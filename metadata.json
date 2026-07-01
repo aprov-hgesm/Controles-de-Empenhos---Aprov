@@ -1,0 +1,6 @@
+{
+  "name": "Controle de Empenhos - Aprov",
+  "description": "Sistema de gestão e conciliação de notas fiscais, empenhos e estoque para logística de saúde hospitalar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

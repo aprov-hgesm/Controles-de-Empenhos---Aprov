@@ -1,0 +1,88 @@
+{
+  "entities": {
+    "empenho": {
+      "title": "Empenho",
+      "description": "Nota de Empenho hospitalar",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "supplier": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string" },
+        "status": { "type": "string" },
+        "items": { "type": "array" },
+        "lastNFDaysAgo": { "type": "number" },
+        "pregao": { "type": "string" },
+        "classification": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "supplier", "description", "date", "status", "items", "userId"]
+    },
+    "alert": {
+      "title": "Alert",
+      "description": "Alerta logístico",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "type", "title", "subtitle", "description", "date", "userId"]
+    },
+    "invoice": {
+      "title": "Invoice",
+      "description": "Nota Fiscal recebida",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "empenhoId": { "type": "string" },
+        "issueDate": { "type": "string" },
+        "items": { "type": "array" },
+        "totalValue": { "type": "number" },
+        "supplier": { "type": "string" },
+        "registeredAt": { "type": "string" },
+        "comissaoDate": { "type": "string" },
+        "tesourariaDate": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "empenhoId", "issueDate", "items", "totalValue", "supplier", "userId"]
+    },
+    "comissao": {
+      "title": "Comissao",
+      "description": "Comissão de recebimento mensal",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "mesReferencia": { "type": "string" },
+        "boletimNumero": { "type": "string" },
+        "boletimData": { "type": "string" },
+        "presidente": { "type": "object" },
+        "auxiliares": { "type": "array" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "mesReferencia", "boletimNumero", "boletimData", "presidente", "auxiliares", "userId"]
+    }
+  },
+  "firestore": {
+    "empenhos/{empenhoId}": {
+      "schema": "empenho",
+      "description": "Coleção de Notas de Empenho"
+    },
+    "alerts/{alertId}": {
+      "schema": "alert",
+      "description": "Coleção de Alertas Logísticos"
+    },
+    "invoices/{invoiceId}": {
+      "schema": "invoice",
+      "description": "Coleção de Notas Fiscais"
+    },
+    "comissoes/{comissaoId}": {
+      "schema": "comissao",
+      "description": "Coleção de Comissões de Recebimento"
+    }
+  }
+}
