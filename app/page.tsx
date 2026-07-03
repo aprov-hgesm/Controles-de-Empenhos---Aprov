@@ -13,6 +13,7 @@ import {
   ChevronDown, 
   ChevronUp, 
   Menu, 
+  Braces, 
   Bell, 
   ArrowLeft, 
   Save, 
@@ -27,12 +28,6 @@ import {
   ChevronRight,
   Filter,
   Info,
-  Settings,
-  Key,
-  Upload,
-  ArrowRight,
-  Eye,
-  EyeOff,
   Layers,
   FileSpreadsheet,
   Users,
@@ -50,8 +45,9 @@ import { INITIAL_EMPENHOS, INITIAL_ALERTS, INITIAL_INVOICES, INITIAL_COMISSOES }
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { auth, googleProvider } from '../lib/firebase';
+import { signInWithPopup, signInAnonymously, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { auth, googleProvider, db, OperationType, handleFirestoreError } from '../lib/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { 
   seedInitialDataIfNecessary, 
   getEmpenhos, 
@@ -84,6 +80,32 @@ const MILITARY_RANKS = [
   'Soldado',
   'Servidor Civil'
 ];
+
+const normalizeSupplier = (supplier: any): string => {
+  if (!supplier) return '';
+  if (typeof supplier === 'string') return supplier;
+  if (typeof supplier === 'object') {
+    if (supplier.razao_social) return String(supplier.razao_social);
+    if (supplier.fornecedor) return String(supplier.fornecedor);
+    if (supplier.name) return String(supplier.name);
+    if (supplier.supplier) return normalizeSupplier(supplier.supplier);
+    
+    const keys = Object.keys(supplier);
+    if (keys.includes('razao_social')) {
+      return String(supplier.razao_social);
+    }
+    if (keys.includes('fornecedor')) {
+      return String(supplier.fornecedor);
+    }
+    for (const key of keys) {
+      if (typeof supplier[key] === 'string') {
+        return supplier[key];
+      }
+    }
+    return String(supplier.name || Object.values(supplier)[0] || '');
+  }
+  return String(supplier);
+};
 
 export default function Home() {
   // Toast / Notifications helper
@@ -120,167 +142,112 @@ export default function Home() {
     }, 0);
   };
 
-  // Listen to auth state changes and fetch Firestore data
+  // Listen to auth state changes in Firebase (supports both Google and Guest Simulation Session)
   useEffect(() => {
-    // Check if there is a saved local simulation session on mount
     const savedLocalSession = typeof window !== 'undefined' ? localStorage.getItem('local_user_session') : null;
     if (savedLocalSession) {
       try {
-        let mockUser = JSON.parse(savedLocalSession);
-        if (mockUser && (mockUser.displayName === 'Administrador Simulado' || mockUser.displayName === 'Gestor Hospitalar' || mockUser.email)) {
-          mockUser.displayName = 'Gestor de Empenhos';
-          mockUser.email = '';
-          mockUser.photoURL = '';
-          localStorage.setItem('local_user_session', JSON.stringify(mockUser));
-        }
+        const mockUser = JSON.parse(savedLocalSession);
         setUser(mockUser);
-        
-        const loadLocalData = async () => {
-          setSyncing(true);
-          try {
-            const [fetchedEmpenhos, fetchedAlerts, fetchedInvoices, fetchedComissoes] = await Promise.all([
-              getEmpenhos(mockUser.uid),
-              getAlerts(mockUser.uid),
-              getInvoices(mockUser.uid),
-              getComissoes(mockUser.uid)
-            ]);
-            setEmpenhos(fetchedEmpenhos);
-            setAlerts(fetchedAlerts);
-            setInvoices(fetchedInvoices);
-            setComissoes(fetchedComissoes);
-          } catch (error) {
-            console.error('Error loading offline mock data:', error);
-          } finally {
-            setSyncing(false);
-            setLoadingAuth(false);
-          }
-        };
-        loadLocalData();
-        return;
+        setLoadingAuth(false);
       } catch (e) {
-        console.error('Failed to parse local user session:', e);
+        console.error(e);
       }
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
-        setSyncing(true);
-        try {
-          // Seed mock data if it is a new user
-          await seedInitialDataIfNecessary(currentUser.uid);
-          
-          // Fetch from Firestore
-          const [fetchedEmpenhos, fetchedAlerts, fetchedInvoices, fetchedComissoes] = await Promise.all([
-            getEmpenhos(currentUser.uid),
-            getAlerts(currentUser.uid),
-            getInvoices(currentUser.uid),
-            getComissoes(currentUser.uid)
-          ]);
-          
-          let finalEmpenhos = [...fetchedEmpenhos];
-          let finalInvoices = [...fetchedInvoices];
-          let finalComissoes = [...fetchedComissoes];
-          let finalAlerts = [...fetchedAlerts];
-          let cleanedAny = false;
-
-          if (fetchedInvoices.length > 0) {
-            console.log('Clearing existing simulation invoices to leave the tab empty as requested...');
-            
-            // Revert received quantities on all fetched empenhos for the invoices we are deleting
-            for (const invoice of fetchedInvoices) {
-              finalEmpenhos = finalEmpenhos.map(emp => {
-                if (emp.id === invoice.empenhoId) {
-                  const updatedItems = emp.items.map(item => {
-                    const oldQty = invoice.items.find(it => it.itemId === item.id)?.quantity || 0;
-                    return {
-                      ...item,
-                      received: Math.max(0, item.received - oldQty),
-                    };
-                  });
-                  const allFullyReceived = updatedItems.every(i => i.received >= i.quantity);
-                  return {
-                    ...emp,
-                    items: updatedItems,
-                    status: (allFullyReceived ? 'Encerrado' : 'Ativo') as any,
-                  };
-                }
-                return emp;
-              });
-            }
-
-            // Sync deleted state back to Firebase
-            try {
-              const deletePromises = fetchedInvoices.map(inv => removeInvoice(currentUser.uid, inv.id));
-              const savePromises = finalEmpenhos.map(emp => saveEmpenho(currentUser.uid, emp));
-              await Promise.all([...deletePromises, ...savePromises]);
-              finalInvoices = [];
-              cleanedAny = true;
-            } catch (err) {
-              console.error('Error during auto-cleaning simulation invoices:', err);
-            }
-          }
-
-          if (fetchedComissoes.length > 0) {
-            console.log('Clearing existing simulation comissoes to leave the tab empty as requested...');
-            try {
-              const deleteComissoesPromises = fetchedComissoes.map(com => removeComissao(currentUser.uid, com.id));
-              await Promise.all(deleteComissoesPromises);
-              finalComissoes = [];
-              cleanedAny = true;
-            } catch (err) {
-              console.error('Error during auto-cleaning simulation comissoes:', err);
-            }
-          }
-
-          if (fetchedEmpenhos.length > 0) {
-            console.log('Clearing existing simulation empenhos to leave the tab empty as requested...');
-            try {
-              const deleteEmpenhosPromises = fetchedEmpenhos.map(emp => removeEmpenho(currentUser.uid, emp.id));
-              await Promise.all(deleteEmpenhosPromises);
-              finalEmpenhos = [];
-              cleanedAny = true;
-            } catch (err) {
-              console.error('Error during auto-cleaning simulation empenhos:', err);
-            }
-          }
-
-          if (fetchedAlerts.length > 0) {
-            console.log('Clearing existing simulation alerts to leave the tab empty as requested...');
-            try {
-              const deleteAlertsPromises = fetchedAlerts.map(alert => removeAlert(currentUser.uid, alert.id));
-              await Promise.all(deleteAlertsPromises);
-              finalAlerts = [];
-              cleanedAny = true;
-            } catch (err) {
-              console.error('Error during auto-cleaning simulation alerts:', err);
-            }
-          }
-
-          setEmpenhos(finalEmpenhos);
-          setAlerts(finalAlerts);
-          setInvoices(finalInvoices);
-          setComissoes(finalComissoes);
-
-          if (cleanedAny) {
-            showToast('Dados de simulação apagados! Sistema totalmente limpo e pronto para seus testes.', 'info');
-          }
-        } catch (error) {
-          console.error('Error fetching data from Firestore:', error);
-          showToast('Erro ao carregar dados do Firebase', 'error');
-        } finally {
-          setSyncing(false);
-        }
+        setUser(currentUser);
+        localStorage.removeItem('local_user_session');
       } else {
-        setEmpenhos([]);
-        setAlerts([]);
-        setInvoices([]);
-        setComissoes([]);
+        const activeLocal = typeof window !== 'undefined' ? localStorage.getItem('local_user_session') : null;
+        if (!activeLocal) {
+          setUser(null);
+        }
       }
       setLoadingAuth(false);
     });
     return () => unsubscribe();
   }, []);
+
+  // Set up real-time Firebase Firestore subscriptions (onSnapshot)
+  useEffect(() => {
+    if (!user) {
+      setEmpenhos([]);
+      setAlerts([]);
+      setInvoices([]);
+      setComissoes([]);
+      return;
+    }
+
+    setSyncing(true);
+
+    // Subscribe to all operational collections in real time (shared globally, no owner isolation)
+    const unsubscribeEmpenhos = onSnapshot(
+      collection(db, 'empenhos'),
+      (snapshot) => {
+        const fetched = snapshot.docs.map(doc => {
+          const data = doc.data() as Empenho;
+          return {
+            ...data,
+            supplier: normalizeSupplier(data.supplier)
+          };
+        });
+        setEmpenhos(fetched);
+        setSyncing(false);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'empenhos');
+        setSyncing(false);
+      }
+    );
+
+    const unsubscribeAlerts = onSnapshot(
+      collection(db, 'alerts'),
+      (snapshot) => {
+        const fetched = snapshot.docs.map(doc => doc.data() as Alert);
+        setAlerts(fetched);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'alerts');
+      }
+    );
+
+    const unsubscribeInvoices = onSnapshot(
+      collection(db, 'invoices'),
+      (snapshot) => {
+        const fetched = snapshot.docs.map(doc => {
+          const data = doc.data() as Invoice;
+          return {
+            ...data,
+            supplier: normalizeSupplier(data.supplier)
+          };
+        });
+        setInvoices(fetched);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'invoices');
+      }
+    );
+
+    const unsubscribeComissoes = onSnapshot(
+      collection(db, 'comissoes'),
+      (snapshot) => {
+        const fetched = snapshot.docs.map(doc => doc.data() as Comissao);
+        setComissoes(fetched);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'comissoes');
+      }
+    );
+
+    return () => {
+      unsubscribeEmpenhos();
+      unsubscribeAlerts();
+      unsubscribeInvoices();
+      unsubscribeComissoes();
+    };
+  }, [user]);
 
   // Unique list of Pregão codes
   const uniquePregaos = Array.from(new Set(empenhos.map(emp => emp.pregao).filter(Boolean))) as string[];
@@ -340,6 +307,11 @@ export default function Home() {
   const [empenhosYearFilter, setEmpenhosYearFilter] = useState('Todos');
   const [empenhosClassFilter, setEmpenhosClassFilter] = useState('Todos');
   const [showNewEmpenhoModal, setShowNewEmpenhoModal] = useState(false);
+  const [newEmpenhoMode, setNewEmpenhoMode] = useState<'manual' | 'json'>('manual');
+  const [jsonInput, setJsonInput] = useState('');
+  const [jsonError, setJsonError] = useState<string | null>(null);
+  const [reviewEmpenho, setReviewEmpenho] = useState<any | null>(null);
+  const [showConfirmSaveModal, setShowConfirmSaveModal] = useState(false);
   const [newEmpenhoForm, setNewEmpenhoForm] = useState<{
     id: string;
     supplier: string;
@@ -355,48 +327,6 @@ export default function Home() {
     date: new Date().toISOString().split('T')[0],
     classification: 'QR',
   });
-
-  // --- GEMINI API & SETTINGS STATES ---
-  const [geminiApiKey, setGeminiApiKey] = useState<string>('');
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [settingsApiKeyInput, setSettingsApiKeyInput] = useState('');
-
-  // --- NEW EMPENHO UPLOAD FLOW STATES ---
-  const [empenhoCadastroModo, setEmpenhoCadastroModo] = useState<'manual' | 'upload'>('manual');
-  const [uploadStage, setUploadStage] = useState<1 | 2 | 3 | 4 | 5>(1);
-  const [uploadForm, setUploadForm] = useState<{
-    id: string;
-    date: string;
-    supplier: string;
-    description: string;
-    pregao: string;
-    classification: 'QR' | 'CALI' | 'PASA';
-  }>({
-    id: '',
-    date: new Date().toISOString().split('T')[0],
-    supplier: '',
-    description: '',
-    pregao: '',
-    classification: 'QR',
-  });
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [extractedItens, setExtractedItens] = useState<Item[]>([]);
-  const [extractedTotalValue, setExtractedTotalValue] = useState<number>(0);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [showSaveConfirmModal, setShowSaveConfirmModal] = useState(false);
-
-  // Load Gemini API key on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedKey = localStorage.getItem('gemini_api_key');
-      if (savedKey) {
-        setGeminiApiKey(savedKey);
-        setSettingsApiKeyInput(savedKey);
-      }
-    }
-  }, []);
 
   // --- VIEW 3: NOVA NF STATES ---
   const [selectedNFCommitmentId, setSelectedNFCommitmentId] = useState<string>('2024NE0015');
@@ -449,28 +379,6 @@ export default function Home() {
       setNfQuantities(initialQtys);
     }
   }, [selectedNFCommitmentId, empenhos]);
-
-  // Reset Commitment registration modal and PDF upload flow states on close/open
-  useEffect(() => {
-    if (!showNewEmpenhoModal) {
-      // Delay slightly or do immediately
-      setEmpenhoCadastroModo('manual');
-      setUploadStage(1);
-      setUploadFile(null);
-      setExtractedItens([]);
-      setExtractedTotalValue(0);
-      setErrorMessage(null);
-      setUploadForm({
-        id: '',
-        date: new Date().toISOString().split('T')[0],
-        supplier: '',
-        description: '',
-        pregao: '',
-        classification: 'QR',
-        expectedTotal: '',
-      });
-    }
-  }, [showNewEmpenhoModal]);
 
   // Handler to register new Commitment
   const handleCreateEmpenho = async (e: React.FormEvent) => {
@@ -528,238 +436,122 @@ export default function Home() {
     setActiveTab('itens_empenho');
   };
 
-  // Helper to get sum of extracted items
-  const calculatedTotal = extractedItens.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-
-  // PDF AI Analysis handler using Gemini API
-  const handleAnalyzePDF = async () => {
-    if (!uploadFile) {
-      showToast('Por favor, selecione um arquivo PDF.', 'error');
-      return;
-    }
-    if (!geminiApiKey) {
-      showToast('Por favor, configure a chave de API do Gemini.', 'error');
-      return;
-    }
-
-    setIsAnalyzing(true);
-    setErrorMessage(null);
-
+  // Process imported JSON data
+  const handleProcessJson = () => {
     try {
-      const fileToBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      let cleanText = jsonInput.trim();
+      // Remove automatically markdown blocks if they exist (```json and ```)
+      cleanText = cleanText.replace(/^```json\s*/i, '');
+      cleanText = cleanText.replace(/```$/, '');
+      cleanText = cleanText.trim();
 
-      const base64PDF = await fileToBase64(uploadFile);
+      if (!cleanText) {
+        setJsonError('Por favor, cole o conteúdo JSON antes de processar.');
+        return;
+      }
 
-      const SYSTEM_PROMPT = `Você é um assistente especializado em leitura de documentos públicos brasileiros do SIAFI (Sistema Integrado de Administração Financeira do Governo Federal). Você receberá o PDF de uma Nota de Empenho e deverá extrair exclusivamente os dados da seção chamada "Lista de Itens" do documento.
+      const data = JSON.parse(cleanText);
 
-Para cada item encontrado na lista, extraia:
-- num_item: número sequencial (ex: "001", "002")
-- codigo_item: código no formato "Item compra: XXXXX" (ex: "00002")
-- descricao: descrição completa do item conforme o documento
-- quantidade: quantidade total empenhada
-- valor_unitario: valor unitário — use ponto como separador decimal
-- valor_total: valor total do item — use ponto como separador decimal
-- unidade: unidade de medida identificável na descrição (kg, un, maço, pct, cx, lt, g); se não identificável, retorne null
+      // Validate required fields
+      if (!data.numero_empenho || !data.data_emissao || !data.fornecedor || !data.itens) {
+        setJsonError('JSON incompleto. Certifique-se de usar o prompt correto na IA externa. Campos obrigatórios ausentes: numero_empenho, data_emissao, fornecedor, itens.');
+        return;
+      }
 
-Padrão da seção "Lista de Itens" no SIAFI:
-- Cada item tem número sequencial (Seq.)
-- Descrição começa com "Item compra: XXXXX - [DESCRIÇÃO EM CAIXA ALTA]"
-- Linha de detalhe: Data | Operação | Quantidade | Valor Unitário | Valor Total
-- Valores no documento usam vírgula como decimal (ex: 6,9000) — converter para ponto no JSON
+      if (!Array.isArray(data.itens) || data.itens.length === 0) {
+        setJsonError('Nenhum item encontrado no JSON. Verifique o documento original.');
+        return;
+      }
 
-Retorne SOMENTE JSON válido, sem texto antes ou depois, sem markdown. Formato:
-
-{
-  "itens": [
-    {
-      "num_item": "001",
-      "codigo_item": "00002",
-      "descricao": "LEGUME PROCESSADO, TIPO MANDIOCA, PREPARO IN NATURA, APRESENTACAO CONGELADO, A VACUO",
-      "quantidade": 430,
-      "valor_unitario": 6.90,
-      "valor_total": 2967.00,
-      "unidade": "kg"
-    }
-  ],
-  "valor_total_lista": 12043.80
-}
-
-Se não encontrar a seção "Lista de Itens", retorne:
-{ "erro": "Seção Lista de Itens não encontrada no documento." }`;
-
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            systemInstruction: {
-              parts: [{ text: SYSTEM_PROMPT }]
-            },
-            contents: [
-              {
-                parts: [
-                  {
-                    inlineData: {
-                      mimeType: 'application/pdf',
-                      data: base64PDF
-                    }
-                  },
-                  {
-                    text: 'Extraia os dados da Lista de Itens desta Nota de Empenho conforme instruído.'
-                  }
-                ]
-              }
-            ],
-            generationConfig: {
-              temperature: 0,
-              responseMimeType: 'application/json'
-            }
-          })
+      let formattedDate = data.data_emissao;
+      // Convert YYYY-MM-DD to DD/MM/YYYY
+      if (formattedDate.includes('-')) {
+        const parts = formattedDate.split('-');
+        if (parts.length === 3) {
+          formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
         }
-      );
-
-      if (response.status === 400 || response.status === 403) {
-        setErrorMessage("Chave de API inválida. Acesse ⚙️ Configurações e verifique sua chave do Gemini.");
-        setIsAnalyzing(false);
-        return;
       }
 
-      if (!response.ok) {
-        setErrorMessage("Erro ao processar. Verifique sua chave de API e conexão.");
-        setIsAnalyzing(false);
-        return;
-      }
-
-      const data = await response.json();
-      
-      if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-        setErrorMessage("Não foi possível ler o arquivo. Verifique se o PDF está íntegro e tente novamente.");
-        setIsAnalyzing(false);
-        return;
-      }
-
-      const textoResposta = data.candidates[0].content.parts[0].text;
-      
-      // Try parsing JSON
-      let itensParsed: any = null;
-      try {
-        let cleanText = textoResposta.trim();
-        if (cleanText.startsWith('```json')) {
-          cleanText = cleanText.substring(7);
-        }
-        if (cleanText.endsWith('```')) {
-          cleanText = cleanText.substring(0, cleanText.length - 3);
-        }
-        cleanText = cleanText.trim();
-        itensParsed = JSON.parse(cleanText);
-      } catch (err) {
-        setErrorMessage("Não foi possível ler o arquivo. Verifique se o PDF está íntegro e tente novamente.");
-        setIsAnalyzing(false);
-        return;
-      }
-
-      if (itensParsed.erro) {
-        setErrorMessage("O documento não parece ser uma Nota de Empenho do SIAFI. Nenhum item foi encontrado.");
-        setIsAnalyzing(false);
-        return;
-      }
-
-      const parsedItemsList = Array.isArray(itensParsed.itens) ? itensParsed.itens : [];
-      
-      // Map to local Item interface
-      const mappedItems: Item[] = parsedItemsList.map((it: any, index: number) => {
+      const mappedReviewItems = data.itens.map((item: any, idx: number) => {
+        const itemQty = parseFloat(item.quantity || item.quantidade) || 0;
+        const itemPrice = parseFloat(item.unit_price || item.unitPrice || item.valor_unitario) || 0;
         return {
-          id: it.codigo_item ? `ITEM-${it.codigo_item}` : `ITEM-${Math.floor(Math.random() * 100000)}`,
-          name: it.descricao || `Item ${index + 1}`,
-          unit: it.unidade || 'un',
-          quantity: typeof it.quantidade === 'number' ? it.quantity : 0,
-          unitPrice: typeof it.valor_unitario === 'number' ? it.valor_unitario : 0,
-          received: 0
+          id: item.codigo_item || item.id || `ITEM-${Math.floor(Math.random() * 10000)}`,
+          name: item.descricao || item.name || `Item sem descrição ${idx + 1}`,
+          unit: item.unidade || item.unit || 'UN',
+          quantity: itemQty,
+          unitPrice: itemPrice,
+          received: 0,
         };
       });
 
-      setExtractedItens(mappedItems);
-      setExtractedTotalValue(typeof itensParsed.valor_total_lista === 'number' ? itensParsed.valor_total_lista : 0);
-      
-      if (mappedItems.length === 0) {
-        showToast("Nenhum item identificado automaticamente.", "info");
-      }
+      const parsedEmpenho = {
+        id: data.numero_empenho.toUpperCase(),
+        supplier: data.fornecedor,
+        cnpj: data.cnpj || '',
+        description: data.descricao_sumaria || data.descricao || '',
+        date: formattedDate,
+        status: 'Ativo',
+        items: mappedReviewItems,
+        pregao: data.pregao_relacionado || data.pregao || '',
+        classification: data.classificacao || 'QR',
+        valorTotalDeclarado: parseFloat(data.valor_total || data.valorTotal) || null,
+      };
 
-      // Move to Stage 4 (Review Table)
-      setUploadStage(4);
-    } catch (err) {
-      setErrorMessage("Erro ao processar. Verifique sua chave de API e conexão.");
-    } finally {
-      setIsAnalyzing(false);
+      setReviewEmpenho(parsedEmpenho);
+      setJsonError(null);
+    } catch (error: any) {
+      setJsonError('O texto colado não é um JSON válido. Verifique se copiou o conteúdo completo gerado pela IA. Erro: ' + error.message);
     }
   };
 
-  // Handler to save complete upload flow commitment
-  const handleSaveUploadedEmpenho = async () => {
-    if (empenhos.some(emp => emp.id.toUpperCase() === uploadForm.id.toUpperCase())) {
+  // Save the reviewed empenho from JSON
+  const handleSaveReviewEmpenho = async () => {
+    if (!reviewEmpenho) return;
+    if (!reviewEmpenho.id || !reviewEmpenho.supplier || !reviewEmpenho.description) {
+      showToast('Por favor, preencha número, fornecedor e descrição do empenho.', 'error');
+      return;
+    }
+
+    if (empenhos.some(emp => emp.id.toUpperCase() === reviewEmpenho.id.toUpperCase())) {
       showToast('Já existe uma Nota de Empenho com este número.', 'error');
       return;
     }
 
-    let formattedDate = '';
-    if (uploadForm.date) {
-      const parts = uploadForm.date.split('-');
-      if (parts.length === 3) {
-        formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
-      } else {
-        formattedDate = new Date().toLocaleDateString('pt-BR');
-      }
-    } else {
-      formattedDate = new Date().toLocaleDateString('pt-BR');
-    }
-
-    const newEmp: Empenho = {
-      id: uploadForm.id.toUpperCase(),
-      supplier: uploadForm.supplier,
-      description: uploadForm.description,
-      date: formattedDate,
+    const finalEmp: Empenho = {
+      id: reviewEmpenho.id.toUpperCase(),
+      supplier: reviewEmpenho.supplier,
+      description: reviewEmpenho.description,
+      date: reviewEmpenho.date,
       status: 'Ativo',
-      items: extractedItens,
-      pregao: uploadForm.pregao || 'Sem Pregão',
-      classification: uploadForm.classification,
+      items: reviewEmpenho.items,
+      pregao: reviewEmpenho.pregao || 'Sem Pregão',
+      classification: reviewEmpenho.classification || 'QR',
     };
 
-    const updatedEmpenhos = [newEmp, ...empenhos];
+    const updatedEmpenhos = [finalEmp, ...empenhos];
     setEmpenhos(updatedEmpenhos);
 
     if (user) {
       try {
-        await saveEmpenho(user.uid, newEmp);
+        await saveEmpenho(user.uid, finalEmp);
       } catch (error) {
         showToast('Erro ao salvar no Firebase', 'error');
       }
     }
 
-    showToast(`Empenho ${newEmp.id} cadastrado com sucesso! ${extractedItens.length} itens importados.`, 'success');
+    showToast(`Empenho ${finalEmp.id} cadastrado com sucesso! ${finalEmp.items.length} itens importados.`, 'success');
     
-    // Reset all upload flow states
-    setUploadForm({
-      id: '',
-      date: new Date().toISOString().split('T')[0],
-      supplier: '',
-      description: '',
-      pregao: '',
-      classification: 'QR',
-      expectedTotal: '',
-    });
-    setUploadFile(null);
-    setExtractedItens([]);
-    setExtractedTotalValue(0);
-    setUploadStage(1);
-    setEmpenhoCadastroModo('manual');
-    setShowSaveConfirmModal(false);
+    // Clean states
+    setReviewEmpenho(null);
+    setJsonInput('');
+    setJsonError(null);
+    setShowConfirmSaveModal(false);
     setShowNewEmpenhoModal(false);
+
+    // Redirect to Items view
+    setEditingEmpenhoId(finalEmp.id);
+    setActiveTab('itens_empenho');
   };
 
   // Handler to add item to the editing commitment
@@ -1754,30 +1546,20 @@ Se não encontrar a seção "Lista de Itens", retorne:
 
           <button
             onClick={async () => {
-              const mockUser = {
-                uid: 'simulado_guest',
-                displayName: 'Gestor de Empenhos',
-                email: '',
-                photoURL: '',
-              };
-              setUser(mockUser as any);
-              localStorage.setItem('local_user_session', JSON.stringify(mockUser));
               setSyncing(true);
               try {
-                const [fetchedEmpenhos, fetchedAlerts, fetchedInvoices, fetchedComissoes] = await Promise.all([
-                  getEmpenhos(mockUser.uid),
-                  getAlerts(mockUser.uid),
-                  getInvoices(mockUser.uid),
-                  getComissoes(mockUser.uid)
-                ]);
-                setEmpenhos(fetchedEmpenhos);
-                setAlerts(fetchedAlerts);
-                setInvoices(fetchedInvoices);
-                setComissoes(fetchedComissoes);
+                const mockUser = {
+                  uid: 'shared_guest_user',
+                  displayName: 'Gestor de Empenhos',
+                  email: '',
+                  photoURL: '',
+                };
+                setUser(mockUser as any);
+                localStorage.setItem('local_user_session', JSON.stringify(mockUser));
                 showToast('Acesso autorizado com sucesso!', 'success');
               } catch (err) {
                 console.error(err);
-                showToast('Erro ao inicializar dados', 'error');
+                showToast('Erro ao inicializar sessão local', 'error');
               } finally {
                 setSyncing(false);
               }
@@ -1858,29 +1640,6 @@ Se não encontrar a seção "Lista de Itens", retorne:
               Sincronizando...
             </div>
           )}
-          <div className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border border-white/40 bg-white/40 backdrop-blur-sm shadow-sm select-none">
-            {geminiApiKey ? (
-              <span className="text-emerald-700 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                🔑 API configurada
-              </span>
-            ) : (
-              <span className="text-rose-700 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                ⚠️ API não configurada
-              </span>
-            )}
-          </div>
-          <button 
-            onClick={() => {
-              setSettingsApiKeyInput(geminiApiKey);
-              setShowSettingsModal(true);
-            }}
-            className="p-2 hover:bg-blue-50/50 rounded-xl transition-all text-[#00288e] hover:text-[#1e40af] active:scale-95 duration-150 flex items-center justify-center cursor-pointer"
-            title="Configurações da API do Gemini"
-          >
-            <Settings className="w-5 h-5 animate-hover:spin" />
-          </button>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#0b1c30] border border-amber-500/30 shadow-inner flex-shrink-0 text-amber-400">
               {/* Símbolo de Folha de Acanto */}
@@ -1988,15 +1747,9 @@ Se não encontrar a seção "Lista de Itens", retorne:
             <button
               onClick={async () => {
                 try {
-                  if (user?.uid === 'simulado_guest') {
-                    localStorage.removeItem('local_user_session');
-                    setUser(null);
-                    showToast('Você saiu do sistema.', 'info');
-                  } else {
-                    await signOut(auth);
-                    setUser(null);
-                    showToast('Você saiu do sistema.', 'info');
-                  }
+                  await signOut(auth);
+                  setUser(null);
+                  showToast('Você saiu do sistema.', 'info');
                 } catch (err: any) {
                   console.error(err);
                   showToast('Erro ao sair do sistema', 'error');
@@ -2483,104 +2236,75 @@ Se não encontrar a seção "Lista de Itens", retorne:
                 {showNewEmpenhoModal && (
                   <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
                     <motion.div 
-                      initial={{ scale: 0.95, opacity: 0 }}
+                      initial={{ scale: 0.9, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.95, opacity: 0 }}
-                      className={`bg-white rounded-2xl shadow-2xl border border-gray-100 ${
-                        empenhoCadastroModo === 'upload' && uploadStage === 4 
-                          ? 'max-w-5xl w-full' 
-                          : 'max-w-xl w-full'
-                      } overflow-hidden transition-all duration-300 my-8`}
+                      exit={{ scale: 0.9, opacity: 0 }}
+                      className={`bg-white rounded-2xl shadow-xl border border-gray-100 w-full overflow-hidden transition-all duration-300 my-8 ${
+                        reviewEmpenho ? 'max-w-5xl' : 'max-w-xl'
+                      }`}
                     >
                       {/* Modal Header */}
                       <div className="bg-[#00288e] text-white p-5 flex justify-between items-center">
                         <div>
                           <h3 className="font-bold text-base tracking-tight">
-                            {empenhoCadastroModo === 'manual' 
-                              ? 'Adicionar Novo Empenho (Manual)' 
-                              : `Cadastrar Empenho via PDF (Etapa ${uploadStage === 4 ? 3 : uploadStage})`
-                            }
+                            {reviewEmpenho ? 'Revisão do Empenho Importado' : 'Adicionar Novo Empenho'}
                           </h3>
+                          <p className="text-xs text-blue-200 mt-0.5">
+                            {reviewEmpenho ? 'Revise e edite os dados extraídos antes de confirmar o salvamento' : 'Escolha um modo de cadastro para iniciar'}
+                          </p>
                         </div>
-                        <button onClick={() => setShowNewEmpenhoModal(false)} className="text-blue-100 hover:text-white transition-all cursor-pointer">
+                        <button 
+                          onClick={() => {
+                            setShowNewEmpenhoModal(false);
+                            setReviewEmpenho(null);
+                            setJsonInput('');
+                            setJsonError(null);
+                          }} 
+                          className="text-blue-100 hover:text-white transition-all p-1 hover:bg-white/10 rounded-lg"
+                        >
                           <X className="w-5 h-5" />
                         </button>
                       </div>
 
-                      {/* Mode Selection Row (Always visible unless in reviewing step 4) */}
-                      {!(empenhoCadastroModo === 'upload' && uploadStage === 4) && (
-                        <div className="bg-gray-50/80 p-4 border-b border-gray-100 flex gap-3">
+                      {/* Mode selection buttons - Only shown when not actively reviewing an imported JSON */}
+                      {!reviewEmpenho && (
+                        <div className="flex border-b border-gray-100 p-3 bg-gray-50/50 gap-2">
                           <button
                             type="button"
                             onClick={() => {
-                              setEmpenhoCadastroModo('manual');
+                              setNewEmpenhoMode('manual');
+                              setJsonError(null);
                             }}
-                            className={`flex-1 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border transition-all cursor-pointer ${
-                              empenhoCadastroModo === 'manual'
-                                ? 'bg-[#00288e] text-white border-[#00288e] shadow-sm'
-                                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
+                            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                              newEmpenhoMode === 'manual'
+                                ? 'bg-[#00288e] text-white shadow-sm'
+                                : 'bg-transparent text-gray-500 hover:bg-gray-100'
                             }`}
                           >
-                            <Plus className="w-4 h-4" /> Cadastrar Manualmente
+                            Cadastro Manual
                           </button>
-                          
-                          <div className="flex-1 relative group">
-                            <button
-                              type="button"
-                              disabled={!geminiApiKey}
-                              onClick={() => {
-                                setEmpenhoCadastroModo('upload');
-                              }}
-                              className={`w-full py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border transition-all cursor-pointer ${
-                                !geminiApiKey 
-                                  ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-65'
-                                  : empenhoCadastroModo === 'upload'
-                                    ? 'bg-[#00288e] text-white border-[#00288e] shadow-sm'
-                                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
-                              }`}
-                            >
-                              <Upload className="w-4 h-4" /> Cadastrar via PDF
-                            </button>
-                            {!geminiApiKey && (
-                              <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] py-1 px-2.5 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 font-medium">
-                                Configure a chave de API do Gemini em Configurações ⚙️
-                              </div>
-                            )}
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewEmpenhoMode('json');
+                              setJsonError(null);
+                            }}
+                            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                              newEmpenhoMode === 'json'
+                                ? 'bg-[#00288e] text-white shadow-sm'
+                                : 'bg-transparent text-gray-500 hover:bg-gray-100'
+                            }`}
+                          >
+                            <Braces className="w-3.5 h-3.5" /> Importar via JSON
+                          </button>
                         </div>
                       )}
 
-                      {/* Step Indicator for Upload mode */}
-                      {empenhoCadastroModo === 'upload' && (
-                        <div className="px-6 pt-4 flex items-center justify-between border-b border-gray-100 pb-2 select-none">
-                          <div className="flex items-center gap-1.5">
-                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                              uploadStage >= 1 ? 'bg-[#00288e] text-white' : 'bg-gray-200 text-gray-500'
-                            }`}>1</span>
-                            <span className="text-[10px] font-bold text-gray-600">Identificação</span>
-                          </div>
-                          <div className="flex-1 h-0.5 bg-gray-200 mx-2" />
-                          <div className="flex items-center gap-1.5">
-                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                              uploadStage >= 2 ? 'bg-[#00288e] text-white' : 'bg-gray-200 text-gray-500'
-                            }`}>2</span>
-                            <span className="text-[10px] font-bold text-gray-600">Upload PDF</span>
-                          </div>
-                          <div className="flex-1 h-0.5 bg-gray-200 mx-2" />
-                          <div className="flex items-center gap-1.5">
-                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                              uploadStage >= 4 ? 'bg-[#00288e] text-white' : 'bg-gray-200 text-gray-500'
-                            }`}>3</span>
-                            <span className="text-[10px] font-bold text-gray-600">Revisão</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* MODE 1: MANUAL REGISTRATION FORM */}
-                      {empenhoCadastroModo === 'manual' && (
+                      {/* MODE 1: MANUAL REGISTRATION */}
+                      {newEmpenhoMode === 'manual' && !reviewEmpenho && (
                         <form onSubmit={handleCreateEmpenho} className="p-5 space-y-4">
                           <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Código do Empenho (NE) *</label>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Código do Empenho (NE)</label>
                             <input 
                               type="text" 
                               required
@@ -2592,7 +2316,7 @@ Se não encontrar a seção "Lista de Itens", retorne:
                           </div>
 
                           <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Data de Emissão do Empenho *</label>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Data de Emissão do Empenho</label>
                             <input 
                               type="date" 
                               required
@@ -2603,7 +2327,7 @@ Se não encontrar a seção "Lista de Itens", retorne:
                           </div>
 
                           <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Fornecedor / Razão Social *</label>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Fornecedor / Razão Social</label>
                             <input 
                               type="text" 
                               required
@@ -2615,7 +2339,7 @@ Se não encontrar a seção "Lista de Itens", retorne:
                           </div>
 
                           <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Descrição sumária do Contrato *</label>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Descrição sumária do Contrato</label>
                             <input 
                               type="text" 
                               required
@@ -2627,7 +2351,7 @@ Se não encontrar a seção "Lista de Itens", retorne:
                           </div>
 
                           <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Pregão Relacionado *</label>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Pregão Relacionado</label>
                             <input 
                               type="text" 
                               required
@@ -2639,14 +2363,14 @@ Se não encontrar a seção "Lista de Itens", retorne:
                           </div>
 
                           <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Classificação do Empenho *</label>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Classificação do Empenho</label>
                             <div className="grid grid-cols-3 gap-2">
                               {(['QR', 'CALI', 'PASA'] as const).map((type) => (
                                 <button
                                   key={type}
                                   type="button"
                                   onClick={() => setNewEmpenhoForm({ ...newEmpenhoForm, classification: type })}
-                                  className={`h-11 rounded-xl font-bold text-xs flex items-center justify-center border transition-all cursor-pointer ${
+                                  className={`h-11 rounded-xl font-bold text-xs flex items-center justify-center border transition-all ${
                                     newEmpenhoForm.classification === type
                                       ? 'bg-[#00288e] text-white border-[#00288e] shadow-sm'
                                       : 'bg-white/40 text-gray-600 border-white/20 hover:bg-white/60 backdrop-blur-sm'
@@ -2662,13 +2386,13 @@ Se não encontrar a seção "Lista de Itens", retorne:
                             <button 
                               type="button"
                               onClick={() => setShowNewEmpenhoModal(false)}
-                              className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl font-bold text-xs hover:bg-gray-200 transition-all cursor-pointer"
+                              className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl font-bold text-xs hover:bg-gray-200 transition-all"
                             >
                               Cancelar
                             </button>
                             <button 
                               type="submit"
-                              className="px-4 py-2 bg-[#00288e] text-white rounded-xl font-bold text-xs hover:bg-[#1e40af] transition-all shadow-sm cursor-pointer"
+                              className="px-4 py-2 bg-[#00288e] text-white rounded-xl font-bold text-xs hover:bg-[#1e40af] transition-all shadow-sm"
                             >
                               Prosseguir
                             </button>
@@ -2676,479 +2400,387 @@ Se não encontrar a seção "Lista de Itens", retorne:
                         </form>
                       )}
 
-                      {/* MODE 2: PDF UPLOAD MULTI-STEP WIZARD */}
-                      {empenhoCadastroModo === 'upload' && (
-                        <div>
-                          {/* ETAPA 1: Header Fields */}
-                          {uploadStage === 1 && (
-                            <form 
-                              onSubmit={(e) => {
-                                e.preventDefault();
-                                if (!uploadForm.id || !uploadForm.date || !uploadForm.supplier || !uploadForm.description || !uploadForm.pregao) {
-                                  showToast('Por favor, preencha todos os campos obrigatórios.', 'error');
-                                  return;
-                                }
-                                if (empenhos.some(emp => emp.id.toUpperCase() === uploadForm.id.toUpperCase())) {
-                                  showToast('Já existe uma Nota de Empenho com este número.', 'error');
-                                  return;
-                                }
-                                setUploadStage(2);
-                              }} 
-                              className="p-6 space-y-4 max-h-[70vh] overflow-y-auto"
+                      {/* MODE 2: JSON IMPORT INPUT */}
+                      {newEmpenhoMode === 'json' && !reviewEmpenho && (
+                        <div className="p-5 space-y-4">
+                          <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Importar Dados via JSON da IA Externa</label>
+                            <textarea
+                              rows={12}
+                              value={jsonInput}
+                              onChange={(e) => setJsonInput(e.target.value)}
+                              placeholder={`Cole aqui o JSON gerado pela IA externa...\n\nExemplo de formato esperado:\n{\n  "numero_empenho": "2026NE0088",\n  "data_emissao": "2026-07-03",\n  "fornecedor": "Hospitália Distribuidora S.A.",\n  "cnpj": "12.345.678/0001-99",\n  "descricao_sumaria": "Aquisição de Insumos Cirúrgicos",\n  "pregao_relacionado": "14/2025",\n  "classificacao": "QR",\n  "valor_total": 45000.00,\n  "itens": [\n    {\n      "codigo_item": "MED-001",\n      "descricao": "Fio de Sutura Nylon 4-0",\n      "unidade": "CX",\n      "quantidade": 150,\n      "valor_unitario": 120.00\n    }\n  ]\n}`}
+                              className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-mono text-xs text-[#0b1c30] bg-gray-50/50 resize-y"
+                            />
+                          </div>
+
+                          {jsonError && (
+                            <div className="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-xl text-xs font-semibold flex items-start gap-2.5">
+                              <AlertCircle className="w-4.5 h-4.5 shrink-0 text-rose-500" />
+                              <span>{jsonError}</span>
+                            </div>
+                          )}
+
+                          <div className="pt-4 flex justify-end gap-3 border-t border-gray-100">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowNewEmpenhoModal(false);
+                                setJsonInput('');
+                                setJsonError(null);
+                              }}
+                              className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-xs hover:bg-gray-200 transition-all"
                             >
-                              <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Código do Empenho (NE) *</label>
-                                <input 
-                                  type="text" 
-                                  required
-                                  placeholder="Ex: 2025NE124"
-                                  value={uploadForm.id}
-                                  onChange={(e) => setUploadForm({ ...uploadForm, id: e.target.value })}
-                                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-semibold text-sm text-[#0b1c30]"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Data de Emissão *</label>
-                                <input 
-                                  type="date" 
-                                  required
-                                  value={uploadForm.date}
-                                  onChange={(e) => setUploadForm({ ...uploadForm, date: e.target.value })}
-                                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-semibold text-sm text-[#0b1c30]"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Fornecedor / Razão Social *</label>
-                                <input 
-                                  type="text" 
-                                  required
-                                  placeholder="Ex: Juliano Lucio Franciscatto do Amaral & Cia Ltda"
-                                  value={uploadForm.supplier}
-                                  onChange={(e) => setUploadForm({ ...uploadForm, supplier: e.target.value })}
-                                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-semibold text-sm text-[#0b1c30]"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Descrição Sumária do Contrato *</label>
-                                <textarea 
-                                  required
-                                  rows={2}
-                                  placeholder="Ex: Aquisição de gêneros de alimentação — Hortifruti"
-                                  value={uploadForm.description}
-                                  onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
-                                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-semibold text-sm text-[#0b1c30] resize-none"
-                                />
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Pregão Relacionado *</label>
-                                  <input 
-                                    type="text" 
-                                    required
-                                    placeholder="Ex: SRP 90019/2025"
-                                    value={uploadForm.pregao}
-                                    onChange={(e) => setUploadForm({ ...uploadForm, pregao: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-semibold text-sm text-[#0b1c30]"
-                                  />
-                                </div>
-
-                                <div>
-                                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Valor Total Informado (R$)</label>
-                                  <input 
-                                    type="number" 
-                                    step="0.01"
-                                    placeholder="Ex: 12043.80"
-                                    value={uploadForm.expectedTotal}
-                                    onChange={(e) => setUploadForm({ ...uploadForm, expectedTotal: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-semibold text-sm text-[#0b1c30]"
-                                  />
-                                </div>
-                              </div>
-
-                              <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Classificação *</label>
-                                <div className="grid grid-cols-3 gap-2">
-                                  {(['QR', 'CALI', 'PASA'] as const).map((type) => (
-                                    <button
-                                      key={type}
-                                      type="button"
-                                      onClick={() => setUploadForm({ ...uploadForm, classification: type })}
-                                      className={`h-10 rounded-xl font-bold text-xs flex items-center justify-center border transition-all cursor-pointer ${
-                                        uploadForm.classification === type
-                                          ? 'bg-[#00288e] text-white border-[#00288e] shadow-sm'
-                                          : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                                      }`}
-                                    >
-                                      {type}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-
-                              <div className="pt-4 flex justify-end gap-3 border-t border-gray-100">
-                                <button 
-                                  type="button"
-                                  onClick={() => setShowNewEmpenhoModal(false)}
-                                  className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-xs hover:bg-gray-200 transition-all cursor-pointer"
-                                >
-                                  Cancelar
-                                </button>
-                                <button 
-                                  type="submit"
-                                  className="px-5 py-2.5 bg-[#00288e] text-white rounded-xl font-bold text-xs hover:bg-[#1e40af] transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
-                                >
-                                  Avançar e Fazer Upload <ArrowRight className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </form>
-                          )}
-
-                          {/* ETAPA 2: Upload PDF File */}
-                          {uploadStage === 2 && (
-                            <div className="p-6 space-y-6">
-                              {isAnalyzing ? (
-                                <div className="py-12 flex flex-col items-center justify-center space-y-4">
-                                  <Loader2 className="w-12 h-12 text-[#00288e] animate-spin" />
-                                  <h4 className="font-bold text-sm text-gray-700 animate-pulse">🔍 Analisando o documento com IA... aguarde.</h4>
-                                  <p className="text-xs text-gray-400 max-w-xs text-center leading-relaxed font-semibold">
-                                    O Gemini está lendo e interpretando a Nota de Empenho para extrair a lista de itens. Isso pode levar alguns segundos.
-                                  </p>
-                                </div>
-                              ) : (
-                                <>
-                                  <div className="text-left space-y-1 select-none">
-                                    <h4 className="font-bold text-sm text-gray-700">Selecione a Nota de Empenho do SIAFI</h4>
-                                    <p className="text-xs text-gray-400 leading-relaxed font-medium">
-                                      Carregue o arquivo PDF correspondente ao código <strong className="text-[#00288e] font-black">{uploadForm.id}</strong> para que a inteligência artificial faça a leitura automática.
-                                    </p>
-                                  </div>
-
-                                  {errorMessage && (
-                                    <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 flex items-start gap-3">
-                                      <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
-                                      <div className="text-left">
-                                        <h5 className="font-bold text-xs text-rose-800">Falha na Leitura</h5>
-                                        <p className="text-xs text-rose-600 font-semibold mt-0.5 leading-relaxed">{errorMessage}</p>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {!uploadFile ? (
-                                    <div 
-                                      onDragOver={(e) => { e.preventDefault(); }}
-                                      onDrop={(e) => {
-                                        e.preventDefault();
-                                        const file = e.dataTransfer.files?.[0];
-                                        if (file && file.type === 'application/pdf') {
-                                          setUploadFile(file);
-                                        } else {
-                                          showToast('Por favor, envie apenas arquivos PDF.', 'error');
-                                        }
-                                      }}
-                                      className="border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center cursor-pointer hover:border-[#00288e] hover:bg-blue-50/10 transition-all select-none"
-                                      onClick={() => document.getElementById('pdf-file-input')?.click()}
-                                    >
-                                      <input 
-                                        id="pdf-file-input"
-                                        type="file" 
-                                        accept=".pdf"
-                                        className="hidden"
-                                        onChange={(e) => {
-                                          const file = e.target.files?.[0];
-                                          if (file) {
-                                            setUploadFile(file);
-                                          }
-                                        }}
-                                      />
-                                      <Upload className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                      <p className="text-sm font-bold text-gray-700">Arraste o PDF aqui ou clique para selecionar</p>
-                                      <p className="text-xs text-gray-400 mt-1 font-semibold">Apenas arquivos .pdf são aceitos</p>
-                                    </div>
-                                  ) : (
-                                    <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-5 flex items-center justify-between">
-                                      <div className="flex items-center gap-3">
-                                        <div className="bg-white p-3 rounded-xl shadow-sm border border-blue-100">
-                                          <FileText className="w-8 h-8 text-[#00288e]" />
-                                        </div>
-                                        <div className="text-left">
-                                          <p className="text-sm font-bold text-gray-800 truncate max-w-[220px] sm:max-w-[320px]">{uploadFile.name}</p>
-                                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">{(uploadFile.size / 1024).toFixed(0)} KB • PDF Selecionado</p>
-                                        </div>
-                                      </div>
-                                      <button 
-                                        onClick={() => setUploadFile(null)}
-                                        className="text-gray-400 hover:text-rose-600 hover:bg-rose-50 p-2 rounded-xl transition-all cursor-pointer"
-                                        title="Remover arquivo"
-                                      >
-                                        <X className="w-5 h-5" />
-                                      </button>
-                                    </div>
-                                  )}
-
-                                  <div className="pt-4 flex justify-between gap-3 border-t border-gray-100">
-                                    <button 
-                                      type="button"
-                                      onClick={() => setUploadStage(1)}
-                                      className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-xs hover:bg-gray-200 transition-all flex items-center gap-1.5 cursor-pointer"
-                                    >
-                                      <ArrowLeft className="w-4 h-4" /> Voltar
-                                    </button>
-                                    <div className="flex gap-2">
-                                      <button 
-                                        type="button"
-                                        onClick={() => setShowNewEmpenhoModal(false)}
-                                        className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-xs hover:bg-gray-200 transition-all cursor-pointer"
-                                      >
-                                        Cancelar
-                                      </button>
-                                      <button 
-                                        type="button"
-                                        disabled={!uploadFile}
-                                        onClick={handleAnalyzePDF}
-                                        className={`px-5 py-2.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 cursor-pointer transition-all ${
-                                          uploadFile
-                                            ? 'bg-[#00288e] text-white hover:bg-[#1e40af]'
-                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                        }`}
-                                      >
-                                        Analisar com IA <ArrowRight className="w-4 h-4" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          )}
-
-                          {/* ETAPA 4: Editable Table Review */}
-                          {uploadStage === 4 && (
-                            <div className="p-6 space-y-6">
-                              <div className="text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none">
-                                <div>
-                                  <h4 className="font-bold text-base text-gray-800">Revisão de Itens Importados</h4>
-                                  <p className="text-xs text-gray-400 mt-0.5 font-medium">
-                                    Abaixo estão os itens identificados pela IA. Você pode editar todos os dados diretamente na tabela.
-                                  </p>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const newItem: Item = {
-                                      id: `ITEM-${Math.floor(Math.random() * 100000)}`,
-                                      name: '',
-                                      unit: 'un',
-                                      quantity: 0,
-                                      unitPrice: 0,
-                                      received: 0
-                                    };
-                                    setExtractedItens([...extractedItens, newItem]);
-                                  }}
-                                  className="px-3.5 py-2 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-700 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer transition-all self-start sm:self-auto"
-                                >
-                                  <Plus className="w-4 h-4" /> Adicionar Item
-                                </button>
-                              </div>
-
-                              <div className="border border-gray-100 rounded-2xl overflow-hidden max-h-[40vh] overflow-y-auto shadow-inner bg-gray-50/30">
-                                <table className="w-full text-left border-collapse">
-                                  <thead>
-                                    <tr className="bg-gray-100/80 text-gray-500 text-[10px] font-bold uppercase tracking-wider select-none">
-                                      <th className="p-3 w-14">Nº</th>
-                                      <th className="p-3 min-w-[240px]">Descrição *</th>
-                                      <th className="p-3 w-28">Unidade</th>
-                                      <th className="p-3 w-24">Quant.</th>
-                                      <th className="p-3 w-28">Unitário (R$)</th>
-                                      <th className="p-3 w-28 text-right">Total (R$)</th>
-                                      <th className="p-3 w-12 text-center"></th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-gray-100 text-xs text-gray-700 font-semibold">
-                                    {extractedItens.length === 0 ? (
-                                      <tr>
-                                        <td colSpan={7} className="p-8 text-center text-gray-400 select-none">
-                                          <Package className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                                          Nenhum item identificado automaticamente. Clique em "Adicionar Item".
-                                        </td>
-                                      </tr>
-                                    ) : (
-                                      extractedItens.map((item, index) => {
-                                        const totalItem = item.quantity * item.unitPrice;
-                                        return (
-                                          <tr key={item.id} className="hover:bg-white/60 transition-colors">
-                                            <td className="p-3 select-none">
-                                              <span className="bg-gray-100 px-1.5 py-1 rounded text-gray-500 font-bold text-[10px]">
-                                                {String(index + 1).padStart(3, '0')}
-                                              </span>
-                                            </td>
-                                            <td className="p-3">
-                                              <textarea 
-                                                rows={1}
-                                                value={item.name}
-                                                onChange={(e) => {
-                                                  const updated = [...extractedItens];
-                                                  updated[index] = { ...updated[index], name: e.target.value };
-                                                  setExtractedItens(updated);
-                                                }}
-                                                className="w-full px-2 py-1 border border-transparent hover:border-gray-200 focus:border-[#00288e] focus:bg-white rounded-lg outline-none font-bold text-gray-800 text-xs resize-none"
-                                                placeholder="Nome / Descrição do item"
-                                              />
-                                            </td>
-                                            <td className="p-3">
-                                              <div className="flex flex-col gap-1">
-                                                <select
-                                                  value={['un', 'kg', 'maço', 'pct', 'cx', 'lt', 'g'].includes(item.unit) ? item.unit : 'Outro'}
-                                                  onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    const updated = [...extractedItens];
-                                                    updated[index] = { ...updated[index], unit: val === 'Outro' ? '' : val };
-                                                    setExtractedItens(updated);
-                                                  }}
-                                                  className="px-1 py-1 border border-transparent hover:border-gray-200 focus:border-[#00288e] focus:bg-white rounded-md outline-none bg-transparent text-xs font-bold"
-                                                >
-                                                  <option value="un">un</option>
-                                                  <option value="kg">kg</option>
-                                                  <option value="maço">maço</option>
-                                                  <option value="pct">pct</option>
-                                                  <option value="cx">cx</option>
-                                                  <option value="lt">lt</option>
-                                                  <option value="g">g</option>
-                                                  <option value="Outro">Outro...</option>
-                                                </select>
-                                                {!['un', 'kg', 'maço', 'pct', 'cx', 'lt', 'g'].includes(item.unit) && (
-                                                  <input 
-                                                    type="text"
-                                                    placeholder="Ex: cx 12"
-                                                    value={item.unit}
-                                                    onChange={(e) => {
-                                                      const updated = [...extractedItens];
-                                                      updated[index] = { ...updated[index], unit: e.target.value };
-                                                      setExtractedItens(updated);
-                                                    }}
-                                                    className="px-1.5 py-0.5 border border-gray-200 rounded focus:border-[#00288e] outline-none text-[10px]"
-                                                  />
-                                                )}
-                                              </div>
-                                            </td>
-                                            <td className="p-3">
-                                              <input 
-                                                type="number"
-                                                min="0"
-                                                step="any"
-                                                value={item.quantity === 0 ? '' : item.quantity}
-                                                onChange={(e) => {
-                                                  const val = parseFloat(e.target.value) || 0;
-                                                  const updated = [...extractedItens];
-                                                  updated[index] = { ...updated[index], quantity: val };
-                                                  setExtractedItens(updated);
-                                                }}
-                                                className="w-full px-1.5 py-1 border border-transparent hover:border-gray-200 focus:border-[#00288e] focus:bg-white rounded outline-none text-xs font-bold text-gray-800"
-                                                placeholder="0"
-                                              />
-                                            </td>
-                                            <td className="p-3">
-                                              <input 
-                                                type="number"
-                                                min="0"
-                                                step="any"
-                                                value={item.unitPrice === 0 ? '' : item.unitPrice}
-                                                onChange={(e) => {
-                                                  const val = parseFloat(e.target.value) || 0;
-                                                  const updated = [...extractedItens];
-                                                  updated[index] = { ...updated[index], unitPrice: val };
-                                                  setExtractedItens(updated);
-                                                }}
-                                                className="w-full px-1.5 py-1 border border-transparent hover:border-gray-200 focus:border-[#00288e] focus:bg-white rounded outline-none text-xs font-bold text-gray-800"
-                                                placeholder="0.00"
-                                              />
-                                            </td>
-                                            <td className="p-3 text-right font-black text-gray-900 pr-3">
-                                              R$ {totalItem.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                            </td>
-                                            <td className="p-3 text-center">
-                                              <button 
-                                                onClick={() => {
-                                                  setExtractedItens(extractedItens.filter((_, i) => i !== index));
-                                                }}
-                                                className="text-gray-400 hover:text-rose-600 hover:bg-rose-50 p-1 rounded transition-all cursor-pointer"
-                                                title="Remover item"
-                                              >
-                                                <Trash2 className="w-4 h-4" />
-                                              </button>
-                                            </td>
-                                          </tr>
-                                        );
-                                      })
-                                    )}
-                                  </tbody>
-                                </table>
-                              </div>
-
-                              {/* Warning & Summary Row */}
-                              <div className="space-y-4">
-                                {uploadForm.expectedTotal && Math.abs(calculatedTotal - parseFloat(uploadForm.expectedTotal)) > 0.01 && (
-                                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3 select-none">
-                                    <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                                    <div className="text-left">
-                                      <h5 className="font-bold text-xs text-amber-800">⚠️ Divergência detectada no Valor Total</h5>
-                                      <p className="text-[11px] text-amber-700 font-semibold mt-0.5 leading-relaxed">
-                                        O valor total calculado dos itens (R$ {calculatedTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) difere do valor total informado no cabeçalho (R$ {parseFloat(uploadForm.expectedTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}). Revise os dados antes de salvar o empenho.
-                                      </p>
-                                    </div>
-                                  </div>
-                                )}
-
-                                <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-5 flex items-center justify-between select-none">
-                                  <div className="text-left">
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Quantidade de Itens</p>
-                                    <p className="text-lg font-black text-gray-800">{extractedItens.length} itens cadastrados</p>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Valor Total Calculado</p>
-                                    <p className="text-xl font-black text-[#00288e]">
-                                      R$ {calculatedTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="pt-4 flex justify-between gap-3 border-t border-gray-100">
-                                <button 
-                                  type="button"
-                                  onClick={() => setUploadStage(1)}
-                                  className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-xs hover:bg-gray-200 transition-all flex items-center gap-1.5 cursor-pointer"
-                                >
-                                  <ArrowLeft className="w-4 h-4" /> Voltar Cabeçalho
-                                </button>
-                                <div className="flex gap-2">
-                                  <button 
-                                    type="button"
-                                    onClick={() => setShowNewEmpenhoModal(false)}
-                                    className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-xs hover:bg-gray-200 transition-all cursor-pointer"
-                                  >
-                                    Cancelar
-                                  </button>
-                                  <button 
-                                    type="button"
-                                    disabled={extractedItens.length === 0 || extractedItens.some(it => !it.name.trim())}
-                                    onClick={() => setShowSaveConfirmModal(true)}
-                                    className={`px-5 py-2.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 cursor-pointer transition-all ${
-                                      (extractedItens.length > 0 && !extractedItens.some(it => !it.name.trim()))
-                                        ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm'
-                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                    }`}
-                                  >
-                                    Confirmar e Salvar Empenho <Check className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          )}
+                              Cancelar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleProcessJson}
+                              className="px-5 py-2.5 bg-[#00288e] text-white rounded-xl font-bold text-xs hover:bg-[#1e40af] transition-all shadow-sm flex items-center gap-1.5"
+                            >
+                              Processar JSON
+                            </button>
+                          </div>
                         </div>
                       )}
+
+                      {/* MODE 2 SUB-VIEW: JSON REVIEW & EDIT SCREEN */}
+                      {reviewEmpenho && (
+                        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+                          
+                          {/* Top-level Metadata Grid */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Número do Empenho</label>
+                              <input
+                                type="text"
+                                value={reviewEmpenho.id}
+                                onChange={(e) => setReviewEmpenho({ ...reviewEmpenho, id: e.target.value })}
+                                className="w-full px-3 py-1.5 border border-gray-200 rounded-xl bg-white text-xs font-bold text-[#0b1c30] focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Data de Emissão</label>
+                              <input
+                                type="text"
+                                value={reviewEmpenho.date}
+                                onChange={(e) => setReviewEmpenho({ ...reviewEmpenho, date: e.target.value })}
+                                className="w-full px-3 py-1.5 border border-gray-200 rounded-xl bg-white text-xs font-bold text-[#0b1c30] focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none"
+                                placeholder="DD/MM/AAAA"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Classificação do Empenho</label>
+                              <div className="grid grid-cols-3 gap-1">
+                                {(['QR', 'CALI', 'PASA'] as const).map((type) => (
+                                  <button
+                                    key={type}
+                                    type="button"
+                                    onClick={() => setReviewEmpenho({ ...reviewEmpenho, classification: type })}
+                                    className={`py-1.5 rounded-lg font-bold text-[10px] border transition-all ${
+                                      reviewEmpenho.classification === type
+                                        ? 'bg-[#00288e] text-white border-[#00288e]'
+                                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                                    }`}
+                                  >
+                                    {type}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Fornecedor / Razão Social</label>
+                              <input
+                                type="text"
+                                value={reviewEmpenho.supplier}
+                                onChange={(e) => setReviewEmpenho({ ...reviewEmpenho, supplier: e.target.value })}
+                                className="w-full px-3 py-1.5 border border-gray-200 rounded-xl bg-white text-xs font-bold text-[#0b1c30] focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">CNPJ do Fornecedor</label>
+                              <input
+                                type="text"
+                                value={reviewEmpenho.cnpj || ''}
+                                onChange={(e) => setReviewEmpenho({ ...reviewEmpenho, cnpj: e.target.value })}
+                                className="w-full px-3 py-1.5 border border-gray-200 rounded-xl bg-white text-xs font-bold text-[#0b1c30] focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none"
+                                placeholder="00.000.000/0000-00"
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Descrição Sumária do Contrato</label>
+                              <input
+                                type="text"
+                                value={reviewEmpenho.description}
+                                onChange={(e) => setReviewEmpenho({ ...reviewEmpenho, description: e.target.value })}
+                                className="w-full px-3 py-1.5 border border-gray-200 rounded-xl bg-white text-xs font-bold text-[#0b1c30] focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none"
+                                placeholder="Ex: Aquisição de Insumos Gerais"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Pregão Relacionado</label>
+                              <input
+                                type="text"
+                                value={reviewEmpenho.pregao}
+                                onChange={(e) => setReviewEmpenho({ ...reviewEmpenho, pregao: e.target.value })}
+                                className="w-full px-3 py-1.5 border border-gray-200 rounded-xl bg-white text-xs font-bold text-[#0b1c30] focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none"
+                                placeholder="Ex: 12/2025"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Alert for Divergence */}
+                          {reviewEmpenho && typeof reviewEmpenho.valorTotalDeclarado === 'number' && reviewEmpenho.valorTotalDeclarado > 0 && (
+                            (() => {
+                              const calculatedTotal = reviewEmpenho.items.reduce((sum: number, item: any) => sum + (item.quantity * item.unitPrice), 0);
+                              const isTotalDivergent = Math.abs(reviewEmpenho.valorTotalDeclarado - calculatedTotal) > 0.05;
+                              if (isTotalDivergent) {
+                                return (
+                                  <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-xs font-semibold flex items-start gap-2.5">
+                                    <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-amber-500" />
+                                    <span>
+                                      O valor total declarado (R$ {reviewEmpenho.valorTotalDeclarado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) difere da soma calculada dos itens (R$ {calculatedTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}). Revise antes de salvar.
+                                    </span>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()
+                          )}
+
+                          {/* Items Section */}
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <h4 className="text-sm font-bold text-[#0b1c30] uppercase tracking-wider">Itens do Empenho ({reviewEmpenho.items.length})</h4>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newItem = {
+                                    id: `ITEM-${Math.floor(Math.random() * 10000)}`,
+                                    name: '',
+                                    unit: 'UN',
+                                    quantity: 1,
+                                    unitPrice: 0,
+                                    received: 0,
+                                  };
+                                  setReviewEmpenho({
+                                    ...reviewEmpenho,
+                                    items: [...reviewEmpenho.items, newItem],
+                                  });
+                                }}
+                                className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#00288e] rounded-xl text-xs font-bold flex items-center gap-1 transition-all"
+                              >
+                                <Plus className="w-3.5 h-3.5" /> Adicionar Item
+                              </button>
+                            </div>
+
+                            {/* Scrollable table container */}
+                            <div className="border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-gray-50 border-b border-gray-100 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                                    <th className="p-3 w-32">Cód. Item</th>
+                                    <th className="p-3">Descrição</th>
+                                    <th className="p-3 w-16">Unidade</th>
+                                    <th className="p-3 w-20">Quantidade</th>
+                                    <th className="p-3 w-28">V. Unitário (R$)</th>
+                                    <th className="p-3 w-28 text-right">V. Total (R$)</th>
+                                    <th className="p-3 w-16 text-center">Ações</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {reviewEmpenho.items.map((item: any, idx: number) => {
+                                    const totalRow = item.quantity * item.unitPrice;
+                                    return (
+                                      <tr key={idx} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                                        <td className="p-2">
+                                          <input
+                                            type="text"
+                                            value={item.id}
+                                            onChange={(e) => {
+                                              const updatedItems = [...reviewEmpenho.items];
+                                              updatedItems[idx].id = e.target.value;
+                                              setReviewEmpenho({ ...reviewEmpenho, items: updatedItems });
+                                            }}
+                                            className="w-full px-2 py-1 text-xs border border-gray-200 rounded-lg outline-none focus:border-[#00288e] font-semibold text-gray-700"
+                                          />
+                                        </td>
+                                        <td className="p-2">
+                                          <input
+                                            type="text"
+                                            value={item.name}
+                                            onChange={(e) => {
+                                              const updatedItems = [...reviewEmpenho.items];
+                                              updatedItems[idx].name = e.target.value;
+                                              setReviewEmpenho({ ...reviewEmpenho, items: updatedItems });
+                                            }}
+                                            className="w-full px-2 py-1 text-xs border border-gray-200 rounded-lg outline-none focus:border-[#00288e] font-semibold text-gray-700"
+                                          />
+                                        </td>
+                                        <td className="p-2">
+                                          <input
+                                            type="text"
+                                            value={item.unit}
+                                            onChange={(e) => {
+                                              const updatedItems = [...reviewEmpenho.items];
+                                              updatedItems[idx].unit = e.target.value;
+                                              setReviewEmpenho({ ...reviewEmpenho, items: updatedItems });
+                                            }}
+                                            className="w-full px-2 py-1 text-xs border border-gray-200 rounded-lg outline-none focus:border-[#00288e] text-center font-bold text-gray-500"
+                                          />
+                                        </td>
+                                        <td className="p-2">
+                                          <input
+                                            type="number"
+                                            step="any"
+                                            value={item.quantity}
+                                            onChange={(e) => {
+                                              const updatedItems = [...reviewEmpenho.items];
+                                              updatedItems[idx].quantity = parseFloat(e.target.value) || 0;
+                                              setReviewEmpenho({ ...reviewEmpenho, items: updatedItems });
+                                            }}
+                                            className="w-full px-2 py-1 text-xs border border-gray-200 rounded-lg outline-none focus:border-[#00288e] text-center font-bold text-gray-700"
+                                          />
+                                        </td>
+                                        <td className="p-2">
+                                          <input
+                                            type="number"
+                                            step="any"
+                                            value={item.unitPrice}
+                                            onChange={(e) => {
+                                              const updatedItems = [...reviewEmpenho.items];
+                                              updatedItems[idx].unitPrice = parseFloat(e.target.value) || 0;
+                                              setReviewEmpenho({ ...reviewEmpenho, items: updatedItems });
+                                            }}
+                                            className="w-full px-2 py-1 text-xs border border-gray-200 rounded-lg outline-none focus:border-[#00288e] text-right font-bold text-gray-700"
+                                          />
+                                        </td>
+                                        <td className="p-3 text-xs font-bold text-gray-700 text-right">
+                                          R$ {totalRow.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="p-2 text-center">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const updatedItems = reviewEmpenho.items.filter((_: any, i: number) => i !== idx);
+                                              setReviewEmpenho({ ...reviewEmpenho, items: updatedItems });
+                                            }}
+                                            className="text-rose-600 hover:text-rose-800 font-extrabold text-xs p-1 hover:bg-rose-50 rounded-lg"
+                                          >
+                                            Excluir
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                                <tfoot>
+                                  <tr className="bg-gray-50/80 font-bold border-t border-gray-100 text-xs text-gray-700">
+                                    <td colSpan={5} className="p-3 text-right text-gray-500">Valor Total da Lista:</td>
+                                    <td className="p-3 text-right text-sm text-[#00288e] font-extrabold">
+                                      R$ {reviewEmpenho.items.reduce((sum: number, item: any) => sum + (item.quantity * item.unitPrice), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </td>
+                                    <td></td>
+                                  </tr>
+                                </tfoot>
+                              </table>
+                            </div>
+                          </div>
+
+                          {/* Review footer buttons */}
+                          <div className="pt-5 border-t border-gray-100 flex justify-between gap-3">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReviewEmpenho(null);
+                                setJsonError(null);
+                              }}
+                              className="px-4 py-2.5 bg-gray-100 text-gray-600 hover:bg-gray-200 font-bold text-xs rounded-xl flex items-center gap-1 transition-all"
+                            >
+                              <ArrowLeft className="w-4 h-4" /> Voltar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmSaveModal(true)}
+                              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-sm"
+                            >
+                              <Check className="w-4 h-4" /> Confirmar e Salvar Empenho
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  </div>
+                )}
+              </AnimatePresence>
+
+              {/* Sub-modal: Confirm JSON Save Resumo */}
+              <AnimatePresence>
+                {showConfirmSaveModal && reviewEmpenho && (
+                  <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+                    <motion.div
+                      initial={{ scale: 0.95, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.95, opacity: 0 }}
+                      className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-md w-full overflow-hidden"
+                    >
+                      <div className="bg-emerald-600 text-white p-5 flex justify-between items-center">
+                        <h3 className="font-bold text-base tracking-tight flex items-center gap-1.5">
+                          <CheckCircle2 className="w-5 h-5" /> Confirmar Cadastro
+                        </h3>
+                        <button 
+                          onClick={() => setShowConfirmSaveModal(false)}
+                          className="text-emerald-100 hover:text-white transition-all p-1"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+
+                      <div className="p-5 space-y-4 text-sm text-[#0b1c30]">
+                        <p className="text-gray-500 font-semibold text-xs uppercase tracking-wider">Resumo do Novo Empenho</p>
+                        
+                        <div className="bg-gray-50 p-4 rounded-xl space-y-2 border border-gray-100">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400 font-bold text-xs">Número NE:</span>
+                            <span className="font-extrabold text-gray-800">{reviewEmpenho.id}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400 font-bold text-xs">Fornecedor:</span>
+                            <span className="font-extrabold text-gray-800 text-right max-w-[200px] truncate">{reviewEmpenho.supplier}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400 font-bold text-xs">Total de Itens:</span>
+                            <span className="font-extrabold text-gray-800">{reviewEmpenho.items.length}</span>
+                          </div>
+                          <div className="flex justify-between border-t border-gray-200 pt-2 mt-2">
+                            <span className="text-gray-500 font-extrabold text-xs">Valor Total:</span>
+                            <span className="font-black text-emerald-600">
+                              R$ {reviewEmpenho.items.reduce((sum: number, item: any) => sum + (item.quantity * item.unitPrice), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-gray-400 leading-relaxed font-semibold">
+                          Deseja confirmar o cadastro desta Nota de Empenho com as especificações acima? Esta ação persistirá os dados e atualizará o painel de faturamentos de forma definitiva.
+                        </p>
+                      </div>
+
+                      <div className="bg-gray-50 p-4 flex justify-end gap-3 border-t border-gray-100">
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmSaveModal(false)}
+                          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-600 rounded-xl font-bold text-xs transition-all"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveReviewEmpenho}
+                          className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-1"
+                        >
+                          Salvar Empenho
+                        </button>
+                      </div>
                     </motion.div>
                   </div>
                 )}
@@ -3602,22 +3234,34 @@ Se não encontrar a seção "Lista de Itens", retorne:
                                     <input 
                                       type="number"
                                       min="0"
-                                      max={balance}
                                       placeholder="0"
                                       value={nfQuantities[item.id] === undefined || nfQuantities[item.id] === 0 ? '' : nfQuantities[item.id]}
                                       onChange={(e) => {
-                                        const val = Math.min(balance, Math.max(0, parseFloat(e.target.value) || 0));
+                                        const val = Math.max(0, parseFloat(e.target.value) || 0);
                                         setNfQuantities({
                                           ...nfQuantities,
                                           [item.id]: val,
                                         });
                                       }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                                          e.preventDefault();
+                                        }
+                                      }}
+                                      onWheel={(e) => e.currentTarget.blur()}
                                       className={`w-full h-11 text-center font-bold text-lg rounded-xl focus:ring-2 outline-none transition-all ${
-                                        inputVal > 0 
-                                          ? 'bg-[#dde1ff] text-[#001453] border-transparent focus:ring-[#00288e]' 
-                                          : 'bg-gray-50 text-gray-700 border border-gray-100 focus:ring-blue-200'
+                                        inputVal > balance
+                                          ? 'bg-rose-50 text-rose-700 border-rose-300 focus:ring-rose-200 focus:border-rose-500 border'
+                                          : inputVal > 0 
+                                            ? 'bg-[#dde1ff] text-[#001453] border-transparent focus:ring-[#00288e]' 
+                                            : 'bg-gray-50 text-gray-700 border border-gray-100 focus:ring-blue-200'
                                       }`}
                                     />
+                                    {inputVal > balance && (
+                                      <p className="text-[10px] text-rose-600 font-bold mt-1 text-center animate-pulse">
+                                        Excede o saldo disponível ({balance})
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
 
@@ -4633,233 +4277,6 @@ Se não encontrar a seção "Lista de Itens", retorne:
 
 
       </nav>
-
-      {/* MODAL DE CONFIGURAÇÕES DE API GEMINI */}
-      <AnimatePresence>
-        {showSettingsModal && (
-          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-2xl shadow-xl border border-gray-200 max-w-lg w-full flex flex-col overflow-hidden text-gray-800"
-            >
-              <div className="bg-[#0b1c30] text-white p-5 flex justify-between items-center">
-                <div className="flex items-center gap-2.5">
-                  <Settings className="w-5 h-5 text-blue-400" />
-                  <h3 className="font-bold text-sm sm:text-base">Configurações do Sistema</h3>
-                </div>
-                <button
-                  onClick={() => setShowSettingsModal(false)}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="p-6 space-y-5">
-                <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Status da Integração AI</span>
-                  {geminiApiKey ? (
-                    <span className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs font-black">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                      Configurada
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1.5 bg-rose-50 text-rose-700 px-3 py-1 rounded-full text-xs font-black">
-                      <span className="w-2 h-2 rounded-full bg-rose-500" />
-                      Não Configurada
-                    </span>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Chave de API do Gemini
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showApiKey ? 'text' : 'password'}
-                      value={settingsApiKeyInput}
-                      onChange={(e) => setSettingsApiKeyInput(e.target.value)}
-                      placeholder="Cole sua chave api_key aqui..."
-                      className="w-full h-12 pl-10 pr-12 border border-gray-200 rounded-xl bg-white text-sm font-semibold text-gray-800 outline-none focus:border-[#00288e] transition-colors"
-                    />
-                    <Key className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-gray-400" />
-                    <button
-                      type="button"
-                      onClick={() => setShowApiKey(!showApiKey)}
-                      className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      {showApiKey ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 space-y-3">
-                  <div className="flex gap-2.5 items-start">
-                    <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-[11px] font-semibold text-gray-500 leading-relaxed">
-                      A chave é salva apenas neste navegador e neste dispositivo. Em outro computador será necessário configurá-la novamente.
-                    </p>
-                  </div>
-                  
-                  <div className="pt-2 border-t border-gray-200/50">
-                    <p className="text-[11px] font-semibold text-gray-500">
-                      Para obter uma chave de API gratuita, acesse o{' '}
-                      <a
-                        href="https://aistudio.google.com/app/apikey"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#00288e] hover:underline font-bold inline-flex items-center gap-0.5"
-                      >
-                        Google AI Studio
-                      </a>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 justify-end pt-2">
-                  {geminiApiKey && (
-                    <button
-                      onClick={() => {
-                        localStorage.removeItem('gemini_api_key');
-                        setGeminiApiKey('');
-                        setSettingsApiKeyInput('');
-                        showToast('Chave de API removida com sucesso.', 'success');
-                      }}
-                      className="px-4 h-11 border border-rose-200 text-rose-600 rounded-xl font-bold text-xs hover:bg-rose-50 active:scale-95 duration-100 transition-all"
-                    >
-                      Remover Chave
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      if (!settingsApiKeyInput.trim()) {
-                        showToast('Por favor, informe uma chave de API válida.', 'error');
-                        return;
-                      }
-                      localStorage.setItem('gemini_api_key', settingsApiKeyInput.trim());
-                      setGeminiApiKey(settingsApiKeyInput.trim());
-                      showToast('Chave de API salva com sucesso!', 'success');
-                      setShowSettingsModal(false);
-                    }}
-                    className="px-5 h-11 bg-[#00288e] text-white rounded-xl font-bold text-xs hover:bg-[#1e40af] active:scale-95 duration-100 transition-all flex items-center gap-1.5 shadow-sm"
-                  >
-                    <Save className="w-4 h-4" /> Salvar Chave
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* MODAL DE CONFIRMAÇÃO DE SALVAMENTO (REVISÃO AI) */}
-      <AnimatePresence>
-        {showSaveConfirmModal && (
-          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-2xl shadow-xl border border-gray-200 max-w-md w-full flex flex-col overflow-hidden text-gray-800"
-            >
-              <div className="bg-[#00288e] text-white p-5 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <Check className="w-5 h-5 text-emerald-300" />
-                  <h3 className="font-extrabold text-sm sm:text-base uppercase tracking-wider">Confirmar Cadastro</h3>
-                </div>
-                <button
-                  onClick={() => setShowSaveConfirmModal(false)}
-                  className="text-blue-100 hover:text-white transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="p-6 space-y-5">
-                <div className="text-center space-y-1">
-                  <h4 className="font-bold text-gray-800 text-sm">Resumo do Empenho a ser Cadastrado:</h4>
-                  <p className="text-xs text-gray-500 font-medium">Verifique os dados compilados pelo upload antes de salvar.</p>
-                </div>
-
-                <div className="bg-gray-50 rounded-xl border border-gray-100 p-4 space-y-3.5 text-xs font-semibold">
-                  <div className="flex justify-between pb-2 border-b border-gray-200/50">
-                    <span className="text-gray-400 uppercase tracking-wider text-[10px]">Número do Empenho</span>
-                    <span className="text-[#00288e] font-extrabold font-mono">{uploadForm.id.toUpperCase()}</span>
-                  </div>
-                  
-                  <div className="flex justify-between pb-2 border-b border-gray-200/50">
-                    <span className="text-gray-400 uppercase tracking-wider text-[10px]">Fornecedor</span>
-                    <span className="text-gray-700 font-bold truncate max-w-[200px]">{uploadForm.supplier}</span>
-                  </div>
-
-                  <div className="flex justify-between pb-2 border-b border-gray-200/50">
-                    <span className="text-gray-400 uppercase tracking-wider text-[10px]">Classe de Empenho</span>
-                    <span className="bg-blue-50 text-[#00288e] px-2 py-0.5 rounded-full font-black">{uploadForm.classification}</span>
-                  </div>
-
-                  <div className="flex justify-between pb-2 border-b border-gray-200/50">
-                    <span className="text-gray-400 uppercase tracking-wider text-[10px]">Quantidade de Itens</span>
-                    <span className="text-gray-700 font-extrabold">{extractedItens.length} itens</span>
-                  </div>
-
-                  {(() => {
-                    const totalCalculado = extractedItens.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-                    const expectedVal = parseFloat(uploadForm.expectedTotal) || 0;
-                    const hasDivergence = expectedVal > 0 && Math.abs(totalCalculado - expectedVal) > 0.01;
-
-                    return (
-                      <div className="space-y-3.5">
-                        <div className="flex justify-between">
-                          <span className="text-gray-400 uppercase tracking-wider text-[10px]">Valor Total de Itens</span>
-                          <span className="text-emerald-600 font-black">
-                            R$ {totalCalculado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
-
-                        {expectedVal > 0 && (
-                          <div className="flex justify-between pt-2 border-t border-dashed border-gray-200">
-                            <span className="text-gray-400 uppercase tracking-wider text-[10px]">Valor Total Informado</span>
-                            <span className="text-gray-700 font-extrabold">
-                              R$ {expectedVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </span>
-                          </div>
-                        )}
-
-                        {hasDivergence && (
-                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2 items-start mt-2 text-amber-800">
-                            <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                            <p className="text-[10px] leading-relaxed font-semibold">
-                              Atenção: O valor total calculado dos itens (R$ {totalCalculado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) diverge do total informado na folha de empenho (R$ {expectedVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}). Deseja salvar mesmo assim?
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                <div className="flex gap-3 justify-end pt-2 text-xs font-bold">
-                  <button
-                    onClick={() => setShowSaveConfirmModal(false)}
-                    className="px-4 h-11 border border-gray-200 text-gray-500 rounded-xl hover:bg-gray-50 transition-all active:scale-95"
-                  >
-                    Voltar e Corrigir
-                  </button>
-                  <button
-                    onClick={handleSaveUploadedEmpenho}
-                    className="px-5 h-11 bg-[#00288e] text-white rounded-xl hover:bg-[#1e40af] transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
-                  >
-                    Sim, Confirmar e Salvar
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
     </div>
   );
