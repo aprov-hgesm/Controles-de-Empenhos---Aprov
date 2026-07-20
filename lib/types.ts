@@ -36,6 +36,7 @@ export interface Invoice {
   registeredAt?: string; // Data de cadastramento da nota fiscal
   comissaoDate?: string; // Data de envio para a comissão de recebimento
   tesourariaDate?: string; // Data de envio para a tesouraria
+  termoNumero?: number; // Número do termo de recebimento QR
 }
 
 export interface MembroComissao {

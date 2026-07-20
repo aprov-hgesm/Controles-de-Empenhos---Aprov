@@ -1146,7 +1146,23 @@ export default function Home() {
     setComissaoAux3Nome('');
   };
 
-  const handleDownloadTermoRecebimento = (inv: Invoice) => {
+  const handleDownloadTermoRecebimento = async (inv: Invoice) => {
+    // 1. Determine or assign sequential term number
+    let termoNumero = inv.termoNumero;
+    if (!termoNumero) {
+      const maxTermoNumero = invoices.reduce((max, i) => (i.termoNumero && i.termoNumero > max ? i.termoNumero : max), 0);
+      termoNumero = maxTermoNumero + 1;
+      
+      // Save updated invoice with termoNumero to Firestore
+      if (user) {
+        try {
+          await saveInvoice(user.uid, { ...inv, termoNumero });
+        } catch (error) {
+          console.error("Erro ao salvar número do termo:", error);
+        }
+      }
+    }
+
     // 1. Find matching commission for the month of reference of the invoice
     const invMonth = inv.issueDate ? inv.issueDate.substring(0, 7) : '';
     let matchingComissao = comissoes.find(c => c.mesReferencia === invMonth);
@@ -1231,7 +1247,7 @@ export default function Home() {
     centerText('EXÉRCITO BRASILEIRO', 9, 'bold');
     centerText('HOSPITAL GERAL DE SANTA MARIA', 10, 'bold');
     yPos += 4;
-    centerText('TERMO DE RECEBIMENTO DE ARTIGOS DE QR', 12, 'bold', secondaryColor);
+    centerText(`TERMO DE RECEBIMENTO DE ARTIGOS DE QR Nº ${termoNumero}/${new Date().getFullYear()}`, 11, 'bold', secondaryColor);
     yPos += 5;
 
     // --- 1. NOMEAÇÃO DA COMISSÃO ---
@@ -1501,7 +1517,30 @@ export default function Home() {
     const vistoWidth = doc.getTextWidth(vistoText);
     doc.text(vistoText, (pageWidth - vistoWidth) / 2, yPos + 5);
 
-    const filename = `Termo_Recebimento_NF_${inv.id}.pdf`;
+    // --- PAGE FOOTER WITH PAGE NUMBERING AND DOCUMENT IDENTIFIER ---
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      
+      // Line separator above footer
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.15);
+      doc.line(margin, doc.internal.pageSize.getHeight() - 15, pageWidth - margin, doc.internal.pageSize.getHeight() - 15);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(120, 120, 120);
+      
+      // Left side: Document identifier with number
+      doc.text(`Termo de Recebimento de Artigos de QR Nº ${termoNumero}/${new Date().getFullYear()}`, margin, doc.internal.pageSize.getHeight() - 10);
+      
+      // Right side: Page numbering
+      const pageText = `Página ${i} de ${pageCount}`;
+      const pageTextWidth = doc.getTextWidth(pageText);
+      doc.text(pageText, pageWidth - margin - pageTextWidth, doc.internal.pageSize.getHeight() - 10);
+    }
+
+    const filename = `Termo_Recebimento_QR_No_${termoNumero}_NF_${inv.id}.pdf`;
     doc.save(filename);
     showToast(`Download iniciado: ${filename}`, 'success');
   };
@@ -2954,6 +2993,11 @@ export default function Home() {
                                 <span className="bg-blue-50 text-[#00288e] text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
                                   NF-e #{inv.id}
                                 </span>
+                                {inv.termoNumero && (
+                                  <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-emerald-100">
+                                    Termo Nº {inv.termoNumero}
+                                  </span>
+                                )}
                                 <span className="text-gray-400 text-xs font-semibold">
                                   Empenho: <span className="font-bold text-gray-600">{inv.empenhoId}</span>
                                 </span>

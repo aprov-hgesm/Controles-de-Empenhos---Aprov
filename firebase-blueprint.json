@@ -47,6 +47,7 @@
         "registeredAt": { "type": "string" },
         "comissaoDate": { "type": "string" },
         "tesourariaDate": { "type": "string" },
+        "termoNumero": { "type": "number" },
         "userId": { "type": "string" }
       },
       "required": ["id", "empenhoId", "issueDate", "items", "totalValue", "supplier", "userId"]
