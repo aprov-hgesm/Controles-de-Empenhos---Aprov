@@ -1326,6 +1326,12 @@ export default function Home() {
     doc.text(`Valor Total: `, margin + 135, yPos);
     doc.setFont('helvetica', 'bold');
     doc.text(empenhoTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), margin + 155, yPos);
+    yPos += 5;
+
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Fornecedor Credor: `, margin, yPos);
+    doc.setFont('helvetica', 'bold');
+    doc.text(targetEmp?.supplier || 'Não especificado', margin + 35, yPos);
     yPos += 6;
 
     // --- 4. DADOS DA NOTA FISCAL ---
@@ -1346,6 +1352,12 @@ export default function Home() {
     doc.text(`Valor Total: `, margin + 135, yPos);
     doc.setFont('helvetica', 'bold');
     doc.text(inv.totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), margin + 155, yPos);
+    yPos += 5;
+
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Empresa Emitente: `, margin, yPos);
+    doc.setFont('helvetica', 'bold');
+    doc.text(inv.supplier || 'Não especificada', margin + 35, yPos);
     yPos += 8;
 
     // Safety margin check
