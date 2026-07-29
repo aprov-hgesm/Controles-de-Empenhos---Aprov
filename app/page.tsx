@@ -3759,10 +3759,10 @@ export default function Home() {
                 }
 
                 const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-                const totalReceived = emp.items.reduce((sum, item) => sum + item.received * item.unitPrice, 0);
                 
                 // Get linked invoices list
                 const linkedInvoices = invoices.filter(inv => inv.empenhoId === emp.id);
+                const totalReceivedNfe = linkedInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
 
                 return (
                   <div className="space-y-6">
@@ -3792,7 +3792,7 @@ export default function Home() {
                           <div>
                             <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider block">TOTAL RECEBIDO (NF-e)</span>
                             <span className="text-xl sm:text-2xl font-black text-emerald-600">
-                              R$ {totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              R$ {totalReceivedNfe.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </span>
                           </div>
 
@@ -3948,8 +3948,8 @@ export default function Home() {
                             const emp = empenhos.find(e => e.id === reportSearch);
                             if (!emp) return null;
                             const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-                            const totalReceived = emp.items.reduce((sum, item) => sum + item.received * item.unitPrice, 0);
                             const pdfInvoices = invoices.filter(inv => inv.empenhoId === emp.id);
+                            const pdfTotalReceivedNfe = pdfInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
 
                             return (
                               <div className="space-y-4">
@@ -3975,7 +3975,7 @@ export default function Home() {
                                   </div>
                                   <div className="text-right">
                                     <p className="font-bold text-gray-400 text-[9px]">TOTAL CONCILIADO POR NF-e</p>
-                                    <p className="text-base font-black text-emerald-600">R$ {totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                    <p className="text-base font-black text-emerald-600">R$ {pdfTotalReceivedNfe.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                                   </div>
                                 </div>
 
