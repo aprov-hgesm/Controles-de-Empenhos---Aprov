@@ -336,6 +336,7 @@ export default function Home() {
   const [nfSearch, setNfSearch] = useState('');
   const [nfSubTab, setNfSubTab] = useState<'acompanhar' | 'cadastrar' | 'comissao'>('acompanhar');
   const [nfMonthFilter, setNfMonthFilter] = useState('Todos');
+  const [nfEmpenhoFilter, setNfEmpenhoFilter] = useState('Todos');
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
 
   // --- COMISSÃO DE RECEBIMENTO FORM STATES ---
@@ -2909,6 +2910,23 @@ export default function Home() {
                       />
                     </div>
 
+                    {/* Empenho Filter */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap hidden md:inline">Empenho (NE):</span>
+                      <select
+                        value={nfEmpenhoFilter}
+                        onChange={(e) => setNfEmpenhoFilter(e.target.value)}
+                        className="h-11 px-4 rounded-xl border border-gray-200 bg-white focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-bold text-sm text-[#0b1c30] shadow-sm min-w-[160px]"
+                      >
+                        <option value="Todos">Todos os Empenhos</option>
+                        {Array.from(new Set([...empenhos.map(e => e.id), ...invoices.map(i => i.empenhoId)].filter(Boolean))).map(empId => (
+                          <option key={empId} value={empId}>
+                            NE {empId}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
                     {/* Month Filter */}
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap hidden md:inline">Mês da Nota:</span>
@@ -2961,7 +2979,9 @@ export default function Home() {
                         const matchesMonth = nfMonthFilter === 'Todos' || 
                           (inv.issueDate && inv.issueDate.startsWith(nfMonthFilter));
 
-                        return matchesSearch && matchesMonth;
+                        const matchesEmpenho = nfEmpenhoFilter === 'Todos' || inv.empenhoId === nfEmpenhoFilter;
+
+                        return matchesSearch && matchesMonth && matchesEmpenho;
                       });
 
                       if (filteredInvoices.length === 0) {
