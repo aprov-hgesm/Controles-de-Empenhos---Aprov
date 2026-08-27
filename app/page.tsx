@@ -750,8 +750,14 @@ export default function Home() {
       return;
     }
 
-    if (!nfNumber) {
+    if (!nfNumber.trim()) {
       showToast('Por favor, insira o número da Nota Fiscal.', 'error');
+      return;
+    }
+
+    const cleanNfNum = nfNumber.trim();
+    if (!editingInvoice && invoices.some(inv => inv.id.trim() === cleanNfNum)) {
+      showToast(`A Nota Fiscal nº ${cleanNfNum} já está cadastrada no sistema! Utilize o botão de edição na lista de notas para alterá-la.`, 'error');
       return;
     }
 
