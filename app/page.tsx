@@ -110,7 +110,7 @@ const normalizeSupplier = (supplier: any): string => {
   return String(supplier);
 };
 
-const PROMPT_EXTRACAO_EMPENHO = `# PROMPT FIXO — Extração de Dados de Nota de Empenho
+export const PROMPT_EXTRACAO_EMPENHO = `# PROMPT FIXO — Extração de Dados de Nota de Empenho
 # Use este prompt no Claude, ChatGPT ou Gemini, anexando o PDF da NE
 
 ---
