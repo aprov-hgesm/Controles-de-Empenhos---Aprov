@@ -34,6 +34,7 @@ import {
   UserCheck,
   FileDown,
   Download,
+  Copy,
   Eye,
   LogIn,
   LogOut,
@@ -108,6 +109,45 @@ const normalizeSupplier = (supplier: any): string => {
   }
   return String(supplier);
 };
+
+export const PROMPT_EXTRACAO_EMPENHO = `# PROMPT FIXO — Extração de Dados de Nota de Empenho
+# Use este prompt no Claude, ChatGPT ou Gemini, anexando o PDF da NE
+
+---
+
+Analise o PDF da Nota de Empenho anexado e extraia os dados abaixo.
+Retorne SOMENTE o JSON, sem texto antes ou depois, sem explicações, sem blocos markdown.
+
+Formato exato a retornar:
+
+{
+  "numero_empenho": "2025NE124",
+  "data_emissao": "2025-08-27",
+  "tipo_empenho": "Global",
+  "valor_total": 12043.80,
+  "fornecedor": {
+    "razao_social": "JULIANO LUCIO FRANCISCATTO DO AMARAL & CIA LT",
+    "cnpj": "02.483.088/0001-75"
+  },
+  "itens": [
+    {
+      "num_item": "001",
+      "codigo_item": "00002",
+      "descricao": "LEGUME PROCESSADO, TIPO MANDIOCA, PREPARO IN NATURA, APRESENTACAO CONGELADO, A VACUO",
+      "unidade": "kg",
+      "quantidade": 430,
+      "valor_unitario": 6.90,
+      "valor_total_item": 2967.00
+    }
+  ]
+}
+
+Regras:
+- data_emissao sempre no formato AAAA-MM-DD
+- Valores numéricos com ponto como separador decimal (não vírgula)
+- Extrair TODOS os itens da seção "Lista de Itens" do documento
+- unidade: identificar na descrição do item (kg, un, maço, pct, cx, lt, g); se não identificável usar "un"
+- Não inventar dados; se um campo não for encontrado, usar null`;
 
 export default function Home() {
   // Toast / Notifications helper
@@ -353,6 +393,7 @@ export default function Home() {
   const [newEmpenhoMode, setNewEmpenhoMode] = useState<'manual' | 'json'>('manual');
   const [jsonInput, setJsonInput] = useState('');
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [reviewEmpenho, setReviewEmpenho] = useState<any | null>(null);
   const [showConfirmSaveModal, setShowConfirmSaveModal] = useState(false);
   const [empenhoToDelete, setEmpenhoToDelete] = useState<string | null>(null);
@@ -483,13 +524,75 @@ export default function Home() {
     setActiveTab('itens_empenho');
   };
 
+  // Download prompt as TXT
+  const handleDownloadPromptTxt = () => {
+    const blob = new Blob([PROMPT_EXTRACAO_EMPENHO], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'prompt_extracao_empenho.txt';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast('Prompt baixado com sucesso em formato .TXT!', 'success');
+  };
+
+  // Download prompt as PDF
+  const handleDownloadPromptPdf = () => {
+    try {
+      const doc = new jsPDF();
+      
+      // Header banner
+      doc.setFillColor(0, 40, 142); // #00288e
+      doc.rect(0, 0, 210, 22, 'F');
+      
+      // Header title
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PROMPT FIXO — EXTRAÇÃO DE NOTA DE EMPENHO', 14, 14);
+      
+      // Subtitle
+      doc.setTextColor(100, 116, 139);
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Copie e utilize este prompt no Claude, ChatGPT ou Gemini anexando o PDF da NE.', 14, 28);
+      
+      // Box for prompt content
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(12, 33, 186, 250, 2, 2, 'FD');
+      
+      doc.setTextColor(30, 41, 59);
+      doc.setFontSize(8.5);
+      doc.setFont('courier', 'normal');
+      
+      const splitText = doc.splitTextToSize(PROMPT_EXTRACAO_EMPENHO, 176);
+      doc.text(splitText, 16, 41);
+      
+      doc.save('prompt_extracao_empenho.pdf');
+      showToast('Prompt baixado com sucesso em formato .PDF!', 'success');
+    } catch (err) {
+      showToast('Erro ao gerar arquivo PDF do prompt.', 'error');
+    }
+  };
+
+  // Copy prompt to clipboard
+  const handleCopyPrompt = () => {
+    navigator.clipboard.writeText(PROMPT_EXTRACAO_EMPENHO);
+    setCopiedPrompt(true);
+    showToast('Prompt copiado para a área de transferência!', 'success');
+    setTimeout(() => setCopiedPrompt(false), 3000);
+  };
+
   // Process imported JSON data
   const handleProcessJson = () => {
     try {
       let cleanText = jsonInput.trim();
       // Remove automatically markdown blocks if they exist (```json and ```)
-      cleanText = cleanText.replace(/^```json\s*/i, '');
-      cleanText = cleanText.replace(/```$/, '');
+      cleanText = cleanText.replace(/^```(?:json)?\s*/i, '');
+      cleanText = cleanText.replace(/\s*```$/i, '');
       cleanText = cleanText.trim();
 
       if (!cleanText) {
@@ -519,13 +622,24 @@ export default function Home() {
         }
       }
 
+      // Extract supplier name and CNPJ flexibly
+      let supplierName = '';
+      let supplierCnpj = data.cnpj || '';
+      if (typeof data.fornecedor === 'object' && data.fornecedor !== null) {
+        supplierName = data.fornecedor.razao_social || data.fornecedor.nome || data.fornecedor.name || '';
+        supplierCnpj = data.fornecedor.cnpj || supplierCnpj;
+      } else if (typeof data.fornecedor === 'string') {
+        supplierName = data.fornecedor;
+      }
+
       const mappedReviewItems = data.itens.map((item: any, idx: number) => {
-        const itemQty = parseFloat(item.quantity || item.quantidade) || 0;
-        const itemPrice = parseFloat(item.unit_price || item.unitPrice || item.valor_unitario) || 0;
+        const itemQty = parseFloat(item.quantidade ?? item.quantity) || 0;
+        const itemPrice = parseFloat(item.valor_unitario ?? item.unit_price ?? item.unitPrice) || 0;
+        const rawCode = item.codigo_item || item.num_item || item.id || `0000${idx + 1}`;
         return {
-          id: item.codigo_item || item.id || `ITEM-${Math.floor(Math.random() * 10000)}`,
-          name: item.descricao || item.name || `Item sem descrição ${idx + 1}`,
-          unit: item.unidade || item.unit || 'UN',
+          id: String(rawCode).padStart(5, '0'),
+          name: item.descricao || item.name || `Item ${idx + 1}`,
+          unit: item.unidade || item.unit || 'un',
           quantity: itemQty,
           unitPrice: itemPrice,
           received: 0,
@@ -533,10 +647,10 @@ export default function Home() {
       });
 
       const parsedEmpenho = {
-        id: data.numero_empenho.toUpperCase(),
-        supplier: data.fornecedor,
-        cnpj: data.cnpj || '',
-        description: data.descricao_sumaria || data.descricao || '',
+        id: String(data.numero_empenho).toUpperCase().trim(),
+        supplier: supplierName,
+        cnpj: supplierCnpj,
+        description: data.descricao_sumaria || data.descricao || (data.tipo_empenho ? `Empenho ${data.tipo_empenho}` : 'Insumos e Suprimentos'),
         date: formattedDate,
         status: 'Ativo',
         items: mappedReviewItems,
@@ -3095,13 +3209,80 @@ export default function Home() {
                       {/* MODE 2: JSON IMPORT INPUT */}
                       {newEmpenhoMode === 'json' && !reviewEmpenho && (
                         <div className="p-5 space-y-4">
+                          {/* PROMPT DOWNLOAD & INSTRUCTIONS CARD */}
+                          <div className="bg-gradient-to-r from-blue-50/90 via-indigo-50/70 to-blue-50/90 border border-blue-100 rounded-2xl p-4 space-y-3 shadow-xs">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-[#00288e] text-white rounded-xl shadow-xs shrink-0">
+                                  <FileText className="w-4.5 h-4.5" />
+                                </div>
+                                <div>
+                                  <h4 className="text-xs font-bold text-[#00288e] uppercase tracking-wider">
+                                    Prompt para IA (Claude, ChatGPT ou Gemini)
+                                  </h4>
+                                  <p className="text-[11px] text-gray-600 font-medium">
+                                    Baixe o prompt padronizado em <strong>TXT</strong> ou <strong>PDF</strong> para enviar junto ao PDF do Empenho para a IA converter em JSON.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-blue-100/80">
+                              <button
+                                type="button"
+                                onClick={handleDownloadPromptTxt}
+                                className="px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 active:scale-95 hover:border-blue-300"
+                                title="Baixar o arquivo prompt_extracao_empenho.txt"
+                              >
+                                <FileText className="w-3.5 h-3.5 text-blue-600" />
+                                <span>Baixar Prompt (.TXT)</span>
+                              </button>
+                              
+                              <button
+                                type="button"
+                                onClick={handleDownloadPromptPdf}
+                                className="px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 active:scale-95 hover:border-rose-300"
+                                title="Baixar o arquivo prompt_extracao_empenho.pdf"
+                              >
+                                <FileDown className="w-3.5 h-3.5 text-rose-600" />
+                                <span>Baixar Prompt (.PDF)</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={handleCopyPrompt}
+                                className="px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 active:scale-95 hover:border-emerald-300 sm:ml-auto"
+                                title="Copiar texto do prompt para a área de transferência"
+                              >
+                                {copiedPrompt ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span className="text-emerald-700 font-bold">Copiado!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3.5 h-3.5 text-gray-600" />
+                                    <span>Copiar Prompt</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+
                           <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Importar Dados via JSON da IA Externa</label>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider">
+                                Cole aqui o JSON retornado pela IA
+                              </label>
+                              <span className="text-[11px] text-gray-400 font-mono">
+                                Formato JSON
+                              </span>
+                            </div>
                             <textarea
-                              rows={12}
+                              rows={10}
                               value={jsonInput}
                               onChange={(e) => setJsonInput(e.target.value)}
-                              placeholder={`Cole aqui o JSON gerado pela IA externa...\n\nExemplo de formato esperado:\n{\n  "numero_empenho": "2026NE0088",\n  "data_emissao": "2026-07-03",\n  "fornecedor": "Hospitália Distribuidora S.A.",\n  "cnpj": "12.345.678/0001-99",\n  "descricao_sumaria": "Aquisição de Insumos Cirúrgicos",\n  "pregao_relacionado": "14/2025",\n  "classificacao": "QR",\n  "valor_total": 45000.00,\n  "itens": [\n    {\n      "codigo_item": "MED-001",\n      "descricao": "Fio de Sutura Nylon 4-0",\n      "unidade": "CX",\n      "quantidade": 150,\n      "valor_unitario": 120.00\n    }\n  ]\n}`}
+                              placeholder={`Cole aqui o resultado JSON gerado pela IA...\n\n{\n  "numero_empenho": "2025NE124",\n  "data_emissao": "2025-08-27",\n  "tipo_empenho": "Global",\n  "valor_total": 12043.80,\n  "fornecedor": {\n    "razao_social": "JULIANO LUCIO FRANCISCATTO DO AMARAL & CIA LT",\n    "cnpj": "02.483.088/0001-75"\n  },\n  "itens": [\n    {\n      "num_item": "001",\n      "codigo_item": "00002",\n      "descricao": "LEGUME PROCESSADO, TIPO MANDIOCA...",\n      "unidade": "kg",\n      "quantidade": 430,\n      "valor_unitario": 6.90,\n      "valor_total_item": 2967.00\n    }\n  ]\n}`}
                               className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-mono text-xs text-[#0b1c30] bg-gray-50/50 resize-y"
                             />
                           </div>
@@ -3130,7 +3311,7 @@ export default function Home() {
                               onClick={handleProcessJson}
                               className="px-5 py-2.5 bg-[#00288e] text-white rounded-xl font-bold text-xs hover:bg-[#1e40af] transition-all shadow-sm flex items-center gap-1.5"
                             >
-                              Processar JSON
+                              <Braces className="w-4 h-4" /> Processar JSON
                             </button>
                           </div>
                         </div>
