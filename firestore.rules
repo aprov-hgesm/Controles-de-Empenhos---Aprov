@@ -1,17 +1,28 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isAuthorizedUser() {
+      return request.auth != null
+        && request.auth.token.email == 'aprov1hgesm@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
     match /empenhos/{id} {
-      allow read, write: if true;
+      allow read, write: if isAuthorizedUser();
     }
+
     match /alerts/{id} {
-      allow read, write: if true;
+      allow read, write: if isAuthorizedUser();
     }
+
     match /invoices/{id} {
-      allow read, write: if true;
+      allow read, write: if isAuthorizedUser();
     }
+
     match /comissoes/{id} {
-      allow read, write: if true;
+      allow read, write: if isAuthorizedUser();
     }
   }
 }
+
