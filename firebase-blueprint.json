@@ -45,6 +45,7 @@
         "totalValue": { "type": "number" },
         "supplier": { "type": "string" },
         "registeredAt": { "type": "string" },
+        "termoEmissaoDate": { "type": "string" },
         "comissaoDate": { "type": "string" },
         "tesourariaDate": { "type": "string" },
         "termoNumero": { "type": "number" },

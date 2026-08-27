@@ -34,6 +34,7 @@ export interface Invoice {
   totalValue: number;
   supplier: string;
   registeredAt?: string; // Data de cadastramento da nota fiscal
+  termoEmissaoDate?: string; // Data de emissão do termo de recebimento
   comissaoDate?: string; // Data de envio para a comissão de recebimento
   tesourariaDate?: string; // Data de envio para a tesouraria
   termoNumero?: number; // Número do termo de recebimento QR

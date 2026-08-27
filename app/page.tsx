@@ -33,6 +33,8 @@ import {
   Users,
   UserCheck,
   FileDown,
+  Download,
+  Eye,
   LogIn,
   LogOut,
   Loader2,
@@ -296,6 +298,44 @@ export default function Home() {
     setComissoes(newComissoes);
   };
 
+  // Helper to format Date + Time
+  const formatDateTime = (isoString?: string) => {
+    if (!isoString) return '';
+    try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return isoString;
+      return d.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return isoString;
+    }
+  };
+
+  // Helper to format Date only (DD/MM/YYYY)
+  const formatDateOnly = (dateStr?: string) => {
+    if (!dateStr) return '—';
+    if (dateStr.includes('T')) {
+      try {
+        const d = new Date(dateStr);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString('pt-BR');
+        }
+      } catch {
+        // fallback
+      }
+    }
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
+  };
+
   // --- VIEW 1: PAINEL / DASHBOARD STATES ---
   const [expandedEmpenhoId, setExpandedEmpenhoId] = useState<string | null>('2025NE124');
   const [dashboardPregaoFilter, setDashboardPregaoFilter] = useState('Todos');
@@ -357,6 +397,7 @@ export default function Home() {
   const [reportStartDate, setReportStartDate] = useState('2026-06-01');
   const [reportEndDate, setReportEndDate] = useState('2026-06-29');
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [selectedReportInvoice, setSelectedReportInvoice] = useState<Invoice | null>(null);
   const [relatoriosPregaoFilter, setRelatoriosPregaoFilter] = useState('Todos');
 
   // --- VIEW 5: ITENS DO EMPENHO STATES (Add/Manage commitment items) ---
@@ -755,8 +796,10 @@ export default function Home() {
       items: enteredItems,
       totalValue: invoiceTotal,
       registeredAt: editingInvoice?.registeredAt || new Date().toISOString(),
+      ...(editingInvoice?.termoEmissaoDate ? { termoEmissaoDate: editingInvoice.termoEmissaoDate } : {}),
       ...(editingInvoice?.comissaoDate ? { comissaoDate: editingInvoice.comissaoDate } : {}),
       ...(editingInvoice?.tesourariaDate ? { tesourariaDate: editingInvoice.tesourariaDate } : {}),
+      ...(editingInvoice?.termoNumero ? { termoNumero: editingInvoice.termoNumero } : {}),
     };
 
     // Update received quantities in empenhos (applying the new invoice quantities)
@@ -1148,19 +1191,30 @@ export default function Home() {
   };
 
   const handleDownloadTermoRecebimento = async (inv: Invoice) => {
-    // 1. Determine or assign sequential term number
+    // 1. Determine or assign sequential term number and register TR emission date
     let termoNumero = inv.termoNumero;
+    const termoEmissaoDate = inv.termoEmissaoDate || inv.registeredAt || new Date().toISOString();
+
     if (!termoNumero) {
       const maxTermoNumero = invoices.reduce((max, i) => (i.termoNumero && i.termoNumero > max ? i.termoNumero : max), 0);
       termoNumero = maxTermoNumero + 1;
-      
-      // Save updated invoice with termoNumero to Firestore
-      if (user) {
-        try {
-          await saveInvoice(user.uid, { ...inv, termoNumero });
-        } catch (error) {
-          console.error("Erro ao salvar número do termo:", error);
-        }
+    }
+
+    const updatedInvoiceWithTR: Invoice = {
+      ...inv,
+      termoNumero,
+      termoEmissaoDate,
+    };
+
+    // Update local state immediately so that the UI immediately displays the TR number & emission date
+    setInvoices(prev => prev.map(i => i.id === inv.id ? updatedInvoiceWithTR : i));
+
+    // Save updated invoice with termoNumero and termoEmissaoDate to Firestore
+    if (user) {
+      try {
+        await saveInvoice(user.uid, updatedInvoiceWithTR);
+      } catch (error) {
+        console.error("Erro ao salvar número e data de emissão do termo:", error);
       }
     }
 
@@ -1556,6 +1610,312 @@ export default function Home() {
     const filename = `Termo_Recebimento_QR_No_${termoNumero}_NF_${inv.id}.pdf`;
     doc.save(filename);
     showToast(`Download iniciado: ${filename}`, 'success');
+  };
+
+  const handleGenerateEmpenhoReportPDF = (emp: Empenho, action: 'download' | 'print' = 'download') => {
+    if (!emp) {
+      showToast('Nenhum empenho selecionado para exportação.', 'error');
+      return;
+    }
+
+    const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    const pdfInvoices = invoices.filter(inv => inv.empenhoId === emp.id);
+    const pdfTotalReceivedNfe = pdfInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
+    const saldoRestante = Math.max(0, totalCommitted - pdfTotalReceivedNfe);
+    const pctExec = totalCommitted > 0 ? Math.round((pdfTotalReceivedNfe / totalCommitted) * 100) : 0;
+
+    // Initialize jsPDF
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
+
+    const primaryColor = [11, 28, 48]; // #0b1c30
+    const secondaryColor = [0, 40, 142]; // #00288e
+    const textColor = [50, 50, 50];
+    const margin = 15;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let yPos = 14;
+
+    const centerText = (text: string, size: number, style: 'normal' | 'bold' = 'normal', color = primaryColor) => {
+      doc.setFont('helvetica', style);
+      doc.setFontSize(size);
+      doc.setTextColor(color[0], color[1], color[2]);
+      const textWidth = doc.getTextWidth(text);
+      doc.text(text, (pageWidth - textWidth) / 2, yPos);
+      yPos += size * 0.38 + 1.8;
+    };
+
+    const addSectionHeader = (title: string) => {
+      yPos += 2;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+      doc.text(title, margin, yPos);
+      yPos += 1.5;
+      doc.setDrawColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+      doc.setLineWidth(0.3);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 4;
+    };
+
+    // Header
+    centerText('MINISTÉRIO DA DEFESA', 8.5, 'bold');
+    centerText('EXÉRCITO BRASILEIRO', 8.5, 'bold');
+    centerText('HOSPITAL GERAL DE SANTA MARIA', 9.5, 'bold');
+    yPos += 2;
+    centerText('RELATÓRIO CONSOLIDADO DE EXECUÇÃO E CONCILIAÇÃO DE EMPENHO', 10.5, 'bold', secondaryColor);
+    
+    // Sub-info
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(120, 120, 120);
+    const dateStr = `Emissão do Relatório: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    const dateWidth = doc.getTextWidth(dateStr);
+    doc.text(dateStr, (pageWidth - dateWidth) / 2, yPos);
+    yPos += 5;
+
+    // 1. DADOS DO EMPENHO
+    addSectionHeader('1. DADOS CADASTRAIS DO EMPENHO');
+    
+    // Draw metadata box
+    doc.setFillColor(248, 249, 252);
+    doc.setDrawColor(225, 230, 240);
+    doc.roundedRect(margin, yPos, pageWidth - margin * 2, 26, 2, 2, 'FD');
+
+    doc.setFontSize(8);
+    // Line 1: NE & Pregao & Data
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text('Nota de Empenho (NE):', margin + 3, yPos + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(emp.id, margin + 38, yPos + 5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Pregão / Processo:', margin + 70, yPos + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(emp.pregao || 'N/A', margin + 98, yPos + 5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Data do Empenho:', margin + 130, yPos + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(emp.date, margin + 157, yPos + 5);
+
+    // Line 2: Supplier
+    doc.setFont('helvetica', 'bold');
+    doc.text('Fornecedor Credor:', margin + 3, yPos + 11);
+    doc.setFont('helvetica', 'normal');
+    doc.text(emp.supplier, margin + 38, yPos + 11);
+
+    // Line 3: Description / Objeto
+    doc.setFont('helvetica', 'bold');
+    doc.text('Objeto da Contratação:', margin + 3, yPos + 17);
+    doc.setFont('helvetica', 'normal');
+    const descLines = doc.splitTextToSize(emp.description || 'Sem descrição cadastrada', pageWidth - margin * 2 - 44);
+    doc.text(descLines[0] || '', margin + 38, yPos + 17);
+
+    // Line 4: Totals Summary within box
+    doc.setFont('helvetica', 'bold');
+    doc.text('Valor Contratado:', margin + 3, yPos + 23);
+    doc.setFont('helvetica', 'normal');
+    doc.text(totalCommitted.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), margin + 30, yPos + 23);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Conciliado por NF-e:', margin + 65, yPos + 23);
+    doc.setFont('helvetica', 'normal');
+    doc.text(pdfTotalReceivedNfe.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), margin + 98, yPos + 23);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Saldo Restante:', margin + 130, yPos + 23);
+    doc.setFont('helvetica', 'normal');
+    doc.text(saldoRestante.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) + ` (${pctExec}% exec.)`, margin + 153, yPos + 23);
+
+    yPos += 30;
+
+    // 2. STATUS FÍSICO DOS ITENS
+    addSectionHeader('2. STATUS E CONCILIAÇÃO FÍSICA DOS ITENS');
+
+    const itemsRows = emp.items.map((it) => {
+      const balance = it.quantity - it.received;
+      const statusText = balance === 0 ? 'CONCLUÍDO' : `${Math.round((it.received / it.quantity) * 100)}% (${balance} ${it.unit} rest.)`;
+      const itemSubtotal = it.quantity * it.unitPrice;
+
+      return [
+        it.id,
+        it.name,
+        it.unit,
+        it.quantity.toLocaleString('pt-BR'),
+        it.received.toLocaleString('pt-BR'),
+        balance.toLocaleString('pt-BR'),
+        it.unitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        itemSubtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        statusText
+      ];
+    });
+
+    autoTable(doc, {
+      startY: yPos,
+      margin: { left: margin, right: margin },
+      head: [['ID', 'Descrição do Material', 'Und', 'Contratado', 'Conciliado', 'Saldo Físico', 'Val. Unit.', 'Val. Total', 'Execução']],
+      body: itemsRows,
+      theme: 'striped',
+      headStyles: {
+        fillColor: [0, 40, 142] as [number, number, number],
+        textColor: 255,
+        fontSize: 7.5,
+        fontStyle: 'bold',
+        halign: 'left',
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: 50,
+      },
+      columnStyles: {
+        0: { cellWidth: 16, fontStyle: 'bold' },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 10, halign: 'center' as const },
+        3: { cellWidth: 16, halign: 'right' as const },
+        4: { cellWidth: 16, halign: 'right' as const, fontStyle: 'bold', textColor: [0, 130, 70] },
+        5: { cellWidth: 16, halign: 'right' as const },
+        6: { cellWidth: 18, halign: 'right' as const },
+        7: { cellWidth: 20, halign: 'right' as const, fontStyle: 'bold' },
+        8: { cellWidth: 25, halign: 'center' as const },
+      },
+      didDrawPage: (data) => {
+        yPos = data.cursor ? data.cursor.y + 6 : yPos + 8;
+      },
+    });
+
+    // Check page break safety
+    if (yPos > doc.internal.pageSize.getHeight() - 65) {
+      doc.addPage();
+      yPos = 18;
+    }
+
+    // 3. NOTAS FISCAIS CADASTRADAS NO EMPENHO
+    addSectionHeader('3. NOTAS FISCAIS CADASTRADAS E CICLO DE RECEBIMENTO');
+
+    if (pdfInvoices.length === 0) {
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8);
+      doc.setTextColor(120, 120, 120);
+      doc.text('Nenhuma nota fiscal cadastrada para este empenho até o momento.', margin, yPos);
+      yPos += 8;
+    } else {
+      const invoicesRows = pdfInvoices.map((inv) => {
+        const formattedIssueDate = formatDateOnly(inv.issueDate);
+        const effectiveTrDate = inv.termoEmissaoDate || (inv.termoNumero ? (inv.registeredAt || inv.issueDate) : null);
+        const formattedTrDate = effectiveTrDate 
+          ? `${formatDateOnly(effectiveTrDate)}${inv.termoNumero ? ` (TR Nº ${inv.termoNumero})` : ''}` 
+          : 'Pendente';
+        const formattedComissaoDate = inv.comissaoDate ? formatDateOnly(inv.comissaoDate) : 'Pendente';
+        const formattedTesourariaDate = inv.tesourariaDate ? formatDateOnly(inv.tesourariaDate) : 'Pendente';
+
+        return [
+          `NF ${inv.id}`,
+          formattedIssueDate,
+          formattedTrDate,
+          formattedComissaoDate,
+          formattedTesourariaDate,
+          inv.totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+        ];
+      });
+
+      autoTable(doc, {
+        startY: yPos,
+        margin: { left: margin, right: margin },
+        head: [['Número NF', 'Emissão NF', 'Emissão do TR / Cad.', 'Comissão Recebimento', 'Tesouraria', 'Valor da NF']],
+        body: invoicesRows,
+        theme: 'striped',
+        headStyles: {
+          fillColor: [11, 28, 48] as [number, number, number],
+          textColor: 255,
+          fontSize: 7.5,
+          fontStyle: 'bold',
+          halign: 'left',
+        },
+        bodyStyles: {
+          fontSize: 7.5,
+          textColor: 50,
+        },
+        columnStyles: {
+          0: { cellWidth: 24, fontStyle: 'bold', textColor: [0, 40, 142] },
+          1: { cellWidth: 26 },
+          2: { cellWidth: 42 },
+          3: { cellWidth: 32 },
+          4: { cellWidth: 26 },
+          5: { cellWidth: 'auto', halign: 'right' as const, fontStyle: 'bold', textColor: [0, 120, 60] },
+        },
+        didDrawPage: (data) => {
+          yPos = data.cursor ? data.cursor.y + 6 : yPos + 8;
+        },
+      });
+    }
+
+    // Check page break safety for signature block
+    if (yPos > doc.internal.pageSize.getHeight() - 40) {
+      doc.addPage();
+      yPos = 20;
+    }
+
+    // 4. SIGNATURE AND VISTO BLOCK
+    yPos += 6;
+    const sigLineWidth = 80;
+    const sigX = (pageWidth - sigLineWidth) / 2;
+    doc.setDrawColor(180, 180, 180);
+    doc.setLineWidth(0.2);
+    doc.line(sigX, yPos + 10, sigX + sigLineWidth, yPos + 10);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    const vistoText = 'Visto / Fiscalização Administrativa';
+    const vistoW = doc.getTextWidth(vistoText);
+    doc.text(vistoText, (pageWidth - vistoW) / 2, yPos + 14);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(100, 100, 100);
+    const setorText = 'Seção de Aquisições / APROV - HGeSM';
+    const setorW = doc.getTextWidth(setorText);
+    doc.text(setorText, (pageWidth - setorW) / 2, yPos + 18);
+
+    // Footers across all pages
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.15);
+      doc.line(margin, doc.internal.pageSize.getHeight() - 12, pageWidth - margin, doc.internal.pageSize.getHeight() - 12);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(120, 120, 120);
+      doc.text(`Hospital Geral de Santa Maria - Relatório de Empenho NE ${emp.id}`, margin, doc.internal.pageSize.getHeight() - 8);
+
+      const pText = `Página ${i} de ${pageCount}`;
+      const pWidth = doc.getTextWidth(pText);
+      doc.text(pText, pageWidth - margin - pWidth, doc.internal.pageSize.getHeight() - 8);
+    }
+
+    if (action === 'download') {
+      const filename = `Relatorio_Consolidado_Empenho_${emp.id.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      doc.save(filename);
+      showToast(`Download do Relatório PDF concluído: ${filename}`, 'success');
+    } else {
+      // Direct print / view
+      const blobUrl = doc.output('bloburl');
+      const win = window.open(blobUrl, '_blank');
+      if (win) {
+        win.focus();
+        showToast('Documento PDF aberto em nova aba para impressão.', 'success');
+      } else {
+        const filename = `Relatorio_Consolidado_Empenho_${emp.id.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+        doc.save(filename);
+        showToast('Pop-up bloqueado pelo navegador. O relatório em PDF foi baixado diretamente.', 'info');
+      }
+    }
   };
 
   // Helper selectors for Dashboard stats
@@ -2999,24 +3359,6 @@ export default function Home() {
                         );
                       }
 
-                      // Helper to parse date
-                      const formatDateTime = (isoString?: string) => {
-                        if (!isoString) return '';
-                        try {
-                          const d = new Date(isoString);
-                          if (isNaN(d.getTime())) return isoString;
-                          return d.toLocaleString('pt-BR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          });
-                        } catch (e) {
-                          return isoString;
-                        }
-                      };
-
                       return filteredInvoices.map((inv) => (
                         <div key={inv.id} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4 hover:border-blue-100 transition-all">
                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-3 border-b border-gray-50">
@@ -3026,8 +3368,8 @@ export default function Home() {
                                   NF-e #{inv.id}
                                 </span>
                                 {inv.termoNumero && (
-                                  <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-emerald-100">
-                                    Termo Nº {inv.termoNumero}
+                                  <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1">
+                                    <Check className="w-3 h-3" /> Termo Nº {inv.termoNumero} ({formatDateOnly(inv.termoEmissaoDate || inv.registeredAt || inv.issueDate)})
                                   </span>
                                 )}
                                 <span className="text-gray-400 text-xs font-semibold">
@@ -3890,20 +4232,71 @@ export default function Home() {
                           <div className="overflow-x-auto rounded-xl border border-gray-100 bg-white shadow-sm">
                             <table className="w-full text-left border-collapse text-xs sm:text-sm">
                               <thead>
-                                <tr className="bg-gray-50 border-b border-gray-100">
-                                  <th className="py-2.5 px-4 font-bold text-gray-500">Número da NF</th>
-                                  <th className="py-2.5 px-4 font-bold text-gray-500">Data de Emissão</th>
-                                  <th className="py-2.5 px-4 font-bold text-gray-500 text-right">Valor Total da NF</th>
+                                <tr className="bg-gray-50 border-b border-gray-100 text-[11px] uppercase tracking-wider">
+                                  <th className="py-3 px-3.5 font-bold text-gray-500">Número da NF</th>
+                                  <th className="py-3 px-3.5 font-bold text-gray-500">Data de Emissão</th>
+                                  <th className="py-3 px-3.5 font-bold text-gray-500">Data de Emissão do TR</th>
+                                  <th className="py-3 px-3.5 font-bold text-gray-500">Data da Comissão</th>
+                                  <th className="py-3 px-3.5 font-bold text-gray-500">Data da Tesouraria</th>
+                                  <th className="py-3 px-3.5 font-bold text-gray-500 text-right">Valor Total da NF</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-gray-50">
                                 {linkedInvoices.map((inv) => {
-                                  const formattedDate = inv.issueDate.split('-').reverse().join('/');
+                                  const formattedIssueDate = formatDateOnly(inv.issueDate);
+                                  const effectiveTrDate = inv.termoEmissaoDate || (inv.termoNumero ? (inv.registeredAt || inv.issueDate) : null);
+                                  const formattedTrDate = effectiveTrDate ? formatDateOnly(effectiveTrDate) : null;
+                                  const formattedComissaoDate = inv.comissaoDate 
+                                    ? formatDateOnly(inv.comissaoDate) 
+                                    : null;
+                                  const formattedTesourariaDate = inv.tesourariaDate 
+                                    ? formatDateOnly(inv.tesourariaDate) 
+                                    : null;
+
                                   return (
-                                    <tr key={inv.id} className="hover:bg-gray-50/50">
-                                      <td className="py-3 px-4 font-bold text-[#00288e]">NF {inv.id}</td>
-                                      <td className="py-3 px-4 text-gray-600 font-semibold">{formattedDate || inv.issueDate}</td>
-                                      <td className="py-3 px-4 text-right font-extrabold text-emerald-600">
+                                    <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
+                                      <td className="py-3 px-3.5 whitespace-nowrap">
+                                        <button
+                                          id={`btn-report-nf-detail-${inv.id}`}
+                                          onClick={() => setSelectedReportInvoice(inv)}
+                                          className="group inline-flex items-center gap-1.5 font-bold text-[#00288e] hover:text-blue-700 bg-blue-50/70 hover:bg-blue-100/80 px-2.5 py-1 rounded-lg transition-all text-xs border border-blue-200/60 active:scale-95 shadow-xs"
+                                          title="Clique para ver os itens detalhados desta Nota Fiscal"
+                                        >
+                                          <FileText className="w-3.5 h-3.5 text-[#00288e] group-hover:scale-110 transition-transform" />
+                                          <span>NF {inv.id}</span>
+                                        </button>
+                                      </td>
+                                      <td className="py-3 px-3.5 text-gray-600 font-semibold whitespace-nowrap">
+                                        {formattedIssueDate}
+                                      </td>
+                                      <td className="py-3 px-3.5 whitespace-nowrap">
+                                        {effectiveTrDate ? (
+                                          <span className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-xs border border-emerald-100">
+                                            {formattedTrDate} {inv.termoNumero ? `(TR Nº ${inv.termoNumero})` : ''}
+                                          </span>
+                                        ) : (
+                                          <span className="text-gray-400 font-normal italic text-xs">Pendente</span>
+                                        )}
+                                      </td>
+                                      <td className="py-3 px-3.5 whitespace-nowrap">
+                                        {inv.comissaoDate ? (
+                                          <span className="inline-flex items-center gap-1 font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md text-xs border border-blue-100">
+                                            {formattedComissaoDate}
+                                          </span>
+                                        ) : (
+                                          <span className="text-gray-400 font-normal italic text-xs">Pendente</span>
+                                        )}
+                                      </td>
+                                      <td className="py-3 px-3.5 whitespace-nowrap">
+                                        {inv.tesourariaDate ? (
+                                          <span className="inline-flex items-center gap-1 font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md text-xs border border-purple-100">
+                                            {formattedTesourariaDate}
+                                          </span>
+                                        ) : (
+                                          <span className="text-gray-400 font-normal italic text-xs">Pendente</span>
+                                        )}
+                                      </td>
+                                      <td className="py-3 px-3.5 text-right font-extrabold text-emerald-600 whitespace-nowrap">
                                         R$ {inv.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                       </td>
                                     </tr>
@@ -3918,12 +4311,33 @@ export default function Home() {
                     </div>
 
                     {/* Action button row */}
-                    <div className="flex justify-center">
+                    <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                       <button 
-                        onClick={() => setShowPdfModal(true)}
-                        className="px-6 py-3 bg-white border border-gray-200 hover:bg-gray-50 active:scale-95 duration-100 rounded-xl font-bold text-sm text-[#00288e] flex items-center gap-2 shadow-sm"
+                        id="btn-download-report-pdf-main"
+                        onClick={() => {
+                          const emp = empenhos.find(e => e.id === reportSearch);
+                          if (emp) handleGenerateEmpenhoReportPDF(emp, 'download');
+                        }}
+                        className="px-5 py-2.5 bg-[#00288e] hover:bg-[#001e6a] text-white active:scale-95 duration-100 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-all"
                       >
-                        <Printer className="w-4 h-4" /> Exportar Relatório PDF
+                        <FileDown className="w-4 h-4" /> Baixar Relatório PDF
+                      </button>
+                      <button 
+                        id="btn-print-report-pdf-main"
+                        onClick={() => {
+                          const emp = empenhos.find(e => e.id === reportSearch);
+                          if (emp) handleGenerateEmpenhoReportPDF(emp, 'print');
+                        }}
+                        className="px-5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 active:scale-95 duration-100 rounded-xl font-bold text-xs sm:text-sm text-gray-700 flex items-center gap-2 shadow-xs transition-all"
+                      >
+                        <Printer className="w-4 h-4 text-[#00288e]" /> Imprimir / Visualizar PDF
+                      </button>
+                      <button 
+                        id="btn-preview-report-modal"
+                        onClick={() => setShowPdfModal(true)}
+                        className="px-4 py-2.5 bg-gray-50 border border-gray-200 hover:bg-gray-100 active:scale-95 duration-100 rounded-xl font-semibold text-xs sm:text-sm text-gray-600 flex items-center gap-2 transition-all"
+                      >
+                        <Eye className="w-4 h-4 text-gray-500" /> Prévia na Tela
                       </button>
                     </div>
                   </div>
@@ -4041,20 +4455,41 @@ export default function Home() {
                                   ) : (
                                     <table className="w-full text-left text-xs border-collapse">
                                       <thead>
-                                        <tr className="border-b bg-gray-50">
-                                          <th className="py-1 px-2 font-bold text-gray-600">Número da NF</th>
-                                          <th className="py-1 px-2 font-bold text-gray-600">Data de Emissão</th>
-                                          <th className="py-1 px-2 font-bold text-gray-600 text-right">Valor Total</th>
+                                        <tr className="border-b bg-gray-50 text-[10px]">
+                                          <th className="py-1.5 px-2 font-bold text-gray-600">Número da NF</th>
+                                          <th className="py-1.5 px-2 font-bold text-gray-600">Data de Emissão</th>
+                                          <th className="py-1.5 px-2 font-bold text-gray-600">Data de Emissão do TR</th>
+                                          <th className="py-1.5 px-2 font-bold text-gray-600">Data da Comissão</th>
+                                          <th className="py-1.5 px-2 font-bold text-gray-600">Data da Tesouraria</th>
+                                          <th className="py-1.5 px-2 font-bold text-gray-600 text-right">Valor Total da NF</th>
                                         </tr>
                                       </thead>
-                                      <tbody className="divide-y">
+                                      <tbody className="divide-y text-[11px]">
                                         {pdfInvoices.map((inv) => {
-                                          const formattedDate = inv.issueDate.split('-').reverse().join('/');
+                                          const formattedIssueDate = formatDateOnly(inv.issueDate);
+                                          const effectiveTrDate = inv.termoEmissaoDate || (inv.termoNumero ? (inv.registeredAt || inv.issueDate) : null);
+                                          const formattedTrDate = effectiveTrDate 
+                                            ? `${formatDateOnly(effectiveTrDate)}${inv.termoNumero ? ` (TR Nº ${inv.termoNumero})` : ''}` 
+                                            : 'Pendente';
+                                          const formattedComissaoDate = inv.comissaoDate ? formatDateOnly(inv.comissaoDate) : 'Pendente';
+                                          const formattedTesourariaDate = inv.tesourariaDate ? formatDateOnly(inv.tesourariaDate) : 'Pendente';
+
                                           return (
                                             <tr key={inv.id}>
-                                              <td className="py-2 px-2 font-bold text-[#00288e]">NF {inv.id}</td>
-                                              <td className="py-2 px-2 text-gray-600">{formattedDate || inv.issueDate}</td>
-                                              <td className="py-2 px-2 text-right font-bold text-emerald-600">
+                                              <td className="py-1.5 px-2">
+                                                <button
+                                                  onClick={() => setSelectedReportInvoice(inv)}
+                                                  className="font-bold text-[#00288e] hover:underline"
+                                                  title="Clique para ver os itens detalhados desta NF"
+                                                >
+                                                  NF {inv.id}
+                                                </button>
+                                              </td>
+                                              <td className="py-1.5 px-2 text-gray-600">{formattedIssueDate}</td>
+                                              <td className="py-1.5 px-2 text-gray-700">{formattedTrDate}</td>
+                                              <td className="py-1.5 px-2 text-gray-700">{formattedComissaoDate}</td>
+                                              <td className="py-1.5 px-2 text-gray-700">{formattedTesourariaDate}</td>
+                                              <td className="py-1.5 px-2 text-right font-bold text-emerald-600">
                                                 R$ {inv.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                               </td>
                                             </tr>
@@ -4072,18 +4507,232 @@ export default function Home() {
                         </div>
                       </div>
 
-                      <div className="p-4 bg-gray-100 flex justify-end gap-3 flex-shrink-0">
+                      <div className="p-4 bg-gray-100 flex flex-wrap justify-between items-center gap-3 flex-shrink-0">
                         <button 
+                          id="btn-close-pdf-preview"
                           onClick={() => setShowPdfModal(false)}
-                          className="px-4 py-2 bg-gray-200 text-gray-600 rounded-xl font-bold text-xs hover:bg-gray-300 transition-all"
+                          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl font-bold text-xs hover:bg-gray-300 transition-all"
                         >
                           Fechar
                         </button>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            id="btn-download-pdf-from-preview"
+                            onClick={() => {
+                              const emp = empenhos.find(e => e.id === reportSearch);
+                              if (emp) handleGenerateEmpenhoReportPDF(emp, 'download');
+                            }}
+                            className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold text-xs hover:bg-emerald-700 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                          >
+                            <FileDown className="w-4 h-4" /> Baixar Arquivo PDF
+                          </button>
+                          <button 
+                            id="btn-print-pdf-from-preview"
+                            onClick={() => {
+                              const emp = empenhos.find(e => e.id === reportSearch);
+                              if (emp) handleGenerateEmpenhoReportPDF(emp, 'print');
+                            }}
+                            className="px-4 py-2 bg-[#00288e] text-white rounded-xl font-bold text-xs hover:bg-[#1e40af] transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                          >
+                            <Printer className="w-4 h-4" /> Imprimir Documento PDF
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </div>
+                )}
+              </AnimatePresence>
+
+              {/* Modal de Detalhamento dos Itens da Nota Fiscal */}
+              <AnimatePresence>
+                {selectedReportInvoice && (
+                  <div 
+                    id="modal-nf-items-detail-overlay"
+                    className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs"
+                  >
+                    <motion.div 
+                      initial={{ scale: 0.95, opacity: 0, y: 12 }}
+                      animate={{ scale: 1, opacity: 1, y: 0 }}
+                      exit={{ scale: 0.95, opacity: 0, y: 12 }}
+                      transition={{ duration: 0.2 }}
+                      className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-3xl w-full max-h-[88vh] flex flex-col overflow-hidden"
+                    >
+                      {/* Modal Header */}
+                      <div className="bg-gradient-to-r from-[#00288e] to-[#001c66] text-white p-4 sm:p-5 flex justify-between items-center flex-shrink-0 shadow-md">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 bg-white/10 rounded-xl backdrop-blur-xs flex items-center justify-center">
+                            <FileSpreadsheet className="w-5 h-5 text-blue-200" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-black text-base sm:text-lg tracking-tight">
+                                Detalhamento da Nota Fiscal #{selectedReportInvoice.id}
+                              </h3>
+                              {selectedReportInvoice.termoNumero && (
+                                <span className="bg-emerald-400/20 text-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-400/30">
+                                  TR Nº {selectedReportInvoice.termoNumero}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-blue-100/90 font-medium mt-0.5">
+                              Empenho: <span className="font-bold text-white">{selectedReportInvoice.empenhoId}</span> • Fornecedor: <span className="font-semibold text-blue-50">{selectedReportInvoice.supplier}</span>
+                            </p>
+                          </div>
+                        </div>
                         <button 
-                          onClick={() => { window.print(); }}
-                          className="px-4 py-2 bg-[#00288e] text-white rounded-xl font-bold text-xs hover:bg-[#1e40af] transition-all flex items-center gap-1.5 shadow-sm"
+                          id="btn-close-nf-modal"
+                          onClick={() => setSelectedReportInvoice(null)} 
+                          className="p-2 text-blue-200 hover:text-white hover:bg-white/10 rounded-xl transition-all active:scale-95"
+                          title="Fechar janela"
                         >
-                          <Printer className="w-4 h-4" /> Enviar para Impressora
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+
+                      {/* Modal Body */}
+                      <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1 bg-gray-50/50">
+                        
+                        {/* Summary Metadata Cards */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-xs">
+                            <span className="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">Emissão da NF</span>
+                            <span className="text-xs font-bold text-gray-800">
+                              {formatDateOnly(selectedReportInvoice.issueDate)}
+                            </span>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-xs">
+                            <span className="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">Cadastramento</span>
+                            <span className="text-xs font-bold text-gray-800">
+                              {selectedReportInvoice.registeredAt 
+                                ? formatDateOnly(selectedReportInvoice.registeredAt) 
+                                : formatDateOnly(selectedReportInvoice.issueDate)}
+                            </span>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-xs">
+                            <span className="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">Comissão Receb.</span>
+                            {selectedReportInvoice.comissaoDate ? (
+                              <span className="text-xs font-bold text-blue-700">
+                                {formatDateOnly(selectedReportInvoice.comissaoDate)}
+                              </span>
+                            ) : (
+                              <span className="text-xs font-semibold text-amber-600">Aguardando</span>
+                            )}
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-xs">
+                            <span className="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">Tesouraria</span>
+                            {selectedReportInvoice.tesourariaDate ? (
+                              <span className="text-xs font-bold text-purple-700">
+                                {formatDateOnly(selectedReportInvoice.tesourariaDate)}
+                              </span>
+                            ) : (
+                              <span className="text-xs font-semibold text-gray-400">Pendente</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Detailed items list */}
+                        <div className="space-y-2.5">
+                          <div className="flex justify-between items-center px-1">
+                            <div className="flex items-center gap-1.5">
+                              <Package className="w-4 h-4 text-[#00288e]" />
+                              <span className="font-extrabold text-gray-700 uppercase text-[11px] tracking-wider">
+                                Itens Faturados nesta Nota Fiscal
+                              </span>
+                            </div>
+                            <span className="text-[11px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
+                              {selectedReportInvoice.items.length} {selectedReportInvoice.items.length === 1 ? 'item' : 'itens'}
+                            </span>
+                          </div>
+
+                          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xs">
+                            <table className="w-full text-left border-collapse text-xs">
+                              <thead>
+                                <tr className="bg-gray-50/90 border-b border-gray-100 text-[10px] uppercase tracking-wider text-gray-500 font-bold">
+                                  <th className="py-3 px-3.5">Código</th>
+                                  <th className="py-3 px-3.5">Descrição do Material</th>
+                                  <th className="py-3 px-3.5 text-center">Und</th>
+                                  <th className="py-3 px-3.5 text-right">Quantidade</th>
+                                  <th className="py-3 px-3.5 text-right">Valor Unitário</th>
+                                  <th className="py-3 px-3.5 text-right">Valor Total</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-100">
+                                {(() => {
+                                  const targetEmpenho = empenhos.find(e => e.id === selectedReportInvoice.empenhoId);
+                                  return selectedReportInvoice.items.map((invItem, idx) => {
+                                    const itemDef = targetEmpenho?.items.find(i => i.id === invItem.itemId);
+                                    const itemName = itemDef?.name || `Item #${invItem.itemId}`;
+                                    const itemUnit = itemDef?.unit || 'UN';
+                                    const itemSubtotal = invItem.subtotal || (invItem.quantity * invItem.unitPrice);
+
+                                    return (
+                                      <tr key={invItem.itemId || idx} className="hover:bg-blue-50/30 transition-colors">
+                                        <td className="py-3 px-3.5 font-mono font-bold text-[#00288e] whitespace-nowrap">
+                                          {invItem.itemId}
+                                        </td>
+                                        <td className="py-3 px-3.5 font-semibold text-gray-800">
+                                          {itemName}
+                                        </td>
+                                        <td className="py-3 px-3.5 text-center font-medium text-gray-500 uppercase whitespace-nowrap">
+                                          <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                            {itemUnit}
+                                          </span>
+                                        </td>
+                                        <td className="py-3 px-3.5 text-right font-extrabold text-gray-800 whitespace-nowrap">
+                                          {invItem.quantity.toLocaleString('pt-BR')}
+                                        </td>
+                                        <td className="py-3 px-3.5 text-right font-medium text-gray-600 whitespace-nowrap">
+                                          R$ {invItem.unitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="py-3 px-3.5 text-right font-black text-emerald-600 whitespace-nowrap">
+                                          R$ {itemSubtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                      </tr>
+                                    );
+                                  });
+                                })()}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* Financial summary highlight */}
+                        <div className="bg-gradient-to-r from-blue-50/80 via-emerald-50/60 to-emerald-50 p-4 rounded-xl border border-emerald-200/70 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                          <div className="space-y-0.5">
+                            <span className="text-[10px] text-gray-500 font-extrabold uppercase block tracking-wider">
+                              Resumo da Nota Fiscal #{selectedReportInvoice.id}
+                            </span>
+                            <span className="text-xs text-gray-600 font-medium">
+                              Volume total de faturamento: <strong className="text-gray-800">{selectedReportInvoice.items.reduce((s, it) => s + it.quantity, 0).toLocaleString('pt-BR')}</strong> unidades distribuídas em <strong className="text-gray-800">{selectedReportInvoice.items.length}</strong> {selectedReportInvoice.items.length === 1 ? 'item' : 'itens'}.
+                            </span>
+                          </div>
+                          <div className="text-left sm:text-right bg-white px-4 py-2 rounded-xl border border-emerald-200/80 shadow-xs flex-shrink-0">
+                            <span className="text-[10px] text-emerald-700 font-black uppercase block tracking-wider">
+                              Valor Total da Nota
+                            </span>
+                            <span className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight">
+                              R$ {selectedReportInvoice.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </div>
+
+                      </div>
+
+                      {/* Modal Footer */}
+                      <div className="p-4 bg-gray-50 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3 flex-shrink-0">
+                        <button
+                          id="btn-download-tr-from-modal"
+                          onClick={() => handleDownloadTermoRecebimento(selectedReportInvoice)}
+                          className="px-4 py-2 bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shadow-xs active:scale-95"
+                        >
+                          <FileDown className="w-4 h-4" /> Gerar Termo de Recebimento (PDF)
+                        </button>
+                        <button 
+                          id="btn-close-nf-modal-footer"
+                          onClick={() => setSelectedReportInvoice(null)}
+                          className="px-6 py-2 bg-[#00288e] hover:bg-[#001e6a] text-white rounded-xl font-bold text-xs transition-all shadow-xs active:scale-95"
+                        >
+                          Fechar
                         </button>
                       </div>
                     </motion.div>

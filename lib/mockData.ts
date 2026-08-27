@@ -190,7 +190,10 @@ export const INITIAL_INVOICES: Invoice[] = [
     ],
     totalValue: 9100,
     registeredAt: '2026-06-27T10:30:00-03:00',
+    termoNumero: 1,
+    termoEmissaoDate: '2026-06-27T11:00:00-03:00',
     comissaoDate: '2026-06-27T14:15:00-03:00',
+    tesourariaDate: '2026-06-28T09:00:00-03:00',
   },
 ];
 
