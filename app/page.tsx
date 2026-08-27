@@ -48,7 +48,7 @@ import { INITIAL_EMPENHOS, INITIAL_ALERTS, INITIAL_INVOICES, INITIAL_COMISSOES }
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import { signInWithPopup, signInAnonymously, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { auth, googleProvider, db, OperationType, handleFirestoreError } from '../lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { 
@@ -110,7 +110,7 @@ const normalizeSupplier = (supplier: any): string => {
   return String(supplier);
 };
 
-export const PROMPT_EXTRACAO_EMPENHO = `# PROMPT FIXO — Extração de Dados de Nota de Empenho
+const PROMPT_EXTRACAO_EMPENHO = `# PROMPT FIXO — Extração de Dados de Nota de Empenho
 # Use este prompt no Claude, ChatGPT ou Gemini, anexando o PDF da NE
 
 ---
@@ -184,28 +184,15 @@ export default function Home() {
     }, 0);
   };
 
-  // Listen to auth state changes in Firebase (supports both Google and Guest Simulation Session)
+  // Listen to auth state changes in Firebase (Google Authentication)
   useEffect(() => {
-    const savedLocalSession = typeof window !== 'undefined' ? localStorage.getItem('local_user_session') : null;
-    if (savedLocalSession) {
-      try {
-        const mockUser = JSON.parse(savedLocalSession);
-        setUser(mockUser);
-        setLoadingAuth(false);
-      } catch (e) {
-        console.error(e);
-      }
-    }
+    localStorage.removeItem('local_user_session');
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        localStorage.removeItem('local_user_session');
       } else {
-        const activeLocal = typeof window !== 'undefined' ? localStorage.getItem('local_user_session') : null;
-        if (!activeLocal) {
-          setUser(null);
-        }
+        setUser(null);
       }
       setLoadingAuth(false);
     });
@@ -2090,18 +2077,11 @@ export default function Home() {
             onClick={async () => {
               setSyncing(true);
               try {
-                const mockUser = {
-                  uid: 'shared_guest_user',
-                  displayName: 'Gestor de Empenhos',
-                  email: '',
-                  photoURL: '',
-                };
-                setUser(mockUser as any);
-                localStorage.setItem('local_user_session', JSON.stringify(mockUser));
+                await signInWithPopup(auth, googleProvider);
                 showToast('Acesso autorizado com sucesso!', 'success');
-              } catch (err) {
-                console.error(err);
-                showToast('Erro ao inicializar sessão local', 'error');
+              } catch (err: any) {
+                console.error('Erro na autenticação:', err);
+                showToast('Falha na autenticação. Verifique sua conta Google.', 'error');
               } finally {
                 setSyncing(false);
               }
@@ -2289,6 +2269,7 @@ export default function Home() {
             <button
               onClick={async () => {
                 try {
+                  localStorage.removeItem('local_user_session');
                   await signOut(auth);
                   setUser(null);
                   showToast('Você saiu do sistema.', 'info');
