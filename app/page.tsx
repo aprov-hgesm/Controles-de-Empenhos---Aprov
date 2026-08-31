@@ -2667,7 +2667,7 @@ export default function Home() {
           <div className="w-full h-[1px] bg-white/10 my-2" />
 
           <p className="text-xs text-gray-400 leading-relaxed">
-            Área de acesso restrito a militares e servidores autorizados do setor logístico de saúde hospitalar.
+            Plataforma integrada de Gestão de Empenhos, Provimento Logístico e Execução Financeira
           </p>
 
           <button
@@ -2688,10 +2688,6 @@ export default function Home() {
             <LogIn className="w-5 h-5 flex-shrink-0 group-hover:translate-x-1 transition-transform" />
             Entrar no Sistema
           </button>
-
-          <p className="text-[11px] text-gray-400">
-            Acesso persistente via simulação local integrada. Seus dados de teste serão mantidos com segurança neste navegador.
-          </p>
         </motion.div>
         
         <p className="absolute bottom-6 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
