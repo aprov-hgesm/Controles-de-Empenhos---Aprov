@@ -63,3 +63,27 @@ export interface Alert {
   description: string;
   date: string;
 }
+
+export interface CronogramaEntregaColuna {
+  id: string; // e.g. 'remessa_1', 'remessa_2'
+  titulo: string; // e.g. '1ª Remessa', '2ª Remessa'
+  dataPrevista: string; // 'YYYY-MM-DD'
+  observacao?: string;
+}
+
+export interface CronogramaEmpenho {
+  id: string; // Usually matches the empenhoId
+  empenhoId: string;
+  dataCriacao: string;
+  localEntrega?: string;
+  horarioEntrega?: string;
+  observacoes?: string;
+  responsavelNome?: string;
+  responsavelCargo?: string;
+  colunasEntregas: CronogramaEntregaColuna[];
+  distribuicao: {
+    [itemId: string]: {
+      [colunaId: string]: number;
+    };
+  };
+}

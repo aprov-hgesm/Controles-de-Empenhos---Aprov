@@ -7,7 +7,7 @@ import {
   doc 
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './firebase';
-import { Empenho, Alert, Invoice, Comissao } from './types';
+import { Empenho, Alert, Invoice, Comissao, CronogramaEmpenho } from './types';
 
 // Seeding function (no-op as data is now fully persistent and shared on Firestore)
 export async function seedInitialDataIfNecessary(userId: string) {
@@ -145,6 +145,38 @@ export async function removeComissao(userId: string, id: string): Promise<void> 
   const path = `comissoes/${id}`;
   try {
     const docRef = doc(db, 'comissoes', id);
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+// Cronogramas operations
+export async function getCronogramas(userId: string): Promise<CronogramaEmpenho[]> {
+  try {
+    const q = collection(db, 'cronogramas');
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => doc.data() as CronogramaEmpenho);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, 'cronogramas');
+    return [];
+  }
+}
+
+export async function saveCronograma(userId: string, cronograma: CronogramaEmpenho): Promise<void> {
+  const path = `cronogramas/${cronograma.id}`;
+  try {
+    const docRef = doc(db, 'cronogramas', cronograma.id);
+    await setDoc(docRef, { ...cronograma, userId });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function removeCronograma(userId: string, id: string): Promise<void> {
+  const path = `cronogramas/${id}`;
+  try {
+    const docRef = doc(db, 'cronogramas', id);
     await deleteDoc(docRef);
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
