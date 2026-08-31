@@ -48,7 +48,10 @@ import {
   Sparkles,
   RefreshCw,
   Sliders,
-  Send
+  Send,
+  Camera,
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react';
 
 import { Empenho, Item, Alert, Invoice, InvoiceItem, Comissao, CronogramaEmpenho, CronogramaEntregaColuna } from '../lib/types';
@@ -168,6 +171,54 @@ export default function Home() {
     setTimeout(() => {
       setToast(null);
     }, 4000);
+  };
+
+  // Custom Platform Logo State & Upload Handlers
+  const [customLogo, setCustomLogo] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('emprovium_custom_logo');
+      if (saved) setCustomLogo(saved);
+    } catch (e) {
+      console.warn('Erro ao carregar logotipo do armazenamento local:', e);
+    }
+  }, []);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        showToast('Por favor, selecione um arquivo de imagem válido (PNG, JPG, SVG, WebP).', 'error');
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        showToast('A imagem deve ter no máximo 2MB.', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const result = ev.target?.result as string;
+        setCustomLogo(result);
+        try {
+          localStorage.setItem('emprovium_custom_logo', result);
+        } catch (err) {
+          console.warn('Erro ao salvar logotipo no armazenamento local:', err);
+        }
+        showToast('Logotipo da plataforma atualizado com sucesso!', 'success');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveLogo = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setCustomLogo(null);
+    try {
+      localStorage.removeItem('emprovium_custom_logo');
+    } catch (e) {}
+    showToast('Logotipo padrão restaurado.', 'info');
   };
 
   // Authentication & Loading state
@@ -2654,14 +2705,48 @@ export default function Home() {
           transition={{ duration: 0.6 }}
           className="w-full max-w-md bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/10 shadow-2xl flex flex-col items-center text-center space-y-6"
         >
-          {/* Insígnia / Brasão do Exército / Hospital fictício bem polido */}
-          <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center shadow-lg border border-white/20">
-            <span className="text-3xl font-black text-white tracking-tighter">CEA</span>
+          {/* Insígnia / Brasão do Exército / Logotipo Customizável */}
+          <div className="relative group">
+            <div className="w-20 h-20 bg-gradient-to-tr from-[#00288e] to-[#1e4fc2] rounded-2xl flex items-center justify-center shadow-xl border border-white/25 overflow-hidden p-2">
+              {customLogo ? (
+                <img src={customLogo} alt="Logotipo EMPROVIUM" className="w-full h-full object-contain" />
+              ) : (
+                <span className="text-2xl font-extrabold text-white tracking-widest font-montserrat">EMP</span>
+              )}
+            </div>
+            
+            <label 
+              className="absolute -bottom-1 -right-1 p-1.5 bg-white/20 hover:bg-white/40 text-white rounded-full backdrop-blur-md border border-white/30 cursor-pointer shadow-md transition-all active:scale-95 flex items-center justify-center"
+              title="Fazer upload de logotipo personalizado"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleLogoUpload} 
+                className="hidden" 
+              />
+            </label>
+            {customLogo && (
+              <button
+                type="button"
+                onClick={handleRemoveLogo}
+                className="absolute -top-1 -right-1 p-1 bg-rose-500/90 hover:bg-rose-600 text-white rounded-full border border-white/30 shadow-md transition-all active:scale-95"
+                title="Restaurar logotipo padrão"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
           </div>
 
           <div>
-            <h2 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">Controle de Empenhos - Aprov</h2>
-            <p className="text-sm text-gray-300 font-medium mt-2">Hospital Geral de Santa Maria (HGeSM)</p>
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-wider text-white uppercase font-montserrat">
+              EMPROVIUM
+            </h2>
+            <p className="text-xs sm:text-sm font-bold text-blue-200 uppercase tracking-widest mt-1.5 font-montserrat">
+              Gestão Logística e Financeira
+            </p>
+            <p className="text-xs text-gray-300 font-medium mt-1.5">Hospital Geral de Santa Maria (HGeSM)</p>
           </div>
 
           <div className="w-full h-[1px] bg-white/10 my-2" />
@@ -2742,9 +2827,58 @@ export default function Home() {
           >
             <Menu className="w-6 h-6" />
           </button>
-          <div className="flex items-center gap-2">
-            <span className="p-2 bg-blue-50/70 backdrop-blur-sm text-[#00288e] rounded-xl font-bold hidden sm:block">CEA</span>
-            <h1 className="font-semibold text-lg sm:text-xl text-[#00288e] tracking-tight">Controle de Empenhos - Aprov</h1>
+          <div className="flex items-center gap-2.5">
+            <div className="relative group">
+              <label 
+                className="w-8 h-8 rounded-lg bg-[#00288e] text-white flex items-center justify-center font-extrabold text-xs tracking-wider shadow-xs flex-shrink-0 font-montserrat cursor-pointer overflow-hidden p-1 hover:ring-2 hover:ring-blue-400 transition-all block"
+                title="Clique para alterar o logotipo da plataforma"
+              >
+                {customLogo ? (
+                  <img src={customLogo} alt="Logo" className="w-full h-full object-contain" />
+                ) : (
+                  <span>EMP</span>
+                )}
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleLogoUpload} 
+                  className="hidden" 
+                />
+              </label>
+
+              <label 
+                className="absolute -bottom-1 -right-1 p-0.5 bg-white text-[#00288e] border border-blue-200 rounded-full shadow-xs cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-50 flex items-center justify-center"
+                title="Upload de logotipo"
+              >
+                <Camera className="w-2.5 h-2.5" />
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleLogoUpload} 
+                  className="hidden" 
+                />
+              </label>
+
+              {customLogo && (
+                <button
+                  type="button"
+                  onClick={handleRemoveLogo}
+                  className="absolute -top-1 -right-1 p-0.5 bg-rose-500 text-white rounded-full shadow-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-600 flex items-center justify-center"
+                  title="Restaurar logotipo padrão"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-col">
+              <h1 className="font-extrabold text-base sm:text-lg text-[#00288e] tracking-wider uppercase font-montserrat leading-none">
+                EMPROVIUM
+              </h1>
+              <span className="text-[9px] sm:text-[10px] font-bold text-gray-500 tracking-wider uppercase font-montserrat mt-0.5">
+                Gestão Logística e Financeira
+              </span>
+            </div>
           </div>
         </div>
         
@@ -2756,15 +2890,9 @@ export default function Home() {
             </div>
           )}
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#0b1c30] border border-amber-500/30 shadow-inner flex-shrink-0 text-amber-400">
-              {/* Símbolo de Folha de Acanto */}
-              <svg className="w-6 h-6 p-0.5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2C11.5 3.5 10 5.5 8 7C6.5 8.1 4.5 9 3 9C4.5 10 6.5 10.5 8 11.5C9 12.2 10 13.5 10.5 15C10.8 15.8 11 17.5 11 19C11 20 11.5 21 12 21C12.5 21 13 20 13 19C13 17.5 13.2 15.8 13.5 15C14 13.5 15 12.2 16 11.5C17.5 10.5 19.5 10 21 9C19.5 9 17.5 8.1 16 7C14 5.5 12.5 3.5 12 2Z" />
-                <path d="M12 8C11.5 9.2 10.5 10.5 9.5 11.2C8.5 12 7 12.5 6 12.8C7.5 13.2 9 13.8 10 14.8C10.5 15.3 11 16 11.2 17C11.3 17.5 11.5 18.5 11.5 19.5C11.5 20 11.8 20.5 12 20.5C12.2 20.5 12.5 20 12.5 19.5C12.5 18.5 12.7 17.5 12.8 17C13 16 13.5 15.3 14 14.8C15 13.8 16.5 13.2 18 12.8C17 12.5 15.5 12 14.5 11.2C13.5 10.5 12.5 9.2 12 8Z" opacity="0.8" />
-                <path d="M12 14V21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </div>
-            <span className="text-xs font-semibold text-gray-600 hidden md:inline">{user?.displayName || 'Gestor de Empenhos'}</span>
+            <span className="text-xs font-semibold text-gray-700 hidden md:inline">
+              {user?.displayName || 'Aprovisionamento HGeSM'}
+            </span>
           </div>
         </div>
       </header>
@@ -2788,19 +2916,12 @@ export default function Home() {
         `}>
           <div className="space-y-6">
             
-            {/* User Profile Card */}
-            <div className="mx-4 p-4 bg-white/40 backdrop-blur-sm rounded-2xl border border-white/30 flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[#0b1c30] border border-amber-500/20 shadow-sm flex-shrink-0 text-amber-400">
-                {/* Símbolo de Folha de Acanto */}
-                <svg className="w-9 h-9 p-0.5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2C11.5 3.5 10 5.5 8 7C6.5 8.1 4.5 9 3 9C4.5 10 6.5 10.5 8 11.5C9 12.2 10 13.5 10.5 15C10.8 15.8 11 17.5 11 19C11 20 11.5 21 12 21C12.5 21 13 20 13 19C13 17.5 13.2 15.8 13.5 15C14 13.5 15 12.2 16 11.5C17.5 10.5 19.5 10 21 9C19.5 9 17.5 8.1 16 7C14 5.5 12.5 3.5 12 2Z" />
-                  <path d="M12 8C11.5 9.2 10.5 10.5 9.5 11.2C8.5 12 7 12.5 6 12.8C7.5 13.2 9 13.8 10 14.8C10.5 15.3 11 16 11.2 17C11.3 17.5 11.5 18.5 11.5 19.5C11.5 20 11.8 20.5 12 20.5C12.2 20.5 12.5 20 12.5 19.5C12.5 18.5 12.7 17.5 12.8 17C13 16 13.5 15.3 14 14.8C15 13.8 16.5 13.2 18 12.8C17 12.5 15.5 12 14.5 11.2C13.5 10.5 12.5 9.2 12 8Z" opacity="0.8" />
-                  <path d="M12 14V21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-              <div className="overflow-hidden">
-                <p className="font-bold text-sm text-[#0b1c30] truncate">{user?.displayName || 'Gestor de Empenhos'}</p>
-              </div>
+            {/* User Profile Card (Text-only without avatar icon) */}
+            <div className="mx-4 px-4 py-3 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/40 shadow-xs">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Usuário Conectado</p>
+              <p className="font-bold text-sm text-[#0b1c30] truncate mt-0.5">
+                {user?.displayName || 'Aprovisionamento HGeSM'}
+              </p>
             </div>
 
             {/* Navigation Menus */}

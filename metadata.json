@@ -1,6 +1,6 @@
 {
-  "name": "Controle de Empenhos - Aprov",
-  "description": "Sistema de gestão e conciliação de notas fiscais, empenhos e estoque para logística de saúde hospitalar.",
+  "name": "EMPROVIUM",
+  "description": "Gestão Logística e Financeira - Plataforma integrada de Gestão de Empenhos, Provimento Logístico e Execução Financeira.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
