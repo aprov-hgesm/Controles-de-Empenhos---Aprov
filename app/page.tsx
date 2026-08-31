@@ -3764,14 +3764,18 @@ export default function Home() {
                           </div>
                         </div>
 
-                        <div className="pt-3 border-t border-gray-50 flex justify-between items-end text-xs">
+                        <div className="pt-3 border-t border-gray-50 grid grid-cols-3 gap-2 text-xs">
                           <div>
-                            <p className="text-gray-400 font-bold uppercase tracking-wider text-[10px]">Total Empenhado</p>
-                            <p className="font-extrabold text-gray-700">R$ {totalCommitted.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                            <p className="text-gray-400 font-bold uppercase tracking-wider text-[9px]">Empenhado</p>
+                            <p className="font-extrabold text-gray-700 text-xs">R$ {totalCommitted.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400 font-bold uppercase tracking-wider text-[9px]">Recebido</p>
+                            <p className="font-extrabold text-emerald-600 text-xs">R$ {totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-gray-400 font-bold uppercase tracking-wider text-[10px]">Total Recebido</p>
-                            <p className="font-extrabold text-emerald-600">R$ {totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                            <p className="text-gray-400 font-bold uppercase tracking-wider text-[9px]">A Receber</p>
+                            <p className="font-extrabold text-amber-600 text-xs">R$ {Math.max(0, totalCommitted - totalReceived).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                           </div>
                         </div>
                       </div>
@@ -5340,6 +5344,7 @@ export default function Home() {
                 // Get linked invoices list
                 const linkedInvoices = invoices.filter(inv => inv.empenhoId === emp.id);
                 const totalReceivedNfe = linkedInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
+                const totalPendingToReceive = Math.max(0, totalCommitted - totalReceivedNfe);
 
                 return (
                   <div className="space-y-6">
@@ -5358,7 +5363,7 @@ export default function Home() {
 
                       {/* Numeric summary block */}
                       <div className="p-5 border-b border-gray-50 space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                           <div>
                             <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider block">VALOR TOTAL EMPENHADO</span>
                             <span className="text-xl sm:text-2xl font-black text-[#00288e]">
@@ -5370,6 +5375,13 @@ export default function Home() {
                             <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider block">TOTAL RECEBIDO (NF-e)</span>
                             <span className="text-xl sm:text-2xl font-black text-emerald-600">
                               R$ {totalReceivedNfe.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider block">TOTAL A RECEBER</span>
+                            <span className={`text-xl sm:text-2xl font-black ${totalPendingToReceive > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
+                              R$ {totalPendingToReceive.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </span>
                           </div>
 
@@ -5702,14 +5714,18 @@ export default function Home() {
                                   </div>
                                 </div>
 
-                                <div className="border-t border-b border-gray-100 py-3 grid grid-cols-2 gap-4">
+                                <div className="border-t border-b border-gray-100 py-3 grid grid-cols-3 gap-4">
                                   <div>
                                     <p className="font-bold text-gray-400 text-[9px]">VALOR TOTAL CONTRATADO</p>
-                                    <p className="text-base font-black text-gray-800">R$ {totalCommitted.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                    <p className="text-sm sm:text-base font-black text-gray-800">R$ {totalCommitted.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-gray-400 text-[9px]">TOTAL CONCILIADO POR NF-e</p>
+                                    <p className="text-sm sm:text-base font-black text-emerald-600">R$ {pdfTotalReceivedNfe.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                                   </div>
                                   <div className="text-right">
-                                    <p className="font-bold text-gray-400 text-[9px]">TOTAL CONCILIADO POR NF-e</p>
-                                    <p className="text-base font-black text-emerald-600">R$ {pdfTotalReceivedNfe.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                    <p className="font-bold text-gray-400 text-[9px]">TOTAL A RECEBER</p>
+                                    <p className="text-sm sm:text-base font-black text-amber-600">R$ {Math.max(0, totalCommitted - pdfTotalReceivedNfe).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                                   </div>
                                 </div>
 
