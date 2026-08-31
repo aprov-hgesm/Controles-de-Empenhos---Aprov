@@ -29,7 +29,8 @@ service cloud.firestore {
     }
 
     match /settings/{id} {
-      allow read, write: if isAuthorizedUser();
+      allow read: if true;
+      allow write: if isAuthorizedUser();
     }
   }
 }

@@ -178,6 +178,7 @@ export default function Home() {
   // Custom Platform Logo State & Upload Handlers
   const [customLogo, setCustomLogo] = useState<string | null>(null);
 
+  // Global Platform Settings (Logotipo & Favicon) Listener - Unconditionally loads and syncs with Firestore
   useEffect(() => {
     try {
       const saved = localStorage.getItem('emprovium_custom_logo');
@@ -185,25 +186,111 @@ export default function Home() {
     } catch (e) {
       console.warn('Erro ao carregar logotipo do armazenamento local:', e);
     }
+
+    const unsubscribe = onSnapshot(
+      doc(db, 'settings', 'global'),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.logo !== undefined) {
+            setCustomLogo(data.logo || null);
+            try {
+              if (data.logo) {
+                localStorage.setItem('emprovium_custom_logo', data.logo);
+              } else {
+                localStorage.removeItem('emprovium_custom_logo');
+              }
+            } catch (e) {}
+          }
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, 'settings/global');
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
-  // Update browser tab favicon dynamically based on the platform logo
+  // Update browser tab favicon dynamically and reliably across all browsers
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
-    let link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
-    if (!link) {
-      link = document.createElement('link');
-      link.rel = 'icon';
-      document.head.appendChild(link);
-    }
+    const setFavicon = (dataUrl: string) => {
+      try {
+        const head = document.head || document.getElementsByTagName('head')[0];
+        if (!head) return;
+
+        // Remove all previous icon tags to force browser tab to refresh the icon
+        const existingLinks = document.querySelectorAll("link[rel*='icon']");
+        existingLinks.forEach(link => link.remove());
+
+        // Create new standard favicon
+        const iconLink = document.createElement('link');
+        iconLink.rel = 'icon';
+        iconLink.type = 'image/png';
+        iconLink.href = dataUrl;
+        head.appendChild(iconLink);
+
+        // Create shortcut icon
+        const shortcutLink = document.createElement('link');
+        shortcutLink.rel = 'shortcut icon';
+        shortcutLink.type = 'image/png';
+        shortcutLink.href = dataUrl;
+        head.appendChild(shortcutLink);
+
+        // Create apple touch icon
+        const appleLink = document.createElement('link');
+        appleLink.rel = 'apple-touch-icon';
+        appleLink.href = dataUrl;
+        head.appendChild(appleLink);
+      } catch (err) {
+        console.warn('Erro ao aplicar favicon no documento:', err);
+      }
+    };
 
     if (customLogo) {
-      link.href = customLogo;
+      // Convert custom image into a clean square 64x64 PNG for crisp browser tab rendering
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = 64;
+          canvas.height = 64;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.clearRect(0, 0, 64, 64);
+
+            // Calculate fit inside 64x64
+            const maxDim = 64;
+            const ratio = Math.min(maxDim / img.width, maxDim / img.height);
+            const w = img.width * ratio;
+            const h = img.height * ratio;
+            const x = (maxDim - w) / 2;
+            const y = (maxDim - h) / 2;
+
+            ctx.drawImage(img, x, y, w, h);
+            const faviconDataUrl = canvas.toDataURL('image/png');
+            setFavicon(faviconDataUrl);
+          } else {
+            setFavicon(customLogo);
+          }
+        } catch (e) {
+          setFavicon(customLogo);
+        }
+      };
+      img.onerror = () => {
+        setFavicon(customLogo);
+      };
+      img.src = customLogo;
     } else {
       // Default SVG favicon with EMP branding
-      const defaultSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#00288e"/><text x="50%" y="54%" dominant-baseline="central" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="10" letter-spacing="0.5">EMP</text></svg>`;
-      link.href = `data:image/svg+xml;utf8,${encodeURIComponent(defaultSvg)}`;
+      const defaultSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#00288e"/><text x="50%" y="54%" dominant-baseline="central" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="20" letter-spacing="1">EMP</text></svg>`;
+      const defaultDataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(defaultSvg)}`;
+      setFavicon(defaultDataUrl);
     }
   }, [customLogo]);
 
@@ -415,37 +502,12 @@ export default function Home() {
       }
     );
 
-    const unsubscribeSettings = onSnapshot(
-      doc(db, 'settings', 'global'),
-      (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data.logo !== undefined) {
-            setCustomLogo(data.logo || null);
-            if (data.logo) {
-              try {
-                localStorage.setItem('emprovium_custom_logo', data.logo);
-              } catch (e) {}
-            } else {
-              try {
-                localStorage.removeItem('emprovium_custom_logo');
-              } catch (e) {}
-            }
-          }
-        }
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.GET, 'settings/global');
-      }
-    );
-
     return () => {
       unsubscribeEmpenhos();
       unsubscribeAlerts();
       unsubscribeInvoices();
       unsubscribeComissoes();
       unsubscribeCronogramas();
-      unsubscribeSettings();
     };
   }, [user]);
 
