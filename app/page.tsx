@@ -187,6 +187,26 @@ export default function Home() {
     }
   }, []);
 
+  // Update browser tab favicon dynamically based on the platform logo
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.appendChild(link);
+    }
+
+    if (customLogo) {
+      link.href = customLogo;
+    } else {
+      // Default SVG favicon with EMP branding
+      const defaultSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#00288e"/><text x="50%" y="54%" dominant-baseline="central" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="10" letter-spacing="0.5">EMP</text></svg>`;
+      link.href = `data:image/svg+xml;utf8,${encodeURIComponent(defaultSvg)}`;
+    }
+  }, [customLogo]);
+
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
