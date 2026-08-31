@@ -61,7 +61,7 @@ import autoTable from 'jspdf-autotable';
 
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { auth, googleProvider, db, OperationType, handleFirestoreError } from '../lib/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, doc } from 'firebase/firestore';
 import { 
   seedInitialDataIfNecessary, 
   getEmpenhos, 
@@ -78,7 +78,9 @@ import {
   removeComissao,
   getCronogramas,
   saveCronograma,
-  removeCronograma
+  removeCronograma,
+  savePlatformLogo,
+  getPlatformLogo
 } from '../lib/firebaseSync';
 
 const MILITARY_RANKS = [
@@ -185,40 +187,85 @@ export default function Home() {
     }
   }, []);
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
         showToast('Por favor, selecione um arquivo de imagem válido (PNG, JPG, SVG, WebP).', 'error');
         return;
       }
-      if (file.size > 2 * 1024 * 1024) {
-        showToast('A imagem deve ter no máximo 2MB.', 'error');
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('A imagem deve ter no máximo 5MB.', 'error');
         return;
       }
+
       const reader = new FileReader();
       reader.onload = (ev) => {
-        const result = ev.target?.result as string;
-        setCustomLogo(result);
-        try {
-          localStorage.setItem('emprovium_custom_logo', result);
-        } catch (err) {
-          console.warn('Erro ao salvar logotipo no armazenamento local:', err);
-        }
-        showToast('Logotipo da plataforma atualizado com sucesso!', 'success');
+        const rawData = ev.target?.result as string;
+        if (!rawData) return;
+
+        // Resize / optimize image using canvas to ensure efficient Firestore storage
+        const img = new Image();
+        img.onload = async () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const maxDim = 480;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              const optimizedDataUrl = canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9);
+              
+              setCustomLogo(optimizedDataUrl);
+              try {
+                localStorage.setItem('emprovium_custom_logo', optimizedDataUrl);
+              } catch (err) {
+                console.warn('Erro no armazenamento local:', err);
+              }
+
+              // Salva no banco de dados Firestore
+              await savePlatformLogo(optimizedDataUrl, user?.email || 'aprov1hgesm@gmail.com');
+              showToast('Logotipo salvo com sucesso no banco de dados!', 'success');
+            }
+          } catch (err) {
+            console.error('Erro ao processar e salvar imagem:', err);
+            showToast('Erro ao salvar logotipo no banco de dados.', 'error');
+          }
+        };
+        img.src = rawData;
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleRemoveLogo = (e: React.MouseEvent) => {
+  const handleRemoveLogo = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     setCustomLogo(null);
     try {
       localStorage.removeItem('emprovium_custom_logo');
     } catch (e) {}
-    showToast('Logotipo padrão restaurado.', 'info');
+    try {
+      await savePlatformLogo(null, user?.email || 'aprov1hgesm@gmail.com');
+      showToast('Logotipo padrão restaurado e sincronizado no banco de dados.', 'info');
+    } catch (err) {
+      console.error('Erro ao remover logotipo no banco:', err);
+      showToast('Logotipo padrão restaurado localmente.', 'info');
+    }
   };
 
   // Authentication & Loading state
@@ -348,12 +395,37 @@ export default function Home() {
       }
     );
 
+    const unsubscribeSettings = onSnapshot(
+      doc(db, 'settings', 'global'),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.logo !== undefined) {
+            setCustomLogo(data.logo || null);
+            if (data.logo) {
+              try {
+                localStorage.setItem('emprovium_custom_logo', data.logo);
+              } catch (e) {}
+            } else {
+              try {
+                localStorage.removeItem('emprovium_custom_logo');
+              } catch (e) {}
+            }
+          }
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, 'settings/global');
+      }
+    );
+
     return () => {
       unsubscribeEmpenhos();
       unsubscribeAlerts();
       unsubscribeInvoices();
       unsubscribeComissoes();
       unsubscribeCronogramas();
+      unsubscribeSettings();
     };
   }, [user]);
 
@@ -2705,37 +2777,12 @@ export default function Home() {
           transition={{ duration: 0.6 }}
           className="w-full max-w-md bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/10 shadow-2xl flex flex-col items-center text-center space-y-6"
         >
-          {/* Insígnia / Brasão do Exército / Logotipo Customizável */}
-          <div className="relative group">
-            <div className="w-20 h-20 bg-gradient-to-tr from-[#00288e] to-[#1e4fc2] rounded-2xl flex items-center justify-center shadow-xl border border-white/25 overflow-hidden p-2">
-              {customLogo ? (
-                <img src={customLogo} alt="Logotipo EMPROVIUM" className="w-full h-full object-contain" />
-              ) : (
-                <span className="text-2xl font-extrabold text-white tracking-widest font-montserrat">EMP</span>
-              )}
-            </div>
-            
-            <label 
-              className="absolute -bottom-1 -right-1 p-1.5 bg-white/20 hover:bg-white/40 text-white rounded-full backdrop-blur-md border border-white/30 cursor-pointer shadow-md transition-all active:scale-95 flex items-center justify-center"
-              title="Fazer upload de logotipo personalizado"
-            >
-              <Camera className="w-3.5 h-3.5" />
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={handleLogoUpload} 
-                className="hidden" 
-              />
-            </label>
-            {customLogo && (
-              <button
-                type="button"
-                onClick={handleRemoveLogo}
-                className="absolute -top-1 -right-1 p-1 bg-rose-500/90 hover:bg-rose-600 text-white rounded-full border border-white/30 shadow-md transition-all active:scale-95"
-                title="Restaurar logotipo padrão"
-              >
-                <X className="w-3 h-3" />
-              </button>
+          {/* Insígnia / Brasão do Exército / Logotipo Institucional */}
+          <div className="w-20 h-20 bg-gradient-to-tr from-[#00288e] to-[#1e4fc2] rounded-2xl flex items-center justify-center shadow-xl border border-white/25 overflow-hidden p-2">
+            {customLogo ? (
+              <img src={customLogo} alt="Logotipo EMPROVIUM" className="w-full h-full object-contain" />
+            ) : (
+              <span className="text-2xl font-extrabold text-white tracking-widest font-montserrat">EMP</span>
             )}
           </div>
 

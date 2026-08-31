@@ -68,6 +68,18 @@
         "userId": { "type": "string" }
       },
       "required": ["id", "mesReferencia", "boletimNumero", "boletimData", "presidente", "auxiliares", "userId"]
+    },
+    "setting": {
+      "title": "Setting",
+      "description": "Configurações globais da plataforma",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "logo": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "updatedBy": { "type": "string" }
+      },
+      "required": ["id"]
     }
   },
   "firestore": {
@@ -86,6 +98,10 @@
     "comissoes/{comissaoId}": {
       "schema": "comissao",
       "description": "Coleção de Comissões de Recebimento"
+    },
+    "settings/{settingId}": {
+      "schema": "setting",
+      "description": "Coleção de Configurações Globais"
     }
   }
 }

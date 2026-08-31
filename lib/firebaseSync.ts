@@ -2,6 +2,7 @@ import {
   collection, 
   query, 
   getDocs, 
+  getDoc,
   setDoc, 
   deleteDoc, 
   doc 
@@ -182,3 +183,35 @@ export async function removeCronograma(userId: string, id: string): Promise<void
     handleFirestoreError(error, OperationType.DELETE, path);
   }
 }
+
+// Global Platform Settings (Logotipo e Configurações)
+export async function getPlatformLogo(): Promise<string | null> {
+  try {
+    const docRef = doc(db, 'settings', 'global');
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      return data.logo || null;
+    }
+    return null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, 'settings/global');
+    return null;
+  }
+}
+
+export async function savePlatformLogo(logo: string | null, userEmail?: string): Promise<void> {
+  const path = 'settings/global';
+  try {
+    const docRef = doc(db, 'settings', 'global');
+    await setDoc(docRef, {
+      id: 'global',
+      logo: logo || null,
+      updatedAt: new Date().toISOString(),
+      updatedBy: userEmail || 'system'
+    }, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
