@@ -174,6 +174,10 @@ export default function Home() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [comissoes, setComissoes] = useState<Comissao[]>([]);
 
+  // State for inline editing of Número da NS in Empenho Report
+  const [editingNSId, setEditingNSId] = useState<string | null>(null);
+  const [tempNSValue, setTempNSValue] = useState<string>('');
+
   // Helper to calculate remaining balance by classification
   const getBalanceByClass = (classification: 'QR' | 'CALI' | 'PASA') => {
     const filtered = empenhos.filter(emp => emp.classification === classification);
@@ -1245,6 +1249,42 @@ export default function Home() {
     showToast(`Nota Fiscal ${invoiceId} finalizada e enviada para o Setor de Tesouraria!`);
   };
 
+  const handleSaveNumeroNS = async (invoiceId: string, value: string) => {
+    const trimmed = value.trim();
+    let updatedTargetInvoice: Invoice | null = null;
+    const updatedInvoices = invoices.map(inv => {
+      if (inv.id === invoiceId) {
+        updatedTargetInvoice = {
+          ...inv,
+          numeroNS: trimmed ? trimmed : undefined,
+        };
+        return updatedTargetInvoice;
+      }
+      return inv;
+    });
+
+    setInvoices(updatedInvoices);
+    setEditingNSId(null);
+    setTempNSValue('');
+
+    if (user && updatedTargetInvoice) {
+      try {
+        await saveInvoice(user.uid, updatedTargetInvoice);
+      } catch (error) {
+        console.error(error);
+        showToast('Erro ao salvar Número da NS no Firebase', 'error');
+        return;
+      }
+    }
+
+    showToast(
+      trimmed 
+        ? `Número da NS (${trimmed}) salvo para a NF ${invoiceId}!` 
+        : `Número da NS removido da NF ${invoiceId}!`,
+      'success'
+    );
+  };
+
   const handleSaveComissao = async () => {
     if (!comissaoBoletimNum) {
       showToast('Por favor, informe o número do Boletim Interno.', 'error');
@@ -1928,6 +1968,7 @@ export default function Home() {
           : 'Pendente';
         const formattedComissaoDate = inv.comissaoDate ? formatDateOnly(inv.comissaoDate) : 'Pendente';
         const formattedTesourariaDate = inv.tesourariaDate ? formatDateOnly(inv.tesourariaDate) : 'Pendente';
+        const formattedNS = inv.numeroNS ? inv.numeroNS : '—';
 
         return [
           `NF ${inv.id}`,
@@ -1935,6 +1976,7 @@ export default function Home() {
           formattedTrDate,
           formattedComissaoDate,
           formattedTesourariaDate,
+          formattedNS,
           inv.totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
         ];
       });
@@ -1942,7 +1984,7 @@ export default function Home() {
       autoTable(doc, {
         startY: yPos,
         margin: { left: margin, right: margin },
-        head: [['Número NF', 'Emissão NF', 'Emissão do TR / Cad.', 'Comissão Recebimento', 'Tesouraria', 'Valor da NF']],
+        head: [['Número NF', 'Emissão NF', 'Emissão do TR / Cad.', 'Comissão Recebimento', 'Tesouraria', 'Número da NS', 'Valor da NF']],
         body: invoicesRows,
         theme: 'striped',
         headStyles: {
@@ -1957,12 +1999,13 @@ export default function Home() {
           textColor: 50,
         },
         columnStyles: {
-          0: { cellWidth: 24, fontStyle: 'bold', textColor: [0, 40, 142] },
-          1: { cellWidth: 26 },
-          2: { cellWidth: 42 },
-          3: { cellWidth: 32 },
-          4: { cellWidth: 26 },
-          5: { cellWidth: 'auto', halign: 'right' as const, fontStyle: 'bold', textColor: [0, 120, 60] },
+          0: { cellWidth: 22, fontStyle: 'bold', textColor: [0, 40, 142] },
+          1: { cellWidth: 24 },
+          2: { cellWidth: 38 },
+          3: { cellWidth: 28 },
+          4: { cellWidth: 24 },
+          5: { cellWidth: 24, fontStyle: 'bold', textColor: [60, 40, 120] },
+          6: { cellWidth: 'auto', halign: 'right' as const, fontStyle: 'bold', textColor: [0, 120, 60] },
         },
         didDrawPage: (data) => {
           yPos = data.cursor ? data.cursor.y + 6 : yPos + 8;
@@ -4680,6 +4723,7 @@ export default function Home() {
                                   <th className="py-3 px-3.5 font-bold text-gray-500">Data de Emissão do TR</th>
                                   <th className="py-3 px-3.5 font-bold text-gray-500">Data da Comissão</th>
                                   <th className="py-3 px-3.5 font-bold text-gray-500">Data da Tesouraria</th>
+                                  <th className="py-3 px-3.5 font-bold text-gray-500">Número da NS</th>
                                   <th className="py-3 px-3.5 font-bold text-gray-500 text-right">Valor Total da NF</th>
                                 </tr>
                               </thead>
@@ -4736,6 +4780,90 @@ export default function Home() {
                                           </span>
                                         ) : (
                                           <span className="text-gray-400 font-normal italic text-xs">Pendente</span>
+                                        )}
+                                      </td>
+                                      <td className="py-3 px-3.5 whitespace-nowrap">
+                                        {editingNSId === inv.id ? (
+                                          <div className="flex items-center gap-1.5">
+                                            <input
+                                              type="text"
+                                              id={`input-ns-${inv.id}`}
+                                              value={tempNSValue}
+                                              onChange={(e) => setTempNSValue(e.target.value)}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                  e.preventDefault();
+                                                  handleSaveNumeroNS(inv.id, tempNSValue);
+                                                } else if (e.key === 'Escape') {
+                                                  setEditingNSId(null);
+                                                  setTempNSValue('');
+                                                }
+                                              }}
+                                              placeholder="Ex: 2026NS..."
+                                              autoFocus
+                                              className="w-32 sm:w-36 h-8 px-2 text-xs font-mono font-bold border border-[#00288e] rounded-lg bg-white text-gray-800 outline-none shadow-xs focus:ring-1 focus:ring-[#00288e]"
+                                            />
+                                            <button
+                                              id={`btn-save-ns-${inv.id}`}
+                                              type="button"
+                                              onClick={() => handleSaveNumeroNS(inv.id, tempNSValue)}
+                                              className="p-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-lg transition-all shadow-xs flex items-center justify-center"
+                                              title="Salvar Número da NS"
+                                            >
+                                              <Save className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button
+                                              id={`btn-cancel-ns-${inv.id}`}
+                                              type="button"
+                                              onClick={() => {
+                                                setEditingNSId(null);
+                                                setTempNSValue('');
+                                              }}
+                                              className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-all flex items-center justify-center"
+                                              title="Cancelar"
+                                            >
+                                              <X className="w-3.5 h-3.5" />
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <div className="flex items-center gap-2">
+                                            {inv.numeroNS ? (
+                                              <span className="inline-flex items-center gap-1 font-mono font-bold text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded-md text-xs border border-indigo-100 shadow-2xs">
+                                                {inv.numeroNS}
+                                              </span>
+                                            ) : (
+                                              <span className="text-gray-400 font-normal italic text-xs">
+                                                —
+                                              </span>
+                                            )}
+                                            
+                                            <div className="flex items-center gap-1">
+                                              <button
+                                                id={`btn-edit-ns-${inv.id}`}
+                                                type="button"
+                                                onClick={() => {
+                                                  setEditingNSId(inv.id);
+                                                  setTempNSValue(inv.numeroNS || '');
+                                                }}
+                                                className="p-1 rounded-lg text-gray-400 hover:text-[#00288e] hover:bg-blue-50 transition-all active:scale-95 border border-transparent hover:border-blue-200/50"
+                                                title={inv.numeroNS ? "Editar Número da NS" : "Informar Número da NS"}
+                                              >
+                                                <Edit className="w-3.5 h-3.5" />
+                                              </button>
+                                              <button
+                                                id={`btn-quick-save-ns-${inv.id}`}
+                                                type="button"
+                                                onClick={() => {
+                                                  setEditingNSId(inv.id);
+                                                  setTempNSValue(inv.numeroNS || '');
+                                                }}
+                                                className="p-1 rounded-lg text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 transition-all active:scale-95 border border-transparent hover:border-emerald-200/50"
+                                                title="Editar e Salvar Número da NS"
+                                              >
+                                                <Save className="w-3.5 h-3.5" />
+                                              </button>
+                                            </div>
+                                          </div>
                                         )}
                                       </td>
                                       <td className="py-3 px-3.5 text-right font-extrabold text-emerald-600 whitespace-nowrap">
@@ -4903,6 +5031,7 @@ export default function Home() {
                                           <th className="py-1.5 px-2 font-bold text-gray-600">Data de Emissão do TR</th>
                                           <th className="py-1.5 px-2 font-bold text-gray-600">Data da Comissão</th>
                                           <th className="py-1.5 px-2 font-bold text-gray-600">Data da Tesouraria</th>
+                                          <th className="py-1.5 px-2 font-bold text-gray-600">Número da NS</th>
                                           <th className="py-1.5 px-2 font-bold text-gray-600 text-right">Valor Total da NF</th>
                                         </tr>
                                       </thead>
@@ -4915,6 +5044,7 @@ export default function Home() {
                                             : 'Pendente';
                                           const formattedComissaoDate = inv.comissaoDate ? formatDateOnly(inv.comissaoDate) : 'Pendente';
                                           const formattedTesourariaDate = inv.tesourariaDate ? formatDateOnly(inv.tesourariaDate) : 'Pendente';
+                                          const formattedNS = inv.numeroNS ? inv.numeroNS : '—';
 
                                           return (
                                             <tr key={inv.id}>
@@ -4931,6 +5061,7 @@ export default function Home() {
                                               <td className="py-1.5 px-2 text-gray-700">{formattedTrDate}</td>
                                               <td className="py-1.5 px-2 text-gray-700">{formattedComissaoDate}</td>
                                               <td className="py-1.5 px-2 text-gray-700">{formattedTesourariaDate}</td>
+                                              <td className="py-1.5 px-2 font-mono font-bold text-indigo-900">{formattedNS}</td>
                                               <td className="py-1.5 px-2 text-right font-bold text-emerald-600">
                                                 R$ {inv.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                               </td>
@@ -5068,6 +5199,16 @@ export default function Home() {
                               </span>
                             ) : (
                               <span className="text-xs font-semibold text-gray-400">Pendente</span>
+                            )}
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-xs">
+                            <span className="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">Número da NS (Liquidação)</span>
+                            {selectedReportInvoice.numeroNS ? (
+                              <span className="text-xs font-bold text-indigo-800 font-mono">
+                                {selectedReportInvoice.numeroNS}
+                              </span>
+                            ) : (
+                              <span className="text-xs font-semibold text-gray-400 italic">Não informada</span>
                             )}
                           </div>
                         </div>

@@ -38,6 +38,7 @@ export interface Invoice {
   comissaoDate?: string; // Data de envio para a comissão de recebimento
   tesourariaDate?: string; // Data de envio para a tesouraria
   termoNumero?: number; // Número do termo de recebimento QR
+  numeroNS?: string; // Número identificador do comprovante de liquidação (Nota de Sistema)
 }
 
 export interface MembroComissao {
