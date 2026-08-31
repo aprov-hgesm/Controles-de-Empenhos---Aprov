@@ -27,6 +27,7 @@ import {
   TrendingDown,
   ChevronRight,
   Filter,
+  ArrowUpDown,
   Info,
   Layers,
   FileSpreadsheet,
@@ -643,6 +644,8 @@ export default function Home() {
   const [nfSubTab, setNfSubTab] = useState<'acompanhar' | 'cadastrar' | 'comissao'>('acompanhar');
   const [nfMonthFilter, setNfMonthFilter] = useState('Todos');
   const [nfEmpenhoFilter, setNfEmpenhoFilter] = useState('Todos');
+  const [nfTramitacaoFilter, setNfTramitacaoFilter] = useState<'Todos' | 'FaltaComissao' | 'FaltaTesouraria' | 'Concluidas'>('Todos');
+  const [nfSortOrder, setNfSortOrder] = useState<'recentes' | 'antigas'>('recentes');
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
 
   // --- COMISSÃO DE RECEBIMENTO FORM STATES ---
@@ -4559,71 +4562,169 @@ export default function Home() {
               {nfSubTab === 'acompanhar' && (
                 <div className="space-y-4">
                   {/* Search / Filter for Invoices */}
-                  <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
-                    <div className="relative flex-1">
-                      <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input 
-                        type="text" 
-                        placeholder="Buscar Nota Fiscal por nº ou fornecedor..."
-                        value={nfSearch}
-                        onChange={(e) => setNfSearch(e.target.value)}
-                        className="w-full pl-12 pr-4 h-11 rounded-xl border border-gray-200 bg-white focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] transition-all font-medium text-sm text-[#0b1c30] placeholder-gray-400 outline-none"
-                      />
+                  <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+                    {/* Row 1: Search, Empenho, Mês, Apagar */}
+                    <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center">
+                      <div className="relative flex-1">
+                        <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input 
+                          type="text" 
+                          placeholder="Buscar Nota Fiscal por nº, fornecedor ou empenho..."
+                          value={nfSearch}
+                          onChange={(e) => setNfSearch(e.target.value)}
+                          className="w-full pl-12 pr-4 h-11 rounded-xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] transition-all font-medium text-sm text-[#0b1c30] placeholder-gray-400 outline-none"
+                        />
+                      </div>
+
+                      <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
+                        {/* Empenho Filter */}
+                        <div className="flex-1 sm:flex-initial">
+                          <select
+                            value={nfEmpenhoFilter}
+                            onChange={(e) => setNfEmpenhoFilter(e.target.value)}
+                            className="w-full sm:w-auto h-11 px-3.5 rounded-xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-bold text-xs sm:text-sm text-[#0b1c30] shadow-sm min-w-[150px]"
+                          >
+                            <option value="Todos">Todos os Empenhos</option>
+                            {Array.from(new Set([...empenhos.map(e => e.id), ...invoices.map(i => i.empenhoId)].filter(Boolean))).map(empId => (
+                              <option key={empId} value={empId}>
+                                NE {empId}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Month Filter */}
+                        <div className="flex-1 sm:flex-initial">
+                          <select
+                            value={nfMonthFilter}
+                            onChange={(e) => setNfMonthFilter(e.target.value)}
+                            className="w-full sm:w-auto h-11 px-3.5 rounded-xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-bold text-xs sm:text-sm text-[#0b1c30] shadow-sm min-w-[150px]"
+                          >
+                            <option value="Todos">Todos os Meses</option>
+                            {uniqueNfMonths.map(monthStr => {
+                              const [year, month] = monthStr.split('-');
+                              const monthNames = [
+                                'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                                'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+                              ];
+                              const monthIdx = parseInt(month, 10) - 1;
+                              const label = `${monthNames[monthIdx]} / ${year}`;
+                              return (
+                                <option key={monthStr} value={monthStr}>
+                                  {label}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+
+                        {invoices.length > 0 && (
+                          <button
+                            onClick={handleDeleteAllInvoices}
+                            className="h-11 px-3.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-sm whitespace-nowrap"
+                            title="Apagar todas as notas fiscais cadastradas"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            <span className="hidden xl:inline">Apagar Todas</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Empenho Filter */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap hidden md:inline">Empenho (NE):</span>
-                      <select
-                        value={nfEmpenhoFilter}
-                        onChange={(e) => setNfEmpenhoFilter(e.target.value)}
-                        className="h-11 px-4 rounded-xl border border-gray-200 bg-white focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-bold text-sm text-[#0b1c30] shadow-sm min-w-[160px]"
-                      >
-                        <option value="Todos">Todos os Empenhos</option>
-                        {Array.from(new Set([...empenhos.map(e => e.id), ...invoices.map(i => i.empenhoId)].filter(Boolean))).map(empId => (
-                          <option key={empId} value={empId}>
-                            NE {empId}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    {/* Row 2: Status Tramitação (Pills) + Ordenação */}
+                    <div className="pt-3 border-t border-gray-100 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
+                      {/* Tramitação Status Pills */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mr-1 hidden sm:inline">Tramitação:</span>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setNfTramitacaoFilter('Todos')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                            nfTramitacaoFilter === 'Todos'
+                              ? 'bg-[#00288e] text-white shadow-sm'
+                              : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                          }`}
+                        >
+                          <span>Todas</span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                            nfTramitacaoFilter === 'Todos' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
+                          }`}>
+                            {invoices.length}
+                          </span>
+                        </button>
 
-                    {/* Month Filter */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap hidden md:inline">Mês da Nota:</span>
-                      <select
-                        value={nfMonthFilter}
-                        onChange={(e) => setNfMonthFilter(e.target.value)}
-                        className="h-11 px-4 rounded-xl border border-gray-200 bg-white focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-bold text-sm text-[#0b1c30] shadow-sm min-w-[160px]"
-                      >
-                        <option value="Todos">Todos os Meses</option>
-                        {uniqueNfMonths.map(monthStr => {
-                          const [year, month] = monthStr.split('-');
-                          const monthNames = [
-                            'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-                            'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-                          ];
-                          const monthIdx = parseInt(month, 10) - 1;
-                          const label = `${monthNames[monthIdx]} / ${year}`;
-                          return (
-                            <option key={monthStr} value={monthStr}>
-                              {label}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
+                        <button
+                          type="button"
+                          onClick={() => setNfTramitacaoFilter('FaltaComissao')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                            nfTramitacaoFilter === 'FaltaComissao'
+                              ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-200'
+                              : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/60'
+                          }`}
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>Falta Enviar p/ Comissão</span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                            nfTramitacaoFilter === 'FaltaComissao' ? 'bg-white/30 text-white' : 'bg-amber-200 text-amber-900'
+                          }`}>
+                            {invoices.filter(i => !i.comissaoDate).length}
+                          </span>
+                        </button>
 
-                    {invoices.length > 0 && (
-                      <button
-                        onClick={handleDeleteAllInvoices}
-                        className="h-11 px-4 bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm"
-                        title="Apagar todas as notas fiscais cadastradas"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Apagar Todas as Notas
-                      </button>
-                    )}
+                        <button
+                          type="button"
+                          onClick={() => setNfTramitacaoFilter('FaltaTesouraria')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                            nfTramitacaoFilter === 'FaltaTesouraria'
+                              ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-200'
+                              : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200/60'
+                          }`}
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>Falta Enviar p/ Tesouraria</span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                            nfTramitacaoFilter === 'FaltaTesouraria' ? 'bg-white/30 text-white' : 'bg-indigo-200 text-indigo-900'
+                          }`}>
+                            {invoices.filter(i => !i.tesourariaDate).length}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setNfTramitacaoFilter('Concluidas')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                            nfTramitacaoFilter === 'Concluidas'
+                              ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-200'
+                              : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/60'
+                          }`}
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Concluídas / Tesouraria</span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                            nfTramitacaoFilter === 'Concluidas' ? 'bg-white/30 text-white' : 'bg-emerald-200 text-emerald-900'
+                          }`}>
+                            {invoices.filter(i => !!i.tesourariaDate).length}
+                          </span>
+                        </button>
+                      </div>
+
+                      {/* Ordenação Filter */}
+                      <div className="flex items-center gap-2 self-end md:self-auto flex-shrink-0">
+                        <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider whitespace-nowrap flex items-center gap-1">
+                          <ArrowUpDown className="w-3.5 h-3.5 text-gray-500" />
+                          Ordenar:
+                        </span>
+                        <select
+                          value={nfSortOrder}
+                          onChange={(e) => setNfSortOrder(e.target.value as 'recentes' | 'antigas')}
+                          className="h-9 px-3 rounded-xl border border-gray-200 bg-gray-50 hover:bg-white focus:bg-white focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-bold text-xs text-[#0b1c30] shadow-xs cursor-pointer"
+                        >
+                          <option value="recentes">Mais Recentes Primeiro (Mais novas)</option>
+                          <option value="antigas">Mais Antigas Primeiro (Mais antigas)</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
 
                   {/* List of Invoices */}
@@ -4642,7 +4743,36 @@ export default function Home() {
 
                         const matchesEmpenho = nfEmpenhoFilter === 'Todos' || inv.empenhoId === nfEmpenhoFilter;
 
-                        return matchesSearch && matchesMonth && matchesEmpenho;
+                        let matchesTramitacao = true;
+                        if (nfTramitacaoFilter === 'FaltaComissao') {
+                          matchesTramitacao = !inv.comissaoDate;
+                        } else if (nfTramitacaoFilter === 'FaltaTesouraria') {
+                          matchesTramitacao = !inv.tesourariaDate;
+                        } else if (nfTramitacaoFilter === 'Concluidas') {
+                          matchesTramitacao = !!inv.tesourariaDate;
+                        }
+
+                        return matchesSearch && matchesMonth && matchesEmpenho && matchesTramitacao;
+                      }).sort((a, b) => {
+                        const getTimestamp = (inv: Invoice): number => {
+                          const raw = inv.registeredAt || inv.issueDate;
+                          if (!raw) return 0;
+                          if (raw.includes('/') && raw.split('/').length === 3) {
+                            const parts = raw.split('/');
+                            return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).getTime() || 0;
+                          }
+                          const t = new Date(raw).getTime();
+                          return isNaN(t) ? 0 : t;
+                        };
+
+                        const timeA = getTimestamp(a);
+                        const timeB = getTimestamp(b);
+                        if (timeA !== timeB) {
+                          return nfSortOrder === 'recentes' ? timeB - timeA : timeA - timeB;
+                        }
+                        return nfSortOrder === 'recentes' 
+                          ? b.id.localeCompare(a.id, undefined, { numeric: true }) 
+                          : a.id.localeCompare(b.id, undefined, { numeric: true });
                       });
 
                       if (filteredInvoices.length === 0) {
