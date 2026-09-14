@@ -1,5 +1,5 @@
 {
-  "name": "EMPROVIUM",
+  "name": "EMPROVEX",
   "description": "Gestão Logística e Financeira - Plataforma integrada de Gestão de Empenhos, Provimento Logístico e Execução Financeira.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

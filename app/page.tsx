@@ -182,7 +182,7 @@ export default function Home() {
   // Global Platform Settings (Logotipo & Favicon) Listener - Unconditionally loads and syncs with Firestore
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('emprovium_custom_logo');
+      const saved = localStorage.getItem('emprovex_custom_logo') || localStorage.getItem('emprovium_custom_logo');
       if (saved) setCustomLogo(saved);
     } catch (e) {
       console.warn('Erro ao carregar logotipo do armazenamento local:', e);
@@ -197,8 +197,9 @@ export default function Home() {
             setCustomLogo(data.logo || null);
             try {
               if (data.logo) {
-                localStorage.setItem('emprovium_custom_logo', data.logo);
+                localStorage.setItem('emprovex_custom_logo', data.logo);
               } else {
+                localStorage.removeItem('emprovex_custom_logo');
                 localStorage.removeItem('emprovium_custom_logo');
               }
             } catch (e) {}
@@ -340,7 +341,7 @@ export default function Home() {
               
               setCustomLogo(optimizedDataUrl);
               try {
-                localStorage.setItem('emprovium_custom_logo', optimizedDataUrl);
+                localStorage.setItem('emprovex_custom_logo', optimizedDataUrl);
               } catch (err) {
                 console.warn('Erro no armazenamento local:', err);
               }
@@ -365,6 +366,7 @@ export default function Home() {
     e.preventDefault();
     setCustomLogo(null);
     try {
+      localStorage.removeItem('emprovex_custom_logo');
       localStorage.removeItem('emprovium_custom_logo');
     } catch (e) {}
     try {
@@ -2869,7 +2871,7 @@ export default function Home() {
           {/* Insígnia / Brasão do Exército / Logotipo Institucional */}
           <div className="w-20 h-20 bg-gradient-to-tr from-[#00288e] to-[#1e4fc2] rounded-2xl flex items-center justify-center shadow-xl border border-white/25 overflow-hidden p-2">
             {customLogo ? (
-              <img src={customLogo} alt="Logotipo EMPROVIUM" className="w-full h-full object-contain" />
+              <img src={customLogo} alt="Logotipo EMPROVEX" className="w-full h-full object-contain" />
             ) : (
               <span className="text-2xl font-extrabold text-white tracking-widest font-montserrat">EMP</span>
             )}
@@ -2877,7 +2879,7 @@ export default function Home() {
 
           <div>
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-wider text-white uppercase font-montserrat">
-              EMPROVIUM
+              EMPROVEX
             </h2>
             <p className="text-xs sm:text-sm font-bold text-blue-200 uppercase tracking-widest mt-1.5 font-montserrat">
               Gestão Logística e Financeira
@@ -3009,7 +3011,7 @@ export default function Home() {
 
             <div className="flex flex-col">
               <h1 className="font-extrabold text-base sm:text-lg text-[#00288e] tracking-wider uppercase font-montserrat leading-none">
-                EMPROVIUM
+                EMPROVEX
               </h1>
               <span className="text-[9px] sm:text-[10px] font-bold text-gray-500 tracking-wider uppercase font-montserrat mt-0.5">
                 Gestão Logística e Financeira

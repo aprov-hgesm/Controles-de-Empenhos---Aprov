@@ -19,7 +19,7 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: 'EMPROVIUM - Gestão Logística e Financeira',
+  title: 'EMPROVEX - Gestão Logística e Financeira',
   description: 'Plataforma integrada de Gestão de Empenhos, Provimento Logístico e Execução Financeira.',
 };
 
