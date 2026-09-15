@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "recovery:plan": "node scripts/firestore-recovery.mjs plan",
+    "recovery:status": "node scripts/firestore-recovery.mjs status",
+    "recovery:verify": "node scripts/firestore-recovery.mjs verify",
+    "test:recovery": "node --test scripts/firestore-recovery.test.mjs"
   },
   "dependencies": {
     "next": "^15.1.0",
