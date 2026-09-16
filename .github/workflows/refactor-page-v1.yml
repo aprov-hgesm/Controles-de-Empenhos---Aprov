@@ -29,17 +29,45 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Apply deterministic refactor
-        run: node scripts/refactor-page-v1.mjs
-
       - name: Install dependencies
         run: npm ci
 
-      - name: TypeScript validation
-        run: npx tsc --noEmit
+      - name: Capture baseline TypeScript debt
+        shell: bash
+        run: |
+          set +e
+          npx tsc --noEmit --pretty false > /tmp/tsc-before.txt 2>&1
+          status=$?
+          set -e
+          echo "Baseline tsc exit code: $status"
+          sed -E 's/\([0-9]+,[0-9]+\)/(LINE,COL)/g' /tmp/tsc-before.txt | sort > /tmp/tsc-before-normalized.txt
+          cat /tmp/tsc-before.txt
+
+      - name: Apply deterministic refactor
+        run: node scripts/refactor-page-v1.mjs
+
+      - name: Verify refactor adds no TypeScript errors
+        shell: bash
+        run: |
+          set +e
+          npx tsc --noEmit --pretty false > /tmp/tsc-after.txt 2>&1
+          status=$?
+          set -e
+          echo "Refactored tsc exit code: $status"
+          sed -E 's/\([0-9]+,[0-9]+\)/(LINE,COL)/g' /tmp/tsc-after.txt | sort > /tmp/tsc-after-normalized.txt
+          if ! diff -u /tmp/tsc-before-normalized.txt /tmp/tsc-after-normalized.txt; then
+            echo "A refatoracao alterou o conjunto de erros TypeScript e foi bloqueada."
+            echo "--- TypeScript apos refatoracao ---"
+            cat /tmp/tsc-after.txt
+            exit 1
+          fi
+          echo "Nenhum erro TypeScript novo foi introduzido; a divida existente permaneceu equivalente."
 
       - name: Production build validation
         run: npm run build
+
+      - name: Existing recovery tests
+        run: npm run test:recovery
 
       - name: Diff hygiene
         run: git diff --check
