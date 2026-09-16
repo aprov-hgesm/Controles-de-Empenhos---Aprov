@@ -32,7 +32,9 @@ jobs:
           sed -E 's/\([0-9]+,[0-9]+\)/(<pos>)/g' /tmp/ts-before.txt | sort -u > /tmp/ts-before-normalized.txt
 
       - name: Apply feature codemod
-        run: python3 scripts/implement-liquidacao-v17.py
+        run: |
+          python3 scripts/implement-liquidacao-v17.py
+          python3 scripts/fix-liquidacao-v17.py
 
       - name: Install PDF merge dependency
         run: npm install pdf-lib@^1.17.1 --save
@@ -73,6 +75,7 @@ jobs:
         shell: bash
         run: |
           rm -f scripts/implement-liquidacao-v17.py
+          rm -f scripts/fix-liquidacao-v17.py
           rm -f .github/workflows/implement-liquidacao-v17.yml
           git diff --check
 
