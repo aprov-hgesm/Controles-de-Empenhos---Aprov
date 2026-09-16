@@ -57,6 +57,9 @@ import {
 
 import { Empenho, Item, Alert, Invoice, InvoiceItem, Comissao, CronogramaEmpenho, CronogramaEntregaColuna, EmpenhoPdfDocument } from '../lib/types';
 import { EmpenhoDocumentActions } from '../components/EmpenhoDocumentActions';
+import { MILITARY_RANKS, normalizeSupplier, PROMPT_EXTRACAO_EMPENHO } from '../features/empenhos/domain/empenhoHelpers';
+import { usePlatformBranding } from '../hooks/usePlatformBranding';
+export { PROMPT_EXTRACAO_EMPENHO } from '../features/empenhos/domain/empenhoHelpers';
 import { INITIAL_EMPENHOS, INITIAL_ALERTS, INITIAL_INVOICES, INITIAL_COMISSOES } from '../lib/mockData';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -81,91 +84,7 @@ import {
   getCronogramas,
   saveCronograma,
   removeCronograma,
-  savePlatformLogo,
-  getPlatformLogo
 } from '../lib/firebaseSync';
-
-const MILITARY_RANKS = [
-  'Coronel',
-  'Tenente-Coronel',
-  'Major',
-  'Capitão',
-  '1º Tenente',
-  '2º Tenente',
-  'Aspirante',
-  'Subtenente',
-  '1º Sargento',
-  '2º Sargento',
-  '3º Sargento',
-  'Cabo',
-  'Soldado',
-  'Servidor Civil'
-];
-
-const normalizeSupplier = (supplier: any): string => {
-  if (!supplier) return '';
-  if (typeof supplier === 'string') return supplier;
-  if (typeof supplier === 'object') {
-    if (supplier.razao_social) return String(supplier.razao_social);
-    if (supplier.fornecedor) return String(supplier.fornecedor);
-    if (supplier.name) return String(supplier.name);
-    if (supplier.supplier) return normalizeSupplier(supplier.supplier);
-    
-    const keys = Object.keys(supplier);
-    if (keys.includes('razao_social')) {
-      return String(supplier.razao_social);
-    }
-    if (keys.includes('fornecedor')) {
-      return String(supplier.fornecedor);
-    }
-    for (const key of keys) {
-      if (typeof supplier[key] === 'string') {
-        return supplier[key];
-      }
-    }
-    return String(supplier.name || Object.values(supplier)[0] || '');
-  }
-  return String(supplier);
-};
-
-export const PROMPT_EXTRACAO_EMPENHO = `# PROMPT FIXO — Extração de Dados de Nota de Empenho
-# Use este prompt no Claude, ChatGPT ou Gemini, anexando o PDF da NE
-
----
-
-Analise o PDF da Nota de Empenho anexado e extraia os dados abaixo.
-Retorne SOMENTE o JSON, sem texto antes ou depois, sem explicações, sem blocos markdown.
-
-Formato exato a retornar:
-
-{
-  "numero_empenho": "2025NE124",
-  "data_emissao": "2025-08-27",
-  "tipo_empenho": "Global",
-  "valor_total": 12043.80,
-  "fornecedor": {
-    "razao_social": "JULIANO LUCIO FRANCISCATTO DO AMARAL & CIA LT",
-    "cnpj": "02.483.088/0001-75"
-  },
-  "itens": [
-    {
-      "num_item": "001",
-      "codigo_item": "00002",
-      "descricao": "LEGUME PROCESSADO, TIPO MANDIOCA, PREPARO IN NATURA, APRESENTACAO CONGELADO, A VACUO",
-      "unidade": "kg",
-      "quantidade": 430,
-      "valor_unitario": 6.90,
-      "valor_total_item": 2967.00
-    }
-  ]
-}
-
-Regras:
-- data_emissao sempre no formato AAAA-MM-DD
-- Valores numéricos com ponto como separador decimal (não vírgula)
-- Extrair TODOS os itens da seção "Lista de Itens" do documento
-- unidade: identificar na descrição do item (kg, un, maço, pct, cx, lt, g); se não identificável usar "un"
-- Não inventar dados; se um campo não for encontrado, usar null`;
 
 export default function Home() {
   // Toast / Notifications helper
@@ -177,212 +96,15 @@ export default function Home() {
     }, 4000);
   };
 
-  // Custom Platform Logo State & Upload Handlers
-  const [customLogo, setCustomLogo] = useState<string | null>(null);
-
-  // Global Platform Settings (Logotipo & Favicon) Listener - Unconditionally loads and syncs with Firestore
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('emprovex_custom_logo') || localStorage.getItem('emprovium_custom_logo');
-      if (saved) setCustomLogo(saved);
-    } catch (e) {
-      console.warn('Erro ao carregar logotipo do armazenamento local:', e);
-    }
-
-    const unsubscribe = onSnapshot(
-      doc(db, 'settings', 'global'),
-      (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data.logo !== undefined) {
-            setCustomLogo(data.logo || null);
-            try {
-              if (data.logo) {
-                localStorage.setItem('emprovex_custom_logo', data.logo);
-              } else {
-                localStorage.removeItem('emprovex_custom_logo');
-                localStorage.removeItem('emprovium_custom_logo');
-              }
-            } catch (e) {}
-          }
-        }
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.GET, 'settings/global');
-      }
-    );
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  // Update browser tab favicon dynamically and reliably across all browsers
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return;
-
-    const setFavicon = (dataUrl: string) => {
-      try {
-        const head = document.head || document.getElementsByTagName('head')[0];
-        if (!head) return;
-
-        // Remove all previous icon tags to force browser tab to refresh the icon
-        const existingLinks = document.querySelectorAll("link[rel*='icon']");
-        existingLinks.forEach(link => link.remove());
-
-        // Create new standard favicon
-        const iconLink = document.createElement('link');
-        iconLink.rel = 'icon';
-        iconLink.type = 'image/png';
-        iconLink.href = dataUrl;
-        head.appendChild(iconLink);
-
-        // Create shortcut icon
-        const shortcutLink = document.createElement('link');
-        shortcutLink.rel = 'shortcut icon';
-        shortcutLink.type = 'image/png';
-        shortcutLink.href = dataUrl;
-        head.appendChild(shortcutLink);
-
-        // Create apple touch icon
-        const appleLink = document.createElement('link');
-        appleLink.rel = 'apple-touch-icon';
-        appleLink.href = dataUrl;
-        head.appendChild(appleLink);
-      } catch (err) {
-        console.warn('Erro ao aplicar favicon no documento:', err);
-      }
-    };
-
-    if (customLogo) {
-      // Convert custom image into a clean square 64x64 PNG for crisp browser tab rendering
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = 64;
-          canvas.height = 64;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.clearRect(0, 0, 64, 64);
-
-            // Calculate fit inside 64x64
-            const maxDim = 64;
-            const ratio = Math.min(maxDim / img.width, maxDim / img.height);
-            const w = img.width * ratio;
-            const h = img.height * ratio;
-            const x = (maxDim - w) / 2;
-            const y = (maxDim - h) / 2;
-
-            ctx.drawImage(img, x, y, w, h);
-            const faviconDataUrl = canvas.toDataURL('image/png');
-            setFavicon(faviconDataUrl);
-          } else {
-            setFavicon(customLogo);
-          }
-        } catch (e) {
-          setFavicon(customLogo);
-        }
-      };
-      img.onerror = () => {
-        setFavicon(customLogo);
-      };
-      img.src = customLogo;
-    } else {
-      // Default SVG favicon with EMP branding
-      const defaultSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#00288e"/><text x="50%" y="54%" dominant-baseline="central" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="20" letter-spacing="1">EMP</text></svg>`;
-      const defaultDataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(defaultSvg)}`;
-      setFavicon(defaultDataUrl);
-    }
-  }, [customLogo]);
-
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        showToast('Por favor, selecione um arquivo de imagem válido (PNG, JPG, SVG, WebP).', 'error');
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        showToast('A imagem deve ter no máximo 5MB.', 'error');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const rawData = ev.target?.result as string;
-        if (!rawData) return;
-
-        // Resize / optimize image using canvas to ensure efficient Firestore storage
-        const img = new Image();
-        img.onload = async () => {
-          try {
-            const canvas = document.createElement('canvas');
-            const maxDim = 480;
-            let width = img.width;
-            let height = img.height;
-
-            if (width > maxDim || height > maxDim) {
-              if (width > height) {
-                height = Math.round((height * maxDim) / width);
-                width = maxDim;
-              } else {
-                width = Math.round((width * maxDim) / height);
-                height = maxDim;
-              }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.drawImage(img, 0, 0, width, height);
-              const optimizedDataUrl = canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9);
-              
-              setCustomLogo(optimizedDataUrl);
-              try {
-                localStorage.setItem('emprovex_custom_logo', optimizedDataUrl);
-              } catch (err) {
-                console.warn('Erro no armazenamento local:', err);
-              }
-
-              // Salva no banco de dados Firestore
-              await savePlatformLogo(optimizedDataUrl, user?.email || 'aprov1hgesm@gmail.com');
-              showToast('Logotipo salvo com sucesso no banco de dados!', 'success');
-            }
-          } catch (err) {
-            console.error('Erro ao processar e salvar imagem:', err);
-            showToast('Erro ao salvar logotipo no banco de dados.', 'error');
-          }
-        };
-        img.src = rawData;
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleRemoveLogo = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setCustomLogo(null);
-    try {
-      localStorage.removeItem('emprovex_custom_logo');
-      localStorage.removeItem('emprovium_custom_logo');
-    } catch (e) {}
-    try {
-      await savePlatformLogo(null, user?.email || 'aprov1hgesm@gmail.com');
-      showToast('Logotipo padrão restaurado e sincronizado no banco de dados.', 'info');
-    } catch (err) {
-      console.error('Erro ao remover logotipo no banco:', err);
-      showToast('Logotipo padrão restaurado localmente.', 'info');
-    }
-  };
-
   // Authentication & Loading state
   const [user, setUser] = useState<User | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [syncing, setSyncing] = useState(false);
+
+  const { customLogo, handleLogoUpload, handleRemoveLogo } = usePlatformBranding({
+    userEmail: user?.email,
+    onNotify: showToast,
+  });
 
   // Navigation & View state
   const [activeTab, setActiveTab] = useState<'painel' | 'empenhos' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas'>('painel');
