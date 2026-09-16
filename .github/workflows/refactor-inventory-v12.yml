@@ -1,0 +1,26 @@
+name: Temporary refactor inventory v12
+
+on:
+  push:
+    branches:
+      - refactor/empenho-actions-v12
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inventory remaining Home handlers and section markers
+        shell: bash
+        run: |
+          echo '=== PAGE LINE COUNT ==='
+          wc -l app/page.tsx
+          echo '=== SECTION MARKERS ==='
+          grep -nE '^\s*// (---|Handler|Save|Delete|Generate|Download|Copy|Process|Reset|Helper|Apply|Clear|Add|Remove|Select|Update|Create|Register|Persist|.*EMPENH|.*NF|.*NOTA|.*COMISS|.*RELATOR|.*CRONOG|.*PDF|.*FIREBASE|.*AUTH)' app/page.tsx || true
+          echo '=== TOP LEVEL CONST FUNCTIONS ==='
+          grep -nE '^\s*const (handle[A-Za-z0-9_]+|apply[A-Za-z0-9_]+|clear[A-Za-z0-9_]+|saveToLocalStorage|saveComissoes|getBalanceByClass|formatDateTime|formatDateOnly|showToast)\s*=' app/page.tsx || true
+          echo '=== USEEFFECTS ==='
+          grep -nE '^\s*useEffect\(' app/page.tsx || true
