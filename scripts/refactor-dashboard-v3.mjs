@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import ts from 'typescript';
 
 const PAGE_PATH = 'app/page.tsx';
 const DASHBOARD_PATH = 'features/dashboard/components/DashboardView.tsx';
@@ -24,102 +23,17 @@ const andIndex = block.indexOf('&&');
 let expression = block.slice(andIndex + 2).trim();
 expression = expression.slice(0, -1).trim(); // remove a chave externa do JSX expression
 
-const parsed = ts.createSourceFile(
-  'dashboard-expression.tsx',
-  `const __dashboard = ${expression};`,
-  ts.ScriptTarget.Latest,
-  true,
-  ts.ScriptKind.TSX,
-);
-const declaration = parsed.statements[0]?.declarationList?.declarations?.[0];
-const initializer = declaration?.initializer;
-if (!initializer) throw new Error('Não foi possível analisar a expressão do Dashboard.');
-
-const declared = new Set();
-const used = new Set();
-
-function addBindingName(name) {
-  if (ts.isIdentifier(name)) {
-    declared.add(name.text);
-    return;
-  }
-  for (const element of name.elements || []) {
-    if (ts.isOmittedExpression(element)) continue;
-    addBindingName(element.name);
-  }
-}
-
-function collectDeclarations(node) {
-  if (ts.isVariableDeclaration(node)) addBindingName(node.name);
-  if (ts.isParameter(node)) addBindingName(node.name);
-  if ((ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node) || ts.isClassDeclaration(node) || ts.isClassExpression(node)) && node.name) {
-    declared.add(node.name.text);
-  }
-  if (ts.isCatchClause(node) && node.variableDeclaration) addBindingName(node.variableDeclaration.name);
-  ts.forEachChild(node, collectDeclarations);
-}
-
-function isDeclarationIdentifier(node) {
-  const p = node.parent;
-  return (
-    (ts.isVariableDeclaration(p) && p.name === node) ||
-    (ts.isParameter(p) && p.name === node) ||
-    (ts.isBindingElement(p) && p.name === node) ||
-    ((ts.isFunctionDeclaration(p) || ts.isFunctionExpression(p) || ts.isClassDeclaration(p) || ts.isClassExpression(p)) && p.name === node)
-  );
-}
-
-function isNonValueIdentifier(node) {
-  const p = node.parent;
-  if (isDeclarationIdentifier(node)) return true;
-  if (ts.isPropertyAccessExpression(p) && p.name === node) return true;
-  if (ts.isPropertyAssignment(p) && p.name === node && !ts.isShorthandPropertyAssignment(p)) return true;
-  if (ts.isBindingElement(p) && p.propertyName === node) return true;
-  if (ts.isPropertySignature(p) && p.name === node) return true;
-  if (ts.isPropertyDeclaration(p) && p.name === node) return true;
-  if (ts.isMethodSignature(p) && p.name === node) return true;
-  if (ts.isMethodDeclaration(p) && p.name === node) return true;
-  if (ts.isJsxAttribute(p) && p.name === node) return true;
-  if (ts.isTypeReferenceNode(p) && p.typeName === node) return true;
-  if (ts.isQualifiedName(p) && p.right === node) return true;
-  if (ts.isTypeParameterDeclaration(p) && p.name === node) return true;
-  if (ts.isInterfaceDeclaration(p) && p.name === node) return true;
-  if (ts.isTypeAliasDeclaration(p) && p.name === node) return true;
-
-  if (
-    (ts.isJsxOpeningElement(p) || ts.isJsxClosingElement(p) || ts.isJsxSelfClosingElement(p)) &&
-    p.tagName === node &&
-    /^[a-z]/.test(node.text)
-  ) return true;
-
-  return false;
-}
-
-function collectUses(node) {
-  if (ts.isIdentifier(node) && !isNonValueIdentifier(node)) used.add(node.text);
-  ts.forEachChild(node, collectUses);
-}
-
-collectDeclarations(initializer);
-collectUses(initializer);
-
-const globals = new Set([
-  'Array', 'Boolean', 'Date', 'Error', 'Infinity', 'Intl', 'JSON', 'Map', 'Math', 'NaN',
-  'Number', 'Object', 'Promise', 'RegExp', 'Set', 'String', 'Symbol', 'WeakMap', 'WeakSet',
-  'console', 'document', 'navigator', 'undefined', 'window',
-]);
-
-const free = [...used]
-  .filter((name) => !declared.has(name) && !globals.has(name) && name !== '__dashboard')
-  .sort((a, b) => a.localeCompare(b));
-
-if (free.length === 0) throw new Error('Nenhuma dependência externa detectada para o Dashboard.');
-
-const dashboardFile = `'use client';\n\nimport React from 'react';\n\ninterface DashboardViewProps {\n  context: Record<string, any>;\n}\n\n/**\n * Dashboard operacional extraído do page.tsx sem alterar regras, cálculos ou interações.\n * O contexto explícito mantém este primeiro corte de modularização conservador; os domínios\n * serão tipados e desacoplados progressivamente nos próximos blocos.\n */\nexport function DashboardView({ context }: DashboardViewProps) {\n  const { ${free.join(', ')} } = context;\n  return ${expression};\n}\n`;
+const dashboardFile = `'use client';\n\nimport type { Dispatch, SetStateAction } from 'react';\nimport { CheckCircle2, Coins, Filter, Layers, Search, X } from 'lucide-react';\nimport type { Empenho } from '../../../lib/types';\n\ntype DashboardClassFilter = 'TODAS' | 'QR' | 'CALI' | 'PASA';\ntype ActiveTab = 'painel' | 'empenhos' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas';\ntype NfSubTab = 'acompanhar' | 'cadastrar' | 'comissao';\n\ninterface DashboardViewProps {\n  dashboardClassFilter: DashboardClassFilter;\n  dashboardPregaoFilter: string;\n  dashboardSearch: string;\n  empenhos: Empenho[];\n  getBalanceByClass: (classification: 'QR' | 'CALI' | 'PASA') => number;\n  setActiveTab: Dispatch<SetStateAction<ActiveTab>>;\n  setDashboardClassFilter: Dispatch<SetStateAction<DashboardClassFilter>>;\n  setDashboardPregaoFilter: Dispatch<SetStateAction<string>>;\n  setDashboardSearch: Dispatch<SetStateAction<string>>;\n  setEditingEmpenhoId: Dispatch<SetStateAction<string>>;\n  setNfSubTab: Dispatch<SetStateAction<NfSubTab>>;\n  setSelectedNFCommitmentId: Dispatch<SetStateAction<string>>;\n  uniquePregaos: string[];\n}\n\n/**\n * Dashboard operacional extraído do page.tsx sem alterar regras, cálculos ou interações.\n * Este componente recebe somente o estado e os callbacks necessários para a tela.\n */\nexport function DashboardView({\n  dashboardClassFilter,\n  dashboardPregaoFilter,\n  dashboardSearch,\n  empenhos,\n  getBalanceByClass,\n  setActiveTab,\n  setDashboardClassFilter,\n  setDashboardPregaoFilter,\n  setDashboardSearch,\n  setEditingEmpenhoId,\n  setNfSubTab,\n  setSelectedNFCommitmentId,\n  uniquePregaos,\n}: DashboardViewProps) {\n  return ${expression};\n}\n`;
 
 fs.mkdirSync('features/dashboard/components', { recursive: true });
 fs.writeFileSync(DASHBOARD_PATH, dashboardFile);
 
+const replacement = `{activeTab === 'painel' && (\n            <DashboardView\n              dashboardClassFilter={dashboardClassFilter}\n              dashboardPregaoFilter={dashboardPregaoFilter}\n              dashboardSearch={dashboardSearch}\n              empenhos={empenhos}\n              getBalanceByClass={getBalanceByClass}\n              setActiveTab={setActiveTab}\n              setDashboardClassFilter={setDashboardClassFilter}\n              setDashboardPregaoFilter={setDashboardPregaoFilter}\n              setDashboardSearch={setDashboardSearch}\n              setEditingEmpenhoId={setEditingEmpenhoId}\n              setNfSubTab={setNfSubTab}\n              setSelectedNFCommitmentId={setSelectedNFCommitmentId}\n              uniquePregaos={uniquePregaos}\n            />\n          )}`;
+
+// Primeiro substitui o bloco usando os índices calculados sobre o arquivo original.
+source = source.slice(0, start) + replacement + source.slice(blockEnd);
+
+// Depois adiciona o import, evitando deslocar os índices da substituição.
 const dashboardImport = "import { DashboardView } from '../features/dashboard/components/DashboardView';\n";
 const importAnchor = "import { ToastNotification } from '../components/layout/ToastNotification';\n";
 if (!source.includes(dashboardImport)) {
@@ -127,11 +41,11 @@ if (!source.includes(dashboardImport)) {
   source = source.replace(importAnchor, importAnchor + dashboardImport);
 }
 
-const replacement = `{activeTab === 'painel' && (\n            <DashboardView context={{ ${free.join(', ')} }} />\n          )}`;
-source = source.slice(0, start) + replacement + source.slice(blockEnd);
 fs.writeFileSync(PAGE_PATH, source);
 
-console.log(`Dashboard extraído com ${free.length} dependências explícitas.`);
-console.log(`Dependências: ${free.join(', ')}`);
-console.log(`page.tsx agora possui ${source.split('\\n').length} linhas.`);
+const lineCount = source.split('\n').length;
+if (lineCount < 1000) throw new Error(`Proteção de integridade acionada: page.tsx ficou com apenas ${lineCount} linhas.`);
+
+console.log('Dashboard extraído para componente próprio com props tipadas.');
+console.log(`page.tsx agora possui ${lineCount} linhas.`);
 console.log(`Novo componente: ${DASHBOARD_PATH}`);
