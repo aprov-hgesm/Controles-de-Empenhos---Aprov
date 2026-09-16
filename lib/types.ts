@@ -17,6 +17,18 @@ export interface EmpenhoPdfDocument {
   uploadedBy: string;
 }
 
+export interface InvoicePdfDocument {
+  id: string;
+  pathname: string;
+  originalName: string;
+  contentType: 'application/pdf';
+  size: number;
+  uploadedAt: string;
+  uploadedBy: string;
+  empenhoId: string;
+  invoiceId: string;
+}
+
 export interface Empenho {
   id: string;
   supplier: string;
@@ -51,6 +63,8 @@ export interface Invoice {
   tesourariaDate?: string; // Data de envio para a tesouraria
   termoNumero?: number; // Número do termo de recebimento QR
   numeroNS?: string; // Número identificador do comprovante de liquidação (Nota de Sistema)
+  notaFiscalPdf?: InvoicePdfDocument;
+  notaFiscalPdfVersions?: InvoicePdfDocument[];
 }
 
 export interface MembroComissao {

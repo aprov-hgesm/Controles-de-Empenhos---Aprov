@@ -1,10 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActions';
+import { InvoiceDocumentActions } from '../../../components/InvoiceDocumentActions';
+import { MAX_INVOICE_PDF_BYTES } from '../../../lib/invoiceDocuments';
 import { removeComissao } from '../../../lib/firebaseSync';
 import { MILITARY_RANKS } from '../../empenhos/domain/empenhoHelpers';
-import { AlertTriangle, ArrowUpDown, Calendar, Check, CheckCircle2, Clock, Edit, FileDown, FileText, Package, Save, Search, Trash2, UserCheck, Users } from 'lucide-react';
+import { AlertTriangle, ArrowUpDown, Calendar, Check, CheckCircle2, Clock, Edit, FileDown, FileText, Loader2, Package, Save, Search, Trash2, Upload, UserCheck, Users, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { Comissao, Empenho, Invoice } from '../../../lib/types';
 
@@ -31,6 +33,7 @@ interface NotasFiscaisViewContext {
   handleDownloadTermoRecebimento: (...args: any[]) => any;
   handleEditInvoice: (...args: any[]) => any;
   handleEmpenhoDocumentUploaded: (...args: any[]) => any;
+  handleInvoiceDocumentUploaded: (...args: any[]) => any;
   handleMarkComissao: (...args: any[]) => any;
   handleMarkTesouraria: (...args: any[]) => any;
   handleSaveComissao: (...args: any[]) => any;
@@ -81,7 +84,26 @@ interface NotasFiscaisViewProps {
 }
 /** Tela de Notas Fiscais extraída sem alterar regras de negócio ou persistência. */
 export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
-  const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleEditInvoice, handleEmpenhoDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleSaveComissao, handleSaveInvoice, invoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
+  const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleSaveComissao, handleSaveInvoice, invoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
+  const nfPdfInputRef = useRef<HTMLInputElement>(null);
+  const [nfPdfFile, setNfPdfFile] = useState<File | null>(null);
+  const [isSavingInvoice, setIsSavingInvoice] = useState(false);
+
+  const handleNfPdfSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (file.type !== 'application/pdf' || !file.name.toLocaleLowerCase('pt-BR').endsWith('.pdf')) {
+      showToast('Selecione um arquivo PDF válido para a Nota Fiscal.', 'error');
+      return;
+    }
+    if (file.size <= 0 || file.size > MAX_INVOICE_PDF_BYTES) {
+      showToast('O PDF da Nota Fiscal deve possuir no máximo 10 MB.', 'error');
+      return;
+    }
+    setNfPdfFile(file);
+  };
+
   return (
             <div className="space-y-6">
               
@@ -107,7 +129,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                   )}
                 </button>
                 <button
-                  onClick={() => setNfSubTab('cadastrar')}
+                  onClick={() => { setNfPdfFile(null); setNfSubTab('cadastrar'); }}
                   className={`pb-3 font-bold text-sm transition-all relative ${
                     nfSubTab === 'cadastrar' 
                       ? 'text-[#00288e]' 
@@ -357,7 +379,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                             <FileText className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                             <p className="text-sm font-semibold text-gray-400">Nenhuma Nota Fiscal encontrada.</p>
                             <button 
-                              onClick={() => setNfSubTab('cadastrar')}
+                              onClick={() => { setNfPdfFile(null); setNfSubTab('cadastrar'); }}
                               className="mt-3 text-[#00288e] text-xs font-bold hover:underline animate-pulse"
                             >
                               Lançar nova nota fiscal agora
@@ -393,15 +415,8 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                 </p>
                               </div>
                               <div className="flex items-center gap-1.5 border-l pl-3 border-gray-100">
-                                <EmpenhoDocumentActions
-                                  empenho={empenhos.find((emp) => emp.id === inv.empenhoId)}
-                                  user={user}
-                                  variant="compact"
-                                  onDocumentUploaded={handleEmpenhoDocumentUploaded}
-                                  onNotify={showToast}
-                                />
                                 <button
-                                  onClick={() => handleEditInvoice(inv)}
+                                  onClick={() => { setNfPdfFile(null); handleEditInvoice(inv); }}
                                   className="p-2 text-[#00288e] hover:bg-blue-50 rounded-xl transition-all active:scale-95 border border-blue-50 hover:border-blue-100"
                                   title="Editar Nota Fiscal"
                                 >
@@ -416,6 +431,22 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                 </button>
                               </div>
                             </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            <InvoiceDocumentActions
+                              invoice={inv}
+                              user={user}
+                              onDocumentUploaded={handleInvoiceDocumentUploaded}
+                              onNotify={showToast}
+                            />
+                            <EmpenhoDocumentActions
+                              empenho={empenhos.find((emp) => emp.id === inv.empenhoId)}
+                              user={user}
+                              variant="panel"
+                              onDocumentUploaded={handleEmpenhoDocumentUploaded}
+                              onNotify={showToast}
+                            />
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
@@ -540,6 +571,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                       <button
                         onClick={() => {
                           setEditingInvoice(null);
+                          setNfPdfFile(null);
                           setNfNumber('');
                           setNfQuantities({});
                           setNfSubTab('acompanhar');
@@ -602,6 +634,32 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                           onChange={(e) => setNfDate(e.target.value)}
                           className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-[#00288e] outline-none font-semibold text-sm text-[#0b1c30] transition-colors shadow-inner"
                         />
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
+                      <input ref={nfPdfInputRef} type="file" accept="application/pdf,.pdf" className="hidden" onChange={handleNfPdfSelection} />
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs font-extrabold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5"><FileText className="w-4 h-4" /> Documento — Nota Fiscal</p>
+                          {nfPdfFile ? (
+                            <p className="text-xs font-semibold text-gray-700 truncate mt-1">{nfPdfFile.name} • {(nfPdfFile.size / (1024 * 1024)).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB</p>
+                          ) : editingInvoice?.notaFiscalPdf ? (
+                            <p className="text-xs font-semibold text-gray-600 truncate mt-1">Atual: {editingInvoice.notaFiscalPdf.originalName}. Selecione outro PDF somente para substituir.</p>
+                          ) : (
+                            <p className="text-xs text-gray-500 font-medium mt-1">Opcional. Anexe o PDF digitalizado da NF; o arquivo ficará em armazenamento privado.</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {nfPdfFile && (
+                            <button type="button" onClick={() => setNfPdfFile(null)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-rose-100 bg-white text-rose-600 hover:bg-rose-50 text-xs font-bold">
+                              <X className="w-3.5 h-3.5" /> Remover
+                            </button>
+                          )}
+                          <button type="button" onClick={() => nfPdfInputRef.current?.click()} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-700 text-white hover:bg-emerald-800 text-xs font-bold">
+                            <Upload className="w-3.5 h-3.5" /> {nfPdfFile || editingInvoice?.notaFiscalPdf ? 'Selecionar outro PDF' : 'Anexar PDF'}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </section>
@@ -720,10 +778,20 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                 </span>
                               </div>
                               <button 
-                                onClick={handleSaveInvoice}
-                                className="h-12 px-6 sm:px-8 bg-[#00288e] text-white rounded-full font-bold text-xs sm:text-sm shadow-md active:scale-95 transition-all duration-100 hover:bg-[#1e40af] flex items-center gap-2"
+                                onClick={async () => {
+                                  if (isSavingInvoice) return;
+                                  setIsSavingInvoice(true);
+                                  try {
+                                    const saved = await handleSaveInvoice(nfPdfFile);
+                                    if (saved) setNfPdfFile(null);
+                                  } finally {
+                                    setIsSavingInvoice(false);
+                                  }
+                                }}
+                                disabled={isSavingInvoice}
+                                className="h-12 px-6 sm:px-8 bg-[#00288e] text-white rounded-full font-bold text-xs sm:text-sm shadow-md active:scale-95 transition-all duration-100 hover:bg-[#1e40af] flex items-center gap-2 disabled:opacity-60 disabled:cursor-wait"
                               >
-                                <Save className="w-4 h-4" /> Salvar Recebimento
+                                {isSavingInvoice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {isSavingInvoice ? 'Salvando e enviando PDF…' : 'Salvar Recebimento'}
                               </button>
                             </div>
                           </footer>
