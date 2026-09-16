@@ -30,6 +30,9 @@ jobs:
           npx tsc --noEmit > /tmp/ts-before.txt 2>&1 || true
           cat /tmp/ts-before.txt
 
+      - name: Prepare deterministic codemod
+        run: python3 scripts/relax-invoice-codemod.py
+
       - name: Apply invoice PDF documents feature
         run: python3 scripts/add-invoice-documents-v16.py
 
@@ -69,6 +72,7 @@ jobs:
         shell: bash
         run: |
           rm -f scripts/add-invoice-documents-v16.py
+          rm -f scripts/relax-invoice-codemod.py
           rm -f .github/workflows/add-invoice-documents-v16.yml
           git diff --check
 
