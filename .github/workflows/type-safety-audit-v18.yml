@@ -1,0 +1,46 @@
+name: Type safety audit v18
+
+on:
+  push:
+    branches:
+      - refactor/type-safety-hardening-v18
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript diagnostics
+        shell: bash
+        run: |
+          set +e
+          npx tsc --noEmit 2>&1 | tee /tmp/tsc.txt
+          code=${PIPESTATUS[0]}
+          echo "TSC_EXIT=$code"
+          echo "TSC_ERROR_COUNT=$(grep -c 'error TS' /tmp/tsc.txt || true)"
+          exit 0
+
+      - name: Explicit any inventory
+        shell: bash
+        run: |
+          echo '=== Explicit any occurrences ==='
+          rg -n '\bany\b' --glob '*.ts' --glob '*.tsx' app components features hooks lib scripts || true
+          echo '=== Count ==='
+          rg -n '\bany\b' --glob '*.ts' --glob '*.tsx' app components features hooks lib scripts | wc -l || true
+
+      - name: Build baseline
+        run: npm run build
