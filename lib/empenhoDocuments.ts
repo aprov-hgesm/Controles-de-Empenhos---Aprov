@@ -112,7 +112,7 @@ export async function deleteEmpenhoPdfUpload(
   });
 }
 
-async function fetchEmpenhoPdf(
+export async function fetchEmpenhoPdfBlob(
   user: User,
   empenhoId: string,
   document: EmpenhoPdfDocument
@@ -159,7 +159,7 @@ export async function runEmpenhoPdfAction(
   }
 
   try {
-    const pdf = await fetchEmpenhoPdf(user, empenhoId, document);
+    const pdf = await fetchEmpenhoPdfBlob(user, empenhoId, document);
     const objectUrl = URL.createObjectURL(pdf);
 
     if (action === 'download') {

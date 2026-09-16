@@ -99,7 +99,7 @@ export async function deleteInvoicePdfUpload(
   }
 }
 
-async function fetchInvoicePdf(user: User, document: InvoicePdfDocument): Promise<Blob> {
+export async function fetchInvoicePdfBlob(user: User, document: InvoicePdfDocument): Promise<Blob> {
   const headers = await getAuthorizationHeader(user);
   const query = new URLSearchParams({
     empenhoId: document.empenhoId,
@@ -135,7 +135,7 @@ export async function runInvoicePdfAction(
   }
 
   try {
-    const pdf = await fetchInvoicePdf(user, document);
+    const pdf = await fetchInvoicePdfBlob(user, document);
     const objectUrl = URL.createObjectURL(pdf);
     if (action === 'download') {
       const link = window.document.createElement('a');

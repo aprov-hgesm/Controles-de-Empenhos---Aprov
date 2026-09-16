@@ -6,6 +6,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Comissao, Empenho, Invoice } from '../../../lib/types';
 import { saveInvoice } from '../../../lib/firebaseSync';
+import { fetchEmpenhoPdfBlob } from '../../../lib/empenhoDocuments';
+import { fetchInvoicePdfBlob } from '../../../lib/invoiceDocuments';
 
 type ToastType='success'|'error'|'info';
 interface DocumentActionsContext {
@@ -22,7 +24,7 @@ interface DocumentActionsContext {
 export function useDocumentActions(context:DocumentActionsContext){
   const { user,invoices,setInvoices,comissoes,empenhos,showToast,formatDateOnly }=context;
 
-  const handleDownloadTermoRecebimento = async (inv: Invoice) => {
+  const buildTermoRecebimentoPdf = async (inv: Invoice) => {
     // 1. Determine or assign sequential term number and register TR emission date
     let termoNumero = inv.termoNumero;
     const termoEmissaoDate = inv.termoEmissaoDate || inv.registeredAt || new Date().toISOString();
@@ -386,8 +388,136 @@ export function useDocumentActions(context:DocumentActionsContext){
       doc.text(pageText, pageWidth - margin - pageTextWidth, doc.internal.pageSize.getHeight() - 10);
     }
      const filename = `Termo_Recebimento_QR_No_${termoNumero}_NF_${inv.id}.pdf`;
-    doc.save(filename);
-    showToast(`Download iniciado: ${filename}`, 'success');
+    return { doc, filename, invoice: updatedInvoiceWithTR };
+  };
+
+  type TermoAction = 'generate' | 'view' | 'print' | 'download';
+
+  const handleTermoRecebimentoAction = async (inv: Invoice, action: TermoAction): Promise<void> => {
+    let targetWindow: Window | null = null;
+    if (action === 'view' || action === 'print') {
+      targetWindow = window.open('', '_blank');
+      if (!targetWindow) {
+        showToast('O navegador bloqueou a nova janela. Autorize pop-ups para visualizar ou imprimir o Termo.', 'error');
+        return;
+      }
+      targetWindow.opener = null;
+      targetWindow.document.write('<!doctype html><html lang="pt-BR"><body style="font-family:Arial,sans-serif;display:grid;place-items:center;height:100vh;margin:0;background:#f8fafc;color:#0b1c30"><p>Preparando Termo de Recebimento…</p></body></html>');
+    }
+
+    try {
+      const result = await buildTermoRecebimentoPdf(inv);
+      if (!result) {
+        targetWindow?.close();
+        return;
+      }
+
+      if (action === 'generate') {
+        showToast(`Termo de Recebimento nº ${result.invoice.termoNumero} gerado e registrado.`, 'success');
+        return;
+      }
+
+      if (action === 'download') {
+        result.doc.save(result.filename);
+        showToast(`Download iniciado: ${result.filename}`, 'success');
+        return;
+      }
+
+      const pdfBlob = result.doc.output('blob');
+      const objectUrl = URL.createObjectURL(pdfBlob);
+      if (!targetWindow || targetWindow.closed) {
+        URL.revokeObjectURL(objectUrl);
+        showToast('A janela do documento foi fechada antes do carregamento.', 'error');
+        return;
+      }
+      targetWindow.location.replace(objectUrl);
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 5 * 60_000);
+
+      if (action === 'print') {
+        window.setTimeout(() => {
+          try {
+            targetWindow?.focus();
+            targetWindow?.print();
+          } catch {
+            // O PDF permanece aberto para impressão pelo controle nativo do navegador.
+          }
+        }, 1500);
+      }
+    } catch (error) {
+      targetWindow?.close();
+      console.error('Erro ao processar Termo de Recebimento:', error);
+      showToast('Não foi possível processar o Termo de Recebimento.', 'error');
+    }
+  };
+
+  const handleDownloadTermoRecebimento = async (inv: Invoice) => {
+    await handleTermoRecebimentoAction(inv, 'download');
+  };
+
+  const handleDownloadLiquidacaoConsolidada = async (inv: Invoice): Promise<void> => {
+    if (!user) {
+      showToast('Faça login novamente antes de gerar a Liquidação Consolidada.', 'error');
+      return;
+    }
+
+    const targetEmp = empenhos.find((emp) => emp.id === inv.empenhoId);
+    if (!targetEmp) {
+      showToast('Não foi possível localizar o empenho vinculado à Nota Fiscal.', 'error');
+      return;
+    }
+    if (!targetEmp.notaEmpenhoPdf) {
+      showToast('Anexe primeiro o PDF da Nota de Empenho para gerar a Liquidação Consolidada.', 'error');
+      return;
+    }
+
+    try {
+      const termo = await buildTermoRecebimentoPdf(inv);
+      if (!termo) return;
+
+      const [{ PDFDocument }, empenhoBlob] = await Promise.all([
+        import('pdf-lib'),
+        fetchEmpenhoPdfBlob(user, targetEmp.id, targetEmp.notaEmpenhoPdf),
+      ]);
+
+      const merged = await PDFDocument.create();
+      const appendPdf = async (sourceBytes: ArrayBuffer) => {
+        const source = await PDFDocument.load(sourceBytes);
+        const pages = await merged.copyPages(source, source.getPageIndices());
+        pages.forEach((page) => merged.addPage(page));
+      };
+
+      await appendPdf(await empenhoBlob.arrayBuffer());
+
+      if (inv.notaFiscalPdf) {
+        const invoiceBlob = await fetchInvoicePdfBlob(user, inv.notaFiscalPdf);
+        await appendPdf(await invoiceBlob.arrayBuffer());
+      }
+
+      await appendPdf(termo.doc.output('arraybuffer'));
+
+      const bytes = await merged.save();
+      const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+      const objectUrl = URL.createObjectURL(blob);
+      const safePart = (value: string | undefined, fallback: string) =>
+        (value?.trim() || fallback)
+          .replace(/[<>:"/\|?*\u0000-\u001F]/g, '-')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^[-.]+|[-.]+$/g, '') || fallback;
+      const filename = `NF${safePart(inv.id, 'SemNumero')}.NE${safePart(inv.empenhoId, 'SemNE')}.Pregão${safePart(targetEmp.pregao, 'SemPregao')}.pdf`;
+
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
+      showToast(`Documento de Liquidação Consolidada gerado: ${filename}`, 'success');
+    } catch (error) {
+      console.error('Erro ao consolidar documentos da liquidação:', error);
+      showToast('Não foi possível consolidar os PDFs. Verifique se os documentos anexados são PDFs válidos e não protegidos por senha.', 'error');
+    }
   };
 
   const handleGenerateEmpenhoReportPDF = (emp: Empenho, action: 'download' | 'print' = 'download') => {
@@ -666,5 +796,5 @@ export function useDocumentActions(context:DocumentActionsContext){
     }
   };
 
-  return { handleDownloadTermoRecebimento, handleGenerateEmpenhoReportPDF };
+  return { handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleGenerateEmpenhoReportPDF };
 }

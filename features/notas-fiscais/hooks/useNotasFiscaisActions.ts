@@ -136,6 +136,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       items: enteredItems,
       totalValue: invoiceTotal,
       registeredAt: editingInvoice?.registeredAt || new Date().toISOString(),
+      localizacaoAtual: editingInvoice?.localizacaoAtual || (editingInvoice?.tesourariaDate ? 'TESOURARIA' : editingInvoice?.comissaoDate ? 'COMISSAO' : 'APROVISIONAMENTO'),
       ...(editingInvoice?.termoEmissaoDate ? { termoEmissaoDate: editingInvoice.termoEmissaoDate } : {}),
       ...(editingInvoice?.comissaoDate ? { comissaoDate: editingInvoice.comissaoDate } : {}),
       ...(editingInvoice?.tesourariaDate ? { tesourariaDate: editingInvoice.tesourariaDate } : {}),
@@ -398,6 +399,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
         updatedTargetInvoice = {
           ...inv,
           comissaoDate: new Date().toISOString(),
+          localizacaoAtual: 'COMISSAO',
         };
         return updatedTargetInvoice;
       }
@@ -421,6 +423,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
         updatedTargetInvoice = {
           ...inv,
           tesourariaDate: new Date().toISOString(),
+          localizacaoAtual: 'TESOURARIA',
         };
         return updatedTargetInvoice;
       }
@@ -435,6 +438,33 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       }
     }
      showToast(`Nota Fiscal ${invoiceId} finalizada e enviada para o Setor de Tesouraria!`);
+  };
+
+  const handleUpdateInvoiceLocation = async (
+    invoiceId: string,
+    localizacaoAtual: NonNullable<Invoice['localizacaoAtual']>
+  ): Promise<void> => {
+    const targetInvoice = invoices.find((invoice) => invoice.id === invoiceId);
+    if (!targetInvoice) {
+      showToast('Nota Fiscal não encontrada para alteração de localização.', 'error');
+      return;
+    }
+
+    const updatedInvoice: Invoice = { ...targetInvoice, localizacaoAtual };
+    try {
+      if (user) await saveInvoice(user.uid, updatedInvoice);
+      setInvoices((current) => current.map((invoice) => invoice.id === invoiceId ? updatedInvoice : invoice));
+      const labels = {
+        APROVISIONAMENTO: 'Setor de Aprovisionamento',
+        COMISSAO: 'Comissão de Recebimento',
+        TESOURARIA: 'Tesouraria',
+      } as const;
+      showToast(`Localização da NF ${invoiceId} alterada para ${labels[localizacaoAtual]}.`, 'success');
+    } catch (error) {
+      console.error('Erro ao alterar localização da Nota Fiscal:', error);
+      showToast('Não foi possível atualizar a localização da Nota Fiscal.', 'error');
+      throw error;
+    }
   };
 
   const handleSaveNumeroNS = async (invoiceId: string, value: string) => {
@@ -535,6 +565,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     handleDeleteAllComissoes,
     handleMarkComissao,
     handleMarkTesouraria,
+    handleUpdateInvoiceLocation,
     handleSaveNumeroNS,
     handleSaveComissao
   };

@@ -37,6 +37,7 @@ interface EmpenhosViewContext {
   handleDownloadPromptTxt: (...args: any[]) => any;
   handleDownloadTermoRecebimento: (...args: any[]) => any;
   handleEmpenhoDocumentUploaded: (empenhoId: string, document: EmpenhoPdfDocument) => Promise<void>;
+  handleUpdateEmpenhoPregao: (empenhoId: string, pregao: string) => Promise<void>;
   handleGenerateEmpenhoReportPDF: (...args: any[]) => any;
   handleProcessJson: (...args: any[]) => any;
   handleSaveReviewEmpenho: (...args: any[]) => any;
@@ -84,7 +85,11 @@ interface EmpenhosViewProps { context: EmpenhosViewContext; }
 
 /** Tela de cadastro e detalhe de empenhos extraída sem alterar comportamento. */
 export function EmpenhosView({ context }: EmpenhosViewProps) {
-  const { copiedPrompt, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCopyPrompt, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadPromptPdf, handleDownloadPromptTxt, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleGenerateEmpenhoReportPDF, handleProcessJson, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, jsonInput, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setJsonInput, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, user } = context;
+  const { copiedPrompt, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCopyPrompt, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadPromptPdf, handleDownloadPromptTxt, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoPregao, handleGenerateEmpenhoReportPDF, handleProcessJson, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, jsonInput, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setJsonInput, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, user } = context;
+  const [editingPregaoEmpenhoId, setEditingPregaoEmpenhoId] = React.useState<string | null>(null);
+  const [pregaoDraft, setPregaoDraft] = React.useState('');
+  const [savingPregao, setSavingPregao] = React.useState(false);
+
   return (
             <div className="space-y-6">
               
@@ -450,6 +455,65 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                             <p className="text-sm text-gray-600 font-medium mt-1 leading-relaxed">
                               {targetEmp.description}
                             </p>
+
+                            <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50/50 px-3 py-2.5 max-w-xl">
+                              {editingPregaoEmpenhoId === targetEmp.id ? (
+                                <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                                  <div className="flex-1">
+                                    <label className="text-[10px] uppercase tracking-wider font-extrabold text-emerald-700 block mb-1">Pregão relacionado à Nota de Empenho</label>
+                                    <input
+                                      value={pregaoDraft}
+                                      onChange={(event) => setPregaoDraft(event.target.value)}
+                                      placeholder="Ex.: 90013/2025"
+                                      className="w-full h-9 px-3 rounded-lg border border-emerald-200 bg-white text-xs font-bold text-gray-800 outline-none focus:ring-1 focus:ring-emerald-500"
+                                    />
+                                  </div>
+                                  <div className="flex gap-2 sm:pt-4">
+                                    <button
+                                      type="button"
+                                      disabled={savingPregao}
+                                      onClick={async () => {
+                                        if (savingPregao) return;
+                                        setSavingPregao(true);
+                                        try {
+                                          await handleUpdateEmpenhoPregao(targetEmp.id, pregaoDraft);
+                                          setEditingPregaoEmpenhoId(null);
+                                        } finally {
+                                          setSavingPregao(false);
+                                        }
+                                      }}
+                                      className="h-9 px-3 rounded-lg bg-emerald-700 text-white text-xs font-bold hover:bg-emerald-800 disabled:opacity-60"
+                                    >
+                                      Salvar Pregão
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingPregaoEmpenhoId(null)}
+                                      className="h-9 px-3 rounded-lg border border-gray-200 bg-white text-gray-600 text-xs font-bold hover:bg-gray-50"
+                                    >
+                                      Cancelar
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-between gap-3">
+                                  <div>
+                                    <span className="text-[10px] uppercase tracking-wider font-extrabold text-emerald-700 block">Pregão relacionado</span>
+                                    <span className="text-xs font-bold text-gray-800">{targetEmp.pregao || 'Sem Pregão'}</span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setPregaoDraft(targetEmp.pregao === 'Sem Pregão' ? '' : (targetEmp.pregao || ''));
+                                      setEditingPregaoEmpenhoId(targetEmp.id);
+                                    }}
+                                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-emerald-200 bg-white text-emerald-800 text-xs font-bold hover:bg-emerald-100"
+                                  >
+                                    <Edit className="w-3.5 h-3.5" /> Alterar Pregão
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
 
                           {/* Quick Action Buttons on Detail Header */}
