@@ -70,6 +70,8 @@ import { RelatoriosView } from '../features/relatorios/components/RelatoriosView
 import { ConsultaItensView } from '../features/itens/components/ConsultaItensView';
 import { ItensEmpenhoView } from '../features/empenhos/components/ItensEmpenhoView';
 import { CronogramasView } from '../features/cronogramas/components/CronogramasView';
+import { DeleteEmpenhoModal } from '../features/empenhos/components/DeleteEmpenhoModal';
+import { MobileNavigation } from '../components/layout/MobileNavigation';
 export { PROMPT_EXTRACAO_EMPENHO } from '../features/empenhos/domain/empenhoHelpers';
 import { INITIAL_EMPENHOS, INITIAL_ALERTS, INITIAL_INVOICES, INITIAL_COMISSOES } from '../lib/mockData';
 import jsPDF from 'jspdf';
@@ -2778,181 +2780,22 @@ export default function Home() {
             <CronogramasView context={{ applyAllToFirstRemessa, applyCronogramaPreset, clearCronogramaDistribuicao, cronogramaColunas, cronogramaDistribuicao, cronogramaHorarioEntrega, cronogramaLocalEntrega, cronogramaObservacoes, cronogramaResponsavelCargo, cronogramaResponsavelNome, cronogramas, cronogramasClassFilter, cronogramasPregaoFilter, cronogramasSearch, cronogramasStatusFilter, cronogramasYearFilter, empenhos, formatDateOnly, handleAddRemessa, handleGenerateCronogramaPDF, handleRemoveRemessa, handleSaveCronograma, handleSelectEmpenhoForCronograma, isSavingCronograma, selectedCronogramaEmpenhoId, setCronogramaColunas, setCronogramaDistribuicao, setCronogramaHorarioEntrega, setCronogramaLocalEntrega, setCronogramaObservacoes, setCronogramaResponsavelCargo, setCronogramaResponsavelNome, setCronogramasClassFilter, setCronogramasPregaoFilter, setCronogramasSearch, setCronogramasStatusFilter, setCronogramasYearFilter, setSelectedCronogramaEmpenhoId, setShowCronogramaPreviewModal, showCronogramaPreviewModal, uniqueEmpenhoYears, uniquePregaos }} />
           )}
 
-          {/* Modal de Confirmação de Exclusão de Empenho Específico */}
-          <AnimatePresence>
-            {empenhoToDelete && (() => {
-              const targetEmp = empenhos.find(e => e.id === empenhoToDelete);
-              const totalCommitted = targetEmp ? targetEmp.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) : 0;
-
-              return (
-                <div 
-                  id="modal-confirm-delete-empenho-overlay"
-                  className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm"
-                >
-                  <motion.div 
-                    initial={{ scale: 0.95, opacity: 0, y: 10 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                    exit={{ scale: 0.95, opacity: 0, y: 10 }}
-                    className="bg-white rounded-2xl shadow-2xl border border-rose-100 max-w-lg w-full overflow-hidden"
-                  >
-                    {/* Header */}
-                    <div className="bg-rose-600 text-white p-5 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                          <AlertTriangle className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-base tracking-tight">Confirmar Exclusão de Empenho</h3>
-                          <p className="text-xs text-rose-100 mt-0.5">Esta ação é permanente e irreversível</p>
-                        </div>
-                      </div>
-                      <button 
-                        type="button"
-                        onClick={() => setEmpenhoToDelete(null)}
-                        className="text-rose-100 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-all cursor-pointer"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
-
-                    {/* Body */}
-                    <div className="p-6 space-y-4">
-                      <p className="text-sm text-gray-700 font-medium">
-                        Você tem certeza que deseja excluir o empenho abaixo?
-                      </p>
-
-                      {/* Info Card */}
-                      <div className="bg-rose-50/60 border border-rose-100 rounded-xl p-4 space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Número do Empenho:</span>
-                          <span className="text-sm font-extrabold text-rose-800">{empenhoToDelete}</span>
-                        </div>
-                        {targetEmp && (
-                          <>
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="text-gray-500 font-semibold">Fornecedor:</span>
-                              <span className="font-bold text-gray-800 text-right max-w-[240px] truncate">{targetEmp.supplier}</span>
-                            </div>
-                            {targetEmp.pregao && (
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="text-gray-500 font-semibold">Pregão:</span>
-                                <span className="font-bold text-gray-800">{targetEmp.pregao}</span>
-                              </div>
-                            )}
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="text-gray-500 font-semibold">Qtd. de Itens:</span>
-                              <span className="font-bold text-gray-800">{targetEmp.items.length} item(ns)</span>
-                            </div>
-                            <div className="flex justify-between items-center text-xs pt-2 border-t border-rose-100">
-                              <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Valor Total:</span>
-                              <span className="font-extrabold text-gray-900">
-                                R$ {totalCommitted.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-
-                      <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3.5 flex items-start gap-2.5 text-xs">
-                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                        <span>
-                          <strong>Atenção:</strong> Ao confirmar, este empenho e todos os registros e notas associadas a ele serão excluídos permanentemente.
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Footer Buttons */}
-                    <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3">
-                      <button
-                        type="button"
-                        disabled={isDeletingEmpenho}
-                        onClick={() => setEmpenhoToDelete(null)}
-                        className="px-4 py-2.5 bg-white border border-gray-200 hover:bg-gray-100 text-gray-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isDeletingEmpenho}
-                        onClick={() => handleDeleteSpecificEmpenho(empenhoToDelete)}
-                        className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
-                      >
-                        {isDeletingEmpenho ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" /> Excluindo...
-                          </>
-                        ) : (
-                          <>
-                            <Trash2 className="w-4 h-4" /> Confirmar Exclusão
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </motion.div>
-                </div>
-              );
-            })()}
-          </AnimatePresence>
+          <DeleteEmpenhoModal
+            empenhoToDelete={empenhoToDelete}
+            empenhos={empenhos}
+            isDeletingEmpenho={isDeletingEmpenho}
+            onCancel={() => setEmpenhoToDelete(null)}
+            onConfirm={handleDeleteSpecificEmpenho}
+          />
 
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation Bar (Visual Sync) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 w-full h-16 flex justify-around items-center bg-white/70 backdrop-blur-md border-t border-white/20 shadow-lg z-30 rounded-t-2xl">
-        <button 
-          onClick={() => setActiveTab('painel')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-            activeTab === 'painel' ? 'text-[#00288e] font-extrabold' : 'text-gray-400'
-          }`}
-        >
-          <Layers className="w-5 h-5" />
-          <span className="text-[10px] mt-0.5">Painel</span>
-        </button>
-
-        <button 
-          onClick={() => { setActiveTab('empenhos'); setSelectedEmpenhoDetailId(null); }}
-          className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-            activeTab === 'empenhos' || activeTab === 'itens_empenho' ? 'text-[#00288e] font-extrabold' : 'text-gray-400'
-          }`}
-        >
-          <FileSpreadsheet className="w-5 h-5" />
-          <span className="text-[10px] mt-0.5">Cad. Empenhos</span>
-        </button>
-
-        <button 
-          onClick={() => setActiveTab('nova_nf')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-            activeTab === 'nova_nf' ? 'text-[#00288e] font-extrabold' : 'text-gray-400'
-          }`}
-        >
-          <div className="p-2 bg-[#00288e] text-white rounded-xl shadow-md -translate-y-4 scale-110 active:scale-95 duration-100 transition-all border-4 border-white/70 backdrop-blur-sm">
-            <FileText className="w-5 h-5" />
-          </div>
-          <span className="text-[10px] mt-0.5 -translate-y-3.5">Notas Fiscais</span>
-        </button>
-
-        <button 
-          onClick={() => setActiveTab('relatorios')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-            activeTab === 'relatorios' ? 'text-[#00288e] font-extrabold' : 'text-gray-400'
-          }`}
-        >
-          <TrendingUp className="w-5 h-5" />
-          <span className="text-[10px] mt-0.5">Empenhos</span>
-        </button>
-
-        <button 
-          onClick={() => setActiveTab('cronogramas')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-            activeTab === 'cronogramas' ? 'text-[#00288e] font-extrabold' : 'text-gray-400'
-          }`}
-        >
-          <CalendarDays className="w-5 h-5" />
-          <span className="text-[10px] mt-0.5">Cronogramas</span>
-        </button>
-
-
-      </nav>
+      <MobileNavigation
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        setSelectedEmpenhoDetailId={setSelectedEmpenhoDetailId}
+      />
 
     </div>
   );
