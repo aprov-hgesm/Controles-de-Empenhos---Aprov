@@ -35,6 +35,8 @@ jobs:
           cp /tmp/main-page.tsx app/page.tsx
           (npx tsc --noEmit --pretty false || true) \
             | sed -E 's#^app/page\.tsx\([0-9]+,[0-9]+\)#app/page.tsx(L,C)#' \
+            | sed -E 's#"success" \| "error" \| "info"#"<toast-type>"#g' \
+            | sed -E 's#"info" \| "success" \| "error"#"<toast-type>"#g' \
             | sort -u > /tmp/ts-baseline.txt
           cp /tmp/branch-page.tsx app/page.tsx
 
@@ -47,6 +49,8 @@ jobs:
           (npx tsc --noEmit --pretty false || true) \
             | sed -E 's#^app/page\.tsx\([0-9]+,[0-9]+\)#app/page.tsx(L,C)#' \
             | sed -E 's#^features/notas-fiscais/components/NotasFiscaisView\.tsx\([0-9]+,[0-9]+\)#app/page.tsx(L,C)#' \
+            | sed -E 's#"success" \| "error" \| "info"#"<toast-type>"#g' \
+            | sed -E 's#"info" \| "success" \| "error"#"<toast-type>"#g' \
             | sort -u > /tmp/ts-after.txt
           if ! diff -u /tmp/ts-baseline.txt /tmp/ts-after.txt; then
             echo "A refatoração alterou o conjunto de erros TypeScript."
