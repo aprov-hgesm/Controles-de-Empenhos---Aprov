@@ -48,15 +48,15 @@ if (hookAst.parseDiagnostics.length) {
 fs.mkdirSync('hooks', { recursive: true });
 fs.writeFileSync(HOOK_PATH, hookSource);
 
+const replacement = `  const {\n${destructureRows}\n  } = useOperationalViewState();\n\n`;
+source = source.slice(0, start) + replacement + source.slice(end);
+
 const importLine = "import { useOperationalViewState } from '../hooks/useOperationalViewState';\n";
 const importAnchor = "import { usePlatformBranding } from '../hooks/usePlatformBranding';\n";
 if (!source.includes(importLine)) {
   if (!source.includes(importAnchor)) throw new Error('Âncora usePlatformBranding não encontrada.');
   source = source.replace(importAnchor, importAnchor + importLine);
 }
-
-const replacement = `  const {\n${destructureRows}\n  } = useOperationalViewState();\n\n`;
-source = source.slice(0, start) + replacement + source.slice(end);
 
 const pageAst = ts.createSourceFile(PAGE_PATH, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 if (pageAst.parseDiagnostics.length) {
