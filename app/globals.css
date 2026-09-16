@@ -3,6 +3,12 @@
 :root {
   --emprovex-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --emprovex-motion-ease-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --emprovex-motion-ease-snappy: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --emprovex-motion-fast: 160ms;
+  --emprovex-motion-medium: 300ms;
+  --emprovex-motion-slow: 460ms;
+  --emprovex-accent: #00288e;
+  --emprovex-accent-soft: rgba(0, 40, 142, 0.12);
 }
 
 @theme {
@@ -29,6 +35,38 @@
     opacity: 1;
     transform: translate3d(0, 0, 0);
   }
+}
+
+@keyframes emprovex-card-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 9px, 0) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes emprovex-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes emprovex-footer-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes emprovex-soft-glow {
+  0%, 100% { box-shadow: 0 0 0 rgba(0, 40, 142, 0); }
+  50% { box-shadow: 0 0 22px rgba(0, 40, 142, 0.08); }
 }
 
 @keyframes emprovex-orbit-a {
@@ -68,10 +106,165 @@
   }
 }
 
+/* Segunda camada: microinterações sistêmicas, mantendo a identidade visual atual. */
+header {
+  isolation: isolate;
+}
+
+header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 40, 142, 0.22), transparent);
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+aside nav button {
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+  transition:
+    transform var(--emprovex-motion-fast) var(--emprovex-motion-ease-snappy),
+    background-color var(--emprovex-motion-medium) var(--emprovex-motion-ease-soft),
+    color var(--emprovex-motion-medium) var(--emprovex-motion-ease-soft),
+    box-shadow var(--emprovex-motion-medium) var(--emprovex-motion-ease-soft);
+}
+
+aside nav button::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 8px;
+  border-radius: 0 999px 999px 0;
+  background: linear-gradient(180deg, #2563eb, #00288e);
+  opacity: 0;
+  transform: translate3d(-3px, -50%, 0) scaleY(0.5);
+  transition:
+    height var(--emprovex-motion-medium) var(--emprovex-motion-ease),
+    opacity var(--emprovex-motion-fast) ease,
+    transform var(--emprovex-motion-medium) var(--emprovex-motion-ease);
+}
+
+aside nav button:hover {
+  transform: translate3d(2px, 0, 0);
+}
+
+aside nav button:hover svg {
+  transform: translate3d(1px, 0, 0) scale(1.035);
+}
+
+aside nav button svg {
+  transition: transform var(--emprovex-motion-medium) var(--emprovex-motion-ease);
+}
+
+aside nav button[class*="bg-[#e5eeff]"]::before {
+  height: 26px;
+  opacity: 1;
+  transform: translate3d(0, -50%, 0) scaleY(1);
+}
+
+aside nav button[class*="bg-[#e5eeff]"] {
+  box-shadow: inset 0 0 0 1px rgba(0, 40, 142, 0.035), 0 5px 16px rgba(0, 40, 142, 0.055);
+}
+
+/* Elevação discreta apenas em elementos interativos que já se comportam como cards. */
+main [class*="rounded-2xl"][class*="cursor-pointer"] {
+  transform: translateZ(0);
+  transition:
+    transform var(--emprovex-motion-medium) var(--emprovex-motion-ease),
+    box-shadow var(--emprovex-motion-medium) var(--emprovex-motion-ease),
+    border-color var(--emprovex-motion-medium) var(--emprovex-motion-ease),
+    background-color var(--emprovex-motion-medium) var(--emprovex-motion-ease);
+}
+
+main [class*="rounded-2xl"][class*="cursor-pointer"]:hover {
+  transform: translate3d(0, -2px, 0);
+}
+
+/* Feedback tátil visual sem interferir em transforms específicos já existentes. */
+button:not(:disabled) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled):active {
+  filter: brightness(0.975);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.62);
+  outline-offset: 2px;
+}
+
+/* Barras de progresso ficam mais orgânicas quando valores mudam em tempo real. */
+main div[class*="h-full"][style*="width"] {
+  transition:
+    width 720ms var(--emprovex-motion-ease),
+    background-color 320ms var(--emprovex-motion-ease-soft),
+    box-shadow 320ms var(--emprovex-motion-ease-soft) !important;
+  box-shadow: 0 0 10px rgba(0, 40, 142, 0.08);
+}
+
+/* Tabelas: leitura mais fluida sem deslocar a malha. */
+main tbody tr > td:first-child {
+  transition: box-shadow var(--emprovex-motion-medium) var(--emprovex-motion-ease-soft);
+}
+
+main tbody tr:hover > td:first-child {
+  box-shadow: inset 2px 0 0 rgba(0, 40, 142, 0.22);
+}
+
+/* Modais e backdrops recebem entrada independente do conteúdo interno. */
+[class*="fixed"][class*="inset-0"][class*="bg-black"] {
+  animation: emprovex-overlay-in 180ms ease-out both;
+}
+
+footer.fixed {
+  animation: emprovex-footer-rise 320ms var(--emprovex-motion-ease) both;
+}
+
+/* Navegação inferior móvel com resposta visual mais polida. */
+nav.lg\:hidden button svg,
+nav.lg\:hidden button span {
+  transition:
+    transform var(--emprovex-motion-medium) var(--emprovex-motion-ease),
+    color var(--emprovex-motion-medium) var(--emprovex-motion-ease),
+    opacity var(--emprovex-motion-medium) var(--emprovex-motion-ease);
+}
+
+nav.lg\:hidden button:active svg {
+  transform: scale(0.94);
+}
+
 @media (prefers-reduced-motion: no-preference) {
   main > div:not(.fixed) {
     animation: emprovex-view-enter 300ms var(--emprovex-motion-ease) both;
     transform-origin: 50% 0%;
+  }
+
+  /* Stagger curto em cards principais recém-montados. */
+  main .grid > [class*="rounded-2xl"] {
+    animation: emprovex-card-enter 380ms var(--emprovex-motion-ease) both;
+  }
+
+  main .grid > [class*="rounded-2xl"]:nth-child(2) { animation-delay: 35ms; }
+  main .grid > [class*="rounded-2xl"]:nth-child(3) { animation-delay: 70ms; }
+  main .grid > [class*="rounded-2xl"]:nth-child(4) { animation-delay: 105ms; }
+  main .grid > [class*="rounded-2xl"]:nth-child(5) { animation-delay: 140ms; }
+  main .grid > [class*="rounded-2xl"]:nth-child(6) { animation-delay: 175ms; }
+
+  /* Brilho ambiente quase imperceptível no CTA principal durante repouso. */
+  main button[class*="bg-[#00288e]"]:not(:hover):not(:active) {
+    animation: emprovex-soft-glow 5.5s ease-in-out infinite;
   }
 }
 
@@ -100,8 +293,21 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
   .animate-fadeIn,
-  main > div:not(.fixed) {
+  main > div:not(.fixed),
+  main .grid > [class*="rounded-2xl"],
+  footer.fixed,
+  [class*="fixed"][class*="inset-0"][class*="bg-black"] {
     animation: none !important;
+    transform: none !important;
   }
 }
