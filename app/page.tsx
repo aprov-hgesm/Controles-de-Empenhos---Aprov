@@ -1,65 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Search, 
-  Plus, 
-  Trash2, 
-  AlertCircle, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Calendar, 
-  ChevronDown, 
-  ChevronUp, 
-  Menu, 
-  Braces, 
-  Bell, 
-  ArrowLeft, 
-  Save, 
-  FileText, 
-  Check, 
-  X, 
-  Printer, 
-  TrendingUp, 
-  Package, 
-  Clock, 
-  TrendingDown,
-  ChevronRight,
-  Filter,
-  ArrowUpDown,
-  Info,
-  Layers,
-  FileSpreadsheet,
-  Users,
-  UserCheck,
-  FileDown,
-  Download,
-  Copy,
-  Eye,
-  LogIn,
-  LogOut,
-  Loader2,
-  Edit,
-  Coins,
-  CalendarDays,
-  CalendarRange,
-  CalendarCheck,
-  CalendarClock,
-  Sparkles,
-  RefreshCw,
-  Sliders,
-  Send,
-  Camera,
-  Upload,
-  Image as ImageIcon
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
+import { Loader2, LogIn } from 'lucide-react';
 
-import { Empenho, Item, Alert, Invoice, InvoiceItem, Comissao, CronogramaEmpenho, CronogramaEntregaColuna, EmpenhoPdfDocument } from '../lib/types';
-import { EmpenhoDocumentActions } from '../components/EmpenhoDocumentActions';
-import { MILITARY_RANKS, normalizeSupplier, PROMPT_EXTRACAO_EMPENHO } from '../features/empenhos/domain/empenhoHelpers';
 import { usePlatformBranding } from '../hooks/usePlatformBranding';
 import { useOperationalViewState } from '../hooks/useOperationalViewState';
+import { useOperationalData } from '../hooks/useOperationalData';
 import { useEmpenhoActions } from '../features/empenhos/hooks/useEmpenhoActions';
 import { useNotasFiscaisActions } from '../features/notas-fiscais/hooks/useNotasFiscaisActions';
 import { useDocumentActions } from '../features/relatorios/hooks/useDocumentActions';
@@ -78,32 +25,6 @@ import { CronogramasView } from '../features/cronogramas/components/CronogramasV
 import { DeleteEmpenhoModal } from '../features/empenhos/components/DeleteEmpenhoModal';
 import { MobileNavigation } from '../components/layout/MobileNavigation';
 export { PROMPT_EXTRACAO_EMPENHO } from '../features/empenhos/domain/empenhoHelpers';
-import { INITIAL_EMPENHOS, INITIAL_ALERTS, INITIAL_INVOICES, INITIAL_COMISSOES } from '../lib/mockData';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-
-import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { auth, googleProvider, db, OperationType, handleFirestoreError } from '../lib/firebase';
-import { collection, onSnapshot, doc } from 'firebase/firestore';
-import { 
-  seedInitialDataIfNecessary, 
-  getEmpenhos, 
-  saveEmpenho, 
-  removeEmpenho,
-  getAlerts, 
-  saveAlert, 
-  removeAlert,
-  getInvoices, 
-  saveInvoice, 
-  removeInvoice,
-  getComissoes, 
-  saveComissao,
-  removeComissao,
-  getCronogramas,
-  saveCronograma,
-  removeCronograma,
-} from '../lib/firebaseSync';
-
 export default function Home() {
   // Toast / Notifications helper
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -114,10 +35,14 @@ export default function Home() {
     }, 4000);
   };
 
-  // Authentication & Loading state
-  const [user, setUser] = useState<User | null>(null);
-  const [loadingAuth, setLoadingAuth] = useState(true);
-  const [syncing, setSyncing] = useState(false);
+  const {
+    user, loadingAuth, syncing,
+    empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices,
+    comissoes, setComissoes, cronogramas, setCronogramas,
+    signInUser, signOutUser, getBalanceByClass,
+    uniquePregaos, uniqueEmpenhoYears, uniqueNfMonths,
+    formatDateTime, formatDateOnly
+  } = useOperationalData();
 
   const { customLogo, handleLogoUpload, handleRemoveLogo } = usePlatformBranding({
     userEmail: user?.email,
@@ -128,218 +53,9 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'painel' | 'empenhos' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas'>('painel');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Core database state
-  const [empenhos, setEmpenhos] = useState<Empenho[]>([]);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [comissoes, setComissoes] = useState<Comissao[]>([]);
-  const [cronogramas, setCronogramas] = useState<CronogramaEmpenho[]>([]);
-
   // State for inline editing of Número da NS in Empenho Report
   const [editingNSId, setEditingNSId] = useState<string | null>(null);
   const [tempNSValue, setTempNSValue] = useState<string>('');
-
-  // Helper to calculate remaining balance by classification
-  const getBalanceByClass = (classification: 'QR' | 'CALI' | 'PASA') => {
-    const filtered = empenhos.filter(emp => emp.classification === classification);
-    return filtered.reduce((total, emp) => {
-      const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-      const totalReceived = emp.items.reduce((sum, item) => sum + item.received * item.unitPrice, 0);
-      return total + (totalCommitted - totalReceived);
-    }, 0);
-  };
-
-  // Listen to auth state changes in Firebase (Google Authentication)
-  useEffect(() => {
-    localStorage.removeItem('local_user_session');
-
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-      } else {
-        setUser(null);
-      }
-      setLoadingAuth(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // Set up real-time Firebase Firestore subscriptions (onSnapshot)
-  useEffect(() => {
-    if (!user) {
-      setEmpenhos([]);
-      setAlerts([]);
-      setInvoices([]);
-      setComissoes([]);
-      return;
-    }
-
-    setSyncing(true);
-
-    // Subscribe to all operational collections in real time (shared globally, no owner isolation)
-    const unsubscribeEmpenhos = onSnapshot(
-      collection(db, 'empenhos'),
-      (snapshot) => {
-        const fetched = snapshot.docs.map(doc => {
-          const data = doc.data() as Empenho;
-          return {
-            ...data,
-            supplier: normalizeSupplier(data.supplier)
-          };
-        });
-        setEmpenhos(fetched);
-        setSyncing(false);
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'empenhos');
-        setSyncing(false);
-      }
-    );
-
-    const unsubscribeAlerts = onSnapshot(
-      collection(db, 'alerts'),
-      (snapshot) => {
-        const fetched = snapshot.docs.map(doc => doc.data() as Alert);
-        setAlerts(fetched);
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'alerts');
-      }
-    );
-
-    const unsubscribeInvoices = onSnapshot(
-      collection(db, 'invoices'),
-      (snapshot) => {
-        const fetched = snapshot.docs.map(doc => {
-          const data = doc.data() as Invoice;
-          return {
-            ...data,
-            supplier: normalizeSupplier(data.supplier)
-          };
-        });
-        setInvoices(fetched);
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'invoices');
-      }
-    );
-
-    const unsubscribeComissoes = onSnapshot(
-      collection(db, 'comissoes'),
-      (snapshot) => {
-        const fetched = snapshot.docs.map(doc => doc.data() as Comissao);
-        setComissoes(fetched);
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'comissoes');
-      }
-    );
-
-    const unsubscribeCronogramas = onSnapshot(
-      collection(db, 'cronogramas'),
-      (snapshot) => {
-        const fetched = snapshot.docs.map(doc => doc.data() as CronogramaEmpenho);
-        setCronogramas(fetched);
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'cronogramas');
-      }
-    );
-
-    return () => {
-      unsubscribeEmpenhos();
-      unsubscribeAlerts();
-      unsubscribeInvoices();
-      unsubscribeComissoes();
-      unsubscribeCronogramas();
-    };
-  }, [user]);
-
-  // Unique list of Pregão codes
-  const uniquePregaos = Array.from(new Set(empenhos.map(emp => emp.pregao).filter(Boolean))) as string[];
-
-  // Unique list of Empenho years
-  const uniqueEmpenhoYears = Array.from(
-    new Set(
-      empenhos
-        .map(emp => {
-          if (!emp.date) return '';
-          const parts = emp.date.split('/');
-          if (parts.length === 3) {
-            return parts[2]; // YYYY
-          }
-          if (emp.date.includes('-')) {
-            return emp.date.split('-')[0];
-          }
-          return '';
-        })
-        .filter(Boolean)
-    )
-  ).sort((a, b) => b.localeCompare(a)) as string[];
-
-  // Unique list of Invoice months (from issueDate)
-  const uniqueNfMonths = Array.from(
-    new Set(
-      invoices
-        .map(inv => {
-          if (inv.issueDate && inv.issueDate.length >= 7) {
-            return inv.issueDate.substring(0, 7); // 'YYYY-MM'
-          }
-          return '';
-        })
-        .filter(Boolean)
-    )
-  ).sort((a, b) => b.localeCompare(a));
-
-
-  // Sync back to local helper (Legacy fallback kept for compatibility signature)
-  const saveToLocalStorage = (newEmpenhos: Empenho[], newAlerts: Alert[], newInvoices: Invoice[]) => {
-    setEmpenhos(newEmpenhos);
-    setAlerts(newAlerts);
-    setInvoices(newInvoices);
-  };
-
-  const saveComissoes = (newComissoes: Comissao[]) => {
-    setComissoes(newComissoes);
-  };
-
-  // Helper to format Date + Time
-  const formatDateTime = (isoString?: string) => {
-    if (!isoString) return '';
-    try {
-      const d = new Date(isoString);
-      if (isNaN(d.getTime())) return isoString;
-      return d.toLocaleString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch {
-      return isoString;
-    }
-  };
-
-  // Helper to format Date only (DD/MM/YYYY)
-  const formatDateOnly = (dateStr?: string) => {
-    if (!dateStr) return '—';
-    if (dateStr.includes('T')) {
-      try {
-        const d = new Date(dateStr);
-        if (!isNaN(d.getTime())) {
-          return d.toLocaleDateString('pt-BR');
-        }
-      } catch {
-        // fallback
-      }
-    }
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    }
-    return dateStr;
-  };
 
   const {
     expandedEmpenhoId, setExpandedEmpenhoId, dashboardPregaoFilter, setDashboardPregaoFilter, dashboardClassFilter, setDashboardClassFilter,
@@ -543,7 +259,7 @@ export default function Home() {
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0b1c30] via-[#001453] to-[#0a1a2e] flex flex-col items-center justify-center p-6 text-white font-sans selection:bg-blue-500 selection:text-white">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
@@ -576,15 +292,12 @@ export default function Home() {
 
           <button
             onClick={async () => {
-              setSyncing(true);
               try {
-                await signInWithPopup(auth, googleProvider);
+                await signInUser();
                 showToast('Acesso autorizado com sucesso!', 'success');
               } catch (err: any) {
                 console.error('Erro na autenticação:', err);
                 showToast('Falha na autenticação. Verifique sua conta Google.', 'error');
-              } finally {
-                setSyncing(false);
               }
             }}
             className="w-full h-12 bg-[#00288e] hover:bg-[#001e6a] text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-3 shadow-md hover:shadow-lg active:scale-95 group"
@@ -593,7 +306,7 @@ export default function Home() {
             Entrar no Sistema
           </button>
         </motion.div>
-        
+
         <p className="absolute bottom-6 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
           Ministério da Defesa • Exército Brasileiro
         </p>
@@ -603,7 +316,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f0f4f8] via-[#e8ecf3] to-[#f4f6fa] text-[#0b1c30] flex flex-col antialiased relative overflow-x-hidden selection:bg-blue-500 selection:text-white">
-      
+
       <AppBackground />
 
       <ToastNotification toast={toast} onClose={() => setToast(null)} />
@@ -632,9 +345,7 @@ export default function Home() {
           }}
           onLogout={async () => {
             try {
-              localStorage.removeItem('local_user_session');
-              await signOut(auth);
-              setUser(null);
+              await signOutUser();
               showToast('Você saiu do sistema.', 'info');
             } catch (err: any) {
               console.error(err);
@@ -645,7 +356,7 @@ export default function Home() {
 
         {/* Content Container Area */}
         <main className="flex-1 lg:pl-6 pb-24 md:pb-12 pt-6 px-4 max-w-7xl mx-auto w-full overflow-hidden">
-          
+
           {/* TAB 1: PAINEL DE CONTROLE / DASHBOARD - SALDO RESTANTE POR CLASSE DETALHADO */}
           {activeTab === 'painel' && (
             <DashboardView

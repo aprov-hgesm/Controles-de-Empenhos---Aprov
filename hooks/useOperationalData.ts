@@ -1,0 +1,175 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { onAuthStateChanged, signInWithPopup, signOut, type User } from 'firebase/auth';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { auth, db, googleProvider, handleFirestoreError, OperationType } from '../lib/firebase';
+import type { Alert, Comissao, CronogramaEmpenho, Empenho, Invoice } from '../lib/types';
+import { normalizeSupplier } from '../features/empenhos/domain/empenhoHelpers';
+
+/**
+ * Fonte de verdade da sessão e das coleções operacionais em tempo real.
+ * Mantém o mesmo comportamento de autenticação e subscriptions que antes vivia no page.tsx.
+ */
+export function useOperationalData() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [empenhos, setEmpenhos] = useState<Empenho[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [comissoes, setComissoes] = useState<Comissao[]>([]);
+  const [cronogramas, setCronogramas] = useState<CronogramaEmpenho[]>([]);
+
+  useEffect(() => {
+    localStorage.removeItem('local_user_session');
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser || null);
+      setLoadingAuth(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setEmpenhos([]);
+      setAlerts([]);
+      setInvoices([]);
+      setComissoes([]);
+      return;
+    }
+
+    setSyncing(true);
+
+    const unsubscribeEmpenhos = onSnapshot(
+      collection(db, 'empenhos'),
+      (snapshot) => {
+        const fetched = snapshot.docs.map((snapshotDoc) => {
+          const data = snapshotDoc.data() as Empenho;
+          return { ...data, supplier: normalizeSupplier(data.supplier) };
+        });
+        setEmpenhos(fetched);
+        setSyncing(false);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'empenhos');
+        setSyncing(false);
+      }
+    );
+
+    const unsubscribeAlerts = onSnapshot(
+      collection(db, 'alerts'),
+      (snapshot) => setAlerts(snapshot.docs.map((snapshotDoc) => snapshotDoc.data() as Alert)),
+      (error) => handleFirestoreError(error, OperationType.LIST, 'alerts')
+    );
+
+    const unsubscribeInvoices = onSnapshot(
+      collection(db, 'invoices'),
+      (snapshot) => {
+        const fetched = snapshot.docs.map((snapshotDoc) => {
+          const data = snapshotDoc.data() as Invoice;
+          return { ...data, supplier: normalizeSupplier(data.supplier) };
+        });
+        setInvoices(fetched);
+      },
+      (error) => handleFirestoreError(error, OperationType.LIST, 'invoices')
+    );
+
+    const unsubscribeComissoes = onSnapshot(
+      collection(db, 'comissoes'),
+      (snapshot) => setComissoes(snapshot.docs.map((snapshotDoc) => snapshotDoc.data() as Comissao)),
+      (error) => handleFirestoreError(error, OperationType.LIST, 'comissoes')
+    );
+
+    const unsubscribeCronogramas = onSnapshot(
+      collection(db, 'cronogramas'),
+      (snapshot) => setCronogramas(snapshot.docs.map((snapshotDoc) => snapshotDoc.data() as CronogramaEmpenho)),
+      (error) => handleFirestoreError(error, OperationType.LIST, 'cronogramas')
+    );
+
+    return () => {
+      unsubscribeEmpenhos();
+      unsubscribeAlerts();
+      unsubscribeInvoices();
+      unsubscribeComissoes();
+      unsubscribeCronogramas();
+    };
+  }, [user]);
+
+  const signInUser = async () => {
+    setSyncing(true);
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const signOutUser = async () => {
+    localStorage.removeItem('local_user_session');
+    await signOut(auth);
+    setUser(null);
+  };
+
+  const getBalanceByClass = (classification: 'QR' | 'CALI' | 'PASA') => {
+    const filtered = empenhos.filter((emp) => emp.classification === classification);
+    return filtered.reduce((total, emp) => {
+      const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+      const totalReceived = emp.items.reduce((sum, item) => sum + item.received * item.unitPrice, 0);
+      return total + (totalCommitted - totalReceived);
+    }, 0);
+  };
+
+  const uniquePregaos = Array.from(new Set(empenhos.map((emp) => emp.pregao).filter(Boolean))) as string[];
+  const uniqueEmpenhoYears = Array.from(new Set(empenhos.map((emp) => {
+    if (!emp.date) return '';
+    const parts = emp.date.split('/');
+    if (parts.length === 3) return parts[2];
+    if (emp.date.includes('-')) return emp.date.split('-')[0];
+    return '';
+  }).filter(Boolean))).sort((a, b) => b.localeCompare(a)) as string[];
+  const uniqueNfMonths = Array.from(new Set(invoices.map((inv) => (
+    inv.issueDate && inv.issueDate.length >= 7 ? inv.issueDate.substring(0, 7) : ''
+  )).filter(Boolean))).sort((a, b) => b.localeCompare(a));
+
+  const formatDateTime = (isoString?: string) => {
+    if (!isoString) return '';
+    try {
+      const date = new Date(isoString);
+      if (Number.isNaN(date.getTime())) return isoString;
+      return date.toLocaleString('pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+    } catch {
+      return isoString;
+    }
+  };
+
+  const formatDateOnly = (dateStr?: string) => {
+    if (!dateStr) return '—';
+    if (dateStr.includes('T')) {
+      try {
+        const date = new Date(dateStr);
+        if (!Number.isNaN(date.getTime())) return date.toLocaleDateString('pt-BR');
+      } catch {
+        // fallback to textual parsing below
+      }
+    }
+    const parts = dateStr.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return dateStr;
+  };
+
+  return {
+    user, loadingAuth, syncing,
+    empenhos, setEmpenhos,
+    alerts, setAlerts,
+    invoices, setInvoices,
+    comissoes, setComissoes,
+    cronogramas, setCronogramas,
+    signInUser, signOutUser,
+    getBalanceByClass,
+    uniquePregaos, uniqueEmpenhoYears, uniqueNfMonths,
+    formatDateTime, formatDateOnly,
+  };
+}
