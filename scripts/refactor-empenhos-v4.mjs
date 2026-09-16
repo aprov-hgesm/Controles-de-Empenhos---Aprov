@@ -8,11 +8,11 @@ let source = fs.readFileSync(PAGE_PATH, 'utf8');
 const originalLineCount = source.split('\n').length;
 
 const startNeedle = "{activeTab === 'empenhos' && (";
-const nextMarker = '{/* CONSULTA CONSOLIDADA DE ITENS */}';
+const nextMarker = '{/* TAB 3: GESTÃO DE NOTAS FISCAIS */}';
 const start = source.indexOf(startNeedle);
 if (start < 0) throw new Error('Bloco de Empenhos não encontrado.');
 const markerIndex = source.indexOf(nextMarker, start);
-if (markerIndex < 0) throw new Error('Marcador da Consulta de Itens não encontrado.');
+if (markerIndex < 0) throw new Error('Marcador da aba Notas Fiscais não encontrado.');
 
 const blockEnd = source.lastIndexOf('\n', markerIndex);
 const block = source.slice(start, blockEnd).trimEnd();
@@ -25,7 +25,9 @@ expression = expression.slice(0, -1).trim();
 const parsed = ts.createSourceFile('empenhos-expression.tsx', `const __view = ${expression};`, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 const declaration = parsed.statements[0]?.declarationList?.declarations?.[0];
 const initializer = declaration?.initializer;
-if (!initializer) throw new Error('Não foi possível analisar a expressão de Empenhos.');
+if (!initializer || parsed.parseDiagnostics.length) {
+  throw new Error(`Não foi possível analisar a expressão de Empenhos: ${parsed.parseDiagnostics.map(d => d.messageText).join('; ')}`);
+}
 
 const declared = new Set();
 const used = new Set();
@@ -72,23 +74,46 @@ function collectUses(node) {
 collectDeclarations(initializer);
 collectUses(initializer);
 
-const globals = new Set(['Array','Boolean','Date','Error','Infinity','Intl','JSON','Map','Math','NaN','Number','Object','Promise','RegExp','Set','String','Symbol','WeakMap','WeakSet','console','document','navigator','undefined','window','confirm']);
+const globals = new Set(['Array','Boolean','Date','Error','Infinity','Intl','JSON','Map','Math','NaN','Number','Object','Promise','RegExp','Set','String','Symbol','WeakMap','WeakSet','console','document','navigator','undefined','window','confirm','parseFloat']);
 const free = [...used].filter((name) => !declared.has(name) && !globals.has(name) && name !== '__view').sort((a,b) => a.localeCompare(b));
-if (!free.length) throw new Error('Nenhuma dependência externa detectada.');
 
-const iconNames = ['AlertCircle','ArrowLeft','Braces','Calendar','Camera','Check','CheckCircle2','ChevronDown','ChevronRight','ChevronUp','Coins','Copy','Edit','Eye','FileDown','FileSpreadsheet','FileText','Filter','ImageIcon','Info','Layers','Package','Plus','Printer','RefreshCw','Save','Search','Sparkles','Trash2','Upload','X'].filter((n) => free.includes(n));
-const nonIconFree = free.filter((n) => !iconNames.includes(n) && n !== 'EmpenhoDocumentActions');
+const iconNames = ['AlertCircle','AlertTriangle','ArrowLeft','Braces','Calendar','CalendarDays','Camera','Check','CheckCircle2','ChevronDown','ChevronRight','ChevronUp','Coins','Copy','Edit','Eye','FileDown','FileSpreadsheet','FileText','Filter','ImageIcon','Info','Layers','Package','Plus','Printer','RefreshCw','Save','Search','Sparkles','Trash2','Upload','X'].filter((n) => free.includes(n));
+const motionNames = ['AnimatePresence','motion'].filter((n) => free.includes(n));
+const importedNames = new Set([...iconNames, ...motionNames, 'EmpenhoDocumentActions']);
+
+const allowedContext = new Set([
+  'copiedPrompt','empenhos','empenhosClassFilter','empenhosFilter','empenhosPregaoFilter','empenhosSearch','empenhosYearFilter',
+  'formatDateOnly','handleAddItemToEmpenho','handleCopyPrompt','handleCreateEmpenho','handleDeleteItemFromEmpenho',
+  'handleDownloadPromptPdf','handleDownloadPromptTxt','handleDownloadTermoRecebimento','handleEmpenhoDocumentUploaded',
+  'handleGenerateEmpenhoReportPDF','handleProcessJson','handleSaveReviewEmpenho','invoices','jsonError','jsonInput',
+  'newEmpenhoForm','newEmpenhoMode','newItemForm','reviewEmpenho','selectedEmpenhoDetailId','setActiveTab','setEditingEmpenhoId',
+  'setEditingInvoice','setEmpenhosClassFilter','setEmpenhosFilter','setEmpenhosPregaoFilter','setEmpenhosSearch','setEmpenhosYearFilter',
+  'setEmpenhoToDelete','setJsonError','setJsonInput','setNewEmpenhoForm','setNewEmpenhoMode','setNewItemForm','setNfSubTab',
+  'setReviewEmpenho','setSelectedEmpenhoDetailId','setSelectedNFCommitmentId','setSelectedReportInvoice','setShowAddItemFormInDetail',
+  'setShowConfirmSaveModal','setShowNewEmpenhoModal','showAddItemFormInDetail','showConfirmSaveModal','showNewEmpenhoModal','showToast',
+  'uniqueEmpenhoYears','uniquePregaos','user'
+]);
+
+const unexpected = free.filter((n) => !importedNames.has(n) && !allowedContext.has(n));
+if (unexpected.length) throw new Error(`Dependências inesperadas no bloco de Empenhos: ${unexpected.join(', ')}`);
+const contextNames = free.filter((n) => allowedContext.has(n));
 
 const imports = [
   "'use client';",
   '',
   "import React from 'react';",
+  "import type { Dispatch, SetStateAction } from 'react';",
   ...(iconNames.length ? [`import { ${iconNames.map(n => n === 'ImageIcon' ? 'Image as ImageIcon' : n).join(', ')} } from 'lucide-react';`] : []),
+  ...(motionNames.length ? [`import { ${motionNames.join(', ')} } from 'motion/react';`] : []),
   ...(free.includes('EmpenhoDocumentActions') ? ["import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActions';"] : []),
+  "import type { Empenho, Invoice, EmpenhoPdfDocument } from '../../../lib/types';",
+  "import type { User } from 'firebase/auth';",
   '',
 ].join('\n');
 
-const viewFile = `${imports}interface EmpenhosViewProps {\n  context: Record<string, any>;\n}\n\n/** Tela de cadastro e detalhe de empenhos extraída sem alterar comportamento. */\nexport function EmpenhosView({ context }: EmpenhosViewProps) {\n  const { ${nonIconFree.join(', ')} } = context;\n  return ${expression};\n}\n`;
+const interfaceText = `type Setter<T = any> = Dispatch<SetStateAction<T>>;\n\ntype NewEmpenhoForm = {\n  id: string;\n  supplier: string;\n  description: string;\n  pregao: string;\n  date: string;\n  classification: 'QR' | 'CALI' | 'PASA';\n};\n\ntype NewItemForm = { id: string; name: string; unit: string; quantity: string; unitPrice: string };\n\ninterface EmpenhosViewContext {\n  copiedPrompt: boolean;\n  empenhos: Empenho[];\n  empenhosClassFilter: string;\n  empenhosFilter: 'Todos' | 'Com Saldo' | 'Ativos' | 'Encerrados';\n  empenhosPregaoFilter: string;\n  empenhosSearch: string;\n  empenhosYearFilter: string;\n  formatDateOnly: (dateStr?: string) => string;\n  handleAddItemToEmpenho: (...args: any[]) => any;\n  handleCopyPrompt: (...args: any[]) => any;\n  handleCreateEmpenho: (...args: any[]) => any;\n  handleDeleteItemFromEmpenho: (...args: any[]) => any;\n  handleDownloadPromptPdf: (...args: any[]) => any;\n  handleDownloadPromptTxt: (...args: any[]) => any;\n  handleDownloadTermoRecebimento: (...args: any[]) => any;\n  handleEmpenhoDocumentUploaded: (empenhoId: string, document: EmpenhoPdfDocument) => Promise<void>;\n  handleGenerateEmpenhoReportPDF: (...args: any[]) => any;\n  handleProcessJson: (...args: any[]) => any;\n  handleSaveReviewEmpenho: (...args: any[]) => any;\n  invoices: Invoice[];\n  jsonError: string | null;\n  jsonInput: string;\n  newEmpenhoForm: NewEmpenhoForm;\n  newEmpenhoMode: 'manual' | 'json';\n  newItemForm: NewItemForm;\n  reviewEmpenho: any;\n  selectedEmpenhoDetailId: string | null;\n  setActiveTab: Setter<any>;\n  setEditingEmpenhoId: Setter<string>;\n  setEditingInvoice: Setter<Invoice | null>;\n  setEmpenhosClassFilter: Setter<string>;\n  setEmpenhosFilter: Setter<'Todos' | 'Com Saldo' | 'Ativos' | 'Encerrados'>;\n  setEmpenhosPregaoFilter: Setter<string>;\n  setEmpenhosSearch: Setter<string>;\n  setEmpenhosYearFilter: Setter<string>;\n  setEmpenhoToDelete: Setter<string | null>;\n  setJsonError: Setter<string | null>;\n  setJsonInput: Setter<string>;\n  setNewEmpenhoForm: Setter<NewEmpenhoForm>;\n  setNewEmpenhoMode: Setter<'manual' | 'json'>;\n  setNewItemForm: Setter<NewItemForm>;\n  setNfSubTab: Setter<any>;\n  setReviewEmpenho: Setter<any>;\n  setSelectedEmpenhoDetailId: Setter<string | null>;\n  setSelectedNFCommitmentId: Setter<string>;\n  setSelectedReportInvoice: Setter<Invoice | null>;\n  setShowAddItemFormInDetail: Setter<boolean>;\n  setShowConfirmSaveModal: Setter<boolean>;\n  setShowNewEmpenhoModal: Setter<boolean>;\n  showAddItemFormInDetail: boolean;\n  showConfirmSaveModal: boolean;\n  showNewEmpenhoModal: boolean;\n  showToast: (message: string, type?: 'success' | 'error' | 'info') => void;\n  uniqueEmpenhoYears: string[];\n  uniquePregaos: string[];\n  user: User | null;\n}\n\ninterface EmpenhosViewProps { context: EmpenhosViewContext; }\n`;
+
+const viewFile = `${imports}${interfaceText}\n/** Tela de cadastro e detalhe de empenhos extraída sem alterar comportamento. */\nexport function EmpenhosView({ context }: EmpenhosViewProps) {\n  const { ${contextNames.join(', ')} } = context;\n  return ${expression};\n}\n`;
 fs.mkdirSync('features/empenhos/components', { recursive: true });
 fs.writeFileSync(VIEW_PATH, viewFile);
 
@@ -96,17 +121,17 @@ const viewImport = "import { EmpenhosView } from '../features/empenhos/component
 const importAnchor = "import { DashboardView } from '../features/dashboard/components/DashboardView';\n";
 if (!source.includes(viewImport)) source = source.replace(importAnchor, importAnchor + viewImport);
 
-const replacement = `{activeTab === 'empenhos' && (\n            <EmpenhosView context={{ ${nonIconFree.join(', ')} }} />\n          )}`;
+const replacement = `{activeTab === 'empenhos' && (\n            <EmpenhosView context={{ ${contextNames.join(', ')} }} />\n          )}`;
 source = source.slice(0, start) + replacement + source.slice(blockEnd);
 
 const newLineCount = source.split('\n').length;
-if (newLineCount < 1000 || newLineCount >= originalLineCount) throw new Error(`Guardrail: contagem de linhas inesperada (${originalLineCount} -> ${newLineCount}).`);
-if (!source.includes(nextMarker)) throw new Error('Guardrail: marcador da Consulta de Itens desapareceu.');
-if (!source.includes("activeTab === 'itens'")) throw new Error('Guardrail: aba Consulta de Itens desapareceu.');
+if (newLineCount < 4500 || newLineCount >= originalLineCount) throw new Error(`Guardrail: contagem de linhas inesperada (${originalLineCount} -> ${newLineCount}).`);
+if (!source.includes(nextMarker)) throw new Error('Guardrail: marcador da aba Notas Fiscais desapareceu.');
 if (!source.includes("activeTab === 'nova_nf'")) throw new Error('Guardrail: aba Notas Fiscais desapareceu.');
+if (!source.includes("activeTab === 'itens'")) throw new Error('Guardrail: aba Consulta de Itens desapareceu.');
 
 fs.writeFileSync(PAGE_PATH, source);
-console.log(`Empenhos extraído com ${free.length} dependências livres.`);
+console.log(`Empenhos extraído com ${free.length} dependências livres e ${contextNames.length} props de contexto.`);
 console.log(`Dependências: ${free.join(', ')}`);
 console.log(`page.tsx: ${originalLineCount} -> ${newLineCount} linhas.`);
 console.log(`Novo componente: ${VIEW_PATH}`);
