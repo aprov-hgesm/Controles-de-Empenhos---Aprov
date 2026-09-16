@@ -190,7 +190,7 @@ fs.writeFileSync(HOOK, hookSource);
 // Simplifica imports que deixaram de pertencer ao orquestrador.
 source = source.replace("import React, { useState, useEffect } from 'react';", "import { useState, useEffect } from 'react';");
 source = source.replace(/import \{ motion, AnimatePresence \} from 'motion\/react';/, "import { motion } from 'motion/react';");
-source = source.replace(/import \{[\s\S]*?\} from 'lucide-react';/, "import { Loader2, LogIn } from 'lucide-react';");
+source = source.replace(/import \{\s*Search,[\s\S]*?Image as ImageIcon\s*\} from 'lucide-react';/, "import { Loader2, LogIn } from 'lucide-react';");
 source = source.replace(/import \{ Empenho, Item, Alert, Invoice, InvoiceItem, Comissao, CronogramaEmpenho, CronogramaEntregaColuna, EmpenhoPdfDocument \} from '\.\.\/lib\/types';\n/, '');
 source = source.replace("import { EmpenhoDocumentActions } from '../components/EmpenhoDocumentActions';\n", '');
 source = source.replace("import { MILITARY_RANKS, normalizeSupplier, PROMPT_EXTRACAO_EMPENHO } from '../features/empenhos/domain/empenhoHelpers';\n", '');
@@ -200,7 +200,7 @@ source = source.replace(/import jsPDF from 'jspdf';\nimport autoTable from 'jspd
 source = source.replace(/import \{ signInWithPopup, signOut, onAuthStateChanged, User \} from 'firebase\/auth';\n/, '');
 source = source.replace(/import \{ auth, googleProvider, db, OperationType, handleFirestoreError \} from '\.\.\/lib\/firebase';\n/, '');
 source = source.replace(/import \{ collection, onSnapshot, doc \} from 'firebase\/firestore';\n/, '');
-source = source.replace(/import \{[\s\S]*?\} from '\.\.\/lib\/firebaseSync';\n\n/, '');
+source = source.replace(/import \{\s*seedInitialDataIfNecessary,[\s\S]*?removeCronograma,\s*\} from '\.\.\/lib\/firebaseSync';\n\n/, '');
 
 // Substitui os estados de autenticação pelo hook operacional.
 const authStart = source.indexOf('  // Authentication & Loading state');
