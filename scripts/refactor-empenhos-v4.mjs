@@ -76,7 +76,7 @@ const globals = new Set(['Array','Boolean','Date','Error','Infinity','Intl','JSO
 const free = [...used].filter((name) => !declared.has(name) && !globals.has(name) && name !== '__view').sort((a,b) => a.localeCompare(b));
 if (!free.length) throw new Error('Nenhuma dependência externa detectada.');
 
-const iconNames = ['AlertCircle','ArrowLeft','Braces','Calendar','Check','CheckCircle2','ChevronDown','ChevronRight','ChevronUp','Coins','Copy','Edit','Eye','FileDown','FileSpreadsheet','FileText','Filter','ImageIcon','Info','Layers','Package','Plus','Printer','RefreshCw','Save','Search','Sparkles','Trash2','Upload','X'].filter((n) => free.includes(n));
+const iconNames = ['AlertCircle','ArrowLeft','Braces','Calendar','Camera','Check','CheckCircle2','ChevronDown','ChevronRight','ChevronUp','Coins','Copy','Edit','Eye','FileDown','FileSpreadsheet','FileText','Filter','ImageIcon','Info','Layers','Package','Plus','Printer','RefreshCw','Save','Search','Sparkles','Trash2','Upload','X'].filter((n) => free.includes(n));
 const nonIconFree = free.filter((n) => !iconNames.includes(n) && n !== 'EmpenhoDocumentActions');
 
 const imports = [
@@ -101,8 +101,9 @@ source = source.slice(0, start) + replacement + source.slice(blockEnd);
 
 const newLineCount = source.split('\n').length;
 if (newLineCount < 1000 || newLineCount >= originalLineCount) throw new Error(`Guardrail: contagem de linhas inesperada (${originalLineCount} -> ${newLineCount}).`);
-if (!source.includes("{activeTab === 'itens'")) throw new Error('Guardrail: aba Consulta de Itens desapareceu.');
-if (!source.includes("{activeTab === 'nova_nf'")) throw new Error('Guardrail: aba Notas Fiscais desapareceu.');
+if (!source.includes(nextMarker)) throw new Error('Guardrail: marcador da Consulta de Itens desapareceu.');
+if (!source.includes("activeTab === 'itens'")) throw new Error('Guardrail: aba Consulta de Itens desapareceu.');
+if (!source.includes("activeTab === 'nova_nf'")) throw new Error('Guardrail: aba Notas Fiscais desapareceu.');
 
 fs.writeFileSync(PAGE_PATH, source);
 console.log(`Empenhos extraído com ${free.length} dependências livres.`);
