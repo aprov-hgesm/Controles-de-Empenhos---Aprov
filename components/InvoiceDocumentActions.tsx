@@ -62,7 +62,7 @@ export function InvoiceDocumentActions({
       );
     } catch (error) {
       if (uploadedDocument) {
-        await deleteInvoicePdfUpload(user, uploadedDocument.empenhoId, uploadedDocument.pathname).catch(() => undefined);
+        await deleteInvoicePdfUpload(user, uploadedDocument.empenhoId, uploadedDocument.invoiceId, uploadedDocument.pathname).catch(() => undefined);
       }
       onNotify(error instanceof Error ? error.message : 'Falha ao anexar o PDF.', 'error');
     } finally {

@@ -2,7 +2,6 @@ import { del, get } from '@vercel/blob';
 import { randomUUID } from 'node:crypto';
 import {
   assertInvoiceUploadPath,
-  assertStoredInvoicePath,
   documentValidationErrorResponse,
   isBlobConfigured,
   MAX_INVOICE_PDF_BYTES,
@@ -66,8 +65,8 @@ export async function GET(request: Request): Promise<Response> {
     await requireAuthorizedFirebaseUser(request);
     const url = new URL(request.url);
     const empenhoId = normalizeEmpenhoId(url.searchParams.get('empenhoId'));
-    normalizeInvoiceId(url.searchParams.get('invoiceId'));
-    const pathname = assertStoredInvoicePath(url.searchParams.get('pathname'), empenhoId);
+    const invoiceId = normalizeInvoiceId(url.searchParams.get('invoiceId'));
+    const pathname = assertInvoiceUploadPath(url.searchParams.get('pathname'), empenhoId, invoiceId);
     const result = await get(pathname, { access: 'private', useCache: false });
 
     if (!result || result.statusCode !== 200) {
@@ -165,9 +164,10 @@ export async function DELETE(request: Request): Promise<Response> {
 
   try {
     await requireAuthorizedFirebaseUser(request);
-    const body = (await request.json()) as { empenhoId?: unknown; pathname?: unknown };
+    const body = (await request.json()) as { empenhoId?: unknown; invoiceId?: unknown; pathname?: unknown };
     const empenhoId = normalizeEmpenhoId(body.empenhoId);
-    const pathname = assertStoredInvoicePath(body.pathname, empenhoId);
+    const invoiceId = normalizeInvoiceId(body.invoiceId);
+    const pathname = assertInvoiceUploadPath(body.pathname, empenhoId, invoiceId);
     await del(pathname);
     return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {

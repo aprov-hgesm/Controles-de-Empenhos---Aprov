@@ -4,7 +4,7 @@ import type React from 'react';
 import type { User } from 'firebase/auth';
 import type { Alert, Comissao, Empenho, Invoice, InvoiceItem, InvoicePdfDocument } from '../../../lib/types';
 import { saveAlert, saveEmpenho, saveInvoice, removeInvoice, removeComissao, saveComissao } from '../../../lib/firebaseSync';
-import { deleteInvoicePdfUpload, uploadInvoicePdf } from '../../../lib/invoiceDocuments';
+import { uploadInvoicePdf } from '../../../lib/invoiceDocuments';
 
 type ToastType = 'success' | 'error' | 'info';
 type NfSubTab = 'acompanhar' | 'cadastrar' | 'comissao';
@@ -33,17 +33,6 @@ interface NotasActionsContext {
 /** Ações de Notas Fiscais e Comissão, com dependências operacionais injetadas. */
 export function useNotasFiscaisActions(context: NotasActionsContext) {
   const { user, empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices, comissoes, setComissoes, showToast, selectedNFCommitmentId, setSelectedNFCommitmentId, nfNumber, setNfNumber, nfDate, setNfDate, nfQuantities, setNfQuantities, nfSubTab, setNfSubTab, editingInvoice, setEditingInvoice, setEditingNSId, setTempNSValue, comissaoMes, comissaoBoletimNum, setComissaoBoletimNum, comissaoBoletimDate, setComissaoBoletimDate, comissaoPresPosto, comissaoPresNome, setComissaoPresNome, comissaoAux1Posto, comissaoAux1Nome, setComissaoAux1Nome, comissaoAux2Posto, comissaoAux2Nome, setComissaoAux2Nome, comissaoAux3Posto, comissaoAux3Nome, setComissaoAux3Nome } = context;
-
-  const removeInvoiceDocuments = async (invoice: Invoice) => {
-    if (!user) return;
-    const documents = [
-      ...(invoice.notaFiscalPdfVersions || []),
-      ...(invoice.notaFiscalPdf ? [invoice.notaFiscalPdf] : []),
-    ].filter((document, index, all) => all.findIndex((item) => item.pathname === document.pathname) === index);
-    await Promise.allSettled(
-      documents.map((document) => deleteInvoicePdfUpload(user, document.empenhoId, document.pathname))
-    );
-  };
 
   // Save or Edit registered Invoice ("Salvar Recebimento")
   const handleSaveInvoice = async (invoicePdfFile?: File | null): Promise<boolean> => {
@@ -319,7 +308,6 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     setInvoices(updatedInvoices);
      if (user) {
       try {
-        await removeInvoiceDocuments(invoice);
         await Promise.all([
           updatedTargetEmpenho ? saveEmpenho(user.uid, updatedTargetEmpenho) : Promise.resolve(),
           removeInvoice(user.uid, invoice.id),
@@ -367,7 +355,6 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     setInvoices([]);
      if (user) {
       try {
-        await Promise.all(invoices.map((invoice) => removeInvoiceDocuments(invoice)));
         const promises = [
           ...updatedEmpenhos.map(emp => saveEmpenho(user.uid, emp)),
           ...invoices.map(inv => removeInvoice(user.uid, inv.id))

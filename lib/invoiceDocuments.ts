@@ -75,7 +75,7 @@ export async function uploadInvoicePdf(
       method: 'DELETE',
       headers: { ...headers, 'Content-Type': 'application/json' },
       cache: 'no-store',
-      body: JSON.stringify({ empenhoId, pathname: blob.pathname }),
+      body: JSON.stringify({ empenhoId, invoiceId, pathname: blob.pathname }),
     }).catch(() => undefined);
     throw error;
   }
@@ -84,6 +84,7 @@ export async function uploadInvoicePdf(
 export async function deleteInvoicePdfUpload(
   user: User,
   empenhoId: string,
+  invoiceId: string,
   pathname: string
 ): Promise<void> {
   const headers = await getAuthorizationHeader(user);
@@ -91,7 +92,7 @@ export async function deleteInvoicePdfUpload(
     method: 'DELETE',
     headers: { ...headers, 'Content-Type': 'application/json' },
     cache: 'no-store',
-    body: JSON.stringify({ empenhoId, pathname }),
+    body: JSON.stringify({ empenhoId, invoiceId, pathname }),
   });
   if (!response.ok && response.status !== 404) {
     throw new Error(await readApiError(response));
