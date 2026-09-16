@@ -176,7 +176,11 @@ if (!source.includes(viewImport)) {
 }
 
 const replacement = `{activeTab === 'nova_nf' && (\n            <NotasFiscaisView context={{ ${contextNames.join(', ')} }} />\n          )}\n\n          `;
-source = source.slice(0, start) + replacement + source.slice(markerIndex);
+const replacementStart = source.indexOf(startNeedle);
+if (replacementStart < 0) throw new Error('Bloco de Notas Fiscais desapareceu após inserir import.');
+const replacementMarkerIndex = source.indexOf(nextMarker, replacementStart);
+if (replacementMarkerIndex < 0) throw new Error('Marcador de Relatórios desapareceu após inserir import.');
+source = source.slice(0, replacementStart) + replacement + source.slice(replacementMarkerIndex);
 
 const verificationAst = ts.createSourceFile(PAGE_PATH, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 if (verificationAst.parseDiagnostics.length) {
