@@ -66,7 +66,3 @@ export function documentValidationErrorResponse(error: unknown): Response | null
 export function isBlobConfigured(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN || (process.env.VERCEL_OIDC_TOKEN && process.env.BLOB_STORE_ID));
 }
-
-export function isEmpenhoDocumentFeatureEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_ENABLE_EMPENHO_DOCUMENTS === 'true';
-}

@@ -4,7 +4,6 @@ import {
   assertEmpenhoPath,
   documentValidationErrorResponse,
   isBlobConfigured,
-  isEmpenhoDocumentFeatureEnabled,
   MAX_EMPENHO_PDF_BYTES,
   normalizeEmpenhoId,
   sanitizePdfFilename,
@@ -19,13 +18,6 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 function configurationError(): Response | null {
-  if (!isEmpenhoDocumentFeatureEnabled()) {
-    return Response.json(
-      { error: 'Armazenamento de documentos ainda não foi habilitado.' },
-      { status: 503, headers: { 'Cache-Control': 'no-store' } }
-    );
-  }
-
   if (!isBlobConfigured()) {
     return Response.json(
       { error: 'Vercel Blob privado ainda não foi conectado ao projeto.' },

@@ -8,7 +8,6 @@ do arquivo.
 
 ## Proteções implementadas
 
-- recurso desligado por padrão por `NEXT_PUBLIC_ENABLE_EMPENHO_DOCUMENTS=false`;
 - autenticação server-side do Firebase ID Token (assinatura, emissor, audiência e expiração);
 - allowlist server-side em `EMPENHO_DOCUMENT_AUTHORIZED_EMAILS`;
 - Blob criado obrigatoriamente com acesso `private`;
@@ -21,7 +20,11 @@ do arquivo.
 - até 25 versões recentes permanecem referenciadas no documento do empenho;
 - substituição não apaga automaticamente a versão anterior.
 
-## Ativação segura
+## Ativação
+
+Após a validação funcional em Preview, o recurso passa a permanecer habilitado pelo
+próprio código. A disponibilidade depende somente da configuração segura do Blob e da
+autorização server-side.
 
 1. Na Vercel, abra o projeto de produção do EMPROVEX.
 2. Em **Storage**, crie um Blob Store e selecione **Private**. O modo de acesso não
@@ -30,18 +33,15 @@ do arquivo.
    injeta `BLOB_READ_WRITE_TOKEN`; nunca copie esse valor para o GitHub.
 4. Configure `EMPENHO_DOCUMENT_AUTHORIZED_EMAILS=aprov1hgesm@gmail.com` em Preview e
    Production.
-5. Configure `NEXT_PUBLIC_ENABLE_EMPENHO_DOCUMENTS=true` somente em Preview e gere
-   uma nova implantação.
-6. Valide em Preview: anexar PDF, visualizar, imprimir, baixar, substituir e confirmar
-   que uma conta não autorizada recebe HTTP 403.
-7. Somente após a validação, replique a feature flag `true` em Production e promova a
-   implantação aprovada.
+5. Gere uma nova implantação e valide: anexar PDF, visualizar, imprimir, baixar,
+   substituir e confirmar que uma conta não autorizada recebe HTTP 403.
 
-## Reversão sem impacto
+## Reversão de emergência
 
-Defina `NEXT_PUBLIC_ENABLE_EMPENHO_DOCUMENTS=false` e faça nova implantação. Os botões
-desaparecem e os fluxos atuais de empenhos, itens e notas fiscais continuam funcionando.
-Os PDFs já armazenados não são apagados.
+Se for necessário interromper temporariamente o armazenamento, desconecte o Blob Store
+do projeto ou faça rollback para a implantação anterior. As APIs retornarão erro de
+configuração sem expor os documentos privados, e os PDFs já armazenados não serão
+apagados automaticamente.
 
 ## Estrutura dos dados
 

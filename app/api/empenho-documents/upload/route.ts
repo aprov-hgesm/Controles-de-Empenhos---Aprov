@@ -3,7 +3,6 @@ import {
   assertEmpenhoPath,
   documentValidationErrorResponse,
   isBlobConfigured,
-  isEmpenhoDocumentFeatureEnabled,
   MAX_EMPENHO_PDF_BYTES,
   normalizeEmpenhoId,
 } from '../../../../lib/server/empenhoDocumentSecurity';
@@ -20,13 +19,6 @@ interface UploadClientPayload {
 }
 
 function configurationError(): Response | null {
-  if (!isEmpenhoDocumentFeatureEnabled()) {
-    return Response.json(
-      { error: 'Armazenamento de documentos ainda não foi habilitado.' },
-      { status: 503, headers: { 'Cache-Control': 'no-store' } }
-    );
-  }
-
   if (!isBlobConfigured()) {
     return Response.json(
       { error: 'Vercel Blob privado ainda não foi conectado ao projeto.' },

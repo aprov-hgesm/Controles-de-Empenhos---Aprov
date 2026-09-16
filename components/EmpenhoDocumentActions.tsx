@@ -10,8 +10,6 @@ import {
 } from '../lib/empenhoDocuments';
 import type { Empenho, EmpenhoPdfDocument } from '../lib/types';
 
-const FEATURE_ENABLED = process.env.NEXT_PUBLIC_ENABLE_EMPENHO_DOCUMENTS === 'true';
-
 type ToastType = 'success' | 'error' | 'info';
 
 interface EmpenhoDocumentActionsProps {
@@ -37,7 +35,7 @@ export function EmpenhoDocumentActions({
   const inputRef = useRef<HTMLInputElement>(null);
   const [busyAction, setBusyAction] = useState<'upload' | 'view' | 'print' | 'download' | null>(null);
 
-  if (!FEATURE_ENABLED || !empenho) return null;
+  if (!empenho) return null;
 
   const currentDocument = empenho.notaEmpenhoPdf;
 
