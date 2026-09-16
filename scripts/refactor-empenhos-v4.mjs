@@ -117,12 +117,22 @@ const viewFile = `${imports}${interfaceText}\n/** Tela de cadastro e detalhe de 
 fs.mkdirSync('features/empenhos/components', { recursive: true });
 fs.writeFileSync(VIEW_PATH, viewFile);
 
-const viewImport = "import { EmpenhosView } from '../features/empenhos/components/EmpenhosView';\n";
-const importAnchor = "import { DashboardView } from '../features/dashboard/components/DashboardView';\n";
-if (!source.includes(viewImport)) source = source.replace(importAnchor, importAnchor + viewImport);
-
+// IMPORTANT: replace the original JSX before adding imports, so the original
+// character offsets remain valid and cannot truncate the surrounding page.
 const replacement = `{activeTab === 'empenhos' && (\n            <EmpenhosView context={{ ${contextNames.join(', ')} }} />\n          )}`;
 source = source.slice(0, start) + replacement + source.slice(blockEnd);
+
+const viewImport = "import { EmpenhosView } from '../features/empenhos/components/EmpenhosView';\n";
+const importAnchor = "import { DashboardView } from '../features/dashboard/components/DashboardView';\n";
+if (!source.includes(viewImport)) {
+  if (!source.includes(importAnchor)) throw new Error('Âncora de import de Empenhos não encontrada.');
+  source = source.replace(importAnchor, importAnchor + viewImport);
+}
+
+const fullParsed = ts.createSourceFile('page-transformed.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+if (fullParsed.parseDiagnostics.length) {
+  throw new Error(`Guardrail sintático do page.tsx: ${fullParsed.parseDiagnostics.map(d => d.messageText).join('; ')}`);
+}
 
 const newLineCount = source.split('\n').length;
 if (newLineCount < 4500 || newLineCount >= originalLineCount) throw new Error(`Guardrail: contagem de linhas inesperada (${originalLineCount} -> ${newLineCount}).`);
