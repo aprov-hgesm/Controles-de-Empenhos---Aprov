@@ -154,6 +154,8 @@ const typeFor = (name) => {
   if (name === 'cronogramasSearch' || name === 'cronogramasPregaoFilter' || name === 'cronogramasYearFilter' || name === 'cronogramasClassFilter' || name === 'cronogramaLocalEntrega' || name === 'cronogramaHorarioEntrega' || name === 'cronogramaObservacoes' || name === 'cronogramaResponsavelNome' || name === 'cronogramaResponsavelCargo') return 'string';
   if (name === 'cronogramasStatusFilter') return "'Todos' | 'Com Saldo' | 'Ativos' | 'Encerrados'";
   if (name === 'cronogramaDistribuicao') return '{ [itemId: string]: { [colunaId: string]: number } }';
+  if (name === 'setCronogramaDistribuicao') return 'React.Dispatch<React.SetStateAction<{ [itemId: string]: { [colunaId: string]: number } }>>';
+  if (name === 'setCronogramaColunas') return 'React.Dispatch<React.SetStateAction<CronogramaEntregaColuna[]>>';
   if (name === 'showCronogramaPreviewModal' || name === 'isSavingCronograma') return 'boolean';
   if (name === 'uniquePregaos' || name === 'uniqueEmpenhoYears') return 'string[]';
   if (/^set[A-Z]/.test(name) || /^handle[A-Z]/.test(name) || name === 'showToast') return '(...args: any[]) => any';
