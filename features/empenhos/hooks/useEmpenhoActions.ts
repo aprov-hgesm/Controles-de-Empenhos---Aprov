@@ -68,6 +68,27 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     setEmpenhos((current) => current.map((emp) => emp.id === empenhoId ? updatedEmpenho : emp));
   };
 
+  const handleUpdateEmpenhoPregao = async (empenhoId: string, pregao: string): Promise<void> => {
+    const currentEmpenho = empenhos.find((emp) => emp.id === empenhoId);
+    if (!currentEmpenho) {
+      showToast('Empenho não encontrado para alteração do Pregão.', 'error');
+      return;
+    }
+
+    const normalizedPregao = pregao.trim() || 'Sem Pregão';
+    const updatedEmpenho: Empenho = { ...currentEmpenho, pregao: normalizedPregao };
+
+    try {
+      if (user) await saveEmpenho(user.uid, updatedEmpenho);
+      setEmpenhos((current) => current.map((emp) => emp.id === empenhoId ? updatedEmpenho : emp));
+      showToast(`Pregão do empenho ${empenhoId} atualizado para ${normalizedPregao}.`, 'success');
+    } catch (error) {
+      console.error('Erro ao atualizar Pregão do empenho:', error);
+      showToast('Não foi possível atualizar o Pregão do empenho.', 'error');
+      throw error;
+    }
+  };
+
   // Handler to register new Commitment
   const handleCreateEmpenho = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -434,6 +455,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
 
   return {
     handleEmpenhoDocumentUploaded,
+    handleUpdateEmpenhoPregao,
     handleCreateEmpenho,
     handleDownloadPromptTxt,
     handleDownloadPromptPdf,

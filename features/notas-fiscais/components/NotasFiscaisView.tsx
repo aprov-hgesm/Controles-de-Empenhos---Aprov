@@ -3,6 +3,7 @@
 import React, { useRef, useState } from 'react';
 import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActions';
 import { InvoiceDocumentActions } from '../../../components/InvoiceDocumentActions';
+import { TermoRecebimentoActions } from '../../../components/TermoRecebimentoActions';
 import { MAX_INVOICE_PDF_BYTES } from '../../../lib/invoiceDocuments';
 import { removeComissao } from '../../../lib/firebaseSync';
 import { MILITARY_RANKS } from '../../empenhos/domain/empenhoHelpers';
@@ -31,11 +32,14 @@ interface NotasFiscaisViewContext {
   handleDeleteAllInvoices: (...args: any[]) => any;
   handleDeleteInvoice: (...args: any[]) => any;
   handleDownloadTermoRecebimento: (...args: any[]) => any;
+  handleTermoRecebimentoAction: (...args: any[]) => any;
+  handleDownloadLiquidacaoConsolidada: (...args: any[]) => any;
   handleEditInvoice: (...args: any[]) => any;
   handleEmpenhoDocumentUploaded: (...args: any[]) => any;
   handleInvoiceDocumentUploaded: (...args: any[]) => any;
   handleMarkComissao: (...args: any[]) => any;
   handleMarkTesouraria: (...args: any[]) => any;
+  handleUpdateInvoiceLocation: (...args: any[]) => any;
   handleSaveComissao: (...args: any[]) => any;
   handleSaveInvoice: (...args: any[]) => any;
   invoices: Invoice[];
@@ -84,10 +88,13 @@ interface NotasFiscaisViewProps {
 }
 /** Tela de Notas Fiscais extraída sem alterar regras de negócio ou persistência. */
 export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
-  const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleSaveComissao, handleSaveInvoice, invoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
+  const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
   const nfPdfInputRef = useRef<HTMLInputElement>(null);
   const [nfPdfFile, setNfPdfFile] = useState<File | null>(null);
   const [isSavingInvoice, setIsSavingInvoice] = useState(false);
+  const [consolidatingInvoiceId, setConsolidatingInvoiceId] = useState<string | null>(null);
+  const getInvoiceLocation = (invoice: Invoice): NonNullable<Invoice['localizacaoAtual']> =>
+    invoice.localizacaoAtual || (invoice.tesourariaDate ? 'TESOURARIA' : invoice.comissaoDate ? 'COMISSAO' : 'APROVISIONAMENTO');
 
   const handleNfPdfSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -266,7 +273,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                           <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                             nfTramitacaoFilter === 'FaltaComissao' ? 'bg-white/30 text-white' : 'bg-amber-200 text-amber-900'
                           }`}>
-                            {invoices.filter(i => !i.comissaoDate).length}
+                            {invoices.filter(i => getInvoiceLocation(i) === 'APROVISIONAMENTO').length}
                           </span>
                         </button>
 
@@ -284,7 +291,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                           <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                             nfTramitacaoFilter === 'FaltaTesouraria' ? 'bg-white/30 text-white' : 'bg-indigo-200 text-indigo-900'
                           }`}>
-                            {invoices.filter(i => !i.tesourariaDate).length}
+                            {invoices.filter(i => getInvoiceLocation(i) === 'COMISSAO').length}
                           </span>
                         </button>
 
@@ -302,7 +309,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                           <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                             nfTramitacaoFilter === 'Concluidas' ? 'bg-white/30 text-white' : 'bg-emerald-200 text-emerald-900'
                           }`}>
-                            {invoices.filter(i => !!i.tesourariaDate).length}
+                            {invoices.filter(i => getInvoiceLocation(i) === 'TESOURARIA').length}
                           </span>
                         </button>
                       </div>
@@ -342,12 +349,13 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                         const matchesEmpenho = nfEmpenhoFilter === 'Todos' || inv.empenhoId === nfEmpenhoFilter;
 
                         let matchesTramitacao = true;
+                        const currentLocation = getInvoiceLocation(inv);
                         if (nfTramitacaoFilter === 'FaltaComissao') {
-                          matchesTramitacao = !inv.comissaoDate;
+                          matchesTramitacao = currentLocation === 'APROVISIONAMENTO';
                         } else if (nfTramitacaoFilter === 'FaltaTesouraria') {
-                          matchesTramitacao = !inv.tesourariaDate;
+                          matchesTramitacao = currentLocation === 'COMISSAO';
                         } else if (nfTramitacaoFilter === 'Concluidas') {
-                          matchesTramitacao = !!inv.tesourariaDate;
+                          matchesTramitacao = currentLocation === 'TESOURARIA';
                         }
 
                         return matchesSearch && matchesMonth && matchesEmpenho && matchesTramitacao;
@@ -433,7 +441,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                          <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
                             <InvoiceDocumentActions
                               invoice={inv}
                               user={user}
@@ -447,6 +455,26 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                               onDocumentUploaded={handleEmpenhoDocumentUploaded}
                               onNotify={showToast}
                             />
+                            <TermoRecebimentoActions
+                              invoice={inv}
+                              onAction={handleTermoRecebimentoAction}
+                            />
+                          </div>
+
+                          <div className="rounded-xl border border-sky-100 bg-sky-50/50 p-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                            <div>
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-sky-700 block">Localização atual da Nota Fiscal</span>
+                              <p className="text-xs text-gray-500 font-medium mt-0.5">Altere este campo quando a NF retornar da Comissão ou Tesouraria para correção. O histórico de datas permanece preservado.</p>
+                            </div>
+                            <select
+                              value={getInvoiceLocation(inv)}
+                              onChange={(event) => handleUpdateInvoiceLocation(inv.id, event.target.value)}
+                              className="h-10 px-3 rounded-xl border border-sky-200 bg-white text-xs font-extrabold text-sky-900 outline-none focus:ring-1 focus:ring-sky-500 min-w-[220px]"
+                            >
+                              <option value="APROVISIONAMENTO">Aprovisionamento</option>
+                              <option value="COMISSAO">Comissão de Recebimento</option>
+                              <option value="TESOURARIA">Tesouraria</option>
+                            </select>
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
@@ -481,7 +509,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                 </div>
                               </div>
                               
-                              {!inv.comissaoDate && (
+                              {getInvoiceLocation(inv) === 'APROVISIONAMENTO' && (
                                 <button
                                   onClick={() => handleMarkComissao(inv.id)}
                                   className="mt-1 w-full py-1.5 bg-[#dde1ff] hover:bg-[#00288e] text-[#001453] hover:text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5"
@@ -509,16 +537,16 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                 </div>
                               </div>
 
-                              {!inv.tesourariaDate && (
+                              {getInvoiceLocation(inv) === 'COMISSAO' && (
                                 <button
                                   onClick={() => handleMarkTesouraria(inv.id)}
-                                  disabled={!inv.comissaoDate}
+                                  disabled={getInvoiceLocation(inv) !== 'COMISSAO'}
                                   className={`mt-1 w-full py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                                    inv.comissaoDate 
+                                    getInvoiceLocation(inv) === 'COMISSAO'
                                       ? 'bg-[#00288e] hover:bg-[#1e40af] text-white shadow-sm' 
                                       : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                   }`}
-                                  title={!inv.comissaoDate ? "Envie primeiro para a Comissão de Recebimento" : ""}
+                                  title={getInvoiceLocation(inv) !== 'COMISSAO' ? "A NF precisa estar na Comissão de Recebimento antes do envio à Tesouraria" : ""}
                                 >
                                   <Check className="w-3.5 h-3.5" /> Enviar p/ Tesouraria
                                 </button>
@@ -543,12 +571,29 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                             </div>
                           </div>
 
-                          <button
-                            onClick={() => handleDownloadTermoRecebimento(inv)}
-                            className="w-full mt-3 py-2.5 bg-gradient-to-r from-emerald-600 to-[#00288e] hover:from-emerald-700 hover:to-[#001e6a] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md active:scale-[0.98]"
-                          >
-                            <FileDown className="w-4 h-4" /> Gerar Termo de Recebimento de Artigos de QR (PDF)
-                          </button>
+                          <div className="mt-3 rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50/80 to-blue-50/80 p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                            <div>
+                              <p className="text-xs font-black text-[#001453] uppercase tracking-wider">Documento de Liquidação Consolidada</p>
+                              <p className="text-xs text-gray-600 font-medium mt-1">Une, nesta ordem, Nota de Empenho + Nota Fiscal (quando houver) + Termo de Recebimento em um único PDF.</p>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={consolidatingInvoiceId !== null}
+                              onClick={async () => {
+                                if (consolidatingInvoiceId) return;
+                                setConsolidatingInvoiceId(inv.id);
+                                try {
+                                  await handleDownloadLiquidacaoConsolidada(inv);
+                                } finally {
+                                  setConsolidatingInvoiceId(null);
+                                }
+                              }}
+                              className="h-11 px-5 bg-[#00288e] hover:bg-[#001e6a] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-60 disabled:cursor-wait whitespace-nowrap"
+                            >
+                              {consolidatingInvoiceId === inv.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                              {consolidatingInvoiceId === inv.id ? 'Consolidando PDFs…' : 'Gerar e Baixar Consolidado'}
+                            </button>
+                          </div>
                         </div>
                       ));
                     })()}
