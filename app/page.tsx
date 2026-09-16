@@ -55,7 +55,8 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 
-import { Empenho, Item, Alert, Invoice, InvoiceItem, Comissao, CronogramaEmpenho, CronogramaEntregaColuna } from '../lib/types';
+import { Empenho, Item, Alert, Invoice, InvoiceItem, Comissao, CronogramaEmpenho, CronogramaEntregaColuna, EmpenhoPdfDocument } from '../lib/types';
+import { EmpenhoDocumentActions } from '../components/EmpenhoDocumentActions';
 import { INITIAL_EMPENHOS, INITIAL_ALERTS, INITIAL_INVOICES, INITIAL_COMISSOES } from '../lib/mockData';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -549,6 +550,31 @@ export default function Home() {
         .filter(Boolean)
     )
   ).sort((a, b) => b.localeCompare(a));
+
+  const handleEmpenhoDocumentUploaded = async (
+    empenhoId: string,
+    document: EmpenhoPdfDocument
+  ): Promise<void> => {
+    if (!user) throw new Error('Sua sessão expirou. Entre novamente para anexar o documento.');
+
+    const currentEmpenho = empenhos.find((emp) => emp.id === empenhoId);
+    if (!currentEmpenho) throw new Error('Empenho não encontrado para vincular o documento.');
+
+    const existingVersions = currentEmpenho.notaEmpenhoPdfVersions
+      || (currentEmpenho.notaEmpenhoPdf ? [currentEmpenho.notaEmpenhoPdf] : []);
+    const versions = [
+      document,
+      ...existingVersions.filter((version) => version.pathname !== document.pathname),
+    ].slice(0, 25);
+    const updatedEmpenho: Empenho = {
+      ...currentEmpenho,
+      notaEmpenhoPdf: document,
+      notaEmpenhoPdfVersions: versions,
+    };
+
+    await saveEmpenho(user.uid, updatedEmpenho);
+    setEmpenhos((current) => current.map((emp) => emp.id === empenhoId ? updatedEmpenho : emp));
+  };
 
   // Sync back to local helper (Legacy fallback kept for compatibility signature)
   const saveToLocalStorage = (newEmpenhos: Empenho[], newAlerts: Alert[], newInvoices: Invoice[]) => {
@@ -4098,6 +4124,13 @@ export default function Home() {
                         </div>
                       </div>
 
+                      <EmpenhoDocumentActions
+                        empenho={targetEmp}
+                        user={user}
+                        onDocumentUploaded={handleEmpenhoDocumentUploaded}
+                        onNotify={showToast}
+                      />
+
                       {/* 4 Financial Macro Cards */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {/* Card 1: Total Empenhado */}
@@ -4552,6 +4585,13 @@ export default function Home() {
                                         >
                                           <FileDown className="w-4 h-4" />
                                         </button>
+                                        <EmpenhoDocumentActions
+                                          empenho={targetEmp}
+                                          user={user}
+                                          variant="compact"
+                                          onDocumentUploaded={handleEmpenhoDocumentUploaded}
+                                          onNotify={showToast}
+                                        />
                                         <button
                                           type="button"
                                           onClick={() => {
@@ -5527,6 +5567,13 @@ export default function Home() {
                                 </p>
                               </div>
                               <div className="flex items-center gap-1.5 border-l pl-3 border-gray-100">
+                                <EmpenhoDocumentActions
+                                  empenho={empenhos.find((emp) => emp.id === inv.empenhoId)}
+                                  user={user}
+                                  variant="compact"
+                                  onDocumentUploaded={handleEmpenhoDocumentUploaded}
+                                  onNotify={showToast}
+                                />
                                 <button
                                   onClick={() => handleEditInvoice(inv)}
                                   className="p-2 text-[#00288e] hover:bg-blue-50 rounded-xl transition-all active:scale-95 border border-blue-50 hover:border-blue-100"
@@ -7289,6 +7336,7 @@ export default function Home() {
                                                 <th className="p-3 text-right">Saldo</th>
                                                 <th className="p-3 text-right">Vlr. unitário</th>
                                                 <th className="p-3 text-right">Saldo financeiro</th>
+                                                <th className="p-3 text-center">Documento NE</th>
                                               </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-100">
@@ -7319,6 +7367,17 @@ export default function Home() {
                                                   </td>
                                                   <td className="p-3 text-right font-black text-[#0b1c30]">
                                                     R$ {association.balanceValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                  </td>
+                                                  <td className="p-3">
+                                                    <div className="flex justify-center">
+                                                      <EmpenhoDocumentActions
+                                                        empenho={empenhos.find((emp) => emp.id === association.empenhoId)}
+                                                        user={user}
+                                                        variant="compact"
+                                                        onDocumentUploaded={handleEmpenhoDocumentUploaded}
+                                                        onNotify={showToast}
+                                                      />
+                                                    </div>
                                                   </td>
                                                 </tr>
                                               ))}

@@ -7,6 +7,16 @@ export interface Item {
   received: number; // total quantity already received (liquidado/recebido)
 }
 
+export interface EmpenhoPdfDocument {
+  id: string;
+  pathname: string;
+  originalName: string;
+  contentType: 'application/pdf';
+  size: number;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
 export interface Empenho {
   id: string;
   supplier: string;
@@ -17,6 +27,8 @@ export interface Empenho {
   lastNFDaysAgo?: number;
   pregao?: string; // Pregão vinculado ao empenho
   classification?: 'QR' | 'CALI' | 'PASA';
+  notaEmpenhoPdf?: EmpenhoPdfDocument;
+  notaEmpenhoPdfVersions?: EmpenhoPdfDocument[];
 }
 
 export interface InvoiceItem {
