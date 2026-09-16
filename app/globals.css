@@ -1,11 +1,107 @@
 @import "tailwindcss";
 
+:root {
+  --emprovex-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --emprovex-motion-ease-soft: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 @theme {
   --font-montserrat: var(--font-montserrat), sans-serif;
+}
+
+@keyframes emprovex-view-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.997);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes emprovex-fade-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 7px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes emprovex-orbit-a {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  100% { transform: translate3d(3vw, 2.5vh, 0) scale(1.04); }
+}
+
+@keyframes emprovex-orbit-b {
+  0% { transform: translate3d(0, 0, 0) scale(1.02); }
+  100% { transform: translate3d(-2.5vw, -2vh, 0) scale(0.98); }
+}
+
+@keyframes emprovex-orbit-c {
+  0% { transform: translate3d(0, 0, 0) scale(0.99); }
+  100% { transform: translate3d(-2vw, 3vh, 0) scale(1.035); }
+}
+
+@keyframes emprovex-orbit-d {
+  0% { transform: translate3d(0, 0, 0) scale(1.01); }
+  100% { transform: translate3d(2.25vw, -2.5vh, 0) scale(0.985); }
 }
 
 @layer utilities {
   .font-montserrat {
     font-family: var(--font-montserrat), 'Montserrat', sans-serif;
+  }
+
+  .animate-fadeIn {
+    animation: emprovex-fade-in 280ms var(--emprovex-motion-ease) both;
+  }
+
+  .transition-all,
+  .transition-colors,
+  .transition-transform,
+  .transition-opacity {
+    transition-timing-function: var(--emprovex-motion-ease-soft);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  main > div:not(.fixed) {
+    animation: emprovex-view-enter 300ms var(--emprovex-motion-ease) both;
+    transform-origin: 50% 0%;
+  }
+}
+
+/* Movimento ambiente deliberadamente lento e restrito a telas maiores para
+   preservar desempenho e bateria em dispositivos móveis. */
+@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  .fixed.inset-0.pointer-events-none.z-0.overflow-hidden > div:nth-child(1) {
+    animation: emprovex-orbit-a 26s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+
+  .fixed.inset-0.pointer-events-none.z-0.overflow-hidden > div:nth-child(2) {
+    animation: emprovex-orbit-b 30s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+
+  .fixed.inset-0.pointer-events-none.z-0.overflow-hidden > div:nth-child(3) {
+    animation: emprovex-orbit-c 34s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+
+  .fixed.inset-0.pointer-events-none.z-0.overflow-hidden > div:nth-child(4) {
+    animation: emprovex-orbit-d 29s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fadeIn,
+  main > div:not(.fixed) {
+    animation: none !important;
   }
 }
