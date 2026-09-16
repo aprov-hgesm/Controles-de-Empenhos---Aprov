@@ -13,7 +13,7 @@
     "test:recovery": "node --test scripts/firestore-recovery.test.mjs"
   },
   "dependencies": {
-    "next": "^15.1.0",
+    "next": "15.5.24",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "lucide-react": "^0.468.0",
@@ -23,6 +23,8 @@
     "jspdf-autotable": "^3.8.2",
     "firebase": "^10.12.2",
     "clsx": "^2.1.1",
+    "@vercel/blob": "^2.8.0",
+    "jose": "^6.2.12",
     "tailwind-merge": "^2.5.4"
   },
   "devDependencies": {
@@ -36,5 +38,8 @@
     "@tailwindcss/postcss": "^4.0.0-alpha.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.1.0"
+  },
+  "overrides": {
+    "undici": "6.28.1"
   }
 }
