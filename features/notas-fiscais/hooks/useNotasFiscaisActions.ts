@@ -2,8 +2,9 @@
 
 import type React from 'react';
 import type { User } from 'firebase/auth';
-import type { Alert, Comissao, Empenho, Invoice, InvoiceItem } from '../../../lib/types';
+import type { Alert, Comissao, Empenho, Invoice, InvoiceItem, InvoicePdfDocument } from '../../../lib/types';
 import { saveAlert, saveEmpenho, saveInvoice, removeInvoice, removeComissao, saveComissao } from '../../../lib/firebaseSync';
+import { deleteInvoicePdfUpload, uploadInvoicePdf } from '../../../lib/invoiceDocuments';
 
 type ToastType = 'success' | 'error' | 'info';
 type NfSubTab = 'acompanhar' | 'cadastrar' | 'comissao';
@@ -33,8 +34,19 @@ interface NotasActionsContext {
 export function useNotasFiscaisActions(context: NotasActionsContext) {
   const { user, empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices, comissoes, setComissoes, showToast, selectedNFCommitmentId, setSelectedNFCommitmentId, nfNumber, setNfNumber, nfDate, setNfDate, nfQuantities, setNfQuantities, nfSubTab, setNfSubTab, editingInvoice, setEditingInvoice, setEditingNSId, setTempNSValue, comissaoMes, comissaoBoletimNum, setComissaoBoletimNum, comissaoBoletimDate, setComissaoBoletimDate, comissaoPresPosto, comissaoPresNome, setComissaoPresNome, comissaoAux1Posto, comissaoAux1Nome, setComissaoAux1Nome, comissaoAux2Posto, comissaoAux2Nome, setComissaoAux2Nome, comissaoAux3Posto, comissaoAux3Nome, setComissaoAux3Nome } = context;
 
+  const removeInvoiceDocuments = async (invoice: Invoice) => {
+    if (!user) return;
+    const documents = [
+      ...(invoice.notaFiscalPdfVersions || []),
+      ...(invoice.notaFiscalPdf ? [invoice.notaFiscalPdf] : []),
+    ].filter((document, index, all) => all.findIndex((item) => item.pathname === document.pathname) === index);
+    await Promise.allSettled(
+      documents.map((document) => deleteInvoicePdfUpload(user, document.empenhoId, document.pathname))
+    );
+  };
+
   // Save or Edit registered Invoice ("Salvar Recebimento")
-  const handleSaveInvoice = async () => {
+  const handleSaveInvoice = async (invoicePdfFile?: File | null): Promise<boolean> => {
     // 1. Revert effect of editingInvoice on empenhos first if in edit mode
     let baseEmpenhos = empenhos;
     if (editingInvoice) {
@@ -60,16 +72,16 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
      const targetEmpenho = baseEmpenhos.find(e => e.id === selectedNFCommitmentId);
     if (!targetEmpenho) {
       showToast('Selecione um empenho válido.', 'error');
-      return;
+      return false;
     }
      if (!nfNumber.trim()) {
       showToast('Por favor, insira o número da Nota Fiscal.', 'error');
-      return;
+      return false;
     }
      const cleanNfNum = nfNumber.trim();
     if (!editingInvoice && invoices.some(inv => inv.id.trim() === cleanNfNum)) {
       showToast(`A Nota Fiscal nº ${cleanNfNum} já está cadastrada no sistema! Utilize o botão de edição na lista de notas para alterá-la.`, 'error');
-      return;
+      return false;
     }
      // Validate quantities entered
     const enteredItems: InvoiceItem[] = [];
@@ -95,14 +107,38 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     });
      if (!isAnyQtyEntered) {
       showToast('Por favor, insira a quantidade para pelo menos um item da NF.', 'error');
-      return;
+      return false;
     }
      if (isExceeded) {
       showToast(`A quantidade inserida para "${exceededItemName}" excede o saldo disponível do empenho!`, 'error');
-      return;
+      return false;
     }
      // Process & update database state
     const invoiceTotal = enteredItems.reduce((sum, item) => sum + item.subtotal, 0);
+
+    let uploadedInvoicePdf: InvoicePdfDocument | undefined;
+    if (invoicePdfFile) {
+      if (!user) {
+        showToast('Faça login novamente antes de anexar o PDF da Nota Fiscal.', 'error');
+        return false;
+      }
+      try {
+        uploadedInvoicePdf = await uploadInvoicePdf(user, selectedNFCommitmentId, cleanNfNum, invoicePdfFile);
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : 'Falha ao anexar o PDF da Nota Fiscal.', 'error');
+        return false;
+      }
+    }
+
+    const previousPdfVersions = editingInvoice?.notaFiscalPdfVersions ||
+      (editingInvoice?.notaFiscalPdf ? [editingInvoice.notaFiscalPdf] : []);
+    const nextPdfVersions = uploadedInvoicePdf
+      ? [...previousPdfVersions, uploadedInvoicePdf]
+          .filter((document, index, all) => all.findIndex((item) => item.pathname === document.pathname) === index)
+          .slice(-25)
+      : editingInvoice?.notaFiscalPdfVersions;
+    const currentInvoicePdf = uploadedInvoicePdf || editingInvoice?.notaFiscalPdf;
+
      const invoiceToSave: Invoice = {
       id: nfNumber,
       empenhoId: selectedNFCommitmentId,
@@ -115,6 +151,8 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       ...(editingInvoice?.comissaoDate ? { comissaoDate: editingInvoice.comissaoDate } : {}),
       ...(editingInvoice?.tesourariaDate ? { tesourariaDate: editingInvoice.tesourariaDate } : {}),
       ...(editingInvoice?.termoNumero ? { termoNumero: editingInvoice.termoNumero } : {}),
+      ...(currentInvoicePdf ? { notaFiscalPdf: currentInvoicePdf } : {}),
+      ...(nextPdfVersions?.length ? { notaFiscalPdfVersions: nextPdfVersions } : {}),
     };
      // Update received quantities in empenhos (applying the new invoice quantities)
     let updatedTargetEmpenho: Empenho | null = null;
@@ -206,6 +244,28 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
 
     // Redirect to accompanying subtab of Notas Fiscais
     setNfSubTab('acompanhar');
+    return true;
+  };
+
+  const handleInvoiceDocumentUploaded = async (invoiceId: string, document: InvoicePdfDocument) => {
+    const targetInvoice = invoices.find((invoice) => invoice.id === invoiceId);
+    if (!targetInvoice) {
+      throw new Error('Nota Fiscal não encontrada para vincular o documento.');
+    }
+
+    const priorVersions = targetInvoice.notaFiscalPdfVersions ||
+      (targetInvoice.notaFiscalPdf ? [targetInvoice.notaFiscalPdf] : []);
+    const versions = [...priorVersions, document]
+      .filter((item, index, all) => all.findIndex((candidate) => candidate.pathname === item.pathname) === index)
+      .slice(-25);
+    const updatedInvoice: Invoice = {
+      ...targetInvoice,
+      notaFiscalPdf: document,
+      notaFiscalPdfVersions: versions,
+    };
+
+    setInvoices((current) => current.map((invoice) => invoice.id === invoiceId ? updatedInvoice : invoice));
+    if (user) await saveInvoice(user.uid, updatedInvoice);
   };
 
   const handleEditInvoice = (invoice: Invoice) => {
@@ -259,6 +319,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     setInvoices(updatedInvoices);
      if (user) {
       try {
+        await removeInvoiceDocuments(invoice);
         await Promise.all([
           updatedTargetEmpenho ? saveEmpenho(user.uid, updatedTargetEmpenho) : Promise.resolve(),
           removeInvoice(user.uid, invoice.id),
@@ -306,6 +367,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     setInvoices([]);
      if (user) {
       try {
+        await Promise.all(invoices.map((invoice) => removeInvoiceDocuments(invoice)));
         const promises = [
           ...updatedEmpenhos.map(emp => saveEmpenho(user.uid, emp)),
           ...invoices.map(inv => removeInvoice(user.uid, inv.id))
@@ -479,6 +541,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
 
   return {
     handleSaveInvoice,
+    handleInvoiceDocumentUploaded,
     handleEditInvoice,
     handleDeleteInvoice,
     handleDeleteAllInvoices,
