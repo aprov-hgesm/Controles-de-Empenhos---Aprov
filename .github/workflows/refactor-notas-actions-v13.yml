@@ -1,0 +1,68 @@
+name: Temporary notas actions refactor v13
+
+on:
+  push:
+    branches:
+      - refactor/notas-actions-v13
+
+permissions:
+  contents: write
+
+jobs:
+  refactor-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/notas-actions-v13
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Capture TypeScript baseline
+        shell: bash
+        run: |
+          (npx tsc --noEmit --pretty false || true) \
+            | sed -E 's/\([0-9]+,[0-9]+\)/(L,C)/g' \
+            | sed -E 's/"success" \| "error" \| "info"/"error" | "info" | "success"/g' \
+            | sed -E 's/"success" \| "info" \| "error"/"error" | "info" | "success"/g' \
+            | sed -E 's/"error" \| "success" \| "info"/"error" | "info" | "success"/g' \
+            | sed -E 's/"info" \| "success" \| "error"/"error" | "info" | "success"/g' \
+            | sed -E 's/"info" \| "error" \| "success"/"error" | "info" | "success"/g' \
+            | sort -u > /tmp/ts-baseline.txt
+      - name: Apply refactor
+        run: node scripts/refactor-notas-actions-v13.mjs
+      - name: Verify no new TypeScript errors
+        shell: bash
+        run: |
+          (npx tsc --noEmit --pretty false || true) \
+            | sed -E 's/\([0-9]+,[0-9]+\)/(L,C)/g' \
+            | sed -E 's/"success" \| "error" \| "info"/"error" | "info" | "success"/g' \
+            | sed -E 's/"success" \| "info" \| "error"/"error" | "info" | "success"/g' \
+            | sed -E 's/"error" \| "success" \| "info"/"error" | "info" | "success"/g' \
+            | sed -E 's/"info" \| "success" \| "error"/"error" | "info" | "success"/g' \
+            | sed -E 's/"info" \| "error" \| "success"/"error" | "info" | "success"/g' \
+            | sort -u > /tmp/ts-after.txt
+          comm -13 /tmp/ts-baseline.txt /tmp/ts-after.txt | tee /tmp/ts-new.txt
+          test ! -s /tmp/ts-new.txt
+      - name: Build
+        run: npm run build
+      - name: Recovery tests
+        run: npm run test:recovery
+      - name: Diff hygiene
+        run: git diff --check
+      - name: Remove temporary tooling
+        run: |
+          rm -f scripts/refactor-notas-actions-v13.mjs
+          rm -f .github/workflows/refactor-notas-actions-v13.yml
+      - name: Commit validated refactor
+        shell: bash
+        run: |
+          git config user.name "Moriark"
+          git config user.email "marcoa.r.aquino@gmail.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "refactor: extrai handlers de notas e comissao"
+          git push origin HEAD:refactor/notas-actions-v13
