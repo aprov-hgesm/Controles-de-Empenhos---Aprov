@@ -1,0 +1,88 @@
+name: Temporary layout shell refactor v2
+
+on:
+  push:
+    branches:
+      - refactor/page-layout-shell-v2
+    paths:
+      - ".github/workflows/refactor-layout-shell-v2.yml"
+      - "scripts/refactor-layout-shell-v2.mjs"
+
+permissions:
+  contents: write
+
+jobs:
+  refactor-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout refactor branch
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/page-layout-shell-v2
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Capture TypeScript baseline from main
+        shell: bash
+        run: |
+          git worktree add --detach /tmp/emprovex-main origin/main
+          ln -s "$GITHUB_WORKSPACE/node_modules" /tmp/emprovex-main/node_modules
+          set +e
+          (cd /tmp/emprovex-main && "$GITHUB_WORKSPACE/node_modules/.bin/tsc" --noEmit --pretty false) > /tmp/tsc-before.txt 2>&1
+          status=$?
+          set -e
+          echo "Main baseline tsc exit code: $status"
+          sed -E 's/\([0-9]+,[0-9]+\)/(LINE,COL)/g' /tmp/tsc-before.txt | sort > /tmp/tsc-before-normalized.txt
+          cat /tmp/tsc-before.txt
+
+      - name: Apply deterministic shell refactor
+        run: node scripts/refactor-layout-shell-v2.mjs
+
+      - name: Verify refactor adds no TypeScript errors
+        shell: bash
+        run: |
+          set +e
+          npx tsc --noEmit --pretty false > /tmp/tsc-after.txt 2>&1
+          status=$?
+          set -e
+          echo "Refactored tsc exit code: $status"
+          sed -E 's/\([0-9]+,[0-9]+\)/(LINE,COL)/g' /tmp/tsc-after.txt | sort > /tmp/tsc-after-normalized.txt
+          if ! diff -u /tmp/tsc-before-normalized.txt /tmp/tsc-after-normalized.txt; then
+            echo "A refatoracao alterou o conjunto de erros TypeScript e foi bloqueada."
+            echo "--- TypeScript apos refatoracao ---"
+            cat /tmp/tsc-after.txt
+            exit 1
+          fi
+          echo "Nenhum erro TypeScript novo foi introduzido."
+
+      - name: Production build validation
+        run: npm run build
+
+      - name: Existing recovery tests
+        run: npm run test:recovery
+
+      - name: Diff hygiene
+        run: git diff --check
+
+      - name: Remove temporary refactor tooling
+        run: |
+          rm -f scripts/refactor-layout-shell-v2.mjs
+          rm -f .github/workflows/refactor-layout-shell-v2.yml
+
+      - name: Commit validated refactor
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "refactor: extrai shell visual do page"
+          git push origin HEAD:refactor/page-layout-shell-v2
