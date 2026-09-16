@@ -59,6 +59,10 @@ import { Empenho, Item, Alert, Invoice, InvoiceItem, Comissao, CronogramaEmpenho
 import { EmpenhoDocumentActions } from '../components/EmpenhoDocumentActions';
 import { MILITARY_RANKS, normalizeSupplier, PROMPT_EXTRACAO_EMPENHO } from '../features/empenhos/domain/empenhoHelpers';
 import { usePlatformBranding } from '../hooks/usePlatformBranding';
+import { AppBackground } from '../components/layout/AppBackground';
+import { AppHeader } from '../components/layout/AppHeader';
+import { AppSidebar } from '../components/layout/AppSidebar';
+import { ToastNotification } from '../components/layout/ToastNotification';
 export { PROMPT_EXTRACAO_EMPENHO } from '../features/empenhos/domain/empenhoHelpers';
 import { INITIAL_EMPENHOS, INITIAL_ALERTS, INITIAL_INVOICES, INITIAL_COMISSOES } from '../lib/mockData';
 import jsPDF from 'jspdf';
@@ -2676,247 +2680,44 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f0f4f8] via-[#e8ecf3] to-[#f4f6fa] text-[#0b1c30] flex flex-col antialiased relative overflow-x-hidden selection:bg-blue-500 selection:text-white">
       
-      {/* iOS-style background gradient blobs */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute top-[-10%] left-[-15%] w-[60vw] h-[60vw] rounded-full bg-blue-300/30 blur-[120px]" />
-        <div className="absolute bottom-[5%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-indigo-300/20 blur-[150px]" />
-        <div className="absolute top-[30%] right-[15%] w-[45vw] h-[45vw] rounded-full bg-pink-200/25 blur-[120px]" />
-        <div className="absolute bottom-[-10%] left-[10%] w-[50vw] h-[50vw] rounded-full bg-sky-200/35 blur-[140px]" />
-      </div>
+      <AppBackground />
 
-      {/* Toast Notification */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div 
-            initial={{ opacity: 0, y: -50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            className={`fixed top-16 right-4 left-4 sm:left-auto sm:right-6 z-50 p-4 rounded-xl shadow-xl flex items-center gap-3 border backdrop-blur-md ${
-              toast.type === 'success' ? 'bg-emerald-50/90 text-emerald-800 border-emerald-200/80' :
-              toast.type === 'error' ? 'bg-rose-50/90 text-rose-800 border-rose-200/80' :
-              'bg-blue-50/90 text-blue-800 border-blue-200/80'
-            }`}
-          >
-            {toast.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-600" />}
-            {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-rose-600" />}
-            {toast.type === 'info' && <Info className="w-5 h-5 text-blue-600" />}
-            <span className="font-medium text-sm">{toast.message}</span>
-            <button onClick={() => setToast(null)} className="ml-auto text-gray-400 hover:text-gray-600">
-              <X className="w-4 h-4" />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ToastNotification toast={toast} onClose={() => setToast(null)} />
 
-      {/* Top Header / App Bar */}
-      <header className="bg-white/70 backdrop-blur-md border-b border-white/30 shadow-sm fixed top-0 w-full h-16 z-40 flex justify-between items-center px-6 transition-all duration-300">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden text-[#00288e] p-1.5 hover:bg-blue-50/50 rounded-lg active:scale-95 duration-150 transition-all"
-            id="menu-toggle-btn"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          <div className="flex items-center gap-2.5">
-            <div className="relative group">
-              <label 
-                className="w-8 h-8 rounded-lg bg-[#00288e] text-white flex items-center justify-center font-extrabold text-xs tracking-wider shadow-xs flex-shrink-0 font-montserrat cursor-pointer overflow-hidden p-1 hover:ring-2 hover:ring-blue-400 transition-all block"
-                title="Clique para alterar o logotipo da plataforma"
-              >
-                {customLogo ? (
-                  <img src={customLogo} alt="Logo" className="w-full h-full object-contain" />
-                ) : (
-                  <span>EMP</span>
-                )}
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleLogoUpload} 
-                  className="hidden" 
-                />
-              </label>
-
-              <label 
-                className="absolute -bottom-1 -right-1 p-0.5 bg-white text-[#00288e] border border-blue-200 rounded-full shadow-xs cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-50 flex items-center justify-center"
-                title="Upload de logotipo"
-              >
-                <Camera className="w-2.5 h-2.5" />
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleLogoUpload} 
-                  className="hidden" 
-                />
-              </label>
-
-              {customLogo && (
-                <button
-                  type="button"
-                  onClick={handleRemoveLogo}
-                  className="absolute -top-1 -right-1 p-0.5 bg-rose-500 text-white rounded-full shadow-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-600 flex items-center justify-center"
-                  title="Restaurar logotipo padrão"
-                >
-                  <X className="w-2.5 h-2.5" />
-                </button>
-              )}
-            </div>
-
-            <div className="flex flex-col">
-              <h1 className="font-extrabold text-base sm:text-lg text-[#00288e] tracking-wider uppercase font-montserrat leading-none">
-                EMPROVEX
-              </h1>
-              <span className="text-[9px] sm:text-[10px] font-bold text-gray-500 tracking-wider uppercase font-montserrat mt-0.5">
-                Gestão Logística e Financeira
-              </span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          {syncing && (
-            <div className="flex items-center gap-1 text-xs font-semibold text-blue-600 animate-pulse bg-blue-50/70 backdrop-blur-sm px-3 py-1 rounded-full">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Sincronizando...
-            </div>
-          )}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-700 hidden md:inline">
-              {user?.displayName || 'Aprovisionamento HGeSM'}
-            </span>
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        customLogo={customLogo}
+        syncing={syncing}
+        userDisplayName={user?.displayName || 'Aprovisionamento HGeSM'}
+        onOpenSidebar={() => setSidebarOpen(true)}
+        onLogoUpload={handleLogoUpload}
+        onRemoveLogo={handleRemoveLogo}
+      />
 
       {/* Main Framework Wrapper */}
       <div className="flex flex-1 pt-16 min-h-screen z-10 relative">
 
-        {/* Backdrop for mobile sidebar */}
-        {sidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black/20 z-40 lg:hidden backdrop-blur-sm"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* Persistent Desktop Sidebar & Sliding Mobile Drawer */}
-        <aside className={`
-          fixed lg:sticky top-16 left-0 h-[calc(100vh-4rem)] w-72 bg-white/60 backdrop-blur-md border-r border-white/20 py-6 z-40
-          flex flex-col justify-between transition-transform duration-300 ease-out shadow-sm lg:shadow-none
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        `}>
-          <div className="space-y-6">
-            
-            {/* User Profile Card (Text-only without avatar icon) */}
-            <div className="mx-4 px-4 py-3 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/40 shadow-xs">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Usuário Conectado</p>
-              <p className="font-bold text-sm text-[#0b1c30] truncate mt-0.5">
-                {user?.displayName || 'Aprovisionamento HGeSM'}
-              </p>
-            </div>
-
-            {/* Navigation Menus */}
-            <nav className="space-y-1.5 px-3">
-              <button 
-                onClick={() => { setActiveTab('painel'); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-150 ${
-                  activeTab === 'painel' 
-                    ? 'bg-[#e5eeff] text-[#00288e]' 
-                    : 'text-gray-600 hover:bg-[#eff4ff] hover:text-[#0b1c30]'
-                }`}
-              >
-                <Layers className="w-5 h-5" />
-                <span>Dashboard</span>
-              </button>
-
-              <button 
-                onClick={() => { setActiveTab('empenhos'); setSelectedEmpenhoDetailId(null); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-150 ${
-                  activeTab === 'empenhos' || activeTab === 'itens_empenho'
-                    ? 'bg-[#e5eeff] text-[#00288e]' 
-                    : 'text-gray-600 hover:bg-[#eff4ff] hover:text-[#0b1c30]'
-                }`}
-              >
-                <FileSpreadsheet className="w-5 h-5" />
-                <span>Cadastro de Empenhos</span>
-              </button>
-
-              <button
-                onClick={() => { setActiveTab('itens'); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-150 ${
-                  activeTab === 'itens'
-                    ? 'bg-[#e5eeff] text-[#00288e]'
-                    : 'text-gray-600 hover:bg-[#eff4ff] hover:text-[#0b1c30]'
-                }`}
-              >
-                <Package className="w-5 h-5" />
-                <span>Consulta de Itens</span>
-              </button>
-
-              <button 
-                onClick={() => { setActiveTab('nova_nf'); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-150 ${
-                  activeTab === 'nova_nf' 
-                    ? 'bg-[#e5eeff] text-[#00288e]' 
-                    : 'text-gray-600 hover:bg-[#eff4ff] hover:text-[#0b1c30]'
-                }`}
-              >
-                <FileText className="w-5 h-5" />
-                <span>Notas Fiscais</span>
-              </button>
-
-              <button 
-                onClick={() => { setActiveTab('relatorios'); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-150 ${
-                  activeTab === 'relatorios' 
-                    ? 'bg-[#e5eeff] text-[#00288e]' 
-                    : 'text-gray-600 hover:bg-[#eff4ff] hover:text-[#0b1c30]'
-                }`}
-              >
-                <TrendingUp className="w-5 h-5" />
-                <span>Empenhos</span>
-              </button>
-
-              <button 
-                onClick={() => { setActiveTab('cronogramas'); setSidebarOpen(false); }}
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-150 ${
-                  activeTab === 'cronogramas' 
-                    ? 'bg-[#e5eeff] text-[#00288e]' 
-                    : 'text-gray-600 hover:bg-[#eff4ff] hover:text-[#0b1c30]'
-                }`}
-              >
-                <CalendarDays className="w-5 h-5" />
-                <span>Cronogramas</span>
-              </button>
-
-
-            </nav>
-          </div>
-
-          {/* Sidebar Footer with Logout */}
-          <div className="px-6 border-t border-gray-100 pt-4 space-y-3">
-            <button
-              onClick={async () => {
-                try {
-                  localStorage.removeItem('local_user_session');
-                  await signOut(auth);
-                  setUser(null);
-                  showToast('Você saiu do sistema.', 'info');
-                } catch (err: any) {
-                  console.error(err);
-                  showToast('Erro ao sair do sistema', 'error');
-                }
-              }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-rose-600 hover:bg-rose-50 rounded-xl font-bold text-xs transition-all active:scale-95"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Sair da Conta</span>
-            </button>
-            <div className="text-[10px] font-semibold text-gray-400">
-              v1.2.0 © 2026 Sistema Logístico
-            </div>
-          </div>
-        </aside>
+        <AppSidebar
+          activeTab={activeTab}
+          open={sidebarOpen}
+          userDisplayName={user?.displayName || 'Aprovisionamento HGeSM'}
+          onClose={() => setSidebarOpen(false)}
+          onNavigate={(tab) => {
+            setActiveTab(tab);
+            if (tab === 'empenhos') setSelectedEmpenhoDetailId(null);
+            setSidebarOpen(false);
+          }}
+          onLogout={async () => {
+            try {
+              localStorage.removeItem('local_user_session');
+              await signOut(auth);
+              setUser(null);
+              showToast('Você saiu do sistema.', 'info');
+            } catch (err: any) {
+              console.error(err);
+              showToast('Erro ao sair do sistema', 'error');
+            }
+          }}
+        />
 
         {/* Content Container Area */}
         <main className="flex-1 lg:pl-6 pb-24 md:pb-12 pt-6 px-4 max-w-7xl mx-auto w-full overflow-hidden">
