@@ -1,0 +1,78 @@
+name: Temporary global UI refactor v10
+
+on:
+  push:
+    branches:
+      - refactor/global-ui-shell-v10
+
+permissions:
+  contents: write
+
+jobs:
+  refactor-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout refactor branch
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/global-ui-shell-v10
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Capture TypeScript baseline from main
+        shell: bash
+        run: |
+          git show origin/main:app/page.tsx > /tmp/main-page.tsx
+          cp app/page.tsx /tmp/branch-page.tsx
+          cp /tmp/main-page.tsx app/page.tsx
+          (npx tsc --noEmit --pretty false || true) \
+            | sed -E 's#^app/page\.tsx\([0-9]+,[0-9]+\)#app/page.tsx(L,C)#' \
+            | sort -u > /tmp/ts-baseline.txt
+          cp /tmp/branch-page.tsx app/page.tsx
+
+      - name: Apply deterministic global UI refactor
+        run: node scripts/refactor-global-ui-v10.mjs
+
+      - name: Verify refactor adds no TypeScript errors
+        shell: bash
+        run: |
+          (npx tsc --noEmit --pretty false || true) \
+            | sed -E 's#^app/page\.tsx\([0-9]+,[0-9]+\)#app/page.tsx(L,C)#' \
+            | sort -u > /tmp/ts-after.txt
+          comm -13 /tmp/ts-baseline.txt /tmp/ts-after.txt > /tmp/ts-new.txt
+          if [ -s /tmp/ts-new.txt ]; then
+            echo 'A refatoração introduziu novos erros TypeScript:'
+            cat /tmp/ts-new.txt
+            exit 1
+          fi
+
+      - name: Production build validation
+        run: npm run build
+
+      - name: Existing recovery tests
+        run: npm run test:recovery
+
+      - name: Diff hygiene
+        run: git diff --check
+
+      - name: Remove temporary refactor tooling
+        run: |
+          rm scripts/refactor-global-ui-v10.mjs
+          rm .github/workflows/refactor-global-ui-v10.yml
+
+      - name: Commit validated refactor
+        shell: bash
+        run: |
+          git config user.name 'Moriark'
+          git config user.email 'marcoa.r.aquino@gmail.com'
+          git add app/page.tsx components/layout/MobileNavigation.tsx features/empenhos/components/DeleteEmpenhoModal.tsx scripts/refactor-global-ui-v10.mjs .github/workflows/refactor-global-ui-v10.yml
+          git commit -m 'refactor: extrai modal global e navegacao mobile'
+          git push origin HEAD:refactor/global-ui-shell-v10
