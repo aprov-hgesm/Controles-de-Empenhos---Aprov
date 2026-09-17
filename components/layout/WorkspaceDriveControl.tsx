@@ -21,7 +21,7 @@ type ToastType = 'success' | 'error' | 'info';
 interface WorkspaceDriveControlProps {
   user: User | null;
   workspaceContext: ResolvedWorkspaceContext;
-  onNotify: (message: string, type?: ToastType) => void;
+  onNotify?: (message: string, type?: ToastType) => void;
 }
 
 export function WorkspaceDriveControl({
@@ -42,6 +42,7 @@ export function WorkspaceDriveControl({
 
   if (status === 'unavailable') return null;
 
+  const notify = onNotify || (() => undefined);
   const isConnected = status === 'connected';
   const isConfigured = status === 'configured-disconnected' || isConnected;
   const statusLabel = status === 'loading'
@@ -55,12 +56,12 @@ export function WorkspaceDriveControl({
   const handleConnect = async () => {
     try {
       const result = await connect();
-      onNotify(
+      notify(
         `Google Drive conectado ao workspace ${result.settings.workspaceId}.`,
         'success'
       );
     } catch (connectionError) {
-      onNotify(
+      notify(
         connectionError instanceof Error
           ? connectionError.message
           : 'Falha ao conectar o Google Drive.',
@@ -71,7 +72,7 @@ export function WorkspaceDriveControl({
 
   const handleDisconnect = () => {
     disconnect();
-    onNotify('Autorização temporária do Google Drive descartada. A configuração do workspace foi preservada.', 'info');
+    notify('Autorização temporária do Google Drive descartada. A configuração do workspace foi preservada.', 'info');
   };
 
   return (
