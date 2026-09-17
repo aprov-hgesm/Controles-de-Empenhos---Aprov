@@ -9,14 +9,19 @@ import {
   signOut,
   type User,
 } from 'firebase/auth';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { onSnapshot } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import { auth, db, googleProvider, handleFirestoreError, OperationType } from '../lib/firebase';
+import { auth, googleProvider, handleFirestoreError, OperationType } from '../lib/firebase';
 import type { Alert, Comissao, CronogramaEmpenho, Empenho, Invoice } from '../lib/types';
 import {
   isOperationalSectorContext,
   resolveWorkspaceContext,
 } from '../lib/workspaceContext';
+import {
+  getOperationalCollectionPath,
+  operationalCollectionRef,
+  operationalScopeFromContext,
+} from '../lib/operationalPaths';
 import { resetActiveProfileMode, setActiveProfileMode } from '../lib/profileMode';
 import { normalizeSupplier } from '../features/empenhos/domain/empenhoHelpers';
 
@@ -24,6 +29,10 @@ import { normalizeSupplier } from '../features/empenhos/domain/empenhoHelpers';
  * Fonte de verdade da sessão e das coleções operacionais em tempo real.
  * O perfil HGeSM é o padrão após cada login. O modo administrativo só é ativado
  * explicitamente pelo seletor de perfil e não abre subscriptions operacionais.
+ *
+ * Bloco 7: os listeners deixam de conhecer paths Firestore diretamente. O workspace
+ * fundador continua usando as coleções legadas; futuros setores usarão subcoleções
+ * em /workspaces/{workspaceId} sem exigir nova alteração neste hook.
  */
 export function useOperationalData() {
   const router = useRouter();
@@ -77,20 +86,23 @@ export function useOperationalData() {
   }, [user, workspaceContext.status]);
 
   useEffect(() => {
-    if (
-      !user ||
-      !isOperationalSectorContext(workspaceContext) ||
-      !workspaceContext.legacyDataMode
-    ) {
+    if (!user || !isOperationalSectorContext(workspaceContext)) {
       clearOperationalState();
       setSyncing(false);
       return;
     }
 
+    const scope = operationalScopeFromContext(workspaceContext);
     setSyncing(true);
 
+    const empenhosPath = getOperationalCollectionPath(scope, 'empenhos');
+    const alertsPath = getOperationalCollectionPath(scope, 'alerts');
+    const invoicesPath = getOperationalCollectionPath(scope, 'invoices');
+    const comissoesPath = getOperationalCollectionPath(scope, 'comissoes');
+    const cronogramasPath = getOperationalCollectionPath(scope, 'cronogramas');
+
     const unsubscribeEmpenhos = onSnapshot(
-      collection(db, 'empenhos'),
+      operationalCollectionRef(scope, 'empenhos'),
       (snapshot) => {
         const fetched = snapshot.docs.map((snapshotDoc) => {
           const data = snapshotDoc.data() as Empenho;
@@ -100,19 +112,19 @@ export function useOperationalData() {
         setSyncing(false);
       },
       (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'empenhos');
+        handleFirestoreError(error, OperationType.LIST, empenhosPath);
         setSyncing(false);
       }
     );
 
     const unsubscribeAlerts = onSnapshot(
-      collection(db, 'alerts'),
+      operationalCollectionRef(scope, 'alerts'),
       (snapshot) => setAlerts(snapshot.docs.map((snapshotDoc) => snapshotDoc.data() as Alert)),
-      (error) => handleFirestoreError(error, OperationType.LIST, 'alerts')
+      (error) => handleFirestoreError(error, OperationType.LIST, alertsPath)
     );
 
     const unsubscribeInvoices = onSnapshot(
-      collection(db, 'invoices'),
+      operationalCollectionRef(scope, 'invoices'),
       (snapshot) => {
         const fetched = snapshot.docs.map((snapshotDoc) => {
           const data = snapshotDoc.data() as Invoice;
@@ -120,19 +132,19 @@ export function useOperationalData() {
         });
         setInvoices(fetched);
       },
-      (error) => handleFirestoreError(error, OperationType.LIST, 'invoices')
+      (error) => handleFirestoreError(error, OperationType.LIST, invoicesPath)
     );
 
     const unsubscribeComissoes = onSnapshot(
-      collection(db, 'comissoes'),
+      operationalCollectionRef(scope, 'comissoes'),
       (snapshot) => setComissoes(snapshot.docs.map((snapshotDoc) => snapshotDoc.data() as Comissao)),
-      (error) => handleFirestoreError(error, OperationType.LIST, 'comissoes')
+      (error) => handleFirestoreError(error, OperationType.LIST, comissoesPath)
     );
 
     const unsubscribeCronogramas = onSnapshot(
-      collection(db, 'cronogramas'),
+      operationalCollectionRef(scope, 'cronogramas'),
       (snapshot) => setCronogramas(snapshot.docs.map((snapshotDoc) => snapshotDoc.data() as CronogramaEmpenho)),
-      (error) => handleFirestoreError(error, OperationType.LIST, 'cronogramas')
+      (error) => handleFirestoreError(error, OperationType.LIST, cronogramasPath)
     );
 
     return () => {
