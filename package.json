@@ -12,6 +12,10 @@
     "recovery:status": "node scripts/firestore-recovery.mjs status",
     "recovery:verify": "node scripts/firestore-recovery.mjs verify",
     "test:recovery": "node --test scripts/firestore-recovery.test.mjs",
+    "snapshot:hgesm:plan": "node scripts/firestore-local-snapshot.mjs plan",
+    "snapshot:hgesm:create": "node scripts/firestore-local-snapshot.mjs create",
+    "snapshot:hgesm:verify": "node scripts/firestore-local-snapshot.mjs verify",
+    "snapshot:hgesm:rollback-plan": "node scripts/firestore-local-snapshot.mjs rollback-plan",
     "migration:hgesm:plan": "node scripts/migrate-hgesm-workspace.mjs plan",
     "migration:hgesm:status": "node scripts/migrate-hgesm-workspace.mjs status",
     "migration:hgesm:verify": "node scripts/migrate-hgesm-workspace.mjs verify"
