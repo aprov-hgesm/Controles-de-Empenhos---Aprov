@@ -4,53 +4,258 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function isVerifiedUser() {
       return request.auth != null
-        && request.auth.token.email_verified == true;
+        && request.auth.token.email_verified == true
+        && request.auth.token.email is string;
     }
 
-    function isAuthorizedUser() {
+    function isHgesmFounder() {
       return isVerifiedUser()
         && request.auth.token.email == 'aprov1hgesm@gmail.com';
     }
 
     function isPlatformAdmin() {
+      // A identidade fundadora alterna entre os perfis operacional e administrativo
+      // apenas na interface. As Rules autorizam a identidade Firebase, não o modo UI.
+      return isHgesmFounder();
+    }
+
+    function workspaceExists(workspaceId) {
+      return exists(/databases/$(database)/documents/workspaces/$(workspaceId));
+    }
+
+    function workspaceData(workspaceId) {
+      return get(/databases/$(database)/documents/workspaces/$(workspaceId)).data;
+    }
+
+    function workspaceAccountExists(workspaceId) {
+      return workspaceExists(workspaceId)
+        && workspaceData(workspaceId).authorizedEmail is string
+        && exists(
+          /databases/$(database)/documents/platformAccounts/$(workspaceData(workspaceId).authorizedEmail)
+        );
+    }
+
+    function workspaceAccountData(workspaceId) {
+      return get(
+        /databases/$(database)/documents/platformAccounts/$(workspaceData(workspaceId).authorizedEmail)
+      ).data;
+    }
+
+    function identityMatchesAccount(account) {
       return isVerifiedUser()
-        && request.auth.token.email == 'aprov1hgesm@gmail.com';
+        && (
+          account.email == request.auth.token.email
+          || (
+            'firebaseUid' in account
+            && account.firebaseUid is string
+            && account.firebaseUid == request.auth.uid
+          )
+        );
     }
 
-    // Diretórios administrativos da plataforma. A conta institucional fundadora
-    // alterna entre o perfil operacional e o perfil administrativo na interface.
-    match /workspaces/{id} {
-      allow read, create: if isPlatformAdmin();
+    function canAccessWorkspace(workspaceId) {
+      return workspaceAccountExists(workspaceId)
+        && workspaceData(workspaceId).status == 'active'
+        && workspaceAccountData(workspaceId).accountType == 'sector'
+        && workspaceAccountData(workspaceId).status == 'active'
+        && workspaceAccountData(workspaceId).workspaceId == workspaceId
+        && workspaceAccountData(workspaceId).email == workspaceData(workspaceId).authorizedEmail
+        && identityMatchesAccount(workspaceAccountData(workspaceId));
     }
 
-    match /platformAccounts/{id} {
-      allow read, create: if isPlatformAdmin();
+    function canReadWorkspaceMetadataFromResource(workspaceId) {
+      return isVerifiedUser()
+        && resource.data.id == workspaceId
+        && resource.data.authorizedEmail is string
+        && exists(
+          /databases/$(database)/documents/platformAccounts/$(resource.data.authorizedEmail)
+        )
+        && get(
+          /databases/$(database)/documents/platformAccounts/$(resource.data.authorizedEmail)
+        ).data.accountType == 'sector'
+        && get(
+          /databases/$(database)/documents/platformAccounts/$(resource.data.authorizedEmail)
+        ).data.workspaceId == workspaceId
+        && identityMatchesAccount(
+          get(
+            /databases/$(database)/documents/platformAccounts/$(resource.data.authorizedEmail)
+          ).data
+        );
     }
 
-    // Coleções operacionais legadas do HGeSM permanecem restritas à mesma conta.
+    function validWorkspaceWrite(workspaceId) {
+      return request.resource.data.keys().hasAll([
+          'id',
+          'name',
+          'status',
+          'authorizedEmail',
+          'institutionalProfile',
+          'createdAt',
+          'updatedAt',
+          'createdBy'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'id',
+          'name',
+          'status',
+          'authorizedEmail',
+          'legacyWorkspace',
+          'institutionalProfile',
+          'createdAt',
+          'updatedAt',
+          'createdBy'
+        ])
+        && request.resource.data.id == workspaceId
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.authorizedEmail is string
+        && request.resource.data.authorizedEmail.size() > 3
+        && request.resource.data.status in ['active', 'disabled']
+        && request.resource.data.institutionalProfile is map;
+    }
+
+    function workspaceHasMatchingAccountAfterWrite(workspaceId) {
+      return request.resource.data.authorizedEmail is string
+        && existsAfter(
+          /databases/$(database)/documents/platformAccounts/$(request.resource.data.authorizedEmail)
+        )
+        && getAfter(
+          /databases/$(database)/documents/platformAccounts/$(request.resource.data.authorizedEmail)
+        ).data.accountType == 'sector'
+        && getAfter(
+          /databases/$(database)/documents/platformAccounts/$(request.resource.data.authorizedEmail)
+        ).data.email == request.resource.data.authorizedEmail
+        && getAfter(
+          /databases/$(database)/documents/platformAccounts/$(request.resource.data.authorizedEmail)
+        ).data.workspaceId == workspaceId;
+    }
+
+    function validSectorAccountWrite(accountId) {
+      return request.resource.data.keys().hasAll([
+          'email',
+          'accountType',
+          'workspaceId',
+          'status',
+          'createdAt',
+          'updatedAt',
+          'createdBy'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'email',
+          'firebaseUid',
+          'accountType',
+          'workspaceId',
+          'status',
+          'createdAt',
+          'updatedAt',
+          'createdBy',
+          'firstLoginAt',
+          'lastLoginAt'
+        ])
+        && request.resource.data.email == accountId
+        && request.resource.data.accountType == 'sector'
+        && request.resource.data.workspaceId is string
+        && request.resource.data.workspaceId.size() > 0
+        && request.resource.data.status in ['active', 'disabled'];
+    }
+
+    function accountHasMatchingWorkspaceAfterWrite(accountId) {
+      return request.resource.data.workspaceId is string
+        && existsAfter(
+          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+        )
+        && getAfter(
+          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+        ).data.id == request.resource.data.workspaceId
+        && getAfter(
+          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+        ).data.authorizedEmail == accountId;
+    }
+
+    function isSelfPlatformAccount() {
+      return isVerifiedUser()
+        && resource.data.accountType == 'sector'
+        && identityMatchesAccount(resource.data);
+    }
+
+    // Diretório administrativo da plataforma. O administrador pode listar e
+    // manter metadados, mas não recebe acesso operacional aos workspaces externos.
+    match /workspaces/{workspaceId} {
+      allow get: if isPlatformAdmin()
+        || canReadWorkspaceMetadataFromResource(workspaceId);
+      allow list: if isPlatformAdmin();
+      allow create, update: if isPlatformAdmin()
+        && validWorkspaceWrite(workspaceId)
+        && workspaceHasMatchingAccountAfterWrite(workspaceId);
+      allow delete: if false;
+    }
+
+    match /platformAccounts/{accountId} {
+      allow get: if isPlatformAdmin() || isSelfPlatformAccount();
+      allow list: if isPlatformAdmin();
+      allow create, update: if isPlatformAdmin()
+        && validSectorAccountWrite(accountId)
+        && accountHasMatchingWorkspaceAfterWrite(accountId);
+      allow delete: if false;
+    }
+
+    // Workspace-scoped operational data. There is deliberately no admin bypass:
+    // a platform administrator cannot read another sector's operational records.
+    match /workspaces/{workspaceId}/empenhos/{id} {
+      allow read, write: if canAccessWorkspace(workspaceId);
+    }
+
+    match /workspaces/{workspaceId}/alerts/{id} {
+      allow read, write: if canAccessWorkspace(workspaceId);
+    }
+
+    match /workspaces/{workspaceId}/invoices/{id} {
+      allow read, write: if canAccessWorkspace(workspaceId);
+    }
+
+    match /workspaces/{workspaceId}/comissoes/{id} {
+      allow read, write: if canAccessWorkspace(workspaceId);
+    }
+
+    match /workspaces/{workspaceId}/cronogramas/{id} {
+      allow read, write: if canAccessWorkspace(workspaceId);
+    }
+
+    match /workspaces/{workspaceId}/settings/{id} {
+      allow read, write: if canAccessWorkspace(workspaceId);
+    }
+
+    // Compatibilidade legada: os dados atuais do HGeSM ainda estão nas coleções
+    // raiz e continuam restritos exclusivamente à identidade fundadora.
     match /empenhos/{id} {
-      allow read, write: if isAuthorizedUser();
+      allow read, write: if isHgesmFounder();
     }
 
     match /alerts/{id} {
-      allow read, write: if isAuthorizedUser();
+      allow read, write: if isHgesmFounder();
     }
 
     match /invoices/{id} {
-      allow read, write: if isAuthorizedUser();
+      allow read, write: if isHgesmFounder();
     }
 
     match /comissoes/{id} {
-      allow read, write: if isAuthorizedUser();
+      allow read, write: if isHgesmFounder();
     }
 
     match /cronogramas/{id} {
-      allow read, write: if isAuthorizedUser();
+      allow read, write: if isHgesmFounder();
+    }
+
+    // A identidade visual global precisa continuar disponível antes do login.
+    // O restante de /settings deixa de ter leitura pública.
+    match /settings/global {
+      allow read: if true;
+      allow write: if isHgesmFounder();
     }
 
     match /settings/{id} {
-      allow read: if true;
-      allow write: if isAuthorizedUser();
+      allow read, write: if isHgesmFounder();
     }
   }
 }
