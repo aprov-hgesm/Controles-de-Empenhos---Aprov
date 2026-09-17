@@ -65,12 +65,14 @@ const SIMPLE_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /**
  * Normaliza o e-mail usado como chave lógica de autorização da plataforma.
  *
- * Para contas pessoais do Gmail, pontos no nome local e aliases `+tag` apontam
- * para a mesma conta Google. A canonicalização evita que o Firebase Auth devolva
- * uma variante equivalente e o EMPROVEX a interprete como outra identidade.
+ * O valor precisa permanecer compatível com o e-mail devolvido pelo Firebase Auth,
+ * pois as Firestore Rules comparam a identidade autenticada com o registro de
+ * `platformAccounts`. Por isso o Bloco 15 preserva o nome local exatamente como a
+ * conta Google o apresenta, alterando apenas caixa/espaços e o domínio histórico
+ * `googlemail.com` para `gmail.com`.
  *
- * Outros domínios (inclusive Google Workspace) preservam integralmente o nome
- * local, pois nesses domínios pontos podem distinguir contas diferentes.
+ * Não removemos pontos nem aliases `+tag` no cliente. O cadastro administrativo deve
+ * usar o e-mail principal exibido pela conta Google que efetivamente fará login.
  */
 export function normalizePlatformEmail(value: string): string {
   const normalized = value.trim().toLowerCase();
@@ -78,19 +80,11 @@ export function normalizePlatformEmail(value: string): string {
 
   if (atIndex <= 0) return normalized;
 
-  let localPart = normalized.slice(0, atIndex);
+  const localPart = normalized.slice(0, atIndex);
   let domain = normalized.slice(atIndex + 1);
 
   if (domain === 'googlemail.com') {
     domain = 'gmail.com';
-  }
-
-  if (domain === 'gmail.com') {
-    const plusIndex = localPart.indexOf('+');
-    if (plusIndex >= 0) {
-      localPart = localPart.slice(0, plusIndex);
-    }
-    localPart = localPart.replace(/\./g, '');
   }
 
   return `${localPart}@${domain}`;
@@ -101,7 +95,7 @@ export function isValidPlatformEmail(value: string): boolean {
 }
 
 /**
- * IDs de workspace são estáveis, legíveis e adequados para uso em caminhos Firestore/Blob.
+ * IDs de workspace são estáveis, legíveis e adequados para uso em caminhos Firestore.
  * A função apenas normaliza caixa e espaços externos; não transforma nomes livres em IDs.
  */
 export function normalizeWorkspaceId(value: string): string {
@@ -122,7 +116,7 @@ export function isSectorAccount(account: PlatformAccount): account is SectorAcco
 
 /**
  * Validação estrutural mínima compartilhada pelos próximos blocos.
- * Regras de autorização efetivas serão aplicadas posteriormente no Firestore e nas APIs server-side.
+ * Regras de autorização efetivas também são aplicadas no Firestore.
  */
 export function validatePlatformAccount(account: PlatformAccount): string[] {
   const errors: string[] = [];
