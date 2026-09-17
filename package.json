@@ -31,7 +31,7 @@
     "verify:storage-provider": "node scripts/verify-storage-provider-abstraction.mjs",
     "verify:workspace-drive": "node scripts/verify-workspace-drive-storage.mjs",
     "verify:drive-cutover": "node scripts/verify-drive-cutover-migration.mjs",
-    "audit:document-storage:pre-decommission": "node scripts/audit-document-storage-pre-decommission.mjs"
+    "audit:document-storage:pre-decommission": "node scripts/run-document-storage-pre-decommission.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",
