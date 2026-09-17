@@ -20,54 +20,133 @@ A produção continua em `legacyDataMode=true` durante todo este bloco.
 
 `/settings/global` não é migrado porque permanece uma configuração global da plataforma.
 
-## Proteções obrigatórias
+## Proteção obrigatória antes do `copy`
 
-A ferramenta `scripts/migrate-hgesm-workspace.mjs`:
+A ferramenta `scripts/migrate-hgesm-workspace.mjs` aceita uma de duas proteções:
 
-- nunca apaga documentos das coleções legadas;
-- não altera `legacyDataMode`;
-- exige que `scripts/firestore-recovery.mjs verify` esteja `READY` antes de qualquer escrita;
-- valida o workspace `hgesm-aprov` e a conta `aprov1hgesm@gmail.com` antes da operação;
-- exige confirmação literal do projeto, banco e workspace;
-- copia os campos Firestore preservando seus tipos;
-- pode ser executada novamente para sincronizar documentos faltantes/desatualizados no destino sombra;
-- interrompe a operação se detectar documentos extras no destino que não existam na origem;
-- compara IDs, contagens e campos para validar integridade.
+1. recuperação nativa do Firestore `READY` (PITR + proteção contra exclusão + backup programado + backup pronto); ou
+2. fallback gratuito de snapshot local criado por `scripts/firestore-local-snapshot.mjs` e revalidado contra a origem ao vivo imediatamente antes da cópia.
 
-## Comandos somente leitura
+Sem pelo menos uma dessas proteções, o `copy` é bloqueado.
 
-```bash
-npm run migration:hgesm:plan
-npm run migration:hgesm:status
-npm run migration:hgesm:verify
+## Fallback gratuito de snapshot
+
+O snapshot fica fora do repositório, por padrão em:
+
+```text
+~/emprovex-snapshots/hgesm-<timestamp>/
+  manifest.json
+  snapshot.json
 ```
 
-`verify` retorna código de saída diferente de zero enquanto houver qualquer divergência.
+A pasta recebe permissão `0700` e os arquivos `0600`. O conteúdo não deve ser enviado ao GitHub, compartilhado publicamente ou incluído em commits.
+
+O `snapshot.json` preserva os campos no formato tipado da API REST do Firestore. O `manifest.json` contém:
+
+- projeto, banco e workspace esperados;
+- data de criação;
+- contagens por coleção;
+- quantidade total de documentos;
+- SHA-256 do arquivo `snapshot.json`;
+- SHA-256 lógico do conjunto de dados.
+
+O snapshot cobre as cinco coleções operacionais, `alerts` e o contador `settings/termoRecebimentoCounter` definidos na política de migração.
+
+### Criar snapshot
+
+```bash
+npm run snapshot:hgesm:create -- \
+  --project=gen-lang-client-0982077967 \
+  --database=ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1 \
+  --workspace=hgesm-aprov
+```
+
+Ao terminar, o comando imprime o caminho exato do `manifest.json`. O snapshot só é declarado `READY` se:
+
+- o arquivo gravado passar na verificação de SHA-256;
+- as contagens coincidirem com o manifesto;
+- o conjunto lógico de dados passar no SHA-256;
+- uma segunda leitura da origem ao vivo continuar idêntica ao snapshot.
+
+Se os dados mudarem durante a captura, o comando falha e um novo snapshot deve ser criado em período de baixa atividade.
+
+### Verificar snapshot novamente
+
+```bash
+npm run snapshot:hgesm:verify -- \
+  --snapshot="$HOME/emprovex-snapshots/hgesm-.../manifest.json" \
+  --project=gen-lang-client-0982077967 \
+  --database=ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1 \
+  --workspace=hgesm-aprov \
+  --live=true
+```
+
+A opção `--live=true` é obrigatória antes de usar o snapshot como proteção de migração, porque prova que a origem ainda não mudou desde a captura.
 
 ## Cópia
 
-A cópia não possui atalho npm intencionalmente. Deve ser executada com confirmação completa:
+A cópia não possui atalho npm intencionalmente. Quando o backup nativo não estiver `READY`, informe também o manifesto do snapshot:
 
 ```bash
 node scripts/migrate-hgesm-workspace.mjs copy \
   --project=gen-lang-client-0982077967 \
   --database=ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1 \
   --workspace=hgesm-aprov \
+  --snapshot="$HOME/emprovex-snapshots/hgesm-.../manifest.json" \
   --confirm=COPY:gen-lang-client-0982077967:ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1:hgesm-aprov
 ```
 
-Antes de escrever, o próprio comando executa a verificação de recuperação e se recusa a continuar se PITR, proteção contra exclusão, backup agendado e pelo menos um backup `READY` não estiverem confirmados.
+Antes da primeira escrita, o próprio `copy` tenta `recovery:verify`. Se a recuperação nativa não estiver pronta, ele executa a validação local + ao vivo do snapshot. Se o snapshot estiver corrompido, desatualizado ou pertencer a outro alvo, a migração é bloqueada.
 
-## Concorrência
+A cópia continua sendo idempotente e não destrutiva: fontes legadas não são apagadas; documentos iguais são ignorados; documentos faltantes/desatualizados no destino sombra são sincronizados; documentos extras no destino interrompem a operação e exigem revisão manual.
 
-Como o sistema continua lendo/escrevendo as coleções legadas durante o Bloco 9, alterações feitas enquanto a cópia está em andamento podem gerar divergência entre origem e destino. Isso não afeta a produção.
+## Validação pós-cópia
 
-Se a verificação final indicar divergência, execute novamente a cópia em um período de baixa atividade. O destino é sincronizado a partir da origem, que continua sendo a fonte de verdade.
+```bash
+npm run migration:hgesm:verify
+```
+
+`verify` retorna código diferente de zero enquanto IDs, contagens ou campos divergirem entre origem e destino.
 
 Nenhuma troca para os paths do workspace deve ocorrer até o Bloco 10 confirmar a integridade.
 
-## Rollback
+## Rollback gratuito das coleções legadas
 
-O Bloco 9 não exige rollback do runtime porque nenhuma leitura ou escrita de produção é redirecionada. Se a cópia precisar ser descartada, basta manter `legacyDataMode=true` e revisar o destino sombra antes de qualquer etapa posterior.
+A migração do Bloco 9 não modifica os dados legados, portanto o rollback normalmente não é necessário neste bloco. Mesmo assim, o snapshot fornece um mecanismo explícito de recuperação para etapas posteriores.
 
-A remoção de dados do destino não faz parte deste script e deve exigir procedimento separado e explícito.
+Primeiro gere o plano:
+
+```bash
+npm run snapshot:hgesm:rollback-plan -- \
+  --snapshot="$HOME/emprovex-snapshots/hgesm-.../manifest.json" \
+  --project=gen-lang-client-0982077967 \
+  --database=ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1 \
+  --workspace=hgesm-aprov
+```
+
+O plano mostra documentos faltantes, diferentes e extras e imprime a confirmação literal necessária para restaurar.
+
+O rollback:
+
+- restaura somente documentos faltantes ou alterados;
+- usa `updateTime`/`exists=false` como precondição contra concorrência;
+- nunca apaga automaticamente documentos extras criados depois do snapshot;
+- é bloqueado se houver documentos extras, porque excluí-los silenciosamente poderia destruir dados legítimos;
+- termina somente quando o SHA-256 lógico da origem coincide novamente com o snapshot.
+
+A execução de rollback não possui atalho npm intencionalmente e exige a confirmação impressa por `rollback-plan`:
+
+```bash
+node scripts/firestore-local-snapshot.mjs rollback \
+  --snapshot="$HOME/emprovex-snapshots/hgesm-.../manifest.json" \
+  --project=gen-lang-client-0982077967 \
+  --database=ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1 \
+  --workspace=hgesm-aprov \
+  --confirm=RESTORE_LEGACY:...:<12-primeiros-caracteres-do-hash>
+```
+
+## Concorrência
+
+Como o sistema continua lendo/escrevendo as coleções legadas durante o Bloco 9, alterações feitas durante a cópia podem gerar divergência entre origem e destino. Isso não afeta a produção porque `legacyDataMode=true` permanece ativo.
+
+Se a verificação final indicar divergência, crie um snapshot atualizado e execute novamente a cópia em período de baixa atividade. A origem legada continua sendo a fonte de verdade até a troca controlada dos blocos seguintes.
