@@ -88,13 +88,12 @@ platformAccounts/{email} existente e active
 
 Somente depois dessa resolução são abertas as subscriptions do workspace.
 
-O Bloco 15 não grava `firebaseUid`. A vinculação persistente da identidade e o endurecimento correspondente das Rules pertencem ao Bloco 16.
+O Bloco 16 complementa este fluxo: no primeiro acesso autorizado, o EMPROVEX grava o `firebaseUid` da sessão. Depois do vínculo, a conta precisa corresponder simultaneamente ao e-mail cadastrado e ao UID persistido.
 
 ## Próximas dependências
 
 Para que um novo setor seja completamente autônomo, ainda serão implementados:
 
-- Bloco 16 — vinculação segura do UID;
 - Bloco 17 — provisionamento de settings, contador de TR e defaults do workspace;
 - Bloco 18 — onboarding do Google Drive por setor;
 - blocos seguintes de ciclo de vida, testes de isolamento e homologação do segundo setor.
