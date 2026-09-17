@@ -14,6 +14,10 @@ import {
   type WorkspaceDriveSettings,
 } from '../lib/workspaceDriveSettings';
 import {
+  clearWorkspaceDriveRuntime,
+  setWorkspaceDriveRuntime,
+} from '../lib/workspaceDriveRuntime';
+import {
   isOperationalSectorContext,
   type ResolvedWorkspaceContext,
 } from '../lib/workspaceContext';
@@ -38,6 +42,7 @@ export function useWorkspaceDriveStorage(
   useEffect(() => {
     setSession(null);
     setError(null);
+    clearWorkspaceDriveRuntime();
 
     if (!user || !isOperationalSectorContext(workspaceContext)) {
       setSettings(null);
@@ -58,7 +63,10 @@ export function useWorkspaceDriveStorage(
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      clearWorkspaceDriveRuntime();
+    };
   }, [user, workspaceContext]);
 
   const connect = useCallback(async () => {
@@ -74,8 +82,10 @@ export function useWorkspaceDriveStorage(
       const savedSettings = await saveWorkspaceDriveSettings(workspaceContext, folders);
       setSession(connectedSession);
       setSettings(savedSettings);
+      setWorkspaceDriveRuntime({ session: connectedSession, settings: savedSettings });
       return { session: connectedSession, settings: savedSettings };
     } catch (connectionError) {
+      clearWorkspaceDriveRuntime();
       const message = connectionError instanceof Error
         ? connectionError.message
         : 'Falha ao conectar o Google Drive deste workspace.';
@@ -87,6 +97,7 @@ export function useWorkspaceDriveStorage(
   }, [user, workspaceContext]);
 
   const disconnect = useCallback(() => {
+    clearWorkspaceDriveRuntime();
     setSession(null);
     setError(null);
   }, []);
