@@ -1,6 +1,6 @@
 'use client';
 
-import type { ChangeEvent, MouseEvent, ReactNode } from 'react';
+import { useMemo, type ChangeEvent, type MouseEvent, type ReactNode } from 'react';
 import { Camera, Loader2, Menu, ShieldCheck, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -30,8 +30,12 @@ export function AppHeader({
 }: AppHeaderProps) {
   const router = useRouter();
   const currentUser = auth.currentUser;
-  const canSwitchProfile = hasDualProfileAccess(currentUser?.email);
-  const workspaceContext = resolveWorkspaceContext(currentUser?.email);
+  const currentEmail = currentUser?.email || null;
+  const canSwitchProfile = hasDualProfileAccess(currentEmail);
+  const workspaceContext = useMemo(
+    () => resolveWorkspaceContext(currentEmail),
+    [currentEmail]
+  );
   const resolvedDriveControl = driveControl ?? (
     <WorkspaceDriveControl
       user={currentUser}
