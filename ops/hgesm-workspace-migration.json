@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "workspaceId": "hgesm-aprov",
+  "authorizedEmail": "aprov1hgesm@gmail.com",
+  "collections": [
+    "empenhos",
+    "alerts",
+    "invoices",
+    "comissoes",
+    "cronogramas"
+  ],
+  "settingsDocuments": [
+    "termoRecebimentoCounter"
+  ],
+  "strategy": "copy-verify-keep-legacy"
+}
