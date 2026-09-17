@@ -41,6 +41,7 @@ export function WorkspaceDriveControl({
   const [open, setOpen] = useState(false);
   const [migrationCounts, setMigrationCounts] = useState<DocumentMigrationCounts | null>(null);
   const [migrationBusy, setMigrationBusy] = useState(false);
+  const [migrationConfirmOpen, setMigrationConfirmOpen] = useState(false);
   const [migrationProgress, setMigrationProgress] = useState<DocumentMigrationProgress | null>(null);
   const [migrationError, setMigrationError] = useState<string | null>(null);
   const [migrationFailures, setMigrationFailures] = useState<string[]>([]);
@@ -105,21 +106,28 @@ export function WorkspaceDriveControl({
   };
 
   const handleDisconnect = () => {
+    setMigrationConfirmOpen(false);
     disconnect();
     notify('Autorização temporária do Google Drive descartada. A configuração do workspace foi preservada.', 'info');
   };
 
-  const handleMigration = async () => {
+  const requestMigration = () => {
     if (!user || !isConnected) {
       setMigrationError('Reconecte o Google Drive antes de iniciar a migração.');
       return;
     }
+    setMigrationError(null);
+    setMigrationConfirmOpen(true);
+  };
 
-    const confirmed = window.confirm(
-      'Migrar automaticamente os PDFs legados do Vercel Blob para o Google Drive?\n\nOs arquivos originais do Blob NÃO serão apagados nesta etapa. Cada PDF será verificado por SHA-256 antes da referência no Firestore ser alterada.'
-    );
-    if (!confirmed) return;
+  const handleMigration = async () => {
+    if (!user || !isConnected) {
+      setMigrationConfirmOpen(false);
+      setMigrationError('Reconecte o Google Drive antes de iniciar a migração.');
+      return;
+    }
 
+    setMigrationConfirmOpen(false);
     setMigrationBusy(true);
     setMigrationError(null);
     setMigrationFailures([]);
@@ -270,10 +278,40 @@ export function WorkspaceDriveControl({
                 </div>
               )}
 
+              {migrationConfirmOpen && !migrationBusy && (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                  <div className="flex items-start gap-2">
+                    <TriangleAlert className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-black text-amber-900">Confirmar migração definitiva para o Drive?</p>
+                      <p className="mt-1 text-[10px] leading-relaxed text-amber-800">
+                        Os PDFs originais do Vercel Blob não serão apagados nesta etapa. Cada arquivo será enviado ao Google Drive e verificado por tamanho e SHA-256 antes de o Firestore passar a apontar para o Drive.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMigrationConfirmOpen(false)}
+                      className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-[11px] font-black text-amber-800 hover:bg-amber-100"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleMigration}
+                      className="rounded-lg bg-emerald-700 px-3 py-2 text-[11px] font-black text-white hover:bg-emerald-800"
+                    >
+                      Confirmar e iniciar
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <button
                 type="button"
-                onClick={handleMigration}
-                disabled={migrationBusy || !isConnected || migrationCounts.totalLegacy === 0}
+                onClick={requestMigration}
+                disabled={migrationBusy || migrationConfirmOpen || !isConnected || migrationCounts.totalLegacy === 0}
                 className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-3 py-2.5 text-xs font-black text-white hover:bg-emerald-800 disabled:opacity-50"
               >
                 {migrationBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />}
@@ -281,7 +319,9 @@ export function WorkspaceDriveControl({
                   ? 'Migrando e verificando...'
                   : migrationCounts.totalLegacy === 0
                     ? 'Migração concluída'
-                    : 'Migrar PDFs automaticamente'}
+                    : migrationConfirmOpen
+                      ? 'Confirmação pendente'
+                      : 'Migrar PDFs automaticamente'}
               </button>
             </div>
           )}
