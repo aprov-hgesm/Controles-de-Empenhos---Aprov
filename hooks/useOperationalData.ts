@@ -62,6 +62,16 @@ export function useOperationalData() {
   }, [user, workspaceContext.status]);
 
   useEffect(() => {
+    if (!user || workspaceContext.status !== 'unauthorized') return;
+
+    clearOperationalState();
+    void signOut(auth).finally(() => {
+      setUser(null);
+      setSyncing(false);
+    });
+  }, [user, workspaceContext.status]);
+
+  useEffect(() => {
     if (
       !user ||
       !isOperationalSectorContext(workspaceContext) ||
