@@ -1,0 +1,57 @@
+name: UX Block 1 Feedback
+
+on:
+  push:
+    branches:
+      - ux/block1-feedback-interactions
+    paths:
+      - ops/ux-block1.trigger
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply conservative UX feedback layer
+        run: python3 scripts/apply-ux-block1-feedback.py
+
+      - name: Diff hygiene
+        run: git diff --check
+
+      - name: TypeScript validation
+        run: npm run typecheck
+
+      - name: Recovery tests
+        run: npm run test:recovery
+
+      - name: Production build
+        run: npm run build
+
+      - name: Final TypeScript validation
+        run: npm run typecheck
+
+      - name: Commit validated application changes
+        shell: bash
+        run: |
+          git config user.name 'Moriark'
+          git config user.email 'marcoa.r.aquino@gmail.com'
+          git add app/page.tsx app/globals.css components/layout/AppHeader.tsx features/empenhos/components/EmpenhosView.tsx features/notas-fiscais/components/NotasFiscaisView.tsx features/cronogramas/components/CronogramasView.tsx
+          git diff --cached --check
+          test -n "$(git diff --cached --name-only)"
+          git commit -m 'feat(ux): adiciona feedback visual às ações críticas'
+          git push origin HEAD:ux/block1-feedback-interactions
