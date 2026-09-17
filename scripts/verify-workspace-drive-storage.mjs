@@ -20,10 +20,11 @@ requireText(driveClient, "https://www.googleapis.com/auth/drive.file", 'O client
 requireText(driveClient, 'reauthenticateWithPopup', 'O Drive por workspace não exige reautenticação explícita da conta Google.');
 requireText(driveClient, 'normalizePlatformEmail(context.email)', 'A validação da conta Google autorizada do workspace não foi encontrada.');
 requireText(driveClient, 'emprovexWorkspaceId', 'As pastas Drive não estão marcadas com o workspaceId.');
-requireText(driveSettings, "WORKSPACE_DOCUMENT_STORAGE_SETTINGS_ID = 'documentStorage'", 'A configuração não usa o settings/documentStorage do workspace.');
+requireText(driveSettings, "WORKSPACE_DOCUMENT_STORAGE_SETTINGS_ID = 'documentStorage'", 'A configuração não usa settings/documentStorage do workspace.');
 requireText(driveSettings, 'operationalSettingsDocRef', 'A configuração Drive não usa o resolver de settings por workspace.');
 requireText(appHeader, '<WorkspaceDriveControl', 'O controle do Drive por workspace não está montado no cabeçalho operacional.');
 requireText(driveControl, 'O token do Google Drive não é persistido', 'O controle perdeu a indicação explícita de token temporário.');
+requireText(driveControl, 'Armazenamento documental ativo: Google Drive', 'O painel não declara o Drive como armazenamento documental ativo.');
 requireText(driveRuntime, 'let activeRuntime', 'A sessão Drive não está limitada ao runtime em memória.');
 requireText(driveRuntime, 'clearWorkspaceDriveRuntime', 'A sessão Drive não possui descarte explícito.');
 requireText(driveHook, 'setWorkspaceDriveRuntime', 'A conexão Drive não alimenta o runtime documental.');
@@ -31,12 +32,12 @@ requireText(driveFiles, 'uploadAndVerifyWorkspacePdf', 'Upload Drive com verific
 requireText(driveFiles, "crypto.subtle.digest('SHA-256'", 'Verificação SHA-256 não foi encontrada.');
 requireText(empenhoDocuments, "provider: 'google-drive'", 'Novos PDFs de NE não usam Google Drive como provider oficial.');
 requireText(invoiceDocuments, "provider: 'google-drive'", 'Novos PDFs de NF não usam Google Drive como provider oficial.');
-requireText(empenhoDocuments, 'fetchLegacyEmpenhoPdfBlob', 'Compatibilidade de leitura de NE legada no Blob foi removida cedo demais.');
-requireText(invoiceDocuments, 'fetchLegacyInvoicePdfBlob', 'Compatibilidade de leitura de NF legada no Blob foi removida cedo demais.');
+requireText(empenhoDocuments, 'fetchWorkspaceDrivePdf', 'Leitura de NE não usa o Google Drive.');
+requireText(invoiceDocuments, 'fetchWorkspaceDrivePdf', 'Leitura de NF não usa o Google Drive.');
 
-for (const source of [empenhoDocuments, invoiceDocuments]) {
-  if (source.includes('@vercel/blob/client')) {
-    findings.push('Upload oficial ainda contém cliente Vercel Blob após o cutover para Drive.');
+for (const source of [driveControl, empenhoDocuments, invoiceDocuments]) {
+  for (const forbidden of ['vercel-blob', '@vercel/blob', 'fetchLegacy', 'Blob pendente', 'Migração Blob']) {
+    if (source.includes(forbidden)) findings.push(`Resíduo legado detectado no runtime Drive: ${forbidden}.`);
   }
 }
 
@@ -61,20 +62,20 @@ if (/drive\.readonly/.test(driveClient)) {
 }
 
 if (findings.length) {
-  console.error('Workspace Google Drive — gate de cutover documental\n');
+  console.error('Workspace Google Drive — gate documental final\n');
   for (const finding of findings) console.error(`  [BLOCK] ${finding}`);
   console.error(`\nWORKSPACE DRIVE STORAGE: BLOQUEADO (${findings.length} achado(s))`);
   process.exitCode = 2;
 } else {
-  console.log('Workspace Google Drive — gate de cutover documental\n');
+  console.log('Workspace Google Drive — gate documental final\n');
   console.log('Escopo OAuth: drive.file');
   console.log('Conta Drive: vinculada ao e-mail do workspace');
   console.log('Pastas: marcadas por workspaceId');
   console.log('Metadados persistidos: settings/documentStorage');
   console.log('Access/refresh token persistente: NÃO');
-  console.log('Uploads oficiais NE/NF: GOOGLE DRIVE');
-  console.log('Legado Blob: leitura/migração temporária preservada');
-  console.log('Integridade de novos uploads: SHA-256');
+  console.log('Uploads e leitura NE/NF: GOOGLE DRIVE');
+  console.log('Integridade: SHA-256');
+  console.log('Fallback legado: AUSENTE');
   console.log('\nWORKSPACE DRIVE STORAGE: READY');
 }
 
