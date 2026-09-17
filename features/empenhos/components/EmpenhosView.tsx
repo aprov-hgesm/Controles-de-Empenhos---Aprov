@@ -979,7 +979,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                       )}
                                     </td>
                                     <td className="p-3.5">
-                                      {inv.dataComissao ? (
+                                      {inv.comissaoDate ? (
                                         <span className="font-bold text-gray-700">{formatDateOnly(inv.dataComissao)}</span>
                                       ) : (
                                         <span className="text-amber-600 font-semibold text-[11px]">Falta Enviar</span>
