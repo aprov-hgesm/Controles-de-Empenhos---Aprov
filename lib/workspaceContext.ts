@@ -12,11 +12,17 @@ export type WorkspaceContextStatus =
   | 'sector'
   | 'unauthorized';
 
+export type WorkspaceResolutionSource =
+  | 'hgesm-dual-profile'
+  | 'legacy-hgesm-bootstrap'
+  | 'platform-directory'
+  | 'none';
+
 interface WorkspaceContextBase {
   status: WorkspaceContextStatus;
   email: string | null;
   canLoadOperationalData: boolean;
-  resolutionSource: 'hgesm-dual-profile' | 'legacy-hgesm-bootstrap' | 'none';
+  resolutionSource: WorkspaceResolutionSource;
 }
 
 export interface AnonymousWorkspaceContext extends WorkspaceContextBase {
@@ -42,18 +48,10 @@ export interface SectorWorkspaceContext extends WorkspaceContextBase {
   workspaceId: string;
   workspaceName: string;
   institutionalProfile: WorkspaceInstitutionalProfile;
-  /**
-   * Define se as coleções operacionais usam os paths globais legados ou o
-   * namespace do workspace. Após o gate final do Bloco 12, o HGeSM usa false.
-   */
   legacyDataMode: boolean;
-  /**
-   * Settings operacionais possuem migração independente das coleções principais.
-   * Desde o Bloco 11 o HGeSM usa o path do workspace.
-   */
   legacySettingsMode: boolean;
   canLoadOperationalData: true;
-  resolutionSource: 'legacy-hgesm-bootstrap';
+  resolutionSource: 'legacy-hgesm-bootstrap' | 'platform-directory';
 }
 
 export interface UnauthorizedWorkspaceContext extends WorkspaceContextBase {
@@ -69,12 +67,43 @@ export type ResolvedWorkspaceContext =
   | SectorWorkspaceContext
   | UnauthorizedWorkspaceContext;
 
+interface CachedWorkspaceSession {
+  uid: string;
+  email: string;
+  context: SectorWorkspaceContext;
+}
+
+let cachedWorkspaceSession: CachedWorkspaceSession | null = null;
+
+export function rememberResolvedWorkspaceContext(
+  uid: string,
+  context: SectorWorkspaceContext
+): void {
+  cachedWorkspaceSession = {
+    uid,
+    email: normalizePlatformEmail(context.email),
+    context,
+  };
+}
+
+export function clearResolvedWorkspaceContext(): void {
+  cachedWorkspaceSession = null;
+}
+
+export function getResolvedWorkspaceContextForSession(
+  uid: string,
+  email?: string | null
+): SectorWorkspaceContext | null {
+  if (!cachedWorkspaceSession || cachedWorkspaceSession.uid !== uid || !email) return null;
+  if (cachedWorkspaceSession.email !== normalizePlatformEmail(email)) return null;
+  return cachedWorkspaceSession.context;
+}
+
 /**
- * Resolve a identidade autenticada antes de qualquer subscription operacional.
- *
- * A conta fundadora do HGeSM possui dois perfis de interface na mesma sessão
- * Firebase. O perfil operacional é o padrão; o modo administrativo só é ativado
- * explicitamente pelo seletor de perfil e nunca carrega dados operacionais.
+ * Resolução síncrona usada durante o runtime depois que a sessão já foi validada.
+ * O HGeSM continua sendo resolvido localmente por ser a identidade fundadora. Os
+ * demais setores somente aparecem aqui depois que `platformAccess` validou conta e
+ * workspace no Firestore e gravou o contexto em memória.
  */
 export function resolveWorkspaceContext(
   email?: string | null,
@@ -120,6 +149,10 @@ export function resolveWorkspaceContext(
       canLoadOperationalData: true,
       resolutionSource: 'legacy-hgesm-bootstrap',
     };
+  }
+
+  if (cachedWorkspaceSession?.email === normalizedEmail) {
+    return cachedWorkspaceSession.context;
   }
 
   return {
