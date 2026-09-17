@@ -108,15 +108,14 @@ function extractMatchBlock(source, matchPath) {
   const start = source.indexOf(marker);
   if (start === -1) return null;
 
-  let depth = 0;
-  let seenOpening = false;
-  for (let i = start; i < source.length; i += 1) {
+  const openingBrace = start + marker.length - 1;
+  let depth = 1;
+  for (let i = openingBrace + 1; i < source.length; i += 1) {
     if (source[i] === '{') {
       depth += 1;
-      seenOpening = true;
     } else if (source[i] === '}') {
       depth -= 1;
-      if (seenOpening && depth === 0) return source.slice(start, i + 1);
+      if (depth === 0) return source.slice(start, i + 1);
     }
   }
   return null;
