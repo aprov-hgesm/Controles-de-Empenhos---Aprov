@@ -33,7 +33,7 @@ async function main() {
     case 'copy':
       ensureCopyConfirmation();
       ensureGcloud();
-      ensureRecoveryReady();
+      ensureSafetyReady();
       await assertTargetMetadata();
       await copyLegacyData();
       return;
@@ -72,10 +72,13 @@ function printPlan() {
   }
   console.log('\nGarantias:');
   console.log('  - operação por cópia; fontes legadas não são apagadas;');
-  console.log('  - exige recovery:verify READY antes de qualquer escrita;');
+  console.log('  - exige recovery:verify READY OU snapshot local íntegro e idêntico à origem;');
   console.log('  - destino é sincronizado somente após confirmação literal;');
   console.log('  - legacyDataMode não é alterado por este script;');
   console.log('  - verificação compara IDs e campos Firestore exatamente.');
+  console.log('\nFallback gratuito:');
+  console.log('  use --snapshot=/caminho/manifest.json quando PITR/backup nativo não estiver disponível.');
+  console.log('  o snapshot é revalidado contra a origem ao vivo imediatamente antes da cópia.');
   console.log('\nConfirmação exigida para copy:');
   console.log(`  --project=${recoveryPolicy.projectId}`);
   console.log(`  --database=${recoveryPolicy.databaseId}`);
@@ -89,15 +92,46 @@ function ensureGcloud() {
   if (check.status !== 0) throw new Error('Não foi possível executar o gcloud.');
 }
 
-function ensureRecoveryReady() {
-  console.log('Verificando controles de recuperação antes da migração...');
-  const result = spawnSync(process.execPath, [resolve(root, 'scripts/firestore-recovery.mjs'), 'verify'], {
-    cwd: root,
-    stdio: 'inherit',
-  });
-  if (result.status !== 0) {
-    throw new Error('Migração bloqueada: o plano de recuperação precisa estar READY antes da cópia.');
+function ensureSafetyReady() {
+  console.log('Verificando proteção de recuperação antes da migração...');
+  const recoveryResult = spawnSync(
+    process.execPath,
+    [resolve(root, 'scripts/firestore-recovery.mjs'), 'verify'],
+    { cwd: root, encoding: 'utf8' },
+  );
+
+  if (recoveryResult.status === 0) {
+    console.log('Recuperação nativa: READY');
+    return;
   }
+
+  console.log('Recuperação nativa não está READY. Verificando fallback local...');
+  if (!flags.snapshot) {
+    throw new Error([
+      'Migração bloqueada: recovery:verify não está READY e nenhum snapshot local foi informado.',
+      'Crie/valide o fallback gratuito e repita o copy com:',
+      '--snapshot=/caminho/manifest.json',
+    ].join('\n'));
+  }
+
+  const snapshotResult = spawnSync(
+    process.execPath,
+    [
+      resolve(root, 'scripts/firestore-local-snapshot.mjs'),
+      'verify',
+      `--snapshot=${flags.snapshot}`,
+      `--project=${recoveryPolicy.projectId}`,
+      `--database=${recoveryPolicy.databaseId}`,
+      `--workspace=${migrationPolicy.workspaceId}`,
+      '--live=true',
+    ],
+    { cwd: root, stdio: 'inherit' },
+  );
+
+  if (snapshotResult.status !== 0) {
+    throw new Error('Migração bloqueada: o snapshot local não está íntegro ou não corresponde à origem atual.');
+  }
+  console.log('Fallback local: READY');
 }
 
 function ensureCopyConfirmation() {
