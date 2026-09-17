@@ -68,6 +68,13 @@ export function useOperationalData() {
   useEffect(() => {
     if (!user || workspaceContext.status !== 'unauthorized') return;
 
+    const returnedEmail = user.email || 'sem e-mail informado pelo Firebase';
+    if (typeof window !== 'undefined') {
+      window.alert(
+        `Diagnóstico EMPROVEX\n\nE-mail retornado pelo Firebase: ${returnedEmail}\nStatus resolvido: unauthorized\n\nA sessão será encerrada por segurança.`
+      );
+    }
+
     clearOperationalState();
     void signOut(auth).finally(() => {
       setUser(null);
@@ -158,6 +165,11 @@ export function useOperationalData() {
 
       if (resolvedContext.status === 'unauthorized' || resolvedContext.status === 'anonymous') {
         const returnedEmail = credential.user.email || 'sem e-mail informado';
+        if (typeof window !== 'undefined') {
+          window.alert(
+            `Diagnóstico EMPROVEX\n\nE-mail retornado pelo Google/Firebase: ${returnedEmail}\nStatus resolvido: ${resolvedContext.status}\n\nEsta identidade não corresponde ao administrador bootstrap configurado.`
+          );
+        }
         await signOut(auth);
         throw new Error(`A conta Google ${returnedEmail} ainda não está autorizada no EMPROVEX.`);
       }
