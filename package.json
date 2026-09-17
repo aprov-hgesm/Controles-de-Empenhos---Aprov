@@ -11,7 +11,10 @@
     "recovery:plan": "node scripts/firestore-recovery.mjs plan",
     "recovery:status": "node scripts/firestore-recovery.mjs status",
     "recovery:verify": "node scripts/firestore-recovery.mjs verify",
-    "test:recovery": "node --test scripts/firestore-recovery.test.mjs"
+    "test:recovery": "node --test scripts/firestore-recovery.test.mjs",
+    "migration:hgesm:plan": "node scripts/migrate-hgesm-workspace.mjs plan",
+    "migration:hgesm:status": "node scripts/migrate-hgesm-workspace.mjs status",
+    "migration:hgesm:verify": "node scripts/migrate-hgesm-workspace.mjs verify"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",
