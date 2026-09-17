@@ -49,7 +49,7 @@ export interface SectorWorkspaceContext extends WorkspaceContextBase {
   legacyDataMode: boolean;
   /**
    * Settings operacionais possuem migração independente das coleções principais.
-   * No Bloco 11 começa true e só muda para false após validação ao vivo do contador.
+   * No Bloco 11 o contador passa a usar o path do workspace após gate ao vivo READY.
    */
   legacySettingsMode: boolean;
   canLoadOperationalData: true;
@@ -116,7 +116,7 @@ export function resolveWorkspaceContext(
         documentHeaderLines: [...(HGESM_INSTITUTIONAL_PROFILE.documentHeaderLines || [])],
       },
       legacyDataMode: true,
-      legacySettingsMode: true,
+      legacySettingsMode: false,
       canLoadOperationalData: true,
       resolutionSource: 'legacy-hgesm-bootstrap',
     };
