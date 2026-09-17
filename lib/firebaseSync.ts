@@ -1,58 +1,65 @@
-import { 
-  collection, 
-  query, 
-  getDocs, 
+import {
+  getDocs,
   getDoc,
-  setDoc, 
-  deleteDoc, 
+  setDoc,
+  deleteDoc,
   doc,
   runTransaction,
   writeBatch,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './firebase';
 import { Empenho, Alert, Invoice, Comissao, CronogramaEmpenho } from './types';
+import {
+  getCurrentOperationalScope,
+  getOperationalCollectionPath,
+  getOperationalDocumentPath,
+  getOperationalSettingsDocumentPath,
+  operationalCollectionRef,
+  operationalDocRef,
+  operationalSettingsDocRef,
+} from './operationalPaths';
 
 // Seeding function (no-op as data is now fully persistent and shared on Firestore)
 export async function seedInitialDataIfNecessary(userId: string) {
+  const scope = getCurrentOperationalScope(userId);
+  const path = getOperationalCollectionPath(scope, 'empenhos');
   try {
-    const q = collection(db, 'empenhos');
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(operationalCollectionRef(scope, 'empenhos'));
     if (snapshot.empty) {
-      console.log('No empenhos found in Firestore. Ready to receive data.');
+      console.log(`No empenhos found in Firestore at ${path}. Ready to receive data.`);
     }
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, 'seeding');
+    handleFirestoreError(error, OperationType.WRITE, `${path}/seeding`);
   }
 }
 
-// Empenhos operations (shared globally, no longer isolated by userId or stored locally)
 export async function getEmpenhos(userId: string): Promise<Empenho[]> {
+  const scope = getCurrentOperationalScope(userId);
+  const path = getOperationalCollectionPath(scope, 'empenhos');
   try {
-    const q = collection(db, 'empenhos');
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => doc.data() as Empenho);
+    const snapshot = await getDocs(operationalCollectionRef(scope, 'empenhos'));
+    return snapshot.docs.map(item => item.data() as Empenho);
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, 'empenhos');
+    handleFirestoreError(error, OperationType.LIST, path);
     return [];
   }
 }
 
 export async function saveEmpenho(userId: string, empenho: Empenho): Promise<void> {
-  const path = `empenhos/${empenho.id}`;
+  const scope = getCurrentOperationalScope(userId);
+  const path = getOperationalDocumentPath(scope, 'empenhos', empenho.id);
   try {
-    const docRef = doc(db, 'empenhos', empenho.id);
-    // Keep userId on the document metadata if desired, but it's shared
-    await setDoc(docRef, { ...empenho, userId });
+    await setDoc(operationalDocRef(scope, 'empenhos', empenho.id), { ...empenho, userId });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
 export async function removeEmpenho(userId: string, id: string): Promise<void> {
-  const path = `empenhos/${id}`;
+  const scope = getCurrentOperationalScope(userId);
+  const path = getOperationalDocumentPath(scope, 'empenhos', id);
   try {
-    const docRef = doc(db, 'empenhos', id);
-    await deleteDoc(docRef);
+    await deleteDoc(operationalDocRef(scope, 'empenhos', id));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
@@ -60,31 +67,32 @@ export async function removeEmpenho(userId: string, id: string): Promise<void> {
 
 // Alerts operations
 export async function getAlerts(userId: string): Promise<Alert[]> {
+  const scope = getCurrentOperationalScope(userId);
+  const path = getOperationalCollectionPath(scope, 'alerts');
   try {
-    const q = collection(db, 'alerts');
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => doc.data() as Alert);
+    const snapshot = await getDocs(operationalCollectionRef(scope, 'alerts'));
+    return snapshot.docs.map(item => item.data() as Alert);
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, 'alerts');
+    handleFirestoreError(error, OperationType.LIST, path);
     return [];
   }
 }
 
 export async function saveAlert(userId: string, alert: Alert): Promise<void> {
-  const path = `alerts/${alert.id}`;
+  const scope = getCurrentOperationalScope(userId);
+  const path = getOperationalDocumentPath(scope, 'alerts', alert.id);
   try {
-    const docRef = doc(db, 'alerts', alert.id);
-    await setDoc(docRef, { ...alert, userId });
+    await setDoc(operationalDocRef(scope, 'alerts', alert.id), { ...alert, userId });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
 export async function removeAlert(userId: string, id: string): Promise<void> {
-  const path = `alerts/${id}`;
+  const scope = getCurrentOperationalScope(userId);
+  const path = getOperationalDocumentPath(scope, 'alerts', id);
   try {
-    const docRef = doc(db, 'alerts', id);
-    await deleteDoc(docRef);
+    await deleteDoc(operationalDocRef(scope, 'alerts', id));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
@@ -92,36 +100,36 @@ export async function removeAlert(userId: string, id: string): Promise<void> {
 
 // Invoices operations
 export async function getInvoices(userId: string): Promise<Invoice[]> {
+  const scope = getCurrentOperationalScope(userId);
+  const path = getOperationalCollectionPath(scope, 'invoices');
   try {
-    const q = collection(db, 'invoices');
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => doc.data() as Invoice);
+    const snapshot = await getDocs(operationalCollectionRef(scope, 'invoices'));
+    return snapshot.docs.map(item => item.data() as Invoice);
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, 'invoices');
+    handleFirestoreError(error, OperationType.LIST, path);
     return [];
   }
 }
 
 export async function saveInvoice(userId: string, invoice: Invoice): Promise<void> {
-  const path = `invoices/${invoice.id}`;
+  const scope = getCurrentOperationalScope(userId);
+  const path = getOperationalDocumentPath(scope, 'invoices', invoice.id);
   try {
-    const docRef = doc(db, 'invoices', invoice.id);
-    await setDoc(docRef, { ...invoice, userId });
+    await setDoc(operationalDocRef(scope, 'invoices', invoice.id), { ...invoice, userId });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
 export async function removeInvoice(userId: string, id: string): Promise<void> {
-  const path = `invoices/${id}`;
+  const scope = getCurrentOperationalScope(userId);
+  const path = getOperationalDocumentPath(scope, 'invoices', id);
   try {
-    const docRef = doc(db, 'invoices', id);
-    await deleteDoc(docRef);
+    await deleteDoc(operationalDocRef(scope, 'invoices', id));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
 }
-
 
 interface CommitInvoiceReceiptChangesInput {
   targetEmpenho: Empenho;
@@ -135,20 +143,21 @@ export async function commitInvoiceReceiptChanges(
   userId: string,
   changes: CommitInvoiceReceiptChangesInput
 ): Promise<void> {
+  const scope = getCurrentOperationalScope(userId);
   try {
     const batch = writeBatch(db);
-    batch.set(doc(db, 'empenhos', changes.targetEmpenho.id), { ...changes.targetEmpenho, userId });
+    batch.set(operationalDocRef(scope, 'empenhos', changes.targetEmpenho.id), { ...changes.targetEmpenho, userId });
     if (changes.previousEmpenho && changes.previousEmpenho.id !== changes.targetEmpenho.id) {
-      batch.set(doc(db, 'empenhos', changes.previousEmpenho.id), { ...changes.previousEmpenho, userId });
+      batch.set(operationalDocRef(scope, 'empenhos', changes.previousEmpenho.id), { ...changes.previousEmpenho, userId });
     }
-    batch.set(doc(db, 'invoices', changes.invoice.id), { ...changes.invoice, userId });
-    batch.set(doc(db, 'alerts', changes.alert.id), { ...changes.alert, userId });
+    batch.set(operationalDocRef(scope, 'invoices', changes.invoice.id), { ...changes.invoice, userId });
+    batch.set(operationalDocRef(scope, 'alerts', changes.alert.id), { ...changes.alert, userId });
     if (changes.previousInvoiceId && changes.previousInvoiceId !== changes.invoice.id) {
-      batch.delete(doc(db, 'invoices', changes.previousInvoiceId));
+      batch.delete(operationalDocRef(scope, 'invoices', changes.previousInvoiceId));
     }
     await batch.commit();
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, 'invoice-receipt-batch');
+    handleFirestoreError(error, OperationType.WRITE, `${getOperationalCollectionPath(scope, 'invoices')}/receipt-batch`);
   }
 }
 
@@ -157,13 +166,14 @@ export async function commitInvoiceDeletion(
   updatedEmpenho: Empenho,
   invoiceId: string
 ): Promise<void> {
+  const scope = getCurrentOperationalScope(userId);
   try {
     const batch = writeBatch(db);
-    batch.set(doc(db, 'empenhos', updatedEmpenho.id), { ...updatedEmpenho, userId });
-    batch.delete(doc(db, 'invoices', invoiceId));
+    batch.set(operationalDocRef(scope, 'empenhos', updatedEmpenho.id), { ...updatedEmpenho, userId });
+    batch.delete(operationalDocRef(scope, 'invoices', invoiceId));
     await batch.commit();
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, `invoices/${invoiceId}`);
+    handleFirestoreError(error, OperationType.DELETE, getOperationalDocumentPath(scope, 'invoices', invoiceId));
   }
 }
 
@@ -172,31 +182,33 @@ export async function commitAllInvoicesDeletion(
   updatedEmpenhos: Empenho[],
   invoiceIds: string[]
 ): Promise<void> {
+  const scope = getCurrentOperationalScope(userId);
   try {
     if (updatedEmpenhos.length + invoiceIds.length > 450) {
       throw new Error('Quantidade de operações excede o limite seguro para exclusão em lote.');
     }
     const batch = writeBatch(db);
     updatedEmpenhos.forEach((empenho) => {
-      batch.set(doc(db, 'empenhos', empenho.id), { ...empenho, userId });
+      batch.set(operationalDocRef(scope, 'empenhos', empenho.id), { ...empenho, userId });
     });
-    invoiceIds.forEach((invoiceId) => batch.delete(doc(db, 'invoices', invoiceId)));
+    invoiceIds.forEach((invoiceId) => batch.delete(operationalDocRef(scope, 'invoices', invoiceId)));
     await batch.commit();
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, 'invoices/bulk');
+    handleFirestoreError(error, OperationType.DELETE, `${getOperationalCollectionPath(scope, 'invoices')}/bulk`);
   }
 }
 
 export async function commitAllComissoesDeletion(userId: string, ids: string[]): Promise<void> {
+  const scope = getCurrentOperationalScope(userId);
   try {
     if (ids.length > 450) {
       throw new Error('Quantidade de comissões excede o limite seguro para exclusão em lote.');
     }
     const batch = writeBatch(db);
-    ids.forEach((id) => batch.delete(doc(db, 'comissoes', id)));
+    ids.forEach((id) => batch.delete(operationalDocRef(scope, 'comissoes', id)));
     await batch.commit();
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, 'comissoes/bulk');
+    handleFirestoreError(error, OperationType.DELETE, `${getOperationalCollectionPath(scope, 'comissoes')}/bulk`);
   }
 }
 
@@ -206,8 +218,9 @@ export async function ensureTermoRecebimentoAssignment(
   observedMaxTermoNumero: number,
   preferredEmissionDate: string
 ): Promise<Invoice> {
-  const invoiceRef = doc(db, 'invoices', invoiceId);
-  const counterRef = doc(db, 'settings', 'termoRecebimentoCounter');
+  const scope = getCurrentOperationalScope(userId);
+  const invoiceRef = operationalDocRef(scope, 'invoices', invoiceId);
+  const counterRef = operationalSettingsDocRef(scope, 'termoRecebimentoCounter');
 
   try {
     return await runTransaction(db, async (transaction) => {
@@ -251,38 +264,39 @@ export async function ensureTermoRecebimentoAssignment(
       return updatedInvoice;
     });
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, `invoices/${invoiceId}/termo`);
+    handleFirestoreError(error, OperationType.WRITE, `${getOperationalDocumentPath(scope, 'invoices', invoiceId)}/termo`);
     throw error;
   }
 }
 
 // Comissoes operations
 export async function getComissoes(userId: string): Promise<Comissao[]> {
+  const scope = getCurrentOperationalScope(userId);
+  const path = getOperationalCollectionPath(scope, 'comissoes');
   try {
-    const q = collection(db, 'comissoes');
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => doc.data() as Comissao);
+    const snapshot = await getDocs(operationalCollectionRef(scope, 'comissoes'));
+    return snapshot.docs.map(item => item.data() as Comissao);
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, 'comissoes');
+    handleFirestoreError(error, OperationType.LIST, path);
     return [];
   }
 }
 
 export async function saveComissao(userId: string, comissao: Comissao): Promise<void> {
-  const path = `comissoes/${comissao.id}`;
+  const scope = getCurrentOperationalScope(userId);
+  const path = getOperationalDocumentPath(scope, 'comissoes', comissao.id);
   try {
-    const docRef = doc(db, 'comissoes', comissao.id);
-    await setDoc(docRef, { ...comissao, userId });
+    await setDoc(operationalDocRef(scope, 'comissoes', comissao.id), { ...comissao, userId });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
 export async function removeComissao(userId: string, id: string): Promise<void> {
-  const path = `comissoes/${id}`;
+  const scope = getCurrentOperationalScope(userId);
+  const path = getOperationalDocumentPath(scope, 'comissoes', id);
   try {
-    const docRef = doc(db, 'comissoes', id);
-    await deleteDoc(docRef);
+    await deleteDoc(operationalDocRef(scope, 'comissoes', id));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
@@ -290,31 +304,32 @@ export async function removeComissao(userId: string, id: string): Promise<void> 
 
 // Cronogramas operations
 export async function getCronogramas(userId: string): Promise<CronogramaEmpenho[]> {
+  const scope = getCurrentOperationalScope(userId);
+  const path = getOperationalCollectionPath(scope, 'cronogramas');
   try {
-    const q = collection(db, 'cronogramas');
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => doc.data() as CronogramaEmpenho);
+    const snapshot = await getDocs(operationalCollectionRef(scope, 'cronogramas'));
+    return snapshot.docs.map(item => item.data() as CronogramaEmpenho);
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, 'cronogramas');
+    handleFirestoreError(error, OperationType.LIST, path);
     return [];
   }
 }
 
 export async function saveCronograma(userId: string, cronograma: CronogramaEmpenho): Promise<void> {
-  const path = `cronogramas/${cronograma.id}`;
+  const scope = getCurrentOperationalScope(userId);
+  const path = getOperationalDocumentPath(scope, 'cronogramas', cronograma.id);
   try {
-    const docRef = doc(db, 'cronogramas', cronograma.id);
-    await setDoc(docRef, { ...cronograma, userId });
+    await setDoc(operationalDocRef(scope, 'cronogramas', cronograma.id), { ...cronograma, userId });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
 export async function removeCronograma(userId: string, id: string): Promise<void> {
-  const path = `cronogramas/${id}`;
+  const scope = getCurrentOperationalScope(userId);
+  const path = getOperationalDocumentPath(scope, 'cronogramas', id);
   try {
-    const docRef = doc(db, 'cronogramas', id);
-    await deleteDoc(docRef);
+    await deleteDoc(operationalDocRef(scope, 'cronogramas', id));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
