@@ -55,7 +55,17 @@ const forbiddenRuntimeMarkers = [
   'fetchLegacyInvoicePdfBlob',
 ];
 
-for (const file of collectFiles(['app', 'components', 'hooks', 'lib', '.github', '.env.example', 'package.json'])) {
+for (const file of collectFiles([
+  'app',
+  'components',
+  'hooks',
+  'lib',
+  '.github',
+  'docs',
+  '.env.example',
+  'package.json',
+  'package-lock.json',
+])) {
   const source = read(file);
   for (const marker of forbiddenRuntimeMarkers) {
     if (source.includes(marker)) findings.push(`${file}: resíduo proibido detectado (${marker}).`);
@@ -72,7 +82,7 @@ if (findings.length) {
   console.log('Provider documental: google-drive');
   console.log('Fallback legado: AUSENTE');
   console.log('Rotas antigas: AUSENTES');
-  console.log('Secrets/configuração legada no repositório: AUSENTES');
+  console.log('Dependências/configuração legada: AUSENTES');
   console.log('Uploads/leitura NE e NF: GOOGLE DRIVE');
   console.log('\nDOCUMENT STORAGE FINAL: READY');
 }
@@ -98,7 +108,7 @@ function collectFiles(entries) {
       for (const name of readdirSync(absolutePath)) visit(resolve(absolutePath, name));
       return;
     }
-    if (!/\.(?:ts|tsx|js|mjs|json|yml|yaml|example)$/.test(absolutePath) && !absolutePath.endsWith('.env.example')) return;
+    if (!/\.(?:ts|tsx|js|mjs|json|md|yml|yaml|example)$/.test(absolutePath) && !absolutePath.endsWith('.env.example')) return;
     files.push(relative(root, absolutePath));
   };
   for (const entry of entries) visit(resolve(root, entry));
