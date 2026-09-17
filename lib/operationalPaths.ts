@@ -7,6 +7,7 @@ import {
 
 import { auth, db } from './firebase';
 import {
+  getResolvedWorkspaceContextForSession,
   isOperationalSectorContext,
   resolveWorkspaceContext,
   type ResolvedWorkspaceContext,
@@ -25,11 +26,6 @@ export interface OperationalDataScope {
   legacySettingsMode: boolean;
 }
 
-/**
- * Após o cutover do HGeSM, o runtime normal não aceita mais scopes legados.
- * Os dados raiz permanecem disponíveis apenas por ferramentas de manutenção,
- * auditoria e recuperação executadas fora do frontend operacional.
- */
 function assertWorkspaceScopedRuntime(context: ResolvedWorkspaceContext): void {
   if (!isOperationalSectorContext(context)) return;
 
@@ -58,8 +54,8 @@ export function operationalScopeFromContext(
 
 /**
  * Resolve o workspace operacional da sessão Firebase atual antes de qualquer write.
- * O UID esperado evita que uma ação iniciada por uma sessão antiga seja reaproveitada
- * depois de uma troca de conta no navegador.
+ * Setores externos só podem escrever usando o contexto que já foi validado no
+ * diretório EMPROVEX para este UID. O HGeSM mantém sua resolução fundadora local.
  */
 export function getCurrentOperationalScope(expectedUid?: string): OperationalDataScope {
   const currentUser = auth.currentUser;
@@ -71,14 +67,15 @@ export function getCurrentOperationalScope(expectedUid?: string): OperationalDat
     throw new Error('A sessão Firebase mudou antes da conclusão da operação.');
   }
 
-  return operationalScopeFromContext(resolveWorkspaceContext(currentUser.email));
+  const cachedContext = getResolvedWorkspaceContextForSession(
+    currentUser.uid,
+    currentUser.email
+  );
+  const context = cachedContext || resolveWorkspaceContext(currentUser.email);
+
+  return operationalScopeFromContext(context);
 }
 
-/**
- * Bloco 13: o legado permanece apenas para compatibilidade/recuperação.
- * Qualquer write iniciado pelo runtime normal deve ser workspace-scoped.
- * Estas travas também protegem chamadas construídas manualmente com um scope.
- */
 export function assertWorkspaceScopedDataWrite(scope: OperationalDataScope): void {
   if (scope.legacyDataMode) {
     throw new Error(
@@ -112,11 +109,6 @@ export function getOperationalDocumentPath(
   return `${getOperationalCollectionPath(scope, collectionName)}/${documentId}`;
 }
 
-/**
- * Settings operacionais possuem um eixo de migração independente das coleções.
- * Isso permite mover contadores/configurações por workspace antes de redirecionar
- * empenhos, NFs, alertas, comissões e cronogramas.
- */
 export function getOperationalSettingsCollectionPath(scope: OperationalDataScope): string {
   return scope.legacySettingsMode
     ? 'settings'
