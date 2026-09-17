@@ -52,6 +52,17 @@ export function useOperationalData() {
 
   useEffect(() => {
     if (
+      user &&
+      workspaceContext.status === 'platformAdmin' &&
+      typeof window !== 'undefined' &&
+      window.location.pathname !== '/admin'
+    ) {
+      window.location.replace('/admin');
+    }
+  }, [user, workspaceContext.status]);
+
+  useEffect(() => {
+    if (
       !user ||
       !isOperationalSectorContext(workspaceContext) ||
       !workspaceContext.legacyDataMode
@@ -129,6 +140,10 @@ export function useOperationalData() {
       if (resolvedContext.status === 'unauthorized' || resolvedContext.status === 'anonymous') {
         await signOut(auth);
         throw new Error('Esta conta Google ainda não está autorizada no EMPROVEX.');
+      }
+
+      if (resolvedContext.status === 'platformAdmin') {
+        window.location.assign('/admin');
       }
 
       return resolvedContext;
