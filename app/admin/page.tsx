@@ -5,6 +5,7 @@ import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
 
 import { PlatformAdminView } from '../../components/admin/PlatformAdminView';
+import { usePlatformAdminDirectory } from '../../hooks/usePlatformAdminDirectory';
 import { auth } from '../../lib/firebase';
 import { resolveWorkspaceContext } from '../../lib/workspaceContext';
 
@@ -22,6 +23,9 @@ export default function PlatformAdminPage() {
   }, []);
 
   const context = resolveWorkspaceContext(user?.email);
+  const adminDirectory = usePlatformAdminDirectory(
+    context.status === 'platformAdmin' ? context.email : null
+  );
 
   useEffect(() => {
     if (loading) return;
@@ -50,6 +54,13 @@ export default function PlatformAdminPage() {
   return (
     <PlatformAdminView
       adminEmail={context.email}
+      workspaces={adminDirectory.directory.workspaces}
+      loadingDirectory={adminDirectory.loading}
+      directoryError={adminDirectory.error}
+      creatingSector={adminDirectory.creating}
+      onCreateSector={async (input) => {
+        await adminDirectory.createSector(input);
+      }}
       onLogout={handleLogout}
     />
   );
