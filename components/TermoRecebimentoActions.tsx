@@ -24,6 +24,10 @@ export function TermoRecebimentoActions({ invoice, onAction }: TermoRecebimentoA
     }
   };
 
+  const termoDateLabel = invoice.termoEmissaoDate
+    ? new Date(invoice.termoEmissaoDate).toLocaleDateString('pt-BR')
+    : 'data de geração não registrada';
+
   return (
     <section className="bg-white/80 backdrop-blur-md p-5 rounded-2xl border border-amber-100 shadow-sm">
       <div className="flex items-start gap-3 mb-4">
@@ -34,7 +38,7 @@ export function TermoRecebimentoActions({ invoice, onAction }: TermoRecebimentoA
           <h4 className="text-sm font-black text-[#0b1c30]">Documento — Termo de Recebimento</h4>
           <p className="text-xs font-semibold text-gray-600 mt-0.5">
             {invoice.termoNumero
-              ? `Termo nº ${invoice.termoNumero} • gerado em ${new Date(invoice.termoEmissaoDate || invoice.registeredAt || invoice.issueDate).toLocaleDateString('pt-BR')}`
+              ? `Termo nº ${invoice.termoNumero} • ${invoice.termoEmissaoDate ? `gerado em ${termoDateLabel}` : termoDateLabel}`
               : 'Ainda não gerado. Gere o termo antes do envio para liquidação.'}
           </p>
         </div>
