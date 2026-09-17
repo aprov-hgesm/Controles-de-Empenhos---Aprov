@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { Loader2, LogIn } from 'lucide-react';
 
@@ -27,12 +27,20 @@ import { MobileNavigation } from '../components/layout/MobileNavigation';
 export default function Home() {
   // Toast / Notifications helper
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToast({ message, type });
-    setTimeout(() => {
+    toastTimerRef.current = setTimeout(() => {
       setToast(null);
+      toastTimerRef.current = null;
     }, 4000);
-  };
+  }, []);
+
+  useEffect(() => () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  }, []);
 
   const {
     user, loadingAuth, syncing,
@@ -294,18 +302,28 @@ export default function Home() {
 
           <button
             onClick={async () => {
+              if (isSigningIn) return;
+              setIsSigningIn(true);
               try {
                 await signInUser();
                 showToast('Acesso autorizado com sucesso!', 'success');
               } catch (err: any) {
                 console.error('Erro na autenticação:', err);
                 showToast('Falha na autenticação. Verifique sua conta Google.', 'error');
+              } finally {
+                setIsSigningIn(false);
               }
             }}
-            className="w-full h-12 bg-[#00288e] hover:bg-[#001e6a] text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-3 shadow-md hover:shadow-lg active:scale-95 group"
+            disabled={isSigningIn}
+            aria-busy={isSigningIn}
+            className="w-full h-12 bg-[#00288e] hover:bg-[#001e6a] text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-3 shadow-md hover:shadow-lg active:scale-95 group disabled:opacity-70 disabled:cursor-wait disabled:active:scale-100"
           >
-            <LogIn className="w-5 h-5 flex-shrink-0 group-hover:translate-x-1 transition-transform" />
-            Entrar no Sistema
+            {isSigningIn ? (
+              <Loader2 className="w-5 h-5 flex-shrink-0 animate-spin" />
+            ) : (
+              <LogIn className="w-5 h-5 flex-shrink-0 group-hover:translate-x-1 transition-transform" />
+            )}
+            {isSigningIn ? 'Autenticando…' : 'Entrar no Sistema'}
           </button>
         </motion.div>
 
