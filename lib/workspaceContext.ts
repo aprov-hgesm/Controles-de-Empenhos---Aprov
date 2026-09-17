@@ -47,6 +47,11 @@ export interface SectorWorkspaceContext extends WorkspaceContextBase {
    * autoriza o hook operacional a usar temporariamente os paths legados.
    */
   legacyDataMode: boolean;
+  /**
+   * Settings operacionais possuem migração independente das coleções principais.
+   * No Bloco 11 começa true e só muda para false após validação ao vivo do contador.
+   */
+  legacySettingsMode: boolean;
   canLoadOperationalData: true;
   resolutionSource: 'legacy-hgesm-bootstrap';
 }
@@ -111,6 +116,7 @@ export function resolveWorkspaceContext(
         documentHeaderLines: [...(HGESM_INSTITUTIONAL_PROFILE.documentHeaderLines || [])],
       },
       legacyDataMode: true,
+      legacySettingsMode: true,
       canLoadOperationalData: true,
       resolutionSource: 'legacy-hgesm-bootstrap',
     };
