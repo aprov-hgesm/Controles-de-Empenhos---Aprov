@@ -57,6 +57,28 @@ export function getCurrentOperationalScope(expectedUid?: string): OperationalDat
   return operationalScopeFromContext(resolveWorkspaceContext(currentUser.email));
 }
 
+/**
+ * Bloco 13: o legado permanece apenas para compatibilidade/recuperação.
+ * Qualquer write iniciado pelo runtime normal deve ser workspace-scoped.
+ * Esta trava impede que uma futura regressão de flag volte silenciosamente a
+ * gravar nas coleções raiz mesmo antes das Rules recusarem a operação.
+ */
+export function assertWorkspaceScopedDataWrite(scope: OperationalDataScope): void {
+  if (scope.legacyDataMode) {
+    throw new Error(
+      'Escrita operacional bloqueada: coleções legadas são somente leitura. Use o workspace ativo.'
+    );
+  }
+}
+
+export function assertWorkspaceScopedSettingsWrite(scope: OperationalDataScope): void {
+  if (scope.legacySettingsMode) {
+    throw new Error(
+      'Escrita de settings bloqueada: settings operacionais legados são somente leitura. Use o workspace ativo.'
+    );
+  }
+}
+
 export function getOperationalCollectionPath(
   scope: OperationalDataScope,
   collectionName: OperationalCollectionName
