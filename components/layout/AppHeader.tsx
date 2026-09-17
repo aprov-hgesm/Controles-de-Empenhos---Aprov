@@ -1,7 +1,11 @@
 'use client';
 
 import type { ChangeEvent, MouseEvent } from 'react';
-import { Camera, Loader2, Menu, X } from 'lucide-react';
+import { Camera, Loader2, Menu, ShieldCheck, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+import { auth } from '../../lib/firebase';
+import { hasDualProfileAccess, setActiveProfileMode } from '../../lib/profileMode';
 
 interface AppHeaderProps {
   customLogo: string | null;
@@ -20,6 +24,15 @@ export function AppHeader({
   onLogoUpload,
   onRemoveLogo,
 }: AppHeaderProps) {
+  const router = useRouter();
+  const canSwitchProfile = hasDualProfileAccess(auth.currentUser?.email);
+
+  const openAdministration = () => {
+    if (!canSwitchProfile) return;
+    setActiveProfileMode('platformAdmin');
+    router.push('/admin');
+  };
+
   return (
     <header className="bg-white/70 backdrop-blur-md border-b border-white/30 shadow-sm fixed top-0 w-full h-16 z-40 flex justify-between items-center px-6 transition-all duration-300">
       <div className="flex items-center gap-4">
@@ -86,13 +99,26 @@ export function AppHeader({
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         {syncing && (
           <div role="status" aria-live="polite" className="flex items-center gap-1 text-xs font-semibold text-blue-600 animate-pulse bg-blue-50/70 backdrop-blur-sm px-3 py-1 rounded-full">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
             Sincronizando...
           </div>
         )}
+
+        {canSwitchProfile && (
+          <button
+            type="button"
+            onClick={openAdministration}
+            className="inline-flex items-center gap-2 rounded-xl border border-blue-200/80 bg-blue-50/80 px-3 py-2 text-[11px] font-extrabold text-[#00288e] transition hover:bg-blue-100 active:scale-95"
+            title="Alternar para o perfil de Administração EMPROVEX"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span className="hidden sm:inline">Administração</span>
+          </button>
+        )}
+
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-gray-700 hidden md:inline">
             {userDisplayName}
