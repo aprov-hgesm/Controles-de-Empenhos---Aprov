@@ -5,7 +5,7 @@ import type { User } from 'firebase/auth';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Comissao, Empenho, Invoice } from '../../../lib/types';
-import { saveInvoice } from '../../../lib/firebaseSync';
+import { ensureTermoRecebimentoAssignment } from '../../../lib/firebaseSync';
 import { fetchEmpenhoPdfBlob } from '../../../lib/empenhoDocuments';
 import { fetchInvoicePdfBlob } from '../../../lib/invoiceDocuments';
 
@@ -25,40 +25,43 @@ export function useDocumentActions(context:DocumentActionsContext){
   const { user,invoices,setInvoices,comissoes,empenhos,showToast,formatDateOnly }=context;
 
   const buildTermoRecebimentoPdf = async (inv: Invoice) => {
-    // 1. Determine or assign sequential term number and register TR emission date
-    let termoNumero = inv.termoNumero;
-    const termoEmissaoDate = inv.termoEmissaoDate || inv.registeredAt || new Date().toISOString();
-     if (!termoNumero) {
-      const maxTermoNumero = invoices.reduce((max, i) => (i.termoNumero && i.termoNumero > max ? i.termoNumero : max), 0);
-      termoNumero = maxTermoNumero + 1;
-    }
-     const updatedInvoiceWithTR: Invoice = {
-      ...inv,
-      termoNumero,
-      termoEmissaoDate,
-    };
-     // Update local state immediately so that the UI immediately displays the TR number & emission date
-    setInvoices(prev => prev.map(i => i.id === inv.id ? updatedInvoiceWithTR : i));
-     // Save updated invoice with termoNumero and termoEmissaoDate to Firestore
-    if (user) {
-      try {
-        await saveInvoice(user.uid, updatedInvoiceWithTR);
-      } catch (error) {
-        console.error("Erro ao salvar número e data de emissão do termo:", error);
-      }
-    }
-     // 1. Find matching commission for the month of reference of the invoice
+    // O conteúdo declaratório do Termo é preservado: a geração pressupõe conferência física já concluída.
     const invMonth = inv.issueDate ? inv.issueDate.substring(0, 7) : '';
-    let matchingComissao = comissoes.find(c => c.mesReferencia === invMonth);
-     if (!matchingComissao) {
-      if (comissoes.length === 0) {
-        showToast('Nenhuma Comissão de Recebimento cadastrada no sistema. Por favor, cadastre a comissão na aba correspondente antes de gerar o termo.', 'error');
-        return;
-      }
-      // If none matches, let's use the first one available but alert the user
-      matchingComissao = comissoes[0];
-      showToast('Aviso: Nenhuma comissão cadastrada para o mês desta Nota Fiscal. Utilizando comissão cadastrada como fallback.', 'info');
+    const matchingComissao = comissoes.find(c => c.mesReferencia === invMonth);
+    if (!matchingComissao) {
+      showToast(
+        invMonth
+          ? `Não existe Comissão de Recebimento cadastrada para o mês ${invMonth}. Cadastre a comissão correspondente antes de gerar o Termo.`
+          : 'A Nota Fiscal não possui mês de emissão válido para localizar a Comissão de Recebimento.',
+        'error'
+      );
+      return;
     }
+
+    let updatedInvoiceWithTR: Invoice = inv;
+    const termoEmissaoDate = inv.termoEmissaoDate || inv.registeredAt || new Date().toISOString();
+    if (user) {
+      const maxTermoNumero = invoices.reduce(
+        (max, invoice) => invoice.termoNumero && invoice.termoNumero > max ? invoice.termoNumero : max,
+        0
+      );
+      updatedInvoiceWithTR = await ensureTermoRecebimentoAssignment(
+        user.uid,
+        inv.id,
+        maxTermoNumero,
+        termoEmissaoDate
+      );
+    } else if (!inv.termoNumero) {
+      showToast('Faça login novamente antes de gerar o Termo de Recebimento.', 'error');
+      return;
+    }
+
+    const termoNumero = updatedInvoiceWithTR.termoNumero;
+    if (!termoNumero) {
+      showToast('Não foi possível reservar a numeração do Termo de Recebimento.', 'error');
+      return;
+    }
+    setInvoices(prev => prev.map(i => i.id === inv.id ? updatedInvoiceWithTR : i));
      const targetEmp = empenhos.find(e => e.id === inv.empenhoId);
     const empenhoTotal = targetEmp?.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) || 0;
     const isQtyEqual = inv.totalValue >= (empenhoTotal - 0.01);

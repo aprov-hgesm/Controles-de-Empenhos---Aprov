@@ -1079,15 +1079,16 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                 <button
                                   onClick={async () => {
                                     if (confirm('Tem certeza que deseja excluir esta comissão?')) {
-                                      const updated = comissoes.filter(c => c.id !== com.id);
-                                      setComissoes(updated);
                                       if (user) {
                                         try {
                                           await removeComissao(user.uid, com.id);
                                         } catch (error) {
-                                          showToast('Erro ao remover no Firebase', 'error');
+                                          showToast('Erro ao remover no Firebase. A comissão foi mantida.', 'error');
+                                          return;
                                         }
                                       }
+                                      const updated = comissoes.filter(c => c.id !== com.id);
+                                      setComissoes(updated);
                                       showToast('Comissão excluída com sucesso!', 'info');
                                     }
                                   }}

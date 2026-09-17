@@ -5,7 +5,9 @@ import {
   getDoc,
   setDoc, 
   deleteDoc, 
-  doc 
+  doc,
+  runTransaction,
+  writeBatch,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './firebase';
 import { Empenho, Alert, Invoice, Comissao, CronogramaEmpenho } from './types';
@@ -117,6 +119,136 @@ export async function removeInvoice(userId: string, id: string): Promise<void> {
     await deleteDoc(docRef);
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+
+interface CommitInvoiceReceiptChangesInput {
+  targetEmpenho: Empenho;
+  previousEmpenho?: Empenho;
+  invoice: Invoice;
+  alert: Alert;
+  previousInvoiceId?: string;
+}
+
+export async function commitInvoiceReceiptChanges(
+  userId: string,
+  changes: CommitInvoiceReceiptChangesInput
+): Promise<void> {
+  try {
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'empenhos', changes.targetEmpenho.id), { ...changes.targetEmpenho, userId });
+    if (changes.previousEmpenho && changes.previousEmpenho.id !== changes.targetEmpenho.id) {
+      batch.set(doc(db, 'empenhos', changes.previousEmpenho.id), { ...changes.previousEmpenho, userId });
+    }
+    batch.set(doc(db, 'invoices', changes.invoice.id), { ...changes.invoice, userId });
+    batch.set(doc(db, 'alerts', changes.alert.id), { ...changes.alert, userId });
+    if (changes.previousInvoiceId && changes.previousInvoiceId !== changes.invoice.id) {
+      batch.delete(doc(db, 'invoices', changes.previousInvoiceId));
+    }
+    await batch.commit();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'invoice-receipt-batch');
+  }
+}
+
+export async function commitInvoiceDeletion(
+  userId: string,
+  updatedEmpenho: Empenho,
+  invoiceId: string
+): Promise<void> {
+  try {
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'empenhos', updatedEmpenho.id), { ...updatedEmpenho, userId });
+    batch.delete(doc(db, 'invoices', invoiceId));
+    await batch.commit();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `invoices/${invoiceId}`);
+  }
+}
+
+export async function commitAllInvoicesDeletion(
+  userId: string,
+  updatedEmpenhos: Empenho[],
+  invoiceIds: string[]
+): Promise<void> {
+  try {
+    if (updatedEmpenhos.length + invoiceIds.length > 450) {
+      throw new Error('Quantidade de operações excede o limite seguro para exclusão em lote.');
+    }
+    const batch = writeBatch(db);
+    updatedEmpenhos.forEach((empenho) => {
+      batch.set(doc(db, 'empenhos', empenho.id), { ...empenho, userId });
+    });
+    invoiceIds.forEach((invoiceId) => batch.delete(doc(db, 'invoices', invoiceId)));
+    await batch.commit();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, 'invoices/bulk');
+  }
+}
+
+export async function commitAllComissoesDeletion(userId: string, ids: string[]): Promise<void> {
+  try {
+    if (ids.length > 450) {
+      throw new Error('Quantidade de comissões excede o limite seguro para exclusão em lote.');
+    }
+    const batch = writeBatch(db);
+    ids.forEach((id) => batch.delete(doc(db, 'comissoes', id)));
+    await batch.commit();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, 'comissoes/bulk');
+  }
+}
+
+export async function ensureTermoRecebimentoAssignment(
+  userId: string,
+  invoiceId: string,
+  observedMaxTermoNumero: number,
+  preferredEmissionDate: string
+): Promise<Invoice> {
+  const invoiceRef = doc(db, 'invoices', invoiceId);
+  const counterRef = doc(db, 'settings', 'termoRecebimentoCounter');
+
+  try {
+    return await runTransaction(db, async (transaction) => {
+      const invoiceSnapshot = await transaction.get(invoiceRef);
+      const counterSnapshot = await transaction.get(counterRef);
+      if (!invoiceSnapshot.exists()) {
+        throw new Error(`Nota Fiscal ${invoiceId} não encontrada para numeração do Termo.`);
+      }
+
+      const storedInvoice = invoiceSnapshot.data() as Invoice;
+      if (storedInvoice.termoNumero) {
+        const existingInvoice: Invoice = {
+          ...storedInvoice,
+          termoEmissaoDate: storedInvoice.termoEmissaoDate || preferredEmissionDate,
+        };
+        if (!storedInvoice.termoEmissaoDate) {
+          transaction.set(invoiceRef, { ...existingInvoice, userId }, { merge: true });
+        }
+        return existingInvoice;
+      }
+
+      const currentCounter = Number(counterSnapshot.data()?.currentNumber || 0);
+      const nextNumber = Math.max(currentCounter + 1, observedMaxTermoNumero + 1);
+      const updatedInvoice: Invoice = {
+        ...storedInvoice,
+        termoNumero: nextNumber,
+        termoEmissaoDate: storedInvoice.termoEmissaoDate || preferredEmissionDate,
+      };
+
+      transaction.set(counterRef, {
+        id: 'termoRecebimentoCounter',
+        currentNumber: nextNumber,
+        updatedAt: new Date().toISOString(),
+        updatedBy: userId,
+      }, { merge: true });
+      transaction.set(invoiceRef, { ...updatedInvoice, userId }, { merge: true });
+      return updatedInvoice;
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `invoices/${invoiceId}/termo`);
+    throw error;
   }
 }
 
