@@ -1,6 +1,8 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import {
+  AlertTriangle,
   Building2,
   Database,
   HardDrive,
@@ -11,14 +13,47 @@ import {
   UserCog,
 } from 'lucide-react';
 
-import { HGESM_SECTOR_EMAIL, HGESM_WORKSPACE_ID } from '../../lib/hgesmWorkspace';
+import { CreateSectorModal } from './CreateSectorModal';
+import { createHgesmFoundingWorkspace } from '../../lib/hgesmWorkspace';
+import type { CreateSectorWorkspaceInput } from '../../lib/platformAdminStore';
+import type { Workspace } from '../../lib/platformIdentity';
 
 interface PlatformAdminViewProps {
   adminEmail: string;
+  workspaces: Workspace[];
+  loadingDirectory: boolean;
+  directoryError: string | null;
+  creatingSector: boolean;
+  onCreateSector: (input: CreateSectorWorkspaceInput) => Promise<void>;
   onLogout: () => Promise<void>;
 }
 
-export function PlatformAdminView({ adminEmail, onLogout }: PlatformAdminViewProps) {
+export function PlatformAdminView({
+  adminEmail,
+  workspaces,
+  loadingDirectory,
+  directoryError,
+  creatingSector,
+  onCreateSector,
+  onLogout,
+}: PlatformAdminViewProps) {
+  const [showCreateSector, setShowCreateSector] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const visibleWorkspaces = useMemo(
+    () => workspaces.length > 0 ? workspaces : [createHgesmFoundingWorkspace('')],
+    [workspaces]
+  );
+
+  const persistentDirectoryReady = !loadingDirectory && !directoryError;
+
+  const handleCreateSector = async (input: CreateSectorWorkspaceInput) => {
+    const resultName = input.workspaceName.trim();
+    await onCreateSector(input);
+    setSuccessMessage(`Setor ${resultName} cadastrado com sucesso.`);
+    window.setTimeout(() => setSuccessMessage(null), 5000);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#08152d] to-[#0a1d3f] text-white">
       <header className="border-b border-white/10 bg-slate-950/70 backdrop-blur-xl sticky top-0 z-20">
@@ -74,12 +109,31 @@ export function PlatformAdminView({ adminEmail, onLogout }: PlatformAdminViewPro
           </div>
         </section>
 
+        {directoryError && (
+          <section className="rounded-2xl border border-amber-400/20 bg-amber-500/[0.08] px-5 py-4 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-300 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-extrabold text-amber-200">Persistência administrativa aguardando liberação</h3>
+              <p className="text-xs text-amber-100/80 mt-1 leading-relaxed">{directoryError}</p>
+              <p className="text-[11px] text-amber-100/60 mt-2 leading-relaxed">
+                O ambiente operacional do HGeSM continua independente e não é afetado por esta pendência.
+              </p>
+            </div>
+          </section>
+        )}
+
+        {successMessage && (
+          <section className="rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.08] px-5 py-3 text-xs font-bold text-emerald-200">
+            {successMessage}
+          </section>
+        )}
+
         <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <AdminMetric
             icon={<Building2 className="w-5 h-5" />}
             label="Setores cadastrados"
-            value="1"
-            detail="HGeSM como workspace fundador"
+            value={String(visibleWorkspaces.length)}
+            detail={workspaces.length > 0 ? 'Diretório administrativo persistente' : 'HGeSM exibido pelo registro fundador'}
           />
           <AdminMetric
             icon={<LockKeyhole className="w-5 h-5" />}
@@ -103,46 +157,26 @@ export function PlatformAdminView({ adminEmail, onLogout }: PlatformAdminViewPro
             </div>
             <button
               type="button"
-              disabled
-              title="O cadastro seguro será habilitado no Bloco 6"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600/40 border border-blue-400/20 px-4 py-2.5 text-xs font-bold text-blue-100 cursor-not-allowed opacity-70"
+              disabled={!persistentDirectoryReady || creatingSector}
+              onClick={() => setShowCreateSector(true)}
+              title={persistentDirectoryReady ? 'Cadastrar novo setor' : 'Aguardando acesso ao diretório administrativo no Firestore'}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 border border-blue-400/20 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-500 disabled:bg-blue-600/30 disabled:text-blue-100/60 disabled:cursor-not-allowed"
             >
               <Plus className="w-4 h-4" />
               Cadastrar novo setor
             </button>
           </div>
 
-          <div className="p-5 sm:p-6">
-            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.06] p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-              <div className="flex items-start gap-4 min-w-0">
-                <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center text-emerald-300 flex-shrink-0">
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h4 className="font-extrabold text-white">Aprovisionamento HGeSM</h4>
-                    <span className="inline-flex rounded-full bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300">
-                      Ativo
-                    </span>
-                    <span className="inline-flex rounded-full bg-white/5 border border-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">
-                      Fundador
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-1 break-all">{HGESM_SECTOR_EMAIL}</p>
-                </div>
+          <div className="p-5 sm:p-6 space-y-4">
+            {loadingDirectory && (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-slate-400">
+                Sincronizando diretório administrativo…
               </div>
+            )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:min-w-[430px]">
-                <div className="rounded-xl bg-slate-950/30 border border-white/10 px-4 py-3">
-                  <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Workspace ID</div>
-                  <div className="text-sm font-mono font-bold text-slate-200 mt-1">{HGESM_WORKSPACE_ID}</div>
-                </div>
-                <div className="rounded-xl bg-slate-950/30 border border-white/10 px-4 py-3">
-                  <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Dados</div>
-                  <div className="text-sm font-bold text-slate-200 mt-1">Legado preservado</div>
-                </div>
-              </div>
-            </div>
+            {visibleWorkspaces.map((workspace) => (
+              <WorkspaceCard key={workspace.id} workspace={workspace} />
+            ))}
           </div>
         </section>
 
@@ -153,21 +187,68 @@ export function PlatformAdminView({ adminEmail, onLogout }: PlatformAdminViewPro
               <h3 className="font-extrabold">Estado da migração</h3>
             </div>
             <p className="text-sm text-slate-300 leading-relaxed">
-              O HGeSM continua operando nas coleções legadas. Nenhum dado foi movido neste bloco e este painel não consulta essas coleções.
+              O HGeSM continua operando nas coleções legadas. Os novos perfis cadastrados aqui contêm somente metadados administrativos e ainda não possuem coleções operacionais próprias.
             </p>
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
             <div className="flex items-center gap-2 mb-3">
               <ShieldCheck className="w-5 h-5 text-emerald-300" />
-              <h3 className="font-extrabold">Próxima capacidade</h3>
+              <h3 className="font-extrabold">Cadastro seguro</h3>
             </div>
             <p className="text-sm text-slate-300 leading-relaxed">
-              O próximo bloco habilitará o cadastro persistente e seguro de novos setores, mantendo a separação entre administração da plataforma e operação de cada workspace.
+              Workspace e conta Google são criados atomicamente. IDs e e-mails duplicados são bloqueados e o administrador continua sem acesso aos dados operacionais dos setores.
             </p>
           </div>
         </section>
       </main>
+
+      <CreateSectorModal
+        open={showCreateSector}
+        creating={creatingSector}
+        onClose={() => setShowCreateSector(false)}
+        onCreate={handleCreateSector}
+      />
+    </div>
+  );
+}
+
+function WorkspaceCard({ workspace }: { workspace: Workspace }) {
+  return (
+    <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.06] p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+      <div className="flex items-start gap-4 min-w-0">
+        <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center text-emerald-300 flex-shrink-0">
+          <Building2 className="w-5 h-5" />
+        </div>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="font-extrabold text-white">{workspace.name}</h4>
+            <span className="inline-flex rounded-full bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+              {workspace.status === 'active' ? 'Ativo' : 'Inativo'}
+            </span>
+            {workspace.legacyWorkspace && (
+              <span className="inline-flex rounded-full bg-white/5 border border-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                Fundador
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-slate-400 mt-1 break-all">{workspace.authorizedEmail}</p>
+          <p className="text-[11px] text-slate-500 mt-1">{workspace.institutionalProfile.organizationName}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:min-w-[430px]">
+        <div className="rounded-xl bg-slate-950/30 border border-white/10 px-4 py-3">
+          <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Workspace ID</div>
+          <div className="text-sm font-mono font-bold text-slate-200 mt-1 break-all">{workspace.id}</div>
+        </div>
+        <div className="rounded-xl bg-slate-950/30 border border-white/10 px-4 py-3">
+          <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Dados</div>
+          <div className="text-sm font-bold text-slate-200 mt-1">
+            {workspace.legacyWorkspace ? 'Legado preservado' : 'Perfil criado'}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
