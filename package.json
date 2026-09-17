@@ -26,7 +26,8 @@
     "data:hgesm:verify": "node scripts/sync-hgesm-workspace-data.mjs verify",
     "verify:hgesm:data-cutover": "node scripts/verify-hgesm-data-cutover.mjs",
     "verify:hgesm:post-cutover": "node scripts/verify-hgesm-post-cutover.mjs",
-    "audit:legacy-runtime": "node scripts/audit-legacy-runtime.mjs"
+    "audit:legacy-runtime": "node scripts/audit-legacy-runtime.mjs",
+    "verify:drive-poc": "node scripts/verify-google-drive-poc.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",
