@@ -43,13 +43,13 @@ export interface SectorWorkspaceContext extends WorkspaceContextBase {
   workspaceName: string;
   institutionalProfile: WorkspaceInstitutionalProfile;
   /**
-   * Enquanto os dados do HGeSM ainda estiverem nas coleções globais, o contexto
-   * autoriza o hook operacional a usar temporariamente os paths legados.
+   * Define se as coleções operacionais usam os paths globais legados ou o
+   * namespace do workspace. Após o gate final do Bloco 12, o HGeSM usa false.
    */
   legacyDataMode: boolean;
   /**
    * Settings operacionais possuem migração independente das coleções principais.
-   * No Bloco 11 o contador passa a usar o path do workspace após gate ao vivo READY.
+   * Desde o Bloco 11 o HGeSM usa o path do workspace.
    */
   legacySettingsMode: boolean;
   canLoadOperationalData: true;
@@ -72,9 +72,9 @@ export type ResolvedWorkspaceContext =
 /**
  * Resolve a identidade autenticada antes de qualquer subscription operacional.
  *
- * Bloco 6.1: a conta fundadora do HGeSM possui dois perfis de interface na mesma
- * sessão Firebase. O perfil operacional é o padrão; o modo administrativo só é
- * ativado explicitamente pelo seletor de perfil e nunca carrega dados operacionais.
+ * A conta fundadora do HGeSM possui dois perfis de interface na mesma sessão
+ * Firebase. O perfil operacional é o padrão; o modo administrativo só é ativado
+ * explicitamente pelo seletor de perfil e nunca carrega dados operacionais.
  */
 export function resolveWorkspaceContext(
   email?: string | null,
@@ -115,7 +115,7 @@ export function resolveWorkspaceContext(
         ...HGESM_INSTITUTIONAL_PROFILE,
         documentHeaderLines: [...(HGESM_INSTITUTIONAL_PROFILE.documentHeaderLines || [])],
       },
-      legacyDataMode: true,
+      legacyDataMode: false,
       legacySettingsMode: false,
       canLoadOperationalData: true,
       resolutionSource: 'legacy-hgesm-bootstrap',
