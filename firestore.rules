@@ -14,14 +14,11 @@ service cloud.firestore {
 
     function isPlatformAdmin() {
       return isVerifiedUser()
-        && (
-          request.auth.token.email == 'codex.martis.dev@gmail.com'
-          || request.auth.token.email == 'codexmartisdev@gmail.com'
-        );
+        && request.auth.token.email == 'aprov1hgesm@gmail.com';
     }
 
-    // Diretórios administrativos da plataforma. No Bloco 6 o administrador pode
-    // consultar e criar registros, mas não apagar nem sobrescrever perfis existentes.
+    // Diretórios administrativos da plataforma. A conta institucional fundadora
+    // alterna entre o perfil operacional e o perfil administrativo na interface.
     match /workspaces/{id} {
       allow read, create: if isPlatformAdmin();
     }
@@ -30,7 +27,7 @@ service cloud.firestore {
       allow read, create: if isPlatformAdmin();
     }
 
-    // Coleções operacionais legadas do HGeSM permanecem com a mesma autorização.
+    // Coleções operacionais legadas do HGeSM permanecem restritas à mesma conta.
     match /empenhos/{id} {
       allow read, write: if isAuthorizedUser();
     }
