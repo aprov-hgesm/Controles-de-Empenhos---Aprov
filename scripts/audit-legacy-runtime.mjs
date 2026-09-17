@@ -41,7 +41,7 @@ function auditRuntimeSource() {
     String.raw`(?:collection|doc)\s*\(\s*db\s*,\s*['"](${operationalCollections.join('|')})['"]`,
     'g'
   );
-  const legacyCounterCall = /doc\s*\(\s*db\s*,\s*['"]settings['"]\s*,\s*['"]termoRecebimentoCounter['"]\s*\)/g;
+  const legacyCounterCall = /doc\s*\(\s*db\s*,\s*['"]settings['"]\s*,\s*['"]termoRecebimentoCounter['"]\s*\)/;
 
   for (const path of files) {
     const source = readFileSync(path, 'utf8');
