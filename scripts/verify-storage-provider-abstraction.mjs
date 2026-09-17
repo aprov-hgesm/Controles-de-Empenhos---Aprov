@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { resolve, relative } from 'node:path';
 
 const root = process.cwd();
 const findings = [];
@@ -10,47 +10,71 @@ const types = read('lib/types.ts');
 const abstraction = read('lib/documentStorage.ts');
 const empenhoClient = read('lib/empenhoDocuments.ts');
 const invoiceClient = read('lib/invoiceDocuments.ts');
-const empenhoRoute = read('app/api/empenho-documents/route.ts');
-const invoiceRoute = read('app/api/invoice-documents/route.ts');
 
-requireText(types, "DocumentStorageProvider = 'vercel-blob' | 'google-drive'", 'Contrato de providers incompleto.');
-requireText(types, "'scheduled-for-deletion'", 'Status de retenção documental não foi declarado.');
-requireText(types, 'storage?: DocumentStorageRef', 'PDFs não aceitam metadata de armazenamento opcional.');
-
-requireText(abstraction, "LEGACY_DOCUMENT_STORAGE_PROVIDER = 'vercel-blob'", 'Fallback legado deixou de ser Vercel Blob.');
-requireText(abstraction, 'if (document.storage) return document.storage', 'Resolução de metadata explícita ausente.');
-requireText(abstraction, 'objectKey: document.pathname', 'Fallback legado não preserva pathname histórico.');
-requireText(abstraction, "=== 'google-drive'", 'Abstração não reconhece Google Drive.');
+requireText(types, "DocumentStorageProvider = 'google-drive'", 'O contrato documental não está restrito ao Google Drive.');
+forbidText(types, "'vercel-blob'", 'O tipo legado de storage ainda existe.');
+requireText(abstraction, "storage.provider !== 'google-drive'", 'A abstração não rejeita providers diferentes do Google Drive.');
+forbidText(abstraction, 'LEGACY_DOCUMENT_STORAGE_PROVIDER', 'Fallback legado ainda está declarado.');
+forbidText(abstraction, 'createVercelBlobStorageRef', 'Factory do provider legado ainda está declarada.');
 
 for (const [label, source] of [
   ['cliente NE', empenhoClient],
   ['cliente NF', invoiceClient],
 ]) {
-  forbidText(source, '@vercel/blob/client', `${label}: upload oficial ainda usa Vercel Blob após o cutover.`);
   requireText(source, "provider: 'google-drive'", `${label}: novos PDFs não recebem metadata Google Drive.`);
-  requireText(source, 'requireWorkspaceDriveRuntime', `${label}: operação Drive não exige sessão do workspace.`);
+  requireText(source, 'requireWorkspaceDriveRuntime', `${label}: operação documental não exige sessão Drive do workspace.`);
+  forbidText(source, 'fetchLegacy', `${label}: fallback de leitura legado ainda existe.`);
+  forbidText(source, '/api/empenho-documents', `${label}: referência à API legada de NE ainda existe.`);
+  forbidText(source, '/api/invoice-documents', `${label}: referência à API legada de NF ainda existe.`);
 }
 
-for (const [label, source] of [
-  ['API NE legada', empenhoRoute],
-  ['API NF legada', invoiceRoute],
-]) {
-  requireText(source, "from '@vercel/blob'", `${label}: rota de compatibilidade Blob foi removida antes da auditoria final.`);
+const removedRuntimePaths = [
+  'app/api/empenho-documents/route.ts',
+  'app/api/empenho-documents/upload/route.ts',
+  'app/api/invoice-documents/route.ts',
+  'app/api/invoice-documents/upload/route.ts',
+  'app/api/document-storage/blob-decommission/route.ts',
+  'lib/blobDecommission.ts',
+  'lib/documentDriveMigration.ts',
+  'lib/server/empenhoDocumentSecurity.ts',
+  'lib/server/invoiceDocumentSecurity.ts',
+  'lib/server/firebaseIdToken.ts',
+];
+for (const path of removedRuntimePaths) {
+  if (existsSync(resolve(root, path))) findings.push(`Artefato legado ainda existe: ${path}.`);
+}
+
+const forbiddenRuntimeMarkers = [
+  '@vercel/blob',
+  'BLOB_READ_WRITE_TOKEN',
+  'BLOB_STORE_ID',
+  'vercel-blob',
+  'isBlobConfigured',
+  'createVercelBlobStorageRef',
+  'fetchLegacyEmpenhoPdfBlob',
+  'fetchLegacyInvoicePdfBlob',
+];
+
+for (const file of collectFiles(['app', 'components', 'hooks', 'lib', '.github', '.env.example', 'package.json'])) {
+  const source = read(file);
+  for (const marker of forbiddenRuntimeMarkers) {
+    if (source.includes(marker)) findings.push(`${file}: resíduo proibido detectado (${marker}).`);
+  }
 }
 
 if (findings.length) {
-  console.error('Storage Provider Abstraction — gate de cutover\n');
+  console.error('Document Storage — auditoria final Drive-only\n');
   for (const finding of findings) console.error(`  [BLOCK] ${finding}`);
-  console.error(`\nSTORAGE PROVIDER ABSTRACTION: BLOQUEADO (${findings.length} achado(s))`);
+  console.error(`\nDOCUMENT STORAGE FINAL: BLOQUEADO (${findings.length} achado(s))`);
   process.exitCode = 2;
 } else {
-  console.log('Storage Provider Abstraction — gate de cutover\n');
-  console.log('Providers reconhecidos: vercel-blob | google-drive');
-  console.log('Legado sem metadata: vercel-blob por compatibilidade');
-  console.log('Novos PDFs oficiais: google-drive');
-  console.log('Cliente Vercel Blob em novos uploads: NÃO');
-  console.log('Rotas Blob legadas: preservadas temporariamente para migração');
-  console.log('\nSTORAGE PROVIDER ABSTRACTION: READY');
+  console.log('Document Storage — auditoria final Drive-only\n');
+  console.log('Provider documental: google-drive');
+  console.log('Fallback legado: AUSENTE');
+  console.log('Rotas antigas: AUSENTES');
+  console.log('Secrets/configuração legada no repositório: AUSENTES');
+  console.log('Uploads/leitura NE e NF: GOOGLE DRIVE');
+  console.log('\nDOCUMENT STORAGE FINAL: READY');
 }
 
 function read(path) {
@@ -63,4 +87,20 @@ function requireText(source, expected, failureMessage) {
 
 function forbidText(source, forbidden, failureMessage) {
   if (source.includes(forbidden)) findings.push(failureMessage);
+}
+
+function collectFiles(entries) {
+  const files = [];
+  const visit = (absolutePath) => {
+    if (!existsSync(absolutePath)) return;
+    const stat = statSync(absolutePath);
+    if (stat.isDirectory()) {
+      for (const name of readdirSync(absolutePath)) visit(resolve(absolutePath, name));
+      return;
+    }
+    if (!/\.(?:ts|tsx|js|mjs|json|yml|yaml|example)$/.test(absolutePath) && !absolutePath.endsWith('.env.example')) return;
+    files.push(relative(root, absolutePath));
+  };
+  for (const entry of entries) visit(resolve(root, entry));
+  return files;
 }
