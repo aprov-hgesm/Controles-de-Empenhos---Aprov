@@ -25,21 +25,22 @@ export function useDocumentActions(context:DocumentActionsContext){
   const { user,invoices,setInvoices,comissoes,empenhos,showToast,formatDateOnly }=context;
 
   const buildTermoRecebimentoPdf = async (inv: Invoice) => {
-    // O conteúdo declaratório do Termo é preservado: a geração pressupõe conferência física já concluída.
-    const invMonth = inv.issueDate ? inv.issueDate.substring(0, 7) : '';
-    const matchingComissao = comissoes.find(c => c.mesReferencia === invMonth);
+    // A comissão é definida pela data efetiva de geração do Termo, nunca pela data da Nota Fiscal.
+    const now = new Date();
+    const termoEmissaoDate = inv.termoEmissaoDate || now.toISOString();
+    const termoReferenceDate = inv.termoEmissaoDate ? new Date(inv.termoEmissaoDate) : now;
+    const validTermoReferenceDate = Number.isNaN(termoReferenceDate.getTime()) ? now : termoReferenceDate;
+    const termoMonth = `${validTermoReferenceDate.getFullYear()}-${String(validTermoReferenceDate.getMonth() + 1).padStart(2, '0')}`;
+    const matchingComissao = comissoes.find(c => c.mesReferencia === termoMonth);
     if (!matchingComissao) {
       showToast(
-        invMonth
-          ? `Não existe Comissão de Recebimento cadastrada para o mês ${invMonth}. Cadastre a comissão correspondente antes de gerar o Termo.`
-          : 'A Nota Fiscal não possui mês de emissão válido para localizar a Comissão de Recebimento.',
+        `Não existe Comissão de Recebimento cadastrada para o mês de geração do Termo (${termoMonth}). Cadastre a comissão correspondente antes de gerar o TR.`,
         'error'
       );
       return;
     }
 
     let updatedInvoiceWithTR: Invoice = inv;
-    const termoEmissaoDate = inv.termoEmissaoDate || inv.registeredAt || new Date().toISOString();
     if (user) {
       const maxTermoNumero = invoices.reduce(
         (max, invoice) => invoice.termoNumero && invoice.termoNumero > max ? invoice.termoNumero : max,
@@ -61,6 +62,8 @@ export function useDocumentActions(context:DocumentActionsContext){
       showToast('Não foi possível reservar a numeração do Termo de Recebimento.', 'error');
       return;
     }
+    const effectiveTermoDate = new Date(updatedInvoiceWithTR.termoEmissaoDate || termoEmissaoDate);
+    const termoYear = Number.isNaN(effectiveTermoDate.getTime()) ? now.getFullYear() : effectiveTermoDate.getFullYear();
     setInvoices(prev => prev.map(i => i.id === inv.id ? updatedInvoiceWithTR : i));
      const targetEmp = empenhos.find(e => e.id === inv.empenhoId);
     const empenhoTotal = targetEmp?.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) || 0;
@@ -124,7 +127,7 @@ export function useDocumentActions(context:DocumentActionsContext){
     centerText('EXÉRCITO BRASILEIRO', 9, 'bold');
     centerText('HOSPITAL GERAL DE SANTA MARIA', 10, 'bold');
     yPos += 4;
-    centerText(`TERMO DE RECEBIMENTO DE ARTIGOS DE QR Nº ${termoNumero}/${new Date().getFullYear()}`, 11, 'bold', secondaryColor);
+    centerText(`TERMO DE RECEBIMENTO DE ARTIGOS DE QR Nº ${termoNumero}/${termoYear}`, 11, 'bold', secondaryColor);
     yPos += 5;
      // --- 1. NOMEAÇÃO DA COMISSÃO ---
     addSectionHeader('1. NOMEAÇÃO DA COMISSÃO');
@@ -383,7 +386,7 @@ export function useDocumentActions(context:DocumentActionsContext){
       doc.setTextColor(120, 120, 120);
 
       // Left side: Document identifier with number
-      doc.text(`Termo de Recebimento de Artigos de QR Nº ${termoNumero}/${new Date().getFullYear()}`, margin, doc.internal.pageSize.getHeight() - 10);
+      doc.text(`Termo de Recebimento de Artigos de QR Nº ${termoNumero}/${termoYear}`, margin, doc.internal.pageSize.getHeight() - 10);
 
       // Right side: Page numbering
       const pageText = `Página ${i} de ${pageCount}`;
@@ -693,10 +696,11 @@ export function useDocumentActions(context:DocumentActionsContext){
     } else {
       const invoicesRows = pdfInvoices.map((inv) => {
         const formattedIssueDate = formatDateOnly(inv.issueDate);
-        const effectiveTrDate = inv.termoEmissaoDate || (inv.termoNumero ? (inv.registeredAt || inv.issueDate) : null);
-        const formattedTrDate = effectiveTrDate
-          ? `${formatDateOnly(effectiveTrDate)}${inv.termoNumero ? ` (TR Nº ${inv.termoNumero})` : ''}`
-          : 'Pendente';
+        const formattedTrDate = inv.termoEmissaoDate
+          ? `${formatDateOnly(inv.termoEmissaoDate)}${inv.termoNumero ? ` (TR Nº ${inv.termoNumero})` : ''}`
+          : inv.termoNumero
+            ? `Data não registrada (TR Nº ${inv.termoNumero})`
+            : 'Pendente';
         const formattedComissaoDate = inv.comissaoDate ? formatDateOnly(inv.comissaoDate) : 'Pendente';
         const formattedTesourariaDate = inv.tesourariaDate ? formatDateOnly(inv.tesourariaDate) : 'Pendente';
         const formattedNS = inv.numeroNS ? inv.numeroNS : '—';
