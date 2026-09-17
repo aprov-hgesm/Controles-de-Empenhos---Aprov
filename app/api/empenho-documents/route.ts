@@ -1,5 +1,6 @@
 import { del, get } from '@vercel/blob';
 import { randomUUID } from 'node:crypto';
+import { createVercelBlobStorageRef } from '../../../lib/documentStorage';
 import {
   assertEmpenhoPath,
   documentValidationErrorResponse,
@@ -141,6 +142,7 @@ export async function POST(request: Request): Promise<Response> {
       size: result.blob.size,
       uploadedAt: result.blob.uploadedAt.toISOString(),
       uploadedBy: user.email,
+      storage: createVercelBlobStorageRef(pathname),
     };
 
     return Response.json({ document }, { headers: { 'Cache-Control': 'no-store' } });
