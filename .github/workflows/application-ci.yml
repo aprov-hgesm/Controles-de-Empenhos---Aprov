@@ -57,6 +57,9 @@ jobs:
       - name: External sector login guard
         run: npm run verify:external-sector-login
 
+      - name: Secure UID binding guard
+        run: npm run verify:uid-binding
+
       - name: Production build
         run: npm run build
 
