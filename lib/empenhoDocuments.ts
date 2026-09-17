@@ -1,6 +1,13 @@
 'use client';
 
 import type { User } from 'firebase/auth';
+import { resolveDocumentStorageRef } from './documentStorage';
+import {
+  deleteWorkspaceDriveFile,
+  fetchWorkspaceDrivePdf,
+  uploadAndVerifyWorkspacePdf,
+} from './googleDriveFiles';
+import { requireWorkspaceDriveRuntime } from './workspaceDriveRuntime';
 import type { EmpenhoPdfDocument } from './types';
 
 export const MAX_EMPENHO_PDF_BYTES = 10 * 1024 * 1024;
@@ -36,9 +43,15 @@ async function validatePdfBeforeUpload(file: File): Promise<void> {
   }
 }
 
-function createPrivatePathname(empenhoId: string): string {
+function createDriveLogicalPathname(workspaceId: string, empenhoId: string, fileId: string): string {
   const normalizedId = empenhoId.trim().toUpperCase();
-  return `empenhos/${normalizedId}/${Date.now()}-${crypto.randomUUID()}.pdf`;
+  return `google-drive/${workspaceId}/empenhos/${normalizedId}/${fileId}`;
+}
+
+function fileIdFromDriveLogicalPathname(pathname: string): string | null {
+  if (!pathname.startsWith('google-drive/')) return null;
+  const parts = pathname.split('/');
+  return parts.length >= 5 ? parts[parts.length - 1] || null : null;
 }
 
 export async function uploadEmpenhoPdf(
@@ -47,81 +60,82 @@ export async function uploadEmpenhoPdf(
   file: File
 ): Promise<EmpenhoPdfDocument> {
   await validatePdfBeforeUpload(file);
-  const { upload } = await import('@vercel/blob/client');
-  const headers = await getAuthorizationHeader(user);
-  const pathname = createPrivatePathname(empenhoId);
+  const runtime = requireWorkspaceDriveRuntime();
 
-  const blob = await upload(pathname, file, {
-    access: 'private',
-    handleUploadUrl: '/api/empenho-documents/upload',
-    clientPayload: JSON.stringify({ empenhoId }),
-    headers,
-    contentType: 'application/pdf',
-    multipart: false,
-  });
-
-  try {
-    const finalizeResponse = await fetch('/api/empenho-documents', {
-      method: 'POST',
-      headers: {
-        ...headers,
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-      body: JSON.stringify({
-        empenhoId,
-        pathname: blob.pathname,
-        originalName: file.name,
-      }),
-    });
-
-    if (!finalizeResponse.ok) {
-      throw new Error(await readApiError(finalizeResponse));
+  const { file: driveFile, sha256 } = await uploadAndVerifyWorkspacePdf(
+    runtime.session,
+    runtime.settings.empenhosFolderId,
+    file,
+    file.name,
+    {
+      emprovexDocumentType: 'empenho',
+      emprovexEmpenhoId: empenhoId.trim().toUpperCase(),
     }
+  );
 
-    const payload = (await finalizeResponse.json()) as { document: EmpenhoPdfDocument };
-    return payload.document;
-  } catch (error) {
-    await fetch('/api/empenho-documents', {
-      method: 'DELETE',
-      headers: {
-        ...headers,
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-      body: JSON.stringify({ empenhoId, pathname: blob.pathname }),
-    }).catch(() => undefined);
-    throw error;
-  }
+  return {
+    id: crypto.randomUUID(),
+    pathname: createDriveLogicalPathname(runtime.session.workspaceId, empenhoId, driveFile.id),
+    originalName: file.name,
+    contentType: 'application/pdf',
+    size: driveFile.size || file.size,
+    uploadedAt: new Date().toISOString(),
+    uploadedBy: user.email || user.uid,
+    storage: {
+      provider: 'google-drive',
+      status: 'active',
+      objectKey: driveFile.id,
+      folderKey: runtime.settings.empenhosFolderId,
+      workspaceId: runtime.session.workspaceId,
+      sha256,
+    },
+  };
 }
 
 export async function deleteEmpenhoPdfUpload(
   user: User,
   empenhoId: string,
-  pathname: string
+  pathnameOrDocument: string | EmpenhoPdfDocument
 ): Promise<void> {
+  if (typeof pathnameOrDocument !== 'string') {
+    const storage = resolveDocumentStorageRef(pathnameOrDocument);
+    if (storage.provider === 'google-drive') {
+      const runtime = requireWorkspaceDriveRuntime(storage.workspaceId);
+      await deleteWorkspaceDriveFile(runtime.session, storage.objectKey);
+      return;
+    }
+    pathnameOrDocument = pathnameOrDocument.pathname;
+  }
+
+  const driveFileId = fileIdFromDriveLogicalPathname(pathnameOrDocument);
+  if (driveFileId) {
+    const runtime = requireWorkspaceDriveRuntime();
+    await deleteWorkspaceDriveFile(runtime.session, driveFileId);
+    return;
+  }
+
   const headers = await getAuthorizationHeader(user);
-  await fetch('/api/empenho-documents', {
+  const response = await fetch('/api/empenho-documents', {
     method: 'DELETE',
     headers: {
       ...headers,
       'Content-Type': 'application/json',
     },
     cache: 'no-store',
-    body: JSON.stringify({ empenhoId, pathname }),
+    body: JSON.stringify({ empenhoId, pathname: pathnameOrDocument }),
   });
+  if (!response.ok && response.status !== 404) {
+    throw new Error(await readApiError(response));
+  }
 }
 
-export async function fetchEmpenhoPdfBlob(
+export async function fetchLegacyEmpenhoPdfBlob(
   user: User,
   empenhoId: string,
-  document: EmpenhoPdfDocument
+  pathname: string
 ): Promise<Blob> {
   const headers = await getAuthorizationHeader(user);
-  const query = new URLSearchParams({
-    empenhoId,
-    pathname: document.pathname,
-  });
+  const query = new URLSearchParams({ empenhoId, pathname });
   const response = await fetch(`/api/empenho-documents?${query.toString()}`, {
     headers,
     cache: 'no-store',
@@ -132,6 +146,24 @@ export async function fetchEmpenhoPdfBlob(
   }
 
   return response.blob();
+}
+
+export async function fetchEmpenhoPdfBlob(
+  user: User,
+  empenhoId: string,
+  document: EmpenhoPdfDocument
+): Promise<Blob> {
+  const storage = resolveDocumentStorageRef(document);
+  if (storage.status !== 'active') {
+    throw new Error('O documento não está mais disponível no armazenamento ativo.');
+  }
+
+  if (storage.provider === 'google-drive') {
+    const runtime = requireWorkspaceDriveRuntime(storage.workspaceId);
+    return fetchWorkspaceDrivePdf(runtime.session, storage.objectKey);
+  }
+
+  return fetchLegacyEmpenhoPdfBlob(user, empenhoId, document.pathname);
 }
 
 function showLoadingMessage(target: Window, action: DocumentAction): void {
