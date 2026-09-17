@@ -18,9 +18,8 @@ requireText(access, "doc(db, WORKSPACES_COLLECTION, account.workspaceId)", 'Logi
 requireText(access, "account.status === 'active'", 'Conta externa não exige status ativo.');
 requireText(access, "workspace.status !== 'active'", 'Workspace externo não exige status ativo.');
 requireText(access, 'rememberResolvedWorkspaceContext(user.uid, context)', 'Contexto validado não é associado à sessão Firebase.');
-forbidText(access, 'setDoc(', 'Bloco 15 não deve gravar identidade persistente.');
-forbidText(access, 'updateDoc(', 'Bloco 15 não deve gravar identidade persistente.');
-forbidText(access, 'runTransaction(', 'Bloco 15 não deve vincular UID; isso pertence ao Bloco 16.');
+requireText(access, 'runTransaction', 'Resolução externa precisa permanecer atômica após o Bloco 16.');
+requireText(access, 'firebaseUid', 'A resolução externa perdeu o vínculo persistente introduzido no Bloco 16.');
 
 requireText(context, "'platform-directory'", 'workspaceContext não reconhece resolução pelo diretório da plataforma.');
 requireText(context, 'getResolvedWorkspaceContextForSession', 'Não existe cache de contexto vinculado ao UID da sessão.');
@@ -46,7 +45,7 @@ if (findings.length) {
   console.log('Conta/workspace desativados: bloqueados');
   console.log('Subscriptions antes da resolução: bloqueadas');
   console.log('Writes: vinculados ao contexto validado da sessão');
-  console.log('Persistência de firebaseUid: NÃO (Bloco 16)');
+  console.log('Persistência de firebaseUid: SIM (Bloco 16)');
   console.log('\nEXTERNAL SECTOR LOGIN: READY');
 }
 
