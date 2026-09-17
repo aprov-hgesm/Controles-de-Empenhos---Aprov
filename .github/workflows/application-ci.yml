@@ -1,0 +1,55 @@
+name: Application CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-application:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript error budget
+        shell: bash
+        run: |
+          npm run typecheck > /tmp/typecheck.txt 2>&1 || true
+          cat /tmp/typecheck.txt
+          current=$(grep -c 'error TS[0-9]' /tmp/typecheck.txt || true)
+          budget=$(node -p "require('./ops/typescript-error-budget.json').maxErrors")
+          echo "TypeScript diagnostics: $current / budget: $budget"
+          if [ "$current" -gt "$budget" ]; then
+            echo 'TypeScript error budget exceeded.'
+            exit 1
+          fi
+
+      - name: Recovery tests
+        run: npm run test:recovery
+
+      - name: Production build
+        run: npm run build
+
+      - name: Diff hygiene
+        shell: bash
+        run: |
+          if [ -n "$GITHUB_BASE_REF" ]; then
+            git diff --check "origin/$GITHUB_BASE_REF...HEAD"
+          else
+            git diff --check HEAD^
+          fi
