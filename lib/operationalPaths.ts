@@ -22,6 +22,7 @@ export type OperationalCollectionName =
 export interface OperationalDataScope {
   workspaceId: string;
   legacyDataMode: boolean;
+  legacySettingsMode: boolean;
 }
 
 export function operationalScopeFromContext(
@@ -34,6 +35,7 @@ export function operationalScopeFromContext(
   return {
     workspaceId: context.workspaceId,
     legacyDataMode: context.legacyDataMode,
+    legacySettingsMode: context.legacySettingsMode,
   };
 }
 
@@ -72,8 +74,13 @@ export function getOperationalDocumentPath(
   return `${getOperationalCollectionPath(scope, collectionName)}/${documentId}`;
 }
 
+/**
+ * Settings operacionais possuem um eixo de migração independente das coleções.
+ * Isso permite mover contadores/configurações por workspace antes de redirecionar
+ * empenhos, NFs, alertas, comissões e cronogramas.
+ */
 export function getOperationalSettingsCollectionPath(scope: OperationalDataScope): string {
-  return scope.legacyDataMode
+  return scope.legacySettingsMode
     ? 'settings'
     : `workspaces/${scope.workspaceId}/settings`;
 }
