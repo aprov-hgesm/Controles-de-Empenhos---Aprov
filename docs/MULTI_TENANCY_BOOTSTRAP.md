@@ -1,70 +1,62 @@
-# EMPROVEX — Bootstrap administrativo (Bloco 2)
+# EMPROVEX — Bootstrap administrativo
 
-## Objetivo
+## Status atual
 
-O Bloco 2 registra formalmente a conta administrativa inicial da plataforma:
+O desenho original do Bloco 2 foi substituído pelo **Bloco 6.1 — conta fundadora multiperfil**.
 
-`codex.martis.dev@gmail.com`
+A identidade fundadora atual é:
 
-Tipo de conta:
+```text
+aprov1hgesm@gmail.com
+```
 
-`platformAdmin`
+A mesma sessão Firebase pode operar em dois contextos de interface:
 
-A finalidade desta conta é administrar a plataforma EMPROVEX. Ela não representa um setor operacional e não deve receber acesso automático aos empenhos, notas fiscais, comissões, cronogramas, TRs ou PDFs dos workspaces.
+```text
+Perfil operacional HGeSM → sector / workspace hgesm-aprov
+Perfil Administração EMPROVEX → platformAdmin / sem subscriptions operacionais
+```
 
-## Implementação
+O perfil operacional é o padrão. O modo administrativo somente é ativado explicitamente pelo seletor de perfil.
 
-O contrato de bootstrap está em:
+## Implementação atual
 
-`lib/platformBootstrap.ts`
+A arquitetura não utiliza mais um arquivo ou uma conta bootstrap administrativa separada.
 
-Ele define:
+Os contratos relevantes estão em:
 
-- `BOOTSTRAP_PLATFORM_ADMIN_EMAIL`;
-- `BOOTSTRAP_PLATFORM_ADMIN_SOURCE`;
-- `isBootstrapPlatformAdminEmail()`;
-- `createBootstrapPlatformAdminAccount()`.
-
-O objeto gerado segue o contrato `PlatformAdminAccount` criado no Bloco 1.
+- `lib/hgesmWorkspace.ts` — identidade e workspace fundador;
+- `lib/profileMode.ts` — alternância de perfil;
+- `lib/workspaceContext.ts` — resolução segura do contexto;
+- `lib/platformAdminStore.ts` — metadados administrativos;
+- `firestore.rules` — autorização do diretório administrativo e das coleções legadas.
 
 ## Segurança e compatibilidade
 
-Este bloco é deliberadamente aditivo e não altera o runtime atual do HGeSM.
+A troca de perfil não cria uma segunda autenticação. O Firebase continua vendo a mesma identidade institucional, enquanto o EMPROVEX controla qual contexto de interface está ativo.
 
-Permanece verdadeiro após o Bloco 2:
+No modo Administração:
 
-1. `aprov1hgesm@gmail.com` continua sendo a única conta autorizada pelas regras atuais do Firestore para as coleções operacionais globais.
-2. `codex.martis.dev@gmail.com` ainda não foi adicionada às regras atuais do Firestore.
-3. A conta administrativa ainda não inicializa uma interface própria no runtime.
-4. Nenhuma collection operacional foi movida.
-5. Nenhum documento do Vercel Blob foi movido ou teve autorização ampliada.
-6. Nenhum contador de TR foi alterado.
-7. GitHub, Vercel e o projeto Firebase continuam os mesmos.
+- não são abertas subscriptions de empenhos, notas fiscais, comissões, cronogramas ou alertas;
+- o painel trabalha somente com os diretórios administrativos;
+- os dados operacionais legados do HGeSM não são migrados ou alterados.
 
-## Por que a conta não é adicionada agora às regras existentes
+No modo HGeSM:
 
-As regras atuais protegem coleções globais do HGeSM. Adicionar o novo administrador diretamente à função de autorização atual ampliaria o acesso dele aos dados operacionais antes da existência do isolamento por workspace.
+- o workspace `hgesm-aprov` continua usando temporariamente as coleções globais legadas;
+- os fluxos atuais permanecem preservados até a migração multi-tenant controlada.
 
-A sequência segura é:
+## Persistência fundadora
+
+O sistema materializa somente:
 
 ```text
-Bloco 2 — registrar identidade bootstrap
-        ↓
-Bloco 3 — registrar HGeSM como setor fundador
-        ↓
-Bloco 4 — resolver contexto da conta antes de subscriptions
-        ↓
-Blocos seguintes — materializar persistência e regras multi-tenant
-        ↓
-só então ativar o acesso administrativo completo
+platformAccounts/aprov1hgesm@gmail.com
+  accountType: sector
+  workspaceId: hgesm-aprov
+
+workspaces/hgesm-aprov
+  legacyWorkspace: true
 ```
 
-## Estado do firebaseUid
-
-O bootstrap não exige cadastro manual antecipado no Firebase Authentication.
-
-O campo `firebaseUid` do `PlatformAdminAccount` permanece ausente até que a conta faça autenticação Google em uma etapa futura em que o runtime já consiga resolver `platformAdmin` sem abrir subscriptions operacionais.
-
-## Próximo bloco
-
-O Bloco 3 registra o HGeSM como workspace fundador, associado à conta operacional `aprov1hgesm@gmail.com`, ainda sem migrar os dados das coleções atuais.
+A capacidade administrativa da identidade fundadora é resolvida pelo contexto de perfil e pelas Firestore Rules, sem necessidade de um segundo documento de conta administrativa.
