@@ -20,7 +20,11 @@
     "migration:hgesm:status": "node scripts/migrate-hgesm-workspace.mjs status",
     "migration:hgesm:verify": "node scripts/migrate-hgesm-workspace.mjs verify",
     "audit:hgesm:integrity": "node scripts/audit-hgesm-workspace-integrity.mjs",
-    "verify:hgesm:settings-cutover": "node scripts/verify-hgesm-workspace-settings.mjs"
+    "verify:hgesm:settings-cutover": "node scripts/verify-hgesm-workspace-settings.mjs",
+    "data:hgesm:plan": "node scripts/sync-hgesm-workspace-data.mjs plan",
+    "data:hgesm:status": "node scripts/sync-hgesm-workspace-data.mjs status",
+    "data:hgesm:verify": "node scripts/sync-hgesm-workspace-data.mjs verify",
+    "verify:hgesm:data-cutover": "node scripts/verify-hgesm-data-cutover.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",
