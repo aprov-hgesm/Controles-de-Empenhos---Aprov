@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 
 import { auth } from '../../lib/firebase';
 import { hasDualProfileAccess, setActiveProfileMode } from '../../lib/profileMode';
+import { resolveWorkspaceContext } from '../../lib/workspaceContext';
+import { WorkspaceDriveControl } from './WorkspaceDriveControl';
 
 interface AppHeaderProps {
   customLogo: string | null;
@@ -27,7 +29,15 @@ export function AppHeader({
   onRemoveLogo,
 }: AppHeaderProps) {
   const router = useRouter();
-  const canSwitchProfile = hasDualProfileAccess(auth.currentUser?.email);
+  const currentUser = auth.currentUser;
+  const canSwitchProfile = hasDualProfileAccess(currentUser?.email);
+  const workspaceContext = resolveWorkspaceContext(currentUser?.email);
+  const resolvedDriveControl = driveControl ?? (
+    <WorkspaceDriveControl
+      user={currentUser}
+      workspaceContext={workspaceContext}
+    />
+  );
 
   const openAdministration = () => {
     if (!canSwitchProfile) return;
@@ -109,7 +119,7 @@ export function AppHeader({
           </div>
         )}
 
-        {driveControl}
+        {resolvedDriveControl}
 
         {canSwitchProfile && (
           <button
