@@ -1,8 +1,16 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { onAuthStateChanged, signInWithPopup, signOut, type User } from 'firebase/auth';
+import {
+  browserLocalPersistence,
+  onAuthStateChanged,
+  setPersistence,
+  signInWithPopup,
+  signOut,
+  type User,
+} from 'firebase/auth';
 import { collection, onSnapshot } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 import { auth, db, googleProvider, handleFirestoreError, OperationType } from '../lib/firebase';
 import type { Alert, Comissao, CronogramaEmpenho, Empenho, Invoice } from '../lib/types';
 import {
@@ -19,6 +27,7 @@ import { normalizeSupplier } from '../features/empenhos/domain/empenhoHelpers';
  * fundador do HGeSM pode usar os paths globais legados.
  */
 export function useOperationalData() {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -51,15 +60,10 @@ export function useOperationalData() {
   }, []);
 
   useEffect(() => {
-    if (
-      user &&
-      workspaceContext.status === 'platformAdmin' &&
-      typeof window !== 'undefined' &&
-      window.location.pathname !== '/admin'
-    ) {
-      window.location.replace('/admin');
+    if (user && workspaceContext.status === 'platformAdmin') {
+      router.replace('/admin');
     }
-  }, [user, workspaceContext.status]);
+  }, [router, user, workspaceContext.status]);
 
   useEffect(() => {
     if (!user || workspaceContext.status !== 'unauthorized') return;
@@ -144,16 +148,22 @@ export function useOperationalData() {
   const signInUser = async () => {
     setSyncing(true);
     try {
+      // Garante que a sessão sobreviva a mudanças de rota/recarregamentos antes
+      // de iniciar o popup. Isso é especialmente importante para o perfil admin,
+      // que navega imediatamente para /admin após autenticar.
+      await setPersistence(auth, browserLocalPersistence);
+
       const credential = await signInWithPopup(auth, googleProvider);
       const resolvedContext = resolveWorkspaceContext(credential.user.email);
 
       if (resolvedContext.status === 'unauthorized' || resolvedContext.status === 'anonymous') {
+        const returnedEmail = credential.user.email || 'sem e-mail informado';
         await signOut(auth);
-        throw new Error('Esta conta Google ainda não está autorizada no EMPROVEX.');
+        throw new Error(`A conta Google ${returnedEmail} ainda não está autorizada no EMPROVEX.`);
       }
 
       if (resolvedContext.status === 'platformAdmin') {
-        window.location.assign('/admin');
+        router.replace('/admin');
       }
 
       return resolvedContext;
