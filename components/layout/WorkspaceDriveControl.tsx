@@ -11,11 +11,18 @@ import {
   LogOut,
   RefreshCw,
   ShieldCheck,
+  Trash2,
   TriangleAlert,
   X,
 } from 'lucide-react';
 
 import { useWorkspaceDriveStorage } from '../../hooks/useWorkspaceDriveStorage';
+import {
+  cleanupMigratedLegacyBlobCopies,
+  collectBlobCleanupCandidates,
+  type BlobCleanupProgress,
+  type BlobCleanupResult,
+} from '../../lib/blobDecommission';
 import {
   countDocumentStorage,
   migrateLegacyDocumentsToDrive,
@@ -45,6 +52,12 @@ export function WorkspaceDriveControl({
   const [migrationProgress, setMigrationProgress] = useState<DocumentMigrationProgress | null>(null);
   const [migrationError, setMigrationError] = useState<string | null>(null);
   const [migrationFailures, setMigrationFailures] = useState<string[]>([]);
+  const [cleanupEligibleCount, setCleanupEligibleCount] = useState(0);
+  const [cleanupBusy, setCleanupBusy] = useState(false);
+  const [cleanupConfirmOpen, setCleanupConfirmOpen] = useState(false);
+  const [cleanupProgress, setCleanupProgress] = useState<BlobCleanupProgress | null>(null);
+  const [cleanupResult, setCleanupResult] = useState<BlobCleanupResult | null>(null);
+  const [cleanupError, setCleanupError] = useState<string | null>(null);
   const {
     settings,
     status,
@@ -67,6 +80,9 @@ export function WorkspaceDriveControl({
         getInvoices(user.uid),
       ]);
       setMigrationCounts(countDocumentStorage(empenhos, invoices));
+      if (!cleanupResult || cleanupResult.failed > 0) {
+        setCleanupEligibleCount(collectBlobCleanupCandidates(empenhos, invoices).length);
+      }
     } catch (countError) {
       setMigrationError(countError instanceof Error ? countError.message : 'Falha ao analisar os documentos atuais.');
     }
@@ -107,6 +123,7 @@ export function WorkspaceDriveControl({
 
   const handleDisconnect = () => {
     setMigrationConfirmOpen(false);
+    setCleanupConfirmOpen(false);
     disconnect();
     notify('Autorização temporária do Google Drive descartada. A configuração do workspace foi preservada.', 'info');
   };
@@ -175,8 +192,86 @@ export function WorkspaceDriveControl({
     }
   };
 
+  const requestCleanup = () => {
+    if (!user) {
+      setCleanupError('Sua sessão expirou. Entre novamente antes de descomissionar o Blob.');
+      return;
+    }
+    if (!migrationCounts || migrationCounts.totalLegacy !== 0) {
+      setCleanupError('A limpeza do Blob só pode começar com 0 referências legadas no Firestore.');
+      return;
+    }
+    if (cleanupEligibleCount === 0) {
+      setCleanupError('Nenhuma cópia física legada foi identificada para limpeza.');
+      return;
+    }
+    setCleanupError(null);
+    setCleanupConfirmOpen(true);
+  };
+
+  const handleCleanup = async () => {
+    if (!user) {
+      setCleanupConfirmOpen(false);
+      setCleanupError('Sua sessão expirou. Entre novamente antes de descomissionar o Blob.');
+      return;
+    }
+
+    setCleanupConfirmOpen(false);
+    setCleanupBusy(true);
+    setCleanupError(null);
+    setCleanupProgress(null);
+    setCleanupResult(null);
+
+    try {
+      const [empenhos, invoices] = await Promise.all([
+        getEmpenhos(user.uid),
+        getInvoices(user.uid),
+      ]);
+      const counts = countDocumentStorage(empenhos, invoices);
+      setMigrationCounts(counts);
+
+      if (counts.totalLegacy !== 0) {
+        throw new Error('A limpeza foi bloqueada porque surgiram referências legadas no Firestore.');
+      }
+
+      const candidates = collectBlobCleanupCandidates(empenhos, invoices);
+      setCleanupEligibleCount(candidates.length);
+      if (candidates.length === 0) {
+        notify('Nenhuma cópia física legada do Blob precisa ser removida.', 'info');
+        return;
+      }
+
+      const result = await cleanupMigratedLegacyBlobCopies(
+        user,
+        empenhos,
+        invoices,
+        setCleanupProgress
+      );
+      setCleanupResult(result);
+
+      if (result.failed === 0) {
+        setCleanupEligibleCount(0);
+        notify(`${result.total} cópia(s) legada(s) do Blob removida(s) ou confirmada(s) como ausentes.`, 'success');
+      } else {
+        setCleanupError(`${result.failed} cópia(s) não puderam ser removidas. A limpeza pode ser retomada com segurança.`);
+        notify('Descomissionamento físico do Blob concluído parcialmente.', 'error');
+      }
+    } catch (cleanupException) {
+      const message = cleanupException instanceof Error
+        ? cleanupException.message
+        : 'Falha inesperada durante a limpeza física do Blob.';
+      setCleanupError(message);
+      notify(message, 'error');
+    } finally {
+      setCleanupBusy(false);
+    }
+  };
+
   const migrationPercent = migrationProgress && migrationProgress.total > 0
     ? Math.round((migrationProgress.processed / migrationProgress.total) * 100)
+    : 0;
+  const cleanupPercent = cleanupProgress && cleanupProgress.total > 0
+    ? Math.round((cleanupProgress.processed / cleanupProgress.total) * 100)
     : 0;
 
   return (
@@ -290,20 +385,8 @@ export function WorkspaceDriveControl({
                     </div>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setMigrationConfirmOpen(false)}
-                      className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-[11px] font-black text-amber-800 hover:bg-amber-100"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleMigration}
-                      className="rounded-lg bg-emerald-700 px-3 py-2 text-[11px] font-black text-white hover:bg-emerald-800"
-                    >
-                      Confirmar e iniciar
-                    </button>
+                    <button type="button" onClick={() => setMigrationConfirmOpen(false)} className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-[11px] font-black text-amber-800 hover:bg-amber-100">Cancelar</button>
+                    <button type="button" onClick={handleMigration} className="rounded-lg bg-emerald-700 px-3 py-2 text-[11px] font-black text-white hover:bg-emerald-800">Confirmar e iniciar</button>
                   </div>
                 </div>
               )}
@@ -311,32 +394,100 @@ export function WorkspaceDriveControl({
               <button
                 type="button"
                 onClick={requestMigration}
-                disabled={migrationBusy || migrationConfirmOpen || !isConnected || migrationCounts.totalLegacy === 0}
+                disabled={migrationBusy || migrationConfirmOpen || cleanupBusy || migrationCounts.totalLegacy === 0 || !isConnected}
                 className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-3 py-2.5 text-xs font-black text-white hover:bg-emerald-800 disabled:opacity-50"
               >
                 {migrationBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />}
-                {migrationBusy
-                  ? 'Migrando e verificando...'
-                  : migrationCounts.totalLegacy === 0
-                    ? 'Migração concluída'
-                    : migrationConfirmOpen
-                      ? 'Confirmação pendente'
-                      : 'Migrar PDFs automaticamente'}
+                {migrationBusy ? 'Migrando e verificando...' : migrationCounts.totalLegacy === 0 ? 'Migração concluída' : migrationConfirmOpen ? 'Confirmação pendente' : 'Migrar PDFs automaticamente'}
               </button>
             </div>
           )}
 
-          {(error || migrationError) && (
+          {settings && migrationCounts && migrationCounts.totalLegacy === 0 && migrationCounts.drive > 0 && (
+            <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50/40 p-3">
+              <div className="flex items-center gap-2">
+                <Trash2 className="w-4 h-4 text-rose-700" />
+                <p className="text-xs font-black text-rose-900">Bloco 14E — Descomissionar Vercel Blob</p>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-white p-2 text-center border border-rose-100">
+                  <div className="text-base font-black text-rose-700">{cleanupResult && cleanupResult.failed === 0 ? 0 : cleanupEligibleCount}</div>
+                  <div className="text-[9px] font-bold text-rose-600 uppercase">Cópias físicas pendentes</div>
+                </div>
+                <div className="rounded-lg bg-white p-2 text-center border border-emerald-100">
+                  <div className="text-base font-black text-emerald-700">{migrationCounts.drive}</div>
+                  <div className="text-[9px] font-bold text-emerald-600 uppercase">Referências no Drive</div>
+                </div>
+              </div>
+              <p className="mt-2 text-[10px] leading-relaxed text-slate-600">
+                Esta etapa remove somente os pathnames históricos já migrados. O Google Drive e o Firestore não são alterados.
+              </p>
+
+              {cleanupProgress && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-1">
+                    <span className="truncate pr-2">{cleanupProgress.currentLabel}</span>
+                    <span>{cleanupProgress.processed}/{cleanupProgress.total}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-rose-100 overflow-hidden">
+                    <div className="h-full bg-rose-600 transition-all" style={{ width: `${cleanupPercent}%` }} />
+                  </div>
+                </div>
+              )}
+
+              {cleanupResult && cleanupResult.failed === 0 && (
+                <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5 text-[10px] font-bold text-emerald-800">
+                  Limpeza física verificada: {cleanupResult.deleted} excluída(s), {cleanupResult.alreadyMissing} já ausente(s), 0 falhas.
+                </div>
+              )}
+
+              {cleanupConfirmOpen && !cleanupBusy && (
+                <div className="mt-3 rounded-xl border border-rose-300 bg-rose-50 p-3">
+                  <div className="flex items-start gap-2">
+                    <TriangleAlert className="w-4 h-4 text-rose-700 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-black text-rose-900">Excluir definitivamente as cópias antigas do Blob?</p>
+                      <p className="mt-1 text-[10px] leading-relaxed text-rose-800">
+                        Esta ação é irreversível no Vercel Blob. Ela só remove as cópias físicas históricas já migradas e verificadas no Google Drive; os documentos ativos do Drive e seus metadados no Firestore permanecem intactos.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => setCleanupConfirmOpen(false)} className="rounded-lg border border-rose-200 bg-white px-3 py-2 text-[11px] font-black text-rose-800 hover:bg-rose-100">Cancelar</button>
+                    <button type="button" onClick={handleCleanup} className="rounded-lg bg-rose-700 px-3 py-2 text-[11px] font-black text-white hover:bg-rose-800">Excluir e verificar</button>
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={requestCleanup}
+                disabled={cleanupBusy || cleanupConfirmOpen || migrationBusy || cleanupEligibleCount === 0 || Boolean(cleanupResult && cleanupResult.failed === 0)}
+                className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-rose-700 px-3 py-2.5 text-xs font-black text-white hover:bg-rose-800 disabled:opacity-50"
+              >
+                {cleanupBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : cleanupResult && cleanupResult.failed === 0 ? <CheckCircle2 className="w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
+                {cleanupBusy ? 'Excluindo e verificando...' : cleanupResult && cleanupResult.failed === 0 ? 'Limpeza do Blob concluída' : cleanupConfirmOpen ? 'Confirmação pendente' : 'Excluir cópias legadas do Blob'}
+              </button>
+            </div>
+          )}
+
+          {(error || migrationError || cleanupError) && (
             <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
               <div className="flex items-start gap-2">
                 <TriangleAlert className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <span>{migrationError || error}</span>
-                <button type="button" onClick={() => { clearError(); setMigrationError(null); }} className="ml-auto text-red-400 hover:text-red-700"><X className="w-3.5 h-3.5" /></button>
+                <span>{cleanupError || migrationError || error}</span>
+                <button type="button" onClick={() => { clearError(); setMigrationError(null); setCleanupError(null); }} className="ml-auto text-red-400 hover:text-red-700"><X className="w-3.5 h-3.5" /></button>
               </div>
               {migrationFailures.length > 0 && (
                 <div className="mt-2 max-h-24 overflow-y-auto space-y-1 text-[10px]">
                   {migrationFailures.slice(0, 6).map((failure) => <div key={failure}>• {failure}</div>)}
                   {migrationFailures.length > 6 && <div>+ {migrationFailures.length - 6} falha(s) adicional(is)</div>}
+                </div>
+              )}
+              {cleanupResult && cleanupResult.failures.length > 0 && (
+                <div className="mt-2 max-h-24 overflow-y-auto space-y-1 text-[10px]">
+                  {cleanupResult.failures.slice(0, 6).map((failure) => <div key={failure}>• {failure}</div>)}
+                  {cleanupResult.failures.length > 6 && <div>+ {cleanupResult.failures.length - 6} falha(s) adicional(is)</div>}
                 </div>
               )}
             </div>
@@ -347,7 +498,7 @@ export function WorkspaceDriveControl({
               <button
                 type="button"
                 onClick={handleConnect}
-                disabled={loading || status === 'loading' || migrationBusy}
+                disabled={loading || status === 'loading' || migrationBusy || cleanupBusy}
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-[#00288e] px-3 py-2.5 text-xs font-black text-white hover:bg-[#001e6a] disabled:opacity-50"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : isConfigured ? <RefreshCw className="w-4 h-4" /> : <HardDrive className="w-4 h-4" />}
@@ -357,7 +508,7 @@ export function WorkspaceDriveControl({
               <button
                 type="button"
                 onClick={handleDisconnect}
-                disabled={migrationBusy}
+                disabled={migrationBusy || cleanupBusy}
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-black text-slate-700 hover:bg-slate-50 disabled:opacity-50"
               >
                 <LogOut className="w-4 h-4" /> Desconectar sessão
