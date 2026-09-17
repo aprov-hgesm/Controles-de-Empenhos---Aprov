@@ -7,18 +7,40 @@ export interface Item {
   received: number; // total quantity already received (liquidado/recebido)
 }
 
+export type DocumentStorageProvider = 'vercel-blob' | 'google-drive';
+export type DocumentStorageStatus = 'active' | 'scheduled-for-deletion' | 'deleted';
+
+export interface DocumentStorageRef {
+  provider: DocumentStorageProvider;
+  status: DocumentStorageStatus;
+  /** Chave física do provedor: pathname no Blob ou fileId no Google Drive. */
+  objectKey: string;
+  /** Pasta/container lógico do provedor quando aplicável, ex.: folderId no Drive. */
+  folderKey?: string;
+  /** Workspace proprietário do documento. Será obrigatório no cutover multi-setor. */
+  workspaceId?: string;
+  /** Hash de integridade, preenchido quando a etapa de hashing estiver habilitada. */
+  sha256?: string;
+  deletedAt?: string;
+  deletedBy?: string;
+}
+
 export interface EmpenhoPdfDocument {
   id: string;
+  /** Mantido por compatibilidade com PDFs legados e com o Vercel Blob atual. */
   pathname: string;
   originalName: string;
   contentType: 'application/pdf';
   size: number;
   uploadedAt: string;
   uploadedBy: string;
+  /** Ausente em documentos antigos; ausência equivale a Vercel Blob ativo. */
+  storage?: DocumentStorageRef;
 }
 
 export interface InvoicePdfDocument {
   id: string;
+  /** Mantido por compatibilidade com PDFs legados e com o Vercel Blob atual. */
   pathname: string;
   originalName: string;
   contentType: 'application/pdf';
@@ -27,6 +49,8 @@ export interface InvoicePdfDocument {
   uploadedBy: string;
   empenhoId: string;
   invoiceId: string;
+  /** Ausente em documentos antigos; ausência equivale a Vercel Blob ativo. */
+  storage?: DocumentStorageRef;
 }
 
 export interface Empenho {
