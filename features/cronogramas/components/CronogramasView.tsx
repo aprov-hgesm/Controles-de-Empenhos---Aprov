@@ -415,6 +415,7 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                           <button
                             onClick={handleSaveCronograma}
                             disabled={isSavingCronograma}
+                            aria-busy={isSavingCronograma}
                             className="px-4 py-2 bg-[#00288e] hover:bg-[#001e6a] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-50"
                           >
                             {isSavingCronograma ? (

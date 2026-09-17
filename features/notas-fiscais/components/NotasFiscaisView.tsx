@@ -92,9 +92,31 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
   const nfPdfInputRef = useRef<HTMLInputElement>(null);
   const [nfPdfFile, setNfPdfFile] = useState<File | null>(null);
   const [isSavingInvoice, setIsSavingInvoice] = useState(false);
+  const [isSavingComissao, setIsSavingComissao] = useState(false);
+  const [processingInvoiceId, setProcessingInvoiceId] = useState<string | null>(null);
   const [consolidatingInvoiceId, setConsolidatingInvoiceId] = useState<string | null>(null);
   const getInvoiceLocation = (invoice: Invoice): NonNullable<Invoice['localizacaoAtual']> =>
     invoice.localizacaoAtual || (invoice.tesourariaDate ? 'TESOURARIA' : invoice.comissaoDate ? 'COMISSAO' : 'APROVISIONAMENTO');
+
+  const runInvoiceTransition = async (invoiceId: string, action: () => Promise<unknown> | unknown) => {
+    if (processingInvoiceId !== null) return;
+    setProcessingInvoiceId(invoiceId);
+    try {
+      await action();
+    } finally {
+      setProcessingInvoiceId(null);
+    }
+  };
+
+  const saveComissaoWithFeedback = async () => {
+    if (isSavingComissao) return;
+    setIsSavingComissao(true);
+    try {
+      await handleSaveComissao();
+    } finally {
+      setIsSavingComissao(false);
+    }
+  };
 
   const handleNfPdfSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -468,8 +490,10 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                             </div>
                             <select
                               value={getInvoiceLocation(inv)}
-                              onChange={(event) => handleUpdateInvoiceLocation(inv.id, event.target.value)}
-                              className="h-10 px-3 rounded-xl border border-sky-200 bg-white text-xs font-extrabold text-sky-900 outline-none focus:ring-1 focus:ring-sky-500 min-w-[220px]"
+                              onChange={(event) => runInvoiceTransition(inv.id, () => handleUpdateInvoiceLocation(inv.id, event.target.value))}
+                              disabled={processingInvoiceId !== null}
+                              aria-busy={processingInvoiceId === inv.id}
+                              className="h-10 px-3 rounded-xl border border-sky-200 bg-white text-xs font-extrabold text-sky-900 outline-none focus:ring-1 focus:ring-sky-500 min-w-[220px] disabled:opacity-60 disabled:cursor-wait"
                             >
                               <option value="APROVISIONAMENTO">Aprovisionamento</option>
                               <option value="COMISSAO">Comissão de Recebimento</option>
@@ -511,10 +535,13 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                               
                               {getInvoiceLocation(inv) === 'APROVISIONAMENTO' && (
                                 <button
-                                  onClick={() => handleMarkComissao(inv.id)}
-                                  className="mt-1 w-full py-1.5 bg-[#dde1ff] hover:bg-[#00288e] text-[#001453] hover:text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                                  onClick={() => runInvoiceTransition(inv.id, () => handleMarkComissao(inv.id))}
+                                  disabled={processingInvoiceId !== null}
+                                  aria-busy={processingInvoiceId === inv.id}
+                                  className="mt-1 w-full py-1.5 bg-[#dde1ff] hover:bg-[#00288e] text-[#001453] hover:text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-wait"
                                 >
-                                  <Check className="w-3.5 h-3.5" /> Enviar p/ Comissão
+                                  {processingInvoiceId === inv.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                  {processingInvoiceId === inv.id ? 'Enviando…' : 'Enviar p/ Comissão'}
                                 </button>
                               )}
                             </div>
@@ -539,8 +566,9 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
 
                               {getInvoiceLocation(inv) === 'COMISSAO' && (
                                 <button
-                                  onClick={() => handleMarkTesouraria(inv.id)}
-                                  disabled={getInvoiceLocation(inv) !== 'COMISSAO'}
+                                  onClick={() => runInvoiceTransition(inv.id, () => handleMarkTesouraria(inv.id))}
+                                  disabled={getInvoiceLocation(inv) !== 'COMISSAO' || processingInvoiceId !== null}
+                                  aria-busy={processingInvoiceId === inv.id}
                                   className={`mt-1 w-full py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                                     getInvoiceLocation(inv) === 'COMISSAO'
                                       ? 'bg-[#00288e] hover:bg-[#1e40af] text-white shadow-sm' 
@@ -548,7 +576,8 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                   }`}
                                   title={getInvoiceLocation(inv) !== 'COMISSAO' ? "A NF precisa estar na Comissão de Recebimento antes do envio à Tesouraria" : ""}
                                 >
-                                  <Check className="w-3.5 h-3.5" /> Enviar p/ Tesouraria
+                                  {processingInvoiceId === inv.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                  {processingInvoiceId === inv.id ? 'Enviando…' : 'Enviar p/ Tesouraria'}
                                 </button>
                               )}
                             </div>
@@ -834,6 +863,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                   }
                                 }}
                                 disabled={isSavingInvoice}
+                                aria-busy={isSavingInvoice}
                                 className="h-12 px-6 sm:px-8 bg-[#00288e] text-white rounded-full font-bold text-xs sm:text-sm shadow-md active:scale-95 transition-all duration-100 hover:bg-[#1e40af] flex items-center gap-2 disabled:opacity-60 disabled:cursor-wait"
                               >
                                 {isSavingInvoice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {isSavingInvoice ? 'Salvando e enviando PDF…' : 'Salvar Recebimento'}
@@ -1017,10 +1047,13 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                       </div>
 
                       <button
-                        onClick={handleSaveComissao}
-                        className="w-full h-11 bg-[#00288e] text-white rounded-xl font-bold text-xs hover:bg-[#1e40af] transition-all flex items-center justify-center gap-2 shadow-md active:scale-95"
+                        onClick={saveComissaoWithFeedback}
+                        disabled={isSavingComissao}
+                        aria-busy={isSavingComissao}
+                        className="w-full h-11 bg-[#00288e] text-white rounded-xl font-bold text-xs hover:bg-[#1e40af] transition-all flex items-center justify-center gap-2 shadow-md active:scale-95 disabled:opacity-60 disabled:cursor-wait"
                       >
-                        <Save className="w-4 h-4" /> Salvar Comissão de Recebimento
+                        {isSavingComissao ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        {isSavingComissao ? 'Salvando Comissão…' : 'Salvar Comissão de Recebimento'}
                       </button>
 
                     </div>

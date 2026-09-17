@@ -2,7 +2,7 @@
 
 import React from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { AlertCircle, AlertTriangle, ArrowLeft, Braces, Calendar, CalendarDays, Check, CheckCircle2, ChevronRight, Copy, Edit, Eye, FileDown, FileText, Package, Plus, Printer, Save, Search, Trash2, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArrowLeft, Braces, Calendar, CalendarDays, Check, CheckCircle2, ChevronRight, Copy, Edit, Eye, FileDown, FileText, Loader2, Package, Plus, Printer, Save, Search, Trash2, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActions';
 import type { Empenho, Invoice, EmpenhoPdfDocument } from '../../../lib/types';
@@ -89,6 +89,42 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
   const [editingPregaoEmpenhoId, setEditingPregaoEmpenhoId] = React.useState<string | null>(null);
   const [pregaoDraft, setPregaoDraft] = React.useState('');
   const [savingPregao, setSavingPregao] = React.useState(false);
+  const [isCreatingEmpenho, setIsCreatingEmpenho] = React.useState(false);
+  const [isSavingReview, setIsSavingReview] = React.useState(false);
+  const [isSavingItem, setIsSavingItem] = React.useState(false);
+
+  const handleCreateEmpenhoWithFeedback = async (event: React.FormEvent) => {
+    if (isCreatingEmpenho) {
+      event.preventDefault();
+      return;
+    }
+    setIsCreatingEmpenho(true);
+    try {
+      await handleCreateEmpenho(event);
+    } finally {
+      setIsCreatingEmpenho(false);
+    }
+  };
+
+  const handleSaveReviewWithFeedback = async () => {
+    if (isSavingReview) return;
+    setIsSavingReview(true);
+    try {
+      await handleSaveReviewEmpenho();
+    } finally {
+      setIsSavingReview(false);
+    }
+  };
+
+  const handleAddItemWithFeedback = async () => {
+    if (isSavingItem) return;
+    setIsSavingItem(true);
+    try {
+      await handleAddItemToEmpenho();
+    } finally {
+      setIsSavingItem(false);
+    }
+  };
 
   return (
             <div className="space-y-6">
@@ -472,6 +508,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                     <button
                                       type="button"
                                       disabled={savingPregao}
+                                      aria-busy={savingPregao}
                                       onClick={async () => {
                                         if (savingPregao) return;
                                         setSavingPregao(true);
@@ -484,7 +521,8 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                       }}
                                       className="h-9 px-3 rounded-lg bg-emerald-700 text-white text-xs font-bold hover:bg-emerald-800 disabled:opacity-60"
                                     >
-                                      Salvar Pregão
+                                      {savingPregao && <Loader2 className="w-3.5 h-3.5 animate-spin inline mr-1.5" />}
+                                      {savingPregao ? 'Salvando…' : 'Salvar Pregão'}
                                     </button>
                                     <button
                                       type="button"
@@ -750,11 +788,13 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                 </div>
                                 <button
                                   type="button"
-                                  onClick={handleAddItemToEmpenho}
-                                  className="px-5 py-2.5 bg-[#00288e] text-white font-bold text-xs rounded-xl hover:bg-[#1e40af] transition-all shadow-sm cursor-pointer flex items-center gap-2"
+                                  onClick={handleAddItemWithFeedback}
+                                  disabled={isSavingItem}
+                                  aria-busy={isSavingItem}
+                                  className="px-5 py-2.5 bg-[#00288e] text-white font-bold text-xs rounded-xl hover:bg-[#1e40af] transition-all shadow-sm cursor-pointer flex items-center gap-2 disabled:opacity-60 disabled:cursor-wait"
                                 >
-                                  <Save className="w-4 h-4" />
-                                  <span>Salvar Item no Empenho</span>
+                                  {isSavingItem ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                  <span>{isSavingItem ? 'Salvando Item…' : 'Salvar Item no Empenho'}</span>
                                 </button>
                               </div>
                             </div>
@@ -1138,7 +1178,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
 
                       {/* MODE 1: MANUAL REGISTRATION */}
                       {newEmpenhoMode === 'manual' && !reviewEmpenho && (
-                        <form onSubmit={handleCreateEmpenho} className="p-5 space-y-4">
+                        <form onSubmit={handleCreateEmpenhoWithFeedback} className="p-5 space-y-4">
                           <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Código do Empenho (NE)</label>
                             <input 
@@ -1228,9 +1268,12 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                             </button>
                             <button 
                               type="submit"
-                              className="px-4 py-2 bg-[#00288e] text-white rounded-xl font-bold text-xs hover:bg-[#1e40af] transition-all shadow-sm"
+                              disabled={isCreatingEmpenho}
+                              aria-busy={isCreatingEmpenho}
+                              className="px-4 py-2 bg-[#00288e] text-white rounded-xl font-bold text-xs hover:bg-[#1e40af] transition-all shadow-sm flex items-center gap-2 disabled:opacity-60 disabled:cursor-wait"
                             >
-                              Prosseguir
+                              {isCreatingEmpenho && <Loader2 className="w-4 h-4 animate-spin" />}
+                              {isCreatingEmpenho ? 'Processando…' : 'Prosseguir'}
                             </button>
                           </div>
                         </form>
@@ -1678,10 +1721,13 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         </button>
                         <button
                           type="button"
-                          onClick={handleSaveReviewEmpenho}
-                          className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-1"
+                          onClick={handleSaveReviewWithFeedback}
+                          disabled={isSavingReview}
+                          aria-busy={isSavingReview}
+                          className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-wait"
                         >
-                          Salvar Empenho
+                          {isSavingReview && <Loader2 className="w-4 h-4 animate-spin" />}
+                          {isSavingReview ? 'Salvando…' : 'Salvar Empenho'}
                         </button>
                       </div>
                     </motion.div>

@@ -88,7 +88,7 @@ export function AppHeader({
 
       <div className="flex items-center gap-4">
         {syncing && (
-          <div className="flex items-center gap-1 text-xs font-semibold text-blue-600 animate-pulse bg-blue-50/70 backdrop-blur-sm px-3 py-1 rounded-full">
+          <div role="status" aria-live="polite" className="flex items-center gap-1 text-xs font-semibold text-blue-600 animate-pulse bg-blue-50/70 backdrop-blur-sm px-3 py-1 rounded-full">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
             Sincronizando...
           </div>

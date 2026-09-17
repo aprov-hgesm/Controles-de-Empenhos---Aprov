@@ -311,3 +311,25 @@ nav.lg\:hidden button:active svg {
     transform: none !important;
   }
 }
+
+/* Bloco 1 UX: feedback de processamento e prevenção visual de ações duplicadas. */
+button:disabled,
+select:disabled,
+input:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+}
+
+button[aria-busy="true"],
+select[aria-busy="true"],
+[aria-busy="true"][role="button"] {
+  cursor: progress;
+}
+
+button[aria-busy="true"] {
+  user-select: none;
+}
+
+button[aria-busy="true"] .animate-spin {
+  animation-duration: 800ms;
+}
