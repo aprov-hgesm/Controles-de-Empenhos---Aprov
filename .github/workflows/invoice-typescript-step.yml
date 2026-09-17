@@ -27,11 +27,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Fix each remaining diagnostic one by one
+      - name: Remove invalid App Router re-export surgically
         shell: bash
         run: |
           git config user.name 'Moriark'
           git config user.email 'marcoa.r.aquino@gmail.com'
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/page.tsx')
+          text = p.read_text(encoding='utf-8')
+          needle = "export { PROMPT_EXTRACAO_EMPENHO } from '../features/empenhos/domain/empenhoHelpers';\n"
+          count = text.count(needle)
+          if count != 1:
+              raise SystemExit(f'esperado exatamente 1 re-export inválido, encontrado {count}')
+          p.write_text(text.replace(needle, '', 1), encoding='utf-8')
+          PY
+          git diff --check
+          test "$(git diff --numstat -- app/page.tsx | awk '{print $1":"$2}')" = "0:1"
+          git add app/page.tsx
+          git commit -m 'fix(types): remove reexport inválido do App Router'
+
+      - name: Fix each remaining Invoice diagnostic one by one
+        shell: bash
+        run: |
           START=$(tr -d '[:space:]' < ops/invoice-typescript.step)
           for STEP in $(seq "$START" 9); do
             echo "===== STEP $STEP/9 ====="
