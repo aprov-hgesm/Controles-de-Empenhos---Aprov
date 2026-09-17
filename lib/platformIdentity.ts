@@ -64,10 +64,36 @@ const SIMPLE_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Normaliza o e-mail usado como chave lógica de autorização da plataforma.
- * Não realiza autenticação; isso continua sendo responsabilidade do Firebase Auth.
+ *
+ * Para contas pessoais do Gmail, pontos no nome local e aliases `+tag` apontam
+ * para a mesma conta Google. A canonicalização evita que o Firebase Auth devolva
+ * uma variante equivalente e o EMPROVEX a interprete como outra identidade.
+ *
+ * Outros domínios (inclusive Google Workspace) preservam integralmente o nome
+ * local, pois nesses domínios pontos podem distinguir contas diferentes.
  */
 export function normalizePlatformEmail(value: string): string {
-  return value.trim().toLocaleLowerCase('pt-BR');
+  const normalized = value.trim().toLowerCase();
+  const atIndex = normalized.lastIndexOf('@');
+
+  if (atIndex <= 0) return normalized;
+
+  let localPart = normalized.slice(0, atIndex);
+  let domain = normalized.slice(atIndex + 1);
+
+  if (domain === 'googlemail.com') {
+    domain = 'gmail.com';
+  }
+
+  if (domain === 'gmail.com') {
+    const plusIndex = localPart.indexOf('+');
+    if (plusIndex >= 0) {
+      localPart = localPart.slice(0, plusIndex);
+    }
+    localPart = localPart.replace(/\./g, '');
+  }
+
+  return `${localPart}@${domain}`;
 }
 
 export function isValidPlatformEmail(value: string): boolean {
