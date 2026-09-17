@@ -1,4 +1,4 @@
 {
-  "maxErrors": 5,
+  "maxErrors": 4,
   "policy": "No pull request may increase the existing TypeScript error count."
 }
