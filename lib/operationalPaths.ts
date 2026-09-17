@@ -25,12 +25,29 @@ export interface OperationalDataScope {
   legacySettingsMode: boolean;
 }
 
+/**
+ * Após o cutover do HGeSM, o runtime normal não aceita mais scopes legados.
+ * Os dados raiz permanecem disponíveis apenas por ferramentas de manutenção,
+ * auditoria e recuperação executadas fora do frontend operacional.
+ */
+function assertWorkspaceScopedRuntime(context: ResolvedWorkspaceContext): void {
+  if (!isOperationalSectorContext(context)) return;
+
+  if (context.legacyDataMode || context.legacySettingsMode) {
+    throw new Error(
+      'Compatibilidade legada bloqueada no runtime operacional. Execute recuperação por procedimento administrativo controlado.'
+    );
+  }
+}
+
 export function operationalScopeFromContext(
   context: ResolvedWorkspaceContext
 ): OperationalDataScope {
   if (!isOperationalSectorContext(context)) {
     throw new Error('O contexto atual não possui acesso operacional a um workspace.');
   }
+
+  assertWorkspaceScopedRuntime(context);
 
   return {
     workspaceId: context.workspaceId,
@@ -60,8 +77,7 @@ export function getCurrentOperationalScope(expectedUid?: string): OperationalDat
 /**
  * Bloco 13: o legado permanece apenas para compatibilidade/recuperação.
  * Qualquer write iniciado pelo runtime normal deve ser workspace-scoped.
- * Esta trava impede que uma futura regressão de flag volte silenciosamente a
- * gravar nas coleções raiz mesmo antes das Rules recusarem a operação.
+ * Estas travas também protegem chamadas construídas manualmente com um scope.
  */
 export function assertWorkspaceScopedDataWrite(scope: OperationalDataScope): void {
   if (scope.legacyDataMode) {
