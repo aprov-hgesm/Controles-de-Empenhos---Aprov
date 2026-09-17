@@ -225,37 +225,47 @@ service cloud.firestore {
       allow read, write: if canAccessWorkspace(workspaceId);
     }
 
-    // Compatibilidade legada: os dados atuais do HGeSM ainda estão nas coleções
-    // raiz e continuam restritos exclusivamente à identidade fundadora.
+    // Bloco 13 — compatibilidade legada somente leitura.
+    // O runtime oficial já usa /workspaces/hgesm-aprov/...; os dados raiz ficam
+    // preservados apenas para consulta, auditoria e recuperação controlada.
+    // Qualquer rollback com escrita exige mudança explícita de Rules, evitando que
+    // uma simples regressão de frontend volte silenciosamente a gravar no legado.
     match /empenhos/{id} {
-      allow read, write: if isHgesmFounder();
+      allow read: if isHgesmFounder();
+      allow write: if false;
     }
 
     match /alerts/{id} {
-      allow read, write: if isHgesmFounder();
+      allow read: if isHgesmFounder();
+      allow write: if false;
     }
 
     match /invoices/{id} {
-      allow read, write: if isHgesmFounder();
+      allow read: if isHgesmFounder();
+      allow write: if false;
     }
 
     match /comissoes/{id} {
-      allow read, write: if isHgesmFounder();
+      allow read: if isHgesmFounder();
+      allow write: if false;
     }
 
     match /cronogramas/{id} {
-      allow read, write: if isHgesmFounder();
+      allow read: if isHgesmFounder();
+      allow write: if false;
     }
 
-    // A identidade visual global precisa continuar disponível antes do login.
-    // O restante de /settings deixa de ter leitura pública.
+    // A identidade visual global precisa continuar disponível antes do login e
+    // continua sendo um setting global da plataforma, não um setting operacional legado.
     match /settings/global {
       allow read: if true;
       allow write: if isHgesmFounder();
     }
 
+    // Demais settings raiz (incluindo o contador histórico) ficam somente leitura.
     match /settings/{id} {
-      allow read, write: if isHgesmFounder();
+      allow read: if isHgesmFounder();
+      allow write: if false;
     }
   }
 }
