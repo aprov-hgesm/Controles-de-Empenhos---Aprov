@@ -9,11 +9,28 @@ import { usePlatformAdminDirectory } from '../../hooks/usePlatformAdminDirectory
 import { auth } from '../../lib/firebase';
 import { resolveWorkspaceContext } from '../../lib/workspaceContext';
 
+const AUTH_DIAGNOSTIC_STORAGE_KEY = 'emprovex_auth_diagnostic_v1';
+
+interface StoredAuthDiagnostic {
+  email: string | null;
+  uid: string;
+  status: string;
+  capturedAt: string;
+}
+
 export default function PlatformAdminPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lastDiagnostic, setLastDiagnostic] = useState<StoredAuthDiagnostic | null>(null);
 
   useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(AUTH_DIAGNOSTIC_STORAGE_KEY);
+      if (raw) setLastDiagnostic(JSON.parse(raw) as StoredAuthDiagnostic);
+    } catch {
+      setLastDiagnostic(null);
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser || null);
       setLoading(false);
@@ -38,10 +55,9 @@ export default function PlatformAdminPage() {
     );
   }
 
-  // Em vez de redirecionar silenciosamente, preservamos um estado seguro de
-  // diagnóstico. Nenhum diretório administrativo é carregado sem platformAdmin.
   if (!user || context.status !== 'platformAdmin') {
     const returnedEmail = user?.email || 'nenhum e-mail — sessão Firebase ausente';
+    const resolvedStatus = context.status;
 
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-white">
@@ -53,19 +69,30 @@ export default function PlatformAdminPage() {
             <div className="min-w-0">
               <h1 className="text-xl font-extrabold">Diagnóstico de acesso administrativo</h1>
               <p className="mt-2 text-sm text-slate-300 leading-relaxed">
-                A rota administrativa foi aberta, mas a sessão recebida não foi reconhecida como administrador da plataforma. Nenhum dado operacional ou administrativo foi carregado.
+                A rota administrativa foi aberta, mas a sessão atual não foi reconhecida como administrador. O último login autenticado fica registrado apenas nesta aba para diagnóstico e não concede acesso a dados.
               </p>
             </div>
           </div>
 
           <div className="mt-6 space-y-3 text-sm">
             <div className="rounded-xl border border-white/10 bg-black/20 p-4">
-              <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">E-mail retornado pelo Firebase</div>
+              <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Sessão Firebase atual</div>
               <div className="mt-1 font-mono text-slate-100 break-all">{returnedEmail}</div>
+              <div className="mt-1 font-mono text-xs text-slate-400">status: {resolvedStatus}</div>
             </div>
-            <div className="rounded-xl border border-white/10 bg-black/20 p-4">
-              <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Status resolvido pelo EMPROVEX</div>
-              <div className="mt-1 font-mono text-slate-100">{context.status}</div>
+
+            <div className="rounded-xl border border-blue-400/15 bg-blue-500/[0.06] p-4">
+              <div className="text-[10px] uppercase tracking-wider font-bold text-blue-300">Última identidade autenticada nesta aba</div>
+              {lastDiagnostic ? (
+                <div className="mt-2 space-y-1 font-mono text-xs text-slate-200">
+                  <div>email: {lastDiagnostic.email || 'sem e-mail'}</div>
+                  <div>status: {lastDiagnostic.status}</div>
+                  <div className="break-all">uid: {lastDiagnostic.uid}</div>
+                  <div>capturado: {lastDiagnostic.capturedAt}</div>
+                </div>
+              ) : (
+                <div className="mt-2 text-xs text-slate-400">Nenhuma tentativa autenticada foi registrada nesta aba.</div>
+              )}
             </div>
           </div>
 
