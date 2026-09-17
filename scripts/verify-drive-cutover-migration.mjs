@@ -23,12 +23,14 @@ requireText(driveFiles, "crypto.subtle.digest('SHA-256'", 'SHA-256 não está ha
 requireText(driveFiles, 'downloadedSha256 !== sourceSha256', 'Upload Drive não revalida o hash após leitura do arquivo gravado.');
 requireText(empenhoDocuments, "provider: 'google-drive'", 'Novas NEs não apontam para Drive.');
 requireText(invoiceDocuments, "provider: 'google-drive'", 'Novas NFs não apontam para Drive.');
-requireText(control, 'Os arquivos originais do Blob NÃO serão apagados nesta etapa', 'Confirmação explícita de preservação do Blob ausente na interface.');
+requireText(control, 'Os PDFs originais do Vercel Blob não serão apagados nesta etapa', 'Confirmação explícita de preservação do Blob ausente na interface.');
+requireText(control, 'Confirmar e iniciar', 'Confirmação visual interna da migração não foi encontrada.');
 requireText(control, 'Migrar PDFs automaticamente', 'Ação de migração assistida não está exposta no painel Drive.');
 
 forbidText(migration, 'deleteEmpenhoPdfUpload', 'Migrador não pode apagar PDFs do Blob nesta etapa.');
 forbidText(migration, 'deleteInvoicePdfUpload', 'Migrador não pode apagar PDFs do Blob nesta etapa.');
 forbidText(migration, "method: 'DELETE'", 'Migrador contém DELETE direto; a origem Blob deve ser preservada.');
+forbidText(control, 'window.confirm', 'A migração não pode depender de window.confirm em previews embutidos.');
 
 if (findings.length) {
   console.error('Drive Cutover Migration — gate de segurança\n');
@@ -39,6 +41,7 @@ if (findings.length) {
   console.log('Drive Cutover Migration — gate de segurança\n');
   console.log('Novos uploads: Google Drive');
   console.log('Migração em lote: habilitada e retomável');
+  console.log('Confirmação de migração: interna ao EMPROVEX');
   console.log('Verificação: tamanho + SHA-256 após leitura do Drive');
   console.log('Falha por registro: rollback dos novos arquivos Drive');
   console.log('Originais Vercel Blob: PRESERVADOS');
