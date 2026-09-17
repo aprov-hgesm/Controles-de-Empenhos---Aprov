@@ -1,0 +1,71 @@
+name: Invoice TypeScript step
+
+on:
+  push:
+    branches:
+      - fix/typescript-invoice-debt-v19
+    paths:
+      - ops/invoice-typescript.step
+
+permissions:
+  contents: write
+
+jobs:
+  fix-one-error:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Read step
+        id: step
+        shell: bash
+        run: |
+          STEP=$(tr -d '[:space:]' < ops/invoice-typescript.step)
+          echo "step=$STEP" >> "$GITHUB_OUTPUT"
+
+      - name: Verify baseline count
+        shell: bash
+        run: |
+          npm run typecheck > /tmp/before.txt 2>&1 || true
+          cat /tmp/before.txt
+          current=$(grep -c 'error TS[0-9]' /tmp/before.txt || true)
+          expected=$((10 - ${{ steps.step.outputs.step }}))
+          echo "Before: $current / expected: $expected"
+          test "$current" -eq "$expected"
+
+      - name: Fix exactly one diagnostic
+        env:
+          STEP: ${{ steps.step.outputs.step }}
+        run: python3 scripts/fix-invoice-typescript-step.py
+
+      - name: Verify exact decrement
+        shell: bash
+        run: |
+          npm run typecheck > /tmp/after.txt 2>&1 || true
+          cat /tmp/after.txt
+          current=$(grep -c 'error TS[0-9]' /tmp/after.txt || true)
+          expected=$((9 - ${{ steps.step.outputs.step }}))
+          echo "After: $current / expected: $expected"
+          test "$current" -eq "$expected"
+          node -e "const fs=require('fs');const p='ops/typescript-error-budget.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.maxErrors=$current;fs.writeFileSync(p,JSON.stringify(j,null,2)+'\\n')"
+          git diff --check
+
+      - name: Commit validated single fix
+        shell: bash
+        run: |
+          git config user.name 'Moriark'
+          git config user.email 'marcoa.r.aquino@gmail.com'
+          git add features/empenhos/components/EmpenhosView.tsx ops/typescript-error-budget.json
+          git commit -m "fix(types): corrige referência Invoice ${{ steps.step.outputs.step }}/9"
+          git push origin HEAD:fix/typescript-invoice-debt-v19
