@@ -6,5 +6,6 @@ coverage/
 *.tsbuildinfo
 .env*
 !.env.example
+.vercel/
 emprovex-snapshots/
 .local-snapshots/
