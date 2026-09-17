@@ -987,7 +987,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                     </td>
                                     <td className="p-3.5">
                                       {inv.tesourariaDate ? (
-                                        <span className="font-bold text-gray-700">{formatDateOnly(inv.dataTesouraria)}</span>
+                                        <span className="font-bold text-gray-700">{formatDateOnly(inv.tesourariaDate)}</span>
                                       ) : (
                                         <span className="text-amber-600 font-semibold text-[11px]">Falta Enviar</span>
                                       )}
