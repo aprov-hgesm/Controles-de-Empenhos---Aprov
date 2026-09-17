@@ -7,19 +7,19 @@ export interface Item {
   received: number; // total quantity already received (liquidado/recebido)
 }
 
-export type DocumentStorageProvider = 'vercel-blob' | 'google-drive';
+export type DocumentStorageProvider = 'google-drive';
 export type DocumentStorageStatus = 'active' | 'scheduled-for-deletion' | 'deleted';
 
 export interface DocumentStorageRef {
   provider: DocumentStorageProvider;
   status: DocumentStorageStatus;
-  /** Chave física do provedor: pathname no Blob ou fileId no Google Drive. */
+  /** fileId físico do Google Drive. */
   objectKey: string;
-  /** Pasta/container lógico do provedor quando aplicável, ex.: folderId no Drive. */
+  /** folderId do Google Drive. */
   folderKey?: string;
-  /** Workspace proprietário do documento. Será obrigatório no cutover multi-setor. */
+  /** Workspace proprietário do documento. */
   workspaceId?: string;
-  /** Hash de integridade, preenchido quando a etapa de hashing estiver habilitada. */
+  /** Hash SHA-256 de integridade do PDF. */
   sha256?: string;
   deletedAt?: string;
   deletedBy?: string;
@@ -27,20 +27,19 @@ export interface DocumentStorageRef {
 
 export interface EmpenhoPdfDocument {
   id: string;
-  /** Mantido por compatibilidade com PDFs legados e com o Vercel Blob atual. */
+  /** Identificador lógico preservado para rastreabilidade; o storage é a fonte física. */
   pathname: string;
   originalName: string;
   contentType: 'application/pdf';
   size: number;
   uploadedAt: string;
   uploadedBy: string;
-  /** Ausente em documentos antigos; ausência equivale a Vercel Blob ativo. */
   storage?: DocumentStorageRef;
 }
 
 export interface InvoicePdfDocument {
   id: string;
-  /** Mantido por compatibilidade com PDFs legados e com o Vercel Blob atual. */
+  /** Identificador lógico preservado para rastreabilidade; o storage é a fonte física. */
   pathname: string;
   originalName: string;
   contentType: 'application/pdf';
@@ -49,7 +48,6 @@ export interface InvoicePdfDocument {
   uploadedBy: string;
   empenhoId: string;
   invoiceId: string;
-  /** Ausente em documentos antigos; ausência equivale a Vercel Blob ativo. */
   storage?: DocumentStorageRef;
 }
 
