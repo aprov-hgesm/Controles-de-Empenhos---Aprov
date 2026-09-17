@@ -20,42 +20,36 @@ requireText(types, 'storage?: DocumentStorageRef', 'PDFs não aceitam metadata d
 requireText(abstraction, "LEGACY_DOCUMENT_STORAGE_PROVIDER = 'vercel-blob'", 'Fallback legado deixou de ser Vercel Blob.');
 requireText(abstraction, 'if (document.storage) return document.storage', 'Resolução de metadata explícita ausente.');
 requireText(abstraction, 'objectKey: document.pathname', 'Fallback legado não preserva pathname histórico.');
-requireText(abstraction, "provider: 'vercel-blob'", 'Factory do Vercel Blob ausente.');
 requireText(abstraction, "=== 'google-drive'", 'Abstração não reconhece Google Drive.');
 
 for (const [label, source] of [
   ['cliente NE', empenhoClient],
   ['cliente NF', invoiceClient],
 ]) {
-  requireText(source, '@vercel/blob/client', `${label}: upload oficial deixou de usar Vercel Blob durante o Bloco 14B.`);
-  forbidText(source, 'googleDrivePoc', `${label}: POC do Drive vazou para o fluxo oficial.`);
-  forbidText(source, 'drive.googleapis.com', `${label}: chamada direta ao Drive apareceu no fluxo oficial.`);
+  forbidText(source, '@vercel/blob/client', `${label}: upload oficial ainda usa Vercel Blob após o cutover.`);
+  requireText(source, "provider: 'google-drive'", `${label}: novos PDFs não recebem metadata Google Drive.`);
+  requireText(source, 'requireWorkspaceDriveRuntime', `${label}: operação Drive não exige sessão do workspace.`);
 }
 
 for (const [label, source] of [
-  ['API NE', empenhoRoute],
-  ['API NF', invoiceRoute],
+  ['API NE legada', empenhoRoute],
+  ['API NF legada', invoiceRoute],
 ]) {
-  requireText(source, "from '@vercel/blob'", `${label}: API oficial deixou de usar Vercel Blob.`);
-  requireText(source, 'createVercelBlobStorageRef', `${label}: novos documentos não recebem metadata explícita do Blob.`);
-  requireText(source, 'storage: createVercelBlobStorageRef(pathname)', `${label}: metadata do provider não está vinculada ao pathname validado.`);
-  forbidText(source, 'googleDrivePoc', `${label}: POC do Drive vazou para a API oficial.`);
-  forbidText(source, 'drive.googleapis.com', `${label}: chamada direta ao Drive apareceu na API oficial.`);
+  requireText(source, "from '@vercel/blob'", `${label}: rota de compatibilidade Blob foi removida antes da auditoria final.`);
 }
 
 if (findings.length) {
-  console.error('Storage Provider Abstraction — gate de compatibilidade\n');
+  console.error('Storage Provider Abstraction — gate de cutover\n');
   for (const finding of findings) console.error(`  [BLOCK] ${finding}`);
   console.error(`\nSTORAGE PROVIDER ABSTRACTION: BLOQUEADO (${findings.length} achado(s))`);
   process.exitCode = 2;
 } else {
-  console.log('Storage Provider Abstraction — gate de compatibilidade\n');
-  console.log('Providers declarados: vercel-blob | google-drive');
+  console.log('Storage Provider Abstraction — gate de cutover\n');
+  console.log('Providers reconhecidos: vercel-blob | google-drive');
   console.log('Legado sem metadata: vercel-blob por compatibilidade');
-  console.log('Novos PDFs oficiais: metadata vercel-blob explícita');
-  console.log('Upload oficial NE/NF: Vercel Blob preservado');
-  console.log('Google Drive oficial: NÃO ATIVADO neste bloco');
-  console.log('POC Drive: permanece isolada em /drive-poc');
+  console.log('Novos PDFs oficiais: google-drive');
+  console.log('Cliente Vercel Blob em novos uploads: NÃO');
+  console.log('Rotas Blob legadas: preservadas temporariamente para migração');
   console.log('\nSTORAGE PROVIDER ABSTRACTION: READY');
 }
 
