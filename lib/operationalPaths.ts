@@ -142,6 +142,7 @@ export function operationalDocRef(
   collectionName: OperationalCollectionName,
   documentId: string
 ): DocumentReference {
+  assertWorkspaceScopedDataWrite(scope);
   return doc(db, getOperationalCollectionPath(scope, collectionName), documentId);
 }
 
@@ -149,5 +150,6 @@ export function operationalSettingsDocRef(
   scope: OperationalDataScope,
   documentId: string
 ): DocumentReference {
+  assertWorkspaceScopedSettingsWrite(scope);
   return doc(db, getOperationalSettingsCollectionPath(scope), documentId);
 }
