@@ -1,6 +1,13 @@
 'use client';
 
 import type { User } from 'firebase/auth';
+import { resolveDocumentStorageRef } from './documentStorage';
+import {
+  deleteWorkspaceDriveFile,
+  fetchWorkspaceDrivePdf,
+  uploadAndVerifyWorkspacePdf,
+} from './googleDriveFiles';
+import { requireWorkspaceDriveRuntime } from './workspaceDriveRuntime';
 import type { InvoicePdfDocument } from './types';
 
 export const MAX_INVOICE_PDF_BYTES = 10 * 1024 * 1024;
@@ -34,10 +41,19 @@ async function validatePdfBeforeUpload(file: File): Promise<void> {
   }
 }
 
-function createPrivatePathname(empenhoId: string, invoiceId: string): string {
-  const normalizedEmpenhoId = empenhoId.trim().toUpperCase();
-  const normalizedInvoiceId = invoiceId.trim().toUpperCase();
-  return `notas-fiscais/${normalizedEmpenhoId}/${normalizedInvoiceId}/${Date.now()}-${crypto.randomUUID()}.pdf`;
+function createDriveLogicalPathname(
+  workspaceId: string,
+  empenhoId: string,
+  invoiceId: string,
+  fileId: string
+): string {
+  return `google-drive/${workspaceId}/notas-fiscais/${empenhoId.trim().toUpperCase()}/${invoiceId.trim().toUpperCase()}/${fileId}`;
+}
+
+function fileIdFromDriveLogicalPathname(pathname: string): string | null {
+  if (!pathname.startsWith('google-drive/')) return null;
+  const parts = pathname.split('/');
+  return parts.length >= 6 ? parts[parts.length - 1] || null : null;
 }
 
 export async function uploadInvoicePdf(
@@ -47,71 +63,104 @@ export async function uploadInvoicePdf(
   file: File
 ): Promise<InvoicePdfDocument> {
   await validatePdfBeforeUpload(file);
-  const { upload } = await import('@vercel/blob/client');
-  const headers = await getAuthorizationHeader(user);
-  const pathname = createPrivatePathname(empenhoId, invoiceId);
+  const runtime = requireWorkspaceDriveRuntime();
 
-  const blob = await upload(pathname, file, {
-    access: 'private',
-    handleUploadUrl: '/api/invoice-documents/upload',
-    clientPayload: JSON.stringify({ empenhoId, invoiceId }),
-    headers,
+  const { file: driveFile, sha256 } = await uploadAndVerifyWorkspacePdf(
+    runtime.session,
+    runtime.settings.invoicesFolderId,
+    file,
+    file.name,
+    {
+      emprovexDocumentType: 'invoice',
+      emprovexEmpenhoId: empenhoId.trim().toUpperCase(),
+      emprovexInvoiceId: invoiceId.trim().toUpperCase(),
+    }
+  );
+
+  return {
+    id: crypto.randomUUID(),
+    pathname: createDriveLogicalPathname(runtime.session.workspaceId, empenhoId, invoiceId, driveFile.id),
+    originalName: file.name,
     contentType: 'application/pdf',
-    multipart: false,
-  });
-
-  try {
-    const finalizeResponse = await fetch('/api/invoice-documents', {
-      method: 'POST',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      cache: 'no-store',
-      body: JSON.stringify({ empenhoId, invoiceId, pathname: blob.pathname, originalName: file.name }),
-    });
-    if (!finalizeResponse.ok) throw new Error(await readApiError(finalizeResponse));
-    const payload = (await finalizeResponse.json()) as { document: InvoicePdfDocument };
-    return payload.document;
-  } catch (error) {
-    await fetch('/api/invoice-documents', {
-      method: 'DELETE',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      cache: 'no-store',
-      body: JSON.stringify({ empenhoId, invoiceId, pathname: blob.pathname }),
-    }).catch(() => undefined);
-    throw error;
-  }
+    size: driveFile.size || file.size,
+    uploadedAt: new Date().toISOString(),
+    uploadedBy: user.email || user.uid,
+    empenhoId,
+    invoiceId,
+    storage: {
+      provider: 'google-drive',
+      status: 'active',
+      objectKey: driveFile.id,
+      folderKey: runtime.settings.invoicesFolderId,
+      workspaceId: runtime.session.workspaceId,
+      sha256,
+    },
+  };
 }
 
 export async function deleteInvoicePdfUpload(
   user: User,
   empenhoId: string,
   invoiceId: string,
-  pathname: string
+  pathnameOrDocument: string | InvoicePdfDocument
 ): Promise<void> {
+  if (typeof pathnameOrDocument !== 'string') {
+    const storage = resolveDocumentStorageRef(pathnameOrDocument);
+    if (storage.provider === 'google-drive') {
+      const runtime = requireWorkspaceDriveRuntime(storage.workspaceId);
+      await deleteWorkspaceDriveFile(runtime.session, storage.objectKey);
+      return;
+    }
+    pathnameOrDocument = pathnameOrDocument.pathname;
+  }
+
+  const driveFileId = fileIdFromDriveLogicalPathname(pathnameOrDocument);
+  if (driveFileId) {
+    const runtime = requireWorkspaceDriveRuntime();
+    await deleteWorkspaceDriveFile(runtime.session, driveFileId);
+    return;
+  }
+
   const headers = await getAuthorizationHeader(user);
   const response = await fetch('/api/invoice-documents', {
     method: 'DELETE',
     headers: { ...headers, 'Content-Type': 'application/json' },
     cache: 'no-store',
-    body: JSON.stringify({ empenhoId, invoiceId, pathname }),
+    body: JSON.stringify({ empenhoId, invoiceId, pathname: pathnameOrDocument }),
   });
   if (!response.ok && response.status !== 404) {
     throw new Error(await readApiError(response));
   }
 }
 
-export async function fetchInvoicePdfBlob(user: User, document: InvoicePdfDocument): Promise<Blob> {
+export async function fetchLegacyInvoicePdfBlob(
+  user: User,
+  empenhoId: string,
+  invoiceId: string,
+  pathname: string
+): Promise<Blob> {
   const headers = await getAuthorizationHeader(user);
-  const query = new URLSearchParams({
-    empenhoId: document.empenhoId,
-    invoiceId: document.invoiceId,
-    pathname: document.pathname,
-  });
+  const query = new URLSearchParams({ empenhoId, invoiceId, pathname });
   const response = await fetch(`/api/invoice-documents?${query.toString()}`, {
     headers,
     cache: 'no-store',
   });
   if (!response.ok) throw new Error(await readApiError(response));
   return response.blob();
+}
+
+export async function fetchInvoicePdfBlob(user: User, document: InvoicePdfDocument): Promise<Blob> {
+  const storage = resolveDocumentStorageRef(document);
+  if (storage.status !== 'active') {
+    throw new Error('O documento não está mais disponível no armazenamento ativo.');
+  }
+
+  if (storage.provider === 'google-drive') {
+    const runtime = requireWorkspaceDriveRuntime(storage.workspaceId);
+    return fetchWorkspaceDrivePdf(runtime.session, storage.objectKey);
+  }
+
+  return fetchLegacyInvoicePdfBlob(user, document.empenhoId, document.invoiceId, document.pathname);
 }
 
 function showLoadingMessage(target: Window, action: DocumentAction): void {
