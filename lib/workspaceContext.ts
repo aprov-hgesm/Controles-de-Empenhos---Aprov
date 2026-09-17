@@ -1,9 +1,9 @@
-import { isBootstrapPlatformAdminEmail } from './platformBootstrap';
 import {
   HGESM_INSTITUTIONAL_PROFILE,
   HGESM_SECTOR_EMAIL,
   HGESM_WORKSPACE_ID,
 } from './hgesmWorkspace';
+import { getActiveProfileMode, type EmprovexProfileMode } from './profileMode';
 import { normalizePlatformEmail, type WorkspaceInstitutionalProfile } from './platformIdentity';
 
 export type WorkspaceContextStatus =
@@ -16,7 +16,7 @@ interface WorkspaceContextBase {
   status: WorkspaceContextStatus;
   email: string | null;
   canLoadOperationalData: boolean;
-  resolutionSource: 'bootstrap-platform-admin' | 'legacy-hgesm-bootstrap' | 'none';
+  resolutionSource: 'hgesm-dual-profile' | 'legacy-hgesm-bootstrap' | 'none';
 }
 
 export interface AnonymousWorkspaceContext extends WorkspaceContextBase {
@@ -32,7 +32,7 @@ export interface PlatformAdminWorkspaceContext extends WorkspaceContextBase {
   accountType: 'platformAdmin';
   workspaceId: null;
   canLoadOperationalData: false;
-  resolutionSource: 'bootstrap-platform-admin';
+  resolutionSource: 'hgesm-dual-profile';
 }
 
 export interface SectorWorkspaceContext extends WorkspaceContextBase {
@@ -67,11 +67,14 @@ export type ResolvedWorkspaceContext =
 /**
  * Resolve a identidade autenticada antes de qualquer subscription operacional.
  *
- * Bloco 4: a resolução ainda usa apenas os dois registros bootstrap conhecidos.
- * A persistência administrativa no Firestore substituirá esta fonte estática nos
- * próximos blocos sem alterar o contrato consumido pelo restante da aplicação.
+ * Bloco 6.1: a conta fundadora do HGeSM possui dois perfis de interface na mesma
+ * sessão Firebase. O perfil operacional é o padrão; o modo administrativo só é
+ * ativado explicitamente pelo seletor de perfil e nunca carrega dados operacionais.
  */
-export function resolveWorkspaceContext(email?: string | null): ResolvedWorkspaceContext {
+export function resolveWorkspaceContext(
+  email?: string | null,
+  requestedProfile?: EmprovexProfileMode
+): ResolvedWorkspaceContext {
   if (!email) {
     return {
       status: 'anonymous',
@@ -83,18 +86,20 @@ export function resolveWorkspaceContext(email?: string | null): ResolvedWorkspac
 
   const normalizedEmail = normalizePlatformEmail(email);
 
-  if (isBootstrapPlatformAdminEmail(normalizedEmail)) {
-    return {
-      status: 'platformAdmin',
-      email: normalizedEmail,
-      accountType: 'platformAdmin',
-      workspaceId: null,
-      canLoadOperationalData: false,
-      resolutionSource: 'bootstrap-platform-admin',
-    };
-  }
-
   if (normalizedEmail === HGESM_SECTOR_EMAIL) {
+    const activeProfile = requestedProfile || getActiveProfileMode(normalizedEmail);
+
+    if (activeProfile === 'platformAdmin') {
+      return {
+        status: 'platformAdmin',
+        email: normalizedEmail,
+        accountType: 'platformAdmin',
+        workspaceId: null,
+        canLoadOperationalData: false,
+        resolutionSource: 'hgesm-dual-profile',
+      };
+    }
+
     return {
       status: 'sector',
       email: normalizedEmail,
