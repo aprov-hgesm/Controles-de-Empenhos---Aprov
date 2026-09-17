@@ -967,7 +967,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                     <td className="p-3.5">
                                       {inv.termoEmissaoDate ? (
                                         <div className="flex items-center gap-1">
-                                          <span className="font-bold text-gray-700">{formatDateOnly(inv.dataRecebimentoTermo)}</span>
+                                          <span className="font-bold text-gray-700">{formatDateOnly(inv.termoEmissaoDate)}</span>
                                           {inv.termoNumero && (
                                             <span className="px-1.5 py-0.2 text-[9px] font-bold bg-emerald-100 text-emerald-800 rounded">
                                               TR #{inv.termoNumero}
