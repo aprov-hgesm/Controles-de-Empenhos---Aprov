@@ -962,12 +962,12 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                       </button>
                                     </td>
                                     <td className="p-3.5 text-gray-600 font-semibold">
-                                      {formatDateOnly(inv.date)}
+                                      {formatDateOnly(inv.issueDate)}
                                     </td>
                                     <td className="p-3.5">
-                                      {inv.dataRecebimentoTermo ? (
+                                      {inv.termoEmissaoDate ? (
                                         <div className="flex items-center gap-1">
-                                          <span className="font-bold text-gray-700">{formatDateOnly(inv.dataRecebimentoTermo)}</span>
+                                          <span className="font-bold text-gray-700">{formatDateOnly(inv.termoEmissaoDate)}</span>
                                           {inv.termoNumero && (
                                             <span className="px-1.5 py-0.2 text-[9px] font-bold bg-emerald-100 text-emerald-800 rounded">
                                               TR #{inv.termoNumero}
@@ -979,23 +979,23 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                       )}
                                     </td>
                                     <td className="p-3.5">
-                                      {inv.dataComissao ? (
-                                        <span className="font-bold text-gray-700">{formatDateOnly(inv.dataComissao)}</span>
+                                      {inv.comissaoDate ? (
+                                        <span className="font-bold text-gray-700">{formatDateOnly(inv.comissaoDate)}</span>
                                       ) : (
                                         <span className="text-amber-600 font-semibold text-[11px]">Falta Enviar</span>
                                       )}
                                     </td>
                                     <td className="p-3.5">
-                                      {inv.dataTesouraria ? (
-                                        <span className="font-bold text-gray-700">{formatDateOnly(inv.dataTesouraria)}</span>
+                                      {inv.tesourariaDate ? (
+                                        <span className="font-bold text-gray-700">{formatDateOnly(inv.tesourariaDate)}</span>
                                       ) : (
                                         <span className="text-amber-600 font-semibold text-[11px]">Falta Enviar</span>
                                       )}
                                     </td>
                                     <td className="p-3.5">
-                                      {inv.nsLiquidacao ? (
+                                      {inv.numeroNS ? (
                                         <span className="px-2 py-0.5 bg-blue-50 text-[#00288e] font-bold rounded text-[11px]">
-                                          {inv.nsLiquidacao}
+                                          {inv.numeroNS}
                                         </span>
                                       ) : (
                                         <span className="text-gray-400 italic text-[11px]">Não inf.</span>

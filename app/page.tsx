@@ -24,7 +24,6 @@ import { ItensEmpenhoView } from '../features/empenhos/components/ItensEmpenhoVi
 import { CronogramasView } from '../features/cronogramas/components/CronogramasView';
 import { DeleteEmpenhoModal } from '../features/empenhos/components/DeleteEmpenhoModal';
 import { MobileNavigation } from '../components/layout/MobileNavigation';
-export { PROMPT_EXTRACAO_EMPENHO } from '../features/empenhos/domain/empenhoHelpers';
 export default function Home() {
   // Toast / Notifications helper
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);

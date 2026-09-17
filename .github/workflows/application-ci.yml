@@ -45,6 +45,9 @@ jobs:
       - name: Production build
         run: npm run build
 
+      - name: Final TypeScript validation
+        run: npm run typecheck
+
       - name: Diff hygiene
         shell: bash
         run: |
