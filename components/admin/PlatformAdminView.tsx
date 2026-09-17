@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  ArrowLeftRight,
   Building2,
   Database,
   HardDrive,
@@ -12,11 +13,13 @@ import {
   ShieldCheck,
   UserCog,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { CreateSectorModal } from './CreateSectorModal';
 import { createHgesmFoundingWorkspace } from '../../lib/hgesmWorkspace';
 import type { CreateSectorWorkspaceInput } from '../../lib/platformAdminStore';
 import type { Workspace } from '../../lib/platformIdentity';
+import { setActiveProfileMode } from '../../lib/profileMode';
 
 interface PlatformAdminViewProps {
   adminEmail: string;
@@ -37,6 +40,7 @@ export function PlatformAdminView({
   onCreateSector,
   onLogout,
 }: PlatformAdminViewProps) {
+  const router = useRouter();
   const [showCreateSector, setShowCreateSector] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -52,6 +56,11 @@ export function PlatformAdminView({
     await onCreateSector(input);
     setSuccessMessage(`Setor ${resultName} cadastrado com sucesso.`);
     window.setTimeout(() => setSuccessMessage(null), 5000);
+  };
+
+  const returnToHgesm = () => {
+    setActiveProfileMode('sector');
+    router.replace('/');
   };
 
   return (
@@ -73,14 +82,26 @@ export function PlatformAdminView({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => void onLogout()}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-bold text-slate-200 transition hover:bg-white/10"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Sair</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={returnToHgesm}
+              className="inline-flex items-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/10 px-3.5 py-2 text-xs font-bold text-blue-100 transition hover:bg-blue-500/20"
+              title="Alternar para o perfil operacional do HGeSM"
+            >
+              <ArrowLeftRight className="w-4 h-4" />
+              <span className="hidden sm:inline">Voltar ao HGeSM</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void onLogout()}
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-bold text-slate-200 transition hover:bg-white/10"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sair</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -91,18 +112,18 @@ export function PlatformAdminView({
             <div>
               <div className="inline-flex items-center gap-2 text-blue-200 text-xs font-bold uppercase tracking-[0.16em] mb-3">
                 <ShieldCheck className="w-4 h-4" />
-                Ambiente administrativo isolado
+                Perfil administrativo
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Central de Administração EMPROVEX</h2>
               <p className="mt-2 text-sm text-slate-300 max-w-2xl leading-relaxed">
-                Este perfil administra a estrutura da plataforma. Dados operacionais de empenhos, notas fiscais, comissões e documentos dos setores não são carregados neste ambiente.
+                A mesma conta institucional alterna entre o perfil operacional do HGeSM e este perfil de administração. Enquanto este modo estiver ativo, nenhuma subscription operacional de empenhos, notas fiscais, comissões ou cronogramas é aberta.
               </p>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 min-w-0 lg:min-w-[310px]">
               <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
                 <UserCog className="w-4 h-4" />
-                Administrador da plataforma
+                Conta institucional
               </div>
               <p className="text-sm font-bold text-white break-all">{adminEmail}</p>
             </div>
@@ -137,9 +158,9 @@ export function PlatformAdminView({
           />
           <AdminMetric
             icon={<LockKeyhole className="w-5 h-5" />}
-            label="Isolamento operacional"
-            value="Ativo"
-            detail="Admin sem subscriptions dos setores"
+            label="Contexto operacional"
+            value="Suspenso"
+            detail="Nenhuma subscription operacional neste perfil"
           />
           <AdminMetric
             icon={<HardDrive className="w-5 h-5" />}
@@ -197,7 +218,7 @@ export function PlatformAdminView({
               <h3 className="font-extrabold">Cadastro seguro</h3>
             </div>
             <p className="text-sm text-slate-300 leading-relaxed">
-              Workspace e conta Google são criados atomicamente. IDs e e-mails duplicados são bloqueados e o administrador continua sem acesso aos dados operacionais dos setores.
+              Workspace e conta Google são criados atomicamente. IDs e e-mails duplicados são bloqueados e os futuros setores continuam isolados por workspace.
             </p>
           </div>
         </section>
