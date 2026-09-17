@@ -14,7 +14,10 @@ service cloud.firestore {
 
     function isPlatformAdmin() {
       return isVerifiedUser()
-        && request.auth.token.email == 'codex.martis.dev@gmail.com';
+        && (
+          request.auth.token.email == 'codex.martis.dev@gmail.com'
+          || request.auth.token.email == 'codexmartisdev@gmail.com'
+        );
     }
 
     // Diretórios administrativos da plataforma. No Bloco 6 o administrador pode
