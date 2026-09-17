@@ -1,30 +1,36 @@
-# EMPROVEX — Cadastro administrativo de setores (Bloco 6)
+# EMPROVEX — Cadastro administrativo de setores
 
 ## Objetivo
 
-O Bloco 6 habilita o administrador da plataforma a cadastrar perfis de novos setores sem alterar o código para cada nova unidade.
+O painel administrativo permite cadastrar novos setores sem editar o código para cada unidade.
 
-## Conta administrativa
+## Conta administrativa atual
 
-A conta bootstrap permanece:
+A administração é exercida pela identidade fundadora:
 
-`codex.martis.dev@gmail.com`
+```text
+aprov1hgesm@gmail.com
+```
 
-Ela pode consultar e criar somente os diretórios administrativos:
+Essa mesma sessão pode alternar entre o perfil operacional HGeSM e o perfil Administração EMPROVEX.
+
+## Diretórios administrativos
+
+No modo Administração, a identidade fundadora pode consultar e criar registros em:
 
 ```text
 /workspaces/{workspaceId}
 /platformAccounts/{emailNormalizado}
 ```
 
-O Bloco 6 **não concede** ao administrador acesso às coleções operacionais legadas do HGeSM.
+O cadastro de setor cria somente metadados administrativos; não cria coleções operacionais nem libera automaticamente acesso aos dados do HGeSM.
 
 ## Cadastro de setor
 
-O formulário administrativo coleta:
+O formulário coleta:
 
 - nome do setor;
-- identificador estável (`workspaceId`);
+- `workspaceId`;
 - conta Google autorizada;
 - nome institucional;
 - sigla opcional;
@@ -32,22 +38,19 @@ O formulário administrativo coleta:
 - local padrão de entrega opcional;
 - cargo/função padrão opcional.
 
-A criação usa uma transação Firestore única. O `Workspace` e a `SectorAccount` são criados juntos; se uma das validações falhar, nenhum dos dois registros é persistido.
+A criação usa uma transação Firestore única. `Workspace` e `SectorAccount` são persistidos juntos ou nenhum dos dois é criado.
 
 Duplicidades bloqueadas:
 
 - `workspaceId` já existente;
-- conta Google já vinculada a qualquer perfil EMPROVEX;
-- tentativa de reutilizar a conta administrativa como conta operacional.
+- conta Google já vinculada;
+- reutilização da conta institucional fundadora como novo setor.
 
 ## Materialização dos registros fundadores
 
-No primeiro acesso administrativo com regras compatíveis, o sistema materializa de forma idempotente:
+O bootstrap atual materializa somente:
 
 ```text
-platformAccounts/codex.martis.dev@gmail.com
-  accountType: platformAdmin
-
 platformAccounts/aprov1hgesm@gmail.com
   accountType: sector
   workspaceId: hgesm-aprov
@@ -56,38 +59,21 @@ workspaces/hgesm-aprov
   legacyWorkspace: true
 ```
 
-Isso não move, copia ou altera empenhos, notas fiscais, comissões, cronogramas ou PDFs do HGeSM.
+A capacidade administrativa da conta fundadora é resolvida pelo contexto de perfil e pelas Firestore Rules, sem um segundo documento `platformAdmin`.
 
-## Regras de segurança deste bloco
+## Regras de segurança
 
-A versão do repositório de `firestore.rules` passa a distinguir:
+`firestore.rules` mantém a conta fundadora como:
 
-- `isAuthorizedUser()` — conta operacional histórica do HGeSM;
-- `isPlatformAdmin()` — conta administrativa da plataforma.
+- usuária autorizada das coleções operacionais legadas do HGeSM;
+- administradora dos diretórios `workspaces` e `platformAccounts`.
 
-O `platformAdmin` recebe apenas `read` e `create` em `workspaces` e `platformAccounts`.
-
-Não há permissão de `update` ou `delete` nesses diretórios neste bloco.
-
-As coleções operacionais legadas permanecem restritas a `aprov1hgesm@gmail.com`.
+Novos setores não recebem essa permissão administrativa.
 
 ## Dependência de implantação
 
-O repositório não possui, neste momento, `firebase.json` nem workflow de GitHub Actions que publique `firestore.rules` automaticamente.
+Alterar `firestore.rules` no GitHub não atualiza automaticamente o banco Firebase usado pelo EMPROVEX. As regras precisam ser publicadas explicitamente no banco nomeado correto.
 
-Portanto, fazer merge/commit de `firestore.rules` no GitHub **não altera as regras ativas do Firebase por si só**.
+## Limite atual
 
-Enquanto a nova regra não estiver publicada no banco real, o painel administrativo exibirá um aviso de persistência bloqueada e manterá o botão de cadastro desabilitado. O HGeSM continua operando normalmente porque suas regras legadas não foram removidas da versão proposta.
-
-## Arquivos principais
-
-- `lib/platformAdminStore.ts`
-- `hooks/usePlatformAdminDirectory.ts`
-- `components/admin/CreateSectorModal.tsx`
-- `components/admin/PlatformAdminView.tsx`
-- `app/admin/page.tsx`
-- `firestore.rules`
-
-## Limite intencional do Bloco 6
-
-Cadastrar um setor cria apenas seu perfil administrativo. A conta recém-cadastrada ainda não deve operar empenhos/NFs até que os blocos seguintes criem a estrutura operacional multi-tenant, regras por workspace e resolução persistente de identidade.
+Cadastrar um novo setor cria seu perfil administrativo. A operação multi-tenant desse setor depende dos blocos seguintes de paths por workspace, regras por workspace e resolução persistente de identidade.
