@@ -18,7 +18,8 @@
     "snapshot:hgesm:rollback-plan": "node scripts/firestore-local-snapshot.mjs rollback-plan",
     "migration:hgesm:plan": "node scripts/migrate-hgesm-workspace.mjs plan",
     "migration:hgesm:status": "node scripts/migrate-hgesm-workspace.mjs status",
-    "migration:hgesm:verify": "node scripts/migrate-hgesm-workspace.mjs verify"
+    "migration:hgesm:verify": "node scripts/migrate-hgesm-workspace.mjs verify",
+    "audit:hgesm:integrity": "node scripts/audit-hgesm-workspace-integrity.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",
