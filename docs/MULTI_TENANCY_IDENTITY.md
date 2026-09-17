@@ -43,7 +43,7 @@ Fluxo futuro:
 ```text
 platformAdmin cria setor
         ↓
-EMPORVEX grava e-mail autorizado + workspaceId
+EMPROVEX grava e-mail autorizado + workspaceId
         ↓
 conta do setor faz primeiro login Google
         ↓
