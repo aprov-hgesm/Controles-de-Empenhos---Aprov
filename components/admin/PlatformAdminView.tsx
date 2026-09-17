@@ -1,0 +1,196 @@
+'use client';
+
+import {
+  Building2,
+  Database,
+  HardDrive,
+  LockKeyhole,
+  LogOut,
+  Plus,
+  ShieldCheck,
+  UserCog,
+} from 'lucide-react';
+
+import { HGESM_SECTOR_EMAIL, HGESM_WORKSPACE_ID } from '../../lib/hgesmWorkspace';
+
+interface PlatformAdminViewProps {
+  adminEmail: string;
+  onLogout: () => Promise<void>;
+}
+
+export function PlatformAdminView({ adminEmail, onLogout }: PlatformAdminViewProps) {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#08152d] to-[#0a1d3f] text-white">
+      <header className="border-b border-white/10 bg-slate-950/70 backdrop-blur-xl sticky top-0 z-20">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 h-20 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-[#00288e] flex items-center justify-center font-black tracking-wider shadow-lg shadow-blue-950/30">
+              EMP
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h1 className="font-extrabold tracking-[0.18em] text-base sm:text-lg">EMPROVEX</h1>
+                <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full border border-blue-400/30 bg-blue-500/10 text-[10px] font-bold uppercase tracking-wider text-blue-200">
+                  Administração
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 truncate">Administração da Plataforma</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void onLogout()}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-bold text-slate-200 transition hover:bg-white/10"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Sair</span>
+          </button>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-5 sm:px-8 py-8 sm:py-10 space-y-8">
+        <section className="rounded-3xl border border-white/10 bg-white/[0.055] backdrop-blur-xl p-6 sm:p-8 shadow-2xl shadow-black/10 overflow-hidden relative">
+          <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+          <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+            <div>
+              <div className="inline-flex items-center gap-2 text-blue-200 text-xs font-bold uppercase tracking-[0.16em] mb-3">
+                <ShieldCheck className="w-4 h-4" />
+                Ambiente administrativo isolado
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Central de Administração EMPROVEX</h2>
+              <p className="mt-2 text-sm text-slate-300 max-w-2xl leading-relaxed">
+                Este perfil administra a estrutura da plataforma. Dados operacionais de empenhos, notas fiscais, comissões e documentos dos setores não são carregados neste ambiente.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 min-w-0 lg:min-w-[310px]">
+              <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
+                <UserCog className="w-4 h-4" />
+                Administrador da plataforma
+              </div>
+              <p className="text-sm font-bold text-white break-all">{adminEmail}</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <AdminMetric
+            icon={<Building2 className="w-5 h-5" />}
+            label="Setores cadastrados"
+            value="1"
+            detail="HGeSM como workspace fundador"
+          />
+          <AdminMetric
+            icon={<LockKeyhole className="w-5 h-5" />}
+            label="Isolamento operacional"
+            value="Ativo"
+            detail="Admin sem subscriptions dos setores"
+          />
+          <AdminMetric
+            icon={<HardDrive className="w-5 h-5" />}
+            label="Armazenamento por setor"
+            value="Preparado"
+            detail="Medição será ativada em bloco posterior"
+          />
+        </section>
+
+        <section className="rounded-3xl border border-white/10 bg-white/[0.045] overflow-hidden">
+          <div className="px-5 sm:px-6 py-5 border-b border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-extrabold">Setores</h3>
+              <p className="text-xs text-slate-400 mt-1">Workspaces operacionais reconhecidos pela plataforma.</p>
+            </div>
+            <button
+              type="button"
+              disabled
+              title="O cadastro seguro será habilitado no Bloco 6"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600/40 border border-blue-400/20 px-4 py-2.5 text-xs font-bold text-blue-100 cursor-not-allowed opacity-70"
+            >
+              <Plus className="w-4 h-4" />
+              Cadastrar novo setor
+            </button>
+          </div>
+
+          <div className="p-5 sm:p-6">
+            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.06] p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+              <div className="flex items-start gap-4 min-w-0">
+                <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center text-emerald-300 flex-shrink-0">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="font-extrabold text-white">Aprovisionamento HGeSM</h4>
+                    <span className="inline-flex rounded-full bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                      Ativo
+                    </span>
+                    <span className="inline-flex rounded-full bg-white/5 border border-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                      Fundador
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1 break-all">{HGESM_SECTOR_EMAIL}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:min-w-[430px]">
+                <div className="rounded-xl bg-slate-950/30 border border-white/10 px-4 py-3">
+                  <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Workspace ID</div>
+                  <div className="text-sm font-mono font-bold text-slate-200 mt-1">{HGESM_WORKSPACE_ID}</div>
+                </div>
+                <div className="rounded-xl bg-slate-950/30 border border-white/10 px-4 py-3">
+                  <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Dados</div>
+                  <div className="text-sm font-bold text-slate-200 mt-1">Legado preservado</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Database className="w-5 h-5 text-blue-300" />
+              <h3 className="font-extrabold">Estado da migração</h3>
+            </div>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              O HGeSM continua operando nas coleções legadas. Nenhum dado foi movido neste bloco e este painel não consulta essas coleções.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <ShieldCheck className="w-5 h-5 text-emerald-300" />
+              <h3 className="font-extrabold">Próxima capacidade</h3>
+            </div>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              O próximo bloco habilitará o cadastro persistente e seguro de novos setores, mantendo a separação entre administração da plataforma e operação de cada workspace.
+            </p>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function AdminMetric({
+  icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-5">
+      <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-400/15 text-blue-200 flex items-center justify-center mb-4">
+        {icon}
+      </div>
+      <div className="text-[11px] uppercase tracking-[0.12em] font-bold text-slate-500">{label}</div>
+      <div className="text-xl font-extrabold mt-1">{value}</div>
+      <div className="text-xs text-slate-400 mt-1">{detail}</div>
+    </div>
+  );
+}
