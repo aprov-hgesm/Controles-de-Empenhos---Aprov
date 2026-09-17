@@ -14,20 +14,6 @@ export const MAX_INVOICE_PDF_BYTES = 10 * 1024 * 1024;
 
 type DocumentAction = 'view' | 'print' | 'download';
 
-async function getAuthorizationHeader(user: User): Promise<Record<string, string>> {
-  const token = await user.getIdToken();
-  return { Authorization: `Bearer ${token}` };
-}
-
-async function readApiError(response: Response): Promise<string> {
-  try {
-    const payload = (await response.json()) as { error?: string };
-    return payload.error || 'Falha ao acessar o documento.';
-  } catch {
-    return 'Falha ao acessar o documento.';
-  }
-}
-
 async function validatePdfBeforeUpload(file: File): Promise<void> {
   if (file.type !== 'application/pdf') {
     throw new Error('Selecione um arquivo no formato PDF.');
@@ -104,63 +90,33 @@ export async function deleteInvoicePdfUpload(
   invoiceId: string,
   pathnameOrDocument: string | InvoicePdfDocument
 ): Promise<void> {
+  void user;
+  void empenhoId;
+  void invoiceId;
+
   if (typeof pathnameOrDocument !== 'string') {
     const storage = resolveDocumentStorageRef(pathnameOrDocument);
-    if (storage.provider === 'google-drive') {
-      const runtime = requireWorkspaceDriveRuntime(storage.workspaceId);
-      await deleteWorkspaceDriveFile(runtime.session, storage.objectKey);
-      return;
-    }
-    pathnameOrDocument = pathnameOrDocument.pathname;
-  }
-
-  const driveFileId = fileIdFromDriveLogicalPathname(pathnameOrDocument);
-  if (driveFileId) {
-    const runtime = requireWorkspaceDriveRuntime();
-    await deleteWorkspaceDriveFile(runtime.session, driveFileId);
+    const runtime = requireWorkspaceDriveRuntime(storage.workspaceId);
+    await deleteWorkspaceDriveFile(runtime.session, storage.objectKey);
     return;
   }
 
-  const headers = await getAuthorizationHeader(user);
-  const response = await fetch('/api/invoice-documents', {
-    method: 'DELETE',
-    headers: { ...headers, 'Content-Type': 'application/json' },
-    cache: 'no-store',
-    body: JSON.stringify({ empenhoId, invoiceId, pathname: pathnameOrDocument }),
-  });
-  if (!response.ok && response.status !== 404) {
-    throw new Error(await readApiError(response));
+  const driveFileId = fileIdFromDriveLogicalPathname(pathnameOrDocument);
+  if (!driveFileId) {
+    throw new Error('Documento sem referência válida do Google Drive.');
   }
-}
-
-export async function fetchLegacyInvoicePdfBlob(
-  user: User,
-  empenhoId: string,
-  invoiceId: string,
-  pathname: string
-): Promise<Blob> {
-  const headers = await getAuthorizationHeader(user);
-  const query = new URLSearchParams({ empenhoId, invoiceId, pathname });
-  const response = await fetch(`/api/invoice-documents?${query.toString()}`, {
-    headers,
-    cache: 'no-store',
-  });
-  if (!response.ok) throw new Error(await readApiError(response));
-  return response.blob();
+  const runtime = requireWorkspaceDriveRuntime();
+  await deleteWorkspaceDriveFile(runtime.session, driveFileId);
 }
 
 export async function fetchInvoicePdfBlob(user: User, document: InvoicePdfDocument): Promise<Blob> {
+  void user;
   const storage = resolveDocumentStorageRef(document);
   if (storage.status !== 'active') {
     throw new Error('O documento não está mais disponível no armazenamento ativo.');
   }
-
-  if (storage.provider === 'google-drive') {
-    const runtime = requireWorkspaceDriveRuntime(storage.workspaceId);
-    return fetchWorkspaceDrivePdf(runtime.session, storage.objectKey);
-  }
-
-  return fetchLegacyInvoicePdfBlob(user, document.empenhoId, document.invoiceId, document.pathname);
+  const runtime = requireWorkspaceDriveRuntime(storage.workspaceId);
+  return fetchWorkspaceDrivePdf(runtime.session, storage.objectKey);
 }
 
 function showLoadingMessage(target: Window, action: DocumentAction): void {
