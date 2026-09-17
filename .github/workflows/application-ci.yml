@@ -42,6 +42,9 @@ jobs:
       - name: Recovery tests
         run: npm run test:recovery
 
+      - name: Legacy runtime guard
+        run: npm run audit:legacy-runtime
+
       - name: Production build
         run: npm run build
 
