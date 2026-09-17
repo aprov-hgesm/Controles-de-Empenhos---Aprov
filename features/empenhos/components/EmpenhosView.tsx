@@ -995,7 +995,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                     <td className="p-3.5">
                                       {inv.numeroNS ? (
                                         <span className="px-2 py-0.5 bg-blue-50 text-[#00288e] font-bold rounded text-[11px]">
-                                          {inv.nsLiquidacao}
+                                          {inv.numeroNS}
                                         </span>
                                       ) : (
                                         <span className="text-gray-400 italic text-[11px]">Não inf.</span>
