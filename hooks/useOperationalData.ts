@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   browserLocalPersistence,
   onAuthStateChanged,
@@ -13,9 +13,12 @@ import { onSnapshot } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { auth, googleProvider, handleFirestoreError, OperationType } from '../lib/firebase';
 import type { Alert, Comissao, CronogramaEmpenho, Empenho, Invoice } from '../lib/types';
+import { resolveAuthenticatedWorkspaceContext } from '../lib/platformAccess';
 import {
+  clearResolvedWorkspaceContext,
   isOperationalSectorContext,
   resolveWorkspaceContext,
+  type ResolvedWorkspaceContext,
 } from '../lib/workspaceContext';
 import {
   getOperationalCollectionPath,
@@ -27,28 +30,25 @@ import { normalizeSupplier } from '../features/empenhos/domain/empenhoHelpers';
 
 /**
  * Fonte de verdade da sessão e das coleções operacionais em tempo real.
- * O perfil HGeSM é o padrão após cada login. O modo administrativo só é ativado
- * explicitamente pelo seletor de perfil e não abre subscriptions operacionais.
  *
- * Bloco 7: os listeners deixam de conhecer paths Firestore diretamente. O workspace
- * fundador continua usando as coleções legadas; futuros setores usarão subcoleções
- * em /workspaces/{workspaceId} sem exigir nova alteração neste hook.
+ * Bloco 15: nenhuma subscription operacional é aberta apenas porque existe uma
+ * sessão Firebase. Primeiro a conta autenticada é resolvida no diretório da
+ * plataforma e associada ao workspace autorizado. Contas desconhecidas,
+ * desativadas ou com workspace inválido são encerradas em fail-closed.
  */
 export function useOperationalData() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [workspaceContext, setWorkspaceContext] = useState<ResolvedWorkspaceContext>(
+    () => resolveWorkspaceContext(null)
+  );
   const [empenhos, setEmpenhos] = useState<Empenho[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [comissoes, setComissoes] = useState<Comissao[]>([]);
   const [cronogramas, setCronogramas] = useState<CronogramaEmpenho[]>([]);
-
-  const workspaceContext = useMemo(
-    () => resolveWorkspaceContext(user?.email),
-    [user?.email]
-  );
 
   const clearOperationalState = () => {
     setEmpenhos([]);
@@ -60,11 +60,49 @@ export function useOperationalData() {
 
   useEffect(() => {
     localStorage.removeItem('local_user_session');
+    let active = true;
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser || null);
-      setLoadingAuth(false);
+      void (async () => {
+        if (!active) return;
+        setLoadingAuth(true);
+
+        if (!currentUser) {
+          clearResolvedWorkspaceContext();
+          clearOperationalState();
+          setUser(null);
+          setWorkspaceContext(resolveWorkspaceContext(null));
+          setSyncing(false);
+          setLoadingAuth(false);
+          return;
+        }
+
+        setUser(currentUser);
+        const resolvedContext = await resolveAuthenticatedWorkspaceContext(currentUser);
+        if (!active) return;
+
+        if (resolvedContext.status === 'unauthorized' || resolvedContext.status === 'anonymous') {
+          clearResolvedWorkspaceContext();
+          clearOperationalState();
+          resetActiveProfileMode();
+          await signOut(auth);
+          if (!active) return;
+          setUser(null);
+          setWorkspaceContext(resolveWorkspaceContext(null));
+          setSyncing(false);
+          setLoadingAuth(false);
+          return;
+        }
+
+        setWorkspaceContext(resolvedContext);
+        setLoadingAuth(false);
+      })();
     });
-    return () => unsubscribe();
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -73,17 +111,6 @@ export function useOperationalData() {
       router.replace('/admin');
     }
   }, [router, user, workspaceContext.status]);
-
-  useEffect(() => {
-    if (!user || workspaceContext.status !== 'unauthorized') return;
-
-    clearOperationalState();
-    void signOut(auth).finally(() => {
-      resetActiveProfileMode();
-      setUser(null);
-      setSyncing(false);
-    });
-  }, [user, workspaceContext.status]);
 
   useEffect(() => {
     if (!user || !isOperationalSectorContext(workspaceContext)) {
@@ -162,17 +189,26 @@ export function useOperationalData() {
       await setPersistence(auth, browserLocalPersistence);
       const credential = await signInWithPopup(auth, googleProvider);
 
-      // Todo novo login inicia no perfil operacional do HGeSM.
+      // Todo login inicia no perfil operacional. Apenas a conta fundadora pode
+      // alternar posteriormente para Administração EMPROVEX.
       setActiveProfileMode('sector');
-      const resolvedContext = resolveWorkspaceContext(credential.user.email, 'sector');
+      const resolvedContext = await resolveAuthenticatedWorkspaceContext(
+        credential.user,
+        'sector'
+      );
 
       if (resolvedContext.status === 'unauthorized' || resolvedContext.status === 'anonymous') {
         const returnedEmail = credential.user.email || 'sem e-mail informado';
+        clearResolvedWorkspaceContext();
         await signOut(auth);
         resetActiveProfileMode();
+        setUser(null);
+        setWorkspaceContext(resolveWorkspaceContext(null));
         throw new Error(`A conta Google ${returnedEmail} ainda não está autorizada no EMPROVEX.`);
       }
 
+      setUser(credential.user);
+      setWorkspaceContext(resolvedContext);
       return resolvedContext;
     } finally {
       setSyncing(false);
@@ -182,8 +218,10 @@ export function useOperationalData() {
   const signOutUser = async () => {
     localStorage.removeItem('local_user_session');
     resetActiveProfileMode();
+    clearResolvedWorkspaceContext();
     await signOut(auth);
     setUser(null);
+    setWorkspaceContext(resolveWorkspaceContext(null));
     clearOperationalState();
   };
 
