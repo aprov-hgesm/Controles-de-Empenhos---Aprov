@@ -19,7 +19,8 @@
     "migration:hgesm:plan": "node scripts/migrate-hgesm-workspace.mjs plan",
     "migration:hgesm:status": "node scripts/migrate-hgesm-workspace.mjs status",
     "migration:hgesm:verify": "node scripts/migrate-hgesm-workspace.mjs verify",
-    "audit:hgesm:integrity": "node scripts/audit-hgesm-workspace-integrity.mjs"
+    "audit:hgesm:integrity": "node scripts/audit-hgesm-workspace-integrity.mjs",
+    "verify:hgesm:settings-cutover": "node scripts/verify-hgesm-workspace-settings.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",
