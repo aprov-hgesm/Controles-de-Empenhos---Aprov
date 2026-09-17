@@ -1,33 +1,37 @@
 # EMPROVEX — Document Storage Provider
 
-## Objetivo
+## Estado atual — Blocos 14B a 14D
 
-Preparar o EMPROVEX para operar documentos privados em mais de um provedor sem interromper os PDFs históricos nem alterar prematuramente o fluxo oficial de upload.
+O EMPROVEX reconhece dois providers documentais:
 
-## Bloco 14B — estado atual
+- `vercel-blob` — legado temporário, mantido apenas para leitura e migração dos PDFs históricos;
+- `google-drive` — provider oficial para novos PDFs de Nota de Empenho e Nota Fiscal.
 
-Providers reconhecidos pelo contrato:
+A ausência do campo `storage` continua significando documento legado do Vercel Blob, usando o `pathname` histórico como `objectKey`.
 
-- `vercel-blob`
-- `google-drive`
+## Google Drive por workspace
 
-O provider oficial de NE e NF continua sendo `vercel-blob`.
+Cada setor possui configuração própria em:
 
-A POC de Google Drive continua isolada em `/drive-poc` e não participa do fluxo operacional de NE/NF.
+```text
+/workspaces/{workspaceId}/settings/documentStorage
+```
 
-## Compatibilidade legada
+A conta Google conectada ao Drive precisa ser a mesma conta autorizada do workspace. O EMPROVEX usa somente o escopo OAuth `drive.file`.
 
-Documentos históricos possuem `pathname`, mas não possuem o campo `storage`.
+A estrutura provisionada é:
 
-Regra definitiva de compatibilidade:
+```text
+EMPROVEX
+├── Notas de Empenho
+└── Notas Fiscais
+```
 
-> Documento sem `storage` é tratado como `vercel-blob`, `active`, usando o `pathname` histórico como `objectKey`.
+Os IDs das pastas podem ser persistidos no Firestore. O access token não é salvo em Firestore, localStorage ou sessionStorage; existe somente em memória durante a sessão da página.
 
-Assim, nenhum documento antigo precisa ser migrado para adotar a abstração.
+## Metadata documental
 
-## Metadata de armazenamento
-
-Novos documentos podem registrar:
+Documentos ativos podem registrar:
 
 ```ts
 storage: {
@@ -42,35 +46,94 @@ storage: {
 }
 ```
 
-No Vercel Blob, `objectKey` corresponde ao `pathname` validado.
+No Google Drive:
 
-No futuro Google Drive, `objectKey` corresponderá ao `fileId` e `folderKey` ao `folderId`.
+- `objectKey` = `fileId` do Drive;
+- `folderKey` = `folderId` da pasta de destino;
+- `workspaceId` = proprietário lógico do documento;
+- `sha256` = hash calculado pelo EMPROVEX.
 
-## Regras deste bloco
+## Cutover oficial
 
-1. Nenhum PDF histórico é movido ou regravado.
-2. Nenhum upload oficial é enviado ao Google Drive ainda.
-3. Novos uploads feitos pelo Blob passam a registrar explicitamente `storage.provider = "vercel-blob"`.
-4. A ausência do bloco `storage` continua válida e significa Blob legado.
-5. `sha256`, `workspaceId` e ciclo de exclusão serão habilitados em blocos posteriores.
-6. Exclusão de documentos encerrados nunca será automática; dependerá de política e confirmação explícita.
+A partir do Bloco 14D, novos uploads de NE/NF não utilizam mais `@vercel/blob/client`.
 
-## Próximo bloco
+Se o Google Drive estiver desconectado, o upload deve falhar com orientação para reconectar o Drive. Não existe fallback silencioso para Blob.
 
-O Bloco 14C poderá introduzir Google Drive por workspace. Antes do cutover de qualquer setor, leitura, upload, exclusão e reconexão serão roteados pelo provider explícito do documento, preservando simultaneamente arquivos históricos no Blob.
+Leitura de documentos é roteada pelo provider:
 
-## Gate
+- `google-drive` → Drive API usando a sessão temporária do workspace;
+- `vercel-blob` ou ausência de metadata → APIs legadas privadas do EMPROVEX.
+
+As rotas Vercel Blob continuam temporariamente no código porque ainda são necessárias para ler e migrar o acervo legado.
+
+## Migração automática Blob → Drive
+
+O painel do Google Drive do setor possui uma migração assistida em lote.
+
+Fluxo por documento:
+
+```text
+Vercel Blob
+  ↓ download autenticado
+SHA-256 da origem
+  ↓
+Google Drive
+  ↓
+verificação de tamanho
+  ↓
+download de conferência
+  ↓
+SHA-256 do arquivo gravado
+  ↓
+Firestore recebe metadata google-drive
+```
+
+A migração opera por registro (Empenho ou Nota Fiscal). Se qualquer PDF do registro falhar antes da gravação do Firestore, os arquivos Drive criados naquele lote são excluídos e o registro continua apontando para o Blob.
+
+O processo é retomável: documentos já marcados como `google-drive` são ignorados em novas execuções.
+
+## Política de segurança da migração
+
+Nesta etapa:
+
+1. nenhum PDF do Vercel Blob é apagado automaticamente;
+2. a migração só altera a referência no Firestore depois de verificar tamanho e SHA-256 do arquivo rebaixado do Drive;
+3. erros de um registro não interrompem necessariamente os demais;
+4. arquivos Drive órfãos criados por um registro que falhou são removidos;
+5. o `pathname` histórico do documento migrado é preservado, permitindo auditoria e futura limpeza controlada do Blob;
+6. a exclusão definitiva dos arquivos do Blob ocorrerá somente após auditoria confirmar `0` documentos legados pendentes.
+
+## Gates
 
 Execute:
 
 ```bash
+npm run verify:drive-poc
 npm run verify:storage-provider
+npm run verify:workspace-drive
+npm run verify:drive-cutover
+npm run audit:legacy-runtime
+npm run typecheck
+npm run build
 ```
 
-O resultado esperado é:
+Resultados principais esperados:
 
 ```text
+DRIVE POC SAFETY: READY
 STORAGE PROVIDER ABSTRACTION: READY
+WORKSPACE DRIVE STORAGE: READY
+DRIVE CUTOVER MIGRATION: READY
+LEGACY RUNTIME GUARD: READY
 ```
 
-O gate bloqueia a etapa caso o fluxo oficial de NE/NF deixe de usar Vercel Blob ou caso código da POC Google Drive vaze para as APIs operacionais antes do cutover planejado.
+## Etapa posterior
+
+Depois de migrar todo o acervo e executar uma auditoria independente, será possível remover:
+
+- PDFs físicos remanescentes do Vercel Blob;
+- rotas legadas de documentos Blob;
+- `@vercel/blob` do projeto;
+- `BLOB_READ_WRITE_TOKEN` da configuração da Vercel.
+
+Essa remoção não faz parte do Bloco 14D e não deve ocorrer antes da auditoria final.
