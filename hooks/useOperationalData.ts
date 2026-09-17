@@ -19,6 +19,28 @@ import {
 } from '../lib/workspaceContext';
 import { normalizeSupplier } from '../features/empenhos/domain/empenhoHelpers';
 
+export const AUTH_DIAGNOSTIC_STORAGE_KEY = 'emprovex_auth_diagnostic_v1';
+
+interface StoredAuthDiagnostic {
+  email: string | null;
+  uid: string;
+  status: string;
+  capturedAt: string;
+}
+
+function persistAuthDiagnostic(user: User, status: string) {
+  if (typeof window === 'undefined') return;
+
+  const diagnostic: StoredAuthDiagnostic = {
+    email: user.email,
+    uid: user.uid,
+    status,
+    capturedAt: new Date().toISOString(),
+  };
+
+  sessionStorage.setItem(AUTH_DIAGNOSTIC_STORAGE_KEY, JSON.stringify(diagnostic));
+}
+
 /**
  * Fonte de verdade da sessão e das coleções operacionais em tempo real.
  *
@@ -61,6 +83,7 @@ export function useOperationalData() {
 
   useEffect(() => {
     if (user && workspaceContext.status === 'platformAdmin') {
+      persistAuthDiagnostic(user, workspaceContext.status);
       router.replace('/admin');
     }
   }, [router, user, workspaceContext.status]);
@@ -68,6 +91,7 @@ export function useOperationalData() {
   useEffect(() => {
     if (!user || workspaceContext.status !== 'unauthorized') return;
 
+    persistAuthDiagnostic(user, workspaceContext.status);
     const returnedEmail = user.email || 'sem e-mail informado pelo Firebase';
     if (typeof window !== 'undefined') {
       window.alert(
@@ -95,8 +119,6 @@ export function useOperationalData() {
 
     setSyncing(true);
 
-    // Compatibilidade temporária do workspace fundador: os dados do HGeSM ainda
-    // residem nas coleções globais. Novos setores nunca devem reutilizar estes paths.
     const unsubscribeEmpenhos = onSnapshot(
       collection(db, 'empenhos'),
       (snapshot) => {
@@ -155,13 +177,11 @@ export function useOperationalData() {
   const signInUser = async () => {
     setSyncing(true);
     try {
-      // Garante que a sessão sobreviva a mudanças de rota/recarregamentos antes
-      // de iniciar o popup. Isso é especialmente importante para o perfil admin,
-      // que navega imediatamente para /admin após autenticar.
       await setPersistence(auth, browserLocalPersistence);
 
       const credential = await signInWithPopup(auth, googleProvider);
       const resolvedContext = resolveWorkspaceContext(credential.user.email);
+      persistAuthDiagnostic(credential.user, resolvedContext.status);
 
       if (resolvedContext.status === 'unauthorized' || resolvedContext.status === 'anonymous') {
         const returnedEmail = credential.user.email || 'sem e-mail informado';
