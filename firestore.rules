@@ -41,15 +41,21 @@ service cloud.firestore {
       ).data;
     }
 
+    function hasBoundUid(account) {
+      return 'firebaseUid' in account
+        && account.firebaseUid is string
+        && account.firebaseUid.size() > 0;
+    }
+
     function identityMatchesAccount(account) {
       return isVerifiedUser()
+        && account.email == request.auth.token.email
         && (
-          account.email == request.auth.token.email
-          || (
-            'firebaseUid' in account
-            && account.firebaseUid is string
+          (
+            hasBoundUid(account)
             && account.firebaseUid == request.auth.uid
           )
+          || !hasBoundUid(account)
         );
     }
 
@@ -178,6 +184,73 @@ service cloud.firestore {
         && identityMatchesAccount(resource.data);
     }
 
+    function selfAccountImmutableFieldsPreserved(accountId) {
+      return request.resource.data.email == resource.data.email
+        && request.resource.data.email == accountId
+        && request.resource.data.accountType == resource.data.accountType
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy;
+    }
+
+    function selfAccountWorkspaceIsActive(accountId) {
+      return resource.data.workspaceId is string
+        && exists(
+          /databases/$(database)/documents/workspaces/$(resource.data.workspaceId)
+        )
+        && get(
+          /databases/$(database)/documents/workspaces/$(resource.data.workspaceId)
+        ).data.id == resource.data.workspaceId
+        && get(
+          /databases/$(database)/documents/workspaces/$(resource.data.workspaceId)
+        ).data.status == 'active'
+        && get(
+          /databases/$(database)/documents/workspaces/$(resource.data.workspaceId)
+        ).data.authorizedEmail == accountId;
+    }
+
+    function isSelfUidBinding(accountId) {
+      return isVerifiedUser()
+        && resource.data.accountType == 'sector'
+        && resource.data.status == 'active'
+        && resource.data.email == accountId
+        && resource.data.email == request.auth.token.email
+        && !hasBoundUid(resource.data)
+        && request.resource.data.firebaseUid == request.auth.uid
+        && request.resource.data.firstLoginAt is string
+        && request.resource.data.lastLoginAt is string
+        && request.resource.data.updatedAt is string
+        && selfAccountImmutableFieldsPreserved(accountId)
+        && selfAccountWorkspaceIsActive(accountId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'firebaseUid',
+          'firstLoginAt',
+          'lastLoginAt',
+          'updatedAt'
+        ]);
+    }
+
+    function isSelfBoundSessionRefresh(accountId) {
+      return isVerifiedUser()
+        && resource.data.accountType == 'sector'
+        && resource.data.status == 'active'
+        && resource.data.email == accountId
+        && resource.data.email == request.auth.token.email
+        && hasBoundUid(resource.data)
+        && resource.data.firebaseUid == request.auth.uid
+        && request.resource.data.firebaseUid == resource.data.firebaseUid
+        && request.resource.data.firstLoginAt == resource.data.firstLoginAt
+        && request.resource.data.lastLoginAt is string
+        && request.resource.data.updatedAt is string
+        && selfAccountImmutableFieldsPreserved(accountId)
+        && selfAccountWorkspaceIsActive(accountId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'lastLoginAt',
+          'updatedAt'
+        ]);
+    }
+
     // Diretório administrativo da plataforma. O administrador pode listar e
     // manter metadados, mas não recebe acesso operacional aos workspaces externos.
     match /workspaces/{workspaceId} {
@@ -193,9 +266,16 @@ service cloud.firestore {
     match /platformAccounts/{accountId} {
       allow get: if isPlatformAdmin() || isSelfPlatformAccount();
       allow list: if isPlatformAdmin();
-      allow create, update: if isPlatformAdmin()
+      allow create: if isPlatformAdmin()
         && validSectorAccountWrite(accountId)
         && accountHasMatchingWorkspaceAfterWrite(accountId);
+      allow update: if (
+          isPlatformAdmin()
+          && validSectorAccountWrite(accountId)
+          && accountHasMatchingWorkspaceAfterWrite(accountId)
+        )
+        || isSelfUidBinding(accountId)
+        || isSelfBoundSessionRefresh(accountId);
       allow delete: if false;
     }
 
