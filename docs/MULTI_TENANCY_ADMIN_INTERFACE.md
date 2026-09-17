@@ -1,69 +1,45 @@
-# EMPROVEX — Interface administrativa separada (Bloco 5)
+# EMPROVEX — Interface administrativa separada
 
-## Objetivo
+## Status atual
 
-O Bloco 5 cria uma experiência de administração da plataforma separada do ambiente operacional dos setores.
-
-## Rota administrativa
-
-A administração passa a utilizar a rota:
+A interface administrativa permanece na rota:
 
 ```text
 /admin
 ```
 
-Somente uma identidade resolvida como `platformAdmin` pode permanecer nessa rota. Qualquer conta de setor, conta não autorizada ou sessão anônima é redirecionada para a raiz da aplicação.
+Desde o Bloco 6.1, a conta institucional fundadora `aprov1hgesm@gmail.com` possui dois modos de interface na mesma sessão Firebase:
 
-## Administrador bootstrap
+- **Aprovisionamento HGeSM** — perfil operacional padrão;
+- **Administração EMPROVEX** — perfil administrativo.
 
-A conta bootstrap definida nos blocos anteriores permanece:
-
-```text
-codex.martis.dev@gmail.com
-```
-
-Quando essa conta autentica a partir da raiz, o contexto é resolvido como `platformAdmin` e o navegador é direcionado para `/admin`.
+A troca para Administração ocorre pelo seletor de perfil no cabeçalho. O retorno ao HGeSM ocorre pelo comando `Voltar ao HGeSM`, sem novo login.
 
 ## Isolamento operacional
 
-O painel administrativo não importa nem consulta:
+Quando o perfil administrativo está ativo:
 
-- empenhos;
-- notas fiscais;
-- comissões;
-- cronogramas;
-- alertas;
-- PDFs operacionais dos setores.
+- `workspaceContext.status = platformAdmin`;
+- `canLoadOperationalData = false`;
+- o painel administrativo não abre subscriptions das coleções operacionais;
+- empenhos, notas fiscais, comissões, cronogramas e alertas não são carregados pelo ambiente administrativo.
 
-O `useOperationalData` também continua impedindo subscriptions operacionais quando o contexto não é `sector`.
+Ao voltar para o perfil operacional:
 
-## Conteúdo atual do painel
+- `workspaceContext.status = sector`;
+- `workspaceId = hgesm-aprov`;
+- `legacyDataMode = true` enquanto a migração das coleções globais ainda não tiver ocorrido.
 
-O painel administrativo apresenta neste bloco:
+## Conteúdo do painel
 
-- identificação da conta administradora;
-- quantidade atual de setores reconhecidos;
+O painel administrativo apresenta:
+
+- identificação da conta institucional fundadora;
+- quantidade de setores reconhecidos;
 - estado de isolamento operacional;
-- indicação de preparação para acompanhamento de armazenamento;
-- listagem do workspace fundador `hgesm-aprov`;
-- indicação de que os dados legados do HGeSM permanecem preservados.
+- listagem dos workspaces cadastrados;
+- cadastro de novos setores quando as Firestore Rules administrativas estiverem publicadas.
 
-## Cadastro de novos setores
+## Compatibilidade
 
-O botão `Cadastrar novo setor` aparece visualmente, mas permanece desabilitado no Bloco 5.
-
-A persistência de novos setores e contas autorizadas será implementada no Bloco 6, depois da preparação administrativa necessária para não depender de edição manual de código.
-
-## Compatibilidade do HGeSM
-
-O Bloco 5 não altera:
-
-- paths das coleções do HGeSM;
-- regras atuais do Firestore;
-- documentos armazenados no Vercel Blob;
-- contador de TR;
-- fluxos operacionais do workspace fundador.
-
-## Segurança adicional
-
-Sessões persistidas de contas que não sejam reconhecidas como `platformAdmin` ou `sector` autorizado são encerradas automaticamente na raiz, evitando acesso visual indevido ao ambiente operacional.
+A alternância de perfil não move dados, não altera PDFs existentes e não muda o contador de TR. Ela apenas altera o contexto de interface usado pela mesma sessão autenticada.
