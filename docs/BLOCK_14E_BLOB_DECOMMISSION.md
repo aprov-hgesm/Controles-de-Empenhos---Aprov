@@ -1,107 +1,78 @@
-# Bloco 14E — Descomissionamento do Vercel Blob + Auditoria Final
+# Bloco 14E — Descomissionamento do armazenamento legado
 
-## Objetivo
+## Status
 
-Encerrar definitivamente o uso do Vercel Blob no EMPROVEX somente depois de concluída e validada a migração documental do Bloco 14D para o Google Drive por workspace.
+**CONCLUÍDO** para o workspace `hgesm-aprov`.
 
-## Condições obrigatórias para iniciar
+O objetivo deste bloco foi encerrar o armazenamento documental legado somente depois de concluir e validar a migração integral dos PDFs para o Google Drive por workspace.
 
-O Bloco 14E não deve começar enquanto qualquer uma destas condições não estiver satisfeita:
+## Evidências de conclusão
 
-- migração Blob → Drive concluída;
-- contador de documentos legados pendentes igual a `0`;
-- referências Firestore de NE/NF apontando para `google-drive`;
-- amostragem funcional de PDFs migrados aprovada em visualizar, imprimir e baixar;
-- verificação de integridade dos documentos migrados concluída;
-- Google Drive do workspace funcionando como provider oficial para novos uploads.
-
-## Etapas
-
-### 14E.1 — Auditoria pré-descomissionamento
-
-Verificar no Firestore e no runtime:
-
-- `0` documentos com provider `vercel-blob`;
-- `0` documentos sem metadata `storage` que ainda dependam do Blob;
-- `0` referências a pathnames físicos do Blob utilizadas como fonte ativa;
-- arquivos Drive acessíveis e coerentes com seus metadados;
-- `workspaceId`, `objectKey`, `folderKey` e `sha256` válidos quando aplicável.
-
-Nenhum arquivo do Blob deve ser apagado antes desta etapa ser aprovada.
-
-### 14E.2 — Exclusão física controlada do acervo Blob
-
-Excluir os PDFs remanescentes do Vercel Blob somente após a auditoria prévia.
-
-A exclusão deve ser separada da migração e não deve alterar saldos, empenhos, NFs, TRs, tramitação, comissões ou demais dados operacionais.
-
-### 14E.3 — Remoção do código legado Blob
-
-Remover do EMPROVEX:
-
-- dependência `@vercel/blob`;
-- imports e helpers exclusivos do Blob;
-- rotas privadas de NE/NF usadas apenas para Blob;
-- funções de leitura, upload, exclusão e fallback legadas;
-- `createVercelBlobStorageRef` e código equivalente que não tenha mais uso;
-- compatibilidade runtime que trate ausência de `storage` como Blob, após confirmação de que não existem documentos antigos dependentes dela.
-
-### 14E.4 — Remoção de configuração e secrets
-
-Após o código deixar de depender do Blob, remover do ambiente de deploy:
-
-- `BLOB_READ_WRITE_TOKEN`;
-- `BLOB_STORE_ID`, se presente;
-- demais variáveis ou bindings específicos do Vercel Blob.
-
-Nunca remover secrets antes de o código correspondente ter sido retirado e validado.
-
-### 14E.5 — Auditoria final de resíduos
-
-Executar uma varredura integral do repositório procurando, entre outros termos:
+A auditoria pré-descomissionamento confirmou:
 
 ```text
-@vercel/blob
-BLOB_READ_WRITE_TOKEN
-BLOB_STORE_ID
-vercel-blob
-/api/empenho-documents
-/api/invoice-documents
-isBlobConfigured
-createVercelBlobStorageRef
-fetchLegacyEmpenhoPdfBlob
-fetchLegacyInvoicePdfBlob
+Empenhos no workspace:       59
+Notas Fiscais no workspace:  138
+NEs com PDF atual:            47
+NFs com PDF atual:            3
+PDFs únicos referenciados:    50
+Google Drive:                 50
+Referências legadas:          0
+Achados bloqueantes:          0
 ```
 
-A auditoria também deve verificar:
+A validação funcional também confirmou visualização, download e impressão de documentos migrados diretamente pelo EMPROVEX.
 
-- `package.json` e lockfile;
-- rotas API;
-- tipos e contratos documentais;
-- scripts e gates de CI;
-- documentação;
-- variáveis de ambiente referenciadas;
-- fallbacks legados;
-- imports mortos;
-- referências persistidas no Firestore.
-
-## Critério de conclusão
-
-O Bloco 14E só pode ser considerado concluído quando o estado final for equivalente a:
+A limpeza física do provedor antigo foi executada e verificada:
 
 ```text
-Provider documental oficial: google-drive
-PDFs legados no Blob: 0
-Referências Firestore vercel-blob: 0
-Dependência @vercel/blob: ausente
-Rotas Blob: ausentes
-Secrets Blob: ausentes
-Fallback Blob: ausente
+Cópias físicas pendentes: 0
+Referências no Drive:      50
+Processados:               50/50
+Excluídos:                 50
+Já ausentes:               0
+Falhas:                    0
+```
+
+## Arquitetura resultante
+
+O Google Drive tornou-se o único provider documental ativo do EMPROVEX.
+
+O runtime atual:
+
+- exige metadata `storage` válida;
+- aceita somente `provider: 'google-drive'`;
+- utiliza `fileId` como `objectKey`;
+- mantém `folderId`, `workspaceId` e SHA-256 quando aplicável;
+- não possui fallback de leitura para o provider anterior;
+- não possui rotas API específicas do armazenamento descomissionado;
+- mantém o token do Drive apenas em memória durante a sessão.
+
+## Validação final
+
+Os gates permanentes do projeto são:
+
+```bash
+npm run verify:storage-provider
+npm run verify:workspace-drive
+npm run audit:legacy-runtime
+npm run typecheck
+npm run build
+```
+
+Critério final esperado:
+
+```text
+Provider documental: google-drive
+Referências legadas no Firestore: 0
+Rotas legadas: ausentes
+Fallback legado: ausente
+Dependência do provider anterior: ausente
 Typecheck: OK
 Build: OK
-Auditoria de resíduos: CLEAN
+Auditoria documental final: READY
 ```
 
-## Regra de segurança
+## Observação operacional
 
-O Bloco 14E é irreversível no que diz respeito à remoção física do acervo Blob. Por isso, a exclusão física deve ocorrer somente depois de a migração do Bloco 14D ter sido auditada e validada no Google Drive.
+O campo `pathname` dos documentos migrados pode conservar valor histórico para rastreabilidade, porém não é utilizado como fonte física do arquivo. A leitura e demais operações documentais usam exclusivamente a metadata do Google Drive.
