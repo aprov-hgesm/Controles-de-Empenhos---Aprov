@@ -16,10 +16,6 @@ import {
   HGESM_WORKSPACE_ID,
 } from './hgesmWorkspace';
 import {
-  BOOTSTRAP_PLATFORM_ADMIN_EMAIL,
-  createBootstrapPlatformAdminAccount,
-} from './platformBootstrap';
-import {
   isValidPlatformEmail,
   isValidWorkspaceId,
   normalizePlatformEmail,
@@ -67,27 +63,24 @@ export function suggestWorkspaceId(name: string): string {
 }
 
 /**
- * Materializa, de forma idempotente, os registros administrativos já definidos
- * nos blocos anteriores. Não toca nas coleções operacionais legadas do HGeSM.
+ * Materializa somente o workspace fundador e sua conta operacional. A capacidade
+ * administrativa da mesma identidade é resolvida pelo contexto de perfil e pelas
+ * Rules; não é necessário manter um segundo documento de conta administrativa.
  */
 export async function ensureFoundingPlatformMetadata(): Promise<void> {
   const now = new Date().toISOString();
-  const admin = createBootstrapPlatformAdminAccount(now);
   const workspace = createHgesmFoundingWorkspace(now);
   const sectorAccount = createHgesmSectorAccount(now);
 
   await runTransaction(db, async (transaction) => {
-    const adminRef = doc(db, PLATFORM_ACCOUNTS_COLLECTION, accountDocumentId(BOOTSTRAP_PLATFORM_ADMIN_EMAIL));
     const workspaceRef = doc(db, WORKSPACES_COLLECTION, HGESM_WORKSPACE_ID);
     const sectorRef = doc(db, PLATFORM_ACCOUNTS_COLLECTION, accountDocumentId(HGESM_SECTOR_EMAIL));
 
-    const [adminSnapshot, workspaceSnapshot, sectorSnapshot] = await Promise.all([
-      transaction.get(adminRef),
+    const [workspaceSnapshot, sectorSnapshot] = await Promise.all([
       transaction.get(workspaceRef),
       transaction.get(sectorRef),
     ]);
 
-    if (!adminSnapshot.exists()) transaction.set(adminRef, admin);
     if (!workspaceSnapshot.exists()) transaction.set(workspaceRef, workspace);
     if (!sectorSnapshot.exists()) transaction.set(sectorRef, sectorAccount);
   });
@@ -112,8 +105,8 @@ export async function createSectorWorkspace(
   if (!isValidPlatformEmail(authorizedEmail)) {
     throw new Error('Informe uma conta Google válida para o setor.');
   }
-  if (authorizedEmail === BOOTSTRAP_PLATFORM_ADMIN_EMAIL) {
-    throw new Error('A conta administrativa da plataforma não pode ser usada como conta operacional de setor.');
+  if (authorizedEmail === HGESM_SECTOR_EMAIL) {
+    throw new Error('A conta institucional fundadora já está vinculada ao workspace HGeSM.');
   }
 
   const workspace: Workspace = {
