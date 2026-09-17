@@ -962,7 +962,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                       </button>
                                     </td>
                                     <td className="p-3.5 text-gray-600 font-semibold">
-                                      {formatDateOnly(inv.date)}
+                                      {formatDateOnly(inv.issueDate)}
                                     </td>
                                     <td className="p-3.5">
                                       {inv.dataRecebimentoTermo ? (
