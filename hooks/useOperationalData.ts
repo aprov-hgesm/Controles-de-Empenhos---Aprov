@@ -1,15 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { onAuthStateChanged, signInWithPopup, signOut, type User } from 'firebase/auth';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { auth, db, googleProvider, handleFirestoreError, OperationType } from '../lib/firebase';
 import type { Alert, Comissao, CronogramaEmpenho, Empenho, Invoice } from '../lib/types';
+import {
+  isOperationalSectorContext,
+  resolveWorkspaceContext,
+} from '../lib/workspaceContext';
 import { normalizeSupplier } from '../features/empenhos/domain/empenhoHelpers';
 
 /**
  * Fonte de verdade da sessão e das coleções operacionais em tempo real.
- * Mantém o mesmo comportamento de autenticação e subscriptions que antes vivia no page.tsx.
+ *
+ * A partir do Bloco 4, nenhuma subscription operacional é aberta antes de a
+ * identidade autenticada ser resolvida. Durante a transição, somente o workspace
+ * fundador do HGeSM pode usar os paths globais legados.
  */
 export function useOperationalData() {
   const [user, setUser] = useState<User | null>(null);
@@ -21,6 +28,19 @@ export function useOperationalData() {
   const [comissoes, setComissoes] = useState<Comissao[]>([]);
   const [cronogramas, setCronogramas] = useState<CronogramaEmpenho[]>([]);
 
+  const workspaceContext = useMemo(
+    () => resolveWorkspaceContext(user?.email),
+    [user?.email]
+  );
+
+  const clearOperationalState = () => {
+    setEmpenhos([]);
+    setAlerts([]);
+    setInvoices([]);
+    setComissoes([]);
+    setCronogramas([]);
+  };
+
   useEffect(() => {
     localStorage.removeItem('local_user_session');
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -31,16 +51,20 @@ export function useOperationalData() {
   }, []);
 
   useEffect(() => {
-    if (!user) {
-      setEmpenhos([]);
-      setAlerts([]);
-      setInvoices([]);
-      setComissoes([]);
+    if (
+      !user ||
+      !isOperationalSectorContext(workspaceContext) ||
+      !workspaceContext.legacyDataMode
+    ) {
+      clearOperationalState();
+      setSyncing(false);
       return;
     }
 
     setSyncing(true);
 
+    // Compatibilidade temporária do workspace fundador: os dados do HGeSM ainda
+    // residem nas coleções globais. Novos setores nunca devem reutilizar estes paths.
     const unsubscribeEmpenhos = onSnapshot(
       collection(db, 'empenhos'),
       (snapshot) => {
@@ -94,12 +118,20 @@ export function useOperationalData() {
       unsubscribeComissoes();
       unsubscribeCronogramas();
     };
-  }, [user]);
+  }, [user, workspaceContext]);
 
   const signInUser = async () => {
     setSyncing(true);
     try {
-      await signInWithPopup(auth, googleProvider);
+      const credential = await signInWithPopup(auth, googleProvider);
+      const resolvedContext = resolveWorkspaceContext(credential.user.email);
+
+      if (resolvedContext.status === 'unauthorized' || resolvedContext.status === 'anonymous') {
+        await signOut(auth);
+        throw new Error('Esta conta Google ainda não está autorizada no EMPROVEX.');
+      }
+
+      return resolvedContext;
     } finally {
       setSyncing(false);
     }
@@ -109,6 +141,7 @@ export function useOperationalData() {
     localStorage.removeItem('local_user_session');
     await signOut(auth);
     setUser(null);
+    clearOperationalState();
   };
 
   const getBalanceByClass = (classification: 'QR' | 'CALI' | 'PASA') => {
@@ -161,7 +194,7 @@ export function useOperationalData() {
   };
 
   return {
-    user, loadingAuth, syncing,
+    user, loadingAuth, syncing, workspaceContext,
     empenhos, setEmpenhos,
     alerts, setAlerts,
     invoices, setInvoices,
