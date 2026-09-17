@@ -1,6 +1,6 @@
 'use client';
 
-import type { ChangeEvent, MouseEvent } from 'react';
+import type { ChangeEvent, MouseEvent, ReactNode } from 'react';
 import { Camera, Loader2, Menu, ShieldCheck, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -11,6 +11,7 @@ interface AppHeaderProps {
   customLogo: string | null;
   syncing: boolean;
   userDisplayName: string;
+  driveControl?: ReactNode;
   onOpenSidebar: () => void;
   onLogoUpload: (event: ChangeEvent<HTMLInputElement>) => void;
   onRemoveLogo: (event: MouseEvent) => void;
@@ -20,6 +21,7 @@ export function AppHeader({
   customLogo,
   syncing,
   userDisplayName,
+  driveControl,
   onOpenSidebar,
   onLogoUpload,
   onRemoveLogo,
@@ -99,13 +101,15 @@ export function AppHeader({
         </div>
       </div>
 
-      <div className="flex items-center gap-3 sm:gap-4">
+      <div className="flex items-center gap-2 sm:gap-3">
         {syncing && (
           <div role="status" aria-live="polite" className="flex items-center gap-1 text-xs font-semibold text-blue-600 animate-pulse bg-blue-50/70 backdrop-blur-sm px-3 py-1 rounded-full">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
             Sincronizando...
           </div>
         )}
+
+        {driveControl}
 
         {canSwitchProfile && (
           <button
