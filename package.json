@@ -24,7 +24,8 @@
     "data:hgesm:plan": "node scripts/sync-hgesm-workspace-data.mjs plan",
     "data:hgesm:status": "node scripts/sync-hgesm-workspace-data.mjs status",
     "data:hgesm:verify": "node scripts/sync-hgesm-workspace-data.mjs verify",
-    "verify:hgesm:data-cutover": "node scripts/verify-hgesm-data-cutover.mjs"
+    "verify:hgesm:data-cutover": "node scripts/verify-hgesm-data-cutover.mjs",
+    "verify:hgesm:post-cutover": "node scripts/verify-hgesm-post-cutover.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",
