@@ -2,12 +2,32 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAuthorizedUser() {
+    function isVerifiedUser() {
       return request.auth != null
-        && request.auth.token.email == 'aprov1hgesm@gmail.com'
         && request.auth.token.email_verified == true;
     }
 
+    function isAuthorizedUser() {
+      return isVerifiedUser()
+        && request.auth.token.email == 'aprov1hgesm@gmail.com';
+    }
+
+    function isPlatformAdmin() {
+      return isVerifiedUser()
+        && request.auth.token.email == 'codex.martis.dev@gmail.com';
+    }
+
+    // Diretórios administrativos da plataforma. No Bloco 6 o administrador pode
+    // consultar e criar registros, mas não apagar nem sobrescrever perfis existentes.
+    match /workspaces/{id} {
+      allow read, create: if isPlatformAdmin();
+    }
+
+    match /platformAccounts/{id} {
+      allow read, create: if isPlatformAdmin();
+    }
+
+    // Coleções operacionais legadas do HGeSM permanecem com a mesma autorização.
     match /empenhos/{id} {
       allow read, write: if isAuthorizedUser();
     }
@@ -34,4 +54,3 @@ service cloud.firestore {
     }
   }
 }
-
