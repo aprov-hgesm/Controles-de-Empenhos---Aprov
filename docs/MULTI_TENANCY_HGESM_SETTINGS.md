@@ -20,18 +20,18 @@ Isso permite mover o contador de TR para `/workspaces/{workspaceId}/settings/...
 
 ## Fase A — preparação sem mudança de runtime
 
-O HGeSM permanece inicialmente com:
+O HGeSM permaneceu inicialmente com:
 
 ```text
 legacyDataMode=true
 legacySettingsMode=true
 ```
 
-Portanto essa fase é uma refatoração estrutural sem mudança de comportamento do sistema em produção.
+Essa fase foi uma refatoração estrutural sem mudança de comportamento do sistema em produção.
 
 ## Gate obrigatório antes do cutover
 
-Execute no Google Cloud Shell:
+O gate foi executado com:
 
 ```bash
 npm run verify:hgesm:settings-cutover
@@ -48,27 +48,21 @@ A ferramenta é somente leitura e valida:
 - contador não inferior ao maior TR já emitido;
 - mesma quantidade de NFs nos dois lados.
 
-O cutover só pode prosseguir com:
-
-```text
-SETTINGS CUTOVER: READY
-```
-
-Qualquer divergência mantém `legacySettingsMode=true`.
+O gate retornou `SETTINGS CUTOVER: READY`, com contador legado=62, contador do workspace=62, maior TR=62 e 138 NFs em ambos os lados.
 
 ## Fase B — settings do HGeSM no workspace
 
-Após o gate READY, o contexto do HGeSM pode mudar para:
+Após o gate READY, o contexto do HGeSM foi alterado para:
 
 ```text
 legacyDataMode=true
 legacySettingsMode=false
 ```
 
-Nesse estado:
+Estado atual do Bloco 11:
 
 - empenhos/NFs/alertas/comissões/cronogramas continuam nas coleções legadas;
-- o contador de TR passa a usar `workspaces/hgesm-aprov/settings/termoRecebimentoCounter`;
+- o contador de TR usa `workspaces/hgesm-aprov/settings/termoRecebimentoCounter`;
 - `settings/global` continua global;
 - outros workspaces usam seus próprios settings e não compartilham sequência de TR.
 
