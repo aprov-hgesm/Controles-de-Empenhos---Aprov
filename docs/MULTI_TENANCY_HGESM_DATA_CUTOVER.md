@@ -16,7 +16,7 @@ Destino:
 /workspaces/hgesm-aprov/<colecao>/...
 ```
 
-O Bloco 11 já moveu os settings operacionais. Portanto o estado de entrada do Bloco 12 é:
+O Bloco 11 já moveu os settings operacionais. O estado de entrada do Bloco 12 era:
 
 ```text
 legacyDataMode=true
@@ -37,98 +37,75 @@ scripts/sync-hgesm-workspace-data.mjs
 
 Ele toca somente nas cinco coleções operacionais e nunca escreve em `/workspaces/hgesm-aprov/settings/...`.
 
-## Verificação somente leitura
+## Verificação e sincronização executadas
 
-```bash
-npm run data:hgesm:verify
+O primeiro gate detectou três NFs divergentes entre legado e workspace:
+
+```text
+90710003
+20887
+71975
 ```
 
-O comando compara legado e workspace documento a documento nas cinco coleções e exige:
+Foi criado um snapshot local atualizado e validado contra a origem ao vivo. Em seguida, o sincronizador dedicado atualizou somente essas três NFs no workspace. Empenhos, alertas, comissões e cronogramas permaneceram inalterados e os settings do workspace não foram tocados.
 
-- mesma quantidade de documentos;
-- nenhum documento faltante;
-- nenhum documento diferente;
-- nenhum documento extra;
-- igualdade exata dos campos tipados do Firestore.
+Após a sincronização, a paridade ficou:
 
-Resultado esperado:
+```text
+empenhos     59/59   faltando=0 diferentes=0 extras=0
+alerts      157/157  faltando=0 diferentes=0 extras=0
+invoices    138/138  faltando=0 diferentes=0 extras=0
+comissoes      2/2   faltando=0 diferentes=0 extras=0
+cronogramas    6/6   faltando=0 diferentes=0 extras=0
+```
+
+## Gate final executado
+
+O gate final `npm run verify:hgesm:data-cutover` foi executado após a ressincronização e retornou:
 
 ```text
 PARIDADE DE DADOS: READY
-Settings do workspace: NÃO TOCADOS por este script.
-```
-
-## Gate final antes do cutover
-
-```bash
-npm run verify:hgesm:data-cutover
-```
-
-O gate é somente leitura e executa, em sequência:
-
-1. paridade exata das cinco coleções;
-2. auditoria estrutural e semântica do Bloco 10;
-3. gate de settings/contador do Bloco 11;
-4. validação de que o código ainda está em `legacyDataMode=true` e `legacySettingsMode=false`.
-
-O cutover só pode ocorrer com:
-
-```text
+INTEGRIDADE SEMÂNTICA: READY
+SETTINGS CUTOVER: READY
+Estado de código esperado: OK
 DATA CUTOVER: READY
 ```
 
-## Se a cópia sombra estiver desatualizada
+A auditoria semântica terminou com zero erros bloqueantes. Os 34 avisos existentes são históricos e referem-se a termos numerados sem `termoEmissaoDate`; não são divergências produzidas pela migração.
 
-Como o HGeSM continua operando no legado até o cutover, podem existir alterações posteriores ao Bloco 9.
+No momento do gate:
 
-Primeiro crie um snapshot atual:
-
-```bash
-npm run snapshot:hgesm:create -- \
-  --project=gen-lang-client-0982077967 \
-  --database=ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1 \
-  --workspace=hgesm-aprov
+```text
+contador legado: 62
+contador workspace: 62
+maior TR nas NFs: 62
+NFs legado/workspace: 138/138
 ```
 
-Depois use o sincronizador de dados com o manifesto recém-criado:
+## Fase B — troca do runtime executada
 
-```bash
-node scripts/sync-hgesm-workspace-data.mjs sync \
-  --project=gen-lang-client-0982077967 \
-  --database=ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1 \
-  --workspace=hgesm-aprov \
-  --snapshot="$HOME/emprovex-snapshots/hgesm-.../manifest.json" \
-  --confirm=SYNC_DATA:gen-lang-client-0982077967:ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1:hgesm-aprov
-```
-
-Garantias dessa sincronização:
-
-- não apaga documentos legados;
-- bloqueia se houver documentos extras no destino;
-- usa precondição `updateTime`/`exists=false` para evitar overwrite cego;
-- exige recuperação nativa READY ou snapshot local íntegro e revalidado contra a origem ao vivo;
-- não lê settings como fonte de cópia;
-- não escreve settings do workspace;
-- não muda `legacyDataMode`.
-
-Depois da sincronização, execute novamente `npm run verify:hgesm:data-cutover`.
-
-## Fase B — troca do runtime
-
-Somente após `DATA CUTOVER: READY`, o contexto do HGeSM será alterado para:
+Após `DATA CUTOVER: READY`, o contexto do HGeSM foi alterado para:
 
 ```text
 legacyDataMode=false
 legacySettingsMode=false
 ```
 
-A partir daí as cinco coleções e os settings operacionais serão workspace-scoped.
+Estado atual:
+
+- empenhos usam `/workspaces/hgesm-aprov/empenhos/...`;
+- alertas usam `/workspaces/hgesm-aprov/alerts/...`;
+- NFs usam `/workspaces/hgesm-aprov/invoices/...`;
+- comissões usam `/workspaces/hgesm-aprov/comissoes/...`;
+- cronogramas usam `/workspaces/hgesm-aprov/cronogramas/...`;
+- settings operacionais usam `/workspaces/hgesm-aprov/settings/...`;
+- `settings/global` continua global.
 
 ## Compatibilidade legada
 
-As coleções legadas não serão apagadas no Bloco 12. Elas permanecem preservadas para rollback e para os blocos posteriores de compatibilidade/desativação controlada.
+As coleções legadas não foram apagadas. Elas permanecem preservadas para rollback e para os blocos posteriores de compatibilidade/desativação controlada.
 
-Nenhuma regra Firestore deve ser removida neste bloco.
+Nenhuma regra Firestore foi removida neste bloco.
 
 ## Rollback
 
@@ -140,10 +117,10 @@ Se houver qualquer operação nova após o cutover, não se deve reverter cegame
 
 O Bloco 12 só é encerrado depois de:
 
-1. `DATA CUTOVER: READY`;
-2. `legacyDataMode=false` aplicado;
-3. `legacySettingsMode=false` preservado;
-4. typecheck e build aprovados;
-5. deploy de produção confirmado;
-6. smoke test operacional completo;
-7. uma nova verificação do workspace após o cutover sem divergências estruturais.
+1. `DATA CUTOVER: READY` — concluído;
+2. `legacyDataMode=false` aplicado — concluído;
+3. `legacySettingsMode=false` preservado — concluído;
+4. typecheck e build aprovados — pendente após o commit de cutover;
+5. deploy de produção confirmado — pendente;
+6. smoke test operacional completo — pendente;
+7. nova verificação pós-cutover sem regressão estrutural — pendente.
