@@ -29,13 +29,9 @@
     "audit:legacy-runtime": "node scripts/audit-legacy-runtime.mjs",
     "verify:drive-poc": "node scripts/verify-google-drive-poc.mjs",
     "verify:storage-provider": "node scripts/verify-storage-provider-abstraction.mjs",
-    "verify:workspace-drive": "node scripts/verify-workspace-drive-storage.mjs",
-    "verify:drive-cutover": "node scripts/verify-drive-cutover-migration.mjs",
-    "audit:document-storage:pre-decommission": "node scripts/run-document-storage-pre-decommission.mjs",
-    "verify:blob-decommission": "node scripts/verify-blob-decommission-stage.mjs"
+    "verify:workspace-drive": "node scripts/verify-workspace-drive-storage.mjs"
   },
   "dependencies": {
-    "@vercel/blob": "^2.8.0",
     "clsx": "^2.1.1",
     "firebase": "^10.12.2",
     "framer-motion": "^11.11.17",
