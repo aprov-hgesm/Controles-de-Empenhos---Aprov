@@ -48,6 +48,9 @@ jobs:
       - name: Google Drive POC guard
         run: npm run verify:drive-poc
 
+      - name: Storage provider abstraction guard
+        run: npm run verify:storage-provider
+
       - name: Production build
         run: npm run build
 
