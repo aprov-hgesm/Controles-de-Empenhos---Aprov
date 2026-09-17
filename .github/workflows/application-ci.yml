@@ -57,6 +57,9 @@ jobs:
       - name: Drive cutover migration guard
         run: npm run verify:drive-cutover
 
+      - name: Blob decommission safety guard
+        run: npm run verify:blob-decommission
+
       - name: Production build
         run: npm run build
 
