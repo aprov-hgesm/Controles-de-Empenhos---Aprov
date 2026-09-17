@@ -54,6 +54,9 @@ jobs:
       - name: Workspace Google Drive guard
         run: npm run verify:workspace-drive
 
+      - name: External sector login guard
+        run: npm run verify:external-sector-login
+
       - name: Production build
         run: npm run build
 
