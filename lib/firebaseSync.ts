@@ -219,11 +219,15 @@ export async function ensureTermoRecebimentoAssignment(
 
       const storedInvoice = invoiceSnapshot.data() as Invoice;
       if (storedInvoice.termoNumero) {
+        const shouldRefreshEmissionDate = Boolean(preferredEmissionDate) &&
+          preferredEmissionDate !== storedInvoice.termoEmissaoDate;
         const existingInvoice: Invoice = {
           ...storedInvoice,
-          termoEmissaoDate: storedInvoice.termoEmissaoDate || preferredEmissionDate,
+          termoEmissaoDate: shouldRefreshEmissionDate
+            ? preferredEmissionDate
+            : storedInvoice.termoEmissaoDate || preferredEmissionDate,
         };
-        if (!storedInvoice.termoEmissaoDate) {
+        if (!storedInvoice.termoEmissaoDate || shouldRefreshEmissionDate) {
           transaction.set(invoiceRef, { ...existingInvoice, userId }, { merge: true });
         }
         return existingInvoice;
@@ -346,4 +350,3 @@ export async function savePlatformLogo(logo: string | null, userEmail?: string):
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
-
