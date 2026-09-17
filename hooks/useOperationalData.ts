@@ -17,36 +17,13 @@ import {
   isOperationalSectorContext,
   resolveWorkspaceContext,
 } from '../lib/workspaceContext';
+import { resetActiveProfileMode, setActiveProfileMode } from '../lib/profileMode';
 import { normalizeSupplier } from '../features/empenhos/domain/empenhoHelpers';
-
-export const AUTH_DIAGNOSTIC_STORAGE_KEY = 'emprovex_auth_diagnostic_v1';
-
-interface StoredAuthDiagnostic {
-  email: string | null;
-  uid: string;
-  status: string;
-  capturedAt: string;
-}
-
-function persistAuthDiagnostic(user: User, status: string) {
-  if (typeof window === 'undefined') return;
-
-  const diagnostic: StoredAuthDiagnostic = {
-    email: user.email,
-    uid: user.uid,
-    status,
-    capturedAt: new Date().toISOString(),
-  };
-
-  sessionStorage.setItem(AUTH_DIAGNOSTIC_STORAGE_KEY, JSON.stringify(diagnostic));
-}
 
 /**
  * Fonte de verdade da sessão e das coleções operacionais em tempo real.
- *
- * A partir do Bloco 4, nenhuma subscription operacional é aberta antes de a
- * identidade autenticada ser resolvida. Durante a transição, somente o workspace
- * fundador do HGeSM pode usar os paths globais legados.
+ * O perfil HGeSM é o padrão após cada login. O modo administrativo só é ativado
+ * explicitamente pelo seletor de perfil e não abre subscriptions operacionais.
  */
 export function useOperationalData() {
   const router = useRouter();
@@ -83,7 +60,7 @@ export function useOperationalData() {
 
   useEffect(() => {
     if (user && workspaceContext.status === 'platformAdmin') {
-      persistAuthDiagnostic(user, workspaceContext.status);
+      clearOperationalState();
       router.replace('/admin');
     }
   }, [router, user, workspaceContext.status]);
@@ -91,16 +68,9 @@ export function useOperationalData() {
   useEffect(() => {
     if (!user || workspaceContext.status !== 'unauthorized') return;
 
-    persistAuthDiagnostic(user, workspaceContext.status);
-    const returnedEmail = user.email || 'sem e-mail informado pelo Firebase';
-    if (typeof window !== 'undefined') {
-      window.alert(
-        `Diagnóstico EMPROVEX\n\nE-mail retornado pelo Firebase: ${returnedEmail}\nStatus resolvido: unauthorized\n\nA sessão será encerrada por segurança.`
-      );
-    }
-
     clearOperationalState();
     void signOut(auth).finally(() => {
+      resetActiveProfileMode();
       setUser(null);
       setSyncing(false);
     });
@@ -178,24 +148,17 @@ export function useOperationalData() {
     setSyncing(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
-
       const credential = await signInWithPopup(auth, googleProvider);
-      const resolvedContext = resolveWorkspaceContext(credential.user.email);
-      persistAuthDiagnostic(credential.user, resolvedContext.status);
+
+      // Todo novo login inicia no perfil operacional do HGeSM.
+      setActiveProfileMode('sector');
+      const resolvedContext = resolveWorkspaceContext(credential.user.email, 'sector');
 
       if (resolvedContext.status === 'unauthorized' || resolvedContext.status === 'anonymous') {
         const returnedEmail = credential.user.email || 'sem e-mail informado';
-        if (typeof window !== 'undefined') {
-          window.alert(
-            `Diagnóstico EMPROVEX\n\nE-mail retornado pelo Google/Firebase: ${returnedEmail}\nStatus resolvido: ${resolvedContext.status}\n\nEsta identidade não corresponde ao administrador bootstrap configurado.`
-          );
-        }
         await signOut(auth);
+        resetActiveProfileMode();
         throw new Error(`A conta Google ${returnedEmail} ainda não está autorizada no EMPROVEX.`);
-      }
-
-      if (resolvedContext.status === 'platformAdmin') {
-        router.replace('/admin');
       }
 
       return resolvedContext;
@@ -206,6 +169,7 @@ export function useOperationalData() {
 
   const signOutUser = async () => {
     localStorage.removeItem('local_user_session');
+    resetActiveProfileMode();
     await signOut(auth);
     setUser(null);
     clearOperationalState();
