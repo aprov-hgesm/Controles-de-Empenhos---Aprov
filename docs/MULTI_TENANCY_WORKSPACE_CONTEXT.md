@@ -1,19 +1,21 @@
-# EMPROVEX — Workspace Context (Bloco 4)
+# EMPROVEX — Workspace Context
 
 ## Objetivo
 
-O Bloco 4 introduz a primeira barreira de runtime da evolução multi-setor: a identidade autenticada precisa ser resolvida antes de qualquer subscription operacional do Firestore.
+A camada de contexto resolve a identidade autenticada antes de qualquer subscription operacional do Firestore.
 
 ## Resolução atual
 
-Nesta fase de transição existem apenas dois registros conhecidos:
+A identidade fundadora `aprov1hgesm@gmail.com` possui dois perfis na mesma sessão:
 
-- `codex.martis.dev@gmail.com` → `platformAdmin`;
-- `aprov1hgesm@gmail.com` → `sector`, workspace `hgesm-aprov`.
+```text
+Perfil HGeSM → sector / workspace hgesm-aprov
+Perfil Administração → platformAdmin / sem workspace operacional
+```
 
-Qualquer outro e-mail é classificado como `unauthorized`.
+Qualquer outra conta ainda não cadastrada é classificada como `unauthorized`.
 
-A implementação central está em `lib/workspaceContext.ts`.
+A implementação central está em `lib/workspaceContext.ts`, com o modo ativo controlado por `lib/profileMode.ts`.
 
 ## Estados do contexto
 
@@ -24,11 +26,11 @@ sector
 unauthorized
 ```
 
-Somente o estado `sector` com `canLoadOperationalData=true` pode inicializar a camada operacional.
+Somente `sector` com `canLoadOperationalData=true` pode inicializar a camada operacional.
 
 ## Compatibilidade do HGeSM
 
-Os dados do HGeSM ainda estão nas coleções globais legadas:
+Os dados do HGeSM ainda permanecem temporariamente nas coleções globais legadas:
 
 ```text
 /empenhos
@@ -38,61 +40,32 @@ Os dados do HGeSM ainda estão nas coleções globais legadas:
 /cronogramas
 ```
 
-Por isso, o contexto do workspace fundador possui temporariamente `legacyDataMode=true`.
-
-Esse marcador permite que `useOperationalData()` continue usando os paths atuais somente para `hgesm-aprov`, preservando o funcionamento existente até a migração controlada das coleções.
-
-Nenhum futuro setor deverá receber `legacyDataMode=true`.
+Por isso, o workspace fundador utiliza `legacyDataMode=true` até a migração controlada para paths por workspace.
 
 ## Trava de subscriptions
-
-Antes do Bloco 4, bastava existir um usuário Firebase autenticado para o navegador assinar as cinco coleções globais.
-
-Agora o fluxo é:
 
 ```text
 Firebase Auth
     ↓
-resolveWorkspaceContext(email)
+resolveWorkspaceContext(email + perfil ativo)
     ↓
-sector autorizado + legacyDataMode?
-    ↓ sim
-subscriptions globais temporárias do HGeSM
+sector + legacyDataMode
+    ↓
+subscriptions operacionais legadas do HGeSM
 
 platformAdmin / unauthorized / anonymous
     ↓
 nenhuma subscription operacional
 ```
 
-## Login de contas não autorizadas
+## Alternância de perfil
 
-Depois do popup Google, `signInUser()` resolve imediatamente o contexto. Contas desconhecidas são desconectadas e a operação é rejeitada antes de poderem abrir subscriptions operacionais.
+O perfil padrão da conta fundadora é o HGeSM. Ao selecionar Administração, o modo ativo é alterado e o usuário é encaminhado para `/admin` sem novo login. Ao escolher `Voltar ao HGeSM`, o modo retorna a `sector` e a interface operacional é restaurada.
 
-## Platform Admin
+## Contas não autorizadas
 
-A conta `codex.martis.dev@gmail.com` já é reconhecida em runtime como `platformAdmin`, mas deliberadamente recebe:
+Depois do popup Google, contas que não correspondem a uma identidade reconhecida são desconectadas antes de poderem abrir subscriptions operacionais.
 
-```text
-canLoadOperationalData = false
-workspaceId = null
-```
+## Próximos passos
 
-Portanto ela não consulta empenhos, NFs, comissões, cronogramas ou alertas do HGeSM.
-
-A interface administrativa própria será implementada no próximo bloco. Até lá, o Bloco 4 trata exclusivamente da separação de contexto e da proteção contra leitura operacional indevida.
-
-## O que não mudou
-
-- regras atuais do Firestore;
-- paths das coleções;
-- dados do HGeSM;
-- PDFs existentes;
-- contador de TR;
-- projeto Firebase;
-- Vercel;
-- GitHub;
-- fluxos operacionais do workspace fundador.
-
-## Próximo bloco
-
-O Bloco 5 criará a interface administrativa separada para `platformAdmin`, utilizando o contexto já resolvido para impedir que o administrador seja encaminhado ao dashboard operacional.
+A resolução estática do workspace fundador será gradualmente substituída por resolução persistente dos setores cadastrados, mantendo o mesmo contrato de segurança para impedir leitura cruzada entre workspaces.
