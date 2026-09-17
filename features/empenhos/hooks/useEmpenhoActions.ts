@@ -122,15 +122,16 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       classification: newEmpenhoForm.classification,
     };
      const updatedEmpenhos = [newEmp, ...empenhos];
-    setEmpenhos(updatedEmpenhos);
-     if (user) {
+    if (user) {
       try {
         await saveEmpenho(user.uid, newEmp);
       } catch (error) {
-        showToast('Erro ao salvar no Firebase', 'error');
+        showToast('Erro ao salvar no Firebase. O empenho não foi confirmado.', 'error');
+        return;
       }
     }
-     showToast(`Nota de Empenho ${newEmp.id} criada! Adicione itens a ela.`, 'success');
+    setEmpenhos(updatedEmpenhos);
+    showToast(`Nota de Empenho ${newEmp.id} criada! Adicione itens a ela.`, 'success');
     setNewEmpenhoForm({ id: '', supplier: '', description: '', pregao: '', date: new Date().toISOString().split('T')[0], classification: 'QR' });
     setShowNewEmpenhoModal(false);
      // Redirect to Detail view of this new empenho

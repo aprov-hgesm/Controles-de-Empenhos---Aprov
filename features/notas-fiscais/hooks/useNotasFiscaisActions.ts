@@ -3,8 +3,8 @@
 import type React from 'react';
 import type { User } from 'firebase/auth';
 import type { Alert, Comissao, Empenho, Invoice, InvoiceItem, InvoicePdfDocument } from '../../../lib/types';
-import { saveAlert, saveEmpenho, saveInvoice, removeInvoice, removeComissao, saveComissao } from '../../../lib/firebaseSync';
-import { uploadInvoicePdf } from '../../../lib/invoiceDocuments';
+import { commitAllComissoesDeletion, commitAllInvoicesDeletion, commitInvoiceDeletion, commitInvoiceReceiptChanges, saveInvoice, removeComissao, saveComissao } from '../../../lib/firebaseSync';
+import { deleteInvoicePdfUpload, uploadInvoicePdf } from '../../../lib/invoiceDocuments';
 
 type ToastType = 'success' | 'error' | 'info';
 type NfSubTab = 'acompanhar' | 'cadastrar' | 'comissao';
@@ -191,38 +191,41 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       updatedInvoices = [invoiceToSave, ...invoices];
     }
      const updatedAlerts = [newAlert, ...alerts];
-     setEmpenhos(updatedEmpenhos);
-    setInvoices(updatedInvoices);
-    setAlerts(updatedAlerts);
-     if (user) {
+    const oldEmpenhoAdjusted = editingInvoice && editingInvoice.empenhoId !== selectedNFCommitmentId
+      ? updatedEmpenhos.find(e => e.id === editingInvoice.empenhoId)
+      : undefined;
+
+    if (!updatedTargetEmpenho) {
+      if (uploadedInvoicePdf && user) {
+        await deleteInvoicePdfUpload(user, selectedNFCommitmentId, cleanNfNum, uploadedInvoicePdf.pathname).catch(() => undefined);
+      }
+      showToast('Não foi possível consolidar o saldo do empenho selecionado.', 'error');
+      return false;
+    }
+
+    if (user) {
       try {
-        const promises: Promise<any>[] = [
-          // 1. Save the new or updated target empenho
-          updatedTargetEmpenho ? saveEmpenho(user.uid, updatedTargetEmpenho) : Promise.resolve(),
-
-          // 2. Save the saved invoice
-          saveInvoice(user.uid, invoiceToSave),
-
-          // 3. Save the new alert
-          saveAlert(user.uid, newAlert)
-        ];
-         // If the old empenho was different and it got reverted, save it too!
-        if (editingInvoice && editingInvoice.empenhoId !== selectedNFCommitmentId) {
-          const oldEmpenhoAdjusted = updatedEmpenhos.find(e => e.id === editingInvoice.empenhoId);
-          if (oldEmpenhoAdjusted) {
-            promises.push(saveEmpenho(user.uid, oldEmpenhoAdjusted));
-          }
-        }
-         // If we edited and changed the invoice number, delete the old document
-        if (editingInvoice && editingInvoice.id !== nfNumber) {
-          promises.push(removeInvoice(user.uid, editingInvoice.id));
-        }
-         await Promise.all(promises);
+        await commitInvoiceReceiptChanges(user.uid, {
+          targetEmpenho: updatedTargetEmpenho,
+          previousEmpenho: oldEmpenhoAdjusted,
+          invoice: invoiceToSave,
+          alert: newAlert,
+          previousInvoiceId: editingInvoice && editingInvoice.id !== nfNumber ? editingInvoice.id : undefined,
+        });
       } catch (error) {
-        showToast('Erro ao sincronizar com o Firebase', 'error');
+        if (uploadedInvoicePdf) {
+          await deleteInvoicePdfUpload(user, selectedNFCommitmentId, cleanNfNum, uploadedInvoicePdf.pathname).catch(() => undefined);
+        }
+        console.error('Erro ao salvar recebimento de NF atomicamente:', error);
+        showToast('Erro ao sincronizar o recebimento com o Firebase. Nenhuma alteração local foi confirmada.', 'error');
+        return false;
       }
     }
-     showToast(editingInvoice
+
+    setEmpenhos(updatedEmpenhos);
+    setInvoices(updatedInvoices);
+    setAlerts(updatedAlerts);
+    showToast(editingInvoice
       ? `Recebimento da NF nº ${nfNumber} editado com sucesso!`
       : `Recebimento da NF nº ${nfNumber} salvo com sucesso!`
     );
@@ -305,21 +308,22 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       return emp;
     });
      const updatedInvoices = invoices.filter(inv => inv.id !== invoice.id);
+    if (!updatedTargetEmpenho) {
+      showToast('Não foi possível localizar o empenho vinculado para reverter o recebimento.', 'error');
+      return;
+    }
+    if (user) {
+      try {
+        await commitInvoiceDeletion(user.uid, updatedTargetEmpenho, invoice.id);
+      } catch (error) {
+        console.error('Erro ao excluir NF atomicamente:', error);
+        showToast('Erro ao remover no Firebase. A Nota Fiscal foi mantida na interface.', 'error');
+        return;
+      }
+    }
     setEmpenhos(updatedEmpenhos);
     setInvoices(updatedInvoices);
-     if (user) {
-      try {
-        await Promise.all([
-          updatedTargetEmpenho ? saveEmpenho(user.uid, updatedTargetEmpenho) : Promise.resolve(),
-          removeInvoice(user.uid, invoice.id),
-        ]);
-        showToast(`Nota Fiscal nº ${invoice.id} excluída com sucesso!`, 'info');
-      } catch (error) {
-        showToast('Erro ao remover no Firebase', 'error');
-      }
-    } else {
-      showToast(`Nota Fiscal nº ${invoice.id} excluída com sucesso!`, 'info');
-    }
+    showToast(`Nota Fiscal nº ${invoice.id} excluída com sucesso!`, 'info');
   };
 
   const handleDeleteAllInvoices = async () => {
@@ -352,22 +356,18 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
         return emp;
       });
     }
-     setEmpenhos(updatedEmpenhos);
-    setInvoices([]);
      if (user) {
       try {
-        const promises = [
-          ...updatedEmpenhos.map(emp => saveEmpenho(user.uid, emp)),
-          ...invoices.map(inv => removeInvoice(user.uid, inv.id))
-        ];
-        await Promise.all(promises);
-        showToast('Todas as Notas Fiscais foram apagadas com sucesso!', 'info');
+        await commitAllInvoicesDeletion(user.uid, updatedEmpenhos, invoices.map(inv => inv.id));
       } catch (error) {
-        showToast('Erro ao remover no Firebase', 'error');
+        console.error('Erro ao excluir NFs em lote:', error);
+        showToast('Erro ao remover no Firebase. As Notas Fiscais foram mantidas na interface.', 'error');
+        return;
       }
-    } else {
-      showToast('Todas as Notas Fiscais foram apagadas com sucesso!', 'info');
     }
+    setEmpenhos(updatedEmpenhos);
+    setInvoices([]);
+    showToast('Todas as Notas Fiscais foram apagadas com sucesso!', 'info');
   };
 
   const handleDeleteAllComissoes = async () => {
@@ -378,18 +378,17 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     if (!confirm('Deseja realmente apagar TODAS as Comissões de Recebimento cadastradas?')) {
       return;
     }
-     setComissoes([]);
      if (user) {
       try {
-        const promises = comissoes.map(com => removeComissao(user.uid, com.id));
-        await Promise.all(promises);
-        showToast('Todas as Comissões foram apagadas com sucesso!', 'info');
+        await commitAllComissoesDeletion(user.uid, comissoes.map(com => com.id));
       } catch (error) {
-        showToast('Erro ao remover no Firebase', 'error');
+        console.error('Erro ao excluir comissões em lote:', error);
+        showToast('Erro ao remover no Firebase. As Comissões foram mantidas na interface.', 'error');
+        return;
       }
-    } else {
-      showToast('Todas as Comissões foram apagadas com sucesso!', 'info');
     }
+    setComissoes([]);
+    showToast('Todas as Comissões foram apagadas com sucesso!', 'info');
   };
 
   const handleMarkComissao = async (invoiceId: string) => {
@@ -405,15 +404,16 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       }
       return inv;
     });
-     setInvoices(updatedInvoices);
      if (user && updatedTargetInvoice) {
       try {
         await saveInvoice(user.uid, updatedTargetInvoice);
       } catch (error) {
-        showToast('Erro ao salvar no Firebase', 'error');
+        showToast('Erro ao salvar no Firebase. A tramitação não foi alterada.', 'error');
+        return;
       }
     }
-     showToast(`Nota Fiscal ${invoiceId} enviada para a Comissão de Recebimento!`);
+    setInvoices(updatedInvoices);
+    showToast(`Nota Fiscal ${invoiceId} enviada para a Comissão de Recebimento!`);
   };
 
   const handleMarkTesouraria = async (invoiceId: string) => {
@@ -429,15 +429,16 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       }
       return inv;
     });
-     setInvoices(updatedInvoices);
      if (user && updatedTargetInvoice) {
       try {
         await saveInvoice(user.uid, updatedTargetInvoice);
       } catch (error) {
-        showToast('Erro ao salvar no Firebase', 'error');
+        showToast('Erro ao salvar no Firebase. A tramitação não foi alterada.', 'error');
+        return;
       }
     }
-     showToast(`Nota Fiscal ${invoiceId} finalizada e enviada para o Setor de Tesouraria!`);
+    setInvoices(updatedInvoices);
+    showToast(`Nota Fiscal ${invoiceId} finalizada e enviada para o Setor de Tesouraria!`);
   };
 
   const handleUpdateInvoiceLocation = async (
@@ -480,9 +481,6 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       }
       return inv;
     });
-     setInvoices(updatedInvoices);
-    setEditingNSId(null);
-    setTempNSValue('');
      if (user && updatedTargetInvoice) {
       try {
         await saveInvoice(user.uid, updatedTargetInvoice);
@@ -492,7 +490,10 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
         return;
       }
     }
-     showToast(
+    setInvoices(updatedInvoices);
+    setEditingNSId(null);
+    setTempNSValue('');
+    showToast(
       trimmed
         ? `Número da NS (${trimmed}) salvo para a NF ${invoiceId}!`
         : `Número da NS removido da NF ${invoiceId}!`,
@@ -538,15 +539,16 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       ],
     };
      const updatedComissoes = [newComissao, ...comissoes];
-    setComissoes(updatedComissoes);
-     if (user) {
+    if (user) {
       try {
         await saveComissao(user.uid, newComissao);
       } catch (error) {
         showToast('Erro ao salvar comissão no Firebase', 'error');
+        return;
       }
     }
-     showToast(`Comissão de Recebimento de ${comissaoMes} cadastrada com sucesso!`);
+    setComissoes(updatedComissoes);
+    showToast(`Comissão de Recebimento de ${comissaoMes} cadastrada com sucesso!`);
      // Reset name fields and bulletin fields
     setComissaoBoletimNum('');
     setComissaoBoletimDate('');
