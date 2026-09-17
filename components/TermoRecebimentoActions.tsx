@@ -16,9 +16,23 @@ export function TermoRecebimentoActions({ invoice, onAction }: TermoRecebimentoA
 
   const execute = async (action: TermoAction) => {
     if (busyAction) return;
+
+    let invoiceForAction = invoice;
+    if (action === 'generate' && invoice.termoNumero) {
+      const confirmed = window.confirm(
+        `Já existe um Termo de Recebimento gerado para a NF ${invoice.id}.\n\nDeseja gerar uma nova versão do TR nº ${invoice.termoNumero}, atualizando a data de geração e utilizando a Comissão de Recebimento do mês atual?\n\nA numeração do TR será mantida.`
+      );
+      if (!confirmed) return;
+
+      invoiceForAction = {
+        ...invoice,
+        termoEmissaoDate: new Date().toISOString(),
+      };
+    }
+
     setBusyAction(action);
     try {
-      await onAction(invoice, action);
+      await onAction(invoiceForAction, action);
     } finally {
       setBusyAction(null);
     }
