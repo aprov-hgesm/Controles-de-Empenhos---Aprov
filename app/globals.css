@@ -13,6 +13,43 @@
   --emprovex-login-panel: rgba(7, 18, 37, 0.80);
   --emprovex-login-line: rgba(148, 181, 255, 0.10);
   --emprovex-login-blue: #0a55dc;
+
+
+  /* EMPROVEX App Shell — visual foundation (Bloco 1).
+     Tokens only: no current component consumes these values yet. */
+  --emprovex-shell-bg: #020817;
+  --emprovex-shell-bg-deep: #010612;
+  --emprovex-shell-bg-elevated: #071225;
+  --emprovex-shell-surface: rgba(7, 18, 37, 0.86);
+  --emprovex-shell-surface-soft: rgba(10, 25, 49, 0.72);
+  --emprovex-shell-surface-hover: rgba(20, 46, 88, 0.58);
+  --emprovex-shell-surface-active: rgba(20, 72, 165, 0.30);
+  --emprovex-shell-border: rgba(148, 181, 255, 0.10);
+  --emprovex-shell-border-strong: rgba(147, 197, 253, 0.22);
+  --emprovex-shell-divider: rgba(148, 163, 184, 0.10);
+  --emprovex-shell-text: #f8fafc;
+  --emprovex-shell-text-soft: #dbeafe;
+  --emprovex-shell-muted: #94a3b8;
+  --emprovex-shell-subtle: #64748b;
+  --emprovex-shell-blue: #3b82f6;
+  --emprovex-shell-blue-bright: #60a5fa;
+  --emprovex-shell-blue-soft: rgba(59, 130, 246, 0.12);
+  --emprovex-shell-cyan: #67e8f9;
+  --emprovex-shell-cyan-soft: rgba(103, 232, 249, 0.08);
+  --emprovex-shell-success: #6ee7b7;
+  --emprovex-shell-success-soft: rgba(52, 211, 153, 0.12);
+  --emprovex-shell-danger: #fb7185;
+  --emprovex-shell-danger-soft: rgba(244, 63, 94, 0.10);
+  --emprovex-shell-shadow: 0 24px 80px rgba(0, 7, 28, 0.36);
+  --emprovex-shell-shadow-soft: 0 12px 36px rgba(0, 7, 28, 0.24);
+  --emprovex-shell-inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  --emprovex-shell-glow-blue: 0 0 28px rgba(59, 130, 246, 0.12);
+  --emprovex-shell-header-height: 4rem;
+  --emprovex-shell-sidebar-width: 18rem;
+  --emprovex-shell-blur: 18px;
+  --emprovex-shell-radius: 0.875rem;
+  --emprovex-shell-radius-lg: 1rem;
+  --emprovex-shell-grain-opacity: 0.022;
 }
 
 @theme {
