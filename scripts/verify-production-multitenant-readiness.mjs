@@ -16,6 +16,7 @@ const requiredFiles = [
   'scripts/verify-uid-binding.mjs',
   'scripts/verify-workspace-provisioning.mjs',
   'scripts/verify-workspace-drive-onboarding.mjs',
+  'scripts/external-drive-auth.test.mjs',
   'scripts/verify-sector-lifecycle.mjs',
   'scripts/verify-multitenant-security-suite.mjs',
   'scripts/firestore-multitenancy-security.test.mjs',
@@ -77,6 +78,7 @@ for (const command of [
   'verify:uid-binding',
   'verify:workspace-provisioning',
   'verify:workspace-drive-onboarding',
+  'test:external-drive-auth',
   'verify:sector-lifecycle',
   'verify:multitenant-security',
   'test:security:multitenant',
@@ -92,6 +94,7 @@ for (const expected of [
   'npm run verify:uid-binding',
   'npm run verify:workspace-provisioning',
   'npm run verify:workspace-drive-onboarding',
+  'npm run test:external-drive-auth',
   'npm run verify:sector-lifecycle',
   'npm run verify:multitenant-security',
   'npm run test:security:multitenant',
@@ -165,6 +168,7 @@ if (findings.length) {
   console.log('Provisionamento inicial: PRONTO');
   console.log('Google Drive por workspace: PRONTO');
   console.log('OAuth Drive externo isolado da sessão Firebase: PRONTO');
+  console.log('Falhas OAuth/Drive preservam sessão Firebase externa: TESTADO');
   console.log('POC Drive legado em produção: AUSENTE');
   console.log('Lifecycle administrativo: PRONTO');
   console.log('Isolamento automatizado A ↔ B: PRONTO');
