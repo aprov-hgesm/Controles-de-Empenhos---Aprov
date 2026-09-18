@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { KeyRound, Loader2, LogIn } from 'lucide-react';
+import { Loader2, LogIn } from 'lucide-react';
 
 import { usePlatformBranding } from '../hooks/usePlatformBranding';
 import { useOperationalViewState } from '../hooks/useOperationalViewState';
@@ -28,8 +28,6 @@ export default function Home() {
   // Toast / Notifications helper
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
-  const [mfaCode, setMfaCode] = useState('');
-  const [isMfaSubmitting, setIsMfaSubmitting] = useState(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -48,9 +46,7 @@ export default function Home() {
     user, loadingAuth, syncing, workspaceContext,
     empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices,
     comissoes, setComissoes, cronogramas, setCronogramas,
-    signInUser, signOutUser,
-    mfaRequired, mfaDisplayName, completeTotpSignIn, cancelMfaSignIn,
-    getBalanceByClass,
+    signInUser, signOutUser, getBalanceByClass,
     uniquePregaos, uniqueEmpenhoYears, uniqueNfMonths,
     formatDateTime, formatDateOnly
   } = useOperationalData();
@@ -304,120 +300,31 @@ export default function Home() {
             Plataforma integrada de Gestão de Empenhos, Provimento Logístico e Execução Financeira
           </p>
 
-          {mfaRequired ? (
-            <div className="w-full space-y-4 rounded-2xl border border-blue-300/15 bg-blue-500/[0.08] p-4 text-left">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 rounded-xl bg-blue-500/15 p-2 text-blue-200">
-                  <KeyRound className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-sm font-extrabold text-white">Verificação em duas etapas</p>
-                  <p className="mt-1 text-xs leading-relaxed text-blue-100/80">
-                    Digite o código de 6 dígitos exibido em {mfaDisplayName || 'seu aplicativo autenticador'}.
-                  </p>
-                </div>
-              </div>
-
-              <input
-                value={mfaCode}
-                onChange={(event) => {
-                  const digits = event.target.value.replace(/\D/g, '').slice(0, 6);
-                  setMfaCode(digits);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' && mfaCode.length === 6 && !isMfaSubmitting) {
-                    event.preventDefault();
-                    void (async () => {
-                      setIsMfaSubmitting(true);
-                      try {
-                        await completeTotpSignIn(mfaCode);
-                        setMfaCode('');
-                        showToast('Acesso autorizado com autenticação em dois fatores.', 'success');
-                      } catch (err: any) {
-                        console.error('Erro na verificação MFA:', err);
-                        showToast(err?.message || 'Código inválido ou expirado.', 'error');
-                      } finally {
-                        setIsMfaSubmitting(false);
-                      }
-                    })();
-                  }
-                }}
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                aria-label="Código do aplicativo autenticador"
-                placeholder="000000"
-                className="w-full rounded-xl border border-white/15 bg-slate-950/35 px-4 py-3 text-center font-mono text-xl font-extrabold tracking-[0.35em] text-white outline-none transition placeholder:text-slate-600 focus:border-blue-400/50 focus:ring-2 focus:ring-blue-500/15"
-              />
-
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setMfaCode('');
-                    await cancelMfaSignIn();
-                  }}
-                  disabled={isMfaSubmitting}
-                  className="h-11 rounded-xl border border-white/10 bg-white/5 text-xs font-bold text-slate-300 transition hover:bg-white/10 disabled:opacity-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (mfaCode.length !== 6 || isMfaSubmitting) return;
-                    setIsMfaSubmitting(true);
-                    try {
-                      await completeTotpSignIn(mfaCode);
-                      setMfaCode('');
-                      showToast('Acesso autorizado com autenticação em dois fatores.', 'success');
-                    } catch (err: any) {
-                      console.error('Erro na verificação MFA:', err);
-                      showToast(err?.message || 'Código inválido ou expirado.', 'error');
-                    } finally {
-                      setIsMfaSubmitting(false);
-                    }
-                  }}
-                  disabled={mfaCode.length !== 6 || isMfaSubmitting}
-                  aria-busy={isMfaSubmitting}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#00288e] text-xs font-extrabold text-white transition hover:bg-[#001e6a] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isMfaSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Verificar código
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={async () => {
-                if (isSigningIn) return;
-                setIsSigningIn(true);
-                try {
-                  const result = await signInUser();
-                  if (result.status === 'mfa-required') {
-                    setMfaCode('');
-                    showToast('Confirme o código do aplicativo autenticador.', 'info');
-                  } else {
-                    showToast('Acesso autorizado com sucesso!', 'success');
-                  }
-                } catch (err: any) {
-                  console.error('Erro na autenticação:', err);
-                  showToast(err?.message || 'Falha na autenticação. Verifique sua conta Google.', 'error');
-                } finally {
-                  setIsSigningIn(false);
-                }
-              }}
-              disabled={isSigningIn}
-              aria-busy={isSigningIn}
-              className="w-full h-12 bg-[#00288e] hover:bg-[#001e6a] text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-3 shadow-md hover:shadow-lg active:scale-95 group disabled:opacity-70 disabled:cursor-wait disabled:active:scale-100"
-            >
-              {isSigningIn ? (
-                <Loader2 className="w-5 h-5 flex-shrink-0 animate-spin" />
-              ) : (
-                <LogIn className="w-5 h-5 flex-shrink-0 group-hover:translate-x-1 transition-transform" />
-              )}
-              {isSigningIn ? 'Autenticando…' : 'Entrar no Sistema'}
-            </button>
-          )}
+          <button
+            onClick={async () => {
+              if (isSigningIn) return;
+              setIsSigningIn(true);
+              try {
+                await signInUser();
+                showToast('Acesso autorizado com sucesso!', 'success');
+              } catch (err: any) {
+                console.error('Erro na autenticação:', err);
+                showToast('Falha na autenticação. Verifique sua conta Google.', 'error');
+              } finally {
+                setIsSigningIn(false);
+              }
+            }}
+            disabled={isSigningIn}
+            aria-busy={isSigningIn}
+            className="w-full h-12 bg-[#00288e] hover:bg-[#001e6a] text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-3 shadow-md hover:shadow-lg active:scale-95 group disabled:opacity-70 disabled:cursor-wait disabled:active:scale-100"
+          >
+            {isSigningIn ? (
+              <Loader2 className="w-5 h-5 flex-shrink-0 animate-spin" />
+            ) : (
+              <LogIn className="w-5 h-5 flex-shrink-0 group-hover:translate-x-1 transition-transform" />
+            )}
+            {isSigningIn ? 'Autenticando…' : 'Entrar no Sistema'}
+          </button>
         </motion.div>
 
         <p className="absolute bottom-6 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
