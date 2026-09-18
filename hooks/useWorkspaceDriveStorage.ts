@@ -6,6 +6,8 @@ import type { User } from 'firebase/auth';
 import {
   connectGoogleDriveForWorkspace,
   ensureWorkspaceGoogleDriveFolders,
+  getWorkspaceGoogleDriveSessionRemainingMs,
+  WORKSPACE_DRIVE_RECONNECT_REQUIRED_MESSAGE,
   type WorkspaceGoogleDriveSession,
 } from '../lib/googleDriveWorkspace';
 import {
@@ -16,6 +18,7 @@ import {
 import {
   clearWorkspaceDriveRuntime,
   setWorkspaceDriveRuntime,
+  subscribeWorkspaceDriveRuntime,
 } from '../lib/workspaceDriveRuntime';
 import {
   isOperationalSectorContext,
@@ -39,10 +42,34 @@ export function useWorkspaceDriveStorage(
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => subscribeWorkspaceDriveRuntime((_runtime, reason) => {
+    if (reason !== 'expired') return;
+    setSession(null);
+    setError(WORKSPACE_DRIVE_RECONNECT_REQUIRED_MESSAGE);
+  }), []);
+
+  useEffect(() => {
+    if (!session) return;
+
+    const remainingMs = getWorkspaceGoogleDriveSessionRemainingMs(session);
+    if (remainingMs === null) return;
+
+    if (remainingMs <= 0) {
+      clearWorkspaceDriveRuntime('expired');
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      clearWorkspaceDriveRuntime('expired');
+    }, remainingMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [session]);
+
   useEffect(() => {
     setSession(null);
     setError(null);
-    clearWorkspaceDriveRuntime();
+    clearWorkspaceDriveRuntime('context-change');
 
     if (!user || !isOperationalSectorContext(workspaceContext)) {
       setSettings(null);
@@ -65,7 +92,7 @@ export function useWorkspaceDriveStorage(
 
     return () => {
       unsubscribe();
-      clearWorkspaceDriveRuntime();
+      clearWorkspaceDriveRuntime('context-change');
     };
   }, [user, workspaceContext]);
 

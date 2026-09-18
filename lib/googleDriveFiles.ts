@@ -1,6 +1,10 @@
 'use client';
 
-import type { WorkspaceGoogleDriveSession } from './googleDriveWorkspace';
+import {
+  assertWorkspaceGoogleDriveSessionActive,
+  type WorkspaceGoogleDriveSession,
+} from './googleDriveWorkspace';
+import { clearWorkspaceDriveRuntime } from './workspaceDriveRuntime';
 
 const DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
@@ -43,9 +47,15 @@ async function driveFetch(
   input: string,
   init: RequestInit = {}
 ): Promise<Response> {
+  assertWorkspaceGoogleDriveSessionActive(session);
+
   const headers = new Headers(init.headers || {});
   headers.set('Authorization', `Bearer ${session.accessToken}`);
   const response = await fetch(input, { ...init, headers, cache: 'no-store' });
+
+  if (response.status === 401) {
+    clearWorkspaceDriveRuntime('expired');
+  }
   if (!response.ok) await readDriveError(response);
   return response;
 }

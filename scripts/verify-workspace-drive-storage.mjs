@@ -23,6 +23,10 @@ requireText(driveClient, 'initTokenClient', 'O Drive externo não usa Google Ide
 requireText(driveClient, 'NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID', 'O cliente OAuth independente do Drive não possui configuração explícita.');
 requireText(driveClient, 'about?fields=user(emailAddress)', 'A conta Google autorizadora não é validada pela Drive API.');
 requireText(driveClient, 'connectFounderDriveSession', 'O fluxo fundador consolidado não foi preservado.');
+requireText(driveClient, 'expires_in', 'O OAuth Drive externo não captura a validade informada pelo Google.');
+requireText(driveClient, 'expiresAt', 'A sessão Drive não registra expiração apenas em memória.');
+requireText(driveClient, 'GOOGLE_DRIVE_TOKEN_EXPIRY_SAFETY_MS', 'A sessão Drive não possui margem preventiva contra expiração durante operações.');
+requireText(driveClient, 'assertWorkspaceGoogleDriveSessionActive', 'Operações Drive não possuem verificação preventiva da validade do token.');
 requireText(driveClient, 'normalizePlatformEmail(context.email)', 'A validação da conta Google autorizada do workspace não foi encontrada.');
 requireText(driveClient, 'emprovexWorkspaceId', 'As pastas Drive não estão marcadas com o workspaceId.');
 requireText(driveSettings, "WORKSPACE_DOCUMENT_STORAGE_SETTINGS_ID = 'documentStorage'", 'A configuração não usa settings/documentStorage do workspace.');
@@ -32,8 +36,16 @@ requireText(driveControl, 'O token do Google Drive não é persistido', 'O contr
 requireText(driveControl, 'Armazenamento documental ativo: Google Drive', 'O painel não declara o Drive como armazenamento documental ativo.');
 requireText(driveRuntime, 'let activeRuntime', 'A sessão Drive não está limitada ao runtime em memória.');
 requireText(driveRuntime, 'clearWorkspaceDriveRuntime', 'A sessão Drive não possui descarte explícito.');
+requireText(driveRuntime, 'isWorkspaceGoogleDriveSessionExpired', 'O runtime Drive não invalida sessões expiradas.');
+requireText(driveRuntime, "clearWorkspaceDriveRuntime('expired')", 'O runtime Drive não diferencia descarte por expiração.');
+requireText(driveRuntime, 'subscribeWorkspaceDriveRuntime', 'A UI não pode observar expiração do runtime Drive.');
 requireText(driveHook, 'setWorkspaceDriveRuntime', 'A conexão Drive não alimenta o runtime documental.');
+requireText(driveHook, 'getWorkspaceGoogleDriveSessionRemainingMs', 'O hook Drive não agenda expiração preventiva da sessão.');
+requireText(driveHook, "reason !== 'expired'", 'O hook Drive não reage ao descarte por expiração.');
+requireText(driveHook, "clearWorkspaceDriveRuntime('expired')", 'O hook Drive não encerra o runtime ao atingir a validade do token.');
 requireText(driveFiles, 'uploadAndVerifyWorkspacePdf', 'Upload Drive com verificação de integridade ausente.');
+requireText(driveFiles, 'assertWorkspaceGoogleDriveSessionActive', 'Operações de arquivo não verificam token Drive antes da chamada remota.');
+requireText(driveFiles, "clearWorkspaceDriveRuntime('expired')", 'Resposta 401 do Drive não invalida o runtime temporário.');
 requireText(driveFiles, "crypto.subtle.digest('SHA-256'", 'Verificação SHA-256 não foi encontrada.');
 requireText(empenhoDocuments, "provider: 'google-drive'", 'Novos PDFs de NE não usam Google Drive como provider oficial.');
 requireText(invoiceDocuments, "provider: 'google-drive'", 'Novos PDFs de NF não usam Google Drive como provider oficial.');
@@ -59,6 +71,10 @@ for (const pattern of persistedCredentialPatterns) {
   }
 }
 
+if (driveSettings.includes('expiresAt')) {
+  findings.push('A validade do token Drive não pode ser persistida em workspaceDriveSettings.');
+}
+
 if (/https:\/\/www\.googleapis\.com\/auth\/drive(?:['"`]|\s)/.test(driveClient)) {
   findings.push('Escopo amplo Google Drive detectado no cliente por workspace.');
 }
@@ -78,6 +94,8 @@ if (findings.length) {
   console.log('Pastas: marcadas por workspaceId');
   console.log('Metadados persistidos: settings/documentStorage');
   console.log('Access/refresh token persistente: NÃO');
+  console.log('Expiração do token externo: CONTROLADA EM MEMÓRIA');
+  console.log('Reconexão preventiva: ATIVA');
   console.log('Uploads e leitura NE/NF: GOOGLE DRIVE');
   console.log('Integridade: SHA-256');
   console.log('Fallback legado: AUSENTE');
