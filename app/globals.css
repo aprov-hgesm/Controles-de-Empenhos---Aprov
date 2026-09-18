@@ -4041,3 +4041,165 @@ button.emprovex-header-control:hover .emprovex-header-control__icon {
     transform: none !important;
   }
 }
+
+
+/* EMPROVEX App Shell — Artistic signature layer (Bloco 9). */
+.emprovex-shell-signature {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.emprovex-shell-signature::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--emprovex-shell-grain-opacity);
+  background-image:
+    repeating-radial-gradient(
+      circle at 20% 30%,
+      rgba(255, 255, 255, 0.55) 0,
+      rgba(255, 255, 255, 0.55) 0.35px,
+      transparent 0.7px,
+      transparent 2.2px
+    );
+  background-size: 5px 5px;
+  mix-blend-mode: soft-light;
+}
+
+.emprovex-shell-signature__network {
+  position: absolute;
+  display: block;
+  fill: none;
+  stroke: rgba(125, 176, 255, 0.08);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.emprovex-shell-signature__network circle {
+  fill: rgba(103, 232, 249, 0.12);
+  stroke: rgba(96, 165, 250, 0.16);
+}
+
+.emprovex-shell-signature__codes {
+  position: absolute;
+  color: rgba(148, 163, 184, 0.11);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.emprovex-shell-signature--header {
+  -webkit-mask-image: linear-gradient(90deg, transparent 8%, #000 32%, #000 88%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 8%, #000 32%, #000 88%, transparent 100%);
+}
+
+.emprovex-shell-signature--header .emprovex-shell-signature__network {
+  top: 0;
+  right: 18%;
+  width: min(44vw, 620px);
+  height: 100%;
+  opacity: 0.72;
+}
+
+.emprovex-shell-signature__codes--header {
+  right: 4.5rem;
+  bottom: 0.28rem;
+  display: flex;
+  gap: 1.15rem;
+  font-size: 0.43rem;
+  opacity: 0.56;
+}
+
+.emprovex-shell-signature--sidebar {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 4%, #000 16%, #000 78%, transparent 96%);
+  mask-image: linear-gradient(to bottom, transparent 4%, #000 16%, #000 78%, transparent 96%);
+}
+
+.emprovex-shell-signature--sidebar .emprovex-shell-signature__network {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.78;
+}
+
+.emprovex-shell-signature__codes--sidebar {
+  inset: 0;
+  font-size: 0.47rem;
+}
+
+.emprovex-shell-signature__code {
+  position: absolute;
+  white-space: nowrap;
+  opacity: 0.64;
+}
+
+.emprovex-shell-signature__code--ne {
+  top: 15%;
+  right: 1rem;
+}
+
+.emprovex-shell-signature__code--nf {
+  top: 39%;
+  right: 1.15rem;
+}
+
+.emprovex-shell-signature__code--tr {
+  top: 61%;
+  left: 1.15rem;
+}
+
+.emprovex-shell-signature__code--liq {
+  top: 78%;
+  right: 1.2rem;
+}
+
+@media (max-width: 1023px) {
+  .emprovex-shell-signature__codes--header {
+    display: none;
+  }
+
+  .emprovex-shell-signature--header .emprovex-shell-signature__network {
+    right: 2%;
+    width: 62vw;
+    opacity: 0.46;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes emprovex-signature-node-breathe {
+    0%, 100% {
+      fill: rgba(103, 232, 249, 0.08);
+      stroke: rgba(96, 165, 250, 0.12);
+    }
+    50% {
+      fill: rgba(103, 232, 249, 0.15);
+      stroke: rgba(96, 165, 250, 0.20);
+    }
+  }
+
+  .emprovex-shell-signature__network circle {
+    animation: emprovex-signature-node-breathe 7.5s ease-in-out infinite;
+  }
+
+  .emprovex-shell-signature__network circle:nth-of-type(2n) {
+    animation-delay: -3.2s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emprovex-shell-signature__network circle {
+    animation: none !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .emprovex-shell-signature {
+    opacity: 0.48;
+  }
+}

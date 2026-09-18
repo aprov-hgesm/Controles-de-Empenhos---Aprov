@@ -13,6 +13,8 @@ import {
   UserRound,
 } from 'lucide-react';
 
+import { AppShellSignature } from './chrome/AppShellSignature';
+
 export type AppTab =
   | 'painel'
   | 'empenhos'
@@ -55,6 +57,8 @@ export function AppSidebar({
           ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
+        <AppShellSignature variant="sidebar" />
+
         <div className="relative z-[1] space-y-6">
           <section className="emprovex-sidebar-operator mx-4" aria-label="Operador conectado">
             <div className="emprovex-sidebar-operator__head">
