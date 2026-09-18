@@ -283,12 +283,25 @@ export function useOperationalData() {
     );
 
     if (resolvedContext.status === 'unauthorized' || resolvedContext.status === 'anonymous') {
+      const diagnosticCode = (
+        typeof resolvedContext === 'object'
+        && resolvedContext
+        && 'diagnosticCode' in resolvedContext
+      )
+        ? String((resolvedContext as { diagnosticCode?: unknown }).diagnosticCode || '')
+        : '';
+
       clearResolvedWorkspaceContext();
       await signOut(auth);
       resetActiveProfileMode();
       setUser(null);
       setWorkspaceContext(resolveWorkspaceContext(null));
       clearOperationalState();
+
+      if (diagnosticCode) {
+        throw new Error(`Falha de autorização do workspace [${diagnosticCode}].`);
+      }
+
       throw new Error('Não foi possível autorizar esta identidade no EMPROVEX.');
     }
 
@@ -363,8 +376,16 @@ export function useOperationalData() {
         throw new Error('Esta credencial está desativada no Firebase Authentication.');
       }
 
+      if (
+        firebaseCredentialAccepted
+        && error instanceof Error
+        && error.message.startsWith('Falha de autorização do workspace [')
+      ) {
+        throw error;
+      }
+
       if (firebaseCredentialAccepted) {
-        throw new Error('A credencial foi aceita pelo Firebase, mas o vínculo com o workspace foi recusado. Revise UID, status da conta e diretório do setor.');
+        throw new Error('A credencial foi aceita pelo Firebase, mas o vínculo com o workspace foi recusado.');
       }
 
       throw new Error('O Firebase rejeitou o e-mail ou a senha informados.');
