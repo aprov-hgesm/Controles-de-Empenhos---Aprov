@@ -384,6 +384,7 @@ service cloud.firestore {
         && validWorkspaceWrite(workspaceId)
         && workspaceHasMatchingAccountAfterWrite(workspaceId);
       allow update: if isPlatformAdmin()
+        && workspaceId != 'hgesm-aprov'
         && validWorkspaceAdminUpdate(workspaceId)
         && workspaceHasMatchingAccountAfterWrite(workspaceId);
       allow delete: if false;
@@ -397,6 +398,7 @@ service cloud.firestore {
         && accountHasMatchingWorkspaceAfterWrite(accountId);
       allow update: if (
           isPlatformAdmin()
+          && accountId != 'aprov1hgesm@gmail.com'
           && validSectorAccountAdminUpdate(accountId)
           && accountHasMatchingWorkspaceAfterWrite(accountId)
         )
