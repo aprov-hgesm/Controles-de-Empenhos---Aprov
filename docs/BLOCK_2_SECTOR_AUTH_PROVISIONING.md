@@ -31,6 +31,8 @@ A rota requer `FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON` somente no ambiente server-s
 
 Esta credencial nunca deve receber prefixo `NEXT_PUBLIC_`, ser gravada no repositório ou enviada ao navegador.
 
+Pelo princípio do menor privilégio, a conta de serviço precisa somente das permissões necessárias para administrar usuários Firebase e os documentos de provisionamento. Como referência operacional, os papéis predefinidos `Firebase Authentication Admin (roles/firebaseauth.admin)` e `Cloud Datastore User (roles/datastore.user)` cobrem respectivamente as operações de Auth e de documentos Firestore usadas pela rota; não deve ser concedido papel de service agent a uma identidade comum.
+
 ## Compatibilidade
 
 A criação server-side não altera os dados do workspace fundador, as coleções operacionais, o Google Drive ou a tela principal de login. Contas legadas sem UID continuam suportadas pelo bootstrap existente; novos setores já nascem pré-vinculados ao UID.
