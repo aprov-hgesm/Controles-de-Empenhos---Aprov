@@ -178,18 +178,6 @@ service cloud.firestore {
         ).data.authorizedEmail == accountId;
     }
 
-    function workspaceAfterData(workspaceId) {
-      return getAfter(
-        /databases/$(database)/documents/workspaces/$(workspaceId)
-      ).data;
-    }
-
-    function provisionedWorkspaceAccountAfterData(workspaceId) {
-      return getAfter(
-        /databases/$(database)/documents/platformAccounts/$(workspaceAfterData(workspaceId).authorizedEmail)
-      ).data;
-    }
-
     function validInitialTermCounter() {
       return request.resource.data.keys().hasOnly(['currentNumber'])
         && request.resource.data.currentNumber is int
@@ -197,21 +185,21 @@ service cloud.firestore {
     }
 
     function canAdminProvisionTermCounter(workspaceId) {
+      let workspace = getAfter(
+        /databases/$(database)/documents/workspaces/$(workspaceId)
+      ).data;
+      let account = getAfter(
+        /databases/$(database)/documents/platformAccounts/$(workspace.authorizedEmail)
+      ).data;
+
       return isPlatformAdmin()
-        && existsAfter(
-          /databases/$(database)/documents/workspaces/$(workspaceId)
-        )
-        && workspaceAfterData(workspaceId).id == workspaceId
-        && workspaceAfterData(workspaceId).status == 'active'
-        && workspaceAfterData(workspaceId).authorizedEmail is string
-        && existsAfter(
-          /databases/$(database)/documents/platformAccounts/$(workspaceAfterData(workspaceId).authorizedEmail)
-        )
-        && provisionedWorkspaceAccountAfterData(workspaceId).accountType == 'sector'
-        && provisionedWorkspaceAccountAfterData(workspaceId).status == 'active'
-        && provisionedWorkspaceAccountAfterData(workspaceId).workspaceId == workspaceId
-        && provisionedWorkspaceAccountAfterData(workspaceId).email
-          == workspaceAfterData(workspaceId).authorizedEmail
+        && workspace.id == workspaceId
+        && workspace.status == 'active'
+        && workspace.authorizedEmail is string
+        && account.accountType == 'sector'
+        && account.status == 'active'
+        && account.workspaceId == workspaceId
+        && account.email == workspace.authorizedEmail
         && validInitialTermCounter();
     }
 
