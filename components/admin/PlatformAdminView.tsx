@@ -39,10 +39,12 @@ interface PlatformAdminViewProps {
   updatingWorkspaceId: string | null;
   changingStatusWorkspaceId: string | null;
   deletingWorkspaceId: string | null;
+  resettingPasswordWorkspaceId: string | null;
   onCreateSector: (input: CreateSectorWorkspaceInput) => Promise<void>;
   onUpdateSector: (input: UpdateSectorWorkspaceInput) => Promise<void>;
   onChangeSectorStatus: (workspaceId: string, status: SectorLifecycleStatus) => Promise<void>;
   onDeleteSector: (workspaceId: string, email: string) => Promise<void>;
+  onResetSectorPassword: (workspaceId: string, email: string, newPassword: string) => Promise<void>;
   onLogout: () => Promise<void>;
 }
 
@@ -55,10 +57,12 @@ export function PlatformAdminView({
   updatingWorkspaceId,
   changingStatusWorkspaceId,
   deletingWorkspaceId,
+  resettingPasswordWorkspaceId,
   onCreateSector,
   onUpdateSector,
   onChangeSectorStatus,
   onDeleteSector,
+  onResetSectorPassword,
   onLogout,
 }: PlatformAdminViewProps) {
   const router = useRouter();
@@ -324,8 +328,10 @@ export function PlatformAdminView({
       <EditSectorModal
         workspace={editingWorkspace}
         saving={Boolean(editingWorkspace && updatingWorkspaceId === editingWorkspace.id)}
+        resettingPassword={Boolean(editingWorkspace && resettingPasswordWorkspaceId === editingWorkspace.id)}
         onClose={() => setEditingWorkspace(null)}
         onSave={handleUpdateSector}
+        onResetPassword={onResetSectorPassword}
       />
 
       {deleteCandidate && (
