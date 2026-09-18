@@ -208,6 +208,9 @@ export async function updateSectorWorkspaceProfile(
   const workspaceId = normalizeWorkspaceId(input.workspaceId);
   const updatedBy = normalizePlatformEmail(updatedByEmail);
 
+  if (updatedBy !== HGESM_SECTOR_EMAIL) {
+    throw new Error('A sessão atual não possui permissão administrativa para alterar setores.');
+  }
   if (!isValidWorkspaceId(workspaceId)) {
     throw new Error('O identificador do setor é inválido.');
   }
@@ -272,7 +275,6 @@ export async function updateSectorWorkspaceProfile(
       updatedAt: now,
     });
 
-    void updatedBy;
     return updated;
   });
 }
@@ -289,6 +291,9 @@ export async function setSectorWorkspaceStatus(
   const workspaceId = normalizeWorkspaceId(workspaceIdInput);
   const updatedBy = normalizePlatformEmail(updatedByEmail);
 
+  if (updatedBy !== HGESM_SECTOR_EMAIL) {
+    throw new Error('A sessão atual não possui permissão administrativa para alterar setores.');
+  }
   if (!isValidWorkspaceId(workspaceId)) {
     throw new Error('O identificador do setor é inválido.');
   }
@@ -357,7 +362,6 @@ export async function setSectorWorkspaceStatus(
       updatedAt: now,
     });
 
-    void updatedBy;
     return { workspace, account };
   });
 }
