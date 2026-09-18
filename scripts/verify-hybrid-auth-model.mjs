@@ -14,6 +14,11 @@ const login = read('components/auth/EmprovexLogin.tsx');
 const rules = read('firestore.rules');
 const driveClient = read('lib/googleDriveWorkspace.ts');
 const layout = read('app/layout.tsx');
+const externalDriveStart = driveClient.indexOf('async function connectExternalWorkspaceDrive(');
+const founderDriveStart = driveClient.indexOf('async function connectFounderDriveSession(');
+const externalDriveBlock = externalDriveStart >= 0 && founderDriveStart > externalDriveStart
+  ? driveClient.slice(externalDriveStart, founderDriveStart)
+  : '';
 
 requireText(
   identity,
@@ -146,6 +151,16 @@ requireText(
   driveClient,
   'connectFounderDriveSession',
   'Fluxo Google do fundador não foi preservado.'
+);
+if (!externalDriveBlock) {
+  findings.push('Não foi possível isolar estaticamente o bloco OAuth do setor externo.');
+} else if (externalDriveBlock.includes('reauthenticateWithPopup')) {
+  findings.push('Fluxo Drive do setor externo voltou a reautenticar a sessão Firebase.');
+}
+requireText(
+  driveClient,
+  'return connectExternalWorkspaceDrive(context, expectedEmail)',
+  'Roteamento do setor externo não aponta para o OAuth independente.'
 );
 requireText(
   layout,
