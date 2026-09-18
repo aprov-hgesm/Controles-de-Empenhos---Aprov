@@ -36,8 +36,6 @@ export interface UpdateSectorWorkspaceInput {
   organizationName: string;
   organizationShortName?: string;
   sectionName: string;
-  defaultDeliveryLocation?: string;
-  defaultResponsibleRole?: string;
 }
 
 export type SectorLifecycleStatus = 'active' | 'disabled';

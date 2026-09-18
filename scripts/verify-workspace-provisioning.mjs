@@ -60,13 +60,18 @@ requireText(
 );
 requireText(
   shared,
-  "optionalTrimmedField('defaultDeliveryLocation'",
-  'Local de entrega opcional pode voltar a ser persistido como undefined.'
+  "defaultDeliveryLocation = organizationShortName",
+  'Local de entrega deixou de ser derivado automaticamente da sigla.'
 );
 requireText(
   shared,
-  "optionalTrimmedField('defaultResponsibleRole'",
-  'Função responsável opcional pode voltar a ser persistida como undefined.'
+  "Setor de Aprovisionamento -",
+  'Local de entrega padronizado não está presente.'
+);
+requireText(
+  shared,
+  "defaultResponsibleRole: 'Chefe do Aprovisionamento'",
+  'Função responsável deixou de ser padronizada.'
 );
 forbidText(
   shared,
@@ -125,6 +130,7 @@ if (findings.length) {
   console.log('Provisionamento automático de workspaces\n');
   console.log('Workspace + conta + contador: commit privilegiado e atômico');
   console.log('Contador inicial de TR: 0');
+  console.log('Perfil institucional: padrões de Aprovisionamento aplicados');
   console.log('Duplicidade/configuração residual: bloqueada');
   console.log('Coleções operacionais: vazias até o uso');
   console.log('Google Drive: não pré-configurado');

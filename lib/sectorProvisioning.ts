@@ -22,8 +22,6 @@ export interface CreateSectorWorkspaceInput {
   organizationName: string;
   organizationShortName?: string;
   sectionName: string;
-  defaultDeliveryLocation?: string;
-  defaultResponsibleRole?: string;
 }
 
 export interface SectorProvisioningResult {
@@ -53,8 +51,6 @@ export function parseSectorProvisioningInput(value: unknown): CreateSectorWorksp
     organizationName: requiredString('organizationName'),
     organizationShortName: optionalString('organizationShortName'),
     sectionName: requiredString('sectionName'),
-    defaultDeliveryLocation: optionalString('defaultDeliveryLocation'),
-    defaultResponsibleRole: optionalString('defaultResponsibleRole'),
   };
 }
 
@@ -63,8 +59,6 @@ export type SectorInstitutionalProfileInput = Pick<
   | 'organizationName'
   | 'organizationShortName'
   | 'sectionName'
-  | 'defaultDeliveryLocation'
-  | 'defaultResponsibleRole'
 >;
 
 function optionalTrimmedField<Key extends string>(
@@ -79,15 +73,20 @@ export function buildSectorInstitutionalProfile(
   input: SectorInstitutionalProfileInput,
   documentHeaderLines?: string[]
 ): Workspace['institutionalProfile'] {
+  const organizationShortName = input.organizationShortName?.trim();
+  const defaultDeliveryLocation = organizationShortName
+    ? `Setor de Aprovisionamento - ${organizationShortName}`
+    : 'Setor de Aprovisionamento';
+
   return {
     organizationName: input.organizationName.trim(),
     sectionName: input.sectionName.trim(),
     ...(documentHeaderLines?.length
       ? { documentHeaderLines: [...documentHeaderLines] }
       : {}),
-    ...optionalTrimmedField('organizationShortName', input.organizationShortName),
-    ...optionalTrimmedField('defaultDeliveryLocation', input.defaultDeliveryLocation),
-    ...optionalTrimmedField('defaultResponsibleRole', input.defaultResponsibleRole),
+    ...optionalTrimmedField('organizationShortName', organizationShortName),
+    defaultDeliveryLocation,
+    defaultResponsibleRole: 'Chefe do Aprovisionamento',
   };
 }
 

@@ -14,6 +14,7 @@ import {
   Pencil,
   Plus,
   ShieldCheck,
+  Trash2,
   UserCog,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -37,9 +38,11 @@ interface PlatformAdminViewProps {
   creatingSector: boolean;
   updatingWorkspaceId: string | null;
   changingStatusWorkspaceId: string | null;
+  deletingWorkspaceId: string | null;
   onCreateSector: (input: CreateSectorWorkspaceInput) => Promise<void>;
   onUpdateSector: (input: UpdateSectorWorkspaceInput) => Promise<void>;
   onChangeSectorStatus: (workspaceId: string, status: SectorLifecycleStatus) => Promise<void>;
+  onDeleteSector: (workspaceId: string, email: string) => Promise<void>;
   onLogout: () => Promise<void>;
 }
 
@@ -51,9 +54,11 @@ export function PlatformAdminView({
   creatingSector,
   updatingWorkspaceId,
   changingStatusWorkspaceId,
+  deletingWorkspaceId,
   onCreateSector,
   onUpdateSector,
   onChangeSectorStatus,
+  onDeleteSector,
   onLogout,
 }: PlatformAdminViewProps) {
   const router = useRouter();
@@ -102,6 +107,20 @@ export function PlatformAdminView({
         ? `Setor ${workspace.name} suspenso. O acesso operacional foi bloqueado.`
         : `Setor ${workspace.name} reativado com sucesso.`
     );
+    window.setTimeout(() => setSuccessMessage(null), 5000);
+  };
+
+  const handleDeleteSector = async (workspace: Workspace) => {
+    if (workspace.legacyWorkspace) return;
+
+    const confirmed = window.confirm(
+      `Excluir definitivamente ${workspace.name}?\n\nEsta ação removerá o usuário de acesso, o workspace e os dados deste setor armazenados no EMPROVEX. Arquivos eventualmente existentes no Google Drive externo não serão apagados. Esta operação não pode ser desfeita.`
+    );
+    if (!confirmed) return;
+
+    await onDeleteSector(workspace.id, workspace.authorizedEmail);
+    setEditingWorkspace((current) => current?.id === workspace.id ? null : current);
+    setSuccessMessage(`Setor ${workspace.name} excluído definitivamente.`);
     window.setTimeout(() => setSuccessMessage(null), 5000);
   };
 
@@ -249,8 +268,10 @@ export function PlatformAdminView({
                 disabled={!persistentDirectoryReady}
                 editing={updatingWorkspaceId === workspace.id}
                 changingStatus={changingStatusWorkspaceId === workspace.id}
+                deleting={deletingWorkspaceId === workspace.id}
                 onEdit={() => setEditingWorkspace(workspace)}
                 onChangeStatus={() => void handleChangeSectorStatus(workspace)}
+                onDelete={() => void handleDeleteSector(workspace)}
               />
             ))}
           </div>
@@ -301,15 +322,19 @@ function WorkspaceCard({
   disabled,
   editing,
   changingStatus,
+  deleting,
   onEdit,
   onChangeStatus,
+  onDelete,
 }: {
   workspace: Workspace;
   disabled: boolean;
   editing: boolean;
   changingStatus: boolean;
+  deleting: boolean;
   onEdit: () => void;
   onChangeStatus: () => void;
+  onDelete: () => void;
 }) {
   const isActive = workspace.status === 'active';
   const founder = Boolean(workspace.legacyWorkspace);
@@ -368,7 +393,7 @@ function WorkspaceCard({
             <button
               type="button"
               onClick={onEdit}
-              disabled={disabled || editing || changingStatus}
+              disabled={disabled || editing || changingStatus || deleting}
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-bold text-slate-200 transition hover:bg-white/10 disabled:opacity-50"
             >
               {editing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pencil className="w-4 h-4" />}
@@ -377,7 +402,7 @@ function WorkspaceCard({
             <button
               type="button"
               onClick={onChangeStatus}
-              disabled={disabled || editing || changingStatus}
+              disabled={disabled || editing || changingStatus || deleting}
               className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition disabled:opacity-50 ${
                 isActive
                   ? 'border-amber-400/20 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20'
@@ -390,6 +415,15 @@ function WorkspaceCard({
                   ? <CirclePause className="w-4 h-4" />
                   : <CirclePlay className="w-4 h-4" />}
               {isActive ? 'Suspender setor' : 'Reativar setor'}
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={disabled || editing || changingStatus || deleting}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3.5 py-2 text-xs font-bold text-rose-200 transition hover:bg-rose-500/20 disabled:opacity-50"
+            >
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              {deleting ? 'Excluindo…' : 'Excluir usuário'}
             </button>
           </div>
         )}

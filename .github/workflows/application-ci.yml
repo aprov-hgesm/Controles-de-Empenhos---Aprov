@@ -66,6 +66,9 @@ jobs:
       - name: Sector auth provisioning guard
         run: npm run verify:sector-auth-provisioning
 
+      - name: Sector admin deletion guard
+        run: npm run verify:sector-admin-deletion
+
       - name: External sector login guard
         run: npm run verify:external-sector-login
 
