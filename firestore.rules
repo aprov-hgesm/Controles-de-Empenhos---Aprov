@@ -430,7 +430,15 @@ service cloud.firestore {
     }
 
     match /workspaces/{workspaceId}/settings/termoRecebimentoCounter {
-      allow read: if canAccessWorkspace(workspaceId);
+      // O cadastro administrativo verifica se existe contador residual antes de
+      // provisionar um workspace novo. Essa leitura prévia só é permitida enquanto
+      // o workspace ainda não existe; depois da criação, o administrador volta a
+      // não possuir acesso ao contador operacional do tenant.
+      allow read: if canAccessWorkspace(workspaceId)
+        || (
+          isPlatformAdmin()
+          && !workspaceExists(workspaceId)
+        );
       allow create: if canAdminProvisionTermCounter(workspaceId)
         || (
           canAccessWorkspace(workspaceId)
