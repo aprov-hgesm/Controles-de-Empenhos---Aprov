@@ -1931,6 +1931,5 @@ button[aria-busy="true"] .animate-spin {
   .emprovex-app-login-entry > :not(.emprovex-login-success) {
     animation: none !important;
     filter: none !important;
-    transform: none !important;
   }
 }
