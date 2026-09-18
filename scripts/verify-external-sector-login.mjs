@@ -27,6 +27,8 @@ requireText(access, 'signInProvider !== FOUNDER_AUTH_PROVIDER', 'Fundador não e
 requireText(context, "'platform-directory'", 'workspaceContext não reconhece resolução pelo diretório da plataforma.');
 requireText(context, 'getResolvedWorkspaceContextForSession', 'Não existe cache de contexto vinculado ao UID da sessão.');
 requireText(operationalData, 'resolveAuthenticatedWorkspaceContext', 'useOperationalData não valida o diretório antes das subscriptions.');
+requireText(operationalData, 'signInWithEmailAndPassword', 'Login por senha dos setores externos não está implementado.');
+requireText(operationalData, 'signInSectorUser', 'Hook operacional não expõe o login por senha do setor.');
 forbidText(operationalData, 'useMemo(', 'Autorização operacional não pode ser derivada somente por useMemo do e-mail.');
 requireText(operationalPaths, 'getResolvedWorkspaceContextForSession', 'Writes não reutilizam o contexto validado da sessão.');
 
@@ -43,7 +45,7 @@ if (findings.length) {
 } else {
   console.log('Bloco 15 — login de setores externos\n');
   console.log('Fundador: Google Auth exclusivo');
-  console.log('Setores externos: provider password obrigatório');
+  console.log('Setores externos: provider password obrigatório e UI disponível');
   console.log('Diretório de contas: platformAccounts');
   console.log('Resolução de workspace: obrigatória');
   console.log('Conta/workspace desativados: bloqueados');
