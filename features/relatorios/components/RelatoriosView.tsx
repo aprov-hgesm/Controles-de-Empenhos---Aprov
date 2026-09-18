@@ -499,6 +499,7 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
                             const emp = empenhos.find(e => e.id === reportSearch);
                             if (!emp) return null;
                             const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+                            const empRequiresTR = classRequiresTermoRecebimento(emp.classification, empenhoClasses);
                             const pdfInvoices = invoices.filter(inv => inv.empenhoId === emp.id);
                             const pdfTotalReceivedNfe = pdfInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
 
@@ -590,10 +591,16 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
                                         {pdfInvoices.map((inv) => {
                                           const formattedIssueDate = formatDateOnly(inv.issueDate);
                                           const effectiveTrDate = inv.termoEmissaoDate || (inv.termoNumero ? (inv.registeredAt || inv.issueDate) : null);
-                                          const formattedTrDate = effectiveTrDate 
-                                            ? `${formatDateOnly(effectiveTrDate)}${inv.termoNumero ? ` (TR Nº ${inv.termoNumero})` : ''}` 
-                                            : 'Pendente';
-                                          const formattedComissaoDate = inv.comissaoDate ? formatDateOnly(inv.comissaoDate) : 'Pendente';
+                                          const formattedTrDate = !empRequiresTR
+                                            ? 'Dispensado'
+                                            : effectiveTrDate
+                                              ? `${formatDateOnly(effectiveTrDate)}${inv.termoNumero ? ` (TR Nº ${inv.termoNumero})` : ''}`
+                                              : 'Pendente';
+                                          const formattedComissaoDate = !empRequiresTR
+                                            ? 'Dispensada'
+                                            : inv.comissaoDate
+                                              ? formatDateOnly(inv.comissaoDate)
+                                              : 'Pendente';
                                           const formattedTesourariaDate = inv.tesourariaDate ? formatDateOnly(inv.tesourariaDate) : 'Pendente';
                                           const formattedNS = inv.numeroNS ? inv.numeroNS : '—';
 
