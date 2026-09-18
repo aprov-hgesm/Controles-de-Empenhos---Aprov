@@ -142,14 +142,12 @@ function getGoogleOAuth2Api(): GoogleOAuth2Api {
   return oauth2;
 }
 
+const DEFAULT_GOOGLE_OAUTH_CLIENT_ID =
+  '943599311487-u07f8gm4t2opgacr3albafmop8uj4h7u.apps.googleusercontent.com';
+
 function getGoogleOAuthClientId(): string {
-  const clientId = process.env.NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID?.trim();
-  if (!clientId) {
-    throw new Error(
-      'A autorização independente do Google Drive ainda não foi configurada para usuários externos.'
-    );
-  }
-  return clientId;
+  const configuredClientId = process.env.NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID?.trim();
+  return configuredClientId || DEFAULT_GOOGLE_OAUTH_CLIENT_ID;
 }
 
 function requestIndependentDriveAccessToken(expectedEmail: string): Promise<string> {
