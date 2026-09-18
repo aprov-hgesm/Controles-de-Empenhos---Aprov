@@ -20,6 +20,9 @@ requireText(driveClient, "https://www.googleapis.com/auth/drive.file", 'O client
 requireText(driveClient, "context.resolutionSource === 'platform-directory'", 'Setores externos não usam um fluxo Drive isolado da sessão Firebase.');
 requireText(driveClient, 'connectExternalWorkspaceDrive', 'O fluxo Drive externo independente não foi encontrado.');
 requireText(driveClient, 'initTokenClient', 'O Drive externo não usa Google Identity Services para autorização independente.');
+requireText(driveClient, "GOOGLE_DRIVE_ACCOUNT_SELECTION_PROMPT = 'select_account'", 'O OAuth Drive não força seleção explícita da conta correta.');
+forbidText(driveClient, "prompt: 'consent select_account'", 'O OAuth Drive ainda força consentimento em toda conexão.');
+forbidText(driveClient, "prompt: 'consent'", 'O OAuth Drive ainda usa prompt de consentimento forçado.');
 requireText(driveClient, 'NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID', 'O cliente OAuth independente do Drive não possui configuração explícita.');
 requireText(driveClient, 'about?fields=user(emailAddress)', 'A conta Google autorizadora não é validada pela Drive API.');
 requireText(driveClient, 'connectFounderDriveSession', 'O fluxo fundador consolidado não foi preservado.');
@@ -90,6 +93,8 @@ if (findings.length) {
 } else {
   console.log('Workspace Google Drive — gate documental final\n');
   console.log('Escopo OAuth: drive.file');
+  console.log('Seleção de conta: EXPLÍCITA');
+  console.log('Consentimento forçado em reconexões: NÃO');
   console.log('Conta Drive: vinculada ao e-mail do workspace');
   console.log('Pastas: marcadas por workspaceId');
   console.log('Metadados persistidos: settings/documentStorage');
@@ -108,4 +113,8 @@ function read(path) {
 
 function requireText(source, expected, failureMessage) {
   if (!source.includes(expected)) findings.push(failureMessage);
+}
+
+function forbidText(source, forbidden, failureMessage) {
+  if (source.includes(forbidden)) findings.push(failureMessage);
 }

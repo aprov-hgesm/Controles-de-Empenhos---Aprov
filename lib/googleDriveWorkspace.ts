@@ -16,6 +16,7 @@ export const GOOGLE_DRIVE_INVOICES_FOLDER_NAME = 'Notas Fiscais';
 
 const DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
 export const GOOGLE_IDENTITY_SERVICES_URL = 'https://accounts.google.com/gsi/client';
+export const GOOGLE_DRIVE_ACCOUNT_SELECTION_PROMPT = 'select_account';
 
 interface GoogleDriveAboutResponse {
   user?: {
@@ -192,6 +193,31 @@ interface IndependentDriveAccessToken {
   expiresAt: string;
 }
 
+function googleOAuthTokenErrorMessage(response: GoogleOAuthTokenResponse): string {
+  switch (response.error) {
+    case 'access_denied':
+      return 'A autorização do Google Drive foi cancelada ou recusada. Sua sessão no EMPROVEX continua ativa; tente novamente quando quiser.';
+    case 'interaction_required':
+    case 'login_required':
+      return 'O Google precisa que você confirme a conta antes de continuar. Tente novamente e selecione a Conta Google autorizada deste setor.';
+    case 'consent_required':
+      return 'O Google precisa confirmar a permissão do Drive. Tente novamente e conclua a autorização exibida pelo Google.';
+    default:
+      return response.error_description?.trim()
+        || 'O Google não autorizou o acesso temporário ao Drive. Tente novamente.';
+  }
+}
+
+function googleOAuthPopupErrorMessage(error: { type?: string }): string {
+  if (error.type === 'popup_closed') {
+    return 'A janela de autorização do Google foi fechada antes da conclusão. Sua sessão no EMPROVEX continua ativa.';
+  }
+  if (error.type === 'popup_failed_to_open') {
+    return 'O navegador bloqueou a janela de autorização do Google Drive. Permita pop-ups para o EMPROVEX e tente novamente.';
+  }
+  return 'Não foi possível abrir a autorização do Google Drive. Sua sessão no EMPROVEX continua ativa; tente novamente.';
+}
+
 function requestIndependentDriveAccessToken(expectedEmail: string): Promise<IndependentDriveAccessToken> {
   const oauth2 = getGoogleOAuth2Api();
   const clientId = getGoogleOAuthClientId();
@@ -208,16 +234,13 @@ function requestIndependentDriveAccessToken(expectedEmail: string): Promise<Inde
       client_id: clientId,
       scope: GOOGLE_DRIVE_WORKSPACE_SCOPE,
       include_granted_scopes: false,
-      prompt: 'consent select_account',
+      prompt: GOOGLE_DRIVE_ACCOUNT_SELECTION_PROMPT,
       login_hint: expectedEmail,
       callback: (response) => {
         if (settled) return;
 
         if (response.error) {
-          rejectOnce(
-            response.error_description
-              || 'O Google não autorizou o acesso temporário ao Drive.'
-          );
+          rejectOnce(googleOAuthTokenErrorMessage(response));
           return;
         }
 
@@ -244,17 +267,12 @@ function requestIndependentDriveAccessToken(expectedEmail: string): Promise<Inde
         });
       },
       error_callback: (error) => {
-        const detail = error.type === 'popup_closed'
-          ? 'A janela de autorização do Google foi fechada antes da conclusão.'
-          : error.type === 'popup_failed_to_open'
-            ? 'O navegador bloqueou a janela de autorização do Google Drive.'
-            : 'Não foi possível abrir a autorização do Google Drive.';
-        rejectOnce(detail);
+        rejectOnce(googleOAuthPopupErrorMessage(error));
       },
     });
 
     tokenClient.requestAccessToken({
-      prompt: 'consent select_account',
+      prompt: GOOGLE_DRIVE_ACCOUNT_SELECTION_PROMPT,
       scope: GOOGLE_DRIVE_WORKSPACE_SCOPE,
       include_granted_scopes: false,
       login_hint: expectedEmail,
@@ -280,7 +298,7 @@ async function connectExternalWorkspaceDrive(
 
   if (!returnedEmail || returnedEmail !== expectedEmail) {
     throw new Error(
-      'Conecte o Google Drive usando a mesma Conta Google autorizada para este setor.'
+      'A Conta Google selecionada não corresponde à conta autorizada deste setor. Selecione a conta correta e tente novamente.'
     );
   }
 
@@ -301,7 +319,7 @@ async function connectFounderDriveSession(
   const provider = new GoogleAuthProvider();
   provider.addScope(GOOGLE_DRIVE_WORKSPACE_SCOPE);
   provider.setCustomParameters({
-    prompt: 'consent select_account',
+    prompt: GOOGLE_DRIVE_ACCOUNT_SELECTION_PROMPT,
     login_hint: context.email,
   });
 
@@ -309,7 +327,7 @@ async function connectFounderDriveSession(
   const returnedEmail = normalizePlatformEmail(result.user.email || '');
 
   if (result.user.uid !== user.uid || returnedEmail !== expectedEmail) {
-    throw new Error('Conecte o Google Drive usando a mesma Conta Google autorizada para este setor.');
+    throw new Error('A Conta Google selecionada não corresponde à conta autorizada deste setor. Selecione a conta correta e tente novamente.');
   }
 
   const credential = GoogleAuthProvider.credentialFromResult(result);
