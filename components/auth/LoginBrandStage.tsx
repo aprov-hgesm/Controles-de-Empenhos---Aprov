@@ -1,11 +1,13 @@
 'use client';
 
-import Image from 'next/image';
 import { Boxes, FileCheck2, LineChart, ShieldCheck } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
+
+import { LoginLogoCore, type LoginLogoVisualState } from './LoginLogoCore';
 
 interface LoginBrandStageProps {
   customLogo: string | null;
+  visualState: LoginLogoVisualState;
 }
 
 const capabilities = [
@@ -14,7 +16,11 @@ const capabilities = [
   { icon: LineChart, label: 'Gestão', detail: 'Visão logística e financeira' },
 ];
 
-export function LoginBrandStage({ customLogo }: LoginBrandStageProps) {
+const brandLetters = 'EMPROVEX'.split('');
+
+export function LoginBrandStage({ customLogo, visualState }: LoginBrandStageProps) {
+  const reduceMotion = useReducedMotion();
+
   return (
     <motion.section
       initial={{ opacity: 0, x: -18 }}
@@ -30,46 +36,76 @@ export function LoginBrandStage({ customLogo }: LoginBrandStageProps) {
       </div>
 
       <div className="relative z-10">
-        <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.10] bg-white/[0.045] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-blue-100/80 backdrop-blur-sm">
+        <motion.div
+          initial={reduceMotion ? false : { opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.18 }}
+          className="inline-flex items-center gap-2 rounded-full border border-white/[0.10] bg-white/[0.045] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-blue-100/80 backdrop-blur-sm"
+        >
           <ShieldCheck className="h-3.5 w-3.5 text-blue-300" />
           Plataforma integrada de gestão
-        </div>
+        </motion.div>
 
-        <div className="mt-8 flex items-center gap-4 sm:mt-12 sm:gap-5 lg:mt-20">
-          <div className="relative">
-            <div className="absolute inset-[-18px] rounded-[2rem] bg-blue-500/10 blur-2xl" />
-            <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-[1.5rem] border border-white/[0.16] bg-gradient-to-br from-white/[0.13] to-white/[0.035] p-2.5 shadow-[0_28px_80px_rgba(0,17,65,0.42)] backdrop-blur-xl sm:h-28 sm:w-28 sm:rounded-[1.75rem] sm:p-3">
-              {customLogo ? (
-                <Image
-                  src={customLogo}
-                  alt="Logotipo EMPROVEX"
-                  width={112}
-                  height={112}
-                  unoptimized
-                  className="h-full w-full object-contain"
-                />
-              ) : (
-                <span className="font-montserrat text-2xl font-black tracking-[0.14em] text-white sm:text-3xl">
-                  EMP
-                </span>
-              )}
-            </div>
-          </div>
+        <div className="mt-8 flex items-center gap-5 sm:mt-12 sm:gap-7 lg:mt-20">
+          <LoginLogoCore customLogo={customLogo} state={visualState} />
 
           <div className="min-w-0">
-            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.28em] text-blue-300/70">
+            <motion.p
+              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.35 }}
+              className="font-mono text-[10px] font-medium uppercase tracking-[0.28em] text-blue-300/70"
+            >
               Sistema operacional
-            </p>
+            </motion.p>
+
             <h1
               id="emprovex-login-title"
-              className="mt-1 font-montserrat text-3xl font-black tracking-[0.08em] text-white sm:text-5xl xl:text-6xl"
+              aria-label="EMPROVEX"
+              className="emprovex-brand-wordmark mt-1 flex font-montserrat text-3xl font-black text-white sm:text-5xl xl:text-6xl"
             >
-              EMPROVEX
+              {brandLetters.map((letter, index) => (
+                <motion.span
+                  key={`${letter}-${index}`}
+                  aria-hidden="true"
+                  initial={
+                    reduceMotion
+                      ? false
+                      : { opacity: 0, y: 14, filter: 'blur(7px)', letterSpacing: '0.22em' }
+                  }
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    filter: 'blur(0px)',
+                    letterSpacing: '0.08em',
+                  }}
+                  transition={{
+                    duration: 0.72,
+                    delay: 0.26 + index * 0.045,
+                    ease: [0.16, 1, 0.3, 1],
+                  }}
+                  className="inline-block"
+                >
+                  {letter}
+                </motion.span>
+              ))}
             </h1>
+
+            <motion.div
+              initial={reduceMotion ? false : { scaleX: 0, opacity: 0 }}
+              animate={{ scaleX: 1, opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.62, ease: [0.16, 1, 0.3, 1] }}
+              className="emprovex-brand-wordmark-line mt-2 h-px w-24 origin-left sm:w-32"
+            />
           </div>
         </div>
 
-        <div className="mt-7 max-w-2xl sm:mt-10 lg:mt-12">
+        <motion.div
+          initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.65, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="mt-7 max-w-2xl sm:mt-10 lg:mt-12"
+        >
           <p className="font-montserrat text-sm font-bold uppercase tracking-[0.18em] text-blue-200 sm:text-base">
             Gestão Logística e Financeira
           </p>
@@ -80,10 +116,15 @@ export function LoginBrandStage({ customLogo }: LoginBrandStageProps) {
             Uma plataforma para setores de aprovisionamento trabalharem com mais rastreabilidade,
             organização e clareza em cada etapa do processo.
           </p>
-        </div>
+        </motion.div>
       </div>
 
-      <div className="relative z-10 mt-8 hidden sm:block sm:mt-10">
+      <motion.div
+        initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.66 }}
+        className="relative z-10 mt-8 hidden sm:block sm:mt-10"
+      >
         <div className="grid gap-3 sm:grid-cols-3 lg:max-w-2xl">
           {capabilities.map(({ icon: Icon, label, detail }) => (
             <div
@@ -101,7 +142,7 @@ export function LoginBrandStage({ customLogo }: LoginBrandStageProps) {
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/80 shadow-[0_0_12px_rgba(52,211,153,0.45)]" />
           Acesso protegido por identidade autenticada e workspace autorizado
         </div>
-      </div>
+      </motion.div>
     </motion.section>
   );
 }
