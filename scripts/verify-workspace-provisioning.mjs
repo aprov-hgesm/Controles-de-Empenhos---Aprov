@@ -55,6 +55,11 @@ requireText(
 );
 requireText(
   rules,
+  "isPlatformAdmin()\n          && !workspaceExists(workspaceId)",
+  'Cadastro administrativo não consegue verificar contador residual antes de criar um workspace.'
+);
+requireText(
+  rules,
   'request.resource.data.currentNumber == 0',
   'Rules não exigem contador inicial igual a zero.'
 );
