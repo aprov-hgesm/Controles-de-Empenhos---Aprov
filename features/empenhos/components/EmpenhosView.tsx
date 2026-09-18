@@ -22,7 +22,7 @@ type NewEmpenhoForm = {
 type NewItemForm = { id: string; name: string; unit: string; quantity: string; unitPrice: string };
 
 interface EmpenhosViewContext {
-  addEmpenhoClass: (code: string, description: string) => Promise<EmpenhoClassDefinition>;
+  addEmpenhoClass: (code: string, description: string, requiresTermoRecebimento: boolean) => Promise<EmpenhoClassDefinition>;
   copiedPrompt: boolean;
   empenhoClasses: EmpenhoClassDefinition[];
   empenhos: Empenho[];
@@ -83,7 +83,7 @@ interface EmpenhosViewContext {
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   uniqueEmpenhoYears: string[];
   uniquePregaos: string[];
-  updateEmpenhoClassDescription: (code: string, description: string) => Promise<void>;
+  updateEmpenhoClass: (code: string, description: string, requiresTermoRecebimento: boolean) => Promise<void>;
   user: User | null;
 }
 
@@ -91,7 +91,7 @@ interface EmpenhosViewProps { context: EmpenhosViewContext; }
 
 /** Tela de cadastro e detalhe de empenhos extraída sem alterar comportamento. */
 export function EmpenhosView({ context }: EmpenhosViewProps) {
-  const { addEmpenhoClass, copiedPrompt, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCopyPrompt, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadPromptPdf, handleDownloadPromptTxt, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoPregao, handleGenerateEmpenhoReportPDF, handleProcessJson, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, jsonInput, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setJsonInput, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClassDescription, user } = context;
+  const { addEmpenhoClass, copiedPrompt, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCopyPrompt, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadPromptPdf, handleDownloadPromptTxt, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoPregao, handleGenerateEmpenhoReportPDF, handleProcessJson, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, jsonInput, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setJsonInput, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user } = context;
   const [editingPregaoEmpenhoId, setEditingPregaoEmpenhoId] = React.useState<string | null>(null);
   const [pregaoDraft, setPregaoDraft] = React.useState('');
   const [savingPregao, setSavingPregao] = React.useState(false);
@@ -101,7 +101,9 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
   const [showClassesModal, setShowClassesModal] = React.useState(false);
   const [newClassCode, setNewClassCode] = React.useState('');
   const [newClassDescription, setNewClassDescription] = React.useState('');
+  const [newClassRequiresTR, setNewClassRequiresTR] = React.useState(true);
   const [classDescriptionDrafts, setClassDescriptionDrafts] = React.useState<Record<string, string>>({});
+  const [classTrRequirementDrafts, setClassTrRequirementDrafts] = React.useState<Record<string, boolean>>({});
   const [savingClassificationEmpenhoId, setSavingClassificationEmpenhoId] = React.useState<string | null>(null);
 
   const handleCreateEmpenhoWithFeedback = async (event: React.FormEvent) => {
@@ -139,27 +141,35 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
 
   const handleAddClass = async () => {
     try {
-      const created = await addEmpenhoClass(newClassCode, newClassDescription);
+      const created = await addEmpenhoClass(newClassCode, newClassDescription, newClassRequiresTR);
       setNewClassCode('');
       setNewClassDescription('');
+      setNewClassRequiresTR(true);
       showToast(`Classe ${created.code} adicionada com sucesso.`, 'success');
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Não foi possível adicionar a classe.', 'error');
     }
   };
 
-  const handleSaveClassDescription = async (definition: EmpenhoClassDefinition) => {
+  const handleSaveClassDefinition = async (definition: EmpenhoClassDefinition) => {
     const description = (classDescriptionDrafts[definition.code] ?? definition.description).trim();
+    const requiresTermoRecebimento =
+      classTrRequirementDrafts[definition.code] ?? definition.requiresTermoRecebimento;
     try {
-      await updateEmpenhoClassDescription(definition.code, description);
+      await updateEmpenhoClass(definition.code, description, requiresTermoRecebimento);
       setClassDescriptionDrafts((current) => {
         const next = { ...current };
         delete next[definition.code];
         return next;
       });
-      showToast(`Descritivo da classe ${definition.code} atualizado.`, 'success');
+      setClassTrRequirementDrafts((current) => {
+        const next = { ...current };
+        delete next[definition.code];
+        return next;
+      });
+      showToast(`Configuração da classe ${definition.code} atualizada.`, 'success');
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Não foi possível atualizar o descritivo.', 'error');
+      showToast(error instanceof Error ? error.message : 'Não foi possível atualizar a classe.', 'error');
     }
   };
 
@@ -1200,7 +1210,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                       <div className="sticky top-0 z-10 flex items-center justify-between gap-4 bg-[#00288e] p-5 text-white">
                         <div>
                           <h3 className="text-base font-bold tracking-tight">Configuração das Classes de Empenho</h3>
-                          <p className="mt-0.5 text-xs text-blue-200">Edite os descritivos ou inclua novas classes para este workspace.</p>
+                          <p className="mt-0.5 text-xs text-blue-200">Edite o descritivo, defina se a classe exige TR ou inclua novas classes para este workspace.</p>
                         </div>
                         <button
                           type="button"
@@ -1231,7 +1241,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                     </span>
                                   </div>
                                 </div>
-                                <div className="flex flex-col gap-2 sm:flex-row">
+                                <div className="space-y-3">
                                   <input
                                     value={draft}
                                     onChange={(event) => setClassDescriptionDrafts((current) => ({
@@ -1239,17 +1249,50 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                       [definition.code]: event.target.value,
                                     }))}
                                     maxLength={180}
-                                    className="h-10 flex-1 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e]"
+                                    className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e]"
                                     aria-label={`Descritivo da classe ${definition.code}`}
                                   />
-                                  <button
-                                    type="button"
-                                    disabled={savingClassConfig || !draft.trim() || draft.trim() === definition.description}
-                                    onClick={() => void handleSaveClassDescription(definition)}
-                                    className="h-10 rounded-xl bg-[#00288e] px-4 text-xs font-bold text-white transition hover:bg-[#1e40af] disabled:cursor-not-allowed disabled:opacity-45"
-                                  >
-                                    {savingClassConfig ? 'Salvando…' : 'Salvar descritivo'}
-                                  </button>
+
+                                  <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                      <span className="block text-[10px] font-extrabold uppercase tracking-wider text-gray-500">Termo de Recebimento (TR)</span>
+                                      <span className="mt-0.5 block text-[11px] font-medium text-gray-500">
+                                        {classTrRequirementDrafts[definition.code] ?? definition.requiresTermoRecebimento
+                                          ? 'Obrigatório: a NF passa pela Comissão de Recebimento e o TR integra a liquidação.'
+                                          : 'Dispensado: a NF pode seguir direto do Aprovisionamento para a Tesouraria.'}
+                                      </span>
+                                    </div>
+                                    <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-bold text-gray-700">
+                                      <input
+                                        type="checkbox"
+                                        checked={classTrRequirementDrafts[definition.code] ?? definition.requiresTermoRecebimento}
+                                        onChange={(event) => setClassTrRequirementDrafts((current) => ({
+                                          ...current,
+                                          [definition.code]: event.target.checked,
+                                        }))}
+                                        className="h-4 w-4 rounded border-gray-300 text-[#00288e] focus:ring-[#00288e]"
+                                      />
+                                      Exige TR
+                                    </label>
+                                  </div>
+
+                                  <div className="flex justify-end">
+                                    <button
+                                      type="button"
+                                      disabled={
+                                        savingClassConfig
+                                        || !draft.trim()
+                                        || (
+                                          draft.trim() === definition.description
+                                          && (classTrRequirementDrafts[definition.code] ?? definition.requiresTermoRecebimento) === definition.requiresTermoRecebimento
+                                        )
+                                      }
+                                      onClick={() => void handleSaveClassDefinition(definition)}
+                                      className="h-10 rounded-xl bg-[#00288e] px-4 text-xs font-bold text-white transition hover:bg-[#1e40af] disabled:cursor-not-allowed disabled:opacity-45"
+                                    >
+                                      {savingClassConfig ? 'Salvando…' : 'Salvar configuração'}
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             );
@@ -1275,6 +1318,20 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                               className="h-10 rounded-xl border border-blue-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none focus:ring-1 focus:ring-[#00288e]"
                             />
                           </div>
+                          <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-xl border border-blue-100 bg-white/80 p-3">
+                            <input
+                              type="checkbox"
+                              checked={newClassRequiresTR}
+                              onChange={(event) => setNewClassRequiresTR(event.target.checked)}
+                              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#00288e] focus:ring-[#00288e]"
+                            />
+                            <span>
+                              <span className="block text-xs font-extrabold text-[#00288e]">Exige Termo de Recebimento (TR)</span>
+                              <span className="mt-0.5 block text-[11px] font-medium text-gray-500">
+                                Desmarque quando as NFs desta classe puderem seguir direto para liquidação/Tesouraria, sem Comissão de Recebimento e sem TR.
+                              </span>
+                            </span>
+                          </label>
                           <div className="mt-3 flex justify-end">
                             <button
                               type="button"
