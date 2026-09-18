@@ -273,7 +273,7 @@ export function PlatformAdminView({
               <h3 className="font-extrabold">Cadastro seguro</h3>
             </div>
             <p className="text-sm text-slate-300 leading-relaxed">
-              Cadastro, edição institucional e ciclo de vida preservam workspace ID, conta Google e UID. Suspensão e reativação atualizam workspace e conta operacional na mesma transação.
+              Cadastro cria a identidade Firebase no servidor e vincula o UID antes do primeiro acesso. Edição institucional e ciclo de vida preservam workspace ID, e-mail de acesso e UID.
             </p>
           </div>
         </section>
