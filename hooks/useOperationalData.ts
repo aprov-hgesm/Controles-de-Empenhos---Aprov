@@ -340,6 +340,22 @@ export function useOperationalData() {
         throw error;
       }
 
+      const authCode = typeof error === 'object' && error && 'code' in error
+        ? String((error as { code?: unknown }).code || '')
+        : '';
+
+      if (authCode.includes('operation-not-allowed')) {
+        throw new Error('O login por e-mail e senha ainda não está habilitado no Firebase Authentication.');
+      }
+
+      if (authCode.includes('too-many-requests')) {
+        throw new Error('Muitas tentativas de acesso. Aguarde um pouco antes de tentar novamente.');
+      }
+
+      if (authCode.includes('network-request-failed')) {
+        throw new Error('Não foi possível conectar ao serviço de autenticação. Verifique a conexão e tente novamente.');
+      }
+
       throw new Error('E-mail ou senha inválidos, ou acesso não autorizado.');
     } finally {
       setSyncing(false);
