@@ -1776,10 +1776,10 @@ button[aria-busy="true"] .animate-spin {
   0% {
     width: 4rem;
     height: 4rem;
-    opacity: 0;
+    opacity: 0.34;
     border-width: 1px;
   }
-  18% {
+  12% {
     opacity: 0.72;
   }
   100% {
@@ -1793,9 +1793,9 @@ button[aria-busy="true"] .animate-spin {
 @keyframes emprovex-success-beam-open {
   0% {
     width: 0;
-    opacity: 0;
+    opacity: 0.18;
   }
-  26% {
+  18% {
     opacity: 0.72;
   }
   100% {
@@ -1827,13 +1827,13 @@ button[aria-busy="true"] .animate-spin {
 
 @keyframes emprovex-app-login-reveal {
   0% {
-    opacity: 0.76;
-    filter: blur(2.5px) saturate(0.88);
-    transform: scale(0.992);
+    opacity: 0.88;
+    filter: blur(1.4px) saturate(0.94);
+    transform: scale(0.996);
   }
-  58% {
-    opacity: 0.96;
-    filter: blur(0.4px) saturate(0.97);
+  48% {
+    opacity: 0.98;
+    filter: blur(0.2px) saturate(0.99);
   }
   100% {
     opacity: 1;
@@ -1901,19 +1901,19 @@ button[aria-busy="true"] .animate-spin {
 
 @media (prefers-reduced-motion: no-preference) {
   .emprovex-login-success__wave {
-    animation: emprovex-success-wave-expand 0.88s var(--emprovex-motion-ease) both;
+    animation: emprovex-success-wave-expand 0.48s var(--emprovex-motion-ease) both;
   }
 
   .emprovex-login-success__beam {
-    animation: emprovex-success-beam-open 0.72s 0.08s var(--emprovex-motion-ease) both;
+    animation: emprovex-success-beam-open 0.40s 0.02s var(--emprovex-motion-ease) both;
   }
 
   .emprovex-login-success__core {
-    animation: emprovex-success-core-flash 0.78s var(--emprovex-motion-ease) both;
+    animation: emprovex-success-core-flash 0.42s var(--emprovex-motion-ease) both;
   }
 
   .emprovex-app-login-entry > :not(.emprovex-login-success) {
-    animation: emprovex-app-login-reveal 0.76s var(--emprovex-motion-ease) both;
+    animation: emprovex-app-login-reveal 0.46s var(--emprovex-motion-ease) both;
   }
 }
 
