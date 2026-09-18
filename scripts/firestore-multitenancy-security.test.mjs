@@ -369,7 +369,7 @@ async function main() {
     ownerWorkspaceId: 'hgesm-aprov',
   });
 
-  const sessionA = await createSession('a', identities.a.email);
+  let sessionA = await createSession('a', identities.a.email);
   const sessionB = await createSession('b', identities.b.email);
   const sessionWrongUid = await createSession('wrong', identities.wrongUid.email);
   const sessionBootstrap = await createSession('bootstrap', identities.bootstrap.email);
@@ -392,6 +392,17 @@ async function main() {
     sessionAGoogle.user.uid,
     identities.a.uid,
     'O teste de provider precisa usar o mesmo UID do setor.'
+  );
+
+  sessionA = await createSession(
+    'sector-a-password-linked',
+    identities.a.email,
+    'password'
+  );
+  assert.equal(
+    sessionA.user.uid,
+    identities.a.uid,
+    'A sessão legítima do setor deve continuar usando o mesmo UID após o vínculo Google.'
   );
 
   await authPost('accounts:update', {
