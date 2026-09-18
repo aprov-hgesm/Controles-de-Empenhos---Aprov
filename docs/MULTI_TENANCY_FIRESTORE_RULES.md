@@ -86,6 +86,14 @@ O workspace `hgesm-aprov` e a conta fundadora são bloqueados para updates admin
 
 Para workspaces externos, o acesso às subcoleções operacionais exige UID já vinculado. A leitura de metadados pré-vínculo continua disponível somente para o bootstrap seguro do primeiro login.
 
+## Testes de isolamento — Bloco 20
+
+As Rules são exercitadas contra o Firestore Emulator com identidades autenticadas pelo Auth Emulator.
+
+Os testes cobrem acesso próprio, tentativas A ↔ B, UID divergente, bootstrap sem UID, conta suspensa, vínculo workspace/conta adulterado, ausência de bypass operacional do administrador, isolamento de `documentStorage` e transações administrativas de suspensão/reativação.
+
+O teste usa o mesmo `firestore.rules` versionado no repositório. Nenhum dado de produção é acessado.
+
 ## Administrador da plataforma
 
 A identidade fundadora `aprov1hgesm@gmail.com` administra os diretórios:
