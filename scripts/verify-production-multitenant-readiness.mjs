@@ -8,6 +8,7 @@ const findings = [];
 
 const requiredFiles = [
   'firestore.rules',
+  'scripts/verify-hybrid-auth-model.mjs',
   'scripts/verify-external-sector-login.mjs',
   'scripts/verify-uid-binding.mjs',
   'scripts/verify-workspace-provisioning.mjs',
@@ -40,6 +41,7 @@ const storage = read('lib/workspaceDriveSettings.ts');
 const lifecycle = read('hooks/useOperationalData.ts');
 
 for (const command of [
+  'verify:hybrid-auth-model',
   'verify:external-sector-login',
   'verify:uid-binding',
   'verify:workspace-provisioning',
@@ -52,6 +54,7 @@ for (const command of [
 }
 
 for (const expected of [
+  'npm run verify:hybrid-auth-model',
   'npm run verify:external-sector-login',
   'npm run verify:uid-binding',
   'npm run verify:workspace-provisioning',
@@ -68,6 +71,9 @@ requireText(admin, 'Suspender setor', 'Painel administrativo perdeu suspensão.'
 requireText(admin, 'Reativar setor', 'Painel administrativo perdeu reativação.');
 requireText(access, 'resolveAndBindExternalIdentity', 'Login externo não mantém resolução/vínculo de identidade.');
 requireText(access, 'firebaseUid', 'Login externo perdeu vínculo de UID.');
+requireText(access, 'tokenResult.signInProvider', 'Modelo híbrido não valida o provider real da sessão.');
+requireText(access, 'signInProvider !== FOUNDER_AUTH_PROVIDER', 'Fundador não está restrito ao Google.');
+requireText(access, 'signInProvider !== SECTOR_AUTH_PROVIDER', 'Setor externo não está restrito a password.');
 requireText(drive, 'reauthenticateWithPopup', 'Onboarding Drive não exige reautenticação.');
 requireText(drive, 'emprovexWorkspaceId', 'Pastas Drive não estão marcadas por workspace.');
 requireText(storage, "WORKSPACE_DOCUMENT_STORAGE_SETTINGS_ID = 'documentStorage'", 'Configuração Drive não usa documentStorage.');
@@ -86,6 +92,7 @@ if (findings.length) {
 } else {
   console.log('Bloco 21 — prontidão para homologação do segundo setor\n');
   console.log('Cadastro administrativo: PRONTO');
+  console.log('Modelo híbrido de provider: PRONTO');
   console.log('Login externo + UID binding: PRONTO');
   console.log('Provisionamento inicial: PRONTO');
   console.log('Google Drive por workspace: PRONTO');
