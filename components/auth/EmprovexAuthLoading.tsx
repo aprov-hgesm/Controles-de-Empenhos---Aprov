@@ -18,7 +18,7 @@ export function EmprovexAuthLoading({
 
   return (
     <div className="emprovex-login-shell relative min-h-[100svh] overflow-hidden bg-[#020817] font-sans text-white">
-      <LoginAtmosphere />
+      <LoginAtmosphere state="authenticating" />
 
       <div className="relative z-10 flex min-h-[100svh] items-center justify-center px-5 py-10">
         <motion.section
