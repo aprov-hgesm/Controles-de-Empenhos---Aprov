@@ -29,6 +29,11 @@ requireText(context, 'getResolvedWorkspaceContextForSession', 'Não existe cache
 requireText(operationalData, 'resolveAuthenticatedWorkspaceContext', 'useOperationalData não valida o diretório antes das subscriptions.');
 requireText(operationalData, 'signInWithEmailAndPassword', 'Login por senha dos setores externos não está implementado.');
 requireText(operationalData, 'signInSectorUser', 'Hook operacional não expõe o login por senha do setor.');
+requireText(access, 'ACCOUNT_NOT_FOUND', 'Diagnóstico não identifica ausência da conta.');
+requireText(access, 'UID_MISMATCH', 'Diagnóstico não identifica divergência de UID.');
+requireText(access, 'WORKSPACE_NOT_FOUND', 'Diagnóstico não identifica ausência do workspace.');
+requireText(access, 'WORKSPACE_EMAIL_MISMATCH', 'Diagnóstico não identifica divergência de e-mail do workspace.');
+requireText(operationalData, 'Falha de autorização do workspace [', 'Tela de login não expõe o código seguro de diagnóstico.');
 forbidText(operationalData, 'useMemo(', 'Autorização operacional não pode ser derivada somente por useMemo do e-mail.');
 requireText(operationalPaths, 'getResolvedWorkspaceContextForSession', 'Writes não reutilizam o contexto validado da sessão.');
 
