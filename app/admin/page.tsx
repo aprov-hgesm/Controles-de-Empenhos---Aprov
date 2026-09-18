@@ -67,8 +67,16 @@ export default function PlatformAdminPage() {
       loadingDirectory={adminDirectory.loading}
       directoryError={adminDirectory.error}
       creatingSector={adminDirectory.creating}
+      updatingWorkspaceId={adminDirectory.updatingWorkspaceId}
+      changingStatusWorkspaceId={adminDirectory.changingStatusWorkspaceId}
       onCreateSector={async (input) => {
         await adminDirectory.createSector(input);
+      }}
+      onUpdateSector={async (input) => {
+        await adminDirectory.updateSector(input);
+      }}
+      onChangeSectorStatus={async (workspaceId, status) => {
+        await adminDirectory.changeSectorStatus(workspaceId, status);
       }}
       onLogout={handleLogout}
     />
