@@ -2,11 +2,24 @@ export type PlatformAccountType = 'platformAdmin' | 'sector';
 
 export type PlatformAccountStatus = 'active' | 'disabled';
 
+export type PlatformAuthProvider = 'google.com' | 'password';
+
+export const FOUNDER_AUTH_PROVIDER: PlatformAuthProvider = 'google.com';
+export const SECTOR_AUTH_PROVIDER: PlatformAuthProvider = 'password';
+
 export type WorkspaceStatus = 'active' | 'disabled';
 
 export interface PlatformAccountBase {
-  /** E-mail Google normalizado e usado como chave de autorização antes do primeiro login. */
+  /** E-mail normalizado usado como identidade lógica única da plataforma. */
   email: string;
+  /**
+   * Provedor esperado para autenticação.
+   *
+   * Transitório no Bloco 1: documentos legados podem ainda não possuir este campo.
+   * Para setores externos, a ausência é interpretada como 'password'. O Bloco 2
+   * passa a persistir explicitamente o provedor durante o provisionamento.
+   */
+  authProvider?: PlatformAuthProvider;
   /** UID do Firebase preenchido somente depois que a conta autenticar pela primeira vez. */
   firebaseUid?: string;
   accountType: PlatformAccountType;
@@ -49,7 +62,11 @@ export interface Workspace {
   id: string;
   name: string;
   status: WorkspaceStatus;
-  /** Conta Google operacional única vinculada ao setor. */
+  /**
+   * E-mail operacional único do setor. Nos setores externos ele será usado no
+   * login Firebase por senha e, posteriormente, deverá coincidir com a conta
+   * Google autorizada para o Drive.
+   */
   authorizedEmail: string;
   /** Marca temporária para o workspace fundador migrado da arquitetura pré-multi-tenant. */
   legacyWorkspace?: boolean;
@@ -131,6 +148,14 @@ export function validatePlatformAccount(account: PlatformAccount): string[] {
 
   if (account.status !== 'active' && account.status !== 'disabled') {
     errors.push('Status da conta da plataforma é inválido.');
+  }
+
+  if (
+    account.authProvider !== undefined
+    && account.authProvider !== FOUNDER_AUTH_PROVIDER
+    && account.authProvider !== SECTOR_AUTH_PROVIDER
+  ) {
+    errors.push('Provedor de autenticação da conta da plataforma é inválido.');
   }
 
   return errors;
