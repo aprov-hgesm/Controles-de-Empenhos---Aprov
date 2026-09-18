@@ -59,6 +59,22 @@ service cloud.firestore {
         );
     }
 
+    function boundIdentityMatchesAccount(account) {
+      return isVerifiedUser()
+        && account.email == request.auth.token.email
+        && hasBoundUid(account)
+        && account.firebaseUid == request.auth.uid;
+    }
+
+    function operationalIdentityMatchesAccount(workspaceId, account) {
+      return (
+          workspaceId == 'hgesm-aprov'
+          && isHgesmFounder()
+          && account.email == 'aprov1hgesm@gmail.com'
+        )
+        || boundIdentityMatchesAccount(account);
+    }
+
     function canAccessWorkspace(workspaceId) {
       return workspaceAccountExists(workspaceId)
         && workspaceData(workspaceId).status == 'active'
@@ -66,7 +82,10 @@ service cloud.firestore {
         && workspaceAccountData(workspaceId).status == 'active'
         && workspaceAccountData(workspaceId).workspaceId == workspaceId
         && workspaceAccountData(workspaceId).email == workspaceData(workspaceId).authorizedEmail
-        && identityMatchesAccount(workspaceAccountData(workspaceId));
+        && operationalIdentityMatchesAccount(
+          workspaceId,
+          workspaceAccountData(workspaceId)
+        );
     }
 
     function canReadWorkspaceMetadataFromResource(workspaceId) {
@@ -133,7 +152,20 @@ service cloud.firestore {
         ).data.email == request.resource.data.authorizedEmail
         && getAfter(
           /databases/$(database)/documents/platformAccounts/$(request.resource.data.authorizedEmail)
-        ).data.workspaceId == workspaceId;
+        ).data.workspaceId == workspaceId
+        && getAfter(
+          /databases/$(database)/documents/platformAccounts/$(request.resource.data.authorizedEmail)
+        ).data.status == request.resource.data.status;
+    }
+
+    function validWorkspaceAdminUpdate(workspaceId) {
+      return validWorkspaceWrite(workspaceId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name',
+          'status',
+          'institutionalProfile',
+          'updatedAt'
+        ]);
     }
 
     function validSectorAccountWrite(accountId) {
@@ -175,7 +207,18 @@ service cloud.firestore {
         ).data.id == request.resource.data.workspaceId
         && getAfter(
           /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
-        ).data.authorizedEmail == accountId;
+        ).data.authorizedEmail == accountId
+        && getAfter(
+          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+        ).data.status == request.resource.data.status;
+    }
+
+    function validSectorAccountAdminUpdate(accountId) {
+      return validSectorAccountWrite(accountId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'updatedAt'
+        ]);
     }
 
     function validInitialTermCounter() {
@@ -337,8 +380,11 @@ service cloud.firestore {
       allow get: if isPlatformAdmin()
         || canReadWorkspaceMetadataFromResource(workspaceId);
       allow list: if isPlatformAdmin();
-      allow create, update: if isPlatformAdmin()
+      allow create: if isPlatformAdmin()
         && validWorkspaceWrite(workspaceId)
+        && workspaceHasMatchingAccountAfterWrite(workspaceId);
+      allow update: if isPlatformAdmin()
+        && validWorkspaceAdminUpdate(workspaceId)
         && workspaceHasMatchingAccountAfterWrite(workspaceId);
       allow delete: if false;
     }
@@ -351,7 +397,7 @@ service cloud.firestore {
         && accountHasMatchingWorkspaceAfterWrite(accountId);
       allow update: if (
           isPlatformAdmin()
-          && validSectorAccountWrite(accountId)
+          && validSectorAccountAdminUpdate(accountId)
           && accountHasMatchingWorkspaceAfterWrite(accountId)
         )
         || isSelfUidBinding(accountId)
