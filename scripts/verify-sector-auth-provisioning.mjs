@@ -16,8 +16,10 @@ const access = read('lib/platformAccess.ts');
 const env = read('.env.example');
 
 requireText(route, 'verifyFounderSession(bearerToken(request))', 'Rota não valida a sessão do fundador antes de provisionar.');
+requireText(route, 'parseSectorProvisioningInput(await request.json())', 'Rota não valida o formato do payload antes de provisionar.');
 requireText(route, 'provisionSectorWorkspaceWithAuth(input, founder)', 'Rota não delega o provisionamento ao serviço privilegiado.');
 requireText(server, "firebaseClaim?.sign_in_provider !== FOUNDER_AUTH_PROVIDER", 'Sessão administrativa não exige provider Google.');
+requireText(server, 'user.disabled === true', 'Conta fundadora desativada ainda poderia provisionar setores.');
 requireText(server, "FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON", 'Servidor não usa credencial administrativa protegida.');
 requireText(server, 'lookupAuthUserByEmail', 'Provisionamento não detecta usuário Firebase já existente.');
 requireText(server, 'createAuthUser', 'Provisionamento não cria usuário Firebase no servidor.');
