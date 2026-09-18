@@ -105,6 +105,9 @@ jobs:
       - name: Production multi-tenant readiness guard
         run: npm run verify:production-multitenant-readiness
 
+      - name: EMPROVEX App Shell guard
+        run: npm run verify:app-shell
+
       - name: Production build
         run: npm run build
 
