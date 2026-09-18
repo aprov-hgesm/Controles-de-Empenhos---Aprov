@@ -42,6 +42,7 @@ export function usePlatformAdminDirectory(adminUser: User | null) {
   const [updatingWorkspaceId, setUpdatingWorkspaceId] = useState<string | null>(null);
   const [changingStatusWorkspaceId, setChangingStatusWorkspaceId] = useState<string | null>(null);
   const [deletingWorkspaceId, setDeletingWorkspaceId] = useState<string | null>(null);
+  const [resettingPasswordWorkspaceId, setResettingPasswordWorkspaceId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!adminEmail) {
@@ -220,6 +221,53 @@ export function usePlatformAdminDirectory(adminUser: User | null) {
     }
   }, [adminEmail, adminUser]);
 
+  const resetSectorPassword = useCallback(async (
+    workspaceId: string,
+    email: string,
+    newPassword: string
+  ) => {
+    if (!adminUser || !adminEmail) {
+      throw new Error('Sessão administrativa inválida.');
+    }
+
+    setResettingPasswordWorkspaceId(workspaceId);
+    setError(null);
+
+    try {
+      const idToken = await adminUser.getIdToken();
+      const response = await fetch('/api/admin/reset-sector-password', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${idToken}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ workspaceId, email, newPassword }),
+      });
+
+      const payload = await response.json() as {
+        ok?: boolean;
+        result?: {
+          workspaceId: string;
+          email: string;
+          firebaseUid: string;
+        };
+        error?: string;
+      };
+
+      if (!response.ok || !payload.ok || !payload.result) {
+        throw new Error(payload.error || 'Não foi possível redefinir a senha do setor.');
+      }
+
+      return payload.result;
+    } catch (resetError) {
+      const message = describeDirectoryError(resetError);
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setResettingPasswordWorkspaceId(null);
+    }
+  }, [adminEmail, adminUser]);
+
   return {
     directory,
     loading,
@@ -228,9 +276,11 @@ export function usePlatformAdminDirectory(adminUser: User | null) {
     updatingWorkspaceId,
     changingStatusWorkspaceId,
     deletingWorkspaceId,
+    resettingPasswordWorkspaceId,
     createSector,
     updateSector,
     changeSectorStatus,
     deleteSector,
+    resetSectorPassword,
   };
 }

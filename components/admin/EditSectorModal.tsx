@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Building2, Loader2, LockKeyhole, X } from 'lucide-react';
+import { Building2, KeyRound, Loader2, LockKeyhole, X } from 'lucide-react';
 
 import type { UpdateSectorWorkspaceInput } from '../../lib/platformAdminStore';
 import type { Workspace } from '../../lib/platformIdentity';
@@ -9,8 +9,10 @@ import type { Workspace } from '../../lib/platformIdentity';
 interface EditSectorModalProps {
   workspace: Workspace | null;
   saving: boolean;
+  resettingPassword: boolean;
   onClose: () => void;
   onSave: (input: UpdateSectorWorkspaceInput) => Promise<void>;
+  onResetPassword: (workspaceId: string, email: string, newPassword: string) => Promise<void>;
 }
 
 function formFromWorkspace(workspace: Workspace): UpdateSectorWorkspaceInput {
@@ -26,15 +28,23 @@ function formFromWorkspace(workspace: Workspace): UpdateSectorWorkspaceInput {
 export function EditSectorModal({
   workspace,
   saving,
+  resettingPassword,
   onClose,
   onSave,
+  onResetPassword,
 }: EditSectorModalProps) {
   const [form, setForm] = useState<UpdateSectorWorkspaceInput | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [credentialMessage, setCredentialMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setForm(workspace ? formFromWorkspace(workspace) : null);
     setError(null);
+    setNewPassword('');
+    setConfirmPassword('');
+    setCredentialMessage(null);
   }, [workspace]);
 
   if (!workspace || !form) return null;
@@ -60,6 +70,30 @@ export function EditSectorModal({
     }
   };
 
+  const handleResetPassword = async () => {
+    setError(null);
+    setCredentialMessage(null);
+
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      setError('A nova senha deve possuir entre 8 e 128 caracteres.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('A confirmação da nova senha não confere.');
+      return;
+    }
+
+    try {
+      await onResetPassword(workspace.id, workspace.authorizedEmail, newPassword);
+      setNewPassword('');
+      setConfirmPassword('');
+      setCredentialMessage('Senha redefinida com sucesso. O usuário já pode testar o novo acesso.');
+    } catch (resetError) {
+      setError(resetError instanceof Error ? resetError.message : 'Não foi possível redefinir a senha.');
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm p-4 sm:p-6 flex items-center justify-center">
       <div className="w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#0b1730] shadow-2xl shadow-black/40">
@@ -77,7 +111,7 @@ export function EditSectorModal({
           <button
             type="button"
             onClick={onClose}
-            disabled={saving}
+            disabled={saving || resettingPassword}
             className="rounded-xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:bg-white/10 disabled:opacity-50"
             aria-label="Fechar"
           >
@@ -141,18 +175,71 @@ export function EditSectorModal({
             O local padrão e a função do responsável são definidos automaticamente como <strong>Setor de Aprovisionamento - [SIGLA]</strong> e <strong>Chefe do Aprovisionamento</strong>.
           </div>
 
+          <div className="rounded-2xl border border-blue-400/15 bg-blue-500/[0.05] p-4 space-y-4">
+            <div className="flex items-start gap-2">
+              <KeyRound className="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-300" />
+              <div>
+                <div className="text-xs font-extrabold uppercase tracking-[0.12em] text-blue-200">Credencial de acesso</div>
+                <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                  Defina uma nova senha para este usuário. A senha atual nunca é exibida nem armazenada no Firestore.
+                </p>
+              </div>
+            </div>
+
+            {credentialMessage && (
+              <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-3.5 py-2.5 text-xs font-bold text-emerald-200">
+                {credentialMessage}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Nova senha">
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  autoComplete="new-password"
+                  disabled={resettingPassword}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Confirmar nova senha">
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  autoComplete="new-password"
+                  disabled={resettingPassword}
+                  className={inputClass}
+                />
+              </Field>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => void handleResetPassword()}
+                disabled={resettingPassword || !newPassword || !confirmPassword}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400/20 bg-blue-600 px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {resettingPassword && <Loader2 className="w-4 h-4 animate-spin" />}
+                {resettingPassword ? 'Redefinindo…' : 'Definir / redefinir senha'}
+              </button>
+            </div>
+          </div>
+
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-1">
             <button
               type="button"
               onClick={onClose}
-              disabled={saving}
+              disabled={saving || resettingPassword}
               className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-bold text-slate-300 transition hover:bg-white/10 disabled:opacity-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || resettingPassword}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-extrabold text-white shadow-lg shadow-blue-950/30 transition hover:bg-blue-500 disabled:cursor-wait disabled:opacity-60"
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}

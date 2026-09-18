@@ -315,6 +315,8 @@ export function useOperationalData() {
       throw new Error('Informe o e-mail e a senha de acesso.');
     }
 
+    let firebaseCredentialAccepted = false;
+
     setSyncing(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
@@ -323,6 +325,7 @@ export function useOperationalData() {
         normalizedEmail,
         password
       );
+      firebaseCredentialAccepted = true;
       return await finalizeSignIn(credential.user);
     } catch (error) {
       clearResolvedWorkspaceContext();
@@ -356,7 +359,15 @@ export function useOperationalData() {
         throw new Error('Não foi possível conectar ao serviço de autenticação. Verifique a conexão e tente novamente.');
       }
 
-      throw new Error('E-mail ou senha inválidos, ou acesso não autorizado.');
+      if (authCode.includes('user-disabled')) {
+        throw new Error('Esta credencial está desativada no Firebase Authentication.');
+      }
+
+      if (firebaseCredentialAccepted) {
+        throw new Error('A credencial foi aceita pelo Firebase, mas o vínculo com o workspace foi recusado. Revise UID, status da conta e diretório do setor.');
+      }
+
+      throw new Error('O Firebase rejeitou o e-mail ou a senha informados.');
     } finally {
       setSyncing(false);
     }

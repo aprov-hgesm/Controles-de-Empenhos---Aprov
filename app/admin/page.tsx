@@ -70,6 +70,7 @@ export default function PlatformAdminPage() {
       updatingWorkspaceId={adminDirectory.updatingWorkspaceId}
       changingStatusWorkspaceId={adminDirectory.changingStatusWorkspaceId}
       deletingWorkspaceId={adminDirectory.deletingWorkspaceId}
+      resettingPasswordWorkspaceId={adminDirectory.resettingPasswordWorkspaceId}
       onCreateSector={async (input) => {
         await adminDirectory.createSector(input);
       }}
@@ -81,6 +82,9 @@ export default function PlatformAdminPage() {
       }}
       onDeleteSector={async (workspaceId, email) => {
         await adminDirectory.deleteSector(workspaceId, email);
+      }}
+      onResetSectorPassword={async (workspaceId, email, newPassword) => {
+        await adminDirectory.resetSectorPassword(workspaceId, email, newPassword);
       }}
       onLogout={handleLogout}
     />

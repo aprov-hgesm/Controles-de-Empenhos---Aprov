@@ -40,7 +40,8 @@
     "verify:production-multitenant-readiness": "node scripts/verify-production-multitenant-readiness.mjs",
     "verify:hybrid-auth-model": "node scripts/verify-hybrid-auth-model.mjs",
     "verify:sector-auth-provisioning": "node scripts/verify-sector-auth-provisioning.mjs",
-    "verify:sector-admin-deletion": "node scripts/verify-sector-admin-deletion.mjs"
+    "verify:sector-admin-deletion": "node scripts/verify-sector-admin-deletion.mjs",
+    "verify:sector-password-reset": "node scripts/verify-sector-password-reset.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
