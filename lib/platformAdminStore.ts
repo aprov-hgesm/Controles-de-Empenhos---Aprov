@@ -66,6 +66,38 @@ function accountDocumentId(email: string): string {
   return normalizePlatformEmail(email);
 }
 
+
+function optionalTrimmedField<Key extends string>(
+  key: Key,
+  value?: string
+): Partial<Record<Key, string>> {
+  const normalized = value?.trim();
+  return normalized ? { [key]: normalized } as Record<Key, string> : {};
+}
+
+function buildInstitutionalProfile(
+  input: Pick<
+    CreateSectorWorkspaceInput,
+    | 'organizationName'
+    | 'organizationShortName'
+    | 'sectionName'
+    | 'defaultDeliveryLocation'
+    | 'defaultResponsibleRole'
+  >,
+  documentHeaderLines?: string[]
+): Workspace['institutionalProfile'] {
+  return {
+    organizationName: input.organizationName.trim(),
+    sectionName: input.sectionName.trim(),
+    ...(documentHeaderLines?.length
+      ? { documentHeaderLines: [...documentHeaderLines] }
+      : {}),
+    ...optionalTrimmedField('organizationShortName', input.organizationShortName),
+    ...optionalTrimmedField('defaultDeliveryLocation', input.defaultDeliveryLocation),
+    ...optionalTrimmedField('defaultResponsibleRole', input.defaultResponsibleRole),
+  };
+}
+
 export function suggestWorkspaceId(name: string): string {
   return normalizeWorkspaceId(
     name
@@ -131,13 +163,7 @@ export async function createSectorWorkspace(
     name: input.workspaceName.trim(),
     status: 'active',
     authorizedEmail,
-    institutionalProfile: {
-      organizationName: input.organizationName.trim(),
-      organizationShortName: input.organizationShortName?.trim() || undefined,
-      sectionName: input.sectionName.trim(),
-      defaultDeliveryLocation: input.defaultDeliveryLocation?.trim() || undefined,
-      defaultResponsibleRole: input.defaultResponsibleRole?.trim() || undefined,
-    },
+    institutionalProfile: buildInstitutionalProfile(input),
     createdAt: now,
     updatedAt: now,
     createdBy,
@@ -255,14 +281,10 @@ export async function updateSectorWorkspaceProfile(
     const updated: Workspace = {
       ...current,
       name: input.workspaceName.trim(),
-      institutionalProfile: {
-        ...current.institutionalProfile,
-        organizationName: input.organizationName.trim(),
-        organizationShortName: input.organizationShortName?.trim() || undefined,
-        sectionName: input.sectionName.trim(),
-        defaultDeliveryLocation: input.defaultDeliveryLocation?.trim() || undefined,
-        defaultResponsibleRole: input.defaultResponsibleRole?.trim() || undefined,
-      },
+      institutionalProfile: buildInstitutionalProfile(
+        input,
+        current.institutionalProfile.documentHeaderLines
+      ),
       updatedAt: now,
     };
 
