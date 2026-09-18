@@ -12,6 +12,8 @@ const operationalData = read('hooks/useOperationalData.ts');
 const page = read('app/page.tsx');
 const login = read('components/auth/EmprovexLogin.tsx');
 const rules = read('firestore.rules');
+const driveClient = read('lib/googleDriveWorkspace.ts');
+const layout = read('app/layout.tsx');
 
 requireText(
   identity,
@@ -125,6 +127,31 @@ requireText(
   "hasSignInProvider('password')",
   'Firestore Rules não restringem setores externos ao provider password.'
 );
+requireText(
+  driveClient,
+  "context.resolutionSource === 'platform-directory'",
+  'Fluxo Drive não distingue setores externos do workspace fundador.'
+);
+requireText(
+  driveClient,
+  'connectExternalWorkspaceDrive',
+  'Setores externos não possuem autorização Google Drive isolada.'
+);
+requireText(
+  driveClient,
+  'initTokenClient',
+  'Autorização Drive externa não usa Google Identity Services.'
+);
+requireText(
+  driveClient,
+  'connectFounderDriveSession',
+  'Fluxo Google do fundador não foi preservado.'
+);
+requireText(
+  layout,
+  'https://accounts.google.com/gsi/client',
+  'Google Identity Services não é carregado pela aplicação.'
+);
 
 if (findings.length) {
   console.error('Nova autenticação — Bloco 1: modelo híbrido\n');
@@ -141,6 +168,7 @@ if (findings.length) {
   console.log('UI email/senha: implementada para setores externos');
   console.log('Login Google: preservado exclusivamente para o fundador');
   console.log('Enforcement nas Rules: ativo para Google/password');
+  console.log('Drive externo: OAuth Google independente sem trocar o provider Firebase');
   console.log('\nHYBRID AUTH MODEL: READY');
 }
 
