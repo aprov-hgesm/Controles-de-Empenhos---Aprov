@@ -13,13 +13,19 @@ const sidebar = read('components/layout/AppSidebar.tsx');
 const mobile = read('components/layout/MobileNavigation.tsx');
 const relatorios = read('features/relatorios/components/RelatoriosView.tsx');
 const actions = read('features/empenhos/hooks/useEmpenhoActions.ts');
+const documentActions = read('features/relatorios/hooks/useDocumentActions.ts');
+const notasFiscais = read('features/notas-fiscais/components/NotasFiscaisView.tsx');
 
 requireText(classes, "code: 'FUNADOM'", 'Classe FUNADOM não está definida entre os padrões.');
+requireText(classes, "code: 'PASA'", 'Classe PASA não está definida entre os padrões.');
+requireText(classes, 'requiresTermoRecebimento: false', 'Classes sem exigência de TR não estão configuradas.');
+requireText(classes, 'classRequiresTermoRecebimento', 'Regra de exigência de TR por classe não está centralizada.');
 requireText(classes, 'normalizeEmpenhoClassCode', 'Classes novas não possuem normalização de código.');
 requireText(hook, "SETTINGS_DOCUMENT_ID = 'empenhoClasses'", 'Configuração não está persistida em settings/empenhoClasses.');
 requireText(hook, 'operationalScopeFromContext', 'Configuração de classes não está isolada pelo workspace.');
 requireText(empenhosView, 'Configuração das Classes de Empenho', 'Tela não possui gerenciador de classes.');
-requireText(empenhosView, 'Salvar descritivo', 'Descritivo da classe não pode ser editado.');
+requireText(empenhosView, 'Salvar configuração', 'Configuração da classe não pode ser editada.');
+requireText(empenhosView, 'Exige Termo de Recebimento (TR)', 'Tela de classes não permite configurar exigência de TR.');
 requireText(empenhosView, 'Adicionar classe', 'Nova classe não pode ser adicionada.');
 requireText(empenhosView, 'handleUpdateEmpenhoClassification', 'Classe de empenho existente não pode ser alterada.');
 requireText(actions, 'handleUpdateEmpenhoClassification', 'Ação persistente de troca de classe não existe.');
@@ -33,6 +39,14 @@ requireText(sidebar, '<span>Relatórios</span>', 'Sidebar não renomeou a aba an
 requireText(mobile, '>Empenhos</span>', 'Navegação mobile não usa Empenhos.');
 requireText(mobile, '>Relatórios</span>', 'Navegação mobile não usa Relatórios.');
 requireText(relatorios, '>Relatórios</h2>', 'Título da tela de relatórios não foi atualizado.');
+requireText(documentActions, 'const shouldIncludeTermo = requiresTermoRecebimento(inv);', 'Liquidação consolidada não consulta a exigência de TR.');
+requireText(documentActions, 'if (termo)', 'Liquidação consolidada não trata TR como documento opcional.');
+requireText(documentActions, "sem TR (classe", 'Liquidação sem TR não possui confirmação específica.');
+requireText(notasFiscais, 'Termo de Recebimento dispensado', 'Tela de NFs não informa dispensa de TR.');
+requireText(notasFiscais, "!requiresTR && currentLocation === 'APROVISIONAMENTO'", 'Classe sem TR não pode seguir direto à Tesouraria.');
+requireText(notasFiscais, 'invoiceRequiresTR(invoice) && getInvoiceLocation(invoice)', 'Filtro de Comissão não exclui classes dispensadas.');
+requireText(relatorios, 'TR dispensado para esta classe', 'Relatórios ainda oferecem TR para classe dispensada.');
+requireText(relatorios, "'Dispensada'", 'Relatórios não identificam Comissão dispensada.');
 
 if (findings.length > 0) {
   console.error('EMPENHO CLASS CONFIG GUARD: FAIL');
