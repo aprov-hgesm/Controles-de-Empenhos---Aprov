@@ -14,9 +14,16 @@ const appHeader = read('components/layout/AppHeader.tsx');
 const page = read('app/page.tsx');
 const rules = read('firestore.rules');
 
-requireText(driveClient, 'reauthenticateWithPopup', 'Onboarding Drive não exige reautenticação explícita.');
-requireText(driveClient, 'result.user.uid !== user.uid', 'Onboarding não valida o UID retornado pelo Google.');
+requireText(driveClient, "context.resolutionSource === 'platform-directory'", 'Onboarding externo não separa autorização Drive da sessão Firebase.');
+requireText(driveClient, 'connectExternalWorkspaceDrive', 'Onboarding externo não possui fluxo OAuth independente.');
+requireText(driveClient, 'initTokenClient', 'Onboarding externo não usa Google Identity Services.');
 requireText(driveClient, 'returnedEmail !== expectedEmail', 'Onboarding não valida a conta Google do setor.');
+requireText(driveClient, 'about?fields=user(emailAddress)', 'Onboarding não confirma o e-mail da conta pela Drive API.');
+forbidText(
+  driveClient,
+  "if (context.resolutionSource === 'platform-directory') {\n    return connectFounderDriveSession",
+  'Setor externo pode cair indevidamente no fluxo Firebase/Google do fundador.'
+);
 requireText(driveClient, 'emprovexWorkspaceId', 'Pastas não são marcadas pelo workspaceId.');
 requireText(driveClient, 'emprovexFolderRole', 'Pastas não são marcadas por função.');
 requireText(driveClient, 'const existing = await findFolder', 'Criação de pastas não é idempotente.');
@@ -62,7 +69,7 @@ if (findings.length) {
 } else {
   console.log('Bloco 18 — onboarding Google Drive por setor\n');
   console.log('Conta Google do setor: validada');
-  console.log('UID da sessão: validado');
+  console.log('Sessão Firebase password: preservada durante autorização Drive');
   console.log('Pastas: idempotentes e marcadas por workspace');
   console.log('documentStorage: isolado por Rules');
   console.log('Token persistente: NÃO');
