@@ -28,6 +28,17 @@ requireText(config, '"auth"', 'Config de testes não habilita Auth Emulator.');
 requireText(config, '"firestore"', 'Config de testes não habilita Firestore Emulator.');
 requireText(config, '"rules": "firestore.rules"', 'Emulador não usa as Rules oficiais do repositório.');
 
+requireText(
+  pkg.scripts?.['test:security:multitenant'] || '',
+  '--project demo-emprovex-security',
+  'Suíte não está restrita a um projeto Firebase demo local.'
+);
+requireText(
+  suite,
+  "const PROJECT_ID = 'demo-emprovex-security';",
+  'Script de teste não está vinculado ao projeto demo local.'
+);
+
 for (const scenario of [
   'Setor A não lê empenho do Setor B',
   'Setor B não lê empenho do Setor A',
