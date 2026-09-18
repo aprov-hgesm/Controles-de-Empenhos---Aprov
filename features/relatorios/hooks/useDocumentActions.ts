@@ -7,6 +7,7 @@ import autoTable from 'jspdf-autotable';
 import type { Comissao, Empenho, Invoice } from '../../../lib/types';
 import { classRequiresTermoRecebimento, type EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 import { ensureTermoRecebimentoAssignment } from '../../../lib/firebaseSync';
+import { getInvoiceRecordKey } from '../../../lib/invoiceIdentity';
 import { fetchEmpenhoPdfBlob } from '../../../lib/empenhoDocuments';
 import { fetchInvoicePdfBlob } from '../../../lib/invoiceDocuments';
 
@@ -68,7 +69,7 @@ export function useDocumentActions(context:DocumentActionsContext){
       );
       updatedInvoiceWithTR = await ensureTermoRecebimentoAssignment(
         user.uid,
-        inv.id,
+        getInvoiceRecordKey(inv),
         maxTermoNumero,
         termoEmissaoDate
       );
@@ -84,7 +85,9 @@ export function useDocumentActions(context:DocumentActionsContext){
     }
     const effectiveTermoDate = new Date(updatedInvoiceWithTR.termoEmissaoDate || termoEmissaoDate);
     const termoYear = Number.isNaN(effectiveTermoDate.getTime()) ? now.getFullYear() : effectiveTermoDate.getFullYear();
-    setInvoices(prev => prev.map(i => i.id === inv.id ? updatedInvoiceWithTR : i));
+    setInvoices((prev) => prev.map((item) => (
+      getInvoiceRecordKey(item) === getInvoiceRecordKey(inv) ? updatedInvoiceWithTR : item
+    )));
     const empenhoTotal = targetEmp?.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) || 0;
     const isQtyEqual = inv.totalValue >= (empenhoTotal - 0.01);
      // Helpers for formatting date
