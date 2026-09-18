@@ -81,6 +81,9 @@ jobs:
       - name: Multi-tenant Firestore security tests
         run: npm run test:security:multitenant
 
+      - name: Production multi-tenant readiness guard
+        run: npm run verify:production-multitenant-readiness
+
       - name: Production build
         run: npm run build
 
