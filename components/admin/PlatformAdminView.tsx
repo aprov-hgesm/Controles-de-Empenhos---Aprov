@@ -6,9 +6,13 @@ import {
   ArrowLeftRight,
   Building2,
   Database,
+  CirclePause,
+  CirclePlay,
   HardDrive,
+  Loader2,
   LockKeyhole,
   LogOut,
+  Pencil,
   Plus,
   ShieldCheck,
   UserCog,
@@ -16,8 +20,13 @@ import {
 import { useRouter } from 'next/navigation';
 
 import { CreateSectorModal } from './CreateSectorModal';
+import { EditSectorModal } from './EditSectorModal';
 import { createHgesmFoundingWorkspace } from '../../lib/hgesmWorkspace';
-import type { CreateSectorWorkspaceInput } from '../../lib/platformAdminStore';
+import type {
+  CreateSectorWorkspaceInput,
+  SectorLifecycleStatus,
+  UpdateSectorWorkspaceInput,
+} from '../../lib/platformAdminStore';
 import type { Workspace } from '../../lib/platformIdentity';
 import { setActiveProfileMode } from '../../lib/profileMode';
 
@@ -27,7 +36,11 @@ interface PlatformAdminViewProps {
   loadingDirectory: boolean;
   directoryError: string | null;
   creatingSector: boolean;
+  updatingWorkspaceId: string | null;
+  changingStatusWorkspaceId: string | null;
   onCreateSector: (input: CreateSectorWorkspaceInput) => Promise<void>;
+  onUpdateSector: (input: UpdateSectorWorkspaceInput) => Promise<void>;
+  onChangeSectorStatus: (workspaceId: string, status: SectorLifecycleStatus) => Promise<void>;
   onLogout: () => Promise<void>;
 }
 
@@ -37,11 +50,16 @@ export function PlatformAdminView({
   loadingDirectory,
   directoryError,
   creatingSector,
+  updatingWorkspaceId,
+  changingStatusWorkspaceId,
   onCreateSector,
+  onUpdateSector,
+  onChangeSectorStatus,
   onLogout,
 }: PlatformAdminViewProps) {
   const router = useRouter();
   const [showCreateSector, setShowCreateSector] = useState(false);
+  const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const visibleWorkspaces = useMemo(
@@ -56,6 +74,35 @@ export function PlatformAdminView({
     await onCreateSector(input);
     setSuccessMessage(`Setor ${resultName} cadastrado e provisionado com sucesso.`);
     window.setTimeout(() => setSuccessMessage(null), 5000);
+  };
+
+  const handleUpdateSector = async (input: UpdateSectorWorkspaceInput) => {
+    const resultName = input.workspaceName.trim();
+    await onUpdateSector(input);
+    setSuccessMessage(`Setor ${resultName} atualizado com sucesso.`);
+    window.setTimeout(() => setSuccessMessage(null), 5000);
+  };
+
+  const handleChangeSectorStatus = async (workspace: Workspace) => {
+    if (workspace.legacyWorkspace) return;
+
+    const nextStatus: SectorLifecycleStatus = workspace.status === 'active' ? 'disabled' : 'active';
+    const actionLabel = nextStatus === 'disabled' ? 'suspender' : 'reativar';
+    const confirmed = window.confirm(
+      nextStatus === 'disabled'
+        ? `Suspender ${workspace.name}? O acesso operacional será bloqueado imediatamente.`
+        : `Reativar ${workspace.name}? A conta poderá voltar a acessar o workspace.`
+    );
+    if (!confirmed) return;
+
+    await onChangeSectorStatus(workspace.id, nextStatus);
+    setSuccessMessage(
+      nextStatus === 'disabled'
+        ? `Setor ${workspace.name} suspenso. O acesso operacional foi bloqueado.`
+        : `Setor ${workspace.name} reativado com sucesso.`
+    );
+    window.setTimeout(() => setSuccessMessage(null), 5000);
+    void actionLabel;
   };
 
   const returnToHgesm = () => {
@@ -196,7 +243,15 @@ export function PlatformAdminView({
             )}
 
             {visibleWorkspaces.map((workspace) => (
-              <WorkspaceCard key={workspace.id} workspace={workspace} />
+              <WorkspaceCard
+                key={workspace.id}
+                workspace={workspace}
+                disabled={!persistentDirectoryReady}
+                editing={updatingWorkspaceId === workspace.id}
+                changingStatus={changingStatusWorkspaceId === workspace.id}
+                onEdit={() => setEditingWorkspace(workspace)}
+                onChangeStatus={() => void handleChangeSectorStatus(workspace)}
+              />
             ))}
           </div>
         </section>
@@ -208,7 +263,7 @@ export function PlatformAdminView({
               <h3 className="font-extrabold">Estado da migração</h3>
             </div>
             <p className="text-sm text-slate-300 leading-relaxed">
-              O HGeSM continua operando nas coleções legadas. Os novos perfis cadastrados aqui contêm somente metadados administrativos e ainda não possuem coleções operacionais próprias.
+              Workspaces ativos operam isoladamente. A suspensão administrativa bloqueia novas leituras e escritas imediatamente, sem apagar documentos, configurações ou histórico do setor.
             </p>
           </div>
 
@@ -218,7 +273,7 @@ export function PlatformAdminView({
               <h3 className="font-extrabold">Cadastro seguro</h3>
             </div>
             <p className="text-sm text-slate-300 leading-relaxed">
-              Workspace e conta Google são criados atomicamente. IDs e e-mails duplicados são bloqueados e os futuros setores continuam isolados por workspace.
+              Cadastro, edição institucional e ciclo de vida preservam workspace ID, conta Google e UID. Suspensão e reativação atualizam workspace e conta operacional na mesma transação.
             </p>
           </div>
         </section>
@@ -230,24 +285,60 @@ export function PlatformAdminView({
         onClose={() => setShowCreateSector(false)}
         onCreate={handleCreateSector}
       />
+
+      <EditSectorModal
+        workspace={editingWorkspace}
+        saving={Boolean(editingWorkspace && updatingWorkspaceId === editingWorkspace.id)}
+        onClose={() => setEditingWorkspace(null)}
+        onSave={handleUpdateSector}
+      />
     </div>
   );
 }
 
-function WorkspaceCard({ workspace }: { workspace: Workspace }) {
+function WorkspaceCard({
+  workspace,
+  disabled,
+  editing,
+  changingStatus,
+  onEdit,
+  onChangeStatus,
+}: {
+  workspace: Workspace;
+  disabled: boolean;
+  editing: boolean;
+  changingStatus: boolean;
+  onEdit: () => void;
+  onChangeStatus: () => void;
+}) {
+  const isActive = workspace.status === 'active';
+  const founder = Boolean(workspace.legacyWorkspace);
+
   return (
-    <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.06] p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+    <div className={`rounded-2xl border p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 ${
+      isActive
+        ? 'border-emerald-400/20 bg-emerald-500/[0.06]'
+        : 'border-amber-400/20 bg-amber-500/[0.06]'
+    }`}>
       <div className="flex items-start gap-4 min-w-0">
-        <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center text-emerald-300 flex-shrink-0">
+        <div className={`w-11 h-11 rounded-xl border flex items-center justify-center flex-shrink-0 ${
+          isActive
+            ? 'bg-emerald-500/10 border-emerald-400/20 text-emerald-300'
+            : 'bg-amber-500/10 border-amber-400/20 text-amber-300'
+        }`}>
           <Building2 className="w-5 h-5" />
         </div>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h4 className="font-extrabold text-white">{workspace.name}</h4>
-            <span className="inline-flex rounded-full bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300">
-              {workspace.status === 'active' ? 'Ativo' : 'Inativo'}
+            <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+              isActive
+                ? 'bg-emerald-400/10 border-emerald-400/20 text-emerald-300'
+                : 'bg-amber-400/10 border-amber-400/20 text-amber-300'
+            }`}>
+              {isActive ? 'Ativo' : 'Suspenso'}
             </span>
-            {workspace.legacyWorkspace && (
+            {founder && (
               <span className="inline-flex rounded-full bg-white/5 border border-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300">
                 Fundador
               </span>
@@ -258,17 +349,50 @@ function WorkspaceCard({ workspace }: { workspace: Workspace }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:min-w-[430px]">
-        <div className="rounded-xl bg-slate-950/30 border border-white/10 px-4 py-3">
-          <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Workspace ID</div>
-          <div className="text-sm font-mono font-bold text-slate-200 mt-1 break-all">{workspace.id}</div>
-        </div>
-        <div className="rounded-xl bg-slate-950/30 border border-white/10 px-4 py-3">
-          <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Dados</div>
-          <div className="text-sm font-bold text-slate-200 mt-1">
-            {workspace.legacyWorkspace ? 'Workspace fundador' : 'Provisionado'}
+      <div className="lg:min-w-[470px] space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="rounded-xl bg-slate-950/30 border border-white/10 px-4 py-3">
+            <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Workspace ID</div>
+            <div className="text-sm font-mono font-bold text-slate-200 mt-1 break-all">{workspace.id}</div>
+          </div>
+          <div className="rounded-xl bg-slate-950/30 border border-white/10 px-4 py-3">
+            <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Ciclo de vida</div>
+            <div className="text-sm font-bold text-slate-200 mt-1">
+              {founder ? 'Protegido' : isActive ? 'Operação liberada' : 'Acesso bloqueado'}
+            </div>
           </div>
         </div>
+
+        {!founder && (
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
+            <button
+              type="button"
+              onClick={onEdit}
+              disabled={disabled || editing || changingStatus}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-bold text-slate-200 transition hover:bg-white/10 disabled:opacity-50"
+            >
+              {editing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pencil className="w-4 h-4" />}
+              Editar cadastro
+            </button>
+            <button
+              type="button"
+              onClick={onChangeStatus}
+              disabled={disabled || editing || changingStatus}
+              className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition disabled:opacity-50 ${
+                isActive
+                  ? 'border-amber-400/20 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20'
+                  : 'border-emerald-400/20 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20'
+              }`}
+            >
+              {changingStatus
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : isActive
+                  ? <CirclePause className="w-4 h-4" />
+                  : <CirclePlay className="w-4 h-4" />}
+              {isActive ? 'Suspender setor' : 'Reativar setor'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
