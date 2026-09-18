@@ -231,9 +231,10 @@ function workspace(id, email, status = 'active', extra = {}) {
   };
 }
 
-function account(email, workspaceId, uid, status = 'active') {
+function account(email, workspaceId, uid, status = 'active', authProvider = 'password') {
   return {
     email,
+    ...(authProvider ? { authProvider } : {}),
     ...(uid ? { firebaseUid: uid } : {}),
     accountType: 'sector',
     workspaceId,
@@ -250,11 +251,18 @@ function account(email, workspaceId, uid, status = 'active') {
   };
 }
 
-async function seedWorkspace(id, email, uid, status = 'active', accountWorkspaceId = id) {
+async function seedWorkspace(
+  id,
+  email,
+  uid,
+  status = 'active',
+  accountWorkspaceId = id,
+  authProvider = 'password'
+) {
   await ownerSet(`workspaces/${id}`, workspace(id, email, status));
   await ownerSet(
     `platformAccounts/${email}`,
-    account(email, accountWorkspaceId, uid, status)
+    account(email, accountWorkspaceId, uid, status, authProvider)
   );
   await ownerSet(`workspaces/${id}/empenhos/sample`, {
     id: 'sample',
@@ -276,10 +284,16 @@ async function main() {
     suspended: 'sector-suspended@example.test',
     tampered: 'sector-tampered@example.test',
     lifecycle: 'sector-lifecycle@example.test',
-    founder: 'aprov1hgesm@gmail.com',
   })) {
     identities[key] = await createVerifiedUser(email);
   }
+
+  const founderEmail = 'aprov1hgesm@gmail.com';
+  const admin = await createSession('admin-google', founderEmail, 'google.com');
+  identities.founder = {
+    email: founderEmail,
+    uid: admin.user.uid,
+  };
 
   await seedWorkspace('workspace-a', identities.a.email, identities.a.uid);
   await seedWorkspace('workspace-b', identities.b.email, identities.b.uid);
@@ -288,7 +302,15 @@ async function main() {
     identities.wrongUid.email,
     'uid-que-nao-corresponde-a-sessao'
   );
-  await seedWorkspace('workspace-bootstrap', identities.bootstrap.email, null);
+  // Caso legado sem authProvider: continua aceito somente quando a sessão é password.
+  await seedWorkspace(
+    'workspace-bootstrap',
+    identities.bootstrap.email,
+    null,
+    'active',
+    'workspace-bootstrap',
+    null
+  );
 
   await ownerSet(
     'workspaces/workspace-prebound',
@@ -334,7 +356,13 @@ async function main() {
   );
   await ownerSet(
     `platformAccounts/${identities.founder.email}`,
-    account(identities.founder.email, 'hgesm-aprov', null, 'active')
+    account(
+      identities.founder.email,
+      'hgesm-aprov',
+      null,
+      'active',
+      'google.com'
+    )
   );
   await ownerSet('workspaces/hgesm-aprov/empenhos/sample', {
     id: 'sample',
@@ -349,7 +377,38 @@ async function main() {
   const sessionSuspended = await createSession('suspended', identities.suspended.email);
   const sessionTampered = await createSession('tampered', identities.tampered.email);
   const sessionLifecycle = await createSession('lifecycle', identities.lifecycle.email);
-  const admin = await createSession('admin', identities.founder.email);
+
+  await linkWithCredential(
+    sessionA.user,
+    mockGoogleCredential('sector-a-linked', identities.a.email)
+  );
+  await sessionA.user.getIdToken(true);
+  const sessionAGoogle = await createSession(
+    'sector-a-linked',
+    identities.a.email,
+    'google.com'
+  );
+  assert.equal(
+    sessionAGoogle.user.uid,
+    identities.a.uid,
+    'O teste de provider precisa usar o mesmo UID do setor.'
+  );
+
+  await authPost('accounts:update', {
+    idToken: await admin.user.getIdToken(),
+    password: PASSWORD,
+    returnSecureToken: true,
+  });
+  const founderPassword = await createSession(
+    'founder-password',
+    identities.founder.email,
+    'password'
+  );
+  assert.equal(
+    founderPassword.user.uid,
+    identities.founder.uid,
+    'O teste do fundador precisa manter o mesmo UID entre providers.'
+  );
 
   console.log('Isolamento A ↔ B');
   await allowed('Setor A lê o próprio empenho', () =>
