@@ -63,6 +63,9 @@ jobs:
       - name: Hybrid authentication model guard
         run: npm run verify:hybrid-auth-model
 
+      - name: Firestore provider enforcement guard
+        run: npm run verify:firestore-provider-enforcement
+
       - name: Sector auth provisioning guard
         run: npm run verify:sector-auth-provisioning
 

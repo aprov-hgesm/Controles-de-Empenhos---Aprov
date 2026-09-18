@@ -8,9 +8,24 @@ service cloud.firestore {
         && request.auth.token.email is string;
     }
 
+    function hasSignInProvider(provider) {
+      return isVerifiedUser()
+        && request.auth.token.firebase is map
+        && request.auth.token.firebase.sign_in_provider == provider;
+    }
+
+    function isPasswordSectorSession() {
+      return hasSignInProvider('password');
+    }
+
+    function isGoogleFounderSession() {
+      return hasSignInProvider('google.com');
+    }
+
     function isHgesmFounder() {
       return isVerifiedUser()
-        && request.auth.token.email == 'aprov1hgesm@gmail.com';
+        && request.auth.token.email == 'aprov1hgesm@gmail.com'
+        && isGoogleFounderSession();
     }
 
     function isPlatformAdmin() {
@@ -47,8 +62,15 @@ service cloud.firestore {
         && account.firebaseUid.size() > 0;
     }
 
+    function sectorAccountUsesPasswordProvider(account) {
+      return !('authProvider' in account)
+        || account.authProvider == 'password';
+    }
+
     function identityMatchesAccount(account) {
       return isVerifiedUser()
+        && isPasswordSectorSession()
+        && sectorAccountUsesPasswordProvider(account)
         && account.email == request.auth.token.email
         && (
           (
@@ -61,6 +83,8 @@ service cloud.firestore {
 
     function boundIdentityMatchesAccount(account) {
       return isVerifiedUser()
+        && isPasswordSectorSession()
+        && sectorAccountUsesPasswordProvider(account)
         && account.email == request.auth.token.email
         && hasBoundUid(account)
         && account.firebaseUid == request.auth.uid;
@@ -193,6 +217,10 @@ service cloud.firestore {
         ])
         && request.resource.data.email == accountId
         && request.resource.data.accountType == 'sector'
+        && (
+          !('authProvider' in request.resource.data)
+          || request.resource.data.authProvider == 'password'
+        )
         && request.resource.data.workspaceId is string
         && request.resource.data.workspaceId.size() > 0
         && request.resource.data.status in ['active', 'disabled'];
@@ -336,6 +364,8 @@ service cloud.firestore {
 
     function isSelfUidBinding(accountId) {
       return isVerifiedUser()
+        && isPasswordSectorSession()
+        && sectorAccountUsesPasswordProvider(resource.data)
         && resource.data.accountType == 'sector'
         && resource.data.status == 'active'
         && resource.data.email == accountId
@@ -357,6 +387,8 @@ service cloud.firestore {
 
     function isSelfPreboundFirstLogin(accountId) {
       return isVerifiedUser()
+        && isPasswordSectorSession()
+        && sectorAccountUsesPasswordProvider(resource.data)
         && resource.data.accountType == 'sector'
         && resource.data.status == 'active'
         && resource.data.email == accountId
@@ -379,6 +411,8 @@ service cloud.firestore {
 
     function isSelfBoundSessionRefresh(accountId) {
       return isVerifiedUser()
+        && isPasswordSectorSession()
+        && sectorAccountUsesPasswordProvider(resource.data)
         && resource.data.accountType == 'sector'
         && resource.data.status == 'active'
         && resource.data.email == accountId

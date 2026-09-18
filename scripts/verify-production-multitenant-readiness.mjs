@@ -10,6 +10,7 @@ const requiredFiles = [
   'firebase.json',
   'firestore.rules',
   'scripts/verify-hybrid-auth-model.mjs',
+  'scripts/verify-firestore-provider-enforcement.mjs',
   'scripts/verify-sector-auth-provisioning.mjs',
   'scripts/verify-external-sector-login.mjs',
   'scripts/verify-uid-binding.mjs',
@@ -49,6 +50,7 @@ const lifecycle = read('hooks/useOperationalData.ts');
 
 for (const command of [
   'verify:hybrid-auth-model',
+  'verify:firestore-provider-enforcement',
   'verify:sector-auth-provisioning',
   'verify:external-sector-login',
   'verify:uid-binding',
@@ -63,6 +65,7 @@ for (const command of [
 
 for (const expected of [
   'npm run verify:hybrid-auth-model',
+  'npm run verify:firestore-provider-enforcement',
   'npm run verify:sector-auth-provisioning',
   'npm run verify:external-sector-login',
   'npm run verify:uid-binding',
@@ -105,6 +108,9 @@ if (!productionRulesTarget) {
 }
 
 requireText(rules, 'function boundIdentityMatchesAccount(account)', 'Rules não exigem UID vinculado para operação externa.');
+requireText(rules, 'request.auth.token.firebase.sign_in_provider == provider', 'Rules não validam o provider real do token.');
+requireText(rules, "hasSignInProvider('google.com')", 'Fundador não está restrito ao provider Google nas Rules.');
+requireText(rules, "hasSignInProvider('password')", 'Setores externos não estão restritos ao provider password nas Rules.');
 requireText(rules, "workspaceId != 'hgesm-aprov'", 'Workspace fundador não está protegido.');
 requireText(rules, "match /workspaces/{workspaceId}/settings/documentStorage", 'documentStorage não possui regra dedicada.');
 requireText(rules, "allow delete: if false;", 'Exclusões protegidas deixaram de estar bloqueadas.');

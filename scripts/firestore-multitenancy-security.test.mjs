@@ -5,6 +5,9 @@ import { initializeApp, deleteApp } from 'firebase/app';
 import {
   connectAuthEmulator,
   getAuth,
+  GoogleAuthProvider,
+  linkWithCredential,
+  signInWithCredential,
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
@@ -130,7 +133,17 @@ async function createVerifiedUser(email) {
   };
 }
 
-async function createSession(label, email) {
+function mockGoogleCredential(label, email) {
+  return GoogleAuthProvider.credential(
+    JSON.stringify({
+      sub: `google-${label}`,
+      email,
+      email_verified: true,
+    })
+  );
+}
+
+async function createSession(label, email, provider = 'password') {
   const app = initializeApp(
     {
       projectId: PROJECT_ID,
@@ -143,20 +156,27 @@ async function createSession(label, email) {
 
   const auth = getAuth(app);
   connectAuthEmulator(auth, AUTH_BASE, { disableWarnings: true });
-  const credential = await signInWithEmailAndPassword(auth, email, PASSWORD);
-  await credential.user.getIdToken(true);
 
+  const credential = provider === 'google.com'
+    ? await signInWithCredential(auth, mockGoogleCredential(label, email))
+    : await signInWithEmailAndPassword(auth, email, PASSWORD);
+
+  const tokenResult = await credential.user.getIdTokenResult(true);
   assert.equal(
     credential.user.emailVerified,
     true,
     `E-mail de teste ${email} precisa estar verificado.`
+  );
+  assert.equal(
+    tokenResult.signInProvider,
+    provider,
+    `Sessão ${label} deveria usar provider ${provider}, mas recebeu ${tokenResult.signInProvider}.`
   );
 
   const firestore = getFirestore(app);
   connectFirestoreEmulator(firestore, '127.0.0.1', 8080);
   return { auth, db: firestore, user: credential.user };
 }
-
 async function allowed(label, operation) {
   try {
     await operation();
@@ -211,9 +231,10 @@ function workspace(id, email, status = 'active', extra = {}) {
   };
 }
 
-function account(email, workspaceId, uid, status = 'active') {
+function account(email, workspaceId, uid, status = 'active', authProvider = 'password') {
   return {
     email,
+    ...(authProvider ? { authProvider } : {}),
     ...(uid ? { firebaseUid: uid } : {}),
     accountType: 'sector',
     workspaceId,
@@ -230,11 +251,18 @@ function account(email, workspaceId, uid, status = 'active') {
   };
 }
 
-async function seedWorkspace(id, email, uid, status = 'active', accountWorkspaceId = id) {
+async function seedWorkspace(
+  id,
+  email,
+  uid,
+  status = 'active',
+  accountWorkspaceId = id,
+  authProvider = 'password'
+) {
   await ownerSet(`workspaces/${id}`, workspace(id, email, status));
   await ownerSet(
     `platformAccounts/${email}`,
-    account(email, accountWorkspaceId, uid, status)
+    account(email, accountWorkspaceId, uid, status, authProvider)
   );
   await ownerSet(`workspaces/${id}/empenhos/sample`, {
     id: 'sample',
@@ -256,10 +284,16 @@ async function main() {
     suspended: 'sector-suspended@example.test',
     tampered: 'sector-tampered@example.test',
     lifecycle: 'sector-lifecycle@example.test',
-    founder: 'aprov1hgesm@gmail.com',
   })) {
     identities[key] = await createVerifiedUser(email);
   }
+
+  const founderEmail = 'aprov1hgesm@gmail.com';
+  const admin = await createSession('admin-google', founderEmail, 'google.com');
+  identities.founder = {
+    email: founderEmail,
+    uid: admin.user.uid,
+  };
 
   await seedWorkspace('workspace-a', identities.a.email, identities.a.uid);
   await seedWorkspace('workspace-b', identities.b.email, identities.b.uid);
@@ -268,7 +302,15 @@ async function main() {
     identities.wrongUid.email,
     'uid-que-nao-corresponde-a-sessao'
   );
-  await seedWorkspace('workspace-bootstrap', identities.bootstrap.email, null);
+  // Caso legado sem authProvider: continua aceito somente quando a sessão é password.
+  await seedWorkspace(
+    'workspace-bootstrap',
+    identities.bootstrap.email,
+    null,
+    'active',
+    'workspace-bootstrap',
+    null
+  );
 
   await ownerSet(
     'workspaces/workspace-prebound',
@@ -314,14 +356,20 @@ async function main() {
   );
   await ownerSet(
     `platformAccounts/${identities.founder.email}`,
-    account(identities.founder.email, 'hgesm-aprov', null, 'active')
+    account(
+      identities.founder.email,
+      'hgesm-aprov',
+      null,
+      'active',
+      'google.com'
+    )
   );
   await ownerSet('workspaces/hgesm-aprov/empenhos/sample', {
     id: 'sample',
     ownerWorkspaceId: 'hgesm-aprov',
   });
 
-  const sessionA = await createSession('a', identities.a.email);
+  let sessionA = await createSession('a', identities.a.email);
   const sessionB = await createSession('b', identities.b.email);
   const sessionWrongUid = await createSession('wrong', identities.wrongUid.email);
   const sessionBootstrap = await createSession('bootstrap', identities.bootstrap.email);
@@ -329,7 +377,49 @@ async function main() {
   const sessionSuspended = await createSession('suspended', identities.suspended.email);
   const sessionTampered = await createSession('tampered', identities.tampered.email);
   const sessionLifecycle = await createSession('lifecycle', identities.lifecycle.email);
-  const admin = await createSession('admin', identities.founder.email);
+
+  await linkWithCredential(
+    sessionA.user,
+    mockGoogleCredential('sector-a-linked', identities.a.email)
+  );
+  await sessionA.user.getIdToken(true);
+  const sessionAGoogle = await createSession(
+    'sector-a-linked',
+    identities.a.email,
+    'google.com'
+  );
+  assert.equal(
+    sessionAGoogle.user.uid,
+    identities.a.uid,
+    'O teste de provider precisa usar o mesmo UID do setor.'
+  );
+
+  sessionA = await createSession(
+    'sector-a-password-linked',
+    identities.a.email,
+    'password'
+  );
+  assert.equal(
+    sessionA.user.uid,
+    identities.a.uid,
+    'A sessão legítima do setor deve continuar usando o mesmo UID após o vínculo Google.'
+  );
+
+  await authPost('accounts:update', {
+    idToken: await admin.user.getIdToken(),
+    password: PASSWORD,
+    returnSecureToken: true,
+  });
+  const founderPassword = await createSession(
+    'founder-password',
+    identities.founder.email,
+    'password'
+  );
+  assert.equal(
+    founderPassword.user.uid,
+    identities.founder.uid,
+    'O teste do fundador precisa manter o mesmo UID entre providers.'
+  );
 
   console.log('Isolamento A ↔ B');
   await allowed('Setor A lê o próprio empenho', () =>
@@ -358,6 +448,46 @@ async function main() {
   );
 
   console.log('\nIdentidade e bootstrap');
+  await denied('Setor com mesmo e-mail e UID via Google não lê o próprio platformAccount', () =>
+    getDoc(
+      doc(
+        sessionAGoogle.db,
+        'platformAccounts',
+        identities.a.email
+      )
+    )
+  );
+  await denied('Setor com mesmo e-mail e UID via Google não acessa dados operacionais', () =>
+    getDoc(
+      doc(
+        sessionAGoogle.db,
+        'workspaces',
+        'workspace-a',
+        'empenhos',
+        'sample'
+      )
+    )
+  );
+  await denied('Fundador com mesmo e-mail e UID via senha não acessa dados operacionais HGeSM', () =>
+    getDoc(
+      doc(
+        founderPassword.db,
+        'workspaces',
+        'hgesm-aprov',
+        'empenhos',
+        'sample'
+      )
+    )
+  );
+  await denied('Fundador com mesmo e-mail e UID via senha não obtém metadados administrativos', () =>
+    getDoc(
+      doc(
+        founderPassword.db,
+        'workspaces',
+        'hgesm-aprov'
+      )
+    )
+  );
   await denied('Mesmo e-mail com UID divergente não acessa dados operacionais', () =>
     getDoc(
       doc(

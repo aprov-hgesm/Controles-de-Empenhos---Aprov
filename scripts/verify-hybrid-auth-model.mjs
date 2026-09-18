@@ -84,10 +84,20 @@ requireText(
   'Entrar com Google — HGeSM',
   'Tela principal não preserva o acesso Google exclusivo do fundador.'
 );
-forbidText(
+requireText(
   rules,
-  'sign_in_provider',
-  'Enforcement de provider nas Firestore Rules pertence ao Bloco 4 e ainda não deve ser antecipado.'
+  "request.auth.token.firebase.sign_in_provider == provider",
+  'Firestore Rules não validam o sign_in_provider real do token.'
+);
+requireText(
+  rules,
+  "hasSignInProvider('google.com')",
+  'Firestore Rules não restringem o fundador ao provider Google.'
+);
+requireText(
+  rules,
+  "hasSignInProvider('password')",
+  'Firestore Rules não restringem setores externos ao provider password.'
 );
 
 if (findings.length) {
@@ -104,7 +114,7 @@ if (findings.length) {
   console.log('Documentos legados sem authProvider: compatíveis como password');
   console.log('UI email/senha: implementada para setores externos');
   console.log('Login Google: preservado exclusivamente para o fundador');
-  console.log('Enforcement nas Rules: reservado para o Bloco 4');
+  console.log('Enforcement nas Rules: ativo para Google/password');
   console.log('\nHYBRID AUTH MODEL: READY');
 }
 
