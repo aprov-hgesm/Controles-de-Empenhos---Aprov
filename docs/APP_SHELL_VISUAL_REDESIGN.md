@@ -99,7 +99,7 @@ Neste bloco eles são apenas fundação: nenhum componente existente consome os 
 3. ~~Card do Operador e rodapé do Sistema.~~ **Concluído no Bloco 4.**
 4. ~~Header estrutural premium.~~ **Concluído no Bloco 5.**
 5. ~~Núcleo visual da marca no Header.~~ **Concluído no Bloco 6.**
-6. Controles inteligentes do Header.
+6. ~~Controles inteligentes do Header.~~ **Concluído no Bloco 7.**
 7. Linha de energia e microinterações.
 8. Camada artística de assinatura.
 9. Responsividade e refinamento mobile.
@@ -201,3 +201,21 @@ A marca no Header recebeu um núcleo visual compacto inspirado no `LoginLogoCore
 - foco de teclado e `prefers-reduced-motion` respeitados.
 
 Nenhuma lógica de autenticação, sessão, Drive, Firestore, workspace, administração ou dados foi alterada.
+
+
+## Bloco 7 — Controles inteligentes do Header
+
+Status: concluído.
+
+Os controles funcionais do Header receberam linguagem visual unificada sem alterar seus fluxos:
+
+- cápsula de sincronização com estado azul e feedback discreto;
+- gatilho do Google Drive estilizado por estado real: conectado, configurado/desconectado, não configurado ou carregando;
+- botão `Administração` integrado ao shell navy;
+- identidade compacta do `Operador` com nome do usuário;
+- ícones, indicadores e chevrons usando a mesma linguagem refrativa do Header;
+- dropdown do Drive mantido funcionalmente intacto;
+- responsividade preservada: rótulo do Drive continua aparecendo apenas em telas largas;
+- foco por teclado e `prefers-reduced-motion` mantidos.
+
+Nenhuma lógica de sincronização, autenticação, Drive, Administração, Firestore, workspace ou dados foi alterada.

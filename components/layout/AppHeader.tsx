@@ -1,7 +1,7 @@
 'use client';
 
 import { type ChangeEvent, type MouseEvent, type ReactNode } from 'react';
-import { Loader2, Menu, ShieldCheck } from 'lucide-react';
+import { Loader2, Menu, ShieldCheck, UserRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { auth } from '../../lib/firebase';
@@ -80,11 +80,16 @@ export function AppHeader({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="emprovex-header-controls flex items-center gap-2 sm:gap-3">
         {syncing && (
-          <div role="status" aria-live="polite" className="flex items-center gap-1 text-xs font-semibold text-blue-600 animate-pulse bg-blue-50/70 backdrop-blur-sm px-3 py-1 rounded-full">
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            Sincronizando...
+          <div
+            role="status"
+            aria-live="polite"
+            className="emprovex-header-control emprovex-header-control--sync"
+          >
+            <Loader2 className="emprovex-header-control__icon h-3.5 w-3.5 animate-spin" />
+            <span className="hidden sm:inline">Sincronizando</span>
+            <span className="emprovex-header-control__dot" aria-hidden="true" />
           </div>
         )}
 
@@ -94,17 +99,21 @@ export function AppHeader({
           <button
             type="button"
             onClick={openAdministration}
-            className="inline-flex items-center gap-2 rounded-xl border border-blue-200/80 bg-blue-50/80 px-3 py-2 text-[11px] font-extrabold text-[#00288e] transition hover:bg-blue-100 active:scale-95"
+            className="emprovex-header-control emprovex-header-control--admin"
             title="Alternar para o perfil de Administração EMPROVEX"
           >
-            <ShieldCheck className="w-4 h-4" />
+            <ShieldCheck className="emprovex-header-control__icon h-4 w-4" />
             <span className="hidden sm:inline">Administração</span>
           </button>
         )}
 
-        <div className="flex items-center gap-2">
-          <span className="emprovex-header-user text-xs font-semibold hidden md:inline">
-            {userDisplayName}
+        <div className="emprovex-header-identity hidden items-center md:flex" title={userDisplayName}>
+          <span className="emprovex-header-identity__avatar" aria-hidden="true">
+            <UserRound className="h-3.5 w-3.5" />
+          </span>
+          <span className="min-w-0">
+            <span className="emprovex-header-identity__label">Operador</span>
+            <span className="emprovex-header-identity__name">{userDisplayName}</span>
           </span>
         </div>
       </div>
