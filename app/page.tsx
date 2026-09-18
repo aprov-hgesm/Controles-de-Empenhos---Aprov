@@ -25,10 +25,12 @@ import { DeleteEmpenhoModal } from '../features/empenhos/components/DeleteEmpenh
 import { MobileNavigation } from '../components/layout/MobileNavigation';
 import { EmprovexLogin } from '../components/auth/EmprovexLogin';
 import { EmprovexAuthLoading } from '../components/auth/EmprovexAuthLoading';
+import { LoginSuccessTransition } from '../components/auth/LoginSuccessTransition';
 export default function Home() {
   // Toast / Notifications helper
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [showLoginSuccessTransition, setShowLoginSuccessTransition] = useState(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -280,8 +282,11 @@ export default function Home() {
 
       setIsSigningIn(true);
       try {
-        await signInSectorUser(email, password);
+        const resolvedContext = await signInSectorUser(email, password);
         showToast('Acesso autorizado com sucesso!', 'success');
+        if (resolvedContext.status === 'sector') {
+          setShowLoginSuccessTransition(true);
+        }
         return true;
       } catch (error) {
         console.error('Erro na autenticação do setor:', error);
@@ -302,8 +307,11 @@ export default function Home() {
 
       setIsSigningIn(true);
       try {
-        await signInUser();
+        const resolvedContext = await signInUser();
         showToast('Acesso institucional autorizado!', 'success');
+        if (resolvedContext.status === 'sector') {
+          setShowLoginSuccessTransition(true);
+        }
       } catch (error) {
         console.error('Erro na autenticação institucional:', error);
         showToast('Falha no acesso institucional com Google.', 'error');
@@ -325,9 +333,19 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f0f4f8] via-[#e8ecf3] to-[#f4f6fa] text-[#0b1c30] flex flex-col antialiased relative overflow-x-hidden selection:bg-blue-500 selection:text-white">
+    <div
+      className={`min-h-screen bg-gradient-to-br from-[#f0f4f8] via-[#e8ecf3] to-[#f4f6fa] text-[#0b1c30] flex flex-col antialiased relative overflow-x-hidden selection:bg-blue-500 selection:text-white ${showLoginSuccessTransition ? 'emprovex-app-login-entry' : ''}`}
+      data-login-entry={showLoginSuccessTransition ? 'true' : 'false'}
+    >
 
       <AppBackground />
+
+      {showLoginSuccessTransition && workspaceContext.status === 'sector' && (
+        <LoginSuccessTransition
+          customLogo={customLogo}
+          onComplete={() => setShowLoginSuccessTransition(false)}
+        />
+      )}
 
       <ToastNotification toast={toast} onClose={() => setToast(null)} />
 
@@ -356,6 +374,7 @@ export default function Home() {
           }}
           onLogout={async () => {
             try {
+              setShowLoginSuccessTransition(false);
               await signOutUser();
               showToast('Você saiu do sistema.', 'info');
             } catch (err: any) {
