@@ -43,6 +43,11 @@ requireText(rules, 'selfAccountImmutableFieldsPreserved(accountId)', 'Vínculo n
 requireText(rules, 'selfAccountWorkspaceIsActive(accountId)', 'Vínculo não exige workspace ativo e correspondente.');
 requireText(rules, "affectedKeys().hasOnly([\n          'firebaseUid',", 'Primeiro vínculo pode alterar campos além dos permitidos.');
 
+requireText(rules, 'function isSelfPreboundFirstLogin(accountId)', 'Rules não tratam o primeiro login de contas já pré-vinculadas.');
+requireText(rules, "!('firstLoginAt' in resource.data)", 'Primeiro login pré-vinculado pode sobrescrever auditoria já existente.');
+requireText(rules, "affectedKeys().hasOnly([\n          'firstLoginAt',\n          'lastLoginAt',\n          'updatedAt'", 'Primeiro login pré-vinculado pode alterar campos além da auditoria.');
+requireText(access, "account.firstLoginAt ? {} : { firstLoginAt }", 'Runtime não inicializa firstLoginAt somente quando ausente.');
+
 requireText(rules, 'function isSelfBoundSessionRefresh(accountId)', 'Rules não controlam refresh de sessão já vinculada.');
 requireText(rules, 'resource.data.firebaseUid == request.auth.uid', 'Refresh não exige UID previamente vinculado.');
 requireText(rules, "affectedKeys().hasOnly([\n          'lastLoginAt',\n          'updatedAt'", 'Refresh pode alterar campos além de auditoria de login.');
