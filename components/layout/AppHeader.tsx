@@ -1,12 +1,12 @@
 'use client';
 
-import { useMemo, type ChangeEvent, type MouseEvent, type ReactNode } from 'react';
+import { type ChangeEvent, type MouseEvent, type ReactNode } from 'react';
 import { Camera, Loader2, Menu, ShieldCheck, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { auth } from '../../lib/firebase';
 import { hasDualProfileAccess, setActiveProfileMode } from '../../lib/profileMode';
-import { resolveWorkspaceContext } from '../../lib/workspaceContext';
+import type { ResolvedWorkspaceContext } from '../../lib/workspaceContext';
 import { WorkspaceDriveControl } from './WorkspaceDriveControl';
 
 interface AppHeaderProps {
@@ -14,6 +14,7 @@ interface AppHeaderProps {
   syncing: boolean;
   userDisplayName: string;
   driveControl?: ReactNode;
+  workspaceContext: ResolvedWorkspaceContext;
   onOpenSidebar: () => void;
   onLogoUpload: (event: ChangeEvent<HTMLInputElement>) => void;
   onRemoveLogo: (event: MouseEvent) => void;
@@ -24,6 +25,7 @@ export function AppHeader({
   syncing,
   userDisplayName,
   driveControl,
+  workspaceContext,
   onOpenSidebar,
   onLogoUpload,
   onRemoveLogo,
@@ -32,10 +34,6 @@ export function AppHeader({
   const currentUser = auth.currentUser;
   const currentEmail = currentUser?.email || null;
   const canSwitchProfile = hasDualProfileAccess(currentEmail);
-  const workspaceContext = useMemo(
-    () => resolveWorkspaceContext(currentEmail),
-    [currentEmail]
-  );
   const resolvedDriveControl = driveControl ?? (
     <WorkspaceDriveControl
       user={currentUser}
