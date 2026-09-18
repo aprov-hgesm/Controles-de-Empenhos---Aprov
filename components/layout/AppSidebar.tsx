@@ -47,7 +47,7 @@ export function AppSidebar({
 
       <aside
         className={`
-          fixed lg:sticky top-16 left-0 h-[calc(100vh-4rem)] w-72 bg-white/60 backdrop-blur-md border-r border-white/20 py-6 z-40
+          fixed top-16 left-0 h-[calc(100vh-4rem)] w-72 overflow-y-auto overscroll-contain bg-white/60 backdrop-blur-md border-r border-white/20 py-6 z-40
           flex flex-col justify-between transition-transform duration-300 ease-out shadow-sm lg:shadow-none
           ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
