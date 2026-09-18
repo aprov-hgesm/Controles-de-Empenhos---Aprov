@@ -9,9 +9,9 @@ import {
   signOut,
   type User,
 } from 'firebase/auth';
-import { onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import { auth, googleProvider, handleFirestoreError, OperationType } from '../lib/firebase';
+import { auth, db, googleProvider, handleFirestoreError, OperationType } from '../lib/firebase';
 import type { Alert, Comissao, CronogramaEmpenho, Empenho, Invoice } from '../lib/types';
 import { resolveAuthenticatedWorkspaceContext } from '../lib/platformAccess';
 import {
@@ -111,6 +111,96 @@ export function useOperationalData() {
       router.replace('/admin');
     }
   }, [router, user, workspaceContext.status]);
+
+  // Bloco 19 — observador de ciclo de vida para setores externos.
+  // As Rules já bloqueiam operações quando status deixa de ser active; este watcher
+  // também encerra a sessão aberta assim que o diretório administrativo mudar.
+  useEffect(() => {
+    if (
+      !user
+      || !isOperationalSectorContext(workspaceContext)
+      || workspaceContext.resolutionSource !== 'platform-directory'
+    ) {
+      return;
+    }
+
+    let revoked = false;
+
+    const revokeOperationalAccess = () => {
+      if (revoked) return;
+      revoked = true;
+      clearResolvedWorkspaceContext();
+      clearOperationalState();
+      resetActiveProfileMode();
+      setWorkspaceContext(resolveWorkspaceContext(null));
+      setUser(null);
+      setSyncing(false);
+      void signOut(auth);
+    };
+
+    const handleLifecycleError = (error: unknown) => {
+      const code = typeof error === 'object' && error && 'code' in error
+        ? String((error as { code?: unknown }).code || '')
+        : '';
+      if (code.includes('permission-denied')) {
+        revokeOperationalAccess();
+      }
+    };
+
+    const workspaceRef = doc(db, 'workspaces', workspaceContext.workspaceId);
+    const accountRef = doc(db, 'platformAccounts', workspaceContext.email);
+
+    const unsubscribeWorkspace = onSnapshot(
+      workspaceRef,
+      (snapshot) => {
+        if (!snapshot.exists()) {
+          revokeOperationalAccess();
+          return;
+        }
+        const data = snapshot.data() as { id?: string; status?: string; authorizedEmail?: string };
+        if (
+          data.id !== workspaceContext.workspaceId
+          || data.status !== 'active'
+          || data.authorizedEmail !== workspaceContext.email
+        ) {
+          revokeOperationalAccess();
+        }
+      },
+      handleLifecycleError
+    );
+
+    const unsubscribeAccount = onSnapshot(
+      accountRef,
+      (snapshot) => {
+        if (!snapshot.exists()) {
+          revokeOperationalAccess();
+          return;
+        }
+        const data = snapshot.data() as {
+          email?: string;
+          workspaceId?: string;
+          accountType?: string;
+          status?: string;
+          firebaseUid?: string;
+        };
+        if (
+          data.email !== workspaceContext.email
+          || data.workspaceId !== workspaceContext.workspaceId
+          || data.accountType !== 'sector'
+          || data.status !== 'active'
+          || data.firebaseUid !== user.uid
+        ) {
+          revokeOperationalAccess();
+        }
+      },
+      handleLifecycleError
+    );
+
+    return () => {
+      unsubscribeWorkspace();
+      unsubscribeAccount();
+    };
+  }, [user, workspaceContext]);
 
   useEffect(() => {
     if (!user || !isOperationalSectorContext(workspaceContext)) {
