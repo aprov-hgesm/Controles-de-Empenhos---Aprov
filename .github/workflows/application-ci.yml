@@ -60,6 +60,9 @@ jobs:
       - name: Workspace Google Drive guard
         run: npm run verify:workspace-drive
 
+      - name: Hybrid authentication model guard
+        run: npm run verify:hybrid-auth-model
+
       - name: External sector login guard
         run: npm run verify:external-sector-login
 
