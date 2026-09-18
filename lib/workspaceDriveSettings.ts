@@ -8,9 +8,10 @@ import {
 } from './operationalPaths';
 import { normalizePlatformEmail } from './platformIdentity';
 import type { SectorWorkspaceContext } from './workspaceContext';
-import type {
-  WorkspaceGoogleDriveFolders,
-  WorkspaceGoogleDriveSession,
+import {
+  assertWorkspaceGoogleDriveSessionActive,
+  type WorkspaceGoogleDriveFolders,
+  type WorkspaceGoogleDriveSession,
 } from './googleDriveWorkspace';
 
 export const WORKSPACE_DOCUMENT_STORAGE_SETTINGS_ID = 'documentStorage';
@@ -63,6 +64,7 @@ function assertAuthorizedDriveSession(
   context: SectorWorkspaceContext,
   session: WorkspaceGoogleDriveSession
 ): void {
+  assertWorkspaceGoogleDriveSessionActive(session);
   const expectedEmail = normalizePlatformEmail(context.email);
   const sessionEmail = normalizePlatformEmail(session.email);
 
