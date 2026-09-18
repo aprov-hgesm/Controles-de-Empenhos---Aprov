@@ -5,9 +5,13 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   createSectorWorkspace,
   ensureFoundingPlatformMetadata,
+  setSectorWorkspaceStatus,
   subscribePlatformAdminDirectory,
+  updateSectorWorkspaceProfile,
   type CreateSectorWorkspaceInput,
   type PlatformAdminDirectory,
+  type SectorLifecycleStatus,
+  type UpdateSectorWorkspaceInput,
 } from '../lib/platformAdminStore';
 
 const EMPTY_DIRECTORY: PlatformAdminDirectory = {
@@ -33,6 +37,8 @@ export function usePlatformAdminDirectory(adminEmail: string | null) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [updatingWorkspaceId, setUpdatingWorkspaceId] = useState<string | null>(null);
+  const [changingStatusWorkspaceId, setChangingStatusWorkspaceId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!adminEmail) {
@@ -92,11 +98,50 @@ export function usePlatformAdminDirectory(adminEmail: string | null) {
     }
   }, [adminEmail]);
 
+  const updateSector = useCallback(async (input: UpdateSectorWorkspaceInput) => {
+    if (!adminEmail) throw new Error('Sessão administrativa inválida.');
+
+    setUpdatingWorkspaceId(input.workspaceId);
+    setError(null);
+    try {
+      return await updateSectorWorkspaceProfile(input, adminEmail);
+    } catch (updateError) {
+      const message = describeDirectoryError(updateError);
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setUpdatingWorkspaceId(null);
+    }
+  }, [adminEmail]);
+
+  const changeSectorStatus = useCallback(async (
+    workspaceId: string,
+    status: SectorLifecycleStatus
+  ) => {
+    if (!adminEmail) throw new Error('Sessão administrativa inválida.');
+
+    setChangingStatusWorkspaceId(workspaceId);
+    setError(null);
+    try {
+      return await setSectorWorkspaceStatus(workspaceId, status, adminEmail);
+    } catch (statusError) {
+      const message = describeDirectoryError(statusError);
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setChangingStatusWorkspaceId(null);
+    }
+  }, [adminEmail]);
+
   return {
     directory,
     loading,
     error,
     creating,
+    updatingWorkspaceId,
+    changingStatusWorkspaceId,
     createSector,
+    updateSector,
+    changeSectorStatus,
   };
 }
