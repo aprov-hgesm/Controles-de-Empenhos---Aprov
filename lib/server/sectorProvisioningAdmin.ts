@@ -699,13 +699,10 @@ export async function provisionSectorWorkspaceWithAuth(
     await updateProvisioningLocks(accessToken, lockPaths, lockState);
 
     if (authUserReused && authUser) {
+      // Esta é a última etapa mutável do caminho de sucesso para um usuário
+      // existente. Depois que a senha é aplicada não executamos mais nenhuma
+      // gravação crítica, evitando rollback impossível da credencial anterior.
       await updateExistingAuthUserForPassword(accessToken, authUser, input);
-      lockState = {
-        ...lockState,
-        phase: 'existing-auth-password-ready',
-        updatedAt: new Date().toISOString(),
-      };
-      await updateProvisioningLocks(accessToken, lockPaths, lockState);
     }
 
     try {
