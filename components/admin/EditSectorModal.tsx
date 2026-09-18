@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Building2, Loader2, LockKeyhole, X } from 'lucide-react';
+import { Building2, KeyRound, Loader2, LockKeyhole, X } from 'lucide-react';
 
 import type { UpdateSectorWorkspaceInput } from '../../lib/platformAdminStore';
 import type { Workspace } from '../../lib/platformIdentity';
