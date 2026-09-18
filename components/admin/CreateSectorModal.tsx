@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Building2, Loader2, Mail, X } from 'lucide-react';
+import { Building2, KeyRound, Loader2, Mail, X } from 'lucide-react';
 
 import { suggestWorkspaceId, type CreateSectorWorkspaceInput } from '../../lib/platformAdminStore';
+import { MIN_SECTOR_PASSWORD_LENGTH } from '../../lib/sectorProvisioning';
 
 interface CreateSectorModalProps {
   open: boolean;
@@ -16,6 +17,7 @@ const INITIAL_FORM: CreateSectorWorkspaceInput = {
   workspaceId: '',
   workspaceName: '',
   authorizedEmail: '',
+  initialPassword: '',
   organizationName: '',
   organizationShortName: '',
   sectionName: 'Seção de Aprovisionamento',
@@ -26,12 +28,14 @@ const INITIAL_FORM: CreateSectorWorkspaceInput = {
 export function CreateSectorModal({ open, creating, onClose, onCreate }: CreateSectorModalProps) {
   const [form, setForm] = useState<CreateSectorWorkspaceInput>(INITIAL_FORM);
   const [workspaceIdTouched, setWorkspaceIdTouched] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
       setForm(INITIAL_FORM);
       setWorkspaceIdTouched(false);
+      setConfirmPassword('');
       setError(null);
     }
   }, [open]);
@@ -50,8 +54,24 @@ export function CreateSectorModal({ open, creating, onClose, onCreate }: CreateS
     event.preventDefault();
     setError(null);
 
-    if (!form.workspaceName.trim() || !form.authorizedEmail.trim() || !form.organizationName.trim() || !form.sectionName.trim()) {
+    if (
+      !form.workspaceName.trim()
+      || !form.authorizedEmail.trim()
+      || !form.initialPassword
+      || !form.organizationName.trim()
+      || !form.sectionName.trim()
+    ) {
       setError('Preencha os campos obrigatórios do setor.');
+      return;
+    }
+
+    if (form.initialPassword.length < MIN_SECTOR_PASSWORD_LENGTH) {
+      setError(`A senha inicial deve possuir pelo menos ${MIN_SECTOR_PASSWORD_LENGTH} caracteres.`);
+      return;
+    }
+
+    if (form.initialPassword !== confirmPassword) {
+      setError('A confirmação da senha inicial não confere.');
       return;
     }
 
@@ -74,7 +94,7 @@ export function CreateSectorModal({ open, creating, onClose, onCreate }: CreateS
             </div>
             <h2 className="mt-2 text-xl font-extrabold text-white">Cadastrar novo setor</h2>
             <p className="mt-1 text-xs leading-relaxed text-slate-400">
-              O setor será provisionado em workspace próprio e a conta Google informada ficará autorizada para o primeiro acesso.
+              O setor será provisionado com identidade Firebase própria. O Gmail informado será o e-mail de acesso e, posteriormente, deverá ser o mesmo usado na conexão do Google Drive.
             </p>
           </div>
           <button
@@ -118,11 +138,16 @@ export function CreateSectorModal({ open, creating, onClose, onCreate }: CreateS
             </Field>
           </div>
 
-          <Field label="Conta Google autorizada" required>
+          <Field
+            label="E-mail de acesso (Gmail)"
+            required
+            hint="Será também a identidade obrigatória do Google Drive."
+          >
             <div className="relative">
               <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
                 type="email"
+                autoComplete="email"
                 value={form.authorizedEmail}
                 onChange={(event) => setForm((current) => ({ ...current, authorizedEmail: event.target.value }))}
                 placeholder="aprovisionamento.unidadeb@gmail.com"
@@ -130,6 +155,38 @@ export function CreateSectorModal({ open, creating, onClose, onCreate }: CreateS
               />
             </div>
           </Field>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field
+              label="Senha inicial"
+              required
+              hint={`Mínimo de ${MIN_SECTOR_PASSWORD_LENGTH} caracteres.`}
+            >
+              <div className="relative">
+                <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={form.initialPassword}
+                  onChange={(event) => setForm((current) => ({ ...current, initialPassword: event.target.value }))}
+                  className={`${inputClass} pl-10`}
+                />
+              </div>
+            </Field>
+
+            <Field label="Confirmar senha inicial" required>
+              <div className="relative">
+                <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  className={`${inputClass} pl-10`}
+                />
+              </div>
+            </Field>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_180px] gap-4">
             <Field label="Nome institucional" required>
@@ -181,7 +238,7 @@ export function CreateSectorModal({ open, creating, onClose, onCreate }: CreateS
           </details>
 
           <div className="rounded-2xl border border-blue-400/15 bg-blue-500/[0.06] px-4 py-3 text-xs leading-relaxed text-blue-100">
-            A criação não concede acesso aos dados de outros setores. O workspace nasce com contador próprio de Termos de Recebimento e configura seu Google Drive no primeiro acesso.
+            O usuário Firebase, o workspace e a conta operacional serão provisionados de forma coordenada no servidor. A senha não é gravada no Firestore. O Google Drive permanece desconectado até a etapa específica de onboarding.
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-1">
