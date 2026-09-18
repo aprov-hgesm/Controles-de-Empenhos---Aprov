@@ -4203,3 +4203,235 @@ button.emprovex-header-control:hover .emprovex-header-control__icon {
     opacity: 0.48;
   }
 }
+
+
+/* EMPROVEX App Shell — Responsive and mobile refinement (Bloco 10). */
+.emprovex-sidebar-backdrop {
+  background: rgba(1, 6, 18, 0.64);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.emprovex-sidebar-mobile-toolbar {
+  display: flex;
+  min-height: 2.55rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: -0.6rem 0.85rem 0.9rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(148, 181, 255, 0.08);
+  border-radius: 0.78rem;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.026), rgba(255, 255, 255, 0.008));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.emprovex-sidebar-mobile-close {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(148, 181, 255, 0.10);
+  border-radius: 0.65rem;
+  color: rgba(203, 213, 225, 0.88);
+  background: rgba(15, 34, 64, 0.52);
+  transition:
+    color 180ms var(--emprovex-motion-ease-soft),
+    border-color 180ms var(--emprovex-motion-ease-soft),
+    background-color 180ms var(--emprovex-motion-ease-soft),
+    transform 160ms var(--emprovex-motion-ease);
+}
+
+.emprovex-sidebar-mobile-close:hover {
+  color: #fff;
+  border-color: rgba(96, 165, 250, 0.20);
+  background: rgba(37, 99, 235, 0.14);
+}
+
+.emprovex-sidebar-mobile-close:active {
+  transform: scale(0.96);
+}
+
+.emprovex-sidebar-mobile-close:focus-visible {
+  outline: 2px solid rgba(96, 165, 250, 0.62);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1023px) {
+  .emprovex-app-sidebar {
+    width: min(18rem, calc(100vw - 1.25rem));
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    box-shadow:
+      var(--emprovex-shell-inset-highlight),
+      22px 0 64px rgba(0, 5, 20, 0.34),
+      inset -1px 0 0 rgba(96, 165, 250, 0.045);
+  }
+
+  .emprovex-sidebar-operator {
+    margin-inline: 0.85rem;
+  }
+
+  .emprovex-sidebar-nav {
+    padding-inline: 0.55rem;
+  }
+
+  .emprovex-sidebar-system {
+    margin-inline: 0.85rem;
+  }
+
+  .emprovex-app-sidebar .emprovex-sidebar-nav-item {
+    min-height: 3rem;
+    padding-block: 0.76rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .emprovex-app-header {
+    padding-inline: 0.65rem;
+  }
+
+  .emprovex-app-header > div:first-of-type {
+    min-width: 0;
+    gap: 0.5rem;
+  }
+
+  .emprovex-header-menu {
+    flex: 0 0 auto;
+    padding: 0.4rem;
+  }
+
+  .emprovex-header-logo-core {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .emprovex-header-logo-core__surface {
+    width: 1.68rem;
+    height: 1.68rem;
+    border-radius: 0.56rem;
+  }
+
+  .emprovex-header-logo-core__mark {
+    width: 1.05rem;
+    height: 1.05rem;
+  }
+
+  .emprovex-header-brand-copy {
+    min-width: 0;
+  }
+
+  .emprovex-header-brand-title {
+    font-size: 0.82rem;
+    letter-spacing: 0.10em;
+  }
+
+  .emprovex-header-brand-subtitle {
+    font-size: 0.47rem;
+    letter-spacing: 0.075em;
+    white-space: nowrap;
+  }
+
+  .emprovex-header-controls {
+    flex: 0 0 auto;
+    gap: 0.28rem;
+  }
+
+  .emprovex-header-control {
+    min-width: 2.05rem;
+    min-height: 2.05rem;
+    gap: 0.34rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: 0.68rem;
+  }
+
+  .emprovex-header-drive-control {
+    padding-inline: 0.48rem;
+  }
+
+  .emprovex-header-control__dot {
+    width: 0.36rem;
+    height: 0.36rem;
+  }
+
+  .emprovex-header-control__chevron {
+    width: 0.62rem;
+    height: 0.62rem;
+  }
+
+  .emprovex-shell-signature--header {
+    opacity: 0.50;
+  }
+}
+
+@media (max-width: 459px) {
+  .emprovex-header-brand-subtitle {
+    display: none;
+  }
+
+  .emprovex-header-brand-title {
+    font-size: 0.78rem;
+  }
+
+  .emprovex-header-controls {
+    gap: 0.22rem;
+  }
+
+  .emprovex-header-control {
+    min-width: 1.95rem;
+    min-height: 1.95rem;
+    padding: 0.36rem 0.42rem;
+  }
+
+  .emprovex-header-drive-control {
+    gap: 0.26rem;
+  }
+}
+
+@media (max-width: 369px) {
+  .emprovex-app-header {
+    padding-inline: 0.48rem;
+  }
+
+  .emprovex-header-brand-copy {
+    display: none;
+  }
+
+  .emprovex-header-logo-core {
+    width: 2.1rem;
+    height: 2.1rem;
+  }
+
+  .emprovex-header-controls {
+    margin-left: auto;
+  }
+
+  .emprovex-header-control {
+    min-width: 1.9rem;
+    min-height: 1.9rem;
+    padding-inline: 0.38rem;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .emprovex-app-sidebar .emprovex-sidebar-nav-item:hover,
+  .emprovex-sidebar-operator:hover,
+  button.emprovex-header-control:hover,
+  .emprovex-header-logo-core:hover .emprovex-header-logo-core__surface {
+    transform: none;
+  }
+
+  .emprovex-app-sidebar .emprovex-sidebar-nav-item,
+  .emprovex-header-control,
+  .emprovex-sidebar-mobile-close {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emprovex-sidebar-mobile-close {
+    transition-duration: 0.001ms !important;
+  }
+}
