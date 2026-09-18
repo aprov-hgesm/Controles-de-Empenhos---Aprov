@@ -54,7 +54,7 @@ export function PlatformAdminView({
   const handleCreateSector = async (input: CreateSectorWorkspaceInput) => {
     const resultName = input.workspaceName.trim();
     await onCreateSector(input);
-    setSuccessMessage(`Setor ${resultName} cadastrado com sucesso.`);
+    setSuccessMessage(`Setor ${resultName} cadastrado e provisionado com sucesso.`);
     window.setTimeout(() => setSuccessMessage(null), 5000);
   };
 
@@ -266,7 +266,7 @@ function WorkspaceCard({ workspace }: { workspace: Workspace }) {
         <div className="rounded-xl bg-slate-950/30 border border-white/10 px-4 py-3">
           <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Dados</div>
           <div className="text-sm font-bold text-slate-200 mt-1">
-            {workspace.legacyWorkspace ? 'Legado preservado' : 'Perfil criado'}
+            {workspace.legacyWorkspace ? 'Workspace fundador' : 'Provisionado'}
           </div>
         </div>
       </div>
