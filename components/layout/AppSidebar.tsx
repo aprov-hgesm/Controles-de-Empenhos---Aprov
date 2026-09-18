@@ -1,13 +1,16 @@
 'use client';
 
 import {
+  Activity,
   CalendarDays,
   FileSpreadsheet,
   FileText,
   Layers,
   LogOut,
   Package,
+  ShieldCheck,
   TrendingUp,
+  UserRound,
 } from 'lucide-react';
 
 export type AppTab =
@@ -53,12 +56,30 @@ export function AppSidebar({
         `}
       >
         <div className="relative z-[1] space-y-6">
-          <div className="mx-4 px-4 py-3 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/40 shadow-xs">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Usuário Conectado</p>
-            <p className="font-bold text-sm text-[#0b1c30] truncate mt-0.5">
-              {userDisplayName}
-            </p>
-          </div>
+          <section className="emprovex-sidebar-operator mx-4" aria-label="Operador conectado">
+            <div className="emprovex-sidebar-operator__head">
+              <div className="emprovex-sidebar-operator__identity">
+                <div className="emprovex-sidebar-operator__avatar" aria-hidden="true">
+                  <UserRound className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-slate-400/75">
+                    Operador
+                  </p>
+                  <p className="mt-1 truncate text-sm font-bold text-slate-50">
+                    {userDisplayName}
+                  </p>
+                </div>
+              </div>
+
+              <span className="emprovex-sidebar-operator__status-dot" aria-hidden="true" />
+            </div>
+
+            <div className="emprovex-sidebar-operator__access">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span>Acesso autorizado</span>
+            </div>
+          </section>
 
           <nav className="emprovex-sidebar-nav px-3" aria-label="Navegação principal">
             <div className="emprovex-sidebar-nav__label px-4 pb-2 font-mono text-[9px] font-bold uppercase tracking-[0.22em]">
@@ -127,18 +148,42 @@ export function AppSidebar({
           </nav>
         </div>
 
-        <div className="relative z-[1] px-6 border-t border-white/[0.08] pt-4 space-y-3">
+        <footer className="emprovex-sidebar-system relative z-[1] mx-4">
+          <div className="emprovex-sidebar-system__label font-mono text-[9px] font-bold uppercase tracking-[0.22em]">
+            Sistema
+          </div>
+
+          <div className="emprovex-sidebar-system__status">
+            <div className="flex items-center gap-2.5">
+              <span className="emprovex-sidebar-system__status-icon" aria-hidden="true">
+                <Activity className="h-3.5 w-3.5" />
+              </span>
+              <div>
+                <p className="text-[11px] font-bold text-slate-100">Operacional</p>
+                <p className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.16em] text-slate-500">
+                  Ambiente seguro
+                </p>
+              </div>
+            </div>
+            <span className="emprovex-sidebar-system__live-dot" aria-hidden="true" />
+          </div>
+
           <button
             onClick={onLogout}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-rose-600 hover:bg-rose-50 rounded-xl font-bold text-xs transition-all active:scale-95"
+            className="emprovex-sidebar-logout"
           >
-            <LogOut className="w-4 h-4" />
-            <span>Sair da Conta</span>
+            <LogOut className="h-4 w-4" />
+            <span>Sair da conta</span>
           </button>
-          <div className="text-[10px] font-semibold text-gray-400">
-            v1.2.0 © 2026 Sistema Logístico
+
+          <div className="emprovex-sidebar-system__meta">
+            <span>EMPROVEX</span>
+            <span aria-hidden="true">•</span>
+            <span>v1.2.0</span>
+            <span aria-hidden="true">•</span>
+            <span>2026</span>
           </div>
-        </div>
+        </footer>
       </aside>
     </>
   );
