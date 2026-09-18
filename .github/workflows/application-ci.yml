@@ -63,6 +63,9 @@ jobs:
       - name: Workspace provisioning guard
         run: npm run verify:workspace-provisioning
 
+      - name: Workspace Drive onboarding guard
+        run: npm run verify:workspace-drive-onboarding
+
       - name: Production build
         run: npm run build
 
