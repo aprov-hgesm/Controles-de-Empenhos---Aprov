@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "database": "ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1",
+      "rules": "firestore.rules"
+    }
+  ]
+}
