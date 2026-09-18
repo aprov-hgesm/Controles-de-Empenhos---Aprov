@@ -114,6 +114,9 @@ jobs:
       - name: Reporting foundation guard
         run: npm run verify:reporting-foundation
 
+      - name: Reports subtabs shell guard
+        run: npm run verify:reports-shell
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
