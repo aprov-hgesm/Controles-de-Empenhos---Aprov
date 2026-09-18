@@ -116,9 +116,14 @@ Suspensão e reativação alteram workspace e conta operacional na mesma transa�
 
 O workspace fundador HGeSM é protegido contra essas alterações.
 
-## Próximas dependências
+## Testes automatizados de isolamento — Bloco 20
 
-Para homologação multi-tenant completa, ainda serão implementados:
+O repositório possui uma suíte baseada no Firebase Emulator Suite que valida isolamento A ↔ B, UID divergente, bootstrap sem UID, suspensão, workspace adulterado, ausência de bypass operacional do administrador e isolamento de `settings/documentStorage`.
 
-- Bloco 20 — testes automatizados de isolamento entre tenants;
+A suíte usa apenas dados descartáveis do projeto local `emprovex-security-test` e é executada pelo CI antes do build de produção.
+
+## Próxima dependência
+
+Para homologação multi-tenant completa, resta:
+
 - Bloco 21 — homologação de um segundo setor real em produção.
