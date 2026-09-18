@@ -101,7 +101,7 @@ Neste bloco eles são apenas fundação: nenhum componente existente consome os 
 5. ~~Núcleo visual da marca no Header.~~ **Concluído no Bloco 6.**
 6. ~~Controles inteligentes do Header.~~ **Concluído no Bloco 7.**
 7. ~~Linha de energia e microinterações.~~ **Concluído no Bloco 8.**
-8. Camada artística de assinatura.
+8. ~~Camada artística de assinatura.~~ **Concluído no Bloco 9.**
 9. Responsividade e refinamento mobile.
 10. Acessibilidade, desempenho e homologação.
 
@@ -238,3 +238,22 @@ A moldura visual recebeu a camada de assinatura dinâmica, mantendo baixa intens
 - todos os efeitos contínuos desativados com `prefers-reduced-motion`.
 
 Nenhum efeito altera layout, handlers, autenticação, Drive, Firestore, workspace, multi-tenant ou dados.
+
+
+## Bloco 9 — Camada artística de assinatura
+
+Status: concluído.
+
+A moldura recebeu elementos artísticos técnicos de baixíssima opacidade, específicos do domínio do EMPROVEX:
+
+- novo componente puramente decorativo `AppShellSignature`;
+- linhas de rede estáticas no Header e na Sidebar;
+- nós luminosos com respiração muito lenta e opcional;
+- textura grain de baixa intensidade;
+- microcódigos `NE`, `NF`, `TR`, `LIQ` e `EXEC`;
+- códigos laterais `NE / PROV`, `NF / REC`, `TR / COM` e `LIQ / EXEC`;
+- elementos com `aria-hidden`, `pointer-events: none` e sem participação na navegação;
+- simplificação automática em telas menores;
+- `prefers-reduced-motion` e `prefers-contrast` respeitados.
+
+Nenhum elemento decorativo acessa estado, banco de dados, autenticação, Drive, handlers ou regras de negócio.
