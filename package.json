@@ -36,7 +36,8 @@
     "verify:workspace-drive-onboarding": "node scripts/verify-workspace-drive-onboarding.mjs",
     "verify:sector-lifecycle": "node scripts/verify-sector-lifecycle.mjs",
     "verify:multitenant-security": "node scripts/verify-multitenant-security-suite.mjs",
-    "test:security:multitenant": "npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore \"node scripts/firestore-multitenancy-security.test.mjs\""
+    "test:security:multitenant": "npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore \"node scripts/firestore-multitenancy-security.test.mjs\"",
+    "verify:production-multitenant-readiness": "node scripts/verify-production-multitenant-readiness.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
