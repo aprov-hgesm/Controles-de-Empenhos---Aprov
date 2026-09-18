@@ -2259,3 +2259,570 @@ button[aria-busy="true"] .animate-spin {
       rgba(2,8,23,0.97);
   }
 }
+
+
+/* EMPROVEX login — Signature Experience (Bloco 9.5). */
+@keyframes emprovex-reactor-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes emprovex-reactor-spin-reverse {
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes emprovex-reactor-core-breathe {
+  0%, 100% {
+    opacity: 0.46;
+    scale: 0.82;
+    box-shadow:
+      0 0 10px rgba(96,165,250,0.18),
+      0 0 24px rgba(37,99,235,0.08);
+  }
+  50% {
+    opacity: 0.92;
+    scale: 1.12;
+    box-shadow:
+      0 0 16px rgba(147,197,253,0.32),
+      0 0 36px rgba(59,130,246,0.15);
+  }
+}
+
+@keyframes emprovex-signature-aperture {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.42);
+  }
+  22% {
+    opacity: 0.54;
+  }
+  72% {
+    opacity: 0.18;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(3.4);
+  }
+}
+
+@keyframes emprovex-signature-line-h {
+  0% { opacity: 0; transform: translateX(-50%) scaleX(0); }
+  24% { opacity: 0.40; }
+  72% { opacity: 0.10; }
+  100% { opacity: 0; transform: translateX(-50%) scaleX(1); }
+}
+
+@keyframes emprovex-signature-line-v {
+  0% { opacity: 0; transform: translateY(-50%) scaleY(0); }
+  24% { opacity: 0.24; }
+  72% { opacity: 0.06; }
+  100% { opacity: 0; transform: translateY(-50%) scaleY(1); }
+}
+
+@keyframes emprovex-refraction-sweep {
+  0%, 100% {
+    opacity: 0.28;
+    background-position: -120% 0, 0 0;
+  }
+  50% {
+    opacity: 0.46;
+    background-position: 220% 0, 0 0;
+  }
+}
+
+@keyframes emprovex-signature-conduit-pulse {
+  0% {
+    left: -7%;
+    opacity: 0;
+  }
+  14% {
+    opacity: 0.84;
+  }
+  78% {
+    opacity: 0.34;
+  }
+  100% {
+    left: 101%;
+    opacity: 0;
+  }
+}
+
+@keyframes emprovex-signature-node-ready {
+  0%, 100% { opacity: 0.34; }
+  50% { opacity: 0.90; }
+}
+
+.emprovex-logo-reactor {
+  position: absolute;
+  z-index: 2;
+  inset: 9%;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translateZ(12px);
+}
+
+.emprovex-logo-reactor__ring,
+.emprovex-logo-reactor__axis,
+.emprovex-logo-reactor__core {
+  position: absolute;
+  pointer-events: none;
+}
+
+.emprovex-logo-reactor__ring {
+  border-radius: 50%;
+  transform-origin: center;
+}
+
+.emprovex-logo-reactor__ring--outer {
+  inset: 5%;
+  border: 1px solid rgba(96,165,250,0.16);
+  border-left-color: rgba(147,197,253,0.56);
+  border-right-color: rgba(103,232,249,0.24);
+  box-shadow:
+    inset 0 0 18px rgba(37,99,235,0.035),
+    0 0 14px rgba(37,99,235,0.045);
+}
+
+.emprovex-logo-reactor__ring--mid {
+  inset: 18%;
+  border: 1px dashed rgba(147,197,253,0.25);
+  opacity: 0.74;
+}
+
+.emprovex-logo-reactor__ring--inner {
+  inset: 31%;
+  border: 1px solid rgba(191,219,254,0.25);
+  border-top-color: rgba(103,232,249,0.62);
+  border-bottom-color: rgba(96,165,250,0.10);
+  box-shadow: 0 0 12px rgba(96,165,250,0.08);
+}
+
+.emprovex-logo-reactor__axis--h {
+  left: 18%;
+  right: 18%;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(96,165,250,0.12),
+    rgba(191,219,254,0.36),
+    rgba(96,165,250,0.12),
+    transparent
+  );
+}
+
+.emprovex-logo-reactor__axis--v {
+  top: 18%;
+  bottom: 18%;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(96,165,250,0.10),
+    rgba(191,219,254,0.28),
+    rgba(96,165,250,0.10),
+    transparent
+  );
+}
+
+.emprovex-logo-reactor__core {
+  width: 13%;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 40% 34%, rgba(255,255,255,0.92), rgba(147,197,253,0.74) 22%, rgba(59,130,246,0.44) 54%, transparent 76%);
+  opacity: 0.62;
+  box-shadow:
+    0 0 10px rgba(96,165,250,0.20),
+    0 0 24px rgba(37,99,235,0.09);
+}
+
+.emprovex-logo-core[data-state='authenticating'] .emprovex-logo-reactor__ring--outer {
+  border-left-color: rgba(191,219,254,0.82);
+  border-right-color: rgba(103,232,249,0.48);
+}
+
+.emprovex-logo-core[data-state='authenticating'] .emprovex-logo-reactor__core {
+  background:
+    radial-gradient(circle, rgba(255,255,255,0.96), rgba(147,197,253,0.84) 28%, rgba(59,130,246,0.52) 58%, transparent 78%);
+}
+
+.emprovex-logo-core[data-state='success'] .emprovex-logo-reactor__ring--outer,
+.emprovex-logo-core[data-state='success'] .emprovex-logo-reactor__ring--inner {
+  border-color: rgba(110,231,183,0.32);
+  border-top-color: rgba(167,243,208,0.70);
+}
+
+.emprovex-logo-core[data-state='success'] .emprovex-logo-reactor__core {
+  background:
+    radial-gradient(circle, rgba(255,255,255,0.96), rgba(167,243,208,0.80) 28%, rgba(52,211,153,0.40) 58%, transparent 78%);
+  box-shadow:
+    0 0 14px rgba(110,231,183,0.28),
+    0 0 32px rgba(52,211,153,0.12);
+}
+
+.emprovex-login-panel__refraction {
+  z-index: 1;
+  opacity: 0.34;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(
+      112deg,
+      transparent 0 28%,
+      rgba(96,165,250,0.00) 34%,
+      rgba(96,165,250,0.08) 43%,
+      rgba(103,232,249,0.065) 48%,
+      rgba(196,181,253,0.038) 53%,
+      rgba(96,165,250,0.00) 62%,
+      transparent 72%
+    ),
+    radial-gradient(
+      350px circle at var(--panel-x) var(--panel-y),
+      rgba(219,234,254,0.075),
+      rgba(103,232,249,0.026) 28%,
+      transparent 62%
+    );
+  background-size: 180% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+  -webkit-mask-image: linear-gradient(#000, #000);
+  mask-image: linear-gradient(#000, #000);
+  transition:
+    opacity 280ms var(--emprovex-motion-ease-soft),
+    border-color 280ms var(--emprovex-motion-ease-soft);
+}
+
+.emprovex-login-panel[data-focus='email'] .emprovex-login-panel__refraction,
+.emprovex-login-panel[data-focus='password'] .emprovex-login-panel__refraction {
+  opacity: 0.48;
+}
+
+.emprovex-login-panel[data-state='ready'] .emprovex-login-panel__refraction {
+  opacity: 0.62;
+  border-color: rgba(147,197,253,0.045);
+}
+
+.emprovex-login-panel[data-state='authenticating'] .emprovex-login-panel__refraction {
+  opacity: 0.72;
+  border-color: rgba(191,219,254,0.055);
+}
+
+.emprovex-signature-intro {
+  overflow: hidden;
+}
+
+.emprovex-signature-intro__aperture {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 999px;
+  border: 1px solid rgba(96,165,250,0.13);
+  box-shadow:
+    0 0 44px rgba(37,99,235,0.045),
+    inset 0 0 42px rgba(96,165,250,0.035);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.42);
+}
+
+.emprovex-signature-intro__line {
+  position: absolute;
+  opacity: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(96,165,250,0.12),
+    rgba(191,219,254,0.34),
+    rgba(96,165,250,0.12),
+    transparent
+  );
+}
+
+.emprovex-signature-intro__line--h {
+  left: 50%;
+  top: 48%;
+  width: 82vw;
+  height: 1px;
+  transform: translateX(-50%) scaleX(0);
+}
+
+.emprovex-signature-intro__line--v {
+  top: 50%;
+  left: 50%;
+  width: 1px;
+  height: 70vh;
+  transform: translateY(-50%) scaleY(0);
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(96,165,250,0.07),
+    rgba(191,219,254,0.22),
+    rgba(96,165,250,0.07),
+    transparent
+  );
+}
+
+.emprovex-signature-conduit {
+  opacity: 1;
+}
+
+.emprovex-signature-conduit__track,
+.emprovex-signature-conduit__pulse {
+  position: absolute;
+  left: 23vw;
+  top: 34vh;
+  width: 56vw;
+  height: 1px;
+  transform: rotate(18deg);
+  transform-origin: left center;
+}
+
+.emprovex-signature-conduit__track {
+  opacity: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(96,165,250,0.025) 12%,
+    rgba(96,165,250,0.13) 46%,
+    rgba(103,232,249,0.085) 68%,
+    transparent
+  );
+  box-shadow: 0 0 18px rgba(59,130,246,0.035);
+  transition: opacity 420ms var(--emprovex-motion-ease-soft);
+}
+
+.emprovex-signature-conduit__pulse {
+  width: 4.8rem;
+  left: calc(23vw - 4.8rem);
+  opacity: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(96,165,250,0.26),
+    rgba(191,219,254,0.72),
+    rgba(103,232,249,0.22),
+    transparent
+  );
+  box-shadow:
+    0 0 10px rgba(96,165,250,0.14),
+    0 0 22px rgba(59,130,246,0.07);
+}
+
+.emprovex-signature-conduit[data-focus='email'] .emprovex-signature-conduit__track {
+  opacity: 0.11;
+}
+
+.emprovex-signature-conduit[data-focus='password'] .emprovex-signature-conduit__track {
+  opacity: 0.075;
+}
+
+.emprovex-signature-conduit[data-state='ready'] .emprovex-signature-conduit__track {
+  opacity: 0.24;
+}
+
+.emprovex-signature-conduit[data-state='authenticating'] .emprovex-signature-conduit__track {
+  opacity: 0.17;
+}
+
+.emprovex-login-atmosphere [data-node] .emprovex-network-node-halo,
+.emprovex-login-atmosphere [data-node] > circle:nth-of-type(2),
+.emprovex-login-atmosphere [data-node] .emprovex-network-label,
+.emprovex-network-route {
+  transition:
+    opacity 320ms var(--emprovex-motion-ease-soft),
+    stroke 320ms var(--emprovex-motion-ease-soft),
+    filter 320ms var(--emprovex-motion-ease-soft);
+}
+
+.emprovex-login-atmosphere[data-focus='email'] [data-node='ne'] .emprovex-network-node-halo,
+.emprovex-login-atmosphere[data-focus='email'] [data-node='rec'] .emprovex-network-node-halo {
+  opacity: 0.92;
+  filter: drop-shadow(0 0 7px rgba(96,165,250,0.30));
+}
+
+.emprovex-login-atmosphere[data-focus='email'] [data-node='ne'] > circle:nth-of-type(2),
+.emprovex-login-atmosphere[data-focus='email'] [data-node='rec'] > circle:nth-of-type(2) {
+  stroke: rgba(191,219,254,0.94);
+}
+
+.emprovex-login-atmosphere[data-focus='email'] .emprovex-network-route--a {
+  opacity: 1;
+  stroke: rgba(96,165,250,0.52);
+}
+
+.emprovex-login-atmosphere[data-focus='password'] [data-node='nf'] .emprovex-network-node-halo,
+.emprovex-login-atmosphere[data-focus='password'] [data-node='doc'] .emprovex-network-node-halo {
+  opacity: 0.80;
+  filter: drop-shadow(0 0 6px rgba(103,232,249,0.22));
+}
+
+.emprovex-login-atmosphere[data-focus='password'] [data-node='nf'] > circle:nth-of-type(2),
+.emprovex-login-atmosphere[data-focus='password'] [data-node='doc'] > circle:nth-of-type(2) {
+  stroke: rgba(165,243,252,0.80);
+}
+
+.emprovex-login-atmosphere[data-focus='password'] .emprovex-network-route--d {
+  opacity: 0.88;
+  stroke: rgba(103,232,249,0.38);
+}
+
+.emprovex-login-atmosphere[data-state='ready'] [data-node] .emprovex-network-node-halo {
+  opacity: 0.68;
+}
+
+.emprovex-login-atmosphere[data-state='ready'] [data-node='rlt'] .emprovex-network-node-halo,
+.emprovex-login-atmosphere[data-state='ready'] [data-node='liq'] .emprovex-network-node-halo {
+  opacity: 0.96;
+  filter: drop-shadow(0 0 8px rgba(96,165,250,0.30));
+}
+
+.emprovex-login-atmosphere[data-state='ready'] .emprovex-network-label {
+  opacity: 0.74;
+}
+
+.emprovex-login-atmosphere[data-state='authenticating'] [data-node] .emprovex-network-node-halo {
+  opacity: 0.28;
+  filter: none;
+}
+
+.emprovex-login-atmosphere[data-state='authenticating'] [data-node='liq'] .emprovex-network-node-halo {
+  opacity: 0.72;
+}
+
+@media (min-width: 1200px) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .emprovex-logo-reactor__ring--outer {
+    animation: emprovex-reactor-spin 20s linear infinite;
+  }
+
+  .emprovex-logo-reactor__ring--mid {
+    animation: emprovex-reactor-spin-reverse 15s linear infinite;
+  }
+
+  .emprovex-logo-reactor__ring--inner {
+    animation: emprovex-reactor-spin 9s linear infinite;
+  }
+
+  .emprovex-logo-reactor__core {
+    animation: emprovex-reactor-core-breathe 3.8s ease-in-out infinite;
+  }
+
+  .emprovex-logo-core[data-state='authenticating'] .emprovex-logo-reactor__ring--outer {
+    animation-duration: 4.2s;
+  }
+
+  .emprovex-logo-core[data-state='authenticating'] .emprovex-logo-reactor__ring--mid {
+    animation-duration: 3.1s;
+  }
+
+  .emprovex-logo-core[data-state='authenticating'] .emprovex-logo-reactor__ring--inner {
+    animation-duration: 2.2s;
+  }
+
+  .emprovex-login-panel__refraction {
+    animation: emprovex-refraction-sweep 9.5s ease-in-out infinite;
+  }
+
+  .emprovex-signature-conduit[data-state='ready'] .emprovex-signature-conduit__pulse {
+    animation: emprovex-signature-conduit-pulse 2.8s var(--emprovex-motion-ease) infinite;
+  }
+
+  .emprovex-signature-conduit[data-state='authenticating'] .emprovex-signature-conduit__pulse {
+    animation: emprovex-signature-conduit-pulse 1.55s linear infinite;
+  }
+
+  .emprovex-login-atmosphere[data-state='ready'] [data-node='liq'] .emprovex-network-node-halo,
+  .emprovex-login-atmosphere[data-state='ready'] [data-node='rlt'] .emprovex-network-node-halo {
+    animation: emprovex-signature-node-ready 2.6s ease-in-out infinite;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .emprovex-signature-intro__aperture {
+    animation: emprovex-signature-aperture 1.08s 0.04s var(--emprovex-motion-ease) both;
+  }
+
+  .emprovex-signature-intro__line--h {
+    animation: emprovex-signature-line-h 0.94s 0.10s var(--emprovex-motion-ease) both;
+  }
+
+  .emprovex-signature-intro__line--v {
+    animation: emprovex-signature-line-v 0.88s 0.14s var(--emprovex-motion-ease) both;
+  }
+}
+
+@media (max-width: 1199px) {
+  .emprovex-signature-conduit {
+    display: none !important;
+  }
+
+  .emprovex-login-panel__refraction {
+    opacity: 0.24;
+    animation: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .emprovex-logo-reactor__axis,
+  .emprovex-logo-reactor__ring--mid {
+    display: none;
+  }
+
+  .emprovex-logo-reactor__ring--outer,
+  .emprovex-logo-reactor__ring--inner,
+  .emprovex-logo-reactor__core {
+    animation: none !important;
+  }
+
+  .emprovex-signature-intro__line--v {
+    display: none;
+  }
+
+  .emprovex-signature-intro__aperture {
+    width: 12rem;
+    height: 12rem;
+  }
+
+  .emprovex-login-panel__refraction {
+    mix-blend-mode: normal;
+    opacity: 0.18;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emprovex-logo-reactor__ring,
+  .emprovex-logo-reactor__core,
+  .emprovex-login-panel__refraction,
+  .emprovex-signature-intro__aperture,
+  .emprovex-signature-intro__line,
+  .emprovex-signature-conduit__pulse,
+  .emprovex-login-atmosphere[data-state='ready'] [data-node] .emprovex-network-node-halo {
+    animation: none !important;
+  }
+
+  .emprovex-signature-intro {
+    display: none;
+  }
+
+  .emprovex-signature-conduit {
+    display: none !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .emprovex-login-panel__refraction {
+    opacity: 0.10 !important;
+    mix-blend-mode: normal;
+  }
+
+  .emprovex-signature-conduit {
+    display: none !important;
+  }
+
+  .emprovex-logo-reactor__axis {
+    opacity: 0.45;
+  }
+}
