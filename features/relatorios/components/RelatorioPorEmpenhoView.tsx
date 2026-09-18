@@ -48,7 +48,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
 
   return (
             <div className="space-y-6">
-              
+
               <div>
                 <h3 className="text-xl font-bold tracking-tight text-[#00288e]">Relatório por Empenho</h3>
                 <p className="text-sm text-gray-500 font-medium">Conciliação detalhada de Notas Fiscais, NS, recebimentos e saldos do empenho selecionado.</p>
@@ -83,7 +83,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
 
                   <div className="col-span-1">
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Selecionar Empenho (NE)</label>
-                    <select 
+                    <select
                       value={reportSearch}
                       onChange={(e) => setReportSearch(e.target.value)}
                       className="w-full h-11 px-3 border border-gray-200 rounded-xl bg-white text-sm font-semibold text-gray-700 outline-none focus:border-[#00288e]"
@@ -98,8 +98,8 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
 
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Período Inicial</label>
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       value={reportStartDate}
                       onChange={(e) => setReportStartDate(e.target.value)}
                       className="w-full h-11 px-3 border border-gray-200 rounded-xl bg-white text-sm font-semibold text-gray-700 outline-none"
@@ -108,8 +108,8 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
 
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Período Final</label>
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       value={reportEndDate}
                       onChange={(e) => setReportEndDate(e.target.value)}
                       className="w-full h-11 px-3 border border-gray-200 rounded-xl bg-white text-sm font-semibold text-gray-700 outline-none"
@@ -137,7 +137,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
 
                 const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
                 const empRequiresTR = classRequiresTermoRecebimento(emp.classification, empenhoClasses);
-                
+
                 // Get linked invoices list
                 const linkedInvoices = invoices.filter(inv => inv.empenhoId === emp.id);
                 const totalReceivedNfe = linkedInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
@@ -146,7 +146,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                 return (
                   <div className="space-y-6">
                     <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-                      
+
                       {/* Card header banner */}
                       <div className="bg-[#00288e] text-white p-5 flex justify-between items-center">
                         <div>
@@ -185,7 +185,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                           <div>
                             <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider block">QTD. DE NOTAS FISCAIS</span>
                             <span className="text-xl sm:text-2xl font-black text-gray-700">
-                              {linkedInvoices.length > 0 ? `0${linkedInvoices.length}` : 'Nenhuma'} 
+                              {linkedInvoices.length > 0 ? `0${linkedInvoices.length}` : 'Nenhuma'}
                               <span className="text-xs font-semibold text-gray-400 ml-1.5">
                                 {linkedInvoices.length > 0 && `(NF ${linkedInvoices.map(i => i.id).join(', ')})`}
                               </span>
@@ -197,7 +197,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                       {/* Items reconciliation lists matching image 1 */}
                       <div className="p-5 space-y-4">
                         <h4 className="font-extrabold text-sm text-gray-700 uppercase tracking-wider">Itens do Empenho</h4>
-                        
+
                         <div className="space-y-4">
                           {emp.items.length === 0 ? (
                             <p className="text-xs text-gray-500 italic py-2">Sem itens vinculados a esta Nota de Empenho.</p>
@@ -205,7 +205,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                             emp.items.map((item) => {
                               const pct = item.quantity > 0 ? Math.round((item.received / item.quantity) * 100) : 0;
                               const balance = item.quantity - item.received;
-                              
+
                               // Visual variation of bars matching image 1 (Dipirona progress is red, others are blue)
                               const isAlertState = pct <= 30;
 
@@ -225,7 +225,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                   </div>
 
                                   <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
-                                    <div 
+                                    <div
                                       className={`h-full transition-all duration-500 ${isAlertState ? 'bg-rose-600' : 'bg-[#00288e]'}`}
                                       style={{ width: `${pct}%` }}
                                     />
@@ -271,11 +271,11 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                   const formattedIssueDate = formatDateOnly(inv.issueDate);
                                   const effectiveTrDate = inv.termoEmissaoDate || (inv.termoNumero ? (inv.registeredAt || inv.issueDate) : null);
                                   const formattedTrDate = effectiveTrDate ? formatDateOnly(effectiveTrDate) : null;
-                                  const formattedComissaoDate = inv.comissaoDate 
-                                    ? formatDateOnly(inv.comissaoDate) 
+                                  const formattedComissaoDate = inv.comissaoDate
+                                    ? formatDateOnly(inv.comissaoDate)
                                     : null;
-                                  const formattedTesourariaDate = inv.tesourariaDate 
-                                    ? formatDateOnly(inv.tesourariaDate) 
+                                  const formattedTesourariaDate = inv.tesourariaDate
+                                    ? formatDateOnly(inv.tesourariaDate)
                                     : null;
 
                                   return (
@@ -383,7 +383,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                                 —
                                               </span>
                                             )}
-                                            
+
                                             <div className="flex items-center gap-1">
                                               <button
                                                 id={`btn-edit-ns-${getInvoiceRecordKey(inv)}`}
@@ -429,7 +429,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
 
                     {/* Action button row */}
                     <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-                      <button 
+                      <button
                         id="btn-download-report-pdf-main"
                         onClick={() => {
                           const emp = empenhos.find(e => e.id === reportSearch);
@@ -439,7 +439,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                       >
                         <FileDown className="w-4 h-4" /> Baixar Relatório PDF
                       </button>
-                      <button 
+                      <button
                         id="btn-print-report-pdf-main"
                         onClick={() => {
                           const emp = empenhos.find(e => e.id === reportSearch);
@@ -449,7 +449,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                       >
                         <Printer className="w-4 h-4 text-[#00288e]" /> Imprimir / Visualizar PDF
                       </button>
-                      <button 
+                      <button
                         id="btn-preview-report-modal"
                         onClick={() => setShowPdfModal(true)}
                         className="px-4 py-2.5 bg-gray-50 border border-gray-200 hover:bg-gray-100 active:scale-95 duration-100 rounded-xl font-semibold text-xs sm:text-sm text-gray-600 flex items-center gap-2 transition-all"
@@ -465,7 +465,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
               <AnimatePresence>
                 {showPdfModal && (
                   <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <motion.div 
+                    <motion.div
                       initial={{ scale: 0.95, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       exit={{ scale: 0.95, opacity: 0 }}
@@ -484,7 +484,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                       {/* Paper formatted printable report preview */}
                       <div className="p-8 space-y-6 overflow-y-auto bg-gray-50 flex-1 font-sans text-xs sm:text-sm text-gray-800">
                         <div className="bg-white p-8 border shadow-sm max-w-2xl mx-auto space-y-6">
-                          
+
                           {/* Print header */}
                           <div className="flex justify-between items-start border-b pb-4 border-gray-100">
                             <div>
@@ -639,7 +639,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                       </div>
 
                       <div className="p-4 bg-gray-100 flex flex-wrap justify-between items-center gap-3 flex-shrink-0">
-                        <button 
+                        <button
                           id="btn-close-pdf-preview"
                           onClick={() => setShowPdfModal(false)}
                           className="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl font-bold text-xs hover:bg-gray-300 transition-all"
@@ -647,7 +647,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                           Fechar
                         </button>
                         <div className="flex items-center gap-2">
-                          <button 
+                          <button
                             id="btn-download-pdf-from-preview"
                             onClick={() => {
                               const emp = empenhos.find(e => e.id === reportSearch);
@@ -657,7 +657,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                           >
                             <FileDown className="w-4 h-4" /> Baixar Arquivo PDF
                           </button>
-                          <button 
+                          <button
                             id="btn-print-pdf-from-preview"
                             onClick={() => {
                               const emp = empenhos.find(e => e.id === reportSearch);
@@ -677,11 +677,11 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
               {/* Modal de Detalhamento dos Itens da Nota Fiscal */}
               <AnimatePresence>
                 {selectedReportInvoice && (
-                  <div 
+                  <div
                     id="modal-nf-items-detail-overlay"
                     className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs"
                   >
-                    <motion.div 
+                    <motion.div
                       initial={{ scale: 0.95, opacity: 0, y: 12 }}
                       animate={{ scale: 1, opacity: 1, y: 0 }}
                       exit={{ scale: 0.95, opacity: 0, y: 12 }}
@@ -710,9 +710,9 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                             </p>
                           </div>
                         </div>
-                        <button 
+                        <button
                           id="btn-close-nf-modal"
-                          onClick={() => setSelectedReportInvoice(null)} 
+                          onClick={() => setSelectedReportInvoice(null)}
                           className="p-2 text-blue-200 hover:text-white hover:bg-white/10 rounded-xl transition-all active:scale-95"
                           title="Fechar janela"
                         >
@@ -722,7 +722,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
 
                       {/* Modal Body */}
                       <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1 bg-gray-50/50">
-                        
+
                         {/* Summary Metadata Cards */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                           <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-xs">
@@ -734,8 +734,8 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                           <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-xs">
                             <span className="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">Cadastramento</span>
                             <span className="text-xs font-bold text-gray-800">
-                              {selectedReportInvoice.registeredAt 
-                                ? formatDateOnly(selectedReportInvoice.registeredAt) 
+                              {selectedReportInvoice.registeredAt
+                                ? formatDateOnly(selectedReportInvoice.registeredAt)
                                 : formatDateOnly(selectedReportInvoice.issueDate)}
                             </span>
                           </div>
@@ -876,7 +876,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                             TR dispensado para esta classe
                           </span>
                         )}
-                        <button 
+                        <button
                           id="btn-close-nf-modal-footer"
                           onClick={() => setSelectedReportInvoice(null)}
                           className="px-6 py-2 bg-[#00288e] hover:bg-[#001e6a] text-white rounded-xl font-bold text-xs transition-all shadow-xs active:scale-95"
