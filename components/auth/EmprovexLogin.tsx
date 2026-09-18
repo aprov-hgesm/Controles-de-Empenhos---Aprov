@@ -129,6 +129,22 @@ export function EmprovexLogin({
       <ToastNotification toast={toast} onClose={onCloseToast} />
       <LoginAtmosphere focus={focusedField} state={panelVisualState} />
 
+      <div className="emprovex-signature-intro pointer-events-none fixed inset-0 z-[4]" aria-hidden="true">
+        <span className="emprovex-signature-intro__aperture" />
+        <span className="emprovex-signature-intro__line emprovex-signature-intro__line--h" />
+        <span className="emprovex-signature-intro__line emprovex-signature-intro__line--v" />
+      </div>
+
+      <div
+        className="emprovex-signature-conduit pointer-events-none fixed inset-0 z-[6] hidden lg:block"
+        data-state={panelVisualState}
+        data-focus={focusedField ?? 'none'}
+        aria-hidden="true"
+      >
+        <span className="emprovex-signature-conduit__track" />
+        <span className="emprovex-signature-conduit__pulse" />
+      </div>
+
       <div className="relative z-10 mx-auto grid min-h-[100svh] w-full max-w-[1600px] lg:grid-cols-[minmax(0,1.12fr)_minmax(460px,0.88fr)]">
         <div className="border-b border-white/[0.07] lg:border-b-0 lg:border-r">
           <LoginBrandStage customLogo={customLogo} visualState={logoVisualState} />
@@ -151,6 +167,7 @@ export function EmprovexLogin({
             >
               <div className="emprovex-login-panel__edge pointer-events-none absolute inset-0 rounded-[inherit]" />
               <div className="emprovex-login-panel__reflection pointer-events-none absolute inset-0 rounded-[inherit]" />
+              <div className="emprovex-login-panel__refraction pointer-events-none absolute inset-0 rounded-[inherit]" />
               <div className="emprovex-login-panel__beam pointer-events-none absolute inset-x-10 top-0 h-px" />
               <div
                 className="emprovex-auth-scanner pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
