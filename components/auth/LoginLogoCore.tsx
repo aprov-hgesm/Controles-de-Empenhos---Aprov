@@ -112,6 +112,15 @@ export function LoginLogoCore({ customLogo, state }: LoginLogoCoreProps) {
         <div className="emprovex-logo-core__edge" />
         <div className="emprovex-logo-core__specular" />
 
+        <div className="emprovex-logo-reactor" aria-hidden="true">
+          <span className="emprovex-logo-reactor__ring emprovex-logo-reactor__ring--outer" />
+          <span className="emprovex-logo-reactor__ring emprovex-logo-reactor__ring--mid" />
+          <span className="emprovex-logo-reactor__ring emprovex-logo-reactor__ring--inner" />
+          <span className="emprovex-logo-reactor__axis emprovex-logo-reactor__axis--h" />
+          <span className="emprovex-logo-reactor__axis emprovex-logo-reactor__axis--v" />
+          <span className="emprovex-logo-reactor__core" />
+        </div>
+
         <div className="emprovex-logo-core__mark">
           {customLogo ? (
             <Image
