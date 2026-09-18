@@ -16,34 +16,19 @@ import {
   HGESM_WORKSPACE_ID,
 } from './hgesmWorkspace';
 import {
-  isValidPlatformEmail,
   isValidWorkspaceId,
   normalizePlatformEmail,
   normalizeWorkspaceId,
-  validatePlatformAccount,
   validateWorkspace,
   type PlatformAccount,
   type SectorAccount,
   type Workspace,
 } from './platformIdentity';
-import {
-  createInitialWorkspaceTermCounter,
-  WORKSPACE_TERM_COUNTER_SETTINGS_ID,
-} from './workspaceProvisioning';
+import { buildSectorInstitutionalProfile } from './sectorProvisioning';
+export type { CreateSectorWorkspaceInput } from './sectorProvisioning';
 
 const PLATFORM_ACCOUNTS_COLLECTION = 'platformAccounts';
 const WORKSPACES_COLLECTION = 'workspaces';
-
-export interface CreateSectorWorkspaceInput {
-  workspaceId: string;
-  workspaceName: string;
-  authorizedEmail: string;
-  organizationName: string;
-  organizationShortName?: string;
-  sectionName: string;
-  defaultDeliveryLocation?: string;
-  defaultResponsibleRole?: string;
-}
 
 export interface UpdateSectorWorkspaceInput {
   workspaceId: string;
@@ -66,37 +51,6 @@ function accountDocumentId(email: string): string {
   return normalizePlatformEmail(email);
 }
 
-
-function optionalTrimmedField<Key extends string>(
-  key: Key,
-  value?: string
-): Partial<Record<Key, string>> {
-  const normalized = value?.trim();
-  return normalized ? { [key]: normalized } as Record<Key, string> : {};
-}
-
-function buildInstitutionalProfile(
-  input: Pick<
-    CreateSectorWorkspaceInput,
-    | 'organizationName'
-    | 'organizationShortName'
-    | 'sectionName'
-    | 'defaultDeliveryLocation'
-    | 'defaultResponsibleRole'
-  >,
-  documentHeaderLines?: string[]
-): Workspace['institutionalProfile'] {
-  return {
-    organizationName: input.organizationName.trim(),
-    sectionName: input.sectionName.trim(),
-    ...(documentHeaderLines?.length
-      ? { documentHeaderLines: [...documentHeaderLines] }
-      : {}),
-    ...optionalTrimmedField('organizationShortName', input.organizationShortName),
-    ...optionalTrimmedField('defaultDeliveryLocation', input.defaultDeliveryLocation),
-    ...optionalTrimmedField('defaultResponsibleRole', input.defaultResponsibleRole),
-  };
-}
 
 export function suggestWorkspaceId(name: string): string {
   return normalizeWorkspaceId(
@@ -132,95 +86,6 @@ export async function ensureFoundingPlatformMetadata(): Promise<void> {
     if (!workspaceSnapshot.exists()) transaction.set(workspaceRef, workspace);
     if (!sectorSnapshot.exists()) transaction.set(sectorRef, sectorAccount);
   });
-}
-
-/**
- * Cria workspace, conta de setor e o estado operacional mínimo na mesma transação.
- * O contador de Termos de Recebimento nasce em zero; Drive e documentos somente
- * são materializados pelo próprio setor nas etapas de onboarding correspondentes.
- */
-export async function createSectorWorkspace(
-  input: CreateSectorWorkspaceInput,
-  createdByEmail: string
-): Promise<{ workspace: Workspace; account: SectorAccount }> {
-  const now = new Date().toISOString();
-  const workspaceId = normalizeWorkspaceId(input.workspaceId);
-  const authorizedEmail = normalizePlatformEmail(input.authorizedEmail);
-  const createdBy = normalizePlatformEmail(createdByEmail);
-
-  if (!isValidWorkspaceId(workspaceId)) {
-    throw new Error('O identificador do setor é inválido. Use letras minúsculas, números e hífens.');
-  }
-  if (!isValidPlatformEmail(authorizedEmail)) {
-    throw new Error('Informe um e-mail operacional válido para o setor.');
-  }
-  if (authorizedEmail === HGESM_SECTOR_EMAIL) {
-    throw new Error('A conta institucional fundadora já está vinculada ao workspace HGeSM.');
-  }
-
-  const workspace: Workspace = {
-    id: workspaceId,
-    name: input.workspaceName.trim(),
-    status: 'active',
-    authorizedEmail,
-    institutionalProfile: buildInstitutionalProfile(input),
-    createdAt: now,
-    updatedAt: now,
-    createdBy,
-  };
-
-  const account: SectorAccount = {
-    email: authorizedEmail,
-    accountType: 'sector',
-    workspaceId,
-    status: 'active',
-    createdAt: now,
-    updatedAt: now,
-    createdBy,
-  };
-
-  const validationErrors = [...validateWorkspace(workspace), ...validatePlatformAccount(account)];
-  if (validationErrors.length > 0) {
-    throw new Error(validationErrors[0]);
-  }
-
-  const workspaceRef = doc(db, WORKSPACES_COLLECTION, workspaceId);
-  const accountRef = doc(db, PLATFORM_ACCOUNTS_COLLECTION, accountDocumentId(authorizedEmail));
-  const termCounterRef = doc(
-    db,
-    WORKSPACES_COLLECTION,
-    workspaceId,
-    'settings',
-    WORKSPACE_TERM_COUNTER_SETTINGS_ID
-  );
-  const initialTermCounter = createInitialWorkspaceTermCounter();
-
-  await runTransaction(db, async (transaction) => {
-    const [workspaceSnapshot, accountSnapshot, termCounterSnapshot] = await Promise.all([
-      transaction.get(workspaceRef),
-      transaction.get(accountRef),
-      transaction.get(termCounterRef),
-    ]);
-
-    if (workspaceSnapshot.exists()) {
-      throw new Error('Já existe um setor com este identificador.');
-    }
-    if (accountSnapshot.exists()) {
-      throw new Error('Este e-mail operacional já está vinculado a um perfil do EMPROVEX.');
-    }
-    if (termCounterSnapshot.exists()) {
-      throw new Error('Já existe configuração operacional residual para este identificador de setor.');
-    }
-
-    // Bloco 17: diretório administrativo e estado operacional mínimo nascem
-    // atomicamente. As demais coleções permanecem vazias e o Google Drive só é
-    // materializado quando o próprio setor concluir o onboarding do Bloco 18.
-    transaction.set(workspaceRef, workspace);
-    transaction.set(accountRef, account);
-    transaction.set(termCounterRef, initialTermCounter);
-  });
-
-  return { workspace, account };
 }
 
 /**
@@ -281,7 +146,7 @@ export async function updateSectorWorkspaceProfile(
     const updated: Workspace = {
       ...current,
       name: input.workspaceName.trim(),
-      institutionalProfile: buildInstitutionalProfile(
+      institutionalProfile: buildSectorInstitutionalProfile(
         input,
         current.institutionalProfile.documentHeaderLines
       ),

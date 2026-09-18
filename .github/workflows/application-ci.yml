@@ -63,6 +63,9 @@ jobs:
       - name: Hybrid authentication model guard
         run: npm run verify:hybrid-auth-model
 
+      - name: Sector auth provisioning guard
+        run: npm run verify:sector-auth-provisioning
+
       - name: External sector login guard
         run: npm run verify:external-sector-login
 

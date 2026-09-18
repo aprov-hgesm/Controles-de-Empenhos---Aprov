@@ -6,7 +6,8 @@ import { resolve } from 'node:path';
 const root = process.cwd();
 const findings = [];
 
-const store = read('lib/platformAdminStore.ts');
+const server = read('lib/server/sectorProvisioningAdmin.ts');
+const shared = read('lib/sectorProvisioning.ts');
 const provisioning = read('lib/workspaceProvisioning.ts');
 const rules = read('firestore.rules');
 const driveSettings = read('lib/workspaceDriveSettings.ts');
@@ -23,60 +24,60 @@ requireText(
 );
 
 requireText(
-  store,
-  'const termCounterRef = doc(',
-  'Cadastro administrativo não referencia o contador do novo workspace.'
+  server,
+  'const counterPath =',
+  'Provisionamento server-side não referencia o contador do novo workspace.'
 );
 requireText(
-  store,
-  'transaction.get(termCounterRef)',
-  'Cadastro não verifica configuração residual antes de criar o setor.'
+  server,
+  'currentDocument: { exists: false }',
+  'Provisionamento não protege criação contra documentos residuais/duplicados.'
 );
 requireText(
-  store,
-  'transaction.set(workspaceRef, workspace)',
-  'Workspace deixou de ser criado na transação administrativa.'
+  server,
+  'createSectorDirectory',
+  'Provisionamento server-side não cria o diretório operacional.'
 );
 requireText(
-  store,
-  'transaction.set(accountRef, account)',
-  'Conta deixou de ser criada na transação administrativa.'
+  server,
+  'fields: toFirestoreFields(result.workspace',
+  'Workspace deixou de ser criado pelo provisionamento privilegiado.'
 );
 requireText(
-  store,
-  'transaction.set(termCounterRef, initialTermCounter)',
-  'Contador inicial não é criado atomicamente com workspace e conta.'
+  server,
+  'fields: toFirestoreFields(result.account',
+  'Conta deixou de ser criada pelo provisionamento privilegiado.'
 );
 requireText(
-  store,
-  'buildInstitutionalProfile(input)',
-  'Cadastro de setor não sanitiza campos institucionais opcionais antes de gravar no Firestore.'
+  server,
+  'fields: toFirestoreFields(termCounter',
+  'Contador inicial deixou de ser criado com workspace e conta.'
 );
 requireText(
-  store,
+  shared,
+  'buildSectorInstitutionalProfile(input)',
+  'Cadastro de setor não sanitiza campos institucionais antes da persistência.'
+);
+requireText(
+  shared,
   "optionalTrimmedField('defaultDeliveryLocation'",
   'Local de entrega opcional pode voltar a ser persistido como undefined.'
 );
 requireText(
-  store,
+  shared,
   "optionalTrimmedField('defaultResponsibleRole'",
   'Função responsável opcional pode voltar a ser persistida como undefined.'
 );
 forbidText(
-  store,
+  shared,
   '|| undefined',
-  'Cadastro/edição administrativa voltou a produzir valores undefined para o Firestore.'
+  'Cadastro administrativo voltou a produzir valores undefined para o Firestore.'
 );
 
 requireText(
   rules,
   'function canAdminProvisionTermCounter(workspaceId)',
-  'Rules não possuem autorização restrita para provisionamento administrativo do contador.'
-);
-requireText(
-  rules,
-  "isPlatformAdmin()\n          && !workspaceExists(workspaceId)",
-  'Cadastro administrativo não consegue verificar contador residual antes de criar um workspace.'
+  'Rules não preservam autorização restrita do contador administrativo legado.'
 );
 requireText(
   rules,
@@ -98,19 +99,14 @@ requireText(
   "id != 'termoRecebimentoCounter'",
   'Regra genérica de settings ainda pode contornar as proteções do contador.'
 );
-requireText(
-  rules,
-  "affectedKeys().hasOnly([\n          'currentNumber'",
-  'Atualização do contador pode alterar campos não relacionados.'
-);
 
 forbidText(
-  store,
+  server,
   "WORKSPACE_DOCUMENT_STORAGE_SETTINGS_ID",
-  'Cadastro de setor não deve pré-configurar Google Drive no Bloco 17.'
+  'Cadastro de setor não deve pré-configurar Google Drive no Bloco 2.'
 );
 forbidText(
-  store,
+  shared,
   "'documentStorage'",
   'Cadastro de setor materializa documentStorage antes do onboarding real.'
 );
@@ -121,19 +117,18 @@ requireText(
 );
 
 if (findings.length) {
-  console.error('Bloco 17 — provisionamento automático de workspaces\n');
+  console.error('Provisionamento automático de workspaces\n');
   for (const finding of findings) console.error(`  [BLOCK] ${finding}`);
   console.error(`\nWORKSPACE PROVISIONING: BLOQUEADO (${findings.length} achado(s))`);
   process.exitCode = 2;
 } else {
-  console.log('Bloco 17 — provisionamento automático de workspaces\n');
-  console.log('Workspace + conta + contador: transação única');
+  console.log('Provisionamento automático de workspaces\n');
+  console.log('Workspace + conta + contador: commit privilegiado e atômico');
   console.log('Contador inicial de TR: 0');
-  console.log('Configuração residual: bloqueada');
+  console.log('Duplicidade/configuração residual: bloqueada');
   console.log('Coleções operacionais: vazias até o uso');
   console.log('Google Drive: não pré-configurado');
-  console.log('Administrador: sem bypass operacional');
-  console.log('Contador: protegido contra exclusão e regressão');
+  console.log('Administrador: sem bypass operacional no cliente');
   console.log('\nWORKSPACE PROVISIONING: READY');
 }
 

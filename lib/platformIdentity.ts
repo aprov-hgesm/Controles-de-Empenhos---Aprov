@@ -20,7 +20,10 @@ export interface PlatformAccountBase {
    * passa a persistir explicitamente o provedor durante o provisionamento.
    */
   authProvider?: PlatformAuthProvider;
-  /** UID do Firebase preenchido somente depois que a conta autenticar pela primeira vez. */
+  /**
+   * UID do Firebase. Novos setores são pré-vinculados durante o provisionamento
+   * server-side; o campo permanece opcional apenas para compatibilidade legada.
+   */
   firebaseUid?: string;
   accountType: PlatformAccountType;
   status: PlatformAccountStatus;

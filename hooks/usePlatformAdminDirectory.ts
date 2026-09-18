@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import type { User } from 'firebase/auth';
 
 import {
-  createSectorWorkspace,
   ensureFoundingPlatformMetadata,
   setSectorWorkspaceStatus,
   subscribePlatformAdminDirectory,
@@ -13,6 +13,7 @@ import {
   type SectorLifecycleStatus,
   type UpdateSectorWorkspaceInput,
 } from '../lib/platformAdminStore';
+import type { SectorProvisioningResult } from '../lib/sectorProvisioning';
 
 const EMPTY_DIRECTORY: PlatformAdminDirectory = {
   workspaces: [],
@@ -32,7 +33,8 @@ function describeDirectoryError(error: unknown): string {
   return 'Não foi possível carregar o diretório administrativo da plataforma.';
 }
 
-export function usePlatformAdminDirectory(adminEmail: string | null) {
+export function usePlatformAdminDirectory(adminUser: User | null) {
+  const adminEmail = adminUser?.email || null;
   const [directory, setDirectory] = useState<PlatformAdminDirectory>(EMPTY_DIRECTORY);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,13 +84,45 @@ export function usePlatformAdminDirectory(adminEmail: string | null) {
     };
   }, [adminEmail]);
 
-  const createSector = useCallback(async (input: CreateSectorWorkspaceInput) => {
-    if (!adminEmail) throw new Error('Sessão administrativa inválida.');
+  const createSector = useCallback(async (
+    input: CreateSectorWorkspaceInput
+  ): Promise<SectorProvisioningResult> => {
+    if (!adminUser || !adminEmail) {
+      throw new Error('Sessão administrativa inválida.');
+    }
 
     setCreating(true);
     setError(null);
+
     try {
-      return await createSectorWorkspace(input, adminEmail);
+      const idToken = await adminUser.getIdToken();
+      const response = await fetch('/api/admin/provision-sector', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${idToken}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(input),
+      });
+
+      const payload = await response.json() as {
+        ok?: boolean;
+        result?: SectorProvisioningResult;
+        error?: string;
+        code?: string;
+        recoveryRequired?: boolean;
+      };
+
+      if (!response.ok || !payload.ok || !payload.result) {
+        if (payload.recoveryRequired) {
+          throw new Error(
+            'O provisionamento não pôde ser revertido integralmente. A operação foi marcada para recuperação administrativa.'
+          );
+        }
+        throw new Error(payload.error || 'Não foi possível provisionar o setor.');
+      }
+
+      return payload.result;
     } catch (createError) {
       const message = describeDirectoryError(createError);
       setError(message);
@@ -96,7 +130,7 @@ export function usePlatformAdminDirectory(adminEmail: string | null) {
     } finally {
       setCreating(false);
     }
-  }, [adminEmail]);
+  }, [adminEmail, adminUser]);
 
   const updateSector = useCallback(async (input: UpdateSectorWorkspaceInput) => {
     if (!adminEmail) throw new Error('Sessão administrativa inválida.');
