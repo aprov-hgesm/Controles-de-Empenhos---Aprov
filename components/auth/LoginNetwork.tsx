@@ -44,10 +44,10 @@ export function LoginNetwork() {
       </defs>
 
       <g className="emprovex-network-routes" fill="none" stroke="url(#network-stroke)" strokeWidth="1.15">
-        <use href="#route-a" />
-        <use href="#route-b" />
-        <use href="#route-c" />
-        <use href="#route-d" />
+        <use className="emprovex-network-route emprovex-network-route--a" href="#route-a" />
+        <use className="emprovex-network-route emprovex-network-route--b" href="#route-b" />
+        <use className="emprovex-network-route emprovex-network-route--c" href="#route-c" />
+        <use className="emprovex-network-route emprovex-network-route--d" href="#route-d" />
       </g>
 
       <g className="emprovex-network-routes emprovex-network-routes--signal" fill="none" strokeWidth="1.2">
@@ -76,7 +76,11 @@ export function LoginNetwork() {
 
       <g className="emprovex-network-nodes">
         {nodes.map((node, index) => (
-          <g key={node.code} transform={`translate(${node.x} ${node.y})`}>
+          <g
+            key={node.code}
+            data-node={node.code.toLowerCase()}
+            transform={`translate(${node.x} ${node.y})`}
+          >
             <circle
               className="emprovex-network-node-halo"
               r={index === 2 ? 18 : 14}
