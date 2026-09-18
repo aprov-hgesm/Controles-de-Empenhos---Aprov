@@ -78,6 +78,9 @@ jobs:
       - name: Empenho class configuration guard
         run: npm run verify:empenho-class-config
 
+      - name: Public OAuth legal pages guard
+        run: npm run verify:public-oauth-legal-pages
+
       - name: External sector login guard
         run: npm run verify:external-sector-login
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { motion } from 'motion/react';
 import { Eye, EyeOff, KeyRound, Loader2, LogIn, Mail } from 'lucide-react';
 
@@ -445,7 +446,30 @@ export default function Home() {
           </div>
         </motion.div>
 
-        <p className="mt-6 text-center text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+        <section className="mt-6 w-full max-w-3xl rounded-2xl border border-white/10 bg-white/[0.05] px-6 py-5 text-left backdrop-blur-sm">
+          <h3 className="text-sm font-extrabold uppercase tracking-[0.12em] text-blue-100">
+            Sobre o EMPROVEX
+          </h3>
+          <p className="mt-2 text-xs leading-6 text-slate-300 sm:text-sm">
+            O EMPROVEX é uma plataforma de gestão logística e financeira para setores autorizados,
+            com recursos para empenhos, notas fiscais, recebimentos, liquidação, cronogramas,
+            relatórios e organização documental. Cada setor opera em workspace isolado e pode,
+            quando habilitado, conectar seu próprio Google Drive para os documentos utilizados pelo sistema.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-bold">
+            <Link href="/privacy" className="text-blue-200 transition hover:text-white hover:underline">
+              Política de Privacidade
+            </Link>
+            <Link href="/terms" className="text-blue-200 transition hover:text-white hover:underline">
+              Termos de Serviço
+            </Link>
+            <a href="mailto:aprov1hgesm@gmail.com" className="text-blue-200 transition hover:text-white hover:underline">
+              Suporte
+            </a>
+          </div>
+        </section>
+
+        <p className="mt-5 text-center text-[10px] font-semibold uppercase tracking-widest text-gray-500">
           Ministério da Defesa • Exército Brasileiro
         </p>
       </div>
