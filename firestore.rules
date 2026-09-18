@@ -180,6 +180,7 @@ service cloud.firestore {
         ])
         && request.resource.data.keys().hasOnly([
           'email',
+          'authProvider',
           'firebaseUid',
           'accountType',
           'workspaceId',
@@ -354,6 +355,28 @@ service cloud.firestore {
         ]);
     }
 
+    function isSelfPreboundFirstLogin(accountId) {
+      return isVerifiedUser()
+        && resource.data.accountType == 'sector'
+        && resource.data.status == 'active'
+        && resource.data.email == accountId
+        && resource.data.email == request.auth.token.email
+        && hasBoundUid(resource.data)
+        && resource.data.firebaseUid == request.auth.uid
+        && request.resource.data.firebaseUid == resource.data.firebaseUid
+        && !('firstLoginAt' in resource.data)
+        && request.resource.data.firstLoginAt is string
+        && request.resource.data.lastLoginAt is string
+        && request.resource.data.updatedAt is string
+        && selfAccountImmutableFieldsPreserved(accountId)
+        && selfAccountWorkspaceIsActive(accountId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'firstLoginAt',
+          'lastLoginAt',
+          'updatedAt'
+        ]);
+    }
+
     function isSelfBoundSessionRefresh(accountId) {
       return isVerifiedUser()
         && resource.data.accountType == 'sector'
@@ -403,6 +426,7 @@ service cloud.firestore {
           && accountHasMatchingWorkspaceAfterWrite(accountId)
         )
         || isSelfUidBinding(accountId)
+        || isSelfPreboundFirstLogin(accountId)
         || isSelfBoundSessionRefresh(accountId);
       allow delete: if false;
     }
