@@ -437,6 +437,46 @@ async function main() {
   );
 
   console.log('\nIdentidade e bootstrap');
+  await denied('Setor com mesmo e-mail e UID via Google não lê o próprio platformAccount', () =>
+    getDoc(
+      doc(
+        sessionAGoogle.db,
+        'platformAccounts',
+        identities.a.email
+      )
+    )
+  );
+  await denied('Setor com mesmo e-mail e UID via Google não acessa dados operacionais', () =>
+    getDoc(
+      doc(
+        sessionAGoogle.db,
+        'workspaces',
+        'workspace-a',
+        'empenhos',
+        'sample'
+      )
+    )
+  );
+  await denied('Fundador com mesmo e-mail e UID via senha não acessa dados operacionais HGeSM', () =>
+    getDoc(
+      doc(
+        founderPassword.db,
+        'workspaces',
+        'hgesm-aprov',
+        'empenhos',
+        'sample'
+      )
+    )
+  );
+  await denied('Fundador com mesmo e-mail e UID via senha não obtém metadados administrativos', () =>
+    getDoc(
+      doc(
+        founderPassword.db,
+        'workspaces',
+        'hgesm-aprov'
+      )
+    )
+  );
   await denied('Mesmo e-mail com UID divergente não acessa dados operacionais', () =>
     getDoc(
       doc(
