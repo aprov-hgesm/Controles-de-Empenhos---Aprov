@@ -4,6 +4,7 @@ import React from 'react';
 import { Edit, Eye, FileDown, FileSpreadsheet, FileText, Filter, Package, Printer, Save, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { Empenho, Invoice } from '../../../lib/types';
+import { getInvoiceRecordKey } from '../../../lib/invoiceIdentity';
 import { classRequiresTermoRecebimento, type EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 
 interface RelatoriosViewContext {
@@ -279,10 +280,10 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
                                     : null;
 
                                   return (
-                                    <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
+                                    <tr key={getInvoiceRecordKey(inv)} className="hover:bg-gray-50/50 transition-colors">
                                       <td className="py-3 px-3.5 whitespace-nowrap">
                                         <button
-                                          id={`btn-report-nf-detail-${inv.id}`}
+                                          id={`btn-report-nf-detail-${getInvoiceRecordKey(inv)}`}
                                           onClick={() => setSelectedReportInvoice(inv)}
                                           className="group inline-flex items-center gap-1.5 font-bold text-[#00288e] hover:text-blue-700 bg-blue-50/70 hover:bg-blue-100/80 px-2.5 py-1 rounded-lg transition-all text-xs border border-blue-200/60 active:scale-95 shadow-xs"
                                           title="Clique para ver os itens detalhados desta Nota Fiscal"
@@ -330,17 +331,17 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
                                         )}
                                       </td>
                                       <td className="py-3 px-3.5 whitespace-nowrap">
-                                        {editingNSId === inv.id ? (
+                                        {editingNSId === getInvoiceRecordKey(inv) ? (
                                           <div className="flex items-center gap-1.5">
                                             <input
                                               type="text"
-                                              id={`input-ns-${inv.id}`}
+                                              id={`input-ns-${getInvoiceRecordKey(inv)}`}
                                               value={tempNSValue}
                                               onChange={(e) => setTempNSValue(e.target.value)}
                                               onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
                                                   e.preventDefault();
-                                                  handleSaveNumeroNS(inv.id, tempNSValue);
+                                                  handleSaveNumeroNS(getInvoiceRecordKey(inv), tempNSValue);
                                                 } else if (e.key === 'Escape') {
                                                   setEditingNSId(null);
                                                   setTempNSValue('');
@@ -351,16 +352,16 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
                                               className="w-32 sm:w-36 h-8 px-2 text-xs font-mono font-bold border border-[#00288e] rounded-lg bg-white text-gray-800 outline-none shadow-xs focus:ring-1 focus:ring-[#00288e]"
                                             />
                                             <button
-                                              id={`btn-save-ns-${inv.id}`}
+                                              id={`btn-save-ns-${getInvoiceRecordKey(inv)}`}
                                               type="button"
-                                              onClick={() => handleSaveNumeroNS(inv.id, tempNSValue)}
+                                              onClick={() => handleSaveNumeroNS(getInvoiceRecordKey(inv), tempNSValue)}
                                               className="p-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-lg transition-all shadow-xs flex items-center justify-center"
                                               title="Salvar Número da NS"
                                             >
                                               <Save className="w-3.5 h-3.5" />
                                             </button>
                                             <button
-                                              id={`btn-cancel-ns-${inv.id}`}
+                                              id={`btn-cancel-ns-${getInvoiceRecordKey(inv)}`}
                                               type="button"
                                               onClick={() => {
                                                 setEditingNSId(null);
@@ -386,10 +387,10 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
                                             
                                             <div className="flex items-center gap-1">
                                               <button
-                                                id={`btn-edit-ns-${inv.id}`}
+                                                id={`btn-edit-ns-${getInvoiceRecordKey(inv)}`}
                                                 type="button"
                                                 onClick={() => {
-                                                  setEditingNSId(inv.id);
+                                                  setEditingNSId(getInvoiceRecordKey(inv));
                                                   setTempNSValue(inv.numeroNS || '');
                                                 }}
                                                 className="p-1 rounded-lg text-gray-400 hover:text-[#00288e] hover:bg-blue-50 transition-all active:scale-95 border border-transparent hover:border-blue-200/50"
@@ -398,10 +399,10 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
                                                 <Edit className="w-3.5 h-3.5" />
                                               </button>
                                               <button
-                                                id={`btn-quick-save-ns-${inv.id}`}
+                                                id={`btn-quick-save-ns-${getInvoiceRecordKey(inv)}`}
                                                 type="button"
                                                 onClick={() => {
-                                                  setEditingNSId(inv.id);
+                                                  setEditingNSId(getInvoiceRecordKey(inv));
                                                   setTempNSValue(inv.numeroNS || '');
                                                 }}
                                                 className="p-1 rounded-lg text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 transition-all active:scale-95 border border-transparent hover:border-emerald-200/50"
@@ -605,7 +606,7 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
                                           const formattedNS = inv.numeroNS ? inv.numeroNS : '—';
 
                                           return (
-                                            <tr key={inv.id}>
+                                            <tr key={getInvoiceRecordKey(inv)}>
                                               <td className="py-1.5 px-2">
                                                 <button
                                                   onClick={() => setSelectedReportInvoice(inv)}

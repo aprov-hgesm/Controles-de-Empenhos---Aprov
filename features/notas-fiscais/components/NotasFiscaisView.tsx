@@ -5,6 +5,7 @@ import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActio
 import { InvoiceDocumentActions } from '../../../components/InvoiceDocumentActions';
 import { TermoRecebimentoActions } from '../../../components/TermoRecebimentoActions';
 import { MAX_INVOICE_PDF_BYTES } from '../../../lib/invoiceDocuments';
+import { getInvoiceRecordKey } from '../../../lib/invoiceIdentity';
 import { removeComissao } from '../../../lib/firebaseSync';
 import { MILITARY_RANKS } from '../../empenhos/domain/empenhoHelpers';
 import { AlertTriangle, ArrowUpDown, Calendar, Check, CheckCircle2, Clock, Edit, FileDown, FileText, Loader2, Package, Save, Search, Trash2, Upload, UserCheck, Users, X } from 'lucide-react';
@@ -442,7 +443,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                         const currentLocation = getInvoiceLocation(inv);
 
                         return (
-                        <div key={inv.id} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4 hover:border-blue-100 transition-all">
+                        <div key={getInvoiceRecordKey(inv)} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4 hover:border-blue-100 transition-all">
                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-3 border-b border-gray-50">
                             <div>
                               <div className="flex items-center gap-2">
@@ -533,9 +534,9 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                             </div>
                             <select
                               value={getInvoiceLocation(inv)}
-                              onChange={(event) => runInvoiceTransition(inv.id, () => handleUpdateInvoiceLocation(inv.id, event.target.value))}
+                              onChange={(event) => runInvoiceTransition(getInvoiceRecordKey(inv), () => handleUpdateInvoiceLocation(getInvoiceRecordKey(inv), event.target.value))}
                               disabled={processingInvoiceId !== null}
-                              aria-busy={processingInvoiceId === inv.id}
+                              aria-busy={processingInvoiceId === getInvoiceRecordKey(inv)}
                               className="h-10 px-3 rounded-xl border border-sky-200 bg-white text-xs font-extrabold text-sky-900 outline-none focus:ring-1 focus:ring-sky-500 min-w-[220px] disabled:opacity-60 disabled:cursor-wait"
                             >
                               <option value="APROVISIONAMENTO">Aprovisionamento</option>
@@ -590,13 +591,13 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                               
                               {requiresTR && currentLocation === 'APROVISIONAMENTO' && (
                                 <button
-                                  onClick={() => runInvoiceTransition(inv.id, () => handleMarkComissao(inv.id))}
+                                  onClick={() => runInvoiceTransition(getInvoiceRecordKey(inv), () => handleMarkComissao(getInvoiceRecordKey(inv)))}
                                   disabled={processingInvoiceId !== null}
-                                  aria-busy={processingInvoiceId === inv.id}
+                                  aria-busy={processingInvoiceId === getInvoiceRecordKey(inv)}
                                   className="mt-1 w-full py-1.5 bg-[#dde1ff] hover:bg-[#00288e] text-[#001453] hover:text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-wait"
                                 >
-                                  {processingInvoiceId === inv.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                                  {processingInvoiceId === inv.id ? 'Enviando…' : 'Enviar p/ Comissão'}
+                                  {processingInvoiceId === getInvoiceRecordKey(inv) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                  {processingInvoiceId === getInvoiceRecordKey(inv) ? 'Enviando…' : 'Enviar p/ Comissão'}
                                 </button>
                               )}
                             </div>
@@ -621,14 +622,14 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
 
                               {(currentLocation === 'COMISSAO' || (!requiresTR && currentLocation === 'APROVISIONAMENTO')) && (
                                 <button
-                                  onClick={() => runInvoiceTransition(inv.id, () => handleMarkTesouraria(inv.id))}
+                                  onClick={() => runInvoiceTransition(getInvoiceRecordKey(inv), () => handleMarkTesouraria(getInvoiceRecordKey(inv)))}
                                   disabled={processingInvoiceId !== null}
-                                  aria-busy={processingInvoiceId === inv.id}
+                                  aria-busy={processingInvoiceId === getInvoiceRecordKey(inv)}
                                   className="mt-1 w-full py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-[#00288e] hover:bg-[#1e40af] text-white shadow-sm disabled:opacity-60 disabled:cursor-wait"
                                   title={requiresTR ? 'Enviar NF recebida pela Comissão para a Tesouraria' : 'Enviar diretamente para a Tesouraria — TR dispensado pela classe'}
                                 >
-                                  {processingInvoiceId === inv.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                                  {processingInvoiceId === inv.id ? 'Enviando…' : 'Enviar p/ Tesouraria'}
+                                  {processingInvoiceId === getInvoiceRecordKey(inv) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                  {processingInvoiceId === getInvoiceRecordKey(inv) ? 'Enviando…' : 'Enviar p/ Tesouraria'}
                                 </button>
                               )}
                             </div>

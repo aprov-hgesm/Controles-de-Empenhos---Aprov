@@ -247,7 +247,11 @@ export function useOperationalData() {
       (snapshot) => {
         const fetched = snapshot.docs.map((snapshotDoc) => {
           const data = snapshotDoc.data() as Invoice;
-          return { ...data, supplier: normalizeSupplier(data.supplier) };
+          return {
+            ...data,
+            recordKey: data.recordKey || snapshotDoc.id,
+            supplier: normalizeSupplier(data.supplier),
+          };
         });
         setInvoices(fetched);
       },

@@ -108,6 +108,12 @@ jobs:
       - name: Production multi-tenant readiness guard
         run: npm run verify:production-multitenant-readiness
 
+      - name: Reporting foundation identity tests
+        run: npm run test:invoice-identity
+
+      - name: Reporting foundation guard
+        run: npm run verify:reporting-foundation
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 

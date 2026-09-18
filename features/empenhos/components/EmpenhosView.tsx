@@ -6,6 +6,7 @@ import { AlertCircle, AlertTriangle, ArrowLeft, Braces, Calendar, CalendarDays, 
 import { AnimatePresence, motion } from 'motion/react';
 import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActions';
 import type { Empenho, Invoice, EmpenhoPdfDocument } from '../../../lib/types';
+import { formatSupplierCnpj } from '../../../lib/invoiceIdentity';
 import type { EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 import type { User } from 'firebase/auth';
 type Setter<T = any> = Dispatch<SetStateAction<T>>;
@@ -13,6 +14,7 @@ type Setter<T = any> = Dispatch<SetStateAction<T>>;
 type NewEmpenhoForm = {
   id: string;
   supplier: string;
+  supplierCnpj: string;
   description: string;
   pregao: string;
   date: string;
@@ -42,6 +44,7 @@ interface EmpenhosViewContext {
   handleEmpenhoDocumentUploaded: (empenhoId: string, document: EmpenhoPdfDocument) => Promise<void>;
   handleUpdateEmpenhoClassification: (empenhoId: string, classification: string) => Promise<void>;
   handleUpdateEmpenhoPregao: (empenhoId: string, pregao: string) => Promise<void>;
+  handleUpdateEmpenhoSupplierCnpj: (empenhoId: string, cnpj: string) => Promise<void>;
   handleGenerateEmpenhoReportPDF: (...args: any[]) => any;
   handleProcessJson: (...args: any[]) => any;
   handleSaveReviewEmpenho: (...args: any[]) => any;
@@ -91,10 +94,13 @@ interface EmpenhosViewProps { context: EmpenhosViewContext; }
 
 /** Tela de cadastro e detalhe de empenhos extraída sem alterar comportamento. */
 export function EmpenhosView({ context }: EmpenhosViewProps) {
-  const { addEmpenhoClass, copiedPrompt, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCopyPrompt, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadPromptPdf, handleDownloadPromptTxt, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoPregao, handleGenerateEmpenhoReportPDF, handleProcessJson, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, jsonInput, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setJsonInput, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user } = context;
+  const { addEmpenhoClass, copiedPrompt, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCopyPrompt, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadPromptPdf, handleDownloadPromptTxt, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoPregao, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessJson, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, jsonInput, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setJsonInput, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user } = context;
   const [editingPregaoEmpenhoId, setEditingPregaoEmpenhoId] = React.useState<string | null>(null);
   const [pregaoDraft, setPregaoDraft] = React.useState('');
   const [savingPregao, setSavingPregao] = React.useState(false);
+  const [editingCnpjEmpenhoId, setEditingCnpjEmpenhoId] = React.useState<string | null>(null);
+  const [cnpjDraft, setCnpjDraft] = React.useState('');
+  const [savingCnpj, setSavingCnpj] = React.useState(false);
   const [isCreatingEmpenho, setIsCreatingEmpenho] = React.useState(false);
   const [isSavingReview, setIsSavingReview] = React.useState(false);
   const [isSavingItem, setIsSavingItem] = React.useState(false);
@@ -547,6 +553,67 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                             <p className="text-sm text-gray-600 font-medium mt-1 leading-relaxed">
                               {targetEmp.description}
                             </p>
+
+                            <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50/40 px-3 py-2.5 max-w-xl">
+                              {editingCnpjEmpenhoId === targetEmp.id ? (
+                                <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                                  <div className="flex-1">
+                                    <label className="text-[10px] uppercase tracking-wider font-extrabold text-blue-700 block mb-1">CNPJ do fornecedor</label>
+                                    <input
+                                      value={cnpjDraft}
+                                      onChange={(event) => setCnpjDraft(event.target.value)}
+                                      placeholder="00.000.000/0000-00"
+                                      inputMode="numeric"
+                                      className="w-full h-9 px-3 rounded-lg border border-blue-200 bg-white text-xs font-bold text-gray-800 outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                  </div>
+                                  <div className="flex gap-2 sm:pt-4">
+                                    <button
+                                      type="button"
+                                      disabled={savingCnpj}
+                                      onClick={async () => {
+                                        setSavingCnpj(true);
+                                        try {
+                                          await handleUpdateEmpenhoSupplierCnpj(targetEmp.id, cnpjDraft);
+                                          setEditingCnpjEmpenhoId(null);
+                                        } finally {
+                                          setSavingCnpj(false);
+                                        }
+                                      }}
+                                      className="h-9 px-3 rounded-lg bg-[#00288e] text-white text-[10px] font-extrabold disabled:opacity-60"
+                                    >
+                                      Salvar CNPJ
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingCnpjEmpenhoId(null)}
+                                      className="h-9 px-3 rounded-lg bg-white border border-gray-200 text-gray-600 text-[10px] font-extrabold"
+                                    >
+                                      Cancelar
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-between gap-3">
+                                  <div>
+                                    <span className="text-[10px] uppercase tracking-wider font-extrabold text-blue-700 block">CNPJ do fornecedor</span>
+                                    <span className="text-xs font-mono font-bold text-gray-700">
+                                      {targetEmp.supplierCnpj ? formatSupplierCnpj(targetEmp.supplierCnpj) : 'Não informado'}
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setCnpjDraft(targetEmp.supplierCnpj ? formatSupplierCnpj(targetEmp.supplierCnpj) : '');
+                                      setEditingCnpjEmpenhoId(targetEmp.id);
+                                    }}
+                                    className="h-8 px-3 rounded-lg bg-white border border-blue-100 text-[#00288e] text-[10px] font-extrabold hover:bg-blue-50"
+                                  >
+                                    {targetEmp.supplierCnpj ? 'Editar' : 'Informar CNPJ'}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
 
                             <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50/50 px-3 py-2.5 max-w-xl">
                               {editingPregaoEmpenhoId === targetEmp.id ? (
@@ -1458,6 +1525,19 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                           </div>
 
                           <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">CNPJ do Fornecedor</label>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              placeholder="00.000.000/0000-00"
+                              value={newEmpenhoForm.supplierCnpj}
+                              onChange={(e) => setNewEmpenhoForm({ ...newEmpenhoForm, supplierCnpj: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-semibold text-sm text-[#0b1c30]"
+                            />
+                            <p className="mt-1 text-[10px] font-semibold text-gray-400">Recomendado para relatórios por fornecedor e conciliação SAG.</p>
+                          </div>
+
+                          <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Descrição sumária do Contrato</label>
                             <input 
                               type="text" 
@@ -1938,6 +2018,10 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                           <div className="flex justify-between">
                             <span className="text-gray-400 font-bold text-xs">Fornecedor:</span>
                             <span className="font-extrabold text-gray-800 text-right max-w-[200px] truncate">{reviewEmpenho.supplier}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400 font-bold text-xs">CNPJ:</span>
+                            <span className="font-mono font-extrabold text-gray-800">{reviewEmpenho.cnpj ? formatSupplierCnpj(reviewEmpenho.cnpj) || reviewEmpenho.cnpj : 'Não informado'}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-400 font-bold text-xs">Total de Itens:</span>

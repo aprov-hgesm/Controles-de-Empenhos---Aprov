@@ -5,6 +5,12 @@ import type { User } from 'firebase/auth';
 import type { Alert, Comissao, Empenho, Invoice, InvoiceItem, InvoicePdfDocument } from '../../../lib/types';
 import { commitAllComissoesDeletion, commitAllInvoicesDeletion, commitInvoiceDeletion, commitInvoiceReceiptChanges, saveInvoice, removeComissao, saveComissao } from '../../../lib/firebaseSync';
 import { deleteInvoicePdfUpload, uploadInvoicePdf } from '../../../lib/invoiceDocuments';
+import {
+  buildInvoiceRecordKey,
+  findInvoiceIdentityConflict,
+  getInvoiceRecordKey,
+  normalizeSupplierCnpj,
+} from '../../../lib/invoiceIdentity';
 
 type ToastType = 'success' | 'error' | 'info';
 type NfSubTab = 'acompanhar' | 'cadastrar' | 'comissao';
@@ -68,10 +74,27 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       return false;
     }
      const cleanNfNum = nfNumber.trim();
-    if (!editingInvoice && invoices.some(inv => inv.id.trim() === cleanNfNum)) {
-      showToast(`A Nota Fiscal nº ${cleanNfNum} já está cadastrada no sistema! Utilize o botão de edição na lista de notas para alterá-la.`, 'error');
+    const supplierCnpj = normalizeSupplierCnpj(targetEmpenho.supplierCnpj);
+    const previousRecordKey = editingInvoice ? getInvoiceRecordKey(editingInvoice) : undefined;
+    const identityConflict = findInvoiceIdentityConflict(
+      invoices,
+      supplierCnpj,
+      cleanNfNum,
+      previousRecordKey
+    );
+    if (identityConflict) {
+      const conflictSupplier = identityConflict.supplierCnpj
+        ? 'para este mesmo CNPJ'
+        : 'em um registro legado ainda sem CNPJ';
+      showToast(
+        `A Nota Fiscal nº ${cleanNfNum} já está cadastrada ${conflictSupplier}. Revise o fornecedor ou edite a NF existente.`,
+        'error'
+      );
       return false;
     }
+
+    const generatedRecordKey = buildInvoiceRecordKey(supplierCnpj, cleanNfNum);
+    const nextRecordKey = generatedRecordKey || previousRecordKey || cleanNfNum;
      // Validate quantities entered
     const enteredItems: InvoiceItem[] = [];
     let isAnyQtyEntered = false;
@@ -129,9 +152,11 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     const currentInvoicePdf = uploadedInvoicePdf || editingInvoice?.notaFiscalPdf;
 
      const invoiceToSave: Invoice = {
-      id: nfNumber,
+      id: cleanNfNum,
+      recordKey: nextRecordKey,
       empenhoId: selectedNFCommitmentId,
       supplier: targetEmpenho.supplier,
+      supplierCnpj: supplierCnpj || undefined,
       issueDate: nfDate,
       items: enteredItems,
       totalValue: invoiceTotal,
@@ -141,6 +166,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       ...(editingInvoice?.comissaoDate ? { comissaoDate: editingInvoice.comissaoDate } : {}),
       ...(editingInvoice?.tesourariaDate ? { tesourariaDate: editingInvoice.tesourariaDate } : {}),
       ...(editingInvoice?.termoNumero ? { termoNumero: editingInvoice.termoNumero } : {}),
+      ...(editingInvoice?.numeroNS ? { numeroNS: editingInvoice.numeroNS } : {}),
       ...(currentInvoicePdf ? { notaFiscalPdf: currentInvoicePdf } : {}),
       ...(nextPdfVersions?.length ? { notaFiscalPdfVersions: nextPdfVersions } : {}),
     };
@@ -181,11 +207,10 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
      // Update invoices array
     let updatedInvoices: Invoice[];
     if (editingInvoice) {
-      // If the ID (invoice number) changed, remove old and insert new. Otherwise, replace in-place
-      if (editingInvoice.id !== nfNumber) {
-        updatedInvoices = [invoiceToSave, ...invoices.filter(inv => inv.id !== editingInvoice.id)];
+      if (previousRecordKey !== nextRecordKey) {
+        updatedInvoices = [invoiceToSave, ...invoices.filter(inv => getInvoiceRecordKey(inv) !== previousRecordKey)];
       } else {
-        updatedInvoices = invoices.map(inv => inv.id === editingInvoice.id ? invoiceToSave : inv);
+        updatedInvoices = invoices.map(inv => getInvoiceRecordKey(inv) === previousRecordKey ? invoiceToSave : inv);
       }
     } else {
       updatedInvoices = [invoiceToSave, ...invoices];
@@ -210,7 +235,8 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
           previousEmpenho: oldEmpenhoAdjusted,
           invoice: invoiceToSave,
           alert: newAlert,
-          previousInvoiceId: editingInvoice && editingInvoice.id !== nfNumber ? editingInvoice.id : undefined,
+          previousInvoiceRecordKey:
+            editingInvoice && previousRecordKey !== nextRecordKey ? previousRecordKey : undefined,
         });
       } catch (error) {
         if (uploadedInvoicePdf) {
@@ -240,8 +266,8 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     return true;
   };
 
-  const handleInvoiceDocumentUploaded = async (invoiceId: string, document: InvoicePdfDocument) => {
-    const targetInvoice = invoices.find((invoice) => invoice.id === invoiceId);
+  const handleInvoiceDocumentUploaded = async (invoiceRecordKey: string, document: InvoicePdfDocument) => {
+    const targetInvoice = invoices.find((invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey);
     if (!targetInvoice) {
       throw new Error('Nota Fiscal não encontrada para vincular o documento.');
     }
@@ -257,7 +283,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       notaFiscalPdfVersions: versions,
     };
 
-    setInvoices((current) => current.map((invoice) => invoice.id === invoiceId ? updatedInvoice : invoice));
+    setInvoices((current) => current.map((invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey ? updatedInvoice : invoice));
     if (user) await saveInvoice(user.uid, updatedInvoice);
   };
 
@@ -307,14 +333,15 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       }
       return emp;
     });
-     const updatedInvoices = invoices.filter(inv => inv.id !== invoice.id);
+     const invoiceRecordKey = getInvoiceRecordKey(invoice);
+    const updatedInvoices = invoices.filter(inv => getInvoiceRecordKey(inv) !== invoiceRecordKey);
     if (!updatedTargetEmpenho) {
       showToast('Não foi possível localizar o empenho vinculado para reverter o recebimento.', 'error');
       return;
     }
     if (user) {
       try {
-        await commitInvoiceDeletion(user.uid, updatedTargetEmpenho, invoice.id);
+        await commitInvoiceDeletion(user.uid, updatedTargetEmpenho, invoiceRecordKey);
       } catch (error) {
         console.error('Erro ao excluir NF atomicamente:', error);
         showToast('Erro ao remover no Firebase. A Nota Fiscal foi mantida na interface.', 'error');
@@ -358,7 +385,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     }
      if (user) {
       try {
-        await commitAllInvoicesDeletion(user.uid, updatedEmpenhos, invoices.map(inv => inv.id));
+        await commitAllInvoicesDeletion(user.uid, updatedEmpenhos, invoices.map(getInvoiceRecordKey));
       } catch (error) {
         console.error('Erro ao excluir NFs em lote:', error);
         showToast('Erro ao remover no Firebase. As Notas Fiscais foram mantidas na interface.', 'error');
@@ -391,10 +418,11 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     showToast('Todas as Comissões foram apagadas com sucesso!', 'info');
   };
 
-  const handleMarkComissao = async (invoiceId: string) => {
+  const handleMarkComissao = async (invoiceRecordKey: string) => {
+    const invoiceLabel = invoices.find((invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey)?.id || invoiceRecordKey;
     let updatedTargetInvoice: Invoice | null = null;
     const updatedInvoices = invoices.map(inv => {
-      if (inv.id === invoiceId) {
+      if (getInvoiceRecordKey(inv) === invoiceRecordKey) {
         updatedTargetInvoice = {
           ...inv,
           comissaoDate: new Date().toISOString(),
@@ -413,13 +441,14 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       }
     }
     setInvoices(updatedInvoices);
-    showToast(`Nota Fiscal ${invoiceId} enviada para a Comissão de Recebimento!`);
+    showToast(`Nota Fiscal ${invoiceLabel} enviada para a Comissão de Recebimento!`);
   };
 
-  const handleMarkTesouraria = async (invoiceId: string) => {
+  const handleMarkTesouraria = async (invoiceRecordKey: string) => {
+    const invoiceLabel = invoices.find((invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey)?.id || invoiceRecordKey;
     let updatedTargetInvoice: Invoice | null = null;
     const updatedInvoices = invoices.map(inv => {
-      if (inv.id === invoiceId) {
+      if (getInvoiceRecordKey(inv) === invoiceRecordKey) {
         updatedTargetInvoice = {
           ...inv,
           tesourariaDate: new Date().toISOString(),
@@ -438,14 +467,14 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       }
     }
     setInvoices(updatedInvoices);
-    showToast(`Nota Fiscal ${invoiceId} finalizada e enviada para o Setor de Tesouraria!`);
+    showToast(`Nota Fiscal ${invoiceLabel} finalizada e enviada para o Setor de Tesouraria!`);
   };
 
   const handleUpdateInvoiceLocation = async (
-    invoiceId: string,
+    invoiceRecordKey: string,
     localizacaoAtual: NonNullable<Invoice['localizacaoAtual']>
   ): Promise<void> => {
-    const targetInvoice = invoices.find((invoice) => invoice.id === invoiceId);
+    const targetInvoice = invoices.find((invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey);
     if (!targetInvoice) {
       showToast('Nota Fiscal não encontrada para alteração de localização.', 'error');
       return;
@@ -454,13 +483,13 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     const updatedInvoice: Invoice = { ...targetInvoice, localizacaoAtual };
     try {
       if (user) await saveInvoice(user.uid, updatedInvoice);
-      setInvoices((current) => current.map((invoice) => invoice.id === invoiceId ? updatedInvoice : invoice));
+      setInvoices((current) => current.map((invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey ? updatedInvoice : invoice));
       const labels = {
         APROVISIONAMENTO: 'Setor de Aprovisionamento',
         COMISSAO: 'Comissão de Recebimento',
         TESOURARIA: 'Tesouraria',
       } as const;
-      showToast(`Localização da NF ${invoiceId} alterada para ${labels[localizacaoAtual]}.`, 'success');
+      showToast(`Localização da NF ${targetInvoice.id} alterada para ${labels[localizacaoAtual]}.`, 'success');
     } catch (error) {
       console.error('Erro ao alterar localização da Nota Fiscal:', error);
       showToast('Não foi possível atualizar a localização da Nota Fiscal.', 'error');
@@ -468,11 +497,12 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     }
   };
 
-  const handleSaveNumeroNS = async (invoiceId: string, value: string) => {
+  const handleSaveNumeroNS = async (invoiceRecordKey: string, value: string) => {
     const trimmed = value.trim();
+    const invoiceLabel = invoices.find((invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey)?.id || invoiceRecordKey;
     let updatedTargetInvoice: Invoice | null = null;
     const updatedInvoices = invoices.map(inv => {
-      if (inv.id === invoiceId) {
+      if (getInvoiceRecordKey(inv) === invoiceRecordKey) {
         updatedTargetInvoice = {
           ...inv,
           numeroNS: trimmed ? trimmed : undefined,
@@ -495,8 +525,8 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     setTempNSValue('');
     showToast(
       trimmed
-        ? `Número da NS (${trimmed}) salvo para a NF ${invoiceId}!`
-        : `Número da NS removido da NF ${invoiceId}!`,
+        ? `Número da NS (${trimmed}) salvo para a NF ${invoiceLabel}!`
+        : `Número da NS removido da NF ${invoiceLabel}!`,
       'success'
     );
   };

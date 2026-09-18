@@ -7,9 +7,10 @@ import type { Alert, Empenho, EmpenhoPdfDocument, Invoice, Item } from '../../..
 import { saveAlert, saveEmpenho, removeAlert, removeEmpenho, removeInvoice } from '../../../lib/firebaseSync';
 import { PROMPT_EXTRACAO_EMPENHO } from '../domain/empenhoHelpers';
 import { normalizeEmpenhoClassCode } from '../../../lib/empenhoClasses';
+import { getInvoiceRecordKey, normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
 
 type ActiveTab = 'painel' | 'empenhos' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas';
-type NewEmpenhoForm = { id: string; supplier: string; description: string; pregao: string; date: string; classification: string };
+type NewEmpenhoForm = { id: string; supplier: string; supplierCnpj: string; description: string; pregao: string; date: string; classification: string };
 type NewItemForm = { id: string; name: string; unit: string; quantity: string; unitPrice: string };
 type ToastType = 'success' | 'error' | 'info';
 
@@ -90,6 +91,42 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     }
   };
 
+  const handleUpdateEmpenhoSupplierCnpj = async (empenhoId: string, cnpjInput: string): Promise<void> => {
+    const currentEmpenho = empenhos.find((emp) => emp.id === empenhoId);
+    if (!currentEmpenho) {
+      showToast('Empenho não encontrado para alteração do CNPJ.', 'error');
+      return;
+    }
+
+    const normalizedCnpj = normalizeSupplierCnpj(cnpjInput);
+    if (cnpjInput.trim() && !normalizedCnpj) {
+      showToast('Informe um CNPJ válido com 14 dígitos.', 'error');
+      return;
+    }
+
+    const updatedEmpenho: Empenho = {
+      ...currentEmpenho,
+      supplierCnpj: normalizedCnpj || undefined,
+    };
+
+    try {
+      if (user) await saveEmpenho(user.uid, updatedEmpenho);
+      setEmpenhos((current) => current.map((emp) => (
+        emp.id === empenhoId ? updatedEmpenho : emp
+      )));
+      showToast(
+        normalizedCnpj
+          ? `CNPJ do fornecedor atualizado no empenho ${empenhoId}.`
+          : `CNPJ removido do empenho ${empenhoId}.`,
+        'success'
+      );
+    } catch (error) {
+      console.error('Erro ao atualizar CNPJ do fornecedor:', error);
+      showToast('Não foi possível atualizar o CNPJ do fornecedor.', 'error');
+      throw error;
+    }
+  };
+
   const handleUpdateEmpenhoClassification = async (
     empenhoId: string,
     classificationInput: string
@@ -131,7 +168,12 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       showToast('Por favor, preencha todos os campos do empenho.', 'error');
       return;
     }
-     if (empenhos.some(emp => emp.id.toUpperCase() === newEmpenhoForm.id.toUpperCase())) {
+     const normalizedSupplierCnpj = normalizeSupplierCnpj(newEmpenhoForm.supplierCnpj);
+    if (newEmpenhoForm.supplierCnpj.trim() && !normalizedSupplierCnpj) {
+      showToast('Informe um CNPJ válido com 14 dígitos.', 'error');
+      return;
+    }
+    if (empenhos.some(emp => emp.id.toUpperCase() === newEmpenhoForm.id.toUpperCase())) {
       showToast('Já existe uma Nota de Empenho com este número.', 'error');
       return;
     }
@@ -149,6 +191,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
      const newEmp: Empenho = {
       id: newEmpenhoForm.id.toUpperCase(),
       supplier: newEmpenhoForm.supplier,
+      supplierCnpj: normalizedSupplierCnpj || undefined,
       description: newEmpenhoForm.description,
       date: formattedDate,
       status: 'Ativo',
@@ -167,7 +210,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     }
     setEmpenhos(updatedEmpenhos);
     showToast(`Nota de Empenho ${newEmp.id} criada! Adicione itens a ela.`, 'success');
-    setNewEmpenhoForm({ id: '', supplier: '', description: '', pregao: '', date: new Date().toISOString().split('T')[0], classification: 'QR' });
+    setNewEmpenhoForm({ id: '', supplier: '', supplierCnpj: '', description: '', pregao: '', date: new Date().toISOString().split('T')[0], classification: 'QR' });
     setShowNewEmpenhoModal(false);
      // Redirect to Detail view of this new empenho
     setEditingEmpenhoId(newEmp.id);
@@ -315,13 +358,19 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       showToast('Por favor, preencha número, fornecedor e descrição do empenho.', 'error');
       return;
     }
-     if (empenhos.some(emp => emp.id.toUpperCase() === reviewEmpenho.id.toUpperCase())) {
+     const normalizedSupplierCnpj = normalizeSupplierCnpj(reviewEmpenho.cnpj);
+    if (String(reviewEmpenho.cnpj || '').trim() && !normalizedSupplierCnpj) {
+      showToast('O CNPJ extraído/revisado precisa conter 14 dígitos válidos para o formato esperado.', 'error');
+      return;
+    }
+    if (empenhos.some(emp => emp.id.toUpperCase() === reviewEmpenho.id.toUpperCase())) {
       showToast('Já existe uma Nota de Empenho com este número.', 'error');
       return;
     }
      const finalEmp: Empenho = {
       id: reviewEmpenho.id.toUpperCase(),
       supplier: reviewEmpenho.supplier,
+      supplierCnpj: normalizedSupplierCnpj || undefined,
       description: reviewEmpenho.description,
       date: reviewEmpenho.date,
       status: 'Ativo',
@@ -464,15 +513,15 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       setEmpenhos(prev => prev.filter(e => e.id !== id));
 
       // 2. Also remove alerts and invoices associated with this empenho if any
-      const associatedInvoices = invoices.filter(inv => (inv as Invoice & { commitmentId?: string }).commitmentId === id);
+      const associatedInvoices = invoices.filter((inv) => inv.empenhoId === id);
       const associatedAlerts = alerts.filter(a => (a as Alert & { empenhoId?: string }).empenhoId === id);
-      setInvoices(prev => prev.filter(inv => (inv as Invoice & { commitmentId?: string }).commitmentId !== id));
+      setInvoices((prev) => prev.filter((inv) => inv.empenhoId !== id));
       setAlerts(prev => prev.filter(a => (a as Alert & { empenhoId?: string }).empenhoId !== id));
        // 3. Remove from Firebase if user is logged in
       if (user) {
         await removeEmpenho(user.uid, id);
         await Promise.all([
-          ...associatedInvoices.map(inv => removeInvoice(user.uid, inv.id)),
+          ...associatedInvoices.map((inv) => removeInvoice(user.uid, getInvoiceRecordKey(inv))),
           ...associatedAlerts.map(a => removeAlert(user.uid, a.id))
         ]);
       }
@@ -492,6 +541,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
   return {
     handleEmpenhoDocumentUploaded,
     handleUpdateEmpenhoPregao,
+    handleUpdateEmpenhoSupplierCnpj,
     handleUpdateEmpenhoClassification,
     handleCreateEmpenho,
     handleDownloadPromptTxt,
