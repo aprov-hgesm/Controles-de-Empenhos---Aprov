@@ -57,6 +57,8 @@ export function AppHeader({
           onClick={onOpenSidebar}
           className="emprovex-header-menu lg:hidden p-1.5 rounded-lg active:scale-95 duration-150 transition-all"
           id="menu-toggle-btn"
+          aria-label="Abrir menu principal"
+          title="Abrir menu principal"
         >
           <Menu className="w-6 h-6" />
         </button>
