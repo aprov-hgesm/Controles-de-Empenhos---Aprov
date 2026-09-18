@@ -5,6 +5,7 @@ import {
   browserLocalPersistence,
   onAuthStateChanged,
   setPersistence,
+  signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
   type User,
@@ -27,6 +28,7 @@ import {
 } from '../lib/operationalPaths';
 import { resetActiveProfileMode, setActiveProfileMode } from '../lib/profileMode';
 import { normalizeSupplier } from '../features/empenhos/domain/empenhoHelpers';
+import { normalizePlatformEmail } from '../lib/platformIdentity';
 
 /**
  * Fonte de verdade da sessão e das coleções operacionais em tempo real.
@@ -273,33 +275,72 @@ export function useOperationalData() {
     };
   }, [user, workspaceContext]);
 
+  const finalizeSignIn = async (authenticatedUser: User) => {
+    setActiveProfileMode('sector');
+    const resolvedContext = await resolveAuthenticatedWorkspaceContext(
+      authenticatedUser,
+      'sector'
+    );
+
+    if (resolvedContext.status === 'unauthorized' || resolvedContext.status === 'anonymous') {
+      clearResolvedWorkspaceContext();
+      await signOut(auth);
+      resetActiveProfileMode();
+      setUser(null);
+      setWorkspaceContext(resolveWorkspaceContext(null));
+      clearOperationalState();
+      throw new Error('Não foi possível autorizar esta identidade no EMPROVEX.');
+    }
+
+    setUser(authenticatedUser);
+    setWorkspaceContext(resolvedContext);
+    return resolvedContext;
+  };
+
   const signInUser = async () => {
     setSyncing(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
       const credential = await signInWithPopup(auth, googleProvider);
+      return await finalizeSignIn(credential.user);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
-      // Todo login inicia no perfil operacional. Apenas a conta fundadora pode
-      // alternar posteriormente para Administração EMPROVEX.
-      setActiveProfileMode('sector');
-      const resolvedContext = await resolveAuthenticatedWorkspaceContext(
-        credential.user,
-        'sector'
+  const signInSectorUser = async (email: string, password: string) => {
+    const normalizedEmail = normalizePlatformEmail(email);
+
+    if (!normalizedEmail || !password) {
+      throw new Error('Informe o e-mail e a senha de acesso.');
+    }
+
+    setSyncing(true);
+    try {
+      await setPersistence(auth, browserLocalPersistence);
+      const credential = await signInWithEmailAndPassword(
+        auth,
+        normalizedEmail,
+        password
       );
+      return await finalizeSignIn(credential.user);
+    } catch (error) {
+      clearResolvedWorkspaceContext();
+      clearOperationalState();
+      resetActiveProfileMode();
 
-      if (resolvedContext.status === 'unauthorized' || resolvedContext.status === 'anonymous') {
-        const returnedEmail = credential.user.email || 'sem e-mail informado';
-        clearResolvedWorkspaceContext();
-        await signOut(auth);
-        resetActiveProfileMode();
-        setUser(null);
-        setWorkspaceContext(resolveWorkspaceContext(null));
-        throw new Error(`A conta Google ${returnedEmail} ainda não está autorizada no EMPROVEX.`);
+      if (auth.currentUser) {
+        await signOut(auth).catch(() => undefined);
       }
 
-      setUser(credential.user);
-      setWorkspaceContext(resolvedContext);
-      return resolvedContext;
+      setUser(null);
+      setWorkspaceContext(resolveWorkspaceContext(null));
+
+      if (error instanceof Error && error.message === 'Informe o e-mail e a senha de acesso.') {
+        throw error;
+      }
+
+      throw new Error('E-mail ou senha inválidos, ou acesso não autorizado.');
     } finally {
       setSyncing(false);
     }
@@ -371,7 +412,7 @@ export function useOperationalData() {
     invoices, setInvoices,
     comissoes, setComissoes,
     cronogramas, setCronogramas,
-    signInUser, signOutUser,
+    signInUser, signInSectorUser, signOutUser,
     getBalanceByClass,
     uniquePregaos, uniqueEmpenhoYears, uniqueNfMonths,
     formatDateTime, formatDateOnly,
