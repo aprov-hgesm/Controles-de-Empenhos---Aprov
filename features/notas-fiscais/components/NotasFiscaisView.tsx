@@ -10,6 +10,7 @@ import { MILITARY_RANKS } from '../../empenhos/domain/empenhoHelpers';
 import { AlertTriangle, ArrowUpDown, Calendar, Check, CheckCircle2, Clock, Edit, FileDown, FileText, Loader2, Package, Save, Search, Trash2, Upload, UserCheck, Users, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { Comissao, Empenho, Invoice } from '../../../lib/types';
+import { classRequiresTermoRecebimento, type EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 
 interface NotasFiscaisViewContext {
   comissaoAux1Nome: any;
@@ -25,6 +26,7 @@ interface NotasFiscaisViewContext {
   comissaoPresPosto: any;
   comissoes: Comissao[];
   editingInvoice: Invoice | null;
+  empenhoClasses: EmpenhoClassDefinition[];
   empenhos: Empenho[];
   formatDateOnly: any;
   formatDateTime: any;
@@ -88,7 +90,7 @@ interface NotasFiscaisViewProps {
 }
 /** Tela de Notas Fiscais extraída sem alterar regras de negócio ou persistência. */
 export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
-  const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
+  const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhoClasses, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
   const nfPdfInputRef = useRef<HTMLInputElement>(null);
   const [nfPdfFile, setNfPdfFile] = useState<File | null>(null);
   const [isSavingInvoice, setIsSavingInvoice] = useState(false);
@@ -97,6 +99,11 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
   const [consolidatingInvoiceId, setConsolidatingInvoiceId] = useState<string | null>(null);
   const getInvoiceLocation = (invoice: Invoice): NonNullable<Invoice['localizacaoAtual']> =>
     invoice.localizacaoAtual || (invoice.tesourariaDate ? 'TESOURARIA' : invoice.comissaoDate ? 'COMISSAO' : 'APROVISIONAMENTO');
+
+  const invoiceRequiresTR = (invoice: Invoice): boolean => {
+    const empenho = empenhos.find((item) => item.id === invoice.empenhoId);
+    return classRequiresTermoRecebimento(empenho?.classification, empenhoClasses);
+  };
 
   const runInvoiceTransition = async (invoiceId: string, action: () => Promise<unknown> | unknown) => {
     if (processingInvoiceId !== null) return;
@@ -295,7 +302,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                           <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                             nfTramitacaoFilter === 'FaltaComissao' ? 'bg-white/30 text-white' : 'bg-amber-200 text-amber-900'
                           }`}>
-                            {invoices.filter(i => getInvoiceLocation(i) === 'APROVISIONAMENTO').length}
+                            {invoices.filter((invoice) => invoiceRequiresTR(invoice) && getInvoiceLocation(invoice) === 'APROVISIONAMENTO').length}
                           </span>
                         </button>
 
@@ -313,7 +320,12 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                           <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                             nfTramitacaoFilter === 'FaltaTesouraria' ? 'bg-white/30 text-white' : 'bg-indigo-200 text-indigo-900'
                           }`}>
-                            {invoices.filter(i => getInvoiceLocation(i) === 'COMISSAO').length}
+                            {invoices.filter((invoice) => {
+                              const location = getInvoiceLocation(invoice);
+                              return invoiceRequiresTR(invoice)
+                                ? location === 'COMISSAO'
+                                : location !== 'TESOURARIA';
+                            }).length}
                           </span>
                         </button>
 
@@ -372,10 +384,13 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
 
                         let matchesTramitacao = true;
                         const currentLocation = getInvoiceLocation(inv);
+                        const requiresTR = invoiceRequiresTR(inv);
                         if (nfTramitacaoFilter === 'FaltaComissao') {
-                          matchesTramitacao = currentLocation === 'APROVISIONAMENTO';
+                          matchesTramitacao = requiresTR && currentLocation === 'APROVISIONAMENTO';
                         } else if (nfTramitacaoFilter === 'FaltaTesouraria') {
-                          matchesTramitacao = currentLocation === 'COMISSAO';
+                          matchesTramitacao = requiresTR
+                            ? currentLocation === 'COMISSAO'
+                            : currentLocation !== 'TESOURARIA';
                         } else if (nfTramitacaoFilter === 'Concluidas') {
                           matchesTramitacao = currentLocation === 'TESOURARIA';
                         }
@@ -418,7 +433,15 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                         );
                       }
 
-                      return filteredInvoices.map((inv) => (
+                      return filteredInvoices.map((inv) => {
+                        const targetEmpenho = empenhos.find((emp) => emp.id === inv.empenhoId);
+                        const requiresTR = classRequiresTermoRecebimento(
+                          targetEmpenho?.classification,
+                          empenhoClasses
+                        );
+                        const currentLocation = getInvoiceLocation(inv);
+
+                        return (
                         <div key={inv.id} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4 hover:border-blue-100 transition-all">
                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-3 border-b border-gray-50">
                             <div>
@@ -471,22 +494,42 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                               onNotify={showToast}
                             />
                             <EmpenhoDocumentActions
-                              empenho={empenhos.find((emp) => emp.id === inv.empenhoId)}
+                              empenho={targetEmpenho}
                               user={user}
                               variant="panel"
                               onDocumentUploaded={handleEmpenhoDocumentUploaded}
                               onNotify={showToast}
                             />
-                            <TermoRecebimentoActions
-                              invoice={inv}
-                              onAction={handleTermoRecebimentoAction}
-                            />
+                            {requiresTR ? (
+                              <TermoRecebimentoActions
+                                invoice={inv}
+                                onAction={handleTermoRecebimentoAction}
+                              />
+                            ) : (
+                              <section className="bg-white/80 backdrop-blur-md p-5 rounded-2xl border border-emerald-100 shadow-sm">
+                                <div className="flex items-start gap-3">
+                                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0">
+                                    <CheckCircle2 className="w-5 h-5" />
+                                  </div>
+                                  <div>
+                                    <h4 className="text-sm font-black text-[#0b1c30]">Termo de Recebimento dispensado</h4>
+                                    <p className="text-xs font-semibold text-gray-600 mt-0.5">
+                                      A classe {targetEmpenho?.classification || 'QR'} está configurada sem exigência de TR ou Comissão de Recebimento.
+                                    </p>
+                                  </div>
+                                </div>
+                              </section>
+                            )}
                           </div>
 
                           <div className="rounded-xl border border-sky-100 bg-sky-50/50 p-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
                             <div>
                               <span className="text-[10px] font-extrabold uppercase tracking-wider text-sky-700 block">Localização atual da Nota Fiscal</span>
-                              <p className="text-xs text-gray-500 font-medium mt-0.5">Altere este campo quando a NF retornar da Comissão ou Tesouraria para correção. O histórico de datas permanece preservado.</p>
+                              <p className="text-xs text-gray-500 font-medium mt-0.5">
+                                {requiresTR
+                                  ? 'Altere este campo quando a NF retornar da Comissão ou Tesouraria para correção. O histórico de datas permanece preservado.'
+                                  : 'Esta classe dispensa Comissão de Recebimento. A NF tramita diretamente entre Aprovisionamento e Tesouraria.'}
+                              </p>
                             </div>
                             <select
                               value={getInvoiceLocation(inv)}
@@ -496,7 +539,11 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                               className="h-10 px-3 rounded-xl border border-sky-200 bg-white text-xs font-extrabold text-sky-900 outline-none focus:ring-1 focus:ring-sky-500 min-w-[220px] disabled:opacity-60 disabled:cursor-wait"
                             >
                               <option value="APROVISIONAMENTO">Aprovisionamento</option>
-                              <option value="COMISSAO">Comissão de Recebimento</option>
+                              {(requiresTR || currentLocation === 'COMISSAO') && (
+                                <option value="COMISSAO">
+                                  {requiresTR ? 'Comissão de Recebimento' : 'Comissão de Recebimento (histórico)'}
+                                </option>
+                              )}
                               <option value="TESOURARIA">Tesouraria</option>
                             </select>
                           </div>
@@ -518,12 +565,20 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                             {/* 2. COMISSÃO DE RECEBIMENTO */}
                             <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 flex flex-col justify-between gap-2">
                               <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-lg ${inv.comissaoDate ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                                <div className={`p-2 rounded-lg ${
+                                  requiresTR
+                                    ? (inv.comissaoDate ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600')
+                                    : 'bg-emerald-50 text-emerald-600'
+                                }`}>
                                   <CheckCircle2 className="w-5 h-5" />
                                 </div>
                                 <div>
                                   <span className="text-[10px] text-gray-400 font-bold uppercase block">Comissão de Recebimento</span>
-                                  {inv.comissaoDate ? (
+                                  {!requiresTR ? (
+                                    <span className="text-xs font-bold text-emerald-700">
+                                      Dispensada — classe {targetEmpenho?.classification || 'QR'}
+                                    </span>
+                                  ) : inv.comissaoDate ? (
                                     <span className="text-xs font-bold text-emerald-700">
                                       Recebido: {formatDateTime(inv.comissaoDate)}
                                     </span>
@@ -533,7 +588,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                 </div>
                               </div>
                               
-                              {getInvoiceLocation(inv) === 'APROVISIONAMENTO' && (
+                              {requiresTR && currentLocation === 'APROVISIONAMENTO' && (
                                 <button
                                   onClick={() => runInvoiceTransition(inv.id, () => handleMarkComissao(inv.id))}
                                   disabled={processingInvoiceId !== null}
@@ -564,17 +619,13 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                 </div>
                               </div>
 
-                              {getInvoiceLocation(inv) === 'COMISSAO' && (
+                              {(currentLocation === 'COMISSAO' || (!requiresTR && currentLocation === 'APROVISIONAMENTO')) && (
                                 <button
                                   onClick={() => runInvoiceTransition(inv.id, () => handleMarkTesouraria(inv.id))}
-                                  disabled={getInvoiceLocation(inv) !== 'COMISSAO' || processingInvoiceId !== null}
+                                  disabled={processingInvoiceId !== null}
                                   aria-busy={processingInvoiceId === inv.id}
-                                  className={`mt-1 w-full py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                                    getInvoiceLocation(inv) === 'COMISSAO'
-                                      ? 'bg-[#00288e] hover:bg-[#1e40af] text-white shadow-sm' 
-                                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                  }`}
-                                  title={getInvoiceLocation(inv) !== 'COMISSAO' ? "A NF precisa estar na Comissão de Recebimento antes do envio à Tesouraria" : ""}
+                                  className="mt-1 w-full py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-[#00288e] hover:bg-[#1e40af] text-white shadow-sm disabled:opacity-60 disabled:cursor-wait"
+                                  title={requiresTR ? 'Enviar NF recebida pela Comissão para a Tesouraria' : 'Enviar diretamente para a Tesouraria — TR dispensado pela classe'}
                                 >
                                   {processingInvoiceId === inv.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                                   {processingInvoiceId === inv.id ? 'Enviando…' : 'Enviar p/ Tesouraria'}
@@ -603,7 +654,11 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                           <div className="mt-3 rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50/80 to-blue-50/80 p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                             <div>
                               <p className="text-xs font-black text-[#001453] uppercase tracking-wider">Documento de Liquidação Consolidada</p>
-                              <p className="text-xs text-gray-600 font-medium mt-1">Une, nesta ordem, Nota de Empenho + Nota Fiscal (quando houver) + Termo de Recebimento em um único PDF.</p>
+                              <p className="text-xs text-gray-600 font-medium mt-1">
+                                {requiresTR
+                                  ? 'Une, nesta ordem, Nota de Empenho + Nota Fiscal (quando houver) + Termo de Recebimento em um único PDF.'
+                                  : `Une Nota de Empenho + Nota Fiscal em um único PDF. O TR é dispensado pela classe ${targetEmpenho?.classification || 'QR'}.`}
+                              </p>
                             </div>
                             <button
                               type="button"
@@ -624,7 +679,8 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                             </button>
                           </div>
                         </div>
-                      ));
+                        );
+                      });
                     })()}
                   </div>
                 </div>
