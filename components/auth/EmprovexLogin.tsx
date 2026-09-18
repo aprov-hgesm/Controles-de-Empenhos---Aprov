@@ -19,6 +19,7 @@ import { ToastNotification } from '../layout/ToastNotification';
 import { LoginAtmosphere } from './LoginAtmosphere';
 import { LoginBrandStage } from './LoginBrandStage';
 import type { LoginLogoVisualState } from './LoginLogoCore';
+import { LoginStatusRail, type LoginNarrativePhase } from './LoginStatusRail';
 
 type LoginToast = {
   message: string;
@@ -76,6 +77,12 @@ export function EmprovexLogin({
       : credentialsReady
         ? 'ready'
         : 'idle';
+
+  const narrativePhase: LoginNarrativePhase = isSigningIn
+    ? 'identity'
+    : toast?.type === 'error'
+      ? 'error'
+      : 'idle';
 
   const handleSectorSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -144,6 +151,13 @@ export function EmprovexLogin({
               <div className="emprovex-login-panel__edge pointer-events-none absolute inset-0 rounded-[inherit]" />
               <div className="emprovex-login-panel__reflection pointer-events-none absolute inset-0 rounded-[inherit]" />
               <div className="emprovex-login-panel__beam pointer-events-none absolute inset-x-10 top-0 h-px" />
+              <div
+                className="emprovex-auth-scanner pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
+                data-active={isSigningIn ? 'true' : 'false'}
+                aria-hidden="true"
+              >
+                <span />
+              </div>
               <div className="pointer-events-none absolute -right-24 -top-24 h-48 w-48 rounded-full bg-blue-500/[0.09] blur-3xl" />
 
               <div className="relative z-[2]">
@@ -171,6 +185,12 @@ export function EmprovexLogin({
                     Entre com as credenciais cadastradas pela Administração EMPROVEX para acessar seu workspace.
                   </p>
                 </div>
+
+                <LoginStatusRail
+                  phase={narrativePhase}
+                  mode={authMode}
+                  className="mt-6"
+                />
 
                 <form onSubmit={handleSectorSubmit} className="mt-7 space-y-5">
                   <label
