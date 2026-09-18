@@ -47,12 +47,12 @@ export function AppSidebar({
 
       <aside
         className={`
-          fixed top-16 left-0 h-[calc(100vh-4rem)] w-72 overflow-y-auto overscroll-contain bg-white/60 backdrop-blur-md border-r border-white/20 py-6 z-40
-          flex flex-col justify-between transition-transform duration-300 ease-out shadow-sm lg:shadow-none
+          emprovex-app-sidebar fixed top-16 left-0 h-[calc(100vh-4rem)] w-72 overflow-y-auto overscroll-contain py-6 z-40
+          flex flex-col justify-between transition-transform duration-300 ease-out
           ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
-        <div className="space-y-6">
+        <div className="relative z-[1] space-y-6">
           <div className="mx-4 px-4 py-3 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/40 shadow-xs">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Usuário Conectado</p>
             <p className="font-bold text-sm text-[#0b1c30] truncate mt-0.5">
@@ -135,7 +135,7 @@ export function AppSidebar({
           </nav>
         </div>
 
-        <div className="px-6 border-t border-gray-100 pt-4 space-y-3">
+        <div className="relative z-[1] px-6 border-t border-white/[0.08] pt-4 space-y-3">
           <button
             onClick={onLogout}
             className="w-full flex items-center gap-2.5 px-3 py-2 text-rose-600 hover:bg-rose-50 rounded-xl font-bold text-xs transition-all active:scale-95"
