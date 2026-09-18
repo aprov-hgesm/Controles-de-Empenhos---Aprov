@@ -216,11 +216,13 @@ service cloud.firestore {
     }
 
     function validOperationalTermCounterUpdate() {
-      return request.resource.data.keys().hasOnly(['currentNumber'])
-        && request.resource.data.currentNumber is int
+      return request.resource.data.currentNumber is int
         && request.resource.data.currentNumber >= 0
         && resource.data.currentNumber is int
-        && request.resource.data.currentNumber >= resource.data.currentNumber;
+        && request.resource.data.currentNumber >= resource.data.currentNumber
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'currentNumber'
+        ]);
     }
 
     function isSelfPlatformAccount() {
