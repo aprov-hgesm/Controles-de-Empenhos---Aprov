@@ -525,7 +525,6 @@ button[aria-busy="true"] .animate-spin {
   border-radius: 8px;
   background: rgba(2, 8, 23, 0.22);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.012);
-  backdrop-filter: blur(3px);
 }
 
 .emprovex-login-scanline {
@@ -1953,7 +1952,6 @@ button[aria-busy="true"] .animate-spin {
 .emprovex-login-grain {
   transition:
     opacity 420ms var(--emprovex-motion-ease-soft),
-    filter 420ms var(--emprovex-motion-ease-soft),
     transform 520ms var(--emprovex-motion-ease-soft);
 }
 
@@ -2184,5 +2182,80 @@ button[aria-busy="true"] .animate-spin {
   .emprovex-login-grain {
     transition: none !important;
     transform: none !important;
+  }
+}
+
+
+/* EMPROVEX login — performance, accessibility and final polish (Bloco 9). */
+.emprovex-login-shell button:focus-visible,
+.emprovex-login-shell a:focus-visible,
+.emprovex-login-shell input:focus-visible {
+  outline: 2px solid rgba(147, 197, 253, 0.96);
+  outline-offset: 3px;
+  box-shadow:
+    0 0 0 4px rgba(37, 99, 235, 0.14),
+    0 0 20px rgba(59, 130, 246, 0.10);
+}
+
+.emprovex-login-footer-link {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  padding-inline: 0.2rem;
+}
+
+@media (max-width: 767px) {
+  .emprovex-login-panel,
+  .emprovex-auth-loading-panel {
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .emprovex-logo-core__surface {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .emprovex-login-success__backdrop {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+}
+
+@media (prefers-contrast: more) {
+  .emprovex-login-panel,
+  .emprovex-auth-loading-panel,
+  .emprovex-auth-rail,
+  .emprovex-institutional-card {
+    border-color: rgba(191, 219, 254, 0.24) !important;
+  }
+
+  .emprovex-login-shell .text-slate-500,
+  .emprovex-login-shell .text-slate-500\/70,
+  .emprovex-login-shell .text-slate-500\/75,
+  .emprovex-login-shell .text-slate-500\/80 {
+    color: rgb(203 213 225) !important;
+  }
+
+  .emprovex-login-shell .text-slate-400 {
+    color: rgb(226 232 240) !important;
+  }
+
+  .emprovex-login-input {
+    border-color: rgba(191, 219, 254, 0.30);
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .emprovex-login-panel,
+  .emprovex-auth-loading-panel,
+  .emprovex-logo-core__surface {
+    background-color: rgba(5, 18, 42, 0.96);
+  }
+
+  .emprovex-login-success__backdrop {
+    background:
+      radial-gradient(circle at 50% 50%, rgba(23,83,196,0.17), transparent 28%),
+      rgba(2,8,23,0.97);
   }
 }
