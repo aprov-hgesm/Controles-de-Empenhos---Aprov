@@ -114,7 +114,7 @@ export function PlatformAdminView({
     if (workspace.legacyWorkspace) return;
 
     const confirmed = window.confirm(
-      `Excluir definitivamente ${workspace.name}?\n\nEsta ação removerá o usuário de acesso, o workspace e todos os dados vinculados a este setor no EMPROVEX. Esta operação não pode ser desfeita.`
+      `Excluir definitivamente ${workspace.name}?\n\nEsta ação removerá o usuário de acesso, o workspace e os dados deste setor armazenados no EMPROVEX. Arquivos eventualmente existentes no Google Drive externo não serão apagados. Esta operação não pode ser desfeita.`
     );
     if (!confirmed) return;
 
