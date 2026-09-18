@@ -97,7 +97,7 @@ Neste bloco eles são apenas fundação: nenhum componente existente consome os 
 1. ~~Sidebar estrutural premium.~~ **Concluído no Bloco 2.**
 2. ~~Navegação premium da Sidebar.~~ **Concluído no Bloco 3.**
 3. ~~Card do Operador e rodapé do Sistema.~~ **Concluído no Bloco 4.**
-4. Header estrutural premium.
+4. ~~Header estrutural premium.~~ **Concluído no Bloco 5.**
 5. Núcleo visual da marca no Header.
 6. Controles inteligentes do Header.
 7. Linha de energia e microinterações.
@@ -164,3 +164,21 @@ A Sidebar agora comunica identidade e estado sem alterar qualquer lógica de ses
 - toda a interface visível mantida em português.
 
 Nenhuma lógica de autenticação, sessão, Firestore, Drive, workspace, multi-tenant ou dados foi alterada.
+
+
+## Bloco 5 — Header estrutural premium
+
+Status: concluído.
+
+O Header agora funciona como continuação visual direta da Sidebar:
+
+- superfície navy profunda baseada nos tokens do App Shell;
+- glassmorphism escuro e profundidade superior;
+- borda inferior refrativa de baixa intensidade;
+- grid técnico quase invisível;
+- halos azul/cyan estáticos e discretos;
+- compatibilidade de contraste para menu, marca, subtítulo e nome do usuário;
+- manutenção integral da altura de `4rem`, posição fixa e z-index;
+- nenhum handler de logo, Drive, Administração, menu ou sincronização foi alterado.
+
+Os controles individuais do Header e o núcleo visual da marca permanecem reservados para os Blocos 6 e 7.
