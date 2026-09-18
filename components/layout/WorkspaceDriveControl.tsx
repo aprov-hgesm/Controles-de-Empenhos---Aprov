@@ -213,7 +213,7 @@ export function WorkspaceDriveControl({
           </div>
 
           <p className="mt-3 text-[10px] leading-relaxed text-slate-400">
-            O token do Google Drive não é persistido. Após recarregar o sistema, a configuração permanece, mas o Drive precisa ser reconectado para operações com arquivos.
+            O token do Google Drive não é persistido. Quando a autorização temporária expirar, somente a sessão do Drive será descartada e a opção Reconectar Drive ficará disponível, sem encerrar a sessão do EMPROVEX.
           </p>
         </div>
       )}
