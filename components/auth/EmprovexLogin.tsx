@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import {
@@ -24,6 +24,9 @@ type LoginToast = {
   message: string;
   type: 'success' | 'error' | 'info';
 } | null;
+
+type FocusedField = 'email' | 'password' | null;
+type AuthMode = 'sector' | 'founder' | null;
 
 interface EmprovexLoginProps {
   customLogo: string | null;
@@ -53,6 +56,10 @@ export function EmprovexLogin({
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<FocusedField>(null);
+  const [authMode, setAuthMode] = useState<AuthMode>(null);
+
+  const credentialsReady = Boolean(loginEmail.trim() && loginPassword);
 
   const logoVisualState: LoginLogoVisualState = isSigningIn
     ? 'authenticating'
@@ -62,12 +69,52 @@ export function EmprovexLogin({
         ? 'error'
         : 'idle';
 
+  const panelVisualState = isSigningIn
+    ? 'authenticating'
+    : toast?.type === 'error'
+      ? 'error'
+      : credentialsReady
+        ? 'ready'
+        : 'idle';
+
   const handleSectorSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isSigningIn) return;
 
-    const authenticated = await onSectorLogin(loginEmail, loginPassword);
-    if (authenticated) setLoginPassword('');
+    setAuthMode('sector');
+    try {
+      const authenticated = await onSectorLogin(loginEmail, loginPassword);
+      if (authenticated) setLoginPassword('');
+    } finally {
+      setAuthMode(null);
+    }
+  };
+
+  const handleFounderSubmit = async () => {
+    if (isSigningIn) return;
+
+    setAuthMode('founder');
+    try {
+      await onFounderLogin();
+    } finally {
+      setAuthMode(null);
+    }
+  };
+
+  const handlePanelPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
+    if (event.pointerType === 'touch') return;
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = ((event.clientX - bounds.left) / Math.max(bounds.width, 1)) * 100;
+    const y = ((event.clientY - bounds.top) / Math.max(bounds.height, 1)) * 100;
+
+    event.currentTarget.style.setProperty('--panel-x', `${x.toFixed(2)}%`);
+    event.currentTarget.style.setProperty('--panel-y', `${y.toFixed(2)}%`);
+  };
+
+  const resetPanelPointer = (event: ReactPointerEvent<HTMLElement>) => {
+    event.currentTarget.style.setProperty('--panel-x', '50%');
+    event.currentTarget.style.setProperty('--panel-y', '22%');
   };
 
   return (
@@ -87,20 +134,28 @@ export function EmprovexLogin({
           className="relative flex items-center justify-center px-4 py-8 sm:px-8 sm:py-10 lg:px-10 xl:px-14"
         >
           <div className="w-full max-w-[540px]">
-            <section className="emprovex-login-panel relative overflow-hidden rounded-[2rem] border border-white/[0.10] bg-[#071225]/78 p-5 shadow-[0_40px_120px_rgba(0,7,28,0.62)] backdrop-blur-2xl sm:p-8 lg:p-9">
-              <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-blue-300/55 to-transparent" />
+            <section
+              className="emprovex-login-panel relative overflow-hidden rounded-[2rem] border border-white/[0.10] bg-[#071225]/78 p-5 backdrop-blur-2xl sm:p-8 lg:p-9"
+              data-state={panelVisualState}
+              data-focus={focusedField ?? 'none'}
+              onPointerMove={handlePanelPointerMove}
+              onPointerLeave={resetPanelPointer}
+            >
+              <div className="emprovex-login-panel__edge pointer-events-none absolute inset-0 rounded-[inherit]" />
+              <div className="emprovex-login-panel__reflection pointer-events-none absolute inset-0 rounded-[inherit]" />
+              <div className="emprovex-login-panel__beam pointer-events-none absolute inset-x-10 top-0 h-px" />
               <div className="pointer-events-none absolute -right-24 -top-24 h-48 w-48 rounded-full bg-blue-500/[0.09] blur-3xl" />
 
-              <div className="relative">
+              <div className="relative z-[2]">
                 <div className="flex items-center justify-between gap-4">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-blue-300/[0.12] bg-blue-400/[0.055] px-3 py-1.5">
+                  <div className="emprovex-access-pill inline-flex items-center gap-2 rounded-full border border-blue-300/[0.12] bg-blue-400/[0.055] px-3 py-1.5">
                     <LockKeyhole className="h-3.5 w-3.5 text-blue-300" />
                     <span className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100/80">
-                      Acesso seguro
+                      Identidade e acesso
                     </span>
                   </div>
                   <div className="hidden items-center gap-2 text-[10px] font-medium text-slate-500 sm:flex">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/80" />
+                    <span className="emprovex-panel-status-dot h-1.5 w-1.5 rounded-full bg-blue-400/80" />
                     EMPROVEX
                   </div>
                 </div>
@@ -118,48 +173,72 @@ export function EmprovexLogin({
                 </div>
 
                 <form onSubmit={handleSectorSubmit} className="mt-7 space-y-5">
-                  <label className="group block text-left">
-                    <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.11em] text-slate-400">
-                      E-mail institucional
+                  <label
+                    className="emprovex-login-field group block text-left"
+                    data-active={focusedField === 'email' ? 'true' : 'false'}
+                  >
+                    <span className="mb-2 flex items-center justify-between gap-3">
+                      <span className="text-[11px] font-bold uppercase tracking-[0.11em] text-slate-400">
+                        E-mail institucional
+                      </span>
+                      <span className="font-mono text-[9px] font-medium tracking-[0.14em] text-slate-700">
+                        01
+                      </span>
                     </span>
-                    <div className="relative">
-                      <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-blue-300" />
+                    <div className="emprovex-login-field__control relative">
+                      <span className="emprovex-login-field__glow pointer-events-none absolute inset-0 rounded-2xl" />
+                      <Mail className="emprovex-login-field__icon pointer-events-none absolute left-4 top-1/2 z-[2] h-4 w-4 -translate-y-1/2 text-slate-500" />
                       <input
                         type="email"
                         value={loginEmail}
                         onChange={(event) => setLoginEmail(event.target.value)}
+                        onFocus={() => setFocusedField('email')}
+                        onBlur={() => setFocusedField(null)}
                         autoComplete="email"
                         inputMode="email"
                         required
                         disabled={isSigningIn}
                         placeholder="setor@exemplo.mil.br"
-                        className="emprovex-login-input h-14 w-full rounded-2xl border border-white/[0.09] bg-slate-950/35 pl-11 pr-4 text-sm font-medium text-white outline-none transition-all placeholder:text-slate-600 hover:border-white/[0.15] focus:border-blue-400/45 focus:bg-slate-950/50 focus:ring-4 focus:ring-blue-500/[0.08] disabled:opacity-60"
+                        className="emprovex-login-input relative z-[1] h-14 w-full rounded-2xl border border-white/[0.09] bg-slate-950/35 pl-11 pr-4 text-sm font-medium text-white outline-none placeholder:text-slate-600 disabled:opacity-60"
                       />
+                      <span className="emprovex-login-field__line pointer-events-none absolute inset-x-4 bottom-0 z-[3] h-px origin-center" />
                     </div>
                   </label>
 
-                  <label className="group block text-left">
-                    <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.11em] text-slate-400">
-                      Senha
+                  <label
+                    className="emprovex-login-field group block text-left"
+                    data-active={focusedField === 'password' ? 'true' : 'false'}
+                  >
+                    <span className="mb-2 flex items-center justify-between gap-3">
+                      <span className="text-[11px] font-bold uppercase tracking-[0.11em] text-slate-400">
+                        Senha
+                      </span>
+                      <span className="font-mono text-[9px] font-medium tracking-[0.14em] text-slate-700">
+                        02
+                      </span>
                     </span>
-                    <div className="relative">
-                      <KeyRound className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-blue-300" />
+                    <div className="emprovex-login-field__control relative">
+                      <span className="emprovex-login-field__glow pointer-events-none absolute inset-0 rounded-2xl" />
+                      <KeyRound className="emprovex-login-field__icon pointer-events-none absolute left-4 top-1/2 z-[2] h-4 w-4 -translate-y-1/2 text-slate-500" />
                       <input
                         type={showLoginPassword ? 'text' : 'password'}
                         value={loginPassword}
                         onChange={(event) => setLoginPassword(event.target.value)}
+                        onFocus={() => setFocusedField('password')}
+                        onBlur={() => setFocusedField(null)}
                         autoComplete="current-password"
                         required
                         disabled={isSigningIn}
                         placeholder="Digite sua senha"
-                        className="emprovex-login-input h-14 w-full rounded-2xl border border-white/[0.09] bg-slate-950/35 pl-11 pr-13 text-sm font-medium text-white outline-none transition-all placeholder:text-slate-600 hover:border-white/[0.15] focus:border-blue-400/45 focus:bg-slate-950/50 focus:ring-4 focus:ring-blue-500/[0.08] disabled:opacity-60"
+                        className="emprovex-login-input relative z-[1] h-14 w-full rounded-2xl border border-white/[0.09] bg-slate-950/35 pl-11 pr-13 text-sm font-medium text-white outline-none placeholder:text-slate-600 disabled:opacity-60"
                       />
+                      <span className="emprovex-login-field__line pointer-events-none absolute inset-x-4 bottom-0 z-[3] h-px origin-center" />
                       <button
                         type="button"
                         onClick={() => setShowLoginPassword((current) => !current)}
                         disabled={isSigningIn}
                         aria-label={showLoginPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                        className="absolute right-2.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl text-slate-500 transition hover:bg-white/[0.06] hover:text-white disabled:opacity-50"
+                        className="emprovex-password-toggle absolute right-2.5 top-1/2 z-[4] flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl text-slate-500 disabled:opacity-50"
                       >
                         {showLoginPassword
                           ? <EyeOff className="h-4 w-4" />
@@ -170,19 +249,22 @@ export function EmprovexLogin({
 
                   <button
                     type="submit"
-                    disabled={isSigningIn || !loginEmail.trim() || !loginPassword}
-                    aria-busy={isSigningIn}
-                    className="emprovex-login-primary group relative flex h-14 w-full items-center justify-center gap-3 overflow-hidden rounded-2xl border border-blue-300/10 bg-gradient-to-r from-[#063db4] via-[#0345c9] to-[#0a55dc] px-5 text-sm font-extrabold text-white shadow-[0_18px_45px_rgba(0,54,180,0.28)] transition-all hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(0,72,210,0.36)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0"
+                    disabled={isSigningIn || !credentialsReady}
+                    aria-busy={isSigningIn && authMode === 'sector'}
+                    data-state={isSigningIn && authMode === 'sector' ? 'authenticating' : credentialsReady ? 'ready' : 'idle'}
+                    className="emprovex-login-primary group relative flex h-14 w-full items-center justify-center gap-3 overflow-hidden rounded-2xl border border-blue-300/10 px-5 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-55"
                   >
-                    <span className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.12] to-transparent opacity-70" />
-                    {isSigningIn
+                    <span className="emprovex-login-primary__base pointer-events-none absolute inset-0" />
+                    <span className="emprovex-login-primary__sheen pointer-events-none absolute inset-y-0 -left-1/3 w-1/3" />
+                    <span className="emprovex-login-primary__edge pointer-events-none absolute inset-0 rounded-[inherit]" />
+                    {isSigningIn && authMode === 'sector'
                       ? <Loader2 className="relative h-5 w-5 animate-spin" />
                       : <LogIn className="relative h-5 w-5" />}
                     <span className="relative">
-                      {isSigningIn ? 'Autenticando…' : 'Entrar com e-mail e senha'}
+                      {isSigningIn && authMode === 'sector' ? 'Autenticando…' : 'Entrar com e-mail e senha'}
                     </span>
-                    {!isSigningIn && (
-                      <ArrowRight className="relative h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                    {!(isSigningIn && authMode === 'sector') && (
+                      <ArrowRight className="relative h-4 w-4 transition-transform group-hover:translate-x-1" />
                     )}
                   </button>
                 </form>
@@ -195,9 +277,9 @@ export function EmprovexLogin({
                   <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/[0.10]" />
                 </div>
 
-                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4">
+                <div className="emprovex-institutional-card rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4">
                   <div className="flex items-start gap-3">
-                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.045]">
+                    <div className="emprovex-institutional-card__icon mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.045]">
                       <ShieldCheck className="h-4 w-4 text-slate-300" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -209,14 +291,17 @@ export function EmprovexLogin({
                   </div>
                   <button
                     type="button"
-                    onClick={() => void onFounderLogin()}
+                    onClick={() => void handleFounderSubmit()}
                     disabled={isSigningIn}
-                    className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/[0.10] bg-white/[0.045] text-xs font-bold text-slate-200 transition hover:border-white/[0.16] hover:bg-white/[0.075] hover:text-white disabled:cursor-wait disabled:opacity-60"
+                    aria-busy={isSigningIn && authMode === 'founder'}
+                    data-state={isSigningIn && authMode === 'founder' ? 'authenticating' : 'idle'}
+                    className="emprovex-google-button group relative mt-4 flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-xl border border-white/[0.10] bg-white/[0.045] text-xs font-bold text-slate-200 disabled:cursor-wait disabled:opacity-60"
                   >
-                    {isSigningIn
-                      ? <Loader2 className="h-4 w-4 animate-spin" />
-                      : <LogIn className="h-4 w-4" />}
-                    Entrar com Google — HGeSM
+                    <span className="emprovex-google-button__sheen pointer-events-none absolute inset-y-0 -left-1/3 w-1/3" />
+                    {isSigningIn && authMode === 'founder'
+                      ? <Loader2 className="relative h-4 w-4 animate-spin" />
+                      : <LogIn className="relative h-4 w-4" />}
+                    <span className="relative">Entrar com Google — HGeSM</span>
                   </button>
                 </div>
               </div>
