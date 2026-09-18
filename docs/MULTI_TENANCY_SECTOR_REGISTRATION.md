@@ -122,8 +122,21 @@ O repositório possui uma suíte baseada no Firebase Emulator Suite que valida i
 
 A suíte usa apenas dados descartáveis do projeto local `demo-emprovex-security` e é executada pelo CI antes do build de produção.
 
-## Próxima dependência
+## Homologação real — Bloco 21
 
-Para homologação multi-tenant completa, resta:
+A preparação técnica da homologação está implementada. O repositório possui um gate de prontidão de produção e um runbook específico para cadastrar, autenticar, conectar o Google Drive, testar operação, suspender e reativar um segundo setor real.
 
-- Bloco 21 — homologação de um segundo setor real em produção.
+O Bloco 21 permanece **em homologação** até que uma segunda Conta Google real conclua todas as fases em produção.
+
+Gate:
+
+```bash
+npm run verify:production-multitenant-readiness
+```
+
+Resultado esperado:
+
+```text
+PRODUCTION MULTI-TENANT READINESS: READY
+```
+
