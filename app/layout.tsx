@@ -1,4 +1,5 @@
 import type {Metadata} from 'next';
+import Script from 'next/script';
 import { Inter, JetBrains_Mono, Montserrat } from 'next/font/google';
 import './globals.css'; // Global styles
 
@@ -27,6 +28,11 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="pt-BR" className={`${inter.variable} ${jetbrainsMono.variable} ${montserrat.variable}`}>
       <body suppressHydrationWarning className="bg-[#f8f9ff] text-[#0b1c30] antialiased min-h-screen font-sans">
+        <Script
+          id="google-identity-services"
+          src="https://accounts.google.com/gsi/client"
+          strategy="afterInteractive"
+        />
         {children}
       </body>
     </html>
