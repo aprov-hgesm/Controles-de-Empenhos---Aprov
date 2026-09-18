@@ -213,6 +213,51 @@ service cloud.firestore {
         ]);
     }
 
+    function validWorkspaceDocumentStorage(workspaceId) {
+      return request.resource.data.keys().hasAll([
+          'provider',
+          'status',
+          'workspaceId',
+          'accountEmail',
+          'rootFolderId',
+          'empenhosFolderId',
+          'invoicesFolderId',
+          'configuredAt',
+          'updatedAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'provider',
+          'status',
+          'workspaceId',
+          'accountEmail',
+          'rootFolderId',
+          'empenhosFolderId',
+          'invoicesFolderId',
+          'configuredAt',
+          'updatedAt'
+        ])
+        && request.resource.data.provider == 'google-drive'
+        && request.resource.data.status == 'configured'
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.accountEmail == request.auth.token.email
+        && request.resource.data.rootFolderId is string
+        && request.resource.data.rootFolderId.size() > 5
+        && request.resource.data.empenhosFolderId is string
+        && request.resource.data.empenhosFolderId.size() > 5
+        && request.resource.data.invoicesFolderId is string
+        && request.resource.data.invoicesFolderId.size() > 5
+        && request.resource.data.configuredAt is string
+        && request.resource.data.updatedAt is string;
+    }
+
+    function validWorkspaceDocumentStorageUpdate(workspaceId) {
+      return validWorkspaceDocumentStorage(workspaceId)
+        && resource.data.provider == 'google-drive'
+        && resource.data.workspaceId == workspaceId
+        && resource.data.accountEmail == request.auth.token.email
+        && request.resource.data.configuredAt == resource.data.configuredAt;
+    }
+
     function isSelfPlatformAccount() {
       return isVerifiedUser()
         && resource.data.accountType == 'sector'
@@ -348,8 +393,18 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /workspaces/{workspaceId}/settings/documentStorage {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validWorkspaceDocumentStorage(workspaceId);
+      allow update: if canAccessWorkspace(workspaceId)
+        && validWorkspaceDocumentStorageUpdate(workspaceId);
+      allow delete: if false;
+    }
+
     match /workspaces/{workspaceId}/settings/{id} {
       allow read, write: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
         && canAccessWorkspace(workspaceId);
     }
 
