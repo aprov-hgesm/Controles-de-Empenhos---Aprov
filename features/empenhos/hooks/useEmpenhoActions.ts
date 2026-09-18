@@ -7,7 +7,7 @@ import type { Alert, Empenho, EmpenhoPdfDocument, Invoice, Item } from '../../..
 import { saveAlert, saveEmpenho, removeAlert, removeEmpenho, removeInvoice } from '../../../lib/firebaseSync';
 import { PROMPT_EXTRACAO_EMPENHO } from '../domain/empenhoHelpers';
 import { normalizeEmpenhoClassCode } from '../../../lib/empenhoClasses';
-import { normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
+import { getInvoiceRecordKey, normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
 
 type ActiveTab = 'painel' | 'empenhos' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas';
 type NewEmpenhoForm = { id: string; supplier: string; supplierCnpj: string; description: string; pregao: string; date: string; classification: string };
@@ -513,15 +513,15 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       setEmpenhos(prev => prev.filter(e => e.id !== id));
 
       // 2. Also remove alerts and invoices associated with this empenho if any
-      const associatedInvoices = invoices.filter(inv => (inv as Invoice & { commitmentId?: string }).commitmentId === id);
+      const associatedInvoices = invoices.filter((inv) => inv.empenhoId === id);
       const associatedAlerts = alerts.filter(a => (a as Alert & { empenhoId?: string }).empenhoId === id);
-      setInvoices(prev => prev.filter(inv => (inv as Invoice & { commitmentId?: string }).commitmentId !== id));
+      setInvoices((prev) => prev.filter((inv) => inv.empenhoId !== id));
       setAlerts(prev => prev.filter(a => (a as Alert & { empenhoId?: string }).empenhoId !== id));
        // 3. Remove from Firebase if user is logged in
       if (user) {
         await removeEmpenho(user.uid, id);
         await Promise.all([
-          ...associatedInvoices.map(inv => removeInvoice(user.uid, inv.id)),
+          ...associatedInvoices.map((inv) => removeInvoice(user.uid, getInvoiceRecordKey(inv))),
           ...associatedAlerts.map(a => removeAlert(user.uid, a.id))
         ]);
       }
