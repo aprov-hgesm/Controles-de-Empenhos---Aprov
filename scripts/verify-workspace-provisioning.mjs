@@ -47,6 +47,26 @@ requireText(
   'transaction.set(termCounterRef, initialTermCounter)',
   'Contador inicial não é criado atomicamente com workspace e conta.'
 );
+requireText(
+  store,
+  'buildInstitutionalProfile(input)',
+  'Cadastro de setor não sanitiza campos institucionais opcionais antes de gravar no Firestore.'
+);
+requireText(
+  store,
+  "optionalTrimmedField('defaultDeliveryLocation'",
+  'Local de entrega opcional pode voltar a ser persistido como undefined.'
+);
+requireText(
+  store,
+  "optionalTrimmedField('defaultResponsibleRole'",
+  'Função responsável opcional pode voltar a ser persistida como undefined.'
+);
+forbidText(
+  store,
+  '|| undefined',
+  'Cadastro/edição administrativa voltou a produzir valores undefined para o Firestore.'
+);
 
 requireText(
   rules,
