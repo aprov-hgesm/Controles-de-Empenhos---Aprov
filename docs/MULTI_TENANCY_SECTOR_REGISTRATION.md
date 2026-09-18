@@ -108,8 +108,17 @@ No primeiro acesso operacional, o próprio setor pode ativar seu Google Drive us
 
 Tokens não são persistidos; após recarregar a aplicação, o setor apenas reconecta a autorização temporária.
 
+## Ciclo de vida administrativo — Bloco 19
+
+Setores externos podem ter seus dados institucionais editados e podem ser suspensos ou reativados pela Administração EMPROVEX. Workspace ID, conta Google e UID permanecem imutáveis.
+
+Suspensão e reativação alteram workspace e conta operacional na mesma transação. Um setor suspenso perde acesso imediatamente pelas Rules e uma sessão externa já aberta é encerrada pelo observador de ciclo de vida.
+
+O workspace fundador HGeSM é protegido contra essas alterações.
+
 ## Próximas dependências
 
-Para que um novo setor seja completamente autônomo, ainda serão implementados:
+Para homologação multi-tenant completa, ainda serão implementados:
 
-- blocos seguintes de ciclo de vida, testes de isolamento e homologação do segundo setor.
+- Bloco 20 — testes automatizados de isolamento entre tenants;
+- Bloco 21 — homologação de um segundo setor real em produção.
