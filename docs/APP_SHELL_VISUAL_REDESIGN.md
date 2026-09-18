@@ -102,7 +102,7 @@ Neste bloco eles são apenas fundação: nenhum componente existente consome os 
 6. ~~Controles inteligentes do Header.~~ **Concluído no Bloco 7.**
 7. ~~Linha de energia e microinterações.~~ **Concluído no Bloco 8.**
 8. ~~Camada artística de assinatura.~~ **Concluído no Bloco 9.**
-9. Responsividade e refinamento mobile.
+9. ~~Responsividade e refinamento mobile.~~ **Concluído no Bloco 10.**
 10. Acessibilidade, desempenho e homologação.
 
 ## Critério de sucesso
@@ -257,3 +257,24 @@ A moldura recebeu elementos artísticos técnicos de baixíssima opacidade, espe
 - `prefers-reduced-motion` e `prefers-contrast` respeitados.
 
 Nenhum elemento decorativo acessa estado, banco de dados, autenticação, Drive, handlers ou regras de negócio.
+
+
+## Bloco 10 — Responsividade e refinamento mobile
+
+Status: concluído.
+
+O App Shell recebeu tratamento progressivo para telas menores sem alterar seu comportamento desktop:
+
+- Header com espaçamento e tipografia compactados em celulares;
+- controles funcionais preservados como ícones em telas estreitas;
+- subtítulo da marca ocultado antes do título principal;
+- em telas extremamente estreitas, a marca textual cede espaço aos controles e o núcleo visual permanece;
+- drawer mobile limitado à largura disponível, preservando margem lateral;
+- novo cabeçalho mobile `Menu principal` com botão explícito de fechar;
+- backdrop mais escuro e refinado;
+- áreas de toque da navegação mantidas próximas de 48 px;
+- efeitos de hover que deslocam elementos são neutralizados em ponteiros touch;
+- foco por teclado e `prefers-reduced-motion` permanecem respeitados;
+- desktop continua com Header de 4rem e Sidebar fixa de 18rem.
+
+Nenhuma lógica de navegação, autenticação, Drive, Firestore, workspace, multi-tenant ou dados foi alterada.
