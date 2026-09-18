@@ -72,6 +72,9 @@ jobs:
       - name: Sector password reset guard
         run: npm run verify:sector-password-reset
 
+      - name: Empenho class configuration guard
+        run: npm run verify:empenho-class-config
+
       - name: External sector login guard
         run: npm run verify:external-sector-login
 
