@@ -87,19 +87,27 @@ export function WorkspaceDriveControl({
         className="emprovex-header-control emprovex-header-drive-control"
         data-drive-status={status}
         title="Armazenamento Google Drive do setor"
+        aria-expanded={open}
+        aria-controls="emprovex-drive-panel"
+        aria-haspopup="dialog"
       >
         {status === 'loading' ? (
-          <Loader2 className="emprovex-header-control__icon h-4 w-4 animate-spin" />
+          <Loader2 className="emprovex-header-control__icon h-4 w-4 animate-spin" aria-hidden="true" />
         ) : (
-          <HardDrive className="emprovex-header-control__icon h-4 w-4" />
+          <HardDrive className="emprovex-header-control__icon h-4 w-4" aria-hidden="true" />
         )}
         <span className="hidden xl:inline">{statusLabel}</span>
         <span className="emprovex-header-control__dot" aria-hidden="true" />
-        <ChevronDown className={`emprovex-header-control__chevron h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`emprovex-header-control__chevron h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-[calc(100%+0.75rem)] w-[min(94vw,430px)] max-h-[78vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl p-4 z-50">
+        <div
+          id="emprovex-drive-panel"
+          role="dialog"
+          aria-label="Google Drive do setor"
+          className="absolute right-0 top-[calc(100%+0.75rem)] w-[min(94vw,430px)] max-h-[78vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl p-4 z-50"
+        >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3 min-w-0">
               <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#00288e] grid place-items-center flex-shrink-0">
@@ -110,7 +118,13 @@ export function WorkspaceDriveControl({
                 <p className="text-xs text-slate-500 mt-0.5 truncate">{workspaceContext.email}</p>
               </div>
             </div>
-            <button type="button" onClick={() => setOpen(false)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="p-1 rounded-lg hover:bg-slate-100 text-slate-400"
+              aria-label="Fechar painel do Google Drive"
+              title="Fechar painel do Google Drive"
+            >
               <X className="w-4 h-4" />
             </button>
           </div>

@@ -60,7 +60,7 @@ export function AppHeader({
           aria-label="Abrir menu principal"
           title="Abrir menu principal"
         >
-          <Menu className="w-6 h-6" />
+          <Menu className="w-6 h-6" aria-hidden="true" />
         </button>
 
         <div className="flex items-center gap-2.5">
@@ -91,7 +91,7 @@ export function AppHeader({
             aria-live="polite"
             className="emprovex-header-control emprovex-header-control--sync"
           >
-            <Loader2 className="emprovex-header-control__icon h-3.5 w-3.5 animate-spin" />
+            <Loader2 className="emprovex-header-control__icon h-3.5 w-3.5 animate-spin" aria-hidden="true" />
             <span className="hidden sm:inline">Sincronizando</span>
             <span className="emprovex-header-control__dot" aria-hidden="true" />
           </div>
@@ -105,8 +105,9 @@ export function AppHeader({
             onClick={openAdministration}
             className="emprovex-header-control emprovex-header-control--admin"
             title="Alternar para o perfil de Administração EMPROVEX"
+            aria-label="Abrir Administração EMPROVEX"
           >
-            <ShieldCheck className="emprovex-header-control__icon h-4 w-4" />
+            <ShieldCheck className="emprovex-header-control__icon h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:inline">Administração</span>
           </button>
         )}

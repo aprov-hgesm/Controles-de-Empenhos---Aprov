@@ -4435,3 +4435,157 @@ button.emprovex-header-control:hover .emprovex-header-control__icon {
     transition-duration: 0.001ms !important;
   }
 }
+
+
+/* EMPROVEX App Shell — Accessibility, contrast and performance hardening (Bloco 11). */
+.emprovex-app-header,
+.emprovex-app-sidebar {
+  text-rendering: optimizeLegibility;
+}
+
+.emprovex-header-control,
+.emprovex-sidebar-nav-item,
+.emprovex-sidebar-mobile-close,
+.emprovex-sidebar-logout {
+  touch-action: manipulation;
+}
+
+.emprovex-header-control:focus-visible,
+.emprovex-header-menu:focus-visible,
+.emprovex-sidebar-nav-item:focus-visible,
+.emprovex-sidebar-mobile-close:focus-visible,
+.emprovex-sidebar-logout:focus-visible {
+  scroll-margin: 0.75rem;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .emprovex-app-header,
+  .emprovex-app-sidebar,
+  .emprovex-header-control,
+  .emprovex-sidebar-operator {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .emprovex-app-header {
+    background: #061127;
+  }
+
+  .emprovex-app-sidebar {
+    background: #061127;
+  }
+
+  .emprovex-header-control,
+  .emprovex-sidebar-operator,
+  .emprovex-sidebar-system__status {
+    background: #0b1830;
+  }
+
+  .emprovex-shell-signature {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .emprovex-app-header,
+  .emprovex-app-sidebar {
+    border-color: rgba(219, 234, 254, 0.34);
+  }
+
+  .emprovex-header-brand-title,
+  .emprovex-header-user,
+  .emprovex-header-identity__name,
+  .emprovex-sidebar-nav-item,
+  .emprovex-sidebar-system__status,
+  .emprovex-sidebar-operator {
+    color: #ffffff;
+  }
+
+  .emprovex-header-brand-subtitle,
+  .emprovex-header-brand-kicker,
+  .emprovex-header-identity__label,
+  .emprovex-sidebar-nav__label {
+    color: rgba(226, 232, 240, 0.86);
+  }
+
+  .emprovex-header-control,
+  .emprovex-sidebar-nav-item,
+  .emprovex-sidebar-operator,
+  .emprovex-sidebar-system__status {
+    border-color: rgba(219, 234, 254, 0.26);
+  }
+
+  .emprovex-sidebar-nav-item[data-active='true'] {
+    border-color: rgba(147, 197, 253, 0.58);
+    background: rgba(30, 64, 175, 0.52);
+  }
+
+  .emprovex-shell-signature,
+  .emprovex-header-energy-line {
+    opacity: 0.20;
+  }
+}
+
+@media (forced-colors: active) {
+  .emprovex-shell-signature,
+  .emprovex-header-energy-line,
+  .emprovex-header-logo-core__halo,
+  .emprovex-header-logo-core__ring,
+  .emprovex-header-logo-core__axis {
+    display: none !important;
+  }
+
+  .emprovex-app-header,
+  .emprovex-app-sidebar,
+  .emprovex-header-control,
+  .emprovex-sidebar-nav-item,
+  .emprovex-sidebar-operator,
+  .emprovex-sidebar-system__status,
+  .emprovex-header-logo-core__surface {
+    forced-color-adjust: auto;
+    background: Canvas;
+    color: CanvasText;
+    border-color: ButtonText;
+    box-shadow: none;
+  }
+
+  .emprovex-sidebar-nav-item[data-active='true'] {
+    border: 2px solid Highlight;
+    color: HighlightText;
+    background: Highlight;
+  }
+
+  .emprovex-header-control__dot,
+  .emprovex-sidebar-system__live-dot,
+  .emprovex-sidebar-operator__status-dot {
+    background: Highlight;
+    box-shadow: none;
+  }
+
+  .emprovex-header-control:focus-visible,
+  .emprovex-header-menu:focus-visible,
+  .emprovex-sidebar-nav-item:focus-visible,
+  .emprovex-sidebar-mobile-close:focus-visible,
+  .emprovex-sidebar-logout:focus-visible {
+    outline: 2px solid Highlight;
+  }
+}
+
+@media (max-width: 639px) and (pointer: coarse) {
+  .emprovex-app-header,
+  .emprovex-app-sidebar {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .emprovex-shell-signature::after {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .emprovex-header-energy-line__beam,
+  .emprovex-header-logo-core__ring {
+    will-change: transform;
+  }
+}

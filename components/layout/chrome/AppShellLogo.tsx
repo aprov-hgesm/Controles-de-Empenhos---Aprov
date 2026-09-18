@@ -40,6 +40,7 @@ export function AppShellLogo({
           accept="image/*"
           onChange={onLogoUpload}
           className="hidden"
+          aria-label="Selecionar logotipo da plataforma"
         />
       </label>
 
@@ -53,6 +54,7 @@ export function AppShellLogo({
           accept="image/*"
           onChange={onLogoUpload}
           className="hidden"
+          aria-label="Selecionar logotipo da plataforma"
         />
       </label>
 

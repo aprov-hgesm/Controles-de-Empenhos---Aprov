@@ -48,6 +48,7 @@ export function AppSidebar({
         <div
           className="emprovex-sidebar-backdrop fixed inset-0 z-40 lg:hidden"
           onClick={onClose}
+          aria-hidden="true"
         />
       )}
 
@@ -75,7 +76,7 @@ export function AppSidebar({
             aria-label="Fechar menu principal"
             title="Fechar menu principal"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
 
@@ -84,7 +85,7 @@ export function AppSidebar({
             <div className="emprovex-sidebar-operator__head">
               <div className="emprovex-sidebar-operator__identity">
                 <div className="emprovex-sidebar-operator__avatar" aria-hidden="true">
-                  <UserRound className="h-4 w-4" />
+                  <UserRound className="h-4 w-4" aria-hidden="true" />
                 </div>
                 <div className="min-w-0">
                   <p className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-slate-400/75">
@@ -100,7 +101,7 @@ export function AppSidebar({
             </div>
 
             <div className="emprovex-sidebar-operator__access">
-              <ShieldCheck className="h-3.5 w-3.5" />
+              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
               <span>Acesso autorizado</span>
             </div>
           </section>
@@ -116,7 +117,7 @@ export function AppSidebar({
               data-active={activeTab === 'painel' ? 'true' : 'false'}
               aria-current={activeTab === 'painel' ? 'page' : undefined}
             >
-              <Layers className="w-5 h-5" />
+              <Layers className="w-5 h-5" aria-hidden="true" />
               <span>Painel</span>
             </button>
 
@@ -126,7 +127,7 @@ export function AppSidebar({
               data-active={activeTab === 'empenhos' || activeTab === 'itens_empenho' ? 'true' : 'false'}
               aria-current={activeTab === 'empenhos' || activeTab === 'itens_empenho' ? 'page' : undefined}
             >
-              <FileSpreadsheet className="w-5 h-5" />
+              <FileSpreadsheet className="w-5 h-5" aria-hidden="true" />
               <span>Empenhos</span>
             </button>
 
@@ -136,7 +137,7 @@ export function AppSidebar({
               data-active={activeTab === 'itens' ? 'true' : 'false'}
               aria-current={activeTab === 'itens' ? 'page' : undefined}
             >
-              <Package className="w-5 h-5" />
+              <Package className="w-5 h-5" aria-hidden="true" />
               <span>Consulta de Itens</span>
             </button>
 
@@ -146,7 +147,7 @@ export function AppSidebar({
               data-active={activeTab === 'nova_nf' ? 'true' : 'false'}
               aria-current={activeTab === 'nova_nf' ? 'page' : undefined}
             >
-              <FileText className="w-5 h-5" />
+              <FileText className="w-5 h-5" aria-hidden="true" />
               <span>Notas Fiscais</span>
             </button>
 
@@ -156,7 +157,7 @@ export function AppSidebar({
               data-active={activeTab === 'relatorios' ? 'true' : 'false'}
               aria-current={activeTab === 'relatorios' ? 'page' : undefined}
             >
-              <TrendingUp className="w-5 h-5" />
+              <TrendingUp className="w-5 h-5" aria-hidden="true" />
               <span>Relatórios</span>
             </button>
 
@@ -166,7 +167,7 @@ export function AppSidebar({
               data-active={activeTab === 'cronogramas' ? 'true' : 'false'}
               aria-current={activeTab === 'cronogramas' ? 'page' : undefined}
             >
-              <CalendarDays className="w-5 h-5" />
+              <CalendarDays className="w-5 h-5" aria-hidden="true" />
               <span>Cronogramas</span>
             </button>
           </nav>
@@ -180,7 +181,7 @@ export function AppSidebar({
           <div className="emprovex-sidebar-system__status">
             <div className="flex items-center gap-2.5">
               <span className="emprovex-sidebar-system__status-icon" aria-hidden="true">
-                <Activity className="h-3.5 w-3.5" />
+                <Activity className="h-3.5 w-3.5" aria-hidden="true" />
               </span>
               <div>
                 <p className="text-[11px] font-bold text-slate-100">Operacional</p>
@@ -196,7 +197,7 @@ export function AppSidebar({
             onClick={onLogout}
             className="emprovex-sidebar-logout"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-4 w-4" aria-hidden="true" />
             <span>Sair da conta</span>
           </button>
 

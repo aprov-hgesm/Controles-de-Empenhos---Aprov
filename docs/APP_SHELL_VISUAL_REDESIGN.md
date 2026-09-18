@@ -278,3 +278,25 @@ O App Shell recebeu tratamento progressivo para telas menores sem alterar seu co
 - desktop continua com Header de 4rem e Sidebar fixa de 18rem.
 
 Nenhuma lógica de navegação, autenticação, Drive, Firestore, workspace, multi-tenant ou dados foi alterada.
+
+
+## Bloco 11 — Acessibilidade, desempenho e contraste
+
+Status: concluído.
+
+O App Shell recebeu uma camada adicional de robustez e acessibilidade:
+
+- estados do Google Drive agora expõem `aria-expanded`, `aria-controls` e `aria-haspopup`;
+- painel do Drive identificado semanticamente como diálogo;
+- botão de fechar do Drive recebeu rótulo acessível;
+- botão de Administração recebeu `aria-label` explícito para telas onde o texto fica oculto;
+- ícones puramente decorativos foram removidos da leitura de tecnologias assistivas;
+- suporte a `prefers-reduced-transparency` com superfícies sólidas e sem blur;
+- contraste reforçado com `prefers-contrast: more`;
+- fallback completo para `forced-colors`/alto contraste do sistema operacional;
+- grain desativado em celulares com ponteiro touch para reduzir custo gráfico;
+- blur reduzido em mobile;
+- `touch-action: manipulation` nos controles principais;
+- `will-change` restrito apenas aos elementos realmente animados.
+
+Nenhuma lógica de autenticação, Drive, Firestore, workspace, multi-tenant, navegação ou dados foi alterada.
