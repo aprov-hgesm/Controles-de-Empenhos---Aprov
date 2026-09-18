@@ -32,6 +32,32 @@ export interface SectorProvisioningResult {
   authUserReused: boolean;
 }
 
+export function parseSectorProvisioningInput(value: unknown): CreateSectorWorkspaceInput {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('A solicitação de provisionamento é inválida.');
+  }
+
+  const source = value as Record<string, unknown>;
+  const requiredString = (key: string): string => (
+    typeof source[key] === 'string' ? source[key] as string : ''
+  );
+  const optionalString = (key: string): string | undefined => (
+    typeof source[key] === 'string' ? source[key] as string : undefined
+  );
+
+  return {
+    workspaceId: requiredString('workspaceId'),
+    workspaceName: requiredString('workspaceName'),
+    authorizedEmail: requiredString('authorizedEmail'),
+    initialPassword: requiredString('initialPassword'),
+    organizationName: requiredString('organizationName'),
+    organizationShortName: optionalString('organizationShortName'),
+    sectionName: requiredString('sectionName'),
+    defaultDeliveryLocation: optionalString('defaultDeliveryLocation'),
+    defaultResponsibleRole: optionalString('defaultResponsibleRole'),
+  };
+}
+
 export type SectorInstitutionalProfileInput = Pick<
   CreateSectorWorkspaceInput,
   | 'organizationName'
