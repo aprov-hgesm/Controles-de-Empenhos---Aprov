@@ -19,7 +19,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 
-const PROJECT_ID = 'emprovex-security-test';
+const PROJECT_ID = 'demo-emprovex-security';
 const API_KEY = 'fake-api-key';
 const PASSWORD = 'Emprovex-Teste!2026';
 const AUTH_BASE = 'http://127.0.0.1:9099';
