@@ -46,7 +46,9 @@
     "verify:sector-password-reset": "node scripts/verify-sector-password-reset.mjs",
     "verify:empenho-class-config": "node scripts/verify-empenho-class-config.mjs",
     "verify:public-oauth-legal-pages": "node scripts/verify-public-oauth-legal-pages.mjs",
-    "verify:app-shell": "node scripts/verify-app-shell.mjs"
+    "verify:app-shell": "node scripts/verify-app-shell.mjs",
+    "test:invoice-identity": "node --experimental-vm-modules --test scripts/invoice-identity.test.mjs",
+    "verify:reporting-foundation": "node scripts/verify-reporting-foundation.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
