@@ -96,7 +96,7 @@ Neste bloco eles são apenas fundação: nenhum componente existente consome os 
 
 1. ~~Sidebar estrutural premium.~~ **Concluído no Bloco 2.**
 2. ~~Navegação premium da Sidebar.~~ **Concluído no Bloco 3.**
-3. Card do Operador e rodapé do Sistema.
+3. ~~Card do Operador e rodapé do Sistema.~~ **Concluído no Bloco 4.**
 4. Header estrutural premium.
 5. Núcleo visual da marca no Header.
 6. Controles inteligentes do Header.
@@ -146,3 +146,21 @@ A navegação recebeu tratamento próprio sem alterar os valores de `AppTab` nem
 - `prefers-reduced-motion` respeitado.
 
 Nenhuma lógica de autenticação, dados, Drive, Firestore, workspace ou navegação foi alterada.
+
+
+## Bloco 4 — Card do Operador e rodapé do Sistema
+
+Status: concluído.
+
+A Sidebar agora comunica identidade e estado sem alterar qualquer lógica de sessão:
+
+- card `Operador` com nome do usuário recebido pela prop existente;
+- indicador visual de acesso autorizado;
+- área `Sistema` com estado `Operacional`;
+- microtexto `Ambiente seguro`;
+- indicador verde de atividade com animação lenta e suporte a `prefers-reduced-motion`;
+- botão `Sair da conta` redesenhado sem alterar o handler `onLogout`;
+- metadados compactos `EMPROVEX • v1.2.0 • 2026`;
+- toda a interface visível mantida em português.
+
+Nenhuma lógica de autenticação, sessão, Firestore, Drive, workspace, multi-tenant ou dados foi alterada.
