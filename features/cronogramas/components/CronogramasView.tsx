@@ -4,6 +4,7 @@ import React from 'react';
 import { ArrowLeft, CalendarDays, CalendarRange, CheckCircle2, Download, Eye, FileSpreadsheet, Filter, Info, Loader2, Package, Plus, Printer, Save, Search, Sparkles, Trash2, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { CronogramaEmpenho, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
+import type { EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 
 interface CronogramasViewContext {
   applyAllToFirstRemessa: any;
@@ -22,6 +23,7 @@ interface CronogramasViewContext {
   cronogramasSearch: string;
   cronogramasStatusFilter: 'Todos' | 'Com Saldo' | 'Ativos' | 'Encerrados';
   cronogramasYearFilter: string;
+  empenhoClasses: EmpenhoClassDefinition[];
   empenhos: Empenho[];
   formatDateOnly: any;
   handleAddRemessa: (...args: any[]) => any;
@@ -55,7 +57,7 @@ interface CronogramasViewProps {
 }
 /** Tela de Cronogramas extraída sem alterar regras de negócio, persistência ou comportamento. */
 export function CronogramasView({ context }: CronogramasViewProps) {
-  const { applyAllToFirstRemessa, applyCronogramaPreset, clearCronogramaDistribuicao, cronogramaColunas, cronogramaDistribuicao, cronogramaHorarioEntrega, cronogramaLocalEntrega, cronogramaObservacoes, cronogramaResponsavelCargo, cronogramaResponsavelNome, cronogramas, cronogramasClassFilter, cronogramasPregaoFilter, cronogramasSearch, cronogramasStatusFilter, cronogramasYearFilter, empenhos, formatDateOnly, handleAddRemessa, handleGenerateCronogramaPDF, handleRemoveRemessa, handleSaveCronograma, handleSelectEmpenhoForCronograma, isSavingCronograma, selectedCronogramaEmpenhoId, setCronogramaColunas, setCronogramaDistribuicao, setCronogramaHorarioEntrega, setCronogramaLocalEntrega, setCronogramaObservacoes, setCronogramaResponsavelCargo, setCronogramaResponsavelNome, setCronogramasClassFilter, setCronogramasPregaoFilter, setCronogramasSearch, setCronogramasStatusFilter, setCronogramasYearFilter, setSelectedCronogramaEmpenhoId, setShowCronogramaPreviewModal, showCronogramaPreviewModal, uniqueEmpenhoYears, uniquePregaos } = context;
+  const { applyAllToFirstRemessa, applyCronogramaPreset, clearCronogramaDistribuicao, cronogramaColunas, cronogramaDistribuicao, cronogramaHorarioEntrega, cronogramaLocalEntrega, cronogramaObservacoes, cronogramaResponsavelCargo, cronogramaResponsavelNome, cronogramas, cronogramasClassFilter, cronogramasPregaoFilter, cronogramasSearch, cronogramasStatusFilter, cronogramasYearFilter, empenhoClasses, empenhos, formatDateOnly, handleAddRemessa, handleGenerateCronogramaPDF, handleRemoveRemessa, handleSaveCronograma, handleSelectEmpenhoForCronograma, isSavingCronograma, selectedCronogramaEmpenhoId, setCronogramaColunas, setCronogramaDistribuicao, setCronogramaHorarioEntrega, setCronogramaLocalEntrega, setCronogramaObservacoes, setCronogramaResponsavelCargo, setCronogramaResponsavelNome, setCronogramasClassFilter, setCronogramasPregaoFilter, setCronogramasSearch, setCronogramasStatusFilter, setCronogramasYearFilter, setSelectedCronogramaEmpenhoId, setShowCronogramaPreviewModal, showCronogramaPreviewModal, uniqueEmpenhoYears, uniquePregaos } = context;
   return (
             <div id="view-cronogramas" className="w-full max-w-7xl mx-auto space-y-6 pb-24">
               
@@ -142,9 +144,11 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                           className="w-full h-11 px-3 bg-white/80 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#00288e]/20 focus:border-[#00288e] transition-all cursor-pointer"
                         >
                           <option value="Todos">Todas as Classes</option>
-                          <option value="QR">QR - Ração Operacional</option>
-                          <option value="CALI">CALI - Alimentos</option>
-                          <option value="PASA">PASA - Apoio de Saúde</option>
+                          {empenhoClasses.map((definition) => (
+                            <option key={definition.code} value={definition.code}>
+                              {definition.code} - {definition.description}
+                            </option>
+                          ))}
                         </select>
                       </div>
 
