@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 import { ToastNotification } from '../layout/ToastNotification';
+import { LoginAtmosphere } from './LoginAtmosphere';
 import { LoginBrandStage } from './LoginBrandStage';
 
 type LoginToast = {
@@ -63,6 +64,7 @@ export function EmprovexLogin({
   return (
     <div className="emprovex-login-shell relative min-h-[100svh] overflow-x-hidden bg-[#020817] font-sans text-white selection:bg-blue-500 selection:text-white">
       <ToastNotification toast={toast} onClose={onCloseToast} />
+      <LoginAtmosphere />
 
       <div className="relative z-10 mx-auto grid min-h-[100svh] w-full max-w-[1600px] lg:grid-cols-[minmax(0,1.12fr)_minmax(460px,0.88fr)]">
         <div className="border-b border-white/[0.07] lg:border-b-0 lg:border-r">
