@@ -7,6 +7,7 @@ const root = process.cwd();
 const findings = [];
 
 const requiredFiles = [
+  'firebase.json',
   'firestore.rules',
   'scripts/verify-hybrid-auth-model.mjs',
   'scripts/verify-sector-auth-provisioning.mjs',
@@ -38,6 +39,7 @@ for (const path of requiredFiles) {
 const pkg = JSON.parse(read('package.json'));
 const ci = read('.github/workflows/application-ci.yml');
 const rules = read('firestore.rules');
+const firebaseConfig = JSON.parse(read('firebase.json'));
 const admin = read('components/admin/PlatformAdminView.tsx');
 const access = read('lib/platformAccess.ts');
 const sectorProvisioning = read('lib/server/sectorProvisioningAdmin.ts');
@@ -88,6 +90,19 @@ requireText(drive, 'reauthenticateWithPopup', 'Onboarding Drive não exige reaut
 requireText(drive, 'emprovexWorkspaceId', 'Pastas Drive não estão marcadas por workspace.');
 requireText(storage, "WORKSPACE_DOCUMENT_STORAGE_SETTINGS_ID = 'documentStorage'", 'Configuração Drive não usa documentStorage.');
 requireText(lifecycle, 'observador de ciclo de vida para setores externos', 'Cliente não observa suspensão administrativa.');
+
+const productionDatabaseId = 'ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1';
+const firestoreTargets = Array.isArray(firebaseConfig.firestore)
+  ? firebaseConfig.firestore
+  : [firebaseConfig.firestore].filter(Boolean);
+const productionRulesTarget = firestoreTargets.find(
+  (target) => target?.database === productionDatabaseId
+);
+if (!productionRulesTarget) {
+  findings.push(`firebase.json não aponta o banco Firestore nomeado de produção: ${productionDatabaseId}`);
+} else if (productionRulesTarget.rules !== 'firestore.rules') {
+  findings.push('firebase.json não associa firestore.rules ao banco nomeado de produção.');
+}
 
 requireText(rules, 'function boundIdentityMatchesAccount(account)', 'Rules não exigem UID vinculado para operação externa.');
 requireText(rules, "workspaceId != 'hgesm-aprov'", 'Workspace fundador não está protegido.');
