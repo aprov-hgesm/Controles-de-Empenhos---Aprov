@@ -11,7 +11,7 @@ A suíte usa Firebase Authentication Emulator + Cloud Firestore Emulator e carre
 Projeto de teste:
 
 ```text
-emprovex-security-test
+demo-emprovex-security
 ```
 
 Configuração:
