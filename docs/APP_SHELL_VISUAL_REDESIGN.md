@@ -94,7 +94,7 @@ Neste bloco eles são apenas fundação: nenhum componente existente consome os 
 
 ## Próximos blocos
 
-1. Sidebar estrutural premium.
+1. ~~Sidebar estrutural premium.~~ **Concluído no Bloco 2.**
 2. Navegação premium da Sidebar.
 3. Card do Operador e rodapé do Sistema.
 4. Header estrutural premium.
@@ -108,3 +108,21 @@ Neste bloco eles são apenas fundação: nenhum componente existente consome os 
 ## Critério de sucesso
 
 Ao sair da tela de login e entrar na plataforma, o usuário deve perceber continuidade de produto: o login funciona como porta de entrada e o Header/Sidebar como a moldura permanente da mesma identidade visual.
+
+
+## Bloco 2 — Sidebar estrutural premium
+
+Status: concluído.
+
+Alterações estruturais aplicadas sem modificar handlers, tabs ou regras de navegação:
+
+- superfície navy profunda baseada nos tokens `--emprovex-shell-*`;
+- vidro escuro e profundidade lateral;
+- borda refrativa direita de baixa intensidade;
+- grid técnico quase invisível;
+- halos azul/cyan estáticos;
+- scrollbar discreta compatível com o novo shell;
+- manutenção integral da largura de `18rem`, posição fixa e rolagem interna;
+- contraste transitório para os itens atuais, até o redesign específico da navegação no Bloco 3.
+
+Nenhuma lógica de autenticação, Drive, Firestore, workspace ou dados foi alterada.
