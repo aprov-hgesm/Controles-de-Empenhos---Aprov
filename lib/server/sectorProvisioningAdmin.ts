@@ -341,7 +341,7 @@ async function updateExistingAuthUserForPassword(
       localId: user.localId,
       password: input.initialPassword,
       emailVerified: true,
-      disabled: false,
+      disableUser: false,
     }
   );
 }
