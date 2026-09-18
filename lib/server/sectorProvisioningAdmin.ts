@@ -279,6 +279,7 @@ export async function verifyFounderSession(idToken: string): Promise<FounderSess
     || tokenClaims.sub !== user.localId
     || normalizedEmail !== HGESM_SECTOR_EMAIL
     || user.emailVerified !== true
+    || user.disabled === true
     || firebaseClaim?.sign_in_provider !== FOUNDER_AUTH_PROVIDER
   ) {
     throw new SectorProvisioningFailure(
