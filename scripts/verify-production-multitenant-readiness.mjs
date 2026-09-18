@@ -17,6 +17,7 @@ const requiredFiles = [
   'scripts/verify-workspace-provisioning.mjs',
   'scripts/verify-workspace-drive-onboarding.mjs',
   'scripts/external-drive-auth.test.mjs',
+  'scripts/external-drive-auth-emulator.test.mjs',
   'scripts/verify-sector-lifecycle.mjs',
   'scripts/verify-multitenant-security-suite.mjs',
   'scripts/firestore-multitenancy-security.test.mjs',
@@ -79,6 +80,7 @@ for (const command of [
   'verify:workspace-provisioning',
   'verify:workspace-drive-onboarding',
   'test:external-drive-auth',
+  'test:external-drive-auth-emulator',
   'verify:sector-lifecycle',
   'verify:multitenant-security',
   'test:security:multitenant',
@@ -95,6 +97,7 @@ for (const expected of [
   'npm run verify:workspace-provisioning',
   'npm run verify:workspace-drive-onboarding',
   'npm run test:external-drive-auth',
+  'npm run test:external-drive-auth-emulator',
   'npm run verify:sector-lifecycle',
   'npm run verify:multitenant-security',
   'npm run test:security:multitenant',
@@ -175,6 +178,7 @@ if (findings.length) {
   console.log('Google Drive por workspace: PRONTO');
   console.log('OAuth Drive externo isolado da sessão Firebase: PRONTO');
   console.log('Falhas OAuth/Drive preservam sessão Firebase externa: TESTADO');
+  console.log('Sessão Firebase password preservada no Auth Emulator: TESTADO');
   console.log('Ciclo de vida do token Drive externo: CONTROLADO EM MEMÓRIA');
   console.log('Reconexão OAuth Drive: SEM CONSENTIMENTO FORÇADO');
   console.log('POC Drive legado em produção: AUSENTE');
