@@ -7,13 +7,15 @@ const root = process.cwd();
 const findings = [];
 
 const page = read('app/page.tsx');
+const login = read('components/auth/EmprovexLogin.tsx');
 const privacy = read('app/privacy/page.tsx');
 const terms = read('app/terms/page.tsx');
 const drive = read('lib/googleDriveWorkspace.ts');
 
-requireText(page, 'Sobre o EMPROVEX', 'Homepage pública não descreve a finalidade do aplicativo.');
-requireText(page, 'href="/privacy"', 'Homepage não possui link público para a Política de Privacidade.');
-requireText(page, 'href="/terms"', 'Homepage não possui link público para os Termos de Serviço.');
+requireText(page, '<EmprovexLogin', 'Homepage pública não monta a experiência pública de autenticação.');
+requireText(login, 'Sobre o EMPROVEX', 'Homepage pública não descreve a finalidade do aplicativo.');
+requireText(login, 'href="/privacy"', 'Homepage não possui link público para a Política de Privacidade.');
+requireText(login, 'href="/terms"', 'Homepage não possui link público para os Termos de Serviço.');
 requireText(privacy, 'Política de Privacidade', 'Página pública de privacidade ausente ou incompleta.');
 requireText(privacy, 'Google Drive e dados do Google', 'Política de Privacidade não explica o uso de dados do Google.');
 requireText(privacy, 'drive.file', 'Política de Privacidade não informa o escopo limitado do Drive.');

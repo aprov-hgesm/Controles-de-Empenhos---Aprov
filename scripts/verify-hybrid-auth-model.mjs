@@ -10,6 +10,7 @@ const identity = read('lib/platformIdentity.ts');
 const access = read('lib/platformAccess.ts');
 const operationalData = read('hooks/useOperationalData.ts');
 const page = read('app/page.tsx');
+const login = read('components/auth/EmprovexLogin.tsx');
 const rules = read('firestore.rules');
 
 requireText(
@@ -76,13 +77,38 @@ requireText(
 );
 requireText(
   page,
-  'Entrar com e-mail e senha',
-  'Tela principal não oferece o login por senha dos setores.'
+  '<EmprovexLogin',
+  'Tela principal não monta a fronteira de autenticação pública.'
 );
 requireText(
   page,
+  'await signInSectorUser(email, password)',
+  'Tela principal não delega credenciais de setor ao fluxo seguro existente.'
+);
+requireText(
+  page,
+  'await signInUser()',
+  'Tela principal não preserva a delegação do acesso institucional Google.'
+);
+requireText(
+  login,
+  'Entrar com e-mail e senha',
+  'Componente público não oferece o login por senha dos setores.'
+);
+requireText(
+  login,
+  'onSectorLogin(loginEmail, loginPassword)',
+  'Componente público não delega o login setorial para a camada de sessão.'
+);
+requireText(
+  login,
   'Entrar com Google — HGeSM',
-  'Tela principal não preserva o acesso Google exclusivo do fundador.'
+  'Componente público não preserva o acesso Google exclusivo do fundador.'
+);
+requireText(
+  login,
+  'onFounderLogin()',
+  'Componente público não delega o acesso institucional para a camada de sessão.'
 );
 requireText(
   rules,

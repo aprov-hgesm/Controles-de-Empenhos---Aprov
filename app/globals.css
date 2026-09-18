@@ -9,6 +9,10 @@
   --emprovex-motion-slow: 460ms;
   --emprovex-accent: #00288e;
   --emprovex-accent-soft: rgba(0, 40, 142, 0.12);
+  --emprovex-login-navy: #020817;
+  --emprovex-login-panel: rgba(7, 18, 37, 0.80);
+  --emprovex-login-line: rgba(148, 181, 255, 0.10);
+  --emprovex-login-blue: #0a55dc;
 }
 
 @theme {
@@ -332,4 +336,2492 @@ button[aria-busy="true"] {
 
 button[aria-busy="true"] .animate-spin {
   animation-duration: 800ms;
+}
+
+
+/* EMPROVEX login — isolated premium foundation (cinematic redesign, Bloco 2). */
+.emprovex-login-shell {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(18, 83, 210, 0.16), transparent 31rem),
+    radial-gradient(circle at 78% 74%, rgba(7, 91, 205, 0.10), transparent 28rem),
+    linear-gradient(135deg, #020817 0%, #03102a 48%, #020714 100%);
+}
+
+.emprovex-login-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.14;
+  background-image:
+    linear-gradient(rgba(128, 166, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(128, 166, 255, 0.045) 1px, transparent 1px);
+  background-size: 52px 52px;
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.68), transparent 82%);
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.68), transparent 82%);
+}
+
+.emprovex-login-shell::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(1, 5, 17, 0.12), transparent 18%, transparent 82%, rgba(1, 5, 17, 0.18)),
+    radial-gradient(ellipse at center, transparent 38%, rgba(0, 3, 13, 0.30) 100%);
+}
+
+.emprovex-login-panel {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.015),
+    0 40px 120px rgba(0, 7, 28, 0.62);
+}
+
+.emprovex-login-input {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018);
+}
+
+.emprovex-login-input:-webkit-autofill,
+.emprovex-login-input:-webkit-autofill:hover,
+.emprovex-login-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffffff;
+  caret-color: #ffffff;
+  box-shadow: 0 0 0 1000px rgba(2, 8, 23, 0.92) inset;
+  transition: background-color 9999s ease-out 0s;
+}
+
+.emprovex-login-primary {
+  transform: translateZ(0);
+}
+
+@media (max-width: 639px) {
+  .emprovex-login-shell::before {
+    background-size: 38px 38px;
+    opacity: 0.20;
+  }
+
+  .emprovex-login-panel {
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+}
+
+
+/* EMPROVEX login — cinematic atmosphere (Bloco 3). */
+@keyframes emprovex-login-aura-drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(5vw, 3vh, 0) scale(1.08); }
+}
+
+@keyframes emprovex-login-aura-drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.02); }
+  50% { transform: translate3d(-4vw, -4vh, 0) scale(0.96); }
+}
+
+@keyframes emprovex-network-flow {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -180; }
+}
+
+@keyframes emprovex-network-node-breathe {
+  0%, 100% { opacity: 0.30; transform: scale(0.88); }
+  50% { opacity: 0.68; transform: scale(1.14); }
+}
+
+@keyframes emprovex-document-drift {
+  0%, 100% { opacity: 0.20; transform: translate3d(0, 0, 0); }
+  50% { opacity: 0.52; transform: translate3d(0, -7px, 0); }
+}
+
+@keyframes emprovex-login-scanline-drift {
+  0%, 100% { opacity: 0.12; transform: translate3d(0, -5vh, 0); }
+  50% { opacity: 0.30; transform: translate3d(0, 28vh, 0); }
+}
+
+.emprovex-login-atmosphere {
+  --spot-x: 58vw;
+  --spot-y: 36vh;
+  contain: layout paint;
+}
+
+.emprovex-login-spotlight {
+  background:
+    radial-gradient(
+      520px circle at var(--spot-x) var(--spot-y),
+      rgba(72, 139, 255, 0.115),
+      rgba(27, 86, 197, 0.045) 38%,
+      transparent 72%
+    );
+  opacity: 0.95;
+}
+
+.emprovex-login-aura {
+  filter: blur(86px);
+  opacity: 0.5;
+  transform: translateZ(0);
+}
+
+.emprovex-login-aura--one {
+  background: rgba(25, 93, 219, 0.20);
+}
+
+.emprovex-login-aura--two {
+  background: rgba(6, 99, 190, 0.13);
+}
+
+.emprovex-login-aura--three {
+  background: rgba(23, 121, 176, 0.08);
+  filter: blur(110px);
+}
+
+.emprovex-login-perspective-grid {
+  opacity: 0.26;
+  transform: perspective(720px) rotateX(67deg) scale(1.08);
+  transform-origin: center bottom;
+  background-image:
+    linear-gradient(rgba(105, 151, 255, 0.075) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(105, 151, 255, 0.075) 1px, transparent 1px);
+  background-size: 58px 58px;
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.85), transparent 88%);
+  mask-image: linear-gradient(to top, rgba(0,0,0,0.85), transparent 88%);
+}
+
+.emprovex-login-network {
+  position: absolute;
+  inset: 5% 0 auto -2%;
+  width: 68%;
+  height: 80%;
+  opacity: 0.58;
+  overflow: visible;
+}
+
+.emprovex-network-routes {
+  opacity: 0.72;
+}
+
+.emprovex-network-routes--signal {
+  stroke: rgba(96, 165, 250, 0.26);
+  stroke-dasharray: 8 20;
+  opacity: 0.66;
+}
+
+.emprovex-network-node-halo {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0.4;
+}
+
+.emprovex-network-label {
+  opacity: 0.62;
+}
+
+.emprovex-document-signal {
+  padding: 5px 8px;
+  border: 1px solid rgba(125, 164, 255, 0.055);
+  border-radius: 8px;
+  background: rgba(2, 8, 23, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.012);
+}
+
+.emprovex-login-scanline {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(96, 165, 250, 0.05) 14%,
+    rgba(147, 197, 253, 0.34) 44%,
+    rgba(103, 232, 249, 0.18) 62%,
+    transparent
+  );
+  box-shadow: 0 0 26px rgba(59, 130, 246, 0.10);
+}
+
+.emprovex-login-grain {
+  opacity: 0.035;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,0.7) 0 0.5px, transparent 0.8px),
+    radial-gradient(circle at 70% 60%, rgba(255,255,255,0.55) 0 0.45px, transparent 0.75px);
+  background-size: 5px 5px, 7px 7px;
+  mix-blend-mode: soft-light;
+}
+
+@media (pointer: coarse) {
+  .emprovex-login-spotlight {
+    background:
+      radial-gradient(
+        430px circle at 72% 24%,
+        rgba(72, 139, 255, 0.09),
+        transparent 70%
+      );
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .emprovex-login-aura--one {
+    animation: emprovex-login-aura-drift-a 24s ease-in-out infinite;
+  }
+
+  .emprovex-login-aura--two {
+    animation: emprovex-login-aura-drift-b 29s ease-in-out infinite;
+  }
+
+  .emprovex-login-aura--three {
+    animation: emprovex-login-aura-drift-a 34s ease-in-out -8s infinite reverse;
+  }
+
+  .emprovex-network-routes--signal {
+    animation: emprovex-network-flow 8s linear infinite;
+  }
+
+  .emprovex-network-node-halo {
+    animation: emprovex-network-node-breathe 5.2s ease-in-out infinite;
+  }
+
+  .emprovex-network-nodes > g:nth-child(2n) .emprovex-network-node-halo {
+    animation-delay: -2.1s;
+  }
+
+  .emprovex-network-nodes > g:nth-child(3n) .emprovex-network-node-halo {
+    animation-delay: -3.6s;
+  }
+
+  .emprovex-document-signal {
+    animation: emprovex-document-drift 8.5s ease-in-out infinite;
+  }
+
+  .emprovex-login-scanline {
+    animation: emprovex-login-scanline-drift 13s ease-in-out infinite;
+  }
+}
+
+@media (max-width: 1023px) {
+  .emprovex-login-perspective-grid {
+    height: 48%;
+    opacity: 0.16;
+    transform: perspective(620px) rotateX(70deg) scale(1.18);
+  }
+
+  .emprovex-login-network {
+    inset: 0;
+    width: 100%;
+    height: 48%;
+    opacity: 0.22;
+  }
+
+  .emprovex-network-label {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .emprovex-login-network {
+    display: none;
+  }
+
+  .emprovex-login-aura--three {
+    display: none;
+  }
+
+  .emprovex-login-grain {
+    opacity: 0.022;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emprovex-login-aura,
+  .emprovex-network-routes--signal,
+  .emprovex-network-node-halo,
+  .emprovex-document-signal,
+  .emprovex-login-scanline {
+    animation: none !important;
+  }
+
+  .emprovex-network-pulse {
+    display: none;
+  }
+
+  .emprovex-login-spotlight {
+    background:
+      radial-gradient(
+        480px circle at 58% 34%,
+        rgba(72, 139, 255, 0.08),
+        transparent 72%
+      );
+  }
+}
+
+
+/* EMPROVEX login — visual brand core (Bloco 4). */
+@keyframes emprovex-logo-idle-breathe {
+  0%, 100% {
+    scale: 0.985;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.075),
+      0 22px 60px rgba(0,21,78,0.34),
+      0 0 24px rgba(37,99,235,0.10);
+  }
+  50% {
+    scale: 1.015;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.095),
+      0 27px 72px rgba(0,28,102,0.42),
+      0 0 38px rgba(59,130,246,0.19);
+  }
+}
+
+@keyframes emprovex-logo-orbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes emprovex-logo-orbit-reverse {
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes emprovex-logo-specular {
+  0%, 62%, 100% { transform: translate3d(-170%, 0, 0) rotate(18deg); opacity: 0; }
+  72% { opacity: 0.52; }
+  86% { transform: translate3d(180%, 0, 0) rotate(18deg); opacity: 0; }
+}
+
+@keyframes emprovex-logo-auth-pulse {
+  0%, 100% { opacity: 0.22; transform: scale(0.88); }
+  50% { opacity: 0.72; transform: scale(1.16); }
+}
+
+@keyframes emprovex-logo-success-wave {
+  0% { opacity: 0; transform: scale(0.72); }
+  32% { opacity: 0.8; }
+  100% { opacity: 0; transform: scale(1.62); }
+}
+
+@keyframes emprovex-logo-error-nudge {
+  0%, 100% { translate: 0 0; }
+  20% { translate: -2px 0; }
+  40% { translate: 2px 0; }
+  62% { translate: -1px 0; }
+  82% { translate: 1px 0; }
+}
+
+@keyframes emprovex-logo-status-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1.12); }
+}
+
+.emprovex-logo-core {
+  --logo-shift-x: 0px;
+  --logo-shift-y: 0px;
+  --logo-rotate-x: 0deg;
+  --logo-rotate-y: 0deg;
+  position: relative;
+  width: 6.25rem;
+  height: 6.25rem;
+  flex: 0 0 auto;
+  perspective: 900px;
+  transform-style: preserve-3d;
+  contain: layout;
+}
+
+.emprovex-logo-core__surface {
+  position: absolute;
+  inset: 0.7rem;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 1.55rem;
+  border: 1px solid rgba(191, 219, 254, 0.18);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.115), rgba(255,255,255,0.028) 42%, rgba(20,69,161,0.10)),
+    rgba(5, 18, 42, 0.74);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  transform:
+    translate3d(var(--logo-shift-x), var(--logo-shift-y), 18px)
+    rotateX(var(--logo-rotate-x))
+    rotateY(var(--logo-rotate-y));
+  transform-style: preserve-3d;
+  transition:
+    border-color 320ms var(--emprovex-motion-ease-soft),
+    background-color 320ms var(--emprovex-motion-ease-soft),
+    box-shadow 320ms var(--emprovex-motion-ease-soft);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.075),
+    inset 0 -1px 0 rgba(40,100,220,0.06),
+    0 22px 60px rgba(0,21,78,0.34),
+    0 0 24px rgba(37,99,235,0.10);
+}
+
+.emprovex-logo-core__mark {
+  position: relative;
+  z-index: 5;
+  width: 72%;
+  height: 72%;
+  display: grid;
+  place-items: center;
+  transform: translateZ(28px);
+  filter: drop-shadow(0 8px 18px rgba(0, 31, 110, 0.26));
+}
+
+.emprovex-logo-core__edge {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,0.045),
+    inset -1px -1px 0 rgba(0,38,132,0.16);
+  pointer-events: none;
+}
+
+.emprovex-logo-core__specular {
+  position: absolute;
+  top: -28%;
+  bottom: -28%;
+  left: 0;
+  width: 38%;
+  z-index: 6;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.02),
+    rgba(191,219,254,0.18),
+    transparent
+  );
+  filter: blur(2px);
+  transform: translate3d(-170%, 0, 0) rotate(18deg);
+}
+
+.emprovex-logo-core__reflection {
+  position: absolute;
+  z-index: 3;
+  inset: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 24% 12%, rgba(219,234,254,0.16), transparent 34%),
+    linear-gradient(150deg, rgba(255,255,255,0.045), transparent 38%);
+}
+
+.emprovex-logo-core__pulse {
+  position: absolute;
+  z-index: 2;
+  inset: 17%;
+  border-radius: 50%;
+  border: 1px solid rgba(96,165,250,0.24);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.emprovex-logo-core__halo {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 2.2rem;
+  transform: translateZ(0);
+}
+
+.emprovex-logo-core__halo--outer {
+  inset: -0.45rem;
+  background: radial-gradient(circle, rgba(37,99,235,0.17), rgba(37,99,235,0.025) 56%, transparent 72%);
+  filter: blur(12px);
+  opacity: 0.72;
+}
+
+.emprovex-logo-core__halo--inner {
+  inset: 0.1rem;
+  border: 1px solid rgba(96,165,250,0.075);
+  box-shadow:
+    inset 0 0 28px rgba(37,99,235,0.045),
+    0 0 24px rgba(37,99,235,0.045);
+}
+
+.emprovex-logo-core__orbit {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  z-index: 2;
+}
+
+.emprovex-logo-core__orbit::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid rgba(96,165,250,0.10);
+}
+
+.emprovex-logo-core__orbit span {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(147,197,253,0.88);
+  box-shadow: 0 0 10px rgba(96,165,250,0.72);
+}
+
+.emprovex-logo-core__orbit--a {
+  inset: 0.04rem;
+}
+
+.emprovex-logo-core__orbit--a span {
+  left: 19%;
+  top: 5%;
+}
+
+.emprovex-logo-core__orbit--b {
+  inset: 0.36rem;
+  opacity: 0.56;
+  transform: rotate(112deg);
+}
+
+.emprovex-logo-core__orbit--b span {
+  right: 11%;
+  bottom: 14%;
+  width: 3px;
+  height: 3px;
+}
+
+.emprovex-logo-core__bracket {
+  position: absolute;
+  z-index: 7;
+  width: 0.8rem;
+  height: 0.8rem;
+  pointer-events: none;
+  opacity: 0.54;
+}
+
+.emprovex-logo-core__bracket--tl {
+  left: 0.16rem;
+  top: 0.16rem;
+  border-left: 1px solid rgba(147,197,253,0.46);
+  border-top: 1px solid rgba(147,197,253,0.46);
+}
+
+.emprovex-logo-core__bracket--br {
+  right: 0.16rem;
+  bottom: 0.16rem;
+  border-right: 1px solid rgba(147,197,253,0.46);
+  border-bottom: 1px solid rgba(147,197,253,0.46);
+}
+
+.emprovex-logo-core__status {
+  position: absolute;
+  z-index: 8;
+  right: 0.38rem;
+  bottom: 0.42rem;
+  width: 0.66rem;
+  height: 0.66rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(191,219,254,0.20);
+  background: rgba(2,8,23,0.88);
+  box-shadow: 0 0 0 3px rgba(2,8,23,0.45);
+}
+
+.emprovex-logo-core__status span {
+  width: 0.28rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: #60a5fa;
+  box-shadow: 0 0 10px rgba(96,165,250,0.65);
+}
+
+.emprovex-brand-wordmark {
+  text-shadow:
+    0 1px 0 rgba(255,255,255,0.04),
+    0 10px 34px rgba(0,33,118,0.22);
+}
+
+.emprovex-brand-wordmark-line {
+  background: linear-gradient(
+    90deg,
+    rgba(96,165,250,0.86),
+    rgba(103,232,249,0.34),
+    transparent
+  );
+  box-shadow: 0 0 16px rgba(59,130,246,0.18);
+}
+
+/* Visual state: authenticating. */
+.emprovex-logo-core[data-state='authenticating'] .emprovex-logo-core__surface {
+  border-color: rgba(147,197,253,0.32);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.095),
+    0 25px 68px rgba(0,31,118,0.44),
+    0 0 42px rgba(37,99,235,0.22);
+}
+
+.emprovex-logo-core[data-state='authenticating'] .emprovex-logo-core__status span {
+  background: #93c5fd;
+  box-shadow: 0 0 12px rgba(147,197,253,0.82);
+}
+
+/* Visual state: success. */
+.emprovex-logo-core[data-state='success'] .emprovex-logo-core__surface {
+  border-color: rgba(110,231,183,0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.095),
+    0 25px 68px rgba(0,47,99,0.42),
+    0 0 46px rgba(52,211,153,0.13);
+}
+
+.emprovex-logo-core[data-state='success'] .emprovex-logo-core__status span {
+  background: #6ee7b7;
+  box-shadow: 0 0 12px rgba(52,211,153,0.64);
+}
+
+/* Visual state: error. */
+.emprovex-logo-core[data-state='error'] .emprovex-logo-core__surface {
+  border-color: rgba(248,113,113,0.22);
+}
+
+.emprovex-logo-core[data-state='error'] .emprovex-logo-core__status span {
+  background: #fca5a5;
+  box-shadow: 0 0 10px rgba(248,113,113,0.48);
+}
+
+@media (min-width: 640px) {
+  .emprovex-logo-core {
+    width: 8rem;
+    height: 8rem;
+  }
+
+  .emprovex-logo-core__surface {
+    inset: 0.82rem;
+    border-radius: 1.85rem;
+  }
+
+  .emprovex-logo-core__bracket {
+    width: 0.95rem;
+    height: 0.95rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .emprovex-logo-core[data-state='idle'] .emprovex-logo-core__surface {
+    animation: emprovex-logo-idle-breathe 5.8s ease-in-out infinite;
+  }
+
+  .emprovex-logo-core__orbit--a {
+    animation: emprovex-logo-orbit 18s linear infinite;
+  }
+
+  .emprovex-logo-core__orbit--b {
+    animation: emprovex-logo-orbit-reverse 26s linear infinite;
+  }
+
+  .emprovex-logo-core__specular {
+    animation: emprovex-logo-specular 8.5s ease-in-out 1.4s infinite;
+  }
+
+  .emprovex-logo-core[data-state='authenticating'] .emprovex-logo-core__orbit--a {
+    animation-duration: 3.2s;
+  }
+
+  .emprovex-logo-core[data-state='authenticating'] .emprovex-logo-core__orbit--b {
+    animation-duration: 4.8s;
+  }
+
+  .emprovex-logo-core[data-state='authenticating'] .emprovex-logo-core__pulse {
+    animation: emprovex-logo-auth-pulse 1.45s ease-in-out infinite;
+  }
+
+  .emprovex-logo-core[data-state='authenticating'] .emprovex-logo-core__status span {
+    animation: emprovex-logo-status-pulse 1.15s ease-in-out infinite;
+  }
+
+  .emprovex-logo-core[data-state='success'] .emprovex-logo-core__pulse {
+    border-color: rgba(110,231,183,0.46);
+    animation: emprovex-logo-success-wave 820ms var(--emprovex-motion-ease) both;
+  }
+
+  .emprovex-logo-core[data-state='error'] .emprovex-logo-core__surface {
+    animation: emprovex-logo-error-nudge 360ms ease-out both;
+  }
+}
+
+@media (pointer: coarse) {
+  .emprovex-logo-core__surface {
+    transform: translate3d(0, 0, 18px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emprovex-logo-core,
+  .emprovex-logo-core__surface,
+  .emprovex-logo-core__orbit,
+  .emprovex-logo-core__specular,
+  .emprovex-logo-core__pulse,
+  .emprovex-logo-core__status span {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .emprovex-brand-wordmark span {
+    filter: none !important;
+    letter-spacing: 0.08em !important;
+  }
+}
+
+
+/* EMPROVEX login — authentication panel microinteractions (Bloco 5). */
+@keyframes emprovex-panel-beam {
+  0%, 100% { opacity: 0.36; transform: scaleX(0.72); }
+  50% { opacity: 0.78; transform: scaleX(1); }
+}
+
+@keyframes emprovex-primary-sheen {
+  0% { transform: translate3d(-190%, 0, 0) skewX(-18deg); opacity: 0; }
+  32% { opacity: 0.62; }
+  68% { opacity: 0.26; }
+  100% { transform: translate3d(470%, 0, 0) skewX(-18deg); opacity: 0; }
+}
+
+@keyframes emprovex-primary-auth {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes emprovex-panel-status {
+  0%, 100% { opacity: 0.58; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.16); }
+}
+
+.emprovex-login-panel {
+  --panel-x: 50%;
+  --panel-y: 22%;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.055),
+    inset 0 0 0 1px rgba(255,255,255,0.012),
+    0 40px 120px rgba(0,7,28,0.62),
+    0 0 0 1px rgba(37,99,235,0.018);
+  transition:
+    border-color 360ms var(--emprovex-motion-ease-soft),
+    box-shadow 420ms var(--emprovex-motion-ease-soft),
+    background-color 360ms var(--emprovex-motion-ease-soft);
+}
+
+.emprovex-login-panel__edge {
+  z-index: 0;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(rgba(7,18,37,0.82), rgba(7,18,37,0.82)) padding-box,
+    radial-gradient(
+      420px circle at var(--panel-x) var(--panel-y),
+      rgba(147,197,253,0.28),
+      rgba(96,165,250,0.075) 38%,
+      rgba(255,255,255,0.045) 58%,
+      transparent 78%
+    ) border-box;
+  opacity: 0.82;
+}
+
+.emprovex-login-panel__reflection {
+  z-index: 0;
+  background:
+    radial-gradient(
+      380px circle at var(--panel-x) var(--panel-y),
+      rgba(191,219,254,0.068),
+      rgba(37,99,235,0.025) 34%,
+      transparent 68%
+    ),
+    linear-gradient(145deg, rgba(255,255,255,0.026), transparent 36%);
+  opacity: 0.82;
+  transition: opacity 360ms ease;
+}
+
+.emprovex-login-panel__beam {
+  z-index: 1;
+  transform-origin: center;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(96,165,250,0.18),
+    rgba(191,219,254,0.64),
+    rgba(103,232,249,0.18),
+    transparent
+  );
+  box-shadow: 0 0 22px rgba(59,130,246,0.16);
+}
+
+.emprovex-login-panel[data-focus='email'] {
+  border-color: rgba(96,165,250,0.17);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.062),
+    0 42px 124px rgba(0,9,36,0.66),
+    0 0 46px rgba(37,99,235,0.035);
+}
+
+.emprovex-login-panel[data-focus='password'] .emprovex-login-panel__reflection {
+  opacity: 0.58;
+}
+
+.emprovex-login-panel[data-state='ready'] {
+  border-color: rgba(96,165,250,0.16);
+}
+
+.emprovex-login-panel[data-state='authenticating'] {
+  border-color: rgba(147,197,253,0.21);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.07),
+    0 44px 132px rgba(0,11,46,0.72),
+    0 0 58px rgba(37,99,235,0.065);
+}
+
+.emprovex-login-panel[data-state='error'] {
+  border-color: rgba(248,113,113,0.13);
+}
+
+.emprovex-access-pill,
+.emprovex-institutional-card,
+.emprovex-institutional-card__icon,
+.emprovex-password-toggle,
+.emprovex-google-button {
+  transition:
+    border-color 240ms var(--emprovex-motion-ease-soft),
+    background-color 240ms var(--emprovex-motion-ease-soft),
+    color 240ms var(--emprovex-motion-ease-soft),
+    box-shadow 280ms var(--emprovex-motion-ease-soft),
+    transform 220ms var(--emprovex-motion-ease);
+}
+
+.emprovex-panel-status-dot {
+  box-shadow: 0 0 9px rgba(96,165,250,0.50);
+}
+
+.emprovex-login-panel[data-state='authenticating'] .emprovex-panel-status-dot {
+  background: rgba(147,197,253,0.96);
+  box-shadow: 0 0 14px rgba(96,165,250,0.72);
+}
+
+.emprovex-login-panel[data-state='error'] .emprovex-panel-status-dot {
+  background: rgba(248,113,113,0.84);
+  box-shadow: 0 0 11px rgba(248,113,113,0.38);
+}
+
+.emprovex-login-field > span:first-child {
+  transition: color 220ms var(--emprovex-motion-ease-soft);
+}
+
+.emprovex-login-field__control {
+  isolation: isolate;
+}
+
+.emprovex-login-input {
+  transition:
+    border-color 240ms var(--emprovex-motion-ease-soft),
+    background-color 240ms var(--emprovex-motion-ease-soft),
+    box-shadow 300ms var(--emprovex-motion-ease-soft),
+    opacity 220ms ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.018),
+    inset 0 -1px 0 rgba(0,0,0,0.14);
+}
+
+.emprovex-login-input:hover:not(:disabled) {
+  border-color: rgba(255,255,255,0.145);
+  background-color: rgba(2,8,23,0.42);
+}
+
+.emprovex-login-input:focus {
+  border-color: rgba(96,165,250,0.42);
+  background-color: rgba(2,8,23,0.54);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.025),
+    0 0 0 4px rgba(37,99,235,0.065),
+    0 10px 34px rgba(0,16,64,0.18);
+}
+
+.emprovex-login-field__icon {
+  transition:
+    color 220ms var(--emprovex-motion-ease-soft),
+    transform 260ms var(--emprovex-motion-ease),
+    filter 260ms var(--emprovex-motion-ease-soft);
+}
+
+.emprovex-login-field[data-active='true'] .emprovex-login-field__icon {
+  color: rgb(147 197 253);
+  transform: translateY(-50%) scale(1.07);
+  filter: drop-shadow(0 0 7px rgba(96,165,250,0.32));
+}
+
+.emprovex-login-field[data-active='true'] > span:first-child > span:first-child {
+  color: rgba(191,219,254,0.88);
+}
+
+.emprovex-login-field__glow {
+  z-index: 0;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 18% 50%, rgba(59,130,246,0.11), transparent 44%),
+    linear-gradient(90deg, rgba(37,99,235,0.035), transparent 48%);
+  filter: blur(8px);
+  transform: scale(0.985);
+  transition:
+    opacity 260ms ease,
+    transform 300ms var(--emprovex-motion-ease);
+}
+
+.emprovex-login-field[data-active='true'] .emprovex-login-field__glow {
+  opacity: 1;
+  transform: scale(1.015);
+}
+
+.emprovex-login-field__line {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(96,165,250,0.22),
+    rgba(147,197,253,0.72),
+    rgba(96,165,250,0.22),
+    transparent
+  );
+  transform: scaleX(0);
+  opacity: 0;
+  transition:
+    transform 340ms var(--emprovex-motion-ease),
+    opacity 220ms ease;
+}
+
+.emprovex-login-field[data-active='true'] .emprovex-login-field__line {
+  transform: scaleX(1);
+  opacity: 0.78;
+}
+
+.emprovex-password-toggle:hover:not(:disabled) {
+  color: #ffffff;
+  background: rgba(255,255,255,0.06);
+  transform: translateY(-50%) scale(1.03);
+}
+
+.emprovex-password-toggle:active:not(:disabled) {
+  transform: translateY(-50%) scale(0.96);
+}
+
+.emprovex-login-primary {
+  min-height: 3.5rem;
+  transform: translateZ(0);
+  background: rgba(3,56,170,0.74);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    0 16px 38px rgba(0,48,158,0.19);
+  transition:
+    transform 220ms var(--emprovex-motion-ease),
+    border-color 260ms var(--emprovex-motion-ease-soft),
+    box-shadow 300ms var(--emprovex-motion-ease-soft),
+    opacity 220ms ease,
+    filter 220ms ease;
+}
+
+.emprovex-login-primary__base {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255,255,255,0.16), transparent 36%),
+    linear-gradient(105deg, #0638a5 0%, #0347c9 48%, #0957db 100%);
+  background-size: 180% 180%;
+}
+
+.emprovex-login-primary__edge {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.13),
+    inset 0 -1px 0 rgba(0,26,103,0.34);
+}
+
+.emprovex-login-primary__sheen,
+.emprovex-google-button__sheen {
+  opacity: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.17),
+    rgba(191,219,254,0.22),
+    transparent
+  );
+  transform: translate3d(-190%,0,0) skewX(-18deg);
+}
+
+.emprovex-login-primary[data-state='ready']:not(:disabled) {
+  border-color: rgba(147,197,253,0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    0 20px 48px rgba(0,60,190,0.26),
+    0 0 24px rgba(37,99,235,0.075);
+}
+
+.emprovex-login-primary[data-state='ready']:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: rgba(191,219,254,0.25);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.17),
+    0 26px 58px rgba(0,68,208,0.33),
+    0 0 36px rgba(37,99,235,0.11);
+}
+
+.emprovex-login-primary[data-state='ready']:active:not(:disabled) {
+  transform: translateY(0) scale(0.992);
+}
+
+.emprovex-login-primary[data-state='authenticating'] {
+  border-color: rgba(147,197,253,0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.15),
+    0 22px 54px rgba(0,64,204,0.30),
+    0 0 38px rgba(59,130,246,0.12);
+}
+
+.emprovex-login-primary[data-state='idle'] {
+  filter: saturate(0.82);
+}
+
+.emprovex-institutional-card:hover {
+  border-color: rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.034);
+}
+
+.emprovex-institutional-card:hover .emprovex-institutional-card__icon {
+  border-color: rgba(147,197,253,0.13);
+  background: rgba(96,165,250,0.06);
+  box-shadow: 0 0 18px rgba(37,99,235,0.05);
+}
+
+.emprovex-google-button {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.025);
+}
+
+.emprovex-google-button:hover:not(:disabled) {
+  color: #ffffff;
+  border-color: rgba(191,219,254,0.16);
+  background: rgba(255,255,255,0.075);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 12px 30px rgba(0,8,32,0.22);
+}
+
+.emprovex-google-button:active:not(:disabled) {
+  transform: translateY(0) scale(0.994);
+}
+
+.emprovex-google-button[data-state='authenticating'] {
+  border-color: rgba(147,197,253,0.17);
+  background: rgba(59,130,246,0.075);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .emprovex-login-panel__beam {
+    animation: emprovex-panel-beam 5.6s ease-in-out infinite;
+  }
+
+  .emprovex-login-panel[data-state='authenticating'] .emprovex-panel-status-dot {
+    animation: emprovex-panel-status 1.25s ease-in-out infinite;
+  }
+
+  .emprovex-login-primary[data-state='ready']:hover:not(:disabled) .emprovex-login-primary__sheen {
+    animation: emprovex-primary-sheen 820ms var(--emprovex-motion-ease) both;
+  }
+
+  .emprovex-login-primary[data-state='authenticating'] .emprovex-login-primary__base {
+    background-size: 220% 220%;
+    animation: emprovex-primary-auth 1.8s ease-in-out infinite;
+  }
+
+  .emprovex-login-primary[data-state='authenticating'] .emprovex-login-primary__sheen {
+    animation: emprovex-primary-sheen 1.45s linear infinite;
+  }
+
+  .emprovex-google-button:hover:not(:disabled) .emprovex-google-button__sheen {
+    animation: emprovex-primary-sheen 900ms var(--emprovex-motion-ease) both;
+  }
+
+  .emprovex-google-button[data-state='authenticating'] .emprovex-google-button__sheen {
+    animation: emprovex-primary-sheen 1.6s linear infinite;
+  }
+}
+
+@media (pointer: coarse) {
+  .emprovex-login-panel__reflection {
+    background:
+      radial-gradient(circle at 72% 18%, rgba(191,219,254,0.055), transparent 42%),
+      linear-gradient(145deg, rgba(255,255,255,0.022), transparent 36%);
+  }
+
+  .emprovex-login-primary[data-state='ready']:hover:not(:disabled),
+  .emprovex-google-button:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emprovex-login-panel__beam,
+  .emprovex-panel-status-dot,
+  .emprovex-login-primary__sheen,
+  .emprovex-google-button__sheen,
+  .emprovex-login-primary__base {
+    animation: none !important;
+  }
+
+  .emprovex-login-primary,
+  .emprovex-google-button {
+    transform: none !important;
+  }
+
+  .emprovex-login-field__line {
+    transition: none !important;
+  }
+}
+
+
+/* EMPROVEX login — truthful authentication scanner and narrative (Bloco 6). */
+@keyframes emprovex-auth-scan {
+  0% {
+    transform: translate3d(0, -125%, 0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.72;
+  }
+  78% {
+    opacity: 0.42;
+  }
+  100% {
+    transform: translate3d(0, 520%, 0);
+    opacity: 0;
+  }
+}
+
+@keyframes emprovex-auth-step-pulse {
+  0%, 100% {
+    opacity: 0.62;
+    box-shadow: 0 0 0 0 rgba(96,165,250,0.10);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 0 5px rgba(96,165,250,0.045);
+  }
+}
+
+@keyframes emprovex-auth-connector-flow {
+  from { background-position: 100% 50%; }
+  to { background-position: 0% 50%; }
+}
+
+.emprovex-auth-scanner {
+  z-index: 1;
+  opacity: 1;
+  transition: opacity 240ms ease;
+}
+
+.emprovex-auth-scanner[data-active='false'] {
+  opacity: 0;
+}
+
+.emprovex-auth-scanner span {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  top: 0;
+  height: 22%;
+  opacity: 0;
+  transform: translate3d(0, -125%, 0);
+  background:
+    linear-gradient(
+      to bottom,
+      transparent,
+      rgba(96,165,250,0.015) 18%,
+      rgba(147,197,253,0.075) 56%,
+      rgba(103,232,249,0.14) 76%,
+      rgba(191,219,254,0.33) 92%,
+      transparent
+    );
+  filter: blur(0.2px);
+  mix-blend-mode: screen;
+}
+
+.emprovex-auth-scanner span::after {
+  content: '';
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 8%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(96,165,250,0.16),
+    rgba(191,219,254,0.62),
+    rgba(103,232,249,0.26),
+    transparent
+  );
+  box-shadow:
+    0 0 14px rgba(96,165,250,0.20),
+    0 0 32px rgba(59,130,246,0.08);
+}
+
+.emprovex-auth-rail {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(148,181,255,0.075);
+  border-radius: 1rem;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.027), rgba(255,255,255,0.012)),
+    rgba(2,8,23,0.20);
+  padding: 0.9rem 1rem 0.85rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.02),
+    0 10px 28px rgba(0,7,28,0.10);
+  transition:
+    border-color 260ms var(--emprovex-motion-ease-soft),
+    background-color 260ms var(--emprovex-motion-ease-soft),
+    box-shadow 300ms var(--emprovex-motion-ease-soft);
+}
+
+.emprovex-auth-rail::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(59,130,246,0.065), transparent 34%);
+  opacity: 0.72;
+}
+
+.emprovex-auth-rail > * {
+  position: relative;
+  z-index: 1;
+}
+
+.emprovex-auth-rail[data-phase='identity'],
+.emprovex-auth-rail[data-phase='workspace'] {
+  border-color: rgba(96,165,250,0.13);
+  background:
+    linear-gradient(145deg, rgba(59,130,246,0.042), rgba(255,255,255,0.012)),
+    rgba(2,8,23,0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.025),
+    0 12px 32px rgba(0,18,68,0.14);
+}
+
+.emprovex-auth-rail[data-phase='error'] {
+  border-color: rgba(248,113,113,0.12);
+}
+
+.emprovex-auth-rail__icon {
+  color: rgba(147,197,253,0.84);
+  border: 1px solid rgba(147,197,253,0.10);
+  background: rgba(59,130,246,0.055);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.018);
+}
+
+.emprovex-auth-rail[data-phase='error'] .emprovex-auth-rail__icon {
+  color: rgba(252,165,165,0.90);
+  border-color: rgba(248,113,113,0.12);
+  background: rgba(127,29,29,0.07);
+}
+
+.emprovex-auth-step {
+  width: 1.05rem;
+  height: 1.05rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.16);
+  background: rgba(15,23,42,0.72);
+  color: rgba(191,219,254,0.92);
+  transition:
+    border-color 240ms ease,
+    background-color 240ms ease,
+    box-shadow 260ms ease,
+    opacity 220ms ease;
+}
+
+.emprovex-auth-step > span {
+  width: 0.22rem;
+  height: 0.22rem;
+  border-radius: 999px;
+  background: rgba(100,116,139,0.62);
+}
+
+.emprovex-auth-step[data-state='active'] {
+  border-color: rgba(147,197,253,0.50);
+  background: rgba(30,64,175,0.22);
+  box-shadow:
+    0 0 0 3px rgba(59,130,246,0.055),
+    0 0 12px rgba(96,165,250,0.12);
+}
+
+.emprovex-auth-step[data-state='active'] > span {
+  background: rgb(147 197 253);
+  box-shadow: 0 0 8px rgba(96,165,250,0.70);
+}
+
+.emprovex-auth-step[data-state='done'] {
+  border-color: rgba(110,231,183,0.30);
+  background: rgba(6,78,59,0.20);
+  color: rgba(167,243,208,0.94);
+}
+
+.emprovex-auth-step[data-state='error'] {
+  border-color: rgba(248,113,113,0.30);
+  background: rgba(127,29,29,0.16);
+}
+
+.emprovex-auth-step[data-state='error'] > span {
+  background: rgba(252,165,165,0.92);
+  box-shadow: 0 0 7px rgba(248,113,113,0.42);
+}
+
+.emprovex-auth-connector {
+  height: 1px;
+  min-width: 1.6rem;
+  background: rgba(100,116,139,0.14);
+  overflow: hidden;
+}
+
+.emprovex-auth-connector[data-state='done'] {
+  background: linear-gradient(
+    90deg,
+    rgba(52,211,153,0.20),
+    rgba(110,231,183,0.48),
+    rgba(96,165,250,0.26)
+  );
+}
+
+.emprovex-auth-connector[data-state='active'] {
+  background: linear-gradient(
+    90deg,
+    rgba(96,165,250,0.08),
+    rgba(147,197,253,0.48),
+    rgba(96,165,250,0.08)
+  );
+  background-size: 180% 100%;
+}
+
+.emprovex-auth-loading-panel {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.045),
+    0 35px 110px rgba(0,7,28,0.62),
+    0 0 42px rgba(37,99,235,0.035);
+}
+
+.emprovex-auth-loading-panel__edge {
+  z-index: 0;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(rgba(7,18,37,0.82), rgba(7,18,37,0.82)) padding-box,
+    radial-gradient(
+      380px circle at 50% 18%,
+      rgba(147,197,253,0.24),
+      rgba(96,165,250,0.06) 40%,
+      transparent 72%
+    ) border-box;
+}
+
+.emprovex-auth-loading-spinner {
+  color: rgba(191,219,254,0.90);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.025),
+    0 0 22px rgba(37,99,235,0.07);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .emprovex-auth-scanner[data-active='true'] span,
+  .emprovex-auth-loading-panel .emprovex-auth-scanner span {
+    animation: emprovex-auth-scan 1.75s linear infinite;
+  }
+
+  .emprovex-auth-step[data-state='active'] {
+    animation: emprovex-auth-step-pulse 1.45s ease-in-out infinite;
+  }
+
+  .emprovex-auth-connector[data-state='active'] {
+    animation: emprovex-auth-connector-flow 1.8s linear infinite;
+  }
+}
+
+@media (max-width: 639px) {
+  .emprovex-auth-rail {
+    padding: 0.8rem 0.85rem;
+  }
+
+  .emprovex-auth-rail__timeline {
+    gap: 0.35rem;
+  }
+
+  .emprovex-auth-connector {
+    min-width: 0.8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emprovex-auth-scanner span,
+  .emprovex-auth-step,
+  .emprovex-auth-connector {
+    animation: none !important;
+  }
+
+  .emprovex-auth-scanner {
+    display: none;
+  }
+
+  .emprovex-auth-loading-spinner svg {
+    animation: none !important;
+  }
+}
+
+
+/* EMPROVEX login — cinematic handoff into application (Bloco 7). */
+@keyframes emprovex-success-wave-expand {
+  0% {
+    width: 4rem;
+    height: 4rem;
+    opacity: 0;
+    border-width: 1px;
+  }
+  18% {
+    opacity: 0.72;
+  }
+  100% {
+    width: 118vmax;
+    height: 118vmax;
+    opacity: 0;
+    border-width: 0.5px;
+  }
+}
+
+@keyframes emprovex-success-beam-open {
+  0% {
+    width: 0;
+    opacity: 0;
+  }
+  26% {
+    opacity: 0.72;
+  }
+  100% {
+    width: 118vw;
+    opacity: 0;
+  }
+}
+
+@keyframes emprovex-success-core-flash {
+  0% {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.08),
+      0 0 0 rgba(52,211,153,0),
+      0 24px 70px rgba(0,18,70,0.38);
+  }
+  34% {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.12),
+      0 0 54px rgba(52,211,153,0.22),
+      0 28px 84px rgba(0,28,96,0.48);
+  }
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.06),
+      0 0 88px rgba(96,165,250,0.03),
+      0 24px 72px rgba(0,18,70,0.24);
+  }
+}
+
+@keyframes emprovex-app-login-reveal {
+  0% {
+    opacity: 0.76;
+    filter: blur(2.5px) saturate(0.88);
+    transform: scale(0.992);
+  }
+  58% {
+    opacity: 0.96;
+    filter: blur(0.4px) saturate(0.97);
+  }
+  100% {
+    opacity: 1;
+    filter: none;
+    transform: scale(1);
+  }
+}
+
+.emprovex-login-success {
+  isolation: isolate;
+}
+
+.emprovex-login-success__backdrop {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(23,83,196,0.20), transparent 28%),
+    linear-gradient(135deg, rgba(2,8,23,0.96), rgba(2,11,31,0.90) 48%, rgba(2,8,23,0.94));
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+
+.emprovex-login-success__wave {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(110,231,183,0.38);
+  transform: translate(-50%, -50%);
+  box-shadow:
+    0 0 30px rgba(52,211,153,0.10),
+    inset 0 0 28px rgba(96,165,250,0.06);
+}
+
+.emprovex-login-success__beam {
+  height: 1px;
+  width: 0;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(96,165,250,0.16),
+    rgba(167,243,208,0.70),
+    rgba(147,197,253,0.52),
+    rgba(96,165,250,0.16),
+    transparent
+  );
+  box-shadow:
+    0 0 18px rgba(52,211,153,0.16),
+    0 0 42px rgba(59,130,246,0.11);
+}
+
+.emprovex-login-success__core {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 24px 70px rgba(0,18,70,0.38);
+}
+
+.emprovex-login-success__core-glow {
+  background:
+    radial-gradient(circle at 50% 46%, rgba(110,231,183,0.15), transparent 42%),
+    linear-gradient(145deg, rgba(255,255,255,0.055), transparent 40%);
+}
+
+.emprovex-app-login-entry > :not(.emprovex-login-success) {
+  transform-origin: center top;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .emprovex-login-success__wave {
+    animation: emprovex-success-wave-expand 0.88s var(--emprovex-motion-ease) both;
+  }
+
+  .emprovex-login-success__beam {
+    animation: emprovex-success-beam-open 0.72s 0.08s var(--emprovex-motion-ease) both;
+  }
+
+  .emprovex-login-success__core {
+    animation: emprovex-success-core-flash 0.78s var(--emprovex-motion-ease) both;
+  }
+
+  .emprovex-app-login-entry > :not(.emprovex-login-success) {
+    animation: emprovex-app-login-reveal 0.76s var(--emprovex-motion-ease) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emprovex-login-success__backdrop {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(2,8,23,0.12);
+  }
+
+  .emprovex-login-success__wave,
+  .emprovex-login-success__beam,
+  .emprovex-login-success__core,
+  .emprovex-app-login-entry > :not(.emprovex-login-success) {
+    animation: none !important;
+    filter: none !important;
+  }
+}
+
+
+/* EMPROVEX login — ambient reactivity (Bloco 8). */
+.emprovex-login-atmosphere {
+  --ambient-shift-x: 0px;
+  --ambient-shift-y: 0px;
+  --ambient-shift-x-inverse: 0px;
+  --ambient-shift-y-inverse: 0px;
+}
+
+.emprovex-login-aura-layer,
+.emprovex-login-network-layer,
+.emprovex-login-document-layer,
+.emprovex-login-spotlight,
+.emprovex-login-attention-field,
+.emprovex-login-perspective-grid,
+.emprovex-login-scanline,
+.emprovex-login-grain {
+  transition:
+    opacity 420ms var(--emprovex-motion-ease-soft),
+    transform 520ms var(--emprovex-motion-ease-soft);
+}
+
+.emprovex-login-aura-layer {
+  transform: translate3d(
+    var(--ambient-shift-x-inverse),
+    var(--ambient-shift-y-inverse),
+    0
+  );
+}
+
+.emprovex-login-network-layer {
+  transform: translate3d(
+    var(--ambient-shift-x),
+    var(--ambient-shift-y),
+    0
+  );
+}
+
+.emprovex-login-document-layer {
+  transform: translate3d(
+    var(--ambient-shift-x-inverse),
+    var(--ambient-shift-y-inverse),
+    0
+  );
+}
+
+.emprovex-login-attention-field {
+  opacity: 0;
+  background:
+    radial-gradient(
+      430px circle at 77% 60%,
+      rgba(59,130,246,0.10),
+      rgba(37,99,235,0.035) 34%,
+      transparent 72%
+    );
+}
+
+.emprovex-login-atmosphere[data-focus='email'] .emprovex-login-spotlight {
+  filter: brightness(1.18) saturate(1.05);
+}
+
+.emprovex-login-atmosphere[data-focus='email'] .emprovex-login-network-layer {
+  filter: brightness(1.08);
+  opacity: 0.95;
+}
+
+.emprovex-login-atmosphere[data-focus='email'] .emprovex-login-aura-layer {
+  filter: saturate(1.08);
+}
+
+.emprovex-login-atmosphere[data-focus='email'] .emprovex-login-attention-field {
+  opacity: 0.16;
+}
+
+.emprovex-login-atmosphere[data-focus='password'] .emprovex-login-document-layer {
+  opacity: 0.38;
+  filter: brightness(0.78);
+}
+
+.emprovex-login-atmosphere[data-focus='password'] .emprovex-login-network-layer {
+  opacity: 0.72;
+  filter: brightness(0.88);
+}
+
+.emprovex-login-atmosphere[data-focus='password'] .emprovex-login-scanline {
+  opacity: 0.58;
+}
+
+.emprovex-login-atmosphere[data-focus='password'] .emprovex-login-grain {
+  opacity: 0.020;
+}
+
+.emprovex-login-atmosphere[data-focus='password'] .emprovex-login-attention-field {
+  opacity: 0.28;
+}
+
+.emprovex-login-atmosphere[data-state='ready'] .emprovex-login-attention-field {
+  opacity: 0.62;
+  background:
+    radial-gradient(
+      380px circle at 78% 61%,
+      rgba(59,130,246,0.15),
+      rgba(37,99,235,0.055) 36%,
+      transparent 72%
+    );
+}
+
+.emprovex-login-atmosphere[data-state='ready'] .emprovex-login-perspective-grid {
+  opacity: 0.20;
+}
+
+.emprovex-login-atmosphere[data-state='ready'] .emprovex-login-document-layer {
+  opacity: 0.72;
+}
+
+.emprovex-login-atmosphere[data-state='authenticating'] .emprovex-login-attention-field {
+  opacity: 1;
+  background:
+    radial-gradient(
+      360px circle at 78% 60%,
+      rgba(96,165,250,0.20),
+      rgba(37,99,235,0.080) 38%,
+      transparent 72%
+    );
+}
+
+.emprovex-login-atmosphere[data-state='authenticating'] .emprovex-login-network-layer {
+  opacity: 0.34;
+  filter: brightness(0.72) saturate(0.82);
+}
+
+.emprovex-login-atmosphere[data-state='authenticating'] .emprovex-login-document-layer {
+  opacity: 0.16;
+  filter: brightness(0.70);
+}
+
+.emprovex-login-atmosphere[data-state='authenticating'] .emprovex-login-perspective-grid {
+  opacity: 0.10;
+}
+
+.emprovex-login-atmosphere[data-state='authenticating'] .emprovex-login-aura-layer {
+  opacity: 0.74;
+  filter: saturate(0.92);
+}
+
+.emprovex-login-atmosphere[data-state='authenticating'] .emprovex-login-grain {
+  opacity: 0.014;
+}
+
+.emprovex-login-atmosphere[data-state='authenticating'] .emprovex-login-scanline {
+  opacity: 0.34;
+}
+
+.emprovex-login-atmosphere[data-state='error'] .emprovex-login-attention-field {
+  opacity: 0.18;
+  background:
+    radial-gradient(
+      360px circle at 78% 60%,
+      rgba(248,113,113,0.055),
+      transparent 68%
+    );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .emprovex-login-atmosphere[data-state='idle'][data-focus='none'] .emprovex-login-aura--one {
+    animation-duration: 32s;
+  }
+
+  .emprovex-login-atmosphere[data-state='idle'][data-focus='none'] .emprovex-login-aura--two {
+    animation-duration: 38s;
+  }
+
+  .emprovex-login-atmosphere[data-state='idle'][data-focus='none'] .emprovex-login-aura--three {
+    animation-duration: 44s;
+  }
+
+  .emprovex-login-atmosphere[data-state='idle'][data-focus='none'] .emprovex-network-routes--signal {
+    animation-duration: 12s;
+  }
+
+  .emprovex-login-atmosphere[data-state='idle'][data-focus='none'] .emprovex-document-signal {
+    animation-duration: 11s;
+  }
+
+  .emprovex-login-atmosphere[data-state='idle'][data-focus='none'] .emprovex-login-scanline {
+    animation-duration: 18s;
+  }
+
+  .emprovex-login-atmosphere[data-state='ready'] .emprovex-network-routes--signal {
+    animation-duration: 7.2s;
+  }
+
+  .emprovex-login-atmosphere[data-state='authenticating'] .emprovex-network-routes--signal {
+    animation-duration: 14s;
+  }
+
+  .emprovex-login-atmosphere[data-state='authenticating'] .emprovex-document-signal {
+    animation-play-state: paused;
+  }
+}
+
+@media (pointer: coarse) {
+  .emprovex-login-aura-layer,
+  .emprovex-login-network-layer,
+  .emprovex-login-document-layer {
+    transform: none;
+  }
+
+  .emprovex-login-atmosphere[data-focus='email'] .emprovex-login-spotlight,
+  .emprovex-login-atmosphere[data-focus='password'] .emprovex-login-spotlight {
+    filter: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .emprovex-login-aura-layer,
+  .emprovex-login-network-layer,
+  .emprovex-login-document-layer {
+    transform: none;
+    filter: none !important;
+  }
+
+  .emprovex-login-atmosphere[data-state='ready'] .emprovex-login-attention-field,
+  .emprovex-login-atmosphere[data-state='authenticating'] .emprovex-login-attention-field {
+    opacity: 0.34;
+    background:
+      radial-gradient(
+        300px circle at 50% 68%,
+        rgba(59,130,246,0.10),
+        transparent 72%
+      );
+  }
+
+  .emprovex-login-atmosphere[data-focus='password'] .emprovex-login-grain {
+    opacity: 0.018;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emprovex-login-aura-layer,
+  .emprovex-login-network-layer,
+  .emprovex-login-document-layer,
+  .emprovex-login-spotlight,
+  .emprovex-login-attention-field,
+  .emprovex-login-perspective-grid,
+  .emprovex-login-scanline,
+  .emprovex-login-grain {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+
+/* EMPROVEX login — performance, accessibility and final polish (Bloco 9). */
+.emprovex-login-shell button:focus-visible,
+.emprovex-login-shell a:focus-visible,
+.emprovex-login-shell input:focus-visible {
+  outline: 2px solid rgba(147, 197, 253, 0.96);
+  outline-offset: 3px;
+  box-shadow:
+    0 0 0 4px rgba(37, 99, 235, 0.14),
+    0 0 20px rgba(59, 130, 246, 0.10);
+}
+
+.emprovex-login-footer-link {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  padding-inline: 0.2rem;
+}
+
+@media (max-width: 767px) {
+  .emprovex-login-panel,
+  .emprovex-auth-loading-panel {
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .emprovex-logo-core__surface {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .emprovex-login-success__backdrop {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+}
+
+@media (prefers-contrast: more) {
+  .emprovex-login-panel,
+  .emprovex-auth-loading-panel,
+  .emprovex-auth-rail,
+  .emprovex-institutional-card {
+    border-color: rgba(191, 219, 254, 0.24) !important;
+  }
+
+  .emprovex-login-shell .text-slate-500,
+  .emprovex-login-shell .text-slate-500\/70,
+  .emprovex-login-shell .text-slate-500\/75,
+  .emprovex-login-shell .text-slate-500\/80 {
+    color: rgb(203 213 225) !important;
+  }
+
+  .emprovex-login-shell .text-slate-400 {
+    color: rgb(226 232 240) !important;
+  }
+
+  .emprovex-login-input {
+    border-color: rgba(191, 219, 254, 0.30);
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .emprovex-login-panel,
+  .emprovex-auth-loading-panel,
+  .emprovex-logo-core__surface {
+    background-color: rgba(5, 18, 42, 0.96);
+  }
+
+  .emprovex-login-success__backdrop {
+    background:
+      radial-gradient(circle at 50% 50%, rgba(23,83,196,0.17), transparent 28%),
+      rgba(2,8,23,0.97);
+  }
+}
+
+
+/* EMPROVEX login — Signature Experience (Bloco 9.5). */
+@keyframes emprovex-reactor-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes emprovex-reactor-spin-reverse {
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes emprovex-reactor-core-breathe {
+  0%, 100% {
+    opacity: 0.46;
+    scale: 0.82;
+    box-shadow:
+      0 0 10px rgba(96,165,250,0.18),
+      0 0 24px rgba(37,99,235,0.08);
+  }
+  50% {
+    opacity: 0.92;
+    scale: 1.12;
+    box-shadow:
+      0 0 16px rgba(147,197,253,0.32),
+      0 0 36px rgba(59,130,246,0.15);
+  }
+}
+
+@keyframes emprovex-signature-aperture {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.42);
+  }
+  22% {
+    opacity: 0.54;
+  }
+  72% {
+    opacity: 0.18;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(3.4);
+  }
+}
+
+@keyframes emprovex-signature-line-h {
+  0% { opacity: 0; transform: translateX(-50%) scaleX(0); }
+  24% { opacity: 0.40; }
+  72% { opacity: 0.10; }
+  100% { opacity: 0; transform: translateX(-50%) scaleX(1); }
+}
+
+@keyframes emprovex-signature-line-v {
+  0% { opacity: 0; transform: translateY(-50%) scaleY(0); }
+  24% { opacity: 0.24; }
+  72% { opacity: 0.06; }
+  100% { opacity: 0; transform: translateY(-50%) scaleY(1); }
+}
+
+@keyframes emprovex-refraction-sweep {
+  0%, 100% {
+    opacity: 0.28;
+    background-position: -120% 0, 0 0;
+  }
+  50% {
+    opacity: 0.46;
+    background-position: 220% 0, 0 0;
+  }
+}
+
+@keyframes emprovex-signature-conduit-pulse {
+  0% {
+    opacity: 0;
+    transform: rotate(18deg) translateX(-7vw);
+  }
+  14% {
+    opacity: 0.84;
+  }
+  78% {
+    opacity: 0.34;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(18deg) translateX(56vw);
+  }
+}
+
+@keyframes emprovex-signature-node-ready {
+  0%, 100% { opacity: 0.34; }
+  50% { opacity: 0.90; }
+}
+
+.emprovex-logo-reactor {
+  position: absolute;
+  z-index: 2;
+  inset: 9%;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translateZ(12px);
+}
+
+.emprovex-logo-reactor__ring,
+.emprovex-logo-reactor__axis,
+.emprovex-logo-reactor__core {
+  position: absolute;
+  pointer-events: none;
+}
+
+.emprovex-logo-reactor__ring {
+  border-radius: 50%;
+  transform-origin: center;
+}
+
+.emprovex-logo-reactor__ring--outer {
+  inset: 5%;
+  border: 1px solid rgba(96,165,250,0.16);
+  border-left-color: rgba(147,197,253,0.56);
+  border-right-color: rgba(103,232,249,0.24);
+  box-shadow:
+    inset 0 0 18px rgba(37,99,235,0.035),
+    0 0 14px rgba(37,99,235,0.045);
+}
+
+.emprovex-logo-reactor__ring--mid {
+  inset: 18%;
+  border: 1px dashed rgba(147,197,253,0.25);
+  opacity: 0.74;
+}
+
+.emprovex-logo-reactor__ring--inner {
+  inset: 31%;
+  border: 1px solid rgba(191,219,254,0.25);
+  border-top-color: rgba(103,232,249,0.62);
+  border-bottom-color: rgba(96,165,250,0.10);
+  box-shadow: 0 0 12px rgba(96,165,250,0.08);
+}
+
+.emprovex-logo-reactor__axis--h {
+  left: 18%;
+  right: 18%;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(96,165,250,0.12),
+    rgba(191,219,254,0.36),
+    rgba(96,165,250,0.12),
+    transparent
+  );
+}
+
+.emprovex-logo-reactor__axis--v {
+  top: 18%;
+  bottom: 18%;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(96,165,250,0.10),
+    rgba(191,219,254,0.28),
+    rgba(96,165,250,0.10),
+    transparent
+  );
+}
+
+.emprovex-logo-reactor__core {
+  width: 13%;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 40% 34%, rgba(255,255,255,0.92), rgba(147,197,253,0.74) 22%, rgba(59,130,246,0.44) 54%, transparent 76%);
+  opacity: 0.62;
+  box-shadow:
+    0 0 10px rgba(96,165,250,0.20),
+    0 0 24px rgba(37,99,235,0.09);
+}
+
+.emprovex-logo-core[data-state='authenticating'] .emprovex-logo-reactor__ring--outer {
+  border-left-color: rgba(191,219,254,0.82);
+  border-right-color: rgba(103,232,249,0.48);
+}
+
+.emprovex-logo-core[data-state='authenticating'] .emprovex-logo-reactor__core {
+  background:
+    radial-gradient(circle, rgba(255,255,255,0.96), rgba(147,197,253,0.84) 28%, rgba(59,130,246,0.52) 58%, transparent 78%);
+}
+
+.emprovex-logo-core[data-state='success'] .emprovex-logo-reactor__ring--outer,
+.emprovex-logo-core[data-state='success'] .emprovex-logo-reactor__ring--inner {
+  border-color: rgba(110,231,183,0.32);
+  border-top-color: rgba(167,243,208,0.70);
+}
+
+.emprovex-logo-core[data-state='success'] .emprovex-logo-reactor__core {
+  background:
+    radial-gradient(circle, rgba(255,255,255,0.96), rgba(167,243,208,0.80) 28%, rgba(52,211,153,0.40) 58%, transparent 78%);
+  box-shadow:
+    0 0 14px rgba(110,231,183,0.28),
+    0 0 32px rgba(52,211,153,0.12);
+}
+
+.emprovex-login-panel__refraction {
+  z-index: 1;
+  opacity: 0.34;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(
+      112deg,
+      transparent 0 28%,
+      rgba(96,165,250,0.00) 34%,
+      rgba(96,165,250,0.08) 43%,
+      rgba(103,232,249,0.065) 48%,
+      rgba(196,181,253,0.038) 53%,
+      rgba(96,165,250,0.00) 62%,
+      transparent 72%
+    ),
+    radial-gradient(
+      350px circle at var(--panel-x) var(--panel-y),
+      rgba(219,234,254,0.075),
+      rgba(103,232,249,0.026) 28%,
+      transparent 62%
+    );
+  background-size: 180% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+  -webkit-mask-image: linear-gradient(#000, #000);
+  mask-image: linear-gradient(#000, #000);
+  transition:
+    opacity 280ms var(--emprovex-motion-ease-soft),
+    border-color 280ms var(--emprovex-motion-ease-soft);
+}
+
+.emprovex-login-panel[data-focus='email'] .emprovex-login-panel__refraction,
+.emprovex-login-panel[data-focus='password'] .emprovex-login-panel__refraction {
+  opacity: 0.48;
+}
+
+.emprovex-login-panel[data-state='ready'] .emprovex-login-panel__refraction {
+  opacity: 0.62;
+  border-color: rgba(147,197,253,0.045);
+}
+
+.emprovex-login-panel[data-state='authenticating'] .emprovex-login-panel__refraction {
+  opacity: 0.72;
+  border-color: rgba(191,219,254,0.055);
+}
+
+.emprovex-signature-intro {
+  overflow: hidden;
+}
+
+.emprovex-signature-intro__aperture {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 999px;
+  border: 1px solid rgba(96,165,250,0.13);
+  box-shadow:
+    0 0 44px rgba(37,99,235,0.045),
+    inset 0 0 42px rgba(96,165,250,0.035);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.42);
+}
+
+.emprovex-signature-intro__line {
+  position: absolute;
+  opacity: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(96,165,250,0.12),
+    rgba(191,219,254,0.34),
+    rgba(96,165,250,0.12),
+    transparent
+  );
+}
+
+.emprovex-signature-intro__line--h {
+  left: 50%;
+  top: 48%;
+  width: 82vw;
+  height: 1px;
+  transform: translateX(-50%) scaleX(0);
+}
+
+.emprovex-signature-intro__line--v {
+  top: 50%;
+  left: 50%;
+  width: 1px;
+  height: 70vh;
+  transform: translateY(-50%) scaleY(0);
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(96,165,250,0.07),
+    rgba(191,219,254,0.22),
+    rgba(96,165,250,0.07),
+    transparent
+  );
+}
+
+.emprovex-signature-conduit {
+  opacity: 1;
+}
+
+.emprovex-signature-conduit__track,
+.emprovex-signature-conduit__pulse {
+  position: absolute;
+  left: 23vw;
+  top: 34vh;
+  width: 56vw;
+  height: 1px;
+  transform: rotate(18deg);
+  transform-origin: left center;
+}
+
+.emprovex-signature-conduit__track {
+  opacity: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(96,165,250,0.025) 12%,
+    rgba(96,165,250,0.13) 46%,
+    rgba(103,232,249,0.085) 68%,
+    transparent
+  );
+  box-shadow: 0 0 18px rgba(59,130,246,0.035);
+  transition: opacity 420ms var(--emprovex-motion-ease-soft);
+}
+
+.emprovex-signature-conduit__pulse {
+  width: 4.8rem;
+  opacity: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(96,165,250,0.26),
+    rgba(191,219,254,0.72),
+    rgba(103,232,249,0.22),
+    transparent
+  );
+  box-shadow:
+    0 0 10px rgba(96,165,250,0.14),
+    0 0 22px rgba(59,130,246,0.07);
+}
+
+.emprovex-signature-conduit[data-focus='email'] .emprovex-signature-conduit__track {
+  opacity: 0.11;
+}
+
+.emprovex-signature-conduit[data-focus='password'] .emprovex-signature-conduit__track {
+  opacity: 0.075;
+}
+
+.emprovex-signature-conduit[data-state='ready'] .emprovex-signature-conduit__track {
+  opacity: 0.24;
+}
+
+.emprovex-signature-conduit[data-state='authenticating'] .emprovex-signature-conduit__track {
+  opacity: 0.17;
+}
+
+.emprovex-login-atmosphere [data-node] .emprovex-network-node-halo,
+.emprovex-login-atmosphere [data-node] > circle:nth-of-type(2),
+.emprovex-login-atmosphere [data-node] .emprovex-network-label,
+.emprovex-network-route {
+  transition:
+    opacity 320ms var(--emprovex-motion-ease-soft),
+    stroke 320ms var(--emprovex-motion-ease-soft),
+    filter 320ms var(--emprovex-motion-ease-soft);
+}
+
+.emprovex-login-atmosphere[data-focus='email'] [data-node='ne'] .emprovex-network-node-halo,
+.emprovex-login-atmosphere[data-focus='email'] [data-node='rec'] .emprovex-network-node-halo {
+  opacity: 0.92;
+  filter: drop-shadow(0 0 7px rgba(96,165,250,0.30));
+}
+
+.emprovex-login-atmosphere[data-focus='email'] [data-node='ne'] > circle:nth-of-type(2),
+.emprovex-login-atmosphere[data-focus='email'] [data-node='rec'] > circle:nth-of-type(2) {
+  stroke: rgba(191,219,254,0.94);
+}
+
+.emprovex-login-atmosphere[data-focus='email'] .emprovex-network-route--a {
+  opacity: 1;
+  stroke: rgba(96,165,250,0.52);
+}
+
+.emprovex-login-atmosphere[data-focus='password'] [data-node='nf'] .emprovex-network-node-halo,
+.emprovex-login-atmosphere[data-focus='password'] [data-node='doc'] .emprovex-network-node-halo {
+  opacity: 0.80;
+  filter: drop-shadow(0 0 6px rgba(103,232,249,0.22));
+}
+
+.emprovex-login-atmosphere[data-focus='password'] [data-node='nf'] > circle:nth-of-type(2),
+.emprovex-login-atmosphere[data-focus='password'] [data-node='doc'] > circle:nth-of-type(2) {
+  stroke: rgba(165,243,252,0.80);
+}
+
+.emprovex-login-atmosphere[data-focus='password'] .emprovex-network-route--d {
+  opacity: 0.88;
+  stroke: rgba(103,232,249,0.38);
+}
+
+.emprovex-login-atmosphere[data-state='ready'] [data-node] .emprovex-network-node-halo {
+  opacity: 0.68;
+}
+
+.emprovex-login-atmosphere[data-state='ready'] [data-node='rlt'] .emprovex-network-node-halo,
+.emprovex-login-atmosphere[data-state='ready'] [data-node='liq'] .emprovex-network-node-halo {
+  opacity: 0.96;
+  filter: drop-shadow(0 0 8px rgba(96,165,250,0.30));
+}
+
+.emprovex-login-atmosphere[data-state='ready'] .emprovex-network-label {
+  opacity: 0.74;
+}
+
+.emprovex-login-atmosphere[data-state='authenticating'] [data-node] .emprovex-network-node-halo {
+  opacity: 0.28;
+  filter: none;
+}
+
+.emprovex-login-atmosphere[data-state='authenticating'] [data-node='liq'] .emprovex-network-node-halo {
+  opacity: 0.72;
+}
+
+@media (min-width: 1200px) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .emprovex-logo-reactor__ring--outer {
+    animation: emprovex-reactor-spin 20s linear infinite;
+  }
+
+  .emprovex-logo-reactor__ring--mid {
+    animation: emprovex-reactor-spin-reverse 15s linear infinite;
+  }
+
+  .emprovex-logo-reactor__ring--inner {
+    animation: emprovex-reactor-spin 9s linear infinite;
+  }
+
+  .emprovex-logo-reactor__core {
+    animation: emprovex-reactor-core-breathe 3.8s ease-in-out infinite;
+  }
+
+  .emprovex-logo-core[data-state='authenticating'] .emprovex-logo-reactor__ring--outer {
+    animation-duration: 4.2s;
+  }
+
+  .emprovex-logo-core[data-state='authenticating'] .emprovex-logo-reactor__ring--mid {
+    animation-duration: 3.1s;
+  }
+
+  .emprovex-logo-core[data-state='authenticating'] .emprovex-logo-reactor__ring--inner {
+    animation-duration: 2.2s;
+  }
+
+  .emprovex-login-panel__refraction {
+    animation: emprovex-refraction-sweep 9.5s ease-in-out infinite;
+  }
+
+  .emprovex-signature-conduit[data-state='ready'] .emprovex-signature-conduit__pulse {
+    animation: emprovex-signature-conduit-pulse 2.8s var(--emprovex-motion-ease) infinite;
+  }
+
+  .emprovex-signature-conduit[data-state='authenticating'] .emprovex-signature-conduit__pulse {
+    animation: emprovex-signature-conduit-pulse 1.55s linear infinite;
+  }
+
+  .emprovex-login-atmosphere[data-state='ready'] [data-node='liq'] .emprovex-network-node-halo,
+  .emprovex-login-atmosphere[data-state='ready'] [data-node='rlt'] .emprovex-network-node-halo {
+    animation: emprovex-signature-node-ready 2.6s ease-in-out infinite;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .emprovex-signature-intro__aperture {
+    animation: emprovex-signature-aperture 1.08s 0.04s var(--emprovex-motion-ease) both;
+  }
+
+  .emprovex-signature-intro__line--h {
+    animation: emprovex-signature-line-h 0.94s 0.10s var(--emprovex-motion-ease) both;
+  }
+
+  .emprovex-signature-intro__line--v {
+    animation: emprovex-signature-line-v 0.88s 0.14s var(--emprovex-motion-ease) both;
+  }
+}
+
+@media (max-width: 1199px) {
+  .emprovex-signature-conduit {
+    display: none !important;
+  }
+
+  .emprovex-login-panel__refraction {
+    opacity: 0.24;
+    animation: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .emprovex-logo-reactor__axis,
+  .emprovex-logo-reactor__ring--mid {
+    display: none;
+  }
+
+  .emprovex-logo-reactor__ring--outer,
+  .emprovex-logo-reactor__ring--inner,
+  .emprovex-logo-reactor__core {
+    animation: none !important;
+  }
+
+  .emprovex-signature-intro__line--v {
+    display: none;
+  }
+
+  .emprovex-signature-intro__aperture {
+    width: 12rem;
+    height: 12rem;
+  }
+
+  .emprovex-login-panel__refraction {
+    mix-blend-mode: normal;
+    opacity: 0.18;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emprovex-logo-reactor__ring,
+  .emprovex-logo-reactor__core,
+  .emprovex-login-panel__refraction,
+  .emprovex-signature-intro__aperture,
+  .emprovex-signature-intro__line,
+  .emprovex-signature-conduit__pulse,
+  .emprovex-login-atmosphere[data-state='ready'] [data-node] .emprovex-network-node-halo {
+    animation: none !important;
+  }
+
+  .emprovex-signature-intro {
+    display: none;
+  }
+
+  .emprovex-signature-conduit {
+    display: none !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .emprovex-login-panel__refraction {
+    opacity: 0.10 !important;
+    mix-blend-mode: normal;
+  }
+
+  .emprovex-signature-conduit {
+    display: none !important;
+  }
+
+  .emprovex-logo-reactor__axis {
+    opacity: 0.45;
+  }
 }
