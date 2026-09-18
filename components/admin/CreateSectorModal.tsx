@@ -74,7 +74,7 @@ export function CreateSectorModal({ open, creating, onClose, onCreate }: CreateS
             </div>
             <h2 className="mt-2 text-xl font-extrabold text-white">Cadastrar novo setor</h2>
             <p className="mt-1 text-xs leading-relaxed text-slate-400">
-              O setor será criado vazio e a conta Google informada ficará pré-autorizada para vinculação futura.
+              O setor será provisionado em workspace próprio e a conta Google informada ficará autorizada para o primeiro acesso.
             </p>
           </div>
           <button
@@ -181,7 +181,7 @@ export function CreateSectorModal({ open, creating, onClose, onCreate }: CreateS
           </details>
 
           <div className="rounded-2xl border border-blue-400/15 bg-blue-500/[0.06] px-4 py-3 text-xs leading-relaxed text-blue-100">
-            A criação deste perfil não concede acesso aos dados do HGeSM. O novo setor terá um workspace próprio e vazio quando a estrutura multi-tenant operacional for ativada nos próximos blocos.
+            A criação não concede acesso aos dados de outros setores. O workspace nasce com contador próprio de Termos de Recebimento e configura seu Google Drive no primeiro acesso.
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-1">
