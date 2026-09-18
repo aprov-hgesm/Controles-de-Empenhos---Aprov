@@ -9,6 +9,7 @@ import {
   uploadInvoicePdf,
 } from '../lib/invoiceDocuments';
 import type { Invoice, InvoicePdfDocument } from '../lib/types';
+import { getInvoiceRecordKey } from '../lib/invoiceIdentity';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -55,7 +56,7 @@ export function InvoiceDocumentActions({
     setBusyAction('upload');
     try {
       uploadedDocument = await uploadInvoicePdf(user, invoice.empenhoId, invoice.id, file);
-      await onDocumentUploaded(invoice.id, uploadedDocument);
+      await onDocumentUploaded(getInvoiceRecordKey(invoice), uploadedDocument);
       onNotify(
         currentDocument ? 'Nova versão do documento da Nota Fiscal anexada com segurança.' : 'Documento da Nota Fiscal anexado com segurança.',
         'success'
