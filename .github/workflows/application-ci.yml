@@ -90,6 +90,9 @@ jobs:
       - name: Workspace Drive onboarding guard
         run: npm run verify:workspace-drive-onboarding
 
+      - name: External Drive OAuth behavior tests
+        run: npm run test:external-drive-auth
+
       - name: Sector lifecycle guard
         run: npm run verify:sector-lifecycle
 
