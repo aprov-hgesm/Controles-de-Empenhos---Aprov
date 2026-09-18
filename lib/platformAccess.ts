@@ -60,9 +60,9 @@ async function resolveSessionAuthProvider(
 }
 
 /**
- * Bloco 16 — valida conta + workspace e vincula a identidade Firebase na mesma
- * transação. O primeiro login grava firebaseUid/firstLoginAt; logins posteriores
- * exigem o mesmo UID e atualizam somente lastLoginAt/updatedAt.
+ * Valida conta + workspace e a identidade Firebase na mesma transação.
+ * Contas novas do Bloco 2 já possuem firebaseUid; o bootstrap de primeiro vínculo
+ * permanece somente para registros legados sem UID.
  *
  * As Firestore Rules repetem as mesmas invariantes e impedem que o próprio setor
  * altere e-mail, workspaceId, status, createdAt, createdBy ou firebaseUid.
@@ -109,21 +109,38 @@ async function resolveAndBindExternalIdentity(
       return null;
     }
 
-    const firstLoginAt = account.firstLoginAt || now;
-    const boundAccount: SectorAccount = {
-      ...account,
-      firebaseUid: account.firebaseUid || user.uid,
-      firstLoginAt,
-      lastLoginAt: now,
-      updatedAt: now,
-    };
+    // Novos setores do Bloco 2 já chegam pré-vinculados ao UID pelo servidor.
+    // Apenas contas legadas sem UID executam o bootstrap histórico de primeiro acesso.
+    let boundAccount: SectorAccount;
 
-    transaction.update(accountRef, {
-      firebaseUid: boundAccount.firebaseUid,
-      firstLoginAt,
-      lastLoginAt: now,
-      updatedAt: now,
-    });
+    if (account.firebaseUid) {
+      boundAccount = {
+        ...account,
+        lastLoginAt: now,
+        updatedAt: now,
+      };
+
+      transaction.update(accountRef, {
+        lastLoginAt: now,
+        updatedAt: now,
+      });
+    } else {
+      const firstLoginAt = account.firstLoginAt || now;
+      boundAccount = {
+        ...account,
+        firebaseUid: user.uid,
+        firstLoginAt,
+        lastLoginAt: now,
+        updatedAt: now,
+      };
+
+      transaction.update(accountRef, {
+        firebaseUid: boundAccount.firebaseUid,
+        firstLoginAt,
+        lastLoginAt: now,
+        updatedAt: now,
+      });
+    }
 
     return {
       account: boundAccount,
