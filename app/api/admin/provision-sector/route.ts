@@ -5,7 +5,7 @@ import {
   provisionSectorWorkspaceWithAuth,
   verifyFounderSession,
 } from '../../../../lib/server/sectorProvisioningAdmin';
-import type { CreateSectorWorkspaceInput } from '../../../../lib/sectorProvisioning';
+import { parseSectorProvisioningInput } from '../../../../lib/sectorProvisioning';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,9 +20,9 @@ export async function POST(request: Request) {
   try {
     const founder = await verifyFounderSession(bearerToken(request));
 
-    let input: CreateSectorWorkspaceInput;
+    let input;
     try {
-      input = await request.json() as CreateSectorWorkspaceInput;
+      input = parseSectorProvisioningInput(await request.json());
     } catch {
       throw new SectorProvisioningFailure(
         'A solicitação de provisionamento é inválida.',
