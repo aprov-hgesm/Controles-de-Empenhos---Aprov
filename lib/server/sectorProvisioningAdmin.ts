@@ -13,6 +13,8 @@ import {
 } from '../platformIdentity';
 import {
   buildProvisionedSectorRecords,
+  MAX_SECTOR_PASSWORD_LENGTH,
+  MIN_SECTOR_PASSWORD_LENGTH,
   validateSectorProvisioningInput,
   type CreateSectorWorkspaceInput,
   type SectorProvisioningResult,
@@ -75,6 +77,12 @@ export interface SectorDeletionResult {
   workspaceId: string;
   email: string;
   firebaseAuthDeleted: boolean;
+}
+
+export interface SectorPasswordResetResult {
+  workspaceId: string;
+  email: string;
+  firebaseUid: string;
 }
 
 interface AccessTokenCache {
@@ -758,6 +766,122 @@ function normalizeProvisioningError(
     'UPSTREAM_ERROR',
     502
   );
+}
+
+export async function resetSectorPasswordWithAuth(
+  workspaceIdInput: string,
+  emailInput: string,
+  newPassword: string,
+  founder: FounderSession
+): Promise<SectorPasswordResetResult> {
+  const workspaceId = normalizeWorkspaceId(workspaceIdInput);
+  const email = normalizePlatformEmail(emailInput);
+
+  if (
+    !isValidWorkspaceId(workspaceId)
+    || !isValidPlatformEmail(email)
+    || newPassword.length < MIN_SECTOR_PASSWORD_LENGTH
+    || newPassword.length > MAX_SECTOR_PASSWORD_LENGTH
+  ) {
+    throw new SectorProvisioningFailure(
+      `A nova senha deve possuir entre ${MIN_SECTOR_PASSWORD_LENGTH} e ${MAX_SECTOR_PASSWORD_LENGTH} caracteres.`,
+      'INVALID_INPUT',
+      400
+    );
+  }
+
+  if (workspaceId === HGESM_WORKSPACE_ID || email === HGESM_SECTOR_EMAIL) {
+    throw new SectorProvisioningFailure(
+      'A credencial do workspace fundador do HGeSM não pode ser alterada por este fluxo.',
+      'FORBIDDEN',
+      403
+    );
+  }
+
+  if (founder.email !== HGESM_SECTOR_EMAIL) {
+    throw new SectorProvisioningFailure(
+      'A sessão atual não possui permissão administrativa para redefinir credenciais.',
+      'FORBIDDEN',
+      403
+    );
+  }
+
+  const accessToken = await getGoogleAccessToken();
+  const workspaceDocument = await readFirestoreDocument(
+    accessToken,
+    `workspaces/${workspaceId}`
+  );
+  const accountDocument = await readFirestoreDocument(
+    accessToken,
+    `platformAccounts/${email}`
+  );
+
+  if (!workspaceDocument || !accountDocument) {
+    throw new SectorProvisioningFailure(
+      'O diretório do setor está incompleto e precisa ser revisado antes da redefinição de senha.',
+      'CONFLICT',
+      409
+    );
+  }
+
+  const workspaceEmail = normalizePlatformEmail(
+    firestoreStringField(workspaceDocument.fields, 'authorizedEmail')
+  );
+  const accountEmail = normalizePlatformEmail(
+    firestoreStringField(accountDocument.fields, 'email')
+  );
+  const accountWorkspaceId = normalizeWorkspaceId(
+    firestoreStringField(accountDocument.fields, 'workspaceId')
+  );
+  const accountType = firestoreStringField(accountDocument.fields, 'accountType');
+  const boundUid = firestoreStringField(accountDocument.fields, 'firebaseUid');
+
+  if (
+    workspaceEmail !== email
+    || accountEmail !== email
+    || accountWorkspaceId !== workspaceId
+    || accountType !== 'sector'
+  ) {
+    throw new SectorProvisioningFailure(
+      'O vínculo entre a conta e o workspace não é consistente.',
+      'CONFLICT',
+      409
+    );
+  }
+
+  const authUser = await lookupAuthUserByEmail(accessToken, email);
+  if (!authUser?.localId) {
+    throw new SectorProvisioningFailure(
+      'A identidade Firebase deste setor não foi localizada.',
+      'CONFLICT',
+      409
+    );
+  }
+
+  if (boundUid && boundUid !== authUser.localId) {
+    throw new SectorProvisioningFailure(
+      'O UID do Firebase diverge do vínculo registrado no diretório do setor.',
+      'CONFLICT',
+      409
+    );
+  }
+
+  await identityToolkitAdminRequest<IdentityToolkitUser>(
+    `projects/${encodeURIComponent(PROJECT_ID)}/accounts:update`,
+    accessToken,
+    {
+      localId: authUser.localId,
+      password: newPassword,
+      emailVerified: true,
+      disableUser: false,
+    }
+  );
+
+  return {
+    workspaceId,
+    email,
+    firebaseUid: authUser.localId,
+  };
 }
 
 export async function deleteSectorWorkspaceWithAuth(
