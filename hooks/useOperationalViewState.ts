@@ -35,6 +35,7 @@ export function useOperationalViewState() {
   const [newEmpenhoForm, setNewEmpenhoForm] = useState<{
     id: string;
     supplier: string;
+    supplierCnpj: string;
     description: string;
     pregao: string;
     date: string;
@@ -42,6 +43,7 @@ export function useOperationalViewState() {
   }>({
     id: '',
     supplier: '',
+    supplierCnpj: '',
     description: '',
     pregao: '',
     date: new Date().toISOString().split('T')[0],
