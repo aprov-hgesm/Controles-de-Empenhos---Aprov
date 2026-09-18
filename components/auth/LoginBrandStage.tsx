@@ -20,7 +20,7 @@ export function LoginBrandStage({ customLogo }: LoginBrandStageProps) {
       initial={{ opacity: 0, x: -18 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-      className="relative flex min-h-[34rem] flex-col justify-between overflow-hidden px-6 pb-8 pt-10 sm:px-10 lg:min-h-0 lg:px-12 lg:py-12 xl:px-16 xl:py-16"
+      className="relative flex min-h-[23rem] flex-col justify-between overflow-hidden px-6 pb-7 pt-8 sm:min-h-[28rem] sm:px-10 sm:pb-9 sm:pt-10 lg:min-h-0 lg:px-12 lg:py-12 xl:px-16 xl:py-16"
       aria-labelledby="emprovex-login-title"
     >
       <div className="pointer-events-none absolute inset-0">
@@ -35,10 +35,10 @@ export function LoginBrandStage({ customLogo }: LoginBrandStageProps) {
           Plataforma integrada de gestão
         </div>
 
-        <div className="mt-12 flex items-center gap-5 sm:mt-14 lg:mt-20">
+        <div className="mt-8 flex items-center gap-4 sm:mt-12 sm:gap-5 lg:mt-20">
           <div className="relative">
             <div className="absolute inset-[-18px] rounded-[2rem] bg-blue-500/10 blur-2xl" />
-            <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-[1.75rem] border border-white/[0.16] bg-gradient-to-br from-white/[0.13] to-white/[0.035] p-3 shadow-[0_28px_80px_rgba(0,17,65,0.42)] backdrop-blur-xl sm:h-28 sm:w-28">
+            <div className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-[1.5rem] border border-white/[0.16] bg-gradient-to-br from-white/[0.13] to-white/[0.035] p-2.5 shadow-[0_28px_80px_rgba(0,17,65,0.42)] backdrop-blur-xl sm:h-28 sm:w-28 sm:rounded-[1.75rem] sm:p-3">
               {customLogo ? (
                 <Image
                   src={customLogo}
@@ -62,28 +62,28 @@ export function LoginBrandStage({ customLogo }: LoginBrandStageProps) {
             </p>
             <h1
               id="emprovex-login-title"
-              className="mt-1 font-montserrat text-4xl font-black tracking-[0.08em] text-white sm:text-5xl xl:text-6xl"
+              className="mt-1 font-montserrat text-3xl font-black tracking-[0.08em] text-white sm:text-5xl xl:text-6xl"
             >
               EMPROVEX
             </h1>
           </div>
         </div>
 
-        <div className="mt-10 max-w-2xl sm:mt-12">
+        <div className="mt-7 max-w-2xl sm:mt-10 lg:mt-12">
           <p className="font-montserrat text-sm font-bold uppercase tracking-[0.18em] text-blue-200 sm:text-base">
             Gestão Logística e Financeira
           </p>
-          <p className="mt-4 max-w-xl text-lg font-medium leading-relaxed text-slate-100/90 sm:text-xl lg:text-2xl">
+          <p className="mt-3 max-w-xl text-base font-medium leading-relaxed text-slate-100/90 sm:mt-4 sm:text-xl lg:text-2xl">
             Inteligência operacional para transformar execução, documentos e controle em uma visão única.
           </p>
-          <p className="mt-4 max-w-xl text-sm leading-6 text-slate-400 sm:text-[15px]">
+          <p className="mt-3 hidden max-w-xl text-sm leading-6 text-slate-400 sm:block sm:text-[15px]">
             Uma plataforma para setores de aprovisionamento trabalharem com mais rastreabilidade,
             organização e clareza em cada etapa do processo.
           </p>
         </div>
       </div>
 
-      <div className="relative z-10 mt-10">
+      <div className="relative z-10 mt-8 hidden sm:block sm:mt-10">
         <div className="grid gap-3 sm:grid-cols-3 lg:max-w-2xl">
           {capabilities.map(({ icon: Icon, label, detail }) => (
             <div
