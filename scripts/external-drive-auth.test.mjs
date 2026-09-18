@@ -311,12 +311,16 @@ test('external Drive OAuth succeeds without mutating the Firebase password sessi
   assert.equal(harness.state.initConfig.scope, DRIVE_SCOPE);
   assert.equal(harness.state.initConfig.include_granted_scopes, false);
   assert.equal(harness.state.initConfig.login_hint, EXPECTED_EMAIL);
+  assert.equal(harness.state.initConfig.prompt, 'select_account');
+  assert.equal(harness.state.requestConfig.prompt, 'select_account');
+  assert.equal(String(harness.state.initConfig.prompt).includes('consent'), false);
+  assert.equal(String(harness.state.requestConfig.prompt).includes('consent'), false);
 });
 
 test('wrong Google account is rejected and Firebase session remains untouched', async () => {
   await expectExternalFailure(
     { driveEmail: 'outra.conta@gmail.com' },
-    /mesma Conta Google autorizada/
+    /não corresponde à conta autorizada/
   );
 });
 
@@ -336,15 +340,38 @@ test('blocked OAuth popup does not sign the external user out', async () => {
   assert.equal(harness.state.fetches.length, 0);
 });
 
-test('OAuth access denial does not sign the external user out', async () => {
+test('OAuth access denial uses a friendly message and does not sign the external user out', async () => {
   const harness = await expectExternalFailure(
     {
       tokenResponse: {
         error: 'access_denied',
-        error_description: 'O usuário recusou o acesso ao Google Drive.',
       },
     },
-    /recusou o acesso ao Google Drive/
+    /autorização do Google Drive foi cancelada ou recusada/
+  );
+  assert.equal(harness.state.fetches.length, 0);
+});
+
+test('OAuth login-required response keeps Firebase intact and asks for account confirmation', async () => {
+  const harness = await expectExternalFailure(
+    {
+      tokenResponse: {
+        error: 'login_required',
+      },
+    },
+    /confirme a conta antes de continuar/
+  );
+  assert.equal(harness.state.fetches.length, 0);
+});
+
+test('OAuth consent-required response keeps Firebase intact and asks only for Google permission', async () => {
+  const harness = await expectExternalFailure(
+    {
+      tokenResponse: {
+        error: 'consent_required',
+      },
+    },
+    /confirmar a permissão do Drive/
   );
   assert.equal(harness.state.fetches.length, 0);
 });
@@ -452,6 +479,11 @@ test('founder path keeps the consolidated Firebase Google reauthentication flow'
   assert.deepEqual(harness.state.firebaseMutations, ['reauthenticateWithPopup']);
   assert.equal(harness.state.initCalls, 0);
   assert.equal(harness.state.founderProvider.scopes.includes(DRIVE_SCOPE), true);
+  assert.equal(harness.state.founderProvider.customParameters.prompt, 'select_account');
+  assert.equal(
+    String(harness.state.founderProvider.customParameters.prompt).includes('consent'),
+    false
+  );
 });
 
 test('Drive runtime clears an external token when its usable lifetime expires', async () => {
@@ -520,6 +552,24 @@ test('Drive runtime refuses an already expired external session', async () => {
     /autorização temporária do Google Drive expirou/
   );
   assert.equal(harness.getWorkspaceDriveRuntime(), null);
+});
+
+test('OAuth account selection never forces consent on every connection', () => {
+  assert.equal(
+    source.includes("prompt: 'consent select_account'"),
+    false,
+    'O OAuth Drive não pode forçar consentimento em toda reconexão.'
+  );
+  assert.equal(
+    source.includes("prompt: 'consent'"),
+    false,
+    'O OAuth Drive não pode usar prompt de consentimento forçado.'
+  );
+  assert.equal(
+    source.includes("GOOGLE_DRIVE_ACCOUNT_SELECTION_PROMPT = 'select_account'"),
+    true,
+    'A seleção explícita de conta deve permanecer ativa.'
+  );
 });
 
 test('external OAuth source boundary contains no Firebase session mutation primitive', () => {
