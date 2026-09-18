@@ -120,7 +120,7 @@ O workspace fundador HGeSM é protegido contra essas alterações.
 
 O repositório possui uma suíte baseada no Firebase Emulator Suite que valida isolamento A ↔ B, UID divergente, bootstrap sem UID, suspensão, workspace adulterado, ausência de bypass operacional do administrador e isolamento de `settings/documentStorage`.
 
-A suíte usa apenas dados descartáveis do projeto local `emprovex-security-test` e é executada pelo CI antes do build de produção.
+A suíte usa apenas dados descartáveis do projeto local `demo-emprovex-security` e é executada pelo CI antes do build de produção.
 
 ## Próxima dependência
 
