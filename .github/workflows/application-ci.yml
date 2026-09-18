@@ -66,6 +66,9 @@ jobs:
       - name: Workspace Drive onboarding guard
         run: npm run verify:workspace-drive-onboarding
 
+      - name: Sector lifecycle guard
+        run: npm run verify:sector-lifecycle
+
       - name: Production build
         run: npm run build
 
