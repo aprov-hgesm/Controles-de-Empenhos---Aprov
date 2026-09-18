@@ -18,6 +18,7 @@ import {
 import { ToastNotification } from '../layout/ToastNotification';
 import { LoginAtmosphere } from './LoginAtmosphere';
 import { LoginBrandStage } from './LoginBrandStage';
+import type { LoginLogoVisualState } from './LoginLogoCore';
 
 type LoginToast = {
   message: string;
@@ -53,6 +54,14 @@ export function EmprovexLogin({
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
 
+  const logoVisualState: LoginLogoVisualState = isSigningIn
+    ? 'authenticating'
+    : toast?.type === 'success'
+      ? 'success'
+      : toast?.type === 'error'
+        ? 'error'
+        : 'idle';
+
   const handleSectorSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isSigningIn) return;
@@ -68,7 +77,7 @@ export function EmprovexLogin({
 
       <div className="relative z-10 mx-auto grid min-h-[100svh] w-full max-w-[1600px] lg:grid-cols-[minmax(0,1.12fr)_minmax(460px,0.88fr)]">
         <div className="border-b border-white/[0.07] lg:border-b-0 lg:border-r">
-          <LoginBrandStage customLogo={customLogo} />
+          <LoginBrandStage customLogo={customLogo} visualState={logoVisualState} />
         </div>
 
         <motion.main
