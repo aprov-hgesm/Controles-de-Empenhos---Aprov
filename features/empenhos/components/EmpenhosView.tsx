@@ -2,10 +2,11 @@
 
 import React from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { AlertCircle, AlertTriangle, ArrowLeft, Braces, Calendar, CalendarDays, Check, CheckCircle2, ChevronRight, Copy, Edit, Eye, FileDown, FileText, Loader2, Package, Plus, Printer, Save, Search, Trash2, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArrowLeft, Braces, Calendar, CalendarDays, Check, CheckCircle2, ChevronRight, Copy, Edit, Eye, FileDown, FileText, Loader2, Package, Plus, Printer, Save, Search, Settings2, Trash2, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActions';
 import type { Empenho, Invoice, EmpenhoPdfDocument } from '../../../lib/types';
+import type { EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 import type { User } from 'firebase/auth';
 type Setter<T = any> = Dispatch<SetStateAction<T>>;
 
@@ -15,13 +16,15 @@ type NewEmpenhoForm = {
   description: string;
   pregao: string;
   date: string;
-  classification: 'QR' | 'CALI' | 'PASA';
+  classification: string;
 };
 
 type NewItemForm = { id: string; name: string; unit: string; quantity: string; unitPrice: string };
 
 interface EmpenhosViewContext {
+  addEmpenhoClass: (code: string, description: string) => Promise<EmpenhoClassDefinition>;
   copiedPrompt: boolean;
+  empenhoClasses: EmpenhoClassDefinition[];
   empenhos: Empenho[];
   empenhosClassFilter: string;
   empenhosFilter: 'Todos' | 'Com Saldo' | 'Ativos' | 'Encerrados';
@@ -37,6 +40,7 @@ interface EmpenhosViewContext {
   handleDownloadPromptTxt: (...args: any[]) => any;
   handleDownloadTermoRecebimento: (...args: any[]) => any;
   handleEmpenhoDocumentUploaded: (empenhoId: string, document: EmpenhoPdfDocument) => Promise<void>;
+  handleUpdateEmpenhoClassification: (empenhoId: string, classification: string) => Promise<void>;
   handleUpdateEmpenhoPregao: (empenhoId: string, pregao: string) => Promise<void>;
   handleGenerateEmpenhoReportPDF: (...args: any[]) => any;
   handleProcessJson: (...args: any[]) => any;
@@ -49,6 +53,7 @@ interface EmpenhosViewContext {
   newEmpenhoMode: 'manual' | 'json';
   newItemForm: NewItemForm;
   reviewEmpenho: any;
+  savingClassConfig: boolean;
   selectedEmpenhoDetailId: string | null;
   setActiveTab: Setter<any>;
   setEditingEmpenhoId: Setter<string>;
@@ -78,6 +83,7 @@ interface EmpenhosViewContext {
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   uniqueEmpenhoYears: string[];
   uniquePregaos: string[];
+  updateEmpenhoClassDescription: (code: string, description: string) => Promise<void>;
   user: User | null;
 }
 
@@ -85,13 +91,18 @@ interface EmpenhosViewProps { context: EmpenhosViewContext; }
 
 /** Tela de cadastro e detalhe de empenhos extraída sem alterar comportamento. */
 export function EmpenhosView({ context }: EmpenhosViewProps) {
-  const { copiedPrompt, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCopyPrompt, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadPromptPdf, handleDownloadPromptTxt, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoPregao, handleGenerateEmpenhoReportPDF, handleProcessJson, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, jsonInput, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setJsonInput, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, user } = context;
+  const { addEmpenhoClass, copiedPrompt, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCopyPrompt, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadPromptPdf, handleDownloadPromptTxt, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoPregao, handleGenerateEmpenhoReportPDF, handleProcessJson, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, jsonInput, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setJsonInput, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClassDescription, user } = context;
   const [editingPregaoEmpenhoId, setEditingPregaoEmpenhoId] = React.useState<string | null>(null);
   const [pregaoDraft, setPregaoDraft] = React.useState('');
   const [savingPregao, setSavingPregao] = React.useState(false);
   const [isCreatingEmpenho, setIsCreatingEmpenho] = React.useState(false);
   const [isSavingReview, setIsSavingReview] = React.useState(false);
   const [isSavingItem, setIsSavingItem] = React.useState(false);
+  const [showClassesModal, setShowClassesModal] = React.useState(false);
+  const [newClassCode, setNewClassCode] = React.useState('');
+  const [newClassDescription, setNewClassDescription] = React.useState('');
+  const [classDescriptionDrafts, setClassDescriptionDrafts] = React.useState<Record<string, string>>({});
+  const [savingClassificationEmpenhoId, setSavingClassificationEmpenhoId] = React.useState<string | null>(null);
 
   const handleCreateEmpenhoWithFeedback = async (event: React.FormEvent) => {
     if (isCreatingEmpenho) {
@@ -126,6 +137,32 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
     }
   };
 
+  const handleAddClass = async () => {
+    try {
+      const created = await addEmpenhoClass(newClassCode, newClassDescription);
+      setNewClassCode('');
+      setNewClassDescription('');
+      showToast(`Classe ${created.code} adicionada com sucesso.`, 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Não foi possível adicionar a classe.', 'error');
+    }
+  };
+
+  const handleSaveClassDescription = async (definition: EmpenhoClassDefinition) => {
+    const description = (classDescriptionDrafts[definition.code] ?? definition.description).trim();
+    try {
+      await updateEmpenhoClassDescription(definition.code, description);
+      setClassDescriptionDrafts((current) => {
+        const next = { ...current };
+        delete next[definition.code];
+        return next;
+      });
+      showToast(`Descritivo da classe ${definition.code} atualizado.`, 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Não foi possível atualizar o descritivo.', 'error');
+    }
+  };
+
   return (
             <div className="space-y-6">
               
@@ -134,10 +171,17 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                   {/* Screen Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h2 className="text-2xl font-bold tracking-tight text-[#00288e]">Cadastro de Empenhos</h2>
+                      <h2 className="text-2xl font-bold tracking-tight text-[#00288e]">Empenhos</h2>
                       <p className="text-sm text-gray-500 font-medium">Controle de faturamento, saldos orçamentários e contratos</p>
                     </div>
-                    <div className="flex items-center gap-3 self-start sm:self-auto">
+                    <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setShowClassesModal(true)}
+                        className="px-4 h-12 bg-white/70 text-[#00288e] border border-blue-200/70 font-bold text-sm rounded-xl hover:bg-white transition-all shadow-sm active:scale-95 duration-150 flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Settings2 className="w-4.5 h-4.5" /> Configurar Classes
+                      </button>
                       <button 
                         onClick={() => setShowNewEmpenhoModal(true)}
                         className="px-5 h-12 bg-[#00288e] text-white font-bold text-sm rounded-xl hover:bg-[#1e40af] transition-all shadow-md active:scale-95 duration-150 flex items-center justify-center gap-2 cursor-pointer"
@@ -199,9 +243,11 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         className="w-full h-12 px-3 border border-white/30 rounded-xl bg-white/40 backdrop-blur-sm text-xs font-bold text-gray-700 outline-none focus:bg-white/60 focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e]"
                       >
                         <option value="Todos">Todas as Classes</option>
-                        <option value="QR">QR</option>
-                        <option value="CALI">CALI</option>
-                        <option value="PASA">PASA</option>
+                        {empenhoClasses.map((definition) => (
+                          <option key={definition.code} value={definition.code}>
+                            {definition.code}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     
@@ -551,6 +597,40 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                   </button>
                                 </div>
                               )}
+                            </div>
+
+                            <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50/50 px-3 py-2.5 max-w-xl">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div>
+                                  <span className="text-[10px] uppercase tracking-wider font-extrabold text-blue-700 block">Classe do empenho</span>
+                                  <span className="text-[11px] text-gray-500 font-medium">A alteração é aplicada ao empenho e aos filtros do sistema.</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {savingClassificationEmpenhoId === targetEmp.id && (
+                                    <Loader2 className="w-4 h-4 animate-spin text-[#00288e]" />
+                                  )}
+                                  <select
+                                    value={targetEmp.classification || 'QR'}
+                                    disabled={savingClassificationEmpenhoId === targetEmp.id}
+                                    onChange={async (event) => {
+                                      const nextClassification = event.target.value;
+                                      setSavingClassificationEmpenhoId(targetEmp.id);
+                                      try {
+                                        await handleUpdateEmpenhoClassification(targetEmp.id, nextClassification);
+                                      } finally {
+                                        setSavingClassificationEmpenhoId(null);
+                                      }
+                                    }}
+                                    className="h-9 min-w-[190px] px-3 rounded-lg border border-blue-200 bg-white text-xs font-bold text-[#00288e] outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+                                  >
+                                    {empenhoClasses.map((definition) => (
+                                      <option key={definition.code} value={definition.code}>
+                                        {definition.code} — {definition.description}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
                             </div>
                           </div>
 
@@ -1107,20 +1187,126 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                 })()
               )}
 
+              {/* Configuração de Classes de Empenho */}
+              <AnimatePresence>
+                {showClassesModal && (
+                  <div className="fixed inset-0 z-[110] flex items-start justify-center overflow-y-auto bg-black/50 px-4 pb-8 pt-20 sm:pt-24 backdrop-blur-sm">
+                    <motion.div
+                      initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 12, scale: 0.98 }}
+                      className="w-full max-w-2xl max-h-[calc(100vh-7rem)] overflow-y-auto rounded-2xl border border-gray-100 bg-white shadow-2xl"
+                    >
+                      <div className="sticky top-0 z-10 flex items-center justify-between gap-4 bg-[#00288e] p-5 text-white">
+                        <div>
+                          <h3 className="text-base font-bold tracking-tight">Configuração das Classes de Empenho</h3>
+                          <p className="mt-0.5 text-xs text-blue-200">Edite os descritivos ou inclua novas classes para este workspace.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowClassesModal(false)}
+                          className="rounded-lg p-1 text-blue-100 transition hover:bg-white/10 hover:text-white"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-5 p-5">
+                        <div className="space-y-3">
+                          {empenhoClasses.map((definition) => {
+                            const classCount = empenhos.filter(
+                              (emp) => (emp.classification || 'QR').toUpperCase() === definition.code
+                            ).length;
+                            const draft = classDescriptionDrafts[definition.code] ?? definition.description;
+
+                            return (
+                              <div key={definition.code} className="rounded-2xl border border-gray-200 bg-gray-50/70 p-4">
+                                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="rounded-lg bg-[#00288e]/10 px-2.5 py-1 text-xs font-black tracking-wider text-[#00288e]">
+                                      {definition.code}
+                                    </span>
+                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${classCount > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-500'}`}>
+                                      {classCount > 0 ? `${classCount} empenho${classCount === 1 ? '' : 's'}` : 'Inativa no Dashboard'}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-2 sm:flex-row">
+                                  <input
+                                    value={draft}
+                                    onChange={(event) => setClassDescriptionDrafts((current) => ({
+                                      ...current,
+                                      [definition.code]: event.target.value,
+                                    }))}
+                                    maxLength={180}
+                                    className="h-10 flex-1 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e]"
+                                    aria-label={`Descritivo da classe ${definition.code}`}
+                                  />
+                                  <button
+                                    type="button"
+                                    disabled={savingClassConfig || !draft.trim() || draft.trim() === definition.description}
+                                    onClick={() => void handleSaveClassDescription(definition)}
+                                    className="h-10 rounded-xl bg-[#00288e] px-4 text-xs font-bold text-white transition hover:bg-[#1e40af] disabled:cursor-not-allowed disabled:opacity-45"
+                                  >
+                                    {savingClassConfig ? 'Salvando…' : 'Salvar descritivo'}
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+                          <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#00288e]">Adicionar nova classe</h4>
+                          <p className="mt-1 text-[11px] font-medium text-gray-500">O código será normalizado em letras maiúsculas e ficará disponível no cadastro e na edição dos empenhos.</p>
+                          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[160px_1fr]">
+                            <input
+                              value={newClassCode}
+                              onChange={(event) => setNewClassCode(event.target.value)}
+                              placeholder="Ex.: EXTRA"
+                              maxLength={24}
+                              className="h-10 rounded-xl border border-blue-200 bg-white px-3 text-xs font-extrabold uppercase text-[#00288e] outline-none focus:ring-1 focus:ring-[#00288e]"
+                            />
+                            <input
+                              value={newClassDescription}
+                              onChange={(event) => setNewClassDescription(event.target.value)}
+                              placeholder="Descritivo da classe"
+                              maxLength={180}
+                              className="h-10 rounded-xl border border-blue-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none focus:ring-1 focus:ring-[#00288e]"
+                            />
+                          </div>
+                          <div className="mt-3 flex justify-end">
+                            <button
+                              type="button"
+                              disabled={savingClassConfig || !newClassCode.trim() || !newClassDescription.trim()}
+                              onClick={() => void handleAddClass()}
+                              className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-bold text-white transition hover:bg-[#1e40af] disabled:cursor-not-allowed disabled:opacity-45"
+                            >
+                              {savingClassConfig ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                              Adicionar classe
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </div>
+                )}
+              </AnimatePresence>
+
               {/* New Empenho Modal Dialog Overlay */}
               <AnimatePresence>
                 {showNewEmpenhoModal && (
-                  <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+                  <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/50 px-4 pb-8 pt-20 sm:pt-24 backdrop-blur-sm">
                     <motion.div 
                       initial={{ scale: 0.9, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       exit={{ scale: 0.9, opacity: 0 }}
-                      className={`bg-white rounded-2xl shadow-xl border border-gray-100 w-full overflow-hidden transition-all duration-300 my-8 ${
+                      className={`bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-h-[calc(100vh-7rem)] overflow-y-auto transition-all duration-300 mb-8 ${
                         reviewEmpenho ? 'max-w-5xl' : 'max-w-xl'
                       }`}
                     >
                       {/* Modal Header */}
-                      <div className="bg-[#00288e] text-white p-5 flex justify-between items-center">
+                      <div className="sticky top-0 z-20 bg-[#00288e] text-white p-5 flex justify-between items-center">
                         <div>
                           <h3 className="font-bold text-base tracking-tight">
                             {reviewEmpenho ? 'Revisão do Empenho Importado' : 'Adicionar Novo Empenho'}
@@ -1240,19 +1426,20 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
 
                           <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Classificação do Empenho</label>
-                            <div className="grid grid-cols-3 gap-2">
-                              {(['QR', 'CALI', 'PASA'] as const).map((type) => (
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                              {empenhoClasses.map((definition) => (
                                 <button
-                                  key={type}
+                                  key={definition.code}
                                   type="button"
-                                  onClick={() => setNewEmpenhoForm({ ...newEmpenhoForm, classification: type })}
-                                  className={`h-11 rounded-xl font-bold text-xs flex items-center justify-center border transition-all ${
-                                    newEmpenhoForm.classification === type
+                                  title={definition.description}
+                                  onClick={() => setNewEmpenhoForm({ ...newEmpenhoForm, classification: definition.code })}
+                                  className={`min-h-11 rounded-xl px-2 font-bold text-xs flex items-center justify-center border transition-all ${
+                                    newEmpenhoForm.classification === definition.code
                                       ? 'bg-[#00288e] text-white border-[#00288e] shadow-sm'
-                                      : 'bg-white/40 text-gray-600 border-white/20 hover:bg-white/60 backdrop-blur-sm'
+                                      : 'bg-white/40 text-gray-600 border-gray-200 hover:bg-white/60 backdrop-blur-sm'
                                   }`}
                                 >
-                                  {type}
+                                  {definition.code}
                                 </button>
                               ))}
                             </div>
@@ -1417,19 +1604,20 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                             </div>
                             <div>
                               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Classificação do Empenho</label>
-                              <div className="grid grid-cols-3 gap-1">
-                                {(['QR', 'CALI', 'PASA'] as const).map((type) => (
+                              <div className="grid grid-cols-2 gap-1">
+                                {empenhoClasses.map((definition) => (
                                   <button
-                                    key={type}
+                                    key={definition.code}
                                     type="button"
-                                    onClick={() => setReviewEmpenho({ ...reviewEmpenho, classification: type })}
-                                    className={`py-1.5 rounded-lg font-bold text-[10px] border transition-all ${
-                                      reviewEmpenho.classification === type
+                                    title={definition.description}
+                                    onClick={() => setReviewEmpenho({ ...reviewEmpenho, classification: definition.code })}
+                                    className={`py-1.5 rounded-lg px-1 font-bold text-[10px] border transition-all ${
+                                      reviewEmpenho.classification === definition.code
                                         ? 'bg-[#00288e] text-white border-[#00288e]'
                                         : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                                     }`}
                                   >
-                                    {type}
+                                    {definition.code}
                                   </button>
                                 ))}
                               </div>
