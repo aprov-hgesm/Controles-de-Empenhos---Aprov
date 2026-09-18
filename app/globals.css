@@ -1472,3 +1472,301 @@ button[aria-busy="true"] .animate-spin {
     transition: none !important;
   }
 }
+
+
+/* EMPROVEX login — truthful authentication scanner and narrative (Bloco 6). */
+@keyframes emprovex-auth-scan {
+  0% {
+    transform: translate3d(0, -125%, 0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.72;
+  }
+  78% {
+    opacity: 0.42;
+  }
+  100% {
+    transform: translate3d(0, 520%, 0);
+    opacity: 0;
+  }
+}
+
+@keyframes emprovex-auth-step-pulse {
+  0%, 100% {
+    opacity: 0.62;
+    box-shadow: 0 0 0 0 rgba(96,165,250,0.10);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 0 5px rgba(96,165,250,0.045);
+  }
+}
+
+@keyframes emprovex-auth-connector-flow {
+  from { background-position: 100% 50%; }
+  to { background-position: 0% 50%; }
+}
+
+.emprovex-auth-scanner {
+  z-index: 1;
+  opacity: 1;
+  transition: opacity 240ms ease;
+}
+
+.emprovex-auth-scanner[data-active='false'] {
+  opacity: 0;
+}
+
+.emprovex-auth-scanner span {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  top: 0;
+  height: 22%;
+  opacity: 0;
+  transform: translate3d(0, -125%, 0);
+  background:
+    linear-gradient(
+      to bottom,
+      transparent,
+      rgba(96,165,250,0.015) 18%,
+      rgba(147,197,253,0.075) 56%,
+      rgba(103,232,249,0.14) 76%,
+      rgba(191,219,254,0.33) 92%,
+      transparent
+    );
+  filter: blur(0.2px);
+  mix-blend-mode: screen;
+}
+
+.emprovex-auth-scanner span::after {
+  content: '';
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 8%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(96,165,250,0.16),
+    rgba(191,219,254,0.62),
+    rgba(103,232,249,0.26),
+    transparent
+  );
+  box-shadow:
+    0 0 14px rgba(96,165,250,0.20),
+    0 0 32px rgba(59,130,246,0.08);
+}
+
+.emprovex-auth-rail {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(148,181,255,0.075);
+  border-radius: 1rem;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.027), rgba(255,255,255,0.012)),
+    rgba(2,8,23,0.20);
+  padding: 0.9rem 1rem 0.85rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.02),
+    0 10px 28px rgba(0,7,28,0.10);
+  transition:
+    border-color 260ms var(--emprovex-motion-ease-soft),
+    background-color 260ms var(--emprovex-motion-ease-soft),
+    box-shadow 300ms var(--emprovex-motion-ease-soft);
+}
+
+.emprovex-auth-rail::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(59,130,246,0.065), transparent 34%);
+  opacity: 0.72;
+}
+
+.emprovex-auth-rail > * {
+  position: relative;
+  z-index: 1;
+}
+
+.emprovex-auth-rail[data-phase='identity'],
+.emprovex-auth-rail[data-phase='workspace'] {
+  border-color: rgba(96,165,250,0.13);
+  background:
+    linear-gradient(145deg, rgba(59,130,246,0.042), rgba(255,255,255,0.012)),
+    rgba(2,8,23,0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.025),
+    0 12px 32px rgba(0,18,68,0.14);
+}
+
+.emprovex-auth-rail[data-phase='error'] {
+  border-color: rgba(248,113,113,0.12);
+}
+
+.emprovex-auth-rail__icon {
+  color: rgba(147,197,253,0.84);
+  border: 1px solid rgba(147,197,253,0.10);
+  background: rgba(59,130,246,0.055);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.018);
+}
+
+.emprovex-auth-rail[data-phase='error'] .emprovex-auth-rail__icon {
+  color: rgba(252,165,165,0.90);
+  border-color: rgba(248,113,113,0.12);
+  background: rgba(127,29,29,0.07);
+}
+
+.emprovex-auth-step {
+  width: 1.05rem;
+  height: 1.05rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,0.16);
+  background: rgba(15,23,42,0.72);
+  color: rgba(191,219,254,0.92);
+  transition:
+    border-color 240ms ease,
+    background-color 240ms ease,
+    box-shadow 260ms ease,
+    opacity 220ms ease;
+}
+
+.emprovex-auth-step > span {
+  width: 0.22rem;
+  height: 0.22rem;
+  border-radius: 999px;
+  background: rgba(100,116,139,0.62);
+}
+
+.emprovex-auth-step[data-state='active'] {
+  border-color: rgba(147,197,253,0.50);
+  background: rgba(30,64,175,0.22);
+  box-shadow:
+    0 0 0 3px rgba(59,130,246,0.055),
+    0 0 12px rgba(96,165,250,0.12);
+}
+
+.emprovex-auth-step[data-state='active'] > span {
+  background: rgb(147 197 253);
+  box-shadow: 0 0 8px rgba(96,165,250,0.70);
+}
+
+.emprovex-auth-step[data-state='done'] {
+  border-color: rgba(110,231,183,0.30);
+  background: rgba(6,78,59,0.20);
+  color: rgba(167,243,208,0.94);
+}
+
+.emprovex-auth-step[data-state='error'] {
+  border-color: rgba(248,113,113,0.30);
+  background: rgba(127,29,29,0.16);
+}
+
+.emprovex-auth-step[data-state='error'] > span {
+  background: rgba(252,165,165,0.92);
+  box-shadow: 0 0 7px rgba(248,113,113,0.42);
+}
+
+.emprovex-auth-connector {
+  height: 1px;
+  min-width: 1.6rem;
+  background: rgba(100,116,139,0.14);
+  overflow: hidden;
+}
+
+.emprovex-auth-connector[data-state='done'] {
+  background: linear-gradient(
+    90deg,
+    rgba(52,211,153,0.20),
+    rgba(110,231,183,0.48),
+    rgba(96,165,250,0.26)
+  );
+}
+
+.emprovex-auth-connector[data-state='active'] {
+  background: linear-gradient(
+    90deg,
+    rgba(96,165,250,0.08),
+    rgba(147,197,253,0.48),
+    rgba(96,165,250,0.08)
+  );
+  background-size: 180% 100%;
+}
+
+.emprovex-auth-loading-panel {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.045),
+    0 35px 110px rgba(0,7,28,0.62),
+    0 0 42px rgba(37,99,235,0.035);
+}
+
+.emprovex-auth-loading-panel__edge {
+  z-index: 0;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(rgba(7,18,37,0.82), rgba(7,18,37,0.82)) padding-box,
+    radial-gradient(
+      380px circle at 50% 18%,
+      rgba(147,197,253,0.24),
+      rgba(96,165,250,0.06) 40%,
+      transparent 72%
+    ) border-box;
+}
+
+.emprovex-auth-loading-spinner {
+  color: rgba(191,219,254,0.90);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.025),
+    0 0 22px rgba(37,99,235,0.07);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .emprovex-auth-scanner[data-active='true'] span,
+  .emprovex-auth-loading-panel .emprovex-auth-scanner span {
+    animation: emprovex-auth-scan 1.75s linear infinite;
+  }
+
+  .emprovex-auth-step[data-state='active'] {
+    animation: emprovex-auth-step-pulse 1.45s ease-in-out infinite;
+  }
+
+  .emprovex-auth-connector[data-state='active'] {
+    animation: emprovex-auth-connector-flow 1.8s linear infinite;
+  }
+}
+
+@media (max-width: 639px) {
+  .emprovex-auth-rail {
+    padding: 0.8rem 0.85rem;
+  }
+
+  .emprovex-auth-rail__timeline {
+    gap: 0.35rem;
+  }
+
+  .emprovex-auth-connector {
+    min-width: 0.8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emprovex-auth-scanner span,
+  .emprovex-auth-step,
+  .emprovex-auth-connector {
+    animation: none !important;
+  }
+
+  .emprovex-auth-scanner {
+    display: none;
+  }
+
+  .emprovex-auth-loading-spinner svg {
+    animation: none !important;
+  }
+}
