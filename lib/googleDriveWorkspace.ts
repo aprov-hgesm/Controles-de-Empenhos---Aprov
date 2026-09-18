@@ -25,6 +25,7 @@ interface GoogleDriveAboutResponse {
 
 interface GoogleOAuthTokenResponse {
   access_token?: string;
+  expires_in?: number;
   error?: string;
   error_description?: string;
   scope?: string;
@@ -60,11 +61,47 @@ type GoogleIdentityWindow = Window & {
   };
 };
 
+export const GOOGLE_DRIVE_TOKEN_EXPIRY_SAFETY_MS = 60_000;
+export const WORKSPACE_DRIVE_RECONNECT_REQUIRED_MESSAGE =
+  'A autorização temporária do Google Drive expirou. Reconecte o Drive para continuar usando os documentos.';
+
 export interface WorkspaceGoogleDriveSession {
   accessToken: string;
   email: string;
   workspaceId: string;
   connectedAt: string;
+  /**
+   * Mantido apenas em memória. Setores externos recebem esse valor a partir
+   * de expires_in do Google Identity Services; nunca é persistido no Firestore.
+   */
+  expiresAt?: string;
+}
+
+export function getWorkspaceGoogleDriveSessionRemainingMs(
+  session: WorkspaceGoogleDriveSession,
+  nowMs: number = Date.now()
+): number | null {
+  if (!session.expiresAt) return null;
+  const expiresAtMs = Date.parse(session.expiresAt);
+  if (!Number.isFinite(expiresAtMs)) return 0;
+  return expiresAtMs - GOOGLE_DRIVE_TOKEN_EXPIRY_SAFETY_MS - nowMs;
+}
+
+export function isWorkspaceGoogleDriveSessionExpired(
+  session: WorkspaceGoogleDriveSession,
+  nowMs: number = Date.now()
+): boolean {
+  const remainingMs = getWorkspaceGoogleDriveSessionRemainingMs(session, nowMs);
+  return remainingMs !== null && remainingMs <= 0;
+}
+
+export function assertWorkspaceGoogleDriveSessionActive(
+  session: WorkspaceGoogleDriveSession,
+  nowMs: number = Date.now()
+): void {
+  if (isWorkspaceGoogleDriveSessionExpired(session, nowMs)) {
+    throw new Error(WORKSPACE_DRIVE_RECONNECT_REQUIRED_MESSAGE);
+  }
 }
 
 export interface WorkspaceGoogleDriveFolders {
@@ -150,7 +187,12 @@ function getGoogleOAuthClientId(): string {
   return configuredClientId || DEFAULT_GOOGLE_OAUTH_CLIENT_ID;
 }
 
-function requestIndependentDriveAccessToken(expectedEmail: string): Promise<string> {
+interface IndependentDriveAccessToken {
+  accessToken: string;
+  expiresAt: string;
+}
+
+function requestIndependentDriveAccessToken(expectedEmail: string): Promise<IndependentDriveAccessToken> {
   const oauth2 = getGoogleOAuth2Api();
   const clientId = getGoogleOAuthClientId();
 
@@ -189,8 +231,17 @@ function requestIndependentDriveAccessToken(expectedEmail: string): Promise<stri
           return;
         }
 
+        const expiresInSeconds = Number(response.expires_in);
+        if (!Number.isFinite(expiresInSeconds) || expiresInSeconds <= 0) {
+          rejectOnce('O Google não informou a validade da autorização temporária do Drive. Reconecte e tente novamente.');
+          return;
+        }
+
         settled = true;
-        resolve(response.access_token);
+        resolve({
+          accessToken: response.access_token,
+          expiresAt: new Date(Date.now() + (expiresInSeconds * 1000)).toISOString(),
+        });
       },
       error_callback: (error) => {
         const detail = error.type === 'popup_closed'
@@ -224,8 +275,8 @@ async function connectExternalWorkspaceDrive(
   context: SectorWorkspaceContext,
   expectedEmail: string
 ): Promise<WorkspaceGoogleDriveSession> {
-  const accessToken = await requestIndependentDriveAccessToken(expectedEmail);
-  const returnedEmail = await readAuthorizedDriveEmail(accessToken);
+  const token = await requestIndependentDriveAccessToken(expectedEmail);
+  const returnedEmail = await readAuthorizedDriveEmail(token.accessToken);
 
   if (!returnedEmail || returnedEmail !== expectedEmail) {
     throw new Error(
@@ -234,10 +285,11 @@ async function connectExternalWorkspaceDrive(
   }
 
   return {
-    accessToken,
+    accessToken: token.accessToken,
     email: returnedEmail,
     workspaceId: context.workspaceId,
     connectedAt: new Date().toISOString(),
+    expiresAt: token.expiresAt,
   };
 }
 
@@ -360,6 +412,7 @@ async function ensureFolder(
 export async function ensureWorkspaceGoogleDriveFolders(
   session: WorkspaceGoogleDriveSession
 ): Promise<WorkspaceGoogleDriveFolders> {
+  assertWorkspaceGoogleDriveSessionActive(session);
   const root = await ensureFolder(
     session.accessToken,
     session.workspaceId,
