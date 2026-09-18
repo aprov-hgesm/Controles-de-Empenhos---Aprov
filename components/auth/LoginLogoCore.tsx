@@ -23,12 +23,15 @@ export function LoginLogoCore({ customLogo, state }: LoginLogoCoreProps) {
     if (!finePointer.matches) return;
 
     let frame = 0;
+    let isRunning = false;
     let targetX = 0;
     let targetY = 0;
     let currentX = 0;
     let currentY = 0;
 
     const render = () => {
+      if (!isRunning) return;
+
       currentX += (targetX - currentX) * 0.075;
       currentY += (targetY - currentY) * 0.075;
 
@@ -38,6 +41,17 @@ export function LoginLogoCore({ customLogo, state }: LoginLogoCoreProps) {
       root.style.setProperty('--logo-rotate-y', `${currentX * 3.4}deg`);
 
       frame = window.requestAnimationFrame(render);
+    };
+
+    const startRendering = () => {
+      if (isRunning || document.hidden) return;
+      isRunning = true;
+      frame = window.requestAnimationFrame(render);
+    };
+
+    const stopRendering = () => {
+      isRunning = false;
+      window.cancelAnimationFrame(frame);
     };
 
     const handlePointerMove = (event: PointerEvent) => {
@@ -50,14 +64,24 @@ export function LoginLogoCore({ customLogo, state }: LoginLogoCoreProps) {
       targetY = 0;
     };
 
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopRendering();
+      } else {
+        startRendering();
+      }
+    };
+
     window.addEventListener('pointermove', handlePointerMove, { passive: true });
     document.documentElement.addEventListener('mouseleave', handlePointerLeave);
-    frame = window.requestAnimationFrame(render);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    startRendering();
 
     return () => {
       window.removeEventListener('pointermove', handlePointerMove);
       document.documentElement.removeEventListener('mouseleave', handlePointerLeave);
-      window.cancelAnimationFrame(frame);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      stopRendering();
     };
   }, [reduceMotion]);
 
@@ -69,7 +93,7 @@ export function LoginLogoCore({ customLogo, state }: LoginLogoCoreProps) {
       transition={{ duration: 0.88, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
       className="emprovex-logo-core"
       data-state={state}
-      aria-label="Identidade visual EMPROVEX"
+      aria-hidden="true"
     >
       <div className="emprovex-logo-core__halo emprovex-logo-core__halo--outer" />
       <div className="emprovex-logo-core__halo emprovex-logo-core__halo--inner" />
@@ -92,7 +116,7 @@ export function LoginLogoCore({ customLogo, state }: LoginLogoCoreProps) {
           {customLogo ? (
             <Image
               src={customLogo}
-              alt="Logotipo EMPROVEX"
+              alt=""
               width={128}
               height={128}
               unoptimized
