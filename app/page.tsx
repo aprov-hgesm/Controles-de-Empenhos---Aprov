@@ -281,12 +281,13 @@ export default function Home() {
 
   if (!user) {
     const handleSectorLogin = async (email: string, password: string) => {
-      if (isSigningIn) return;
+      if (isSigningIn) return false;
 
       setIsSigningIn(true);
       try {
         await signInSectorUser(email, password);
         showToast('Acesso autorizado com sucesso!', 'success');
+        return true;
       } catch (error) {
         console.error('Erro na autenticação do setor:', error);
         showToast(
@@ -295,6 +296,7 @@ export default function Home() {
             : 'Não foi possível entrar no EMPROVEX.',
           'error'
         );
+        return false;
       } finally {
         setIsSigningIn(false);
       }
