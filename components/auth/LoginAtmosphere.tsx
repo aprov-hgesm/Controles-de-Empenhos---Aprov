@@ -37,12 +37,15 @@ export function LoginAtmosphere({
     if (!finePointer.matches || reducedMotion.matches) return;
 
     let frame = 0;
+    let isRunning = false;
     let targetX = window.innerWidth * 0.58;
     let targetY = window.innerHeight * 0.36;
     let currentX = targetX;
     let currentY = targetY;
 
     const render = () => {
+      if (!isRunning) return;
+
       currentX += (targetX - currentX) * 0.08;
       currentY += (targetY - currentY) * 0.08;
 
@@ -61,6 +64,17 @@ export function LoginAtmosphere({
       frame = window.requestAnimationFrame(render);
     };
 
+    const startRendering = () => {
+      if (isRunning || document.hidden) return;
+      isRunning = true;
+      frame = window.requestAnimationFrame(render);
+    };
+
+    const stopRendering = () => {
+      isRunning = false;
+      window.cancelAnimationFrame(frame);
+    };
+
     const handlePointerMove = (event: PointerEvent) => {
       targetX = event.clientX;
       targetY = event.clientY;
@@ -71,14 +85,24 @@ export function LoginAtmosphere({
       targetY = window.innerHeight * 0.36;
     };
 
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopRendering();
+      } else {
+        startRendering();
+      }
+    };
+
     window.addEventListener('pointermove', handlePointerMove, { passive: true });
     document.documentElement.addEventListener('mouseleave', handlePointerLeave);
-    frame = window.requestAnimationFrame(render);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    startRendering();
 
     return () => {
       window.removeEventListener('pointermove', handlePointerMove);
       document.documentElement.removeEventListener('mouseleave', handlePointerLeave);
-      window.cancelAnimationFrame(frame);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      stopRendering();
     };
   }, []);
 
