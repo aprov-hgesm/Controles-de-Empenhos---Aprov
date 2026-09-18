@@ -43,7 +43,8 @@
     "verify:sector-auth-provisioning": "node scripts/verify-sector-auth-provisioning.mjs",
     "verify:sector-admin-deletion": "node scripts/verify-sector-admin-deletion.mjs",
     "verify:sector-password-reset": "node scripts/verify-sector-password-reset.mjs",
-    "verify:empenho-class-config": "node scripts/verify-empenho-class-config.mjs"
+    "verify:empenho-class-config": "node scripts/verify-empenho-class-config.mjs",
+    "verify:public-oauth-legal-pages": "node scripts/verify-public-oauth-legal-pages.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
