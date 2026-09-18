@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Loader2 } from 'lucide-react';
 
 import { usePlatformBranding } from '../hooks/usePlatformBranding';
 import { useOperationalViewState } from '../hooks/useOperationalViewState';
@@ -25,6 +24,7 @@ import { CronogramasView } from '../features/cronogramas/components/CronogramasV
 import { DeleteEmpenhoModal } from '../features/empenhos/components/DeleteEmpenhoModal';
 import { MobileNavigation } from '../components/layout/MobileNavigation';
 import { EmprovexLogin } from '../components/auth/EmprovexLogin';
+import { EmprovexAuthLoading } from '../components/auth/EmprovexAuthLoading';
 export default function Home() {
   // Toast / Notifications helper
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -271,12 +271,7 @@ export default function Home() {
   const totalLiquidadoValue = invoices.reduce((sum, inv) => sum + inv.totalValue, 0) + 42000; // Mock baseline
 
   if (loadingAuth) {
-    return (
-      <div className="min-h-screen bg-[#f8f9ff] flex flex-col items-center justify-center font-sans">
-        <Loader2 className="w-12 h-12 text-[#00288e] animate-spin mb-4" />
-        <p className="text-sm font-semibold text-gray-500 animate-pulse">Carregando Sistema Logístico...</p>
-      </div>
-    );
+    return <EmprovexAuthLoading hasAuthenticatedIdentity={Boolean(user)} />;
   }
 
   if (!user) {
