@@ -4,9 +4,11 @@ import React from 'react';
 import { Edit, Eye, FileDown, FileSpreadsheet, FileText, Filter, Package, Printer, Save, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { Empenho, Invoice } from '../../../lib/types';
+import { classRequiresTermoRecebimento, type EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 
 interface RelatoriosViewContext {
   editingNSId: string | null;
+  empenhoClasses: EmpenhoClassDefinition[];
   empenhos: Empenho[];
   formatDateOnly: any;
   handleDownloadTermoRecebimento: (...args: any[]) => any;
@@ -36,7 +38,13 @@ interface RelatoriosViewProps {
 }
 /** Tela de Relatórios extraída sem alterar regras de negócio, persistência ou comportamento. */
 export function RelatoriosView({ context }: RelatoriosViewProps) {
-  const { editingNSId, empenhos, formatDateOnly, handleDownloadTermoRecebimento, handleGenerateEmpenhoReportPDF, handleSaveNumeroNS, invoices, relatoriosPregaoFilter, reportEndDate, reportSearch, reportStartDate, selectedReportInvoice, setEditingNSId, setRelatoriosPregaoFilter, setReportEndDate, setReportSearch, setReportStartDate, setSelectedReportInvoice, setShowPdfModal, setTempNSValue, showPdfModal, tempNSValue, uniquePregaos } = context;
+  const { editingNSId, empenhoClasses, empenhos, formatDateOnly, handleDownloadTermoRecebimento, handleGenerateEmpenhoReportPDF, handleSaveNumeroNS, invoices, relatoriosPregaoFilter, reportEndDate, reportSearch, reportStartDate, selectedReportInvoice, setEditingNSId, setRelatoriosPregaoFilter, setReportEndDate, setReportSearch, setReportStartDate, setSelectedReportInvoice, setShowPdfModal, setTempNSValue, showPdfModal, tempNSValue, uniquePregaos } = context;
+
+  const invoiceRequiresTR = (invoice: Invoice): boolean => {
+    const empenho = empenhos.find((item) => item.id === invoice.empenhoId);
+    return classRequiresTermoRecebimento(empenho?.classification, empenhoClasses);
+  };
+
   return (
             <div className="space-y-6">
               
@@ -128,6 +136,7 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
                 }
 
                 const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+                const empRequiresTR = classRequiresTermoRecebimento(emp.classification, empenhoClasses);
                 
                 // Get linked invoices list
                 const linkedInvoices = invoices.filter(inv => inv.empenhoId === emp.id);
@@ -286,7 +295,11 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
                                         {formattedIssueDate}
                                       </td>
                                       <td className="py-3 px-3.5 whitespace-nowrap">
-                                        {effectiveTrDate ? (
+                                        {!empRequiresTR ? (
+                                          <span className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-xs border border-emerald-100">
+                                            Dispensado
+                                          </span>
+                                        ) : effectiveTrDate ? (
                                           <span className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-xs border border-emerald-100">
                                             {formattedTrDate} {inv.termoNumero ? `(TR Nº ${inv.termoNumero})` : ''}
                                           </span>
@@ -295,7 +308,11 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
                                         )}
                                       </td>
                                       <td className="py-3 px-3.5 whitespace-nowrap">
-                                        {inv.comissaoDate ? (
+                                        {!empRequiresTR ? (
+                                          <span className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md text-xs border border-emerald-100">
+                                            Dispensada
+                                          </span>
+                                        ) : inv.comissaoDate ? (
                                           <span className="inline-flex items-center gap-1 font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md text-xs border border-blue-100">
                                             {formattedComissaoDate}
                                           </span>
@@ -717,7 +734,9 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
                           </div>
                           <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-xs">
                             <span className="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">Comissão Receb.</span>
-                            {selectedReportInvoice.comissaoDate ? (
+                            {!invoiceRequiresTR(selectedReportInvoice) ? (
+                              <span className="text-xs font-bold text-emerald-700">Dispensada pela classe</span>
+                            ) : selectedReportInvoice.comissaoDate ? (
                               <span className="text-xs font-bold text-blue-700">
                                 {formatDateOnly(selectedReportInvoice.comissaoDate)}
                               </span>
@@ -837,13 +856,19 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
 
                       {/* Modal Footer */}
                       <div className="p-4 bg-gray-50 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3 flex-shrink-0">
-                        <button
-                          id="btn-download-tr-from-modal"
-                          onClick={() => handleDownloadTermoRecebimento(selectedReportInvoice)}
-                          className="px-4 py-2 bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shadow-xs active:scale-95"
-                        >
-                          <FileDown className="w-4 h-4" /> Gerar Termo de Recebimento (PDF)
-                        </button>
+                        {invoiceRequiresTR(selectedReportInvoice) ? (
+                          <button
+                            id="btn-download-tr-from-modal"
+                            onClick={() => handleDownloadTermoRecebimento(selectedReportInvoice)}
+                            className="px-4 py-2 bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shadow-xs active:scale-95"
+                          >
+                            <FileDown className="w-4 h-4" /> Gerar Termo de Recebimento (PDF)
+                          </button>
+                        ) : (
+                          <span className="px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl font-bold text-xs">
+                            TR dispensado para esta classe
+                          </span>
+                        )}
                         <button 
                           id="btn-close-nf-modal-footer"
                           onClick={() => setSelectedReportInvoice(null)}
