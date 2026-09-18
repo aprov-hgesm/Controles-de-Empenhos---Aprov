@@ -84,12 +84,12 @@ const SIMPLE_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  *
  * O valor precisa permanecer compatível com o e-mail devolvido pelo Firebase Auth,
  * pois as Firestore Rules comparam a identidade autenticada com o registro de
- * `platformAccounts`. Por isso o Bloco 15 preserva o nome local exatamente como a
- * conta Google o apresenta, alterando apenas caixa/espaços e o domínio histórico
+ * `platformAccounts`. O nome local é preservado exatamente como cadastrado,
+ * alterando apenas caixa/espaços e o domínio histórico
  * `googlemail.com` para `gmail.com`.
  *
  * Não removemos pontos nem aliases `+tag` no cliente. O cadastro administrativo deve
- * usar o e-mail principal exibido pela conta Google que efetivamente fará login.
+ * usar o e-mail principal definido para a identidade operacional do setor.
  */
 export function normalizePlatformEmail(value: string): string {
   const normalized = value.trim().toLowerCase();
@@ -173,7 +173,7 @@ export function validateWorkspace(workspace: Workspace): string[] {
   }
 
   if (!isValidPlatformEmail(workspace.authorizedEmail)) {
-    errors.push('Conta Google autorizada do workspace é inválida.');
+    errors.push('E-mail operacional autorizado do workspace é inválido.');
   }
 
   if (!workspace.institutionalProfile.organizationName.trim()) {
