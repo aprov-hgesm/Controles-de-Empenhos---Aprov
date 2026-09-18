@@ -60,26 +60,26 @@ export function AppSidebar({
             </p>
           </div>
 
-          <nav className="space-y-1.5 px-3">
+          <nav className="emprovex-sidebar-nav px-3" aria-label="Navegação principal">
+            <div className="emprovex-sidebar-nav__label px-4 pb-2 font-mono text-[9px] font-bold uppercase tracking-[0.22em]">
+              Navegação
+            </div>
+
             <button
               onClick={() => onNavigate('painel')}
-              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-150 ${
-                activeTab === 'painel'
-                  ? 'bg-[#e5eeff] text-[#00288e]'
-                  : 'text-gray-600 hover:bg-[#eff4ff] hover:text-[#0b1c30]'
-              }`}
+              className="emprovex-sidebar-nav-item"
+              data-active={activeTab === 'painel' ? 'true' : 'false'}
+              aria-current={activeTab === 'painel' ? 'page' : undefined}
             >
               <Layers className="w-5 h-5" />
-              <span>Dashboard</span>
+              <span>Painel</span>
             </button>
 
             <button
               onClick={() => onNavigate('empenhos')}
-              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-150 ${
-                activeTab === 'empenhos' || activeTab === 'itens_empenho'
-                  ? 'bg-[#e5eeff] text-[#00288e]'
-                  : 'text-gray-600 hover:bg-[#eff4ff] hover:text-[#0b1c30]'
-              }`}
+              className="emprovex-sidebar-nav-item"
+              data-active={activeTab === 'empenhos' || activeTab === 'itens_empenho' ? 'true' : 'false'}
+              aria-current={activeTab === 'empenhos' || activeTab === 'itens_empenho' ? 'page' : undefined}
             >
               <FileSpreadsheet className="w-5 h-5" />
               <span>Empenhos</span>
@@ -87,11 +87,9 @@ export function AppSidebar({
 
             <button
               onClick={() => onNavigate('itens')}
-              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-150 ${
-                activeTab === 'itens'
-                  ? 'bg-[#e5eeff] text-[#00288e]'
-                  : 'text-gray-600 hover:bg-[#eff4ff] hover:text-[#0b1c30]'
-              }`}
+              className="emprovex-sidebar-nav-item"
+              data-active={activeTab === 'itens' ? 'true' : 'false'}
+              aria-current={activeTab === 'itens' ? 'page' : undefined}
             >
               <Package className="w-5 h-5" />
               <span>Consulta de Itens</span>
@@ -99,11 +97,9 @@ export function AppSidebar({
 
             <button
               onClick={() => onNavigate('nova_nf')}
-              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-150 ${
-                activeTab === 'nova_nf'
-                  ? 'bg-[#e5eeff] text-[#00288e]'
-                  : 'text-gray-600 hover:bg-[#eff4ff] hover:text-[#0b1c30]'
-              }`}
+              className="emprovex-sidebar-nav-item"
+              data-active={activeTab === 'nova_nf' ? 'true' : 'false'}
+              aria-current={activeTab === 'nova_nf' ? 'page' : undefined}
             >
               <FileText className="w-5 h-5" />
               <span>Notas Fiscais</span>
@@ -111,11 +107,9 @@ export function AppSidebar({
 
             <button
               onClick={() => onNavigate('relatorios')}
-              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-150 ${
-                activeTab === 'relatorios'
-                  ? 'bg-[#e5eeff] text-[#00288e]'
-                  : 'text-gray-600 hover:bg-[#eff4ff] hover:text-[#0b1c30]'
-              }`}
+              className="emprovex-sidebar-nav-item"
+              data-active={activeTab === 'relatorios' ? 'true' : 'false'}
+              aria-current={activeTab === 'relatorios' ? 'page' : undefined}
             >
               <TrendingUp className="w-5 h-5" />
               <span>Relatórios</span>
@@ -123,11 +117,9 @@ export function AppSidebar({
 
             <button
               onClick={() => onNavigate('cronogramas')}
-              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-150 ${
-                activeTab === 'cronogramas'
-                  ? 'bg-[#e5eeff] text-[#00288e]'
-                  : 'text-gray-600 hover:bg-[#eff4ff] hover:text-[#0b1c30]'
-              }`}
+              className="emprovex-sidebar-nav-item"
+              data-active={activeTab === 'cronogramas' ? 'true' : 'false'}
+              aria-current={activeTab === 'cronogramas' ? 'page' : undefined}
             >
               <CalendarDays className="w-5 h-5" />
               <span>Cronogramas</span>
