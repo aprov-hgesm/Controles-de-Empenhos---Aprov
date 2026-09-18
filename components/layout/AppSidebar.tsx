@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   TrendingUp,
   UserRound,
+  X,
 } from 'lucide-react';
 
 import { AppShellSignature } from './chrome/AppShellSignature';
@@ -45,12 +46,13 @@ export function AppSidebar({
     <>
       {open && (
         <div
-          className="fixed inset-0 bg-black/20 z-40 lg:hidden backdrop-blur-sm"
+          className="emprovex-sidebar-backdrop fixed inset-0 z-40 lg:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
+        aria-label="Menu principal"
         className={`
           emprovex-app-sidebar fixed top-16 left-0 h-[calc(100vh-4rem)] w-72 overflow-y-auto overscroll-contain py-6 z-40
           flex flex-col justify-between transition-transform duration-300 ease-out
@@ -58,6 +60,24 @@ export function AppSidebar({
         `}
       >
         <AppShellSignature variant="sidebar" />
+
+        <div className="emprovex-sidebar-mobile-toolbar relative z-[2] lg:hidden">
+          <div>
+            <p className="font-mono text-[8px] font-bold uppercase tracking-[0.22em] text-slate-500">
+              EMPROVEX
+            </p>
+            <p className="mt-0.5 text-[11px] font-bold text-slate-200">Menu principal</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="emprovex-sidebar-mobile-close"
+            aria-label="Fechar menu principal"
+            title="Fechar menu principal"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
 
         <div className="relative z-[1] space-y-6">
           <section className="emprovex-sidebar-operator mx-4" aria-label="Operador conectado">

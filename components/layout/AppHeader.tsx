@@ -52,11 +52,13 @@ export function AppHeader({
   return (
     <header className="emprovex-app-header fixed top-0 z-40 flex h-16 w-full items-center justify-between px-4 transition-all duration-300 sm:px-6">
       <AppShellSignature variant="header" />
-      <div className="flex items-center gap-4">
+      <div className="emprovex-header-brand-zone flex items-center gap-4">
         <button
           onClick={onOpenSidebar}
           className="emprovex-header-menu lg:hidden p-1.5 rounded-lg active:scale-95 duration-150 transition-all"
           id="menu-toggle-btn"
+          aria-label="Abrir menu principal"
+          title="Abrir menu principal"
         >
           <Menu className="w-6 h-6" />
         </button>
