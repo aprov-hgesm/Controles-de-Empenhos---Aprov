@@ -9,6 +9,7 @@ const findings = [];
 const identity = read('lib/platformIdentity.ts');
 const access = read('lib/platformAccess.ts');
 const operationalData = read('hooks/useOperationalData.ts');
+const page = read('app/page.tsx');
 const rules = read('firestore.rules');
 
 requireText(
@@ -63,17 +64,30 @@ requireText(
   'Provider incompatível não falha fechado.'
 );
 
-// Bloco 1 não deve antecipar a UI de senha nem alterar as Rules; isso pertence
-// respectivamente aos Blocos 3 e 4.
-forbidText(
+requireText(
   operationalData,
   'signInWithEmailAndPassword',
-  'Bloco 1 antecipou o formulário/login por senha que pertence ao Bloco 3.'
+  'Login por e-mail/senha dos setores externos não está implementado.'
+);
+requireText(
+  operationalData,
+  'signInSectorUser',
+  'Hook operacional não expõe o login específico dos setores.'
+);
+requireText(
+  page,
+  'Entrar com e-mail e senha',
+  'Tela principal não oferece o login por senha dos setores.'
+);
+requireText(
+  page,
+  'Entrar com Google — HGeSM',
+  'Tela principal não preserva o acesso Google exclusivo do fundador.'
 );
 forbidText(
   rules,
   'sign_in_provider',
-  'Bloco 1 antecipou enforcement de provider nas Firestore Rules; isso pertence ao Bloco 4.'
+  'Enforcement de provider nas Firestore Rules pertence ao Bloco 4 e ainda não deve ser antecipado.'
 );
 
 if (findings.length) {
@@ -88,8 +102,9 @@ if (findings.length) {
   console.log('Provider real: validado pelo ID token Firebase');
   console.log('Conta externa por Google: bloqueada no runtime');
   console.log('Documentos legados sem authProvider: compatíveis como password');
-  console.log('UI email/senha: adiada para Bloco 3');
-  console.log('Enforcement nas Rules: adiado para Bloco 4');
+  console.log('UI email/senha: implementada para setores externos');
+  console.log('Login Google: preservado exclusivamente para o fundador');
+  console.log('Enforcement nas Rules: reservado para o Bloco 4');
   console.log('\nHYBRID AUTH MODEL: READY');
 }
 
