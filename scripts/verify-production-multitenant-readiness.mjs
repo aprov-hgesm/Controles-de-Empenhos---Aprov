@@ -48,6 +48,27 @@ const drive = read('lib/googleDriveWorkspace.ts');
 const storage = read('lib/workspaceDriveSettings.ts');
 const lifecycle = read('hooks/useOperationalData.ts');
 
+const legacyDriveArtifacts = [
+  'lib/googleDrivePoc.ts',
+  'app/drive-poc/page.tsx',
+  'scripts/verify-google-drive-poc.mjs',
+];
+for (const path of legacyDriveArtifacts) {
+  if (existsSync(resolve(root, path))) {
+    findings.push(`Artefato legado de OAuth Drive ainda presente: ${path}`);
+  }
+}
+
+const externalDriveStart = drive.indexOf('async function connectExternalWorkspaceDrive(');
+const founderDriveStart = drive.indexOf('async function connectFounderDriveSession(');
+const workspaceDriveStart = drive.indexOf('export async function connectGoogleDriveForWorkspace(');
+const externalDriveBlock = externalDriveStart >= 0 && founderDriveStart > externalDriveStart
+  ? drive.slice(externalDriveStart, founderDriveStart)
+  : '';
+const founderDriveBlock = founderDriveStart >= 0 && workspaceDriveStart > founderDriveStart
+  ? drive.slice(founderDriveStart, workspaceDriveStart)
+  : '';
+
 for (const command of [
   'verify:hybrid-auth-model',
   'verify:firestore-provider-enforcement',
@@ -89,7 +110,22 @@ requireText(access, 'firebaseUid', 'Login externo perdeu vínculo de UID.');
 requireText(access, 'tokenResult.signInProvider', 'Modelo híbrido não valida o provider real da sessão.');
 requireText(access, 'signInProvider !== FOUNDER_AUTH_PROVIDER', 'Fundador não está restrito ao Google.');
 requireText(access, 'signInProvider !== SECTOR_AUTH_PROVIDER', 'Setor externo não está restrito a password.');
-requireText(drive, 'reauthenticateWithPopup', 'Onboarding Drive não exige reautenticação.');
+requireText(drive, 'initTokenClient', 'OAuth independente do Drive externo não usa Google Identity Services.');
+requireText(
+  drive,
+  'return connectExternalWorkspaceDrive(context, expectedEmail)',
+  'Setores externos não são roteados para o OAuth Drive independente.'
+);
+if (!externalDriveBlock) {
+  findings.push('Não foi possível isolar o bloco OAuth do setor externo.');
+} else if (externalDriveBlock.includes('reauthenticateWithPopup')) {
+  findings.push('Setor externo voltou a reautenticar ou alterar a sessão Firebase durante OAuth do Drive.');
+}
+if (!founderDriveBlock) {
+  findings.push('Não foi possível isolar o fluxo Drive do fundador.');
+} else if (!founderDriveBlock.includes('reauthenticateWithPopup')) {
+  findings.push('Fluxo Drive do fundador perdeu a reautenticação Google/Firebase consolidada.');
+}
 requireText(drive, 'emprovexWorkspaceId', 'Pastas Drive não estão marcadas por workspace.');
 requireText(storage, "WORKSPACE_DOCUMENT_STORAGE_SETTINGS_ID = 'documentStorage'", 'Configuração Drive não usa documentStorage.');
 requireText(lifecycle, 'observador de ciclo de vida para setores externos', 'Cliente não observa suspensão administrativa.');
@@ -128,6 +164,8 @@ if (findings.length) {
   console.log('Login externo + UID binding: PRONTO');
   console.log('Provisionamento inicial: PRONTO');
   console.log('Google Drive por workspace: PRONTO');
+  console.log('OAuth Drive externo isolado da sessão Firebase: PRONTO');
+  console.log('POC Drive legado em produção: AUSENTE');
   console.log('Lifecycle administrativo: PRONTO');
   console.log('Isolamento automatizado A ↔ B: PRONTO');
   console.log('Proteção HGeSM fundador: PRONTA');

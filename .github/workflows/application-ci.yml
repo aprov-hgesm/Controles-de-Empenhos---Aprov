@@ -51,9 +51,6 @@ jobs:
       - name: Legacy runtime guard
         run: npm run audit:legacy-runtime
 
-      - name: Google Drive POC guard
-        run: npm run verify:drive-poc
-
       - name: Final document storage guard
         run: npm run verify:storage-provider
 
