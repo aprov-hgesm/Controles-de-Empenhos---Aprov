@@ -125,11 +125,11 @@ export async function saveInvoice(userId: string, invoice: Invoice): Promise<voi
   }
 }
 
-export async function removeInvoice(userId: string, id: string): Promise<void> {
+export async function removeInvoice(userId: string, recordKey: string): Promise<void> {
   const scope = getCurrentOperationalScope(userId);
-  const path = getOperationalDocumentPath(scope, 'invoices', id);
+  const path = getOperationalDocumentPath(scope, 'invoices', recordKey);
   try {
-    await deleteDoc(operationalDocRef(scope, 'invoices', id));
+    await deleteDoc(operationalDocRef(scope, 'invoices', recordKey));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
