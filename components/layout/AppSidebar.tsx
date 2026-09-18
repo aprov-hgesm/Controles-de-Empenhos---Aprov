@@ -82,7 +82,7 @@ export function AppSidebar({
               }`}
             >
               <FileSpreadsheet className="w-5 h-5" />
-              <span>Cadastro de Empenhos</span>
+              <span>Empenhos</span>
             </button>
 
             <button
@@ -118,7 +118,7 @@ export function AppSidebar({
               }`}
             >
               <TrendingUp className="w-5 h-5" />
-              <span>Empenhos</span>
+              <span>Relatórios</span>
             </button>
 
             <button
