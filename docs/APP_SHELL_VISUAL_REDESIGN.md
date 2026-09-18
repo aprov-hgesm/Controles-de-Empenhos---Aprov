@@ -100,7 +100,7 @@ Neste bloco eles são apenas fundação: nenhum componente existente consome os 
 4. ~~Header estrutural premium.~~ **Concluído no Bloco 5.**
 5. ~~Núcleo visual da marca no Header.~~ **Concluído no Bloco 6.**
 6. ~~Controles inteligentes do Header.~~ **Concluído no Bloco 7.**
-7. Linha de energia e microinterações.
+7. ~~Linha de energia e microinterações.~~ **Concluído no Bloco 8.**
 8. Camada artística de assinatura.
 9. Responsividade e refinamento mobile.
 10. Acessibilidade, desempenho e homologação.
@@ -219,3 +219,22 @@ Os controles funcionais do Header receberam linguagem visual unificada sem alter
 - foco por teclado e `prefers-reduced-motion` mantidos.
 
 Nenhuma lógica de sincronização, autenticação, Drive, Administração, Firestore, workspace ou dados foi alterada.
+
+
+## Bloco 8 — Linha de energia e microinterações
+
+Status: concluído.
+
+A moldura visual recebeu a camada de assinatura dinâmica, mantendo baixa intensidade:
+
+- linha de energia de 1 px na base do Header;
+- beam luminoso lento, com ciclo aproximado de 11 segundos;
+- reflexão curta nos controles do Header em hover/foco;
+- resposta tipográfica mínima nos itens da Sidebar;
+- glow respiratório muito discreto apenas no ícone da aba ativa;
+- microelevação do card do Operador;
+- refinamento de hover no estado do Sistema e na identidade do Operador do Header;
+- intensificação sutil do halo do núcleo da marca em hover;
+- todos os efeitos contínuos desativados com `prefers-reduced-motion`.
+
+Nenhum efeito altera layout, handlers, autenticação, Drive, Firestore, workspace, multi-tenant ou dados.

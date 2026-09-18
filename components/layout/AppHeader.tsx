@@ -117,6 +117,10 @@ export function AppHeader({
           </span>
         </div>
       </div>
+
+      <span className="emprovex-header-energy-line" aria-hidden="true">
+        <span className="emprovex-header-energy-line__beam" />
+      </span>
     </header>
   );
 }
