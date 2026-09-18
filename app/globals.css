@@ -9,6 +9,10 @@
   --emprovex-motion-slow: 460ms;
   --emprovex-accent: #00288e;
   --emprovex-accent-soft: rgba(0, 40, 142, 0.12);
+  --emprovex-login-navy: #020817;
+  --emprovex-login-panel: rgba(7, 18, 37, 0.80);
+  --emprovex-login-line: rgba(148, 181, 255, 0.10);
+  --emprovex-login-blue: #0a55dc;
 }
 
 @theme {
@@ -332,4 +336,76 @@ button[aria-busy="true"] {
 
 button[aria-busy="true"] .animate-spin {
   animation-duration: 800ms;
+}
+
+
+/* EMPROVEX login — isolated premium foundation (cinematic redesign, Bloco 2). */
+.emprovex-login-shell {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(18, 83, 210, 0.16), transparent 31rem),
+    radial-gradient(circle at 78% 74%, rgba(7, 91, 205, 0.10), transparent 28rem),
+    linear-gradient(135deg, #020817 0%, #03102a 48%, #020714 100%);
+}
+
+.emprovex-login-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.28;
+  background-image:
+    linear-gradient(rgba(128, 166, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(128, 166, 255, 0.045) 1px, transparent 1px);
+  background-size: 52px 52px;
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.68), transparent 82%);
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.68), transparent 82%);
+}
+
+.emprovex-login-shell::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(1, 5, 17, 0.12), transparent 18%, transparent 82%, rgba(1, 5, 17, 0.18)),
+    radial-gradient(ellipse at center, transparent 38%, rgba(0, 3, 13, 0.30) 100%);
+}
+
+.emprovex-login-panel {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.015),
+    0 40px 120px rgba(0, 7, 28, 0.62);
+}
+
+.emprovex-login-input {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018);
+}
+
+.emprovex-login-input:-webkit-autofill,
+.emprovex-login-input:-webkit-autofill:hover,
+.emprovex-login-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffffff;
+  caret-color: #ffffff;
+  box-shadow: 0 0 0 1000px rgba(2, 8, 23, 0.92) inset;
+  transition: background-color 9999s ease-out 0s;
+}
+
+.emprovex-login-primary {
+  transform: translateZ(0);
+}
+
+@media (max-width: 639px) {
+  .emprovex-login-shell::before {
+    background-size: 38px 38px;
+    opacity: 0.20;
+  }
+
+  .emprovex-login-panel {
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
 }
