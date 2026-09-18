@@ -26,6 +26,10 @@ import {
   type SectorAccount,
   type Workspace,
 } from './platformIdentity';
+import {
+  createInitialWorkspaceTermCounter,
+  WORKSPACE_TERM_COUNTER_SETTINGS_ID,
+} from './workspaceProvisioning';
 
 const PLATFORM_ACCOUNTS_COLLECTION = 'platformAccounts';
 const WORKSPACES_COLLECTION = 'workspaces';
@@ -87,8 +91,9 @@ export async function ensureFoundingPlatformMetadata(): Promise<void> {
 }
 
 /**
- * Cria workspace e conta de setor na mesma transação. Não permite sobrescrever
- * IDs ou e-mails já cadastrados.
+ * Cria workspace, conta de setor e o estado operacional mínimo na mesma transação.
+ * O contador de Termos de Recebimento nasce em zero; Drive e documentos somente
+ * são materializados pelo próprio setor nas etapas de onboarding correspondentes.
  */
 export async function createSectorWorkspace(
   input: CreateSectorWorkspaceInput,
@@ -143,11 +148,20 @@ export async function createSectorWorkspace(
 
   const workspaceRef = doc(db, WORKSPACES_COLLECTION, workspaceId);
   const accountRef = doc(db, PLATFORM_ACCOUNTS_COLLECTION, accountDocumentId(authorizedEmail));
+  const termCounterRef = doc(
+    db,
+    WORKSPACES_COLLECTION,
+    workspaceId,
+    'settings',
+    WORKSPACE_TERM_COUNTER_SETTINGS_ID
+  );
+  const initialTermCounter = createInitialWorkspaceTermCounter();
 
   await runTransaction(db, async (transaction) => {
-    const [workspaceSnapshot, accountSnapshot] = await Promise.all([
+    const [workspaceSnapshot, accountSnapshot, termCounterSnapshot] = await Promise.all([
       transaction.get(workspaceRef),
       transaction.get(accountRef),
+      transaction.get(termCounterRef),
     ]);
 
     if (workspaceSnapshot.exists()) {
@@ -156,9 +170,16 @@ export async function createSectorWorkspace(
     if (accountSnapshot.exists()) {
       throw new Error('Esta conta Google já está vinculada a um perfil do EMPROVEX.');
     }
+    if (termCounterSnapshot.exists()) {
+      throw new Error('Já existe configuração operacional residual para este identificador de setor.');
+    }
 
+    // Bloco 17: diretório administrativo e estado operacional mínimo nascem
+    // atomicamente. As demais coleções permanecem vazias e o Google Drive só é
+    // materializado quando o próprio setor concluir o onboarding do Bloco 18.
     transaction.set(workspaceRef, workspace);
     transaction.set(accountRef, account);
+    transaction.set(termCounterRef, initialTermCounter);
   });
 
   return { workspace, account };
