@@ -5,6 +5,7 @@ import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActio
 import { InvoiceDocumentActions } from '../../../components/InvoiceDocumentActions';
 import { TermoRecebimentoActions } from '../../../components/TermoRecebimentoActions';
 import { MAX_INVOICE_PDF_BYTES } from '../../../lib/invoiceDocuments';
+import { getInvoiceRecordKey } from '../../../lib/invoiceIdentity';
 import { removeComissao } from '../../../lib/firebaseSync';
 import { MILITARY_RANKS } from '../../empenhos/domain/empenhoHelpers';
 import { AlertTriangle, ArrowUpDown, Calendar, Check, CheckCircle2, Clock, Edit, FileDown, FileText, Loader2, Package, Save, Search, Trash2, Upload, UserCheck, Users, X } from 'lucide-react';
