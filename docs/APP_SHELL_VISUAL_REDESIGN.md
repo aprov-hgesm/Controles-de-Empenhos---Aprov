@@ -300,3 +300,39 @@ O App Shell recebeu uma camada adicional de robustez e acessibilidade:
 - `will-change` restrito apenas aos elementos realmente animados.
 
 Nenhuma lógica de autenticação, Drive, Firestore, workspace, multi-tenant, navegação ou dados foi alterada.
+
+
+## Bloco 12 — Homologação visual e integração final
+
+Status: concluído.
+
+A revisão final do Header e da Sidebar foi convertida em uma proteção permanente do repositório:
+
+- novo guard `scripts/verify-app-shell.mjs`;
+- validação automática da altura fixa do Header;
+- validação da largura e posicionamento fixo da Sidebar;
+- proteção da reserva de `18rem` no conteúdo desktop;
+- verificação da linha de energia e da assinatura visual;
+- verificação da semântica ARIA do Google Drive;
+- proteção da indicação `aria-current` na navegação;
+- garantia de que a assinatura artística permaneça sem acesso a Firebase, Drive ou workspace;
+- verificação dos fallbacks de movimento reduzido, transparência reduzida, contraste reforçado e forced colors;
+- verificação dos breakpoints mobile críticos;
+- novo comando `npm run verify:app-shell`;
+- integração do guard no Application CI antes do build de produção.
+
+Com esse guard, futuras alterações em Header, Sidebar ou CSS do App Shell passam a falhar no CI quando quebrarem uma das invariantes homologadas.
+
+### Estado homologado
+
+O redesign interno do EMPROVEX está encerrado com a seguinte arquitetura:
+
+- Login: apresentação cinematográfica;
+- Header: identidade, estado e controles operacionais;
+- Sidebar: navegação, operador e estado do sistema;
+- área central: produtividade e legibilidade;
+- mobile: versão compacta e funcional;
+- acessibilidade: reduced-motion, reduced-transparency, high contrast e forced colors;
+- elementos artísticos: estritamente decorativos e não interativos.
+
+Nenhuma regra de autenticação, Drive, Firestore, workspace, multi-tenant ou dados foi alterada pela homologação final.
