@@ -11,7 +11,7 @@ export function useOperationalViewState() {
   // --- VIEW 1: PAINEL / DASHBOARD STATES ---
   const [expandedEmpenhoId, setExpandedEmpenhoId] = useState<string | null>('2025NE124');
   const [dashboardPregaoFilter, setDashboardPregaoFilter] = useState('Todos');
-  const [dashboardClassFilter, setDashboardClassFilter] = useState<'TODAS' | 'QR' | 'CALI' | 'PASA'>('TODAS');
+  const [dashboardClassFilter, setDashboardClassFilter] = useState<string>('TODAS');
   const [dashboardSearch, setDashboardSearch] = useState('');
   const [dashboardExpandedClass, setDashboardExpandedClass] = useState<string | null>(null);
 
@@ -38,7 +38,7 @@ export function useOperationalViewState() {
     description: string;
     pregao: string;
     date: string;
-    classification: 'QR' | 'CALI' | 'PASA';
+    classification: string;
   }>({
     id: '',
     supplier: '',

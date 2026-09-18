@@ -32,7 +32,7 @@ export function MobileNavigation({ activeTab, setActiveTab, setSelectedEmpenhoDe
         }`}
       >
         <FileSpreadsheet className="w-5 h-5" />
-        <span className="text-[10px] mt-0.5">Cad. Empenhos</span>
+        <span className="text-[10px] mt-0.5">Empenhos</span>
       </button>
 
       <button
@@ -54,7 +54,7 @@ export function MobileNavigation({ activeTab, setActiveTab, setSelectedEmpenhoDe
         }`}
       >
         <TrendingUp className="w-5 h-5" />
-        <span className="text-[10px] mt-0.5">Empenhos</span>
+        <span className="text-[10px] mt-0.5">Relatórios</span>
       </button>
 
       <button

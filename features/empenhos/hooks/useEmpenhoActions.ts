@@ -6,9 +6,10 @@ import jsPDF from 'jspdf';
 import type { Alert, Empenho, EmpenhoPdfDocument, Invoice, Item } from '../../../lib/types';
 import { saveAlert, saveEmpenho, removeAlert, removeEmpenho, removeInvoice } from '../../../lib/firebaseSync';
 import { PROMPT_EXTRACAO_EMPENHO } from '../domain/empenhoHelpers';
+import { normalizeEmpenhoClassCode } from '../../../lib/empenhoClasses';
 
 type ActiveTab = 'painel' | 'empenhos' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas';
-type NewEmpenhoForm = { id: string; supplier: string; description: string; pregao: string; date: string; classification: 'QR' | 'CALI' | 'PASA' };
+type NewEmpenhoForm = { id: string; supplier: string; description: string; pregao: string; date: string; classification: string };
 type NewItemForm = { id: string; name: string; unit: string; quantity: string; unitPrice: string };
 type ToastType = 'success' | 'error' | 'info';
 
@@ -89,6 +90,40 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     }
   };
 
+  const handleUpdateEmpenhoClassification = async (
+    empenhoId: string,
+    classificationInput: string
+  ): Promise<void> => {
+    const currentEmpenho = empenhos.find((emp) => emp.id === empenhoId);
+    if (!currentEmpenho) {
+      showToast('Empenho não encontrado para alteração da classe.', 'error');
+      return;
+    }
+
+    const classification = normalizeEmpenhoClassCode(classificationInput);
+    if (!classification) {
+      showToast('Selecione uma classe válida para o empenho.', 'error');
+      return;
+    }
+
+    const updatedEmpenho: Empenho = {
+      ...currentEmpenho,
+      classification,
+    };
+
+    try {
+      if (user) await saveEmpenho(user.uid, updatedEmpenho);
+      setEmpenhos((current) => current.map((emp) => (
+        emp.id === empenhoId ? updatedEmpenho : emp
+      )));
+      showToast(`Classe do empenho ${empenhoId} alterada para ${classification}.`, 'success');
+    } catch (error) {
+      console.error('Erro ao atualizar classe do empenho:', error);
+      showToast('Não foi possível atualizar a classe do empenho.', 'error');
+      throw error;
+    }
+  };
+
   // Handler to register new Commitment
   const handleCreateEmpenho = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,7 +154,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       status: 'Ativo',
       items: [],
       pregao: newEmpenhoForm.pregao || 'Sem Pregão',
-      classification: newEmpenhoForm.classification,
+      classification: normalizeEmpenhoClassCode(newEmpenhoForm.classification) || 'QR',
     };
      const updatedEmpenhos = [newEmp, ...empenhos];
     if (user) {
@@ -263,7 +298,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
         status: 'Ativo',
         items: mappedReviewItems,
         pregao: data.pregao_relacionado || data.pregao || '',
-        classification: data.classificacao || 'QR',
+        classification: normalizeEmpenhoClassCode(String(data.classificacao || 'QR')) || 'QR',
         valorTotalDeclarado: parseFloat(data.valor_total || data.valorTotal) || null,
       };
        setReviewEmpenho(parsedEmpenho);
@@ -292,7 +327,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       status: 'Ativo',
       items: reviewEmpenho.items,
       pregao: reviewEmpenho.pregao || 'Sem Pregão',
-      classification: reviewEmpenho.classification || 'QR',
+      classification: normalizeEmpenhoClassCode(String(reviewEmpenho.classification || 'QR')) || 'QR',
     };
      const updatedEmpenhos = [finalEmp, ...empenhos];
     setEmpenhos(updatedEmpenhos);
@@ -457,6 +492,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
   return {
     handleEmpenhoDocumentUploaded,
     handleUpdateEmpenhoPregao,
+    handleUpdateEmpenhoClassification,
     handleCreateEmpenho,
     handleDownloadPromptTxt,
     handleDownloadPromptPdf,

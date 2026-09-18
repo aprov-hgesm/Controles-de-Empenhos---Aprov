@@ -404,7 +404,7 @@ export function useOperationalData() {
     clearOperationalState();
   };
 
-  const getBalanceByClass = (classification: 'QR' | 'CALI' | 'PASA') => {
+  const getBalanceByClass = (classification: string) => {
     const filtered = empenhos.filter((emp) => emp.classification === classification);
     return filtered.reduce((total, emp) => {
       const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);

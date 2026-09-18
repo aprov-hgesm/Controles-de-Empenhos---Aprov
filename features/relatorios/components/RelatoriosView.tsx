@@ -42,7 +42,7 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
               
               {/* Screen Title */}
               <div>
-                <h2 className="text-2xl font-bold tracking-tight text-[#00288e]">Empenhos</h2>
+                <h2 className="text-2xl font-bold tracking-tight text-[#00288e]">Relatórios</h2>
                 <p className="text-sm text-gray-500 font-medium">Conciliação de Notas Fiscais, Notas de Empenho e saldos logísticos</p>
               </div>
 

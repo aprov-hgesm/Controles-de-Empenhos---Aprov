@@ -3,8 +3,9 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { CheckCircle2, Coins, Filter, Layers, Search, X } from 'lucide-react';
 import type { Empenho } from '../../../lib/types';
+import type { EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 
-type DashboardClassFilter = 'TODAS' | 'QR' | 'CALI' | 'PASA';
+type DashboardClassFilter = string;
 type ActiveTab = 'painel' | 'empenhos' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas';
 type NfSubTab = 'acompanhar' | 'cadastrar' | 'comissao';
 
@@ -13,7 +14,8 @@ interface DashboardViewProps {
   dashboardPregaoFilter: string;
   dashboardSearch: string;
   empenhos: Empenho[];
-  getBalanceByClass: (classification: 'QR' | 'CALI' | 'PASA') => number;
+  empenhoClasses: EmpenhoClassDefinition[];
+  getBalanceByClass: (classification: string) => number;
   setActiveTab: Dispatch<SetStateAction<ActiveTab>>;
   setDashboardClassFilter: Dispatch<SetStateAction<DashboardClassFilter>>;
   setDashboardPregaoFilter: Dispatch<SetStateAction<string>>;
@@ -33,6 +35,7 @@ export function DashboardView({
   dashboardPregaoFilter,
   dashboardSearch,
   empenhos,
+  empenhoClasses,
   getBalanceByClass,
   setActiveTab,
   setDashboardClassFilter,
@@ -56,21 +59,9 @@ export function DashboardView({
             const totalGeralSaldo = Math.max(0, totalGeralEmpenhado - totalGeralLiquidado);
             const totalGeralPctExec = totalGeralEmpenhado > 0 ? Math.round((totalGeralLiquidado / totalGeralEmpenhado) * 100) : 0;
 
-            // Class definitions
-            const classesConfig: {
-              key: 'QR' | 'CALI' | 'PASA';
-              name: string;
-              description: string;
-              borderClass: string;
-              badgeBg: string;
-              badgeText: string;
-              progressColor: string;
-              accentText: string;
-            }[] = [
+            // Classes aparecem no Dashboard somente quando possuem ao menos um empenho.
+            const classPalette = [
               {
-                key: 'QR',
-                name: 'Classe QR',
-                description: 'Quadro de Rancho / Subsistência e Alimentação Geral',
                 borderClass: 'border-blue-200',
                 badgeBg: 'bg-blue-50',
                 badgeText: 'text-blue-800',
@@ -78,9 +69,6 @@ export function DashboardView({
                 accentText: 'text-[#00288e]',
               },
               {
-                key: 'CALI',
-                name: 'Classe CALI',
-                description: 'Cálculo de Alimentação / Insumos e Materiais de Apoio',
                 borderClass: 'border-amber-200',
                 badgeBg: 'bg-amber-50',
                 badgeText: 'text-amber-800',
@@ -88,20 +76,50 @@ export function DashboardView({
                 accentText: 'text-amber-700',
               },
               {
-                key: 'PASA',
-                name: 'Classe PASA',
-                description: 'Plano de Apoio / Alimentação e Serviços Especializados',
                 borderClass: 'border-emerald-200',
                 badgeBg: 'bg-emerald-50',
                 badgeText: 'text-emerald-800',
                 progressColor: 'bg-emerald-600',
                 accentText: 'text-emerald-700',
               },
-            ];
+              {
+                borderClass: 'border-violet-200',
+                badgeBg: 'bg-violet-50',
+                badgeText: 'text-violet-800',
+                progressColor: 'bg-violet-600',
+                accentText: 'text-violet-700',
+              },
+              {
+                borderClass: 'border-cyan-200',
+                badgeBg: 'bg-cyan-50',
+                badgeText: 'text-cyan-800',
+                progressColor: 'bg-cyan-600',
+                accentText: 'text-cyan-700',
+              },
+            ] as const;
 
-            const displayedClasses = dashboardClassFilter === 'TODAS'
+            const activeClassCodes = new Set(
+              empenhos.map((emp) => (emp.classification || 'QR').trim().toUpperCase())
+            );
+
+            const classesConfig = empenhoClasses
+              .filter((definition) => activeClassCodes.has(definition.code))
+              .map((definition, index) => ({
+                key: definition.code,
+                name: `Classe ${definition.code}`,
+                description: definition.description,
+                ...classPalette[index % classPalette.length],
+              }));
+
+            const effectiveDashboardClassFilter =
+              dashboardClassFilter === 'TODAS'
+              || classesConfig.some((item) => item.key === dashboardClassFilter)
+                ? dashboardClassFilter
+                : 'TODAS';
+
+            const displayedClasses = effectiveDashboardClassFilter === 'TODAS'
               ? classesConfig
-              : classesConfig.filter(c => c.key === dashboardClassFilter);
+              : classesConfig.filter((item) => item.key === effectiveDashboardClassFilter);
 
             return (
               <div className="space-y-6">
@@ -142,7 +160,7 @@ export function DashboardView({
                     id="filter-class-todas"
                     onClick={() => setDashboardClassFilter('TODAS')}
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                      dashboardClassFilter === 'TODAS'
+                      effectiveDashboardClassFilter === 'TODAS'
                         ? 'bg-[#00288e] text-white shadow-xs'
                         : 'bg-white/60 text-gray-600 border border-gray-200 hover:bg-white'
                     }`}
@@ -157,14 +175,14 @@ export function DashboardView({
                         id={`filter-class-${cls.key.toLowerCase()}`}
                         onClick={() => setDashboardClassFilter(cls.key)}
                         className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                          dashboardClassFilter === cls.key
+                          effectiveDashboardClassFilter === cls.key
                             ? 'bg-[#00288e] text-white shadow-xs'
                             : 'bg-white/60 text-gray-600 border border-gray-200 hover:bg-white'
                         }`}
                       >
                         <span>{cls.name}</span>
                         <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
-                          dashboardClassFilter === cls.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700 font-bold'
+                          effectiveDashboardClassFilter === cls.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700 font-bold'
                         }`}>
                           R$ {stats.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
@@ -259,7 +277,7 @@ export function DashboardView({
                       const classPct = classCommitted > 0 ? Math.round((classReceived / classCommitted) * 100) : 0;
                       const activeCount = classEmpenhos.filter(e => e.status === 'Ativo').length;
 
-                      const isSelected = dashboardClassFilter === cls.key;
+                      const isSelected = effectiveDashboardClassFilter === cls.key;
 
                       return (
                         <div 
