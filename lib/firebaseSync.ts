@@ -8,6 +8,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './firebase';
+import { getInvoiceRecordKey } from './invoiceIdentity';
 import { Empenho, Alert, Invoice, Comissao, CronogramaEmpenho } from './types';
 import {
   getCurrentOperationalScope,
