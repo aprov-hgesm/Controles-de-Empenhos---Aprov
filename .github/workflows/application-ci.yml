@@ -60,6 +60,9 @@ jobs:
       - name: Secure UID binding guard
         run: npm run verify:uid-binding
 
+      - name: Workspace provisioning guard
+        run: npm run verify:workspace-provisioning
+
       - name: Production build
         run: npm run build
 
