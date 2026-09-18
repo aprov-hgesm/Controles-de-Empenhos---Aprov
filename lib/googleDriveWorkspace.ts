@@ -248,28 +248,6 @@ async function connectFounderDriveSession(
   context: SectorWorkspaceContext,
   expectedEmail: string
 ): Promise<WorkspaceGoogleDriveSession> {
-  // Setores externos entram no EMPROVEX por e-mail/senha. A autorização
-  // do Drive precisa ser independente para não trocar o sign_in_provider da
-  // sessão Firebase e disparar a revogação fail-closed do workspace.
-  if (context.resolutionSource === 'platform-directory') {
-    return connectExternalWorkspaceDrive(context, expectedEmail);
-  }
-
-  // O workspace fundador legado continua usando o fluxo Firebase consolidado.
-  return connectFounderDriveSession(user, context, expectedEmail);
-}
-
-export async function connectGoogleDriveForWorkspace(
-  user: User,
-  context: SectorWorkspaceContext
-): Promise<WorkspaceGoogleDriveSession> {
-  const expectedEmail = normalizePlatformEmail(context.email);
-  const currentEmail = normalizePlatformEmail(user.email || '');
-
-  if (!currentEmail || currentEmail !== expectedEmail) {
-    throw new Error('A conta Firebase atual não corresponde à conta autorizada deste workspace.');
-  }
-
   const provider = new GoogleAuthProvider();
   provider.addScope(GOOGLE_DRIVE_WORKSPACE_SCOPE);
   provider.setCustomParameters({
@@ -296,6 +274,28 @@ export async function connectGoogleDriveForWorkspace(
     workspaceId: context.workspaceId,
     connectedAt: new Date().toISOString(),
   };
+}
+
+export async function connectGoogleDriveForWorkspace(
+  user: User,
+  context: SectorWorkspaceContext
+): Promise<WorkspaceGoogleDriveSession> {
+  const expectedEmail = normalizePlatformEmail(context.email);
+  const currentEmail = normalizePlatformEmail(user.email || '');
+
+  if (!currentEmail || currentEmail !== expectedEmail) {
+    throw new Error('A conta Firebase atual não corresponde à conta autorizada deste workspace.');
+  }
+
+  // Setores externos entram no EMPROVEX por e-mail/senha. A autorização do
+  // Google Drive usa OAuth independente para preservar o sign_in_provider=password
+  // da sessão Firebase e impedir logout por fail-closed do workspace.
+  if (context.resolutionSource === 'platform-directory') {
+    return connectExternalWorkspaceDrive(context, expectedEmail);
+  }
+
+  // O workspace fundador legado mantém o fluxo Firebase/Google já consolidado.
+  return connectFounderDriveSession(user, context, expectedEmail);
 }
 
 async function findFolder(
