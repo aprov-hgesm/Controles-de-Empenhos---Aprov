@@ -25,7 +25,7 @@ function describeDirectoryError(error: unknown): string {
     : '';
 
   if (code.includes('permission-denied')) {
-    return 'As regras administrativas do Firestore ainda não estão publicadas. O painel está pronto, mas o cadastro persistente permanece bloqueado até a publicação das novas regras.';
+    return 'O Firestore recusou esta operação administrativa por permissão. Atualize a página e tente novamente; se persistir, valide as Rules publicadas e o vínculo da conta administrativa.';
   }
 
   if (error instanceof Error && error.message) return error.message;
