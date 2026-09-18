@@ -114,6 +114,8 @@ requireText(access, 'tokenResult.signInProvider', 'Modelo híbrido não valida o
 requireText(access, 'signInProvider !== FOUNDER_AUTH_PROVIDER', 'Fundador não está restrito ao Google.');
 requireText(access, 'signInProvider !== SECTOR_AUTH_PROVIDER', 'Setor externo não está restrito a password.');
 requireText(drive, 'initTokenClient', 'OAuth independente do Drive externo não usa Google Identity Services.');
+requireText(drive, 'expires_in', 'OAuth Drive externo não controla a validade do token.');
+requireText(drive, 'expiresAt', 'Sessão Drive externa não registra validade em memória.');
 requireText(
   drive,
   'return connectExternalWorkspaceDrive(context, expectedEmail)',
@@ -169,6 +171,7 @@ if (findings.length) {
   console.log('Google Drive por workspace: PRONTO');
   console.log('OAuth Drive externo isolado da sessão Firebase: PRONTO');
   console.log('Falhas OAuth/Drive preservam sessão Firebase externa: TESTADO');
+  console.log('Ciclo de vida do token Drive externo: CONTROLADO EM MEMÓRIA');
   console.log('POC Drive legado em produção: AUSENTE');
   console.log('Lifecycle administrativo: PRONTO');
   console.log('Isolamento automatizado A ↔ B: PRONTO');
