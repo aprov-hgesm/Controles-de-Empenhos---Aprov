@@ -25,7 +25,7 @@ export default function PlatformAdminPage() {
 
   const context = resolveWorkspaceContext(user?.email);
   const adminDirectory = usePlatformAdminDirectory(
-    context.status === 'platformAdmin' ? context.email : null
+    context.status === 'platformAdmin' ? user : null
   );
 
   useEffect(() => {
