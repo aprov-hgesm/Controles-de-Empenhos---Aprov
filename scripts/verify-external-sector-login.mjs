@@ -24,6 +24,11 @@ requireText(access, 'firebaseUid', 'A resolução externa perdeu o vínculo pers
 requireText(context, "'platform-directory'", 'workspaceContext não reconhece resolução pelo diretório da plataforma.');
 requireText(context, 'getResolvedWorkspaceContextForSession', 'Não existe cache de contexto vinculado ao UID da sessão.');
 requireText(operationalData, 'resolveAuthenticatedWorkspaceContext', 'useOperationalData não valida o diretório antes das subscriptions.');
+requireText(operationalData, 'getMultiFactorResolver', 'Login Google não trata contas protegidas por MFA.');
+requireText(operationalData, 'TotpMultiFactorGenerator', 'Login não suporta segundo fator TOTP.');
+requireText(operationalData, "code !== 'auth/multi-factor-auth-required'", 'Login não detecta desafio MFA retornado pelo Firebase.');
+requireText(operationalData, 'assertionForSignIn', 'Segundo fator TOTP não é transformado em assertion de login.');
+requireText(operationalData, 'resolver.resolveSignIn', 'Segundo fator não conclui a sessão Firebase.');
 forbidText(operationalData, 'useMemo(', 'Autorização operacional não pode ser derivada somente por useMemo do e-mail.');
 requireText(operationalPaths, 'getResolvedWorkspaceContextForSession', 'Writes não reutilizam o contexto validado da sessão.');
 
@@ -46,6 +51,7 @@ if (findings.length) {
   console.log('Subscriptions antes da resolução: bloqueadas');
   console.log('Writes: vinculados ao contexto validado da sessão');
   console.log('Persistência de firebaseUid: SIM (Bloco 16)');
+  console.log('MFA TOTP: suportado');
   console.log('\nEXTERNAL SECTOR LOGIN: READY');
 }
 
