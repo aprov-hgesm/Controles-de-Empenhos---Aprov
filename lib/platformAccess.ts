@@ -46,6 +46,17 @@ interface ResolvedExternalIdentity {
   workspace: Workspace;
 }
 
+class ExternalIdentityResolutionError extends Error {
+  constructor(public readonly code: string) {
+    super(code);
+    this.name = 'ExternalIdentityResolutionError';
+  }
+}
+
+function failIdentityResolution(code: string): never {
+  throw new ExternalIdentityResolutionError(code);
+}
+
 async function resolveSessionAuthProvider(
   user: User
 ): Promise<PlatformAuthProvider | null> {
@@ -77,36 +88,36 @@ async function resolveAndBindExternalIdentity(
 
   return runTransaction(db, async (transaction) => {
     const accountSnapshot = await transaction.get(accountRef);
-    if (!accountSnapshot.exists()) return null;
+    if (!accountSnapshot.exists()) failIdentityResolution('ACCOUNT_NOT_FOUND');
 
     const account = accountSnapshot.data() as PlatformAccount;
-    if (validatePlatformAccount(account).length > 0) return null;
-    if (!isActiveSectorAccount(account)) return null;
-    if (normalizePlatformEmail(account.email) !== normalizedEmail) return null;
+    if (validatePlatformAccount(account).length > 0) failIdentityResolution('ACCOUNT_INVALID');
+    if (!isActiveSectorAccount(account)) failIdentityResolution('ACCOUNT_DISABLED_OR_WRONG_TYPE');
+    if (normalizePlatformEmail(account.email) !== normalizedEmail) failIdentityResolution('ACCOUNT_EMAIL_MISMATCH');
 
     // Nova arquitetura híbrida: setores externos entram exclusivamente pelo
     // provider email/password. Documentos legados sem authProvider são tratados
     // como password até que o Bloco 2 materialize o campo explicitamente.
     const expectedProvider = account.authProvider || SECTOR_AUTH_PROVIDER;
-    if (expectedProvider !== SECTOR_AUTH_PROVIDER) return null;
-    if (signInProvider !== SECTOR_AUTH_PROVIDER) return null;
+    if (expectedProvider !== SECTOR_AUTH_PROVIDER) failIdentityResolution('ACCOUNT_PROVIDER_MISMATCH');
+    if (signInProvider !== SECTOR_AUTH_PROVIDER) failIdentityResolution('SESSION_PROVIDER_MISMATCH');
 
     // Depois do primeiro vínculo, e-mail idêntico não é suficiente: o UID precisa
     // continuar sendo exatamente o mesmo.
     if (account.firebaseUid && account.firebaseUid !== user.uid) {
-      return null;
+      failIdentityResolution('UID_MISMATCH');
     }
 
     const workspaceRef = doc(db, WORKSPACES_COLLECTION, account.workspaceId);
     const workspaceSnapshot = await transaction.get(workspaceRef);
-    if (!workspaceSnapshot.exists()) return null;
+    if (!workspaceSnapshot.exists()) failIdentityResolution('WORKSPACE_NOT_FOUND');
 
     const workspace = workspaceSnapshot.data() as Workspace;
-    if (validateWorkspace(workspace).length > 0) return null;
-    if (workspace.status !== 'active') return null;
-    if (workspace.id !== account.workspaceId) return null;
+    if (validateWorkspace(workspace).length > 0) failIdentityResolution('WORKSPACE_INVALID');
+    if (workspace.status !== 'active') failIdentityResolution('WORKSPACE_DISABLED');
+    if (workspace.id !== account.workspaceId) failIdentityResolution('WORKSPACE_ID_MISMATCH');
     if (normalizePlatformEmail(workspace.authorizedEmail) !== normalizedEmail) {
-      return null;
+      failIdentityResolution('WORKSPACE_EMAIL_MISMATCH');
     }
 
     // Novos setores do Bloco 2 já chegam pré-vinculados ao UID pelo servidor.
@@ -227,7 +238,25 @@ export async function resolveAuthenticatedWorkspaceContext(
   } catch (error) {
     // Fail closed: qualquer conflito de UID, regra, leitura ou transação mantém o
     // usuário fora do workspace e impede subscriptions operacionais.
-    console.warn('Não foi possível validar/vincular a identidade no EMPROVEX.', error);
-    return unauthorized(normalizedEmail);
+    const diagnosticCode = error instanceof ExternalIdentityResolutionError
+      ? error.code
+      : (
+          typeof error === 'object'
+          && error
+          && 'code' in error
+            ? `FIRESTORE_${String((error as { code?: unknown }).code || 'UNKNOWN').toUpperCase().replace(/[^A-Z0-9]+/g, '_')}`
+            : 'UNEXPECTED_RESOLUTION_ERROR'
+        );
+
+    console.warn(
+      'Não foi possível validar/vincular a identidade no EMPROVEX.',
+      diagnosticCode,
+      error
+    );
+
+    return {
+      ...unauthorized(normalizedEmail),
+      diagnosticCode,
+    } as UnauthorizedWorkspaceContext & { diagnosticCode: string };
   }
 }
