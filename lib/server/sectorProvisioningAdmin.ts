@@ -796,10 +796,21 @@ export async function deleteSectorWorkspaceWithAuth(
   const workspacePath = `workspaces/${workspaceId}`;
   const accountPath = `platformAccounts/${email}`;
 
-  const [workspaceDocument, accountDocument] = await Promise.all([
+  const lockPaths = lockDocumentIds(email, workspaceId);
+  const [workspaceDocument, accountDocument, emailLockDocument, workspaceLockDocument] = await Promise.all([
     readFirestoreDocument(accessToken, workspacePath),
     readFirestoreDocument(accessToken, accountPath),
+    readFirestoreDocument(accessToken, lockPaths[0]),
+    readFirestoreDocument(accessToken, lockPaths[1]),
   ]);
+
+  if (!workspaceDocument && !accountDocument && !emailLockDocument && !workspaceLockDocument) {
+    throw new SectorProvisioningFailure(
+      'Não existe cadastro ou resíduo de provisionamento correspondente a este setor.',
+      'CONFLICT',
+      409
+    );
+  }
 
   if (workspaceDocument) {
     const storedEmail = normalizePlatformEmail(
@@ -854,7 +865,6 @@ export async function deleteSectorWorkspaceWithAuth(
   }
 
   try {
-    const lockPaths = lockDocumentIds(email, workspaceId);
     await releaseProvisioningLocks(accessToken, lockPaths);
   } catch (error) {
     cleanupErrors.push(
