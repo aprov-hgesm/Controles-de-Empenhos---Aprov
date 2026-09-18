@@ -41,6 +41,7 @@ export function usePlatformAdminDirectory(adminUser: User | null) {
   const [creating, setCreating] = useState(false);
   const [updatingWorkspaceId, setUpdatingWorkspaceId] = useState<string | null>(null);
   const [changingStatusWorkspaceId, setChangingStatusWorkspaceId] = useState<string | null>(null);
+  const [deletingWorkspaceId, setDeletingWorkspaceId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!adminEmail) {
@@ -167,6 +168,58 @@ export function usePlatformAdminDirectory(adminUser: User | null) {
     }
   }, [adminEmail]);
 
+  const deleteSector = useCallback(async (
+    workspaceId: string,
+    email: string
+  ) => {
+    if (!adminUser || !adminEmail) {
+      throw new Error('Sessão administrativa inválida.');
+    }
+
+    setDeletingWorkspaceId(workspaceId);
+    setError(null);
+
+    try {
+      const idToken = await adminUser.getIdToken();
+      const response = await fetch('/api/admin/delete-sector', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${idToken}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ workspaceId, email }),
+      });
+
+      const payload = await response.json() as {
+        ok?: boolean;
+        result?: {
+          workspaceId: string;
+          email: string;
+          firebaseAuthDeleted: boolean;
+        };
+        error?: string;
+        recoveryRequired?: boolean;
+      };
+
+      if (!response.ok || !payload.ok || !payload.result) {
+        if (payload.recoveryRequired) {
+          throw new Error(
+            'A exclusão foi iniciada, mas alguns resíduos exigem recuperação administrativa antes de reutilizar este cadastro.'
+          );
+        }
+        throw new Error(payload.error || 'Não foi possível excluir o setor.');
+      }
+
+      return payload.result;
+    } catch (deleteError) {
+      const message = describeDirectoryError(deleteError);
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setDeletingWorkspaceId(null);
+    }
+  }, [adminEmail, adminUser]);
+
   return {
     directory,
     loading,
@@ -174,8 +227,10 @@ export function usePlatformAdminDirectory(adminUser: User | null) {
     creating,
     updatingWorkspaceId,
     changingStatusWorkspaceId,
+    deletingWorkspaceId,
     createSector,
     updateSector,
     changeSectorStatus,
+    deleteSector,
   };
 }
