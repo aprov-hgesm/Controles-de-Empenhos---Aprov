@@ -60,7 +60,7 @@ export interface Empenho {
   items: Item[];
   lastNFDaysAgo?: number;
   pregao?: string; // Pregão vinculado ao empenho
-  classification?: 'QR' | 'CALI' | 'PASA';
+  classification?: string;
   notaEmpenhoPdf?: EmpenhoPdfDocument;
   notaEmpenhoPdfVersions?: EmpenhoPdfDocument[];
 }
