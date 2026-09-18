@@ -58,7 +58,12 @@ export function WorkspaceDriveControl({
   const handleConnect = async () => {
     try {
       const result = await connect();
-      notify(`Google Drive conectado ao workspace ${result.settings.workspaceId}.`, 'success');
+      notify(
+        isConfigured
+          ? `Google Drive reconectado ao workspace ${result.settings.workspaceId}.`
+          : `Google Drive ativado para o workspace ${result.settings.workspaceId}.`,
+        'success'
+      );
     } catch (connectionError) {
       notify(
         connectionError instanceof Error
@@ -127,6 +132,25 @@ export function WorkspaceDriveControl({
             </div>
           </div>
 
+          {!isConfigured && (
+            <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50/70 p-3">
+              <div className="flex gap-2">
+                <ShieldCheck className="w-4 h-4 text-[#00288e] mt-0.5 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs font-black text-[#00288e]">Ativação inicial do armazenamento</p>
+                  <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
+                    Autorize o Google Drive usando a mesma Conta Google deste setor. O EMPROVEX criará ou reutilizará a estrutura abaixo sem acessar arquivos fora do escopo autorizado.
+                  </p>
+                  <div className="mt-2 rounded-lg border border-blue-100 bg-white/70 px-3 py-2 font-mono text-[10px] leading-5 text-slate-600">
+                    EMPROVEX<br />
+                    ├─ Notas de Empenho<br />
+                    └─ Notas Fiscais
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {settings && (
             <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3">
               <div className="flex gap-2">
@@ -160,7 +184,7 @@ export function WorkspaceDriveControl({
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-[#00288e] px-3 py-2.5 text-xs font-black text-white hover:bg-[#001e6a] disabled:opacity-50"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : isConfigured ? <RefreshCw className="w-4 h-4" /> : <HardDrive className="w-4 h-4" />}
-                {isConfigured ? 'Reconectar Drive' : 'Configurar Drive'}
+                {isConfigured ? 'Reconectar Drive' : 'Ativar Google Drive'}
               </button>
             ) : (
               <button
