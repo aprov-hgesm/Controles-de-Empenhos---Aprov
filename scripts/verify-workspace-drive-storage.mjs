@@ -17,7 +17,12 @@ const empenhoDocuments = read('lib/empenhoDocuments.ts');
 const invoiceDocuments = read('lib/invoiceDocuments.ts');
 
 requireText(driveClient, "https://www.googleapis.com/auth/drive.file", 'O cliente Drive por workspace não usa o escopo restrito drive.file.');
-requireText(driveClient, 'reauthenticateWithPopup', 'O Drive por workspace não exige reautenticação explícita da conta Google.');
+requireText(driveClient, "context.resolutionSource === 'platform-directory'", 'Setores externos não usam um fluxo Drive isolado da sessão Firebase.');
+requireText(driveClient, 'connectExternalWorkspaceDrive', 'O fluxo Drive externo independente não foi encontrado.');
+requireText(driveClient, 'initTokenClient', 'O Drive externo não usa Google Identity Services para autorização independente.');
+requireText(driveClient, 'NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID', 'O cliente OAuth independente do Drive não possui configuração explícita.');
+requireText(driveClient, 'about?fields=user(emailAddress)', 'A conta Google autorizadora não é validada pela Drive API.');
+requireText(driveClient, 'connectFounderDriveSession', 'O fluxo fundador consolidado não foi preservado.');
 requireText(driveClient, 'normalizePlatformEmail(context.email)', 'A validação da conta Google autorizada do workspace não foi encontrada.');
 requireText(driveClient, 'emprovexWorkspaceId', 'As pastas Drive não estão marcadas com o workspaceId.');
 requireText(driveSettings, "WORKSPACE_DOCUMENT_STORAGE_SETTINGS_ID = 'documentStorage'", 'A configuração não usa settings/documentStorage do workspace.');
