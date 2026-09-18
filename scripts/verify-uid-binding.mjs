@@ -26,6 +26,10 @@ requireText(rules, 'account.email == request.auth.token.email', 'Rules deixaram 
 requireText(rules, 'hasBoundUid(account)', 'Rules não verificam a presença do UID vinculado.');
 requireText(rules, 'account.firebaseUid == request.auth.uid', 'Rules não exigem o UID correto depois do vínculo.');
 requireText(rules, '|| !hasBoundUid(account)', 'Rules não preservam o bootstrap controlado do primeiro acesso.');
+requireText(rules, 'function boundIdentityMatchesAccount(account)', 'Rules não separam bootstrap de acesso operacional.');
+requireText(rules, 'function operationalIdentityMatchesAccount(workspaceId, account)', 'Rules não exigem identidade operacional vinculada.');
+requireText(rules, 'boundIdentityMatchesAccount(account)', 'Acesso operacional externo não exige UID já vinculado.');
+requireText(rules, "workspaceId == 'hgesm-aprov'", 'Exceção fundadora HGeSM não está explicitamente restrita ao workspace fundador.');
 forbidText(
   rules,
   "account.email == request.auth.token.email\n          || (",
