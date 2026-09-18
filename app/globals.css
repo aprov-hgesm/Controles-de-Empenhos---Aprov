@@ -4293,7 +4293,7 @@ button.emprovex-header-control:hover .emprovex-header-control__icon {
     padding-inline: 0.65rem;
   }
 
-  .emprovex-app-header > div:first-of-type {
+  .emprovex-header-brand-zone {
     min-width: 0;
     gap: 0.5rem;
   }
