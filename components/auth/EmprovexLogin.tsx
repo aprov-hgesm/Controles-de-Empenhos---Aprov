@@ -147,6 +147,7 @@ export function EmprovexLogin({
               data-focus={focusedField ?? 'none'}
               onPointerMove={handlePanelPointerMove}
               onPointerLeave={resetPanelPointer}
+              aria-labelledby="emprovex-login-heading"
             >
               <div className="emprovex-login-panel__edge pointer-events-none absolute inset-0 rounded-[inherit]" />
               <div className="emprovex-login-panel__reflection pointer-events-none absolute inset-0 rounded-[inherit]" />
@@ -178,10 +179,13 @@ export function EmprovexLogin({
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300/80">
                     Acesso do setor
                   </p>
-                  <h2 className="mt-2 font-montserrat text-2xl font-extrabold tracking-[-0.02em] text-white sm:text-3xl">
+                  <h2
+                    id="emprovex-login-heading"
+                    className="mt-2 font-montserrat text-2xl font-extrabold tracking-[-0.02em] text-white sm:text-3xl"
+                  >
                     Bem-vindo de volta.
                   </h2>
-                  <p className="mt-3 max-w-md text-sm leading-6 text-slate-400">
+                  <p id="emprovex-login-guidance" className="mt-3 max-w-md text-sm leading-6 text-slate-400">
                     Entre com as credenciais cadastradas pela Administração EMPROVEX para acessar seu workspace.
                   </p>
                 </div>
@@ -192,7 +196,11 @@ export function EmprovexLogin({
                   className="mt-6"
                 />
 
-                <form onSubmit={handleSectorSubmit} className="mt-7 space-y-5">
+                <form
+                  onSubmit={handleSectorSubmit}
+                  className="mt-7 space-y-5"
+                  aria-describedby="emprovex-login-guidance"
+                >
                   <label
                     className="emprovex-login-field group block text-left"
                     data-active={focusedField === 'email' ? 'true' : 'false'}
@@ -201,7 +209,7 @@ export function EmprovexLogin({
                       <span className="text-[11px] font-bold uppercase tracking-[0.11em] text-slate-400">
                         E-mail institucional
                       </span>
-                      <span className="font-mono text-[9px] font-medium tracking-[0.14em] text-slate-700">
+                      <span className="font-mono text-[9px] font-medium tracking-[0.14em] text-slate-500/70">
                         01
                       </span>
                     </span>
@@ -233,7 +241,7 @@ export function EmprovexLogin({
                       <span className="text-[11px] font-bold uppercase tracking-[0.11em] text-slate-400">
                         Senha
                       </span>
-                      <span className="font-mono text-[9px] font-medium tracking-[0.14em] text-slate-700">
+                      <span className="font-mono text-[9px] font-medium tracking-[0.14em] text-slate-500/70">
                         02
                       </span>
                     </span>
@@ -258,7 +266,7 @@ export function EmprovexLogin({
                         onClick={() => setShowLoginPassword((current) => !current)}
                         disabled={isSigningIn}
                         aria-label={showLoginPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                        className="emprovex-password-toggle absolute right-2.5 top-1/2 z-[4] flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl text-slate-500 disabled:opacity-50"
+                        className="emprovex-password-toggle absolute right-1.5 top-1/2 z-[4] flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-slate-400 disabled:opacity-50"
                       >
                         {showLoginPassword
                           ? <EyeOff className="h-4 w-4" />
@@ -291,7 +299,7 @@ export function EmprovexLogin({
 
                 <div className="my-7 flex items-center gap-3">
                   <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/[0.10]" />
-                  <span className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-600">
+                  <span className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500/80">
                     Acesso institucional
                   </span>
                   <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/[0.10]" />
@@ -342,19 +350,19 @@ export function EmprovexLogin({
               </div>
             </section>
 
-            <footer className="mt-5 flex flex-col items-center justify-between gap-3 px-1 text-[10px] font-semibold text-slate-600 sm:flex-row">
+            <footer className="mt-5 flex flex-col items-center justify-between gap-3 px-1 text-[10px] font-semibold text-slate-500 sm:flex-row">
               <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-start">
-                <Link href="/privacy" className="transition hover:text-blue-200">
+                <Link href="/privacy" className="emprovex-login-footer-link transition hover:text-blue-200">
                   Política de Privacidade
                 </Link>
-                <Link href="/terms" className="transition hover:text-blue-200">
+                <Link href="/terms" className="emprovex-login-footer-link transition hover:text-blue-200">
                   Termos de Serviço
                 </Link>
-                <a href="mailto:aprov1hgesm@gmail.com" className="transition hover:text-blue-200">
+                <a href="mailto:aprov1hgesm@gmail.com" className="emprovex-login-footer-link transition hover:text-blue-200">
                   Suporte
                 </a>
               </div>
-              <span className="text-center uppercase tracking-[0.12em] text-slate-700">
+              <span className="text-center uppercase tracking-[0.12em] text-slate-500/75">
                 Ministério da Defesa • Exército Brasileiro
               </span>
             </footer>
