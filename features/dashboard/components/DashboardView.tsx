@@ -112,7 +112,7 @@ export function DashboardView({
               }));
 
             const effectiveDashboardClassFilter =
-              effectiveDashboardClassFilter === 'TODAS'
+              dashboardClassFilter === 'TODAS'
               || classesConfig.some((item) => item.key === dashboardClassFilter)
                 ? dashboardClassFilter
                 : 'TODAS';
