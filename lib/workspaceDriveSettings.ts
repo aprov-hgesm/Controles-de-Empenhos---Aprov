@@ -8,7 +8,10 @@ import {
 } from './operationalPaths';
 import { normalizePlatformEmail } from './platformIdentity';
 import type { SectorWorkspaceContext } from './workspaceContext';
-import type { WorkspaceGoogleDriveFolders } from './googleDriveWorkspace';
+import type {
+  WorkspaceGoogleDriveFolders,
+  WorkspaceGoogleDriveSession,
+} from './googleDriveWorkspace';
 
 export const WORKSPACE_DOCUMENT_STORAGE_SETTINGS_ID = 'documentStorage';
 
@@ -56,6 +59,22 @@ function assertWorkspaceDriveSettings(
   return settings as WorkspaceDriveSettings;
 }
 
+function assertAuthorizedDriveSession(
+  context: SectorWorkspaceContext,
+  session: WorkspaceGoogleDriveSession
+): void {
+  const expectedEmail = normalizePlatformEmail(context.email);
+  const sessionEmail = normalizePlatformEmail(session.email);
+
+  if (
+    session.workspaceId !== context.workspaceId
+    || sessionEmail !== expectedEmail
+    || !session.accessToken
+  ) {
+    throw new Error('A sessão Google Drive não pertence ao workspace autenticado.');
+  }
+}
+
 export function subscribeWorkspaceDriveSettings(
   context: SectorWorkspaceContext,
   onChange: (settings: WorkspaceDriveSettings | null) => void,
@@ -89,8 +108,12 @@ export function subscribeWorkspaceDriveSettings(
 
 export async function saveWorkspaceDriveSettings(
   context: SectorWorkspaceContext,
-  folders: WorkspaceGoogleDriveFolders
+  session: WorkspaceGoogleDriveSession,
+  folders: WorkspaceGoogleDriveFolders,
+  existingSettings?: WorkspaceDriveSettings | null
 ): Promise<WorkspaceDriveSettings> {
+  assertAuthorizedDriveSession(context, session);
+
   const scope = operationalScopeFromContext(context);
   const ref = operationalSettingsDocRef(scope, WORKSPACE_DOCUMENT_STORAGE_SETTINGS_ID);
   const now = new Date().toISOString();
@@ -99,11 +122,11 @@ export async function saveWorkspaceDriveSettings(
     provider: 'google-drive',
     status: 'configured',
     workspaceId: context.workspaceId,
-    accountEmail: normalizePlatformEmail(context.email),
+    accountEmail: normalizePlatformEmail(session.email),
     rootFolderId: folders.rootFolderId,
     empenhosFolderId: folders.empenhosFolderId,
     invoicesFolderId: folders.invoicesFolderId,
-    configuredAt: now,
+    configuredAt: existingSettings?.configuredAt || now,
     updatedAt: now,
   };
 
