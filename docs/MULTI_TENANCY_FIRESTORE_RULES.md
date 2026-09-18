@@ -56,6 +56,18 @@ updatedAt
 
 Campos críticos da conta permanecem imutáveis para o setor, incluindo e-mail, `workspaceId`, status, `createdAt`, `createdBy` e o próprio UID vinculado.
 
+## Provisionamento de workspace — Bloco 17
+
+O cadastro administrativo pode criar atomicamente o documento:
+
+```text
+/workspaces/{workspaceId}/settings/termoRecebimentoCounter
+```
+
+somente quando o workspace e a conta de setor correspondentes também existem após a transação, estão ativos e consistentes. O valor inicial obrigatório é `currentNumber = 0`.
+
+O contador possui regra específica: não pode ser excluído, não pode regredir e a regra genérica de `settings` exclui explicitamente esse ID para evitar bypass. Essa exceção de provisionamento não concede ao administrador acesso às demais configurações ou dados operacionais do setor.
+
 ## Administrador da plataforma
 
 A identidade fundadora `aprov1hgesm@gmail.com` administra os diretórios:
