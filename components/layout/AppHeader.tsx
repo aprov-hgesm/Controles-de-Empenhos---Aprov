@@ -1,13 +1,14 @@
 'use client';
 
 import { type ChangeEvent, type MouseEvent, type ReactNode } from 'react';
-import { Camera, Loader2, Menu, ShieldCheck, X } from 'lucide-react';
+import { Loader2, Menu, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { auth } from '../../lib/firebase';
 import { hasDualProfileAccess, setActiveProfileMode } from '../../lib/profileMode';
 import type { ResolvedWorkspaceContext } from '../../lib/workspaceContext';
 import { WorkspaceDriveControl } from './WorkspaceDriveControl';
+import { AppShellLogo } from './chrome/AppShellLogo';
 
 interface AppHeaderProps {
   customLogo: string | null;
@@ -59,50 +60,16 @@ export function AppHeader({
         </button>
 
         <div className="flex items-center gap-2.5">
-          <div className="relative group">
-            <label
-              className="w-8 h-8 rounded-lg bg-[#00288e] text-white flex items-center justify-center font-extrabold text-xs tracking-wider shadow-xs flex-shrink-0 font-montserrat cursor-pointer overflow-hidden p-1 hover:ring-2 hover:ring-blue-400 transition-all block"
-              title="Clique para alterar o logotipo da plataforma"
-            >
-              {customLogo ? (
-                <img src={customLogo} alt="Logo" className="w-full h-full object-contain" />
-              ) : (
-                <span>EMP</span>
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={onLogoUpload}
-                className="hidden"
-              />
-            </label>
+          <AppShellLogo
+            customLogo={customLogo}
+            onLogoUpload={onLogoUpload}
+            onRemoveLogo={onRemoveLogo}
+          />
 
-            <label
-              className="absolute -bottom-1 -right-1 p-0.5 bg-white text-[#00288e] border border-blue-200 rounded-full shadow-xs cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-50 flex items-center justify-center"
-              title="Upload de logotipo"
-            >
-              <Camera className="w-2.5 h-2.5" />
-              <input
-                type="file"
-                accept="image/*"
-                onChange={onLogoUpload}
-                className="hidden"
-              />
-            </label>
-
-            {customLogo && (
-              <button
-                type="button"
-                onClick={onRemoveLogo}
-                className="absolute -top-1 -right-1 p-0.5 bg-rose-500 text-white rounded-full shadow-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-600 flex items-center justify-center"
-                title="Restaurar logotipo padrão"
-              >
-                <X className="w-2.5 h-2.5" />
-              </button>
-            )}
-          </div>
-
-          <div className="flex flex-col">
+          <div className="emprovex-header-brand-copy flex flex-col">
+            <span className="emprovex-header-brand-kicker hidden font-mono text-[8px] font-bold uppercase tracking-[0.22em] sm:block">
+              Central Operacional
+            </span>
             <h1 className="emprovex-header-brand-title font-extrabold text-base sm:text-lg tracking-wider uppercase font-montserrat leading-none">
               EMPROVEX
             </h1>
