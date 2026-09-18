@@ -54,6 +54,7 @@ export interface InvoicePdfDocument {
 export interface Empenho {
   id: string;
   supplier: string;
+  supplierCnpj?: string; // CNPJ normalizado do fornecedor (14 dígitos)
   description: string;
   date: string;
   status: 'Ativo' | 'Encerrado' | 'Sem Movimentação' | 'Urgente';
@@ -79,6 +80,8 @@ export interface Invoice {
   items: InvoiceItem[];
   totalValue: number;
   supplier: string;
+  supplierCnpj?: string; // CNPJ normalizado herdado do empenho
+  recordKey?: string; // Chave interna do documento Firestore; id continua sendo o número exibido da NF
   registeredAt?: string; // Data de cadastramento da nota fiscal
   termoEmissaoDate?: string; // Data de emissão do termo de recebimento
   comissaoDate?: string; // Data de envio para a comissão de recebimento
