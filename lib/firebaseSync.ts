@@ -219,12 +219,12 @@ export async function commitAllComissoesDeletion(userId: string, ids: string[]):
 
 export async function ensureTermoRecebimentoAssignment(
   userId: string,
-  invoiceId: string,
+  invoiceRecordKey: string,
   observedMaxTermoNumero: number,
   preferredEmissionDate: string
 ): Promise<Invoice> {
   const scope = getCurrentOperationalScope(userId);
-  const invoiceRef = operationalDocRef(scope, 'invoices', invoiceId);
+  const invoiceRef = operationalDocRef(scope, 'invoices', invoiceRecordKey);
   const counterRef = operationalSettingsDocRef(scope, 'termoRecebimentoCounter');
 
   try {
@@ -232,10 +232,14 @@ export async function ensureTermoRecebimentoAssignment(
       const invoiceSnapshot = await transaction.get(invoiceRef);
       const counterSnapshot = await transaction.get(counterRef);
       if (!invoiceSnapshot.exists()) {
-        throw new Error(`Nota Fiscal ${invoiceId} não encontrada para numeração do Termo.`);
+        throw new Error(`Nota Fiscal ${invoiceRecordKey} não encontrada para numeração do Termo.`);
       }
 
-      const storedInvoice = invoiceSnapshot.data() as Invoice;
+      const storedInvoiceData = invoiceSnapshot.data() as Invoice;
+      const storedInvoice: Invoice = {
+        ...storedInvoiceData,
+        recordKey: storedInvoiceData.recordKey || invoiceRecordKey,
+      };
       if (storedInvoice.termoNumero) {
         const shouldRefreshEmissionDate = Boolean(preferredEmissionDate) &&
           preferredEmissionDate !== storedInvoice.termoEmissaoDate;
@@ -269,7 +273,7 @@ export async function ensureTermoRecebimentoAssignment(
       return updatedInvoice;
     });
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, `${getOperationalDocumentPath(scope, 'invoices', invoiceId)}/termo`);
+    handleFirestoreError(error, OperationType.WRITE, `${getOperationalDocumentPath(scope, 'invoices', invoiceRecordKey)}/termo`);
     throw error;
   }
 }
