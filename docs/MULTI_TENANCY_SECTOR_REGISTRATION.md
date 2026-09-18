@@ -100,11 +100,16 @@ workspace
 + settings/termoRecebimentoCounter (currentNumber = 0)
 ```
 
-As coleções operacionais começam vazias e são materializadas conforme o uso. `settings/documentStorage` não é criado nesta etapa, porque o Google Drive precisa ser autorizado pela própria conta do setor.
+As coleções operacionais começam vazias e são materializadas conforme o uso. `settings/documentStorage` não é criado no cadastro.
+
+## Onboarding Google Drive — Bloco 18
+
+No primeiro acesso operacional, o próprio setor pode ativar seu Google Drive usando a mesma Conta Google autorizada. O EMPROVEX cria ou reutiliza `EMPROVEX / Notas de Empenho / Notas Fiscais` e grava os IDs das pastas em `settings/documentStorage` do próprio workspace.
+
+Tokens não são persistidos; após recarregar a aplicação, o setor apenas reconecta a autorização temporária.
 
 ## Próximas dependências
 
 Para que um novo setor seja completamente autônomo, ainda serão implementados:
 
-- Bloco 18 — onboarding do Google Drive por setor;
 - blocos seguintes de ciclo de vida, testes de isolamento e homologação do segundo setor.
