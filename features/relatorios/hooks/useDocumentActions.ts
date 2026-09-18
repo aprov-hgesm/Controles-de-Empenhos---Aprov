@@ -559,6 +559,7 @@ export function useDocumentActions(context:DocumentActionsContext){
       return;
     }
      const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    const empRequiresTR = classRequiresTermoRecebimento(emp.classification, empenhoClasses);
     const pdfInvoices = invoices.filter(inv => inv.empenhoId === emp.id);
     const pdfTotalReceivedNfe = pdfInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
     const saldoRestante = Math.max(0, totalCommitted - pdfTotalReceivedNfe);
@@ -723,12 +724,18 @@ export function useDocumentActions(context:DocumentActionsContext){
     } else {
       const invoicesRows = pdfInvoices.map((inv) => {
         const formattedIssueDate = formatDateOnly(inv.issueDate);
-        const formattedTrDate = inv.termoEmissaoDate
-          ? `${formatDateOnly(inv.termoEmissaoDate)}${inv.termoNumero ? ` (TR Nº ${inv.termoNumero})` : ''}`
-          : inv.termoNumero
-            ? `Data não registrada (TR Nº ${inv.termoNumero})`
+        const formattedTrDate = !empRequiresTR
+          ? 'Dispensado'
+          : inv.termoEmissaoDate
+            ? `${formatDateOnly(inv.termoEmissaoDate)}${inv.termoNumero ? ` (TR Nº ${inv.termoNumero})` : ''}`
+            : inv.termoNumero
+              ? `Data não registrada (TR Nº ${inv.termoNumero})`
+              : 'Pendente';
+        const formattedComissaoDate = !empRequiresTR
+          ? 'Dispensada'
+          : inv.comissaoDate
+            ? formatDateOnly(inv.comissaoDate)
             : 'Pendente';
-        const formattedComissaoDate = inv.comissaoDate ? formatDateOnly(inv.comissaoDate) : 'Pendente';
         const formattedTesourariaDate = inv.tesourariaDate ? formatDateOnly(inv.tesourariaDate) : 'Pendente';
         const formattedNS = inv.numeroNS ? inv.numeroNS : '—';
          return [
