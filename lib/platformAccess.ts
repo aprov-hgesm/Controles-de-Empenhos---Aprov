@@ -114,13 +114,17 @@ async function resolveAndBindExternalIdentity(
     let boundAccount: SectorAccount;
 
     if (account.firebaseUid) {
+      const firstLoginAt = account.firstLoginAt || now;
+
       boundAccount = {
         ...account,
+        firstLoginAt,
         lastLoginAt: now,
         updatedAt: now,
       };
 
       transaction.update(accountRef, {
+        ...(account.firstLoginAt ? {} : { firstLoginAt }),
         lastLoginAt: now,
         updatedAt: now,
       });
