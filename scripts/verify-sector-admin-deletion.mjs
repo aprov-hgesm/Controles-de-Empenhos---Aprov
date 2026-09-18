@@ -43,7 +43,10 @@ assert(server.includes('deleteAuthUser'), 'exclusão não remove identidade Fire
 assert(server.includes('lockDocumentIds(email, workspaceId)'), 'exclusão não limpa locks residuais');
 
 assert(hook.includes("fetch('/api/admin/delete-sector'"), 'hook não chama API segura de exclusão');
-assert(view.includes('window.confirm('), 'interface não pede confirmação');
+assert(view.includes('setDeleteCandidate(workspace)'), 'ação de exclusão não abre confirmação interna');
+assert(view.includes('role="alertdialog"'), 'modal de confirmação de exclusão está ausente');
+assert(view.includes('Confirmar exclusão'), 'modal não possui ação explícita de confirmação');
+assert(view.includes('Esta operação não pode ser desfeita.'), 'modal não informa irreversibilidade');
 assert(view.includes('Excluir usuário'), 'ação de exclusão não está visível');
 assert(page.includes('onDeleteSector='), 'página admin não conecta a exclusão');
 

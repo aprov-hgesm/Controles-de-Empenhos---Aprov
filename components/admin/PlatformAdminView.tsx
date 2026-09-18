@@ -64,6 +64,8 @@ export function PlatformAdminView({
   const router = useRouter();
   const [showCreateSector, setShowCreateSector] = useState(false);
   const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null);
+  const [deleteCandidate, setDeleteCandidate] = useState<Workspace | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const visibleWorkspaces = useMemo(
@@ -110,18 +112,30 @@ export function PlatformAdminView({
     window.setTimeout(() => setSuccessMessage(null), 5000);
   };
 
-  const handleDeleteSector = async (workspace: Workspace) => {
+  const requestDeleteSector = (workspace: Workspace) => {
     if (workspace.legacyWorkspace) return;
+    setDeleteError(null);
+    setDeleteCandidate(workspace);
+  };
 
-    const confirmed = window.confirm(
-      `Excluir definitivamente ${workspace.name}?\n\nEsta ação removerá o usuário de acesso, o workspace e os dados deste setor armazenados no EMPROVEX. Arquivos eventualmente existentes no Google Drive externo não serão apagados. Esta operação não pode ser desfeita.`
-    );
-    if (!confirmed) return;
+  const confirmDeleteSector = async () => {
+    const workspace = deleteCandidate;
+    if (!workspace || workspace.legacyWorkspace) return;
 
-    await onDeleteSector(workspace.id, workspace.authorizedEmail);
-    setEditingWorkspace((current) => current?.id === workspace.id ? null : current);
-    setSuccessMessage(`Setor ${workspace.name} excluído definitivamente.`);
-    window.setTimeout(() => setSuccessMessage(null), 5000);
+    setDeleteError(null);
+    try {
+      await onDeleteSector(workspace.id, workspace.authorizedEmail);
+      setEditingWorkspace((current) => current?.id === workspace.id ? null : current);
+      setDeleteCandidate(null);
+      setSuccessMessage(`Setor ${workspace.name} excluído definitivamente.`);
+      window.setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível excluir este usuário com segurança.'
+      );
+    }
   };
 
   const returnToHgesm = () => {
@@ -271,7 +285,7 @@ export function PlatformAdminView({
                 deleting={deletingWorkspaceId === workspace.id}
                 onEdit={() => setEditingWorkspace(workspace)}
                 onChangeStatus={() => void handleChangeSectorStatus(workspace)}
-                onDelete={() => void handleDeleteSector(workspace)}
+                onDelete={() => requestDeleteSector(workspace)}
               />
             ))}
           </div>
@@ -313,6 +327,77 @@ export function PlatformAdminView({
         onClose={() => setEditingWorkspace(null)}
         onSave={handleUpdateSector}
       />
+
+      {deleteCandidate && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-sector-title"
+            aria-describedby="delete-sector-description"
+            className="w-full max-w-lg rounded-3xl border border-rose-400/20 bg-[#0b1730] p-6 shadow-2xl shadow-black/40"
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-rose-400/20 bg-rose-500/10 text-rose-300">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-rose-300">
+                  Exclusão permanente
+                </div>
+                <h2 id="delete-sector-title" className="mt-1 text-xl font-extrabold text-white">
+                  Excluir {deleteCandidate.name}?
+                </h2>
+                <p id="delete-sector-description" className="mt-2 text-sm leading-relaxed text-slate-300">
+                  Esta ação removerá o usuário de acesso, o workspace e os dados deste setor armazenados no EMPROVEX. Arquivos eventualmente existentes no Google Drive externo não serão apagados.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-rose-400/15 bg-rose-500/[0.06] px-4 py-3 text-xs leading-relaxed text-rose-100">
+              <strong>Esta operação não pode ser desfeita.</strong> O HGeSM fundador continua protegido e não pode ser excluído por este fluxo.
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/25 px-4 py-3">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Usuário</div>
+              <div className="mt-1 break-all text-sm font-bold text-slate-200">{deleteCandidate.authorizedEmail}</div>
+              <div className="mt-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Workspace</div>
+              <div className="mt-1 break-all font-mono text-xs font-bold text-slate-300">{deleteCandidate.id}</div>
+            </div>
+
+            {deleteError && (
+              <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-xs leading-relaxed text-rose-200">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                disabled={deletingWorkspaceId === deleteCandidate.id}
+                onClick={() => {
+                  setDeleteError(null);
+                  setDeleteCandidate(null);
+                }}
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-bold text-slate-300 transition hover:bg-white/10 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={deletingWorkspaceId === deleteCandidate.id}
+                onClick={() => void confirmDeleteSector()}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-400/20 bg-rose-600 px-5 py-2.5 text-xs font-extrabold text-white transition hover:bg-rose-500 disabled:cursor-wait disabled:opacity-60"
+              >
+                {deletingWorkspaceId === deleteCandidate.id
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <Trash2 className="h-4 w-4" />}
+                {deletingWorkspaceId === deleteCandidate.id ? 'Excluindo…' : 'Confirmar exclusão'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
