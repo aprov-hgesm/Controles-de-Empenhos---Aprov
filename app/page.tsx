@@ -360,7 +360,7 @@ export default function Home() {
       />
 
       {/* Main Framework Wrapper */}
-      <div className="flex flex-1 pt-16 min-h-screen z-10 relative">
+      <div className="flex flex-1 pt-16 min-h-screen z-10 relative lg:pl-72">
 
         <AppSidebar
           activeTab={activeTab}
