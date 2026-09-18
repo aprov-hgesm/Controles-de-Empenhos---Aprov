@@ -6,10 +6,13 @@ import { doc, runTransaction } from 'firebase/firestore';
 import { db } from './firebase';
 import { HGESM_SECTOR_EMAIL } from './hgesmWorkspace';
 import {
+  FOUNDER_AUTH_PROVIDER,
+  SECTOR_AUTH_PROVIDER,
   normalizePlatformEmail,
   validatePlatformAccount,
   validateWorkspace,
   type PlatformAccount,
+  type PlatformAuthProvider,
   type SectorAccount,
   type Workspace,
 } from './platformIdentity';
@@ -43,6 +46,19 @@ interface ResolvedExternalIdentity {
   workspace: Workspace;
 }
 
+async function resolveSessionAuthProvider(
+  user: User
+): Promise<PlatformAuthProvider | null> {
+  const tokenResult = await user.getIdTokenResult();
+  const provider = tokenResult.signInProvider;
+
+  if (provider === FOUNDER_AUTH_PROVIDER || provider === SECTOR_AUTH_PROVIDER) {
+    return provider;
+  }
+
+  return null;
+}
+
 /**
  * Bloco 16 — valida conta + workspace e vincula a identidade Firebase na mesma
  * transação. O primeiro login grava firebaseUid/firstLoginAt; logins posteriores
@@ -53,7 +69,8 @@ interface ResolvedExternalIdentity {
  */
 async function resolveAndBindExternalIdentity(
   user: User,
-  normalizedEmail: string
+  normalizedEmail: string,
+  signInProvider: PlatformAuthProvider
 ): Promise<ResolvedExternalIdentity | null> {
   const now = new Date().toISOString();
   const accountRef = doc(db, PLATFORM_ACCOUNTS_COLLECTION, normalizedEmail);
@@ -66,6 +83,13 @@ async function resolveAndBindExternalIdentity(
     if (validatePlatformAccount(account).length > 0) return null;
     if (!isActiveSectorAccount(account)) return null;
     if (normalizePlatformEmail(account.email) !== normalizedEmail) return null;
+
+    // Nova arquitetura híbrida: setores externos entram exclusivamente pelo
+    // provider email/password. Documentos legados sem authProvider são tratados
+    // como password até que o Bloco 2 materialize o campo explicitamente.
+    const expectedProvider = account.authProvider || SECTOR_AUTH_PROVIDER;
+    if (expectedProvider !== SECTOR_AUTH_PROVIDER) return null;
+    if (signInProvider !== SECTOR_AUTH_PROVIDER) return null;
 
     // Depois do primeiro vínculo, e-mail idêntico não é suficiente: o UID precisa
     // continuar sendo exatamente o mesmo.
@@ -109,11 +133,15 @@ async function resolveAndBindExternalIdentity(
 }
 
 /**
- * Resolve uma sessão Google para um contexto operacional EMPROVEX.
+ * Resolve uma sessão Firebase para um contexto operacional EMPROVEX.
+ *
+ * Modelo híbrido:
+ * - fundador HGeSM: exclusivamente Google (google.com);
+ * - setores externos: exclusivamente e-mail/senha (password).
  *
  * A conta fundadora preserva a lógica multiperfil consolidada. Setores externos
- * passam obrigatoriamente pelo diretório, pelo workspace e pelo vínculo de UID
- * antes que qualquer subscription operacional seja aberta.
+ * passam obrigatoriamente pelo diretório, pelo workspace, pelo provider esperado
+ * e pelo vínculo de UID antes que qualquer subscription operacional seja aberta.
  */
 export async function resolveAuthenticatedWorkspaceContext(
   user: User,
@@ -125,7 +153,20 @@ export async function resolveAuthenticatedWorkspaceContext(
 
   const normalizedEmail = normalizePlatformEmail(user.email);
 
+  let signInProvider: PlatformAuthProvider | null = null;
+  try {
+    signInProvider = await resolveSessionAuthProvider(user);
+  } catch (error) {
+    console.warn('Não foi possível identificar o provedor da sessão EMPROVEX.', error);
+    return unauthorized(normalizedEmail);
+  }
+
   if (normalizedEmail === HGESM_SECTOR_EMAIL) {
+    // O perfil fundador preserva exclusivamente o login federado Google.
+    if (signInProvider !== FOUNDER_AUTH_PROVIDER) {
+      return unauthorized(normalizedEmail);
+    }
+
     const founderContext = resolveWorkspaceContext(normalizedEmail, requestedProfile);
     if (founderContext.status === 'sector') {
       rememberResolvedWorkspaceContext(user.uid, founderContext);
@@ -134,7 +175,13 @@ export async function resolveAuthenticatedWorkspaceContext(
   }
 
   try {
-    const resolvedIdentity = await resolveAndBindExternalIdentity(user, normalizedEmail);
+    if (signInProvider !== SECTOR_AUTH_PROVIDER) return unauthorized(normalizedEmail);
+
+    const resolvedIdentity = await resolveAndBindExternalIdentity(
+      user,
+      normalizedEmail,
+      signInProvider
+    );
     if (!resolvedIdentity) return unauthorized(normalizedEmail);
 
     const { workspace } = resolvedIdentity;
