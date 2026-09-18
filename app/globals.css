@@ -354,7 +354,7 @@ button[aria-busy="true"] .animate-spin {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.28;
+  opacity: 0.14;
   background-image:
     linear-gradient(rgba(128, 166, 255, 0.045) 1px, transparent 1px),
     linear-gradient(90deg, rgba(128, 166, 255, 0.045) 1px, transparent 1px);
@@ -407,5 +407,249 @@ button[aria-busy="true"] .animate-spin {
   .emprovex-login-panel {
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
+  }
+}
+
+
+/* EMPROVEX login — cinematic atmosphere (Bloco 3). */
+@keyframes emprovex-login-aura-drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(5vw, 3vh, 0) scale(1.08); }
+}
+
+@keyframes emprovex-login-aura-drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.02); }
+  50% { transform: translate3d(-4vw, -4vh, 0) scale(0.96); }
+}
+
+@keyframes emprovex-network-flow {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -180; }
+}
+
+@keyframes emprovex-network-node-breathe {
+  0%, 100% { opacity: 0.30; transform: scale(0.88); }
+  50% { opacity: 0.68; transform: scale(1.14); }
+}
+
+@keyframes emprovex-document-drift {
+  0%, 100% { opacity: 0.20; transform: translate3d(0, 0, 0); }
+  50% { opacity: 0.52; transform: translate3d(0, -7px, 0); }
+}
+
+@keyframes emprovex-login-scanline-drift {
+  0%, 100% { opacity: 0.12; transform: translate3d(0, -5vh, 0); }
+  50% { opacity: 0.30; transform: translate3d(0, 28vh, 0); }
+}
+
+.emprovex-login-atmosphere {
+  --spot-x: 58vw;
+  --spot-y: 36vh;
+  contain: layout paint;
+}
+
+.emprovex-login-spotlight {
+  background:
+    radial-gradient(
+      520px circle at var(--spot-x) var(--spot-y),
+      rgba(72, 139, 255, 0.115),
+      rgba(27, 86, 197, 0.045) 38%,
+      transparent 72%
+    );
+  opacity: 0.95;
+}
+
+.emprovex-login-aura {
+  filter: blur(86px);
+  opacity: 0.5;
+  transform: translateZ(0);
+}
+
+.emprovex-login-aura--one {
+  background: rgba(25, 93, 219, 0.20);
+}
+
+.emprovex-login-aura--two {
+  background: rgba(6, 99, 190, 0.13);
+}
+
+.emprovex-login-aura--three {
+  background: rgba(23, 121, 176, 0.08);
+  filter: blur(110px);
+}
+
+.emprovex-login-perspective-grid {
+  opacity: 0.26;
+  transform: perspective(720px) rotateX(67deg) scale(1.08);
+  transform-origin: center bottom;
+  background-image:
+    linear-gradient(rgba(105, 151, 255, 0.075) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(105, 151, 255, 0.075) 1px, transparent 1px);
+  background-size: 58px 58px;
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.85), transparent 88%);
+  mask-image: linear-gradient(to top, rgba(0,0,0,0.85), transparent 88%);
+}
+
+.emprovex-login-network {
+  position: absolute;
+  inset: 5% 0 auto -2%;
+  width: 68%;
+  height: 80%;
+  opacity: 0.58;
+  overflow: visible;
+}
+
+.emprovex-network-routes {
+  opacity: 0.72;
+}
+
+.emprovex-network-routes--signal {
+  stroke: rgba(96, 165, 250, 0.26);
+  stroke-dasharray: 8 20;
+  opacity: 0.66;
+}
+
+.emprovex-network-node-halo {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0.4;
+}
+
+.emprovex-network-label {
+  opacity: 0.62;
+}
+
+.emprovex-document-signal {
+  padding: 5px 8px;
+  border: 1px solid rgba(125, 164, 255, 0.055);
+  border-radius: 8px;
+  background: rgba(2, 8, 23, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.012);
+  backdrop-filter: blur(3px);
+}
+
+.emprovex-login-scanline {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(96, 165, 250, 0.05) 14%,
+    rgba(147, 197, 253, 0.34) 44%,
+    rgba(103, 232, 249, 0.18) 62%,
+    transparent
+  );
+  box-shadow: 0 0 26px rgba(59, 130, 246, 0.10);
+}
+
+.emprovex-login-grain {
+  opacity: 0.035;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,0.7) 0 0.5px, transparent 0.8px),
+    radial-gradient(circle at 70% 60%, rgba(255,255,255,0.55) 0 0.45px, transparent 0.75px);
+  background-size: 5px 5px, 7px 7px;
+  mix-blend-mode: soft-light;
+}
+
+@media (pointer: coarse) {
+  .emprovex-login-spotlight {
+    background:
+      radial-gradient(
+        430px circle at 72% 24%,
+        rgba(72, 139, 255, 0.09),
+        transparent 70%
+      );
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .emprovex-login-aura--one {
+    animation: emprovex-login-aura-drift-a 24s ease-in-out infinite;
+  }
+
+  .emprovex-login-aura--two {
+    animation: emprovex-login-aura-drift-b 29s ease-in-out infinite;
+  }
+
+  .emprovex-login-aura--three {
+    animation: emprovex-login-aura-drift-a 34s ease-in-out -8s infinite reverse;
+  }
+
+  .emprovex-network-routes--signal {
+    animation: emprovex-network-flow 8s linear infinite;
+  }
+
+  .emprovex-network-node-halo {
+    animation: emprovex-network-node-breathe 5.2s ease-in-out infinite;
+  }
+
+  .emprovex-network-nodes > g:nth-child(2n) .emprovex-network-node-halo {
+    animation-delay: -2.1s;
+  }
+
+  .emprovex-network-nodes > g:nth-child(3n) .emprovex-network-node-halo {
+    animation-delay: -3.6s;
+  }
+
+  .emprovex-document-signal {
+    animation: emprovex-document-drift 8.5s ease-in-out infinite;
+  }
+
+  .emprovex-login-scanline {
+    animation: emprovex-login-scanline-drift 13s ease-in-out infinite;
+  }
+}
+
+@media (max-width: 1023px) {
+  .emprovex-login-perspective-grid {
+    height: 48%;
+    opacity: 0.16;
+    transform: perspective(620px) rotateX(70deg) scale(1.18);
+  }
+
+  .emprovex-login-network {
+    inset: 0;
+    width: 100%;
+    height: 48%;
+    opacity: 0.22;
+  }
+
+  .emprovex-network-label {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .emprovex-login-network {
+    display: none;
+  }
+
+  .emprovex-login-aura--three {
+    display: none;
+  }
+
+  .emprovex-login-grain {
+    opacity: 0.022;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emprovex-login-aura,
+  .emprovex-network-routes--signal,
+  .emprovex-network-node-halo,
+  .emprovex-document-signal,
+  .emprovex-login-scanline {
+    animation: none !important;
+  }
+
+  .emprovex-network-pulse {
+    display: none;
+  }
+
+  .emprovex-login-spotlight {
+    background:
+      radial-gradient(
+        480px circle at 58% 34%,
+        rgba(72, 139, 255, 0.08),
+        transparent 72%
+      );
   }
 }
