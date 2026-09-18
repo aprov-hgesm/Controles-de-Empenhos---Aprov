@@ -44,7 +44,8 @@
     "verify:sector-admin-deletion": "node scripts/verify-sector-admin-deletion.mjs",
     "verify:sector-password-reset": "node scripts/verify-sector-password-reset.mjs",
     "verify:empenho-class-config": "node scripts/verify-empenho-class-config.mjs",
-    "verify:public-oauth-legal-pages": "node scripts/verify-public-oauth-legal-pages.mjs"
+    "verify:public-oauth-legal-pages": "node scripts/verify-public-oauth-legal-pages.mjs",
+    "verify:app-shell": "node scripts/verify-app-shell.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
