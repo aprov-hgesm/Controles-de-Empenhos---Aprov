@@ -178,6 +178,51 @@ service cloud.firestore {
         ).data.authorizedEmail == accountId;
     }
 
+    function workspaceAfterData(workspaceId) {
+      return getAfter(
+        /databases/$(database)/documents/workspaces/$(workspaceId)
+      ).data;
+    }
+
+    function provisionedWorkspaceAccountAfterData(workspaceId) {
+      return getAfter(
+        /databases/$(database)/documents/platformAccounts/$(workspaceAfterData(workspaceId).authorizedEmail)
+      ).data;
+    }
+
+    function validInitialTermCounter() {
+      return request.resource.data.keys().hasOnly(['currentNumber'])
+        && request.resource.data.currentNumber is int
+        && request.resource.data.currentNumber == 0;
+    }
+
+    function canAdminProvisionTermCounter(workspaceId) {
+      return isPlatformAdmin()
+        && existsAfter(
+          /databases/$(database)/documents/workspaces/$(workspaceId)
+        )
+        && workspaceAfterData(workspaceId).id == workspaceId
+        && workspaceAfterData(workspaceId).status == 'active'
+        && workspaceAfterData(workspaceId).authorizedEmail is string
+        && existsAfter(
+          /databases/$(database)/documents/platformAccounts/$(workspaceAfterData(workspaceId).authorizedEmail)
+        )
+        && provisionedWorkspaceAccountAfterData(workspaceId).accountType == 'sector'
+        && provisionedWorkspaceAccountAfterData(workspaceId).status == 'active'
+        && provisionedWorkspaceAccountAfterData(workspaceId).workspaceId == workspaceId
+        && provisionedWorkspaceAccountAfterData(workspaceId).email
+          == workspaceAfterData(workspaceId).authorizedEmail
+        && validInitialTermCounter();
+    }
+
+    function validOperationalTermCounterUpdate() {
+      return request.resource.data.keys().hasOnly(['currentNumber'])
+        && request.resource.data.currentNumber is int
+        && request.resource.data.currentNumber >= 0
+        && resource.data.currentNumber is int
+        && request.resource.data.currentNumber >= resource.data.currentNumber;
+    }
+
     function isSelfPlatformAccount() {
       return isVerifiedUser()
         && resource.data.accountType == 'sector'
@@ -301,8 +346,21 @@ service cloud.firestore {
       allow read, write: if canAccessWorkspace(workspaceId);
     }
 
+    match /workspaces/{workspaceId}/settings/termoRecebimentoCounter {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAdminProvisionTermCounter(workspaceId)
+        || (
+          canAccessWorkspace(workspaceId)
+          && validInitialTermCounter()
+        );
+      allow update: if canAccessWorkspace(workspaceId)
+        && validOperationalTermCounterUpdate();
+      allow delete: if false;
+    }
+
     match /workspaces/{workspaceId}/settings/{id} {
-      allow read, write: if canAccessWorkspace(workspaceId);
+      allow read, write: if id != 'termoRecebimentoCounter'
+        && canAccessWorkspace(workspaceId);
     }
 
     // Bloco 13 — compatibilidade legada somente leitura.
