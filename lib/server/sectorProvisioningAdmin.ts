@@ -3,9 +3,11 @@ import { createHash, randomUUID } from 'node:crypto';
 import { SignJWT, decodeJwt, importPKCS8 } from 'jose';
 
 import firebaseConfig from '../../firebase-applet-config.json';
-import { HGESM_SECTOR_EMAIL } from '../hgesmWorkspace';
+import { HGESM_SECTOR_EMAIL, HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import {
   FOUNDER_AUTH_PROVIDER,
+  isValidPlatformEmail,
+  isValidWorkspaceId,
   normalizePlatformEmail,
   normalizeWorkspaceId,
 } from '../platformIdentity';
@@ -67,6 +69,12 @@ interface IdentityToolkitUser {
 interface FounderSession {
   uid: string;
   email: string;
+}
+
+export interface SectorDeletionResult {
+  workspaceId: string;
+  email: string;
+  firebaseAuthDeleted: boolean;
 }
 
 interface AccessTokenCache {
@@ -440,6 +448,159 @@ async function commitFirestoreWrites(
   }
 }
 
+interface FirestoreDocumentPayload {
+  name?: string;
+  fields?: Record<string, FirestoreValue>;
+}
+
+function encodeFirestoreDocumentPath(path: string): string {
+  return path.split('/').map((segment) => encodeURIComponent(segment)).join('/');
+}
+
+function firestoreStringField(
+  fields: Record<string, FirestoreValue> | undefined,
+  key: string
+): string {
+  const value = fields?.[key];
+  return value && 'stringValue' in value ? value.stringValue : '';
+}
+
+async function readFirestoreDocument(
+  accessToken: string,
+  path: string
+): Promise<FirestoreDocumentPayload | null> {
+  const response = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(PROJECT_ID)}/databases/${encodeURIComponent(DATABASE_ID)}/documents/${encodeFirestoreDocumentPath(path)}`,
+    {
+      headers: { authorization: `Bearer ${accessToken}` },
+      cache: 'no-store',
+    }
+  );
+
+  if (response.status === 404) return null;
+
+  const payload = await readJson<FirestoreDocumentPayload & GoogleApiErrorPayload>(response);
+  if (!response.ok) {
+    const error = new Error(googleErrorMessage(payload));
+    error.name = 'FirestoreAdminError';
+    throw error;
+  }
+
+  return payload;
+}
+
+async function listFirestoreCollectionIds(
+  accessToken: string,
+  documentPath: string
+): Promise<string[]> {
+  const collectionIds: string[] = [];
+  let pageToken = '';
+
+  do {
+    const response = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(PROJECT_ID)}/databases/${encodeURIComponent(DATABASE_ID)}/documents/${encodeFirestoreDocumentPath(documentPath)}:listCollectionIds`,
+      {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          pageSize: 1000,
+          ...(pageToken ? { pageToken } : {}),
+        }),
+        cache: 'no-store',
+      }
+    );
+
+    const payload = await readJson<{
+      collectionIds?: string[];
+      nextPageToken?: string;
+    } & GoogleApiErrorPayload>(response);
+
+    if (response.status === 404) return collectionIds;
+    if (!response.ok) {
+      const error = new Error(googleErrorMessage(payload));
+      error.name = 'FirestoreAdminError';
+      throw error;
+    }
+
+    collectionIds.push(...(payload.collectionIds || []));
+    pageToken = payload.nextPageToken || '';
+  } while (pageToken);
+
+  return collectionIds;
+}
+
+async function listFirestoreDocuments(
+  accessToken: string,
+  parentDocumentPath: string,
+  collectionId: string
+): Promise<string[]> {
+  const documentPaths: string[] = [];
+  let pageToken = '';
+
+  do {
+    const params = new URLSearchParams({ pageSize: '100' });
+    if (pageToken) params.set('pageToken', pageToken);
+
+    const response = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(PROJECT_ID)}/databases/${encodeURIComponent(DATABASE_ID)}/documents/${encodeFirestoreDocumentPath(parentDocumentPath)}/${encodeURIComponent(collectionId)}?${params.toString()}`,
+      {
+        headers: { authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      }
+    );
+
+    const payload = await readJson<{
+      documents?: FirestoreDocumentPayload[];
+      nextPageToken?: string;
+    } & GoogleApiErrorPayload>(response);
+
+    if (response.status === 404) return documentPaths;
+    if (!response.ok) {
+      const error = new Error(googleErrorMessage(payload));
+      error.name = 'FirestoreAdminError';
+      throw error;
+    }
+
+    for (const document of payload.documents || []) {
+      const marker = '/documents/';
+      const markerIndex = document.name?.indexOf(marker) ?? -1;
+      if (markerIndex >= 0 && document.name) {
+        documentPaths.push(document.name.slice(markerIndex + marker.length));
+      }
+    }
+
+    pageToken = payload.nextPageToken || '';
+  } while (pageToken);
+
+  return documentPaths;
+}
+
+async function deleteFirestoreDocumentTree(
+  accessToken: string,
+  documentPath: string
+): Promise<void> {
+  const childCollections = await listFirestoreCollectionIds(accessToken, documentPath);
+
+  for (const collectionId of childCollections) {
+    const childDocuments = await listFirestoreDocuments(
+      accessToken,
+      documentPath,
+      collectionId
+    );
+
+    for (const childDocumentPath of childDocuments) {
+      await deleteFirestoreDocumentTree(accessToken, childDocumentPath);
+    }
+  }
+
+  await commitFirestoreWrites(accessToken, [
+    { delete: firestoreDocumentName(documentPath) },
+  ]);
+}
+
 function lockDocumentIds(email: string, workspaceId: string): [string, string] {
   const emailHash = createHash('sha256').update(email).digest('hex');
   return [
@@ -597,6 +758,141 @@ function normalizeProvisioningError(
     'UPSTREAM_ERROR',
     502
   );
+}
+
+export async function deleteSectorWorkspaceWithAuth(
+  workspaceIdInput: string,
+  emailInput: string,
+  founder: FounderSession
+): Promise<SectorDeletionResult> {
+  const workspaceId = normalizeWorkspaceId(workspaceIdInput);
+  const email = normalizePlatformEmail(emailInput);
+
+  if (!isValidWorkspaceId(workspaceId) || !isValidPlatformEmail(email)) {
+    throw new SectorProvisioningFailure(
+      'Os dados do setor informados para exclusão são inválidos.',
+      'INVALID_INPUT',
+      400
+    );
+  }
+
+  if (workspaceId === HGESM_WORKSPACE_ID || email === HGESM_SECTOR_EMAIL) {
+    throw new SectorProvisioningFailure(
+      'O workspace fundador do HGeSM não pode ser excluído.',
+      'FORBIDDEN',
+      403
+    );
+  }
+
+  if (founder.email !== HGESM_SECTOR_EMAIL) {
+    throw new SectorProvisioningFailure(
+      'A sessão atual não possui permissão administrativa para excluir setores.',
+      'FORBIDDEN',
+      403
+    );
+  }
+
+  const accessToken = await getGoogleAccessToken();
+  const workspacePath = `workspaces/${workspaceId}`;
+  const accountPath = `platformAccounts/${email}`;
+
+  const [workspaceDocument, accountDocument] = await Promise.all([
+    readFirestoreDocument(accessToken, workspacePath),
+    readFirestoreDocument(accessToken, accountPath),
+  ]);
+
+  if (workspaceDocument) {
+    const storedEmail = normalizePlatformEmail(
+      firestoreStringField(workspaceDocument.fields, 'authorizedEmail')
+    );
+    if (storedEmail && storedEmail !== email) {
+      throw new SectorProvisioningFailure(
+        'O e-mail informado não corresponde ao workspace selecionado.',
+        'CONFLICT',
+        409
+      );
+    }
+  }
+
+  if (accountDocument) {
+    const storedWorkspaceId = normalizeWorkspaceId(
+      firestoreStringField(accountDocument.fields, 'workspaceId')
+    );
+    const accountType = firestoreStringField(accountDocument.fields, 'accountType');
+
+    if (
+      (storedWorkspaceId && storedWorkspaceId !== workspaceId)
+      || (accountType && accountType !== 'sector')
+    ) {
+      throw new SectorProvisioningFailure(
+        'A conta informada não corresponde ao workspace selecionado.',
+        'CONFLICT',
+        409
+      );
+    }
+  }
+
+  const authUser = await lookupAuthUserByEmail(accessToken, email);
+  const cleanupErrors: string[] = [];
+
+  try {
+    await deleteFirestoreDocumentTree(accessToken, workspacePath);
+  } catch (error) {
+    cleanupErrors.push(
+      `workspace: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
+  try {
+    await commitFirestoreWrites(accessToken, [
+      { delete: firestoreDocumentName(accountPath) },
+    ]);
+  } catch (error) {
+    cleanupErrors.push(
+      `platformAccount: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
+  try {
+    const lockPaths = lockDocumentIds(email, workspaceId);
+    await releaseProvisioningLocks(accessToken, lockPaths);
+  } catch (error) {
+    cleanupErrors.push(
+      `locks: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
+  let firebaseAuthDeleted = false;
+  if (authUser?.localId) {
+    try {
+      await deleteAuthUser(accessToken, authUser.localId);
+      firebaseAuthDeleted = true;
+    } catch (error) {
+      cleanupErrors.push(
+        `firebaseAuth: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  if (cleanupErrors.length > 0) {
+    console.error('EMPROVEX sector deletion requires recovery.', {
+      workspaceId,
+      email,
+      errors: cleanupErrors,
+    });
+    throw new SectorProvisioningFailure(
+      'A exclusão foi iniciada, mas alguns resíduos não puderam ser removidos. Execute a recuperação administrativa antes de reutilizar este e-mail ou identificador.',
+      'RECOVERY_REQUIRED',
+      500,
+      true
+    );
+  }
+
+  return {
+    workspaceId,
+    email,
+    firebaseAuthDeleted,
+  };
 }
 
 export async function provisionSectorWorkspaceWithAuth(
