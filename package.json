@@ -33,7 +33,8 @@
     "verify:external-sector-login": "node scripts/verify-external-sector-login.mjs",
     "verify:uid-binding": "node scripts/verify-uid-binding.mjs",
     "verify:workspace-provisioning": "node scripts/verify-workspace-provisioning.mjs",
-    "verify:workspace-drive-onboarding": "node scripts/verify-workspace-drive-onboarding.mjs"
+    "verify:workspace-drive-onboarding": "node scripts/verify-workspace-drive-onboarding.mjs",
+    "verify:sector-lifecycle": "node scripts/verify-sector-lifecycle.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
