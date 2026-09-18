@@ -76,6 +76,16 @@ Criação e atualização exigem acesso operacional válido ao workspace, `provi
 
 Em atualizações, `configuredAt` deve ser preservado. Exclusão pelo runtime é bloqueada. A regra genérica de settings exclui explicitamente `documentStorage`, evitando bypass.
 
+## Ciclo de vida dos setores — Bloco 19
+
+Atualizações administrativas preservam identidade e estrutura. Workspaces só podem alterar `name`, `status`, `institutionalProfile` e `updatedAt`; contas de setor só podem alterar `status` e `updatedAt`.
+
+As Rules exigem status idêntico entre workspace e conta após a gravação. Por isso suspensão e reativação são executadas em transação única.
+
+O workspace `hgesm-aprov` e a conta fundadora são bloqueados para updates administrativos de ciclo de vida. Exclusões permanecem proibidas.
+
+Para workspaces externos, o acesso às subcoleções operacionais exige UID já vinculado. A leitura de metadados pré-vínculo continua disponível somente para o bootstrap seguro do primeiro login.
+
 ## Administrador da plataforma
 
 A identidade fundadora `aprov1hgesm@gmail.com` administra os diretórios:
