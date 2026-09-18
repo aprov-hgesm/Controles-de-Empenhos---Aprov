@@ -67,7 +67,7 @@ export function useWorkspaceDriveStorage(
       unsubscribe();
       clearWorkspaceDriveRuntime();
     };
-  }, [user, workspaceContext]);
+  }, [settings, user, workspaceContext]);
 
   const connect = useCallback(async () => {
     if (!user || !isOperationalSectorContext(workspaceContext)) {
@@ -79,7 +79,12 @@ export function useWorkspaceDriveStorage(
     try {
       const connectedSession = await connectGoogleDriveForWorkspace(user, workspaceContext);
       const folders = await ensureWorkspaceGoogleDriveFolders(connectedSession);
-      const savedSettings = await saveWorkspaceDriveSettings(workspaceContext, folders);
+      const savedSettings = await saveWorkspaceDriveSettings(
+        workspaceContext,
+        connectedSession,
+        folders,
+        settings
+      );
       setSession(connectedSession);
       setSettings(savedSettings);
       setWorkspaceDriveRuntime({ session: connectedSession, settings: savedSettings });
