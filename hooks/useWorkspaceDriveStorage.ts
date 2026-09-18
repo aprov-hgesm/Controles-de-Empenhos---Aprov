@@ -67,7 +67,7 @@ export function useWorkspaceDriveStorage(
       unsubscribe();
       clearWorkspaceDriveRuntime();
     };
-  }, [settings, user, workspaceContext]);
+  }, [user, workspaceContext]);
 
   const connect = useCallback(async () => {
     if (!user || !isOperationalSectorContext(workspaceContext)) {
@@ -99,7 +99,7 @@ export function useWorkspaceDriveStorage(
     } finally {
       setLoading(false);
     }
-  }, [user, workspaceContext]);
+  }, [settings, user, workspaceContext]);
 
   const disconnect = useCallback(() => {
     clearWorkspaceDriveRuntime();
