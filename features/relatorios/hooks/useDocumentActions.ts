@@ -5,6 +5,7 @@ import type { User } from 'firebase/auth';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { Comissao, Empenho, Invoice } from '../../../lib/types';
+import { classRequiresTermoRecebimento, type EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 import { ensureTermoRecebimentoAssignment } from '../../../lib/firebaseSync';
 import { fetchEmpenhoPdfBlob } from '../../../lib/empenhoDocuments';
 import { fetchInvoicePdfBlob } from '../../../lib/invoiceDocuments';
@@ -16,15 +17,34 @@ interface DocumentActionsContext {
   setInvoices: React.Dispatch<React.SetStateAction<Invoice[]>>;
   comissoes: Comissao[];
   empenhos: Empenho[];
+  empenhoClasses: EmpenhoClassDefinition[];
   showToast: (message:string,type?:ToastType)=>void;
   formatDateOnly: (dateStr?:string)=>string;
 }
 
 /** Geração de termos e relatórios PDF, isolada da composição principal. */
 export function useDocumentActions(context:DocumentActionsContext){
-  const { user,invoices,setInvoices,comissoes,empenhos,showToast,formatDateOnly }=context;
+  const { user,invoices,setInvoices,comissoes,empenhos,empenhoClasses,showToast,formatDateOnly }=context;
+
+  const requiresTermoRecebimento = (inv: Invoice): boolean => {
+    const targetEmp = empenhos.find((emp) => emp.id === inv.empenhoId);
+    return classRequiresTermoRecebimento(targetEmp?.classification, empenhoClasses);
+  };
 
   const buildTermoRecebimentoPdf = async (inv: Invoice) => {
+    const targetEmp = empenhos.find((emp) => emp.id === inv.empenhoId);
+    if (!targetEmp) {
+      showToast('Não foi possível localizar o empenho vinculado à Nota Fiscal.', 'error');
+      return;
+    }
+
+    if (!classRequiresTermoRecebimento(targetEmp.classification, empenhoClasses)) {
+      showToast(
+        `A classe ${targetEmp.classification || 'QR'} está configurada sem exigência de Termo de Recebimento.`,
+        'info'
+      );
+      return;
+    }
     // A comissão é definida pela data efetiva de geração do Termo, nunca pela data da Nota Fiscal.
     const now = new Date();
     const termoEmissaoDate = inv.termoEmissaoDate || now.toISOString();
@@ -65,7 +85,6 @@ export function useDocumentActions(context:DocumentActionsContext){
     const effectiveTermoDate = new Date(updatedInvoiceWithTR.termoEmissaoDate || termoEmissaoDate);
     const termoYear = Number.isNaN(effectiveTermoDate.getTime()) ? now.getFullYear() : effectiveTermoDate.getFullYear();
     setInvoices(prev => prev.map(i => i.id === inv.id ? updatedInvoiceWithTR : i));
-     const targetEmp = empenhos.find(e => e.id === inv.empenhoId);
     const empenhoTotal = targetEmp?.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) || 0;
     const isQtyEqual = inv.totalValue >= (empenhoTotal - 0.01);
      // Helpers for formatting date
@@ -477,8 +496,9 @@ export function useDocumentActions(context:DocumentActionsContext){
     }
 
     try {
-      const termo = await buildTermoRecebimentoPdf(inv);
-      if (!termo) return;
+      const shouldIncludeTermo = requiresTermoRecebimento(inv);
+      const termo = shouldIncludeTermo ? await buildTermoRecebimentoPdf(inv) : null;
+      if (shouldIncludeTermo && !termo) return;
 
       const [{ PDFDocument }, empenhoBlob] = await Promise.all([
         import('pdf-lib'),
@@ -499,7 +519,9 @@ export function useDocumentActions(context:DocumentActionsContext){
         await appendPdf(await invoiceBlob.arrayBuffer());
       }
 
-      await appendPdf(termo.doc.output('arraybuffer'));
+      if (termo) {
+        await appendPdf(termo.doc.output('arraybuffer'));
+      }
 
       const bytes = await merged.save();
       const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/pdf' });
@@ -519,7 +541,12 @@ export function useDocumentActions(context:DocumentActionsContext){
       link.click();
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
-      showToast(`Documento de Liquidação Consolidada gerado: ${filename}`, 'success');
+      showToast(
+        shouldIncludeTermo
+          ? `Documento de Liquidação Consolidada gerado: ${filename}`
+          : `Documento de Liquidação Consolidada gerado sem TR (classe ${targetEmp.classification || 'QR'}): ${filename}`,
+        'success'
+      );
     } catch (error) {
       console.error('Erro ao consolidar documentos da liquidação:', error);
       showToast('Não foi possível consolidar os PDFs. Verifique se os documentos anexados são PDFs válidos e não protegidos por senha.', 'error');
@@ -532,6 +559,7 @@ export function useDocumentActions(context:DocumentActionsContext){
       return;
     }
      const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    const empRequiresTR = classRequiresTermoRecebimento(emp.classification, empenhoClasses);
     const pdfInvoices = invoices.filter(inv => inv.empenhoId === emp.id);
     const pdfTotalReceivedNfe = pdfInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
     const saldoRestante = Math.max(0, totalCommitted - pdfTotalReceivedNfe);
@@ -696,12 +724,18 @@ export function useDocumentActions(context:DocumentActionsContext){
     } else {
       const invoicesRows = pdfInvoices.map((inv) => {
         const formattedIssueDate = formatDateOnly(inv.issueDate);
-        const formattedTrDate = inv.termoEmissaoDate
-          ? `${formatDateOnly(inv.termoEmissaoDate)}${inv.termoNumero ? ` (TR Nº ${inv.termoNumero})` : ''}`
-          : inv.termoNumero
-            ? `Data não registrada (TR Nº ${inv.termoNumero})`
+        const formattedTrDate = !empRequiresTR
+          ? 'Dispensado'
+          : inv.termoEmissaoDate
+            ? `${formatDateOnly(inv.termoEmissaoDate)}${inv.termoNumero ? ` (TR Nº ${inv.termoNumero})` : ''}`
+            : inv.termoNumero
+              ? `Data não registrada (TR Nº ${inv.termoNumero})`
+              : 'Pendente';
+        const formattedComissaoDate = !empRequiresTR
+          ? 'Dispensada'
+          : inv.comissaoDate
+            ? formatDateOnly(inv.comissaoDate)
             : 'Pendente';
-        const formattedComissaoDate = inv.comissaoDate ? formatDateOnly(inv.comissaoDate) : 'Pendente';
         const formattedTesourariaDate = inv.tesourariaDate ? formatDateOnly(inv.tesourariaDate) : 'Pendente';
         const formattedNS = inv.numeroNS ? inv.numeroNS : '—';
          return [

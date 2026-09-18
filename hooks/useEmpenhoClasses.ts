@@ -23,7 +23,7 @@ import {
 const SETTINGS_DOCUMENT_ID = 'empenhoClasses';
 
 interface EmpenhoClassSettingsDocument {
-  schemaVersion: 1;
+  schemaVersion: 2;
   classes: EmpenhoClassDefinition[];
   updatedAt: string;
   updatedBy: string;
@@ -97,7 +97,7 @@ export function useEmpenhoClasses({
       await setDoc(
         settingsRef,
         {
-          schemaVersion: 1,
+          schemaVersion: 2,
           classes: normalized,
           updatedAt: new Date().toISOString(),
           updatedBy: user.email || user.uid,
@@ -110,19 +110,25 @@ export function useEmpenhoClasses({
     }
   };
 
-  const addEmpenhoClass = async (codeInput: string, descriptionInput: string) => {
+  const addEmpenhoClass = async (
+    codeInput: string,
+    descriptionInput: string,
+    requiresTermoRecebimento: boolean
+  ) => {
     const created = validateNewEmpenhoClass(
       codeInput,
       descriptionInput,
+      requiresTermoRecebimento,
       empenhoClasses
     );
     await persistClasses([...configuredClasses, created]);
     return created;
   };
 
-  const updateEmpenhoClassDescription = async (
+  const updateEmpenhoClass = async (
     codeInput: string,
-    descriptionInput: string
+    descriptionInput: string,
+    requiresTermoRecebimento: boolean
   ) => {
     const code = normalizeEmpenhoClassCode(codeInput);
     const description = normalizeEmpenhoClassDescription(descriptionInput);
@@ -133,11 +139,12 @@ export function useEmpenhoClasses({
 
     const source = mergeEmpenhoClassDefinitions(configuredClasses, empenhos);
     const exists = source.some((item) => item.code === code);
+    const updatedDefinition = { code, description, requiresTermoRecebimento };
     const nextClasses = exists
       ? source.map((item) => (
-          item.code === code ? { ...item, description } : item
+          item.code === code ? updatedDefinition : item
         ))
-      : [...source, { code, description }];
+      : [...source, updatedDefinition];
 
     await persistClasses(nextClasses);
   };
@@ -146,6 +153,6 @@ export function useEmpenhoClasses({
     empenhoClasses,
     savingClassConfig,
     addEmpenhoClass,
-    updateEmpenhoClassDescription,
+    updateEmpenhoClass,
   };
 }
