@@ -38,7 +38,7 @@ O formulário coleta:
 - local padrão de entrega opcional;
 - cargo/função padrão opcional.
 
-A criação usa uma transação Firestore única. `Workspace` e `SectorAccount` são persistidos juntos ou nenhum dos dois é criado.
+A criação usa uma transação Firestore única. `Workspace`, `SectorAccount` e o contador inicial de Termos de Recebimento são persistidos juntos ou nenhum deles é criado. O contador nasce em `currentNumber = 0`.
 
 Duplicidades bloqueadas:
 
@@ -90,10 +90,21 @@ Somente depois dessa resolução são abertas as subscriptions do workspace.
 
 O Bloco 16 complementa este fluxo: no primeiro acesso autorizado, o EMPROVEX grava o `firebaseUid` da sessão. Depois do vínculo, a conta precisa corresponder simultaneamente ao e-mail cadastrado e ao UID persistido.
 
+## Provisionamento automático — Bloco 17
+
+Novos setores já nascem com o estado operacional mínimo:
+
+```text
+workspace
++ platformAccount
++ settings/termoRecebimentoCounter (currentNumber = 0)
+```
+
+As coleções operacionais começam vazias e são materializadas conforme o uso. `settings/documentStorage` não é criado nesta etapa, porque o Google Drive precisa ser autorizado pela própria conta do setor.
+
 ## Próximas dependências
 
 Para que um novo setor seja completamente autônomo, ainda serão implementados:
 
-- Bloco 17 — provisionamento de settings, contador de TR e defaults do workspace;
 - Bloco 18 — onboarding do Google Drive por setor;
 - blocos seguintes de ciclo de vida, testes de isolamento e homologação do segundo setor.
