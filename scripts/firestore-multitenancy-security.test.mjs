@@ -252,6 +252,7 @@ async function main() {
     b: 'sector-b@example.test',
     wrongUid: 'sector-wrong-uid@example.test',
     bootstrap: 'sector-bootstrap@example.test',
+    prebound: 'sector-prebound@example.test',
     suspended: 'sector-suspended@example.test',
     tampered: 'sector-tampered@example.test',
     lifecycle: 'sector-lifecycle@example.test',
@@ -268,6 +269,26 @@ async function main() {
     'uid-que-nao-corresponde-a-sessao'
   );
   await seedWorkspace('workspace-bootstrap', identities.bootstrap.email, null);
+
+  await ownerSet(
+    'workspaces/workspace-prebound',
+    workspace('workspace-prebound', identities.prebound.email, 'active')
+  );
+  await ownerSet(
+    `platformAccounts/${identities.prebound.email}`,
+    {
+      email: identities.prebound.email,
+      authProvider: 'password',
+      firebaseUid: identities.prebound.uid,
+      accountType: 'sector',
+      workspaceId: 'workspace-prebound',
+      status: 'active',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      createdBy: 'aprov1hgesm@gmail.com',
+    }
+  );
+
   await seedWorkspace(
     'workspace-suspended',
     identities.suspended.email,
@@ -304,6 +325,7 @@ async function main() {
   const sessionB = await createSession('b', identities.b.email);
   const sessionWrongUid = await createSession('wrong', identities.wrongUid.email);
   const sessionBootstrap = await createSession('bootstrap', identities.bootstrap.email);
+  const sessionPrebound = await createSession('prebound', identities.prebound.email);
   const sessionSuspended = await createSession('suspended', identities.suspended.email);
   const sessionTampered = await createSession('tampered', identities.tampered.email);
   const sessionLifecycle = await createSession('lifecycle', identities.lifecycle.email);
@@ -369,6 +391,35 @@ async function main() {
         'sample'
       )
     )
+  );
+
+  const preboundAccountRef = doc(
+    sessionPrebound.db,
+    'platformAccounts',
+    identities.prebound.email
+  );
+
+  await allowed('Conta pré-vinculada inicializa firstLoginAt no primeiro acesso', () =>
+    updateDoc(preboundAccountRef, {
+      firstLoginAt: now(),
+      lastLoginAt: now(),
+      updatedAt: now(),
+    })
+  );
+
+  await denied('Conta pré-vinculada não pode reescrever firstLoginAt depois do primeiro acesso', () =>
+    updateDoc(preboundAccountRef, {
+      firstLoginAt: '2099-01-01T00:00:00.000Z',
+      lastLoginAt: now(),
+      updatedAt: now(),
+    })
+  );
+
+  await allowed('Conta pré-vinculada atualiza somente auditoria de logins posteriores', () =>
+    updateDoc(preboundAccountRef, {
+      lastLoginAt: now(),
+      updatedAt: now(),
+    })
   );
 
   console.log('\nSuspensão e adulteração');
