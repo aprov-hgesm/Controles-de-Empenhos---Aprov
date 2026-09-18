@@ -114,6 +114,10 @@ requireText(access, 'tokenResult.signInProvider', 'Modelo híbrido não valida o
 requireText(access, 'signInProvider !== FOUNDER_AUTH_PROVIDER', 'Fundador não está restrito ao Google.');
 requireText(access, 'signInProvider !== SECTOR_AUTH_PROVIDER', 'Setor externo não está restrito a password.');
 requireText(drive, 'initTokenClient', 'OAuth independente do Drive externo não usa Google Identity Services.');
+requireText(drive, "GOOGLE_DRIVE_ACCOUNT_SELECTION_PROMPT = 'select_account'", 'OAuth Drive externo não preserva seleção explícita da Conta Google.');
+if (drive.includes("prompt: 'consent select_account'") || drive.includes("prompt: 'consent'")) {
+  findings.push('OAuth Drive ainda força consentimento em toda reconexão.');
+}
 requireText(drive, 'expires_in', 'OAuth Drive externo não controla a validade do token.');
 requireText(drive, 'expiresAt', 'Sessão Drive externa não registra validade em memória.');
 requireText(
@@ -172,6 +176,7 @@ if (findings.length) {
   console.log('OAuth Drive externo isolado da sessão Firebase: PRONTO');
   console.log('Falhas OAuth/Drive preservam sessão Firebase externa: TESTADO');
   console.log('Ciclo de vida do token Drive externo: CONTROLADO EM MEMÓRIA');
+  console.log('Reconexão OAuth Drive: SEM CONSENTIMENTO FORÇADO');
   console.log('POC Drive legado em produção: AUSENTE');
   console.log('Lifecycle administrativo: PRONTO');
   console.log('Isolamento automatizado A ↔ B: PRONTO');
