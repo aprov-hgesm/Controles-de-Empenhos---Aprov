@@ -21,8 +21,6 @@ const INITIAL_FORM: CreateSectorWorkspaceInput = {
   organizationName: '',
   organizationShortName: '',
   sectionName: 'Seção de Aprovisionamento',
-  defaultDeliveryLocation: '',
-  defaultResponsibleRole: '',
 };
 
 export function CreateSectorModal({ open, creating, onClose, onCreate }: CreateSectorModalProps) {
@@ -215,27 +213,9 @@ export function CreateSectorModal({ open, creating, onClose, onCreate }: CreateS
             />
           </Field>
 
-          <details className="rounded-2xl border border-white/10 bg-slate-950/20 p-4">
-            <summary className="cursor-pointer text-xs font-bold text-slate-300">Configurações institucionais opcionais</summary>
-            <div className="mt-4 space-y-4">
-              <Field label="Local padrão de entrega">
-                <input
-                  value={form.defaultDeliveryLocation || ''}
-                  onChange={(event) => setForm((current) => ({ ...current, defaultDeliveryLocation: event.target.value }))}
-                  placeholder="Ex.: Almoxarifado / Seção de Aprovisionamento"
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Cargo/função padrão do responsável">
-                <input
-                  value={form.defaultResponsibleRole || ''}
-                  onChange={(event) => setForm((current) => ({ ...current, defaultResponsibleRole: event.target.value }))}
-                  placeholder="Ex.: Fiscal de Contrato / Aprovisionamento"
-                  className={inputClass}
-                />
-              </Field>
-            </div>
-          </details>
+          <div className="rounded-2xl border border-white/10 bg-slate-950/20 px-4 py-3 text-xs leading-relaxed text-slate-300">
+            O sistema padroniza automaticamente o local como <strong>Setor de Aprovisionamento - [SIGLA]</strong> e o responsável como <strong>Chefe do Aprovisionamento</strong>.
+          </div>
 
           <div className="rounded-2xl border border-blue-400/15 bg-blue-500/[0.06] px-4 py-3 text-xs leading-relaxed text-blue-100">
             O usuário Firebase, o workspace e a conta operacional serão provisionados de forma coordenada no servidor. A senha não é gravada no Firestore. O Google Drive permanece desconectado até a etapa específica de onboarding.
