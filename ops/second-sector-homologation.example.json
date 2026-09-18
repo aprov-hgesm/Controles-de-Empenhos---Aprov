@@ -1,0 +1,10 @@
+{
+  "workspaceId": "exemplo-setor-b",
+  "workspaceName": "Setor de Homologação",
+  "authorizedEmail": "INFORMAR_SOMENTE_NO_PAINEL_DE_PRODUCAO",
+  "organizationName": "Organização de Homologação",
+  "organizationShortName": "HML",
+  "sectionName": "Seção de Aprovisionamento",
+  "defaultDeliveryLocation": "",
+  "defaultResponsibleRole": ""
+}
