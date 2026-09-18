@@ -48,6 +48,8 @@ for (const scenario of [
   'Vínculo adulterado entre conta e workspace é bloqueado',
   'Administrador não lê dados operacionais de setor externo',
   'Administrador não grava dados operacionais de setor externo',
+  'Admin executa preflight e provisiona workspace + conta + contador na mesma transação',
+  'Admin não lê contador operacional depois que o workspace existe',
   'Setor B não lê documentStorage do Setor A',
   'documentStorage rejeita persistência de accessToken',
   'Admin não pode suspender somente o workspace',
