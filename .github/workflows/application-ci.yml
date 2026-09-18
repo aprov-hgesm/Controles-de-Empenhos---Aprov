@@ -93,6 +93,9 @@ jobs:
       - name: External Drive OAuth behavior tests
         run: npm run test:external-drive-auth
 
+      - name: External Drive OAuth Firebase Auth emulator tests
+        run: npm run test:external-drive-auth-emulator
+
       - name: Sector lifecycle guard
         run: npm run verify:sector-lifecycle
 
