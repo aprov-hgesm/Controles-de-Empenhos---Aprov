@@ -45,6 +45,7 @@ export function LoginStatusRail({
   className = '',
 }: LoginStatusRailProps) {
   const copy = phaseCopy[phase];
+  const isLivePhase = phase === 'session' || phase === 'identity' || phase === 'workspace' || phase === 'error';
   const identityLabel = mode === 'founder'
     ? 'Google institucional'
     : mode === 'sector'
@@ -60,9 +61,9 @@ export function LoginStatusRail({
     <div
       className={`emprovex-auth-rail ${className}`}
       data-phase={phase}
-      role="status"
-      aria-live="polite"
-      aria-atomic="true"
+      role={isLivePhase ? 'status' : undefined}
+      aria-live={isLivePhase ? 'polite' : 'off'}
+      aria-atomic={isLivePhase ? 'true' : undefined}
     >
       <div className="flex items-start gap-3">
         <div className="emprovex-auth-rail__icon mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
@@ -107,7 +108,7 @@ export function LoginStatusRail({
         </span>
       </div>
 
-      <div className="mt-2 grid grid-cols-3 gap-2 font-mono text-[8px] font-semibold uppercase tracking-[0.13em] text-slate-700">
+      <div className="mt-2 grid grid-cols-3 gap-2 font-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500/75">
         <span>{identityLabel}</span>
         <span className="text-center">Workspace</span>
         <span className="text-right">Ambiente</span>
