@@ -9,12 +9,20 @@ import ts from 'typescript';
 
 const root = process.cwd();
 const source = readFileSync(resolve(root, 'lib/googleDriveWorkspace.ts'), 'utf8');
+const runtimeSource = readFileSync(resolve(root, 'lib/workspaceDriveRuntime.ts'), 'utf8');
 const transpiled = ts.transpileModule(source, {
   compilerOptions: {
     module: ts.ModuleKind.ESNext,
     target: ts.ScriptTarget.ES2022,
   },
   fileName: 'googleDriveWorkspace.ts',
+}).outputText;
+const runtimeTranspiled = ts.transpileModule(runtimeSource, {
+  compilerOptions: {
+    module: ts.ModuleKind.ESNext,
+    target: ts.ScriptTarget.ES2022,
+  },
+  fileName: 'workspaceDriveRuntime.ts',
 }).outputText;
 
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
@@ -75,6 +83,7 @@ async function createHarness(scenario = {}) {
           config.callback(
             scenario.tokenResponse ?? {
               access_token: 'external-drive-token',
+              expires_in: 3600,
               scope: DRIVE_SCOPE,
             }
           );
@@ -219,9 +228,29 @@ async function createHarness(scenario = {}) {
 
   await module.evaluate();
 
+  const runtimeModule = new vm.SourceTextModule(runtimeTranspiled, {
+    context,
+    identifier: 'file:///lib/workspaceDriveRuntime.js',
+  });
+
+  await runtimeModule.link(async (specifier) => {
+    if (specifier === './googleDriveWorkspace') return module;
+    throw new Error(`Unexpected module import in Drive runtime harness: ${specifier}`);
+  });
+
+  await runtimeModule.evaluate();
+
   return {
     state,
     connectGoogleDriveForWorkspace: module.namespace.connectGoogleDriveForWorkspace,
+    getWorkspaceGoogleDriveSessionRemainingMs:
+      module.namespace.getWorkspaceGoogleDriveSessionRemainingMs,
+    isWorkspaceGoogleDriveSessionExpired:
+      module.namespace.isWorkspaceGoogleDriveSessionExpired,
+    setWorkspaceDriveRuntime: runtimeModule.namespace.setWorkspaceDriveRuntime,
+    getWorkspaceDriveRuntime: runtimeModule.namespace.getWorkspaceDriveRuntime,
+    requireWorkspaceDriveRuntime: runtimeModule.namespace.requireWorkspaceDriveRuntime,
+    subscribeWorkspaceDriveRuntime: runtimeModule.namespace.subscribeWorkspaceDriveRuntime,
   };
 }
 
@@ -261,6 +290,19 @@ test('external Drive OAuth succeeds without mutating the Firebase password sessi
   assert.equal(session.email, EXPECTED_EMAIL);
   assert.equal(session.workspaceId, externalContext.workspaceId);
   assert.equal(typeof session.connectedAt, 'string');
+  assert.equal(typeof session.expiresAt, 'string');
+  const expiresAtMs = Date.parse(session.expiresAt);
+  assert.equal(Number.isFinite(expiresAtMs), true);
+  assert.equal(expiresAtMs > Date.now() + 3_500_000, true);
+  assert.equal(expiresAtMs <= Date.now() + 3_610_000, true);
+  assert.equal(
+    harness.isWorkspaceGoogleDriveSessionExpired(session, expiresAtMs - 60_001),
+    false
+  );
+  assert.equal(
+    harness.isWorkspaceGoogleDriveSessionExpired(session, expiresAtMs - 60_000),
+    true
+  );
   assert.deepEqual(harness.state.firebaseMutations, []);
   assert.equal(harness.state.initCalls, 1);
   assert.equal(harness.state.requestCalls, 1);
@@ -311,6 +353,19 @@ test('missing access token fails closed without touching Firebase Auth', async (
   const harness = await expectExternalFailure(
     { tokenResponse: {} },
     /não retornou uma autorização temporária/
+  );
+  assert.equal(harness.state.fetches.length, 0);
+});
+
+test('missing token expiry metadata fails closed without touching Firebase Auth', async () => {
+  const harness = await expectExternalFailure(
+    {
+      tokenResponse: {
+        access_token: 'external-drive-token',
+        scope: DRIVE_SCOPE,
+      },
+    },
+    /não informou a validade da autorização temporária/
   );
   assert.equal(harness.state.fetches.length, 0);
 });
@@ -397,6 +452,74 @@ test('founder path keeps the consolidated Firebase Google reauthentication flow'
   assert.deepEqual(harness.state.firebaseMutations, ['reauthenticateWithPopup']);
   assert.equal(harness.state.initCalls, 0);
   assert.equal(harness.state.founderProvider.scopes.includes(DRIVE_SCOPE), true);
+});
+
+test('Drive runtime clears an external token when its usable lifetime expires', async () => {
+  const harness = await createHarness();
+  const session = await harness.connectGoogleDriveForWorkspace(
+    externalUser(),
+    externalContext
+  );
+  const settings = {
+    provider: 'google-drive',
+    status: 'configured',
+    workspaceId: externalContext.workspaceId,
+    accountEmail: EXPECTED_EMAIL,
+    rootFolderId: 'root-folder-id',
+    empenhosFolderId: 'empenhos-folder-id',
+    invoicesFolderId: 'invoices-folder-id',
+    configuredAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const events = [];
+  const unsubscribe = harness.subscribeWorkspaceDriveRuntime((_runtime, reason) => {
+    events.push(reason);
+  });
+
+  harness.setWorkspaceDriveRuntime({ session, settings });
+  assert.equal(
+    harness.requireWorkspaceDriveRuntime(externalContext.workspaceId).session.accessToken,
+    'external-drive-token'
+  );
+
+  session.expiresAt = new Date(Date.now() - 1_000).toISOString();
+
+  assert.throws(
+    () => harness.requireWorkspaceDriveRuntime(externalContext.workspaceId),
+    /autorização temporária do Google Drive expirou/
+  );
+  assert.equal(harness.getWorkspaceDriveRuntime(), null);
+  assert.deepEqual(events, ['set', 'expired']);
+  unsubscribe();
+});
+
+test('Drive runtime refuses an already expired external session', async () => {
+  const harness = await createHarness();
+  const session = await harness.connectGoogleDriveForWorkspace(
+    externalUser(),
+    externalContext
+  );
+  session.expiresAt = new Date(Date.now() - 1_000).toISOString();
+
+  assert.throws(
+    () => harness.setWorkspaceDriveRuntime({
+      session,
+      settings: {
+        provider: 'google-drive',
+        status: 'configured',
+        workspaceId: externalContext.workspaceId,
+        accountEmail: EXPECTED_EMAIL,
+        rootFolderId: 'root-folder-id',
+        empenhosFolderId: 'empenhos-folder-id',
+        invoicesFolderId: 'invoices-folder-id',
+        configuredAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    }),
+    /autorização temporária do Google Drive expirou/
+  );
+  assert.equal(harness.getWorkspaceDriveRuntime(), null);
 });
 
 test('external OAuth source boundary contains no Firebase session mutation primitive', () => {
