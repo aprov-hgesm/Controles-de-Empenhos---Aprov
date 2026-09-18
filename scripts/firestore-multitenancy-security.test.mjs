@@ -14,6 +14,7 @@ import {
   doc,
   getDoc,
   getFirestore,
+  runTransaction,
   setDoc,
   updateDoc,
   writeBatch,
@@ -390,6 +391,56 @@ async function main() {
         'workspace-tampered',
         'empenhos',
         'sample'
+      )
+    )
+  );
+
+  console.log('\nProvisionamento administrativo real');
+  const provisioningWorkspaceId = 'workspace-provisioning-real';
+  const provisioningEmail = 'sector-provisioning@example.test';
+
+  await allowed('Admin executa preflight e provisiona workspace + conta + contador na mesma transação', () =>
+    runTransaction(admin.db, async (transaction) => {
+      const workspaceRef = doc(admin.db, 'workspaces', provisioningWorkspaceId);
+      const accountRef = doc(admin.db, 'platformAccounts', provisioningEmail);
+      const counterRef = doc(
+        admin.db,
+        'workspaces',
+        provisioningWorkspaceId,
+        'settings',
+        'termoRecebimentoCounter'
+      );
+
+      const [workspaceSnapshot, accountSnapshot, counterSnapshot] = await Promise.all([
+        transaction.get(workspaceRef),
+        transaction.get(accountRef),
+        transaction.get(counterRef),
+      ]);
+
+      assert.equal(workspaceSnapshot.exists(), false);
+      assert.equal(accountSnapshot.exists(), false);
+      assert.equal(counterSnapshot.exists(), false);
+
+      transaction.set(
+        workspaceRef,
+        workspace(provisioningWorkspaceId, provisioningEmail, 'active')
+      );
+      transaction.set(
+        accountRef,
+        account(provisioningEmail, provisioningWorkspaceId, null, 'active')
+      );
+      transaction.set(counterRef, { currentNumber: 0 });
+    })
+  );
+
+  await denied('Admin não lê contador operacional depois que o workspace existe', () =>
+    getDoc(
+      doc(
+        admin.db,
+        'workspaces',
+        provisioningWorkspaceId,
+        'settings',
+        'termoRecebimentoCounter'
       )
     )
   );
