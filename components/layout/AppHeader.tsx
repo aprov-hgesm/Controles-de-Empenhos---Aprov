@@ -48,11 +48,11 @@ export function AppHeader({
   };
 
   return (
-    <header className="bg-white/70 backdrop-blur-md border-b border-white/30 shadow-sm fixed top-0 w-full h-16 z-40 flex justify-between items-center px-6 transition-all duration-300">
+    <header className="emprovex-app-header fixed top-0 z-40 flex h-16 w-full items-center justify-between px-4 transition-all duration-300 sm:px-6">
       <div className="flex items-center gap-4">
         <button
           onClick={onOpenSidebar}
-          className="lg:hidden text-[#00288e] p-1.5 hover:bg-blue-50/50 rounded-lg active:scale-95 duration-150 transition-all"
+          className="emprovex-header-menu lg:hidden p-1.5 rounded-lg active:scale-95 duration-150 transition-all"
           id="menu-toggle-btn"
         >
           <Menu className="w-6 h-6" />
@@ -103,10 +103,10 @@ export function AppHeader({
           </div>
 
           <div className="flex flex-col">
-            <h1 className="font-extrabold text-base sm:text-lg text-[#00288e] tracking-wider uppercase font-montserrat leading-none">
+            <h1 className="emprovex-header-brand-title font-extrabold text-base sm:text-lg tracking-wider uppercase font-montserrat leading-none">
               EMPROVEX
             </h1>
-            <span className="text-[9px] sm:text-[10px] font-bold text-gray-500 tracking-wider uppercase font-montserrat mt-0.5">
+            <span className="emprovex-header-brand-subtitle text-[9px] sm:text-[10px] font-bold tracking-wider uppercase font-montserrat mt-0.5">
               Gestão Logística e Financeira
             </span>
           </div>
@@ -136,7 +136,7 @@ export function AppHeader({
         )}
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-gray-700 hidden md:inline">
+          <span className="emprovex-header-user text-xs font-semibold hidden md:inline">
             {userDisplayName}
           </span>
         </div>
