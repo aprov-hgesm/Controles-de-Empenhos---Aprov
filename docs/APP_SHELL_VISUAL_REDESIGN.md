@@ -95,7 +95,7 @@ Neste bloco eles são apenas fundação: nenhum componente existente consome os 
 ## Próximos blocos
 
 1. ~~Sidebar estrutural premium.~~ **Concluído no Bloco 2.**
-2. Navegação premium da Sidebar.
+2. ~~Navegação premium da Sidebar.~~ **Concluído no Bloco 3.**
 3. Card do Operador e rodapé do Sistema.
 4. Header estrutural premium.
 5. Núcleo visual da marca no Header.
@@ -126,3 +126,23 @@ Alterações estruturais aplicadas sem modificar handlers, tabs ou regras de nav
 - contraste transitório para os itens atuais, até o redesign específico da navegação no Bloco 3.
 
 Nenhuma lógica de autenticação, Drive, Firestore, workspace ou dados foi alterada.
+
+
+## Bloco 3 — Navegação premium da Sidebar
+
+Status: concluído.
+
+A navegação recebeu tratamento próprio sem alterar os valores de `AppTab` nem os handlers existentes:
+
+- item ativo com barra luminosa lateral;
+- superfície azul translúcida com profundidade e halo discreto;
+- ícones com realce e glow controlado;
+- hover com deslocamento mínimo e resposta luminosa;
+- linha técnica vertical conectando visualmente a navegação;
+- rótulo `Navegação` em microtipografia mono;
+- `Dashboard` renomeado visualmente para `Painel`, mantendo `activeTab='painel'`;
+- `aria-current` no item ativo;
+- foco de teclado preservado;
+- `prefers-reduced-motion` respeitado.
+
+Nenhuma lógica de autenticação, dados, Drive, Firestore, workspace ou navegação foi alterada.
