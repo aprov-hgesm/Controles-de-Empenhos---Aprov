@@ -19,6 +19,8 @@ requireText(driveClient, 'connectExternalWorkspaceDrive', 'Onboarding externo n�
 requireText(driveClient, 'initTokenClient', 'Onboarding externo não usa Google Identity Services.');
 requireText(driveClient, 'returnedEmail !== expectedEmail', 'Onboarding não valida a conta Google do setor.');
 requireText(driveClient, 'about?fields=user(emailAddress)', 'Onboarding não confirma o e-mail da conta pela Drive API.');
+requireText(driveClient, 'expires_in', 'Onboarding não captura a validade do token OAuth externo.');
+requireText(driveClient, 'expiresAt', 'Onboarding não mantém a validade do token na sessão em memória.');
 forbidText(
   driveClient,
   "if (context.resolutionSource === 'platform-directory') {\n    return connectFounderDriveSession",
@@ -35,6 +37,7 @@ requireText(driveSettings, 'existingSettings?.configuredAt || now', 'Reconexão 
 
 requireText(driveHook, "'not-configured'", 'Hook não representa estado inicial não configurado.');
 requireText(driveHook, 'connectedSession,\n        folders,\n        settings', 'Hook não vincula settings à sessão recém-autorizada.');
+requireText(driveHook, 'WORKSPACE_DRIVE_RECONNECT_REQUIRED_MESSAGE', 'Hook não comunica reconexão após expiração do token.');
 
 requireText(appHeader, 'workspaceContext: ResolvedWorkspaceContext', 'AppHeader não recebe o contexto validado.');
 forbidText(appHeader, 'resolveWorkspaceContext(currentEmail)', 'AppHeader ainda reconstrói contexto apenas pelo e-mail.');
@@ -73,6 +76,7 @@ if (findings.length) {
   console.log('Pastas: idempotentes e marcadas por workspace');
   console.log('documentStorage: isolado por Rules');
   console.log('Token persistente: NÃO');
+  console.log('Expiração OAuth externa: controlada em memória');
   console.log('Contexto externo no cabeçalho: validado');
   console.log('Primeiro acesso: fluxo de ativação disponível');
   console.log('\nDRIVE ONBOARDING: READY');
