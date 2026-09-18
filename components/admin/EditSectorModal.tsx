@@ -20,8 +20,6 @@ function formFromWorkspace(workspace: Workspace): UpdateSectorWorkspaceInput {
     organizationName: workspace.institutionalProfile.organizationName,
     organizationShortName: workspace.institutionalProfile.organizationShortName || '',
     sectionName: workspace.institutionalProfile.sectionName,
-    defaultDeliveryLocation: workspace.institutionalProfile.defaultDeliveryLocation || '',
-    defaultResponsibleRole: workspace.institutionalProfile.defaultResponsibleRole || '',
   };
 }
 
@@ -139,21 +137,9 @@ export function EditSectorModal({
             />
           </Field>
 
-          <Field label="Local padrão de entrega">
-            <input
-              value={form.defaultDeliveryLocation || ''}
-              onChange={(event) => setForm((current) => current && ({ ...current, defaultDeliveryLocation: event.target.value }))}
-              className={inputClass}
-            />
-          </Field>
-
-          <Field label="Cargo/função padrão do responsável">
-            <input
-              value={form.defaultResponsibleRole || ''}
-              onChange={(event) => setForm((current) => current && ({ ...current, defaultResponsibleRole: event.target.value }))}
-              className={inputClass}
-            />
-          </Field>
+          <div className="rounded-2xl border border-white/10 bg-slate-950/20 px-4 py-3 text-xs leading-relaxed text-slate-300">
+            O local padrão e a função do responsável são definidos automaticamente como <strong>Setor de Aprovisionamento - [SIGLA]</strong> e <strong>Chefe do Aprovisionamento</strong>.
+          </div>
 
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-1">
             <button
