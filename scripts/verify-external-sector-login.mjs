@@ -20,6 +20,9 @@ requireText(access, "workspace.status !== 'active'", 'Workspace externo não exi
 requireText(access, 'rememberResolvedWorkspaceContext(user.uid, context)', 'Contexto validado não é associado à sessão Firebase.');
 requireText(access, 'runTransaction', 'Resolução externa precisa permanecer atômica após o Bloco 16.');
 requireText(access, 'firebaseUid', 'A resolução externa perdeu o vínculo persistente introduzido no Bloco 16.');
+requireText(access, 'tokenResult.signInProvider', 'Login externo não valida o provider real da sessão Firebase.');
+requireText(access, 'signInProvider !== SECTOR_AUTH_PROVIDER', 'Setor externo não está restrito ao provider password.');
+requireText(access, 'signInProvider !== FOUNDER_AUTH_PROVIDER', 'Fundador não está restrito ao provider Google.');
 
 requireText(context, "'platform-directory'", 'workspaceContext não reconhece resolução pelo diretório da plataforma.');
 requireText(context, 'getResolvedWorkspaceContextForSession', 'Não existe cache de contexto vinculado ao UID da sessão.');
@@ -39,7 +42,8 @@ if (findings.length) {
   process.exitCode = 2;
 } else {
   console.log('Bloco 15 — login de setores externos\n');
-  console.log('Google Auth: habilitado');
+  console.log('Fundador: Google Auth exclusivo');
+  console.log('Setores externos: provider password obrigatório');
   console.log('Diretório de contas: platformAccounts');
   console.log('Resolução de workspace: obrigatória');
   console.log('Conta/workspace desativados: bloqueados');
