@@ -5,6 +5,9 @@ import { initializeApp, deleteApp } from 'firebase/app';
 import {
   connectAuthEmulator,
   getAuth,
+  GoogleAuthProvider,
+  linkWithCredential,
+  signInWithCredential,
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
@@ -130,7 +133,17 @@ async function createVerifiedUser(email) {
   };
 }
 
-async function createSession(label, email) {
+function mockGoogleCredential(label, email) {
+  return GoogleAuthProvider.credential(
+    JSON.stringify({
+      sub: `google-${label}`,
+      email,
+      email_verified: true,
+    })
+  );
+}
+
+async function createSession(label, email, provider = 'password') {
   const app = initializeApp(
     {
       projectId: PROJECT_ID,
@@ -143,20 +156,27 @@ async function createSession(label, email) {
 
   const auth = getAuth(app);
   connectAuthEmulator(auth, AUTH_BASE, { disableWarnings: true });
-  const credential = await signInWithEmailAndPassword(auth, email, PASSWORD);
-  await credential.user.getIdToken(true);
 
+  const credential = provider === 'google.com'
+    ? await signInWithCredential(auth, mockGoogleCredential(label, email))
+    : await signInWithEmailAndPassword(auth, email, PASSWORD);
+
+  const tokenResult = await credential.user.getIdTokenResult(true);
   assert.equal(
     credential.user.emailVerified,
     true,
     `E-mail de teste ${email} precisa estar verificado.`
+  );
+  assert.equal(
+    tokenResult.signInProvider,
+    provider,
+    `Sessão ${label} deveria usar provider ${provider}, mas recebeu ${tokenResult.signInProvider}.`
   );
 
   const firestore = getFirestore(app);
   connectFirestoreEmulator(firestore, '127.0.0.1', 8080);
   return { auth, db: firestore, user: credential.user };
 }
-
 async function allowed(label, operation) {
   try {
     await operation();
