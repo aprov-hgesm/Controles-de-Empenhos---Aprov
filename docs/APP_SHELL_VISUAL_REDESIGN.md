@@ -98,7 +98,7 @@ Neste bloco eles são apenas fundação: nenhum componente existente consome os 
 2. ~~Navegação premium da Sidebar.~~ **Concluído no Bloco 3.**
 3. ~~Card do Operador e rodapé do Sistema.~~ **Concluído no Bloco 4.**
 4. ~~Header estrutural premium.~~ **Concluído no Bloco 5.**
-5. Núcleo visual da marca no Header.
+5. ~~Núcleo visual da marca no Header.~~ **Concluído no Bloco 6.**
 6. Controles inteligentes do Header.
 7. Linha de energia e microinterações.
 8. Camada artística de assinatura.
@@ -182,3 +182,22 @@ O Header agora funciona como continuação visual direta da Sidebar:
 - nenhum handler de logo, Drive, Administração, menu ou sincronização foi alterado.
 
 Os controles individuais do Header e o núcleo visual da marca permanecem reservados para os Blocos 6 e 7.
+
+
+## Bloco 6 — Núcleo visual da marca no Header
+
+Status: concluído.
+
+A marca no Header recebeu um núcleo visual compacto inspirado no `LoginLogoCore`, sem reutilizar sua escala ou complexidade integral:
+
+- novo componente visual `AppShellLogo`;
+- dois anéis técnicos compactos com rotação lenta e opcional;
+- halo azul de baixa intensidade;
+- eixos técnicos internos;
+- superfície refrativa para o logotipo;
+- manutenção integral do upload e restauração do logotipo;
+- microassinatura em português `Central Operacional`;
+- `EMPROVEX` e `Gestão Logística e Financeira` preservados;
+- foco de teclado e `prefers-reduced-motion` respeitados.
+
+Nenhuma lógica de autenticação, sessão, Drive, Firestore, workspace, administração ou dados foi alterada.
