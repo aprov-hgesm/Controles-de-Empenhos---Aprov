@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { motion } from 'motion/react';
 import { Eye, EyeOff, KeyRound, Loader2, LogIn, Mail } from 'lucide-react';
 
@@ -270,7 +270,7 @@ export default function Home() {
   }
 
   if (!user) {
-    const handleSectorLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    const handleSectorLogin = async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       if (isSigningIn) return;
 
@@ -309,6 +309,7 @@ export default function Home() {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0b1c30] via-[#001453] to-[#0a1a2e] flex flex-col items-center justify-center p-6 text-white font-sans selection:bg-blue-500 selection:text-white">
+        <ToastNotification toast={toast} onClose={() => setToast(null)} />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
