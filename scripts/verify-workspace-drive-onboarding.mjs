@@ -17,6 +17,9 @@ const rules = read('firestore.rules');
 requireText(driveClient, "context.resolutionSource === 'platform-directory'", 'Onboarding externo não separa autorização Drive da sessão Firebase.');
 requireText(driveClient, 'connectExternalWorkspaceDrive', 'Onboarding externo não possui fluxo OAuth independente.');
 requireText(driveClient, 'initTokenClient', 'Onboarding externo não usa Google Identity Services.');
+requireText(driveClient, "GOOGLE_DRIVE_ACCOUNT_SELECTION_PROMPT = 'select_account'", 'Onboarding Drive não mantém seleção explícita da Conta Google.');
+forbidText(driveClient, "prompt: 'consent select_account'", 'Onboarding Drive ainda força consentimento em toda reconexão.');
+forbidText(driveClient, "prompt: 'consent'", 'Onboarding Drive ainda possui prompt de consentimento forçado.');
 requireText(driveClient, 'returnedEmail !== expectedEmail', 'Onboarding não valida a conta Google do setor.');
 requireText(driveClient, 'about?fields=user(emailAddress)', 'Onboarding não confirma o e-mail da conta pela Drive API.');
 requireText(driveClient, 'expires_in', 'Onboarding não captura a validade do token OAuth externo.');
@@ -45,6 +48,7 @@ requireText(page, 'workspaceContext={workspaceContext}', 'Página não entrega o
 
 requireText(driveControl, 'Ativação inicial do armazenamento', 'UI não apresenta onboarding inicial.');
 requireText(driveControl, 'Ativar Google Drive', 'UI não possui ação explícita de ativação.');
+requireText(driveControl, 'só solicitará novo consentimento quando ele for realmente necessário', 'UI não explica a reconexão sem consentimento forçado.');
 requireText(driveControl, 'Notas de Empenho', 'UI não explica a estrutura de pastas.');
 requireText(driveControl, 'Notas Fiscais', 'UI não explica a estrutura de pastas.');
 
@@ -77,6 +81,7 @@ if (findings.length) {
   console.log('documentStorage: isolado por Rules');
   console.log('Token persistente: NÃO');
   console.log('Expiração OAuth externa: controlada em memória');
+  console.log('Reconexão OAuth: seleção de conta sem consentimento forçado');
   console.log('Contexto externo no cabeçalho: validado');
   console.log('Primeiro acesso: fluxo de ativação disponível');
   console.log('\nDRIVE ONBOARDING: READY');
