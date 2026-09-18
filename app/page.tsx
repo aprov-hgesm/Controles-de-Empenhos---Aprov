@@ -43,7 +43,7 @@ export default function Home() {
   }, []);
 
   const {
-    user, loadingAuth, syncing,
+    user, loadingAuth, syncing, workspaceContext,
     empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices,
     comissoes, setComissoes, cronogramas, setCronogramas,
     signInUser, signOutUser, getBalanceByClass,
@@ -345,6 +345,7 @@ export default function Home() {
         customLogo={customLogo}
         syncing={syncing}
         userDisplayName={user?.displayName || 'Aprovisionamento HGeSM'}
+        workspaceContext={workspaceContext}
         onOpenSidebar={() => setSidebarOpen(true)}
         onLogoUpload={handleLogoUpload}
         onRemoveLogo={handleRemoveLogo}
