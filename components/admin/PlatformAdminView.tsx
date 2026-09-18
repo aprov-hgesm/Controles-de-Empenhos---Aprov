@@ -8,7 +8,6 @@ import {
   Database,
   CirclePause,
   CirclePlay,
-  HardDrive,
   Loader2,
   LockKeyhole,
   LogOut,
@@ -69,6 +68,9 @@ export function PlatformAdminView({
 
   const persistentDirectoryReady = !loadingDirectory && !directoryError;
 
+  const activeWorkspaceCount = visibleWorkspaces.filter((workspace) => workspace.status === 'active').length;
+  const disabledWorkspaceCount = visibleWorkspaces.filter((workspace) => workspace.status === 'disabled').length;
+
   const handleCreateSector = async (input: CreateSectorWorkspaceInput) => {
     const resultName = input.workspaceName.trim();
     await onCreateSector(input);
@@ -87,7 +89,6 @@ export function PlatformAdminView({
     if (workspace.legacyWorkspace) return;
 
     const nextStatus: SectorLifecycleStatus = workspace.status === 'active' ? 'disabled' : 'active';
-    const actionLabel = nextStatus === 'disabled' ? 'suspender' : 'reativar';
     const confirmed = window.confirm(
       nextStatus === 'disabled'
         ? `Suspender ${workspace.name}? O acesso operacional será bloqueado imediatamente.`
@@ -102,7 +103,6 @@ export function PlatformAdminView({
         : `Setor ${workspace.name} reativado com sucesso.`
     );
     window.setTimeout(() => setSuccessMessage(null), 5000);
-    void actionLabel;
   };
 
   const returnToHgesm = () => {
@@ -204,16 +204,16 @@ export function PlatformAdminView({
             detail={workspaces.length > 0 ? 'Diretório administrativo persistente' : 'HGeSM exibido pelo registro fundador'}
           />
           <AdminMetric
-            icon={<LockKeyhole className="w-5 h-5" />}
-            label="Contexto operacional"
-            value="Suspenso"
-            detail="Nenhuma subscription operacional neste perfil"
+            icon={<ShieldCheck className="w-5 h-5" />}
+            label="Setores ativos"
+            value={String(activeWorkspaceCount)}
+            detail="Acesso operacional liberado"
           />
           <AdminMetric
-            icon={<HardDrive className="w-5 h-5" />}
-            label="Armazenamento por setor"
-            value="Preparado"
-            detail="Medição será ativada em bloco posterior"
+            icon={<LockKeyhole className="w-5 h-5" />}
+            label="Setores suspensos"
+            value={String(disabledWorkspaceCount)}
+            detail="Leituras e escritas operacionais bloqueadas"
           />
         </section>
 
