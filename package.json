@@ -31,7 +31,8 @@
     "verify:storage-provider": "node scripts/verify-storage-provider-abstraction.mjs",
     "verify:workspace-drive": "node scripts/verify-workspace-drive-storage.mjs",
     "verify:external-sector-login": "node scripts/verify-external-sector-login.mjs",
-    "verify:uid-binding": "node scripts/verify-uid-binding.mjs"
+    "verify:uid-binding": "node scripts/verify-uid-binding.mjs",
+    "verify:workspace-provisioning": "node scripts/verify-workspace-provisioning.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
