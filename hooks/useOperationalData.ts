@@ -3,12 +3,10 @@
 import { useEffect, useState } from 'react';
 import {
   browserLocalPersistence,
-  getMultiFactorResolver,
   onAuthStateChanged,
   setPersistence,
   signInWithPopup,
   signOut,
-  TotpMultiFactorGenerator,
   type User,
 } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -43,9 +41,6 @@ export function useOperationalData() {
   const [user, setUser] = useState<User | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [mfaResolver, setMfaResolver] = useState<ReturnType<typeof getMultiFactorResolver> | null>(null);
-  const [mfaHintUid, setMfaHintUid] = useState<string | null>(null);
-  const [mfaDisplayName, setMfaDisplayName] = useState<string>('Google Authenticator');
   const [workspaceContext, setWorkspaceContext] = useState<ResolvedWorkspaceContext>(
     () => resolveWorkspaceContext(null)
   );
@@ -278,104 +273,36 @@ export function useOperationalData() {
     };
   }, [user, workspaceContext]);
 
-  const finalizeAuthenticatedSignIn = async (authenticatedUser: User) => {
-    // Todo login inicia no perfil operacional. Apenas a conta fundadora pode
-    // alternar posteriormente para Administração EMPROVEX.
-    setActiveProfileMode('sector');
-    const resolvedContext = await resolveAuthenticatedWorkspaceContext(
-      authenticatedUser,
-      'sector'
-    );
-
-    if (resolvedContext.status === 'unauthorized' || resolvedContext.status === 'anonymous') {
-      const returnedEmail = authenticatedUser.email || 'sem e-mail informado';
-      clearResolvedWorkspaceContext();
-      await signOut(auth);
-      resetActiveProfileMode();
-      setUser(null);
-      setWorkspaceContext(resolveWorkspaceContext(null));
-      throw new Error(`A conta Google ${returnedEmail} ainda não está autorizada no EMPROVEX.`);
-    }
-
-    setUser(authenticatedUser);
-    setWorkspaceContext(resolvedContext);
-    return resolvedContext;
-  };
-
-  const clearMfaChallenge = () => {
-    setMfaResolver(null);
-    setMfaHintUid(null);
-    setMfaDisplayName('Google Authenticator');
-  };
-
   const signInUser = async () => {
     setSyncing(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
+      const credential = await signInWithPopup(auth, googleProvider);
 
-      try {
-        const credential = await signInWithPopup(auth, googleProvider);
-        clearMfaChallenge();
-        return await finalizeAuthenticatedSignIn(credential.user);
-      } catch (error) {
-        const code = typeof error === 'object' && error && 'code' in error
-          ? String((error as { code?: unknown }).code || '')
-          : '';
-
-        if (code !== 'auth/multi-factor-auth-required') throw error;
-
-        const resolver = getMultiFactorResolver(
-          auth,
-          error as Parameters<typeof getMultiFactorResolver>[1]
-        );
-        const totpHint = resolver.hints.find(
-          (hint) => hint.factorId === TotpMultiFactorGenerator.FACTOR_ID
-        );
-
-        if (!totpHint) {
-          throw new Error(
-            'Esta conta exige autenticação em dois fatores, mas o método cadastrado ainda não é compatível com o EMPROVEX.'
-          );
-        }
-
-        setMfaResolver(resolver);
-        setMfaHintUid(totpHint.uid);
-        setMfaDisplayName(totpHint.displayName || 'Google Authenticator');
-        return { status: 'mfa-required' as const };
-      }
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const completeTotpSignIn = async (verificationCode: string) => {
-    const code = verificationCode.replace(/\s+/g, '');
-    if (!/^\d{6}$/.test(code)) {
-      throw new Error('Informe o código de 6 dígitos do aplicativo autenticador.');
-    }
-    if (!mfaResolver || !mfaHintUid) {
-      throw new Error('O desafio de autenticação expirou. Inicie o login novamente.');
-    }
-
-    setSyncing(true);
-    try {
-      const assertion = TotpMultiFactorGenerator.assertionForSignIn(
-        mfaHintUid,
-        code
+      // Todo login inicia no perfil operacional. Apenas a conta fundadora pode
+      // alternar posteriormente para Administração EMPROVEX.
+      setActiveProfileMode('sector');
+      const resolvedContext = await resolveAuthenticatedWorkspaceContext(
+        credential.user,
+        'sector'
       );
-      const credential = await mfaResolver.resolveSignIn(assertion);
-      clearMfaChallenge();
-      return await finalizeAuthenticatedSignIn(credential.user);
+
+      if (resolvedContext.status === 'unauthorized' || resolvedContext.status === 'anonymous') {
+        const returnedEmail = credential.user.email || 'sem e-mail informado';
+        clearResolvedWorkspaceContext();
+        await signOut(auth);
+        resetActiveProfileMode();
+        setUser(null);
+        setWorkspaceContext(resolveWorkspaceContext(null));
+        throw new Error(`A conta Google ${returnedEmail} ainda não está autorizada no EMPROVEX.`);
+      }
+
+      setUser(credential.user);
+      setWorkspaceContext(resolvedContext);
+      return resolvedContext;
     } finally {
       setSyncing(false);
     }
-  };
-
-  const cancelMfaSignIn = async () => {
-    clearMfaChallenge();
-    clearResolvedWorkspaceContext();
-    resetActiveProfileMode();
-    if (auth.currentUser) await signOut(auth);
   };
 
   const signOutUser = async () => {
@@ -445,10 +372,6 @@ export function useOperationalData() {
     comissoes, setComissoes,
     cronogramas, setCronogramas,
     signInUser, signOutUser,
-    mfaRequired: Boolean(mfaResolver),
-    mfaDisplayName,
-    completeTotpSignIn,
-    cancelMfaSignIn,
     getBalanceByClass,
     uniquePregaos, uniqueEmpenhoYears, uniqueNfMonths,
     formatDateTime, formatDateOnly,
