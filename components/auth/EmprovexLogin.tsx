@@ -17,7 +17,7 @@ interface EmprovexLoginProps {
   isSigningIn: boolean;
   toast: LoginToast;
   onCloseToast: () => void;
-  onSectorLogin: (email: string, password: string) => Promise<void>;
+  onSectorLogin: (email: string, password: string) => Promise<boolean>;
   onFounderLogin: () => Promise<void>;
 }
 
@@ -45,8 +45,8 @@ export function EmprovexLogin({
     event.preventDefault();
     if (isSigningIn) return;
 
-    await onSectorLogin(loginEmail, loginPassword);
-    setLoginPassword('');
+    const authenticated = await onSectorLogin(loginEmail, loginPassword);
+    if (authenticated) setLoginPassword('');
   };
 
   return (
