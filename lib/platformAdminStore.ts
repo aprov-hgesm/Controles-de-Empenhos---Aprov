@@ -152,7 +152,7 @@ export async function createSectorWorkspace(
     throw new Error('O identificador do setor é inválido. Use letras minúsculas, números e hífens.');
   }
   if (!isValidPlatformEmail(authorizedEmail)) {
-    throw new Error('Informe uma conta Google válida para o setor.');
+    throw new Error('Informe um e-mail operacional válido para o setor.');
   }
   if (authorizedEmail === HGESM_SECTOR_EMAIL) {
     throw new Error('A conta institucional fundadora já está vinculada ao workspace HGeSM.');
@@ -206,7 +206,7 @@ export async function createSectorWorkspace(
       throw new Error('Já existe um setor com este identificador.');
     }
     if (accountSnapshot.exists()) {
-      throw new Error('Esta conta Google já está vinculada a um perfil do EMPROVEX.');
+      throw new Error('Este e-mail operacional já está vinculado a um perfil do EMPROVEX.');
     }
     if (termCounterSnapshot.exists()) {
       throw new Error('Já existe configuração operacional residual para este identificador de setor.');
