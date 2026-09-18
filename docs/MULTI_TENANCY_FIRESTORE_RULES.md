@@ -68,6 +68,14 @@ somente quando o workspace e a conta de setor correspondentes também existem ap
 
 O contador possui regra específica: não pode ser excluído, não pode regredir e a regra genérica de `settings` exclui explicitamente esse ID para evitar bypass. Essa exceção de provisionamento não concede ao administrador acesso às demais configurações ou dados operacionais do setor.
 
+## Google Drive por workspace — Bloco 18
+
+`/workspaces/{workspaceId}/settings/documentStorage` possui regra própria e não herda a permissão genérica de settings.
+
+Criação e atualização exigem acesso operacional válido ao workspace, `provider = google-drive`, `workspaceId` igual ao path, `accountEmail` igual ao e-mail autenticado, IDs das três pastas e timestamps. O conjunto de campos é fechado, impedindo persistência de tokens ou propriedades extras.
+
+Em atualizações, `configuredAt` deve ser preservado. Exclusão pelo runtime é bloqueada. A regra genérica de settings exclui explicitamente `documentStorage`, evitando bypass.
+
 ## Administrador da plataforma
 
 A identidade fundadora `aprov1hgesm@gmail.com` administra os diretórios:
