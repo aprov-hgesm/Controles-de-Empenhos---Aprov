@@ -1933,3 +1933,256 @@ button[aria-busy="true"] .animate-spin {
     filter: none !important;
   }
 }
+
+
+/* EMPROVEX login — ambient reactivity (Bloco 8). */
+.emprovex-login-atmosphere {
+  --ambient-shift-x: 0px;
+  --ambient-shift-y: 0px;
+  --ambient-shift-x-inverse: 0px;
+  --ambient-shift-y-inverse: 0px;
+}
+
+.emprovex-login-aura-layer,
+.emprovex-login-network-layer,
+.emprovex-login-document-layer,
+.emprovex-login-spotlight,
+.emprovex-login-attention-field,
+.emprovex-login-perspective-grid,
+.emprovex-login-scanline,
+.emprovex-login-grain {
+  transition:
+    opacity 420ms var(--emprovex-motion-ease-soft),
+    filter 420ms var(--emprovex-motion-ease-soft),
+    transform 520ms var(--emprovex-motion-ease-soft);
+}
+
+.emprovex-login-aura-layer {
+  transform: translate3d(
+    var(--ambient-shift-x-inverse),
+    var(--ambient-shift-y-inverse),
+    0
+  );
+}
+
+.emprovex-login-network-layer {
+  transform: translate3d(
+    var(--ambient-shift-x),
+    var(--ambient-shift-y),
+    0
+  );
+}
+
+.emprovex-login-document-layer {
+  transform: translate3d(
+    var(--ambient-shift-x-inverse),
+    var(--ambient-shift-y-inverse),
+    0
+  );
+}
+
+.emprovex-login-attention-field {
+  opacity: 0;
+  background:
+    radial-gradient(
+      430px circle at 77% 60%,
+      rgba(59,130,246,0.10),
+      rgba(37,99,235,0.035) 34%,
+      transparent 72%
+    );
+}
+
+.emprovex-login-atmosphere[data-focus='email'] .emprovex-login-spotlight {
+  filter: brightness(1.18) saturate(1.05);
+}
+
+.emprovex-login-atmosphere[data-focus='email'] .emprovex-login-network-layer {
+  filter: brightness(1.08);
+  opacity: 0.95;
+}
+
+.emprovex-login-atmosphere[data-focus='email'] .emprovex-login-aura-layer {
+  filter: saturate(1.08);
+}
+
+.emprovex-login-atmosphere[data-focus='email'] .emprovex-login-attention-field {
+  opacity: 0.16;
+}
+
+.emprovex-login-atmosphere[data-focus='password'] .emprovex-login-document-layer {
+  opacity: 0.38;
+  filter: brightness(0.78);
+}
+
+.emprovex-login-atmosphere[data-focus='password'] .emprovex-login-network-layer {
+  opacity: 0.72;
+  filter: brightness(0.88);
+}
+
+.emprovex-login-atmosphere[data-focus='password'] .emprovex-login-scanline {
+  opacity: 0.58;
+}
+
+.emprovex-login-atmosphere[data-focus='password'] .emprovex-login-grain {
+  opacity: 0.020;
+}
+
+.emprovex-login-atmosphere[data-focus='password'] .emprovex-login-attention-field {
+  opacity: 0.28;
+}
+
+.emprovex-login-atmosphere[data-state='ready'] .emprovex-login-attention-field {
+  opacity: 0.62;
+  background:
+    radial-gradient(
+      380px circle at 78% 61%,
+      rgba(59,130,246,0.15),
+      rgba(37,99,235,0.055) 36%,
+      transparent 72%
+    );
+}
+
+.emprovex-login-atmosphere[data-state='ready'] .emprovex-login-perspective-grid {
+  opacity: 0.20;
+}
+
+.emprovex-login-atmosphere[data-state='ready'] .emprovex-login-document-layer {
+  opacity: 0.72;
+}
+
+.emprovex-login-atmosphere[data-state='authenticating'] .emprovex-login-attention-field {
+  opacity: 1;
+  background:
+    radial-gradient(
+      360px circle at 78% 60%,
+      rgba(96,165,250,0.20),
+      rgba(37,99,235,0.080) 38%,
+      transparent 72%
+    );
+}
+
+.emprovex-login-atmosphere[data-state='authenticating'] .emprovex-login-network-layer {
+  opacity: 0.34;
+  filter: brightness(0.72) saturate(0.82);
+}
+
+.emprovex-login-atmosphere[data-state='authenticating'] .emprovex-login-document-layer {
+  opacity: 0.16;
+  filter: brightness(0.70);
+}
+
+.emprovex-login-atmosphere[data-state='authenticating'] .emprovex-login-perspective-grid {
+  opacity: 0.10;
+}
+
+.emprovex-login-atmosphere[data-state='authenticating'] .emprovex-login-aura-layer {
+  opacity: 0.74;
+  filter: saturate(0.92);
+}
+
+.emprovex-login-atmosphere[data-state='authenticating'] .emprovex-login-grain {
+  opacity: 0.014;
+}
+
+.emprovex-login-atmosphere[data-state='authenticating'] .emprovex-login-scanline {
+  opacity: 0.34;
+}
+
+.emprovex-login-atmosphere[data-state='error'] .emprovex-login-attention-field {
+  opacity: 0.18;
+  background:
+    radial-gradient(
+      360px circle at 78% 60%,
+      rgba(248,113,113,0.055),
+      transparent 68%
+    );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .emprovex-login-atmosphere[data-state='idle'][data-focus='none'] .emprovex-login-aura--one {
+    animation-duration: 32s;
+  }
+
+  .emprovex-login-atmosphere[data-state='idle'][data-focus='none'] .emprovex-login-aura--two {
+    animation-duration: 38s;
+  }
+
+  .emprovex-login-atmosphere[data-state='idle'][data-focus='none'] .emprovex-login-aura--three {
+    animation-duration: 44s;
+  }
+
+  .emprovex-login-atmosphere[data-state='idle'][data-focus='none'] .emprovex-network-routes--signal {
+    animation-duration: 12s;
+  }
+
+  .emprovex-login-atmosphere[data-state='idle'][data-focus='none'] .emprovex-document-signal {
+    animation-duration: 11s;
+  }
+
+  .emprovex-login-atmosphere[data-state='idle'][data-focus='none'] .emprovex-login-scanline {
+    animation-duration: 18s;
+  }
+
+  .emprovex-login-atmosphere[data-state='ready'] .emprovex-network-routes--signal {
+    animation-duration: 7.2s;
+  }
+
+  .emprovex-login-atmosphere[data-state='authenticating'] .emprovex-network-routes--signal {
+    animation-duration: 14s;
+  }
+
+  .emprovex-login-atmosphere[data-state='authenticating'] .emprovex-document-signal {
+    animation-play-state: paused;
+  }
+}
+
+@media (pointer: coarse) {
+  .emprovex-login-aura-layer,
+  .emprovex-login-network-layer,
+  .emprovex-login-document-layer {
+    transform: none;
+  }
+
+  .emprovex-login-atmosphere[data-focus='email'] .emprovex-login-spotlight,
+  .emprovex-login-atmosphere[data-focus='password'] .emprovex-login-spotlight {
+    filter: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .emprovex-login-aura-layer,
+  .emprovex-login-network-layer,
+  .emprovex-login-document-layer {
+    transform: none;
+    filter: none !important;
+  }
+
+  .emprovex-login-atmosphere[data-state='ready'] .emprovex-login-attention-field,
+  .emprovex-login-atmosphere[data-state='authenticating'] .emprovex-login-attention-field {
+    opacity: 0.34;
+    background:
+      radial-gradient(
+        300px circle at 50% 68%,
+        rgba(59,130,246,0.10),
+        transparent 72%
+      );
+  }
+
+  .emprovex-login-atmosphere[data-focus='password'] .emprovex-login-grain {
+    opacity: 0.018;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emprovex-login-aura-layer,
+  .emprovex-login-network-layer,
+  .emprovex-login-document-layer,
+  .emprovex-login-spotlight,
+  .emprovex-login-attention-field,
+  .emprovex-login-perspective-grid,
+  .emprovex-login-scanline,
+  .emprovex-login-grain {
+    transition: none !important;
+    transform: none !important;
+  }
+}
