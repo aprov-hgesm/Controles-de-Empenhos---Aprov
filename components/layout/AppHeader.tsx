@@ -9,6 +9,7 @@ import { hasDualProfileAccess, setActiveProfileMode } from '../../lib/profileMod
 import type { ResolvedWorkspaceContext } from '../../lib/workspaceContext';
 import { WorkspaceDriveControl } from './WorkspaceDriveControl';
 import { AppShellLogo } from './chrome/AppShellLogo';
+import { AppShellSignature } from './chrome/AppShellSignature';
 
 interface AppHeaderProps {
   customLogo: string | null;
@@ -50,6 +51,7 @@ export function AppHeader({
 
   return (
     <header className="emprovex-app-header fixed top-0 z-40 flex h-16 w-full items-center justify-between px-4 transition-all duration-300 sm:px-6">
+      <AppShellSignature variant="header" />
       <div className="flex items-center gap-4">
         <button
           onClick={onOpenSidebar}
