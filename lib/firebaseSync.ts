@@ -104,7 +104,10 @@ export async function getInvoices(userId: string): Promise<Invoice[]> {
   const path = getOperationalCollectionPath(scope, 'invoices');
   try {
     const snapshot = await getDocs(operationalCollectionRef(scope, 'invoices'));
-    return snapshot.docs.map(item => item.data() as Invoice);
+    return snapshot.docs.map((item) => {
+      const data = item.data() as Invoice;
+      return { ...data, recordKey: data.recordKey || item.id };
+    });
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
     return [];
@@ -113,9 +116,10 @@ export async function getInvoices(userId: string): Promise<Invoice[]> {
 
 export async function saveInvoice(userId: string, invoice: Invoice): Promise<void> {
   const scope = getCurrentOperationalScope(userId);
-  const path = getOperationalDocumentPath(scope, 'invoices', invoice.id);
+  const recordKey = getInvoiceRecordKey(invoice);
+  const path = getOperationalDocumentPath(scope, 'invoices', recordKey);
   try {
-    await setDoc(operationalDocRef(scope, 'invoices', invoice.id), { ...invoice, userId });
+    await setDoc(operationalDocRef(scope, 'invoices', recordKey), { ...invoice, recordKey, userId });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -136,7 +140,7 @@ interface CommitInvoiceReceiptChangesInput {
   previousEmpenho?: Empenho;
   invoice: Invoice;
   alert: Alert;
-  previousInvoiceId?: string;
+  previousInvoiceRecordKey?: string;
 }
 
 export async function commitInvoiceReceiptChanges(
@@ -150,10 +154,11 @@ export async function commitInvoiceReceiptChanges(
     if (changes.previousEmpenho && changes.previousEmpenho.id !== changes.targetEmpenho.id) {
       batch.set(operationalDocRef(scope, 'empenhos', changes.previousEmpenho.id), { ...changes.previousEmpenho, userId });
     }
-    batch.set(operationalDocRef(scope, 'invoices', changes.invoice.id), { ...changes.invoice, userId });
+    const invoiceRecordKey = getInvoiceRecordKey(changes.invoice);
+    batch.set(operationalDocRef(scope, 'invoices', invoiceRecordKey), { ...changes.invoice, recordKey: invoiceRecordKey, userId });
     batch.set(operationalDocRef(scope, 'alerts', changes.alert.id), { ...changes.alert, userId });
-    if (changes.previousInvoiceId && changes.previousInvoiceId !== changes.invoice.id) {
-      batch.delete(operationalDocRef(scope, 'invoices', changes.previousInvoiceId));
+    if (changes.previousInvoiceRecordKey && changes.previousInvoiceRecordKey !== invoiceRecordKey) {
+      batch.delete(operationalDocRef(scope, 'invoices', changes.previousInvoiceRecordKey));
     }
     await batch.commit();
   } catch (error) {
@@ -164,34 +169,34 @@ export async function commitInvoiceReceiptChanges(
 export async function commitInvoiceDeletion(
   userId: string,
   updatedEmpenho: Empenho,
-  invoiceId: string
+  invoiceRecordKey: string
 ): Promise<void> {
   const scope = getCurrentOperationalScope(userId);
   try {
     const batch = writeBatch(db);
     batch.set(operationalDocRef(scope, 'empenhos', updatedEmpenho.id), { ...updatedEmpenho, userId });
-    batch.delete(operationalDocRef(scope, 'invoices', invoiceId));
+    batch.delete(operationalDocRef(scope, 'invoices', invoiceRecordKey));
     await batch.commit();
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, getOperationalDocumentPath(scope, 'invoices', invoiceId));
+    handleFirestoreError(error, OperationType.DELETE, getOperationalDocumentPath(scope, 'invoices', invoiceRecordKey));
   }
 }
 
 export async function commitAllInvoicesDeletion(
   userId: string,
   updatedEmpenhos: Empenho[],
-  invoiceIds: string[]
+  invoiceRecordKeys: string[]
 ): Promise<void> {
   const scope = getCurrentOperationalScope(userId);
   try {
-    if (updatedEmpenhos.length + invoiceIds.length > 450) {
+    if (updatedEmpenhos.length + invoiceRecordKeys.length > 450) {
       throw new Error('Quantidade de operações excede o limite seguro para exclusão em lote.');
     }
     const batch = writeBatch(db);
     updatedEmpenhos.forEach((empenho) => {
       batch.set(operationalDocRef(scope, 'empenhos', empenho.id), { ...empenho, userId });
     });
-    invoiceIds.forEach((invoiceId) => batch.delete(operationalDocRef(scope, 'invoices', invoiceId)));
+    invoiceRecordKeys.forEach((recordKey) => batch.delete(operationalDocRef(scope, 'invoices', recordKey)));
     await batch.commit();
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${getOperationalCollectionPath(scope, 'invoices')}/bulk`);
