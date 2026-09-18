@@ -419,6 +419,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
   };
 
   const handleMarkComissao = async (invoiceRecordKey: string) => {
+    const invoiceLabel = invoices.find((invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey)?.id || invoiceRecordKey;
     let updatedTargetInvoice: Invoice | null = null;
     const updatedInvoices = invoices.map(inv => {
       if (getInvoiceRecordKey(inv) === invoiceRecordKey) {
@@ -440,10 +441,11 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       }
     }
     setInvoices(updatedInvoices);
-    showToast(`Nota Fiscal ${updatedTargetInvoice?.id || invoiceRecordKey} enviada para a Comissão de Recebimento!`);
+    showToast(`Nota Fiscal ${invoiceLabel} enviada para a Comissão de Recebimento!`);
   };
 
   const handleMarkTesouraria = async (invoiceRecordKey: string) => {
+    const invoiceLabel = invoices.find((invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey)?.id || invoiceRecordKey;
     let updatedTargetInvoice: Invoice | null = null;
     const updatedInvoices = invoices.map(inv => {
       if (getInvoiceRecordKey(inv) === invoiceRecordKey) {
@@ -465,7 +467,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       }
     }
     setInvoices(updatedInvoices);
-    showToast(`Nota Fiscal ${updatedTargetInvoice?.id || invoiceRecordKey} finalizada e enviada para o Setor de Tesouraria!`);
+    showToast(`Nota Fiscal ${invoiceLabel} finalizada e enviada para o Setor de Tesouraria!`);
   };
 
   const handleUpdateInvoiceLocation = async (
@@ -497,6 +499,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
 
   const handleSaveNumeroNS = async (invoiceRecordKey: string, value: string) => {
     const trimmed = value.trim();
+    const invoiceLabel = invoices.find((invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey)?.id || invoiceRecordKey;
     let updatedTargetInvoice: Invoice | null = null;
     const updatedInvoices = invoices.map(inv => {
       if (getInvoiceRecordKey(inv) === invoiceRecordKey) {
@@ -522,8 +525,8 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     setTempNSValue('');
     showToast(
       trimmed
-        ? `Número da NS (${trimmed}) salvo para a NF ${updatedTargetInvoice?.id || invoiceRecordKey}!`
-        : `Número da NS removido da NF ${updatedTargetInvoice?.id || invoiceRecordKey}!`,
+        ? `Número da NS (${trimmed}) salvo para a NF ${invoiceLabel}!`
+        : `Número da NS removido da NF ${invoiceLabel}!`,
       'success'
     );
   };
