@@ -2,7 +2,7 @@
 
 import { Check, CircleDot, KeyRound, ShieldAlert } from 'lucide-react';
 
-export type LoginNarrativePhase = 'idle' | 'identity' | 'workspace' | 'error';
+export type LoginNarrativePhase = 'session' | 'idle' | 'identity' | 'workspace' | 'error';
 export type LoginNarrativeMode = 'sector' | 'founder' | null;
 
 interface LoginStatusRailProps {
@@ -12,6 +12,11 @@ interface LoginStatusRailProps {
 }
 
 const phaseCopy = {
+  session: {
+    eyebrow: 'Sessão',
+    title: 'Verificando sessão existente',
+    detail: 'O EMPROVEX está verificando se há uma sessão autenticada neste navegador.',
+  },
   idle: {
     eyebrow: 'Fluxo de acesso',
     title: 'Aguardando autenticação',
