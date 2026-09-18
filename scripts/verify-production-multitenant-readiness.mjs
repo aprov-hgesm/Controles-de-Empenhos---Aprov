@@ -9,6 +9,7 @@ const findings = [];
 const requiredFiles = [
   'firestore.rules',
   'scripts/verify-hybrid-auth-model.mjs',
+  'scripts/verify-sector-auth-provisioning.mjs',
   'scripts/verify-external-sector-login.mjs',
   'scripts/verify-uid-binding.mjs',
   'scripts/verify-workspace-provisioning.mjs',
@@ -18,6 +19,9 @@ const requiredFiles = [
   'scripts/firestore-multitenancy-security.test.mjs',
   'components/admin/PlatformAdminView.tsx',
   'components/admin/EditSectorModal.tsx',
+  'app/api/admin/provision-sector/route.ts',
+  'lib/server/sectorProvisioningAdmin.ts',
+  'lib/sectorProvisioning.ts',
   'hooks/useOperationalData.ts',
   'lib/platformAdminStore.ts',
   'lib/platformAccess.ts',
@@ -36,12 +40,14 @@ const ci = read('.github/workflows/application-ci.yml');
 const rules = read('firestore.rules');
 const admin = read('components/admin/PlatformAdminView.tsx');
 const access = read('lib/platformAccess.ts');
+const sectorProvisioning = read('lib/server/sectorProvisioningAdmin.ts');
 const drive = read('lib/googleDriveWorkspace.ts');
 const storage = read('lib/workspaceDriveSettings.ts');
 const lifecycle = read('hooks/useOperationalData.ts');
 
 for (const command of [
   'verify:hybrid-auth-model',
+  'verify:sector-auth-provisioning',
   'verify:external-sector-login',
   'verify:uid-binding',
   'verify:workspace-provisioning',
@@ -55,6 +61,7 @@ for (const command of [
 
 for (const expected of [
   'npm run verify:hybrid-auth-model',
+  'npm run verify:sector-auth-provisioning',
   'npm run verify:external-sector-login',
   'npm run verify:uid-binding',
   'npm run verify:workspace-provisioning',
@@ -69,6 +76,9 @@ for (const expected of [
 requireText(admin, 'Cadastrar novo setor', 'Painel administrativo perdeu o cadastro de setor.');
 requireText(admin, 'Suspender setor', 'Painel administrativo perdeu suspensão.');
 requireText(admin, 'Reativar setor', 'Painel administrativo perdeu reativação.');
+requireText(sectorProvisioning, 'provisionSectorWorkspaceWithAuth', 'Provisionamento server-side de setor está ausente.');
+requireText(sectorProvisioning, 'createAuthUser', 'Provisionamento não cria a identidade Firebase no servidor.');
+requireText(sectorProvisioning, 'deleteAuthUser', 'Provisionamento não possui rollback da identidade Firebase.');
 requireText(access, 'resolveAndBindExternalIdentity', 'Login externo não mantém resolução/vínculo de identidade.');
 requireText(access, 'firebaseUid', 'Login externo perdeu vínculo de UID.');
 requireText(access, 'tokenResult.signInProvider', 'Modelo híbrido não valida o provider real da sessão.');
@@ -93,6 +103,7 @@ if (findings.length) {
   console.log('Bloco 21 — prontidão para homologação do segundo setor\n');
   console.log('Cadastro administrativo: PRONTO');
   console.log('Modelo híbrido de provider: PRONTO');
+  console.log('Provisionamento Auth server-side: PRONTO');
   console.log('Login externo + UID binding: PRONTO');
   console.log('Provisionamento inicial: PRONTO');
   console.log('Google Drive por workspace: PRONTO');
