@@ -45,6 +45,18 @@ export interface CreateSectorWorkspaceInput {
   defaultResponsibleRole?: string;
 }
 
+export interface UpdateSectorWorkspaceInput {
+  workspaceId: string;
+  workspaceName: string;
+  organizationName: string;
+  organizationShortName?: string;
+  sectionName: string;
+  defaultDeliveryLocation?: string;
+  defaultResponsibleRole?: string;
+}
+
+export type SectorLifecycleStatus = 'active' | 'disabled';
+
 export interface PlatformAdminDirectory {
   workspaces: Workspace[];
   accounts: PlatformAccount[];
@@ -183,6 +195,171 @@ export async function createSectorWorkspace(
   });
 
   return { workspace, account };
+}
+
+/**
+ * Atualiza apenas metadados editáveis do setor. workspaceId, conta autorizada,
+ * status e campos de auditoria de criação permanecem imutáveis.
+ */
+export async function updateSectorWorkspaceProfile(
+  input: UpdateSectorWorkspaceInput,
+  updatedByEmail: string
+): Promise<Workspace> {
+  const workspaceId = normalizeWorkspaceId(input.workspaceId);
+  const updatedBy = normalizePlatformEmail(updatedByEmail);
+
+  if (!isValidWorkspaceId(workspaceId)) {
+    throw new Error('O identificador do setor é inválido.');
+  }
+  if (workspaceId === HGESM_WORKSPACE_ID) {
+    throw new Error('O workspace fundador não pode ser alterado por este fluxo administrativo.');
+  }
+
+  const workspaceRef = doc(db, WORKSPACES_COLLECTION, workspaceId);
+
+  return runTransaction(db, async (transaction) => {
+    const workspaceSnapshot = await transaction.get(workspaceRef);
+    if (!workspaceSnapshot.exists()) {
+      throw new Error('O setor informado não existe.');
+    }
+
+    const current = workspaceSnapshot.data() as Workspace;
+    if (validateWorkspace(current).length > 0 || current.id !== workspaceId) {
+      throw new Error('Os metadados atuais do setor são inválidos.');
+    }
+
+    const accountRef = doc(
+      db,
+      PLATFORM_ACCOUNTS_COLLECTION,
+      accountDocumentId(current.authorizedEmail)
+    );
+    const accountSnapshot = await transaction.get(accountRef);
+    if (!accountSnapshot.exists()) {
+      throw new Error('A conta operacional vinculada ao setor não existe.');
+    }
+
+    const account = accountSnapshot.data() as PlatformAccount;
+    if (
+      account.accountType !== 'sector'
+      || account.workspaceId !== workspaceId
+      || normalizePlatformEmail(account.email) !== normalizePlatformEmail(current.authorizedEmail)
+      || account.status !== current.status
+    ) {
+      throw new Error('Workspace e conta operacional estão inconsistentes.');
+    }
+
+    const now = new Date().toISOString();
+    const updated: Workspace = {
+      ...current,
+      name: input.workspaceName.trim(),
+      institutionalProfile: {
+        ...current.institutionalProfile,
+        organizationName: input.organizationName.trim(),
+        organizationShortName: input.organizationShortName?.trim() || undefined,
+        sectionName: input.sectionName.trim(),
+        defaultDeliveryLocation: input.defaultDeliveryLocation?.trim() || undefined,
+        defaultResponsibleRole: input.defaultResponsibleRole?.trim() || undefined,
+      },
+      updatedAt: now,
+    };
+
+    const errors = validateWorkspace(updated);
+    if (errors.length > 0) throw new Error(errors[0]);
+
+    transaction.update(workspaceRef, {
+      name: updated.name,
+      institutionalProfile: updated.institutionalProfile,
+      updatedAt: now,
+    });
+
+    void updatedBy;
+    return updated;
+  });
+}
+
+/**
+ * Suspende ou reativa um setor de forma atômica. O status do workspace e da conta
+ * operacional nunca é alterado isoladamente.
+ */
+export async function setSectorWorkspaceStatus(
+  workspaceIdInput: string,
+  status: SectorLifecycleStatus,
+  updatedByEmail: string
+): Promise<{ workspace: Workspace; account: SectorAccount }> {
+  const workspaceId = normalizeWorkspaceId(workspaceIdInput);
+  const updatedBy = normalizePlatformEmail(updatedByEmail);
+
+  if (!isValidWorkspaceId(workspaceId)) {
+    throw new Error('O identificador do setor é inválido.');
+  }
+  if (workspaceId === HGESM_WORKSPACE_ID) {
+    throw new Error('O workspace fundador HGeSM não pode ser suspenso por este painel.');
+  }
+  if (status !== 'active' && status !== 'disabled') {
+    throw new Error('Status administrativo inválido.');
+  }
+
+  const workspaceRef = doc(db, WORKSPACES_COLLECTION, workspaceId);
+
+  return runTransaction(db, async (transaction) => {
+    const workspaceSnapshot = await transaction.get(workspaceRef);
+    if (!workspaceSnapshot.exists()) {
+      throw new Error('O setor informado não existe.');
+    }
+
+    const currentWorkspace = workspaceSnapshot.data() as Workspace;
+    if (
+      validateWorkspace(currentWorkspace).length > 0
+      || currentWorkspace.id !== workspaceId
+    ) {
+      throw new Error('Os metadados atuais do setor são inválidos.');
+    }
+
+    const accountRef = doc(
+      db,
+      PLATFORM_ACCOUNTS_COLLECTION,
+      accountDocumentId(currentWorkspace.authorizedEmail)
+    );
+    const accountSnapshot = await transaction.get(accountRef);
+    if (!accountSnapshot.exists()) {
+      throw new Error('A conta operacional vinculada ao setor não existe.');
+    }
+
+    const currentAccount = accountSnapshot.data() as PlatformAccount;
+    if (
+      currentAccount.accountType !== 'sector'
+      || currentAccount.workspaceId !== workspaceId
+      || normalizePlatformEmail(currentAccount.email)
+        !== normalizePlatformEmail(currentWorkspace.authorizedEmail)
+      || currentAccount.status !== currentWorkspace.status
+    ) {
+      throw new Error('Workspace e conta operacional estão inconsistentes.');
+    }
+
+    const now = new Date().toISOString();
+    const workspace: Workspace = {
+      ...currentWorkspace,
+      status,
+      updatedAt: now,
+    };
+    const account: SectorAccount = {
+      ...currentAccount,
+      status,
+      updatedAt: now,
+    };
+
+    transaction.update(workspaceRef, {
+      status,
+      updatedAt: now,
+    });
+    transaction.update(accountRef, {
+      status,
+      updatedAt: now,
+    });
+
+    void updatedBy;
+    return { workspace, account };
+  });
 }
 
 export function subscribePlatformAdminDirectory(
