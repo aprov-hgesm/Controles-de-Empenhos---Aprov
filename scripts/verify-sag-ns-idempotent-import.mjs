@@ -7,6 +7,8 @@ const root = process.cwd();
 const findings = [];
 
 const plan = read('lib/sagNsPersistencePlan.ts');
+const domain = read('lib/nsIntegrity.ts');
+const service = read('lib/nsIntegrityService.ts');
 const persistence = read('lib/sagNsPersistence.ts');
 const hook = read('features/relatorios/hooks/useSagNsImportActions.ts');
 const view = read('features/relatorios/components/SagImportView.tsx');
@@ -17,20 +19,22 @@ const workflow = read('.github/workflows/application-ci.yml');
 
 requireText(plan, 'buildSagNsPersistenceChanges', 'Plano não seleciona somente alterações elegíveis.');
 requireText(plan, 'validateSagNsPersistenceSnapshot', 'Revalidação pura de persistência ausente.');
-requireText(plan, "currentNs === proposedNs", 'Idempotência para NS já aplicada ausente.');
-requireText(plan, "'stale_invoice_ns'", 'Mudança concorrente da NS não bloqueia o lote.');
-requireText(plan, "'ns_reused_in_scope'", 'Reutilização de NS em outra NF não é bloqueada.');
-requireText(plan, "'supplier_scope_changed'", 'Mudança de CNPJ do empenho não é bloqueada.');
-requireText(plan, "'invoice_identity_changed'", 'Mudança de identidade NF/NE não é bloqueada.');
-requireText(plan, "'duplicate_ns_in_batch'", 'Duplicidade de NS no lote não é bloqueada.');
+requireText(domain, 'currentNs === proposedNs', 'Idempotência para NS já aplicada ausente.');
+requireText(domain, "'stale_invoice_ns'", 'Mudança concorrente da NS não bloqueia o lote.');
+requireText(domain, "'ns_reused_in_scope'", 'Reutilização de NS em outra NF não é bloqueada.');
+requireText(domain, "'supplier_scope_changed'", 'Mudança de CNPJ do empenho não é bloqueada.');
+requireText(domain, "'invoice_identity_changed'", 'Mudança de identidade NF/NE não é bloqueada.');
+requireText(domain, "'duplicate_ns_in_batch'", 'Duplicidade de NS no lote não é bloqueada.');
 
-requireText(persistence, 'runTransaction', 'Persistência SAG não usa transação Firestore.');
-requireText(persistence, 'transaction.get(', 'Transação não relê documentos antes da escrita.');
-requireText(persistence, 'validateSagNsPersistenceSnapshot', 'Transação não executa revalidação final.');
-requireText(persistence, 'transaction.set(', 'Transação não possui escrita controlada de NS.');
-requireText(persistence, "{ merge: true }", 'Escrita SAG não está limitada a merge do documento existente.');
+requireText(service, 'runTransaction', 'Serviço central de NS não usa transação Firestore.');
+requireText(service, 'transaction.get(', 'Transação central não relê documentos antes da escrita.');
+requireText(service, 'validateNsIntegritySnapshot', 'Transação central não executa revalidação final.');
+requireText(service, 'transaction.set(', 'Transação central não possui escrita controlada de NS.');
+requireText(service, "{ merge: true }", 'Escrita central não está limitada a merge do documento existente.');
+requireText(service, 'MAX_NS_INTEGRITY_TRANSACTION_MUTATIONS', 'Limite seguro de alterações por transação ausente.');
+requireText(persistence, 'commitNsIntegrityMutations', 'Persistência SAG não delega ao serviço central.');
 requireText(persistence, 'alreadyAppliedCount', 'Resultado idempotente não informa NS já aplicadas.');
-requireText(persistence, 'MAX_SAG_NS_TRANSACTION_CHANGES', 'Limite seguro de alterações por transação ausente.');
+forbidText(persistence, 'runTransaction(', 'Persistência SAG voltou a abrir transação própria.');
 
 requireText(hook, 'reconcileSagNsPayload', 'Ação SAG não refaz a conciliação antes da transação.');
 requireText(hook, 'buildSagNsApplicationFingerprint', 'Ação SAG não compara a prévia confirmada.');
