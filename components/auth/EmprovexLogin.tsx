@@ -234,6 +234,7 @@ export function EmprovexLogin({
                       <span className="emprovex-login-field__glow pointer-events-none absolute inset-0 rounded-2xl" />
                       <Mail className="emprovex-login-field__icon pointer-events-none absolute left-4 top-1/2 z-[2] h-4 w-4 -translate-y-1/2 text-slate-500" />
                       <input
+                        data-testid="sector-login-email"
                         type="email"
                         value={loginEmail}
                         onChange={(event) => setLoginEmail(event.target.value)}
@@ -266,6 +267,7 @@ export function EmprovexLogin({
                       <span className="emprovex-login-field__glow pointer-events-none absolute inset-0 rounded-2xl" />
                       <KeyRound className="emprovex-login-field__icon pointer-events-none absolute left-4 top-1/2 z-[2] h-4 w-4 -translate-y-1/2 text-slate-500" />
                       <input
+                        data-testid="sector-login-password"
                         type={showLoginPassword ? 'text' : 'password'}
                         value={loginPassword}
                         onChange={(event) => setLoginPassword(event.target.value)}
@@ -293,6 +295,7 @@ export function EmprovexLogin({
                   </label>
 
                   <button
+                    data-testid="sector-login-submit"
                     type="submit"
                     disabled={isSigningIn || !credentialsReady}
                     aria-busy={isSigningIn && authMode === 'sector'}
