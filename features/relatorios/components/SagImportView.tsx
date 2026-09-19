@@ -633,7 +633,7 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
 
                 <label className="mt-3 block">
                   <span className="text-[9px] font-extrabold uppercase tracking-wider text-gray-400">
-                    UG opcional
+                    UG emitente
                   </span>
                   <input
                     type="text"
@@ -654,7 +654,7 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
                 </label>
                 {ugInvalid ? (
                   <p className="mt-1.5 text-[10px] font-semibold text-amber-700">
-                    Informe os 6 dígitos da UG ou deixe o campo vazio.
+                    Informe os 6 dígitos da UG ou deixe em branco apenas se ela puder ser extraída explicitamente do SAG.
                   </p>
                 ) : null}
 
