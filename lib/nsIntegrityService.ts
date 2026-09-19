@@ -16,9 +16,11 @@ import {
 } from './operationalPaths';
 import {
   assertNsLockOwnership,
+  buildLegacyNsLockDocumentId,
   buildNsLockDocument,
   buildNsLockDocumentId,
   normalizeNsNumber,
+  normalizeNsUg,
   validateNsIntegritySnapshot,
   NsIntegrityError,
   type NsIntegrityInvoiceDocument,
@@ -43,7 +45,17 @@ export interface CommitNsIntegrityResult {
 function withoutNumeroNs(invoice: Invoice): Invoice {
   const result: Invoice = { ...invoice };
   delete result.numeroNS;
+  delete result.nsUg;
   return result;
+}
+
+function buildStoredNsLockDocumentId(invoice: Pick<Invoice, 'numeroNS' | 'nsUg'>): string {
+  const numeroNS = normalizeNsNumber(invoice.numeroNS);
+  if (!numeroNS) return '';
+  const ug = normalizeNsUg(invoice.nsUg);
+  return ug
+    ? buildNsLockDocumentId(ug, numeroNS)
+    : buildLegacyNsLockDocumentId(numeroNS);
 }
 
 export async function commitNsIntegrityMutations(
@@ -127,8 +139,8 @@ export async function commitNsIntegrityMutations(
         const stored = targetByKey.get(mutation.invoiceRecordKey);
         const currentNs = normalizeNsNumber(stored?.numeroNS);
         const proposedNs = normalizeNsNumber(mutation.proposedNs);
-        if (currentNs) lockIds.add(buildNsLockDocumentId(currentNs));
-        if (proposedNs) lockIds.add(buildNsLockDocumentId(proposedNs));
+        if (stored && currentNs) lockIds.add(buildStoredNsLockDocumentId(stored));
+        if (proposedNs) lockIds.add(buildNsLockDocumentId(mutation.proposedUg, proposedNs));
       }
 
       const lockIdList = Array.from(lockIds);
@@ -149,26 +161,30 @@ export async function commitNsIntegrityMutations(
         if (!stored) continue;
 
         const currentNs = normalizeNsNumber(stored.numeroNS);
+        const currentUg = normalizeNsUg(stored.nsUg);
         const proposedNs = normalizeNsNumber(mutation.proposedNs);
+        const proposedUg = normalizeNsUg(mutation.proposedUg);
 
         if (proposedNs) {
-          const proposedLock = lockById.get(buildNsLockDocumentId(proposedNs));
+          const proposedLock = lockById.get(buildNsLockDocumentId(proposedUg, proposedNs));
           if (proposedLock) {
             assertNsLockOwnership(
               proposedLock,
               mutation,
+              proposedUg,
               proposedNs,
               'ns_lock_conflict'
             );
           }
         }
 
-        if (currentNs && currentNs !== proposedNs) {
-          const currentLock = lockById.get(buildNsLockDocumentId(currentNs));
+        if (currentNs && (currentNs !== proposedNs || currentUg !== proposedUg)) {
+          const currentLock = lockById.get(buildStoredNsLockDocumentId(stored));
           if (currentLock) {
             assertNsLockOwnership(
               currentLock,
               mutation,
+              currentUg || null,
               currentNs,
               'stale_lock_owner'
             );
@@ -184,7 +200,9 @@ export async function commitNsIntegrityMutations(
         if (!stored) continue;
 
         const currentNs = normalizeNsNumber(stored.numeroNS);
+        const currentUg = normalizeNsUg(stored.nsUg);
         const proposedNs = normalizeNsNumber(mutation.proposedNs);
+        const proposedUg = normalizeNsUg(mutation.proposedUg);
 
         if (writeKeys.has(mutation.invoiceRecordKey)) {
           transaction.set(
@@ -192,11 +210,13 @@ export async function commitNsIntegrityMutations(
             proposedNs
               ? {
                   numeroNS: proposedNs,
+                  nsUg: proposedUg,
                   recordKey: mutation.invoiceRecordKey,
                   userId,
                 }
               : {
                   numeroNS: deleteField(),
+                  nsUg: deleteField(),
                   recordKey: mutation.invoiceRecordKey,
                   userId,
                 },
@@ -215,15 +235,15 @@ export async function commitNsIntegrityMutations(
           );
         }
 
-        if (currentNs && currentNs !== proposedNs) {
-          const currentLockId = buildNsLockDocumentId(currentNs);
+        if (currentNs && (currentNs !== proposedNs || currentUg !== proposedUg)) {
+          const currentLockId = buildStoredNsLockDocumentId(stored);
           if (lockById.get(currentLockId)) {
             transaction.delete(operationalSettingsDocRef(scope, currentLockId));
           }
         }
 
         if (proposedNs) {
-          const lockId = buildNsLockDocumentId(proposedNs);
+          const lockId = buildNsLockDocumentId(proposedUg, proposedNs);
           const existingLock = lockById.get(lockId);
           const lock = buildNsLockDocument({
             workspaceId: scope.workspaceId,
@@ -254,6 +274,7 @@ export async function commitNsIntegrityMutations(
                 ...stored,
                 recordKey: mutation.invoiceRecordKey,
                 numeroNS: proposedNs,
+                nsUg: proposedUg,
               }
             : {
                 ...withoutNumeroNs(stored),
@@ -321,7 +342,9 @@ function buildLifecycleMutation(
     invoiceId: invoice.id,
     empenhoId: invoice.empenhoId,
     supplierCnpj,
+    expectedCurrentUg: normalizeNsUg(invoice.nsUg) || null,
     expectedCurrentNs: normalizeNsNumber(invoice.numeroNS) || null,
+    proposedUg: proposedNs ? normalizeNsUg(invoice.nsUg) || null : null,
     proposedNs,
     source,
   };
