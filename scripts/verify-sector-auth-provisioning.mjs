@@ -26,11 +26,15 @@ requireText(server, 'createAuthUser', 'Provisionamento não cria usuário Fireba
 requireText(server, 'updateExistingAuthUserForPassword', 'Usuário Firebase existente não pode receber o provider password.');
 requireText(server, 'deleteAuthUser', 'Rollback não remove usuário Firebase recém-criado.');
 requireText(server, 'platformProvisioningLocks', 'Provisionamento não mantém locks/estado de recuperação.');
+requireText(server, 'platformProvisioningLocks/ug-', 'Provisionamento não reserva concorrência por UG.');
+requireText(server, 'platformUgIndex', 'Provisionamento não cria índice exclusivo de UG.');
 requireText(server, 'currentDocument: { exists: false }', 'Criação Firestore não protege contra duplicidade concorrente.');
 requireText(server, 'createSectorDirectory', 'Workspace, platformAccount e contador não são criados pelo servidor.');
 requireText(server, 'deleteSectorDirectory', 'Rollback do diretório Firestore está ausente.');
 requireText(shared, 'authProvider: SECTOR_AUTH_PROVIDER', 'Novo platformAccount não nasce explicitamente com provider password.');
 requireText(shared, 'firebaseUid: firebaseUid.trim()', 'Novo platformAccount não nasce pré-vinculado ao UID Firebase.');
+requireText(shared, 'isValidUnitUg(ug)', 'Novo setor não exige UG válida.');
+requireText(shared, 'workspaceId,\n    ug,\n    status', 'Novo platformAccount não recebe a UG da unidade.');
 forbidText(shared, 'password:', 'Senha não pode fazer parte dos registros persistidos do workspace/platformAccount.');
 
 forbidText(store, 'export async function createSectorWorkspace(', 'O navegador ainda possui caminho direto para criar workspace/conta.');
@@ -38,6 +42,7 @@ requireText(hook, "fetch('/api/admin/provision-sector'", 'Painel administrativo 
 requireText(hook, 'adminUser.getIdToken()', 'Painel não envia prova da sessão Firebase do fundador.');
 requireText(modal, 'initialPassword', 'Formulário não solicita senha inicial.');
 requireText(modal, 'confirmPassword', 'Formulário não confirma a senha inicial.');
+requireText(modal, 'UG da OM', 'Formulário administrativo não solicita a UG da Organização Militar.');
 requireText(access, 'if (account.firebaseUid)', 'Runtime não diferencia conta pré-vinculada do bootstrap legado.');
 requireText(env, 'FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON', 'Exemplo de ambiente não documenta a credencial administrativa server-only.');
 
@@ -51,7 +56,7 @@ if (findings.length) {
   console.log('Fundador: sessão Google validada no servidor');
   console.log('Firebase Auth: criação/reatribuição de senha server-side');
   console.log('Senha: nunca persistida no Firestore');
-  console.log('platformAccount: provider=password + firebaseUid no provisionamento');
+  console.log('platformAccount: provider=password + firebaseUid + UG no provisionamento');
   console.log('Duplicidade: protegida por locks e precondições Firestore');
   console.log('Rollback: Auth + diretório com marcador de recuperação');
   console.log('Usuário Firebase existente: reutilizado quando autorizado pelo fundador');
