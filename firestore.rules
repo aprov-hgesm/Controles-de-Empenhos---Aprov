@@ -464,6 +464,84 @@ service cloud.firestore {
         );
     }
 
+    function empenhoDeletionLockId(empenhoId) {
+      return 'empenhoDelete_' + empenhoId;
+    }
+
+    function isEmpenhoDeletionLockId(id) {
+      return id.matches('^empenhoDelete_.+$');
+    }
+
+    function empenhoDeletionIsLockedAfter(workspaceId, empenhoId) {
+      let lockPath = /databases/$(database)/documents/workspaces/$(workspaceId)/settings/$(empenhoDeletionLockId(empenhoId));
+      return empenhoId is string
+        && existsAfter(lockPath);
+    }
+
+    function linkedEmpenhoWriteAllowedAfter(workspaceId, data) {
+      return !('empenhoId' in data)
+        || (
+          data.empenhoId is string
+          && !empenhoDeletionIsLockedAfter(workspaceId, data.empenhoId)
+        );
+    }
+
+    function validEmpenhoDeletionLockCreate(workspaceId, id) {
+      let empenhoId = request.resource.data.empenhoId;
+      let empenhoPath = /databases/$(database)/documents/workspaces/$(workspaceId)/empenhos/$(empenhoId);
+      return isEmpenhoDeletionLockId(id)
+        && request.resource.data.keys().hasOnly([
+          'id',
+          'type',
+          'workspaceId',
+          'empenhoId',
+          'correlationId',
+          'createdAt',
+          'createdBy'
+        ])
+        && request.resource.data.keys().hasAll([
+          'id',
+          'type',
+          'workspaceId',
+          'empenhoId',
+          'correlationId',
+          'createdAt',
+          'createdBy'
+        ])
+        && request.resource.data.id == id
+        && id == empenhoDeletionLockId(empenhoId)
+        && request.resource.data.type == 'empenho-deletion-lock'
+        && request.resource.data.workspaceId == workspaceId
+        && empenhoId is string
+        && empenhoId.size() > 0
+        && request.resource.data.correlationId is string
+        && request.resource.data.correlationId.size() > 0
+        && request.resource.data.createdAt is string
+        && request.resource.data.createdBy == request.auth.uid
+        && existsAfter(empenhoPath)
+        && getAfter(empenhoPath).data.id == empenhoId;
+    }
+
+    function validEmpenhoDeletionLockDelete(workspaceId, id) {
+      return isEmpenhoDeletionLockId(id)
+        && resource.data.id == id
+        && resource.data.type == 'empenho-deletion-lock'
+        && resource.data.workspaceId == workspaceId
+        && resource.data.createdBy == request.auth.uid;
+    }
+
+    function validEmpenhoLifecycleDelete(workspaceId, empenhoId) {
+      let lockId = empenhoDeletionLockId(empenhoId);
+      let lockPath = /databases/$(database)/documents/workspaces/$(workspaceId)/settings/$(lockId);
+      return exists(lockPath)
+        && get(lockPath).data.id == lockId
+        && get(lockPath).data.type == 'empenho-deletion-lock'
+        && get(lockPath).data.workspaceId == workspaceId
+        && get(lockPath).data.empenhoId == empenhoId
+        && get(lockPath).data.createdBy == request.auth.uid
+        && !existsAfter(lockPath);
+    }
+
     function invoiceHasControlledNs(data) {
       return 'numeroNS' in data
         && isValidNsNumber(data.numeroNS);
@@ -649,6 +727,8 @@ service cloud.firestore {
 
     function validInvoiceCreate(workspaceId, id) {
       return invoiceNsFieldIsValid(request.resource.data)
+        && request.resource.data.empenhoId is string
+        && !empenhoDeletionIsLockedAfter(workspaceId, request.resource.data.empenhoId)
         && (
           !invoiceHasControlledNs(request.resource.data)
           || (
@@ -1040,6 +1120,7 @@ service cloud.firestore {
         'invoice.identity_migrate',
         'invoice.delete',
         'invoice.bulk_delete',
+        'empenho.delete',
         'supplier_cnpj.migrate',
         'sector.create',
         'sector.profile_update',
@@ -1245,12 +1326,16 @@ service cloud.firestore {
       allow create: if canAccessWorkspace(workspaceId)
         && empenhoCnpjCreateIsValid(request.resource.data);
       allow update: if canAccessWorkspace(workspaceId)
+        && !empenhoDeletionIsLockedAfter(workspaceId, id)
         && empenhoCnpjUpdateIsValid();
-      allow delete: if canAccessWorkspace(workspaceId);
+      allow delete: if canAccessWorkspace(workspaceId)
+        && validEmpenhoLifecycleDelete(workspaceId, id);
     }
 
     match /workspaces/{workspaceId}/alerts/{id} {
-      allow read, write: if canAccessWorkspace(workspaceId);
+      allow read, delete: if canAccessWorkspace(workspaceId);
+      allow create, update: if canAccessWorkspace(workspaceId)
+        && linkedEmpenhoWriteAllowedAfter(workspaceId, request.resource.data);
     }
 
     match /workspaces/{workspaceId}/invoices/{id} {
@@ -1268,7 +1353,9 @@ service cloud.firestore {
     }
 
     match /workspaces/{workspaceId}/cronogramas/{id} {
-      allow read, write: if canAccessWorkspace(workspaceId);
+      allow read, delete: if canAccessWorkspace(workspaceId);
+      allow create, update: if canAccessWorkspace(workspaceId)
+        && linkedEmpenhoWriteAllowedAfter(workspaceId, request.resource.data);
     }
 
     match /workspaces/{workspaceId}/settings/termoRecebimentoCounter {
@@ -1312,12 +1399,22 @@ service cloud.firestore {
         && id != 'documentStorage'
         && canAccessWorkspace(workspaceId)
         && (
-          !isSagNsLockId(id)
-          || validSagNsLock(workspaceId, id)
+          (
+            isEmpenhoDeletionLockId(id)
+            && validEmpenhoDeletionLockCreate(workspaceId, id)
+          )
+          || (
+            !isEmpenhoDeletionLockId(id)
+            && (
+              !isSagNsLockId(id)
+              || validSagNsLock(workspaceId, id)
+            )
+          )
         );
       allow update: if id != 'termoRecebimentoCounter'
         && id != 'documentStorage'
         && canAccessWorkspace(workspaceId)
+        && !isEmpenhoDeletionLockId(id)
         && (
           !isSagNsLockId(id)
           || validSagNsLockUpdate(workspaceId, id)
@@ -1326,8 +1423,17 @@ service cloud.firestore {
         && id != 'documentStorage'
         && canAccessWorkspace(workspaceId)
         && (
-          !isSagNsLockId(id)
-          || validSagNsLockDelete(workspaceId, id)
+          (
+            isEmpenhoDeletionLockId(id)
+            && validEmpenhoDeletionLockDelete(workspaceId, id)
+          )
+          || (
+            !isEmpenhoDeletionLockId(id)
+            && (
+              !isSagNsLockId(id)
+              || validSagNsLockDelete(workspaceId, id)
+            )
+          )
         );
     }
 

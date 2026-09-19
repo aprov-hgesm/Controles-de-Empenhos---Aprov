@@ -14,6 +14,10 @@ import {
   commitInvoiceReceiptLifecycle,
 } from './nsIntegrityService';
 import {
+  commitEmpenhoDeletionLifecycle,
+  type CommitEmpenhoDeletionResult,
+} from './empenhoDeletionService';
+import {
   getCurrentOperationalScope,
   getOperationalCollectionPath,
   getOperationalDocumentPath,
@@ -59,14 +63,11 @@ export async function saveEmpenho(userId: string, empenho: Empenho): Promise<voi
   }
 }
 
-export async function removeEmpenho(userId: string, id: string): Promise<void> {
-  const scope = getCurrentOperationalScope(userId);
-  const path = getOperationalDocumentPath(scope, 'empenhos', id);
-  try {
-    await deleteDoc(operationalDocRef(scope, 'empenhos', id));
-  } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, path);
-  }
+export async function removeEmpenho(
+  userId: string,
+  id: string
+): Promise<CommitEmpenhoDeletionResult> {
+  return commitEmpenhoDeletionLifecycle(userId, id);
 }
 
 // Alerts operations

@@ -4,7 +4,7 @@ import type React from 'react';
 import type { User } from 'firebase/auth';
 import jsPDF from 'jspdf';
 import type { Alert, Empenho, EmpenhoPdfDocument, Invoice, Item } from '../../../lib/types';
-import { saveAlert, saveEmpenho, removeAlert, removeEmpenho, removeInvoice } from '../../../lib/firebaseSync';
+import { saveAlert, saveEmpenho, removeEmpenho } from '../../../lib/firebaseSync';
 import { PROMPT_EXTRACAO_EMPENHO } from '../domain/empenhoHelpers';
 import { normalizeEmpenhoClassCode } from '../../../lib/empenhoClasses';
 import { getInvoiceRecordKey, isValidSupplierCnpj, normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
@@ -538,6 +538,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
      // Add alert notification about the new commitment
     const newAlert: Alert = {
       id: `alt-${Date.now()}`,
+      empenhoId: target.id,
       type: 'ATENÇÃO',
       title: `Novo Empenho Cadastrado: ${target.id}`,
       subtitle: `Fornecedor: ${target.supplier}`,
@@ -558,32 +559,44 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
 
   const handleDeleteSpecificEmpenho = async (id: string) => {
     if (!id) return;
+    if (!user) {
+      showToast('Faça login novamente antes de excluir o empenho.', 'error');
+      return;
+    }
+
     setIsDeletingEmpenho(true);
     try {
-      // 1. Remove from local state
-      setEmpenhos(prev => prev.filter(e => e.id !== id));
+      const result = await removeEmpenho(user.uid, id);
+      const deletedInvoices = new Set(result.deletedInvoiceRecordKeys);
+      const deletedAlerts = new Set(result.deletedAlertIds);
 
-      // 2. Also remove alerts and invoices associated with this empenho if any
-      const associatedInvoices = invoices.filter((inv) => inv.empenhoId === id);
-      const associatedAlerts = alerts.filter(a => (a as Alert & { empenhoId?: string }).empenhoId === id);
-      setInvoices((prev) => prev.filter((inv) => inv.empenhoId !== id));
-      setAlerts(prev => prev.filter(a => (a as Alert & { empenhoId?: string }).empenhoId !== id));
-       // 3. Remove from Firebase if user is logged in
-      if (user) {
-        await removeEmpenho(user.uid, id);
-        await Promise.all([
-          ...associatedInvoices.map((inv) => removeInvoice(user.uid, getInvoiceRecordKey(inv))),
-          ...associatedAlerts.map(a => removeAlert(user.uid, a.id))
-        ]);
-      }
-       showToast(`Empenho ${id} excluído com sucesso!`, 'info');
+      // O estado local só muda depois que a transação protegida foi confirmada.
+      // onSnapshot continuará sendo a fonte de verdade e reconciliará qualquer
+      // sessão concorrente sem janela de estado parcialmente excluído.
+      setEmpenhos((current) => current.filter((empenho) => empenho.id !== id));
+      setInvoices((current) => current.filter(
+        (invoice) => !deletedInvoices.has(getInvoiceRecordKey(invoice))
+      ));
+      setAlerts((current) => current.filter((alert) => !deletedAlerts.has(alert.id)));
+
+      showToast(
+        result.deletedInvoiceRecordKeys.length > 0
+          ? `Empenho ${id} e ${result.deletedInvoiceRecordKeys.length} NF(s) vinculada(s) excluídos com segurança.`
+          : `Empenho ${id} excluído com segurança.`,
+        'info'
+      );
       setEmpenhoToDelete(null);
       if (activeTab === 'itens_empenho') {
         setActiveTab('empenhos');
       }
     } catch (error) {
-      console.error('Erro ao excluir empenho:', error);
-      showToast('Erro ao excluir o empenho.', 'error');
+      console.error('Erro ao excluir empenho com integridade:', error);
+      showToast(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível excluir o empenho com segurança.',
+        'error'
+      );
     } finally {
       setIsDeletingEmpenho(false);
     }
