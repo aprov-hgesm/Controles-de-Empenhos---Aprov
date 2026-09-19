@@ -1753,6 +1753,39 @@ async function main() {
     })
   );
 
+  await allowed('Admin vincula UG uma única vez a cadastro legado sem UG', async () => {
+    const batch = writeBatch(admin.db);
+    batch.update(doc(admin.db, 'workspaces', 'workspace-bootstrap'), {
+      ug: '160499',
+      updatedAt: now(),
+    });
+    batch.update(doc(admin.db, 'platformAccounts', identities.bootstrap.email), {
+      ug: '160499',
+      updatedAt: now(),
+    });
+    batch.set(doc(admin.db, 'platformUgIndex', '160499'), {
+      ug: '160499',
+      workspaceId: 'workspace-bootstrap',
+      email: identities.bootstrap.email,
+      createdAt: now(),
+      createdBy: identities.founder.email,
+    });
+    await batch.commit();
+  });
+
+  await denied('UG já vinculada não pode ser substituída por outra UG', async () => {
+    const batch = writeBatch(admin.db);
+    batch.update(doc(admin.db, 'workspaces', 'workspace-bootstrap'), {
+      ug: '160498',
+      updatedAt: now(),
+    });
+    batch.update(doc(admin.db, 'platformAccounts', identities.bootstrap.email), {
+      ug: '160498',
+      updatedAt: now(),
+    });
+    await batch.commit();
+  });
+
   await allowed('Admin suspende workspace + conta atomicamente', async () => {
     const batch = writeBatch(admin.db);
     batch.update(doc(admin.db, 'workspaces', 'workspace-lifecycle'), {
