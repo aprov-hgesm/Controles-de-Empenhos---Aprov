@@ -213,6 +213,9 @@ jobs:
       - name: EMPROVEX brand logo lock guard
         run: npm run verify:brand-logo-lock
 
+      - name: EMPROVEX final experience guard
+        run: npm run verify:experience-finalization
+
       - name: Production build
         run: npm run build
 
