@@ -5,6 +5,7 @@ import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
 
 import { PlatformAdminView } from '../../components/admin/PlatformAdminView';
+import { usePlatformBranding } from '../../hooks/usePlatformBranding';
 import { usePlatformAdminDirectory } from '../../hooks/usePlatformAdminDirectory';
 import { auth } from '../../lib/firebase';
 import { resetActiveProfileMode, setActiveProfileMode } from '../../lib/profileMode';
@@ -13,6 +14,10 @@ import { resolveWorkspaceContext } from '../../lib/workspaceContext';
 export default function PlatformAdminPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const { customLogo } = usePlatformBranding({
+    userEmail: user?.email,
+    onNotify: () => undefined,
+  });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -63,6 +68,7 @@ export default function PlatformAdminPage() {
   return (
     <PlatformAdminView
       adminEmail={context.email}
+      customLogo={customLogo}
       workspaces={adminDirectory.directory.workspaces}
       loadingDirectory={adminDirectory.loading}
       directoryError={adminDirectory.error}
