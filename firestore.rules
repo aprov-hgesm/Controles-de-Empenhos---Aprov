@@ -120,17 +120,27 @@ service cloud.firestore {
     }
 
     function canAccessWorkspace(workspaceId) {
+      let workspace = workspaceData(workspaceId);
+      let account = workspaceAccountData(workspaceId);
       return workspaceAccountExists(workspaceId)
-        && workspaceData(workspaceId).status == 'active'
-        && workspaceAccountData(workspaceId).accountType == 'sector'
-        && workspaceAccountData(workspaceId).status == 'active'
-        && workspaceAccountData(workspaceId).workspaceId == workspaceId
-        && workspaceAccountData(workspaceId).email == workspaceData(workspaceId).authorizedEmail
-        && workspaceAndAccountUgMatch(workspaceId)
-        && operationalIdentityMatchesAccount(
-          workspaceId,
-          workspaceAccountData(workspaceId)
-        );
+        && workspace.status == 'active'
+        && account.accountType == 'sector'
+        && account.status == 'active'
+        && account.workspaceId == workspaceId
+        && account.email == workspace.authorizedEmail
+        && (
+          (
+            !('ug' in workspace)
+            && !('ug' in account)
+          )
+          || (
+            'ug' in workspace
+            && 'ug' in account
+            && isValidUnitUg(workspace.ug)
+            && workspace.ug == account.ug
+          )
+        )
+        && operationalIdentityMatchesAccount(workspaceId, account);
     }
 
     function canReadWorkspaceMetadataFromResource(workspaceId) {
@@ -502,20 +512,19 @@ service cloud.firestore {
     }
 
     function workspaceUgMatchesNs(workspaceId, ug) {
+      let workspace = workspaceData(workspaceId);
       return (
           workspaceId == 'hgesm-aprov'
           && ug == '160416'
-          && workspaceExists(workspaceId)
           && (
-            !('ug' in workspaceData(workspaceId))
-            || workspaceData(workspaceId).ug == '160416'
+            !('ug' in workspace)
+            || workspace.ug == '160416'
           )
         )
         || (
-          workspaceExists(workspaceId)
-          && 'ug' in workspaceData(workspaceId)
-          && isValidUnitUg(workspaceData(workspaceId).ug)
-          && workspaceData(workspaceId).ug == ug
+          'ug' in workspace
+          && isValidUnitUg(workspace.ug)
+          && workspace.ug == ug
         );
     }
 
@@ -523,7 +532,6 @@ service cloud.firestore {
       let lockId = sagNsLockIdForIdentity(data.nsUg, data.numeroNS);
       let lockPath = /databases/$(database)/documents/workspaces/$(workspaceId)/settings/$(lockId);
       return invoiceHasCanonicalNsIdentity(data)
-        && workspaceUgMatchesNs(workspaceId, data.nsUg)
         && data.recordKey == id
         && data.id is string
         && data.id.size() > 0
