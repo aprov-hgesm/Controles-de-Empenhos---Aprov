@@ -413,7 +413,9 @@ service cloud.firestore {
     }
 
     function invoiceIdentityChanged() {
-      return request.resource.data.recordKey != resource.data.recordKey
+      return !('recordKey' in resource.data)
+        || !('supplierCnpj' in resource.data)
+        || request.resource.data.recordKey != resource.data.recordKey
         || request.resource.data.id != resource.data.id
         || request.resource.data.empenhoId != resource.data.empenhoId
         || request.resource.data.supplierCnpj != resource.data.supplierCnpj;
