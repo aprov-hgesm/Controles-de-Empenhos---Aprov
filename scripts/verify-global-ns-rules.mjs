@@ -84,7 +84,8 @@ for (const expected of [
   'Remoção direta de NS sem liberar o lock é rejeitada',
   'Exclusão direta de NF com lock ativo é rejeitada',
   'Registro legado com NS pode reparar recordKey preservando lock legado existente',
-  'Mesmo número de NS pode ser reservado em UGs diferentes',
+  'Setor não pode reservar NS com UG diferente da UG vinculada ao workspace',
+  'Setor reserva NS usando automaticamente a UG vinculada ao workspace',
 ]) {
   requireText(security, expected, `Emulator não cobre bypass global: ${expected}`);
 }
