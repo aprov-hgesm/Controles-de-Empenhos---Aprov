@@ -1066,6 +1066,74 @@ async function main() {
   assert.equal(manualAfterRemoval.data()?.numeroNS, undefined);
   assert.equal(manualLockAfterRemoval.exists(), false);
 
+  const metadataRefreshKey = 'nf_11111111000191_metadata-refresh';
+  const metadataRefreshNs = '2026NS009202';
+  await ownerSet(`workspaces/workspace-a/invoices/${metadataRefreshKey}`, {
+    id: 'META-OLD',
+    recordKey: metadataRefreshKey,
+    empenhoId: sagEmpenhoId,
+    supplier: 'Fornecedor SAG',
+    supplierCnpj: sagSupplierCnpj,
+    issueDate: '2026-01-17',
+    items: [],
+    totalValue: 190,
+  });
+  await reserveSagNs(
+    sessionA.db,
+    sessionA.user.uid,
+    'workspace-a',
+    metadataRefreshKey,
+    'META-OLD',
+    sagEmpenhoId,
+    sagSupplierCnpj,
+    metadataRefreshNs
+  );
+  const metadataRefreshLockRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'settings',
+    sagLockId(metadataRefreshNs)
+  );
+
+  await allowed('Mesmo recordKey pode atualizar metadados do lock somente junto da NF coerente', () =>
+    runTransaction(sessionA.db, async (transaction) => {
+      const invoiceRef = doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'invoices',
+        metadataRefreshKey
+      );
+      const [invoiceSnapshot, lockSnapshot] = await Promise.all([
+        transaction.get(invoiceRef),
+        transaction.get(metadataRefreshLockRef),
+      ]);
+      assert.equal(invoiceSnapshot.exists(), true);
+      assert.equal(lockSnapshot.exists(), true);
+
+      transaction.set(
+        invoiceRef,
+        { ...invoiceSnapshot.data(), id: 'META-NEW' },
+        { merge: false }
+      );
+      transaction.set(
+        metadataRefreshLockRef,
+        {
+          ...lockSnapshot.data(),
+          invoiceId: 'META-NEW',
+          updatedAt: now(),
+          updatedBy: sessionA.user.uid,
+        },
+        { merge: true }
+      );
+    })
+  );
+
+  const metadataRefreshLock = await getDoc(metadataRefreshLockRef);
+  assert.equal(metadataRefreshLock.data()?.invoiceRecordKey, metadataRefreshKey);
+  assert.equal(metadataRefreshLock.data()?.invoiceId, 'META-NEW');
+
   console.log('\nIsolamento do Google Drive / documentStorage');
   const validDriveSettings = {
     provider: 'google-drive',
