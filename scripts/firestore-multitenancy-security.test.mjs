@@ -1555,39 +1555,48 @@ async function main() {
 
   console.log('\nFormato estrutural do CNPJ alfanumérico');
   await allowed('Empenho aceita CNPJ alfanumérico oficial em forma canônica', () =>
-    ownerSet('workspaces/workspace-a/empenhos/2026NE-CNPJ-ALFA', {
-      id: '2026NE-CNPJ-ALFA',
-      supplier: 'Fornecedor Alfa',
-      supplierCnpj: '00000000E08G12',
-      description: 'CNPJ alfanumérico',
-      date: '2026-09-19',
-      status: 'Ativo',
-      items: [],
-    })
+    setDoc(
+      doc(sessionA.db, 'workspaces', 'workspace-a', 'empenhos', '2026NE-CNPJ-ALFA'),
+      {
+        id: '2026NE-CNPJ-ALFA',
+        supplier: 'Fornecedor Alfa',
+        supplierCnpj: '00000000E08G12',
+        description: 'CNPJ alfanumérico',
+        date: '2026-09-19',
+        status: 'Ativo',
+        items: [],
+      }
+    )
   );
 
   await denied('Empenho rejeita letras nas duas posições de DV do CNPJ', () =>
-    ownerSet('workspaces/workspace-a/empenhos/2026NE-CNPJ-DV-ALFA', {
-      id: '2026NE-CNPJ-DV-ALFA',
-      supplier: 'Fornecedor Inválido',
-      supplierCnpj: '00000000E08GXY',
-      description: 'DV inválido estruturalmente',
-      date: '2026-09-19',
-      status: 'Ativo',
-      items: [],
-    })
+    setDoc(
+      doc(sessionA.db, 'workspaces', 'workspace-a', 'empenhos', '2026NE-CNPJ-DV-ALFA'),
+      {
+        id: '2026NE-CNPJ-DV-ALFA',
+        supplier: 'Fornecedor Inválido',
+        supplierCnpj: '00000000E08GXY',
+        description: 'DV inválido estruturalmente',
+        date: '2026-09-19',
+        status: 'Ativo',
+        items: [],
+      }
+    )
   );
 
   await denied('Empenho rejeita CNPJ com caractere fora do alfabeto oficial', () =>
-    ownerSet('workspaces/workspace-a/empenhos/2026NE-CNPJ-SHAPE', {
-      id: '2026NE-CNPJ-SHAPE',
-      supplier: 'Fornecedor Inválido',
-      supplierCnpj: '00000000E08_12',
-      description: 'Forma inválida',
-      date: '2026-09-19',
-      status: 'Ativo',
-      items: [],
-    })
+    setDoc(
+      doc(sessionA.db, 'workspaces', 'workspace-a', 'empenhos', '2026NE-CNPJ-SHAPE'),
+      {
+        id: '2026NE-CNPJ-SHAPE',
+        supplier: 'Fornecedor Inválido',
+        supplierCnpj: '00000000E08_12',
+        description: 'Forma inválida',
+        date: '2026-09-19',
+        status: 'Ativo',
+        items: [],
+      }
+    )
   );
 
   console.log('\nIsolamento do Google Drive / documentStorage');
