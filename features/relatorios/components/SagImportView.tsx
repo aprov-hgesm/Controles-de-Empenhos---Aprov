@@ -915,17 +915,27 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
                 <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
                   <div>
                     <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.18em] text-indigo-600">
-                      Bloco 9 · motor determinístico
+                      Diagnóstico técnico
                     </p>
                     <h4 className="mt-1 text-base font-black text-[#0b1c30]">Conciliação CNPJ → NF → NE</h4>
                     <p className="mt-1 max-w-3xl text-xs font-medium leading-relaxed text-gray-500">
-                      O EMPROVEX compara somente o número normalizado da NF dentro dos empenhos do CNPJ selecionado.
-                      Datas não desempatarão resultados e nenhuma correspondência aproximada é aceita.
+                      O resumo abaixo mostra o resultado do motor determinístico. Abra o diagnóstico detalhado
+                      somente quando precisar investigar uma divergência.
                     </p>
                   </div>
-                  <span className="w-fit rounded-full border border-indigo-100 bg-white px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-wider text-indigo-700">
-                    Somente leitura
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowTechnicalReconciliation((current) => !current)}
+                    aria-expanded={showTechnicalReconciliation}
+                    className="inline-flex h-9 w-fit items-center gap-2 rounded-xl border border-indigo-100 bg-white px-3 text-[10px] font-extrabold text-indigo-700 transition hover:bg-indigo-50"
+                  >
+                    {showTechnicalReconciliation ? 'Ocultar diagnóstico' : 'Ver diagnóstico técnico'}
+                    {showTechnicalReconciliation ? (
+                      <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                    )}
+                  </button>
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
@@ -945,90 +955,94 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1050px] text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-gray-100 bg-gray-50 text-[9px] uppercase tracking-wider text-gray-500">
-                      <th className="px-4 py-3 font-extrabold">NS SAG</th>
-                      <th className="px-4 py-3 font-extrabold">NF SAG</th>
-                      <th className="px-4 py-3 font-extrabold">Resultado</th>
-                      <th className="px-4 py-3 font-extrabold">NF EMPROVEX</th>
-                      <th className="px-4 py-3 font-extrabold">NE vinculada</th>
-                      <th className="px-4 py-3 font-extrabold">NS atual</th>
-                      <th className="px-4 py-3 font-extrabold">Conferência</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {reconciliation.items.map((item, index) => {
-                      const meta = RECONCILIATION_STATUS_META[item.status];
-                      return (
-                        <tr key={`${item.record.ns}-${index}`} className="align-top hover:bg-gray-50/60">
-                          <td className="px-4 py-3 font-mono text-[10px] font-black text-indigo-700">
-                            {item.record.ns}
-                          </td>
-                          <td className="px-4 py-3 font-black text-[#00288e]">
-                            {item.record.nf_number_raw ? `NF ${item.record.nf_number_raw}` : '—'}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`inline-flex rounded-md border px-2 py-1 text-[9px] font-extrabold ${meta.className}`}>
-                              {meta.label}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 font-semibold text-gray-700">
-                            {item.invoice ? `NF ${item.invoice.invoiceId}` : (
-                              item.candidates.length > 0
-                                ? `${item.candidates.length} candidata(s)`
-                                : '—'
-                            )}
-                          </td>
-                          <td className="px-4 py-3 font-mono text-[10px] font-bold text-gray-600">
-                            {item.invoice?.empenhoId || '—'}
-                          </td>
-                          <td className="px-4 py-3">
-                            {item.invoice?.currentNs ? (
-                              <span className="rounded-md border border-indigo-100 bg-indigo-50 px-2 py-1 font-mono text-[9px] font-bold text-indigo-700">
-                                {item.invoice.currentNs}
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-semibold text-gray-400">Sem NS</span>
-                            )}
-                          </td>
-                          <td className="max-w-sm px-4 py-3">
-                            {item.issues.length > 0 ? (
-                              <div className="space-y-1.5">
-                                {item.issues.map((reconciliationIssue, issueIndex) => (
-                                  <p
-                                    key={`${reconciliationIssue.code}-${issueIndex}`}
-                                    className={`text-[10px] font-semibold leading-relaxed ${
-                                      reconciliationIssue.severity === 'blocker'
-                                        ? 'text-rose-700'
-                                        : 'text-amber-700'
-                                    }`}
-                                  >
-                                    {reconciliationIssue.message}
-                                  </p>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700">
-                                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                                Número da NF único no CNPJ
-                              </span>
-                            )}
-                          </td>
+              {showTechnicalReconciliation ? (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[1050px] text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-gray-100 bg-gray-50 text-[9px] uppercase tracking-wider text-gray-500">
+                          <th className="px-4 py-3 font-extrabold">NS SAG</th>
+                          <th className="px-4 py-3 font-extrabold">NF SAG</th>
+                          <th className="px-4 py-3 font-extrabold">Resultado</th>
+                          <th className="px-4 py-3 font-extrabold">NF EMPROVEX</th>
+                          <th className="px-4 py-3 font-extrabold">NE vinculada</th>
+                          <th className="px-4 py-3 font-extrabold">NS atual</th>
+                          <th className="px-4 py-3 font-extrabold">Conferência</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {reconciliation.items.map((item, index) => {
+                          const meta = RECONCILIATION_STATUS_META[item.status];
+                          return (
+                            <tr key={`${item.record.ns}-${index}`} className="align-top hover:bg-gray-50/60">
+                              <td className="px-4 py-3 font-mono text-[10px] font-black text-indigo-700">
+                                {item.record.ns}
+                              </td>
+                              <td className="px-4 py-3 font-black text-[#00288e]">
+                                {item.record.nf_number_raw ? `NF ${item.record.nf_number_raw}` : '—'}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`inline-flex rounded-md border px-2 py-1 text-[9px] font-extrabold ${meta.className}`}>
+                                  {meta.label}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 font-semibold text-gray-700">
+                                {item.invoice ? `NF ${item.invoice.invoiceId}` : (
+                                  item.candidates.length > 0
+                                    ? `${item.candidates.length} candidata(s)`
+                                    : '—'
+                                )}
+                              </td>
+                              <td className="px-4 py-3 font-mono text-[10px] font-bold text-gray-600">
+                                {item.invoice?.empenhoId || '—'}
+                              </td>
+                              <td className="px-4 py-3">
+                                {item.invoice?.currentNs ? (
+                                  <span className="rounded-md border border-indigo-100 bg-indigo-50 px-2 py-1 font-mono text-[9px] font-bold text-indigo-700">
+                                    {item.invoice.currentNs}
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-semibold text-gray-400">Sem NS</span>
+                                )}
+                              </td>
+                              <td className="max-w-sm px-4 py-3">
+                                {item.issues.length > 0 ? (
+                                  <div className="space-y-1.5">
+                                    {item.issues.map((reconciliationIssue, issueIndex) => (
+                                      <p
+                                        key={`${reconciliationIssue.code}-${issueIndex}`}
+                                        className={`text-[10px] font-semibold leading-relaxed ${
+                                          reconciliationIssue.severity === 'blocker'
+                                            ? 'text-rose-700'
+                                            : 'text-amber-700'
+                                        }`}
+                                      >
+                                        {reconciliationIssue.message}
+                                      </p>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700">
+                                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                                    Número da NF único no CNPJ
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
 
-              <div className="border-t border-indigo-100 bg-indigo-50/30 px-5 py-4">
-                <p className="text-[10px] font-semibold leading-relaxed text-indigo-800">
-                  Correspondência segura significa apenas que o motor encontrou uma única NF pelo número normalizado dentro do CNPJ.
-                  A gravação continuará bloqueada até a prévia e confirmação humana dos próximos blocos.
-                </p>
-              </div>
+                  <div className="border-t border-indigo-100 bg-indigo-50/30 px-5 py-4">
+                    <p className="text-[10px] font-semibold leading-relaxed text-indigo-800">
+                      O diagnóstico técnico é somente leitura. A decisão de escrita continua sendo determinada pela
+                      prévia de aplicação e pela confirmação humana.
+                    </p>
+                  </div>
+                </>
+              ) : null}
             </section>
           ) : null}
 
