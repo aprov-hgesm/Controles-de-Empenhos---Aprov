@@ -101,7 +101,11 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
           <RelatorioPorFornecedorView empenhos={context.empenhos} invoices={context.invoices} />
         )}
         {activeSubTab === 'sag' && (
-          <SagImportView empenhos={context.empenhos} invoices={context.invoices} />
+          <SagImportView
+            empenhos={context.empenhos}
+            invoices={context.invoices}
+            onApplySagNsImport={context.handleApplySagNsImport}
+          />
         )}
       </section>
     </div>
