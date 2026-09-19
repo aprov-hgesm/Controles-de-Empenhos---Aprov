@@ -42,7 +42,7 @@ export type AuditEntityType =
 export type AuditScalar = string | number | boolean | null;
 export type AuditValue =
   | AuditScalar
-  | AuditScalar[]
+  | AuditValue[]
   | { [key: string]: AuditValue };
 
 export type AuditMap = Record<string, AuditValue>;
@@ -78,7 +78,7 @@ function sanitizeAuditValue(value: unknown): AuditValue | undefined {
     const sanitized = value
       .map((entry) => sanitizeAuditValue(entry))
       .filter((entry): entry is AuditValue => entry !== undefined);
-    return sanitized as AuditValue;
+    return sanitized;
   }
 
   if (typeof value === 'object' && value) {
