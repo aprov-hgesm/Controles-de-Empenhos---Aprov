@@ -2304,6 +2304,91 @@ async function main() {
     }
   );
 
+  await ownerSet('workspaces/workspace-lifecycle/empenhos/delete-e2e', {
+    id: 'delete-e2e',
+    supplier: 'Fornecedor E2E Delete',
+    supplierCnpj: '11111111000191',
+    description: 'Empenho para exclusão protegida E2E',
+    date: '2026-09-03',
+    status: 'Ativo',
+    classification: 'QR',
+    pregao: '90003/2026',
+    items: [
+      {
+        id: '1',
+        name: 'Item E2E Delete',
+        unit: 'UN',
+        quantity: 2,
+        unitPrice: 25,
+        received: 1,
+      },
+    ],
+    userId: identities.lifecycle.uid,
+  });
+
+  await ownerSet(
+    'workspaces/workspace-lifecycle/invoices/nf_11111111000191_3003',
+    {
+      id: '3003',
+      empenhoId: 'delete-e2e',
+      issueDate: '2026-06-17',
+      items: [
+        {
+          itemId: '1',
+          quantity: 1,
+          unitPrice: 25,
+          subtotal: 25,
+        },
+      ],
+      totalValue: 25,
+      supplier: 'Fornecedor E2E Delete',
+      supplierCnpj: '11111111000191',
+      recordKey: 'nf_11111111000191_3003',
+      registeredAt: browserFixtureTimestamp,
+      numeroNS: '2026NS008888',
+      nsUg: '160416',
+      userId: identities.lifecycle.uid,
+    }
+  );
+
+  await ownerSet(
+    'workspaces/workspace-lifecycle/settings/sagNsLock_160416_2026NS008888',
+    {
+      id: 'sagNsLock_160416_2026NS008888',
+      type: 'sag-ns-lock',
+      workspaceId: 'workspace-lifecycle',
+      ug: '160416',
+      numeroNS: '2026NS008888',
+      invoiceRecordKey: 'nf_11111111000191_3003',
+      invoiceId: '3003',
+      empenhoId: 'delete-e2e',
+      supplierCnpj: '11111111000191',
+      createdAt: browserFixtureTimestamp,
+      updatedAt: browserFixtureTimestamp,
+      updatedBy: identities.lifecycle.uid,
+    }
+  );
+
+  await ownerSet('workspaces/workspace-lifecycle/alerts/alert-delete-e2e', {
+    id: 'alert-delete-e2e',
+    empenhoId: 'delete-e2e',
+    type: 'ATENÇÃO',
+    title: 'Alerta E2E Delete',
+    subtitle: 'Fornecedor E2E Delete',
+    description: 'Vínculo estruturado para exclusão protegida.',
+    date: 'Agora',
+    userId: identities.lifecycle.uid,
+  });
+
+  await ownerSet('workspaces/workspace-lifecycle/cronogramas/cronograma-delete-e2e', {
+    id: 'cronograma-delete-e2e',
+    empenhoId: 'delete-e2e',
+    dataCriacao: '2026-09-03',
+    colunas: [],
+    distribuicao: {},
+    userId: identities.lifecycle.uid,
+  });
+
   await ownerSet('workspaces/workspace-b/empenhos/sample', {
     id: 'sample',
     supplier: 'Fornecedor E2E Isolado B',
