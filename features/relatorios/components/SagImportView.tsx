@@ -7,14 +7,18 @@ import {
   Building2,
   Ban,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   ClipboardCopy,
   ClipboardPaste,
   ExternalLink,
   FileJson,
   Eye,
   Landmark,
+  ListFilter,
   MinusCircle,
   PencilLine,
+  RefreshCw,
   Search,
   ShieldCheck,
   X,
@@ -52,6 +56,7 @@ interface SagImportViewProps {
 }
 
 type CopyState = 'idle' | 'copied' | 'error';
+type PreviewFilter = 'all' | SagNsApplicationDecision;
 
 const APPLICATION_DECISION_META: Record<
   SagNsApplicationDecision,
@@ -157,6 +162,9 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
   const [applyError, setApplyError] = React.useState('');
   const [confirmationFingerprint, setConfirmationFingerprint] = React.useState('');
   const [lastImportResult, setLastImportResult] = React.useState<SagNsImportCommitResult | null>(null);
+  const [supplierPickerOpen, setSupplierPickerOpen] = React.useState(true);
+  const [showTechnicalReconciliation, setShowTechnicalReconciliation] = React.useState(false);
+  const [previewFilter, setPreviewFilter] = React.useState<PreviewFilter>('all');
 
   const selectedSupplier = React.useMemo(
     () => supplierReports.find((supplier) => supplier.cnpj === selectedCnpj) || null,
@@ -210,6 +218,18 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
     () => (applicationPreview ? buildSagNsApplicationFingerprint(applicationPreview) : ''),
     [applicationPreview]
   );
+  const filteredPreviewItems = React.useMemo(() => {
+    if (!applicationPreview) return [];
+    if (previewFilter === 'all') return applicationPreview.items;
+    return applicationPreview.items.filter((item) => item.decision === previewFilter);
+  }, [applicationPreview, previewFilter]);
+  const activeFlowStep = !selectedSupplier
+    ? 1
+    : !jsonText.trim()
+      ? 2
+      : !validation?.ok
+        ? 3
+        : 4;
 
   const handleSelectSupplier = (cnpj: string) => {
     setSelectedCnpj(cnpj);
@@ -221,6 +241,9 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
     setApplyError('');
     setConfirmationFingerprint('');
     setLastImportResult(null);
+    setSupplierPickerOpen(false);
+    setShowTechnicalReconciliation(false);
+    setPreviewFilter('all');
   };
 
   const handleCopyPrompt = async () => {
@@ -259,6 +282,8 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
     setApplyError('');
     setConfirmationFingerprint('');
     setLastImportResult(null);
+    setShowTechnicalReconciliation(false);
+    setPreviewFilter('all');
   };
 
   const handleOpenApplyConfirmation = () => {
@@ -313,6 +338,11 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
   };
 
   const previewChanges = applicationPreview?.items.filter((item) => item.decision === 'change') || [];
+
+  const handleStartAnotherImport = () => {
+    resetJson();
+    setSupplierPickerOpen(false);
+  };
 
   return (
     <div className="space-y-6">
