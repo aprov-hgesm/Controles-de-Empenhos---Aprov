@@ -120,6 +120,12 @@ jobs:
       - name: Report empenho card selector guard
         run: npm run verify:report-empenho-selector
 
+      - name: Reporting period tests
+        run: npm run test:reporting-period
+
+      - name: Report empenho detail guard
+        run: npm run verify:report-empenho-detail
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 

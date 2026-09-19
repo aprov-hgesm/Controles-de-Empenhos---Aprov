@@ -10,6 +10,12 @@ import { ensureTermoRecebimentoAssignment } from '../../../lib/firebaseSync';
 import { getInvoiceRecordKey } from '../../../lib/invoiceIdentity';
 import { fetchEmpenhoPdfBlob } from '../../../lib/empenhoDocuments';
 import { fetchInvoicePdfBlob } from '../../../lib/invoiceDocuments';
+import {
+  filterInvoicesByReportingPeriod,
+  formatReportingPeriodLabel,
+  isReportingPeriodValid,
+  type ReportingPeriod,
+} from '../../../lib/reportingPeriod';
 
 type ToastType='success'|'error'|'info';
 interface DocumentActionsContext {
@@ -556,17 +562,29 @@ export function useDocumentActions(context:DocumentActionsContext){
     }
   };
 
-  const handleGenerateEmpenhoReportPDF = (emp: Empenho, action: 'download' | 'print' = 'download') => {
+  const handleGenerateEmpenhoReportPDF = (
+    emp: Empenho,
+    action: 'download' | 'print' = 'download',
+    reportingPeriod: ReportingPeriod = {}
+  ) => {
     if (!emp) {
       showToast('Nenhum empenho selecionado para exportação.', 'error');
       return;
     }
-     const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    if (!isReportingPeriodValid(reportingPeriod)) {
+      showToast('O período do relatório é inválido. Revise as datas inicial e final.', 'error');
+      return;
+    }
+
+    const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
     const empRequiresTR = classRequiresTermoRecebimento(emp.classification, empenhoClasses);
-    const pdfInvoices = invoices.filter(inv => inv.empenhoId === emp.id);
-    const pdfTotalReceivedNfe = pdfInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
-    const saldoRestante = Math.max(0, totalCommitted - pdfTotalReceivedNfe);
-    const pctExec = totalCommitted > 0 ? Math.round((pdfTotalReceivedNfe / totalCommitted) * 100) : 0;
+    const allPdfInvoices = invoices.filter((inv) => inv.empenhoId === emp.id);
+    const pdfInvoices = filterInvoicesByReportingPeriod(allPdfInvoices, reportingPeriod);
+    const pdfPeriodReceivedNfe = pdfInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
+    const pdfAccumulatedReceivedNfe = allPdfInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
+    const saldoRestante = Math.max(0, totalCommitted - pdfAccumulatedReceivedNfe);
+    const pctExec = totalCommitted > 0 ? Math.round((pdfAccumulatedReceivedNfe / totalCommitted) * 100) : 0;
+    const reportingPeriodLabel = formatReportingPeriodLabel(reportingPeriod);
      // Initialize jsPDF
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -613,6 +631,13 @@ export function useDocumentActions(context:DocumentActionsContext){
     const dateStr = `Emissão do Relatório: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
     const dateWidth = doc.getTextWidth(dateStr);
     doc.text(dateStr, (pageWidth - dateWidth) / 2, yPos);
+    yPos += 3.5;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(90, 105, 130);
+    const periodStr = `Recorte de NF-e: ${reportingPeriodLabel}`;
+    const periodWidth = doc.getTextWidth(periodStr);
+    doc.text(periodStr, (pageWidth - periodWidth) / 2, yPos);
     yPos += 5;
      // 1. DADOS DO EMPENHO
     addSectionHeader('1. DADOS CADASTRAIS DO EMPENHO');
@@ -653,9 +678,9 @@ export function useDocumentActions(context:DocumentActionsContext){
     doc.setFont('helvetica', 'normal');
     doc.text(totalCommitted.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), margin + 30, yPos + 23);
      doc.setFont('helvetica', 'bold');
-    doc.text('Conciliado por NF-e:', margin + 65, yPos + 23);
+    doc.text('NF-e no recorte:', margin + 65, yPos + 23);
     doc.setFont('helvetica', 'normal');
-    doc.text(pdfTotalReceivedNfe.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), margin + 98, yPos + 23);
+    doc.text(pdfPeriodReceivedNfe.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), margin + 98, yPos + 23);
      doc.setFont('helvetica', 'bold');
     doc.text('Saldo Restante:', margin + 130, yPos + 23);
     doc.setFont('helvetica', 'normal');
@@ -717,12 +742,12 @@ export function useDocumentActions(context:DocumentActionsContext){
       yPos = 18;
     }
      // 3. NOTAS FISCAIS CADASTRADAS NO EMPENHO
-    addSectionHeader('3. NOTAS FISCAIS CADASTRADAS E CICLO DE RECEBIMENTO');
+    addSectionHeader(`3. NOTAS FISCAIS NO RECORTE — ${reportingPeriodLabel.toUpperCase()}`);
      if (pdfInvoices.length === 0) {
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(8);
       doc.setTextColor(120, 120, 120);
-      doc.text('Nenhuma nota fiscal cadastrada para este empenho até o momento.', margin, yPos);
+      doc.text(`Nenhuma nota fiscal encontrada no recorte: ${reportingPeriodLabel}.`, margin, yPos);
       yPos += 8;
     } else {
       const invoicesRows = pdfInvoices.map((inv) => {

@@ -7,6 +7,12 @@ import type { Empenho, Invoice } from '../../../lib/types';
 import { getInvoiceRecordKey } from '../../../lib/invoiceIdentity';
 import { classRequiresTermoRecebimento, type EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 import { RelatorioEmpenhoSelector } from './RelatorioEmpenhoSelector';
+import {
+  filterInvoicesByReportingPeriod,
+  formatReportingPeriodLabel,
+  isReportingPeriodValid,
+  normalizeOperationalDate,
+} from '../../../lib/reportingPeriod';
 
 export interface RelatoriosViewContext {
   editingNSId: string | null;
@@ -47,6 +53,14 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
     return classRequiresTermoRecebimento(empenho?.classification, empenhoClasses);
   };
 
+  const reportingPeriod = {
+    startDate: reportStartDate || undefined,
+    endDate: reportEndDate || undefined,
+  };
+  const reportingPeriodValid = isReportingPeriodValid(reportingPeriod);
+  const reportingPeriodLabel = formatReportingPeriodLabel(reportingPeriod);
+  const hasReportingPeriod = Boolean(reportStartDate || reportEndDate);
+
   return (
             <div className="space-y-6">
 
@@ -67,6 +81,14 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
               />
 
               <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
+                <div className="flex flex-col gap-1 pb-3">
+                  <span className="font-mono text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#00288e]">
+                    Recorte temporal das Notas Fiscais
+                  </span>
+                  <p className="text-[11px] font-medium text-gray-500">
+                    O período filtra as NFs e os indicadores do intervalo. O saldo atual do empenho continua acumulado.
+                  </p>
+                </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="mb-1.5 block text-[10px] font-extrabold uppercase tracking-wider text-gray-500">
@@ -91,6 +113,20 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                     />
                   </div>
                 </div>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3">
+                  <span className={`rounded-lg px-2.5 py-1 text-[10px] font-extrabold ${
+                    reportingPeriodValid
+                      ? 'bg-blue-50 text-[#00288e]'
+                      : 'bg-rose-50 text-rose-700'
+                  }`}>
+                    {reportingPeriodLabel}
+                  </span>
+                  {!reportingPeriodValid && (
+                    <span className="text-[10px] font-bold text-rose-600">
+                      A data inicial não pode ser posterior à data final.
+                    </span>
+                  )}
+                </div>
               </section>
 
               {/* Reconciliation Report Card */}
@@ -107,10 +143,17 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                 const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
                 const empRequiresTR = classRequiresTermoRecebimento(emp.classification, empenhoClasses);
 
-                // Get linked invoices list
-                const linkedInvoices = invoices.filter(inv => inv.empenhoId === emp.id);
-                const totalReceivedNfe = linkedInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
+                const allLinkedInvoices = invoices.filter((inv) => inv.empenhoId === emp.id);
+                const linkedInvoices = [...filterInvoicesByReportingPeriod(allLinkedInvoices, reportingPeriod)]
+                  .sort((a, b) => normalizeOperationalDate(b.issueDate).localeCompare(normalizeOperationalDate(a.issueDate)));
+                const totalReceivedNfe = allLinkedInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
+                const periodReceivedNfe = linkedInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
                 const totalPendingToReceive = Math.max(0, totalCommitted - totalReceivedNfe);
+                const invoicesWithNs = linkedInvoices.filter((inv) => Boolean(inv.numeroNS)).length;
+                const invoicesWithoutNs = linkedInvoices.length - invoicesWithNs;
+                const nsCoverage = linkedInvoices.length > 0
+                  ? Math.round((invoicesWithNs / linkedInvoices.length) * 100)
+                  : 0;
 
                 return (
                   <div className="space-y-6">
@@ -152,13 +195,38 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                           </div>
 
                           <div>
-                            <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider block">QTD. DE NOTAS FISCAIS</span>
-                            <span className="text-xl sm:text-2xl font-black text-gray-700">
-                              {linkedInvoices.length > 0 ? `0${linkedInvoices.length}` : 'Nenhuma'}
-                              <span className="text-xs font-semibold text-gray-400 ml-1.5">
-                                {linkedInvoices.length > 0 && `(NF ${linkedInvoices.map(i => i.id).join(', ')})`}
-                              </span>
+                            <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider block">
+                              NFs {hasReportingPeriod ? 'NO PERÍODO' : 'CADASTRADAS'}
                             </span>
+                            <span className="text-xl sm:text-2xl font-black text-gray-700">
+                              {linkedInvoices.length || 'Nenhuma'}
+                            </span>
+                            {hasReportingPeriod && (
+                              <span className="mt-0.5 block text-[10px] font-semibold text-gray-400">
+                                {allLinkedInvoices.length} NF(s) no empenho inteiro
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 border-t border-gray-100 pt-4 lg:grid-cols-4">
+                          <div className="rounded-xl bg-blue-50/60 px-3 py-2.5">
+                            <span className="text-[9px] font-extrabold uppercase tracking-wider text-blue-500">Valor no recorte</span>
+                            <span className="mt-0.5 block text-sm font-black text-[#00288e]">
+                              R$ {periodReceivedNfe.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <div className="rounded-xl bg-emerald-50/60 px-3 py-2.5">
+                            <span className="text-[9px] font-extrabold uppercase tracking-wider text-emerald-600">NFs com NS</span>
+                            <span className="mt-0.5 block text-sm font-black text-emerald-700">{invoicesWithNs}</span>
+                          </div>
+                          <div className={`rounded-xl px-3 py-2.5 ${invoicesWithoutNs > 0 ? 'bg-amber-50/70' : 'bg-gray-50'}`}>
+                            <span className={`text-[9px] font-extrabold uppercase tracking-wider ${invoicesWithoutNs > 0 ? 'text-amber-600' : 'text-gray-400'}`}>NFs sem NS</span>
+                            <span className={`mt-0.5 block text-sm font-black ${invoicesWithoutNs > 0 ? 'text-amber-700' : 'text-gray-500'}`}>{invoicesWithoutNs}</span>
+                          </div>
+                          <div className="rounded-xl bg-indigo-50/60 px-3 py-2.5">
+                            <span className="text-[9px] font-extrabold uppercase tracking-wider text-indigo-500">Cobertura de NS</span>
+                            <span className="mt-0.5 block text-sm font-black text-indigo-700">{nsCoverage}%</span>
                           </div>
                         </div>
                       </div>
@@ -210,7 +278,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                       <div className="p-5 border-t border-gray-100 bg-[#f8f9ff]/50 space-y-4">
                         <div className="flex justify-between items-center">
                           <h4 className="font-extrabold text-sm text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-[#00288e]" /> Notas Fiscais Cadastradas no Empenho
+                            <FileText className="w-4 h-4 text-[#00288e]" /> {hasReportingPeriod ? 'Notas Fiscais no Período' : 'Notas Fiscais Cadastradas no Empenho'}
                           </h4>
                           <span className="text-xs bg-[#e5eeff] text-[#00288e] px-2.5 py-0.5 rounded-full font-bold">
                             {linkedInvoices.length} {linkedInvoices.length === 1 ? 'Nota' : 'Notas'}
@@ -219,7 +287,11 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
 
                         {linkedInvoices.length === 0 ? (
                           <div className="p-6 bg-white rounded-xl text-center border border-dashed border-gray-200">
-                            <p className="text-xs text-gray-500 font-medium">Nenhuma nota fiscal cadastrada para este empenho até o momento.</p>
+                            <p className="text-xs text-gray-500 font-medium">
+                              {hasReportingPeriod
+                                ? `Nenhuma nota fiscal emitida em ${reportingPeriodLabel}.`
+                                : 'Nenhuma nota fiscal cadastrada para este empenho até o momento.'}
+                            </p>
                           </div>
                         ) : (
                           <div className="overflow-x-auto rounded-xl border border-gray-100 bg-white shadow-sm">
@@ -402,7 +474,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                         id="btn-download-report-pdf-main"
                         onClick={() => {
                           const emp = empenhos.find(e => e.id === reportSearch);
-                          if (emp) handleGenerateEmpenhoReportPDF(emp, 'download');
+                          if (emp) handleGenerateEmpenhoReportPDF(emp, 'download', reportingPeriod);
                         }}
                         className="px-5 py-2.5 bg-[#00288e] hover:bg-[#001e6a] text-white active:scale-95 duration-100 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-all"
                       >
@@ -412,7 +484,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                         id="btn-print-report-pdf-main"
                         onClick={() => {
                           const emp = empenhos.find(e => e.id === reportSearch);
-                          if (emp) handleGenerateEmpenhoReportPDF(emp, 'print');
+                          if (emp) handleGenerateEmpenhoReportPDF(emp, 'print', reportingPeriod);
                         }}
                         className="px-5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 active:scale-95 duration-100 rounded-xl font-bold text-xs sm:text-sm text-gray-700 flex items-center gap-2 shadow-xs transition-all"
                       >
@@ -469,8 +541,10 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                             if (!emp) return null;
                             const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
                             const empRequiresTR = classRequiresTermoRecebimento(emp.classification, empenhoClasses);
-                            const pdfInvoices = invoices.filter(inv => inv.empenhoId === emp.id);
+                            const allPdfInvoices = invoices.filter((inv) => inv.empenhoId === emp.id);
+                            const pdfInvoices = filterInvoicesByReportingPeriod(allPdfInvoices, reportingPeriod);
                             const pdfTotalReceivedNfe = pdfInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
+                            const pdfAccumulatedReceivedNfe = allPdfInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
 
                             return (
                               <div className="space-y-4">
@@ -495,12 +569,12 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                     <p className="text-sm sm:text-base font-black text-gray-800">R$ {totalCommitted.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                                   </div>
                                   <div>
-                                    <p className="font-bold text-gray-400 text-[9px]">TOTAL CONCILIADO POR NF-e</p>
+                                    <p className="font-bold text-gray-400 text-[9px]">NF-e NO RECORTE</p>
                                     <p className="text-sm sm:text-base font-black text-emerald-600">R$ {pdfTotalReceivedNfe.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                                   </div>
                                   <div className="text-right">
-                                    <p className="font-bold text-gray-400 text-[9px]">TOTAL A RECEBER</p>
-                                    <p className="text-sm sm:text-base font-black text-amber-600">R$ {Math.max(0, totalCommitted - pdfTotalReceivedNfe).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                    <p className="font-bold text-gray-400 text-[9px]">SALDO ATUAL</p>
+                                    <p className="text-sm sm:text-base font-black text-amber-600">R$ {Math.max(0, totalCommitted - pdfAccumulatedReceivedNfe).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                                   </div>
                                 </div>
 
@@ -620,7 +694,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                             id="btn-download-pdf-from-preview"
                             onClick={() => {
                               const emp = empenhos.find(e => e.id === reportSearch);
-                              if (emp) handleGenerateEmpenhoReportPDF(emp, 'download');
+                              if (emp) handleGenerateEmpenhoReportPDF(emp, 'download', reportingPeriod);
                             }}
                             className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold text-xs hover:bg-emerald-700 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
                           >
@@ -630,7 +704,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                             id="btn-print-pdf-from-preview"
                             onClick={() => {
                               const emp = empenhos.find(e => e.id === reportSearch);
-                              if (emp) handleGenerateEmpenhoReportPDF(emp, 'print');
+                              if (emp) handleGenerateEmpenhoReportPDF(emp, 'print', reportingPeriod);
                             }}
                             className="px-4 py-2 bg-[#00288e] text-white rounded-xl font-bold text-xs hover:bg-[#1e40af] transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
                           >
