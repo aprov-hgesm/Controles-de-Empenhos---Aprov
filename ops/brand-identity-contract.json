@@ -1,0 +1,154 @@
+{
+  "contractVersion": "emprovex_brand_identity_v1",
+  "status": "frozen",
+  "block": 0,
+  "runtimeBehaviorChange": false,
+  "scope": [
+    "global notifications",
+    "platform administration visual shell",
+    "global EMPROVEX logo identity",
+    "branding mutation boundary"
+  ],
+  "authoritativeBranding": {
+    "firestoreDocument": "settings/global",
+    "logoField": "logo",
+    "preLoginReadable": true,
+    "targetMutationPolicy": "read_only_runtime"
+  },
+  "invariants": [
+    {
+      "id": "BRAND-001",
+      "title": "Identidade visual única",
+      "rule": "Login, área operacional e Administração devem pertencer à mesma família visual EMPROVEX, preservando contexto e hierarquia próprios de cada superfície."
+    },
+    {
+      "id": "BRAND-002",
+      "title": "Fonte única do logotipo",
+      "rule": "O logotipo oficial deve ser resolvido a partir da configuração global da plataforma e reutilizado em todas as superfícies que exibem a marca."
+    },
+    {
+      "id": "BRAND-003",
+      "title": "Logotipo não editável no runtime",
+      "rule": "Após o bloqueio planejado, usuários comuns e a conta fundadora não devem receber controles de upload, troca ou remoção do logotipo pela aplicação."
+    },
+    {
+      "id": "BRAND-004",
+      "title": "Administração usa a marca oficial",
+      "rule": "A Administração não deve manter marca paralela, placeholder EMP ou símbolo alternativo quando o logotipo oficial estiver disponível."
+    },
+    {
+      "id": "BRAND-005",
+      "title": "Feedback visual compartilhado",
+      "rule": "Mensagens transitórias de sucesso, erro, atenção e informação devem convergir para um componente visual compartilhado, em vez de padrões independentes por área."
+    },
+    {
+      "id": "BRAND-006",
+      "title": "Semântica preservada",
+      "rule": "A unificação estética não pode eliminar distinções semânticas entre sucesso, erro, atenção e informação, nem depender somente de cor."
+    },
+    {
+      "id": "BRAND-007",
+      "title": "Acessibilidade preservada",
+      "rule": "Notificações e superfícies administrativas devem preservar foco, aria-live ou role apropriado, contraste e preferências de movimento reduzido."
+    },
+    {
+      "id": "BRAND-008",
+      "title": "Refatoração estética sem mudança de autorização",
+      "rule": "Mudanças visuais deste plano não podem ampliar permissões, alterar provedores de autenticação, perfis, isolamento multi-tenant ou acesso operacional."
+    },
+    {
+      "id": "BRAND-009",
+      "title": "Administração permanece isolada da operação",
+      "rule": "A modernização da Administração não pode introduzir subscriptions ou leituras de empenhos, notas fiscais, comissões ou cronogramas de workspaces externos."
+    },
+    {
+      "id": "BRAND-010",
+      "title": "Mudança de marca exige manutenção deliberada",
+      "rule": "Depois do bloqueio do logo, qualquer troca futura da identidade deve exigir alteração deliberada de manutenção ou desenvolvimento, não uma ação casual de interface."
+    }
+  ],
+  "baseline": {
+    "notification": {
+      "component": "components/layout/ToastNotification.tsx",
+      "currentVisualState": "light semantic surfaces",
+      "usedByOperationalApp": true,
+      "usedByLogin": true,
+      "adminUsesSameFeedbackSystem": false
+    },
+    "administration": {
+      "route": "app/admin/page.tsx",
+      "view": "components/admin/PlatformAdminView.tsx",
+      "currentBrandPlaceholder": "EMP",
+      "currentVisualState": "legacy dark admin surface"
+    },
+    "logo": {
+      "hook": "hooks/usePlatformBranding.ts",
+      "shellComponent": "components/layout/chrome/AppShellLogo.tsx",
+      "currentUploadControl": true,
+      "currentRemoveControl": true,
+      "currentFirestoreWriteAllowedForFounder": true
+    }
+  },
+  "knownGaps": [
+    {
+      "id": "GAP-BRAND-001",
+      "severity": "medium",
+      "description": "Toast global ainda utiliza superfícies claras que destoam da linguagem cinematográfica do login."
+    },
+    {
+      "id": "GAP-BRAND-002",
+      "severity": "medium",
+      "description": "Administração mantém linguagem visual anterior e placeholder textual EMP em vez da marca oficial."
+    },
+    {
+      "id": "GAP-BRAND-003",
+      "severity": "high",
+      "description": "AppShellLogo ainda expõe upload e remoção do logotipo."
+    },
+    {
+      "id": "GAP-BRAND-004",
+      "severity": "high",
+      "description": "usePlatformBranding ainda expõe handlers de escrita e settings/global ainda aceita escrita da conta fundadora."
+    },
+    {
+      "id": "GAP-BRAND-005",
+      "severity": "medium",
+      "description": "Administração usa mensagens e confirmações próprias em vez do sistema visual compartilhado."
+    }
+  ],
+  "plannedResolution": {
+    "block1": [
+      "BRAND-005",
+      "BRAND-006",
+      "BRAND-007",
+      "GAP-BRAND-001"
+    ],
+    "block2": [
+      "BRAND-001",
+      "BRAND-004",
+      "BRAND-009",
+      "GAP-BRAND-002",
+      "GAP-BRAND-005"
+    ],
+    "block3": [
+      "BRAND-002",
+      "BRAND-003",
+      "BRAND-010",
+      "GAP-BRAND-003",
+      "GAP-BRAND-004"
+    ],
+    "block4": [
+      "BRAND-007",
+      "BRAND-008"
+    ]
+  },
+  "block0NonGoals": [
+    "alterar componentes de runtime",
+    "alterar layout ou CSS",
+    "alterar autenticação",
+    "alterar Firestore Rules",
+    "remover controles de logo",
+    "trocar mensagens administrativas",
+    "mudar comportamento de login ou logout"
+  ]
+}
