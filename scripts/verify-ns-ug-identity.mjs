@@ -16,6 +16,9 @@ const types = read('lib/types.ts');
 const sagPlan = read('lib/sagNsPersistencePlan.ts');
 const sagPersistence = read('lib/sagNsPersistence.ts');
 const sagActions = read('features/relatorios/hooks/useSagNsImportActions.ts');
+const sagReconciliation = read('lib/sagNsReconciliation.ts');
+const rules = read('firestore.rules');
+const security = read('scripts/firestore-multitenancy-security.test.mjs');
 const manual = read('features/notas-fiscais/hooks/useNotasFiscaisActions.ts');
 const docs = read('docs/NS_UG_IDENTITY_BLOCK_7.md');
 
@@ -36,7 +39,12 @@ requireText(service, 'nsUg: proposedUg', 'Serviço não persiste UG junto da NS.
 requireText(service, 'nsUg: deleteField()', 'Serviço não remove UG junto da NS.');
 requireText(sagPlan, 'proposedUg', 'Plano SAG não carrega UG para a persistência.');
 requireText(sagPersistence, 'proposedUg: change.proposedUg', 'Persistência SAG não delega UG ao serviço central.');
-requireText(sagActions, 'payload.ug', 'Ação SAG não usa a UG validada do payload.');
+requireText(sagReconciliation, 'normalizeSagUg(payload.ug)', 'Conciliação SAG não usa a UG validada do payload.');
+requireText(sagActions, 'proposedIdentities', 'Ação SAG não restringe proprietários pela identidade UG + NS.');
+requireText(rules, 'sagNsLockIdForIdentity(ug, numeroNS)', 'Rules não derivam o lock canônico de UG + NS.');
+requireText(rules, 'invoiceHasCanonicalNsIdentity', 'Rules não distinguem identidade canônica da legada.');
+requireText(rules, 'validLegacySagNsLockUpdate', 'Rules perderam a compatibilidade controlada de lock legado.');
+requireText(security, 'Mesmo número de NS pode ser reservado em UGs diferentes', 'Emulator não prova isolamento por UG.');
 requireText(manual, 'setTempNSUgValue', 'Edição manual não oferece estado para UG da NS.');
 requireText(manual, 'isValidNsUg', 'Edição manual não valida UG antes da gravação.');
 requireText(docs, 'workspaceId + UG emitente + numeroNS', 'Documentação perdeu a identidade canônica.');
