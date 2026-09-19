@@ -247,6 +247,7 @@ test('reconhece NS idêntica já cadastrada como already_registered', () => {
         empenhoId: '2026NE000001',
         cnpj: CNPJ_A,
         numeroNS: '2026 NS 000123',
+        nsUg: '160416',
       }),
     ]
   );
