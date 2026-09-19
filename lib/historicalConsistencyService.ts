@@ -1,8 +1,11 @@
 import {
   collection,
   deleteField,
+  documentId,
   getDocs,
+  query,
   runTransaction,
+  where,
 } from 'firebase/firestore';
 
 import { auth, db } from './firebase';
@@ -61,7 +64,13 @@ export async function scanHistoricalConsistency(): Promise<HistoricalConsistency
   const [empenhoSnapshot, invoiceSnapshot, settingsSnapshot] = await Promise.all([
     getDocs(operationalCollectionRef(scope, 'empenhos')),
     getDocs(operationalCollectionRef(scope, 'invoices')),
-    getDocs(collection(db, getOperationalSettingsCollectionPath(scope))),
+    getDocs(
+      query(
+        collection(db, getOperationalSettingsCollectionPath(scope)),
+        where(documentId(), '>=', 'sagNsLock_'),
+        where(documentId(), '<', 'sagNsLock_\uf8ff')
+      )
+    ),
   ]);
 
   return analyzeHistoricalConsistency({
