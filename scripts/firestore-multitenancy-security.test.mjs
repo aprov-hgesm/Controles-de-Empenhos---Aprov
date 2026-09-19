@@ -271,6 +271,53 @@ async function seedWorkspace(
   });
 }
 
+function sagLockId(ns) {
+  return `sagNsLock_${encodeURIComponent(ns)}`;
+}
+
+async function reserveSagNs(db, uid, workspaceId, invoiceRecordKey, invoiceId, empenhoId, supplierCnpj, ns) {
+  const invoiceRef = doc(db, 'workspaces', workspaceId, 'invoices', invoiceRecordKey);
+  const lockRef = doc(db, 'workspaces', workspaceId, 'settings', sagLockId(ns));
+
+  return runTransaction(db, async (transaction) => {
+    const [invoiceSnapshot, lockSnapshot] = await Promise.all([
+      transaction.get(invoiceRef),
+      transaction.get(lockRef),
+    ]);
+
+    if (!invoiceSnapshot.exists()) {
+      throw new Error('SAG_INVOICE_MISSING');
+    }
+
+    if (
+      lockSnapshot.exists()
+      && lockSnapshot.data()?.invoiceRecordKey !== invoiceRecordKey
+    ) {
+      throw new Error('SAG_NS_LOCK_CONFLICT');
+    }
+
+    const timestamp = now();
+    transaction.set(invoiceRef, { numeroNS: ns }, { merge: true });
+    transaction.set(
+      lockRef,
+      {
+        id: sagLockId(ns),
+        type: 'sag-ns-lock',
+        workspaceId,
+        numeroNS: ns,
+        invoiceRecordKey,
+        invoiceId,
+        empenhoId,
+        supplierCnpj,
+        createdAt: lockSnapshot.data()?.createdAt || timestamp,
+        updatedAt: timestamp,
+        updatedBy: uid,
+      },
+      { merge: true }
+    );
+  });
+}
+
 async function main() {
   console.log('Bloco 20 — testes automatizados de segurança multi-tenant\n');
 
@@ -637,6 +684,204 @@ async function main() {
     setDoc(doc(admin.db, 'workspaces', 'workspace-a', 'alerts', 'admin-bypass'), {
       marker: 'forbidden',
     })
+  );
+
+  console.log('\nHardening transacional da importação SAG');
+  const sagSupplierCnpj = '11111111000191';
+  const sagEmpenhoId = '2026NE-SAG-001';
+  const sagInvoiceAKey = 'nf_11111111000191_sag-a';
+  const sagInvoiceBKey = 'nf_11111111000191_sag-b';
+  const sagInvoiceRollbackKey = 'nf_11111111000191_sag-rollback';
+
+  await ownerSet(`workspaces/workspace-a/empenhos/${sagEmpenhoId}`, {
+    id: sagEmpenhoId,
+    supplier: 'Fornecedor SAG',
+    supplierCnpj: sagSupplierCnpj,
+    description: 'Teste concorrencial SAG',
+    date: '2026-01-01',
+    status: 'Ativo',
+    items: [],
+  });
+
+  for (const [recordKey, invoiceId] of [
+    [sagInvoiceAKey, 'SAG-A'],
+    [sagInvoiceBKey, 'SAG-B'],
+    [sagInvoiceRollbackKey, 'SAG-ROLLBACK'],
+  ]) {
+    await ownerSet(`workspaces/workspace-a/invoices/${recordKey}`, {
+      id: invoiceId,
+      recordKey,
+      empenhoId: sagEmpenhoId,
+      supplier: 'Fornecedor SAG',
+      supplierCnpj: sagSupplierCnpj,
+      issueDate: '2026-01-10',
+      items: [],
+      totalValue: 100,
+    });
+  }
+
+  const contestedNs = '2026NS009001';
+  const concurrentReservations = await Promise.allSettled([
+    reserveSagNs(
+      sessionA.db,
+      sessionA.user.uid,
+      'workspace-a',
+      sagInvoiceAKey,
+      'SAG-A',
+      sagEmpenhoId,
+      sagSupplierCnpj,
+      contestedNs
+    ),
+    reserveSagNs(
+      sessionA.db,
+      sessionA.user.uid,
+      'workspace-a',
+      sagInvoiceBKey,
+      'SAG-B',
+      sagEmpenhoId,
+      sagSupplierCnpj,
+      contestedNs
+    ),
+  ]);
+
+  assert.equal(
+    concurrentReservations.filter((item) => item.status === 'fulfilled').length,
+    1,
+    'Exatamente uma transação deve reservar a NS concorrida.'
+  );
+  assert.equal(
+    concurrentReservations.filter((item) => item.status === 'rejected').length,
+    1,
+    'A segunda transação deve ser rejeitada pelo lock transacional.'
+  );
+
+  const contestedLockRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'settings',
+    sagLockId(contestedNs)
+  );
+  const contestedLock = await getDoc(contestedLockRef);
+  assert.equal(contestedLock.exists(), true);
+  const lockOwner = contestedLock.data().invoiceRecordKey;
+  assert.ok(
+    [sagInvoiceAKey, sagInvoiceBKey].includes(lockOwner),
+    'O lock deve apontar para uma das NFs concorrentes.'
+  );
+
+  const [sagInvoiceA, sagInvoiceB] = await Promise.all([
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', sagInvoiceAKey)),
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', sagInvoiceBKey)),
+  ]);
+  assert.equal(
+    [sagInvoiceA, sagInvoiceB].filter((snapshot) => snapshot.data()?.numeroNS === contestedNs).length,
+    1,
+    'A mesma NS não pode aparecer em duas NFs após corrida concorrente.'
+  );
+
+  const winnerId = lockOwner === sagInvoiceAKey ? 'SAG-A' : 'SAG-B';
+  await allowed('Reimportação SAG pelo mesmo proprietário do lock é idempotente', () =>
+    reserveSagNs(
+      sessionA.db,
+      sessionA.user.uid,
+      'workspace-a',
+      lockOwner,
+      winnerId,
+      sagEmpenhoId,
+      sagSupplierCnpj,
+      contestedNs
+    )
+  );
+
+  await denied('Setor B não lê lock SAG do Setor A', () =>
+    getDoc(
+      doc(
+        sessionB.db,
+        'workspaces',
+        'workspace-a',
+        'settings',
+        sagLockId(contestedNs)
+      )
+    )
+  );
+
+  await denied('Setor B não grava lock SAG no Setor A', () =>
+    setDoc(
+      doc(
+        sessionB.db,
+        'workspaces',
+        'workspace-a',
+        'settings',
+        sagLockId('2026NS009002')
+      ),
+      {
+        id: sagLockId('2026NS009002'),
+        type: 'sag-ns-lock',
+        workspaceId: 'workspace-a',
+        numeroNS: '2026NS009002',
+        invoiceRecordKey: sagInvoiceAKey,
+        invoiceId: 'SAG-A',
+        empenhoId: sagEmpenhoId,
+        supplierCnpj: sagSupplierCnpj,
+        createdAt: now(),
+        updatedAt: now(),
+        updatedBy: sessionB.user.uid,
+      }
+    )
+  );
+
+  await denied('Lock SAG não permite troca posterior do proprietário', () =>
+    updateDoc(contestedLockRef, {
+      invoiceRecordKey: sagInvoiceRollbackKey,
+      updatedAt: now(),
+      updatedBy: sessionA.user.uid,
+    })
+  );
+
+  const rollbackNs = '2026NS009099';
+  await denied('Lock SAG inválido cancela atomicamente a escrita da NF', () =>
+    runTransaction(sessionA.db, async (transaction) => {
+      const invoiceRef = doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'invoices',
+        sagInvoiceRollbackKey
+      );
+      const invalidLockRef = doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'settings',
+        sagLockId(rollbackNs)
+      );
+
+      await transaction.get(invoiceRef);
+      transaction.set(invoiceRef, { numeroNS: rollbackNs }, { merge: true });
+      transaction.set(invalidLockRef, {
+        id: sagLockId(rollbackNs),
+        type: 'sag-ns-lock',
+        workspaceId: 'workspace-a',
+        numeroNS: rollbackNs,
+        updatedBy: sessionA.user.uid,
+      });
+    })
+  );
+
+  const rollbackInvoice = await getDoc(
+    doc(
+      sessionA.db,
+      'workspaces',
+      'workspace-a',
+      'invoices',
+      sagInvoiceRollbackKey
+    )
+  );
+  assert.equal(
+    rollbackInvoice.data()?.numeroNS,
+    undefined,
+    'A NF não pode ser alterada se a criação do lock falhar.'
   );
 
   console.log('\nIsolamento do Google Drive / documentStorage');
