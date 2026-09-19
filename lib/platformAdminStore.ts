@@ -10,6 +10,10 @@ import {
 
 import { db } from './firebase';
 import {
+  appendPlatformAuditEvent,
+  createPlatformAuditCorrelationId,
+} from './auditTrail';
+import {
   createHgesmFoundingWorkspace,
   createHgesmSectorAccount,
   HGESM_SECTOR_EMAIL,
@@ -116,6 +120,7 @@ export async function updateSectorWorkspaceProfile(
   }
 
   const workspaceRef = doc(db, WORKSPACES_COLLECTION, workspaceId);
+  const correlationId = createPlatformAuditCorrelationId();
 
   return runTransaction(db, async (transaction) => {
     const workspaceSnapshot = await transaction.get(workspaceRef);
@@ -207,6 +212,35 @@ export async function updateSectorWorkspaceProfile(
       });
     }
 
+    appendPlatformAuditEvent(transaction, {
+      operation: currentUg ? 'sector.profile_update' : 'sector.ug_backfill',
+      source: 'admin',
+      entityType: 'workspace',
+      entityId: workspaceId,
+      correlationId,
+      workspaceId,
+      ug,
+      actorEmail: updatedBy,
+      before: {
+        name: current.name,
+        ug: currentUg || null,
+        organizationName: current.institutionalProfile.organizationName,
+        organizationShortName: current.institutionalProfile.organizationShortName || null,
+        sectionName: current.institutionalProfile.sectionName,
+      },
+      after: {
+        name: updated.name,
+        ug,
+        organizationName: updated.institutionalProfile.organizationName,
+        organizationShortName: updated.institutionalProfile.organizationShortName || null,
+        sectionName: updated.institutionalProfile.sectionName,
+      },
+      metadata: {
+        authorizedEmail: current.authorizedEmail,
+        ugBackfill: !currentUg,
+      },
+    });
+
     return updated;
   });
 }
@@ -237,6 +271,7 @@ export async function setSectorWorkspaceStatus(
   }
 
   const workspaceRef = doc(db, WORKSPACES_COLLECTION, workspaceId);
+  const correlationId = createPlatformAuditCorrelationId();
 
   return runTransaction(db, async (transaction) => {
     const workspaceSnapshot = await transaction.get(workspaceRef);
@@ -301,6 +336,28 @@ export async function setSectorWorkspaceStatus(
       status,
       updatedAt: now,
     });
+
+    if (currentWorkspace.status !== status) {
+      appendPlatformAuditEvent(transaction, {
+        operation: 'sector.status_change',
+        source: 'admin',
+        entityType: 'workspace',
+        entityId: workspaceId,
+        correlationId,
+        workspaceId,
+        ug: normalizeUnitUg(currentWorkspace.ug) || null,
+        actorEmail: updatedBy,
+        before: {
+          status: currentWorkspace.status,
+        },
+        after: {
+          status,
+        },
+        metadata: {
+          authorizedEmail: currentWorkspace.authorizedEmail,
+        },
+      });
+    }
 
     return { workspace, account };
   });
