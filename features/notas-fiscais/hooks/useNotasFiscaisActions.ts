@@ -5,7 +5,7 @@ import type { User } from 'firebase/auth';
 import type { Alert, Comissao, Empenho, Invoice, InvoiceItem, InvoicePdfDocument } from '../../../lib/types';
 import { commitAllComissoesDeletion, commitAllInvoicesDeletion, commitInvoiceDeletion, commitInvoiceReceiptChanges, saveInvoice, removeComissao, saveComissao } from '../../../lib/firebaseSync';
 import { deleteInvoicePdfUpload, uploadInvoicePdf } from '../../../lib/invoiceDocuments';
-import { normalizeNsNumber } from '../../../lib/nsIntegrity';
+import { isValidNsUg, normalizeNsNumber, normalizeNsUg } from '../../../lib/nsIntegrity';
 import { commitNsIntegrityMutations } from '../../../lib/nsIntegrityService';
 import {
   buildInvoiceRecordKey,
@@ -30,7 +30,7 @@ interface NotasActionsContext {
   nfQuantities: Record<string, number>; setNfQuantities: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   nfSubTab: NfSubTab; setNfSubTab: React.Dispatch<React.SetStateAction<NfSubTab>>;
   editingInvoice: Invoice | null; setEditingInvoice: React.Dispatch<React.SetStateAction<Invoice | null>>;
-  setEditingNSId: React.Dispatch<React.SetStateAction<string | null>>; setTempNSValue: React.Dispatch<React.SetStateAction<string>>;
+  setEditingNSId: React.Dispatch<React.SetStateAction<string | null>>; setTempNSValue: React.Dispatch<React.SetStateAction<string>>; setTempNSUgValue: React.Dispatch<React.SetStateAction<string>>;
   comissaoMes: string; comissaoBoletimNum: string; setComissaoBoletimNum: React.Dispatch<React.SetStateAction<string>>;
   comissaoBoletimDate: string; setComissaoBoletimDate: React.Dispatch<React.SetStateAction<string>>;
   comissaoPresPosto: string; comissaoPresNome: string; setComissaoPresNome: React.Dispatch<React.SetStateAction<string>>;
@@ -504,7 +504,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     }
   };
 
-  const handleSaveNumeroNS = async (invoiceRecordKey: string, value: string) => {
+  const handleSaveNumeroNS = async (invoiceRecordKey: string, value: string, ugValue: string) => {
     const targetInvoice = invoices.find(
       (invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey
     );
@@ -533,14 +533,23 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     }
 
     const currentNs = normalizeNsNumber(targetInvoice.numeroNS);
+    const currentUg = normalizeNsUg(targetInvoice.nsUg);
     const proposedNs = normalizeNsNumber(value);
+    const proposedUg = proposedNs ? normalizeNsUg(ugValue) : '';
+
+    if (proposedNs && !isValidNsUg(proposedUg)) {
+      showToast('Informe a UG emitente da NS com exatamente 6 dígitos.', 'error');
+      return;
+    }
+
     const knownNsOwnerRecordKeys = proposedNs
       ? invoices
-          .filter(
-            (invoice) =>
-              getInvoiceRecordKey(invoice) !== invoiceRecordKey &&
-              normalizeNsNumber(invoice.numeroNS) === proposedNs
-          )
+          .filter((invoice) => {
+            if (getInvoiceRecordKey(invoice) === invoiceRecordKey) return false;
+            if (normalizeNsNumber(invoice.numeroNS) !== proposedNs) return false;
+            const ownerUg = normalizeNsUg(invoice.nsUg);
+            return !ownerUg || ownerUg === proposedUg;
+          })
           .map(getInvoiceRecordKey)
       : [];
 
@@ -552,7 +561,9 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
             invoiceId: targetInvoice.id,
             empenhoId: targetInvoice.empenhoId,
             supplierCnpj,
+            expectedCurrentUg: currentUg || null,
             expectedCurrentNs: currentNs || null,
+            proposedUg: proposedUg || null,
             proposedNs: proposedNs || null,
             source: 'manual',
           },
@@ -576,9 +587,10 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
 
       setEditingNSId(null);
       setTempNSValue('');
+      setTempNSUgValue('');
       showToast(
         proposedNs
-          ? `Número da NS (${proposedNs}) salvo para a NF ${targetInvoice.id}!`
+          ? `Identidade UG ${proposedUg} + NS ${proposedNs} salva para a NF ${targetInvoice.id}!`
           : `Número da NS removido da NF ${targetInvoice.id}!`,
         'success'
       );
