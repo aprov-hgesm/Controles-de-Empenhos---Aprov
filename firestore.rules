@@ -400,6 +400,17 @@ service cloud.firestore {
         && getAfter(newInvoicePath).data.numeroNS == request.resource.data.numeroNS;
     }
 
+    function validSagNsLockMetadataRefresh(workspaceId) {
+      let ownerInvoicePath = /databases/$(database)/documents/workspaces/$(workspaceId)/invoices/$(request.resource.data.invoiceRecordKey);
+      return resource.data.invoiceRecordKey == request.resource.data.invoiceRecordKey
+        && existsAfter(ownerInvoicePath)
+        && getAfter(ownerInvoicePath).data.recordKey == request.resource.data.invoiceRecordKey
+        && getAfter(ownerInvoicePath).data.id == request.resource.data.invoiceId
+        && getAfter(ownerInvoicePath).data.empenhoId == request.resource.data.empenhoId
+        && getAfter(ownerInvoicePath).data.supplierCnpj == request.resource.data.supplierCnpj
+        && getAfter(ownerInvoicePath).data.numeroNS == request.resource.data.numeroNS;
+    }
+
     function validSagNsLockDelete(workspaceId, id) {
       let ownerInvoicePath = /databases/$(database)/documents/workspaces/$(workspaceId)/invoices/$(resource.data.invoiceRecordKey);
       return isSagNsLockId(id)
@@ -426,6 +437,7 @@ service cloud.firestore {
         && resource.data.createdAt == request.resource.data.createdAt
         && (
           sagNsLockOwnerUnchanged()
+          || validSagNsLockMetadataRefresh(workspaceId)
           || validSagNsLockOwnerMigration(workspaceId)
         );
     }
