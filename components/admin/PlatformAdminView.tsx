@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   ArrowLeftRight,
@@ -17,10 +17,12 @@ import {
   Trash2,
   UserCog,
 } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 
 import { CreateSectorModal } from './CreateSectorModal';
 import { EditSectorModal } from './EditSectorModal';
+import { ToastNotification } from '../layout/ToastNotification';
 import { createHgesmFoundingWorkspace } from '../../lib/hgesmWorkspace';
 import type {
   CreateSectorWorkspaceInput,
@@ -32,6 +34,7 @@ import { setActiveProfileMode } from '../../lib/profileMode';
 
 interface PlatformAdminViewProps {
   adminEmail: string;
+  customLogo: string | null;
   workspaces: Workspace[];
   loadingDirectory: boolean;
   directoryError: string | null;
@@ -50,6 +53,7 @@ interface PlatformAdminViewProps {
 
 export function PlatformAdminView({
   adminEmail,
+  customLogo,
   workspaces,
   loadingDirectory,
   directoryError,
@@ -66,11 +70,27 @@ export function PlatformAdminView({
   onLogout,
 }: PlatformAdminViewProps) {
   const router = useRouter();
+  const shouldReduceMotion = useReducedMotion();
   const [showCreateSector, setShowCreateSector] = useState(false);
   const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null);
   const [deleteCandidate, setDeleteCandidate] = useState<Workspace | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [statusCandidate, setStatusCandidate] = useState<Workspace | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+
+  const showAdminToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    setToast({ message, type });
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast(null);
+      toastTimerRef.current = null;
+    }, 4000);
+  }, []);
+
+  useEffect(() => () => {
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+  }, []);
 
   const visibleWorkspaces = useMemo(
     () => workspaces.length > 0 ? workspaces : [createHgesmFoundingWorkspace('')],
@@ -85,35 +105,40 @@ export function PlatformAdminView({
   const handleCreateSector = async (input: CreateSectorWorkspaceInput) => {
     const resultName = input.workspaceName.trim();
     await onCreateSector(input);
-    setSuccessMessage(`Setor ${resultName} cadastrado e provisionado com sucesso.`);
-    window.setTimeout(() => setSuccessMessage(null), 5000);
+    showAdminToast(`Setor ${resultName} cadastrado e provisionado com sucesso.`, 'success');
   };
 
   const handleUpdateSector = async (input: UpdateSectorWorkspaceInput) => {
     const resultName = input.workspaceName.trim();
     await onUpdateSector(input);
-    setSuccessMessage(`Setor ${resultName} atualizado com sucesso.`);
-    window.setTimeout(() => setSuccessMessage(null), 5000);
+    showAdminToast(`Setor ${resultName} atualizado com sucesso.`, 'success');
   };
 
-  const handleChangeSectorStatus = async (workspace: Workspace) => {
+  const requestChangeSectorStatus = (workspace: Workspace) => {
     if (workspace.legacyWorkspace) return;
+    setStatusCandidate(workspace);
+  };
+
+  const confirmChangeSectorStatus = async () => {
+    const workspace = statusCandidate;
+    if (!workspace || workspace.legacyWorkspace) return;
 
     const nextStatus: SectorLifecycleStatus = workspace.status === 'active' ? 'disabled' : 'active';
-    const confirmed = window.confirm(
-      nextStatus === 'disabled'
-        ? `Suspender ${workspace.name}? O acesso operacional será bloqueado imediatamente.`
-        : `Reativar ${workspace.name}? A conta poderá voltar a acessar o workspace.`
-    );
-    if (!confirmed) return;
-
-    await onChangeSectorStatus(workspace.id, nextStatus);
-    setSuccessMessage(
-      nextStatus === 'disabled'
-        ? `Setor ${workspace.name} suspenso. O acesso operacional foi bloqueado.`
-        : `Setor ${workspace.name} reativado com sucesso.`
-    );
-    window.setTimeout(() => setSuccessMessage(null), 5000);
+    try {
+      await onChangeSectorStatus(workspace.id, nextStatus);
+      setStatusCandidate(null);
+      showAdminToast(
+        nextStatus === 'disabled'
+          ? `Setor ${workspace.name} suspenso. O acesso operacional foi bloqueado.`
+          : `Setor ${workspace.name} reativado com sucesso.`,
+        nextStatus === 'disabled' ? 'info' : 'success'
+      );
+    } catch (error) {
+      showAdminToast(
+        error instanceof Error ? error.message : 'Não foi possível alterar o status deste setor.',
+        'error'
+      );
+    }
   };
 
   const requestDeleteSector = (workspace: Workspace) => {
@@ -131,8 +156,7 @@ export function PlatformAdminView({
       await onDeleteSector(workspace.id, workspace.authorizedEmail);
       setEditingWorkspace((current) => current?.id === workspace.id ? null : current);
       setDeleteCandidate(null);
-      setSuccessMessage(`Setor ${workspace.name} excluído definitivamente.`);
-      window.setTimeout(() => setSuccessMessage(null), 5000);
+      showAdminToast(`Setor ${workspace.name} excluído definitivamente.`, 'success');
     } catch (error) {
       setDeleteError(
         error instanceof Error
@@ -148,21 +172,43 @@ export function PlatformAdminView({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#08152d] to-[#0a1d3f] text-white">
-      <header className="border-b border-white/10 bg-slate-950/70 backdrop-blur-xl sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 h-20 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-[#00288e] flex items-center justify-center font-black tracking-wider shadow-lg shadow-blue-950/30">
-              EMP
+    <div className="relative min-h-screen overflow-x-hidden bg-[#020817] text-white selection:bg-blue-500 selection:text-white">
+      <ToastNotification toast={toast} onClose={() => setToast(null)} />
+
+      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_12%,rgba(37,99,235,0.14),transparent_30%),radial-gradient(circle_at_82%_18%,rgba(56,189,248,0.08),transparent_28%),linear-gradient(145deg,#020817_0%,#061126_48%,#071a34_100%)]" />
+        <div className="absolute left-[7%] top-32 h-72 w-72 rounded-full bg-blue-500/[0.06] blur-3xl" />
+        <div className="absolute -right-20 top-[28%] h-96 w-96 rounded-full bg-cyan-400/[0.035] blur-3xl" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-300/35 to-transparent" />
+        <div className="absolute left-[12%] top-28 hidden h-px w-[28%] bg-gradient-to-r from-blue-300/0 via-blue-300/20 to-blue-300/0 lg:block" />
+        <div className="absolute right-[10%] top-40 hidden h-px w-[22%] bg-gradient-to-r from-cyan-200/0 via-cyan-200/15 to-cyan-200/0 lg:block" />
+      </div>
+
+      <header className="sticky top-0 z-20 border-b border-white/[0.07] bg-[#030b1b]/80 backdrop-blur-2xl">
+        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-5 sm:px-8">
+          <div className="flex min-w-0 items-center gap-3.5">
+            <div className="relative grid h-11 w-11 shrink-0 place-items-center">
+              <span className="absolute inset-0 rounded-2xl border border-blue-300/15 bg-blue-500/[0.06] shadow-[0_0_30px_rgba(37,99,235,0.12)]" />
+              <span className="absolute inset-[5px] rounded-xl border border-white/[0.08]" />
+              <span className="relative grid h-8 w-8 place-items-center overflow-hidden rounded-lg bg-[#071a3a]">
+                {customLogo ? (
+                  <img src={customLogo} alt="Logo EMPROVEX" className="h-full w-full object-contain p-0.5" />
+                ) : (
+                  <span className="text-[9px] font-black tracking-[0.10em] text-white">EMP</span>
+                )}
+              </span>
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="font-extrabold tracking-[0.18em] text-base sm:text-lg">EMPROVEX</h1>
-                <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full border border-blue-400/30 bg-blue-500/10 text-[10px] font-bold uppercase tracking-wider text-blue-200">
+                <div>
+                  <p className="font-mono text-[7px] font-bold uppercase tracking-[0.22em] text-blue-300/55">Central de comando</p>
+                  <h1 className="mt-0.5 text-base font-extrabold tracking-[0.16em] text-white sm:text-lg">EMPROVEX</h1>
+                </div>
+                <span className="hidden rounded-full border border-blue-300/15 bg-blue-400/[0.07] px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.14em] text-blue-200 sm:inline-flex">
                   Administração
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 truncate">Administração da Plataforma</p>
+              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.10em] text-slate-500">Governança da plataforma</p>
             </div>
           </div>
 
@@ -170,7 +216,7 @@ export function PlatformAdminView({
             <button
               type="button"
               onClick={returnToHgesm}
-              className="inline-flex items-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/10 px-3.5 py-2 text-xs font-bold text-blue-100 transition hover:bg-blue-500/20"
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-blue-300/15 bg-blue-400/[0.07] px-3.5 text-xs font-bold text-blue-100 transition hover:border-blue-300/25 hover:bg-blue-400/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/50"
               title="Alternar para o perfil operacional do HGeSM"
             >
               <ArrowLeftRight className="w-4 h-4" />
@@ -180,7 +226,7 @@ export function PlatformAdminView({
             <button
               type="button"
               onClick={() => void onLogout()}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-bold text-slate-200 transition hover:bg-white/10"
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.035] px-3.5 text-xs font-bold text-slate-300 transition hover:border-white/[0.14] hover:bg-white/[0.07] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/50"
             >
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">Sair</span>
@@ -189,22 +235,29 @@ export function PlatformAdminView({
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-5 sm:px-8 py-8 sm:py-10 space-y-8">
-        <section className="rounded-3xl border border-white/10 bg-white/[0.055] backdrop-blur-xl p-6 sm:p-8 shadow-2xl shadow-black/10 overflow-hidden relative">
-          <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+      <main className="relative z-10 mx-auto max-w-7xl space-y-7 px-5 py-7 sm:px-8 sm:py-10">
+        <motion.section
+          initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: shouldReduceMotion ? 0.12 : 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="relative overflow-hidden rounded-[2rem] border border-white/[0.09] bg-[#071225]/75 p-6 shadow-[0_30px_90px_rgba(0,8,28,0.28)] backdrop-blur-2xl sm:p-8"
+        >
+          <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-blue-500/[0.10] blur-3xl" />
+          <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-blue-200/45 to-transparent" />
+          <div className="pointer-events-none absolute left-0 top-14 h-32 w-px bg-gradient-to-b from-transparent via-blue-300/25 to-transparent" />
           <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
             <div>
-              <div className="inline-flex items-center gap-2 text-blue-200 text-xs font-bold uppercase tracking-[0.16em] mb-3">
+              <div className="mb-3 inline-flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.20em] text-blue-200/70">
                 <ShieldCheck className="w-4 h-4" />
                 Perfil administrativo
               </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Central de Administração EMPROVEX</h2>
-              <p className="mt-2 text-sm text-slate-300 max-w-2xl leading-relaxed">
+              <h2 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">Central de Administração EMPROVEX</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
                 A mesma conta institucional alterna entre o perfil operacional do HGeSM e este perfil de administração. Enquanto este modo estiver ativo, nenhuma subscription operacional de empenhos, notas fiscais, comissões ou cronogramas é aberta.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 min-w-0 lg:min-w-[310px]">
+            <div className="min-w-0 rounded-2xl border border-white/[0.08] bg-slate-950/30 px-4 py-3.5 shadow-inner shadow-black/10 lg:min-w-[310px]">
               <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
                 <UserCog className="w-4 h-4" />
                 Conta institucional
@@ -212,7 +265,7 @@ export function PlatformAdminView({
               <p className="text-sm font-bold text-white break-all">{adminEmail}</p>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {directoryError && (
           <section className="rounded-2xl border border-amber-400/20 bg-amber-500/[0.08] px-5 py-4 flex items-start gap-3">
@@ -227,13 +280,7 @@ export function PlatformAdminView({
           </section>
         )}
 
-        {successMessage && (
-          <section className="rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.08] px-5 py-3 text-xs font-bold text-emerald-200">
-            {successMessage}
-          </section>
-        )}
-
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <AdminMetric
             icon={<Building2 className="w-5 h-5" />}
             label="Setores cadastrados"
@@ -254,7 +301,7 @@ export function PlatformAdminView({
           />
         </section>
 
-        <section className="rounded-3xl border border-white/10 bg-white/[0.045] overflow-hidden">
+        <section className="overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#071225]/60 shadow-[0_22px_70px_rgba(0,8,28,0.18)] backdrop-blur-xl">
           <div className="px-5 sm:px-6 py-5 border-b border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h3 className="text-lg font-extrabold">Setores</h3>
@@ -265,7 +312,7 @@ export function PlatformAdminView({
               disabled={!persistentDirectoryReady || creatingSector}
               onClick={() => setShowCreateSector(true)}
               title={persistentDirectoryReady ? 'Cadastrar novo setor' : 'Aguardando acesso ao diretório administrativo no Firestore'}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 border border-blue-400/20 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-500 disabled:bg-blue-600/30 disabled:text-blue-100/60 disabled:cursor-not-allowed"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-blue-300/20 bg-blue-600 px-4 text-xs font-extrabold text-white shadow-lg shadow-blue-950/20 transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-blue-600/25 disabled:text-blue-100/45"
             >
               <Plus className="w-4 h-4" />
               Cadastrar novo setor
@@ -288,15 +335,15 @@ export function PlatformAdminView({
                 changingStatus={changingStatusWorkspaceId === workspace.id}
                 deleting={deletingWorkspaceId === workspace.id}
                 onEdit={() => setEditingWorkspace(workspace)}
-                onChangeStatus={() => void handleChangeSectorStatus(workspace)}
+                onChangeStatus={() => requestChangeSectorStatus(workspace)}
                 onDelete={() => requestDeleteSector(workspace)}
               />
             ))}
           </div>
         </section>
 
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="rounded-3xl border border-white/[0.08] bg-[#071225]/55 p-6 backdrop-blur-xl">
             <div className="flex items-center gap-2 mb-3">
               <Database className="w-5 h-5 text-blue-300" />
               <h3 className="font-extrabold">Estado da migração</h3>
@@ -306,7 +353,7 @@ export function PlatformAdminView({
             </p>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+          <div className="rounded-3xl border border-white/[0.08] bg-[#071225]/55 p-6 backdrop-blur-xl">
             <div className="flex items-center gap-2 mb-3">
               <ShieldCheck className="w-5 h-5 text-emerald-300" />
               <h3 className="font-extrabold">Cadastro seguro</h3>
@@ -334,6 +381,81 @@ export function PlatformAdminView({
         onResetPassword={onResetSectorPassword}
       />
 
+      {statusCandidate && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#020817]/85 p-4 backdrop-blur-xl">
+          <motion.div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="status-sector-title"
+            aria-describedby="status-sector-description"
+            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            className="relative w-full max-w-lg overflow-hidden rounded-[1.75rem] border border-blue-300/15 bg-[#071225] p-6 shadow-[0_30px_100px_rgba(0,8,28,0.55)]"
+          >
+            <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-blue-200/50 to-transparent" />
+            <div className="flex items-start gap-4">
+              <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl border ${
+                statusCandidate.status === 'active'
+                  ? 'border-amber-300/20 bg-amber-400/[0.08] text-amber-200'
+                  : 'border-emerald-300/20 bg-emerald-400/[0.08] text-emerald-200'
+              }`}>
+                {statusCandidate.status === 'active'
+                  ? <CirclePause className="h-5 w-5" />
+                  : <CirclePlay className="h-5 w-5" />}
+              </div>
+              <div className="min-w-0">
+                <p className="font-mono text-[8px] font-bold uppercase tracking-[0.20em] text-blue-300/55">EMPROVEX // CICLO DE VIDA</p>
+                <h2 id="status-sector-title" className="mt-1.5 text-xl font-extrabold text-white">
+                  {statusCandidate.status === 'active' ? 'Suspender setor?' : 'Reativar setor?'}
+                </h2>
+                <p id="status-sector-description" className="mt-2 text-sm leading-relaxed text-slate-400">
+                  {statusCandidate.status === 'active'
+                    ? `O acesso operacional de ${statusCandidate.name} será bloqueado imediatamente, sem apagar dados ou histórico.`
+                    : `O acesso operacional de ${statusCandidate.name} será liberado novamente para a conta autorizada.`}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-white/[0.07] bg-slate-950/25 px-4 py-3">
+              <div className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">Conta autorizada</div>
+              <div className="mt-1 break-all text-xs font-bold text-slate-300">{statusCandidate.authorizedEmail}</div>
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                disabled={changingStatusWorkspaceId === statusCandidate.id}
+                onClick={() => setStatusCandidate(null)}
+                className="rounded-xl border border-white/[0.08] bg-white/[0.035] px-4 py-2.5 text-xs font-bold text-slate-300 transition hover:bg-white/[0.07] disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={changingStatusWorkspaceId === statusCandidate.id}
+                onClick={() => void confirmChangeSectorStatus()}
+                className={`inline-flex items-center justify-center gap-2 rounded-xl border px-5 py-2.5 text-xs font-extrabold transition disabled:cursor-wait disabled:opacity-60 ${
+                  statusCandidate.status === 'active'
+                    ? 'border-amber-300/20 bg-amber-500 text-slate-950 hover:bg-amber-400'
+                    : 'border-emerald-300/20 bg-emerald-500 text-slate-950 hover:bg-emerald-400'
+                }`}
+              >
+                {changingStatusWorkspaceId === statusCandidate.id
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : statusCandidate.status === 'active'
+                    ? <CirclePause className="h-4 w-4" />
+                    : <CirclePlay className="h-4 w-4" />}
+                {changingStatusWorkspaceId === statusCandidate.id
+                  ? 'Processando…'
+                  : statusCandidate.status === 'active'
+                    ? 'Confirmar suspensão'
+                    : 'Confirmar reativação'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {deleteCandidate && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
           <div
@@ -341,7 +463,7 @@ export function PlatformAdminView({
             aria-modal="true"
             aria-labelledby="delete-sector-title"
             aria-describedby="delete-sector-description"
-            className="w-full max-w-lg rounded-3xl border border-rose-400/20 bg-[#0b1730] p-6 shadow-2xl shadow-black/40"
+            className="relative w-full max-w-lg overflow-hidden rounded-[1.75rem] border border-rose-300/15 bg-[#071225] p-6 shadow-[0_30px_100px_rgba(0,8,28,0.55)]"
           >
             <div className="flex items-start gap-4">
               <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-rose-400/20 bg-rose-500/10 text-rose-300">
@@ -431,10 +553,10 @@ function WorkspaceCard({
   const founder = Boolean(workspace.legacyWorkspace);
 
   return (
-    <div className={`rounded-2xl border p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 ${
+    <div className={`group relative overflow-hidden rounded-2xl border p-5 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_50px_rgba(0,8,28,0.22)] flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 ${
       isActive
-        ? 'border-emerald-400/20 bg-emerald-500/[0.06]'
-        : 'border-amber-400/20 bg-amber-500/[0.06]'
+        ? 'border-emerald-300/15 bg-emerald-400/[0.045]'
+        : 'border-amber-300/15 bg-amber-400/[0.045]'
     }`}>
       <div className="flex items-start gap-4 min-w-0">
         <div className={`w-11 h-11 rounded-xl border flex items-center justify-center flex-shrink-0 ${
@@ -535,8 +657,8 @@ function AdminMetric({
   detail: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-5">
-      <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-400/15 text-blue-200 flex items-center justify-center mb-4">
+    <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[#071225]/60 p-5 backdrop-blur-xl transition duration-300 hover:-translate-y-0.5 hover:border-blue-300/15 hover:bg-[#09182f]/70">
+      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl border border-blue-300/15 bg-blue-400/[0.08] text-blue-200 shadow-[0_0_24px_rgba(37,99,235,0.08)]">
         {icon}
       </div>
       <div className="text-[11px] uppercase tracking-[0.12em] font-bold text-slate-500">{label}</div>

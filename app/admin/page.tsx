@@ -5,6 +5,7 @@ import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
 
 import { PlatformAdminView } from '../../components/admin/PlatformAdminView';
+import { usePlatformBranding } from '../../hooks/usePlatformBranding';
 import { usePlatformAdminDirectory } from '../../hooks/usePlatformAdminDirectory';
 import { auth } from '../../lib/firebase';
 import { resetActiveProfileMode, setActiveProfileMode } from '../../lib/profileMode';
@@ -13,6 +14,10 @@ import { resolveWorkspaceContext } from '../../lib/workspaceContext';
 export default function PlatformAdminPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const { customLogo } = usePlatformBranding({
+    userEmail: user?.email,
+    onNotify: () => undefined,
+  });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -45,9 +50,21 @@ export default function PlatformAdminPage() {
 
   if (loading || !user || context.status !== 'platformAdmin') {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
-        <Loader2 className="w-10 h-10 text-blue-400 animate-spin mb-4" />
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+      <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#020817] px-6 text-white">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(37,99,235,0.16),transparent_32%),linear-gradient(145deg,#020817_0%,#061126_55%,#071a34_100%)]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-300/35 to-transparent" />
+        <div className="relative mb-5 grid h-16 w-16 place-items-center rounded-[1.35rem] border border-blue-300/15 bg-blue-400/[0.06] shadow-[0_0_45px_rgba(37,99,235,0.16)]">
+          <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-xl border border-white/[0.08] bg-[#071a3a]">
+            {customLogo ? (
+              <img src={customLogo} alt="Logo EMPROVEX" className="h-full w-full object-contain p-1" />
+            ) : (
+              <span className="text-[10px] font-black tracking-[0.12em]">EMP</span>
+            )}
+          </div>
+          <Loader2 className="absolute -bottom-2 -right-2 h-5 w-5 animate-spin rounded-full bg-[#071225] p-1 text-blue-300" />
+        </div>
+        <p className="relative font-mono text-[8px] font-bold uppercase tracking-[0.22em] text-blue-300/55">EMPROVEX // ADMIN</p>
+        <p className="relative mt-2 text-xs font-extrabold uppercase tracking-[0.14em] text-slate-300">
           Validando perfil administrativo...
         </p>
       </div>
@@ -63,6 +80,7 @@ export default function PlatformAdminPage() {
   return (
     <PlatformAdminView
       adminEmail={context.email}
+      customLogo={customLogo}
       workspaces={adminDirectory.directory.workspaces}
       loadingDirectory={adminDirectory.loading}
       directoryError={adminDirectory.error}

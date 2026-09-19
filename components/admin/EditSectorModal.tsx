@@ -95,9 +95,9 @@ export function EditSectorModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm p-4 sm:p-6 flex items-center justify-center">
-      <div className="w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#0b1730] shadow-2xl shadow-black/40">
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-white/10 bg-[#0b1730]/95 backdrop-blur-xl px-5 sm:px-7 py-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#020817]/85 p-4 backdrop-blur-xl sm:p-6">
+      <div className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-[1.75rem] border border-white/[0.08] bg-[#071225] shadow-[0_30px_100px_rgba(0,8,28,0.58)]">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-white/[0.07] bg-[#071225]/95 px-5 py-5 backdrop-blur-2xl sm:px-7">
           <div>
             <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-blue-300">
               <Building2 className="w-4 h-4" />
@@ -112,7 +112,7 @@ export function EditSectorModal({
             type="button"
             onClick={onClose}
             disabled={saving || resettingPassword}
-            className="rounded-xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:bg-white/10 disabled:opacity-50"
+            className="rounded-xl border border-white/[0.08] bg-white/[0.035] p-2 text-slate-400 transition hover:border-blue-300/15 hover:bg-blue-400/[0.07] hover:text-white disabled:opacity-50"
             aria-label="Fechar"
           >
             <X className="w-4 h-4" />
@@ -252,7 +252,7 @@ export function EditSectorModal({
   );
 }
 
-const inputClass = 'w-full rounded-xl border border-white/10 bg-slate-950/35 px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-blue-400/40 focus:ring-2 focus:ring-blue-500/10';
+const inputClass = 'w-full rounded-xl border border-white/10 bg-slate-950/30 px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-blue-400/40 focus:ring-2 focus:ring-blue-500/10';
 
 function Field({
   label,
