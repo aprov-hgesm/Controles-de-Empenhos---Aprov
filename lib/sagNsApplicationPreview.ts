@@ -87,6 +87,24 @@ function summaryFor(
   }
 }
 
+export function buildSagNsApplicationFingerprint(
+  preview: SagNsApplicationPreview
+): string {
+  return JSON.stringify({
+    supplierCnpj: preview.supplierCnpj,
+    items: preview.items.map((item) => ({
+      decision: item.decision,
+      reconciliationStatus: item.reconciliationStatus,
+      ns: item.ns,
+      invoiceRecordKey: item.invoiceRecordKey,
+      invoiceId: item.invoiceId,
+      empenhoId: item.empenhoId,
+      currentNs: item.currentNs,
+      proposedNs: item.proposedNs,
+    })),
+  });
+}
+
 export function buildSagNsApplicationPreview(
   reconciliation: SagNsReconciliationResult
 ): SagNsApplicationPreview {

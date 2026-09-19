@@ -17,6 +17,7 @@ import {
   PencilLine,
   Search,
   ShieldCheck,
+  X,
   XCircle,
 } from 'lucide-react';
 import type { Empenho, Invoice } from '../../../lib/types';
@@ -26,6 +27,7 @@ import {
   buildSagNsExtractionPrompt,
   normalizeSagUg,
   parseSagNsJson,
+  type SagNsPayload,
   type SagNsValidationResult,
 } from '../../../lib/sagNsContract';
 import {
@@ -33,13 +35,20 @@ import {
   type SagNsReconciliationStatus,
 } from '../../../lib/sagNsReconciliation';
 import {
+  buildSagNsApplicationFingerprint,
   buildSagNsApplicationPreview,
   type SagNsApplicationDecision,
 } from '../../../lib/sagNsApplicationPreview';
+import type { SagNsImportCommitResult } from '../../../lib/sagNsPersistence';
 
 interface SagImportViewProps {
   empenhos: Empenho[];
   invoices: Invoice[];
+  onApplySagNsImport: (
+    payload: SagNsPayload,
+    supplierCnpj: string,
+    expectedFingerprint: string
+  ) => Promise<SagNsImportCommitResult>;
 }
 
 type CopyState = 'idle' | 'copied' | 'error';
@@ -131,7 +140,7 @@ function copyTextFallback(value: string): boolean {
   }
 }
 
-export function SagImportView({ empenhos, invoices }: SagImportViewProps) {
+export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImportViewProps) {
   const supplierReports = React.useMemo(
     () => buildSupplierReports(empenhos, invoices),
     [empenhos, invoices]
@@ -142,6 +151,12 @@ export function SagImportView({ empenhos, invoices }: SagImportViewProps) {
   const [jsonText, setJsonText] = React.useState('');
   const [validation, setValidation] = React.useState<SagNsValidationResult | null>(null);
   const [copyState, setCopyState] = React.useState<CopyState>('idle');
+  const [showApplyConfirmation, setShowApplyConfirmation] = React.useState(false);
+  const [applyConfirmed, setApplyConfirmed] = React.useState(false);
+  const [isApplying, setIsApplying] = React.useState(false);
+  const [applyError, setApplyError] = React.useState('');
+  const [confirmationFingerprint, setConfirmationFingerprint] = React.useState('');
+  const [lastImportResult, setLastImportResult] = React.useState<SagNsImportCommitResult | null>(null);
 
   const selectedSupplier = React.useMemo(
     () => supplierReports.find((supplier) => supplier.cnpj === selectedCnpj) || null,
@@ -191,12 +206,21 @@ export function SagImportView({ empenhos, invoices }: SagImportViewProps) {
     () => (reconciliation ? buildSagNsApplicationPreview(reconciliation) : null),
     [reconciliation]
   );
+  const applicationFingerprint = React.useMemo(
+    () => (applicationPreview ? buildSagNsApplicationFingerprint(applicationPreview) : ''),
+    [applicationPreview]
+  );
 
   const handleSelectSupplier = (cnpj: string) => {
     setSelectedCnpj(cnpj);
     setJsonText('');
     setValidation(null);
     setCopyState('idle');
+    setShowApplyConfirmation(false);
+    setApplyConfirmed(false);
+    setApplyError('');
+    setConfirmationFingerprint('');
+    setLastImportResult(null);
   };
 
   const handleCopyPrompt = async () => {
@@ -230,7 +254,65 @@ export function SagImportView({ empenhos, invoices }: SagImportViewProps) {
   const resetJson = () => {
     setJsonText('');
     setValidation(null);
+    setShowApplyConfirmation(false);
+    setApplyConfirmed(false);
+    setApplyError('');
+    setConfirmationFingerprint('');
+    setLastImportResult(null);
   };
+
+  const handleOpenApplyConfirmation = () => {
+    if (!applicationPreview?.canAdvanceToPersistenceReview || !applicationFingerprint) return;
+    setConfirmationFingerprint(applicationFingerprint);
+    setApplyConfirmed(false);
+    setApplyError('');
+    setShowApplyConfirmation(true);
+  };
+
+  const handleCloseApplyConfirmation = () => {
+    if (isApplying) return;
+    setShowApplyConfirmation(false);
+    setApplyConfirmed(false);
+    setApplyError('');
+    setConfirmationFingerprint('');
+  };
+
+  const handleConfirmSagImport = async () => {
+    if (
+      !validation?.ok ||
+      !validation.data ||
+      !selectedSupplier ||
+      !applyConfirmed ||
+      !confirmationFingerprint ||
+      isApplying
+    ) {
+      return;
+    }
+
+    setIsApplying(true);
+    setApplyError('');
+    try {
+      const result = await onApplySagNsImport(
+        validation.data,
+        selectedSupplier.cnpj,
+        confirmationFingerprint
+      );
+      setLastImportResult(result);
+      setShowApplyConfirmation(false);
+      setApplyConfirmed(false);
+      setConfirmationFingerprint('');
+    } catch (error) {
+      setApplyError(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível concluir a importação das NS. Nenhuma alteração foi confirmada.'
+      );
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  const previewChanges = applicationPreview?.items.filter((item) => item.decision === 'change') || [];
 
   return (
     <div className="space-y-6">
@@ -532,6 +614,11 @@ export function SagImportView({ empenhos, invoices }: SagImportViewProps) {
               onChange={(event) => {
                 setJsonText(event.target.value);
                 setValidation(null);
+                setShowApplyConfirmation(false);
+                setApplyConfirmed(false);
+                setApplyError('');
+                setConfirmationFingerprint('');
+                setLastImportResult(null);
               }}
               spellCheck={false}
               placeholder={'Cole aqui o JSON retornado pela IA...\n\n{\n  "schema_version": "emprovex_sag_ns_v1",\n  ...\n}'}
@@ -991,15 +1078,43 @@ export function SagImportView({ empenhos, invoices }: SagImportViewProps) {
                           : 'Lote sem alterações pendentes para gravar.'}
                     </p>
                     <p className="mt-1 text-[10px] font-semibold leading-relaxed text-gray-500">
-                      O Bloco 10 é exclusivamente de conferência. Nenhum botão de aplicar ou confirmar gravação é disponibilizado nesta etapa.
+                      Antes da escrita, o EMPROVEX refaz a conciliação e a transação relê NF, NE, CNPJ e NS diretamente do Firestore.
                     </p>
                   </div>
-                  <span className="w-fit rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-wider text-gray-600">
-                    Persistência reservada ao Bloco 11
-                  </span>
+                  {applicationPreview.canAdvanceToPersistenceReview ? (
+                    <button
+                      type="button"
+                      onClick={handleOpenApplyConfirmation}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00288e] px-4 text-[10px] font-extrabold text-white shadow-sm transition hover:bg-[#001f70]"
+                    >
+                      <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                      Revisar gravação de {applicationPreview.stats.changes} NS
+                    </button>
+                  ) : (
+                    <span className="w-fit rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-wider text-gray-600">
+                      Gravação indisponível
+                    </span>
+                  )}
                 </div>
               </div>
             </section>
+          ) : null}
+
+          {lastImportResult ? (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5" aria-live="polite">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 flex-none text-emerald-700" aria-hidden="true" />
+                <div>
+                  <p className="text-sm font-black text-emerald-800">Importação SAG concluída</p>
+                  <p className="mt-1 text-xs font-semibold leading-relaxed text-emerald-800/80">
+                    {lastImportResult.appliedCount} NS gravada(s) nesta transação
+                    {lastImportResult.alreadyAppliedCount > 0
+                      ? ` · ${lastImportResult.alreadyAppliedCount} já estava(m) aplicada(s) e foi(ram) mantida(s) sem nova escrita`
+                      : ''}.
+                  </p>
+                </div>
+              </div>
+            </div>
           ) : null}
 
           <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-5">
@@ -1008,14 +1123,149 @@ export function SagImportView({ empenhos, invoices }: SagImportViewProps) {
               <div>
                 <p className="text-sm font-extrabold">Validação sem persistência</p>
                 <p className="mt-1 text-xs font-medium leading-relaxed text-emerald-800/80">
-                  Nenhuma NS será gravada automaticamente neste bloco. O motor identifica vínculos, conflitos e pendências,
-                  e a prévia mostra exatamente o efeito esperado; a confirmação e a escrita permanecem reservadas ao Bloco 11.
+                  Nenhuma NS será gravada automaticamente. A escrita só ocorre após revisão do lote, confirmação humana explícita
+                  e revalidação transacional das NFs e dos empenhos imediatamente antes do commit.
                 </p>
               </div>
             </div>
           </div>
         </>
       )}
+
+      {showApplyConfirmation && applicationPreview && validation?.data && selectedSupplier ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target) handleCloseApplyConfirmation();
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sag-import-confirmation-title"
+            className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-blue-100 bg-white shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-gray-100 p-5">
+              <div>
+                <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#00288e]">
+                  Bloco 11 · confirmação humana
+                </p>
+                <h4 id="sag-import-confirmation-title" className="mt-1 text-lg font-black text-[#0b1c30]">
+                  Confirmar importação das NS
+                </h4>
+                <p className="mt-1 text-xs font-medium leading-relaxed text-gray-500">
+                  Confira as alterações abaixo. Ao confirmar, o EMPROVEX revalidará o lote e executará uma única transação atômica.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseApplyConfirmation}
+                disabled={isApplying}
+                aria-label="Fechar confirmação"
+                className="grid h-9 w-9 flex-none place-items-center rounded-xl border border-gray-200 text-gray-500 transition hover:bg-gray-50 disabled:opacity-40"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="p-5">
+              <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+                <p className="text-xs font-black text-[#00288e]">{selectedSupplier.supplierName}</p>
+                <p className="mt-1 font-mono text-[10px] font-bold text-blue-700">
+                  {formatSupplierCnpj(selectedSupplier.cnpj)}
+                </p>
+                <p className="mt-2 text-[10px] font-semibold leading-relaxed text-blue-800/80">
+                  {previewChanges.length} alteração(ões) serão submetidas à revalidação. Itens ignorados ou já cadastrados não geram escrita.
+                </p>
+              </div>
+
+              <div className="mt-4 overflow-hidden rounded-xl border border-gray-100">
+                <div className="divide-y divide-gray-100">
+                  {previewChanges.map((item) => (
+                    <div key={`${item.invoiceRecordKey}-${item.ns}`} className="grid gap-2 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+                      <div>
+                        <p className="text-xs font-black text-[#0b1c30]">
+                          NF {item.invoiceId} · <span className="font-mono text-[10px] text-gray-500">{item.empenhoId}</span>
+                        </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] font-bold">
+                          <span className="rounded-md bg-gray-50 px-2 py-1 text-gray-500">Sem NS</span>
+                          <ArrowRight className="h-3.5 w-3.5 text-gray-300" aria-hidden="true" />
+                          <span className="rounded-md bg-emerald-50 px-2 py-1 font-mono text-emerald-700">
+                            {item.proposedNs}
+                          </span>
+                        </div>
+                      </div>
+                      {item.warnings.length > 0 ? (
+                        <span className="w-fit rounded-md border border-amber-100 bg-amber-50 px-2 py-1 text-[9px] font-extrabold text-amber-700">
+                          {item.warnings.length} alerta(s)
+                        </span>
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50/60 p-4">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 flex-none text-amber-700" aria-hidden="true" />
+                  <p className="text-[10px] font-semibold leading-relaxed text-amber-800">
+                    Se qualquer NF, NE, CNPJ ou NS tiver mudado desde esta prévia, a transação será cancelada integralmente. Nenhuma parte do lote será gravada.
+                  </p>
+                </div>
+              </div>
+
+              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+                <input
+                  type="checkbox"
+                  checked={applyConfirmed}
+                  onChange={(event) => setApplyConfirmed(event.target.checked)}
+                  disabled={isApplying}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#00288e] focus:ring-[#00288e]"
+                />
+                <span className="text-xs font-semibold leading-relaxed text-gray-700">
+                  Conferi as NFs, as NEs e as NS propostas acima e autorizo a gravação somente dessas correspondências seguras.
+                </span>
+              </label>
+
+              {applyError ? (
+                <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4" role="alert">
+                  <p className="text-xs font-black text-rose-800">Importação não realizada</p>
+                  <p className="mt-1 text-[10px] font-semibold leading-relaxed text-rose-700">{applyError}</p>
+                  <p className="mt-1 text-[9px] font-medium text-rose-600">
+                    Revise a prévia atualizada antes de tentar novamente.
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={handleCloseApplyConfirmation}
+                  disabled={isApplying}
+                  className="h-10 rounded-xl border border-gray-200 px-4 text-xs font-extrabold text-gray-600 transition hover:bg-gray-50 disabled:opacity-40"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmSagImport}
+                  disabled={!applyConfirmed || isApplying || previewChanges.length === 0}
+                  aria-busy={isApplying}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00288e] px-5 text-xs font-extrabold text-white shadow-sm transition hover:bg-[#001f70] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                  {isApplying
+                    ? 'Revalidando e gravando…'
+                    : `Confirmar e gravar ${previewChanges.length} NS`}
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }
