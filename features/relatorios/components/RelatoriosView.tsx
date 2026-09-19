@@ -73,6 +73,7 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
           return (
             <button
               key={tab.id}
+              data-testid={`relatorios-tab-${tab.id}`}
               type="button"
               onClick={() => setActiveSubTab(tab.id)}
               aria-pressed={active}
