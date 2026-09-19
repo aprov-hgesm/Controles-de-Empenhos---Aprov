@@ -1031,6 +1031,81 @@ async function main() {
     })
   );
 
+  const legacyRulesKey = 'nf_11111111000191_rules-legacy';
+  const legacyRulesNs = '2026NS009404';
+  await ownerSet(`workspaces/workspace-a/invoices/${legacyRulesKey}`, {
+    id: 'RULES-LEGACY',
+    empenhoId: sagEmpenhoId,
+    supplier: 'Fornecedor SAG',
+    supplierCnpj: sagSupplierCnpj,
+    issueDate: '2026-01-14',
+    items: [],
+    totalValue: 142,
+    numeroNS: legacyRulesNs,
+  });
+
+  const legacyRulesLockRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'settings',
+    sagLockId(legacyRulesNs)
+  );
+
+  await allowed('Registro legado com NS pode reparar recordKey e lock atomicamente', () =>
+    runTransaction(sessionA.db, async (transaction) => {
+      const invoiceRef = doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'invoices',
+        legacyRulesKey
+      );
+      const [invoiceSnapshot, lockSnapshot] = await Promise.all([
+        transaction.get(invoiceRef),
+        transaction.get(legacyRulesLockRef),
+      ]);
+      assert.equal(invoiceSnapshot.exists(), true);
+      assert.equal(lockSnapshot.exists(), false);
+
+      const timestamp = now();
+      transaction.set(
+        invoiceRef,
+        { recordKey: legacyRulesKey },
+        { merge: true }
+      );
+      transaction.set(legacyRulesLockRef, {
+        id: sagLockId(legacyRulesNs),
+        type: 'sag-ns-lock',
+        workspaceId: 'workspace-a',
+        numeroNS: legacyRulesNs,
+        invoiceRecordKey: legacyRulesKey,
+        invoiceId: 'RULES-LEGACY',
+        empenhoId: sagEmpenhoId,
+        supplierCnpj: sagSupplierCnpj,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        updatedBy: sessionA.user.uid,
+      });
+    })
+  );
+
+  const [legacyRulesInvoiceAfter, legacyRulesLockAfter] = await Promise.all([
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', legacyRulesKey)),
+    getDoc(legacyRulesLockRef),
+  ]);
+  assert.equal(legacyRulesInvoiceAfter.data()?.recordKey, legacyRulesKey);
+  assert.equal(legacyRulesLockAfter.data()?.invoiceRecordKey, legacyRulesKey);
+
+  await allowed('Limpeza do registro legado reparado preserva a invariância', () =>
+    runTransaction(sessionA.db, async (transaction) => {
+      transaction.delete(
+        doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', legacyRulesKey)
+      );
+      transaction.delete(legacyRulesLockRef);
+    })
+  );
+
   console.log('\nCiclo de vida de NF + lock NS');
   const lifecycleOldKey = 'nf_11111111000191_lifecycle-old';
   const lifecycleNewKey = 'nf_11111111000191_lifecycle-new';
