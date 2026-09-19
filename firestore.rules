@@ -468,10 +468,18 @@ service cloud.firestore {
         && getAfter(empenhoPath).data.supplierCnpj == data.supplierCnpj;
     }
 
+    function workspaceUgMatchesNs(workspaceId, ug) {
+      return workspaceExists(workspaceId)
+        && 'ug' in workspaceData(workspaceId)
+        && isValidUnitUg(workspaceData(workspaceId).ug)
+        && workspaceData(workspaceId).ug == ug;
+    }
+
     function canonicalInvoiceLockMatchesAfter(workspaceId, id, data) {
       let lockId = sagNsLockIdForIdentity(data.nsUg, data.numeroNS);
       let lockPath = /databases/$(database)/documents/workspaces/$(workspaceId)/settings/$(lockId);
       return invoiceHasCanonicalNsIdentity(data)
+        && workspaceUgMatchesNs(workspaceId, data.nsUg)
         && data.recordKey == id
         && data.id is string
         && data.id.size() > 0
@@ -686,6 +694,7 @@ service cloud.firestore {
         && request.resource.data.type == 'sag-ns-lock'
         && request.resource.data.workspaceId == workspaceId
         && isValidNsUg(request.resource.data.ug)
+        && workspaceUgMatchesNs(workspaceId, request.resource.data.ug)
         && isValidNsNumber(request.resource.data.numeroNS)
         && request.resource.data.invoiceRecordKey is string
         && request.resource.data.invoiceRecordKey.size() > 0
