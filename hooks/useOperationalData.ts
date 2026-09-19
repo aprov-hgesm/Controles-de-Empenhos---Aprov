@@ -159,11 +159,12 @@ export function useOperationalData() {
           revokeOperationalAccess();
           return;
         }
-        const data = snapshot.data() as { id?: string; status?: string; authorizedEmail?: string };
+        const data = snapshot.data() as { id?: string; status?: string; authorizedEmail?: string; ug?: string };
         if (
           data.id !== workspaceContext.workspaceId
           || data.status !== 'active'
           || data.authorizedEmail !== workspaceContext.email
+          || (data.ug || null) !== workspaceContext.ug
         ) {
           revokeOperationalAccess();
         }
@@ -184,6 +185,7 @@ export function useOperationalData() {
           accountType?: string;
           status?: string;
           firebaseUid?: string;
+          ug?: string;
         };
         if (
           data.email !== workspaceContext.email
@@ -191,6 +193,7 @@ export function useOperationalData() {
           || data.accountType !== 'sector'
           || data.status !== 'active'
           || data.firebaseUid !== user.uid
+          || (data.ug || null) !== workspaceContext.ug
         ) {
           revokeOperationalAccess();
         }

@@ -88,6 +88,7 @@ export interface Invoice {
   tesourariaDate?: string; // Data de envio para a tesouraria
   termoNumero?: number; // Número do termo de recebimento QR
   numeroNS?: string; // Número identificador do comprovante de liquidação (Nota de Sistema)
+  nsUg?: string; // UG emitente da NS, normalizada em 6 dígitos; compõe a identidade canônica da NS
   localizacaoAtual?: 'APROVISIONAMENTO' | 'COMISSAO' | 'TESOURARIA'; // Localização operacional atual da NF; datas históricas são preservadas
   notaFiscalPdf?: InvoicePdfDocument;
   notaFiscalPdfVersions?: InvoicePdfDocument[];

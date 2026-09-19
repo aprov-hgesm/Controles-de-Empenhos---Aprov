@@ -9,6 +9,7 @@ import { normalizePlatformEmail, normalizeWorkspaceId } from './platformIdentity
  */
 export const HGESM_WORKSPACE_ID = normalizeWorkspaceId('hgesm-aprov');
 export const HGESM_SECTOR_EMAIL = normalizePlatformEmail('aprov1hgesm@gmail.com');
+export const HGESM_UG = '160416';
 export const HGESM_WORKSPACE_BOOTSTRAP_SOURCE = 'system:legacy-workspace-bootstrap';
 
 /**
@@ -41,6 +42,7 @@ export function createHgesmFoundingWorkspace(
     id: HGESM_WORKSPACE_ID,
     name: 'Aprovisionamento HGeSM',
     status: 'active',
+    ug: HGESM_UG,
     authorizedEmail: HGESM_SECTOR_EMAIL,
     legacyWorkspace: true,
     institutionalProfile: {
@@ -65,6 +67,7 @@ export function createHgesmSectorAccount(
     email: HGESM_SECTOR_EMAIL,
     accountType: 'sector',
     workspaceId: HGESM_WORKSPACE_ID,
+    ug: HGESM_UG,
     status: 'active',
     createdAt: now,
     updatedAt: now,

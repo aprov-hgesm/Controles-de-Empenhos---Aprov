@@ -40,8 +40,10 @@ requireText(rules, 'function validSectorAccountAdminUpdate(accountId)', 'Rules n
 requireText(rules, ".data.status == request.resource.data.status", 'Rules não exigem status coerente entre workspace e conta.');
 requireText(rules, "workspaceId != 'hgesm-aprov'", 'Rules não protegem o workspace fundador contra alteração.');
 requireText(rules, "accountId != 'aprov1hgesm@gmail.com'", 'Rules não protegem a conta fundadora contra alteração.');
-requireText(rules, "'name',\n          'status',\n          'institutionalProfile',\n          'updatedAt'", 'Workspace pode alterar campos além dos permitidos.');
-requireText(rules, "'status',\n          'updatedAt'", 'Conta pode alterar campos além do ciclo de vida.');
+requireText(rules, "'name',\n          'status',\n          'ug',\n          'institutionalProfile',\n          'updatedAt'", 'Workspace pode alterar campos além dos permitidos.');
+requireText(rules, "'status',\n          'ug',\n          'updatedAt'", 'Conta pode alterar campos além do ciclo de vida.');
+requireText(rules, "request.resource.data.ug == resource.data.ug", 'UG já vinculada não está protegida contra substituição.');
+requireText(operational, "(data.ug || null) !== workspaceContext.ug", 'Watcher não observa divergência da UG organizacional.');
 
 forbidText(
   rules,
@@ -57,7 +59,7 @@ if (findings.length) {
 } else {
   console.log('Bloco 19 — ciclo de vida administrativo dos setores\n');
   console.log('Edição institucional: habilitada');
-  console.log('Workspace ID / e-mail / UID: imutáveis');
+  console.log('Workspace ID / e-mail / UID / UG vinculada: protegidos');
   console.log('Suspensão e reativação: transação única');
   console.log('Status workspace/conta: coerente');
   console.log('Sessão suspensa: encerramento imediato');

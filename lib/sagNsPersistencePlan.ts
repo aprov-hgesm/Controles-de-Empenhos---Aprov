@@ -1,8 +1,10 @@
 import type { Empenho, Invoice } from './types';
 import {
   buildNsLockDocumentId,
+  isValidNsUg,
   NsIntegrityError,
   normalizeNsNumber,
+  normalizeNsUg,
   validateNsIntegritySnapshot,
   type NsIntegrityErrorCode,
   type NsIntegrityMutation,
@@ -13,15 +15,17 @@ import {
 } from './sagNsContract';
 import type { SagNsApplicationPreview } from './sagNsApplicationPreview';
 
-export function buildSagNsLockDocumentId(value?: string | null): string {
-  return buildNsLockDocumentId(value);
+export function buildSagNsLockDocumentId(ug?: string | null, value?: string | null): string {
+  return buildNsLockDocumentId(ug, value);
 }
 
 export interface SagNsPersistenceChange {
   invoiceRecordKey: string;
   invoiceId: string;
   empenhoId: string;
+  expectedCurrentUg: string | null;
   expectedCurrentNs: string | null;
+  proposedUg: string;
   proposedNs: string;
 }
 
@@ -74,6 +78,7 @@ export function buildSagNsPersistenceChanges(
       }
 
       const proposedNs = normalizeSagNsNumber(item.proposedNs);
+      const proposedUg = normalizeNsUg(item.proposedUg);
       if (!isValidSagNsNumber(proposedNs)) {
         throw new SagNsPersistencePlanError(
           'invalid_ns',
@@ -81,13 +86,22 @@ export function buildSagNsPersistenceChanges(
         );
       }
 
+      if (!isValidNsUg(proposedUg)) {
+        throw new SagNsPersistencePlanError(
+          'invalid_ug',
+          `A UG emitente da NS ${proposedNs} deve possuir 6 dígitos.`
+        );
+      }
+
       return {
         invoiceRecordKey: item.invoiceRecordKey,
         invoiceId: item.invoiceId,
         empenhoId: item.empenhoId,
+        expectedCurrentUg: normalizeNsUg(item.currentUg) || null,
         expectedCurrentNs: item.currentNs
           ? normalizeSagNsNumber(item.currentNs)
           : null,
+        proposedUg,
         proposedNs,
       };
     });
@@ -101,7 +115,9 @@ export function validateSagNsPersistenceSnapshot(
     invoiceId: change.invoiceId,
     empenhoId: change.empenhoId,
     supplierCnpj: input.supplierCnpj,
+    expectedCurrentUg: change.expectedCurrentUg,
     expectedCurrentNs: change.expectedCurrentNs,
+    proposedUg: change.proposedUg,
     proposedNs: change.proposedNs,
     source: 'sag',
   }));

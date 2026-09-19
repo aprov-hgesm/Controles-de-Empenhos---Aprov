@@ -43,9 +43,13 @@ await integrityModule.evaluate();
 const {
   assertNsLockOwnership,
   buildNsLockDocument,
+  buildLegacyNsLockDocumentId,
+  buildNsIdentityKey,
   buildNsLockDocumentId,
   isValidNsNumber,
+  isValidNsUg,
   normalizeNsNumber,
+  normalizeNsUg,
   validateNsIntegritySnapshot,
 } = integrityModule.namespace;
 
@@ -68,6 +72,7 @@ const invoice = ({
   empenhoId = '2026NE000001',
   cnpj = CNPJ,
   numeroNS,
+  nsUg,
 } = {}) => ({
   id,
   recordKey,
@@ -78,6 +83,7 @@ const invoice = ({
   supplier: 'Fornecedor',
   supplierCnpj: cnpj,
   ...(numeroNS ? { numeroNS } : {}),
+  ...(nsUg ? { nsUg } : {}),
 });
 
 const mutation = ({
@@ -85,7 +91,9 @@ const mutation = ({
   id = '1234',
   empenhoId = '2026NE000001',
   cnpj = CNPJ,
+  expectedCurrentUg = null,
   expectedCurrentNs = null,
+  proposedUg = '160416',
   proposedNs = '2026NS000001',
   source = 'sag',
 } = {}) => ({
@@ -93,7 +101,9 @@ const mutation = ({
   invoiceId: id,
   empenhoId,
   supplierCnpj: cnpj,
+  expectedCurrentUg,
   expectedCurrentNs,
+  proposedUg,
   proposedNs,
   source,
 });
@@ -122,11 +132,13 @@ test('normaliza e valida o formato canônico da NS', () => {
   assert.equal(isValidNsNumber('NS000001'), false);
 });
 
-test('mantém o lock físico legado determinístico no Bloco 1', () => {
-  assert.equal(
-    buildNsLockDocumentId(' 2026 ns 000001 '),
-    'sagNsLock_2026NS000001'
-  );
+test('normaliza UG e constrói identidade canônica workspace + UG + NS', () => {
+  assert.equal(normalizeNsUg(' 160416 '), '160416');
+  assert.equal(isValidNsUg('160416'), true);
+  assert.equal(isValidNsUg('16041'), false);
+  assert.equal(buildNsIdentityKey('160416', '2026 NS 000001'), '160416|2026NS000001');
+  assert.equal(buildNsLockDocumentId('160416', '2026 NS 000001'), 'sagNsLock_160416_2026NS000001');
+  assert.equal(buildLegacyNsLockDocumentId('2026 NS 000001'), 'sagNsLock_2026NS000001');
 });
 
 test('atribuição nova produz write', () => {
@@ -136,7 +148,7 @@ test('atribuição nova produz write', () => {
 });
 
 test('reaplicar a mesma NS é no-op idempotente', () => {
-  const stored = invoice({ numeroNS: '2026 NS 000001' });
+  const stored = invoice({ numeroNS: '2026 NS 000001', nsUg: '160416' });
   const result = validate({
     targets: [doc(stored)],
     owners: [doc(stored)],
@@ -146,10 +158,12 @@ test('reaplicar a mesma NS é no-op idempotente', () => {
 });
 
 test('troca de NS é aceita quando a NS atual coincide com o estado esperado', () => {
-  const stored = invoice({ numeroNS: '2026NS000010' });
+  const stored = invoice({ numeroNS: '2026NS000010', nsUg: '160416' });
   const result = validate({
     mutations: [mutation({
+      expectedCurrentUg: '160416',
       expectedCurrentNs: '2026NS000010',
+      proposedUg: '160416',
       proposedNs: '2026NS000011',
       source: 'manual',
     })],
@@ -160,10 +174,12 @@ test('troca de NS é aceita quando a NS atual coincide com o estado esperado', (
 });
 
 test('remoção de NS é representada por proposedNs null', () => {
-  const stored = invoice({ numeroNS: '2026NS000010' });
+  const stored = invoice({ numeroNS: '2026NS000010', nsUg: '160416' });
   const result = validate({
     mutations: [mutation({
+      expectedCurrentUg: '160416',
       expectedCurrentNs: '2026NS000010',
+      proposedUg: null,
       proposedNs: null,
       source: 'manual',
     })],
@@ -176,7 +192,7 @@ test('remoção de NS é representada por proposedNs null', () => {
 
 test('remoção de NF já sem NS é no-op', () => {
   const result = validate({
-    mutations: [mutation({ proposedNs: null, source: 'manual' })],
+    mutations: [mutation({ proposedUg: null, proposedNs: null, source: 'manual' })],
   });
   assert.equal(result.writes.length, 0);
   assert.equal(result.noOps.length, 1);
@@ -220,6 +236,7 @@ test('bloqueia NS já pertencente a outra NF conhecida', () => {
     id: '9999',
     recordKey: 'nf_11111111000191_9999',
     numeroNS: '2026NS000001',
+    nsUg: '160416',
   });
   assert.throws(
     () => validate({
@@ -230,7 +247,7 @@ test('bloqueia NS já pertencente a outra NF conhecida', () => {
 });
 
 test('bloqueia alteração concorrente da NS atual', () => {
-  const stored = invoice({ numeroNS: '2026NS999999' });
+  const stored = invoice({ numeroNS: '2026NS999999', nsUg: '160416' });
   assert.throws(
     () => validate({
       targets: [doc(stored)],
@@ -279,7 +296,8 @@ test('constrói lock canônico com proprietário e UID responsáveis', () => {
     updatedAt: '2026-09-19T00:00:00.000Z',
   });
 
-  assert.equal(lock.id, 'sagNsLock_2026NS000001');
+  assert.equal(lock.id, 'sagNsLock_160416_2026NS000001');
+  assert.equal(lock.ug, '160416');
   assert.equal(lock.type, 'sag-ns-lock');
   assert.equal(lock.invoiceRecordKey, item.invoiceRecordKey);
   assert.equal(lock.updatedBy, 'uid-a');
@@ -291,12 +309,45 @@ test('validação de lock bloqueia proprietário diferente', () => {
       assertNsLockOwnership(
         {
           numeroNS: '2026NS000001',
+          ug: '160416',
           invoiceRecordKey: 'nf_11111111000191_9999',
         },
         mutation(),
+        '160416',
         '2026NS000001',
         'ns_lock_conflict'
       ),
     (error) => error?.code === 'ns_lock_conflict'
+  );
+});
+
+
+test('permite o mesmo número de NS em UGs diferentes', () => {
+  const other = invoice({
+    id: '9999',
+    recordKey: 'nf_11111111000191_9999',
+    numeroNS: '2026NS000001',
+    nsUg: '160415',
+  });
+  const result = validate({ owners: [doc(invoice()), doc(other)] });
+  assert.equal(result.writes.length, 1);
+});
+
+test('bloqueia NS canônica sem UG', () => {
+  assert.throws(
+    () => validate({ mutations: [mutation({ proposedUg: null })] }),
+    (error) => error?.code === 'invalid_ug'
+  );
+});
+
+test('registro legado sem UG bloqueia reutilização ambígua do mesmo número', () => {
+  const legacy = invoice({
+    id: '9999',
+    recordKey: 'nf_11111111000191_9999',
+    numeroNS: '2026NS000001',
+  });
+  assert.throws(
+    () => validate({ owners: [doc(invoice()), doc(legacy)] }),
+    (error) => error?.code === 'ns_reused_in_scope'
   );
 });

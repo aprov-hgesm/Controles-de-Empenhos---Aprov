@@ -422,7 +422,7 @@ export default function Home() {
 
           {/* TAB 4: CONCILIAÇÃO E RELATÓRIO DO RECEBIMENTO */}
           {activeTab === 'relatorios' && (
-            <RelatoriosView context={{ editingNSId, empenhoClasses, empenhos, formatDateOnly, handleApplySagNsImport, handleDownloadTermoRecebimento, handleGenerateEmpenhoReportPDF, handleSaveNumeroNS, invoices, relatoriosPregaoFilter, reportEndDate, reportSearch, reportStartDate, selectedReportInvoice, setEditingNSId, setRelatoriosPregaoFilter, setReportEndDate, setReportSearch, setReportStartDate, setSelectedReportInvoice, setShowPdfModal, setTempNSValue, showPdfModal, tempNSValue, uniquePregaos }} />
+            <RelatoriosView context={{ editingNSId, empenhoClasses, empenhos, formatDateOnly, handleApplySagNsImport, handleDownloadTermoRecebimento, handleGenerateEmpenhoReportPDF, handleSaveNumeroNS, invoices, relatoriosPregaoFilter, reportEndDate, reportSearch, reportStartDate, selectedReportInvoice, setEditingNSId, setRelatoriosPregaoFilter, setReportEndDate, setReportSearch, setReportStartDate, setSelectedReportInvoice, setShowPdfModal, setTempNSValue, showPdfModal, tempNSValue, uniquePregaos, workspaceUg: workspaceContext.status === 'sector' ? workspaceContext.ug : null }} />
           )}
 
           {/* CONSULTA CONSOLIDADA DE ITENS */}

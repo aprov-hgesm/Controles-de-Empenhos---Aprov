@@ -31,7 +31,9 @@ export async function commitSagNsImport(
     invoiceId: change.invoiceId,
     empenhoId: change.empenhoId,
     supplierCnpj: input.supplierCnpj,
+    expectedCurrentUg: change.expectedCurrentUg,
     expectedCurrentNs: change.expectedCurrentNs,
+    proposedUg: change.proposedUg,
     proposedNs: change.proposedNs,
     source: 'sag',
   }));

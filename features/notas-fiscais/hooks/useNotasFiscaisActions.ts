@@ -5,8 +5,9 @@ import type { User } from 'firebase/auth';
 import type { Alert, Comissao, Empenho, Invoice, InvoiceItem, InvoicePdfDocument } from '../../../lib/types';
 import { commitAllComissoesDeletion, commitAllInvoicesDeletion, commitInvoiceDeletion, commitInvoiceReceiptChanges, saveInvoice, removeComissao, saveComissao } from '../../../lib/firebaseSync';
 import { deleteInvoicePdfUpload, uploadInvoicePdf } from '../../../lib/invoiceDocuments';
-import { normalizeNsNumber } from '../../../lib/nsIntegrity';
+import { isValidNsUg, normalizeNsNumber, normalizeNsUg } from '../../../lib/nsIntegrity';
 import { commitNsIntegrityMutations } from '../../../lib/nsIntegrityService';
+import { getCurrentOperationalScope } from '../../../lib/operationalPaths';
 import {
   buildInvoiceRecordKey,
   findInvoiceIdentityConflict,
@@ -533,14 +534,27 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     }
 
     const currentNs = normalizeNsNumber(targetInvoice.numeroNS);
+    const currentUg = normalizeNsUg(targetInvoice.nsUg);
     const proposedNs = normalizeNsNumber(value);
+    const scope = getCurrentOperationalScope(user.uid);
+    const proposedUg = proposedNs ? normalizeNsUg(scope.ug) : '';
+
+    if (proposedNs && !isValidNsUg(proposedUg)) {
+      showToast(
+        'A UG da Organização Militar não está configurada para este usuário. Solicite ao administrador que vincule a UG ao cadastro do setor.',
+        'error'
+      );
+      return;
+    }
+
     const knownNsOwnerRecordKeys = proposedNs
       ? invoices
-          .filter(
-            (invoice) =>
-              getInvoiceRecordKey(invoice) !== invoiceRecordKey &&
-              normalizeNsNumber(invoice.numeroNS) === proposedNs
-          )
+          .filter((invoice) => {
+            if (getInvoiceRecordKey(invoice) === invoiceRecordKey) return false;
+            if (normalizeNsNumber(invoice.numeroNS) !== proposedNs) return false;
+            const ownerUg = normalizeNsUg(invoice.nsUg);
+            return !ownerUg || ownerUg === proposedUg;
+          })
           .map(getInvoiceRecordKey)
       : [];
 
@@ -552,7 +566,9 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
             invoiceId: targetInvoice.id,
             empenhoId: targetInvoice.empenhoId,
             supplierCnpj,
+            expectedCurrentUg: currentUg || null,
             expectedCurrentNs: currentNs || null,
+            proposedUg: proposedUg || null,
             proposedNs: proposedNs || null,
             source: 'manual',
           },
@@ -578,7 +594,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       setTempNSValue('');
       showToast(
         proposedNs
-          ? `Número da NS (${proposedNs}) salvo para a NF ${targetInvoice.id}!`
+          ? `NS ${proposedNs} salva para a NF ${targetInvoice.id} com a UG ${proposedUg} da unidade.`
           : `Número da NS removido da NF ${targetInvoice.id}!`,
         'success'
       );

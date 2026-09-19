@@ -4,7 +4,7 @@ import type React from 'react';
 import type { User } from 'firebase/auth';
 import type { Empenho, Invoice } from '../../../lib/types';
 import { getInvoiceRecordKey, normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
-import { normalizeSagNsNumber, type SagNsPayload } from '../../../lib/sagNsContract';
+import { normalizeSagNsNumber, normalizeSagUg, type SagNsPayload } from '../../../lib/sagNsContract';
 import { reconcileSagNsPayload } from '../../../lib/sagNsReconciliation';
 import {
   buildSagNsApplicationFingerprint,
@@ -15,6 +15,7 @@ import {
   commitSagNsImport,
   type SagNsImportCommitResult,
 } from '../../../lib/sagNsPersistence';
+import { getCurrentOperationalScope } from '../../../lib/operationalPaths';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -54,8 +55,30 @@ export function useSagNsImportActions(context: SagNsImportActionsContext) {
       );
     }
 
+    const scope = getCurrentOperationalScope(user.uid);
+    const workspaceUg = normalizeSagUg(scope.ug);
+    if (!workspaceUg) {
+      throw new SagNsImportActionError(
+        'blocked_preview',
+        'A UG da Organização Militar não está configurada para este usuário. Solicite ao administrador a vinculação da UG antes de importar NS.'
+      );
+    }
+
+    const payloadUg = normalizeSagUg(payload.ug);
+    if (payloadUg && payloadUg !== workspaceUg) {
+      throw new SagNsImportActionError(
+        'blocked_preview',
+        `O SAG informou a UG ${payloadUg}, diferente da UG ${workspaceUg} vinculada a este usuário.`
+      );
+    }
+
+    const scopedPayload: SagNsPayload = {
+      ...payload,
+      ug: workspaceUg,
+    };
+
     const freshReconciliation = reconcileSagNsPayload(
-      payload,
+      scopedPayload,
       supplierCnpj,
       empenhos,
       invoices
@@ -92,12 +115,20 @@ export function useSagNsImportActions(context: SagNsImportActionsContext) {
     const proposedNs = new Set(
       changes.map((change) => normalizeSagNsNumber(change.proposedNs))
     );
-    const knownNsOwnerRecordKeys = invoices
-      .filter(
-        (invoice) =>
-          selectedEmpenhoIds.has(invoice.empenhoId) &&
-          proposedNs.has(normalizeSagNsNumber(invoice.numeroNS))
+    const proposedIdentities = new Set(
+      changes.map(
+        (change) =>
+          `${change.proposedUg}|${normalizeSagNsNumber(change.proposedNs)}`
       )
+    );
+    const knownNsOwnerRecordKeys = invoices
+      .filter((invoice) => {
+        if (!selectedEmpenhoIds.has(invoice.empenhoId)) return false;
+        const invoiceNs = normalizeSagNsNumber(invoice.numeroNS);
+        if (!invoiceNs || !proposedNs.has(invoiceNs)) return false;
+        const invoiceUg = normalizeSagUg(invoice.nsUg);
+        return !invoiceUg || proposedIdentities.has(`${invoiceUg}|${invoiceNs}`);
+      })
       .map(getInvoiceRecordKey);
 
     const result = await commitSagNsImport(user.uid, {

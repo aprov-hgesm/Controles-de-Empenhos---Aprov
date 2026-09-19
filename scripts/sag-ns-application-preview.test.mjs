@@ -39,11 +39,12 @@ const baseRecord = (ns, nf = '1234') => ({
   observation: 'NF',
 });
 
-const invoiceRef = (invoiceId, empenhoId, currentNs = null) => ({
+const invoiceRef = (invoiceId, empenhoId, currentNs = null, currentUg = null) => ({
   invoiceId,
   invoiceRecordKey: `nf_key_${invoiceId}`,
   empenhoId,
   issueDate: '2026-01-10',
+  currentUg,
   currentNs,
 });
 
@@ -62,8 +63,9 @@ const item = ({
   issues,
 });
 
-const result = (items) => ({
+const result = (items, ug = '160416') => ({
   supplierCnpj: '11111111000191',
+  ug,
   items,
   stats: {
     total: items.length,
@@ -87,7 +89,9 @@ test('transforma correspondência segura em alteração proposta', () => {
   ]));
 
   assert.equal(preview.items[0].decision, 'change');
+  assert.equal(preview.items[0].currentUg, null);
   assert.equal(preview.items[0].currentNs, null);
+  assert.equal(preview.items[0].proposedUg, '160416');
   assert.equal(preview.items[0].proposedNs, '2026NS000001');
   assert.equal(preview.stats.changes, 1);
   assert.equal(preview.canAdvanceToPersistenceReview, true);
@@ -202,4 +206,20 @@ test('um lote com alterações e sem bloqueios pode avançar para revisão de pe
   assert.equal(preview.stats.ignored, 1);
   assert.equal(preview.stats.blocked, 0);
   assert.equal(preview.canAdvanceToPersistenceReview, true);
+});
+
+
+test('bloqueia persistência quando o SAG não fornece UG emitente', () => {
+  const preview = buildSagNsApplicationPreview(result([
+    item({
+      status: 'matched',
+      ns: '2026NS000090',
+      invoice: invoiceRef('1290', '2026NE000001'),
+    }),
+  ], null));
+
+  assert.equal(preview.ug, null);
+  assert.equal(preview.items[0].decision, 'blocked');
+  assert.equal(preview.items[0].blockers.some((message) => message.includes('UG emitente')), true);
+  assert.equal(preview.canAdvanceToPersistenceReview, false);
 });

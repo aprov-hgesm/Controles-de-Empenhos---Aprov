@@ -48,6 +48,7 @@ import type { SagNsImportCommitResult } from '../../../lib/sagNsPersistence';
 interface SagImportViewProps {
   empenhos: Empenho[];
   invoices: Invoice[];
+  workspaceUg: string | null;
   onApplySagNsImport: (
     payload: SagNsPayload,
     supplierCnpj: string,
@@ -145,14 +146,13 @@ function copyTextFallback(value: string): boolean {
   }
 }
 
-export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImportViewProps) {
+export function SagImportView({ empenhos, invoices, workspaceUg, onApplySagNsImport }: SagImportViewProps) {
   const supplierReports = React.useMemo(
     () => buildSupplierReports(empenhos, invoices),
     [empenhos, invoices]
   );
   const [supplierSearch, setSupplierSearch] = React.useState('');
   const [selectedCnpj, setSelectedCnpj] = React.useState('');
-  const [ug, setUg] = React.useState('');
   const [jsonText, setJsonText] = React.useState('');
   const [validation, setValidation] = React.useState<SagNsValidationResult | null>(null);
   const [copyState, setCopyState] = React.useState<CopyState>('idle');
@@ -183,8 +183,18 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
     });
   }, [normalizedSearch, searchDigits, supplierReports]);
 
-  const normalizedUg = normalizeSagUg(ug);
-  const ugInvalid = Boolean(ug.trim()) && !normalizedUg;
+  const normalizedUg = normalizeSagUg(workspaceUg);
+  const ugInvalid = !normalizedUg;
+  const payloadUg = normalizeSagUg(validation?.data?.ug);
+  const ugMismatch = Boolean(payloadUg && normalizedUg && payloadUg !== normalizedUg);
+  const effectivePayload = React.useMemo(
+    () => (
+      validation?.ok && validation.data && normalizedUg && !ugMismatch
+        ? { ...validation.data, ug: normalizedUg }
+        : null
+    ),
+    [normalizedUg, ugMismatch, validation]
+  );
 
   const prompt = React.useMemo(() => {
     if (!selectedSupplier || ugInvalid) return '';
@@ -200,15 +210,15 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
   const warningIssues = validation?.issues.filter((issue) => issue.severity === 'warning') || [];
 
   const reconciliation = React.useMemo(() => {
-    if (!selectedSupplier || !validation?.ok || !validation.data) return null;
+    if (!selectedSupplier || !effectivePayload) return null;
 
     return reconcileSagNsPayload(
-      validation.data,
+      effectivePayload,
       selectedSupplier.cnpj,
       empenhos,
       invoices
     );
-  }, [empenhos, invoices, selectedSupplier, validation]);
+  }, [effectivePayload, empenhos, invoices, selectedSupplier]);
 
   const applicationPreview = React.useMemo(
     () => (reconciliation ? buildSagNsApplicationPreview(reconciliation) : null),
@@ -307,6 +317,7 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
     if (
       !validation?.ok ||
       !validation.data ||
+      !effectivePayload ||
       !selectedSupplier ||
       !applyConfirmed ||
       !confirmationFingerprint ||
@@ -319,7 +330,7 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
     setApplyError('');
     try {
       const result = await onApplySagNsImport(
-        validation.data,
+        effectivePayload,
         selectedSupplier.cnpj,
         confirmationFingerprint
       );
@@ -631,30 +642,24 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
                   </div>
                 </div>
 
-                <label className="mt-3 block">
+                <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50/70 px-3.5 py-3">
                   <span className="text-[9px] font-extrabold uppercase tracking-wider text-gray-400">
-                    UG opcional
+                    UG da Organização Militar
                   </span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={6}
-                    value={ug}
-                    onChange={(event) => {
-                      setUg(event.target.value.replace(/\D/g, '').slice(0, 6));
-                      setCopyState('idle');
-                    }}
-                    placeholder="Ex.: 160416"
-                    className={`mt-1.5 h-10 w-full rounded-xl border bg-gray-50/60 px-3 font-mono text-xs font-bold outline-none transition ${
-                      ugInvalid
-                        ? 'border-amber-300 text-amber-800 focus:ring-1 focus:ring-amber-300'
-                        : 'border-gray-200 text-gray-700 focus:border-[#00288e] focus:bg-white focus:ring-1 focus:ring-[#00288e]'
-                    }`}
-                  />
-                </label>
+                  <div className="mt-1 font-mono text-sm font-black text-[#00288e]">
+                    {normalizedUg || 'Não configurada'}
+                  </div>
+                  <p className="mt-1 text-[10px] font-semibold leading-relaxed text-gray-500">
+                    A UG vem automaticamente do cadastro do usuário/setor e compõe a identidade das NS.
+                  </p>
+                </div>
                 {ugInvalid ? (
                   <p className="mt-1.5 text-[10px] font-semibold text-amber-700">
-                    Informe os 6 dígitos da UG ou deixe o campo vazio.
+                    A UG da unidade ainda não está configurada. O administrador deve vinculá-la ao cadastro antes de importar NS.
+                  </p>
+                ) : ugMismatch ? (
+                  <p className="mt-1.5 text-[10px] font-semibold text-rose-700">
+                    O SAG informou a UG {payloadUg}, diferente da UG {normalizedUg} vinculada a este usuário. A importação foi bloqueada.
                   </p>
                 ) : null}
 

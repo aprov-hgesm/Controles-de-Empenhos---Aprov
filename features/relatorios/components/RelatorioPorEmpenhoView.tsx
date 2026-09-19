@@ -46,6 +46,7 @@ export interface RelatoriosViewContext {
   showPdfModal: boolean;
   tempNSValue: string;
   uniquePregaos: string[];
+  workspaceUg: string | null;
 }
 
 interface RelatorioPorEmpenhoViewProps {
@@ -53,7 +54,7 @@ interface RelatorioPorEmpenhoViewProps {
 }
 /** Relatório operacional por empenho preservado do fluxo legado da aba Relatórios. */
 export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProps) {
-  const { editingNSId, empenhoClasses, empenhos, formatDateOnly, handleDownloadTermoRecebimento, handleGenerateEmpenhoReportPDF, handleSaveNumeroNS, invoices, relatoriosPregaoFilter, reportEndDate, reportSearch, reportStartDate, selectedReportInvoice, setEditingNSId, setRelatoriosPregaoFilter, setReportEndDate, setReportSearch, setReportStartDate, setSelectedReportInvoice, setShowPdfModal, setTempNSValue, showPdfModal, tempNSValue, uniquePregaos } = context;
+  const { editingNSId, empenhoClasses, empenhos, formatDateOnly, handleDownloadTermoRecebimento, handleGenerateEmpenhoReportPDF, handleSaveNumeroNS, invoices, relatoriosPregaoFilter, reportEndDate, reportSearch, reportStartDate, selectedReportInvoice, setEditingNSId, setRelatoriosPregaoFilter, setReportEndDate, setReportSearch, setReportStartDate, setSelectedReportInvoice, setShowPdfModal, setTempNSValue, showPdfModal, tempNSValue, uniquePregaos, workspaceUg } = context;
 
   const invoiceRequiresTR = (invoice: Invoice): boolean => {
     const empenho = empenhos.find((item) => item.id === invoice.empenhoId);
@@ -379,7 +380,13 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                       </td>
                                       <td className="py-3 px-3.5 whitespace-nowrap">
                                         {editingNSId === getInvoiceRecordKey(inv) ? (
-                                          <div className="flex items-center gap-1.5">
+                                          <div className="flex flex-wrap items-center gap-1.5">
+                                            <span
+                                              className="inline-flex h-8 items-center rounded-lg border border-blue-100 bg-blue-50 px-2 text-[10px] font-mono font-bold text-[#00288e]"
+                                              title="UG vinculada automaticamente ao cadastro da unidade"
+                                            >
+                                              UG {workspaceUg || 'não configurada'}
+                                            </span>
                                             <input
                                               type="text"
                                               id={`input-ns-${getInvoiceRecordKey(inv)}`}
@@ -424,7 +431,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                           <div className="flex items-center gap-2">
                                             {inv.numeroNS ? (
                                               <span className="inline-flex items-center gap-1 font-mono font-bold text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded-md text-xs border border-indigo-100 shadow-2xs">
-                                                {inv.numeroNS}
+                                                {inv.nsUg ? `UG ${inv.nsUg} · ` : 'UG pendente · '}{inv.numeroNS}
                                               </span>
                                             ) : (
                                               <span className="text-gray-400 font-normal italic text-xs">

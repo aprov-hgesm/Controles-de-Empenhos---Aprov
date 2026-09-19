@@ -54,6 +54,16 @@ requireText(
   'Contador inicial deixou de ser criado com workspace e conta.'
 );
 requireText(
+  server,
+  'platformUgIndex',
+  'Novo workspace não reserva índice exclusivo de UG.'
+);
+requireText(
+  shared,
+  'isValidUnitUg(ug)',
+  'Novo workspace não exige UG válida.'
+);
+requireText(
   shared,
   'buildSectorInstitutionalProfile(input)',
   'Cadastro de setor não sanitiza campos institucionais antes da persistência.'
@@ -128,7 +138,7 @@ if (findings.length) {
   process.exitCode = 2;
 } else {
   console.log('Provisionamento automático de workspaces\n');
-  console.log('Workspace + conta + contador: commit privilegiado e atômico');
+  console.log('Workspace + conta + UG + contador: commit privilegiado e atômico');
   console.log('Contador inicial de TR: 0');
   console.log('Perfil institucional: padrões de Aprovisionamento aplicados');
   console.log('Duplicidade/configuração residual: bloqueada');

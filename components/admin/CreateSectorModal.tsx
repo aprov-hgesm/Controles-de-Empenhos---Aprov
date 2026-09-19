@@ -16,6 +16,7 @@ interface CreateSectorModalProps {
 const INITIAL_FORM: CreateSectorWorkspaceInput = {
   workspaceId: '',
   workspaceName: '',
+  ug: '',
   authorizedEmail: '',
   initialPassword: '',
   organizationName: '',
@@ -54,6 +55,7 @@ export function CreateSectorModal({ open, creating, onClose, onCreate }: CreateS
 
     if (
       !form.workspaceName.trim()
+      || !form.ug.trim()
       || !form.authorizedEmail.trim()
       || !form.initialPassword
       || !form.organizationName.trim()
@@ -119,7 +121,7 @@ export function CreateSectorModal({ open, creating, onClose, onCreate }: CreateS
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field label="Nome do setor" required>
               <input
                 value={form.workspaceName}
@@ -138,6 +140,22 @@ export function CreateSectorModal({ open, creating, onClose, onCreate }: CreateS
                 }}
                 placeholder="unidade-b"
                 className={`${inputClass} font-mono`}
+              />
+            </Field>
+
+            <Field label="UG da OM" required hint="6 dígitos; identidade da unidade.">
+              <input
+                inputMode="numeric"
+                value={form.ug}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    ug: event.target.value.replace(/\D/g, '').slice(0, 6),
+                  }))
+                }
+                placeholder="160416"
+                maxLength={6}
+                className={`${inputClass} font-mono tracking-[0.12em]`}
               />
             </Field>
           </div>
@@ -224,7 +242,7 @@ export function CreateSectorModal({ open, creating, onClose, onCreate }: CreateS
           </div>
 
           <div className="rounded-2xl border border-blue-400/15 bg-blue-500/[0.06] px-4 py-3 text-xs leading-relaxed text-blue-100">
-            O usuário Firebase, o workspace e a conta operacional serão provisionados de forma coordenada no servidor. A senha não é gravada no Firestore. O Google Drive permanece desconectado até a etapa específica de onboarding.
+            O usuário Firebase, o workspace e a conta operacional serão provisionados de forma coordenada no servidor. A UG será vinculada à identidade da Organização Militar e reutilizada automaticamente nos fluxos operacionais. A senha não é gravada no Firestore. O Google Drive permanece desconectado até a etapa específica de onboarding.
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-1">

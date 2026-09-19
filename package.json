@@ -82,7 +82,8 @@
     "test:supplier-cnpj-migration": "node --experimental-vm-modules --test scripts/supplier-cnpj-migration.test.mjs",
     "verify:supplier-cnpj-migration": "node scripts/verify-supplier-cnpj-migration.mjs",
     "verify:global-ns-rules": "node scripts/verify-global-ns-rules.mjs",
-    "verify:cnpj-validation": "node scripts/verify-cnpj-validation.mjs"
+    "verify:cnpj-validation": "node scripts/verify-cnpj-validation.mjs",
+    "verify:ns-ug-identity": "node scripts/verify-ns-ug-identity.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

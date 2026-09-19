@@ -16,9 +16,12 @@ import {
 } from './operationalPaths';
 import {
   assertNsLockOwnership,
+  buildLegacyNsLockDocumentId,
   buildNsLockDocument,
   buildNsLockDocumentId,
+  isValidNsUg,
   normalizeNsNumber,
+  normalizeNsUg,
   validateNsIntegritySnapshot,
   NsIntegrityError,
   type NsIntegrityInvoiceDocument,
@@ -43,7 +46,17 @@ export interface CommitNsIntegrityResult {
 function withoutNumeroNs(invoice: Invoice): Invoice {
   const result: Invoice = { ...invoice };
   delete result.numeroNS;
+  delete result.nsUg;
   return result;
+}
+
+function buildStoredNsLockDocumentId(invoice: Pick<Invoice, 'numeroNS' | 'nsUg'>): string {
+  const numeroNS = normalizeNsNumber(invoice.numeroNS);
+  if (!numeroNS) return '';
+  const ug = normalizeNsUg(invoice.nsUg);
+  return ug
+    ? buildNsLockDocumentId(ug, numeroNS)
+    : buildLegacyNsLockDocumentId(numeroNS);
 }
 
 export async function commitNsIntegrityMutations(
@@ -52,15 +65,42 @@ export async function commitNsIntegrityMutations(
 ): Promise<CommitNsIntegrityResult> {
   const scope = getCurrentOperationalScope(userId);
   const path = `${getOperationalCollectionPath(scope, 'invoices')}/ns-integrity`;
+  const scopeUg = normalizeNsUg(scope.ug);
+  const mutations = input.mutations.map((mutation) => {
+    const proposedNs = normalizeNsNumber(mutation.proposedNs);
+    if (!proposedNs) {
+      return { ...mutation, proposedUg: null };
+    }
 
-  if (input.mutations.length > MAX_NS_INTEGRITY_TRANSACTION_MUTATIONS) {
+    if (!isValidNsUg(scopeUg)) {
+      throw new NsIntegrityError(
+        'invalid_ug',
+        'A UG da Organização Militar não está configurada para este usuário. A gravação de NS foi bloqueada.'
+      );
+    }
+
+    const requestedUg = normalizeNsUg(mutation.proposedUg);
+    if (requestedUg && requestedUg !== scopeUg) {
+      throw new NsIntegrityError(
+        'invalid_ug',
+        `A UG ${requestedUg} informada para a NS não corresponde à UG ${scopeUg} vinculada ao usuário.`
+      );
+    }
+
+    return {
+      ...mutation,
+      proposedUg: scopeUg,
+    };
+  });
+
+  if (mutations.length > MAX_NS_INTEGRITY_TRANSACTION_MUTATIONS) {
     throw new Error(
       `A operação de NS excede o limite seguro de ${MAX_NS_INTEGRITY_TRANSACTION_MUTATIONS} alterações por transação.`
     );
   }
 
   const targetRecordKeys = Array.from(
-    new Set(input.mutations.map((mutation) => mutation.invoiceRecordKey))
+    new Set(mutations.map((mutation) => mutation.invoiceRecordKey))
   );
   const knownOwnerRecordKeys = Array.from(new Set(input.knownNsOwnerRecordKeys));
 
@@ -74,7 +114,7 @@ export async function commitNsIntegrityMutations(
     new Set([...targetRecordKeys, ...knownOwnerRecordKeys])
   );
   const empenhoIds = Array.from(
-    new Set(input.mutations.map((mutation) => mutation.empenhoId))
+    new Set(mutations.map((mutation) => mutation.empenhoId))
   );
 
   try {
@@ -111,24 +151,35 @@ export async function commitNsIntegrityMutations(
         targetInvoiceDocuments.map((document) => [document.recordKey, document.invoice])
       );
 
+      for (const document of targetInvoiceDocuments) {
+        const storedNs = normalizeNsNumber(document.invoice.numeroNS);
+        const storedUg = normalizeNsUg(document.invoice.nsUg);
+        if (storedNs && storedUg && isValidNsUg(scopeUg) && storedUg !== scopeUg) {
+          throw new NsIntegrityError(
+            'invalid_ug',
+            `A NF ${document.invoice.id} está vinculada à UG ${storedUg}, diferente da UG ${scopeUg} deste usuário. A operação foi bloqueada.`
+          );
+        }
+      }
+
       const empenhos: Empenho[] = empenhoSnapshots
         .filter((snapshot) => snapshot.exists())
         .map((snapshot) => snapshot.data() as Empenho);
 
       const validation = validateNsIntegritySnapshot({
-        mutations: input.mutations,
+        mutations: mutations,
         targetInvoiceDocuments,
         knownOwnerInvoiceDocuments,
         empenhos,
       });
 
       const lockIds = new Set<string>();
-      for (const mutation of input.mutations) {
+      for (const mutation of mutations) {
         const stored = targetByKey.get(mutation.invoiceRecordKey);
         const currentNs = normalizeNsNumber(stored?.numeroNS);
         const proposedNs = normalizeNsNumber(mutation.proposedNs);
-        if (currentNs) lockIds.add(buildNsLockDocumentId(currentNs));
-        if (proposedNs) lockIds.add(buildNsLockDocumentId(proposedNs));
+        if (stored && currentNs) lockIds.add(buildStoredNsLockDocumentId(stored));
+        if (proposedNs) lockIds.add(buildNsLockDocumentId(mutation.proposedUg, proposedNs));
       }
 
       const lockIdList = Array.from(lockIds);
@@ -144,31 +195,35 @@ export async function commitNsIntegrityMutations(
         ])
       );
 
-      for (const mutation of input.mutations) {
+      for (const mutation of mutations) {
         const stored = targetByKey.get(mutation.invoiceRecordKey);
         if (!stored) continue;
 
         const currentNs = normalizeNsNumber(stored.numeroNS);
+        const currentUg = normalizeNsUg(stored.nsUg);
         const proposedNs = normalizeNsNumber(mutation.proposedNs);
+        const proposedUg = normalizeNsUg(mutation.proposedUg);
 
         if (proposedNs) {
-          const proposedLock = lockById.get(buildNsLockDocumentId(proposedNs));
+          const proposedLock = lockById.get(buildNsLockDocumentId(proposedUg, proposedNs));
           if (proposedLock) {
             assertNsLockOwnership(
               proposedLock,
               mutation,
+              proposedUg,
               proposedNs,
               'ns_lock_conflict'
             );
           }
         }
 
-        if (currentNs && currentNs !== proposedNs) {
-          const currentLock = lockById.get(buildNsLockDocumentId(currentNs));
+        if (currentNs && (currentNs !== proposedNs || currentUg !== proposedUg)) {
+          const currentLock = lockById.get(buildStoredNsLockDocumentId(stored));
           if (currentLock) {
             assertNsLockOwnership(
               currentLock,
               mutation,
+              currentUg || null,
               currentNs,
               'stale_lock_owner'
             );
@@ -179,12 +234,14 @@ export async function commitNsIntegrityMutations(
       const writeKeys = new Set(validation.writes.map((mutation) => mutation.invoiceRecordKey));
       const now = new Date().toISOString();
 
-      for (const mutation of input.mutations) {
+      for (const mutation of mutations) {
         const stored = targetByKey.get(mutation.invoiceRecordKey);
         if (!stored) continue;
 
         const currentNs = normalizeNsNumber(stored.numeroNS);
+        const currentUg = normalizeNsUg(stored.nsUg);
         const proposedNs = normalizeNsNumber(mutation.proposedNs);
+        const proposedUg = normalizeNsUg(mutation.proposedUg);
 
         if (writeKeys.has(mutation.invoiceRecordKey)) {
           transaction.set(
@@ -192,11 +249,13 @@ export async function commitNsIntegrityMutations(
             proposedNs
               ? {
                   numeroNS: proposedNs,
+                  nsUg: proposedUg,
                   recordKey: mutation.invoiceRecordKey,
                   userId,
                 }
               : {
                   numeroNS: deleteField(),
+                  nsUg: deleteField(),
                   recordKey: mutation.invoiceRecordKey,
                   userId,
                 },
@@ -215,15 +274,15 @@ export async function commitNsIntegrityMutations(
           );
         }
 
-        if (currentNs && currentNs !== proposedNs) {
-          const currentLockId = buildNsLockDocumentId(currentNs);
+        if (currentNs && (currentNs !== proposedNs || currentUg !== proposedUg)) {
+          const currentLockId = buildStoredNsLockDocumentId(stored);
           if (lockById.get(currentLockId)) {
             transaction.delete(operationalSettingsDocRef(scope, currentLockId));
           }
         }
 
         if (proposedNs) {
-          const lockId = buildNsLockDocumentId(proposedNs);
+          const lockId = buildNsLockDocumentId(proposedUg, proposedNs);
           const existingLock = lockById.get(lockId);
           const lock = buildNsLockDocument({
             workspaceId: scope.workspaceId,
@@ -244,16 +303,18 @@ export async function commitNsIntegrityMutations(
       }
 
       const updatedInvoices: Invoice[] = [];
-      for (const mutation of input.mutations) {
+      for (const mutation of mutations) {
         const stored = targetByKey.get(mutation.invoiceRecordKey);
         if (!stored) continue;
         const proposedNs = normalizeNsNumber(mutation.proposedNs);
+        const proposedUg = normalizeNsUg(mutation.proposedUg);
         updatedInvoices.push(
           proposedNs
             ? {
                 ...stored,
                 recordKey: mutation.invoiceRecordKey,
                 numeroNS: proposedNs,
+                nsUg: proposedUg,
               }
             : {
                 ...withoutNumeroNs(stored),
@@ -272,7 +333,7 @@ export async function commitNsIntegrityMutations(
     handleFirestoreError(
       error,
       OperationType.WRITE,
-      `${path}:${input.mutations.map((mutation) =>
+      `${path}:${mutations.map((mutation) =>
         getOperationalDocumentPath(scope, 'invoices', mutation.invoiceRecordKey)
       ).join(',')}`
     );
@@ -321,7 +382,9 @@ function buildLifecycleMutation(
     invoiceId: invoice.id,
     empenhoId: invoice.empenhoId,
     supplierCnpj,
+    expectedCurrentUg: normalizeNsUg(invoice.nsUg) || null,
     expectedCurrentNs: normalizeNsNumber(invoice.numeroNS) || null,
+    proposedUg: proposedNs ? normalizeNsUg(invoice.nsUg) || null : null,
     proposedNs,
     source,
   };
@@ -441,18 +504,20 @@ export async function commitInvoiceReceiptLifecycle(
           existingSnapshot.data() as Invoice
         );
         const oldNs = normalizeNsNumber(oldInvoice.numeroNS);
+        const oldUg = normalizeNsUg(oldInvoice.nsUg);
         const nextNs = normalizeNsNumber(input.invoice.numeroNS);
-        if (oldNs !== nextNs) {
+        const nextUg = normalizeNsUg(input.invoice.nsUg);
+        if (oldNs !== nextNs || oldUg !== nextUg) {
           throw new NsIntegrityError(
             'stale_invoice_ns',
-            'A NS da Nota Fiscal mudou durante a edição. Altere a NS pelo campo específico.'
+            'A identidade UG + NS da Nota Fiscal mudou durante a edição. Altere-a pelo campo específico.'
           );
         }
 
         if (oldNs) {
           migratedLockRef = operationalSettingsDocRef(
             scope,
-            buildNsLockDocumentId(oldNs)
+            buildStoredNsLockDocumentId(oldInvoice)
           );
           const lockSnapshot = await transaction.get(migratedLockRef);
           if (lockSnapshot.exists()) {
@@ -475,6 +540,7 @@ export async function commitInvoiceReceiptLifecycle(
                 oldNs,
                 'migration'
               ),
+              oldUg || null,
               oldNs,
               'stale_lock_owner'
             );
@@ -524,28 +590,38 @@ export async function commitInvoiceReceiptLifecycle(
       }
 
       const preservedNs = normalizeNsNumber(oldInvoice?.numeroNS);
+      const preservedUg = normalizeNsUg(oldInvoice?.nsUg);
       if (
         isExistingEdit &&
         preservedNs &&
         supplierCnpj &&
         migratedLockRef
       ) {
-        const now = new Date().toISOString();
-        const refreshedMutation = buildLifecycleMutation(
-          input.invoice,
-          nextRecordKey,
-          supplierCnpj,
-          preservedNs,
-          'migration'
-        );
-        const nextLock = buildNsLockDocument({
-          workspaceId: scope.workspaceId,
-          mutation: refreshedMutation,
-          userId,
-          createdAt: migratedLock?.createdAt || now,
-          updatedAt: now,
-        });
-        transaction.set(migratedLockRef, nextLock, { merge: true });
+        if (!preservedUg) {
+          if (isIdentityMigration) {
+            throw new NsIntegrityError(
+              'invalid_ug',
+              'A NF possui NS legada sem UG. Informe a UG pelo controle de NS antes de migrar a identidade da Nota Fiscal.'
+            );
+          }
+        } else {
+          const now = new Date().toISOString();
+          const refreshedMutation = buildLifecycleMutation(
+            input.invoice,
+            nextRecordKey,
+            supplierCnpj,
+            preservedNs,
+            'migration'
+          );
+          const nextLock = buildNsLockDocument({
+            workspaceId: scope.workspaceId,
+            mutation: refreshedMutation,
+            userId,
+            createdAt: migratedLock?.createdAt || now,
+            updatedAt: now,
+          });
+          transaction.set(migratedLockRef, nextLock, { merge: true });
+        }
       }
     });
   } catch (error) {
@@ -590,7 +666,7 @@ export async function commitInvoiceDeletionLifecycle(
       if (currentNs) {
         lockRef = operationalSettingsDocRef(
           scope,
-          buildNsLockDocumentId(currentNs)
+          buildStoredNsLockDocumentId(invoice)
         );
         const lockSnapshot = await transaction.get(lockRef);
         if (lockSnapshot.exists()) {
@@ -613,6 +689,7 @@ export async function commitInvoiceDeletionLifecycle(
               currentNs,
               'system'
             ),
+            normalizeNsUg(invoice.nsUg) || null,
             currentNs,
             'stale_lock_owner'
           );
@@ -666,6 +743,7 @@ export async function commitAllInvoicesDeletionLifecycle(
           invoice,
           recordKey: uniqueRecordKeys[index],
           ns: normalizeNsNumber(invoice.numeroNS),
+          ug: normalizeNsUg(invoice.nsUg),
         }))
         .filter((entry) => entry.ns);
 
@@ -676,7 +754,7 @@ export async function commitAllInvoicesDeletionLifecycle(
       }
 
       const lockIds = Array.from(
-        new Set(lockEntries.map((entry) => buildNsLockDocumentId(entry.ns)))
+        new Set(lockEntries.map((entry) => buildStoredNsLockDocumentId(entry.invoice)))
       );
       const lockRefs = lockIds.map((lockId) =>
         operationalSettingsDocRef(scope, lockId)
@@ -696,7 +774,7 @@ export async function commitAllInvoicesDeletionLifecycle(
       );
 
       for (const entry of lockEntries) {
-        const lock = lockById.get(buildNsLockDocumentId(entry.ns));
+        const lock = lockById.get(buildStoredNsLockDocumentId(entry.invoice));
         if (!lock) continue;
         const relatedEmpenho = empenhoById.get(entry.invoice.empenhoId);
         const supplierCnpj = normalizeSupplierCnpj(
@@ -717,6 +795,7 @@ export async function commitAllInvoicesDeletionLifecycle(
             entry.ns,
             'system'
           ),
+          entry.ug || null,
           entry.ns,
           'stale_lock_owner'
         );
@@ -895,6 +974,7 @@ export async function commitEmpenhoSupplierCnpjMigration(
         .map((item) => ({
           item,
           ns: normalizeNsNumber(item.invoice.numeroNS),
+          ug: normalizeNsUg(item.invoice.nsUg),
         }))
         .filter((entry) => entry.ns);
 
@@ -904,19 +984,28 @@ export async function commitEmpenhoSupplierCnpjMigration(
         );
       }
 
-      const seenNs = new Set<string>();
+      const legacyNsWithoutUg = nsEntries.find((entry) => !entry.ug);
+      if (legacyNsWithoutUg) {
+        throw new NsIntegrityError(
+          'invalid_ug',
+          `A NF ${legacyNsWithoutUg.item.invoice.id} possui a NS ${legacyNsWithoutUg.ns} sem UG emitente. Informe a UG pelo controle de NS antes de migrar o CNPJ.`
+        );
+      }
+
+      const seenNsIdentities = new Set<string>();
       for (const entry of nsEntries) {
-        if (seenNs.has(entry.ns)) {
+        const identityKey = `${entry.ug || 'legacy'}|${entry.ns}`;
+        if (seenNsIdentities.has(identityKey)) {
           throw new NsIntegrityError(
             'ns_reused_in_scope',
-            `A NS ${entry.ns} aparece em mais de uma NF vinculada ao empenho. Corrija a inconsistência antes de alterar o CNPJ.`
+            `A identidade UG ${entry.ug || 'legada'} + NS ${entry.ns} aparece em mais de uma NF vinculada ao empenho. Corrija a inconsistência antes de alterar o CNPJ.`
           );
         }
-        seenNs.add(entry.ns);
+        seenNsIdentities.add(identityKey);
       }
 
       const lockIds = Array.from(
-        new Set(nsEntries.map((entry) => buildNsLockDocumentId(entry.ns)))
+        new Set(nsEntries.map((entry) => buildStoredNsLockDocumentId(entry.item.invoice)))
       );
       const lockSnapshots = await Promise.all(
         lockIds.map((lockId) =>
@@ -931,7 +1020,7 @@ export async function commitEmpenhoSupplierCnpjMigration(
       );
 
       for (const entry of nsEntries) {
-        const lock = lockById.get(buildNsLockDocumentId(entry.ns));
+        const lock = lockById.get(buildStoredNsLockDocumentId(entry.item.invoice));
         if (!lock) continue;
 
         const sourceSupplierCnpj =
@@ -967,6 +1056,7 @@ export async function commitEmpenhoSupplierCnpjMigration(
             entry.ns,
             'migration'
           ),
+          entry.ug || null,
           entry.ns,
           'stale_lock_owner'
         );
@@ -1026,7 +1116,7 @@ export async function commitEmpenhoSupplierCnpjMigration(
       const now = new Date().toISOString();
       let migratedLockCount = 0;
       for (const entry of nsEntries) {
-        const lockId = buildNsLockDocumentId(entry.ns);
+        const lockId = buildStoredNsLockDocumentId(entry.item.invoice);
         const existingLock = lockById.get(lockId);
 
         const targetMutation = buildLifecycleMutation(

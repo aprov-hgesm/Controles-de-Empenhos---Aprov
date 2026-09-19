@@ -76,6 +76,7 @@ const invoice = ({
   cnpj,
   issueDate = '2026-01-10',
   numeroNS,
+  nsUg,
   recordKey,
 }) => ({
   id,
@@ -86,6 +87,7 @@ const invoice = ({
   supplier: 'Fornecedor',
   ...(cnpj ? { supplierCnpj: cnpj } : {}),
   ...(numeroNS ? { numeroNS } : {}),
+  ...(nsUg ? { nsUg } : {}),
   ...(recordKey ? { recordKey } : {}),
 });
 
@@ -245,6 +247,7 @@ test('reconhece NS idêntica já cadastrada como already_registered', () => {
         empenhoId: '2026NE000001',
         cnpj: CNPJ_A,
         numeroNS: '2026 NS 000123',
+        nsUg: '160416',
       }),
     ]
   );
@@ -345,4 +348,66 @@ test('rejeita payload de CNPJ diferente antes de qualquer conciliação', () => 
       ),
     /não corresponde/
   );
+});
+
+
+test('permite o mesmo número de NS em UG diferente', () => {
+  const result = reconcileSagNsPayload(
+    payload([record({ nf: '1234', ns: '2026NS000777' })]),
+    CNPJ_A,
+    [empenho('2026NE000001', CNPJ_A)],
+    [
+      invoice({ id: '1234', empenhoId: '2026NE000001', cnpj: CNPJ_A }),
+      invoice({
+        id: '9999',
+        empenhoId: '2026NE000001',
+        cnpj: CNPJ_A,
+        numeroNS: '2026NS000777',
+        nsUg: '160415',
+      }),
+    ]
+  );
+
+  assert.equal(result.ug, '160416');
+  assert.equal(result.items[0].status, 'matched');
+});
+
+test('bloqueia a mesma identidade UG + NS já usada em outra NF', () => {
+  const result = reconcileSagNsPayload(
+    payload([record({ nf: '1234', ns: '2026NS000778' })]),
+    CNPJ_A,
+    [empenho('2026NE000001', CNPJ_A)],
+    [
+      invoice({ id: '1234', empenhoId: '2026NE000001', cnpj: CNPJ_A }),
+      invoice({
+        id: '9999',
+        empenhoId: '2026NE000001',
+        cnpj: CNPJ_A,
+        numeroNS: '2026NS000778',
+        nsUg: '160416',
+      }),
+    ]
+  );
+
+  assert.equal(result.items[0].status, 'conflict_ns_reused');
+});
+
+test('trata NS legada na NF alvo como migração quando o SAG informa UG', () => {
+  const result = reconcileSagNsPayload(
+    payload([record({ nf: '1234', ns: '2026NS000779' })]),
+    CNPJ_A,
+    [empenho('2026NE000001', CNPJ_A)],
+    [
+      invoice({
+        id: '1234',
+        empenhoId: '2026NE000001',
+        cnpj: CNPJ_A,
+        numeroNS: '2026NS000779',
+      }),
+    ]
+  );
+
+  assert.equal(result.items[0].status, 'matched');
+  assert.equal(result.items[0].invoice.currentUg, null);
+  assert.equal(result.items[0].issues.some((issue) => issue.code === 'legacy_ns_missing_ug'), true);
 });

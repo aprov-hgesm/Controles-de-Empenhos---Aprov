@@ -11,7 +11,9 @@ export interface NsIntegrityMutation {
   invoiceId: string;
   empenhoId: string;
   supplierCnpj: string;
+  expectedCurrentUg: string | null;
   expectedCurrentNs: string | null;
+  proposedUg: string | null;
   proposedNs: string | null;
   source: NsIntegrityMutationSource;
 }
@@ -37,6 +39,7 @@ export interface NsLockDocument {
   id: string;
   type: typeof NS_LOCK_DOCUMENT_TYPE;
   workspaceId: string;
+  ug: string;
   numeroNS: string;
   invoiceRecordKey: string;
   invoiceId: string;
@@ -49,6 +52,7 @@ export interface NsLockDocument {
 
 export type NsIntegrityErrorCode =
   | 'invalid_supplier_cnpj'
+  | 'invalid_ug'
   | 'empty_change_set'
   | 'duplicate_invoice_target'
   | 'duplicate_ns_in_batch'
@@ -82,9 +86,55 @@ export function isValidNsNumber(value?: string | number | null): boolean {
   return /^\d{4}NS\d{6}$/.test(normalizeNsNumber(value));
 }
 
-export function buildNsLockDocumentId(value?: string | number | null): string {
+export function normalizeNsUg(value?: string | number | null): string {
+  if (value === null || value === undefined) return '';
+  return String(value).trim().replace(/\D/g, '');
+}
+
+export function isValidNsUg(value?: string | number | null): boolean {
+  return /^\d{6}$/.test(normalizeNsUg(value));
+}
+
+export function buildNsIdentityKey(
+  ug?: string | number | null,
+  numeroNS?: string | number | null
+): string {
+  const normalizedUg = normalizeNsUg(ug);
+  const normalizedNs = normalizeNsNumber(numeroNS);
+  return isValidNsUg(normalizedUg) && isValidNsNumber(normalizedNs)
+    ? `${normalizedUg}|${normalizedNs}`
+    : '';
+}
+
+export function buildNsLockDocumentId(
+  ug?: string | number | null,
+  numeroNS?: string | number | null
+): string {
+  const identity = buildNsIdentityKey(ug, numeroNS);
+  if (!identity) return '';
+  const [normalizedUg, normalizedNs] = identity.split('|');
+  return `${NS_LOCK_DOCUMENT_PREFIX}${normalizedUg}_${encodeURIComponent(normalizedNs)}`;
+}
+
+export function buildLegacyNsLockDocumentId(value?: string | number | null): string {
   const normalizedNs = normalizeNsNumber(value);
-  return normalizedNs ? `${NS_LOCK_DOCUMENT_PREFIX}${encodeURIComponent(normalizedNs)}` : '';
+  return isValidNsNumber(normalizedNs)
+    ? `${NS_LOCK_DOCUMENT_PREFIX}${encodeURIComponent(normalizedNs)}`
+    : '';
+}
+
+export function getInvoiceNsIdentity(invoice: Pick<Invoice, 'numeroNS' | 'nsUg'>): {
+  ug: string;
+  numeroNS: string;
+  canonical: boolean;
+} {
+  const numeroNS = normalizeNsNumber(invoice.numeroNS);
+  const ug = normalizeNsUg(invoice.nsUg);
+  return {
+    ug,
+    numeroNS,
+    canonical: Boolean(numeroNS && isValidNsNumber(numeroNS) && isValidNsUg(ug)),
+  };
 }
 
 export function buildNsLockDocument(input: {
@@ -102,6 +152,14 @@ export function buildNsLockDocument(input: {
     );
   }
 
+  const ug = normalizeNsUg(input.mutation.proposedUg);
+  if (!isValidNsUg(ug)) {
+    throw new NsIntegrityError(
+      'invalid_ug',
+      `A UG emitente da NS ${numeroNS} deve possuir 6 dígitos.`
+    );
+  }
+
   const supplierCnpj = normalizeSupplierCnpj(input.mutation.supplierCnpj);
   if (!supplierCnpj || !isValidSupplierCnpj(supplierCnpj)) {
     throw new NsIntegrityError(
@@ -110,11 +168,12 @@ export function buildNsLockDocument(input: {
     );
   }
 
-  const id = buildNsLockDocumentId(numeroNS);
+  const id = buildNsLockDocumentId(ug, numeroNS);
   return {
     id,
     type: NS_LOCK_DOCUMENT_TYPE,
     workspaceId: input.workspaceId,
+    ug,
     numeroNS,
     invoiceRecordKey: input.mutation.invoiceRecordKey,
     invoiceId: input.mutation.invoiceId,
@@ -129,16 +188,24 @@ export function buildNsLockDocument(input: {
 export function assertNsLockOwnership(
   lock: Partial<NsLockDocument>,
   mutation: NsIntegrityMutation,
+  expectedUg: string | null,
   expectedNs: string,
   conflictCode: 'ns_lock_conflict' | 'stale_lock_owner'
 ): void {
   const normalizedExpectedNs = normalizeNsNumber(expectedNs);
+  const normalizedExpectedUg = normalizeNsUg(expectedUg);
   const lockNs = normalizeNsNumber(lock.numeroNS);
+  const lockUg = normalizeNsUg(lock.ug);
 
-  if (!lock.invoiceRecordKey || !lockNs || lockNs !== normalizedExpectedNs) {
+  if (
+    !lock.invoiceRecordKey ||
+    !lockNs ||
+    lockNs !== normalizedExpectedNs ||
+    (normalizedExpectedUg && lockUg !== normalizedExpectedUg)
+  ) {
     throw new NsIntegrityError(
       'stale_lock_owner',
-      `O lock da NS ${normalizedExpectedNs || expectedNs} está inconsistente. Nenhuma alteração foi aplicada.`
+      `O lock da NS ${normalizedExpectedNs || expectedNs}${normalizedExpectedUg ? ` / UG ${normalizedExpectedUg}` : ''} está inconsistente. Nenhuma alteração foi aplicada.`
     );
   }
 
@@ -146,7 +213,7 @@ export function assertNsLockOwnership(
     throw new NsIntegrityError(
       conflictCode,
       conflictCode === 'ns_lock_conflict'
-        ? `A NS ${normalizedExpectedNs} já está reservada para outra NF neste workspace.`
+        ? `A identidade UG ${normalizedExpectedUg || 'legada'} + NS ${normalizedExpectedNs} já está reservada para outra NF neste workspace.`
         : `O lock atual da NS ${normalizedExpectedNs} pertence a outra NF. Nenhuma alteração foi aplicada.`
     );
   }
@@ -163,7 +230,7 @@ export function validateNsIntegritySnapshot(
   }
 
   const targetKeys = new Set<string>();
-  const proposedNsInBatch = new Set<string>();
+  const proposedIdentitiesInBatch = new Set<string>();
 
   for (const mutation of input.mutations) {
     if (targetKeys.has(mutation.invoiceRecordKey)) {
@@ -183,19 +250,33 @@ export function validateNsIntegritySnapshot(
 
     if (mutation.proposedNs !== null) {
       const proposedNs = normalizeNsNumber(mutation.proposedNs);
+      const proposedUg = normalizeNsUg(mutation.proposedUg);
       if (!isValidNsNumber(proposedNs)) {
         throw new NsIntegrityError(
           'invalid_ns',
           `A NS proposta para a NF ${mutation.invoiceId} é inválida.`
         );
       }
-      if (proposedNsInBatch.has(proposedNs)) {
+      if (!isValidNsUg(proposedUg)) {
         throw new NsIntegrityError(
-          'duplicate_ns_in_batch',
-          `A NS ${proposedNs} foi proposta para mais de uma NF no mesmo lote.`
+          'invalid_ug',
+          `A UG emitente da NS ${proposedNs} deve possuir 6 dígitos.`
         );
       }
-      proposedNsInBatch.add(proposedNs);
+
+      const proposedIdentity = buildNsIdentityKey(proposedUg, proposedNs);
+      if (proposedIdentitiesInBatch.has(proposedIdentity)) {
+        throw new NsIntegrityError(
+          'duplicate_ns_in_batch',
+          `A identidade UG ${proposedUg} + NS ${proposedNs} foi proposta para mais de uma NF no mesmo lote.`
+        );
+      }
+      proposedIdentitiesInBatch.add(proposedIdentity);
+    } else if (mutation.proposedUg !== null && normalizeNsUg(mutation.proposedUg)) {
+      throw new NsIntegrityError(
+        'invalid_ug',
+        `A NF ${mutation.invoiceId} não pode manter UG de NS sem numeroNS.`
+      );
     }
   }
 
@@ -204,13 +285,21 @@ export function validateNsIntegritySnapshot(
   );
   const empenhoById = new Map(input.empenhos.map((empenho) => [empenho.id, empenho]));
 
-  const nsOwners = new Map<string, string[]>();
+  const canonicalOwners = new Map<string, string[]>();
+  const legacyOwnersByNs = new Map<string, string[]>();
   for (const document of input.knownOwnerInvoiceDocuments) {
-    const ns = normalizeNsNumber(document.invoice.numeroNS);
-    if (!ns) continue;
-    const owners = nsOwners.get(ns) || [];
-    owners.push(document.recordKey);
-    nsOwners.set(ns, owners);
+    const { ug, numeroNS, canonical } = getInvoiceNsIdentity(document.invoice);
+    if (!numeroNS) continue;
+    if (canonical) {
+      const key = buildNsIdentityKey(ug, numeroNS);
+      const owners = canonicalOwners.get(key) || [];
+      owners.push(document.recordKey);
+      canonicalOwners.set(key, owners);
+    } else {
+      const owners = legacyOwnersByNs.get(numeroNS) || [];
+      owners.push(document.recordKey);
+      legacyOwnersByNs.set(numeroNS, owners);
+    }
   }
 
   const writes: NsIntegrityMutation[] = [];
@@ -267,30 +356,39 @@ export function validateNsIntegritySnapshot(
     }
 
     const currentNs = normalizeNsNumber(storedInvoice.numeroNS);
+    const currentUg = normalizeNsUg(storedInvoice.nsUg);
     const expectedCurrentNs = normalizeNsNumber(mutation.expectedCurrentNs);
+    const expectedCurrentUg = normalizeNsUg(mutation.expectedCurrentUg);
     const proposedNs = normalizeNsNumber(mutation.proposedNs);
+    const proposedUg = normalizeNsUg(mutation.proposedUg);
 
     if (proposedNs) {
-      const otherOwners = (nsOwners.get(proposedNs) || []).filter(
+      const proposedIdentity = buildNsIdentityKey(proposedUg, proposedNs);
+      const otherCanonicalOwners = (canonicalOwners.get(proposedIdentity) || []).filter(
         (recordKey) => recordKey !== mutation.invoiceRecordKey
       );
-      if (otherOwners.length > 0) {
+      const ambiguousLegacyOwners = (legacyOwnersByNs.get(proposedNs) || []).filter(
+        (recordKey) => recordKey !== mutation.invoiceRecordKey
+      );
+      if (otherCanonicalOwners.length > 0 || ambiguousLegacyOwners.length > 0) {
         throw new NsIntegrityError(
           'ns_reused_in_scope',
-          `A NS ${proposedNs} já está vinculada a outra NF conhecida no mesmo escopo.`
+          ambiguousLegacyOwners.length > 0
+            ? `A NS ${proposedNs} existe em registro legado sem UG. Informe/corrija a UG desse histórico antes de reutilizar o número.`
+            : `A identidade UG ${proposedUg} + NS ${proposedNs} já está vinculada a outra NF conhecida no mesmo workspace.`
         );
       }
     }
 
-    if (currentNs === proposedNs) {
+    if (currentNs === proposedNs && currentUg === proposedUg) {
       noOps.push(mutation);
       continue;
     }
 
-    if (currentNs !== expectedCurrentNs) {
+    if (currentNs !== expectedCurrentNs || currentUg !== expectedCurrentUg) {
       throw new NsIntegrityError(
         'stale_invoice_ns',
-        `A NF ${mutation.invoiceId} teve sua NS alterada desde a preparação da operação.`
+        `A identidade UG + NS da NF ${mutation.invoiceId} mudou desde a preparação da operação.`
       );
     }
 

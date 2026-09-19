@@ -215,10 +215,12 @@ async function denied(label, operation) {
 }
 
 function workspace(id, email, status = 'active', extra = {}) {
+  const { ug = '160416', ...rest } = extra;
   return {
     id,
     name: `Workspace ${id}`,
     status,
+    ...(ug ? { ug } : {}),
     authorizedEmail: email,
     institutionalProfile: {
       organizationName: `Organização ${id}`,
@@ -228,17 +230,18 @@ function workspace(id, email, status = 'active', extra = {}) {
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     createdBy: 'aprov1hgesm@gmail.com',
-    ...extra,
+    ...rest,
   };
 }
 
-function account(email, workspaceId, uid, status = 'active', authProvider = 'password') {
+function account(email, workspaceId, uid, status = 'active', authProvider = 'password', ug = '160416') {
   return {
     email,
     ...(authProvider ? { authProvider } : {}),
     ...(uid ? { firebaseUid: uid } : {}),
     accountType: 'sector',
     workspaceId,
+    ...(ug ? { ug } : {}),
     status,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -258,12 +261,13 @@ async function seedWorkspace(
   uid,
   status = 'active',
   accountWorkspaceId = id,
-  authProvider = 'password'
+  authProvider = 'password',
+  ug = '160416'
 ) {
-  await ownerSet(`workspaces/${id}`, workspace(id, email, status));
+  await ownerSet(`workspaces/${id}`, workspace(id, email, status, { ug }));
   await ownerSet(
     `platformAccounts/${email}`,
-    account(email, accountWorkspaceId, uid, status, authProvider)
+    account(email, accountWorkspaceId, uid, status, authProvider, ug)
   );
   await ownerSet(`workspaces/${id}/empenhos/sample`, {
     id: 'sample',
@@ -272,13 +276,19 @@ async function seedWorkspace(
   });
 }
 
-function sagLockId(ns) {
+const DEFAULT_NS_UG = '160416';
+
+function sagLockId(ns, ug = DEFAULT_NS_UG) {
+  return `sagNsLock_${ug}_${encodeURIComponent(ns)}`;
+}
+
+function legacySagLockId(ns) {
   return `sagNsLock_${encodeURIComponent(ns)}`;
 }
 
-async function reserveSagNs(db, uid, workspaceId, invoiceRecordKey, invoiceId, empenhoId, supplierCnpj, ns) {
+async function reserveSagNs(db, uid, workspaceId, invoiceRecordKey, invoiceId, empenhoId, supplierCnpj, ns, ug = DEFAULT_NS_UG) {
   const invoiceRef = doc(db, 'workspaces', workspaceId, 'invoices', invoiceRecordKey);
-  const lockRef = doc(db, 'workspaces', workspaceId, 'settings', sagLockId(ns));
+  const lockRef = doc(db, 'workspaces', workspaceId, 'settings', sagLockId(ns, ug));
 
   return runTransaction(db, async (transaction) => {
     const [invoiceSnapshot, lockSnapshot] = await Promise.all([
@@ -298,13 +308,14 @@ async function reserveSagNs(db, uid, workspaceId, invoiceRecordKey, invoiceId, e
     }
 
     const timestamp = now();
-    transaction.set(invoiceRef, { numeroNS: ns }, { merge: true });
+    transaction.set(invoiceRef, { numeroNS: ns, nsUg: ug }, { merge: true });
     transaction.set(
       lockRef,
       {
-        id: sagLockId(ns),
+        id: sagLockId(ns, ug),
         type: 'sag-ns-lock',
         workspaceId,
+        ug,
         numeroNS: ns,
         invoiceRecordKey,
         invoiceId,
@@ -344,7 +355,7 @@ async function main() {
   };
 
   await seedWorkspace('workspace-a', identities.a.email, identities.a.uid);
-  await seedWorkspace('workspace-b', identities.b.email, identities.b.uid);
+  await seedWorkspace('workspace-b', identities.b.email, identities.b.uid, 'active', 'workspace-b', 'password', '160417');
   await seedWorkspace(
     'workspace-wrong-uid',
     identities.wrongUid.email,
@@ -357,6 +368,7 @@ async function main() {
     null,
     'active',
     'workspace-bootstrap',
+    null,
     null
   );
 
@@ -372,6 +384,7 @@ async function main() {
       firebaseUid: identities.prebound.uid,
       accountType: 'sector',
       workspaceId: 'workspace-prebound',
+      ug: '160416',
       status: 'active',
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
@@ -693,6 +706,8 @@ async function main() {
   const sagInvoiceAKey = 'nf_11111111000191_sag-a';
   const sagInvoiceBKey = 'nf_11111111000191_sag-b';
   const sagInvoiceRollbackKey = 'nf_11111111000191_sag-rollback';
+  const sagInvoiceUgAKey = 'nf_11111111000191_sag-ug-a';
+  const sagInvoiceUgBKey = 'nf_11111111000191_sag-ug-b';
 
   await ownerSet(`workspaces/workspace-a/empenhos/${sagEmpenhoId}`, {
     id: sagEmpenhoId,
@@ -708,6 +723,8 @@ async function main() {
     [sagInvoiceAKey, 'SAG-A'],
     [sagInvoiceBKey, 'SAG-B'],
     [sagInvoiceRollbackKey, 'SAG-ROLLBACK'],
+    [sagInvoiceUgAKey, 'SAG-UG-A'],
+    [sagInvoiceUgBKey, 'SAG-UG-B'],
   ]) {
     await ownerSet(`workspaces/workspace-a/invoices/${recordKey}`, {
       id: invoiceId,
@@ -781,6 +798,46 @@ async function main() {
     'A mesma NS não pode aparecer em duas NFs após corrida concorrente.'
   );
 
+  const wrongWorkspaceUgNs = '2026NS009050';
+  await denied('Setor não pode reservar NS com UG diferente da UG vinculada ao workspace', () =>
+    reserveSagNs(
+      sessionA.db,
+      sessionA.user.uid,
+      'workspace-a',
+      sagInvoiceUgAKey,
+      'SAG-UG-A',
+      sagEmpenhoId,
+      sagSupplierCnpj,
+      wrongWorkspaceUgNs,
+      '160415'
+    )
+  );
+
+  await allowed('Setor reserva NS usando automaticamente a UG vinculada ao workspace', () =>
+    reserveSagNs(
+      sessionA.db,
+      sessionA.user.uid,
+      'workspace-a',
+      sagInvoiceUgBKey,
+      'SAG-UG-B',
+      sagEmpenhoId,
+      sagSupplierCnpj,
+      wrongWorkspaceUgNs,
+      '160416'
+    )
+  );
+
+  const [wrongUgInvoice, canonicalUgInvoice, wrongUgLock, canonicalUgLock] = await Promise.all([
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', sagInvoiceUgAKey)),
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', sagInvoiceUgBKey)),
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'settings', sagLockId(wrongWorkspaceUgNs, '160415'))),
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'settings', sagLockId(wrongWorkspaceUgNs, '160416'))),
+  ]);
+  assert.equal(wrongUgInvoice.data()?.numeroNS, undefined);
+  assert.equal(canonicalUgInvoice.data()?.nsUg, '160416');
+  assert.equal(wrongUgLock.exists(), false);
+  assert.equal(canonicalUgLock.data()?.ug, '160416');
+
   const winnerId = lockOwner === sagInvoiceAKey ? 'SAG-A' : 'SAG-B';
   await allowed('Reimportação SAG pelo mesmo proprietário do lock é idempotente', () =>
     reserveSagNs(
@@ -820,6 +877,7 @@ async function main() {
         id: sagLockId('2026NS009002'),
         type: 'sag-ns-lock',
         workspaceId: 'workspace-a',
+        ug: DEFAULT_NS_UG,
         numeroNS: '2026NS009002',
         invoiceRecordKey: sagInvoiceAKey,
         invoiceId: 'SAG-A',
@@ -859,11 +917,12 @@ async function main() {
       );
 
       await transaction.get(invoiceRef);
-      transaction.set(invoiceRef, { numeroNS: rollbackNs }, { merge: true });
+      transaction.set(invoiceRef, { numeroNS: rollbackNs, nsUg: DEFAULT_NS_UG }, { merge: true });
       transaction.set(invalidLockRef, {
         id: sagLockId(rollbackNs),
         type: 'sag-ns-lock',
         workspaceId: 'workspace-a',
+        ug: DEFAULT_NS_UG,
         numeroNS: rollbackNs,
         updatedBy: sessionA.user.uid,
       });
@@ -952,6 +1011,7 @@ async function main() {
         id: sagLockId('2026NS009403'),
         type: 'sag-ns-lock',
         workspaceId: 'workspace-a',
+        ug: DEFAULT_NS_UG,
         numeroNS: '2026NS009403',
         invoiceRecordKey: 'nf_11111111000191_inexistente',
         invoiceId: 'INEXISTENTE',
@@ -994,7 +1054,7 @@ async function main() {
   await denied('Remoção direta de NS sem liberar o lock é rejeitada', () =>
     updateDoc(
       doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', rulesInvoiceKey),
-      { numeroNS: deleteField() }
+      { numeroNS: deleteField(), nsUg: deleteField() }
     )
   );
 
@@ -1049,10 +1109,27 @@ async function main() {
     'workspaces',
     'workspace-a',
     'settings',
-    sagLockId(legacyRulesNs)
+    legacySagLockId(legacyRulesNs)
+  );
+  const legacyRulesCreatedAt = now();
+  await ownerSet(
+    `workspaces/workspace-a/settings/${legacySagLockId(legacyRulesNs)}`,
+    {
+      id: legacySagLockId(legacyRulesNs),
+      type: 'sag-ns-lock',
+      workspaceId: 'workspace-a',
+      numeroNS: legacyRulesNs,
+      invoiceRecordKey: legacyRulesKey,
+      invoiceId: 'RULES-LEGACY',
+      empenhoId: sagEmpenhoId,
+      supplierCnpj: sagSupplierCnpj,
+      createdAt: legacyRulesCreatedAt,
+      updatedAt: legacyRulesCreatedAt,
+      updatedBy: 'legacy-seed',
+    }
   );
 
-  await allowed('Registro legado com NS pode reparar recordKey e lock atomicamente', () =>
+  await allowed('Registro legado com NS pode reparar recordKey preservando lock legado existente', () =>
     runTransaction(sessionA.db, async (transaction) => {
       const invoiceRef = doc(
         sessionA.db,
@@ -1066,27 +1143,22 @@ async function main() {
         transaction.get(legacyRulesLockRef),
       ]);
       assert.equal(invoiceSnapshot.exists(), true);
-      assert.equal(lockSnapshot.exists(), false);
+      assert.equal(lockSnapshot.exists(), true);
 
-      const timestamp = now();
       transaction.set(
         invoiceRef,
         { recordKey: legacyRulesKey },
         { merge: true }
       );
-      transaction.set(legacyRulesLockRef, {
-        id: sagLockId(legacyRulesNs),
-        type: 'sag-ns-lock',
-        workspaceId: 'workspace-a',
-        numeroNS: legacyRulesNs,
-        invoiceRecordKey: legacyRulesKey,
-        invoiceId: 'RULES-LEGACY',
-        empenhoId: sagEmpenhoId,
-        supplierCnpj: sagSupplierCnpj,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        updatedBy: sessionA.user.uid,
-      });
+      transaction.set(
+        legacyRulesLockRef,
+        {
+          ...lockSnapshot.data(),
+          updatedAt: now(),
+          updatedBy: sessionA.user.uid,
+        },
+        { merge: false }
+      );
     })
   );
 
@@ -1275,7 +1347,11 @@ async function main() {
       ]);
       assert.equal(invoiceSnapshot.exists(), true);
       assert.equal(lockSnapshot.exists(), true);
-      transaction.set(invoiceRef, { numeroNS: deleteField() }, { merge: true });
+      transaction.set(
+        invoiceRef,
+        { numeroNS: deleteField(), nsUg: deleteField() },
+        { merge: true }
+      );
       transaction.delete(manualRemovalLockRef);
     })
   );
@@ -1676,6 +1752,39 @@ async function main() {
       updatedAt: now(),
     })
   );
+
+  await allowed('Admin vincula UG uma única vez a cadastro legado sem UG', async () => {
+    const batch = writeBatch(admin.db);
+    batch.update(doc(admin.db, 'workspaces', 'workspace-bootstrap'), {
+      ug: '160499',
+      updatedAt: now(),
+    });
+    batch.update(doc(admin.db, 'platformAccounts', identities.bootstrap.email), {
+      ug: '160499',
+      updatedAt: now(),
+    });
+    batch.set(doc(admin.db, 'platformUgIndex', '160499'), {
+      ug: '160499',
+      workspaceId: 'workspace-bootstrap',
+      email: identities.bootstrap.email,
+      createdAt: now(),
+      createdBy: identities.founder.email,
+    });
+    await batch.commit();
+  });
+
+  await denied('UG já vinculada não pode ser substituída por outra UG', async () => {
+    const batch = writeBatch(admin.db);
+    batch.update(doc(admin.db, 'workspaces', 'workspace-bootstrap'), {
+      ug: '160498',
+      updatedAt: now(),
+    });
+    batch.update(doc(admin.db, 'platformAccounts', identities.bootstrap.email), {
+      ug: '160498',
+      updatedAt: now(),
+    });
+    await batch.commit();
+  });
 
   await allowed('Admin suspende workspace + conta atomicamente', async () => {
     const batch = writeBatch(admin.db);

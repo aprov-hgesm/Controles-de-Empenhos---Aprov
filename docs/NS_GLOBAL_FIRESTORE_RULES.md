@@ -29,9 +29,10 @@ Se o estado final da NF possui `numeroNS`, as Rules exigem:
 - formato canônico `AAAANSNNNNNN`;
 - `recordKey` igual ao ID físico do documento;
 - CNPJ em forma canônica oficial de 14 posições (12 alfanuméricas + 2 DVs numéricos);
-- lock `sagNsLock_<numeroNS>` existente no estado final;
+- para identidades canônicas, `nsUg` com 6 dígitos;
+- lock `sagNsLock_<UG>_<numeroNS>` existente no estado final;
 - lock com mesmo workspace;
-- lock com mesma NS;
+- lock com a mesma UG e a mesma NS;
 - lock apontando para o mesmo `recordKey`;
 - mesmo `invoiceId`;
 - mesmo `empenhoId`;
@@ -67,11 +68,11 @@ Isso preserva os fluxos de mudança de `recordKey` e migração de CNPJ implemen
 
 A criação ou atualização de um lock agora exige que a NF alvo exista no estado final e confirme todos os metadados do lock.
 
-Também é exigido que o ID físico do lock seja exatamente derivado da NS:
+Desde o Bloco 7, o ID físico canônico do lock é derivado da UG emitente e da NS:
 
-`sagNsLock_<numeroNS>`.
+`sagNsLock_<UG>_<numeroNS>`.
 
-Assim, não é possível criar um lock órfão ou usar um ID de lock que não corresponda ao número da NS.
+Locks históricos `sagNsLock_<numeroNS>` continuam reconhecidos somente em compatibilidade controlada, sem permitir novas reservas legadas. Assim, não é possível criar lock órfão, inventar UG para histórico ou usar um ID que não corresponda à identidade da NS.
 
 ## Compatibilidade com atualizações comuns
 
@@ -122,6 +123,6 @@ Mesmo um cliente modificado autenticado no workspace precisa produzir um estado 
 Permanecem fora deste bloco:
 
 - validação matemática dos dígitos verificadores do CNPJ é implementada pelo Bloco 6 no domínio TypeScript; as Rules mantêm a validação estrutural e relacional;
-- migração da identidade física do lock para incluir UG;
+- a migração da identidade física do lock para incluir UG foi concluída no Bloco 7, com compatibilidade controlada para históricos sem UG;
 - trilha histórica imutável de mutações;
 - teste Emulator usando diretamente o serviço de persistência de produção em vez do helper conceitual.

@@ -9,6 +9,7 @@ import {
   FOUNDER_AUTH_PROVIDER,
   SECTOR_AUTH_PROVIDER,
   normalizePlatformEmail,
+  normalizeUnitUg,
   validatePlatformAccount,
   validateWorkspace,
   type PlatformAccount,
@@ -120,6 +121,12 @@ async function resolveAndBindExternalIdentity(
       failIdentityResolution('WORKSPACE_EMAIL_MISMATCH');
     }
 
+    const workspaceUg = normalizeUnitUg(workspace.ug);
+    const accountUg = normalizeUnitUg(account.ug);
+    if ((workspaceUg || accountUg) && workspaceUg !== accountUg) {
+      failIdentityResolution('UG_MISMATCH');
+    }
+
     // Novos setores do Bloco 2 já chegam pré-vinculados ao UID pelo servidor.
     // Apenas contas legadas sem UID executam o bootstrap histórico de primeiro acesso.
     let boundAccount: SectorAccount;
@@ -223,6 +230,7 @@ export async function resolveAuthenticatedWorkspaceContext(
       accountType: 'sector',
       workspaceId: workspace.id,
       workspaceName: workspace.name,
+      ug: normalizeUnitUg(workspace.ug) || null,
       institutionalProfile: {
         ...workspace.institutionalProfile,
         documentHeaderLines: [...(workspace.institutionalProfile.documentHeaderLines || [])],

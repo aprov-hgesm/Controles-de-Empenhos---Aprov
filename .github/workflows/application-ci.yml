@@ -195,6 +195,9 @@ jobs:
       - name: Official CNPJ validation guard
         run: npm run verify:cnpj-validation
 
+      - name: NS UG identity guard
+        run: npm run verify:ns-ug-identity
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
