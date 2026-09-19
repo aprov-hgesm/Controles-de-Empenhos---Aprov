@@ -3,12 +3,14 @@ import { createHash, randomUUID } from 'node:crypto';
 import { SignJWT, decodeJwt, importPKCS8 } from 'jose';
 
 import firebaseConfig from '../../firebase-applet-config.json';
-import { HGESM_SECTOR_EMAIL, HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
+import { HGESM_SECTOR_EMAIL, HGESM_UG, HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import {
   FOUNDER_AUTH_PROVIDER,
   isValidPlatformEmail,
+  isValidUnitUg,
   isValidWorkspaceId,
   normalizePlatformEmail,
+  normalizeUnitUg,
   normalizeWorkspaceId,
 } from '../platformIdentity';
 import {
@@ -93,6 +95,7 @@ interface AccessTokenCache {
 interface ProvisioningLockState {
   operationId: string;
   workspaceId: string;
+  ug: string;
   email: string;
   phase: string;
   createdBy: string;
@@ -609,16 +612,17 @@ async function deleteFirestoreDocumentTree(
   ]);
 }
 
-function lockDocumentIds(email: string, workspaceId: string): [string, string] {
+function lockDocumentIds(email: string, workspaceId: string, ug?: string): string[] {
   const emailHash = createHash('sha256').update(email).digest('hex');
   return [
     `platformProvisioningLocks/email-${emailHash}`,
     `platformProvisioningLocks/workspace-${workspaceId}`,
+    ...(isValidUnitUg(ug) ? [`platformProvisioningLocks/ug-${normalizeUnitUg(ug)}`] : []),
   ];
 }
 
 function lockWrites(
-  lockPaths: [string, string],
+  lockPaths: string[],
   state: ProvisioningLockState,
   createOnly = false
 ): FirestoreWrite[] {
@@ -634,8 +638,8 @@ function lockWrites(
 async function acquireProvisioningLocks(
   accessToken: string,
   state: ProvisioningLockState
-): Promise<[string, string]> {
-  const paths = lockDocumentIds(state.email, state.workspaceId);
+): Promise<string[]> {
+  const paths = lockDocumentIds(state.email, state.workspaceId, state.ug);
   try {
     await commitFirestoreWrites(accessToken, lockWrites(paths, state, true));
   } catch (error) {
@@ -654,7 +658,7 @@ async function acquireProvisioningLocks(
 
 async function updateProvisioningLocks(
   accessToken: string,
-  lockPaths: [string, string],
+  lockPaths: string[],
   state: ProvisioningLockState
 ): Promise<void> {
   await commitFirestoreWrites(accessToken, lockWrites(lockPaths, state));
@@ -662,7 +666,7 @@ async function updateProvisioningLocks(
 
 async function releaseProvisioningLocks(
   accessToken: string,
-  lockPaths: [string, string]
+  lockPaths: string[]
 ): Promise<void> {
   await commitFirestoreWrites(
     accessToken,
@@ -678,6 +682,15 @@ async function createSectorDirectory(
   const workspacePath = `workspaces/${result.workspace.id}`;
   const accountPath = `platformAccounts/${result.account.email}`;
   const counterPath = `workspaces/${result.workspace.id}/settings/${WORKSPACE_TERM_COUNTER_SETTINGS_ID}`;
+  const ug = normalizeUnitUg(result.workspace.ug);
+  if (!isValidUnitUg(ug) || ug !== normalizeUnitUg(result.account.ug)) {
+    throw new SectorProvisioningFailure(
+      'A UG do workspace e da conta operacional precisa ser válida e idêntica.',
+      'INVALID_INPUT',
+      400
+    );
+  }
+  const ugIndexPath = `platformUgIndex/${ug}`;
 
   try {
     await commitFirestoreWrites(accessToken, [
@@ -702,6 +715,19 @@ async function createSectorDirectory(
         },
         currentDocument: { exists: false },
       },
+      {
+        update: {
+          name: firestoreDocumentName(ugIndexPath),
+          fields: toFirestoreFields({
+            ug,
+            workspaceId: result.workspace.id,
+            email: result.account.email,
+            createdAt: result.workspace.createdAt,
+            createdBy: result.workspace.createdBy,
+          }),
+        },
+        currentDocument: { exists: false },
+      },
     ]);
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
@@ -719,12 +745,17 @@ async function createSectorDirectory(
 async function deleteSectorDirectory(
   accessToken: string,
   workspaceId: string,
-  email: string
+  email: string,
+  ug?: string
 ): Promise<void> {
+  const normalizedUg = normalizeUnitUg(ug);
   await commitFirestoreWrites(accessToken, [
     { delete: firestoreDocumentName(`workspaces/${workspaceId}/settings/${WORKSPACE_TERM_COUNTER_SETTINGS_ID}`) },
     { delete: firestoreDocumentName(`platformAccounts/${email}`) },
     { delete: firestoreDocumentName(`workspaces/${workspaceId}`) },
+    ...(isValidUnitUg(normalizedUg)
+      ? [{ delete: firestoreDocumentName(`platformUgIndex/${normalizedUg}`) }]
+      : []),
   ]);
 }
 
@@ -1044,7 +1075,7 @@ export async function provisionSectorWorkspaceWithAuth(
   const operationId = randomUUID();
   const now = new Date().toISOString();
 
-  let lockPaths: [string, string] | null = null;
+  let lockPaths: string[] | null = null;
   let createdAuthUser = false;
   let directoryCreated = false;
   let authUserReused = false;
