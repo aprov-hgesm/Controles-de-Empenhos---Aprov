@@ -885,6 +885,152 @@ async function main() {
     'A NF não pode ser alterada se a criação do lock falhar.'
   );
 
+  console.log('\nHardening global NF ↔ NS ↔ lock');
+  const rulesInvoiceKey = 'nf_11111111000191_rules-hardening';
+  const rulesInvoiceId = 'RULES-HARDENING';
+  const rulesNs = '2026NS009400';
+  const rulesNsOther = '2026NS009401';
+
+  await ownerSet(`workspaces/workspace-a/invoices/${rulesInvoiceKey}`, {
+    id: rulesInvoiceId,
+    recordKey: rulesInvoiceKey,
+    empenhoId: sagEmpenhoId,
+    supplier: 'Fornecedor SAG',
+    supplierCnpj: sagSupplierCnpj,
+    issueDate: '2026-01-14',
+    items: [],
+    totalValue: 140,
+  });
+
+  await denied('NF não recebe numeroNS diretamente sem lock correspondente', () =>
+    updateDoc(
+      doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', rulesInvoiceKey),
+      { numeroNS: rulesNs }
+    )
+  );
+
+  await denied('NF não pode ser criada já liquidada sem lock correspondente', () =>
+    setDoc(
+      doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'invoices',
+        'nf_11111111000191_rules-create'
+      ),
+      {
+        id: 'RULES-CREATE',
+        recordKey: 'nf_11111111000191_rules-create',
+        empenhoId: sagEmpenhoId,
+        supplier: 'Fornecedor SAG',
+        supplierCnpj: sagSupplierCnpj,
+        issueDate: '2026-01-14',
+        items: [],
+        totalValue: 141,
+        numeroNS: '2026NS009402',
+      }
+    )
+  );
+
+  await denied('numeroNS fora do formato canônico é rejeitado pelas Rules', () =>
+    updateDoc(
+      doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', rulesInvoiceKey),
+      { numeroNS: 'NS-9400' }
+    )
+  );
+
+  await denied('Lock não pode nascer órfão sem NF correspondente', () =>
+    setDoc(
+      doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'settings',
+        sagLockId('2026NS009403')
+      ),
+      {
+        id: sagLockId('2026NS009403'),
+        type: 'sag-ns-lock',
+        workspaceId: 'workspace-a',
+        numeroNS: '2026NS009403',
+        invoiceRecordKey: 'nf_11111111000191_inexistente',
+        invoiceId: 'INEXISTENTE',
+        empenhoId: sagEmpenhoId,
+        supplierCnpj: sagSupplierCnpj,
+        createdAt: now(),
+        updatedAt: now(),
+        updatedBy: sessionA.user.uid,
+      }
+    )
+  );
+
+  await allowed('Transação coerente NF + lock continua autorizada', () =>
+    reserveSagNs(
+      sessionA.db,
+      sessionA.user.uid,
+      'workspace-a',
+      rulesInvoiceKey,
+      rulesInvoiceId,
+      sagEmpenhoId,
+      sagSupplierCnpj,
+      rulesNs
+    )
+  );
+
+  await allowed('Atualização comum da NF preserva NS quando o lock continua coerente', () =>
+    updateDoc(
+      doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', rulesInvoiceKey),
+      { localizacaoAtual: 'COMISSAO' }
+    )
+  );
+
+  await denied('Troca direta de NS sem novo lock é rejeitada', () =>
+    updateDoc(
+      doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', rulesInvoiceKey),
+      { numeroNS: rulesNsOther }
+    )
+  );
+
+  await denied('Remoção direta de NS sem liberar o lock é rejeitada', () =>
+    updateDoc(
+      doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', rulesInvoiceKey),
+      { numeroNS: deleteField() }
+    )
+  );
+
+  await denied('Exclusão direta de NF com lock ativo é rejeitada', () =>
+    deleteDoc(
+      doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', rulesInvoiceKey)
+    )
+  );
+
+  const rulesLockRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'settings',
+    sagLockId(rulesNs)
+  );
+  await allowed('Limpeza coerente remove NF e lock juntos após os testes de bypass', () =>
+    runTransaction(sessionA.db, async (transaction) => {
+      const invoiceRef = doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'invoices',
+        rulesInvoiceKey
+      );
+      const [invoiceSnapshot, lockSnapshot] = await Promise.all([
+        transaction.get(invoiceRef),
+        transaction.get(rulesLockRef),
+      ]);
+      assert.equal(invoiceSnapshot.exists(), true);
+      assert.equal(lockSnapshot.exists(), true);
+      transaction.delete(invoiceRef);
+      transaction.delete(rulesLockRef);
+    })
+  );
+
   console.log('\nCiclo de vida de NF + lock NS');
   const lifecycleOldKey = 'nf_11111111000191_lifecycle-old';
   const lifecycleNewKey = 'nf_11111111000191_lifecycle-new';
