@@ -12,11 +12,18 @@ import {
   commitAllInvoicesDeletionLifecycle,
   commitInvoiceDeletionLifecycle,
   commitInvoiceReceiptLifecycle,
+  type CommitAllInvoicesDeletionLifecycleResult,
+  type CommitInvoiceDeletionLifecycleResult,
+  type CommitInvoiceReceiptLifecycleResult,
 } from './nsIntegrityService';
 import {
   commitEmpenhoDeletionLifecycle,
   type CommitEmpenhoDeletionResult,
 } from './empenhoDeletionService';
+import {
+  commitEmpenhoCreate,
+  commitEmpenhoUpdate,
+} from './empenhoConcurrencyService';
 import {
   getCurrentOperationalScope,
   getOperationalCollectionPath,
@@ -53,21 +60,20 @@ export async function getEmpenhos(userId: string): Promise<Empenho[]> {
   }
 }
 
-export async function saveEmpenho(userId: string, empenho: Empenho): Promise<void> {
-  const scope = getCurrentOperationalScope(userId);
-  const path = getOperationalDocumentPath(scope, 'empenhos', empenho.id);
-  try {
-    await setDoc(operationalDocRef(scope, 'empenhos', empenho.id), { ...empenho, userId });
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
-  }
+export async function createEmpenho(userId: string, empenho: Empenho): Promise<Empenho> {
+  return commitEmpenhoCreate(userId, empenho);
+}
+
+export async function saveEmpenho(userId: string, empenho: Empenho): Promise<Empenho> {
+  return commitEmpenhoUpdate(userId, empenho);
 }
 
 export async function removeEmpenho(
   userId: string,
-  id: string
+  id: string,
+  expectedRevision?: number
 ): Promise<CommitEmpenhoDeletionResult> {
-  return commitEmpenhoDeletionLifecycle(userId, id);
+  return commitEmpenhoDeletionLifecycle(userId, id, expectedRevision);
 }
 
 // Alerts operations
@@ -151,16 +157,16 @@ interface CommitInvoiceReceiptChangesInput {
 export async function commitInvoiceReceiptChanges(
   userId: string,
   changes: CommitInvoiceReceiptChangesInput
-): Promise<void> {
-  await commitInvoiceReceiptLifecycle(userId, changes);
+): Promise<CommitInvoiceReceiptLifecycleResult> {
+  return commitInvoiceReceiptLifecycle(userId, changes);
 }
 
 export async function commitInvoiceDeletion(
   userId: string,
   updatedEmpenho: Empenho,
   invoiceRecordKey: string
-): Promise<void> {
-  await commitInvoiceDeletionLifecycle(userId, {
+): Promise<CommitInvoiceDeletionLifecycleResult> {
+  return commitInvoiceDeletionLifecycle(userId, {
     updatedEmpenho,
     invoiceRecordKey,
   });
@@ -170,8 +176,8 @@ export async function commitAllInvoicesDeletion(
   userId: string,
   updatedEmpenhos: Empenho[],
   invoiceRecordKeys: string[]
-): Promise<void> {
-  await commitAllInvoicesDeletionLifecycle(userId, {
+): Promise<CommitAllInvoicesDeletionLifecycleResult> {
+  return commitAllInvoicesDeletionLifecycle(userId, {
     updatedEmpenhos,
     invoiceRecordKeys,
   });

@@ -514,6 +514,140 @@ async function main() {
     })
   );
 
+  console.log('\nConcorrência otimista de empenhos');
+
+  const concurrencyEmpenhoRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'empenhos',
+    '2026NE-CONC-001'
+  );
+
+  await denied('Empenho novo sem revision não pode ser criado', () =>
+    setDoc(concurrencyEmpenhoRef, {
+      id: '2026NE-CONC-001',
+      supplier: 'Fornecedor Concorrência',
+      supplierCnpj: '11111111000191',
+      description: 'Teste de revisionamento',
+      date: '2026-09-19',
+      status: 'Ativo',
+      items: [],
+    })
+  );
+
+  await allowed('Empenho novo nasce em revision 1 com ator autenticado', () =>
+    setDoc(concurrencyEmpenhoRef, {
+      id: '2026NE-CONC-001',
+      supplier: 'Fornecedor Concorrência',
+      supplierCnpj: '11111111000191',
+      description: 'Teste de revisionamento',
+      date: '2026-09-19',
+      status: 'Ativo',
+      items: [],
+      revision: 1,
+      updatedAt: now(),
+      updatedBy: sessionA.user.uid,
+    })
+  );
+
+  await denied('Empenho não aceita repetir a mesma revision em atualização', () =>
+    updateDoc(concurrencyEmpenhoRef, {
+      pregao: 'STALE',
+      revision: 1,
+      updatedAt: now(),
+      updatedBy: sessionA.user.uid,
+    })
+  );
+
+  await denied('Empenho não aceita pular revision', () =>
+    updateDoc(concurrencyEmpenhoRef, {
+      pregao: 'SKIP',
+      revision: 3,
+      updatedAt: now(),
+      updatedBy: sessionA.user.uid,
+    })
+  );
+
+  await denied('Empenho não aceita updatedBy forjado', () =>
+    updateDoc(concurrencyEmpenhoRef, {
+      pregao: 'FORGED',
+      revision: 2,
+      updatedAt: now(),
+      updatedBy: 'uid-forjado',
+    })
+  );
+
+  await allowed('Empenho avança exatamente uma revision por atualização', () =>
+    updateDoc(concurrencyEmpenhoRef, {
+      pregao: '90099/2026',
+      revision: 2,
+      updatedAt: now(),
+      updatedBy: sessionA.user.uid,
+    })
+  );
+
+  const legacyConcurrencyRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'empenhos',
+    '2026NE-CONC-LEGACY'
+  );
+  await ownerSet('workspaces/workspace-a/empenhos/2026NE-CONC-LEGACY', {
+    id: '2026NE-CONC-LEGACY',
+    supplier: 'Fornecedor Legado',
+    supplierCnpj: '11111111000191',
+    description: 'Documento sem revision anterior ao Bloco 13',
+    date: '2026-09-18',
+    status: 'Ativo',
+    items: [],
+  });
+
+  await allowed('Empenho legado sem revision migra uma única vez de 0 para 1', () =>
+    updateDoc(legacyConcurrencyRef, {
+      pregao: '90098/2026',
+      revision: 1,
+      updatedAt: now(),
+      updatedBy: sessionA.user.uid,
+    })
+  );
+
+  const fixedExpectedRevision = 2;
+  const concurrentWrites = await Promise.allSettled([
+    runTransaction(sessionA.db, async (transaction) => {
+      const snapshot = await transaction.get(concurrencyEmpenhoRef);
+      assert.equal(snapshot.data()?.revision, fixedExpectedRevision);
+      transaction.update(concurrencyEmpenhoRef, {
+        marker: 'writer-a',
+        revision: fixedExpectedRevision + 1,
+        updatedAt: now(),
+        updatedBy: sessionA.user.uid,
+      });
+    }),
+    runTransaction(sessionA.db, async (transaction) => {
+      const snapshot = await transaction.get(concurrencyEmpenhoRef);
+      assert.equal(snapshot.data()?.revision, fixedExpectedRevision);
+      transaction.update(concurrencyEmpenhoRef, {
+        marker: 'writer-b',
+        revision: fixedExpectedRevision + 1,
+        updatedAt: now(),
+        updatedBy: sessionA.user.uid,
+      });
+    }),
+  ]);
+  assert.equal(
+    concurrentWrites.filter((item) => item.status === 'fulfilled').length,
+    1,
+    'Somente uma sessão pode confirmar a mesma revision esperada.'
+  );
+  assert.equal(
+    concurrentWrites.filter((item) => item.status === 'rejected').length,
+    1,
+    'A segunda sessão precisa detectar revision obsoleta após o retry transacional.'
+  );
+  console.log('  [PASS] RACE  — Duas sessões com a mesma revision não geram lost update');
+
   console.log('\nIdentidade e bootstrap');
   await denied('Setor com mesmo e-mail e UID via Google não lê o próprio platformAccount', () =>
     getDoc(
@@ -932,7 +1066,12 @@ async function main() {
   );
 
   await denied('Empenho bloqueado para alteração enquanto exclusão está em andamento', () =>
-    updateDoc(deletionEmpenhoRef, { pregao: 'NAO-DEVE-GRAVAR' })
+    updateDoc(deletionEmpenhoRef, {
+      pregao: 'NAO-DEVE-GRAVAR',
+      revision: 1,
+      updatedAt: now(),
+      updatedBy: sessionA.user.uid,
+    })
   );
 
   await denied('Nova NF não entra no empenho depois do lock de exclusão', () =>
@@ -1870,7 +2009,16 @@ async function main() {
       assert.equal(newB.exists(), false);
       assert.equal(lockSnapshot.exists(), true);
 
-      transaction.set(empenhoRef, { supplierCnpj: cnpjNext }, { merge: true });
+      transaction.set(
+        empenhoRef,
+        {
+          supplierCnpj: cnpjNext,
+          revision: 1,
+          updatedAt: now(),
+          updatedBy: sessionA.user.uid,
+        },
+        { merge: true }
+      );
       transaction.set(newARef, {
         ...oldA.data(),
         recordKey: cnpjInvoiceANext,
@@ -1997,6 +2145,9 @@ async function main() {
         date: '2026-09-19',
         status: 'Ativo',
         items: [],
+        revision: 1,
+        updatedAt: now(),
+        updatedBy: sessionA.user.uid,
       }
     )
   );
@@ -2012,6 +2163,9 @@ async function main() {
         date: '2026-09-19',
         status: 'Ativo',
         items: [],
+        revision: 1,
+        updatedAt: now(),
+        updatedBy: sessionA.user.uid,
       }
     )
   );
@@ -2027,6 +2181,9 @@ async function main() {
         date: '2026-09-19',
         status: 'Ativo',
         items: [],
+        revision: 1,
+        updatedAt: now(),
+        updatedBy: sessionA.user.uid,
       }
     )
   );

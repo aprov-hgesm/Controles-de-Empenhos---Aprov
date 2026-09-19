@@ -10,6 +10,10 @@ import {
   createWorkspaceAuditCorrelationId,
 } from './auditTrail';
 import { db, handleFirestoreError, OperationType } from './firebase';
+import {
+  assertEmpenhoRevision,
+  isEmpenhoConcurrencyError,
+} from './empenhoConcurrency';
 import { isValidSupplierCnpj, normalizeSupplierCnpj } from './invoiceIdentity';
 import {
   assertNsLockOwnership,
@@ -160,7 +164,8 @@ function assertDeletionCapacity(links: DiscoveredEmpenhoLinks): void {
 async function acquireEmpenhoDeletionLock(
   scope: OperationalDataScope,
   userId: string,
-  empenhoId: string
+  empenhoId: string,
+  expectedRevision?: number
 ): Promise<EmpenhoDeletionLockDocument> {
   const empenhoRef = operationalDocRef(scope, 'empenhos', empenhoId);
   const lockId = buildEmpenhoDeletionLockId(empenhoId);
@@ -180,6 +185,7 @@ async function acquireEmpenhoDeletionLock(
     if (storedEmpenho.id !== empenhoId) {
       throw new Error('A identidade do empenho mudou. A exclusão foi cancelada.');
     }
+    assertEmpenhoRevision(storedEmpenho, expectedRevision);
 
     if (lockSnapshot.exists()) {
       const lock = lockSnapshot.data() as Partial<EmpenhoDeletionLockDocument>;
@@ -244,7 +250,8 @@ async function releaseEmpenhoDeletionLock(
 
 export async function commitEmpenhoDeletionLifecycle(
   userId: string,
-  empenhoId: string
+  empenhoId: string,
+  expectedRevision?: number
 ): Promise<CommitEmpenhoDeletionResult> {
   const scope = getCurrentOperationalScope(userId);
   const path = `${getOperationalDocumentPath(scope, 'empenhos', empenhoId)}/deletion-lifecycle`;
@@ -257,7 +264,7 @@ export async function commitEmpenhoDeletionLifecycle(
   let lock: EmpenhoDeletionLockDocument | null = null;
 
   try {
-    lock = await acquireEmpenhoDeletionLock(scope, userId, empenhoId);
+    lock = await acquireEmpenhoDeletionLock(scope, userId, empenhoId, expectedRevision);
 
     // Once the lock exists, Rules reject new invoice creation and normal
     // empenho/linked writes. This closes the query -> delete race window.
@@ -295,6 +302,7 @@ export async function commitEmpenhoDeletionLifecycle(
       }
 
       const storedEmpenho = empenhoSnapshot.data() as Empenho;
+      assertEmpenhoRevision(storedEmpenho, expectedRevision);
       const storedDeletionLock = deletionLockSnapshot.data() as Partial<EmpenhoDeletionLockDocument>;
       if (
         storedEmpenho.id !== empenhoId
@@ -472,6 +480,7 @@ export async function commitEmpenhoDeletionLifecycle(
     if (lock) {
       await releaseEmpenhoDeletionLock(scope, userId, empenhoId).catch(() => undefined);
     }
+    if (isEmpenhoConcurrencyError(error)) throw error;
     try {
       handleFirestoreError(error, OperationType.DELETE, path);
     } catch (wrappedError) {

@@ -4,7 +4,7 @@ import type React from 'react';
 import type { User } from 'firebase/auth';
 import jsPDF from 'jspdf';
 import type { Alert, Empenho, EmpenhoPdfDocument, Invoice, Item } from '../../../lib/types';
-import { saveAlert, saveEmpenho, removeEmpenho } from '../../../lib/firebaseSync';
+import { createEmpenho, saveAlert, saveEmpenho, removeEmpenho } from '../../../lib/firebaseSync';
 import { PROMPT_EXTRACAO_EMPENHO } from '../domain/empenhoHelpers';
 import { normalizeEmpenhoClassCode } from '../../../lib/empenhoClasses';
 import { getInvoiceRecordKey, isValidSupplierCnpj, normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
@@ -67,8 +67,8 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       notaEmpenhoPdf: document,
       notaEmpenhoPdfVersions: versions,
     };
-     await saveEmpenho(user.uid, updatedEmpenho);
-    setEmpenhos((current) => current.map((emp) => emp.id === empenhoId ? updatedEmpenho : emp));
+     const committedEmpenho = await saveEmpenho(user.uid, updatedEmpenho);
+    setEmpenhos((current) => current.map((emp) => emp.id === empenhoId ? committedEmpenho : emp));
   };
 
   const handleUpdateEmpenhoPregao = async (empenhoId: string, pregao: string): Promise<void> => {
@@ -82,12 +82,16 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     const updatedEmpenho: Empenho = { ...currentEmpenho, pregao: normalizedPregao };
 
     try {
-      if (user) await saveEmpenho(user.uid, updatedEmpenho);
-      setEmpenhos((current) => current.map((emp) => emp.id === empenhoId ? updatedEmpenho : emp));
+      if (!user) throw new Error('Sua sessão expirou. Entre novamente para alterar o empenho.');
+      const committedEmpenho = await saveEmpenho(user.uid, updatedEmpenho);
+      setEmpenhos((current) => current.map((emp) => emp.id === empenhoId ? committedEmpenho : emp));
       showToast(`Pregão do empenho ${empenhoId} atualizado para ${normalizedPregao}.`, 'success');
     } catch (error) {
       console.error('Erro ao atualizar Pregão do empenho:', error);
-      showToast('Não foi possível atualizar o Pregão do empenho.', 'error');
+      showToast(
+        error instanceof Error ? error.message : 'Não foi possível atualizar o Pregão do empenho.',
+        'error'
+      );
       throw error;
     }
   };
@@ -133,6 +137,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       const result = await commitEmpenhoSupplierCnpjMigration(user.uid, {
         empenhoId,
         targetSupplierCnpj: normalizedCnpj,
+        expectedRevision: currentEmpenho.revision,
       });
 
       setEmpenhos((current) => current.map((emp) => (
@@ -200,14 +205,18 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     };
 
     try {
-      if (user) await saveEmpenho(user.uid, updatedEmpenho);
+      if (!user) throw new Error('Sua sessão expirou. Entre novamente para alterar o empenho.');
+      const committedEmpenho = await saveEmpenho(user.uid, updatedEmpenho);
       setEmpenhos((current) => current.map((emp) => (
-        emp.id === empenhoId ? updatedEmpenho : emp
+        emp.id === empenhoId ? committedEmpenho : emp
       )));
       showToast(`Classe do empenho ${empenhoId} alterada para ${classification}.`, 'success');
     } catch (error) {
       console.error('Erro ao atualizar classe do empenho:', error);
-      showToast('Não foi possível atualizar a classe do empenho.', 'error');
+      showToast(
+        error instanceof Error ? error.message : 'Não foi possível atualizar a classe do empenho.',
+        'error'
+      );
       throw error;
     }
   };
@@ -250,16 +259,21 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       pregao: newEmpenhoForm.pregao || 'Sem Pregão',
       classification: normalizeEmpenhoClassCode(newEmpenhoForm.classification) || 'QR',
     };
-     const updatedEmpenhos = [newEmp, ...empenhos];
-    if (user) {
-      try {
-        await saveEmpenho(user.uid, newEmp);
-      } catch (error) {
-        showToast('Erro ao salvar no Firebase. O empenho não foi confirmado.', 'error');
-        return;
-      }
+    if (!user) {
+      showToast('Sua sessão expirou. Entre novamente antes de cadastrar o empenho.', 'error');
+      return;
     }
-    setEmpenhos(updatedEmpenhos);
+    let committedEmpenho: Empenho;
+    try {
+      committedEmpenho = await createEmpenho(user.uid, newEmp);
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : 'Erro ao salvar no Firebase. O empenho não foi confirmado.',
+        'error'
+      );
+      return;
+    }
+    setEmpenhos((current) => [committedEmpenho, ...current.filter((emp) => emp.id !== committedEmpenho.id)]);
     showToast(`Nota de Empenho ${newEmp.id} criada! Adicione itens a ela.`, 'success');
     setNewEmpenhoForm({ id: '', supplier: '', supplierCnpj: '', description: '', pregao: '', date: new Date().toISOString().split('T')[0], classification: 'QR' });
     setShowNewEmpenhoModal(false);
@@ -429,16 +443,22 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       pregao: reviewEmpenho.pregao || 'Sem Pregão',
       classification: normalizeEmpenhoClassCode(String(reviewEmpenho.classification || 'QR')) || 'QR',
     };
-     const updatedEmpenhos = [finalEmp, ...empenhos];
-    setEmpenhos(updatedEmpenhos);
-     if (user) {
-      try {
-        await saveEmpenho(user.uid, finalEmp);
-      } catch (error) {
-        showToast('Erro ao salvar no Firebase', 'error');
-      }
+    if (!user) {
+      showToast('Sua sessão expirou. Entre novamente antes de cadastrar o empenho.', 'error');
+      return;
     }
-     showToast(`Empenho ${finalEmp.id} cadastrado com sucesso! ${finalEmp.items.length} itens importados.`, 'success');
+    let committedEmpenho: Empenho;
+    try {
+      committedEmpenho = await createEmpenho(user.uid, finalEmp);
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : 'Erro ao salvar no Firebase.',
+        'error'
+      );
+      return;
+    }
+    setEmpenhos((current) => [committedEmpenho, ...current.filter((emp) => emp.id !== committedEmpenho.id)]);
+     showToast(`Empenho ${committedEmpenho.id} cadastrado com sucesso! ${committedEmpenho.items.length} itens importados.`, 'success');
 
     // Clean states
     setReviewEmpenho(null);
@@ -485,13 +505,21 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       }
       return emp;
     });
-     setEmpenhos(updatedEmpenhos);
-     if (user && updatedTargetEmp) {
-      try {
-        await saveEmpenho(user.uid, updatedTargetEmp);
-      } catch (error) {
-        showToast('Erro ao salvar no Firebase', 'error');
-      }
+     if (!user || !updatedTargetEmp) {
+      showToast('Sua sessão expirou ou o empenho não foi localizado.', 'error');
+      return;
+    }
+    try {
+      const committedEmpenho = await saveEmpenho(user.uid, updatedTargetEmp);
+      setEmpenhos((current) => current.map((emp) => (
+        emp.id === committedEmpenho.id ? committedEmpenho : emp
+      )));
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : 'Erro ao salvar no Firebase.',
+        'error'
+      );
+      return;
     }
      showToast('Item adicionado ao empenho com sucesso!');
      // Reset item form
@@ -517,13 +545,21 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       }
       return emp;
     });
-     setEmpenhos(updatedEmpenhos);
-     if (user && updatedTargetEmp) {
-      try {
-        await saveEmpenho(user.uid, updatedTargetEmp);
-      } catch (error) {
-        showToast('Erro ao salvar no Firebase', 'error');
-      }
+     if (!user || !updatedTargetEmp) {
+      showToast('Sua sessão expirou ou o empenho não foi localizado.', 'error');
+      return;
+    }
+    try {
+      const committedEmpenho = await saveEmpenho(user.uid, updatedTargetEmp);
+      setEmpenhos((current) => current.map((emp) => (
+        emp.id === committedEmpenho.id ? committedEmpenho : emp
+      )));
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : 'Erro ao salvar no Firebase.',
+        'error'
+      );
+      return;
     }
      showToast('Item excluído do empenho.', 'info');
   };
@@ -566,7 +602,11 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
 
     setIsDeletingEmpenho(true);
     try {
-      const result = await removeEmpenho(user.uid, id);
+      const currentEmpenho = empenhos.find((empenho) => empenho.id === id);
+      if (!currentEmpenho) {
+        throw new Error('O empenho não está mais disponível. Atualize a tela.');
+      }
+      const result = await removeEmpenho(user.uid, id, currentEmpenho.revision);
       const deletedInvoices = new Set(result.deletedInvoiceRecordKeys);
       const deletedAlerts = new Set(result.deletedAlertIds);
 

@@ -1,6 +1,11 @@
 import { deleteField, getDocs, query, runTransaction, where } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './firebase';
 import {
+  assertEmpenhoRevision,
+  buildNextEmpenho,
+  isEmpenhoConcurrencyError,
+} from './empenhoConcurrency';
+import {
   appendWorkspaceAuditEvent,
   createWorkspaceAuditCorrelationId,
 } from './auditTrail';
@@ -396,14 +401,27 @@ export interface CommitInvoiceReceiptLifecycleInput {
   previousInvoiceRecordKey?: string;
 }
 
+export interface CommitInvoiceReceiptLifecycleResult {
+  updatedTargetEmpenho: Empenho;
+  updatedPreviousEmpenho?: Empenho;
+}
+
 export interface CommitInvoiceDeletionLifecycleInput {
   updatedEmpenho: Empenho;
   invoiceRecordKey: string;
 }
 
+export interface CommitInvoiceDeletionLifecycleResult {
+  updatedEmpenho: Empenho;
+}
+
 export interface CommitAllInvoicesDeletionLifecycleInput {
   updatedEmpenhos: Empenho[];
   invoiceRecordKeys: string[];
+}
+
+export interface CommitAllInvoicesDeletionLifecycleResult {
+  updatedEmpenhos: Empenho[];
 }
 
 export const MAX_INVOICE_LIFECYCLE_WRITES = 450;
@@ -439,7 +457,7 @@ function buildLifecycleMutation(
 export async function commitInvoiceReceiptLifecycle(
   userId: string,
   input: CommitInvoiceReceiptLifecycleInput
-): Promise<void> {
+): Promise<CommitInvoiceReceiptLifecycleResult> {
   const scope = getCurrentOperationalScope(userId);
   const nextRecordKey = getInvoiceRecordKey(input.invoice);
   const previousRecordKey = input.previousInvoiceRecordKey;
@@ -451,7 +469,7 @@ export async function commitInvoiceReceiptLifecycle(
   const correlationId = createWorkspaceAuditCorrelationId(scope);
 
   try {
-    await runTransaction(db, async (transaction) => {
+    return await runTransaction(db, async (transaction) => {
       const nextInvoiceRef = operationalDocRef(scope, 'invoices', nextRecordKey);
       const previousInvoiceRef = isExistingEdit
         ? operationalDocRef(scope, 'invoices', previousRecordKey!)
@@ -496,6 +514,26 @@ export async function commitInvoiceReceiptLifecycle(
       }
 
       const storedTargetEmpenho = storedTargetEmpenhoSnapshot.data() as Empenho;
+      assertEmpenhoRevision(storedTargetEmpenho, input.targetEmpenho.revision);
+
+      const storedPreviousEmpenho =
+        previousEmpenhoRef && storedPreviousEmpenhoSnapshot?.exists()
+          ? (storedPreviousEmpenhoSnapshot.data() as Empenho)
+          : null;
+      if (storedPreviousEmpenho && input.previousEmpenho) {
+        assertEmpenhoRevision(storedPreviousEmpenho, input.previousEmpenho.revision);
+      }
+
+      const committedTargetEmpenho = buildNextEmpenho(
+        input.targetEmpenho,
+        storedTargetEmpenho,
+        userId
+      );
+      const committedPreviousEmpenho =
+        storedPreviousEmpenho && input.previousEmpenho
+          ? buildNextEmpenho(input.previousEmpenho, storedPreviousEmpenho, userId)
+          : undefined;
+
       const storedTargetCnpj = normalizeSupplierCnpj(storedTargetEmpenho.supplierCnpj);
       const expectedTargetCnpj = normalizeSupplierCnpj(input.targetEmpenho.supplierCnpj);
       const invoiceCnpj = normalizeSupplierCnpj(input.invoice.supplierCnpj);
@@ -610,15 +648,12 @@ export async function commitInvoiceReceiptLifecycle(
 
       transaction.set(
         targetEmpenhoRef,
-        { ...input.targetEmpenho, userId }
+        { ...committedTargetEmpenho, userId }
       );
-      if (
-        input.previousEmpenho &&
-        input.previousEmpenho.id !== input.targetEmpenho.id
-      ) {
+      if (committedPreviousEmpenho) {
         transaction.set(
-          operationalDocRef(scope, 'empenhos', input.previousEmpenho.id),
-          { ...input.previousEmpenho, userId }
+          operationalDocRef(scope, 'empenhos', committedPreviousEmpenho.id),
+          { ...committedPreviousEmpenho, userId }
         );
       }
 
@@ -701,8 +736,16 @@ export async function commitInvoiceReceiptLifecycle(
           userId
         );
       }
+
+      return {
+        updatedTargetEmpenho: committedTargetEmpenho,
+        ...(committedPreviousEmpenho
+          ? { updatedPreviousEmpenho: committedPreviousEmpenho }
+          : {}),
+      };
     });
   } catch (error) {
+    if (isEmpenhoConcurrencyError(error)) throw error;
     handleFirestoreError(error, OperationType.WRITE, path);
     throw error;
   }
@@ -711,15 +754,19 @@ export async function commitInvoiceReceiptLifecycle(
 export async function commitInvoiceDeletionLifecycle(
   userId: string,
   input: CommitInvoiceDeletionLifecycleInput
-): Promise<void> {
+): Promise<CommitInvoiceDeletionLifecycleResult> {
   const scope = getCurrentOperationalScope(userId);
   const invoiceRef = operationalDocRef(scope, 'invoices', input.invoiceRecordKey);
   const path = getOperationalDocumentPath(scope, 'invoices', input.invoiceRecordKey);
   const correlationId = createWorkspaceAuditCorrelationId(scope);
 
   try {
-    await runTransaction(db, async (transaction) => {
-      const invoiceSnapshot = await transaction.get(invoiceRef);
+    return await runTransaction(db, async (transaction) => {
+      const empenhoRef = operationalDocRef(scope, 'empenhos', input.updatedEmpenho.id);
+      const [invoiceSnapshot, empenhoSnapshot] = await Promise.all([
+        transaction.get(invoiceRef),
+        transaction.get(empenhoRef),
+      ]);
       if (!invoiceSnapshot.exists()) {
         throw new NsIntegrityError(
           'invoice_missing',
@@ -737,6 +784,20 @@ export async function commitInvoiceDeletionLifecycle(
           'O vínculo da Nota Fiscal com o empenho mudou. A exclusão foi cancelada.'
         );
       }
+      if (!empenhoSnapshot.exists()) {
+        throw new NsIntegrityError(
+          'empenho_missing',
+          'O empenho vinculado não existe mais. A exclusão foi cancelada.'
+        );
+      }
+
+      const storedEmpenho = empenhoSnapshot.data() as Empenho;
+      assertEmpenhoRevision(storedEmpenho, input.updatedEmpenho.revision);
+      const committedEmpenho = buildNextEmpenho(
+        input.updatedEmpenho,
+        storedEmpenho,
+        userId
+      );
 
       const currentNs = normalizeNsNumber(invoice.numeroNS);
       let lockRef: ReturnType<typeof operationalSettingsDocRef> | null = null;
@@ -776,8 +837,8 @@ export async function commitInvoiceDeletionLifecycle(
       }
 
       transaction.set(
-        operationalDocRef(scope, 'empenhos', input.updatedEmpenho.id),
-        { ...input.updatedEmpenho, userId }
+        empenhoRef,
+        { ...committedEmpenho, userId }
       );
       transaction.delete(invoiceRef);
       if (lockRef && lockExists) {
@@ -810,8 +871,11 @@ export async function commitInvoiceDeletionLifecycle(
         },
         userId
       );
+
+      return { updatedEmpenho: committedEmpenho };
     });
   } catch (error) {
+    if (isEmpenhoConcurrencyError(error)) throw error;
     handleFirestoreError(error, OperationType.DELETE, path);
     throw error;
   }
@@ -820,14 +884,14 @@ export async function commitInvoiceDeletionLifecycle(
 export async function commitAllInvoicesDeletionLifecycle(
   userId: string,
   input: CommitAllInvoicesDeletionLifecycleInput
-): Promise<void> {
+): Promise<CommitAllInvoicesDeletionLifecycleResult> {
   const scope = getCurrentOperationalScope(userId);
   const uniqueRecordKeys = Array.from(new Set(input.invoiceRecordKeys));
   const path = `${getOperationalCollectionPath(scope, 'invoices')}/bulk-lifecycle`;
   const correlationId = createWorkspaceAuditCorrelationId(scope);
 
   try {
-    await runTransaction(db, async (transaction) => {
+    return await runTransaction(db, async (transaction) => {
       const invoiceRefs = uniqueRecordKeys.map((recordKey) =>
         operationalDocRef(scope, 'invoices', recordKey)
       );
@@ -845,6 +909,27 @@ export async function commitAllInvoicesDeletionLifecycle(
       const invoices = invoiceSnapshots.map((snapshot) =>
         invoiceWithRecordKey(snapshot.id, snapshot.data() as Invoice)
       );
+
+      const affectedEmpenhoIds = Array.from(
+        new Set(invoices.map((invoice) => invoice.empenhoId))
+      );
+      const inputEmpenhoById = new Map(
+        input.updatedEmpenhos.map((empenho) => [empenho.id, empenho])
+      );
+      const affectedEmpenhos = affectedEmpenhoIds.map((empenhoId) => {
+        const empenho = inputEmpenhoById.get(empenhoId);
+        if (!empenho) {
+          throw new NsIntegrityError(
+            'empenho_missing',
+            `O empenho ${empenhoId} não foi informado para reverter as Notas Fiscais.`
+          );
+        }
+        return empenho;
+      });
+      const affectedEmpenhoRefs = affectedEmpenhos.map((empenho) =>
+        operationalDocRef(scope, 'empenhos', empenho.id)
+      );
+
       const lockEntries = invoices
         .map((invoice, index) => ({
           invoice,
@@ -866,9 +951,24 @@ export async function commitAllInvoicesDeletionLifecycle(
       const lockRefs = lockIds.map((lockId) =>
         operationalSettingsDocRef(scope, lockId)
       );
-      const lockSnapshots = await Promise.all(
-        lockRefs.map((ref) => transaction.get(ref))
-      );
+      const [lockSnapshots, storedEmpenhoSnapshots] = await Promise.all([
+        Promise.all(lockRefs.map((ref) => transaction.get(ref))),
+        Promise.all(affectedEmpenhoRefs.map((ref) => transaction.get(ref))),
+      ]);
+
+      if (storedEmpenhoSnapshots.some((snapshot) => !snapshot.exists())) {
+        throw new NsIntegrityError(
+          'empenho_missing',
+          'Um ou mais empenhos vinculados não existem mais. A exclusão em lote foi cancelada.'
+        );
+      }
+
+      const committedEmpenhos = affectedEmpenhos.map((empenho, index) => {
+        const stored = storedEmpenhoSnapshots[index].data() as Empenho;
+        assertEmpenhoRevision(stored, empenho.revision);
+        return buildNextEmpenho(empenho, stored, userId);
+      });
+
       const lockById = new Map(
         lockSnapshots.map((snapshot) => [
           snapshot.id,
@@ -877,7 +977,7 @@ export async function commitAllInvoicesDeletionLifecycle(
       );
 
       const empenhoById = new Map(
-        input.updatedEmpenhos.map((empenho) => [empenho.id, empenho])
+        committedEmpenhos.map((empenho) => [empenho.id, empenho])
       );
 
       for (const entry of lockEntries) {
@@ -912,7 +1012,7 @@ export async function commitAllInvoicesDeletionLifecycle(
         (_, index) => lockSnapshots[index].exists()
       );
       const totalWrites =
-        input.updatedEmpenhos.length +
+        committedEmpenhos.length +
         invoiceRefs.length +
         existingLockRefs.length +
         1;
@@ -922,7 +1022,7 @@ export async function commitAllInvoicesDeletionLifecycle(
         );
       }
 
-      input.updatedEmpenhos.forEach((empenho) => {
+      committedEmpenhos.forEach((empenho) => {
         transaction.set(
           operationalDocRef(scope, 'empenhos', empenho.id),
           { ...empenho, userId }
@@ -949,13 +1049,16 @@ export async function commitAllInvoicesDeletionLifecycle(
           },
           metadata: {
             removedLockCount: existingLockRefs.length,
-            updatedEmpenhoCount: input.updatedEmpenhos.length,
+            updatedEmpenhoCount: committedEmpenhos.length,
           },
         },
         userId
       );
+
+      return { updatedEmpenhos: committedEmpenhos };
     });
   } catch (error) {
+    if (isEmpenhoConcurrencyError(error)) throw error;
     handleFirestoreError(error, OperationType.DELETE, path);
     throw error;
   }
@@ -968,6 +1071,7 @@ export const MAX_SUPPLIER_CNPJ_MIGRATION_NS_LOCKS = 5;
 export interface CommitEmpenhoSupplierCnpjMigrationInput {
   empenhoId: string;
   targetSupplierCnpj: string;
+  expectedRevision?: number;
 }
 
 export interface CommitEmpenhoSupplierCnpjMigrationResult {
@@ -1025,6 +1129,7 @@ export async function commitEmpenhoSupplierCnpjMigration(
       }
 
       const currentEmpenho = empenhoSnapshot.data() as Empenho;
+      assertEmpenhoRevision(currentEmpenho, input.expectedRevision);
       const sourceInvoiceRefs = discoveredRecordKeys.map((recordKey) =>
         operationalDocRef(scope, 'invoices', recordKey)
       );
@@ -1067,7 +1172,7 @@ export async function commitEmpenhoSupplierCnpjMigration(
 
       if (plan.isNoOp) {
         return {
-          updatedEmpenho: plan.updatedEmpenho,
+          updatedEmpenho: currentEmpenho,
           invoiceMigrations: plan.items.map((item) => ({
             sourceRecordKey: item.sourceRecordKey,
             targetRecordKey: item.targetRecordKey,
@@ -1208,26 +1313,15 @@ export async function commitEmpenhoSupplierCnpjMigration(
         );
       }
 
-      const updatedEmpenho = plan.updatedEmpenho;
-      if (plan.targetSupplierCnpj) {
-        transaction.set(
-          empenhoRef,
-          {
-            supplierCnpj: plan.targetSupplierCnpj,
-            userId,
-          },
-          { merge: true }
-        );
-      } else {
-        transaction.set(
-          empenhoRef,
-          {
-            supplierCnpj: deleteField(),
-            userId,
-          },
-          { merge: true }
-        );
-      }
+      const updatedEmpenho = buildNextEmpenho(
+        plan.updatedEmpenho,
+        currentEmpenho,
+        userId
+      );
+      transaction.set(
+        empenhoRef,
+        { ...updatedEmpenho, userId }
+      );
 
       for (const item of plan.items) {
         transaction.set(
@@ -1319,6 +1413,7 @@ export async function commitEmpenhoSupplierCnpjMigration(
       };
     });
   } catch (error) {
+    if (isEmpenhoConcurrencyError(error)) throw error;
     handleFirestoreError(error, OperationType.WRITE, path);
     throw error;
   }

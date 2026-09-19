@@ -464,6 +464,32 @@ service cloud.firestore {
         );
     }
 
+    function validEmpenhoRevisionCreate(data) {
+      return data.keys().hasAll([
+          'revision',
+          'updatedAt',
+          'updatedBy'
+        ])
+        && data.revision is int
+        && data.revision == 1
+        && data.updatedAt is string
+        && data.updatedAt.size() > 0
+        && data.updatedBy == request.auth.uid;
+    }
+
+    function validEmpenhoRevisionUpdate() {
+      let currentRevision = 'revision' in resource.data
+        ? resource.data.revision
+        : 0;
+      return currentRevision is int
+        && currentRevision >= 0
+        && request.resource.data.revision is int
+        && request.resource.data.revision == currentRevision + 1
+        && request.resource.data.updatedAt is string
+        && request.resource.data.updatedAt.size() > 0
+        && request.resource.data.updatedBy == request.auth.uid;
+    }
+
     function empenhoDeletionLockId(empenhoId) {
       return 'empenhoDelete_' + empenhoId;
     }
@@ -1324,9 +1350,11 @@ service cloud.firestore {
     match /workspaces/{workspaceId}/empenhos/{id} {
       allow read: if canAccessWorkspace(workspaceId);
       allow create: if canAccessWorkspace(workspaceId)
+        && validEmpenhoRevisionCreate(request.resource.data)
         && empenhoCnpjCreateIsValid(request.resource.data);
       allow update: if canAccessWorkspace(workspaceId)
         && !empenhoDeletionIsLockedAfter(workspaceId, id)
+        && validEmpenhoRevisionUpdate()
         && empenhoCnpjUpdateIsValid();
       allow delete: if canAccessWorkspace(workspaceId)
         && validEmpenhoLifecycleDelete(workspaceId, id);

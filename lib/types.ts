@@ -62,6 +62,9 @@ export interface Empenho {
   lastNFDaysAgo?: number;
   pregao?: string; // Pregão vinculado ao empenho
   classification?: string;
+  revision?: number; // Revisão otimista do documento; legado sem campo equivale à revisão 0
+  updatedAt?: string;
+  updatedBy?: string;
   notaEmpenhoPdf?: EmpenhoPdfDocument;
   notaEmpenhoPdfVersions?: EmpenhoPdfDocument[];
 }
