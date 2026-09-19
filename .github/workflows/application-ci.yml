@@ -249,6 +249,9 @@ jobs:
       - name: EMPROVEX final experience guard
         run: npm run verify:experience-finalization
 
+      - name: Block 15 final hardening guard
+        run: npm run verify:block-15-hardening
+
       - name: Production build
         run: npm run build
 
