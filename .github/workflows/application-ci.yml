@@ -219,6 +219,12 @@ jobs:
       - name: Block 13 empenho concurrency guard
         run: npm run verify:block-13-empenho-concurrency
 
+      - name: Operational subscription plan tests
+        run: npm run test:operational-subscription-plan
+
+      - name: Block 14 operational scalability guard
+        run: npm run verify:block-14-scalability
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 

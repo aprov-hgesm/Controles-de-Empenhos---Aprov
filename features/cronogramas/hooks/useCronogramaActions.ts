@@ -2,10 +2,9 @@
 
 import type React from 'react';
 import type { User } from 'firebase/auth';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import type { CronogramaEmpenho, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
 import { saveCronograma } from '../../../lib/firebaseSync';
+import { loadJsPdfWithAutoTable } from '../../../lib/pdfToolkit';
 
 type Distribution=Record<string,Record<string,number>>;
 interface CronogramaActionsContext {
@@ -194,7 +193,8 @@ export function useCronogramaActions(context:CronogramaActionsContext){
   };
 
   // PDF Generator for Cronograma
-  const handleGenerateCronogramaPDF = (emp: Empenho, action: 'download' | 'print' = 'download') => {
+  const handleGenerateCronogramaPDF = async (emp: Empenho, action: 'download' | 'print' = 'download') => {
+    const { jsPDF, autoTable } = await loadJsPdfWithAutoTable();
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
