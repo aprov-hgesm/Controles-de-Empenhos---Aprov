@@ -226,6 +226,7 @@ export function RelatorioEmpenhoSelector({
               return (
                 <button
                   key={empenho.id}
+                  data-testid={`report-empenho-${empenho.id}`}
                   type="button"
                   onClick={() => onSelectEmpenho(empenho.id)}
                   aria-pressed={selected}
