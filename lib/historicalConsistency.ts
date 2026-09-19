@@ -360,7 +360,7 @@ export function analyzeHistoricalConsistency(
       const legacyId = buildLegacyNsLockDocumentId(ns);
       const legacy = lockById.get(legacyId);
       issues.push(createIssue({
-        code: legacy ? 'legacy_lock_missing' : 'invoice_ns_without_ug',
+        code: legacy ? 'invoice_ns_without_ug' : 'legacy_lock_missing',
         severity: 'warning',
         repairMode: 'manual_review',
         entityType: 'invoice',
