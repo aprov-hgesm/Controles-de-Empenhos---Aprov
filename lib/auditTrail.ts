@@ -25,6 +25,7 @@ export type AuditOperation =
   | 'invoice.identity_migrate'
   | 'invoice.delete'
   | 'invoice.bulk_delete'
+  | 'empenho.delete'
   | 'supplier_cnpj.migrate'
   | 'sector.create'
   | 'sector.profile_update'
