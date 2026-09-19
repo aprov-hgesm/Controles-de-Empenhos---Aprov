@@ -101,6 +101,6 @@ A suíte cobre:
 
 ## Fora do escopo
 
-A validação matemática dos dígitos verificadores do CNPJ continua reservada ao Bloco 6.
+A validação matemática dos dígitos verificadores foi implementada no Bloco 6 e agora protege o CNPJ alvo da migração, inclusive no formato alfanumérico.
 
 O endurecimento global das Firestore Rules para toda escrita de `numeroNS` continua no Bloco 5.

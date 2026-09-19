@@ -70,7 +70,7 @@ const {
 } = planModule.namespace;
 
 const CNPJ = '11111111000191';
-const OTHER_CNPJ = '22222222000182';
+const OTHER_CNPJ = '22222222000191';
 
 const empenho = (id = '2026NE000001', cnpj = CNPJ) => ({
   id,

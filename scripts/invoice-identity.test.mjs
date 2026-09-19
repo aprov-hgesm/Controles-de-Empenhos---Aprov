@@ -27,6 +27,10 @@ await module.link(() => {
 await module.evaluate();
 
 const {
+  calculateSupplierCnpjCheckDigits,
+  formatSupplierCnpj,
+  hasValidSupplierCnpjShape,
+  isValidSupplierCnpj,
   normalizeSupplierCnpj,
   normalizeInvoiceNumber,
   buildInvoiceRecordKey,
@@ -48,10 +52,35 @@ function invoice(id, supplierCnpj, recordKey) {
   };
 }
 
-test('normaliza CNPJ formatado para 14 dígitos', () => {
+test('normaliza CNPJ numérico e alfanumérico para 14 posições canônicas', () => {
   assert.equal(normalizeSupplierCnpj('02.483.088/0001-75'), '02483088000175');
   assert.equal(normalizeSupplierCnpj('02483088000175'), '02483088000175');
+  assert.equal(normalizeSupplierCnpj('00.000.000/E08G-12'), '00000000E08G12');
+  assert.equal(normalizeSupplierCnpj('12.abc.345/01de-35'), '12ABC34501DE35');
+  assert.equal(normalizeSupplierCnpj('12.ABC.345/01DE-XY'), '');
   assert.equal(normalizeSupplierCnpj('123'), '');
+});
+
+test('valida dígitos verificadores oficiais do CNPJ numérico e alfanumérico', () => {
+  assert.equal(isValidSupplierCnpj('02.483.088/0001-75'), true);
+  assert.equal(isValidSupplierCnpj('02.483.088/0001-74'), false);
+  assert.equal(isValidSupplierCnpj('00.000.000/E08G-12'), true);
+  assert.equal(isValidSupplierCnpj('12.ABC.345/01DE-35'), true);
+  assert.equal(isValidSupplierCnpj('12.ABC.345/01DE-34'), false);
+  assert.equal(isValidSupplierCnpj('00.000.000/0000-00'), false);
+});
+
+test('calcula DV pela regra ASCII-48 e módulo 11', () => {
+  assert.equal(calculateSupplierCnpjCheckDigits('024830880001'), '75');
+  assert.equal(calculateSupplierCnpjCheckDigits('00000000E08G'), '12');
+  assert.equal(calculateSupplierCnpjCheckDigits('12ABC34501DE'), '35');
+  assert.equal(calculateSupplierCnpjCheckDigits('ABC'), null);
+});
+
+test('distingue formato estrutural de validade matemática para históricos', () => {
+  assert.equal(hasValidSupplierCnpjShape('22.222.222/0001-82'), true);
+  assert.equal(isValidSupplierCnpj('22.222.222/0001-82'), false);
+  assert.equal(formatSupplierCnpj('00000000E08G12'), '00.000.000/E08G-12');
 });
 
 test('normaliza zeros à esquerda somente para NF numérica', () => {
@@ -67,6 +96,13 @@ test('recordKey combina CNPJ e número normalizado', () => {
     'nf_02483088000175_1234'
   );
   assert.equal(buildInvoiceRecordKey('', '1234'), null);
+});
+
+test('recordKey aceita CNPJ alfanumérico oficial', () => {
+  assert.equal(
+    buildInvoiceRecordKey('00.000.000/E08G-12', '01234'),
+    'nf_00000000E08G12_1234'
+  );
 });
 
 test('duas empresas podem possuir o mesmo número de NF', () => {

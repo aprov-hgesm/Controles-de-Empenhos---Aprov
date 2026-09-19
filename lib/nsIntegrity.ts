@@ -1,5 +1,5 @@
 import type { Empenho, Invoice } from './types';
-import { getInvoiceRecordKey, normalizeSupplierCnpj } from './invoiceIdentity';
+import { getInvoiceRecordKey, isValidSupplierCnpj, normalizeSupplierCnpj } from './invoiceIdentity';
 
 export const NS_LOCK_DOCUMENT_PREFIX = 'sagNsLock_' as const;
 export const NS_LOCK_DOCUMENT_TYPE = 'sag-ns-lock' as const;
@@ -103,10 +103,10 @@ export function buildNsLockDocument(input: {
   }
 
   const supplierCnpj = normalizeSupplierCnpj(input.mutation.supplierCnpj);
-  if (!supplierCnpj) {
+  if (!supplierCnpj || !isValidSupplierCnpj(supplierCnpj)) {
     throw new NsIntegrityError(
       'invalid_supplier_cnpj',
-      `O CNPJ da NF ${input.mutation.invoiceId} é inválido para reserva da NS.`
+      `O CNPJ da NF ${input.mutation.invoiceId} possui formato ou dígitos verificadores inválidos para reserva da NS.`
     );
   }
 
@@ -174,10 +174,10 @@ export function validateNsIntegritySnapshot(
     }
     targetKeys.add(mutation.invoiceRecordKey);
 
-    if (!normalizeSupplierCnpj(mutation.supplierCnpj)) {
+    if (!isValidSupplierCnpj(mutation.supplierCnpj)) {
       throw new NsIntegrityError(
         'invalid_supplier_cnpj',
-        `O CNPJ da NF ${mutation.invoiceId} é inválido para persistência de NS.`
+        `O CNPJ da NF ${mutation.invoiceId} possui formato ou dígitos verificadores inválidos para persistência de NS.`
       );
     }
 

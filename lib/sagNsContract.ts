@@ -1,4 +1,4 @@
-import { normalizeInvoiceNumber, normalizeSupplierCnpj } from './invoiceIdentity';
+import { isValidSupplierCnpj, normalizeInvoiceNumber, normalizeSupplierCnpj } from './invoiceIdentity';
 
 export const SAG_NS_SCHEMA_VERSION = 'emprovex_sag_ns_v1' as const;
 export const SAG_NS_SOURCE = 'SAG' as const;
@@ -211,18 +211,28 @@ export function validateSagNsPayload(
       ? String(input.supplier_cnpj)
       : ''
   );
-  if (!supplierCnpj) {
+  if (!supplierCnpj || !isValidSupplierCnpj(supplierCnpj)) {
     issues.push(
       makeIssue(
         'error',
         'invalid_supplier_cnpj',
         '$.supplier_cnpj',
-        'supplier_cnpj deve conter um CNPJ válido no formato normalizado de 14 dígitos.'
+        'supplier_cnpj deve conter um CNPJ oficial válido, com 12 posições alfanuméricas e 2 dígitos verificadores corretos.'
       )
     );
   }
 
   const expectedSupplierCnpj = normalizeSupplierCnpj(options.expectedSupplierCnpj);
+  if (options.expectedSupplierCnpj && (!expectedSupplierCnpj || !isValidSupplierCnpj(expectedSupplierCnpj))) {
+    issues.push(
+      makeIssue(
+        'error',
+        'invalid_expected_supplier_cnpj',
+        '$.supplier_cnpj',
+        'O CNPJ selecionado no EMPROVEX possui formato ou dígitos verificadores inválidos.'
+      )
+    );
+  }
   if (expectedSupplierCnpj && supplierCnpj && expectedSupplierCnpj !== supplierCnpj) {
     issues.push(
       makeIssue(
@@ -498,8 +508,8 @@ export function parseSagNsJson(
 
 export function buildSagNsExtractionPrompt(options: SagNsPromptOptions): string {
   const supplierCnpj = normalizeSupplierCnpj(options.supplierCnpj);
-  if (!supplierCnpj) {
-    throw new Error('CNPJ do fornecedor inválido para geração do prompt SAG.');
+  if (!supplierCnpj || !isValidSupplierCnpj(supplierCnpj)) {
+    throw new Error('CNPJ do fornecedor inválido para geração do prompt SAG. Confira formato e dígitos verificadores.');
   }
 
   let ug: string | null = null;

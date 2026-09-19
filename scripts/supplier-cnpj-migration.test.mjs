@@ -43,7 +43,7 @@ await migrationModule.evaluate();
 const { buildSupplierCnpjMigrationPlan } = migrationModule.namespace;
 
 const OLD = '11111111000191';
-const NEXT = '22222222000182';
+const NEXT = '22222222000191';
 
 const empenho = (cnpj = OLD) => ({
   id: '2026NE000001',
@@ -90,6 +90,26 @@ test('migra CNPJ, supplierCnpj e recordKey de todas as NFs', () => {
   assert.equal(plan.isNoOp, false);
 });
 
+test('migra para CNPJ alfanumérico oficial e gera recordKey canônico', () => {
+  const alpha = '00.000.000/E08G-12';
+  const plan = buildSupplierCnpjMigrationPlan(
+    empenho(),
+    [invoice()],
+    alpha
+  );
+
+  assert.equal(plan.targetSupplierCnpj, '00000000E08G12');
+  assert.equal(plan.updatedEmpenho.supplierCnpj, '00000000E08G12');
+  assert.equal(plan.items[0].targetRecordKey, 'nf_00000000E08G12_1234');
+});
+
+test('bloqueia CNPJ estruturalmente correto com DV inválido', () => {
+  assert.throws(
+    () => buildSupplierCnpjMigrationPlan(empenho(), [invoice()], '22.222.222/0001-82'),
+    (error) => error?.code === 'invalid_target_cnpj'
+  );
+});
+
 test('aceita NF legada sem CNPJ quando o empenho possui o CNPJ de origem', () => {
   const plan = buildSupplierCnpjMigrationPlan(
     empenho(),
@@ -105,7 +125,7 @@ test('bloqueia NF com CNPJ divergente do empenho atual', () => {
     () => buildSupplierCnpjMigrationPlan(
       empenho(),
       [invoice({ cnpj: NEXT, recordKey: `nf_${NEXT}_1234` })],
-      '33333333000173'
+      '33333333000191'
     ),
     (error) => error?.code === 'invoice_supplier_conflict'
   );

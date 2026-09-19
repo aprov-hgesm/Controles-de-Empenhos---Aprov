@@ -76,6 +76,7 @@ test('agrega vários empenhos e pregões do mesmo CNPJ', () => {
 
   assert.equal(reports.length, 1);
   assert.equal(reports[0].cnpj, '02483088000175');
+  assert.equal(reports[0].cnpjValid, true);
   assert.equal(reports[0].empenhos.length, 2);
   assert.equal(reports[0].pregoes.length, 2);
   assert.equal(reports[0].totalCommitted, 300);
@@ -100,7 +101,7 @@ test('mantém CNPJs diferentes separados mesmo com NFs de mesmo número', () => 
   const reports = buildSupplierReports(
     [
       empenho('2026NE000020', '11111111000191', 'Fornecedor B', '90003/2026'),
-      empenho('2026NE000021', '22222222000182', 'Fornecedor C', '90003/2026'),
+      empenho('2026NE000021', '22222222000191', 'Fornecedor C', '90003/2026'),
     ],
     [
       invoice('1234', '2026NE000020', 30),
@@ -116,14 +117,36 @@ test('mantém CNPJs diferentes separados mesmo com NFs de mesmo número', () => 
 test('mantém aliases quando o mesmo CNPJ possui grafias diferentes de razão social', () => {
   const reports = buildSupplierReports(
     [
-      empenho('2026NE000030', '33333333000173', 'Empresa Exemplo LTDA', '90004/2026'),
-      empenho('2026NE000031', '33333333000173', 'EMPRESA EXEMPLO LTDA', '90004/2026'),
+      empenho('2026NE000030', '33333333000191', 'Empresa Exemplo LTDA', '90004/2026'),
+      empenho('2026NE000031', '33333333000191', 'EMPRESA EXEMPLO LTDA', '90004/2026'),
     ],
     []
   );
 
   assert.equal(reports[0].aliases.length, 2);
   assert.equal(reports[0].pregoes[0].empenhos.length, 2);
+});
+
+test('consolida CNPJ alfanumérico oficial como chave de fornecedor', () => {
+  const reports = buildSupplierReports(
+    [empenho('2026NE000035', '00.000.000/E08G-12', 'Fornecedor Alfa', '90005/2026')],
+    []
+  );
+
+  assert.equal(reports.length, 1);
+  assert.equal(reports[0].cnpj, '00000000E08G12');
+  assert.equal(reports[0].cnpjValid, true);
+});
+
+test('mantém CNPJ histórico com DV inválido visível e sinalizado', () => {
+  const reports = buildSupplierReports(
+    [empenho('2026NE000036', '22.222.222/0001-82', 'Fornecedor Histórico', '90005/2026')],
+    []
+  );
+
+  assert.equal(reports.length, 1);
+  assert.equal(reports[0].cnpj, '22222222000182');
+  assert.equal(reports[0].cnpjValid, false);
 });
 
 test('ignora empenhos sem CNPJ na consolidação por fornecedor', () => {

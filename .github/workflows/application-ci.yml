@@ -192,6 +192,9 @@ jobs:
       - name: Global NS Firestore Rules guard
         run: npm run verify:global-ns-rules
 
+      - name: Official CNPJ validation guard
+        run: npm run verify:cnpj-validation
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 

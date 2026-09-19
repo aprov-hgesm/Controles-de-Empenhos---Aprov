@@ -1,6 +1,7 @@
 import type { Empenho, Invoice } from './types';
 import {
   getInvoiceRecordKey,
+  isValidSupplierCnpj,
   normalizeInvoiceNumber,
   normalizeSupplierCnpj,
 } from './invoiceIdentity';
@@ -116,11 +117,11 @@ export function reconcileSagNsPayload(
   const expectedCnpj = normalizeSupplierCnpj(supplierCnpj);
   const payloadCnpj = normalizeSupplierCnpj(payload.supplier_cnpj);
 
-  if (!expectedCnpj) {
-    throw new Error('CNPJ selecionado inválido para conciliação SAG.');
+  if (!expectedCnpj || !isValidSupplierCnpj(expectedCnpj)) {
+    throw new Error('CNPJ selecionado inválido para conciliação SAG. Confira formato e dígitos verificadores.');
   }
 
-  if (!payloadCnpj || payloadCnpj !== expectedCnpj) {
+  if (!payloadCnpj || !isValidSupplierCnpj(payloadCnpj) || payloadCnpj !== expectedCnpj) {
     throw new Error('O CNPJ do payload SAG não corresponde ao fornecedor selecionado.');
   }
 
