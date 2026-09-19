@@ -5,7 +5,7 @@
 Encerrar a sequência dos Blocos 9–14 com um contrato técnico único de regressão, sem alterar regras de negócio,
 fluxos do operador, persistência, layout, Firestore Rules ou comportamento funcional de produção.
 
-O Bloco 15 não cria uma nova funcionalidade. Ele transforma garantias já implementadas em pré-condições
+O Bloco 15 não cria uma nova funcionalidade e não altera regras de negócio. Ele transforma garantias já implementadas em pré-condições
 obrigatórias do CI.
 
 ## Escopo consolidado
