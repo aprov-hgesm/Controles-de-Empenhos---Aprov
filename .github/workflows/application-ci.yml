@@ -198,6 +198,9 @@ jobs:
       - name: NS UG identity guard
         run: npm run verify:ns-ug-identity
 
+      - name: Immutable audit trail guard
+        run: npm run verify:immutable-audit
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
