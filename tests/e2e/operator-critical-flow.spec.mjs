@@ -118,4 +118,27 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
       timeout: 15_000,
     });
   });
+
+  test('assistente SAG refatorado preserva progresso, fornecedor, prompt e UG', async ({ page }) => {
+    await page.goto('/');
+    await loginSector(page, OPERATOR_A);
+
+    await page.getByTestId('nav-relatorios').click();
+    await expect(page.getByRole('heading', { name: 'Relatórios' })).toBeVisible();
+    await page.getByTestId('relatorios-tab-sag').click();
+
+    await expect(page.getByRole('heading', { name: 'Importar NS — SAG' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Progresso da importação SAG' })).toBeVisible();
+
+    const supplierButton = page
+      .getByRole('button')
+      .filter({ hasText: 'Fornecedor E2E Lifecycle' })
+      .first();
+    await expect(supplierButton).toBeVisible();
+    await supplierButton.click();
+
+    await expect(page.getByText('Obter relatório no SAG', { exact: true })).toBeVisible();
+    await expect(page.getByText('Prompt oficial do EMPROVEX', { exact: true })).toBeVisible();
+    await expect(page.getByText(UG, { exact: true })).toBeVisible();
+  });
 });
