@@ -148,6 +148,11 @@ export function analyzeHistoricalConsistency(
   const invoiceByDocumentId = new Map(
     snapshot.invoices.map((document) => [document.documentId, document])
   );
+  const invoiceByStoredRecordKey = new Map(
+    snapshot.invoices
+      .map((document) => [String(document.invoice.recordKey || '').trim(), document] as const)
+      .filter(([recordKey]) => Boolean(recordKey))
+  );
   const locks = snapshot.settings
     .map((document) => ({ document, lock: lockData(document) }))
     .filter(
@@ -529,7 +534,15 @@ export function analyzeHistoricalConsistency(
 
   for (const { document, lock } of locks) {
     const ownerKey = String(lock.invoiceRecordKey || '').trim();
-    if (ownerKey && invoiceByDocumentId.has(ownerKey)) continue;
+    if (
+      ownerKey
+      && (
+        invoiceByDocumentId.has(ownerKey)
+        || invoiceByStoredRecordKey.has(ownerKey)
+      )
+    ) {
+      continue;
+    }
 
     issues.push(createIssue({
       code: 'orphan_ns_lock',
