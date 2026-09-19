@@ -15,6 +15,7 @@ const forbidText = (source, forbidden, message) => {
 
 const audit = read('lib/auditTrail.ts');
 const service = read('lib/nsIntegrityService.ts');
+const empenhoDeletion = read('lib/empenhoDeletionService.ts');
 const admin = read('lib/platformAdminStore.ts');
 const server = read('lib/server/sectorProvisioningAdmin.ts');
 const paths = read('lib/operationalPaths.ts');
@@ -54,6 +55,8 @@ for (const operation of [
   requireText(service, operation, `Serviço central não audita operação crítica: ${operation}`);
 }
 requireText(service, 'appendWorkspaceAuditEvent(', 'Serviço central não grava eventos operacionais.');
+requireText(empenhoDeletion, "operation: 'empenho.delete'", 'Exclusão de empenho não grava auditoria operacional.');
+requireText(empenhoDeletion, 'appendWorkspaceAuditEvent(', 'Exclusão de empenho não usa trilha imutável.');
 requireText(service, 'correlationId', 'Serviço central não correlaciona eventos.');
 
 for (const operation of [
