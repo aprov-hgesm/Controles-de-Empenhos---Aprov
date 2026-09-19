@@ -57,7 +57,7 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
       </header>
 
       <nav
-        className="grid grid-cols-1 gap-2 rounded-2xl border border-blue-100/80 bg-white/75 p-2 shadow-sm sm:grid-cols-3"
+        className="flex gap-2 overflow-x-auto rounded-2xl border border-blue-100/80 bg-white/75 p-2 shadow-sm"
         aria-label="Modos de relatório"
       >
         {tabs.map((tab) => {
@@ -69,7 +69,7 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
               type="button"
               onClick={() => setActiveSubTab(tab.id)}
               aria-pressed={active}
-              className={`group flex min-h-16 items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
+              className={`group flex min-h-16 min-w-[210px] flex-1 items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all sm:min-w-0 ${
                 active
                   ? 'border-blue-200 bg-[#00288e] text-white shadow-md'
                   : 'border-transparent bg-white/40 text-gray-600 hover:border-blue-100 hover:bg-blue-50/60'

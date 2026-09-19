@@ -162,6 +162,9 @@ jobs:
       - name: SAG NS hardening guard
         run: npm run verify:sag-ns-hardening
 
+      - name: SAG UX guard
+        run: npm run verify:sag-ux
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 

@@ -7,14 +7,18 @@ import {
   Building2,
   Ban,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   ClipboardCopy,
   ClipboardPaste,
   ExternalLink,
   FileJson,
   Eye,
   Landmark,
+  ListFilter,
   MinusCircle,
   PencilLine,
+  RefreshCw,
   Search,
   ShieldCheck,
   X,
@@ -52,6 +56,7 @@ interface SagImportViewProps {
 }
 
 type CopyState = 'idle' | 'copied' | 'error';
+type PreviewFilter = 'all' | SagNsApplicationDecision;
 
 const APPLICATION_DECISION_META: Record<
   SagNsApplicationDecision,
@@ -157,6 +162,9 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
   const [applyError, setApplyError] = React.useState('');
   const [confirmationFingerprint, setConfirmationFingerprint] = React.useState('');
   const [lastImportResult, setLastImportResult] = React.useState<SagNsImportCommitResult | null>(null);
+  const [supplierPickerOpen, setSupplierPickerOpen] = React.useState(true);
+  const [showTechnicalReconciliation, setShowTechnicalReconciliation] = React.useState(false);
+  const [previewFilter, setPreviewFilter] = React.useState<PreviewFilter>('all');
 
   const selectedSupplier = React.useMemo(
     () => supplierReports.find((supplier) => supplier.cnpj === selectedCnpj) || null,
@@ -210,9 +218,22 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
     () => (applicationPreview ? buildSagNsApplicationFingerprint(applicationPreview) : ''),
     [applicationPreview]
   );
+  const filteredPreviewItems = React.useMemo(() => {
+    if (!applicationPreview) return [];
+    if (previewFilter === 'all') return applicationPreview.items;
+    return applicationPreview.items.filter((item) => item.decision === previewFilter);
+  }, [applicationPreview, previewFilter]);
+  const activeFlowStep = !selectedSupplier
+    ? 1
+    : !jsonText.trim()
+      ? 2
+      : !validation?.ok
+        ? 3
+        : 4;
 
   const handleSelectSupplier = (cnpj: string) => {
     setSelectedCnpj(cnpj);
+    setSupplierSearch('');
     setJsonText('');
     setValidation(null);
     setCopyState('idle');
@@ -221,6 +242,9 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
     setApplyError('');
     setConfirmationFingerprint('');
     setLastImportResult(null);
+    setSupplierPickerOpen(false);
+    setShowTechnicalReconciliation(false);
+    setPreviewFilter('all');
   };
 
   const handleCopyPrompt = async () => {
@@ -259,6 +283,8 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
     setApplyError('');
     setConfirmationFingerprint('');
     setLastImportResult(null);
+    setShowTechnicalReconciliation(false);
+    setPreviewFilter('all');
   };
 
   const handleOpenApplyConfirmation = () => {
@@ -314,6 +340,11 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
 
   const previewChanges = applicationPreview?.items.filter((item) => item.decision === 'change') || [];
 
+  const handleStartAnotherImport = () => {
+    resetJson();
+    setSupplierPickerOpen(false);
+  };
+
   return (
     <div className="space-y-6">
       <header>
@@ -325,34 +356,62 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
         </div>
         <h3 className="mt-1 text-xl font-bold tracking-tight text-[#00288e]">Importar NS — SAG</h3>
         <p className="mt-1 max-w-3xl text-sm font-medium leading-relaxed text-gray-500">
-          Selecione o fornecedor, obtenha o relatório no SAG, use o prompt oficial do EMPROVEX
-          em uma IA externa e valide o JSON antes da futura conciliação.
+          Um fluxo guiado para extrair, validar, conciliar e gravar NS com confirmação humana e
+          revalidação transacional antes do commit.
         </p>
       </header>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
-        {[
-          ['1', 'Selecionar fornecedor', 'O CNPJ define o universo seguro da análise'],
-          ['2', 'Obter relatório no SAG', 'Baixe o relatório de NS do favorecido'],
-          ['3', 'Gerar JSON com IA', 'Copie o prompt oficial e anexe o relatório'],
-          ['4', 'Colar e validar JSON', 'Confira estrutura, CNPJ, NS, datas e alertas'],
-        ].map(([step, title, text], index, all) => (
-          <div key={step} className="relative rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
-            <span className="mb-3 grid h-7 w-7 place-items-center rounded-lg bg-[#00288e] text-[10px] font-black text-white">
-              {step}
-            </span>
-            <p className="text-xs font-extrabold text-gray-800">{title}</p>
-            <p className="mt-1 text-[11px] font-medium leading-relaxed text-gray-500">{text}</p>
-            {index < all.length - 1 ? (
-              <ArrowRight
-                className="absolute -right-2 top-1/2 hidden h-4 w-4 -translate-y-1/2 text-blue-200 lg:block"
-                aria-hidden="true"
-              />
-            ) : null}
-          </div>
-        ))}
-      </div>
+      <nav
+        className="rounded-2xl border border-blue-100 bg-white p-3 shadow-sm"
+        aria-label="Progresso da importação SAG"
+      >
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          {[
+            ['Fornecedor', 'Definir o CNPJ'],
+            ['SAG + prompt', 'Obter e estruturar'],
+            ['Validar JSON', 'Conferir o lote'],
+            ['Revisar e gravar', 'Confirmar alterações'],
+          ].map(([title, text], index) => {
+            const step = index + 1;
+            const complete = Boolean(lastImportResult) || step < activeFlowStep;
+            const active = !lastImportResult && step === activeFlowStep;
 
+            return (
+              <div
+                key={title}
+                aria-current={active ? 'step' : undefined}
+                className={`flex items-center gap-3 rounded-xl border px-3 py-3 transition ${
+                  active
+                    ? 'border-blue-200 bg-blue-50/80'
+                    : complete
+                      ? 'border-emerald-100 bg-emerald-50/50'
+                      : 'border-transparent bg-gray-50/70'
+                }`}
+              >
+                <span
+                  className={`grid h-8 w-8 flex-none place-items-center rounded-lg text-[10px] font-black ${
+                    complete
+                      ? 'bg-emerald-600 text-white'
+                      : active
+                        ? 'bg-[#00288e] text-white'
+                        : 'bg-gray-200 text-gray-500'
+                  }`}
+                >
+                  {complete ? <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> : step}
+                </span>
+                <span className="min-w-0">
+                  <span className={`block text-[11px] font-extrabold ${
+                    active ? 'text-[#00288e]' : complete ? 'text-emerald-800' : 'text-gray-500'
+                  }`}>
+                    {title}
+                  </span>
+                  <span className="mt-0.5 block text-[9px] font-semibold text-gray-400">{text}</span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </nav>
       <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div>
@@ -361,92 +420,139 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
             </p>
             <h4 className="mt-1 text-base font-black text-[#0b1c30]">Fornecedor / favorecido</h4>
             <p className="mt-1 text-xs font-medium text-gray-500">
-              Apenas empenhos com CNPJ cadastrado aparecem nesta seleção.
+              O CNPJ escolhido define o universo seguro da conciliação.
             </p>
           </div>
-          <span className="w-fit rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-[10px] font-extrabold text-[#00288e]">
-            {supplierReports.length} fornecedor(es) disponíveis
-          </span>
+          {selectedSupplier ? (
+            <button
+              type="button"
+              onClick={() => setSupplierPickerOpen((current) => !current)}
+              aria-expanded={supplierPickerOpen}
+              className="inline-flex h-9 w-fit items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 text-[10px] font-extrabold text-[#00288e] transition hover:bg-blue-100"
+            >
+              {supplierPickerOpen ? 'Ocultar fornecedores' : 'Trocar fornecedor'}
+              {supplierPickerOpen ? (
+                <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+            </button>
+          ) : (
+            <span className="w-fit rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-[10px] font-extrabold text-[#00288e]">
+              {supplierReports.length} fornecedor(es) disponíveis
+            </span>
+          )}
         </div>
 
-        <label className="relative mt-4 block">
-          <span className="sr-only">Buscar fornecedor por razão social ou CNPJ</span>
-          <Search
-            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
-            aria-hidden="true"
-          />
-          <input
-            type="search"
-            value={supplierSearch}
-            onChange={(event) => setSupplierSearch(event.target.value)}
-            placeholder="Razão social ou CNPJ..."
-            className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50/60 pl-10 pr-3 text-xs font-semibold text-gray-700 outline-none transition focus:border-[#00288e] focus:bg-white focus:ring-1 focus:ring-[#00288e]"
-          />
-        </label>
+        {selectedSupplier && !supplierPickerOpen ? (
+          <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-blue-100 bg-blue-50/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[#00288e] text-white">
+                <Building2 className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-xs font-black text-[#0b1c30]">{selectedSupplier.supplierName}</p>
+                <p className="mt-0.5 font-mono text-[10px] font-bold text-blue-700">
+                  {formatSupplierCnpj(selectedSupplier.cnpj)}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5 text-[9px] font-extrabold">
+              <span className="rounded-md bg-white px-2 py-1 text-gray-500">
+                {selectedSupplier.empenhos.length} NE(s)
+              </span>
+              <span className="rounded-md bg-white px-2 py-1 text-gray-500">
+                {selectedSupplier.invoiceCount} NF(s)
+              </span>
+              <span className="rounded-md bg-amber-50 px-2 py-1 text-amber-700">
+                {selectedSupplier.invoicesWithoutNs} sem NS
+              </span>
+            </div>
+          </div>
+        ) : null}
 
-        {filteredSuppliers.length > 0 ? (
-          <div className="mt-4 grid max-h-80 grid-cols-1 gap-3 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3">
-            {filteredSuppliers.map((supplier) => {
-              const selected = selectedCnpj === supplier.cnpj;
-              return (
-                <button
-                  key={supplier.cnpj}
-                  type="button"
-                  onClick={() => handleSelectSupplier(supplier.cnpj)}
-                  aria-pressed={selected}
-                  className={`rounded-2xl border p-4 text-left transition-all ${
-                    selected
-                      ? 'border-[#00288e] bg-blue-50/70 shadow-md ring-1 ring-[#00288e]/10'
-                      : 'border-gray-100 bg-white hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <span
-                      className={`grid h-9 w-9 flex-none place-items-center rounded-xl ${
-                        selected ? 'bg-[#00288e] text-white' : 'bg-blue-50 text-[#00288e]'
+        {supplierPickerOpen || !selectedSupplier ? (
+          <>
+            <label className="relative mt-4 block">
+              <span className="sr-only">Buscar fornecedor por razão social ou CNPJ</span>
+              <Search
+                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                aria-hidden="true"
+              />
+              <input
+                type="search"
+                value={supplierSearch}
+                onChange={(event) => setSupplierSearch(event.target.value)}
+                placeholder="Razão social ou CNPJ..."
+                className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50/60 pl-10 pr-3 text-xs font-semibold text-gray-700 outline-none transition focus:border-[#00288e] focus:bg-white focus:ring-1 focus:ring-[#00288e]"
+              />
+            </label>
+
+            {filteredSuppliers.length > 0 ? (
+              <div className="mt-4 grid max-h-80 grid-cols-1 gap-3 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3">
+                {filteredSuppliers.map((supplier) => {
+                  const selected = selectedCnpj === supplier.cnpj;
+                  return (
+                    <button
+                      key={supplier.cnpj}
+                      type="button"
+                      onClick={() => handleSelectSupplier(supplier.cnpj)}
+                      aria-pressed={selected}
+                      className={`rounded-2xl border p-4 text-left transition-all ${
+                        selected
+                          ? 'border-[#00288e] bg-blue-50/70 shadow-md ring-1 ring-[#00288e]/10'
+                          : 'border-gray-100 bg-white hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm'
                       }`}
                     >
-                      <Building2 className="h-4 w-4" aria-hidden="true" />
-                    </span>
-                    {selected ? (
-                      <CheckCircle2 className="h-4 w-4 flex-none text-[#00288e]" aria-hidden="true" />
-                    ) : null}
-                  </div>
-                  <p className="mt-3 line-clamp-2 text-xs font-extrabold leading-relaxed text-[#0b1c30]">
-                    {supplier.supplierName}
-                  </p>
-                  <p className="mt-1 font-mono text-[10px] font-bold text-gray-500">
-                    {formatSupplierCnpj(supplier.cnpj)}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-1.5 text-[9px] font-extrabold">
-                    <span className="rounded-md bg-gray-50 px-2 py-1 text-gray-500">
-                      {supplier.empenhos.length} NE(s)
-                    </span>
-                    <span className="rounded-md bg-gray-50 px-2 py-1 text-gray-500">
-                      {supplier.invoiceCount} NF(s)
-                    </span>
-                    <span
-                      className={`rounded-md px-2 py-1 ${
-                        supplier.invoicesWithoutNs > 0
-                          ? 'bg-amber-50 text-amber-700'
-                          : 'bg-emerald-50 text-emerald-700'
-                      }`}
-                    >
-                      {supplier.invoicesWithoutNs} sem NS
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="mt-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 px-6 py-8 text-center">
-            <p className="text-sm font-extrabold text-gray-500">Nenhum fornecedor encontrado</p>
-            <p className="mt-1 text-xs font-medium text-gray-400">
-              Ajuste a busca ou cadastre o CNPJ dos empenhos pendentes.
-            </p>
-          </div>
-        )}
+                      <div className="flex items-start justify-between gap-3">
+                        <span
+                          className={`grid h-9 w-9 flex-none place-items-center rounded-xl ${
+                            selected ? 'bg-[#00288e] text-white' : 'bg-blue-50 text-[#00288e]'
+                          }`}
+                        >
+                          <Building2 className="h-4 w-4" aria-hidden="true" />
+                        </span>
+                        {selected ? (
+                          <CheckCircle2 className="h-4 w-4 flex-none text-[#00288e]" aria-hidden="true" />
+                        ) : null}
+                      </div>
+                      <p className="mt-3 line-clamp-2 text-xs font-extrabold leading-relaxed text-[#0b1c30]">
+                        {supplier.supplierName}
+                      </p>
+                      <p className="mt-1 font-mono text-[10px] font-bold text-gray-500">
+                        {formatSupplierCnpj(supplier.cnpj)}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-1.5 text-[9px] font-extrabold">
+                        <span className="rounded-md bg-gray-50 px-2 py-1 text-gray-500">
+                          {supplier.empenhos.length} NE(s)
+                        </span>
+                        <span className="rounded-md bg-gray-50 px-2 py-1 text-gray-500">
+                          {supplier.invoiceCount} NF(s)
+                        </span>
+                        <span
+                          className={`rounded-md px-2 py-1 ${
+                            supplier.invoicesWithoutNs > 0
+                              ? 'bg-amber-50 text-amber-700'
+                              : 'bg-emerald-50 text-emerald-700'
+                          }`}
+                        >
+                          {supplier.invoicesWithoutNs} sem NS
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 px-6 py-8 text-center">
+                <p className="text-sm font-extrabold text-gray-500">Nenhum fornecedor encontrado</p>
+                <p className="mt-1 text-xs font-medium text-gray-400">
+                  Ajuste a busca ou cadastre o CNPJ dos empenhos pendentes.
+                </p>
+              </div>
+            )}
+          </>
+        ) : null}
       </section>
 
       {!selectedSupplier ? (
@@ -619,6 +725,8 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
                 setApplyError('');
                 setConfirmationFingerprint('');
                 setLastImportResult(null);
+                setShowTechnicalReconciliation(false);
+                setPreviewFilter('all');
               }}
               spellCheck={false}
               placeholder={'Cole aqui o JSON retornado pela IA...\n\n{\n  "schema_version": "emprovex_sag_ns_v1",\n  ...\n}'}
@@ -810,17 +918,32 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
                 <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
                   <div>
                     <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.18em] text-indigo-600">
-                      Bloco 9 · motor determinístico
+                      Diagnóstico técnico
                     </p>
                     <h4 className="mt-1 text-base font-black text-[#0b1c30]">Conciliação CNPJ → NF → NE</h4>
                     <p className="mt-1 max-w-3xl text-xs font-medium leading-relaxed text-gray-500">
-                      O EMPROVEX compara somente o número normalizado da NF dentro dos empenhos do CNPJ selecionado.
-                      Datas não desempatarão resultados e nenhuma correspondência aproximada é aceita.
+                      O resumo abaixo mostra o resultado do motor determinístico. Abra o diagnóstico detalhado
+                      somente quando precisar investigar uma divergência.
                     </p>
                   </div>
-                  <span className="w-fit rounded-full border border-indigo-100 bg-white px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-wider text-indigo-700">
-                    Somente leitura
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-indigo-100 bg-white px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-wider text-indigo-700">
+                      Somente leitura
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowTechnicalReconciliation((current) => !current)}
+                      aria-expanded={showTechnicalReconciliation}
+                      className="inline-flex h-9 w-fit items-center gap-2 rounded-xl border border-indigo-100 bg-white px-3 text-[10px] font-extrabold text-indigo-700 transition hover:bg-indigo-50"
+                    >
+                    {showTechnicalReconciliation ? 'Ocultar diagnóstico' : 'Ver diagnóstico técnico'}
+                    {showTechnicalReconciliation ? (
+                      <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                    )}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
@@ -840,90 +963,94 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1050px] text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-gray-100 bg-gray-50 text-[9px] uppercase tracking-wider text-gray-500">
-                      <th className="px-4 py-3 font-extrabold">NS SAG</th>
-                      <th className="px-4 py-3 font-extrabold">NF SAG</th>
-                      <th className="px-4 py-3 font-extrabold">Resultado</th>
-                      <th className="px-4 py-3 font-extrabold">NF EMPROVEX</th>
-                      <th className="px-4 py-3 font-extrabold">NE vinculada</th>
-                      <th className="px-4 py-3 font-extrabold">NS atual</th>
-                      <th className="px-4 py-3 font-extrabold">Conferência</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {reconciliation.items.map((item, index) => {
-                      const meta = RECONCILIATION_STATUS_META[item.status];
-                      return (
-                        <tr key={`${item.record.ns}-${index}`} className="align-top hover:bg-gray-50/60">
-                          <td className="px-4 py-3 font-mono text-[10px] font-black text-indigo-700">
-                            {item.record.ns}
-                          </td>
-                          <td className="px-4 py-3 font-black text-[#00288e]">
-                            {item.record.nf_number_raw ? `NF ${item.record.nf_number_raw}` : '—'}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`inline-flex rounded-md border px-2 py-1 text-[9px] font-extrabold ${meta.className}`}>
-                              {meta.label}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 font-semibold text-gray-700">
-                            {item.invoice ? `NF ${item.invoice.invoiceId}` : (
-                              item.candidates.length > 0
-                                ? `${item.candidates.length} candidata(s)`
-                                : '—'
-                            )}
-                          </td>
-                          <td className="px-4 py-3 font-mono text-[10px] font-bold text-gray-600">
-                            {item.invoice?.empenhoId || '—'}
-                          </td>
-                          <td className="px-4 py-3">
-                            {item.invoice?.currentNs ? (
-                              <span className="rounded-md border border-indigo-100 bg-indigo-50 px-2 py-1 font-mono text-[9px] font-bold text-indigo-700">
-                                {item.invoice.currentNs}
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-semibold text-gray-400">Sem NS</span>
-                            )}
-                          </td>
-                          <td className="max-w-sm px-4 py-3">
-                            {item.issues.length > 0 ? (
-                              <div className="space-y-1.5">
-                                {item.issues.map((reconciliationIssue, issueIndex) => (
-                                  <p
-                                    key={`${reconciliationIssue.code}-${issueIndex}`}
-                                    className={`text-[10px] font-semibold leading-relaxed ${
-                                      reconciliationIssue.severity === 'blocker'
-                                        ? 'text-rose-700'
-                                        : 'text-amber-700'
-                                    }`}
-                                  >
-                                    {reconciliationIssue.message}
-                                  </p>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700">
-                                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                                Número da NF único no CNPJ
-                              </span>
-                            )}
-                          </td>
+              {showTechnicalReconciliation ? (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[1050px] text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-gray-100 bg-gray-50 text-[9px] uppercase tracking-wider text-gray-500">
+                          <th className="px-4 py-3 font-extrabold">NS SAG</th>
+                          <th className="px-4 py-3 font-extrabold">NF SAG</th>
+                          <th className="px-4 py-3 font-extrabold">Resultado</th>
+                          <th className="px-4 py-3 font-extrabold">NF EMPROVEX</th>
+                          <th className="px-4 py-3 font-extrabold">NE vinculada</th>
+                          <th className="px-4 py-3 font-extrabold">NS atual</th>
+                          <th className="px-4 py-3 font-extrabold">Conferência</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {reconciliation.items.map((item, index) => {
+                          const meta = RECONCILIATION_STATUS_META[item.status];
+                          return (
+                            <tr key={`${item.record.ns}-${index}`} className="align-top hover:bg-gray-50/60">
+                              <td className="px-4 py-3 font-mono text-[10px] font-black text-indigo-700">
+                                {item.record.ns}
+                              </td>
+                              <td className="px-4 py-3 font-black text-[#00288e]">
+                                {item.record.nf_number_raw ? `NF ${item.record.nf_number_raw}` : '—'}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`inline-flex rounded-md border px-2 py-1 text-[9px] font-extrabold ${meta.className}`}>
+                                  {meta.label}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 font-semibold text-gray-700">
+                                {item.invoice ? `NF ${item.invoice.invoiceId}` : (
+                                  item.candidates.length > 0
+                                    ? `${item.candidates.length} candidata(s)`
+                                    : '—'
+                                )}
+                              </td>
+                              <td className="px-4 py-3 font-mono text-[10px] font-bold text-gray-600">
+                                {item.invoice?.empenhoId || '—'}
+                              </td>
+                              <td className="px-4 py-3">
+                                {item.invoice?.currentNs ? (
+                                  <span className="rounded-md border border-indigo-100 bg-indigo-50 px-2 py-1 font-mono text-[9px] font-bold text-indigo-700">
+                                    {item.invoice.currentNs}
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-semibold text-gray-400">Sem NS</span>
+                                )}
+                              </td>
+                              <td className="max-w-sm px-4 py-3">
+                                {item.issues.length > 0 ? (
+                                  <div className="space-y-1.5">
+                                    {item.issues.map((reconciliationIssue, issueIndex) => (
+                                      <p
+                                        key={`${reconciliationIssue.code}-${issueIndex}`}
+                                        className={`text-[10px] font-semibold leading-relaxed ${
+                                          reconciliationIssue.severity === 'blocker'
+                                            ? 'text-rose-700'
+                                            : 'text-amber-700'
+                                        }`}
+                                      >
+                                        {reconciliationIssue.message}
+                                      </p>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700">
+                                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                                    Número da NF único no CNPJ
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
 
-              <div className="border-t border-indigo-100 bg-indigo-50/30 px-5 py-4">
-                <p className="text-[10px] font-semibold leading-relaxed text-indigo-800">
-                  Correspondência segura significa apenas que o motor encontrou uma única NF pelo número normalizado dentro do CNPJ.
-                  A gravação continuará bloqueada até a prévia e confirmação humana dos próximos blocos.
-                </p>
-              </div>
+                  <div className="border-t border-indigo-100 bg-indigo-50/30 px-5 py-4">
+                    <p className="text-[10px] font-semibold leading-relaxed text-indigo-800">
+                      O diagnóstico técnico é somente leitura. A decisão de escrita continua sendo determinada pela
+                      prévia de aplicação e pela confirmação humana.
+                    </p>
+                  </div>
+                </>
+              ) : null}
             </section>
           ) : null}
 
@@ -937,7 +1064,7 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
                     </span>
                     <div>
                       <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.18em] text-sky-700">
-                        Bloco 10 · prévia de aplicação
+                        Prévia final do lote
                       </p>
                       <h4 className="mt-1 text-base font-black text-[#0b1c30]">O que aconteceria com este lote</h4>
                       <p className="mt-1 max-w-3xl text-xs font-medium leading-relaxed text-gray-500">
@@ -967,7 +1094,118 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="border-b border-gray-100 bg-white px-4 py-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2 text-gray-500">
+                    <ListFilter className="h-4 w-4" aria-hidden="true" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider">Filtrar prévia</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtros da prévia SAG">
+                    {[
+                      ['all', 'Todos', applicationPreview.stats.total],
+                      ['change', 'Alterar', applicationPreview.stats.changes],
+                      ['blocked', 'Bloqueados', applicationPreview.stats.blocked],
+                      ['unchanged', 'Sem alteração', applicationPreview.stats.unchanged],
+                      ['ignored', 'Ignorar', applicationPreview.stats.ignored],
+                    ].map(([filter, label, count]) => {
+                      const active = previewFilter === filter;
+                      return (
+                        <button
+                          key={String(filter)}
+                          type="button"
+                          onClick={() => setPreviewFilter(filter as PreviewFilter)}
+                          aria-pressed={active}
+                          className={`rounded-lg border px-2.5 py-1.5 text-[9px] font-extrabold transition ${
+                            active
+                              ? 'border-[#00288e] bg-[#00288e] text-white'
+                              : 'border-gray-200 bg-white text-gray-500 hover:border-blue-200 hover:text-[#00288e]'
+                          }`}
+                        >
+                          {label} · {count}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {filteredPreviewItems.length > 0 ? (
+                <div className="space-y-3 p-4 lg:hidden">
+                  {filteredPreviewItems.map((item, index) => {
+                    const meta = APPLICATION_DECISION_META[item.decision];
+                    const DecisionIcon = meta.icon;
+
+                    return (
+                      <article
+                        key={`mobile-${item.ns}-${index}`}
+                        className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-black text-[#00288e]">
+                              {item.invoiceId
+                                ? `NF ${item.invoiceId}`
+                                : item.nfNumberRaw
+                                  ? `NF ${item.nfNumberRaw}`
+                                  : 'NF não identificada'}
+                            </p>
+                            <p className="mt-0.5 font-mono text-[9px] font-bold text-gray-400">
+                              {item.empenhoId || 'Sem NE vinculada'}
+                            </p>
+                          </div>
+                          <span className={`inline-flex flex-none items-center gap-1.5 rounded-md border px-2 py-1 text-[9px] font-extrabold ${meta.className}`}>
+                            <DecisionIcon className="h-3.5 w-3.5" aria-hidden={true} />
+                            {meta.label}
+                          </span>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-xl bg-gray-50 p-3">
+                          <div>
+                            <p className="text-[8px] font-extrabold uppercase tracking-wider text-gray-400">NS atual</p>
+                            <p className="mt-1 break-all font-mono text-[10px] font-bold text-gray-600">
+                              {item.currentNs || 'Sem NS'}
+                            </p>
+                          </div>
+                          <ArrowRight className="h-4 w-4 text-gray-300" aria-hidden="true" />
+                          <div>
+                            <p className="text-[8px] font-extrabold uppercase tracking-wider text-gray-400">NS proposta</p>
+                            <p className="mt-1 break-all font-mono text-[10px] font-black text-emerald-700">
+                              {item.proposedNs || 'Nenhuma'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <p className="mt-3 text-[10px] font-semibold leading-relaxed text-gray-600">{item.summary}</p>
+
+                        {item.blockers.length > 0 ? (
+                          <div className="mt-3 space-y-1.5 rounded-xl border border-rose-100 bg-rose-50/60 p-3">
+                            {item.blockers.map((message, blockerIndex) => (
+                              <p key={blockerIndex} className="text-[10px] font-semibold leading-relaxed text-rose-700">
+                                {message}
+                              </p>
+                            ))}
+                          </div>
+                        ) : item.warnings.length > 0 ? (
+                          <div className="mt-3 space-y-1.5 rounded-xl border border-amber-100 bg-amber-50/60 p-3">
+                            {item.warnings.map((message, warningIndex) => (
+                              <p key={warningIndex} className="text-[10px] font-semibold leading-relaxed text-amber-700">
+                                {message}
+                              </p>
+                            ))}
+                          </div>
+                        ) : null}
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="px-5 py-8 text-center">
+                  <p className="text-xs font-extrabold text-gray-500">Nenhum item neste filtro</p>
+                  <p className="mt-1 text-[10px] font-medium text-gray-400">Escolha outra categoria para continuar a conferência.</p>
+                </div>
+              )}
+
+              <div className="hidden overflow-x-auto lg:block">
                 <table className="w-full min-w-[1120px] text-left text-xs">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50 text-[9px] uppercase tracking-wider text-gray-500">
@@ -981,7 +1219,7 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {applicationPreview.items.map((item, index) => {
+                    {filteredPreviewItems.map((item, index) => {
                       const meta = APPLICATION_DECISION_META[item.decision];
                       const DecisionIcon = meta.icon;
 
@@ -1102,17 +1340,27 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
 
           {lastImportResult ? (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5" aria-live="polite">
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 flex-none text-emerald-700" aria-hidden="true" />
-                <div>
-                  <p className="text-sm font-black text-emerald-800">Importação SAG concluída</p>
-                  <p className="mt-1 text-xs font-semibold leading-relaxed text-emerald-800/80">
-                    {lastImportResult.appliedCount} NS gravada(s) nesta transação
-                    {lastImportResult.alreadyAppliedCount > 0
-                      ? ` · ${lastImportResult.alreadyAppliedCount} já estava(m) aplicada(s) e foi(ram) mantida(s) sem nova escrita`
-                      : ''}.
-                  </p>
+              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-none text-emerald-700" aria-hidden="true" />
+                  <div>
+                    <p className="text-sm font-black text-emerald-800">Importação SAG concluída</p>
+                    <p className="mt-1 text-xs font-semibold leading-relaxed text-emerald-800/80">
+                      {lastImportResult.appliedCount} NS gravada(s) nesta transação
+                      {lastImportResult.alreadyAppliedCount > 0
+                        ? ` · ${lastImportResult.alreadyAppliedCount} já estava(m) aplicada(s) e foi(ram) mantida(s) sem nova escrita`
+                        : ''}.
+                    </p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={handleStartAnotherImport}
+                  className="inline-flex h-9 flex-none items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-3 text-[10px] font-extrabold text-emerald-700 transition hover:bg-emerald-100/60"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                  Importar outro relatório
+                </button>
               </div>
             </div>
           ) : null}
@@ -1240,7 +1488,7 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
                 </div>
               ) : null}
 
-              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <div className="sticky bottom-0 mt-5 -mx-5 -mb-5 flex flex-col-reverse gap-2 border-t border-gray-100 bg-white/95 p-5 backdrop-blur sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={handleCloseApplyConfirmation}
