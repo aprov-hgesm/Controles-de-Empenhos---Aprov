@@ -141,6 +141,12 @@ jobs:
       - name: SAG import assistant guard
         run: npm run verify:sag-import-assistant
 
+      - name: SAG NS reconciliation tests
+        run: npm run test:sag-ns-reconciliation
+
+      - name: SAG NS reconciliation guard
+        run: npm run verify:sag-ns-reconciliation
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
