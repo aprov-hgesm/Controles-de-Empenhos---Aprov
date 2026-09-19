@@ -40,6 +40,8 @@ Esse fechamento é conservador: ele transforma as garantias já implementadas em
 
 ## Extensão de fechamento
 
+O Bloco 15 não altera regras de negócio; esta extensão apenas reforça verificações e gates de regressão.
+
 A validação final amplia o contrato sem alterar regras de negócio, persistência ou UX funcional.
 
 ### GitHub Actions
