@@ -165,6 +165,12 @@ jobs:
       - name: SAG UX guard
         run: npm run verify:sag-ux
 
+      - name: NS integrity contract tests
+        run: npm run test:ns-integrity-contract
+
+      - name: NS integrity contract guard
+        run: npm run verify:ns-integrity-contract
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
