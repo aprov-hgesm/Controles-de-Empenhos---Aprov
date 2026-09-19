@@ -41,7 +41,7 @@ for (const expected of [
   'transaction.delete(',
   'deleteField()',
   'buildNsLockDocument',
-  'MAX_NS_INTEGRITY_TRANSACTION_MUTATIONS = 100',
+  'MAX_NS_INTEGRITY_TRANSACTION_MUTATIONS = 6',
   'MAX_NS_INTEGRITY_KNOWN_OWNER_READS = 200',
 ]) {
   requireText(service, expected, `Serviço central perdeu requisito: ${expected}`);
