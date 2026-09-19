@@ -36,7 +36,7 @@ requireText(rules, "request.resource.data.updatedBy == request.auth.uid", 'Rules
 requireText(rules, '!isSagNsLockId(id)', 'Settings gerais não diferenciam locks SAG.');
 
 requireText(security, 'Hardening transacional da importação SAG', 'Emulator suite não cobre o hardening SAG.');
-requireText(security, 'duas importações concorrentes', 'Cenário concorrente SAG ausente no Emulator.');
+requireText(security, 'concurrentReservations = await Promise.allSettled', 'Cenário concorrente SAG ausente no Emulator.');
 requireText(security, 'Setor B não lê lock SAG do Setor A', 'Isolamento cross-tenant do lock não é testado.');
 requireText(security, 'Lock SAG inválido cancela atomicamente a escrita da NF', 'Rollback atômico do lock não é testado.');
 
