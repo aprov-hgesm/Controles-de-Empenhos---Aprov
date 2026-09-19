@@ -464,18 +464,20 @@ export async function commitInvoiceReceiptLifecycle(
           existingSnapshot.data() as Invoice
         );
         const oldNs = normalizeNsNumber(oldInvoice.numeroNS);
+        const oldUg = normalizeNsUg(oldInvoice.nsUg);
         const nextNs = normalizeNsNumber(input.invoice.numeroNS);
-        if (oldNs !== nextNs) {
+        const nextUg = normalizeNsUg(input.invoice.nsUg);
+        if (oldNs !== nextNs || oldUg !== nextUg) {
           throw new NsIntegrityError(
             'stale_invoice_ns',
-            'A NS da Nota Fiscal mudou durante a edição. Altere a NS pelo campo específico.'
+            'A identidade UG + NS da Nota Fiscal mudou durante a edição. Altere-a pelo campo específico.'
           );
         }
 
         if (oldNs) {
           migratedLockRef = operationalSettingsDocRef(
             scope,
-            buildNsLockDocumentId(oldNs)
+            buildStoredNsLockDocumentId(oldInvoice)
           );
           const lockSnapshot = await transaction.get(migratedLockRef);
           if (lockSnapshot.exists()) {
@@ -498,6 +500,7 @@ export async function commitInvoiceReceiptLifecycle(
                 oldNs,
                 'migration'
               ),
+              oldUg || null,
               oldNs,
               'stale_lock_owner'
             );
@@ -547,28 +550,38 @@ export async function commitInvoiceReceiptLifecycle(
       }
 
       const preservedNs = normalizeNsNumber(oldInvoice?.numeroNS);
+      const preservedUg = normalizeNsUg(oldInvoice?.nsUg);
       if (
         isExistingEdit &&
         preservedNs &&
         supplierCnpj &&
         migratedLockRef
       ) {
-        const now = new Date().toISOString();
-        const refreshedMutation = buildLifecycleMutation(
-          input.invoice,
-          nextRecordKey,
-          supplierCnpj,
-          preservedNs,
-          'migration'
-        );
-        const nextLock = buildNsLockDocument({
-          workspaceId: scope.workspaceId,
-          mutation: refreshedMutation,
-          userId,
-          createdAt: migratedLock?.createdAt || now,
-          updatedAt: now,
-        });
-        transaction.set(migratedLockRef, nextLock, { merge: true });
+        if (!preservedUg) {
+          if (isIdentityMigration) {
+            throw new NsIntegrityError(
+              'invalid_ug',
+              'A NF possui NS legada sem UG. Informe a UG pelo controle de NS antes de migrar a identidade da Nota Fiscal.'
+            );
+          }
+        } else {
+          const now = new Date().toISOString();
+          const refreshedMutation = buildLifecycleMutation(
+            input.invoice,
+            nextRecordKey,
+            supplierCnpj,
+            preservedNs,
+            'migration'
+          );
+          const nextLock = buildNsLockDocument({
+            workspaceId: scope.workspaceId,
+            mutation: refreshedMutation,
+            userId,
+            createdAt: migratedLock?.createdAt || now,
+            updatedAt: now,
+          });
+          transaction.set(migratedLockRef, nextLock, { merge: true });
+        }
       }
     });
   } catch (error) {
@@ -613,7 +626,7 @@ export async function commitInvoiceDeletionLifecycle(
       if (currentNs) {
         lockRef = operationalSettingsDocRef(
           scope,
-          buildNsLockDocumentId(currentNs)
+          buildStoredNsLockDocumentId(invoice)
         );
         const lockSnapshot = await transaction.get(lockRef);
         if (lockSnapshot.exists()) {
@@ -636,6 +649,7 @@ export async function commitInvoiceDeletionLifecycle(
               currentNs,
               'system'
             ),
+            normalizeNsUg(invoice.nsUg) || null,
             currentNs,
             'stale_lock_owner'
           );
@@ -689,6 +703,7 @@ export async function commitAllInvoicesDeletionLifecycle(
           invoice,
           recordKey: uniqueRecordKeys[index],
           ns: normalizeNsNumber(invoice.numeroNS),
+          ug: normalizeNsUg(invoice.nsUg),
         }))
         .filter((entry) => entry.ns);
 
@@ -699,7 +714,7 @@ export async function commitAllInvoicesDeletionLifecycle(
       }
 
       const lockIds = Array.from(
-        new Set(lockEntries.map((entry) => buildNsLockDocumentId(entry.ns)))
+        new Set(lockEntries.map((entry) => buildStoredNsLockDocumentId(entry.invoice)))
       );
       const lockRefs = lockIds.map((lockId) =>
         operationalSettingsDocRef(scope, lockId)
@@ -719,7 +734,7 @@ export async function commitAllInvoicesDeletionLifecycle(
       );
 
       for (const entry of lockEntries) {
-        const lock = lockById.get(buildNsLockDocumentId(entry.ns));
+        const lock = lockById.get(buildStoredNsLockDocumentId(entry.invoice));
         if (!lock) continue;
         const relatedEmpenho = empenhoById.get(entry.invoice.empenhoId);
         const supplierCnpj = normalizeSupplierCnpj(
@@ -740,6 +755,7 @@ export async function commitAllInvoicesDeletionLifecycle(
             entry.ns,
             'system'
           ),
+          entry.ug || null,
           entry.ns,
           'stale_lock_owner'
         );
@@ -918,6 +934,7 @@ export async function commitEmpenhoSupplierCnpjMigration(
         .map((item) => ({
           item,
           ns: normalizeNsNumber(item.invoice.numeroNS),
+          ug: normalizeNsUg(item.invoice.nsUg),
         }))
         .filter((entry) => entry.ns);
 
@@ -927,19 +944,20 @@ export async function commitEmpenhoSupplierCnpjMigration(
         );
       }
 
-      const seenNs = new Set<string>();
+      const seenNsIdentities = new Set<string>();
       for (const entry of nsEntries) {
-        if (seenNs.has(entry.ns)) {
+        const identityKey = `${entry.ug || 'legacy'}|${entry.ns}`;
+        if (seenNsIdentities.has(identityKey)) {
           throw new NsIntegrityError(
             'ns_reused_in_scope',
-            `A NS ${entry.ns} aparece em mais de uma NF vinculada ao empenho. Corrija a inconsistência antes de alterar o CNPJ.`
+            `A identidade UG ${entry.ug || 'legada'} + NS ${entry.ns} aparece em mais de uma NF vinculada ao empenho. Corrija a inconsistência antes de alterar o CNPJ.`
           );
         }
-        seenNs.add(entry.ns);
+        seenNsIdentities.add(identityKey);
       }
 
       const lockIds = Array.from(
-        new Set(nsEntries.map((entry) => buildNsLockDocumentId(entry.ns)))
+        new Set(nsEntries.map((entry) => buildStoredNsLockDocumentId(entry.item.invoice)))
       );
       const lockSnapshots = await Promise.all(
         lockIds.map((lockId) =>
@@ -954,7 +972,7 @@ export async function commitEmpenhoSupplierCnpjMigration(
       );
 
       for (const entry of nsEntries) {
-        const lock = lockById.get(buildNsLockDocumentId(entry.ns));
+        const lock = lockById.get(buildStoredNsLockDocumentId(entry.item.invoice));
         if (!lock) continue;
 
         const sourceSupplierCnpj =
@@ -990,6 +1008,7 @@ export async function commitEmpenhoSupplierCnpjMigration(
             entry.ns,
             'migration'
           ),
+          entry.ug || null,
           entry.ns,
           'stale_lock_owner'
         );
@@ -1049,7 +1068,7 @@ export async function commitEmpenhoSupplierCnpjMigration(
       const now = new Date().toISOString();
       let migratedLockCount = 0;
       for (const entry of nsEntries) {
-        const lockId = buildNsLockDocumentId(entry.ns);
+        const lockId = buildStoredNsLockDocumentId(entry.item.invoice);
         const existingLock = lockById.get(lockId);
 
         const targetMutation = buildLifecycleMutation(
@@ -1059,18 +1078,44 @@ export async function commitEmpenhoSupplierCnpjMigration(
           entry.ns,
           'migration'
         );
-        const nextLock = buildNsLockDocument({
-          workspaceId: scope.workspaceId,
-          mutation: targetMutation,
-          userId,
-          createdAt: existingLock?.createdAt || now,
-          updatedAt: now,
-        });
-        transaction.set(
-          operationalSettingsDocRef(scope, lockId),
-          nextLock,
-          { merge: true }
-        );
+        if (!entry.ug) {
+          if (!existingLock) {
+            throw new NsIntegrityError(
+              'invalid_ug',
+              `A NF ${entry.item.invoice.id} possui NS legada sem UG e sem lock recuperável. Informe a UG antes de migrar o CNPJ.`
+            );
+          }
+          transaction.set(
+            operationalSettingsDocRef(scope, lockId),
+            {
+              ...existingLock,
+              id: lockId,
+              type: 'sag-ns-lock',
+              workspaceId: scope.workspaceId,
+              numeroNS: entry.ns,
+              invoiceRecordKey: entry.item.targetRecordKey,
+              invoiceId: entry.item.updatedInvoice.id,
+              empenhoId: entry.item.updatedInvoice.empenhoId,
+              supplierCnpj: plan.targetSupplierCnpj,
+              updatedAt: now,
+              updatedBy: userId,
+            },
+            { merge: false }
+          );
+        } else {
+          const nextLock = buildNsLockDocument({
+            workspaceId: scope.workspaceId,
+            mutation: targetMutation,
+            userId,
+            createdAt: existingLock?.createdAt || now,
+            updatedAt: now,
+          });
+          transaction.set(
+            operationalSettingsDocRef(scope, lockId),
+            nextLock,
+            { merge: true }
+          );
+        }
         migratedLockCount += 1;
       }
 
