@@ -204,6 +204,9 @@ jobs:
       - name: EMPROVEX empenhos subtabs guard
         run: npm run verify:empenhos-subtabs
 
+      - name: EMPROVEX brand admin guard
+        run: npm run verify:brand-admin
+
       - name: Production build
         run: npm run build
 
