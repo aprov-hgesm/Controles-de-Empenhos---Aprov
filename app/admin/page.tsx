@@ -14,10 +14,7 @@ import { resolveWorkspaceContext } from '../../lib/workspaceContext';
 export default function PlatformAdminPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const { customLogo } = usePlatformBranding({
-    userEmail: user?.email,
-    onNotify: () => undefined,
-  });
+  const { customLogo } = usePlatformBranding();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
