@@ -1101,8 +1101,25 @@ async function main() {
     'settings',
     legacySagLockId(legacyRulesNs)
   );
+  const legacyRulesCreatedAt = now();
+  await ownerSet(
+    `workspaces/workspace-a/settings/${legacySagLockId(legacyRulesNs)}`,
+    {
+      id: legacySagLockId(legacyRulesNs),
+      type: 'sag-ns-lock',
+      workspaceId: 'workspace-a',
+      numeroNS: legacyRulesNs,
+      invoiceRecordKey: legacyRulesKey,
+      invoiceId: 'RULES-LEGACY',
+      empenhoId: sagEmpenhoId,
+      supplierCnpj: sagSupplierCnpj,
+      createdAt: legacyRulesCreatedAt,
+      updatedAt: legacyRulesCreatedAt,
+      updatedBy: 'legacy-seed',
+    }
+  );
 
-  await allowed('Registro legado com NS pode reparar recordKey e lock atomicamente', () =>
+  await allowed('Registro legado com NS pode reparar recordKey preservando lock legado existente', () =>
     runTransaction(sessionA.db, async (transaction) => {
       const invoiceRef = doc(
         sessionA.db,
@@ -1116,27 +1133,22 @@ async function main() {
         transaction.get(legacyRulesLockRef),
       ]);
       assert.equal(invoiceSnapshot.exists(), true);
-      assert.equal(lockSnapshot.exists(), false);
+      assert.equal(lockSnapshot.exists(), true);
 
-      const timestamp = now();
       transaction.set(
         invoiceRef,
         { recordKey: legacyRulesKey },
         { merge: true }
       );
-      transaction.set(legacyRulesLockRef, {
-        id: legacySagLockId(legacyRulesNs),
-        type: 'sag-ns-lock',
-        workspaceId: 'workspace-a',
-        numeroNS: legacyRulesNs,
-        invoiceRecordKey: legacyRulesKey,
-        invoiceId: 'RULES-LEGACY',
-        empenhoId: sagEmpenhoId,
-        supplierCnpj: sagSupplierCnpj,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        updatedBy: sessionA.user.uid,
-      });
+      transaction.set(
+        legacyRulesLockRef,
+        {
+          ...lockSnapshot.data(),
+          updatedAt: now(),
+          updatedBy: sessionA.user.uid,
+        },
+        { merge: false }
+      );
     })
   );
 
