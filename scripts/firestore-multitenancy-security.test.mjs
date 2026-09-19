@@ -271,6 +271,53 @@ async function seedWorkspace(
   });
 }
 
+function sagLockId(ns) {
+  return `sagNsLock_${encodeURIComponent(ns)}`;
+}
+
+async function reserveSagNs(db, uid, workspaceId, invoiceRecordKey, invoiceId, empenhoId, supplierCnpj, ns) {
+  const invoiceRef = doc(db, 'workspaces', workspaceId, 'invoices', invoiceRecordKey);
+  const lockRef = doc(db, 'workspaces', workspaceId, 'settings', sagLockId(ns));
+
+  return runTransaction(db, async (transaction) => {
+    const [invoiceSnapshot, lockSnapshot] = await Promise.all([
+      transaction.get(invoiceRef),
+      transaction.get(lockRef),
+    ]);
+
+    if (!invoiceSnapshot.exists()) {
+      throw new Error('SAG_INVOICE_MISSING');
+    }
+
+    if (
+      lockSnapshot.exists()
+      && lockSnapshot.data()?.invoiceRecordKey !== invoiceRecordKey
+    ) {
+      throw new Error('SAG_NS_LOCK_CONFLICT');
+    }
+
+    const timestamp = now();
+    transaction.set(invoiceRef, { numeroNS: ns }, { merge: true });
+    transaction.set(
+      lockRef,
+      {
+        id: sagLockId(ns),
+        type: 'sag-ns-lock',
+        workspaceId,
+        numeroNS: ns,
+        invoiceRecordKey,
+        invoiceId,
+        empenhoId,
+        supplierCnpj,
+        createdAt: lockSnapshot.data()?.createdAt || timestamp,
+        updatedAt: timestamp,
+        updatedBy: uid,
+      },
+      { merge: true }
+    );
+  });
+}
+
 async function main() {
   console.log('Bloco 20 — testes automatizados de segurança multi-tenant\n');
 
