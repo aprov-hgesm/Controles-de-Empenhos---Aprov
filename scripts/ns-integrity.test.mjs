@@ -313,8 +313,8 @@ test('validação de lock bloqueia proprietário diferente', () => {
           invoiceRecordKey: 'nf_11111111000191_9999',
         },
         mutation(),
-        '2026NS000001',
         '160416',
+        '2026NS000001',
         'ns_lock_conflict'
       ),
     (error) => error?.code === 'ns_lock_conflict'
