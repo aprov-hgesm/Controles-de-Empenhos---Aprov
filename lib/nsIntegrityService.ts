@@ -268,6 +268,7 @@ export async function commitNsIntegrityMutations(
         const stored = targetByKey.get(mutation.invoiceRecordKey);
         if (!stored) continue;
         const proposedNs = normalizeNsNumber(mutation.proposedNs);
+        const proposedUg = normalizeNsUg(mutation.proposedUg);
         updatedInvoices.push(
           proposedNs
             ? {
