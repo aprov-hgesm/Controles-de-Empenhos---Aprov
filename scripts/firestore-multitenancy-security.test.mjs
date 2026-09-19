@@ -2005,7 +2005,7 @@ async function main() {
     {
       id: '1001',
       empenhoId: 'sample',
-      issueDate: '2026-09-05',
+      issueDate: '2026-06-15',
       items: [
         {
           itemId: '1',
