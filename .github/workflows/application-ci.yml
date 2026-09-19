@@ -117,6 +117,9 @@ jobs:
       - name: Reports subtabs shell guard
         run: npm run verify:reports-shell
 
+      - name: Report empenho card selector guard
+        run: npm run verify:report-empenho-selector
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 

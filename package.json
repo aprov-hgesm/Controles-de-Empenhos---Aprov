@@ -49,7 +49,8 @@
     "verify:app-shell": "node scripts/verify-app-shell.mjs",
     "test:invoice-identity": "node --experimental-vm-modules --test scripts/invoice-identity.test.mjs",
     "verify:reporting-foundation": "node scripts/verify-reporting-foundation.mjs",
-    "verify:reports-shell": "node scripts/verify-reports-shell.mjs"
+    "verify:reports-shell": "node scripts/verify-reports-shell.mjs",
+    "verify:report-empenho-selector": "node scripts/verify-report-empenho-selector.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

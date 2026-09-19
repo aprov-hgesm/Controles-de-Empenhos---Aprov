@@ -1,11 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Edit, Eye, FileDown, FileSpreadsheet, FileText, Filter, Package, Printer, Save, X } from 'lucide-react';
+import { Edit, Eye, FileDown, FileSpreadsheet, FileText, Package, Printer, Save, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { Empenho, Invoice } from '../../../lib/types';
 import { getInvoiceRecordKey } from '../../../lib/invoiceIdentity';
 import { classRequiresTermoRecebimento, type EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
+import { RelatorioEmpenhoSelector } from './RelatorioEmpenhoSelector';
 
 export interface RelatoriosViewContext {
   editingNSId: string | null;
@@ -54,73 +55,41 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                 <p className="text-sm text-gray-500 font-medium">Conciliação detalhada de Notas Fiscais, NS, recebimentos e saldos do empenho selecionado.</p>
               </div>
 
-              {/* Filter form */}
-              <section className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                  <div className="col-span-1">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Filtrar por Pregão</label>
-                    <select
-                      value={relatoriosPregaoFilter}
-                      onChange={(e) => {
-                        const nextPregao = e.target.value;
-                        setRelatoriosPregaoFilter(nextPregao);
-                        const filtered = empenhos.filter(emp => nextPregao === 'Todos' || emp.pregao === nextPregao);
-                        if (filtered.length > 0) {
-                          const isStillValid = filtered.some(emp => emp.id === reportSearch);
-                          if (!isStillValid) {
-                            setReportSearch(filtered[0].id);
-                          }
-                        }
-                      }}
-                      className="w-full h-11 px-3 border border-gray-200 rounded-xl bg-white text-sm font-semibold text-gray-700 outline-none focus:border-[#00288e]"
-                    >
-                      <option value="Todos">Todos os Pregões</option>
-                      {uniquePregaos.map(p => (
-                        <option key={p} value={p}>{p}</option>
-                      ))}
-                    </select>
-                  </div>
+              <RelatorioEmpenhoSelector
+                empenhos={empenhos}
+                invoices={invoices}
+                empenhoClasses={empenhoClasses}
+                selectedEmpenhoId={reportSearch}
+                onSelectEmpenho={setReportSearch}
+                pregaoFilter={relatoriosPregaoFilter}
+                onPregaoFilterChange={setRelatoriosPregaoFilter}
+                uniquePregaos={uniquePregaos}
+              />
 
-                  <div className="col-span-1">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Selecionar Empenho (NE)</label>
-                    <select
-                      value={reportSearch}
-                      onChange={(e) => setReportSearch(e.target.value)}
-                      className="w-full h-11 px-3 border border-gray-200 rounded-xl bg-white text-sm font-semibold text-gray-700 outline-none focus:border-[#00288e]"
-                    >
-                      {empenhos
-                        .filter(emp => relatoriosPregaoFilter === 'Todos' || emp.pregao === relatoriosPregaoFilter)
-                        .map(emp => (
-                          <option key={emp.id} value={emp.id}>{emp.id} - {emp.supplier}</option>
-                        ))}
-                    </select>
-                  </div>
-
+              <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Período Inicial</label>
+                    <label className="mb-1.5 block text-[10px] font-extrabold uppercase tracking-wider text-gray-500">
+                      Período inicial
+                    </label>
                     <input
                       type="date"
                       value={reportStartDate}
-                      onChange={(e) => setReportStartDate(e.target.value)}
-                      className="w-full h-11 px-3 border border-gray-200 rounded-xl bg-white text-sm font-semibold text-gray-700 outline-none"
+                      onChange={(event) => setReportStartDate(event.target.value)}
+                      className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none focus:border-[#00288e]"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Período Final</label>
+                    <label className="mb-1.5 block text-[10px] font-extrabold uppercase tracking-wider text-gray-500">
+                      Período final
+                    </label>
                     <input
                       type="date"
                       value={reportEndDate}
-                      onChange={(e) => setReportEndDate(e.target.value)}
-                      className="w-full h-11 px-3 border border-gray-200 rounded-xl bg-white text-sm font-semibold text-gray-700 outline-none"
+                      onChange={(event) => setReportEndDate(event.target.value)}
+                      className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 outline-none focus:border-[#00288e]"
                     />
                   </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <button className="h-11 px-6 bg-[#00288e] text-white font-bold text-xs rounded-xl hover:bg-[#1e40af] transition-all flex items-center gap-2 shadow-sm">
-                    <Filter className="w-4 h-4" /> Filtrar Conciliação
-                  </button>
                 </div>
               </section>
 
