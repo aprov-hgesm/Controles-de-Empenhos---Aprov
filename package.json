@@ -84,7 +84,9 @@
     "verify:global-ns-rules": "node scripts/verify-global-ns-rules.mjs",
     "verify:cnpj-validation": "node scripts/verify-cnpj-validation.mjs",
     "verify:ns-ug-identity": "node scripts/verify-ns-ug-identity.mjs",
-    "verify:immutable-audit": "node scripts/verify-immutable-audit.mjs"
+    "verify:immutable-audit": "node scripts/verify-immutable-audit.mjs",
+    "test:e2e:browser": "npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore \"node scripts/e2e-browser-emulator.mjs\"",
+    "verify:block-9-e2e": "node scripts/verify-block-9-e2e.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
