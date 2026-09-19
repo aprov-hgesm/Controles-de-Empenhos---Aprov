@@ -204,6 +204,9 @@ jobs:
       - name: Block 9 browser E2E guard
         run: npm run verify:block-9-e2e
 
+      - name: Block 10 historical consistency guard
+        run: npm run verify:block-10-consistency
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
