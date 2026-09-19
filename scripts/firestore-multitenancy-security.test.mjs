@@ -19,6 +19,7 @@ import {
   getDoc,
   getFirestore,
   runTransaction,
+  serverTimestamp,
   setDoc,
   updateDoc,
   writeBatch,
@@ -698,6 +699,122 @@ async function main() {
     setDoc(doc(admin.db, 'workspaces', 'workspace-a', 'alerts', 'admin-bypass'), {
       marker: 'forbidden',
     })
+  );
+
+  console.log('\nTrilha de auditoria imutável');
+
+  const workspaceAuditRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'auditEvents',
+    'audit-workspace-001'
+  );
+  const validWorkspaceAudit = {
+    eventVersion: 'emprovex_audit_v1',
+    eventId: 'audit-workspace-001',
+    workspaceId: 'workspace-a',
+    ug: '160416',
+    operation: 'ns.assign',
+    source: 'manual',
+    entityType: 'invoice',
+    entityId: 'nf_11111111000191_audit-1',
+    correlationId: 'audit-correlation-001',
+    actorUid: sessionA.user.uid,
+    actorEmail: identities.a.email,
+    before: {},
+    after: { numeroNS: '2026NS000001', nsUg: '160416' },
+    metadata: {},
+    createdAt: serverTimestamp(),
+  };
+
+  await allowed('Setor cria evento de auditoria válido no próprio workspace', () =>
+    setDoc(workspaceAuditRef, validWorkspaceAudit)
+  );
+  await denied('Evento de auditoria do workspace não pode ser alterado', () =>
+    updateDoc(workspaceAuditRef, {
+      metadata: { adulterado: true },
+    })
+  );
+  await denied('Evento de auditoria do workspace não pode ser excluído', () =>
+    deleteDoc(workspaceAuditRef)
+  );
+  await denied('Setor não pode forjar actorUid em evento de auditoria', () =>
+    setDoc(
+      doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'auditEvents',
+        'audit-workspace-forged'
+      ),
+      {
+        ...validWorkspaceAudit,
+        eventId: 'audit-workspace-forged',
+        actorUid: 'uid-forjado',
+        createdAt: serverTimestamp(),
+      }
+    )
+  );
+  await denied('Setor A não cria auditoria dentro do workspace B', () =>
+    setDoc(
+      doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-b',
+        'auditEvents',
+        'audit-cross-tenant'
+      ),
+      {
+        ...validWorkspaceAudit,
+        eventId: 'audit-cross-tenant',
+        workspaceId: 'workspace-b',
+        ug: '160417',
+        createdAt: serverTimestamp(),
+      }
+    )
+  );
+
+  const platformAuditRef = doc(admin.db, 'platformAuditEvents', 'audit-platform-001');
+  const validPlatformAudit = {
+    eventVersion: 'emprovex_audit_v1',
+    eventId: 'audit-platform-001',
+    workspaceId: 'workspace-lifecycle',
+    ug: '160416',
+    operation: 'sector.status_change',
+    source: 'admin',
+    entityType: 'workspace',
+    entityId: 'workspace-lifecycle',
+    correlationId: 'audit-platform-correlation-001',
+    actorUid: admin.user.uid,
+    actorEmail: founderEmail,
+    before: { status: 'active' },
+    after: { status: 'disabled' },
+    metadata: {},
+    createdAt: serverTimestamp(),
+  };
+  await allowed('Administrador cria evento de auditoria administrativa', () =>
+    setDoc(platformAuditRef, validPlatformAudit)
+  );
+  await denied('Evento de auditoria administrativa não pode ser alterado', () =>
+    updateDoc(platformAuditRef, {
+      metadata: { adulterado: true },
+    })
+  );
+  await denied('Evento de auditoria administrativa não pode ser excluído', () =>
+    deleteDoc(platformAuditRef)
+  );
+  await denied('Setor externo não cria evento na auditoria administrativa', () =>
+    setDoc(
+      doc(sessionA.db, 'platformAuditEvents', 'audit-platform-forged'),
+      {
+        ...validPlatformAudit,
+        eventId: 'audit-platform-forged',
+        actorUid: sessionA.user.uid,
+        actorEmail: identities.a.email,
+        createdAt: serverTimestamp(),
+      }
+    )
   );
 
   console.log('\nHardening transacional da importação SAG');

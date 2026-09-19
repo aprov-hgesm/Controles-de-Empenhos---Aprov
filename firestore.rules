@@ -1032,6 +1032,129 @@ service cloud.firestore {
         ]);
     }
 
+    function isValidAuditOperation(operation) {
+      return operation in [
+        'ns.assign',
+        'ns.replace',
+        'ns.remove',
+        'invoice.identity_migrate',
+        'invoice.delete',
+        'invoice.bulk_delete',
+        'supplier_cnpj.migrate',
+        'sector.create',
+        'sector.profile_update',
+        'sector.status_change',
+        'sector.ug_backfill',
+        'sector.password_reset',
+        'sector.delete'
+      ];
+    }
+
+    function isValidAuditSource(source) {
+      return source in ['sag', 'manual', 'migration', 'system', 'admin'];
+    }
+
+    function isValidAuditEntityType(entityType) {
+      return entityType in ['invoice', 'invoice_batch', 'empenho', 'workspace'];
+    }
+
+    function auditUgMatchesWorkspace(workspaceId, ug) {
+      let workspace = workspaceData(workspaceId);
+      return (
+          workspaceId == 'hgesm-aprov'
+          && ug == '160416'
+          && (
+            !('ug' in workspace)
+            || workspace.ug == '160416'
+          )
+        )
+        || (
+          ug == null
+          && !('ug' in workspace)
+        )
+        || (
+          ug is string
+          && 'ug' in workspace
+          && workspace.ug == ug
+          && isValidUnitUg(ug)
+        );
+    }
+
+    function validAuditEventShape(eventId, workspaceId) {
+      return request.resource.data.keys().hasAll([
+          'eventVersion',
+          'eventId',
+          'workspaceId',
+          'ug',
+          'operation',
+          'source',
+          'entityType',
+          'entityId',
+          'correlationId',
+          'actorUid',
+          'actorEmail',
+          'before',
+          'after',
+          'metadata',
+          'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'eventVersion',
+          'eventId',
+          'workspaceId',
+          'ug',
+          'operation',
+          'source',
+          'entityType',
+          'entityId',
+          'correlationId',
+          'actorUid',
+          'actorEmail',
+          'before',
+          'after',
+          'metadata',
+          'createdAt'
+        ])
+        && request.resource.data.eventVersion == 'emprovex_audit_v1'
+        && request.resource.data.eventId == eventId
+        && request.resource.data.workspaceId == workspaceId
+        && isValidAuditOperation(request.resource.data.operation)
+        && isValidAuditSource(request.resource.data.source)
+        && isValidAuditEntityType(request.resource.data.entityType)
+        && request.resource.data.entityId is string
+        && request.resource.data.entityId.size() > 0
+        && request.resource.data.correlationId is string
+        && request.resource.data.correlationId.size() > 0
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.actorEmail == request.auth.token.email
+        && request.resource.data.before is map
+        && request.resource.data.after is map
+        && request.resource.data.metadata is map
+        && request.resource.data.createdAt == request.time;
+    }
+
+    function validWorkspaceAuditEvent(eventId, workspaceId) {
+      return validAuditEventShape(eventId, workspaceId)
+        && auditUgMatchesWorkspace(workspaceId, request.resource.data.ug);
+    }
+
+    function validPlatformAuditEvent(eventId) {
+      return isPlatformAdmin()
+        && validAuditEventShape(
+          eventId,
+          request.resource.data.workspaceId
+        )
+        && request.resource.data.source == 'admin'
+        && request.resource.data.operation in [
+          'sector.create',
+          'sector.profile_update',
+          'sector.status_change',
+          'sector.ug_backfill',
+          'sector.password_reset',
+          'sector.delete'
+        ];
+    }
+
     // Diretório administrativo da plataforma. O administrador pode listar e
     // manter metadados, mas não recebe acesso operacional aos workspaces externos.
     match /workspaces/{workspaceId} {
@@ -1064,6 +1187,12 @@ service cloud.firestore {
         || isSelfPreboundFirstLogin(accountId)
         || isSelfBoundSessionRefresh(accountId);
       allow delete: if false;
+    }
+
+    match /platformAuditEvents/{eventId} {
+      allow get, list: if isPlatformAdmin();
+      allow create: if validPlatformAuditEvent(eventId);
+      allow update, delete: if false;
     }
 
     match /platformUgIndex/{ug} {
@@ -1103,6 +1232,13 @@ service cloud.firestore {
 
     // Workspace-scoped operational data. There is deliberately no admin bypass:
     // a platform administrator cannot read another sector's operational records.
+    match /workspaces/{workspaceId}/auditEvents/{eventId} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validWorkspaceAuditEvent(eventId, workspaceId);
+      allow update, delete: if false;
+    }
+
     match /workspaces/{workspaceId}/empenhos/{id} {
       allow read: if canAccessWorkspace(workspaceId);
       allow create: if canAccessWorkspace(workspaceId)

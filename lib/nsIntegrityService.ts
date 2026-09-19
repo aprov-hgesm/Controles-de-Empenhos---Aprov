@@ -1,5 +1,9 @@
 import { deleteField, getDocs, query, runTransaction, where } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './firebase';
+import {
+  appendWorkspaceAuditEvent,
+  createWorkspaceAuditCorrelationId,
+} from './auditTrail';
 import type { Alert, Empenho, Invoice } from './types';
 import { getInvoiceRecordKey, isValidSupplierCnpj, normalizeSupplierCnpj } from './invoiceIdentity';
 import {
@@ -65,6 +69,7 @@ export async function commitNsIntegrityMutations(
 ): Promise<CommitNsIntegrityResult> {
   const scope = getCurrentOperationalScope(userId);
   const path = `${getOperationalCollectionPath(scope, 'invoices')}/ns-integrity`;
+  const correlationId = createWorkspaceAuditCorrelationId(scope);
   const scopeUg = normalizeNsUg(scope.ug);
   const mutations = input.mutations.map((mutation) => {
     const proposedNs = normalizeNsNumber(mutation.proposedNs);
@@ -300,6 +305,47 @@ export async function commitNsIntegrityMutations(
             { merge: true }
           );
         }
+
+        if (writeKeys.has(mutation.invoiceRecordKey)) {
+          const operation = !currentNs && proposedNs
+            ? 'ns.assign'
+            : currentNs && proposedNs
+              ? 'ns.replace'
+              : 'ns.remove';
+
+          appendWorkspaceAuditEvent(
+            transaction,
+            scope,
+            {
+              operation,
+              source: mutation.source,
+              entityType: 'invoice',
+              entityId: mutation.invoiceRecordKey,
+              correlationId,
+              before: {
+                recordKey: mutation.invoiceRecordKey,
+                invoiceId: mutation.invoiceId,
+                empenhoId: mutation.empenhoId,
+                supplierCnpj: mutation.supplierCnpj,
+                numeroNS: currentNs || null,
+                nsUg: currentUg || null,
+              },
+              after: {
+                recordKey: mutation.invoiceRecordKey,
+                invoiceId: mutation.invoiceId,
+                empenhoId: mutation.empenhoId,
+                supplierCnpj: mutation.supplierCnpj,
+                numeroNS: proposedNs || null,
+                nsUg: proposedUg || null,
+              },
+              metadata: {
+                identityBefore: currentNs ? `${currentUg || 'legacy'}|${currentNs}` : null,
+                identityAfter: proposedNs ? `${proposedUg}|${proposedNs}` : null,
+              },
+            },
+            userId
+          );
+        }
       }
 
       const updatedInvoices: Invoice[] = [];
@@ -402,6 +448,7 @@ export async function commitInvoiceReceiptLifecycle(
     previousRecordKey && previousRecordKey !== nextRecordKey
   );
   const path = `${getOperationalCollectionPath(scope, 'invoices')}/receipt-lifecycle`;
+  const correlationId = createWorkspaceAuditCorrelationId(scope);
 
   try {
     await runTransaction(db, async (transaction) => {
@@ -623,6 +670,37 @@ export async function commitInvoiceReceiptLifecycle(
           transaction.set(migratedLockRef, nextLock, { merge: true });
         }
       }
+
+      if (isIdentityMigration && oldInvoice) {
+        appendWorkspaceAuditEvent(
+          transaction,
+          scope,
+          {
+            operation: 'invoice.identity_migrate',
+            source: 'migration',
+            entityType: 'invoice',
+            entityId: nextRecordKey,
+            correlationId,
+            before: {
+              recordKey: previousRecordKey || null,
+              invoiceId: oldInvoice.id,
+              empenhoId: oldInvoice.empenhoId,
+              supplierCnpj: normalizeSupplierCnpj(oldInvoice.supplierCnpj) || null,
+              numeroNS: normalizeNsNumber(oldInvoice.numeroNS) || null,
+              nsUg: normalizeNsUg(oldInvoice.nsUg) || null,
+            },
+            after: {
+              recordKey: nextRecordKey,
+              invoiceId: input.invoice.id,
+              empenhoId: input.invoice.empenhoId,
+              supplierCnpj: supplierCnpj || null,
+              numeroNS: normalizeNsNumber(input.invoice.numeroNS) || null,
+              nsUg: normalizeNsUg(input.invoice.nsUg) || null,
+            },
+          },
+          userId
+        );
+      }
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
@@ -637,6 +715,7 @@ export async function commitInvoiceDeletionLifecycle(
   const scope = getCurrentOperationalScope(userId);
   const invoiceRef = operationalDocRef(scope, 'invoices', input.invoiceRecordKey);
   const path = getOperationalDocumentPath(scope, 'invoices', input.invoiceRecordKey);
+  const correlationId = createWorkspaceAuditCorrelationId(scope);
 
   try {
     await runTransaction(db, async (transaction) => {
@@ -704,6 +783,33 @@ export async function commitInvoiceDeletionLifecycle(
       if (lockRef && lockExists) {
         transaction.delete(lockRef);
       }
+
+      appendWorkspaceAuditEvent(
+        transaction,
+        scope,
+        {
+          operation: 'invoice.delete',
+          source: 'system',
+          entityType: 'invoice',
+          entityId: input.invoiceRecordKey,
+          correlationId,
+          before: {
+            recordKey: input.invoiceRecordKey,
+            invoiceId: invoice.id,
+            empenhoId: invoice.empenhoId,
+            supplierCnpj: normalizeSupplierCnpj(invoice.supplierCnpj) || null,
+            numeroNS: normalizeNsNumber(invoice.numeroNS) || null,
+            nsUg: normalizeNsUg(invoice.nsUg) || null,
+          },
+          after: {
+            deleted: true,
+          },
+          metadata: {
+            lockRemoved: Boolean(lockRef && lockExists),
+          },
+        },
+        userId
+      );
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
@@ -718,6 +824,7 @@ export async function commitAllInvoicesDeletionLifecycle(
   const scope = getCurrentOperationalScope(userId);
   const uniqueRecordKeys = Array.from(new Set(input.invoiceRecordKeys));
   const path = `${getOperationalCollectionPath(scope, 'invoices')}/bulk-lifecycle`;
+  const correlationId = createWorkspaceAuditCorrelationId(scope);
 
   try {
     await runTransaction(db, async (transaction) => {
@@ -807,7 +914,8 @@ export async function commitAllInvoicesDeletionLifecycle(
       const totalWrites =
         input.updatedEmpenhos.length +
         invoiceRefs.length +
-        existingLockRefs.length;
+        existingLockRefs.length +
+        1;
       if (totalWrites > MAX_INVOICE_LIFECYCLE_WRITES) {
         throw new Error(
           `A exclusão em lote exige ${totalWrites} gravações e excede o limite seguro de ${MAX_INVOICE_LIFECYCLE_WRITES}.`
@@ -822,6 +930,30 @@ export async function commitAllInvoicesDeletionLifecycle(
       });
       invoiceRefs.forEach((ref) => transaction.delete(ref));
       existingLockRefs.forEach((ref) => transaction.delete(ref));
+
+      appendWorkspaceAuditEvent(
+        transaction,
+        scope,
+        {
+          operation: 'invoice.bulk_delete',
+          source: 'system',
+          entityType: 'invoice_batch',
+          entityId: correlationId,
+          correlationId,
+          before: {
+            recordKeys: uniqueRecordKeys,
+            invoiceIds: invoices.map((invoice) => invoice.id),
+          },
+          after: {
+            deletedCount: invoiceRefs.length,
+          },
+          metadata: {
+            removedLockCount: existingLockRefs.length,
+            updatedEmpenhoCount: input.updatedEmpenhos.length,
+          },
+        },
+        userId
+      );
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
@@ -879,6 +1011,7 @@ export async function commitEmpenhoSupplierCnpjMigration(
 
   const discoveredRecordKeys = linkedSnapshot.docs.map((snapshot) => snapshot.id);
   const path = `${getOperationalDocumentPath(scope, 'empenhos', input.empenhoId)}/supplier-cnpj-migration`;
+  const correlationId = createWorkspaceAuditCorrelationId(scope);
 
   try {
     return await runTransaction(db, async (transaction) => {
@@ -1068,7 +1201,7 @@ export async function commitEmpenhoSupplierCnpjMigration(
           count + 1 + (item.sourceRecordKey !== item.targetRecordKey ? 1 : 0),
         0
       );
-      const totalWrites = 1 + invoiceWriteCount + lockWriteCount;
+      const totalWrites = 1 + invoiceWriteCount + lockWriteCount + 1;
       if (totalWrites > MAX_INVOICE_LIFECYCLE_WRITES) {
         throw new Error(
           `A migração exige ${totalWrites} gravações e excede o limite seguro de ${MAX_INVOICE_LIFECYCLE_WRITES}.`
@@ -1141,6 +1274,38 @@ export async function commitEmpenhoSupplierCnpjMigration(
         migratedLockCount += 1;
       }
 
+      const migratedInvoiceCount = plan.items.filter(
+        (item) =>
+          item.sourceRecordKey !== item.targetRecordKey ||
+          normalizeSupplierCnpj(item.invoice.supplierCnpj) !==
+            plan.targetSupplierCnpj
+      ).length;
+
+      appendWorkspaceAuditEvent(
+        transaction,
+        scope,
+        {
+          operation: 'supplier_cnpj.migrate',
+          source: 'migration',
+          entityType: 'empenho',
+          entityId: input.empenhoId,
+          correlationId,
+          before: {
+            supplierCnpj: plan.sourceSupplierCnpj || null,
+          },
+          after: {
+            supplierCnpj: plan.targetSupplierCnpj || null,
+          },
+          metadata: {
+            migratedInvoiceCount,
+            migratedLockCount,
+            sourceRecordKeys: plan.items.map((item) => item.sourceRecordKey),
+            targetRecordKeys: plan.items.map((item) => item.targetRecordKey),
+          },
+        },
+        userId
+      );
+
       return {
         updatedEmpenho,
         invoiceMigrations: plan.items.map((item) => ({
@@ -1148,12 +1313,7 @@ export async function commitEmpenhoSupplierCnpjMigration(
           targetRecordKey: item.targetRecordKey,
           invoice: item.updatedInvoice,
         })),
-        migratedInvoiceCount: plan.items.filter(
-          (item) =>
-            item.sourceRecordKey !== item.targetRecordKey ||
-            normalizeSupplierCnpj(item.invoice.supplierCnpj) !==
-              plan.targetSupplierCnpj
-        ).length,
+        migratedInvoiceCount,
         migratedLockCount,
         noOp: false,
       };
