@@ -34,7 +34,21 @@ requireText(access, 'UID_MISMATCH', 'Diagnóstico não identifica divergência d
 requireText(access, 'WORKSPACE_NOT_FOUND', 'Diagnóstico não identifica ausência do workspace.');
 requireText(access, 'WORKSPACE_EMAIL_MISMATCH', 'Diagnóstico não identifica divergência de e-mail do workspace.');
 requireText(operationalData, 'Falha de autorização do workspace [', 'Tela de login não expõe o código seguro de diagnóstico.');
-forbidText(operationalData, 'useMemo(', 'Autorização operacional não pode ser derivada somente por useMemo do e-mail.');
+requireText(
+  operationalData,
+  'const [workspaceContext, setWorkspaceContext] = useState<ResolvedWorkspaceContext>',
+  'Contexto operacional precisa permanecer estado validado da sessão.'
+);
+forbidText(
+  operationalData,
+  'const workspaceContext = useMemo',
+  'Autorização operacional não pode ser derivada por useMemo do e-mail.'
+);
+forbidText(
+  operationalData,
+  'useMemo(() => resolveWorkspaceContext',
+  'resolveWorkspaceContext não pode ser usado como autorização memoizada.'
+);
 requireText(operationalPaths, 'getResolvedWorkspaceContextForSession', 'Writes não reutilizam o contexto validado da sessão.');
 
 forbidText(identity, "localPart.replace(/\\./g, '')", 'Normalização Gmail remove pontos e pode divergir do e-mail presente no token Firebase.');
