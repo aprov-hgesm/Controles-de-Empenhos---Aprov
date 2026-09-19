@@ -631,7 +631,7 @@ export function SagImportView({ empenhos, invoices }: SagImportViewProps) {
               <div>
                 <p className="text-sm font-extrabold">Validação sem persistência</p>
                 <p className="mt-1 text-xs font-medium leading-relaxed text-emerald-800/80">
-                  Nenhuma NS será gravada neste bloco. Mesmo com JSON válido, a ligação CNPJ → NF → NE,
+                  Nenhuma NS será gravada automaticamente neste bloco. Mesmo com JSON válido, a ligação CNPJ → NF → NE,
                   a prévia de conciliação e a confirmação de gravação continuam reservadas aos blocos seguintes.
                 </p>
               </div>
