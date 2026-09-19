@@ -56,7 +56,8 @@
     "test:supplier-reporting": "node --experimental-vm-modules --test scripts/supplier-reporting.test.mjs",
     "verify:supplier-reports": "node scripts/verify-supplier-reports.mjs",
     "test:sag-ns-contract": "node --experimental-vm-modules --test scripts/sag-ns-contract.test.mjs",
-    "verify:sag-ns-contract": "node scripts/verify-sag-ns-contract.mjs"
+    "verify:sag-ns-contract": "node scripts/verify-sag-ns-contract.mjs",
+    "verify:sag-import-assistant": "node scripts/verify-sag-import-assistant.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

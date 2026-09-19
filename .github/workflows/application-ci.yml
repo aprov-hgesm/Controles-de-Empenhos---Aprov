@@ -138,6 +138,9 @@ jobs:
       - name: SAG NS contract guard
         run: npm run verify:sag-ns-contract
 
+      - name: SAG import assistant guard
+        run: npm run verify:sag-import-assistant
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
