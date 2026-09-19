@@ -6,7 +6,14 @@ import { resolve } from 'node:path';
 const root = process.cwd();
 const findings = [];
 
-const sag = read('features/relatorios/components/SagImportView.tsx');
+const sag = [
+  read('features/relatorios/components/SagImportView.tsx'),
+  read('features/relatorios/components/SagImportProgress.tsx'),
+  read('features/relatorios/components/SagSupplierStep.tsx'),
+  read('features/relatorios/components/SagPromptStep.tsx'),
+  read('features/relatorios/components/SagApplicationPreviewSection.tsx'),
+  read('features/relatorios/components/SagApplyConfirmationDialog.tsx'),
+].join('\n');
 const reports = read('features/relatorios/components/RelatoriosView.tsx');
 const pkg = read('package.json');
 const workflow = read('.github/workflows/application-ci.yml');
@@ -14,7 +21,7 @@ const workflow = read('.github/workflows/application-ci.yml');
 requireText(sag, 'Progresso da importação SAG', 'Navegador de progresso SAG ausente.');
 requireText(sag, 'Trocar fornecedor', 'Seletor recolhível de fornecedor ausente.');
 requireText(sag, 'Ver diagnóstico técnico', 'Diagnóstico técnico não pode ser recolhido.');
-requireText(sag, "type PreviewFilter = 'all' | SagNsApplicationDecision", 'Filtro tipado da prévia ausente.');
+requireText(sag, "export type SagPreviewFilter = 'all' | SagNsApplicationDecision", 'Filtro tipado da prévia ausente.');
 requireText(sag, 'Filtros da prévia SAG', 'Controles de filtro da prévia ausentes.');
 requireText(sag, 'filteredPreviewItems', 'Prévia não usa conjunto filtrado.');
 requireText(sag, 'lg:hidden', 'Cards mobile da prévia ausentes.');
