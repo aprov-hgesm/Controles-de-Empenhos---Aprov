@@ -26,7 +26,7 @@ import {
   type NsLockDocument,
 } from './nsIntegrity';
 
-export const MAX_NS_INTEGRITY_TRANSACTION_MUTATIONS = 100;
+export const MAX_NS_INTEGRITY_TRANSACTION_MUTATIONS = 6;
 export const MAX_NS_INTEGRITY_KNOWN_OWNER_READS = 200;
 
 export interface CommitNsIntegrityInput {
@@ -289,6 +289,7 @@ export interface CommitAllInvoicesDeletionLifecycleInput {
 }
 
 export const MAX_INVOICE_LIFECYCLE_WRITES = 450;
+export const MAX_INVOICE_LIFECYCLE_NS_LOCKS = 8;
 
 function invoiceWithRecordKey(snapshotId: string, invoice: Invoice): Invoice {
   return {
@@ -645,6 +646,12 @@ export async function commitAllInvoicesDeletionLifecycle(
         }))
         .filter((entry) => entry.ns);
 
+      if (lockEntries.length > MAX_INVOICE_LIFECYCLE_NS_LOCKS) {
+        throw new Error(
+          `A exclusão em lote possui ${lockEntries.length} NFs com NS e excede o limite seguro de ${MAX_INVOICE_LIFECYCLE_NS_LOCKS} para validação cruzada pelas Firestore Rules.`
+        );
+      }
+
       const lockIds = Array.from(
         new Set(lockEntries.map((entry) => buildNsLockDocumentId(entry.ns)))
       );
@@ -722,6 +729,7 @@ export async function commitAllInvoicesDeletionLifecycle(
 
 
 export const MAX_SUPPLIER_CNPJ_MIGRATION_INVOICES = 100;
+export const MAX_SUPPLIER_CNPJ_MIGRATION_NS_LOCKS = 5;
 
 export interface CommitEmpenhoSupplierCnpjMigrationInput {
   empenhoId: string;
@@ -866,6 +874,12 @@ export async function commitEmpenhoSupplierCnpjMigration(
           ns: normalizeNsNumber(item.invoice.numeroNS),
         }))
         .filter((entry) => entry.ns);
+
+      if (nsEntries.length > MAX_SUPPLIER_CNPJ_MIGRATION_NS_LOCKS) {
+        throw new Error(
+          `A migração possui ${nsEntries.length} NFs com NS e excede o limite seguro de ${MAX_SUPPLIER_CNPJ_MIGRATION_NS_LOCKS} para validação cruzada pelas Firestore Rules.`
+        );
+      }
 
       const seenNs = new Set<string>();
       for (const entry of nsEntries) {
