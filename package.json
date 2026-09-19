@@ -50,7 +50,9 @@
     "test:invoice-identity": "node --experimental-vm-modules --test scripts/invoice-identity.test.mjs",
     "verify:reporting-foundation": "node scripts/verify-reporting-foundation.mjs",
     "verify:reports-shell": "node scripts/verify-reports-shell.mjs",
-    "verify:report-empenho-selector": "node scripts/verify-report-empenho-selector.mjs"
+    "verify:report-empenho-selector": "node scripts/verify-report-empenho-selector.mjs",
+    "test:reporting-period": "node --experimental-vm-modules --test scripts/reporting-period.test.mjs",
+    "verify:report-empenho-detail": "node scripts/verify-report-empenho-detail.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
