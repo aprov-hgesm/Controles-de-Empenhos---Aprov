@@ -464,6 +464,1025 @@ service cloud.firestore {
         );
     }
 
+    function empenhoDeletionLockId(empenhoId) {
+      return 'empenhoDelete_' + empenhoId;
+    }
+
+    function isEmpenhoDeletionLockId(id) {
+      return id.matches('^empenhoDelete_.+
+    function invoiceHasControlledNs(data) {
+      return 'numeroNS' in data
+        && isValidNsNumber(data.numeroNS);
+    }
+
+    function invoiceHasCanonicalNsIdentity(data) {
+      return invoiceHasControlledNs(data)
+        && 'nsUg' in data
+        && isValidNsUg(data.nsUg);
+    }
+
+    function invoiceHasLegacyNsIdentity(data) {
+      return invoiceHasControlledNs(data)
+        && !('nsUg' in data);
+    }
+
+    function invoiceNsFieldIsValid(data) {
+      return (
+          !('numeroNS' in data)
+          && !('nsUg' in data)
+        )
+        || (
+          isValidNsNumber(data.numeroNS)
+          && (
+            !('nsUg' in data)
+            || isValidNsUg(data.nsUg)
+          )
+        );
+    }
+
+    function sagNsLockIdForIdentity(ug, numeroNS) {
+      return 'sagNsLock_' + ug + '_' + numeroNS;
+    }
+
+    function legacySagNsLockIdForNumber(numeroNS) {
+      return 'sagNsLock_' + numeroNS;
+    }
+
+    function invoiceEmpenhoMatchesAfter(workspaceId, data) {
+      let empenhoPath = /databases/$(database)/documents/workspaces/$(workspaceId)/empenhos/$(data.empenhoId);
+      return data.empenhoId is string
+        && isValidCnpjShape(data.supplierCnpj)
+        && existsAfter(empenhoPath)
+        && getAfter(empenhoPath).data.id == data.empenhoId
+        && getAfter(empenhoPath).data.supplierCnpj == data.supplierCnpj;
+    }
+
+    function workspaceUgMatchesNs(workspaceId, ug) {
+      let workspace = workspaceData(workspaceId);
+      return (
+          workspaceId == 'hgesm-aprov'
+          && ug == '160416'
+          && (
+            !('ug' in workspace)
+            || workspace.ug == '160416'
+          )
+        )
+        || (
+          'ug' in workspace
+          && isValidUnitUg(workspace.ug)
+          && workspace.ug == ug
+        );
+    }
+
+    function canonicalInvoiceLockMatchesAfter(workspaceId, id, data) {
+      let lockId = sagNsLockIdForIdentity(data.nsUg, data.numeroNS);
+      let lockPath = /databases/$(database)/documents/workspaces/$(workspaceId)/settings/$(lockId);
+      return invoiceHasCanonicalNsIdentity(data)
+        && data.recordKey == id
+        && data.id is string
+        && data.id.size() > 0
+        && data.empenhoId is string
+        && data.empenhoId.size() > 0
+        && isValidCnpjShape(data.supplierCnpj)
+        && existsAfter(lockPath)
+        && getAfter(lockPath).data.id == lockId
+        && getAfter(lockPath).data.type == 'sag-ns-lock'
+        && getAfter(lockPath).data.workspaceId == workspaceId
+        && getAfter(lockPath).data.ug == data.nsUg
+        && getAfter(lockPath).data.numeroNS == data.numeroNS
+        && getAfter(lockPath).data.invoiceRecordKey == id
+        && getAfter(lockPath).data.invoiceId == data.id
+        && getAfter(lockPath).data.empenhoId == data.empenhoId
+        && getAfter(lockPath).data.supplierCnpj == data.supplierCnpj;
+    }
+
+    function legacyInvoiceLockMatchesAfter(workspaceId, id, data) {
+      let lockId = legacySagNsLockIdForNumber(data.numeroNS);
+      let lockPath = /databases/$(database)/documents/workspaces/$(workspaceId)/settings/$(lockId);
+      return invoiceHasLegacyNsIdentity(data)
+        && data.recordKey == id
+        && data.id is string
+        && data.id.size() > 0
+        && data.empenhoId is string
+        && data.empenhoId.size() > 0
+        && isValidCnpjShape(data.supplierCnpj)
+        && existsAfter(lockPath)
+        && getAfter(lockPath).data.id == lockId
+        && getAfter(lockPath).data.type == 'sag-ns-lock'
+        && getAfter(lockPath).data.workspaceId == workspaceId
+        && !('ug' in getAfter(lockPath).data)
+        && getAfter(lockPath).data.numeroNS == data.numeroNS
+        && getAfter(lockPath).data.invoiceRecordKey == id
+        && getAfter(lockPath).data.invoiceId == data.id
+        && getAfter(lockPath).data.empenhoId == data.empenhoId
+        && getAfter(lockPath).data.supplierCnpj == data.supplierCnpj;
+    }
+
+    function invoiceLockMatchesAfter(workspaceId, id, data) {
+      return canonicalInvoiceLockMatchesAfter(workspaceId, id, data)
+        || legacyInvoiceLockMatchesAfter(workspaceId, id, data);
+    }
+
+    function sameNsIdentityAfterUpdate() {
+      return invoiceHasControlledNs(request.resource.data)
+        && request.resource.data.numeroNS == resource.data.numeroNS
+        && (
+          (
+            !('nsUg' in resource.data)
+            && !('nsUg' in request.resource.data)
+          )
+          || (
+            'nsUg' in resource.data
+            && 'nsUg' in request.resource.data
+            && request.resource.data.nsUg == resource.data.nsUg
+          )
+        );
+    }
+
+    function controlledOldInvoiceLockReleasedAfter(workspaceId, id) {
+      let oldLockId = invoiceHasCanonicalNsIdentity(resource.data)
+        ? sagNsLockIdForIdentity(resource.data.nsUg, resource.data.numeroNS)
+        : legacySagNsLockIdForNumber(resource.data.numeroNS);
+      let oldLockPath = /databases/$(database)/documents/workspaces/$(workspaceId)/settings/$(oldLockId);
+      return sameNsIdentityAfterUpdate()
+        || !existsAfter(oldLockPath)
+        || getAfter(oldLockPath).data.invoiceRecordKey != id;
+    }
+
+    function oldInvoiceLockReleasedAfter(workspaceId, id) {
+      return !invoiceHasControlledNs(resource.data)
+        || controlledOldInvoiceLockReleasedAfter(workspaceId, id);
+    }
+
+    function controlledDeletedInvoiceLockReleasedAfter(workspaceId, id) {
+      let oldLockId = invoiceHasCanonicalNsIdentity(resource.data)
+        ? sagNsLockIdForIdentity(resource.data.nsUg, resource.data.numeroNS)
+        : legacySagNsLockIdForNumber(resource.data.numeroNS);
+      let oldLockPath = /databases/$(database)/documents/workspaces/$(workspaceId)/settings/$(oldLockId);
+      return !existsAfter(oldLockPath)
+        || getAfter(oldLockPath).data.invoiceRecordKey != id;
+    }
+
+    function deletedInvoiceLockReleasedAfter(workspaceId, id) {
+      return !invoiceHasControlledNs(resource.data)
+        || controlledDeletedInvoiceLockReleasedAfter(workspaceId, id);
+    }
+
+    function invoiceIdentityChanged() {
+      return !('recordKey' in resource.data)
+        || !('supplierCnpj' in resource.data)
+        || request.resource.data.recordKey != resource.data.recordKey
+        || request.resource.data.id != resource.data.id
+        || request.resource.data.empenhoId != resource.data.empenhoId
+        || request.resource.data.supplierCnpj != resource.data.supplierCnpj;
+    }
+
+    function invoiceNsIdentityChanged() {
+      return !sameNsIdentityAfterUpdate();
+    }
+
+    function invoiceNeedsEmpenhoRevalidation() {
+      return !invoiceHasControlledNs(resource.data)
+        || invoiceNsIdentityChanged()
+        || invoiceIdentityChanged();
+    }
+
+    function preservesLegacyNsIdentity() {
+      return invoiceHasLegacyNsIdentity(resource.data)
+        && invoiceHasLegacyNsIdentity(request.resource.data)
+        && request.resource.data.numeroNS == resource.data.numeroNS;
+    }
+
+    function validInvoiceCreate(workspaceId, id) {
+      return invoiceNsFieldIsValid(request.resource.data)
+        && request.resource.data.empenhoId is string
+        && !empenhoDeletionIsLockedAfter(workspaceId, request.resource.data.empenhoId)
+        && (
+          !invoiceHasControlledNs(request.resource.data)
+          || (
+            invoiceHasCanonicalNsIdentity(request.resource.data)
+            && canonicalInvoiceLockMatchesAfter(workspaceId, id, request.resource.data)
+            && invoiceEmpenhoMatchesAfter(workspaceId, request.resource.data)
+          )
+        );
+    }
+
+    function validInvoiceUpdate(workspaceId, id) {
+      return invoiceNsFieldIsValid(request.resource.data)
+        && oldInvoiceLockReleasedAfter(workspaceId, id)
+        && (
+          !invoiceHasControlledNs(request.resource.data)
+          || (
+            (
+              (
+                invoiceHasCanonicalNsIdentity(request.resource.data)
+                && canonicalInvoiceLockMatchesAfter(workspaceId, id, request.resource.data)
+              )
+              || (
+                preservesLegacyNsIdentity()
+                && legacyInvoiceLockMatchesAfter(workspaceId, id, request.resource.data)
+              )
+            )
+            && (
+              !invoiceNeedsEmpenhoRevalidation()
+              || invoiceEmpenhoMatchesAfter(workspaceId, request.resource.data)
+            )
+          )
+        );
+    }
+
+    function validInvoiceDelete(workspaceId, id) {
+      return deletedInvoiceLockReleasedAfter(workspaceId, id);
+    }
+
+    function sagNsLockTargetMatchesAfter(workspaceId) {
+      let invoicePath = /databases/$(database)/documents/workspaces/$(workspaceId)/invoices/$(request.resource.data.invoiceRecordKey);
+      return existsAfter(invoicePath)
+        && getAfter(invoicePath).data.recordKey == request.resource.data.invoiceRecordKey
+        && getAfter(invoicePath).data.id == request.resource.data.invoiceId
+        && getAfter(invoicePath).data.empenhoId == request.resource.data.empenhoId
+        && getAfter(invoicePath).data.supplierCnpj == request.resource.data.supplierCnpj
+        && getAfter(invoicePath).data.numeroNS == request.resource.data.numeroNS
+        && (
+          (
+            'ug' in request.resource.data
+            && 'nsUg' in getAfter(invoicePath).data
+            && getAfter(invoicePath).data.nsUg == request.resource.data.ug
+          )
+          || (
+            !('ug' in request.resource.data)
+            && !('nsUg' in getAfter(invoicePath).data)
+          )
+        );
+    }
+
+    function validSagNsLock(workspaceId, id) {
+      return isSagNsLockId(id)
+        && request.resource.data.keys().hasAll([
+          'id',
+          'type',
+          'workspaceId',
+          'ug',
+          'numeroNS',
+          'invoiceRecordKey',
+          'invoiceId',
+          'empenhoId',
+          'supplierCnpj',
+          'createdAt',
+          'updatedAt',
+          'updatedBy'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'id',
+          'type',
+          'workspaceId',
+          'ug',
+          'numeroNS',
+          'invoiceRecordKey',
+          'invoiceId',
+          'empenhoId',
+          'supplierCnpj',
+          'createdAt',
+          'updatedAt',
+          'updatedBy'
+        ])
+        && request.resource.data.id == id
+        && request.resource.data.id == sagNsLockIdForIdentity(
+          request.resource.data.ug,
+          request.resource.data.numeroNS
+        )
+        && request.resource.data.type == 'sag-ns-lock'
+        && request.resource.data.workspaceId == workspaceId
+        && isValidNsUg(request.resource.data.ug)
+        && workspaceUgMatchesNs(workspaceId, request.resource.data.ug)
+        && isValidNsNumber(request.resource.data.numeroNS)
+        && request.resource.data.invoiceRecordKey is string
+        && request.resource.data.invoiceRecordKey.size() > 0
+        && request.resource.data.invoiceId is string
+        && request.resource.data.invoiceId.size() > 0
+        && request.resource.data.empenhoId is string
+        && request.resource.data.empenhoId.size() > 0
+        && isValidCnpjShape(request.resource.data.supplierCnpj)
+        && request.resource.data.createdAt is string
+        && request.resource.data.updatedAt is string
+        && request.resource.data.updatedBy == request.auth.uid
+        && sagNsLockTargetMatchesAfter(workspaceId);
+    }
+
+    function validLegacySagNsLockUpdate(workspaceId, id) {
+      return isSagNsLockId(id)
+        && !('ug' in resource.data)
+        && !('ug' in request.resource.data)
+        && request.resource.data.keys().hasAll([
+          'id',
+          'type',
+          'workspaceId',
+          'numeroNS',
+          'invoiceRecordKey',
+          'invoiceId',
+          'empenhoId',
+          'supplierCnpj',
+          'createdAt',
+          'updatedAt',
+          'updatedBy'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'id',
+          'type',
+          'workspaceId',
+          'numeroNS',
+          'invoiceRecordKey',
+          'invoiceId',
+          'empenhoId',
+          'supplierCnpj',
+          'createdAt',
+          'updatedAt',
+          'updatedBy'
+        ])
+        && request.resource.data.id == id
+        && request.resource.data.id == legacySagNsLockIdForNumber(request.resource.data.numeroNS)
+        && request.resource.data.type == 'sag-ns-lock'
+        && request.resource.data.workspaceId == workspaceId
+        && isValidNsNumber(request.resource.data.numeroNS)
+        && request.resource.data.updatedBy == request.auth.uid
+        && sagNsLockTargetMatchesAfter(workspaceId);
+    }
+
+    function sagNsLockOwnerUnchanged() {
+      return resource.data.invoiceRecordKey == request.resource.data.invoiceRecordKey
+        && resource.data.invoiceId == request.resource.data.invoiceId
+        && resource.data.empenhoId == request.resource.data.empenhoId
+        && resource.data.supplierCnpj == request.resource.data.supplierCnpj;
+    }
+
+    function validSagNsLockOwnerMigration(workspaceId) {
+      let oldInvoicePath = /databases/$(database)/documents/workspaces/$(workspaceId)/invoices/$(resource.data.invoiceRecordKey);
+      let newInvoicePath = /databases/$(database)/documents/workspaces/$(workspaceId)/invoices/$(request.resource.data.invoiceRecordKey);
+      return resource.data.invoiceRecordKey != request.resource.data.invoiceRecordKey
+        && !existsAfter(oldInvoicePath)
+        && existsAfter(newInvoicePath)
+        && getAfter(newInvoicePath).data.recordKey == request.resource.data.invoiceRecordKey
+        && getAfter(newInvoicePath).data.id == request.resource.data.invoiceId
+        && getAfter(newInvoicePath).data.empenhoId == request.resource.data.empenhoId
+        && getAfter(newInvoicePath).data.supplierCnpj == request.resource.data.supplierCnpj
+        && getAfter(newInvoicePath).data.numeroNS == request.resource.data.numeroNS
+        && (
+          (
+            'ug' in request.resource.data
+            && getAfter(newInvoicePath).data.nsUg == request.resource.data.ug
+          )
+          || (
+            !('ug' in request.resource.data)
+            && !('nsUg' in getAfter(newInvoicePath).data)
+          )
+        );
+    }
+
+    function validSagNsLockMetadataRefresh(workspaceId) {
+      let ownerInvoicePath = /databases/$(database)/documents/workspaces/$(workspaceId)/invoices/$(request.resource.data.invoiceRecordKey);
+      return resource.data.invoiceRecordKey == request.resource.data.invoiceRecordKey
+        && existsAfter(ownerInvoicePath)
+        && getAfter(ownerInvoicePath).data.recordKey == request.resource.data.invoiceRecordKey
+        && getAfter(ownerInvoicePath).data.id == request.resource.data.invoiceId
+        && getAfter(ownerInvoicePath).data.empenhoId == request.resource.data.empenhoId
+        && getAfter(ownerInvoicePath).data.supplierCnpj == request.resource.data.supplierCnpj
+        && getAfter(ownerInvoicePath).data.numeroNS == request.resource.data.numeroNS
+        && (
+          (
+            'ug' in request.resource.data
+            && getAfter(ownerInvoicePath).data.nsUg == request.resource.data.ug
+          )
+          || (
+            !('ug' in request.resource.data)
+            && !('nsUg' in getAfter(ownerInvoicePath).data)
+          )
+        );
+    }
+
+    function validSagNsLockDelete(workspaceId, id) {
+      let ownerInvoicePath = /databases/$(database)/documents/workspaces/$(workspaceId)/invoices/$(resource.data.invoiceRecordKey);
+      return isSagNsLockId(id)
+        && resource.data.type == 'sag-ns-lock'
+        && resource.data.workspaceId == workspaceId
+        && (
+          !existsAfter(ownerInvoicePath)
+          || (
+            existsAfter(ownerInvoicePath)
+            && (
+              !('numeroNS' in getAfter(ownerInvoicePath).data)
+              || getAfter(ownerInvoicePath).data.numeroNS != resource.data.numeroNS
+              || (
+                'ug' in resource.data
+                && (
+                  !('nsUg' in getAfter(ownerInvoicePath).data)
+                  || getAfter(ownerInvoicePath).data.nsUg != resource.data.ug
+                )
+              )
+              || (
+                !('ug' in resource.data)
+                && 'nsUg' in getAfter(ownerInvoicePath).data
+              )
+            )
+          )
+        );
+    }
+
+    function validSagNsLockUpdate(workspaceId, id) {
+      return (
+          (
+            'ug' in resource.data
+            && validSagNsLock(workspaceId, id)
+            && resource.data.ug == request.resource.data.ug
+          )
+          || (
+            !('ug' in resource.data)
+            && validLegacySagNsLockUpdate(workspaceId, id)
+          )
+        )
+        && resource.data.id == request.resource.data.id
+        && resource.data.type == request.resource.data.type
+        && resource.data.workspaceId == request.resource.data.workspaceId
+        && resource.data.numeroNS == request.resource.data.numeroNS
+        && resource.data.createdAt == request.resource.data.createdAt
+        && (
+          sagNsLockOwnerUnchanged()
+          || validSagNsLockMetadataRefresh(workspaceId)
+          || validSagNsLockOwnerMigration(workspaceId)
+        );
+    }
+
+    function isSelfPlatformAccount() {
+      return isVerifiedUser()
+        && resource.data.accountType == 'sector'
+        && identityMatchesAccount(resource.data);
+    }
+
+    function selfAccountImmutableFieldsPreserved(accountId) {
+      return request.resource.data.email == resource.data.email
+        && request.resource.data.email == accountId
+        && request.resource.data.accountType == resource.data.accountType
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && (
+          (
+            !('ug' in resource.data)
+            && !('ug' in request.resource.data)
+          )
+          || (
+            'ug' in resource.data
+            && 'ug' in request.resource.data
+            && request.resource.data.ug == resource.data.ug
+          )
+        )
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy;
+    }
+
+    function selfAccountWorkspaceIsActive(accountId) {
+      return resource.data.workspaceId is string
+        && exists(
+          /databases/$(database)/documents/workspaces/$(resource.data.workspaceId)
+        )
+        && get(
+          /databases/$(database)/documents/workspaces/$(resource.data.workspaceId)
+        ).data.id == resource.data.workspaceId
+        && get(
+          /databases/$(database)/documents/workspaces/$(resource.data.workspaceId)
+        ).data.status == 'active'
+        && get(
+          /databases/$(database)/documents/workspaces/$(resource.data.workspaceId)
+        ).data.authorizedEmail == accountId
+        && (
+          (
+            !('ug' in resource.data)
+            && !('ug' in get(
+              /databases/$(database)/documents/workspaces/$(resource.data.workspaceId)
+            ).data)
+          )
+          || (
+            'ug' in resource.data
+            && 'ug' in get(
+              /databases/$(database)/documents/workspaces/$(resource.data.workspaceId)
+            ).data
+            && resource.data.ug == get(
+              /databases/$(database)/documents/workspaces/$(resource.data.workspaceId)
+            ).data.ug
+          )
+        );
+    }
+
+    function isSelfUidBinding(accountId) {
+      return isVerifiedUser()
+        && isPasswordSectorSession()
+        && sectorAccountUsesPasswordProvider(resource.data)
+        && resource.data.accountType == 'sector'
+        && resource.data.status == 'active'
+        && resource.data.email == accountId
+        && resource.data.email == request.auth.token.email
+        && !hasBoundUid(resource.data)
+        && request.resource.data.firebaseUid == request.auth.uid
+        && request.resource.data.firstLoginAt is string
+        && request.resource.data.lastLoginAt is string
+        && request.resource.data.updatedAt is string
+        && selfAccountImmutableFieldsPreserved(accountId)
+        && selfAccountWorkspaceIsActive(accountId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'firebaseUid',
+          'firstLoginAt',
+          'lastLoginAt',
+          'updatedAt'
+        ]);
+    }
+
+    function isSelfPreboundFirstLogin(accountId) {
+      return isVerifiedUser()
+        && isPasswordSectorSession()
+        && sectorAccountUsesPasswordProvider(resource.data)
+        && resource.data.accountType == 'sector'
+        && resource.data.status == 'active'
+        && resource.data.email == accountId
+        && resource.data.email == request.auth.token.email
+        && hasBoundUid(resource.data)
+        && resource.data.firebaseUid == request.auth.uid
+        && request.resource.data.firebaseUid == resource.data.firebaseUid
+        && !('firstLoginAt' in resource.data)
+        && request.resource.data.firstLoginAt is string
+        && request.resource.data.lastLoginAt is string
+        && request.resource.data.updatedAt is string
+        && selfAccountImmutableFieldsPreserved(accountId)
+        && selfAccountWorkspaceIsActive(accountId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'firstLoginAt',
+          'lastLoginAt',
+          'updatedAt'
+        ]);
+    }
+
+    function isSelfBoundSessionRefresh(accountId) {
+      return isVerifiedUser()
+        && isPasswordSectorSession()
+        && sectorAccountUsesPasswordProvider(resource.data)
+        && resource.data.accountType == 'sector'
+        && resource.data.status == 'active'
+        && resource.data.email == accountId
+        && resource.data.email == request.auth.token.email
+        && hasBoundUid(resource.data)
+        && resource.data.firebaseUid == request.auth.uid
+        && request.resource.data.firebaseUid == resource.data.firebaseUid
+        && request.resource.data.firstLoginAt == resource.data.firstLoginAt
+        && request.resource.data.lastLoginAt is string
+        && request.resource.data.updatedAt is string
+        && selfAccountImmutableFieldsPreserved(accountId)
+        && selfAccountWorkspaceIsActive(accountId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'lastLoginAt',
+          'updatedAt'
+        ]);
+    }
+
+    function isValidAuditOperation(operation) {
+      return operation in [
+        'ns.assign',
+        'ns.replace',
+        'ns.remove',
+        'invoice.identity_migrate',
+        'invoice.delete',
+        'invoice.bulk_delete',
+        'empenho.delete',
+        'supplier_cnpj.migrate',
+        'sector.create',
+        'sector.profile_update',
+        'sector.status_change',
+        'sector.ug_backfill',
+        'sector.password_reset',
+        'sector.delete',
+        'historical.repair'
+      ];
+    }
+
+    function isValidAuditSource(source) {
+      return source in ['sag', 'manual', 'migration', 'system', 'admin'];
+    }
+
+    function isValidAuditEntityType(entityType) {
+      return entityType in ['invoice', 'invoice_batch', 'empenho', 'workspace', 'ns_lock'];
+    }
+
+    function auditUgMatchesWorkspace(workspaceId, ug) {
+      let workspace = workspaceData(workspaceId);
+      return (
+          workspaceId == 'hgesm-aprov'
+          && ug == '160416'
+          && (
+            !('ug' in workspace)
+            || workspace.ug == '160416'
+          )
+        )
+        || (
+          ug == null
+          && !('ug' in workspace)
+        )
+        || (
+          ug is string
+          && 'ug' in workspace
+          && workspace.ug == ug
+          && isValidUnitUg(ug)
+        );
+    }
+
+    function validAuditEventShape(eventId, workspaceId) {
+      return request.resource.data.keys().hasAll([
+          'eventVersion',
+          'eventId',
+          'workspaceId',
+          'ug',
+          'operation',
+          'source',
+          'entityType',
+          'entityId',
+          'correlationId',
+          'actorUid',
+          'actorEmail',
+          'before',
+          'after',
+          'metadata',
+          'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'eventVersion',
+          'eventId',
+          'workspaceId',
+          'ug',
+          'operation',
+          'source',
+          'entityType',
+          'entityId',
+          'correlationId',
+          'actorUid',
+          'actorEmail',
+          'before',
+          'after',
+          'metadata',
+          'createdAt'
+        ])
+        && request.resource.data.eventVersion == 'emprovex_audit_v1'
+        && request.resource.data.eventId == eventId
+        && request.resource.data.workspaceId == workspaceId
+        && isValidAuditOperation(request.resource.data.operation)
+        && isValidAuditSource(request.resource.data.source)
+        && isValidAuditEntityType(request.resource.data.entityType)
+        && request.resource.data.entityId is string
+        && request.resource.data.entityId.size() > 0
+        && request.resource.data.correlationId is string
+        && request.resource.data.correlationId.size() > 0
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.actorEmail == request.auth.token.email
+        && request.resource.data.before is map
+        && request.resource.data.after is map
+        && request.resource.data.metadata is map
+        && request.resource.data.createdAt == request.time;
+    }
+
+    function validWorkspaceAuditEvent(eventId, workspaceId) {
+      return validAuditEventShape(eventId, workspaceId)
+        && auditUgMatchesWorkspace(workspaceId, request.resource.data.ug);
+    }
+
+    function validPlatformAuditEvent(eventId) {
+      return isPlatformAdmin()
+        && validAuditEventShape(
+          eventId,
+          request.resource.data.workspaceId
+        )
+        && request.resource.data.source == 'admin'
+        && request.resource.data.operation in [
+          'sector.create',
+          'sector.profile_update',
+          'sector.status_change',
+          'sector.ug_backfill',
+          'sector.password_reset',
+          'sector.delete'
+        ];
+    }
+
+    // Diretório administrativo da plataforma. O administrador pode listar e
+    // manter metadados, mas não recebe acesso operacional aos workspaces externos.
+    match /workspaces/{workspaceId} {
+      allow get: if isPlatformAdmin()
+        || canReadWorkspaceMetadataFromResource(workspaceId);
+      allow list: if isPlatformAdmin();
+      allow create: if isPlatformAdmin()
+        && validWorkspaceCreate(workspaceId)
+        && workspaceHasMatchingAccountAfterWrite(workspaceId);
+      allow update: if isPlatformAdmin()
+        && workspaceId != 'hgesm-aprov'
+        && validWorkspaceAdminUpdate(workspaceId)
+        && workspaceHasMatchingAccountAfterWrite(workspaceId);
+      allow delete: if false;
+    }
+
+    match /platformAccounts/{accountId} {
+      allow get: if isPlatformAdmin() || isSelfPlatformAccount();
+      allow list: if isPlatformAdmin();
+      allow create: if isPlatformAdmin()
+        && validSectorAccountCreate(accountId)
+        && accountHasMatchingWorkspaceAfterWrite(accountId);
+      allow update: if (
+          isPlatformAdmin()
+          && accountId != 'aprov1hgesm@gmail.com'
+          && validSectorAccountAdminUpdate(accountId)
+          && accountHasMatchingWorkspaceAfterWrite(accountId)
+        )
+        || isSelfUidBinding(accountId)
+        || isSelfPreboundFirstLogin(accountId)
+        || isSelfBoundSessionRefresh(accountId);
+      allow delete: if false;
+    }
+
+    match /platformAuditEvents/{eventId} {
+      allow get, list: if isPlatformAdmin();
+      allow create: if validPlatformAuditEvent(eventId);
+      allow update, delete: if false;
+    }
+
+    match /platformUgIndex/{ug} {
+      allow get, list: if isPlatformAdmin();
+      allow create: if isPlatformAdmin()
+        && request.resource.data.keys().hasOnly([
+          'ug',
+          'workspaceId',
+          'email',
+          'createdAt',
+          'createdBy'
+        ])
+        && request.resource.data.ug == ug
+        && isValidUnitUg(ug)
+        && request.resource.data.workspaceId is string
+        && request.resource.data.email is string
+        && existsAfter(
+          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+        )
+        && existsAfter(
+          /databases/$(database)/documents/platformAccounts/$(request.resource.data.email)
+        )
+        && getAfter(
+          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+        ).data.ug == ug
+        && getAfter(
+          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+        ).data.authorizedEmail == request.resource.data.email
+        && getAfter(
+          /databases/$(database)/documents/platformAccounts/$(request.resource.data.email)
+        ).data.ug == ug
+        && getAfter(
+          /databases/$(database)/documents/platformAccounts/$(request.resource.data.email)
+        ).data.workspaceId == request.resource.data.workspaceId;
+      allow update, delete: if false;
+    }
+
+    // Workspace-scoped operational data. There is deliberately no admin bypass:
+    // a platform administrator cannot read another sector's operational records.
+    match /workspaces/{workspaceId}/auditEvents/{eventId} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validWorkspaceAuditEvent(eventId, workspaceId);
+      allow update, delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/empenhos/{id} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && empenhoCnpjCreateIsValid(request.resource.data);
+      allow update: if canAccessWorkspace(workspaceId)
+        && !empenhoDeletionIsLockedAfter(workspaceId, id)
+        && empenhoCnpjUpdateIsValid();
+      allow delete: if canAccessWorkspace(workspaceId)
+        && validEmpenhoLifecycleDelete(workspaceId, id);
+    }
+
+    match /workspaces/{workspaceId}/alerts/{id} {
+      allow read, delete: if canAccessWorkspace(workspaceId);
+      allow create, update: if canAccessWorkspace(workspaceId)
+        && linkedEmpenhoWriteAllowedAfter(workspaceId, request.resource.data);
+    }
+
+    match /workspaces/{workspaceId}/invoices/{id} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validInvoiceCreate(workspaceId, id);
+      allow update: if canAccessWorkspace(workspaceId)
+        && validInvoiceUpdate(workspaceId, id);
+      allow delete: if canAccessWorkspace(workspaceId)
+        && validInvoiceDelete(workspaceId, id);
+    }
+
+    match /workspaces/{workspaceId}/comissoes/{id} {
+      allow read, write: if canAccessWorkspace(workspaceId);
+    }
+
+    match /workspaces/{workspaceId}/cronogramas/{id} {
+      allow read, delete: if canAccessWorkspace(workspaceId);
+      allow create, update: if canAccessWorkspace(workspaceId)
+        && linkedEmpenhoWriteAllowedAfter(workspaceId, request.resource.data);
+    }
+
+    match /workspaces/{workspaceId}/settings/termoRecebimentoCounter {
+      // O cadastro administrativo verifica se existe contador residual antes de
+      // provisionar um workspace novo. Essa leitura prévia só é permitida enquanto
+      // o workspace ainda não existe; depois da criação, o administrador volta a
+      // não possuir acesso ao contador operacional do tenant.
+      allow read: if canAccessWorkspace(workspaceId)
+        || (
+          isPlatformAdmin()
+          && !workspaceExists(workspaceId)
+        );
+      allow create: if canAdminProvisionTermCounter(workspaceId)
+        || (
+          canAccessWorkspace(workspaceId)
+          && validInitialTermCounter()
+        );
+      allow update: if canAccessWorkspace(workspaceId)
+        && validOperationalTermCounterUpdate();
+      allow delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/settings/documentStorage {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validWorkspaceDocumentStorage(workspaceId);
+      allow update: if canAccessWorkspace(workspaceId)
+        && validWorkspaceDocumentStorageUpdate(workspaceId);
+      allow delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/settings/{id} {
+      // Listagem é limitada ao próprio workspace autenticado. Os settings atuais
+      // já são individualmente legíveis pelo setor; o list habilita diagnósticos
+      // de integridade sem ampliar acesso entre tenants.
+      allow list: if canAccessWorkspace(workspaceId);
+      allow get: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && canAccessWorkspace(workspaceId);
+      allow create: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && canAccessWorkspace(workspaceId)
+        && (
+          (
+            isEmpenhoDeletionLockId(id)
+            && validEmpenhoDeletionLockCreate(workspaceId, id)
+          )
+          || (
+            !isEmpenhoDeletionLockId(id)
+            && (
+              !isSagNsLockId(id)
+              || validSagNsLock(workspaceId, id)
+            )
+          )
+        );
+      allow update: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && canAccessWorkspace(workspaceId)
+        && !isEmpenhoDeletionLockId(id)
+        && (
+          !isSagNsLockId(id)
+          || validSagNsLockUpdate(workspaceId, id)
+        );
+      allow delete: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && canAccessWorkspace(workspaceId)
+        && (
+          (
+            isEmpenhoDeletionLockId(id)
+            && validEmpenhoDeletionLockDelete(workspaceId, id)
+          )
+          || (
+            !isEmpenhoDeletionLockId(id)
+            && (
+              !isSagNsLockId(id)
+              || validSagNsLockDelete(workspaceId, id)
+            )
+          )
+        );
+    }
+
+    // Bloco 13 — compatibilidade legada somente leitura.
+    // O runtime oficial já usa /workspaces/hgesm-aprov/...; os dados raiz ficam
+    // preservados apenas para consulta, auditoria e recuperação controlada.
+    // Qualquer rollback com escrita exige mudança explícita de Rules, evitando que
+    // uma simples regressão de frontend volte silenciosamente a gravar no legado.
+    match /empenhos/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /alerts/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /invoices/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /comissoes/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /cronogramas/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    // A identidade visual global precisa continuar disponível antes do login.
+    // A marca institucional é imutável no runtime: qualquer troca futura exige
+    // manutenção deliberada fora da aplicação e revisão explícita destas Rules.
+    match /settings/global {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Demais settings raiz (incluindo o contador histórico) ficam somente leitura.
+    match /settings/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+  }
+}
+);
+    }
+
+    function empenhoDeletionIsLockedAfter(workspaceId, empenhoId) {
+      let lockPath = /databases/$(database)/documents/workspaces/$(workspaceId)/settings/$(empenhoDeletionLockId(empenhoId));
+      return empenhoId is string
+        && existsAfter(lockPath);
+    }
+
+    function linkedEmpenhoWriteAllowedAfter(workspaceId, data) {
+      return !('empenhoId' in data)
+        || (
+          data.empenhoId is string
+          && !empenhoDeletionIsLockedAfter(workspaceId, data.empenhoId)
+        );
+    }
+
+    function validEmpenhoDeletionLockCreate(workspaceId, id) {
+      let empenhoId = request.resource.data.empenhoId;
+      let empenhoPath = /databases/$(database)/documents/workspaces/$(workspaceId)/empenhos/$(empenhoId);
+      return isEmpenhoDeletionLockId(id)
+        && request.resource.data.keys().hasOnly([
+          'id',
+          'type',
+          'workspaceId',
+          'empenhoId',
+          'correlationId',
+          'createdAt',
+          'createdBy'
+        ])
+        && request.resource.data.keys().hasAll([
+          'id',
+          'type',
+          'workspaceId',
+          'empenhoId',
+          'correlationId',
+          'createdAt',
+          'createdBy'
+        ])
+        && request.resource.data.id == id
+        && id == empenhoDeletionLockId(empenhoId)
+        && request.resource.data.type == 'empenho-deletion-lock'
+        && request.resource.data.workspaceId == workspaceId
+        && empenhoId is string
+        && empenhoId.size() > 0
+        && request.resource.data.correlationId is string
+        && request.resource.data.correlationId.size() > 0
+        && request.resource.data.createdAt is string
+        && request.resource.data.createdBy == request.auth.uid
+        && existsAfter(empenhoPath)
+        && getAfter(empenhoPath).data.id == empenhoId;
+    }
+
+    function validEmpenhoDeletionLockDelete(workspaceId, id) {
+      return isEmpenhoDeletionLockId(id)
+        && resource.data.id == id
+        && resource.data.type == 'empenho-deletion-lock'
+        && resource.data.workspaceId == workspaceId
+        && resource.data.createdBy == request.auth.uid;
+    }
+
+    function validEmpenhoLifecycleDelete(workspaceId, empenhoId) {
+      let lockId = empenhoDeletionLockId(empenhoId);
+      let lockPath = /databases/$(database)/documents/workspaces/$(workspaceId)/settings/$(lockId);
+      return exists(lockPath)
+        && get(lockPath).data.id == lockId
+        && get(lockPath).data.type == 'empenho-deletion-lock'
+        && get(lockPath).data.workspaceId == workspaceId
+        && get(lockPath).data.empenhoId == empenhoId
+        && get(lockPath).data.createdBy == request.auth.uid
+        && !existsAfter(lockPath);
+    }
+
     function invoiceHasControlledNs(data) {
       return 'numeroNS' in data
         && isValidNsNumber(data.numeroNS);
