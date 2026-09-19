@@ -945,6 +945,14 @@ export async function commitEmpenhoSupplierCnpjMigration(
         );
       }
 
+      const legacyNsWithoutUg = nsEntries.find((entry) => !entry.ug);
+      if (legacyNsWithoutUg) {
+        throw new NsIntegrityError(
+          'invalid_ug',
+          `A NF ${legacyNsWithoutUg.item.invoice.id} possui a NS ${legacyNsWithoutUg.ns} sem UG emitente. Informe a UG pelo controle de NS antes de migrar o CNPJ.`
+        );
+      }
+
       const seenNsIdentities = new Set<string>();
       for (const entry of nsEntries) {
         const identityKey = `${entry.ug || 'legacy'}|${entry.ns}`;
@@ -1079,44 +1087,18 @@ export async function commitEmpenhoSupplierCnpjMigration(
           entry.ns,
           'migration'
         );
-        if (!entry.ug) {
-          if (!existingLock) {
-            throw new NsIntegrityError(
-              'invalid_ug',
-              `A NF ${entry.item.invoice.id} possui NS legada sem UG e sem lock recuperável. Informe a UG antes de migrar o CNPJ.`
-            );
-          }
-          transaction.set(
-            operationalSettingsDocRef(scope, lockId),
-            {
-              ...existingLock,
-              id: lockId,
-              type: 'sag-ns-lock',
-              workspaceId: scope.workspaceId,
-              numeroNS: entry.ns,
-              invoiceRecordKey: entry.item.targetRecordKey,
-              invoiceId: entry.item.updatedInvoice.id,
-              empenhoId: entry.item.updatedInvoice.empenhoId,
-              supplierCnpj: plan.targetSupplierCnpj,
-              updatedAt: now,
-              updatedBy: userId,
-            },
-            { merge: false }
-          );
-        } else {
-          const nextLock = buildNsLockDocument({
-            workspaceId: scope.workspaceId,
-            mutation: targetMutation,
-            userId,
-            createdAt: existingLock?.createdAt || now,
-            updatedAt: now,
-          });
-          transaction.set(
-            operationalSettingsDocRef(scope, lockId),
-            nextLock,
-            { merge: true }
-          );
-        }
+        const nextLock = buildNsLockDocument({
+          workspaceId: scope.workspaceId,
+          mutation: targetMutation,
+          userId,
+          createdAt: existingLock?.createdAt || now,
+          updatedAt: now,
+        });
+        transaction.set(
+          operationalSettingsDocRef(scope, lockId),
+          nextLock,
+          { merge: true }
+        );
         migratedLockCount += 1;
       }
 
