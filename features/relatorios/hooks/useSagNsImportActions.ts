@@ -4,7 +4,7 @@ import type React from 'react';
 import type { User } from 'firebase/auth';
 import type { Empenho, Invoice } from '../../../lib/types';
 import { getInvoiceRecordKey, normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
-import type { SagNsPayload } from '../../../lib/sagNsContract';
+import { normalizeSagNsNumber, type SagNsPayload } from '../../../lib/sagNsContract';
 import { reconcileSagNsPayload } from '../../../lib/sagNsReconciliation';
 import {
   buildSagNsApplicationFingerprint,
@@ -89,14 +89,21 @@ export function useSagNsImportActions(context: SagNsImportActionsContext) {
         )
         .map((empenho) => empenho.id)
     );
-    const scopedInvoiceRecordKeys = invoices
-      .filter((invoice) => selectedEmpenhoIds.has(invoice.empenhoId))
+    const proposedNs = new Set(
+      changes.map((change) => normalizeSagNsNumber(change.proposedNs))
+    );
+    const knownNsOwnerRecordKeys = invoices
+      .filter(
+        (invoice) =>
+          selectedEmpenhoIds.has(invoice.empenhoId) &&
+          proposedNs.has(normalizeSagNsNumber(invoice.numeroNS))
+      )
       .map(getInvoiceRecordKey);
 
     const result = await commitSagNsImport(user.uid, {
       supplierCnpj: normalizedSupplierCnpj,
       changes,
-      scopedInvoiceRecordKeys,
+      knownNsOwnerRecordKeys,
     });
 
     if (result.updatedInvoices.length > 0) {
