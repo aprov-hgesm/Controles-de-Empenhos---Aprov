@@ -56,6 +56,7 @@ const server = spawn(
     env: {
       ...process.env,
       NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1',
+      NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: 'demo-emprovex-security',
       NEXT_TELEMETRY_DISABLED: '1',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
