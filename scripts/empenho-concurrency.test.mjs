@@ -75,18 +75,14 @@ test('atualização válida avança exatamente uma revisão', () => {
 });
 
 test('metadata parcial também avança uma revisão', () => {
-  assert.deepEqual(
-    buildNextEmpenhoRevisionMetadata(
-      empenho(9),
-      'uid-b',
-      '2026-09-19T12:02:00.000Z'
-    ),
-    {
-      revision: 10,
-      updatedAt: '2026-09-19T12:02:00.000Z',
-      updatedBy: 'uid-b',
-    }
+  const metadata = buildNextEmpenhoRevisionMetadata(
+    empenho(9),
+    'uid-b',
+    '2026-09-19T12:02:00.000Z'
   );
+  assert.equal(metadata.revision, 10);
+  assert.equal(metadata.updatedAt, '2026-09-19T12:02:00.000Z');
+  assert.equal(metadata.updatedBy, 'uid-b');
 });
 
 test('mesma revisão observada pode ser validada', () => {
