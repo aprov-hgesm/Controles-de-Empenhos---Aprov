@@ -18,6 +18,10 @@ import {
   type CommitEmpenhoDeletionResult,
 } from './empenhoDeletionService';
 import {
+  commitEmpenhoCreate,
+  commitEmpenhoUpdate,
+} from './empenhoConcurrencyService';
+import {
   getCurrentOperationalScope,
   getOperationalCollectionPath,
   getOperationalDocumentPath,
@@ -53,14 +57,12 @@ export async function getEmpenhos(userId: string): Promise<Empenho[]> {
   }
 }
 
-export async function saveEmpenho(userId: string, empenho: Empenho): Promise<void> {
-  const scope = getCurrentOperationalScope(userId);
-  const path = getOperationalDocumentPath(scope, 'empenhos', empenho.id);
-  try {
-    await setDoc(operationalDocRef(scope, 'empenhos', empenho.id), { ...empenho, userId });
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
-  }
+export async function createEmpenho(userId: string, empenho: Empenho): Promise<Empenho> {
+  return commitEmpenhoCreate(userId, empenho);
+}
+
+export async function saveEmpenho(userId: string, empenho: Empenho): Promise<Empenho> {
+  return commitEmpenhoUpdate(userId, empenho);
 }
 
 export async function removeEmpenho(
