@@ -700,6 +700,8 @@ async function main() {
   const sagInvoiceAKey = 'nf_11111111000191_sag-a';
   const sagInvoiceBKey = 'nf_11111111000191_sag-b';
   const sagInvoiceRollbackKey = 'nf_11111111000191_sag-rollback';
+  const sagInvoiceUgAKey = 'nf_11111111000191_sag-ug-a';
+  const sagInvoiceUgBKey = 'nf_11111111000191_sag-ug-b';
 
   await ownerSet(`workspaces/workspace-a/empenhos/${sagEmpenhoId}`, {
     id: sagEmpenhoId,
@@ -715,6 +717,8 @@ async function main() {
     [sagInvoiceAKey, 'SAG-A'],
     [sagInvoiceBKey, 'SAG-B'],
     [sagInvoiceRollbackKey, 'SAG-ROLLBACK'],
+    [sagInvoiceUgAKey, 'SAG-UG-A'],
+    [sagInvoiceUgBKey, 'SAG-UG-B'],
   ]) {
     await ownerSet(`workspaces/workspace-a/invoices/${recordKey}`, {
       id: invoiceId,
@@ -787,6 +791,42 @@ async function main() {
     1,
     'A mesma NS não pode aparecer em duas NFs após corrida concorrente.'
   );
+
+  const sameNumberDifferentUg = '2026NS009050';
+  await allowed('Mesmo número de NS pode ser reservado em UGs diferentes', async () => {
+    await reserveSagNs(
+      sessionA.db,
+      sessionA.user.uid,
+      'workspace-a',
+      sagInvoiceUgAKey,
+      'SAG-UG-A',
+      sagEmpenhoId,
+      sagSupplierCnpj,
+      sameNumberDifferentUg,
+      '160415'
+    );
+    await reserveSagNs(
+      sessionA.db,
+      sessionA.user.uid,
+      'workspace-a',
+      sagInvoiceUgBKey,
+      'SAG-UG-B',
+      sagEmpenhoId,
+      sagSupplierCnpj,
+      sameNumberDifferentUg,
+      '160416'
+    );
+  });
+  const [ugAInvoice, ugBInvoice, ugALock, ugBLock] = await Promise.all([
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', sagInvoiceUgAKey)),
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', sagInvoiceUgBKey)),
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'settings', sagLockId(sameNumberDifferentUg, '160415'))),
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'settings', sagLockId(sameNumberDifferentUg, '160416'))),
+  ]);
+  assert.equal(ugAInvoice.data()?.nsUg, '160415');
+  assert.equal(ugBInvoice.data()?.nsUg, '160416');
+  assert.equal(ugALock.data()?.ug, '160415');
+  assert.equal(ugBLock.data()?.ug, '160416');
 
   const winnerId = lockOwner === sagInvoiceAKey ? 'SAG-A' : 'SAG-B';
   await allowed('Reimportação SAG pelo mesmo proprietário do lock é idempotente', () =>
