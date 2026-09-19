@@ -7,6 +7,7 @@ import {
 } from './invoiceIdentity';
 import {
   normalizeSagNsNumber,
+  normalizeSagUg,
   type SagNsPayload,
   type SagNsRecord,
 } from './sagNsContract';
@@ -28,6 +29,7 @@ export interface SagNsInvoiceReference {
   invoiceRecordKey: string;
   empenhoId: string;
   issueDate: string;
+  currentUg: string | null;
   currentNs: string | null;
 }
 
@@ -58,17 +60,20 @@ export interface SagNsReconciliationStats {
 
 export interface SagNsReconciliationResult {
   supplierCnpj: string;
+  ug: string | null;
   items: SagNsReconciliationItem[];
   stats: SagNsReconciliationStats;
 }
 
 function toInvoiceReference(invoice: Invoice): SagNsInvoiceReference {
   const currentNs = normalizeSagNsNumber(invoice.numeroNS);
+  const currentUg = normalizeSagUg(invoice.nsUg);
   return {
     invoiceId: invoice.id,
     invoiceRecordKey: getInvoiceRecordKey(invoice),
     empenhoId: invoice.empenhoId,
     issueDate: invoice.issueDate,
+    currentUg,
     currentNs: currentNs || null,
   };
 }
@@ -116,6 +121,7 @@ export function reconcileSagNsPayload(
 ): SagNsReconciliationResult {
   const expectedCnpj = normalizeSupplierCnpj(supplierCnpj);
   const payloadCnpj = normalizeSupplierCnpj(payload.supplier_cnpj);
+  const payloadUg = normalizeSagUg(payload.ug);
 
   if (!expectedCnpj || !isValidSupplierCnpj(expectedCnpj)) {
     throw new Error('CNPJ selecionado inválido para conciliação SAG. Confira formato e dígitos verificadores.');
@@ -134,7 +140,8 @@ export function reconcileSagNsPayload(
   const scopedInvoices = invoices.filter((invoice) => selectedEmpenhoIds.has(invoice.empenhoId));
   const eligibleByNumber = new Map<string, Invoice[]>();
   const mismatchedByNumber = new Map<string, Invoice[]>();
-  const invoicesByNs = new Map<string, Invoice[]>();
+  const invoicesByNsIdentity = new Map<string, Invoice[]>();
+  const legacyInvoicesByNs = new Map<string, Invoice[]>();
 
   for (const invoice of scopedInvoices) {
     const invoiceNumber = normalizeInvoiceNumber(invoice.id);
@@ -150,9 +157,17 @@ export function reconcileSagNsPayload(
     if (!hasConflictingCnpj) {
       const normalizedNs = normalizeSagNsNumber(invoice.numeroNS);
       if (normalizedNs) {
-        const nsInvoices = invoicesByNs.get(normalizedNs) || [];
-        nsInvoices.push(invoice);
-        invoicesByNs.set(normalizedNs, nsInvoices);
+        const invoiceUg = normalizeSagUg(invoice.nsUg);
+        if (invoiceUg) {
+          const identity = `${invoiceUg}|${normalizedNs}`;
+          const nsInvoices = invoicesByNsIdentity.get(identity) || [];
+          nsInvoices.push(invoice);
+          invoicesByNsIdentity.set(identity, nsInvoices);
+        } else {
+          const legacyInvoices = legacyInvoicesByNs.get(normalizedNs) || [];
+          legacyInvoices.push(invoice);
+          legacyInvoicesByNs.set(normalizedNs, legacyInvoices);
+        }
       }
     }
   }
@@ -242,8 +257,9 @@ export function reconcileSagNsPayload(
     }
 
     const targetNs = normalizeSagNsNumber(target.numeroNS);
+    const targetUg = normalizeSagUg(target.nsUg);
     if (targetNs) {
-      if (targetNs === record.ns) {
+      if (targetNs === record.ns && targetUg && payloadUg && targetUg === payloadUg) {
         return {
           record,
           status: 'already_registered',
@@ -253,7 +269,16 @@ export function reconcileSagNsPayload(
         };
       }
 
-      return {
+      if (targetNs === record.ns && !targetUg && payloadUg) {
+        issues.push(
+          issue(
+            'warning',
+            'legacy_ns_missing_ug',
+            `A NF já possui a NS ${targetNs}, mas ainda não possui UG. A aplicação migrará a identidade para UG ${payloadUg} + NS.`
+          )
+        );
+      } else {
+        return {
         record,
         status: 'conflict_existing_ns',
         invoice: targetRef,
@@ -267,11 +292,18 @@ export function reconcileSagNsPayload(
           ),
         ],
       };
+      }
     }
 
-    const sameNsElsewhere = (invoicesByNs.get(record.ns) || []).filter(
+    const sameIdentityElsewhere = payloadUg
+      ? (invoicesByNsIdentity.get(`${payloadUg}|${record.ns}`) || []).filter(
+          (invoice) => getInvoiceRecordKey(invoice) !== getInvoiceRecordKey(target)
+        )
+      : [];
+    const ambiguousLegacyElsewhere = (legacyInvoicesByNs.get(record.ns) || []).filter(
       (invoice) => getInvoiceRecordKey(invoice) !== getInvoiceRecordKey(target)
     );
+    const sameNsElsewhere = [...sameIdentityElsewhere, ...ambiguousLegacyElsewhere];
 
     if (sameNsElsewhere.length > 0) {
       return {
@@ -284,7 +316,9 @@ export function reconcileSagNsPayload(
           issue(
             'blocker',
             'ns_already_used_by_other_invoice',
-            'A mesma NS já está cadastrada em outra NF deste fornecedor. Nenhuma alteração deve ser aplicada automaticamente.'
+            ambiguousLegacyElsewhere.length > 0
+              ? 'A mesma NS existe em outra NF legada sem UG. A UG histórica deve ser saneada antes de reutilizar o número.'
+              : 'A mesma identidade UG + NS já está cadastrada em outra NF deste fornecedor. Nenhuma alteração deve ser aplicada automaticamente.'
           ),
         ],
       };
@@ -301,6 +335,7 @@ export function reconcileSagNsPayload(
 
   return {
     supplierCnpj: expectedCnpj,
+    ug: payloadUg,
     items,
     stats: countStats(items),
   };
