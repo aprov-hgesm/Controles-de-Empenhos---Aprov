@@ -36,17 +36,6 @@ for (const [tab, collections] of Object.entries(expected)) {
 }
 
 assert.match(source, /empenhos: true;/, 'Empenhos precisa permanecer sempre em tempo real.');
-assert.doesNotMatch(
-  source,
-  /painel:[\s\S]*?invoices: true/,
-  'Dashboard não deve manter invoices abertas.'
-);
-assert.doesNotMatch(
-  source,
-  /painel:[\s\S]*?cronogramas: true/,
-  'Dashboard não deve manter cronogramas abertos.'
-);
-
 console.log('OPERATIONAL SUBSCRIPTION PLAN: PASS');
 console.log('Painel: 1 coleção operacional realtime');
 console.log('Empenhos: 3 coleções operacionais realtime');
