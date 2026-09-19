@@ -207,6 +207,9 @@ jobs:
       - name: Block 10 historical consistency guard
         run: npm run verify:block-10-consistency
 
+      - name: Block 11 SAG conservative refactor guard
+        run: npm run verify:block-11-sag-refactor
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
