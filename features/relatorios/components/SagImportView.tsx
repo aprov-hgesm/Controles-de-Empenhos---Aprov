@@ -41,7 +41,6 @@ import {
 import {
   buildSagNsApplicationFingerprint,
   buildSagNsApplicationPreview,
-  type SagNsApplicationDecision,
 } from '../../../lib/sagNsApplicationPreview';
 import type { SagNsImportCommitResult } from '../../../lib/sagNsPersistence';
 import { SagApplicationPreviewSection, type SagPreviewFilter } from './SagApplicationPreviewSection';
