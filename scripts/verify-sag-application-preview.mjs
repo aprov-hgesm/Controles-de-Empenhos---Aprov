@@ -7,7 +7,10 @@ const root = process.cwd();
 const findings = [];
 
 const model = read('lib/sagNsApplicationPreview.ts');
-const view = read('features/relatorios/components/SagImportView.tsx');
+const view = [
+  read('features/relatorios/components/SagImportView.tsx'),
+  read('features/relatorios/components/SagApplicationPreviewSection.tsx'),
+].join('\n');
 const pkg = read('package.json');
 const workflow = read('.github/workflows/application-ci.yml');
 
