@@ -104,13 +104,25 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
   const [isCreatingEmpenho, setIsCreatingEmpenho] = React.useState(false);
   const [isSavingReview, setIsSavingReview] = React.useState(false);
   const [isSavingItem, setIsSavingItem] = React.useState(false);
-  const [showClassesModal, setShowClassesModal] = React.useState(false);
+  const [empenhosSubTab, setEmpenhosSubTab] = React.useState<'overview' | 'register' | 'classes'>('overview');
   const [newClassCode, setNewClassCode] = React.useState('');
   const [newClassDescription, setNewClassDescription] = React.useState('');
   const [newClassRequiresTR, setNewClassRequiresTR] = React.useState(true);
   const [classDescriptionDrafts, setClassDescriptionDrafts] = React.useState<Record<string, string>>({});
   const [classTrRequirementDrafts, setClassTrRequirementDrafts] = React.useState<Record<string, boolean>>({});
   const [savingClassificationEmpenhoId, setSavingClassificationEmpenhoId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!showNewEmpenhoModal && empenhosSubTab === 'register') {
+      setEmpenhosSubTab('overview');
+    }
+  }, [empenhosSubTab, showNewEmpenhoModal]);
+
+  const selectEmpenhosSubTab = (tab: 'overview' | 'register' | 'classes') => {
+    setEmpenhosSubTab(tab);
+    setShowConfirmSaveModal(false);
+    setShowNewEmpenhoModal(tab === 'register');
+  };
 
   const handleCreateEmpenhoWithFeedback = async (event: React.FormEvent) => {
     if (isCreatingEmpenho) {
@@ -185,28 +197,84 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
               {!selectedEmpenhoDetailId ? (
                 <>
                   {/* Screen Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex flex-col gap-5">
                     <div>
-                      <h2 className="text-2xl font-bold tracking-tight text-[#00288e]">Empenhos</h2>
-                      <p className="text-sm text-gray-500 font-medium">Controle de faturamento, saldos orçamentários e contratos</p>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#00288e]/55">
+                          Central de Empenhos
+                        </span>
+                        <span className="h-1 w-1 rounded-full bg-blue-400/60" aria-hidden="true" />
+                        <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">
+                          Gestão orçamentária
+                        </span>
+                      </div>
+                      <h2 className="mt-1 text-2xl font-bold tracking-tight text-[#00288e]">Empenhos</h2>
+                      <p className="text-sm font-medium text-gray-500">Controle de faturamento, saldos orçamentários e contratos</p>
                     </div>
-                    <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
+
+                    <div
+                      role="tablist"
+                      aria-label="Navegação da área de Empenhos"
+                      className="flex w-full gap-2 overflow-x-auto rounded-2xl border border-white/50 bg-white/55 p-2 shadow-sm backdrop-blur-md no-scrollbar"
+                    >
                       <button
+                        id="empenhos-tab-overview"
                         type="button"
-                        onClick={() => setShowClassesModal(true)}
-                        className="px-4 h-12 bg-white/70 text-[#00288e] border border-blue-200/70 font-bold text-sm rounded-xl hover:bg-white transition-all shadow-sm active:scale-95 duration-150 flex items-center justify-center gap-2 cursor-pointer"
+                        role="tab"
+                        aria-selected={empenhosSubTab === 'overview'}
+                        aria-controls="empenhos-panel-overview"
+                        onClick={() => selectEmpenhosSubTab('overview')}
+                        className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-xs font-extrabold transition-all sm:min-w-[150px] ${
+                          empenhosSubTab === 'overview'
+                            ? 'bg-[#00288e] text-white shadow-md shadow-blue-950/10'
+                            : 'text-gray-500 hover:bg-white/80 hover:text-[#00288e]'
+                        }`}
                       >
-                        <Settings2 className="w-4.5 h-4.5" /> Configurar Classes
+                        <Eye className="h-4 w-4" aria-hidden="true" />
+                        Visão geral
                       </button>
-                      <button 
-                        onClick={() => setShowNewEmpenhoModal(true)}
-                        className="px-5 h-12 bg-[#00288e] text-white font-bold text-sm rounded-xl hover:bg-[#1e40af] transition-all shadow-md active:scale-95 duration-150 flex items-center justify-center gap-2 cursor-pointer"
+                      <button
+                        id="empenhos-tab-register"
+                        type="button"
+                        role="tab"
+                        aria-selected={empenhosSubTab === 'register'}
+                        aria-controls="empenhos-panel-register"
+                        onClick={() => selectEmpenhosSubTab('register')}
+                        className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-xs font-extrabold transition-all sm:min-w-[170px] ${
+                          empenhosSubTab === 'register'
+                            ? 'bg-[#00288e] text-white shadow-md shadow-blue-950/10'
+                            : 'text-gray-500 hover:bg-white/80 hover:text-[#00288e]'
+                        }`}
                       >
-                        <Plus className="w-5 h-5" /> Novo Empenho
+                        <Plus className="h-4 w-4" aria-hidden="true" />
+                        Cadastrar Empenho
+                      </button>
+                      <button
+                        id="empenhos-tab-classes"
+                        type="button"
+                        role="tab"
+                        aria-selected={empenhosSubTab === 'classes'}
+                        aria-controls="empenhos-panel-classes"
+                        onClick={() => selectEmpenhosSubTab('classes')}
+                        className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-xs font-extrabold transition-all sm:min-w-[170px] ${
+                          empenhosSubTab === 'classes'
+                            ? 'bg-[#00288e] text-white shadow-md shadow-blue-950/10'
+                            : 'text-gray-500 hover:bg-white/80 hover:text-[#00288e]'
+                        }`}
+                      >
+                        <Settings2 className="h-4 w-4" aria-hidden="true" />
+                        Configurar Classes
                       </button>
                     </div>
                   </div>
 
+                  {empenhosSubTab === 'overview' && (
+                    <div
+                      id="empenhos-panel-overview"
+                      role="tabpanel"
+                      aria-labelledby="empenhos-tab-overview"
+                      className="space-y-6"
+                    >
                   {/* Filtering & Search Row */}
                   <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center">
                     <div className="relative flex-1">
@@ -463,7 +531,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
 
                     {/* Empty State visual card */}
                     <div 
-                      onClick={() => setShowNewEmpenhoModal(true)}
+                      onClick={() => selectEmpenhosSubTab('register')}
                       className="bg-[#eff4ff]/20 rounded-2xl border-2 border-dashed border-blue-200/50 flex flex-col items-center justify-center p-6 text-center hover:bg-[#e5eeff]/30 transition-all cursor-pointer min-h-[220px]"
                     >
                       <div className="w-12 h-12 bg-blue-50 text-[#00288e] rounded-full flex items-center justify-center mb-3 shadow-inner">
@@ -473,6 +541,8 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                       <p className="text-xs text-gray-500 font-semibold mt-1 max-w-[200px]">Cadastre novas contratações orçamentárias do hospital</p>
                     </div>
                   </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 /* DETAIL VIEW FOR THE SELECTED EMPENHO */
@@ -1264,32 +1334,34 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                 })()
               )}
 
-              {/* Configuração de Classes de Empenho */}
-              <AnimatePresence>
-                {showClassesModal && (
-                  <div className="fixed inset-0 z-[110] flex items-start justify-center overflow-y-auto bg-black/50 px-4 pb-8 pt-20 sm:pt-24 backdrop-blur-sm">
-                    <motion.div
-                      initial={{ opacity: 0, y: 16, scale: 0.98 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 12, scale: 0.98 }}
-                      className="w-full max-w-2xl max-h-[calc(100vh-7rem)] overflow-y-auto rounded-2xl border border-gray-100 bg-white shadow-2xl"
-                    >
-                      <div className="sticky top-0 z-10 flex items-center justify-between gap-4 bg-[#00288e] p-5 text-white">
-                        <div>
-                          <h3 className="text-base font-bold tracking-tight">Configuração das Classes de Empenho</h3>
-                          <p className="mt-0.5 text-xs text-blue-200">Edite o descritivo, defina se a classe exige TR ou inclua novas classes para este workspace.</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setShowClassesModal(false)}
-                          className="rounded-lg p-1 text-blue-100 transition hover:bg-white/10 hover:text-white"
-                        >
-                          <X className="h-5 w-5" />
-                        </button>
+              {/* Subaba: Configuração de Classes de Empenho */}
+              {!selectedEmpenhoDetailId && empenhosSubTab === 'classes' && (
+                <motion.section
+                  id="empenhos-panel-classes"
+                  role="tabpanel"
+                  aria-labelledby="empenhos-tab-classes"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  className="overflow-hidden rounded-3xl border border-white/55 bg-white/70 shadow-lg shadow-blue-950/[0.05] backdrop-blur-md"
+                >
+                  <div className="flex flex-col gap-3 border-b border-blue-900/10 bg-gradient-to-r from-[#071a3a] via-[#0a2a63] to-[#00288e] px-5 py-5 text-white sm:px-6">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.07] text-blue-100">
+                        <Settings2 className="h-5 w-5" aria-hidden="true" />
                       </div>
+                      <div>
+                        <p className="font-mono text-[8px] font-bold uppercase tracking-[0.20em] text-blue-200/60">EMPROVEX // CLASSIFICAÇÃO</p>
+                        <h3 className="mt-1 text-base font-extrabold tracking-tight">Configuração das Classes de Empenho</h3>
+                        <p className="mt-1 max-w-3xl text-xs leading-relaxed text-blue-100/75">
+                          Edite o descritivo, defina a exigência de Termo de Recebimento ou inclua novas classes para este workspace.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-                      <div className="space-y-5 p-5">
-                        <div className="space-y-3">
+                      <div className="space-y-6 p-5 sm:p-6">
+                        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                           {empenhoClasses.map((definition) => {
                             const classCount = empenhos.filter(
                               (emp) => (emp.classification || 'QR').toUpperCase() === definition.code
@@ -1412,45 +1484,52 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                           </div>
                         </div>
                       </div>
-                    </motion.div>
-                  </div>
-                )}
-              </AnimatePresence>
 
-              {/* New Empenho Modal Dialog Overlay */}
-              <AnimatePresence>
-                {showNewEmpenhoModal && (
-                  <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/50 px-4 pb-8 pt-20 sm:pt-24 backdrop-blur-sm">
-                    <motion.div 
-                      initial={{ scale: 0.9, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.9, opacity: 0 }}
-                      className={`bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-h-[calc(100vh-7rem)] overflow-y-auto transition-all duration-300 mb-8 ${
-                        reviewEmpenho ? 'max-w-5xl' : 'max-w-xl'
-                      }`}
-                    >
-                      {/* Modal Header */}
-                      <div className="sticky top-0 z-20 bg-[#00288e] text-white p-5 flex justify-between items-center">
-                        <div>
-                          <h3 className="font-bold text-base tracking-tight">
-                            {reviewEmpenho ? 'Revisão do Empenho Importado' : 'Adicionar Novo Empenho'}
-                          </h3>
-                          <p className="text-xs text-blue-200 mt-0.5">
-                            {reviewEmpenho ? 'Revise e edite os dados extraídos antes de confirmar o salvamento' : 'Escolha um modo de cadastro para iniciar'}
-                          </p>
-                        </div>
-                        <button 
-                          onClick={() => {
-                            setShowNewEmpenhoModal(false);
-                            setReviewEmpenho(null);
-                            setJsonInput('');
-                            setJsonError(null);
-                          }} 
-                          className="text-blue-100 hover:text-white transition-all p-1 hover:bg-white/10 rounded-lg"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
+                </motion.section>
+              )}
+
+              {/* Subaba: Cadastro de Empenho */}
+              {!selectedEmpenhoDetailId && empenhosSubTab === 'register' && showNewEmpenhoModal && (
+                <motion.section
+                  id="empenhos-panel-register"
+                  role="tabpanel"
+                  aria-labelledby="empenhos-tab-register"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  className="w-full overflow-hidden rounded-3xl border border-white/55 bg-white/75 shadow-lg shadow-blue-950/[0.05] backdrop-blur-md"
+                >
+                  <div className="flex flex-col gap-4 border-b border-blue-900/10 bg-gradient-to-r from-[#071a3a] via-[#0a2a63] to-[#00288e] px-5 py-5 text-white sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.07] text-blue-100">
+                        {reviewEmpenho ? <CheckCircle2 className="h-5 w-5" aria-hidden="true" /> : <Plus className="h-5 w-5" aria-hidden="true" />}
                       </div>
+                      <div>
+                        <p className="font-mono text-[8px] font-bold uppercase tracking-[0.20em] text-blue-200/60">EMPROVEX // CADASTRO</p>
+                        <h3 className="mt-1 text-base font-extrabold tracking-tight">
+                          {reviewEmpenho ? 'Revisão do Empenho Importado' : 'Cadastrar Novo Empenho'}
+                        </h3>
+                        <p className="mt-1 max-w-3xl text-xs leading-relaxed text-blue-100/75">
+                          {reviewEmpenho
+                            ? 'Revise e edite os dados extraídos antes de confirmar o salvamento.'
+                            : 'Escolha o cadastro manual ou a importação estruturada via JSON.'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowNewEmpenhoModal(false);
+                        setReviewEmpenho(null);
+                        setJsonInput('');
+                        setJsonError(null);
+                      }}
+                      className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3.5 text-xs font-bold text-blue-50 transition hover:bg-white/[0.12]"
+                    >
+                      <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                      Voltar à visão geral
+                    </button>
+                  </div>
 
                       {/* Mode selection buttons - Only shown when not actively reviewing an imported JSON */}
                       {!reviewEmpenho && (
@@ -1488,7 +1567,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
 
                       {/* MODE 1: MANUAL REGISTRATION */}
                       {newEmpenhoMode === 'manual' && !reviewEmpenho && (
-                        <form onSubmit={handleCreateEmpenhoWithFeedback} className="p-5 space-y-4">
+                        <form onSubmit={handleCreateEmpenhoWithFeedback} className="mx-auto max-w-4xl p-5 sm:p-6 space-y-4">
                           <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Código do Empenho (NE)</label>
                             <input 
@@ -1716,7 +1795,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
 
                       {/* MODE 2 SUB-VIEW: JSON REVIEW & EDIT SCREEN */}
                       {reviewEmpenho && (
-                        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+                        <div className="p-5 sm:p-6 space-y-6">
                           
                           {/* Top-level Metadata Grid */}
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
@@ -1846,7 +1925,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                             </div>
 
                             {/* Scrollable table container */}
-                            <div className="border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                            <div className="overflow-x-auto rounded-2xl border border-gray-100 shadow-sm">
                               <table className="w-full text-left border-collapse">
                                 <thead>
                                   <tr className="bg-gray-50 border-b border-gray-100 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
@@ -1980,12 +2059,11 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                           </div>
                         </div>
                       )}
-                    </motion.div>
-                  </div>
-                )}
-              </AnimatePresence>
 
-              {/* Sub-modal: Confirm JSON Save Resumo */}
+                </motion.section>
+              )}
+
+              {/* Modal breve de confirmação: permitido pelo contrato de UX */}
               <AnimatePresence>
                 {showConfirmSaveModal && reviewEmpenho && (
                   <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
