@@ -1123,7 +1123,7 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
               <div>
                 <p className="text-sm font-extrabold">Validação sem persistência</p>
                 <p className="mt-1 text-xs font-medium leading-relaxed text-emerald-800/80">
-                  Nenhuma NS é gravada automaticamente. A escrita só ocorre após revisão do lote, confirmação humana explícita
+                  Nenhuma NS será gravada automaticamente. A escrita só ocorre após revisão do lote, confirmação humana explícita
                   e revalidação transacional das NFs e dos empenhos imediatamente antes do commit.
                 </p>
               </div>
