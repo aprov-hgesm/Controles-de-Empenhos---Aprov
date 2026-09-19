@@ -822,6 +822,240 @@ async function main() {
     )
   );
 
+  console.log('\nExclusão protegida de empenho');
+
+  const deletionEmpenhoId = '2026NE-DEL-001';
+  const deletionCnpj = '11111111000191';
+  const deletionInvoiceKey = 'nf_11111111000191_del-001';
+  const deletionNs = '2026NS008901';
+  const deletionLockId = `empenhoDelete_${deletionEmpenhoId}`;
+  const deletionLockRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'settings',
+    deletionLockId
+  );
+  const deletionEmpenhoRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'empenhos',
+    deletionEmpenhoId
+  );
+  const deletionInvoiceRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'invoices',
+    deletionInvoiceKey
+  );
+  const deletionAlertRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'alerts',
+    'alert-del-001'
+  );
+  const deletionCronogramaRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'cronogramas',
+    'cronograma-del-001'
+  );
+
+  await ownerSet(`workspaces/workspace-a/empenhos/${deletionEmpenhoId}`, {
+    id: deletionEmpenhoId,
+    supplier: 'Fornecedor Exclusão',
+    supplierCnpj: deletionCnpj,
+    description: 'Lifecycle protegido de exclusão',
+    date: '2026-01-01',
+    status: 'Ativo',
+    items: [],
+  });
+  await ownerSet(`workspaces/workspace-a/invoices/${deletionInvoiceKey}`, {
+    id: 'DEL-001',
+    recordKey: deletionInvoiceKey,
+    empenhoId: deletionEmpenhoId,
+    supplier: 'Fornecedor Exclusão',
+    supplierCnpj: deletionCnpj,
+    issueDate: '2026-01-10',
+    items: [],
+    totalValue: 100,
+  });
+  await ownerSet('workspaces/workspace-a/alerts/alert-del-001', {
+    id: 'alert-del-001',
+    empenhoId: deletionEmpenhoId,
+    type: 'ATENÇÃO',
+    title: 'Alerta vinculado',
+    subtitle: 'Teste',
+    description: 'Teste',
+    date: 'Agora',
+  });
+  await ownerSet('workspaces/workspace-a/cronogramas/cronograma-del-001', {
+    id: 'cronograma-del-001',
+    empenhoId: deletionEmpenhoId,
+    dataCriacao: '2026-01-01',
+    colunas: [],
+    distribuicao: {},
+  });
+
+  await reserveSagNs(
+    sessionA.db,
+    sessionA.user.uid,
+    'workspace-a',
+    deletionInvoiceKey,
+    'DEL-001',
+    deletionEmpenhoId,
+    deletionCnpj,
+    deletionNs
+  );
+  const deletionNsLockRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'settings',
+    sagLockId(deletionNs)
+  );
+
+  await allowed('Setor cria lock técnico antes de excluir empenho', () =>
+    setDoc(deletionLockRef, {
+      id: deletionLockId,
+      type: 'empenho-deletion-lock',
+      workspaceId: 'workspace-a',
+      empenhoId: deletionEmpenhoId,
+      correlationId: 'delete-correlation-001',
+      createdAt: now(),
+      createdBy: sessionA.user.uid,
+    })
+  );
+
+  await denied('Empenho bloqueado para alteração enquanto exclusão está em andamento', () =>
+    updateDoc(deletionEmpenhoRef, { pregao: 'NAO-DEVE-GRAVAR' })
+  );
+
+  await denied('Nova NF não entra no empenho depois do lock de exclusão', () =>
+    setDoc(
+      doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', 'nf_11111111000191_del-late'),
+      {
+        id: 'DEL-LATE',
+        recordKey: 'nf_11111111000191_del-late',
+        empenhoId: deletionEmpenhoId,
+        supplier: 'Fornecedor Exclusão',
+        supplierCnpj: deletionCnpj,
+        issueDate: '2026-01-11',
+        items: [],
+        totalValue: 10,
+      }
+    )
+  );
+
+  await denied('Novo alerta estruturado não entra no empenho durante exclusão', () =>
+    setDoc(
+      doc(sessionA.db, 'workspaces', 'workspace-a', 'alerts', 'alert-del-late'),
+      {
+        id: 'alert-del-late',
+        empenhoId: deletionEmpenhoId,
+        type: 'ATENÇÃO',
+        title: 'Tardio',
+        subtitle: 'Teste',
+        description: 'Teste',
+        date: 'Agora',
+      }
+    )
+  );
+
+  await denied('Novo cronograma não entra no empenho durante exclusão', () =>
+    setDoc(
+      doc(sessionA.db, 'workspaces', 'workspace-a', 'cronogramas', 'cronograma-del-late'),
+      {
+        id: 'cronograma-del-late',
+        empenhoId: deletionEmpenhoId,
+        dataCriacao: '2026-01-02',
+        colunas: [],
+        distribuicao: {},
+      }
+    )
+  );
+
+  await denied('Empenho não pode ser apagado isoladamente mantendo o lock técnico', () =>
+    deleteDoc(deletionEmpenhoRef)
+  );
+
+  const deletionAuditRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'auditEvents',
+    'audit-empenho-delete-001'
+  );
+
+  await allowed('Empenho + NF + locks + vínculos são excluídos na mesma transação', () =>
+    runTransaction(sessionA.db, async (transaction) => {
+      const [
+        empenhoSnapshot,
+        invoiceSnapshot,
+        nsLockSnapshot,
+        deletionLockSnapshot,
+        alertSnapshot,
+        cronogramaSnapshot,
+      ] = await Promise.all([
+        transaction.get(deletionEmpenhoRef),
+        transaction.get(deletionInvoiceRef),
+        transaction.get(deletionNsLockRef),
+        transaction.get(deletionLockRef),
+        transaction.get(deletionAlertRef),
+        transaction.get(deletionCronogramaRef),
+      ]);
+
+      assert.equal(empenhoSnapshot.exists(), true);
+      assert.equal(invoiceSnapshot.exists(), true);
+      assert.equal(nsLockSnapshot.exists(), true);
+      assert.equal(deletionLockSnapshot.exists(), true);
+      assert.equal(alertSnapshot.exists(), true);
+      assert.equal(cronogramaSnapshot.exists(), true);
+
+      transaction.delete(deletionInvoiceRef);
+      transaction.delete(deletionNsLockRef);
+      transaction.delete(deletionAlertRef);
+      transaction.delete(deletionCronogramaRef);
+      transaction.delete(deletionEmpenhoRef);
+      transaction.delete(deletionLockRef);
+      transaction.set(deletionAuditRef, {
+        eventVersion: 'emprovex_audit_v1',
+        eventId: 'audit-empenho-delete-001',
+        workspaceId: 'workspace-a',
+        ug: '160416',
+        operation: 'empenho.delete',
+        source: 'system',
+        entityType: 'empenho',
+        entityId: deletionEmpenhoId,
+        correlationId: 'delete-correlation-001',
+        actorUid: sessionA.user.uid,
+        actorEmail: identities.a.email,
+        before: { empenhoId: deletionEmpenhoId },
+        after: { deleted: true },
+        metadata: { deletedInvoiceCount: 1, deletedNsLockCount: 1 },
+        createdAt: serverTimestamp(),
+      });
+    })
+  );
+
+  const deletionAfter = await Promise.all([
+    getDoc(deletionEmpenhoRef),
+    getDoc(deletionInvoiceRef),
+    getDoc(deletionNsLockRef),
+    getDoc(deletionLockRef),
+    getDoc(deletionAlertRef),
+    getDoc(deletionCronogramaRef),
+    getDoc(deletionAuditRef),
+  ]);
+  for (const snapshot of deletionAfter.slice(0, 6)) {
+    assert.equal(snapshot.exists(), false);
+  }
+  assert.equal(deletionAfter[6].data()?.operation, 'empenho.delete');
+
   console.log('\nHardening transacional da importação SAG');
   const sagSupplierCnpj = '11111111000191';
   const sagEmpenhoId = '2026NE-SAG-001';
