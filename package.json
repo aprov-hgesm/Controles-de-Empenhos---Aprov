@@ -91,7 +91,9 @@
     "verify:block-11-sag-refactor": "node scripts/verify-block-11-sag-refactor.mjs",
     "verify:block-12-empenho-deletion": "node scripts/verify-block-12-empenho-deletion.mjs",
     "test:empenho-concurrency": "node --experimental-vm-modules --test scripts/empenho-concurrency.test.mjs",
-    "verify:block-13-empenho-concurrency": "node scripts/verify-block-13-empenho-concurrency.mjs"
+    "verify:block-13-empenho-concurrency": "node scripts/verify-block-13-empenho-concurrency.mjs",
+    "test:operational-subscription-plan": "node scripts/operational-subscription-plan.test.mjs",
+    "verify:block-14-scalability": "node scripts/verify-block-14-scalability.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
