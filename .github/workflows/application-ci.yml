@@ -201,6 +201,9 @@ jobs:
       - name: EMPROVEX brand notifications guard
         run: npm run verify:brand-notifications
 
+      - name: EMPROVEX empenhos subtabs guard
+        run: npm run verify:empenhos-subtabs
+
       - name: Production build
         run: npm run build
 
