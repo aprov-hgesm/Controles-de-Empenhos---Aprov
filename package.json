@@ -67,7 +67,9 @@
     "verify:sag-ns-hardening": "node scripts/verify-sag-ns-hardening.mjs",
     "verify:sag-ux": "node scripts/verify-sag-ux.mjs",
     "test:ns-integrity-contract": "node --test scripts/ns-integrity-contract.test.mjs",
-    "verify:ns-integrity-contract": "node scripts/verify-ns-integrity-contract.mjs"
+    "verify:ns-integrity-contract": "node scripts/verify-ns-integrity-contract.mjs",
+    "test:ns-integrity": "node --experimental-vm-modules --test scripts/ns-integrity.test.mjs",
+    "verify:ns-integrity-service": "node scripts/verify-ns-integrity-service.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
