@@ -1,6 +1,6 @@
 'use client';
 
-import { type ChangeEvent, type MouseEvent, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { Loader2, Menu, ShieldCheck, UserRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -18,8 +18,6 @@ interface AppHeaderProps {
   driveControl?: ReactNode;
   workspaceContext: ResolvedWorkspaceContext;
   onOpenSidebar: () => void;
-  onLogoUpload: (event: ChangeEvent<HTMLInputElement>) => void;
-  onRemoveLogo: (event: MouseEvent) => void;
 }
 
 export function AppHeader({
@@ -29,8 +27,6 @@ export function AppHeader({
   driveControl,
   workspaceContext,
   onOpenSidebar,
-  onLogoUpload,
-  onRemoveLogo,
 }: AppHeaderProps) {
   const router = useRouter();
   const currentUser = auth.currentUser;
@@ -64,11 +60,7 @@ export function AppHeader({
         </button>
 
         <div className="flex items-center gap-2.5">
-          <AppShellLogo
-            customLogo={customLogo}
-            onLogoUpload={onLogoUpload}
-            onRemoveLogo={onRemoveLogo}
-          />
+          <AppShellLogo customLogo={customLogo} />
 
           <div className="emprovex-header-brand-copy flex flex-col">
             <span className="emprovex-header-brand-kicker hidden font-mono text-[8px] font-bold uppercase tracking-[0.22em] sm:block">
