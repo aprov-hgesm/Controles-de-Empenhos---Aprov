@@ -30,7 +30,7 @@ requireText(persistence, 'validateSagNsPersistenceSnapshot', 'Transação não e
 requireText(persistence, 'transaction.set(', 'Transação não possui escrita controlada de NS.');
 requireText(persistence, "{ merge: true }", 'Escrita SAG não está limitada a merge do documento existente.');
 requireText(persistence, 'alreadyAppliedCount', 'Resultado idempotente não informa NS já aplicadas.');
-requireText(persistence, 'input.changes.length > 400', 'Limite seguro de alterações por transação ausente.');
+requireText(persistence, 'MAX_SAG_NS_TRANSACTION_CHANGES', 'Limite seguro de alterações por transação ausente.');
 
 requireText(hook, 'reconcileSagNsPayload', 'Ação SAG não refaz a conciliação antes da transação.');
 requireText(hook, 'buildSagNsApplicationFingerprint', 'Ação SAG não compara a prévia confirmada.');
