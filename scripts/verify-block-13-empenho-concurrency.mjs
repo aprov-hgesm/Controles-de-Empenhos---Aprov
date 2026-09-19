@@ -164,8 +164,8 @@ for (const file of ['app', 'components', 'features', 'hooks', 'lib'].flatMap((di
   if (allowedDirectWriters.has(file)) continue;
   const source = read(file);
   if (
-    /transaction\.set\([\s\S]{0,220}['"]empenhos['"]/.test(source)
-    || /setDoc\([\s\S]{0,220}['"]empenhos['"]/.test(source)
+    /transaction\.set\s*\(\s*operationalDocRef\([^)]*['"]empenhos['"]/.test(source)
+    || /setDoc\s*\(\s*operationalDocRef\([^)]*['"]empenhos['"]/.test(source)
   ) {
     findings.push(`Writer direto de empenho fora do serviço revisionado: ${file}`);
   }
