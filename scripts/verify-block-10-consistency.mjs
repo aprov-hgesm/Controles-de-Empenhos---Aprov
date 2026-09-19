@@ -74,6 +74,9 @@ requireText(service, "operation: 'historical.repair'", 'Reparos não geram event
 requireText(service, "source: 'system'", 'Origem de reparo histórico não está identificada.');
 requireText(service, 'getCurrentOperationalScope(user.uid)', 'Scanner/reparo não usa escopo autenticado.');
 requireText(service, "where(documentId(), '>=', 'sagNsLock_')", 'Scanner faz leitura ampla de settings em vez de limitar aos locks de NS.');
+requireText(rules, 'allow list: if canAccessWorkspace(workspaceId);', 'Rules não autorizam listagem tenant-safe de settings para o diagnóstico.');
+requireText(fixture, 'Setor lista somente locks NS do próprio workspace para diagnóstico', 'Emulator não prova listagem de locks no próprio workspace.');
+requireText(fixture, 'Setor não lista settings de outro workspace', 'Emulator não prova bloqueio de listagem cross-tenant.');
 requireText(service, 'A UG da NF diverge da UG autenticada do workspace.', 'Reparo de lock não revalida UG do workspace.');
 requireText(service, 'A NF proprietária existe novamente. O lock não foi removido.', 'Remoção de lock órfão não revalida a ausência da NF.');
 requireText(service, 'A NF passou a possuir NS. O reparo automático de CNPJ foi bloqueado.', 'Backfill de CNPJ não revalida ausência de NS.');
