@@ -926,19 +926,24 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
                       somente quando precisar investigar uma divergência.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowTechnicalReconciliation((current) => !current)}
-                    aria-expanded={showTechnicalReconciliation}
-                    className="inline-flex h-9 w-fit items-center gap-2 rounded-xl border border-indigo-100 bg-white px-3 text-[10px] font-extrabold text-indigo-700 transition hover:bg-indigo-50"
-                  >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-indigo-100 bg-white px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-wider text-indigo-700">
+                      Somente leitura
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowTechnicalReconciliation((current) => !current)}
+                      aria-expanded={showTechnicalReconciliation}
+                      className="inline-flex h-9 w-fit items-center gap-2 rounded-xl border border-indigo-100 bg-white px-3 text-[10px] font-extrabold text-indigo-700 transition hover:bg-indigo-50"
+                    >
                     {showTechnicalReconciliation ? 'Ocultar diagnóstico' : 'Ver diagnóstico técnico'}
                     {showTechnicalReconciliation ? (
                       <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
                     ) : (
                       <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
                     )}
-                  </button>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
