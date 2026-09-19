@@ -3,7 +3,7 @@
 import React from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { AlertCircle, AlertTriangle, ArrowLeft, Braces, Calendar, CalendarDays, Check, CheckCircle2, ChevronRight, Copy, Edit, Eye, FileDown, FileText, Loader2, Package, Plus, Printer, Save, Search, Settings2, Trash2, X } from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActions';
 import type { Empenho, Invoice, EmpenhoPdfDocument } from '../../../lib/types';
 import { formatSupplierCnpj } from '../../../lib/invoiceIdentity';
@@ -94,6 +94,7 @@ interface EmpenhosViewProps { context: EmpenhosViewContext; }
 
 /** Tela de cadastro e detalhe de empenhos extraída sem alterar comportamento. */
 export function EmpenhosView({ context }: EmpenhosViewProps) {
+  const shouldReduceMotion = useReducedMotion();
   const { addEmpenhoClass, copiedPrompt, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCopyPrompt, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadPromptPdf, handleDownloadPromptTxt, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoPregao, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessJson, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, jsonInput, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setJsonInput, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user } = context;
   const [editingPregaoEmpenhoId, setEditingPregaoEmpenhoId] = React.useState<string | null>(null);
   const [pregaoDraft, setPregaoDraft] = React.useState('');
@@ -122,6 +123,27 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
     setEmpenhosSubTab(tab);
     setShowConfirmSaveModal(false);
     setShowNewEmpenhoModal(tab === 'register');
+  };
+
+  const handleEmpenhosSubTabKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const tabs = ['overview', 'register', 'classes'] as const;
+    if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
+
+    event.preventDefault();
+    const currentIndex = tabs.indexOf(empenhosSubTab);
+    const nextTab =
+      event.key === 'Home'
+        ? tabs[0]
+        : event.key === 'End'
+          ? tabs[tabs.length - 1]
+          : event.key === 'ArrowRight'
+            ? tabs[(currentIndex + 1) % tabs.length]
+            : tabs[(currentIndex - 1 + tabs.length) % tabs.length];
+
+    selectEmpenhosSubTab(nextTab);
+    window.requestAnimationFrame(() => {
+      document.getElementById(`empenhos-tab-${nextTab}`)?.focus();
+    });
   };
 
   const handleCreateEmpenhoWithFeedback = async (event: React.FormEvent) => {
@@ -215,6 +237,8 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                     <div
                       role="tablist"
                       aria-label="Navegação da área de Empenhos"
+                      aria-orientation="horizontal"
+                      onKeyDown={handleEmpenhosSubTabKeyDown}
                       className="flex w-full gap-2 overflow-x-auto rounded-2xl border border-white/50 bg-white/55 p-2 shadow-sm backdrop-blur-md no-scrollbar"
                     >
                       <button
@@ -223,8 +247,9 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         role="tab"
                         aria-selected={empenhosSubTab === 'overview'}
                         aria-controls="empenhos-panel-overview"
+                        tabIndex={empenhosSubTab === 'overview' ? 0 : -1}
                         onClick={() => selectEmpenhosSubTab('overview')}
-                        className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-xs font-extrabold transition-all sm:min-w-[150px] ${
+                        className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-xs font-extrabold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00288e]/45 focus-visible:ring-offset-2 sm:min-w-[150px] ${
                           empenhosSubTab === 'overview'
                             ? 'bg-[#00288e] text-white shadow-md shadow-blue-950/10'
                             : 'text-gray-500 hover:bg-white/80 hover:text-[#00288e]'
@@ -239,8 +264,9 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         role="tab"
                         aria-selected={empenhosSubTab === 'register'}
                         aria-controls="empenhos-panel-register"
+                        tabIndex={empenhosSubTab === 'register' ? 0 : -1}
                         onClick={() => selectEmpenhosSubTab('register')}
-                        className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-xs font-extrabold transition-all sm:min-w-[170px] ${
+                        className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-xs font-extrabold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00288e]/45 focus-visible:ring-offset-2 sm:min-w-[170px] ${
                           empenhosSubTab === 'register'
                             ? 'bg-[#00288e] text-white shadow-md shadow-blue-950/10'
                             : 'text-gray-500 hover:bg-white/80 hover:text-[#00288e]'
@@ -255,8 +281,9 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         role="tab"
                         aria-selected={empenhosSubTab === 'classes'}
                         aria-controls="empenhos-panel-classes"
+                        tabIndex={empenhosSubTab === 'classes' ? 0 : -1}
                         onClick={() => selectEmpenhosSubTab('classes')}
-                        className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-xs font-extrabold transition-all sm:min-w-[170px] ${
+                        className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-xs font-extrabold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00288e]/45 focus-visible:ring-offset-2 sm:min-w-[170px] ${
                           empenhosSubTab === 'classes'
                             ? 'bg-[#00288e] text-white shadow-md shadow-blue-950/10'
                             : 'text-gray-500 hover:bg-white/80 hover:text-[#00288e]'
@@ -1340,9 +1367,9 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                   id="empenhos-panel-classes"
                   role="tabpanel"
                   aria-labelledby="empenhos-tab-classes"
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  transition={shouldReduceMotion ? { duration: 0.12 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                   className="overflow-hidden rounded-3xl border border-white/55 bg-white/70 shadow-lg shadow-blue-950/[0.05] backdrop-blur-md"
                 >
                   <div className="flex flex-col gap-3 border-b border-blue-900/10 bg-gradient-to-r from-[#071a3a] via-[#0a2a63] to-[#00288e] px-5 py-5 text-white sm:px-6">
@@ -1494,9 +1521,9 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                   id="empenhos-panel-register"
                   role="tabpanel"
                   aria-labelledby="empenhos-tab-register"
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  transition={shouldReduceMotion ? { duration: 0.12 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                   className="w-full overflow-hidden rounded-3xl border border-white/55 bg-white/75 shadow-lg shadow-blue-950/[0.05] backdrop-blur-md"
                 >
                   <div className="flex flex-col gap-4 border-b border-blue-900/10 bg-gradient-to-r from-[#071a3a] via-[#0a2a63] to-[#00288e] px-5 py-5 text-white sm:flex-row sm:items-center sm:justify-between sm:px-6">
