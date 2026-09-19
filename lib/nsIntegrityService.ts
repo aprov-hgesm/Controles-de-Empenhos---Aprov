@@ -34,8 +34,9 @@ export interface CommitNsIntegrityResult {
 }
 
 function withoutNumeroNs(invoice: Invoice): Invoice {
-  const { numeroNS: _removed, ...rest } = invoice;
-  return rest;
+  const result: Invoice = { ...invoice };
+  delete result.numeroNS;
+  return result;
 }
 
 export async function commitNsIntegrityMutations(
