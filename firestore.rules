@@ -1046,7 +1046,8 @@ service cloud.firestore {
         'sector.status_change',
         'sector.ug_backfill',
         'sector.password_reset',
-        'sector.delete'
+        'sector.delete',
+        'historical.repair'
       ];
     }
 
@@ -1055,7 +1056,7 @@ service cloud.firestore {
     }
 
     function isValidAuditEntityType(entityType) {
-      return entityType in ['invoice', 'invoice_batch', 'empenho', 'workspace'];
+      return entityType in ['invoice', 'invoice_batch', 'empenho', 'workspace', 'ns_lock'];
     }
 
     function auditUgMatchesWorkspace(workspaceId, ug) {
