@@ -17,7 +17,9 @@ export interface SagNsApplicationPreviewItem {
   invoiceId: string | null;
   invoiceRecordKey: string | null;
   empenhoId: string | null;
+  currentUg: string | null;
   currentNs: string | null;
+  proposedUg: string | null;
   proposedNs: string | null;
   summary: string;
   warnings: string[];
@@ -35,6 +37,7 @@ export interface SagNsApplicationPreviewStats {
 
 export interface SagNsApplicationPreview {
   supplierCnpj: string;
+  ug: string | null;
   items: SagNsApplicationPreviewItem[];
   stats: SagNsApplicationPreviewStats;
   canAdvanceToPersistenceReview: boolean;
@@ -92,6 +95,7 @@ export function buildSagNsApplicationFingerprint(
 ): string {
   return JSON.stringify({
     supplierCnpj: preview.supplierCnpj,
+    ug: preview.ug,
     items: preview.items.map((item) => ({
       decision: item.decision,
       reconciliationStatus: item.reconciliationStatus,
@@ -99,7 +103,9 @@ export function buildSagNsApplicationFingerprint(
       invoiceRecordKey: item.invoiceRecordKey,
       invoiceId: item.invoiceId,
       empenhoId: item.empenhoId,
+      currentUg: item.currentUg,
       currentNs: item.currentNs,
+      proposedUg: item.proposedUg,
       proposedNs: item.proposedNs,
     })),
   });
@@ -109,13 +115,18 @@ export function buildSagNsApplicationPreview(
   reconciliation: SagNsReconciliationResult
 ): SagNsApplicationPreview {
   const items = reconciliation.items.map<SagNsApplicationPreviewItem>((item) => {
-    const decision = decisionFor(item);
+    const baseDecision = decisionFor(item);
+    const missingUg = baseDecision === 'change' && !reconciliation.ug;
+    const decision: SagNsApplicationDecision = missingUg ? 'blocked' : baseDecision;
     const warnings = item.issues
       .filter((issue) => issue.severity === 'warning')
       .map((issue) => issue.message);
     const blockers = item.issues
       .filter((issue) => issue.severity === 'blocker')
       .map((issue) => issue.message);
+    if (missingUg) {
+      blockers.push('A UG emitente é obrigatória para gravar uma nova identidade de NS.');
+    }
 
     return {
       decision,
@@ -125,7 +136,9 @@ export function buildSagNsApplicationPreview(
       invoiceId: item.invoice?.invoiceId || null,
       invoiceRecordKey: item.invoice?.invoiceRecordKey || null,
       empenhoId: item.invoice?.empenhoId || null,
+      currentUg: item.invoice?.currentUg || null,
       currentNs: item.invoice?.currentNs || null,
+      proposedUg: decision === 'change' ? reconciliation.ug : null,
       proposedNs: decision === 'change' ? item.record.ns : null,
       summary: summaryFor(item, decision),
       warnings,
@@ -144,6 +157,7 @@ export function buildSagNsApplicationPreview(
 
   return {
     supplierCnpj: reconciliation.supplierCnpj,
+    ug: reconciliation.ug,
     items,
     stats,
     canAdvanceToPersistenceReview: stats.blocked === 0 && stats.changes > 0,
