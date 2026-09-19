@@ -88,6 +88,7 @@ const invoice = ({
   empenhoId = '2026NE000001',
   cnpj = CNPJ,
   numeroNS,
+  nsUg,
 } = {}) => ({
   id,
   recordKey,
@@ -98,19 +99,24 @@ const invoice = ({
   supplier: 'Fornecedor',
   supplierCnpj: cnpj,
   ...(numeroNS ? { numeroNS } : {}),
+  ...(nsUg ? { nsUg } : {}),
 });
 
 const change = ({
   recordKey = 'nf_11111111000191_1234',
   id = '1234',
   empenhoId = '2026NE000001',
+  expectedCurrentUg = null,
   expectedCurrentNs = null,
+  proposedUg = '160416',
   proposedNs = '2026NS000001',
 } = {}) => ({
   invoiceRecordKey: recordKey,
   invoiceId: id,
   empenhoId,
+  expectedCurrentUg,
   expectedCurrentNs,
+  proposedUg,
   proposedNs,
 });
 
@@ -136,10 +142,10 @@ const validate = ({
 
 test('gera identidade determinística e segura para lock de NS', () => {
   assert.equal(
-    buildSagNsLockDocumentId(' 2026 ns 000001 '),
-    'sagNsLock_2026NS000001'
+    buildSagNsLockDocumentId('160416', ' 2026 ns 000001 '),
+    'sagNsLock_160416_2026NS000001'
   );
-  assert.equal(buildSagNsLockDocumentId(''), '');
+  assert.equal(buildSagNsLockDocumentId('', ''), '');
 });
 
 test('gera alterações somente a partir de linhas ALTERAR da prévia', () => {
@@ -156,7 +162,9 @@ test('gera alterações somente a partir de linhas ALTERAR da prévia', () => {
         invoiceId: '1234',
         invoiceRecordKey: 'nf_11111111000191_1234',
         empenhoId: '2026NE000001',
+        currentUg: null,
         currentNs: null,
+        proposedUg: '160416',
         proposedNs: '2026NS000001',
         summary: '',
         warnings: [],
@@ -170,7 +178,9 @@ test('gera alterações somente a partir de linhas ALTERAR da prévia', () => {
         invoiceId: '1235',
         invoiceRecordKey: 'nf_11111111000191_1235',
         empenhoId: '2026NE000001',
+        currentUg: '160416',
         currentNs: '2026NS000002',
+        proposedUg: null,
         proposedNs: null,
         summary: '',
         warnings: [],
@@ -181,7 +191,9 @@ test('gera alterações somente a partir de linhas ALTERAR da prévia', () => {
 
   assert.equal(changes.length, 1);
   assert.equal(changes[0].proposedNs, '2026NS000001');
+  assert.equal(changes[0].expectedCurrentUg, null);
   assert.equal(changes[0].expectedCurrentNs, null);
+  assert.equal(changes[0].proposedUg, '160416');
 });
 
 test('autoriza escrita quando identidade, CNPJ e NS atual continuam iguais à prévia', () => {
@@ -191,7 +203,7 @@ test('autoriza escrita quando identidade, CNPJ e NS atual continuam iguais à pr
 });
 
 test('segunda aplicação da mesma NS é idempotente e vira no-op', () => {
-  const stored = invoice({ numeroNS: '2026 NS 000001' });
+  const stored = invoice({ numeroNS: '2026 NS 000001', nsUg: '160416' });
   const result = validate({
     targets: [doc(stored)],
     scope: [doc(stored)],
@@ -202,7 +214,7 @@ test('segunda aplicação da mesma NS é idempotente e vira no-op', () => {
 });
 
 test('bloqueia se a NF recebeu outra NS depois da prévia', () => {
-  const stored = invoice({ numeroNS: '2026NS999999' });
+  const stored = invoice({ numeroNS: '2026NS999999', nsUg: '160416' });
   assert.throws(
     () => validate({ targets: [doc(stored)], scope: [doc(stored)] }),
     (error) => error?.code === 'stale_invoice_ns'
@@ -215,6 +227,7 @@ test('bloqueia se a NS proposta já pertence a outra NF do mesmo fornecedor', ()
     id: '9999',
     recordKey: 'nf_11111111000191_9999',
     numeroNS: '2026NS000001',
+    nsUg: '160416',
   });
 
   assert.throws(
@@ -266,4 +279,17 @@ test('bloqueia a mesma NS proposta para duas NFs no mesmo lote', () => {
     () => validate({ changes: [change(), secondChange] }),
     (error) => error?.code === 'duplicate_ns_in_batch'
   );
+});
+
+
+test('permite a mesma NS quando a UG é diferente', () => {
+  const target = invoice();
+  const other = invoice({
+    id: '9999',
+    recordKey: 'nf_11111111000191_9999',
+    numeroNS: '2026NS000001',
+    nsUg: '160415',
+  });
+  const result = validate({ targets: [doc(target)], scope: [doc(target), doc(other)] });
+  assert.equal(result.writes.length, 1);
 });
