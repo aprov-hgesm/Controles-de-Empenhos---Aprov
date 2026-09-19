@@ -18,6 +18,7 @@ const sync = read('lib/firebaseSync.ts');
 const hook = read('features/empenhos/hooks/useEmpenhoActions.ts');
 const rules = read('firestore.rules');
 const security = read('scripts/firestore-multitenancy-security.test.mjs');
+const e2e = read('tests/e2e/operator-critical-flow.spec.mjs');
 const audit = read('lib/auditTrail.ts');
 const types = read('lib/types.ts');
 const docs = read('docs/BLOCK_12_EMPENHO_DELETION_INTEGRITY.md');
@@ -84,6 +85,10 @@ for (const expected of [
 ]) {
   requireText(security, expected, `Emulator não cobre cenário do Bloco 12: ${expected}`);
 }
+
+requireText(e2e, 'exclusão protegida remove empenho, NF e NS lock sem estado parcial', 'Browser E2E não cobre exclusão protegida de empenho.');
+requireText(e2e, "getByTitle('Excluir empenho delete-e2e')", 'Browser E2E não executa a exclusão pela interface real.');
+requireText(e2e, "historical-consistency-clean", 'Browser E2E não verifica integridade após a exclusão.');
 
 requireText(audit, "| 'empenho.delete'", 'Tipo de auditoria não registra empenho.delete.');
 requireText(rules, "'empenho.delete'", 'Rules não aceitam auditoria empenho.delete.');
