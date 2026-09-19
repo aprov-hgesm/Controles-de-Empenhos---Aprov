@@ -845,11 +845,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // A identidade visual global precisa continuar disponível antes do login e
-    // continua sendo um setting global da plataforma, não um setting operacional legado.
+    // A identidade visual global precisa continuar disponível antes do login.
+    // A marca institucional é imutável no runtime: qualquer troca futura exige
+    // manutenção deliberada fora da aplicação e revisão explícita destas Rules.
     match /settings/global {
       allow read: if true;
-      allow write: if isHgesmFounder();
+      allow write: if false;
     }
 
     // Demais settings raiz (incluindo o contador histórico) ficam somente leitura.
