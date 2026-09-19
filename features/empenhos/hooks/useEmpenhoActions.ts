@@ -2,13 +2,13 @@
 
 import type React from 'react';
 import type { User } from 'firebase/auth';
-import jsPDF from 'jspdf';
 import type { Alert, Empenho, EmpenhoPdfDocument, Invoice, Item } from '../../../lib/types';
 import { createEmpenho, saveAlert, saveEmpenho, removeEmpenho } from '../../../lib/firebaseSync';
 import { PROMPT_EXTRACAO_EMPENHO } from '../domain/empenhoHelpers';
 import { normalizeEmpenhoClassCode } from '../../../lib/empenhoClasses';
 import { getInvoiceRecordKey, isValidSupplierCnpj, normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
 import { commitEmpenhoSupplierCnpjMigration } from '../../../lib/nsIntegrityService';
+import { loadJsPdf } from '../../../lib/pdfToolkit';
 
 type ActiveTab = 'painel' | 'empenhos' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas';
 type NewEmpenhoForm = { id: string; supplier: string; supplierCnpj: string; description: string; pregao: string; date: string; classification: string };
@@ -298,8 +298,9 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
   };
 
   // Download prompt as PDF
-  const handleDownloadPromptPdf = () => {
+  const handleDownloadPromptPdf = async () => {
     try {
+      const jsPDF = await loadJsPdf();
       const doc = new jsPDF();
 
       // Header banner
