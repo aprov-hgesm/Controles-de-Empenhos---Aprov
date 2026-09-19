@@ -26,6 +26,17 @@ async function openSampleReport(page) {
   await page.getByTestId('report-empenho-sample').click();
 }
 
+async function expectRealtimeProfile(page, expectedCount) {
+  const shell = page.locator('[data-active-realtime-collections]');
+  await expect(shell).toHaveAttribute(
+    'data-active-realtime-collections',
+    String(expectedCount)
+  );
+  await expect(page.getByTestId('operational-section-loading')).toHaveCount(0, {
+    timeout: 15_000,
+  });
+}
+
 test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
   test('login -> relatório -> NS automática por UG -> persistência após reload', async ({ page }) => {
     await page.goto('/');
@@ -168,6 +179,30 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     await expect(page.getByTestId('historical-consistency-clean')).toBeVisible({
       timeout: 15000,
     });
+  });
+
+  test('perfil realtime acompanha a seção ativa sem manter coleções ociosas', async ({ page }) => {
+    await page.goto('/');
+    await loginSector(page, OPERATOR_A);
+    await expectRealtimeProfile(page, 1);
+
+    await page.getByRole('button', { name: 'Empenhos', exact: true }).first().click();
+    await expectRealtimeProfile(page, 3);
+
+    await page.getByRole('button', { name: 'Notas Fiscais', exact: true }).first().click();
+    await expectRealtimeProfile(page, 4);
+
+    await page.getByTestId('nav-relatorios').click();
+    await expectRealtimeProfile(page, 3);
+
+    await page.getByRole('button', { name: 'Cronogramas', exact: true }).first().click();
+    await expectRealtimeProfile(page, 2);
+
+    await page.getByRole('button', { name: 'Consulta de Itens', exact: true }).first().click();
+    await expectRealtimeProfile(page, 1);
+
+    await page.getByRole('button', { name: 'Painel', exact: true }).first().click();
+    await expectRealtimeProfile(page, 1);
   });
 
 });
