@@ -18,7 +18,8 @@ export type OperationalCollectionName =
   | 'alerts'
   | 'invoices'
   | 'comissoes'
-  | 'cronogramas';
+  | 'cronogramas'
+  | 'auditEvents';
 
 export interface OperationalDataScope {
   workspaceId: string;
