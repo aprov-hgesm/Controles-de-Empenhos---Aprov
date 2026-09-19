@@ -88,7 +88,10 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       showToast(`Pregão do empenho ${empenhoId} atualizado para ${normalizedPregao}.`, 'success');
     } catch (error) {
       console.error('Erro ao atualizar Pregão do empenho:', error);
-      showToast('Não foi possível atualizar o Pregão do empenho.', 'error');
+      showToast(
+        error instanceof Error ? error.message : 'Não foi possível atualizar o Pregão do empenho.',
+        'error'
+      );
       throw error;
     }
   };
@@ -210,7 +213,10 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       showToast(`Classe do empenho ${empenhoId} alterada para ${classification}.`, 'success');
     } catch (error) {
       console.error('Erro ao atualizar classe do empenho:', error);
-      showToast('Não foi possível atualizar a classe do empenho.', 'error');
+      showToast(
+        error instanceof Error ? error.message : 'Não foi possível atualizar a classe do empenho.',
+        'error'
+      );
       throw error;
     }
   };
