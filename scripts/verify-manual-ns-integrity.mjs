@@ -19,8 +19,11 @@ if (!manualBlock) {
 } else {
   requireText(manualBlock, 'commitNsIntegrityMutations', 'Edição manual não usa o serviço central de integridade.');
   requireText(manualBlock, "source: 'manual'", 'Origem manual não é registrada na mutação.');
+  requireText(manualBlock, 'expectedCurrentUg:', 'Edição manual não congela a UG atual esperada.');
   requireText(manualBlock, 'expectedCurrentNs:', 'Edição manual não congela a NS atual esperada.');
+  requireText(manualBlock, 'proposedUg:', 'Edição manual não envia a UG proposta ao serviço central.');
   requireText(manualBlock, 'proposedNs:', 'Edição manual não envia a NS proposta ao serviço central.');
+  requireText(manualBlock, 'isValidNsUg', 'Edição manual não valida a UG da NS.');
   requireText(manualBlock, 'knownNsOwnerRecordKeys', 'Edição manual não informa possíveis proprietários da NS.');
   requireText(manualBlock, 'normalizeNsNumber', 'Edição manual não normaliza a NS pelo domínio central.');
   requireText(manualBlock, 'normalizeSupplierCnpj', 'Edição manual não valida o CNPJ da NF/NE.');
@@ -31,9 +34,12 @@ if (!manualBlock) {
 
 requireText(
   hook,
-  "import { normalizeNsNumber } from '../../../lib/nsIntegrity';",
-  'Hook de Notas Fiscais não importa a normalização central de NS.'
+  "from '../../../lib/nsIntegrity';",
+  'Hook de Notas Fiscais não importa o domínio central de NS.'
 );
+requireText(hook, 'normalizeNsNumber', 'Hook não importa a normalização central de NS.');
+requireText(hook, 'normalizeNsUg', 'Hook não importa a normalização central de UG.');
+requireText(hook, 'isValidNsUg', 'Hook não importa a validação central de UG.');
 requireText(
   hook,
   "import { commitNsIntegrityMutations } from '../../../lib/nsIntegrityService';",
@@ -51,7 +57,7 @@ if (findings.length) {
   console.log('MANUAL NS INTEGRITY: READY');
   console.log('saveInvoice direto para numeroNS: REMOVIDO');
   console.log('Serviço central: ATIVO');
-  console.log('Lock NF + NS: TRANSACIONAL');
+  console.log('Lock NF + UG + NS: TRANSACIONAL');
   console.log('Origem manual: IDENTIFICADA');
 }
 
