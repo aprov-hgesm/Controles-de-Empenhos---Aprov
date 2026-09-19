@@ -15,6 +15,7 @@ import {
   commitSagNsImport,
   type SagNsImportCommitResult,
 } from '../../../lib/sagNsPersistence';
+import { getCurrentOperationalScope } from '../../../lib/operationalPaths';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -54,8 +55,30 @@ export function useSagNsImportActions(context: SagNsImportActionsContext) {
       );
     }
 
+    const scope = getCurrentOperationalScope(user.uid);
+    const workspaceUg = normalizeSagUg(scope.ug);
+    if (!workspaceUg) {
+      throw new SagNsImportActionError(
+        'blocked_preview',
+        'A UG da Organização Militar não está configurada para este usuário. Solicite ao administrador a vinculação da UG antes de importar NS.'
+      );
+    }
+
+    const payloadUg = normalizeSagUg(payload.ug);
+    if (payloadUg && payloadUg !== workspaceUg) {
+      throw new SagNsImportActionError(
+        'blocked_preview',
+        `O SAG informou a UG ${payloadUg}, diferente da UG ${workspaceUg} vinculada a este usuário.`
+      );
+    }
+
+    const scopedPayload: SagNsPayload = {
+      ...payload,
+      ug: workspaceUg,
+    };
+
     const freshReconciliation = reconcileSagNsPayload(
-      payload,
+      scopedPayload,
       supplierCnpj,
       empenhos,
       invoices
