@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   browserLocalPersistence,
   onAuthStateChanged,
@@ -21,14 +21,10 @@ import {
   resolveWorkspaceContext,
   type ResolvedWorkspaceContext,
 } from '../lib/workspaceContext';
-import {
-  getOperationalCollectionPath,
-  operationalCollectionRef,
-  operationalScopeFromContext,
-} from '../lib/operationalPaths';
+import type { OperationalActiveTab } from '../lib/operationalSubscriptionPlan';
 import { resetActiveProfileMode, setActiveProfileMode } from '../lib/profileMode';
-import { normalizeSupplier } from '../features/empenhos/domain/empenhoHelpers';
 import { normalizePlatformEmail } from '../lib/platformIdentity';
+import { useOperationalRealtimeCollections } from './useOperationalRealtimeCollections';
 
 /**
  * Fonte de verdade da sessão e das coleções operacionais em tempo real.
@@ -38,7 +34,7 @@ import { normalizePlatformEmail } from '../lib/platformIdentity';
  * plataforma e associada ao workspace autorizado. Contas desconhecidas,
  * desativadas ou com workspace inválido são encerradas em fail-closed.
  */
-export function useOperationalData() {
+export function useOperationalData(activeTab: OperationalActiveTab) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
@@ -51,6 +47,20 @@ export function useOperationalData() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [comissoes, setComissoes] = useState<Comissao[]>([]);
   const [cronogramas, setCronogramas] = useState<CronogramaEmpenho[]>([]);
+
+  const {
+    activeOperationalDataReady,
+    activeRealtimeCollectionCount,
+  } = useOperationalRealtimeCollections({
+    user,
+    workspaceContext,
+    activeTab,
+    setEmpenhos,
+    setAlerts,
+    setInvoices,
+    setComissoes,
+    setCronogramas,
+  });
 
   const clearOperationalState = () => {
     setEmpenhos([]);
@@ -207,81 +217,6 @@ export function useOperationalData() {
     };
   }, [user, workspaceContext]);
 
-  useEffect(() => {
-    if (!user || !isOperationalSectorContext(workspaceContext)) {
-      clearOperationalState();
-      setSyncing(false);
-      return;
-    }
-
-    const scope = operationalScopeFromContext(workspaceContext);
-    setSyncing(true);
-
-    const empenhosPath = getOperationalCollectionPath(scope, 'empenhos');
-    const alertsPath = getOperationalCollectionPath(scope, 'alerts');
-    const invoicesPath = getOperationalCollectionPath(scope, 'invoices');
-    const comissoesPath = getOperationalCollectionPath(scope, 'comissoes');
-    const cronogramasPath = getOperationalCollectionPath(scope, 'cronogramas');
-
-    const unsubscribeEmpenhos = onSnapshot(
-      operationalCollectionRef(scope, 'empenhos'),
-      (snapshot) => {
-        const fetched = snapshot.docs.map((snapshotDoc) => {
-          const data = snapshotDoc.data() as Empenho;
-          return { ...data, supplier: normalizeSupplier(data.supplier) };
-        });
-        setEmpenhos(fetched);
-        setSyncing(false);
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.LIST, empenhosPath);
-        setSyncing(false);
-      }
-    );
-
-    const unsubscribeAlerts = onSnapshot(
-      operationalCollectionRef(scope, 'alerts'),
-      (snapshot) => setAlerts(snapshot.docs.map((snapshotDoc) => snapshotDoc.data() as Alert)),
-      (error) => handleFirestoreError(error, OperationType.LIST, alertsPath)
-    );
-
-    const unsubscribeInvoices = onSnapshot(
-      operationalCollectionRef(scope, 'invoices'),
-      (snapshot) => {
-        const fetched = snapshot.docs.map((snapshotDoc) => {
-          const data = snapshotDoc.data() as Invoice;
-          return {
-            ...data,
-            recordKey: data.recordKey || snapshotDoc.id,
-            supplier: normalizeSupplier(data.supplier),
-          };
-        });
-        setInvoices(fetched);
-      },
-      (error) => handleFirestoreError(error, OperationType.LIST, invoicesPath)
-    );
-
-    const unsubscribeComissoes = onSnapshot(
-      operationalCollectionRef(scope, 'comissoes'),
-      (snapshot) => setComissoes(snapshot.docs.map((snapshotDoc) => snapshotDoc.data() as Comissao)),
-      (error) => handleFirestoreError(error, OperationType.LIST, comissoesPath)
-    );
-
-    const unsubscribeCronogramas = onSnapshot(
-      operationalCollectionRef(scope, 'cronogramas'),
-      (snapshot) => setCronogramas(snapshot.docs.map((snapshotDoc) => snapshotDoc.data() as CronogramaEmpenho)),
-      (error) => handleFirestoreError(error, OperationType.LIST, cronogramasPath)
-    );
-
-    return () => {
-      unsubscribeEmpenhos();
-      unsubscribeAlerts();
-      unsubscribeInvoices();
-      unsubscribeComissoes();
-      unsubscribeCronogramas();
-    };
-  }, [user, workspaceContext]);
-
   const finalizeSignIn = async (authenticatedUser: User) => {
     setActiveProfileMode('sector');
     const resolvedContext = await resolveAuthenticatedWorkspaceContext(
@@ -411,26 +346,37 @@ export function useOperationalData() {
     clearOperationalState();
   };
 
-  const getBalanceByClass = (classification: string) => {
+  const getBalanceByClass = useCallback((classification: string) => {
     const filtered = empenhos.filter((emp) => emp.classification === classification);
     return filtered.reduce((total, emp) => {
       const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
       const totalReceived = emp.items.reduce((sum, item) => sum + item.received * item.unitPrice, 0);
       return total + (totalCommitted - totalReceived);
     }, 0);
-  };
+  }, [empenhos]);
 
-  const uniquePregaos = Array.from(new Set(empenhos.map((emp) => emp.pregao).filter(Boolean))) as string[];
-  const uniqueEmpenhoYears = Array.from(new Set(empenhos.map((emp) => {
-    if (!emp.date) return '';
-    const parts = emp.date.split('/');
-    if (parts.length === 3) return parts[2];
-    if (emp.date.includes('-')) return emp.date.split('-')[0];
-    return '';
-  }).filter(Boolean))).sort((a, b) => b.localeCompare(a)) as string[];
-  const uniqueNfMonths = Array.from(new Set(invoices.map((inv) => (
-    inv.issueDate && inv.issueDate.length >= 7 ? inv.issueDate.substring(0, 7) : ''
-  )).filter(Boolean))).sort((a, b) => b.localeCompare(a));
+  const uniquePregaos = useMemo(
+    () => Array.from(new Set(empenhos.map((emp) => emp.pregao).filter(Boolean))) as string[],
+    [empenhos]
+  );
+
+  const uniqueEmpenhoYears = useMemo(
+    () => Array.from(new Set(empenhos.map((emp) => {
+      if (!emp.date) return '';
+      const parts = emp.date.split('/');
+      if (parts.length === 3) return parts[2];
+      if (emp.date.includes('-')) return emp.date.split('-')[0];
+      return '';
+    }).filter(Boolean))).sort((a, b) => b.localeCompare(a)) as string[],
+    [empenhos]
+  );
+
+  const uniqueNfMonths = useMemo(
+    () => Array.from(new Set(invoices.map((inv) => (
+      inv.issueDate && inv.issueDate.length >= 7 ? inv.issueDate.substring(0, 7) : ''
+    )).filter(Boolean))).sort((a, b) => b.localeCompare(a)),
+    [invoices]
+  );
 
   const formatDateTime = (isoString?: string) => {
     if (!isoString) return '';
@@ -462,6 +408,7 @@ export function useOperationalData() {
 
   return {
     user, loadingAuth, syncing, workspaceContext,
+    activeOperationalDataReady, activeRealtimeCollectionCount,
     empenhos, setEmpenhos,
     alerts, setAlerts,
     invoices, setInvoices,
