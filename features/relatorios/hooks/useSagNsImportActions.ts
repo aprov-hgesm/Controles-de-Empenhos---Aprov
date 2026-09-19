@@ -4,7 +4,7 @@ import type React from 'react';
 import type { User } from 'firebase/auth';
 import type { Empenho, Invoice } from '../../../lib/types';
 import { getInvoiceRecordKey, normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
-import { normalizeSagNsNumber, type SagNsPayload } from '../../../lib/sagNsContract';
+import { normalizeSagNsNumber, normalizeSagUg, type SagNsPayload } from '../../../lib/sagNsContract';
 import { reconcileSagNsPayload } from '../../../lib/sagNsReconciliation';
 import {
   buildSagNsApplicationFingerprint,
@@ -92,12 +92,20 @@ export function useSagNsImportActions(context: SagNsImportActionsContext) {
     const proposedNs = new Set(
       changes.map((change) => normalizeSagNsNumber(change.proposedNs))
     );
-    const knownNsOwnerRecordKeys = invoices
-      .filter(
-        (invoice) =>
-          selectedEmpenhoIds.has(invoice.empenhoId) &&
-          proposedNs.has(normalizeSagNsNumber(invoice.numeroNS))
+    const proposedIdentities = new Set(
+      changes.map(
+        (change) =>
+          `${change.proposedUg}|${normalizeSagNsNumber(change.proposedNs)}`
       )
+    );
+    const knownNsOwnerRecordKeys = invoices
+      .filter((invoice) => {
+        if (!selectedEmpenhoIds.has(invoice.empenhoId)) return false;
+        const invoiceNs = normalizeSagNsNumber(invoice.numeroNS);
+        if (!invoiceNs || !proposedNs.has(invoiceNs)) return false;
+        const invoiceUg = normalizeSagUg(invoice.nsUg);
+        return !invoiceUg || proposedIdentities.has(`${invoiceUg}|${invoiceNs}`);
+      })
       .map(getInvoiceRecordKey);
 
     const result = await commitSagNsImport(user.uid, {
