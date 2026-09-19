@@ -48,6 +48,7 @@ for (const expected of [
   'MAX_NS_INTEGRITY_TRANSACTION_MUTATIONS = 6',
   'MAX_INVOICE_LIFECYCLE_NS_LOCKS = 8',
   'MAX_SUPPLIER_CNPJ_MIGRATION_NS_LOCKS = 5',
+  'Reaplicações idempotentes também normalizam a identidade física',
 ]) {
   requireText(service, expected, `Serviço perdeu teto compatível com Rules: ${expected}`);
 }
@@ -62,6 +63,7 @@ for (const expected of [
   'Troca direta de NS sem novo lock é rejeitada',
   'Remoção direta de NS sem liberar o lock é rejeitada',
   'Exclusão direta de NF com lock ativo é rejeitada',
+  'Registro legado com NS pode reparar recordKey e lock atomicamente',
 ]) {
   requireText(security, expected, `Emulator não cobre bypass global: ${expected}`);
 }
