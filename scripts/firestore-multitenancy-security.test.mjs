@@ -855,13 +855,6 @@ async function main() {
     })
   );
 
-  await ownerSet('workspaces/workspace-a/settings/documentStorage', {
-    provider: 'google-drive',
-    workspaceId: 'workspace-a',
-    driveFolderId: 'drive-folder-private-a',
-    updatedAt: now(),
-    updatedBy: identities.a.uid,
-  });
   await denied('Administrador não lê configuração Drive operacional de setor externo', () =>
     getDoc(
       doc(
