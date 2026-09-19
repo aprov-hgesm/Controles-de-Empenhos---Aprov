@@ -85,10 +85,14 @@ forbidText(manual, 'setTempNSUgValue', 'Edição manual voltou a manter UG digit
 requireText(rules, 'workspaceAndAccountUgMatch', 'Rules não vinculam UG de workspace e conta.');
 requireText(rules, 'match /platformUgIndex/{ug}', 'Rules não protegem índice de UG.');
 requireText(rules, 'workspaceUgMatchesNs(workspaceId, request.resource.data.ug)', 'Rules não vinculam o lock de NS à UG do workspace.');
+requireText(rules, "workspaceId == 'hgesm-aprov'", 'Rules perderam a compatibilidade controlada do HGeSM fundador.');
+requireText(rules, "ug == '160416'", 'Rules perderam a UG fundadora do HGeSM.');
 requireText(rules, 'sagNsLockIdForIdentity(ug, numeroNS)', 'Rules não derivam lock canônico de UG + NS.');
 requireText(rules, 'validLegacySagNsLockUpdate', 'Rules perderam compatibilidade controlada de lock legado.');
 requireText(security, 'UG diferente da UG vinculada ao workspace', 'Emulator não prova bloqueio de NS com UG externa.');
 requireText(security, 'UG vinculada ao workspace', 'Emulator não prova uso da UG organizacional.');
+requireText(security, 'Admin vincula UG uma única vez a cadastro legado sem UG', 'Emulator não cobre backfill administrativo de UG.');
+requireText(security, 'UG já vinculada não pode ser substituída por outra UG', 'Emulator não cobre imutabilidade da UG.');
 requireText(docs, 'workspaceId + UG emitente + numeroNS', 'Documentação perdeu a identidade canônica.');
 
 if (findings.length) {
