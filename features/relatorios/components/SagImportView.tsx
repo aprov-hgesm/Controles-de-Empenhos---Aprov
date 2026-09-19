@@ -3,25 +3,15 @@
 import React from 'react';
 import {
   AlertTriangle,
-  ArrowRight,
   Building2,
-  Ban,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  ClipboardCopy,
   ClipboardPaste,
-  ExternalLink,
   FileJson,
-  Eye,
   Landmark,
-  ListFilter,
-  MinusCircle,
-  PencilLine,
   RefreshCw,
-  Search,
   ShieldCheck,
-  X,
   XCircle,
 } from 'lucide-react';
 import type { Empenho, Invoice } from '../../../lib/types';
