@@ -9,6 +9,7 @@ import { useEmpenhoClasses } from '../hooks/useEmpenhoClasses';
 import { useEmpenhoActions } from '../features/empenhos/hooks/useEmpenhoActions';
 import { useNotasFiscaisActions } from '../features/notas-fiscais/hooks/useNotasFiscaisActions';
 import { useDocumentActions } from '../features/relatorios/hooks/useDocumentActions';
+import { useSagNsImportActions } from '../features/relatorios/hooks/useSagNsImportActions';
 import { useCronogramaActions } from '../features/cronogramas/hooks/useCronogramaActions';
 import { AppBackground } from '../components/layout/AppBackground';
 import { AppHeader } from '../components/layout/AppHeader';
@@ -205,6 +206,14 @@ export default function Home() {
     comissaoAux3Posto,
     comissaoAux3Nome,
     setComissaoAux3Nome
+  });
+
+  const { handleApplySagNsImport } = useSagNsImportActions({
+    user,
+    empenhos,
+    invoices,
+    setInvoices,
+    showToast,
   });
 
   const { handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleGenerateEmpenhoReportPDF } = useDocumentActions({
@@ -418,7 +427,7 @@ export default function Home() {
 
           {/* TAB 4: CONCILIAÇÃO E RELATÓRIO DO RECEBIMENTO */}
           {activeTab === 'relatorios' && (
-            <RelatoriosView context={{ editingNSId, empenhoClasses, empenhos, formatDateOnly, handleDownloadTermoRecebimento, handleGenerateEmpenhoReportPDF, handleSaveNumeroNS, invoices, relatoriosPregaoFilter, reportEndDate, reportSearch, reportStartDate, selectedReportInvoice, setEditingNSId, setRelatoriosPregaoFilter, setReportEndDate, setReportSearch, setReportStartDate, setSelectedReportInvoice, setShowPdfModal, setTempNSValue, showPdfModal, tempNSValue, uniquePregaos }} />
+            <RelatoriosView context={{ editingNSId, empenhoClasses, empenhos, formatDateOnly, handleApplySagNsImport, handleDownloadTermoRecebimento, handleGenerateEmpenhoReportPDF, handleSaveNumeroNS, invoices, relatoriosPregaoFilter, reportEndDate, reportSearch, reportStartDate, selectedReportInvoice, setEditingNSId, setRelatoriosPregaoFilter, setReportEndDate, setReportSearch, setReportStartDate, setSelectedReportInvoice, setShowPdfModal, setTempNSValue, showPdfModal, tempNSValue, uniquePregaos }} />
           )}
 
           {/* CONSULTA CONSOLIDADA DE ITENS */}
