@@ -275,7 +275,7 @@ export function analyzeHistoricalConsistency(
     const storedRecordKey = String(invoice.recordKey || '').trim();
 
     if (!storedRecordKey) {
-      const safe = Boolean(expectedRecordKey && expectedRecordKey === document.documentId);
+      const safe = Boolean(!ns && expectedRecordKey && expectedRecordKey === document.documentId);
       issues.push(createIssue({
         code: 'invoice_record_key_missing',
         severity: safe ? 'info' : 'warning',
@@ -517,8 +517,8 @@ export function analyzeHistoricalConsistency(
     issues.push(createIssue({
       code: 'orphan_ns_lock',
       severity: 'warning',
-      repairMode: 'automatic',
-      repairKind: 'delete_orphan_lock',
+      repairMode: ownerKey ? 'automatic' : 'manual_review',
+      repairKind: ownerKey ? 'delete_orphan_lock' : undefined,
       entityType: 'ns_lock',
       entityId: document.documentId,
       summary: 'Lock de NS não possui NF proprietária existente.',
