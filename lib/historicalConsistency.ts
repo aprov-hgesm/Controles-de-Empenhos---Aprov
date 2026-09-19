@@ -25,6 +25,7 @@ export type HistoricalConsistencyIssueCode =
   | 'empenho_invalid_cnpj'
   | 'invoice_missing_empenho'
   | 'invoice_missing_supplier_cnpj'
+  | 'invoice_invalid_supplier_cnpj'
   | 'invoice_supplier_cnpj_mismatch'
   | 'invoice_record_key_missing'
   | 'invoice_record_key_mismatch'
@@ -208,6 +209,7 @@ export function analyzeHistoricalConsistency(
   for (const document of snapshot.invoices) {
     const invoice = document.invoice;
     const empenho = empenhoById.get(invoice.empenhoId);
+    const rawInvoiceCnpj = String(invoice.supplierCnpj || '').trim();
     const invoiceCnpj = normalizeSupplierCnpj(invoice.supplierCnpj);
     const empenhoCnpj = normalizeSupplierCnpj(empenho?.supplierCnpj);
     const ns = normalizeNsNumber(invoice.numeroNS);
@@ -229,7 +231,22 @@ export function analyzeHistoricalConsistency(
       }));
     }
 
-    if (!invoiceCnpj && empenhoCnpj && isValidSupplierCnpj(empenhoCnpj)) {
+    if (rawInvoiceCnpj && !isValidSupplierCnpj(rawInvoiceCnpj)) {
+      issues.push(createIssue({
+        code: 'invoice_invalid_supplier_cnpj',
+        severity: 'critical',
+        repairMode: 'manual_review',
+        entityType: 'invoice',
+        entityId: document.documentId,
+        summary: 'CNPJ histórico da NF é inválido.',
+        detail: 'O valor existente não será substituído por inferência a partir do empenho; confirme o documento fiscal.',
+        evidence: {
+          invoiceSupplierCnpj: rawInvoiceCnpj,
+          empenhoSupplierCnpj: empenhoCnpj || null,
+          empenhoId: invoice.empenhoId,
+        },
+      }));
+    } else if (!rawInvoiceCnpj && empenhoCnpj && isValidSupplierCnpj(empenhoCnpj)) {
       issues.push(createIssue({
         code: 'invoice_missing_supplier_cnpj',
         severity: ns ? 'warning' : 'info',
@@ -410,7 +427,7 @@ export function analyzeHistoricalConsistency(
       && invoiceCnpj === empenhoCnpj
       && isValidSupplierCnpj(invoiceCnpj)
       && (!workspaceUg || ug === workspaceUg)
-      && String(invoice.recordKey || document.documentId) === document.documentId
+      && String(invoice.recordKey || '').trim() === document.documentId
     );
 
     if (!canonicalLock) {
