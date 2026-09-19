@@ -7,6 +7,8 @@ const root = process.cwd();
 const findings = [];
 
 const plan = read('lib/sagNsPersistencePlan.ts');
+const domain = read('lib/nsIntegrity.ts');
+const service = read('lib/nsIntegrityService.ts');
 const persistence = read('lib/sagNsPersistence.ts');
 const hook = read('features/relatorios/hooks/useSagNsImportActions.ts');
 const rules = read('firestore.rules');
@@ -14,17 +16,20 @@ const security = read('scripts/firestore-multitenancy-security.test.mjs');
 const pkg = read('package.json');
 const workflow = read('.github/workflows/application-ci.yml');
 
-requireText(plan, 'buildSagNsLockDocumentId', 'Identidade determinística do lock SAG ausente.');
-requireText(plan, "'ns_lock_conflict'", 'Código de conflito de lock SAG ausente.');
-requireText(plan, "'stale_lock_owner'", 'Código de lock SAG inconsistente ausente.');
+requireText(plan, 'buildSagNsLockDocumentId', 'Adaptador de identidade do lock SAG ausente.');
+requireText(domain, 'buildNsLockDocumentId', 'Identidade determinística central do lock ausente.');
+requireText(domain, "'ns_lock_conflict'", 'Código de conflito de lock ausente.');
+requireText(domain, "'stale_lock_owner'", 'Código de lock inconsistente ausente.');
 
-requireText(persistence, 'MAX_SAG_NS_TRANSACTION_CHANGES = 100', 'Teto de 100 alterações não está protegido.');
-requireText(persistence, 'MAX_SAG_NS_KNOWN_OWNER_READS = 200', 'Teto de leituras de donos conhecidos não está protegido.');
-requireText(persistence, 'operationalSettingsDocRef', 'Persistência não utiliza lock no settings do workspace.');
-requireText(persistence, 'transaction.get(operationalSettingsDocRef', 'Lock SAG não é relido dentro da transação.');
-requireText(persistence, 'ns_lock_conflict', 'Colisão concorrente de NS não bloqueia o commit.');
-requireText(persistence, "type: 'sag-ns-lock'", 'Documento de lock SAG não é criado.');
-requireText(persistence, 'updatedBy: userId', 'Lock SAG não registra a identidade Firebase responsável.');
+requireText(service, 'MAX_NS_INTEGRITY_TRANSACTION_MUTATIONS = 100', 'Teto de 100 alterações não está protegido.');
+requireText(service, 'MAX_NS_INTEGRITY_KNOWN_OWNER_READS = 200', 'Teto de leituras de donos conhecidos não está protegido.');
+requireText(service, 'operationalSettingsDocRef', 'Serviço central não utiliza lock no settings do workspace.');
+requireText(service, 'transaction.get(operationalSettingsDocRef', 'Lock não é relido dentro da transação.');
+requireText(service, 'assertNsLockOwnership', 'Colisão concorrente de NS não é validada no serviço central.');
+requireText(domain, "type: typeof NS_LOCK_DOCUMENT_TYPE", 'Documento de lock central perdeu tipo protegido.');
+requireText(domain, 'updatedBy: string', 'Lock central não registra identidade responsável.');
+requireText(persistence, 'commitNsIntegrityMutations', 'SAG não delega para o serviço central de NS.');
+forbidText(persistence, 'operationalSettingsDocRef', 'SAG voltou a manipular locks diretamente.');
 
 requireText(hook, 'knownNsOwnerRecordKeys', 'Hook não limita leituras aos possíveis donos das NS propostas.');
 requireText(hook, 'proposedNs.has(normalizeSagNsNumber(invoice.numeroNS))', 'Filtro de donos conhecidos por NS proposta ausente.');
