@@ -29,6 +29,7 @@ requireText(firebase, "NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1'", 'Frontend n�
 requireText(firebase, 'NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID', 'Frontend não isola o projectId E2E.');
 requireText(firebase, 'connectAuthEmulator', 'Frontend não conecta Auth Emulator.');
 requireText(firebase, 'connectFirestoreEmulator', 'Frontend não conecta Firestore Emulator.');
+requireText(firebase, 'if (useE2eEmulators) {', 'Conexão dos Emulators não está protegida por opt-in.');
 requireText(firebase, 'firebaseConfig.firestoreDatabaseId', 'Configuração de produção perdeu o banco nomeado.');
 
 requireText(harness, "scripts/firestore-multitenancy-security.test.mjs", 'Harness não prepara o ambiente pela suíte multi-tenant.');
@@ -70,7 +71,6 @@ requireText(docs, 'Next.js local', 'Documentação não descreve aplicação rea
 requireText(docs, 'persistência após reload', 'Documentação não descreve prova de persistência.');
 requireText(docs, 'não usa dados de produção', 'Documentação não declara isolamento de produção.');
 
-forbidText(firebase, "connectAuthEmulator(auth, 'http://127.0.0.1:9099'", 'Conexão de Emulator não pode ficar incondicional.');
 
 if (findings.length) {
   console.error('BLOCK 9 BROWSER E2E: FAIL');
