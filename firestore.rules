@@ -330,6 +330,69 @@ service cloud.firestore {
         && request.resource.data.configuredAt == resource.data.configuredAt;
     }
 
+    function isSagNsLockId(id) {
+      return id.matches('^sagNsLock_.+');
+    }
+
+    function validSagNsLock(workspaceId, id) {
+      return isSagNsLockId(id)
+        && request.resource.data.keys().hasAll([
+          'id',
+          'type',
+          'workspaceId',
+          'numeroNS',
+          'invoiceRecordKey',
+          'invoiceId',
+          'empenhoId',
+          'supplierCnpj',
+          'createdAt',
+          'updatedAt',
+          'updatedBy'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'id',
+          'type',
+          'workspaceId',
+          'numeroNS',
+          'invoiceRecordKey',
+          'invoiceId',
+          'empenhoId',
+          'supplierCnpj',
+          'createdAt',
+          'updatedAt',
+          'updatedBy'
+        ])
+        && request.resource.data.id == id
+        && request.resource.data.type == 'sag-ns-lock'
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.numeroNS is string
+        && request.resource.data.numeroNS.size() > 0
+        && request.resource.data.invoiceRecordKey is string
+        && request.resource.data.invoiceRecordKey.size() > 0
+        && request.resource.data.invoiceId is string
+        && request.resource.data.invoiceId.size() > 0
+        && request.resource.data.empenhoId is string
+        && request.resource.data.empenhoId.size() > 0
+        && request.resource.data.supplierCnpj is string
+        && request.resource.data.supplierCnpj.size() == 14
+        && request.resource.data.createdAt is string
+        && request.resource.data.updatedAt is string
+        && request.resource.data.updatedBy == request.auth.uid;
+    }
+
+    function validSagNsLockUpdate(workspaceId, id) {
+      return validSagNsLock(workspaceId, id)
+        && resource.data.id == request.resource.data.id
+        && resource.data.type == request.resource.data.type
+        && resource.data.workspaceId == request.resource.data.workspaceId
+        && resource.data.numeroNS == request.resource.data.numeroNS
+        && resource.data.invoiceRecordKey == request.resource.data.invoiceRecordKey
+        && resource.data.invoiceId == request.resource.data.invoiceId
+        && resource.data.empenhoId == request.resource.data.empenhoId
+        && resource.data.supplierCnpj == request.resource.data.supplierCnpj
+        && resource.data.createdAt == request.resource.data.createdAt;
+    }
+
     function isSelfPlatformAccount() {
       return isVerifiedUser()
         && resource.data.accountType == 'sector'
@@ -517,7 +580,24 @@ service cloud.firestore {
     }
 
     match /workspaces/{workspaceId}/settings/{id} {
-      allow read, write: if id != 'termoRecebimentoCounter'
+      allow read: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && canAccessWorkspace(workspaceId);
+      allow create: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && canAccessWorkspace(workspaceId)
+        && (
+          !isSagNsLockId(id)
+          || validSagNsLock(workspaceId, id)
+        );
+      allow update: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && canAccessWorkspace(workspaceId)
+        && (
+          !isSagNsLockId(id)
+          || validSagNsLockUpdate(workspaceId, id)
+        );
+      allow delete: if id != 'termoRecebimentoCounter'
         && id != 'documentStorage'
         && canAccessWorkspace(workspaceId);
     }
