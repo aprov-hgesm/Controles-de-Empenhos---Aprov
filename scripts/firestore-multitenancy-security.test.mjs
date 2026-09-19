@@ -272,13 +272,19 @@ async function seedWorkspace(
   });
 }
 
-function sagLockId(ns) {
+const DEFAULT_NS_UG = '160416';
+
+function sagLockId(ns, ug = DEFAULT_NS_UG) {
+  return `sagNsLock_${ug}_${encodeURIComponent(ns)}`;
+}
+
+function legacySagLockId(ns) {
   return `sagNsLock_${encodeURIComponent(ns)}`;
 }
 
-async function reserveSagNs(db, uid, workspaceId, invoiceRecordKey, invoiceId, empenhoId, supplierCnpj, ns) {
+async function reserveSagNs(db, uid, workspaceId, invoiceRecordKey, invoiceId, empenhoId, supplierCnpj, ns, ug = DEFAULT_NS_UG) {
   const invoiceRef = doc(db, 'workspaces', workspaceId, 'invoices', invoiceRecordKey);
-  const lockRef = doc(db, 'workspaces', workspaceId, 'settings', sagLockId(ns));
+  const lockRef = doc(db, 'workspaces', workspaceId, 'settings', sagLockId(ns, ug));
 
   return runTransaction(db, async (transaction) => {
     const [invoiceSnapshot, lockSnapshot] = await Promise.all([
@@ -298,13 +304,14 @@ async function reserveSagNs(db, uid, workspaceId, invoiceRecordKey, invoiceId, e
     }
 
     const timestamp = now();
-    transaction.set(invoiceRef, { numeroNS: ns }, { merge: true });
+    transaction.set(invoiceRef, { numeroNS: ns, nsUg: ug }, { merge: true });
     transaction.set(
       lockRef,
       {
-        id: sagLockId(ns),
+        id: sagLockId(ns, ug),
         type: 'sag-ns-lock',
         workspaceId,
+        ug,
         numeroNS: ns,
         invoiceRecordKey,
         invoiceId,
@@ -820,6 +827,7 @@ async function main() {
         id: sagLockId('2026NS009002'),
         type: 'sag-ns-lock',
         workspaceId: 'workspace-a',
+        ug: DEFAULT_NS_UG,
         numeroNS: '2026NS009002',
         invoiceRecordKey: sagInvoiceAKey,
         invoiceId: 'SAG-A',
@@ -859,11 +867,12 @@ async function main() {
       );
 
       await transaction.get(invoiceRef);
-      transaction.set(invoiceRef, { numeroNS: rollbackNs }, { merge: true });
+      transaction.set(invoiceRef, { numeroNS: rollbackNs, nsUg: DEFAULT_NS_UG }, { merge: true });
       transaction.set(invalidLockRef, {
         id: sagLockId(rollbackNs),
         type: 'sag-ns-lock',
         workspaceId: 'workspace-a',
+        ug: DEFAULT_NS_UG,
         numeroNS: rollbackNs,
         updatedBy: sessionA.user.uid,
       });
@@ -952,6 +961,7 @@ async function main() {
         id: sagLockId('2026NS009403'),
         type: 'sag-ns-lock',
         workspaceId: 'workspace-a',
+        ug: DEFAULT_NS_UG,
         numeroNS: '2026NS009403',
         invoiceRecordKey: 'nf_11111111000191_inexistente',
         invoiceId: 'INEXISTENTE',
@@ -994,7 +1004,7 @@ async function main() {
   await denied('Remoção direta de NS sem liberar o lock é rejeitada', () =>
     updateDoc(
       doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', rulesInvoiceKey),
-      { numeroNS: deleteField() }
+      { numeroNS: deleteField(), nsUg: deleteField() }
     )
   );
 
@@ -1049,7 +1059,7 @@ async function main() {
     'workspaces',
     'workspace-a',
     'settings',
-    sagLockId(legacyRulesNs)
+    legacySagLockId(legacyRulesNs)
   );
 
   await allowed('Registro legado com NS pode reparar recordKey e lock atomicamente', () =>
@@ -1075,7 +1085,7 @@ async function main() {
         { merge: true }
       );
       transaction.set(legacyRulesLockRef, {
-        id: sagLockId(legacyRulesNs),
+        id: legacySagLockId(legacyRulesNs),
         type: 'sag-ns-lock',
         workspaceId: 'workspace-a',
         numeroNS: legacyRulesNs,
@@ -1275,7 +1285,11 @@ async function main() {
       ]);
       assert.equal(invoiceSnapshot.exists(), true);
       assert.equal(lockSnapshot.exists(), true);
-      transaction.set(invoiceRef, { numeroNS: deleteField() }, { merge: true });
+      transaction.set(
+        invoiceRef,
+        { numeroNS: deleteField(), nsUg: deleteField() },
+        { merge: true }
+      );
       transaction.delete(manualRemovalLockRef);
     })
   );
