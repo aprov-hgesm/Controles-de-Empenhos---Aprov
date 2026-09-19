@@ -951,13 +951,29 @@ export async function deleteSectorWorkspaceWithAuth(
   const workspacePath = `workspaces/${workspaceId}`;
   const accountPath = `platformAccounts/${email}`;
 
-  const lockPaths = lockDocumentIds(email, workspaceId);
+  const baseLockPaths = lockDocumentIds(email, workspaceId);
   const [workspaceDocument, accountDocument, emailLockDocument, workspaceLockDocument] = await Promise.all([
     readFirestoreDocument(accessToken, workspacePath),
     readFirestoreDocument(accessToken, accountPath),
-    readFirestoreDocument(accessToken, lockPaths[0]),
-    readFirestoreDocument(accessToken, lockPaths[1]),
+    readFirestoreDocument(accessToken, baseLockPaths[0]),
+    readFirestoreDocument(accessToken, baseLockPaths[1]),
   ]);
+
+  const workspaceUg = normalizeUnitUg(
+    firestoreStringField(workspaceDocument?.fields, 'ug')
+  );
+  const accountUg = normalizeUnitUg(
+    firestoreStringField(accountDocument?.fields, 'ug')
+  );
+  if (workspaceUg && accountUg && workspaceUg !== accountUg) {
+    throw new SectorProvisioningFailure(
+      'A UG do workspace diverge da UG da conta operacional. Revise a identidade antes da exclusão.',
+      'CONFLICT',
+      409
+    );
+  }
+  const storedUg = workspaceUg || accountUg;
+  const lockPaths = lockDocumentIds(email, workspaceId, storedUg);
 
   if (!workspaceDocument && !accountDocument && !emailLockDocument && !workspaceLockDocument) {
     throw new SectorProvisioningFailure(
@@ -1012,10 +1028,13 @@ export async function deleteSectorWorkspaceWithAuth(
   try {
     await commitFirestoreWrites(accessToken, [
       { delete: firestoreDocumentName(accountPath) },
+      ...(isValidUnitUg(storedUg)
+        ? [{ delete: firestoreDocumentName(`platformUgIndex/${storedUg}`) }]
+        : []),
     ]);
   } catch (error) {
     cleanupErrors.push(
-      `platformAccount: ${error instanceof Error ? error.message : String(error)}`
+      `platformAccount/UG index: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 
@@ -1071,6 +1090,14 @@ export async function provisionSectorWorkspaceWithAuth(
 
   const email = normalizePlatformEmail(input.authorizedEmail);
   const workspaceId = normalizeWorkspaceId(input.workspaceId);
+  const ug = normalizeUnitUg(input.ug);
+  if (ug === HGESM_UG) {
+    throw new SectorProvisioningFailure(
+      'A UG 160416 já pertence ao workspace fundador do HGeSM.',
+      'CONFLICT',
+      409
+    );
+  }
   const accessToken = await getGoogleAccessToken();
   const operationId = randomUUID();
   const now = new Date().toISOString();
@@ -1083,6 +1110,7 @@ export async function provisionSectorWorkspaceWithAuth(
   let lockState: ProvisioningLockState = {
     operationId,
     workspaceId,
+    ug,
     email,
     phase: 'acquiring-lock',
     createdBy: founder.email,
@@ -1189,7 +1217,7 @@ export async function provisionSectorWorkspaceWithAuth(
 
     if (directoryCreated) {
       try {
-        await deleteSectorDirectory(accessToken, workspaceId, email);
+        await deleteSectorDirectory(accessToken, workspaceId, email, ug);
         directoryCreated = false;
       } catch (rollbackError) {
         recoveryRequired = true;
