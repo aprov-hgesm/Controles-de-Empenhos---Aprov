@@ -831,13 +831,56 @@ async function main() {
   await allowed('Fundador continua acessando o workspace operacional HGeSM', () =>
     getDoc(doc(admin.db, 'workspaces', 'hgesm-aprov', 'empenhos', 'sample'))
   );
+  await allowed('Administrador lista somente o diretório de workspaces', () =>
+    getDocs(collection(admin.db, 'workspaces'))
+  );
+  await allowed('Administrador lista somente o diretório de contas da plataforma', () =>
+    getDocs(collection(admin.db, 'platformAccounts'))
+  );
+  await denied('Setor externo não lista o diretório global de workspaces', () =>
+    getDocs(collection(sessionA.db, 'workspaces'))
+  );
+  await denied('Setor externo não lista o diretório global de contas da plataforma', () =>
+    getDocs(collection(sessionA.db, 'platformAccounts'))
+  );
   await denied('Administrador não lê dados operacionais de setor externo', () =>
     getDoc(doc(admin.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))
+  );
+  await denied('Administrador não lista dados operacionais de setor externo', () =>
+    getDocs(collection(admin.db, 'workspaces', 'workspace-a', 'empenhos'))
   );
   await denied('Administrador não grava dados operacionais de setor externo', () =>
     setDoc(doc(admin.db, 'workspaces', 'workspace-a', 'alerts', 'admin-bypass'), {
       marker: 'forbidden',
     })
+  );
+
+  await denied('Administrador não lê configuração Drive operacional de setor externo', () =>
+    getDoc(
+      doc(
+        admin.db,
+        'workspaces',
+        'workspace-a',
+        'settings',
+        'documentStorage'
+      )
+    )
+  );
+
+  await ownerSet('empenhos/legacy-hardening', {
+    id: 'legacy-hardening',
+    marker: 'legacy-read-only',
+  });
+  await allowed('Fundador Google pode consultar legado raiz somente leitura', () =>
+    getDoc(doc(admin.db, 'empenhos', 'legacy-hardening'))
+  );
+  await denied('Fundador não pode voltar a gravar no legado raiz', () =>
+    setDoc(doc(admin.db, 'empenhos', 'legacy-hardening-write'), {
+      id: 'legacy-hardening-write',
+    })
+  );
+  await denied('Fundador autenticado por senha não acessa o legado raiz', () =>
+    getDoc(doc(founderPassword.db, 'empenhos', 'legacy-hardening'))
   );
 
   console.log('\nTrilha de auditoria imutável');
@@ -954,6 +997,15 @@ async function main() {
         createdAt: serverTimestamp(),
       }
     )
+  );
+  await allowed('Administrador pode listar a auditoria administrativa', () =>
+    getDocs(collection(admin.db, 'platformAuditEvents'))
+  );
+  await denied('Setor externo não lê evento da auditoria administrativa', () =>
+    getDoc(doc(sessionA.db, 'platformAuditEvents', 'audit-platform-001'))
+  );
+  await denied('Setor externo não lista a auditoria administrativa', () =>
+    getDocs(collection(sessionA.db, 'platformAuditEvents'))
   );
 
   console.log('\nExclusão protegida de empenho');
@@ -2305,6 +2357,20 @@ async function main() {
     });
     await batch.commit();
   });
+
+  const hardeningUgIndexRef = doc(admin.db, 'platformUgIndex', '160499');
+  await allowed('Administrador lê o índice global de UG', () =>
+    getDoc(hardeningUgIndexRef)
+  );
+  await denied('Setor externo não lê o índice global de UG', () =>
+    getDoc(doc(sessionA.db, 'platformUgIndex', '160499'))
+  );
+  await denied('Índice global de UG não pode ser alterado depois de criado', () =>
+    updateDoc(hardeningUgIndexRef, { email: 'adulterado@example.test' })
+  );
+  await denied('Índice global de UG não pode ser excluído', () =>
+    deleteDoc(hardeningUgIndexRef)
+  );
 
   await denied('UG já vinculada não pode ser substituída por outra UG', async () => {
     const batch = writeBatch(admin.db);
