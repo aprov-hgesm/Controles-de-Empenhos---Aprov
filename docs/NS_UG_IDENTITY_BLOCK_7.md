@@ -40,7 +40,7 @@ O Hospital Geral de Santa Maria possui:
 UG 160416
 ```
 
-Essa UG integra o contexto fundador do HGeSM.
+Essa UG integra o contexto fundador do HGeSM. Como o workspace fundador já existia antes deste bloco, as Rules possuem uma compatibilidade explícita e restrita para `hgesm-aprov + 160416` caso os documentos históricos do diretório ainda não tenham o campo `ug` materializado. Essa exceção não se aplica a novos setores.
 
 ## Persistência de NS
 
