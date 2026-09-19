@@ -89,7 +89,9 @@
     "verify:block-9-e2e": "node scripts/verify-block-9-e2e.mjs",
     "verify:block-10-consistency": "node scripts/verify-block-10-consistency.mjs",
     "verify:block-11-sag-refactor": "node scripts/verify-block-11-sag-refactor.mjs",
-    "verify:block-12-empenho-deletion": "node scripts/verify-block-12-empenho-deletion.mjs"
+    "verify:block-12-empenho-deletion": "node scripts/verify-block-12-empenho-deletion.mjs",
+    "test:empenho-concurrency": "node --experimental-vm-modules --test scripts/empenho-concurrency.test.mjs",
+    "verify:block-13-empenho-concurrency": "node scripts/verify-block-13-empenho-concurrency.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
