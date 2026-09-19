@@ -379,6 +379,7 @@ type FirestoreValue =
   | { integerValue: string }
   | { doubleValue: number }
   | { booleanValue: boolean }
+  | { timestampValue: string }
   | { nullValue: 'NULL_VALUE' }
   | { arrayValue: { values?: FirestoreValue[] } }
   | { mapValue: { fields?: Record<string, FirestoreValue> } };
@@ -391,6 +392,9 @@ function toFirestoreValue(value: unknown): FirestoreValue {
     return Number.isInteger(value)
       ? { integerValue: String(value) }
       : { doubleValue: value };
+  }
+  if (value instanceof Date) {
+    return { timestampValue: value.toISOString() };
   }
   if (Array.isArray(value)) {
     return {
@@ -457,6 +461,54 @@ async function commitFirestoreWrites(
     error.name = 'FirestoreAdminError';
     throw error;
   }
+}
+
+interface ServerPlatformAuditInput {
+  operation:
+    | 'sector.create'
+    | 'sector.password_reset'
+    | 'sector.delete';
+  workspaceId: string;
+  ug?: string | null;
+  correlationId: string;
+  actor: FounderSession;
+  before?: Record<string, unknown>;
+  after?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}
+
+function serverPlatformAuditWrite(input: ServerPlatformAuditInput): FirestoreWrite {
+  const eventId = randomUUID();
+  return {
+    update: {
+      name: firestoreDocumentName(`platformAuditEvents/${eventId}`),
+      fields: toFirestoreFields({
+        eventVersion: 'emprovex_audit_v1',
+        eventId,
+        workspaceId: input.workspaceId,
+        ug: input.ug || null,
+        operation: input.operation,
+        source: 'admin',
+        entityType: 'workspace',
+        entityId: input.workspaceId,
+        correlationId: input.correlationId,
+        actorUid: input.actor.uid,
+        actorEmail: input.actor.email,
+        before: input.before || {},
+        after: input.after || {},
+        metadata: input.metadata || {},
+        createdAt: new Date(),
+      }),
+    },
+    currentDocument: { exists: false },
+  };
+}
+
+async function appendServerPlatformAuditEvent(
+  accessToken: string,
+  input: ServerPlatformAuditInput
+): Promise<void> {
+  await commitFirestoreWrites(accessToken, [serverPlatformAuditWrite(input)]);
 }
 
 interface FirestoreDocumentPayload {
@@ -676,7 +728,9 @@ async function releaseProvisioningLocks(
 
 async function createSectorDirectory(
   accessToken: string,
-  result: Pick<SectorProvisioningResult, 'workspace' | 'account'>
+  result: Pick<SectorProvisioningResult, 'workspace' | 'account'>,
+  founder: FounderSession,
+  correlationId: string
 ): Promise<void> {
   const termCounter = createInitialWorkspaceTermCounter();
   const workspacePath = `workspaces/${result.workspace.id}`;
@@ -728,6 +782,23 @@ async function createSectorDirectory(
         },
         currentDocument: { exists: false },
       },
+      serverPlatformAuditWrite({
+        operation: 'sector.create',
+        workspaceId: result.workspace.id,
+        ug,
+        correlationId,
+        actor: founder,
+        before: {},
+        after: {
+          email: result.account.email,
+          ug,
+          status: result.workspace.status,
+          firebaseUid: result.account.firebaseUid || null,
+        },
+        metadata: {
+          authProvider: result.account.authProvider || 'password',
+        },
+      }),
     ]);
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
@@ -908,6 +979,24 @@ export async function resetSectorPasswordWithAuth(
     }
   );
 
+  await appendServerPlatformAuditEvent(accessToken, {
+    operation: 'sector.password_reset',
+    workspaceId,
+    ug: normalizeUnitUg(firestoreStringField(workspaceDocument.fields, 'ug')) || null,
+    correlationId: randomUUID(),
+    actor: founder,
+    before: {
+      credentialState: 'existing',
+    },
+    after: {
+      credentialState: 'password-reset',
+    },
+    metadata: {
+      email,
+      firebaseUid: authUser.localId,
+    },
+  });
+
   return {
     workspaceId,
     email,
@@ -948,6 +1037,7 @@ export async function deleteSectorWorkspaceWithAuth(
   }
 
   const accessToken = await getGoogleAccessToken();
+  const deletionCorrelationId = randomUUID();
   const workspacePath = `workspaces/${workspaceId}`;
   const accountPath = `platformAccounts/${email}`;
 
@@ -1072,6 +1162,27 @@ export async function deleteSectorWorkspaceWithAuth(
     );
   }
 
+  await appendServerPlatformAuditEvent(accessToken, {
+    operation: 'sector.delete',
+    workspaceId,
+    ug: storedUg || null,
+    correlationId: deletionCorrelationId,
+    actor: founder,
+    before: {
+      email,
+      ug: storedUg || null,
+      firebaseUid: authUser?.localId || null,
+    },
+    after: {
+      deleted: true,
+      firebaseAuthDeleted,
+    },
+    metadata: {
+      directoryDeleted: true,
+      locksReleased: true,
+    },
+  });
+
   return {
     workspaceId,
     email,
@@ -1175,10 +1286,15 @@ export async function provisionSectorWorkspaceWithAuth(
       new Date().toISOString()
     );
 
-    await createSectorDirectory(accessToken, {
-      workspace: records.workspace,
-      account: records.account,
-    });
+    await createSectorDirectory(
+      accessToken,
+      {
+        workspace: records.workspace,
+        account: records.account,
+      },
+      founder,
+      operationId
+    );
     directoryCreated = true;
 
     lockState = {
