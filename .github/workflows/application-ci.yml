@@ -225,6 +225,9 @@ jobs:
       - name: Block 14 operational scalability guard
         run: npm run verify:block-14-scalability
 
+      - name: Block 15 final hardening guard
+        run: npm run verify:block-15-final-hardening
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
