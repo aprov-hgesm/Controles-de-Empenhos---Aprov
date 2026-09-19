@@ -1134,6 +1134,204 @@ async function main() {
   assert.equal(metadataRefreshLock.data()?.invoiceRecordKey, metadataRefreshKey);
   assert.equal(metadataRefreshLock.data()?.invoiceId, 'META-NEW');
 
+  console.log('\nMigração de CNPJ do empenho + NFs + locks');
+  const cnpjOld = '11111111000191';
+  const cnpjNext = '22222222000182';
+  const cnpjEmpenhoId = '2026NE-CNPJ-001';
+  const cnpjInvoiceAOld = `nf_${cnpjOld}_c-a`;
+  const cnpjInvoiceBOld = `nf_${cnpjOld}_c-b`;
+  const cnpjInvoiceANext = `nf_${cnpjNext}_c-a`;
+  const cnpjInvoiceBNext = `nf_${cnpjNext}_c-b`;
+  const cnpjNs = '2026NS009300';
+
+  await ownerSet(`workspaces/workspace-a/empenhos/${cnpjEmpenhoId}`, {
+    id: cnpjEmpenhoId,
+    supplier: 'Fornecedor CNPJ',
+    supplierCnpj: cnpjOld,
+    description: 'Migração CNPJ',
+    date: '2026-01-01',
+    status: 'Ativo',
+    items: [],
+  });
+  for (const [recordKey, invoiceId] of [
+    [cnpjInvoiceAOld, 'C-A'],
+    [cnpjInvoiceBOld, 'C-B'],
+  ]) {
+    await ownerSet(`workspaces/workspace-a/invoices/${recordKey}`, {
+      id: invoiceId,
+      recordKey,
+      empenhoId: cnpjEmpenhoId,
+      supplier: 'Fornecedor CNPJ',
+      supplierCnpj: cnpjOld,
+      issueDate: '2026-01-18',
+      items: [],
+      totalValue: 200,
+    });
+  }
+  await reserveSagNs(
+    sessionA.db,
+    sessionA.user.uid,
+    'workspace-a',
+    cnpjInvoiceAOld,
+    'C-A',
+    cnpjEmpenhoId,
+    cnpjOld,
+    cnpjNs
+  );
+
+  const cnpjLockRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'settings',
+    sagLockId(cnpjNs)
+  );
+
+  await allowed('CNPJ migra empenho, NFs e lock de NS na mesma transação', () =>
+    runTransaction(sessionA.db, async (transaction) => {
+      const empenhoRef = doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'empenhos',
+        cnpjEmpenhoId
+      );
+      const oldARef = doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', cnpjInvoiceAOld);
+      const oldBRef = doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', cnpjInvoiceBOld);
+      const newARef = doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', cnpjInvoiceANext);
+      const newBRef = doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', cnpjInvoiceBNext);
+
+      const [empenhoSnapshot, oldA, oldB, newA, newB, lockSnapshot] = await Promise.all([
+        transaction.get(empenhoRef),
+        transaction.get(oldARef),
+        transaction.get(oldBRef),
+        transaction.get(newARef),
+        transaction.get(newBRef),
+        transaction.get(cnpjLockRef),
+      ]);
+
+      assert.equal(empenhoSnapshot.exists(), true);
+      assert.equal(oldA.exists(), true);
+      assert.equal(oldB.exists(), true);
+      assert.equal(newA.exists(), false);
+      assert.equal(newB.exists(), false);
+      assert.equal(lockSnapshot.exists(), true);
+
+      transaction.set(empenhoRef, { supplierCnpj: cnpjNext }, { merge: true });
+      transaction.set(newARef, {
+        ...oldA.data(),
+        recordKey: cnpjInvoiceANext,
+        supplierCnpj: cnpjNext,
+      });
+      transaction.set(newBRef, {
+        ...oldB.data(),
+        recordKey: cnpjInvoiceBNext,
+        supplierCnpj: cnpjNext,
+      });
+      transaction.delete(oldARef);
+      transaction.delete(oldBRef);
+      transaction.set(
+        cnpjLockRef,
+        {
+          ...lockSnapshot.data(),
+          invoiceRecordKey: cnpjInvoiceANext,
+          supplierCnpj: cnpjNext,
+          updatedAt: now(),
+          updatedBy: sessionA.user.uid,
+        },
+        { merge: true }
+      );
+    })
+  );
+
+  const [cnpjEmpenhoAfter, cnpjOldAAfter, cnpjOldBAfter, cnpjNewAAfter, cnpjNewBAfter, cnpjLockAfter] = await Promise.all([
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'empenhos', cnpjEmpenhoId)),
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', cnpjInvoiceAOld)),
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', cnpjInvoiceBOld)),
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', cnpjInvoiceANext)),
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', cnpjInvoiceBNext)),
+    getDoc(cnpjLockRef),
+  ]);
+  assert.equal(cnpjEmpenhoAfter.data()?.supplierCnpj, cnpjNext);
+  assert.equal(cnpjOldAAfter.exists(), false);
+  assert.equal(cnpjOldBAfter.exists(), false);
+  assert.equal(cnpjNewAAfter.data()?.supplierCnpj, cnpjNext);
+  assert.equal(cnpjNewBAfter.data()?.supplierCnpj, cnpjNext);
+  assert.equal(cnpjLockAfter.data()?.invoiceRecordKey, cnpjInvoiceANext);
+  assert.equal(cnpjLockAfter.data()?.supplierCnpj, cnpjNext);
+
+  const cnpjDeniedEmpenhoId = '2026NE-CNPJ-DENY';
+  const cnpjDeniedKey = `nf_${cnpjOld}_deny`;
+  const cnpjDeniedNs = '2026NS009301';
+  await ownerSet(`workspaces/workspace-a/empenhos/${cnpjDeniedEmpenhoId}`, {
+    id: cnpjDeniedEmpenhoId,
+    supplier: 'Fornecedor CNPJ Deny',
+    supplierCnpj: cnpjOld,
+    description: 'Teste CNPJ deny',
+    date: '2026-01-01',
+    status: 'Ativo',
+    items: [],
+  });
+  await ownerSet(`workspaces/workspace-a/invoices/${cnpjDeniedKey}`, {
+    id: 'DENY',
+    recordKey: cnpjDeniedKey,
+    empenhoId: cnpjDeniedEmpenhoId,
+    supplier: 'Fornecedor CNPJ Deny',
+    supplierCnpj: cnpjOld,
+    issueDate: '2026-01-19',
+    items: [],
+    totalValue: 210,
+  });
+  await reserveSagNs(
+    sessionA.db,
+    sessionA.user.uid,
+    'workspace-a',
+    cnpjDeniedKey,
+    'DENY',
+    cnpjDeniedEmpenhoId,
+    cnpjOld,
+    cnpjDeniedNs
+  );
+  const cnpjDeniedLockRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'settings',
+    sagLockId(cnpjDeniedNs)
+  );
+
+  await denied('Lock não aceita novo CNPJ se o empenho final não confirmar o mesmo CNPJ', () =>
+    runTransaction(sessionA.db, async (transaction) => {
+      const invoiceRef = doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'invoices',
+        cnpjDeniedKey
+      );
+      const [invoiceSnapshot, lockSnapshot] = await Promise.all([
+        transaction.get(invoiceRef),
+        transaction.get(cnpjDeniedLockRef),
+      ]);
+
+      transaction.set(
+        invoiceRef,
+        { ...invoiceSnapshot.data(), supplierCnpj: cnpjNext },
+        { merge: false }
+      );
+      transaction.set(
+        cnpjDeniedLockRef,
+        {
+          ...lockSnapshot.data(),
+          supplierCnpj: cnpjNext,
+          updatedAt: now(),
+          updatedBy: sessionA.user.uid,
+        },
+        { merge: true }
+      );
+    })
+  );
+
   console.log('\nIsolamento do Google Drive / documentStorage');
   const validDriveSettings = {
     provider: 'google-drive',

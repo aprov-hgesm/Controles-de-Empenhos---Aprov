@@ -387,6 +387,13 @@ service cloud.firestore {
         && resource.data.supplierCnpj == request.resource.data.supplierCnpj;
     }
 
+    function sagNsLockEmpenhoMatches(workspaceId) {
+      let empenhoPath = /databases/$(database)/documents/workspaces/$(workspaceId)/empenhos/$(request.resource.data.empenhoId);
+      return existsAfter(empenhoPath)
+        && getAfter(empenhoPath).data.id == request.resource.data.empenhoId
+        && getAfter(empenhoPath).data.supplierCnpj == request.resource.data.supplierCnpj;
+    }
+
     function validSagNsLockOwnerMigration(workspaceId) {
       let oldInvoicePath = /databases/$(database)/documents/workspaces/$(workspaceId)/invoices/$(resource.data.invoiceRecordKey);
       let newInvoicePath = /databases/$(database)/documents/workspaces/$(workspaceId)/invoices/$(request.resource.data.invoiceRecordKey);
@@ -397,7 +404,8 @@ service cloud.firestore {
         && getAfter(newInvoicePath).data.id == request.resource.data.invoiceId
         && getAfter(newInvoicePath).data.empenhoId == request.resource.data.empenhoId
         && getAfter(newInvoicePath).data.supplierCnpj == request.resource.data.supplierCnpj
-        && getAfter(newInvoicePath).data.numeroNS == request.resource.data.numeroNS;
+        && getAfter(newInvoicePath).data.numeroNS == request.resource.data.numeroNS
+        && sagNsLockEmpenhoMatches(workspaceId);
     }
 
     function validSagNsLockMetadataRefresh(workspaceId) {
@@ -408,7 +416,8 @@ service cloud.firestore {
         && getAfter(ownerInvoicePath).data.id == request.resource.data.invoiceId
         && getAfter(ownerInvoicePath).data.empenhoId == request.resource.data.empenhoId
         && getAfter(ownerInvoicePath).data.supplierCnpj == request.resource.data.supplierCnpj
-        && getAfter(ownerInvoicePath).data.numeroNS == request.resource.data.numeroNS;
+        && getAfter(ownerInvoicePath).data.numeroNS == request.resource.data.numeroNS
+        && sagNsLockEmpenhoMatches(workspaceId);
     }
 
     function validSagNsLockDelete(workspaceId, id) {

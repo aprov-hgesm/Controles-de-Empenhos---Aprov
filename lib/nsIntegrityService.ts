@@ -1,11 +1,16 @@
-import { deleteField, runTransaction } from 'firebase/firestore';
+import { deleteField, getDocs, query, runTransaction, where } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './firebase';
 import type { Alert, Empenho, Invoice } from './types';
 import { getInvoiceRecordKey, normalizeSupplierCnpj } from './invoiceIdentity';
 import {
+  buildSupplierCnpjMigrationPlan,
+  SupplierCnpjMigrationError,
+} from './supplierCnpjMigration';
+import {
   getCurrentOperationalScope,
   getOperationalCollectionPath,
   getOperationalDocumentPath,
+  operationalCollectionRef,
   operationalDocRef,
   operationalSettingsDocRef,
 } from './operationalPaths';
@@ -337,6 +342,52 @@ export async function commitInvoiceReceiptLifecycle(
         ? await transaction.get(nextInvoiceRef)
         : existingSnapshot;
 
+      const targetEmpenhoRef = operationalDocRef(
+        scope,
+        'empenhos',
+        input.targetEmpenho.id
+      );
+      const previousEmpenhoRef =
+        input.previousEmpenho &&
+        input.previousEmpenho.id !== input.targetEmpenho.id
+          ? operationalDocRef(scope, 'empenhos', input.previousEmpenho.id)
+          : null;
+      const [storedTargetEmpenhoSnapshot, storedPreviousEmpenhoSnapshot] =
+        await Promise.all([
+          transaction.get(targetEmpenhoRef),
+          previousEmpenhoRef
+            ? transaction.get(previousEmpenhoRef)
+            : Promise.resolve(null),
+        ]);
+
+      if (!storedTargetEmpenhoSnapshot.exists()) {
+        throw new NsIntegrityError(
+          'empenho_missing',
+          'O empenho selecionado não existe mais. O recebimento foi cancelado.'
+        );
+      }
+      if (previousEmpenhoRef && !storedPreviousEmpenhoSnapshot?.exists()) {
+        throw new NsIntegrityError(
+          'empenho_missing',
+          'O empenho anterior da Nota Fiscal não existe mais. A edição foi cancelada.'
+        );
+      }
+
+      const storedTargetEmpenho = storedTargetEmpenhoSnapshot.data() as Empenho;
+      const storedTargetCnpj = normalizeSupplierCnpj(storedTargetEmpenho.supplierCnpj);
+      const expectedTargetCnpj = normalizeSupplierCnpj(input.targetEmpenho.supplierCnpj);
+      const invoiceCnpj = normalizeSupplierCnpj(input.invoice.supplierCnpj);
+
+      if (
+        storedTargetCnpj !== expectedTargetCnpj ||
+        (invoiceCnpj && invoiceCnpj !== storedTargetCnpj)
+      ) {
+        throw new NsIntegrityError(
+          'supplier_scope_changed',
+          'O CNPJ do empenho mudou durante o recebimento. Reabra a Nota Fiscal e tente novamente.'
+        );
+      }
+
       if (isExistingEdit && !existingSnapshot.exists()) {
         throw new NsIntegrityError(
           'invoice_missing',
@@ -421,7 +472,7 @@ export async function commitInvoiceReceiptLifecycle(
       }
 
       transaction.set(
-        operationalDocRef(scope, 'empenhos', input.targetEmpenho.id),
+        targetEmpenhoRef,
         { ...input.targetEmpenho, userId }
       );
       if (
@@ -665,6 +716,323 @@ export async function commitAllInvoicesDeletionLifecycle(
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
+    throw error;
+  }
+}
+
+
+export const MAX_SUPPLIER_CNPJ_MIGRATION_INVOICES = 100;
+
+export interface CommitEmpenhoSupplierCnpjMigrationInput {
+  empenhoId: string;
+  targetSupplierCnpj: string;
+}
+
+export interface CommitEmpenhoSupplierCnpjMigrationResult {
+  updatedEmpenho: Empenho;
+  invoiceMigrations: Array<{
+    sourceRecordKey: string;
+    targetRecordKey: string;
+    invoice: Invoice;
+  }>;
+  migratedInvoiceCount: number;
+  migratedLockCount: number;
+  noOp: boolean;
+}
+
+export async function commitEmpenhoSupplierCnpjMigration(
+  userId: string,
+  input: CommitEmpenhoSupplierCnpjMigrationInput
+): Promise<CommitEmpenhoSupplierCnpjMigrationResult> {
+  const scope = getCurrentOperationalScope(userId);
+  const rawTarget = String(input.targetSupplierCnpj || '').trim();
+  const normalizedTarget = normalizeSupplierCnpj(rawTarget);
+
+  if (rawTarget && !normalizedTarget) {
+    throw new SupplierCnpjMigrationError(
+      'invalid_target_cnpj',
+      'Informe um CNPJ válido com 14 dígitos.'
+    );
+  }
+
+  const linkedQuery = query(
+    operationalCollectionRef(scope, 'invoices'),
+    where('empenhoId', '==', input.empenhoId)
+  );
+  const linkedSnapshot = await getDocs(linkedQuery);
+
+  if (linkedSnapshot.size > MAX_SUPPLIER_CNPJ_MIGRATION_INVOICES) {
+    throw new Error(
+      `O empenho possui ${linkedSnapshot.size} NFs vinculadas e excede o limite seguro de ${MAX_SUPPLIER_CNPJ_MIGRATION_INVOICES} para migração de CNPJ em uma única transação.`
+    );
+  }
+
+  const discoveredRecordKeys = linkedSnapshot.docs.map((snapshot) => snapshot.id);
+  const path = `${getOperationalDocumentPath(scope, 'empenhos', input.empenhoId)}/supplier-cnpj-migration`;
+
+  try {
+    return await runTransaction(db, async (transaction) => {
+      const empenhoRef = operationalDocRef(scope, 'empenhos', input.empenhoId);
+      const empenhoSnapshot = await transaction.get(empenhoRef);
+      if (!empenhoSnapshot.exists()) {
+        throw new NsIntegrityError(
+          'empenho_missing',
+          `O empenho ${input.empenhoId} não existe mais.`
+        );
+      }
+
+      const currentEmpenho = empenhoSnapshot.data() as Empenho;
+      const sourceInvoiceRefs = discoveredRecordKeys.map((recordKey) =>
+        operationalDocRef(scope, 'invoices', recordKey)
+      );
+      const sourceSnapshots = await Promise.all(
+        sourceInvoiceRefs.map((ref) => transaction.get(ref))
+      );
+
+      if (sourceSnapshots.some((snapshot) => !snapshot.exists())) {
+        throw new NsIntegrityError(
+          'invoice_missing',
+          'Uma ou mais Notas Fiscais mudaram durante a preparação da migração de CNPJ.'
+        );
+      }
+
+      const linkedInvoices = sourceSnapshots.map((snapshot) => {
+        const data = snapshot.data() as Invoice;
+        if (data.recordKey && data.recordKey !== snapshot.id) {
+          throw new NsIntegrityError(
+            'invoice_identity_changed',
+            `A NF ${data.id} possui recordKey divergente do documento Firestore. Corrija a identidade antes de alterar o CNPJ.`
+          );
+        }
+        if (data.empenhoId !== input.empenhoId) {
+          throw new NsIntegrityError(
+            'invoice_identity_changed',
+            `A NF ${data.id} mudou de empenho durante a preparação da migração de CNPJ.`
+          );
+        }
+        return {
+          ...data,
+          recordKey: snapshot.id,
+        };
+      });
+
+      const plan = buildSupplierCnpjMigrationPlan(
+        currentEmpenho,
+        linkedInvoices,
+        rawTarget
+      );
+
+      if (plan.isNoOp) {
+        return {
+          updatedEmpenho: plan.updatedEmpenho,
+          invoiceMigrations: plan.items.map((item) => ({
+            sourceRecordKey: item.sourceRecordKey,
+            targetRecordKey: item.targetRecordKey,
+            invoice: item.updatedInvoice,
+          })),
+          migratedInvoiceCount: 0,
+          migratedLockCount: 0,
+          noOp: true,
+        };
+      }
+
+      const targetRecordKeys = Array.from(
+        new Set(
+          plan.items
+            .filter((item) => item.targetRecordKey !== item.sourceRecordKey)
+            .map((item) => item.targetRecordKey)
+        )
+      );
+      const targetSnapshots = await Promise.all(
+        targetRecordKeys.map((recordKey) =>
+          transaction.get(operationalDocRef(scope, 'invoices', recordKey))
+        )
+      );
+      const occupiedTargetKeys = new Set(
+        targetSnapshots
+          .filter((snapshot) => snapshot.exists())
+          .map((snapshot) => snapshot.id)
+      );
+      if (occupiedTargetKeys.size > 0) {
+        throw new SupplierCnpjMigrationError(
+          'duplicate_target_identity',
+          `A migração foi bloqueada porque já existe NF com a nova identidade: ${Array.from(occupiedTargetKeys).join(', ')}.`
+        );
+      }
+
+      const nsEntries = plan.items
+        .map((item) => ({
+          item,
+          ns: normalizeNsNumber(item.invoice.numeroNS),
+        }))
+        .filter((entry) => entry.ns);
+
+      const seenNs = new Set<string>();
+      for (const entry of nsEntries) {
+        if (seenNs.has(entry.ns)) {
+          throw new NsIntegrityError(
+            'ns_reused_in_scope',
+            `A NS ${entry.ns} aparece em mais de uma NF vinculada ao empenho. Corrija a inconsistência antes de alterar o CNPJ.`
+          );
+        }
+        seenNs.add(entry.ns);
+      }
+
+      const lockIds = Array.from(
+        new Set(nsEntries.map((entry) => buildNsLockDocumentId(entry.ns)))
+      );
+      const lockSnapshots = await Promise.all(
+        lockIds.map((lockId) =>
+          transaction.get(operationalSettingsDocRef(scope, lockId))
+        )
+      );
+      const lockById = new Map(
+        lockSnapshots.map((snapshot) => [
+          snapshot.id,
+          snapshot.exists() ? (snapshot.data() as Partial<NsLockDocument>) : null,
+        ])
+      );
+
+      for (const entry of nsEntries) {
+        const lock = lockById.get(buildNsLockDocumentId(entry.ns));
+        if (!lock) continue;
+
+        const sourceSupplierCnpj =
+          normalizeSupplierCnpj(entry.item.invoice.supplierCnpj) ||
+          plan.sourceSupplierCnpj ||
+          plan.targetSupplierCnpj;
+
+        if (!sourceSupplierCnpj) {
+          throw new NsIntegrityError(
+            'invalid_supplier_cnpj',
+            `A NF ${entry.item.invoice.id} não possui CNPJ suficiente para validar o lock da NS.`
+          );
+        }
+
+        const lockSupplierCnpj = normalizeSupplierCnpj(lock.supplierCnpj);
+        if (
+          (lock.invoiceId && lock.invoiceId !== entry.item.invoice.id) ||
+          (lock.empenhoId && lock.empenhoId !== input.empenhoId) ||
+          (lockSupplierCnpj && lockSupplierCnpj !== sourceSupplierCnpj)
+        ) {
+          throw new NsIntegrityError(
+            'stale_lock_owner',
+            `O lock da NS ${entry.ns} possui metadados divergentes da NF ${entry.item.invoice.id}. Corrija a inconsistência antes de alterar o CNPJ.`
+          );
+        }
+
+        assertNsLockOwnership(
+          lock,
+          buildLifecycleMutation(
+            entry.item.invoice,
+            entry.item.sourceRecordKey,
+            sourceSupplierCnpj,
+            entry.ns,
+            'migration'
+          ),
+          entry.ns,
+          'stale_lock_owner'
+        );
+      }
+
+      const lockWriteCount = nsEntries.length;
+      const invoiceWriteCount = plan.items.reduce(
+        (count, item) =>
+          count + 1 + (item.sourceRecordKey !== item.targetRecordKey ? 1 : 0),
+        0
+      );
+      const totalWrites = 1 + invoiceWriteCount + lockWriteCount;
+      if (totalWrites > MAX_INVOICE_LIFECYCLE_WRITES) {
+        throw new Error(
+          `A migração exige ${totalWrites} gravações e excede o limite seguro de ${MAX_INVOICE_LIFECYCLE_WRITES}.`
+        );
+      }
+
+      const updatedEmpenho = plan.updatedEmpenho;
+      if (plan.targetSupplierCnpj) {
+        transaction.set(
+          empenhoRef,
+          {
+            supplierCnpj: plan.targetSupplierCnpj,
+            userId,
+          },
+          { merge: true }
+        );
+      } else {
+        transaction.set(
+          empenhoRef,
+          {
+            supplierCnpj: deleteField(),
+            userId,
+          },
+          { merge: true }
+        );
+      }
+
+      for (const item of plan.items) {
+        transaction.set(
+          operationalDocRef(scope, 'invoices', item.targetRecordKey),
+          {
+            ...item.updatedInvoice,
+            recordKey: item.targetRecordKey,
+            userId,
+          }
+        );
+
+        if (item.sourceRecordKey !== item.targetRecordKey) {
+          transaction.delete(
+            operationalDocRef(scope, 'invoices', item.sourceRecordKey)
+          );
+        }
+      }
+
+      const now = new Date().toISOString();
+      let migratedLockCount = 0;
+      for (const entry of nsEntries) {
+        const lockId = buildNsLockDocumentId(entry.ns);
+        const existingLock = lockById.get(lockId);
+
+        const targetMutation = buildLifecycleMutation(
+          entry.item.updatedInvoice,
+          entry.item.targetRecordKey,
+          plan.targetSupplierCnpj,
+          entry.ns,
+          'migration'
+        );
+        const nextLock = buildNsLockDocument({
+          workspaceId: scope.workspaceId,
+          mutation: targetMutation,
+          userId,
+          createdAt: existingLock?.createdAt || now,
+          updatedAt: now,
+        });
+        transaction.set(
+          operationalSettingsDocRef(scope, lockId),
+          nextLock,
+          { merge: true }
+        );
+        migratedLockCount += 1;
+      }
+
+      return {
+        updatedEmpenho,
+        invoiceMigrations: plan.items.map((item) => ({
+          sourceRecordKey: item.sourceRecordKey,
+          targetRecordKey: item.targetRecordKey,
+          invoice: item.updatedInvoice,
+        })),
+        migratedInvoiceCount: plan.items.filter(
+          (item) =>
+            item.sourceRecordKey !== item.targetRecordKey ||
+            normalizeSupplierCnpj(item.invoice.supplierCnpj) !==
+              plan.targetSupplierCnpj
+        ).length,
+        migratedLockCount,
+        noOp: false,
+      };
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
     throw error;
   }
 }

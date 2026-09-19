@@ -72,7 +72,9 @@
     "verify:ns-integrity-service": "node scripts/verify-ns-integrity-service.mjs",
     "verify:manual-ns-integrity": "node scripts/verify-manual-ns-integrity.mjs",
     "verify:invoice-ns-lifecycle": "node scripts/verify-invoice-ns-lifecycle.mjs",
-    "verify:brand-identity-foundation": "node scripts/verify-brand-identity-foundation.mjs"
+    "verify:brand-identity-foundation": "node scripts/verify-brand-identity-foundation.mjs",
+    "test:supplier-cnpj-migration": "node --experimental-vm-modules --test scripts/supplier-cnpj-migration.test.mjs",
+    "verify:supplier-cnpj-migration": "node scripts/verify-supplier-cnpj-migration.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
