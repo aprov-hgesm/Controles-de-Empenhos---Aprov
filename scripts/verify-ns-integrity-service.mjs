@@ -56,11 +56,16 @@ forbidText(sagPersistence, 'operationalSettingsDocRef', 'SAG voltou a manipular 
 requireText(sagPlan, 'validateNsIntegritySnapshot', 'Plano SAG não reutiliza a validação central.');
 requireText(sagPlan, 'buildNsLockDocumentId', 'Identidade de lock SAG não reutiliza a camada central.');
 
-requireText(
-  manual,
-  'const handleSaveNumeroNS',
-  'O Bloco 1 não deve remover a edição manual antes da migração controlada do Bloco 2.'
-);
+requireText(manual, 'const handleSaveNumeroNS', 'Edição manual de NS ausente.');
+requireText(manual, 'commitNsIntegrityMutations', 'Edição manual não usa o serviço central de NS.');
+requireText(manual, "source: 'manual'", 'Edição manual não identifica a origem da mutação.');
+const manualStart = manual.indexOf('const handleSaveNumeroNS');
+const manualEnd = manual.indexOf('const handleSaveComissao', manualStart);
+const manualBlock =
+  manualStart >= 0 && manualEnd > manualStart
+    ? manual.slice(manualStart, manualEnd)
+    : '';
+forbidText(manualBlock, 'saveInvoice(', 'Edição manual voltou a gravar numeroNS fora do serviço central.');
 
 requireText(pkg, '"test:ns-integrity"', 'Testes do serviço de integridade não estão registrados.');
 requireText(pkg, '"verify:ns-integrity-service"', 'Guard do serviço de integridade não está registrado.');
@@ -77,7 +82,7 @@ if (findings.length) {
   console.log('Transação NF + lock: CENTRALIZADA');
   console.log('SAG como adaptador: ATIVO');
   console.log('Atribuição/troca/remoção: MODELADAS');
-  console.log('Migração manual: RESERVADA AO BLOCO 2');
+  console.log('Edição manual: CENTRALIZADA');
 }
 
 function read(path) {
