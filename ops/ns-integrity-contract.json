@@ -1,0 +1,269 @@
+{
+  "contractVersion": "emprovex_ns_integrity_v1",
+  "status": "frozen",
+  "runtimeBehaviorChange": false,
+  "canonicalIdentity": {
+    "targetDimensions": [
+      "workspaceId",
+      "ug",
+      "numeroNS"
+    ],
+    "legacyLockDimensions": [
+      "workspaceId",
+      "numeroNS"
+    ],
+    "migrationRequired": true,
+    "notes": "A identidade canônica futura inclui a UG emitente. O lock legado permanece inalterado neste bloco."
+  },
+  "formats": {
+    "numeroNS": "AAAANSNNNNNN",
+    "ug": "NNNNNN",
+    "supplierCnpj": "14_digits_normalized",
+    "invoiceRecordKey": "nf_<cnpj>_<numero_nf_normalizado>"
+  },
+  "invariants": [
+    {
+      "id": "NS-001",
+      "title": "Identidade canônica",
+      "rule": "Uma NS é identificada canonicamente por workspaceId + UG emitente + numeroNS normalizado."
+    },
+    {
+      "id": "NS-002",
+      "title": "Proprietário único",
+      "rule": "Uma identidade canônica de NS pode pertencer a no máximo uma NF ativa no mesmo workspace."
+    },
+    {
+      "id": "NS-003",
+      "title": "Coerência NF-lock",
+      "rule": "Toda NF com NS controlada deve possuir lock coerente e todo lock ativo deve apontar para uma NF existente e compatível."
+    },
+    {
+      "id": "NS-004",
+      "title": "Mutação atômica",
+      "rule": "Criar, trocar, remover ou migrar NS deve atualizar NF e lock na mesma unidade atômica de persistência."
+    },
+    {
+      "id": "NS-005",
+      "title": "Idempotência",
+      "rule": "Reaplicar exatamente a mesma NS à mesma NF não produz nova alteração material."
+    },
+    {
+      "id": "NS-006",
+      "title": "Sem bypass por origem",
+      "rule": "SAG, edição manual, migração e rotinas de sistema obedecem à mesma camada de integridade."
+    },
+    {
+      "id": "NS-007",
+      "title": "Ciclo de vida do lock",
+      "rule": "Excluir NF, alterar recordKey ou migrar identidade deve remover ou migrar o lock correspondente de forma atômica."
+    },
+    {
+      "id": "NS-008",
+      "title": "Coerência CNPJ-NF",
+      "rule": "A identidade interna da NF deve permanecer coerente com o CNPJ do empenho e com seu recordKey."
+    },
+    {
+      "id": "NS-009",
+      "title": "Isolamento multi-tenant",
+      "rule": "Nenhuma operação de NS pode ler, reservar, migrar ou remover locks de outro workspace."
+    },
+    {
+      "id": "NS-010",
+      "title": "Falha fechada",
+      "rule": "Ambiguidade, conflito de identidade, lock órfão ou estado obsoleto bloqueiam a operação em vez de escolher ou corrigir automaticamente."
+    },
+    {
+      "id": "NS-011",
+      "title": "Rastreabilidade de origem",
+      "rule": "Toda mutação controlada deve preservar a origem lógica da ação para futura trilha de auditoria."
+    }
+  ],
+  "operations": [
+    {
+      "id": "assign_ns",
+      "allowed": true,
+      "requiresAtomicLockUpdate": true,
+      "preconditions": [
+        "NF existe",
+        "NS normalizada é válida",
+        "identidade canônica da NS está livre ou já pertence à mesma NF"
+      ],
+      "postconditions": [
+        "NF possui a NS",
+        "lock aponta para a NF"
+      ]
+    },
+    {
+      "id": "replace_ns",
+      "allowed": true,
+      "requiresAtomicLockUpdate": true,
+      "preconditions": [
+        "lock antigo pertence à NF",
+        "novo lock está livre ou já pertence à mesma NF"
+      ],
+      "postconditions": [
+        "lock antigo é liberado",
+        "novo lock aponta para a NF",
+        "NF contém somente a nova NS"
+      ]
+    },
+    {
+      "id": "remove_ns",
+      "allowed": true,
+      "requiresAtomicLockUpdate": true,
+      "preconditions": [
+        "se houver lock, ele pertence à NF"
+      ],
+      "postconditions": [
+        "NF fica sem numeroNS",
+        "lock anterior é removido"
+      ]
+    },
+    {
+      "id": "migrate_invoice_record_key",
+      "allowed": true,
+      "requiresAtomicLockUpdate": true,
+      "preconditions": [
+        "novo recordKey não conflita",
+        "NF antiga é a proprietária do lock quando houver NS"
+      ],
+      "postconditions": [
+        "NF existe somente na nova identidade",
+        "lock aponta para o novo recordKey"
+      ]
+    },
+    {
+      "id": "delete_invoice",
+      "allowed": true,
+      "requiresAtomicLockUpdate": true,
+      "preconditions": [
+        "lock existente pertence à NF"
+      ],
+      "postconditions": [
+        "NF é removida",
+        "lock correspondente é removido"
+      ]
+    },
+    {
+      "id": "bulk_delete_invoices",
+      "allowed": true,
+      "requiresAtomicLockUpdate": true,
+      "preconditions": [
+        "todos os locks associados são conhecidos e pertencem às respectivas NFs"
+      ],
+      "postconditions": [
+        "nenhum lock das NFs excluídas permanece órfão"
+      ]
+    },
+    {
+      "id": "change_supplier_cnpj",
+      "allowed": true,
+      "requiresAtomicLockUpdate": true,
+      "preconditions": [
+        "todas as NFs vinculadas são reidentificáveis",
+        "não existe colisão de recordKey no novo CNPJ"
+      ],
+      "postconditions": [
+        "empenho, NFs, recordKeys e locks permanecem coerentes com o novo CNPJ"
+      ]
+    },
+    {
+      "id": "sag_import",
+      "allowed": true,
+      "requiresAtomicLockUpdate": true,
+      "preconditions": [
+        "payload válido",
+        "CNPJ conciliado",
+        "NF e NE determinísticas",
+        "confirmação humana quando houver escrita"
+      ],
+      "postconditions": [
+        "apenas correspondências seguras são persistidas",
+        "locks e NFs permanecem coerentes"
+      ]
+    },
+    {
+      "id": "direct_numero_ns_write_without_integrity_service",
+      "allowed": false,
+      "requiresAtomicLockUpdate": true,
+      "preconditions": [],
+      "postconditions": []
+    },
+    {
+      "id": "delete_lock_without_owner_transition",
+      "allowed": false,
+      "requiresAtomicLockUpdate": true,
+      "preconditions": [],
+      "postconditions": []
+    }
+  ],
+  "knownGaps": [
+    {
+      "id": "GAP-001",
+      "severity": "high",
+      "description": "Edição manual de numeroNS ainda grava a NF diretamente sem lock central."
+    },
+    {
+      "id": "GAP-002",
+      "severity": "high",
+      "description": "Exclusão de NF ainda não remove o lock de NS correspondente."
+    },
+    {
+      "id": "GAP-003",
+      "severity": "high",
+      "description": "Mudança de recordKey de NF ainda não migra o lock."
+    },
+    {
+      "id": "GAP-004",
+      "severity": "high",
+      "description": "Mudança de CNPJ do empenho ainda não migra NFs, recordKeys e locks."
+    },
+    {
+      "id": "GAP-005",
+      "severity": "medium",
+      "description": "Firestore Rules ainda não obrigam coerência entre numeroNS e lock em toda escrita de invoice."
+    },
+    {
+      "id": "GAP-006",
+      "severity": "medium",
+      "description": "Teste Emulator de concorrência usa helper conceitual e ainda não executa commitSagNsImport real."
+    },
+    {
+      "id": "GAP-007",
+      "severity": "medium",
+      "description": "Lock legado ainda usa workspaceId + numeroNS e não inclui UG."
+    }
+  ],
+  "plannedResolution": {
+    "block1": [
+      "NS-003",
+      "NS-004",
+      "NS-005",
+      "NS-006"
+    ],
+    "block2": [
+      "GAP-001"
+    ],
+    "block3": [
+      "GAP-002",
+      "GAP-003"
+    ],
+    "block4": [
+      "GAP-004",
+      "NS-008"
+    ],
+    "block5": [
+      "GAP-005"
+    ],
+    "block7": [
+      "GAP-007",
+      "NS-001"
+    ],
+    "block8": [
+      "NS-011"
+    ],
+    "block9": [
+      "GAP-006"
+    ]
+  }
+}
