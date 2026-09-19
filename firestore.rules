@@ -502,10 +502,21 @@ service cloud.firestore {
     }
 
     function workspaceUgMatchesNs(workspaceId, ug) {
-      return workspaceExists(workspaceId)
-        && 'ug' in workspaceData(workspaceId)
-        && isValidUnitUg(workspaceData(workspaceId).ug)
-        && workspaceData(workspaceId).ug == ug;
+      return (
+          workspaceId == 'hgesm-aprov'
+          && ug == '160416'
+          && workspaceExists(workspaceId)
+          && (
+            !('ug' in workspaceData(workspaceId))
+            || workspaceData(workspaceId).ug == '160416'
+          )
+        )
+        || (
+          workspaceExists(workspaceId)
+          && 'ug' in workspaceData(workspaceId)
+          && isValidUnitUg(workspaceData(workspaceId).ug)
+          && workspaceData(workspaceId).ug == ug
+        );
     }
 
     function canonicalInvoiceLockMatchesAfter(workspaceId, id, data) {
