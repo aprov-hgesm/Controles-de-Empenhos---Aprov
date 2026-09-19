@@ -1301,7 +1301,11 @@ service cloud.firestore {
     }
 
     match /workspaces/{workspaceId}/settings/{id} {
-      allow read: if id != 'termoRecebimentoCounter'
+      // Listagem é limitada ao próprio workspace autenticado. Os settings atuais
+      // já são individualmente legíveis pelo setor; o list habilita diagnósticos
+      // de integridade sem ampliar acesso entre tenants.
+      allow list: if canAccessWorkspace(workspaceId);
+      allow get: if id != 'termoRecebimentoCounter'
         && id != 'documentStorage'
         && canAccessWorkspace(workspaceId);
       allow create: if id != 'termoRecebimentoCounter'
