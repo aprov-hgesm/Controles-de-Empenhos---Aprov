@@ -13,7 +13,7 @@ Resolver o GAP-004 e aplicar o invariante NS-008 do contrato de integridade:
 
 A alteração de CNPJ agora usa `commitEmpenhoSupplierCnpjMigration()`.
 
-O serviço primeiro consulta as NFs vinculadas ao empenho e limita a migração a 100 NFs por transação. Depois, dentro de `runTransaction()`:
+O serviço primeiro consulta as NFs vinculadas ao empenho e limita a migração a 100 NFs por transação. Após o hardening global das Rules, uma mesma migração pode conter no máximo **5 NFs com NS**, preservando o orçamento de leituras cruzadas do Firestore. Depois, dentro de `runTransaction()`:
 
 1. relê o empenho;
 2. relê todas as NFs descobertas;

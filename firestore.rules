@@ -334,6 +334,139 @@ service cloud.firestore {
       return id.matches('^sagNsLock_.+');
     }
 
+    function isValidNsNumber(value) {
+      return value is string
+        && value.matches('^[0-9]{4}NS[0-9]{6}$');
+    }
+
+    function invoiceHasControlledNs(data) {
+      return 'numeroNS' in data
+        && isValidNsNumber(data.numeroNS);
+    }
+
+    function invoiceNsFieldIsValid(data) {
+      return !('numeroNS' in data)
+        || isValidNsNumber(data.numeroNS);
+    }
+
+    function sagNsLockIdForNumber(numeroNS) {
+      return 'sagNsLock_' + numeroNS;
+    }
+
+    function invoiceEmpenhoMatchesAfter(workspaceId, data) {
+      let empenhoPath = /databases/$(database)/documents/workspaces/$(workspaceId)/empenhos/$(data.empenhoId);
+      return data.empenhoId is string
+        && data.supplierCnpj is string
+        && data.supplierCnpj.size() == 14
+        && existsAfter(empenhoPath)
+        && getAfter(empenhoPath).data.id == data.empenhoId
+        && getAfter(empenhoPath).data.supplierCnpj == data.supplierCnpj;
+    }
+
+    function invoiceLockMatchesAfter(workspaceId, id, data) {
+      let lockId = sagNsLockIdForNumber(data.numeroNS);
+      let lockPath = /databases/$(database)/documents/workspaces/$(workspaceId)/settings/$(lockId);
+      return data.recordKey == id
+        && data.id is string
+        && data.id.size() > 0
+        && data.empenhoId is string
+        && data.empenhoId.size() > 0
+        && data.supplierCnpj is string
+        && data.supplierCnpj.size() == 14
+        && existsAfter(lockPath)
+        && getAfter(lockPath).data.id == lockId
+        && getAfter(lockPath).data.type == 'sag-ns-lock'
+        && getAfter(lockPath).data.workspaceId == workspaceId
+        && getAfter(lockPath).data.numeroNS == data.numeroNS
+        && getAfter(lockPath).data.invoiceRecordKey == id
+        && getAfter(lockPath).data.invoiceId == data.id
+        && getAfter(lockPath).data.empenhoId == data.empenhoId
+        && getAfter(lockPath).data.supplierCnpj == data.supplierCnpj;
+    }
+
+    function controlledOldInvoiceLockReleasedAfter(workspaceId, id) {
+      let oldLockId = sagNsLockIdForNumber(resource.data.numeroNS);
+      let oldLockPath = /databases/$(database)/documents/workspaces/$(workspaceId)/settings/$(oldLockId);
+      return (
+          invoiceHasControlledNs(request.resource.data)
+          && request.resource.data.numeroNS == resource.data.numeroNS
+        )
+        || !existsAfter(oldLockPath)
+        || getAfter(oldLockPath).data.invoiceRecordKey != id;
+    }
+
+    function oldInvoiceLockReleasedAfter(workspaceId, id) {
+      return !invoiceHasControlledNs(resource.data)
+        || controlledOldInvoiceLockReleasedAfter(workspaceId, id);
+    }
+
+    function controlledDeletedInvoiceLockReleasedAfter(workspaceId, id) {
+      let oldLockId = sagNsLockIdForNumber(resource.data.numeroNS);
+      let oldLockPath = /databases/$(database)/documents/workspaces/$(workspaceId)/settings/$(oldLockId);
+      return !existsAfter(oldLockPath)
+        || getAfter(oldLockPath).data.invoiceRecordKey != id;
+    }
+
+    function deletedInvoiceLockReleasedAfter(workspaceId, id) {
+      return !invoiceHasControlledNs(resource.data)
+        || controlledDeletedInvoiceLockReleasedAfter(workspaceId, id);
+    }
+
+    function invoiceIdentityChanged() {
+      return !('recordKey' in resource.data)
+        || !('supplierCnpj' in resource.data)
+        || request.resource.data.recordKey != resource.data.recordKey
+        || request.resource.data.id != resource.data.id
+        || request.resource.data.empenhoId != resource.data.empenhoId
+        || request.resource.data.supplierCnpj != resource.data.supplierCnpj;
+    }
+
+    function invoiceNeedsEmpenhoRevalidation() {
+      return !invoiceHasControlledNs(resource.data)
+        || request.resource.data.numeroNS != resource.data.numeroNS
+        || invoiceIdentityChanged();
+    }
+
+    function validInvoiceCreate(workspaceId, id) {
+      return invoiceNsFieldIsValid(request.resource.data)
+        && (
+          !invoiceHasControlledNs(request.resource.data)
+          || (
+            invoiceLockMatchesAfter(workspaceId, id, request.resource.data)
+            && invoiceEmpenhoMatchesAfter(workspaceId, request.resource.data)
+          )
+        );
+    }
+
+    function validInvoiceUpdate(workspaceId, id) {
+      return invoiceNsFieldIsValid(request.resource.data)
+        && oldInvoiceLockReleasedAfter(workspaceId, id)
+        && (
+          !invoiceHasControlledNs(request.resource.data)
+          || (
+            invoiceLockMatchesAfter(workspaceId, id, request.resource.data)
+            && (
+              !invoiceNeedsEmpenhoRevalidation()
+              || invoiceEmpenhoMatchesAfter(workspaceId, request.resource.data)
+            )
+          )
+        );
+    }
+
+    function validInvoiceDelete(workspaceId, id) {
+      return deletedInvoiceLockReleasedAfter(workspaceId, id);
+    }
+
+    function sagNsLockTargetMatchesAfter(workspaceId) {
+      let invoicePath = /databases/$(database)/documents/workspaces/$(workspaceId)/invoices/$(request.resource.data.invoiceRecordKey);
+      return existsAfter(invoicePath)
+        && getAfter(invoicePath).data.recordKey == request.resource.data.invoiceRecordKey
+        && getAfter(invoicePath).data.id == request.resource.data.invoiceId
+        && getAfter(invoicePath).data.empenhoId == request.resource.data.empenhoId
+        && getAfter(invoicePath).data.supplierCnpj == request.resource.data.supplierCnpj
+        && getAfter(invoicePath).data.numeroNS == request.resource.data.numeroNS;
+    }
+
     function validSagNsLock(workspaceId, id) {
       return isSagNsLockId(id)
         && request.resource.data.keys().hasAll([
@@ -363,10 +496,10 @@ service cloud.firestore {
           'updatedBy'
         ])
         && request.resource.data.id == id
+        && request.resource.data.id == sagNsLockIdForNumber(request.resource.data.numeroNS)
         && request.resource.data.type == 'sag-ns-lock'
         && request.resource.data.workspaceId == workspaceId
-        && request.resource.data.numeroNS is string
-        && request.resource.data.numeroNS.size() > 0
+        && isValidNsNumber(request.resource.data.numeroNS)
         && request.resource.data.invoiceRecordKey is string
         && request.resource.data.invoiceRecordKey.size() > 0
         && request.resource.data.invoiceId is string
@@ -377,7 +510,8 @@ service cloud.firestore {
         && request.resource.data.supplierCnpj.size() == 14
         && request.resource.data.createdAt is string
         && request.resource.data.updatedAt is string
-        && request.resource.data.updatedBy == request.auth.uid;
+        && request.resource.data.updatedBy == request.auth.uid
+        && sagNsLockTargetMatchesAfter(workspaceId);
     }
 
     function sagNsLockOwnerUnchanged() {
@@ -385,13 +519,6 @@ service cloud.firestore {
         && resource.data.invoiceId == request.resource.data.invoiceId
         && resource.data.empenhoId == request.resource.data.empenhoId
         && resource.data.supplierCnpj == request.resource.data.supplierCnpj;
-    }
-
-    function sagNsLockEmpenhoMatches(workspaceId) {
-      let empenhoPath = /databases/$(database)/documents/workspaces/$(workspaceId)/empenhos/$(request.resource.data.empenhoId);
-      return existsAfter(empenhoPath)
-        && getAfter(empenhoPath).data.id == request.resource.data.empenhoId
-        && getAfter(empenhoPath).data.supplierCnpj == request.resource.data.supplierCnpj;
     }
 
     function validSagNsLockOwnerMigration(workspaceId) {
@@ -404,8 +531,7 @@ service cloud.firestore {
         && getAfter(newInvoicePath).data.id == request.resource.data.invoiceId
         && getAfter(newInvoicePath).data.empenhoId == request.resource.data.empenhoId
         && getAfter(newInvoicePath).data.supplierCnpj == request.resource.data.supplierCnpj
-        && getAfter(newInvoicePath).data.numeroNS == request.resource.data.numeroNS
-        && sagNsLockEmpenhoMatches(workspaceId);
+        && getAfter(newInvoicePath).data.numeroNS == request.resource.data.numeroNS;
     }
 
     function validSagNsLockMetadataRefresh(workspaceId) {
@@ -416,8 +542,7 @@ service cloud.firestore {
         && getAfter(ownerInvoicePath).data.id == request.resource.data.invoiceId
         && getAfter(ownerInvoicePath).data.empenhoId == request.resource.data.empenhoId
         && getAfter(ownerInvoicePath).data.supplierCnpj == request.resource.data.supplierCnpj
-        && getAfter(ownerInvoicePath).data.numeroNS == request.resource.data.numeroNS
-        && sagNsLockEmpenhoMatches(workspaceId);
+        && getAfter(ownerInvoicePath).data.numeroNS == request.resource.data.numeroNS;
     }
 
     function validSagNsLockDelete(workspaceId, id) {
@@ -597,7 +722,13 @@ service cloud.firestore {
     }
 
     match /workspaces/{workspaceId}/invoices/{id} {
-      allow read, write: if canAccessWorkspace(workspaceId);
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validInvoiceCreate(workspaceId, id);
+      allow update: if canAccessWorkspace(workspaceId)
+        && validInvoiceUpdate(workspaceId, id);
+      allow delete: if canAccessWorkspace(workspaceId)
+        && validInvoiceDelete(workspaceId, id);
     }
 
     match /workspaces/{workspaceId}/comissoes/{id} {

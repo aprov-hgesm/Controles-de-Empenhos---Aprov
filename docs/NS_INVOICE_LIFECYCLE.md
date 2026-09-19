@@ -45,7 +45,7 @@ NF histórica com NS sem lock continua podendo ser excluída; não é criado um 
 
 `commitAllInvoicesDeletionLifecycle()` relê todas as NFs, identifica os locks associados e valida seus proprietários antes de qualquer escrita.
 
-O limite considera empenhos atualizados + NFs excluídas + locks excluídos e não pode ultrapassar **450 writes** por transação.
+O limite geral considera empenhos atualizados + NFs excluídas + locks excluídos e não pode ultrapassar **450 writes** por transação. Após o hardening global das Rules, uma exclusão em lote fica adicionalmente limitada a **8 NFs com NS** por transação, devido ao orçamento de leituras cruzadas `getAfter()/existsAfter()`.
 
 Se uma NF tiver mudado/desaparecido ou um lock pertencer a outra NF, toda a exclusão é cancelada.
 

@@ -38,6 +38,7 @@ for (const expected of [
   'transaction.delete(',
   'supplierCnpj: plan.targetSupplierCnpj',
   'migratedLockCount',
+  'MAX_SUPPLIER_CNPJ_MIGRATION_NS_LOCKS = 5',
   'data.recordKey && data.recordKey !== snapshot.id',
   "data.empenhoId !== input.empenhoId",
   'storedTargetCnpj !== expectedTargetCnpj',
@@ -64,8 +65,9 @@ if (!handler) {
 }
 
 for (const expected of [
-  'sagNsLockEmpenhoMatches(workspaceId)',
-  'getAfter(empenhoPath).data.supplierCnpj == request.resource.data.supplierCnpj',
+  'invoiceEmpenhoMatchesAfter(workspaceId, data)',
+  'getAfter(empenhoPath).data.supplierCnpj == data.supplierCnpj',
+  'sagNsLockTargetMatchesAfter(workspaceId)',
   'validSagNsLockOwnerMigration(workspaceId)',
   'validSagNsLockMetadataRefresh(workspaceId)',
 ]) {
