@@ -867,27 +867,6 @@ async function main() {
     )
   );
 
-  await ownerSet('platformUgIndex/160499', {
-    ug: '160499',
-    workspaceId: 'workspace-a',
-    email: identities.a.email,
-    createdAt: now(),
-    createdBy: founderEmail,
-  });
-  const hardeningUgIndexRef = doc(admin.db, 'platformUgIndex', '160499');
-  await allowed('Administrador lê o índice global de UG', () =>
-    getDoc(hardeningUgIndexRef)
-  );
-  await denied('Setor externo não lê o índice global de UG', () =>
-    getDoc(doc(sessionA.db, 'platformUgIndex', '160499'))
-  );
-  await denied('Índice global de UG não pode ser alterado depois de criado', () =>
-    updateDoc(hardeningUgIndexRef, { email: 'adulterado@example.test' })
-  );
-  await denied('Índice global de UG não pode ser excluído', () =>
-    deleteDoc(hardeningUgIndexRef)
-  );
-
   await ownerSet('empenhos/legacy-hardening', {
     id: 'legacy-hardening',
     marker: 'legacy-read-only',
@@ -2378,6 +2357,20 @@ async function main() {
     });
     await batch.commit();
   });
+
+  const hardeningUgIndexRef = doc(admin.db, 'platformUgIndex', '160499');
+  await allowed('Administrador lê o índice global de UG', () =>
+    getDoc(hardeningUgIndexRef)
+  );
+  await denied('Setor externo não lê o índice global de UG', () =>
+    getDoc(doc(sessionA.db, 'platformUgIndex', '160499'))
+  );
+  await denied('Índice global de UG não pode ser alterado depois de criado', () =>
+    updateDoc(hardeningUgIndexRef, { email: 'adulterado@example.test' })
+  );
+  await denied('Índice global de UG não pode ser excluído', () =>
+    deleteDoc(hardeningUgIndexRef)
+  );
 
   await denied('UG já vinculada não pode ser substituída por outra UG', async () => {
     const batch = writeBatch(admin.db);
