@@ -12,6 +12,9 @@ import {
   commitAllInvoicesDeletionLifecycle,
   commitInvoiceDeletionLifecycle,
   commitInvoiceReceiptLifecycle,
+  type CommitAllInvoicesDeletionLifecycleResult,
+  type CommitInvoiceDeletionLifecycleResult,
+  type CommitInvoiceReceiptLifecycleResult,
 } from './nsIntegrityService';
 import {
   commitEmpenhoDeletionLifecycle,
@@ -67,9 +70,10 @@ export async function saveEmpenho(userId: string, empenho: Empenho): Promise<Emp
 
 export async function removeEmpenho(
   userId: string,
-  id: string
+  id: string,
+  expectedRevision?: number
 ): Promise<CommitEmpenhoDeletionResult> {
-  return commitEmpenhoDeletionLifecycle(userId, id);
+  return commitEmpenhoDeletionLifecycle(userId, id, expectedRevision);
 }
 
 // Alerts operations
@@ -153,16 +157,16 @@ interface CommitInvoiceReceiptChangesInput {
 export async function commitInvoiceReceiptChanges(
   userId: string,
   changes: CommitInvoiceReceiptChangesInput
-): Promise<void> {
-  await commitInvoiceReceiptLifecycle(userId, changes);
+): Promise<CommitInvoiceReceiptLifecycleResult> {
+  return commitInvoiceReceiptLifecycle(userId, changes);
 }
 
 export async function commitInvoiceDeletion(
   userId: string,
   updatedEmpenho: Empenho,
   invoiceRecordKey: string
-): Promise<void> {
-  await commitInvoiceDeletionLifecycle(userId, {
+): Promise<CommitInvoiceDeletionLifecycleResult> {
+  return commitInvoiceDeletionLifecycle(userId, {
     updatedEmpenho,
     invoiceRecordKey,
   });
@@ -172,8 +176,8 @@ export async function commitAllInvoicesDeletion(
   userId: string,
   updatedEmpenhos: Empenho[],
   invoiceRecordKeys: string[]
-): Promise<void> {
-  await commitAllInvoicesDeletionLifecycle(userId, {
+): Promise<CommitAllInvoicesDeletionLifecycleResult> {
+  return commitAllInvoicesDeletionLifecycle(userId, {
     updatedEmpenhos,
     invoiceRecordKeys,
   });
