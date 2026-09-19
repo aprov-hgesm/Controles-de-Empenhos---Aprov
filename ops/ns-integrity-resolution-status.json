@@ -1,0 +1,39 @@
+{
+  "contractVersion": "emprovex_ns_integrity_v1",
+  "updatedAt": "2026-09-18",
+  "gaps": {
+    "GAP-001": {
+      "status": "resolved",
+      "resolvedInBlock": 2,
+      "evidence": [
+        "features/notas-fiscais/hooks/useNotasFiscaisActions.ts",
+        "lib/nsIntegrityService.ts",
+        "scripts/verify-manual-ns-integrity.mjs"
+      ]
+    },
+    "GAP-002": {
+      "status": "open",
+      "plannedBlock": 3
+    },
+    "GAP-003": {
+      "status": "open",
+      "plannedBlock": 3
+    },
+    "GAP-004": {
+      "status": "open",
+      "plannedBlock": 4
+    },
+    "GAP-005": {
+      "status": "open",
+      "plannedBlock": 5
+    },
+    "GAP-006": {
+      "status": "open",
+      "plannedBlock": 9
+    },
+    "GAP-007": {
+      "status": "open",
+      "plannedBlock": 7
+    }
+  }
+}
