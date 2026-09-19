@@ -61,7 +61,9 @@
     "test:sag-ns-reconciliation": "node --experimental-vm-modules --test scripts/sag-ns-reconciliation.test.mjs",
     "verify:sag-ns-reconciliation": "node scripts/verify-sag-ns-reconciliation.mjs",
     "test:sag-application-preview": "node --experimental-vm-modules --test scripts/sag-ns-application-preview.test.mjs",
-    "verify:sag-application-preview": "node scripts/verify-sag-application-preview.mjs"
+    "verify:sag-application-preview": "node scripts/verify-sag-application-preview.mjs",
+    "test:sag-ns-persistence": "node --experimental-vm-modules --test scripts/sag-ns-persistence-plan.test.mjs",
+    "verify:sag-ns-idempotent-import": "node scripts/verify-sag-ns-idempotent-import.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
