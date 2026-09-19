@@ -1,0 +1,301 @@
+import type { Empenho, Invoice } from './types';
+import { getInvoiceRecordKey, normalizeSupplierCnpj } from './invoiceIdentity';
+
+export const NS_LOCK_DOCUMENT_PREFIX = 'sagNsLock_' as const;
+export const NS_LOCK_DOCUMENT_TYPE = 'sag-ns-lock' as const;
+
+export type NsIntegrityMutationSource = 'sag' | 'manual' | 'migration' | 'system';
+
+export interface NsIntegrityMutation {
+  invoiceRecordKey: string;
+  invoiceId: string;
+  empenhoId: string;
+  supplierCnpj: string;
+  expectedCurrentNs: string | null;
+  proposedNs: string | null;
+  source: NsIntegrityMutationSource;
+}
+
+export interface NsIntegrityInvoiceDocument {
+  recordKey: string;
+  invoice: Invoice;
+}
+
+export interface NsIntegritySnapshotInput {
+  mutations: NsIntegrityMutation[];
+  targetInvoiceDocuments: NsIntegrityInvoiceDocument[];
+  knownOwnerInvoiceDocuments: NsIntegrityInvoiceDocument[];
+  empenhos: Empenho[];
+}
+
+export interface NsIntegritySnapshotResult {
+  writes: NsIntegrityMutation[];
+  noOps: NsIntegrityMutation[];
+}
+
+export interface NsLockDocument {
+  id: string;
+  type: typeof NS_LOCK_DOCUMENT_TYPE;
+  workspaceId: string;
+  numeroNS: string;
+  invoiceRecordKey: string;
+  invoiceId: string;
+  empenhoId: string;
+  supplierCnpj: string;
+  createdAt: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export type NsIntegrityErrorCode =
+  | 'invalid_supplier_cnpj'
+  | 'empty_change_set'
+  | 'duplicate_invoice_target'
+  | 'duplicate_ns_in_batch'
+  | 'invalid_ns'
+  | 'invoice_missing'
+  | 'invoice_identity_changed'
+  | 'empenho_missing'
+  | 'supplier_scope_changed'
+  | 'invoice_supplier_conflict'
+  | 'stale_invoice_ns'
+  | 'ns_reused_in_scope'
+  | 'ns_lock_conflict'
+  | 'stale_lock_owner';
+
+export class NsIntegrityError extends Error {
+  readonly code: NsIntegrityErrorCode;
+
+  constructor(code: NsIntegrityErrorCode, message: string) {
+    super(message);
+    this.name = 'NsIntegrityError';
+    this.code = code;
+  }
+}
+
+export function normalizeNsNumber(value?: string | number | null): string {
+  if (value === null || value === undefined) return '';
+  return String(value).trim().toUpperCase().replace(/[^0-9A-Z]/g, '');
+}
+
+export function isValidNsNumber(value?: string | number | null): boolean {
+  return /^\d{4}NS\d{6}$/.test(normalizeNsNumber(value));
+}
+
+export function buildNsLockDocumentId(value?: string | number | null): string {
+  const normalizedNs = normalizeNsNumber(value);
+  return normalizedNs ? `${NS_LOCK_DOCUMENT_PREFIX}${encodeURIComponent(normalizedNs)}` : '';
+}
+
+export function buildNsLockDocument(input: {
+  workspaceId: string;
+  mutation: NsIntegrityMutation;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+}): NsLockDocument {
+  const numeroNS = normalizeNsNumber(input.mutation.proposedNs);
+  if (!isValidNsNumber(numeroNS)) {
+    throw new NsIntegrityError(
+      'invalid_ns',
+      `A NS proposta para a NF ${input.mutation.invoiceId} é inválida.`
+    );
+  }
+
+  const supplierCnpj = normalizeSupplierCnpj(input.mutation.supplierCnpj);
+  if (!supplierCnpj) {
+    throw new NsIntegrityError(
+      'invalid_supplier_cnpj',
+      `O CNPJ da NF ${input.mutation.invoiceId} é inválido para reserva da NS.`
+    );
+  }
+
+  const id = buildNsLockDocumentId(numeroNS);
+  return {
+    id,
+    type: NS_LOCK_DOCUMENT_TYPE,
+    workspaceId: input.workspaceId,
+    numeroNS,
+    invoiceRecordKey: input.mutation.invoiceRecordKey,
+    invoiceId: input.mutation.invoiceId,
+    empenhoId: input.mutation.empenhoId,
+    supplierCnpj,
+    createdAt: input.createdAt,
+    updatedAt: input.updatedAt,
+    updatedBy: input.userId,
+  };
+}
+
+export function assertNsLockOwnership(
+  lock: Partial<NsLockDocument>,
+  mutation: NsIntegrityMutation,
+  expectedNs: string,
+  conflictCode: 'ns_lock_conflict' | 'stale_lock_owner'
+): void {
+  const normalizedExpectedNs = normalizeNsNumber(expectedNs);
+  const lockNs = normalizeNsNumber(lock.numeroNS);
+
+  if (!lock.invoiceRecordKey || !lockNs || lockNs !== normalizedExpectedNs) {
+    throw new NsIntegrityError(
+      'stale_lock_owner',
+      `O lock da NS ${normalizedExpectedNs || expectedNs} está inconsistente. Nenhuma alteração foi aplicada.`
+    );
+  }
+
+  if (lock.invoiceRecordKey !== mutation.invoiceRecordKey) {
+    throw new NsIntegrityError(
+      conflictCode,
+      conflictCode === 'ns_lock_conflict'
+        ? `A NS ${normalizedExpectedNs} já está reservada para outra NF neste workspace.`
+        : `O lock atual da NS ${normalizedExpectedNs} pertence a outra NF. Nenhuma alteração foi aplicada.`
+    );
+  }
+}
+
+export function validateNsIntegritySnapshot(
+  input: NsIntegritySnapshotInput
+): NsIntegritySnapshotResult {
+  if (input.mutations.length === 0) {
+    throw new NsIntegrityError(
+      'empty_change_set',
+      'Não existem alterações de NS elegíveis para persistência.'
+    );
+  }
+
+  const targetKeys = new Set<string>();
+  const proposedNsInBatch = new Set<string>();
+
+  for (const mutation of input.mutations) {
+    if (targetKeys.has(mutation.invoiceRecordKey)) {
+      throw new NsIntegrityError(
+        'duplicate_invoice_target',
+        `A NF ${mutation.invoiceId} aparece mais de uma vez no mesmo lote.`
+      );
+    }
+    targetKeys.add(mutation.invoiceRecordKey);
+
+    if (!normalizeSupplierCnpj(mutation.supplierCnpj)) {
+      throw new NsIntegrityError(
+        'invalid_supplier_cnpj',
+        `O CNPJ da NF ${mutation.invoiceId} é inválido para persistência de NS.`
+      );
+    }
+
+    if (mutation.proposedNs !== null) {
+      const proposedNs = normalizeNsNumber(mutation.proposedNs);
+      if (!isValidNsNumber(proposedNs)) {
+        throw new NsIntegrityError(
+          'invalid_ns',
+          `A NS proposta para a NF ${mutation.invoiceId} é inválida.`
+        );
+      }
+      if (proposedNsInBatch.has(proposedNs)) {
+        throw new NsIntegrityError(
+          'duplicate_ns_in_batch',
+          `A NS ${proposedNs} foi proposta para mais de uma NF no mesmo lote.`
+        );
+      }
+      proposedNsInBatch.add(proposedNs);
+    }
+  }
+
+  const targetByKey = new Map(
+    input.targetInvoiceDocuments.map((document) => [document.recordKey, document])
+  );
+  const empenhoById = new Map(input.empenhos.map((empenho) => [empenho.id, empenho]));
+
+  const nsOwners = new Map<string, string[]>();
+  for (const document of input.knownOwnerInvoiceDocuments) {
+    const ns = normalizeNsNumber(document.invoice.numeroNS);
+    if (!ns) continue;
+    const owners = nsOwners.get(ns) || [];
+    owners.push(document.recordKey);
+    nsOwners.set(ns, owners);
+  }
+
+  const writes: NsIntegrityMutation[] = [];
+  const noOps: NsIntegrityMutation[] = [];
+
+  for (const mutation of input.mutations) {
+    const document = targetByKey.get(mutation.invoiceRecordKey);
+    if (!document) {
+      throw new NsIntegrityError(
+        'invoice_missing',
+        `A NF ${mutation.invoiceId} não existe mais no Firestore.`
+      );
+    }
+
+    const storedInvoice = document.invoice;
+    const storedRecordKey = getInvoiceRecordKey({
+      id: storedInvoice.id,
+      recordKey: storedInvoice.recordKey || document.recordKey,
+    });
+
+    if (
+      storedRecordKey !== mutation.invoiceRecordKey ||
+      storedInvoice.id !== mutation.invoiceId ||
+      storedInvoice.empenhoId !== mutation.empenhoId
+    ) {
+      throw new NsIntegrityError(
+        'invoice_identity_changed',
+        `A identidade da NF ${mutation.invoiceId} mudou desde a preparação da operação.`
+      );
+    }
+
+    const empenho = empenhoById.get(mutation.empenhoId);
+    if (!empenho) {
+      throw new NsIntegrityError(
+        'empenho_missing',
+        `O empenho ${mutation.empenhoId} não existe mais.`
+      );
+    }
+
+    const supplierCnpj = normalizeSupplierCnpj(mutation.supplierCnpj);
+    if (normalizeSupplierCnpj(empenho.supplierCnpj) !== supplierCnpj) {
+      throw new NsIntegrityError(
+        'supplier_scope_changed',
+        `O empenho ${mutation.empenhoId} não pertence mais ao CNPJ esperado.`
+      );
+    }
+
+    const invoiceCnpj = normalizeSupplierCnpj(storedInvoice.supplierCnpj);
+    if (invoiceCnpj && invoiceCnpj !== supplierCnpj) {
+      throw new NsIntegrityError(
+        'invoice_supplier_conflict',
+        `A NF ${mutation.invoiceId} possui CNPJ divergente do empenho.`
+      );
+    }
+
+    const currentNs = normalizeNsNumber(storedInvoice.numeroNS);
+    const expectedCurrentNs = normalizeNsNumber(mutation.expectedCurrentNs);
+    const proposedNs = normalizeNsNumber(mutation.proposedNs);
+
+    if (proposedNs) {
+      const otherOwners = (nsOwners.get(proposedNs) || []).filter(
+        (recordKey) => recordKey !== mutation.invoiceRecordKey
+      );
+      if (otherOwners.length > 0) {
+        throw new NsIntegrityError(
+          'ns_reused_in_scope',
+          `A NS ${proposedNs} já está vinculada a outra NF conhecida no mesmo escopo.`
+        );
+      }
+    }
+
+    if (currentNs === proposedNs) {
+      noOps.push(mutation);
+      continue;
+    }
+
+    if (currentNs !== expectedCurrentNs) {
+      throw new NsIntegrityError(
+        'stale_invoice_ns',
+        `A NF ${mutation.invoiceId} teve sua NS alterada desde a preparação da operação.`
+      );
+    }
+
+    writes.push(mutation);
+  }
+
+  return { writes, noOps };
+}

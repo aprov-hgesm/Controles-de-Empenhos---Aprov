@@ -10,6 +10,7 @@ import ts from 'typescript';
 const root = process.cwd();
 const identitySource = readFileSync(resolve(root, 'lib/invoiceIdentity.ts'), 'utf8');
 const contractSource = readFileSync(resolve(root, 'lib/sagNsContract.ts'), 'utf8');
+const integritySource = readFileSync(resolve(root, 'lib/nsIntegrity.ts'), 'utf8');
 const planSource = readFileSync(resolve(root, 'lib/sagNsPersistencePlan.ts'), 'utf8');
 
 const transpile = (source, filename) => ts.transpileModule(source, {
@@ -41,12 +42,22 @@ await contractModule.link(async (specifier) => {
 });
 await contractModule.evaluate();
 
+const integrityModule = new vm.SourceTextModule(transpile(integritySource, 'nsIntegrity.ts'), {
+  context,
+  identifier: 'file:///lib/nsIntegrity.js',
+});
+await integrityModule.link(async (specifier) => {
+  if (specifier === './invoiceIdentity') return identityModule;
+  throw new Error(`Import runtime inesperado em nsIntegrity: ${specifier}`);
+});
+await integrityModule.evaluate();
+
 const planModule = new vm.SourceTextModule(transpile(planSource, 'sagNsPersistencePlan.ts'), {
   context,
   identifier: 'file:///lib/sagNsPersistencePlan.js',
 });
 await planModule.link(async (specifier) => {
-  if (specifier === './invoiceIdentity') return identityModule;
+  if (specifier === './nsIntegrity') return integrityModule;
   if (specifier === './sagNsContract') return contractModule;
   throw new Error(`Import runtime inesperado no plano de persistência: ${specifier}`);
 });
