@@ -663,7 +663,7 @@ export function SagImportView({ empenhos, invoices, workspaceUg, onApplySagNsImp
                   </p>
                 ) : null}
 
-                <button                <button
+                <button
                   type="button"
                   onClick={handleCopyPrompt}
                   disabled={!prompt}
