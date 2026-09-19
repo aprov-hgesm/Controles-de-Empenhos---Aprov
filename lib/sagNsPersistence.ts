@@ -106,17 +106,16 @@ export async function commitSagNsImport(
         );
       });
 
-      const updatedInvoices = input.changes
-        .map((change) => {
-          const stored = targetByKey.get(change.invoiceRecordKey);
-          if (!stored) return null;
-          return {
-            ...stored,
-            recordKey: change.invoiceRecordKey,
-            numeroNS: change.proposedNs,
-          } satisfies Invoice;
-        })
-        .filter((invoice): invoice is Invoice => Boolean(invoice));
+      const updatedInvoices: Invoice[] = [];
+      for (const change of input.changes) {
+        const stored = targetByKey.get(change.invoiceRecordKey);
+        if (!stored) continue;
+        updatedInvoices.push({
+          ...stored,
+          recordKey: change.invoiceRecordKey,
+          numeroNS: change.proposedNs,
+        });
+      }
 
       return {
         appliedCount: validation.writes.length,
