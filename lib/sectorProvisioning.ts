@@ -2,8 +2,10 @@ import { HGESM_SECTOR_EMAIL } from './hgesmWorkspace';
 import {
   SECTOR_AUTH_PROVIDER,
   isValidPlatformEmail,
+  isValidUnitUg,
   isValidWorkspaceId,
   normalizePlatformEmail,
+  normalizeUnitUg,
   normalizeWorkspaceId,
   validatePlatformAccount,
   validateWorkspace,
@@ -17,6 +19,7 @@ export const MAX_SECTOR_PASSWORD_LENGTH = 128;
 export interface CreateSectorWorkspaceInput {
   workspaceId: string;
   workspaceName: string;
+  ug: string;
   authorizedEmail: string;
   initialPassword: string;
   organizationName: string;
@@ -46,6 +49,7 @@ export function parseSectorProvisioningInput(value: unknown): CreateSectorWorksp
   return {
     workspaceId: requiredString('workspaceId'),
     workspaceName: requiredString('workspaceName'),
+    ug: requiredString('ug'),
     authorizedEmail: requiredString('authorizedEmail'),
     initialPassword: requiredString('initialPassword'),
     organizationName: requiredString('organizationName'),
@@ -93,6 +97,7 @@ export function buildSectorInstitutionalProfile(
 export function validateSectorProvisioningInput(input: CreateSectorWorkspaceInput): string[] {
   const errors: string[] = [];
   const workspaceId = normalizeWorkspaceId(input.workspaceId);
+  const ug = normalizeUnitUg(input.ug);
   const authorizedEmail = normalizePlatformEmail(input.authorizedEmail);
 
   if (!isValidWorkspaceId(workspaceId)) {
@@ -100,6 +105,9 @@ export function validateSectorProvisioningInput(input: CreateSectorWorkspaceInpu
   }
   if (!input.workspaceName.trim()) {
     errors.push('Informe o nome do setor.');
+  }
+  if (!isValidUnitUg(ug)) {
+    errors.push('Informe a UG da Organização Militar com exatamente 6 dígitos.');
   }
   if (!isValidPlatformEmail(authorizedEmail)) {
     errors.push('Informe um e-mail de acesso válido para o setor.');
@@ -132,6 +140,7 @@ export function buildProvisionedSectorRecords(
   now: string = new Date().toISOString()
 ): { workspace: Workspace; account: SectorAccount } {
   const workspaceId = normalizeWorkspaceId(input.workspaceId);
+  const ug = normalizeUnitUg(input.ug);
   const authorizedEmail = normalizePlatformEmail(input.authorizedEmail);
   const createdBy = normalizePlatformEmail(createdByEmail);
 
@@ -148,6 +157,7 @@ export function buildProvisionedSectorRecords(
     id: workspaceId,
     name: input.workspaceName.trim(),
     status: 'active',
+    ug,
     authorizedEmail,
     institutionalProfile: buildSectorInstitutionalProfile(input),
     createdAt: now,
@@ -161,6 +171,7 @@ export function buildProvisionedSectorRecords(
     firebaseUid: firebaseUid.trim(),
     accountType: 'sector',
     workspaceId,
+    ug,
     status: 'active',
     createdAt: now,
     updatedAt: now,
