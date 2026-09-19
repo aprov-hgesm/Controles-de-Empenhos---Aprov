@@ -44,8 +44,8 @@ for (const marker of [
   'google-cloud-monitoring',
   'emprovex-workspace-estimate',
   'não persiste esse objeto',
-  'não cria heartbeat',
-  'não altera Rules',
+  '- cria heartbeat;',
+  '- altera Rules;',
 ]) {
   requireText(docs, marker, `Documentação 16.0 perdeu requisito: ${marker}`);
 }
