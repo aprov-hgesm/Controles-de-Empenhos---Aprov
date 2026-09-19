@@ -1,12 +1,13 @@
 'use client';
 
 import React from 'react';
-import { Building2, FileSearch, Landmark, ReceiptText } from 'lucide-react';
+import { Building2, FileSearch, Landmark, ReceiptText, ShieldCheck } from 'lucide-react';
 import { RelatorioPorEmpenhoView, type RelatoriosViewContext } from './RelatorioPorEmpenhoView';
 import { RelatorioPorFornecedorView } from './RelatorioPorFornecedorView';
 import { SagImportView } from './SagImportView';
+import { HistoricalConsistencyView } from './HistoricalConsistencyView';
 
-type RelatoriosSubTab = 'empenho' | 'fornecedor' | 'sag';
+type RelatoriosSubTab = 'empenho' | 'fornecedor' | 'sag' | 'integridade';
 
 interface RelatoriosViewProps {
   context: RelatoriosViewContext;
@@ -35,6 +36,12 @@ const tabs: Array<{
     label: 'Importar NS — SAG',
     description: 'Conciliação manual assistida',
     icon: Landmark,
+  },
+  {
+    id: 'integridade',
+    label: 'Integridade',
+    description: 'Diagnóstico e saneamento histórico',
+    icon: ShieldCheck,
   },
 ];
 
@@ -66,6 +73,7 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
           return (
             <button
               key={tab.id}
+              data-testid={`relatorios-tab-${tab.id}`}
               type="button"
               onClick={() => setActiveSubTab(tab.id)}
               aria-pressed={active}
@@ -108,6 +116,7 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
             onApplySagNsImport={context.handleApplySagNsImport}
           />
         )}
+        {activeSubTab === 'integridade' && <HistoricalConsistencyView />}
       </section>
     </div>
   );

@@ -12,16 +12,21 @@ import {
   signOut,
 } from 'firebase/auth';
 import {
+  collection,
   connectFirestoreEmulator,
   deleteDoc,
   deleteField,
   doc,
+  documentId,
   getDoc,
+  getDocs,
   getFirestore,
+  query,
   runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
   writeBatch,
 } from 'firebase/firestore';
 
@@ -1792,6 +1797,26 @@ async function main() {
     )
   );
 
+  console.log('\nListagem segura de settings para diagnóstico histórico');
+
+  const ownNsLockQuery = query(
+    collection(sessionA.db, 'workspaces', 'workspace-a', 'settings'),
+    where(documentId(), '>=', 'sagNsLock_'),
+    where(documentId(), '<', 'sagNsLock_\uf8ff')
+  );
+  const crossNsLockQuery = query(
+    collection(sessionA.db, 'workspaces', 'workspace-b', 'settings'),
+    where(documentId(), '>=', 'sagNsLock_'),
+    where(documentId(), '<', 'sagNsLock_\uf8ff')
+  );
+
+  await allowed('Setor lista somente locks NS do próprio workspace para diagnóstico', () =>
+    getDocs(ownNsLockQuery)
+  );
+  await denied('Setor não lista settings de outro workspace', () =>
+    getDocs(crossNsLockQuery)
+  );
+
   console.log('\nIsolamento do Google Drive / documentStorage');
   const validDriveSettings = {
     provider: 'google-drive',
@@ -2018,6 +2043,28 @@ async function main() {
       supplier: 'Fornecedor E2E Lifecycle',
       supplierCnpj: '11111111000191',
       recordKey: 'nf_11111111000191_1001',
+      registeredAt: browserFixtureTimestamp,
+      userId: identities.lifecycle.uid,
+    }
+  );
+
+  await ownerSet(
+    'workspaces/workspace-lifecycle/invoices/nf_11111111000191_2002',
+    {
+      id: '2002',
+      empenhoId: 'sample',
+      issueDate: '2026-06-16',
+      items: [
+        {
+          itemId: '1',
+          quantity: 1,
+          unitPrice: 20,
+          subtotal: 20,
+        },
+      ],
+      totalValue: 20,
+      supplier: 'Fornecedor E2E Lifecycle',
+      recordKey: 'nf_11111111000191_2002',
       registeredAt: browserFixtureTimestamp,
       userId: identities.lifecycle.uid,
     }

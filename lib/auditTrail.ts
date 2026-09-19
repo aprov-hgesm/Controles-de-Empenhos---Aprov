@@ -31,13 +31,15 @@ export type AuditOperation =
   | 'sector.status_change'
   | 'sector.ug_backfill'
   | 'sector.password_reset'
-  | 'sector.delete';
+  | 'sector.delete'
+  | 'historical.repair';
 
 export type AuditEntityType =
   | 'invoice'
   | 'invoice_batch'
   | 'empenho'
-  | 'workspace';
+  | 'workspace'
+  | 'ns_lock';
 
 export type AuditScalar = string | number | boolean | null;
 export type AuditValue =
