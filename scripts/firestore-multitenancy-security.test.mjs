@@ -2329,7 +2329,7 @@ async function main() {
   await ownerSet('workspaces/workspace-lifecycle/empenhos/delete-e2e', {
     id: 'delete-e2e',
     supplier: 'Fornecedor E2E Delete',
-    supplierCnpj: '11111111000191',
+    supplierCnpj: '22222222000191',
     description: 'Empenho para exclusão protegida E2E',
     date: '2026-09-03',
     status: 'Ativo',
@@ -2349,7 +2349,7 @@ async function main() {
   });
 
   await ownerSet(
-    'workspaces/workspace-lifecycle/invoices/nf_11111111000191_3003',
+    'workspaces/workspace-lifecycle/invoices/nf_22222222000191_3003',
     {
       id: '3003',
       empenhoId: 'delete-e2e',
@@ -2364,8 +2364,8 @@ async function main() {
       ],
       totalValue: 25,
       supplier: 'Fornecedor E2E Delete',
-      supplierCnpj: '11111111000191',
-      recordKey: 'nf_11111111000191_3003',
+      supplierCnpj: '22222222000191',
+      recordKey: 'nf_22222222000191_3003',
       registeredAt: browserFixtureTimestamp,
       numeroNS: '2026NS008888',
       nsUg: '160416',
@@ -2381,10 +2381,10 @@ async function main() {
       workspaceId: 'workspace-lifecycle',
       ug: '160416',
       numeroNS: '2026NS008888',
-      invoiceRecordKey: 'nf_11111111000191_3003',
+      invoiceRecordKey: 'nf_22222222000191_3003',
       invoiceId: '3003',
       empenhoId: 'delete-e2e',
-      supplierCnpj: '11111111000191',
+      supplierCnpj: '22222222000191',
       createdAt: browserFixtureTimestamp,
       updatedAt: browserFixtureTimestamp,
       updatedBy: identities.lifecycle.uid,
