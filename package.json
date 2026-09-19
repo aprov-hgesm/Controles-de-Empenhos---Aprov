@@ -52,7 +52,9 @@
     "verify:reports-shell": "node scripts/verify-reports-shell.mjs",
     "verify:report-empenho-selector": "node scripts/verify-report-empenho-selector.mjs",
     "test:reporting-period": "node --experimental-vm-modules --test scripts/reporting-period.test.mjs",
-    "verify:report-empenho-detail": "node scripts/verify-report-empenho-detail.mjs"
+    "verify:report-empenho-detail": "node scripts/verify-report-empenho-detail.mjs",
+    "test:supplier-reporting": "node --experimental-vm-modules --test scripts/supplier-reporting.test.mjs",
+    "verify:supplier-reports": "node scripts/verify-supplier-reports.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
