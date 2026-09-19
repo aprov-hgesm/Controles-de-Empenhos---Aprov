@@ -30,15 +30,17 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     await loginSector(page, OPERATOR_A);
     await openSampleReport(page);
 
-    await expect(page.getByText('Fornecedor E2E Lifecycle')).toBeVisible();
+    await expect(page.getByText('Fornecedor E2E Lifecycle').first()).toBeVisible();
     await expect(page.getByText('1001')).toBeVisible();
 
     await page.locator(`#btn-edit-ns-${RECORD_KEY}`).click();
-    await expect(page.getByText(`UG ${UG}`)).toBeVisible();
+    await expect(
+      page.locator('[title="UG vinculada automaticamente ao cadastro da unidade"]')
+    ).toContainText(`UG ${UG}`);
     await page.locator(`#input-ns-${RECORD_KEY}`).fill(NS);
     await page.locator(`#btn-save-ns-${RECORD_KEY}`).click();
 
-    await expect(page.getByText(`UG ${UG} · ${NS}`)).toBeVisible({
+    await expect(page.getByText(`UG ${UG} · ${NS}`).first()).toBeVisible({
       timeout: 15_000,
     });
 
@@ -62,7 +64,7 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     await loginSector(page, OPERATOR_B);
     await openSampleReport(page);
 
-    await expect(page.getByText('Fornecedor E2E Isolado B')).toBeVisible();
+    await expect(page.getByText('Fornecedor E2E Isolado B').first()).toBeVisible();
     await expect(page.getByText('Fornecedor E2E Lifecycle')).toHaveCount(0);
     await expect(page.getByText(NS)).toHaveCount(0);
   });
