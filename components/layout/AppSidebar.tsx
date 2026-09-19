@@ -152,6 +152,7 @@ export function AppSidebar({
             </button>
 
             <button
+              data-testid="nav-relatorios"
               onClick={() => onNavigate('relatorios')}
               className="emprovex-sidebar-nav-item"
               data-active={activeTab === 'relatorios' ? 'true' : 'false'}
@@ -194,6 +195,7 @@ export function AppSidebar({
           </div>
 
           <button
+            data-testid="logout"
             onClick={onLogout}
             className="emprovex-sidebar-logout"
           >
