@@ -902,7 +902,7 @@ export function SagImportView({ empenhos, invoices }: SagImportViewProps) {
                         <tr key={`${item.ns}-${index}`} className="align-top hover:bg-gray-50/60">
                           <td className="px-4 py-3">
                             <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[9px] font-extrabold ${meta.className}`}>
-                              <DecisionIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                              <DecisionIcon className="h-3.5 w-3.5" aria-hidden={true} />
                               {meta.label}
                             </span>
                           </td>
