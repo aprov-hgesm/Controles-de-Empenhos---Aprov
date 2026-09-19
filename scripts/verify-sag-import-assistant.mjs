@@ -24,7 +24,7 @@ requireText(view, 'expectedSupplierCnpj: selectedSupplier.cnpj', 'Validação n�
 requireText(view, 'validation.data.records.map', 'Prévia estrutural dos registros SAG ausente.');
 requireText(view, 'JSON bloqueado pela validação', 'Estado visual de erro ausente.');
 requireText(view, 'Alertas para conferência humana', 'Alertas de validação não são exibidos.');
-requireText(view, 'Nenhuma NS será gravada neste bloco', 'Aviso de não persistência ausente.');
+requireText(view, 'Nenhuma NS será gravada automaticamente', 'Aviso de não persistência ausente.');
 forbidText(view, 'updateDoc(', 'Assistente SAG não deve gravar diretamente no Firestore no Bloco 8.');
 forbidText(view, 'setDoc(', 'Assistente SAG não deve gravar diretamente no Firestore no Bloco 8.');
 forbidText(view, 'addDoc(', 'Assistente SAG não deve gravar diretamente no Firestore no Bloco 8.');
