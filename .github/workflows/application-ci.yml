@@ -132,6 +132,12 @@ jobs:
       - name: Supplier reports guard
         run: npm run verify:supplier-reports
 
+      - name: SAG NS contract tests
+        run: npm run test:sag-ns-contract
+
+      - name: SAG NS contract guard
+        run: npm run verify:sag-ns-contract
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
