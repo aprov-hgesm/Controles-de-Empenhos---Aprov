@@ -44,6 +44,11 @@ export interface SectorAccount extends PlatformAccountBase {
   accountType: 'sector';
   /** Cada conta operacional de setor pertence a exatamente um workspace. */
   workspaceId: string;
+  /**
+   * UG da Organização Militar vinculada ao setor. Novas contas sempre possuem
+   * este identificador; a opcionalidade existe apenas para registros legados.
+   */
+  ug?: string;
 }
 
 export type PlatformAccount = PlatformAdminAccount | SectorAccount;
@@ -66,6 +71,11 @@ export interface Workspace {
   name: string;
   status: WorkspaceStatus;
   /**
+   * Unidade Gestora da Organização Militar. Novos workspaces sempre possuem UG;
+   * ausência é tolerada somente para compatibilidade com cadastros legados.
+   */
+  ug?: string;
+  /**
    * E-mail operacional único do setor. Nos setores externos ele será usado no
    * login Firebase por senha e, posteriormente, deverá coincidir com a conta
    * Google autorizada para o Drive.
@@ -81,6 +91,16 @@ export interface Workspace {
 
 const WORKSPACE_ID_PATTERN = /^[a-z0-9](?:[a-z0-9-]{1,46}[a-z0-9])?$/;
 const SIMPLE_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const UNIT_UG_PATTERN = /^\d{6}$/;
+
+export function normalizeUnitUg(value?: string | number | null): string {
+  if (value === null || value === undefined) return '';
+  return String(value).trim().replace(/\D/g, '');
+}
+
+export function isValidUnitUg(value?: string | number | null): boolean {
+  return UNIT_UG_PATTERN.test(normalizeUnitUg(value));
+}
 
 /**
  * Normaliza o e-mail usado como chave lógica de autorização da plataforma.
@@ -149,6 +169,10 @@ export function validatePlatformAccount(account: PlatformAccount): string[] {
     errors.push('Conta de setor precisa possuir um workspaceId válido.');
   }
 
+  if (account.accountType === 'sector' && account.ug !== undefined && !isValidUnitUg(account.ug)) {
+    errors.push('UG da conta operacional deve possuir exatamente 6 dígitos.');
+  }
+
   if (account.status !== 'active' && account.status !== 'disabled') {
     errors.push('Status da conta da plataforma é inválido.');
   }
@@ -173,6 +197,10 @@ export function validateWorkspace(workspace: Workspace): string[] {
 
   if (!workspace.name.trim()) {
     errors.push('Nome do workspace é obrigatório.');
+  }
+
+  if (workspace.ug !== undefined && !isValidUnitUg(workspace.ug)) {
+    errors.push('UG do workspace deve possuir exatamente 6 dígitos.');
   }
 
   if (!isValidPlatformEmail(workspace.authorizedEmail)) {
