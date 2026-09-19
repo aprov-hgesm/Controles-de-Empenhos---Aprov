@@ -11,6 +11,12 @@ import {
   getInvoiceRecordKey,
   normalizeSupplierCnpj,
 } from '../../../lib/invoiceIdentity';
+import {
+  isValidNsNumber,
+  normalizeNsNumber,
+  type NsIntegrityMutation,
+} from '../../../lib/nsIntegrity';
+import { commitNsIntegrityMutations } from '../../../lib/nsIntegrityService';
 
 type ToastType = 'success' | 'error' | 'info';
 type NfSubTab = 'acompanhar' | 'cadastrar' | 'comissao';
@@ -498,37 +504,125 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
   };
 
   const handleSaveNumeroNS = async (invoiceRecordKey: string, value: string) => {
-    const trimmed = value.trim();
-    const invoiceLabel = invoices.find((invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey)?.id || invoiceRecordKey;
-    let updatedTargetInvoice: Invoice | null = null;
-    const updatedInvoices = invoices.map(inv => {
-      if (getInvoiceRecordKey(inv) === invoiceRecordKey) {
-        updatedTargetInvoice = {
-          ...inv,
-          numeroNS: trimmed ? trimmed : undefined,
-        };
-        return updatedTargetInvoice;
-      }
-      return inv;
-    });
-     if (user && updatedTargetInvoice) {
-      try {
-        await saveInvoice(user.uid, updatedTargetInvoice);
-      } catch (error) {
-        console.error(error);
-        showToast('Erro ao salvar Número da NS no Firebase', 'error');
-        return;
-      }
-    }
-    setInvoices(updatedInvoices);
-    setEditingNSId(null);
-    setTempNSValue('');
-    showToast(
-      trimmed
-        ? `Número da NS (${trimmed}) salvo para a NF ${invoiceLabel}!`
-        : `Número da NS removido da NF ${invoiceLabel}!`,
-      'success'
+    const targetInvoice = invoices.find(
+      (invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey
     );
+    if (!targetInvoice) {
+      showToast('Nota Fiscal não encontrada para alteração do Número da NS.', 'error');
+      return;
+    }
+
+    if (!user) {
+      showToast('Faça login novamente antes de alterar o Número da NS.', 'error');
+      return;
+    }
+
+    const targetEmpenho = empenhos.find(
+      (empenho) => empenho.id === targetInvoice.empenhoId
+    );
+    if (!targetEmpenho) {
+      showToast(
+        `O empenho ${targetInvoice.empenhoId} vinculado à NF ${targetInvoice.id} não foi encontrado.`,
+        'error'
+      );
+      return;
+    }
+
+    const supplierCnpj =
+      normalizeSupplierCnpj(targetInvoice.supplierCnpj) ||
+      normalizeSupplierCnpj(targetEmpenho.supplierCnpj);
+
+    if (!supplierCnpj) {
+      showToast(
+        'Cadastre um CNPJ válido no empenho antes de alterar o Número da NS desta Nota Fiscal.',
+        'error'
+      );
+      return;
+    }
+
+    const proposedNs = normalizeNsNumber(value) || null;
+    if (proposedNs && !isValidNsNumber(proposedNs)) {
+      showToast(
+        'Número da NS inválido. Utilize o formato AAAANSNNNNNN, por exemplo 2026NS000123.',
+        'error'
+      );
+      return;
+    }
+
+    const expectedCurrentNs = normalizeNsNumber(targetInvoice.numeroNS) || null;
+    const mutation: NsIntegrityMutation = {
+      invoiceRecordKey,
+      invoiceId: targetInvoice.id,
+      empenhoId: targetInvoice.empenhoId,
+      supplierCnpj,
+      expectedCurrentNs,
+      proposedNs,
+      source: 'manual',
+    };
+
+    const knownNsOwnerRecordKeys = proposedNs
+      ? invoices
+          .filter(
+            (invoice) =>
+              getInvoiceRecordKey(invoice) !== invoiceRecordKey &&
+              normalizeNsNumber(invoice.numeroNS) === proposedNs
+          )
+          .map(getInvoiceRecordKey)
+      : [];
+
+    try {
+      const result = await commitNsIntegrityMutations(user.uid, {
+        mutations: [mutation],
+        knownNsOwnerRecordKeys,
+      });
+
+      const updatedTargetInvoice = result.updatedInvoices.find(
+        (invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey
+      );
+      if (!updatedTargetInvoice) {
+        throw new Error('O serviço de integridade não retornou a NF atualizada.');
+      }
+
+      setInvoices((current) =>
+        current.map((invoice) =>
+          getInvoiceRecordKey(invoice) === invoiceRecordKey
+            ? updatedTargetInvoice
+            : invoice
+        )
+      );
+      setEditingNSId(null);
+      setTempNSValue('');
+
+      if (!proposedNs) {
+        showToast(
+          `Número da NS removido da NF ${targetInvoice.id} com liberação do lock correspondente.`,
+          'success'
+        );
+      } else if (result.noOpCount > 0) {
+        showToast(
+          `Número da NS (${proposedNs}) confirmado para a NF ${targetInvoice.id}. O vínculo já estava aplicado e o lock foi validado.`,
+          'success'
+        );
+      } else if (expectedCurrentNs && expectedCurrentNs !== proposedNs) {
+        showToast(
+          `Número da NS alterado de ${expectedCurrentNs} para ${proposedNs} na NF ${targetInvoice.id}.`,
+          'success'
+        );
+      } else {
+        showToast(
+          `Número da NS (${proposedNs}) salvo com integridade transacional para a NF ${targetInvoice.id}.`,
+          'success'
+        );
+      }
+    } catch (error) {
+      console.error('Erro ao salvar Número da NS com integridade transacional:', error);
+      showToast(
+        error instanceof Error
+          ? error.message
+          : 'Erro ao salvar Número da NS. Nenhuma alteração foi aplicada.',
+        'error'
+      );
+    }
   };
 
   const handleSaveComissao = async () => {
