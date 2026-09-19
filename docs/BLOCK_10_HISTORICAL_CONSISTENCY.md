@@ -149,6 +149,8 @@ O diagnóstico usa exclusivamente o `OperationalDataScope` da sessão atual.
 
 O operador não fornece `workspaceId` ao scanner nem ao reparador. O workspace é resolvido a partir da identidade autenticada e das mesmas regras usadas pelo restante do sistema.
 
+Na coleção `settings`, o scanner não faz leitura ampla: consulta apenas IDs no intervalo `sagNsLock_*`, evitando tocar contador do termo, configuração do Drive ou outros settings sem relação com integridade de NS.
+
 ## Browser E2E
 
 A fixture E2E contém propositalmente uma NF histórica sem CNPJ, mas com vínculo inequívoco a um empenho de CNPJ válido.
