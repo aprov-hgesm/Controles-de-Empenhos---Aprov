@@ -15,7 +15,9 @@ async function loginSector(page, email) {
   await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.getByText('Acesso autorizado')).toBeVisible();
+  await expect(
+    page.getByLabel('Operador conectado').getByText('Acesso autorizado', { exact: true })
+  ).toBeVisible();
 }
 
 async function openSampleReport(page) {
