@@ -202,6 +202,17 @@ export async function commitNsIntegrityMutations(
                 },
             { merge: true }
           );
+        } else if (proposedNs) {
+          // Reaplicações idempotentes também normalizam a identidade física
+          // para permitir reconstrução segura de locks em registros legados.
+          transaction.set(
+            operationalDocRef(scope, 'invoices', mutation.invoiceRecordKey),
+            {
+              recordKey: mutation.invoiceRecordKey,
+              userId,
+            },
+            { merge: true }
+          );
         }
 
         if (currentNs && currentNs !== proposedNs) {
