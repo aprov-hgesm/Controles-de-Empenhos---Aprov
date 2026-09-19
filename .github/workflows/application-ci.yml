@@ -153,6 +153,12 @@ jobs:
       - name: SAG application preview guard
         run: npm run verify:sag-application-preview
 
+      - name: SAG NS persistence tests
+        run: npm run test:sag-ns-persistence
+
+      - name: SAG NS idempotent import guard
+        run: npm run verify:sag-ns-idempotent-import
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
