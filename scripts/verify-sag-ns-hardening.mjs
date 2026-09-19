@@ -32,7 +32,8 @@ requireText(persistence, 'commitNsIntegrityMutations', 'SAG não delega para o s
 forbidText(persistence, 'operationalSettingsDocRef', 'SAG voltou a manipular locks diretamente.');
 
 requireText(hook, 'knownNsOwnerRecordKeys', 'Hook não limita leituras aos possíveis donos das NS propostas.');
-requireText(hook, 'proposedNs.has(normalizeSagNsNumber(invoice.numeroNS))', 'Filtro de donos conhecidos por NS proposta ausente.');
+requireText(hook, 'proposedIdentities', 'Filtro de donos conhecidos por identidade UG + NS ausente.');
+requireText(hook, 'proposedNs.has(invoiceNs)', 'Filtro conservador de donos legados por número de NS ausente.');
 forbidText(hook, 'scopedInvoiceRecordKeys', 'Varredura ampla de todas as NFs do fornecedor reapareceu.');
 
 requireText(rules, 'function validSagNsLock(workspaceId, id)', 'Rules não validam a estrutura do lock SAG.');
