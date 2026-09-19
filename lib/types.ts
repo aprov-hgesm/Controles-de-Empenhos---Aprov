@@ -110,6 +110,7 @@ export interface Comissao {
 
 export interface Alert {
   id: string;
+  empenhoId?: string;
   type: 'CRÍTICO' | 'ATENÇÃO' | 'ESTOQUE ZERADO';
   title: string;
   subtitle: string;
