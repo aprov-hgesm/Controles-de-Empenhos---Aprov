@@ -15,6 +15,7 @@ import {
   buildNsLockDocumentId,
   normalizeNsNumber,
   validateNsIntegritySnapshot,
+  NsIntegrityError,
   type NsIntegrityInvoiceDocument,
   type NsIntegrityMutation,
   type NsLockDocument,
