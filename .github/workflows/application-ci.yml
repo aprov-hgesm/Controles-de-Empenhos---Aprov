@@ -183,6 +183,12 @@ jobs:
       - name: Invoice NS lifecycle guard
         run: npm run verify:invoice-ns-lifecycle
 
+      - name: Supplier CNPJ migration tests
+        run: npm run test:supplier-cnpj-migration
+
+      - name: Supplier CNPJ migration guard
+        run: npm run verify:supplier-cnpj-migration
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 

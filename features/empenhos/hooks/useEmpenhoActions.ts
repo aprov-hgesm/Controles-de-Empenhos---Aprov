@@ -8,6 +8,7 @@ import { saveAlert, saveEmpenho, removeAlert, removeEmpenho, removeInvoice } fro
 import { PROMPT_EXTRACAO_EMPENHO } from '../domain/empenhoHelpers';
 import { normalizeEmpenhoClassCode } from '../../../lib/empenhoClasses';
 import { getInvoiceRecordKey, normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
+import { commitEmpenhoSupplierCnpjMigration } from '../../../lib/nsIntegrityService';
 
 type ActiveTab = 'painel' | 'empenhos' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas';
 type NewEmpenhoForm = { id: string; supplier: string; supplierCnpj: string; description: string; pregao: string; date: string; classification: string };
@@ -98,35 +99,85 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       return;
     }
 
+    if (!user) {
+      showToast('Faça login novamente antes de alterar o CNPJ do fornecedor.', 'error');
+      return;
+    }
+
     const normalizedCnpj = normalizeSupplierCnpj(cnpjInput);
     if (cnpjInput.trim() && !normalizedCnpj) {
       showToast('Informe um CNPJ válido com 14 dígitos.', 'error');
       return;
     }
 
-    const updatedEmpenho: Empenho = {
-      ...currentEmpenho,
-      supplierCnpj: normalizedCnpj || undefined,
-    };
+    const currentCnpj = normalizeSupplierCnpj(currentEmpenho.supplierCnpj);
+    const linkedInvoices = invoices.filter((invoice) => invoice.empenhoId === empenhoId);
+
+    if (!normalizedCnpj && linkedInvoices.length > 0) {
+      showToast(
+        'Não é possível remover o CNPJ deste empenho enquanto houver Notas Fiscais vinculadas.',
+        'error'
+      );
+      return;
+    }
+
+    const willChangeIdentity = currentCnpj !== normalizedCnpj;
+    if (willChangeIdentity && linkedInvoices.length > 0) {
+      const confirmed = confirm(
+        `Alterar o CNPJ do empenho ${empenhoId} migrará ${linkedInvoices.length} Nota(s) Fiscal(is), suas identidades internas e os locks de NS associados. Deseja continuar?`
+      );
+      if (!confirmed) return;
+    }
 
     try {
-      if (user) await saveEmpenho(user.uid, updatedEmpenho);
+      const result = await commitEmpenhoSupplierCnpjMigration(user.uid, {
+        empenhoId,
+        targetSupplierCnpj: normalizedCnpj,
+      });
+
       setEmpenhos((current) => current.map((emp) => (
-        emp.id === empenhoId ? updatedEmpenho : emp
+        emp.id === empenhoId ? result.updatedEmpenho : emp
       )));
+
+      if (result.invoiceMigrations.length > 0) {
+        setInvoices((current) => {
+          const migratedSourceKeys = new Set(
+            result.invoiceMigrations.map((migration) => migration.sourceRecordKey)
+          );
+          const retained = current.filter(
+            (invoice) => !migratedSourceKeys.has(getInvoiceRecordKey(invoice))
+          );
+          return [
+            ...result.invoiceMigrations.map((migration) => migration.invoice),
+            ...retained,
+          ];
+        });
+      }
+
+      if (result.noOp) {
+        showToast(`O CNPJ do empenho ${empenhoId} já está consistente.`, 'info');
+        return;
+      }
+
       showToast(
         normalizedCnpj
-          ? `CNPJ do fornecedor atualizado no empenho ${empenhoId}.`
+          ? result.migratedInvoiceCount > 0
+            ? `CNPJ do empenho ${empenhoId} atualizado. ${result.migratedInvoiceCount} NF(s) e ${result.migratedLockCount} lock(s) de NS foram sincronizados.`
+            : `CNPJ do fornecedor atualizado no empenho ${empenhoId}.`
           : `CNPJ removido do empenho ${empenhoId}.`,
         'success'
       );
     } catch (error) {
-      console.error('Erro ao atualizar CNPJ do fornecedor:', error);
-      showToast('Não foi possível atualizar o CNPJ do fornecedor.', 'error');
+      console.error('Erro ao migrar CNPJ do fornecedor:', error);
+      showToast(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível atualizar o CNPJ do fornecedor.',
+        'error'
+      );
       throw error;
     }
   };
-
   const handleUpdateEmpenhoClassification = async (
     empenhoId: string,
     classificationInput: string
