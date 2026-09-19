@@ -43,12 +43,13 @@ Antes do commit são conferidos:
 - CNPJ atual da NE;
 - CNPJ explícito da NF, quando existente;
 - NS atual;
-- reutilização da NS em outra NF do escopo conhecido;
+- reutilização da NS em outra NF conhecida no escopo;
+- lock transacional determinístico da NS no workspace;
 - duplicidade de NF ou de NS dentro do próprio lote.
 
 ## Proteções adicionais
 
-- máximo de 400 alterações por transação;
+- máximo de 100 alterações por transação;
 - itens `unchanged`, `ignored` e `blocked` nunca viram operação de escrita;
 - a interface não acessa Firestore diretamente;
 - o estado local só é atualizado após sucesso da transação;
@@ -56,4 +57,4 @@ Antes do commit são conferidos:
 
 ## Limite deste bloco
 
-A integridade transacional e a idempotência do fluxo estão implementadas. O Bloco 12 permanece responsável por ampliar a cobertura de segurança, desempenho e testes de integração/emulador.
+A integridade transacional e a idempotência do fluxo estão implementadas. O Bloco 12 adiciona lock transacional por NS, redução de leituras e cobertura no Firebase Emulator.
