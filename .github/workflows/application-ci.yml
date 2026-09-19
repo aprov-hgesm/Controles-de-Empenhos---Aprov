@@ -213,6 +213,12 @@ jobs:
       - name: Block 12 empenho deletion integrity guard
         run: npm run verify:block-12-empenho-deletion
 
+      - name: Empenho concurrency domain tests
+        run: npm run test:empenho-concurrency
+
+      - name: Block 13 empenho concurrency guard
+        run: npm run verify:block-13-empenho-concurrency
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
