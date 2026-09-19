@@ -2304,6 +2304,28 @@ async function main() {
     }
   );
 
+  await ownerSet('workspaces/workspace-b/empenhos/sample', {
+    id: 'sample',
+    supplier: 'Fornecedor E2E Isolado B',
+    supplierCnpj: '22222222000191',
+    description: 'Empenho completo do segundo workspace E2E',
+    date: '2026-09-02',
+    status: 'Ativo',
+    classification: 'QR',
+    pregao: '90002/2026',
+    items: [
+      {
+        id: '1',
+        name: 'Item E2E B',
+        unit: 'UN',
+        quantity: 3,
+        unitPrice: 50,
+        received: 0,
+      },
+    ],
+    userId: identities.b.uid,
+  });
+
   await ownerSet('workspaces/workspace-lifecycle/empenhos/delete-e2e', {
     id: 'delete-e2e',
     supplier: 'Fornecedor E2E Delete',
@@ -2387,28 +2409,6 @@ async function main() {
     colunas: [],
     distribuicao: {},
     userId: identities.lifecycle.uid,
-  });
-
-  await ownerSet('workspaces/workspace-b/empenhos/sample', {
-    id: 'sample',
-    supplier: 'Fornecedor E2E Isolado B',
-    supplierCnpj: '22222222000191',
-    description: 'Empenho completo do segundo workspace E2E',
-    date: '2026-09-02',
-    status: 'Ativo',
-    classification: 'QR',
-    pregao: '90002/2026',
-    items: [
-      {
-        id: '1',
-        name: 'Item E2E B',
-        unit: 'UN',
-        quantity: 3,
-        unitPrice: 50,
-        received: 0,
-      },
-    ],
-    userId: identities.b.uid,
   });
 
   console.log('BROWSER E2E FIXTURE: READY');
