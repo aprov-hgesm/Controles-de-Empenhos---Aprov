@@ -51,7 +51,11 @@ const deletionBlock = deletionStart >= 0 && deletionEnd > deletionStart
   : '';
 if (!deletionBlock) findings.push('Handler de exclusão de empenho não foi localizado.');
 else {
-  requireText(deletionBlock, 'await removeEmpenho(user.uid, id)', 'Handler não aguarda lifecycle central.');
+  requireText(
+    deletionBlock,
+    'removeEmpenho(user.uid, id, currentEmpenho.revision)',
+    'Handler não aguarda lifecycle central preso à revisão observada.'
+  );
   requireText(deletionBlock, 'const result = await removeEmpenho', 'Handler não usa resultado confirmado da transação.');
   requireText(deletionBlock, 'setEmpenhos', 'Handler não reconcilia estado local após sucesso.');
   forbidText(deletionBlock, 'removeInvoice(', 'Handler voltou a apagar NF individualmente.');
