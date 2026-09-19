@@ -42,7 +42,11 @@ for (const expected of [
   requireText(service, expected, `Lifecycle de exclusão perdeu requisito: ${expected}`);
 }
 
-requireText(sync, 'return commitEmpenhoDeletionLifecycle(userId, id);', 'firebaseSync não delega exclusão ao lifecycle central.');
+requireText(
+  sync,
+  'return commitEmpenhoDeletionLifecycle(userId, id, expectedRevision);',
+  'firebaseSync não delega exclusão revision-aware ao lifecycle central.'
+);
 
 const deletionStart = hook.indexOf('const handleDeleteSpecificEmpenho');
 const deletionEnd = hook.indexOf('return {', deletionStart);
