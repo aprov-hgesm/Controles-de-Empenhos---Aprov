@@ -4,6 +4,8 @@ import React from 'react';
 import { Edit, Eye, FileDown, FileSpreadsheet, FileText, Package, Printer, Save, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { Empenho, Invoice } from '../../../lib/types';
+import type { SagNsPayload } from '../../../lib/sagNsContract';
+import type { SagNsImportCommitResult } from '../../../lib/sagNsPersistence';
 import { getInvoiceRecordKey } from '../../../lib/invoiceIdentity';
 import { classRequiresTermoRecebimento, type EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 import { RelatorioEmpenhoSelector } from './RelatorioEmpenhoSelector';
@@ -22,6 +24,11 @@ export interface RelatoriosViewContext {
   handleDownloadTermoRecebimento: (...args: any[]) => any;
   handleGenerateEmpenhoReportPDF: (...args: any[]) => any;
   handleSaveNumeroNS: (...args: any[]) => any;
+  handleApplySagNsImport: (
+    payload: SagNsPayload,
+    supplierCnpj: string,
+    expectedFingerprint: string
+  ) => Promise<SagNsImportCommitResult>;
   invoices: Invoice[];
   relatoriosPregaoFilter: string;
   reportEndDate: string;
