@@ -43,8 +43,10 @@ export interface RelatoriosViewContext {
   setSelectedReportInvoice: (...args: any[]) => any;
   setShowPdfModal: (...args: any[]) => any;
   setTempNSValue: (...args: any[]) => any;
+  setTempNSUgValue: (...args: any[]) => any;
   showPdfModal: boolean;
   tempNSValue: string;
+  tempNSUgValue: string;
   uniquePregaos: string[];
 }
 
@@ -53,7 +55,7 @@ interface RelatorioPorEmpenhoViewProps {
 }
 /** Relatório operacional por empenho preservado do fluxo legado da aba Relatórios. */
 export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProps) {
-  const { editingNSId, empenhoClasses, empenhos, formatDateOnly, handleDownloadTermoRecebimento, handleGenerateEmpenhoReportPDF, handleSaveNumeroNS, invoices, relatoriosPregaoFilter, reportEndDate, reportSearch, reportStartDate, selectedReportInvoice, setEditingNSId, setRelatoriosPregaoFilter, setReportEndDate, setReportSearch, setReportStartDate, setSelectedReportInvoice, setShowPdfModal, setTempNSValue, showPdfModal, tempNSValue, uniquePregaos } = context;
+  const { editingNSId, empenhoClasses, empenhos, formatDateOnly, handleDownloadTermoRecebimento, handleGenerateEmpenhoReportPDF, handleSaveNumeroNS, invoices, relatoriosPregaoFilter, reportEndDate, reportSearch, reportStartDate, selectedReportInvoice, setEditingNSId, setRelatoriosPregaoFilter, setReportEndDate, setReportSearch, setReportStartDate, setSelectedReportInvoice, setShowPdfModal, setTempNSValue, setTempNSUgValue, showPdfModal, tempNSValue, tempNSUgValue, uniquePregaos } = context;
 
   const invoiceRequiresTR = (invoice: Invoice): boolean => {
     const empenho = empenhos.find((item) => item.id === invoice.empenhoId);
@@ -379,7 +381,16 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                       </td>
                                       <td className="py-3 px-3.5 whitespace-nowrap">
                                         {editingNSId === getInvoiceRecordKey(inv) ? (
-                                          <div className="flex items-center gap-1.5">
+                                          <div className="flex flex-wrap items-center gap-1.5">
+                                            <input
+                                              type="text"
+                                              inputMode="numeric"
+                                              aria-label="UG emitente da NS"
+                                              value={tempNSUgValue}
+                                              onChange={(e) => setTempNSUgValue(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                              placeholder="UG 000000"
+                                              className="w-24 h-8 px-2 text-xs font-mono font-bold border border-[#00288e] rounded-lg bg-white text-gray-800 outline-none shadow-xs focus:ring-1 focus:ring-[#00288e]"
+                                            />
                                             <input
                                               type="text"
                                               id={`input-ns-${getInvoiceRecordKey(inv)}`}
@@ -388,10 +399,11 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                               onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
                                                   e.preventDefault();
-                                                  handleSaveNumeroNS(getInvoiceRecordKey(inv), tempNSValue);
+                                                  handleSaveNumeroNS(getInvoiceRecordKey(inv), tempNSValue, tempNSUgValue);
                                                 } else if (e.key === 'Escape') {
                                                   setEditingNSId(null);
                                                   setTempNSValue('');
+                                                  setTempNSUgValue('');
                                                 }
                                               }}
                                               placeholder="Ex: 2026NS..."
@@ -401,7 +413,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                             <button
                                               id={`btn-save-ns-${getInvoiceRecordKey(inv)}`}
                                               type="button"
-                                              onClick={() => handleSaveNumeroNS(getInvoiceRecordKey(inv), tempNSValue)}
+                                              onClick={() => handleSaveNumeroNS(getInvoiceRecordKey(inv), tempNSValue, tempNSUgValue)}
                                               className="p-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-lg transition-all shadow-xs flex items-center justify-center"
                                               title="Salvar Número da NS"
                                             >
@@ -413,6 +425,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                               onClick={() => {
                                                 setEditingNSId(null);
                                                 setTempNSValue('');
+                                                setTempNSUgValue('');
                                               }}
                                               className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-all flex items-center justify-center"
                                               title="Cancelar"
@@ -424,7 +437,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                           <div className="flex items-center gap-2">
                                             {inv.numeroNS ? (
                                               <span className="inline-flex items-center gap-1 font-mono font-bold text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded-md text-xs border border-indigo-100 shadow-2xs">
-                                                {inv.numeroNS}
+                                                {inv.nsUg ? `UG ${inv.nsUg} · ` : 'UG pendente · '}{inv.numeroNS}
                                               </span>
                                             ) : (
                                               <span className="text-gray-400 font-normal italic text-xs">
@@ -439,6 +452,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                                 onClick={() => {
                                                   setEditingNSId(getInvoiceRecordKey(inv));
                                                   setTempNSValue(inv.numeroNS || '');
+                                                  setTempNSUgValue(inv.nsUg || '');
                                                 }}
                                                 className="p-1 rounded-lg text-gray-400 hover:text-[#00288e] hover:bg-blue-50 transition-all active:scale-95 border border-transparent hover:border-blue-200/50"
                                                 title={inv.numeroNS ? "Editar Número da NS" : "Informar Número da NS"}
@@ -451,6 +465,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                                 onClick={() => {
                                                   setEditingNSId(getInvoiceRecordKey(inv));
                                                   setTempNSValue(inv.numeroNS || '');
+                                                  setTempNSUgValue(inv.nsUg || '');
                                                 }}
                                                 className="p-1 rounded-lg text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 transition-all active:scale-95 border border-transparent hover:border-emerald-200/50"
                                                 title="Editar e Salvar Número da NS"
