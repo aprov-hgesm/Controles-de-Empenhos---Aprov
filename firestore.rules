@@ -1041,9 +1041,12 @@ service cloud.firestore {
         'invoice.delete',
         'invoice.bulk_delete',
         'supplier_cnpj.migrate',
+        'sector.create',
         'sector.profile_update',
         'sector.status_change',
-        'sector.ug_backfill'
+        'sector.ug_backfill',
+        'sector.password_reset',
+        'sector.delete'
       ];
     }
 
@@ -1143,9 +1146,12 @@ service cloud.firestore {
         )
         && request.resource.data.source == 'admin'
         && request.resource.data.operation in [
+          'sector.create',
           'sector.profile_update',
           'sector.status_change',
-          'sector.ug_backfill'
+          'sector.ug_backfill',
+          'sector.password_reset',
+          'sector.delete'
         ];
     }
 
