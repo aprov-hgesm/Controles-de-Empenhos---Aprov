@@ -21,7 +21,7 @@ requireText(domain, 'buildNsLockDocumentId', 'Identidade determinística central
 requireText(domain, "'ns_lock_conflict'", 'Código de conflito de lock ausente.');
 requireText(domain, "'stale_lock_owner'", 'Código de lock inconsistente ausente.');
 
-requireText(service, 'MAX_NS_INTEGRITY_TRANSACTION_MUTATIONS = 100', 'Teto de 100 alterações não está protegido.');
+requireText(service, 'MAX_NS_INTEGRITY_TRANSACTION_MUTATIONS = 6', 'Teto compatível com o orçamento de access calls das Rules não está protegido.');
 requireText(service, 'MAX_NS_INTEGRITY_KNOWN_OWNER_READS = 200', 'Teto de leituras de donos conhecidos não está protegido.');
 requireText(service, 'operationalSettingsDocRef', 'Serviço central não utiliza lock no settings do workspace.');
 requireText(service, 'transaction.get(operationalSettingsDocRef', 'Lock não é relido dentro da transação.');
