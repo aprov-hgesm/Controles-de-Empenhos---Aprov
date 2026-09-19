@@ -355,34 +355,62 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
         </div>
         <h3 className="mt-1 text-xl font-bold tracking-tight text-[#00288e]">Importar NS — SAG</h3>
         <p className="mt-1 max-w-3xl text-sm font-medium leading-relaxed text-gray-500">
-          Selecione o fornecedor, obtenha o relatório no SAG, use o prompt oficial do EMPROVEX
-          em uma IA externa e valide o JSON antes da futura conciliação.
+          Um fluxo guiado para extrair, validar, conciliar e gravar NS com confirmação humana e
+          revalidação transacional antes do commit.
         </p>
       </header>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
-        {[
-          ['1', 'Selecionar fornecedor', 'O CNPJ define o universo seguro da análise'],
-          ['2', 'Obter relatório no SAG', 'Baixe o relatório de NS do favorecido'],
-          ['3', 'Gerar JSON com IA', 'Copie o prompt oficial e anexe o relatório'],
-          ['4', 'Colar e validar JSON', 'Confira estrutura, CNPJ, NS, datas e alertas'],
-        ].map(([step, title, text], index, all) => (
-          <div key={step} className="relative rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
-            <span className="mb-3 grid h-7 w-7 place-items-center rounded-lg bg-[#00288e] text-[10px] font-black text-white">
-              {step}
-            </span>
-            <p className="text-xs font-extrabold text-gray-800">{title}</p>
-            <p className="mt-1 text-[11px] font-medium leading-relaxed text-gray-500">{text}</p>
-            {index < all.length - 1 ? (
-              <ArrowRight
-                className="absolute -right-2 top-1/2 hidden h-4 w-4 -translate-y-1/2 text-blue-200 lg:block"
-                aria-hidden="true"
-              />
-            ) : null}
-          </div>
-        ))}
-      </div>
+      <nav
+        className="rounded-2xl border border-blue-100 bg-white p-3 shadow-sm"
+        aria-label="Progresso da importação SAG"
+      >
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          {[
+            ['Fornecedor', 'Definir o CNPJ'],
+            ['SAG + prompt', 'Obter e estruturar'],
+            ['Validar JSON', 'Conferir o lote'],
+            ['Revisar e gravar', 'Confirmar alterações'],
+          ].map(([title, text], index) => {
+            const step = index + 1;
+            const complete = Boolean(lastImportResult) || step < activeFlowStep;
+            const active = !lastImportResult && step === activeFlowStep;
 
+            return (
+              <div
+                key={title}
+                aria-current={active ? 'step' : undefined}
+                className={`flex items-center gap-3 rounded-xl border px-3 py-3 transition ${
+                  active
+                    ? 'border-blue-200 bg-blue-50/80'
+                    : complete
+                      ? 'border-emerald-100 bg-emerald-50/50'
+                      : 'border-transparent bg-gray-50/70'
+                }`}
+              >
+                <span
+                  className={`grid h-8 w-8 flex-none place-items-center rounded-lg text-[10px] font-black ${
+                    complete
+                      ? 'bg-emerald-600 text-white'
+                      : active
+                        ? 'bg-[#00288e] text-white'
+                        : 'bg-gray-200 text-gray-500'
+                  }`}
+                >
+                  {complete ? <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> : step}
+                </span>
+                <span className="min-w-0">
+                  <span className={`block text-[11px] font-extrabold ${
+                    active ? 'text-[#00288e]' : complete ? 'text-emerald-800' : 'text-gray-500'
+                  }`}>
+                    {title}
+                  </span>
+                  <span className="mt-0.5 block text-[9px] font-semibold text-gray-400">{text}</span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </nav>
       <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div>
