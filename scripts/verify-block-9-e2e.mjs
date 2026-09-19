@@ -46,7 +46,7 @@ requireText(security, 'nf_11111111000191_1001', 'Fixture de NF sem NS não exist
 requireText(spec, 'sector-lifecycle@example.test', 'E2E não autentica operador principal.');
 requireText(spec, 'sector-b@example.test', 'E2E não autentica segundo workspace.');
 requireText(spec, "page.reload()", 'E2E não comprova persistência após reload.');
-requireText(spec, 'UG 160416', 'E2E não comprova UG automática.');
+requireText(spec, "const UG = '160416'", 'E2E não comprova UG automática.');
 requireText(spec, '2026NS009999', 'E2E não cobre gravação real de NS.');
 requireText(spec, 'Fornecedor E2E Lifecycle', 'E2E não valida dados do workspace principal.');
 requireText(spec, 'Fornecedor E2E Isolado B', 'E2E não valida isolamento do segundo workspace.');
