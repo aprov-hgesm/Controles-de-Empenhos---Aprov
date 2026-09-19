@@ -2,10 +2,17 @@ name: Application CI
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: emprovex-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate-application:
@@ -299,3 +306,21 @@ jobs:
 
       - name: Browser E2E with Firebase Emulator
         run: npm run test:e2e:browser
+
+
+  block-15-release-gate:
+    name: Block 15 Final Release Gate
+    if: ${{ always() }}
+    needs:
+      - validate-application
+      - browser-e2e-emulator
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require all critical validation jobs
+        shell: bash
+        run: |
+          echo "validate-application=${{ needs.validate-application.result }}"
+          echo "browser-e2e-emulator=${{ needs.browser-e2e-emulator.result }}"
+          test "${{ needs.validate-application.result }}" = "success"
+          test "${{ needs.browser-e2e-emulator.result }}" = "success"
