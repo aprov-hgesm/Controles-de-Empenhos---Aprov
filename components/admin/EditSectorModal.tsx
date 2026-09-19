@@ -19,6 +19,7 @@ function formFromWorkspace(workspace: Workspace): UpdateSectorWorkspaceInput {
   return {
     workspaceId: workspace.id,
     workspaceName: workspace.name,
+    ug: workspace.ug || '',
     organizationName: workspace.institutionalProfile.organizationName,
     organizationShortName: workspace.institutionalProfile.organizationShortName || '',
     sectionName: workspace.institutionalProfile.sectionName,
@@ -55,6 +56,7 @@ export function EditSectorModal({
 
     if (
       !form.workspaceName.trim()
+      || !form.ug.trim()
       || !form.organizationName.trim()
       || !form.sectionName.trim()
     ) {
@@ -132,15 +134,34 @@ export function EditSectorModal({
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <ReadOnlyField label="Workspace ID" value={workspace.id} />
             <ReadOnlyField label="Conta Google autorizada" value={workspace.authorizedEmail} />
+            {workspace.ug ? (
+              <ReadOnlyField label="UG da OM" value={workspace.ug} />
+            ) : (
+              <Field label="UG da OM" required>
+                <input
+                  inputMode="numeric"
+                  value={form.ug}
+                  onChange={(event) =>
+                    setForm((current) => current && ({
+                      ...current,
+                      ug: event.target.value.replace(/\D/g, '').slice(0, 6),
+                    }))
+                  }
+                  placeholder="160416"
+                  maxLength={6}
+                  className={`${inputClass} font-mono tracking-[0.12em]`}
+                />
+              </Field>
+            )}
           </div>
 
           <div className="rounded-2xl border border-blue-400/15 bg-blue-500/[0.06] px-4 py-3 text-xs leading-relaxed text-blue-100 flex gap-2">
             <LockKeyhole className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <span>
-              Para preservar isolamento, UID e vínculo de armazenamento, workspace ID e e-mail não podem ser alterados neste fluxo.
+              Para preservar isolamento, UID e vínculo de armazenamento, workspace ID, e-mail e UG já vinculada não podem ser alterados. Cadastros legados sem UG podem receber esse identificador uma única vez.
             </span>
           </div>
 

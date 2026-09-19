@@ -1,6 +1,7 @@
 import {
   HGESM_INSTITUTIONAL_PROFILE,
   HGESM_SECTOR_EMAIL,
+  HGESM_UG,
   HGESM_WORKSPACE_ID,
 } from './hgesmWorkspace';
 import { getActiveProfileMode, type EmprovexProfileMode } from './profileMode';
@@ -47,6 +48,7 @@ export interface SectorWorkspaceContext extends WorkspaceContextBase {
   accountType: 'sector';
   workspaceId: string;
   workspaceName: string;
+  ug: string | null;
   institutionalProfile: WorkspaceInstitutionalProfile;
   legacyDataMode: boolean;
   legacySettingsMode: boolean;
@@ -140,6 +142,7 @@ export function resolveWorkspaceContext(
       accountType: 'sector',
       workspaceId: HGESM_WORKSPACE_ID,
       workspaceName: 'Aprovisionamento HGeSM',
+      ug: HGESM_UG,
       institutionalProfile: {
         ...HGESM_INSTITUTIONAL_PROFILE,
         documentHeaderLines: [...(HGESM_INSTITUTIONAL_PROFILE.documentHeaderLines || [])],

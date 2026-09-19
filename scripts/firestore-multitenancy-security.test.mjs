@@ -215,10 +215,12 @@ async function denied(label, operation) {
 }
 
 function workspace(id, email, status = 'active', extra = {}) {
+  const { ug = '160416', ...rest } = extra;
   return {
     id,
     name: `Workspace ${id}`,
     status,
+    ...(ug ? { ug } : {}),
     authorizedEmail: email,
     institutionalProfile: {
       organizationName: `Organização ${id}`,
@@ -228,17 +230,18 @@ function workspace(id, email, status = 'active', extra = {}) {
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     createdBy: 'aprov1hgesm@gmail.com',
-    ...extra,
+    ...rest,
   };
 }
 
-function account(email, workspaceId, uid, status = 'active', authProvider = 'password') {
+function account(email, workspaceId, uid, status = 'active', authProvider = 'password', ug = '160416') {
   return {
     email,
     ...(authProvider ? { authProvider } : {}),
     ...(uid ? { firebaseUid: uid } : {}),
     accountType: 'sector',
     workspaceId,
+    ...(ug ? { ug } : {}),
     status,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -258,12 +261,13 @@ async function seedWorkspace(
   uid,
   status = 'active',
   accountWorkspaceId = id,
-  authProvider = 'password'
+  authProvider = 'password',
+  ug = '160416'
 ) {
-  await ownerSet(`workspaces/${id}`, workspace(id, email, status));
+  await ownerSet(`workspaces/${id}`, workspace(id, email, status, { ug }));
   await ownerSet(
     `platformAccounts/${email}`,
-    account(email, accountWorkspaceId, uid, status, authProvider)
+    account(email, accountWorkspaceId, uid, status, authProvider, ug)
   );
   await ownerSet(`workspaces/${id}/empenhos/sample`, {
     id: 'sample',
@@ -351,7 +355,7 @@ async function main() {
   };
 
   await seedWorkspace('workspace-a', identities.a.email, identities.a.uid);
-  await seedWorkspace('workspace-b', identities.b.email, identities.b.uid);
+  await seedWorkspace('workspace-b', identities.b.email, identities.b.uid, 'active', 'workspace-b', 'password', '160417');
   await seedWorkspace(
     'workspace-wrong-uid',
     identities.wrongUid.email,
@@ -364,6 +368,7 @@ async function main() {
     null,
     'active',
     'workspace-bootstrap',
+    null,
     null
   );
 
@@ -379,6 +384,7 @@ async function main() {
       firebaseUid: identities.prebound.uid,
       accountType: 'sector',
       workspaceId: 'workspace-prebound',
+      ug: '160416',
       status: 'active',
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
@@ -792,9 +798,9 @@ async function main() {
     'A mesma NS não pode aparecer em duas NFs após corrida concorrente.'
   );
 
-  const sameNumberDifferentUg = '2026NS009050';
-  await allowed('Mesmo número de NS pode ser reservado em UGs diferentes', async () => {
-    await reserveSagNs(
+  const wrongWorkspaceUgNs = '2026NS009050';
+  await denied('Setor não pode reservar NS com UG diferente da UG vinculada ao workspace', () =>
+    reserveSagNs(
       sessionA.db,
       sessionA.user.uid,
       'workspace-a',
@@ -802,10 +808,13 @@ async function main() {
       'SAG-UG-A',
       sagEmpenhoId,
       sagSupplierCnpj,
-      sameNumberDifferentUg,
+      wrongWorkspaceUgNs,
       '160415'
-    );
-    await reserveSagNs(
+    )
+  );
+
+  await allowed('Setor reserva NS usando automaticamente a UG vinculada ao workspace', () =>
+    reserveSagNs(
       sessionA.db,
       sessionA.user.uid,
       'workspace-a',
@@ -813,20 +822,21 @@ async function main() {
       'SAG-UG-B',
       sagEmpenhoId,
       sagSupplierCnpj,
-      sameNumberDifferentUg,
+      wrongWorkspaceUgNs,
       '160416'
-    );
-  });
-  const [ugAInvoice, ugBInvoice, ugALock, ugBLock] = await Promise.all([
+    )
+  );
+
+  const [wrongUgInvoice, canonicalUgInvoice, wrongUgLock, canonicalUgLock] = await Promise.all([
     getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', sagInvoiceUgAKey)),
     getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', sagInvoiceUgBKey)),
-    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'settings', sagLockId(sameNumberDifferentUg, '160415'))),
-    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'settings', sagLockId(sameNumberDifferentUg, '160416'))),
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'settings', sagLockId(wrongWorkspaceUgNs, '160415'))),
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'settings', sagLockId(wrongWorkspaceUgNs, '160416'))),
   ]);
-  assert.equal(ugAInvoice.data()?.nsUg, '160415');
-  assert.equal(ugBInvoice.data()?.nsUg, '160416');
-  assert.equal(ugALock.data()?.ug, '160415');
-  assert.equal(ugBLock.data()?.ug, '160416');
+  assert.equal(wrongUgInvoice.data()?.numeroNS, undefined);
+  assert.equal(canonicalUgInvoice.data()?.nsUg, '160416');
+  assert.equal(wrongUgLock.exists(), false);
+  assert.equal(canonicalUgLock.data()?.ug, '160416');
 
   const winnerId = lockOwner === sagInvoiceAKey ? 'SAG-A' : 'SAG-B';
   await allowed('Reimportação SAG pelo mesmo proprietário do lock é idempotente', () =>
@@ -1742,6 +1752,39 @@ async function main() {
       updatedAt: now(),
     })
   );
+
+  await allowed('Admin vincula UG uma única vez a cadastro legado sem UG', async () => {
+    const batch = writeBatch(admin.db);
+    batch.update(doc(admin.db, 'workspaces', 'workspace-bootstrap'), {
+      ug: '160499',
+      updatedAt: now(),
+    });
+    batch.update(doc(admin.db, 'platformAccounts', identities.bootstrap.email), {
+      ug: '160499',
+      updatedAt: now(),
+    });
+    batch.set(doc(admin.db, 'platformUgIndex', '160499'), {
+      ug: '160499',
+      workspaceId: 'workspace-bootstrap',
+      email: identities.bootstrap.email,
+      createdAt: now(),
+      createdBy: identities.founder.email,
+    });
+    await batch.commit();
+  });
+
+  await denied('UG já vinculada não pode ser substituída por outra UG', async () => {
+    const batch = writeBatch(admin.db);
+    batch.update(doc(admin.db, 'workspaces', 'workspace-bootstrap'), {
+      ug: '160498',
+      updatedAt: now(),
+    });
+    batch.update(doc(admin.db, 'platformAccounts', identities.bootstrap.email), {
+      ug: '160498',
+      updatedAt: now(),
+    });
+    await batch.commit();
+  });
 
   await allowed('Admin suspende workspace + conta atomicamente', async () => {
     const batch = writeBatch(admin.db);

@@ -22,6 +22,7 @@ export type OperationalCollectionName =
 
 export interface OperationalDataScope {
   workspaceId: string;
+  ug: string | null;
   legacyDataMode: boolean;
   legacySettingsMode: boolean;
 }
@@ -47,6 +48,7 @@ export function operationalScopeFromContext(
 
   return {
     workspaceId: context.workspaceId,
+    ug: context.ug,
     legacyDataMode: context.legacyDataMode,
     legacySettingsMode: context.legacySettingsMode,
   };

@@ -16,8 +16,10 @@ import {
   HGESM_WORKSPACE_ID,
 } from './hgesmWorkspace';
 import {
+  isValidUnitUg,
   isValidWorkspaceId,
   normalizePlatformEmail,
+  normalizeUnitUg,
   normalizeWorkspaceId,
   validateWorkspace,
   type PlatformAccount,
@@ -29,10 +31,12 @@ export type { CreateSectorWorkspaceInput } from './sectorProvisioning';
 
 const PLATFORM_ACCOUNTS_COLLECTION = 'platformAccounts';
 const WORKSPACES_COLLECTION = 'workspaces';
+const PLATFORM_UG_INDEX_COLLECTION = 'platformUgIndex';
 
 export interface UpdateSectorWorkspaceInput {
   workspaceId: string;
   workspaceName: string;
+  ug: string;
   organizationName: string;
   organizationShortName?: string;
   sectionName: string;
@@ -95,6 +99,7 @@ export async function updateSectorWorkspaceProfile(
   updatedByEmail: string
 ): Promise<Workspace> {
   const workspaceId = normalizeWorkspaceId(input.workspaceId);
+  const ug = normalizeUnitUg(input.ug);
   const updatedBy = normalizePlatformEmail(updatedByEmail);
 
   if (updatedBy !== HGESM_SECTOR_EMAIL) {
@@ -102,6 +107,9 @@ export async function updateSectorWorkspaceProfile(
   }
   if (!isValidWorkspaceId(workspaceId)) {
     throw new Error('O identificador do setor é inválido.');
+  }
+  if (!isValidUnitUg(ug)) {
+    throw new Error('A UG da Organização Militar deve possuir exatamente 6 dígitos.');
   }
   if (workspaceId === HGESM_WORKSPACE_ID) {
     throw new Error('O workspace fundador não pode ser alterado por este fluxo administrativo.');
@@ -140,9 +148,32 @@ export async function updateSectorWorkspaceProfile(
       throw new Error('Workspace e conta operacional estão inconsistentes.');
     }
 
+    const currentUg = normalizeUnitUg(current.ug);
+    const accountUg = account.accountType === 'sector' ? normalizeUnitUg(account.ug) : '';
+    if (
+      (currentUg && currentUg !== ug)
+      || (accountUg && accountUg !== ug)
+      || (currentUg && accountUg && currentUg !== accountUg)
+    ) {
+      throw new Error('A UG já vinculada ao setor é imutável e não pode ser substituída.');
+    }
+
+    const ugIndexRef = doc(db, PLATFORM_UG_INDEX_COLLECTION, ug);
+    const ugIndexSnapshot = await transaction.get(ugIndexRef);
+    if (ugIndexSnapshot.exists()) {
+      const indexed = ugIndexSnapshot.data() as { workspaceId?: string; email?: string };
+      if (
+        indexed.workspaceId !== workspaceId
+        || normalizePlatformEmail(indexed.email || '') !== normalizePlatformEmail(current.authorizedEmail)
+      ) {
+        throw new Error('Esta UG já está vinculada a outro setor da plataforma.');
+      }
+    }
+
     const now = new Date().toISOString();
     const updated: Workspace = {
       ...current,
+      ug,
       name: input.workspaceName.trim(),
       institutionalProfile: buildSectorInstitutionalProfile(
         input,
@@ -155,10 +186,26 @@ export async function updateSectorWorkspaceProfile(
     if (errors.length > 0) throw new Error(errors[0]);
 
     transaction.update(workspaceRef, {
+      ug,
       name: updated.name,
       institutionalProfile: updated.institutionalProfile,
       updatedAt: now,
     });
+    if (!accountUg) {
+      transaction.update(accountRef, {
+        ug,
+        updatedAt: now,
+      });
+    }
+    if (!ugIndexSnapshot.exists()) {
+      transaction.set(ugIndexRef, {
+        ug,
+        workspaceId,
+        email: current.authorizedEmail,
+        createdAt: now,
+        createdBy: updatedBy,
+      });
+    }
 
     return updated;
   });
@@ -222,6 +269,14 @@ export async function setSectorWorkspaceStatus(
       || normalizePlatformEmail(currentAccount.email)
         !== normalizePlatformEmail(currentWorkspace.authorizedEmail)
       || currentAccount.status !== currentWorkspace.status
+      || (
+        normalizeUnitUg(currentWorkspace.ug)
+        && normalizeUnitUg(currentWorkspace.ug) !== normalizeUnitUg(currentAccount.ug)
+      )
+      || (
+        normalizeUnitUg(currentAccount.ug)
+        && normalizeUnitUg(currentWorkspace.ug) !== normalizeUnitUg(currentAccount.ug)
+      )
     ) {
       throw new Error('Workspace e conta operacional estão inconsistentes.');
     }

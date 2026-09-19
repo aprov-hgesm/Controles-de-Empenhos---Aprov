@@ -19,6 +19,7 @@ import {
   buildLegacyNsLockDocumentId,
   buildNsLockDocument,
   buildNsLockDocumentId,
+  isValidNsUg,
   normalizeNsNumber,
   normalizeNsUg,
   validateNsIntegritySnapshot,
@@ -64,15 +65,42 @@ export async function commitNsIntegrityMutations(
 ): Promise<CommitNsIntegrityResult> {
   const scope = getCurrentOperationalScope(userId);
   const path = `${getOperationalCollectionPath(scope, 'invoices')}/ns-integrity`;
+  const scopeUg = normalizeNsUg(scope.ug);
+  const mutations = input.mutations.map((mutation) => {
+    const proposedNs = normalizeNsNumber(mutation.proposedNs);
+    if (!proposedNs) {
+      return { ...mutation, proposedUg: null };
+    }
 
-  if (input.mutations.length > MAX_NS_INTEGRITY_TRANSACTION_MUTATIONS) {
+    if (!isValidNsUg(scopeUg)) {
+      throw new NsIntegrityError(
+        'invalid_ug',
+        'A UG da Organização Militar não está configurada para este usuário. A gravação de NS foi bloqueada.'
+      );
+    }
+
+    const requestedUg = normalizeNsUg(mutation.proposedUg);
+    if (requestedUg && requestedUg !== scopeUg) {
+      throw new NsIntegrityError(
+        'invalid_ug',
+        `A UG ${requestedUg} informada para a NS não corresponde à UG ${scopeUg} vinculada ao usuário.`
+      );
+    }
+
+    return {
+      ...mutation,
+      proposedUg: scopeUg,
+    };
+  });
+
+  if (mutations.length > MAX_NS_INTEGRITY_TRANSACTION_MUTATIONS) {
     throw new Error(
       `A operação de NS excede o limite seguro de ${MAX_NS_INTEGRITY_TRANSACTION_MUTATIONS} alterações por transação.`
     );
   }
 
   const targetRecordKeys = Array.from(
-    new Set(input.mutations.map((mutation) => mutation.invoiceRecordKey))
+    new Set(mutations.map((mutation) => mutation.invoiceRecordKey))
   );
   const knownOwnerRecordKeys = Array.from(new Set(input.knownNsOwnerRecordKeys));
 
@@ -86,7 +114,7 @@ export async function commitNsIntegrityMutations(
     new Set([...targetRecordKeys, ...knownOwnerRecordKeys])
   );
   const empenhoIds = Array.from(
-    new Set(input.mutations.map((mutation) => mutation.empenhoId))
+    new Set(mutations.map((mutation) => mutation.empenhoId))
   );
 
   try {
@@ -123,19 +151,30 @@ export async function commitNsIntegrityMutations(
         targetInvoiceDocuments.map((document) => [document.recordKey, document.invoice])
       );
 
+      for (const document of targetInvoiceDocuments) {
+        const storedNs = normalizeNsNumber(document.invoice.numeroNS);
+        const storedUg = normalizeNsUg(document.invoice.nsUg);
+        if (storedNs && storedUg && isValidNsUg(scopeUg) && storedUg !== scopeUg) {
+          throw new NsIntegrityError(
+            'invalid_ug',
+            `A NF ${document.invoice.id} está vinculada à UG ${storedUg}, diferente da UG ${scopeUg} deste usuário. A operação foi bloqueada.`
+          );
+        }
+      }
+
       const empenhos: Empenho[] = empenhoSnapshots
         .filter((snapshot) => snapshot.exists())
         .map((snapshot) => snapshot.data() as Empenho);
 
       const validation = validateNsIntegritySnapshot({
-        mutations: input.mutations,
+        mutations: mutations,
         targetInvoiceDocuments,
         knownOwnerInvoiceDocuments,
         empenhos,
       });
 
       const lockIds = new Set<string>();
-      for (const mutation of input.mutations) {
+      for (const mutation of mutations) {
         const stored = targetByKey.get(mutation.invoiceRecordKey);
         const currentNs = normalizeNsNumber(stored?.numeroNS);
         const proposedNs = normalizeNsNumber(mutation.proposedNs);
@@ -156,7 +195,7 @@ export async function commitNsIntegrityMutations(
         ])
       );
 
-      for (const mutation of input.mutations) {
+      for (const mutation of mutations) {
         const stored = targetByKey.get(mutation.invoiceRecordKey);
         if (!stored) continue;
 
@@ -195,7 +234,7 @@ export async function commitNsIntegrityMutations(
       const writeKeys = new Set(validation.writes.map((mutation) => mutation.invoiceRecordKey));
       const now = new Date().toISOString();
 
-      for (const mutation of input.mutations) {
+      for (const mutation of mutations) {
         const stored = targetByKey.get(mutation.invoiceRecordKey);
         if (!stored) continue;
 
@@ -264,7 +303,7 @@ export async function commitNsIntegrityMutations(
       }
 
       const updatedInvoices: Invoice[] = [];
-      for (const mutation of input.mutations) {
+      for (const mutation of mutations) {
         const stored = targetByKey.get(mutation.invoiceRecordKey);
         if (!stored) continue;
         const proposedNs = normalizeNsNumber(mutation.proposedNs);
@@ -294,7 +333,7 @@ export async function commitNsIntegrityMutations(
     handleFirestoreError(
       error,
       OperationType.WRITE,
-      `${path}:${input.mutations.map((mutation) =>
+      `${path}:${mutations.map((mutation) =>
         getOperationalDocumentPath(scope, 'invoices', mutation.invoiceRecordKey)
       ).join(',')}`
     );

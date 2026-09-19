@@ -104,6 +104,7 @@ export function RelatoriosView({ context }: RelatoriosViewProps) {
           <SagImportView
             empenhos={context.empenhos}
             invoices={context.invoices}
+            workspaceUg={context.workspaceUg}
             onApplySagNsImport={context.handleApplySagNsImport}
           />
         )}

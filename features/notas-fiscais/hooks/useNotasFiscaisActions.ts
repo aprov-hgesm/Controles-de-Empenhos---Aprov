@@ -7,6 +7,7 @@ import { commitAllComissoesDeletion, commitAllInvoicesDeletion, commitInvoiceDel
 import { deleteInvoicePdfUpload, uploadInvoicePdf } from '../../../lib/invoiceDocuments';
 import { isValidNsUg, normalizeNsNumber, normalizeNsUg } from '../../../lib/nsIntegrity';
 import { commitNsIntegrityMutations } from '../../../lib/nsIntegrityService';
+import { getCurrentOperationalScope } from '../../../lib/operationalPaths';
 import {
   buildInvoiceRecordKey,
   findInvoiceIdentityConflict,
@@ -30,7 +31,7 @@ interface NotasActionsContext {
   nfQuantities: Record<string, number>; setNfQuantities: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   nfSubTab: NfSubTab; setNfSubTab: React.Dispatch<React.SetStateAction<NfSubTab>>;
   editingInvoice: Invoice | null; setEditingInvoice: React.Dispatch<React.SetStateAction<Invoice | null>>;
-  setEditingNSId: React.Dispatch<React.SetStateAction<string | null>>; setTempNSValue: React.Dispatch<React.SetStateAction<string>>; setTempNSUgValue: React.Dispatch<React.SetStateAction<string>>;
+  setEditingNSId: React.Dispatch<React.SetStateAction<string | null>>; setTempNSValue: React.Dispatch<React.SetStateAction<string>>;
   comissaoMes: string; comissaoBoletimNum: string; setComissaoBoletimNum: React.Dispatch<React.SetStateAction<string>>;
   comissaoBoletimDate: string; setComissaoBoletimDate: React.Dispatch<React.SetStateAction<string>>;
   comissaoPresPosto: string; comissaoPresNome: string; setComissaoPresNome: React.Dispatch<React.SetStateAction<string>>;
@@ -41,7 +42,7 @@ interface NotasActionsContext {
 
 /** Ações de Notas Fiscais e Comissão, com dependências operacionais injetadas. */
 export function useNotasFiscaisActions(context: NotasActionsContext) {
-  const { user, empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices, comissoes, setComissoes, showToast, selectedNFCommitmentId, setSelectedNFCommitmentId, nfNumber, setNfNumber, nfDate, setNfDate, nfQuantities, setNfQuantities, nfSubTab, setNfSubTab, editingInvoice, setEditingInvoice, setEditingNSId, setTempNSValue, setTempNSUgValue, comissaoMes, comissaoBoletimNum, setComissaoBoletimNum, comissaoBoletimDate, setComissaoBoletimDate, comissaoPresPosto, comissaoPresNome, setComissaoPresNome, comissaoAux1Posto, comissaoAux1Nome, setComissaoAux1Nome, comissaoAux2Posto, comissaoAux2Nome, setComissaoAux2Nome, comissaoAux3Posto, comissaoAux3Nome, setComissaoAux3Nome } = context;
+  const { user, empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices, comissoes, setComissoes, showToast, selectedNFCommitmentId, setSelectedNFCommitmentId, nfNumber, setNfNumber, nfDate, setNfDate, nfQuantities, setNfQuantities, nfSubTab, setNfSubTab, editingInvoice, setEditingInvoice, setEditingNSId, setTempNSValue, comissaoMes, comissaoBoletimNum, setComissaoBoletimNum, comissaoBoletimDate, setComissaoBoletimDate, comissaoPresPosto, comissaoPresNome, setComissaoPresNome, comissaoAux1Posto, comissaoAux1Nome, setComissaoAux1Nome, comissaoAux2Posto, comissaoAux2Nome, setComissaoAux2Nome, comissaoAux3Posto, comissaoAux3Nome, setComissaoAux3Nome } = context;
 
   // Save or Edit registered Invoice ("Salvar Recebimento")
   const handleSaveInvoice = async (invoicePdfFile?: File | null): Promise<boolean> => {
@@ -504,7 +505,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     }
   };
 
-  const handleSaveNumeroNS = async (invoiceRecordKey: string, value: string, ugValue: string) => {
+  const handleSaveNumeroNS = async (invoiceRecordKey: string, value: string) => {
     const targetInvoice = invoices.find(
       (invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey
     );
@@ -535,10 +536,14 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     const currentNs = normalizeNsNumber(targetInvoice.numeroNS);
     const currentUg = normalizeNsUg(targetInvoice.nsUg);
     const proposedNs = normalizeNsNumber(value);
-    const proposedUg = proposedNs ? normalizeNsUg(ugValue) : '';
+    const scope = getCurrentOperationalScope(user.uid);
+    const proposedUg = proposedNs ? normalizeNsUg(scope.ug) : '';
 
     if (proposedNs && !isValidNsUg(proposedUg)) {
-      showToast('Informe a UG emitente da NS com exatamente 6 dígitos.', 'error');
+      showToast(
+        'A UG da Organização Militar não está configurada para este usuário. Solicite ao administrador que vincule a UG ao cadastro do setor.',
+        'error'
+      );
       return;
     }
 
@@ -587,10 +592,9 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
 
       setEditingNSId(null);
       setTempNSValue('');
-      setTempNSUgValue('');
       showToast(
         proposedNs
-          ? `Identidade UG ${proposedUg} + NS ${proposedNs} salva para a NF ${targetInvoice.id}!`
+          ? `NS ${proposedNs} salva para a NF ${targetInvoice.id} com a UG ${proposedUg} da unidade.`
           : `Número da NS removido da NF ${targetInvoice.id}!`,
         'success'
       );

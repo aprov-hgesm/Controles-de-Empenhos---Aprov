@@ -56,6 +56,26 @@ service cloud.firestore {
       ).data;
     }
 
+    function isValidUnitUg(value) {
+      return value is string
+        && value.matches('^[0-9]{6}$');
+    }
+
+    function workspaceAndAccountUgMatch(workspaceId) {
+      let workspace = workspaceData(workspaceId);
+      let account = workspaceAccountData(workspaceId);
+      return (
+          !('ug' in workspace)
+          && !('ug' in account)
+        )
+        || (
+          'ug' in workspace
+          && 'ug' in account
+          && isValidUnitUg(workspace.ug)
+          && workspace.ug == account.ug
+        );
+    }
+
     function hasBoundUid(account) {
       return 'firebaseUid' in account
         && account.firebaseUid is string
@@ -100,16 +120,27 @@ service cloud.firestore {
     }
 
     function canAccessWorkspace(workspaceId) {
+      let workspace = workspaceData(workspaceId);
+      let account = workspaceAccountData(workspaceId);
       return workspaceAccountExists(workspaceId)
-        && workspaceData(workspaceId).status == 'active'
-        && workspaceAccountData(workspaceId).accountType == 'sector'
-        && workspaceAccountData(workspaceId).status == 'active'
-        && workspaceAccountData(workspaceId).workspaceId == workspaceId
-        && workspaceAccountData(workspaceId).email == workspaceData(workspaceId).authorizedEmail
-        && operationalIdentityMatchesAccount(
-          workspaceId,
-          workspaceAccountData(workspaceId)
-        );
+        && workspace.status == 'active'
+        && account.accountType == 'sector'
+        && account.status == 'active'
+        && account.workspaceId == workspaceId
+        && account.email == workspace.authorizedEmail
+        && (
+          (
+            !('ug' in workspace)
+            && !('ug' in account)
+          )
+          || (
+            'ug' in workspace
+            && 'ug' in account
+            && isValidUnitUg(workspace.ug)
+            && workspace.ug == account.ug
+          )
+        )
+        && operationalIdentityMatchesAccount(workspaceId, account);
     }
 
     function canReadWorkspaceMetadataFromResource(workspaceId) {
@@ -125,6 +156,7 @@ service cloud.firestore {
         && get(
           /databases/$(database)/documents/platformAccounts/$(resource.data.authorizedEmail)
         ).data.workspaceId == workspaceId
+        && workspaceAndAccountUgMatch(workspaceId)
         && identityMatchesAccount(
           get(
             /databases/$(database)/documents/platformAccounts/$(resource.data.authorizedEmail)
@@ -148,6 +180,7 @@ service cloud.firestore {
           'name',
           'status',
           'authorizedEmail',
+          'ug',
           'legacyWorkspace',
           'institutionalProfile',
           'createdAt',
@@ -159,6 +192,10 @@ service cloud.firestore {
         && request.resource.data.name.size() > 0
         && request.resource.data.authorizedEmail is string
         && request.resource.data.authorizedEmail.size() > 3
+        && (
+          !('ug' in request.resource.data)
+          || isValidUnitUg(request.resource.data.ug)
+        )
         && request.resource.data.status in ['active', 'disabled']
         && request.resource.data.institutionalProfile is map;
     }
@@ -179,7 +216,30 @@ service cloud.firestore {
         ).data.workspaceId == workspaceId
         && getAfter(
           /databases/$(database)/documents/platformAccounts/$(request.resource.data.authorizedEmail)
-        ).data.status == request.resource.data.status;
+        ).data.status == request.resource.data.status
+        && (
+          (
+            !('ug' in request.resource.data)
+            && !('ug' in getAfter(
+              /databases/$(database)/documents/platformAccounts/$(request.resource.data.authorizedEmail)
+            ).data)
+          )
+          || (
+            'ug' in request.resource.data
+            && 'ug' in getAfter(
+              /databases/$(database)/documents/platformAccounts/$(request.resource.data.authorizedEmail)
+            ).data
+            && request.resource.data.ug == getAfter(
+              /databases/$(database)/documents/platformAccounts/$(request.resource.data.authorizedEmail)
+            ).data.ug
+          )
+        );
+    }
+
+    function validWorkspaceCreate(workspaceId) {
+      return validWorkspaceWrite(workspaceId)
+        && 'ug' in request.resource.data
+        && isValidUnitUg(request.resource.data.ug);
     }
 
     function validWorkspaceAdminUpdate(workspaceId) {
@@ -187,9 +247,14 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'name',
           'status',
+          'ug',
           'institutionalProfile',
           'updatedAt'
-        ]);
+        ])
+        && (
+          !('ug' in resource.data)
+          || request.resource.data.ug == resource.data.ug
+        );
     }
 
     function validSectorAccountWrite(accountId) {
@@ -208,6 +273,7 @@ service cloud.firestore {
           'firebaseUid',
           'accountType',
           'workspaceId',
+          'ug',
           'status',
           'createdAt',
           'updatedAt',
@@ -223,7 +289,17 @@ service cloud.firestore {
         )
         && request.resource.data.workspaceId is string
         && request.resource.data.workspaceId.size() > 0
+        && (
+          !('ug' in request.resource.data)
+          || isValidUnitUg(request.resource.data.ug)
+        )
         && request.resource.data.status in ['active', 'disabled'];
+    }
+
+    function validSectorAccountCreate(accountId) {
+      return validSectorAccountWrite(accountId)
+        && 'ug' in request.resource.data
+        && isValidUnitUg(request.resource.data.ug);
     }
 
     function accountHasMatchingWorkspaceAfterWrite(accountId) {
@@ -239,15 +315,37 @@ service cloud.firestore {
         ).data.authorizedEmail == accountId
         && getAfter(
           /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
-        ).data.status == request.resource.data.status;
+        ).data.status == request.resource.data.status
+        && (
+          (
+            !('ug' in request.resource.data)
+            && !('ug' in getAfter(
+              /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+            ).data)
+          )
+          || (
+            'ug' in request.resource.data
+            && 'ug' in getAfter(
+              /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+            ).data
+            && request.resource.data.ug == getAfter(
+              /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+            ).data.ug
+          )
+        );
     }
 
     function validSectorAccountAdminUpdate(accountId) {
       return validSectorAccountWrite(accountId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'status',
+          'ug',
           'updatedAt'
-        ]);
+        ])
+        && (
+          !('ug' in resource.data)
+          || request.resource.data.ug == resource.data.ug
+        );
     }
 
     function validInitialTermCounter() {
@@ -272,6 +370,10 @@ service cloud.firestore {
         && account.status == 'active'
         && account.workspaceId == workspaceId
         && account.email == workspace.authorizedEmail
+        && 'ug' in workspace
+        && 'ug' in account
+        && isValidUnitUg(workspace.ug)
+        && workspace.ug == account.ug
         && validInitialTermCounter();
     }
 
@@ -340,8 +442,7 @@ service cloud.firestore {
     }
 
     function isValidNsUg(value) {
-      return value is string
-        && value.matches('^[0-9]{6}$');
+      return isValidUnitUg(value);
     }
 
     function isValidCnpjShape(value) {
@@ -408,6 +509,23 @@ service cloud.firestore {
         && existsAfter(empenhoPath)
         && getAfter(empenhoPath).data.id == data.empenhoId
         && getAfter(empenhoPath).data.supplierCnpj == data.supplierCnpj;
+    }
+
+    function workspaceUgMatchesNs(workspaceId, ug) {
+      let workspace = workspaceData(workspaceId);
+      return (
+          workspaceId == 'hgesm-aprov'
+          && ug == '160416'
+          && (
+            !('ug' in workspace)
+            || workspace.ug == '160416'
+          )
+        )
+        || (
+          'ug' in workspace
+          && isValidUnitUg(workspace.ug)
+          && workspace.ug == ug
+        );
     }
 
     function canonicalInvoiceLockMatchesAfter(workspaceId, id, data) {
@@ -628,6 +746,7 @@ service cloud.firestore {
         && request.resource.data.type == 'sag-ns-lock'
         && request.resource.data.workspaceId == workspaceId
         && isValidNsUg(request.resource.data.ug)
+        && workspaceUgMatchesNs(workspaceId, request.resource.data.ug)
         && isValidNsNumber(request.resource.data.numeroNS)
         && request.resource.data.invoiceRecordKey is string
         && request.resource.data.invoiceRecordKey.size() > 0
@@ -795,6 +914,17 @@ service cloud.firestore {
         && request.resource.data.email == accountId
         && request.resource.data.accountType == resource.data.accountType
         && request.resource.data.workspaceId == resource.data.workspaceId
+        && (
+          (
+            !('ug' in resource.data)
+            && !('ug' in request.resource.data)
+          )
+          || (
+            'ug' in resource.data
+            && 'ug' in request.resource.data
+            && request.resource.data.ug == resource.data.ug
+          )
+        )
         && request.resource.data.status == resource.data.status
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.createdBy == resource.data.createdBy;
@@ -813,7 +943,24 @@ service cloud.firestore {
         ).data.status == 'active'
         && get(
           /databases/$(database)/documents/workspaces/$(resource.data.workspaceId)
-        ).data.authorizedEmail == accountId;
+        ).data.authorizedEmail == accountId
+        && (
+          (
+            !('ug' in resource.data)
+            && !('ug' in get(
+              /databases/$(database)/documents/workspaces/$(resource.data.workspaceId)
+            ).data)
+          )
+          || (
+            'ug' in resource.data
+            && 'ug' in get(
+              /databases/$(database)/documents/workspaces/$(resource.data.workspaceId)
+            ).data
+            && resource.data.ug == get(
+              /databases/$(database)/documents/workspaces/$(resource.data.workspaceId)
+            ).data.ug
+          )
+        );
     }
 
     function isSelfUidBinding(accountId) {
@@ -892,7 +1039,7 @@ service cloud.firestore {
         || canReadWorkspaceMetadataFromResource(workspaceId);
       allow list: if isPlatformAdmin();
       allow create: if isPlatformAdmin()
-        && validWorkspaceWrite(workspaceId)
+        && validWorkspaceCreate(workspaceId)
         && workspaceHasMatchingAccountAfterWrite(workspaceId);
       allow update: if isPlatformAdmin()
         && workspaceId != 'hgesm-aprov'
@@ -905,7 +1052,7 @@ service cloud.firestore {
       allow get: if isPlatformAdmin() || isSelfPlatformAccount();
       allow list: if isPlatformAdmin();
       allow create: if isPlatformAdmin()
-        && validSectorAccountWrite(accountId)
+        && validSectorAccountCreate(accountId)
         && accountHasMatchingWorkspaceAfterWrite(accountId);
       allow update: if (
           isPlatformAdmin()
@@ -917,6 +1064,41 @@ service cloud.firestore {
         || isSelfPreboundFirstLogin(accountId)
         || isSelfBoundSessionRefresh(accountId);
       allow delete: if false;
+    }
+
+    match /platformUgIndex/{ug} {
+      allow get, list: if isPlatformAdmin();
+      allow create: if isPlatformAdmin()
+        && request.resource.data.keys().hasOnly([
+          'ug',
+          'workspaceId',
+          'email',
+          'createdAt',
+          'createdBy'
+        ])
+        && request.resource.data.ug == ug
+        && isValidUnitUg(ug)
+        && request.resource.data.workspaceId is string
+        && request.resource.data.email is string
+        && existsAfter(
+          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+        )
+        && existsAfter(
+          /databases/$(database)/documents/platformAccounts/$(request.resource.data.email)
+        )
+        && getAfter(
+          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+        ).data.ug == ug
+        && getAfter(
+          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+        ).data.authorizedEmail == request.resource.data.email
+        && getAfter(
+          /databases/$(database)/documents/platformAccounts/$(request.resource.data.email)
+        ).data.ug == ug
+        && getAfter(
+          /databases/$(database)/documents/platformAccounts/$(request.resource.data.email)
+        ).data.workspaceId == request.resource.data.workspaceId;
+      allow update, delete: if false;
     }
 
     // Workspace-scoped operational data. There is deliberately no admin bypass:
