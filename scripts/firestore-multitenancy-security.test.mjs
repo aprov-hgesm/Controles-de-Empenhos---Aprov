@@ -2023,6 +2023,28 @@ async function main() {
     }
   );
 
+  await ownerSet(
+    'workspaces/workspace-lifecycle/invoices/nf_11111111000191_2002',
+    {
+      id: '2002',
+      empenhoId: 'sample',
+      issueDate: '2026-06-16',
+      items: [
+        {
+          itemId: '1',
+          quantity: 1,
+          unitPrice: 20,
+          subtotal: 20,
+        },
+      ],
+      totalValue: 20,
+      supplier: 'Fornecedor E2E Lifecycle',
+      recordKey: 'nf_11111111000191_2002',
+      registeredAt: browserFixtureTimestamp,
+      userId: identities.lifecycle.uid,
+    }
+  );
+
   await ownerSet('workspaces/workspace-b/empenhos/sample', {
     id: 'sample',
     supplier: 'Fornecedor E2E Isolado B',
