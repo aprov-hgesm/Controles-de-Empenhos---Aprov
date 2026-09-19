@@ -26,9 +26,12 @@ export type AuditOperation =
   | 'invoice.delete'
   | 'invoice.bulk_delete'
   | 'supplier_cnpj.migrate'
+  | 'sector.create'
   | 'sector.profile_update'
   | 'sector.status_change'
-  | 'sector.ug_backfill';
+  | 'sector.ug_backfill'
+  | 'sector.password_reset'
+  | 'sector.delete';
 
 export type AuditEntityType =
   | 'invoice'
