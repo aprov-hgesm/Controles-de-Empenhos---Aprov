@@ -186,6 +186,9 @@ jobs:
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
+      - name: EMPROVEX brand identity foundation guard
+        run: npm run verify:brand-identity-foundation
+
       - name: Production build
         run: npm run build
 
