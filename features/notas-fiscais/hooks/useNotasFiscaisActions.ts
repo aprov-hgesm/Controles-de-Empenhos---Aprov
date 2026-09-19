@@ -236,9 +236,10 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       return false;
     }
 
+    let committedEmpenhos = updatedEmpenhos;
     if (user) {
       try {
-        await commitInvoiceReceiptChanges(user.uid, {
+        const result = await commitInvoiceReceiptChanges(user.uid, {
           targetEmpenho: updatedTargetEmpenho,
           previousEmpenho: oldEmpenhoAdjusted,
           invoice: invoiceToSave,
@@ -246,17 +247,31 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
           previousInvoiceRecordKey:
             editingInvoice ? previousRecordKey : undefined,
         });
+        const committedById = new Map<string, Empenho>([
+          [result.updatedTargetEmpenho.id, result.updatedTargetEmpenho],
+          ...(result.updatedPreviousEmpenho
+            ? [[result.updatedPreviousEmpenho.id, result.updatedPreviousEmpenho] as [string, Empenho]]
+            : []),
+        ]);
+        committedEmpenhos = updatedEmpenhos.map((empenho) =>
+          committedById.get(empenho.id) || empenho
+        );
       } catch (error) {
         if (uploadedInvoicePdf) {
           await deleteInvoicePdfUpload(user, selectedNFCommitmentId, cleanNfNum, uploadedInvoicePdf.pathname).catch(() => undefined);
         }
         console.error('Erro ao salvar recebimento de NF atomicamente:', error);
-        showToast('Erro ao sincronizar o recebimento com o Firebase. Nenhuma alteração local foi confirmada.', 'error');
+        showToast(
+          error instanceof Error
+            ? error.message
+            : 'Erro ao sincronizar o recebimento com o Firebase. Nenhuma alteração local foi confirmada.',
+          'error'
+        );
         return false;
       }
     }
 
-    setEmpenhos(updatedEmpenhos);
+    setEmpenhos(committedEmpenhos);
     setInvoices(updatedInvoices);
     setAlerts(updatedAlerts);
     showToast(editingInvoice
@@ -347,16 +362,25 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       showToast('Não foi possível localizar o empenho vinculado para reverter o recebimento.', 'error');
       return;
     }
+    let committedTargetEmpenho = updatedTargetEmpenho;
     if (user) {
       try {
-        await commitInvoiceDeletion(user.uid, updatedTargetEmpenho, invoiceRecordKey);
+        const result = await commitInvoiceDeletion(user.uid, updatedTargetEmpenho, invoiceRecordKey);
+        committedTargetEmpenho = result.updatedEmpenho;
       } catch (error) {
         console.error('Erro ao excluir NF atomicamente:', error);
-        showToast('Erro ao remover no Firebase. A Nota Fiscal foi mantida na interface.', 'error');
+        showToast(
+          error instanceof Error
+            ? error.message
+            : 'Erro ao remover no Firebase. A Nota Fiscal foi mantida na interface.',
+          'error'
+        );
         return;
       }
     }
-    setEmpenhos(updatedEmpenhos);
+    setEmpenhos(updatedEmpenhos.map((empenho) =>
+      empenho.id === committedTargetEmpenho.id ? committedTargetEmpenho : empenho
+    ));
     setInvoices(updatedInvoices);
     showToast(`Nota Fiscal nº ${invoice.id} excluída com sucesso!`, 'info');
   };
@@ -391,16 +415,32 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
         return emp;
       });
     }
-     if (user) {
+     let committedEmpenhos = updatedEmpenhos;
+    if (user) {
       try {
-        await commitAllInvoicesDeletion(user.uid, updatedEmpenhos, invoices.map(getInvoiceRecordKey));
+        const result = await commitAllInvoicesDeletion(
+          user.uid,
+          updatedEmpenhos,
+          invoices.map(getInvoiceRecordKey)
+        );
+        const committedById = new Map(
+          result.updatedEmpenhos.map((empenho) => [empenho.id, empenho] as const)
+        );
+        committedEmpenhos = updatedEmpenhos.map((empenho) =>
+          committedById.get(empenho.id) || empenho
+        );
       } catch (error) {
         console.error('Erro ao excluir NFs em lote:', error);
-        showToast('Erro ao remover no Firebase. As Notas Fiscais foram mantidas na interface.', 'error');
+        showToast(
+          error instanceof Error
+            ? error.message
+            : 'Erro ao remover no Firebase. As Notas Fiscais foram mantidas na interface.',
+          'error'
+        );
         return;
       }
     }
-    setEmpenhos(updatedEmpenhos);
+    setEmpenhos(committedEmpenhos);
     setInvoices([]);
     showToast('Todas as Notas Fiscais foram apagadas com sucesso!', 'info');
   };
