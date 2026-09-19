@@ -4,7 +4,6 @@ import { spawn } from 'node:child_process';
 
 const root = process.cwd();
 const appBase = 'http://127.0.0.1:3100';
-const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 
 async function waitForApp(url, timeoutMs = 60_000) {
@@ -49,8 +48,8 @@ function run(command, args, env = process.env) {
 await run(process.execPath, ['scripts/firestore-multitenancy-security.test.mjs']);
 
 const server = spawn(
-  npmCommand,
-  ['run', 'dev', '--', '--hostname', '127.0.0.1', '--port', '3100'],
+  process.execPath,
+  ['node_modules/next/dist/bin/next', 'dev', '--hostname', '127.0.0.1', '--port', '3100'],
   {
     cwd: root,
     env: {
@@ -79,5 +78,17 @@ try {
     }
   );
 } finally {
-  if (!server.killed) server.kill('SIGTERM');
+  if (!server.killed) {
+    server.kill('SIGTERM');
+    await new Promise((resolve) => {
+      const fallback = setTimeout(() => {
+        if (!server.killed) server.kill('SIGKILL');
+        resolve();
+      }, 3000);
+      server.once('exit', () => {
+        clearTimeout(fallback);
+        resolve();
+      });
+    });
+  }
 }
