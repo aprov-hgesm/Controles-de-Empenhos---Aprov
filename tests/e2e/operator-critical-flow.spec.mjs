@@ -82,6 +82,19 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     await expect(page.getByTestId('historical-consistency-view')).toBeVisible();
     await page.getByTestId('historical-consistency-scan').click();
 
+    await page.waitForTimeout(1200);
+    const scanError = page.getByTestId('historical-consistency-error');
+    if (await scanError.isVisible()) {
+      throw new Error(`Historical scan failed: ${await scanError.textContent()}`);
+    }
+
+    const issueCodes = await page
+      .locator('[data-testid^="historical-issue-"]')
+      .evaluateAll((elements) =>
+        elements.map((element) => element.getAttribute('data-testid'))
+      );
+    console.log('Historical consistency issues:', issueCodes);
+
     await expect(
       page.getByTestId('historical-issue-invoice_missing_supplier_cnpj')
     ).toBeVisible({ timeout: 15_000 });
