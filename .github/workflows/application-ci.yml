@@ -147,6 +147,12 @@ jobs:
       - name: SAG NS reconciliation guard
         run: npm run verify:sag-ns-reconciliation
 
+      - name: SAG application preview tests
+        run: npm run test:sag-application-preview
+
+      - name: SAG application preview guard
+        run: npm run verify:sag-application-preview
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 

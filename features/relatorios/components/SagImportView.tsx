@@ -5,12 +5,16 @@ import {
   AlertTriangle,
   ArrowRight,
   Building2,
+  Ban,
   CheckCircle2,
   ClipboardCopy,
   ClipboardPaste,
   ExternalLink,
   FileJson,
+  Eye,
   Landmark,
+  MinusCircle,
+  PencilLine,
   Search,
   ShieldCheck,
   XCircle,
@@ -28,6 +32,10 @@ import {
   reconcileSagNsPayload,
   type SagNsReconciliationStatus,
 } from '../../../lib/sagNsReconciliation';
+import {
+  buildSagNsApplicationPreview,
+  type SagNsApplicationDecision,
+} from '../../../lib/sagNsApplicationPreview';
 
 interface SagImportViewProps {
   empenhos: Empenho[];
@@ -35,6 +43,32 @@ interface SagImportViewProps {
 }
 
 type CopyState = 'idle' | 'copied' | 'error';
+
+const APPLICATION_DECISION_META: Record<
+  SagNsApplicationDecision,
+  { label: string; className: string; icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }> }
+> = {
+  change: {
+    label: 'ALTERAR',
+    className: 'border-emerald-100 bg-emerald-50 text-emerald-700',
+    icon: PencilLine,
+  },
+  unchanged: {
+    label: 'SEM ALTERAÇÃO',
+    className: 'border-blue-100 bg-blue-50 text-blue-700',
+    icon: CheckCircle2,
+  },
+  ignored: {
+    label: 'IGNORAR',
+    className: 'border-gray-200 bg-gray-50 text-gray-600',
+    icon: MinusCircle,
+  },
+  blocked: {
+    label: 'BLOQUEAR',
+    className: 'border-rose-100 bg-rose-50 text-rose-700',
+    icon: Ban,
+  },
+};
 
 const RECONCILIATION_STATUS_META: Record<
   SagNsReconciliationStatus,
@@ -152,6 +186,11 @@ export function SagImportView({ empenhos, invoices }: SagImportViewProps) {
       invoices
     );
   }, [empenhos, invoices, selectedSupplier, validation]);
+
+  const applicationPreview = React.useMemo(
+    () => (reconciliation ? buildSagNsApplicationPreview(reconciliation) : null),
+    [reconciliation]
+  );
 
   const handleSelectSupplier = (cnpj: string) => {
     setSelectedCnpj(cnpj);
@@ -801,14 +840,176 @@ export function SagImportView({ empenhos, invoices }: SagImportViewProps) {
             </section>
           ) : null}
 
+          {applicationPreview ? (
+            <section className="overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-sm">
+              <div className="border-b border-sky-100 bg-sky-50/50 p-5">
+                <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+                  <div className="flex items-start gap-3">
+                    <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-sky-100 text-sky-700">
+                      <Eye className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <div>
+                      <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.18em] text-sky-700">
+                        Bloco 10 · prévia de aplicação
+                      </p>
+                      <h4 className="mt-1 text-base font-black text-[#0b1c30]">O que aconteceria com este lote</h4>
+                      <p className="mt-1 max-w-3xl text-xs font-medium leading-relaxed text-gray-500">
+                        Esta visão transforma a conciliação em um plano legível antes de qualquer escrita:
+                        alterações propostas, registros já corretos, itens ignorados e bloqueios.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="w-fit rounded-full border border-sky-100 bg-white px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-wider text-sky-700">
+                    Prévia — nada será gravado
+                  </span>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                  {[
+                    ['Alterar', applicationPreview.stats.changes, 'text-emerald-700'],
+                    ['Sem alteração', applicationPreview.stats.unchanged, 'text-blue-700'],
+                    ['Ignorar', applicationPreview.stats.ignored, 'text-gray-700'],
+                    ['Bloqueados', applicationPreview.stats.blocked, 'text-rose-700'],
+                    ['Com alertas', applicationPreview.stats.warningItems, 'text-amber-700'],
+                  ].map(([label, value, valueClass]) => (
+                    <div key={String(label)} className="rounded-xl border border-white bg-white px-3 py-3 shadow-sm">
+                      <p className="text-[8px] font-extrabold uppercase tracking-wider text-gray-400">{label}</p>
+                      <p className={`mt-1 text-lg font-black ${valueClass}`}>{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[1120px] text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-gray-50 text-[9px] uppercase tracking-wider text-gray-500">
+                      <th className="px-4 py-3 font-extrabold">Decisão</th>
+                      <th className="px-4 py-3 font-extrabold">NF</th>
+                      <th className="px-4 py-3 font-extrabold">NE</th>
+                      <th className="px-4 py-3 font-extrabold">NS atual</th>
+                      <th className="px-4 py-3 font-extrabold">NS proposta</th>
+                      <th className="px-4 py-3 font-extrabold">Efeito</th>
+                      <th className="px-4 py-3 font-extrabold">Alertas / bloqueios</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {applicationPreview.items.map((item, index) => {
+                      const meta = APPLICATION_DECISION_META[item.decision];
+                      const DecisionIcon = meta.icon;
+
+                      return (
+                        <tr key={`${item.ns}-${index}`} className="align-top hover:bg-gray-50/60">
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[9px] font-extrabold ${meta.className}`}>
+                              <DecisionIcon className="h-3.5 w-3.5" aria-hidden={true} />
+                              {meta.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 font-black text-[#00288e]">
+                            {item.invoiceId
+                              ? `NF ${item.invoiceId}`
+                              : item.nfNumberRaw
+                                ? `NF ${item.nfNumberRaw}`
+                                : '—'}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-[10px] font-bold text-gray-600">
+                            {item.empenhoId || '—'}
+                          </td>
+                          <td className="px-4 py-3">
+                            {item.currentNs ? (
+                              <span className="rounded-md border border-gray-200 bg-gray-50 px-2 py-1 font-mono text-[9px] font-bold text-gray-700">
+                                {item.currentNs}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-semibold text-gray-400">Sem NS</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {item.proposedNs ? (
+                              <span className="rounded-md border border-emerald-100 bg-emerald-50 px-2 py-1 font-mono text-[9px] font-black text-emerald-700">
+                                {item.proposedNs}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-semibold text-gray-400">Nenhuma</span>
+                            )}
+                          </td>
+                          <td className="max-w-sm px-4 py-3 text-[10px] font-semibold leading-relaxed text-gray-600">
+                            {item.summary}
+                          </td>
+                          <td className="max-w-sm px-4 py-3">
+                            {item.blockers.length > 0 ? (
+                              <div className="space-y-1.5">
+                                {item.blockers.map((message, blockerIndex) => (
+                                  <p key={blockerIndex} className="text-[10px] font-semibold leading-relaxed text-rose-700">
+                                    {message}
+                                  </p>
+                                ))}
+                              </div>
+                            ) : item.warnings.length > 0 ? (
+                              <div className="space-y-1.5">
+                                {item.warnings.map((message, warningIndex) => (
+                                  <p key={warningIndex} className="text-[10px] font-semibold leading-relaxed text-amber-700">
+                                    {message}
+                                  </p>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700">
+                                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                                Sem ressalvas adicionais
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className={`border-t px-5 py-4 ${
+                applicationPreview.stats.blocked > 0
+                  ? 'border-rose-100 bg-rose-50/50'
+                  : applicationPreview.canAdvanceToPersistenceReview
+                    ? 'border-emerald-100 bg-emerald-50/50'
+                    : 'border-gray-100 bg-gray-50/70'
+              }`}>
+                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                  <div>
+                    <p className={`text-xs font-black ${
+                      applicationPreview.stats.blocked > 0
+                        ? 'text-rose-800'
+                        : applicationPreview.canAdvanceToPersistenceReview
+                          ? 'text-emerald-800'
+                          : 'text-gray-700'
+                    }`}>
+                      {applicationPreview.stats.blocked > 0
+                        ? 'Lote com bloqueios: não pode avançar para persistência.'
+                        : applicationPreview.canAdvanceToPersistenceReview
+                          ? 'Lote sem bloqueios e com alterações propostas.'
+                          : 'Lote sem alterações pendentes para gravar.'}
+                    </p>
+                    <p className="mt-1 text-[10px] font-semibold leading-relaxed text-gray-500">
+                      O Bloco 10 é exclusivamente de conferência. Nenhum botão de aplicar ou confirmar gravação é disponibilizado nesta etapa.
+                    </p>
+                  </div>
+                  <span className="w-fit rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-wider text-gray-600">
+                    Persistência reservada ao Bloco 11
+                  </span>
+                </div>
+              </div>
+            </section>
+          ) : null}
+
           <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-5">
             <div className="flex items-start gap-3 text-emerald-800">
               <ShieldCheck className="mt-0.5 h-5 w-5 flex-none" aria-hidden="true" />
               <div>
                 <p className="text-sm font-extrabold">Validação sem persistência</p>
                 <p className="mt-1 text-xs font-medium leading-relaxed text-emerald-800/80">
-                  Nenhuma NS será gravada automaticamente neste bloco. O motor agora identifica vínculos determinísticos,
-                  conflitos e pendências; a prévia final de aplicação e a confirmação de gravação continuam reservadas aos blocos seguintes.
+                  Nenhuma NS será gravada automaticamente neste bloco. O motor identifica vínculos, conflitos e pendências,
+                  e a prévia mostra exatamente o efeito esperado; a confirmação e a escrita permanecem reservadas ao Bloco 11.
                 </p>
               </div>
             </div>
