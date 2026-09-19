@@ -235,6 +235,9 @@ jobs:
       - name: Block 15 final hardening guard
         run: npm run verify:block-15-final-hardening
 
+      - name: Block 16.0 capacity foundation guard
+        run: npm run verify:block-16-0-capacity-foundation
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
