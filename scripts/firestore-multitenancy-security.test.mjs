@@ -1066,7 +1066,12 @@ async function main() {
   );
 
   await denied('Empenho bloqueado para alteração enquanto exclusão está em andamento', () =>
-    updateDoc(deletionEmpenhoRef, { pregao: 'NAO-DEVE-GRAVAR' })
+    updateDoc(deletionEmpenhoRef, {
+      pregao: 'NAO-DEVE-GRAVAR',
+      revision: 1,
+      updatedAt: now(),
+      updatedBy: sessionA.user.uid,
+    })
   );
 
   await denied('Nova NF não entra no empenho depois do lock de exclusão', () =>
