@@ -2,14 +2,13 @@
 
 import type React from 'react';
 import type { User } from 'firebase/auth';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import type { Comissao, Empenho, Invoice } from '../../../lib/types';
 import { classRequiresTermoRecebimento, type EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 import { ensureTermoRecebimentoAssignment } from '../../../lib/firebaseSync';
 import { getInvoiceRecordKey } from '../../../lib/invoiceIdentity';
 import { fetchEmpenhoPdfBlob } from '../../../lib/empenhoDocuments';
 import { fetchInvoicePdfBlob } from '../../../lib/invoiceDocuments';
+import { loadJsPdfWithAutoTable } from '../../../lib/pdfToolkit';
 import {
   filterInvoicesByReportingPeriod,
   formatReportingPeriodLabel,
@@ -105,7 +104,8 @@ export function useDocumentActions(context:DocumentActionsContext){
       }
       return dateStr;
     };
-     // Initialize jsPDF
+     // Initialize jsPDF on demand to keep the initial client bundle lean.
+    const { jsPDF, autoTable } = await loadJsPdfWithAutoTable();
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -562,7 +562,7 @@ export function useDocumentActions(context:DocumentActionsContext){
     }
   };
 
-  const handleGenerateEmpenhoReportPDF = (
+  const handleGenerateEmpenhoReportPDF = async (
     emp: Empenho,
     action: 'download' | 'print' = 'download',
     reportingPeriod: ReportingPeriod = {}
@@ -585,7 +585,8 @@ export function useDocumentActions(context:DocumentActionsContext){
     const saldoRestante = Math.max(0, totalCommitted - pdfAccumulatedReceivedNfe);
     const pctExec = totalCommitted > 0 ? Math.round((pdfAccumulatedReceivedNfe / totalCommitted) * 100) : 0;
     const reportingPeriodLabel = formatReportingPeriodLabel(reportingPeriod);
-     // Initialize jsPDF
+     // Initialize jsPDF only when the operator requests the report.
+    const { jsPDF, autoTable } = await loadJsPdfWithAutoTable();
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
