@@ -83,15 +83,21 @@ export function CreateSectorModal({ open, creating, onClose, onCreate }: CreateS
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#020817]/85 p-4 backdrop-blur-xl sm:p-6">
-      <div className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-[1.75rem] border border-white/[0.08] bg-[#071225] shadow-[0_30px_100px_rgba(0,8,28,0.58)]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-sector-title"
+        aria-describedby="create-sector-description"
+        className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-[1.75rem] border border-white/[0.08] bg-[#071225] shadow-[0_30px_100px_rgba(0,8,28,0.58)]"
+      >
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-white/[0.07] bg-[#071225]/95 px-5 py-5 backdrop-blur-2xl sm:px-7">
           <div>
             <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-blue-300">
               <Building2 className="w-4 h-4" />
               Novo workspace operacional
             </div>
-            <h2 className="mt-2 text-xl font-extrabold text-white">Cadastrar novo setor</h2>
-            <p className="mt-1 text-xs leading-relaxed text-slate-400">
+            <h2 id="create-sector-title" className="mt-2 text-xl font-extrabold text-white">Cadastrar novo setor</h2>
+            <p id="create-sector-description" className="mt-1 text-xs leading-relaxed text-slate-400">
               O setor será provisionado com identidade Firebase própria. O Gmail informado será o e-mail de acesso e, posteriormente, deverá ser o mesmo usado na conexão do Google Drive.
             </p>
           </div>
