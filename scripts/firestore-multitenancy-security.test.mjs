@@ -1975,6 +1975,78 @@ async function main() {
     })
   );
 
+  console.log('\nFixture determinística para E2E de navegador');
+  const browserFixtureTimestamp = now();
+
+  await ownerSet('workspaces/workspace-lifecycle/empenhos/sample', {
+    id: 'sample',
+    supplier: 'Fornecedor E2E Lifecycle',
+    supplierCnpj: '11111111000191',
+    description: 'Empenho completo para jornada E2E de navegador',
+    date: '2026-09-01',
+    status: 'Ativo',
+    classification: 'QR',
+    pregao: '90001/2026',
+    items: [
+      {
+        id: '1',
+        name: 'Item E2E Lifecycle',
+        unit: 'UN',
+        quantity: 10,
+        unitPrice: 20,
+        received: 5,
+      },
+    ],
+    userId: identities.lifecycle.uid,
+  });
+
+  await ownerSet(
+    'workspaces/workspace-lifecycle/invoices/nf_11111111000191_1001',
+    {
+      id: '1001',
+      empenhoId: 'sample',
+      issueDate: '2026-09-05',
+      items: [
+        {
+          itemId: '1',
+          quantity: 5,
+          unitPrice: 20,
+          subtotal: 100,
+        },
+      ],
+      totalValue: 100,
+      supplier: 'Fornecedor E2E Lifecycle',
+      supplierCnpj: '11111111000191',
+      recordKey: 'nf_11111111000191_1001',
+      registeredAt: browserFixtureTimestamp,
+      userId: identities.lifecycle.uid,
+    }
+  );
+
+  await ownerSet('workspaces/workspace-b/empenhos/sample', {
+    id: 'sample',
+    supplier: 'Fornecedor E2E Isolado B',
+    supplierCnpj: '22222222000191',
+    description: 'Empenho completo do segundo workspace E2E',
+    date: '2026-09-02',
+    status: 'Ativo',
+    classification: 'QR',
+    pregao: '90002/2026',
+    items: [
+      {
+        id: '1',
+        name: 'Item E2E B',
+        unit: 'UN',
+        quantity: 3,
+        unitPrice: 50,
+        received: 0,
+      },
+    ],
+    userId: identities.b.uid,
+  });
+
+  console.log('BROWSER E2E FIXTURE: READY');
+
   console.log('\nResumo');
   const passed = results.filter((item) => item.ok).length;
   const failed = results.filter((item) => !item.ok).length;
