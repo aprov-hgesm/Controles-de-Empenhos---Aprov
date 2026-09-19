@@ -9,6 +9,11 @@ import {
 } from './sagNsContract';
 import type { SagNsApplicationPreview } from './sagNsApplicationPreview';
 
+export function buildSagNsLockDocumentId(value?: string | null): string {
+  const normalizedNs = normalizeSagNsNumber(value);
+  return normalizedNs ? `sagNsLock_${encodeURIComponent(normalizedNs)}` : '';
+}
+
 export interface SagNsPersistenceChange {
   invoiceRecordKey: string;
   invoiceId: string;
@@ -47,7 +52,9 @@ export type SagNsPersistencePlanErrorCode =
   | 'supplier_scope_changed'
   | 'invoice_supplier_conflict'
   | 'stale_invoice_ns'
-  | 'ns_reused_in_scope';
+  | 'ns_reused_in_scope'
+  | 'ns_lock_conflict'
+  | 'stale_lock_owner';
 
 export class SagNsPersistencePlanError extends Error {
   readonly code: SagNsPersistencePlanErrorCode;
