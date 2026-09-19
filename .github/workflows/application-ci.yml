@@ -210,6 +210,9 @@ jobs:
       - name: Block 11 SAG conservative refactor guard
         run: npm run verify:block-11-sag-refactor
 
+      - name: Block 12 empenho deletion integrity guard
+        run: npm run verify:block-12-empenho-deletion
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
