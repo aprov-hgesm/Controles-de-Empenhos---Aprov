@@ -58,7 +58,7 @@ await reconciliationModule.evaluate();
 const { reconcileSagNsPayload } = reconciliationModule.namespace;
 
 const CNPJ_A = '11111111000191';
-const CNPJ_B = '22222222000182';
+const CNPJ_B = '22222222000191';
 
 const empenho = (id, cnpj) => ({
   id,
@@ -120,6 +120,32 @@ test('concilia zeros à esquerda pelo número normalizado da NF', () => {
   assert.equal(result.items[0].status, 'matched');
   assert.equal(result.items[0].invoice.invoiceId, '1234');
   assert.equal(result.stats.readyToApply, 1);
+});
+
+test('concilia fornecedor com CNPJ alfanumérico oficial', () => {
+  const alpha = '00000000E08G12';
+  const result = reconcileSagNsPayload(
+    payload([record({ nf: '1234' })], alpha),
+    alpha,
+    [empenho('2026NE000ALFA', alpha)],
+    [invoice({ id: '1234', empenhoId: '2026NE000ALFA', cnpj: alpha })]
+  );
+
+  assert.equal(result.items[0].status, 'matched');
+  assert.equal(result.supplierCnpj, alpha);
+});
+
+test('rejeita CNPJ selecionado com DV inválido antes da conciliação', () => {
+  assert.throws(
+    () =>
+      reconcileSagNsPayload(
+        payload([record({ nf: '1234' })], '22222222000182'),
+        '22222222000182',
+        [empenho('2026NE000BAD', '22222222000182')],
+        [invoice({ id: '1234', empenhoId: '2026NE000BAD', cnpj: '22222222000182' })]
+      ),
+    /dígitos verificadores/
+  );
 });
 
 test('isola a conciliação pelo CNPJ selecionado mesmo com NF igual em outro fornecedor', () => {

@@ -1,7 +1,7 @@
 import { deleteField, getDocs, query, runTransaction, where } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './firebase';
 import type { Alert, Empenho, Invoice } from './types';
-import { getInvoiceRecordKey, normalizeSupplierCnpj } from './invoiceIdentity';
+import { getInvoiceRecordKey, isValidSupplierCnpj, normalizeSupplierCnpj } from './invoiceIdentity';
 import {
   buildSupplierCnpjMigrationPlan,
   SupplierCnpjMigrationError,
@@ -389,6 +389,18 @@ export async function commitInvoiceReceiptLifecycle(
       const storedTargetCnpj = normalizeSupplierCnpj(storedTargetEmpenho.supplierCnpj);
       const expectedTargetCnpj = normalizeSupplierCnpj(input.targetEmpenho.supplierCnpj);
       const invoiceCnpj = normalizeSupplierCnpj(input.invoice.supplierCnpj);
+      const storedTargetHasCnpj = Boolean(String(storedTargetEmpenho.supplierCnpj || '').trim());
+      const invoiceHasCnpj = Boolean(String(input.invoice.supplierCnpj || '').trim());
+
+      if (
+        (storedTargetHasCnpj && (!storedTargetCnpj || !isValidSupplierCnpj(storedTargetCnpj))) ||
+        (invoiceHasCnpj && (!invoiceCnpj || !isValidSupplierCnpj(invoiceCnpj)))
+      ) {
+        throw new NsIntegrityError(
+          'invalid_supplier_cnpj',
+          'O recebimento foi bloqueado porque o CNPJ do empenho ou da NF possui formato ou dígitos verificadores inválidos.'
+        );
+      }
 
       if (
         storedTargetCnpj !== expectedTargetCnpj ||
@@ -767,10 +779,10 @@ export async function commitEmpenhoSupplierCnpjMigration(
   const rawTarget = String(input.targetSupplierCnpj || '').trim();
   const normalizedTarget = normalizeSupplierCnpj(rawTarget);
 
-  if (rawTarget && !normalizedTarget) {
+  if (rawTarget && (!normalizedTarget || !isValidSupplierCnpj(normalizedTarget))) {
     throw new SupplierCnpjMigrationError(
       'invalid_target_cnpj',
-      'Informe um CNPJ válido com 14 dígitos.'
+      'Informe um CNPJ válido, com formato oficial e dígitos verificadores corretos.'
     );
   }
 

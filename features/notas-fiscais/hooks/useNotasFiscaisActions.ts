@@ -11,6 +11,7 @@ import {
   buildInvoiceRecordKey,
   findInvoiceIdentityConflict,
   getInvoiceRecordKey,
+  isValidSupplierCnpj,
   normalizeSupplierCnpj,
 } from '../../../lib/invoiceIdentity';
 
@@ -77,6 +78,10 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     }
      const cleanNfNum = nfNumber.trim();
     const supplierCnpj = normalizeSupplierCnpj(targetEmpenho.supplierCnpj);
+    if (targetEmpenho.supplierCnpj && (!supplierCnpj || !isValidSupplierCnpj(supplierCnpj))) {
+      showToast('O CNPJ do empenho possui formato ou dígitos verificadores inválidos. Corrija o fornecedor antes de cadastrar a Nota Fiscal.', 'error');
+      return false;
+    }
     const previousRecordKey = editingInvoice ? getInvoiceRecordKey(editingInvoice) : undefined;
     const identityConflict = findInvoiceIdentityConflict(
       invoices,
@@ -522,8 +527,8 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     const supplierCnpj = normalizeSupplierCnpj(
       targetInvoice.supplierCnpj || targetEmpenho.supplierCnpj
     );
-    if (!supplierCnpj) {
-      showToast('A Nota Fiscal não possui um CNPJ válido para controlar a NS.', 'error');
+    if (!supplierCnpj || !isValidSupplierCnpj(supplierCnpj)) {
+      showToast('A Nota Fiscal não possui um CNPJ oficial válido para controlar a NS. Corrija formato e dígitos verificadores.', 'error');
       return;
     }
 

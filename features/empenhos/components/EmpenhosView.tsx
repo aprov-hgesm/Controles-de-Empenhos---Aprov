@@ -632,8 +632,9 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                     <input
                                       value={cnpjDraft}
                                       onChange={(event) => setCnpjDraft(event.target.value)}
-                                      placeholder="00.000.000/0000-00"
-                                      inputMode="numeric"
+                                      placeholder="00.000.000/E08G-12"
+                                      inputMode="text"
+                                      autoCapitalize="characters"
                                       className="w-full h-9 px-3 rounded-lg border border-blue-200 bg-white text-xs font-bold text-gray-800 outline-none focus:ring-1 focus:ring-blue-500"
                                     />
                                   </div>
@@ -1607,13 +1608,14 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">CNPJ do Fornecedor</label>
                             <input
                               type="text"
-                              inputMode="numeric"
-                              placeholder="00.000.000/0000-00"
+                              inputMode="text"
+                              autoCapitalize="characters"
+                              placeholder="00.000.000/E08G-12"
                               value={newEmpenhoForm.supplierCnpj}
                               onChange={(e) => setNewEmpenhoForm({ ...newEmpenhoForm, supplierCnpj: e.target.value })}
                               className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-semibold text-sm text-[#0b1c30]"
                             />
-                            <p className="mt-1 text-[10px] font-semibold text-gray-400">Recomendado para relatórios por fornecedor e conciliação SAG.</p>
+                            <p className="mt-1 text-[10px] font-semibold text-gray-400">Aceita CNPJ numérico legado ou alfanumérico atual. Usado em relatórios e conciliação SAG.</p>
                           </div>
 
                           <div>
@@ -1854,7 +1856,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                 value={reviewEmpenho.cnpj || ''}
                                 onChange={(e) => setReviewEmpenho({ ...reviewEmpenho, cnpj: e.target.value })}
                                 className="w-full px-3 py-1.5 border border-gray-200 rounded-xl bg-white text-xs font-bold text-[#0b1c30] focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none"
-                                placeholder="00.000.000/0000-00"
+                                placeholder="00.000.000/E08G-12"
                               />
                             </div>
                             <div className="md:col-span-2">

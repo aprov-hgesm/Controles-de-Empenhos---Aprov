@@ -78,4 +78,4 @@ Regras:
 - Valores numéricos com ponto como separador decimal (não vírgula)
 - Extrair TODOS os itens da seção "Lista de Itens" do documento
 - unidade: identificar na descrição do item (kg, un, maço, pct, cx, lt, g); se não identificável usar "un"
-- Não inventar dados; se um campo não for encontrado, usar null`;
+- CNPJ: preservar exatamente letras, números e zeros à esquerda encontrados no documento; CNPJs novos podem ser alfanuméricos\n- Não inventar dados; se um campo não for encontrado, usar null`;

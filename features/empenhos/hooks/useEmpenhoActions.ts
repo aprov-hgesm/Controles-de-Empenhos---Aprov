@@ -7,7 +7,7 @@ import type { Alert, Empenho, EmpenhoPdfDocument, Invoice, Item } from '../../..
 import { saveAlert, saveEmpenho, removeAlert, removeEmpenho, removeInvoice } from '../../../lib/firebaseSync';
 import { PROMPT_EXTRACAO_EMPENHO } from '../domain/empenhoHelpers';
 import { normalizeEmpenhoClassCode } from '../../../lib/empenhoClasses';
-import { getInvoiceRecordKey, normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
+import { getInvoiceRecordKey, isValidSupplierCnpj, normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
 import { commitEmpenhoSupplierCnpjMigration } from '../../../lib/nsIntegrityService';
 
 type ActiveTab = 'painel' | 'empenhos' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas';
@@ -105,8 +105,8 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     }
 
     const normalizedCnpj = normalizeSupplierCnpj(cnpjInput);
-    if (cnpjInput.trim() && !normalizedCnpj) {
-      showToast('Informe um CNPJ válido com 14 dígitos.', 'error');
+    if (cnpjInput.trim() && (!normalizedCnpj || !isValidSupplierCnpj(normalizedCnpj))) {
+      showToast('Informe um CNPJ válido, com formato oficial e dígitos verificadores corretos.', 'error');
       return;
     }
 
@@ -220,8 +220,8 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       return;
     }
      const normalizedSupplierCnpj = normalizeSupplierCnpj(newEmpenhoForm.supplierCnpj);
-    if (newEmpenhoForm.supplierCnpj.trim() && !normalizedSupplierCnpj) {
-      showToast('Informe um CNPJ válido com 14 dígitos.', 'error');
+    if (newEmpenhoForm.supplierCnpj.trim() && (!normalizedSupplierCnpj || !isValidSupplierCnpj(normalizedSupplierCnpj))) {
+      showToast('Informe um CNPJ válido, com formato oficial e dígitos verificadores corretos.', 'error');
       return;
     }
     if (empenhos.some(emp => emp.id.toUpperCase() === newEmpenhoForm.id.toUpperCase())) {
@@ -410,8 +410,8 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       return;
     }
      const normalizedSupplierCnpj = normalizeSupplierCnpj(reviewEmpenho.cnpj);
-    if (String(reviewEmpenho.cnpj || '').trim() && !normalizedSupplierCnpj) {
-      showToast('O CNPJ extraído/revisado precisa conter 14 dígitos válidos para o formato esperado.', 'error');
+    if (String(reviewEmpenho.cnpj || '').trim() && (!normalizedSupplierCnpj || !isValidSupplierCnpj(normalizedSupplierCnpj))) {
+      showToast('O CNPJ extraído/revisado precisa ter formato oficial e dígitos verificadores corretos.', 'error');
       return;
     }
     if (empenhos.some(emp => emp.id.toUpperCase() === reviewEmpenho.id.toUpperCase())) {

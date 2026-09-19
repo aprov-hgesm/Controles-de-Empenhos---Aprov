@@ -2,6 +2,7 @@ import type { Empenho, Invoice } from './types';
 import {
   buildInvoiceRecordKey,
   getInvoiceRecordKey,
+  isValidSupplierCnpj,
   normalizeSupplierCnpj,
 } from './invoiceIdentity';
 
@@ -43,10 +44,10 @@ export function buildSupplierCnpjMigrationPlan(
 ): SupplierCnpjMigrationPlan {
   const rawTarget = String(targetSupplierCnpjInput || '').trim();
   const targetSupplierCnpj = normalizeSupplierCnpj(rawTarget);
-  if (rawTarget && !targetSupplierCnpj) {
+  if (rawTarget && (!targetSupplierCnpj || !isValidSupplierCnpj(targetSupplierCnpj))) {
     throw new SupplierCnpjMigrationError(
       'invalid_target_cnpj',
-      'Informe um CNPJ válido com 14 dígitos.'
+      'Informe um CNPJ válido, com formato oficial e dígitos verificadores corretos.'
     );
   }
 

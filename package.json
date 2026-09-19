@@ -78,7 +78,8 @@
     "verify:brand-admin": "node scripts/verify-brand-admin.mjs",
     "test:supplier-cnpj-migration": "node --experimental-vm-modules --test scripts/supplier-cnpj-migration.test.mjs",
     "verify:supplier-cnpj-migration": "node scripts/verify-supplier-cnpj-migration.mjs",
-    "verify:global-ns-rules": "node scripts/verify-global-ns-rules.mjs"
+    "verify:global-ns-rules": "node scripts/verify-global-ns-rules.mjs",
+    "verify:cnpj-validation": "node scripts/verify-cnpj-validation.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

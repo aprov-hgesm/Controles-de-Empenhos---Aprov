@@ -28,7 +28,7 @@ Se o estado final da NF possui `numeroNS`, as Rules exigem:
 
 - formato canônico `AAAANSNNNNNN`;
 - `recordKey` igual ao ID físico do documento;
-- CNPJ com 14 dígitos;
+- CNPJ em forma canônica oficial de 14 posições (12 alfanuméricas + 2 DVs numéricos);
 - lock `sagNsLock_<numeroNS>` existente no estado final;
 - lock com mesmo workspace;
 - lock com mesma NS;
@@ -121,7 +121,7 @@ Mesmo um cliente modificado autenticado no workspace precisa produzir um estado 
 
 Permanecem fora deste bloco:
 
-- validação matemática dos dígitos verificadores do CNPJ;
+- validação matemática dos dígitos verificadores do CNPJ é implementada pelo Bloco 6 no domínio TypeScript; as Rules mantêm a validação estrutural e relacional;
 - migração da identidade física do lock para incluir UG;
 - trilha histórica imutável de mutações;
 - teste Emulator usando diretamente o serviço de persistência de produção em vez do helper conceitual.

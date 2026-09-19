@@ -1357,7 +1357,7 @@ async function main() {
 
   console.log('\nMigração de CNPJ do empenho + NFs + locks');
   const cnpjOld = '11111111000191';
-  const cnpjNext = '22222222000182';
+  const cnpjNext = '22222222000191';
   const cnpjEmpenhoId = '2026NE-CNPJ-001';
   const cnpjInvoiceAOld = `nf_${cnpjOld}_c-a`;
   const cnpjInvoiceBOld = `nf_${cnpjOld}_c-b`;
@@ -1550,6 +1550,43 @@ async function main() {
         },
         { merge: true }
       );
+    })
+  );
+
+  console.log('\nFormato estrutural do CNPJ alfanumérico');
+  await allowed('Empenho aceita CNPJ alfanumérico oficial em forma canônica', () =>
+    ownerSet('workspaces/workspace-a/empenhos/2026NE-CNPJ-ALFA', {
+      id: '2026NE-CNPJ-ALFA',
+      supplier: 'Fornecedor Alfa',
+      supplierCnpj: '00000000E08G12',
+      description: 'CNPJ alfanumérico',
+      date: '2026-09-19',
+      status: 'Ativo',
+      items: [],
+    })
+  );
+
+  await denied('Empenho rejeita letras nas duas posições de DV do CNPJ', () =>
+    ownerSet('workspaces/workspace-a/empenhos/2026NE-CNPJ-DV-ALFA', {
+      id: '2026NE-CNPJ-DV-ALFA',
+      supplier: 'Fornecedor Inválido',
+      supplierCnpj: '00000000E08GXY',
+      description: 'DV inválido estruturalmente',
+      date: '2026-09-19',
+      status: 'Ativo',
+      items: [],
+    })
+  );
+
+  await denied('Empenho rejeita CNPJ com caractere fora do alfabeto oficial', () =>
+    ownerSet('workspaces/workspace-a/empenhos/2026NE-CNPJ-SHAPE', {
+      id: '2026NE-CNPJ-SHAPE',
+      supplier: 'Fornecedor Inválido',
+      supplierCnpj: '00000000E08_12',
+      description: 'Forma inválida',
+      date: '2026-09-19',
+      status: 'Ativo',
+      items: [],
     })
   );
 

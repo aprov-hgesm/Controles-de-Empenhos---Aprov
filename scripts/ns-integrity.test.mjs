@@ -50,7 +50,7 @@ const {
 } = integrityModule.namespace;
 
 const CNPJ = '11111111000191';
-const OTHER_CNPJ = '22222222000182';
+const OTHER_CNPJ = '22222222000191';
 
 const empenho = (id = '2026NE000001', cnpj = CNPJ) => ({
   id,
@@ -237,6 +237,15 @@ test('bloqueia alteração concorrente da NS atual', () => {
       owners: [doc(stored)],
     }),
     (error) => error?.code === 'stale_invoice_ns'
+  );
+});
+
+test('bloqueia CNPJ estruturalmente válido com DV incorreto', () => {
+  assert.throws(
+    () => validate({
+      mutations: [mutation({ cnpj: '22222222000182' })],
+    }),
+    (error) => error?.code === 'invalid_supplier_cnpj'
   );
 });
 

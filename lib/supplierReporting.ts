@@ -1,5 +1,5 @@
 import type { Empenho, Invoice } from './types';
-import { normalizeSupplierCnpj } from './invoiceIdentity';
+import { isValidSupplierCnpj, normalizeSupplierCnpj } from './invoiceIdentity';
 
 export interface SupplierEmpenhoReport {
   empenho: Empenho;
@@ -24,6 +24,7 @@ export interface SupplierPregaoReport {
 
 export interface SupplierReport {
   cnpj: string;
+  cnpjValid: boolean;
   supplierName: string;
   aliases: string[];
   empenhos: SupplierEmpenhoReport[];
@@ -122,6 +123,7 @@ export function buildSupplierReports(empenhos: Empenho[], invoices: Invoice[]): 
 
       return {
         cnpj,
+        cnpjValid: isValidSupplierCnpj(cnpj),
         supplierName,
         aliases,
         empenhos: empenhoReports,

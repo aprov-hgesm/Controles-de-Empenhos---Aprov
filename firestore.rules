@@ -338,6 +338,24 @@ service cloud.firestore {
       return value is string
         && value.matches('^[0-9]{4}NS[0-9]{6}$');
     }
+    function isValidCnpjShape(value) {
+      return value is string
+        && value.matches('^[0-9A-Z]{12}[0-9]{2}$');
+    }
+
+    function empenhoCnpjCreateIsValid(data) {
+      return !('supplierCnpj' in data)
+        || isValidCnpjShape(data.supplierCnpj);
+    }
+
+    function empenhoCnpjUpdateIsValid() {
+      return !('supplierCnpj' in request.resource.data)
+        || isValidCnpjShape(request.resource.data.supplierCnpj)
+        || (
+          'supplierCnpj' in resource.data
+          && request.resource.data.supplierCnpj == resource.data.supplierCnpj
+        );
+    }
 
     function invoiceHasControlledNs(data) {
       return 'numeroNS' in data
@@ -356,8 +374,7 @@ service cloud.firestore {
     function invoiceEmpenhoMatchesAfter(workspaceId, data) {
       let empenhoPath = /databases/$(database)/documents/workspaces/$(workspaceId)/empenhos/$(data.empenhoId);
       return data.empenhoId is string
-        && data.supplierCnpj is string
-        && data.supplierCnpj.size() == 14
+        && isValidCnpjShape(data.supplierCnpj)
         && existsAfter(empenhoPath)
         && getAfter(empenhoPath).data.id == data.empenhoId
         && getAfter(empenhoPath).data.supplierCnpj == data.supplierCnpj;
@@ -371,8 +388,7 @@ service cloud.firestore {
         && data.id.size() > 0
         && data.empenhoId is string
         && data.empenhoId.size() > 0
-        && data.supplierCnpj is string
-        && data.supplierCnpj.size() == 14
+        && isValidCnpjShape(data.supplierCnpj)
         && existsAfter(lockPath)
         && getAfter(lockPath).data.id == lockId
         && getAfter(lockPath).data.type == 'sag-ns-lock'
@@ -506,8 +522,7 @@ service cloud.firestore {
         && request.resource.data.invoiceId.size() > 0
         && request.resource.data.empenhoId is string
         && request.resource.data.empenhoId.size() > 0
-        && request.resource.data.supplierCnpj is string
-        && request.resource.data.supplierCnpj.size() == 14
+        && isValidCnpjShape(request.resource.data.supplierCnpj)
         && request.resource.data.createdAt is string
         && request.resource.data.updatedAt is string
         && request.resource.data.updatedBy == request.auth.uid
@@ -714,7 +729,12 @@ service cloud.firestore {
     // Workspace-scoped operational data. There is deliberately no admin bypass:
     // a platform administrator cannot read another sector's operational records.
     match /workspaces/{workspaceId}/empenhos/{id} {
-      allow read, write: if canAccessWorkspace(workspaceId);
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && empenhoCnpjCreateIsValid(request.resource.data);
+      allow update: if canAccessWorkspace(workspaceId)
+        && empenhoCnpjUpdateIsValid();
+      allow delete: if canAccessWorkspace(workspaceId);
     }
 
     match /workspaces/{workspaceId}/alerts/{id} {

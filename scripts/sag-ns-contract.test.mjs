@@ -92,6 +92,36 @@ test('aceita payload válido, normaliza CNPJ e preserva zeros da NF', () => {
   assert.equal(result.stats.recordsWithoutNf, 1);
 });
 
+test('aceita CNPJ alfanumérico oficial no payload SAG', () => {
+  const payload = basePayload();
+  payload.supplier_cnpj = '00.000.000/E08G-12';
+
+  const result = validateSagNsPayload(payload, {
+    expectedSupplierCnpj: '00000000E08G12',
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.supplier_cnpj, '00000000E08G12');
+});
+
+test('rejeita CNPJ com forma válida mas dígitos verificadores incorretos', () => {
+  const payload = basePayload();
+  payload.supplier_cnpj = '02.483.088/0001-74';
+
+  const result = validateSagNsPayload(payload);
+  assert.equal(result.ok, false);
+  assert.equal(result.issues.some((issue) => issue.code === 'invalid_supplier_cnpj'), true);
+});
+
+test('rejeita fornecedor selecionado com DV inválido antes da conciliação', () => {
+  const result = validateSagNsPayload(basePayload(), {
+    expectedSupplierCnpj: '22.222.222/0001-82',
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.issues.some((issue) => issue.code === 'invalid_expected_supplier_cnpj'), true);
+});
+
 test('rejeita CNPJ diferente do fornecedor selecionado', () => {
   const result = validateSagNsPayload(basePayload(), {
     expectedSupplierCnpj: '11111111000191',
@@ -146,6 +176,15 @@ test('parser aceita JSON puro e também remove apenas cerca Markdown externa', (
   assert.equal(parseSagNsJson(json).ok, true);
   assert.equal(parseSagNsJson(`\`\`\`json\n${json}\n\`\`\``).ok, true);
   assert.equal(parseSagNsJson('{json quebrado').ok, false);
+});
+
+test('prompt SAG normaliza CNPJ alfanumérico oficial', () => {
+  const prompt = buildSagNsExtractionPrompt({
+    supplierCnpj: '00.000.000/E08G-12',
+    supplierName: 'Banco do Brasil S.A.',
+    ug: '160416',
+  });
+  assert.equal(prompt.includes('00000000E08G12'), true);
 });
 
 test('prompt oficial fixa CNPJ, schema e proíbe inferência de NE', () => {
