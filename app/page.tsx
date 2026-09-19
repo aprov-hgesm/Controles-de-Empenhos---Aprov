@@ -27,6 +27,7 @@ import { MobileNavigation } from '../components/layout/MobileNavigation';
 import { EmprovexLogin } from '../components/auth/EmprovexLogin';
 import { EmprovexAuthLoading } from '../components/auth/EmprovexAuthLoading';
 import { LoginSuccessTransition } from '../components/auth/LoginSuccessTransition';
+import type { OperationalActiveTab } from '../lib/operationalSubscriptionPlan';
 export default function Home() {
   // Toast / Notifications helper
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -46,14 +47,19 @@ export default function Home() {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
   }, []);
 
+  // Navigation drives the realtime subscription profile (Block 14).
+  const [activeTab, setActiveTab] = useState<OperationalActiveTab>('painel');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const {
     user, loadingAuth, syncing, workspaceContext,
+    activeOperationalDataReady, activeRealtimeCollectionCount,
     empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices,
     comissoes, setComissoes, cronogramas, setCronogramas,
     signInUser, signInSectorUser, signOutUser, getBalanceByClass,
     uniquePregaos, uniqueEmpenhoYears, uniqueNfMonths,
     formatDateTime, formatDateOnly
-  } = useOperationalData();
+  } = useOperationalData(activeTab);
 
   const {
     empenhoClasses,
@@ -67,10 +73,6 @@ export default function Home() {
   });
 
   const { customLogo } = usePlatformBranding();
-
-  // Navigation & View state
-  const [activeTab, setActiveTab] = useState<'painel' | 'empenhos' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas'>('painel');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // State for inline editing of Número da NS in Empenho Report
   const [editingNSId, setEditingNSId] = useState<string | null>(null);
@@ -275,10 +277,6 @@ export default function Home() {
 
 
 
-  // Helper selectors for Dashboard stats
-  const totalOpenInvoicesCount = invoices.length + 11; // Styled baseline
-  const totalLiquidadoValue = invoices.reduce((sum, inv) => sum + inv.totalValue, 0) + 42000; // Mock baseline
-
   if (loadingAuth) {
     return <EmprovexAuthLoading hasAuthenticatedIdentity={Boolean(user)} />;
   }
@@ -343,6 +341,7 @@ export default function Home() {
     <div
       className={`min-h-screen bg-gradient-to-br from-[#f0f4f8] via-[#e8ecf3] to-[#f4f6fa] text-[#0b1c30] flex flex-col antialiased relative overflow-x-hidden selection:bg-blue-500 selection:text-white ${showLoginSuccessTransition ? 'emprovex-app-login-entry' : ''}`}
       data-login-entry={showLoginSuccessTransition ? 'true' : 'false'}
+      data-active-realtime-collections={activeRealtimeCollectionCount}
     >
 
       <AppBackground />
@@ -358,7 +357,7 @@ export default function Home() {
 
       <AppHeader
         customLogo={customLogo}
-        syncing={syncing}
+        syncing={syncing || !activeOperationalDataReady}
         userDisplayName={user?.displayName || 'Aprovisionamento HGeSM'}
         workspaceContext={workspaceContext}
         onOpenSidebar={() => setSidebarOpen(true)}
@@ -391,7 +390,23 @@ export default function Home() {
 
         {/* Content Container Area */}
         <main className="flex-1 lg:pl-6 pb-24 md:pb-12 pt-6 px-4 max-w-7xl mx-auto w-full overflow-hidden">
-
+          {!activeOperationalDataReady ? (
+            <section
+              data-testid="operational-section-loading"
+              className="flex min-h-[320px] items-center justify-center rounded-2xl border border-blue-100 bg-white/75 p-8 text-center shadow-sm backdrop-blur"
+            >
+              <div>
+                <div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-blue-100 border-t-[#00288e]" />
+                <p className="mt-4 text-sm font-extrabold text-[#00288e]">
+                  Sincronizando dados desta seção
+                </p>
+                <p className="mt-1 text-xs font-medium text-gray-500">
+                  O EMPROVEX mantém em tempo real somente as coleções necessárias à tela atual.
+                </p>
+              </div>
+            </section>
+          ) : (
+            <>
           {/* TAB 1: PAINEL DE CONTROLE / DASHBOARD - SALDO RESTANTE POR CLASSE DETALHADO */}
           {activeTab === 'painel' && (
             <DashboardView
@@ -449,7 +464,8 @@ export default function Home() {
             onCancel={() => setEmpenhoToDelete(null)}
             onConfirm={handleDeleteSpecificEmpenho}
           />
-
+            </>
+          )}
         </main>
       </div>
 
