@@ -16,10 +16,10 @@ export type SagPromptCopyState = 'idle' | 'copied' | 'error';
 
 interface SagPromptStepProps {
   selectedSupplier: SupplierReport;
-  normalizedUg: string;
+  normalizedUg: string | null;
   ugInvalid: boolean;
   ugMismatch: boolean;
-  payloadUg: string;
+  payloadUg: string | null;
   prompt: string;
   copyState: SagPromptCopyState;
   onCopyPrompt: () => void;
