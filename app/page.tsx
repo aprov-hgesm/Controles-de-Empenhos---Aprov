@@ -66,10 +66,7 @@ export default function Home() {
     empenhos,
   });
 
-  const { customLogo, handleLogoUpload, handleRemoveLogo } = usePlatformBranding({
-    userEmail: user?.email,
-    onNotify: showToast,
-  });
+  const { customLogo } = usePlatformBranding();
 
   // Navigation & View state
   const [activeTab, setActiveTab] = useState<'painel' | 'empenhos' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas'>('painel');
@@ -365,8 +362,6 @@ export default function Home() {
         userDisplayName={user?.displayName || 'Aprovisionamento HGeSM'}
         workspaceContext={workspaceContext}
         onOpenSidebar={() => setSidebarOpen(true)}
-        onLogoUpload={handleLogoUpload}
-        onRemoveLogo={handleRemoveLogo}
       />
 
       {/* Main Framework Wrapper */}
