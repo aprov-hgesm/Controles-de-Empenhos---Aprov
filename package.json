@@ -93,7 +93,8 @@
     "test:empenho-concurrency": "node --experimental-vm-modules --test scripts/empenho-concurrency.test.mjs",
     "verify:block-13-empenho-concurrency": "node scripts/verify-block-13-empenho-concurrency.mjs",
     "test:operational-subscription-plan": "node scripts/operational-subscription-plan.test.mjs",
-    "verify:block-14-scalability": "node scripts/verify-block-14-scalability.mjs"
+    "verify:block-14-scalability": "node scripts/verify-block-14-scalability.mjs",
+    "verify:block-15-final-hardening": "node scripts/verify-block-15-final-hardening.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
