@@ -36,3 +36,43 @@ O Bloco 15 está pronto quando:
 6. o E2E crítico e o job com Emulator permanecem obrigatórios.
 
 Esse fechamento é conservador: ele transforma as garantias já implementadas em uma barreira explícita contra regressões futuras.
+
+
+## Extensão de fechamento
+
+A validação final amplia o contrato sem alterar regras de negócio, persistência ou UX funcional.
+
+### GitHub Actions
+
+A pipeline passa a executar em pull requests, em push para a `main` e por acionamento manual. Execuções obsoletas da mesma referência são canceladas por `concurrency`.
+
+Além dos jobs existentes, um **release gate** consolidado só fica verde quando:
+
+- `validate-application` conclui com sucesso;
+- `browser-e2e-emulator` conclui com sucesso.
+
+Isso evita considerar o fechamento válido quando apenas um dos dois pilares passa.
+
+### Fronteiras administrativas
+
+A suíte real do Firebase Emulator também fixa regressões para garantir que:
+
+- o administrador pode listar metadados administrativos de workspaces e contas;
+- setores externos não podem listar esses diretórios globais;
+- o administrador não recebe bypass para ler, listar ou gravar dados operacionais de outro setor;
+- a auditoria administrativa permanece invisível aos setores externos;
+- o índice global de UG permanece legível apenas no contexto administrativo e imutável após criação.
+
+### Google Drive
+
+Os gates de Google Drive permanecem obrigatórios no GitHub Actions, incluindo onboarding e autorização externa com Firebase Auth Emulator.
+
+A configuração `settings/documentStorage` continua privada ao próprio workspace; o administrador da plataforma não recebe acesso operacional à configuração de outro setor.
+
+### Legado raiz
+
+Os dados legados raiz permanecem disponíveis apenas para consulta controlada pelo fundador usando a sessão Google prevista pelas Rules. Escrita continua bloqueada e o mesmo e-mail autenticado por provider de senha não recebe o acesso especial.
+
+### Resultado esperado
+
+O Bloco 15 fecha a sequência com uma barreira de regressão verificável: segurança multi-tenant, auditoria, UG, Google Drive, legado, Browser E2E e CI precisam permanecer coerentes simultaneamente.
