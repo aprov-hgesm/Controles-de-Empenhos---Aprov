@@ -380,17 +380,66 @@ service cloud.firestore {
         && request.resource.data.updatedBy == request.auth.uid;
     }
 
+    function sagNsLockOwnerUnchanged() {
+      return resource.data.invoiceRecordKey == request.resource.data.invoiceRecordKey
+        && resource.data.invoiceId == request.resource.data.invoiceId
+        && resource.data.empenhoId == request.resource.data.empenhoId
+        && resource.data.supplierCnpj == request.resource.data.supplierCnpj;
+    }
+
+    function validSagNsLockOwnerMigration(workspaceId) {
+      let oldInvoicePath = /databases/$(database)/documents/workspaces/$(workspaceId)/invoices/$(resource.data.invoiceRecordKey);
+      let newInvoicePath = /databases/$(database)/documents/workspaces/$(workspaceId)/invoices/$(request.resource.data.invoiceRecordKey);
+      return resource.data.invoiceRecordKey != request.resource.data.invoiceRecordKey
+        && !existsAfter(oldInvoicePath)
+        && existsAfter(newInvoicePath)
+        && getAfter(newInvoicePath).data.recordKey == request.resource.data.invoiceRecordKey
+        && getAfter(newInvoicePath).data.id == request.resource.data.invoiceId
+        && getAfter(newInvoicePath).data.empenhoId == request.resource.data.empenhoId
+        && getAfter(newInvoicePath).data.supplierCnpj == request.resource.data.supplierCnpj
+        && getAfter(newInvoicePath).data.numeroNS == request.resource.data.numeroNS;
+    }
+
+    function validSagNsLockMetadataRefresh(workspaceId) {
+      let ownerInvoicePath = /databases/$(database)/documents/workspaces/$(workspaceId)/invoices/$(request.resource.data.invoiceRecordKey);
+      return resource.data.invoiceRecordKey == request.resource.data.invoiceRecordKey
+        && existsAfter(ownerInvoicePath)
+        && getAfter(ownerInvoicePath).data.recordKey == request.resource.data.invoiceRecordKey
+        && getAfter(ownerInvoicePath).data.id == request.resource.data.invoiceId
+        && getAfter(ownerInvoicePath).data.empenhoId == request.resource.data.empenhoId
+        && getAfter(ownerInvoicePath).data.supplierCnpj == request.resource.data.supplierCnpj
+        && getAfter(ownerInvoicePath).data.numeroNS == request.resource.data.numeroNS;
+    }
+
+    function validSagNsLockDelete(workspaceId, id) {
+      let ownerInvoicePath = /databases/$(database)/documents/workspaces/$(workspaceId)/invoices/$(resource.data.invoiceRecordKey);
+      return isSagNsLockId(id)
+        && resource.data.type == 'sag-ns-lock'
+        && resource.data.workspaceId == workspaceId
+        && (
+          !existsAfter(ownerInvoicePath)
+          || (
+            existsAfter(ownerInvoicePath)
+            && (
+              !('numeroNS' in getAfter(ownerInvoicePath).data)
+              || getAfter(ownerInvoicePath).data.numeroNS != resource.data.numeroNS
+            )
+          )
+        );
+    }
+
     function validSagNsLockUpdate(workspaceId, id) {
       return validSagNsLock(workspaceId, id)
         && resource.data.id == request.resource.data.id
         && resource.data.type == request.resource.data.type
         && resource.data.workspaceId == request.resource.data.workspaceId
         && resource.data.numeroNS == request.resource.data.numeroNS
-        && resource.data.invoiceRecordKey == request.resource.data.invoiceRecordKey
-        && resource.data.invoiceId == request.resource.data.invoiceId
-        && resource.data.empenhoId == request.resource.data.empenhoId
-        && resource.data.supplierCnpj == request.resource.data.supplierCnpj
-        && resource.data.createdAt == request.resource.data.createdAt;
+        && resource.data.createdAt == request.resource.data.createdAt
+        && (
+          sagNsLockOwnerUnchanged()
+          || validSagNsLockMetadataRefresh(workspaceId)
+          || validSagNsLockOwnerMigration(workspaceId)
+        );
     }
 
     function isSelfPlatformAccount() {
@@ -599,7 +648,11 @@ service cloud.firestore {
         );
       allow delete: if id != 'termoRecebimentoCounter'
         && id != 'documentStorage'
-        && canAccessWorkspace(workspaceId);
+        && canAccessWorkspace(workspaceId)
+        && (
+          !isSagNsLockId(id)
+          || validSagNsLockDelete(workspaceId, id)
+        );
     }
 
     // Bloco 13 — compatibilidade legada somente leitura.

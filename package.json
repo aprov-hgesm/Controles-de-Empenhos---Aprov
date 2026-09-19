@@ -70,7 +70,8 @@
     "verify:ns-integrity-contract": "node scripts/verify-ns-integrity-contract.mjs",
     "test:ns-integrity": "node --experimental-vm-modules --test scripts/ns-integrity.test.mjs",
     "verify:ns-integrity-service": "node scripts/verify-ns-integrity-service.mjs",
-    "verify:manual-ns-integrity": "node scripts/verify-manual-ns-integrity.mjs"
+    "verify:manual-ns-integrity": "node scripts/verify-manual-ns-integrity.mjs",
+    "verify:invoice-ns-lifecycle": "node scripts/verify-invoice-ns-lifecycle.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

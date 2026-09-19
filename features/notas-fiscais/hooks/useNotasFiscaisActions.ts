@@ -238,7 +238,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
           invoice: invoiceToSave,
           alert: newAlert,
           previousInvoiceRecordKey:
-            editingInvoice && previousRecordKey !== nextRecordKey ? previousRecordKey : undefined,
+            editingInvoice ? previousRecordKey : undefined,
         });
       } catch (error) {
         if (uploadedInvoicePdf) {
