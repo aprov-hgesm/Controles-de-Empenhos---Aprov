@@ -198,6 +198,9 @@ jobs:
       - name: EMPROVEX brand identity foundation guard
         run: npm run verify:brand-identity-foundation
 
+      - name: EMPROVEX brand notifications guard
+        run: npm run verify:brand-notifications
+
       - name: Production build
         run: npm run build
 
