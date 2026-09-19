@@ -233,6 +233,7 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
 
   const handleSelectSupplier = (cnpj: string) => {
     setSelectedCnpj(cnpj);
+    setSupplierSearch('');
     setJsonText('');
     setValidation(null);
     setCopyState('idle');
@@ -724,6 +725,8 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
                 setApplyError('');
                 setConfirmationFingerprint('');
                 setLastImportResult(null);
+                setShowTechnicalReconciliation(false);
+                setPreviewFilter('all');
               }}
               spellCheck={false}
               placeholder={'Cole aqui o JSON retornado pela IA...\n\n{\n  "schema_version": "emprovex_sag_ns_v1",\n  ...\n}'}
@@ -1332,17 +1335,27 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
 
           {lastImportResult ? (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5" aria-live="polite">
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 flex-none text-emerald-700" aria-hidden="true" />
-                <div>
-                  <p className="text-sm font-black text-emerald-800">Importação SAG concluída</p>
-                  <p className="mt-1 text-xs font-semibold leading-relaxed text-emerald-800/80">
-                    {lastImportResult.appliedCount} NS gravada(s) nesta transação
-                    {lastImportResult.alreadyAppliedCount > 0
-                      ? ` · ${lastImportResult.alreadyAppliedCount} já estava(m) aplicada(s) e foi(ram) mantida(s) sem nova escrita`
-                      : ''}.
-                  </p>
+              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-none text-emerald-700" aria-hidden="true" />
+                  <div>
+                    <p className="text-sm font-black text-emerald-800">Importação SAG concluída</p>
+                    <p className="mt-1 text-xs font-semibold leading-relaxed text-emerald-800/80">
+                      {lastImportResult.appliedCount} NS gravada(s) nesta transação
+                      {lastImportResult.alreadyAppliedCount > 0
+                        ? ` · ${lastImportResult.alreadyAppliedCount} já estava(m) aplicada(s) e foi(ram) mantida(s) sem nova escrita`
+                        : ''}.
+                    </p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={handleStartAnotherImport}
+                  className="inline-flex h-9 flex-none items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-3 text-[10px] font-extrabold text-emerald-700 transition hover:bg-emerald-100/60"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                  Importar outro relatório
+                </button>
               </div>
             </div>
           ) : null}
@@ -1470,7 +1483,7 @@ export function SagImportView({ empenhos, invoices, onApplySagNsImport }: SagImp
                 </div>
               ) : null}
 
-              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <div className="sticky bottom-0 mt-5 -mx-5 -mb-5 flex flex-col-reverse gap-2 border-t border-gray-100 bg-white/95 p-5 backdrop-blur sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={handleCloseApplyConfirmation}
