@@ -11,7 +11,10 @@ const domain = read('lib/nsIntegrity.ts');
 const service = read('lib/nsIntegrityService.ts');
 const persistence = read('lib/sagNsPersistence.ts');
 const hook = read('features/relatorios/hooks/useSagNsImportActions.ts');
-const view = read('features/relatorios/components/SagImportView.tsx');
+const view = [
+  read('features/relatorios/components/SagImportView.tsx'),
+  read('features/relatorios/components/SagApplyConfirmationDialog.tsx'),
+].join('\n');
 const reportsView = read('features/relatorios/components/RelatoriosView.tsx');
 const page = read('app/page.tsx');
 const pkg = read('package.json');
