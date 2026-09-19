@@ -77,7 +77,7 @@ export function PlatformAdminView({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [statusCandidate, setStatusCandidate] = useState<Workspace | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
 
   const showAdminToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
