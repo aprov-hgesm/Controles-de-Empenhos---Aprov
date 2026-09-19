@@ -177,6 +177,9 @@ jobs:
       - name: NS integrity service guard
         run: npm run verify:ns-integrity-service
 
+      - name: Manual NS integrity guard
+        run: npm run verify:manual-ns-integrity
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
