@@ -316,6 +316,7 @@ export async function commitInvoiceReceiptLifecycle(
   const scope = getCurrentOperationalScope(userId);
   const nextRecordKey = getInvoiceRecordKey(input.invoice);
   const previousRecordKey = input.previousInvoiceRecordKey;
+  const isExistingEdit = Boolean(previousRecordKey);
   const isIdentityMigration = Boolean(
     previousRecordKey && previousRecordKey !== nextRecordKey
   );
@@ -323,44 +324,52 @@ export async function commitInvoiceReceiptLifecycle(
 
   try {
     await runTransaction(db, async (transaction) => {
-      const previousInvoiceRef = isIdentityMigration
+      const nextInvoiceRef = operationalDocRef(scope, 'invoices', nextRecordKey);
+      const previousInvoiceRef = isExistingEdit
         ? operationalDocRef(scope, 'invoices', previousRecordKey!)
         : null;
-      const nextInvoiceRef = operationalDocRef(scope, 'invoices', nextRecordKey);
 
-      const [previousSnapshot, nextSnapshot] = await Promise.all([
-        previousInvoiceRef ? transaction.get(previousInvoiceRef) : Promise.resolve(null),
-        isIdentityMigration ? transaction.get(nextInvoiceRef) : Promise.resolve(null),
-      ]);
+      const existingSnapshot = previousInvoiceRef
+        ? await transaction.get(previousInvoiceRef)
+        : await transaction.get(nextInvoiceRef);
+      const targetSnapshot = isIdentityMigration
+        ? await transaction.get(nextInvoiceRef)
+        : existingSnapshot;
 
+      if (isExistingEdit && !existingSnapshot.exists()) {
+        throw new NsIntegrityError(
+          'invoice_missing',
+          'A Nota Fiscal original não existe mais. A edição foi cancelada.'
+        );
+      }
+      if (!isExistingEdit && existingSnapshot.exists()) {
+        throw new NsIntegrityError(
+          'invoice_identity_changed',
+          'Já existe uma Nota Fiscal com esta identidade. O cadastro foi cancelado.'
+        );
+      }
+      if (isIdentityMigration && targetSnapshot.exists()) {
+        throw new NsIntegrityError(
+          'invoice_identity_changed',
+          'Já existe uma Nota Fiscal com a nova identidade. A edição foi cancelada.'
+        );
+      }
+
+      let oldInvoice: Invoice | null = null;
       let migratedLockRef: ReturnType<typeof operationalSettingsDocRef> | null = null;
       let migratedLock: Partial<NsLockDocument> | null = null;
-      let oldInvoice: Invoice | null = null;
 
-      if (isIdentityMigration) {
-        if (!previousSnapshot?.exists()) {
-          throw new NsIntegrityError(
-            'invoice_missing',
-            'A Nota Fiscal original não existe mais. A edição foi cancelada.'
-          );
-        }
-        if (nextSnapshot?.exists()) {
-          throw new NsIntegrityError(
-            'invoice_identity_changed',
-            'Já existe uma Nota Fiscal com a nova identidade. A edição foi cancelada.'
-          );
-        }
-
+      if (isExistingEdit) {
         oldInvoice = invoiceWithRecordKey(
-          previousSnapshot.id,
-          previousSnapshot.data() as Invoice
+          existingSnapshot.id,
+          existingSnapshot.data() as Invoice
         );
         const oldNs = normalizeNsNumber(oldInvoice.numeroNS);
         const nextNs = normalizeNsNumber(input.invoice.numeroNS);
         if (oldNs !== nextNs) {
           throw new NsIntegrityError(
             'stale_invoice_ns',
-            'A NS da Nota Fiscal mudou durante a edição da identidade. Salve a NS separadamente.'
+            'A NS da Nota Fiscal mudou durante a edição. Altere a NS pelo campo específico.'
           );
         }
 
@@ -378,7 +387,7 @@ export async function commitInvoiceReceiptLifecycle(
             if (!oldSupplierCnpj) {
               throw new NsIntegrityError(
                 'invalid_supplier_cnpj',
-                'A Nota Fiscal original não possui CNPJ válido para migrar o lock da NS.'
+                'A Nota Fiscal original não possui CNPJ válido para validar o lock da NS.'
               );
             }
             assertNsLockOwnership(
@@ -395,6 +404,11 @@ export async function commitInvoiceReceiptLifecycle(
             );
           }
         }
+      } else if (normalizeNsNumber(input.invoice.numeroNS)) {
+        throw new NsIntegrityError(
+          'invoice_identity_changed',
+          'Uma nova Nota Fiscal deve ser cadastrada sem NS e receber a NS pelo fluxo específico.'
+        );
       }
 
       const supplierCnpj = normalizeSupplierCnpj(input.invoice.supplierCnpj);
@@ -429,28 +443,33 @@ export async function commitInvoiceReceiptLifecycle(
         { ...input.alert, userId }
       );
 
-      if (isIdentityMigration && previousInvoiceRef && oldInvoice) {
+      if (isIdentityMigration && previousInvoiceRef) {
         transaction.delete(previousInvoiceRef);
+      }
 
-        const migratedNs = normalizeNsNumber(oldInvoice.numeroNS);
-        if (migratedNs && supplierCnpj && migratedLockRef) {
-          const now = new Date().toISOString();
-          const newMutation = buildLifecycleMutation(
-            input.invoice,
-            nextRecordKey,
-            supplierCnpj,
-            migratedNs,
-            'migration'
-          );
-          const nextLock = buildNsLockDocument({
-            workspaceId: scope.workspaceId,
-            mutation: newMutation,
-            userId,
-            createdAt: migratedLock?.createdAt || now,
-            updatedAt: now,
-          });
-          transaction.set(migratedLockRef, nextLock, { merge: true });
-        }
+      const preservedNs = normalizeNsNumber(oldInvoice?.numeroNS);
+      if (
+        isExistingEdit &&
+        preservedNs &&
+        supplierCnpj &&
+        migratedLockRef
+      ) {
+        const now = new Date().toISOString();
+        const refreshedMutation = buildLifecycleMutation(
+          input.invoice,
+          nextRecordKey,
+          supplierCnpj,
+          preservedNs,
+          'migration'
+        );
+        const nextLock = buildNsLockDocument({
+          workspaceId: scope.workspaceId,
+          mutation: refreshedMutation,
+          userId,
+          createdAt: migratedLock?.createdAt || now,
+          updatedAt: now,
+        });
+        transaction.set(migratedLockRef, nextLock, { merge: true });
       }
     });
   } catch (error) {
