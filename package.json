@@ -75,6 +75,7 @@
     "verify:brand-identity-foundation": "node scripts/verify-brand-identity-foundation.mjs",
     "verify:brand-notifications": "node scripts/verify-brand-notifications.mjs",
     "verify:empenhos-subtabs": "node scripts/verify-empenhos-subtabs.mjs",
+    "verify:brand-admin": "node scripts/verify-brand-admin.mjs",
     "test:supplier-cnpj-migration": "node --experimental-vm-modules --test scripts/supplier-cnpj-migration.test.mjs",
     "verify:supplier-cnpj-migration": "node scripts/verify-supplier-cnpj-migration.mjs",
     "verify:global-ns-rules": "node scripts/verify-global-ns-rules.mjs"
