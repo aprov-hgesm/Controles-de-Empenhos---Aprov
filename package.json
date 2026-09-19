@@ -71,7 +71,8 @@
     "test:ns-integrity": "node --experimental-vm-modules --test scripts/ns-integrity.test.mjs",
     "verify:ns-integrity-service": "node scripts/verify-ns-integrity-service.mjs",
     "verify:manual-ns-integrity": "node scripts/verify-manual-ns-integrity.mjs",
-    "verify:invoice-ns-lifecycle": "node scripts/verify-invoice-ns-lifecycle.mjs"
+    "verify:invoice-ns-lifecycle": "node scripts/verify-invoice-ns-lifecycle.mjs",
+    "verify:brand-identity-foundation": "node scripts/verify-brand-identity-foundation.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
