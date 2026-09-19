@@ -189,6 +189,9 @@ jobs:
       - name: Supplier CNPJ migration guard
         run: npm run verify:supplier-cnpj-migration
 
+      - name: Global NS Firestore Rules guard
+        run: npm run verify:global-ns-rules
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
