@@ -359,7 +359,7 @@ export function PlatformAdminView({
               <h3 className="font-extrabold">Cadastro seguro</h3>
             </div>
             <p className="text-sm text-slate-300 leading-relaxed">
-              Cadastro cria a identidade Firebase no servidor e vincula o UID antes do primeiro acesso. Edição institucional e ciclo de vida preservam workspace ID, e-mail de acesso e UID.
+              Cadastro cria a identidade Firebase no servidor e vincula UID, workspace e UG da Organização Militar antes do primeiro acesso. Edição institucional e ciclo de vida preservam esses identificadores.
             </p>
           </div>
         </section>
@@ -588,10 +588,14 @@ function WorkspaceCard({
       </div>
 
       <div className="lg:min-w-[470px] space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="rounded-xl bg-slate-950/30 border border-white/10 px-4 py-3">
             <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Workspace ID</div>
             <div className="text-sm font-mono font-bold text-slate-200 mt-1 break-all">{workspace.id}</div>
+          </div>
+          <div className="rounded-xl bg-slate-950/30 border border-white/10 px-4 py-3">
+            <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">UG da OM</div>
+            <div className="text-sm font-mono font-bold text-slate-200 mt-1">{workspace.ug || 'Não cadastrada'}</div>
           </div>
           <div className="rounded-xl bg-slate-950/30 border border-white/10 px-4 py-3">
             <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Ciclo de vida</div>
