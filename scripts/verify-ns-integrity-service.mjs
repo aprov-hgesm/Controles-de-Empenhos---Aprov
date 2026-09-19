@@ -43,6 +43,7 @@ for (const expected of [
   'buildNsLockDocument',
   'MAX_NS_INTEGRITY_TRANSACTION_MUTATIONS = 6',
   'MAX_NS_INTEGRITY_KNOWN_OWNER_READS = 200',
+  'Reaplicações idempotentes também normalizam a identidade física',
 ]) {
   requireText(service, expected, `Serviço central perdeu requisito: ${expected}`);
 }
