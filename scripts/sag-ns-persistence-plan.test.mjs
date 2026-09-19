@@ -53,6 +53,7 @@ await planModule.link(async (specifier) => {
 await planModule.evaluate();
 
 const {
+  buildSagNsLockDocumentId,
   buildSagNsPersistenceChanges,
   validateSagNsPersistenceSnapshot,
 } = planModule.namespace;
@@ -121,6 +122,14 @@ const validate = ({
     scopedInvoiceDocuments: scope,
     empenhos,
   });
+
+test('gera identidade determinística e segura para lock de NS', () => {
+  assert.equal(
+    buildSagNsLockDocumentId(' 2026 ns 000001 '),
+    'sagNsLock_2026NS000001'
+  );
+  assert.equal(buildSagNsLockDocumentId(''), '');
+});
 
 test('gera alterações somente a partir de linhas ALTERAR da prévia', () => {
   const changes = buildSagNsPersistenceChanges({
