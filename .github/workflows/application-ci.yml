@@ -180,6 +180,9 @@ jobs:
       - name: Manual NS integrity guard
         run: npm run verify:manual-ns-integrity
 
+      - name: Invoice NS lifecycle guard
+        run: npm run verify:invoice-ns-lifecycle
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
