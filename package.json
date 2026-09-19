@@ -57,7 +57,9 @@
     "verify:supplier-reports": "node scripts/verify-supplier-reports.mjs",
     "test:sag-ns-contract": "node --experimental-vm-modules --test scripts/sag-ns-contract.test.mjs",
     "verify:sag-ns-contract": "node scripts/verify-sag-ns-contract.mjs",
-    "verify:sag-import-assistant": "node scripts/verify-sag-import-assistant.mjs"
+    "verify:sag-import-assistant": "node scripts/verify-sag-import-assistant.mjs",
+    "test:sag-ns-reconciliation": "node --experimental-vm-modules --test scripts/sag-ns-reconciliation.test.mjs",
+    "verify:sag-ns-reconciliation": "node scripts/verify-sag-ns-reconciliation.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
