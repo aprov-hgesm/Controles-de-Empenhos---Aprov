@@ -31,8 +31,9 @@ requireText(empenhosView, 'Exige Termo de Recebimento (TR)', 'Tela de classes n�
 requireText(empenhosView, 'Adicionar classe', 'Nova classe não pode ser adicionada.');
 requireText(empenhosView, 'handleUpdateEmpenhoClassification', 'Classe de empenho existente não pode ser alterada.');
 requireText(actions, 'handleUpdateEmpenhoClassification', 'Ação persistente de troca de classe não existe.');
-requireText(empenhosView, 'pt-20 sm:pt-24', 'Modal de novo empenho não possui posicionamento visível no viewport.');
-requireText(empenhosView, 'max-h-[calc(100vh-7rem)]', 'Modal de novo empenho não limita altura ao viewport.');
+requireText(empenhosView, 'id="empenhos-panel-register"', 'Cadastro de empenho não está integrado à subaba persistente.');
+requireText(empenhosView, 'id="empenhos-panel-classes"', 'Configuração de classes não está integrada à subaba persistente.');
+requireText(empenhosView, 'role="tablist"', 'Área de Empenhos perdeu a navegação semântica entre visão geral, cadastro e classes.');
 requireText(dashboard, 'activeClassCodes', 'Dashboard não identifica classes ativas.');
 requireText(dashboard, '.filter((definition) => activeClassCodes.has(definition.code))', 'Dashboard não oculta classes sem empenhos.');
 requireText(cronogramas, 'empenhoClasses.map', 'Cronogramas ainda usa lista fixa de classes.');
