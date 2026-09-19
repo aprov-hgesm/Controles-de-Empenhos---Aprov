@@ -70,4 +70,39 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     await expect(page.getByText('Fornecedor E2E Lifecycle')).toHaveCount(0);
     await expect(page.getByText(NS)).toHaveCount(0);
   });
+
+  test('diagnóstico histórico -> reparo seguro -> persistência após reload', async ({ page }) => {
+    await page.goto('/');
+    await loginSector(page, OPERATOR_A);
+
+    await page.getByTestId('nav-relatorios').click();
+    await expect(page.getByRole('heading', { name: 'Relatórios' })).toBeVisible();
+    await page.getByTestId('relatorios-tab-integridade').click();
+
+    await expect(page.getByTestId('historical-consistency-view')).toBeVisible();
+    await page.getByTestId('historical-consistency-scan').click();
+
+    await expect(
+      page.getByTestId('historical-issue-invoice_missing_supplier_cnpj')
+    ).toBeVisible({ timeout: 15_000 });
+
+    await page.getByTestId('repair-backfill_invoice_supplier_cnpj').click();
+    await expect(
+      page.getByText('CNPJ da NF preenchido a partir do empenho vinculado.')
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('historical-consistency-clean')).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await page.reload();
+    await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
+      timeout: 20_000,
+    });
+    await page.getByTestId('nav-relatorios').click();
+    await page.getByTestId('relatorios-tab-integridade').click();
+    await page.getByTestId('historical-consistency-scan').click();
+    await expect(page.getByTestId('historical-consistency-clean')).toBeVisible({
+      timeout: 15_000,
+    });
+  });
 });
