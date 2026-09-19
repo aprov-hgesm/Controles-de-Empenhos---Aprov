@@ -53,6 +53,7 @@ requireText(analyzer, "repairMode: 'automatic'", 'Analyzer não possui classe ex
 requireText(analyzer, 'rawInvoiceCnpj && !isValidSupplierCnpj(rawInvoiceCnpj)', 'CNPJ inválido da NF pode estar sendo confundido com CNPJ ausente.');
 requireText(analyzer, "summary: 'NS histórica não possui UG confiável.'", 'NS histórica sem UG perdeu bloqueio de inferência.');
 requireText(analyzer, 'duplicateOwners.length === 1', 'Reconstrução de lock não exige identidade NS única.');
+requireText(analyzer, 'invoiceByStoredRecordKey.has(ownerKey)', 'Scanner pode apagar lock ligado a NF fisicamente deslocada.');
 requireText(analyzer, "String(invoice.recordKey || '').trim() === document.documentId", 'Reconstrução de lock não exige recordKey persistida.');
 
 for (const repair of [
