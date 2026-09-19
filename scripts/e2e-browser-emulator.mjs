@@ -46,7 +46,7 @@ function run(command, args, env = process.env) {
   });
 }
 
-await run(process.execPath, ['scripts/e2e-browser-seed.mjs']);
+await run(process.execPath, ['scripts/firestore-multitenancy-security.test.mjs']);
 
 const server = spawn(
   npmCommand,
