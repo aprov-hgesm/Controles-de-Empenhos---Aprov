@@ -14,6 +14,7 @@ import {
 import {
   connectFirestoreEmulator,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getFirestore,
@@ -883,6 +884,187 @@ async function main() {
     undefined,
     'A NF não pode ser alterada se a criação do lock falhar.'
   );
+
+  console.log('\nCiclo de vida de NF + lock NS');
+  const lifecycleOldKey = 'nf_11111111000191_lifecycle-old';
+  const lifecycleNewKey = 'nf_11111111000191_lifecycle-new';
+  const lifecycleNs = '2026NS009200';
+
+  await ownerSet(`workspaces/workspace-a/invoices/${lifecycleOldKey}`, {
+    id: 'LIFECYCLE-OLD',
+    recordKey: lifecycleOldKey,
+    empenhoId: sagEmpenhoId,
+    supplier: 'Fornecedor SAG',
+    supplierCnpj: sagSupplierCnpj,
+    issueDate: '2026-01-15',
+    items: [],
+    totalValue: 150,
+  });
+  await allowed('NF de ciclo de vida recebe NS e lock antes da migração', () =>
+    reserveSagNs(
+      sessionA.db,
+      sessionA.user.uid,
+      'workspace-a',
+      lifecycleOldKey,
+      'LIFECYCLE-OLD',
+      sagEmpenhoId,
+      sagSupplierCnpj,
+      lifecycleNs
+    )
+  );
+
+  const lifecycleLockRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'settings',
+    sagLockId(lifecycleNs)
+  );
+
+  await denied('Lock NS ativo não pode ser excluído isoladamente enquanto a NF ainda o utiliza', () =>
+    deleteDoc(lifecycleLockRef)
+  );
+
+  await allowed('Migração de recordKey move NF e proprietário do lock na mesma transação', () =>
+    runTransaction(sessionA.db, async (transaction) => {
+      const oldRef = doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'invoices',
+        lifecycleOldKey
+      );
+      const newRef = doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'invoices',
+        lifecycleNewKey
+      );
+      const [oldSnapshot, newSnapshot, lockSnapshot] = await Promise.all([
+        transaction.get(oldRef),
+        transaction.get(newRef),
+        transaction.get(lifecycleLockRef),
+      ]);
+
+      assert.equal(oldSnapshot.exists(), true);
+      assert.equal(newSnapshot.exists(), false);
+      assert.equal(lockSnapshot.exists(), true);
+
+      transaction.set(newRef, {
+        ...oldSnapshot.data(),
+        id: 'LIFECYCLE-NEW',
+        recordKey: lifecycleNewKey,
+        numeroNS: lifecycleNs,
+      });
+      transaction.delete(oldRef);
+      transaction.set(
+        lifecycleLockRef,
+        {
+          ...lockSnapshot.data(),
+          invoiceRecordKey: lifecycleNewKey,
+          invoiceId: 'LIFECYCLE-NEW',
+          updatedAt: now(),
+          updatedBy: sessionA.user.uid,
+        },
+        { merge: true }
+      );
+    })
+  );
+
+  const [oldAfterMigration, newAfterMigration, lockAfterMigration] = await Promise.all([
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', lifecycleOldKey)),
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', lifecycleNewKey)),
+    getDoc(lifecycleLockRef),
+  ]);
+  assert.equal(oldAfterMigration.exists(), false);
+  assert.equal(newAfterMigration.data()?.numeroNS, lifecycleNs);
+  assert.equal(lockAfterMigration.data()?.invoiceRecordKey, lifecycleNewKey);
+  assert.equal(lockAfterMigration.data()?.invoiceId, 'LIFECYCLE-NEW');
+
+  await allowed('Exclusão de NF remove o lock correspondente na mesma transação', () =>
+    runTransaction(sessionA.db, async (transaction) => {
+      const invoiceRef = doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'invoices',
+        lifecycleNewKey
+      );
+      const [invoiceSnapshot, lockSnapshot] = await Promise.all([
+        transaction.get(invoiceRef),
+        transaction.get(lifecycleLockRef),
+      ]);
+      assert.equal(invoiceSnapshot.exists(), true);
+      assert.equal(lockSnapshot.exists(), true);
+      transaction.delete(invoiceRef);
+      transaction.delete(lifecycleLockRef);
+    })
+  );
+
+  const [deletedLifecycleInvoice, deletedLifecycleLock] = await Promise.all([
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', lifecycleNewKey)),
+    getDoc(lifecycleLockRef),
+  ]);
+  assert.equal(deletedLifecycleInvoice.exists(), false);
+  assert.equal(deletedLifecycleLock.exists(), false);
+
+  const manualRemovalKey = 'nf_11111111000191_manual-removal';
+  const manualRemovalNs = '2026NS009201';
+  await ownerSet(`workspaces/workspace-a/invoices/${manualRemovalKey}`, {
+    id: 'MANUAL-REMOVAL',
+    recordKey: manualRemovalKey,
+    empenhoId: sagEmpenhoId,
+    supplier: 'Fornecedor SAG',
+    supplierCnpj: sagSupplierCnpj,
+    issueDate: '2026-01-16',
+    items: [],
+    totalValue: 175,
+  });
+  await reserveSagNs(
+    sessionA.db,
+    sessionA.user.uid,
+    'workspace-a',
+    manualRemovalKey,
+    'MANUAL-REMOVAL',
+    sagEmpenhoId,
+    sagSupplierCnpj,
+    manualRemovalNs
+  );
+  const manualRemovalLockRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'settings',
+    sagLockId(manualRemovalNs)
+  );
+
+  await allowed('Remoção manual da NS pode liberar lock quando a NF deixa de usar a NS', () =>
+    runTransaction(sessionA.db, async (transaction) => {
+      const invoiceRef = doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'invoices',
+        manualRemovalKey
+      );
+      const [invoiceSnapshot, lockSnapshot] = await Promise.all([
+        transaction.get(invoiceRef),
+        transaction.get(manualRemovalLockRef),
+      ]);
+      assert.equal(invoiceSnapshot.exists(), true);
+      assert.equal(lockSnapshot.exists(), true);
+      transaction.set(invoiceRef, { numeroNS: deleteField() }, { merge: true });
+      transaction.delete(manualRemovalLockRef);
+    })
+  );
+
+  const [manualAfterRemoval, manualLockAfterRemoval] = await Promise.all([
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', manualRemovalKey)),
+    getDoc(manualRemovalLockRef),
+  ]);
+  assert.equal(manualAfterRemoval.data()?.numeroNS, undefined);
+  assert.equal(manualLockAfterRemoval.exists(), false);
 
   console.log('\nIsolamento do Google Drive / documentStorage');
   const validDriveSettings = {
