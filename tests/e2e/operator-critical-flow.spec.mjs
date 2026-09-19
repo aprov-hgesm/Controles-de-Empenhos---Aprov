@@ -141,4 +141,33 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     await expect(page.getByText('Prompt oficial do EMPROVEX', { exact: true })).toBeVisible();
     await expect(page.getByText(UG, { exact: true })).toBeVisible();
   });
+  test('exclusão protegida remove empenho, NF e NS lock sem estado parcial', async ({ page }) => {
+    await page.goto('/');
+    await loginSector(page, OPERATOR_A);
+
+    await page.getByRole('button', { name: 'Empenhos', exact: true }).first().click();
+    await expect(page.getByRole('heading', { name: 'Empenhos' })).toBeVisible();
+    await expect(page.getByText('Fornecedor E2E Delete').first()).toBeVisible();
+
+    await page.getByTitle('Excluir empenho delete-e2e').click();
+    await expect(page.getByRole('heading', { name: 'Confirmar Exclusão de Empenho' })).toBeVisible();
+    await page.getByRole('button', { name: 'Confirmar Exclusão' }).click();
+
+    await expect(page.getByText('Fornecedor E2E Delete')).toHaveCount(0, { timeout: 15000 });
+
+    await page.reload();
+    await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
+      timeout: 20000,
+    });
+    await page.getByRole('button', { name: 'Empenhos', exact: true }).first().click();
+    await expect(page.getByText('Fornecedor E2E Delete')).toHaveCount(0);
+
+    await page.getByTestId('nav-relatorios').click();
+    await page.getByTestId('relatorios-tab-integridade').click();
+    await page.getByTestId('historical-consistency-scan').click();
+    await expect(page.getByTestId('historical-consistency-clean')).toBeVisible({
+      timeout: 15000,
+    });
+  });
+
 });
