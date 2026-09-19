@@ -84,7 +84,7 @@ forbidText(manual, 'setTempNSUgValue', 'Edição manual voltou a manter UG digit
 
 requireText(rules, 'workspaceAndAccountUgMatch', 'Rules não vinculam UG de workspace e conta.');
 requireText(rules, 'match /platformUgIndex/{ug}', 'Rules não protegem índice de UG.');
-requireText(rules, 'workspaceUgMatchesNs(workspaceId, data.nsUg)', 'Rules não vinculam NS à UG do workspace.');
+requireText(rules, 'workspaceUgMatchesNs(workspaceId, request.resource.data.ug)', 'Rules não vinculam o lock de NS à UG do workspace.');
 requireText(rules, 'sagNsLockIdForIdentity(ug, numeroNS)', 'Rules não derivam lock canônico de UG + NS.');
 requireText(rules, 'validLegacySagNsLockUpdate', 'Rules perderam compatibilidade controlada de lock legado.');
 requireText(security, 'UG diferente da UG vinculada ao workspace', 'Emulator não prova bloqueio de NS com UG externa.');
