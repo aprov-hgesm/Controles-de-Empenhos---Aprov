@@ -362,10 +362,11 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       showToast('Não foi possível localizar o empenho vinculado para reverter o recebimento.', 'error');
       return;
     }
-    let committedTargetEmpenho = updatedTargetEmpenho;
+    const targetEmpenhoToCommit = updatedTargetEmpenho as Empenho;
+    let committedTargetEmpenho: Empenho = targetEmpenhoToCommit;
     if (user) {
       try {
-        const result = await commitInvoiceDeletion(user.uid, updatedTargetEmpenho, invoiceRecordKey);
+        const result = await commitInvoiceDeletion(user.uid, targetEmpenhoToCommit, invoiceRecordKey);
         committedTargetEmpenho = result.updatedEmpenho;
       } catch (error) {
         console.error('Erro ao excluir NF atomicamente:', error);
