@@ -28,7 +28,10 @@ const operationalPaths = read('lib/operationalPaths.ts');
 const sagPlan = read('lib/sagNsPersistencePlan.ts');
 const sagPersistence = read('lib/sagNsPersistence.ts');
 const sagActions = read('features/relatorios/hooks/useSagNsImportActions.ts');
-const sagView = read('features/relatorios/components/SagImportView.tsx');
+const sagView = [
+  read('features/relatorios/components/SagImportView.tsx'),
+  read('features/relatorios/components/SagPromptStep.tsx'),
+].join('\n');
 const sagReconciliation = read('lib/sagNsReconciliation.ts');
 const rules = read('firestore.rules');
 const security = read('scripts/firestore-multitenancy-security.test.mjs');

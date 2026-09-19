@@ -6,7 +6,11 @@ import { resolve } from 'node:path';
 const root = process.cwd();
 const findings = [];
 
-const view = read('features/relatorios/components/SagImportView.tsx');
+const view = [
+  read('features/relatorios/components/SagImportView.tsx'),
+  read('features/relatorios/components/SagSupplierStep.tsx'),
+  read('features/relatorios/components/SagPromptStep.tsx'),
+].join('\n');
 const pkg = read('package.json');
 const workflow = read('.github/workflows/application-ci.yml');
 
