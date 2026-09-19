@@ -12,16 +12,21 @@ import {
   signOut,
 } from 'firebase/auth';
 import {
+  collection,
   connectFirestoreEmulator,
   deleteDoc,
   deleteField,
   doc,
+  documentId,
   getDoc,
+  getDocs,
   getFirestore,
+  query,
   runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
   writeBatch,
 } from 'firebase/firestore';
 
@@ -1790,6 +1795,26 @@ async function main() {
         items: [],
       }
     )
+  );
+
+  console.log('\nListagem segura de settings para diagnóstico histórico');
+
+  const ownNsLockQuery = query(
+    collection(sessionA.db, 'workspaces', 'workspace-a', 'settings'),
+    where(documentId(), '>=', 'sagNsLock_'),
+    where(documentId(), '<', 'sagNsLock_\uf8ff')
+  );
+  const crossNsLockQuery = query(
+    collection(sessionA.db, 'workspaces', 'workspace-b', 'settings'),
+    where(documentId(), '>=', 'sagNsLock_'),
+    where(documentId(), '<', 'sagNsLock_\uf8ff')
+  );
+
+  await allowed('Setor lista somente locks NS do próprio workspace para diagnóstico', () =>
+    getDocs(ownNsLockQuery)
+  );
+  await denied('Setor não lista settings de outro workspace', () =>
+    getDocs(crossNsLockQuery)
   );
 
   console.log('\nIsolamento do Google Drive / documentStorage');
