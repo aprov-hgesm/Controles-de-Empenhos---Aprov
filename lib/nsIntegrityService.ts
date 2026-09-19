@@ -1,6 +1,7 @@
 import { deleteField, runTransaction } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './firebase';
-import type { Empenho, Invoice } from './types';
+import type { Alert, Empenho, Invoice } from './types';
+import { getInvoiceRecordKey, normalizeSupplierCnpj } from './invoiceIdentity';
 import {
   getCurrentOperationalScope,
   getOperationalCollectionPath,
@@ -258,6 +259,392 @@ export async function commitNsIntegrityMutations(
         getOperationalDocumentPath(scope, 'invoices', mutation.invoiceRecordKey)
       ).join(',')}`
     );
+    throw error;
+  }
+}
+
+
+export interface CommitInvoiceReceiptLifecycleInput {
+  targetEmpenho: Empenho;
+  previousEmpenho?: Empenho;
+  invoice: Invoice;
+  alert: Alert;
+  previousInvoiceRecordKey?: string;
+}
+
+export interface CommitInvoiceDeletionLifecycleInput {
+  updatedEmpenho: Empenho;
+  invoiceRecordKey: string;
+}
+
+export interface CommitAllInvoicesDeletionLifecycleInput {
+  updatedEmpenhos: Empenho[];
+  invoiceRecordKeys: string[];
+}
+
+export const MAX_INVOICE_LIFECYCLE_WRITES = 450;
+
+function invoiceWithRecordKey(snapshotId: string, invoice: Invoice): Invoice {
+  return {
+    ...invoice,
+    recordKey: invoice.recordKey || snapshotId,
+  };
+}
+
+function buildLifecycleMutation(
+  invoice: Invoice,
+  invoiceRecordKey: string,
+  supplierCnpj: string,
+  proposedNs: string | null,
+  source: 'migration' | 'system'
+): NsIntegrityMutation {
+  return {
+    invoiceRecordKey,
+    invoiceId: invoice.id,
+    empenhoId: invoice.empenhoId,
+    supplierCnpj,
+    expectedCurrentNs: normalizeNsNumber(invoice.numeroNS) || null,
+    proposedNs,
+    source,
+  };
+}
+
+export async function commitInvoiceReceiptLifecycle(
+  userId: string,
+  input: CommitInvoiceReceiptLifecycleInput
+): Promise<void> {
+  const scope = getCurrentOperationalScope(userId);
+  const nextRecordKey = getInvoiceRecordKey(input.invoice);
+  const previousRecordKey = input.previousInvoiceRecordKey;
+  const isIdentityMigration = Boolean(
+    previousRecordKey && previousRecordKey !== nextRecordKey
+  );
+  const path = `${getOperationalCollectionPath(scope, 'invoices')}/receipt-lifecycle`;
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const previousInvoiceRef = isIdentityMigration
+        ? operationalDocRef(scope, 'invoices', previousRecordKey!)
+        : null;
+      const nextInvoiceRef = operationalDocRef(scope, 'invoices', nextRecordKey);
+
+      const [previousSnapshot, nextSnapshot] = await Promise.all([
+        previousInvoiceRef ? transaction.get(previousInvoiceRef) : Promise.resolve(null),
+        isIdentityMigration ? transaction.get(nextInvoiceRef) : Promise.resolve(null),
+      ]);
+
+      let migratedLockRef: ReturnType<typeof operationalSettingsDocRef> | null = null;
+      let migratedLock: Partial<NsLockDocument> | null = null;
+      let oldInvoice: Invoice | null = null;
+
+      if (isIdentityMigration) {
+        if (!previousSnapshot?.exists()) {
+          throw new NsIntegrityError(
+            'invoice_missing',
+            'A Nota Fiscal original não existe mais. A edição foi cancelada.'
+          );
+        }
+        if (nextSnapshot?.exists()) {
+          throw new NsIntegrityError(
+            'invoice_identity_changed',
+            'Já existe uma Nota Fiscal com a nova identidade. A edição foi cancelada.'
+          );
+        }
+
+        oldInvoice = invoiceWithRecordKey(
+          previousSnapshot.id,
+          previousSnapshot.data() as Invoice
+        );
+        const oldNs = normalizeNsNumber(oldInvoice.numeroNS);
+        const nextNs = normalizeNsNumber(input.invoice.numeroNS);
+        if (oldNs !== nextNs) {
+          throw new NsIntegrityError(
+            'stale_invoice_ns',
+            'A NS da Nota Fiscal mudou durante a edição da identidade. Salve a NS separadamente.'
+          );
+        }
+
+        if (oldNs) {
+          migratedLockRef = operationalSettingsDocRef(
+            scope,
+            buildNsLockDocumentId(oldNs)
+          );
+          const lockSnapshot = await transaction.get(migratedLockRef);
+          if (lockSnapshot.exists()) {
+            migratedLock = lockSnapshot.data() as Partial<NsLockDocument>;
+            const oldSupplierCnpj = normalizeSupplierCnpj(
+              oldInvoice.supplierCnpj || input.invoice.supplierCnpj
+            );
+            if (!oldSupplierCnpj) {
+              throw new NsIntegrityError(
+                'invalid_supplier_cnpj',
+                'A Nota Fiscal original não possui CNPJ válido para migrar o lock da NS.'
+              );
+            }
+            assertNsLockOwnership(
+              migratedLock,
+              buildLifecycleMutation(
+                oldInvoice,
+                previousRecordKey!,
+                oldSupplierCnpj,
+                oldNs,
+                'migration'
+              ),
+              oldNs,
+              'stale_lock_owner'
+            );
+          }
+        }
+      }
+
+      const supplierCnpj = normalizeSupplierCnpj(input.invoice.supplierCnpj);
+      if (input.invoice.numeroNS && !supplierCnpj) {
+        throw new NsIntegrityError(
+          'invalid_supplier_cnpj',
+          'A Nota Fiscal editada não possui CNPJ válido para preservar o lock da NS.'
+        );
+      }
+
+      transaction.set(
+        operationalDocRef(scope, 'empenhos', input.targetEmpenho.id),
+        { ...input.targetEmpenho, userId }
+      );
+      if (
+        input.previousEmpenho &&
+        input.previousEmpenho.id !== input.targetEmpenho.id
+      ) {
+        transaction.set(
+          operationalDocRef(scope, 'empenhos', input.previousEmpenho.id),
+          { ...input.previousEmpenho, userId }
+        );
+      }
+
+      transaction.set(nextInvoiceRef, {
+        ...input.invoice,
+        recordKey: nextRecordKey,
+        userId,
+      });
+      transaction.set(
+        operationalDocRef(scope, 'alerts', input.alert.id),
+        { ...input.alert, userId }
+      );
+
+      if (isIdentityMigration && previousInvoiceRef && oldInvoice) {
+        transaction.delete(previousInvoiceRef);
+
+        const migratedNs = normalizeNsNumber(oldInvoice.numeroNS);
+        if (migratedNs && supplierCnpj && migratedLockRef) {
+          const now = new Date().toISOString();
+          const newMutation = buildLifecycleMutation(
+            input.invoice,
+            nextRecordKey,
+            supplierCnpj,
+            migratedNs,
+            'migration'
+          );
+          const nextLock = buildNsLockDocument({
+            workspaceId: scope.workspaceId,
+            mutation: newMutation,
+            userId,
+            createdAt: migratedLock?.createdAt || now,
+            updatedAt: now,
+          });
+          transaction.set(migratedLockRef, nextLock, { merge: true });
+        }
+      }
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+    throw error;
+  }
+}
+
+export async function commitInvoiceDeletionLifecycle(
+  userId: string,
+  input: CommitInvoiceDeletionLifecycleInput
+): Promise<void> {
+  const scope = getCurrentOperationalScope(userId);
+  const invoiceRef = operationalDocRef(scope, 'invoices', input.invoiceRecordKey);
+  const path = getOperationalDocumentPath(scope, 'invoices', input.invoiceRecordKey);
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const invoiceSnapshot = await transaction.get(invoiceRef);
+      if (!invoiceSnapshot.exists()) {
+        throw new NsIntegrityError(
+          'invoice_missing',
+          'A Nota Fiscal não existe mais. A exclusão foi cancelada.'
+        );
+      }
+
+      const invoice = invoiceWithRecordKey(
+        invoiceSnapshot.id,
+        invoiceSnapshot.data() as Invoice
+      );
+      if (invoice.empenhoId !== input.updatedEmpenho.id) {
+        throw new NsIntegrityError(
+          'invoice_identity_changed',
+          'O vínculo da Nota Fiscal com o empenho mudou. A exclusão foi cancelada.'
+        );
+      }
+
+      const currentNs = normalizeNsNumber(invoice.numeroNS);
+      let lockRef: ReturnType<typeof operationalSettingsDocRef> | null = null;
+      let lockExists = false;
+
+      if (currentNs) {
+        lockRef = operationalSettingsDocRef(
+          scope,
+          buildNsLockDocumentId(currentNs)
+        );
+        const lockSnapshot = await transaction.get(lockRef);
+        if (lockSnapshot.exists()) {
+          lockExists = true;
+          const supplierCnpj = normalizeSupplierCnpj(
+            invoice.supplierCnpj || input.updatedEmpenho.supplierCnpj
+          );
+          if (!supplierCnpj) {
+            throw new NsIntegrityError(
+              'invalid_supplier_cnpj',
+              'A Nota Fiscal não possui CNPJ válido para validar o lock da NS.'
+            );
+          }
+          assertNsLockOwnership(
+            lockSnapshot.data() as Partial<NsLockDocument>,
+            buildLifecycleMutation(
+              invoice,
+              input.invoiceRecordKey,
+              supplierCnpj,
+              currentNs,
+              'system'
+            ),
+            currentNs,
+            'stale_lock_owner'
+          );
+        }
+      }
+
+      transaction.set(
+        operationalDocRef(scope, 'empenhos', input.updatedEmpenho.id),
+        { ...input.updatedEmpenho, userId }
+      );
+      transaction.delete(invoiceRef);
+      if (lockRef && lockExists) {
+        transaction.delete(lockRef);
+      }
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+    throw error;
+  }
+}
+
+export async function commitAllInvoicesDeletionLifecycle(
+  userId: string,
+  input: CommitAllInvoicesDeletionLifecycleInput
+): Promise<void> {
+  const scope = getCurrentOperationalScope(userId);
+  const uniqueRecordKeys = Array.from(new Set(input.invoiceRecordKeys));
+  const path = `${getOperationalCollectionPath(scope, 'invoices')}/bulk-lifecycle`;
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const invoiceRefs = uniqueRecordKeys.map((recordKey) =>
+        operationalDocRef(scope, 'invoices', recordKey)
+      );
+      const invoiceSnapshots = await Promise.all(
+        invoiceRefs.map((ref) => transaction.get(ref))
+      );
+
+      if (invoiceSnapshots.some((snapshot) => !snapshot.exists())) {
+        throw new NsIntegrityError(
+          'invoice_missing',
+          'Uma ou mais Notas Fiscais mudaram antes da exclusão em lote. A operação foi cancelada.'
+        );
+      }
+
+      const invoices = invoiceSnapshots.map((snapshot) =>
+        invoiceWithRecordKey(snapshot.id, snapshot.data() as Invoice)
+      );
+      const lockEntries = invoices
+        .map((invoice, index) => ({
+          invoice,
+          recordKey: uniqueRecordKeys[index],
+          ns: normalizeNsNumber(invoice.numeroNS),
+        }))
+        .filter((entry) => entry.ns);
+
+      const lockIds = Array.from(
+        new Set(lockEntries.map((entry) => buildNsLockDocumentId(entry.ns)))
+      );
+      const lockRefs = lockIds.map((lockId) =>
+        operationalSettingsDocRef(scope, lockId)
+      );
+      const lockSnapshots = await Promise.all(
+        lockRefs.map((ref) => transaction.get(ref))
+      );
+      const lockById = new Map(
+        lockSnapshots.map((snapshot) => [
+          snapshot.id,
+          snapshot.exists() ? (snapshot.data() as Partial<NsLockDocument>) : null,
+        ])
+      );
+
+      const empenhoById = new Map(
+        input.updatedEmpenhos.map((empenho) => [empenho.id, empenho])
+      );
+
+      for (const entry of lockEntries) {
+        const lock = lockById.get(buildNsLockDocumentId(entry.ns));
+        if (!lock) continue;
+        const relatedEmpenho = empenhoById.get(entry.invoice.empenhoId);
+        const supplierCnpj = normalizeSupplierCnpj(
+          entry.invoice.supplierCnpj || relatedEmpenho?.supplierCnpj
+        );
+        if (!supplierCnpj) {
+          throw new NsIntegrityError(
+            'invalid_supplier_cnpj',
+            `A NF ${entry.invoice.id} não possui CNPJ válido para validar o lock da NS.`
+          );
+        }
+        assertNsLockOwnership(
+          lock,
+          buildLifecycleMutation(
+            entry.invoice,
+            entry.recordKey,
+            supplierCnpj,
+            entry.ns,
+            'system'
+          ),
+          entry.ns,
+          'stale_lock_owner'
+        );
+      }
+
+      const existingLockRefs = lockRefs.filter(
+        (_, index) => lockSnapshots[index].exists()
+      );
+      const totalWrites =
+        input.updatedEmpenhos.length +
+        invoiceRefs.length +
+        existingLockRefs.length;
+      if (totalWrites > MAX_INVOICE_LIFECYCLE_WRITES) {
+        throw new Error(
+          `A exclusão em lote exige ${totalWrites} gravações e excede o limite seguro de ${MAX_INVOICE_LIFECYCLE_WRITES}.`
+        );
+      }
+
+      input.updatedEmpenhos.forEach((empenho) => {
+        transaction.set(
+          operationalDocRef(scope, 'empenhos', empenho.id),
+          { ...empenho, userId }
+        );
+      });
+      invoiceRefs.forEach((ref) => transaction.delete(ref));
+      existingLockRefs.forEach((ref) => transaction.delete(ref));
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
     throw error;
   }
 }
