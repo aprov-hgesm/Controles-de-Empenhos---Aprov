@@ -126,6 +126,12 @@ jobs:
       - name: Report empenho detail guard
         run: npm run verify:report-empenho-detail
 
+      - name: Supplier reporting tests
+        run: npm run test:supplier-reporting
+
+      - name: Supplier reports guard
+        run: npm run verify:supplier-reports
+
       - name: Supplier reporting aggregation tests
         run: npm run test:supplier-reporting
 
