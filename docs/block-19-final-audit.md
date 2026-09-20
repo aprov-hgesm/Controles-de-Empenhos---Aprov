@@ -152,4 +152,3 @@ O Bloco 19 pode ser considerado tecnicamente encerrado quando, no mesmo commit:
 - Recovery guardrails passa;
 - Block 19 Final Closure Gate passa;
 - branch permanece 0 commits atrás da `main`.
-
