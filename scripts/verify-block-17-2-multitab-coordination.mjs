@@ -139,19 +139,20 @@ requireText(rules, "return slotId in ['slot-1', 'slot-2'];", 'Rules perderam lim
 requireText(rules, 'sameWorkspaceSessionLeaseOwner()', 'Rules perderam vínculo de identidade do lease.');
 
 for (const scenario of [
-  'coordenação multiaba elege um líder e promove seguidora após fechamento',
-  "sessionCoordinatorRole(pageA1)",
-  "toBe('follower')",
-  "await pageA1.close()",
-  "sessionCoordinatorRole(pageA2)",
+  'coordenação multiaba mantém um único líder e promove a seguidora sem trocar a sessão lógica',
+  "toBe('follower,leader')",
+  "const leaderPage = roleA === 'leader' ? pageA : pageB",
+  'await leaderPage.close()',
+  'sessionCoordinatorRole(followerPage)',
   "toBe('leader')",
-  'expect(await logicalSessionId(pageA2)).toBe(sessionIdBefore)',
+  'expect(await logicalSessionId(followerPage)).toBe(sessionIdBefore)',
 ]) {
   requireText(operatorE2e, scenario, `E2E de liderança/failover ausente: ${scenario}`);
 }
 
 for (const scenario of [
   'aba líder propaga revogação administrativa para a aba seguidora',
+  "toBe('follower,leader')",
   'await expect(pageA1.getByTestId',
   'await expect(pageA2.getByTestId',
 ]) {
