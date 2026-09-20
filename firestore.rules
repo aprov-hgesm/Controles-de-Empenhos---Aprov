@@ -246,6 +246,66 @@ service cloud.firestore {
         && resource.data.accountEmail == request.auth.token.email;
     }
 
+    function validSessionRevocationCreate(workspaceId, sessionId) {
+      return isPlatformAdmin()
+        && request.resource.data.keys().hasAll([
+          'revocationVersion',
+          'sessionId',
+          'workspaceId',
+          'ug',
+          'uid',
+          'accountEmail',
+          'slotId',
+          'createdAt',
+          'createdBy',
+          'expiresAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'revocationVersion',
+          'sessionId',
+          'workspaceId',
+          'ug',
+          'uid',
+          'accountEmail',
+          'slotId',
+          'createdAt',
+          'createdBy',
+          'expiresAt'
+        ])
+        && request.resource.data.revocationVersion == 'emprovex_session_revocation_v1'
+        && request.resource.data.sessionId == sessionId
+        && request.resource.data.workspaceId == workspaceId
+        && isValidUnitUg(request.resource.data.ug)
+        && request.resource.data.uid is string
+        && request.resource.data.uid.size() > 0
+        && request.resource.data.accountEmail is string
+        && request.resource.data.accountEmail.size() > 3
+        && isValidSessionSlotId(request.resource.data.slotId)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.createdBy == request.auth.token.email
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt > request.time;
+    }
+
+    function validAdminSessionSlotDelete(workspaceId, slotId) {
+      return isPlatformAdmin()
+        && isValidSessionSlotId(slotId)
+        && resource.data.workspaceId == workspaceId
+        && resource.data.slotId == slotId
+        && existsAfter(
+          /databases/$(database)/documents/workspaces/$(workspaceId)/sessionRevocations/$(resource.data.sessionId)
+        )
+        && getAfter(
+          /databases/$(database)/documents/workspaces/$(workspaceId)/sessionRevocations/$(resource.data.sessionId)
+        ).data.sessionId == resource.data.sessionId
+        && getAfter(
+          /databases/$(database)/documents/workspaces/$(workspaceId)/sessionRevocations/$(resource.data.sessionId)
+        ).data.uid == resource.data.uid
+        && getAfter(
+          /databases/$(database)/documents/workspaces/$(workspaceId)/sessionRevocations/$(resource.data.sessionId)
+        ).data.slotId == slotId;
+    }
+
     function canReadWorkspaceMetadataFromResource(workspaceId) {
       return isVerifiedUser()
         && resource.data.id == workspaceId
@@ -1257,6 +1317,7 @@ service cloud.firestore {
         'sector.ug_backfill',
         'sector.password_reset',
         'sector.delete',
+        'session.terminate',
         'historical.repair'
       ];
     }
@@ -1266,7 +1327,7 @@ service cloud.firestore {
     }
 
     function isValidAuditEntityType(entityType) {
-      return entityType in ['invoice', 'invoice_batch', 'empenho', 'workspace', 'ns_lock'];
+      return entityType in ['invoice', 'invoice_batch', 'empenho', 'workspace', 'session', 'ns_lock'];
     }
 
     function auditUgMatchesWorkspace(workspaceId, ug) {
@@ -1362,7 +1423,8 @@ service cloud.firestore {
           'sector.status_change',
           'sector.ug_backfill',
           'sector.password_reset',
-          'sector.delete'
+          'sector.delete',
+          'session.terminate'
         ];
     }
 
@@ -1448,7 +1510,22 @@ service cloud.firestore {
       allow get, list: if canAccessWorkspace(workspaceId) || isPlatformAdmin();
       allow create: if validWorkspaceSessionLeaseCreate(workspaceId, slotId);
       allow update: if validWorkspaceSessionLeaseUpdate(workspaceId, slotId);
-      allow delete: if validWorkspaceSessionLeaseDelete(workspaceId, slotId);
+      allow delete: if validWorkspaceSessionLeaseDelete(workspaceId, slotId)
+        || validAdminSessionSlotDelete(workspaceId, slotId);
+    }
+
+    // Block 16.2 — tombstones curtos impedem uma sessão encerrada remotamente
+    // de recriar o slot com o mesmo sessionId.
+    match /workspaces/{workspaceId}/sessionRevocations/{sessionId} {
+      allow get: if isPlatformAdmin()
+        || (
+          canAccessWorkspace(workspaceId)
+          && resource.data.uid == request.auth.uid
+          && resource.data.accountEmail == request.auth.token.email
+        );
+      allow list: if isPlatformAdmin();
+      allow create: if validSessionRevocationCreate(workspaceId, sessionId);
+      allow update, delete: if false;
     }
 
     // Workspace-scoped operational data. There is deliberately no admin bypass:
