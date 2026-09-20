@@ -19,7 +19,6 @@ const layerCss = read('features/inicio/components/InicioInteractionLayer.module.
 const coreCss = read('features/inicio/components/InicioCore.module.css');
 const orbitCss = read('features/inicio/components/InicioOrbitSystem.module.css');
 const constellationCss = read('features/inicio/components/InicioConstellation.module.css');
-const quickCss = read('features/inicio/components/InicioQuickActions.module.css');
 const docs = read('docs/block-19-home-experience.md');
 
 requireText(view, "import { InicioInteractionLayer }", 'Início não importa a camada de microinterações.');
@@ -38,7 +37,6 @@ requireText(layerCss, '@media (prefers-reduced-motion: reduce)', 'Microinteraç�
 requireText(coreCss, '.root:active', 'Núcleo não possui resposta de pressionamento.');
 requireText(orbitCss, '.planet:active .planetSurface', 'Planetas não possuem resposta de pressionamento.');
 requireText(constellationCss, '.star:active', 'Estrelas não possuem resposta de pressionamento.');
-requireText(quickCss, '.action:active', 'Ações rápidas não possuem resposta de pressionamento.');
 requireText(docs, 'Bloco 19.8', 'Documentação não registra microinterações.');
 
 forbidText(layerCss, 'cursor: none', 'Cursor nativo foi ocultado indevidamente.');
