@@ -283,6 +283,7 @@ export function InicioOrbitSystem({
               : styles.floatingTooltip
           }
           data-placement={tooltipState.placement}
+          data-kind={tooltipState.key}
           role="tooltip"
           style={{
             left: `${tooltipState.left}%`,
