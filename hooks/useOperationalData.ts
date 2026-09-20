@@ -30,7 +30,6 @@ import {
   SESSION_CAPACITY_EXCEEDED_MESSAGE,
   clearAllLocalWorkspaceSessionState,
   clearLocalWorkspaceSessionLease,
-  isSessionCapacityExceededError,
   isTerminalSessionLeaseError,
   releaseWorkspaceSessionLease,
   renewWorkspaceSessionLeaseIfDue,
