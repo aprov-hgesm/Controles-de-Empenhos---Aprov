@@ -5,6 +5,16 @@ import {
   resetSectorPasswordWithAuth,
   verifyFounderSession,
 } from '../../../../lib/server/sectorProvisioningAdmin';
+import {
+  ApiSecurityError,
+  apiSecurityErrorHeaders,
+  assertAdminMutationEnabled,
+  createRequestSecurityContext,
+  enforceAuthenticatedAdminBurstLimit,
+  enforcePreAuthBurstLimit,
+  readBoundedJsonRequest,
+  securityResponseHeaders,
+} from '../../../../lib/server/requestSecurity';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,13 +26,19 @@ function bearerToken(request: Request): string {
 }
 
 export async function POST(request: Request) {
+  const security = createRequestSecurityContext(request, 'sector-password-reset');
+
   try {
+    enforcePreAuthBurstLimit(security);
     const founder = await verifyFounderSession(bearerToken(request));
-    const body = await request.json().catch(() => null) as {
+    enforceAuthenticatedAdminBurstLimit(security, founder.uid, 'mutation');
+    assertAdminMutationEnabled(security, 'sector-password-reset');
+
+    const body = await readBoundedJsonRequest<{
       workspaceId?: unknown;
       email?: unknown;
       newPassword?: unknown;
-    } | null;
+    }>(request, security);
 
     const workspaceId = typeof body?.workspaceId === 'string' ? body.workspaceId : '';
     const email = typeof body?.email === 'string' ? body.email : '';
@@ -35,8 +51,26 @@ export async function POST(request: Request) {
       founder
     );
 
-    return NextResponse.json({ ok: true, result });
+    return NextResponse.json(
+      { ok: true, result },
+      { headers: securityResponseHeaders(security) }
+    );
   } catch (error) {
+    if (error instanceof ApiSecurityError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: error.message,
+          code: error.code,
+          recoveryRequired: false,
+        },
+        {
+          status: error.httpStatus,
+          headers: apiSecurityErrorHeaders(security, error),
+        }
+      );
+    }
+
     if (error instanceof SectorProvisioningFailure) {
       return NextResponse.json(
         {
@@ -45,11 +79,17 @@ export async function POST(request: Request) {
           code: error.code,
           recoveryRequired: error.recoveryRequired,
         },
-        { status: error.httpStatus }
+        {
+          status: error.httpStatus,
+          headers: securityResponseHeaders(security),
+        }
       );
     }
 
-    console.error('Unexpected EMPROVEX sector password reset failure.', error);
+    console.error('Unexpected EMPROVEX sector password reset failure.', {
+      requestId: security.requestId,
+      error,
+    });
     return NextResponse.json(
       {
         ok: false,
@@ -57,7 +97,10 @@ export async function POST(request: Request) {
         code: 'UPSTREAM_ERROR',
         recoveryRequired: false,
       },
-      { status: 500 }
+      {
+        status: 500,
+        headers: securityResponseHeaders(security),
+      }
     );
   }
 }
