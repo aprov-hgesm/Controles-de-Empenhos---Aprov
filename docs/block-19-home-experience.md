@@ -214,6 +214,7 @@ Concluído:
 - Rules dedicadas vinculam o snapshot ao workspace/UG, limitam a constelação a 72 estrelas e proíbem delete pelo runtime;
 - a suíte multitenant testa isolamento entre workspaces, UG divergente, limite de estrelas e tentativa de delete;
 - o Browser E2E comprova `data-active-realtime-collections="1"` no Início e confirma `data-snapshot="ready"`;
+- a contagem **1** refere-se ao conteúdo operacional da Home; listeners independentes de autenticação, lifecycle e sessão permanecem ativos por segurança;
 - snapshot ausente não provoca fallback caro: a Home mostra um aviso e continua sem abrir coleções brutas;
 - o primeiro snapshot é criado automaticamente quando Empenhos ou Notas Fiscais estiverem em uso e os dados necessários já tiverem sido carregados.
 
