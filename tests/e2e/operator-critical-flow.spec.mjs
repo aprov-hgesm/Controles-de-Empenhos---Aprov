@@ -307,46 +307,51 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
       await pageA1.goto('/');
       await loginSector(pageA1, OPERATOR_A);
 
+      // Sem concorrente, a primeira aba deve assumir a liderança de forma
+      // determinística antes de criarmos a seguidora.
+      await expect.poll(
+        () => sessionCoordinatorRole(pageA1),
+        {
+          timeout: 15_000,
+          intervals: [250, 500, 1000],
+        }
+      ).toBe('leader');
+
+      const sessionIdBefore = await logicalSessionId(pageA1);
+      expect(sessionIdBefore).toBeTruthy();
+
       const pageA2 = await context.newPage();
       await pageA2.goto('/');
       await expect(pageA2.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
         timeout: 20_000,
       });
 
-      await expect.poll(async () => {
-        const roles = [
-          await sessionCoordinatorRole(pageA1),
-          await sessionCoordinatorRole(pageA2),
-        ];
-        return roles.filter((role) => role === 'leader').length;
-      }, {
-        timeout: 15_000,
-        intervals: [250, 500, 1000],
-      }).toBe(1);
-
-      const sessionIdBefore = await logicalSessionId(pageA1);
-      expect(sessionIdBefore).toBeTruthy();
-
-      const roleA1 = await sessionCoordinatorRole(pageA1);
-      const leader = roleA1 === 'leader' ? pageA1 : pageA2;
-      const follower = roleA1 === 'leader' ? pageA2 : pageA1;
-
-      await leader.close();
-
       await expect.poll(
-        () => sessionCoordinatorRole(follower),
+        () => sessionCoordinatorRole(pageA2),
         {
-          timeout: 20_000,
-          intervals: [500, 1000],
+          timeout: 15_000,
+          intervals: [250, 500, 1000],
+        }
+      ).toBe('follower');
+
+      await pageA1.close();
+
+      // A requisição de Web Lock da seguidora já está enfileirada; fechar a líder
+      // deve promovê-la sem depender de timer de polling em background.
+      await expect.poll(
+        () => sessionCoordinatorRole(pageA2),
+        {
+          timeout: 10_000,
+          intervals: [250, 500, 1000],
         }
       ).toBe('leader');
 
       await expect(
-        follower.getByRole('navigation', { name: 'Navegação principal' })
+        pageA2.getByRole('navigation', { name: 'Navegação principal' })
       ).toBeVisible();
 
-      expect(await logicalSessionId(follower)).toBe(sessionIdBefore);
-      await logoutIfAuthenticated(follower);
+      expect(await logicalSessionId(pageA2)).toBe(sessionIdBefore);
+      await logoutIfAuthenticated(pageA2);
     } finally {
       await context.close();
     }
