@@ -15,6 +15,7 @@ import { AppBackground } from '../components/layout/AppBackground';
 import { AppHeader } from '../components/layout/AppHeader';
 import { AppSidebar } from '../components/layout/AppSidebar';
 import { ToastNotification } from '../components/layout/ToastNotification';
+import { OperationalSurfaceTransition } from '../components/layout/OperationalSurfaceTransition';
 import { DashboardView } from '../features/dashboard/components/DashboardView';
 import { InicioView } from '../features/inicio/components/InicioView';
 import { useInicioWorkMemory } from '../features/inicio/hooks/useInicioWorkMemory';
@@ -421,7 +422,7 @@ export default function Home() {
               </div>
             </section>
           ) : (
-            <>
+            <OperationalSurfaceTransition surfaceKey={activeTab}>
           {/* INÍCIO: EXPERIÊNCIA VISUAL / MAPA OPERACIONAL */}
           {activeTab === 'inicio' && (
             <InicioView
@@ -525,7 +526,7 @@ export default function Home() {
             onCancel={() => setEmpenhoToDelete(null)}
             onConfirm={handleDeleteSpecificEmpenho}
           />
-            </>
+            </OperationalSurfaceTransition>
           )}
         </main>
       </div>
