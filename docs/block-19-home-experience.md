@@ -204,7 +204,7 @@ Concluído:
 - o snapshot é apenas dado derivado de apresentação e nunca substitui Empenhos/Alertas como fonte de verdade;
 - `InicioView`, sistema orbital e constelação passaram a consumir exclusivamente `InicioOperationalSnapshot`;
 - o documento agrega total de empenhos, valor total, alertas, recebimentos, execução, classes e até 72 estrelas;
-- o publisher só funciona em **Empenhos** e **Notas Fiscais**, superfícies que já carregam Empenhos + Alertas para o trabalho normal;
+- o publisher funciona em **Empenhos**, **Notas Fiscais** e **Central de Avisos**, superfícies que já carregam Empenhos + Avisos para o trabalho normal;
 - nenhuma coleção adicional é consultada para gerar o snapshot;
 - antes da primeira publicação da sessão, no máximo uma leitura documental compara o `contentHash` remoto;
 - se o conteúdo não mudou, nenhuma gravação é executada;
@@ -216,7 +216,7 @@ Concluído:
 - o Browser E2E comprova `data-active-realtime-collections="1"` no Início e confirma `data-snapshot="ready"`;
 - a contagem **1** refere-se ao conteúdo operacional da Home; listeners independentes de autenticação, lifecycle e sessão permanecem ativos por segurança;
 - snapshot ausente não provoca fallback caro: a Home mostra um aviso e continua sem abrir coleções brutas;
-- o primeiro snapshot é criado automaticamente quando Empenhos ou Notas Fiscais estiverem em uso e os dados necessários já tiverem sido carregados.
+- o primeiro snapshot é criado automaticamente quando Empenhos, Notas Fiscais ou Central de Avisos estiverem em uso e os dados necessários já tiverem sido carregados.
 
 ### Regra econômica consolidada
 
@@ -503,3 +503,16 @@ Nenhuma leitura Firestore, regra de negócio, autenticação, persistência ou d
 - a constelação inteira fica acima das camadas decorativas internas da Home;
 - Header e Sidebar permanecem acima da superfície operacional, enquanto os tooltips são mantidos dentro dos limites da cena para não ficarem ocultos sob a Sidebar;
 - nenhuma leitura Firestore, regra de negócio ou persistência adicional foi criada.
+
+
+## Central de Avisos — evolução do sistema de notificações
+
+- a coleção técnica `alerts` foi preservada para compatibilidade, mas a interface passa a se chamar **Central de Avisos**;
+- eventos concluídos passam a ser classificados como Informativo em vez de Atenção;
+- avisos possuem ciclo de vida Novo, Lido, Resolvido e Arquivado;
+- registros legados sem status são normalizados em runtime, sem migração destrutiva;
+- o planeta da Home continua sem clique e mostra somente ocorrências pendentes relevantes;
+- a Sidebar recebe acesso dedicado à Central e contador de pendências;
+- a Central usa apenas Empenhos + Avisos em realtime;
+- ações realizadas na Central podem atualizar o homeSnapshot sem abrir coleções adicionais;
+- o histórico é preservado por arquivamento em vez de exclusão pela interface.

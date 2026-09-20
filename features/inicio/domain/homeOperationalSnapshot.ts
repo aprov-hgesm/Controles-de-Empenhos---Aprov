@@ -1,4 +1,8 @@
 import type { Alert, Empenho } from '../../../lib/types';
+import {
+  getNoticeSeverity,
+  isNoticePending,
+} from '../../avisos/domain/noticeLifecycle';
 
 export const INICIO_SNAPSHOT_VERSION = 'emprovex_home_snapshot_v1' as const;
 export const INICIO_SNAPSHOT_DOCUMENT_ID = 'homeSnapshot' as const;
@@ -101,7 +105,7 @@ function getEmpenhoTotals(empenho: Empenho) {
 function buildAlertsByEmpenho(alerts: Alert[]): Map<string, Alert[]> {
   const map = new Map<string, Alert[]>();
   alerts.forEach((alert) => {
-    if (!alert.empenhoId) return;
+    if (!alert.empenhoId || !isNoticePending(alert)) return;
     const current = map.get(alert.empenhoId) ?? [];
     current.push(alert);
     map.set(alert.empenhoId, current);
@@ -243,8 +247,12 @@ export function buildInicioOperationalSnapshot({
     classMap.set(classification, current);
   });
 
-  const criticalAlerts = alerts.filter(
-    (alert) => alert.type === 'CRÍTICO' || alert.type === 'ESTOQUE ZERADO'
+  const pendingAlerts = alerts.filter(isNoticePending);
+  const criticalAlerts = pendingAlerts.filter(
+    (alert) => getNoticeSeverity(alert) === 'CRÍTICO'
+  ).length;
+  const attentionAlerts = pendingAlerts.filter(
+    (alert) => getNoticeSeverity(alert) === 'ATENÇÃO'
   ).length;
 
   const selectedEmpenhos = selectSnapshotEmpenhos(empenhos, alertsByEmpenho);
@@ -279,9 +287,9 @@ export function buildInicioOperationalSnapshot({
       totalValue: committed,
     },
     alerts: {
-      total: alerts.length,
+      total: pendingAlerts.length,
       critical: criticalAlerts,
-      attention: Math.max(0, alerts.length - criticalAlerts),
+      attention: attentionAlerts,
     },
     receiving: {
       pendingEmpenhos,

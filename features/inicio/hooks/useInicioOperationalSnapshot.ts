@@ -46,7 +46,7 @@ interface KnownRemoteState {
 const SNAPSHOT_PUBLISH_DEBOUNCE_MS = 900;
 
 function shouldPublishSnapshot(activeTab: OperationalActiveTab): boolean {
-  return activeTab === 'empenhos' || activeTab === 'nova_nf';
+  return activeTab === 'empenhos' || activeTab === 'nova_nf' || activeTab === 'avisos';
 }
 
 export function useInicioOperationalSnapshot({

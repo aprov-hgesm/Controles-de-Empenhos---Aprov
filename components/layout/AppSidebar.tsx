@@ -2,6 +2,7 @@
 
 import {
   Activity,
+  BellRing,
   CalendarDays,
   FileSpreadsheet,
   FileText,
@@ -25,12 +26,14 @@ export type AppTab =
   | 'nova_nf'
   | 'relatorios'
   | 'itens_empenho'
-  | 'cronogramas';
+  | 'cronogramas'
+  | 'avisos';
 
 interface AppSidebarProps {
   activeTab: AppTab;
   open: boolean;
   userDisplayName: string;
+  noticeCount?: number;
   onClose: () => void;
   onNavigate: (tab: AppTab) => void;
   onLogout: () => void | Promise<void>;
@@ -40,6 +43,7 @@ export function AppSidebar({
   activeTab,
   open,
   userDisplayName,
+  noticeCount = 0,
   onClose,
   onNavigate,
   onLogout,
@@ -161,6 +165,27 @@ export function AppSidebar({
             >
               <FileText className="w-5 h-5" aria-hidden="true" />
               <span>Notas Fiscais</span>
+            </button>
+
+            <button
+              data-testid="nav-avisos"
+              onClick={() => onNavigate('avisos')}
+              className="emprovex-sidebar-nav-item"
+              data-active={activeTab === 'avisos' ? 'true' : 'false'}
+              aria-current={activeTab === 'avisos' ? 'page' : undefined}
+            >
+              <BellRing className="w-5 h-5" aria-hidden="true" />
+              <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                <span>Central de Avisos</span>
+                {noticeCount > 0 && (
+                  <span
+                    className="inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[9px] font-black text-white"
+                    aria-label={`${noticeCount} aviso(s) pendente(s)`}
+                  >
+                    {noticeCount > 99 ? '99+' : noticeCount}
+                  </span>
+                )}
+              </span>
             </button>
 
             <button

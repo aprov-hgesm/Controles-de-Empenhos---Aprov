@@ -17,6 +17,7 @@ const expected = {
   relatorios: ['empenhos', 'invoices', 'comissoes'],
   itens_empenho: ['empenhos'],
   cronogramas: ['empenhos', 'cronogramas'],
+  avisos: ['empenhos', 'alerts'],
 };
 
 for (const [tab, collections] of Object.entries(expected)) {
@@ -48,3 +49,4 @@ console.log('Empenhos: 3 coleções operacionais realtime');
 console.log('Notas Fiscais: 4 coleções operacionais realtime');
 console.log('Relatórios: 3 coleções operacionais realtime');
 console.log('Cronogramas: 2 coleções operacionais realtime');
+console.log('Central de Avisos: 2 coleções operacionais realtime');
