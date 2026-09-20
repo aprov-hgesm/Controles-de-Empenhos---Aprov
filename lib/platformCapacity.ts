@@ -15,8 +15,8 @@ export const SESSION_LEASE_VERSION = 'emprovex_session_v1';
 export const SESSION_REVOCATION_VERSION = 'emprovex_session_revocation_v1';
 export const SESSION_REVOCATION_TTL_MS = 24 * 60 * 60 * 1000;
 export const SESSION_SLOT_IDS = ['slot-1', 'slot-2'] as const;
-export const SESSION_LEASE_DURATION_MS = 10 * 60 * 1000;
-export const SESSION_HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000;
+export const SESSION_LEASE_DURATION_MS = 30 * 60 * 1000;
+export const SESSION_HEARTBEAT_INTERVAL_MS = 15 * 60 * 1000;
 
 export type SimultaneousSessionLimit = number | null;
 export type WorkspaceSessionSlotId = (typeof SESSION_SLOT_IDS)[number];
