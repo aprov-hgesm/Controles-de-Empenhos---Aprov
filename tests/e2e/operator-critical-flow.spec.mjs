@@ -261,7 +261,7 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     await expectRealtimeProfile(page, 4);
 
     await page.getByTestId('nav-relatorios').click();
-    await expectRealtimeProfile(page, 3);
+    await expectRealtimeProfile(page, 2);
 
     await page.getByRole('button', { name: 'Cronogramas', exact: true }).first().click();
     await expectRealtimeProfile(page, 2);
