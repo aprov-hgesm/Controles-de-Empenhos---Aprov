@@ -176,8 +176,6 @@
 
 .star:hover .starTooltip,
 .star:focus-visible .starTooltip,
-.sun:hover .celestialTooltip,
-.sun:focus-visible .celestialTooltip,
 .planet:hover .celestialTooltip,
 .planet:focus-visible .celestialTooltip {
   opacity: 1;
@@ -325,71 +323,10 @@
   opacity: 0.75;
 }
 
-.sun {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  z-index: 4;
-  width: clamp(110px, 15vw, 154px);
-  aspect-ratio: 1;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: white;
-  cursor: pointer;
-  transform: translate(-50%, -50%);
-}
-
-.sun:focus-visible,
 .planet:focus-visible,
 .classMoon:focus-visible {
   outline: 2px solid rgba(146, 176, 255, 0.75);
   outline-offset: 4px;
-}
-
-.sunCorona {
-  position: absolute;
-  inset: -30%;
-  border-radius: inherit;
-  background: radial-gradient(circle, rgba(86, 125, 255, 0.28), rgba(86, 125, 255, 0.07) 38%, transparent 68%);
-  filter: blur(8px);
-  animation: sunBreath 5.8s ease-in-out infinite;
-}
-
-.sunCore {
-  position: absolute;
-  inset: 9%;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border: 1px solid rgba(186, 205, 255, 0.28);
-  border-radius: inherit;
-  background:
-    radial-gradient(circle at 36% 30%, rgba(210, 225, 255, 0.46), transparent 13%),
-    radial-gradient(circle at center, #3358ad 0%, #13285d 44%, #061127 76%);
-  box-shadow:
-    0 0 28px rgba(76, 115, 255, 0.46),
-    0 0 90px rgba(52, 76, 183, 0.25),
-    inset 0 0 26px rgba(166, 196, 255, 0.14);
-  transition: transform 220ms ease, box-shadow 220ms ease;
-}
-
-.sun:hover .sunCore {
-  transform: scale(1.045);
-  box-shadow:
-    0 0 34px rgba(91, 132, 255, 0.6),
-    0 0 110px rgba(67, 93, 204, 0.33),
-    inset 0 0 32px rgba(180, 207, 255, 0.18);
-}
-
-.sunSymbol {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: clamp(18px, 3vw, 28px);
-  font-weight: 900;
-  letter-spacing: 0.15em;
-  text-indent: 0.15em;
-  text-shadow: 0 0 18px rgba(205, 224, 255, 0.5);
 }
 
 .celestialTooltip {
@@ -636,11 +573,6 @@
   100% { transform: scale(1.6); opacity: 0; }
 }
 
-@keyframes sunBreath {
-  0%, 100% { transform: scale(0.92); opacity: 0.65; }
-  50% { transform: scale(1.08); opacity: 1; }
-}
-
 @keyframes floatPlanet {
   0%, 100% { translate: 0 0; }
   50% { translate: 0 -8px; }
@@ -738,7 +670,6 @@
   .star,
   .star[data-severity='critical'],
   .starHalo,
-  .sunCorona,
   .planet,
   .alertPlanet,
   .dashboardPlanet,
