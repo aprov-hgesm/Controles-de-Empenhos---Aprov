@@ -451,3 +451,42 @@ Home
 → sem excesso de brilho
 → sem custo Firestore adicional
 ```
+
+
+## Bloco 21 — estrelas operacionais e meteoros atmosféricos
+
+Concluído como refinamento visual e de usabilidade da Home.
+
+### Estrelas operacionais
+
+- cada empenho visível deixa de usar um ponto circular e passa a usar uma estrela vetorial de quatro pontas curvas;
+- o glifo é SVG inline leve e escala sem perda de definição;
+- partículas atmosféricas permanecem circulares, criando distinção semântica imediata entre cenário e objeto operacional;
+- o tamanho visual da estrela continua relacionado ao valor do empenho, com mínimo maior para tornar a silhueta reconhecível;
+- a área real de hover/click é desacoplada do tamanho visual e possui mínimo de 16 px em desktop;
+- em ponteiro coarse/touch, a área mínima sobe para 22 px;
+- hover/foco preserva estabilização, halo, tooltip e abertura direta do empenho;
+- atenção, crítico e encerrado mantêm suas cores e estados;
+- a legenda usa a mesma linguagem de quatro pontas.
+
+### Estrelas cadentes
+
+- adicionada uma camada esparsa de sete meteoros decorativos;
+- cada meteoro possui posição, comprimento, ângulo, ciclo e trajetória determinísticos;
+- o deslocamento visível acontece rapidamente dentro de um ciclo maior, evitando sensação de chuva contínua;
+- o rastro é fino, luminoso e não interativo;
+- mobile limita a camada aos três primeiros meteoros;
+- balanced também reduz a densidade;
+- static remove completamente os meteoros;
+- prefers-reduced-motion desativa a animação;
+- a camada continua atrás da constelação e nunca intercepta o ponteiro.
+
+### Contrato
+
+```
+círculo difuso → atmosfera decorativa
+estrela de quatro pontas → empenho interativo
+rastro veloz → meteoro decorativo
+```
+
+Nenhuma leitura Firestore, regra de negócio, autenticação, persistência ou dependência gráfica adicional foi criada.
