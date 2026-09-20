@@ -310,6 +310,9 @@ jobs:
       - name: Block 19.12 responsiveness guard
         run: npm run verify:block-19-12-responsiveness
 
+      - name: Block 19.13 visual polish guard
+        run: npm run verify:block-19-13-visual-polish
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
