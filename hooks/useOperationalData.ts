@@ -178,7 +178,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     }
   }, [router, user, workspaceContext.status]);
 
-  const sessionCoordinatorIdentityKey = (
+  const sessionControlIdentityKey = (
     user
     && isOperationalSectorContext(workspaceContext)
     && workspaceContext.resolutionSource === 'platform-directory'
@@ -234,7 +234,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
       active = false;
       sessionControl.stop();
     };
-  }, [sessionCoordinatorIdentityKey]);
+  }, [sessionControlIdentityKey]);
 
   const finalizeSignIn = async (authenticatedUser: User) => {
     setActiveProfileMode('sector');
