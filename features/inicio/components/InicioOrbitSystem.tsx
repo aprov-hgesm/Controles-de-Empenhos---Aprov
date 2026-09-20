@@ -60,6 +60,7 @@ export function InicioOrbitSystem({
 
       <div
         tabIndex={0}
+        data-inicio-star-exclusion="planet"
         className={`${styles.planet} ${styles.alertPlanet}`}
         data-alert={alertSeverity.total > 0 ? 'true' : 'false'}
         aria-label={`Alertas operacionais: ${alertSeverity.total} ativos`}
@@ -83,6 +84,7 @@ export function InicioOrbitSystem({
 
       <div
         tabIndex={0}
+        data-inicio-star-exclusion="planet"
         className={`${styles.planet} ${styles.receivingPlanet}`}
         aria-label={`Recebimentos: ${receiving.pendingEmpenhos} empenhos com saldo`}
       >
@@ -101,6 +103,7 @@ export function InicioOrbitSystem({
 
       <div
         tabIndex={0}
+        data-inicio-star-exclusion="planet"
         className={`${styles.planet} ${styles.executionPlanet}`}
         aria-label={`Execução estimada: ${execution.percentage}%`}
       >
@@ -123,6 +126,7 @@ export function InicioOrbitSystem({
 
       <div
         tabIndex={0}
+        data-inicio-star-exclusion="planet"
         className={`${styles.planet} ${styles.dashboardPlanet}`}
         aria-label="Painel de Controle"
       >
@@ -140,6 +144,7 @@ export function InicioOrbitSystem({
       <div className={styles.classSystem} aria-label="Classes de empenho">
         <div
           tabIndex={0}
+          data-inicio-star-exclusion="planet"
           className={styles.classPlanet}
           aria-label="Classes de empenho"
           aria-describedby="inicio-class-tooltip"
