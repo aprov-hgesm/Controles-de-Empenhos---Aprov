@@ -666,3 +666,420 @@
 [data-performance='static'] .planetGlow {
   animation: none !important;
 }
+
+
+/* Block 20 — cinematic functional planets */
+.track {
+  border-color: rgba(128, 156, 225, 0.1);
+  box-shadow:
+    inset 0 0 32px rgba(67, 91, 165, 0.018),
+    0 0 24px rgba(62, 86, 170, 0.018);
+}
+
+.track::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent 0 43deg,
+      rgba(151, 180, 246, 0.25) 44deg 45deg,
+      transparent 46deg 133deg,
+      rgba(123, 149, 217, 0.18) 134deg 135deg,
+      transparent 136deg 360deg
+    );
+  -webkit-mask: radial-gradient(circle, transparent 97%, #000 98%);
+  mask: radial-gradient(circle, transparent 97%, #000 98%);
+  pointer-events: none;
+}
+
+.planet {
+  --planet-rgb: 137, 167, 236;
+  --planet-light: #b8d0ff;
+  --planet-mid: #526dba;
+  --planet-deep: #0a1228;
+  width: 21px;
+}
+
+.alertPlanet {
+  --planet-rgb: 255, 101, 78;
+  --planet-light: #ffb39b;
+  --planet-mid: #a5453c;
+  --planet-deep: #26090f;
+  width: 21px;
+}
+
+.receivingPlanet {
+  --planet-rgb: 72, 220, 209;
+  --planet-light: #b9fff7;
+  --planet-mid: #278f8b;
+  --planet-deep: #061d22;
+  width: 20px;
+}
+
+.executionPlanet {
+  --planet-rgb: 245, 183, 72;
+  --planet-light: #ffe2a0;
+  --planet-mid: #a56d24;
+  --planet-deep: #281605;
+  width: 21px;
+}
+
+.dashboardPlanet {
+  --planet-rgb: 160, 116, 255;
+  --planet-light: #dbc8ff;
+  --planet-mid: #6747ad;
+  --planet-deep: #120a27;
+  width: 20px;
+}
+
+.planetGlow {
+  inset: -58%;
+  background:
+    radial-gradient(circle,
+      rgba(var(--planet-rgb), 0.24) 0%,
+      rgba(var(--planet-rgb), 0.09) 39%,
+      transparent 69%);
+  filter: blur(5px);
+  opacity: 0.7;
+}
+
+.planetSurface {
+  border-color: rgba(var(--planet-rgb), 0.34);
+  background:
+    radial-gradient(circle at 31% 25%, rgba(255,255,255,0.52), transparent 10%),
+    radial-gradient(circle at 38% 34%, var(--planet-light) 0%, var(--planet-mid) 27%, var(--planet-deep) 69%, #02040a 100%);
+  box-shadow:
+    0 0 13px rgba(var(--planet-rgb), 0.3),
+    inset -6px -7px 12px rgba(0, 0, 0, 0.52),
+    inset 4px 4px 8px rgba(255,255,255,0.08);
+}
+
+.planetMaterial,
+.planetBands,
+.planetSpecular {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.planetMaterial {
+  background:
+    radial-gradient(circle at 66% 68%, rgba(0,0,0,0.22) 0 9%, transparent 10%),
+    radial-gradient(circle at 29% 58%, rgba(255,255,255,0.07) 0 7%, transparent 8%),
+    radial-gradient(circle at 61% 34%, rgba(0,0,0,0.16) 0 6%, transparent 7%);
+  opacity: 0.82;
+  mix-blend-mode: soft-light;
+}
+
+.planetBands {
+  inset: 3%;
+  background:
+    repeating-linear-gradient(
+      168deg,
+      transparent 0 3px,
+      rgba(255,255,255,0.045) 4px,
+      transparent 5px 7px
+    );
+  opacity: 0.45;
+  mix-blend-mode: screen;
+}
+
+.planetSpecular {
+  background:
+    radial-gradient(circle at 26% 21%, rgba(255,255,255,0.7), rgba(255,255,255,0.1) 13%, transparent 25%),
+    linear-gradient(125deg, transparent 20%, rgba(255,255,255,0.07) 39%, transparent 53%);
+}
+
+.alertPlanet .planetMaterial {
+  background:
+    linear-gradient(112deg, transparent 18%, rgba(255, 175, 139, 0.16) 20%, transparent 23%),
+    linear-gradient(42deg, transparent 54%, rgba(255, 85, 63, 0.2) 56%, transparent 59%),
+    radial-gradient(circle at 65% 66%, rgba(20,0,3,0.34) 0 12%, transparent 13%);
+}
+
+.receivingPlanet .planetBands {
+  background:
+    repeating-linear-gradient(
+      176deg,
+      transparent 0 2px,
+      rgba(184,255,249,0.12) 3px,
+      transparent 4px 6px
+    );
+  opacity: 0.62;
+}
+
+.executionPlanet .planetMaterial {
+  background:
+    radial-gradient(circle at 63% 60%, rgba(74, 38, 4, 0.3) 0 13%, transparent 14%),
+    radial-gradient(circle at 35% 71%, rgba(255, 218, 138, 0.11) 0 10%, transparent 11%);
+}
+
+.dashboardPlanet .planetMaterial {
+  background:
+    linear-gradient(90deg, transparent 46%, rgba(224,206,255,0.12) 48% 50%, transparent 52%),
+    linear-gradient(0deg, transparent 46%, rgba(176,143,255,0.1) 48% 50%, transparent 52%);
+}
+
+.planetHud {
+  position: absolute;
+  inset: -8px;
+  z-index: 5;
+  border-radius: 999px;
+  background:
+    conic-gradient(
+      from 10deg,
+      rgba(var(--planet-rgb), 0.74) 0deg 9deg,
+      transparent 10deg 76deg,
+      rgba(var(--planet-rgb), 0.4) 77deg 82deg,
+      transparent 83deg 174deg,
+      rgba(var(--planet-rgb), 0.55) 175deg 181deg,
+      transparent 182deg 360deg
+    );
+  -webkit-mask: radial-gradient(circle, transparent 72%, #000 74%, #000 80%, transparent 82%);
+  mask: radial-gradient(circle, transparent 72%, #000 74%, #000 80%, transparent 82%);
+  opacity: 0.46;
+  animation: planetHudSpin 17s linear infinite;
+  pointer-events: none;
+  transition: opacity 180ms ease, scale 180ms ease;
+}
+
+.planetHud i {
+  position: absolute;
+  width: 3px;
+  height: 1px;
+  border-radius: 999px;
+  background: rgba(var(--planet-rgb), 0.85);
+  box-shadow: 0 0 5px rgba(var(--planet-rgb), 0.5);
+}
+
+.planetHud i:nth-child(1) { left: 50%; top: 1px; }
+.planetHud i:nth-child(2) { right: 1px; top: 50%; transform: rotate(90deg); }
+.planetHud i:nth-child(3) { left: 50%; bottom: 1px; }
+.planetHud i:nth-child(4) { left: 1px; top: 50%; transform: rotate(90deg); }
+
+.planet:hover .planetSurface,
+.planet:focus-visible .planetSurface {
+  transform: scale(1.16);
+  border-color: rgba(var(--planet-rgb), 0.56);
+  box-shadow:
+    0 0 18px rgba(var(--planet-rgb), 0.5),
+    0 0 36px rgba(var(--planet-rgb), 0.18),
+    inset -6px -7px 12px rgba(0,0,0,0.47),
+    inset 4px 4px 8px rgba(255,255,255,0.11);
+}
+
+.planet:hover .planetGlow,
+.planet:focus-visible .planetGlow {
+  opacity: 1;
+  transform: scale(1.28);
+}
+
+.planet:hover .planetHud,
+.planet:focus-visible .planetHud {
+  opacity: 0.95;
+  scale: 1.08;
+}
+
+.planet svg {
+  width: 8px;
+  height: 8px;
+  filter: drop-shadow(0 0 3px rgba(255,255,255,0.28));
+}
+
+.executionHalo {
+  inset: -7px;
+  background:
+    conic-gradient(
+      rgba(var(--planet-rgb), 0.82) var(--execution),
+      rgba(var(--planet-rgb), 0.09) var(--execution)
+    );
+  opacity: 0.66;
+}
+
+.alertPlanet[data-alert='true'] .planetGlow {
+  background:
+    radial-gradient(circle,
+      rgba(var(--planet-rgb), 0.34),
+      rgba(var(--planet-rgb), 0.08) 45%,
+      transparent 70%);
+}
+
+.classSystem {
+  width: 22px;
+}
+
+.classPlanet {
+  --planet-rgb: 207, 179, 255;
+  position: relative;
+  width: 22px;
+  border-color: rgba(210, 184, 255, 0.32);
+  background:
+    radial-gradient(circle at 31% 24%, rgba(255,255,255,0.58), transparent 11%),
+    radial-gradient(circle at 39% 34%, #e1d4ff 0%, #7656b2 29%, #24123e 68%, #05040a 100%);
+  box-shadow:
+    0 0 15px rgba(185, 145, 255, 0.28),
+    inset -6px -7px 12px rgba(7,2,14,0.48),
+    inset 4px 4px 8px rgba(255,255,255,0.08);
+  overflow: visible;
+}
+
+.classMaterial,
+.classFacet {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.classMaterial {
+  background:
+    linear-gradient(45deg, transparent 46%, rgba(242,235,255,0.12) 48% 51%, transparent 53%),
+    linear-gradient(135deg, transparent 46%, rgba(151,118,214,0.16) 48% 51%, transparent 53%);
+}
+
+.classFacet {
+  inset: 2px;
+  border: 1px solid rgba(226, 214, 255, 0.11);
+  clip-path: polygon(50% 0, 92% 25%, 92% 75%, 50% 100%, 8% 75%, 8% 25%);
+}
+
+.classHud {
+  position: absolute;
+  inset: -8px;
+  border-radius: 999px;
+  background:
+    conic-gradient(
+      rgba(211,186,255,0.72) 0 11deg,
+      transparent 12deg 86deg,
+      rgba(183,151,245,0.42) 87deg 93deg,
+      transparent 94deg 200deg,
+      rgba(226,218,255,0.5) 201deg 208deg,
+      transparent 209deg 360deg
+    );
+  -webkit-mask: radial-gradient(circle, transparent 72%, #000 74%, #000 80%, transparent 82%);
+  mask: radial-gradient(circle, transparent 72%, #000 74%, #000 80%, transparent 82%);
+  opacity: 0.52;
+  animation: planetHudSpin 19s linear infinite reverse;
+  pointer-events: none;
+}
+
+.classHud i {
+  position: absolute;
+  width: 3px;
+  height: 1px;
+  background: rgba(222, 205, 255, 0.8);
+  box-shadow: 0 0 5px rgba(191, 157, 255, 0.48);
+}
+
+.classHud i:nth-child(1) { left: 50%; top: 1px; }
+.classHud i:nth-child(2) { right: 1px; top: 50%; transform: rotate(90deg); }
+.classHud i:nth-child(3) { left: 50%; bottom: 1px; }
+.classHud i:nth-child(4) { left: 1px; top: 50%; transform: rotate(90deg); }
+
+.classPlanetOrbit {
+  inset: -5px;
+  border-color: rgba(214, 190, 255, 0.16);
+}
+
+.classPlanet svg {
+  position: relative;
+  z-index: 4;
+  width: 7px;
+  height: 7px;
+  filter: drop-shadow(0 0 3px rgba(229, 216, 255, 0.34));
+}
+
+.classPlanet > span:last-child {
+  position: relative;
+  z-index: 4;
+  margin-top: -5px;
+  color: rgba(245, 239, 255, 0.88);
+  font-size: 4.5px;
+}
+
+.classSystem:hover .classPlanet,
+.classSystem:focus-within .classPlanet {
+  transform: scale(1.12);
+  border-color: rgba(228, 214, 255, 0.5);
+  box-shadow:
+    0 0 20px rgba(190, 150, 255, 0.42),
+    0 0 38px rgba(129, 90, 217, 0.14),
+    inset -6px -7px 12px rgba(7,2,14,0.45);
+}
+
+.classSystem:hover .classHud,
+.classSystem:focus-within .classHud {
+  opacity: 0.96;
+}
+
+.floatingTooltip,
+.floatingClassTooltip {
+  border-color: rgba(156, 179, 232, 0.22);
+  background:
+    linear-gradient(145deg, rgba(10, 18, 39, 0.97), rgba(3, 7, 17, 0.985));
+  box-shadow:
+    0 20px 50px rgba(0,0,0,0.44),
+    inset 0 1px 0 rgba(255,255,255,0.045);
+}
+
+.floatingTooltip::before,
+.floatingClassTooltip::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(174, 199, 255, 0.52), transparent);
+}
+
+@keyframes planetHudSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 640px) {
+  .planet {
+    width: 19px;
+  }
+
+  .classSystem,
+  .classPlanet {
+    width: 20px;
+  }
+
+  .planetHud,
+  .classHud {
+    inset: -7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planetHud,
+  .classHud {
+    animation: none !important;
+  }
+}
+
+[data-performance='balanced'] .planetHud,
+[data-performance='balanced'] .classHud {
+  animation: none;
+  opacity: 0.36;
+}
+
+[data-performance='balanced'] .planetMaterial,
+[data-performance='balanced'] .planetBands {
+  opacity: 0.5;
+}
+
+[data-performance='static'] .planetHud,
+[data-performance='static'] .classHud {
+  animation: none !important;
+}
+
+[data-performance='static'] .planetBands {
+  display: none;
+}
