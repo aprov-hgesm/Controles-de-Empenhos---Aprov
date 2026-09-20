@@ -50,7 +50,9 @@ As seguidoras:
 - não abrem esses três listeners Firestore de controle;
 - não mantêm timer próprio de renovação;
 - recebem invalidação da líder por BroadcastChannel;
-- tentam assumir o Web Lock a cada 4 segundos.
+- mantêm uma requisição **enfileirada** no Web Lock exclusivo.
+
+Não existe polling periódico para eleição. A fila nativa do Web Locks promove automaticamente a próxima aba quando a líder fecha ou libera o lock. Isso evita depender de `setInterval` em abas em segundo plano, cujos timers podem ser atrasados ou congelados pelo navegador.
 
 Se a líder fechar, travar ou liberar o lock, uma seguidora assume a liderança automaticamente e reabre somente os três listeners necessários.
 
@@ -116,11 +118,12 @@ A diferença é que somente a líder mantém a rotina que decide quando renovar.
 
 O Browser E2E agora prova:
 
-1. duas abas do mesmo contexto convergem para exatamente uma `leader` e uma `follower`;
-2. fechar a aba líder promove a seguidora em até a janela de retry;
-3. o `sessionId` lógico permanece o mesmo após o failover;
-4. a navegação operacional permanece ativa;
-5. revogação administrativa observada pela líder derruba também a seguidora.
+1. a primeira aba assume `leader` antes da abertura da segunda;
+2. a segunda aba entra em `follower` com uma requisição de Web Lock já enfileirada;
+3. fechar a líder promove a seguidora sem depender de timer de polling;
+4. o `sessionId` lógico permanece o mesmo após o failover;
+5. a navegação operacional permanece ativa;
+6. revogação administrativa observada pela líder derruba também a seguidora.
 
 ## Escopo deliberadamente não alterado
 
@@ -147,7 +150,7 @@ O Bloco 17.2 está concluído quando:
 - a invalidação usa BroadcastChannel;
 - existe fallback seguro;
 - somente a líder possui os 3 listeners de controle em modo coordenado;
-- failover é automático;
+- failover é automático por fila nativa do Web Locks, sem polling de aba em background;
 - revogação chega a todas as abas;
 - limite de duas sessões continua preservado;
 - testes multi-tenant, Browser E2E, build e TypeScript permanecem verdes;
