@@ -167,7 +167,7 @@ function scheduleFlush(
 ): void {
   if (typeof window === 'undefined') return;
   const key = buildUsageKey(scope, dayKey);
-  if (flushTimers.has(key) || flushInFlight.has(key)) return;
+  if (flushTimers.has(key)) return;
 
   const timer = window.setTimeout(() => {
     flushTimers.delete(key);
