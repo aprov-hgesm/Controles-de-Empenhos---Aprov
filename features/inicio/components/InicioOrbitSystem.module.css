@@ -555,3 +555,45 @@
     animation: none !important;
   }
 }
+
+
+[data-performance='balanced'] .sweepInner {
+  display: none;
+}
+
+[data-performance='balanced'] .sweepOuter {
+  animation-duration: 36s;
+  opacity: 0.32;
+}
+
+[data-performance='balanced'] .planet,
+[data-performance='balanced'] .classPlanet,
+[data-performance='balanced'] .classMoon,
+[data-performance='balanced'] .executionHalo,
+[data-performance='balanced'] .alertPlanet[data-alert='true'] .planetGlow,
+[data-performance='balanced'] .classPlanetOrbit {
+  animation: none;
+}
+
+[data-performance='balanced'] .planetGlow {
+  filter: none;
+  opacity: 0.58;
+}
+
+[data-performance='balanced'] .tooltip,
+[data-performance='balanced'] .classMoon {
+  backdrop-filter: none;
+}
+
+[data-performance='static'] .sweep,
+[data-performance='static'] .classPlanetOrbit {
+  display: none;
+}
+
+[data-performance='static'] .planet,
+[data-performance='static'] .classPlanet,
+[data-performance='static'] .classMoon,
+[data-performance='static'] .executionHalo,
+[data-performance='static'] .planetGlow {
+  animation: none !important;
+}
