@@ -51,8 +51,7 @@ Existe um limitador local de bursts para as rotas administrativas:
 - leitura autenticada: 120/minuto por UID/rota;
 - mutação autenticada: 30/minuto por UID/rota.
 
-O bucket é local ao processo e limitado em memória. Em serverless ele **não é descrito
-como rate limit distribuído**. Seu objetivo é conter loops, cliques repetidos e abuso
+O bucket é local ao processo e limitado em memória. Em serverless ele **não é descrito como rate limit distribuído**. Seu objetivo é conter loops, cliques repetidos e abuso
 concentrado sem introduzir Redis, banco auxiliar ou custo operacional adicional.
 
 A autenticação, as Rules e os contratos transacionais continuam sendo as proteções
