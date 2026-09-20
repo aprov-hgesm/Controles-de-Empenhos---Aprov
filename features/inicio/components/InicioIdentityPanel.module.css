@@ -45,7 +45,7 @@
 .heading h2 {
   margin: 1px 0 0;
   max-width: 430px;
-  color: #f5f8ff;
+  color: var(--inicio-text, #f5f8ff);
   font-size: clamp(30px, 4.2vw, 50px);
   font-weight: 850;
   letter-spacing: -0.05em;
@@ -74,13 +74,26 @@
   min-width: 0;
   align-items: center;
   gap: 9px;
-  border: 1px solid rgba(115, 148, 224, 0.12);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--inicio-line, rgba(115, 148, 224, 0.12));
   border-radius: 13px;
   background:
-    linear-gradient(145deg, rgba(12, 23, 48, 0.5), rgba(6, 12, 27, 0.3));
+    linear-gradient(145deg, rgba(15, 29, 60, 0.56), rgba(5, 11, 25, 0.34));
   padding: 9px 10px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
   backdrop-filter: blur(10px);
+}
+
+.identityCard::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  right: 42%;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--inicio-line-strong, rgba(151, 183, 255, 0.28)), transparent);
+  opacity: 0.7;
 }
 
 .identityIcon {
@@ -92,7 +105,7 @@
   border: 1px solid rgba(132, 165, 241, 0.13);
   border-radius: 10px;
   background: rgba(54, 81, 153, 0.09);
-  color: rgba(167, 196, 255, 0.75);
+  color: var(--inicio-blue, rgba(167, 196, 255, 0.75));
 }
 
 .identityIcon svg {
@@ -155,7 +168,7 @@
   border-radius: 999px;
   background: rgba(16, 29, 58, 0.2);
   padding: 5px 7px;
-  color: rgba(151, 177, 226, 0.68);
+  color: var(--inicio-muted, rgba(151, 177, 226, 0.68));
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 6px;
   font-weight: 800;
