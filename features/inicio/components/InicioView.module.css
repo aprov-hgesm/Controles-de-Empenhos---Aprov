@@ -7,6 +7,7 @@
   min-height: clamp(620px, calc(100vh - 7rem), 880px);
   overflow: hidden;
   isolation: isolate;
+  contain: paint style;
   border: 1px solid rgba(104, 139, 255, 0.18);
   border-radius: 2rem;
   background:
@@ -200,5 +201,48 @@
   .scene *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+
+/* Block 19.11 — pausa todo trabalho visual contínuo quando a aba não está visível. */
+.scene[data-ambient-paused='true'] *,
+.scene[data-ambient-paused='true'] *::before,
+.scene[data-ambient-paused='true'] *::after {
+  animation-play-state: paused !important;
+}
+
+/* Hardware balanceado mantém hierarquia visual sem parallax/filtros caros. */
+.scene[data-performance='balanced'] .ambientGlow {
+  opacity: 0.72;
+  filter: none;
+}
+
+.scene[data-performance='balanced'] .grid {
+  opacity: 0.14;
+}
+
+.scene[data-performance='static'] .ambientGlow {
+  transform: none;
+}
+
+.scene[data-performance='static'] .system {
+  transform: translate3d(-50%, -50%, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene[data-ready='true'] {
+    animation: none !important;
+  }
+
+  .ambientGlow,
+  .system,
+  .grid {
+    transform: none;
+    transition: none;
+  }
+
+  .system {
+    transform: translate3d(-50%, -50%, 0);
   }
 }
