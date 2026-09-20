@@ -11,6 +11,7 @@ const capacity = read('lib/platformCapacity.ts');
 const lease = read('lib/platformSessionLease.ts');
 const access = read('lib/platformAccess.ts');
 const operational = read('hooks/useOperationalData.ts');
+const provisioning = read('lib/server/sectorProvisioningAdmin.ts');
 const rules = read('firestore.rules');
 const security = read('scripts/firestore-multitenancy-security.test.mjs');
 const e2e = read('tests/e2e/operator-critical-flow.spec.mjs');
@@ -108,6 +109,13 @@ for (const marker of [
   'não ocupa slot',
 ]) {
   requireText(docs, marker, `Documentação 16.1 perdeu requisito: ${marker}`);
+}
+
+for (const marker of [
+  'workspaces/${workspaceId}/sessionSlots/slot-1',
+  'workspaces/${workspaceId}/sessionSlots/slot-2',
+]) {
+  requireText(provisioning, marker, `Exclusão administrativa não limpa slot: ${marker}`);
 }
 
 requireText(
