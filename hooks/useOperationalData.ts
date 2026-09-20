@@ -31,7 +31,7 @@ import {
   clearLocalWorkspaceSessionLease,
   releaseWorkspaceSessionLease,
 } from '../lib/platformSessionLease';
-import { startWorkspaceSessionCoordinator } from '../lib/platformSessionCoordinator';
+import { startWorkspaceSessionControl } from '../lib/platformSessionControl';
 import { useOperationalRealtimeCollections } from './useOperationalRealtimeCollections';
 import { useInicioOperationalSnapshot } from '../features/inicio/hooks/useInicioOperationalSnapshot';
 
@@ -192,10 +192,9 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
       ].join('|')
     : null;
 
-  // Bloco 17.2 — uma única aba por navegador assume heartbeat, lifecycle e
-  // listener de revogação. Followers preservam a UX operacional e recebem
-  // invalidação via BroadcastChannel. Navegadores incompatíveis usam fallback
-  // conservador por aba, sem reduzir segurança.
+  // Bloco 17.2 simplificado — cada aba protege autonomamente lifecycle e
+  // revogação. A identidade lógica continua compartilhada entre abas, enquanto
+  // somente o heartbeat usa um mutex curto para evitar writes redundantes.
   useEffect(() => {
     if (
       !user
@@ -220,20 +219,20 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
       void signOut(auth);
     };
 
-    const coordinator = startWorkspaceSessionCoordinator(
+    const sessionControl = startWorkspaceSessionControl(
       user,
       workspaceContext,
       {
         onSessionInvalid: () => revokeLeaseAccess(),
         onTransientError: (error) => {
-          console.warn('Falha transitória na coordenação de sessão EMPROVEX.', error);
+          console.warn('Falha transitória no controle de sessão EMPROVEX.', error);
         },
       }
     );
 
     return () => {
       active = false;
-      coordinator.stop();
+      sessionControl.stop();
     };
   }, [sessionCoordinatorIdentityKey]);
 
