@@ -447,7 +447,12 @@ export default function Home() {
               onResumeWork={() => {
                 if (!inicioResumeTarget) return;
                 if (inicioResumeTarget.tab === 'empenhos') {
-                  setSelectedEmpenhoDetailId(inicioResumeTarget.empenhoId);
+                  const resumableEmpenhoId =
+                    inicioResumeTarget.empenhoId
+                    && empenhos.some((empenho) => empenho.id === inicioResumeTarget.empenhoId)
+                      ? inicioResumeTarget.empenhoId
+                      : null;
+                  setSelectedEmpenhoDetailId(resumableEmpenhoId);
                 }
                 setActiveTab(inicioResumeTarget.tab);
               }}
