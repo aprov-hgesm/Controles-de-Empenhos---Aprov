@@ -112,7 +112,8 @@
     "verify:block-19-2-cinematic-scene": "node scripts/verify-block-19-2-cinematic-scene.mjs",
     "verify:block-19-3-interactive-core": "node scripts/verify-block-19-3-interactive-core.mjs",
     "verify:block-19-4-operational-orbits": "node scripts/verify-block-19-4-operational-orbits.mjs",
-    "verify:block-19-5-operational-constellation": "node scripts/verify-block-19-5-operational-constellation.mjs"
+    "verify:block-19-5-operational-constellation": "node scripts/verify-block-19-5-operational-constellation.mjs",
+    "verify:block-19-6-unit-identity": "node scripts/verify-block-19-6-unit-identity.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
