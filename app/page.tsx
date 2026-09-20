@@ -420,6 +420,10 @@ export default function Home() {
                 setActiveTab(tab);
                 if (tab === 'empenhos') setSelectedEmpenhoDetailId(null);
               }}
+              onSelectEmpenho={(empenhoId) => {
+                setSelectedEmpenhoDetailId(empenhoId);
+                setActiveTab('empenhos');
+              }}
             />
           )}
 
