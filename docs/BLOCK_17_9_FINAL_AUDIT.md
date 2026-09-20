@@ -17,7 +17,7 @@ O Bloco 17 não adiciona:
 ### Arquitetura final
 
 - lease: 30 min; renovação nominal: 15 min;
-- controle multiaba: uma líder por sessão lógica de navegador em modo coordenado;
+- controle multiaba: sessão lógica compartilhada, proteção autônoma por aba e mutex curto apenas na renovação do lease;
 - branding: asset/configuração estática ou uma leitura por sessão, sem listener realtime;
 - Drive settings: uma leitura por contexto, sem listener permanente;
 - classes: listener somente nas superfícies que dependem delas;
