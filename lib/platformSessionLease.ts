@@ -324,7 +324,6 @@ export async function acquireWorkspaceSessionLease(
   const accountEmail = normalizePlatformEmail(user.email || '');
   const browserInstanceId = await getOrCreateBrowserInstanceId();
   const sessionId = await getOrCreateWorkspaceSessionId(context.workspaceId, user.uid);
-  const nowMs = Date.now();
 
   const slotRefs = SESSION_SLOT_IDS.map((slotId) => ({
     slotId,
@@ -344,17 +343,19 @@ export async function acquireWorkspaceSessionLease(
       ...slotRefs.map(({ ref }) => transaction.get(ref)),
     ]);
 
+    // Tombstones são imutáveis nas Rules. Portanto, a existência do documento
+    // torna este sessionId definitivamente revogado; expiresAt é somente metadado
+    // operacional/retentivo e nunca autoriza reciclar uma identidade já revogada.
     if (revocationSnapshot.exists()) {
-      const revocation = revocationSnapshot.data() as { expiresAt?: Timestamp };
-      const stillRevoked = !isTimestamp(revocation.expiresAt)
-        || revocation.expiresAt.toMillis() > nowMs;
-      if (stillRevoked) {
-        throw new PlatformSessionLeaseError(
-          'SESSION_REVOKED',
-          'Esta sessão foi encerrada pela administração. Faça login novamente.'
-        );
-      }
+      throw new PlatformSessionLeaseError(
+        'SESSION_REVOKED',
+        'Esta sessão foi encerrada pela administração. Faça login novamente.'
+      );
     }
+
+    // Firestore pode repetir o callback de uma transação após contenção. Calcular
+    // o relógio por tentativa evita decidir takeover/expiração com tempo obsoleto.
+    const attemptNowMs = Date.now();
 
     const candidates = snapshots.map((snapshot, index) => ({
       slotId: slotRefs[index].slotId,
@@ -377,7 +378,7 @@ export async function acquireWorkspaceSessionLease(
     ));
 
     const available = owned || candidates.find(({ snapshot, data }) => (
-      !snapshot.exists() || (data ? isExpiredLease(data, nowMs) : true)
+      !snapshot.exists() || (data ? isExpiredLease(data, attemptNowMs) : true)
     ));
 
     if (!available) {
@@ -400,7 +401,7 @@ export async function acquireWorkspaceSessionLease(
       && isTimestamp(previous.startedAt)
     );
 
-    const expiresAt = Timestamp.fromMillis(nowMs + SESSION_LEASE_DURATION_MS);
+    const expiresAt = Timestamp.fromMillis(attemptNowMs + SESSION_LEASE_DURATION_MS);
 
     transaction.set(available.ref, {
       leaseVersion: SESSION_LEASE_VERSION,
@@ -421,7 +422,8 @@ export async function acquireWorkspaceSessionLease(
       expiresAt,
       startedAt: keepStartedAt && previous?.startedAt
         ? previous.startedAt
-        : Timestamp.fromMillis(nowMs),
+        : Timestamp.fromMillis(attemptNowMs),
+      renewedAtMs: attemptNowMs,
     };
   });
 
@@ -437,7 +439,7 @@ export async function acquireWorkspaceSessionLease(
     sessionId,
     browserInstanceId,
   });
-  markLeaseRenewed(context.workspaceId, user.uid, nowMs);
+  markLeaseRenewed(context.workspaceId, user.uid, result.renewedAtMs);
 
   const lease: WorkspaceSessionLease = {
     sessionId,
@@ -447,7 +449,7 @@ export async function acquireWorkspaceSessionLease(
     accountEmail,
     browserInstanceId,
     startedAt: result.startedAt.toDate().toISOString(),
-    lastSeenAt: new Date(nowMs).toISOString(),
+    lastSeenAt: new Date(result.renewedAtMs).toISOString(),
     expiresAt: result.expiresAt.toDate().toISOString(),
   };
 
@@ -530,28 +532,11 @@ export function subscribeWorkspaceSessionRevocation(
     ug: context.ug,
   };
   const stopListenerTelemetry = trackWorkspaceRealtimeListener(telemetryScope);
-  let firstSnapshot = true;
   const unsubscribe = onSnapshot(
     ref,
     (snapshot) => {
       recordWorkspaceRealtimeSnapshot(telemetryScope, 1);
-      if (!snapshot.exists()) {
-        firstSnapshot = false;
-        return;
-      }
-
-      const data = snapshot.data() as { expiresAt?: Timestamp };
-      const activeRevocation = !isTimestamp(data.expiresAt)
-        || data.expiresAt.toMillis() > Date.now();
-
-      if (activeRevocation && !firstSnapshot) {
-        onRevoked();
-        return;
-      }
-      if (activeRevocation && firstSnapshot) {
-        onRevoked();
-      }
-      firstSnapshot = false;
+      if (snapshot.exists()) onRevoked();
     },
     (error) => onError?.(error)
   );
