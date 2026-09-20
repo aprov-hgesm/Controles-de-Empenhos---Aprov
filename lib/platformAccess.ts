@@ -19,6 +19,10 @@ import {
 } from './platformIdentity';
 import type { EmprovexProfileMode } from './profileMode';
 import {
+  acquireWorkspaceSessionLease,
+  isSessionCapacityExceededError,
+} from './platformSessionLease';
+import {
   rememberResolvedWorkspaceContext,
   resolveWorkspaceContext,
   type ResolvedWorkspaceContext,
@@ -241,6 +245,7 @@ export async function resolveAuthenticatedWorkspaceContext(
       resolutionSource: 'platform-directory',
     };
 
+    await acquireWorkspaceSessionLease(user, context);
     rememberResolvedWorkspaceContext(user.uid, context);
     return context;
   } catch (error) {
@@ -248,7 +253,9 @@ export async function resolveAuthenticatedWorkspaceContext(
     // usuário fora do workspace e impede subscriptions operacionais.
     const diagnosticCode = error instanceof ExternalIdentityResolutionError
       ? error.code
-      : (
+      : isSessionCapacityExceededError(error)
+        ? error.code
+        : (
           typeof error === 'object'
           && error
           && 'code' in error
