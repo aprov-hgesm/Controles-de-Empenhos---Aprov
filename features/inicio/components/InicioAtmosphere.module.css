@@ -14,7 +14,6 @@
   filter: blur(52px);
   opacity: 0.28;
   mix-blend-mode: screen;
-  will-change: transform;
 }
 
 .nebulaOne {
@@ -178,4 +177,43 @@
   .scan {
     animation: none !important;
   }
+}
+
+
+[data-performance='balanced'] .nebulaThree,
+[data-performance='balanced'] .arcTwo,
+[data-performance='balanced'] .scan,
+[data-performance='balanced'] .dustParticle:nth-child(n+9),
+[data-performance='balanced'] .deepStar:nth-child(n+21) {
+  display: none;
+}
+
+[data-performance='balanced'] .nebula {
+  filter: blur(36px);
+  opacity: 0.2;
+}
+
+[data-performance='balanced'] .deepStar {
+  animation-duration: 9s;
+}
+
+[data-performance='balanced'] .dustParticle {
+  animation: none;
+  opacity: 0.18;
+}
+
+[data-performance='static'] .nebulaThree,
+[data-performance='static'] .arc,
+[data-performance='static'] .scan,
+[data-performance='static'] .dustParticle {
+  display: none;
+}
+
+[data-performance='static'] .nebula {
+  filter: blur(30px);
+  opacity: 0.16;
+}
+
+[data-performance='static'] .deepStar {
+  animation: none;
 }
