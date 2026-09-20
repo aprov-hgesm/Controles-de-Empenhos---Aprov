@@ -273,6 +273,71 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     }
   });
 
+  test('coordenação multiaba propaga invalidação local para a follower', async ({ browser }) => {
+    const context = await browser.newContext();
+    const pageA = await context.newPage();
+    let pageB = null;
+
+    try {
+      await pageA.goto('/');
+      await loginSector(pageA, OPERATOR_A);
+
+      pageB = await context.newPage();
+      await pageB.goto('/');
+      await expect(pageB.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
+        timeout: 20_000,
+      });
+
+      await expect.poll(async () => {
+        const roles = [await sessionTabRole(pageA), await sessionTabRole(pageB)].sort();
+        return roles.join(',');
+      }, {
+        timeout: 15_000,
+        intervals: [100, 250, 500],
+      }).toBe('follower,leader');
+
+      const follower = (await sessionTabRole(pageA)) === 'follower' ? pageA : pageB;
+
+      const suffix = await follower.evaluate(() => {
+        const prefix = 'emprovex:session-tab-role:v1:';
+        for (let index = 0; index < sessionStorage.length; index += 1) {
+          const key = sessionStorage.key(index);
+          if (key?.startsWith(prefix)) return key.slice(prefix.length);
+        }
+        return null;
+      });
+      expect(suffix).toBeTruthy();
+
+      await pageA.evaluate((channelSuffix) => {
+        const channel = new BroadcastChannel(`emprovex:session-tabs:v1:${channelSuffix}`);
+        channel.postMessage({
+          type: 'session-invalidated',
+          reason: 'e2e-probe',
+          senderTabId: 'e2e-probe-sender',
+          emittedAt: Date.now(),
+        });
+        channel.close();
+      }, suffix);
+
+      await expect.poll(() => follower.evaluate((channelSuffix) => (
+        sessionStorage.getItem(`emprovex:session-tab-last-invalidation:v1:${channelSuffix}`)
+      ), suffix), {
+        timeout: 15_000,
+        intervals: [100, 250, 500],
+      }).toBe('e2e-probe');
+
+      await expect(follower.getByTestId('sector-login-email')).toBeVisible({
+        timeout: 15_000,
+      });
+      await expect(
+        follower.getByRole('navigation', { name: 'Navegação principal' })
+      ).toHaveCount(0);
+    } finally {
+      if (pageB && !pageB.isClosed()) await pageB.close();
+      await context.close();
+    }
+  });
+
   test('duas sessões por setor, múltiplas abas compartilham vaga e terceira sessão é barrada', async ({ browser }) => {
     const contextA = await browser.newContext();
     const contextB = await browser.newContext();
