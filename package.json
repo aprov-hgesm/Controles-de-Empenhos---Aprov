@@ -95,7 +95,8 @@
     "test:operational-subscription-plan": "node scripts/operational-subscription-plan.test.mjs",
     "verify:block-14-scalability": "node scripts/verify-block-14-scalability.mjs",
     "verify:block-15-final-hardening": "node scripts/verify-block-15-final-hardening.mjs",
-    "verify:block-16-0-capacity-foundation": "node scripts/verify-block-16-0-capacity-foundation.mjs"
+    "verify:block-16-0-capacity-foundation": "node scripts/verify-block-16-0-capacity-foundation.mjs",
+    "verify:block-16-1-session-enforcement": "node scripts/verify-block-16-1-session-enforcement.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
