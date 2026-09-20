@@ -18,6 +18,7 @@ const sidebar = read('components/layout/AppSidebar.tsx');
 const plan = read('lib/operationalSubscriptionPlan.ts');
 const view = read('features/inicio/components/InicioView.tsx');
 const constellation = read('features/inicio/components/InicioConstellation.tsx');
+const snapshotDomain = read('features/inicio/domain/homeOperationalSnapshot.ts');
 const constellationCss = read('features/inicio/components/InicioConstellation.module.css');
 const orbit = read('features/inicio/components/InicioOrbitSystem.tsx');
 const styles = read('features/inicio/components/InicioView.module.css');
@@ -28,7 +29,7 @@ requireText(page, "activeTab === 'inicio'", 'Página principal não renderiza a 
 requireText(page, "useState<OperationalActiveTab>('painel')", 'Destino padrão pós-login foi alterado antes da homologação.');
 requireText(sidebar, "onNavigate('inicio')", 'Sidebar não oferece navegação para Início.');
 requireText(plan, 'inicio:', 'Plano realtime não possui perfil para Início.');
-requireText(constellation, 'MAX_VISIBLE_STARS = 72', 'Constelação não possui limite de densidade inicial.');
+requireText(snapshotDomain, 'INICIO_MAX_VISIBLE_STARS = 72', 'Snapshot não possui limite de densidade inicial.');
 requireText(constellation, "data-severity={node.severity}", 'Estrelas não expõem severidade semântica.');
 requireText(view, 'snapshot?.alerts.total ?? 0', 'Planeta de alertas não usa o snapshot econômico.');
 requireText(orbit, "CLASS_CODES = ['QR', 'CALI', 'PASA', 'FUNADOM']", 'Classes iniciais não preservam QR/CALI/PASA/FUNADOM no sistema orbital.');
