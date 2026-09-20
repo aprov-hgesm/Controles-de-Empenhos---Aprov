@@ -401,6 +401,14 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
       await pageA.goto('/');
       await loginSector(pageA, OPERATOR_A);
 
+      await expect.poll(
+        () => sessionCoordinatorRole(pageA),
+        {
+          timeout: 15_000,
+          intervals: [250, 500, 1000],
+        }
+      ).toBe('leader');
+
       pageB = await context.newPage();
       await pageB.goto('/');
       await expect(pageB.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
