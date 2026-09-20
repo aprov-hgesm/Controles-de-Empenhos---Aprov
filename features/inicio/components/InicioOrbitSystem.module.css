@@ -86,7 +86,7 @@
   border-radius: 999px;
   background: transparent;
   color: #eef5ff;
-  cursor: pointer;
+  cursor: default;
   pointer-events: auto;
   animation: planetFloat 7.2s ease-in-out infinite;
 }
@@ -324,7 +324,7 @@
     0 0 30px rgba(137, 88, 211, 0.19),
     inset -8px -10px 20px rgba(10, 4, 19, 0.4);
   color: rgba(238, 226, 255, 0.9);
-  cursor: pointer;
+  cursor: default;
   animation: planetFloat 9.6s ease-in-out infinite reverse;
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
