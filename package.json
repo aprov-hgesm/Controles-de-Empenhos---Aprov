@@ -107,7 +107,8 @@
     "verify:block-16-8-integrated-e2e": "node scripts/verify-block-16-8-integrated-e2e.mjs",
     "verify:block-16-9-final-closure": "node scripts/verify-block-16-9-final-closure.mjs",
     "verify:block-17-0-firestore-baseline": "node scripts/verify-block-17-0-firestore-baseline.mjs",
-    "verify:block-17-1-session-lease-efficiency": "node scripts/verify-block-17-1-session-lease-efficiency.mjs"
+    "verify:block-17-1-session-lease-efficiency": "node scripts/verify-block-17-1-session-lease-efficiency.mjs",
+    "verify:block-17-2-session-tab-coordination": "node scripts/verify-block-17-2-session-tab-coordination.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
