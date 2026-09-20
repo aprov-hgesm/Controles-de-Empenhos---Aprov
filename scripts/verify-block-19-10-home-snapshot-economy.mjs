@@ -204,7 +204,7 @@ requireText(
 );
 requireText(
   e2e,
-  "page.locator('[data-snapshot="ready"]')",
+  `page.locator('[data-snapshot="ready"]')`,
   'E2E não confirma snapshot pronto.'
 );
 requireText(
