@@ -1,6 +1,10 @@
 'use client';
 
 import type { User } from 'firebase/auth';
+import {
+  assertWorkspacePdfIsSafeForStorage,
+  MAX_WORKSPACE_PDF_UPLOAD_BYTES,
+} from './pdfSecurity';
 import { resolveDocumentStorageRef } from './documentStorage';
 import {
   deleteWorkspaceDriveFile,
@@ -10,23 +14,15 @@ import {
 import { requireWorkspaceDriveRuntime } from './workspaceDriveRuntime';
 import type { EmpenhoPdfDocument } from './types';
 
-export const MAX_EMPENHO_PDF_BYTES = 10 * 1024 * 1024;
+export const MAX_EMPENHO_PDF_BYTES = MAX_WORKSPACE_PDF_UPLOAD_BYTES;
 
 type DocumentAction = 'view' | 'print' | 'download';
 
 async function validatePdfBeforeUpload(file: File): Promise<void> {
-  if (file.type !== 'application/pdf') {
-    throw new Error('Selecione um arquivo no formato PDF.');
-  }
-
-  if (file.size <= 0 || file.size > MAX_EMPENHO_PDF_BYTES) {
-    throw new Error('O PDF deve possuir no máximo 10 MB.');
-  }
-
-  const signature = new Uint8Array(await file.slice(0, 5).arrayBuffer());
-  if (String.fromCharCode(...signature) !== '%PDF-') {
-    throw new Error('O arquivo selecionado não possui uma assinatura PDF válida.');
-  }
+  await assertWorkspacePdfIsSafeForStorage(file, {
+    maxBytes: MAX_EMPENHO_PDF_BYTES,
+    requireDeclaredPdfMime: true,
+  });
 }
 
 function createDriveLogicalPathname(workspaceId: string, empenhoId: string, fileId: string): string {
