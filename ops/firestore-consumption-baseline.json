@@ -1,0 +1,181 @@
+{
+  "baselineVersion": "emprovex_firestore_consumption_baseline_v1",
+  "block": "17.0",
+  "baselineCommit": "f432b18e661f0ef1758a567caf7d72f883e1adb4",
+  "capturedAt": "2026-09-20",
+  "scope": "production-runtime",
+  "productionFirestore": {
+    "projectId": "gen-lang-client-0982077967",
+    "databaseId": "ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1",
+    "isNamedDatabase": true,
+    "edition": "standard-assumed-from-current-web-sdk-contract",
+    "repositoryBillingState": "not-verifiable-from-repository",
+    "freeTierFinding": "named-database-does-not-qualify-for-free-quota",
+    "officialReferences": [
+      "https://cloud.google.com/firestore/pricing",
+      "https://docs.cloud.google.com/firestore/quotas",
+      "https://firebase.google.com/docs/firestore/security/rules-conditions"
+    ]
+  },
+  "sessionLease": {
+    "externalSessionLimit": 2,
+    "slotCount": 2,
+    "leaseDurationMs": 600000,
+    "heartbeatIntervalMs": 300000,
+    "explicitReadsPerAcquireOrCurrentRenewal": 3,
+    "explicitWritesPerAcquireOrCurrentRenewal": 1,
+    "renewalsPerHourAtCurrentInterval": 12,
+    "explicitReadsPerSessionHour": 36,
+    "explicitWritesPerSessionHour": 12,
+    "scenarios": {
+      "50_sessions_8_hours": {
+        "explicitReads": 14400,
+        "explicitWrites": 4800
+      },
+      "100_sessions_8_hours": {
+        "explicitReads": 28800,
+        "explicitWrites": 9600
+      },
+      "100_sessions_24_hours": {
+        "explicitReads": 86400,
+        "explicitWrites": 28800
+      }
+    },
+    "exclusions": [
+      "security-rules-dependent-document-reads",
+      "transaction-retries",
+      "realtime-listener-initial-snapshots",
+      "realtime-listener-updates",
+      "network-reconnects"
+    ]
+  },
+  "operationalRealtimePlan": {
+    "painel": 1,
+    "empenhos": 3,
+    "itens": 1,
+    "nova_nf": 4,
+    "relatorios": 3,
+    "itens_empenho": 1,
+    "cronogramas": 2
+  },
+  "persistentExternalSessionListeners": {
+    "workspaceLifecycle": 2,
+    "sessionRevocation": 1,
+    "empenhoClasses": 1,
+    "driveSettings": 1,
+    "globalBranding": 1,
+    "total": 6
+  },
+  "estimatedExternalListenerFloorByTab": {
+    "painel": 7,
+    "empenhos": 9,
+    "itens": 7,
+    "nova_nf": 10,
+    "relatorios": 9,
+    "itens_empenho": 7,
+    "cronogramas": 8
+  },
+  "adminSurface": {
+    "realtimeListeners": {
+      "globalBranding": 1,
+      "workspaceDirectory": 1,
+      "accountDirectory": 1,
+      "sessionSlotsCollectionGroup": 1,
+      "total": 4
+    },
+    "usageEstimateReads": "one getDoc per eligible workspace/UG per refresh"
+  },
+  "knownReadHotspots": [
+    {
+      "id": "FQ-001",
+      "severity": "critical",
+      "source": "lib/platformSessionLease.ts",
+      "finding": "current heartbeat reuses full acquisition transaction",
+      "baselineCost": "3 explicit reads + 1 write every 5 minutes per external logical session"
+    },
+    {
+      "id": "FQ-002",
+      "severity": "high",
+      "source": "firestore.rules",
+      "finding": "workspace authorization uses dependent get/exists calls",
+      "baselineCost": "billed dependent document reads may occur during rule evaluation"
+    },
+    {
+      "id": "FQ-003",
+      "severity": "high",
+      "source": "hooks/usePlatformBranding.ts",
+      "finding": "public realtime listener to settings/global before authentication",
+      "baselineCost": "at least initial document read per listener lifecycle plus updates/reconnects"
+    },
+    {
+      "id": "FQ-004",
+      "severity": "high",
+      "source": "hooks/useOperationalRealtimeCollections.ts",
+      "finding": "secondary realtime collections are unsubscribed/resubscribed by active tab",
+      "baselineCost": "returning to a tab can issue a new initial query snapshot"
+    },
+    {
+      "id": "FQ-005",
+      "severity": "high",
+      "source": "browser multi-tab runtime",
+      "finding": "logical session identity is shared, Firestore listeners are not",
+      "baselineCost": "each browser tab can maintain its own listener set"
+    },
+    {
+      "id": "FQ-006",
+      "severity": "medium",
+      "source": "lib/platformAdminUsage.ts",
+      "finding": "usage dashboard fans out one document read per eligible workspace",
+      "baselineCost": "N eligible workspaces = N explicit reads per refresh"
+    },
+    {
+      "id": "FQ-007",
+      "severity": "medium",
+      "source": "lib/historicalConsistencyService.ts",
+      "finding": "manual diagnostic reads full empenhos and invoices collections plus SAG NS locks",
+      "baselineCost": "user-triggered full collection/query reads"
+    },
+    {
+      "id": "FQ-008",
+      "severity": "medium",
+      "source": "lib/empenhoDeletionService.ts",
+      "finding": "protected deletion discovers linked invoices, alerts and cronogramas with three queries before transaction",
+      "baselineCost": "user-triggered linked-document reads plus transactional validation"
+    },
+    {
+      "id": "FQ-009",
+      "severity": "medium",
+      "source": "lib/nsIntegrityService.ts",
+      "finding": "CNPJ/NS integrity operations use discovery reads and transaction reads",
+      "baselineCost": "operation-dependent and not fully represented by workspace telemetry"
+    },
+    {
+      "id": "FQ-010",
+      "severity": "medium",
+      "source": "lib/workspaceUsageTelemetry.ts",
+      "finding": "telemetry writes its own usageEstimates document and does not model every billable source",
+      "baselineCost": "one telemetry write per flush plus known undercount blind spots"
+    }
+  ],
+  "telemetryBlindSpots": [
+    "security-rules-dependent-document-reads",
+    "transaction-retries",
+    "historical-consistency-full-scans",
+    "some deletion and NS integrity transaction reads",
+    "admin reads",
+    "public branding reads",
+    "listener reconnect index/read effects",
+    "telemetry self-write overhead"
+  ],
+  "optimizationOrder": [
+    "17.1-session-lease-heartbeat-redesign",
+    "17.2-multitab-coordination",
+    "17.3-static-branding-and-public-read-removal",
+    "17.4-operational-listener-lifecycle",
+    "17.5-large-collection-query-strategy",
+    "17.6-telemetry-accuracy",
+    "17.7-abuse-protection",
+    "17.8-consumption-regression-tests",
+    "17.9-final-efficiency-audit"
+  ]
+}
