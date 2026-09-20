@@ -104,7 +104,8 @@
     "verify:block-16-6-usage-alerts": "node scripts/verify-block-16-6-usage-alerts.mjs",
     "verify:block-16-7-security-concurrency": "node scripts/verify-block-16-7-security-concurrency.mjs",
     "test:block-16-8-integrated-domain": "node --experimental-vm-modules --test scripts/block-16-integrated-domain.test.mjs",
-    "verify:block-16-8-integrated-e2e": "node scripts/verify-block-16-8-integrated-e2e.mjs"
+    "verify:block-16-8-integrated-e2e": "node scripts/verify-block-16-8-integrated-e2e.mjs",
+    "verify:block-16-9-final-closure": "node scripts/verify-block-16-9-final-closure.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
