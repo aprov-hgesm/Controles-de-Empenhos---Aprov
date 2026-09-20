@@ -6,8 +6,10 @@ import {
   query,
   startAfter,
   where,
+  type Query,
   type QueryConstraint,
   type QueryDocumentSnapshot,
+  type QuerySnapshot,
   type DocumentData,
 } from 'firebase/firestore';
 
@@ -52,7 +54,7 @@ async function loadHistoricalInvoiceSlice(
   const invoices: Invoice[] = [];
 
   while (pages < HISTORICAL_QUERY_MAX_PAGES) {
-    const pageQuery = cursor
+    const pageQuery: Query<DocumentData> = cursor
       ? query(
           collectionRef,
           ...constraints,
@@ -65,7 +67,7 @@ async function loadHistoricalInvoiceSlice(
           limit(HISTORICAL_QUERY_PAGE_SIZE)
         );
 
-    const snapshot = await getDocs(pageQuery);
+    const snapshot: QuerySnapshot<DocumentData> = await getDocs(pageQuery);
     pages += 1;
     documentReads += snapshot.size;
     recordWorkspaceDocumentReads(scope, snapshot.size);
