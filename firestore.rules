@@ -143,6 +143,109 @@ service cloud.firestore {
         && operationalIdentityMatchesAccount(workspaceId, account);
     }
 
+    function isValidSessionSlotId(slotId) {
+      return slotId in ['slot-1', 'slot-2'];
+    }
+
+    function validWorkspaceSessionLeaseShape(workspaceId, slotId) {
+      let workspace = workspaceData(workspaceId);
+      return canAccessWorkspace(workspaceId)
+        && !isHgesmFounder()
+        && isValidSessionSlotId(slotId)
+        && 'ug' in workspace
+        && isValidUnitUg(workspace.ug)
+        && request.resource.data.keys().hasAll([
+          'leaseVersion',
+          'slotId',
+          'sessionId',
+          'workspaceId',
+          'ug',
+          'uid',
+          'accountEmail',
+          'browserInstanceId',
+          'startedAt',
+          'lastSeenAt',
+          'expiresAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'leaseVersion',
+          'slotId',
+          'sessionId',
+          'workspaceId',
+          'ug',
+          'uid',
+          'accountEmail',
+          'browserInstanceId',
+          'startedAt',
+          'lastSeenAt',
+          'expiresAt'
+        ])
+        && request.resource.data.leaseVersion == 'emprovex_session_v1'
+        && request.resource.data.slotId == slotId
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.ug == workspace.ug
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.accountEmail == request.auth.token.email
+        && request.resource.data.sessionId is string
+        && request.resource.data.sessionId.size() > 8
+        && request.resource.data.browserInstanceId is string
+        && request.resource.data.browserInstanceId.size() > 8
+        && request.resource.data.startedAt is timestamp
+        && request.resource.data.lastSeenAt == request.time
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt >= request.time + duration.value(5, 'm')
+        && request.resource.data.expiresAt <= request.time + duration.value(15, 'm');
+    }
+
+    function validWorkspaceSessionLeaseCreate(workspaceId, slotId) {
+      return validWorkspaceSessionLeaseShape(workspaceId, slotId)
+        && request.resource.data.startedAt == request.time;
+    }
+
+    function sameWorkspaceSessionLeaseOwner() {
+      return resource.data.uid == request.auth.uid
+        && resource.data.accountEmail == request.auth.token.email
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.accountEmail == resource.data.accountEmail
+        && request.resource.data.sessionId == resource.data.sessionId
+        && request.resource.data.browserInstanceId == resource.data.browserInstanceId
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.ug == resource.data.ug
+        && request.resource.data.slotId == resource.data.slotId
+        && request.resource.data.leaseVersion == resource.data.leaseVersion;
+    }
+
+    function validWorkspaceSessionLeaseUpdate(workspaceId, slotId) {
+      // Avalia o shape/tenant uma única vez. Separar renewal e takeover em duas
+      // branches completas excedia o orçamento de 1000 expressões das Rules.
+      return validWorkspaceSessionLeaseShape(workspaceId, slotId)
+        && (
+          (
+            sameWorkspaceSessionLeaseOwner()
+            && request.resource.data.startedAt == resource.data.startedAt
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'lastSeenAt',
+              'expiresAt'
+            ])
+          )
+          || (
+            resource.data.expiresAt is timestamp
+            && resource.data.expiresAt <= request.time
+            && request.resource.data.startedAt == request.time
+          )
+        );
+    }
+
+    function validWorkspaceSessionLeaseDelete(workspaceId, slotId) {
+      return canAccessWorkspace(workspaceId)
+        && !isHgesmFounder()
+        && isValidSessionSlotId(slotId)
+        && resource.data.workspaceId == workspaceId
+        && resource.data.slotId == slotId
+        && resource.data.uid == request.auth.uid
+        && resource.data.accountEmail == request.auth.token.email;
+    }
+
     function canReadWorkspaceMetadataFromResource(workspaceId) {
       return isVerifiedUser()
         && resource.data.id == workspaceId
@@ -1336,6 +1439,16 @@ service cloud.firestore {
           /databases/$(database)/documents/platformAccounts/$(request.resource.data.email)
         ).data.workspaceId == request.resource.data.workspaceId;
       allow update, delete: if false;
+    }
+
+    // Block 16.1 — capacity metadata. These two fixed slots enforce a maximum of
+    // two simultaneous external-sector browser sessions without query/count races.
+    // The founder is exempt and never claims a slot.
+    match /workspaces/{workspaceId}/sessionSlots/{slotId} {
+      allow get, list: if canAccessWorkspace(workspaceId) || isPlatformAdmin();
+      allow create: if validWorkspaceSessionLeaseCreate(workspaceId, slotId);
+      allow update: if validWorkspaceSessionLeaseUpdate(workspaceId, slotId);
+      allow delete: if validWorkspaceSessionLeaseDelete(workspaceId, slotId);
     }
 
     // Workspace-scoped operational data. There is deliberately no admin bypass:

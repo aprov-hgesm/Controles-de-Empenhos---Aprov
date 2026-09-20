@@ -11,8 +11,13 @@ export const CAPACITY_POLICY_VERSION = 'emprovex_capacity_v1';
 export const USAGE_TELEMETRY_VERSION = 'emprovex_usage_v1';
 
 export const DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT = 2;
+export const SESSION_LEASE_VERSION = 'emprovex_session_v1';
+export const SESSION_SLOT_IDS = ['slot-1', 'slot-2'] as const;
+export const SESSION_LEASE_DURATION_MS = 10 * 60 * 1000;
+export const SESSION_HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000;
 
 export type SimultaneousSessionLimit = number | null;
+export type WorkspaceSessionSlotId = (typeof SESSION_SLOT_IDS)[number];
 
 export type UsageBudgetLevel =
   | 'unconfigured'
