@@ -369,3 +369,15 @@ A navegação funcional permanece disponível pela Sidebar e, dentro da cena, ex
 - hover/foco pausa a órbita correspondente enquanto o operador consulta o tooltip;
 - as três faixas orbitais são corredores de exclusão da constelação, garantindo que o movimento dos planetas não atravesse estrelas clicáveis;
 - perfis balanced/static e prefers-reduced-motion continuam removendo movimento contínuo.
+
+
+### Refinamento atmosférico — partículas em fluxo
+
+- a Home recebe uma camada adicional de partículas decorativas inspirada na atmosfera cinematográfica do login;
+- as partículas usam deslocamentos lentos em profundidade, com tamanhos, atrasos e velocidades variados;
+- são visualmente distintas das estrelas de empenho: menores, desfocadas, não interativas e posicionadas atrás da constelação;
+- não usam JavaScript contínuo nem RAF; o movimento é exclusivamente CSS;
+- mobile reduz a quantidade renderizada;
+- perfil balanced reduz densidade, brilho e velocidade;
+- perfil static e prefers-reduced-motion removem totalmente o movimento dessas partículas;
+- nenhuma leitura Firestore, persistência ou dependência adicional foi introduzida.
