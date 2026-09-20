@@ -7,10 +7,12 @@ import styles from './InicioInteractionLayer.module.css';
 
 interface InicioInteractionLayerProps {
   sceneRef: RefObject<HTMLElement | null>;
+  enabled: boolean;
 }
 
 export function InicioInteractionLayer({
   sceneRef,
+  enabled,
 }: InicioInteractionLayerProps) {
   const layerRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
@@ -18,7 +20,7 @@ export function InicioInteractionLayer({
   useEffect(() => {
     const scene = sceneRef.current;
     const layer = layerRef.current;
-    if (!scene || !layer || reduceMotion) return;
+    if (!scene || !layer || reduceMotion || !enabled) return;
 
     const finePointer = window.matchMedia('(pointer: fine)');
     if (!finePointer.matches) return;
@@ -29,12 +31,35 @@ export function InicioInteractionLayer({
     let currentX = 0;
     let currentY = 0;
 
+    const apply = () => {
+      layer.style.setProperty('--pointer-x', `${currentX.toFixed(2)}px`);
+      layer.style.setProperty('--pointer-y', `${currentY.toFixed(2)}px`);
+    };
+
     const render = () => {
       currentX += (targetX - currentX) * 0.2;
       currentY += (targetY - currentY) * 0.2;
-      layer.style.setProperty('--pointer-x', `${currentX.toFixed(2)}px`);
-      layer.style.setProperty('--pointer-y', `${currentY.toFixed(2)}px`);
+      apply();
+
+      const settled =
+        Math.abs(targetX - currentX) < 0.15
+        && Math.abs(targetY - currentY) < 0.15;
+
+      if (settled) {
+        currentX = targetX;
+        currentY = targetY;
+        apply();
+        frame = 0;
+        return;
+      }
+
       frame = window.requestAnimationFrame(render);
+    };
+
+    const scheduleFrame = () => {
+      if (!frame && document.visibilityState === 'visible') {
+        frame = window.requestAnimationFrame(render);
+      }
     };
 
     const handlePointerMove = (event: PointerEvent) => {
@@ -47,6 +72,7 @@ export function InicioInteractionLayer({
         'button, a, [role="button"], [tabindex]'
       );
       layer.dataset.target = interactive ? 'true' : 'false';
+      scheduleFrame();
     };
 
     const handlePointerLeave = () => {
@@ -73,16 +99,15 @@ export function InicioInteractionLayer({
     scene.addEventListener('pointerleave', handlePointerLeave);
     scene.addEventListener('pointerdown', handlePointerDown);
     layer.addEventListener('animationend', handleAnimationEnd);
-    frame = window.requestAnimationFrame(render);
 
     return () => {
       scene.removeEventListener('pointermove', handlePointerMove);
       scene.removeEventListener('pointerleave', handlePointerLeave);
       scene.removeEventListener('pointerdown', handlePointerDown);
       layer.removeEventListener('animationend', handleAnimationEnd);
-      window.cancelAnimationFrame(frame);
+      if (frame) window.cancelAnimationFrame(frame);
     };
-  }, [reduceMotion, sceneRef]);
+  }, [enabled, reduceMotion, sceneRef]);
 
   return (
     <div
@@ -91,6 +116,7 @@ export function InicioInteractionLayer({
       data-visible="false"
       data-target="false"
       data-pulse="false"
+      data-enabled={enabled ? 'true' : 'false'}
       aria-hidden="true"
     >
       <span className={styles.reticle}>
