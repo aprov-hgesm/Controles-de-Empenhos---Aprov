@@ -215,21 +215,25 @@ service cloud.firestore {
         && request.resource.data.leaseVersion == resource.data.leaseVersion;
     }
 
-    function validWorkspaceSessionLeaseRenewal(workspaceId, slotId) {
+    function validWorkspaceSessionLeaseUpdate(workspaceId, slotId) {
+      // Avalia o shape/tenant uma única vez. Separar renewal e takeover em duas
+      // branches completas excedia o orçamento de 1000 expressões das Rules.
       return validWorkspaceSessionLeaseShape(workspaceId, slotId)
-        && sameWorkspaceSessionLeaseOwner()
-        && request.resource.data.startedAt == resource.data.startedAt
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'lastSeenAt',
-          'expiresAt'
-        ]);
-    }
-
-    function validWorkspaceSessionLeaseTakeover(workspaceId, slotId) {
-      return validWorkspaceSessionLeaseShape(workspaceId, slotId)
-        && resource.data.expiresAt is timestamp
-        && resource.data.expiresAt <= request.time
-        && request.resource.data.startedAt == request.time;
+        && (
+          (
+            sameWorkspaceSessionLeaseOwner()
+            && request.resource.data.startedAt == resource.data.startedAt
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'lastSeenAt',
+              'expiresAt'
+            ])
+          )
+          || (
+            resource.data.expiresAt is timestamp
+            && resource.data.expiresAt <= request.time
+            && request.resource.data.startedAt == request.time
+          )
+        );
     }
 
     function validWorkspaceSessionLeaseDelete(workspaceId, slotId) {
@@ -1443,8 +1447,7 @@ service cloud.firestore {
     match /workspaces/{workspaceId}/sessionSlots/{slotId} {
       allow get, list: if canAccessWorkspace(workspaceId) || isPlatformAdmin();
       allow create: if validWorkspaceSessionLeaseCreate(workspaceId, slotId);
-      allow update: if validWorkspaceSessionLeaseRenewal(workspaceId, slotId)
-        || validWorkspaceSessionLeaseTakeover(workspaceId, slotId);
+      allow update: if validWorkspaceSessionLeaseUpdate(workspaceId, slotId);
       allow delete: if validWorkspaceSessionLeaseDelete(workspaceId, slotId);
     }
 
