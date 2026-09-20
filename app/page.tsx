@@ -8,6 +8,7 @@ import { useOperationalData } from '../hooks/useOperationalData';
 import { useEmpenhoClasses } from '../hooks/useEmpenhoClasses';
 import { useEmpenhoActions } from '../features/empenhos/hooks/useEmpenhoActions';
 import { useNotasFiscaisActions } from '../features/notas-fiscais/hooks/useNotasFiscaisActions';
+import { useAvisosActions } from '../features/avisos/hooks/useAvisosActions';
 import { useDocumentActions } from '../features/relatorios/hooks/useDocumentActions';
 import { useSagNsImportActions } from '../features/relatorios/hooks/useSagNsImportActions';
 import { useCronogramaActions } from '../features/cronogramas/hooks/useCronogramaActions';
@@ -24,12 +25,14 @@ import { RelatoriosView } from '../features/relatorios/components/RelatoriosView
 import { ConsultaItensView } from '../features/itens/components/ConsultaItensView';
 import { ItensEmpenhoView } from '../features/empenhos/components/ItensEmpenhoView';
 import { CronogramasView } from '../features/cronogramas/components/CronogramasView';
+import { CentralAvisosView } from '../features/avisos/components/CentralAvisosView';
 import { DeleteEmpenhoModal } from '../features/empenhos/components/DeleteEmpenhoModal';
 import { MobileNavigation } from '../components/layout/MobileNavigation';
 import { EmprovexLogin } from '../components/auth/EmprovexLogin';
 import { EmprovexAuthLoading } from '../components/auth/EmprovexAuthLoading';
 import { LoginSuccessTransition } from '../components/auth/LoginSuccessTransition';
 import type { OperationalActiveTab } from '../lib/operationalSubscriptionPlan';
+import { countPendingNotices } from '../features/avisos/domain/noticeLifecycle';
 export default function Home() {
   // Toast / Notifications helper
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -208,6 +211,21 @@ export default function Home() {
     setComissaoAux3Nome
   });
 
+  const {
+    updateNoticeStatus,
+    markAllUnreadAsRead,
+  } = useAvisosActions({
+    user,
+    alerts,
+    setAlerts,
+    showToast,
+  });
+
+  const pendingNoticeCount = Math.max(
+    inicioSnapshot?.alerts.total ?? 0,
+    countPendingNotices(alerts)
+  );
+
   const { handleApplySagNsImport } = useSagNsImportActions({
     user,
     empenhos,
@@ -371,6 +389,7 @@ export default function Home() {
           activeTab={activeTab}
           open={sidebarOpen}
           userDisplayName={user?.displayName || 'Aprovisionamento HGeSM'}
+          noticeCount={pendingNoticeCount}
           onClose={() => setSidebarOpen(false)}
           onNavigate={(tab) => {
             setActiveTab(tab);
@@ -451,6 +470,20 @@ export default function Home() {
           {/* TAB 3: GESTÃO DE NOTAS FISCAIS */}
           {activeTab === 'nova_nf' && (
             <NotasFiscaisView context={{ comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhoClasses, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user }} />
+          )}
+
+          {/* CENTRAL DE AVISOS */}
+          {activeTab === 'avisos' && (
+            <CentralAvisosView
+              alerts={alerts}
+              empenhos={empenhos}
+              onUpdateStatus={updateNoticeStatus}
+              onMarkAllRead={markAllUnreadAsRead}
+              onOpenEmpenho={(empenhoId) => {
+                setSelectedEmpenhoDetailId(empenhoId);
+                setActiveTab('empenhos');
+              }}
+            />
           )}
 
           {/* TAB 4: CONCILIAÇÃO E RELATÓRIO DO RECEBIMENTO */}
