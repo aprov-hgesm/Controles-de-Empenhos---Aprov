@@ -337,7 +337,7 @@ export async function acquireWorkspaceSessionLease(
       uid: user.uid,
       accountEmail,
       browserInstanceId,
-      startedAt: keepStartedAt ? previous?.startedAt : serverTimestamp(),
+      startedAt: keepStartedAt ? previous!.startedAt! : serverTimestamp(),
       lastSeenAt: serverTimestamp(),
       expiresAt,
     });
