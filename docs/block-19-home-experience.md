@@ -194,9 +194,42 @@ Concluído:
 
 A transição é estritamente de apresentação. A lógica de navegação, carregamento condicional e plano realtime continuam sendo comandados pelo `activeTab` original.
 
+## Bloco 19.10 — snapshot econômico por UG
+
+Concluído:
+
+- o perfil realtime do `Início` foi reduzido para **zero coleções operacionais brutas**;
+- a Home observa somente **1 documento**: `workspaces/{workspaceId}/settings/homeSnapshot`;
+- Empenhos, Alertas, Notas Fiscais, Comissões e Cronogramas ficam totalmente desligados enquanto o operador permanece no Início;
+- o snapshot é apenas dado derivado de apresentação e nunca substitui Empenhos/Alertas como fonte de verdade;
+- `InicioView`, sistema orbital e constelação passaram a consumir exclusivamente `InicioOperationalSnapshot`;
+- o documento agrega total de empenhos, valor total, alertas, recebimentos, execução, classes e até 72 estrelas;
+- o publisher só funciona em **Empenhos** e **Notas Fiscais**, superfícies que já carregam Empenhos + Alertas para o trabalho normal;
+- nenhuma coleção adicional é consultada para gerar o snapshot;
+- antes da primeira publicação da sessão, no máximo uma leitura documental compara o `contentHash` remoto;
+- se o conteúdo não mudou, nenhuma gravação é executada;
+- alterações sucessivas são agrupadas por debounce de 900 ms;
+- quando o operador veio do próprio Início, o hash já conhecido evita até a leitura de comparação;
+- telemetria registra separadamente a leitura do snapshot e cada write efetivamente realizado;
+- Rules dedicadas vinculam o snapshot ao workspace/UG, limitam a constelação a 72 estrelas e proíbem delete pelo runtime;
+- a suíte multitenant testa isolamento entre workspaces, UG divergente, limite de estrelas e tentativa de delete;
+- o Browser E2E comprova `data-active-realtime-collections="1"` no Início e confirma `data-snapshot="ready"`;
+- snapshot ausente não provoca fallback caro: a Home mostra um aviso e continua sem abrir coleções brutas;
+- o primeiro snapshot é criado automaticamente quando Empenhos ou Notas Fiscais estiverem em uso e os dados necessários já tiverem sido carregados.
+
+### Regra econômica consolidada
+
+```
+Início
+→ 0 coleções operacionais brutas
+→ 1 documento realtime por workspace/UG
+→ até 72 estrelas já agregadas
+```
+
+O objetivo do bloco é reduzir agressivamente leituras de Firestore na superfície mais visual do sistema. A Home não deve voltar a montar sua experiência a partir de centenas de documentos individuais.
+
 ## Próximas etapas
 
-- 19.10: snapshot otimizado por UG;
 - 19.11: performance/GPU/reduced motion;
 - 19.12: responsividade;
 - 19.13: polimento;
