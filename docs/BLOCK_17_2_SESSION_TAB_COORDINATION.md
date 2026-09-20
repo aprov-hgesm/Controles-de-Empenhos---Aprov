@@ -82,7 +82,8 @@ O Browser E2E passa a verificar:
 
 - duas abas autenticadas da mesma instância possuem exatamente um `leader` e um `follower`;
 - ao fechar a líder, a follower assume liderança automaticamente;
-- revogação administrativa observada pela líder também derruba a follower via canal local;
+- um evento `session-invalidated` recebido no canal local derruba a follower e deixa um marcador diagnóstico em `sessionStorage`;
+- o E2E histórico do Bloco 16 continua provando a revogação administrativa real, tombstone e novo login;
 - o limite de 2 sessões por setor continua funcionando;
 - uma segunda aba do mesmo browser continua ocupando apenas uma vaga lógica.
 
