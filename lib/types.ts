@@ -111,14 +111,24 @@ export interface Comissao {
   auxiliares: MembroComissao[]; // Array de 3 auxiliares
 }
 
+export type AlertType = 'INFORMATIVO' | 'CRÍTICO' | 'ATENÇÃO' | 'ESTOQUE ZERADO';
+export type AlertStatus = 'NOVO' | 'LIDO' | 'RESOLVIDO' | 'ARQUIVADO';
+export type AlertSource = 'EMPENHO' | 'NOTA_FISCAL' | 'SISTEMA';
+
 export interface Alert {
   id: string;
   empenhoId?: string;
-  type: 'CRÍTICO' | 'ATENÇÃO' | 'ESTOQUE ZERADO';
+  type: AlertType;
+  status?: AlertStatus;
+  source?: AlertSource;
   title: string;
   subtitle: string;
   description: string;
   date: string;
+  createdAt?: string;
+  readAt?: string;
+  resolvedAt?: string;
+  archivedAt?: string;
 }
 
 export interface CronogramaEntregaColuna {
