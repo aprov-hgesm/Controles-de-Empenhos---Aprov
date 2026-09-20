@@ -17,6 +17,8 @@ const page = read('app/page.tsx');
 const sidebar = read('components/layout/AppSidebar.tsx');
 const plan = read('lib/operationalSubscriptionPlan.ts');
 const view = read('features/inicio/components/InicioView.tsx');
+const constellation = read('features/inicio/components/InicioConstellation.tsx');
+const constellationCss = read('features/inicio/components/InicioConstellation.module.css');
 const orbit = read('features/inicio/components/InicioOrbitSystem.tsx');
 const styles = read('features/inicio/components/InicioView.module.css');
 const docs = read('docs/block-19-home-experience.md');
@@ -26,12 +28,12 @@ requireText(page, "activeTab === 'inicio'", 'Página principal não renderiza a 
 requireText(page, "useState<OperationalActiveTab>('painel')", 'Destino padrão pós-login foi alterado antes da homologação.');
 requireText(sidebar, "onNavigate('inicio')", 'Sidebar não oferece navegação para Início.');
 requireText(plan, 'inicio:', 'Plano realtime não possui perfil para Início.');
-requireText(view, 'MAX_VISIBLE_STARS = 72', 'Constelação não possui limite de densidade inicial.');
-requireText(view, "data-severity={star.severity}", 'Estrelas não expõem severidade semântica.');
+requireText(constellation, 'MAX_VISIBLE_STARS = 72', 'Constelação não possui limite de densidade inicial.');
+requireText(constellation, "data-severity={node.severity}", 'Estrelas não expõem severidade semântica.');
 requireText(view, 'activeAlertCount = alerts.length', 'Planeta de alertas não usa alertas operacionais.');
 requireText(orbit, "CLASS_CODES = ['QR', 'CALI', 'PASA', 'FUNADOM']", 'Classes iniciais não preservam QR/CALI/PASA/FUNADOM no sistema orbital.');
 requireText(styles, '@media (prefers-reduced-motion: reduce)', 'Experiência não respeita reduced motion.');
-requireText(styles, '.star[data-severity=\'critical\']', 'Estado crítico não possui tratamento visual.');
+requireText(constellationCss, ".star[data-severity='critical']", 'Estado crítico não possui tratamento visual.');
 requireText(docs, 'snapshot compacto por UG', 'Documentação não protege a evolução de custo por UG.');
 forbidText(page, "useState<OperationalActiveTab>('inicio')", 'Início foi promovido para landing antes da validação.');
 
