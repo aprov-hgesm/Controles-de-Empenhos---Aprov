@@ -20,6 +20,11 @@
   color: #f8fbff;
 }
 
+
+.scene[data-ready='true'] {
+  animation: sceneReveal 760ms cubic-bezier(.16, 1, .3, 1) both;
+}
+
 .scene::after {
   content: '';
   position: absolute;
@@ -259,6 +264,9 @@
   border: 1px solid rgba(108, 139, 222, 0.13);
   border-radius: 999px;
   transform: translate(-50%, -50%);
+  box-shadow:
+    inset 0 0 22px rgba(83, 112, 196, 0.025),
+    0 0 22px rgba(56, 84, 171, 0.025);
 }
 
 .orbitOuter {
@@ -271,6 +279,50 @@
   width: 60%;
   height: 45%;
   rotate: 18deg;
+}
+
+.orbitBeacon {
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(174, 200, 255, 0.82);
+  box-shadow:
+    0 0 7px rgba(144, 178, 255, 0.9),
+    0 0 18px rgba(93, 130, 230, 0.42);
+}
+
+.orbitInner .orbitBeacon {
+  left: 16%;
+  top: auto;
+  bottom: -2px;
+  width: 4px;
+  height: 4px;
+  opacity: 0.7;
+}
+
+.orbitSignal {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 74%;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(116, 150, 255, 0.02) 55deg,
+    rgba(142, 173, 255, 0.19) 72deg,
+    transparent 92deg,
+    transparent 360deg
+  );
+  -webkit-mask: radial-gradient(circle, transparent 67%, #000 68%, #000 69.5%, transparent 70.5%);
+  mask: radial-gradient(circle, transparent 67%, #000 68%, #000 69.5%, transparent 70.5%);
+  animation: orbitalSweep 16s linear infinite;
+  opacity: 0.75;
 }
 
 .sun {
@@ -473,6 +525,47 @@
   font-size: 8px;
 }
 
+.interactionHint {
+  position: absolute;
+  right: 30px;
+  bottom: 24px;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: rgba(135, 155, 193, 0.5);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.interactionHint span {
+  position: relative;
+  width: 17px;
+  height: 25px;
+  border: 1px solid rgba(143, 171, 232, 0.28);
+  border-radius: 10px;
+}
+
+.interactionHint span::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 5px;
+  width: 2px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(177, 202, 255, 0.58);
+  transform: translateX(-50%);
+  animation: cursorHint 2.2s ease-in-out infinite;
+}
+
+.interactionHint p {
+  margin: 0;
+}
+
 .legend {
   position: absolute;
   left: 32px;
@@ -511,6 +604,20 @@
 .legend i[data-severity='critical'] {
   background: #ff7167;
   box-shadow: 0 0 8px rgba(255, 85, 78, 0.9);
+}
+
+@keyframes sceneReveal {
+  0% { opacity: 0.42; filter: saturate(0.72) brightness(0.78); }
+  100% { opacity: 1; filter: saturate(1) brightness(1); }
+}
+
+@keyframes orbitalSweep {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes cursorHint {
+  0%, 100% { transform: translate(-50%, 0); opacity: 0.28; }
+  45% { transform: translate(-50%, 5px); opacity: 0.9; }
 }
 
 @keyframes starBreath {
@@ -571,6 +678,10 @@
     bottom: 18px;
     right: 22px;
   }
+
+  .interactionHint {
+    display: none;
+  }
 }
 
 @media (max-width: 640px) {
@@ -630,7 +741,9 @@
   .sunCorona,
   .planet,
   .alertPlanet,
-  .dashboardPlanet {
+  .dashboardPlanet,
+  .orbitSignal,
+  .interactionHint span::after {
     animation: none !important;
   }
 
