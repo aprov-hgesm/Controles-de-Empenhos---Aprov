@@ -18,7 +18,6 @@ const operational = read('hooks/useOperationalData.ts');
 const lease = read('lib/platformSessionLease.ts');
 const rules = read('firestore.rules');
 const operatorE2e = read('tests/e2e/operator-critical-flow.spec.mjs');
-const integratedE2e = read('tests/e2e/block-16-integrated.spec.mjs');
 const manifest = JSON.parse(read('ops/session-tab-coordination.json'));
 const docs = read('docs/BLOCK_17_2_SESSION_TAB_COORDINATION.md');
 const pkg = read('package.json');
@@ -75,12 +74,19 @@ for (const scenario of [
 }
 
 for (const scenario of [
-  'revogação administrativa derruba líder e follower',
-  "toBe('follower,leader')",
-  'sibling.getByTestId',
+  'coordenação multiaba propaga invalidação local para a follower',
+  'emprovex:session-tab-last-invalidation:v1:',
+  'e2e-probe',
+  "toBe('e2e-probe')",
 ]) {
-  requireText(integratedE2e, scenario, `E2E de revogação multiaba perdeu cenário: ${scenario}`);
+  requireText(operatorE2e, scenario, `E2E de invalidação multiaba perdeu cenário: ${scenario}`);
 }
+
+requireText(
+  coordinator,
+  "LAST_INVALIDATION_KEY_PREFIX = 'emprovex:session-tab-last-invalidation:v1'",
+  'Coordenador perdeu marcador diagnóstico de invalidação recebida.'
+);
 
 if (manifest.primaryElection !== 'Web Locks API exclusive lock per workspace+uid') {
   findings.push('Manifesto 17.2 perdeu eleição Web Locks.');
