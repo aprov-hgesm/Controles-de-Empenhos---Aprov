@@ -85,8 +85,8 @@ for (const path of requiredGuardFiles) {
 
 requireText(
   page,
-  "useState<OperationalActiveTab>('painel')",
-  'Painel deixou de ser o landing pós-login antes da homologação humana.'
+  "useState<OperationalActiveTab>('inicio')",
+  'Início deixou de ser o landing pós-login após a homologação humana.'
 );
 
 const inicioPlan = plan.match(/inicio:\s*\{([\s\S]*?)\n\s*\},/);
@@ -164,7 +164,7 @@ if (findings.length) {
 } else {
   console.log('BLOCK 19.14 FINAL CLOSURE: READY');
   console.log('Blocos 19.1–19.13: PROTEGIDOS');
-  console.log('Landing pós-login: PAINEL PRESERVADO');
+  console.log('Landing pós-login: INÍCIO HOMOLOGADO');
   console.log('Início — coleções operacionais brutas: ZERO');
   console.log('Início — snapshot operacional realtime: 1');
   console.log('Operadores externos em emulador: COBERTOS');

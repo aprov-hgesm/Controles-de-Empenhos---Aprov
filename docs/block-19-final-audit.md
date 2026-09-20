@@ -4,7 +4,7 @@
 
 **Fechamento técnico do Bloco 19: pronto para homologação humana.**
 
-Este documento encerra o desenvolvimento técnico da nova experiência `Início` sem promover a PR para merge, sem alterar o landing pós-login e sem realizar deploy de produção.
+Este documento registrou o fechamento técnico original da experiência `Início`. Naquele momento o landing pós-login ainda não havia sido alterado; após a homologação visual posterior, o Início foi promovido a landing padrão.
 
 ## Escopo auditado
 
@@ -120,13 +120,15 @@ Valida ausência de overflow horizontal e confinamento da identidade e dock à c
 
 ## Landing e rollout
 
-O Dashboard/Painel permanece como landing pós-login:
+No fechamento técnico original, o Dashboard/Painel permaneceu como landing durante a homologação.
+
+Após a homologação visual e operacional da Home, a decisão foi atualizada para:
 
 ```ts
-useState<OperationalActiveTab>('painel')
+useState<OperationalActiveTab>('inicio')
 ```
 
-A promoção automática do Início para landing deve ser uma decisão posterior à homologação humana.
+O Início passa a ser a superfície padrão após autenticação, mantendo o Painel disponível pela Sidebar.
 
 ## Estado da PR
 
@@ -136,7 +138,7 @@ O fechamento técnico não autoriza automaticamente:
 
 - merge na `main`;
 - deploy em produção;
-- mudança do landing;
+- mudança futura do landing sem nova validação;
 - teste com credenciais reais;
 - alteração de cobrança/plano Firebase.
 

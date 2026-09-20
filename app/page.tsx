@@ -50,7 +50,7 @@ export default function Home() {
   }, []);
 
   // Navigation drives the realtime subscription profile (Block 14).
-  const [activeTab, setActiveTab] = useState<OperationalActiveTab>('painel');
+  const [activeTab, setActiveTab] = useState<OperationalActiveTab>('inicio');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const {

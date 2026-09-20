@@ -26,7 +26,7 @@ const docs = read('docs/block-19-home-experience.md');
 
 requireText(page, "import { InicioView }", 'Página principal não importa a visão Início.');
 requireText(page, "activeTab === 'inicio'", 'Página principal não renderiza a visão Início.');
-requireText(page, "useState<OperationalActiveTab>('painel')", 'Destino padrão pós-login foi alterado antes da homologação.');
+requireText(page, "useState<OperationalActiveTab>('inicio')", 'Início deixou de ser o landing padrão após homologação.');
 requireText(sidebar, "onNavigate('inicio')", 'Sidebar não oferece navegação para Início.');
 requireText(plan, 'inicio:', 'Plano realtime não possui perfil para Início.');
 requireText(snapshotDomain, 'INICIO_MAX_VISIBLE_STARS = 72', 'Snapshot não possui limite de densidade inicial.');
@@ -38,7 +38,7 @@ requireText(constellationCss, ".star[data-severity='critical']", 'Estado crític
 requireText(docs, 'snapshot compacto por UG', 'Documentação não protege a evolução de custo por UG.');
 forbidText(view, 'Empenho[]', 'Início voltou a depender da coleção bruta de empenhos.');
 forbidText(view, 'Alert[]', 'Início voltou a depender da coleção bruta de alertas.');
-forbidText(page, "useState<OperationalActiveTab>('inicio')", 'Início foi promovido para landing antes da validação.');
+forbidText(page, "useState<OperationalActiveTab>('painel')", 'Painel voltou a ser landing após a promoção homologada do Início.');
 
 if (findings.length) {
   console.error('BLOCK 19 HOME EXPERIENCE FOUNDATION: FAIL');
@@ -47,7 +47,7 @@ if (findings.length) {
 } else {
   console.log('BLOCK 19 HOME EXPERIENCE FOUNDATION: READY');
   console.log('Início: NAVEGÁVEL');
-  console.log('Dashboard padrão pós-login: PRESERVADO');
+  console.log('Início padrão pós-login: ATIVO');
   console.log('Constelação: LIMITADA A 72 ESTRELAS');
   console.log('Alertas + classes: CONECTADOS');
   console.log('Reduced motion: PROTEGIDO');

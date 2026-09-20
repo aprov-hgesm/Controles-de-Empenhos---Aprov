@@ -40,6 +40,16 @@ interface StarOrbitCorridor {
   percentPerPixelY: number;
 }
 
+interface ConstellationViewport {
+  width: number;
+  height: number;
+}
+
+const EMPTY_VIEWPORT: ConstellationViewport = {
+  width: 0,
+  height: 0,
+};
+
 const STAR_EXCLUSION_GAP_PX = {
   planet: 38,
   core: 50,
@@ -52,6 +62,8 @@ const STAR_SEVERITY_GAP_BOOST_PX = {
 } as const;
 
 const STAR_ORBIT_CORRIDOR_HALF_WIDTH_PX = 30;
+const STAR_DESKTOP_HITBOX_MIN_PX = 20;
+const STAR_SELECTABLE_CLEARANCE_PX = 9;
 
 function hashValue(value: string, seed = 0): number {
   let hash = 2166136261 ^ seed;
@@ -217,6 +229,77 @@ function keepStarClearOfExclusions(
   };
 }
 
+function keepStarsMutuallySelectable(
+  nodes: ConstellationNode[],
+  viewport: ConstellationViewport,
+  zones: StarExclusionZone[],
+  corridors: StarOrbitCorridor[]
+): ConstellationNode[] {
+  if (viewport.width <= 0 || viewport.height <= 0) return nodes;
+
+  const placed: ConstellationNode[] = [];
+
+  const hitSize = (node: ConstellationNode) =>
+    Math.max(STAR_DESKTOP_HITBOX_MIN_PX, node.size + 12);
+
+  nodes.forEach((sourceNode) => {
+    let candidate = sourceNode;
+
+    for (let attempt = 0; attempt < 28; attempt += 1) {
+      const collision = placed.find((other) => {
+        const dxPx = ((candidate.left - other.left) / 100) * viewport.width;
+        const dyPx = ((candidate.top - other.top) / 100) * viewport.height;
+        const minimumDistance =
+          (hitSize(candidate) + hitSize(other)) / 2
+          + STAR_SELECTABLE_CLEARANCE_PX;
+
+        return Math.hypot(dxPx, dyPx) < minimumDistance;
+      });
+
+      if (!collision) break;
+
+      let dxPx = ((candidate.left - collision.left) / 100) * viewport.width;
+      let dyPx = ((candidate.top - collision.top) / 100) * viewport.height;
+      let distance = Math.hypot(dxPx, dyPx);
+
+      if (distance < 0.5) {
+        const angle =
+          ((hashValue(candidate.id, 1201 + attempt) % 360) * Math.PI) / 180;
+        dxPx = Math.cos(angle);
+        dyPx = Math.sin(angle);
+        distance = 1;
+      }
+
+      const minimumDistance =
+        (hitSize(candidate) + hitSize(collision)) / 2
+        + STAR_SELECTABLE_CLEARANCE_PX
+        + 1;
+      const scale = minimumDistance / Math.max(distance, 0.5);
+
+      candidate = {
+        ...candidate,
+        left: clamp(
+          collision.left + ((dxPx * scale) / viewport.width) * 100,
+          4,
+          96
+        ),
+        top: clamp(
+          collision.top + ((dyPx * scale) / viewport.height) * 100,
+          5,
+          94
+        ),
+      };
+
+      candidate = keepStarClearOfExclusions(candidate, zones);
+      candidate = keepStarClearOfOrbitCorridors(candidate, corridors);
+    }
+
+    placed.push(candidate);
+  });
+
+  return placed;
+}
+
 function buildNode(
   star: InicioSnapshotStar,
   index: number,
@@ -251,6 +334,7 @@ export function InicioConstellation({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [exclusionZones, setExclusionZones] = useState<StarExclusionZone[]>([]);
   const [orbitCorridors, setOrbitCorridors] = useState<StarOrbitCorridor[]>([]);
+  const [viewport, setViewport] = useState<ConstellationViewport>(EMPTY_VIEWPORT);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -263,6 +347,16 @@ export function InicioConstellation({
       frame = 0;
       const rootRect = root.getBoundingClientRect();
       if (rootRect.width <= 0 || rootRect.height <= 0) return;
+
+      setViewport((current) => {
+        const next = { width: rootRect.width, height: rootRect.height };
+        return (
+          Math.abs(current.width - next.width) < 0.5
+          && Math.abs(current.height - next.height) < 0.5
+        )
+          ? current
+          : next;
+      });
 
       const percentPerPixelX = 100 / rootRect.width;
       const percentPerPixelY = 100 / rootRect.height;
@@ -343,11 +437,18 @@ export function InicioConstellation({
       0
     );
 
-    return stars
+    const protectedNodes = stars
       .map((star, index) => buildNode(star, index, maxValue))
       .map((node) => keepStarClearOfExclusions(node, exclusionZones))
       .map((node) => keepStarClearOfOrbitCorridors(node, orbitCorridors));
-  }, [exclusionZones, orbitCorridors, snapshot]);
+
+    return keepStarsMutuallySelectable(
+      protectedNodes,
+      viewport,
+      exclusionZones,
+      orbitCorridors
+    );
+  }, [exclusionZones, orbitCorridors, snapshot, viewport]);
 
   const hoveredNode = hoveredId
     ? nodes.find((node) => node.id === hoveredId) ?? null
@@ -405,7 +506,9 @@ export function InicioConstellation({
           && hoveredNode.id !== node.id
           && hoveredNode.supplierKey === node.supplierKey;
 
-        const hitSize = Math.max(16, node.size + 10);
+        const hitSize = Math.max(STAR_DESKTOP_HITBOX_MIN_PX, node.size + 12);
+        const tooltipX = node.left < 28 ? 'start' : node.left > 72 ? 'end' : 'center';
+        const tooltipY = node.top < 30 ? 'below' : 'above';
 
         return (
           <button
@@ -416,6 +519,8 @@ export function InicioConstellation({
             data-stage={node.stage}
             data-related={isRelated ? 'true' : 'false'}
             data-dimmed={hoveredNode && !isHovered && !isRelated ? 'true' : 'false'}
+            data-tooltip-x={tooltipX}
+            data-tooltip-y={tooltipY}
             style={{
               left: `${node.left}%`,
               top: `${node.top}%`,
