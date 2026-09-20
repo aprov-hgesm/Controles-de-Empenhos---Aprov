@@ -384,7 +384,7 @@
   }
 
   .tooltip {
-    width: 224px;
+    width: min(224px, calc(100vw - 48px));
   }
 }
 
@@ -394,7 +394,7 @@
   }
 
   .tooltip {
-    width: 200px;
+    width: min(200px, calc(100vw - 36px));
   }
 
   .metrics {
@@ -406,8 +406,43 @@
   }
 
   .legend {
+    left: 16px;
+    right: 16px;
+    bottom: 132px;
     gap: 6px 9px;
+    max-width: none;
     font-size: 6px;
+    line-height: 1.25;
+  }
+
+  .densityNote {
+    display: none !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .legend {
+    bottom: 136px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, max-content));
+    gap: 5px 12px;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .tooltip {
+    display: none;
+  }
+
+  .star {
+    touch-action: manipulation;
+  }
+
+  .star::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 999px;
   }
 }
 
