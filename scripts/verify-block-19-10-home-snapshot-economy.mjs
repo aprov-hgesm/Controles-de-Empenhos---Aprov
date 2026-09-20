@@ -64,6 +64,16 @@ requireText(
   'Snapshot não possui hash estável para evitar writes redundantes.'
 );
 requireText(
+  snapshotDomain,
+  'return left.id.localeCompare(right.id);',
+  'Seleção de estrelas não é determinística por ID.'
+);
+forbidText(
+  snapshotDomain,
+  'updatedAt ||',
+  'Metadados invisíveis como updatedAt voltaram a influenciar o snapshot.'
+);
+requireText(
   snapshotHook,
   "activeTab === 'empenhos' || activeTab === 'nova_nf'",
   'Publicação do snapshot não está restrita a telas que já carregam Empenhos + Alertas.'
