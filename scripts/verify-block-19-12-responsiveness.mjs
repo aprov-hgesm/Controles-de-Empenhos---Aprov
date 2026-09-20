@@ -41,8 +41,10 @@ requireText(viewCss, '100svh', 'Cena não usa viewport dinâmica segura.');
 requireText(viewCss, '--inicio-mobile-dock-reserve: 28px', 'Reserva inferior compacta da Home ausente.');
 requireText(viewCss, 'width: min(520px, 94vw)', 'Sistema orbital mobile não utiliza escala compacta.');
 
-requireText(orbitCss, 'width: 46px', 'Planetas não utilizam escala compacta desktop.');
-requireText(orbitCss, 'width: 44px', 'Planetas não utilizam escala compacta mobile.');
+requireText(orbitCss, 'width: 24px', 'Planetas não utilizam a nova escala orbital compacta.');
+requireText(orbitCss, '.starOrbitOuter,\n.orbitOuter {\n  width: 88%;', 'Órbita externa responsiva não está dimensionada.');
+requireText(orbitCss, '.starOrbitMiddle,\n.orbitMiddle {\n  width: 68%;', 'Órbita intermediária responsiva não está dimensionada.');
+requireText(orbitCss, '.starOrbitInner,\n.orbitInner {\n  width: 50%;', 'Órbita interna responsiva não está dimensionada.');
 requireText(orbitCss, '@media (hover: none), (pointer: coarse)', 'Órbitas não tratam touch/coarse pointer.');
 requireText(orbitCss, '.tooltip,\n  .classTooltip {\n    display: none;', 'Tooltips orbitais e de classes continuam dependentes de hover em touch.');
 
