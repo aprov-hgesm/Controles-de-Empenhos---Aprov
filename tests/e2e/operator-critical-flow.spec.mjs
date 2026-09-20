@@ -42,6 +42,28 @@ async function sessionCoordinatorRole(page) {
   });
 }
 
+async function coordinatorDiagnostics(page) {
+  return page.evaluate(async () => {
+    const roleEntries = [];
+    for (let index = 0; index < sessionStorage.length; index += 1) {
+      const key = sessionStorage.key(index);
+      if (key?.startsWith('emprovex:session-coordinator-role:v1:')) {
+        roleEntries.push([key, sessionStorage.getItem(key)]);
+      }
+    }
+
+    const lockState = navigator.locks?.query
+      ? await navigator.locks.query()
+      : { held: [], pending: [] };
+
+    return {
+      roleEntries,
+      held: (lockState.held || []).map((lock) => ({ name: lock.name, mode: lock.mode })),
+      pending: (lockState.pending || []).map((lock) => ({ name: lock.name, mode: lock.mode })),
+    };
+  });
+}
+
 async function logicalSessionId(page) {
   return page.evaluate(() => {
     for (let index = 0; index < localStorage.length; index += 1) {
@@ -325,6 +347,14 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
       await expect(pageA2.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
         timeout: 20_000,
       });
+
+      console.log(
+        'Block 17.2 coordinator diagnostics',
+        JSON.stringify({
+          pageA1: await coordinatorDiagnostics(pageA1),
+          pageA2: await coordinatorDiagnostics(pageA2),
+        })
+      );
 
       await expect.poll(
         () => sessionCoordinatorRole(pageA2),
