@@ -23,14 +23,19 @@ const requireText = (source, expected, message) => {
 };
 
 function numericExpressionForConst(source, name) {
-  const match = source.match(new RegExp(`export const ${name} = ([0-9*+()\\s]+);`));
+  const match = source.match(new RegExp(`export const ${name} = ([^;]+);`));
   if (!match) throw new Error(`Constante não encontrada: ${name}`);
-  const expression = match[1].trim();
-  const compactExpression = expression.replace(/\\s+/g, '');
-  if (!/^[0-9*+()]+$/.test(compactExpression)) {
-    throw new Error(`Expressão não numérica para ${name}`);
+
+  const factors = match[1]
+    .trim()
+    .split('*')
+    .map((value) => Number(value.trim()));
+
+  if (factors.length === 0 || factors.some((value) => !Number.isFinite(value))) {
+    throw new Error(`Expressão numérica inválida para ${name}`);
   }
-  return Function(`"use strict"; return (${compactExpression});`)();
+
+  return factors.reduce((total, value) => total * value, 1);
 }
 
 requireTrue(
