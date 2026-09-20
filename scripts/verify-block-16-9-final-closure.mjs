@@ -122,7 +122,7 @@ for (const invariant of [
   'Google Drive permanece o armazenamento exclusivo de PDFs e documentos',
   'não executa deploy manual ou de produção na Vercel',
   'métrica global real, estimativa interna por UG e cobrança oficial permanecem conceitos separados',
-  'Bloco 16 Final Release Gate',
+  'Block 16 Final Release Gate',
 ]) {
   requireText(closure, invariant, `Documento de fechamento perdeu requisito: ${invariant}`);
 }
