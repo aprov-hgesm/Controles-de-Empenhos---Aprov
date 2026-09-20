@@ -72,11 +72,11 @@ for (const marker of [
   'function isValidSessionSlotId(slotId)',
   "return slotId in ['slot-1', 'slot-2'];",
   'function validWorkspaceSessionLeaseCreate',
-  'function validWorkspaceSessionLeaseRenewal',
-  'function validWorkspaceSessionLeaseTakeover',
+  'function validWorkspaceSessionLeaseUpdate',
   'function validWorkspaceSessionLeaseDelete',
   'match /workspaces/{workspaceId}/sessionSlots/{slotId}',
   'resource.data.expiresAt <= request.time',
+  'Avalia o shape/tenant uma única vez',
   'request.resource.data.lastSeenAt == request.time',
 ]) {
   requireText(rules, marker, `Firestore Rules perderam proteção 16.1: ${marker}`);
