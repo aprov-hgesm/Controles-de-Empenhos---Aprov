@@ -18,6 +18,9 @@ async function loginSector(page, email) {
   await expect(
     page.getByLabel('Operador conectado').getByText('Acesso autorizado', { exact: true })
   ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Início', exact: true }).first()
+  ).toHaveAttribute('aria-current', 'page');
 }
 
 async function logoutIfAuthenticated(page) {
