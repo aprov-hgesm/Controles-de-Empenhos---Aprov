@@ -1,23 +1,22 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
-import type { Alert, Empenho } from '../../../lib/types';
 import type { OperationalActiveTab } from '../../../lib/operationalSubscriptionPlan';
+import type { InicioOperationalSnapshot } from '../domain/homeOperationalSnapshot';
+import type { InicioResumeTarget } from '../hooks/useInicioWorkMemory';
 import { InicioAtmosphere } from './InicioAtmosphere';
-import { InicioEntrySequence } from './InicioEntrySequence';
 import { InicioConstellation } from './InicioConstellation';
 import { InicioCore } from './InicioCore';
+import { InicioEntrySequence } from './InicioEntrySequence';
 import { InicioIdentityPanel } from './InicioIdentityPanel';
 import { InicioInteractionLayer } from './InicioInteractionLayer';
 import { InicioOrbitSystem } from './InicioOrbitSystem';
 import { InicioQuickActions } from './InicioQuickActions';
-import type { InicioResumeTarget } from '../hooks/useInicioWorkMemory';
 import styles from './InicioView.module.css';
 
 interface InicioViewProps {
-  empenhos: Empenho[];
-  alerts: Alert[];
+  snapshot: InicioOperationalSnapshot | null;
   userDisplayName: string;
   workspaceName: string;
   organizationName: string;
@@ -34,13 +33,6 @@ interface InicioViewProps {
   onRegisterInvoice: () => void;
 }
 
-function getEmpenhoValue(empenho: Empenho): number {
-  return empenho.items.reduce(
-    (total, item) => total + item.quantity * item.unitPrice,
-    0
-  );
-}
-
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -50,8 +42,7 @@ function formatCurrency(value: number): string {
 }
 
 export function InicioView({
-  empenhos,
-  alerts,
+  snapshot,
   userDisplayName,
   workspaceName,
   organizationName,
@@ -114,23 +105,26 @@ export function InicioView({
     };
   }, []);
 
-  const totalValue = useMemo(
-    () => empenhos.reduce((total, empenho) => total + getEmpenhoValue(empenho), 0),
-    [empenhos]
-  );
-
-  const activeAlertCount = alerts.length;
+  const totalEmpenhos = snapshot?.metrics.totalEmpenhos ?? 0;
+  const totalValue = snapshot?.metrics.totalValue ?? 0;
+  const activeAlertCount = snapshot?.alerts.total ?? 0;
 
   return (
-    <section ref={rootRef} className={styles.scene} data-ready="true" aria-label="Início EMPROVEX">
+    <section
+      ref={rootRef}
+      className={styles.scene}
+      data-ready="true"
+      data-snapshot={snapshot ? 'ready' : 'empty'}
+      aria-label="Início EMPROVEX"
+    >
       <InicioEntrySequence />
       <InicioAtmosphere />
       <InicioInteractionLayer sceneRef={rootRef} />
       <div className={styles.ambientGlow} aria-hidden="true" />
       <div className={styles.grid} aria-hidden="true" />
+
       <InicioConstellation
-        empenhos={empenhos}
-        alerts={alerts}
+        snapshot={snapshot}
         onSelectEmpenho={onSelectEmpenho}
       />
 
@@ -146,19 +140,28 @@ export function InicioView({
 
       <div className={styles.system} aria-label="Sistema solar operacional EMPROVEX">
         <InicioOrbitSystem
-          empenhos={empenhos}
-          alerts={alerts}
+          snapshot={snapshot}
           onNavigate={onNavigate}
         />
 
         <InicioCore
           customLogo={customLogo}
-          totalEmpenhos={empenhos.length}
+          totalEmpenhos={totalEmpenhos}
           totalValueLabel={formatCurrency(totalValue)}
           activeAlertCount={activeAlertCount}
           onOpenEmpenhos={() => onNavigate('empenhos')}
         />
       </div>
+
+      {!snapshot && (
+        <div className={styles.snapshotNotice} role="status">
+          <strong>Mapa econômico ainda não consolidado</strong>
+          <span>
+            O Início não abrirá coleções brutas. O snapshot será criado automaticamente
+            quando Empenhos ou Notas Fiscais estiverem em uso.
+          </span>
+        </div>
+      )}
 
       <div className={styles.interactionHint} aria-hidden="true">
         <span />
