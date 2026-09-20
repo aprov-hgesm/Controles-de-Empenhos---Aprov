@@ -5,7 +5,6 @@ import { useEffect, useRef } from 'react';
 import type { OperationalActiveTab } from '../../../lib/operationalSubscriptionPlan';
 import type { InicioOperationalSnapshot } from '../domain/homeOperationalSnapshot';
 import { useInicioPerformanceProfile } from '../hooks/useInicioPerformanceProfile';
-import type { InicioResumeTarget } from '../hooks/useInicioWorkMemory';
 import { InicioAtmosphere } from './InicioAtmosphere';
 import { InicioConstellation } from './InicioConstellation';
 import { InicioCore } from './InicioCore';
@@ -13,26 +12,14 @@ import { InicioEntrySequence } from './InicioEntrySequence';
 import { InicioIdentityPanel } from './InicioIdentityPanel';
 import { InicioInteractionLayer } from './InicioInteractionLayer';
 import { InicioOrbitSystem } from './InicioOrbitSystem';
-import { InicioQuickActions } from './InicioQuickActions';
 import { InicioSceneChrome } from './InicioSceneChrome';
 import styles from './InicioView.module.css';
 
 interface InicioViewProps {
   snapshot: InicioOperationalSnapshot | null;
   userDisplayName: string;
-  workspaceName: string;
-  organizationName: string;
-  organizationShortName: string | null;
-  sectionName: string;
-  workspaceUg: string | null;
-  isFoundingWorkspace: boolean;
-  customLogo: string | null;
-  resumeTarget: InicioResumeTarget | null;
   onNavigate: (tab: OperationalActiveTab) => void;
   onSelectEmpenho: (empenhoId: string) => void;
-  onResumeWork: () => void;
-  onCreateEmpenho: () => void;
-  onRegisterInvoice: () => void;
 }
 
 function formatCurrency(value: number): string {
@@ -46,19 +33,8 @@ function formatCurrency(value: number): string {
 export function InicioView({
   snapshot,
   userDisplayName,
-  workspaceName,
-  organizationName,
-  organizationShortName,
-  sectionName,
-  workspaceUg,
-  isFoundingWorkspace,
-  customLogo,
-  resumeTarget,
   onNavigate,
   onSelectEmpenho,
-  onResumeWork,
-  onCreateEmpenho,
-  onRegisterInvoice,
 }: InicioViewProps) {
   const rootRef = useRef<HTMLElement>(null);
   const { mode: performanceMode, ambientPaused } = useInicioPerformanceProfile();
@@ -162,15 +138,7 @@ export function InicioView({
         onSelectEmpenho={onSelectEmpenho}
       />
 
-      <InicioIdentityPanel
-        userDisplayName={userDisplayName}
-        workspaceName={workspaceName}
-        organizationName={organizationName}
-        organizationShortName={organizationShortName}
-        sectionName={sectionName}
-        workspaceUg={workspaceUg}
-        isFoundingWorkspace={isFoundingWorkspace}
-      />
+      <InicioIdentityPanel userDisplayName={userDisplayName} />
 
       <div
         className={styles.system}
@@ -183,7 +151,6 @@ export function InicioView({
         />
 
         <InicioCore
-          customLogo={customLogo}
           totalEmpenhos={totalEmpenhos}
           totalValueLabel={formatCurrency(totalValue)}
           activeAlertCount={activeAlertCount}
@@ -202,18 +169,6 @@ export function InicioView({
         </div>
       )}
 
-      <div className={styles.interactionHint} aria-hidden="true">
-        <span />
-        <p>Explore os elementos do mapa com o cursor</p>
-      </div>
-
-      <InicioQuickActions
-        resumeTarget={resumeTarget}
-        onResume={onResumeWork}
-        onCreateEmpenho={onCreateEmpenho}
-        onRegisterInvoice={onRegisterInvoice}
-        onNavigate={onNavigate}
-      />
     </section>
   );
 }
