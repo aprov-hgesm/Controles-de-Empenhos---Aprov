@@ -31,7 +31,7 @@ requireText(
 );
 requireText(
   constellation,
-  'const hitSize = Math.max(16, node.size + 10)',
+  'const hitSize = Math.max(STAR_DESKTOP_HITBOX_MIN_PX, node.size + 12)',
   'Área desktop de interação das estrelas não foi ampliada.'
 );
 requireText(
@@ -46,18 +46,58 @@ requireText(
 );
 requireText(
   constellationCss,
-  'min-width: 16px',
+  'min-width: 20px',
   'Hitbox desktop mínima não está protegida.'
 );
 requireText(
   constellationCss,
-  'min-width: 22px',
+  'min-width: 26px',
   'Hitbox touch mínima não está protegida.'
 );
 requireText(
   constellationCss,
   'clip-path: polygon(',
   'Legenda não diferencia estrelas operacionais.'
+);
+requireText(
+  constellation,
+  'keepStarsMutuallySelectable',
+  'Constelação não evita sobreposição entre hitboxes.'
+);
+requireText(
+  constellation,
+  'STAR_SELECTABLE_CLEARANCE_PX',
+  'Constelação não preserva folga mínima entre estrelas clicáveis.'
+);
+requireText(
+  constellation,
+  'data-tooltip-x={tooltipX}',
+  'Tooltip não possui posicionamento horizontal adaptativo.'
+);
+requireText(
+  constellation,
+  'data-tooltip-y={tooltipY}',
+  'Tooltip não possui posicionamento vertical adaptativo.'
+);
+requireText(
+  constellationCss,
+  'z-index: 35',
+  'Constelação não fica acima das camadas decorativas internas.'
+);
+requireText(
+  constellationCss,
+  ".star[data-tooltip-x='start'] .tooltip",
+  'Tooltip não protege a borda esquerda da cena.'
+);
+requireText(
+  constellationCss,
+  ".star[data-tooltip-x='end'] .tooltip",
+  'Tooltip não protege a borda direita da cena.'
+);
+requireText(
+  constellationCss,
+  ".star[data-tooltip-y='below'] .tooltip",
+  'Tooltip não protege a borda superior da cena.'
 );
 
 requireText(
