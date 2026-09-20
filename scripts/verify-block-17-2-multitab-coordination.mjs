@@ -149,7 +149,7 @@ for (const scenario of [
   "toBe('leader')",
   'expect(await logicalSessionId(followerPage)).toBe(sessionIdBefore)',
 ]) {
-  requireText(operatorE2e, scenario, `E2E de liderança/failover ausente: ${scenario}`);
+  requireText(integratedE2e, scenario, `E2E integrado de liderança/failover ausente: ${scenario}`);
 }
 
 for (const scenario of [
