@@ -47,6 +47,59 @@ async function expectRealtimeProfile(page, expectedCount) {
   });
 }
 
+async function expectResponsiveInicio(page, label) {
+  const overflow = await page.evaluate(() => ({
+    innerWidth: window.innerWidth,
+    documentWidth: document.documentElement.scrollWidth,
+    bodyWidth: document.body.scrollWidth,
+  }));
+
+  expect(
+    overflow.documentWidth,
+    `${label}: documentElement não deve criar overflow horizontal`
+  ).toBeLessThanOrEqual(overflow.innerWidth + 1);
+
+  expect(
+    overflow.bodyWidth,
+    `${label}: body não deve criar overflow horizontal`
+  ).toBeLessThanOrEqual(overflow.innerWidth + 1);
+
+  const scene = page.getByTestId('inicio-scene');
+  const identity = page.getByTestId('inicio-identity');
+  const quickActions = page.getByTestId('inicio-quick-actions');
+
+  await expect(scene).toBeVisible();
+  await expect(identity).toBeVisible();
+  await expect(quickActions).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Novo empenho' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Cadastrar NF' })).toBeVisible();
+
+  const [sceneBox, identityBox, quickBox] = await Promise.all([
+    scene.boundingBox(),
+    identity.boundingBox(),
+    quickActions.boundingBox(),
+  ]);
+
+  expect(sceneBox, `${label}: scene sem bounding box`).not.toBeNull();
+  expect(identityBox, `${label}: identidade sem bounding box`).not.toBeNull();
+  expect(quickBox, `${label}: dock sem bounding box`).not.toBeNull();
+
+  if (!sceneBox || !identityBox || !quickBox) return;
+
+  const tolerance = 2;
+  expect(identityBox.x).toBeGreaterThanOrEqual(sceneBox.x - tolerance);
+  expect(identityBox.x + identityBox.width).toBeLessThanOrEqual(
+    sceneBox.x + sceneBox.width + tolerance
+  );
+  expect(quickBox.x).toBeGreaterThanOrEqual(sceneBox.x - tolerance);
+  expect(quickBox.x + quickBox.width).toBeLessThanOrEqual(
+    sceneBox.x + sceneBox.width + tolerance
+  );
+  expect(quickBox.y + quickBox.height).toBeLessThanOrEqual(
+    sceneBox.y + sceneBox.height + tolerance
+  );
+}
+
 test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
   test.afterEach(async ({ page }) => {
     await logoutIfAuthenticated(page);
@@ -224,6 +277,35 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
 
     await page.getByRole('button', { name: 'Painel', exact: true }).first().click();
     await expectRealtimeProfile(page, 1);
+  });
+
+  test('Início permanece responsivo em celular, tablet e landscape sem overflow horizontal', async ({ page }) => {
+    await page.goto('/');
+    await loginSector(page, OPERATOR_A);
+
+    await page.getByRole('button', { name: 'Empenhos', exact: true }).first().click();
+    await expectRealtimeProfile(page, 3);
+    await page.waitForTimeout(1200);
+
+    await page.getByRole('button', { name: 'Início', exact: true }).first().click();
+    await expectRealtimeProfile(page, 1);
+    await expect(page.locator('[data-snapshot="ready"]')).toBeVisible();
+
+    const viewports = [
+      { label: 'phone-small', width: 360, height: 800 },
+      { label: 'phone-standard', width: 390, height: 844 },
+      { label: 'tablet-portrait', width: 768, height: 1024 },
+      { label: 'phone-landscape', width: 844, height: 390 },
+    ];
+
+    for (const viewport of viewports) {
+      await page.setViewportSize({
+        width: viewport.width,
+        height: viewport.height,
+      });
+      await page.waitForTimeout(120);
+      await expectResponsiveInicio(page, viewport.label);
+    }
   });
 
   test('duas sessões por setor, múltiplas abas compartilham vaga e terceira sessão é barrada', async ({ browser }) => {
