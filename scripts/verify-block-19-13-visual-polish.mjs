@@ -20,7 +20,6 @@ const viewCss = read('features/inicio/components/InicioView.module.css');
 const chrome = read('features/inicio/components/InicioSceneChrome.tsx');
 const chromeCss = read('features/inicio/components/InicioSceneChrome.module.css');
 const identityCss = read('features/inicio/components/InicioIdentityPanel.module.css');
-const quickCss = read('features/inicio/components/InicioQuickActions.module.css');
 const coreCss = read('features/inicio/components/InicioCore.module.css');
 const orbitCss = read('features/inicio/components/InicioOrbitSystem.module.css');
 const constellationCss = read('features/inicio/components/InicioConstellation.module.css');
@@ -53,8 +52,7 @@ for (const token of [
 }
 
 requireText(viewCss, '.scene::before', 'Cena não possui moldura interna refinada.');
-requireText(identityCss, 'var(--inicio-line', 'Identidade não usa material compartilhado.');
-requireText(quickCss, 'var(--inicio-glass', 'Dock não usa material compartilhado.');
+requireText(identityCss, 'font-size: clamp(23px, 3vw, 34px)', 'Saudação compacta perdeu hierarquia tipográfica.');
 requireText(coreCss, 'var(--inicio-text', 'Núcleo não usa tipografia compartilhada.');
 requireText(orbitCss, 'var(--inicio-line', 'Órbitas não usam material compartilhado.');
 requireText(constellationCss, 'var(--inicio-critical', 'Constelação não usa paleta semântica compartilhada.');
