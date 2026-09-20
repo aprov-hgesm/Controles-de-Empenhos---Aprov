@@ -282,7 +282,7 @@ export function AdminConsolidatedUsagePanel({
             <div>
               <div className="flex items-center gap-2 text-[9px] font-extrabold uppercase tracking-[0.14em] text-amber-200/85">
                 <BellRing className="h-4 w-4" />
-                Bloco 16.6 · alertas de consumo/cotas
+                Bloco 16.6 · Alertas de consumo/cotas
               </div>
               <p className="mt-2 max-w-3xl text-xs leading-relaxed text-slate-400">
                 Alertas derivados de referências operacionais explícitas. Métrica global real,
