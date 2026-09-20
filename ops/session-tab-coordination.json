@@ -1,0 +1,46 @@
+{
+  "version": "emprovex_session_tab_coordination_v1",
+  "block": "17.2",
+  "baselineCommit": "7e424b30b00e32c9a1b94044c7a1f0c55d4f1e0a",
+  "scope": "browser-session-presence",
+  "primaryElection": "Web Locks API exclusive lock per workspace+uid",
+  "fallbackElection": "localStorage lease with 12s TTL and 4s renewal",
+  "messaging": {
+    "primary": "BroadcastChannel",
+    "fallback": "storage event",
+    "events": [
+      "session-invalidated"
+    ]
+  },
+  "leaderResponsibilities": [
+    "workspace session lease heartbeat",
+    "session revocation Firestore listener",
+    "online-triggered renewal",
+    "visibility-triggered renewal"
+  ],
+  "followerResponsibilities": [
+    "receive local session invalidation",
+    "take over leadership when current leader closes"
+  ],
+  "intentionallyNotCentralized": [
+    "operational collection listeners",
+    "workspace lifecycle listener",
+    "platform account lifecycle listener",
+    "branding listener",
+    "Drive settings listener"
+  ],
+  "failover": {
+    "webLocks": "automatic lock transfer when leader tab releases/closes",
+    "fallback": "leader can be reclaimed after TTL"
+  },
+  "preserved": [
+    "two-session external limit",
+    "founder unlimited",
+    "30-minute lease",
+    "15-minute heartbeat",
+    "identity-safe direct renewal",
+    "remote revocation",
+    "explicit logout release",
+    "multi-tenant Firestore Rules"
+  ]
+}
