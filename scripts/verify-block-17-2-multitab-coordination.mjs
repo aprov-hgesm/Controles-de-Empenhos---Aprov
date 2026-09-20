@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = process.cwd();
@@ -13,7 +13,7 @@ const forbidText = (source, needle, message) => {
   if (source.includes(needle)) findings.push(message);
 };
 
-const coordinator = read('lib/platformSessionCoordinator.ts');
+const control = read('lib/platformSessionControl.ts');
 const operational = read('hooks/useOperationalData.ts');
 const lease = read('lib/platformSessionLease.ts');
 const capacity = read('lib/platformCapacity.ts');
@@ -25,100 +25,58 @@ const docs = read('docs/BLOCK_17_2_MULTITAB_SESSION_COORDINATION.md');
 const pkg = read('package.json');
 const workflow = read('.github/workflows/application-ci.yml');
 
-for (const marker of [
-  "SESSION_COORDINATOR_VERSION = 'emprovex_session_coordinator_v1'",
-  'new BroadcastChannel(channelName(workspaceId, uid))',
-  'navigator.locks.request(',
-  '{ signal: leadershipAbortController.signal }',
-  'leadershipAbortController.abort()',
-  "setRole('leader')",
-  "setRole('follower')",
-  "setRole('fallback')",
-  "message.type !== 'session-invalid'",
-  "handleTerminalFailure('revoked')",
-  "handleTerminalFailure('lease-lost')",
-  "handleTerminalFailure('access-changed')",
-  "ROLE_OWNER_KEY_PREFIX = 'emprovex:session-coordinator-role-owner:v1'",
-  'clearStoredRoleIfOwned',
-]) {
-  requireText(coordinator, marker, `Coordenador multiaba perdeu requisito: ${marker}`);
+if (existsSync(resolve(root, 'lib/platformSessionCoordinator.ts'))) {
+  findings.push('Coordenador persistente antigo ainda existe no runtime.');
 }
 
 for (const marker of [
+  "SESSION_CONTROL_VERSION = 'emprovex_session_control_v2'",
   "doc(db, 'workspaces', workspaceId)",
   "doc(db, 'platformAccounts', context.email)",
   'subscribeWorkspaceSessionRevocation(',
   'renewWorkspaceSessionLeaseIfDue(user, context)',
   'trackWorkspaceRealtimeListener(telemetryScope)',
+  'SESSION_HEARTBEAT_INTERVAL_MS',
 ]) {
-  requireText(coordinator, marker, `Responsabilidade da aba líder ausente: ${marker}`);
+  requireText(control, marker, `Controle autônomo por aba perdeu requisito: ${marker}`);
 }
 
-requireText(
-  coordinator,
-  'if (!supportsSafeCoordination())',
-  'Fallback para navegador sem coordenação segura foi removido.'
-);
-requireText(
-  coordinator,
-  'stopLeaderWork = startLeaderResponsibilities();',
-  'Fallback precisa preservar responsabilidades de controle por aba.'
-);
-requireText(
-  coordinator,
-  'Web Locks já possui fila nativa',
-  'Coordenador perdeu a justificativa do failover sem polling.'
-);
-forbidText(
-  coordinator,
-  'setInterval(attemptLeadership',
-  'Failover multiaba não pode voltar a depender de polling por timer.'
-);
-forbidText(
-  coordinator,
-  'ifAvailable: true',
-  'Web Lock em modo ifAvailable reintroduz polling e pode falhar em aba throttled.'
-);
+for (const forbidden of [
+  'BroadcastChannel',
+  "setRole('leader')",
+  "setRole('follower')",
+  'leadershipAbortController',
+  'session-coordinator-role',
+]) {
+  forbidText(control, forbidden, `Controle por aba reintroduziu coordenação persistente: ${forbidden}`);
+}
 
-requireText(
+for (const marker of [
+  'startWorkspaceSessionControl(',
+  'sessionCoordinatorIdentityKey',
+  'sessionControl.stop()',
+]) {
+  requireText(operational, marker, `Hook operacional perdeu requisito: ${marker}`);
+}
+forbidText(
   operational,
   'startWorkspaceSessionCoordinator(',
-  'Hook operacional não inicia o coordenador multiaba.'
+  'Hook operacional voltou ao coordenador persistente.'
 );
-requireText(
-  operational,
-  'sessionCoordinatorIdentityKey',
-  'Coordenador voltou a depender diretamente de referências voláteis de Auth/contexto.'
-);
-requireText(
-  operational,
-  '}, [sessionCoordinatorIdentityKey]);',
-  'Efeito do coordenador não está estabilizado pela identidade lógica.'
-);
+
+for (const marker of [
+  'shouldRenewWorkspaceSessionLease(context.workspaceId, user.uid)',
+  'const renewIfStillDue = async () =>',
+  'navigator.locks.request(',
+  'emprovex-session-renew:',
+  'return renewIfStillDue();',
+]) {
+  requireText(lease, marker, `Heartbeat curto perdeu requisito: ${marker}`);
+}
 forbidText(
-  operational,
-  '}, [user, workspaceContext]);',
-  'Reemissões equivalentes de Auth/contexto não podem reiniciar o Web Lock.'
-);
-forbidText(
-  operational,
-  "doc(db, 'workspaces', workspaceContext.workspaceId)",
-  'Hook voltou a abrir listener de workspace por aba.'
-);
-forbidText(
-  operational,
-  "doc(db, 'platformAccounts', workspaceContext.email)",
-  'Hook voltou a abrir listener de conta por aba.'
-);
-forbidText(
-  operational,
-  'subscribeWorkspaceSessionRevocation(',
-  'Hook voltou a abrir listener de tombstone por aba.'
-);
-forbidText(
-  operational,
-  'window.setInterval(\n      () => void renewLease()',
-  'Hook voltou a manter heartbeat por aba.'
+  lease,
+  'emprovex-session-leader:',
+  'Lease não pode manter lock persistente de liderança.'
 );
 
 for (const invariant of [
@@ -141,48 +99,48 @@ requireText(rules, "return slotId in ['slot-1', 'slot-2'];", 'Rules perderam lim
 requireText(rules, 'sameWorkspaceSessionLeaseOwner()', 'Rules perderam vínculo de identidade do lease.');
 
 for (const scenario of [
-  'coordenação multiaba mantém um único líder e promove a seguidora sem trocar a sessão lógica',
-  "toBe('follower,leader')",
-  "const leaderPage = roleA === 'leader' ? pageA : pageB",
-  'await leaderPage.close()',
-  'sessionCoordinatorRole(followerPage)',
-  "toBe('leader')",
-  'expect(await logicalSessionId(followerPage)).toBe(sessionIdBefore)',
-]) {
-  requireText(integratedE2e, scenario, `E2E integrado de liderança/failover ausente: ${scenario}`);
-}
-
-for (const scenario of [
-  'aba líder propaga revogação administrativa para a aba seguidora',
-  "toBe('follower,leader')",
+  'abas da mesma sessão compartilham identidade e permanecem autônomas ao fechar uma delas',
+  'expect(sessionsBeforeClose).toHaveLength(1)',
+  'await pageA.close()',
+  'expect(await logicalSessionId(pageB)).toBe(sessionIdBefore)',
+  'revogação administrativa derruba todas as abas da mesma sessão lógica',
   'await expect(pageA1.getByTestId',
   'await expect(pageA2.getByTestId',
 ]) {
-  requireText(integratedE2e, scenario, `E2E de revogação multiaba ausente: ${scenario}`);
+  requireText(integratedE2e, scenario, `E2E integrado simplificado ausente: ${scenario}`);
+}
+
+for (const scenario of [
+  'duas sessões por setor, múltiplas abas compartilham vaga e terceira sessão é barrada',
+  'Limite de acessos simultâneos atingido.',
+]) {
+  requireText(operatorE2e, scenario, `E2E operacional perdeu cenário: ${scenario}`);
 }
 
 if (
-  result.controlListenerModel.before.listenersPerTab !== 3
-  || result.controlListenerModel.afterPreferredMode.listenersPerBrowserLogicalSession !== 3
-  || result.controlListenerModel.afterPreferredMode.listenersPerFollowerTab !== 0
+  result.strategy?.mode !== 'autonomous-control-per-tab'
+  || result.strategy?.persistentLeaderElection !== false
+  || result.strategy?.broadcastChannel !== false
+  || result.strategy?.controlListenersPerActiveTab !== 3
 ) {
-  findings.push('Modelo quantitativo de listeners do 17.2 está inconsistente.');
+  findings.push('Modelo quantitativo/arquitetural do 17.2 simplificado está inconsistente.');
 }
 
-for (const [tabs, expectedReduction] of [[2, 50], [5, 80]]) {
-  const key = `${tabs}_tabs`;
-  if (Math.abs(result.controlListenerModel.examples[key].reductionPercent - expectedReduction) > 0.001) {
-    findings.push(`Redução de listeners para ${tabs} abas está incorreta.`);
-  }
+if (
+  result.heartbeatModel?.shortMutex !== 'emprovex-session-renew:{workspaceId}:{uid}'
+  || result.heartbeatModel?.doubleCheckInsideMutex !== true
+  || result.heartbeatModel?.persistentLock !== false
+) {
+  findings.push('Contrato do mutex curto de heartbeat está inconsistente.');
 }
 
 for (const marker of [
-  'Web Locks API',
+  'Cada aba operacional é autônoma',
+  'Não existe:',
   'BroadcastChannel',
-  'Fallback conservador',
-  '3 × número de abas',
-  '5 | 15 | 3 | 80%',
-  'não é alterado neste bloco',
+  'mutex curto',
+  '3 × número de abas ativas',
+  'O teste não depende de papéis internos de aba',
   'nenhum deploy Vercel',
 ]) {
   requireText(docs, marker, `Documentação 17.2 perdeu requisito: ${marker}`);
@@ -192,15 +150,15 @@ requireText(pkg, '"verify:block-17-2-multitab-coordination"', 'package.json não
 requireText(workflow, 'Block 17.2 multi-tab session coordination guard', 'Application CI não executa guard 17.2.');
 
 if (findings.length) {
-  console.error('BLOCK 17.2 MULTITAB SESSION COORDINATION: FAIL');
+  console.error('BLOCK 17.2 AUTONOMOUS MULTITAB CONTROL: FAIL');
   findings.forEach((finding) => console.error(`  [BLOCK] ${finding}`));
   process.exitCode = 2;
 } else {
-  console.log('BLOCK 17.2 MULTITAB SESSION COORDINATION: READY');
-  console.log('Controle Firestore: 3 LISTENERS POR NAVEGADOR, não por aba');
-  console.log('Liderança: WEB LOCKS');
-  console.log('Invalidação: BROADCASTCHANNEL');
-  console.log('Failover: AUTOMÁTICO');
-  console.log('Fallback incompatível: SEGURO / POR ABA');
+  console.log('BLOCK 17.2 AUTONOMOUS MULTITAB CONTROL: READY');
+  console.log('Controle: 3 LISTENERS POR ABA ATIVA');
+  console.log('Sessão lógica: COMPARTILHADA ENTRE ABAS');
+  console.log('Heartbeat: MUTEX CURTO QUANDO NECESSÁRIO');
+  console.log('Liderança persistente: REMOVIDA');
+  console.log('BroadcastChannel: REMOVIDO');
   console.log('Limite externo: 2 SESSÕES — PRESERVADO');
 }
