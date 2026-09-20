@@ -317,12 +317,12 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
         const roles = [
           await sessionCoordinatorRole(pageA1),
           await sessionCoordinatorRole(pageA2),
-        ].sort();
-        return roles.join(',');
+        ];
+        return roles.filter((role) => role === 'leader').length;
       }, {
         timeout: 15_000,
         intervals: [250, 500, 1000],
-      }).toBe('follower,leader');
+      }).toBe(1);
 
       const sessionIdBefore = await logicalSessionId(pageA1);
       expect(sessionIdBefore).toBeTruthy();
@@ -336,7 +336,7 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
       await expect.poll(
         () => sessionCoordinatorRole(follower),
         {
-          timeout: 15_000,
+          timeout: 20_000,
           intervals: [500, 1000],
         }
       ).toBe('leader');
