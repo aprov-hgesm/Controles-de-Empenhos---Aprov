@@ -1777,6 +1777,15 @@ service cloud.firestore {
         && linkedEmpenhoWriteAllowedAfter(workspaceId, request.resource.data);
     }
 
+    // Block 19.10 — snapshot econômico do Início.
+    // Um único documento derivado alimenta a Home; ele não concede autorização
+    // e nunca substitui as coleções operacionais como fonte de verdade.
+    match /workspaces/{workspaceId}/settings/homeSnapshot {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create, update: if validHomeSnapshot(workspaceId);
+      allow delete: if false;
+    }
+
     match /workspaces/{workspaceId}/settings/termoRecebimentoCounter {
       // O cadastro administrativo verifica se existe contador residual antes de
       // provisionar um workspace novo. Essa leitura prévia só é permitida enquanto
@@ -1813,9 +1822,11 @@ service cloud.firestore {
       allow list: if canAccessWorkspace(workspaceId);
       allow get: if id != 'termoRecebimentoCounter'
         && id != 'documentStorage'
+        && id != 'homeSnapshot'
         && canAccessWorkspace(workspaceId);
       allow create: if id != 'termoRecebimentoCounter'
         && id != 'documentStorage'
+        && id != 'homeSnapshot'
         && canAccessWorkspace(workspaceId)
         && (
           (
@@ -1832,6 +1843,7 @@ service cloud.firestore {
         );
       allow update: if id != 'termoRecebimentoCounter'
         && id != 'documentStorage'
+        && id != 'homeSnapshot'
         && canAccessWorkspace(workspaceId)
         && !isEmpenhoDeletionLockId(id)
         && (
@@ -1840,6 +1852,7 @@ service cloud.firestore {
         );
       allow delete: if id != 'termoRecebimentoCounter'
         && id != 'documentStorage'
+        && id != 'homeSnapshot'
         && canAccessWorkspace(workspaceId)
         && (
           (
