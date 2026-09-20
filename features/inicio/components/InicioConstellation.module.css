@@ -413,7 +413,7 @@
   .legend {
     left: 16px;
     right: 16px;
-    bottom: 132px;
+    bottom: 34px;
     gap: 6px 9px;
     max-width: none;
     font-size: 6px;
@@ -427,7 +427,7 @@
 
 @media (max-width: 420px) {
   .legend {
-    bottom: 136px;
+    bottom: 30px;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, max-content));
     gap: 5px 12px;
