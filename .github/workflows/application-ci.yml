@@ -286,6 +286,9 @@ jobs:
       - name: Block 19.4 operational orbit guard
         run: npm run verify:block-19-4-operational-orbits
 
+      - name: Block 19.5 operational constellation guard
+        run: npm run verify:block-19-5-operational-constellation
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
