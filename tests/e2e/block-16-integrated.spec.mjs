@@ -332,22 +332,27 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
       await pageA1.goto('/');
       await loginSector(pageA1);
 
+      await expect.poll(
+        () => coordinatorRole(pageA1),
+        {
+          timeout: 15_000,
+          intervals: [250, 500, 1000],
+        }
+      ).toBe('leader');
+
       const pageA2 = await context.newPage();
       await pageA2.goto('/');
       await expect(pageA2.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
         timeout: 20_000,
       });
 
-      await expect.poll(async () => {
-        const roles = [
-          await coordinatorRole(pageA1),
-          await coordinatorRole(pageA2),
-        ].sort();
-        return roles.join(',');
-      }, {
-        timeout: 15_000,
-        intervals: [250, 500, 1000],
-      }).toBe('follower,leader');
+      await expect.poll(
+        () => coordinatorRole(pageA2),
+        {
+          timeout: 15_000,
+          intervals: [250, 500, 1000],
+        }
+      ).toBe('follower');
 
       const [session] = await workspaceSessions();
       expect(session).toBeTruthy();
