@@ -216,7 +216,7 @@ test('política sem referências não fabrica alertas, franquia ou cobrança', (
     policy,
   });
 
-  assert.deepEqual(alerts, []);
+  assert.equal(alerts.length, 0);
   assert.equal('billing' in policy, false);
   assert.equal('price' in policy, false);
 });
