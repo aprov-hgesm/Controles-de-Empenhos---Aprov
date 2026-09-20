@@ -98,7 +98,8 @@ for (const marker of [
 for (const marker of [
   'Administrador lista slots de sessão de toda a plataforma',
   'Administrador revoga e libera uma sessão na mesma transação',
-  'Setor revogado lê somente o tombstone da própria sessão',
+  'Setor lê tombstone conhecido dentro do próprio workspace',
+  'Setor pode verificar tombstone inexistente antes de adquirir lease',
   'Outro workspace não lê revogação de sessão do Setor A',
   'Setor operacional não cria tombstone de revogação',
 ]) requireText(security, marker, `Emulator perdeu cenário 16.2: ${marker}`);
@@ -106,6 +107,7 @@ for (const marker of [
 for (const marker of [
   'um único listener de collection group',
   'revogação correspondente na mesma transação',
+  'get` pontual em `sessionRevocations` apenas dentro do próprio workspace',
   'session.terminate',
   '24 horas',
 ]) requireText(docs, marker, `Documentação 16.2 perdeu requisito: ${marker}`);
