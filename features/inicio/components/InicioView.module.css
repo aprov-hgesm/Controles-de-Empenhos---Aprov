@@ -67,67 +67,6 @@
   mask-image: linear-gradient(to bottom, transparent, black 22%, transparent 78%);
 }
 
-.copy {
-  position: relative;
-  z-index: 8;
-  width: min(460px, calc(100% - 48px));
-  padding: 42px 0 0 42px;
-  pointer-events: none;
-}
-
-.kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: rgba(164, 191, 255, 0.74);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-
-.kicker svg {
-  width: 14px;
-  height: 14px;
-}
-
-.copy h2 {
-  margin: 16px 0 0;
-  max-width: 430px;
-  font-size: clamp(28px, 4vw, 48px);
-  line-height: 0.98;
-  letter-spacing: -0.045em;
-  font-weight: 850;
-}
-
-.copy p {
-  margin: 18px 0 0;
-  max-width: 430px;
-  color: rgba(190, 204, 230, 0.72);
-  font-size: 13px;
-  line-height: 1.7;
-}
-
-.identity {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 18px;
-}
-
-.identity span {
-  border: 1px solid rgba(104, 139, 255, 0.15);
-  border-radius: 999px;
-  background: rgba(56, 82, 157, 0.08);
-  padding: 6px 9px;
-  color: rgba(177, 202, 255, 0.68);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-}
-
 .system {
   position: absolute;
   left: 50%;
@@ -196,15 +135,6 @@
     border-radius: 1.5rem;
   }
 
-  .copy {
-    width: calc(100% - 36px);
-    padding: 28px 0 0 28px;
-  }
-
-  .copy p {
-    max-width: 360px;
-  }
-
   .system {
     top: 61%;
     width: min(620px, 108vw);
@@ -219,21 +149,6 @@
   .scene {
     min-height: 760px;
     border-radius: 1.25rem;
-  }
-
-  .copy {
-    padding: 24px 20px 0;
-    width: 100%;
-  }
-
-  .copy h2 {
-    max-width: 300px;
-    font-size: 32px;
-  }
-
-  .copy p {
-    max-width: 315px;
-    font-size: 12px;
   }
 
   .system {
