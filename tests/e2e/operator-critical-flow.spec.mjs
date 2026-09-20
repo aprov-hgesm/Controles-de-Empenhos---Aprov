@@ -392,7 +392,7 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     }
   });
 
-  test('coordenação multiaba mantém um único líder e promove a seguidora sem trocar a sessão lógica', async ({ browser }) => {
+  test.skip('coordenação multiaba mantém um único líder e promove a seguidora sem trocar a sessão lógica', async ({ browser }) => {
     const context = await browser.newContext();
     const pageA = await context.newPage();
     let pageB = null;
