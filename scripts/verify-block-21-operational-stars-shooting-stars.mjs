@@ -59,6 +59,14 @@ requireText(
   'clip-path: polygon(',
   'Legenda não diferencia estrelas operacionais.'
 );
+requireText(constellation, 'keepStarsMutuallySelectable', 'Constelação não evita sobreposição entre hitboxes.');
+requireText(constellation, 'STAR_SELECTABLE_CLEARANCE_PX', 'Constelação não preserva folga mínima entre estrelas clicáveis.');
+requireText(constellation, 'data-tooltip-x={tooltipX}', 'Tooltip não possui posicionamento horizontal adaptativo.');
+requireText(constellation, 'data-tooltip-y={tooltipY}', 'Tooltip não possui posicionamento vertical adaptativo.');
+requireText(constellationCss, 'z-index: 35', 'Constelação não fica acima das camadas decorativas internas.');
+requireText(constellationCss, ".star[data-tooltip-x='start'] .tooltip", 'Tooltip não protege a borda esquerda da cena.');
+requireText(constellationCss, ".star[data-tooltip-x='end'] .tooltip", 'Tooltip não protege a borda direita da cena.');
+requireText(constellationCss, ".star[data-tooltip-y='below'] .tooltip", 'Tooltip não protege a borda superior da cena.');
 requireText(
   constellation,
   'keepStarsMutuallySelectable',
