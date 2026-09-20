@@ -75,9 +75,9 @@ function formatCurrency(value: number): string {
 }
 
 function getSize(value: number, maxValue: number): number {
-  if (value <= 0 || maxValue <= 0) return 3;
+  if (value <= 0 || maxValue <= 0) return 4.8;
   const normalized = Math.log10(value + 1) / Math.log10(maxValue + 1);
-  return 3 + normalized * 3.4;
+  return 4.8 + normalized * 3.8;
 }
 
 function sameExclusionZones(
