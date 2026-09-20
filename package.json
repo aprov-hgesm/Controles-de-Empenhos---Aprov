@@ -115,7 +115,8 @@
     "verify:block-19-5-operational-constellation": "node scripts/verify-block-19-5-operational-constellation.mjs",
     "verify:block-19-6-unit-identity": "node scripts/verify-block-19-6-unit-identity.mjs",
     "verify:block-19-7-quick-actions-resume": "node scripts/verify-block-19-7-quick-actions-resume.mjs",
-    "verify:block-19-8-microinteractions": "node scripts/verify-block-19-8-microinteractions.mjs"
+    "verify:block-19-8-microinteractions": "node scripts/verify-block-19-8-microinteractions.mjs",
+    "verify:block-19-9-surface-transitions": "node scripts/verify-block-19-9-surface-transitions.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
