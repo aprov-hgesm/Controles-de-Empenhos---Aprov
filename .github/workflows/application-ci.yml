@@ -253,6 +253,9 @@ jobs:
       - name: Block 16.5 consolidated usage dashboard guard
         run: npm run verify:block-16-5-consolidated-usage
 
+      - name: Block 16.6 usage alerts guard
+        run: npm run verify:block-16-6-usage-alerts
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
