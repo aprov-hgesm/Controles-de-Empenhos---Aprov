@@ -139,6 +139,7 @@ export function InicioView({
     <section
       ref={rootRef}
       className={styles.scene}
+      data-testid="inicio-scene"
       data-ready="true"
       data-snapshot={snapshot ? 'ready' : 'empty'}
       data-performance={performanceMode}
@@ -169,7 +170,11 @@ export function InicioView({
         isFoundingWorkspace={isFoundingWorkspace}
       />
 
-      <div className={styles.system} aria-label="Sistema solar operacional EMPROVEX">
+      <div
+        className={styles.system}
+        data-testid="inicio-system"
+        aria-label="Sistema solar operacional EMPROVEX"
+      >
         <InicioOrbitSystem
           snapshot={snapshot}
           onNavigate={onNavigate}
