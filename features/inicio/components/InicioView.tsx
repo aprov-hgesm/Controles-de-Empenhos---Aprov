@@ -14,6 +14,7 @@ import { InicioIdentityPanel } from './InicioIdentityPanel';
 import { InicioInteractionLayer } from './InicioInteractionLayer';
 import { InicioOrbitSystem } from './InicioOrbitSystem';
 import { InicioQuickActions } from './InicioQuickActions';
+import { InicioSceneChrome } from './InicioSceneChrome';
 import styles from './InicioView.module.css';
 
 interface InicioViewProps {
@@ -148,6 +149,7 @@ export function InicioView({
     >
       <InicioEntrySequence />
       <InicioAtmosphere />
+      <InicioSceneChrome />
       <InicioInteractionLayer
         sceneRef={rootRef}
         enabled={enableFineMotion}
