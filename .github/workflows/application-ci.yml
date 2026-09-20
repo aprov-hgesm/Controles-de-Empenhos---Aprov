@@ -247,6 +247,9 @@ jobs:
       - name: Block 16.3 workspace telemetry guard
         run: npm run verify:block-16-3-workspace-telemetry
 
+      - name: Block 16.4 global Cloud Monitoring guard
+        run: npm run verify:block-16-4-global-monitoring
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 

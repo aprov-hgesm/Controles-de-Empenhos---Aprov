@@ -9,6 +9,7 @@ import { usePlatformBranding } from '../../hooks/usePlatformBranding';
 import { usePlatformAdminDirectory } from '../../hooks/usePlatformAdminDirectory';
 import { usePlatformAdminSessions } from '../../hooks/usePlatformAdminSessions';
 import { usePlatformAdminUsage } from '../../hooks/usePlatformAdminUsage';
+import { usePlatformAdminGlobalUsage } from '../../hooks/usePlatformAdminGlobalUsage';
 import { auth } from '../../lib/firebase';
 import { resetActiveProfileMode, setActiveProfileMode } from '../../lib/profileMode';
 import { resolveWorkspaceContext } from '../../lib/workspaceContext';
@@ -36,6 +37,7 @@ export default function PlatformAdminPage() {
     adminDirectory.directory.workspaces,
     !adminDirectory.loading && !adminDirectory.error
   );
+  const adminGlobalUsage = usePlatformAdminGlobalUsage(adminUser);
 
   useEffect(() => {
     if (loading) return;
@@ -100,6 +102,12 @@ export default function PlatformAdminPage() {
       usage={adminUsage.usage}
       loadingUsage={adminUsage.loading}
       usageError={adminUsage.error}
+      globalUsage={adminGlobalUsage.snapshot}
+      globalUsageConfigured={adminGlobalUsage.configured}
+      globalUsageObservedAt={adminGlobalUsage.observedAt}
+      globalUsageDataThrough={adminGlobalUsage.dataThrough}
+      loadingGlobalUsage={adminGlobalUsage.loading}
+      globalUsageError={adminGlobalUsage.error}
       onCreateSector={async (input) => {
         await adminDirectory.createSector(input);
       }}
@@ -119,6 +127,7 @@ export default function PlatformAdminPage() {
         await adminSessions.terminateSession(session);
       }}
       onRefreshUsage={adminUsage.refresh}
+      onRefreshGlobalUsage={adminGlobalUsage.refresh}
       onLogout={handleLogout}
     />
   );
