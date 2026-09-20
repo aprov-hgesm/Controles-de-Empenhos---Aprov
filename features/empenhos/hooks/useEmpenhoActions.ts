@@ -576,11 +576,14 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     const newAlert: Alert = {
       id: `alt-${Date.now()}`,
       empenhoId: target.id,
-      type: 'ATENÇÃO',
+      type: 'INFORMATIVO',
+      status: 'NOVO',
+      source: 'EMPENHO',
       title: `Novo Empenho Cadastrado: ${target.id}`,
       subtitle: `Fornecedor: ${target.supplier}`,
       description: `Aguardando faturamento de ${target.items.length} itens cadastrados no valor de R$ ${target.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`,
       date: 'Agora',
+      createdAt: new Date().toISOString(),
     };
      setAlerts([newAlert, ...alerts]);
      if (user) {
