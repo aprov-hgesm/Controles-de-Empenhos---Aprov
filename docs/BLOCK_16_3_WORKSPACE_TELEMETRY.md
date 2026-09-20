@@ -57,6 +57,8 @@ telemetria.
 O write usado para consolidar a telemetria não é somado novamente ao consumo da UG;
 isso evita realimentação infinita do contador.
 
+No logout explícito, o buffer pendente é consolidado uma única vez antes do encerramento da autenticação. Se a sessão Firebase já tiver terminado, o buffer não tenta executar writes não autorizados em loop; ele permanece apenas como estado local best-effort.
+
 ## Fontes instrumentadas neste bloco
 
 A estimativa passa a observar os pontos de maior impacto e maior confiança do runtime:
