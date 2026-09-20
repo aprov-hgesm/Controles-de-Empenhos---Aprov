@@ -84,6 +84,7 @@ for (const marker of [
 ]) requireText(audit, marker, `Auditoria não conhece sessão: ${marker}`);
 
 for (const marker of [
+  'match /{path=**}/sessionSlots/{slotId}',
   'function validSessionRevocationCreate',
   'function validAdminSessionSlotDelete',
   'match /workspaces/{workspaceId}/sessionRevocations/{sessionId}',
