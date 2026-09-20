@@ -203,6 +203,13 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     await page.getByRole('button', { name: 'Empenhos', exact: true }).first().click();
     await expectRealtimeProfile(page, 3);
 
+    // O snapshot econômico é publicado somente a partir de dados que esta tela
+    // já precisou carregar. A Home seguinte deve usar um único documento realtime.
+    await page.waitForTimeout(1200);
+    await page.getByRole('button', { name: 'Início', exact: true }).first().click();
+    await expectRealtimeProfile(page, 1);
+    await expect(page.locator('[data-snapshot="ready"]')).toBeVisible();
+
     await page.getByRole('button', { name: 'Notas Fiscais', exact: true }).first().click();
     await expectRealtimeProfile(page, 4);
 
