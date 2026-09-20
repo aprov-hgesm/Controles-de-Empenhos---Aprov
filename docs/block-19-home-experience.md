@@ -58,9 +58,26 @@ Concluído na mesma branch da fundação:
 
 A transição automática **Login → Início** permanece propositalmente adiada até a homologação visual. O Dashboard continua como landing pós-login, e a animação completa é validada ao entrar manualmente em Início.
 
+## Bloco 19.3 — núcleo/logo interativo
+
+Concluído:
+
+- Sol estático substituído por componente `InicioCore`;
+- logo institucional real integrado com `next/image`;
+- fallback EMP preservado caso não exista logo;
+- resposta 3D local ao cursor, sem mover a cena inteira;
+- três órbitas energéticas com velocidades distintas;
+- arco telemétrico e pulsos concêntricos;
+- intensidade do halo deriva suavemente da quantidade de empenhos;
+- tooltip mantém total de empenhos, valor empenhado e contexto de alertas;
+- alerta afeta somente um sinal secundário do núcleo, preservando o planeta de Alertas como indicador primário;
+- nenhuma leitura Firestore adicional;
+- nenhuma dependência WebGL/Three.js;
+- `prefers-reduced-motion` preservado.
+
 ## Próximas etapas
 
-- 19.3: núcleo/logo interativo;
+- 19.4: órbitas e planetas adicionais;
 - 19.3: núcleo/logo interativo;
 - 19.4: órbitas e planetas adicionais;
 - 19.5: constelação operacional completa;
