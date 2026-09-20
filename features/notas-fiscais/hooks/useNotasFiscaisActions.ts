@@ -549,24 +549,28 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     }
   };
 
-  const handleSaveNumeroNS = async (invoiceRecordKey: string, value: string) => {
-    const targetInvoice = invoices.find(
+  const handleSaveNumeroNS = async (
+    invoiceRecordKey: string,
+    value: string,
+    invoiceSource: Invoice[] = invoices
+  ): Promise<Invoice | null> => {
+    const targetInvoice = invoiceSource.find(
       (invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey
     );
     if (!targetInvoice) {
       showToast('Nota Fiscal não encontrada para alteração da NS.', 'error');
-      return;
+      return null;
     }
 
     if (!user) {
       showToast('Faça login novamente antes de alterar a NS.', 'error');
-      return;
+      return null;
     }
 
     const targetEmpenho = empenhos.find((empenho) => empenho.id === targetInvoice.empenhoId);
     if (!targetEmpenho) {
       showToast('Empenho vinculado à Nota Fiscal não foi encontrado.', 'error');
-      return;
+      return null;
     }
 
     const supplierCnpj = normalizeSupplierCnpj(
@@ -574,7 +578,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     );
     if (!supplierCnpj || !isValidSupplierCnpj(supplierCnpj)) {
       showToast('A Nota Fiscal não possui um CNPJ oficial válido para controlar a NS. Corrija formato e dígitos verificadores.', 'error');
-      return;
+      return null;
     }
 
     const currentNs = normalizeNsNumber(targetInvoice.numeroNS);
@@ -588,11 +592,11 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
         'A UG da Organização Militar não está configurada para este usuário. Solicite ao administrador que vincule a UG ao cadastro do setor.',
         'error'
       );
-      return;
+      return null;
     }
 
     const knownNsOwnerRecordKeys = proposedNs
-      ? invoices
+      ? invoiceSource
           .filter((invoice) => {
             if (getInvoiceRecordKey(invoice) === invoiceRecordKey) return false;
             if (normalizeNsNumber(invoice.numeroNS) !== proposedNs) return false;
@@ -642,6 +646,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
           : `Número da NS removido da NF ${targetInvoice.id}!`,
         'success'
       );
+      return updatedInvoice || null;
     } catch (error) {
       console.error('Erro ao salvar Número da NS com integridade transacional:', error);
       showToast(
@@ -650,6 +655,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
           : 'Erro ao salvar Número da NS no Firebase.',
         'error'
       );
+      return null;
     }
   };
 
