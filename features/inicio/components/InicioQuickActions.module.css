@@ -44,6 +44,15 @@
   box-shadow: 0 0 0 2px rgba(139, 176, 255, 0.35);
 }
 
+.resume:active {
+  transform: translateY(0) scale(0.985);
+}
+
+.action:active {
+  transform: translateY(0) scale(0.95);
+  background: rgba(25, 42, 81, 0.92);
+}
+
 .resumeIcon {
   display: grid;
   width: 31px;
