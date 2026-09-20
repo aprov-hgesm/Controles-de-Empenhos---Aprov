@@ -10,7 +10,6 @@ import {
   signOut,
   type User,
 } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { auth, db, googleProvider, handleFirestoreError, OperationType } from '../lib/firebase';
 import type { Alert, Comissao, CronogramaEmpenho, Empenho, Invoice } from '../lib/types';
@@ -24,11 +23,7 @@ import {
 import type { OperationalActiveTab } from '../lib/operationalSubscriptionPlan';
 import { resetActiveProfileMode, setActiveProfileMode } from '../lib/profileMode';
 import { normalizePlatformEmail } from '../lib/platformIdentity';
-import {
-  flushWorkspaceUsageTelemetry,
-  recordWorkspaceRealtimeSnapshot,
-  trackWorkspaceRealtimeListener,
-} from '../lib/workspaceUsageTelemetry';
+import { flushWorkspaceUsageTelemetry } from '../lib/workspaceUsageTelemetry';
 import {
   PlatformSessionLeaseError,
   SESSION_CAPACITY_EXCEEDED_MESSAGE,
@@ -152,110 +147,6 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
       router.replace('/admin');
     }
   }, [router, user, workspaceContext.status]);
-
-  // Bloco 19 — observador de ciclo de vida para setores externos.
-  // As Rules já bloqueiam operações quando status deixa de ser active; este watcher
-  // também encerra a sessão aberta assim que o diretório administrativo mudar.
-  useEffect(() => {
-    if (
-      !user
-      || !isOperationalSectorContext(workspaceContext)
-      || workspaceContext.resolutionSource !== 'platform-directory'
-    ) {
-      return;
-    }
-
-    let revoked = false;
-
-    const revokeOperationalAccess = () => {
-      if (revoked) return;
-      revoked = true;
-      clearLocalWorkspaceSessionLease(workspaceContext.workspaceId, user.uid);
-      clearResolvedWorkspaceContext();
-      clearOperationalState();
-      resetActiveProfileMode();
-      setWorkspaceContext(resolveWorkspaceContext(null));
-      setUser(null);
-      setSyncing(false);
-      void signOut(auth);
-    };
-
-    const handleLifecycleError = (error: unknown) => {
-      const code = typeof error === 'object' && error && 'code' in error
-        ? String((error as { code?: unknown }).code || '')
-        : '';
-      if (code.includes('permission-denied')) {
-        revokeOperationalAccess();
-      }
-    };
-
-    const workspaceRef = doc(db, 'workspaces', workspaceContext.workspaceId);
-    const accountRef = doc(db, 'platformAccounts', workspaceContext.email);
-    const telemetryScope = {
-      workspaceId: workspaceContext.workspaceId,
-      ug: workspaceContext.ug,
-    };
-    const stopWorkspaceListenerTelemetry = trackWorkspaceRealtimeListener(telemetryScope);
-    const stopAccountListenerTelemetry = trackWorkspaceRealtimeListener(telemetryScope);
-
-    const unsubscribeWorkspace = onSnapshot(
-      workspaceRef,
-      (snapshot) => {
-        recordWorkspaceRealtimeSnapshot(telemetryScope, 1);
-        if (!snapshot.exists()) {
-          revokeOperationalAccess();
-          return;
-        }
-        const data = snapshot.data() as { id?: string; status?: string; authorizedEmail?: string; ug?: string };
-        if (
-          data.id !== workspaceContext.workspaceId
-          || data.status !== 'active'
-          || data.authorizedEmail !== workspaceContext.email
-          || (data.ug || null) !== workspaceContext.ug
-        ) {
-          revokeOperationalAccess();
-        }
-      },
-      handleLifecycleError
-    );
-
-    const unsubscribeAccount = onSnapshot(
-      accountRef,
-      (snapshot) => {
-        recordWorkspaceRealtimeSnapshot(telemetryScope, 1);
-        if (!snapshot.exists()) {
-          revokeOperationalAccess();
-          return;
-        }
-        const data = snapshot.data() as {
-          email?: string;
-          workspaceId?: string;
-          accountType?: string;
-          status?: string;
-          firebaseUid?: string;
-          ug?: string;
-        };
-        if (
-          data.email !== workspaceContext.email
-          || data.workspaceId !== workspaceContext.workspaceId
-          || data.accountType !== 'sector'
-          || data.status !== 'active'
-          || data.firebaseUid !== user.uid
-          || (data.ug || null) !== workspaceContext.ug
-        ) {
-          revokeOperationalAccess();
-        }
-      },
-      handleLifecycleError
-    );
-
-    return () => {
-      unsubscribeWorkspace();
-      unsubscribeAccount();
-      stopWorkspaceListenerTelemetry();
-      stopAccountListenerTelemetry();
-    };
-  }, [user, workspaceContext]);
 
   // Bloco 17.2 — uma única aba por navegador assume heartbeat + listener de
   // revogação. Abas seguidoras recebem invalidação via BroadcastChannel e podem
