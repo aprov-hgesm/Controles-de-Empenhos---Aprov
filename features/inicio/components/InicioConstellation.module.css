@@ -141,7 +141,7 @@
 
 .star[data-stage='closed'] {
   opacity: 0.3;
-  animation-duration: 8s, calc(var(--star-drift-duration, 11s) * 1.35);
+  animation-duration: 8s, var(--star-drift-duration, 11s);
 }
 
 .star[data-stage='closed'] .core {
@@ -375,9 +375,9 @@
 }
 
 @keyframes starDrift {
-  0% { translate: calc(var(--star-drift-x, 0px) * -0.45) calc(var(--star-drift-y, 0px) * -0.45); }
+  0%, 100% { translate: 0 0; }
   48% { translate: var(--star-drift-x, 0px) var(--star-drift-y, 0px); }
-  100% { translate: calc(var(--star-drift-x, 0px) * -0.7) calc(var(--star-drift-y, 0px) * 0.55); }
+  72% { translate: var(--star-drift-y, 0px) var(--star-drift-x, 0px); }
 }
 
 @keyframes criticalPulse {
