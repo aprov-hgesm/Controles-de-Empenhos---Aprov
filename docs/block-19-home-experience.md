@@ -95,9 +95,30 @@ Concluído:
 
 As métricas de Execução e Recebimentos desta etapa usam `item.received`, que já representa o quantitativo recebido/liquidado no domínio atual. Indicadores específicos de NF permanecem reservados para o snapshot agregado por UG, evitando abrir novas coleções realtime na Home.
 
+## Bloco 19.5 — constelação operacional completa
+
+Concluído:
+
+- constelação extraída para `InicioConstellation`;
+- cada estrela representa um empenho e abre diretamente o respectivo detalhe;
+- estados regular, atenção, crítico, urgente, sem movimentação e encerrado possuem leitura visual própria;
+- tamanho varia discretamente conforme o valor empenhado, sem transformar a Home em gráfico;
+- até 60 empenhos ativos ficam em primeiro plano e até 12 encerrados formam uma camada histórica suave;
+- empenhos críticos/atenção recebem prioridade no orçamento visual;
+- estrelas do mesmo fornecedor são posicionadas por proximidade determinística;
+- ao focar/hover uma estrela, empenhos do mesmo fornecedor permanecem destacados e recebem linhas de conexão temporárias;
+- tooltip expandido mostra classe, status, motivo, fornecedor, valor, saldo e percentual recebido;
+- legenda passa a exibir contagens por estado;
+- dispositivos menores removem as linhas relacionais, preservando as estrelas e tooltips;
+- `prefers-reduced-motion` preservado;
+- nenhuma subscription de invoices, comissões ou cronogramas adicionada;
+- nenhum acesso direto ao Firebase, Canvas ou WebGL.
+
+A limitação de 72 estrelas de primeiro plano permanece intencional. Grandes históricos serão tratados pelo snapshot agregado/densidade visual, não por milhares de nós DOM simultâneos.
+
 ## Próximas etapas
 
-- 19.5: constelação operacional completa;
+- 19.6: identidade/UG e contexto do operador;
 - 19.3: núcleo/logo interativo;
 - 19.4: órbitas e planetas adicionais;
 - 19.5: constelação operacional completa;
