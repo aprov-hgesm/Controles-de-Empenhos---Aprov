@@ -88,6 +88,7 @@ for (const marker of [
   'function validSessionRevocationCreate',
   'function validAdminSessionSlotDelete',
   'match /workspaces/{workspaceId}/sessionRevocations/{sessionId}',
+  'match /{sessionSlotPath=**}/sessionSlots/{slotId}',
   "request.resource.data.revocationVersion == 'emprovex_session_revocation_v1'",
   'allow update, delete: if false;',
   "'session.terminate'",
