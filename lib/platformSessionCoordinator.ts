@@ -1,6 +1,9 @@
 'use client';
 
 import type { User } from 'firebase/auth';
+import { doc, onSnapshot } from 'firebase/firestore';
+
+import { db } from './firebase';
 
 import {
   SESSION_HEARTBEAT_INTERVAL_MS,
@@ -11,6 +14,10 @@ import {
   renewWorkspaceSessionLeaseIfDue,
   subscribeWorkspaceSessionRevocation,
 } from './platformSessionLease';
+import {
+  recordWorkspaceRealtimeSnapshot,
+  trackWorkspaceRealtimeListener,
+} from './workspaceUsageTelemetry';
 import type { SectorWorkspaceContext } from './workspaceContext';
 
 export const SESSION_COORDINATOR_VERSION = 'emprovex_session_coordinator_v1';
@@ -25,7 +32,7 @@ export type WorkspaceSessionCoordinatorRole =
   | 'follower'
   | 'fallback';
 
-type SessionInvalidationReason = 'revoked' | 'lease-lost';
+type SessionInvalidationReason = 'revoked' | 'lease-lost' | 'access-changed';
 
 interface CoordinatorMessage {
   version: typeof SESSION_COORDINATOR_VERSION;
@@ -168,6 +175,85 @@ export function startWorkspaceSessionCoordinator(
       }
     };
 
+    const telemetryScope = {
+      workspaceId,
+      ug: context.ug,
+    };
+    const stopWorkspaceListenerTelemetry = trackWorkspaceRealtimeListener(telemetryScope);
+    const stopAccountListenerTelemetry = trackWorkspaceRealtimeListener(telemetryScope);
+
+    const handleLifecycleError = (error: unknown) => {
+      const code = typeof error === 'object' && error && 'code' in error
+        ? String((error as { code?: unknown }).code || '')
+        : '';
+      if (code.includes('permission-denied') || code.includes('unauthenticated')) {
+        handleTerminalFailure('access-changed');
+        return;
+      }
+      callbacks.onTransientError?.(error);
+    };
+
+    const workspaceRef = doc(db, 'workspaces', workspaceId);
+    const accountRef = doc(db, 'platformAccounts', context.email);
+
+    const unsubscribeWorkspace = onSnapshot(
+      workspaceRef,
+      (snapshot) => {
+        recordWorkspaceRealtimeSnapshot(telemetryScope, 1);
+        if (!snapshot.exists()) {
+          handleTerminalFailure('access-changed');
+          return;
+        }
+
+        const data = snapshot.data() as {
+          id?: string;
+          status?: string;
+          authorizedEmail?: string;
+          ug?: string;
+        };
+        if (
+          data.id !== workspaceId
+          || data.status !== 'active'
+          || data.authorizedEmail !== context.email
+          || (data.ug || null) !== context.ug
+        ) {
+          handleTerminalFailure('access-changed');
+        }
+      },
+      handleLifecycleError
+    );
+
+    const unsubscribeAccount = onSnapshot(
+      accountRef,
+      (snapshot) => {
+        recordWorkspaceRealtimeSnapshot(telemetryScope, 1);
+        if (!snapshot.exists()) {
+          handleTerminalFailure('access-changed');
+          return;
+        }
+
+        const data = snapshot.data() as {
+          email?: string;
+          workspaceId?: string;
+          accountType?: string;
+          status?: string;
+          firebaseUid?: string;
+          ug?: string;
+        };
+        if (
+          data.email !== context.email
+          || data.workspaceId !== workspaceId
+          || data.accountType !== 'sector'
+          || data.status !== 'active'
+          || data.firebaseUid !== uid
+          || (data.ug || null) !== context.ug
+        ) {
+          handleTerminalFailure('access-changed');
+        }
+      },
+      handleLifecycleError
+    );
+
     const unsubscribeRevocation = subscribeWorkspaceSessionRevocation(
       user,
       context,
@@ -194,7 +280,11 @@ export function startWorkspaceSessionCoordinator(
 
     return () => {
       active = false;
+      unsubscribeWorkspace();
+      unsubscribeAccount();
       unsubscribeRevocation();
+      stopWorkspaceListenerTelemetry();
+      stopAccountListenerTelemetry();
       window.clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('online', handleOnline);
