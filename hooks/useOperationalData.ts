@@ -30,6 +30,7 @@ import {
   recordWorkspaceRealtimeSnapshot,
   trackWorkspaceRealtimeListener,
 } from '../lib/workspaceUsageTelemetry';
+import { startWorkspaceSessionTabCoordinator } from '../lib/sessionTabCoordinator';
 import {
   PlatformSessionLeaseError,
   SESSION_CAPACITY_EXCEEDED_MESSAGE,
@@ -260,9 +261,9 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     };
   }, [user, workspaceContext]);
 
-  // Bloco 17.1 — mantém o lease externo vivo com renovação esparsa do slot já
-  // conhecido. O timestamp local compartilhado reduz renovações redundantes entre
-  // abas; a liderança multiaba completa fica deliberadamente para o Bloco 17.2.
+  // Bloco 17.2 — uma única aba do navegador assume a presença Firestore da
+  // sessão lógica. As demais abas permanecem followers e recebem invalidações
+  // localmente; quando a líder fecha, Web Locks transfere a liderança automaticamente.
   useEffect(() => {
     if (
       !user
@@ -273,10 +274,14 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     }
 
     let active = true;
+    let stopLeaderResources: (() => void) | null = null;
+    let coordinator: ReturnType<typeof startWorkspaceSessionTabCoordinator> | null = null;
 
     const revokeLeaseAccess = () => {
       if (!active) return;
       active = false;
+      stopLeaderResources?.();
+      stopLeaderResources = null;
       clearLocalWorkspaceSessionLease(workspaceContext.workspaceId, user.uid);
       clearResolvedWorkspaceContext();
       clearOperationalState();
@@ -287,46 +292,93 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
       void signOut(auth);
     };
 
-    const renewLease = async () => {
-      try {
-        await renewWorkspaceSessionLeaseIfDue(user, workspaceContext);
-      } catch (error) {
-        if (isTerminalSessionLeaseError(error)) {
-          revokeLeaseAccess();
-          return;
+    const invalidateLogicalSession = (reason: string) => {
+      coordinator?.broadcastSessionInvalidated(reason);
+      revokeLeaseAccess();
+    };
+
+    const startLeaderResources = () => {
+      if (!active || stopLeaderResources) return;
+
+      let leaderActive = true;
+
+      const renewLease = async () => {
+        if (!leaderActive || !active) return;
+        try {
+          await renewWorkspaceSessionLeaseIfDue(user, workspaceContext);
+        } catch (error) {
+          if (isTerminalSessionLeaseError(error)) {
+            invalidateLogicalSession('lease-terminal');
+            return;
+          }
+
+          // Falhas transitórias de rede não derrubam a sessão imediatamente. O lease
+          // permanece válido até expiresAt e será reavaliado no próximo heartbeat.
+          console.warn('Não foi possível renovar o lease de sessão EMPROVEX.', error);
         }
+      };
 
-        // Falhas transitórias de rede não derrubam a sessão imediatamente. O lease
-        // permanece válido até expiresAt e será reavaliado no próximo heartbeat.
-        console.warn('Não foi possível renovar o lease de sessão EMPROVEX.', error);
-      }
+      const unsubscribeRevocation = subscribeWorkspaceSessionRevocation(
+        user,
+        workspaceContext,
+        () => invalidateLogicalSession('session-revoked'),
+        (error) => console.warn('Falha ao observar revogação de sessão EMPROVEX.', error)
+      );
+
+      const intervalId = window.setInterval(
+        () => void renewLease(),
+        SESSION_HEARTBEAT_INTERVAL_MS
+      );
+      const handleVisibility = () => {
+        if (document.visibilityState === 'visible') void renewLease();
+      };
+      const handleOnline = () => void renewLease();
+
+      document.addEventListener('visibilitychange', handleVisibility);
+      window.addEventListener('online', handleOnline);
+
+      // Ao assumir após o fechamento de outra aba, verifica imediatamente se o
+      // heartbeat ficou devido enquanto não havia líder.
+      void renewLease();
+
+      stopLeaderResources = () => {
+        if (!leaderActive) return;
+        leaderActive = false;
+        unsubscribeRevocation();
+        window.clearInterval(intervalId);
+        document.removeEventListener('visibilitychange', handleVisibility);
+        window.removeEventListener('online', handleOnline);
+        stopLeaderResources = null;
+      };
     };
 
-    const unsubscribeRevocation = subscribeWorkspaceSessionRevocation(
-      user,
-      workspaceContext,
-      revokeLeaseAccess,
-      (error) => console.warn('Falha ao observar revogação de sessão EMPROVEX.', error)
-    );
+    coordinator = startWorkspaceSessionTabCoordinator({
+      workspaceId: workspaceContext.workspaceId,
+      uid: user.uid,
+      onLeadershipChange: (role) => {
+        if (!active) return;
+        if (role === 'leader') {
+          startLeaderResources();
+        } else {
+          stopLeaderResources?.();
+        }
+      },
+      onSessionInvalidated: () => revokeLeaseAccess(),
+    });
 
-    const intervalId = window.setInterval(
-      () => void renewLease(),
-      SESSION_HEARTBEAT_INTERVAL_MS
-    );
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') void renewLease();
-    };
-    const handleOnline = () => void renewLease();
-
-    document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('online', handleOnline);
+    // No fallback sem Web Locks, a eleição pode ocorrer sincronicamente antes de
+    // coordinator receber a referência. Reconciliar o papel após a criação evita
+    // perder a primeira liderança.
+    if (coordinator.getRole() === 'leader') {
+      startLeaderResources();
+    }
 
     return () => {
       active = false;
-      unsubscribeRevocation();
-      window.clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('online', handleOnline);
+      stopLeaderResources?.();
+      stopLeaderResources = null;
+      coordinator?.stop();
+      coordinator = null;
     };
   }, [user, workspaceContext]);
 
