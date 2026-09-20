@@ -4,6 +4,7 @@ import {
   assertWorkspaceGoogleDriveSessionActive,
   type WorkspaceGoogleDriveSession,
 } from './googleDriveWorkspace';
+import { assertWorkspacePdfIsSafeForStorage } from './pdfSecurity';
 import { clearWorkspaceDriveRuntime } from './workspaceDriveRuntime';
 
 const DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
@@ -79,9 +80,7 @@ export async function uploadWorkspacePdf(
   originalName: string,
   appProperties: Record<string, string>
 ): Promise<WorkspaceDrivePdfFile> {
-  if (blob.type && blob.type !== 'application/pdf') {
-    throw new Error('O arquivo recebido para o Google Drive não é um PDF válido.');
-  }
+  await assertWorkspacePdfIsSafeForStorage(blob);
 
   const boundary = `emprovex_${crypto.randomUUID().replaceAll('-', '')}`;
   const metadata = {
@@ -141,8 +140,11 @@ export async function fetchWorkspaceDrivePdf(
     `${DRIVE_API_BASE}/files/${encodeURIComponent(fileId)}?alt=media`
   );
   const blob = await response.blob();
-  if (blob.size <= 0) throw new Error('O Google Drive retornou um arquivo vazio.');
-  return blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' });
+  const normalized = blob.type === 'application/pdf'
+    ? blob
+    : new Blob([blob], { type: 'application/pdf' });
+  await assertWorkspacePdfIsSafeForStorage(normalized);
+  return normalized;
 }
 
 export async function getWorkspaceDrivePdfMetadata(
