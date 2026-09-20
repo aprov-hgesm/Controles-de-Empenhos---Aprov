@@ -415,6 +415,7 @@ export default function Home() {
               alerts={alerts}
               userDisplayName={user?.displayName || 'Operador EMPROVEX'}
               workspaceUg={workspaceContext.status === 'sector' ? workspaceContext.ug : null}
+              customLogo={customLogo}
               onNavigate={(tab) => {
                 setActiveTab(tab);
                 if (tab === 'empenhos') setSelectedEmpenhoDetailId(null);
