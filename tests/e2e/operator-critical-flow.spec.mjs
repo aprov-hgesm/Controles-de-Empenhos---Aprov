@@ -298,13 +298,19 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
       { label: 'phone-landscape', width: 844, height: 390 },
     ];
 
-    for (const viewport of viewports) {
-      await page.setViewportSize({
-        width: viewport.width,
-        height: viewport.height,
-      });
-      await page.waitForTimeout(120);
-      await expectResponsiveInicio(page, viewport.label);
+    try {
+      for (const viewport of viewports) {
+        await page.setViewportSize({
+          width: viewport.width,
+          height: viewport.height,
+        });
+        await page.waitForTimeout(120);
+        await expectResponsiveInicio(page, viewport.label);
+      }
+    } finally {
+      // Restaura o viewport padrão antes do afterEach para que o logout da
+      // sidebar continue clicável mesmo quando o último caso testado é landscape.
+      await page.setViewportSize({ width: 1280, height: 900 });
     }
   });
 
