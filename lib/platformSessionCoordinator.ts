@@ -23,6 +23,7 @@ import type { SectorWorkspaceContext } from './workspaceContext';
 export const SESSION_COORDINATOR_VERSION = 'emprovex_session_coordinator_v1';
 const CHANNEL_PREFIX = 'emprovex:session-coordinator:v1';
 const ROLE_KEY_PREFIX = 'emprovex:session-coordinator-role:v1';
+const ROLE_OWNER_KEY_PREFIX = 'emprovex:session-coordinator-role-owner:v1';
 const TAB_ID_KEY = 'emprovex:session-coordinator-tab:v1';
 
 export type WorkspaceSessionCoordinatorRole =
@@ -82,6 +83,10 @@ function roleKey(workspaceId: string, uid: string): string {
   return `${ROLE_KEY_PREFIX}:${workspaceId}:${uid}`;
 }
 
+function roleOwnerKey(workspaceId: string, uid: string): string {
+  return `${ROLE_OWNER_KEY_PREFIX}:${workspaceId}:${uid}`;
+}
+
 function channelName(workspaceId: string, uid: string): string {
   return `${CHANNEL_PREFIX}:${workspaceId}:${uid}`;
 }
@@ -116,6 +121,7 @@ export function startWorkspaceSessionCoordinator(
   const workspaceId = context.workspaceId;
   const uid = user.uid;
   const tabId = getOrCreateTabId();
+  const coordinatorInstanceId = randomTabId();
   const storage = sessionStorageSafe();
 
   let stopped = false;
@@ -129,6 +135,16 @@ export function startWorkspaceSessionCoordinator(
   const setRole = (nextRole: WorkspaceSessionCoordinatorRole) => {
     role = nextRole;
     storage?.setItem(roleKey(workspaceId, uid), nextRole);
+    storage?.setItem(roleOwnerKey(workspaceId, uid), coordinatorInstanceId);
+  };
+
+  const clearStoredRoleIfOwned = () => {
+    if (!storage) return;
+    if (storage.getItem(roleOwnerKey(workspaceId, uid)) !== coordinatorInstanceId) {
+      return;
+    }
+    storage.removeItem(roleKey(workspaceId, uid));
+    storage.removeItem(roleOwnerKey(workspaceId, uid));
   };
 
   const invalidateLocalSession = (reason: SessionInvalidationReason) => {
@@ -302,7 +318,7 @@ export function startWorkspaceSessionCoordinator(
         stopped = true;
         stopLeaderWork?.();
         stopLeaderWork = null;
-        storage?.removeItem(roleKey(workspaceId, uid));
+        clearStoredRoleIfOwned();
       },
       getRole: () => role,
     };
@@ -376,7 +392,7 @@ export function startWorkspaceSessionCoordinator(
 
       channel?.close();
       channel = null;
-      storage?.removeItem(roleKey(workspaceId, uid));
+      clearStoredRoleIfOwned();
     },
     getRole: () => role,
   };
