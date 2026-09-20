@@ -297,6 +297,28 @@ Concluído:
 
 O objetivo do bloco foi elevar a percepção de acabamento e consistência comercial sem transformar o Início em uma superfície mais pesada.
 
-## Próximas etapas
+## Bloco 19.14 — auditoria, testes externos e fechamento
 
-- 19.14: auditoria, testes externos e fechamento.
+Concluído tecnicamente:
+
+- criada auditoria final dedicada em `docs/block-19-final-audit.md`;
+- o fechamento verifica a presença e registro de todos os guards dos blocos 19.1–19.13;
+- o Painel permanece explicitamente como landing pós-login até homologação humana;
+- o contrato econômico final permanece em zero coleções operacionais brutas + um `homeSnapshot`;
+- Rules do snapshot, isolamento por workspace/UG e limite de 72 estrelas permanecem protegidos;
+- a auditoria confirma perfis de performance, reduced motion e pausa por visibilidade;
+- a suíte externa automatizada cobre dois workspaces setoriais independentes;
+- isolamento de dados entre setores é validado em navegador/emulador;
+- duas sessões simultâneas por setor e bloqueio da terceira sessão são validados;
+- o E2E continua comprovando perfil realtime econômico no Início;
+- os quatro viewports responsivos permanecem obrigatórios;
+- WebGL, Three.js e Canvas permanecem ausentes da experiência Início;
+- criado o `Block 19 Final Closure Gate` para exigir CI principal + Browser E2E verdes no mesmo commit;
+- homologação humana real com as contas externas planejadas permanece como gate operacional pré-merge;
+- a PR deve permanecer Draft até autorização explícita para homologação/merge/deploy.
+
+### Estado do Bloco 19
+
+**Desenvolvimento técnico encerrado; pronto para homologação humana.**
+
+O fechamento técnico não muda automaticamente o landing para Início, não publica a branch na `main` e não realiza deploy.
