@@ -81,6 +81,8 @@ function sameExclusionZones(
       && Math.abs(zone.centerY - other.centerY) < 0.05
       && Math.abs(zone.radiusX - other.radiusX) < 0.05
       && Math.abs(zone.radiusY - other.radiusY) < 0.05
+      && Math.abs(zone.percentPerPixelX - other.percentPerPixelX) < 0.001
+      && Math.abs(zone.percentPerPixelY - other.percentPerPixelY) < 0.001
     );
   });
 }
@@ -163,7 +165,7 @@ export function InicioConstellation({
 
   useEffect(() => {
     const root = rootRef.current;
-    const scene = root?.closest<HTMLElement>('[data-testid="inicio-scene"]');
+    const scene = root?.closest('[data-testid="inicio-scene"]') as HTMLElement | null;
     if (!root || !scene) return;
 
     let frame = 0;
