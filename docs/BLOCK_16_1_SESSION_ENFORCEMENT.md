@@ -44,7 +44,7 @@ Outro navegador, perfil ou contexto isolado recebe outro `browserInstanceId` e o
 - falhas transitórias de rede não derrubam a sessão imediatamente;
 - perda de capacidade, falta de autorização ou lease inválido encerram o acesso operacional.
 
-O logout explícito tenta excluir o próprio slot antes do `signOut`. Se a rede impedir essa liberação, o slot expira naturalmente.
+O logout explícito tenta excluir o próprio slot antes do `signOut`. Se a rede impedir essa liberação, o slot expira naturalmente. A exclusão administrativa definitiva de um setor também remove os dois documentos de slot para não deixar metadados órfãos.
 
 ## Conta fundadora
 
