@@ -16,7 +16,15 @@ const access = read('lib/platformAccess.ts');
 const env = read('.env.example');
 
 requireText(route, 'verifyFounderSession(bearerToken(request))', 'Rota não valida a sessão do fundador antes de provisionar.');
-requireText(route, 'parseSectorProvisioningInput(await request.json())', 'Rota não valida o formato do payload antes de provisionar.');
+if (
+  !route.includes('parseSectorProvisioningInput(await request.json())')
+  && !(
+    route.includes('readBoundedJsonRequest<unknown>(request, security)')
+    && route.includes('parseSectorProvisioningInput(')
+  )
+) {
+  findings.push('Rota não valida o formato do payload antes de provisionar.');
+}
 requireText(route, 'provisionSectorWorkspaceWithAuth(input, founder)', 'Rota não delega o provisionamento ao serviço privilegiado.');
 requireText(server, "firebaseClaim?.sign_in_provider !== FOUNDER_AUTH_PROVIDER", 'Sessão administrativa não exige provider Google.');
 requireText(server, 'user.disabled === true', 'Conta fundadora desativada ainda poderia provisionar setores.');
