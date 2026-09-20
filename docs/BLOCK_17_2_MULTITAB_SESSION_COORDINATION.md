@@ -30,6 +30,8 @@ cada aba disputa um Web Lock exclusivo:
 
 Somente a aba que possui o lock executa as responsabilidades de controle Firestore.
 
+O efeito React que mantém o coordenador é indexado pela **identidade lógica estável** (UID + e-mail + workspace + UG), e não pelas referências dos objetos `User`/`workspaceContext`. Isso evita que reemissões equivalentes do Firebase Auth entre abas desmontem o coordenador, liberem o lock e provoquem troca artificial de liderança.
+
 O lock é local ao perfil/navegador. Outro computador ou outro contexto de navegador não compartilha essa eleição e continua representando outra sessão lógica, exatamente como antes.
 
 ### Responsabilidades da aba líder
