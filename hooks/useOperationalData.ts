@@ -148,9 +148,24 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     }
   }, [router, user, workspaceContext.status]);
 
+  const sessionCoordinatorIdentityKey = (
+    user
+    && isOperationalSectorContext(workspaceContext)
+    && workspaceContext.resolutionSource === 'platform-directory'
+  )
+    ? [
+        user.uid,
+        normalizePlatformEmail(user.email || ''),
+        workspaceContext.workspaceId,
+        workspaceContext.email,
+        workspaceContext.ug || '',
+      ].join('|')
+    : null;
+
   // Bloco 17.2 — uma única aba por navegador assume heartbeat + listener de
-  // revogação. Abas seguidoras recebem invalidação via BroadcastChannel e podem
-  // assumir automaticamente a liderança se a aba líder for encerrada.
+  // revogação. A dependência usa a identidade lógica, não as referências dos
+  // objetos Firebase/contexto. Reemissões equivalentes de Auth entre abas não
+  // desmontam o coordenador nem liberam o Web Lock desnecessariamente.
   useEffect(() => {
     if (
       !user
@@ -190,7 +205,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
       active = false;
       coordinator.stop();
     };
-  }, [user, workspaceContext]);
+  }, [sessionCoordinatorIdentityKey]);
 
   const finalizeSignIn = async (authenticatedUser: User) => {
     setActiveProfileMode('sector');
