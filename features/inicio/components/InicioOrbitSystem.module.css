@@ -148,19 +148,6 @@
   transform: scale(1.15);
 }
 
-.planet:active .planetSurface {
-  transform: scale(0.94);
-}
-
-.planet:active .planetGlow {
-  transform: scale(1.28);
-  opacity: 1;
-}
-
-.classPlanet:active {
-  transform: scale(0.95);
-}
-
 .planet svg {
   position: relative;
   z-index: 2;
