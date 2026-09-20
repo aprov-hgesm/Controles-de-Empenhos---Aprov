@@ -118,18 +118,36 @@ export function InicioCore({
       }}
     >
       <span className={styles.corona} aria-hidden="true" />
+      <span className={styles.commandHalo} aria-hidden="true">
+        <i />
+        <i />
+        <i />
+        <i />
+      </span>
       <span className={styles.field} aria-hidden="true">
         <span className={`${styles.orbit} ${styles.orbitA}`}><i /></span>
         <span className={`${styles.orbit} ${styles.orbitB}`}><i /></span>
         <span className={`${styles.orbit} ${styles.orbitC}`}><i /></span>
         <span className={styles.pulseRing} />
         <span className={styles.telemetryArc} />
+        <span className={styles.commandArcA} />
+        <span className={styles.commandArcB} />
       </span>
 
       <span className={styles.reactor}>
         <span className={styles.reactorGrid} aria-hidden="true" />
+        <span className={styles.reactorShell} aria-hidden="true" />
         <span className={styles.reactorGlow} aria-hidden="true" />
-        <span className={styles.logoPlate} aria-hidden="true" />
+        <span className={styles.energyFilaments} aria-hidden="true">
+          <i />
+          <i />
+          <i />
+          <i />
+        </span>
+        <span className={styles.logoPlate} aria-hidden="true">
+          <span className={styles.apertureRing} />
+          <span className={styles.energyCore} />
+        </span>
         <span className={styles.specular} aria-hidden="true" />
         <span className={styles.centerPulse} aria-hidden="true" />
       </span>
