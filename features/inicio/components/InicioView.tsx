@@ -211,7 +211,7 @@ export function InicioView({
   const firstName = userDisplayName.trim().split(/\s+/)[0] || 'Operador';
 
   return (
-    <section ref={rootRef} className={styles.scene} aria-label="Início EMPROVEX">
+    <section ref={rootRef} className={styles.scene} data-ready="true" aria-label="Início EMPROVEX">
       <InicioEntrySequence />
       <InicioAtmosphere />
       <div className={styles.ambientGlow} aria-hidden="true" />
