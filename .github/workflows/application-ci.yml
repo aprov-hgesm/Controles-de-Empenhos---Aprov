@@ -259,6 +259,12 @@ jobs:
       - name: Block 16.7 security and concurrency hardening guard
         run: npm run verify:block-16-7-security-concurrency
 
+      - name: Block 16.8 integrated domain tests
+        run: npm run test:block-16-8-integrated-domain
+
+      - name: Block 16.8 integrated E2E guard
+        run: npm run verify:block-16-8-integrated-e2e
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
