@@ -4150,7 +4150,7 @@ button.emprovex-header-control:hover .emprovex-header-control__icon {
 }
 
 .emprovex-sidebar-mobile-toolbar {
-  display: flex;
+  display: none;
   min-height: 2.55rem;
   align-items: center;
   justify-content: space-between;
@@ -4197,6 +4197,10 @@ button.emprovex-header-control:hover .emprovex-header-control__icon {
 }
 
 @media (max-width: 1023px) {
+  .emprovex-sidebar-mobile-toolbar {
+    display: flex;
+  }
+
   .emprovex-app-sidebar {
     width: min(18rem, calc(100vw - 1.25rem));
     padding-top: 1rem;
