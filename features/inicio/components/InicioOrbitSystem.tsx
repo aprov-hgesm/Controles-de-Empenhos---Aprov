@@ -133,7 +133,7 @@ export function InicioOrbitSystem({
         <span className={styles.tooltip}>
           <strong>Painel</strong>
           <span>Visão analítica</span>
-          <small>Abrir saldos, filtros e indicadores detalhados</small>
+          <small>Saldos, filtros e indicadores detalhados</small>
         </span>
       </div>
 
