@@ -246,3 +246,13 @@
     animation: none;
   }
 }
+
+
+[data-performance='balanced'] .identityCard {
+  backdrop-filter: none;
+}
+
+[data-performance='balanced'] .online i,
+[data-performance='static'] .online i {
+  animation: none;
+}
