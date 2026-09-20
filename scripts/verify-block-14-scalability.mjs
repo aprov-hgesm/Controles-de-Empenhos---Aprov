@@ -32,6 +32,7 @@ for (const expected of [
   'nova_nf:',
   'relatorios:',
   'cronogramas:',
+  'avisos:',
   'empenhos: true',
   'invoices: false',
   'comissoes: false',
