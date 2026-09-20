@@ -24,6 +24,7 @@ import { CreateSectorModal } from './CreateSectorModal';
 import { EditSectorModal } from './EditSectorModal';
 import { AdminSessionsPanel } from './AdminSessionsPanel';
 import { AdminUsagePanel } from './AdminUsagePanel';
+import { AdminGlobalUsagePanel } from './AdminGlobalUsagePanel';
 import { ToastNotification } from '../layout/ToastNotification';
 import { createHgesmFoundingWorkspace } from '../../lib/hgesmWorkspace';
 import type {
@@ -34,6 +35,7 @@ import type {
 import type { Workspace } from '../../lib/platformIdentity';
 import type { AdminWorkspaceSession } from '../../lib/platformAdminSessions';
 import type { AdminWorkspaceUsageEstimate } from '../../lib/platformAdminUsage';
+import type { FirebaseGlobalUsageSnapshot } from '../../lib/platformCapacity';
 import { setActiveProfileMode } from '../../lib/profileMode';
 
 interface PlatformAdminViewProps {
@@ -54,6 +56,12 @@ interface PlatformAdminViewProps {
   usage: AdminWorkspaceUsageEstimate[];
   loadingUsage: boolean;
   usageError: string | null;
+  globalUsage: FirebaseGlobalUsageSnapshot | null;
+  globalUsageConfigured: boolean | null;
+  globalUsageObservedAt: string | null;
+  globalUsageDataThrough: string | null;
+  loadingGlobalUsage: boolean;
+  globalUsageError: string | null;
   onCreateSector: (input: CreateSectorWorkspaceInput) => Promise<void>;
   onUpdateSector: (input: UpdateSectorWorkspaceInput) => Promise<void>;
   onChangeSectorStatus: (workspaceId: string, status: SectorLifecycleStatus) => Promise<void>;
@@ -61,6 +69,7 @@ interface PlatformAdminViewProps {
   onResetSectorPassword: (workspaceId: string, email: string, newPassword: string) => Promise<void>;
   onTerminateSession: (session: AdminWorkspaceSession) => Promise<void>;
   onRefreshUsage: () => Promise<void>;
+  onRefreshGlobalUsage: () => Promise<void>;
   onLogout: () => Promise<void>;
 }
 
@@ -82,6 +91,12 @@ export function PlatformAdminView({
   usage,
   loadingUsage,
   usageError,
+  globalUsage,
+  globalUsageConfigured,
+  globalUsageObservedAt,
+  globalUsageDataThrough,
+  loadingGlobalUsage,
+  globalUsageError,
   onCreateSector,
   onUpdateSector,
   onChangeSectorStatus,
@@ -89,6 +104,7 @@ export function PlatformAdminView({
   onResetSectorPassword,
   onTerminateSession,
   onRefreshUsage,
+  onRefreshGlobalUsage,
   onLogout,
 }: PlatformAdminViewProps) {
   const router = useRouter();
@@ -331,6 +347,16 @@ export function PlatformAdminView({
           terminatingSessionId={terminatingSessionId}
           onTerminateSession={onTerminateSession}
           onNotify={showAdminToast}
+        />
+
+        <AdminGlobalUsagePanel
+          snapshot={globalUsage}
+          configured={globalUsageConfigured}
+          observedAt={globalUsageObservedAt}
+          dataThrough={globalUsageDataThrough}
+          loading={loadingGlobalUsage}
+          error={globalUsageError}
+          onRefresh={onRefreshGlobalUsage}
         />
 
         <AdminUsagePanel
