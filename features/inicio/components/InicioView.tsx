@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from 'react';
 
-import type { OperationalActiveTab } from '../../../lib/operationalSubscriptionPlan';
 import type { InicioOperationalSnapshot } from '../domain/homeOperationalSnapshot';
 import { useInicioPerformanceProfile } from '../hooks/useInicioPerformanceProfile';
 import { InicioAtmosphere } from './InicioAtmosphere';
@@ -18,7 +17,6 @@ import styles from './InicioView.module.css';
 interface InicioViewProps {
   snapshot: InicioOperationalSnapshot | null;
   userDisplayName: string;
-  onNavigate: (tab: OperationalActiveTab) => void;
   onSelectEmpenho: (empenhoId: string) => void;
 }
 
@@ -33,7 +31,6 @@ function formatCurrency(value: number): string {
 export function InicioView({
   snapshot,
   userDisplayName,
-  onNavigate,
   onSelectEmpenho,
 }: InicioViewProps) {
   const rootRef = useRef<HTMLElement>(null);
@@ -145,17 +142,13 @@ export function InicioView({
         data-testid="inicio-system"
         aria-label="Sistema solar operacional EMPROVEX"
       >
-        <InicioOrbitSystem
-          snapshot={snapshot}
-          onNavigate={onNavigate}
-        />
+        <InicioOrbitSystem snapshot={snapshot} />
 
         <InicioCore
           totalEmpenhos={totalEmpenhos}
           totalValueLabel={formatCurrency(totalValue)}
           activeAlertCount={activeAlertCount}
           interactiveMotion={enableFineMotion}
-          onOpenEmpenhos={() => onNavigate('empenhos')}
         />
       </div>
 

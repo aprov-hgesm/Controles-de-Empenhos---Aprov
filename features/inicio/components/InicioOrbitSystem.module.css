@@ -86,14 +86,13 @@
   border-radius: 999px;
   background: transparent;
   color: #eef5ff;
-  cursor: pointer;
+  cursor: default;
   pointer-events: auto;
   animation: planetFloat 7.2s ease-in-out infinite;
 }
 
 .planet:focus-visible,
-.classPlanet:focus-visible,
-.classMoon:focus-visible {
+.classPlanet:focus-visible {
   outline: 2px solid var(--inicio-blue, rgba(151, 181, 255, 0.78));
   outline-offset: 4px;
 }
@@ -147,23 +146,6 @@
 .planet:focus-visible .planetGlow {
   opacity: 1;
   transform: scale(1.15);
-}
-
-.planet:active .planetSurface {
-  transform: scale(0.94);
-}
-
-.planet:active .planetGlow {
-  transform: scale(1.28);
-  opacity: 1;
-}
-
-.classPlanet:active {
-  transform: scale(0.95);
-}
-
-.classMoon:active {
-  transform: translateX(2px) scale(0.97);
 }
 
 .planet svg {
@@ -310,9 +292,7 @@
   right: 0;
   top: 37%;
   z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 11px;
+  width: 50px;
   pointer-events: auto;
 }
 
@@ -331,8 +311,17 @@
     0 0 30px rgba(137, 88, 211, 0.19),
     inset -8px -10px 20px rgba(10, 4, 19, 0.4);
   color: rgba(238, 226, 255, 0.9);
-  cursor: pointer;
+  cursor: default;
   animation: planetFloat 9.6s ease-in-out infinite reverse;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.classSystem:hover .classPlanet,
+.classSystem:focus-within .classPlanet {
+  border-color: rgba(210, 181, 255, 0.38);
+  box-shadow:
+    0 0 38px rgba(154, 105, 226, 0.28),
+    inset -8px -10px 20px rgba(10, 4, 19, 0.36);
 }
 
 .classPlanetOrbit {
@@ -369,62 +358,110 @@
   text-transform: uppercase;
 }
 
-.classMoons {
-  display: grid;
-  gap: 6px;
+.classTooltip {
+  position: absolute;
+  right: calc(100% + 14px);
+  top: 50%;
+  z-index: 42;
+  width: 228px;
+  padding: 12px 13px;
+  border: 1px solid var(--inicio-line, rgba(149, 164, 218, 0.16));
+  border-radius: 14px;
+  background:
+    linear-gradient(145deg, var(--inicio-glass-strong, rgba(9, 17, 37, 0.96)), rgba(5, 8, 19, 0.98));
+  box-shadow:
+    0 18px 46px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(16px);
+  color: var(--inicio-text, #eaf2ff);
+  transform: translate(8px, -50%) scale(0.97);
+  transform-origin: right center;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease,
+    visibility 150ms ease;
 }
 
-.classMoon {
-  position: relative;
+.classSystem:hover .classTooltip,
+.classSystem:focus-within .classTooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(0, -50%) scale(1);
+}
+
+.classTooltipHeader {
   display: flex;
-  min-width: 118px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(145, 166, 224, 0.1);
+}
+
+.classTooltipHeader strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.classTooltipHeader span {
+  color: #8291af;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.classTooltipList {
+  display: grid;
+  gap: 4px;
+  padding-top: 7px;
+}
+
+.classTooltipRow {
+  display: grid;
+  grid-template-columns: 7px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
-  padding: 6px 9px;
-  border: 1px solid var(--inicio-line, rgba(149, 164, 218, 0.13));
-  border-radius: 12px;
-  background: rgba(8, 14, 31, 0.74);
-  color: #dfe9ff;
-  text-align: left;
-  cursor: pointer;
-  backdrop-filter: blur(12px);
-  animation: moonDrift 5.8s ease-in-out infinite;
-  animation-delay: calc(var(--moon-index) * -0.62s);
-  transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+  min-height: 31px;
+  padding: 5px 6px;
+  border-radius: 9px;
+  background: rgba(17, 22, 45, 0.38);
 }
 
-.classMoon:hover,
-.classMoon:focus-visible {
-  transform: translateX(3px);
-  border-color: rgba(179, 145, 255, 0.3);
-  background: rgba(21, 24, 53, 0.88);
-}
-
-.classMoon i {
+.classTooltipRow > i {
   width: 7px;
   height: 7px;
-  flex: 0 0 auto;
   border-radius: 999px;
   background: rgba(196, 173, 255, 0.82);
-  box-shadow: 0 0 9px rgba(161, 126, 238, 0.56);
+  box-shadow: 0 0 9px rgba(161, 126, 238, 0.5);
 }
 
-.classMoon span {
-  display: block;
+.classTooltipRow > span {
+  min-width: 0;
 }
 
-.classMoon strong {
+.classTooltipRow strong {
   display: block;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 8px;
-  letter-spacing: 0.13em;
+  letter-spacing: 0.12em;
 }
 
-.classMoon small {
+.classTooltipRow small {
   display: block;
-  margin-top: 2px;
-  color: rgba(174, 191, 224, 0.74);
+  margin-top: 1px;
+  color: rgba(160, 178, 214, 0.7);
+  font-size: 7px;
+}
+
+.classTooltipRow em {
+  color: #c9d5ef;
   font-size: 8px;
+  font-style: normal;
+  white-space: nowrap;
 }
 
 .orbitCaption {
@@ -472,11 +509,6 @@
   to { transform: rotate(360deg); }
 }
 
-@keyframes moonDrift {
-  0%, 100% { translate: 0 0; }
-  50% { translate: 3px 0; }
-}
-
 @media (max-width: 900px) {
   .root {
     transform: scale(0.92);
@@ -509,10 +541,6 @@
     right: 8%;
     top: 27%;
     transform: scale(0.68);
-  }
-
-  .classMoons {
-    display: none;
   }
 
   .alertPlanet {
@@ -580,7 +608,8 @@
 }
 
 @media (hover: none), (pointer: coarse) {
-  .tooltip {
+  .tooltip,
+  .classTooltip {
     display: none;
   }
 
@@ -596,8 +625,7 @@
   .alertPlanet[data-alert='true'] .planetGlow,
   .executionHalo,
   .classPlanet,
-  .classPlanetOrbit,
-  .classMoon {
+  .classPlanetOrbit {
     animation: none !important;
   }
 }
@@ -614,7 +642,6 @@
 
 [data-performance='balanced'] .planet,
 [data-performance='balanced'] .classPlanet,
-[data-performance='balanced'] .classMoon,
 [data-performance='balanced'] .executionHalo,
 [data-performance='balanced'] .alertPlanet[data-alert='true'] .planetGlow,
 [data-performance='balanced'] .classPlanetOrbit {
@@ -627,7 +654,7 @@
 }
 
 [data-performance='balanced'] .tooltip,
-[data-performance='balanced'] .classMoon {
+[data-performance='balanced'] .classTooltip {
   backdrop-filter: none;
 }
 
@@ -638,7 +665,6 @@
 
 [data-performance='static'] .planet,
 [data-performance='static'] .classPlanet,
-[data-performance='static'] .classMoon,
 [data-performance='static'] .executionHalo,
 [data-performance='static'] .planetGlow {
   animation: none !important;

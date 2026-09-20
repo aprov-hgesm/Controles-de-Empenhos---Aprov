@@ -330,4 +330,15 @@ A composição final foi simplificada para priorizar o mapa operacional e reduzi
 
 O núcleo central permanece interativo, porém sem imagem do logotipo. Núcleo e planetas passam a usar escala menor, liberando espaço negativo para órbitas, constelações e tooltips. A aba Início também utiliza shell escuro imersivo e largura integral da área operacional; as demais abas preservam o shell claro existente.
 
-A navegação funcional permanece disponível pela Sidebar e pelos elementos orbitais. A memória de retomada deixa de ser montada pela página enquanto não houver interface correspondente, evitando lógica ociosa.
+A navegação funcional permanece disponível pela Sidebar e, dentro da cena, exclusivamente pelas estrelas da constelação. Planetas, Classes e núcleo são informativos: hover/foco revela contexto, mas clique não troca de módulo. A memória de retomada deixa de ser montada pela página enquanto não houver interface correspondente, evitando lógica ociosa.
+
+### Refinamento de interação — navegação exclusiva por estrelas
+
+- planetas Alertas, Recebimentos, Execução, Painel e Classes não executam navegação;
+- núcleo central não executa navegação;
+- o planeta Classes mantém QR/CALI/PASA/FUNADOM somente em tooltip sob demanda;
+- a camada de microinterações não trata elementos meramente focáveis como alvos clicáveis;
+- o pulso de acionamento fica restrito a controles realmente navegáveis;
+- estrelas continuam representando empenhos individuais;
+- atenção/crítico exibem “Pendência identificada” no tooltip;
+- clique em estrela abre diretamente o empenho específico na aba Empenhos.

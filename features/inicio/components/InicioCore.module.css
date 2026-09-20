@@ -17,7 +17,7 @@
   border-radius: 999px;
   background: transparent;
   color: var(--inicio-text, #f5f8ff);
-  cursor: pointer;
+  cursor: default;
   transform:
     translate(-50%, -50%)
     translate3d(var(--core-shift-x), var(--core-shift-y), 0)
@@ -35,18 +35,6 @@
 
 .root:hover {
   filter: brightness(1.08);
-}
-
-.root:active {
-  filter: brightness(1.16);
-}
-
-.root:active .reactor {
-  transform: translateZ(14px) scale(0.965);
-}
-
-.root:active .telemetryArc {
-  animation-duration: 2.8s;
 }
 
 .corona {

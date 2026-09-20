@@ -69,7 +69,7 @@ export function InicioInteractionLayer({
       layer.dataset.visible = 'true';
 
       const interactive = (event.target as Element | null)?.closest(
-        'button, a, [role="button"], [tabindex]'
+        'button, a, [role="button"]'
       );
       layer.dataset.target = interactive ? 'true' : 'false';
       scheduleFrame();
@@ -81,6 +81,11 @@ export function InicioInteractionLayer({
     };
 
     const handlePointerDown = (event: PointerEvent) => {
+      const interactive = (event.target as Element | null)?.closest(
+        'button, a, [role="button"]'
+      );
+      if (!interactive) return;
+
       const rect = scene.getBoundingClientRect();
       layer.style.setProperty('--pulse-x', `${(event.clientX - rect.left).toFixed(2)}px`);
       layer.style.setProperty('--pulse-y', `${(event.clientY - rect.top).toFixed(2)}px`);

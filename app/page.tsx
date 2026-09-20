@@ -418,10 +418,6 @@ export default function Home() {
             <InicioView
               snapshot={inicioSnapshot}
               userDisplayName={user?.displayName || 'Operador EMPROVEX'}
-              onNavigate={(tab) => {
-                setActiveTab(tab);
-                if (tab === 'empenhos') setSelectedEmpenhoDetailId(null);
-              }}
               onSelectEmpenho={(empenhoId) => {
                 setSelectedEmpenhoDetailId(empenhoId);
                 setActiveTab('empenhos');
