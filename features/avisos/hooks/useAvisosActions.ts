@@ -17,16 +17,24 @@ interface UseAvisosActionsInput {
 
 function applyLifecycleMetadata(alert: Alert, status: AlertStatus): Alert {
   const now = new Date().toISOString();
-
-  return {
+  const updated: Alert = {
     ...alert,
     status,
-    readAt: status === 'LIDO' || status === 'RESOLVIDO' || status === 'ARQUIVADO'
-      ? alert.readAt ?? now
-      : undefined,
-    resolvedAt: status === 'RESOLVIDO' ? now : undefined,
-    archivedAt: status === 'ARQUIVADO' ? now : undefined,
   };
+
+  if (status === 'LIDO' || status === 'RESOLVIDO' || status === 'ARQUIVADO') {
+    updated.readAt = alert.readAt ?? now;
+  } else {
+    delete updated.readAt;
+  }
+
+  if (status === 'RESOLVIDO') updated.resolvedAt = now;
+  else delete updated.resolvedAt;
+
+  if (status === 'ARQUIVADO') updated.archivedAt = now;
+  else delete updated.archivedAt;
+
+  return updated;
 }
 
 export function useAvisosActions({
