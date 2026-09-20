@@ -260,9 +260,9 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     };
   }, [user, workspaceContext]);
 
-  // Bloco 16.1 — mantém o lease externo vivo com baixa frequência. O timestamp
-  // local compartilhado entre abas evita que duas abas do mesmo navegador
-  // multipliquem heartbeats para a mesma sessão lógica.
+  // Bloco 17.1 — mantém o lease externo vivo com renovação esparsa do slot já
+  // conhecido. O timestamp local compartilhado reduz renovações redundantes entre
+  // abas; a liderança multiaba completa fica deliberadamente para o Bloco 17.2.
   useEffect(() => {
     if (
       !user

@@ -151,7 +151,7 @@ function clearAlertEnvironment() {
   delete sandboxProcess.env.EMPROVEX_WORKSPACE_DAILY_USAGE_BUDGETS_JSON;
 }
 
-test('capacidade integrada preserva fundador ilimitado, setor externo em 2 e lease/heartbeat em 10/5 minutos', () => {
+test('capacidade integrada preserva fundador ilimitado, setor externo em 2 e lease/heartbeat em 30/15 minutos', () => {
   assert.equal(
     capacity.getDefaultSimultaneousSessionLimit(['aprov1hgesm', 'gmail.com'].join('@')),
     null
@@ -160,8 +160,8 @@ test('capacidade integrada preserva fundador ilimitado, setor externo em 2 e lea
     capacity.getDefaultSimultaneousSessionLimit('setor@example.test'),
     2
   );
-  assert.equal(capacity.SESSION_LEASE_DURATION_MS, 10 * 60 * 1000);
-  assert.equal(capacity.SESSION_HEARTBEAT_INTERVAL_MS, 5 * 60 * 1000);
+  assert.equal(capacity.SESSION_LEASE_DURATION_MS, 30 * 60 * 1000);
+  assert.equal(capacity.SESSION_HEARTBEAT_INTERVAL_MS, 15 * 60 * 1000);
   assert.deepEqual([...capacity.SESSION_SLOT_IDS], ['slot-1', 'slot-2']);
 });
 

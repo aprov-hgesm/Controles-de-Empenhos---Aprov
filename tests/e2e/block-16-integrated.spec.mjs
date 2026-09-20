@@ -184,7 +184,7 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
     await clearSlots();
   });
 
-  test('heartbeat renova lease de 10 minutos e mantém telemetria estimada por UG no buffer local', async ({ page }) => {
+  test('heartbeat eficiente renova lease de 30 minutos sem redescobrir capacidade', async ({ page }) => {
     await page.goto('/');
     await loginSector(page);
 
@@ -195,12 +195,12 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
 
     const initialExpiry = Date.parse(session.expiresAt);
     const initialLastSeen = Date.parse(session.lastSeenAt);
-    expect(initialExpiry - initialLastSeen).toBeGreaterThan(9 * 60 * 1000);
-    expect(initialExpiry - initialLastSeen).toBeLessThanOrEqual(10 * 60 * 1000 + 15_000);
+    expect(initialExpiry - initialLastSeen).toBeGreaterThan(29 * 60 * 1000);
+    expect(initialExpiry - initialLastSeen).toBeLessThanOrEqual(30 * 60 * 1000 + 15_000);
 
     await page.evaluate(({ workspaceId, uid }) => {
       const key = `emprovex:workspace-lease-renewed:v1:${workspaceId}:${uid}`;
-      localStorage.setItem(key, String(Date.now() - (6 * 60 * 1000)));
+      localStorage.setItem(key, String(Date.now() - (16 * 60 * 1000)));
       window.dispatchEvent(new Event('online'));
     }, { workspaceId: WORKSPACE_ID, uid: session.uid });
 

@@ -271,6 +271,9 @@ jobs:
       - name: Block 17.0 Firestore consumption baseline guard
         run: npm run verify:block-17-0-firestore-baseline
 
+      - name: Block 17.1 session lease efficiency guard
+        run: npm run verify:block-17-1-session-lease-efficiency
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
