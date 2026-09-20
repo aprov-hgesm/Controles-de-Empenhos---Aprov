@@ -28,7 +28,8 @@ export interface RelatoriosViewContext {
   handleApplySagNsImport: (
     payload: SagNsPayload,
     supplierCnpj: string,
-    expectedFingerprint: string
+    expectedFingerprint: string,
+    invoiceSource?: Invoice[]
   ) => Promise<SagNsImportCommitResult>;
   invoices: Invoice[];
   relatoriosPregaoFilter: string;
