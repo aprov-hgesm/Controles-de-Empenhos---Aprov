@@ -295,6 +295,9 @@ jobs:
       - name: Block 19.7 quick actions and resume guard
         run: npm run verify:block-19-7-quick-actions-resume
 
+      - name: Block 19.8 microinteraction guard
+        run: npm run verify:block-19-8-microinteractions
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
