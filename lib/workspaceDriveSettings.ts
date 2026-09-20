@@ -1,6 +1,6 @@
 'use client';
 
-import { onSnapshot, setDoc, type Unsubscribe } from 'firebase/firestore';
+import { getDoc, setDoc } from 'firebase/firestore';
 
 import {
   operationalScopeFromContext,
@@ -77,35 +77,15 @@ function assertAuthorizedDriveSession(
   }
 }
 
-export function subscribeWorkspaceDriveSettings(
-  context: SectorWorkspaceContext,
-  onChange: (settings: WorkspaceDriveSettings | null) => void,
-  onError: (error: Error) => void
-): Unsubscribe {
+export async function loadWorkspaceDriveSettings(
+  context: SectorWorkspaceContext
+): Promise<WorkspaceDriveSettings | null> {
   const scope = operationalScopeFromContext(context);
   const ref = operationalSettingsDocRef(scope, WORKSPACE_DOCUMENT_STORAGE_SETTINGS_ID);
+  const snapshot = await getDoc(ref);
 
-  return onSnapshot(
-    ref,
-    (snapshot) => {
-      if (!snapshot.exists()) {
-        onChange(null);
-        return;
-      }
-
-      try {
-        onChange(assertWorkspaceDriveSettings(context, snapshot.data()));
-      } catch (validationError) {
-        onChange(null);
-        onError(
-          validationError instanceof Error
-            ? validationError
-            : new Error('Falha ao validar a configuração do Google Drive.')
-        );
-      }
-    },
-    (error) => onError(error)
-  );
+  if (!snapshot.exists()) return null;
+  return assertWorkspaceDriveSettings(context, snapshot.data());
 }
 
 export async function saveWorkspaceDriveSettings(
