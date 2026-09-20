@@ -7,7 +7,7 @@ import {
   setDoc,
 } from 'firebase/firestore';
 
-import { db } from './firebase';
+import { auth, db } from './firebase';
 import { USAGE_TELEMETRY_VERSION } from './platformCapacity';
 import { isValidUnitUg } from './platformIdentity';
 
@@ -277,7 +277,7 @@ export async function flushWorkspaceUsageTelemetry(
   scope: WorkspaceUsageScope,
   requestedDayKey = getWorkspaceUsageDayKey()
 ): Promise<void> {
-  if (!isValidScope(scope)) return;
+  if (!isValidScope(scope) || !auth.currentUser) return;
 
   const key = buildUsageKey(scope, requestedDayKey);
   if (flushInFlight.has(key)) return;
