@@ -33,6 +33,12 @@ requireText(orbitCss, '.executionPlanet', 'Planeta de Execução sem identidade 
 requireText(orbitCss, '.dashboardPlanet', 'Planeta do Painel sem identidade visual.');
 requireText(orbitCss, '.classPlanet', 'Planeta de Classes ausente.');
 requireText(orbitCss, '.classTooltip', 'Tooltip consolidado de classes ausente.');
+requireText(orbitCss, '@keyframes planetOrbit', 'Planetas não possuem movimento orbital ao redor do núcleo.');
+requireText(orbitCss, '@keyframes planetCounterOrbit', 'Conteúdo dos planetas não compensa a rotação orbital.');
+requireText(orbitCss, '.orbitSlot:hover', 'Órbita não pausa para estabilizar hover/foco.');
+requireText(orbit, 'data-inicio-star-orbit="outer"', 'Faixa orbital externa não está exposta para proteção da constelação.');
+requireText(orbit, 'data-inicio-star-orbit="middle"', 'Faixa orbital intermediária não está exposta para proteção da constelação.');
+requireText(orbit, 'data-inicio-star-orbit="inner"', 'Faixa orbital interna não está exposta para proteção da constelação.');
 requireText(orbit, 'className={styles.classTooltip}', 'Indicadores de classes não foram movidos para o tooltip do planeta.');
 forbidText(orbit, 'className={styles.classMoons}', 'Indicadores de classes continuam permanentemente expostos ao lado do planeta.');
 requireText(orbitCss, '@media (prefers-reduced-motion: reduce)', 'Sistema orbital não respeita reduced motion.');
@@ -58,5 +64,6 @@ if (findings.length) {
   console.log('Recebimentos: PLANETA ATIVO');
   console.log('Execução: PLANETA ATIVO');
   console.log('Classes: TOOLTIP SOB DEMANDA ATIVO');
+  console.log('Órbitas planetárias: ATIVAS EM PERFIL FULL');
   console.log('Realtime adicional: ZERO');
 }

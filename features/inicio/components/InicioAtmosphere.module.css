@@ -44,9 +44,14 @@
 }
 
 .deepStars,
-.dust {
+.dust,
+.flowParticles {
   position: absolute;
   inset: 0;
+}
+
+.flowParticles {
+  z-index: 0;
 }
 
 .deepStar {
@@ -63,6 +68,19 @@
   background: rgba(139, 164, 224, 0.5);
   filter: blur(0.2px);
   animation: dustFloat 12s linear infinite;
+}
+
+.flowParticle {
+  --particle-dx: 42px;
+  --particle-dy: -58px;
+  position: absolute;
+  border-radius: 999px;
+  background: rgba(154, 198, 255, 0.72);
+  box-shadow:
+    0 0 5px rgba(113, 168, 255, 0.28),
+    0 0 11px rgba(78, 117, 226, 0.12);
+  filter: blur(0.15px);
+  animation: ambientParticleFlow 24s linear infinite;
 }
 
 .arc {
@@ -141,6 +159,23 @@
   100% { transform: translate3d(16px, -20px, 0); opacity: 0.06; }
 }
 
+@keyframes ambientParticleFlow {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.72);
+    opacity: 0;
+  }
+  14% {
+    opacity: 0.42;
+  }
+  58% {
+    opacity: 0.26;
+  }
+  100% {
+    transform: translate3d(var(--particle-dx), var(--particle-dy), 0) scale(1.12);
+    opacity: 0;
+  }
+}
+
 @keyframes nebulaDriftA {
   0%, 100% { transform: translate3d(-2%, -1%, 0) scale(0.96); }
   50% { transform: translate3d(5%, 3%, 0) scale(1.08); }
@@ -168,6 +203,7 @@
     opacity: 0.2;
   }
 
+  .flowParticle:nth-child(n+13),
   .dustParticle:nth-child(n+11),
   .deepStar:nth-child(n+23),
   .arcTwo {
@@ -183,6 +219,7 @@
   .nebula,
   .deepStar,
   .dustParticle,
+  .flowParticle,
   .arc,
   .scan {
     animation: none !important;
@@ -193,6 +230,7 @@
 [data-performance='balanced'] .nebulaThree,
 [data-performance='balanced'] .arcTwo,
 [data-performance='balanced'] .scan,
+[data-performance='balanced'] .flowParticle:nth-child(n+9),
 [data-performance='balanced'] .dustParticle:nth-child(n+9),
 [data-performance='balanced'] .deepStar:nth-child(n+21) {
   display: none;
@@ -207,6 +245,12 @@
   animation-duration: 9s;
 }
 
+[data-performance='balanced'] .flowParticle {
+  animation-duration: 34s;
+  opacity: 0.16;
+  box-shadow: 0 0 4px rgba(113, 168, 255, 0.18);
+}
+
 [data-performance='balanced'] .dustParticle {
   animation: none;
   opacity: 0.18;
@@ -215,6 +259,7 @@
 [data-performance='static'] .nebulaThree,
 [data-performance='static'] .arc,
 [data-performance='static'] .scan,
+[data-performance='static'] .flowParticle,
 [data-performance='static'] .dustParticle {
   display: none;
 }

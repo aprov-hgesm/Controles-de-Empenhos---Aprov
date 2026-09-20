@@ -20,6 +20,8 @@ const snapshotDomain = read('features/inicio/domain/homeOperationalSnapshot.ts')
 const constellationCss = read('features/inicio/components/InicioConstellation.module.css');
 const plan = read('lib/operationalSubscriptionPlan.ts');
 const docs = read('docs/block-19-home-experience.md');
+const orbit = read('features/inicio/components/InicioOrbitSystem.tsx');
+const core = read('features/inicio/components/InicioCore.tsx');
 
 requireText(view, "import { InicioConstellation }", 'Início não importa a constelação dedicada.');
 requireText(view, '<InicioConstellation', 'Início não renderiza a constelação operacional.');
@@ -33,6 +35,15 @@ requireText(constellation, 'supplierHashX', 'Posicionamento não cria proximidad
 requireText(constellation, 'relatedNodes', 'Constelação não calcula relações contextuais.');
 requireText(constellation, '<line', 'Constelação não desenha conexões entre empenhos relacionados.');
 requireText(constellation, 'getSize(star.value, maxValue)', 'Tamanho da estrela não representa valor agregado de forma sutil.');
+requireText(constellation, 'keepStarClearOfExclusions', 'Constelação não aplica zonas de exclusão ao redor do sistema orbital.');
+requireText(constellation, 'ResizeObserver', 'Constelação não recalcula zonas seguras com a responsividade.');
+requireText(constellation, 'STAR_SEVERITY_GAP_BOOST_PX', 'Estrelas prioritárias não recebem margem adicional de seleção.');
+requireText(constellation, 'keepStarClearOfOrbitCorridors', 'Estrelas não evitam as faixas orbitais em movimento.');
+requireText(constellation, 'STAR_ORBIT_CORRIDOR_HALF_WIDTH_PX', 'Constelação não reserva corredor ao redor das órbitas.');
+requireText(constellationCss, '@keyframes starDrift', 'Estrelas continuam sem deriva espacial própria.');
+requireText(constellationCss, 'animation-play-state: paused', 'Estrela não estabiliza durante hover/foco.');
+requireText(constellation, "querySelectorAll<HTMLElement>('[data-inicio-star-exclusion]')", 'Constelação não mede os elementos que bloqueiam seleção.');
+requireText(view, '<InicioConstellation', 'Início perdeu constelação ao aplicar zonas seguras.');
 requireText(constellation, "data-stage={node.stage}", 'Estrelas não expõem estágio operacional.');
 requireText(constellation, 'receivedPct', 'Tooltip não inclui execução do empenho.');
 requireText(constellation, 'formatCurrency(node.balance)', 'Tooltip não inclui saldo do empenho.');
@@ -40,6 +51,8 @@ requireText(constellationCss, ".star[data-stage='closed']", 'Histórico encerrad
 requireText(constellationCss, ".star[data-related='true']", 'Relacionamentos por fornecedor não possuem tratamento visual.');
 requireText(constellationCss, '.relationships line', 'Linhas de fornecedor não possuem tratamento visual.');
 requireText(constellationCss, '@media (prefers-reduced-motion: reduce)', 'Constelação não respeita reduced motion.');
+requireText(orbit, 'data-inicio-star-exclusion="planet"', 'Planetas não estão marcados como zonas de exclusão para estrelas.');
+requireText(core, 'data-inicio-star-exclusion="core"', 'Núcleo não está marcado como zona de exclusão para estrelas.');
 requireText(plan, 'inicio:', 'Perfil realtime do Início ausente.');
 requireText(constellation, 'InicioOperationalSnapshot', 'Constelação não consome o snapshot econômico.');
 forbidText(constellation, 'Empenho[]', 'Constelação voltou a consumir empenhos brutos.');
@@ -61,5 +74,8 @@ if (findings.length) {
   console.log('Relações por fornecedor: ATIVAS');
   console.log('Abertura direta do empenho: ATIVA');
   console.log('Camada histórica: ATIVA');
+  console.log('Zonas seguras planetas/núcleo: ATIVAS');
+  console.log('Corredores orbitais protegidos: ATIVOS');
+  console.log('Deriva estelar: ATIVA EM PERFIL FULL');
   console.log('Realtime adicional: ZERO');
 }

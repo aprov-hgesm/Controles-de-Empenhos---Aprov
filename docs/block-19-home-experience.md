@@ -342,3 +342,42 @@ A navegação funcional permanece disponível pela Sidebar e, dentro da cena, ex
 - estrelas continuam representando empenhos individuais;
 - atenção/crítico exibem “Pendência identificada” no tooltip;
 - clique em estrela abre diretamente o empenho específico na aba Empenhos.
+
+
+### Refinamento de interação — zonas seguras para estrelas
+
+- planetas e núcleo são tratados como zonas de exclusão geométrica da constelação;
+- estrelas não podem permanecer atrás nem excessivamente próximas desses elementos;
+- a posição real dos planetas/núcleo é medida no navegador, portanto a regra acompanha desktop, tablet, mobile e mudanças responsivas;
+- estrelas em atenção recebem margem adicional de segurança;
+- estrelas críticas recebem margem ainda maior para preservar hover, foco e clique quando houver pendência importante;
+- o reposicionamento continua determinístico e preserva a proximidade por fornecedor sempre que possível;
+- nenhuma leitura Firestore, listener de dados ou nova persistência é criada; a medição é exclusivamente de layout DOM.
+
+
+### Refinamento visual — dinâmica orbital e deriva estelar
+
+- estrelas deixam de apenas pulsar e passam a executar deriva espacial lenta e determinística de poucos pixels;
+- cada estrela possui vetor e duração próprios derivados do ID, evitando movimento sincronizado/artificial;
+- hover/foco pausa a animação da estrela para preservar a seleção do empenho;
+- planetas passam a executar órbitas reais ao redor do núcleo em três raios distintos;
+- Alertas e Painel compartilham a órbita externa em oposição de 180°;
+- Recebimentos e Classes compartilham a órbita intermediária em oposição de 180°;
+- Execução utiliza a órbita interna;
+- os planetas foram reduzidos para aproximadamente metade do diâmetro anterior, favorecendo movimento e espaço visual;
+- a rotação visual do conteúdo é compensada para que ícones e tooltips permaneçam legíveis durante a órbita;
+- hover/foco pausa a órbita correspondente enquanto o operador consulta o tooltip;
+- as três faixas orbitais são corredores de exclusão da constelação, garantindo que o movimento dos planetas não atravesse estrelas clicáveis;
+- perfis balanced/static e prefers-reduced-motion continuam removendo movimento contínuo.
+
+
+### Refinamento atmosférico — partículas em fluxo
+
+- a Home recebe uma camada adicional de partículas decorativas inspirada na atmosfera cinematográfica do login;
+- as partículas usam deslocamentos lentos em profundidade, com tamanhos, atrasos e velocidades variados;
+- são visualmente distintas das estrelas de empenho: menores, desfocadas, não interativas e posicionadas atrás da constelação;
+- não usam JavaScript contínuo nem RAF; o movimento é exclusivamente CSS;
+- mobile reduz a quantidade renderizada;
+- perfil balanced reduz densidade, brilho e velocidade;
+- perfil static e prefers-reduced-motion removem totalmente o movimento dessas partículas;
+- nenhuma leitura Firestore, persistência ou dependência adicional foi introduzida.

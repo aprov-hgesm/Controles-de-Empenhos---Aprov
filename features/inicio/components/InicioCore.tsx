@@ -106,6 +106,7 @@ export function InicioCore({
       ref={rootRef}
       className={styles.root}
       data-alert={activeAlertCount > 0 ? 'true' : 'false'}
+      data-inicio-star-exclusion="core"
       tabIndex={0}
       role="group"
       aria-label={`Núcleo EMPROVEX. ${totalEmpenhos} empenhos cadastrados, ${totalValueLabel} empenhados.`}

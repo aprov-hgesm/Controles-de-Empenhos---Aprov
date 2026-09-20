@@ -37,7 +37,9 @@
   cursor: pointer;
   pointer-events: auto;
   transform: translate(-50%, -50%);
-  animation: starBreath 5.1s ease-in-out infinite;
+  animation:
+    starBreath 5.1s ease-in-out infinite,
+    starDrift var(--star-drift-duration, 11s) ease-in-out infinite alternate;
   transition:
     opacity 180ms ease,
     filter 180ms ease,
@@ -67,6 +69,7 @@
 .star:hover,
 .star:focus-visible {
   z-index: 25;
+  animation-play-state: paused;
   outline: none;
   transform: translate(-50%, -50%) scale(1.7);
 }
@@ -118,7 +121,9 @@
 }
 
 .star[data-severity='critical'] {
-  animation: criticalPulse 2.6s ease-in-out infinite;
+  animation:
+    criticalPulse 2.6s ease-in-out infinite,
+    starDrift var(--star-drift-duration, 11s) ease-in-out infinite alternate;
 }
 
 .star[data-severity='critical'] .core {
@@ -136,7 +141,7 @@
 
 .star[data-stage='closed'] {
   opacity: 0.3;
-  animation-duration: 8s;
+  animation-duration: 8s, var(--star-drift-duration, 11s);
 }
 
 .star[data-stage='closed'] .core {
@@ -367,6 +372,12 @@
 @keyframes starBreath {
   0%, 100% { opacity: 0.52; }
   50% { opacity: 1; }
+}
+
+@keyframes starDrift {
+  0%, 100% { translate: 0 0; }
+  48% { translate: var(--star-drift-x, 0px) var(--star-drift-y, 0px); }
+  72% { translate: var(--star-drift-y, 0px) var(--star-drift-x, 0px); }
 }
 
 @keyframes criticalPulse {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type {
   InicioOperationalSnapshot,
@@ -13,12 +13,45 @@ interface ConstellationNode extends InicioSnapshotStar {
   top: number;
   size: number;
   delay: number;
+  driftX: number;
+  driftY: number;
+  driftDuration: number;
 }
 
 interface InicioConstellationProps {
   snapshot: InicioOperationalSnapshot | null;
   onSelectEmpenho: (empenhoId: string) => void;
 }
+
+interface StarExclusionZone {
+  centerX: number;
+  centerY: number;
+  radiusX: number;
+  radiusY: number;
+  percentPerPixelX: number;
+  percentPerPixelY: number;
+}
+
+interface StarOrbitCorridor {
+  centerX: number;
+  centerY: number;
+  radiusPx: number;
+  percentPerPixelX: number;
+  percentPerPixelY: number;
+}
+
+const STAR_EXCLUSION_GAP_PX = {
+  planet: 38,
+  core: 50,
+} as const;
+
+const STAR_SEVERITY_GAP_BOOST_PX = {
+  normal: 0,
+  attention: 10,
+  critical: 16,
+} as const;
+
+const STAR_ORBIT_CORRIDOR_HALF_WIDTH_PX = 30;
 
 function hashValue(value: string, seed = 0): number {
   let hash = 2166136261 ^ seed;
@@ -47,6 +80,143 @@ function getSize(value: number, maxValue: number): number {
   return 3 + normalized * 3.4;
 }
 
+function sameExclusionZones(
+  left: StarExclusionZone[],
+  right: StarExclusionZone[]
+): boolean {
+  if (left.length !== right.length) return false;
+
+  return left.every((zone, index) => {
+    const other = right[index];
+    if (!other) return false;
+    return (
+      Math.abs(zone.centerX - other.centerX) < 0.05
+      && Math.abs(zone.centerY - other.centerY) < 0.05
+      && Math.abs(zone.radiusX - other.radiusX) < 0.05
+      && Math.abs(zone.radiusY - other.radiusY) < 0.05
+      && Math.abs(zone.percentPerPixelX - other.percentPerPixelX) < 0.001
+      && Math.abs(zone.percentPerPixelY - other.percentPerPixelY) < 0.001
+    );
+  });
+}
+
+
+function sameOrbitCorridors(
+  left: StarOrbitCorridor[],
+  right: StarOrbitCorridor[]
+): boolean {
+  if (left.length !== right.length) return false;
+
+  return left.every((corridor, index) => {
+    const other = right[index];
+    if (!other) return false;
+    return (
+      Math.abs(corridor.centerX - other.centerX) < 0.05
+      && Math.abs(corridor.centerY - other.centerY) < 0.05
+      && Math.abs(corridor.radiusPx - other.radiusPx) < 0.25
+      && Math.abs(corridor.percentPerPixelX - other.percentPerPixelX) < 0.001
+      && Math.abs(corridor.percentPerPixelY - other.percentPerPixelY) < 0.001
+    );
+  });
+}
+
+function keepStarClearOfOrbitCorridors(
+  node: ConstellationNode,
+  corridors: StarOrbitCorridor[]
+): ConstellationNode {
+  if (corridors.length === 0) return node;
+
+  let left = node.left;
+  let top = node.top;
+  const severityGap = STAR_SEVERITY_GAP_BOOST_PX[node.severity];
+
+  for (let pass = 0; pass < 3; pass += 1) {
+    corridors.forEach((corridor, corridorIndex) => {
+      let dxPx = (left - corridor.centerX) / corridor.percentPerPixelX;
+      let dyPx = (top - corridor.centerY) / corridor.percentPerPixelY;
+      let distance = Math.hypot(dxPx, dyPx);
+      const safeGap = STAR_ORBIT_CORRIDOR_HALF_WIDTH_PX + severityGap;
+
+      if (Math.abs(distance - corridor.radiusPx) >= safeGap) return;
+
+      if (distance < 0.5) {
+        const angle =
+          ((hashValue(node.id, 701 + corridorIndex) % 360) * Math.PI) / 180;
+        dxPx = Math.cos(angle);
+        dyPx = Math.sin(angle);
+        distance = 1;
+      }
+
+      const moveOutside = distance >= corridor.radiusPx;
+      const targetRadius =
+        corridor.radiusPx + (moveOutside ? safeGap : -safeGap) * 1.08;
+      const scale = Math.max(0, targetRadius) / Math.max(distance, 0.5);
+
+      left = clamp(
+        corridor.centerX + dxPx * scale * corridor.percentPerPixelX,
+        4,
+        96
+      );
+      top = clamp(
+        corridor.centerY + dyPx * scale * corridor.percentPerPixelY,
+        5,
+        94
+      );
+    });
+  }
+
+  return {
+    ...node,
+    left,
+    top,
+  };
+}
+
+function keepStarClearOfExclusions(
+  node: ConstellationNode,
+  zones: StarExclusionZone[]
+): ConstellationNode {
+  if (zones.length === 0) return node;
+
+  let left = node.left;
+  let top = node.top;
+  const boostPx = STAR_SEVERITY_GAP_BOOST_PX[node.severity];
+
+  for (let pass = 0; pass < 4; pass += 1) {
+    zones.forEach((zone, zoneIndex) => {
+      const radiusX = zone.radiusX + boostPx * zone.percentPerPixelX;
+      const radiusY = zone.radiusY + boostPx * zone.percentPerPixelY;
+      let dx = left - zone.centerX;
+      let dy = top - zone.centerY;
+      let normalizedDistance =
+        (dx * dx) / (radiusX * radiusX)
+        + (dy * dy) / (radiusY * radiusY);
+
+      if (normalizedDistance >= 1) return;
+
+      if (normalizedDistance < 0.0001) {
+        const angle =
+          ((hashValue(node.id, 509 + zoneIndex) % 360) * Math.PI) / 180;
+        dx = Math.cos(angle) * radiusX * 0.3;
+        dy = Math.sin(angle) * radiusY * 0.3;
+        normalizedDistance =
+          (dx * dx) / (radiusX * radiusX)
+          + (dy * dy) / (radiusY * radiusY);
+      }
+
+      const scale = 1.08 / Math.sqrt(Math.max(normalizedDistance, 0.0001));
+      left = clamp(zone.centerX + dx * scale, 4, 96);
+      top = clamp(zone.centerY + dy * scale, 5, 94);
+    });
+  }
+
+  return {
+    ...node,
+    left,
+    top,
+  };
+}
+
 function buildNode(
   star: InicioSnapshotStar,
   index: number,
@@ -67,6 +237,9 @@ function buildNode(
     top: clamp(clusterY + localY, 5, 94),
     size: getSize(star.value, maxValue),
     delay: -((index % 14) * 0.39),
+    driftX: ((hashValue(star.id, 811) % 1001) / 1000 - 0.5) * 7,
+    driftY: ((hashValue(star.id, 919) % 1001) / 1000 - 0.5) * 6,
+    driftDuration: 8.5 + (hashValue(star.id, 977) % 700) / 100,
   };
 }
 
@@ -74,7 +247,94 @@ export function InicioConstellation({
   snapshot,
   onSelectEmpenho,
 }: InicioConstellationProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [exclusionZones, setExclusionZones] = useState<StarExclusionZone[]>([]);
+  const [orbitCorridors, setOrbitCorridors] = useState<StarOrbitCorridor[]>([]);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    const scene = root?.closest('[data-testid="inicio-scene"]') as HTMLElement | null;
+    if (!root || !scene) return;
+
+    let frame = 0;
+
+    const measure = () => {
+      frame = 0;
+      const rootRect = root.getBoundingClientRect();
+      if (rootRect.width <= 0 || rootRect.height <= 0) return;
+
+      const percentPerPixelX = 100 / rootRect.width;
+      const percentPerPixelY = 100 / rootRect.height;
+      const nextZones = Array.from(
+        scene.querySelectorAll<HTMLElement>('[data-inicio-star-exclusion]')
+      ).map((element) => {
+        const rect = element.getBoundingClientRect();
+        const kind =
+          element.dataset.inicioStarExclusion === 'core' ? 'core' : 'planet';
+        const gap = STAR_EXCLUSION_GAP_PX[kind];
+
+        return {
+          centerX:
+            ((rect.left + rect.width / 2 - rootRect.left) / rootRect.width) * 100,
+          centerY:
+            ((rect.top + rect.height / 2 - rootRect.top) / rootRect.height) * 100,
+          radiusX: (rect.width / 2 + gap) * percentPerPixelX,
+          radiusY: (rect.height / 2 + gap) * percentPerPixelY,
+          percentPerPixelX,
+          percentPerPixelY,
+        };
+      });
+
+      setExclusionZones((current) =>
+        sameExclusionZones(current, nextZones) ? current : nextZones
+      );
+
+      const nextOrbitCorridors = Array.from(
+        scene.querySelectorAll<HTMLElement>('[data-inicio-star-orbit]')
+      ).map((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          centerX:
+            ((rect.left + rect.width / 2 - rootRect.left) / rootRect.width) * 100,
+          centerY:
+            ((rect.top + rect.height / 2 - rootRect.top) / rootRect.height) * 100,
+          radiusPx: rect.width / 2,
+          percentPerPixelX,
+          percentPerPixelY,
+        };
+      });
+
+      setOrbitCorridors((current) =>
+        sameOrbitCorridors(current, nextOrbitCorridors)
+          ? current
+          : nextOrbitCorridors
+      );
+    };
+
+    const scheduleMeasure = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(measure);
+    };
+
+    const observer = new ResizeObserver(scheduleMeasure);
+    observer.observe(root);
+    observer.observe(scene);
+    scene
+      .querySelectorAll<HTMLElement>(
+        '[data-inicio-star-exclusion], [data-inicio-star-orbit]'
+      )
+      .forEach((element) => observer.observe(element));
+
+    scheduleMeasure();
+    const settleTimer = window.setTimeout(scheduleMeasure, 900);
+
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      window.clearTimeout(settleTimer);
+      observer.disconnect();
+    };
+  }, []);
 
   const nodes = useMemo(() => {
     const stars = snapshot?.stars ?? [];
@@ -83,8 +343,11 @@ export function InicioConstellation({
       0
     );
 
-    return stars.map((star, index) => buildNode(star, index, maxValue));
-  }, [snapshot]);
+    return stars
+      .map((star, index) => buildNode(star, index, maxValue))
+      .map((node) => keepStarClearOfExclusions(node, exclusionZones))
+      .map((node) => keepStarClearOfOrbitCorridors(node, orbitCorridors));
+  }, [exclusionZones, orbitCorridors, snapshot]);
 
   const hoveredNode = hoveredId
     ? nodes.find((node) => node.id === hoveredId) ?? null
@@ -113,6 +376,7 @@ export function InicioConstellation({
 
   return (
     <div
+      ref={rootRef}
       className={styles.root}
       data-testid="inicio-constellation"
       aria-label="Constelação operacional de empenhos"
@@ -156,6 +420,9 @@ export function InicioConstellation({
               width: node.size,
               height: node.size,
               animationDelay: `${node.delay}s`,
+              ['--star-drift-x' as string]: `${node.driftX.toFixed(2)}px`,
+              ['--star-drift-y' as string]: `${node.driftY.toFixed(2)}px`,
+              ['--star-drift-duration' as string]: `${node.driftDuration.toFixed(2)}s`,
             }}
             onMouseEnter={() => setHoveredId(node.id)}
             onMouseLeave={() => setHoveredId(null)}
