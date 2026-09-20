@@ -31,7 +31,7 @@ requireText(editModal, 'Conta Google autorizada', 'Modal de edição não exibe 
 
 requireText(operational, 'startWorkspaceSessionCoordinator', 'Sessão aberta não delega lifecycle ao coordenador multiaba.');
 requireText(sessionCoordinator, "data.status !== 'active'", 'Coordenador não encerra setor suspenso.');
-requireText(sessionCoordinator, 'data.firebaseUid !== user.uid', 'Coordenador não preserva vínculo de UID.');
+requireText(sessionCoordinator, 'data.firebaseUid !== uid', 'Coordenador não preserva vínculo de UID.');
 requireText(operational, 'void signOut(auth)', 'Invalidação coordenada não encerra a sessão suspensa.');
 
 requireText(rules, 'function boundIdentityMatchesAccount(account)', 'Acesso operacional não separa bootstrap do UID vinculado.');
