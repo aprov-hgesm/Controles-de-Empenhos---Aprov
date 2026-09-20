@@ -664,7 +664,7 @@ async function main() {
     })
   );
 
-  await allowed('Setor revogado lê somente o tombstone da própria sessão', () =>
+  await allowed('Setor lê tombstone conhecido dentro do próprio workspace', () =>
     getDoc(
       doc(
         sessionA.db,
@@ -672,6 +672,18 @@ async function main() {
         'workspace-a',
         'sessionRevocations',
         revokedSessionId
+      )
+    )
+  );
+
+  await allowed('Setor pode verificar tombstone inexistente antes de adquirir lease', () =>
+    getDoc(
+      doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'sessionRevocations',
+        'session-ainda-nao-revogada'
       )
     )
   );
