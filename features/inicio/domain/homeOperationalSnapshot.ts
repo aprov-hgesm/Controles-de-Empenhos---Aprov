@@ -106,6 +106,15 @@ function buildAlertsByEmpenho(alerts: Alert[]): Map<string, Alert[]> {
     current.push(alert);
     map.set(alert.empenhoId, current);
   });
+
+  map.forEach((linkedAlerts) => {
+    linkedAlerts.sort((left, right) => {
+      const dateDelta = (right.date || '').localeCompare(left.date || '');
+      if (dateDelta !== 0) return dateDelta;
+      return left.id.localeCompare(right.id);
+    });
+  });
+
   return map;
 }
 
@@ -167,10 +176,6 @@ function getMessage(
   return 'Operação sem sinal de atenção ativo.';
 }
 
-function stableEmpenhoDate(empenho: Empenho): string {
-  return empenho.updatedAt || empenho.date || '';
-}
-
 function selectSnapshotEmpenhos(
   empenhos: Empenho[],
   alertsByEmpenho: Map<string, Alert[]>
@@ -188,15 +193,13 @@ function selectSnapshotEmpenhos(
         severityWeight[getSeverity(left, alertsByEmpenho)]
         - severityWeight[getSeverity(right, alertsByEmpenho)];
       if (severityDelta !== 0) return severityDelta;
-      return stableEmpenhoDate(right).localeCompare(stableEmpenhoDate(left));
+      return left.id.localeCompare(right.id);
     })
     .slice(0, INICIO_ACTIVE_STAR_BUDGET);
 
   const closed = empenhos
     .filter((empenho) => empenho.status === 'Encerrado')
-    .sort((left, right) =>
-      stableEmpenhoDate(right).localeCompare(stableEmpenhoDate(left))
-    )
+    .sort((left, right) => left.id.localeCompare(right.id))
     .slice(0, INICIO_CLOSED_STAR_BUDGET);
 
   return [...active, ...closed];
