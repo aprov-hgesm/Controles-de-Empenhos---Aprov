@@ -110,7 +110,8 @@
     "verify:block-17-1-session-lease-efficiency": "node scripts/verify-block-17-1-session-lease-efficiency.mjs",
     "verify:block-19-home-experience": "node scripts/verify-block-19-home-experience.mjs",
     "verify:block-19-2-cinematic-scene": "node scripts/verify-block-19-2-cinematic-scene.mjs",
-    "verify:block-19-3-interactive-core": "node scripts/verify-block-19-3-interactive-core.mjs"
+    "verify:block-19-3-interactive-core": "node scripts/verify-block-19-3-interactive-core.mjs",
+    "verify:block-19-4-operational-orbits": "node scripts/verify-block-19-4-operational-orbits.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
