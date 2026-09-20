@@ -229,9 +229,30 @@ Início
 
 O objetivo do bloco é reduzir agressivamente leituras de Firestore na superfície mais visual do sistema. A Home não deve voltar a montar sua experiência a partir de centenas de documentos individuais.
 
+## Bloco 19.11 — performance, GPU e reduced motion
+
+Concluído:
+
+- novo `useInicioPerformanceProfile` define os perfis `full`, `balanced` e `static`;
+- `prefers-reduced-motion` força o perfil estático;
+- ponteiro coarse, até 4 threads lógicas ou até 4 GB reportados ativam o perfil balanceado;
+- o estado de visibilidade da aba é observado por `visibilitychange`;
+- ao ocultar a aba, animações CSS contínuas são pausadas por `animation-play-state`;
+- os loops de `requestAnimationFrame` do parallax global, retículo e núcleo deixaram de ser contínuos;
+- esses RAFs agora iniciam somente sob demanda e encerram automaticamente quando a interpolação estabiliza;
+- parallax fino e microinteração de cursor ficam restritos ao perfil `full`;
+- o perfil `balanced` reduz partículas, nebulosas, sweeps, órbitas, filtros blur e `backdrop-filter`;
+- sinais críticos permanecem visualmente distinguíveis mesmo quando animações são reduzidas;
+- `will-change: transform` permanente foi removido da atmosfera e do núcleo para evitar reserva desnecessária de memória GPU;
+- a cena recebeu `contain: paint style` para limitar invalidações de pintura;
+- o perfil `static` remove movimentos decorativos preservando integralmente navegação, alertas e informações;
+- nenhuma informação de hardware é persistida;
+- nenhuma leitura, listener ou gravação Firestore adicional foi introduzida.
+
+A política é adaptativa e exclusivamente visual: o mesmo snapshot operacional e as mesmas ações permanecem disponíveis em todos os perfis.
+
 ## Próximas etapas
 
-- 19.11: performance/GPU/reduced motion;
 - 19.12: responsividade;
 - 19.13: polimento;
 - 19.14: auditoria e testes externos.
