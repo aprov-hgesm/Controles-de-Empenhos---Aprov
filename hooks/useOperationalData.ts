@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   browserLocalPersistence,
   onAuthStateChanged,
@@ -24,6 +24,16 @@ import {
 import type { OperationalActiveTab } from '../lib/operationalSubscriptionPlan';
 import { resetActiveProfileMode, setActiveProfileMode } from '../lib/profileMode';
 import { normalizePlatformEmail } from '../lib/platformIdentity';
+import { SESSION_HEARTBEAT_INTERVAL_MS } from '../lib/platformCapacity';
+import {
+  PlatformSessionLeaseError,
+  SESSION_CAPACITY_EXCEEDED_MESSAGE,
+  clearLocalWorkspaceSessionLease,
+  isSessionCapacityExceededError,
+  isTerminalSessionLeaseError,
+  releaseWorkspaceSessionLease,
+  renewWorkspaceSessionLeaseIfDue,
+} from '../lib/platformSessionLease';
 import { useOperationalRealtimeCollections } from './useOperationalRealtimeCollections';
 
 /**
@@ -37,6 +47,7 @@ import { useOperationalRealtimeCollections } from './useOperationalRealtimeColle
 export function useOperationalData(activeTab: OperationalActiveTab) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const explicitSignInRef = useRef(false);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [workspaceContext, setWorkspaceContext] = useState<ResolvedWorkspaceContext>(
@@ -77,6 +88,11 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       void (async () => {
         if (!active) return;
+
+        // O login explícito já resolve workspace + lease no mesmo fluxo. Ignorar
+        // este eco do Auth evita duas resoluções concorrentes da mesma tentativa.
+        if (currentUser && explicitSignInRef.current) return;
+
         setLoadingAuth(true);
 
         if (!currentUser) {
@@ -217,6 +233,68 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     };
   }, [user, workspaceContext]);
 
+  // Bloco 16.1 — mantém o lease externo vivo com baixa frequência. O timestamp
+  // local compartilhado entre abas evita que duas abas do mesmo navegador
+  // multipliquem heartbeats para a mesma sessão lógica.
+  useEffect(() => {
+    if (
+      !user
+      || !isOperationalSectorContext(workspaceContext)
+      || workspaceContext.resolutionSource !== 'platform-directory'
+    ) {
+      return;
+    }
+
+    let active = true;
+
+    const revokeLeaseAccess = () => {
+      if (!active) return;
+      active = false;
+      clearLocalWorkspaceSessionLease(workspaceContext.workspaceId, user.uid);
+      clearResolvedWorkspaceContext();
+      clearOperationalState();
+      resetActiveProfileMode();
+      setWorkspaceContext(resolveWorkspaceContext(null));
+      setUser(null);
+      setSyncing(false);
+      void signOut(auth);
+    };
+
+    const renewLease = async () => {
+      try {
+        await renewWorkspaceSessionLeaseIfDue(user, workspaceContext);
+      } catch (error) {
+        if (isTerminalSessionLeaseError(error)) {
+          revokeLeaseAccess();
+          return;
+        }
+
+        // Falhas transitórias de rede não derrubam a sessão imediatamente. O lease
+        // permanece válido até expiresAt e será reavaliado no próximo heartbeat.
+        console.warn('Não foi possível renovar o lease de sessão EMPROVEX.', error);
+      }
+    };
+
+    const intervalId = window.setInterval(
+      () => void renewLease(),
+      SESSION_HEARTBEAT_INTERVAL_MS
+    );
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') void renewLease();
+    };
+    const handleOnline = () => void renewLease();
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [user, workspaceContext]);
+
   const finalizeSignIn = async (authenticatedUser: User) => {
     setActiveProfileMode('sector');
     const resolvedContext = await resolveAuthenticatedWorkspaceContext(
@@ -240,6 +318,13 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
       setWorkspaceContext(resolveWorkspaceContext(null));
       clearOperationalState();
 
+      if (diagnosticCode === 'SESSION_CAPACITY_EXCEEDED') {
+        throw new PlatformSessionLeaseError(
+          'SESSION_CAPACITY_EXCEEDED',
+          SESSION_CAPACITY_EXCEEDED_MESSAGE
+        );
+      }
+
       if (diagnosticCode) {
         throw new Error(`Falha de autorização do workspace [${diagnosticCode}].`);
       }
@@ -253,12 +338,14 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
   };
 
   const signInUser = async () => {
+    explicitSignInRef.current = true;
     setSyncing(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
       const credential = await signInWithPopup(auth, googleProvider);
       return await finalizeSignIn(credential.user);
     } finally {
+      explicitSignInRef.current = false;
       setSyncing(false);
     }
   };
@@ -272,6 +359,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
 
     let firebaseCredentialAccepted = false;
 
+    explicitSignInRef.current = true;
     setSyncing(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
@@ -318,6 +406,10 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
         throw new Error('Esta credencial está desativada no Firebase Authentication.');
       }
 
+      if (firebaseCredentialAccepted && isSessionCapacityExceededError(error)) {
+        throw error;
+      }
+
       if (
         firebaseCredentialAccepted
         && error instanceof Error
@@ -332,12 +424,28 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
 
       throw new Error('O Firebase rejeitou o e-mail ou a senha informados.');
     } finally {
+      explicitSignInRef.current = false;
       setSyncing(false);
     }
   };
 
   const signOutUser = async () => {
     localStorage.removeItem('local_user_session');
+
+    if (
+      user
+      && isOperationalSectorContext(workspaceContext)
+      && workspaceContext.resolutionSource === 'platform-directory'
+    ) {
+      try {
+        await releaseWorkspaceSessionLease(user, workspaceContext);
+      } catch (error) {
+        // Logout não fica preso por falha de rede; nesse caso o slot expira sozinho.
+        console.warn('Não foi possível liberar imediatamente o lease de sessão.', error);
+        clearLocalWorkspaceSessionLease(workspaceContext.workspaceId, user.uid);
+      }
+    }
+
     resetActiveProfileMode();
     clearResolvedWorkspaceContext();
     await signOut(auth);
