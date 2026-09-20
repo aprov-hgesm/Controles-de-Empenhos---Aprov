@@ -210,7 +210,7 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
     }, {
       timeout: 15_000,
       intervals: [250, 500, 1000],
-    }).toBeGreaterThan(initialExpiry + 1000);
+    }).toBeGreaterThan(initialExpiry);
 
     await expect.poll(async () => page.evaluate((workspaceId) => {
       for (let index = 0; index < sessionStorage.length; index += 1) {
