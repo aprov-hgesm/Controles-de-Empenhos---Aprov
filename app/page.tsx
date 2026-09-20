@@ -56,7 +56,7 @@ export default function Home() {
 
   const {
     user, loadingAuth, syncing, workspaceContext,
-    activeOperationalDataReady, activeRealtimeCollectionCount,
+    activeOperationalDataReady, activeRealtimeCollectionCount, inicioSnapshot,
     empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices,
     comissoes, setComissoes, cronogramas, setCronogramas,
     signInUser, signInSectorUser, signOutUser, getBalanceByClass,
@@ -426,8 +426,7 @@ export default function Home() {
           {/* INÍCIO: EXPERIÊNCIA VISUAL / MAPA OPERACIONAL */}
           {activeTab === 'inicio' && (
             <InicioView
-              empenhos={empenhos}
-              alerts={alerts}
+              snapshot={inicioSnapshot}
               userDisplayName={user?.displayName || 'Operador EMPROVEX'}
               workspaceName={workspaceContext.status === 'sector' ? workspaceContext.workspaceName : 'Ambiente EMPROVEX'}
               organizationName={workspaceContext.status === 'sector' ? workspaceContext.institutionalProfile.organizationName : 'EMPROVEX'}
