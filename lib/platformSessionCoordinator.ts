@@ -21,8 +21,6 @@ import {
 import type { SectorWorkspaceContext } from './workspaceContext';
 
 export const SESSION_COORDINATOR_VERSION = 'emprovex_session_coordinator_v1';
-export const SESSION_COORDINATOR_RETRY_MS = 4 * 1000;
-
 const CHANNEL_PREFIX = 'emprovex:session-coordinator:v1';
 const ROLE_KEY_PREFIX = 'emprovex:session-coordinator-role:v1';
 const TAB_ID_KEY = 'emprovex:session-coordinator-tab:v1';
@@ -123,10 +121,9 @@ export function startWorkspaceSessionCoordinator(
   let stopped = false;
   let invalidated = false;
   let role: WorkspaceSessionCoordinatorRole = 'follower';
-  let retryTimer: number | null = null;
   let releaseLeadership: (() => void) | null = null;
   let stopLeaderWork: (() => void) | null = null;
-  let leadershipRequestInFlight = false;
+  const leadershipAbortController = new AbortController();
   let channel: BroadcastChannel | null = null;
 
   const setRole = (nextRole: WorkspaceSessionCoordinatorRole) => {
@@ -328,18 +325,18 @@ export function startWorkspaceSessionCoordinator(
     invalidateLocalSession(message.reason);
   });
 
-  const attemptLeadership = () => {
-    if (stopped || invalidated || leadershipRequestInFlight) return;
-    leadershipRequestInFlight = true;
+  const queueLeadership = () => {
+    setRole('follower');
 
+    // Web Locks já possui fila nativa. Manter a requisição pendente é mais seguro
+    // que polling por setInterval: abas em segundo plano podem ter timers
+    // estrangulados/congelados, enquanto o LockManager promove automaticamente a
+    // próxima aba quando a líder fecha e o lock é liberado.
     void navigator.locks.request(
       lockName(workspaceId, uid),
-      { ifAvailable: true },
-      async (lock) => {
-        if (!lock || stopped || invalidated) {
-          setRole('follower');
-          return;
-        }
+      { signal: leadershipAbortController.signal },
+      async () => {
+        if (stopped || invalidated) return;
 
         stopLeaderWork = startLeaderResponsibilities();
 
@@ -352,27 +349,26 @@ export function startWorkspaceSessionCoordinator(
         releaseLeadership = null;
       }
     ).catch((error) => {
+      if (stopped || leadershipAbortController.signal.aborted) return;
+
+      // Falha da própria API de coordenação não deixa a sessão sem proteção.
+      // Entramos no modelo conservador por aba: pode duplicar listeners, mas
+      // preserva revogação, lifecycle e heartbeat.
       callbacks.onTransientError?.(error);
-    }).finally(() => {
-      leadershipRequestInFlight = false;
-      if (!stopped && !invalidated) setRole('follower');
+      setRole('fallback');
+      stopLeaderWork = startLeaderResponsibilities();
+      setRole('fallback');
     });
   };
 
-  setRole('follower');
-  attemptLeadership();
-  retryTimer = window.setInterval(attemptLeadership, SESSION_COORDINATOR_RETRY_MS);
+  queueLeadership();
 
   return {
     stop: () => {
       if (stopped) return;
       stopped = true;
 
-      if (retryTimer !== null) {
-        window.clearInterval(retryTimer);
-        retryTimer = null;
-      }
-
+      leadershipAbortController.abort();
       releaseLeadership?.();
       releaseLeadership = null;
       stopLeaderWork?.();
