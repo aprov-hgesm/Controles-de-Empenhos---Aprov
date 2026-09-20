@@ -225,3 +225,9 @@
     transition: none;
   }
 }
+
+
+[data-performance='balanced'] .resume,
+[data-performance='balanced'] .action {
+  backdrop-filter: none;
+}
