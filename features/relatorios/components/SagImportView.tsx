@@ -47,7 +47,8 @@ interface SagImportViewProps {
   onApplySagNsImport: (
     payload: SagNsPayload,
     supplierCnpj: string,
-    expectedFingerprint: string
+    expectedFingerprint: string,
+    invoiceSource?: Invoice[]
   ) => Promise<SagNsImportCommitResult>;
 }
 
@@ -122,6 +123,7 @@ export function SagImportView({ empenhos, invoices, workspaceUg, onApplySagNsImp
     loading: selectedSupplierHistoryLoading,
     truncated: selectedSupplierHistoryTruncated,
     error: selectedSupplierHistoryError,
+    upsertInvoices: upsertSupplierHistory,
   } = useHistoricalInvoices({
     mode: 'supplier',
     keyValue: selectedCnpj,
@@ -319,9 +321,11 @@ export function SagImportView({ empenhos, invoices, workspaceUg, onApplySagNsImp
       const result = await onApplySagNsImport(
         effectivePayload,
         selectedSupplier.cnpj,
-        confirmationFingerprint
+        confirmationFingerprint,
+        effectiveInvoices
       );
       setLastImportResult(result);
+      upsertSupplierHistory(result.updatedInvoices);
       setShowApplyConfirmation(false);
       setApplyConfirmed(false);
       setConfirmationFingerprint('');
