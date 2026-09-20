@@ -75,6 +75,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
     loading: historicalInvoicesLoading,
     truncated: historicalInvoicesTruncated,
     error: historicalInvoicesError,
+    upsertInvoices: upsertHistoricalInvoices,
   } = useHistoricalInvoices({
     mode: 'empenho',
     keyValue: reportSearch,
@@ -96,6 +97,15 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
 
     return [...byRecordKey.values()];
   }, [historicalInvoices, liveInvoices, reportSearch]);
+
+  const saveScopedNumeroNS = React.useCallback(
+    async (invoiceRecordKey: string, value: string) => {
+      const updated = await handleSaveNumeroNS(invoiceRecordKey, value, invoices);
+      if (updated) upsertHistoricalInvoices([updated]);
+      return updated;
+    },
+    [handleSaveNumeroNS, invoices, upsertHistoricalInvoices]
+  );
 
   return (
             <div className="space-y-6">
@@ -434,7 +444,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                               onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
                                                   e.preventDefault();
-                                                  handleSaveNumeroNS(getInvoiceRecordKey(inv), tempNSValue);
+                                                  saveScopedNumeroNS(getInvoiceRecordKey(inv), tempNSValue);
                                                 } else if (e.key === 'Escape') {
                                                   setEditingNSId(null);
                                                   setTempNSValue('');
@@ -447,7 +457,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                             <button
                                               id={`btn-save-ns-${getInvoiceRecordKey(inv)}`}
                                               type="button"
-                                              onClick={() => handleSaveNumeroNS(getInvoiceRecordKey(inv), tempNSValue)}
+                                              onClick={() => saveScopedNumeroNS(getInvoiceRecordKey(inv), tempNSValue)}
                                               className="p-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-lg transition-all shadow-xs flex items-center justify-center"
                                               title="Salvar Número da NS"
                                             >
@@ -527,7 +537,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                         id="btn-download-report-pdf-main"
                         onClick={() => {
                           const emp = empenhos.find(e => e.id === reportSearch);
-                          if (emp) handleGenerateEmpenhoReportPDF(emp, 'download', reportingPeriod);
+                          if (emp) handleGenerateEmpenhoReportPDF(emp, 'download', reportingPeriod, invoices);
                         }}
                         className="px-5 py-2.5 bg-[#00288e] hover:bg-[#001e6a] text-white active:scale-95 duration-100 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-all"
                       >
@@ -537,7 +547,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                         id="btn-print-report-pdf-main"
                         onClick={() => {
                           const emp = empenhos.find(e => e.id === reportSearch);
-                          if (emp) handleGenerateEmpenhoReportPDF(emp, 'print', reportingPeriod);
+                          if (emp) handleGenerateEmpenhoReportPDF(emp, 'print', reportingPeriod, invoices);
                         }}
                         className="px-5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 active:scale-95 duration-100 rounded-xl font-bold text-xs sm:text-sm text-gray-700 flex items-center gap-2 shadow-xs transition-all"
                       >
@@ -747,7 +757,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                             id="btn-download-pdf-from-preview"
                             onClick={() => {
                               const emp = empenhos.find(e => e.id === reportSearch);
-                              if (emp) handleGenerateEmpenhoReportPDF(emp, 'download', reportingPeriod);
+                              if (emp) handleGenerateEmpenhoReportPDF(emp, 'download', reportingPeriod, invoices);
                             }}
                             className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold text-xs hover:bg-emerald-700 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
                           >
@@ -757,7 +767,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                             id="btn-print-pdf-from-preview"
                             onClick={() => {
                               const emp = empenhos.find(e => e.id === reportSearch);
-                              if (emp) handleGenerateEmpenhoReportPDF(emp, 'print', reportingPeriod);
+                              if (emp) handleGenerateEmpenhoReportPDF(emp, 'print', reportingPeriod, invoices);
                             }}
                             className="px-4 py-2 bg-[#00288e] text-white rounded-xl font-bold text-xs hover:bg-[#1e40af] transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
                           >
