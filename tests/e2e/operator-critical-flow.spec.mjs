@@ -20,6 +20,16 @@ async function loginSector(page, email) {
   ).toBeVisible();
 }
 
+async function logoutIfAuthenticated(page) {
+  const logout = page.getByTestId('logout');
+  if (await logout.isVisible().catch(() => false)) {
+    await logout.click();
+    await expect(page.getByTestId('sector-login-email')).toBeVisible({
+      timeout: 15_000,
+    });
+  }
+}
+
 async function openSampleReport(page) {
   await page.getByTestId('nav-relatorios').click();
   await expect(page.getByRole('heading', { name: 'Relatórios' })).toBeVisible();
@@ -38,6 +48,10 @@ async function expectRealtimeProfile(page, expectedCount) {
 }
 
 test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
+  test.afterEach(async ({ page }) => {
+    await logoutIfAuthenticated(page);
+  });
+
   test('login -> relatório -> NS automática por UG -> persistência após reload', async ({ page }) => {
     await page.goto('/');
     await loginSector(page, OPERATOR_A);
@@ -203,6 +217,62 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
 
     await page.getByRole('button', { name: 'Painel', exact: true }).first().click();
     await expectRealtimeProfile(page, 1);
+  });
+
+  test('duas sessões por setor, múltiplas abas compartilham vaga e terceira sessão é barrada', async ({ browser }) => {
+    const contextA = await browser.newContext();
+    const contextB = await browser.newContext();
+    const contextC = await browser.newContext();
+
+    const pageA1 = await contextA.newPage();
+    const pageB = await contextB.newPage();
+    const pageC = await contextC.newPage();
+
+    try {
+      await pageA1.goto('/');
+      await loginSector(pageA1, OPERATOR_A);
+
+      // Mesma instância de navegador: a segunda aba reutiliza browserInstanceId +
+      // sessionId e não consome o segundo slot.
+      const pageA2 = await contextA.newPage();
+      await pageA2.goto('/');
+      await expect(pageA2.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
+        timeout: 20_000,
+      });
+
+      // Segundo navegador/contexto consome a segunda vaga.
+      await pageB.goto('/');
+      await loginSector(pageB, OPERATOR_A);
+
+      // Terceiro navegador autentica no Firebase, mas é recusado pelo lease.
+      await pageC.goto('/');
+      await pageC.getByTestId('sector-login-email').fill(OPERATOR_A);
+      await pageC.getByTestId('sector-login-password').fill(PASSWORD);
+      await pageC.getByTestId('sector-login-submit').click();
+
+      await expect(
+        pageC.getByText('Limite de acessos simultâneos atingido.', { exact: false })
+      ).toBeVisible({ timeout: 20_000 });
+      await expect(pageC.getByTestId('sector-login-email')).toBeVisible();
+      await expect(
+        pageC.getByRole('navigation', { name: 'Navegação principal' })
+      ).toHaveCount(0);
+
+      // Liberar a segunda sessão devolve a vaga imediatamente.
+      await logoutIfAuthenticated(pageB);
+
+      await pageC.getByTestId('sector-login-submit').click();
+      await expect(
+        pageC.getByRole('navigation', { name: 'Navegação principal' })
+      ).toBeVisible({ timeout: 20_000 });
+
+      await logoutIfAuthenticated(pageC);
+      await logoutIfAuthenticated(pageA1);
+    } finally {
+      await contextC.close();
+      await contextB.close();
+      await contextA.close();
+    }
   });
 
 });
