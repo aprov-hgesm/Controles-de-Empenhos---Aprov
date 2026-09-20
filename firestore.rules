@@ -1626,6 +1626,293 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    function validHomeSnapshotNumber(value) {
+      return value is number && value >= 0;
+    }
+
+    function homeSnapshotUgMatchesWorkspace(workspaceId, ug) {
+      let workspace = workspaceData(workspaceId);
+      return isValidUnitUg(ug)
+        && (
+          (
+            workspaceId == 'hgesm-aprov'
+            && ug == '160416'
+            && (
+              !('ug' in workspace)
+              || workspace.ug == '160416'
+            )
+          )
+          || (
+            'ug' in workspace
+            && isValidUnitUg(workspace.ug)
+            && workspace.ug == ug
+          )
+        );
+    }
+
+    function validHomeSnapshot(workspaceId) {
+      return canAccessWorkspace(workspaceId)
+        && request.resource.data.keys().hasAll([
+          'snapshotVersion',
+          'workspaceId',
+          'ug',
+          'contentHash',
+          'generatedAt',
+          'generatedBy',
+          'metrics',
+          'alerts',
+          'receiving',
+          'execution',
+          'classStats',
+          'stars'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'snapshotVersion',
+          'workspaceId',
+          'ug',
+          'contentHash',
+          'generatedAt',
+          'generatedBy',
+          'metrics',
+          'alerts',
+          'receiving',
+          'execution',
+          'classStats',
+          'stars'
+        ])
+        && request.resource.data.snapshotVersion == 'emprovex_home_snapshot_v1'
+        && request.resource.data.workspaceId == workspaceId
+        && homeSnapshotUgMatchesWorkspace(workspaceId, request.resource.data.ug)
+        && request.resource.data.contentHash is string
+        && request.resource.data.contentHash.matches('^[0-9a-f]{8}
+    // a platform administrator cannot read another sector's operational records.
+    match /workspaces/{workspaceId}/auditEvents/{eventId} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validWorkspaceAuditEvent(eventId, workspaceId);
+      allow update, delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/empenhos/{id} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validEmpenhoRevisionCreate(request.resource.data)
+        && empenhoCnpjCreateIsValid(request.resource.data);
+      allow update: if canAccessWorkspace(workspaceId)
+        && !empenhoDeletionIsLockedAfter(workspaceId, id)
+        && validEmpenhoRevisionUpdate()
+        && empenhoCnpjUpdateIsValid();
+      allow delete: if canAccessWorkspace(workspaceId)
+        && validEmpenhoLifecycleDelete(workspaceId, id);
+    }
+
+    match /workspaces/{workspaceId}/alerts/{id} {
+      allow read, delete: if canAccessWorkspace(workspaceId);
+      allow create, update: if canAccessWorkspace(workspaceId)
+        && linkedEmpenhoWriteAllowedAfter(workspaceId, request.resource.data);
+    }
+
+    match /workspaces/{workspaceId}/invoices/{id} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validInvoiceCreate(workspaceId, id);
+      allow update: if canAccessWorkspace(workspaceId)
+        && validInvoiceUpdate(workspaceId, id);
+      allow delete: if canAccessWorkspace(workspaceId)
+        && validInvoiceDelete(workspaceId, id);
+    }
+
+    match /workspaces/{workspaceId}/comissoes/{id} {
+      allow read, write: if canAccessWorkspace(workspaceId);
+    }
+
+    match /workspaces/{workspaceId}/cronogramas/{id} {
+      allow read, delete: if canAccessWorkspace(workspaceId);
+      allow create, update: if canAccessWorkspace(workspaceId)
+        && linkedEmpenhoWriteAllowedAfter(workspaceId, request.resource.data);
+    }
+
+    // Block 19.10 — um único documento compacto alimenta o Início.
+    // É dado derivado: não concede autorização e não substitui coleções operacionais.
+    match /workspaces/{workspaceId}/settings/homeSnapshot {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create, update: if validHomeSnapshot(workspaceId);
+      allow delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/settings/termoRecebimentoCounter {
+      // O cadastro administrativo verifica se existe contador residual antes de
+      // provisionar um workspace novo. Essa leitura prévia só é permitida enquanto
+      // o workspace ainda não existe; depois da criação, o administrador volta a
+      // não possuir acesso ao contador operacional do tenant.
+      allow read: if canAccessWorkspace(workspaceId)
+        || (
+          isPlatformAdmin()
+          && !workspaceExists(workspaceId)
+        );
+      allow create: if canAdminProvisionTermCounter(workspaceId)
+        || (
+          canAccessWorkspace(workspaceId)
+          && validInitialTermCounter()
+        );
+      allow update: if canAccessWorkspace(workspaceId)
+        && validOperationalTermCounterUpdate();
+      allow delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/settings/documentStorage {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validWorkspaceDocumentStorage(workspaceId);
+      allow update: if canAccessWorkspace(workspaceId)
+        && validWorkspaceDocumentStorageUpdate(workspaceId);
+      allow delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/settings/{id} {
+      // Listagem é limitada ao próprio workspace autenticado. Os settings atuais
+      // já são individualmente legíveis pelo setor; o list habilita diagnósticos
+      // de integridade sem ampliar acesso entre tenants.
+      allow list: if canAccessWorkspace(workspaceId);
+      allow get: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId);
+      allow create: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId)
+        && (
+          (
+            isEmpenhoDeletionLockId(id)
+            && validEmpenhoDeletionLockCreate(workspaceId, id)
+          )
+          || (
+            !isEmpenhoDeletionLockId(id)
+            && (
+              !isSagNsLockId(id)
+              || validSagNsLock(workspaceId, id)
+            )
+          )
+        );
+      allow update: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId)
+        && !isEmpenhoDeletionLockId(id)
+        && (
+          !isSagNsLockId(id)
+          || validSagNsLockUpdate(workspaceId, id)
+        );
+      allow delete: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId)
+        && (
+          (
+            isEmpenhoDeletionLockId(id)
+            && validEmpenhoDeletionLockDelete(workspaceId, id)
+          )
+          || (
+            !isEmpenhoDeletionLockId(id)
+            && (
+              !isSagNsLockId(id)
+              || validSagNsLockDelete(workspaceId, id)
+            )
+          )
+        );
+    }
+
+    // Bloco 13 — compatibilidade legada somente leitura.
+    // O runtime oficial já usa /workspaces/hgesm-aprov/...; os dados raiz ficam
+    // preservados apenas para consulta, auditoria e recuperação controlada.
+    // Qualquer rollback com escrita exige mudança explícita de Rules, evitando que
+    // uma simples regressão de frontend volte silenciosamente a gravar no legado.
+    match /empenhos/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /alerts/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /invoices/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /comissoes/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /cronogramas/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    // A identidade visual global precisa continuar disponível antes do login.
+    // A marca institucional é imutável no runtime: qualquer troca futura exige
+    // manutenção deliberada fora da aplicação e revisão explícita destas Rules.
+    match /settings/global {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Demais settings raiz (incluindo o contador histórico) ficam somente leitura.
+    match /settings/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+  }
+}
+)
+        && request.resource.data.generatedAt is string
+        && request.resource.data.generatedAt.size() > 10
+        && request.resource.data.generatedBy == request.auth.uid
+        && request.resource.data.metrics is map
+        && request.resource.data.metrics.keys().hasOnly([
+          'totalEmpenhos',
+          'totalValue'
+        ])
+        && validHomeSnapshotNumber(request.resource.data.metrics.totalEmpenhos)
+        && validHomeSnapshotNumber(request.resource.data.metrics.totalValue)
+        && request.resource.data.alerts is map
+        && request.resource.data.alerts.keys().hasOnly([
+          'total',
+          'critical',
+          'attention'
+        ])
+        && validHomeSnapshotNumber(request.resource.data.alerts.total)
+        && validHomeSnapshotNumber(request.resource.data.alerts.critical)
+        && validHomeSnapshotNumber(request.resource.data.alerts.attention)
+        && request.resource.data.receiving is map
+        && request.resource.data.receiving.keys().hasOnly([
+          'pendingEmpenhos',
+          'pendingItems',
+          'balance'
+        ])
+        && validHomeSnapshotNumber(request.resource.data.receiving.pendingEmpenhos)
+        && validHomeSnapshotNumber(request.resource.data.receiving.pendingItems)
+        && validHomeSnapshotNumber(request.resource.data.receiving.balance)
+        && request.resource.data.execution is map
+        && request.resource.data.execution.keys().hasOnly([
+          'committed',
+          'received',
+          'percentage'
+        ])
+        && validHomeSnapshotNumber(request.resource.data.execution.committed)
+        && validHomeSnapshotNumber(request.resource.data.execution.received)
+        && validHomeSnapshotNumber(request.resource.data.execution.percentage)
+        && request.resource.data.execution.percentage <= 100
+        && request.resource.data.classStats is list
+        && request.resource.data.classStats.size() <= 32
+        && request.resource.data.stars is list
+        && request.resource.data.stars.size() <= 72;
+    }
+
     // Workspace-scoped operational data. There is deliberately no admin bypass:
     // a platform administrator cannot read another sector's operational records.
     match /workspaces/{workspaceId}/auditEvents/{eventId} {
