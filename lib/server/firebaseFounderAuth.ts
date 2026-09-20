@@ -2,7 +2,10 @@ import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 
 import firebaseConfig from '../../firebase-applet-config.json';
 import { HGESM_SECTOR_EMAIL } from '../hgesmWorkspace';
-import { normalizePlatformEmail } from '../platformIdentity';
+import {
+  FOUNDER_AUTH_PROVIDER,
+  normalizePlatformEmail,
+} from '../platformIdentity';
 
 const FIREBASE_JWKS = createRemoteJWKSet(
   new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')
@@ -46,6 +49,16 @@ function verifiedEmail(payload: JWTPayload): string {
   return email;
 }
 
+function verifiedSignInProvider(payload: JWTPayload): string {
+  const firebaseClaim = payload.firebase;
+  if (!firebaseClaim || typeof firebaseClaim !== 'object' || Array.isArray(firebaseClaim)) {
+    return '';
+  }
+
+  const provider = (firebaseClaim as Record<string, unknown>).sign_in_provider;
+  return typeof provider === 'string' ? provider : '';
+}
+
 export async function verifyFounderFirebaseRequest(
   authorization: string | null
 ): Promise<{ uid: string; email: string }> {
@@ -65,6 +78,10 @@ export async function verifyFounderFirebaseRequest(
   const email = verifiedEmail(payload);
   if (email !== HGESM_SECTOR_EMAIL) {
     throw new FounderAuthError('Acesso reservado à conta fundadora.', 403);
+  }
+
+  if (verifiedSignInProvider(payload) !== FOUNDER_AUTH_PROVIDER) {
+    throw new FounderAuthError('A conta fundadora exige autenticação Google.', 403);
   }
 
   if (!payload.sub) {
