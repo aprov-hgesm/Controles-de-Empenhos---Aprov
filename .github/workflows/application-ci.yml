@@ -280,6 +280,9 @@ jobs:
       - name: Block 19.2 cinematic scene guard
         run: npm run verify:block-19-2-cinematic-scene
 
+      - name: Block 19.3 interactive core guard
+        run: npm run verify:block-19-3-interactive-core
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
