@@ -15,7 +15,9 @@ import { AppBackground } from '../components/layout/AppBackground';
 import { AppHeader } from '../components/layout/AppHeader';
 import { AppSidebar } from '../components/layout/AppSidebar';
 import { ToastNotification } from '../components/layout/ToastNotification';
+import { OperationalSurfaceTransition } from '../components/layout/OperationalSurfaceTransition';
 import { DashboardView } from '../features/dashboard/components/DashboardView';
+import { InicioView } from '../features/inicio/components/InicioView';
 import { EmpenhosView } from '../features/empenhos/components/EmpenhosView';
 import { NotasFiscaisView } from '../features/notas-fiscais/components/NotasFiscaisView';
 import { RelatoriosView } from '../features/relatorios/components/RelatoriosView';
@@ -53,7 +55,7 @@ export default function Home() {
 
   const {
     user, loadingAuth, syncing, workspaceContext,
-    activeOperationalDataReady, activeRealtimeCollectionCount,
+    activeOperationalDataReady, activeRealtimeCollectionCount, inicioSnapshot,
     empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices,
     comissoes, setComissoes, cronogramas, setCronogramas,
     signInUser, signInSectorUser, signOutUser, getBalanceByClass,
@@ -104,7 +106,6 @@ export default function Home() {
     cronogramaResponsavelNome, setCronogramaResponsavelNome, cronogramaResponsavelCargo, setCronogramaResponsavelCargo, showCronogramaPreviewModal, setShowCronogramaPreviewModal,
     isSavingCronograma, setIsSavingCronograma,
   } = useOperationalViewState();
-
 
   const {
     handleEmpenhoDocumentUploaded,
@@ -339,12 +340,12 @@ export default function Home() {
 
   return (
     <div
-      className={`min-h-screen bg-gradient-to-br from-[#f0f4f8] via-[#e8ecf3] to-[#f4f6fa] text-[#0b1c30] flex flex-col antialiased relative overflow-x-hidden selection:bg-blue-500 selection:text-white ${showLoginSuccessTransition ? 'emprovex-app-login-entry' : ''}`}
+      className={`min-h-screen ${activeTab === 'inicio' ? 'bg-[#02040b] text-white' : 'bg-gradient-to-br from-[#f0f4f8] via-[#e8ecf3] to-[#f4f6fa] text-[#0b1c30]'} flex flex-col antialiased relative overflow-x-hidden selection:bg-blue-500 selection:text-white ${showLoginSuccessTransition ? 'emprovex-app-login-entry' : ''}`}
       data-login-entry={showLoginSuccessTransition ? 'true' : 'false'}
       data-active-realtime-collections={activeRealtimeCollectionCount}
     >
 
-      <AppBackground />
+      <AppBackground immersive={activeTab === 'inicio'} />
 
       {showLoginSuccessTransition && workspaceContext.status === 'sector' && (
         <LoginSuccessTransition
@@ -389,7 +390,12 @@ export default function Home() {
         />
 
         {/* Content Container Area */}
-        <main className="flex-1 lg:pl-6 pb-24 md:pb-12 pt-6 px-4 max-w-7xl mx-auto w-full overflow-hidden">
+        <main
+          className={`flex-1 w-full overflow-hidden ${activeTab === 'inicio'
+            ? 'p-0 pb-20 md:pb-0 max-w-none'
+            : 'lg:pl-6 pb-24 md:pb-12 pt-6 px-4 max-w-7xl mx-auto'
+          }`}
+        >
           {!activeOperationalDataReady ? (
             <section
               data-testid="operational-section-loading"
@@ -406,7 +412,23 @@ export default function Home() {
               </div>
             </section>
           ) : (
-            <>
+            <OperationalSurfaceTransition surfaceKey={activeTab}>
+          {/* INÍCIO: EXPERIÊNCIA VISUAL / MAPA OPERACIONAL */}
+          {activeTab === 'inicio' && (
+            <InicioView
+              snapshot={inicioSnapshot}
+              userDisplayName={user?.displayName || 'Operador EMPROVEX'}
+              onNavigate={(tab) => {
+                setActiveTab(tab);
+                if (tab === 'empenhos') setSelectedEmpenhoDetailId(null);
+              }}
+              onSelectEmpenho={(empenhoId) => {
+                setSelectedEmpenhoDetailId(empenhoId);
+                setActiveTab('empenhos');
+              }}
+            />
+          )}
+
           {/* TAB 1: PAINEL DE CONTROLE / DASHBOARD - SALDO RESTANTE POR CLASSE DETALHADO */}
           {activeTab === 'painel' && (
             <DashboardView
@@ -464,7 +486,7 @@ export default function Home() {
             onCancel={() => setEmpenhoToDelete(null)}
             onConfirm={handleDeleteSpecificEmpenho}
           />
-            </>
+            </OperationalSurfaceTransition>
           )}
         </main>
       </div>

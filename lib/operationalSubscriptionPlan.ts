@@ -1,4 +1,5 @@
 export type OperationalActiveTab =
+  | 'inicio'
   | 'painel'
   | 'empenhos'
   | 'itens'
@@ -15,7 +16,7 @@ export type RealtimeOperationalCollection =
   | 'cronogramas';
 
 export interface OperationalSubscriptionPlan {
-  empenhos: true;
+  empenhos: boolean;
   alerts: boolean;
   invoices: boolean;
   comissoes: boolean;
@@ -23,6 +24,13 @@ export interface OperationalSubscriptionPlan {
 }
 
 const PLAN_BY_TAB: Record<OperationalActiveTab, OperationalSubscriptionPlan> = {
+  inicio: {
+    empenhos: false,
+    alerts: false,
+    invoices: false,
+    comissoes: false,
+    cronogramas: false,
+  },
   painel: {
     empenhos: true,
     alerts: false,

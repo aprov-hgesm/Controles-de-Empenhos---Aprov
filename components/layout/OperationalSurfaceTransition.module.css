@@ -1,0 +1,135 @@
+.root {
+  position: relative;
+  min-width: 0;
+  isolation: isolate;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.entryBeam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -5px;
+  z-index: 4;
+  height: 1px;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(91, 137, 244, 0.05) 18%,
+      rgba(107, 157, 255, 0.58) 48%,
+      rgba(164, 192, 255, 0.22) 64%,
+      transparent 100%
+    );
+  box-shadow:
+    0 0 10px rgba(86, 130, 240, 0.26),
+    0 0 26px rgba(73, 111, 222, 0.12);
+  transform: translateX(-38%) scaleX(0.24);
+  transform-origin: left center;
+  animation: surfaceBeam 520ms cubic-bezier(.16, 1, .3, 1) 30ms both;
+}
+
+.edgeSignal {
+  position: absolute;
+  right: 5px;
+  top: -18px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(74, 96, 139, 0.5);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 6px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  pointer-events: none;
+  opacity: 0;
+  animation: surfaceLabel 420ms ease-out 90ms both;
+}
+
+.edgeSignal i {
+  width: 18px;
+  height: 1px;
+  background:
+    linear-gradient(90deg, transparent, rgba(58, 105, 217, 0.42));
+}
+
+.edgeSignal b {
+  font: inherit;
+  font-weight: 900;
+}
+
+.root[data-surface='inicio'] .entryBeam {
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(129, 156, 255, 0.1) 22%,
+      rgba(157, 129, 255, 0.62) 50%,
+      rgba(92, 149, 255, 0.2) 68%,
+      transparent
+    );
+}
+
+.root[data-surface='inicio'] .edgeSignal {
+  color: rgba(133, 155, 204, 0.54);
+}
+
+.root[data-surface='nova_nf'] .entryBeam,
+.root[data-surface='relatorios'] .entryBeam {
+  opacity: 0.82;
+}
+
+@keyframes surfaceBeam {
+  0% {
+    opacity: 0;
+    transform: translateX(-38%) scaleX(0.24);
+  }
+  35% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(28%) scaleX(0.86);
+  }
+}
+
+@keyframes surfaceLabel {
+  0% {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  45% {
+    opacity: 0.72;
+  }
+  100% {
+    opacity: 0.38;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .edgeSignal {
+    display: none;
+  }
+
+  .entryBeam {
+    top: -2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entryBeam,
+  .edgeSignal {
+    animation: none !important;
+    opacity: 0;
+  }
+}

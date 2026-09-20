@@ -5,6 +5,7 @@ import {
   CalendarDays,
   FileSpreadsheet,
   FileText,
+  Home,
   Layers,
   LogOut,
   Package,
@@ -17,6 +18,7 @@ import {
 import { AppShellSignature } from './chrome/AppShellSignature';
 
 export type AppTab =
+  | 'inicio'
   | 'painel'
   | 'empenhos'
   | 'itens'
@@ -110,6 +112,16 @@ export function AppSidebar({
             <div className="emprovex-sidebar-nav__label px-4 pb-2 font-mono text-[9px] font-bold uppercase tracking-[0.22em]">
               Navegação
             </div>
+
+            <button
+              onClick={() => onNavigate('inicio')}
+              className="emprovex-sidebar-nav-item"
+              data-active={activeTab === 'inicio' ? 'true' : 'false'}
+              aria-current={activeTab === 'inicio' ? 'page' : undefined}
+            >
+              <Home className="w-5 h-5" aria-hidden="true" />
+              <span>Início</span>
+            </button>
 
             <button
               onClick={() => onNavigate('painel')}

@@ -41,6 +41,7 @@ import {
   subscribeWorkspaceSessionRevocation,
 } from '../lib/platformSessionLease';
 import { useOperationalRealtimeCollections } from './useOperationalRealtimeCollections';
+import { useInicioOperationalSnapshot } from '../features/inicio/hooks/useInicioOperationalSnapshot';
 
 /**
  * Fonte de verdade da sessão e das coleções operacionais em tempo real.
@@ -66,8 +67,9 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
   const [cronogramas, setCronogramas] = useState<CronogramaEmpenho[]>([]);
 
   const {
-    activeOperationalDataReady,
-    activeRealtimeCollectionCount,
+    activeOperationalDataReady: operationalCollectionsReady,
+    activeRealtimeCollectionCount: operationalCollectionCount,
+    readiness,
   } = useOperationalRealtimeCollections({
     user,
     workspaceContext,
@@ -78,6 +80,34 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     setComissoes,
     setCronogramas,
   });
+
+  const {
+    snapshot: inicioSnapshot,
+    snapshotReady: inicioSnapshotReady,
+  } = useInicioOperationalSnapshot({
+    user,
+    workspaceContext,
+    activeTab,
+    empenhos,
+    alerts,
+    empenhosReady: readiness.empenhos,
+    alertsReady: readiness.alerts,
+  });
+
+  const activeOperationalDataReady =
+    activeTab === 'inicio'
+      ? inicioSnapshotReady
+      : operationalCollectionsReady;
+
+  const activeRealtimeCollectionCount =
+    operationalCollectionCount
+    + (
+      activeTab === 'inicio'
+      && user
+      && isOperationalSectorContext(workspaceContext)
+        ? 1
+        : 0
+    );
 
   const clearOperationalState = () => {
     setEmpenhos([]);
@@ -567,6 +597,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
   return {
     user, loadingAuth, syncing, workspaceContext,
     activeOperationalDataReady, activeRealtimeCollectionCount,
+    inicioSnapshot,
     empenhos, setEmpenhos,
     alerts, setAlerts,
     invoices, setInvoices,

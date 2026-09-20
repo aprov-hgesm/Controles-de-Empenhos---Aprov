@@ -274,6 +274,48 @@ jobs:
       - name: Block 17.1 session lease efficiency guard
         run: npm run verify:block-17-1-session-lease-efficiency
 
+      - name: Block 19 home experience foundation guard
+        run: npm run verify:block-19-home-experience
+
+      - name: Block 19.2 cinematic scene guard
+        run: npm run verify:block-19-2-cinematic-scene
+
+      - name: Block 19.3 interactive core guard
+        run: npm run verify:block-19-3-interactive-core
+
+      - name: Block 19.4 operational orbit guard
+        run: npm run verify:block-19-4-operational-orbits
+
+      - name: Block 19.5 operational constellation guard
+        run: npm run verify:block-19-5-operational-constellation
+
+      - name: Block 19.6 unit identity guard
+        run: npm run verify:block-19-6-unit-identity
+
+      - name: Block 19.7 quick actions and resume guard
+        run: npm run verify:block-19-7-quick-actions-resume
+
+      - name: Block 19.8 microinteraction guard
+        run: npm run verify:block-19-8-microinteractions
+
+      - name: Block 19.9 surface transition guard
+        run: npm run verify:block-19-9-surface-transitions
+
+      - name: Block 19.10 economical home snapshot guard
+        run: npm run verify:block-19-10-home-snapshot-economy
+
+      - name: Block 19.11 performance and GPU guard
+        run: npm run verify:block-19-11-performance-gpu
+
+      - name: Block 19.12 responsiveness guard
+        run: npm run verify:block-19-12-responsiveness
+
+      - name: Block 19.13 visual polish guard
+        run: npm run verify:block-19-13-visual-polish
+
+      - name: Block 19.14 final closure guard
+        run: npm run verify:block-19-14-final-closure
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
@@ -363,3 +405,20 @@ jobs:
           echo "browser-e2e-emulator=${{ needs.browser-e2e-emulator.result }}"
           test "${{ needs.validate-application.result }}" = "success"
           test "${{ needs.browser-e2e-emulator.result }}" = "success"
+  block-19-final-closure-gate:
+    name: Block 19 Final Closure Gate
+    if: ${{ always() }}
+    needs:
+      - validate-application
+      - browser-e2e-emulator
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require Block 19 critical validation jobs
+        shell: bash
+        run: |
+          echo "validate-application=${{ needs.validate-application.result }}"
+          echo "browser-e2e-emulator=${{ needs.browser-e2e-emulator.result }}"
+          test "${{ needs.validate-application.result }}" = "success"
+          test "${{ needs.browser-e2e-emulator.result }}" = "success"
+          echo "BLOCK 19 FINAL CLOSURE: READY"

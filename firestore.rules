@@ -1626,6 +1626,109 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    function validHomeSnapshotNumber(value) {
+      return value is number && value >= 0;
+    }
+
+    function homeSnapshotUgMatchesWorkspace(workspaceId, ug) {
+      let workspace = workspaceData(workspaceId);
+      return isValidUnitUg(ug)
+        && (
+          (
+            workspaceId == 'hgesm-aprov'
+            && ug == '160416'
+            && (
+              !('ug' in workspace)
+              || workspace.ug == '160416'
+            )
+          )
+          || (
+            'ug' in workspace
+            && isValidUnitUg(workspace.ug)
+            && workspace.ug == ug
+          )
+        );
+    }
+
+    function validHomeSnapshot(workspaceId) {
+      return canAccessWorkspace(workspaceId)
+        && request.resource.data.keys().hasAll([
+          'snapshotVersion',
+          'workspaceId',
+          'ug',
+          'contentHash',
+          'generatedAt',
+          'generatedBy',
+          'metrics',
+          'alerts',
+          'receiving',
+          'execution',
+          'classStats',
+          'stars'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'snapshotVersion',
+          'workspaceId',
+          'ug',
+          'contentHash',
+          'generatedAt',
+          'generatedBy',
+          'metrics',
+          'alerts',
+          'receiving',
+          'execution',
+          'classStats',
+          'stars'
+        ])
+        && request.resource.data.snapshotVersion == 'emprovex_home_snapshot_v1'
+        && request.resource.data.workspaceId == workspaceId
+        && homeSnapshotUgMatchesWorkspace(workspaceId, request.resource.data.ug)
+        && request.resource.data.contentHash is string
+        && request.resource.data.contentHash.matches('^[0-9a-f]{8}$')
+        && request.resource.data.generatedAt is string
+        && request.resource.data.generatedAt.size() > 10
+        && request.resource.data.generatedBy == request.auth.uid
+        && request.resource.data.metrics is map
+        && request.resource.data.metrics.keys().hasOnly([
+          'totalEmpenhos',
+          'totalValue'
+        ])
+        && validHomeSnapshotNumber(request.resource.data.metrics.totalEmpenhos)
+        && validHomeSnapshotNumber(request.resource.data.metrics.totalValue)
+        && request.resource.data.alerts is map
+        && request.resource.data.alerts.keys().hasOnly([
+          'total',
+          'critical',
+          'attention'
+        ])
+        && validHomeSnapshotNumber(request.resource.data.alerts.total)
+        && validHomeSnapshotNumber(request.resource.data.alerts.critical)
+        && validHomeSnapshotNumber(request.resource.data.alerts.attention)
+        && request.resource.data.receiving is map
+        && request.resource.data.receiving.keys().hasOnly([
+          'pendingEmpenhos',
+          'pendingItems',
+          'balance'
+        ])
+        && validHomeSnapshotNumber(request.resource.data.receiving.pendingEmpenhos)
+        && validHomeSnapshotNumber(request.resource.data.receiving.pendingItems)
+        && validHomeSnapshotNumber(request.resource.data.receiving.balance)
+        && request.resource.data.execution is map
+        && request.resource.data.execution.keys().hasOnly([
+          'committed',
+          'received',
+          'percentage'
+        ])
+        && validHomeSnapshotNumber(request.resource.data.execution.committed)
+        && validHomeSnapshotNumber(request.resource.data.execution.received)
+        && validHomeSnapshotNumber(request.resource.data.execution.percentage)
+        && request.resource.data.execution.percentage <= 100
+        && request.resource.data.classStats is list
+        && request.resource.data.classStats.size() <= 32
+        && request.resource.data.stars is list
+        && request.resource.data.stars.size() <= 72;
+    }
+
     // Workspace-scoped operational data. There is deliberately no admin bypass:
     // a platform administrator cannot read another sector's operational records.
     match /workspaces/{workspaceId}/auditEvents/{eventId} {
@@ -1674,6 +1777,15 @@ service cloud.firestore {
         && linkedEmpenhoWriteAllowedAfter(workspaceId, request.resource.data);
     }
 
+    // Block 19.10 — snapshot econômico do Início.
+    // Um único documento derivado alimenta a Home; ele não concede autorização
+    // e nunca substitui as coleções operacionais como fonte de verdade.
+    match /workspaces/{workspaceId}/settings/homeSnapshot {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create, update: if validHomeSnapshot(workspaceId);
+      allow delete: if false;
+    }
+
     match /workspaces/{workspaceId}/settings/termoRecebimentoCounter {
       // O cadastro administrativo verifica se existe contador residual antes de
       // provisionar um workspace novo. Essa leitura prévia só é permitida enquanto
@@ -1710,9 +1822,11 @@ service cloud.firestore {
       allow list: if canAccessWorkspace(workspaceId);
       allow get: if id != 'termoRecebimentoCounter'
         && id != 'documentStorage'
+        && id != 'homeSnapshot'
         && canAccessWorkspace(workspaceId);
       allow create: if id != 'termoRecebimentoCounter'
         && id != 'documentStorage'
+        && id != 'homeSnapshot'
         && canAccessWorkspace(workspaceId)
         && (
           (
@@ -1729,6 +1843,7 @@ service cloud.firestore {
         );
       allow update: if id != 'termoRecebimentoCounter'
         && id != 'documentStorage'
+        && id != 'homeSnapshot'
         && canAccessWorkspace(workspaceId)
         && !isEmpenhoDeletionLockId(id)
         && (
@@ -1737,6 +1852,7 @@ service cloud.firestore {
         );
       allow delete: if id != 'termoRecebimentoCounter'
         && id != 'documentStorage'
+        && id != 'homeSnapshot'
         && canAccessWorkspace(workspaceId)
         && (
           (

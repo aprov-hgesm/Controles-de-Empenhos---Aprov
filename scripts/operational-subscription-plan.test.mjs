@@ -9,6 +9,7 @@ const source = readFileSync(
 );
 
 const expected = {
+  inicio: [],
   painel: ['empenhos'],
   empenhos: ['empenhos', 'alerts', 'invoices'],
   itens: ['empenhos'],
@@ -35,8 +36,13 @@ for (const [tab, collections] of Object.entries(expected)) {
   }
 }
 
-assert.match(source, /empenhos: true;/, 'Empenhos precisa permanecer sempre em tempo real.');
+assert.match(
+  source,
+  /inicio:\s*\{[\s\S]*?empenhos: false,[\s\S]*?alerts: false,/,
+  'Início não pode reabrir coleções operacionais brutas.'
+);
 console.log('OPERATIONAL SUBSCRIPTION PLAN: PASS');
+console.log('Início: 0 coleções operacionais brutas + 1 snapshot documental');
 console.log('Painel: 1 coleção operacional realtime');
 console.log('Empenhos: 3 coleções operacionais realtime');
 console.log('Notas Fiscais: 4 coleções operacionais realtime');

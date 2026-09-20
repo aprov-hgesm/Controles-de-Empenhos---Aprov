@@ -1,0 +1,168 @@
+.root {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.corner {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  opacity: 0.52;
+}
+
+.corner::before,
+.corner::after {
+  content: '';
+  position: absolute;
+  background: linear-gradient(
+    90deg,
+    rgba(151, 183, 255, 0.48),
+    rgba(151, 183, 255, 0.05)
+  );
+}
+
+.corner::before {
+  width: 28px;
+  height: 1px;
+}
+
+.corner::after {
+  width: 1px;
+  height: 28px;
+  background: linear-gradient(
+    180deg,
+    rgba(151, 183, 255, 0.48),
+    rgba(151, 183, 255, 0.05)
+  );
+}
+
+.cornerTopLeft {
+  left: 14px;
+  top: 14px;
+}
+
+.cornerTopRight {
+  right: 14px;
+  top: 14px;
+  transform: scaleX(-1);
+}
+
+.cornerBottomLeft {
+  left: 14px;
+  bottom: 14px;
+  transform: scaleY(-1);
+}
+
+.cornerBottomRight {
+  right: 14px;
+  bottom: 14px;
+  transform: scale(-1);
+}
+
+.topRail,
+.bottomRail {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(129, 153, 199, 0.34);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.topRail {
+  right: 56px;
+  top: 17px;
+}
+
+.bottomRail {
+  left: 56px;
+  bottom: 17px;
+}
+
+.topRail i,
+.bottomRail i {
+  width: 18px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(130, 162, 229, 0.34),
+    transparent
+  );
+}
+
+.sideScale {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  display: grid;
+  gap: 7px;
+  transform: translateY(-50%);
+}
+
+.sideScale i {
+  display: block;
+  width: 8px;
+  height: 1px;
+  background: rgba(139, 167, 224, 0.2);
+}
+
+.sideScale i:nth-child(3) {
+  width: 13px;
+  background: rgba(163, 192, 249, 0.38);
+}
+
+@media (max-width: 640px) {
+  .corner {
+    width: 24px;
+    height: 24px;
+    opacity: 0.34;
+  }
+
+  .corner::before {
+    width: 20px;
+  }
+
+  .corner::after {
+    height: 20px;
+  }
+
+  .cornerTopLeft,
+  .cornerBottomLeft {
+    left: 9px;
+  }
+
+  .cornerTopRight,
+  .cornerBottomRight {
+    right: 9px;
+  }
+
+  .cornerTopLeft,
+  .cornerTopRight {
+    top: 9px;
+  }
+
+  .cornerBottomLeft,
+  .cornerBottomRight {
+    bottom: 9px;
+  }
+
+  .topRail,
+  .sideScale,
+  .bottomRail {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    transform: none;
+  }
+}

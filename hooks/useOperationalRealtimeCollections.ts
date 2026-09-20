@@ -163,9 +163,10 @@ function useRealtimeCollectionSubscription<T>({
 /**
  * Bloco 14 — mantém somente as coleções necessárias à aba atual em realtime.
  *
- * Empenhos permanece sempre ativo porque sustenta dashboard, classes, itens e
- * diversas navegações. As demais coleções são inscritas/desinscritas conforme a
- * superfície que realmente as utiliza, preservando o último snapshot em memória.
+ * Empenhos permanece ativo somente nas superfícies de trabalho que realmente
+ * dependem dele. O Início usa um snapshot agregado de documento único e, por isso,
+ * não abre nenhuma coleção operacional bruta. As coleções preservam o último
+ * snapshot em memória quando são desinscritas.
  */
 export function useOperationalRealtimeCollections({
   user,
