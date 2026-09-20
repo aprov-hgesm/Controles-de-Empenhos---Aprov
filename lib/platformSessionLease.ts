@@ -21,6 +21,11 @@ import {
   type WorkspaceSessionSlotId,
 } from './platformCapacity';
 import { normalizePlatformEmail } from './platformIdentity';
+import {
+  recordWorkspaceRealtimeSnapshot,
+  recordWorkspaceUsage,
+  trackWorkspaceRealtimeListener,
+} from './workspaceUsageTelemetry';
 import type { SectorWorkspaceContext } from './workspaceContext';
 
 const BROWSER_INSTANCE_KEY = 'emprovex:browser-instance:v1';
@@ -420,6 +425,11 @@ export async function acquireWorkspaceSessionLease(
     };
   });
 
+  recordWorkspaceUsage(
+    { workspaceId: context.workspaceId, ug },
+    { documentReads: 3, documentWrites: 1 }
+  );
+
   rememberLocalLease({
     workspaceId: context.workspaceId,
     uid: user.uid,
@@ -470,9 +480,9 @@ export async function releaseWorkspaceSessionLease(
     local.slotId
   );
 
-  await runTransaction(db, async (transaction) => {
+  const deleted = await runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(ref);
-    if (!snapshot.exists()) return;
+    if (!snapshot.exists()) return false;
 
     const data = snapshot.data() as StoredWorkspaceSessionLeaseDocument;
     if (
@@ -482,9 +492,15 @@ export async function releaseWorkspaceSessionLease(
       && data.workspaceId === context.workspaceId
     ) {
       transaction.delete(ref);
+      return true;
     }
+    return false;
   });
 
+  recordWorkspaceUsage(
+    { workspaceId: context.workspaceId, ug: context.ug },
+    { documentReads: 1, documentDeletes: deleted ? 1 : 0 }
+  );
   clearLocalWorkspaceSessionLease(context.workspaceId, user.uid);
 }
 
@@ -509,10 +525,16 @@ export function subscribeWorkspaceSessionRevocation(
     local.sessionId
   );
 
+  const telemetryScope = {
+    workspaceId: context.workspaceId,
+    ug: context.ug,
+  };
+  const stopListenerTelemetry = trackWorkspaceRealtimeListener(telemetryScope);
   let firstSnapshot = true;
   const unsubscribe = onSnapshot(
     ref,
     (snapshot) => {
+      recordWorkspaceRealtimeSnapshot(telemetryScope, 1);
       if (!snapshot.exists()) {
         firstSnapshot = false;
         return;
@@ -534,7 +556,10 @@ export function subscribeWorkspaceSessionRevocation(
     (error) => onError?.(error)
   );
 
-  return unsubscribe;
+  return () => {
+    unsubscribe();
+    stopListenerTelemetry();
+  };
 }
 
 export async function renewWorkspaceSessionLeaseIfDue(
