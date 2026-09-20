@@ -25,6 +25,7 @@ import { EditSectorModal } from './EditSectorModal';
 import { AdminSessionsPanel } from './AdminSessionsPanel';
 import { AdminUsagePanel } from './AdminUsagePanel';
 import { AdminGlobalUsagePanel } from './AdminGlobalUsagePanel';
+import { AdminConsolidatedUsagePanel } from './AdminConsolidatedUsagePanel';
 import { ToastNotification } from '../layout/ToastNotification';
 import { createHgesmFoundingWorkspace } from '../../lib/hgesmWorkspace';
 import type {
@@ -347,6 +348,22 @@ export function PlatformAdminView({
           terminatingSessionId={terminatingSessionId}
           onTerminateSession={onTerminateSession}
           onNotify={showAdminToast}
+        />
+
+        <AdminConsolidatedUsagePanel
+          workspaces={visibleWorkspaces}
+          sessions={sessions}
+          usage={usage}
+          globalUsage={globalUsage}
+          globalUsageConfigured={globalUsageConfigured}
+          globalUsageObservedAt={globalUsageObservedAt}
+          globalUsageDataThrough={globalUsageDataThrough}
+          loadingUsage={loadingUsage}
+          loadingGlobalUsage={loadingGlobalUsage}
+          usageError={usageError}
+          globalUsageError={globalUsageError}
+          onRefreshUsage={onRefreshUsage}
+          onRefreshGlobalUsage={onRefreshGlobalUsage}
         />
 
         <AdminGlobalUsagePanel

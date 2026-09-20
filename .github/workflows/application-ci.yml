@@ -250,6 +250,9 @@ jobs:
       - name: Block 16.4 global Cloud Monitoring guard
         run: npm run verify:block-16-4-global-monitoring
 
+      - name: Block 16.5 consolidated usage dashboard guard
+        run: npm run verify:block-16-5-consolidated-usage
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
