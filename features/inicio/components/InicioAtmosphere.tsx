@@ -19,6 +19,18 @@ const dust = Array.from({ length: 18 }, (_, index) => ({
   delay: -((index % 9) * 0.81),
 }));
 
+const flowParticles = Array.from({ length: 22 }, (_, index) => ({
+  id: `flow-${index}`,
+  left: 3 + ((index * 47) % 94),
+  top: 7 + ((index * 31) % 86),
+  size: index % 5 === 0 ? 2 : 1,
+  opacity: 0.16 + ((index % 4) * 0.07),
+  dx: 26 + ((index * 13) % 54),
+  dy: -(32 + ((index * 17) % 62)),
+  duration: 18 + (index % 7) * 2.8,
+  delay: -((index % 13) * 2.1),
+}));
+
 export function InicioAtmosphere() {
   return (
     <div className={styles.root} aria-hidden="true">
@@ -54,6 +66,26 @@ export function InicioAtmosphere() {
               width: particle.size,
               height: particle.size,
               animationDelay: `${particle.delay}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className={styles.flowParticles}>
+        {flowParticles.map((particle) => (
+          <span
+            key={particle.id}
+            className={styles.flowParticle}
+            style={{
+              left: `${particle.left}%`,
+              top: `${particle.top}%`,
+              width: particle.size,
+              height: particle.size,
+              opacity: particle.opacity,
+              animationDelay: `${particle.delay}s`,
+              animationDuration: `${particle.duration}s`,
+              ['--particle-dx' as string]: `${particle.dx}px`,
+              ['--particle-dy' as string]: `${particle.dy}px`,
             }}
           />
         ))}
