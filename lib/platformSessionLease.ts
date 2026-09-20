@@ -98,25 +98,51 @@ function scopedKey(prefix: string, workspaceId: string, uid: string): string {
   return `${prefix}:${workspaceId}:${uid}`;
 }
 
-function getOrCreateBrowserInstanceId(): string {
+async function getOrCreateStoredId(
+  key: string,
+  prefix: string
+): Promise<string> {
   const storage = browserStorage();
-  const current = storage?.getItem(BROWSER_INSTANCE_KEY)?.trim();
-  if (current) return current;
-
-  const created = randomId('browser');
-  storage?.setItem(BROWSER_INSTANCE_KEY, created);
-  return created;
-}
-
-function getOrCreateWorkspaceSessionId(workspaceId: string, uid: string): string {
-  const storage = browserStorage();
-  const key = scopedKey(SESSION_ID_KEY_PREFIX, workspaceId, uid);
   const current = storage?.getItem(key)?.trim();
   if (current) return current;
 
-  const created = randomId('session');
-  storage?.setItem(key, created);
-  return created;
+  const createUnderLock = () => {
+    const lockedCurrent = storage?.getItem(key)?.trim();
+    if (lockedCurrent) return lockedCurrent;
+
+    const created = randomId(prefix);
+    storage?.setItem(key, created);
+    return storage?.getItem(key)?.trim() || created;
+  };
+
+  if (
+    typeof navigator !== 'undefined'
+    && navigator.locks
+    && typeof navigator.locks.request === 'function'
+  ) {
+    return navigator.locks.request(
+      `emprovex-id:${key}`,
+      async () => createUnderLock()
+    );
+  }
+
+  // Fallback para navegadores sem Web Locks. A releitura após o set reduz a
+  // janela de corrida e mantém compatibilidade sem impedir o acesso.
+  return createUnderLock();
+}
+
+async function getOrCreateBrowserInstanceId(): Promise<string> {
+  return getOrCreateStoredId(BROWSER_INSTANCE_KEY, 'browser');
+}
+
+async function getOrCreateWorkspaceSessionId(
+  workspaceId: string,
+  uid: string
+): Promise<string> {
+  return getOrCreateStoredId(
+    scopedKey(SESSION_ID_KEY_PREFIX, workspaceId, uid),
+    'session'
+  );
 }
 
 function getLocalLeaseRecord(
@@ -268,8 +294,8 @@ export async function acquireWorkspaceSessionLease(
 
   const ug = validateExternalSessionContext(user, context);
   const accountEmail = normalizePlatformEmail(user.email || '');
-  const browserInstanceId = getOrCreateBrowserInstanceId();
-  const sessionId = getOrCreateWorkspaceSessionId(context.workspaceId, user.uid);
+  const browserInstanceId = await getOrCreateBrowserInstanceId();
+  const sessionId = await getOrCreateWorkspaceSessionId(context.workspaceId, user.uid);
   const nowMs = Date.now();
 
   const slotRefs = SESSION_SLOT_IDS.map((slotId) => ({
