@@ -292,6 +292,9 @@ jobs:
       - name: Block 19.6 unit identity guard
         run: npm run verify:block-19-6-unit-identity
 
+      - name: Block 19.7 quick actions and resume guard
+        run: npm run verify:block-19-7-quick-actions-resume
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
