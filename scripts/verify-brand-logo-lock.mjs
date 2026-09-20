@@ -21,12 +21,14 @@ const workflow = read('.github/workflows/application-ci.yml');
 
 for (const required of [
   "doc(db, 'settings', 'global')",
-  'onSnapshot(',
+  'getDoc(',
   'setCustomLogo',
   'return { customLogo }',
 ]) {
   requireText(hook, required, `Branding somente leitura perdeu requisito: ${required}`);
 }
+
+forbidText(hook, 'onSnapshot(', 'Branding voltou a manter listener realtime permanente.');
 
 for (const forbidden of [
   'savePlatformLogo',
@@ -112,7 +114,7 @@ if (findings.length > 0) {
   process.exitCode = 2;
 } else {
   console.log('EMPROVEX BRAND LOGO LOCK: READY');
-  console.log('Fonte de verdade: settings/global.logo');
+  console.log('Fonte de verdade: configuração estática ou settings/global.logo somente leitura');
   console.log('Leitura pré-login: habilitada');
   console.log('Escrita cliente: bloqueada');
   console.log('Upload/remoção no runtime: removidos');
