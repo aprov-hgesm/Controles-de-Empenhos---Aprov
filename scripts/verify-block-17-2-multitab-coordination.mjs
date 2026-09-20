@@ -27,10 +27,10 @@ const workflow = read('.github/workflows/application-ci.yml');
 
 for (const marker of [
   "SESSION_COORDINATOR_VERSION = 'emprovex_session_coordinator_v1'",
-  'SESSION_COORDINATOR_RETRY_MS = 4 * 1000',
   'new BroadcastChannel(channelName(workspaceId, uid))',
   'navigator.locks.request(',
-  '{ ifAvailable: true }',
+  '{ signal: leadershipAbortController.signal }',
+  'leadershipAbortController.abort()',
   "setRole('leader')",
   "setRole('follower')",
   "setRole('fallback')",
@@ -61,6 +61,21 @@ requireText(
   coordinator,
   'stopLeaderWork = startLeaderResponsibilities();',
   'Fallback precisa preservar responsabilidades de controle por aba.'
+);
+requireText(
+  coordinator,
+  'Web Locks já possui fila nativa',
+  'Coordenador perdeu a justificativa do failover sem polling.'
+);
+forbidText(
+  coordinator,
+  'setInterval(attemptLeadership',
+  'Failover multiaba não pode voltar a depender de polling por timer.'
+);
+forbidText(
+  coordinator,
+  'ifAvailable: true',
+  'Web Lock em modo ifAvailable reintroduz polling e pode falhar em aba throttled.'
 );
 
 requireText(
@@ -110,9 +125,12 @@ requireText(rules, 'sameWorkspaceSessionLeaseOwner()', 'Rules perderam vínculo 
 
 for (const scenario of [
   'coordenação multiaba elege um líder e promove seguidora após fechamento',
-  "filter((role) => role === 'leader').length",
+  "sessionCoordinatorRole(pageA1)",
+  "toBe('follower')",
+  "await pageA1.close()",
+  "sessionCoordinatorRole(pageA2)",
   "toBe('leader')",
-  'expect(await logicalSessionId(follower)).toBe(sessionIdBefore)',
+  'expect(await logicalSessionId(pageA2)).toBe(sessionIdBefore)',
 ]) {
   requireText(operatorE2e, scenario, `E2E de liderança/failover ausente: ${scenario}`);
 }
