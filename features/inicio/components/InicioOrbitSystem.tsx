@@ -130,7 +130,7 @@ export function InicioOrbitSystem({
                 onFocus={(event) => showTooltip('alerts', event.currentTarget)}
                 onBlur={hideTooltip}
                 data-alert={alertSeverity.total > 0 ? 'true' : 'false'}
-                aria-label={`Alertas operacionais: ${alertSeverity.total} ativos`}
+                aria-label={`Avisos pendentes: ${alertSeverity.total}`}
               >
                 <span className={styles.planetGlow} aria-hidden="true" />
                 <span className={styles.planetSurface}>
@@ -292,8 +292,8 @@ export function InicioOrbitSystem({
         >
           {tooltipState.key === 'alerts' && (
             <>
-              <strong>Alertas operacionais</strong>
-              <span>{alertSeverity.total} ativos</span>
+              <strong>Avisos pendentes</strong>
+              <span>{alertSeverity.total} pendente(s)</span>
               <small>
                 {alertSeverity.critical > 0
                   ? `${alertSeverity.critical} crítico(s) · ${alertSeverity.attention} atenção`
