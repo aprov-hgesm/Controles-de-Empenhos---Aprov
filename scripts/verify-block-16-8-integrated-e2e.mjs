@@ -30,7 +30,7 @@ const driveGuard = read('scripts/verify-workspace-drive-storage.mjs');
 const docs = read('docs/BLOCK_16_8_INTEGRATED_E2E.md');
 
 for (const scenario of [
-  'heartbeat renova lease de 10 minutos e mantém telemetria estimada por UG no buffer local',
+  'heartbeat eficiente renova lease de 30 minutos sem redescobrir capacidade',
   'slot expirado pode ser retomado por uma nova identidade de sessão',
   'duas tentativas concorrentes disputando o último slot produzem exatamente um vencedor',
   'revogação administrativa derruba a sessão, tombstone bloqueia retorno e novo login cria nova identidade',
@@ -67,7 +67,7 @@ for (const emulatorScenario of [
 }
 
 for (const contract of [
-  'capacidade integrada preserva fundador ilimitado, setor externo em 2 e lease/heartbeat em 10/5 minutos',
+  'capacidade integrada preserva fundador ilimitado, setor externo em 2 e lease/heartbeat em 30/15 minutos',
   'limiares de consumo permanecem determinísticos em 70%, 85%, 95%, 100% e acima de 100%',
   'política sem referências não fabrica alertas, franquia ou cobrança',
   'política com referências separa métrica global real de estimativa interna por UG',
