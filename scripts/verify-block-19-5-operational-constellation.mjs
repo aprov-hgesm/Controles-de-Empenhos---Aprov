@@ -51,7 +51,9 @@ requireText(constellationCss, ".star[data-stage='closed']", 'Histórico encerrad
 requireText(constellationCss, ".star[data-related='true']", 'Relacionamentos por fornecedor não possuem tratamento visual.');
 requireText(constellationCss, '.relationships line', 'Linhas de fornecedor não possuem tratamento visual.');
 requireText(constellationCss, '@media (prefers-reduced-motion: reduce)', 'Constelação não respeita reduced motion.');
-requireText(orbit, 'data-inicio-star-exclusion="planet"', 'Planetas não estão marcados como zonas de exclusão para estrelas.');
+requireText(orbit, 'data-inicio-star-orbit="outer"', 'Órbita externa não está marcada como corredor protegido para estrelas.');
+requireText(orbit, 'data-inicio-star-orbit="middle"', 'Órbita intermediária não está marcada como corredor protegido para estrelas.');
+requireText(orbit, 'data-inicio-star-orbit="inner"', 'Órbita interna não está marcada como corredor protegido para estrelas.');
 requireText(core, 'data-inicio-star-exclusion="core"', 'Núcleo não está marcado como zona de exclusão para estrelas.');
 requireText(plan, 'inicio:', 'Perfil realtime do Início ausente.');
 requireText(constellation, 'InicioOperationalSnapshot', 'Constelação não consome o snapshot econômico.');
@@ -74,7 +76,7 @@ if (findings.length) {
   console.log('Relações por fornecedor: ATIVAS');
   console.log('Abertura direta do empenho: ATIVA');
   console.log('Camada histórica: ATIVA');
-  console.log('Zonas seguras planetas/núcleo: ATIVAS');
+  console.log('Zona segura do núcleo: ATIVA');
   console.log('Corredores orbitais protegidos: ATIVOS');
   console.log('Deriva estelar: ATIVA EM PERFIL FULL');
   console.log('Realtime adicional: ZERO');
