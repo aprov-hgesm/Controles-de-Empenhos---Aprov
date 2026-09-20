@@ -1,37 +1,66 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 
-import { db, OperationType, handleFirestoreError } from '../lib/firebase';
+import { db } from '../lib/firebase';
 
 /**
  * Branding institucional somente leitura.
  *
- * A fonte de verdade é settings/global.logo. O runtime não oferece qualquer
- * caminho de upload, substituição ou remoção da marca.
+ * Prioriza configuração estática de build e, quando ausente, faz no máximo uma
+ * leitura Firestore por sessão do navegador. Não existe listener realtime nem
+ * caminho de upload, substituição ou remoção da marca no runtime.
  */
 export function usePlatformBranding() {
   const [customLogo, setCustomLogo] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      doc(db, 'settings', 'global'),
-      (docSnap) => {
-        if (!docSnap.exists()) {
-          setCustomLogo(null);
-          return;
-        }
+    let active = true;
+    const staticLogo = process.env.NEXT_PUBLIC_EMPROVEX_LOGO_URL?.trim() || '';
+    const cacheKey = 'emprovex:branding-logo:v1';
 
-        const logo = docSnap.data().logo;
-        setCustomLogo(typeof logo === 'string' && logo.trim() ? logo : null);
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.GET, 'settings/global');
+    if (staticLogo) {
+      setCustomLogo(staticLogo);
+      return () => {
+        active = false;
+      };
+    }
+
+    try {
+      const cached = window.sessionStorage.getItem(cacheKey);
+      if (cached) {
+        setCustomLogo(cached === '__none__' ? null : cached);
+        return () => {
+          active = false;
+        };
       }
-    );
+    } catch {
+      // Cache é apenas otimização; a identidade visual nunca depende dele.
+    }
 
-    return () => unsubscribe();
+    void getDoc(doc(db, 'settings', 'global'))
+      .then((docSnap) => {
+        if (!active) return;
+        const logo = docSnap.exists() ? docSnap.data().logo : null;
+        const resolved = typeof logo === 'string' && logo.trim() ? logo.trim() : null;
+        setCustomLogo(resolved);
+        try {
+          window.sessionStorage.setItem(cacheKey, resolved || '__none__');
+        } catch {
+          // Sem persistência local, a UI continua funcionando normalmente.
+        }
+      })
+      .catch((error) => {
+        // Branding nunca pode bloquear login/operação. O fallback visual EMPROVEX
+        // permanece disponível mesmo se a leitura institucional falhar.
+        console.warn('Não foi possível carregar o branding institucional.', error);
+        if (active) setCustomLogo(null);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
