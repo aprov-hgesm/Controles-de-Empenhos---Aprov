@@ -338,12 +338,6 @@ export function InicioOrbitSystem({
                 <span>
                   {classStats.reduce((total, item) => total + item.count, 0)} empenho(s)
                 </span>
-                <span className={styles.planetHud} aria-hidden="true">
-                  <i />
-                  <i />
-                  <i />
-                  <i />
-                </span>
               </div>
 
               <div className={styles.classTooltipList}>
