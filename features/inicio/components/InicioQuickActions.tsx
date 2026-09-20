@@ -45,7 +45,11 @@ export function InicioQuickActions({
     : null;
 
   return (
-    <aside className={styles.root} aria-label="Atalhos operacionais">
+    <aside
+      className={styles.root}
+      data-testid="inicio-quick-actions"
+      aria-label="Atalhos operacionais"
+    >
       {resumeTarget && resumeLabel && (
         <button
           type="button"
