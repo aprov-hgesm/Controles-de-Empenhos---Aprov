@@ -116,9 +116,27 @@ Concluído:
 
 A limitação de 72 estrelas de primeiro plano permanece intencional. Grandes históricos serão tratados pelo snapshot agregado/densidade visual, não por milhares de nós DOM simultâneos.
 
+## Bloco 19.6 — identidade da UG e contexto do operador
+
+Concluído:
+
+- novo componente `InicioIdentityPanel` dedicado à identidade do ambiente;
+- saudação muda conforme manhã/tarde/noite usando o horário local do navegador;
+- organização, sigla, setor, workspace e UG vêm exclusivamente do `workspaceContext` já validado;
+- workspace fundador é identificado pela origem segura `legacy-hgesm-bootstrap`;
+- workspaces externos aparecem como ambiente setorial;
+- nenhum e-mail operacional é exibido na Home;
+- assinatura visual determinística `UNIT XXXXXXXX` é calculada localmente a partir da UG/workspace, sem criar novo dado;
+- nó fundador recebe sinal visual discreto, sem alterar autorização ou privilégios;
+- estado EMPROVEX ONLINE permanece visível;
+- responsividade e `prefers-reduced-motion` preservados;
+- nenhuma leitura, listener ou persistência adicional foi adicionada.
+
+A identidade visual é contextual, não autorizadora: permissões continuam sendo determinadas exclusivamente pelo fluxo de autenticação, diretório da plataforma e Firestore Rules.
+
 ## Próximas etapas
 
-- 19.6: identidade/UG e contexto do operador;
+- 19.7: atalhos e retomada de trabalho;
 - 19.3: núcleo/logo interativo;
 - 19.4: órbitas e planetas adicionais;
 - 19.5: constelação operacional completa;
