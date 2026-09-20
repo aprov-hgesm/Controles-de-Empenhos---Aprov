@@ -33,7 +33,7 @@ for (const scenario of [
   'heartbeat eficiente renova lease de 30 minutos sem redescobrir capacidade',
   'slot expirado pode ser retomado por uma nova identidade de sessão',
   'duas tentativas concorrentes disputando o último slot produzem exatamente um vencedor',
-  'revogação administrativa derruba a sessão, tombstone bloqueia retorno e novo login cria nova identidade',
+  'revogação administrativa derruba líder e follower, tombstone bloqueia retorno e novo login cria nova identidade',
 ]) {
   requireText(browserIntegrated, scenario, `Browser E2E integrado perdeu cenário: ${scenario}`);
 }
