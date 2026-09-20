@@ -102,7 +102,9 @@
     "verify:block-16-4-global-monitoring": "node scripts/verify-block-16-4-global-monitoring.mjs",
     "verify:block-16-5-consolidated-usage": "node scripts/verify-block-16-5-consolidated-usage.mjs",
     "verify:block-16-6-usage-alerts": "node scripts/verify-block-16-6-usage-alerts.mjs",
-    "verify:block-16-7-security-concurrency": "node scripts/verify-block-16-7-security-concurrency.mjs"
+    "verify:block-16-7-security-concurrency": "node scripts/verify-block-16-7-security-concurrency.mjs",
+    "test:block-16-8-integrated-domain": "node --experimental-vm-modules --test scripts/block-16-integrated-domain.test.mjs",
+    "verify:block-16-8-integrated-e2e": "node scripts/verify-block-16-8-integrated-e2e.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
