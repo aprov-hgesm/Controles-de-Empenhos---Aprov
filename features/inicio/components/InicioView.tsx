@@ -9,6 +9,7 @@ import { InicioEntrySequence } from './InicioEntrySequence';
 import { InicioConstellation } from './InicioConstellation';
 import { InicioCore } from './InicioCore';
 import { InicioIdentityPanel } from './InicioIdentityPanel';
+import { InicioInteractionLayer } from './InicioInteractionLayer';
 import { InicioOrbitSystem } from './InicioOrbitSystem';
 import { InicioQuickActions } from './InicioQuickActions';
 import type { InicioResumeTarget } from '../hooks/useInicioWorkMemory';
@@ -124,6 +125,7 @@ export function InicioView({
     <section ref={rootRef} className={styles.scene} data-ready="true" aria-label="Início EMPROVEX">
       <InicioEntrySequence />
       <InicioAtmosphere />
+      <InicioInteractionLayer sceneRef={rootRef} />
       <div className={styles.ambientGlow} aria-hidden="true" />
       <div className={styles.grid} aria-hidden="true" />
       <InicioConstellation
