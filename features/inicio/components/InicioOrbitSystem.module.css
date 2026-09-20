@@ -1105,3 +1105,42 @@
 .floatingClassTooltip[data-kind='classes']::before {
   background: linear-gradient(90deg, transparent, rgba(216, 192, 255, 0.72), transparent);
 }
+
+
+/* Block 20 — specificity lock for cinematic planet materials */
+.alertPlanet .planetSurface,
+.receivingPlanet .planetSurface,
+.executionPlanet .planetSurface,
+.dashboardPlanet .planetSurface {
+  border-color: rgba(var(--planet-rgb), 0.34);
+  background:
+    radial-gradient(circle at 31% 25%, rgba(255,255,255,0.52), transparent 10%),
+    radial-gradient(circle at 38% 34%, var(--planet-light) 0%, var(--planet-mid) 27%, var(--planet-deep) 69%, #02040a 100%);
+  box-shadow:
+    0 0 13px rgba(var(--planet-rgb), 0.3),
+    inset -6px -7px 12px rgba(0, 0, 0, 0.52),
+    inset 4px 4px 8px rgba(255,255,255,0.08);
+}
+
+.alertPlanet[data-alert='true'] .planetSurface {
+  border-color: rgba(var(--planet-rgb), 0.48);
+  background:
+    radial-gradient(circle at 31% 25%, rgba(255,255,255,0.56), transparent 10%),
+    radial-gradient(circle at 38% 34%, var(--planet-light) 0%, var(--planet-mid) 26%, var(--planet-deep) 68%, #020307 100%);
+  box-shadow:
+    0 0 16px rgba(var(--planet-rgb), 0.44),
+    0 0 30px rgba(var(--planet-rgb), 0.13),
+    inset -6px -7px 12px rgba(0,0,0,0.5),
+    inset 4px 4px 8px rgba(255,255,255,0.09);
+}
+
+.alertPlanet .planetGlow,
+.receivingPlanet .planetGlow,
+.executionPlanet .planetGlow,
+.dashboardPlanet .planetGlow {
+  background:
+    radial-gradient(circle,
+      rgba(var(--planet-rgb), 0.24) 0%,
+      rgba(var(--planet-rgb), 0.09) 39%,
+      transparent 69%);
+}
