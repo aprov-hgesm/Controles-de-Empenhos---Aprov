@@ -1,0 +1,49 @@
+{
+  "version": "emprovex_firestore_consumption_after_block_17_v1",
+  "block": "17.8",
+  "baseline": "ops/firestore-consumption-baseline.json",
+  "baselineCommit": "68d7044bc3b6b36e1610a28fb1dfe821eefcb027",
+  "sessionLease": {
+    "leaseDurationMinutes": 30,
+    "nominalRenewalMinutes": 15,
+    "normalRenewalExplicitReads": 0,
+    "normalRenewalExplicitWrites": 1,
+    "renewalsPerHour": 4,
+    "explicitReadsPerSessionHour": 0,
+    "explicitWritesPerSessionHour": 4,
+    "periodicExplicitOperationReductionVs170Percent": 91.6667
+  },
+  "multiTabControl": {
+    "beforeFormula": "3 control listeners * tabs",
+    "afterPreferredMode": "3 control listeners per logical browser session",
+    "examples": {
+      "2_tabs": {
+        "before": 6,
+        "after": 3,
+        "reductionPercent": 50
+      },
+      "3_tabs": {
+        "before": 9,
+        "after": 3,
+        "reductionPercent": 66.6667
+      },
+      "5_tabs": {
+        "before": 15,
+        "after": 3,
+        "reductionPercent": 80
+      }
+    }
+  },
+  "fixedInfrastructure": {
+    "globalBrandingRealtimeListener": 0,
+    "driveSettingsRealtimeListener": 0,
+    "empenhoClassSettings": "surface-dependent only"
+  },
+  "reports": {
+    "rawRealtimeCollectionsBefore": 3,
+    "rawRealtimeCollectionsAfter": 2,
+    "unboundedInvoicesRealtime": false,
+    "invoiceHistory": "server-side equality query + cursor pagination, 250 documents/page"
+  },
+  "caveat": "Numbers describe explicit application/runtime behavior, not official Firestore billing."
+}
