@@ -322,6 +322,9 @@ jobs:
       - name: Block 21 operational stars and shooting stars guard
         run: npm run verify:block-21-operational-stars-shooting-stars
 
+      - name: Central de Avisos guard
+        run: npm run verify:central-avisos
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
