@@ -16,7 +16,7 @@ const forbidText = (source, forbidden, message) => {
 const telemetry = read('lib/workspaceUsageTelemetry.ts');
 const realtime = read('hooks/useOperationalRealtimeCollections.ts');
 const operational = read('hooks/useOperationalData.ts');
-const coordinator = read('lib/platformSessionCoordinator.ts');
+const sessionControl = read('lib/platformSessionControl.ts');
 const lease = read('lib/platformSessionLease.ts');
 const sync = read('lib/firebaseSync.ts');
 const concurrency = read('lib/empenhoConcurrencyService.ts');
@@ -65,11 +65,11 @@ for (const marker of [
   'recordWorkspaceRealtimeSnapshot(telemetryScope, 1)',
   'stopWorkspaceListenerTelemetry',
   'stopAccountListenerTelemetry',
-]) requireText(coordinator, marker, `Watchers coordenados de lifecycle perderam telemetria: ${marker}`);
+]) requireText(sessionControl, marker, `Watchers autônomos de lifecycle perderam telemetria: ${marker}`);
 requireText(
   operational,
-  'startWorkspaceSessionCoordinator',
-  'Hook operacional deixou de ativar a telemetria coordenada de lifecycle.'
+  'startWorkspaceSessionControl',
+  'Hook operacional deixou de ativar a telemetria de lifecycle por aba.'
 );
 
 for (const marker of [
