@@ -435,7 +435,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
         throw new Error('Esta credencial está desativada no Firebase Authentication.');
       }
 
-      if (firebaseCredentialAccepted && isSessionCapacityExceededError(error)) {
+      if (firebaseCredentialAccepted && error instanceof PlatformSessionLeaseError) {
         throw error;
       }
 
