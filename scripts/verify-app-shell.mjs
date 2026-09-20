@@ -29,6 +29,11 @@ requireText(sidebar, 'aria-current=', 'Navegação perdeu indicação semântica
 requireText(sidebar, 'emprovex-sidebar-mobile-close', 'Drawer mobile perdeu o controle explícito de fechamento.');
 
 requireText(page, 'lg:pl-72', 'Conteúdo desktop deixou de reservar os 18rem da Sidebar.');
+requireText(
+  page,
+  "useState<OperationalActiveTab>('inicio')",
+  'Sessão autenticada não abre mais diretamente no Início.'
+);
 
 requireText(drive, 'aria-expanded={open}', 'Controle do Drive deixou de expor aria-expanded.');
 requireText(drive, 'aria-controls="emprovex-drive-panel"', 'Controle do Drive perdeu associação com o painel.');
