@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import { BellRing, Gauge, Orbit, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 import type { Alert, Empenho } from '../../../lib/types';
 import type { OperationalActiveTab } from '../../../lib/operationalSubscriptionPlan';
 import { InicioAtmosphere } from './InicioAtmosphere';
 import { InicioEntrySequence } from './InicioEntrySequence';
 import { InicioCore } from './InicioCore';
+import { InicioOrbitSystem } from './InicioOrbitSystem';
 import styles from './InicioView.module.css';
 
 interface InicioViewProps {
@@ -32,7 +33,6 @@ interface StarNode {
   message: string;
 }
 
-const CLASS_CODES = ['QR', 'CALI', 'PASA', 'FUNADOM'] as const;
 const MAX_VISIBLE_STARS = 72;
 
 function hashValue(value: string, seed = 0): number {
@@ -167,20 +167,6 @@ export function InicioView({
 
   const activeAlertCount = alerts.length;
 
-  const classStats = useMemo(
-    () => CLASS_CODES.map((code) => {
-      const related = empenhos.filter(
-        (empenho) => (empenho.classification || 'QR').trim().toUpperCase() === code
-      );
-      return {
-        code,
-        count: related.length,
-        value: related.reduce((total, empenho) => total + getEmpenhoValue(empenho), 0),
-      };
-    }),
-    [empenhos]
-  );
-
   const stars = useMemo<StarNode[]>(() => {
     const ordered = [...empenhos].sort((left, right) => {
       const severityOrder: Record<StarSeverity, number> = {
@@ -263,13 +249,11 @@ export function InicioView({
       </header>
 
       <div className={styles.system} aria-label="Sistema solar operacional EMPROVEX">
-        <div className={styles.orbitOuter} aria-hidden="true">
-          <span className={styles.orbitBeacon} />
-        </div>
-        <div className={styles.orbitInner} aria-hidden="true">
-          <span className={styles.orbitBeacon} />
-        </div>
-        <div className={styles.orbitSignal} aria-hidden="true" />
+        <InicioOrbitSystem
+          empenhos={empenhos}
+          alerts={alerts}
+          onNavigate={onNavigate}
+        />
 
         <InicioCore
           customLogo={customLogo}
@@ -278,57 +262,6 @@ export function InicioView({
           activeAlertCount={activeAlertCount}
           onOpenEmpenhos={() => onNavigate('empenhos')}
         />
-
-        <button
-          type="button"
-          className={`${styles.planet} ${styles.alertPlanet}`}
-          data-alert={activeAlertCount > 0 ? 'true' : 'false'}
-          onClick={() => onNavigate('painel')}
-          aria-label={`Abrir painel. ${activeAlertCount} alertas ativos.`}
-        >
-          <span className={styles.planetRing} aria-hidden="true" />
-          <BellRing aria-hidden="true" />
-          <span className={styles.celestialTooltip}>
-            <strong>Alertas operacionais</strong>
-            <span>{activeAlertCount} ativos</span>
-            <small>{activeAlertCount > 0 ? 'Requerem leitura do operador' : 'Nenhuma pendência ativa'}</small>
-          </span>
-        </button>
-
-        <button
-          type="button"
-          className={`${styles.planet} ${styles.dashboardPlanet}`}
-          onClick={() => onNavigate('painel')}
-          aria-label="Abrir Painel de Controle"
-        >
-          <Gauge aria-hidden="true" />
-          <span className={styles.celestialTooltip}>
-            <strong>Painel</strong>
-            <span>Visão analítica</span>
-            <small>Abrir indicadores e saldos</small>
-          </span>
-        </button>
-
-        <div className={styles.classSystem} aria-label="Valores por classe de empenho">
-          <div className={styles.classPlanet}>
-            <Orbit aria-hidden="true" />
-            <span>Classes</span>
-          </div>
-          <div className={styles.classMoons}>
-            {classStats.map((item) => (
-              <button
-                key={item.code}
-                type="button"
-                className={styles.classMoon}
-                onClick={() => onNavigate('painel')}
-                aria-label={`${item.code}: ${item.count} empenhos, ${formatCurrency(item.value)}`}
-              >
-                <strong>{item.code}</strong>
-                <span>{formatCurrency(item.value)}</span>
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       <div className={styles.interactionHint} aria-hidden="true">
