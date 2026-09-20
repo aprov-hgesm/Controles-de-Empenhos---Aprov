@@ -298,6 +298,9 @@ jobs:
       - name: Block 17.9 final closure guard
         run: npm run verify:block-17-9-final-closure
 
+      - name: Block 18 security and resilience guard
+        run: npm run verify:block-18-security-resilience
+
       - name: Block 19 home experience foundation guard
         run: npm run verify:block-19-home-experience
 
@@ -455,6 +458,24 @@ jobs:
           test "${{ needs.validate-application.result }}" = "success"
           test "${{ needs.browser-e2e-emulator.result }}" = "success"
           echo "BLOCK 17 FINAL RELEASE: READY"
+
+  block-18-final-release-gate:
+    name: Block 18 Final Release Gate
+    if: ${{ always() }}
+    needs:
+      - validate-application
+      - browser-e2e-emulator
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require Block 18 critical validation jobs
+        shell: bash
+        run: |
+          echo "validate-application=${{ needs.validate-application.result }}"
+          echo "browser-e2e-emulator=${{ needs.browser-e2e-emulator.result }}"
+          test "${{ needs.validate-application.result }}" = "success"
+          test "${{ needs.browser-e2e-emulator.result }}" = "success"
+          echo "BLOCK 18 FINAL RELEASE: READY"
 
   block-19-final-closure-gate:
     name: Block 19 Final Closure Gate

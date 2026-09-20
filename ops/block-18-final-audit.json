@@ -1,0 +1,45 @@
+{
+  "version": "emprovex_block_18_final_audit_v1",
+  "block": "18.10",
+  "baselineCommit": "004d3351332761117729015b087bffd0fb23fc87",
+  "productionDeploy": false,
+  "controls": {
+    "requestEnvelopeHardening": true,
+    "requestCorrelation": true,
+    "bestEffortBurstGuard": true,
+    "distributedRateLimiterAdded": false,
+    "adminKillSwitches": true,
+    "pdfDefenseInDepth": true,
+    "heuristicAntivirusAdded": false,
+    "browserSecurityHeaders": true,
+    "cspEnforcementAdded": false,
+    "dependabotEnabled": true,
+    "genericMutationRetryAdded": false,
+    "genericIdempotencyLayerAdded": false
+  },
+  "operatorExperienceContract": {
+    "newRequiredFields": 0,
+    "newRequiredConfirmations": 0,
+    "captchaRequired": false,
+    "routineReauthenticationAdded": false,
+    "documentUploadStepsAdded": 0,
+    "normalLoginWorkflowChanged": false,
+    "normalDriveWorkflowChanged": false,
+    "normalEmpenhoWorkflowChanged": false,
+    "normalInvoiceWorkflowChanged": false
+  },
+  "preservedSecurityAuthorities": [
+    "Firebase Auth",
+    "Firestore Rules",
+    "workspace/UG tenant identity",
+    "transactional domain invariants",
+    "remote session revocation",
+    "immutable audit trail"
+  ],
+  "futureOnlyIfRiskJustifies": [
+    "distributed rate limiting",
+    "dedicated malware scanning and quarantine",
+    "CSP enforcement after dependency inventory and observation",
+    "external SIEM"
+  ]
+}

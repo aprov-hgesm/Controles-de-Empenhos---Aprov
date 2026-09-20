@@ -1,0 +1,36 @@
+{
+  "version": "emprovex_block_18_security_baseline_v1",
+  "block": "18.0",
+  "baselineCommit": "004d3351332761117729015b087bffd0fb23fc87",
+  "existingControls": [
+    "Firebase Auth hybrid provider enforcement",
+    "bound Firebase UID for external sectors",
+    "workspace/UG Firestore isolation",
+    "two external logical sessions per workspace",
+    "remote session revocation",
+    "transactional session leases",
+    "provisioning locks and rollback",
+    "SAG/NS domain idempotency",
+    "immutable audit trail",
+    "Google Drive drive.file scope and in-memory OAuth token",
+    "document SHA-256 verification",
+    "App Check client instrumentation"
+  ],
+  "identifiedGaps": [
+    "shared request envelope validation for founder APIs",
+    "best-effort burst containment",
+    "consistent request correlation",
+    "server-side emergency kill switches",
+    "defensive response/browser headers",
+    "central PDF validation reused by storage layer",
+    "automated dependency update hygiene"
+  ],
+  "principles": [
+    "security over convenience when tenant isolation or integrity is at stake",
+    "prefer invisible backend controls",
+    "do not duplicate controls already provided by Auth or Firestore Rules",
+    "do not add distributed infrastructure without a demonstrated requirement",
+    "do not auto-retry ambiguous mutations",
+    "do not claim heuristic PDF validation is antivirus"
+  ]
+}
