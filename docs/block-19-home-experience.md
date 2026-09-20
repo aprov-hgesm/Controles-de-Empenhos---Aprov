@@ -156,9 +156,28 @@ Concluído:
 
 A retomada é uma conveniência de interface, não estado de negócio. Ela não altera autorização, sincronização, histórico, filtros persistentes ou dados operacionais.
 
+## Bloco 19.8 — microinterações
+
+Concluído:
+
+- nova camada `InicioInteractionLayer` dedicada à resposta fina do cenário;
+- retículo visual acompanha o cursor com interpolação via `requestAnimationFrame`;
+- o retículo se expande discretamente quando o ponteiro encontra um elemento interativo;
+- clique/pressionamento gera um pulso visual curto no ponto exato da interação;
+- cursor nativo permanece visível e funcional;
+- núcleo recebeu resposta visual de compressão e aceleração telemétrica no pressionamento;
+- planetas, planeta de classes, luas e estrelas receberam resposta `:active` própria;
+- ações rápidas e retomada receberam feedback de pressionamento;
+- a camada é totalmente `pointer-events: none`, portanto nunca bloqueia controles;
+- em dispositivos `pointer: coarse`, a camada de cursor é desativada;
+- com `prefers-reduced-motion`, retículo/pulso são desativados e o comportamento funcional permanece intacto;
+- nenhum áudio, vibração, Canvas, WebGL, Three.js ou nova dependência foi introduzido;
+- nenhuma leitura ou subscription Firestore adicional foi adicionada.
+
+As microinterações foram tratadas como feedback visual, não como requisito de navegação: mouse, toque e teclado continuam operando os mesmos controles sem depender dos efeitos.
+
 ## Próximas etapas
 
-- 19.8: microinterações;
 - 19.9: transições entre superfícies;
 - 19.10: snapshot otimizado por UG;
 - 19.11: performance/GPU/reduced motion;
