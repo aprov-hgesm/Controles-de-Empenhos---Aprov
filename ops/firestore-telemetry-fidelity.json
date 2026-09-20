@@ -1,0 +1,36 @@
+{
+  "version": "emprovex_telemetry_fidelity_v1",
+  "block": "17.6",
+  "attribution": {
+    "knownApplicationOperations": {
+      "classification": "app-attributed",
+      "examples": [
+        "explicit getDoc/getDocs reads instrumented by EMPROVEX",
+        "known application writes",
+        "known application deletes"
+      ]
+    },
+    "estimates": {
+      "classification": "application-estimate",
+      "source": "emprovex-workspace-estimate",
+      "examples": [
+        "realtime snapshot document reads",
+        "peak realtime listener count"
+      ],
+      "limitations": [
+        "Security Rules dependent reads",
+        "transaction retries",
+        "reconnect overhead",
+        "uninstrumented service/admin reads"
+      ]
+    },
+    "actualGlobalMetrics": {
+      "classification": "observed-global",
+      "source": "google-cloud-monitoring",
+      "scope": "configured Firestore database",
+      "limitation": "not attributable to one workspace/UG by Cloud Monitoring data alone"
+    }
+  },
+  "billingRule": "No workspace estimate is represented as official billing.",
+  "operatorImpact": "none"
+}
