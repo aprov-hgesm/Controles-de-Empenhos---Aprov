@@ -116,9 +116,9 @@
   width: min(440px, calc(100% - 40px));
   gap: 3px;
   padding: 9px 12px;
-  border: 1px solid rgba(120, 151, 221, 0.14);
+  border: 1px solid var(--inicio-line, rgba(120, 151, 221, 0.14));
   border-radius: 13px;
-  background: rgba(6, 13, 29, 0.72);
+  background: var(--inicio-glass, rgba(6, 13, 29, 0.72));
   color: rgba(190, 207, 239, 0.82);
   text-align: center;
   transform: translateX(-50%);
@@ -202,6 +202,10 @@
     border-radius: 1.5rem;
   }
 
+  .scene::before {
+    border-radius: calc(1.5rem - 5px);
+  }
+
   .system {
     top: 58%;
     width: min(650px, 94vw);
@@ -216,6 +220,10 @@
   .scene {
     min-height: max(800px, calc(100svh - 5rem));
     border-radius: 1.25rem;
+  }
+
+  .scene::before {
+    border-radius: calc(1.25rem - 5px);
   }
 
   .system {
@@ -234,6 +242,10 @@
   .scene {
     min-height: max(820px, calc(100svh - 4.75rem));
     border-radius: 1rem;
+  }
+
+  .scene::before {
+    border-radius: calc(1rem - 5px);
   }
 
   .system {
