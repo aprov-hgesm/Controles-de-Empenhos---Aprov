@@ -44,7 +44,7 @@ requireText(viewCss, 'width: min(520px, 94vw)', 'Sistema orbital mobile não uti
 requireText(orbitCss, 'width: 46px', 'Planetas não utilizam escala compacta desktop.');
 requireText(orbitCss, 'width: 44px', 'Planetas não utilizam escala compacta mobile.');
 requireText(orbitCss, '@media (hover: none), (pointer: coarse)', 'Órbitas não tratam touch/coarse pointer.');
-requireText(orbitCss, '.tooltip {\n    display: none;', 'Tooltips orbitais continuam dependentes de hover em touch.');
+requireText(orbitCss, '.tooltip,\n  .classTooltip {\n    display: none;', 'Tooltips orbitais e de classes continuam dependentes de hover em touch.');
 
 requireText(constellationCss, 'bottom: 34px', 'Legenda mobile não utiliza o rodapé liberado.');
 requireText(constellationCss, '.densityNote {\n    display: none !important;', 'Legenda mobile não reduz informação secundária.');
