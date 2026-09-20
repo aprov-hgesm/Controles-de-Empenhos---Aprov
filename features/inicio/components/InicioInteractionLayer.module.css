@@ -1,0 +1,164 @@
+.root {
+  --pointer-x: 0px;
+  --pointer-y: 0px;
+  --pulse-x: 0px;
+  --pulse-y: 0px;
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.reticle,
+.pointerDot,
+.telemetry {
+  position: absolute;
+  left: var(--pointer-x);
+  top: var(--pointer-y);
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition:
+    opacity 150ms ease,
+    width 180ms ease,
+    height 180ms ease,
+    border-color 180ms ease;
+}
+
+.root[data-visible='true'] .reticle,
+.root[data-visible='true'] .pointerDot {
+  opacity: 1;
+}
+
+.reticle {
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(143, 178, 255, 0.12);
+  border-radius: 999px;
+}
+
+.reticle i {
+  position: absolute;
+  background: rgba(157, 190, 255, 0.28);
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.reticle i:nth-child(1),
+.reticle i:nth-child(2) {
+  left: 50%;
+  width: 1px;
+  height: 5px;
+  transform: translateX(-50%);
+}
+
+.reticle i:nth-child(1) {
+  top: -3px;
+}
+
+.reticle i:nth-child(2) {
+  bottom: -3px;
+}
+
+.reticle i:nth-child(3),
+.reticle i:nth-child(4) {
+  top: 50%;
+  width: 5px;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+.reticle i:nth-child(3) {
+  left: -3px;
+}
+
+.reticle i:nth-child(4) {
+  right: -3px;
+}
+
+.pointerDot {
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(192, 214, 255, 0.74);
+  box-shadow:
+    0 0 7px rgba(145, 181, 255, 0.7),
+    0 0 15px rgba(103, 144, 240, 0.25);
+}
+
+.telemetry {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 21px 0 0 32px;
+  color: rgba(137, 164, 218, 0.48);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transform: none;
+}
+
+.telemetry b {
+  color: rgba(174, 202, 255, 0.6);
+  font-size: 5px;
+}
+
+.root[data-target='true'] .reticle {
+  width: 38px;
+  height: 38px;
+  border-color: rgba(157, 191, 255, 0.28);
+}
+
+.root[data-target='true'] .reticle i {
+  background: rgba(188, 211, 255, 0.58);
+}
+
+.root[data-target='true'] .pointerDot {
+  width: 4px;
+  height: 4px;
+  background: rgba(218, 230, 255, 0.94);
+}
+
+.root[data-target='true'] .telemetry {
+  opacity: 1;
+}
+
+.pulse {
+  position: absolute;
+  left: var(--pulse-x);
+  top: var(--pulse-y);
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(161, 193, 255, 0.42);
+  border-radius: 999px;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.5);
+}
+
+.root[data-pulse='true'] .pulse {
+  animation: interactionPulse 440ms cubic-bezier(.16, 1, .3, 1) both;
+}
+
+@keyframes interactionPulse {
+  0% {
+    opacity: 0.72;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(3.2);
+  }
+}
+
+@media (pointer: coarse) {
+  .root {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    display: none;
+  }
+}
