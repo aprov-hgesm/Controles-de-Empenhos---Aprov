@@ -30,11 +30,13 @@ requireText(sidebar, "onNavigate('inicio')", 'Sidebar não oferece navegação p
 requireText(plan, 'inicio:', 'Plano realtime não possui perfil para Início.');
 requireText(constellation, 'MAX_VISIBLE_STARS = 72', 'Constelação não possui limite de densidade inicial.');
 requireText(constellation, "data-severity={node.severity}", 'Estrelas não expõem severidade semântica.');
-requireText(view, 'activeAlertCount = alerts.length', 'Planeta de alertas não usa alertas operacionais.');
+requireText(view, 'snapshot?.alerts.total ?? 0', 'Planeta de alertas não usa o snapshot econômico.');
 requireText(orbit, "CLASS_CODES = ['QR', 'CALI', 'PASA', 'FUNADOM']", 'Classes iniciais não preservam QR/CALI/PASA/FUNADOM no sistema orbital.');
 requireText(styles, '@media (prefers-reduced-motion: reduce)', 'Experiência não respeita reduced motion.');
 requireText(constellationCss, ".star[data-severity='critical']", 'Estado crítico não possui tratamento visual.');
 requireText(docs, 'snapshot compacto por UG', 'Documentação não protege a evolução de custo por UG.');
+forbidText(view, 'Empenho[]', 'Início voltou a depender da coleção bruta de empenhos.');
+forbidText(view, 'Alert[]', 'Início voltou a depender da coleção bruta de alertas.');
 forbidText(page, "useState<OperationalActiveTab>('inicio')", 'Início foi promovido para landing antes da validação.');
 
 if (findings.length) {
