@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react';
 import { PlatformAdminView } from '../../components/admin/PlatformAdminView';
 import { usePlatformBranding } from '../../hooks/usePlatformBranding';
 import { usePlatformAdminDirectory } from '../../hooks/usePlatformAdminDirectory';
+import { usePlatformAdminSessions } from '../../hooks/usePlatformAdminSessions';
 import { auth } from '../../lib/firebase';
 import { resetActiveProfileMode, setActiveProfileMode } from '../../lib/profileMode';
 import { resolveWorkspaceContext } from '../../lib/workspaceContext';
@@ -26,9 +27,9 @@ export default function PlatformAdminPage() {
   }, []);
 
   const context = resolveWorkspaceContext(user?.email);
-  const adminDirectory = usePlatformAdminDirectory(
-    context.status === 'platformAdmin' ? user : null
-  );
+  const adminUser = context.status === 'platformAdmin' ? user : null;
+  const adminDirectory = usePlatformAdminDirectory(adminUser);
+  const adminSessions = usePlatformAdminSessions(adminUser);
 
   useEffect(() => {
     if (loading) return;
@@ -86,6 +87,10 @@ export default function PlatformAdminPage() {
       changingStatusWorkspaceId={adminDirectory.changingStatusWorkspaceId}
       deletingWorkspaceId={adminDirectory.deletingWorkspaceId}
       resettingPasswordWorkspaceId={adminDirectory.resettingPasswordWorkspaceId}
+      sessions={adminSessions.sessions}
+      loadingSessions={adminSessions.loading}
+      sessionsError={adminSessions.error}
+      terminatingSessionId={adminSessions.terminatingSessionId}
       onCreateSector={async (input) => {
         await adminDirectory.createSector(input);
       }}
@@ -100,6 +105,9 @@ export default function PlatformAdminPage() {
       }}
       onResetSectorPassword={async (workspaceId, email, newPassword) => {
         await adminDirectory.resetSectorPassword(workspaceId, email, newPassword);
+      }}
+      onTerminateSession={async (session) => {
+        await adminSessions.terminateSession(session);
       }}
       onLogout={handleLogout}
     />
