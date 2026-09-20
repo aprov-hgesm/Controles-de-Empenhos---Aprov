@@ -1,13 +1,11 @@
 'use client';
 
-import Image from 'next/image';
 import { useEffect, useMemo, useRef } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 
 import styles from './InicioCore.module.css';
 
 interface InicioCoreProps {
-  customLogo: string | null;
   totalEmpenhos: number;
   totalValueLabel: string;
   activeAlertCount: number;
@@ -16,7 +14,6 @@ interface InicioCoreProps {
 }
 
 export function InicioCore({
-  customLogo,
   totalEmpenhos,
   totalValueLabel,
   activeAlertCount,
@@ -133,21 +130,7 @@ export function InicioCore({
       <span className={styles.reactor}>
         <span className={styles.reactorGrid} aria-hidden="true" />
         <span className={styles.reactorGlow} aria-hidden="true" />
-        <span className={styles.logoPlate}>
-          {customLogo ? (
-            <Image
-              src={customLogo}
-              alt=""
-              width={152}
-              height={152}
-              unoptimized
-              priority
-              className={styles.logo}
-            />
-          ) : (
-            <span className={styles.fallback}>EMP</span>
-          )}
-        </span>
+        <span className={styles.logoPlate} aria-hidden="true" />
         <span className={styles.specular} aria-hidden="true" />
         <span className={styles.centerPulse} aria-hidden="true" />
       </span>
