@@ -14,7 +14,7 @@ const expected = {
   empenhos: ['empenhos', 'alerts', 'invoices'],
   itens: ['empenhos'],
   nova_nf: ['empenhos', 'alerts', 'invoices', 'comissoes'],
-  relatorios: ['empenhos', 'invoices', 'comissoes'],
+  relatorios: ['empenhos', 'comissoes'],
   itens_empenho: ['empenhos'],
   cronogramas: ['empenhos', 'cronogramas'],
   avisos: ['empenhos', 'alerts'],
@@ -47,6 +47,6 @@ console.log('Início: 0 coleções operacionais brutas + 1 snapshot documental')
 console.log('Painel: 1 coleção operacional realtime');
 console.log('Empenhos: 3 coleções operacionais realtime');
 console.log('Notas Fiscais: 4 coleções operacionais realtime');
-console.log('Relatórios: 3 coleções operacionais realtime');
+console.log('Relatórios: 2 coleções operacionais realtime + invoices históricas sob demanda');
 console.log('Cronogramas: 2 coleções operacionais realtime');
 console.log('Central de Avisos: 2 coleções operacionais realtime');
