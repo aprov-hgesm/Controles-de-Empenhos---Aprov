@@ -102,22 +102,19 @@
 }
 
 .trackOuter {
-  width: 95%;
-  height: 68%;
-  rotate: -10deg;
+  width: 88%;
+  aspect-ratio: 1;
 }
 
 .trackMid {
-  width: 76%;
-  height: 54%;
-  rotate: 17deg;
+  width: 68%;
+  aspect-ratio: 1;
   border-color: rgba(139, 112, 214, 0.07);
 }
 
 .trackInner {
-  width: 58%;
-  height: 42%;
-  rotate: -25deg;
+  width: 50%;
+  aspect-ratio: 1;
   border-color: rgba(78, 147, 216, 0.075);
 }
 
@@ -146,7 +143,7 @@
 }
 
 .sweepInner {
-  width: 62%;
+  width: 50%;
   aspect-ratio: 1;
   background: conic-gradient(
     from 220deg,
