@@ -46,7 +46,7 @@ requireText(orbitCss, '.starOrbitOuter,\n.orbitOuter {\n  width: 88%;', 'Órbita
 requireText(orbitCss, '.starOrbitMiddle,\n.orbitMiddle {\n  width: 68%;', 'Órbita intermediária responsiva não está dimensionada.');
 requireText(orbitCss, '.starOrbitInner,\n.orbitInner {\n  width: 50%;', 'Órbita interna responsiva não está dimensionada.');
 requireText(orbitCss, '@media (hover: none), (pointer: coarse)', 'Órbitas não tratam touch/coarse pointer.');
-requireText(orbitCss, '.tooltip,\n  .classTooltip {\n    display: none;', 'Tooltips orbitais e de classes continuam dependentes de hover em touch.');
+requireText(orbitCss, '.floatingTooltip,\n  .floatingClassTooltip {\n    display: none;', 'Tooltips orbitais e de classes continuam dependentes de hover em touch.');
 
 requireText(constellationCss, 'bottom: 34px', 'Legenda mobile não utiliza o rodapé liberado.');
 requireText(constellationCss, '.densityNote {\n    display: none !important;', 'Legenda mobile não reduz informação secundária.');
