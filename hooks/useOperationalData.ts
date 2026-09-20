@@ -157,6 +157,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     const revokeOperationalAccess = () => {
       if (revoked) return;
       revoked = true;
+      clearLocalWorkspaceSessionLease(workspaceContext.workspaceId, user.uid);
       clearResolvedWorkspaceContext();
       clearOperationalState();
       resetActiveProfileMode();
