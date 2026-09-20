@@ -5,6 +5,16 @@ import {
   provisionSectorWorkspaceWithAuth,
   verifyFounderSession,
 } from '../../../../lib/server/sectorProvisioningAdmin';
+import {
+  ApiSecurityError,
+  apiSecurityErrorHeaders,
+  assertAdminMutationEnabled,
+  createRequestSecurityContext,
+  enforceAuthenticatedAdminBurstLimit,
+  enforcePreAuthBurstLimit,
+  readBoundedJsonRequest,
+  securityResponseHeaders,
+} from '../../../../lib/server/requestSecurity';
 import { parseSectorProvisioningInput } from '../../../../lib/sectorProvisioning';
 
 export const runtime = 'nodejs';
@@ -17,13 +27,21 @@ function bearerToken(request: Request): string {
 }
 
 export async function POST(request: Request) {
+  const security = createRequestSecurityContext(request, 'sector-provision');
+
   try {
+    enforcePreAuthBurstLimit(security);
     const founder = await verifyFounderSession(bearerToken(request));
+    enforceAuthenticatedAdminBurstLimit(security, founder.uid, 'mutation');
+    assertAdminMutationEnabled(security, 'sector-provision');
 
     let input;
     try {
-      input = parseSectorProvisioningInput(await request.json());
-    } catch {
+      input = parseSectorProvisioningInput(
+        await readBoundedJsonRequest<unknown>(request, security)
+      );
+    } catch (error) {
+      if (error instanceof ApiSecurityError) throw error;
       throw new SectorProvisioningFailure(
         'A solicitação de provisionamento é inválida.',
         'INVALID_INPUT',
@@ -33,15 +51,33 @@ export async function POST(request: Request) {
 
     const result = await provisionSectorWorkspaceWithAuth(input, founder);
 
-    return NextResponse.json({
-      ok: true,
-      result: {
-        workspace: result.workspace,
-        account: result.account,
-        authUserReused: result.authUserReused,
+    return NextResponse.json(
+      {
+        ok: true,
+        result: {
+          workspace: result.workspace,
+          account: result.account,
+          authUserReused: result.authUserReused,
+        },
       },
-    });
+      { headers: securityResponseHeaders(security) }
+    );
   } catch (error) {
+    if (error instanceof ApiSecurityError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: error.message,
+          code: error.code,
+          recoveryRequired: false,
+        },
+        {
+          status: error.httpStatus,
+          headers: apiSecurityErrorHeaders(security, error),
+        }
+      );
+    }
+
     if (error instanceof SectorProvisioningFailure) {
       return NextResponse.json(
         {
@@ -50,11 +86,17 @@ export async function POST(request: Request) {
           code: error.code,
           recoveryRequired: error.recoveryRequired,
         },
-        { status: error.httpStatus }
+        {
+          status: error.httpStatus,
+          headers: securityResponseHeaders(security),
+        }
       );
     }
 
-    console.error('Unexpected EMPROVEX sector provisioning failure.', error);
+    console.error('Unexpected EMPROVEX sector provisioning failure.', {
+      requestId: security.requestId,
+      error,
+    });
     return NextResponse.json(
       {
         ok: false,
@@ -62,7 +104,10 @@ export async function POST(request: Request) {
         code: 'UPSTREAM_ERROR',
         recoveryRequired: false,
       },
-      { status: 500 }
+      {
+        status: 500,
+        headers: securityResponseHeaders(security),
+      }
     );
   }
 }
