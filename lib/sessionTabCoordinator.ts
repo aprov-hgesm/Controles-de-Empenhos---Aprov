@@ -2,6 +2,7 @@
 
 const TAB_ID_KEY = 'emprovex:session-tab-id:v1';
 const TAB_ROLE_KEY_PREFIX = 'emprovex:session-tab-role:v1';
+const LAST_INVALIDATION_KEY_PREFIX = 'emprovex:session-tab-last-invalidation:v1';
 const FALLBACK_LEADER_KEY_PREFIX = 'emprovex:session-tab-leader:v1';
 const FALLBACK_LEADER_TTL_MS = 12_000;
 const FALLBACK_RENEW_INTERVAL_MS = 4_000;
@@ -80,6 +81,10 @@ function fallbackLeaderKey(workspaceId: string, uid: string): string {
   return scopedKey(FALLBACK_LEADER_KEY_PREFIX, workspaceId, uid);
 }
 
+function lastInvalidationKey(workspaceId: string, uid: string): string {
+  return scopedKey(LAST_INVALIDATION_KEY_PREFIX, workspaceId, uid);
+}
+
 function channelName(workspaceId: string, uid: string): string {
   return `emprovex:session-tabs:v1:${workspaceId}:${uid}`;
 }
@@ -115,6 +120,7 @@ export function startWorkspaceSessionTabCoordinator(
   const tabId = getOrCreateTabId();
   const roleStorageKey = roleKey(options.workspaceId, options.uid);
   const fallbackKey = fallbackLeaderKey(options.workspaceId, options.uid);
+  const invalidationStorageKey = lastInvalidationKey(options.workspaceId, options.uid);
   const localStorage = localStorageSafe();
   const sessionStorage = sessionStorageSafe();
 
@@ -134,6 +140,7 @@ export function startWorkspaceSessionTabCoordinator(
   // Expor o papel por aba ajuda diagnóstico e E2E sem criar nova fonte de
   // verdade: a exclusão mútua continua pertencendo ao Web Locks/localStorage.
   sessionStorage?.setItem(roleStorageKey, role);
+  sessionStorage?.removeItem(invalidationStorageKey);
 
   const broadcastChannel = typeof BroadcastChannel !== 'undefined'
     ? new BroadcastChannel(channelName(options.workspaceId, options.uid))
@@ -141,6 +148,7 @@ export function startWorkspaceSessionTabCoordinator(
 
   const dispatchInvalidation = (reason: string) => {
     if (stopped) return;
+    sessionStorage?.setItem(invalidationStorageKey, reason);
     options.onSessionInvalidated(reason);
   };
 
