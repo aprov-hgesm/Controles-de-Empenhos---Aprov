@@ -66,7 +66,11 @@ export function InicioIdentityPanel({
   const environmentLabel = isFoundingWorkspace ? 'Workspace fundador' : 'Workspace setorial';
 
   return (
-    <header className={styles.root} data-phase={dayPhase}>
+    <header
+      className={styles.root}
+      data-testid="inicio-identity"
+      data-phase={dayPhase}
+    >
       <div className={styles.kicker}>
         <RadioTower aria-hidden="true" />
         <span>Mapa operacional</span>
