@@ -26,6 +26,11 @@ import { resetActiveProfileMode, setActiveProfileMode } from '../lib/profileMode
 import { normalizePlatformEmail } from '../lib/platformIdentity';
 import { SESSION_HEARTBEAT_INTERVAL_MS } from '../lib/platformCapacity';
 import {
+  flushWorkspaceUsageTelemetry,
+  recordWorkspaceRealtimeSnapshot,
+  trackWorkspaceRealtimeListener,
+} from '../lib/workspaceUsageTelemetry';
+import {
   PlatformSessionLeaseError,
   SESSION_CAPACITY_EXCEEDED_MESSAGE,
   clearAllLocalWorkspaceSessionState,
@@ -189,10 +194,17 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
 
     const workspaceRef = doc(db, 'workspaces', workspaceContext.workspaceId);
     const accountRef = doc(db, 'platformAccounts', workspaceContext.email);
+    const telemetryScope = {
+      workspaceId: workspaceContext.workspaceId,
+      ug: workspaceContext.ug,
+    };
+    const stopWorkspaceListenerTelemetry = trackWorkspaceRealtimeListener(telemetryScope);
+    const stopAccountListenerTelemetry = trackWorkspaceRealtimeListener(telemetryScope);
 
     const unsubscribeWorkspace = onSnapshot(
       workspaceRef,
       (snapshot) => {
+        recordWorkspaceRealtimeSnapshot(telemetryScope, 1);
         if (!snapshot.exists()) {
           revokeOperationalAccess();
           return;
@@ -213,6 +225,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     const unsubscribeAccount = onSnapshot(
       accountRef,
       (snapshot) => {
+        recordWorkspaceRealtimeSnapshot(telemetryScope, 1);
         if (!snapshot.exists()) {
           revokeOperationalAccess();
           return;
@@ -242,6 +255,8 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     return () => {
       unsubscribeWorkspace();
       unsubscribeAccount();
+      stopWorkspaceListenerTelemetry();
+      stopAccountListenerTelemetry();
     };
   }, [user, workspaceContext]);
 
@@ -472,6 +487,13 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
         console.warn('Não foi possível liberar imediatamente o lease de sessão.', error);
         clearLocalWorkspaceSessionLease(workspaceContext.workspaceId, user.uid);
       }
+    }
+
+    if (user && isOperationalSectorContext(workspaceContext)) {
+      await flushWorkspaceUsageTelemetry({
+        workspaceId: workspaceContext.workspaceId,
+        ug: workspaceContext.ug,
+      });
     }
 
     resetActiveProfileMode();

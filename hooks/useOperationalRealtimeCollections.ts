@@ -40,6 +40,10 @@ import {
   type ResolvedWorkspaceContext,
 } from '../lib/workspaceContext';
 import { normalizeSupplier } from '../features/empenhos/domain/empenhoHelpers';
+import {
+  recordWorkspaceRealtimeSnapshot,
+  trackWorkspaceRealtimeListener,
+} from '../lib/workspaceUsageTelemetry';
 
 interface OperationalRealtimeCollectionsInput {
   user: User | null;
@@ -120,9 +124,16 @@ function useRealtimeCollectionSubscription<T>({
     const scope = operationalScopeFromContext(workspaceContext);
     const collectionPath = getOperationalCollectionPath(scope, collectionName);
 
-    return onSnapshot(
+    let firstSnapshot = true;
+    const stopTrackingListener = trackWorkspaceRealtimeListener(scope);
+    const unsubscribe = onSnapshot(
       operationalCollectionRef(scope, collectionName),
       (snapshot) => {
+        recordWorkspaceRealtimeSnapshot(
+          scope,
+          firstSnapshot ? snapshot.size : snapshot.docChanges().length
+        );
+        firstSnapshot = false;
         setData(snapshot.docs.map(mapDocument));
         setCollectionReady(collectionName, true);
       },
@@ -133,6 +144,11 @@ function useRealtimeCollectionSubscription<T>({
         setCollectionReady(collectionName, true);
       }
     );
+
+    return () => {
+      unsubscribe();
+      stopTrackingListener();
+    };
   }, [
     collectionName,
     enabled,

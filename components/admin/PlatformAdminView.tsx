@@ -23,6 +23,7 @@ import { useRouter } from 'next/navigation';
 import { CreateSectorModal } from './CreateSectorModal';
 import { EditSectorModal } from './EditSectorModal';
 import { AdminSessionsPanel } from './AdminSessionsPanel';
+import { AdminUsagePanel } from './AdminUsagePanel';
 import { ToastNotification } from '../layout/ToastNotification';
 import { createHgesmFoundingWorkspace } from '../../lib/hgesmWorkspace';
 import type {
@@ -32,6 +33,7 @@ import type {
 } from '../../lib/platformAdminStore';
 import type { Workspace } from '../../lib/platformIdentity';
 import type { AdminWorkspaceSession } from '../../lib/platformAdminSessions';
+import type { AdminWorkspaceUsageEstimate } from '../../lib/platformAdminUsage';
 import { setActiveProfileMode } from '../../lib/profileMode';
 
 interface PlatformAdminViewProps {
@@ -49,12 +51,16 @@ interface PlatformAdminViewProps {
   loadingSessions: boolean;
   sessionsError: string | null;
   terminatingSessionId: string | null;
+  usage: AdminWorkspaceUsageEstimate[];
+  loadingUsage: boolean;
+  usageError: string | null;
   onCreateSector: (input: CreateSectorWorkspaceInput) => Promise<void>;
   onUpdateSector: (input: UpdateSectorWorkspaceInput) => Promise<void>;
   onChangeSectorStatus: (workspaceId: string, status: SectorLifecycleStatus) => Promise<void>;
   onDeleteSector: (workspaceId: string, email: string) => Promise<void>;
   onResetSectorPassword: (workspaceId: string, email: string, newPassword: string) => Promise<void>;
   onTerminateSession: (session: AdminWorkspaceSession) => Promise<void>;
+  onRefreshUsage: () => Promise<void>;
   onLogout: () => Promise<void>;
 }
 
@@ -73,12 +79,16 @@ export function PlatformAdminView({
   loadingSessions,
   sessionsError,
   terminatingSessionId,
+  usage,
+  loadingUsage,
+  usageError,
   onCreateSector,
   onUpdateSector,
   onChangeSectorStatus,
   onDeleteSector,
   onResetSectorPassword,
   onTerminateSession,
+  onRefreshUsage,
   onLogout,
 }: PlatformAdminViewProps) {
   const router = useRouter();
@@ -321,6 +331,14 @@ export function PlatformAdminView({
           terminatingSessionId={terminatingSessionId}
           onTerminateSession={onTerminateSession}
           onNotify={showAdminToast}
+        />
+
+        <AdminUsagePanel
+          workspaces={visibleWorkspaces}
+          usage={usage}
+          loading={loadingUsage}
+          error={usageError}
+          onRefresh={onRefreshUsage}
         />
 
         <section className="overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#071225]/60 shadow-[0_22px_70px_rgba(0,8,28,0.18)] backdrop-blur-xl">

@@ -8,6 +8,7 @@ import { PlatformAdminView } from '../../components/admin/PlatformAdminView';
 import { usePlatformBranding } from '../../hooks/usePlatformBranding';
 import { usePlatformAdminDirectory } from '../../hooks/usePlatformAdminDirectory';
 import { usePlatformAdminSessions } from '../../hooks/usePlatformAdminSessions';
+import { usePlatformAdminUsage } from '../../hooks/usePlatformAdminUsage';
 import { auth } from '../../lib/firebase';
 import { resetActiveProfileMode, setActiveProfileMode } from '../../lib/profileMode';
 import { resolveWorkspaceContext } from '../../lib/workspaceContext';
@@ -30,6 +31,11 @@ export default function PlatformAdminPage() {
   const adminUser = context.status === 'platformAdmin' ? user : null;
   const adminDirectory = usePlatformAdminDirectory(adminUser);
   const adminSessions = usePlatformAdminSessions(adminUser);
+  const adminUsage = usePlatformAdminUsage(
+    adminUser,
+    adminDirectory.directory.workspaces,
+    !adminDirectory.loading && !adminDirectory.error
+  );
 
   useEffect(() => {
     if (loading) return;
@@ -91,6 +97,9 @@ export default function PlatformAdminPage() {
       loadingSessions={adminSessions.loading}
       sessionsError={adminSessions.error}
       terminatingSessionId={adminSessions.terminatingSessionId}
+      usage={adminUsage.usage}
+      loadingUsage={adminUsage.loading}
+      usageError={adminUsage.error}
       onCreateSector={async (input) => {
         await adminDirectory.createSector(input);
       }}
@@ -109,6 +118,7 @@ export default function PlatformAdminPage() {
       onTerminateSession={async (session) => {
         await adminSessions.terminateSession(session);
       }}
+      onRefreshUsage={adminUsage.refresh}
       onLogout={handleLogout}
     />
   );

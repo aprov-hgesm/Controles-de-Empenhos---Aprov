@@ -724,6 +724,115 @@ async function main() {
     )
   );
 
+  console.log('\nBloco 16.3 — telemetria estimada por UG');
+
+  const usageDayKey = '2026-09-19';
+  const usageRefA = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'usageEstimates',
+    usageDayKey
+  );
+  const usagePayload = {
+    telemetryVersion: 'emprovex_usage_v1',
+    source: 'emprovex-workspace-estimate',
+    workspaceId: 'workspace-a',
+    ug: '160416',
+    dayKey: usageDayKey,
+    windowStartedAt: `${usageDayKey}T00:00:00.000Z`,
+    windowEndedAt: `${usageDayKey}T23:59:59.999Z`,
+    estimatedDocumentReads: 25,
+    estimatedDocumentWrites: 4,
+    estimatedDocumentDeletes: 1,
+    realtimeSnapshots: 6,
+    peakRealtimeListeners: 3,
+    telemetryFlushes: 1,
+    lastReportedAt: serverTimestamp(),
+  };
+
+  await allowed('Setor grava telemetria estimada somente no próprio workspace/UG', () =>
+    setDoc(usageRefA, usagePayload)
+  );
+
+  await allowed('Setor incrementa apenas contadores monotônicos da própria UG', () =>
+    updateDoc(usageRefA, {
+      estimatedDocumentReads: 30,
+      estimatedDocumentWrites: 5,
+      realtimeSnapshots: 7,
+      peakRealtimeListeners: 4,
+      telemetryFlushes: 2,
+      lastReportedAt: serverTimestamp(),
+    })
+  );
+
+  await denied('Setor não pode reduzir contador consolidado de telemetria', () =>
+    updateDoc(usageRefA, {
+      estimatedDocumentReads: 1,
+      telemetryFlushes: 3,
+      lastReportedAt: serverTimestamp(),
+    })
+  );
+
+  await denied('Setor não pode falsificar UG na própria telemetria', () =>
+    setDoc(
+      doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'usageEstimates',
+        '2026-09-20'
+      ),
+      {
+        ...usagePayload,
+        dayKey: '2026-09-20',
+        ug: '999999',
+        windowStartedAt: '2026-09-20T00:00:00.000Z',
+        windowEndedAt: '2026-09-20T23:59:59.999Z',
+        lastReportedAt: serverTimestamp(),
+      }
+    )
+  );
+
+  await denied('Outro workspace não grava telemetria no Setor A', () =>
+    setDoc(
+      doc(
+        sessionB.db,
+        'workspaces',
+        'workspace-a',
+        'usageEstimates',
+        '2026-09-20'
+      ),
+      {
+        ...usagePayload,
+        dayKey: '2026-09-20',
+        windowStartedAt: '2026-09-20T00:00:00.000Z',
+        windowEndedAt: '2026-09-20T23:59:59.999Z',
+        lastReportedAt: serverTimestamp(),
+      }
+    )
+  );
+
+  await denied('Setor operacional não lê o documento administrativo de telemetria', () =>
+    getDoc(usageRefA)
+  );
+
+  await allowed('Administrador lê a estimativa consolidada por UG', () =>
+    getDoc(
+      doc(
+        admin.db,
+        'workspaces',
+        'workspace-a',
+        'usageEstimates',
+        usageDayKey
+      )
+    )
+  );
+
+  await denied('Telemetria diária não pode ser apagada pelo setor', () =>
+    deleteDoc(usageRefA)
+  );
+
   await deleteDoc(sessionSlot2);
 
   console.log('\nConcorrência otimista de empenhos');

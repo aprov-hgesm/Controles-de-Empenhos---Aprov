@@ -13,6 +13,7 @@ import {
   operationalDocRef,
 } from './operationalPaths';
 import type { Empenho } from './types';
+import { recordWorkspaceUsage } from './workspaceUsageTelemetry';
 
 export async function commitEmpenhoCreate(
   userId: string,
@@ -23,7 +24,7 @@ export async function commitEmpenhoCreate(
   const ref = operationalDocRef(scope, 'empenhos', empenho.id);
 
   try {
-    return await runTransaction(db, async (transaction) => {
+    const result = await runTransaction(db, async (transaction) => {
       const snapshot = await transaction.get(ref);
       if (snapshot.exists()) {
         throw new EmpenhoConcurrencyError(
@@ -36,6 +37,8 @@ export async function commitEmpenhoCreate(
       transaction.set(ref, { ...next, userId });
       return next;
     });
+    recordWorkspaceUsage(scope, { documentReads: 1, documentWrites: 1 });
+    return result;
   } catch (error) {
     if (isEmpenhoConcurrencyError(error)) throw error;
     handleFirestoreError(error, OperationType.WRITE, path);
@@ -52,7 +55,7 @@ export async function commitEmpenhoUpdate(
   const ref = operationalDocRef(scope, 'empenhos', empenho.id);
 
   try {
-    return await runTransaction(db, async (transaction) => {
+    const result = await runTransaction(db, async (transaction) => {
       const snapshot = await transaction.get(ref);
       if (!snapshot.exists()) {
         throw new EmpenhoConcurrencyError(
@@ -68,6 +71,8 @@ export async function commitEmpenhoUpdate(
       transaction.set(ref, { ...next, userId });
       return next;
     });
+    recordWorkspaceUsage(scope, { documentReads: 1, documentWrites: 1 });
+    return result;
   } catch (error) {
     if (isEmpenhoConcurrencyError(error)) throw error;
     handleFirestoreError(error, OperationType.WRITE, path);
