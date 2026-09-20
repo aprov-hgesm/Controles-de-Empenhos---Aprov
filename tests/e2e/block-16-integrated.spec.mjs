@@ -340,6 +340,15 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
         timeout: 20_000,
       });
 
+      // Neste arquivo o cenário de revogação é o primeiro a abrir uma segunda
+      // aba no contexto recém-criado. Recarregar após a persistência Auth estar
+      // confirmada elimina a corrida de bootstrap e valida o runtime multiaba já
+      // estabilizado, não um estado intermediário do Firebase Auth.
+      await sibling.reload();
+      await expect(sibling.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
+        timeout: 20_000,
+      });
+
       await expect.poll(async () => {
         const roles = [await sessionTabRole(page), await sessionTabRole(sibling)].sort();
         return roles.join(',');
