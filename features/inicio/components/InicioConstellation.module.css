@@ -628,3 +628,64 @@
     inset: 0;
   }
 }
+
+
+/* Home UX hardening — selectable stars + tooltip safe zones */
+.root {
+  z-index: 35;
+}
+
+.star {
+  min-width: 20px;
+  min-height: 20px;
+}
+
+.tooltip {
+  --tooltip-x: -50%;
+  --tooltip-y: 7px;
+}
+
+.star[data-tooltip-x='start'] .tooltip {
+  left: 0;
+  right: auto;
+  --tooltip-x: 0%;
+  transform-origin: left bottom;
+}
+
+.star[data-tooltip-x='end'] .tooltip {
+  left: auto;
+  right: 0;
+  --tooltip-x: 0%;
+  transform-origin: right bottom;
+}
+
+.star[data-tooltip-y='below'] .tooltip {
+  top: calc(100% + 14px);
+  bottom: auto;
+  --tooltip-y: -7px;
+  transform-origin: center top;
+}
+
+.star[data-tooltip-x='start'][data-tooltip-y='below'] .tooltip {
+  transform-origin: left top;
+}
+
+.star[data-tooltip-x='end'][data-tooltip-y='below'] .tooltip {
+  transform-origin: right top;
+}
+
+.star .tooltip {
+  transform: translate(var(--tooltip-x), var(--tooltip-y)) scale(0.96);
+}
+
+.star:hover .tooltip,
+.star:focus-visible .tooltip {
+  transform: translate(var(--tooltip-x), 0) scale(1);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .star {
+    min-width: 26px;
+    min-height: 26px;
+  }
+}
