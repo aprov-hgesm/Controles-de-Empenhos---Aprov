@@ -13,47 +13,41 @@ const forbidText = (source, forbidden, message) => {
   if (source.includes(forbidden)) findings.push(message);
 };
 
-const page = read('app/page.tsx');
 const view = read('features/inicio/components/InicioView.tsx');
 const identity = read('features/inicio/components/InicioIdentityPanel.tsx');
 const identityCss = read('features/inicio/components/InicioIdentityPanel.module.css');
-const workspace = read('lib/workspaceContext.ts');
 const docs = read('docs/block-19-home-experience.md');
 
-requireText(view, "import { InicioIdentityPanel }", 'Início não importa o painel de identidade contextual.');
-requireText(view, '<InicioIdentityPanel', 'Início não renderiza identidade da unidade.');
-requireText(page, "workspaceName={workspaceContext.status === 'sector'", 'Home não recebe nome do workspace validado.');
-requireText(page, "organizationName={workspaceContext.status === 'sector'", 'Home não recebe organização institucional.');
-requireText(page, "sectionName={workspaceContext.status === 'sector'", 'Home não recebe setor institucional.');
-requireText(page, "workspaceUg={workspaceContext.status === 'sector'", 'Home não recebe UG validada.');
-requireText(page, "workspaceContext.resolutionSource === 'legacy-hgesm-bootstrap'", 'Workspace fundador não é identificado de forma explícita.');
-requireText(identity, 'hashUnitSignature', 'Identidade não possui assinatura determinística da unidade.');
-requireText(identity, 'workspaceUg || workspaceName || organizationName', 'Assinatura não usa identidade estável da unidade.');
-requireText(identity, 'resolveDayPhase', 'Saudação contextual por período não foi implementada.');
+requireText(view, "import { InicioIdentityPanel }", 'Início não importa a saudação compacta.');
+requireText(view, '<InicioIdentityPanel userDisplayName={userDisplayName} />', 'Início não renderiza a saudação compacta.');
+requireText(identity, 'resolveDayPhase', 'Saudação contextual por período não foi preservada.');
 requireText(identity, 'new Date().getHours()', 'Saudação não usa horário local do navegador.');
-requireText(identity, 'Workspace fundador', 'Identidade não diferencia workspace fundador.');
-requireText(identity, 'Workspace setorial', 'Identidade não diferencia workspace externo.');
-requireText(identity, 'NÓ FUNDADOR', 'Nó fundador não possui sinal visual dedicado.');
-requireText(identity, 'EMPROVEX ONLINE', 'Estado operacional não está presente na identidade.');
-requireText(identityCss, '.identityGrid', 'Identidade institucional não possui estrutura visual.');
-requireText(identityCss, '.signature', 'Assinatura visual da unidade não possui estilo.');
-requireText(identityCss, '@media (prefers-reduced-motion: reduce)', 'Identidade não respeita reduced motion.');
-requireText(workspace, 'institutionalProfile: WorkspaceInstitutionalProfile', 'Contrato de workspace não preserva perfil institucional.');
-requireText(docs, 'Bloco 19.6', 'Documentação não registra identidade/UG.');
-forbidText(identity, 'email', 'Painel de identidade expõe e-mail operacional.');
-forbidText(identity, 'firebase', 'Painel de identidade acoplou Firebase diretamente.');
-forbidText(identity, 'onSnapshot', 'Painel de identidade abriu listener Firestore.');
-forbidText(identity, 'localStorage', 'Painel de identidade criou persistência local indevida.');
+requireText(identity, "split(/\\s+/)[0]", 'Saudação não limita o nome ao primeiro nome.');
+requireText(identity, 'data-testid="inicio-identity"', 'Saudação perdeu âncora E2E.');
+requireText(identityCss, 'font-size: clamp(23px, 3vw, 34px)', 'Saudação não utiliza escala compacta.');
+requireText(identityCss, '@media (max-width: 420px)', 'Saudação não possui compactação narrow-phone.');
+requireText(docs, 'Bloco 19.6', 'Documentação não registra o bloco de identidade.');
+
+forbidText(identity, 'Organização', 'Home voltou a exibir cartão de organização.');
+forbidText(identity, 'Ambiente', 'Home voltou a exibir cartão de ambiente.');
+forbidText(identity, 'EMPROVEX ONLINE', 'Home voltou a exibir status online redundante.');
+forbidText(identity, 'NÓ FUNDADOR', 'Home voltou a exibir marcador fundador.');
+forbidText(identity, 'Fingerprint', 'Home voltou a exibir assinatura técnica da unidade.');
+forbidText(identity, 'workspaceName', 'Saudação voltou a depender do workspace.');
+forbidText(identity, 'organizationName', 'Saudação voltou a depender da organização.');
+forbidText(identity, 'workspaceUg', 'Saudação voltou a exibir UG.');
+forbidText(identity, 'firebase', 'Saudação acoplou Firebase diretamente.');
+forbidText(identity, 'onSnapshot', 'Saudação abriu listener Firestore.');
+forbidText(identity, 'localStorage', 'Saudação criou persistência local indevida.');
 
 if (findings.length) {
-  console.error('BLOCK 19.6 UNIT IDENTITY: FAIL');
+  console.error('BLOCK 19.6 COMPACT IDENTITY: FAIL');
   findings.forEach((finding) => console.error('  [BLOCK] ' + finding));
   process.exitCode = 2;
 } else {
-  console.log('BLOCK 19.6 UNIT IDENTITY: READY');
-  console.log('UG + organização: CONTEXTUALIZADAS');
-  console.log('Workspace fundador/setorial: DIFERENCIADO');
-  console.log('Assinatura da unidade: DETERMINÍSTICA');
-  console.log('Dados sensíveis adicionais: ZERO');
+  console.log('BLOCK 19.6 COMPACT IDENTITY: READY');
+  console.log('Saudação por período: PRESERVADA');
+  console.log('Nome: COMPACTO');
+  console.log('Organização/ambiente/status: REMOVIDOS');
   console.log('Realtime adicional: ZERO');
 }
