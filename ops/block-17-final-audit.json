@@ -6,7 +6,7 @@
   "subblocks": {
     "17.0": "baseline-preserved",
     "17.1": "lease-efficiency-preserved",
-    "17.2": "multi-tab-control-coordination",
+    "17.2": "autonomous-per-tab-control-with-short-renewal-mutex",
     "17.3": "branding-one-shot-or-static",
     "17.4": "surface-scoped-realtime-and-one-shot-drive-settings",
     "17.5": "scoped-paginated-invoice-history",
