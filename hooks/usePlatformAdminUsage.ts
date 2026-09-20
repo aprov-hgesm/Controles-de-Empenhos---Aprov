@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { User } from 'firebase/auth';
 
 import type { Workspace } from '../lib/platformIdentity';
@@ -17,8 +17,11 @@ export function usePlatformAdminUsage(
   const [usage, setUsage] = useState<AdminWorkspaceUsageEstimate[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestSequence = useRef(0);
 
   const refresh = useCallback(async () => {
+    const requestId = ++requestSequence.current;
+
     if (!adminUser?.email || !directoryReady) {
       setUsage([]);
       setLoading(false);
@@ -29,15 +32,18 @@ export function usePlatformAdminUsage(
     setLoading(true);
     setError(null);
     try {
-      setUsage(await loadPlatformWorkspaceUsage(workspaces));
+      const nextUsage = await loadPlatformWorkspaceUsage(workspaces);
+      if (requestSequence.current !== requestId) return;
+      setUsage(nextUsage);
     } catch (loadError) {
+      if (requestSequence.current !== requestId) return;
       setError(
         loadError instanceof Error
           ? loadError.message
           : 'Não foi possível carregar a telemetria estimada por UG.'
       );
     } finally {
-      setLoading(false);
+      if (requestSequence.current === requestId) setLoading(false);
     }
   }, [adminUser, directoryReady, workspaces]);
 
