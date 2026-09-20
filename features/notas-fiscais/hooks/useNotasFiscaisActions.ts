@@ -204,13 +204,16 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
      // Create a warning/success notification alert
     const newAlert: Alert = {
       id: `alt-${Date.now()}`,
-      type: 'ATENÇÃO',
+      type: 'INFORMATIVO',
+      status: 'NOVO',
+      source: 'NOTA_FISCAL',
       title: editingInvoice
         ? `NF ${nfNumber} editada com sucesso!`
         : `NF ${nfNumber} recebida com sucesso!`,
       subtitle: `Fornecedor: ${targetEmpenho.supplier}`,
       description: `Conciliação realizada para o Empenho ${selectedNFCommitmentId}. Valor: R$ ${invoiceTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`,
       date: 'Agora',
+      createdAt: new Date().toISOString(),
     };
      // Update invoices array
     let updatedInvoices: Invoice[];
