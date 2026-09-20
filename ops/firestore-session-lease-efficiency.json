@@ -1,0 +1,69 @@
+{
+  "version": "emprovex_session_lease_efficiency_v1",
+  "block": "17.1",
+  "baselineCommit": "815ac5ba9b4e1c3ff9b3151a9be447dc12eebf9a",
+  "externalSessionLimit": 2,
+  "acquisition": {
+    "strategy": "transactional-capacity-discovery",
+    "explicitDocumentReads": 3,
+    "explicitDocumentWrites": 1,
+    "reads": [
+      "sessionRevocations/{sessionId}",
+      "sessionSlots/slot-1",
+      "sessionSlots/slot-2"
+    ],
+    "unchanged": true
+  },
+  "renewal": {
+    "strategy": "identity-asserting-direct-update",
+    "leaseDurationMs": 1800000,
+    "intervalMs": 900000,
+    "renewalsPerHour": 4,
+    "explicitDocumentReadsPerRenewal": 0,
+    "explicitDocumentWritesPerRenewal": 1,
+    "explicitDocumentReadsPerSessionHour": 0,
+    "explicitDocumentWritesPerSessionHour": 4,
+    "rulesStillValidateWorkspaceAccess": true,
+    "fallback": "full transactional acquisition only when local lease identity is unavailable"
+  },
+  "baselineComparison": {
+    "previousLeaseDurationMs": 600000,
+    "previousIntervalMs": 300000,
+    "previousExplicitReadsPerSessionHour": 36,
+    "previousExplicitWritesPerSessionHour": 12,
+    "explicitReadReductionPercent": 100,
+    "explicitWriteReductionPercent": 66.6667,
+    "explicitPeriodicOperationReductionPercent": 91.6667
+  },
+  "scenarios": {
+    "50_sessions_8_hours": {
+      "explicitRenewalReads": 0,
+      "explicitRenewalWrites": 1600
+    },
+    "100_sessions_8_hours": {
+      "explicitRenewalReads": 0,
+      "explicitRenewalWrites": 3200
+    },
+    "100_sessions_24_hours": {
+      "explicitRenewalReads": 0,
+      "explicitRenewalWrites": 9600
+    }
+  },
+  "preservedInvariants": [
+    "two external sessions per workspace/UG",
+    "founder unlimited",
+    "transactional initial acquisition",
+    "expired-slot takeover",
+    "immediate explicit logout release",
+    "remote administrative revocation",
+    "immutable revocation tombstone",
+    "workspace/UG/UID/email/sessionId/browserInstanceId identity binding",
+    "multi-tenant Firestore Rules"
+  ],
+  "nonGoals": [
+    "multi-tab leader election (Block 17.2)",
+    "branding optimization (Block 17.3)",
+    "operational listener lifecycle changes (Block 17.4)",
+    "billing estimation"
+  ]
+}
