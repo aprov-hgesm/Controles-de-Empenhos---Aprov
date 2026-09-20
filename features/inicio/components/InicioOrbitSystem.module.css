@@ -5,6 +5,90 @@
   pointer-events: none;
 }
 
+.starOrbitLane,
+.orbitSlot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 999px;
+}
+
+.starOrbitLane {
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.starOrbitOuter,
+.orbitOuter {
+  width: 88%;
+}
+
+.starOrbitMiddle,
+.orbitMiddle {
+  width: 68%;
+}
+
+.starOrbitInner,
+.orbitInner {
+  width: 50%;
+}
+
+.orbitSlot {
+  --orbit-angle: 0deg;
+  --orbit-counter-angle: 0deg;
+  --orbit-duration: 56s;
+  z-index: 8;
+  pointer-events: none;
+  transform: rotate(var(--orbit-angle));
+  animation: planetOrbit var(--orbit-duration) linear infinite;
+}
+
+.orbitMiddle {
+  --orbit-duration: 44s;
+}
+
+.orbitInner {
+  --orbit-duration: 34s;
+}
+
+.orbitPhaseA {
+  --orbit-angle: 0deg;
+  --orbit-counter-angle: 0deg;
+}
+
+.orbitPhaseB {
+  --orbit-angle: 180deg;
+  --orbit-counter-angle: -180deg;
+}
+
+.orbitPhaseC {
+  --orbit-angle: 42deg;
+  --orbit-counter-angle: -42deg;
+}
+
+.orbitAnchor {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.orbitSlot:hover,
+.orbitSlot:focus-within {
+  animation-play-state: paused;
+}
+
+.orbitSlot:hover .planet,
+.orbitSlot:focus-within .planet,
+.orbitSlot:hover .classSystem,
+.orbitSlot:focus-within .classSystem {
+  animation-play-state: paused;
+}
+
 .track {
   position: absolute;
   left: 50%;
@@ -77,9 +161,9 @@
 }
 
 .planet {
-  position: absolute;
+  position: relative;
   z-index: 8;
-  width: 46px;
+  width: 24px;
   aspect-ratio: 1;
   padding: 0;
   border: 0;
@@ -88,7 +172,7 @@
   color: #eef5ff;
   cursor: default;
   pointer-events: auto;
-  animation: planetFloat 7.2s ease-in-out infinite;
+  animation: planetCounterOrbit var(--orbit-duration) linear infinite;
 }
 
 .planet:focus-visible,
@@ -151,13 +235,12 @@
 .planet svg {
   position: relative;
   z-index: 2;
-  width: 15px;
-  height: 15px;
+  width: 9px;
+  height: 9px;
 }
 
 .alertPlanet {
-  left: 8%;
-  top: 34%;
+  --planet-accent: 255, 111, 88;
 }
 
 .alertPlanet[data-alert='true'] .planetSurface {
@@ -176,11 +259,7 @@
 }
 
 .receivingPlanet {
-  left: 23%;
-  bottom: 17%;
-  width: 41px;
-  animation-duration: 8.4s;
-  animation-delay: -2.2s;
+  width: 22px;
 }
 
 .receivingPlanet .planetSurface {
@@ -195,11 +274,7 @@
 }
 
 .executionPlanet {
-  right: 24%;
-  top: 18%;
-  width: 43px;
-  animation-duration: 9.1s;
-  animation-delay: -4.4s;
+  width: 23px;
 }
 
 .executionPlanet .planetSurface {
@@ -225,11 +300,7 @@
 }
 
 .dashboardPlanet {
-  right: 9%;
-  bottom: 31%;
-  width: 42px;
-  animation-duration: 8.8s;
-  animation-delay: -1.1s;
+  width: 22px;
 }
 
 .tooltip {
@@ -288,18 +359,17 @@
 }
 
 .classSystem {
-  position: absolute;
-  right: 0;
-  top: 37%;
+  position: relative;
   z-index: 10;
-  width: 50px;
+  width: 26px;
   pointer-events: auto;
+  animation: planetCounterOrbit var(--orbit-duration) linear infinite;
 }
 
 .classPlanet {
   position: relative;
   display: grid;
-  width: 50px;
+  width: 26px;
   aspect-ratio: 1;
   place-items: center;
   padding: 0;
@@ -312,7 +382,6 @@
     inset -8px -10px 20px rgba(10, 4, 19, 0.4);
   color: rgba(238, 226, 255, 0.9);
   cursor: default;
-  animation: planetFloat 9.6s ease-in-out infinite reverse;
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
@@ -326,7 +395,7 @@
 
 .classPlanetOrbit {
   position: absolute;
-  inset: -11px;
+  inset: -6px;
   border: 1px solid rgba(190, 153, 255, 0.12);
   border-radius: 999px;
   animation: orbitSpin 15s linear infinite;
@@ -345,14 +414,14 @@
 }
 
 .classPlanet svg {
-  width: 14px;
-  height: 14px;
+  width: 8px;
+  height: 8px;
 }
 
 .classPlanet > span:last-child {
-  margin-top: -11px;
+  margin-top: -6px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 7px;
+  font-size: 5px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -490,9 +559,14 @@
   to { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
-@keyframes planetFloat {
-  0%, 100% { translate: 0 0; }
-  50% { translate: 0 -7px; }
+@keyframes planetOrbit {
+  from { transform: rotate(var(--orbit-angle)); }
+  to { transform: rotate(calc(var(--orbit-angle) + 360deg)); }
+}
+
+@keyframes planetCounterOrbit {
+  from { transform: rotate(var(--orbit-counter-angle)); }
+  to { transform: rotate(calc(var(--orbit-counter-angle) - 360deg)); }
 }
 
 @keyframes alertGlow {
@@ -513,57 +587,11 @@
   .root {
     transform: scale(0.92);
   }
-
-  .classSystem {
-    right: 3%;
-    top: 23%;
-    transform: scale(0.82);
-    transform-origin: top right;
-  }
-
-  .receivingPlanet {
-    left: 22%;
-    bottom: 24%;
-  }
-
-  .executionPlanet {
-    right: 23%;
-    top: 25%;
-  }
 }
 
 @media (max-width: 640px) {
   .root {
     transform: scale(0.86);
-  }
-
-  .classSystem {
-    right: 8%;
-    top: 27%;
-    transform: scale(0.68);
-  }
-
-  .alertPlanet {
-    left: 13%;
-    top: 42%;
-  }
-
-  .receivingPlanet {
-    left: 25%;
-    bottom: 29%;
-    width: 44px;
-  }
-
-  .executionPlanet {
-    right: 25%;
-    top: 30%;
-    width: 44px;
-  }
-
-  .dashboardPlanet {
-    right: 13%;
-    bottom: 38%;
-    width: 44px;
   }
 
   .tooltip {
@@ -578,32 +606,6 @@
 @media (max-width: 420px) {
   .root {
     transform: scale(0.8);
-  }
-
-  .classSystem {
-    right: 10%;
-    top: 29%;
-    transform: scale(0.7);
-  }
-
-  .alertPlanet {
-    left: 12%;
-    top: 44%;
-  }
-
-  .receivingPlanet {
-    left: 25%;
-    bottom: 31%;
-  }
-
-  .executionPlanet {
-    right: 24%;
-    top: 31%;
-  }
-
-  .dashboardPlanet {
-    right: 12%;
-    bottom: 40%;
   }
 }
 
@@ -621,9 +623,11 @@
 
 @media (prefers-reduced-motion: reduce) {
   .sweep,
+  .orbitSlot,
   .planet,
   .alertPlanet[data-alert='true'] .planetGlow,
   .executionHalo,
+  .classSystem,
   .classPlanet,
   .classPlanetOrbit {
     animation: none !important;
@@ -640,7 +644,9 @@
   opacity: 0.32;
 }
 
+[data-performance='balanced'] .orbitSlot,
 [data-performance='balanced'] .planet,
+[data-performance='balanced'] .classSystem,
 [data-performance='balanced'] .classPlanet,
 [data-performance='balanced'] .executionHalo,
 [data-performance='balanced'] .alertPlanet[data-alert='true'] .planetGlow,
@@ -663,7 +669,9 @@
   display: none;
 }
 
+[data-performance='static'] .orbitSlot,
 [data-performance='static'] .planet,
+[data-performance='static'] .classSystem,
 [data-performance='static'] .classPlanet,
 [data-performance='static'] .executionHalo,
 [data-performance='static'] .planetGlow {
