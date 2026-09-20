@@ -32,7 +32,9 @@ requireText(orbitCss, '.receivingPlanet', 'Planeta de Recebimentos sem identidad
 requireText(orbitCss, '.executionPlanet', 'Planeta de Execução sem identidade visual.');
 requireText(orbitCss, '.dashboardPlanet', 'Planeta do Painel sem identidade visual.');
 requireText(orbitCss, '.classPlanet', 'Planeta de Classes ausente.');
-requireText(orbitCss, '.classMoon', 'Luas de classes ausentes.');
+requireText(orbitCss, '.classTooltip', 'Tooltip consolidado de classes ausente.');
+requireText(orbit, 'className={styles.classTooltip}', 'Indicadores de classes não foram movidos para o tooltip do planeta.');
+forbidText(orbit, 'className={styles.classMoons}', 'Indicadores de classes continuam permanentemente expostos ao lado do planeta.');
 requireText(orbitCss, '@media (prefers-reduced-motion: reduce)', 'Sistema orbital não respeita reduced motion.');
 requireText(plan, 'inicio:', 'Perfil realtime de Início ausente.');
 requireText(plan, 'invoices: false', 'Proteção de invoices realtime não está registrada.');
@@ -55,6 +57,6 @@ if (findings.length) {
   console.log('Alertas: PLANETA ATIVO');
   console.log('Recebimentos: PLANETA ATIVO');
   console.log('Execução: PLANETA ATIVO');
-  console.log('Classes + luas: ATIVAS');
+  console.log('Classes: TOOLTIP SOB DEMANDA ATIVO');
   console.log('Realtime adicional: ZERO');
 }
