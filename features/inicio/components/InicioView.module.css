@@ -78,6 +78,38 @@
   transition: transform 80ms linear;
 }
 
+.snapshotNotice {
+  position: absolute;
+  left: 50%;
+  bottom: 78px;
+  z-index: 18;
+  display: grid;
+  width: min(440px, calc(100% - 40px));
+  gap: 3px;
+  padding: 9px 12px;
+  border: 1px solid rgba(120, 151, 221, 0.14);
+  border-radius: 13px;
+  background: rgba(6, 13, 29, 0.72);
+  color: rgba(190, 207, 239, 0.82);
+  text-align: center;
+  transform: translateX(-50%);
+  backdrop-filter: blur(14px);
+  pointer-events: none;
+}
+
+.snapshotNotice strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 7px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.snapshotNotice span {
+  color: rgba(142, 163, 202, 0.68);
+  font-size: 8px;
+  line-height: 1.45;
+}
+
 .interactionHint {
   position: absolute;
   right: 30px;
