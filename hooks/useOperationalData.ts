@@ -28,11 +28,12 @@ import { SESSION_HEARTBEAT_INTERVAL_MS } from '../lib/platformCapacity';
 import {
   PlatformSessionLeaseError,
   SESSION_CAPACITY_EXCEEDED_MESSAGE,
+  clearAllLocalWorkspaceSessionState,
   clearLocalWorkspaceSessionLease,
-  isSessionCapacityExceededError,
   isTerminalSessionLeaseError,
   releaseWorkspaceSessionLease,
   renewWorkspaceSessionLeaseIfDue,
+  subscribeWorkspaceSessionRevocation,
 } from '../lib/platformSessionLease';
 import { useOperationalRealtimeCollections } from './useOperationalRealtimeCollections';
 
@@ -110,6 +111,16 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
         if (!active) return;
 
         if (resolvedContext.status === 'unauthorized' || resolvedContext.status === 'anonymous') {
+          const diagnosticCode = (
+            typeof resolvedContext === 'object'
+            && resolvedContext
+            && 'diagnosticCode' in resolvedContext
+          )
+            ? String((resolvedContext as { diagnosticCode?: unknown }).diagnosticCode || '')
+            : '';
+          if (diagnosticCode === 'SESSION_REVOKED') {
+            clearAllLocalWorkspaceSessionState();
+          }
           clearResolvedWorkspaceContext();
           clearOperationalState();
           resetActiveProfileMode();
@@ -276,6 +287,13 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
       }
     };
 
+    const unsubscribeRevocation = subscribeWorkspaceSessionRevocation(
+      user,
+      workspaceContext,
+      revokeLeaseAccess,
+      (error) => console.warn('Falha ao observar revogação de sessão EMPROVEX.', error)
+    );
+
     const intervalId = window.setInterval(
       () => void renewLease(),
       SESSION_HEARTBEAT_INTERVAL_MS
@@ -290,6 +308,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
 
     return () => {
       active = false;
+      unsubscribeRevocation();
       window.clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('online', handleOnline);
@@ -318,6 +337,14 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
       setUser(null);
       setWorkspaceContext(resolveWorkspaceContext(null));
       clearOperationalState();
+
+      if (diagnosticCode === 'SESSION_REVOKED') {
+        clearAllLocalWorkspaceSessionState();
+        throw new PlatformSessionLeaseError(
+          'SESSION_REVOKED',
+          'Esta sessão foi encerrada pela administração. Faça login novamente.'
+        );
+      }
 
       if (diagnosticCode === 'SESSION_CAPACITY_EXCEEDED') {
         throw new PlatformSessionLeaseError(
@@ -407,7 +434,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
         throw new Error('Esta credencial está desativada no Firebase Authentication.');
       }
 
-      if (firebaseCredentialAccepted && isSessionCapacityExceededError(error)) {
+      if (firebaseCredentialAccepted && error instanceof PlatformSessionLeaseError) {
         throw error;
       }
 

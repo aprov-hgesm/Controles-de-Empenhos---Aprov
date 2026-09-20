@@ -96,7 +96,8 @@
     "verify:block-14-scalability": "node scripts/verify-block-14-scalability.mjs",
     "verify:block-15-final-hardening": "node scripts/verify-block-15-final-hardening.mjs",
     "verify:block-16-0-capacity-foundation": "node scripts/verify-block-16-0-capacity-foundation.mjs",
-    "verify:block-16-1-session-enforcement": "node scripts/verify-block-16-1-session-enforcement.mjs"
+    "verify:block-16-1-session-enforcement": "node scripts/verify-block-16-1-session-enforcement.mjs",
+    "verify:block-16-2-admin-session-panel": "node scripts/verify-block-16-2-admin-session-panel.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

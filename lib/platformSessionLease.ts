@@ -4,6 +4,7 @@ import type { User } from 'firebase/auth';
 import {
   Timestamp,
   doc,
+  onSnapshot,
   runTransaction,
   serverTimestamp,
 } from 'firebase/firestore';
@@ -33,7 +34,8 @@ export const SESSION_CAPACITY_EXCEEDED_MESSAGE =
 export type PlatformSessionLeaseErrorCode =
   | 'SESSION_CAPACITY_EXCEEDED'
   | 'SESSION_UG_REQUIRED'
-  | 'SESSION_INVALID_CONTEXT';
+  | 'SESSION_INVALID_CONTEXT'
+  | 'SESSION_REVOKED';
 
 export class PlatformSessionLeaseError extends Error {
   constructor(
@@ -208,6 +210,27 @@ export function clearLocalWorkspaceSessionLease(
   storage?.removeItem(scopedKey(SESSION_ID_KEY_PREFIX, workspaceId, uid));
   storage?.removeItem(scopedKey(LAST_RENEWED_KEY_PREFIX, workspaceId, uid));
 }
+export function clearAllLocalWorkspaceSessionState(): void {
+  const storage = browserStorage();
+  if (!storage) return;
+
+  const keys: string[] = [];
+  for (let index = 0; index < storage.length; index += 1) {
+    const key = storage.key(index);
+    if (
+      key
+      && (
+        key.startsWith(ACTIVE_LEASE_KEY_PREFIX)
+        || key.startsWith(SESSION_ID_KEY_PREFIX)
+        || key.startsWith(LAST_RENEWED_KEY_PREFIX)
+      )
+    ) {
+      keys.push(key);
+    }
+  }
+  keys.forEach((key) => storage.removeItem(key));
+}
+
 
 function isTimestamp(value: unknown): value is Timestamp {
   return value instanceof Timestamp;
@@ -302,11 +325,31 @@ export async function acquireWorkspaceSessionLease(
     slotId,
     ref: doc(db, 'workspaces', context.workspaceId, 'sessionSlots', slotId),
   }));
+  const revocationRef = doc(
+    db,
+    'workspaces',
+    context.workspaceId,
+    'sessionRevocations',
+    sessionId
+  );
 
   const result = await runTransaction(db, async (transaction) => {
-    const snapshots = await Promise.all(
-      slotRefs.map(({ ref }) => transaction.get(ref))
-    );
+    const [revocationSnapshot, ...snapshots] = await Promise.all([
+      transaction.get(revocationRef),
+      ...slotRefs.map(({ ref }) => transaction.get(ref)),
+    ]);
+
+    if (revocationSnapshot.exists()) {
+      const revocation = revocationSnapshot.data() as { expiresAt?: Timestamp };
+      const stillRevoked = !isTimestamp(revocation.expiresAt)
+        || revocation.expiresAt.toMillis() > nowMs;
+      if (stillRevoked) {
+        throw new PlatformSessionLeaseError(
+          'SESSION_REVOKED',
+          'Esta sessão foi encerrada pela administração. Faça login novamente.'
+        );
+      }
+    }
 
     const candidates = snapshots.map((snapshot, index) => ({
       slotId: slotRefs[index].slotId,
@@ -443,6 +486,55 @@ export async function releaseWorkspaceSessionLease(
   });
 
   clearLocalWorkspaceSessionLease(context.workspaceId, user.uid);
+}
+
+export function subscribeWorkspaceSessionRevocation(
+  user: User,
+  context: SectorWorkspaceContext,
+  onRevoked: () => void,
+  onError?: (error: unknown) => void
+): () => void {
+  if (isFounderCapacityExempt(user.email) || context.resolutionSource !== 'platform-directory') {
+    return () => undefined;
+  }
+
+  const local = getLocalLeaseRecord(context.workspaceId, user.uid);
+  if (!local) return () => undefined;
+
+  const ref = doc(
+    db,
+    'workspaces',
+    context.workspaceId,
+    'sessionRevocations',
+    local.sessionId
+  );
+
+  let firstSnapshot = true;
+  const unsubscribe = onSnapshot(
+    ref,
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        firstSnapshot = false;
+        return;
+      }
+
+      const data = snapshot.data() as { expiresAt?: Timestamp };
+      const activeRevocation = !isTimestamp(data.expiresAt)
+        || data.expiresAt.toMillis() > Date.now();
+
+      if (activeRevocation && !firstSnapshot) {
+        onRevoked();
+        return;
+      }
+      if (activeRevocation && firstSnapshot) {
+        onRevoked();
+      }
+      firstSnapshot = false;
+    },
+    (error) => onError?.(error)
+  );
+
+  return unsubscribe;
 }
 
 export async function renewWorkspaceSessionLeaseIfDue(

@@ -19,6 +19,7 @@ import {
 } from './platformIdentity';
 import type { EmprovexProfileMode } from './profileMode';
 import {
+  PlatformSessionLeaseError,
   acquireWorkspaceSessionLease,
   isSessionCapacityExceededError,
 } from './platformSessionLease';
@@ -255,7 +256,9 @@ export async function resolveAuthenticatedWorkspaceContext(
       ? error.code
       : isSessionCapacityExceededError(error)
         ? error.code
-        : (
+        : error instanceof PlatformSessionLeaseError
+          ? error.code
+          : (
           typeof error === 'object'
           && error
           && 'code' in error

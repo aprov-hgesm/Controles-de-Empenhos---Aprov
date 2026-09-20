@@ -13,6 +13,7 @@ import {
 } from 'firebase/auth';
 import {
   collection,
+  collectionGroup,
   connectFirestoreEmulator,
   deleteDoc,
   deleteField,
@@ -623,7 +624,106 @@ async function main() {
     )
   );
 
-  await deleteDoc(sessionSlot1);
+  console.log('\nBloco 16.2 — painel e encerramento remoto de sessões');
+
+  await allowed('Administrador lista slots de sessão de toda a plataforma', () =>
+    getDocs(collectionGroup(admin.db, 'sessionSlots'))
+  );
+
+  const revokedSessionId = 'session-browser-a1';
+  const revocationRefA1 = doc(
+    admin.db,
+    'workspaces',
+    'workspace-a',
+    'sessionRevocations',
+    revokedSessionId
+  );
+
+  await allowed('Administrador revoga e libera uma sessão na mesma transação', () =>
+    runTransaction(admin.db, async (transaction) => {
+      const snapshot = await transaction.get(
+        doc(admin.db, 'workspaces', 'workspace-a', 'sessionSlots', 'slot-1')
+      );
+      assert.equal(snapshot.exists(), true);
+
+      transaction.set(revocationRefA1, {
+        revocationVersion: 'emprovex_session_revocation_v1',
+        sessionId: revokedSessionId,
+        workspaceId: 'workspace-a',
+        ug: '160416',
+        uid: sessionA.user.uid,
+        accountEmail: identities.a.email,
+        slotId: 'slot-1',
+        createdAt: serverTimestamp(),
+        createdBy: identities.founder.email,
+        expiresAt: Timestamp.fromMillis(Date.now() + (24 * 60 * 60 * 1000)),
+      });
+      transaction.delete(
+        doc(admin.db, 'workspaces', 'workspace-a', 'sessionSlots', 'slot-1')
+      );
+    })
+  );
+
+  await allowed('Setor lê tombstone conhecido dentro do próprio workspace', () =>
+    getDoc(
+      doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'sessionRevocations',
+        revokedSessionId
+      )
+    )
+  );
+
+  await allowed('Setor pode verificar tombstone inexistente antes de adquirir lease', () =>
+    getDoc(
+      doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'sessionRevocations',
+        'session-ainda-nao-revogada'
+      )
+    )
+  );
+
+  await denied('Outro workspace não lê revogação de sessão do Setor A', () =>
+    getDoc(
+      doc(
+        sessionB.db,
+        'workspaces',
+        'workspace-a',
+        'sessionRevocations',
+        revokedSessionId
+      )
+    )
+  );
+
+  await denied('Setor operacional não cria tombstone de revogação', () =>
+    setDoc(
+      doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'sessionRevocations',
+        'forged-revocation'
+      ),
+      {
+        revocationVersion: 'emprovex_session_revocation_v1',
+        sessionId: 'forged-revocation',
+        workspaceId: 'workspace-a',
+        ug: '160416',
+        uid: sessionA.user.uid,
+        accountEmail: identities.a.email,
+        slotId: 'slot-1',
+        createdAt: serverTimestamp(),
+        createdBy: identities.a.email,
+        expiresAt: Timestamp.fromMillis(Date.now() + (24 * 60 * 60 * 1000)),
+      }
+    )
+  );
+
   await deleteDoc(sessionSlot2);
 
   console.log('\nConcorrência otimista de empenhos');

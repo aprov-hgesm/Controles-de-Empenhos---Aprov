@@ -22,6 +22,7 @@ import { useRouter } from 'next/navigation';
 
 import { CreateSectorModal } from './CreateSectorModal';
 import { EditSectorModal } from './EditSectorModal';
+import { AdminSessionsPanel } from './AdminSessionsPanel';
 import { ToastNotification } from '../layout/ToastNotification';
 import { createHgesmFoundingWorkspace } from '../../lib/hgesmWorkspace';
 import type {
@@ -30,6 +31,7 @@ import type {
   UpdateSectorWorkspaceInput,
 } from '../../lib/platformAdminStore';
 import type { Workspace } from '../../lib/platformIdentity';
+import type { AdminWorkspaceSession } from '../../lib/platformAdminSessions';
 import { setActiveProfileMode } from '../../lib/profileMode';
 
 interface PlatformAdminViewProps {
@@ -43,11 +45,16 @@ interface PlatformAdminViewProps {
   changingStatusWorkspaceId: string | null;
   deletingWorkspaceId: string | null;
   resettingPasswordWorkspaceId: string | null;
+  sessions: AdminWorkspaceSession[];
+  loadingSessions: boolean;
+  sessionsError: string | null;
+  terminatingSessionId: string | null;
   onCreateSector: (input: CreateSectorWorkspaceInput) => Promise<void>;
   onUpdateSector: (input: UpdateSectorWorkspaceInput) => Promise<void>;
   onChangeSectorStatus: (workspaceId: string, status: SectorLifecycleStatus) => Promise<void>;
   onDeleteSector: (workspaceId: string, email: string) => Promise<void>;
   onResetSectorPassword: (workspaceId: string, email: string, newPassword: string) => Promise<void>;
+  onTerminateSession: (session: AdminWorkspaceSession) => Promise<void>;
   onLogout: () => Promise<void>;
 }
 
@@ -62,11 +69,16 @@ export function PlatformAdminView({
   changingStatusWorkspaceId,
   deletingWorkspaceId,
   resettingPasswordWorkspaceId,
+  sessions,
+  loadingSessions,
+  sessionsError,
+  terminatingSessionId,
   onCreateSector,
   onUpdateSector,
   onChangeSectorStatus,
   onDeleteSector,
   onResetSectorPassword,
+  onTerminateSession,
   onLogout,
 }: PlatformAdminViewProps) {
   const router = useRouter();
@@ -300,6 +312,16 @@ export function PlatformAdminView({
             detail="Leituras e escritas operacionais bloqueadas"
           />
         </section>
+
+        <AdminSessionsPanel
+          workspaces={visibleWorkspaces}
+          sessions={sessions}
+          loading={loadingSessions}
+          error={sessionsError}
+          terminatingSessionId={terminatingSessionId}
+          onTerminateSession={onTerminateSession}
+          onNotify={showAdminToast}
+        />
 
         <section className="overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#071225]/60 shadow-[0_22px_70px_rgba(0,8,28,0.18)] backdrop-blur-xl">
           <div className="px-5 sm:px-6 py-5 border-b border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
