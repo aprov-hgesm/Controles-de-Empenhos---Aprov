@@ -5,6 +5,13 @@ import {
   verifyFounderFirebaseRequest,
 } from '../../../../lib/server/firebaseFounderAuth';
 import {
+  createRequestSecurityContext,
+  enforceAuthenticatedAdminBurstLimit,
+  enforcePreAuthBurstLimit,
+  logSecurityEvent,
+  securityResponseHeaders,
+} from '../../../../lib/server/requestSecurity';
+import {
   isGoogleCloudMonitoringConfigured,
   loadFirebaseGlobalUsageObservation,
 } from '../../../../lib/server/googleCloudMonitoring';
@@ -12,15 +19,20 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const NO_STORE_HEADERS = {
-  'Cache-Control': 'private, no-store, max-age=0',
-};
-
 export async function GET(request: NextRequest) {
+  const security = createRequestSecurityContext(request, 'firebase-global-usage');
+
   try {
-    await verifyFounderFirebaseRequest(request.headers.get('authorization'));
+    enforcePreAuthBurstLimit(security);
+    const founder = await verifyFounderFirebaseRequest(
+      request.headers.get('authorization')
+    );
+    enforceAuthenticatedAdminBurstLimit(security, founder.uid, 'read');
   } catch (error) {
     if (error instanceof FounderAuthError) {
+      logSecurityEvent('authentication_rejected', security, {
+        status: error.status,
+      });
       return NextResponse.json(
         {
           code: error.status === 401 ? 'UNAUTHENTICATED' : 'FORBIDDEN',
@@ -28,11 +40,41 @@ export async function GET(request: NextRequest) {
         },
         {
           status: error.status,
-          headers: NO_STORE_HEADERS,
+          headers: securityResponseHeaders(security),
         }
       );
     }
 
+    if (
+      typeof error === 'object'
+      && error
+      && 'httpStatus' in error
+      && 'code' in error
+    ) {
+      const securityError = error as {
+        httpStatus: number;
+        code: string;
+        message?: string;
+        retryAfterSeconds?: number;
+      };
+      return NextResponse.json(
+        {
+          code: securityError.code,
+          message: securityError.message || 'Solicitação recusada por segurança.',
+        },
+        {
+          status: securityError.httpStatus,
+          headers: securityResponseHeaders(
+            security,
+            securityError.retryAfterSeconds
+              ? { 'Retry-After': String(securityError.retryAfterSeconds) }
+              : {}
+          ),
+        }
+      );
+    }
+
+    logSecurityEvent('authentication_rejected', security, { status: 401 });
     return NextResponse.json(
       {
         code: 'UNAUTHENTICATED',
@@ -40,7 +82,7 @@ export async function GET(request: NextRequest) {
       },
       {
         status: 401,
-        headers: NO_STORE_HEADERS,
+        headers: securityResponseHeaders(security),
       }
     );
   }
@@ -53,7 +95,7 @@ export async function GET(request: NextRequest) {
       },
       {
         status: 503,
-        headers: NO_STORE_HEADERS,
+        headers: securityResponseHeaders(security),
       }
     );
   }
@@ -67,14 +109,14 @@ export async function GET(request: NextRequest) {
       },
       {
         status: 200,
-        headers: NO_STORE_HEADERS,
+        headers: securityResponseHeaders(security),
       }
     );
   } catch (error) {
-    console.error(
-      'Falha ao consultar métricas globais do Firestore no Cloud Monitoring.',
-      error instanceof Error ? error.message : error
-    );
+    console.error('Falha ao consultar métricas globais do Firestore no Cloud Monitoring.', {
+      requestId: security.requestId,
+      error: error instanceof Error ? error.message : error,
+    });
 
     return NextResponse.json(
       {
@@ -83,7 +125,7 @@ export async function GET(request: NextRequest) {
       },
       {
         status: 502,
-        headers: NO_STORE_HEADERS,
+        headers: securityResponseHeaders(security),
       }
     );
   }
