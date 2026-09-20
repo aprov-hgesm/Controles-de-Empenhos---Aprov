@@ -75,6 +75,7 @@ export default function Home() {
     user,
     workspaceContext,
     empenhos,
+    enabled: ['painel', 'empenhos', 'nova_nf', 'relatorios', 'cronogramas'].includes(activeTab),
   });
 
   const { customLogo } = usePlatformBranding();
