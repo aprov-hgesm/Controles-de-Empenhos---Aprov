@@ -24,6 +24,7 @@ import {
   query,
   runTransaction,
   serverTimestamp,
+  Timestamp,
   setDoc,
   updateDoc,
   where,
@@ -45,6 +46,8 @@ function now() {
 
 function encodeFirestoreValue(value) {
   if (value === null) return { nullValue: null };
+  if (value instanceof Date) return { timestampValue: value.toISOString() };
+  if (value instanceof Timestamp) return { timestampValue: value.toDate().toISOString() };
   if (typeof value === 'string') return { stringValue: value };
   if (typeof value === 'boolean') return { booleanValue: value };
   if (typeof value === 'number') {
@@ -513,6 +516,115 @@ async function main() {
       marker: 'forbidden',
     })
   );
+
+  console.log('\nBloco 16.1 — limite de sessões simultâneas por UG');
+
+  const sessionLeaseExpiry = () => Timestamp.fromMillis(Date.now() + (10 * 60 * 1000));
+  const sessionLeasePayload = (slotId, sessionId, browserInstanceId) => ({
+    leaseVersion: 'emprovex_session_v1',
+    slotId,
+    sessionId,
+    workspaceId: 'workspace-a',
+    ug: '160416',
+    uid: sessionA.user.uid,
+    accountEmail: identities.a.email,
+    browserInstanceId,
+    startedAt: serverTimestamp(),
+    lastSeenAt: serverTimestamp(),
+    expiresAt: sessionLeaseExpiry(),
+  });
+
+  const sessionSlot1 = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'sessionSlots',
+    'slot-1'
+  );
+  const sessionSlot2 = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'sessionSlots',
+    'slot-2'
+  );
+
+  await allowed('Setor externo ocupa o primeiro slot de sessão', () =>
+    setDoc(sessionSlot1, sessionLeasePayload('slot-1', 'session-browser-a1', 'browser-instance-a1'))
+  );
+  await allowed('Setor externo ocupa o segundo slot de sessão', () =>
+    setDoc(sessionSlot2, sessionLeasePayload('slot-2', 'session-browser-a2', 'browser-instance-a2'))
+  );
+  await denied('Terceiro slot não existe no contrato de capacidade', () =>
+    setDoc(
+      doc(sessionA.db, 'workspaces', 'workspace-a', 'sessionSlots', 'slot-3'),
+      sessionLeasePayload('slot-3', 'session-browser-a3', 'browser-instance-a3')
+    )
+  );
+  await denied('Sessão diferente não sobrescreve slot ainda ativo', () =>
+    setDoc(
+      sessionSlot1,
+      sessionLeasePayload('slot-1', 'session-browser-intruso', 'browser-instance-intruso')
+    )
+  );
+  await allowed('Mesma sessão renova somente heartbeat e expiração', () =>
+    updateDoc(sessionSlot1, {
+      lastSeenAt: serverTimestamp(),
+      expiresAt: sessionLeaseExpiry(),
+    })
+  );
+  await denied('Outro workspace não lê slots de sessão do Setor A', () =>
+    getDoc(doc(sessionB.db, 'workspaces', 'workspace-a', 'sessionSlots', 'slot-1'))
+  );
+  await allowed('Administrador pode observar slots como metadado de capacidade', () =>
+    getDoc(doc(admin.db, 'workspaces', 'workspace-a', 'sessionSlots', 'slot-1'))
+  );
+  await denied('Conta fundadora não consome slot no workspace fundador', () =>
+    setDoc(
+      doc(admin.db, 'workspaces', 'hgesm-aprov', 'sessionSlots', 'slot-1'),
+      {
+        leaseVersion: 'emprovex_session_v1',
+        slotId: 'slot-1',
+        sessionId: 'founder-session',
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        uid: admin.user.uid,
+        accountEmail: identities.founder.email,
+        browserInstanceId: 'founder-browser',
+        startedAt: serverTimestamp(),
+        lastSeenAt: serverTimestamp(),
+        expiresAt: sessionLeaseExpiry(),
+      }
+    )
+  );
+
+  await allowed('Logout explícito pode liberar o slot da própria conta', () =>
+    deleteDoc(sessionSlot2)
+  );
+
+  await ownerSet('workspaces/workspace-a/sessionSlots/slot-2', {
+    leaseVersion: 'emprovex_session_v1',
+    slotId: 'slot-2',
+    sessionId: 'expired-session',
+    workspaceId: 'workspace-a',
+    ug: '160416',
+    uid: sessionA.user.uid,
+    accountEmail: identities.a.email,
+    browserInstanceId: 'expired-browser',
+    startedAt: new Date(Date.now() - (30 * 60 * 1000)),
+    lastSeenAt: new Date(Date.now() - (30 * 60 * 1000)),
+    expiresAt: new Date(Date.now() - (20 * 60 * 1000)),
+  });
+
+  await allowed('Slot expirado pode ser retomado por uma nova sessão', () =>
+    setDoc(
+      sessionSlot2,
+      sessionLeasePayload('slot-2', 'session-browser-reclaimed', 'browser-instance-reclaimed')
+    )
+  );
+
+  await deleteDoc(sessionSlot1);
+  await deleteDoc(sessionSlot2);
 
   console.log('\nConcorrência otimista de empenhos');
 
