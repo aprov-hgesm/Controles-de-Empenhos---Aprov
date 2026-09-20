@@ -405,6 +405,8 @@ export function InicioConstellation({
           && hoveredNode.id !== node.id
           && hoveredNode.supplierKey === node.supplierKey;
 
+        const hitSize = Math.max(16, node.size + 10);
+
         return (
           <button
             key={node.id}
@@ -417,9 +419,10 @@ export function InicioConstellation({
             style={{
               left: `${node.left}%`,
               top: `${node.top}%`,
-              width: node.size,
-              height: node.size,
+              width: hitSize,
+              height: hitSize,
               animationDelay: `${node.delay}s`,
+              ['--star-visual-size' as string]: `${node.size.toFixed(2)}px`,
               ['--star-drift-x' as string]: `${node.driftX.toFixed(2)}px`,
               ['--star-drift-y' as string]: `${node.driftY.toFixed(2)}px`,
               ['--star-drift-duration' as string]: `${node.driftDuration.toFixed(2)}s`,
@@ -432,7 +435,16 @@ export function InicioConstellation({
             aria-label={`${node.id}. ${node.message}. Abrir empenho.`}
           >
             <span className={styles.halo} aria-hidden="true" />
-            <span className={styles.core} aria-hidden="true" />
+            <span className={styles.core} aria-hidden="true">
+              <svg
+                className={styles.operationalStarGlyph}
+                viewBox="0 0 24 24"
+                focusable="false"
+                aria-hidden="true"
+              >
+                <path d="M12 0C12.8 7.2 16.8 11.2 24 12C16.8 12.8 12.8 16.8 12 24C11.2 16.8 7.2 12.8 0 12C7.2 11.2 11.2 7.2 12 0Z" />
+              </svg>
+            </span>
 
             <span className={styles.tooltip}>
               <span className={styles.tooltipEyebrow}>
