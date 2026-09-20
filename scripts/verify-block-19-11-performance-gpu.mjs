@@ -48,6 +48,8 @@ requireText(core, 'const scheduleFrame = () =>', 'Core não é RAF sob demanda.'
 requireText(viewCss, ".scene[data-ambient-paused='true'] *", 'Animações CSS não são pausadas com aba oculta.');
 requireText(viewCss, 'contain: paint style', 'Cena não possui contenção de pintura/estilo.');
 requireText(atmosphereCss, "[data-performance='balanced'] .nebulaThree", 'Atmosfera não reduz camadas em balanced.');
+requireText(atmosphereCss, '@keyframes ambientParticleFlow', 'Atmosfera não possui fluxo de partículas decorativas.');
+requireText(atmosphereCss, "[data-performance='static'] .flowParticle", 'Perfil static não desativa partículas em movimento.');
 requireText(coreCss, "[data-performance='balanced'] .orbitC", 'Core não reduz órbitas em balanced.');
 requireText(orbitCss, "[data-performance='balanced'] .sweepInner", 'Sistema orbital não reduz sweeps em balanced.');
 requireText(constellationCss, "[data-performance='balanced'] .star", 'Constelação não reduz animações em balanced.');
