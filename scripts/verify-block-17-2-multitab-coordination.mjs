@@ -38,6 +38,8 @@ for (const marker of [
   "handleTerminalFailure('revoked')",
   "handleTerminalFailure('lease-lost')",
   "handleTerminalFailure('access-changed')",
+  "ROLE_OWNER_KEY_PREFIX = 'emprovex:session-coordinator-role-owner:v1'",
+  'clearStoredRoleIfOwned',
 ]) {
   requireText(coordinator, marker, `Coordenador multiaba perdeu requisito: ${marker}`);
 }
