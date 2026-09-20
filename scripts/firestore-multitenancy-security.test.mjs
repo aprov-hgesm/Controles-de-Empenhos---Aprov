@@ -520,7 +520,7 @@ async function main() {
 
   console.log('\nBloco 16.1 — limite de sessões simultâneas por UG');
 
-  const sessionLeaseExpiry = () => Timestamp.fromMillis(Date.now() + (10 * 60 * 1000));
+  const sessionLeaseExpiry = () => Timestamp.fromMillis(Date.now() + (30 * 60 * 1000));
   const sessionLeasePayload = (slotId, sessionId, browserInstanceId) => ({
     leaseVersion: 'emprovex_session_v1',
     slotId,
@@ -568,8 +568,16 @@ async function main() {
       sessionLeasePayload('slot-1', 'session-browser-intruso', 'browser-instance-intruso')
     )
   );
-  await allowed('Mesma sessão renova somente heartbeat e expiração', () =>
+  await allowed('Mesma sessão renova diretamente o slot conhecido com identidade confirmada', () =>
     updateDoc(sessionSlot1, {
+      leaseVersion: 'emprovex_session_v1',
+      slotId: 'slot-1',
+      sessionId: 'session-browser-a1',
+      workspaceId: 'workspace-a',
+      ug: '160416',
+      uid: sessionA.user.uid,
+      accountEmail: identities.a.email,
+      browserInstanceId: 'browser-instance-a1',
       lastSeenAt: serverTimestamp(),
       expiresAt: sessionLeaseExpiry(),
     })
@@ -622,6 +630,36 @@ async function main() {
       sessionSlot2,
       sessionLeasePayload('slot-2', 'session-browser-reclaimed', 'browser-instance-reclaimed')
     )
+  );
+
+  await denied('Sessão antiga não renova slot retomado por outra identidade lógica', () =>
+    updateDoc(sessionSlot2, {
+      leaseVersion: 'emprovex_session_v1',
+      slotId: 'slot-2',
+      sessionId: 'expired-session',
+      workspaceId: 'workspace-a',
+      ug: '160416',
+      uid: sessionA.user.uid,
+      accountEmail: identities.a.email,
+      browserInstanceId: 'expired-browser',
+      lastSeenAt: serverTimestamp(),
+      expiresAt: sessionLeaseExpiry(),
+    })
+  );
+
+  await allowed('Sessão vencedora renova diretamente o slot retomado', () =>
+    updateDoc(sessionSlot2, {
+      leaseVersion: 'emprovex_session_v1',
+      slotId: 'slot-2',
+      sessionId: 'session-browser-reclaimed',
+      workspaceId: 'workspace-a',
+      ug: '160416',
+      uid: sessionA.user.uid,
+      accountEmail: identities.a.email,
+      browserInstanceId: 'browser-instance-reclaimed',
+      lastSeenAt: serverTimestamp(),
+      expiresAt: sessionLeaseExpiry(),
+    })
   );
 
   console.log('\nBloco 16.2 — painel e encerramento remoto de sessões');
