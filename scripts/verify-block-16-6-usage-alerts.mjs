@@ -14,6 +14,7 @@ const capacity = read('lib/platformCapacity.ts');
 const alerts = read('lib/usageAlerts.ts');
 const policy = read('lib/server/usageAlertPolicy.ts');
 const route = read('app/api/admin/usage-alert-policy/route.ts');
+const requestSecurity = read('lib/server/requestSecurity.ts');
 const panel = read('components/admin/AdminConsolidatedUsagePanel.tsx');
 const docs = read('docs/BLOCK_16_6_USAGE_ALERTS.md');
 const rules = read('firestore.rules');
@@ -32,7 +33,12 @@ requireText(alerts, "'workspace-estimate'", 'Alertas por UG precisam manter orig
 requireText(policy, 'EMPROVEX_GLOBAL_DAILY_USAGE_REFERENCE_JSON', 'Referência global explícita ausente.');
 requireText(policy, 'EMPROVEX_WORKSPACE_DAILY_USAGE_BUDGETS_JSON', 'Orçamentos por UG explícitos ausentes.');
 requireText(route, 'verifyFounderFirebaseRequest', 'Rota de política deve permanecer founder-only.');
-requireText(route, "'Cache-Control': 'private, no-store, max-age=0'", 'Rota deve impedir cache compartilhado.');
+requireText(route, 'securityResponseHeaders', 'Rota deve aplicar headers de segurança centralizados.');
+requireText(
+  requestSecurity,
+  "'Cache-Control': 'private, no-store, max-age=0'",
+  'Rota deve impedir cache compartilhado via camada central.'
+);
 requireText(panel, 'Alertas de consumo/cotas', 'Painel consolidado deve exibir a seção de alertas.');
 requireText(panel, 'não representam cobrança oficial', 'Painel deve preservar o aviso de cobrança.');
 requireText(docs, 'não gera alerta de orçamento', 'Documentação deve tratar ausência de referência sem falso positivo.');
