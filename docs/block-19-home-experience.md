@@ -43,9 +43,24 @@ Criar uma superfície `Início` separada do Dashboard. A tela deve funcionar com
 
 A constelação usa os dados já disponíveis no runtime e limita a renderização a 72 estrelas. O Bloco 19 posterior deverá criar um snapshot compacto por UG antes de tornar `Início` a tela automática após autenticação, evitando que a experiência estética reverta os ganhos de escalabilidade dos blocos 14–17.
 
+## Bloco 19.2 — cenário cinematográfico
+
+Concluído na mesma branch da fundação:
+
+- atmosfera modular com nebulosas, poeira, estrelas profundas e arcos;
+- varredura luminosa e horizonte de profundidade;
+- sinal orbital animado ao redor do núcleo;
+- sequência cinematográfica de abertura;
+- sequência completa apenas na primeira visita ao Início por sessão;
+- visitas seguintes usam fade curto para não cansar o operador;
+- redução automática dos movimentos com `prefers-reduced-motion`;
+- nenhum listener Firestore adicional e nenhuma dependência WebGL.
+
+A transição automática **Login → Início** permanece propositalmente adiada até a homologação visual. O Dashboard continua como landing pós-login, e a animação completa é validada ao entrar manualmente em Início.
+
 ## Próximas etapas
 
-- 19.2: aprofundar cenário cinematográfico e transição Login → Início;
+- 19.3: núcleo/logo interativo;
 - 19.3: núcleo/logo interativo;
 - 19.4: órbitas e planetas adicionais;
 - 19.5: constelação operacional completa;
