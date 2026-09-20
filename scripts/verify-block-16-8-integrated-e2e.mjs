@@ -148,7 +148,7 @@ for (const ciStep of [
   'Final TypeScript validation',
   'Diff hygiene',
   'Browser E2E with Firebase Emulator',
-  'Block 15 Final Release Gate',
+  'Block 16 Final Release Gate',
 ]) {
   requireText(workflow, ciStep, `Application CI perdeu gate integrado: ${ciStep}`);
 }
