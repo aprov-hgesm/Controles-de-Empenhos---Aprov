@@ -49,6 +49,8 @@ requireText(css, '@media (prefers-reduced-motion: reduce)', 'Shell deixou de res
 requireText(css, '@media (prefers-reduced-transparency: reduce)', 'Shell deixou de respeitar transparência reduzida.');
 requireText(css, '@media (prefers-contrast: more)', 'Shell deixou de oferecer contraste reforçado.');
 requireText(css, '@media (forced-colors: active)', 'Shell deixou de oferecer fallback de cores forçadas.');
+requireText(css, '.emprovex-sidebar-mobile-toolbar {\n  display: none;', 'Toolbar mobile da Sidebar está visível fora do breakpoint mobile/tablet.');
+requireText(css, '@media (max-width: 1023px) {\n  .emprovex-sidebar-mobile-toolbar {\n    display: flex;', 'Toolbar mobile da Sidebar não é reativada abaixo de 1024px.');
 requireText(css, '@media (max-width: 639px)', 'Refinamentos mobile principais não foram encontrados.');
 requireText(css, '@media (max-width: 369px)', 'Fallback para telas extremamente estreitas não foi encontrado.');
 
