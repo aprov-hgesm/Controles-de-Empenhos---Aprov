@@ -1083,3 +1083,25 @@
 [data-performance='static'] .planetBands {
   display: none;
 }
+
+
+/* Block 20 — semantic tooltip accents without rotational coupling */
+.floatingTooltip[data-kind='alerts']::before {
+  background: linear-gradient(90deg, transparent, rgba(255, 109, 84, 0.72), transparent);
+}
+
+.floatingTooltip[data-kind='receiving']::before {
+  background: linear-gradient(90deg, transparent, rgba(87, 225, 214, 0.7), transparent);
+}
+
+.floatingTooltip[data-kind='execution']::before {
+  background: linear-gradient(90deg, transparent, rgba(247, 190, 82, 0.72), transparent);
+}
+
+.floatingTooltip[data-kind='dashboard']::before {
+  background: linear-gradient(90deg, transparent, rgba(171, 130, 255, 0.7), transparent);
+}
+
+.floatingClassTooltip[data-kind='classes']::before {
+  background: linear-gradient(90deg, transparent, rgba(216, 192, 255, 0.72), transparent);
+}
