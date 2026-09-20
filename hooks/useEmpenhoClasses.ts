@@ -33,12 +33,14 @@ interface UseEmpenhoClassesInput {
   user: User | null;
   workspaceContext: ResolvedWorkspaceContext;
   empenhos: Empenho[];
+  enabled?: boolean;
 }
 
 export function useEmpenhoClasses({
   user,
   workspaceContext,
   empenhos,
+  enabled = true,
 }: UseEmpenhoClassesInput) {
   const [configuredClasses, setConfiguredClasses] = useState<EmpenhoClassDefinition[]>(() =>
     mergeEmpenhoClassDefinitions([])
@@ -48,6 +50,12 @@ export function useEmpenhoClasses({
   useEffect(() => {
     if (!user || !isOperationalSectorContext(workspaceContext)) {
       setConfiguredClasses(mergeEmpenhoClassDefinitions([]));
+      return;
+    }
+
+    if (!enabled) {
+      // Mantém o último snapshot em memória, mas não sustenta listener em telas
+      // que não utilizam configuração de classes.
       return;
     }
 
@@ -73,7 +81,7 @@ export function useEmpenhoClasses({
         setConfiguredClasses(mergeEmpenhoClassDefinitions([]));
       }
     );
-  }, [user, workspaceContext]);
+  }, [enabled, user, workspaceContext]);
 
   const empenhoClasses = useMemo(
     () => mergeEmpenhoClassDefinitions(configuredClasses, empenhos),
