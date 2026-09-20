@@ -26,7 +26,8 @@ requireText(view, '<InicioInteractionLayer', 'Início não renderiza a camada de
 requireText(view, 'sceneRef={rootRef}', 'Camada de microinterações não está vinculada ao cenário.');
 requireText(view, 'enabled={enableFineMotion}', 'Camada de microinterações não respeita o perfil de performance.');
 requireText(layer, "closest(", 'Retículo não detecta elementos interativos.');
-requireText(layer, "button, a, [role=\"button\"], [tabindex]", 'Allowlist de alvos interativos ausente.');
+requireText(layer, "button, a, [role=\"button\"]", 'Allowlist de alvos navegáveis ausente.');
+forbidText(layer, '[tabindex]', 'Elementos apenas focáveis voltaram a ser tratados como clicáveis.');
 requireText(layer, "pointermove", 'Camada não acompanha o ponteiro.');
 requireText(layer, "pointerdown", 'Camada não reage ao acionamento.');
 requireText(layer, "requestAnimationFrame", 'Movimento do retículo não usa RAF.');
@@ -34,9 +35,10 @@ requireText(layerCss, ".root[data-target='true'] .reticle", 'Retículo não dife
 requireText(layerCss, ".root[data-pulse='true'] .pulse", 'Pulso de clique ausente.');
 requireText(layerCss, '@media (pointer: coarse)', 'Microinterações não são desligadas em ponteiro coarse.');
 requireText(layerCss, '@media (prefers-reduced-motion: reduce)', 'Microinterações não respeitam reduced motion.');
-requireText(coreCss, '.root:active', 'Núcleo não possui resposta de pressionamento.');
-requireText(orbitCss, '.planet:active .planetSurface', 'Planetas não possuem resposta de pressionamento.');
-requireText(constellationCss, '.star:active', 'Estrelas não possuem resposta de pressionamento.');
+forbidText(coreCss, '.root:active', 'Núcleo informativo ainda possui affordance visual de clique.');
+forbidText(orbitCss, '.planet:active .planetSurface', 'Planetas informativos ainda possuem affordance visual de clique.');
+forbidText(orbitCss, '.classPlanet:active', 'Planeta Classes ainda possui affordance visual de clique.');
+requireText(constellationCss, '.star:active', 'Estrelas navegáveis perderam resposta de pressionamento.');
 requireText(docs, 'Bloco 19.8', 'Documentação não registra microinterações.');
 
 forbidText(layerCss, 'cursor: none', 'Cursor nativo foi ocultado indevidamente.');
@@ -55,7 +57,7 @@ if (findings.length) {
   console.log('BLOCK 19.8 MICROINTERACTIONS: READY');
   console.log('Retículo contextual: ATIVO');
   console.log('Pulso de interação: ATIVO');
-  console.log('Resposta tátil visual: ATIVA');
+  console.log('Resposta de clique: RESTRITA ÀS ESTRELAS NAVEGÁVEIS');
   console.log('Cursor nativo: PRESERVADO');
   console.log('Reduced motion/coarse pointer: PROTEGIDOS');
   console.log('Firestore adicional: ZERO');
