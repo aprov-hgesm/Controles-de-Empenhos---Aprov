@@ -405,3 +405,20 @@ jobs:
           echo "browser-e2e-emulator=${{ needs.browser-e2e-emulator.result }}"
           test "${{ needs.validate-application.result }}" = "success"
           test "${{ needs.browser-e2e-emulator.result }}" = "success"
+  block-19-final-closure-gate:
+    name: Block 19 Final Closure Gate
+    if: ${{ always() }}
+    needs:
+      - validate-application
+      - browser-e2e-emulator
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require Block 19 critical validation jobs
+        shell: bash
+        run: |
+          echo "validate-application=${{ needs.validate-application.result }}"
+          echo "browser-e2e-emulator=${{ needs.browser-e2e-emulator.result }}"
+          test "${{ needs.validate-application.result }}" = "success"
+          test "${{ needs.browser-e2e-emulator.result }}" = "success"
+          echo "BLOCK 19 FINAL CLOSURE: READY"
