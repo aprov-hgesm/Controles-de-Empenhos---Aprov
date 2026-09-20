@@ -150,29 +150,37 @@ export function InicioOrbitSystem({
           className={styles.classPlanet}
           onClick={() => onNavigate('painel')}
           aria-label="Abrir classes de empenho no Painel"
+          aria-describedby="inicio-class-tooltip"
         >
           <span className={styles.classPlanetOrbit} aria-hidden="true" />
           <Orbit aria-hidden="true" />
           <span>Classes</span>
         </button>
 
-        <div className={styles.classMoons}>
-          {classStats.map((item, index) => (
-            <button
-              key={item.code}
-              type="button"
-              className={styles.classMoon}
-              style={{ ['--moon-index' as string]: index }}
-              onClick={() => onNavigate('painel')}
-              aria-label={`${item.code}: ${item.count} empenhos, ${formatCurrency(item.value)}`}
-            >
-              <i aria-hidden="true" />
-              <span>
-                <strong>{item.code}</strong>
-                <small>{formatCurrency(item.value)}</small>
-              </span>
-            </button>
-          ))}
+        <div
+          id="inicio-class-tooltip"
+          className={styles.classTooltip}
+          role="tooltip"
+        >
+          <div className={styles.classTooltipHeader}>
+            <strong>Classes de empenho</strong>
+            <span>
+              {classStats.reduce((total, item) => total + item.count, 0)} empenho(s)
+            </span>
+          </div>
+
+          <div className={styles.classTooltipList}>
+            {classStats.map((item) => (
+              <div key={item.code} className={styles.classTooltipRow}>
+                <i aria-hidden="true" />
+                <span>
+                  <strong>{item.code}</strong>
+                  <small>{item.count} empenho(s)</small>
+                </span>
+                <em>{formatCurrency(item.value)}</em>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
