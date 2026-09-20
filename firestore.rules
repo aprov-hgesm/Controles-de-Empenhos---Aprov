@@ -246,6 +246,84 @@ service cloud.firestore {
         && resource.data.accountEmail == request.auth.token.email;
     }
 
+    function validWorkspaceUsageCounter(value) {
+      return value is number && value >= 0;
+    }
+
+    function validWorkspaceUsageEstimate(workspaceId, dayKey) {
+      let workspace = workspaceData(workspaceId);
+      return canAccessWorkspace(workspaceId)
+        && 'ug' in workspace
+        && isValidUnitUg(workspace.ug)
+        && request.resource.data.keys().hasAll([
+          'telemetryVersion',
+          'source',
+          'workspaceId',
+          'ug',
+          'dayKey',
+          'windowStartedAt',
+          'windowEndedAt',
+          'estimatedDocumentReads',
+          'estimatedDocumentWrites',
+          'estimatedDocumentDeletes',
+          'realtimeSnapshots',
+          'peakRealtimeListeners',
+          'telemetryFlushes',
+          'lastReportedAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'telemetryVersion',
+          'source',
+          'workspaceId',
+          'ug',
+          'dayKey',
+          'windowStartedAt',
+          'windowEndedAt',
+          'estimatedDocumentReads',
+          'estimatedDocumentWrites',
+          'estimatedDocumentDeletes',
+          'realtimeSnapshots',
+          'peakRealtimeListeners',
+          'telemetryFlushes',
+          'lastReportedAt'
+        ])
+        && request.resource.data.telemetryVersion == 'emprovex_usage_v1'
+        && request.resource.data.source == 'emprovex-workspace-estimate'
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.ug == workspace.ug
+        && request.resource.data.dayKey == dayKey
+        && request.resource.data.windowStartedAt is string
+        && request.resource.data.windowEndedAt is string
+        && validWorkspaceUsageCounter(request.resource.data.estimatedDocumentReads)
+        && validWorkspaceUsageCounter(request.resource.data.estimatedDocumentWrites)
+        && validWorkspaceUsageCounter(request.resource.data.estimatedDocumentDeletes)
+        && validWorkspaceUsageCounter(request.resource.data.realtimeSnapshots)
+        && validWorkspaceUsageCounter(request.resource.data.peakRealtimeListeners)
+        && validWorkspaceUsageCounter(request.resource.data.telemetryFlushes)
+        && request.resource.data.lastReportedAt == request.time;
+    }
+
+    function validWorkspaceUsageEstimateCreate(workspaceId, dayKey) {
+      return validWorkspaceUsageEstimate(workspaceId, dayKey);
+    }
+
+    function validWorkspaceUsageEstimateUpdate(workspaceId, dayKey) {
+      return validWorkspaceUsageEstimate(workspaceId, dayKey)
+        && request.resource.data.telemetryVersion == resource.data.telemetryVersion
+        && request.resource.data.source == resource.data.source
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.ug == resource.data.ug
+        && request.resource.data.dayKey == resource.data.dayKey
+        && request.resource.data.windowStartedAt == resource.data.windowStartedAt
+        && request.resource.data.windowEndedAt == resource.data.windowEndedAt
+        && request.resource.data.estimatedDocumentReads >= resource.data.estimatedDocumentReads
+        && request.resource.data.estimatedDocumentWrites >= resource.data.estimatedDocumentWrites
+        && request.resource.data.estimatedDocumentDeletes >= resource.data.estimatedDocumentDeletes
+        && request.resource.data.realtimeSnapshots >= resource.data.realtimeSnapshots
+        && request.resource.data.peakRealtimeListeners >= resource.data.peakRealtimeListeners
+        && request.resource.data.telemetryFlushes > resource.data.telemetryFlushes;
+    }
+
     function validSessionRevocationCreate(workspaceId, sessionId) {
       return isPlatformAdmin()
         && request.resource.data.keys().hasAll([
@@ -1537,6 +1615,15 @@ service cloud.firestore {
       allow list: if isPlatformAdmin();
       allow create: if validSessionRevocationCreate(workspaceId, sessionId);
       allow update, delete: if false;
+    }
+
+    // Block 16.3 — low-frequency workspace usage estimates. Sector clients can
+    // only append monotonically to their own UG counters; only the founder can read.
+    match /workspaces/{workspaceId}/usageEstimates/{dayKey} {
+      allow get, list: if isPlatformAdmin();
+      allow create: if validWorkspaceUsageEstimateCreate(workspaceId, dayKey);
+      allow update: if validWorkspaceUsageEstimateUpdate(workspaceId, dayKey);
+      allow delete: if false;
     }
 
     // Workspace-scoped operational data. There is deliberately no admin bypass:
