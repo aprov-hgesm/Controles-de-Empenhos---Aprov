@@ -26,6 +26,7 @@ import { resetActiveProfileMode, setActiveProfileMode } from '../lib/profileMode
 import { normalizePlatformEmail } from '../lib/platformIdentity';
 import { SESSION_HEARTBEAT_INTERVAL_MS } from '../lib/platformCapacity';
 import {
+  flushWorkspaceUsageTelemetry,
   recordWorkspaceRealtimeSnapshot,
   trackWorkspaceRealtimeListener,
 } from '../lib/workspaceUsageTelemetry';
@@ -486,6 +487,13 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
         console.warn('Não foi possível liberar imediatamente o lease de sessão.', error);
         clearLocalWorkspaceSessionLease(workspaceContext.workspaceId, user.uid);
       }
+    }
+
+    if (user && isOperationalSectorContext(workspaceContext)) {
+      await flushWorkspaceUsageTelemetry({
+        workspaceId: workspaceContext.workspaceId,
+        ug: workspaceContext.ug,
+      });
     }
 
     resetActiveProfileMode();
