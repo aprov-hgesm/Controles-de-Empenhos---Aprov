@@ -187,6 +187,18 @@ async function coordinatorRole(page) {
   });
 }
 
+async function logicalSessionId(page) {
+  return page.evaluate(() => {
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (key?.startsWith('emprovex:workspace-session:v1:')) {
+        return localStorage.getItem(key);
+      }
+    }
+    return null;
+  });
+}
+
 async function coordinatorDiagnostics(page) {
   return page.evaluate(async () => {
     const roleEntries = [];
@@ -343,6 +355,59 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
     } finally {
       await contextC.close();
       await contextB.close();
+    }
+  });
+
+  test('coordenação multiaba mantém um único líder e promove a seguidora sem trocar a sessão lógica', async ({ browser }) => {
+    const context = await browser.newContext();
+    const pageA = await context.newPage();
+
+    try {
+      await pageA.goto('/');
+      await loginSector(pageA);
+
+      await expect.poll(
+        () => coordinatorRole(pageA),
+        { timeout: 15_000, intervals: [250, 500, 1000] }
+      ).toBe('leader');
+
+      const pageB = await context.newPage();
+      await pageB.goto('/');
+      await expect(pageB.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
+        timeout: 20_000,
+      });
+
+      await expect.poll(async () => {
+        const roles = [await coordinatorRole(pageA), await coordinatorRole(pageB)]
+          .filter(Boolean)
+          .sort();
+        return roles.join(',');
+      }, {
+        timeout: 30_000,
+        intervals: [250, 500, 1000],
+      }).toBe('follower,leader');
+
+      const roleA = await coordinatorRole(pageA);
+      const leaderPage = roleA === 'leader' ? pageA : pageB;
+      const followerPage = roleA === 'leader' ? pageB : pageA;
+      const sessionIdBefore = await logicalSessionId(followerPage);
+      expect(sessionIdBefore).toBeTruthy();
+
+      await leaderPage.close();
+
+      await expect.poll(
+        () => coordinatorRole(followerPage),
+        { timeout: 15_000, intervals: [250, 500, 1000] }
+      ).toBe('leader');
+
+      await expect(
+        followerPage.getByRole('navigation', { name: 'Navegação principal' })
+      ).toBeVisible();
+      expect(await logicalSessionId(followerPage)).toBe(sessionIdBefore);
+
+      await logoutIfAuthenticated(followerPage);
+    } finally {
+      await context.close();
     }
   });
 
