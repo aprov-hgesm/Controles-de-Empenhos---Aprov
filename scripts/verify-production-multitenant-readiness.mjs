@@ -27,6 +27,7 @@ const requiredFiles = [
   'lib/server/sectorProvisioningAdmin.ts',
   'lib/sectorProvisioning.ts',
   'hooks/useOperationalData.ts',
+  'lib/platformSessionCoordinator.ts',
   'lib/platformAdminStore.ts',
   'lib/platformAccess.ts',
   'lib/googleDriveWorkspace.ts',
@@ -49,6 +50,7 @@ const sectorProvisioning = read('lib/server/sectorProvisioningAdmin.ts');
 const drive = read('lib/googleDriveWorkspace.ts');
 const storage = read('lib/workspaceDriveSettings.ts');
 const lifecycle = read('hooks/useOperationalData.ts');
+const sessionCoordinator = read('lib/platformSessionCoordinator.ts');
 
 const legacyDriveArtifacts = [
   'lib/googleDrivePoc.ts',
@@ -140,7 +142,21 @@ if (!founderDriveBlock) {
 }
 requireText(drive, 'emprovexWorkspaceId', 'Pastas Drive não estão marcadas por workspace.');
 requireText(storage, "WORKSPACE_DOCUMENT_STORAGE_SETTINGS_ID = 'documentStorage'", 'Configuração Drive não usa documentStorage.');
-requireText(lifecycle, 'observador de ciclo de vida para setores externos', 'Cliente não observa suspensão administrativa.');
+requireText(
+  lifecycle,
+  'startWorkspaceSessionCoordinator',
+  'Cliente operacional não inicia o coordenador de ciclo de vida.'
+);
+requireText(
+  sessionCoordinator,
+  "data.status !== 'active'",
+  'Coordenador não observa suspensão administrativa.'
+);
+requireText(
+  sessionCoordinator,
+  "handleTerminalFailure('access-changed')",
+  'Suspensão administrativa não invalida a sessão coordenada.'
+);
 
 const productionDatabaseId = 'ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1';
 const firestoreTargets = Array.isArray(firebaseConfig.firestore)
