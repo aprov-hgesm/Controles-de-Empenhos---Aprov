@@ -152,6 +152,18 @@ async function logoutIfAuthenticated(page) {
   }
 }
 
+async function sessionTabRole(page) {
+  return page.evaluate(() => {
+    for (let index = 0; index < sessionStorage.length; index += 1) {
+      const key = sessionStorage.key(index);
+      if (key?.startsWith('emprovex:session-tab-role:v1:')) {
+        return sessionStorage.getItem(key);
+      }
+    }
+    return null;
+  });
+}
+
 function leaseSeed({
   slotId,
   sessionId,
@@ -312,9 +324,23 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
     }
   });
 
-  test('revogação administrativa derruba a sessão, tombstone bloqueia retorno e novo login cria nova identidade', async ({ page }) => {
+  test('revogação administrativa derruba líder e follower, tombstone bloqueia retorno e novo login cria nova identidade', async ({ page }) => {
     await page.goto('/');
     await loginSector(page);
+
+    const sibling = await page.context().newPage();
+    await sibling.goto('/');
+    await expect(sibling.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
+      timeout: 20_000,
+    });
+
+    await expect.poll(async () => {
+      const roles = [await sessionTabRole(page), await sessionTabRole(sibling)].sort();
+      return roles.join(',');
+    }, {
+      timeout: 15_000,
+      intervals: [100, 250, 500],
+    }).toBe('follower,leader');
 
     const [session] = await workspaceSessions();
     expect(session).toBeTruthy();
@@ -342,6 +368,13 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
     await expect(
       page.getByRole('navigation', { name: 'Navegação principal' })
     ).toHaveCount(0);
+    await expect(sibling.getByTestId('sector-login-email')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(
+      sibling.getByRole('navigation', { name: 'Navegação principal' })
+    ).toHaveCount(0);
+    await sibling.close();
 
     await page.evaluate(({ key, sessionId }) => {
       localStorage.setItem(key, sessionId);
