@@ -67,38 +67,27 @@ async function expectResponsiveInicio(page, label) {
   const scene = page.getByTestId('inicio-scene');
   const chrome = page.getByTestId('inicio-scene-chrome');
   const identity = page.getByTestId('inicio-identity');
-  const quickActions = page.getByTestId('inicio-quick-actions');
-
   await expect(scene).toBeVisible();
   await expect(chrome).toBeVisible();
   await expect(identity).toBeVisible();
-  await expect(quickActions).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Novo empenho' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Cadastrar NF' })).toBeVisible();
+  await expect(page.getByTestId('inicio-quick-actions')).toHaveCount(0);
+  await expect(page.getByText('Continuar de onde parei', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Ações rápidas', { exact: true })).toHaveCount(0);
 
-  const [sceneBox, identityBox, quickBox] = await Promise.all([
+  const [sceneBox, identityBox] = await Promise.all([
     scene.boundingBox(),
     identity.boundingBox(),
-    quickActions.boundingBox(),
   ]);
 
   expect(sceneBox, `${label}: scene sem bounding box`).not.toBeNull();
   expect(identityBox, `${label}: identidade sem bounding box`).not.toBeNull();
-  expect(quickBox, `${label}: dock sem bounding box`).not.toBeNull();
 
-  if (!sceneBox || !identityBox || !quickBox) return;
+  if (!sceneBox || !identityBox) return;
 
   const tolerance = 2;
   expect(identityBox.x).toBeGreaterThanOrEqual(sceneBox.x - tolerance);
   expect(identityBox.x + identityBox.width).toBeLessThanOrEqual(
     sceneBox.x + sceneBox.width + tolerance
-  );
-  expect(quickBox.x).toBeGreaterThanOrEqual(sceneBox.x - tolerance);
-  expect(quickBox.x + quickBox.width).toBeLessThanOrEqual(
-    sceneBox.x + sceneBox.width + tolerance
-  );
-  expect(quickBox.y + quickBox.height).toBeLessThanOrEqual(
-    sceneBox.y + sceneBox.height + tolerance
   );
 }
 
