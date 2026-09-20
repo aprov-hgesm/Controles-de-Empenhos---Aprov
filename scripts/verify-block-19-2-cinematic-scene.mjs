@@ -19,6 +19,7 @@ const atmosphereCss = read('features/inicio/components/InicioAtmosphere.module.c
 const entry = read('features/inicio/components/InicioEntrySequence.tsx');
 const entryCss = read('features/inicio/components/InicioEntrySequence.module.css');
 const sceneCss = read('features/inicio/components/InicioView.module.css');
+const orbitCss = read('features/inicio/components/InicioOrbitSystem.module.css');
 const docs = read('docs/block-19-home-experience.md');
 
 requireText(view, '<InicioAtmosphere />', 'Início não compõe a atmosfera cinematográfica.');
@@ -33,7 +34,7 @@ requireText(entry, "sessionStorage.getItem(STORAGE_KEY)", 'Entrada não limita a
 requireText(entry, "setMode(seen ? 'short' : 'full')", 'Entrada não diferencia visita inicial de retorno.');
 requireText(entry, 'useReducedMotion', 'Entrada não respeita preferência de movimento reduzido.');
 requireText(entryCss, '.aperture', 'Entrada perdeu abertura cinematográfica.');
-requireText(sceneCss, '@keyframes orbitalSweep', 'Sistema solar não possui sinal orbital.');
+requireText(orbitCss, '@keyframes orbitalSweep', 'Sistema solar não possui sinal orbital na camada orbital dedicada.');
 requireText(sceneCss, '.interactionHint', 'Cena não possui affordance de exploração.');
 requireText(sceneCss, '@media (prefers-reduced-motion: reduce)', 'Cena não protege usuários com movimento reduzido.');
 requireText(docs, 'nenhum listener Firestore adicional', 'Documentação não registra neutralidade de consumo.');
