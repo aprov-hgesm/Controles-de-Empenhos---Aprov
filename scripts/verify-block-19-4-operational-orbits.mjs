@@ -25,8 +25,8 @@ requireText(orbit, "const CLASS_CODES = ['QR', 'CALI', 'PASA', 'FUNADOM']", 'Sis
 requireText(orbit, 'receiving.pendingEmpenhos', 'Planeta Recebimentos não usa saldo agregado do snapshot.');
 requireText(orbit, 'execution.percentage', 'Planeta Execução não usa percentual agregado do snapshot.');
 requireText(orbit, 'alertSeverity', 'Planeta Alertas não usa severidade agregada do snapshot.');
-requireText(orbit, "onNavigate('itens')", 'Planeta Recebimentos não navega para consulta de itens.');
-requireText(orbit, "onNavigate('painel')", 'Planetas analíticos não navegam ao Painel.');
+forbidText(orbit, 'onNavigate', 'Planetas voltaram a controlar navegação da Home.');
+forbidText(orbit, 'onClick=', 'Planetas voltaram a possuir ação de clique navegável.');
 requireText(orbitCss, '.alertPlanet', 'Planeta de Alertas sem identidade visual.');
 requireText(orbitCss, '.receivingPlanet', 'Planeta de Recebimentos sem identidade visual.');
 requireText(orbitCss, '.executionPlanet', 'Planeta de Execução sem identidade visual.');
@@ -54,7 +54,7 @@ if (findings.length) {
   process.exitCode = 2;
 } else {
   console.log('BLOCK 19.4 OPERATIONAL ORBITS: READY');
-  console.log('Alertas: PLANETA ATIVO');
+  console.log('Planetas: INFORMATIVOS, SEM NAVEGAÇÃO');
   console.log('Recebimentos: PLANETA ATIVO');
   console.log('Execução: PLANETA ATIVO');
   console.log('Classes: TOOLTIP SOB DEMANDA ATIVO');
