@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import { Sparkles } from 'lucide-react';
 
 import type { Alert, Empenho } from '../../../lib/types';
 import type { OperationalActiveTab } from '../../../lib/operationalSubscriptionPlan';
@@ -9,6 +8,7 @@ import { InicioAtmosphere } from './InicioAtmosphere';
 import { InicioEntrySequence } from './InicioEntrySequence';
 import { InicioConstellation } from './InicioConstellation';
 import { InicioCore } from './InicioCore';
+import { InicioIdentityPanel } from './InicioIdentityPanel';
 import { InicioOrbitSystem } from './InicioOrbitSystem';
 import styles from './InicioView.module.css';
 
@@ -16,7 +16,12 @@ interface InicioViewProps {
   empenhos: Empenho[];
   alerts: Alert[];
   userDisplayName: string;
+  workspaceName: string;
+  organizationName: string;
+  organizationShortName: string | null;
+  sectionName: string;
   workspaceUg: string | null;
+  isFoundingWorkspace: boolean;
   customLogo: string | null;
   onNavigate: (tab: OperationalActiveTab) => void;
   onSelectEmpenho: (empenhoId: string) => void;
@@ -41,7 +46,12 @@ export function InicioView({
   empenhos,
   alerts,
   userDisplayName,
+  workspaceName,
+  organizationName,
+  organizationShortName,
+  sectionName,
   workspaceUg,
+  isFoundingWorkspace,
   customLogo,
   onNavigate,
   onSelectEmpenho,
@@ -100,8 +110,6 @@ export function InicioView({
 
   const activeAlertCount = alerts.length;
 
-  const firstName = userDisplayName.trim().split(/\s+/)[0] || 'Operador';
-
   return (
     <section ref={rootRef} className={styles.scene} data-ready="true" aria-label="Início EMPROVEX">
       <InicioEntrySequence />
@@ -114,21 +122,15 @@ export function InicioView({
         onSelectEmpenho={onSelectEmpenho}
       />
 
-      <header className={styles.copy}>
-        <div className={styles.kicker}>
-          <Sparkles aria-hidden="true" />
-          <span>Mapa operacional</span>
-        </div>
-        <h2>Bem-vindo de volta, {firstName}.</h2>
-        <p>
-          Cada estrela representa um empenho. O ambiente reage ao estado real da operação
-          sem substituir o painel analítico.
-        </p>
-        <div className={styles.identity}>
-          <span>EMPROVEX ONLINE</span>
-          {workspaceUg && <span>UG {workspaceUg}</span>}
-        </div>
-      </header>
+      <InicioIdentityPanel
+        userDisplayName={userDisplayName}
+        workspaceName={workspaceName}
+        organizationName={organizationName}
+        organizationShortName={organizationShortName}
+        sectionName={sectionName}
+        workspaceUg={workspaceUg}
+        isFoundingWorkspace={isFoundingWorkspace}
+      />
 
       <div className={styles.system} aria-label="Sistema solar operacional EMPROVEX">
         <InicioOrbitSystem
