@@ -162,3 +162,8 @@
     display: none;
   }
 }
+
+
+.root[data-enabled='false'] {
+  display: none;
+}
