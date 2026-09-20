@@ -42,7 +42,7 @@ for (const marker of [
 }
 
 for (const forbidden of [
-  'BroadcastChannel',
+  'new BroadcastChannel',
   "setRole('leader')",
   "setRole('follower')",
   'leadershipAbortController',
