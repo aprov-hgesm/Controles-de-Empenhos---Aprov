@@ -84,7 +84,7 @@ if (
 }
 
 for (const marker of [
-  'não cria uma terceira fonte de verdade',
+  'sem criar uma terceira fonte de verdade',
   'participação por UG nunca é apresentada como rateio da fatura global',
   'banco Firestore nomeado',
   'não presume automaticamente',
