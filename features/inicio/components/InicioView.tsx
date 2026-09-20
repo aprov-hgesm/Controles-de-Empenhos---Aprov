@@ -10,6 +10,8 @@ import { InicioConstellation } from './InicioConstellation';
 import { InicioCore } from './InicioCore';
 import { InicioIdentityPanel } from './InicioIdentityPanel';
 import { InicioOrbitSystem } from './InicioOrbitSystem';
+import { InicioQuickActions } from './InicioQuickActions';
+import type { InicioResumeTarget } from '../hooks/useInicioWorkMemory';
 import styles from './InicioView.module.css';
 
 interface InicioViewProps {
@@ -23,8 +25,12 @@ interface InicioViewProps {
   workspaceUg: string | null;
   isFoundingWorkspace: boolean;
   customLogo: string | null;
+  resumeTarget: InicioResumeTarget | null;
   onNavigate: (tab: OperationalActiveTab) => void;
   onSelectEmpenho: (empenhoId: string) => void;
+  onResumeWork: () => void;
+  onCreateEmpenho: () => void;
+  onRegisterInvoice: () => void;
 }
 
 function getEmpenhoValue(empenho: Empenho): number {
@@ -53,8 +59,12 @@ export function InicioView({
   workspaceUg,
   isFoundingWorkspace,
   customLogo,
+  resumeTarget,
   onNavigate,
   onSelectEmpenho,
+  onResumeWork,
+  onCreateEmpenho,
+  onRegisterInvoice,
 }: InicioViewProps) {
   const rootRef = useRef<HTMLElement>(null);
 
@@ -153,6 +163,13 @@ export function InicioView({
         <p>Explore os elementos do mapa com o cursor</p>
       </div>
 
+      <InicioQuickActions
+        resumeTarget={resumeTarget}
+        onResume={onResumeWork}
+        onCreateEmpenho={onCreateEmpenho}
+        onRegisterInvoice={onRegisterInvoice}
+        onNavigate={onNavigate}
+      />
     </section>
   );
 }
