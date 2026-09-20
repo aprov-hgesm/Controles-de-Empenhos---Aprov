@@ -7,6 +7,7 @@ import type { Alert, Empenho } from '../../../lib/types';
 import type { OperationalActiveTab } from '../../../lib/operationalSubscriptionPlan';
 import { InicioAtmosphere } from './InicioAtmosphere';
 import { InicioEntrySequence } from './InicioEntrySequence';
+import { InicioCore } from './InicioCore';
 import styles from './InicioView.module.css';
 
 interface InicioViewProps {
@@ -14,6 +15,7 @@ interface InicioViewProps {
   alerts: Alert[];
   userDisplayName: string;
   workspaceUg: string | null;
+  customLogo: string | null;
   onNavigate: (tab: OperationalActiveTab) => void;
 }
 
@@ -97,6 +99,7 @@ export function InicioView({
   alerts,
   userDisplayName,
   workspaceUg,
+  customLogo,
   onNavigate,
 }: InicioViewProps) {
   const rootRef = useRef<HTMLElement>(null);
@@ -268,22 +271,13 @@ export function InicioView({
         </div>
         <div className={styles.orbitSignal} aria-hidden="true" />
 
-        <button
-          type="button"
-          className={styles.sun}
-          onClick={() => onNavigate('empenhos')}
-          aria-label={`Abrir empenhos. ${empenhos.length} empenhos cadastrados.`}
-        >
-          <span className={styles.sunCorona} aria-hidden="true" />
-          <span className={styles.sunCore}>
-            <span className={styles.sunSymbol}>EMP</span>
-          </span>
-          <span className={styles.celestialTooltip}>
-            <strong>Núcleo EMPROVEX</strong>
-            <span>{empenhos.length} empenhos cadastrados</span>
-            <small>{formatCurrency(totalValue)} empenhados</small>
-          </span>
-        </button>
+        <InicioCore
+          customLogo={customLogo}
+          totalEmpenhos={empenhos.length}
+          totalValueLabel={formatCurrency(totalValue)}
+          activeAlertCount={activeAlertCount}
+          onOpenEmpenhos={() => onNavigate('empenhos')}
+        />
 
         <button
           type="button"
