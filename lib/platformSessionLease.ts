@@ -7,6 +7,7 @@ import {
   onSnapshot,
   runTransaction,
   serverTimestamp,
+  updateDoc,
 } from 'firebase/firestore';
 
 import { db } from './firebase';
@@ -40,7 +41,8 @@ export type PlatformSessionLeaseErrorCode =
   | 'SESSION_CAPACITY_EXCEEDED'
   | 'SESSION_UG_REQUIRED'
   | 'SESSION_INVALID_CONTEXT'
-  | 'SESSION_REVOKED';
+  | 'SESSION_REVOKED'
+  | 'SESSION_LEASE_LOST';
 
 export class PlatformSessionLeaseError extends Error {
   constructor(
@@ -547,10 +549,85 @@ export function subscribeWorkspaceSessionRevocation(
   };
 }
 
+export interface WorkspaceSessionLeaseRenewal {
+  status: 'renewed';
+  slotId: WorkspaceSessionSlotId;
+  renewedAt: string;
+  expiresAt: string;
+}
+
+function firestoreErrorCode(error: unknown): string {
+  return typeof error === 'object' && error && 'code' in error
+    ? String((error as { code?: unknown }).code || '')
+    : '';
+}
+
+async function renewKnownWorkspaceSessionLease(
+  user: User,
+  context: SectorWorkspaceContext,
+  local: LocalLeaseRecord
+): Promise<WorkspaceSessionLeaseRenewal> {
+  const ug = validateExternalSessionContext(user, context);
+  const accountEmail = normalizePlatformEmail(user.email || '');
+  const renewedAtMs = Date.now();
+  const expiresAt = Timestamp.fromMillis(renewedAtMs + SESSION_LEASE_DURATION_MS);
+  const ref = doc(
+    db,
+    'workspaces',
+    context.workspaceId,
+    'sessionSlots',
+    local.slotId
+  );
+
+  try {
+    // Bloco 17.1 — renovação conhecida não precisa redescobrir capacidade.
+    //
+    // Os campos de identidade são reenviados deliberadamente. Quando o slot ainda
+    // pertence à mesma sessão, eles são idênticos ao resource e o diff efetivo
+    // continua restrito a lastSeenAt/expiresAt. Se o slot tiver sido retomado por
+    // outra sessão do mesmo setor, sessionId/browserInstanceId divergem e as Rules
+    // recusam o write em vez de prolongar acidentalmente a sessão vencedora.
+    await updateDoc(ref, {
+      leaseVersion: SESSION_LEASE_VERSION,
+      slotId: local.slotId,
+      sessionId: local.sessionId,
+      workspaceId: context.workspaceId,
+      ug,
+      uid: user.uid,
+      accountEmail,
+      browserInstanceId: local.browserInstanceId,
+      lastSeenAt: serverTimestamp(),
+      expiresAt,
+    });
+  } catch (error) {
+    const code = firestoreErrorCode(error);
+    if (code.includes('not-found')) {
+      throw new PlatformSessionLeaseError(
+        'SESSION_LEASE_LOST',
+        'A vaga desta sessão não está mais ativa. Faça login novamente.'
+      );
+    }
+    throw error;
+  }
+
+  recordWorkspaceUsage(
+    { workspaceId: context.workspaceId, ug },
+    { documentWrites: 1 }
+  );
+  markLeaseRenewed(context.workspaceId, user.uid, renewedAtMs);
+
+  return {
+    status: 'renewed',
+    slotId: local.slotId,
+    renewedAt: new Date(renewedAtMs).toISOString(),
+    expiresAt: expiresAt.toDate().toISOString(),
+  };
+}
+
 export async function renewWorkspaceSessionLeaseIfDue(
   user: User,
   context: SectorWorkspaceContext
-): Promise<WorkspaceSessionLeaseAcquisition | null> {
+): Promise<WorkspaceSessionLeaseAcquisition | WorkspaceSessionLeaseRenewal | null> {
   if (isFounderCapacityExempt(user.email) || context.resolutionSource !== 'platform-directory') {
     return null;
   }
@@ -559,7 +636,15 @@ export async function renewWorkspaceSessionLeaseIfDue(
     return null;
   }
 
-  return acquireWorkspaceSessionLease(user, context);
+  const local = getLocalLeaseRecord(context.workspaceId, user.uid);
+  if (!local) {
+    // Recuperação rara: sem a identidade local do slot não é seguro fazer update
+    // cego. Voltamos à aquisição transacional completa, que verifica tombstone e
+    // os dois slots antes de reconstruir o estado local.
+    return acquireWorkspaceSessionLease(user, context);
+  }
+
+  return renewKnownWorkspaceSessionLease(user, context, local);
 }
 
 export function getConfiguredExternalSessionLimit(): number {
