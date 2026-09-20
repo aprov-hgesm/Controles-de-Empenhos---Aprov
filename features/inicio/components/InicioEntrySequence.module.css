@@ -103,3 +103,30 @@
     animation: none;
   }
 }
+
+
+@media (max-width: 420px) {
+  .beam {
+    width: 88vw;
+  }
+
+  .copy {
+    width: calc(100% - 32px);
+  }
+
+  .copy span {
+    font-size: 7px;
+    letter-spacing: 0.24em;
+    text-indent: 0.24em;
+  }
+
+  .copy strong {
+    font-size: clamp(24px, 10vw, 34px);
+  }
+
+  .copy small {
+    max-width: 260px;
+    font-size: 6px;
+    line-height: 1.5;
+  }
+}
