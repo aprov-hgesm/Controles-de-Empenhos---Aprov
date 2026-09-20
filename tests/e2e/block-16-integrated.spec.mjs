@@ -175,6 +175,18 @@ function leaseSeed({
   };
 }
 
+async function coordinatorRole(page) {
+  return page.evaluate(() => {
+    for (let index = 0; index < sessionStorage.length; index += 1) {
+      const key = sessionStorage.key(index);
+      if (key?.startsWith('emprovex:session-coordinator-role:v1:')) {
+        return sessionStorage.getItem(key);
+      }
+    }
+    return null;
+  });
+}
+
 test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação', () => {
   test.beforeEach(async () => {
     await clearSlots();
@@ -309,6 +321,65 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
     } finally {
       await contextC.close();
       await contextB.close();
+    }
+  });
+
+  test('aba líder propaga revogação administrativa para a aba seguidora', async ({ browser }) => {
+    const context = await browser.newContext();
+    const pageA1 = await context.newPage();
+
+    try {
+      await pageA1.goto('/');
+      await loginSector(pageA1);
+
+      const pageA2 = await context.newPage();
+      await pageA2.goto('/');
+      await expect(pageA2.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
+        timeout: 20_000,
+      });
+
+      await expect.poll(async () => {
+        const roles = [
+          await coordinatorRole(pageA1),
+          await coordinatorRole(pageA2),
+        ].sort();
+        return roles.join(',');
+      }, {
+        timeout: 15_000,
+        intervals: [250, 500, 1000],
+      }).toBe('follower,leader');
+
+      const [session] = await workspaceSessions();
+      expect(session).toBeTruthy();
+
+      await emulatorSet(revocationPath(session.sessionId), {
+        revocationVersion: 'emprovex_session_revocation_v1',
+        sessionId: session.sessionId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        uid: session.uid,
+        accountEmail: OPERATOR,
+        slotId: session.slotId,
+        createdAt: new Date(),
+        createdBy: FOUNDER,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      });
+      await emulatorDelete(slotPath(session.slotId));
+
+      await expect(pageA1.getByTestId('sector-login-email')).toBeVisible({
+        timeout: 15_000,
+      });
+      await expect(pageA2.getByTestId('sector-login-email')).toBeVisible({
+        timeout: 15_000,
+      });
+      await expect(
+        pageA1.getByRole('navigation', { name: 'Navegação principal' })
+      ).toHaveCount(0);
+      await expect(
+        pageA2.getByRole('navigation', { name: 'Navegação principal' })
+      ).toHaveCount(0);
+    } finally {
+      await context.close();
     }
   });
 
