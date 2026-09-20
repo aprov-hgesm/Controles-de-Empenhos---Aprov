@@ -1530,12 +1530,10 @@ service cloud.firestore {
     // Block 16.2 — tombstones curtos impedem uma sessão encerrada remotamente
     // de recriar o slot com o mesmo sessionId.
     match /workspaces/{workspaceId}/sessionRevocations/{sessionId} {
-      allow get: if isPlatformAdmin()
-        || (
-          canAccessWorkspace(workspaceId)
-          && resource.data.uid == request.auth.uid
-          && resource.data.accountEmail == request.auth.token.email
-        );
+      // O cliente precisa poder consultar um sessionId que normalmente ainda não
+      // existe. Por isso o GET é tenant-scoped pelo workspace, sem depender de
+      // resource.data; LIST continua exclusivo da administração.
+      allow get: if isPlatformAdmin() || canAccessWorkspace(workspaceId);
       allow list: if isPlatformAdmin();
       allow create: if validSessionRevocationCreate(workspaceId, sessionId);
       allow update, delete: if false;
