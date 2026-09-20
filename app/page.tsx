@@ -16,6 +16,7 @@ import { AppHeader } from '../components/layout/AppHeader';
 import { AppSidebar } from '../components/layout/AppSidebar';
 import { ToastNotification } from '../components/layout/ToastNotification';
 import { DashboardView } from '../features/dashboard/components/DashboardView';
+import { InicioView } from '../features/inicio/components/InicioView';
 import { EmpenhosView } from '../features/empenhos/components/EmpenhosView';
 import { NotasFiscaisView } from '../features/notas-fiscais/components/NotasFiscaisView';
 import { RelatoriosView } from '../features/relatorios/components/RelatoriosView';
@@ -407,6 +408,20 @@ export default function Home() {
             </section>
           ) : (
             <>
+          {/* INÍCIO: EXPERIÊNCIA VISUAL / MAPA OPERACIONAL */}
+          {activeTab === 'inicio' && (
+            <InicioView
+              empenhos={empenhos}
+              alerts={alerts}
+              userDisplayName={user?.displayName || 'Operador EMPROVEX'}
+              workspaceUg={workspaceContext.status === 'sector' ? workspaceContext.ug : null}
+              onNavigate={(tab) => {
+                setActiveTab(tab);
+                if (tab === 'empenhos') setSelectedEmpenhoDetailId(null);
+              }}
+            />
+          )}
+
           {/* TAB 1: PAINEL DE CONTROLE / DASHBOARD - SALDO RESTANTE POR CLASSE DETALHADO */}
           {activeTab === 'painel' && (
             <DashboardView
