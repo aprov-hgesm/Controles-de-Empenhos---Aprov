@@ -238,6 +238,9 @@ jobs:
       - name: Block 16.0 capacity foundation guard
         run: npm run verify:block-16-0-capacity-foundation
 
+      - name: Block 16.1 session enforcement guard
+        run: npm run verify:block-16-1-session-enforcement
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
