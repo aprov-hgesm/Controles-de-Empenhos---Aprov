@@ -15,51 +15,30 @@ const forbidText = (source, forbidden, message) => {
 
 const page = read('app/page.tsx');
 const view = read('features/inicio/components/InicioView.tsx');
-const quick = read('features/inicio/components/InicioQuickActions.tsx');
-const quickCss = read('features/inicio/components/InicioQuickActions.module.css');
-const memory = read('features/inicio/hooks/useInicioWorkMemory.ts');
+const sidebar = read('components/layout/AppSidebar.tsx');
 const docs = read('docs/block-19-home-experience.md');
 
-requireText(view, "import { InicioQuickActions }", 'Início não importa o dock de ações rápidas.');
-requireText(view, '<InicioQuickActions', 'Início não renderiza ações rápidas.');
-requireText(page, "useInicioWorkMemory", 'Página principal não ativa memória de retomada.');
-requireText(page, "workspaceContext.workspaceId", 'Memória não está separada por workspace.');
-requireText(page, "workspaceContext.ug || 'sem-ug'", 'Memória não incorpora identidade da UG.');
-requireText(page, "clearInicioWorkMemory();", 'Logout não limpa memória efêmera de retomada.');
-requireText(page, "setShowNewEmpenhoModal(true)", 'Atalho Novo empenho não abre cadastro.');
-requireText(page, "setNfSubTab('cadastrar')", 'Atalho Cadastrar NF não abre subaba correta.');
-requireText(page, "empenhos.some((empenho) => empenho.id === inicioResumeTarget.empenhoId)", 'Retomada não valida empenho ainda existente.');
-requireText(memory, "sessionStorage.getItem", 'Retomada não lê memória da sessão.');
-requireText(memory, "sessionStorage.setItem", 'Retomada não grava memória da sessão.');
-requireText(memory, "sessionStorage.removeItem", 'Retomada não permite limpeza no logout.');
-requireText(memory, "TRACKABLE_TABS", 'Retomada não possui allowlist de módulos.');
-requireText(memory, "'painel'", 'Painel não pode ser retomado.');
-requireText(memory, "'empenhos'", 'Empenhos não podem ser retomados.');
-requireText(memory, "'nova_nf'", 'Notas Fiscais não podem ser retomadas.');
-requireText(memory, "'relatorios'", 'Relatórios não podem ser retomados.');
-requireText(memory, "'cronogramas'", 'Cronogramas não podem ser retomados.');
-requireText(quick, 'Continuar de onde parei', 'Card de retomada não possui rótulo explícito.');
-requireText(quick, 'Novo empenho', 'Atalho Novo empenho ausente.');
-requireText(quick, 'Cadastrar NF', 'Atalho Cadastrar NF ausente.');
-requireText(quick, 'Itens', 'Atalho Itens ausente.');
-requireText(quick, 'Relatórios', 'Atalho Relatórios ausente.');
-requireText(quick, 'Cronogramas', 'Atalho Cronogramas ausente.');
-requireText(quickCss, '@media (prefers-reduced-motion: reduce)', 'Dock não respeita reduced motion.');
-requireText(docs, 'Bloco 19.7', 'Documentação não registra atalhos/retomada.');
-forbidText(memory, 'localStorage', 'Retomada persistiu dados além da sessão.');
-forbidText(memory, 'firebase', 'Memória de retomada acoplou Firebase.');
-forbidText(memory, 'onSnapshot', 'Memória de retomada abriu listener Firestore.');
-forbidText(memory, "'inicio'", 'A Home não deve salvar a própria Home como destino de retomada.');
+requireText(sidebar, "onNavigate('empenhos')", 'Empenhos deixou de estar acessível pela navegação principal.');
+requireText(sidebar, "onNavigate('itens')", 'Itens deixou de estar acessível pela navegação principal.');
+requireText(sidebar, "onNavigate('relatorios')", 'Relatórios deixou de estar acessível pela navegação principal.');
+requireText(sidebar, "onNavigate('cronogramas')", 'Cronogramas deixou de estar acessível pela navegação principal.');
+requireText(docs, 'Bloco 19.7', 'Documentação não registra o bloco originalmente reservado a atalhos/retomada.');
+
+forbidText(view, "InicioQuickActions", 'Home voltou a renderizar o dock de ações rápidas.');
+forbidText(view, 'Continuar de onde parei', 'Home voltou a exibir retomada de trabalho.');
+forbidText(view, 'Ações rápidas', 'Home voltou a exibir ações rápidas.');
+forbidText(page, 'useInicioWorkMemory', 'Página voltou a ativar memória de retomada sem interface.');
+forbidText(page, 'inicioResumeTarget', 'Página voltou a manter destino de retomada da Home.');
+forbidText(page, 'clearInicioWorkMemory', 'Logout voltou a carregar lógica de retomada desativada.');
 
 if (findings.length) {
-  console.error('BLOCK 19.7 QUICK ACTIONS + RESUME: FAIL');
+  console.error('BLOCK 19.7 MINIMAL HOME ACTION SURFACE: FAIL');
   findings.forEach((finding) => console.error('  [BLOCK] ' + finding));
   process.exitCode = 2;
 } else {
-  console.log('BLOCK 19.7 QUICK ACTIONS + RESUME: READY');
-  console.log('Ações rápidas: ATIVAS');
-  console.log('Retomada por workspace: ATIVA');
-  console.log('Persistência: SOMENTE SESSÃO');
-  console.log('Empenho removido: PROTEGIDO');
+  console.log('BLOCK 19.7 MINIMAL HOME ACTION SURFACE: READY');
+  console.log('Dock de ações rápidas: REMOVIDO');
+  console.log('Retomada na Home: REMOVIDA');
+  console.log('Navegação principal: PRESERVADA');
   console.log('Firestore adicional: ZERO');
 }
