@@ -6,7 +6,8 @@ export type OperationalActiveTab =
   | 'nova_nf'
   | 'relatorios'
   | 'itens_empenho'
-  | 'cronogramas';
+  | 'cronogramas'
+  | 'avisos';
 
 export type RealtimeOperationalCollection =
   | 'empenhos'
@@ -79,6 +80,13 @@ const PLAN_BY_TAB: Record<OperationalActiveTab, OperationalSubscriptionPlan> = {
     invoices: false,
     comissoes: false,
     cronogramas: true,
+  },
+  avisos: {
+    empenhos: true,
+    alerts: true,
+    invoices: false,
+    comissoes: false,
+    cronogramas: false,
   },
 };
 
