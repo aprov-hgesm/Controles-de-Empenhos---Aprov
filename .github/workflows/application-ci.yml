@@ -313,6 +313,9 @@ jobs:
       - name: Block 19.13 visual polish guard
         run: npm run verify:block-19-13-visual-polish
 
+      - name: Block 19.14 final closure guard
+        run: npm run verify:block-19-14-final-closure
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
