@@ -1,15 +1,13 @@
 'use client';
 
 import { Activity, BellRing, Gauge, Orbit, PackageCheck } from 'lucide-react';
-import { useMemo } from 'react';
 
-import type { Alert, Empenho } from '../../../lib/types';
 import type { OperationalActiveTab } from '../../../lib/operationalSubscriptionPlan';
+import type { InicioOperationalSnapshot } from '../domain/homeOperationalSnapshot';
 import styles from './InicioOrbitSystem.module.css';
 
 interface InicioOrbitSystemProps {
-  empenhos: Empenho[];
-  alerts: Alert[];
+  snapshot: InicioOperationalSnapshot | null;
   onNavigate: (tab: OperationalActiveTab) => void;
 }
 
@@ -23,78 +21,32 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-function getEmpenhoTotals(empenho: Empenho) {
-  return empenho.items.reduce(
-    (acc, item) => {
-      const committed = item.quantity * item.unitPrice;
-      const received = Math.min(item.received, item.quantity) * item.unitPrice;
-      acc.committed += committed;
-      acc.received += received;
-      acc.balance += Math.max(0, item.quantity - item.received) * item.unitPrice;
-      if (item.received < item.quantity) acc.pendingItems += 1;
-      return acc;
-    },
-    { committed: 0, received: 0, balance: 0, pendingItems: 0 }
-  );
-}
-
 export function InicioOrbitSystem({
-  empenhos,
-  alerts,
+  snapshot,
   onNavigate,
 }: InicioOrbitSystemProps) {
-  const metrics = useMemo(() => {
-    let committed = 0;
-    let received = 0;
-    let balance = 0;
-    let pendingItems = 0;
-    let pendingEmpenhos = 0;
+  const alertSeverity = snapshot?.alerts ?? {
+    total: 0,
+    critical: 0,
+    attention: 0,
+  };
 
-    empenhos.forEach((empenho) => {
-      const totals = getEmpenhoTotals(empenho);
-      committed += totals.committed;
-      received += totals.received;
-      balance += totals.balance;
-      pendingItems += totals.pendingItems;
-      if (totals.pendingItems > 0) pendingEmpenhos += 1;
-    });
+  const receiving = snapshot?.receiving ?? {
+    pendingEmpenhos: 0,
+    pendingItems: 0,
+    balance: 0,
+  };
 
-    return {
-      committed,
-      received,
-      balance,
-      pendingItems,
-      pendingEmpenhos,
-      executionPct: committed > 0 ? Math.round((received / committed) * 100) : 0,
-    };
-  }, [empenhos]);
+  const execution = snapshot?.execution ?? {
+    committed: 0,
+    received: 0,
+    percentage: 0,
+  };
 
-  const classStats = useMemo(
-    () => CLASS_CODES.map((code) => {
-      const related = empenhos.filter(
-        (empenho) => (empenho.classification || 'QR').trim().toUpperCase() === code
-      );
-
-      return {
-        code,
-        count: related.length,
-        value: related.reduce((sum, empenho) => sum + getEmpenhoTotals(empenho).committed, 0),
-      };
-    }),
-    [empenhos]
-  );
-
-  const alertSeverity = useMemo(() => {
-    const critical = alerts.filter(
-      (alert) => alert.type === 'CRÍTICO' || alert.type === 'ESTOQUE ZERADO'
-    ).length;
-
-    return {
-      total: alerts.length,
-      critical,
-      attention: Math.max(0, alerts.length - critical),
-    };
-  }, [alerts]);
+  const classStats = CLASS_CODES.map((code) => {
+    const item = snapshot?.classStats.find((entry) => entry.code === code);
+    return item ?? { code, count: 0, value: 0 };
+  });
 
   return (
     <div className={styles.root} aria-label="Sistema orbital operacional EMPROVEX">
@@ -133,7 +85,7 @@ export function InicioOrbitSystem({
         type="button"
         className={`${styles.planet} ${styles.receivingPlanet}`}
         onClick={() => onNavigate('itens')}
-        aria-label={`Recebimentos: ${metrics.pendingEmpenhos} empenhos com saldo`}
+        aria-label={`Recebimentos: ${receiving.pendingEmpenhos} empenhos com saldo`}
       >
         <span className={styles.planetGlow} aria-hidden="true" />
         <span className={styles.planetSurface}>
@@ -141,9 +93,9 @@ export function InicioOrbitSystem({
         </span>
         <span className={styles.tooltip}>
           <strong>Recebimentos</strong>
-          <span>{metrics.pendingEmpenhos} empenhos com saldo</span>
+          <span>{receiving.pendingEmpenhos} empenhos com saldo</span>
           <small>
-            {metrics.pendingItems} item(ns) pendentes · {formatCurrency(metrics.balance)}
+            {receiving.pendingItems} item(ns) pendentes · {formatCurrency(receiving.balance)}
           </small>
         </span>
       </button>
@@ -152,11 +104,11 @@ export function InicioOrbitSystem({
         type="button"
         className={`${styles.planet} ${styles.executionPlanet}`}
         onClick={() => onNavigate('painel')}
-        aria-label={`Execução estimada: ${metrics.executionPct}%`}
+        aria-label={`Execução estimada: ${execution.percentage}%`}
       >
         <span
           className={styles.executionHalo}
-          style={{ ['--execution' as string]: `${metrics.executionPct}%` }}
+          style={{ ['--execution' as string]: `${execution.percentage}%` }}
           aria-hidden="true"
         />
         <span className={styles.planetSurface}>
@@ -164,9 +116,9 @@ export function InicioOrbitSystem({
         </span>
         <span className={styles.tooltip}>
           <strong>Execução</strong>
-          <span>{metrics.executionPct}% recebido/liquidado</span>
+          <span>{execution.percentage}% recebido/liquidado</span>
           <small>
-            {formatCurrency(metrics.received)} de {formatCurrency(metrics.committed)}
+            {formatCurrency(execution.received)} de {formatCurrency(execution.committed)}
           </small>
         </span>
       </button>
@@ -223,7 +175,7 @@ export function InicioOrbitSystem({
       <div className={styles.orbitCaption} aria-hidden="true">
         <span>OPERATIONAL ORBIT</span>
         <i />
-        <span>{metrics.executionPct}% EXEC</span>
+        <span>{execution.percentage}% EXEC</span>
       </div>
     </div>
   );
