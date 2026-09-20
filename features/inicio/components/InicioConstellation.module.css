@@ -79,6 +79,14 @@
     0 0 24px rgba(111, 161, 255, 0.44);
 }
 
+.star:active {
+  transform: translate(-50%, -50%) scale(1.34);
+}
+
+.star:active .core {
+  filter: brightness(1.32);
+}
+
 .star:hover .halo,
 .star:focus-visible .halo,
 .star[data-related='true'] .halo {
