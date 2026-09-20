@@ -499,3 +499,132 @@
 [data-performance='static'] .relationships line {
   animation: none !important;
 }
+
+
+/* Block 21 — operational stars use a distinct four-point curved glyph */
+.star {
+  min-width: 16px;
+  min-height: 16px;
+}
+
+.core {
+  inset: auto;
+  left: 50%;
+  top: 50%;
+  width: var(--star-visual-size, 4px);
+  height: var(--star-visual-size, 4px);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #edf6ff;
+  transform: translate(-50%, -50%);
+  transition:
+    transform 180ms ease,
+    filter 180ms ease,
+    color 180ms ease;
+}
+
+.operationalStarGlyph {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: currentColor;
+  filter:
+    drop-shadow(0 0 3px rgba(213, 234, 255, 0.95))
+    drop-shadow(0 0 7px rgba(104, 157, 255, 0.42));
+}
+
+.halo {
+  inset: auto;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--star-visual-size, 4px) + 12px);
+  height: calc(var(--star-visual-size, 4px) + 12px);
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+}
+
+.star:hover,
+.star:focus-visible {
+  transform: translate(-50%, -50%);
+}
+
+.star:hover .core,
+.star:focus-visible .core {
+  transform: translate(-50%, -50%) scale(1.58);
+  filter: brightness(1.16);
+  box-shadow: none;
+}
+
+.star:active {
+  transform: translate(-50%, -50%);
+}
+
+.star:active .core {
+  transform: translate(-50%, -50%) scale(1.34);
+}
+
+.star:hover .halo,
+.star:focus-visible .halo,
+.star[data-related='true'] .halo {
+  transform: translate(-50%, -50%) scale(1.16);
+}
+
+.star[data-related='true'] .core {
+  filter: brightness(1.12);
+  box-shadow: none;
+}
+
+.star[data-severity='attention'] .core {
+  color: var(--inicio-amber, #ffca72);
+  background: transparent;
+  box-shadow: none;
+}
+
+.star[data-severity='critical'] .core {
+  color: var(--inicio-critical, #ff7167);
+  background: transparent;
+  box-shadow: none;
+}
+
+.star[data-stage='closed'] .core {
+  color: rgba(153, 170, 199, 0.82);
+  background: transparent;
+  box-shadow: none;
+}
+
+.star[data-stage='urgent'] .core {
+  outline: none;
+}
+
+.star:hover .tooltip,
+.star:focus-visible .tooltip {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+
+.legend i {
+  border-radius: 0;
+  clip-path: polygon(
+    50% 0%,
+    61% 39%,
+    100% 50%,
+    61% 61%,
+    50% 100%,
+    39% 61%,
+    0% 50%,
+    39% 39%
+  );
+}
+
+@media (hover: none), (pointer: coarse) {
+  .star {
+    min-width: 22px;
+    min-height: 22px;
+  }
+
+  .star::before {
+    inset: 0;
+  }
+}

@@ -19,6 +19,19 @@ const dust = Array.from({ length: 18 }, (_, index) => ({
   delay: -((index % 9) * 0.81),
 }));
 
+const shootingStars = Array.from({ length: 7 }, (_, index) => ({
+  id: `shoot-${index}`,
+  left: -18 + ((index * 19) % 58),
+  top: 4 + ((index * 23) % 46),
+  length: 72 + ((index * 17) % 62),
+  angle: 22 + (index % 4) * 2.5,
+  cycle: 6.8 + (index % 5) * 1.35,
+  delay: -((index * 2.17) % 9.6),
+  dx: 88 + ((index * 11) % 26),
+  dy: 42 + ((index * 9) % 24),
+  opacity: 0.5 + (index % 3) * 0.12,
+}));
+
 const flowParticles = Array.from({ length: 22 }, (_, index) => ({
   id: `flow-${index}`,
   left: 3 + ((index * 47) % 94),
@@ -66,6 +79,26 @@ export function InicioAtmosphere() {
               width: particle.size,
               height: particle.size,
               animationDelay: `${particle.delay}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className={styles.shootingStars}>
+        {shootingStars.map((star) => (
+          <span
+            key={star.id}
+            className={styles.shootingStar}
+            style={{
+              left: `${star.left}%`,
+              top: `${star.top}%`,
+              width: star.length,
+              opacity: star.opacity,
+              animationDuration: `${star.cycle}s`,
+              animationDelay: `${star.delay}s`,
+              ['--shoot-angle' as string]: `${star.angle}deg`,
+              ['--shoot-dx' as string]: `${star.dx}vw`,
+              ['--shoot-dy' as string]: `${star.dy}vh`,
             }}
           />
         ))}
