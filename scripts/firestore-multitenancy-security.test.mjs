@@ -676,6 +676,21 @@ async function main() {
     )
   );
 
+  await denied('Tombstone existente é imutável e não pode ser reciclado pelo administrador', () =>
+    setDoc(revocationRefA1, {
+      revocationVersion: 'emprovex_session_revocation_v1',
+      sessionId: revokedSessionId,
+      workspaceId: 'workspace-a',
+      ug: '160416',
+      uid: sessionA.user.uid,
+      accountEmail: identities.a.email,
+      slotId: 'slot-1',
+      createdAt: serverTimestamp(),
+      createdBy: identities.founder.email,
+      expiresAt: Timestamp.fromMillis(Date.now() + (48 * 60 * 60 * 1000)),
+    })
+  );
+
   await allowed('Setor pode verificar tombstone inexistente antes de adquirir lease', () =>
     getDoc(
       doc(
