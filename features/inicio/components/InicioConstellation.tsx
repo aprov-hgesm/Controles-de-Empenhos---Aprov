@@ -173,7 +173,10 @@ export function InicioConstellation({
                 {node.classification} · {node.status}
               </span>
               <strong>{node.id}</strong>
-              <span className={styles.tooltipMessage}>{node.message}</span>
+              <span className={styles.tooltipMessage}>
+                <small>{node.severity === 'normal' ? 'Situação' : 'Pendência identificada'}</small>
+                {node.message}
+              </span>
               <span className={styles.tooltipSupplier}>{node.supplier}</span>
               <span className={styles.metrics}>
                 <span>
