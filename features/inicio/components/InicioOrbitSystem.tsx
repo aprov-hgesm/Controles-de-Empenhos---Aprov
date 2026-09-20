@@ -2,13 +2,11 @@
 
 import { Activity, BellRing, Gauge, Orbit, PackageCheck } from 'lucide-react';
 
-import type { OperationalActiveTab } from '../../../lib/operationalSubscriptionPlan';
 import type { InicioOperationalSnapshot } from '../domain/homeOperationalSnapshot';
 import styles from './InicioOrbitSystem.module.css';
 
 interface InicioOrbitSystemProps {
   snapshot: InicioOperationalSnapshot | null;
-  onNavigate: (tab: OperationalActiveTab) => void;
 }
 
 const CLASS_CODES = ['QR', 'CALI', 'PASA', 'FUNADOM'] as const;
@@ -23,7 +21,6 @@ function formatCurrency(value: number): string {
 
 export function InicioOrbitSystem({
   snapshot,
-  onNavigate,
 }: InicioOrbitSystemProps) {
   const alertSeverity = snapshot?.alerts ?? {
     total: 0,
@@ -61,11 +58,10 @@ export function InicioOrbitSystem({
       <div className={`${styles.sweep} ${styles.sweepOuter}`} aria-hidden="true" />
       <div className={`${styles.sweep} ${styles.sweepInner}`} aria-hidden="true" />
 
-      <button
-        type="button"
+      <div
+        tabIndex={0}
         className={`${styles.planet} ${styles.alertPlanet}`}
         data-alert={alertSeverity.total > 0 ? 'true' : 'false'}
-        onClick={() => onNavigate('painel')}
         aria-label={`Alertas operacionais: ${alertSeverity.total} ativos`}
       >
         <span className={styles.planetGlow} aria-hidden="true" />
@@ -83,12 +79,11 @@ export function InicioOrbitSystem({
                 : 'Nenhuma pendência ativa'}
           </small>
         </span>
-      </button>
+      </div>
 
-      <button
-        type="button"
+      <div
+        tabIndex={0}
         className={`${styles.planet} ${styles.receivingPlanet}`}
-        onClick={() => onNavigate('itens')}
         aria-label={`Recebimentos: ${receiving.pendingEmpenhos} empenhos com saldo`}
       >
         <span className={styles.planetGlow} aria-hidden="true" />
@@ -102,12 +97,11 @@ export function InicioOrbitSystem({
             {receiving.pendingItems} item(ns) pendentes · {formatCurrency(receiving.balance)}
           </small>
         </span>
-      </button>
+      </div>
 
-      <button
-        type="button"
+      <div
+        tabIndex={0}
         className={`${styles.planet} ${styles.executionPlanet}`}
-        onClick={() => onNavigate('painel')}
         aria-label={`Execução estimada: ${execution.percentage}%`}
       >
         <span
@@ -125,13 +119,12 @@ export function InicioOrbitSystem({
             {formatCurrency(execution.received)} de {formatCurrency(execution.committed)}
           </small>
         </span>
-      </button>
+      </div>
 
-      <button
-        type="button"
+      <div
+        tabIndex={0}
         className={`${styles.planet} ${styles.dashboardPlanet}`}
-        onClick={() => onNavigate('painel')}
-        aria-label="Abrir Painel de Controle"
+        aria-label="Painel de Controle"
       >
         <span className={styles.planetGlow} aria-hidden="true" />
         <span className={styles.planetSurface}>
@@ -142,20 +135,19 @@ export function InicioOrbitSystem({
           <span>Visão analítica</span>
           <small>Abrir saldos, filtros e indicadores detalhados</small>
         </span>
-      </button>
+      </div>
 
       <div className={styles.classSystem} aria-label="Classes de empenho">
-        <button
-          type="button"
+        <div
+          tabIndex={0}
           className={styles.classPlanet}
-          onClick={() => onNavigate('painel')}
-          aria-label="Abrir classes de empenho no Painel"
+          aria-label="Classes de empenho"
           aria-describedby="inicio-class-tooltip"
         >
           <span className={styles.classPlanetOrbit} aria-hidden="true" />
           <Orbit aria-hidden="true" />
           <span>Classes</span>
-        </button>
+        </div>
 
         <div
           id="inicio-class-tooltip"
