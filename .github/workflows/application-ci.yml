@@ -304,6 +304,9 @@ jobs:
       - name: Block 19.10 economical home snapshot guard
         run: npm run verify:block-19-10-home-snapshot-economy
 
+      - name: Block 19.11 performance and GPU guard
+        run: npm run verify:block-19-11-performance-gpu
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
