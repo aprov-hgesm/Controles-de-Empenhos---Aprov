@@ -1509,6 +1509,13 @@ service cloud.firestore {
       allow get, list: if isPlatformAdmin();
     }
 
+    // Block 16.2 — collection-group queries require a recursive match. This
+    // grants only global LIST to the platform admin; no create/update/delete
+    // permission is introduced here and sector users receive no access.
+    match /{sessionSlotPath=**}/sessionSlots/{slotId} {
+      allow list: if isPlatformAdmin();
+    }
+
     // Block 16.1 — capacity metadata. These two fixed slots enforce a maximum of
     // two simultaneous external-sector browser sessions without query/count races.
     // The founder is exempt and never claims a slot.
