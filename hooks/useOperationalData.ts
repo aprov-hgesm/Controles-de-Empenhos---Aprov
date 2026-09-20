@@ -10,9 +10,8 @@ import {
   signOut,
   type User,
 } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import { auth, db, googleProvider, handleFirestoreError, OperationType } from '../lib/firebase';
+import { auth, googleProvider, handleFirestoreError, OperationType } from '../lib/firebase';
 import type { Alert, Comissao, CronogramaEmpenho, Empenho, Invoice } from '../lib/types';
 import { resolveAuthenticatedWorkspaceContext } from '../lib/platformAccess';
 import {
@@ -24,22 +23,15 @@ import {
 import type { OperationalActiveTab } from '../lib/operationalSubscriptionPlan';
 import { resetActiveProfileMode, setActiveProfileMode } from '../lib/profileMode';
 import { normalizePlatformEmail } from '../lib/platformIdentity';
-import { SESSION_HEARTBEAT_INTERVAL_MS } from '../lib/platformCapacity';
-import {
-  flushWorkspaceUsageTelemetry,
-  recordWorkspaceRealtimeSnapshot,
-  trackWorkspaceRealtimeListener,
-} from '../lib/workspaceUsageTelemetry';
+import { flushWorkspaceUsageTelemetry } from '../lib/workspaceUsageTelemetry';
 import {
   PlatformSessionLeaseError,
   SESSION_CAPACITY_EXCEEDED_MESSAGE,
   clearAllLocalWorkspaceSessionState,
   clearLocalWorkspaceSessionLease,
-  isTerminalSessionLeaseError,
   releaseWorkspaceSessionLease,
-  renewWorkspaceSessionLeaseIfDue,
-  subscribeWorkspaceSessionRevocation,
 } from '../lib/platformSessionLease';
+import { startWorkspaceSessionCoordinator } from '../lib/platformSessionCoordinator';
 import { useOperationalRealtimeCollections } from './useOperationalRealtimeCollections';
 import { useInicioOperationalSnapshot } from '../features/inicio/hooks/useInicioOperationalSnapshot';
 
@@ -186,113 +178,24 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     }
   }, [router, user, workspaceContext.status]);
 
-  // Bloco 19 — observador de ciclo de vida para setores externos.
-  // As Rules já bloqueiam operações quando status deixa de ser active; este watcher
-  // também encerra a sessão aberta assim que o diretório administrativo mudar.
-  useEffect(() => {
-    if (
-      !user
-      || !isOperationalSectorContext(workspaceContext)
-      || workspaceContext.resolutionSource !== 'platform-directory'
-    ) {
-      return;
-    }
+  const sessionCoordinatorIdentityKey = (
+    user
+    && isOperationalSectorContext(workspaceContext)
+    && workspaceContext.resolutionSource === 'platform-directory'
+  )
+    ? [
+        user.uid,
+        normalizePlatformEmail(user.email || ''),
+        workspaceContext.workspaceId,
+        workspaceContext.email,
+        workspaceContext.ug || '',
+      ].join('|')
+    : null;
 
-    let revoked = false;
-
-    const revokeOperationalAccess = () => {
-      if (revoked) return;
-      revoked = true;
-      clearLocalWorkspaceSessionLease(workspaceContext.workspaceId, user.uid);
-      clearResolvedWorkspaceContext();
-      clearOperationalState();
-      resetActiveProfileMode();
-      setWorkspaceContext(resolveWorkspaceContext(null));
-      setUser(null);
-      setSyncing(false);
-      void signOut(auth);
-    };
-
-    const handleLifecycleError = (error: unknown) => {
-      const code = typeof error === 'object' && error && 'code' in error
-        ? String((error as { code?: unknown }).code || '')
-        : '';
-      if (code.includes('permission-denied')) {
-        revokeOperationalAccess();
-      }
-    };
-
-    const workspaceRef = doc(db, 'workspaces', workspaceContext.workspaceId);
-    const accountRef = doc(db, 'platformAccounts', workspaceContext.email);
-    const telemetryScope = {
-      workspaceId: workspaceContext.workspaceId,
-      ug: workspaceContext.ug,
-    };
-    const stopWorkspaceListenerTelemetry = trackWorkspaceRealtimeListener(telemetryScope);
-    const stopAccountListenerTelemetry = trackWorkspaceRealtimeListener(telemetryScope);
-
-    const unsubscribeWorkspace = onSnapshot(
-      workspaceRef,
-      (snapshot) => {
-        recordWorkspaceRealtimeSnapshot(telemetryScope, 1);
-        if (!snapshot.exists()) {
-          revokeOperationalAccess();
-          return;
-        }
-        const data = snapshot.data() as { id?: string; status?: string; authorizedEmail?: string; ug?: string };
-        if (
-          data.id !== workspaceContext.workspaceId
-          || data.status !== 'active'
-          || data.authorizedEmail !== workspaceContext.email
-          || (data.ug || null) !== workspaceContext.ug
-        ) {
-          revokeOperationalAccess();
-        }
-      },
-      handleLifecycleError
-    );
-
-    const unsubscribeAccount = onSnapshot(
-      accountRef,
-      (snapshot) => {
-        recordWorkspaceRealtimeSnapshot(telemetryScope, 1);
-        if (!snapshot.exists()) {
-          revokeOperationalAccess();
-          return;
-        }
-        const data = snapshot.data() as {
-          email?: string;
-          workspaceId?: string;
-          accountType?: string;
-          status?: string;
-          firebaseUid?: string;
-          ug?: string;
-        };
-        if (
-          data.email !== workspaceContext.email
-          || data.workspaceId !== workspaceContext.workspaceId
-          || data.accountType !== 'sector'
-          || data.status !== 'active'
-          || data.firebaseUid !== user.uid
-          || (data.ug || null) !== workspaceContext.ug
-        ) {
-          revokeOperationalAccess();
-        }
-      },
-      handleLifecycleError
-    );
-
-    return () => {
-      unsubscribeWorkspace();
-      unsubscribeAccount();
-      stopWorkspaceListenerTelemetry();
-      stopAccountListenerTelemetry();
-    };
-  }, [user, workspaceContext]);
-
-  // Bloco 17.1 — mantém o lease externo vivo com renovação esparsa do slot já
-  // conhecido. O timestamp local compartilhado reduz renovações redundantes entre
-  // abas; a liderança multiaba completa fica deliberadamente para o Bloco 17.2.
+  // Bloco 17.2 — uma única aba por navegador assume heartbeat, lifecycle e
+  // listener de revogação. Followers preservam a UX operacional e recebem
+  // invalidação via BroadcastChannel. Navegadores incompatíveis usam fallback
+  // conservador por aba, sem reduzir segurança.
   useEffect(() => {
     if (
       !user
@@ -317,48 +220,22 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
       void signOut(auth);
     };
 
-    const renewLease = async () => {
-      try {
-        await renewWorkspaceSessionLeaseIfDue(user, workspaceContext);
-      } catch (error) {
-        if (isTerminalSessionLeaseError(error)) {
-          revokeLeaseAccess();
-          return;
-        }
-
-        // Falhas transitórias de rede não derrubam a sessão imediatamente. O lease
-        // permanece válido até expiresAt e será reavaliado no próximo heartbeat.
-        console.warn('Não foi possível renovar o lease de sessão EMPROVEX.', error);
-      }
-    };
-
-    const unsubscribeRevocation = subscribeWorkspaceSessionRevocation(
+    const coordinator = startWorkspaceSessionCoordinator(
       user,
       workspaceContext,
-      revokeLeaseAccess,
-      (error) => console.warn('Falha ao observar revogação de sessão EMPROVEX.', error)
+      {
+        onSessionInvalid: () => revokeLeaseAccess(),
+        onTransientError: (error) => {
+          console.warn('Falha transitória na coordenação de sessão EMPROVEX.', error);
+        },
+      }
     );
-
-    const intervalId = window.setInterval(
-      () => void renewLease(),
-      SESSION_HEARTBEAT_INTERVAL_MS
-    );
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') void renewLease();
-    };
-    const handleOnline = () => void renewLease();
-
-    document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('online', handleOnline);
 
     return () => {
       active = false;
-      unsubscribeRevocation();
-      window.clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('online', handleOnline);
+      coordinator.stop();
     };
-  }, [user, workspaceContext]);
+  }, [sessionCoordinatorIdentityKey]);
 
   const finalizeSignIn = async (authenticatedUser: User) => {
     setActiveProfileMode('sector');
