@@ -5,6 +5,16 @@ import {
   deleteSectorWorkspaceWithAuth,
   verifyFounderSession,
 } from '../../../../lib/server/sectorProvisioningAdmin';
+import {
+  ApiSecurityError,
+  apiSecurityErrorHeaders,
+  assertAdminMutationEnabled,
+  createRequestSecurityContext,
+  enforceAuthenticatedAdminBurstLimit,
+  enforcePreAuthBurstLimit,
+  readBoundedJsonRequest,
+  securityResponseHeaders,
+} from '../../../../lib/server/requestSecurity';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,13 +26,18 @@ function bearerToken(request: Request): string {
 }
 
 export async function POST(request: Request) {
-  try {
-    const founder = await verifyFounderSession(bearerToken(request));
+  const security = createRequestSecurityContext(request, 'sector-delete');
 
-    const body = await request.json().catch(() => null) as {
+  try {
+    enforcePreAuthBurstLimit(security);
+    const founder = await verifyFounderSession(bearerToken(request));
+    enforceAuthenticatedAdminBurstLimit(security, founder.uid, 'mutation');
+    assertAdminMutationEnabled(security, 'sector-delete');
+
+    const body = await readBoundedJsonRequest<{
       workspaceId?: unknown;
       email?: unknown;
-    } | null;
+    }>(request, security);
 
     const workspaceId = typeof body?.workspaceId === 'string' ? body.workspaceId : '';
     const email = typeof body?.email === 'string' ? body.email : '';
@@ -37,8 +52,26 @@ export async function POST(request: Request) {
 
     const result = await deleteSectorWorkspaceWithAuth(workspaceId, email, founder);
 
-    return NextResponse.json({ ok: true, result });
+    return NextResponse.json(
+      { ok: true, result },
+      { headers: securityResponseHeaders(security) }
+    );
   } catch (error) {
+    if (error instanceof ApiSecurityError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: error.message,
+          code: error.code,
+          recoveryRequired: false,
+        },
+        {
+          status: error.httpStatus,
+          headers: apiSecurityErrorHeaders(security, error),
+        }
+      );
+    }
+
     if (error instanceof SectorProvisioningFailure) {
       return NextResponse.json(
         {
@@ -47,11 +80,17 @@ export async function POST(request: Request) {
           code: error.code,
           recoveryRequired: error.recoveryRequired,
         },
-        { status: error.httpStatus }
+        {
+          status: error.httpStatus,
+          headers: securityResponseHeaders(security),
+        }
       );
     }
 
-    console.error('Unexpected EMPROVEX sector deletion failure.', error);
+    console.error('Unexpected EMPROVEX sector deletion failure.', {
+      requestId: security.requestId,
+      error,
+    });
     return NextResponse.json(
       {
         ok: false,
@@ -59,7 +98,10 @@ export async function POST(request: Request) {
         code: 'UPSTREAM_ERROR',
         recoveryRequired: false,
       },
-      { status: 500 }
+      {
+        status: 500,
+        headers: securityResponseHeaders(security),
+      }
     );
   }
 }
