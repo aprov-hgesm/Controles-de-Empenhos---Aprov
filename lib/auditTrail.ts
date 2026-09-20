@@ -33,6 +33,7 @@ export type AuditOperation =
   | 'sector.ug_backfill'
   | 'sector.password_reset'
   | 'sector.delete'
+  | 'session.terminate'
   | 'historical.repair';
 
 export type AuditEntityType =
@@ -40,6 +41,7 @@ export type AuditEntityType =
   | 'invoice_batch'
   | 'empenho'
   | 'workspace'
+  | 'session'
   | 'ns_lock';
 
 export type AuditScalar = string | number | boolean | null;
