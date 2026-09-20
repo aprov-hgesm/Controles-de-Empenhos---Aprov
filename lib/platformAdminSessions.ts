@@ -121,10 +121,13 @@ export async function terminatePlatformWorkspaceSession(
 
     const current = slotSnapshot.data() as Record<string, unknown>;
     if (
-      String(current.sessionId || '') !== session.sessionId
+      String(current.slotId || '') !== session.slotId
+      || String(current.sessionId || '') !== session.sessionId
       || String(current.uid || '') !== session.uid
       || String(current.workspaceId || '') !== session.workspaceId
       || normalizeUnitUg(String(current.ug || '')) !== session.ug
+      || normalizePlatformEmail(String(current.accountEmail || '')) !== session.accountEmail
+      || String(current.browserInstanceId || '') !== session.browserInstanceId
     ) {
       throw new Error('A sessão mudou antes do encerramento administrativo.');
     }
