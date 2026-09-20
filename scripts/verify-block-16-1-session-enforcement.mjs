@@ -11,6 +11,7 @@ const capacity = read('lib/platformCapacity.ts');
 const lease = read('lib/platformSessionLease.ts');
 const access = read('lib/platformAccess.ts');
 const operational = read('hooks/useOperationalData.ts');
+const sessionControl = read('lib/platformSessionControl.ts');
 const provisioning = read('lib/server/sectorProvisioningAdmin.ts');
 const rules = read('firestore.rules');
 const security = read('scripts/firestore-multitenancy-security.test.mjs');
@@ -59,13 +60,19 @@ requireText(
 
 for (const marker of [
   'explicitSignInRef',
-  'renewWorkspaceSessionLeaseIfDue',
-  'SESSION_HEARTBEAT_INTERVAL_MS',
   'releaseWorkspaceSessionLease',
   'clearLocalWorkspaceSessionLease',
   "diagnosticCode === 'SESSION_CAPACITY_EXCEEDED'",
+  'startWorkspaceSessionControl',
 ]) {
   requireText(operational, marker, `Runtime de sessão perdeu requisito: ${marker}`);
+}
+for (const marker of [
+  'renewWorkspaceSessionLeaseIfDue',
+  'SESSION_HEARTBEAT_INTERVAL_MS',
+  'subscribeWorkspaceSessionRevocation',
+]) {
+  requireText(sessionControl, marker, `Controle de sessão perdeu requisito histórico: ${marker}`);
 }
 
 for (const marker of [

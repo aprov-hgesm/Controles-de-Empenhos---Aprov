@@ -565,7 +565,8 @@ export function useDocumentActions(context:DocumentActionsContext){
   const handleGenerateEmpenhoReportPDF = async (
     emp: Empenho,
     action: 'download' | 'print' = 'download',
-    reportingPeriod: ReportingPeriod = {}
+    reportingPeriod: ReportingPeriod = {},
+    invoiceSource: Invoice[] = invoices
   ) => {
     if (!emp) {
       showToast('Nenhum empenho selecionado para exportação.', 'error');
@@ -578,7 +579,7 @@ export function useDocumentActions(context:DocumentActionsContext){
 
     const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
     const empRequiresTR = classRequiresTermoRecebimento(emp.classification, empenhoClasses);
-    const allPdfInvoices = invoices.filter((inv) => inv.empenhoId === emp.id);
+    const allPdfInvoices = invoiceSource.filter((inv) => inv.empenhoId === emp.id);
     const pdfInvoices = filterInvoicesByReportingPeriod(allPdfInvoices, reportingPeriod);
     const pdfPeriodReceivedNfe = pdfInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
     const pdfAccumulatedReceivedNfe = allPdfInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);

@@ -1,0 +1,45 @@
+{
+  "version": "emprovex_block_17_final_audit_v1",
+  "block": "17.9",
+  "baselineCommit": "68d7044bc3b6b36e1610a28fb1dfe821eefcb027",
+  "productionDeploy": false,
+  "subblocks": {
+    "17.0": "baseline-preserved",
+    "17.1": "lease-efficiency-preserved",
+    "17.2": "autonomous-per-tab-control-with-short-renewal-mutex",
+    "17.3": "branding-one-shot-or-static",
+    "17.4": "surface-scoped-realtime-and-one-shot-drive-settings",
+    "17.5": "scoped-paginated-invoice-history",
+    "17.6": "telemetry-sources-explicitly-separated",
+    "17.7": "app-check-instrumented-enforcement-after-production-observation",
+    "17.8": "consumption-and-regression-guarded",
+    "17.9": "final-integrated-audit"
+  },
+  "operatorExperienceContract": {
+    "newRequiredFields": 0,
+    "newRequiredConfirmations": 0,
+    "manualRefreshRequired": false,
+    "captchaRequired": false,
+    "firestoreKnowledgeRequired": false,
+    "appCheckKnowledgeRequired": false,
+    "normalDriveWorkflowChanged": false,
+    "normalEmpenhoWorkflowChanged": false,
+    "normalInvoiceWorkflowChanged": false
+  },
+  "invariants": [
+    "multi-tenant workspace/UG isolation",
+    "two simultaneous external sessions per workspace",
+    "founder unlimited",
+    "remote revocation",
+    "workspace/account lifecycle fail-closed",
+    "Google Drive workspace isolation",
+    "no sensitive payloads added to telemetry",
+    "no production deployment in Block 17 repository cycle"
+  ],
+  "productionFollowUp": [
+    "register reCAPTCHA Enterprise score-based key and Firebase App Check app",
+    "set NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY",
+    "deploy instrumented build",
+    "observe App Check metrics before progressive enforcement"
+  ]
+}

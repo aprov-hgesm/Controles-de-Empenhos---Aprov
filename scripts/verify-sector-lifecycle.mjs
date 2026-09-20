@@ -11,6 +11,7 @@ const adminHook = read('hooks/usePlatformAdminDirectory.ts');
 const adminView = read('components/admin/PlatformAdminView.tsx');
 const editModal = read('components/admin/EditSectorModal.tsx');
 const operational = read('hooks/useOperationalData.ts');
+const sessionControl = read('lib/platformSessionControl.ts');
 const rules = read('firestore.rules');
 
 requireText(store, 'export async function updateSectorWorkspaceProfile', 'Edição institucional do setor não foi implementada.');
@@ -28,10 +29,10 @@ requireText(adminView, 'Editar cadastro', 'Painel não oferece edição instituc
 requireText(editModal, 'Workspace ID', 'Modal de edição não exibe workspace protegido.');
 requireText(editModal, 'Conta Google autorizada', 'Modal de edição não exibe conta protegida.');
 
-requireText(operational, 'observador de ciclo de vida para setores externos', 'Sessão aberta não observa mudanças administrativas.');
-requireText(operational, "data.status !== 'active'", 'Watcher não encerra setor suspenso.');
-requireText(operational, 'data.firebaseUid !== user.uid', 'Watcher não preserva vínculo de UID.');
-requireText(operational, 'void signOut(auth)', 'Watcher não encerra a sessão suspensa.');
+requireText(operational, 'startWorkspaceSessionControl', 'Sessão aberta não delega lifecycle ao controle autônomo por aba.');
+requireText(sessionControl, "data.status !== 'active'", 'Controle de sessão não encerra setor suspenso.');
+requireText(sessionControl, 'data.firebaseUid !== uid', 'Controle de sessão não preserva vínculo de UID.');
+requireText(operational, 'void signOut(auth)', 'Invalidação de sessão não encerra a sessão suspensa.');
 
 requireText(rules, 'function boundIdentityMatchesAccount(account)', 'Acesso operacional não separa bootstrap do UID vinculado.');
 requireText(rules, 'operationalIdentityMatchesAccount(', 'Acesso operacional não exige identidade vinculada.');
@@ -43,7 +44,7 @@ requireText(rules, "accountId != 'aprov1hgesm@gmail.com'", 'Rules não protegem 
 requireText(rules, "'name',\n          'status',\n          'ug',\n          'institutionalProfile',\n          'updatedAt'", 'Workspace pode alterar campos além dos permitidos.');
 requireText(rules, "'status',\n          'ug',\n          'updatedAt'", 'Conta pode alterar campos além do ciclo de vida.');
 requireText(rules, "request.resource.data.ug == resource.data.ug", 'UG já vinculada não está protegida contra substituição.');
-requireText(operational, "(data.ug || null) !== workspaceContext.ug", 'Watcher não observa divergência da UG organizacional.');
+requireText(sessionControl, "(data.ug || null) !== context.ug", 'Controle de sessão não observa divergência da UG organizacional.');
 
 forbidText(
   rules,

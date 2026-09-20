@@ -9,6 +9,7 @@ import type { SagNsImportCommitResult } from '../../../lib/sagNsPersistence';
 import { getInvoiceRecordKey } from '../../../lib/invoiceIdentity';
 import { classRequiresTermoRecebimento, type EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 import { RelatorioEmpenhoSelector } from './RelatorioEmpenhoSelector';
+import { useHistoricalInvoices } from '../hooks/useHistoricalInvoices';
 import {
   filterInvoicesByReportingPeriod,
   formatReportingPeriodLabel,
@@ -27,7 +28,8 @@ export interface RelatoriosViewContext {
   handleApplySagNsImport: (
     payload: SagNsPayload,
     supplierCnpj: string,
-    expectedFingerprint: string
+    expectedFingerprint: string,
+    invoiceSource?: Invoice[]
   ) => Promise<SagNsImportCommitResult>;
   invoices: Invoice[];
   relatoriosPregaoFilter: string;
@@ -54,7 +56,7 @@ interface RelatorioPorEmpenhoViewProps {
 }
 /** Relatório operacional por empenho preservado do fluxo legado da aba Relatórios. */
 export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProps) {
-  const { editingNSId, empenhoClasses, empenhos, formatDateOnly, handleDownloadTermoRecebimento, handleGenerateEmpenhoReportPDF, handleSaveNumeroNS, invoices, relatoriosPregaoFilter, reportEndDate, reportSearch, reportStartDate, selectedReportInvoice, setEditingNSId, setRelatoriosPregaoFilter, setReportEndDate, setReportSearch, setReportStartDate, setSelectedReportInvoice, setShowPdfModal, setTempNSValue, showPdfModal, tempNSValue, uniquePregaos, workspaceUg } = context;
+  const { editingNSId, empenhoClasses, empenhos, formatDateOnly, handleDownloadTermoRecebimento, handleGenerateEmpenhoReportPDF, handleSaveNumeroNS, invoices: liveInvoices, relatoriosPregaoFilter, reportEndDate, reportSearch, reportStartDate, selectedReportInvoice, setEditingNSId, setRelatoriosPregaoFilter, setReportEndDate, setReportSearch, setReportStartDate, setSelectedReportInvoice, setShowPdfModal, setTempNSValue, showPdfModal, tempNSValue, uniquePregaos, workspaceUg } = context;
 
   const invoiceRequiresTR = (invoice: Invoice): boolean => {
     const empenho = empenhos.find((item) => item.id === invoice.empenhoId);
@@ -69,12 +71,60 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
   const reportingPeriodLabel = formatReportingPeriodLabel(reportingPeriod);
   const hasReportingPeriod = Boolean(reportStartDate || reportEndDate);
 
+  const {
+    invoices: historicalInvoices,
+    loading: historicalInvoicesLoading,
+    truncated: historicalInvoicesTruncated,
+    error: historicalInvoicesError,
+    upsertInvoices: upsertHistoricalInvoices,
+  } = useHistoricalInvoices({
+    mode: 'empenho',
+    keyValue: reportSearch,
+    enabled: Boolean(reportSearch),
+  });
+
+  const invoices = React.useMemo(() => {
+    if (!reportSearch) return [];
+    const byRecordKey = new Map(
+      historicalInvoices.map((invoice) => [getInvoiceRecordKey(invoice), invoice])
+    );
+
+    // Escritas feitas nesta sessão atualizam o estado operacional imediatamente.
+    // Mesclar esse cache sobre a consulta histórica evita exigir refresh após
+    // editar NS/fluxo documental, sem reabrir um listener histórico ilimitado.
+    liveInvoices
+      .filter((invoice) => invoice.empenhoId === reportSearch)
+      .forEach((invoice) => byRecordKey.set(getInvoiceRecordKey(invoice), invoice));
+
+    return [...byRecordKey.values()];
+  }, [historicalInvoices, liveInvoices, reportSearch]);
+
+  const saveScopedNumeroNS = React.useCallback(
+    async (invoiceRecordKey: string, value: string) => {
+      const updated = await handleSaveNumeroNS(invoiceRecordKey, value, invoices);
+      if (updated) upsertHistoricalInvoices([updated]);
+      return updated;
+    },
+    [handleSaveNumeroNS, invoices, upsertHistoricalInvoices]
+  );
+
   return (
             <div className="space-y-6">
 
               <div>
                 <h3 className="text-xl font-bold tracking-tight text-[#00288e]">Relatório por Empenho</h3>
                 <p className="text-sm text-gray-500 font-medium">Conciliação detalhada de Notas Fiscais, NS, recebimentos e saldos do empenho selecionado.</p>
+                {reportSearch && historicalInvoicesLoading && (
+                  <p className="mt-1 text-[10px] font-semibold text-blue-500">Consultando histórico do empenho…</p>
+                )}
+                {historicalInvoicesError && (
+                  <p className="mt-1 text-[10px] font-semibold text-rose-600">{historicalInvoicesError}</p>
+                )}
+                {historicalInvoicesTruncated && (
+                  <p className="mt-1 text-[10px] font-semibold text-amber-600">
+                    Histórico excepcionalmente extenso; a consulta atingiu o limite de segurança.
+                  </p>
+                )}
               </div>
 
               <RelatorioEmpenhoSelector
@@ -395,7 +445,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                               onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
                                                   e.preventDefault();
-                                                  handleSaveNumeroNS(getInvoiceRecordKey(inv), tempNSValue);
+                                                  saveScopedNumeroNS(getInvoiceRecordKey(inv), tempNSValue);
                                                 } else if (e.key === 'Escape') {
                                                   setEditingNSId(null);
                                                   setTempNSValue('');
@@ -408,7 +458,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                             <button
                                               id={`btn-save-ns-${getInvoiceRecordKey(inv)}`}
                                               type="button"
-                                              onClick={() => handleSaveNumeroNS(getInvoiceRecordKey(inv), tempNSValue)}
+                                              onClick={() => saveScopedNumeroNS(getInvoiceRecordKey(inv), tempNSValue)}
                                               className="p-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-lg transition-all shadow-xs flex items-center justify-center"
                                               title="Salvar Número da NS"
                                             >
@@ -488,7 +538,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                         id="btn-download-report-pdf-main"
                         onClick={() => {
                           const emp = empenhos.find(e => e.id === reportSearch);
-                          if (emp) handleGenerateEmpenhoReportPDF(emp, 'download', reportingPeriod);
+                          if (emp) handleGenerateEmpenhoReportPDF(emp, 'download', reportingPeriod, invoices);
                         }}
                         className="px-5 py-2.5 bg-[#00288e] hover:bg-[#001e6a] text-white active:scale-95 duration-100 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-all"
                       >
@@ -498,7 +548,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                         id="btn-print-report-pdf-main"
                         onClick={() => {
                           const emp = empenhos.find(e => e.id === reportSearch);
-                          if (emp) handleGenerateEmpenhoReportPDF(emp, 'print', reportingPeriod);
+                          if (emp) handleGenerateEmpenhoReportPDF(emp, 'print', reportingPeriod, invoices);
                         }}
                         className="px-5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 active:scale-95 duration-100 rounded-xl font-bold text-xs sm:text-sm text-gray-700 flex items-center gap-2 shadow-xs transition-all"
                       >
@@ -708,7 +758,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                             id="btn-download-pdf-from-preview"
                             onClick={() => {
                               const emp = empenhos.find(e => e.id === reportSearch);
-                              if (emp) handleGenerateEmpenhoReportPDF(emp, 'download', reportingPeriod);
+                              if (emp) handleGenerateEmpenhoReportPDF(emp, 'download', reportingPeriod, invoices);
                             }}
                             className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold text-xs hover:bg-emerald-700 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
                           >
@@ -718,7 +768,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                             id="btn-print-pdf-from-preview"
                             onClick={() => {
                               const emp = empenhos.find(e => e.id === reportSearch);
-                              if (emp) handleGenerateEmpenhoReportPDF(emp, 'print', reportingPeriod);
+                              if (emp) handleGenerateEmpenhoReportPDF(emp, 'print', reportingPeriod, invoices);
                             }}
                             className="px-4 py-2 bg-[#00288e] text-white rounded-xl font-bold text-xs hover:bg-[#1e40af] transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
                           >

@@ -274,6 +274,30 @@ jobs:
       - name: Block 17.1 session lease efficiency guard
         run: npm run verify:block-17-1-session-lease-efficiency
 
+      - name: Block 17.2 multi-tab session coordination guard
+        run: npm run verify:block-17-2-multitab-coordination
+
+      - name: Block 17.3 branding efficiency guard
+        run: npm run verify:block-17-3-branding-efficiency
+
+      - name: Block 17.4 operational listeners guard
+        run: npm run verify:block-17-4-operational-listeners
+
+      - name: Block 17.5 historical scalability guard
+        run: npm run verify:block-17-5-historical-scalability
+
+      - name: Block 17.6 telemetry fidelity guard
+        run: npm run verify:block-17-6-telemetry-fidelity
+
+      - name: Block 17.7 App Check guard
+        run: npm run verify:block-17-7-app-check
+
+      - name: Block 17.8 consumption regression guard
+        run: npm run verify:block-17-8-consumption-regression
+
+      - name: Block 17.9 final closure guard
+        run: npm run verify:block-17-9-final-closure
+
       - name: Block 19 home experience foundation guard
         run: npm run verify:block-19-home-experience
 
@@ -414,6 +438,24 @@ jobs:
           echo "browser-e2e-emulator=${{ needs.browser-e2e-emulator.result }}"
           test "${{ needs.validate-application.result }}" = "success"
           test "${{ needs.browser-e2e-emulator.result }}" = "success"
+  block-17-final-release-gate:
+    name: Block 17 Final Release Gate
+    if: ${{ always() }}
+    needs:
+      - validate-application
+      - browser-e2e-emulator
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require Block 17 critical validation jobs
+        shell: bash
+        run: |
+          echo "validate-application=${{ needs.validate-application.result }}"
+          echo "browser-e2e-emulator=${{ needs.browser-e2e-emulator.result }}"
+          test "${{ needs.validate-application.result }}" = "success"
+          test "${{ needs.browser-e2e-emulator.result }}" = "success"
+          echo "BLOCK 17 FINAL RELEASE: READY"
+
   block-19-final-closure-gate:
     name: Block 19 Final Closure Gate
     if: ${{ always() }}

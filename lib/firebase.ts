@@ -1,4 +1,5 @@
 import { initializeApp } from 'firebase/app';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 import { connectAuthEmulator, getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -14,6 +15,27 @@ const effectiveFirebaseConfig = useE2eEmulators && e2eProjectId
   : firebaseConfig;
 
 const app = initializeApp(effectiveFirebaseConfig);
+
+const appCheckSiteKey = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY?.trim() || '';
+export const firebaseAppCheckConfigured = Boolean(appCheckSiteKey);
+
+declare global {
+  // Evita dupla inicialização durante Fast Refresh/HMR sem persistir token/segredo.
+  var __emprovexAppCheckInitialized: boolean | undefined;
+}
+
+if (
+  typeof window !== 'undefined'
+  && !useE2eEmulators
+  && appCheckSiteKey
+  && !globalThis.__emprovexAppCheckInitialized
+) {
+  initializeAppCheck(app, {
+    provider: new ReCaptchaEnterpriseProvider(appCheckSiteKey),
+    isTokenAutoRefreshEnabled: true,
+  });
+  globalThis.__emprovexAppCheckInitialized = true;
+}
 
 export const db = useE2eEmulators
   ? getFirestore(app)

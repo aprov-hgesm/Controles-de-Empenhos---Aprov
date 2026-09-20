@@ -15,6 +15,7 @@ const lease = read('lib/platformSessionLease.ts');
 const adminSessions = read('lib/platformAdminSessions.ts');
 const adminHook = read('hooks/usePlatformAdminSessions.ts');
 const operational = read('hooks/useOperationalData.ts');
+const sessionControl = read('lib/platformSessionControl.ts');
 const access = read('lib/platformAccess.ts');
 const panel = read('components/admin/AdminSessionsPanel.tsx');
 const adminView = read('components/admin/PlatformAdminView.tsx');
@@ -54,10 +55,15 @@ for (const marker of [
   'terminateSession',
 ]) requireText(adminHook, marker, `Hook administrativo perdeu requisito: ${marker}`);
 
-for (const marker of [
+requireText(
+  sessionControl,
   'subscribeWorkspaceSessionRevocation',
+  'Controle autônomo por aba deixou de observar revogação de sessão.'
+);
+for (const marker of [
   "diagnosticCode === 'SESSION_REVOKED'",
   'error instanceof PlatformSessionLeaseError',
+  'startWorkspaceSessionControl',
 ]) requireText(operational, marker, `Sessão operacional não trata revogação: ${marker}`);
 
 requireText(

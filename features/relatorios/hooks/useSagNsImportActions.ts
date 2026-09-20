@@ -46,7 +46,8 @@ export function useSagNsImportActions(context: SagNsImportActionsContext) {
   const handleApplySagNsImport = async (
     payload: SagNsPayload,
     supplierCnpj: string,
-    expectedFingerprint: string
+    expectedFingerprint: string,
+    invoiceSource: Invoice[] = invoices
   ): Promise<SagNsImportCommitResult> => {
     if (!user) {
       throw new SagNsImportActionError(
@@ -81,7 +82,7 @@ export function useSagNsImportActions(context: SagNsImportActionsContext) {
       scopedPayload,
       supplierCnpj,
       empenhos,
-      invoices
+      invoiceSource
     );
     const freshPreview = buildSagNsApplicationPreview(freshReconciliation);
     const freshFingerprint = buildSagNsApplicationFingerprint(freshPreview);
@@ -121,7 +122,7 @@ export function useSagNsImportActions(context: SagNsImportActionsContext) {
           `${change.proposedUg}|${normalizeSagNsNumber(change.proposedNs)}`
       )
     );
-    const knownNsOwnerRecordKeys = invoices
+    const knownNsOwnerRecordKeys = invoiceSource
       .filter((invoice) => {
         if (!selectedEmpenhoIds.has(invoice.empenhoId)) return false;
         const invoiceNs = normalizeSagNsNumber(invoice.numeroNS);

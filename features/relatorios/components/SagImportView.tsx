@@ -15,7 +15,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import type { Empenho, Invoice } from '../../../lib/types';
-import { formatSupplierCnpj } from '../../../lib/invoiceIdentity';
+import { formatSupplierCnpj, getInvoiceRecordKey } from '../../../lib/invoiceIdentity';
 import { buildSupplierReports } from '../../../lib/supplierReporting';
 import {
   buildSagNsExtractionPrompt,
@@ -38,6 +38,7 @@ import { SagApplyConfirmationDialog } from './SagApplyConfirmationDialog';
 import { SagImportProgress } from './SagImportProgress';
 import { SagPromptStep, type SagPromptCopyState } from './SagPromptStep';
 import { SagSupplierStep } from './SagSupplierStep';
+import { useHistoricalInvoices } from '../hooks/useHistoricalInvoices';
 
 interface SagImportViewProps {
   empenhos: Empenho[];
@@ -46,7 +47,8 @@ interface SagImportViewProps {
   onApplySagNsImport: (
     payload: SagNsPayload,
     supplierCnpj: string,
-    expectedFingerprint: string
+    expectedFingerprint: string,
+    invoiceSource?: Invoice[]
   ) => Promise<SagNsImportCommitResult>;
 }
 
@@ -113,12 +115,33 @@ function copyTextFallback(value: string): boolean {
 }
 
 export function SagImportView({ empenhos, invoices, workspaceUg, onApplySagNsImport }: SagImportViewProps) {
-  const supplierReports = React.useMemo(
-    () => buildSupplierReports(empenhos, invoices),
-    [empenhos, invoices]
-  );
   const [supplierSearch, setSupplierSearch] = React.useState('');
   const [selectedCnpj, setSelectedCnpj] = React.useState('');
+
+  const {
+    invoices: selectedSupplierHistory,
+    loading: selectedSupplierHistoryLoading,
+    truncated: selectedSupplierHistoryTruncated,
+    error: selectedSupplierHistoryError,
+    upsertInvoices: upsertSupplierHistory,
+  } = useHistoricalInvoices({
+    mode: 'supplier',
+    keyValue: selectedCnpj,
+    enabled: Boolean(selectedCnpj),
+  });
+
+  const effectiveInvoices = React.useMemo(() => {
+    const byRecordKey = new Map(invoices.map((invoice) => [getInvoiceRecordKey(invoice), invoice]));
+    selectedSupplierHistory.forEach((invoice) => {
+      byRecordKey.set(getInvoiceRecordKey(invoice), invoice);
+    });
+    return [...byRecordKey.values()];
+  }, [invoices, selectedSupplierHistory]);
+
+  const supplierReports = React.useMemo(
+    () => buildSupplierReports(empenhos, effectiveInvoices),
+    [effectiveInvoices, empenhos]
+  );
   const [jsonText, setJsonText] = React.useState('');
   const [validation, setValidation] = React.useState<SagNsValidationResult | null>(null);
   const [copyState, setCopyState] = React.useState<SagPromptCopyState>('idle');
@@ -182,9 +205,9 @@ export function SagImportView({ empenhos, invoices, workspaceUg, onApplySagNsImp
       effectivePayload,
       selectedSupplier.cnpj,
       empenhos,
-      invoices
+      effectiveInvoices
     );
-  }, [effectivePayload, empenhos, invoices, selectedSupplier]);
+  }, [effectiveInvoices, effectivePayload, empenhos, selectedSupplier]);
 
   const applicationPreview = React.useMemo(
     () => (reconciliation ? buildSagNsApplicationPreview(reconciliation) : null),
@@ -298,9 +321,11 @@ export function SagImportView({ empenhos, invoices, workspaceUg, onApplySagNsImp
       const result = await onApplySagNsImport(
         effectivePayload,
         selectedSupplier.cnpj,
-        confirmationFingerprint
+        confirmationFingerprint,
+        effectiveInvoices
       );
       setLastImportResult(result);
+      upsertSupplierHistory(result.updatedInvoices);
       setShowApplyConfirmation(false);
       setApplyConfirmed(false);
       setConfirmationFingerprint('');
@@ -324,6 +349,17 @@ export function SagImportView({ empenhos, invoices, workspaceUg, onApplySagNsImp
 
   return (
     <div className="space-y-6">
+      {selectedCnpj && selectedSupplierHistoryLoading && (
+        <p className="text-[10px] font-semibold text-blue-500">Consultando NFs deste fornecedor para a conciliação SAG…</p>
+      )}
+      {selectedSupplierHistoryError && (
+        <p className="text-[10px] font-semibold text-rose-600">{selectedSupplierHistoryError}</p>
+      )}
+      {selectedSupplierHistoryTruncated && (
+        <p className="text-[10px] font-semibold text-amber-600">
+          Histórico excepcionalmente extenso; a consulta atingiu o limite de segurança.
+        </p>
+      )}
       <header>
         <div className="flex items-center gap-2 text-[#00288e]">
           <Landmark className="h-5 w-5" aria-hidden="true" />

@@ -63,7 +63,7 @@ const PLAN_BY_TAB: Record<OperationalActiveTab, OperationalSubscriptionPlan> = {
   relatorios: {
     empenhos: true,
     alerts: false,
-    invoices: true,
+    invoices: false,
     comissoes: true,
     cronogramas: false,
   },

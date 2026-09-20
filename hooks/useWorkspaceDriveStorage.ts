@@ -12,7 +12,7 @@ import {
 } from '../lib/googleDriveWorkspace';
 import {
   saveWorkspaceDriveSettings,
-  subscribeWorkspaceDriveSettings,
+  loadWorkspaceDriveSettings,
   type WorkspaceDriveSettings,
 } from '../lib/workspaceDriveSettings';
 import {
@@ -77,21 +77,27 @@ export function useWorkspaceDriveStorage(
       return;
     }
 
+    let active = true;
     setSettingsLoading(true);
-    const unsubscribe = subscribeWorkspaceDriveSettings(
-      workspaceContext,
-      (nextSettings) => {
+
+    void loadWorkspaceDriveSettings(workspaceContext)
+      .then((nextSettings) => {
+        if (!active) return;
         setSettings(nextSettings);
         setSettingsLoading(false);
-      },
-      (subscriptionError) => {
-        setError(subscriptionError.message || 'Falha ao carregar a configuração do Google Drive.');
+      })
+      .catch((loadError) => {
+        if (!active) return;
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : 'Falha ao carregar a configuração do Google Drive.'
+        );
         setSettingsLoading(false);
-      }
-    );
+      });
 
     return () => {
-      unsubscribe();
+      active = false;
       clearWorkspaceDriveRuntime('context-change');
     };
   }, [user, workspaceContext]);

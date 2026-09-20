@@ -632,19 +632,49 @@ export async function renewWorkspaceSessionLeaseIfDue(
     return null;
   }
 
+  // Fast path: praticamente todos os ticks param aqui. O timestamp vive em
+  // localStorage e é compartilhado pelas abas do mesmo navegador.
   if (!shouldRenewWorkspaceSessionLease(context.workspaceId, user.uid)) {
     return null;
   }
 
-  const local = getLocalLeaseRecord(context.workspaceId, user.uid);
-  if (!local) {
-    // Recuperação rara: sem a identidade local do slot não é seguro fazer update
-    // cego. Voltamos à aquisição transacional completa, que verifica tombstone e
-    // os dois slots antes de reconstruir o estado local.
-    return acquireWorkspaceSessionLease(user, context);
+  const renewIfStillDue = async () => {
+    // Segunda leitura dentro do mutex: duas abas podem observar "due" ao mesmo
+    // tempo, mas somente a primeira deve efetivamente renovar. Quando a segunda
+    // entra, ela já encontra o marcador atualizado e retorna sem write.
+    if (!shouldRenewWorkspaceSessionLease(context.workspaceId, user.uid)) {
+      return null;
+    }
+
+    const local = getLocalLeaseRecord(context.workspaceId, user.uid);
+    if (!local) {
+      // Recuperação rara: sem a identidade local do slot não é seguro fazer update
+      // cego. Voltamos à aquisição transacional completa, que verifica tombstone e
+      // os dois slots antes de reconstruir o estado local.
+      return acquireWorkspaceSessionLease(user, context);
+    }
+
+    return renewKnownWorkspaceSessionLease(user, context, local);
+  };
+
+  if (
+    typeof navigator !== 'undefined'
+    && navigator.locks
+    && typeof navigator.locks.request === 'function'
+  ) {
+    // Lock propositalmente curto: existe apenas durante a decisão/write de
+    // heartbeat. Nenhuma aba vira líder e nenhum lock permanece pendente durante
+    // a vida da sessão.
+    return navigator.locks.request(
+      `emprovex-session-renew:${context.workspaceId}:${user.uid}`,
+      renewIfStillDue
+    );
   }
 
-  return renewKnownWorkspaceSessionLease(user, context, local);
+  // Navegadores sem Web Locks continuam seguros. No pior caso duas abas podem
+  // emitir uma renovação redundante na mesma janela; as Rules e a identidade do
+  // lease permanecem iguais.
+  return renewIfStillDue();
 }
 
 export function getConfiguredExternalSessionLimit(): number {
