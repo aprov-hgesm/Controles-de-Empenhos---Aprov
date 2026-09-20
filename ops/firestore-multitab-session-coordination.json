@@ -1,0 +1,79 @@
+{
+  "version": "emprovex_multitab_session_coordination_v1",
+  "block": "17.2",
+  "baselineCommit": "68d7044bc3b6b36e1610a28fb1dfe821eefcb027",
+  "coordination": {
+    "preferredMode": "web-locks-plus-broadcast-channel",
+    "leaderElection": "queued exclusive Web Lock scoped by workspaceId + uid",
+    "invalidationTransport": "BroadcastChannel scoped by workspaceId + uid",
+    "fallback": "per-tab control listeners and heartbeat when safe coordination APIs are unavailable",
+    "failoverMechanism": "native Web Locks queue; follower request remains pending until leader releases or document closes"
+  },
+  "leaderResponsibilities": [
+    "workspace lifecycle listener",
+    "platform account lifecycle listener",
+    "session revocation listener",
+    "session lease renewal timer",
+    "visibility-triggered renewal",
+    "online-triggered renewal"
+  ],
+  "followerResponsibilities": [
+    "listen for session-invalid BroadcastChannel messages",
+    "remain queued on the exclusive Web Lock without timer polling",
+    "keep operational UI and data subscriptions outside this block"
+  ],
+  "controlListenerModel": {
+    "before": {
+      "listenersPerTab": 3,
+      "formula": "3 * tabs"
+    },
+    "afterPreferredMode": {
+      "listenersPerBrowserLogicalSession": 3,
+      "listenersPerFollowerTab": 0,
+      "formula": "3"
+    },
+    "examples": {
+      "2_tabs": {
+        "before": 6,
+        "after": 3,
+        "reductionPercent": 50
+      },
+      "3_tabs": {
+        "before": 9,
+        "after": 3,
+        "reductionPercent": 66.6667
+      },
+      "5_tabs": {
+        "before": 15,
+        "after": 3,
+        "reductionPercent": 80
+      }
+    }
+  },
+  "fixedInfrastructureListenerScope": {
+    "notCoordinatedYet": [
+      "empenho classes listener",
+      "workspace Drive settings listener",
+      "global branding listener",
+      "operational collection listeners"
+    ],
+    "futureBlocks": [
+      "17.3",
+      "17.4"
+    ]
+  },
+  "invariants": [
+    "two external sessions per workspace/UG",
+    "founder unlimited",
+    "30-minute lease and 15-minute renewal window",
+    "transactional initial acquisition",
+    "identity-safe direct renewal",
+    "remote revocation",
+    "workspace/account lifecycle invalidation",
+    "immediate explicit logout release",
+    "multi-tenant isolation",
+    "Google Drive exclusivity for documents"
+  ],
+  "firestoreRulesChanged": false,
+  "productionDeploy": false
+}
