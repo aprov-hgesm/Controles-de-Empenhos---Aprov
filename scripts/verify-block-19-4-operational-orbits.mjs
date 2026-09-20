@@ -32,14 +32,17 @@ requireText(orbitCss, '.receivingPlanet', 'Planeta de Recebimentos sem identidad
 requireText(orbitCss, '.executionPlanet', 'Planeta de Execução sem identidade visual.');
 requireText(orbitCss, '.dashboardPlanet', 'Planeta do Painel sem identidade visual.');
 requireText(orbitCss, '.classPlanet', 'Planeta de Classes ausente.');
-requireText(orbitCss, '.classTooltip', 'Tooltip consolidado de classes ausente.');
+requireText(orbitCss, '.floatingClassTooltip', 'Tooltip consolidado de classes ausente.');
+requireText(orbitCss, '.floatingTooltip', 'Tooltips orbitais não estão desacoplados da rotação dos planetas.');
+requireText(orbit, 'showTooltip(', 'Sistema orbital não calcula posição independente para os tooltips.');
+requireText(orbit, 'rootRef', 'Tooltips orbitais não possuem referencial estável da cena.');
 requireText(orbitCss, '@keyframes planetOrbit', 'Planetas não possuem movimento orbital ao redor do núcleo.');
 requireText(orbitCss, '@keyframes planetCounterOrbit', 'Conteúdo dos planetas não compensa a rotação orbital.');
 requireText(orbitCss, '.orbitSlot:hover', 'Órbita não pausa para estabilizar hover/foco.');
 requireText(orbit, 'data-inicio-star-orbit="outer"', 'Faixa orbital externa não está exposta para proteção da constelação.');
 requireText(orbit, 'data-inicio-star-orbit="middle"', 'Faixa orbital intermediária não está exposta para proteção da constelação.');
 requireText(orbit, 'data-inicio-star-orbit="inner"', 'Faixa orbital interna não está exposta para proteção da constelação.');
-requireText(orbit, 'className={styles.classTooltip}', 'Indicadores de classes não foram movidos para o tooltip do planeta.');
+requireText(orbit, "tooltipState.key === 'classes'", 'Indicadores de classes não estão no tooltip flutuante independente.');
 forbidText(orbit, 'className={styles.classMoons}', 'Indicadores de classes continuam permanentemente expostos ao lado do planeta.');
 requireText(orbitCss, '@media (prefers-reduced-motion: reduce)', 'Sistema orbital não respeita reduced motion.');
 requireText(plan, 'inicio:', 'Perfil realtime de Início ausente.');
@@ -65,5 +68,6 @@ if (findings.length) {
   console.log('Execução: PLANETA ATIVO');
   console.log('Classes: TOOLTIP SOB DEMANDA ATIVO');
   console.log('Órbitas planetárias: ATIVAS EM PERFIL FULL');
+  console.log('Tooltips: SEMPRE ORIENTADOS À TELA');
   console.log('Realtime adicional: ZERO');
 }

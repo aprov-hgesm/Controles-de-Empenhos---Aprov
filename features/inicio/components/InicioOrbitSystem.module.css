@@ -300,11 +300,9 @@
   width: 22px;
 }
 
-.tooltip {
+.floatingTooltip {
   position: absolute;
-  left: 50%;
-  bottom: calc(100% + 13px);
-  z-index: 40;
+  z-index: 60;
   min-width: 210px;
   max-width: 245px;
   padding: 11px 13px;
@@ -318,20 +316,18 @@
   backdrop-filter: blur(16px);
   color: var(--inicio-text, #eaf2ff);
   text-align: left;
-  transform: translate(-50%, 7px) scale(0.97);
-  transform-origin: center bottom;
-  opacity: 0;
   pointer-events: none;
-  transition: opacity 150ms ease, transform 150ms ease;
+  transform: translate(-50%, calc(-100% - 13px)) scale(1);
+  transform-origin: center bottom;
+  animation: tooltipReveal 150ms ease-out both;
 }
 
-.planet:hover .tooltip,
-.planet:focus-visible .tooltip {
-  opacity: 1;
-  transform: translate(-50%, 0) scale(1);
+.floatingTooltip[data-placement='below'] {
+  transform: translate(-50%, 13px) scale(1);
+  transform-origin: center top;
 }
 
-.tooltip strong {
+.floatingTooltip strong {
   display: block;
   margin-bottom: 4px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -340,14 +336,14 @@
   text-transform: uppercase;
 }
 
-.tooltip span {
+.floatingTooltip span {
   display: block;
   color: #cbd9f3;
   font-size: 10px;
   line-height: 1.4;
 }
 
-.tooltip small {
+.floatingTooltip small {
   display: block;
   margin-top: 4px;
   color: #8291af;
@@ -424,11 +420,9 @@
   text-transform: uppercase;
 }
 
-.classTooltip {
+.floatingClassTooltip {
   position: absolute;
-  right: calc(100% + 14px);
-  top: 50%;
-  z-index: 42;
+  z-index: 62;
   width: 228px;
   padding: 12px 13px;
   border: 1px solid var(--inicio-line, rgba(149, 164, 218, 0.16));
@@ -440,22 +434,15 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.035);
   backdrop-filter: blur(16px);
   color: var(--inicio-text, #eaf2ff);
-  transform: translate(8px, -50%) scale(0.97);
-  transform-origin: right center;
-  opacity: 0;
-  visibility: hidden;
   pointer-events: none;
-  transition:
-    opacity 150ms ease,
-    transform 150ms ease,
-    visibility 150ms ease;
+  transform: translate(-50%, calc(-100% - 13px)) scale(1);
+  transform-origin: center bottom;
+  animation: tooltipReveal 150ms ease-out both;
 }
 
-.classSystem:hover .classTooltip,
-.classSystem:focus-within .classTooltip {
-  opacity: 1;
-  visibility: visible;
-  transform: translate(0, -50%) scale(1);
+.floatingClassTooltip[data-placement='below'] {
+  transform: translate(-50%, 13px) scale(1);
+  transform-origin: center top;
 }
 
 .classTooltipHeader {
@@ -552,6 +539,11 @@
   background: linear-gradient(90deg, transparent, rgba(125, 156, 225, 0.5), transparent);
 }
 
+@keyframes tooltipReveal {
+  from { opacity: 0; scale: 0.98; }
+  to { opacity: 1; scale: 1; }
+}
+
 @keyframes orbitalSweep {
   to { transform: translate(-50%, -50%) rotate(360deg); }
 }
@@ -591,7 +583,7 @@
     transform: scale(0.86);
   }
 
-  .tooltip {
+  .floatingTooltip {
     min-width: 178px;
   }
 
@@ -607,8 +599,8 @@
 }
 
 @media (hover: none), (pointer: coarse) {
-  .tooltip,
-  .classTooltip {
+  .floatingTooltip,
+  .floatingClassTooltip {
     display: none;
   }
 
@@ -656,8 +648,8 @@
   opacity: 0.58;
 }
 
-[data-performance='balanced'] .tooltip,
-[data-performance='balanced'] .classTooltip {
+[data-performance='balanced'] .floatingTooltip,
+[data-performance='balanced'] .floatingClassTooltip {
   backdrop-filter: none;
 }
 
