@@ -17,6 +17,7 @@ import { AppSidebar } from '../components/layout/AppSidebar';
 import { ToastNotification } from '../components/layout/ToastNotification';
 import { DashboardView } from '../features/dashboard/components/DashboardView';
 import { InicioView } from '../features/inicio/components/InicioView';
+import { useInicioWorkMemory } from '../features/inicio/hooks/useInicioWorkMemory';
 import { EmpenhosView } from '../features/empenhos/components/EmpenhosView';
 import { NotasFiscaisView } from '../features/notas-fiscais/components/NotasFiscaisView';
 import { RelatoriosView } from '../features/relatorios/components/RelatoriosView';
@@ -106,6 +107,18 @@ export default function Home() {
     isSavingCronograma, setIsSavingCronograma,
   } = useOperationalViewState();
 
+  const inicioWorkspaceKey = workspaceContext.status === 'sector'
+    ? `${workspaceContext.workspaceId}:${workspaceContext.ug || 'sem-ug'}`
+    : null;
+
+  const {
+    resumeTarget: inicioResumeTarget,
+    clearWorkMemory: clearInicioWorkMemory,
+  } = useInicioWorkMemory({
+    workspaceKey: inicioWorkspaceKey,
+    activeTab,
+    selectedEmpenhoDetailId,
+  });
 
   const {
     handleEmpenhoDocumentUploaded,
@@ -380,6 +393,7 @@ export default function Home() {
           onLogout={async () => {
             try {
               setShowLoginSuccessTransition(false);
+              clearInicioWorkMemory();
               await signOutUser();
               showToast('Você saiu do sistema.', 'info');
             } catch (err: any) {
@@ -421,6 +435,7 @@ export default function Home() {
               workspaceUg={workspaceContext.status === 'sector' ? workspaceContext.ug : null}
               isFoundingWorkspace={workspaceContext.status === 'sector' && workspaceContext.resolutionSource === 'legacy-hgesm-bootstrap'}
               customLogo={customLogo}
+              resumeTarget={inicioResumeTarget}
               onNavigate={(tab) => {
                 setActiveTab(tab);
                 if (tab === 'empenhos') setSelectedEmpenhoDetailId(null);
@@ -428,6 +443,22 @@ export default function Home() {
               onSelectEmpenho={(empenhoId) => {
                 setSelectedEmpenhoDetailId(empenhoId);
                 setActiveTab('empenhos');
+              }}
+              onResumeWork={() => {
+                if (!inicioResumeTarget) return;
+                if (inicioResumeTarget.tab === 'empenhos') {
+                  setSelectedEmpenhoDetailId(inicioResumeTarget.empenhoId);
+                }
+                setActiveTab(inicioResumeTarget.tab);
+              }}
+              onCreateEmpenho={() => {
+                setSelectedEmpenhoDetailId(null);
+                setActiveTab('empenhos');
+                setShowNewEmpenhoModal(true);
+              }}
+              onRegisterInvoice={() => {
+                setNfSubTab('cadastrar');
+                setActiveTab('nova_nf');
               }}
             />
           )}
