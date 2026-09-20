@@ -414,7 +414,12 @@ export default function Home() {
               empenhos={empenhos}
               alerts={alerts}
               userDisplayName={user?.displayName || 'Operador EMPROVEX'}
+              workspaceName={workspaceContext.status === 'sector' ? workspaceContext.workspaceName : 'Ambiente EMPROVEX'}
+              organizationName={workspaceContext.status === 'sector' ? workspaceContext.institutionalProfile.organizationName : 'EMPROVEX'}
+              organizationShortName={workspaceContext.status === 'sector' ? (workspaceContext.institutionalProfile.organizationShortName || null) : null}
+              sectionName={workspaceContext.status === 'sector' ? workspaceContext.institutionalProfile.sectionName : 'Operação'}
               workspaceUg={workspaceContext.status === 'sector' ? workspaceContext.ug : null}
+              isFoundingWorkspace={workspaceContext.status === 'sector' && workspaceContext.resolutionSource === 'legacy-hgesm-bootstrap'}
               customLogo={customLogo}
               onNavigate={(tab) => {
                 setActiveTab(tab);
