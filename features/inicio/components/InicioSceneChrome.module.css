@@ -155,14 +155,9 @@
   }
 
   .topRail,
-  .sideScale {
-    display: none;
-  }
-
+  .sideScale,
   .bottomRail {
-    left: 34px;
-    bottom: 12px;
-    opacity: 0.56;
+    display: none;
   }
 }
 
