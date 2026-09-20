@@ -4,10 +4,10 @@
   "baselineCommit": "7e424b30b00e32c9a1b94044c7a1f0c55d4f1e0a",
   "coordination": {
     "preferredMode": "web-locks-plus-broadcast-channel",
-    "leaderElection": "exclusive Web Lock scoped by workspaceId + uid",
+    "leaderElection": "queued exclusive Web Lock scoped by workspaceId + uid",
     "invalidationTransport": "BroadcastChannel scoped by workspaceId + uid",
-    "failoverRetryMs": 4000,
-    "fallback": "per-tab control listeners and heartbeat when safe coordination APIs are unavailable"
+    "fallback": "per-tab control listeners and heartbeat when safe coordination APIs are unavailable",
+    "failoverMechanism": "native Web Locks queue; follower request remains pending until leader releases or document closes"
   },
   "leaderResponsibilities": [
     "workspace lifecycle listener",
@@ -19,7 +19,7 @@
   ],
   "followerResponsibilities": [
     "listen for session-invalid BroadcastChannel messages",
-    "retry leader election locally",
+    "remain queued on the exclusive Web Lock without timer polling",
     "keep operational UI and data subscriptions outside this block"
   ],
   "controlListenerModel": {
