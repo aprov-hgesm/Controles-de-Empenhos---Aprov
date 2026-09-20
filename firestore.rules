@@ -1503,6 +1503,12 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Block 16.2 — collection-group read used only by the founder dashboard.
+    // This recursive match grants no writes and no access to external sectors.
+    match /{path=**}/sessionSlots/{slotId} {
+      allow get, list: if isPlatformAdmin();
+    }
+
     // Block 16.1 — capacity metadata. These two fixed slots enforce a maximum of
     // two simultaneous external-sector browser sessions without query/count races.
     // The founder is exempt and never claims a slot.
