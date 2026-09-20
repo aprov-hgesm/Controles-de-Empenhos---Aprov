@@ -75,9 +75,29 @@ Concluído:
 - nenhuma dependência WebGL/Three.js;
 - `prefers-reduced-motion` preservado.
 
+## Bloco 19.4 — sistema orbital e planetas adicionais
+
+Concluído:
+
+- sistema orbital extraído para `InicioOrbitSystem`;
+- três trilhas orbitais e duas varreduras energéticas independentes;
+- planeta **Alertas** com leitura de críticos e atenções;
+- planeta **Recebimentos** com empenhos/itens que ainda possuem saldo e valor pendente;
+- planeta **Execução** com percentual estimado de recebido/liquidado e valor executado;
+- planeta **Painel** preservado como acesso à visão analítica;
+- planeta **Classes** mantido com luas QR/CALI/PASA/FUNADOM e seus valores;
+- identidade visual própria por planeta para facilitar leitura sem depender do texto;
+- navegação contextual: Recebimentos → Itens; indicadores analíticos → Painel;
+- métricas derivadas exclusivamente dos empenhos e alertas já carregados;
+- nenhuma subscription de invoices, comissões ou cronogramas adicionada;
+- nenhum acesso direto ao Firebase no componente;
+- movimento reduzido preservado.
+
+As métricas de Execução e Recebimentos desta etapa usam `item.received`, que já representa o quantitativo recebido/liquidado no domínio atual. Indicadores específicos de NF permanecem reservados para o snapshot agregado por UG, evitando abrir novas coleções realtime na Home.
+
 ## Próximas etapas
 
-- 19.4: órbitas e planetas adicionais;
+- 19.5: constelação operacional completa;
 - 19.3: núcleo/logo interativo;
 - 19.4: órbitas e planetas adicionais;
 - 19.5: constelação operacional completa;
