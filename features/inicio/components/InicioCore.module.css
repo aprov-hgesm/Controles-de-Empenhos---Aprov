@@ -26,7 +26,6 @@
     rotateY(var(--core-rotate-y));
   transform-style: preserve-3d;
   transition: filter 220ms ease;
-  will-change: transform;
 }
 
 .root:focus-visible {
@@ -459,4 +458,43 @@
   .specular {
     display: none;
   }
+}
+
+
+[data-performance='balanced'] .orbitC,
+[data-performance='balanced'] .pulseRing {
+  display: none;
+}
+
+[data-performance='balanced'] .orbitA,
+[data-performance='balanced'] .orbitB,
+[data-performance='balanced'] .telemetryArc,
+[data-performance='balanced'] .corona,
+[data-performance='balanced'] .reactorGlow,
+[data-performance='balanced'] .centerPulse,
+[data-performance='balanced'] .statusRing i {
+  animation-play-state: paused;
+}
+
+[data-performance='balanced'] .logoPlate,
+[data-performance='balanced'] .tooltip {
+  backdrop-filter: none;
+}
+
+[data-performance='balanced'] .corona {
+  filter: blur(7px);
+}
+
+[data-performance='static'] .orbitC,
+[data-performance='static'] .pulseRing,
+[data-performance='static'] .telemetryArc,
+[data-performance='static'] .reactorGlow,
+[data-performance='static'] .centerPulse {
+  display: none;
+}
+
+[data-performance='static'] .corona,
+[data-performance='static'] .orbit,
+[data-performance='static'] .statusRing i {
+  animation: none !important;
 }
