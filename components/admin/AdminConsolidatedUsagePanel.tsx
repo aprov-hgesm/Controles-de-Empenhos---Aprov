@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
+  AlertTriangle,
+  BellRing,
+  CircleCheck,
   Cloud,
   Database,
   Gauge,
@@ -12,6 +15,7 @@ import {
   Users,
 } from 'lucide-react';
 
+import { usePlatformAdminUsageAlertPolicy } from '../../hooks/usePlatformAdminUsageAlertPolicy';
 import type { Workspace } from '../../lib/platformIdentity';
 import type { AdminWorkspaceUsageEstimate } from '../../lib/platformAdminUsage';
 import {
@@ -22,6 +26,12 @@ import {
   getDefaultSimultaneousSessionLimit,
   type FirebaseGlobalUsageSnapshot,
 } from '../../lib/platformCapacity';
+import {
+  buildUsageThresholdAlerts,
+  usageAlertLevelLabel,
+  usageAlertMetricLabel,
+  type UsageThresholdAlert,
+} from '../../lib/usageAlerts';
 
 interface AdminConsolidatedUsagePanelProps {
   workspaces: Workspace[];
@@ -88,6 +98,7 @@ export function AdminConsolidatedUsagePanel({
   onRefreshGlobalUsage,
 }: AdminConsolidatedUsagePanelProps) {
   const [now, setNow] = useState(() => Date.now());
+  const alertPolicy = usePlatformAdminUsageAlertPolicy();
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
@@ -116,6 +127,23 @@ export function AdminConsolidatedUsagePanel({
   const realOperations = globalUsage
     ? globalUsage.documentReads + globalUsage.documentWrites + globalUsage.documentDeletes
     : null;
+
+  const usageAlerts = useMemo(
+    () => alertPolicy.policy
+      ? buildUsageThresholdAlerts({
+          workspaces,
+          workspaceUsage: usage,
+          globalUsage,
+          policy: alertPolicy.policy,
+        })
+      : [],
+    [alertPolicy.policy, globalUsage, usage, workspaces]
+  );
+
+  const configuredAlertReferences = alertPolicy.policy
+    ? alertPolicy.policy.configuredGlobalMetrics
+      + alertPolicy.policy.configuredWorkspaceUgs
+    : 0;
 
   const rows = useMemo(() => (
     workspaces
@@ -150,10 +178,13 @@ export function AdminConsolidatedUsagePanel({
     globalUsage?.databaseId
     && globalUsage.databaseId !== '(default)'
   );
-  const refreshing = loadingUsage || loadingGlobalUsage;
+  const refreshing = loadingUsage || loadingGlobalUsage || alertPolicy.loading;
 
   const refreshAll = async () => {
-    const jobs: Promise<void>[] = [onRefreshUsage()];
+    const jobs: Promise<void>[] = [
+      onRefreshUsage(),
+      alertPolicy.refresh(),
+    ];
     if (globalUsageConfigured !== false) {
       jobs.push(onRefreshGlobalUsage());
     }
@@ -242,6 +273,72 @@ export function AdminConsolidatedUsagePanel({
             {usageError || globalUsageError}
           </div>
         )}
+
+        <div
+          data-testid="admin-usage-alerts-panel"
+          className="rounded-2xl border border-amber-300/15 bg-amber-400/[0.035] p-4"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-[9px] font-extrabold uppercase tracking-[0.14em] text-amber-200/85">
+                <BellRing className="h-4 w-4" />
+                Bloco 16.6 · alertas de consumo/cotas
+              </div>
+              <p className="mt-2 max-w-3xl text-xs leading-relaxed text-slate-400">
+                Alertas derivados de referências operacionais explícitas. Métrica global real,
+                estimativa interna por UG e cobrança oficial continuam separadas.
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/[0.08] bg-slate-950/25 px-3 py-2 text-[10px] font-bold text-slate-300">
+              {usageAlerts.length} alertas ativos
+            </div>
+          </div>
+
+          {alertPolicy.loading && (
+            <div className="mt-4 flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 py-3 text-xs text-slate-400">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Carregando referências de alerta…
+            </div>
+          )}
+
+          {alertPolicy.error && !alertPolicy.loading && (
+            <div className="mt-4 flex items-start gap-2 rounded-xl border border-rose-300/15 bg-rose-400/[0.06] px-3 py-3 text-xs leading-relaxed text-rose-100">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              {alertPolicy.error}
+            </div>
+          )}
+
+          {!alertPolicy.loading && !alertPolicy.error && alertPolicy.policy && configuredAlertReferences === 0 && (
+            <div className="mt-4 rounded-xl border border-blue-300/15 bg-blue-400/[0.05] px-3 py-3 text-xs leading-relaxed text-blue-100">
+              Nenhuma referência operacional foi configurada. O EMPROVEX não presume franquia,
+              limite gratuito ou valor de cobrança para gerar alertas.
+            </div>
+          )}
+
+          {!alertPolicy.loading && !alertPolicy.error && alertPolicy.policy && configuredAlertReferences > 0 && usageAlerts.length === 0 && (
+            <div className="mt-4 flex items-start gap-2 rounded-xl border border-emerald-300/15 bg-emerald-400/[0.05] px-3 py-3 text-xs leading-relaxed text-emerald-100">
+              <CircleCheck className="mt-0.5 h-4 w-4 shrink-0" />
+              Referências configuradas e nenhum limiar de 70%, 85%, 95% ou excedente foi atingido.
+            </div>
+          )}
+
+          {usageAlerts.length > 0 && (
+            <div className="mt-4 grid gap-2">
+              {usageAlerts.slice(0, 12).map((alert) => (
+                <UsageAlertCard key={alert.id} alert={alert} />
+              ))}
+              {usageAlerts.length > 12 && (
+                <div className="px-1 pt-1 text-[10px] text-slate-500">
+                  Mais {usageAlerts.length - 12} alertas permanecem ativos; os mais graves são exibidos primeiro.
+                </div>
+              )}
+            </div>
+          )}
+
+          <p className="mt-4 font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">
+            Alertas não bloqueiam operações e não representam cobrança oficial
+          </p>
+        </div>
 
         <div className="grid gap-3 lg:grid-cols-3">
           <Info
@@ -357,6 +454,46 @@ export function AdminConsolidatedUsagePanel({
         </div>
       </div>
     </section>
+  );
+}
+
+function UsageAlertCard({ alert }: { alert: UsageThresholdAlert }) {
+  const percentage = alert.assessment.percentage || 0;
+  const scope = alert.origin === 'global-real'
+    ? 'Global real · google-cloud-monitoring'
+    : `UG ${alert.ug || '—'} · emprovex-workspace-estimate`;
+  const title = alert.workspaceName
+    ? `${alert.workspaceName} · ${usageAlertMetricLabel(alert.metric)}`
+    : `Firebase global · ${usageAlertMetricLabel(alert.metric)}`;
+
+  const tone = alert.level === 'exceeded'
+    ? 'border-rose-300/20 bg-rose-400/[0.07] text-rose-100'
+    : alert.level === 'critical'
+      ? 'border-orange-300/20 bg-orange-400/[0.07] text-orange-100'
+      : alert.level === 'elevated'
+        ? 'border-amber-300/20 bg-amber-400/[0.07] text-amber-100'
+        : 'border-yellow-200/15 bg-yellow-300/[0.05] text-yellow-50';
+
+  return (
+    <div className={`rounded-xl border px-3 py-3 ${tone}`}>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <div className="text-xs font-extrabold">{title}</div>
+          <div className="mt-1 font-mono text-[8px] font-bold uppercase tracking-[0.11em] opacity-70">
+            {scope}
+          </div>
+        </div>
+        <div className="rounded-full border border-current/15 px-2 py-1 text-[9px] font-extrabold uppercase tracking-[0.10em]">
+          {usageAlertLevelLabel(alert.level)} · {percentage.toLocaleString('pt-BR', {
+            minimumFractionDigits: percentage >= 10 ? 0 : 1,
+            maximumFractionDigits: 1,
+          })}%
+        </div>
+      </div>
+      <div className="mt-2 text-[10px] opacity-80">
+        Consumo {formatCount(alert.used)} / referência {formatCount(alert.budget)}.
+      </div>
+    </div>
   );
 }
 
