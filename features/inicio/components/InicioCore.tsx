@@ -10,7 +10,6 @@ interface InicioCoreProps {
   totalValueLabel: string;
   activeAlertCount: number;
   interactiveMotion: boolean;
-  onOpenEmpenhos: () => void;
 }
 
 export function InicioCore({
@@ -18,9 +17,8 @@ export function InicioCore({
   totalValueLabel,
   activeAlertCount,
   interactiveMotion,
-  onOpenEmpenhos,
 }: InicioCoreProps) {
-  const rootRef = useRef<HTMLButtonElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
 
   useEffect(() => {
@@ -104,13 +102,13 @@ export function InicioCore({
   );
 
   return (
-    <motion.button
+    <motion.div
       ref={rootRef}
-      type="button"
       className={styles.root}
       data-alert={activeAlertCount > 0 ? 'true' : 'false'}
-      onClick={onOpenEmpenhos}
-      aria-label={`Abrir empenhos. ${totalEmpenhos} empenhos cadastrados, ${totalValueLabel} empenhados.`}
+      tabIndex={0}
+      role="group"
+      aria-label={`Núcleo EMPROVEX. ${totalEmpenhos} empenhos cadastrados, ${totalValueLabel} empenhados.`}
       initial={reduceMotion ? false : { opacity: 0, scale: 0.82 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.78, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
@@ -147,6 +145,6 @@ export function InicioCore({
         <small>{totalValueLabel} empenhados</small>
         <em>{activeAlertCount > 0 ? `${activeAlertCount} alerta(s) ativos no ambiente` : 'Operação sem alertas ativos'}</em>
       </span>
-    </motion.button>
+    </motion.div>
   );
 }
