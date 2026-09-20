@@ -322,3 +322,12 @@ Concluído tecnicamente:
 **Desenvolvimento técnico encerrado; pronto para homologação humana.**
 
 O fechamento técnico não muda automaticamente o landing para Início, não publica a branch na `main` e não realiza deploy.
+
+
+## Refinamento visual pós-homologação — Home minimalista
+
+A composição final foi simplificada para priorizar o mapa operacional e reduzir competição visual. A Home mantém apenas uma saudação contextual curta; cartões de organização/ambiente, status online, assinatura de unidade, texto descritivo do ambiente, instrução de cursor, retomada e dock de ações rápidas deixam de ser renderizados.
+
+O núcleo central permanece interativo, porém sem imagem do logotipo. Núcleo e planetas passam a usar escala menor, liberando espaço negativo para órbitas, constelações e tooltips. A aba Início também utiliza shell escuro imersivo e largura integral da área operacional; as demais abas preservam o shell claro existente.
+
+A navegação funcional permanece disponível pela Sidebar e pelos elementos orbitais. A memória de retomada deixa de ser montada pela página enquanto não houver interface correspondente, evitando lógica ociosa.
