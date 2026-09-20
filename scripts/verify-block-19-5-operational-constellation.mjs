@@ -38,6 +38,10 @@ requireText(constellation, 'getSize(star.value, maxValue)', 'Tamanho da estrela 
 requireText(constellation, 'keepStarClearOfExclusions', 'Constelação não aplica zonas de exclusão ao redor do sistema orbital.');
 requireText(constellation, 'ResizeObserver', 'Constelação não recalcula zonas seguras com a responsividade.');
 requireText(constellation, 'STAR_SEVERITY_GAP_BOOST_PX', 'Estrelas prioritárias não recebem margem adicional de seleção.');
+requireText(constellation, 'keepStarClearOfOrbitCorridors', 'Estrelas não evitam as faixas orbitais em movimento.');
+requireText(constellation, 'STAR_ORBIT_CORRIDOR_HALF_WIDTH_PX', 'Constelação não reserva corredor ao redor das órbitas.');
+requireText(constellationCss, '@keyframes starDrift', 'Estrelas continuam sem deriva espacial própria.');
+requireText(constellationCss, 'animation-play-state: paused', 'Estrela não estabiliza durante hover/foco.');
 requireText(constellation, "querySelectorAll<HTMLElement>('[data-inicio-star-exclusion]')", 'Constelação não mede os elementos que bloqueiam seleção.');
 requireText(view, '<InicioConstellation', 'Início perdeu constelação ao aplicar zonas seguras.');
 requireText(constellation, "data-stage={node.stage}", 'Estrelas não expõem estágio operacional.');
@@ -71,5 +75,7 @@ if (findings.length) {
   console.log('Abertura direta do empenho: ATIVA');
   console.log('Camada histórica: ATIVA');
   console.log('Zonas seguras planetas/núcleo: ATIVAS');
+  console.log('Corredores orbitais protegidos: ATIVOS');
+  console.log('Deriva estelar: ATIVA EM PERFIL FULL');
   console.log('Realtime adicional: ZERO');
 }
