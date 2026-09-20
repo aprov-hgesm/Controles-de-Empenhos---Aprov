@@ -4,7 +4,7 @@
   --home-shift-x-inverse: 0px;
   --home-shift-y-inverse: 0px;
   --inicio-inline-safe: clamp(16px, 3vw, 34px);
-  --inicio-mobile-dock-reserve: 132px;
+  --inicio-mobile-dock-reserve: 28px;
   --inicio-line: rgba(124, 154, 222, 0.14);
   --inicio-line-strong: rgba(151, 183, 255, 0.28);
   --inicio-glass: rgba(7, 15, 33, 0.72);
@@ -101,7 +101,7 @@
   left: 50%;
   top: 54%;
   z-index: 5;
-  width: min(680px, 76vw);
+  width: min(610px, 68vw);
   aspect-ratio: 1;
   transform: translate3d(calc(-50% + var(--home-shift-x)), calc(-50% + var(--home-shift-y)), 0);
   transition: transform 80ms linear;
@@ -192,7 +192,7 @@
 
 @media (max-width: 1100px) {
   .system {
-    width: min(650px, 86vw);
+    width: min(590px, 78vw);
   }
 }
 
@@ -208,7 +208,7 @@
 
   .system {
     top: 58%;
-    width: min(650px, 94vw);
+    width: min(570px, 84vw);
   }
 
   .interactionHint {
@@ -228,7 +228,7 @@
 
   .system {
     top: 57%;
-    width: min(620px, 112vw);
+    width: min(520px, 94vw);
   }
 
   .snapshotNotice {
@@ -250,7 +250,7 @@
 
   .system {
     top: 56%;
-    width: 116vw;
+    width: min(500px, 98vw);
   }
 
   .snapshotNotice {
