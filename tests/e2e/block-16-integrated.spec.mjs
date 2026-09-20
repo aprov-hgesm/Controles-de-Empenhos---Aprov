@@ -175,18 +175,6 @@ function leaseSeed({
   };
 }
 
-async function coordinatorRole(page) {
-  return page.evaluate(() => {
-    for (let index = 0; index < sessionStorage.length; index += 1) {
-      const key = sessionStorage.key(index);
-      if (key?.startsWith('emprovex:session-coordinator-role:v1:')) {
-        return sessionStorage.getItem(key);
-      }
-    }
-    return null;
-  });
-}
-
 async function logicalSessionId(page) {
   return page.evaluate(() => {
     for (let index = 0; index < localStorage.length; index += 1) {
@@ -196,28 +184,6 @@ async function logicalSessionId(page) {
       }
     }
     return null;
-  });
-}
-
-async function coordinatorDiagnostics(page) {
-  return page.evaluate(async () => {
-    const roleEntries = [];
-    for (let index = 0; index < sessionStorage.length; index += 1) {
-      const key = sessionStorage.key(index);
-      if (key?.startsWith('emprovex:session-coordinator-role:v1:')) {
-        roleEntries.push([key, sessionStorage.getItem(key)]);
-      }
-    }
-
-    const lockState = navigator.locks?.query
-      ? await navigator.locks.query()
-      : { held: [], pending: [] };
-
-    return {
-      roleEntries,
-      held: (lockState.held || []).map((lock) => ({ name: lock.name, mode: lock.mode })),
-      pending: (lockState.pending || []).map((lock) => ({ name: lock.name, mode: lock.mode })),
-    };
   });
 }
 
@@ -358,7 +324,7 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
     }
   });
 
-  test('coordenação multiaba mantém um único líder e promove a seguidora sem trocar a sessão lógica', async ({ browser }) => {
+  test('abas da mesma sessão compartilham identidade e permanecem autônomas ao fechar uma delas', async ({ browser }) => {
     const context = await browser.newContext();
     const pageA = await context.newPage();
 
@@ -366,10 +332,8 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
       await pageA.goto('/');
       await loginSector(pageA);
 
-      await expect.poll(
-        () => coordinatorRole(pageA),
-        { timeout: 15_000, intervals: [250, 500, 1000] }
-      ).toBe('leader');
+      const sessionIdBefore = await logicalSessionId(pageA);
+      expect(sessionIdBefore).toBeTruthy();
 
       const pageB = await context.newPage();
       await pageB.goto('/');
@@ -377,41 +341,33 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
         timeout: 20_000,
       });
 
-      await expect.poll(async () => {
-        const roles = [await coordinatorRole(pageA), await coordinatorRole(pageB)]
-          .filter(Boolean)
-          .sort();
-        return roles.join(',');
-      }, {
-        timeout: 30_000,
-        intervals: [250, 500, 1000],
-      }).toBe('follower,leader');
-
-      const roleA = await coordinatorRole(pageA);
-      const leaderPage = roleA === 'leader' ? pageA : pageB;
-      const followerPage = roleA === 'leader' ? pageB : pageA;
-      const sessionIdBefore = await logicalSessionId(followerPage);
-      expect(sessionIdBefore).toBeTruthy();
-
-      await leaderPage.close();
-
       await expect.poll(
-        () => coordinatorRole(followerPage),
+        () => logicalSessionId(pageB),
         { timeout: 15_000, intervals: [250, 500, 1000] }
-      ).toBe('leader');
+      ).toBe(sessionIdBefore);
+
+      const sessionsBeforeClose = await workspaceSessions();
+      expect(sessionsBeforeClose).toHaveLength(1);
+      expect(sessionsBeforeClose[0].sessionId).toBe(sessionIdBefore);
+
+      await pageA.close();
 
       await expect(
-        followerPage.getByRole('navigation', { name: 'Navegação principal' })
+        pageB.getByRole('navigation', { name: 'Navegação principal' })
       ).toBeVisible();
-      expect(await logicalSessionId(followerPage)).toBe(sessionIdBefore);
+      expect(await logicalSessionId(pageB)).toBe(sessionIdBefore);
 
-      await logoutIfAuthenticated(followerPage);
+      const sessionsAfterClose = await workspaceSessions();
+      expect(sessionsAfterClose).toHaveLength(1);
+      expect(sessionsAfterClose[0].sessionId).toBe(sessionIdBefore);
+
+      await logoutIfAuthenticated(pageB);
     } finally {
       await context.close();
     }
   });
 
-  test('aba líder propaga revogação administrativa para a aba seguidora', async ({ browser }) => {
+  test('revogação administrativa derruba todas as abas da mesma sessão lógica', async ({ browser }) => {
     const context = await browser.newContext();
     const pageA1 = await context.newPage();
 
@@ -419,43 +375,22 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
       await pageA1.goto('/');
       await loginSector(pageA1);
 
-      await expect.poll(
-        () => coordinatorRole(pageA1),
-        {
-          timeout: 15_000,
-          intervals: [250, 500, 1000],
-        }
-      ).toBe('leader');
+      const sessionId = await logicalSessionId(pageA1);
+      expect(sessionId).toBeTruthy();
 
       const pageA2 = await context.newPage();
       await pageA2.goto('/');
       await expect(pageA2.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
         timeout: 20_000,
       });
-
-      console.log(
-        'Block 17.2 revocation coordinator diagnostics',
-        JSON.stringify({
-          pageA1: await coordinatorDiagnostics(pageA1),
-          pageA2: await coordinatorDiagnostics(pageA2),
-        })
-      );
-
       await expect.poll(
-        async () => {
-          const roles = [await coordinatorRole(pageA1), await coordinatorRole(pageA2)]
-            .filter(Boolean)
-            .sort();
-          return roles.join(',');
-        },
-        {
-          timeout: 30_000,
-          intervals: [250, 500, 1000],
-        }
-      ).toBe('follower,leader');
+        () => logicalSessionId(pageA2),
+        { timeout: 15_000, intervals: [250, 500, 1000] }
+      ).toBe(sessionId);
 
       const [session] = await workspaceSessions();
       expect(session).toBeTruthy();
+      expect(session.sessionId).toBe(sessionId);
 
       await emulatorSet(revocationPath(session.sessionId), {
         revocationVersion: 'emprovex_session_revocation_v1',
