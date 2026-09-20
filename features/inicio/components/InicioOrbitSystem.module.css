@@ -479,36 +479,36 @@
 
 @media (max-width: 900px) {
   .root {
-    transform: scale(0.95);
+    transform: scale(0.92);
   }
 
   .classSystem {
     right: 3%;
-    top: 18%;
-    transform: scale(0.84);
+    top: 23%;
+    transform: scale(0.82);
     transform-origin: top right;
   }
 
   .receivingPlanet {
-    left: 21%;
-    bottom: 20%;
+    left: 22%;
+    bottom: 24%;
   }
 
   .executionPlanet {
     right: 23%;
-    top: 23%;
+    top: 25%;
   }
 }
 
 @media (max-width: 640px) {
   .root {
-    transform: scale(0.88);
+    transform: scale(0.86);
   }
 
   .classSystem {
     right: 8%;
-    top: 21%;
-    transform: scale(0.72);
+    top: 27%;
+    transform: scale(0.68);
   }
 
   .classMoons {
@@ -517,22 +517,25 @@
 
   .alertPlanet {
     left: 13%;
-    top: 38%;
+    top: 42%;
   }
 
   .receivingPlanet {
-    left: 28%;
-    bottom: 20%;
+    left: 25%;
+    bottom: 29%;
+    width: 56px;
   }
 
   .executionPlanet {
-    right: 28%;
-    top: 24%;
+    right: 25%;
+    top: 30%;
+    width: 56px;
   }
 
   .dashboardPlanet {
-    right: 14%;
-    bottom: 33%;
+    right: 13%;
+    bottom: 38%;
+    width: 56px;
   }
 
   .tooltip {
@@ -541,6 +544,49 @@
 
   .orbitCaption {
     display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .root {
+    transform: scale(0.8);
+  }
+
+  .classSystem {
+    right: 10%;
+    top: 29%;
+    transform: scale(0.7);
+  }
+
+  .alertPlanet {
+    left: 12%;
+    top: 44%;
+  }
+
+  .receivingPlanet {
+    left: 25%;
+    bottom: 31%;
+  }
+
+  .executionPlanet {
+    right: 24%;
+    top: 31%;
+  }
+
+  .dashboardPlanet {
+    right: 12%;
+    bottom: 40%;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .tooltip {
+    display: none;
+  }
+
+  .planet,
+  .classPlanet {
+    touch-action: manipulation;
   }
 }
 
