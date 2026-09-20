@@ -26,10 +26,11 @@ function numericExpressionForConst(source, name) {
   const match = source.match(new RegExp(`export const ${name} = ([0-9*+()\\s]+);`));
   if (!match) throw new Error(`Constante não encontrada: ${name}`);
   const expression = match[1].trim();
-  if (!/^[0-9*+()\\s]+$/.test(expression)) {
+  const compactExpression = expression.replace(/\\s+/g, '');
+  if (!/^[0-9*+()]+$/.test(compactExpression)) {
     throw new Error(`Expressão não numérica para ${name}`);
   }
-  return Function(`"use strict"; return (${expression});`)();
+  return Function(`"use strict"; return (${compactExpression});`)();
 }
 
 requireTrue(
