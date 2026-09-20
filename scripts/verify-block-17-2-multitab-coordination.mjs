@@ -83,6 +83,21 @@ requireText(
   'startWorkspaceSessionCoordinator(',
   'Hook operacional não inicia o coordenador multiaba.'
 );
+requireText(
+  operational,
+  'sessionCoordinatorIdentityKey',
+  'Coordenador voltou a depender diretamente de referências voláteis de Auth/contexto.'
+);
+requireText(
+  operational,
+  '}, [sessionCoordinatorIdentityKey]);',
+  'Efeito do coordenador não está estabilizado pela identidade lógica.'
+);
+forbidText(
+  operational,
+  '}, [user, workspaceContext]);',
+  'Reemissões equivalentes de Auth/contexto não podem reiniciar o Web Lock.'
+);
 forbidText(
   operational,
   "doc(db, 'workspaces', workspaceContext.workspaceId)",
