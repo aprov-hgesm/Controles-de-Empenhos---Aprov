@@ -5,6 +5,8 @@ import { BellRing, Gauge, Orbit, Sparkles } from 'lucide-react';
 
 import type { Alert, Empenho } from '../../../lib/types';
 import type { OperationalActiveTab } from '../../../lib/operationalSubscriptionPlan';
+import { InicioAtmosphere } from './InicioAtmosphere';
+import { InicioEntrySequence } from './InicioEntrySequence';
 import styles from './InicioView.module.css';
 
 interface InicioViewProps {
@@ -210,6 +212,8 @@ export function InicioView({
 
   return (
     <section ref={rootRef} className={styles.scene} aria-label="Início EMPROVEX">
+      <InicioEntrySequence />
+      <InicioAtmosphere />
       <div className={styles.ambientGlow} aria-hidden="true" />
       <div className={styles.grid} aria-hidden="true" />
       <div className={styles.starField} aria-label="Constelação operacional de empenhos">
@@ -256,8 +260,13 @@ export function InicioView({
       </header>
 
       <div className={styles.system} aria-label="Sistema solar operacional EMPROVEX">
-        <div className={styles.orbitOuter} aria-hidden="true" />
-        <div className={styles.orbitInner} aria-hidden="true" />
+        <div className={styles.orbitOuter} aria-hidden="true">
+          <span className={styles.orbitBeacon} />
+        </div>
+        <div className={styles.orbitInner} aria-hidden="true">
+          <span className={styles.orbitBeacon} />
+        </div>
+        <div className={styles.orbitSignal} aria-hidden="true" />
 
         <button
           type="button"
@@ -326,6 +335,11 @@ export function InicioView({
             ))}
           </div>
         </div>
+      </div>
+
+      <div className={styles.interactionHint} aria-hidden="true">
+        <span />
+        <p>Explore os elementos do mapa com o cursor</p>
       </div>
 
       <footer className={styles.legend}>
