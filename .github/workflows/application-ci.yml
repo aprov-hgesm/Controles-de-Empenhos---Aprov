@@ -298,6 +298,9 @@ jobs:
       - name: Block 19.8 microinteraction guard
         run: npm run verify:block-19-8-microinteractions
 
+      - name: Block 19.9 surface transition guard
+        run: npm run verify:block-19-9-surface-transitions
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
