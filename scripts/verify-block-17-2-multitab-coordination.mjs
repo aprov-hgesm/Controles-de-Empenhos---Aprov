@@ -110,7 +110,7 @@ requireText(rules, 'sameWorkspaceSessionLeaseOwner()', 'Rules perderam vínculo 
 
 for (const scenario of [
   'coordenação multiaba elege um líder e promove seguidora após fechamento',
-  "toBe('follower,leader')",
+  "filter((role) => role === 'leader').length",
   "toBe('leader')",
   'expect(await logicalSessionId(follower)).toBe(sessionIdBefore)',
 ]) {
