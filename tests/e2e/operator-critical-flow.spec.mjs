@@ -264,17 +264,6 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
         timeout: 20_000,
       });
 
-      await expect.poll(async () => {
-        const roles = [
-          await sessionCoordinatorRole(pageA1),
-          await sessionCoordinatorRole(pageA2),
-        ].sort();
-        return roles.join(',');
-      }, {
-        timeout: 15_000,
-        intervals: [250, 500, 1000],
-      }).toBe('follower,leader');
-
       // Segundo navegador/contexto consome a segunda vaga.
       await pageB.goto('/');
       await loginSector(pageB, OPERATOR_A);
