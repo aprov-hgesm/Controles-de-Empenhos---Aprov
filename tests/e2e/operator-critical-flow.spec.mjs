@@ -30,6 +30,18 @@ async function logoutIfAuthenticated(page) {
   }
 }
 
+async function sessionTabRole(page) {
+  return page.evaluate(() => {
+    for (let index = 0; index < sessionStorage.length; index += 1) {
+      const key = sessionStorage.key(index);
+      if (key?.startsWith('emprovex:session-tab-role:v1:')) {
+        return sessionStorage.getItem(key);
+      }
+    }
+    return null;
+  });
+}
+
 async function openSampleReport(page) {
   await page.getByTestId('nav-relatorios').click();
   await expect(page.getByRole('heading', { name: 'Relatórios' })).toBeVisible();
@@ -217,6 +229,48 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
 
     await page.getByRole('button', { name: 'Painel', exact: true }).first().click();
     await expectRealtimeProfile(page, 1);
+  });
+
+  test('coordenação multiaba mantém uma líder e transfere liderança ao fechar a aba', async ({ browser }) => {
+    const context = await browser.newContext();
+    const pageA = await context.newPage();
+    let pageB = null;
+
+    try {
+      await pageA.goto('/');
+      await loginSector(pageA, OPERATOR_A);
+
+      pageB = await context.newPage();
+      await pageB.goto('/');
+      await expect(pageB.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
+        timeout: 20_000,
+      });
+
+      await expect.poll(async () => {
+        const roles = [await sessionTabRole(pageA), await sessionTabRole(pageB)].sort();
+        return roles.join(',');
+      }, {
+        timeout: 15_000,
+        intervals: [100, 250, 500],
+      }).toBe('follower,leader');
+
+      const roleA = await sessionTabRole(pageA);
+      const leader = roleA === 'leader' ? pageA : pageB;
+      const survivor = roleA === 'leader' ? pageB : pageA;
+
+      await leader.close();
+      if (leader === pageB) pageB = null;
+
+      await expect.poll(() => sessionTabRole(survivor), {
+        timeout: 15_000,
+        intervals: [100, 250, 500],
+      }).toBe('leader');
+
+      await logoutIfAuthenticated(survivor);
+    } finally {
+      if (pageB && !pageB.isClosed()) await pageB.close();
+      await context.close();
+    }
   });
 
   test('duas sessões por setor, múltiplas abas compartilham vaga e terceira sessão é barrada', async ({ browser }) => {
