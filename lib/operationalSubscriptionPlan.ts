@@ -1,4 +1,5 @@
 export type OperationalActiveTab =
+  | 'inicio'
   | 'painel'
   | 'empenhos'
   | 'itens'
@@ -23,6 +24,13 @@ export interface OperationalSubscriptionPlan {
 }
 
 const PLAN_BY_TAB: Record<OperationalActiveTab, OperationalSubscriptionPlan> = {
+  inicio: {
+    empenhos: true,
+    alerts: true,
+    invoices: false,
+    comissoes: false,
+    cronogramas: false,
+  },
   painel: {
     empenhos: true,
     alerts: false,
