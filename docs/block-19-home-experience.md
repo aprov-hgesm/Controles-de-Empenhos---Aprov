@@ -342,3 +342,14 @@ A navegação funcional permanece disponível pela Sidebar e, dentro da cena, ex
 - estrelas continuam representando empenhos individuais;
 - atenção/crítico exibem “Pendência identificada” no tooltip;
 - clique em estrela abre diretamente o empenho específico na aba Empenhos.
+
+
+### Refinamento de interação — zonas seguras para estrelas
+
+- planetas e núcleo são tratados como zonas de exclusão geométrica da constelação;
+- estrelas não podem permanecer atrás nem excessivamente próximas desses elementos;
+- a posição real dos planetas/núcleo é medida no navegador, portanto a regra acompanha desktop, tablet, mobile e mudanças responsivas;
+- estrelas em atenção recebem margem adicional de segurança;
+- estrelas críticas recebem margem ainda maior para preservar hover, foco e clique quando houver pendência importante;
+- o reposicionamento continua determinístico e preserva a proximidade por fornecedor sempre que possível;
+- nenhuma leitura Firestore, listener de dados ou nova persistência é criada; a medição é exclusivamente de layout DOM.
