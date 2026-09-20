@@ -30,6 +30,30 @@ async function logoutIfAuthenticated(page) {
   }
 }
 
+async function sessionCoordinatorRole(page) {
+  return page.evaluate(() => {
+    for (let index = 0; index < sessionStorage.length; index += 1) {
+      const key = sessionStorage.key(index);
+      if (key?.startsWith('emprovex:session-coordinator-role:v1:')) {
+        return sessionStorage.getItem(key);
+      }
+    }
+    return null;
+  });
+}
+
+async function logicalSessionId(page) {
+  return page.evaluate(() => {
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (key?.startsWith('emprovex:workspace-session:v1:')) {
+        return localStorage.getItem(key);
+      }
+    }
+    return null;
+  });
+}
+
 async function openSampleReport(page) {
   await page.getByTestId('nav-relatorios').click();
   await expect(page.getByRole('heading', { name: 'Relatórios' })).toBeVisible();
@@ -240,6 +264,17 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
         timeout: 20_000,
       });
 
+      await expect.poll(async () => {
+        const roles = [
+          await sessionCoordinatorRole(pageA1),
+          await sessionCoordinatorRole(pageA2),
+        ].sort();
+        return roles.join(',');
+      }, {
+        timeout: 15_000,
+        intervals: [250, 500, 1000],
+      }).toBe('follower,leader');
+
       // Segundo navegador/contexto consome a segunda vaga.
       await pageB.goto('/');
       await loginSector(pageB, OPERATOR_A);
@@ -272,6 +307,59 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
       await contextC.close();
       await contextB.close();
       await contextA.close();
+    }
+  });
+
+  test('coordenação multiaba elege um líder e promove seguidora após fechamento', async ({ browser }) => {
+    const context = await browser.newContext();
+    const pageA1 = await context.newPage();
+
+    try {
+      await pageA1.goto('/');
+      await loginSector(pageA1, OPERATOR_A);
+
+      const pageA2 = await context.newPage();
+      await pageA2.goto('/');
+      await expect(pageA2.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
+        timeout: 20_000,
+      });
+
+      await expect.poll(async () => {
+        const roles = [
+          await sessionCoordinatorRole(pageA1),
+          await sessionCoordinatorRole(pageA2),
+        ].sort();
+        return roles.join(',');
+      }, {
+        timeout: 15_000,
+        intervals: [250, 500, 1000],
+      }).toBe('follower,leader');
+
+      const sessionIdBefore = await logicalSessionId(pageA1);
+      expect(sessionIdBefore).toBeTruthy();
+
+      const roleA1 = await sessionCoordinatorRole(pageA1);
+      const leader = roleA1 === 'leader' ? pageA1 : pageA2;
+      const follower = roleA1 === 'leader' ? pageA2 : pageA1;
+
+      await leader.close();
+
+      await expect.poll(
+        () => sessionCoordinatorRole(follower),
+        {
+          timeout: 15_000,
+          intervals: [500, 1000],
+        }
+      ).toBe('leader');
+
+      await expect(
+        follower.getByRole('navigation', { name: 'Navegação principal' })
+      ).toBeVisible();
+
+      expect(await logicalSessionId(follower)).toBe(sessionIdBefore);
+      await logoutIfAuthenticated(follower);
+    } finally {
+      await context.close();
     }
   });
 
