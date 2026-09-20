@@ -38,6 +38,8 @@ requireText(coreCss, '@media (prefers-reduced-motion: reduce)', 'Núcleo não pr
 requireText(docs, 'Bloco 19.3', 'Documentação não registra o núcleo interativo.');
 forbidText(core, "next/image", 'Núcleo voltou a renderizar imagem institucional.');
 forbidText(core, 'customLogo', 'Núcleo voltou a depender do logotipo da plataforma.');
+forbidText(core, 'onOpenEmpenhos', 'Núcleo voltou a controlar navegação para Empenhos.');
+forbidText(core, 'onClick=', 'Núcleo voltou a possuir ação de clique navegável.');
 forbidText(core, 'three.js', 'Núcleo introduziu Three.js indevidamente.');
 forbidText(core, '<canvas', 'Núcleo introduziu canvas indevidamente.');
 forbidText(core, 'onSnapshot', 'Núcleo abriu listener Firestore indevido.');
@@ -49,7 +51,7 @@ if (findings.length) {
 } else {
   console.log('BLOCK 19.3 INTERACTIVE CORE: READY');
   console.log('Logo institucional no núcleo: REMOVIDO');
-  console.log('Resposta ao ponteiro: ATIVA');
+  console.log('Resposta ao ponteiro: ATIVA, SEM NAVEGAÇÃO');
   console.log('Órbitas + telemetria: ATIVAS');
   console.log('Reduced motion: PRESERVADO');
   console.log('Firestore adicional: ZERO');
