@@ -221,10 +221,10 @@ export default function Home() {
     showToast,
   });
 
-  const pendingNoticeCount = Math.max(
-    inicioSnapshot?.alerts.total ?? 0,
-    countPendingNotices(alerts)
-  );
+  const pendingNoticeCount =
+    activeTab === 'empenhos' || activeTab === 'nova_nf' || activeTab === 'avisos'
+      ? countPendingNotices(alerts)
+      : inicioSnapshot?.alerts.total ?? 0;
 
   const { handleApplySagNsImport } = useSagNsImportActions({
     user,
