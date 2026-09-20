@@ -92,7 +92,7 @@ export function InicioIdentityPanel({
           <span className={styles.identityCopy}>
             <small>Organização</small>
             <strong>{unitLabel}</strong>
-            <em>{sectionName}</em>
+            <em>{organizationShortName ? `${organizationName} · ${sectionName}` : sectionName}</em>
           </span>
         </div>
 
