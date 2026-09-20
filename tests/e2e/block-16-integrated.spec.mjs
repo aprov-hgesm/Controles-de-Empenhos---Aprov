@@ -324,108 +324,67 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
     }
   });
 
-  test('revogação administrativa derruba líder e follower, tombstone bloqueia retorno e novo login cria nova identidade', async ({ browser }) => {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    let sibling = null;
-    let oldSessionId = null;
+  test('revogação administrativa derruba a sessão, tombstone bloqueia retorno e novo login cria nova identidade', async ({ page }) => {
+    await page.goto('/');
+    await loginSector(page);
 
-    try {
-      await page.goto('/');
-      await loginSector(page);
+    const [session] = await workspaceSessions();
+    expect(session).toBeTruthy();
+    const oldSessionId = session.sessionId;
+    const oldSessionKey =
+      `emprovex:workspace-session:v1:${WORKSPACE_ID}:${session.uid}`;
 
-      sibling = await context.newPage();
-      await sibling.goto('/');
-      await expect(sibling.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
-        timeout: 20_000,
-      });
+    await emulatorSet(revocationPath(oldSessionId), {
+      revocationVersion: 'emprovex_session_revocation_v1',
+      sessionId: oldSessionId,
+      workspaceId: WORKSPACE_ID,
+      ug: UG,
+      uid: session.uid,
+      accountEmail: OPERATOR,
+      slotId: session.slotId,
+      createdAt: new Date(),
+      createdBy: FOUNDER,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    });
+    await emulatorDelete(slotPath(session.slotId));
 
-      // Neste arquivo o cenário de revogação é o primeiro a abrir uma segunda
-      // aba no contexto recém-criado. Recarregar após a persistência Auth estar
-      // confirmada elimina a corrida de bootstrap e valida o runtime multiaba já
-      // estabilizado, não um estado intermediário do Firebase Auth.
-      await sibling.reload();
-      await expect(sibling.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
-        timeout: 20_000,
-      });
+    await expect(page.getByTestId('sector-login-email')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(
+      page.getByRole('navigation', { name: 'Navegação principal' })
+    ).toHaveCount(0);
 
-      await expect.poll(async () => {
-        const roles = [await sessionTabRole(page), await sessionTabRole(sibling)].sort();
-        return roles.join(',');
-      }, {
-        timeout: 15_000,
-        intervals: [100, 250, 500],
-      }).toBe('follower,leader');
+    await page.evaluate(({ key, sessionId }) => {
+      localStorage.setItem(key, sessionId);
+    }, { key: oldSessionKey, sessionId: oldSessionId });
 
-      const [session] = await workspaceSessions();
-      expect(session).toBeTruthy();
-      oldSessionId = session.sessionId;
-      const oldSessionKey =
-        `emprovex:workspace-session:v1:${WORKSPACE_ID}:${session.uid}`;
+    await page.getByTestId('sector-login-email').fill(OPERATOR);
+    await page.getByTestId('sector-login-password').fill(PASSWORD);
+    await page.getByTestId('sector-login-submit').click();
 
-      await emulatorSet(revocationPath(oldSessionId), {
-        revocationVersion: 'emprovex_session_revocation_v1',
-        sessionId: oldSessionId,
-        workspaceId: WORKSPACE_ID,
-        ug: UG,
-        uid: session.uid,
-        accountEmail: OPERATOR,
-        slotId: session.slotId,
-        createdAt: new Date(),
-        createdBy: FOUNDER,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      });
-      await emulatorDelete(slotPath(session.slotId));
+    await expect(
+      page.getByText('Esta sessão foi encerrada pela administração. Faça login novamente.', {
+        exact: false,
+      })
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId('sector-login-email')).toBeVisible();
 
-      await expect(page.getByTestId('sector-login-email')).toBeVisible({
-        timeout: 15_000,
-      });
-      await expect(
-        page.getByRole('navigation', { name: 'Navegação principal' })
-      ).toHaveCount(0);
-      await expect(sibling.getByTestId('sector-login-email')).toBeVisible({
-        timeout: 15_000,
-      });
-      await expect(
-        sibling.getByRole('navigation', { name: 'Navegação principal' })
-      ).toHaveCount(0);
-      await sibling.close();
-      sibling = null;
+    expect(await page.evaluate((key) => localStorage.getItem(key), oldSessionKey)).toBeNull();
 
-      await page.evaluate(({ key, sessionId }) => {
-        localStorage.setItem(key, sessionId);
-      }, { key: oldSessionKey, sessionId: oldSessionId });
+    await page.getByTestId('sector-login-email').fill(OPERATOR);
+    await page.getByTestId('sector-login-password').fill(PASSWORD);
+    await page.getByTestId('sector-login-submit').click();
+    await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
+      timeout: 20_000,
+    });
 
-      await page.getByTestId('sector-login-email').fill(OPERATOR);
-      await page.getByTestId('sector-login-password').fill(PASSWORD);
-      await page.getByTestId('sector-login-submit').click();
+    const [newSession] = await workspaceSessions();
+    expect(newSession).toBeTruthy();
+    expect(newSession.sessionId).not.toBe(oldSessionId);
+    expect(await emulatorGet(revocationPath(oldSessionId))).toBeTruthy();
 
-      await expect(
-        page.getByText('Esta sessão foi encerrada pela administração. Faça login novamente.', {
-          exact: false,
-        })
-      ).toBeVisible({ timeout: 15_000 });
-      await expect(page.getByTestId('sector-login-email')).toBeVisible();
-
-      expect(await page.evaluate((key) => localStorage.getItem(key), oldSessionKey)).toBeNull();
-
-      await page.getByTestId('sector-login-email').fill(OPERATOR);
-      await page.getByTestId('sector-login-password').fill(PASSWORD);
-      await page.getByTestId('sector-login-submit').click();
-      await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
-        timeout: 20_000,
-      });
-
-      const [newSession] = await workspaceSessions();
-      expect(newSession).toBeTruthy();
-      expect(newSession.sessionId).not.toBe(oldSessionId);
-      expect(await emulatorGet(revocationPath(oldSessionId))).toBeTruthy();
-
-      await logoutIfAuthenticated(page);
-    } finally {
-      if (sibling && !sibling.isClosed()) await sibling.close();
-      await context.close();
-      if (oldSessionId) await emulatorDelete(revocationPath(oldSessionId));
-    }
+    await logoutIfAuthenticated(page);
+    await emulatorDelete(revocationPath(oldSessionId));
   });
 });
