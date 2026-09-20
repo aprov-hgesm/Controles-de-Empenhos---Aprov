@@ -6,7 +6,7 @@ import type { Empenho } from '../../../lib/types';
 import type { EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 
 type DashboardClassFilter = string;
-type ActiveTab = 'inicio' | 'painel' | 'empenhos' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas';
+type ActiveTab = 'inicio' | 'painel' | 'empenhos' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas' | 'avisos';
 type NfSubTab = 'acompanhar' | 'cadastrar' | 'comissao';
 
 interface DashboardViewProps {
