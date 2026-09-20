@@ -134,14 +134,30 @@ Concluído:
 
 A identidade visual é contextual, não autorizadora: permissões continuam sendo determinadas exclusivamente pelo fluxo de autenticação, diretório da plataforma e Firestore Rules.
 
+## Bloco 19.7 — atalhos e retomada de trabalho
+
+Concluído:
+
+- novo hook `useInicioWorkMemory` mantém a última área operacional relevante por workspace;
+- a memória utiliza somente `sessionStorage`, nunca Firestore ou `localStorage`;
+- a chave é separada por workspace + UG, evitando cruzamento entre unidades;
+- a entrada automática inicial no Painel não sobrescreve uma retomada anterior da mesma sessão;
+- a própria Home nunca é salva como destino de retomada;
+- quando o último contexto é um empenho específico, o ID é preservado e reaberto diretamente;
+- antes de reabrir um empenho memorizado, o sistema confirma que ele ainda existe;
+- logout explícito limpa a memória efêmera da sessão;
+- novo `InicioQuickActions` adiciona atalhos para Novo empenho, Cadastrar NF, Itens, Relatórios e Cronogramas;
+- Novo empenho abre diretamente o modal de cadastro;
+- Cadastrar NF abre diretamente a subaba de cadastro;
+- dock permanece visualmente secundário ao sistema solar e à constelação;
+- layout mobile usa uma faixa compacta rolável;
+- `prefers-reduced-motion` permanece preservado;
+- nenhuma leitura ou subscription Firestore adicional foi adicionada.
+
+A retomada é uma conveniência de interface, não estado de negócio. Ela não altera autorização, sincronização, histórico, filtros persistentes ou dados operacionais.
+
 ## Próximas etapas
 
-- 19.7: atalhos e retomada de trabalho;
-- 19.3: núcleo/logo interativo;
-- 19.4: órbitas e planetas adicionais;
-- 19.5: constelação operacional completa;
-- 19.6: identidade/UG e contexto do operador;
-- 19.7: atalhos e retomada de trabalho;
 - 19.8: microinterações;
 - 19.9: transições entre superfícies;
 - 19.10: snapshot otimizado por UG;
