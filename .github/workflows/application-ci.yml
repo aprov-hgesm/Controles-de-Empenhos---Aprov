@@ -283,6 +283,9 @@ jobs:
       - name: Block 19.3 interactive core guard
         run: npm run verify:block-19-3-interactive-core
 
+      - name: Block 19.4 operational orbit guard
+        run: npm run verify:block-19-4-operational-orbits
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
