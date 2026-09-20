@@ -37,18 +37,6 @@
   filter: brightness(1.08);
 }
 
-.root:active {
-  filter: brightness(1.16);
-}
-
-.root:active .reactor {
-  transform: translateZ(14px) scale(0.965);
-}
-
-.root:active .telemetryArc {
-  animation-duration: 2.8s;
-}
-
 .corona {
   position: absolute;
   inset: -48%;
