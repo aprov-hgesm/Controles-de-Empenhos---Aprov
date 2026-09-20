@@ -1,0 +1,218 @@
+.root {
+  position: absolute;
+  right: 24px;
+  bottom: 22px;
+  z-index: 22;
+  width: min(290px, calc(100% - 48px));
+  pointer-events: auto;
+}
+
+.resume {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 11px;
+  border: 1px solid rgba(133, 166, 240, 0.18);
+  border-radius: 15px;
+  background:
+    linear-gradient(145deg, rgba(16, 30, 63, 0.9), rgba(6, 13, 30, 0.88));
+  box-shadow:
+    0 16px 38px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255,255,255,0.025);
+  color: #eef5ff;
+  text-align: left;
+  cursor: pointer;
+  backdrop-filter: blur(16px);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.resume:hover,
+.resume:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(158, 191, 255, 0.34);
+  background:
+    linear-gradient(145deg, rgba(23, 43, 88, 0.94), rgba(7, 16, 36, 0.92));
+  outline: none;
+}
+
+.resume:focus-visible,
+.action:focus-visible {
+  box-shadow: 0 0 0 2px rgba(139, 176, 255, 0.35);
+}
+
+.resumeIcon {
+  display: grid;
+  width: 31px;
+  height: 31px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(147, 180, 255, 0.16);
+  border-radius: 11px;
+  background: rgba(61, 93, 174, 0.12);
+  color: rgba(184, 207, 255, 0.9);
+}
+
+.resumeIcon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.resumeCopy {
+  display: block;
+  min-width: 0;
+  flex: 1;
+}
+
+.resumeCopy small,
+.resumeCopy strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resumeCopy small {
+  color: rgba(133, 158, 207, 0.72);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 6px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.resumeCopy strong {
+  margin-top: 3px;
+  color: rgba(232, 240, 255, 0.94);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.resumeArrow {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  color: rgba(161, 188, 244, 0.7);
+  transition: transform 160ms ease;
+}
+
+.resume:hover .resumeArrow,
+.resume:focus-visible .resumeArrow {
+  transform: translateX(3px);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 9px 2px 6px;
+  color: rgba(124, 148, 195, 0.58);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 6px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.header i {
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, rgba(123, 153, 218, 0.23), transparent);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.action {
+  display: grid;
+  min-width: 0;
+  place-items: center;
+  gap: 5px;
+  padding: 8px 3px 7px;
+  border: 1px solid rgba(113, 143, 207, 0.11);
+  border-radius: 11px;
+  background: rgba(7, 15, 33, 0.72);
+  color: rgba(164, 187, 229, 0.76);
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    background 150ms ease;
+}
+
+.action:hover,
+.action:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(145, 178, 244, 0.27);
+  background: rgba(18, 31, 62, 0.84);
+  color: rgba(218, 231, 255, 0.96);
+  outline: none;
+}
+
+.action svg {
+  width: 14px;
+  height: 14px;
+}
+
+.action span {
+  overflow: hidden;
+  width: 100%;
+  font-size: 6px;
+  font-weight: 750;
+  line-height: 1.1;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .root {
+    right: 18px;
+    bottom: 17px;
+    width: min(275px, calc(100% - 36px));
+  }
+}
+
+@media (max-width: 640px) {
+  .root {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    width: auto;
+  }
+
+  .resume {
+    padding: 9px 10px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(5, minmax(48px, 1fr));
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .action {
+    min-width: 48px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resume,
+  .resumeArrow,
+  .action {
+    transition: none;
+  }
+}
