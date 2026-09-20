@@ -16,6 +16,7 @@ const forbidText = (source, forbidden, message) => {
 const auth = read('lib/server/firebaseFounderAuth.ts');
 const monitoring = read('lib/server/googleCloudMonitoring.ts');
 const route = read('app/api/admin/firebase-global-usage/route.ts');
+const requestSecurity = read('lib/server/requestSecurity.ts');
 const hook = read('hooks/usePlatformAdminGlobalUsage.ts');
 const panel = read('components/admin/AdminGlobalUsagePanel.tsx');
 const adminPage = read('app/admin/page.tsx');
@@ -55,8 +56,14 @@ for (const marker of [
   'isGoogleCloudMonitoringConfigured',
   'loadFirebaseGlobalUsageObservation',
   'CLOUD_MONITORING_NOT_CONFIGURED',
-  'Cache-Control',
+  'securityResponseHeaders',
 ]) requireText(route, marker, `Rota global perdeu proteção: ${marker}`);
+
+requireText(
+  requestSecurity,
+  "'Cache-Control': 'private, no-store, max-age=0'",
+  'Rota global perdeu proteção no-store centralizada.'
+);
 
 for (const marker of [
   'adminUser.getIdToken()',
