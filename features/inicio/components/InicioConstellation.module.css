@@ -423,3 +423,28 @@
     animation: none !important;
   }
 }
+
+
+[data-performance='balanced'] .star {
+  animation: none;
+  opacity: 0.74;
+}
+
+[data-performance='balanced'] .star[data-severity='critical'] {
+  opacity: 1;
+}
+
+[data-performance='balanced'] .star[data-severity='critical'] .halo {
+  animation: none;
+}
+
+[data-performance='balanced'] .tooltip {
+  backdrop-filter: none;
+}
+
+[data-performance='static'] .star,
+[data-performance='static'] .star[data-severity='critical'],
+[data-performance='static'] .star[data-severity='critical'] .halo,
+[data-performance='static'] .relationships line {
+  animation: none !important;
+}
