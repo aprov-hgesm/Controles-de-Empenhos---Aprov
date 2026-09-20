@@ -1,0 +1,123 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const root = process.cwd();
+const findings = [];
+const read = (path) => readFileSync(resolve(root, path), 'utf8');
+
+const panel = read('components/admin/AdminConsolidatedUsagePanel.tsx');
+const adminView = read('components/admin/PlatformAdminView.tsx');
+const docs = read('docs/BLOCK_16_5_CONSOLIDATED_USAGE_DASHBOARD.md');
+const pkg = read('package.json');
+const workflow = read('.github/workflows/application-ci.yml');
+
+function requireText(source, expected, message) {
+  if (!source.includes(expected)) findings.push(message);
+}
+
+function forbidText(source, forbidden, message) {
+  if (source.includes(forbidden)) findings.push(message);
+}
+
+for (const marker of [
+  'data-testid="admin-consolidated-usage-panel"',
+  'Bloco 16.5 · visão consolidada',
+  'Painel consolidado de consumo',
+  'google-cloud-monitoring',
+  'emprovex-workspace-estimate',
+  'getDefaultSimultaneousSessionLimit',
+  'isAdminWorkspaceSessionActive',
+  'Participação calculada somente sobre a soma das estimativas EMPROVEX',
+  'Projeção financeira: referência operacional, não cobrança oficial',
+]) {
+  requireText(panel, marker, `Painel 16.5 perdeu requisito: ${marker}`);
+}
+
+for (const forbidden of [
+  'onSnapshot(',
+  'getDoc(',
+  'getDocs(',
+  'setDoc(',
+  'updateDoc(',
+  'deleteDoc(',
+  'runTransaction(',
+  'collectionGroup(',
+]) {
+  forbidText(
+    panel,
+    forbidden,
+    `Painel consolidado abriu acesso Firestore próprio indevido: ${forbidden}`
+  );
+}
+
+requireText(
+  adminView,
+  "import { AdminConsolidatedUsagePanel } from './AdminConsolidatedUsagePanel';",
+  'PlatformAdminView não importa o painel consolidado.'
+);
+requireText(
+  adminView,
+  '<AdminConsolidatedUsagePanel',
+  'PlatformAdminView não renderiza o painel consolidado.'
+);
+requireText(
+  adminView,
+  '<AdminGlobalUsagePanel',
+  'Visão detalhada global do 16.4 foi removida.'
+);
+requireText(
+  adminView,
+  '<AdminUsagePanel',
+  'Visão detalhada por UG do 16.3 foi removida.'
+);
+
+const consolidatedIndex = adminView.indexOf('<AdminConsolidatedUsagePanel');
+const globalIndex = adminView.indexOf('<AdminGlobalUsagePanel');
+const workspaceIndex = adminView.indexOf('<AdminUsagePanel');
+if (
+  consolidatedIndex < 0
+  || globalIndex < 0
+  || workspaceIndex < 0
+  || !(consolidatedIndex < globalIndex && globalIndex < workspaceIndex)
+) {
+  findings.push('Ordem do painel consolidado e drill-downs 16.4/16.3 foi alterada.');
+}
+
+for (const marker of [
+  'não cria uma terceira fonte de verdade',
+  'participação por UG nunca é apresentada como rateio da fatura global',
+  'banco Firestore nomeado',
+  'não presume automaticamente',
+  'não inventa um valor em USD ou BRL',
+  'não altera:',
+  'Firestore Rules',
+  'Google Drive por workspace',
+  'nenhum deploy Vercel',
+]) {
+  requireText(docs, marker, `Documentação 16.5 perdeu requisito: ${marker}`);
+}
+
+requireText(
+  pkg,
+  '"verify:block-16-5-consolidated-usage"',
+  'package.json não registra o guard do Bloco 16.5.'
+);
+requireText(
+  workflow,
+  'Block 16.5 consolidated usage dashboard guard',
+  'Application CI não executa o guard do Bloco 16.5.'
+);
+
+if (findings.length) {
+  console.error('BLOCK 16.5 CONSOLIDATED USAGE DASHBOARD: FAIL');
+  findings.forEach((finding) => console.error(`  [BLOCK] ${finding}`));
+  process.exitCode = 2;
+} else {
+  console.log('BLOCK 16.5 CONSOLIDATED USAGE DASHBOARD: READY');
+  console.log('Global real: GOOGLE CLOUD MONITORING');
+  console.log('Por UG: ESTIMATIVA EMPROVEX');
+  console.log('Sessões: REUTILIZADAS DO BLOCO 16.2');
+  console.log('Firestore adicional no painel: NENHUM');
+  console.log('Franquia do banco nomeado: NÃO PRESUMIDA');
+  console.log('Deploy Vercel: NÃO REALIZADO');
+}
