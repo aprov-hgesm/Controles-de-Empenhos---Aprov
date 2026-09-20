@@ -38,7 +38,8 @@ export function isNoticePending(alert: Alert): boolean {
 }
 
 export function isNoticeVisibleInActiveQueue(alert: Alert): boolean {
-  return getNoticeStatus(alert) !== 'ARQUIVADO';
+  const status = getNoticeStatus(alert);
+  return status !== 'RESOLVIDO' && status !== 'ARQUIVADO';
 }
 
 export function getNoticeSortTimestamp(alert: Alert): number {
