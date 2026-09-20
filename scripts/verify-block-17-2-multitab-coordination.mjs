@@ -53,7 +53,7 @@ for (const forbidden of [
 
 for (const marker of [
   'startWorkspaceSessionControl(',
-  'sessionCoordinatorIdentityKey',
+  'sessionControlIdentityKey',
   'sessionControl.stop()',
 ]) {
   requireText(operational, marker, `Hook operacional perdeu requisito: ${marker}`);
