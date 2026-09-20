@@ -13,6 +13,9 @@ interface ConstellationNode extends InicioSnapshotStar {
   top: number;
   size: number;
   delay: number;
+  driftX: number;
+  driftY: number;
+  driftDuration: number;
 }
 
 interface InicioConstellationProps {
@@ -29,6 +32,14 @@ interface StarExclusionZone {
   percentPerPixelY: number;
 }
 
+interface StarOrbitCorridor {
+  centerX: number;
+  centerY: number;
+  radiusPx: number;
+  percentPerPixelX: number;
+  percentPerPixelY: number;
+}
+
 const STAR_EXCLUSION_GAP_PX = {
   planet: 38,
   core: 50,
@@ -39,6 +50,8 @@ const STAR_SEVERITY_GAP_BOOST_PX = {
   attention: 10,
   critical: 16,
 } as const;
+
+const STAR_ORBIT_CORRIDOR_HALF_WIDTH_PX = 30;
 
 function hashValue(value: string, seed = 0): number {
   let hash = 2166136261 ^ seed;
@@ -85,6 +98,78 @@ function sameExclusionZones(
       && Math.abs(zone.percentPerPixelY - other.percentPerPixelY) < 0.001
     );
   });
+}
+
+
+function sameOrbitCorridors(
+  left: StarOrbitCorridor[],
+  right: StarOrbitCorridor[]
+): boolean {
+  if (left.length !== right.length) return false;
+
+  return left.every((corridor, index) => {
+    const other = right[index];
+    if (!other) return false;
+    return (
+      Math.abs(corridor.centerX - other.centerX) < 0.05
+      && Math.abs(corridor.centerY - other.centerY) < 0.05
+      && Math.abs(corridor.radiusPx - other.radiusPx) < 0.25
+      && Math.abs(corridor.percentPerPixelX - other.percentPerPixelX) < 0.001
+      && Math.abs(corridor.percentPerPixelY - other.percentPerPixelY) < 0.001
+    );
+  });
+}
+
+function keepStarClearOfOrbitCorridors(
+  node: ConstellationNode,
+  corridors: StarOrbitCorridor[]
+): ConstellationNode {
+  if (corridors.length === 0) return node;
+
+  let left = node.left;
+  let top = node.top;
+  const severityGap = STAR_SEVERITY_GAP_BOOST_PX[node.severity];
+
+  for (let pass = 0; pass < 3; pass += 1) {
+    corridors.forEach((corridor, corridorIndex) => {
+      let dxPx = (left - corridor.centerX) / corridor.percentPerPixelX;
+      let dyPx = (top - corridor.centerY) / corridor.percentPerPixelY;
+      let distance = Math.hypot(dxPx, dyPx);
+      const safeGap = STAR_ORBIT_CORRIDOR_HALF_WIDTH_PX + severityGap;
+
+      if (Math.abs(distance - corridor.radiusPx) >= safeGap) return;
+
+      if (distance < 0.5) {
+        const angle =
+          ((hashValue(node.id, 701 + corridorIndex) % 360) * Math.PI) / 180;
+        dxPx = Math.cos(angle);
+        dyPx = Math.sin(angle);
+        distance = 1;
+      }
+
+      const moveOutside = distance >= corridor.radiusPx;
+      const targetRadius =
+        corridor.radiusPx + (moveOutside ? safeGap : -safeGap) * 1.08;
+      const scale = Math.max(0, targetRadius) / Math.max(distance, 0.5);
+
+      left = clamp(
+        corridor.centerX + dxPx * scale * corridor.percentPerPixelX,
+        4,
+        96
+      );
+      top = clamp(
+        corridor.centerY + dyPx * scale * corridor.percentPerPixelY,
+        5,
+        94
+      );
+    });
+  }
+
+  return {
+    ...node,
+    left,
+    top,
+  };
 }
 
 function keepStarClearOfExclusions(
@@ -152,6 +237,9 @@ function buildNode(
     top: clamp(clusterY + localY, 5, 94),
     size: getSize(star.value, maxValue),
     delay: -((index % 14) * 0.39),
+    driftX: ((hashValue(star.id, 811) % 1001) / 1000 - 0.5) * 7,
+    driftY: ((hashValue(star.id, 919) % 1001) / 1000 - 0.5) * 6,
+    driftDuration: 8.5 + (hashValue(star.id, 977) % 700) / 100,
   };
 }
 
@@ -162,6 +250,7 @@ export function InicioConstellation({
   const rootRef = useRef<HTMLDivElement>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [exclusionZones, setExclusionZones] = useState<StarExclusionZone[]>([]);
+  const [orbitCorridors, setOrbitCorridors] = useState<StarOrbitCorridor[]>([]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -200,6 +289,27 @@ export function InicioConstellation({
       setExclusionZones((current) =>
         sameExclusionZones(current, nextZones) ? current : nextZones
       );
+
+      const nextOrbitCorridors = Array.from(
+        scene.querySelectorAll<HTMLElement>('[data-inicio-star-orbit]')
+      ).map((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          centerX:
+            ((rect.left + rect.width / 2 - rootRect.left) / rootRect.width) * 100,
+          centerY:
+            ((rect.top + rect.height / 2 - rootRect.top) / rootRect.height) * 100,
+          radiusPx: rect.width / 2,
+          percentPerPixelX,
+          percentPerPixelY,
+        };
+      });
+
+      setOrbitCorridors((current) =>
+        sameOrbitCorridors(current, nextOrbitCorridors)
+          ? current
+          : nextOrbitCorridors
+      );
     };
 
     const scheduleMeasure = () => {
@@ -211,7 +321,9 @@ export function InicioConstellation({
     observer.observe(root);
     observer.observe(scene);
     scene
-      .querySelectorAll<HTMLElement>('[data-inicio-star-exclusion]')
+      .querySelectorAll<HTMLElement>(
+        '[data-inicio-star-exclusion], [data-inicio-star-orbit]'
+      )
       .forEach((element) => observer.observe(element));
 
     scheduleMeasure();
@@ -233,8 +345,9 @@ export function InicioConstellation({
 
     return stars
       .map((star, index) => buildNode(star, index, maxValue))
-      .map((node) => keepStarClearOfExclusions(node, exclusionZones));
-  }, [exclusionZones, snapshot]);
+      .map((node) => keepStarClearOfExclusions(node, exclusionZones))
+      .map((node) => keepStarClearOfOrbitCorridors(node, orbitCorridors));
+  }, [exclusionZones, orbitCorridors, snapshot]);
 
   const hoveredNode = hoveredId
     ? nodes.find((node) => node.id === hoveredId) ?? null
@@ -307,6 +420,9 @@ export function InicioConstellation({
               width: node.size,
               height: node.size,
               animationDelay: `${node.delay}s`,
+              ['--star-drift-x' as string]: `${node.driftX.toFixed(2)}px`,
+              ['--star-drift-y' as string]: `${node.driftY.toFixed(2)}px`,
+              ['--star-drift-duration' as string]: `${node.driftDuration.toFixed(2)}s`,
             }}
             onMouseEnter={() => setHoveredId(node.id)}
             onMouseLeave={() => setHoveredId(null)}
