@@ -9,6 +9,7 @@ const source = readFileSync(
 );
 
 const expected = {
+  inicio: ['empenhos', 'alerts'],
   painel: ['empenhos'],
   empenhos: ['empenhos', 'alerts', 'invoices'],
   itens: ['empenhos'],
@@ -37,6 +38,7 @@ for (const [tab, collections] of Object.entries(expected)) {
 
 assert.match(source, /empenhos: true;/, 'Empenhos precisa permanecer sempre em tempo real.');
 console.log('OPERATIONAL SUBSCRIPTION PLAN: PASS');
+console.log('Início: 2 coleções operacionais realtime');
 console.log('Painel: 1 coleção operacional realtime');
 console.log('Empenhos: 3 coleções operacionais realtime');
 console.log('Notas Fiscais: 4 coleções operacionais realtime');
