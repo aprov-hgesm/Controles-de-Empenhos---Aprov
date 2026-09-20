@@ -24,7 +24,7 @@ import {
 import type { OperationalActiveTab } from '../lib/operationalSubscriptionPlan';
 import { resetActiveProfileMode, setActiveProfileMode } from '../lib/profileMode';
 import { normalizePlatformEmail } from '../lib/platformIdentity';
-import { SESSION_HEARTBEAT_INTERVAL_MS } from '../lib/platformCapacity';
+import { SESSION_HEARTBEAT_INTERVAL_MS, isFounderCapacityExempt } from '../lib/platformCapacity';
 import {
   flushWorkspaceUsageTelemetry,
   recordWorkspaceRealtimeSnapshot,
@@ -268,7 +268,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     if (
       !user
       || !isOperationalSectorContext(workspaceContext)
-      || workspaceContext.resolutionSource !== 'platform-directory'
+      || isFounderCapacityExempt(user.email)
     ) {
       return;
     }
