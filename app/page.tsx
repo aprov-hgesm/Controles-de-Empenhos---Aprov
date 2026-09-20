@@ -18,7 +18,6 @@ import { ToastNotification } from '../components/layout/ToastNotification';
 import { OperationalSurfaceTransition } from '../components/layout/OperationalSurfaceTransition';
 import { DashboardView } from '../features/dashboard/components/DashboardView';
 import { InicioView } from '../features/inicio/components/InicioView';
-import { useInicioWorkMemory } from '../features/inicio/hooks/useInicioWorkMemory';
 import { EmpenhosView } from '../features/empenhos/components/EmpenhosView';
 import { NotasFiscaisView } from '../features/notas-fiscais/components/NotasFiscaisView';
 import { RelatoriosView } from '../features/relatorios/components/RelatoriosView';
@@ -107,19 +106,6 @@ export default function Home() {
     cronogramaResponsavelNome, setCronogramaResponsavelNome, cronogramaResponsavelCargo, setCronogramaResponsavelCargo, showCronogramaPreviewModal, setShowCronogramaPreviewModal,
     isSavingCronograma, setIsSavingCronograma,
   } = useOperationalViewState();
-
-  const inicioWorkspaceKey = workspaceContext.status === 'sector'
-    ? `${workspaceContext.workspaceId}:${workspaceContext.ug || 'sem-ug'}`
-    : null;
-
-  const {
-    resumeTarget: inicioResumeTarget,
-    clearWorkMemory: clearInicioWorkMemory,
-  } = useInicioWorkMemory({
-    workspaceKey: inicioWorkspaceKey,
-    activeTab,
-    selectedEmpenhoDetailId,
-  });
 
   const {
     handleEmpenhoDocumentUploaded,
@@ -354,12 +340,12 @@ export default function Home() {
 
   return (
     <div
-      className={`min-h-screen bg-gradient-to-br from-[#f0f4f8] via-[#e8ecf3] to-[#f4f6fa] text-[#0b1c30] flex flex-col antialiased relative overflow-x-hidden selection:bg-blue-500 selection:text-white ${showLoginSuccessTransition ? 'emprovex-app-login-entry' : ''}`}
+      className={`min-h-screen ${activeTab === 'inicio' ? 'bg-[#02040b] text-white' : 'bg-gradient-to-br from-[#f0f4f8] via-[#e8ecf3] to-[#f4f6fa] text-[#0b1c30]'} flex flex-col antialiased relative overflow-x-hidden selection:bg-blue-500 selection:text-white ${showLoginSuccessTransition ? 'emprovex-app-login-entry' : ''}`}
       data-login-entry={showLoginSuccessTransition ? 'true' : 'false'}
       data-active-realtime-collections={activeRealtimeCollectionCount}
     >
 
-      <AppBackground />
+      <AppBackground immersive={activeTab === 'inicio'} />
 
       {showLoginSuccessTransition && workspaceContext.status === 'sector' && (
         <LoginSuccessTransition
@@ -394,7 +380,6 @@ export default function Home() {
           onLogout={async () => {
             try {
               setShowLoginSuccessTransition(false);
-              clearInicioWorkMemory();
               await signOutUser();
               showToast('Você saiu do sistema.', 'info');
             } catch (err: any) {
@@ -405,7 +390,12 @@ export default function Home() {
         />
 
         {/* Content Container Area */}
-        <main className="flex-1 lg:pl-6 pb-24 md:pb-12 pt-6 px-4 max-w-7xl mx-auto w-full overflow-hidden">
+        <main
+          className={`flex-1 w-full overflow-hidden ${activeTab === 'inicio'
+            ? 'p-0 pb-20 md:pb-0 max-w-none'
+            : 'lg:pl-6 pb-24 md:pb-12 pt-6 px-4 max-w-7xl mx-auto'
+          }`}
+        >
           {!activeOperationalDataReady ? (
             <section
               data-testid="operational-section-loading"
@@ -428,14 +418,6 @@ export default function Home() {
             <InicioView
               snapshot={inicioSnapshot}
               userDisplayName={user?.displayName || 'Operador EMPROVEX'}
-              workspaceName={workspaceContext.status === 'sector' ? workspaceContext.workspaceName : 'Ambiente EMPROVEX'}
-              organizationName={workspaceContext.status === 'sector' ? workspaceContext.institutionalProfile.organizationName : 'EMPROVEX'}
-              organizationShortName={workspaceContext.status === 'sector' ? (workspaceContext.institutionalProfile.organizationShortName || null) : null}
-              sectionName={workspaceContext.status === 'sector' ? workspaceContext.institutionalProfile.sectionName : 'Operação'}
-              workspaceUg={workspaceContext.status === 'sector' ? workspaceContext.ug : null}
-              isFoundingWorkspace={workspaceContext.status === 'sector' && workspaceContext.resolutionSource === 'legacy-hgesm-bootstrap'}
-              customLogo={customLogo}
-              resumeTarget={inicioResumeTarget}
               onNavigate={(tab) => {
                 setActiveTab(tab);
                 if (tab === 'empenhos') setSelectedEmpenhoDetailId(null);
@@ -443,27 +425,6 @@ export default function Home() {
               onSelectEmpenho={(empenhoId) => {
                 setSelectedEmpenhoDetailId(empenhoId);
                 setActiveTab('empenhos');
-              }}
-              onResumeWork={() => {
-                if (!inicioResumeTarget) return;
-                if (inicioResumeTarget.tab === 'empenhos') {
-                  const resumableEmpenhoId =
-                    inicioResumeTarget.empenhoId
-                    && empenhos.some((empenho) => empenho.id === inicioResumeTarget.empenhoId)
-                      ? inicioResumeTarget.empenhoId
-                      : null;
-                  setSelectedEmpenhoDetailId(resumableEmpenhoId);
-                }
-                setActiveTab(inicioResumeTarget.tab);
-              }}
-              onCreateEmpenho={() => {
-                setSelectedEmpenhoDetailId(null);
-                setActiveTab('empenhos');
-                setShowNewEmpenhoModal(true);
-              }}
-              onRegisterInvoice={() => {
-                setNfSubTab('cadastrar');
-                setActiveTab('nova_nf');
               }}
             />
           )}
