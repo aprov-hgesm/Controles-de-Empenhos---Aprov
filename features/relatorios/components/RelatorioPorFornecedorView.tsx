@@ -13,8 +13,9 @@ import {
   Search,
 } from 'lucide-react';
 import type { Empenho, Invoice } from '../../../lib/types';
-import { formatSupplierCnpj, isValidSupplierCnpj } from '../../../lib/invoiceIdentity';
+import { formatSupplierCnpj, getInvoiceRecordKey, isValidSupplierCnpj, normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
 import { buildSupplierReports } from '../../../lib/supplierReporting';
+import { useHistoricalInvoices } from '../hooks/useHistoricalInvoices';
 
 interface RelatorioPorFornecedorViewProps {
   empenhos: Empenho[];
@@ -48,9 +49,37 @@ export function RelatorioPorFornecedorView({ empenhos, invoices }: RelatorioPorF
   const [selectedCnpj, setSelectedCnpj] = React.useState('');
   const [visibleCount, setVisibleCount] = React.useState(8);
 
+  const {
+    invoices: selectedSupplierHistory,
+    loading: selectedSupplierHistoryLoading,
+    truncated: selectedSupplierHistoryTruncated,
+    error: selectedSupplierHistoryError,
+  } = useHistoricalInvoices({
+    mode: 'supplier',
+    keyValue: selectedCnpj,
+    enabled: Boolean(selectedCnpj),
+  });
+
+  const effectiveInvoices = React.useMemo(() => {
+    const byRecordKey = new Map(invoices.map((invoice) => [getInvoiceRecordKey(invoice), invoice]));
+    selectedSupplierHistory.forEach((invoice) => {
+      byRecordKey.set(getInvoiceRecordKey(invoice), invoice);
+    });
+    return [...byRecordKey.values()];
+  }, [invoices, selectedSupplierHistory]);
+
+  const loadedSupplierCnpjs = React.useMemo(
+    () => new Set(
+      effectiveInvoices
+        .map((invoice) => normalizeSupplierCnpj(invoice.supplierCnpj))
+        .filter(Boolean)
+    ),
+    [effectiveInvoices]
+  );
+
   const supplierReports = React.useMemo(
-    () => buildSupplierReports(empenhos, invoices),
-    [empenhos, invoices]
+    () => buildSupplierReports(empenhos, effectiveInvoices),
+    [effectiveInvoices, empenhos]
   );
 
   const empenhosWithoutCnpj = React.useMemo(
@@ -190,6 +219,7 @@ export function RelatorioPorFornecedorView({ empenhos, invoices }: RelatorioPorF
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
               {visibleSuppliers.map((report) => {
                 const selected = selectedCnpj === report.cnpj;
+                const invoiceMetricsLoaded = loadedSupplierCnpjs.has(report.cnpj);
                 return (
                   <button
                     key={report.cnpj}
@@ -237,7 +267,7 @@ export function RelatorioPorFornecedorView({ empenhos, invoices }: RelatorioPorF
                         <span className="text-[8px] font-extrabold uppercase tracking-wider text-gray-400">Pregões</span>
                       </div>
                       <div className="rounded-lg bg-gray-50 px-1 py-2">
-                        <span className="block text-sm font-black text-gray-700">{report.invoiceCount}</span>
+                        <span className="block text-sm font-black text-gray-700">{invoiceMetricsLoaded ? report.invoiceCount : '—'}</span>
                         <span className="text-[8px] font-extrabold uppercase tracking-wider text-gray-400">NFs</span>
                       </div>
                     </div>
@@ -245,12 +275,12 @@ export function RelatorioPorFornecedorView({ empenhos, invoices }: RelatorioPorF
                     <div className="mt-3">
                       <div className="flex items-center justify-between text-[9px] font-bold text-gray-400">
                         <span>Cobertura de NS</span>
-                        <span>{report.nsCoverage}%</span>
+                        <span>{invoiceMetricsLoaded ? `${report.nsCoverage}%` : 'Sob demanda'}</span>
                       </div>
                       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-gray-100">
                         <div
                           className="h-full rounded-full bg-emerald-500"
-                          style={{ width: `${report.nsCoverage}%` }}
+                          style={{ width: invoiceMetricsLoaded ? `${report.nsCoverage}%` : '0%' }}
                           aria-hidden="true"
                         />
                       </div>
@@ -281,6 +311,18 @@ export function RelatorioPorFornecedorView({ empenhos, invoices }: RelatorioPorF
           </div>
         )}
       </section>
+
+      {selectedCnpj && selectedSupplierHistoryLoading && (
+        <p className="text-[10px] font-semibold text-blue-500">Consultando histórico do fornecedor…</p>
+      )}
+      {selectedSupplierHistoryError && (
+        <p className="text-[10px] font-semibold text-rose-600">{selectedSupplierHistoryError}</p>
+      )}
+      {selectedSupplierHistoryTruncated && (
+        <p className="text-[10px] font-semibold text-amber-600">
+          Histórico excepcionalmente extenso; a consulta atingiu o limite de segurança.
+        </p>
+      )}
 
       {!selectedSupplier ? (
         <div className="rounded-2xl border border-dashed border-blue-100 bg-blue-50/30 px-6 py-10 text-center">
