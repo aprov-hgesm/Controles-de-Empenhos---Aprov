@@ -251,8 +251,30 @@ Concluído:
 
 A política é adaptativa e exclusivamente visual: o mesmo snapshot operacional e as mesmas ações permanecem disponíveis em todos os perfis.
 
+## Bloco 19.12 — responsividade completa
+
+Concluído:
+
+- a cena ganhou breakpoints explícitos para desktop intermediário, tablet, celular e telefone estreito;
+- `100svh` passou a complementar a altura mínima em mobile para respeitar viewports dinâmicas;
+- o sistema orbital deixou de usar `126vw` no celular e passou a escalar de forma controlada;
+- planetas foram reposicionados para manter distância do dock inferior, especialmente Recebimentos e Painel;
+- o sistema de classes reduz sua escala e oculta luas em telas pequenas sem remover o acesso ao Painel;
+- a constelação mantém as estrelas visuais, mas esconde tooltips dependentes de hover em dispositivos touch;
+- áreas de toque das estrelas foram ampliadas de forma invisível em ponteiro coarse;
+- a legenda da constelação sobe para uma zona reservada acima do dock e remove a nota secundária de densidade no celular;
+- o núcleo usa `clamp` para manter escala coerente em telas pequenas;
+- o painel de identidade reduz tipografia, cards e assinatura conforme a largura, preservando organização e operador;
+- telas baixas em landscape recebem um layout compacto dedicado;
+- o dock de ações rápidas deixou de depender de rolagem horizontal e distribui cinco ações dentro da largura disponível;
+- alvos touch do dock preservam altura mínima de 44 px;
+- a sequência cinematográfica inicial foi compactada para aparelhos abaixo de 420 px;
+- foram adicionadas âncoras E2E específicas para cena, identidade, órbitas, constelação e ações rápidas;
+- o Browser E2E agora valida 360×800, 390×844, 768×1024 e 844×390;
+- cada viewport testa ausência de overflow horizontal e confinamento da identidade/dock à cena;
+- nenhuma leitura, listener, gravação Firestore, regra de negócio ou autenticação foi alterada.
+
 ## Próximas etapas
 
-- 19.12: responsividade;
 - 19.13: polimento;
 - 19.14: auditoria e testes externos.
