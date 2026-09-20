@@ -266,6 +266,10 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     await page.getByRole('button', { name: 'Cronogramas', exact: true }).first().click();
     await expectRealtimeProfile(page, 2);
 
+    await page.getByTestId('nav-avisos').click();
+    await expectRealtimeProfile(page, 2);
+    await expect(page.getByRole('heading', { name: 'Central de Avisos' })).toBeVisible();
+
     await page.getByRole('button', { name: 'Consulta de Itens', exact: true }).first().click();
     await expectRealtimeProfile(page, 1);
 
