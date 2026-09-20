@@ -274,6 +274,9 @@ jobs:
       - name: Block 17.1 session lease efficiency guard
         run: npm run verify:block-17-1-session-lease-efficiency
 
+      - name: Block 19 home experience foundation guard
+        run: npm run verify:block-19-home-experience
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
