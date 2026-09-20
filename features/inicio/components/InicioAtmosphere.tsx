@@ -1,5 +1,7 @@
 'use client';
 
+import styles from './InicioAtmosphere.module.css';
+
 const deepStars = Array.from({ length: 34 }, (_, index) => ({
   id: `deep-${index}`,
   left: 4 + ((index * 37) % 92),
@@ -19,16 +21,16 @@ const dust = Array.from({ length: 18 }, (_, index) => ({
 
 export function InicioAtmosphere() {
   return (
-    <div className="inicio-cinematic-atmosphere" aria-hidden="true">
-      <div className="inicio-cinematic-atmosphere__nebula inicio-cinematic-atmosphere__nebula--one" />
-      <div className="inicio-cinematic-atmosphere__nebula inicio-cinematic-atmosphere__nebula--two" />
-      <div className="inicio-cinematic-atmosphere__nebula inicio-cinematic-atmosphere__nebula--three" />
+    <div className={styles.root} aria-hidden="true">
+      <div className={`${styles.nebula} ${styles.nebulaOne}`} />
+      <div className={`${styles.nebula} ${styles.nebulaTwo}`} />
+      <div className={`${styles.nebula} ${styles.nebulaThree}`} />
 
-      <div className="inicio-cinematic-atmosphere__deep-stars">
+      <div className={styles.deepStars}>
         {deepStars.map((star) => (
           <span
             key={star.id}
-            className="inicio-cinematic-atmosphere__deep-star"
+            className={styles.deepStar}
             style={{
               left: `${star.left}%`,
               top: `${star.top}%`,
@@ -41,11 +43,11 @@ export function InicioAtmosphere() {
         ))}
       </div>
 
-      <div className="inicio-cinematic-atmosphere__dust">
+      <div className={styles.dust}>
         {dust.map((particle) => (
           <span
             key={particle.id}
-            className="inicio-cinematic-atmosphere__dust-particle"
+            className={styles.dustParticle}
             style={{
               left: `${particle.left}%`,
               top: `${particle.top}%`,
@@ -57,11 +59,11 @@ export function InicioAtmosphere() {
         ))}
       </div>
 
-      <div className="inicio-cinematic-atmosphere__arc inicio-cinematic-atmosphere__arc--one" />
-      <div className="inicio-cinematic-atmosphere__arc inicio-cinematic-atmosphere__arc--two" />
-      <div className="inicio-cinematic-atmosphere__horizon" />
-      <div className="inicio-cinematic-atmosphere__scan" />
-      <div className="inicio-cinematic-atmosphere__vignette" />
+      <div className={`${styles.arc} ${styles.arcOne}`} />
+      <div className={`${styles.arc} ${styles.arcTwo}`} />
+      <div className={styles.horizon} />
+      <div className={styles.scan} />
+      <div className={styles.vignette} />
     </div>
   );
 }
