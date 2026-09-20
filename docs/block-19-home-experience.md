@@ -176,9 +176,26 @@ Concluído:
 
 As microinterações foram tratadas como feedback visual, não como requisito de navegação: mouse, toque e teclado continuam operando os mesmos controles sem depender dos efeitos.
 
+## Bloco 19.9 — transições entre superfícies
+
+Concluído:
+
+- novo `OperationalSurfaceTransition` envolve a superfície operacional ativa;
+- a troca funcional de `activeTab` continua imediata;
+- a tela anterior não permanece montada durante a animação;
+- não foi usado `AnimatePresence`, `mode="wait"` nem animação de saída;
+- o perfil realtime muda imediatamente junto com a aba selecionada;
+- a nova superfície recebe entrada curta com opacidade, deslocamento, escala e saturação;
+- um feixe horizontal discreto reforça a continuidade entre áreas;
+- um pequeno indicador contextual mostra a superfície que acabou de ser aberta;
+- Início, Painel, Empenhos, Itens, Notas Fiscais, Relatórios, Itens do Empenho e Cronogramas usam o mesmo contrato visual;
+- com `prefers-reduced-motion`, a animação funcional é reduzida a duração zero e os ornamentos CSS são desativados;
+- nenhuma espera artificial, persistência ou nova subscription foi introduzida.
+
+A transição é estritamente de apresentação. A lógica de navegação, carregamento condicional e plano realtime continuam sendo comandados pelo `activeTab` original.
+
 ## Próximas etapas
 
-- 19.9: transições entre superfícies;
 - 19.10: snapshot otimizado por UG;
 - 19.11: performance/GPU/reduced motion;
 - 19.12: responsividade;
