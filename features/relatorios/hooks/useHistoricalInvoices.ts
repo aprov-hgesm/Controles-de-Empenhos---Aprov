@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import type { Invoice } from '../../../lib/types';
 import {
@@ -69,10 +69,24 @@ export function useHistoricalInvoices({
     };
   }, [enabled, keyValue, mode]);
 
+  const upsertInvoices = useCallback((updates: Invoice[]) => {
+    if (updates.length === 0) return;
+    setInvoices((current) => {
+      const byKey = new Map(
+        current.map((invoice) => [invoice.recordKey?.trim() || invoice.id.trim(), invoice])
+      );
+      updates.forEach((invoice) => {
+        byKey.set(invoice.recordKey?.trim() || invoice.id.trim(), invoice);
+      });
+      return [...byKey.values()];
+    });
+  }, []);
+
   return {
     invoices,
     loading,
     truncated,
     error,
+    upsertInvoices,
   };
 }
