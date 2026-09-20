@@ -274,7 +274,29 @@ Concluído:
 - cada viewport testa ausência de overflow horizontal e confinamento da identidade/dock à cena;
 - nenhuma leitura, listener, gravação Firestore, regra de negócio ou autenticação foi alterada.
 
+## Bloco 19.13 — polimento visual final
+
+Concluído:
+
+- a cena recebeu tokens visuais compartilhados para linhas, vidro, texto, azul, âmbar e crítico;
+- esses tokens passaram a ser reutilizados por identidade, dock, tooltips, núcleo, órbitas e constelação;
+- foi criada a camada puramente decorativa `InicioSceneChrome`, com cantos técnicos, trilhos e escala lateral;
+- o chrome é `aria-hidden`, não intercepta ponteiro e não possui efeitos de runtime;
+- nenhuma animação, `@keyframes`, blur ou `backdrop-filter` foi adicionado ao chrome;
+- a moldura interna da cena foi refinada e acompanha os raios responsivos dos breakpoints;
+- o painel de identidade ganhou acabamento superior sutil nos cards e melhor coesão com a paleta central;
+- ações rápidas ganharam acabamento de borda/luz consistente sem alterar navegação ou áreas touch;
+- tooltips orbitais e da constelação passaram a compartilhar o mesmo material visual;
+- o núcleo recebeu uma moldura técnica estática adicional e brilho mais controlado;
+- a constelação consolidou cores semânticas de atenção/crítico nos tokens da cena;
+- a legenda ganhou superfície discreta para leitura sem competir com o sistema orbital;
+- o horizonte da atmosfera recebeu uma linha focal estática, sem custo contínuo de GPU;
+- no mobile, o chrome reduz-se aos cantos para preservar espaço visual;
+- o Browser E2E exige que a camada de chrome esteja presente nos quatro viewports responsivos;
+- nenhuma leitura, listener, gravação Firestore, autenticação, regra ou lógica de negócio foi alterada.
+
+O objetivo do bloco foi elevar a percepção de acabamento e consistência comercial sem transformar o Início em uma superfície mais pesada.
+
 ## Próximas etapas
 
-- 19.13: polimento;
-- 19.14: auditoria e testes externos.
+- 19.14: auditoria, testes externos e fechamento.
