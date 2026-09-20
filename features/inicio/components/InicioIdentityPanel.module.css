@@ -208,28 +208,41 @@
   }
 
   .identityGrid {
-    max-width: 430px;
+    max-width: min(430px, calc(100vw - 72px));
   }
 }
 
 @media (max-width: 640px) {
   .root {
     width: 100%;
-    padding: 24px 20px 0;
+    padding: 22px 16px 0;
+  }
+
+  .kicker {
+    gap: 6px;
+    font-size: 7px;
+    letter-spacing: 0.12em;
+  }
+
+  .heading {
+    margin-top: 12px;
   }
 
   .heading h2 {
-    font-size: 32px;
+    font-size: clamp(28px, 9vw, 32px);
   }
 
   .description {
-    max-width: 320px;
-    font-size: 10px;
+    max-width: min(300px, calc(100vw - 52px));
+    margin-top: 12px;
+    font-size: 9px;
+    line-height: 1.55;
   }
 
   .identityGrid {
     grid-template-columns: 1fr;
-    max-width: 280px;
+    width: min(270px, calc(100vw - 52px));
+    margin-top: 12px;
   }
 
   .identityCard:nth-child(2) {
@@ -238,6 +251,46 @@
 
   .signature {
     display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .root {
+    padding-top: 18px;
+  }
+
+  .kicker i,
+  .kicker span:last-child {
+    display: none;
+  }
+
+  .description {
+    max-width: 250px;
+  }
+
+  .identityGrid {
+    width: min(250px, calc(100vw - 44px));
+  }
+}
+
+@media (max-height: 560px) and (min-width: 641px) {
+  .root {
+    width: 360px;
+    padding: 18px 0 0 22px;
+  }
+
+  .description,
+  .identityGrid,
+  .signatureRow {
+    display: none;
+  }
+
+  .heading {
+    margin-top: 8px;
+  }
+
+  .heading h2 {
+    font-size: 34px;
   }
 }
 
