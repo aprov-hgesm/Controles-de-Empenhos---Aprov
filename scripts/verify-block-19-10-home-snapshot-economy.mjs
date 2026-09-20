@@ -75,7 +75,7 @@ forbidText(
 );
 requireText(
   snapshotHook,
-  "activeTab === 'empenhos' || activeTab === 'nova_nf'",
+  "activeTab === 'empenhos' || activeTab === 'nova_nf' || activeTab === 'avisos'",
   'Publicação do snapshot não está restrita a telas que já carregam Empenhos + Alertas.'
 );
 requireText(
