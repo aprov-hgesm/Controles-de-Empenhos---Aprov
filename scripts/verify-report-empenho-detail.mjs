@@ -18,8 +18,8 @@ requireText(report, 'periodReceivedNfe', 'Indicador financeiro do recorte ausent
 requireText(report, 'invoicesWithoutNs', 'Pendências de NS não são destacadas.');
 requireText(report, 'nsCoverage', 'Cobertura de NS não é calculada.');
 requireText(report, 'O saldo atual do empenho continua acumulado.', 'Interface não esclarece a diferença entre recorte e saldo acumulado.');
-requireText(report, "handleGenerateEmpenhoReportPDF(emp, 'download', reportingPeriod)", 'Download PDF não recebe o período.');
-requireText(report, "handleGenerateEmpenhoReportPDF(emp, 'print', reportingPeriod)", 'Impressão PDF não recebe o período.');
+requireText(report, "handleGenerateEmpenhoReportPDF(emp, 'download', reportingPeriod, invoices)", 'Download PDF não recebe período + histórico escopado.');
+requireText(report, "handleGenerateEmpenhoReportPDF(emp, 'print', reportingPeriod, invoices)", 'Impressão PDF não recebe período + histórico escopado.');
 requireText(documentActions, 'pdfAccumulatedReceivedNfe', 'PDF não preserva saldo acumulado real.');
 requireText(documentActions, 'pdfPeriodReceivedNfe', 'PDF não calcula movimentação no recorte.');
 requireText(documentActions, 'Recorte de NF-e:', 'PDF não identifica o período aplicado.');
