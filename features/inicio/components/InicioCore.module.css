@@ -427,16 +427,32 @@
 
 @media (max-width: 640px) {
   .root {
-    width: 132px;
+    width: clamp(116px, 31vw, 132px);
   }
 
   .tooltip {
-    min-width: 205px;
+    min-width: min(205px, calc(100vw - 44px));
     bottom: calc(100% + 20px);
   }
 
   .orbitC {
     display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .root {
+    width: 116px;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .tooltip {
+    display: none;
+  }
+
+  .root {
+    touch-action: manipulation;
   }
 }
 
