@@ -241,6 +241,9 @@ jobs:
       - name: Block 16.1 session enforcement guard
         run: npm run verify:block-16-1-session-enforcement
 
+      - name: Block 16.2 admin session panel guard
+        run: npm run verify:block-16-2-admin-session-panel
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
