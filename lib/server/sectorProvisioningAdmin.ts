@@ -822,6 +822,8 @@ async function deleteSectorDirectory(
   const normalizedUg = normalizeUnitUg(ug);
   await commitFirestoreWrites(accessToken, [
     { delete: firestoreDocumentName(`workspaces/${workspaceId}/settings/${WORKSPACE_TERM_COUNTER_SETTINGS_ID}`) },
+    { delete: firestoreDocumentName(`workspaces/${workspaceId}/sessionSlots/slot-1`) },
+    { delete: firestoreDocumentName(`workspaces/${workspaceId}/sessionSlots/slot-2`) },
     { delete: firestoreDocumentName(`platformAccounts/${email}`) },
     { delete: firestoreDocumentName(`workspaces/${workspaceId}`) },
     ...(isValidUnitUg(normalizedUg)
