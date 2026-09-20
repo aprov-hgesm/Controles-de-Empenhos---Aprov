@@ -1,0 +1,248 @@
+.root {
+  position: relative;
+  z-index: 12;
+  width: min(500px, calc(100% - 48px));
+  padding: 40px 0 0 42px;
+  pointer-events: none;
+}
+
+.kicker {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: rgba(164, 191, 255, 0.7);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.kicker svg {
+  width: 13px;
+  height: 13px;
+}
+
+.kicker i {
+  width: 18px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(139, 171, 245, 0.54), transparent);
+}
+
+.heading {
+  margin-top: 15px;
+}
+
+.heading p {
+  margin: 0;
+  color: rgba(170, 191, 228, 0.72);
+  font-size: clamp(13px, 1.6vw, 17px);
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.heading h2 {
+  margin: 1px 0 0;
+  max-width: 430px;
+  color: #f5f8ff;
+  font-size: clamp(30px, 4.2vw, 50px);
+  font-weight: 850;
+  letter-spacing: -0.05em;
+  line-height: 0.96;
+  text-shadow: 0 0 35px rgba(94, 133, 225, 0.1);
+}
+
+.description {
+  max-width: 450px;
+  margin: 16px 0 0;
+  color: rgba(183, 198, 226, 0.68);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.identityGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: min(470px, 100%);
+  margin-top: 16px;
+}
+
+.identityCard {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgba(115, 148, 224, 0.12);
+  border-radius: 13px;
+  background:
+    linear-gradient(145deg, rgba(12, 23, 48, 0.5), rgba(6, 12, 27, 0.3));
+  padding: 9px 10px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+  backdrop-filter: blur(10px);
+}
+
+.identityIcon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(132, 165, 241, 0.13);
+  border-radius: 10px;
+  background: rgba(54, 81, 153, 0.09);
+  color: rgba(167, 196, 255, 0.75);
+}
+
+.identityIcon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.identityCopy {
+  display: block;
+  min-width: 0;
+}
+
+.identityCopy small,
+.identityCopy strong,
+.identityCopy em {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identityCopy small {
+  color: rgba(128, 151, 195, 0.58);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 6px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.identityCopy strong {
+  margin-top: 2px;
+  color: rgba(225, 235, 255, 0.88);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.identityCopy em {
+  margin-top: 2px;
+  color: rgba(143, 164, 205, 0.67);
+  font-size: 7px;
+  font-style: normal;
+}
+
+.signatureRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.online,
+.signature,
+.founder {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(114, 147, 221, 0.1);
+  border-radius: 999px;
+  background: rgba(16, 29, 58, 0.2);
+  padding: 5px 7px;
+  color: rgba(151, 177, 226, 0.68);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 6px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.online i {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #72e2b4;
+  box-shadow: 0 0 8px rgba(79, 219, 161, 0.68);
+  animation: onlinePulse 2.8s ease-in-out infinite;
+}
+
+.signature svg {
+  width: 10px;
+  height: 10px;
+  opacity: 0.72;
+}
+
+.founder {
+  border-color: rgba(198, 148, 255, 0.14);
+  background: rgba(91, 54, 151, 0.11);
+  color: rgba(203, 174, 255, 0.74);
+}
+
+.root[data-phase='morning'] .heading h2 {
+  text-shadow: 0 0 34px rgba(118, 162, 255, 0.12);
+}
+
+.root[data-phase='afternoon'] .heading h2 {
+  text-shadow: 0 0 36px rgba(102, 139, 228, 0.13);
+}
+
+.root[data-phase='evening'] .heading h2 {
+  text-shadow: 0 0 38px rgba(150, 103, 238, 0.12);
+}
+
+@keyframes onlinePulse {
+  0%, 100% { opacity: 0.48; transform: scale(0.86); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+@media (max-width: 900px) {
+  .root {
+    width: calc(100% - 36px);
+    padding: 28px 0 0 28px;
+  }
+
+  .identityGrid {
+    max-width: 430px;
+  }
+}
+
+@media (max-width: 640px) {
+  .root {
+    width: 100%;
+    padding: 24px 20px 0;
+  }
+
+  .heading h2 {
+    font-size: 32px;
+  }
+
+  .description {
+    max-width: 320px;
+    font-size: 10px;
+  }
+
+  .identityGrid {
+    grid-template-columns: 1fr;
+    max-width: 280px;
+  }
+
+  .identityCard:nth-child(2) {
+    display: none;
+  }
+
+  .signature {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .online i {
+    animation: none;
+  }
+}
