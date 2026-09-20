@@ -65,10 +65,12 @@ async function expectResponsiveInicio(page, label) {
   ).toBeLessThanOrEqual(overflow.innerWidth + 1);
 
   const scene = page.getByTestId('inicio-scene');
+  const chrome = page.getByTestId('inicio-scene-chrome');
   const identity = page.getByTestId('inicio-identity');
   const quickActions = page.getByTestId('inicio-quick-actions');
 
   await expect(scene).toBeVisible();
+  await expect(chrome).toBeVisible();
   await expect(identity).toBeVisible();
   await expect(quickActions).toBeVisible();
   await expect(page.getByRole('button', { name: 'Novo empenho' })).toBeVisible();
