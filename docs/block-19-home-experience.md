@@ -381,3 +381,73 @@ A navegação funcional permanece disponível pela Sidebar e, dentro da cena, ex
 - perfil balanced reduz densidade, brilho e velocidade;
 - perfil static e prefers-reduced-motion removem totalmente o movimento dessas partículas;
 - nenhuma leitura Firestore, persistência ou dependência adicional foi introduzida.
+
+
+## Bloco 20 — redesign orbital premium
+
+Concluído em uma única frente visual, sem alteração de regra de negócio.
+
+### 20.0 — Fundação estética
+
+- a linguagem visual da Home foi consolidada em torno de azul profundo, violeta, grafite e preto espacial;
+- o redesign reutiliza DOM + CSS já existentes e não adiciona Canvas, WebGL, Three.js ou dependência gráfica;
+- partículas atmosféricas, constelação, movimento orbital e corredores de exclusão permanecem intactos;
+- o perfil econômico da Home continua utilizando exclusivamente o `homeSnapshot`.
+
+### 20.1 — Reator holográfico premium
+
+- o núcleo central passa a ter presença maior e hierarquia visual de centro de comando;
+- adicionados halo técnico segmentado, arcos de comando, carcaça rotativa, filamentos energéticos e abertura holográfica;
+- o coração energético possui pulsação controlada e profundidade em múltiplas camadas;
+- interação fina com o ponteiro já existente foi preservada;
+- tooltip informativo do núcleo permanece funcional e sem navegação.
+
+### 20.2 — Planetas cinematográficos com identidade funcional
+
+- planetas ficam mais compactos e recebem materialidade própria;
+- cada planeta possui textura, bandas, luz especular, atmosfera e HUD técnico;
+- Alertas usa coral/vermelho energético;
+- Recebimentos usa ciano logístico;
+- Execução usa âmbar/dourado energético;
+- Painel usa violeta institucional;
+- Classes usa lilás técnico/prata com facetas próprias;
+- nenhuma função de clique/navegação foi adicionada aos planetas.
+
+### 20.3 — HUD, hover e tooltips
+
+- anéis HUD segmentados giram independentemente da superfície dos planetas;
+- hover/foco aumenta halo, leitura de material e presença do HUD sem alterar a órbita;
+- tooltips permanecem desacoplados da rotação orbital e sempre orientados à tela;
+- a janela recebe somente uma linha de acento semântico correspondente ao planeta que a abriu;
+- Classes preserva QR/CALI/PASA/FUNADOM no tooltip consolidado.
+
+### 20.4 — Harmonia, performance e responsividade
+
+- efeitos adicionais são exclusivamente decorativos e CSS-only;
+- perfil balanced desativa ou pausa camadas secundárias;
+- perfil static remove movimento decorativo não essencial;
+- `prefers-reduced-motion` continua protegido;
+- mobile reduz núcleo/HUD sem perder legibilidade;
+- não há novas leituras, listeners, writes, autenticação ou persistência;
+- estrelas e corredores orbitais mantêm as regras de seleção segura definidas após o Bloco 19.
+
+### Contrato final do Bloco 20
+
+```
+Núcleo
+→ reator holográfico multicamadas
+→ centro de comando visual
+→ zero navegação
+
+Planetas
+→ corpos cinematográficos compactos
+→ identidade funcional por material/cor
+→ HUD técnico + hover premium
+→ zero navegação
+
+Home
+→ profundidade reforçada
+→ partículas e órbitas preservadas
+→ sem excesso de brilho
+→ sem custo Firestore adicional
+```

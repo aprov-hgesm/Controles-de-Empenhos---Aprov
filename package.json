@@ -121,7 +121,8 @@
     "verify:block-19-11-performance-gpu": "node scripts/verify-block-19-11-performance-gpu.mjs",
     "verify:block-19-12-responsiveness": "node scripts/verify-block-19-12-responsiveness.mjs",
     "verify:block-19-13-visual-polish": "node scripts/verify-block-19-13-visual-polish.mjs",
-    "verify:block-19-14-final-closure": "node scripts/verify-block-19-14-final-closure.mjs"
+    "verify:block-19-14-final-closure": "node scripts/verify-block-19-14-final-closure.mjs",
+    "verify:block-20-premium-orbital-redesign": "node scripts/verify-block-20-premium-orbital-redesign.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

@@ -134,7 +134,16 @@ export function InicioOrbitSystem({
               >
                 <span className={styles.planetGlow} aria-hidden="true" />
                 <span className={styles.planetSurface}>
+                  <span className={styles.planetMaterial} aria-hidden="true" />
+                  <span className={styles.planetBands} aria-hidden="true" />
+                  <span className={styles.planetSpecular} aria-hidden="true" />
                   <BellRing aria-hidden="true" />
+                </span>
+                <span className={styles.planetHud} aria-hidden="true">
+                  <i />
+                  <i />
+                  <i />
+                  <i />
                 </span>
               </div>
         
@@ -155,7 +164,16 @@ export function InicioOrbitSystem({
               >
                 <span className={styles.planetGlow} aria-hidden="true" />
                 <span className={styles.planetSurface}>
+                  <span className={styles.planetMaterial} aria-hidden="true" />
+                  <span className={styles.planetBands} aria-hidden="true" />
+                  <span className={styles.planetSpecular} aria-hidden="true" />
                   <PackageCheck aria-hidden="true" />
+                </span>
+                <span className={styles.planetHud} aria-hidden="true">
+                  <i />
+                  <i />
+                  <i />
+                  <i />
                 </span>
               </div>
         
@@ -180,7 +198,16 @@ export function InicioOrbitSystem({
                   aria-hidden="true"
                 />
                 <span className={styles.planetSurface}>
+                  <span className={styles.planetMaterial} aria-hidden="true" />
+                  <span className={styles.planetBands} aria-hidden="true" />
+                  <span className={styles.planetSpecular} aria-hidden="true" />
                   <Activity aria-hidden="true" />
+                </span>
+                <span className={styles.planetHud} aria-hidden="true">
+                  <i />
+                  <i />
+                  <i />
+                  <i />
                 </span>
               </div>
         
@@ -201,7 +228,16 @@ export function InicioOrbitSystem({
               >
                 <span className={styles.planetGlow} aria-hidden="true" />
                 <span className={styles.planetSurface}>
+                  <span className={styles.planetMaterial} aria-hidden="true" />
+                  <span className={styles.planetBands} aria-hidden="true" />
+                  <span className={styles.planetSpecular} aria-hidden="true" />
                   <Gauge aria-hidden="true" />
+                </span>
+                <span className={styles.planetHud} aria-hidden="true">
+                  <i />
+                  <i />
+                  <i />
+                  <i />
                 </span>
               </div>
         
@@ -222,6 +258,14 @@ export function InicioOrbitSystem({
                   onBlur={hideTooltip}
                 >
                   <span className={styles.classPlanetOrbit} aria-hidden="true" />
+                  <span className={styles.classMaterial} aria-hidden="true" />
+                  <span className={styles.classFacet} aria-hidden="true" />
+                  <span className={styles.classHud} aria-hidden="true">
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                  </span>
                   <Orbit aria-hidden="true" />
                   <span>Classes</span>
                 </div>
@@ -239,6 +283,7 @@ export function InicioOrbitSystem({
               : styles.floatingTooltip
           }
           data-placement={tooltipState.placement}
+          data-kind={tooltipState.key}
           role="tooltip"
           style={{
             left: `${tooltipState.left}%`,
