@@ -49,7 +49,11 @@ export function InicioOrbitSystem({
   });
 
   return (
-    <div className={styles.root} aria-label="Sistema orbital operacional EMPROVEX">
+    <div
+      className={styles.root}
+      data-testid="inicio-orbit-system"
+      aria-label="Sistema orbital operacional EMPROVEX"
+    >
       <div className={`${styles.track} ${styles.trackOuter}`} aria-hidden="true" />
       <div className={`${styles.track} ${styles.trackMid}`} aria-hidden="true" />
       <div className={`${styles.track} ${styles.trackInner}`} aria-hidden="true" />
