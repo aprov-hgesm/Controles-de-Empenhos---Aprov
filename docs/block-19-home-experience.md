@@ -303,7 +303,7 @@ Concluído tecnicamente:
 
 - criada auditoria final dedicada em `docs/block-19-final-audit.md`;
 - o fechamento verifica a presença e registro de todos os guards dos blocos 19.1–19.13;
-- o Painel permanece explicitamente como landing pós-login até homologação humana;
+- o landing pós-login foi inicialmente preservado no Painel durante a homologação técnica; após a homologação visual, a sessão passou a abrir diretamente no Início;
 - o contrato econômico final permanece em zero coleções operacionais brutas + um `homeSnapshot`;
 - Rules do snapshot, isolamento por workspace/UG e limite de 72 estrelas permanecem protegidos;
 - a auditoria confirma perfis de performance, reduced motion e pausa por visibilidade;
@@ -321,7 +321,7 @@ Concluído tecnicamente:
 
 **Desenvolvimento técnico encerrado; pronto para homologação humana.**
 
-O fechamento técnico não muda automaticamente o landing para Início, não publica a branch na `main` e não realiza deploy.
+O fechamento técnico original não alterava automaticamente o landing. O refinamento posterior de UX promoveu o Início a landing padrão após autenticação.
 
 
 ## Refinamento visual pós-homologação — Home minimalista
@@ -490,3 +490,16 @@ rastro veloz → meteoro decorativo
 ```
 
 Nenhuma leitura Firestore, regra de negócio, autenticação, persistência ou dependência gráfica adicional foi criada.
+
+
+### Refinamento de UX — seleção estelar, tooltips e landing
+
+- o Início passa a ser a aba inicial de toda sessão autenticada;
+- estrelas operacionais mantêm o glifo de quatro pontas, com hitbox mínima maior;
+- a constelação resolve deterministicamente colisões entre hitboxes para impedir que uma estrela intercepte o cursor destinado a outra;
+- após cada deslocamento de separação, zonas seguras do núcleo e corredores orbitais são reaplicados;
+- tooltips escolhem automaticamente alinhamento horizontal para dentro da cena quando a estrela está próxima às bordas esquerda ou direita;
+- estrelas próximas ao topo exibem o tooltip abaixo do glifo;
+- a constelação inteira fica acima das camadas decorativas internas da Home;
+- Header e Sidebar permanecem acima da superfície operacional, enquanto os tooltips são mantidos dentro dos limites da cena para não ficarem ocultos sob a Sidebar;
+- nenhuma leitura Firestore, regra de negócio ou persistência adicional foi criada.
