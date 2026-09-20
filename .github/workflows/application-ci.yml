@@ -319,6 +319,9 @@ jobs:
       - name: Block 20 premium orbital redesign guard
         run: npm run verify:block-20-premium-orbital-redesign
 
+      - name: Block 21 operational stars and shooting stars guard
+        run: npm run verify:block-21-operational-stars-shooting-stars
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
@@ -443,3 +446,21 @@ jobs:
           test "${{ needs.validate-application.result }}" = "success"
           test "${{ needs.browser-e2e-emulator.result }}" = "success"
           echo "BLOCK 20 FINAL RELEASE: READY"
+
+  block-21-final-release-gate:
+    name: Block 21 Final Release Gate
+    if: ${{ always() }}
+    needs:
+      - validate-application
+      - browser-e2e-emulator
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require Block 21 critical validation jobs
+        shell: bash
+        run: |
+          echo "validate-application=${{ needs.validate-application.result }}"
+          echo "browser-e2e-emulator=${{ needs.browser-e2e-emulator.result }}"
+          test "${{ needs.validate-application.result }}" = "success"
+          test "${{ needs.browser-e2e-emulator.result }}" = "success"
+          echo "BLOCK 21 FINAL RELEASE: READY"
