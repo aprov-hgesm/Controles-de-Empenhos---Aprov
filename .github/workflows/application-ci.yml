@@ -301,6 +301,9 @@ jobs:
       - name: Block 19.9 surface transition guard
         run: npm run verify:block-19-9-surface-transitions
 
+      - name: Block 19.10 economical home snapshot guard
+        run: npm run verify:block-19-10-home-snapshot-economy
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
