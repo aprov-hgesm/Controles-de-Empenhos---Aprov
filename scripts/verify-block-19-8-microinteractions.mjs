@@ -23,7 +23,9 @@ const quickCss = read('features/inicio/components/InicioQuickActions.module.css'
 const docs = read('docs/block-19-home-experience.md');
 
 requireText(view, "import { InicioInteractionLayer }", 'Início não importa a camada de microinterações.');
-requireText(view, '<InicioInteractionLayer sceneRef={rootRef}', 'Camada de microinterações não está vinculada ao cenário.');
+requireText(view, '<InicioInteractionLayer', 'Início não renderiza a camada de microinterações.');
+requireText(view, 'sceneRef={rootRef}', 'Camada de microinterações não está vinculada ao cenário.');
+requireText(view, 'enabled={enableFineMotion}', 'Camada de microinterações não respeita o perfil de performance.');
 requireText(layer, "closest(", 'Retículo não detecta elementos interativos.');
 requireText(layer, "button, a, [role=\"button\"], [tabindex]", 'Allowlist de alvos interativos ausente.');
 requireText(layer, "pointermove", 'Camada não acompanha o ponteiro.');
