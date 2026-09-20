@@ -112,7 +112,11 @@ export function InicioConstellation({
   const totalEmpenhos = snapshot?.metrics.totalEmpenhos ?? 0;
 
   return (
-    <div className={styles.root} aria-label="Constelação operacional de empenhos">
+    <div
+      className={styles.root}
+      data-testid="inicio-constellation"
+      aria-label="Constelação operacional de empenhos"
+    >
       <svg
         className={styles.relationships}
         viewBox="0 0 100 100"
@@ -194,7 +198,11 @@ export function InicioConstellation({
         );
       })}
 
-      <div className={styles.legend} aria-label="Legenda da constelação">
+      <div
+        className={styles.legend}
+        data-testid="inicio-constellation-legend"
+        aria-label="Legenda da constelação"
+      >
         <span><i data-severity="normal" /> Regular <b>{counts.regular}</b></span>
         <span><i data-severity="attention" /> Atenção <b>{counts.attention}</b></span>
         <span><i data-severity="critical" /> Crítico <b>{counts.critical}</b></span>
