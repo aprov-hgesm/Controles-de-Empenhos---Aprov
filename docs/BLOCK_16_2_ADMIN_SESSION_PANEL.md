@@ -39,7 +39,7 @@ A revogação possui validade lógica de 24 horas e impede a mesma sessão lógi
 
 ## Reação do cliente
 
-Cada sessão externa observa apenas o tombstone do próprio `sessionId`.
+Cada sessão externa observa o tombstone do próprio `sessionId`. Como o documento normalmente não existe, as Rules permitem `get` pontual em `sessionRevocations` apenas dentro do próprio workspace; `list` continua exclusivo da fundadora.
 
 Quando a revogação aparece:
 
@@ -56,8 +56,8 @@ As Firestore Rules garantem que:
 
 - somente a conta fundadora pode criar revogações;
 - uma exclusão administrativa de slot exige a revogação correspondente na mesma transação;
-- o setor pode ler somente a revogação vinculada ao próprio UID/e-mail;
-- outro workspace não pode ler a revogação;
+- o setor pode fazer `get` pontual de revogações somente dentro do próprio workspace, inclusive quando o documento ainda não existe;
+- o setor não pode listar revogações e outro workspace não pode lê-las;
 - revogações são append-only;
 - o evento de auditoria usa a operação `session.terminate` e entityType `session`.
 
