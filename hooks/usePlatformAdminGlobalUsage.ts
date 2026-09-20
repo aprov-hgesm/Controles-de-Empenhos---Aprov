@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { User } from 'firebase/auth';
 
 import type { FirebaseGlobalUsageSnapshot } from '../lib/platformCapacity';
@@ -24,8 +24,11 @@ export function usePlatformAdminGlobalUsage(adminUser: User | null) {
   const [dataThrough, setDataThrough] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestSequence = useRef(0);
 
   const refresh = useCallback(async () => {
+    const requestId = ++requestSequence.current;
+
     if (!adminUser) {
       setSnapshot(null);
       setConfigured(null);
@@ -56,6 +59,7 @@ export function usePlatformAdminGlobalUsage(adminUser: User | null) {
         && 'code' in payload
         && payload.code === 'CLOUD_MONITORING_NOT_CONFIGURED'
       ) {
+        if (requestSequence.current !== requestId) return;
         setSnapshot(null);
         setConfigured(false);
         setObservedAt(null);
@@ -71,18 +75,20 @@ export function usePlatformAdminGlobalUsage(adminUser: User | null) {
         );
       }
 
+      if (requestSequence.current !== requestId) return;
       setSnapshot(payload.snapshot);
       setConfigured(true);
       setObservedAt(payload.observedAt);
       setDataThrough(payload.dataThrough);
     } catch (loadError) {
+      if (requestSequence.current !== requestId) return;
       setError(
         loadError instanceof Error
           ? loadError.message
           : 'Não foi possível consultar o consumo global real do Firebase.'
       );
     } finally {
-      setLoading(false);
+      if (requestSequence.current === requestId) setLoading(false);
     }
   }, [adminUser]);
 
