@@ -265,6 +265,9 @@ jobs:
       - name: Block 16.8 integrated E2E guard
         run: npm run verify:block-16-8-integrated-e2e
 
+      - name: Block 16.9 final audit and closure guard
+        run: npm run verify:block-16-9-final-closure
+
       - name: EMPROVEX App Shell guard
         run: npm run verify:app-shell
 
@@ -338,8 +341,8 @@ jobs:
         run: npm run test:e2e:browser
 
 
-  block-15-release-gate:
-    name: Block 15 Final Release Gate
+  block-16-release-gate:
+    name: Block 16 Final Release Gate
     if: ${{ always() }}
     needs:
       - validate-application
