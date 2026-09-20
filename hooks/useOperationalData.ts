@@ -24,7 +24,6 @@ import {
 import type { OperationalActiveTab } from '../lib/operationalSubscriptionPlan';
 import { resetActiveProfileMode, setActiveProfileMode } from '../lib/profileMode';
 import { normalizePlatformEmail } from '../lib/platformIdentity';
-import { SESSION_HEARTBEAT_INTERVAL_MS } from '../lib/platformCapacity';
 import {
   flushWorkspaceUsageTelemetry,
   recordWorkspaceRealtimeSnapshot,
@@ -35,11 +34,9 @@ import {
   SESSION_CAPACITY_EXCEEDED_MESSAGE,
   clearAllLocalWorkspaceSessionState,
   clearLocalWorkspaceSessionLease,
-  isTerminalSessionLeaseError,
   releaseWorkspaceSessionLease,
-  renewWorkspaceSessionLeaseIfDue,
-  subscribeWorkspaceSessionRevocation,
 } from '../lib/platformSessionLease';
+import { startWorkspaceSessionCoordinator } from '../lib/platformSessionCoordinator';
 import { useOperationalRealtimeCollections } from './useOperationalRealtimeCollections';
 
 /**
@@ -260,9 +257,9 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     };
   }, [user, workspaceContext]);
 
-  // Bloco 17.1 — mantém o lease externo vivo com renovação esparsa do slot já
-  // conhecido. O timestamp local compartilhado reduz renovações redundantes entre
-  // abas; a liderança multiaba completa fica deliberadamente para o Bloco 17.2.
+  // Bloco 17.2 — uma única aba por navegador assume heartbeat + listener de
+  // revogação. Abas seguidoras recebem invalidação via BroadcastChannel e podem
+  // assumir automaticamente a liderança se a aba líder for encerrada.
   useEffect(() => {
     if (
       !user
@@ -287,46 +284,20 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
       void signOut(auth);
     };
 
-    const renewLease = async () => {
-      try {
-        await renewWorkspaceSessionLeaseIfDue(user, workspaceContext);
-      } catch (error) {
-        if (isTerminalSessionLeaseError(error)) {
-          revokeLeaseAccess();
-          return;
-        }
-
-        // Falhas transitórias de rede não derrubam a sessão imediatamente. O lease
-        // permanece válido até expiresAt e será reavaliado no próximo heartbeat.
-        console.warn('Não foi possível renovar o lease de sessão EMPROVEX.', error);
-      }
-    };
-
-    const unsubscribeRevocation = subscribeWorkspaceSessionRevocation(
+    const coordinator = startWorkspaceSessionCoordinator(
       user,
       workspaceContext,
-      revokeLeaseAccess,
-      (error) => console.warn('Falha ao observar revogação de sessão EMPROVEX.', error)
+      {
+        onSessionInvalid: () => revokeLeaseAccess(),
+        onTransientError: (error) => {
+          console.warn('Falha transitória na coordenação de sessão EMPROVEX.', error);
+        },
+      }
     );
-
-    const intervalId = window.setInterval(
-      () => void renewLease(),
-      SESSION_HEARTBEAT_INTERVAL_MS
-    );
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') void renewLease();
-    };
-    const handleOnline = () => void renewLease();
-
-    document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('online', handleOnline);
 
     return () => {
       active = false;
-      unsubscribeRevocation();
-      window.clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('online', handleOnline);
+      coordinator.stop();
     };
   }, [user, workspaceContext]);
 
