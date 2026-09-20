@@ -26,8 +26,8 @@ const requireText = (source, expected, message) => {
 for (const marker of [
   "SESSION_LEASE_VERSION = 'emprovex_session_v1'",
   "SESSION_SLOT_IDS = ['slot-1', 'slot-2']",
-  'SESSION_LEASE_DURATION_MS = 10 * 60 * 1000',
-  'SESSION_HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000',
+  'SESSION_LEASE_DURATION_MS = 30 * 60 * 1000',
+  'SESSION_HEARTBEAT_INTERVAL_MS = 15 * 60 * 1000',
 ]) {
   requireText(capacity, marker, `Contrato 16.1 ausente: ${marker}`);
 }
@@ -139,6 +139,6 @@ if (findings.length) {
   console.log('Múltiplas abas: 1 VAGA POR NAVEGADOR');
   console.log('Conta fundadora: ILIMITADA');
   console.log('Reserva de vaga: TRANSAÇÃO FIRESTORE');
-  console.log('Lease: 10 MIN / HEARTBEAT: 5 MIN');
+  console.log('Lease atual: 30 MIN / HEARTBEAT: 15 MIN (otimizado no Bloco 17.1)');
   console.log('Terceira sessão: BLOQUEADA');
 }
