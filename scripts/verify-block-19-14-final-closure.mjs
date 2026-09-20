@@ -132,7 +132,7 @@ requireText(e2e, "test('duas sessões por setor, múltiplas abas compartilham va
 requireText(e2e, "test('perfil realtime acompanha a seção ativa sem manter coleções ociosas'", 'E2E não cobre consumo realtime por superfície.');
 requireText(e2e, "test('Início permanece responsivo em celular, tablet e landscape sem overflow horizontal'", 'E2E não cobre responsividade final.');
 requireText(e2e, 'expectRealtimeProfile(page, 1)', 'E2E não comprova perfil econômico do Início.');
-requireText(e2e, "page.locator('[data-snapshot="ready"]')", 'E2E não comprova snapshot pronto.');
+requireText(e2e, `page.locator('[data-snapshot="ready"]')`, 'E2E não comprova snapshot pronto.');
 requireText(e2e, "phone-small', width: 360, height: 800", 'Viewport 360x800 ausente.');
 requireText(e2e, "phone-standard', width: 390, height: 844", 'Viewport 390x844 ausente.');
 requireText(e2e, "tablet-portrait', width: 768, height: 1024", 'Viewport 768x1024 ausente.');
