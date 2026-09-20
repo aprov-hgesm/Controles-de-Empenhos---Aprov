@@ -116,7 +116,7 @@ requireText(workflow, 'push:\n    branches:\n      - main', 'Application CI deix
 requireText(workflow, 'workflow_dispatch:', 'Application CI perdeu execução manual.');
 requireText(workflow, 'concurrency:', 'Application CI perdeu controle de concorrência.');
 requireText(workflow, 'cancel-in-progress: true', 'Application CI deixou de cancelar execução obsoleta da mesma referência.');
-requireText(workflow, 'block-15-release-gate:', 'Application CI perdeu o gate consolidado do Bloco 15.');
+requireRegex(workflow, /block-(?:15|16)-release-gate:/, 'Application CI perdeu o gate consolidado de release.');
 requireText(workflow, 'needs.validate-application.result', 'Gate final não verifica validate-application.');
 requireText(workflow, 'needs.browser-e2e-emulator.result', 'Gate final não verifica Browser E2E.');
 forbidText(workflow, 'continue-on-error: true', 'CI contém continue-on-error em etapa de validação.');
