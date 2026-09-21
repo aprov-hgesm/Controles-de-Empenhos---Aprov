@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
 
@@ -11,6 +11,10 @@ import { usePlatformAdminSessions } from '../../hooks/usePlatformAdminSessions';
 import { usePlatformAdminUsage } from '../../hooks/usePlatformAdminUsage';
 import { usePlatformAdminGlobalUsage } from '../../hooks/usePlatformAdminGlobalUsage';
 import { auth } from '../../lib/firebase';
+import {
+  createHgesmFoundingWorkspace,
+  HGESM_WORKSPACE_ID,
+} from '../../lib/hgesmWorkspace';
 import { resetActiveProfileMode, setActiveProfileMode } from '../../lib/profileMode';
 import { resolveWorkspaceContext } from '../../lib/workspaceContext';
 
@@ -32,9 +36,21 @@ export default function PlatformAdminPage() {
   const adminUser = context.status === 'platformAdmin' ? user : null;
   const adminDirectory = usePlatformAdminDirectory(adminUser);
   const adminSessions = usePlatformAdminSessions(adminUser);
+  const adminWorkspaces = useMemo(() => {
+    const workspaces = adminDirectory.directory.workspaces;
+    if (workspaces.some((workspace) => workspace.id === HGESM_WORKSPACE_ID)) {
+      return workspaces;
+    }
+
+    return [
+      createHgesmFoundingWorkspace(),
+      ...workspaces,
+    ];
+  }, [adminDirectory.directory.workspaces]);
+
   const adminUsage = usePlatformAdminUsage(
     adminUser,
-    adminDirectory.directory.workspaces,
+    adminWorkspaces,
     !adminDirectory.loading && !adminDirectory.error
   );
   const adminGlobalUsage = usePlatformAdminGlobalUsage(adminUser);
@@ -88,7 +104,7 @@ export default function PlatformAdminPage() {
       adminUser={user}
       adminEmail={context.email}
       customLogo={customLogo}
-      workspaces={adminDirectory.directory.workspaces}
+      workspaces={adminWorkspaces}
       loadingDirectory={adminDirectory.loading}
       directoryError={adminDirectory.error}
       creatingSector={adminDirectory.creating}
