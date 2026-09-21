@@ -535,3 +535,21 @@ Adicionado como refinamento posterior da superfície Início:
 - a textura permanece abaixo das estrelas, planetas, identidade da UG e demais conteúdos operacionais.
 
 O objetivo é acrescentar materialidade e profundidade ao cenário sem transformar o Início em um fundo chamativo ou competir com a leitura operacional.
+
+
+## Refinamento visual — órbita planetária lenta e contínua
+
+Adicionado como refinamento posterior do sistema orbital:
+
+- planetas passam a orbitar o núcleo de forma contínua, lenta e linear;
+- órbita externa: aproximadamente 136 segundos por volta;
+- órbita média: aproximadamente 112 segundos por volta;
+- órbita interna: aproximadamente 88 segundos por volta;
+- os anéis usam velocidades diferentes para evitar aparência mecânica;
+- a contrarrotação do conteúdo preserva ícones e superfícies dos planetas orientados corretamente;
+- hover/focus não pausa mais a órbita, mantendo movimento constante;
+- o perfil `balanced` preserva a órbita principal, desligando apenas animações decorativas secundárias;
+- o perfil `static` e `prefers-reduced-motion` continuam sem movimento orbital;
+- nenhuma leitura, listener ou gravação Firestore foi adicionada.
+
+O objetivo é dar vida permanente ao sistema solar operacional sem transformar a Home em uma animação acelerada ou cansativa.
