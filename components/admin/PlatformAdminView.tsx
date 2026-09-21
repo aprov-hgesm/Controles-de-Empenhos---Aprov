@@ -206,8 +206,8 @@ export function PlatformAdminView({
         workspace.ug,
         workspace.authorizedEmail,
         workspace.id,
-        workspace.organizationName,
-        workspace.organizationShortName,
+        workspace.institutionalProfile.organizationName,
+        workspace.institutionalProfile.organizationShortName,
       ]
         .filter(Boolean)
         .some((value) => String(value).toLocaleLowerCase('pt-BR').includes(query));
