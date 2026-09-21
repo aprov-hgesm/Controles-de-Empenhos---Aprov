@@ -15,7 +15,7 @@ consumo oficial.
 A integração consulta a API v3 do Cloud Monitoring, sempre no servidor, para o banco Firestore
 nomeado configurado em `firebase-applet-config.json`.
 
-Métricas:
+Métricas operacionais:
 
 - `firestore.googleapis.com/document/read_ops_count`;
 - `firestore.googleapis.com/document/write_ops_count`;
@@ -23,8 +23,15 @@ Métricas:
 - `firestore.googleapis.com/network/active_connections`;
 - `firestore.googleapis.com/network/snapshot_listeners`.
 
-Reads, writes e deletes são somados desde 00:00 UTC do dia corrente. Conexões e listeners são
-gauges e representam a amostra mais recente disponível.
+Métricas de faturamento da edição Enterprise:
+
+- `firestore.googleapis.com/api/billable_read_units`;
+- `firestore.googleapis.com/api/billable_realtime_read_units`;
+- `firestore.googleapis.com/api/billable_write_units`.
+
+As métricas DELTA são somadas desde o início do dia de cobrança em
+`America/Los_Angeles`, alinhando a janela administrativa ao reset diário do free tier.
+Conexões e listeners permanecem gauges da amostra mais recente.
 
 As métricas do Firestore são amostradas periodicamente pelo Google e podem levar alguns minutos
 para aparecer no Cloud Monitoring.
@@ -45,12 +52,14 @@ Setores externos não recebem acesso à rota global.
 A consulta usa uma service account de **somente leitura**, idealmente com apenas
 `roles/monitoring.viewer`.
 
-Variáveis server-side:
+A fonte preferencial é a credencial server-only já existente
+`FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON`, evitando uma segunda chave privada no ambiente.
+As credenciais dedicadas permanecem aceitas como fallback:
 
 - `EMPROVEX_GCP_MONITORING_CLIENT_EMAIL`;
 - `EMPROVEX_GCP_MONITORING_PRIVATE_KEY`.
 
-Elas não possuem prefixo `NEXT_PUBLIC_` e não podem ser expostas ao bundle cliente.
+Nenhuma dessas variáveis possui prefixo `NEXT_PUBLIC_` ou é exposta ao bundle cliente.
 
 A chave privada pode ser armazenada com quebras de linha reais ou com `\n`; o runtime normaliza
 o valor antes de assinar o JWT OAuth.
@@ -69,17 +78,30 @@ Firebase Auth ou qualquer workspace do EMPROVEX.
 
 A conta fundadora recebe uma seção separada chamada **Consumo global real do Firebase**.
 
-O painel mostra reads, writes e deletes do dia UTC, conexões ativas, snapshot listeners, banco
-Firestore consultado e momento da última amostra disponível.
+O painel mostra Read Units, Realtime Read Units e Write Units faturáveis na janela diária do
+Firestore, além das contagens operacionais de documentos, conexões ativas, snapshot listeners,
+banco consultado e momento da última amostra disponível.
+
+O indicador principal é `billableReadUnits`. Para o banco Enterprise atual elegível ao free tier,
+o default administrativo é 50.000 Read Units/dia. Também existem defaults de 50.000 Realtime
+Read Units/dia e 40.000 Write Units/dia. Os três valores podem ser alterados server-side por:
+
+- `EMPROVEX_FIRESTORE_DAILY_READ_UNIT_FREE_LIMIT`;
+- `EMPROVEX_FIRESTORE_DAILY_REALTIME_READ_UNIT_FREE_LIMIT`;
+- `EMPROVEX_FIRESTORE_DAILY_WRITE_UNIT_FREE_LIMIT`.
+
+A elegibilidade pode ser explicitada por `EMPROVEX_FIRESTORE_FREE_TIER_ELIGIBLE`.
 
 A consulta é pontual. Não existe polling automático nem listener realtime do Cloud Monitoring.
 Há apenas uma leitura inicial ao abrir o painel e atualização manual.
 
 ## Separação da cobrança
 
-Os números vêm de métricas reais do Firestore, mas o EMPROVEX não os apresenta como fatura final,
-preço ou cobrança oficial do Google Cloud. Tarifação, franquias, créditos, arredondamentos e outros
-componentes de billing permanecem fora deste bloco.
+Os números vêm de métricas reais de faturamento do Firestore Enterprise. O EMPROVEX usa a franquia
+diária de Read Units como referência principal para indicar a aproximação do ponto em que unidades
+adicionais ficam sujeitas a cobrança. Isso não transforma o painel em fatura final: preços por região,
+armazenamento, rede, créditos, operações administrativas e demais componentes de billing continuam
+sendo conciliados no Google Cloud Billing.
 
 ## Preservado
 
