@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Trash2,
   UserCog,
+  WalletCards,
 } from 'lucide-react';
 import type { User } from 'firebase/auth';
 import { motion, useReducedMotion } from 'motion/react';
@@ -32,6 +33,7 @@ import { AdminBackupPanel } from './AdminBackupPanel';
 import { AdminConsumptionHub } from './AdminConsumptionHub';
 import { AdminCreateSectorPanel } from './AdminCreateSectorPanel';
 import { AdminSecurityPanel } from './AdminSecurityPanel';
+import { AdminBillingPanel } from './AdminBillingPanel';
 import { AdminSessionsPanel } from './AdminSessionsPanel';
 import { ToastNotification } from '../layout/ToastNotification';
 import { createHgesmFoundingWorkspace } from '../../lib/hgesmWorkspace';
@@ -45,6 +47,14 @@ import type { AdminWorkspaceSession } from '../../lib/platformAdminSessions';
 import type { AdminWorkspaceUsageEstimate } from '../../lib/platformAdminUsage';
 import type { FirebaseGlobalUsageSnapshot } from '../../lib/platformCapacity';
 import { setActiveProfileMode } from '../../lib/profileMode';
+import type {
+  BillingAccount,
+  BillingAccountStatus,
+  BillingCycle,
+  BillingCycleStatus,
+  PlatformBillingConfig,
+} from '../../lib/billing';
+import type { UpdatePlatformBillingConfigInput } from '../../lib/platformBillingStore';
 
 type AdminTabId =
   | 'overview'
@@ -52,6 +62,7 @@ type AdminTabId =
   | 'novo-setor'
   | 'consumo'
   | 'sessoes'
+  | 'assinaturas'
   | 'backups'
   | 'seguranca';
 
@@ -61,6 +72,7 @@ const ADMIN_TABS = [
   { id: 'novo-setor', label: 'Cadastrar Setor', icon: Plus },
   { id: 'consumo', label: 'Consumo & Cotas', icon: BarChart3 },
   { id: 'sessoes', label: 'Sessões', icon: MonitorSmartphone },
+  { id: 'assinaturas', label: 'Assinaturas', icon: WalletCards },
   { id: 'backups', label: 'Backup & Recuperação', icon: DatabaseBackup },
   { id: 'seguranca', label: 'Segurança', icon: ShieldAlert },
 ] satisfies Array<{
@@ -68,6 +80,27 @@ const ADMIN_TABS = [
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }>;
+
+interface AdminBillingViewState {
+  config: PlatformBillingConfig | null;
+  accounts: BillingAccount[];
+  cyclesByWorkspace: Map<string, BillingCycle[]>;
+  loading: boolean;
+  error: string | null;
+  mutatingKey: string | null;
+  updateConfig: (input: UpdatePlatformBillingConfigInput) => Promise<unknown>;
+  grantTrial: (workspace: Workspace, trialDays?: number) => Promise<unknown>;
+  setStatus: (
+    workspace: Workspace,
+    status: Exclude<BillingAccountStatus, 'exempt'>
+  ) => Promise<unknown>;
+  setCycleStatus: (
+    workspace: Workspace,
+    referenceMonth: string,
+    status: BillingCycleStatus,
+    note?: string
+  ) => Promise<unknown>;
+}
 
 interface PlatformAdminViewProps {
   adminUser: User;
@@ -94,6 +127,7 @@ interface PlatformAdminViewProps {
   globalUsageDataThrough: string | null;
   loadingGlobalUsage: boolean;
   globalUsageError: string | null;
+  billing: AdminBillingViewState;
   onCreateSector: (input: CreateSectorWorkspaceInput) => Promise<void>;
   onUpdateSector: (input: UpdateSectorWorkspaceInput) => Promise<void>;
   onChangeSectorStatus: (workspaceId: string, status: SectorLifecycleStatus) => Promise<void>;
@@ -130,6 +164,7 @@ export function PlatformAdminView({
   globalUsageDataThrough,
   loadingGlobalUsage,
   globalUsageError,
+  billing,
   onCreateSector,
   onUpdateSector,
   onChangeSectorStatus,
@@ -672,6 +707,22 @@ export function PlatformAdminView({
             terminatingSessionId={terminatingSessionId}
             onTerminateSession={onTerminateSession}
             onNotify={showAdminToast}
+          />
+        )}
+
+        {activeTab === 'assinaturas' && (
+          <AdminBillingPanel
+            workspaces={visibleWorkspaces}
+            config={billing.config}
+            accounts={billing.accounts}
+            cyclesByWorkspace={billing.cyclesByWorkspace}
+            loading={billing.loading}
+            error={billing.error}
+            mutatingKey={billing.mutatingKey}
+            onUpdateConfig={billing.updateConfig}
+            onGrantTrial={billing.grantTrial}
+            onSetStatus={billing.setStatus}
+            onSetCycleStatus={billing.setCycleStatus}
           />
         )}
 
