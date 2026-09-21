@@ -291,6 +291,7 @@ test('política com referências separa métrica global real de estimativa inter
 });
 
 test('Cloud Monitoring não configurado falha de forma segura sem chamada externa', async () => {
+  delete sandboxProcess.env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON;
   delete sandboxProcess.env.EMPROVEX_GCP_MONITORING_CLIENT_EMAIL;
   delete sandboxProcess.env.EMPROVEX_GCP_MONITORING_PRIVATE_KEY;
 
@@ -319,6 +320,9 @@ test('Cloud Monitoring configurado usa respostas mockadas e mantém fonte global
     ['firestore.googleapis.com/document/read_ops_count', 70],
     ['firestore.googleapis.com/document/write_ops_count', 85],
     ['firestore.googleapis.com/document/delete_ops_count', 101],
+    ['firestore.googleapis.com/api/billable_read_units', 12000],
+    ['firestore.googleapis.com/api/billable_realtime_read_units', 2400],
+    ['firestore.googleapis.com/api/billable_write_units', 1800],
     ['firestore.googleapis.com/network/active_connections', 7],
     ['firestore.googleapis.com/network/snapshot_listeners', 3],
   ]);
@@ -376,11 +380,19 @@ test('Cloud Monitoring configurado usa respostas mockadas e mantém fonte global
   assert.equal(observation.snapshot.documentReads, 70);
   assert.equal(observation.snapshot.documentWrites, 85);
   assert.equal(observation.snapshot.documentDeletes, 101);
+  assert.equal(observation.snapshot.billableReadUnits, 12000);
+  assert.equal(observation.snapshot.billableRealtimeReadUnits, 2400);
+  assert.equal(observation.snapshot.billableWriteUnits, 1800);
+  assert.equal(observation.snapshot.billingReference.primaryMetric, 'billableReadUnits');
+  assert.equal(observation.snapshot.billingReference.readUnitsDailyLimit, 50000);
+  assert.equal(observation.snapshot.billingReference.realtimeReadUnitsDailyLimit, 50000);
+  assert.equal(observation.snapshot.billingReference.writeUnitsDailyLimit, 40000);
+  assert.equal(observation.snapshot.billingReference.resetTimeZone, 'America/Los_Angeles');
   assert.equal(observation.snapshot.activeConnections, 7);
   assert.equal(observation.snapshot.snapshotListeners, 3);
   assert.equal(
     observation.snapshot.databaseId,
     'ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1'
   );
-  assert.equal(calls.length, 6);
+  assert.equal(calls.length, 9);
 });

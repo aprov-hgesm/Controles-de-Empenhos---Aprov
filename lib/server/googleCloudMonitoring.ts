@@ -1,15 +1,29 @@
 import { importPKCS8, SignJWT } from 'jose';
 
 import firebaseConfig from '../../firebase-applet-config.json';
-import type { FirebaseGlobalUsageSnapshot } from '../platformCapacity';
+import type {
+  FirebaseGlobalUsageSnapshot,
+  FirestoreBillingReference,
+} from '../platformCapacity';
 import { USAGE_TELEMETRY_VERSION } from '../platformCapacity';
 
 const MONITORING_SCOPE = 'https://www.googleapis.com/auth/monitoring.read';
 const OAUTH_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const MONITORING_API_ROOT = 'https://monitoring.googleapis.com/v3';
+const BILLING_RESET_TIME_ZONE = 'America/Los_Angeles' as const;
 
 const SERVICE_ACCOUNT_EMAIL_ENV = 'EMPROVEX_GCP_MONITORING_CLIENT_EMAIL';
 const SERVICE_ACCOUNT_PRIVATE_KEY_ENV = 'EMPROVEX_GCP_MONITORING_PRIVATE_KEY';
+const FIREBASE_ADMIN_SERVICE_ACCOUNT_ENV = 'FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON';
+
+const FREE_TIER_ELIGIBLE_ENV = 'EMPROVEX_FIRESTORE_FREE_TIER_ELIGIBLE';
+const READ_UNITS_LIMIT_ENV = 'EMPROVEX_FIRESTORE_DAILY_READ_UNIT_FREE_LIMIT';
+const REALTIME_READ_UNITS_LIMIT_ENV = 'EMPROVEX_FIRESTORE_DAILY_REALTIME_READ_UNIT_FREE_LIMIT';
+const WRITE_UNITS_LIMIT_ENV = 'EMPROVEX_FIRESTORE_DAILY_WRITE_UNIT_FREE_LIMIT';
+
+const DEFAULT_ENTERPRISE_READ_UNITS_LIMIT = 50_000;
+const DEFAULT_ENTERPRISE_REALTIME_READ_UNITS_LIMIT = 50_000;
+const DEFAULT_ENTERPRISE_WRITE_UNITS_LIMIT = 40_000;
 
 const METRICS = {
   documentReads: {
@@ -22,6 +36,18 @@ const METRICS = {
   },
   documentDeletes: {
     type: 'firestore.googleapis.com/document/delete_ops_count',
+    kind: 'delta',
+  },
+  billableReadUnits: {
+    type: 'firestore.googleapis.com/api/billable_read_units',
+    kind: 'delta',
+  },
+  billableRealtimeReadUnits: {
+    type: 'firestore.googleapis.com/api/billable_realtime_read_units',
+    kind: 'delta',
+  },
+  billableWriteUnits: {
+    type: 'firestore.googleapis.com/api/billable_write_units',
     kind: 'delta',
   },
   activeConnections: {
@@ -59,50 +85,155 @@ interface MetricObservation {
   latestPointAt: string | null;
 }
 
+interface ServiceAccountCredentials {
+  clientEmail: string;
+  privateKey: string;
+  source: 'firebase-admin' | 'dedicated-monitoring';
+}
+
 interface CachedAccessToken {
   token: string;
   expiresAtMs: number;
+  credentialIdentity: string;
 }
 
 let cachedAccessToken: CachedAccessToken | null = null;
-
-function requiredEnv(name: string): string {
-  const value = process.env[name]?.trim();
-  if (!value) throw new Error(`Cloud Monitoring não configurado: variável ${name} ausente.`);
-  return value;
-}
 
 function normalizePrivateKey(value: string): string {
   return value.includes('\\n') ? value.replace(/\\n/g, '\n') : value;
 }
 
+function parseFirebaseAdminCredentials(): ServiceAccountCredentials | null {
+  const raw = process.env[FIREBASE_ADMIN_SERVICE_ACCOUNT_ENV]?.trim();
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as {
+      client_email?: unknown;
+      private_key?: unknown;
+      project_id?: unknown;
+    };
+
+    const clientEmail = typeof parsed.client_email === 'string'
+      ? parsed.client_email.trim()
+      : '';
+    const privateKey = typeof parsed.private_key === 'string'
+      ? normalizePrivateKey(parsed.private_key.trim())
+      : '';
+    const projectId = typeof parsed.project_id === 'string'
+      ? parsed.project_id.trim()
+      : '';
+
+    if (!clientEmail || !privateKey) return null;
+    if (projectId && projectId !== firebaseConfig.projectId) return null;
+
+    return {
+      clientEmail,
+      privateKey,
+      source: 'firebase-admin',
+    };
+  } catch {
+    return null;
+  }
+}
+
+function parseDedicatedMonitoringCredentials(): ServiceAccountCredentials | null {
+  const clientEmail = process.env[SERVICE_ACCOUNT_EMAIL_ENV]?.trim() || '';
+  const rawPrivateKey = process.env[SERVICE_ACCOUNT_PRIVATE_KEY_ENV]?.trim() || '';
+  if (!clientEmail || !rawPrivateKey) return null;
+
+  return {
+    clientEmail,
+    privateKey: normalizePrivateKey(rawPrivateKey),
+    source: 'dedicated-monitoring',
+  };
+}
+
+function resolveMonitoringCredentials(): ServiceAccountCredentials {
+  // Prefer the already-provisioned server-only Firebase admin service account.
+  // This removes the need for a second private key in Vercel while preserving
+  // the dedicated monitoring credential as a backwards-compatible fallback.
+  const credentials =
+    parseFirebaseAdminCredentials()
+    || parseDedicatedMonitoringCredentials();
+
+  if (!credentials) {
+    throw new Error(
+      'Cloud Monitoring não configurado: configure FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON '
+      + 'ou as credenciais dedicadas EMPROVEX_GCP_MONITORING_CLIENT_EMAIL/PRIVATE_KEY.'
+    );
+  }
+
+  return credentials;
+}
+
 export function isGoogleCloudMonitoringConfigured(): boolean {
   return Boolean(
-    process.env[SERVICE_ACCOUNT_EMAIL_ENV]?.trim()
-    && process.env[SERVICE_ACCOUNT_PRIVATE_KEY_ENV]?.trim()
+    parseFirebaseAdminCredentials()
+    || parseDedicatedMonitoringCredentials()
   );
 }
 
+function parseBooleanEnvironment(name: string, fallback: boolean): boolean {
+  const raw = process.env[name]?.trim().toLowerCase();
+  if (!raw) return fallback;
+  if (['1', 'true', 'yes', 'sim'].includes(raw)) return true;
+  if (['0', 'false', 'no', 'nao', 'não'].includes(raw)) return false;
+  throw new Error(`Variável ${name} deve ser true/false.`);
+}
+
+function positiveIntegerEnvironment(name: string, fallback: number): number {
+  const raw = process.env[name]?.trim();
+  if (!raw) return fallback;
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error(`Variável ${name} deve ser um inteiro positivo.`);
+  }
+  return value;
+}
+
+function loadBillingReference(): FirestoreBillingReference {
+  return {
+    source: 'firestore-enterprise-free-tier',
+    freeTierEligible: parseBooleanEnvironment(FREE_TIER_ELIGIBLE_ENV, true),
+    primaryMetric: 'billableReadUnits',
+    resetTimeZone: BILLING_RESET_TIME_ZONE,
+    readUnitsDailyLimit: positiveIntegerEnvironment(
+      READ_UNITS_LIMIT_ENV,
+      DEFAULT_ENTERPRISE_READ_UNITS_LIMIT
+    ),
+    realtimeReadUnitsDailyLimit: positiveIntegerEnvironment(
+      REALTIME_READ_UNITS_LIMIT_ENV,
+      DEFAULT_ENTERPRISE_REALTIME_READ_UNITS_LIMIT
+    ),
+    writeUnitsDailyLimit: positiveIntegerEnvironment(
+      WRITE_UNITS_LIMIT_ENV,
+      DEFAULT_ENTERPRISE_WRITE_UNITS_LIMIT
+    ),
+  };
+}
+
 async function mintServiceAccountAccessToken(): Promise<string> {
+  const credentials = resolveMonitoringCredentials();
+  const identity = `${credentials.source}:${credentials.clientEmail}`;
   const nowMs = Date.now();
-  if (cachedAccessToken && cachedAccessToken.expiresAtMs - nowMs > 60_000) {
+
+  if (
+    cachedAccessToken
+    && cachedAccessToken.credentialIdentity === identity
+    && cachedAccessToken.expiresAtMs - nowMs > 60_000
+  ) {
     return cachedAccessToken.token;
   }
 
-  const clientEmail = requiredEnv(SERVICE_ACCOUNT_EMAIL_ENV);
-  const privateKey = normalizePrivateKey(requiredEnv(SERVICE_ACCOUNT_PRIVATE_KEY_ENV));
-  const key = await importPKCS8(privateKey, 'RS256');
+  const key = await importPKCS8(credentials.privateKey, 'RS256');
   const nowSeconds = Math.floor(nowMs / 1000);
 
   const assertion = await new SignJWT({
     scope: MONITORING_SCOPE,
   })
     .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
-    .setIssuer(clientEmail)
-    // OAuth service-account JWT assertions must omit "sub" unless using
-    // Google Workspace domain-wide delegation. EMPROVEX authenticates as the
-    // service account itself, so adding a subject can make the token exchange
-    // fail with unauthorized_client.
+    .setIssuer(credentials.clientEmail)
     .setAudience(OAUTH_TOKEN_URL)
     .setIssuedAt(nowSeconds)
     .setExpirationTime(nowSeconds + 3600)
@@ -123,7 +254,9 @@ async function mintServiceAccountAccessToken(): Promise<string> {
   });
 
   if (!response.ok) {
-    throw new Error(`Falha ao autenticar o leitor do Cloud Monitoring (HTTP ${response.status}).`);
+    throw new Error(
+      `Falha ao autenticar o leitor do Cloud Monitoring (HTTP ${response.status}).`
+    );
   }
 
   const payload = await response.json() as {
@@ -139,6 +272,7 @@ async function mintServiceAccountAccessToken(): Promise<string> {
   cachedAccessToken = {
     token: payload.access_token,
     expiresAtMs: nowMs + (Number.isFinite(expiresIn) ? expiresIn : 3600) * 1000,
+    credentialIdentity: identity,
   };
 
   return payload.access_token;
@@ -187,7 +321,7 @@ async function loadMetricObservation(
   const filter = [
     `metric.type = "${metricType}"`,
     'resource.type = "firestore.googleapis.com/Database"',
-    `resource.labels.database_id = "${databaseId.replace(/(["\\])/g, '\\$1')}"`,
+    `resource.labels.database_id = "${databaseId.replace(/(["\\\\])/g, '\\\\$1')}"`,
   ].join(' AND ');
 
   let pageToken: string | undefined;
@@ -213,8 +347,11 @@ async function loadMetricObservation(
     });
 
     if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      const detail = body.slice(0, 240).replace(/\s+/g, ' ');
       throw new Error(
-        `Cloud Monitoring recusou a métrica ${metricType} (HTTP ${response.status}).`
+        `Cloud Monitoring recusou a métrica ${metricType} (HTTP ${response.status})`
+        + (detail ? `: ${detail}` : '.')
       );
     }
 
@@ -245,16 +382,74 @@ async function loadMetricObservation(
   };
 }
 
-function startOfUtcDay(date: Date): Date {
-  return new Date(Date.UTC(
-    date.getUTCFullYear(),
-    date.getUTCMonth(),
-    date.getUTCDate(),
-    0,
+const pacificDateFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: BILLING_RESET_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+});
+
+function timeZoneParts(date: Date): {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+} {
+  const values = Object.fromEntries(
+    pacificDateFormatter
+      .formatToParts(date)
+      .filter((part) => part.type !== 'literal')
+      .map((part) => [part.type, Number(part.value)])
+  );
+
+  return {
+    year: values.year,
+    month: values.month,
+    day: values.day,
+    hour: values.hour,
+    minute: values.minute,
+    second: values.second,
+  };
+}
+
+function timeZoneOffsetMs(date: Date): number {
+  const parts = timeZoneParts(date);
+  const representedAsUtc = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second
+  );
+  const epochWithoutMilliseconds = Math.floor(date.getTime() / 1000) * 1000;
+  return representedAsUtc - epochWithoutMilliseconds;
+}
+
+function startOfPacificBillingDay(date: Date): Date {
+  const local = timeZoneParts(date);
+  const targetWallClock = Date.UTC(
+    local.year,
+    local.month - 1,
+    local.day,
     0,
     0,
     0
-  ));
+  );
+
+  let guess = new Date(targetWallClock);
+  let offset = timeZoneOffsetMs(guess);
+  guess = new Date(targetWallClock - offset);
+
+  // Re-evaluate at the resolved instant so DST transitions remain correct.
+  offset = timeZoneOffsetMs(guess);
+  return new Date(targetWallClock - offset);
 }
 
 export interface FirebaseGlobalUsageObservation {
@@ -271,13 +466,17 @@ export async function loadFirebaseGlobalUsageObservation(
   }
 
   const accessToken = await mintServiceAccountAccessToken();
-  const startTime = startOfUtcDay(now).toISOString();
+  const startTime = startOfPacificBillingDay(now).toISOString();
   const endTime = now.toISOString();
+  const billingReference = loadBillingReference();
 
   const [
     reads,
     writes,
     deletes,
+    billableReadUnits,
+    billableRealtimeReadUnits,
+    billableWriteUnits,
     activeConnections,
     snapshotListeners,
   ] = await Promise.all([
@@ -304,6 +503,27 @@ export async function loadFirebaseGlobalUsageObservation(
     ),
     loadMetricObservation(
       accessToken,
+      METRICS.billableReadUnits.type,
+      METRICS.billableReadUnits.kind,
+      startTime,
+      endTime
+    ),
+    loadMetricObservation(
+      accessToken,
+      METRICS.billableRealtimeReadUnits.type,
+      METRICS.billableRealtimeReadUnits.kind,
+      startTime,
+      endTime
+    ),
+    loadMetricObservation(
+      accessToken,
+      METRICS.billableWriteUnits.type,
+      METRICS.billableWriteUnits.kind,
+      startTime,
+      endTime
+    ),
+    loadMetricObservation(
+      accessToken,
       METRICS.activeConnections.type,
       METRICS.activeConnections.kind,
       startTime,
@@ -322,6 +542,9 @@ export async function loadFirebaseGlobalUsageObservation(
     reads.latestPointAt,
     writes.latestPointAt,
     deletes.latestPointAt,
+    billableReadUnits.latestPointAt,
+    billableRealtimeReadUnits.latestPointAt,
+    billableWriteUnits.latestPointAt,
     activeConnections.latestPointAt,
     snapshotListeners.latestPointAt,
   ].filter((value): value is string => Boolean(value));
@@ -343,8 +566,12 @@ export async function loadFirebaseGlobalUsageObservation(
       documentReads: reads.value,
       documentWrites: writes.value,
       documentDeletes: deletes.value,
+      billableReadUnits: billableReadUnits.value,
+      billableRealtimeReadUnits: billableRealtimeReadUnits.value,
+      billableWriteUnits: billableWriteUnits.value,
       activeConnections: activeConnections.value,
       snapshotListeners: snapshotListeners.value,
+      billingReference,
     },
     observedAt: endTime,
     dataThrough,

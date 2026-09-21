@@ -74,6 +74,16 @@ export interface WorkspaceUsageEstimate {
   peakActiveSessions: number;
 }
 
+export interface FirestoreBillingReference {
+  source: 'firestore-enterprise-free-tier';
+  freeTierEligible: boolean;
+  primaryMetric: 'billableReadUnits';
+  resetTimeZone: 'America/Los_Angeles';
+  readUnitsDailyLimit: number;
+  realtimeReadUnitsDailyLimit: number;
+  writeUnitsDailyLimit: number;
+}
+
 export interface FirebaseGlobalUsageSnapshot {
   telemetryVersion: typeof USAGE_TELEMETRY_VERSION;
   source: 'google-cloud-monitoring';
@@ -84,8 +94,12 @@ export interface FirebaseGlobalUsageSnapshot {
   documentReads: number;
   documentWrites: number;
   documentDeletes: number;
+  billableReadUnits: number;
+  billableRealtimeReadUnits: number;
+  billableWriteUnits: number;
   activeConnections: number;
   snapshotListeners: number;
+  billingReference: FirestoreBillingReference;
 }
 
 export interface UsageBudgetAssessment {

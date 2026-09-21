@@ -72,13 +72,17 @@ A configuração atual do EMPROVEX usa o banco Firestore nomeado:
 
 `ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1`.
 
-Por isso o painel não presume automaticamente que a franquia diária de 50 mil reads, 20 mil writes e 20 mil deletes se aplique a este banco.
+O banco de produção atual está na edição Enterprise e foi verificado como elegível ao free tier.
+Por isso o painel passa a usar as métricas `api/billable_read_units`,
+`api/billable_realtime_read_units` e `api/billable_write_units` como referência de cota.
 
-A documentação atual do Google informa que a cota gratuita do Firestore se aplica a apenas um banco elegível por projeto e que bancos nomeados adicionais não recebem automaticamente essa franquia.
+O limite principal é o de Read Units: 50.000 unidades por dia por padrão, parametrizável no servidor.
+Realtime Read Units usa 50.000/dia e Write Units 40.000/dia como defaults. A janela acompanha o reset
+do Firestore em `America/Los_Angeles`.
 
-Como a tarifa monetária também depende da localização/região e do modelo de cobrança, o Bloco 16.5 não inventa um valor em USD ou BRL. O painel identifica a base operacional observada e mantém a projeção financeira como referência não oficial até existir uma fonte explícita de tarifa/região.
-
-Isso evita apresentar uma estimativa financeira aparentemente precisa com premissas não verificadas.
+A tarifa monetária final continua fora do painel: região, armazenamento, rede, créditos e operações
+administrativas podem alterar a fatura. Portanto o indicador representa o ponto operacional de
+entrada na faixa sujeita a cobrança, e não um valor monetário fechado.
 
 ## UX
 
@@ -123,8 +127,8 @@ O Bloco 16.5 está concluído quando:
 2. existe uma visão consolidada das duas fontes sem fundi-las semanticamente;
 3. sessões ativas são reutilizadas sem criar novo listener;
 4. participação por UG usa apenas o universo das estimativas EMPROVEX;
-5. banco nomeado não recebe franquia gratuita presumida;
-6. nenhuma tarifa monetária é inventada sem região/preço configurados;
+5. o limite principal usa Read Units faturáveis e referência diária parametrizada;
+6. nenhuma tarifa monetária é inventada sem conciliação com Google Cloud Billing;
 7. as telas detalhadas 16.3 e 16.4 permanecem disponíveis;
 8. não há alteração em Firestore Rules;
 9. o guard do Bloco 16.5 roda na Application CI;
