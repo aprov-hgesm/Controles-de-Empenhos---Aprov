@@ -5,6 +5,8 @@ import type { User } from 'firebase/auth';
 import type { CronogramaEmpenho, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
 import { saveCronograma } from '../../../lib/firebaseSync';
 import { loadJsPdfWithAutoTable } from '../../../lib/pdfToolkit';
+import { resolveInstitutionalDocumentIdentity } from '../../../lib/institutionalDocumentProfile';
+import type { WorkspaceInstitutionalProfile } from '../../../lib/platformIdentity';
 
 type Distribution=Record<string,Record<string,number>>;
 interface CronogramaActionsContext {
@@ -26,11 +28,14 @@ interface CronogramaActionsContext {
   setIsSavingCronograma:React.Dispatch<React.SetStateAction<boolean>>;
   showToast:(message:string,type?:any)=>void;
   formatDateOnly:(dateStr?:string)=>string;
+  institutionalProfile?: WorkspaceInstitutionalProfile | null;
 }
 
 /** Ações e geração de PDF dos cronogramas de entrega. */
 export function useCronogramaActions(context:CronogramaActionsContext){
-  const { user, empenhos, cronogramas, setCronogramas, selectedCronogramaEmpenhoId, setSelectedCronogramaEmpenhoId, cronogramaColunas, setCronogramaColunas, cronogramaDistribuicao, setCronogramaDistribuicao, cronogramaLocalEntrega, setCronogramaLocalEntrega, cronogramaHorarioEntrega, setCronogramaHorarioEntrega, cronogramaObservacoes, setCronogramaObservacoes, cronogramaResponsavelNome, setCronogramaResponsavelNome, cronogramaResponsavelCargo, setCronogramaResponsavelCargo, setIsSavingCronograma, showToast, formatDateOnly }=context;
+  const { user, empenhos, cronogramas, setCronogramas, selectedCronogramaEmpenhoId, setSelectedCronogramaEmpenhoId, cronogramaColunas, setCronogramaColunas, cronogramaDistribuicao, setCronogramaDistribuicao, cronogramaLocalEntrega, setCronogramaLocalEntrega, cronogramaHorarioEntrega, setCronogramaHorarioEntrega, cronogramaObservacoes, setCronogramaObservacoes, cronogramaResponsavelNome, setCronogramaResponsavelNome, cronogramaResponsavelCargo, setCronogramaResponsavelCargo, setIsSavingCronograma, showToast, formatDateOnly, institutionalProfile }=context;
+  const institutionalIdentity = resolveInstitutionalDocumentIdentity(institutionalProfile);
+  const { organizationName, sectionName, documentHeaderLines, defaultDeliveryLocation, defaultResponsibleRole } = institutionalIdentity;
 
   // Helper date calculator for schedule simulation
   const getFutureDate = (daysAhead: number): string => {
@@ -48,14 +53,14 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     if (saved && saved.colunasEntregas && saved.colunasEntregas.length > 0) {
       setCronogramaColunas(saved.colunasEntregas);
       setCronogramaDistribuicao(saved.distribuicao || {});
-      setCronogramaLocalEntrega(saved.localEntrega || 'Almoxarifado Geral / Seção de Aprovisionamento - HGeSM');
+      setCronogramaLocalEntrega(saved.localEntrega || defaultDeliveryLocation);
       setCronogramaHorarioEntrega(saved.horarioEntrega || 'Segunda a Quinta: 08:00 às 11:30 e 13:30 às 16:30 | Sexta: 08:00 às 11:30');
       setCronogramaObservacoes(
         saved.observacoes ||
         '1. As entregas deverão ser efetuadas nas datas previstas acompanhadas das respectivas Notas Fiscais.\n2. Os produtos perecíveis deverão atender rigorosamente aos padrões de qualidade e temperatura estabelecidos no Edital.\n3. Qualquer impossibilidade de entrega deverá ser comunicada formalmente com antecedência mínima de 48 horas.'
       );
       setCronogramaResponsavelNome(saved.responsavelNome || (user?.displayName || ''));
-      setCronogramaResponsavelCargo(saved.responsavelCargo || 'Fiscal de Contrato / Seção de Aprovisionamento - HGeSM');
+      setCronogramaResponsavelCargo(saved.responsavelCargo || defaultResponsibleRole);
     } else {
       // Default: 2 remessas quinzenais
       const initialCols: CronogramaEntregaColuna[] = [
@@ -74,13 +79,13 @@ export function useCronogramaActions(context:CronogramaActionsContext){
         };
       });
       setCronogramaDistribuicao(initialDist);
-      setCronogramaLocalEntrega('Almoxarifado Geral / Seção de Aprovisionamento - HGeSM');
+      setCronogramaLocalEntrega(defaultDeliveryLocation);
       setCronogramaHorarioEntrega('Segunda a Quinta: 08:00 às 11:30 e 13:30 às 16:30 | Sexta: 08:00 às 11:30');
       setCronogramaObservacoes(
         '1. As entregas deverão ser efetuadas nas datas previstas acompanhadas das respectivas Notas Fiscais.\n2. Os produtos perecíveis deverão atender rigorosamente aos padrões de qualidade e temperatura estabelecidos no Edital.\n3. Qualquer impossibilidade de entrega deverá ser comunicada formalmente com antecedência mínima de 48 horas.'
       );
       setCronogramaResponsavelNome(user?.displayName || '');
-      setCronogramaResponsavelCargo('Fiscal de Contrato / Seção de Aprovisionamento - HGeSM');
+      setCronogramaResponsavelCargo(defaultResponsibleRole);
     }
   };
 
@@ -208,17 +213,16 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('MINISTÉRIO DA DEFESA', pageWidth / 2, yPos, { align: 'center' });
-    yPos += 4;
-    doc.text('EXÉRCITO BRASILEIRO', pageWidth / 2, yPos, { align: 'center' });
-    yPos += 4;
-    doc.setFontSize(8);
-    doc.setTextColor(60, 60, 60);
-    doc.text('HOSPITAL GERAL DE SANTA MARIA', pageWidth / 2, yPos, { align: 'center' });
-    yPos += 3.5;
+    documentHeaderLines.forEach((line, index) => {
+      doc.setFontSize(index === documentHeaderLines.length - 1 ? 8 : 8.5);
+      doc.setTextColor(index === documentHeaderLines.length - 1 ? 60 : 50, index === documentHeaderLines.length - 1 ? 60 : 50, index === documentHeaderLines.length - 1 ? 60 : 50);
+      doc.text(line, pageWidth / 2, yPos, { align: 'center' });
+      yPos += 4;
+    });
+    yPos -= 0.5;
     doc.setFontSize(7.5);
     doc.setTextColor(90, 90, 90);
-    doc.text('SEÇÃO DE APROVISIONAMENTO / LOGÍSTICA HOSPITALAR', pageWidth / 2, yPos, { align: 'center' });
+    doc.text(sectionName.toLocaleUpperCase('pt-BR'), pageWidth / 2, yPos, { align: 'center' });
     yPos += 5;
      doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.setLineWidth(0.6);
@@ -404,7 +408,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     doc.setTextColor(50, 50, 50);
     doc.text('Local de Entrega:', margin + 3, yPos + 4.5);
     doc.setFont('helvetica', 'normal');
-    doc.text(cronogramaLocalEntrega || 'Almoxarifado Geral / Seção de Aprovisionamento - HGeSM', margin + 26, yPos + 4.5);
+    doc.text(cronogramaLocalEntrega || defaultDeliveryLocation, margin + 26, yPos + 4.5);
      doc.setFont('helvetica', 'bold');
     doc.text('Horário de Recebimento:', margin + 3, yPos + 9);
     doc.setFont('helvetica', 'normal');
@@ -422,7 +426,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     }
      const boxWidth = (pageWidth - (margin * 2) - 10) / 2;
     const sigY = yPos + 12;
-     // Left Signature (HGeSM Fiscal)
+     // Left Signature (workspace fiscal)
     doc.setDrawColor(160, 160, 160);
     doc.setLineWidth(0.25);
     doc.line(margin + 5, sigY, margin + boxWidth - 5, sigY);
@@ -434,7 +438,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
      doc.setFont('helvetica', 'normal');
     doc.setFontSize(6.8);
     doc.setTextColor(90, 90, 90);
-    const cargo1Text = cronogramaResponsavelCargo || 'Fiscal de Contrato / Seção de Aprovisionamento - HGeSM';
+    const cargo1Text = cronogramaResponsavelCargo || defaultResponsibleRole;
     doc.text(cargo1Text, margin + (boxWidth / 2), sigY + 7.5, { align: 'center' });
      // Right Signature (Fornecedor / De Acordo)
     const rightBoxX = margin + boxWidth + 10;
@@ -459,7 +463,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
        doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
       doc.setTextColor(120, 120, 120);
-      doc.text(`Hospital Geral de Santa Maria • Cronograma de Entrega NE ${emp.id}`, margin, doc.internal.pageSize.getHeight() - 6);
+      doc.text(`${organizationName} • Cronograma de Entrega NE ${emp.id}`, margin, doc.internal.pageSize.getHeight() - 6);
        const pText = `Página ${i} de ${pageCount}`;
       const pWidth = doc.getTextWidth(pText);
       doc.text(pText, pageWidth - margin - pWidth, doc.internal.pageSize.getHeight() - 6);

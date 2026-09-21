@@ -257,11 +257,10 @@ export async function ensureTermoRecebimentoAssignment(
         termoEmissaoDate: storedInvoice.termoEmissaoDate || preferredEmissionDate,
       };
 
+      // As Rules do contador permitem alterar somente currentNumber. Metadados
+      // adicionais fariam a transação falhar para workspaces de setor.
       transaction.set(counterRef, {
-        id: 'termoRecebimentoCounter',
         currentNumber: nextNumber,
-        updatedAt: new Date().toISOString(),
-        updatedBy: userId,
       }, { merge: true });
       transaction.set(invoiceRef, { ...updatedInvoice, userId }, { merge: true });
       return updatedInvoice;

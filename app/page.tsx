@@ -236,7 +236,17 @@ export default function Home() {
   });
 
   const { handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleGenerateEmpenhoReportPDF } = useDocumentActions({
-    user, invoices, setInvoices, comissoes, empenhos, empenhoClasses, showToast, formatDateOnly
+    user,
+    invoices,
+    setInvoices,
+    comissoes,
+    empenhos,
+    empenhoClasses,
+    showToast,
+    formatDateOnly,
+    institutionalProfile: workspaceContext.status === 'sector'
+      ? workspaceContext.institutionalProfile
+      : null,
   });
 
   const {
@@ -271,7 +281,10 @@ export default function Home() {
     setCronogramaResponsavelCargo,
     setIsSavingCronograma,
     showToast,
-    formatDateOnly
+    formatDateOnly,
+    institutionalProfile: workspaceContext.status === 'sector'
+      ? workspaceContext.institutionalProfile
+      : null,
   });
 
   // Reset NF inputs when changing target empenho
