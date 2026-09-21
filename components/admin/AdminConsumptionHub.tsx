@@ -11,12 +11,13 @@ import {
 import { AdminConsolidatedUsagePanel } from './AdminConsolidatedUsagePanel';
 import { AdminGlobalUsagePanel } from './AdminGlobalUsagePanel';
 import { AdminUsagePanel } from './AdminUsagePanel';
+import { AdminUsageReportsPanel } from './AdminUsageReportsPanel';
 import type { Workspace } from '../../lib/platformIdentity';
 import type { AdminWorkspaceSession } from '../../lib/platformAdminSessions';
 import type { AdminWorkspaceUsageEstimate } from '../../lib/platformAdminUsage';
 import type { FirebaseGlobalUsageSnapshot } from '../../lib/platformCapacity';
 
-type ConsumptionTab = 'consolidated' | 'global' | 'workspace' | 'alerts';
+type ConsumptionTab = 'quota' | 'reports' | 'consolidated' | 'workspace' | 'alerts';
 
 interface AdminConsumptionHubProps {
   workspaces: Workspace[];
@@ -39,14 +40,15 @@ const tabs: Array<{
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }> = [
-  { id: 'consolidated', label: 'Visão consolidada', icon: BarChart3 },
-  { id: 'global', label: 'Firebase global', icon: Database },
+  { id: 'quota', label: 'Cota diária', icon: Database },
+  { id: 'reports', label: 'Histórico & Relatórios', icon: BarChart3 },
+  { id: 'consolidated', label: 'Visão consolidada', icon: Activity },
   { id: 'workspace', label: 'Consumo por UG', icon: Activity },
   { id: 'alerts', label: 'Alertas e limites', icon: BellRing },
 ];
 
 export function AdminConsumptionHub(props: AdminConsumptionHubProps) {
-  const [activeTab, setActiveTab] = useState<ConsumptionTab>('consolidated');
+  const [activeTab, setActiveTab] = useState<ConsumptionTab>('quota');
 
   return (
     <div data-testid="admin-consumption-hub" className="space-y-5">
@@ -91,6 +93,30 @@ export function AdminConsumptionHub(props: AdminConsumptionHubProps) {
         </div>
       </section>
 
+      {activeTab === 'quota' && (
+        <AdminGlobalUsagePanel
+          snapshot={props.globalUsage}
+          configured={props.globalUsageConfigured}
+          observedAt={props.globalUsageObservedAt}
+          dataThrough={props.globalUsageDataThrough}
+          loading={props.loadingGlobalUsage}
+          error={props.globalUsageError}
+          onRefresh={props.onRefreshGlobalUsage}
+        />
+      )}
+
+      {activeTab === 'reports' && (
+        <AdminUsageReportsPanel
+          workspaces={props.workspaces}
+          usage={props.usage}
+          globalUsage={props.globalUsage}
+          globalUsageObservedAt={props.globalUsageObservedAt}
+          globalUsageError={props.globalUsageError}
+          onRefreshUsage={props.onRefreshUsage}
+          onRefreshGlobalUsage={props.onRefreshGlobalUsage}
+        />
+      )}
+
       {activeTab === 'consolidated' && (
         <AdminConsolidatedUsagePanel
           workspaces={props.workspaces}
@@ -106,18 +132,6 @@ export function AdminConsumptionHub(props: AdminConsumptionHubProps) {
           globalUsageError={props.globalUsageError}
           onRefreshUsage={props.onRefreshUsage}
           onRefreshGlobalUsage={props.onRefreshGlobalUsage}
-        />
-      )}
-
-      {activeTab === 'global' && (
-        <AdminGlobalUsagePanel
-          snapshot={props.globalUsage}
-          configured={props.globalUsageConfigured}
-          observedAt={props.globalUsageObservedAt}
-          dataThrough={props.globalUsageDataThrough}
-          loading={props.loadingGlobalUsage}
-          error={props.globalUsageError}
-          onRefresh={props.onRefreshGlobalUsage}
         />
       )}
 
