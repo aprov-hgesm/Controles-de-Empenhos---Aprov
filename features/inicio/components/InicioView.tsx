@@ -128,6 +128,7 @@ export function InicioView({
         enabled={enableFineMotion}
       />
       <div className={styles.ambientGlow} aria-hidden="true" />
+      <div className={styles.texture} aria-hidden="true" />
       <div className={styles.grid} aria-hidden="true" />
 
       <InicioConstellation

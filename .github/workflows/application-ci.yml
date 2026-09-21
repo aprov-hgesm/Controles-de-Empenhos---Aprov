@@ -310,6 +310,9 @@ jobs:
       - name: RPNP visual priority guard
         run: npm run verify:rpnp-visual-priority
 
+      - name: Inicio background texture guard
+        run: npm run verify:inicio-background-texture
+
       - name: Block 19 home experience foundation guard
         run: npm run verify:block-19-home-experience
 
