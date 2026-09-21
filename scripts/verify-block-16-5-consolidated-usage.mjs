@@ -79,16 +79,18 @@ for (const marker of [
   );
 }
 
-const consolidatedIndex = consumptionHub.indexOf('<AdminConsolidatedUsagePanel');
 const globalIndex = consumptionHub.indexOf('<AdminGlobalUsagePanel');
+const reportsIndex = consumptionHub.indexOf('<AdminUsageReportsPanel');
+const consolidatedIndex = consumptionHub.indexOf('<AdminConsolidatedUsagePanel');
 const workspaceIndex = consumptionHub.indexOf('<AdminUsagePanel');
 if (
-  consolidatedIndex < 0
-  || globalIndex < 0
+  globalIndex < 0
+  || reportsIndex < 0
+  || consolidatedIndex < 0
   || workspaceIndex < 0
-  || !(consolidatedIndex < globalIndex && globalIndex < workspaceIndex)
+  || !(globalIndex < reportsIndex && reportsIndex < consolidatedIndex && consolidatedIndex < workspaceIndex)
 ) {
-  findings.push('Ordem do painel consolidado e drill-downs 16.4/16.3 foi alterada no hub.');
+  findings.push('Ordem principal Cota -> Relatórios -> Consolidado -> UG foi alterada no hub.');
 }
 
 for (const marker of [

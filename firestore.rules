@@ -1707,6 +1707,14 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Histórico global de cota/faturamento: escrito exclusivamente pelo servidor
+    // via IAM e somente legível pela conta fundadora. Clientes jamais podem forjar
+    // a série histórica usada nos relatórios administrativos.
+    match /platformUsageHistory/{dayKey} {
+      allow get, list: if isPlatformAdmin();
+      allow create, update, delete: if false;
+    }
+
     // Block 16.3 — low-frequency workspace usage estimates. Sector clients can
     // only append monotonically to their own UG counters; only the founder can read.
     match /workspaces/{workspaceId}/usageEstimates/{dayKey} {

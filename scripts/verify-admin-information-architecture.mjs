@@ -60,12 +60,14 @@ for (const marker of [
 
 for (const marker of [
   'data-testid="admin-consumption-hub"',
+  'Cota diária',
+  'Histórico & Relatórios',
   'Visão consolidada',
-  'Firebase global',
   'Consumo por UG',
   'Alertas e limites',
-  '<AdminConsolidatedUsagePanel',
   '<AdminGlobalUsagePanel',
+  '<AdminUsageReportsPanel',
+  '<AdminConsolidatedUsagePanel',
   '<AdminUsagePanel',
 ]) {
   requireText(consumption, marker, 'Hub de consumo perdeu requisito: ' + marker);
