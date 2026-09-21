@@ -138,6 +138,7 @@
     "verify:backup-recovery": "node scripts/verify-backup-recovery.mjs",
     "test:backup-recovery": "npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-backup --only auth,firestore \"node --test scripts/workspace-backup-disaster.test.mjs\"",
     "verify:rpnp-visual-priority": "node scripts/verify-rpnp-visual-priority.mjs",
+    "verify:tr-workspace-documents": "node scripts/verify-tr-workspace-documents.mjs",
     "verify:inicio-background-texture": "node scripts/verify-inicio-background-texture.mjs",
     "verify:inicio-slow-planet-orbits": "node scripts/verify-inicio-slow-planet-orbits.mjs"
   },
