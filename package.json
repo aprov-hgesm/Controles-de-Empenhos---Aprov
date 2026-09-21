@@ -72,6 +72,7 @@
     "verify:ns-integrity-service": "node scripts/verify-ns-integrity-service.mjs",
     "verify:manual-ns-integrity": "node scripts/verify-manual-ns-integrity.mjs",
     "verify:invoice-ns-lifecycle": "node scripts/verify-invoice-ns-lifecycle.mjs",
+    "verify:invoice-mirror-document": "node scripts/verify-invoice-mirror-document.mjs",
     "verify:brand-identity-foundation": "node scripts/verify-brand-identity-foundation.mjs",
     "verify:brand-notifications": "node scripts/verify-brand-notifications.mjs",
     "verify:empenhos-subtabs": "node scripts/verify-empenhos-subtabs.mjs",
