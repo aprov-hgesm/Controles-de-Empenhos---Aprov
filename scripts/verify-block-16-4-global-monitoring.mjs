@@ -38,6 +38,12 @@ for (const marker of [
   'https://www.googleapis.com/auth/monitoring.read',
   'EMPROVEX_GCP_MONITORING_CLIENT_EMAIL',
   'EMPROVEX_GCP_MONITORING_PRIVATE_KEY',
+  'FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON',
+  'EMPROVEX_FIRESTORE_DAILY_READ_UNIT_FREE_LIMIT',
+  'America/Los_Angeles',
+  'firestore.googleapis.com/api/billable_read_units',
+  'firestore.googleapis.com/api/billable_realtime_read_units',
+  'firestore.googleapis.com/api/billable_write_units',
   'firestore.googleapis.com/document/read_ops_count',
   'firestore.googleapis.com/document/write_ops_count',
   'firestore.googleapis.com/document/delete_ops_count',
@@ -57,7 +63,7 @@ forbidText(
 );
 requireText(
   monitoring,
-  '.setIssuer(clientEmail)',
+  '.setIssuer(credentials.clientEmail)',
   'JWT assertion perdeu issuer da conta de serviço.'
 );
 requireText(
@@ -91,6 +97,8 @@ for (const marker of [
 for (const marker of [
   'Consumo global real do Firebase',
   'google-cloud-monitoring',
+  'Limite principal · início de cobrança',
+  'Read Units faturáveis',
   'não representa a fatura final',
   'estimativa por UG',
 ]) requireText(panel, marker, `Painel global perdeu separação: ${marker}`);
@@ -120,4 +128,5 @@ if (findings.length) {
   console.log('Credenciais no cliente: PROIBIDAS');
   console.log('Banco: FIRESTORE DATABASE ID NOMEADO');
   console.log('Estimativa por UG: PRESERVADA E SEPARADA');
+  console.log('Cota principal: ENTERPRISE BILLABLE READ UNITS / FREE-TIER PARAMETRIZADO');
 }
