@@ -76,6 +76,7 @@
     "verify:brand-notifications": "node scripts/verify-brand-notifications.mjs",
     "verify:empenhos-subtabs": "node scripts/verify-empenhos-subtabs.mjs",
     "verify:brand-admin": "node scripts/verify-brand-admin.mjs",
+    "verify:admin-information-architecture": "node scripts/verify-admin-information-architecture.mjs",
     "test:brand-logo-lock": "npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-brand-lock --only firestore \"node --test scripts/brand-logo-lock.test.mjs\"",
     "verify:brand-logo-lock": "node scripts/verify-brand-logo-lock.mjs",
     "verify:experience-finalization": "node scripts/verify-experience-finalization.mjs",

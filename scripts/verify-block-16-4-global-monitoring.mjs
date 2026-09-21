@@ -21,6 +21,7 @@ const hook = read('hooks/usePlatformAdminGlobalUsage.ts');
 const panel = read('components/admin/AdminGlobalUsagePanel.tsx');
 const adminPage = read('app/admin/page.tsx');
 const adminView = read('components/admin/PlatformAdminView.tsx');
+const consumptionHub = read('components/admin/AdminConsumptionHub.tsx');
 const docs = read('docs/BLOCK_16_4_GLOBAL_CLOUD_MONITORING.md');
 const pkg = read('package.json');
 const workflow = read('.github/workflows/application-ci.yml');
@@ -80,7 +81,8 @@ for (const marker of [
 ]) requireText(panel, marker, `Painel global perdeu separação: ${marker}`);
 
 requireText(adminPage, 'usePlatformAdminGlobalUsage', 'Página admin não conecta consumo global.');
-requireText(adminView, '<AdminGlobalUsagePanel', 'Console admin não renderiza painel global.');
+requireText(adminView, '<AdminConsumptionHub', 'Console admin não renderiza o hub de consumo.');
+requireText(consumptionHub, '<AdminGlobalUsagePanel', 'Hub de consumo não preserva o painel global.');
 
 for (const marker of [
   'sempre no servidor',

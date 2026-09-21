@@ -25,6 +25,7 @@ const adminHook = read('hooks/usePlatformAdminUsage.ts');
 const panel = read('components/admin/AdminUsagePanel.tsx');
 const adminPage = read('app/admin/page.tsx');
 const adminView = read('components/admin/PlatformAdminView.tsx');
+const consumptionHub = read('components/admin/AdminConsumptionHub.tsx');
 const capacity = read('lib/platformCapacity.ts');
 const rules = read('firestore.rules');
 const security = read('scripts/firestore-multitenancy-security.test.mjs');
@@ -109,7 +110,8 @@ for (const marker of [
 ]) requireText(panel, marker, `Painel perdeu aviso/controle: ${marker}`);
 
 requireText(adminPage, 'usePlatformAdminUsage', 'Página admin não conecta telemetria.');
-requireText(adminView, '<AdminUsagePanel', 'Console administrativo não renderiza telemetria.');
+requireText(adminView, '<AdminConsumptionHub', 'Console administrativo não renderiza o hub de consumo.');
+requireText(consumptionHub, '<AdminUsagePanel', 'Hub administrativo não preserva a telemetria por UG.');
 
 requireText(
   capacity,
