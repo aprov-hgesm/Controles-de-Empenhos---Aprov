@@ -64,7 +64,9 @@ A UG usada na gravação não é escolhida pelo operador: ela é derivada do con
 
 Locks antigos no formato `sagNsLock_<NS>` continuam reconhecíveis para validação, migração e remoção segura. Uma nova reserva de NS exige que o usuário possua uma UG organizacional válida.
 
-Uma NF histórica com NS mas sem `nsUg` continua explicitamente legada. O sistema não inventa uma UG histórica apenas porque o workspace hoje possui uma UG.
+A política operacional foi refinada para os fluxos de saneamento controlado: quando uma NF histórica com NS sem `nsUg` é alcançada por uma migração segura de CNPJ, a UG ausente é preenchida automaticamente com a UG do workspace autenticado. No HGeSM, o valor aplicado é `160416`.
+
+Esse backfill não é uma escolha livre do operador. A origem é sempre a identidade institucional da sessão. Quando a NS histórica estiver em formato abreviado, o número completo precisa ser confirmado pelo usuário antes da conversão; somente a UG é inferida automaticamente.
 
 ## SAG
 
@@ -90,7 +92,8 @@ Ao gravar, o serviço obtém a UG diretamente do contexto operacional autenticad
 - uma NS nova só pode usar a UG do workspace autenticado;
 - a mesma combinação UG + NS não pode pertencer a duas NFs no mesmo workspace;
 - remover NS remove também `nsUg`;
-- registros históricos sem UG não são reinterpretados silenciosamente;
+- registros históricos sem UG podem receber backfill automático somente em fluxo controlado, usando a UG do workspace autenticado;
+- números de NS abreviados não recebem ano inventado silenciosamente: a forma completa exige confirmação humana;
 - CNPJ, NF, empenho, UG, NS e lock permanecem coerentes nas mutações controladas.
 
 ## Experiência do operador
@@ -108,7 +111,9 @@ Assim, um usuário do HGeSM trabalha automaticamente no contexto da UG `160416`,
 
 ## Migração progressiva
 
-O bloco não executa migração cega dos históricos. Cadastros legados de setor sem UG recebem backfill administrativo explícito. NFs e locks históricos sem UG permanecem identificados como legados até um fluxo seguro de saneamento.
+O bloco não executa migração cega em massa dos históricos. Cadastros legados de setor sem UG continuam exigindo backfill administrativo explícito da identidade da unidade.
+
+Para NFs históricas, o saneamento pode ocorrer progressivamente quando um fluxo transacional seguro precisar tocar o registro. Na migração de CNPJ, uma NS sem `nsUg` recebe a UG do workspace autenticado e o lock legado é substituído pelo lock canônico na mesma transação. Isso evita deixar dados parcialmente migrados.
 
 ## Critério de aceite
 

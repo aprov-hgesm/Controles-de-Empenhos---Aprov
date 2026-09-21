@@ -28,6 +28,7 @@ import {
   buildLegacyNsLockDocumentId,
   buildNsLockDocument,
   buildNsLockDocumentId,
+  isValidNsNumber,
   isValidNsUg,
   normalizeNsNumber,
   normalizeNsUg,
@@ -1072,6 +1073,12 @@ export interface CommitEmpenhoSupplierCnpjMigrationInput {
   empenhoId: string;
   targetSupplierCnpj: string;
   expectedRevision?: number;
+  /**
+   * Correções explícitas para NS legadas fora do padrão AAAANS000000.
+   * A chave é o recordKey atual da NF. A interface só envia este mapa após
+   * confirmação humana do número completo; a UG continua vindo do workspace.
+   */
+  legacyNsCanonicalOverrides?: Record<string, string>;
 }
 
 export interface CommitEmpenhoSupplierCnpjMigrationResult {
@@ -1083,6 +1090,8 @@ export interface CommitEmpenhoSupplierCnpjMigrationResult {
   }>;
   migratedInvoiceCount: number;
   migratedLockCount: number;
+  backfilledNsUgCount: number;
+  canonicalizedLegacyNsCount: number;
   noOp: boolean;
 }
 
@@ -1170,7 +1179,18 @@ export async function commitEmpenhoSupplierCnpjMigration(
         rawTarget
       );
 
-      if (plan.isNoOp) {
+      const hasRequestedNsRepair = plan.items.some((item) => {
+        const storedNs = normalizeNsNumber(item.invoice.numeroNS);
+        const requestedOverride = normalizeNsNumber(
+          input.legacyNsCanonicalOverrides?.[item.sourceRecordKey]
+        );
+        return Boolean(
+          requestedOverride ||
+          (storedNs && !normalizeNsUg(item.invoice.nsUg))
+        );
+      });
+
+      if (plan.isNoOp && !hasRequestedNsRepair) {
         return {
           updatedEmpenho: currentEmpenho,
           invoiceMigrations: plan.items.map((item) => ({
@@ -1180,6 +1200,8 @@ export async function commitEmpenhoSupplierCnpjMigration(
           })),
           migratedInvoiceCount: 0,
           migratedLockCount: 0,
+          backfilledNsUgCount: 0,
+          canonicalizedLegacyNsCount: 0,
           noOp: true,
         };
       }
@@ -1208,12 +1230,75 @@ export async function commitEmpenhoSupplierCnpjMigration(
         );
       }
 
+      const scopeUg = normalizeNsUg(scope.ug);
+      let backfilledNsUgCount = 0;
+      let canonicalizedLegacyNsCount = 0;
+
       const nsEntries = plan.items
-        .map((item) => ({
-          item,
-          ns: normalizeNsNumber(item.invoice.numeroNS),
-          ug: normalizeNsUg(item.invoice.nsUg),
-        }))
+        .map((item) => {
+          const storedNs = normalizeNsNumber(item.invoice.numeroNS);
+          if (!storedNs) {
+            return {
+              item,
+              ns: '',
+              ug: '',
+              sourceUg: '',
+              sourceLockId: '',
+              targetLockId: '',
+            };
+          }
+
+          const requestedOverride = normalizeNsNumber(
+            input.legacyNsCanonicalOverrides?.[item.sourceRecordKey]
+          );
+          const storedNsIsCanonical = isValidNsNumber(storedNs);
+
+          if (requestedOverride && storedNsIsCanonical && requestedOverride !== storedNs) {
+            throw new NsIntegrityError(
+              'stale_invoice_ns',
+              `A NF ${item.invoice.id} já possui uma NS canônica (${storedNs}) e não pode ser substituída durante a migração de CNPJ.`
+            );
+          }
+
+          const resolvedNs = requestedOverride || storedNs;
+          if (!isValidNsNumber(resolvedNs)) {
+            throw new NsIntegrityError(
+              'invalid_ns',
+              `A NF ${item.invoice.id} possui a NS legada "${storedNs}" fora do padrão AAAANS000000. Confirme o número completo da NS para continuar a migração do CNPJ.`
+            );
+          }
+
+          const sourceUg = normalizeNsUg(item.invoice.nsUg);
+          const resolvedUg = sourceUg || scopeUg;
+          if (!isValidNsUg(resolvedUg)) {
+            throw new NsIntegrityError(
+              'invalid_ug',
+              `A NF ${item.invoice.id} possui NS sem UG e a UG da unidade autenticada não está configurada. A migração do CNPJ foi bloqueada.`
+            );
+          }
+
+          if (!sourceUg) {
+            backfilledNsUgCount += 1;
+          }
+          if (requestedOverride && requestedOverride !== storedNs) {
+            canonicalizedLegacyNsCount += 1;
+          }
+
+          item.updatedInvoice = {
+            ...item.updatedInvoice,
+            numeroNS: resolvedNs,
+            nsUg: resolvedUg,
+          };
+
+          return {
+            item,
+            ns: resolvedNs,
+            ug: resolvedUg,
+            sourceUg,
+            sourceLockId: buildStoredNsLockDocumentId(item.invoice),
+            targetLockId: buildNsLockDocumentId(resolvedUg, resolvedNs),
+          };
+        })
         .filter((entry) => entry.ns);
 
       if (nsEntries.length > MAX_SUPPLIER_CNPJ_MIGRATION_NS_LOCKS) {
@@ -1222,28 +1307,24 @@ export async function commitEmpenhoSupplierCnpjMigration(
         );
       }
 
-      const legacyNsWithoutUg = nsEntries.find((entry) => !entry.ug);
-      if (legacyNsWithoutUg) {
-        throw new NsIntegrityError(
-          'invalid_ug',
-          `A NF ${legacyNsWithoutUg.item.invoice.id} possui a NS ${legacyNsWithoutUg.ns} sem UG emitente. Informe a UG pelo controle de NS antes de migrar o CNPJ.`
-        );
-      }
-
       const seenNsIdentities = new Set<string>();
       for (const entry of nsEntries) {
-        const identityKey = `${entry.ug || 'legacy'}|${entry.ns}`;
+        const identityKey = `${entry.ug}|${entry.ns}`;
         if (seenNsIdentities.has(identityKey)) {
           throw new NsIntegrityError(
             'ns_reused_in_scope',
-            `A identidade UG ${entry.ug || 'legada'} + NS ${entry.ns} aparece em mais de uma NF vinculada ao empenho. Corrija a inconsistência antes de alterar o CNPJ.`
+            `A identidade UG ${entry.ug} + NS ${entry.ns} aparece em mais de uma NF vinculada ao empenho. Corrija a inconsistência antes de alterar o CNPJ.`
           );
         }
         seenNsIdentities.add(identityKey);
       }
 
       const lockIds = Array.from(
-        new Set(nsEntries.map((entry) => buildStoredNsLockDocumentId(entry.item.invoice)))
+        new Set(
+          nsEntries
+            .flatMap((entry) => [entry.sourceLockId, entry.targetLockId])
+            .filter(Boolean)
+        )
       );
       const lockSnapshots = await Promise.all(
         lockIds.map((lockId) =>
@@ -1258,8 +1339,12 @@ export async function commitEmpenhoSupplierCnpjMigration(
       );
 
       for (const entry of nsEntries) {
-        const lock = lockById.get(buildStoredNsLockDocumentId(entry.item.invoice));
-        if (!lock) continue;
+        const sourceLock = entry.sourceLockId
+          ? lockById.get(entry.sourceLockId)
+          : null;
+        const targetLock = entry.targetLockId
+          ? lockById.get(entry.targetLockId)
+          : null;
 
         const sourceSupplierCnpj =
           normalizeSupplierCnpj(entry.item.invoice.supplierCnpj) ||
@@ -1273,34 +1358,62 @@ export async function commitEmpenhoSupplierCnpjMigration(
           );
         }
 
-        const lockSupplierCnpj = normalizeSupplierCnpj(lock.supplierCnpj);
-        if (
-          (lock.invoiceId && lock.invoiceId !== entry.item.invoice.id) ||
-          (lock.empenhoId && lock.empenhoId !== input.empenhoId) ||
-          (lockSupplierCnpj && lockSupplierCnpj !== sourceSupplierCnpj)
-        ) {
-          throw new NsIntegrityError(
-            'stale_lock_owner',
-            `O lock da NS ${entry.ns} possui metadados divergentes da NF ${entry.item.invoice.id}. Corrija a inconsistência antes de alterar o CNPJ.`
+        if (sourceLock) {
+          const lockSupplierCnpj = normalizeSupplierCnpj(sourceLock.supplierCnpj);
+          if (
+            (sourceLock.invoiceId && sourceLock.invoiceId !== entry.item.invoice.id) ||
+            (sourceLock.empenhoId && sourceLock.empenhoId !== input.empenhoId) ||
+            (lockSupplierCnpj && lockSupplierCnpj !== sourceSupplierCnpj)
+          ) {
+            throw new NsIntegrityError(
+              'stale_lock_owner',
+              `O lock da NS ${entry.ns} possui metadados divergentes da NF ${entry.item.invoice.id}. Corrija a inconsistência antes de alterar o CNPJ.`
+            );
+          }
+
+          assertNsLockOwnership(
+            sourceLock,
+            buildLifecycleMutation(
+              entry.item.invoice,
+              entry.item.sourceRecordKey,
+              sourceSupplierCnpj,
+              normalizeNsNumber(entry.item.invoice.numeroNS),
+              'migration'
+            ),
+            entry.sourceUg || null,
+            normalizeNsNumber(entry.item.invoice.numeroNS),
+            'stale_lock_owner'
           );
         }
 
-        assertNsLockOwnership(
-          lock,
-          buildLifecycleMutation(
-            entry.item.invoice,
-            entry.item.sourceRecordKey,
-            sourceSupplierCnpj,
-            entry.ns,
-            'migration'
-          ),
-          entry.ug || null,
-          entry.ns,
-          'stale_lock_owner'
-        );
+        if (
+          targetLock &&
+          entry.targetLockId !== entry.sourceLockId
+        ) {
+          const targetLockSupplierCnpj = normalizeSupplierCnpj(targetLock.supplierCnpj);
+          if (
+            targetLock.invoiceRecordKey !== entry.item.sourceRecordKey ||
+            (targetLock.invoiceId && targetLock.invoiceId !== entry.item.invoice.id) ||
+            (targetLock.empenhoId && targetLock.empenhoId !== input.empenhoId) ||
+            (targetLockSupplierCnpj && targetLockSupplierCnpj !== sourceSupplierCnpj)
+          ) {
+            throw new NsIntegrityError(
+              'ns_lock_conflict',
+              `A identidade UG ${entry.ug} + NS ${entry.ns} já está reservada para outra NF neste workspace.`
+            );
+          }
+        }
       }
 
-      const lockWriteCount = nsEntries.length;
+      const lockWriteCount = nsEntries.reduce((count, entry) => {
+        const sourceLockExists = Boolean(
+          entry.sourceLockId && lockById.get(entry.sourceLockId)
+        );
+        const releasesLegacyLock =
+          sourceLockExists &&
+          entry.sourceLockId !== entry.targetLockId;
+        return count + 1 + (releasesLegacyLock ? 1 : 0);
+      }, 0);
       const invoiceWriteCount = plan.items.reduce(
         (count, item) =>
           count + 1 + (item.sourceRecordKey !== item.targetRecordKey ? 1 : 0),
@@ -1343,8 +1456,12 @@ export async function commitEmpenhoSupplierCnpjMigration(
       const now = new Date().toISOString();
       let migratedLockCount = 0;
       for (const entry of nsEntries) {
-        const lockId = buildStoredNsLockDocumentId(entry.item.invoice);
-        const existingLock = lockById.get(lockId);
+        const sourceLock = entry.sourceLockId
+          ? lockById.get(entry.sourceLockId)
+          : null;
+        const targetLock = entry.targetLockId
+          ? lockById.get(entry.targetLockId)
+          : null;
 
         const targetMutation = buildLifecycleMutation(
           entry.item.updatedInvoice,
@@ -1357,14 +1474,26 @@ export async function commitEmpenhoSupplierCnpjMigration(
           workspaceId: scope.workspaceId,
           mutation: targetMutation,
           userId,
-          createdAt: existingLock?.createdAt || now,
+          createdAt: targetLock?.createdAt || sourceLock?.createdAt || now,
           updatedAt: now,
         });
+
         transaction.set(
-          operationalSettingsDocRef(scope, lockId),
+          operationalSettingsDocRef(scope, entry.targetLockId),
           nextLock,
           { merge: true }
         );
+
+        if (
+          sourceLock &&
+          entry.sourceLockId &&
+          entry.sourceLockId !== entry.targetLockId
+        ) {
+          transaction.delete(
+            operationalSettingsDocRef(scope, entry.sourceLockId)
+          );
+        }
+
         migratedLockCount += 1;
       }
 
@@ -1393,6 +1522,8 @@ export async function commitEmpenhoSupplierCnpjMigration(
           metadata: {
             migratedInvoiceCount,
             migratedLockCount,
+            backfilledNsUgCount,
+            canonicalizedLegacyNsCount,
             sourceRecordKeys: plan.items.map((item) => item.sourceRecordKey),
             targetRecordKeys: plan.items.map((item) => item.targetRecordKey),
           },
@@ -1409,6 +1540,8 @@ export async function commitEmpenhoSupplierCnpjMigration(
         })),
         migratedInvoiceCount,
         migratedLockCount,
+        backfilledNsUgCount,
+        canonicalizedLegacyNsCount,
         noOp: false,
       };
     });

@@ -43,6 +43,11 @@ for (const expected of [
   "data.empenhoId !== input.empenhoId",
   'storedTargetCnpj !== expectedTargetCnpj',
   "'supplier_scope_changed'",
+  'legacyNsCanonicalOverrides',
+  'backfilledNsUgCount',
+  'canonicalizedLegacyNsCount',
+  'scopeUg = normalizeNsUg(scope.ug)',
+  'buildNsLockDocumentId(resolvedUg, resolvedNs)',
 ]) {
   requireText(service, expected, `Serviço de migração de CNPJ perdeu requisito: ${expected}`);
 }
@@ -61,6 +66,10 @@ if (!handler) {
   requireText(handler, 'confirm(', 'Migração com NFs não pede confirmação explícita.');
   requireText(handler, 'setInvoices((current)', 'Estado local das NFs não é sincronizado após a migração.');
   requireText(handler, 'setEmpenhos((current)', 'Estado local do empenho não é sincronizado após a migração.');
+  requireText(handler, 'legacyNsCanonicalOverrides', 'Handler não prepara correção explícita de NS legada.');
+  requireText(handler, 'isValidNsNumber', 'Handler não valida o formato canônico da NS legada.');
+  requireText(handler, 'prompt(', 'Handler não solicita confirmação humana para converter NS abreviada.');
+  requireText(handler, 'nsWithoutUgCount', 'Handler não informa backfill automático da UG.');
   forbidText(handler, 'saveEmpenho(', 'CNPJ voltou a ser salvo diretamente via saveEmpenho.');
 }
 
@@ -76,6 +85,9 @@ for (const expected of [
 
 for (const expected of [
   'CNPJ migra empenho, NFs e lock de NS na mesma transação',
+  'CNPJ saneia NS legada usando a UG da unidade na mesma transação',
+  'legacyUgCanonicalNs',
+  'nsUg: DEFAULT_NS_UG',
   'Lock não aceita novo CNPJ se o empenho final não confirmar o mesmo CNPJ',
 ]) {
   requireText(security, expected, `Emulator não cobre cenário de CNPJ: ${expected}`);
@@ -94,6 +106,8 @@ if (findings.length) {
   console.log('SUPPLIER CNPJ MIGRATION: READY');
   console.log('Empenho + NFs + recordKeys: ATÔMICOS');
   console.log('Locks NS: MIGRADOS/RECONSTRUÍDOS');
+  console.log('NS sem UG: BACKFILL PELA UG DO WORKSPACE');
+  console.log('NS abreviada: CONVERSÃO EXPLÍCITA/CONFIRMADA');
   console.log('Colisões: BLOQUEADAS');
   console.log('CNPJ NE/NF/lock: COERENTE');
 }
