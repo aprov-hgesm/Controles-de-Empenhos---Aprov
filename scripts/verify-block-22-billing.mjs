@@ -18,6 +18,7 @@ const rules = read('firestore.rules');
 const provisioning = read('lib/server/sectorProvisioningAdmin.ts');
 const sharedProvisioning = read('lib/sectorProvisioning.ts');
 const modal = read('components/admin/CreateSectorModal.tsx');
+const primaryCreatePanel = read('components/admin/AdminCreateSectorPanel.tsx');
 const adminPage = read('app/admin/page.tsx');
 const adminView = read('components/admin/PlatformAdminView.tsx');
 const adminPanel = read('components/admin/AdminBillingPanel.tsx');
@@ -38,7 +39,16 @@ requireText(domain, 'getBrazilFixedNationalHolidays', 'Cálculo não considera f
 requireText(domain, 'holidayDates', 'Calendário não aceita feriados adicionais cadastrados.');
 
 requireText(sharedProvisioning, 'grantTrial: boolean', 'Provisionamento não possui opção explícita de trial.');
-requireText(modal, 'Conceder período de teste', 'Cadastro de setor não expõe a opção de trial.');
+requireText(
+  modal + primaryCreatePanel,
+  'Período de teste',
+  'Cadastro de setor não expõe a opção de trial.'
+);
+requireText(
+  modal + primaryCreatePanel,
+  'grantTrial',
+  'Cadastro de setor não vincula a opção visual ao grantTrial.'
+);
 requireText(provisioning, 'buildInitialBillingAccount', 'Provisionamento server-side não materializa billing.');
 requireText(provisioning, 'billingAccounts/', 'Billing não participa do provisionamento atômico do setor.');
 
