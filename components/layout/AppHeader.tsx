@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { Loader2, Menu, ShieldCheck, UserRound } from 'lucide-react';
+import { Loader2, Menu, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { auth } from '../../lib/firebase';
@@ -10,6 +10,8 @@ import type { ResolvedWorkspaceContext } from '../../lib/workspaceContext';
 import { WorkspaceDriveControl } from './WorkspaceDriveControl';
 import { AppShellLogo } from './chrome/AppShellLogo';
 import { AppShellSignature } from './chrome/AppShellSignature';
+import { useWorkspaceBillingAccount } from '../../hooks/useWorkspaceBillingAccount';
+import { calculateTrialDaysRemaining, isTrialExpired } from '../../lib/billing';
 
 interface AppHeaderProps {
   customLogo: string | null;
@@ -32,6 +34,13 @@ export function AppHeader({
   const currentUser = auth.currentUser;
   const currentEmail = currentUser?.email || null;
   const canSwitchProfile = hasDualProfileAccess(currentEmail);
+  const { account: billingAccount } = useWorkspaceBillingAccount(workspaceContext);
+  const trialExpired = billingAccount?.status === 'trial'
+    ? isTrialExpired(billingAccount)
+    : false;
+  const trialDaysRemaining = billingAccount?.status === 'trial'
+    ? calculateTrialDaysRemaining(billingAccount)
+    : null;
   const resolvedDriveControl = driveControl ?? (
     <WorkspaceDriveControl
       user={currentUser}
@@ -90,6 +99,25 @@ export function AppHeader({
         )}
 
         {resolvedDriveControl}
+
+        {billingAccount?.status === 'trial' && (
+          <div
+            data-testid="billing-trial-badge"
+            className="emprovex-header-control border-violet-300/15 bg-violet-400/[0.07] text-violet-100"
+            title={
+              trialExpired
+                ? 'Período de teste encerrado. O acesso permanece liberado durante a fase de testes.'
+                : `Período de teste: ${trialDaysRemaining ?? 0} dia(s) restante(s). Acesso completo.`
+            }
+          >
+            <Sparkles className="emprovex-header-control__icon h-4 w-4" aria-hidden="true" />
+            <span className="hidden sm:inline">
+              {trialExpired
+                ? 'Teste encerrado'
+                : `Período de Teste · ${trialDaysRemaining ?? 0}d`}
+            </span>
+          </div>
+        )}
 
         {canSwitchProfile && (
           <button

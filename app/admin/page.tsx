@@ -10,6 +10,7 @@ import { usePlatformAdminDirectory } from '../../hooks/usePlatformAdminDirectory
 import { usePlatformAdminSessions } from '../../hooks/usePlatformAdminSessions';
 import { usePlatformAdminUsage } from '../../hooks/usePlatformAdminUsage';
 import { usePlatformAdminGlobalUsage } from '../../hooks/usePlatformAdminGlobalUsage';
+import { usePlatformAdminBilling } from '../../hooks/usePlatformAdminBilling';
 import { auth } from '../../lib/firebase';
 import {
   createHgesmFoundingWorkspace,
@@ -54,6 +55,11 @@ export default function PlatformAdminPage() {
     !adminDirectory.loading && !adminDirectory.error
   );
   const adminGlobalUsage = usePlatformAdminGlobalUsage(adminUser);
+  const adminBilling = usePlatformAdminBilling(
+    adminUser,
+    adminWorkspaces,
+    !adminDirectory.loading && !adminDirectory.error
+  );
 
   useEffect(() => {
     if (loading) return;
@@ -125,6 +131,7 @@ export default function PlatformAdminPage() {
       globalUsageDataThrough={adminGlobalUsage.dataThrough}
       loadingGlobalUsage={adminGlobalUsage.loading}
       globalUsageError={adminGlobalUsage.error}
+      billing={adminBilling}
       onCreateSector={async (input) => {
         await adminDirectory.createSector(input);
       }}

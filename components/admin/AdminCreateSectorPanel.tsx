@@ -32,6 +32,7 @@ const INITIAL_FORM: CreateSectorWorkspaceInput = {
   organizationName: '',
   organizationShortName: '',
   sectionName: 'Seção de Aprovisionamento',
+  grantTrial: true,
 };
 
 const inputClass =
@@ -353,6 +354,33 @@ export function AdminCreateSectorPanel({
                   />
                 </div>
               </Field>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-violet-300/15 bg-violet-400/[0.05] p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-extrabold text-violet-100">
+                  Período de teste
+                </p>
+                <p className="mt-1 text-[11px] leading-relaxed text-violet-100/70">
+                  Conceda 30 dias de trial completo. Durante a fase atual, o billing permanece em OBSERVE e nunca bloqueia o acesso operacional.
+                </p>
+              </div>
+              <label className="inline-flex shrink-0 items-center gap-2 text-[11px] font-bold text-violet-100">
+                <input
+                  type="checkbox"
+                  checked={form.grantTrial}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      grantTrial: event.target.checked,
+                    }))
+                  }
+                  className="h-4 w-4 rounded border-white/20 bg-slate-950/40"
+                />
+                Conceder
+              </label>
             </div>
           </div>
 

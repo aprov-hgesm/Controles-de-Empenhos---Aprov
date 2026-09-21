@@ -25,6 +25,8 @@ export interface CreateSectorWorkspaceInput {
   organizationName: string;
   organizationShortName?: string;
   sectionName: string;
+  /** Concede o trial comercial padrão no provisionamento. Não interfere no acesso operacional. */
+  grantTrial: boolean;
 }
 
 export interface SectorProvisioningResult {
@@ -55,6 +57,7 @@ export function parseSectorProvisioningInput(value: unknown): CreateSectorWorksp
     organizationName: requiredString('organizationName'),
     organizationShortName: optionalString('organizationShortName'),
     sectionName: requiredString('sectionName'),
+    grantTrial: typeof source.grantTrial === 'boolean' ? source.grantTrial : true,
   };
 }
 
