@@ -120,9 +120,13 @@ O banco monitorado permanece:
 
 `ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1`
 
-O Bloco 16.6 não presume que cotas gratuitas aplicáveis a outro banco se apliquem a esse banco nomeado.
+Os alertas operacionais deste bloco continuam configuráveis e independentes. A referência principal
+de cobrança do banco Enterprise passou a ser exibida pelos Blocos 16.4/16.5 usando Read Units
+faturáveis e a franquia diária parametrizada.
 
-Também não calcula USD, BRL ou fatura estimada. Um alerta de 95%, por exemplo, significa 95% da referência operacional explicitamente configurada — não 95% de uma cobrança oficial.
+O Bloco 16.6 não calcula USD, BRL ou fatura estimada. Um alerta operacional de 95%, por exemplo,
+continua significando 95% da referência configurada para aquela métrica — não 95% do valor monetário
+da fatura.
 
 ## Segurança e arquitetura preservadas
 
