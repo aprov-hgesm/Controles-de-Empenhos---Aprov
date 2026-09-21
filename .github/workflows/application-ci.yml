@@ -313,6 +313,9 @@ jobs:
       - name: Inicio background texture guard
         run: npm run verify:inicio-background-texture
 
+      - name: Inicio slow planet orbit guard
+        run: npm run verify:inicio-slow-planet-orbits
+
       - name: Block 19 home experience foundation guard
         run: npm run verify:block-19-home-experience
 
