@@ -241,7 +241,9 @@ export function DashboardView({
                         className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                           effectiveDashboardClassFilter === cls.key
                             ? 'bg-[#00288e] text-white shadow-xs'
-                            : 'bg-white/60 text-gray-600 border border-gray-200 hover:bg-white'
+                            : cls.isRpnp
+                              ? 'bg-amber-50/80 text-amber-900 border border-amber-200 hover:bg-amber-100/70'
+                              : 'bg-white/60 text-gray-600 border border-gray-200 hover:bg-white'
                         }`}
                       >
                         <span>{cls.name}</span>
@@ -325,7 +327,7 @@ export function DashboardView({
                         Saldo RPNP prioritário
                       </span>
                       <span className="text-[10px] font-bold bg-amber-100/80 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full">
-                        Exercício {getPreviousExerciseYear()}
+                        Exercício {previousExerciseYear}
                       </span>
                     </div>
                     <div className="mt-2">
@@ -371,7 +373,11 @@ export function DashboardView({
                           key={cls.key}
                           onClick={() => setDashboardClassFilter(isSelected ? 'TODAS' : cls.key)}
                           className={`${cls.cardClass} backdrop-blur-md rounded-2xl border p-5 shadow-xs transition-all cursor-pointer hover:shadow-md relative overflow-hidden group ${
-                            isSelected ? `${cls.borderClass} ring-2 ring-offset-1 ring-[#00288e]` : 'border-white/40 hover:border-gray-200'
+                            isSelected
+                              ? `${cls.borderClass} ring-2 ring-offset-1 ring-[#00288e]`
+                              : cls.isRpnp
+                                ? 'hover:border-amber-300/90'
+                                : 'hover:border-gray-200'
                           }`}
                         >
                           <div className="flex justify-between items-start mb-3">
