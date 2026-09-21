@@ -9,6 +9,8 @@ import { getInvoiceRecordKey } from '../../../lib/invoiceIdentity';
 import { fetchEmpenhoPdfBlob } from '../../../lib/empenhoDocuments';
 import { fetchInvoicePdfBlob } from '../../../lib/invoiceDocuments';
 import { loadJsPdfWithAutoTable } from '../../../lib/pdfToolkit';
+import { resolveInstitutionalDocumentIdentity } from '../../../lib/institutionalDocumentProfile';
+import type { WorkspaceInstitutionalProfile } from '../../../lib/platformIdentity';
 import {
   filterInvoicesByReportingPeriod,
   formatReportingPeriodLabel,
@@ -26,11 +28,14 @@ interface DocumentActionsContext {
   empenhoClasses: EmpenhoClassDefinition[];
   showToast: (message:string,type?:ToastType)=>void;
   formatDateOnly: (dateStr?:string)=>string;
+  institutionalProfile?: WorkspaceInstitutionalProfile | null;
 }
 
 /** Geração de termos e relatórios PDF, isolada da composição principal. */
 export function useDocumentActions(context:DocumentActionsContext){
-  const { user,invoices,setInvoices,comissoes,empenhos,empenhoClasses,showToast,formatDateOnly }=context;
+  const { user,invoices,setInvoices,comissoes,empenhos,empenhoClasses,showToast,formatDateOnly,institutionalProfile }=context;
+  const institutionalIdentity = resolveInstitutionalDocumentIdentity(institutionalProfile);
+  const { organizationName, organizationShortName, sectionName, documentHeaderLines } = institutionalIdentity;
 
   const requiresTermoRecebimento = (inv: Invoice): boolean => {
     const targetEmp = empenhos.find((emp) => emp.id === inv.empenhoId);
@@ -151,9 +156,13 @@ export function useDocumentActions(context:DocumentActionsContext){
       });
     };
      // --- 1. HEADER ---
-    centerText('MINISTÉRIO DA DEFESA', 9, 'bold');
-    centerText('EXÉRCITO BRASILEIRO', 9, 'bold');
-    centerText('HOSPITAL GERAL DE SANTA MARIA', 10, 'bold');
+    documentHeaderLines.forEach((line, index) => {
+      centerText(
+        line,
+        index === documentHeaderLines.length - 1 ? 10 : 9,
+        'bold'
+      );
+    });
     yPos += 4;
     centerText(`TERMO DE RECEBIMENTO DE ARTIGOS DE QR Nº ${termoNumero}/${termoYear}`, 11, 'bold', secondaryColor);
     yPos += 5;
@@ -161,7 +170,7 @@ export function useDocumentActions(context:DocumentActionsContext){
     addSectionHeader('1. NOMEAÇÃO DA COMISSÃO');
     const bNum = matchingComissao.boletimNumero;
     const bData = formatDateToBR(matchingComissao.boletimData);
-    addParagraph(`A Comissão de Recebimento de material do Hospital Geral de Santa Maria, nomeada por intermédio do Boletim Interno do HGeSM nº ${bNum}, de ${bData}, reuniu-se para fins de examinar e receber os artigos constantes nos documentos abaixo especificados.`, 9, 'normal', textColor);
+    addParagraph(`A Comissão de Recebimento de material do ${organizationName}, nomeada por intermédio do Boletim Interno do ${organizationShortName} nº ${bNum}, de ${bData}, reuniu-se para fins de examinar e receber os artigos constantes nos documentos abaixo especificados.`, 9, 'normal', textColor);
      // --- 2. IDENTIFICAÇÃO DO MATERIAL ---
     addSectionHeader('2. IDENTIFICAÇÃO DO MATERIAL');
     const tableRows = inv.items.map((it) => {
@@ -620,9 +629,13 @@ export function useDocumentActions(context:DocumentActionsContext){
       yPos += 4;
     };
      // Header
-    centerText('MINISTÉRIO DA DEFESA', 8.5, 'bold');
-    centerText('EXÉRCITO BRASILEIRO', 8.5, 'bold');
-    centerText('HOSPITAL GERAL DE SANTA MARIA', 9.5, 'bold');
+    documentHeaderLines.forEach((line, index) => {
+      centerText(
+        line,
+        index === documentHeaderLines.length - 1 ? 9.5 : 8.5,
+        'bold'
+      );
+    });
     yPos += 2;
     centerText('RELATÓRIO CONSOLIDADO DE EXECUÇÃO E CONCILIAÇÃO DE EMPENHO', 10.5, 'bold', secondaryColor);
 
@@ -830,7 +843,7 @@ export function useDocumentActions(context:DocumentActionsContext){
      doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
     doc.setTextColor(100, 100, 100);
-    const setorText = 'Seção de Aquisições / APROV - HGeSM';
+    const setorText = `${sectionName} - ${organizationShortName}`;
     const setorW = doc.getTextWidth(setorText);
     doc.text(setorText, (pageWidth - setorW) / 2, yPos + 18);
      // Footers across all pages
@@ -843,7 +856,7 @@ export function useDocumentActions(context:DocumentActionsContext){
        doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.5);
       doc.setTextColor(120, 120, 120);
-      doc.text(`Hospital Geral de Santa Maria - Relatório de Empenho NE ${emp.id}`, margin, doc.internal.pageSize.getHeight() - 8);
+      doc.text(`${organizationName} - Relatório de Empenho NE ${emp.id}`, margin, doc.internal.pageSize.getHeight() - 8);
        const pText = `Página ${i} de ${pageCount}`;
       const pWidth = doc.getTextWidth(pText);
       doc.text(pText, pageWidth - margin - pWidth, doc.internal.pageSize.getHeight() - 8);
