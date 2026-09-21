@@ -3,6 +3,8 @@ import { SignJWT, importPKCS8 } from 'jose';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const PROJECT_ID = firebaseConfig.projectId;
+const DATABASE_ID = firebaseConfig.firestoreDatabaseId;
+const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/${DATABASE_ID}/documents`;
 const TOKEN_URI = 'https://oauth2.googleapis.com/token';
 const CLOUD_PLATFORM_SCOPE = 'https://www.googleapis.com/auth/cloud-platform';
 const IDENTITY_TOOLKIT_BASE = 'https://identitytoolkit.googleapis.com/v1';
@@ -52,6 +54,12 @@ export interface FirebaseAuthMetadataBackup {
   passwordSaltIncluded: false;
   passwordUsersRequireResetAfterCatastrophicRestore: boolean;
   users: FirebaseAuthBackupUser[];
+  platformMetadata: {
+    workspaces: Array<{ id: string; data: Record<string, unknown> }>;
+    platformAccounts: Array<{ id: string; data: Record<string, unknown> }>;
+    platformUgIndex: Array<{ id: string; data: Record<string, unknown> }>;
+    globalSettings: { id: 'global'; data: Record<string, unknown> } | null;
+  };
 }
 
 function parseServiceAccount(): Required<Pick<ServiceAccountCredentials, 'client_email' | 'private_key'>> & {
@@ -184,6 +192,108 @@ function sanitizeUser(user: IdentityToolkitUser): FirebaseAuthBackupUser | null 
   };
 }
 
+type FirestoreRestValue = {
+  nullValue?: null;
+  booleanValue?: boolean;
+  integerValue?: string;
+  doubleValue?: number;
+  timestampValue?: string;
+  stringValue?: string;
+  referenceValue?: string;
+  arrayValue?: { values?: FirestoreRestValue[] };
+  mapValue?: { fields?: Record<string, FirestoreRestValue> };
+};
+
+interface FirestoreRestDocument {
+  name?: string;
+  fields?: Record<string, FirestoreRestValue>;
+}
+
+function decodeFirestoreValue(value: FirestoreRestValue): unknown {
+  if ('nullValue' in value) return null;
+  if ('booleanValue' in value) return value.booleanValue === true;
+  if ('integerValue' in value) return Number(value.integerValue || 0);
+  if ('doubleValue' in value) return Number(value.doubleValue || 0);
+  if ('timestampValue' in value) return value.timestampValue || '';
+  if ('stringValue' in value) return value.stringValue || '';
+  if ('referenceValue' in value) return value.referenceValue || '';
+  if ('arrayValue' in value) {
+    return (value.arrayValue?.values || []).map(decodeFirestoreValue);
+  }
+  if ('mapValue' in value) {
+    return decodeFirestoreFields(value.mapValue?.fields || {});
+  }
+  return null;
+}
+
+function decodeFirestoreFields(
+  fields: Record<string, FirestoreRestValue>
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(fields).map(([key, value]) => [key, decodeFirestoreValue(value)])
+  );
+}
+
+async function listPlatformCollection(
+  accessToken: string,
+  collectionId: 'workspaces' | 'platformAccounts' | 'platformUgIndex'
+): Promise<Array<{ id: string; data: Record<string, unknown> }>> {
+  const result: Array<{ id: string; data: Record<string, unknown> }> = [];
+  let pageToken = '';
+
+  do {
+    const params = new URLSearchParams({ pageSize: '1000' });
+    if (pageToken) params.set('pageToken', pageToken);
+    const response = await fetch(
+      `${FIRESTORE_BASE}/${collectionId}?${params.toString()}`,
+      {
+        headers: { authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      }
+    );
+    const payload = await response.json() as {
+      documents?: FirestoreRestDocument[];
+      nextPageToken?: string;
+      error?: { message?: string };
+    };
+    if (!response.ok) {
+      throw new Error(payload.error?.message || `Não foi possível exportar ${collectionId}.`);
+    }
+
+    for (const document of payload.documents || []) {
+      const id = document.name?.split('/').pop() || '';
+      if (!id) continue;
+      result.push({
+        id,
+        data: decodeFirestoreFields(document.fields || {}),
+      });
+    }
+    pageToken = payload.nextPageToken || '';
+  } while (pageToken);
+
+  return result.sort((a, b) => a.id.localeCompare(b.id));
+}
+
+async function readGlobalSettings(
+  accessToken: string
+): Promise<{ id: 'global'; data: Record<string, unknown> } | null> {
+  const response = await fetch(`${FIRESTORE_BASE}/settings/global`, {
+    headers: { authorization: `Bearer ${accessToken}` },
+    cache: 'no-store',
+  });
+  if (response.status === 404) return null;
+  const payload = await response.json() as FirestoreRestDocument & {
+    error?: { message?: string };
+  };
+  if (!response.ok) {
+    throw new Error(payload.error?.message || 'Não foi possível exportar a configuração global.');
+  }
+  return {
+    id: 'global',
+    data: decodeFirestoreFields(payload.fields || {}),
+  };
+}
+
 export async function createFirebaseAuthMetadataBackup(): Promise<FirebaseAuthMetadataBackup> {
   const accessToken = await getGoogleAdminAccessToken();
   const users: FirebaseAuthBackupUser[] = [];
@@ -215,6 +325,13 @@ export async function createFirebaseAuthMetadataBackup(): Promise<FirebaseAuthMe
 
   users.sort((a, b) => a.email.localeCompare(b.email) || a.uid.localeCompare(b.uid));
 
+  const [workspaces, platformAccounts, platformUgIndex, globalSettings] = await Promise.all([
+    listPlatformCollection(accessToken, 'workspaces'),
+    listPlatformCollection(accessToken, 'platformAccounts'),
+    listPlatformCollection(accessToken, 'platformUgIndex'),
+    readGlobalSettings(accessToken),
+  ]);
+
   return {
     format: 'emprovex-firebase-auth-backup',
     schemaVersion: 1,
@@ -228,5 +345,11 @@ export async function createFirebaseAuthMetadataBackup(): Promise<FirebaseAuthMe
       user.providers.some((provider) => provider.providerId === 'password')
     ),
     users,
+    platformMetadata: {
+      workspaces,
+      platformAccounts,
+      platformUgIndex,
+      globalSettings,
+    },
   };
 }
