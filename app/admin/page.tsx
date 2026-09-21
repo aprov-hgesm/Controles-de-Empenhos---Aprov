@@ -1,8 +1,9 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
-import { Loader2 } from 'lucide-react';
+import { DatabaseBackup, Loader2 } from 'lucide-react';
 
 import { PlatformAdminView } from '../../components/admin/PlatformAdminView';
 import { usePlatformBranding } from '../../hooks/usePlatformBranding';
@@ -84,7 +85,8 @@ export default function PlatformAdminPage() {
   };
 
   return (
-    <PlatformAdminView
+    <>
+      <PlatformAdminView
       adminEmail={context.email}
       customLogo={customLogo}
       workspaces={adminDirectory.directory.workspaces}
@@ -130,5 +132,14 @@ export default function PlatformAdminPage() {
       onRefreshGlobalUsage={adminGlobalUsage.refresh}
       onLogout={handleLogout}
     />
+      <Link
+        href="/admin/backups"
+        className="fixed bottom-5 right-5 z-40 inline-flex min-h-11 items-center gap-2 rounded-xl border border-blue-300/20 bg-[#0b2b66]/95 px-4 text-xs font-extrabold text-white shadow-2xl shadow-blue-950/40 backdrop-blur-xl transition hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/50"
+        title="Abrir Backup e Recuperação"
+      >
+        <DatabaseBackup className="h-4 w-4" />
+        Backup e Recuperação
+      </Link>
+    </>
   );
 }
