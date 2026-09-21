@@ -245,7 +245,8 @@ export function AdminGlobalUsagePanel({
           Consulta realizada: {formatDateTime(observedAt)}. O Cloud Monitoring amostra as métricas
           do Firestore periodicamente e pode apresentar atraso de alguns minutos. Métricas de
           unidades faturáveis são a referência principal de cota do Firestore Enterprise; as
-          contagens de documentos permanecem apenas como diagnóstico operacional.
+          contagens de documentos permanecem apenas como diagnóstico operacional. A estimativa por UG
+          permanece independente e não é usada para fabricar ou ratear estes números globais.
         </p>
       </div>
     </section>
