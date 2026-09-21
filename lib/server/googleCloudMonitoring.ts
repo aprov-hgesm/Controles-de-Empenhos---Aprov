@@ -99,7 +99,10 @@ async function mintServiceAccountAccessToken(): Promise<string> {
   })
     .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
     .setIssuer(clientEmail)
-    .setSubject(clientEmail)
+    // OAuth service-account JWT assertions must omit "sub" unless using
+    // Google Workspace domain-wide delegation. EMPROVEX authenticates as the
+    // service account itself, so adding a subject can make the token exchange
+    // fail with unauthorized_client.
     .setAudience(OAUTH_TOKEN_URL)
     .setIssuedAt(nowSeconds)
     .setExpirationTime(nowSeconds + 3600)
