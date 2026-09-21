@@ -142,7 +142,8 @@
     "verify:rpnp-visual-priority": "node scripts/verify-rpnp-visual-priority.mjs",
     "verify:tr-workspace-documents": "node scripts/verify-tr-workspace-documents.mjs",
     "verify:inicio-background-texture": "node scripts/verify-inicio-background-texture.mjs",
-    "verify:inicio-slow-planet-orbits": "node scripts/verify-inicio-slow-planet-orbits.mjs"
+    "verify:inicio-slow-planet-orbits": "node scripts/verify-inicio-slow-planet-orbits.mjs",
+    "verify:block-22-billing": "node scripts/verify-block-22-billing.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
