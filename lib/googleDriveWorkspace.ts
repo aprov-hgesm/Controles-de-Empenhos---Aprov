@@ -366,6 +366,31 @@ export async function connectGoogleDriveForWorkspace(
   return connectFounderDriveSession(user, context, expectedEmail);
 }
 
+export const PLATFORM_RECOVERY_DRIVE_WORKSPACE_ID = 'platform-recovery';
+
+export async function connectFounderRecoveryDrive(
+  expectedEmailInput: string
+): Promise<WorkspaceGoogleDriveSession> {
+  const expectedEmail = normalizePlatformEmail(expectedEmailInput);
+  if (!expectedEmail) {
+    throw new Error('A conta fundadora não possui e-mail válido para autorizar o Drive de recuperação.');
+  }
+
+  const token = await requestIndependentDriveAccessToken(expectedEmail);
+  const returnedEmail = await readAuthorizedDriveEmail(token.accessToken);
+  if (returnedEmail !== expectedEmail) {
+    throw new Error('A Conta Google selecionada não corresponde à conta fundadora autenticada.');
+  }
+
+  return {
+    accessToken: token.accessToken,
+    email: returnedEmail,
+    workspaceId: PLATFORM_RECOVERY_DRIVE_WORKSPACE_ID,
+    connectedAt: new Date().toISOString(),
+    expiresAt: token.expiresAt,
+  };
+}
+
 async function findFolder(
   accessToken: string,
   workspaceId: string,
