@@ -450,10 +450,9 @@ export interface FirebaseGlobalUsageObservation {
 
 async function loadObservationWithAccessToken(
   accessToken: string,
-  now: Date
+  startTime: string,
+  endTime: string
 ): Promise<FirebaseGlobalUsageObservation> {
-  const startTime = startOfPacificBillingDay(now).toISOString();
-  const endTime = now.toISOString();
   const billingReference = loadBillingReference();
 
   const [
@@ -516,8 +515,9 @@ async function loadObservationWithAccessToken(
   };
 }
 
-export async function loadFirebaseGlobalUsageObservation(
-  now = new Date()
+async function loadFirebaseGlobalUsageObservationForInterval(
+  startTime: string,
+  endTime: string
 ): Promise<FirebaseGlobalUsageObservation> {
   const candidates = monitoringCredentialCandidates();
   if (!candidates.length) {
@@ -529,7 +529,7 @@ export async function loadFirebaseGlobalUsageObservation(
   for (const credentials of candidates) {
     try {
       const accessToken = await mintServiceAccountAccessToken(credentials);
-      return await loadObservationWithAccessToken(accessToken, now);
+      return await loadObservationWithAccessToken(accessToken, startTime, endTime);
     } catch (error) {
       cachedAccessTokens.delete(`${credentials.source}:${credentials.clientEmail}`);
       const message = error instanceof Error ? error.message : 'falha desconhecida';
@@ -544,6 +544,27 @@ export async function loadFirebaseGlobalUsageObservation(
   throw new Error(
     'Nenhuma credencial server-side conseguiu consultar o Cloud Monitoring. '
     + failures.join(' | ')
+  );
+}
+
+export async function loadFirebaseGlobalUsageObservation(
+  now = new Date()
+): Promise<FirebaseGlobalUsageObservation> {
+  const startTime = startOfPacificBillingDay(now).toISOString();
+  const endTime = now.toISOString();
+  return loadFirebaseGlobalUsageObservationForInterval(startTime, endTime);
+}
+
+export async function loadPreviousFirebaseBillingDayObservation(
+  now = new Date()
+): Promise<FirebaseGlobalUsageObservation> {
+  const currentDayStart = startOfPacificBillingDay(now);
+  const previousDayProbe = new Date(currentDayStart.getTime() - 12 * 60 * 60 * 1000);
+  const previousDayStart = startOfPacificBillingDay(previousDayProbe);
+
+  return loadFirebaseGlobalUsageObservationForInterval(
+    previousDayStart.toISOString(),
+    currentDayStart.toISOString()
   );
 }
 
