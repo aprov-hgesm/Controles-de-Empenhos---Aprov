@@ -29,7 +29,10 @@ for (const marker of [
   'getDefaultSimultaneousSessionLimit',
   'isAdminWorkspaceSessionActive',
   'Participação calculada somente sobre a soma das estimativas EMPROVEX',
-  'Projeção financeira: referência operacional, não cobrança oficial',
+  'data-testid="admin-primary-billing-quota"',
+  'Limite principal de cota · Read Units',
+  'api/billable_read_units',
+  'cobrança monetária final continua no Google Cloud Billing',
 ]) {
   requireText(panel, marker, `Painel 16.5 perdeu requisito: ${marker}`);
 }
@@ -91,9 +94,10 @@ if (
 for (const marker of [
   'sem criar uma terceira fonte de verdade',
   'participação por UG nunca é apresentada como rateio da fatura global',
-  'banco Firestore nomeado',
-  'não presume automaticamente',
-  'não inventa um valor em USD ou BRL',
+  'edição Enterprise',
+  'api/billable_read_units',
+  '50.000 unidades por dia',
+  'não um valor monetário fechado',
   'não altera:',
   'Firestore Rules',
   'Google Drive por workspace',
@@ -123,6 +127,6 @@ if (findings.length) {
   console.log('Por UG: ESTIMATIVA EMPROVEX');
   console.log('Sessões: REUTILIZADAS DO BLOCO 16.2');
   console.log('Firestore adicional no painel: NENHUM');
-  console.log('Franquia do banco nomeado: NÃO PRESUMIDA');
+  console.log('Cota principal: READ UNITS ENTERPRISE / LIMITE DIÁRIO PARAMETRIZADO');
   console.log('Deploy Vercel: NÃO REALIZADO');
 }
