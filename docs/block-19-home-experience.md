@@ -516,3 +516,22 @@ Nenhuma leitura Firestore, regra de negócio, autenticação, persistência ou d
 - a Central usa apenas Empenhos + Avisos em realtime;
 - ações realizadas na Central podem atualizar o homeSnapshot sem abrir coleções adicionais;
 - o histórico é preservado por arquivamento em vez de exclusão pela interface.
+
+
+## Refinamento visual — textura técnica do fundo
+
+Adicionado como refinamento posterior da superfície Início:
+
+- camada dedicada `texture` entre a atmosfera e a constelação;
+- microgrão pontilhado de baixa opacidade para reduzir a sensação de fundo liso;
+- fibras diagonais extremamente sutis, inspiradas em material técnico/compósito;
+- anéis topográficos/telemetria quase imperceptíveis ao redor do núcleo;
+- dois traços diagonais de baixa intensidade para quebrar áreas grandes e vazias;
+- nenhum arquivo de imagem, SVG externo, Canvas ou WebGL;
+- nenhuma animação contínua nova;
+- nenhum listener, leitura ou gravação Firestore;
+- `pointer-events: none`, preservando integralmente a interação;
+- perfis `balanced` e `static` reduzem automaticamente a intensidade e removem `mix-blend-mode`;
+- a textura permanece abaixo das estrelas, planetas, identidade da UG e demais conteúdos operacionais.
+
+O objetivo é acrescentar materialidade e profundidade ao cenário sem transformar o Início em um fundo chamativo ou competir com a leitura operacional.
