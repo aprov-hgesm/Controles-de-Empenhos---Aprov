@@ -34,6 +34,11 @@ export type AuditOperation =
   | 'sector.password_reset'
   | 'sector.delete'
   | 'session.terminate'
+  | 'billing.config_update'
+  | 'billing.trial_grant'
+  | 'billing.status_change'
+  | 'billing.payment_confirm'
+  | 'billing.payment_reopen'
   | 'historical.repair';
 
 export type AuditEntityType =
@@ -42,6 +47,9 @@ export type AuditEntityType =
   | 'empenho'
   | 'workspace'
   | 'session'
+  | 'billing_config'
+  | 'billing_account'
+  | 'billing_cycle'
   | 'ns_lock';
 
 export type AuditScalar = string | number | boolean | null;
