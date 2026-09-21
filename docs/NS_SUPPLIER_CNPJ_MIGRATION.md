@@ -57,6 +57,27 @@ Se a NF histórica possuir NS mas não possuir lock, o Bloco 4 reconstrói o loc
 
 Se duas NFs vinculadas ao mesmo empenho compartilharem a mesma NS, a migração falha fechada.
 
+### Backfill de UG para NS legada
+
+A política operacional atual considera a UG do workspace autenticado como a UG emitente das NS legadas que ainda não possuem `nsUg`.
+
+Assim, ao alterar o CNPJ de um empenho:
+
+- uma NS já canônica no formato `AAAANS000000`, mas sem UG, recebe automaticamente a UG da unidade do usuário autenticado;
+- no workspace fundador HGeSM, essa UG é `160416`;
+- o lock legado `sagNsLock_<NS>`, quando existir, é liberado e substituído atomicamente pelo lock canônico `sagNsLock_<UG>_<NS>`;
+- a NF, o novo CNPJ, a UG e o lock são confirmados na mesma transação.
+
+A UG não é digitada nem escolhida pelo operador nesse fluxo: ela é derivada do contexto autenticado.
+
+### NS legada abreviada
+
+Registros antigos podem conter somente a sequência da NS, por exemplo `922`, em vez do identificador completo `2026NS000922`.
+
+O sistema não inventa o ano silenciosamente. Antes da migração, a interface apresenta uma sugestão baseada no ano do empenho e exige confirmação humana do número completo. Somente após essa confirmação o serviço converte a NS para o padrão canônico, aplica a UG da unidade e cria o lock correspondente.
+
+Se o número completo não for confirmado em formato válido, toda a migração é cancelada sem gravações parciais.
+
 ## Firestore Rules
 
 O Bloco 4 acrescenta vínculo explícito entre lock e empenho.
