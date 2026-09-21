@@ -8,6 +8,13 @@ import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActio
 import type { Empenho, Invoice, EmpenhoPdfDocument } from '../../../lib/types';
 import { formatSupplierCnpj } from '../../../lib/invoiceIdentity';
 import type { EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
+import {
+  compareEmpenhosByRpnpPriority,
+  getEmpenhoDisplayClassification,
+  getEmpenhoExerciseYear,
+  getEmpenhoYearFilterLabel,
+  isRpnpEmpenho,
+} from '../domain/empenhoExercise';
 import type { User } from 'firebase/auth';
 type Setter<T = any> = Dispatch<SetStateAction<T>>;
 
@@ -340,7 +347,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                       >
                         <option value="Todos">Todos os Anos</option>
                         {uniqueEmpenhoYears.map(y => (
-                          <option key={y} value={y}>{y}</option>
+                          <option key={y} value={y}>{getEmpenhoYearFilterLabel(y)}</option>
                         ))}
                       </select>
                     </div>
@@ -403,20 +410,14 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
 
                         const matchesPregao = empenhosPregaoFilter === 'Todos' || emp.pregao === empenhosPregaoFilter;
                         
-                        let empYear = '';
-                        if (emp.date) {
-                          const parts = emp.date.split('/');
-                          if (parts.length === 3) {
-                            empYear = parts[2];
-                          } else if (emp.date.includes('-')) {
-                            empYear = emp.date.split('-')[0];
-                          }
-                        }
-                        const matchesYear = empenhosYearFilter === 'Todos' || empYear === empenhosYearFilter;
+                        const empYear = getEmpenhoExerciseYear(emp);
+                        const matchesYear = empenhosYearFilter === 'Todos'
+                          || String(empYear || '') === empenhosYearFilter;
                         const matchesClass = empenhosClassFilter === 'Todos' || emp.classification === empenhosClassFilter;
 
                         return matchesSearch && matchesFilter && matchesPregao && matchesYear && matchesClass;
                       })
+                      .sort((a, b) => compareEmpenhosByRpnpPriority(a, b))
                       .map((emp) => {
                         const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
                         const totalReceived = emp.items.reduce((sum, item) => sum + item.received * item.unitPrice, 0);
@@ -432,7 +433,10 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                               setSelectedEmpenhoDetailId(emp.id); 
                               setEditingEmpenhoId(emp.id); 
                             }}
-                            className="bg-white/70 backdrop-blur-md p-5 rounded-2xl border border-white/40 shadow-sm hover:shadow-lg transition-all cursor-pointer group hover:border-[#00288e]/30 hover:bg-white/90 flex flex-col justify-between"
+                            className={`${isRpnpEmpenho(emp)
+                              ? 'bg-amber-50/65 border-amber-200/80 hover:border-amber-300/90 hover:bg-amber-50/85'
+                              : 'bg-white/70 border-white/40 hover:border-[#00288e]/30 hover:bg-white/90'
+                            } backdrop-blur-md p-5 rounded-2xl border shadow-sm hover:shadow-lg transition-all cursor-pointer group flex flex-col justify-between`}
                           >
                             <div>
                               {/* Card Header */}
@@ -442,12 +446,19 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                     NE {emp.id}
                                   </span>
                                   {emp.classification && (
-                                    <span className={`px-2 py-0.5 text-[10px] font-extrabold rounded-md uppercase tracking-wider ${
-                                      emp.classification === 'QR' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/60' :
-                                      emp.classification === 'CALI' ? 'bg-purple-50 text-purple-700 border border-purple-200/60' :
-                                      'bg-teal-50 text-teal-700 border border-teal-200/60'
-                                    }`}>
-                                      {emp.classification}
+                                    <span
+                                      title={isRpnpEmpenho(emp) ? 'RPNP — prioridade de liquidação' : undefined}
+                                      className={`px-2 py-0.5 text-[10px] font-extrabold rounded-md uppercase tracking-wider ${
+                                        isRpnpEmpenho(emp)
+                                          ? 'bg-amber-100 text-amber-900 border border-amber-300/80'
+                                          : emp.classification === 'QR'
+                                            ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/60'
+                                            : emp.classification === 'CALI'
+                                              ? 'bg-purple-50 text-purple-700 border border-purple-200/60'
+                                              : 'bg-teal-50 text-teal-700 border border-teal-200/60'
+                                      }`}
+                                    >
+                                      {getEmpenhoDisplayClassification(emp)}
                                     </span>
                                   )}
                                   {emp.pregao && (
@@ -488,9 +499,14 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                               </p>
 
                               {/* Date Row */}
-                              <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 mt-3 mb-3">
+                              <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-gray-400 mt-3 mb-3">
                                 <Calendar className="w-3.5 h-3.5 text-gray-400" />
                                 <span>Emitido em {formatDateOnly(emp.date)}</span>
+                                {isRpnpEmpenho(emp) && (
+                                  <span className="ml-1 rounded-full border border-amber-200 bg-amber-100/70 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-amber-800">
+                                    prioridade de liquidação
+                                  </span>
+                                )}
                               </div>
 
                               {/* Progress bar */}
@@ -619,11 +635,20 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                               </span>
                               {targetEmp.classification && (
                                 <span className={`px-2.5 py-1 text-xs font-extrabold rounded-lg uppercase tracking-wider ${
-                                  targetEmp.classification === 'QR' ? 'bg-indigo-100 text-indigo-800' :
-                                  targetEmp.classification === 'CALI' ? 'bg-purple-100 text-purple-800' :
-                                  'bg-teal-100 text-teal-800'
+                                  isRpnpEmpenho(targetEmp)
+                                    ? 'bg-amber-100 text-amber-900 border border-amber-200'
+                                    : targetEmp.classification === 'QR'
+                                      ? 'bg-indigo-100 text-indigo-800'
+                                      : targetEmp.classification === 'CALI'
+                                        ? 'bg-purple-100 text-purple-800'
+                                        : 'bg-teal-100 text-teal-800'
                                 }`}>
-                                  Classe: {targetEmp.classification}
+                                  Classe: {getEmpenhoDisplayClassification(targetEmp)}
+                                </span>
+                              )}
+                              {isRpnpEmpenho(targetEmp) && (
+                                <span className="px-2.5 py-1 text-[10px] font-black rounded-lg uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200">
+                                  Prioridade de liquidação
                                 </span>
                               )}
                               <span className={`px-2.5 py-1 text-xs font-extrabold rounded-lg ${
