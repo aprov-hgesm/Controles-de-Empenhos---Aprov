@@ -7,6 +7,7 @@ const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
 const panel = read('components/admin/AdminConsolidatedUsagePanel.tsx');
 const adminView = read('components/admin/PlatformAdminView.tsx');
+const consumptionHub = read('components/admin/AdminConsumptionHub.tsx');
 const docs = read('docs/BLOCK_16_5_CONSOLIDATED_USAGE_DASHBOARD.md');
 const pkg = read('package.json');
 const workflow = read('.github/workflows/application-ci.yml');
@@ -52,35 +53,39 @@ for (const forbidden of [
 
 requireText(
   adminView,
+  "import { AdminConsumptionHub } from './AdminConsumptionHub';",
+  'PlatformAdminView não importa o hub de consumo.'
+);
+requireText(
+  adminView,
+  '<AdminConsumptionHub',
+  'PlatformAdminView não renderiza o hub de consumo.'
+);
+for (const marker of [
   "import { AdminConsolidatedUsagePanel } from './AdminConsolidatedUsagePanel';",
-  'PlatformAdminView não importa o painel consolidado.'
-);
-requireText(
-  adminView,
+  "import { AdminGlobalUsagePanel } from './AdminGlobalUsagePanel';",
+  "import { AdminUsagePanel } from './AdminUsagePanel';",
   '<AdminConsolidatedUsagePanel',
-  'PlatformAdminView não renderiza o painel consolidado.'
-);
-requireText(
-  adminView,
   '<AdminGlobalUsagePanel',
-  'Visão detalhada global do 16.4 foi removida.'
-);
-requireText(
-  adminView,
   '<AdminUsagePanel',
-  'Visão detalhada por UG do 16.3 foi removida.'
-);
+]) {
+  requireText(
+    consumptionHub,
+    marker,
+    `Hub de consumo perdeu requisito 16.5: ${marker}`
+  );
+}
 
-const consolidatedIndex = adminView.indexOf('<AdminConsolidatedUsagePanel');
-const globalIndex = adminView.indexOf('<AdminGlobalUsagePanel');
-const workspaceIndex = adminView.indexOf('<AdminUsagePanel');
+const consolidatedIndex = consumptionHub.indexOf('<AdminConsolidatedUsagePanel');
+const globalIndex = consumptionHub.indexOf('<AdminGlobalUsagePanel');
+const workspaceIndex = consumptionHub.indexOf('<AdminUsagePanel');
 if (
   consolidatedIndex < 0
   || globalIndex < 0
   || workspaceIndex < 0
   || !(consolidatedIndex < globalIndex && globalIndex < workspaceIndex)
 ) {
-  findings.push('Ordem do painel consolidado e drill-downs 16.4/16.3 foi alterada.');
+  findings.push('Ordem do painel consolidado e drill-downs 16.4/16.3 foi alterada no hub.');
 }
 
 for (const marker of [
