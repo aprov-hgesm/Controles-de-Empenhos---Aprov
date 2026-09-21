@@ -61,7 +61,7 @@ export default function Home() {
     activeOperationalDataReady, activeRealtimeCollectionCount, inicioSnapshot,
     empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices,
     comissoes, setComissoes, cronogramas, setCronogramas,
-    signInUser, signInSectorUser, signOutUser, getBalanceByClass,
+    signInUser, signInSectorUser, signOutUser,
     uniquePregaos, uniqueEmpenhoYears, uniqueNfMonths,
     formatDateTime, formatDateOnly
   } = useOperationalData(activeTab);
@@ -452,7 +452,6 @@ export default function Home() {
               dashboardPregaoFilter={dashboardPregaoFilter}
               dashboardSearch={dashboardSearch}
               empenhos={empenhos}
-              getBalanceByClass={getBalanceByClass}
               empenhoClasses={empenhoClasses}
               setActiveTab={setActiveTab}
               setDashboardClassFilter={setDashboardClassFilter}
