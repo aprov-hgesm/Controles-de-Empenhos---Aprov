@@ -3,6 +3,7 @@
 import React, { useRef, useState } from 'react';
 import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActions';
 import { InvoiceDocumentActions } from '../../../components/InvoiceDocumentActions';
+import { InvoiceMirrorDocumentActions } from '../../../components/InvoiceMirrorDocumentActions';
 import { TermoRecebimentoActions } from '../../../components/TermoRecebimentoActions';
 import { MAX_INVOICE_PDF_BYTES } from '../../../lib/invoiceDocuments';
 import { getInvoiceRecordKey } from '../../../lib/invoiceIdentity';
@@ -40,6 +41,7 @@ interface NotasFiscaisViewContext {
   handleEditInvoice: (...args: any[]) => any;
   handleEmpenhoDocumentUploaded: (...args: any[]) => any;
   handleInvoiceDocumentUploaded: (...args: any[]) => any;
+  handleInvoiceMirrorDocumentUploaded: (...args: any[]) => any;
   handleMarkComissao: (...args: any[]) => any;
   handleMarkTesouraria: (...args: any[]) => any;
   handleUpdateInvoiceLocation: (...args: any[]) => any;
@@ -91,7 +93,7 @@ interface NotasFiscaisViewProps {
 }
 /** Tela de Notas Fiscais extraída sem alterar regras de negócio ou persistência. */
 export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
-  const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhoClasses, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
+  const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhoClasses, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleInvoiceMirrorDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
   const nfPdfInputRef = useRef<HTMLInputElement>(null);
   const [nfPdfFile, setNfPdfFile] = useState<File | null>(null);
   const [isSavingInvoice, setIsSavingInvoice] = useState(false);
@@ -487,11 +489,17 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
+                          <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-3">
                             <InvoiceDocumentActions
                               invoice={inv}
                               user={user}
                               onDocumentUploaded={handleInvoiceDocumentUploaded}
+                              onNotify={showToast}
+                            />
+                            <InvoiceMirrorDocumentActions
+                              invoice={inv}
+                              user={user}
+                              onDocumentUploaded={handleInvoiceMirrorDocumentUploaded}
                               onNotify={showToast}
                             />
                             <EmpenhoDocumentActions
@@ -657,8 +665,8 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                               <p className="text-xs font-black text-[#001453] uppercase tracking-wider">Documento de Liquidação Consolidada</p>
                               <p className="text-xs text-gray-600 font-medium mt-1">
                                 {requiresTR
-                                  ? 'Une, nesta ordem, Nota de Empenho + Nota Fiscal (quando houver) + Termo de Recebimento em um único PDF.'
-                                  : `Une Nota de Empenho + Nota Fiscal em um único PDF. O TR é dispensado pela classe ${targetEmpenho?.classification || 'QR'}.`}
+                                  ? 'Une, nesta ordem, Nota de Empenho + Nota Fiscal (quando houver) + Espelho da Nota Fiscal (quando anexado) + Termo de Recebimento em um único PDF.'
+                                  : `Une Nota de Empenho + Nota Fiscal + Espelho da Nota Fiscal (quando anexado) em um único PDF. O TR é dispensado pela classe ${targetEmpenho?.classification || 'QR'}.`}
                               </p>
                             </div>
                             <button
