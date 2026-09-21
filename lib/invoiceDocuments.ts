@@ -25,13 +25,17 @@ async function validatePdfBeforeUpload(file: File): Promise<void> {
   });
 }
 
+type InvoiceStoredPdfKind = 'invoice' | 'invoice-mirror';
+
 function createDriveLogicalPathname(
   workspaceId: string,
   empenhoId: string,
   invoiceId: string,
-  fileId: string
+  fileId: string,
+  kind: InvoiceStoredPdfKind
 ): string {
-  return `google-drive/${workspaceId}/notas-fiscais/${empenhoId.trim().toUpperCase()}/${invoiceId.trim().toUpperCase()}/${fileId}`;
+  const directory = kind === 'invoice' ? 'notas-fiscais' : 'espelhos-nota-fiscal';
+  return `google-drive/${workspaceId}/${directory}/${empenhoId.trim().toUpperCase()}/${invoiceId.trim().toUpperCase()}/${fileId}`;
 }
 
 function fileIdFromDriveLogicalPathname(pathname: string): string | null {
@@ -40,11 +44,12 @@ function fileIdFromDriveLogicalPathname(pathname: string): string | null {
   return parts.length >= 6 ? parts[parts.length - 1] || null : null;
 }
 
-export async function uploadInvoicePdf(
+async function uploadInvoiceRelatedPdf(
   user: User,
   empenhoId: string,
   invoiceId: string,
-  file: File
+  file: File,
+  kind: InvoiceStoredPdfKind
 ): Promise<InvoicePdfDocument> {
   await validatePdfBeforeUpload(file);
   const runtime = requireWorkspaceDriveRuntime();
@@ -55,7 +60,7 @@ export async function uploadInvoicePdf(
     file,
     file.name,
     {
-      emprovexDocumentType: 'invoice',
+      emprovexDocumentType: kind,
       emprovexEmpenhoId: empenhoId.trim().toUpperCase(),
       emprovexInvoiceId: invoiceId.trim().toUpperCase(),
     }
@@ -63,7 +68,13 @@ export async function uploadInvoicePdf(
 
   return {
     id: crypto.randomUUID(),
-    pathname: createDriveLogicalPathname(runtime.session.workspaceId, empenhoId, invoiceId, driveFile.id),
+    pathname: createDriveLogicalPathname(
+      runtime.session.workspaceId,
+      empenhoId,
+      invoiceId,
+      driveFile.id,
+      kind
+    ),
     originalName: file.name,
     contentType: 'application/pdf',
     size: driveFile.size || file.size,
@@ -80,6 +91,24 @@ export async function uploadInvoicePdf(
       sha256,
     },
   };
+}
+
+export async function uploadInvoicePdf(
+  user: User,
+  empenhoId: string,
+  invoiceId: string,
+  file: File
+): Promise<InvoicePdfDocument> {
+  return uploadInvoiceRelatedPdf(user, empenhoId, invoiceId, file, 'invoice');
+}
+
+export async function uploadInvoiceMirrorPdf(
+  user: User,
+  empenhoId: string,
+  invoiceId: string,
+  file: File
+): Promise<InvoicePdfDocument> {
+  return uploadInvoiceRelatedPdf(user, empenhoId, invoiceId, file, 'invoice-mirror');
 }
 
 export async function deleteInvoicePdfUpload(
@@ -117,24 +146,29 @@ export async function fetchInvoicePdfBlob(user: User, document: InvoicePdfDocume
   return fetchWorkspaceDrivePdf(runtime.session, storage.objectKey);
 }
 
-function showLoadingMessage(target: Window, action: DocumentAction): void {
+function showLoadingMessage(
+  target: Window,
+  action: DocumentAction,
+  documentLabel: string
+): void {
   const label = action === 'print' ? 'Preparando impressão segura…' : 'Abrindo documento seguro…';
   target.document.open();
-  target.document.write(`<!doctype html><html lang="pt-BR"><head><title>Nota Fiscal</title></head><body style="font-family:Arial,sans-serif;background:#f8fafc;color:#0b1c30;display:grid;place-items:center;height:100vh;margin:0"><p>${label}</p></body></html>`);
+  target.document.write(`<!doctype html><html lang="pt-BR"><head><title>${documentLabel}</title></head><body style="font-family:Arial,sans-serif;background:#f8fafc;color:#0b1c30;display:grid;place-items:center;height:100vh;margin:0"><p>${label}</p></body></html>`);
   target.document.close();
 }
 
 export async function runInvoicePdfAction(
   user: User,
   document: InvoicePdfDocument,
-  action: DocumentAction
+  action: DocumentAction,
+  documentLabel = 'Nota Fiscal'
 ): Promise<void> {
   let targetWindow: Window | null = null;
   if (action !== 'download') {
     targetWindow = window.open('', '_blank');
     if (!targetWindow) throw new Error('O navegador bloqueou a nova janela. Autorize pop-ups para o EMPROVEX.');
     targetWindow.opener = null;
-    showLoadingMessage(targetWindow, action);
+    showLoadingMessage(targetWindow, action, documentLabel);
   }
 
   try {

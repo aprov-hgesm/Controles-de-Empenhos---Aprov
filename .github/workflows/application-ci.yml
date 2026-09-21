@@ -190,6 +190,9 @@ jobs:
       - name: Invoice NS lifecycle guard
         run: npm run verify:invoice-ns-lifecycle
 
+      - name: Invoice mirror document guard
+        run: npm run verify:invoice-mirror-document
+
       - name: Supplier CNPJ migration tests
         run: npm run test:supplier-cnpj-migration
 

@@ -95,6 +95,9 @@ export interface Invoice {
   localizacaoAtual?: 'APROVISIONAMENTO' | 'COMISSAO' | 'TESOURARIA'; // Localização operacional atual da NF; datas históricas são preservadas
   notaFiscalPdf?: InvoicePdfDocument;
   notaFiscalPdfVersions?: InvoicePdfDocument[];
+  /** Espelho da Nota Fiscal: anexo opcional usado no consolidado de liquidação. */
+  espelhoNotaFiscalPdf?: InvoicePdfDocument;
+  espelhoNotaFiscalPdfVersions?: InvoicePdfDocument[];
 }
 
 export interface MembroComissao {

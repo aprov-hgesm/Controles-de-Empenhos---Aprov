@@ -175,8 +175,15 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       ...(editingInvoice?.tesourariaDate ? { tesourariaDate: editingInvoice.tesourariaDate } : {}),
       ...(editingInvoice?.termoNumero ? { termoNumero: editingInvoice.termoNumero } : {}),
       ...(editingInvoice?.numeroNS ? { numeroNS: editingInvoice.numeroNS } : {}),
+      ...(editingInvoice?.nsUg ? { nsUg: editingInvoice.nsUg } : {}),
       ...(currentInvoicePdf ? { notaFiscalPdf: currentInvoicePdf } : {}),
       ...(nextPdfVersions?.length ? { notaFiscalPdfVersions: nextPdfVersions } : {}),
+      ...(editingInvoice?.espelhoNotaFiscalPdf
+        ? { espelhoNotaFiscalPdf: editingInvoice.espelhoNotaFiscalPdf }
+        : {}),
+      ...(editingInvoice?.espelhoNotaFiscalPdfVersions?.length
+        ? { espelhoNotaFiscalPdfVersions: editingInvoice.espelhoNotaFiscalPdfVersions }
+        : {}),
     };
      // Update received quantities in empenhos (applying the new invoice quantities)
     let updatedTargetEmpenho: Empenho | null = null;
@@ -310,6 +317,40 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     };
 
     setInvoices((current) => current.map((invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey ? updatedInvoice : invoice));
+    if (user) await saveInvoice(user.uid, updatedInvoice);
+  };
+
+  const handleInvoiceMirrorDocumentUploaded = async (
+    invoiceRecordKey: string,
+    document: InvoicePdfDocument
+  ) => {
+    const targetInvoice = invoices.find(
+      (invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey
+    );
+    if (!targetInvoice) {
+      throw new Error('Nota Fiscal não encontrada para vincular o Espelho.');
+    }
+
+    const priorVersions = targetInvoice.espelhoNotaFiscalPdfVersions ||
+      (targetInvoice.espelhoNotaFiscalPdf ? [targetInvoice.espelhoNotaFiscalPdf] : []);
+    const versions = [...priorVersions, document]
+      .filter(
+        (item, index, all) =>
+          all.findIndex((candidate) => candidate.pathname === item.pathname) === index
+      )
+      .slice(-25);
+
+    const updatedInvoice: Invoice = {
+      ...targetInvoice,
+      espelhoNotaFiscalPdf: document,
+      espelhoNotaFiscalPdfVersions: versions,
+    };
+
+    setInvoices((current) =>
+      current.map((invoice) =>
+        getInvoiceRecordKey(invoice) === invoiceRecordKey ? updatedInvoice : invoice
+      )
+    );
     if (user) await saveInvoice(user.uid, updatedInvoice);
   };
 
@@ -719,6 +760,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
   return {
     handleSaveInvoice,
     handleInvoiceDocumentUploaded,
+    handleInvoiceMirrorDocumentUploaded,
     handleEditInvoice,
     handleDeleteInvoice,
     handleDeleteAllInvoices,

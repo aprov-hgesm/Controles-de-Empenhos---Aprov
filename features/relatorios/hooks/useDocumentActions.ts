@@ -537,6 +537,11 @@ export function useDocumentActions(context:DocumentActionsContext){
         await appendPdf(await invoiceBlob.arrayBuffer());
       }
 
+      if (inv.espelhoNotaFiscalPdf) {
+        const invoiceMirrorBlob = await fetchInvoicePdfBlob(user, inv.espelhoNotaFiscalPdf);
+        await appendPdf(await invoiceMirrorBlob.arrayBuffer());
+      }
+
       if (termo) {
         await appendPdf(termo.doc.output('arraybuffer'));
       }
