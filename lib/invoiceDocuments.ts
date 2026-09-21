@@ -146,24 +146,29 @@ export async function fetchInvoicePdfBlob(user: User, document: InvoicePdfDocume
   return fetchWorkspaceDrivePdf(runtime.session, storage.objectKey);
 }
 
-function showLoadingMessage(target: Window, action: DocumentAction): void {
+function showLoadingMessage(
+  target: Window,
+  action: DocumentAction,
+  documentLabel: string
+): void {
   const label = action === 'print' ? 'Preparando impressão segura…' : 'Abrindo documento seguro…';
   target.document.open();
-  target.document.write(`<!doctype html><html lang="pt-BR"><head><title>Nota Fiscal</title></head><body style="font-family:Arial,sans-serif;background:#f8fafc;color:#0b1c30;display:grid;place-items:center;height:100vh;margin:0"><p>${label}</p></body></html>`);
+  target.document.write(`<!doctype html><html lang="pt-BR"><head><title>${documentLabel}</title></head><body style="font-family:Arial,sans-serif;background:#f8fafc;color:#0b1c30;display:grid;place-items:center;height:100vh;margin:0"><p>${label}</p></body></html>`);
   target.document.close();
 }
 
 export async function runInvoicePdfAction(
   user: User,
   document: InvoicePdfDocument,
-  action: DocumentAction
+  action: DocumentAction,
+  documentLabel = 'Nota Fiscal'
 ): Promise<void> {
   let targetWindow: Window | null = null;
   if (action !== 'download') {
     targetWindow = window.open('', '_blank');
     if (!targetWindow) throw new Error('O navegador bloqueou a nova janela. Autorize pop-ups para o EMPROVEX.');
     targetWindow.opener = null;
-    showLoadingMessage(targetWindow, action);
+    showLoadingMessage(targetWindow, action, documentLabel);
   }
 
   try {
