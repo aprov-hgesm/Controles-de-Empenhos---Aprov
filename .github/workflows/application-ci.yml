@@ -301,6 +301,12 @@ jobs:
       - name: Block 18 security and resilience guard
         run: npm run verify:block-18-security-resilience
 
+      - name: Backup and recovery architecture guard
+        run: npm run verify:backup-recovery
+
+      - name: Backup disaster recovery emulator test
+        run: npm run test:backup-recovery
+
       - name: Block 19 home experience foundation guard
         run: npm run verify:block-19-home-experience
 

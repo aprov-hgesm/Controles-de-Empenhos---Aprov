@@ -133,7 +133,9 @@
     "verify:block-20-premium-orbital-redesign": "node scripts/verify-block-20-premium-orbital-redesign.mjs",
     "verify:block-21-operational-stars-shooting-stars": "node scripts/verify-block-21-operational-stars-shooting-stars.mjs",
     "verify:central-avisos": "node scripts/verify-central-avisos.mjs",
-    "verify:block-18-security-resilience": "node scripts/verify-block-18-security-resilience.mjs"
+    "verify:block-18-security-resilience": "node scripts/verify-block-18-security-resilience.mjs",
+    "verify:backup-recovery": "node scripts/verify-backup-recovery.mjs",
+    "test:backup-recovery": "npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-backup --only auth,firestore \"node --test scripts/workspace-backup-disaster.test.mjs\""
   },
   "dependencies": {
     "clsx": "^2.1.1",

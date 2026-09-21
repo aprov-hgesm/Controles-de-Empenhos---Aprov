@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 
 import { useWorkspaceDriveStorage } from '../../hooks/useWorkspaceDriveStorage';
+import { WorkspaceBackupSection } from './WorkspaceBackupSection';
 import type { ResolvedWorkspaceContext } from '../../lib/workspaceContext';
 
 type ToastType = 'success' | 'error' | 'info';
@@ -33,6 +34,7 @@ export function WorkspaceDriveControl({
   const [open, setOpen] = useState(false);
   const {
     settings,
+    session,
     status,
     loading,
     error,
@@ -177,6 +179,14 @@ export function WorkspaceDriveControl({
               </div>
             </div>
           )}
+
+          <WorkspaceBackupSection
+            user={user}
+            workspaceContext={workspaceContext}
+            session={session}
+            settings={settings}
+            onNotify={notify}
+          />
 
           {error && (
             <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">

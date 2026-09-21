@@ -9,7 +9,8 @@ export type AdminSecurityOperation =
   | 'sector-delete'
   | 'sector-password-reset'
   | 'firebase-global-usage'
-  | 'usage-alert-policy';
+  | 'usage-alert-policy'
+  | 'firebase-auth-backup';
 
 export type AdminMutationOperation =
   | 'sector-provision'
@@ -204,6 +205,22 @@ export function assertAdminMutationEnabled(
 
   throw new ApiSecurityError(
     'Esta operação administrativa está temporariamente suspensa por segurança.',
+    'SECURITY_KILL_SWITCH',
+    503
+  );
+}
+
+export function assertFirebaseAuthBackupEnabled(
+  context: RequestSecurityContext
+): void {
+  if (process.env.EMPROVEX_DISABLE_AUTH_BACKUP !== '1') return;
+
+  logSecurityEvent('kill_switch_blocked', context, {
+    operation: 'firebase-auth-backup',
+  });
+
+  throw new ApiSecurityError(
+    'O backup administrativo de identidades está temporariamente suspenso por segurança.',
     'SECURITY_KILL_SWITCH',
     503
   );

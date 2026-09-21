@@ -1,0 +1,46 @@
+{
+  "contractVersion": 1,
+  "name": "EMPROVEX Backup and Recovery",
+  "targetUsers": 50,
+  "workspaceBackup": {
+    "format": "emprovex-workspace-backup",
+    "schemaVersion": 1,
+    "collections": [
+      "empenhos",
+      "alerts",
+      "invoices",
+      "comissoes",
+      "cronogramas"
+    ],
+    "settings": [
+      "termoRecebimentoCounter",
+      "empenhoClasses"
+    ],
+    "excludedSettings": [
+      "documentStorage",
+      "homeSnapshot",
+      "backupLease"
+    ],
+    "pdfBytesIncluded": false,
+    "retentionCount": 30,
+    "autoIntervalHours": 24,
+    "restoreMode": "missing-only",
+    "driveScope": "https://www.googleapis.com/auth/drive.file"
+  },
+  "admin": {
+    "operationalTenantBypass": false,
+    "monitorsMetadataOnly": true
+  },
+  "authBackup": {
+    "mode": "metadata-only",
+    "founderOnly": true,
+    "passwordHashIncluded": false,
+    "passwordSaltIncluded": false,
+    "includesPlatformDirectory": true,
+    "passwordResetRequiredAfterCatastrophicRestore": true
+  },
+  "disasterTest": {
+    "environment": "firebase-emulator",
+    "productionDeletion": false
+  }
+}
