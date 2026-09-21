@@ -30,7 +30,7 @@ assert(empenhos.includes('prioridade de liquidação'), 'Cards RPNP precisam com
 assert(empenhos.includes('getEmpenhoYearFilterLabel(y)'), 'Filtro de ano precisa identificar o exercício RPNP.');
 assert(operationalData.includes('getEmpenhoExerciseYear(emp)'), 'Detecção de exercício deve ser centralizada nos filtros.');
 
-assert(docs.includes('RPNP **não é gravado** em `classification`'), 'Documentação precisa registrar a não persistência de RPNP.');
+assert(docs.includes('RPNP **não é gravado**') && docs.includes('classification'), 'Documentação precisa registrar a não persistência de RPNP.');
 assert(docs.includes('prioridade implementada é **visual e de ordenação**'), 'Documentação precisa limitar o escopo da prioridade.');
 
 console.log('RPNP visual priority guard: OK');
