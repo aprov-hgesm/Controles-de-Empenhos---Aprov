@@ -8,6 +8,7 @@ import { PROMPT_EXTRACAO_EMPENHO } from '../domain/empenhoHelpers';
 import { normalizeEmpenhoClassCode } from '../../../lib/empenhoClasses';
 import { getInvoiceRecordKey, isValidSupplierCnpj, normalizeSupplierCnpj } from '../../../lib/invoiceIdentity';
 import { commitEmpenhoSupplierCnpjMigration } from '../../../lib/nsIntegrityService';
+import { isValidNsNumber, normalizeNsNumber } from '../../../lib/nsIntegrity';
 import { loadJsPdf } from '../../../lib/pdfToolkit';
 
 type ActiveTab = 'inicio' | 'painel' | 'empenhos' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas' | 'avisos';
@@ -126,11 +127,52 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     }
 
     const willChangeIdentity = currentCnpj !== normalizedCnpj;
+    const nsWithoutUgCount = linkedInvoices.filter(
+      (invoice) =>
+        Boolean(normalizeNsNumber(invoice.numeroNS)) &&
+        !String(invoice.nsUg || '').trim()
+    ).length;
+
     if (willChangeIdentity && linkedInvoices.length > 0) {
+      const automaticUgNotice = nsWithoutUgCount > 0
+        ? ` ${nsWithoutUgCount} NS(s) legada(s) sem UG receberão automaticamente a UG da unidade autenticada.`
+        : '';
       const confirmed = confirm(
-        `Alterar o CNPJ do empenho ${empenhoId} migrará ${linkedInvoices.length} Nota(s) Fiscal(is), suas identidades internas e os locks de NS associados. Deseja continuar?`
+        `Alterar o CNPJ do empenho ${empenhoId} migrará ${linkedInvoices.length} Nota(s) Fiscal(is), suas identidades internas e os locks de NS associados.${automaticUgNotice} Deseja continuar?`
       );
       if (!confirmed) return;
+    }
+
+    const legacyNsCanonicalOverrides: Record<string, string> = {};
+    for (const invoice of linkedInvoices) {
+      const storedNs = normalizeNsNumber(invoice.numeroNS);
+      if (!storedNs || isValidNsNumber(storedNs)) continue;
+
+      const empenhoYear = empenhoId.match(/^(\d{4})NE/i)?.[1];
+      const suggestedNs = /^\d{1,6}$/.test(storedNs)
+        ? `${empenhoYear || new Date().getFullYear()}NS${storedNs.padStart(6, '0')}`
+        : storedNs;
+
+      const confirmedNs = prompt(
+        `A NF ${invoice.id} possui a NS legada "${storedNs}" fora do padrão completo. Confirme ou corrija o número no formato AAAANS000000. A UG será preenchida automaticamente pela unidade do usuário.`,
+        suggestedNs
+      );
+
+      if (confirmedNs === null) {
+        showToast('Migração de CNPJ cancelada antes de alterar qualquer dado.', 'info');
+        return;
+      }
+
+      const normalizedNs = normalizeNsNumber(confirmedNs);
+      if (!isValidNsNumber(normalizedNs)) {
+        showToast(
+          `A NS informada para a NF ${invoice.id} é inválida. Use o formato AAAANS000000, por exemplo 2026NS000922.`,
+          'error'
+        );
+        return;
+      }
+
+      legacyNsCanonicalOverrides[getInvoiceRecordKey(invoice)] = normalizedNs;
     }
 
     try {
@@ -138,6 +180,10 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
         empenhoId,
         targetSupplierCnpj: normalizedCnpj,
         expectedRevision: currentEmpenho.revision,
+        legacyNsCanonicalOverrides:
+          Object.keys(legacyNsCanonicalOverrides).length > 0
+            ? legacyNsCanonicalOverrides
+            : undefined,
       });
 
       setEmpenhos((current) => current.map((emp) => (
@@ -164,12 +210,23 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
         return;
       }
 
+      const nsRepairSummary = [
+        result.backfilledNsUgCount > 0
+          ? `${result.backfilledNsUgCount} NS(s) receberam a UG da unidade`
+          : '',
+        result.canonicalizedLegacyNsCount > 0
+          ? `${result.canonicalizedLegacyNsCount} NS(s) legada(s) foram convertidas para o formato completo`
+          : '',
+      ].filter(Boolean).join(' ');
+
+      const successMessage = normalizedCnpj
+        ? result.migratedInvoiceCount > 0
+          ? `CNPJ do empenho ${empenhoId} atualizado. ${result.migratedInvoiceCount} NF(s) e ${result.migratedLockCount} lock(s) de NS foram sincronizados.`
+          : `CNPJ do fornecedor atualizado no empenho ${empenhoId}.`
+        : `CNPJ removido do empenho ${empenhoId}.`;
+
       showToast(
-        normalizedCnpj
-          ? result.migratedInvoiceCount > 0
-            ? `CNPJ do empenho ${empenhoId} atualizado. ${result.migratedInvoiceCount} NF(s) e ${result.migratedLockCount} lock(s) de NS foram sincronizados.`
-            : `CNPJ do fornecedor atualizado no empenho ${empenhoId}.`
-          : `CNPJ removido do empenho ${empenhoId}.`,
+        nsRepairSummary ? `${successMessage} ${nsRepairSummary}.` : successMessage,
         'success'
       );
     } catch (error) {
