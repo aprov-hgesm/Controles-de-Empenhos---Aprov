@@ -50,6 +50,21 @@ for (const marker of [
 ]) requireText(monitoring, marker, `Cloud Monitoring perdeu requisito: ${marker}`);
 
 forbidText(monitoring, 'NEXT_PUBLIC_', 'Credencial sensível não pode usar NEXT_PUBLIC_.');
+forbidText(
+  monitoring,
+  '.setSubject(',
+  'JWT assertion do Cloud Monitoring não pode usar subject sem domain-wide delegation.'
+);
+requireText(
+  monitoring,
+  '.setIssuer(clientEmail)',
+  'JWT assertion perdeu issuer da conta de serviço.'
+);
+requireText(
+  monitoring,
+  '.setAudience(OAUTH_TOKEN_URL)',
+  'JWT assertion perdeu audience do endpoint OAuth.'
+);
 
 for (const marker of [
   "runtime = 'nodejs'",
