@@ -5,7 +5,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { AlertCircle, AlertTriangle, ArrowLeft, Braces, Calendar, CalendarDays, Check, CheckCircle2, ChevronRight, Copy, Edit, Eye, FileDown, FileText, Loader2, Package, Plus, Printer, Save, Search, Settings2, Trash2, X } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActions';
-import type { Empenho, Invoice, EmpenhoPdfDocument } from '../../../lib/types';
+import type { Alert, Empenho, Invoice, EmpenhoPdfDocument } from '../../../lib/types';
 import { formatSupplierCnpj } from '../../../lib/invoiceIdentity';
 import type { EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 import {
@@ -16,6 +16,12 @@ import {
   getEmpenhoYearFilterLabel,
   isRpnpEmpenho,
 } from '../domain/empenhoExercise';
+import {
+  getNoticeSeverity,
+  getNoticeSortTimestamp,
+  isNoticePending,
+  isNoticeVisibleInActiveQueue,
+} from '../../avisos/domain/noticeLifecycle';
 import type { User } from 'firebase/auth';
 type Setter<T = any> = Dispatch<SetStateAction<T>>;
 
@@ -32,6 +38,7 @@ type NewEmpenhoForm = {
 type NewItemForm = { id: string; name: string; unit: string; quantity: string; unitPrice: string };
 
 interface EmpenhosViewContext {
+  alerts: Alert[];
   addEmpenhoClass: (code: string, description: string, requiresTermoRecebimento: boolean) => Promise<EmpenhoClassDefinition>;
   copiedPrompt: boolean;
   empenhoClasses: EmpenhoClassDefinition[];
@@ -103,7 +110,7 @@ interface EmpenhosViewProps { context: EmpenhosViewContext; }
 /** Tela de cadastro e detalhe de empenhos extraída sem alterar comportamento. */
 export function EmpenhosView({ context }: EmpenhosViewProps) {
   const shouldReduceMotion = useReducedMotion();
-  const { addEmpenhoClass, copiedPrompt, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCopyPrompt, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadPromptPdf, handleDownloadPromptTxt, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoPregao, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessJson, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, jsonInput, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setJsonInput, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user } = context;
+  const { alerts, addEmpenhoClass, copiedPrompt, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCopyPrompt, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadPromptPdf, handleDownloadPromptTxt, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoPregao, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessJson, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, jsonInput, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setJsonInput, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user } = context;
   const [editingPregaoEmpenhoId, setEditingPregaoEmpenhoId] = React.useState<string | null>(null);
   const [pregaoDraft, setPregaoDraft] = React.useState('');
   const [savingPregao, setSavingPregao] = React.useState(false);
@@ -614,6 +621,24 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                   const itemsComSaldo = targetEmp.items.filter(i => (i.quantity - i.received) > 0).length;
                   const targetInvoices = invoices.filter(inv => inv.empenhoId === targetEmp.id);
                   const totalInvoicesValue = targetInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
+                  const activeEmpenhoNotices = alerts
+                    .filter((alert) => alert.empenhoId === targetEmp.id && isNoticeVisibleInActiveQueue(alert))
+                    .sort((left, right) => {
+                      const severityRank = { 'CRÍTICO': 3, 'ATENÇÃO': 2, 'INFORMATIVO': 1 } as const;
+                      const severityDelta =
+                        severityRank[getNoticeSeverity(right)] - severityRank[getNoticeSeverity(left)];
+                      if (severityDelta !== 0) return severityDelta;
+                      return getNoticeSortTimestamp(right) - getNoticeSortTimestamp(left);
+                    });
+                  const pendingEmpenhoNotices = activeEmpenhoNotices.filter(isNoticePending);
+                  const criticalEmpenhoNoticeCount = activeEmpenhoNotices.filter(
+                    (alert) => getNoticeSeverity(alert) === 'CRÍTICO'
+                  ).length;
+                  const noticeSummaryTone = criticalEmpenhoNoticeCount > 0
+                    ? 'border-rose-200 bg-rose-50/80 text-rose-800'
+                    : pendingEmpenhoNotices.length > 0
+                      ? 'border-amber-200 bg-amber-50/80 text-amber-800'
+                      : 'border-blue-200 bg-blue-50/70 text-[#00288e]';
 
                   return (
                     <div className="space-y-6 animate-fadeIn">
@@ -879,6 +904,49 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                           </div>
                         </div>
                       </div>
+
+                      {activeEmpenhoNotices.length > 0 && (
+                        <div
+                          data-testid="empenho-notice-summary"
+                          className={`flex flex-col gap-2 rounded-xl border px-3.5 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between ${noticeSummaryTone}`}
+                        >
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.12em]">
+                                <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                                Avisos e pendências
+                              </span>
+                              <span className="rounded-full border border-current/15 bg-white/60 px-2 py-0.5 text-[10px] font-extrabold">
+                                {pendingEmpenhoNotices.length > 0
+                                  ? `${pendingEmpenhoNotices.length} pendência${pendingEmpenhoNotices.length === 1 ? '' : 's'}`
+                                  : `${activeEmpenhoNotices.length} aviso${activeEmpenhoNotices.length === 1 ? '' : 's'}`}
+                              </span>
+                              {criticalEmpenhoNoticeCount > 0 && (
+                                <span className="rounded-full border border-rose-200 bg-white/70 px-2 py-0.5 text-[10px] font-black text-rose-700">
+                                  {criticalEmpenhoNoticeCount} crítico{criticalEmpenhoNoticeCount === 1 ? '' : 's'}
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-1 truncate text-[11px] font-semibold opacity-80 sm:max-w-[680px]">
+                              {activeEmpenhoNotices
+                                .slice(0, 2)
+                                .map((alert) => alert.title)
+                                .join(' • ')}
+                              {activeEmpenhoNotices.length > 2
+                                ? ` • +${activeEmpenhoNotices.length - 2}`
+                                : ''}
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('avisos')}
+                            className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-current/15 bg-white/70 px-3 text-[10px] font-extrabold transition hover:bg-white"
+                          >
+                            Abrir Central
+                          </button>
+                        </div>
+                      )}
 
                       <EmpenhoDocumentActions
                         empenho={targetEmp}
