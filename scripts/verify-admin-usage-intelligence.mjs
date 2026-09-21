@@ -114,7 +114,7 @@ for (const marker of [
   'Anual',
   'Exportar CSV',
   'Cota global hoje',
-  'HGeSM · conta fundadora',
+  'conta fundadora HGeSM',
   'não separa a cobrança por UG',
 ]) {
   requireText(reports, marker, `Painel histórico perdeu requisito visual/semântico: ${marker}`);
@@ -132,7 +132,7 @@ for (const marker of [
   'Vercel Cron',
   'dia anterior já encerrado',
   'CRON_SECRET',
-  'listeners adicionais',
+  'não usa `onSnapshot`',
 ]) {
   requireText(docs, marker, `Documentação da inteligência de consumo perdeu requisito: ${marker}`);
 }
