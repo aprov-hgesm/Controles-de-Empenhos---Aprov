@@ -136,7 +136,8 @@
     "verify:block-18-security-resilience": "node scripts/verify-block-18-security-resilience.mjs",
     "verify:backup-recovery": "node scripts/verify-backup-recovery.mjs",
     "test:backup-recovery": "npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-backup --only auth,firestore \"node --test scripts/workspace-backup-disaster.test.mjs\"",
-    "verify:rpnp-visual-priority": "node scripts/verify-rpnp-visual-priority.mjs"
+    "verify:rpnp-visual-priority": "node scripts/verify-rpnp-visual-priority.mjs",
+    "verify:inicio-background-texture": "node scripts/verify-inicio-background-texture.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
