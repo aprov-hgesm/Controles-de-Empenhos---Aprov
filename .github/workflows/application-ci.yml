@@ -310,6 +310,9 @@ jobs:
       - name: RPNP visual priority guard
         run: npm run verify:rpnp-visual-priority
 
+      - name: TR counter and workspace document identity guard
+        run: npm run verify:tr-workspace-documents
+
       - name: Inicio background texture guard
         run: npm run verify:inicio-background-texture
 
