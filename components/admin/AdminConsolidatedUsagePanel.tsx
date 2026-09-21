@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 import { usePlatformAdminUsageAlertPolicy } from '../../hooks/usePlatformAdminUsageAlertPolicy';
+import { HGESM_WORKSPACE_ID } from '../../lib/hgesmWorkspace';
 import type { Workspace } from '../../lib/platformIdentity';
 import type { AdminWorkspaceUsageEstimate } from '../../lib/platformAdminUsage';
 import {
@@ -484,6 +485,11 @@ export function AdminConsolidatedUsagePanel({
                       <span className="rounded-full border border-white/[0.08] bg-white/[0.035] px-2 py-0.5 font-mono text-[9px] font-bold text-slate-300">
                         UG {row.workspace.ug}
                       </span>
+                      {row.workspace.id === HGESM_WORKSPACE_ID && (
+                        <span className="rounded-full border border-violet-300/15 bg-violet-400/[0.07] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.10em] text-violet-100">
+                          HGeSM · fundador
+                        </span>
+                      )}
                       <span className="rounded-full border border-cyan-300/15 bg-cyan-400/[0.06] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.10em] text-cyan-100">
                         {formatShare(row.share)} das estimativas
                       </span>
