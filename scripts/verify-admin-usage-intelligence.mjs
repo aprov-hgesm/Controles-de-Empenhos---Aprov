@@ -23,6 +23,9 @@ const monitoring = read('lib/server/googleCloudMonitoring.ts');
 const historyServer = read('lib/server/globalUsageHistory.ts');
 const globalRoute = read('app/api/admin/firebase-global-usage/route.ts');
 const rules = read('firestore.rules');
+const cron = read('app/api/cron/usage-snapshot/route.ts');
+const vercel = read('vercel.json');
+const envExample = read('.env.example');
 const docs = read('docs/ADMIN_USAGE_INTELLIGENCE.md');
 
 for (const marker of [
@@ -85,6 +88,18 @@ requireText(
 );
 
 for (const marker of [
+  'CRON_SECRET',
+  'loadPreviousFirebaseBillingDayObservation',
+  'persistGlobalUsageObservation',
+  "request.headers.get('authorization')",
+]) {
+  requireText(cron, marker, `Cron diário perdeu requisito: ${marker}`);
+}
+requireText(vercel, '/api/cron/usage-snapshot', 'Vercel perdeu rota do cron diário.');
+requireText(vercel, '15 9 * * *', 'Vercel perdeu horário diário de consolidação.');
+requireText(envExample, 'CRON_SECRET=""', 'Exemplo de ambiente perdeu CRON_SECRET.');
+
+for (const marker of [
   'match /platformUsageHistory/{dayKey}',
   'allow get, list: if isPlatformAdmin();',
   'allow create, update, delete: if false;',
@@ -114,6 +129,9 @@ for (const marker of [
   'hgesm-aprov',
   '160416',
   'getDocs',
+  'Vercel Cron',
+  'dia anterior já encerrado',
+  'CRON_SECRET',
   'listeners adicionais',
 ]) {
   requireText(docs, marker, `Documentação da inteligência de consumo perdeu requisito: ${marker}`);
@@ -128,6 +146,7 @@ if (findings.length) {
   console.log('Cota principal: FIRESTORE ENTERPRISE BILLABLE READ UNITS');
   console.log('HGeSM fundador: INCLUÍDO');
   console.log('Histórico: DIÁRIO / SEMANAL / MENSAL / ANUAL');
+  console.log('Captura diária: VERCEL CRON AUTENTICADO');
   console.log('UG: ATRIBUIÇÃO ESTIMADA E SEPARADA');
   console.log('Realtime histórico: NENHUM LISTENER');
 }
