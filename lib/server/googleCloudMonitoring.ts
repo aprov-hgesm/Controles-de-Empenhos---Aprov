@@ -94,10 +94,9 @@ interface ServiceAccountCredentials {
 interface CachedAccessToken {
   token: string;
   expiresAtMs: number;
-  credentialIdentity: string;
 }
 
-let cachedAccessToken: CachedAccessToken | null = null;
+const cachedAccessTokens = new Map<string, CachedAccessToken>();
 
 function normalizePrivateKey(value: string): string {
   return value.includes('\\n') ? value.replace(/\\n/g, '\n') : value;
@@ -149,29 +148,23 @@ function parseDedicatedMonitoringCredentials(): ServiceAccountCredentials | null
   };
 }
 
-function resolveMonitoringCredentials(): ServiceAccountCredentials {
-  // Prefer the already-provisioned server-only Firebase admin service account.
-  // This removes the need for a second private key in Vercel while preserving
-  // the dedicated monitoring credential as a backwards-compatible fallback.
-  const credentials =
-    parseFirebaseAdminCredentials()
-    || parseDedicatedMonitoringCredentials();
+function monitoringCredentialCandidates(): ServiceAccountCredentials[] {
+  const candidates = [
+    parseFirebaseAdminCredentials(),
+    parseDedicatedMonitoringCredentials(),
+  ].filter((value): value is ServiceAccountCredentials => Boolean(value));
 
-  if (!credentials) {
-    throw new Error(
-      'Cloud Monitoring não configurado: configure FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON '
-      + 'ou as credenciais dedicadas EMPROVEX_GCP_MONITORING_CLIENT_EMAIL/PRIVATE_KEY.'
-    );
-  }
-
-  return credentials;
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    const identity = candidate.clientEmail.toLowerCase();
+    if (seen.has(identity)) return false;
+    seen.add(identity);
+    return true;
+  });
 }
 
 export function isGoogleCloudMonitoringConfigured(): boolean {
-  return Boolean(
-    parseFirebaseAdminCredentials()
-    || parseDedicatedMonitoringCredentials()
-  );
+  return monitoringCredentialCandidates().length > 0;
 }
 
 function parseBooleanEnvironment(name: string, fallback: boolean): boolean {
@@ -213,17 +206,15 @@ function loadBillingReference(): FirestoreBillingReference {
   };
 }
 
-async function mintServiceAccountAccessToken(): Promise<string> {
-  const credentials = resolveMonitoringCredentials();
+async function mintServiceAccountAccessToken(
+  credentials: ServiceAccountCredentials
+): Promise<string> {
   const identity = `${credentials.source}:${credentials.clientEmail}`;
   const nowMs = Date.now();
+  const cached = cachedAccessTokens.get(identity);
 
-  if (
-    cachedAccessToken
-    && cachedAccessToken.credentialIdentity === identity
-    && cachedAccessToken.expiresAtMs - nowMs > 60_000
-  ) {
-    return cachedAccessToken.token;
+  if (cached && cached.expiresAtMs - nowMs > 60_000) {
+    return cached.token;
   }
 
   const key = await importPKCS8(credentials.privateKey, 'RS256');
@@ -255,7 +246,7 @@ async function mintServiceAccountAccessToken(): Promise<string> {
 
   if (!response.ok) {
     throw new Error(
-      `Falha ao autenticar o leitor do Cloud Monitoring (HTTP ${response.status}).`
+      `Falha ao autenticar ${credentials.source} no Cloud Monitoring (HTTP ${response.status}).`
     );
   }
 
@@ -265,15 +256,14 @@ async function mintServiceAccountAccessToken(): Promise<string> {
   };
 
   if (!payload.access_token) {
-    throw new Error('Cloud Monitoring não retornou token de acesso.');
+    throw new Error(`Cloud Monitoring não retornou token para ${credentials.source}.`);
   }
 
   const expiresIn = Number(payload.expires_in);
-  cachedAccessToken = {
+  cachedAccessTokens.set(identity, {
     token: payload.access_token,
     expiresAtMs: nowMs + (Number.isFinite(expiresIn) ? expiresIn : 3600) * 1000,
-    credentialIdentity: identity,
-  };
+  });
 
   return payload.access_token;
 }
@@ -458,14 +448,10 @@ export interface FirebaseGlobalUsageObservation {
   dataThrough: string | null;
 }
 
-export async function loadFirebaseGlobalUsageObservation(
-  now = new Date()
+async function loadObservationWithAccessToken(
+  accessToken: string,
+  now: Date
 ): Promise<FirebaseGlobalUsageObservation> {
-  if (!isGoogleCloudMonitoringConfigured()) {
-    throw new Error('Cloud Monitoring ainda não possui credencial server-side configurada.');
-  }
-
-  const accessToken = await mintServiceAccountAccessToken();
   const startTime = startOfPacificBillingDay(now).toISOString();
   const endTime = now.toISOString();
   const billingReference = loadBillingReference();
@@ -480,62 +466,14 @@ export async function loadFirebaseGlobalUsageObservation(
     activeConnections,
     snapshotListeners,
   ] = await Promise.all([
-    loadMetricObservation(
-      accessToken,
-      METRICS.documentReads.type,
-      METRICS.documentReads.kind,
-      startTime,
-      endTime
-    ),
-    loadMetricObservation(
-      accessToken,
-      METRICS.documentWrites.type,
-      METRICS.documentWrites.kind,
-      startTime,
-      endTime
-    ),
-    loadMetricObservation(
-      accessToken,
-      METRICS.documentDeletes.type,
-      METRICS.documentDeletes.kind,
-      startTime,
-      endTime
-    ),
-    loadMetricObservation(
-      accessToken,
-      METRICS.billableReadUnits.type,
-      METRICS.billableReadUnits.kind,
-      startTime,
-      endTime
-    ),
-    loadMetricObservation(
-      accessToken,
-      METRICS.billableRealtimeReadUnits.type,
-      METRICS.billableRealtimeReadUnits.kind,
-      startTime,
-      endTime
-    ),
-    loadMetricObservation(
-      accessToken,
-      METRICS.billableWriteUnits.type,
-      METRICS.billableWriteUnits.kind,
-      startTime,
-      endTime
-    ),
-    loadMetricObservation(
-      accessToken,
-      METRICS.activeConnections.type,
-      METRICS.activeConnections.kind,
-      startTime,
-      endTime
-    ),
-    loadMetricObservation(
-      accessToken,
-      METRICS.snapshotListeners.type,
-      METRICS.snapshotListeners.kind,
-      startTime,
-      endTime
-    ),
+    loadMetricObservation(accessToken, METRICS.documentReads.type, METRICS.documentReads.kind, startTime, endTime),
+    loadMetricObservation(accessToken, METRICS.documentWrites.type, METRICS.documentWrites.kind, startTime, endTime),
+    loadMetricObservation(accessToken, METRICS.documentDeletes.type, METRICS.documentDeletes.kind, startTime, endTime),
+    loadMetricObservation(accessToken, METRICS.billableReadUnits.type, METRICS.billableReadUnits.kind, startTime, endTime),
+    loadMetricObservation(accessToken, METRICS.billableRealtimeReadUnits.type, METRICS.billableRealtimeReadUnits.kind, startTime, endTime),
+    loadMetricObservation(accessToken, METRICS.billableWriteUnits.type, METRICS.billableWriteUnits.kind, startTime, endTime),
+    loadMetricObservation(accessToken, METRICS.activeConnections.type, METRICS.activeConnections.kind, startTime, endTime),
+    loadMetricObservation(accessToken, METRICS.snapshotListeners.type, METRICS.snapshotListeners.kind, startTime, endTime),
   ]);
 
   const timestamps = [
@@ -577,3 +515,35 @@ export async function loadFirebaseGlobalUsageObservation(
     dataThrough,
   };
 }
+
+export async function loadFirebaseGlobalUsageObservation(
+  now = new Date()
+): Promise<FirebaseGlobalUsageObservation> {
+  const candidates = monitoringCredentialCandidates();
+  if (!candidates.length) {
+    throw new Error('Cloud Monitoring ainda não possui credencial server-side configurada.');
+  }
+
+  const failures: string[] = [];
+
+  for (const credentials of candidates) {
+    try {
+      const accessToken = await mintServiceAccountAccessToken(credentials);
+      return await loadObservationWithAccessToken(accessToken, now);
+    } catch (error) {
+      cachedAccessTokens.delete(`${credentials.source}:${credentials.clientEmail}`);
+      const message = error instanceof Error ? error.message : 'falha desconhecida';
+      failures.push(`${credentials.source}: ${message}`);
+      console.warn('Leitor do Cloud Monitoring tentou credencial alternativa.', {
+        source: credentials.source,
+        message,
+      });
+    }
+  }
+
+  throw new Error(
+    'Nenhuma credencial server-side conseguiu consultar o Cloud Monitoring. '
+    + failures.join(' | ')
+  );
+}
+
