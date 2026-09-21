@@ -34,6 +34,7 @@ import {
 import { startWorkspaceSessionControl } from '../lib/platformSessionControl';
 import { useOperationalRealtimeCollections } from './useOperationalRealtimeCollections';
 import { useInicioOperationalSnapshot } from '../features/inicio/hooks/useInicioOperationalSnapshot';
+import { getEmpenhoExerciseYear } from '../features/empenhos/domain/empenhoExercise';
 
 /**
  * Fonte de verdade da sessão e das coleções operacionais em tempo real.
@@ -425,13 +426,12 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
   );
 
   const uniqueEmpenhoYears = useMemo(
-    () => Array.from(new Set(empenhos.map((emp) => {
-      if (!emp.date) return '';
-      const parts = emp.date.split('/');
-      if (parts.length === 3) return parts[2];
-      if (emp.date.includes('-')) return emp.date.split('-')[0];
-      return '';
-    }).filter(Boolean))).sort((a, b) => b.localeCompare(a)) as string[],
+    () => Array.from(new Set(
+      empenhos
+        .map((emp) => getEmpenhoExerciseYear(emp))
+        .filter((year): year is number => Number.isFinite(year))
+        .map(String)
+    )).sort((a, b) => b.localeCompare(a)),
     [empenhos]
   );
 
