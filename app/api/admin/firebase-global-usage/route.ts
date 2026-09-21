@@ -15,6 +15,7 @@ import {
   isGoogleCloudMonitoringConfigured,
   loadFirebaseGlobalUsageObservation,
 } from '../../../../lib/server/googleCloudMonitoring';
+import { persistGlobalUsageObservation } from '../../../../lib/server/globalUsageHistory';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -102,9 +103,21 @@ export async function GET(request: NextRequest) {
 
   try {
     const observation = await loadFirebaseGlobalUsageObservation();
+    let historyPersisted = false;
+
+    try {
+      historyPersisted = await persistGlobalUsageObservation(observation);
+    } catch (historyError) {
+      console.warn('Métricas globais carregadas, mas o histórico diário não pôde ser consolidado.', {
+        requestId: security.requestId,
+        error: historyError instanceof Error ? historyError.message : historyError,
+      });
+    }
+
     return NextResponse.json(
       {
         configured: true,
+        historyPersisted,
         ...observation,
       },
       {
@@ -118,10 +131,21 @@ export async function GET(request: NextRequest) {
       error: error instanceof Error ? error.message : error,
     });
 
+    const message = error instanceof Error ? error.message : '';
+    const diagnosticCode = message.includes('HTTP 403')
+      ? 'CLOUD_MONITORING_PERMISSION_DENIED'
+      : message.includes('HTTP 401')
+        ? 'CLOUD_MONITORING_AUTH_FAILED'
+        : 'CLOUD_MONITORING_UNAVAILABLE';
+
     return NextResponse.json(
       {
-        code: 'CLOUD_MONITORING_UNAVAILABLE',
-        message: 'Não foi possível consultar as métricas globais do Firebase neste momento.',
+        code: diagnosticCode,
+        message: diagnosticCode === 'CLOUD_MONITORING_PERMISSION_DENIED'
+          ? 'A credencial server-side não possui permissão para consultar o Cloud Monitoring. Verifique roles/monitoring.viewer.'
+          : diagnosticCode === 'CLOUD_MONITORING_AUTH_FAILED'
+            ? 'A credencial server-side do Cloud Monitoring não pôde ser autenticada.'
+            : 'Não foi possível consultar as métricas globais do Firebase neste momento.',
       },
       {
         status: 502,
