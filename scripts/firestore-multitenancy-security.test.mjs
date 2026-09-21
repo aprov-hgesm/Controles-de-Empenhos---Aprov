@@ -2487,6 +2487,123 @@ async function main() {
   assert.equal(cnpjLockAfter.data()?.invoiceRecordKey, cnpjInvoiceANext);
   assert.equal(cnpjLockAfter.data()?.supplierCnpj, cnpjNext);
 
+  const legacyUgEmpenhoId = '2026NE-CNPJ-LEGACY-UG';
+  const legacyUgOldKey = '02574';
+  const legacyUgNewKey = `nf_${cnpjNext}_02574`;
+  const legacyUgRawNs = '922';
+  const legacyUgCanonicalNs = '2026NS000922';
+  const legacyUgLockRef = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'settings',
+    sagLockId(legacyUgCanonicalNs)
+  );
+
+  await ownerSet(`workspaces/workspace-a/empenhos/${legacyUgEmpenhoId}`, {
+    id: legacyUgEmpenhoId,
+    supplier: 'Fornecedor legado sem CNPJ',
+    description: 'Migração CNPJ com NS legada',
+    date: '2026-01-01',
+    status: 'Ativo',
+    items: [],
+  });
+  await ownerSet(`workspaces/workspace-a/invoices/${legacyUgOldKey}`, {
+    id: '02574',
+    recordKey: legacyUgOldKey,
+    empenhoId: legacyUgEmpenhoId,
+    supplier: 'Fornecedor legado sem CNPJ',
+    issueDate: '2026-01-20',
+    items: [],
+    totalValue: 250,
+    numeroNS: legacyUgRawNs,
+  });
+
+  await allowed('CNPJ saneia NS legada usando a UG da unidade na mesma transação', () =>
+    runTransaction(sessionA.db, async (transaction) => {
+      const empenhoRef = doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'empenhos',
+        legacyUgEmpenhoId
+      );
+      const oldInvoiceRef = doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'invoices',
+        legacyUgOldKey
+      );
+      const newInvoiceRef = doc(
+        sessionA.db,
+        'workspaces',
+        'workspace-a',
+        'invoices',
+        legacyUgNewKey
+      );
+
+      const [empenhoSnapshot, oldInvoiceSnapshot, newInvoiceSnapshot, lockSnapshot] = await Promise.all([
+        transaction.get(empenhoRef),
+        transaction.get(oldInvoiceRef),
+        transaction.get(newInvoiceRef),
+        transaction.get(legacyUgLockRef),
+      ]);
+
+      assert.equal(empenhoSnapshot.exists(), true);
+      assert.equal(oldInvoiceSnapshot.exists(), true);
+      assert.equal(newInvoiceSnapshot.exists(), false);
+      assert.equal(lockSnapshot.exists(), false);
+
+      const timestamp = now();
+      transaction.set(
+        empenhoRef,
+        {
+          supplierCnpj: cnpjNext,
+          revision: 1,
+          updatedAt: timestamp,
+          updatedBy: sessionA.user.uid,
+        },
+        { merge: true }
+      );
+      transaction.set(newInvoiceRef, {
+        ...oldInvoiceSnapshot.data(),
+        recordKey: legacyUgNewKey,
+        supplierCnpj: cnpjNext,
+        numeroNS: legacyUgCanonicalNs,
+        nsUg: DEFAULT_NS_UG,
+      });
+      transaction.delete(oldInvoiceRef);
+      transaction.set(legacyUgLockRef, {
+        id: sagLockId(legacyUgCanonicalNs),
+        type: 'sag-ns-lock',
+        workspaceId: 'workspace-a',
+        ug: DEFAULT_NS_UG,
+        numeroNS: legacyUgCanonicalNs,
+        invoiceRecordKey: legacyUgNewKey,
+        invoiceId: '02574',
+        empenhoId: legacyUgEmpenhoId,
+        supplierCnpj: cnpjNext,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        updatedBy: sessionA.user.uid,
+      });
+    })
+  );
+
+  const [legacyUgEmpenhoAfter, legacyUgOldAfter, legacyUgNewAfter, legacyUgLockAfter] = await Promise.all([
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'empenhos', legacyUgEmpenhoId)),
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', legacyUgOldKey)),
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'invoices', legacyUgNewKey)),
+    getDoc(legacyUgLockRef),
+  ]);
+  assert.equal(legacyUgEmpenhoAfter.data()?.supplierCnpj, cnpjNext);
+  assert.equal(legacyUgOldAfter.exists(), false);
+  assert.equal(legacyUgNewAfter.data()?.numeroNS, legacyUgCanonicalNs);
+  assert.equal(legacyUgNewAfter.data()?.nsUg, DEFAULT_NS_UG);
+  assert.equal(legacyUgLockAfter.data()?.ug, DEFAULT_NS_UG);
+  assert.equal(legacyUgLockAfter.data()?.invoiceRecordKey, legacyUgNewKey);
+
   const cnpjDeniedEmpenhoId = '2026NE-CNPJ-DENY';
   const cnpjDeniedKey = `nf_${cnpjOld}_deny`;
   const cnpjDeniedNs = '2026NS009301';
