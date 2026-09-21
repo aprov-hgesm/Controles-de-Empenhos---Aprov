@@ -382,6 +382,9 @@ jobs:
       - name: EMPROVEX brand admin guard
         run: npm run verify:brand-admin
 
+      - name: EMPROVEX admin information architecture guard
+        run: npm run verify:admin-information-architecture
+
       - name: EMPROVEX brand logo lock security test
         run: npm run test:brand-logo-lock
 
