@@ -254,6 +254,7 @@ export function PlatformAdminView({
     sessionsError ? 'Monitoramento de sessões requer atenção.' : null,
     usageError ? 'Telemetria estimada por UG requer atenção.' : null,
     globalUsageError ? 'Telemetria global do Firebase requer atenção.' : null,
+    billing.error ? 'Controle administrativo de assinaturas requer atenção.' : null,
     disabledWorkspaceCount > 0
       ? disabledWorkspaceCount + ' setor(es) está(ão) suspenso(s).'
       : null,
