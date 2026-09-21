@@ -3,6 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { SignJWT, decodeJwt, importPKCS8 } from 'jose';
 
 import firebaseConfig from '../../firebase-applet-config.json';
+import { buildInitialBillingAccount } from '../billing';
 import { HGESM_SECTOR_EMAIL, HGESM_UG, HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import {
   FOUNDER_AUTH_PROVIDER,
@@ -730,7 +731,8 @@ async function createSectorDirectory(
   accessToken: string,
   result: Pick<SectorProvisioningResult, 'workspace' | 'account'>,
   founder: FounderSession,
-  correlationId: string
+  correlationId: string,
+  grantTrial: boolean
 ): Promise<void> {
   const termCounter = createInitialWorkspaceTermCounter();
   const workspacePath = `workspaces/${result.workspace.id}`;
@@ -745,6 +747,12 @@ async function createSectorDirectory(
     );
   }
   const ugIndexPath = `platformUgIndex/${ug}`;
+  const billingPath = `billingAccounts/${result.workspace.id}`;
+  const billingAccount = buildInitialBillingAccount(
+    result.workspace,
+    founder.email,
+    grantTrial
+  );
 
   try {
     await commitFirestoreWrites(accessToken, [
@@ -782,6 +790,13 @@ async function createSectorDirectory(
         },
         currentDocument: { exists: false },
       },
+      {
+        update: {
+          name: firestoreDocumentName(billingPath),
+          fields: toFirestoreFields(billingAccount as unknown as Record<string, unknown>),
+        },
+        currentDocument: { exists: false },
+      },
       serverPlatformAuditWrite({
         operation: 'sector.create',
         workspaceId: result.workspace.id,
@@ -797,6 +812,8 @@ async function createSectorDirectory(
         },
         metadata: {
           authProvider: result.account.authProvider || 'password',
+          grantTrial,
+          billingMode: 'observe',
         },
       }),
     ]);
@@ -825,6 +842,7 @@ async function deleteSectorDirectory(
     { delete: firestoreDocumentName(`workspaces/${workspaceId}/sessionSlots/slot-1`) },
     { delete: firestoreDocumentName(`workspaces/${workspaceId}/sessionSlots/slot-2`) },
     { delete: firestoreDocumentName(`platformAccounts/${email}`) },
+    { delete: firestoreDocumentName(`billingAccounts/${workspaceId}`) },
     { delete: firestoreDocumentName(`workspaces/${workspaceId}`) },
     ...(isValidUnitUg(normalizedUg)
       ? [{ delete: firestoreDocumentName(`platformUgIndex/${normalizedUg}`) }]
@@ -1295,7 +1313,8 @@ export async function provisionSectorWorkspaceWithAuth(
         account: records.account,
       },
       founder,
-      operationId
+      operationId,
+      input.grantTrial
     );
     directoryCreated = true;
 
