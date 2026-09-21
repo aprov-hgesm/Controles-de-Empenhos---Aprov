@@ -4,28 +4,35 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   ArrowLeftRight,
+  BarChart3,
   Building2,
-  Database,
   CirclePause,
   CirclePlay,
+  Database,
+  DatabaseBackup,
+  LayoutDashboard,
   Loader2,
   LockKeyhole,
   LogOut,
+  MonitorSmartphone,
   Pencil,
   Plus,
+  Search,
+  ShieldAlert,
   ShieldCheck,
   Trash2,
   UserCog,
 } from 'lucide-react';
+import type { User } from 'firebase/auth';
 import { motion, useReducedMotion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 
-import { CreateSectorModal } from './CreateSectorModal';
 import { EditSectorModal } from './EditSectorModal';
+import { AdminBackupPanel } from './AdminBackupPanel';
+import { AdminConsumptionHub } from './AdminConsumptionHub';
+import { AdminCreateSectorPanel } from './AdminCreateSectorPanel';
+import { AdminSecurityPanel } from './AdminSecurityPanel';
 import { AdminSessionsPanel } from './AdminSessionsPanel';
-import { AdminUsagePanel } from './AdminUsagePanel';
-import { AdminGlobalUsagePanel } from './AdminGlobalUsagePanel';
-import { AdminConsolidatedUsagePanel } from './AdminConsolidatedUsagePanel';
 import { ToastNotification } from '../layout/ToastNotification';
 import { createHgesmFoundingWorkspace } from '../../lib/hgesmWorkspace';
 import type {
@@ -39,7 +46,31 @@ import type { AdminWorkspaceUsageEstimate } from '../../lib/platformAdminUsage';
 import type { FirebaseGlobalUsageSnapshot } from '../../lib/platformCapacity';
 import { setActiveProfileMode } from '../../lib/profileMode';
 
+type AdminTabId =
+  | 'overview'
+  | 'setores'
+  | 'novo-setor'
+  | 'consumo'
+  | 'sessoes'
+  | 'backups'
+  | 'seguranca';
+
+const ADMIN_TABS = [
+  { id: 'overview', label: 'Visão Geral', icon: LayoutDashboard },
+  { id: 'setores', label: 'Setores', icon: Building2 },
+  { id: 'novo-setor', label: 'Cadastrar Setor', icon: Plus },
+  { id: 'consumo', label: 'Consumo & Cotas', icon: BarChart3 },
+  { id: 'sessoes', label: 'Sessões', icon: MonitorSmartphone },
+  { id: 'backups', label: 'Backup & Recuperação', icon: DatabaseBackup },
+  { id: 'seguranca', label: 'Segurança', icon: ShieldAlert },
+] satisfies Array<{
+  id: AdminTabId;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}>;
+
 interface PlatformAdminViewProps {
+  adminUser: User;
   adminEmail: string;
   customLogo: string | null;
   workspaces: Workspace[];
@@ -75,6 +106,7 @@ interface PlatformAdminViewProps {
 }
 
 export function PlatformAdminView({
+  adminUser,
   adminEmail,
   customLogo,
   workspaces,
@@ -110,7 +142,9 @@ export function PlatformAdminView({
 }: PlatformAdminViewProps) {
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
-  const [showCreateSector, setShowCreateSector] = useState(false);
+  const [activeTab, setActiveTab] = useState<AdminTabId>('overview');
+  const [sectorQuery, setSectorQuery] = useState('');
+  const [sectorStatusFilter, setSectorStatusFilter] = useState<'all' | 'active' | 'disabled'>('all');
   const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null);
   const [deleteCandidate, setDeleteCandidate] = useState<Workspace | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -131,6 +165,24 @@ export function PlatformAdminView({
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
   }, []);
 
+  useEffect(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get('tab') as AdminTabId | null;
+    if (requestedTab && ADMIN_TABS.some((tab) => tab.id === requestedTab)) {
+      setActiveTab(requestedTab);
+    }
+  }, []);
+
+  const changeAdminTab = useCallback((tab: AdminTabId) => {
+    setActiveTab(tab);
+    const url = new URL(window.location.href);
+    if (tab === 'overview') {
+      url.searchParams.delete('tab');
+    } else {
+      url.searchParams.set('tab', tab);
+    }
+    window.history.replaceState(window.history.state, '', url);
+  }, []);
+
   const visibleWorkspaces = useMemo(
     () => workspaces.length > 0 ? workspaces : [createHgesmFoundingWorkspace('')],
     [workspaces]
@@ -140,6 +192,37 @@ export function PlatformAdminView({
 
   const activeWorkspaceCount = visibleWorkspaces.filter((workspace) => workspace.status === 'active').length;
   const disabledWorkspaceCount = visibleWorkspaces.filter((workspace) => workspace.status === 'disabled').length;
+
+  const filteredWorkspaces = useMemo(() => {
+    const query = sectorQuery.trim().toLocaleLowerCase('pt-BR');
+    return visibleWorkspaces.filter((workspace) => {
+      const matchesStatus =
+        sectorStatusFilter === 'all' || workspace.status === sectorStatusFilter;
+      if (!matchesStatus) return false;
+      if (!query) return true;
+
+      return [
+        workspace.name,
+        workspace.ug,
+        workspace.authorizedEmail,
+        workspace.id,
+        workspace.organizationName,
+        workspace.organizationShortName,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLocaleLowerCase('pt-BR').includes(query));
+    });
+  }, [sectorQuery, sectorStatusFilter, visibleWorkspaces]);
+
+  const attentionItems = [
+    directoryError ? 'Diretório administrativo com pendência de persistência.' : null,
+    sessionsError ? 'Monitoramento de sessões requer atenção.' : null,
+    usageError ? 'Telemetria estimada por UG requer atenção.' : null,
+    globalUsageError ? 'Telemetria global do Firebase requer atenção.' : null,
+    disabledWorkspaceCount > 0
+      ? disabledWorkspaceCount + ' setor(es) está(ão) suspenso(s).'
+      : null,
+  ].filter((item): item is string => Boolean(item));
 
   const handleCreateSector = async (input: CreateSectorWorkspaceInput) => {
     const resultName = input.workspaceName.trim();
@@ -319,141 +402,296 @@ export function PlatformAdminView({
           </section>
         )}
 
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <AdminMetric
-            icon={<Building2 className="w-5 h-5" />}
-            label="Setores cadastrados"
-            value={String(visibleWorkspaces.length)}
-            detail={workspaces.length > 0 ? 'Diretório administrativo persistente' : 'HGeSM exibido pelo registro fundador'}
-          />
-          <AdminMetric
-            icon={<ShieldCheck className="w-5 h-5" />}
-            label="Setores ativos"
-            value={String(activeWorkspaceCount)}
-            detail="Acesso operacional liberado"
-          />
-          <AdminMetric
-            icon={<LockKeyhole className="w-5 h-5" />}
-            label="Setores suspensos"
-            value={String(disabledWorkspaceCount)}
-            detail="Leituras e escritas operacionais bloqueadas"
-          />
+        <section
+          data-testid="admin-tab-navigation"
+          className="sticky top-[5.25rem] z-10 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#030b1b]/88 shadow-[0_18px_50px_rgba(0,8,28,0.22)] backdrop-blur-2xl"
+        >
+          <div className="overflow-x-auto p-2.5">
+            <div className="flex min-w-max gap-2">
+              {ADMIN_TABS.map((tab) => {
+                const Icon = tab.icon;
+                const selected = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => changeAdminTab(tab.id)}
+                    aria-pressed={selected}
+                    data-testid={'admin-tab-' + tab.id}
+                    className={
+                      'inline-flex min-h-11 items-center gap-2 rounded-xl border px-3.5 text-xs font-extrabold transition '
+                      + (selected
+                        ? 'border-blue-300/25 bg-blue-500/15 text-blue-100 shadow-[0_0_24px_rgba(37,99,235,0.12)]'
+                        : 'border-white/[0.06] bg-white/[0.025] text-slate-400 hover:border-white/[0.10] hover:bg-white/[0.05] hover:text-white')
+                    }
+                  >
+                    <Icon className="h-4 w-4" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </section>
 
-        <AdminSessionsPanel
-          workspaces={visibleWorkspaces}
-          sessions={sessions}
-          loading={loadingSessions}
-          error={sessionsError}
-          terminatingSessionId={terminatingSessionId}
-          onTerminateSession={onTerminateSession}
-          onNotify={showAdminToast}
-        />
-
-        <AdminConsolidatedUsagePanel
-          workspaces={visibleWorkspaces}
-          sessions={sessions}
-          usage={usage}
-          globalUsage={globalUsage}
-          globalUsageConfigured={globalUsageConfigured}
-          globalUsageObservedAt={globalUsageObservedAt}
-          globalUsageDataThrough={globalUsageDataThrough}
-          loadingUsage={loadingUsage}
-          loadingGlobalUsage={loadingGlobalUsage}
-          usageError={usageError}
-          globalUsageError={globalUsageError}
-          onRefreshUsage={onRefreshUsage}
-          onRefreshGlobalUsage={onRefreshGlobalUsage}
-        />
-
-        <AdminGlobalUsagePanel
-          snapshot={globalUsage}
-          configured={globalUsageConfigured}
-          observedAt={globalUsageObservedAt}
-          dataThrough={globalUsageDataThrough}
-          loading={loadingGlobalUsage}
-          error={globalUsageError}
-          onRefresh={onRefreshGlobalUsage}
-        />
-
-        <AdminUsagePanel
-          workspaces={visibleWorkspaces}
-          usage={usage}
-          loading={loadingUsage}
-          error={usageError}
-          onRefresh={onRefreshUsage}
-        />
-
-        <section className="overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#071225]/60 shadow-[0_22px_70px_rgba(0,8,28,0.18)] backdrop-blur-xl">
-          <div className="px-5 sm:px-6 py-5 border-b border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-extrabold">Setores</h3>
-              <p className="text-xs text-slate-400 mt-1">Workspaces operacionais reconhecidos pela plataforma.</p>
-            </div>
-            <button
-              type="button"
-              disabled={!persistentDirectoryReady || creatingSector}
-              onClick={() => setShowCreateSector(true)}
-              title={persistentDirectoryReady ? 'Cadastrar novo setor' : 'Aguardando acesso ao diretório administrativo no Firestore'}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-blue-300/20 bg-blue-600 px-4 text-xs font-extrabold text-white shadow-lg shadow-blue-950/20 transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-blue-600/25 disabled:text-blue-100/45"
-            >
-              <Plus className="w-4 h-4" />
-              Cadastrar novo setor
-            </button>
-          </div>
-
-          <div className="p-5 sm:p-6 space-y-4">
-            {loadingDirectory && (
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-slate-400">
-                Sincronizando diretório administrativo…
-              </div>
-            )}
-
-            {visibleWorkspaces.map((workspace) => (
-              <WorkspaceCard
-                key={workspace.id}
-                workspace={workspace}
-                disabled={!persistentDirectoryReady}
-                editing={updatingWorkspaceId === workspace.id}
-                changingStatus={changingStatusWorkspaceId === workspace.id}
-                deleting={deletingWorkspaceId === workspace.id}
-                onEdit={() => setEditingWorkspace(workspace)}
-                onChangeStatus={() => requestChangeSectorStatus(workspace)}
-                onDelete={() => requestDeleteSector(workspace)}
+        {activeTab === 'overview' && (
+          <div data-testid="admin-overview-tab" className="space-y-5">
+            <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <AdminMetric
+                icon={<Building2 className="w-5 h-5" />}
+                label="Setores cadastrados"
+                value={String(visibleWorkspaces.length)}
+                detail={workspaces.length > 0 ? 'Diretório administrativo persistente' : 'HGeSM exibido pelo registro fundador'}
               />
-            ))}
-          </div>
-        </section>
+              <AdminMetric
+                icon={<ShieldCheck className="w-5 h-5" />}
+                label="Setores ativos"
+                value={String(activeWorkspaceCount)}
+                detail="Acesso operacional liberado"
+              />
+              <AdminMetric
+                icon={<MonitorSmartphone className="w-5 h-5" />}
+                label="Sessões monitoradas"
+                value={String(sessions.length)}
+                detail="Sessões atualmente conhecidas pelo painel"
+              />
+              <AdminMetric
+                icon={<Database className="w-5 h-5" />}
+                label="Firebase global"
+                value={
+                  globalUsageConfigured === true
+                    ? 'Conectado'
+                    : globalUsageConfigured === false
+                      ? 'Configurar'
+                      : 'Verificando'
+                }
+                detail="Telemetria global independente da estimativa por UG"
+              />
+            </section>
 
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="rounded-3xl border border-white/[0.08] bg-[#071225]/55 p-6 backdrop-blur-xl">
-            <div className="flex items-center gap-2 mb-3">
-              <Database className="w-5 h-5 text-blue-300" />
-              <h3 className="font-extrabold">Estado da migração</h3>
-            </div>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              Workspaces ativos operam isoladamente. A suspensão administrativa bloqueia novas leituras e escritas imediatamente, sem apagar documentos, configurações ou histórico do setor.
-            </p>
-          </div>
+            <section className="grid gap-4 lg:grid-cols-[1.35fr_.65fr]">
+              <div className="rounded-[2rem] border border-white/[0.08] bg-[#071225]/60 p-5 backdrop-blur-xl sm:p-6">
+                <div className="flex items-start gap-3">
+                  <div className={
+                    'grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl border '
+                    + (attentionItems.length > 0
+                      ? 'border-amber-300/15 bg-amber-400/[0.07] text-amber-200'
+                      : 'border-emerald-300/15 bg-emerald-400/[0.07] text-emerald-200')
+                  }>
+                    {attentionItems.length > 0
+                      ? <AlertTriangle className="h-5 w-5" />
+                      : <ShieldCheck className="h-5 w-5" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                      Atenção necessária
+                    </p>
+                    <h3 className="mt-1 text-lg font-extrabold text-white">
+                      {attentionItems.length > 0
+                        ? attentionItems.length + ' ponto(s) para revisar'
+                        : 'Nenhuma pendência administrativa detectada'}
+                    </h3>
+                    {attentionItems.length > 0 ? (
+                      <div className="mt-4 space-y-2">
+                        {attentionItems.map((item) => (
+                          <div
+                            key={item}
+                            className="flex items-start gap-2 rounded-xl border border-white/[0.06] bg-white/[0.025] px-3 py-2.5 text-xs text-slate-300"
+                          >
+                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-300" />
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-xs leading-relaxed text-slate-400">
+                        Diretório, telemetria e ciclo de vida dos setores não apresentam alertas conhecidos nesta visão.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
 
-          <div className="rounded-3xl border border-white/[0.08] bg-[#071225]/55 p-6 backdrop-blur-xl">
-            <div className="flex items-center gap-2 mb-3">
-              <ShieldCheck className="w-5 h-5 text-emerald-300" />
-              <h3 className="font-extrabold">Cadastro seguro</h3>
-            </div>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              Cadastro cria a identidade Firebase no servidor e vincula UID, workspace e UG da Organização Militar antes do primeiro acesso. Edição institucional e ciclo de vida preservam esses identificadores.
-            </p>
+              <div className="rounded-[2rem] border border-white/[0.08] bg-[#071225]/60 p-5 backdrop-blur-xl sm:p-6">
+                <p className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-blue-300/60">
+                  Ações rápidas
+                </p>
+                <div className="mt-4 grid gap-2">
+                  <button
+                    type="button"
+                    onClick={() => changeAdminTab('novo-setor')}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-blue-300/15 bg-blue-500/10 px-3.5 text-left text-xs font-extrabold text-blue-100 transition hover:bg-blue-500/15"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Cadastrar novo setor
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => changeAdminTab('consumo')}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 text-left text-xs font-extrabold text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    Ver consumo e cotas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => changeAdminTab('backups')}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 text-left text-xs font-extrabold text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+                  >
+                    <DatabaseBackup className="h-4 w-4" />
+                    Revisar backups
+                  </button>
+                </div>
+              </div>
+            </section>
           </div>
-        </section>
+        )}
+
+        {activeTab === 'setores' && (
+          <section
+            data-testid="admin-sectors-tab"
+            className="overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#071225]/60 shadow-[0_22px_70px_rgba(0,8,28,0.18)] backdrop-blur-xl"
+          >
+            <div className="border-b border-white/10 px-5 py-5 sm:px-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <h3 className="text-lg font-extrabold">Setores</h3>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Workspaces operacionais reconhecidos pela plataforma.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={!persistentDirectoryReady || creatingSector}
+                  onClick={() => changeAdminTab('novo-setor')}
+                  title={persistentDirectoryReady ? 'Cadastrar novo setor' : 'Aguardando acesso ao diretório administrativo no Firestore'}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-blue-300/20 bg-blue-600 px-4 text-xs font-extrabold text-white shadow-lg shadow-blue-950/20 transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-blue-600/25 disabled:text-blue-100/45"
+                >
+                  <Plus className="w-4 h-4" />
+                  Cadastrar novo setor
+                </button>
+              </div>
+
+              <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  <input
+                    value={sectorQuery}
+                    onChange={(event) => setSectorQuery(event.target.value)}
+                    placeholder="Buscar por UG, OM, setor, e-mail ou workspace..."
+                    className="min-h-11 w-full rounded-xl border border-white/[0.08] bg-black/20 pl-10 pr-3 text-xs font-semibold text-white outline-none placeholder:text-slate-600 focus:border-blue-300/25 focus:ring-2 focus:ring-blue-300/10"
+                  />
+                </div>
+                <div className="flex gap-2 overflow-x-auto">
+                  {([
+                    ['all', 'Todos'],
+                    ['active', 'Ativos'],
+                    ['disabled', 'Suspensos'],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setSectorStatusFilter(value)}
+                      className={
+                        'min-h-10 rounded-xl border px-3 text-[10px] font-extrabold uppercase tracking-[0.10em] transition '
+                        + (sectorStatusFilter === value
+                          ? 'border-blue-300/20 bg-blue-500/12 text-blue-100'
+                          : 'border-white/[0.07] bg-white/[0.025] text-slate-500 hover:text-white')
+                      }
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 p-5 sm:p-6">
+              {loadingDirectory && (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-slate-400">
+                  Sincronizando diretório administrativo…
+                </div>
+              )}
+
+              {!loadingDirectory && filteredWorkspaces.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-white/[0.10] px-4 py-8 text-center text-xs text-slate-500">
+                  Nenhum setor corresponde aos filtros atuais.
+                </div>
+              )}
+
+              {filteredWorkspaces.map((workspace) => (
+                <WorkspaceCard
+                  key={workspace.id}
+                  workspace={workspace}
+                  disabled={!persistentDirectoryReady}
+                  editing={updatingWorkspaceId === workspace.id}
+                  changingStatus={changingStatusWorkspaceId === workspace.id}
+                  deleting={deletingWorkspaceId === workspace.id}
+                  onEdit={() => setEditingWorkspace(workspace)}
+                  onChangeStatus={() => requestChangeSectorStatus(workspace)}
+                  onDelete={() => requestDeleteSector(workspace)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'novo-setor' && (
+          <AdminCreateSectorPanel
+            creating={creatingSector}
+            disabled={!persistentDirectoryReady}
+            onCreate={handleCreateSector}
+            onCreated={() => changeAdminTab('setores')}
+          />
+        )}
+
+        {activeTab === 'consumo' && (
+          <AdminConsumptionHub
+            workspaces={visibleWorkspaces}
+            sessions={sessions}
+            usage={usage}
+            globalUsage={globalUsage}
+            globalUsageConfigured={globalUsageConfigured}
+            globalUsageObservedAt={globalUsageObservedAt}
+            globalUsageDataThrough={globalUsageDataThrough}
+            loadingUsage={loadingUsage}
+            loadingGlobalUsage={loadingGlobalUsage}
+            usageError={usageError}
+            globalUsageError={globalUsageError}
+            onRefreshUsage={onRefreshUsage}
+            onRefreshGlobalUsage={onRefreshGlobalUsage}
+          />
+        )}
+
+        {activeTab === 'sessoes' && (
+          <AdminSessionsPanel
+            workspaces={visibleWorkspaces}
+            sessions={sessions}
+            loading={loadingSessions}
+            error={sessionsError}
+            terminatingSessionId={terminatingSessionId}
+            onTerminateSession={onTerminateSession}
+            onNotify={showAdminToast}
+          />
+        )}
+
+        {activeTab === 'backups' && (
+          <AdminBackupPanel
+            adminUser={adminUser}
+            workspaces={visibleWorkspaces}
+          />
+        )}
+
+        {activeTab === 'seguranca' && (
+          <AdminSecurityPanel
+            directoryReady={persistentDirectoryReady}
+            workspaceCount={visibleWorkspaces.length}
+            activeWorkspaceCount={activeWorkspaceCount}
+            suspendedWorkspaceCount={disabledWorkspaceCount}
+            globalUsageConfigured={globalUsageConfigured}
+          />
+        )}
       </main>
-
-      <CreateSectorModal
-        open={showCreateSector}
-        creating={creatingSector}
-        onClose={() => setShowCreateSector(false)}
-        onCreate={handleCreateSector}
-      />
 
       <EditSectorModal
         workspace={editingWorkspace}
