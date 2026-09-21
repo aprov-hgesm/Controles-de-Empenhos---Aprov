@@ -1506,6 +1506,81 @@ service cloud.firestore {
         ];
     }
 
+    function backupUgMatchesWorkspace(workspaceId, ug) {
+      let workspace = workspaceData(workspaceId);
+      return isValidUnitUg(ug)
+        && (
+          (
+            workspaceId == 'hgesm-aprov'
+            && ug == '160416'
+            && (
+              !('ug' in workspace)
+              || workspace.ug == '160416'
+            )
+          )
+          || (
+            'ug' in workspace
+            && isValidUnitUg(workspace.ug)
+            && workspace.ug == ug
+          )
+        );
+    }
+
+    function validWorkspaceBackupStatus(workspaceId) {
+      return canAccessWorkspace(workspaceId)
+        && request.resource.data.keys().hasAll([
+          'workspaceId',
+          'ug',
+          'accountEmail',
+          'status',
+          'lastAttemptAt',
+          'lastSuccessAt',
+          'latestFileId',
+          'latestFileName',
+          'sizeBytes',
+          'recordCount',
+          'schemaVersion',
+          'sha256',
+          'trigger',
+          'lastError',
+          'updatedBy'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'workspaceId',
+          'ug',
+          'accountEmail',
+          'status',
+          'lastAttemptAt',
+          'lastSuccessAt',
+          'latestFileId',
+          'latestFileName',
+          'sizeBytes',
+          'recordCount',
+          'schemaVersion',
+          'sha256',
+          'trigger',
+          'lastError',
+          'updatedBy'
+        ])
+        && request.resource.data.workspaceId == workspaceId
+        && backupUgMatchesWorkspace(workspaceId, request.resource.data.ug)
+        && request.resource.data.accountEmail == request.auth.token.email
+        && request.resource.data.status in ['success', 'failed', 'in_progress']
+        && request.resource.data.lastAttemptAt is string
+        && request.resource.data.lastSuccessAt is string
+        && request.resource.data.latestFileId is string
+        && request.resource.data.latestFileName is string
+        && request.resource.data.sizeBytes is int
+        && request.resource.data.sizeBytes >= 0
+        && request.resource.data.recordCount is int
+        && request.resource.data.recordCount >= 0
+        && request.resource.data.schemaVersion == 1
+        && request.resource.data.sha256 is string
+        && request.resource.data.trigger in ['automatic', 'manual']
+        && request.resource.data.lastError is string
+        && request.resource.data.updatedBy == request.auth.uid;
+    }
+
     // Diretório administrativo da plataforma. O administrador pode listar e
     // manter metadados, mas não recebe acesso operacional aos workspaces externos.
     match /workspaces/{workspaceId} {
@@ -1579,6 +1654,21 @@ service cloud.firestore {
           /databases/$(database)/documents/platformAccounts/$(request.resource.data.email)
         ).data.workspaceId == request.resource.data.workspaceId;
       allow update, delete: if false;
+    }
+
+    // Commercial readiness — metadados de backup. O fundador enxerga apenas
+    // saúde/telemetria; o conteúdo operacional continua tenant-scoped.
+    match /workspaceBackupStatus/{workspaceId} {
+      allow get: if isPlatformAdmin() || canAccessWorkspace(workspaceId);
+      allow list: if isPlatformAdmin();
+      allow create, update: if validWorkspaceBackupStatus(workspaceId);
+      allow delete: if false;
+    }
+
+    // Metadados do backup global de identidade. Nunca contém hashes/senhas.
+    match /platformRecoveryStatus/{id} {
+      allow get, list, create, update: if isPlatformAdmin();
+      allow delete: if false;
     }
 
     // Block 16.2 — collection-group read used only by the founder dashboard.
