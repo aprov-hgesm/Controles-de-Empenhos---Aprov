@@ -68,6 +68,9 @@ forbidText(platformAccess, 'billingAccounts', 'platformAccess não pode impor bi
 forbidText(platformAccess, 'requirePayment', 'Autorização operacional não pode exigir pagamento nesta fase.');
 forbidText(workspaceContext, 'billingAccounts', 'workspaceContext não pode bloquear por billing nesta fase.');
 
+requireText(rules, "request.resource.data.billingMode == 'observe'", 'Rules não travam o billing em OBSERVE durante os testes.');
+requireText(rules, 'request.resource.data.requirePayment == false', 'Rules permitem ativar exigência de pagamento durante os testes.');
+requireText(rules, 'request.resource.data.paymentRequired == false', 'Rules permitem marcar workspace como paymentRequired durante os testes.');
 requireText(rules, 'match /billingAccounts/{workspaceId}', 'Firestore não protege billingAccounts.');
 requireText(rules, 'allow get: if isPlatformAdmin() || canAccessWorkspace(workspaceId);', 'Setor não possui leitura tenant-scoped do próprio billing.');
 requireText(rules, 'allow create: if isPlatformAdmin()', 'Criação de billing não está restrita à administração.');
