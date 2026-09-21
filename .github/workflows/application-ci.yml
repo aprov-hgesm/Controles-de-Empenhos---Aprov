@@ -307,6 +307,9 @@ jobs:
       - name: Backup disaster recovery emulator test
         run: npm run test:backup-recovery
 
+      - name: RPNP visual priority guard
+        run: npm run verify:rpnp-visual-priority
+
       - name: Block 19 home experience foundation guard
         run: npm run verify:block-19-home-experience
 
