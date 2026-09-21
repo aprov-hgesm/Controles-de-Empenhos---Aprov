@@ -1,9 +1,14 @@
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
-import { CheckCircle2, Coins, Filter, Layers, Search, X } from 'lucide-react';
+import { CheckCircle2, Clock3, Coins, Filter, Layers, Search, X } from 'lucide-react';
 import type { Empenho } from '../../../lib/types';
 import type { EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
+import {
+  getEmpenhoBaseClassification,
+  getPreviousExerciseYear,
+  isRpnpEmpenho,
+} from '../../empenhos/domain/empenhoExercise';
 
 type DashboardClassFilter = string;
 type ActiveTab = 'inicio' | 'painel' | 'empenhos' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas' | 'avisos';
@@ -15,7 +20,6 @@ interface DashboardViewProps {
   dashboardSearch: string;
   empenhos: Empenho[];
   empenhoClasses: EmpenhoClassDefinition[];
-  getBalanceByClass: (classification: string) => number;
   setActiveTab: Dispatch<SetStateAction<ActiveTab>>;
   setDashboardClassFilter: Dispatch<SetStateAction<DashboardClassFilter>>;
   setDashboardPregaoFilter: Dispatch<SetStateAction<string>>;
@@ -36,7 +40,6 @@ export function DashboardView({
   dashboardSearch,
   empenhos,
   empenhoClasses,
-  getBalanceByClass,
   setActiveTab,
   setDashboardClassFilter,
   setDashboardPregaoFilter,
@@ -58,6 +61,15 @@ export function DashboardView({
 
             const totalGeralSaldo = Math.max(0, totalGeralEmpenhado - totalGeralLiquidado);
             const totalGeralPctExec = totalGeralEmpenhado > 0 ? Math.round((totalGeralLiquidado / totalGeralEmpenhado) * 100) : 0;
+
+            const rpnpEmpenhos = empenhos.filter((emp) => isRpnpEmpenho(emp));
+            const totalRpnpEmpenhado = rpnpEmpenhos.reduce((sum, emp) => (
+              sum + emp.items.reduce((itemSum, item) => itemSum + item.quantity * item.unitPrice, 0)
+            ), 0);
+            const totalRpnpLiquidado = rpnpEmpenhos.reduce((sum, emp) => (
+              sum + emp.items.reduce((itemSum, item) => itemSum + item.received * item.unitPrice, 0)
+            ), 0);
+            const totalRpnpSaldo = Math.max(0, totalRpnpEmpenhado - totalRpnpLiquidado);
 
             // Classes aparecem no Dashboard somente quando possuem ao menos um empenho.
             const classPalette = [
@@ -98,18 +110,70 @@ export function DashboardView({
               },
             ] as const;
 
+            const previousExerciseYear = getPreviousExerciseYear();
             const activeClassCodes = new Set(
-              empenhos.map((emp) => (emp.classification || 'QR').trim().toUpperCase())
+              empenhos.map((emp) => getEmpenhoBaseClassification(emp))
             );
 
             const classesConfig = empenhoClasses
               .filter((definition) => activeClassCodes.has(definition.code))
-              .map((definition, index) => ({
-                key: definition.code,
-                name: `Classe ${definition.code}`,
-                description: definition.description,
-                ...classPalette[index % classPalette.length],
-              }));
+              .flatMap((definition, index) => {
+                const basePalette = classPalette[index % classPalette.length];
+                const baseEmpenhos = empenhos.filter(
+                  (emp) => getEmpenhoBaseClassification(emp) === definition.code
+                );
+                const hasRpnp = baseEmpenhos.some((emp) => isRpnpEmpenho(emp));
+                const hasRegular = baseEmpenhos.some((emp) => !isRpnpEmpenho(emp));
+                const segments = [];
+
+                if (hasRpnp) {
+                  segments.push({
+                    key: `${definition.code}::RPNP`,
+                    classification: definition.code,
+                    isRpnp: true,
+                    name: `${definition.code} RPNP`,
+                    description: `${definition.description} · Restos a Pagar Não Processados do exercício ${previousExerciseYear}`,
+                    borderClass: 'border-amber-300/80',
+                    badgeBg: 'bg-amber-50',
+                    badgeText: 'text-amber-900',
+                    progressColor: 'bg-amber-600',
+                    accentText: 'text-amber-800',
+                    cardClass: 'bg-amber-50/70 border-amber-200/90',
+                  });
+                }
+
+                if (hasRegular) {
+                  segments.push({
+                    key: definition.code,
+                    classification: definition.code,
+                    isRpnp: false,
+                    name: definition.code,
+                    description: definition.description,
+                    ...basePalette,
+                    cardClass: 'bg-white/70 border-white/40',
+                  });
+                }
+
+                return segments;
+              });
+
+            const matchesClassSegment = (
+              emp: Empenho,
+              cls: (typeof classesConfig)[number]
+            ) => (
+              getEmpenhoBaseClassification(emp) === cls.classification
+              && isRpnpEmpenho(emp) === cls.isRpnp
+            );
+
+            const getBalanceBySegment = (cls: (typeof classesConfig)[number]) => (
+              empenhos
+                .filter((emp) => matchesClassSegment(emp, cls))
+                .reduce((total, emp) => {
+                  const committed = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+                  const liquidated = emp.items.reduce((sum, item) => sum + item.received * item.unitPrice, 0);
+                  return total + Math.max(0, committed - liquidated);
+                }, 0)
+            );
 
             const effectiveDashboardClassFilter =
               dashboardClassFilter === 'TODAS'
@@ -168,7 +232,7 @@ export function DashboardView({
                     Todas as Classes (Consolidado)
                   </button>
                   {classesConfig.map((cls) => {
-                    const stats = getBalanceByClass(cls.key);
+                    const stats = getBalanceBySegment(cls);
                     return (
                       <button
                         key={cls.key}
@@ -177,7 +241,9 @@ export function DashboardView({
                         className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                           effectiveDashboardClassFilter === cls.key
                             ? 'bg-[#00288e] text-white shadow-xs'
-                            : 'bg-white/60 text-gray-600 border border-gray-200 hover:bg-white'
+                            : cls.isRpnp
+                              ? 'bg-amber-50/80 text-amber-900 border border-amber-200 hover:bg-amber-100/70'
+                              : 'bg-white/60 text-gray-600 border border-gray-200 hover:bg-white'
                         }`}
                       >
                         <span>{cls.name}</span>
@@ -192,7 +258,7 @@ export function DashboardView({
                 </div>
 
                 {/* Resumo Macro Geral (Consolidado em Dinheiro) */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                   {/* Saldo Restante Geral */}
                   <div className="bg-gradient-to-br from-blue-900 to-[#00288e] text-white p-5 rounded-2xl shadow-md relative overflow-hidden flex flex-col justify-between">
                     <div className="absolute right-[-10px] bottom-[-15px] opacity-10 text-white select-none pointer-events-none">
@@ -253,6 +319,29 @@ export function DashboardView({
                       <CheckCircle2 className="w-3.5 h-3.5" /> {totalGeralPctExec}% do total contratado
                     </div>
                   </div>
+
+                  {/* RPNP prioritário */}
+                  <div className="bg-amber-50/70 backdrop-blur-md p-5 rounded-2xl border border-amber-200/80 shadow-xs flex flex-col justify-between">
+                    <div className="flex justify-between items-start gap-3">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-amber-900">
+                        Saldo RPNP prioritário
+                      </span>
+                      <span className="text-[10px] font-bold bg-amber-100/80 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full">
+                        Exercício {previousExerciseYear}
+                      </span>
+                    </div>
+                    <div className="mt-2">
+                      <p className="text-2xl font-black text-amber-900">
+                        R$ {totalRpnpSaldo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-xs text-amber-800/70 font-medium">
+                        {rpnpEmpenhos.length} {rpnpEmpenhos.length === 1 ? 'empenho com prioridade de liquidação' : 'empenhos com prioridade de liquidação'}
+                      </p>
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-amber-200/70 text-xs text-amber-800 font-semibold flex items-center gap-1">
+                      <Clock3 className="w-3.5 h-3.5" /> Restos a Pagar Não Processados
+                    </div>
+                  </div>
                 </div>
 
                 {/* Cards de Saldo por Classe (Grandes Destaques) */}
@@ -266,7 +355,7 @@ export function DashboardView({
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {classesConfig.map((cls) => {
-                      const classEmpenhos = empenhos.filter(emp => (emp.classification || 'QR') === cls.key);
+                      const classEmpenhos = empenhos.filter((emp) => matchesClassSegment(emp, cls));
                       const classCommitted = classEmpenhos.reduce((sum, emp) => {
                         return sum + emp.items.reduce((iSum, it) => iSum + it.quantity * it.unitPrice, 0);
                       }, 0);
@@ -283,8 +372,12 @@ export function DashboardView({
                         <div 
                           key={cls.key}
                           onClick={() => setDashboardClassFilter(isSelected ? 'TODAS' : cls.key)}
-                          className={`bg-white/70 backdrop-blur-md rounded-2xl border p-5 shadow-xs transition-all cursor-pointer hover:shadow-md relative overflow-hidden group ${
-                            isSelected ? `${cls.borderClass} ring-2 ring-offset-1 ring-[#00288e]` : 'border-white/40 hover:border-gray-200'
+                          className={`${cls.cardClass} backdrop-blur-md rounded-2xl border p-5 shadow-xs transition-all cursor-pointer hover:shadow-md relative overflow-hidden group ${
+                            isSelected
+                              ? `${cls.borderClass} ring-2 ring-offset-1 ring-[#00288e]`
+                              : cls.isRpnp
+                                ? 'hover:border-amber-300/90'
+                                : 'hover:border-gray-200'
                           }`}
                         >
                           <div className="flex justify-between items-start mb-3">
@@ -293,6 +386,11 @@ export function DashboardView({
                                 {cls.name}
                               </span>
                               <span className="text-[10px] text-gray-400 font-semibold">{classEmpenhos.length} NEs</span>
+                              {cls.isRpnp && (
+                                <span className="text-[9px] font-black uppercase tracking-wide text-amber-800 bg-amber-100/80 border border-amber-200 px-1.5 py-0.5 rounded-md">
+                                  Prioridade
+                                </span>
+                              )}
                             </div>
                             <Coins className={`w-4 h-4 ${cls.accentText}`} />
                           </div>
@@ -370,7 +468,7 @@ export function DashboardView({
 
                   {/* Itera sobre as classes a exibir */}
                   {displayedClasses.map((cls) => {
-                    const rawClassEmpenhos = empenhos.filter(emp => (emp.classification || 'QR') === cls.key);
+                    const rawClassEmpenhos = empenhos.filter((emp) => matchesClassSegment(emp, cls));
                     
                     const filteredClassEmpenhos = rawClassEmpenhos.filter(emp => {
                       const matchesPregao = dashboardPregaoFilter === 'Todos' || emp.pregao === dashboardPregaoFilter;
@@ -395,7 +493,7 @@ export function DashboardView({
                     return (
                       <div 
                         key={cls.key}
-                        className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/40 p-5 shadow-xs space-y-4"
+                        className={`${cls.isRpnp ? 'bg-amber-50/60 border-amber-200/80' : 'bg-white/70 border-white/40'} backdrop-blur-md rounded-2xl border p-5 shadow-xs space-y-4`}
                       >
                         {/* Header da Classe */}
                         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-gray-100 pb-3.5">
@@ -458,10 +556,20 @@ export function DashboardView({
                                   const pct = totalCommitted > 0 ? Math.round((totalReceived / totalCommitted) * 100) : 0;
 
                                   return (
-                                    <tr key={emp.id} className="hover:bg-blue-50/30 transition-colors">
+                                    <tr
+                                      key={emp.id}
+                                      className={`transition-colors ${isRpnpEmpenho(emp) ? 'bg-amber-50/35 hover:bg-amber-50/70' : 'hover:bg-blue-50/30'}`}
+                                    >
                                       {/* NE e Pregão */}
                                       <td className="py-3 px-3.5 whitespace-nowrap">
-                                        <span className="font-bold text-[#00288e] block">{emp.id}</span>
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="font-bold text-[#00288e] block">{emp.id}</span>
+                                          {isRpnpEmpenho(emp) && (
+                                            <span className="text-[8px] font-black uppercase tracking-wider text-amber-800 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded">
+                                              RPNP
+                                            </span>
+                                          )}
+                                        </div>
                                         <span className="text-[10px] text-gray-400 block font-medium">
                                           {emp.pregao ? `Pregão: ${emp.pregao}` : 'Sem pregão'} • {emp.date}
                                         </span>
