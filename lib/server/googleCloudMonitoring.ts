@@ -567,4 +567,3 @@ export async function loadPreviousFirebaseBillingDayObservation(
     currentDayStart.toISOString()
   );
 }
-
