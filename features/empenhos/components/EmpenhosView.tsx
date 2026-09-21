@@ -10,6 +10,7 @@ import { formatSupplierCnpj } from '../../../lib/invoiceIdentity';
 import type { EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
 import {
   compareEmpenhosByRpnpPriority,
+  getEmpenhoBaseClassification,
   getEmpenhoDisplayClassification,
   getEmpenhoExerciseYear,
   getEmpenhoYearFilterLabel,
@@ -413,7 +414,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         const empYear = getEmpenhoExerciseYear(emp);
                         const matchesYear = empenhosYearFilter === 'Todos'
                           || String(empYear || '') === empenhosYearFilter;
-                        const matchesClass = empenhosClassFilter === 'Todos' || emp.classification === empenhosClassFilter;
+                        const matchesClass = empenhosClassFilter === 'Todos' || getEmpenhoBaseClassification(emp) === empenhosClassFilter;
 
                         return matchesSearch && matchesFilter && matchesPregao && matchesYear && matchesClass;
                       })
