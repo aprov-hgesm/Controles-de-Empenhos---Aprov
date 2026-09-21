@@ -124,8 +124,20 @@ export function AdminConsolidatedUsagePanel({
   );
 
   const estimatedOperations = totals.reads + totals.writes + totals.deletes;
-  const realOperations = globalUsage
-    ? globalUsage.documentReads + globalUsage.documentWrites + globalUsage.documentDeletes
+  const primaryBillingUsed = globalUsage?.billableReadUnits ?? null;
+  const primaryBillingLimit = globalUsage?.billingReference.readUnitsDailyLimit ?? null;
+  const primaryBillingPercentage = (
+    primaryBillingUsed !== null
+    && primaryBillingLimit !== null
+    && primaryBillingLimit > 0
+  )
+    ? (primaryBillingUsed / primaryBillingLimit) * 100
+    : null;
+  const primaryBillingRemaining = (
+    primaryBillingUsed !== null
+    && primaryBillingLimit !== null
+  )
+    ? Math.max(0, primaryBillingLimit - primaryBillingUsed)
     : null;
 
   const usageAlerts = useMemo(
@@ -174,10 +186,6 @@ export function AdminConsolidatedUsagePanel({
       ))
   ), [activeSessions, estimatedOperations, usage, workspaces]);
 
-  const namedDatabase = Boolean(
-    globalUsage?.databaseId
-    && globalUsage.databaseId !== '(default)'
-  );
   const refreshing = loadingUsage || loadingGlobalUsage || alertPolicy.loading;
 
   const refreshAll = async () => {
@@ -223,6 +231,79 @@ export function AdminConsolidatedUsagePanel({
       </div>
 
       <div className="space-y-5 p-5 sm:p-6">
+        <div
+          data-testid="admin-primary-billing-quota"
+          className="rounded-2xl border border-blue-300/20 bg-blue-500/[0.06] p-4"
+        >
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <div className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-blue-200/85">
+                Limite principal de cota · Read Units
+              </div>
+              <p className="mt-2 max-w-3xl text-xs leading-relaxed text-slate-300">
+                Referência principal para identificar a aproximação do ponto em que o uso diário
+                de leitura do Firestore Enterprise ultrapassa a franquia configurada e passa para
+                a faixa sujeita a cobrança.
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/[0.08] bg-slate-950/25 px-3 py-2 text-right">
+              <div className="text-[8px] font-bold uppercase tracking-[0.10em] text-slate-500">
+                Uso da franquia
+              </div>
+              <div className="mt-1 text-xl font-black text-white">
+                {primaryBillingPercentage === null
+                  ? '—'
+                  : `${primaryBillingPercentage.toLocaleString('pt-BR', {
+                      minimumFractionDigits: primaryBillingPercentage >= 10 ? 0 : 1,
+                      maximumFractionDigits: 1,
+                    })}%`}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-950/50">
+            <div
+              className="h-full rounded-full bg-blue-400 transition-[width] duration-500"
+              style={{
+                width: `${Math.min(100, Math.max(0, primaryBillingPercentage || 0))}%`,
+              }}
+            />
+          </div>
+
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            <Metric
+              label="Read Units usadas"
+              value={primaryBillingUsed === null ? '—' : formatCount(primaryBillingUsed)}
+            />
+            <Metric
+              label="Limite diário"
+              value={primaryBillingLimit === null ? '—' : formatCount(primaryBillingLimit)}
+            />
+            <Metric
+              label={
+                primaryBillingUsed !== null
+                && primaryBillingLimit !== null
+                && primaryBillingUsed > primaryBillingLimit
+                  ? 'Acima da franquia'
+                  : 'Restante até cobrança'
+              }
+              value={
+                primaryBillingUsed === null || primaryBillingLimit === null
+                  ? '—'
+                  : formatCount(
+                      primaryBillingUsed > primaryBillingLimit
+                        ? primaryBillingUsed - primaryBillingLimit
+                        : primaryBillingRemaining || 0
+                    )
+              }
+            />
+          </div>
+
+          <p className="mt-3 font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">
+            Janela diária: America/Los_Angeles · métrica: api/billable_read_units
+          </p>
+        </div>
+
         <div className="grid gap-3 lg:grid-cols-2">
           <div className="rounded-2xl border border-emerald-300/15 bg-emerald-400/[0.045] p-4">
             <div className="flex items-center gap-2 text-[9px] font-extrabold uppercase tracking-[0.14em] text-emerald-200/80">
@@ -233,12 +314,12 @@ export function AdminConsolidatedUsagePanel({
               Operações observadas pelo Google Cloud para o banco Firestore configurado.
             </p>
             <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <Metric label="Reads" value={globalUsage ? formatCount(globalUsage.documentReads) : '—'} />
-              <Metric label="Writes" value={globalUsage ? formatCount(globalUsage.documentWrites) : '—'} />
-              <Metric label="Deletes" value={globalUsage ? formatCount(globalUsage.documentDeletes) : '—'} />
+              <Metric label="Read Units" value={globalUsage ? formatCount(globalUsage.billableReadUnits) : '—'} />
+              <Metric label="Realtime Units" value={globalUsage ? formatCount(globalUsage.billableRealtimeReadUnits) : '—'} />
+              <Metric label="Write Units" value={globalUsage ? formatCount(globalUsage.billableWriteUnits) : '—'} />
+              <Metric label="Docs lidos" value={globalUsage ? formatCount(globalUsage.documentReads) : '—'} />
               <Metric label="Conexões" value={globalUsage ? formatCount(globalUsage.activeConnections) : '—'} />
               <Metric label="Listeners" value={globalUsage ? formatCount(globalUsage.snapshotListeners) : '—'} />
-              <Metric label="Operações" value={realOperations === null ? '—' : formatCount(realOperations)} />
             </div>
           </div>
 
@@ -363,12 +444,14 @@ export function AdminConsolidatedUsagePanel({
             <div>
               <h4 className="text-sm font-extrabold text-white">Referência de cobrança</h4>
               <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                {namedDatabase
-                  ? 'O EMPROVEX está usando um banco Firestore nomeado. O painel não presume a franquia diária do banco gratuito e não calcula valor monetário sem uma referência explícita de região/tarifa.'
-                  : 'O painel não transforma métricas de uso em fatura. Franquias, região, preços, créditos e arredondamentos permanecem separados das métricas operacionais.'}
+                O EMPROVEX usa as unidades faturáveis do Firestore Enterprise para acompanhar a
+                franquia diária. O limite principal de leitura é parametrizado server-side e tem
+                default de 50.000 Read Units/dia para o banco atualmente elegível ao free tier.
+                O painel não converte esse consumo em valor final de fatura, pois preços, créditos,
+                rede, armazenamento e operações administrativas podem compor a cobrança separadamente.
               </p>
               <p className="mt-2 font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">
-                Projeção financeira: referência operacional, não cobrança oficial
+                Principal: Read Units até a franquia · cobrança monetária final continua no Google Cloud Billing
               </p>
             </div>
           </div>
