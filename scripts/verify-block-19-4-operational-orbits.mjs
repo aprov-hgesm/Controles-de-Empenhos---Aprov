@@ -38,7 +38,7 @@ requireText(orbit, 'showTooltip(', 'Sistema orbital não calcula posição indep
 requireText(orbit, 'rootRef', 'Tooltips orbitais não possuem referencial estável da cena.');
 requireText(orbitCss, '@keyframes planetOrbit', 'Planetas não possuem movimento orbital ao redor do núcleo.');
 requireText(orbitCss, '@keyframes planetCounterOrbit', 'Conteúdo dos planetas não compensa a rotação orbital.');
-requireText(orbitCss, '.orbitSlot:hover', 'Órbita não pausa para estabilizar hover/foco.');
+forbidText(orbitCss, '.orbitSlot:hover,\n.orbitSlot:focus-within {\n  animation-play-state: paused;', 'Órbita não deve mais pausar em hover/foco.');
 requireText(orbit, 'data-inicio-star-orbit="outer"', 'Faixa orbital externa não está exposta para proteção da constelação.');
 requireText(orbit, 'data-inicio-star-orbit="middle"', 'Faixa orbital intermediária não está exposta para proteção da constelação.');
 requireText(orbit, 'data-inicio-star-orbit="inner"', 'Faixa orbital interna não está exposta para proteção da constelação.');
@@ -67,7 +67,7 @@ if (findings.length) {
   console.log('Recebimentos: PLANETA ATIVO');
   console.log('Execução: PLANETA ATIVO');
   console.log('Classes: TOOLTIP SOB DEMANDA ATIVO');
-  console.log('Órbitas planetárias: ATIVAS EM PERFIL FULL');
+  console.log('Órbitas planetárias: LENTAS E CONTÍNUAS EM FULL/BALANCED');
   console.log('Tooltips: SEMPRE ORIENTADOS À TELA');
   console.log('Realtime adicional: ZERO');
 }
