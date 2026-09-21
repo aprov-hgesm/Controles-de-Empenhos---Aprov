@@ -56,7 +56,13 @@ permanece limitada às operações instrumentadas em contexto operacional.
 
 ## Histórico global
 
-Cada consulta global bem-sucedida atualiza um único documento diário:
+Além da atualização durante consultas administrativas, a produção possui uma captura automática
+diária via Vercel Cron em `/api/cron/usage-snapshot`. A execução ocorre às 09:15 UTC e consolida
+o **dia anterior já encerrado no horário do Pacífico**, evitando que o histórico dependa de alguém
+abrir o painel. A rota exige `CRON_SECRET` no header Bearer, seguindo o mecanismo de autenticação
+de Cron Jobs da Vercel.
+
+Cada consolidação atualiza um único documento diário:
 
 `platformUsageHistory/{YYYY-MM-DD}`
 
