@@ -629,8 +629,8 @@ service cloud.firestore {
           'updatedBy'
         ])
         && request.resource.data.version == 'emprovex_billing_v1'
-        && request.resource.data.billingMode in ['off', 'observe', 'enforce']
-        && request.resource.data.requirePayment is bool
+        && request.resource.data.billingMode == 'observe'
+        && request.resource.data.requirePayment == false
         && request.resource.data.automaticSuspension == false
         && request.resource.data.monthlyPriceCents is int
         && request.resource.data.monthlyPriceCents >= 0
@@ -708,7 +708,7 @@ service cloud.firestore {
         && request.resource.data.trialGranted is bool
         && request.resource.data.trialStartedAt is string
         && request.resource.data.trialEndsAt is string
-        && request.resource.data.paymentRequired is bool
+        && request.resource.data.paymentRequired == false
         && request.resource.data.createdAt is string
         && request.resource.data.updatedAt is string
         && request.resource.data.createdBy is string
