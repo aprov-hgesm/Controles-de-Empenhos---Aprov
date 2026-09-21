@@ -39,19 +39,20 @@
 .orbitSlot {
   --orbit-angle: 0deg;
   --orbit-counter-angle: 0deg;
-  --orbit-duration: 56s;
+  --orbit-duration: 136s;
   z-index: 8;
   pointer-events: none;
   transform: rotate(var(--orbit-angle));
   animation: planetOrbit var(--orbit-duration) linear infinite;
+  animation-timing-function: linear;
 }
 
 .orbitMiddle {
-  --orbit-duration: 44s;
+  --orbit-duration: 112s;
 }
 
 .orbitInner {
-  --orbit-duration: 34s;
+  --orbit-duration: 88s;
 }
 
 .orbitPhaseA {
@@ -75,18 +76,6 @@
   top: 0;
   pointer-events: none;
   transform: translate(-50%, -50%);
-}
-
-.orbitSlot:hover,
-.orbitSlot:focus-within {
-  animation-play-state: paused;
-}
-
-.orbitSlot:hover .planet,
-.orbitSlot:focus-within .planet,
-.orbitSlot:hover .classSystem,
-.orbitSlot:focus-within .classSystem {
-  animation-play-state: paused;
 }
 
 .track {
@@ -170,6 +159,7 @@
   cursor: default;
   pointer-events: auto;
   animation: planetCounterOrbit var(--orbit-duration) linear infinite;
+  animation-timing-function: linear;
 }
 
 .planet:focus-visible,
@@ -548,6 +538,7 @@
   to { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
+/* Slow continuous orbital travel. Counter-rotation keeps planet faces upright. */
 @keyframes planetOrbit {
   from { transform: rotate(var(--orbit-angle)); }
   to { transform: rotate(calc(var(--orbit-angle) + 360deg)); }
@@ -635,7 +626,10 @@
 
 [data-performance='balanced'] .orbitSlot,
 [data-performance='balanced'] .planet,
-[data-performance='balanced'] .classSystem,
+[data-performance='balanced'] .classSystem {
+  animation-timing-function: linear;
+}
+
 [data-performance='balanced'] .classPlanet,
 [data-performance='balanced'] .executionHalo,
 [data-performance='balanced'] .alertPlanet[data-alert='true'] .planetGlow,
