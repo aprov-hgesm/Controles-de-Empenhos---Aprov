@@ -440,6 +440,32 @@ async function main() {
     ownerWorkspaceId: 'hgesm-aprov',
   });
 
+  const billingAccountSeed = (workspaceId, email, ug) => ({
+    version: 'emprovex_billing_v1',
+    workspaceId,
+    ug,
+    authorizedEmail: email,
+    status: 'trial',
+    monthlyPriceCents: 7000,
+    currency: 'BRL',
+    trialGranted: true,
+    trialStartedAt: '2026-09-21T00:00:00.000Z',
+    trialEndsAt: '2026-10-21T00:00:00.000Z',
+    paymentRequired: false,
+    createdAt: '2026-09-21T00:00:00.000Z',
+    updatedAt: '2026-09-21T00:00:00.000Z',
+    createdBy: founderEmail,
+    updatedBy: founderEmail,
+  });
+  await ownerSet(
+    'billingAccounts/workspace-a',
+    billingAccountSeed('workspace-a', identities.a.email, '160416')
+  );
+  await ownerSet(
+    'billingAccounts/workspace-b',
+    billingAccountSeed('workspace-b', identities.b.email, '160417')
+  );
+
   let sessionA = await createSession('a', identities.a.email);
   const sessionB = await createSession('b', identities.b.email);
   const sessionWrongUid = await createSession('wrong', identities.wrongUid.email);
@@ -448,6 +474,41 @@ async function main() {
   const sessionSuspended = await createSession('suspended', identities.suspended.email);
   const sessionTampered = await createSession('tampered', identities.tampered.email);
   const sessionLifecycle = await createSession('lifecycle', identities.lifecycle.email);
+
+  console.log('\nBilling em modo de observação');
+
+  await allowed('Setor consulta somente o próprio status de trial', () =>
+    getDoc(doc(sessionA.db, 'billingAccounts', 'workspace-a'))
+  );
+  await denied('Setor não consulta o billing de outro workspace', () =>
+    getDoc(doc(sessionA.db, 'billingAccounts', 'workspace-b'))
+  );
+  await denied('Setor não lista billingAccounts globalmente', () =>
+    getDocs(collection(sessionA.db, 'billingAccounts'))
+  );
+  await denied('Setor não altera o próprio trial', () =>
+    updateDoc(doc(sessionA.db, 'billingAccounts', 'workspace-a'), {
+      trialEndsAt: '2099-12-31T00:00:00.000Z',
+    })
+  );
+  await allowed('Administrador lista assinaturas comerciais', () =>
+    getDocs(collection(admin.db, 'billingAccounts'))
+  );
+  await allowed('Administrador atualiza situação comercial sem tocar no workspace', () =>
+    updateDoc(doc(admin.db, 'billingAccounts', 'workspace-a'), {
+      status: 'pending',
+      updatedAt: '2026-09-22T00:00:00.000Z',
+      updatedBy: founderEmail,
+    })
+  );
+  const operationalStillAvailable = await getDoc(
+    doc(sessionA.db, 'workspaces', 'workspace-a', 'empenhos', 'sample')
+  );
+  assert.equal(
+    operationalStillAvailable.exists(),
+    true,
+    'Billing pending em OBSERVE não pode bloquear o acesso operacional.'
+  );
 
   await linkWithCredential(
     sessionA.user,
