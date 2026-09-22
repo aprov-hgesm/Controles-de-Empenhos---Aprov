@@ -21,11 +21,13 @@ Nenhuma soma das estimativas por UG é apresentada como fatura oficial do Fireba
 
 ## Persistência
 
-Cada workspace mantém no máximo um documento consolidado por dia UTC:
+Cada workspace mantém no máximo um documento consolidado por dia de faturamento do Firestore (`America/Los_Angeles`):
 
 ```text
 workspaces/{workspaceId}/usageEstimates/{YYYY-MM-DD}
 ```
+
+O `YYYY-MM-DD` do documento representa a mesma janela diária usada pelo Cloud Monitoring para a referência de consumo. Isso permite reconciliação sem misturar dia UTC com dia de faturamento.
 
 O documento contém somente metadados de identidade da telemetria e contadores
 agregados:
@@ -154,3 +156,10 @@ O Bloco 16.3 está concluído quando:
 8. a fonte global real continua reservada para `google-cloud-monitoring`;
 9. o guard 16.3 e os testes multi-tenant passam;
 10. build, TypeScript, Browser E2E e release gate permanecem verdes.
+
+
+## Evolução v2 — reconciliação
+
+A evolução v2 mantém o contrato `emprovex-workspace-estimate`, mas passa a comparar as estimativas por UG com os contadores globais do Cloud Monitoring na mesma janela diária.
+
+O painel mostra cobertura, parcela não atribuída e um proxy proporcional de Read/Write Units somente para a parte coberta. A parcela sem atribuição nunca é redistribuída artificialmente e o proxy não é faturamento oficial.
