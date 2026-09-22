@@ -400,6 +400,9 @@ jobs:
       - name: EMPROVEX admin information architecture guard
         run: npm run verify:admin-information-architecture
 
+      - name: Admin sidebar and Google usage UX guard
+        run: npm run verify:admin-sidebar-google-usage
+
       - name: EMPROVEX brand logo lock security test
         run: npm run test:brand-logo-lock
 
