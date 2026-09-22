@@ -1006,6 +1006,17 @@ async function main() {
     expiresAt: new Date(Date.now() - (20 * 60 * 1000)),
   });
 
+  const expiredSessionA = await createBoundOperationalSession('a-expired', identities.a, {
+    workspaceId: 'workspace-a',
+    ug: '160416',
+    slotId: 'slot-2',
+    sessionId: 'expired-session',
+    browserInstanceId: 'expired-browser',
+  });
+  await denied('Sessão expirada não acessa dados operacionais diretamente', () =>
+    getDoc(doc(expiredSessionA.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))
+  );
+
   await allowed('Slot expirado pode ser retomado por uma nova sessão', () =>
     setDoc(
       sessionSlot2,
@@ -1177,6 +1188,44 @@ async function main() {
   );
   await allowed('Outra sessão legítima do mesmo UID continua autorizada', () =>
     getDoc(doc(sessionA2.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))
+  );
+
+  await sessionA2.user.getIdToken(true);
+  await allowed('Refresh do ID token preserva a autorização da sessão legítima', () =>
+    getDoc(doc(sessionA2.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))
+  );
+
+  const sessionA2SecondTab = await createBoundOperationalSession('a2-second-tab', identities.a, {
+    workspaceId: 'workspace-a',
+    ug: '160416',
+    slotId: 'slot-2',
+    sessionId: 'session-browser-reclaimed',
+    browserInstanceId: 'browser-instance-reclaimed',
+  });
+  await allowed('Múltiplas abas da mesma sessão lógica compartilham a autorização', () =>
+    getDoc(doc(sessionA2SecondTab.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))
+  );
+
+  const forgedSessionA = await createBoundOperationalSession('a-forged-session', identities.a, {
+    workspaceId: 'workspace-a',
+    ug: '160416',
+    slotId: 'slot-2',
+    sessionId: 'session-browser-forged',
+    browserInstanceId: 'browser-instance-reclaimed',
+  });
+  await denied('SessionId falsificado não se beneficia do slot legítimo do mesmo UID', () =>
+    getDoc(doc(forgedSessionA.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))
+  );
+
+  const forgedBrowserA = await createBoundOperationalSession('a-forged-browser', identities.a, {
+    workspaceId: 'workspace-a',
+    ug: '160416',
+    slotId: 'slot-2',
+    sessionId: 'session-browser-reclaimed',
+    browserInstanceId: 'browser-instance-forged',
+  });
+  await denied('BrowserInstanceId falsificado não substitui a sessão legítima', () =>
+    getDoc(doc(forgedBrowserA.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))
   );
 
   sessionA = sessionA2;
