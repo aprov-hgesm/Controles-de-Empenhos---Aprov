@@ -90,7 +90,7 @@ for (const marker of [
 }
 
 for (const marker of [
-  'Setor externo ocupa o primeiro slot de sessão',
+  'Sessão vinculada consulta o próprio primeiro slot',
   'Setor externo ocupa o segundo slot de sessão',
   'Terceiro slot não existe no contrato de capacidade',
   'Sessão diferente não sobrescreve slot ainda ativo',
