@@ -14,6 +14,7 @@ const admin = read('components/admin/PlatformAdminView.tsx');
 const consumption = read('components/admin/AdminConsumptionHub.tsx');
 const google = read('components/admin/AdminGlobalUsagePanel.tsx');
 const monitoring = read('lib/server/googleCloudMonitoring.ts');
+const globalUsageHook = read('hooks/usePlatformAdminGlobalUsage.ts');
 const reconciliation = read('lib/usageReconciliation.ts');
 
 for (const marker of [
@@ -42,6 +43,8 @@ for (const marker of [
   'Janela diária diferente do horário do Brasil',
   'Read Units e documentos lidos são métricas diferentes',
   'Google é global; UG é atribuição interna',
+  'Frescor de cada métrica Google',
+  'GOOGLE_METRIC_LABELS',
   'Read Units faturáveis',
   'Realtime Read Units',
   'Write Units faturáveis',
@@ -52,7 +55,16 @@ for (const marker of [
   'firebaseConfig.firestoreDatabaseId',
   'google-cloud-monitoring',
   'America/Los_Angeles',
+  'metricDataThrough',
+  'credentialSource',
 ]) requireText(monitoring, marker, `Leitor Google perdeu requisito técnico: ${marker}`);
+
+for (const marker of [
+  'metricDataThrough',
+  'credentialSource',
+  'setMetricDataThrough',
+  'setCredentialSource',
+]) requireText(globalUsageHook, marker, `Hook Google perdeu diagnóstico: ${marker}`);
 
 for (const marker of [
   'readCoverage',
@@ -71,7 +83,7 @@ if (findings.length) {
   console.log('ADMIN SIDEBAR + GOOGLE USAGE UX: READY');
   console.log('Navegação admin: SIDEBAR RESPONSIVA');
   console.log('Hub de consumo: SIDEBAR INTERNA');
-  console.log('Google real: VISUALIZAÇÃO + FRESCOR + DIAGNÓSTICO');
+  console.log('Google real: VISUALIZAÇÃO + FRESCOR POR MÉTRICA + DIAGNÓSTICO');
   console.log('UG: RECONCILIAÇÃO V2 PRESERVADA');
   console.log('Novos listeners admin: NENHUM');
 }
