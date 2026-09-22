@@ -9,6 +9,7 @@ A partir da criação desta pasta, decisões, estado de implementação, sequên
 - `ROADMAP.md` — plano completo de implementação, fases, blocos, gates e ordem de execução.
 - `DECISIONS.md` — decisões arquiteturais e funcionais congeladas.
 - `STATUS.md` — estado atual real do desenvolvimento, último commit validado, PRs, testes, riscos e próxima fase.
+- `HANDOFF_TEMPLATE.md` — mensagem padrão para abrir o chat da fase seguinte.
 
 ## Regra de continuidade
 
