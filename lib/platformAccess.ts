@@ -20,11 +20,6 @@ import {
 } from './platformIdentity';
 import type { EmprovexProfileMode } from './profileMode';
 import {
-  PlatformSessionLeaseError,
-  acquireWorkspaceSessionLease,
-  isSessionCapacityExceededError,
-} from './platformSessionLease';
-import {
   rememberResolvedWorkspaceContext,
   resolveWorkspaceContext,
   type ResolvedWorkspaceContext,
@@ -293,7 +288,9 @@ export async function resolveAuthenticatedWorkspaceContext(
       resolutionSource: 'platform-directory',
     };
 
-    await acquireWorkspaceSessionLease(user, context);
+    // A resolução de identidade não cria mais leases. O bootstrap da sessão
+    // operacional ocorre depois, com uma identidade gerada no servidor e
+    // materializada no slot somente pelo token custom correspondente.
     rememberResolvedWorkspaceContext(user.uid, context);
     return context;
   } catch (error) {
@@ -301,11 +298,7 @@ export async function resolveAuthenticatedWorkspaceContext(
     // usuário fora do workspace e impede subscriptions operacionais.
     const diagnosticCode = error instanceof ExternalIdentityResolutionError
       ? error.code
-      : isSessionCapacityExceededError(error)
-        ? error.code
-        : error instanceof PlatformSessionLeaseError
-          ? error.code
-          : (
+      : (
           typeof error === 'object'
           && error
           && 'code' in error
