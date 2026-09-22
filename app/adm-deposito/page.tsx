@@ -34,6 +34,21 @@ export default function WarehouseModulePage() {
           return;
         }
 
+        const idToken = await currentUser.getIdToken();
+        const response = await fetch('/api/adm-deposito/status', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          setGateState('denied');
+          window.location.replace('/');
+          return;
+        }
+
         setGateState('allowed');
       } catch {
         if (!active) return;
