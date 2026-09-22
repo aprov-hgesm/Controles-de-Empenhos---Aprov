@@ -403,6 +403,9 @@ jobs:
       - name: Admin sidebar and Google usage UX guard
         run: npm run verify:admin-sidebar-google-usage
 
+      - name: SPED NUP reporting guard
+        run: npm run verify:sped-nup-reporting
+
       - name: EMPROVEX brand logo lock security test
         run: npm run test:brand-logo-lock
 

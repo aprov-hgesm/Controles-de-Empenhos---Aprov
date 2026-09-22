@@ -785,6 +785,7 @@ export function useDocumentActions(context:DocumentActionsContext){
             ? formatDateOnly(inv.comissaoDate)
             : 'Pendente';
         const formattedTesourariaDate = inv.tesourariaDate ? formatDateOnly(inv.tesourariaDate) : 'Pendente';
+        const formattedNup = inv.spedNup ? inv.spedNup : '—';
         const formattedNS = inv.numeroNS ? inv.numeroNS : '—';
          return [
           `NF ${inv.id}`,
@@ -792,6 +793,7 @@ export function useDocumentActions(context:DocumentActionsContext){
           formattedTrDate,
           formattedComissaoDate,
           formattedTesourariaDate,
+          formattedNup,
           formattedNS,
           inv.totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
         ];
@@ -799,28 +801,29 @@ export function useDocumentActions(context:DocumentActionsContext){
        autoTable(doc, {
         startY: yPos,
         margin: { left: margin, right: margin },
-        head: [['Número NF', 'Emissão NF', 'Emissão do TR / Cad.', 'Comissão Recebimento', 'Tesouraria', 'Número da NS', 'Valor da NF']],
+        head: [['Número NF', 'Emissão NF', 'Emissão do TR / Cad.', 'Comissão Recebimento', 'Tesouraria', 'NUP SPED', 'Número da NS', 'Valor da NF']],
         body: invoicesRows,
         theme: 'striped',
         headStyles: {
           fillColor: [11, 28, 48] as [number, number, number],
           textColor: 255,
-          fontSize: 7.5,
+          fontSize: 6.6,
           fontStyle: 'bold',
           halign: 'left',
         },
         bodyStyles: {
-          fontSize: 7.5,
+          fontSize: 6.6,
           textColor: 50,
         },
         columnStyles: {
-          0: { cellWidth: 22, fontStyle: 'bold', textColor: [0, 40, 142] },
-          1: { cellWidth: 24 },
-          2: { cellWidth: 38 },
-          3: { cellWidth: 28 },
-          4: { cellWidth: 24 },
-          5: { cellWidth: 24, fontStyle: 'bold', textColor: [60, 40, 120] },
-          6: { cellWidth: 'auto', halign: 'right' as const, fontStyle: 'bold', textColor: [0, 120, 60] },
+          0: { cellWidth: 18, fontStyle: 'bold', textColor: [0, 40, 142] },
+          1: { cellWidth: 18 },
+          2: { cellWidth: 27 },
+          3: { cellWidth: 22 },
+          4: { cellWidth: 20 },
+          5: { cellWidth: 31, fontStyle: 'bold', textColor: [3, 105, 161] },
+          6: { cellWidth: 22, fontStyle: 'bold', textColor: [60, 40, 120] },
+          7: { cellWidth: 22, halign: 'right' as const, fontStyle: 'bold', textColor: [0, 120, 60] },
         },
         didDrawPage: (data) => {
           yPos = data.cursor ? data.cursor.y + 6 : yPos + 8;

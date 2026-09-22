@@ -6,6 +6,7 @@ import type { Alert, Comissao, Empenho, Invoice, InvoiceItem, InvoicePdfDocument
 import { commitAllComissoesDeletion, commitAllInvoicesDeletion, commitInvoiceDeletion, commitInvoiceReceiptChanges, saveInvoice, removeComissao, saveComissao } from '../../../lib/firebaseSync';
 import { deleteInvoicePdfUpload, uploadInvoicePdf } from '../../../lib/invoiceDocuments';
 import { isValidNsUg, normalizeNsNumber, normalizeNsUg } from '../../../lib/nsIntegrity';
+import { isValidOptionalSpedNup, normalizeSpedNup } from '../../../lib/spedNup';
 import { commitNsIntegrityMutations } from '../../../lib/nsIntegrityService';
 import { getCurrentOperationalScope } from '../../../lib/operationalPaths';
 import {
@@ -176,6 +177,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       ...(editingInvoice?.termoNumero ? { termoNumero: editingInvoice.termoNumero } : {}),
       ...(editingInvoice?.numeroNS ? { numeroNS: editingInvoice.numeroNS } : {}),
       ...(editingInvoice?.nsUg ? { nsUg: editingInvoice.nsUg } : {}),
+      ...(editingInvoice?.spedNup ? { spedNup: editingInvoice.spedNup } : {}),
       ...(currentInvoicePdf ? { notaFiscalPdf: currentInvoicePdf } : {}),
       ...(nextPdfVersions?.length ? { notaFiscalPdfVersions: nextPdfVersions } : {}),
       ...(editingInvoice?.espelhoNotaFiscalPdf
@@ -537,30 +539,111 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     showToast(`Nota Fiscal ${invoiceLabel} enviada para a Comissão de Recebimento!`);
   };
 
-  const handleMarkTesouraria = async (invoiceRecordKey: string) => {
-    const invoiceLabel = invoices.find((invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey)?.id || invoiceRecordKey;
-    let updatedTargetInvoice: Invoice | null = null;
-    const updatedInvoices = invoices.map(inv => {
-      if (getInvoiceRecordKey(inv) === invoiceRecordKey) {
-        updatedTargetInvoice = {
-          ...inv,
-          tesourariaDate: new Date().toISOString(),
-          localizacaoAtual: 'TESOURARIA',
-        };
-        return updatedTargetInvoice;
-      }
-      return inv;
-    });
-     if (user && updatedTargetInvoice) {
+  const handleMarkTesouraria = async (
+    invoiceRecordKey: string,
+    spedNupValue = ''
+  ): Promise<Invoice | null> => {
+    const targetInvoice = invoices.find(
+      (invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey
+    );
+    const invoiceLabel = targetInvoice?.id || invoiceRecordKey;
+
+    if (!targetInvoice) {
+      showToast('Nota Fiscal não encontrada para envio à Tesouraria.', 'error');
+      return null;
+    }
+
+    if (!isValidOptionalSpedNup(spedNupValue)) {
+      showToast(
+        'NUP do SPED inválido. Use o padrão 00000.000000/0000-00 ou deixe o campo vazio.',
+        'error'
+      );
+      return null;
+    }
+
+    const normalizedSpedNup = normalizeSpedNup(spedNupValue);
+    const updatedTargetInvoice: Invoice = {
+      ...targetInvoice,
+      tesourariaDate: new Date().toISOString(),
+      localizacaoAtual: 'TESOURARIA',
+      ...(normalizedSpedNup
+        ? { spedNup: normalizedSpedNup }
+        : targetInvoice.spedNup
+          ? { spedNup: targetInvoice.spedNup }
+          : {}),
+    };
+
+    if (user) {
       try {
         await saveInvoice(user.uid, updatedTargetInvoice);
       } catch (error) {
         showToast('Erro ao salvar no Firebase. A tramitação não foi alterada.', 'error');
-        return;
+        return null;
       }
     }
-    setInvoices(updatedInvoices);
-    showToast(`Nota Fiscal ${invoiceLabel} finalizada e enviada para o Setor de Tesouraria!`);
+
+    setInvoices((current) =>
+      current.map((invoice) =>
+        getInvoiceRecordKey(invoice) === invoiceRecordKey
+          ? updatedTargetInvoice
+          : invoice
+      )
+    );
+    showToast(
+      normalizedSpedNup
+        ? `Nota Fiscal ${invoiceLabel} enviada para a Tesouraria com NUP ${normalizedSpedNup}.`
+        : `Nota Fiscal ${invoiceLabel} finalizada e enviada para o Setor de Tesouraria!`
+    );
+    return updatedTargetInvoice;
+  };
+
+  const handleSaveSpedNup = async (
+    invoiceRecordKey: string,
+    spedNupValue: string
+  ): Promise<Invoice | null> => {
+    const targetInvoice = invoices.find(
+      (invoice) => getInvoiceRecordKey(invoice) === invoiceRecordKey
+    );
+    if (!targetInvoice) {
+      showToast('Nota Fiscal não encontrada para atualização do NUP.', 'error');
+      return null;
+    }
+
+    if (!isValidOptionalSpedNup(spedNupValue)) {
+      showToast(
+        'NUP do SPED inválido. Use o padrão 00000.000000/0000-00 ou deixe o campo vazio.',
+        'error'
+      );
+      return null;
+    }
+
+    const normalizedSpedNup = normalizeSpedNup(spedNupValue);
+    const updatedInvoice: Invoice = {
+      ...targetInvoice,
+      spedNup: normalizedSpedNup,
+    };
+
+    try {
+      if (user) await saveInvoice(user.uid, updatedInvoice);
+      setInvoices((current) =>
+        current.map((invoice) =>
+          getInvoiceRecordKey(invoice) === invoiceRecordKey
+            ? updatedInvoice
+            : invoice
+        )
+      );
+      showToast(
+        normalizedSpedNup
+          ? `NUP ${normalizedSpedNup} salvo na Nota Fiscal ${targetInvoice.id}.`
+          : `NUP removido da Nota Fiscal ${targetInvoice.id}.`,
+        'success'
+      );
+      return updatedInvoice;
+    } catch (error) {
+      console.error('Erro ao atualizar NUP do SPED:', error);
+      showToast('Não foi possível atualizar o NUP do SPED.', 'error');
+      return null;
+    }
   };
 
   const handleUpdateInvoiceLocation = async (
@@ -767,6 +850,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     handleDeleteAllComissoes,
     handleMarkComissao,
     handleMarkTesouraria,
+    handleSaveSpedNup,
     handleUpdateInvoiceLocation,
     handleSaveNumeroNS,
     handleSaveComissao

@@ -113,7 +113,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
 
               <div>
                 <h3 className="text-xl font-bold tracking-tight text-[#00288e]">Relatório por Empenho</h3>
-                <p className="text-sm text-gray-500 font-medium">Conciliação detalhada de Notas Fiscais, NS, recebimentos e saldos do empenho selecionado.</p>
+                <p className="text-sm text-gray-500 font-medium">Conciliação detalhada de Notas Fiscais, NUP do SPED, NS, recebimentos e saldos do empenho selecionado.</p>
                 {reportSearch && historicalInvoicesLoading && (
                   <p className="mt-1 text-[10px] font-semibold text-blue-500">Consultando histórico do empenho…</p>
                 )}
@@ -361,6 +361,7 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                   <th className="py-3 px-3.5 font-bold text-gray-500">Data de Emissão do TR</th>
                                   <th className="py-3 px-3.5 font-bold text-gray-500">Data da Comissão</th>
                                   <th className="py-3 px-3.5 font-bold text-gray-500">Data da Tesouraria</th>
+                                  <th className="py-3 px-3.5 font-bold text-gray-500">NUP SPED</th>
                                   <th className="py-3 px-3.5 font-bold text-gray-500">Número da NS</th>
                                   <th className="py-3 px-3.5 font-bold text-gray-500 text-right">Valor Total da NF</th>
                                 </tr>
@@ -426,6 +427,18 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                                           </span>
                                         ) : (
                                           <span className="text-gray-400 font-normal italic text-xs">Pendente</span>
+                                        )}
+                                      </td>
+                                      <td className="py-3 px-3.5 whitespace-nowrap">
+                                        {inv.spedNup ? (
+                                          <span
+                                            className="inline-flex items-center font-mono font-bold text-sky-800 bg-sky-50 px-2 py-0.5 rounded-md text-[11px] border border-sky-100"
+                                            title={`NUP do processo SPED da NF ${inv.id}`}
+                                          >
+                                            {inv.spedNup}
+                                          </span>
+                                        ) : (
+                                          <span className="text-gray-400 font-normal italic text-xs">—</span>
                                         )}
                                       </td>
                                       <td className="py-3 px-3.5 whitespace-nowrap">
@@ -866,6 +879,16 @@ export function RelatorioPorEmpenhoView({ context }: RelatorioPorEmpenhoViewProp
                               </span>
                             ) : (
                               <span className="text-xs font-semibold text-gray-400">Pendente</span>
+                            )}
+                          </div>
+                          <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-xs">
+                            <span className="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">NUP do SPED</span>
+                            {selectedReportInvoice.spedNup ? (
+                              <span className="text-xs font-bold text-sky-800 font-mono break-all">
+                                {selectedReportInvoice.spedNup}
+                              </span>
+                            ) : (
+                              <span className="text-xs font-semibold text-gray-400 italic">Não informado</span>
                             )}
                           </div>
                           <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-xs">
