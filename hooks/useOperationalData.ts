@@ -32,6 +32,7 @@ import {
   releaseWorkspaceSessionLease,
 } from '../lib/platformSessionLease';
 import { startWorkspaceSessionControl } from '../lib/platformSessionControl';
+import { ensureWorkspaceSessionCredential } from '../lib/platformSessionCredential';
 import { useOperationalRealtimeCollections } from './useOperationalRealtimeCollections';
 import { useInicioOperationalSnapshot } from '../features/inicio/hooks/useInicioOperationalSnapshot';
 import { getEmpenhoExerciseYear } from '../features/empenhos/domain/empenhoExercise';
@@ -134,7 +135,6 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
           return;
         }
 
-        setUser(currentUser);
         const resolvedContext = await resolveAuthenticatedWorkspaceContext(currentUser);
         if (!active) return;
 
@@ -161,9 +161,42 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
           return;
         }
 
+        let effectiveUser = currentUser;
+        if (
+          isOperationalSectorContext(resolvedContext)
+          && resolvedContext.resolutionSource === 'platform-directory'
+        ) {
+          explicitSignInRef.current = true;
+          try {
+            effectiveUser = await ensureWorkspaceSessionCredential(currentUser, resolvedContext);
+          } catch (error) {
+            try {
+              await releaseWorkspaceSessionLease(currentUser, resolvedContext);
+            } catch {
+              clearLocalWorkspaceSessionLease(resolvedContext.workspaceId, currentUser.uid);
+            }
+            throw error;
+          } finally {
+            explicitSignInRef.current = false;
+          }
+        }
+        if (!active) return;
+
+        setUser(effectiveUser);
         setWorkspaceContext(resolvedContext);
         setLoadingAuth(false);
-      })();
+      })().catch(async (error) => {
+        console.warn('Falha ao preparar a sessão operacional EMPROVEX.', error);
+        clearResolvedWorkspaceContext();
+        clearOperationalState();
+        resetActiveProfileMode();
+        if (auth.currentUser) await signOut(auth).catch(() => undefined);
+        if (!active) return;
+        setUser(null);
+        setWorkspaceContext(resolveWorkspaceContext(null));
+        setSyncing(false);
+        setLoadingAuth(false);
+      });
     });
 
     return () => {
@@ -282,7 +315,27 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
       throw new Error('Não foi possível autorizar esta identidade no EMPROVEX.');
     }
 
-    setUser(authenticatedUser);
+    let effectiveUser = authenticatedUser;
+    if (
+      isOperationalSectorContext(resolvedContext)
+      && resolvedContext.resolutionSource === 'platform-directory'
+    ) {
+      try {
+        effectiveUser = await ensureWorkspaceSessionCredential(
+          authenticatedUser,
+          resolvedContext
+        );
+      } catch (error) {
+        try {
+          await releaseWorkspaceSessionLease(authenticatedUser, resolvedContext);
+        } catch {
+          clearLocalWorkspaceSessionLease(resolvedContext.workspaceId, authenticatedUser.uid);
+        }
+        throw error;
+      }
+    }
+
+    setUser(effectiveUser);
     setWorkspaceContext(resolvedContext);
     return resolvedContext;
   };
