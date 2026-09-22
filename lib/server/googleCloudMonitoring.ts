@@ -1,6 +1,12 @@
 import { importPKCS8, SignJWT } from 'jose';
 
 import firebaseConfig from '../../firebase-applet-config.json';
+import {
+  FIRESTORE_BILLING_TIME_ZONE,
+  getFirestoreBillingDayKey,
+  getFirestoreBillingDayWindow,
+  shiftFirestoreBillingDayKey,
+} from '../firestoreBillingDay';
 import type {
   FirebaseGlobalUsageSnapshot,
   FirestoreBillingReference,
@@ -10,7 +16,7 @@ import { USAGE_TELEMETRY_VERSION } from '../platformCapacity';
 const MONITORING_SCOPE = 'https://www.googleapis.com/auth/monitoring.read';
 const OAUTH_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const MONITORING_API_ROOT = 'https://monitoring.googleapis.com/v3';
-const BILLING_RESET_TIME_ZONE = 'America/Los_Angeles' as const;
+const BILLING_RESET_TIME_ZONE = FIRESTORE_BILLING_TIME_ZONE;
 
 const SERVICE_ACCOUNT_EMAIL_ENV = 'EMPROVEX_GCP_MONITORING_CLIENT_EMAIL';
 const SERVICE_ACCOUNT_PRIVATE_KEY_ENV = 'EMPROVEX_GCP_MONITORING_PRIVATE_KEY';
@@ -372,76 +378,6 @@ async function loadMetricObservation(
   };
 }
 
-const pacificDateFormatter = new Intl.DateTimeFormat('en-US', {
-  timeZone: BILLING_RESET_TIME_ZONE,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  hourCycle: 'h23',
-});
-
-function timeZoneParts(date: Date): {
-  year: number;
-  month: number;
-  day: number;
-  hour: number;
-  minute: number;
-  second: number;
-} {
-  const values = Object.fromEntries(
-    pacificDateFormatter
-      .formatToParts(date)
-      .filter((part) => part.type !== 'literal')
-      .map((part) => [part.type, Number(part.value)])
-  );
-
-  return {
-    year: values.year,
-    month: values.month,
-    day: values.day,
-    hour: values.hour,
-    minute: values.minute,
-    second: values.second,
-  };
-}
-
-function timeZoneOffsetMs(date: Date): number {
-  const parts = timeZoneParts(date);
-  const representedAsUtc = Date.UTC(
-    parts.year,
-    parts.month - 1,
-    parts.day,
-    parts.hour,
-    parts.minute,
-    parts.second
-  );
-  const epochWithoutMilliseconds = Math.floor(date.getTime() / 1000) * 1000;
-  return representedAsUtc - epochWithoutMilliseconds;
-}
-
-function startOfPacificBillingDay(date: Date): Date {
-  const local = timeZoneParts(date);
-  const targetWallClock = Date.UTC(
-    local.year,
-    local.month - 1,
-    local.day,
-    0,
-    0,
-    0
-  );
-
-  let guess = new Date(targetWallClock);
-  let offset = timeZoneOffsetMs(guess);
-  guess = new Date(targetWallClock - offset);
-
-  // Re-evaluate at the resolved instant so DST transitions remain correct.
-  offset = timeZoneOffsetMs(guess);
-  return new Date(targetWallClock - offset);
-}
-
 export interface FirebaseGlobalUsageObservation {
   snapshot: FirebaseGlobalUsageSnapshot;
   observedAt: string;
@@ -550,20 +486,23 @@ async function loadFirebaseGlobalUsageObservationForInterval(
 export async function loadFirebaseGlobalUsageObservation(
   now = new Date()
 ): Promise<FirebaseGlobalUsageObservation> {
-  const startTime = startOfPacificBillingDay(now).toISOString();
-  const endTime = now.toISOString();
-  return loadFirebaseGlobalUsageObservationForInterval(startTime, endTime);
+  const billingDayKey = getFirestoreBillingDayKey(now);
+  const billingWindow = getFirestoreBillingDayWindow(billingDayKey);
+  return loadFirebaseGlobalUsageObservationForInterval(
+    billingWindow.startedAt,
+    now.toISOString()
+  );
 }
 
 export async function loadPreviousFirebaseBillingDayObservation(
   now = new Date()
 ): Promise<FirebaseGlobalUsageObservation> {
-  const currentDayStart = startOfPacificBillingDay(now);
-  const previousDayProbe = new Date(currentDayStart.getTime() - 12 * 60 * 60 * 1000);
-  const previousDayStart = startOfPacificBillingDay(previousDayProbe);
+  const currentDayKey = getFirestoreBillingDayKey(now);
+  const previousDayKey = shiftFirestoreBillingDayKey(currentDayKey, -1);
+  const previousWindow = getFirestoreBillingDayWindow(previousDayKey);
 
   return loadFirebaseGlobalUsageObservationForInterval(
-    previousDayStart.toISOString(),
-    currentDayStart.toISOString()
+    previousWindow.startedAt,
+    previousWindow.nextStartedAt
   );
 }

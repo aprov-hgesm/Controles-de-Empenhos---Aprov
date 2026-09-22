@@ -888,6 +888,26 @@ async function main() {
     })
   );
 
+  await allowed('Setor migra uma única vez a janela UTC legada para o billing day', () =>
+    updateDoc(usageRefA, {
+      windowStartedAt: '2026-09-19T07:00:00.000Z',
+      windowEndedAt: '2026-09-20T06:59:59.999Z',
+      estimatedDocumentReads: 31,
+      telemetryFlushes: 3,
+      lastReportedAt: serverTimestamp(),
+    })
+  );
+
+  await denied('Setor não pode alterar novamente a janela já migrada', () =>
+    updateDoc(usageRefA, {
+      windowStartedAt: '2026-09-19T08:00:00.000Z',
+      windowEndedAt: '2026-09-20T07:59:59.999Z',
+      estimatedDocumentReads: 32,
+      telemetryFlushes: 4,
+      lastReportedAt: serverTimestamp(),
+    })
+  );
+
   await denied('Setor não pode falsificar UG na própria telemetria', () =>
     setDoc(
       doc(

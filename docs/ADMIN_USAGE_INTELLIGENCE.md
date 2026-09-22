@@ -115,6 +115,14 @@ Nenhum listener é criado para histórico de cota. Atualizações acontecem apen
 - na troca da UG selecionada;
 - quando o administrador pressiona Atualizar.
 
+## Reconciliação por UG
+
+A Telemetria por UG v2 alinha os documentos diários das UGs à mesma janela `America/Los_Angeles` usada pela referência diária do Firestore.
+
+O painel compara `documentReads` e `documentWrites` observados globalmente com a soma atribuída às UGs. A diferença é mostrada como **não atribuída**, em vez de ser rateada silenciosamente.
+
+Para facilitar análise de custo relativo, o sistema calcula um **proxy** de Read/Write Units por UG apenas sobre a fração de operações documentais coberta pela telemetria. Esse proxy permanece explicitamente estimado e não substitui faturamento oficial.
+
 ## Limitações e interpretação
 
 O Google Cloud Monitoring observa o banco, não a UG de negócio do EMPROVEX.
@@ -123,7 +131,9 @@ Consequentemente:
 
 - o percentual da franquia global é a referência real para capacidade/cobrança;
 - a participação por UG é uma atribuição interna;
-- o sistema não converte reads estimados de uma UG diretamente em Read Units oficiais;
+- cobertura abaixo de 100% permanece visível como atividade não atribuída;
+- Read/Write Units por UG são apresentadas apenas como proxy proporcional da parcela coberta;
+- a parcela não atribuída nunca é redistribuída artificialmente;
 - a soma das UGs não é apresentada como fatura.
 
 O histórico global é acumulado pelo EMPROVEX a partir desta implementação. Lacunas anteriores à

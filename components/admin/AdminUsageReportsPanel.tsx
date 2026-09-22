@@ -11,10 +11,12 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
+import { getFirestoreBillingDayKey } from '../../lib/firestoreBillingDay';
 import { HGESM_WORKSPACE_ID } from '../../lib/hgesmWorkspace';
 import type { Workspace } from '../../lib/platformIdentity';
 import type { AdminWorkspaceUsageEstimate } from '../../lib/platformAdminUsage';
 import type { FirebaseGlobalUsageSnapshot } from '../../lib/platformCapacity';
+import { buildUsageReconciliation } from '../../lib/usageReconciliation';
 import {
   getUsageReportRange,
   loadGlobalUsageHistory,
@@ -57,24 +59,10 @@ function formatDayKey(value: string): string {
   return `${day}/${month}/${year}`;
 }
 
-function pacificDayKey(iso: string): string {
-  const date = new Date(iso);
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Los_Angeles',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(date);
-  const values = Object.fromEntries(
-    parts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value])
-  );
-  return `${values.year}-${values.month}-${values.day}`;
-}
-
 function liveGlobalPoint(snapshot: FirebaseGlobalUsageSnapshot): GlobalUsageHistoryPoint {
   const limit = snapshot.billingReference.readUnitsDailyLimit;
   return {
-    dayKey: pacificDayKey(snapshot.windowStartedAt),
+    dayKey: getFirestoreBillingDayKey(new Date(snapshot.windowStartedAt)),
     billableReadUnits: snapshot.billableReadUnits,
     billableRealtimeReadUnits: snapshot.billableRealtimeReadUnits,
     billableWriteUnits: snapshot.billableWriteUnits,
@@ -228,6 +216,13 @@ export function AdminUsageReportsPanel({
   const currentWorkspaceShare = totalCurrentEstimatedReads > 0 && selectedCurrentUsage
     ? (selectedCurrentUsage.estimatedDocumentReads / totalCurrentEstimatedReads) * 100
     : 0;
+  const currentReconciliation = useMemo(
+    () => globalUsage ? buildUsageReconciliation(globalUsage, usage) : null,
+    [globalUsage, usage]
+  );
+  const selectedReconciliationRow = currentReconciliation?.rows.find(
+    (row) => row.workspaceId === selectedWorkspace?.id
+  ) || null;
 
   const refresh = async () => {
     setLoading(true);
@@ -388,7 +383,7 @@ export function AdminUsageReportsPanel({
       </div>
 
       <div className="space-y-5 p-5 sm:p-6">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
           <ReportMetric
             label="Cota global hoje"
             value={globalUsage ? formatPercent(currentQuotaPercentage) : '—'}
@@ -414,10 +409,47 @@ export function AdminUsageReportsPanel({
           />
           <ReportMetric
             label="Participação hoje"
-            value={selectedCurrentUsage ? formatPercent(currentWorkspaceShare) : '—'}
-            detail="Dentro das estimativas instrumentadas"
+            value={selectedReconciliationRow?.readShareOfAttributed !== null
+              && selectedReconciliationRow?.readShareOfAttributed !== undefined
+              ? formatPercent(selectedReconciliationRow.readShareOfAttributed * 100)
+              : selectedCurrentUsage
+                ? formatPercent(currentWorkspaceShare)
+                : '—'}
+            detail="Entre reads atribuídos na janela do Firestore"
+          />
+          <ReportMetric
+            label="Read Units proxy UG"
+            value={selectedReconciliationRow
+              ? formatCount(selectedReconciliationRow.estimatedBillableReadUnits)
+              : '—'}
+            detail={currentReconciliation
+              ? `Cobertura global de reads: ${formatPercent(currentReconciliation.readCoverage.percentage || 0)} · estimativa não oficial`
+              : 'Aguardando reconciliação global'}
           />
         </div>
+
+        {currentReconciliation && (
+          <div
+            data-testid="admin-usage-report-reconciliation"
+            className="rounded-2xl border border-violet-300/15 bg-violet-400/[0.045] px-4 py-3"
+          >
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-violet-200/85">
+                  Reconciliação do dia atual
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                  {formatCount(currentReconciliation.readCoverage.attributed)} de {formatCount(currentReconciliation.readCoverage.globalObserved)}
+                  {' '}leituras documentais observadas estão atribuídas a UGs ({formatPercent(currentReconciliation.readCoverage.percentage || 0)}).
+                  A parcela restante não é redistribuída artificialmente.
+                </p>
+              </div>
+              <div className="shrink-0 rounded-xl border border-white/[0.08] bg-slate-950/25 px-3 py-2 text-[10px] font-extrabold text-slate-200">
+                Não atribuídas: {formatCount(currentReconciliation.readCoverage.unattributed)} reads · ~{formatCount(currentReconciliation.estimatedUnattributedReadUnits)} RU
+              </div>
+            </div>
+          </div>
+        )}
 
         {(globalUsageError || historyError) && (
           <div className="rounded-2xl border border-rose-300/15 bg-rose-400/[0.06] px-4 py-3 text-xs leading-relaxed text-rose-100">

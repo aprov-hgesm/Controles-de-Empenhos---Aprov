@@ -303,6 +303,11 @@ service cloud.firestore {
         && request.resource.data.lastReportedAt == request.time;
     }
 
+    function legacyUtcWorkspaceUsageWindow(data) {
+      return data.windowStartedAt == data.dayKey + 'T00:00:00.000Z'
+        && data.windowEndedAt == data.dayKey + 'T23:59:59.999Z';
+    }
+
     function validWorkspaceUsageEstimateCreate(workspaceId, dayKey) {
       return validWorkspaceUsageEstimate(workspaceId, dayKey);
     }
@@ -314,8 +319,13 @@ service cloud.firestore {
         && request.resource.data.workspaceId == resource.data.workspaceId
         && request.resource.data.ug == resource.data.ug
         && request.resource.data.dayKey == resource.data.dayKey
-        && request.resource.data.windowStartedAt == resource.data.windowStartedAt
-        && request.resource.data.windowEndedAt == resource.data.windowEndedAt
+        && (
+          (
+            request.resource.data.windowStartedAt == resource.data.windowStartedAt
+            && request.resource.data.windowEndedAt == resource.data.windowEndedAt
+          )
+          || legacyUtcWorkspaceUsageWindow(resource.data)
+        )
         && request.resource.data.estimatedDocumentReads >= resource.data.estimatedDocumentReads
         && request.resource.data.estimatedDocumentWrites >= resource.data.estimatedDocumentWrites
         && request.resource.data.estimatedDocumentDeletes >= resource.data.estimatedDocumentDeletes

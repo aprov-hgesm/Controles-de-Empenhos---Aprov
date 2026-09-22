@@ -12,6 +12,10 @@ import {
 } from 'firebase/firestore';
 
 import { db } from './firebase';
+import {
+  getFirestoreBillingDayKey,
+  shiftFirestoreBillingDayKey,
+} from './firestoreBillingDay';
 import { USAGE_TELEMETRY_VERSION } from './platformCapacity';
 import { WORKSPACE_USAGE_SOURCE } from './workspaceUsageTelemetry';
 
@@ -53,47 +57,30 @@ export interface WorkspaceUsageHistoryPoint {
   lastReportedAt: string | null;
 }
 
-function dayKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function startOfUtcDay(date: Date): Date {
-  return new Date(Date.UTC(
-    date.getUTCFullYear(),
-    date.getUTCMonth(),
-    date.getUTCDate()
-  ));
-}
-
-function addUtcDays(date: Date, days: number): Date {
-  const next = new Date(date);
-  next.setUTCDate(next.getUTCDate() + days);
-  return next;
-}
-
 export function getUsageReportRange(
   period: UsageReportPeriod,
   now = new Date()
 ): UsageReportRange {
-  const end = startOfUtcDay(now);
-  let start = end;
+  const endDayKey = getFirestoreBillingDayKey(now);
+  const [year, month] = endDayKey.split('-');
+  let startDayKey = endDayKey;
   let label = 'Hoje';
 
   if (period === 'weekly') {
-    start = addUtcDays(end, -6);
+    startDayKey = shiftFirestoreBillingDayKey(endDayKey, -6);
     label = 'Últimos 7 dias';
   } else if (period === 'monthly') {
-    start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1));
+    startDayKey = `${year}-${month}-01`;
     label = 'Mês atual';
   } else if (period === 'annual') {
-    start = new Date(Date.UTC(end.getUTCFullYear(), 0, 1));
-    label = `Ano ${end.getUTCFullYear()}`;
+    startDayKey = `${year}-01-01`;
+    label = `Ano ${year}`;
   }
 
   return {
     period,
-    startDayKey: dayKey(start),
-    endDayKey: dayKey(end),
+    startDayKey,
+    endDayKey,
     label,
   };
 }
