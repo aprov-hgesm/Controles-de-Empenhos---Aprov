@@ -97,7 +97,7 @@ for (const marker of [
 
 for (const marker of [
   'verifyFirebaseSectorRequest',
-  'assertActiveSessionLease',
+  'resolveBootstrapIdentity',
   'emprovexSessionId',
   'emprovexSessionSlotId',
   'emprovexBrowserInstanceId',
@@ -105,13 +105,15 @@ for (const marker of [
   'emprovexUg',
   'createSessionCustomToken',
   'FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON',
-  'PASSWORD_BOOTSTRAP_MAX_AGE_SECONDS',
+  'randomUUID',
+  'SESSION_CAPACITY_EXCEEDED',
 ]) requireText(sessionCredentialServer, marker, `Emissão server-side perdeu requisito: ${marker}`);
 
 for (const marker of [
   'ensureWorkspaceSessionCredential',
   'signInWithCustomToken',
-  'getLocalWorkspaceSessionIdentity',
+  'acquireBoundWorkspaceSessionLease',
+  'rememberBoundWorkspaceSessionIdentity',
   "result.signInProvider === 'custom'",
 ]) requireText(sessionCredentialClient, marker, `Upgrade silencioso perdeu requisito: ${marker}`);
 
@@ -126,6 +128,7 @@ for (const marker of [
   'function activeSessionSlotMatchesCredential',
   'function sessionCredentialMatchesAccount',
   'function canManageWorkspaceSession',
+  'function canInspectWorkspaceSessionCapacity',
   'function requestLeaseMatchesSessionCredential',
   'function resourceLeaseMatchesSessionCredential',
   "request.auth.token.get('emprovexSessionId', '')",
