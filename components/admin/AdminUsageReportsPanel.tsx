@@ -409,8 +409,13 @@ export function AdminUsageReportsPanel({
           />
           <ReportMetric
             label="Participação hoje"
-            value={selectedCurrentUsage ? formatPercent(currentWorkspaceShare) : '—'}
-            detail="Dentro das estimativas instrumentadas"
+            value={selectedReconciliationRow?.readShareOfAttributed !== null
+              && selectedReconciliationRow?.readShareOfAttributed !== undefined
+              ? formatPercent(selectedReconciliationRow.readShareOfAttributed * 100)
+              : selectedCurrentUsage
+                ? formatPercent(currentWorkspaceShare)
+                : '—'}
+            detail="Entre reads atribuídos na janela do Firestore"
           />
           <ReportMetric
             label="Read Units proxy UG"
