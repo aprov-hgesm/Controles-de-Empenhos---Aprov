@@ -92,6 +92,7 @@ export interface Invoice {
   termoNumero?: number; // Número do termo de recebimento QR
   numeroNS?: string; // Número identificador do comprovante de liquidação (Nota de Sistema)
   nsUg?: string; // UG emitente da NS, normalizada em 6 dígitos; compõe a identidade canônica da NS
+  spedNup?: string; // NUP opcional do processo digital no SPED, ex.: 64594.015046/2026-11
   localizacaoAtual?: 'APROVISIONAMENTO' | 'COMISSAO' | 'TESOURARIA'; // Localização operacional atual da NF; datas históricas são preservadas
   notaFiscalPdf?: InvoicePdfDocument;
   notaFiscalPdfVersions?: InvoicePdfDocument[];
