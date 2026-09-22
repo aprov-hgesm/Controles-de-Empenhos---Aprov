@@ -4,15 +4,15 @@ Este arquivo registra o estado real de continuidade do projeto.
 
 ## Estado geral
 
-Status: **PLANEJADO / IMPLEMENTAÇÃO AINDA NÃO INICIADA**
+Status: **FASE 0 — CONCLUÍDA E APROVADA TECNICAMENTE**
 
-Data-base desta memória: 2026-09-22.
+Data de fechamento técnico: 2026-09-22.
 
 Módulo:
 - ADM Depósito / Área Logística;
-- primeira implementação exclusiva da conta fundadora;
-- usuários externos ainda não possuem acesso;
-- nenhum bloco DEP foi implementado até a criação desta memória oficial.
+- piloto permanece exclusivo da conta fundadora;
+- usuários externos permanecem sem visibilidade e sem acesso;
+- nenhuma funcionalidade operacional da FASE 1 foi iniciada.
 
 ## Repositório
 
@@ -22,104 +22,158 @@ Repositório:
 Branch oficial:
 `main`
 
+Branch da FASE 0:
+`feat/adm-deposito-phase-0-foundation`
+
 Commit-base do código operacional anterior à memória oficial:
 `04fada7d74ee346e0db19699a969d74f1c329ebb`
 
 Merge que introduziu a memória oficial:
 `b9a139ab6a3c905878e279342760d35210fdd52d`
 
-Observação: commits posteriores que alterem apenas este `STATUS.md` fazem parte da própria manutenção documental e não redefinem o baseline operacional. O próximo chat deve sempre consultar a `main` real e comparar mudanças posteriores ao baseline relevante, em vez de assumir que um SHA textual dentro deste arquivo é o HEAD atual.
+HEAD real da `main` no início da FASE 0:
+`e7c78c0762ec861a088a1c3bfb93854c6ae996c8`
 
-Esse commit corresponde ao merge da memória oficial do projeto. O commit-base anterior à documentação era `04fada7d74ee346e0db19699a969d74f1c329ebb` e já continha, entre outras alterações anteriores ao módulo, a configuração de billing com mensalidade padrão de R$ 50,00.
+Commit técnico da FASE 0 aprovado pelos gates antes do fechamento documental:
+`f1b2ca5e0068b7ca0f4e4e54958886e7007e18e9`
+
+Comparação realizada antes da implementação:
+- `b9a139ab6a3c905878e279342760d35210fdd52d...main`: 3 commits à frente;
+- arquivos operacionais alterados nesse intervalo: nenhum;
+- único arquivo alterado: `docs/adm-deposito/STATUS.md`;
+- conclusão: os commits posteriores eram documentais e não interferiam na FASE 0.
+
+Observação: commits posteriores que alterem apenas este `STATUS.md` fazem parte da manutenção documental e não redefinem o baseline operacional. Todo novo chat deve consultar a `main` real antes de desenvolver.
 
 ## Última fase concluída
 
-Nenhuma fase do ADM Depósito foi implementada.
-
-## Próxima fase
-
 **FASE 0 — Fundação e isolamento**
 
-Blocos:
+Blocos concluídos:
 - DEP-0 — Feature flag exclusiva da conta fundadora;
 - DEP-0.1 — Namespace próprio do módulo.
 
-## Gate esperado da próxima fase
+## Implementação concluída
 
-Ao final da FASE 0 deve estar comprovado que:
-- a conta fundadora pode acessar a fundação do módulo;
-- usuários externos não veem a navegação do módulo;
-- usuários externos não acessam rotas do módulo por URL direta;
-- usuários externos não acessam APIs/dados logísticos;
-- nenhuma funcionalidade operacional existente do EMPROVEX foi quebrada.
+### DEP-0 — Feature flag exclusiva da conta fundadora
 
-## Decisões vigentes
+Foi criada uma política dedicada do módulo que:
+- mantém a feature habilitada apenas para o piloto fundador;
+- exige contexto operacional do workspace fundador;
+- exige a identidade fundadora consolidada;
+- mantém a entrada "ADM Depósito" invisível para usuários externos;
+- protege a rota `/adm-deposito` contra abertura direta por usuário externo;
+- exige confirmação server-side antes de renderizar a fundação do módulo;
+- protege a API `/api/adm-deposito/status` com validação do token Firebase da conta fundadora e provider Google.
 
-Consultar obrigatoriamente:
-`docs/adm-deposito/DECISIONS.md`
+A visibilidade da interface não é tratada como mecanismo suficiente de segurança.
 
-Principais decisões em vigor:
-- NF cadastrada = material recebido e estoque disponível;
-- não existe confirmação física adicional pelo ADM Depósito;
-- pendência de lote/validade/localização não bloqueia;
-- SISCOFIS entra via prompt padronizado + IA externa + JSON;
-- sem Número de Ficha no núcleo inicial;
-- código de barras desde a primeira versão;
-- FEFO recomendado;
-- Visão do Depósito é 2D com perspectiva tridimensional, não 3D real;
-- mapa mostra somente locais;
-- pesquisa de produto altera o destaque/cor dos locais correspondentes;
-- Firestore mantém o layout operacional;
-- Drive pode manter layout JSON, versões e preview SVG;
-- primeira implementação permanece exclusiva da conta fundadora.
+### DEP-0.1 — Namespace próprio do módulo
 
-## Testes do módulo
+Foi criado namespace Firestore independente:
 
-Ainda não executados, pois a implementação não começou.
+`warehouse/{workspaceId}/...`
 
-## PRs do módulo
+Domínios reservados na fundação:
+- `materials`;
+- `depots`;
+- `locations`;
+- `movements`;
+- `lots`;
+- `inventories`;
+- `siscofisSnapshots`.
 
-Nenhum PR de implementação do ADM Depósito concluído até esta data.
+As Firestore Rules possuem gate próprio do ADM Depósito e deliberadamente não reutilizam `canAccessWorkspace(workspaceId)` como fallback. Durante o piloto:
+- somente a identidade fundadora autenticada por Google;
+- somente no workspace `hgesm-aprov`;
+- pode ler ou gravar no namespace `warehouse`.
 
-Memória oficial criada e integrada:
-- PR #154 — `docs: establish ADM Depósito project memory`;
-- merge via squash;
-- commit da `main`: `b9a139ab6a3c905878e279342760d35210fdd52d`;
-- Application CI: aprovado;
-- Browser E2E com Firebase Emulator: aprovado;
-- release gates 16, 17, 18, 19, 20 e 21: aprovados;
-- Vercel preview: aprovado.
+Nenhuma modelagem operacional de materiais, estoque ou movimentações da FASE 1 foi iniciada.
 
-Nenhum código operacional do ADM Depósito foi implementado por esse PR.
+## Segurança comprovada
 
-## Riscos conhecidos antes da FASE 0
+Cenários automatizados aprovados no Firebase Emulator:
+- fundador grava no namespace ADM Depósito;
+- fundador lê o namespace ADM Depósito;
+- fundador lista domínio do namespace ADM Depósito;
+- setor externo não lê o namespace do fundador;
+- setor externo não grava no namespace nem usando o próprio workspace;
+- sessão da conta fundadora autenticada por senha não acessa o módulo;
+- fundador não usa o namespace logístico de workspace externo.
 
-1. O EMPROVEX continua recebendo mudanças paralelas em outras áreas.
-2. Antes de cada nova fase, a `main` deve ser comparada com o commit registrado aqui.
-3. Alterações futuras em NF, autenticação, Drive, Firestore Rules, workspace/UG ou telemetria podem afetar fases ainda não executadas.
-4. Nenhuma decisão de habilitação externa deve ser antecipada.
+Cenário Browser E2E aprovado:
+- usuário externo não vê `nav-adm-deposito`;
+- tentativa de acesso direto a `/adm-deposito` é negada e retorna à aplicação operacional;
+- a navegação do ADM Depósito permanece invisível após o redirecionamento.
 
-## Protocolo de fechamento de cada fase
+## Testes e checks
 
-Ao concluir uma fase, substituir/atualizar:
-- status geral;
-- última fase concluída;
-- blocos concluídos;
-- PR;
-- commit final da `main`;
-- testes e respectivos resultados;
-- decisões novas;
-- pendências;
-- riscos;
-- próxima fase;
-- impacto de mudanças paralelas detectadas.
+PR da implementação:
+- PR #155 — `feat: establish ADM Depósito phase 0 isolation`.
 
-## Instrução para o próximo chat
+Commit técnico validado:
+- `f1b2ca5e0068b7ca0f4e4e54958886e7007e18e9`.
+
+Resultado final do commit técnico:
+- Recovery guardrails: **aprovado**;
+- Application CI: **aprovado**;
+- gate `verify:adm-deposito-phase-0`: **aprovado**;
+- suíte multi-tenant Firestore Emulator: **aprovada**;
+- Browser E2E com Firebase Emulator: **aprovado**;
+- Production build: **aprovado**;
+- TypeScript final: **aprovado**;
+- Diff hygiene: **aprovado**;
+- release gates 16, 17, 18, 19, 20 e 21: **aprovados**;
+- Vercel preview do commit técnico: **aprovado**.
+
+Ocorrência durante a validação:
+- as duas primeiras execuções do Browser E2E chegaram ao timeout global de 45 s no cenário legado de três contextos simultâneos;
+- os testes novos do ADM Depósito já haviam passado nas duas execuções;
+- não houve falha da lógica de produção nem da segurança do ADM Depósito;
+- o teste legado recebeu timeout específico de 90 s, sem alteração da lógica de sessões;
+- após a estabilização, a bateria Browser E2E completa foi aprovada.
+
+## Decisões arquiteturais
+
+Nenhuma decisão registrada em `docs/adm-deposito/DECISIONS.md` foi alterada na FASE 0.
+
+A implementação segue especialmente:
+- D-001 — piloto exclusivo da conta fundadora;
+- D-026 — isolamento estrutural por workspace/UG e preparação segura para expansão futura.
+
+`DECISIONS.md` permanece como fonte oficial para qualquer alteração arquitetural futura.
+
+## Riscos e pendências
+
+Riscos conhecidos após a FASE 0:
+1. Qualquer nova rota ou API do ADM Depósito deverá reutilizar o gate fundador enquanto D-001 permanecer vigente.
+2. Alterações futuras nas Firestore Rules não podem introduzir fallback de acesso do namespace `warehouse` para usuários externos antes do gate de expansão previsto no roadmap.
+3. O cenário Browser E2E de três contextos simultâneos continua sendo naturalmente mais pesado em runners compartilhados; o timeout específico de 90 s é de teste e não altera a capacidade de sessões da aplicação.
+4. Mudanças paralelas em autenticação, workspace/UG, Firestore Rules ou Firebase devem ser comparadas com a `main` real antes da próxima fase.
+5. O namespace foi apenas fundado e protegido; seus contratos operacionais ainda não existem por decisão de escopo desta fase.
+
+Pendências:
+- nenhuma pendência bloqueante da FASE 0;
+- registrar no próximo fechamento o commit final da `main` resultante do merge do PR #155;
+- iniciar a FASE 1 somente em um novo chat.
+
+## Próxima fase
+
+**FASE 1 — Fundação do material**
+
+Blocos previstos conforme `ROADMAP.md`:
+- DEP-1;
+- DEP-1.1.
+
+**A FASE 1 NÃO FOI INICIADA NESTE CHAT.**
+
+## Gate para o próximo chat
 
 Antes de qualquer modificação:
 
-1. Ler `README.md`, `ROADMAP.md`, `DECISIONS.md` e este `STATUS.md`.
-2. Consultar a `main` atual.
-3. Comparar a `main` atual com o commit-base/último commit deste arquivo.
-4. Avaliar alterações intermediárias.
-5. Executar somente a fase indicada como próxima.
+1. Ler `README.md`, `ROADMAP.md`, `DECISIONS.md`, este `STATUS.md` e `HANDOFF_TEMPLATE.md`.
+2. Consultar a `main` real.
+3. Confirmar o merge final do PR #155 e registrar/usar seu SHA como novo baseline.
+4. Comparar mudanças posteriores ao SHA final da FASE 0.
+5. Avaliar impacto de alterações intermediárias em autenticação, Rules, workspace/UG e dados.
+6. Executar somente a FASE 1.
