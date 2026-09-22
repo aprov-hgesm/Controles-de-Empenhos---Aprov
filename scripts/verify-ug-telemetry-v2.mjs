@@ -18,6 +18,8 @@ const history = read('lib/platformAdminUsageHistory.ts');
 const reconciliation = read('lib/usageReconciliation.ts');
 const consolidated = read('components/admin/AdminConsolidatedUsagePanel.tsx');
 const reports = read('components/admin/AdminUsageReportsPanel.tsx');
+const rules = read('firestore.rules');
+const security = read('scripts/firestore-multitenancy-security.test.mjs');
 const docs = read('docs/UG_TELEMETRY_V2_RECONCILIATION.md');
 
 for (const marker of [
@@ -76,6 +78,17 @@ for (const marker of [
   'Cobertura global de reads',
   'A parcela restante não é redistribuída artificialmente',
 ]) requireText(reports, marker, `Relatório perdeu reconciliação: ${marker}`);
+
+for (const marker of [
+  'legacyUtcWorkspaceUsageWindow',
+  "data.windowStartedAt == data.dayKey + 'T00:00:00.000Z'",
+  '|| legacyUtcWorkspaceUsageWindow(resource.data)',
+]) requireText(rules, marker, `Rules perderam migração controlada da janela: ${marker}`);
+
+for (const marker of [
+  'Setor migra uma única vez a janela UTC legada para o billing day',
+  'Setor não pode alterar novamente a janela já migrada',
+]) requireText(security, marker, `Emulator perdeu cenário de migração v2: ${marker}`);
 
 for (const marker of [
   'America/Los_Angeles',
