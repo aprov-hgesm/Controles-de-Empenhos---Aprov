@@ -68,13 +68,15 @@ interface StoredWorkspaceSessionLeaseDocument {
   expiresAt?: Timestamp;
 }
 
-interface LocalLeaseRecord {
+export interface WorkspaceSessionLeaseIdentity {
   workspaceId: string;
   uid: string;
   slotId: WorkspaceSessionSlotId;
   sessionId: string;
   browserInstanceId: string;
 }
+
+type LocalLeaseRecord = WorkspaceSessionLeaseIdentity;
 
 export type WorkspaceSessionLeaseAcquisition =
   | {
@@ -177,6 +179,14 @@ function getLocalLeaseRecord(
   } catch {
     return null;
   }
+}
+
+export function getLocalWorkspaceSessionIdentity(
+  workspaceId: string,
+  uid: string
+): WorkspaceSessionLeaseIdentity | null {
+  const current = getLocalLeaseRecord(workspaceId, uid);
+  return current ? { ...current } : null;
 }
 
 function rememberLocalLease(record: LocalLeaseRecord): void {
