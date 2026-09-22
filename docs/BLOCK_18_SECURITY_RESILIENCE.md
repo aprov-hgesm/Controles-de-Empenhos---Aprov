@@ -9,6 +9,20 @@ Princípio:
 
 > Segurança deve ficar no backend, nas Rules, nos headers, nos limites e nos testes sempre que possível.
 
+### Segurança discreta como contrato permanente
+
+Controles de segurança devem funcionar “embaixo do capô” sempre que isso não reduza a
+proteção: sem confirmações recorrentes, tokens manuais, seleção de slot, relogins
+periódicos, CAPTCHA ou mensagens de infraestrutura apenas para simplificar a
+implementação. Sessões explicitamente revogadas, credenciais inválidas e acessos não
+autorizados podem interromper o trabalho, mas a comunicação ao operador deve ser simples
+e acionável.
+
+Segurança discreta não autoriza confiar em estado somente do cliente. Quando uma decisão
+de autorização depende de uma sessão operacional, a identidade usada pelas Rules precisa
+ser verificável e ter granularidade suficiente para distinguir aquela sessão de outra
+sessão legítima que compartilhe UID/e-mail.
+
 Baseline: `main@004d3351332761117729015b087bffd0fb23fc87`.
 
 ## 18.0 — Baseline e threat model
