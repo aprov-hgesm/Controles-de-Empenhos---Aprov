@@ -39,6 +39,7 @@
       "limitation": "proxy attribution is not official per-workspace billing"
     }
   },
-  "billingRule": "No workspace estimate or reconciliation proxy is represented as official billing.",
-  "operatorImpact": "none"
+  "billingRule": "No workspace estimate is represented as official billing.",
+  "operatorImpact": "none",
+  "reconciliationRule": "No reconciliation proxy is represented as official billing, and unattributed usage is never redistributed."
 }
