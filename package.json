@@ -145,7 +145,8 @@
     "verify:inicio-slow-planet-orbits": "node scripts/verify-inicio-slow-planet-orbits.mjs",
     "verify:block-22-billing": "node scripts/verify-block-22-billing.mjs",
     "verify:ug-telemetry-v2": "node scripts/verify-ug-telemetry-v2.mjs",
-    "verify:admin-sidebar-google-usage": "node scripts/verify-admin-sidebar-google-usage.mjs"
+    "verify:admin-sidebar-google-usage": "node scripts/verify-admin-sidebar-google-usage.mjs",
+    "verify:sped-nup-reporting": "node scripts/verify-sped-nup-reporting.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
