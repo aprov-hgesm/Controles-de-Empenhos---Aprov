@@ -166,10 +166,16 @@ function validateRequestedSession(
   request: WorkspaceSessionCredentialRequest
 ): void {
   if (
-    !request.workspaceId
+    !request
+    || typeof request.workspaceId !== 'string'
+    || request.workspaceId.length === 0
+    || typeof request.ug !== 'string'
     || !/^\d{6}$/.test(request.ug)
-    || !SESSION_SLOT_IDS.includes(request.slotId)
+    || typeof request.slotId !== 'string'
+    || !SESSION_SLOT_IDS.includes(request.slotId as WorkspaceSessionSlotId)
+    || typeof request.sessionId !== 'string'
     || request.sessionId.length <= 8
+    || typeof request.browserInstanceId !== 'string'
     || request.browserInstanceId.length <= 8
   ) {
     throw new SessionCredentialError(
