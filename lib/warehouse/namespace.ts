@@ -1,0 +1,45 @@
+import { isValidWorkspaceId, normalizeWorkspaceId } from '../platformIdentity';
+
+/**
+ * FASE 0 / DEP-0.1
+ *
+ * Namespace Firestore dedicado ao ADM Depósito.
+ *
+ * Estrutura:
+ * warehouse/{workspaceId}/{domain}/{documentId}
+ *
+ * Nenhuma coleção operacional existente é reutilizada como armazenamento do
+ * módulo logístico. As regras de segurança do namespace são independentes.
+ */
+export const WAREHOUSE_NAMESPACE_ROOT = 'warehouse';
+export const WAREHOUSE_NAMESPACE_VERSION = 'warehouse_v1';
+
+export const WAREHOUSE_DOMAIN_COLLECTIONS = {
+  materials: 'materials',
+  depots: 'depots',
+  locations: 'locations',
+  movements: 'movements',
+  lots: 'lots',
+  inventories: 'inventories',
+  siscofisSnapshots: 'siscofisSnapshots',
+} as const;
+
+export type WarehouseDomain =
+  keyof typeof WAREHOUSE_DOMAIN_COLLECTIONS;
+
+export function warehouseWorkspaceRoot(workspaceId: string): string {
+  const normalized = normalizeWorkspaceId(workspaceId);
+
+  if (!isValidWorkspaceId(normalized)) {
+    throw new Error('WAREHOUSE_INVALID_WORKSPACE_ID');
+  }
+
+  return `${WAREHOUSE_NAMESPACE_ROOT}/${normalized}`;
+}
+
+export function warehouseDomainPath(
+  workspaceId: string,
+  domain: WarehouseDomain
+): string {
+  return `${warehouseWorkspaceRoot(workspaceId)}/${WAREHOUSE_DOMAIN_COLLECTIONS[domain]}`;
+}

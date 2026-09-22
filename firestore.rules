@@ -34,6 +34,19 @@ service cloud.firestore {
       return isHgesmFounder();
     }
 
+    // FASE 0 / DEP-0 — a flag existe também nas Rules para que a liberação do
+    // módulo nunca dependa apenas da interface. Até o gate DEP-37, somente a
+    // identidade fundadora no workspace fundador pode tocar no namespace logístico.
+    function warehouseModuleEnabled() {
+      return true;
+    }
+
+    function canAccessWarehouseModule(workspaceId) {
+      return warehouseModuleEnabled()
+        && workspaceId == 'hgesm-aprov'
+        && isHgesmFounder();
+    }
+
     function workspaceExists(workspaceId) {
       return exists(/databases/$(database)/documents/workspaces/$(workspaceId));
     }
@@ -2085,6 +2098,17 @@ service cloud.firestore {
         && request.resource.data.classStats.size() <= 32
         && request.resource.data.stars is list
         && request.resource.data.stars.size() <= 72;
+    }
+
+    // FASE 0 / DEP-0.1 — namespace independente do ADM Depósito.
+    // Não existe fallback para canAccessWorkspace(): setores externos continuam
+    // bloqueados mesmo no próprio workspace durante todo o piloto fundador.
+    match /warehouse/{workspaceId} {
+      allow read, write: if canAccessWarehouseModule(workspaceId);
+
+      match /{document=**} {
+        allow read, write: if canAccessWarehouseModule(workspaceId);
+      }
     }
 
     // Workspace-scoped operational data. There is deliberately no admin bypass:

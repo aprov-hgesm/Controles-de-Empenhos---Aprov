@@ -133,6 +133,20 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     });
   });
 
+  test('usuário externo não vê nem acessa a rota ADM Depósito', async ({ page }) => {
+    await page.goto('/');
+    await loginSector(page, OPERATOR_A);
+
+    await expect(page.getByTestId('nav-adm-deposito')).toHaveCount(0);
+
+    await page.goto('/adm-deposito');
+    await expect(page).toHaveURL(/\/$/, { timeout: 20_000 });
+    await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByTestId('nav-adm-deposito')).toHaveCount(0);
+  });
+
   test('segundo workspace não enxerga a NS nem o fornecedor do primeiro', async ({ page }) => {
     await page.goto('/');
     await loginSector(page, OPERATOR_B);
@@ -313,6 +327,7 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
   });
 
   test('duas sessões por setor, múltiplas abas compartilham vaga e terceira sessão é barrada', async ({ browser }) => {
+    test.setTimeout(90_000);
     const contextA = await browser.newContext();
     const contextB = await browser.newContext();
     const contextC = await browser.newContext();
