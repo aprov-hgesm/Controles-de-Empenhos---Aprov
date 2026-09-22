@@ -27,6 +27,7 @@ import {
   getDefaultSimultaneousSessionLimit,
   type FirebaseGlobalUsageSnapshot,
 } from '../../lib/platformCapacity';
+import { buildUsageReconciliation } from '../../lib/usageReconciliation';
 import {
   buildUsageThresholdAlerts,
   usageAlertLevelLabel,
@@ -125,6 +126,16 @@ export function AdminConsolidatedUsagePanel({
   );
 
   const estimatedOperations = totals.reads + totals.writes + totals.deletes;
+  const reconciliation = useMemo(
+    () => globalUsage ? buildUsageReconciliation(globalUsage, usage) : null,
+    [globalUsage, usage]
+  );
+  const reconciliationByWorkspace = useMemo(
+    () => new Map(
+      (reconciliation?.rows || []).map((row) => [row.workspaceId, row])
+    ),
+    [reconciliation]
+  );
   const primaryBillingUsed = globalUsage?.billableReadUnits ?? null;
   const primaryBillingLimit = globalUsage?.billingReference.readUnitsDailyLimit ?? null;
   const primaryBillingPercentage = (
@@ -177,6 +188,7 @@ export function AdminConsolidatedUsagePanel({
           estimate,
           operations,
           share,
+          reconciliation: reconciliationByWorkspace.get(workspace.id) || null,
           activeSessionCount: workspaceSessions.length,
           sessionLimit: limit,
         };
@@ -185,7 +197,7 @@ export function AdminConsolidatedUsagePanel({
         b.operations - a.operations
         || a.workspace.name.localeCompare(b.workspace.name, 'pt-BR')
       ))
-  ), [activeSessions, estimatedOperations, usage, workspaces]);
+  ), [activeSessions, estimatedOperations, reconciliationByWorkspace, usage, workspaces]);
 
   const refreshing = loadingUsage || loadingGlobalUsage || alertPolicy.loading;
 
@@ -343,6 +355,88 @@ export function AdminConsolidatedUsagePanel({
           </div>
         </div>
 
+        {reconciliation && (
+          <div
+            data-testid="admin-usage-reconciliation-v2"
+            className="rounded-2xl border border-violet-300/15 bg-violet-400/[0.045] p-4"
+          >
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-[9px] font-extrabold uppercase tracking-[0.14em] text-violet-200/85">
+                  <Gauge className="h-4 w-4" />
+                  Telemetria por UG v2 · reconciliação
+                </div>
+                <h4 className="mt-2 text-sm font-extrabold text-white">
+                  Cobertura entre atividade atribuída e consumo global
+                </h4>
+                <p className="mt-1 max-w-4xl text-xs leading-relaxed text-slate-400">
+                  Compara documentos observados pelo Google com operações instrumentadas pelo EMPROVEX na mesma
+                  janela diária do Firestore. Read/Write Units por UG são apenas um proxy proporcional da parcela
+                  coberta; a fração sem evidência de atribuição permanece como não atribuída.
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/[0.08] bg-slate-950/25 px-3 py-2 font-mono text-[9px] font-bold uppercase tracking-[0.11em] text-slate-300">
+                Dia de cobrança {reconciliation.billingDayKey}
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
+              <Metric
+                label="Cobertura reads"
+                value={formatShare(reconciliation.readCoverage.percentage)}
+              />
+              <Metric
+                label="Docs lidos Google"
+                value={formatCount(reconciliation.readCoverage.globalObserved)}
+              />
+              <Metric
+                label="Reads atribuídos"
+                value={formatCount(reconciliation.readCoverage.attributed)}
+              />
+              <Metric
+                label="Reads não atribuídos"
+                value={formatCount(reconciliation.readCoverage.unattributed)}
+              />
+              <Metric
+                label="Cobertura writes"
+                value={formatShare(reconciliation.writeCoverage.percentage)}
+              />
+              <Metric
+                label="Writes Google"
+                value={formatCount(reconciliation.writeCoverage.globalObserved)}
+              />
+              <Metric
+                label="Proxy Read Units atribuídas"
+                value={formatCount(Math.round(reconciliation.estimatedAttributedReadUnits))}
+              />
+              <Metric
+                label="Proxy Read Units não atribuídas"
+                value={formatCount(Math.round(reconciliation.estimatedUnattributedReadUnits))}
+              />
+            </div>
+
+            {(reconciliation.mismatchedUsageCount > 0
+              || reconciliation.readCoverage.overAttributed > 0
+              || reconciliation.writeCoverage.overAttributed > 0) && (
+              <div className="mt-3 rounded-xl border border-amber-300/15 bg-amber-400/[0.05] px-3 py-2.5 text-[10px] leading-relaxed text-amber-100">
+                {reconciliation.mismatchedUsageCount > 0
+                  ? `${reconciliation.mismatchedUsageCount} registro(s) de UG pertencem a outra janela diária e foram excluídos da reconciliação. `
+                  : ''}
+                {reconciliation.readCoverage.overAttributed > 0
+                  ? `Reads atribuídos excedem o total Google em ${formatCount(reconciliation.readCoverage.overAttributed)}; isso indica defasagem/amostragem e não gera rateio adicional. `
+                  : ''}
+                {reconciliation.writeCoverage.overAttributed > 0
+                  ? `Writes atribuídos excedem o total Google em ${formatCount(reconciliation.writeCoverage.overAttributed)}.`
+                  : ''}
+              </div>
+            )}
+
+            <p className="mt-3 font-mono text-[9px] font-bold uppercase tracking-[0.11em] text-slate-500">
+              Proxy por UG ≠ faturamento oficial · parcela não atribuída nunca é redistribuída artificialmente
+            </p>
+          </div>
+        )}
+
         {globalUsageConfigured === false && (
           <div className="rounded-2xl border border-amber-300/15 bg-amber-400/[0.06] px-4 py-3 text-xs leading-relaxed text-amber-100">
             O Cloud Monitoring ainda não está configurado neste ambiente. A parte estimada por UG
@@ -493,6 +587,11 @@ export function AdminConsolidatedUsagePanel({
                       <span className="rounded-full border border-cyan-300/15 bg-cyan-400/[0.06] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.10em] text-cyan-100">
                         {formatShare(row.share)} das estimativas
                       </span>
+                      {row.reconciliation && (
+                        <span className="rounded-full border border-violet-300/15 bg-violet-400/[0.06] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.10em] text-violet-100">
+                          ~{formatCount(Math.round(row.reconciliation.estimatedBillableReadUnits))} Read Units proxy
+                        </span>
+                      )}
                     </div>
                     <p className="mt-1 text-[11px] text-slate-500">
                       Última consolidação: {formatDateTime(row.estimate?.lastReportedAt || null)}
@@ -513,11 +612,27 @@ export function AdminConsolidatedUsagePanel({
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
                   <Metric label="Reads estimados" value={formatCount(row.estimate?.estimatedDocumentReads || 0)} />
                   <Metric label="Writes estimados" value={formatCount(row.estimate?.estimatedDocumentWrites || 0)} />
                   <Metric label="Deletes estimados" value={formatCount(row.estimate?.estimatedDocumentDeletes || 0)} />
                   <Metric label="Snapshots" value={formatCount(row.estimate?.realtimeSnapshots || 0)} />
+                  <Metric
+                    label="Cobertura relativa reads"
+                    value={row.reconciliation
+                      ? formatShare(
+                          row.reconciliation.readShareOfAttributed === null
+                            ? null
+                            : row.reconciliation.readShareOfAttributed * 100
+                        )
+                      : '—'}
+                  />
+                  <Metric
+                    label="Read Units proxy"
+                    value={row.reconciliation
+                      ? formatCount(Math.round(row.reconciliation.estimatedBillableReadUnits))
+                      : '—'}
+                  />
                 </div>
               </div>
             ))}
