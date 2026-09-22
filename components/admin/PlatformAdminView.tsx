@@ -67,17 +67,58 @@ type AdminTabId =
   | 'seguranca';
 
 const ADMIN_TABS = [
-  { id: 'overview', label: 'Visão Geral', icon: LayoutDashboard },
-  { id: 'setores', label: 'Setores', icon: Building2 },
-  { id: 'novo-setor', label: 'Cadastrar Setor', icon: Plus },
-  { id: 'consumo', label: 'Consumo & Cotas', icon: BarChart3 },
-  { id: 'sessoes', label: 'Sessões', icon: MonitorSmartphone },
-  { id: 'assinaturas', label: 'Assinaturas', icon: WalletCards },
-  { id: 'backups', label: 'Backup & Recuperação', icon: DatabaseBackup },
-  { id: 'seguranca', label: 'Segurança', icon: ShieldAlert },
+  {
+    id: 'overview',
+    label: 'Visão Geral',
+    description: 'Resumo da plataforma, saúde dos serviços e pontos que exigem atenção.',
+    icon: LayoutDashboard,
+  },
+  {
+    id: 'setores',
+    label: 'Setores',
+    description: 'Gestão dos workspaces, UGs, responsáveis e ciclo de vida dos usuários.',
+    icon: Building2,
+  },
+  {
+    id: 'novo-setor',
+    label: 'Cadastrar Setor',
+    description: 'Provisionamento completo de uma nova unidade operacional.',
+    icon: Plus,
+  },
+  {
+    id: 'consumo',
+    label: 'Consumo & Cotas',
+    description: 'Telemetria real do Google, estimativas por UG, histórico e limites.',
+    icon: BarChart3,
+  },
+  {
+    id: 'sessoes',
+    label: 'Sessões',
+    description: 'Acompanhamento das sessões simultâneas e encerramento remoto.',
+    icon: MonitorSmartphone,
+  },
+  {
+    id: 'assinaturas',
+    label: 'Assinaturas',
+    description: 'Trial, situação comercial e controle administrativo de cobrança.',
+    icon: WalletCards,
+  },
+  {
+    id: 'backups',
+    label: 'Backup & Recuperação',
+    description: 'Saúde dos backups, recuperação e proteção dos dados administrativos.',
+    icon: DatabaseBackup,
+  },
+  {
+    id: 'seguranca',
+    label: 'Segurança',
+    description: 'Isolamento multi-tenant, integridade e postura de segurança da plataforma.',
+    icon: ShieldAlert,
+  },
 ] satisfies Array<{
   id: AdminTabId;
   label: string;
+  description: string;
   icon: React.ComponentType<{ className?: string }>;
 }>;
 
@@ -329,6 +370,9 @@ export function PlatformAdminView({
     router.replace('/');
   };
 
+  const activeTabConfig = ADMIN_TABS.find((tab) => tab.id === activeTab) || ADMIN_TABS[0];
+  const ActiveTabIcon = activeTabConfig.icon;
+
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[#020817] text-white selection:bg-blue-500 selection:text-white">
       <ToastNotification toast={toast} onClose={() => setToast(null)} />
@@ -393,12 +437,100 @@ export function PlatformAdminView({
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto max-w-7xl space-y-7 px-5 py-7 sm:px-8 sm:py-10">
+      <main className="relative z-10 mx-auto w-full max-w-[1640px] px-4 py-5 sm:px-6 sm:py-7 xl:px-8">
+        <div className="grid min-w-0 gap-5 lg:grid-cols-[248px_minmax(0,1fr)] xl:grid-cols-[268px_minmax(0,1fr)]">
+          <aside
+            data-testid="admin-tab-navigation"
+            data-layout="sidebar"
+            className="min-w-0 lg:sticky lg:top-24 lg:self-start"
+          >
+            <div className="overflow-hidden rounded-[1.75rem] border border-white/[0.08] bg-[#030b1b]/88 shadow-[0_24px_70px_rgba(0,8,28,0.24)] backdrop-blur-2xl">
+              <div className="border-b border-white/[0.07] p-4">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-blue-300/15 bg-blue-500/[0.08] text-blue-100">
+                    <UserCog className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-blue-300/55">
+                      Administração
+                    </p>
+                    <p className="truncate text-xs font-extrabold text-white">{adminEmail}</p>
+                  </div>
+                </div>
+              </div>
+
+              <nav aria-label="Áreas administrativas" className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-4 lg:grid-cols-1">
+                {ADMIN_TABS.map((tab) => {
+                  const Icon = tab.icon;
+                  const selected = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => changeAdminTab(tab.id)}
+                      aria-pressed={selected}
+                      data-testid={'admin-tab-' + tab.id}
+                      className={
+                        'group flex min-h-12 min-w-0 items-center gap-3 rounded-xl border px-3 text-left transition '
+                        + (selected
+                          ? 'border-blue-300/25 bg-blue-500/15 text-blue-50 shadow-[inset_3px_0_0_rgba(96,165,250,0.72)]'
+                          : 'border-transparent bg-transparent text-slate-400 hover:border-white/[0.07] hover:bg-white/[0.035] hover:text-white')
+                      }
+                    >
+                      <span className={
+                        'grid h-8 w-8 shrink-0 place-items-center rounded-lg border '
+                        + (selected
+                          ? 'border-blue-300/20 bg-blue-400/[0.10] text-blue-200'
+                          : 'border-white/[0.06] bg-white/[0.025] text-slate-500 group-hover:text-slate-300')
+                      }>
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-[11px] font-extrabold">{tab.label}</span>
+                        <span className="mt-0.5 hidden truncate text-[9px] text-slate-600 lg:block">
+                          {tab.id === 'consumo'
+                            ? 'Google + UG'
+                            : tab.id === 'assinaturas'
+                              ? 'Billing OBSERVE'
+                              : tab.id === 'sessoes'
+                                ? 'Tempo real'
+                                : 'Gestão'}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </nav>
+
+              <div className="border-t border-white/[0.07] p-3">
+                <div className="grid gap-2">
+                  <button
+                    type="button"
+                    onClick={returnToHgesm}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-blue-300/12 bg-blue-400/[0.055] px-3 text-[10px] font-extrabold text-blue-100 transition hover:bg-blue-400/[0.10]"
+                  >
+                    <ArrowLeftRight className="h-4 w-4" />
+                    Voltar ao HGeSM
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void onLogout()}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 text-[10px] font-extrabold text-slate-400 transition hover:bg-white/[0.05] hover:text-white"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Encerrar sessão
+                  </button>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <div className="min-w-0 space-y-5">
         <motion.section
           initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: shouldReduceMotion ? 0.12 : 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="relative overflow-hidden rounded-[2rem] border border-white/[0.09] bg-[#071225]/75 p-6 shadow-[0_30px_90px_rgba(0,8,28,0.28)] backdrop-blur-2xl sm:p-8"
+          className="relative overflow-hidden rounded-[1.75rem] border border-white/[0.09] bg-[#071225]/72 p-5 shadow-[0_24px_70px_rgba(0,8,28,0.24)] backdrop-blur-2xl sm:p-6"
         >
           <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-blue-500/[0.10] blur-3xl" />
           <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-blue-200/45 to-transparent" />
@@ -409,9 +541,21 @@ export function PlatformAdminView({
                 <ShieldCheck className="w-4 h-4" />
                 Perfil administrativo
               </div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">Central de Administração EMPROVEX</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
-                A mesma conta institucional alterna entre o perfil operacional do HGeSM e este perfil de administração. Enquanto este modo estiver ativo, nenhuma subscription operacional de empenhos, notas fiscais, comissões ou cronogramas é aberta.
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-xl border border-blue-300/15 bg-blue-400/[0.07] text-blue-200">
+                  <ActiveTabIcon className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-blue-300/55">
+                    Central de Administração EMPROVEX
+                  </p>
+                  <h2 className="mt-0.5 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+                    {activeTabConfig.label}
+                  </h2>
+                </div>
+              </div>
+              <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-400">
+                {activeTabConfig.description}
               </p>
             </div>
 
@@ -437,38 +581,6 @@ export function PlatformAdminView({
             </div>
           </section>
         )}
-
-        <section
-          data-testid="admin-tab-navigation"
-          className="sticky top-[5.25rem] z-10 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#030b1b]/88 shadow-[0_18px_50px_rgba(0,8,28,0.22)] backdrop-blur-2xl"
-        >
-          <div className="overflow-x-auto p-2.5">
-            <div className="flex min-w-max gap-2">
-              {ADMIN_TABS.map((tab) => {
-                const Icon = tab.icon;
-                const selected = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => changeAdminTab(tab.id)}
-                    aria-pressed={selected}
-                    data-testid={'admin-tab-' + tab.id}
-                    className={
-                      'inline-flex min-h-11 items-center gap-2 rounded-xl border px-3.5 text-xs font-extrabold transition '
-                      + (selected
-                        ? 'border-blue-300/25 bg-blue-500/15 text-blue-100 shadow-[0_0_24px_rgba(37,99,235,0.12)]'
-                        : 'border-white/[0.06] bg-white/[0.025] text-slate-400 hover:border-white/[0.10] hover:bg-white/[0.05] hover:text-white')
-                    }
-                  >
-                    <Icon className="h-4 w-4" />
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </section>
 
         {activeTab === 'overview' && (
           <div data-testid="admin-overview-tab" className="space-y-5">
@@ -743,6 +855,8 @@ export function PlatformAdminView({
             globalUsageConfigured={globalUsageConfigured}
           />
         )}
+          </div>
+        </div>
       </main>
 
       <EditSectorModal
