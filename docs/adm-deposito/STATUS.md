@@ -22,8 +22,8 @@ Repositório:
 Branch oficial:
 `main`
 
-Último commit de referência confirmado da `main`:
-`b9a139ab6a3c905878e279342760d35210fdd52d`
+Último commit de referência confirmado da `main` no fechamento desta inicialização documental:
+`00d922fe1f8dba5ddd4af45737aa9a7cf210f549`
 
 Esse commit corresponde ao merge da memória oficial do projeto. O commit-base anterior à documentação era `04fada7d74ee346e0db19699a969d74f1c329ebb` e já continha, entre outras alterações anteriores ao módulo, a configuração de billing com mensalidade padrão de R$ 50,00.
 
