@@ -33,6 +33,7 @@ import { EmprovexAuthLoading } from '../components/auth/EmprovexAuthLoading';
 import { LoginSuccessTransition } from '../components/auth/LoginSuccessTransition';
 import type { OperationalActiveTab } from '../lib/operationalSubscriptionPlan';
 import { countPendingNotices } from '../features/avisos/domain/noticeLifecycle';
+import { canAccessWarehouseModule } from '../lib/warehouse/featureFlag';
 export default function Home() {
   // Toast / Notifications helper
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -421,6 +422,10 @@ export default function Home() {
               console.error(err);
               showToast('Erro ao sair do sistema', 'error');
             }
+          }}
+          warehouseModuleEnabled={canAccessWarehouseModule(workspaceContext)}
+          onOpenWarehouse={() => {
+            window.location.assign('/adm-deposito');
           }}
         />
 
