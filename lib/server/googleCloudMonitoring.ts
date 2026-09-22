@@ -72,9 +72,6 @@ interface MonitoringPoint {
 }
 
 interface MonitoringTimeSeries {
-  metric?: {
-    labels?: Record<string, string>;
-  };
   points?: MonitoringPoint[];
 }
 
@@ -375,107 +372,6 @@ async function loadMetricObservation(
   };
 }
 
-
-export interface FirebaseApiMethodUsage {
-  apiMethod: string;
-  billableReadUnits: number;
-  billableRealtimeReadUnits: number;
-  billableWriteUnits: number;
-}
-
-async function loadMetricByApiMethod(
-  accessToken: string,
-  metricType: string,
-  startTime: string,
-  endTime: string
-): Promise<Map<string, number>> {
-  const projectId = firebaseConfig.projectId;
-  const databaseId = firebaseConfig.firestoreDatabaseId;
-  const filter = [
-    `metric.type = "${metricType}"`,
-    'resource.type = "firestore.googleapis.com/Database"',
-    `resource.labels.database_id = "${databaseId.replace(/(["\\\\])/g, '\\\\$1')}"`,
-  ].join(' AND ');
-
-  let pageToken: string | undefined;
-  const totals = new Map<string, number>();
-
-  do {
-    const url = new URL(
-      `${MONITORING_API_ROOT}/projects/${encodeURIComponent(projectId)}/timeSeries`
-    );
-    url.searchParams.set('filter', filter);
-    url.searchParams.set('interval.startTime', startTime);
-    url.searchParams.set('interval.endTime', endTime);
-    url.searchParams.set('view', 'FULL');
-    url.searchParams.set('pageSize', '1000');
-    if (pageToken) url.searchParams.set('pageToken', pageToken);
-
-    const response = await fetch(url, {
-      headers: { authorization: `Bearer ${accessToken}` },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `Cloud Monitoring recusou breakdown ${metricType} (HTTP ${response.status}).`
-      );
-    }
-
-    const payload = await response.json() as MonitoringListResponse;
-    for (const series of payload.timeSeries || []) {
-      const apiMethod = series.metric?.labels?.api_method || 'outros';
-      const value = (series.points || []).reduce(
-        (sum, point) => sum + numericPointValue(point),
-        0
-      );
-      totals.set(apiMethod, (totals.get(apiMethod) || 0) + value);
-    }
-    pageToken = payload.nextPageToken || undefined;
-  } while (pageToken);
-
-  return totals;
-}
-
-export async function loadFirebaseApiMethodUsage(
-  now = new Date()
-): Promise<FirebaseApiMethodUsage[]> {
-  const startTime = startOfPacificBillingDay(now).toISOString();
-  const endTime = now.toISOString();
-  const candidates = monitoringCredentialCandidates();
-  if (!candidates.length) {
-    throw new Error('Cloud Monitoring ainda não possui credencial server-side configurada.');
-  }
-
-  let lastError: unknown = null;
-  for (const credentials of candidates) {
-    try {
-      const accessToken = await mintServiceAccountAccessToken(credentials);
-      const [reads, realtime, writes] = await Promise.all([
-        loadMetricByApiMethod(accessToken, METRICS.billableReadUnits.type, startTime, endTime),
-        loadMetricByApiMethod(accessToken, METRICS.billableRealtimeReadUnits.type, startTime, endTime),
-        loadMetricByApiMethod(accessToken, METRICS.billableWriteUnits.type, startTime, endTime),
-      ]);
-      const methods = new Set([...reads.keys(), ...realtime.keys(), ...writes.keys()]);
-      return [...methods].map((apiMethod) => ({
-        apiMethod,
-        billableReadUnits: Math.max(0, Math.round(reads.get(apiMethod) || 0)),
-        billableRealtimeReadUnits: Math.max(0, Math.round(realtime.get(apiMethod) || 0)),
-        billableWriteUnits: Math.max(0, Math.round(writes.get(apiMethod) || 0)),
-      })).sort((a, b) => (
-        (b.billableReadUnits + b.billableRealtimeReadUnits + b.billableWriteUnits)
-        - (a.billableReadUnits + a.billableRealtimeReadUnits + a.billableWriteUnits)
-      ));
-    } catch (error) {
-      lastError = error;
-      cachedAccessTokens.delete(`${credentials.source}:${credentials.clientEmail}`);
-    }
-  }
-
-  throw lastError instanceof Error
-    ? lastError
-    : new Error('Não foi possível detalhar consumo por método da API.');
-}
 
 const pacificDateFormatter = new Intl.DateTimeFormat('en-US', {
   timeZone: BILLING_RESET_TIME_ZONE,
