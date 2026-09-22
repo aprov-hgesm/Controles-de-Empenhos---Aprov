@@ -15,6 +15,7 @@ const sidebar = read('components/layout/AppSidebar.tsx');
 const home = read('app/page.tsx');
 const rules = read('firestore.rules');
 const securitySuite = read('scripts/firestore-multitenancy-security.test.mjs');
+const browserE2e = read('tests/e2e/operator-critical-flow.spec.mjs');
 const ci = read('.github/workflows/application-ci.yml');
 const pkg = JSON.parse(read('package.json'));
 
@@ -157,6 +158,12 @@ for (const scenario of [
     `Cenário de segurança da FASE 0 ausente: ${scenario}`
   );
 }
+
+requireText(
+  browserE2e,
+  'usuário externo não vê nem acessa a rota ADM Depósito',
+  'Browser E2E não cobre invisibilidade e bloqueio de URL direta para usuário externo.'
+);
 
 requireText(
   pkg.scripts?.['verify:adm-deposito-phase-0'] || '',
