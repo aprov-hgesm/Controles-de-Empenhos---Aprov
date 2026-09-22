@@ -35,6 +35,10 @@ Regras:
 - valide checks;
 - faça merge na main somente após aprovação técnica;
 - verifique o deploy quando aplicável;
+- trabalhe de forma autônoma e evite intervenção manual do operador sempre que houver integração disponível;
+- quando Cloud Shell for realmente necessário, prefira consolidar publicações/ações compatíveis em um único bloco após várias fases ou no gate de release;
+- se uma intervenção externa for indispensável para segurança ou validação da fase atual, solicite-a imediatamente e forneça comandos prontos para copiar;
+- nunca presuma que uma publicação externa ocorreu sem validar o retorno do operador;
 - ao concluir, atualize STATUS.md com PR, commit, testes, riscos, pendências e próxima fase;
 - atualize DECISIONS.md somente se houver nova decisão arquitetural definitiva;
 - não inicie a próxima fase neste mesmo chat.

@@ -198,7 +198,7 @@ Riscos conhecidos após a FASE 1:
 2. A FASE 2 deverá usar o material canônico sem introduzir uma segunda identidade concorrente de item/material.
 3. Conversões de apresentação existem como contrato; não devem ser confundidas com saldo, movimentação, código de barras ou embalagem operacional antes das fases correspondentes.
 4. Alterações futuras em autenticação, workspace/UG ou Firestore Rules precisam ser comparadas com a `main` real antes de cada nova fase.
-5. O deploy da aplicação na Vercel foi confirmado. Este ambiente não possui canal autenticado para publicar `firestore.rules` diretamente no projeto Firebase; portanto a versão nova das Rules foi confirmada no repositório e no Emulator, mas uma publicação independente das Rules de produção não foi presumida. Antes de expor qualquer gravação operacional de materiais, essa publicação deve ser confirmada.
+5. O deploy da aplicação na Vercel foi confirmado. Para ações externas não disponíveis diretamente ao agente, o operador pode executar comandos via Cloud Shell. A diretriz é minimizar essas intervenções e, quando tecnicamente seguro, consolidar publicações compatíveis de várias fases em um único gate operacional. Se uma publicação for indispensável para segurança ou validação da fase corrente, o agente deve solicitá-la imediatamente com comandos prontos para copiar e nunca presumir sucesso sem conferir o retorno.
 
 Pendências bloqueantes da FASE 1:
 - nenhuma no código, testes, CI ou integração com a `main`.
