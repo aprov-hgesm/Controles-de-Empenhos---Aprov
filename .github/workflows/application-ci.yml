@@ -262,6 +262,9 @@ jobs:
       - name: Admin usage intelligence guard
         run: npm run verify:admin-usage-intelligence
 
+      - name: Workspace usage reconciliation v2 guard
+        run: npm run verify:workspace-usage-reconciliation
+
       - name: Block 16.7 security and concurrency hardening guard
         run: npm run verify:block-16-7-security-concurrency
 
