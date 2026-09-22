@@ -1,9 +1,10 @@
+import { randomUUID } from 'node:crypto';
+
 import { decodeJwt, createRemoteJWKSet, importPKCS8, jwtVerify, SignJWT, type JWTPayload } from 'jose';
 
 import firebaseConfig from '../../firebase-applet-config.json';
 import {
   SESSION_AUTHORIZATION_VERSION,
-  SESSION_LEASE_VERSION,
   SESSION_SLOT_IDS,
   type WorkspaceSessionSlotId,
 } from '../platformCapacity';
@@ -26,9 +27,13 @@ const FIREBASE_ISSUER = `https://securetoken.google.com/${PROJECT_ID}`;
 const FIRESTORE_BASE = E2E_EMULATORS
   ? `http://127.0.0.1:8080/v1/projects/${PROJECT_ID}/databases/(default)/documents`
   : `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/${DATABASE_ID}/documents`;
-const PASSWORD_BOOTSTRAP_MAX_AGE_SECONDS = 5 * 60;
 
 export interface WorkspaceSessionCredentialRequest {
+  workspaceId: string;
+  ug: string;
+}
+
+export interface WorkspaceSessionCredentialIdentity {
   workspaceId: string;
   ug: string;
   slotId: WorkspaceSessionSlotId;
@@ -39,8 +44,7 @@ export interface WorkspaceSessionCredentialRequest {
 export interface VerifiedFirebaseSectorIdentity {
   uid: string;
   email: string;
-  provider: 'password' | 'custom';
-  authTime: number;
+  provider: 'password';
   token: string;
   payload: JWTPayload;
 }
@@ -52,8 +56,7 @@ export class SessionCredentialError extends Error {
       | 'UNAUTHENTICATED'
       | 'FORBIDDEN'
       | 'INVALID_SESSION'
-      | 'SESSION_REVOKED'
-      | 'SESSION_EXPIRED'
+      | 'SESSION_CAPACITY_EXCEEDED'
       | 'SERVER_NOT_CONFIGURED',
     public readonly status: 400 | 401 | 403 | 409 | 503
   ) {
@@ -80,16 +83,6 @@ function readProvider(payload: JWTPayload): string {
   return typeof provider === 'string' ? provider : '';
 }
 
-function numericClaim(payload: JWTPayload, name: string): number {
-  const value = payload[name];
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
-
-function stringClaim(payload: JWTPayload, name: string): string {
-  const value = payload[name];
-  return typeof value === 'string' ? value : '';
-}
-
 function assertTokenEnvelope(payload: JWTPayload): void {
   if (payload.aud !== PROJECT_ID) {
     throw new SessionCredentialError('Token Firebase emitido para outro projeto.', 'UNAUTHENTICATED', 401);
@@ -97,9 +90,14 @@ function assertTokenEnvelope(payload: JWTPayload): void {
   if (payload.iss !== FIREBASE_ISSUER) {
     throw new SessionCredentialError('Emissor do token Firebase é inválido.', 'UNAUTHENTICATED', 401);
   }
+
   const now = Math.floor(Date.now() / 1000);
-  if (typeof payload.exp !== 'number' || payload.exp <= now) {
-    throw new SessionCredentialError('Sessão Firebase expirada.', 'UNAUTHENTICATED', 401);
+  if (
+    typeof payload.exp !== 'number'
+    || payload.exp <= now
+    || (typeof payload.iat === 'number' && payload.iat > now + 60)
+  ) {
+    throw new SessionCredentialError('Sessão Firebase inválida ou expirada.', 'UNAUTHENTICATED', 401);
   }
 }
 
@@ -118,6 +116,7 @@ export async function verifyFirebaseSectorRequest(
         issuer: FIREBASE_ISSUER,
         audience: PROJECT_ID,
         algorithms: ['RS256'],
+        clockTolerance: 60,
       }));
     }
   } catch (error) {
@@ -143,9 +142,9 @@ export async function verifyFirebaseSectorRequest(
       403
     );
   }
-  if (provider !== 'password' && provider !== 'custom') {
+  if (provider !== 'password') {
     throw new SessionCredentialError(
-      'Provedor de autenticação não autorizado para sessão operacional.',
+      'Somente o login inicial por e-mail e senha pode abrir uma nova sessão operacional.',
       'FORBIDDEN',
       403
     );
@@ -154,65 +153,24 @@ export async function verifyFirebaseSectorRequest(
   return {
     uid,
     email,
-    provider,
-    authTime: numericClaim(payload, 'auth_time'),
+    provider: 'password',
     token,
     payload,
   };
 }
 
-function validateRequestedSession(
-  identity: VerifiedFirebaseSectorIdentity,
-  request: WorkspaceSessionCredentialRequest
-): void {
+function validateRequestedWorkspace(request: WorkspaceSessionCredentialRequest): void {
   if (
     !request
     || typeof request.workspaceId !== 'string'
     || request.workspaceId.length === 0
     || typeof request.ug !== 'string'
     || !/^\d{6}$/.test(request.ug)
-    || typeof request.slotId !== 'string'
-    || !SESSION_SLOT_IDS.includes(request.slotId as WorkspaceSessionSlotId)
-    || typeof request.sessionId !== 'string'
-    || request.sessionId.length <= 8
-    || typeof request.browserInstanceId !== 'string'
-    || request.browserInstanceId.length <= 8
   ) {
     throw new SessionCredentialError(
-      'Identidade operacional da sessão é inválida.',
+      'Workspace/UG da sessão operacional são inválidos.',
       'INVALID_SESSION',
       400
-    );
-  }
-
-  if (identity.provider === 'password') {
-    const now = Math.floor(Date.now() / 1000);
-    if (
-      identity.authTime <= 0
-      || identity.authTime > now + 60
-      || now - identity.authTime > PASSWORD_BOOTSTRAP_MAX_AGE_SECONDS
-    ) {
-      throw new SessionCredentialError(
-        'A autenticação inicial ficou antiga. Faça login novamente para abrir uma nova sessão.',
-        'UNAUTHENTICATED',
-        401
-      );
-    }
-    return;
-  }
-
-  if (
-    stringClaim(identity.payload, 'emprovexSessionVersion') !== SESSION_AUTHORIZATION_VERSION
-    || stringClaim(identity.payload, 'emprovexSessionId') !== request.sessionId
-    || stringClaim(identity.payload, 'emprovexBrowserInstanceId') !== request.browserInstanceId
-    || stringClaim(identity.payload, 'emprovexWorkspaceId') !== request.workspaceId
-    || normalizeUnitUg(stringClaim(identity.payload, 'emprovexUg')) !== request.ug
-    || stringClaim(identity.payload, 'emprovexSourceProvider') !== 'password'
-  ) {
-    throw new SessionCredentialError(
-      'A credencial atual não pode assumir outra sessão operacional.',
-      'FORBIDDEN',
-      403
     );
   }
 }
@@ -254,8 +212,8 @@ async function readFirestoreDocument(
     const permissionDenied = response.status === 401 || response.status === 403;
     throw new SessionCredentialError(
       permissionDenied
-        ? 'A sessão não possui autorização para validar o lease operacional.'
-        : payload.error?.message || 'Não foi possível validar o lease operacional.',
+        ? 'A identidade não possui autorização para abrir esta sessão operacional.'
+        : payload.error?.message || 'Não foi possível consultar a capacidade de sessões.',
       permissionDenied ? 'FORBIDDEN' : 'INVALID_SESSION',
       permissionDenied ? 403 : 409
     );
@@ -267,62 +225,78 @@ async function readFirestoreDocument(
   };
 }
 
-async function assertActiveSessionLease(
+async function resolveBootstrapIdentity(
   identity: VerifiedFirebaseSectorIdentity,
   request: WorkspaceSessionCredentialRequest
-): Promise<void> {
-  const [slot, revocation] = await Promise.all([
-    readFirestoreDocument(
-      identity.token,
-      `workspaces/${request.workspaceId}/sessionSlots/${request.slotId}`
-    ),
-    readFirestoreDocument(
-      identity.token,
-      `workspaces/${request.workspaceId}/sessionRevocations/${request.sessionId}`
-    ),
+): Promise<WorkspaceSessionCredentialIdentity> {
+  const accountPath = `platformAccounts/${identity.email}`;
+  const workspacePath = `workspaces/${request.workspaceId}`;
+  const slotPaths = SESSION_SLOT_IDS.map(
+    (slotId) => `workspaces/${request.workspaceId}/sessionSlots/${slotId}`
+  );
+
+  const [account, workspace, ...slots] = await Promise.all([
+    readFirestoreDocument(identity.token, accountPath),
+    readFirestoreDocument(identity.token, workspacePath),
+    ...slotPaths.map((path) => readFirestoreDocument(identity.token, path)),
   ]);
 
-  if (revocation.exists) {
+  if (!account.exists || !workspace.exists) {
     throw new SessionCredentialError(
-      'Esta sessão foi encerrada pela administração. Faça login novamente.',
-      'SESSION_REVOKED',
+      'Conta ou workspace operacional não estão disponíveis.',
+      'FORBIDDEN',
       403
     );
   }
 
-  if (!slot.exists) {
-    throw new SessionCredentialError(
-      'A vaga desta sessão não está mais ativa.',
-      'INVALID_SESSION',
-      409
-    );
-  }
+  const accountFields = account.fields;
+  const workspaceFields = workspace.fields;
+  const accountProvider = restString(accountFields, 'authProvider') || 'password';
+  const accountUg = normalizeUnitUg(restString(accountFields, 'ug'));
+  const workspaceUg = normalizeUnitUg(restString(workspaceFields, 'ug'));
 
-  const fields = slot.fields;
   if (
-    restString(fields, 'leaseVersion') !== SESSION_LEASE_VERSION
-    || restString(fields, 'slotId') !== request.slotId
-    || restString(fields, 'sessionId') !== request.sessionId
-    || restString(fields, 'workspaceId') !== request.workspaceId
-    || normalizeUnitUg(restString(fields, 'ug')) !== request.ug
-    || restString(fields, 'uid') !== identity.uid
-    || normalizePlatformEmail(restString(fields, 'accountEmail')) !== identity.email
-    || restString(fields, 'browserInstanceId') !== request.browserInstanceId
+    restString(accountFields, 'accountType') !== 'sector'
+    || restString(accountFields, 'status') !== 'active'
+    || restString(accountFields, 'email') !== identity.email
+    || restString(accountFields, 'workspaceId') !== request.workspaceId
+    || restString(accountFields, 'firebaseUid') !== identity.uid
+    || accountProvider !== 'password'
+    || accountUg !== request.ug
+    || restString(workspaceFields, 'id') !== request.workspaceId
+    || restString(workspaceFields, 'status') !== 'active'
+    || restString(workspaceFields, 'authorizedEmail') !== identity.email
+    || workspaceUg !== request.ug
   ) {
     throw new SessionCredentialError(
-      'O lease ativo não corresponde à identidade apresentada.',
-      'INVALID_SESSION',
+      'Conta, UID, workspace ou UG não correspondem à identidade autenticada.',
+      'FORBIDDEN',
+      403
+    );
+  }
+
+  const now = Date.now();
+  const availableIndex = slots.findIndex((slot) => {
+    if (!slot.exists) return true;
+    const expiresAt = restTimestamp(slot.fields, 'expiresAt');
+    return expiresAt > 0 && expiresAt <= now;
+  });
+
+  if (availableIndex < 0) {
+    throw new SessionCredentialError(
+      'Limite de acessos simultâneos atingido. Encerre uma das sessões ativas para continuar.',
+      'SESSION_CAPACITY_EXCEEDED',
       409
     );
   }
 
-  if (restTimestamp(fields, 'expiresAt') <= Date.now()) {
-    throw new SessionCredentialError(
-      'O lease desta sessão expirou.',
-      'SESSION_EXPIRED',
-      409
-    );
-  }
+  return {
+    workspaceId: request.workspaceId,
+    ug: request.ug,
+    slotId: SESSION_SLOT_IDS[availableIndex],
+    sessionId: `session-${randomUUID()}`,
+    browserInstanceId: `browser-${randomUUID()}`,
+  };
 }
 
 interface ServiceAccountCredentials {
@@ -371,16 +345,16 @@ function base64UrlJson(value: unknown): string {
 
 async function createSessionCustomToken(
   identity: VerifiedFirebaseSectorIdentity,
-  request: WorkspaceSessionCredentialRequest
+  session: WorkspaceSessionCredentialIdentity
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const claims = {
     emprovexSessionVersion: SESSION_AUTHORIZATION_VERSION,
-    emprovexSessionId: request.sessionId,
-    emprovexSessionSlotId: request.slotId,
-    emprovexBrowserInstanceId: request.browserInstanceId,
-    emprovexWorkspaceId: request.workspaceId,
-    emprovexUg: request.ug,
+    emprovexSessionId: session.sessionId,
+    emprovexSessionSlotId: session.slotId,
+    emprovexBrowserInstanceId: session.browserInstanceId,
+    emprovexWorkspaceId: session.workspaceId,
+    emprovexUg: session.ug,
     emprovexSourceProvider: 'password',
   };
 
@@ -420,18 +394,24 @@ export async function issueWorkspaceSessionCredential(
 ): Promise<{
   customToken: string;
   sessionVersion: typeof SESSION_AUTHORIZATION_VERSION;
-  sessionId: string;
   slotId: WorkspaceSessionSlotId;
+  sessionId: string;
+  browserInstanceId: string;
 }> {
   const identity = await verifyFirebaseSectorRequest(authorization);
-  validateRequestedSession(identity, request);
-  await assertActiveSessionLease(identity, request);
-  const customToken = await createSessionCustomToken(identity, request);
+  validateRequestedWorkspace(request);
+
+  // O servidor escolhe somente um slot ausente/expirado e gera a identidade
+  // lógica. Um token password jamais pode pedir ou adotar sessionId/slot de outra
+  // sessão legítima do mesmo UID.
+  const session = await resolveBootstrapIdentity(identity, request);
+  const customToken = await createSessionCustomToken(identity, session);
 
   return {
     customToken,
     sessionVersion: SESSION_AUTHORIZATION_VERSION,
-    sessionId: request.sessionId,
-    slotId: request.slotId,
+    slotId: session.slotId,
+    sessionId: session.sessionId,
+    browserInstanceId: session.browserInstanceId,
   };
 }
