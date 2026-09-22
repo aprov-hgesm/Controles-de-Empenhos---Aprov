@@ -115,6 +115,12 @@ jobs:
       - name: ADM Depósito Phase 0 isolation guard
         run: npm run verify:adm-deposito-phase-0
 
+      - name: ADM Depósito Phase 1 material contract tests
+        run: npm run test:adm-deposito-material
+
+      - name: ADM Depósito Phase 1 material foundation guard
+        run: npm run verify:adm-deposito-phase-1
+
       - name: Production multi-tenant readiness guard
         run: npm run verify:production-multitenant-readiness
 

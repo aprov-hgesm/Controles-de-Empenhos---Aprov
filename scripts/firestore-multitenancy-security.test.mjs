@@ -622,6 +622,116 @@ async function main() {
     )
   );
 
+  console.log('\nFASE 1 — fundação canônica do material');
+
+  const canonicalMaterialId = 'mat_123e4567e89b12d3a456426614174000';
+  const canonicalMaterial = {
+    schemaVersion: 'warehouse_material_v1',
+    id: canonicalMaterialId,
+    workspaceId: 'hgesm-aprov',
+    ug: '160416',
+    description: 'Arroz parboilizado',
+    aliases: ['Arroz beneficiado'],
+    unit: { code: 'kg', label: null },
+    status: 'active',
+    conversions: [
+      {
+        presentation: { code: 'g', label: null },
+        factorToBaseUnit: 0.001,
+      },
+      {
+        presentation: { code: 'box', label: 'Caixa 30 kg' },
+        factorToBaseUnit: 30,
+      },
+    ],
+  };
+
+  const founderMaterialProbe = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'materials',
+    canonicalMaterialId
+  );
+
+  await allowed('Fundador grava material canônico da FASE 1', () =>
+    setDoc(founderMaterialProbe, canonicalMaterial)
+  );
+  await allowed('Fundador lê material canônico da FASE 1', () =>
+    getDoc(founderMaterialProbe)
+  );
+  await allowed('Fundador lista materiais da FASE 1', () =>
+    getDocs(collection(admin.db, 'warehouse', 'hgesm-aprov', 'materials'))
+  );
+
+  await denied('Material não pode declarar workspace diferente do caminho', () =>
+    setDoc(founderMaterialProbe, {
+      ...canonicalMaterial,
+      workspaceId: 'workspace-a',
+    })
+  );
+
+  await denied('Setor externo não lê material do fundador', () =>
+    getDoc(
+      doc(
+        sessionA.db,
+        'warehouse',
+        'hgesm-aprov',
+        'materials',
+        canonicalMaterialId
+      )
+    )
+  );
+
+  const externalMaterialId = 'mat_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  await denied('Setor externo não grava material nem no próprio workspace', () =>
+    setDoc(
+      doc(
+        sessionA.db,
+        'warehouse',
+        'workspace-a',
+        'materials',
+        externalMaterialId
+      ),
+      {
+        ...canonicalMaterial,
+        id: externalMaterialId,
+        workspaceId: 'workspace-a',
+        ug: '123456',
+      }
+    )
+  );
+
+  await denied('Sessão fundadora por senha não lê materiais da FASE 1', () =>
+    getDoc(
+      doc(
+        founderPassword.db,
+        'warehouse',
+        'hgesm-aprov',
+        'materials',
+        canonicalMaterialId
+      )
+    )
+  );
+
+  await denied('Fundador não grava material em workspace externo', () =>
+    setDoc(
+      doc(
+        admin.db,
+        'warehouse',
+        'workspace-a',
+        'materials',
+        externalMaterialId
+      ),
+      {
+        ...canonicalMaterial,
+        id: externalMaterialId,
+        workspaceId: 'workspace-a',
+        ug: '123456',
+      }
+    )
+  );
+
   console.log('Isolamento A ↔ B');
   await allowed('Setor A lê o próprio empenho', () =>
     getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))
