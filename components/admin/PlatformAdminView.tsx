@@ -401,7 +401,7 @@ export function PlatformAdminView({
               </span>
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 lg:hidden">
                 <div>
                   <p className="font-mono text-[7px] font-bold uppercase tracking-[0.22em] text-blue-300/55">Central de comando</p>
                   <h1 className="mt-0.5 text-base font-extrabold tracking-[0.16em] text-white sm:text-lg">EMPROVEX</h1>
@@ -560,11 +560,29 @@ export function PlatformAdminView({
             </div>
 
             <div className="min-w-0 rounded-2xl border border-white/[0.08] bg-slate-950/30 px-4 py-3.5 shadow-inner shadow-black/10 lg:min-w-[310px]">
-              <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
-                <UserCog className="w-4 h-4" />
-                Conta institucional
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Setores ativos</p>
+                  <p className="mt-1 text-lg font-black text-white">{activeWorkspaceCount}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Google Cloud</p>
+                  <p className={
+                    'mt-1 text-sm font-extrabold '
+                    + (globalUsageConfigured === true
+                      ? 'text-emerald-300'
+                      : globalUsageConfigured === false
+                        ? 'text-amber-300'
+                        : 'text-slate-300')
+                  }>
+                    {globalUsageConfigured === true
+                      ? 'Conectado'
+                      : globalUsageConfigured === false
+                        ? 'Configurar'
+                        : 'Verificando'}
+                  </p>
+                </div>
               </div>
-              <p className="text-sm font-bold text-white break-all">{adminEmail}</p>
             </div>
           </div>
         </motion.section>
