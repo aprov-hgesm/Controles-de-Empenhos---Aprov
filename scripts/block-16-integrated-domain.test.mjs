@@ -133,6 +133,15 @@ const firebaseConfig = await synthetic('file:///firebase-applet-config.json', {
   },
 });
 
+const billingDayModule = compiled(
+  'file:///lib/firestoreBillingDay.js',
+  'lib/firestoreBillingDay.ts'
+);
+await billingDayModule.link(async (specifier) => {
+  throw new Error(`Import inesperado em firestoreBillingDay: ${specifier}`);
+});
+await billingDayModule.evaluate();
+
 const monitoringModule = compiled(
   'file:///lib/server/googleCloudMonitoring.js',
   'lib/server/googleCloudMonitoring.ts'
@@ -140,6 +149,7 @@ const monitoringModule = compiled(
 await monitoringModule.link(async (specifier) => {
   if (specifier === 'jose') return jose;
   if (specifier === '../../firebase-applet-config.json') return firebaseConfig;
+  if (specifier === '../firestoreBillingDay') return billingDayModule;
   if (specifier === '../platformCapacity') return capacityModule;
   throw new Error(`Import inesperado em googleCloudMonitoring: ${specifier}`);
 });
