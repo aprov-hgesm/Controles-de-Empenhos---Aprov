@@ -553,6 +553,75 @@ async function main() {
     'O teste do fundador precisa manter o mesmo UID entre providers.'
   );
 
+  console.log('\nFASE 0 — isolamento do ADM Depósito');
+
+  const founderWarehouseProbe = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'depots',
+    'phase-zero-probe'
+  );
+
+  await allowed('Fundador grava no namespace ADM Depósito', () =>
+    setDoc(founderWarehouseProbe, {
+      phase: 0,
+      workspaceId: 'hgesm-aprov',
+      marker: 'founder-only',
+    })
+  );
+  await allowed('Fundador lê o namespace ADM Depósito', () =>
+    getDoc(founderWarehouseProbe)
+  );
+  await allowed('Fundador lista domínio do namespace ADM Depósito', () =>
+    getDocs(collection(admin.db, 'warehouse', 'hgesm-aprov', 'depots'))
+  );
+  await denied('Setor externo não lê namespace ADM Depósito do fundador', () =>
+    getDoc(
+      doc(
+        sessionA.db,
+        'warehouse',
+        'hgesm-aprov',
+        'depots',
+        'phase-zero-probe'
+      )
+    )
+  );
+  await denied('Setor externo não grava namespace ADM Depósito nem no próprio workspace', () =>
+    setDoc(
+      doc(
+        sessionA.db,
+        'warehouse',
+        'workspace-a',
+        'depots',
+        'external-probe'
+      ),
+      { marker: 'forbidden' }
+    )
+  );
+  await denied('Sessão fundadora por senha não acessa ADM Depósito', () =>
+    getDoc(
+      doc(
+        founderPassword.db,
+        'warehouse',
+        'hgesm-aprov',
+        'depots',
+        'phase-zero-probe'
+      )
+    )
+  );
+  await denied('Fundador não usa o namespace ADM Depósito de workspace externo', () =>
+    getDoc(
+      doc(
+        admin.db,
+        'warehouse',
+        'workspace-a',
+        'depots',
+        'external-probe'
+      )
+    )
+  );
+
   console.log('Isolamento A ↔ B');
   await allowed('Setor A lê o próprio empenho', () =>
     getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))
