@@ -16,7 +16,11 @@ import { AdminUsageReportsPanel } from './AdminUsageReportsPanel';
 import type { Workspace } from '../../lib/platformIdentity';
 import type { AdminWorkspaceSession } from '../../lib/platformAdminSessions';
 import type { AdminWorkspaceUsageEstimate } from '../../lib/platformAdminUsage';
-import type { FirebaseGlobalUsageSnapshot } from '../../lib/platformCapacity';
+import type {
+  FirebaseGlobalMetricDataThrough,
+  FirebaseGlobalUsageSnapshot,
+  GoogleMonitoringCredentialSource,
+} from '../../lib/platformCapacity';
 
 type ConsumptionTab = 'quota' | 'reports' | 'consolidated' | 'workspace' | 'alerts';
 
@@ -28,6 +32,8 @@ interface AdminConsumptionHubProps {
   globalUsageConfigured: boolean | null;
   globalUsageObservedAt: string | null;
   globalUsageDataThrough: string | null;
+  globalUsageMetricDataThrough: FirebaseGlobalMetricDataThrough | null;
+  globalUsageCredentialSource: GoogleMonitoringCredentialSource | null;
   loadingUsage: boolean;
   loadingGlobalUsage: boolean;
   usageError: string | null;
@@ -190,6 +196,8 @@ export function AdminConsumptionHub(props: AdminConsumptionHubProps) {
               configured={props.globalUsageConfigured}
               observedAt={props.globalUsageObservedAt}
               dataThrough={props.globalUsageDataThrough}
+              metricDataThrough={props.globalUsageMetricDataThrough}
+              credentialSource={props.globalUsageCredentialSource}
               loading={props.loadingGlobalUsage}
               error={props.globalUsageError}
               onRefresh={props.onRefreshGlobalUsage}
