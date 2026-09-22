@@ -18,7 +18,10 @@ import {
 import { usePlatformAdminUsageAlertPolicy } from '../../hooks/usePlatformAdminUsageAlertPolicy';
 import { HGESM_WORKSPACE_ID } from '../../lib/hgesmWorkspace';
 import type { Workspace } from '../../lib/platformIdentity';
-import type { AdminWorkspaceUsageEstimate } from '../../lib/platformAdminUsage';
+import {
+  reconcileWorkspaceUsage,
+  type AdminWorkspaceUsageEstimate,
+} from '../../lib/platformAdminUsage';
 import {
   isAdminWorkspaceSessionActive,
   type AdminWorkspaceSession,
@@ -125,6 +128,10 @@ export function AdminConsolidatedUsagePanel({
   );
 
   const estimatedOperations = totals.reads + totals.writes + totals.deletes;
+  const reconciliation = useMemo(
+    () => reconcileWorkspaceUsage(usage, globalUsage),
+    [globalUsage, usage]
+  );
   const primaryBillingUsed = globalUsage?.billableReadUnits ?? null;
   const primaryBillingLimit = globalUsage?.billingReference.readUnitsDailyLimit ?? null;
   const primaryBillingPercentage = (
@@ -342,6 +349,50 @@ export function AdminConsolidatedUsagePanel({
             </div>
           </div>
         </div>
+
+        {reconciliation && (
+          <div
+            data-testid="admin-usage-reconciliation"
+            className="rounded-2xl border border-violet-300/15 bg-violet-400/[0.04] p-4"
+          >
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-[9px] font-extrabold uppercase tracking-[0.14em] text-violet-200/85">
+                  <Activity className="h-4 w-4" />
+                  Reconciliação · Google × UGs
+                </div>
+                <p className="mt-2 max-w-3xl text-xs leading-relaxed text-slate-400">
+                  Compara contagens de documentos observadas pelo Google com operações que o EMPROVEX
+                  conseguiu atribuir a uma UG. Read Units e Write Units não entram neste percentual,
+                  pois são unidades faturáveis e não contagens de documentos.
+                </p>
+              </div>
+              <div className="rounded-xl border border-violet-300/15 bg-violet-500/[0.08] px-3 py-2 text-right">
+                <div className="text-[8px] font-bold uppercase tracking-[0.11em] text-violet-200/70">
+                  Cobertura de reads
+                </div>
+                <div className="mt-1 text-xl font-black text-violet-50">
+                  {formatShare(reconciliation.coveragePercentage)}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+              <Metric label="Docs Google" value={formatCount(reconciliation.globalDocumentReads)} />
+              <Metric label="Reads atribuídos" value={formatCount(reconciliation.attributedDocumentReads)} />
+              <Metric label="Reads não atribuídos" value={formatCount(reconciliation.unattributedDocumentReads)} />
+              <Metric label="Writes Google" value={formatCount(reconciliation.globalDocumentWrites)} />
+              <Metric label="Writes atribuídos" value={formatCount(reconciliation.attributedDocumentWrites)} />
+              <Metric label="Writes não atribuídos" value={formatCount(reconciliation.unattributedDocumentWrites)} />
+            </div>
+
+            <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
+              Cobertura é um indicador de fidelidade da telemetria, não um rateio da fatura. Valores
+              atribuídos acima do global são limitados a 100% na cobertura e permanecem visíveis nos
+              contadores para diagnóstico de janela, retries ou instrumentação.
+            </p>
+          </div>
+        )}
 
         {globalUsageConfigured === false && (
           <div className="rounded-2xl border border-amber-300/15 bg-amber-400/[0.06] px-4 py-3 text-xs leading-relaxed text-amber-100">
