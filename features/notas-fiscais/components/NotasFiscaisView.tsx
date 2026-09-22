@@ -7,6 +7,7 @@ import { InvoiceMirrorDocumentActions } from '../../../components/InvoiceMirrorD
 import { TermoRecebimentoActions } from '../../../components/TermoRecebimentoActions';
 import { MAX_INVOICE_PDF_BYTES } from '../../../lib/invoiceDocuments';
 import { getInvoiceRecordKey } from '../../../lib/invoiceIdentity';
+import { isValidOptionalSpedNup, normalizeSpedNup } from '../../../lib/spedNup';
 import { removeComissao } from '../../../lib/firebaseSync';
 import { MILITARY_RANKS } from '../../empenhos/domain/empenhoHelpers';
 import { AlertTriangle, ArrowUpDown, Calendar, Check, CheckCircle2, Clock, Edit, FileDown, FileText, Loader2, Package, Save, Search, Trash2, Upload, UserCheck, Users, X } from 'lucide-react';
@@ -44,6 +45,7 @@ interface NotasFiscaisViewContext {
   handleInvoiceMirrorDocumentUploaded: (...args: any[]) => any;
   handleMarkComissao: (...args: any[]) => any;
   handleMarkTesouraria: (...args: any[]) => any;
+  handleSaveSpedNup: (...args: any[]) => any;
   handleUpdateInvoiceLocation: (...args: any[]) => any;
   handleSaveComissao: (...args: any[]) => any;
   handleSaveInvoice: (...args: any[]) => any;
@@ -93,13 +95,14 @@ interface NotasFiscaisViewProps {
 }
 /** Tela de Notas Fiscais extraída sem alterar regras de negócio ou persistência. */
 export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
-  const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhoClasses, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleInvoiceMirrorDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
+  const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhoClasses, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleInvoiceMirrorDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleSaveSpedNup, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
   const nfPdfInputRef = useRef<HTMLInputElement>(null);
   const [nfPdfFile, setNfPdfFile] = useState<File | null>(null);
   const [isSavingInvoice, setIsSavingInvoice] = useState(false);
   const [isSavingComissao, setIsSavingComissao] = useState(false);
   const [processingInvoiceId, setProcessingInvoiceId] = useState<string | null>(null);
   const [consolidatingInvoiceId, setConsolidatingInvoiceId] = useState<string | null>(null);
+  const [spedNupDrafts, setSpedNupDrafts] = useState<Record<string, string>>({});
   const getInvoiceLocation = (invoice: Invoice): NonNullable<Invoice['localizacaoAtual']> =>
     invoice.localizacaoAtual || (invoice.tesourariaDate ? 'TESOURARIA' : invoice.comissaoDate ? 'COMISSAO' : 'APROVISIONAMENTO');
 
@@ -616,7 +619,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                 <div className={`p-2 rounded-lg ${inv.tesourariaDate ? 'bg-purple-50 text-purple-600' : 'bg-gray-100 text-gray-400'}`}>
                                   <Clock className="w-5 h-5" />
                                 </div>
-                                <div>
+                                <div className="min-w-0">
                                   <span className="text-[10px] text-gray-400 font-bold uppercase block">Setor de Tesouraria (Fim)</span>
                                   {inv.tesourariaDate ? (
                                     <span className="text-xs font-bold text-purple-700">
@@ -625,21 +628,103 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                   ) : (
                                     <span className="text-xs font-semibold text-gray-400 font-medium">Pendente</span>
                                   )}
+                                  {inv.spedNup && (
+                                    <span className="mt-0.5 block truncate font-mono text-[10px] font-bold text-indigo-700" title={inv.spedNup}>
+                                      NUP: {inv.spedNup}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
 
-                              {(currentLocation === 'COMISSAO' || (!requiresTR && currentLocation === 'APROVISIONAMENTO')) && (
-                                <button
-                                  onClick={() => runInvoiceTransition(getInvoiceRecordKey(inv), () => handleMarkTesouraria(getInvoiceRecordKey(inv)))}
-                                  disabled={processingInvoiceId !== null}
-                                  aria-busy={processingInvoiceId === getInvoiceRecordKey(inv)}
-                                  className="mt-1 w-full py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-[#00288e] hover:bg-[#1e40af] text-white shadow-sm disabled:opacity-60 disabled:cursor-wait"
-                                  title={requiresTR ? 'Enviar NF recebida pela Comissão para a Tesouraria' : 'Enviar diretamente para a Tesouraria — TR dispensado pela classe'}
-                                >
-                                  {processingInvoiceId === getInvoiceRecordKey(inv) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                                  {processingInvoiceId === getInvoiceRecordKey(inv) ? 'Enviando…' : 'Enviar p/ Tesouraria'}
-                                </button>
-                              )}
+                              {(currentLocation === 'COMISSAO' || (!requiresTR && currentLocation === 'APROVISIONAMENTO') || currentLocation === 'TESOURARIA') && (() => {
+                                const recordKey = getInvoiceRecordKey(inv);
+                                const draftValue = spedNupDrafts[recordKey] ?? inv.spedNup ?? '';
+                                const normalizedDraft = normalizeSpedNup(draftValue);
+                                const nupValid = isValidOptionalSpedNup(draftValue);
+                                const nupChanged = normalizedDraft !== (inv.spedNup || '');
+
+                                return (
+                                  <div className="mt-1 space-y-2">
+                                    <label className="block">
+                                      <span className="mb-1 block text-[9px] font-extrabold uppercase tracking-wider text-gray-400">
+                                        NUP do SPED · opcional
+                                      </span>
+                                      <input
+                                        type="text"
+                                        value={draftValue}
+                                        onChange={(event) =>
+                                          setSpedNupDrafts((current) => ({
+                                            ...current,
+                                            [recordKey]: event.target.value,
+                                          }))
+                                        }
+                                        onBlur={() => {
+                                          if (!draftValue.trim() || nupValid) {
+                                            setSpedNupDrafts((current) => ({
+                                              ...current,
+                                              [recordKey]: normalizedDraft,
+                                            }));
+                                          }
+                                        }}
+                                        placeholder="64594.015046/2026-11"
+                                        maxLength={22}
+                                        aria-label={`NUP do SPED da Nota Fiscal ${inv.id}`}
+                                        className={`w-full rounded-lg border bg-white px-2.5 py-2 font-mono text-[11px] font-bold text-gray-700 outline-none transition focus:ring-1 ${nupValid ? 'border-gray-200 focus:border-[#00288e] focus:ring-[#00288e]/20' : 'border-rose-300 focus:border-rose-500 focus:ring-rose-200'}`}
+                                      />
+                                      {!nupValid && (
+                                        <span className="mt-1 block text-[9px] font-semibold text-rose-600">
+                                          Use 00000.000000/0000-00 ou deixe em branco.
+                                        </span>
+                                      )}
+                                    </label>
+
+                                    {currentLocation === 'TESOURARIA' ? (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          runInvoiceTransition(recordKey, async () => {
+                                            const updated = await handleSaveSpedNup(recordKey, draftValue);
+                                            if (updated) {
+                                              setSpedNupDrafts((current) => ({
+                                                ...current,
+                                                [recordKey]: updated.spedNup || '',
+                                              }));
+                                            }
+                                          })
+                                        }
+                                        disabled={processingInvoiceId !== null || !nupValid || !nupChanged}
+                                        aria-busy={processingInvoiceId === recordKey}
+                                        className="w-full py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 disabled:opacity-45 disabled:cursor-not-allowed"
+                                        title="Salvar ou corrigir o NUP do processo SPED desta Nota Fiscal"
+                                      >
+                                        {processingInvoiceId === recordKey ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                                        {processingInvoiceId === recordKey ? 'Salvando…' : 'Salvar NUP'}
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() =>
+                                          runInvoiceTransition(recordKey, async () => {
+                                            const updated = await handleMarkTesouraria(recordKey, draftValue);
+                                            if (updated) {
+                                              setSpedNupDrafts((current) => ({
+                                                ...current,
+                                                [recordKey]: updated.spedNup || '',
+                                              }));
+                                            }
+                                          })
+                                        }
+                                        disabled={processingInvoiceId !== null || !nupValid}
+                                        aria-busy={processingInvoiceId === recordKey}
+                                        className="w-full py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-[#00288e] hover:bg-[#1e40af] text-white shadow-sm disabled:opacity-60 disabled:cursor-wait"
+                                        title={requiresTR ? 'Enviar NF recebida pela Comissão para a Tesouraria; NUP do SPED é opcional' : 'Enviar diretamente para a Tesouraria — TR dispensado; NUP do SPED é opcional'}
+                                      >
+                                        {processingInvoiceId === recordKey ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                        {processingInvoiceId === recordKey ? 'Enviando…' : 'Enviar p/ Tesouraria'}
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                           
