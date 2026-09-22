@@ -37,6 +37,9 @@ HEAD real da `main` no início da FASE 0:
 Commit técnico da FASE 0 aprovado pelos gates antes do fechamento documental:
 `f1b2ca5e0068b7ca0f4e4e54958886e7007e18e9`
 
+Commit final da `main` resultante do merge via squash do PR #155:
+`cb1e0b652248122d7e49975c34f2362c04d7761f`
+
 Comparação realizada antes da implementação:
 - `b9a139ab6a3c905878e279342760d35210fdd52d...main`: 3 commits à frente;
 - arquivos operacionais alterados nesse intervalo: nenhum;
@@ -154,7 +157,6 @@ Riscos conhecidos após a FASE 0:
 
 Pendências:
 - nenhuma pendência bloqueante da FASE 0;
-- registrar no próximo fechamento o commit final da `main` resultante do merge do PR #155;
 - iniciar a FASE 1 somente em um novo chat.
 
 ## Próxima fase
@@ -173,7 +175,7 @@ Antes de qualquer modificação:
 
 1. Ler `README.md`, `ROADMAP.md`, `DECISIONS.md`, este `STATUS.md` e `HANDOFF_TEMPLATE.md`.
 2. Consultar a `main` real.
-3. Confirmar o merge final do PR #155 e registrar/usar seu SHA como novo baseline.
-4. Comparar mudanças posteriores ao SHA final da FASE 0.
+3. Usar `cb1e0b652248122d7e49975c34f2362c04d7761f` como baseline final da FASE 0.
+4. Comparar mudanças posteriores a esse SHA.
 5. Avaliar impacto de alterações intermediárias em autenticação, Rules, workspace/UG e dados.
 6. Executar somente a FASE 1.
