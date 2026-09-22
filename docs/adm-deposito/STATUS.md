@@ -4,17 +4,18 @@ Este arquivo registra o estado real de continuidade do projeto.
 
 ## Estado geral
 
-Status: **FASE 0 — CONCLUÍDA E APROVADA TECNICAMENTE**
+Status: **FASE 1 — CONCLUÍDA E APROVADA TECNICAMENTE**
 
 Data de fechamento técnico: 2026-09-22.
 
 Módulo:
 - ADM Depósito / Área Logística;
 - piloto permanece exclusivo da conta fundadora;
-- usuários externos permanecem sem visibilidade e sem acesso;
-- nenhuma funcionalidade operacional da FASE 1 foi iniciada.
+- usuários externos continuam sem visibilidade e sem acesso ao módulo;
+- DEP-1 e DEP-1.1 estão concluídos;
+- nenhuma funcionalidade da FASE 2 foi iniciada.
 
-## Repositório
+## Repositório e baseline
 
 Repositório:
 `aprov-hgesm/Controles-de-Empenhos---Aprov`
@@ -22,152 +23,214 @@ Repositório:
 Branch oficial:
 `main`
 
-Branch da FASE 0:
-`feat/adm-deposito-phase-0-foundation`
+Branch da FASE 1:
+`feat/adm-deposito-phase-1-material-foundation`
 
-Commit-base do código operacional anterior à memória oficial:
-`04fada7d74ee346e0db19699a969d74f1c329ebb`
+Branch de fechamento documental:
+`docs/adm-deposito-phase-1-closure`
 
-Merge que introduziu a memória oficial:
-`b9a139ab6a3c905878e279342760d35210fdd52d`
+HEAD real da `main` no início da FASE 1:
+`86be9a1db7dc340939cdd7a8ac76b679297b4ad5`
 
-HEAD real da `main` no início da FASE 0:
-`e7c78c0762ec861a088a1c3bfb93854c6ae996c8`
-
-Commit técnico da FASE 0 aprovado pelos gates antes do fechamento documental:
-`f1b2ca5e0068b7ca0f4e4e54958886e7007e18e9`
-
-Commit final da `main` resultante do merge via squash do PR #155:
+Baseline operacional final da FASE 0:
 `cb1e0b652248122d7e49975c34f2362c04d7761f`
 
-Comparação realizada antes da implementação:
-- `b9a139ab6a3c905878e279342760d35210fdd52d...main`: 3 commits à frente;
-- arquivos operacionais alterados nesse intervalo: nenhum;
-- único arquivo alterado: `docs/adm-deposito/STATUS.md`;
-- conclusão: os commits posteriores eram documentais e não interferiam na FASE 0.
+Auditoria inicial:
+- a `main` ainda estava exatamente em `86be9a1db7dc340939cdd7a8ac76b679297b4ad5`;
+- não existiam commits nem PRs mesclados após o fechamento documental da FASE 0;
+- autenticação fundadora, isolamento por workspace/UG e namespace `warehouse` permaneciam íntegros;
+- `firestore.rules` continuava sem fallback de `canAccessWorkspace(workspaceId)` para o namespace logístico;
+- FASE 1 ainda não havia sido iniciada.
 
-Observação: commits posteriores que alterem apenas este `STATUS.md` fazem parte da manutenção documental e não redefinem o baseline operacional. Todo novo chat deve consultar a `main` real antes de desenvolver.
+Commit técnico final da branch aprovado pelos gates:
+`62d34f1ac0941d0eb16fd671504099f24d51c30c`
+
+PR da implementação:
+- PR #157 — `feat: establish ADM Depósito phase 1 material foundation`;
+- merge via squash;
+- commit final da implementação na `main`: `74e271e5b2b04367e75002dce4e8d7bebe72d63a`.
+
+Após o merge do PR #157, a comparação de `74e271e5b2b04367e75002dce4e8d7bebe72d63a...main` retornou `identical`, 0 ahead e 0 behind.
 
 ## Última fase concluída
 
-**FASE 0 — Fundação e isolamento**
+**FASE 1 — Fundação do material**
 
 Blocos concluídos:
-- DEP-0 — Feature flag exclusiva da conta fundadora;
-- DEP-0.1 — Namespace próprio do módulo.
+- DEP-1 — Modelo canônico de material;
+- DEP-1.1 — Unidades e conversões.
 
 ## Implementação concluída
 
-### DEP-0 — Feature flag exclusiva da conta fundadora
+### DEP-1 — Modelo canônico de material
 
-Foi criada uma política dedicada do módulo que:
-- mantém a feature habilitada apenas para o piloto fundador;
-- exige contexto operacional do workspace fundador;
-- exige a identidade fundadora consolidada;
-- mantém a entrada "ADM Depósito" invisível para usuários externos;
-- protege a rota `/adm-deposito` contra abertura direta por usuário externo;
-- exige confirmação server-side antes de renderizar a fundação do módulo;
-- protege a API `/api/adm-deposito/status` com validação do token Firebase da conta fundadora e provider Google.
+Foi criado o contrato de domínio versionado:
 
-A visibilidade da interface não é tratada como mecanismo suficiente de segurança.
+`warehouse_material_v1`
 
-### DEP-0.1 — Namespace próprio do módulo
+O material canônico possui:
+- ID interno estável no formato `mat_<uuid sem hífens>`;
+- `workspaceId`;
+- UG;
+- descrição principal;
+- aliases normalizados e deduplicados;
+- unidade canônica;
+- status `active` ou `inactive`;
+- lista explícita de conversões de apresentação.
 
-Foi criado namespace Firestore independente:
+A validação de domínio:
+- normaliza workspace, UG, descrição, aliases e unidades;
+- rejeita IDs, workspaces, UGs, status, unidades e conversões inválidos;
+- pode exigir workspace e UG esperados;
+- permanece independente de React e das futuras telas operacionais.
 
-`warehouse/{workspaceId}/...`
+Persistência:
+- domínio reservado utilizado: `warehouse/{workspaceId}/materials/{materialId}`;
+- foi criado repositório Firestore específico para listar, obter e salvar materiais;
+- nenhuma árvore paralela de dados foi criada;
+- o documento persistido continua declarando o mesmo `workspaceId` do caminho Firestore.
 
-Domínios reservados na fundação:
-- `materials`;
-- `depots`;
-- `locations`;
-- `movements`;
-- `lots`;
-- `inventories`;
-- `siscofisSnapshots`.
+### DEP-1.1 — Unidades e conversões
 
-As Firestore Rules possuem gate próprio do ADM Depósito e deliberadamente não reutilizam `canAccessWorkspace(workspaceId)` como fallback. Durante o piloto:
-- somente a identidade fundadora autenticada por Google;
-- somente no workspace `hgesm-aprov`;
-- pode ler ou gravar no namespace `warehouse`.
+Unidades/apresentações iniciais suportadas:
+- unidade;
+- kg;
+- g;
+- L;
+- mL;
+- pacote;
+- caixa;
+- fardo;
+- `other` para outras apresentações necessárias.
 
-Nenhuma modelagem operacional de materiais, estoque ou movimentações da FASE 1 foi iniciada.
+O contrato permite rótulos de apresentação, por exemplo:
+- `Caixa 30 kg`;
+- `Bombona 20 L`.
 
-## Segurança comprovada
+Conversões são explícitas para a unidade canônica do material por `factorToBaseUnit`.
 
-Cenários automatizados aprovados no Firebase Emulator:
-- fundador grava no namespace ADM Depósito;
-- fundador lê o namespace ADM Depósito;
-- fundador lista domínio do namespace ADM Depósito;
-- setor externo não lê o namespace do fundador;
-- setor externo não grava no namespace nem usando o próprio workspace;
-- sessão da conta fundadora autenticada por senha não acessa o módulo;
-- fundador não usa o namespace logístico de workspace externo.
+A FASE 1 não cria saldo nem movimentação ao converter quantidades; a função de conversão é apenas parte do contrato reutilizável de domínio.
 
-Cenário Browser E2E aprovado:
-- usuário externo não vê `nav-adm-deposito`;
-- tentativa de acesso direto a `/adm-deposito` é negada e retorna à aplicação operacional;
-- a navegação do ADM Depósito permanece invisível após o redirecionamento.
+## Segurança e isolamento
+
+A FASE 0 permanece integralmente preservada.
+
+O gate continua exigindo:
+- módulo habilitado;
+- identidade fundadora;
+- sessão Google válida;
+- workspace fundador `hgesm-aprov`;
+- contexto compatível com o bootstrap fundador.
+
+As Firestore Rules da FASE 1:
+- mantêm o gate fundador como condição obrigatória;
+- validam o envelope canônico dos documentos em `materials`;
+- exigem que `workspaceId` do documento corresponda ao workspace do caminho;
+- impedem que o match genérico dos demais domínios funcione como bypass para `materials`;
+- continuam sem usar `canAccessWorkspace(workspaceId)` como fallback para `warehouse`.
+
+Cenários aprovados no Firebase Emulator:
+- fundador grava material canônico;
+- fundador lê material canônico;
+- fundador lista materiais;
+- documento não pode declarar workspace diferente do caminho;
+- usuário externo não lê material do fundador;
+- usuário externo não grava material nem usando o próprio workspace;
+- sessão fundadora autenticada por senha não lê materiais;
+- fundador não grava material em workspace externo.
+
+O Browser E2E legado que comprova invisibilidade e bloqueio da rota para usuários externos também permaneceu aprovado.
+
+## Arquivos principais alterados
+
+- `lib/warehouse/material.ts`;
+- `lib/warehouse/materialRepository.ts`;
+- `lib/warehouse/namespace.ts`;
+- `firestore.rules`;
+- `scripts/warehouse-material-contract.test.mjs`;
+- `scripts/firestore-multitenancy-security.test.mjs`;
+- `scripts/verify-adm-deposito-phase-1.mjs`;
+- `.github/workflows/application-ci.yml`;
+- `package.json`;
+- `app/api/adm-deposito/status/route.ts`;
+- `features/warehouse/components/WarehouseFoundationView.tsx`.
 
 ## Testes e checks
 
-PR da implementação:
-- PR #155 — `feat: establish ADM Depósito phase 0 isolation`.
-
-Commit técnico validado:
-- `f1b2ca5e0068b7ca0f4e4e54958886e7007e18e9`.
-
-Resultado final do commit técnico:
+Resultado final do commit técnico `62d34f1ac0941d0eb16fd671504099f24d51c30c`:
 - Recovery guardrails: **aprovado**;
 - Application CI: **aprovado**;
-- gate `verify:adm-deposito-phase-0`: **aprovado**;
 - suíte multi-tenant Firestore Emulator: **aprovada**;
+- gate `verify:adm-deposito-phase-0`: **aprovado**;
+- testes `test:adm-deposito-material`: **aprovados**;
+- gate `verify:adm-deposito-phase-1`: **aprovado**;
 - Browser E2E com Firebase Emulator: **aprovado**;
 - Production build: **aprovado**;
 - TypeScript final: **aprovado**;
 - Diff hygiene: **aprovado**;
 - release gates 16, 17, 18, 19, 20 e 21: **aprovados**;
-- Vercel preview do commit técnico: **aprovado**.
+- Vercel preview do PR #157: **Ready**;
+- deploy automático da Vercel para o commit `74e271e5b2b04367e75002dce4e8d7bebe72d63a`: **success**.
 
-Ocorrência durante a validação:
-- as duas primeiras execuções do Browser E2E chegaram ao timeout global de 45 s no cenário legado de três contextos simultâneos;
-- os testes novos do ADM Depósito já haviam passado nas duas execuções;
-- não houve falha da lógica de produção nem da segurança do ADM Depósito;
-- o teste legado recebeu timeout específico de 90 s, sem alteração da lógica de sessões;
-- após a estabilização, a bateria Browser E2E completa foi aprovada.
+Ocorrência resolvida durante o desenvolvimento:
+- uma edição intermediária de `firestore.rules` na branch foi corrompida pelo mecanismo de substituição textual usado durante a automação;
+- o problema foi detectado antes da abertura/validação final do PR;
+- o arquivo foi reconstruído a partir da versão íntegra da `main`;
+- o diff final de Rules ficou restrito à alteração esperada da FASE 1;
+- CI, emulator, build e diff hygiene validaram a versão corrigida.
 
 ## Decisões arquiteturais
 
-Nenhuma decisão registrada em `docs/adm-deposito/DECISIONS.md` foi alterada na FASE 0.
+Nenhuma decisão definitiva nova foi necessária.
 
-A implementação segue especialmente:
+`docs/adm-deposito/DECISIONS.md` não foi alterado.
+
+A FASE 1 permanece alinhada especialmente a:
 - D-001 — piloto exclusivo da conta fundadora;
-- D-026 — isolamento estrutural por workspace/UG e preparação segura para expansão futura.
-
-`DECISIONS.md` permanece como fonte oficial para qualquer alteração arquitetural futura.
+- D-012 — apresentações/conversões preparadas desde a fundação do material, sem antecipar scanner operacional;
+- D-026 — isolamento estrutural por workspace/UG;
+- D-028 — reduzir redigitação e manter contratos reutilizáveis.
 
 ## Riscos e pendências
 
-Riscos conhecidos após a FASE 0:
-1. Qualquer nova rota ou API do ADM Depósito deverá reutilizar o gate fundador enquanto D-001 permanecer vigente.
-2. Alterações futuras nas Firestore Rules não podem introduzir fallback de acesso do namespace `warehouse` para usuários externos antes do gate de expansão previsto no roadmap.
-3. O cenário Browser E2E de três contextos simultâneos continua sendo naturalmente mais pesado em runners compartilhados; o timeout específico de 90 s é de teste e não altera a capacidade de sessões da aplicação.
-4. Mudanças paralelas em autenticação, workspace/UG, Firestore Rules ou Firebase devem ser comparadas com a `main` real antes da próxima fase.
-5. O namespace foi apenas fundado e protegido; seus contratos operacionais ainda não existem por decisão de escopo desta fase.
+Riscos conhecidos após a FASE 1:
+1. Toda futura rota/API/serviço do ADM Depósito deve continuar reutilizando o gate fundador enquanto D-001 permanecer vigente.
+2. A FASE 2 deverá usar o material canônico sem introduzir uma segunda identidade concorrente de item/material.
+3. Conversões de apresentação existem como contrato; não devem ser confundidas com saldo, movimentação, código de barras ou embalagem operacional antes das fases correspondentes.
+4. Alterações futuras em autenticação, workspace/UG ou Firestore Rules precisam ser comparadas com a `main` real antes de cada nova fase.
+5. O deploy da aplicação na Vercel foi confirmado. Este ambiente não possui canal autenticado para publicar `firestore.rules` diretamente no projeto Firebase; portanto a versão nova das Rules foi confirmada no repositório e no Emulator, mas uma publicação independente das Rules de produção não foi presumida. Antes de expor qualquer gravação operacional de materiais, essa publicação deve ser confirmada.
 
-Pendências:
-- nenhuma pendência bloqueante da FASE 0;
-- iniciar a FASE 1 somente em um novo chat.
+Pendências bloqueantes da FASE 1:
+- nenhuma no código, testes, CI ou integração com a `main`.
 
-## Próxima fase
+## Fora do escopo confirmado
 
-**FASE 1 — Fundação do material**
+Não foram implementados nesta fase:
+- ledger de movimentações;
+- saldo agregado;
+- NF → estoque;
+- entrada/saída operacional;
+- lotes;
+- validade;
+- depósitos/localizações operacionais;
+- inventário;
+- SISCOFIS;
+- scanner/código de barras operacional;
+- FEFO;
+- mapa do depósito;
+- dashboard ou alertas de estoque;
+- liberação para usuários externos.
+
+## Próxima fase prevista
+
+**FASE 2 — Ledger e saldos**
 
 Blocos previstos conforme `ROADMAP.md`:
-- DEP-1;
-- DEP-1.1.
+- DEP-2 — Ledger de movimentações;
+- DEP-2.1 — Saldo agregado;
+- DEP-2.2 — Idempotência.
 
-**A FASE 1 NÃO FOI INICIADA NESTE CHAT.**
+**A FASE 2 NÃO FOI INICIADA NESTE CHAT.**
 
 ## Gate para o próximo chat
 
@@ -175,7 +238,7 @@ Antes de qualquer modificação:
 
 1. Ler `README.md`, `ROADMAP.md`, `DECISIONS.md`, este `STATUS.md` e `HANDOFF_TEMPLATE.md`.
 2. Consultar a `main` real.
-3. Usar `cb1e0b652248122d7e49975c34f2362c04d7761f` como baseline final da FASE 0.
-4. Comparar mudanças posteriores a esse SHA.
-5. Avaliar impacto de alterações intermediárias em autenticação, Rules, workspace/UG e dados.
-6. Executar somente a FASE 1.
+3. Usar `74e271e5b2b04367e75002dce4e8d7bebe72d63a` como baseline operacional final da FASE 1.
+4. Comparar qualquer commit posterior a esse SHA.
+5. Avaliar impacto de mudanças intermediárias em autenticação, workspace/UG, Firestore Rules, Firebase e contratos de material.
+6. Executar somente a FASE 2 em um novo chat.
