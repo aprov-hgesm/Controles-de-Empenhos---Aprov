@@ -84,6 +84,25 @@ export interface FirestoreBillingReference {
   writeUnitsDailyLimit: number;
 }
 
+export type FirebaseGlobalMetricKey =
+  | 'documentReads'
+  | 'documentWrites'
+  | 'documentDeletes'
+  | 'billableReadUnits'
+  | 'billableRealtimeReadUnits'
+  | 'billableWriteUnits'
+  | 'activeConnections'
+  | 'snapshotListeners';
+
+export type FirebaseGlobalMetricDataThrough = Record<
+  FirebaseGlobalMetricKey,
+  string | null
+>;
+
+export type GoogleMonitoringCredentialSource =
+  | 'firebase-admin'
+  | 'dedicated-monitoring';
+
 export interface FirebaseGlobalUsageSnapshot {
   telemetryVersion: typeof USAGE_TELEMETRY_VERSION;
   source: 'google-cloud-monitoring';

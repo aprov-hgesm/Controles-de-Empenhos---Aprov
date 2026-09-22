@@ -129,6 +129,8 @@ export default function PlatformAdminPage() {
       globalUsageConfigured={adminGlobalUsage.configured}
       globalUsageObservedAt={adminGlobalUsage.observedAt}
       globalUsageDataThrough={adminGlobalUsage.dataThrough}
+      globalUsageMetricDataThrough={adminGlobalUsage.metricDataThrough}
+      globalUsageCredentialSource={adminGlobalUsage.credentialSource}
       loadingGlobalUsage={adminGlobalUsage.loading}
       globalUsageError={adminGlobalUsage.error}
       billing={adminBilling}
