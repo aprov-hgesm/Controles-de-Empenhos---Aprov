@@ -15,13 +15,20 @@ import {
   WalletCards,
 } from 'lucide-react';
 
-import type { FirebaseGlobalUsageSnapshot } from '../../lib/platformCapacity';
+import type {
+  FirebaseGlobalMetricDataThrough,
+  FirebaseGlobalMetricKey,
+  FirebaseGlobalUsageSnapshot,
+  GoogleMonitoringCredentialSource,
+} from '../../lib/platformCapacity';
 
 interface AdminGlobalUsagePanelProps {
   snapshot: FirebaseGlobalUsageSnapshot | null;
   configured: boolean | null;
   observedAt: string | null;
   dataThrough: string | null;
+  metricDataThrough: FirebaseGlobalMetricDataThrough | null;
+  credentialSource: GoogleMonitoringCredentialSource | null;
   loading: boolean;
   error: string | null;
   onRefresh: () => Promise<void>;
@@ -77,9 +84,19 @@ function buildDiagnostics(input: {
   configured: boolean | null;
   observedAt: string | null;
   dataThrough: string | null;
+  metricDataThrough: FirebaseGlobalMetricDataThrough | null;
+  credentialSource: GoogleMonitoringCredentialSource | null;
   error: string | null;
 }): DiagnosticItem[] {
-  const { snapshot, configured, observedAt, dataThrough, error } = input;
+  const {
+    snapshot,
+    configured,
+    observedAt,
+    dataThrough,
+    metricDataThrough,
+    credentialSource,
+    error,
+  } = input;
   const diagnostics: DiagnosticItem[] = [];
 
   if (configured === false) {
@@ -91,7 +108,9 @@ function buildDiagnostics(input: {
   } else if (configured === true) {
     diagnostics.push({
       title: 'Integração server-side configurada',
-      detail: 'O EMPROVEX reconheceu uma credencial apta a tentar a leitura do Cloud Monitoring.',
+      detail: credentialSource
+        ? `Consulta autenticada via ${credentialSource === 'firebase-admin' ? 'credencial Firebase Admin' : 'credencial dedicada de Monitoring'}.`
+        : 'O EMPROVEX reconheceu uma credencial apta a tentar a leitura do Cloud Monitoring.',
       tone: 'ok',
     });
   } else {
@@ -128,6 +147,26 @@ function buildDiagnostics(input: {
         : 'Quando não há dataThrough, alguma série filtrada pode ainda não ter pontos na janela atual.',
       tone: lagMinutes !== null && lagMinutes > 15 ? 'attention' : dataThrough ? 'ok' : 'attention',
     });
+
+    if (metricDataThrough) {
+      const staleMetrics = Object.entries(metricDataThrough)
+        .map(([metric, timestamp]) => ({
+          metric: metric as FirebaseGlobalMetricKey,
+          timestamp,
+          lag: minutesBetween(observedAt, timestamp),
+        }))
+        .filter((item) => item.timestamp === null || (item.lag !== null && item.lag > 15));
+
+      diagnostics.push({
+        title: staleMetrics.length > 0
+          ? `${staleMetrics.length} métrica(s) com amostra atrasada ou ausente`
+          : 'Todas as métricas retornaram amostra recente',
+        detail: staleMetrics.length > 0
+          ? 'O horário global “Dados disponíveis até” usa o ponto mais recente entre todas as séries e pode esconder que uma métrica específica ainda está atrasada. Veja o quadro de frescor por métrica.'
+          : 'Nenhuma das séries monitoradas está mais de 15 minutos atrás da hora da consulta.',
+        tone: staleMetrics.length > 0 ? 'attention' : 'ok',
+      });
+    }
 
     diagnostics.push({
       title: 'Janela diária diferente do horário do Brasil',
@@ -173,6 +212,8 @@ export function AdminGlobalUsagePanel({
   configured,
   observedAt,
   dataThrough,
+  metricDataThrough,
+  credentialSource,
   loading,
   error,
   onRefresh,
@@ -183,6 +224,8 @@ export function AdminGlobalUsagePanel({
     configured,
     observedAt,
     dataThrough,
+    metricDataThrough,
+    credentialSource,
     error,
   });
 
@@ -218,7 +261,7 @@ export function AdminGlobalUsagePanel({
           </button>
         </div>
 
-        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
           <StatusBox
             label="Integração"
             value={
@@ -245,6 +288,17 @@ export function AdminGlobalUsagePanel({
             value={snapshot?.databaseId || 'Sem amostra'}
             tone={snapshot ? 'ok' : 'info'}
             mono
+          />
+          <StatusBox
+            label="Credencial"
+            value={
+              credentialSource === 'firebase-admin'
+                ? 'Firebase Admin'
+                : credentialSource === 'dedicated-monitoring'
+                  ? 'Monitoring dedicada'
+                  : 'Não identificada'
+            }
+            tone={credentialSource ? 'ok' : configured === false ? 'error' : 'info'}
           />
         </div>
       </div>
@@ -373,6 +427,36 @@ export function AdminGlobalUsagePanel({
               o painel de diagnóstico abaixo aponta as causas mais prováveis.
             </p>
           </div>
+        )}
+
+        {metricDataThrough && (
+          <section className="rounded-2xl border border-white/[0.07] bg-slate-950/18 p-4 sm:p-5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-sm font-extrabold text-white">Frescor de cada métrica Google</p>
+                <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
+                  Mostra o último ponto de cada série separadamente. Isso evita que uma série recente
+                  mascare outra que ainda não foi atualizada.
+                </p>
+              </div>
+              <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">
+                referência: hora da consulta
+              </p>
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {(Object.entries(metricDataThrough) as Array<[FirebaseGlobalMetricKey, string | null]>).map(
+                ([metric, timestamp]) => (
+                  <MetricFreshnessCard
+                    key={metric}
+                    metric={metric}
+                    timestamp={timestamp}
+                    observedAt={observedAt}
+                  />
+                )
+              )}
+            </div>
+          </section>
         )}
 
         <section
@@ -537,6 +621,52 @@ function DiagnosticCard({ item }: { item: DiagnosticItem }) {
         <p className="text-[11px] font-extrabold text-slate-200">{item.title}</p>
         <p className="mt-1 text-[10px] leading-relaxed text-slate-500">{item.detail}</p>
       </div>
+    </div>
+  );
+}
+
+const GOOGLE_METRIC_LABELS: Record<FirebaseGlobalMetricKey, string> = {
+  documentReads: 'Document reads',
+  documentWrites: 'Document writes',
+  documentDeletes: 'Document deletes',
+  billableReadUnits: 'Read Units',
+  billableRealtimeReadUnits: 'Realtime Read Units',
+  billableWriteUnits: 'Write Units',
+  activeConnections: 'Conexões',
+  snapshotListeners: 'Listeners',
+};
+
+function MetricFreshnessCard({
+  metric,
+  timestamp,
+  observedAt,
+}: {
+  metric: FirebaseGlobalMetricKey;
+  timestamp: string | null;
+  observedAt: string | null;
+}) {
+  const lag = minutesBetween(observedAt, timestamp);
+  const delayed = timestamp === null || (lag !== null && lag > 15);
+
+  return (
+    <div className={
+      'rounded-xl border px-3 py-2.5 '
+      + (delayed
+        ? 'border-amber-300/15 bg-amber-400/[0.045]'
+        : 'border-emerald-300/12 bg-emerald-400/[0.035]')
+    }>
+      <p className="text-[8px] font-black uppercase tracking-[0.10em] text-slate-600">
+        {GOOGLE_METRIC_LABELS[metric]}
+      </p>
+      <p className="mt-1 text-[10px] font-extrabold text-slate-200">
+        {formatDateTime(timestamp)}
+      </p>
+      <p className={
+        'mt-0.5 text-[9px] font-bold '
+        + (delayed ? 'text-amber-300' : 'text-emerald-300')
+      }>
+        {freshnessLabel(lag)}
+      </p>
     </div>
   );
 }
