@@ -13,6 +13,7 @@ import {
 } from '../../../../lib/server/requestSecurity';
 import {
   isGoogleCloudMonitoringConfigured,
+  loadFirebaseApiMethodUsage,
   loadFirebaseGlobalUsageObservation,
 } from '../../../../lib/server/googleCloudMonitoring';
 import { persistGlobalUsageObservation } from '../../../../lib/server/globalUsageHistory';
@@ -103,6 +104,15 @@ export async function GET(request: NextRequest) {
 
   try {
     const observation = await loadFirebaseGlobalUsageObservation();
+    let apiMethodUsage = [];
+    try {
+      apiMethodUsage = await loadFirebaseApiMethodUsage();
+    } catch (breakdownError) {
+      console.warn('Métricas globais carregadas, mas o breakdown por método não ficou disponível.', {
+        requestId: security.requestId,
+        error: breakdownError instanceof Error ? breakdownError.message : breakdownError,
+      });
+    }
     let historyPersisted = false;
 
     try {
@@ -118,6 +128,7 @@ export async function GET(request: NextRequest) {
       {
         configured: true,
         historyPersisted,
+        apiMethodUsage,
         ...observation,
       },
       {
