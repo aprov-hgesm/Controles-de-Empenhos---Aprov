@@ -49,8 +49,18 @@ for (const marker of [
 
 requireText(
   access,
-  'await acquireWorkspaceSessionLease(user, context);',
-  'Resolução externa deixou de exigir lease antes de liberar o workspace.'
+  'rememberResolvedWorkspaceContext(user.uid, context);',
+  'Resolução externa deixou de produzir contexto validado para o bootstrap de sessão.'
+);
+requireText(
+  lease,
+  'acquireBoundWorkspaceSessionLease',
+  'Runtime deixou de materializar o lease vinculado à credencial server-side.'
+);
+requireText(
+  operational,
+  'ensureWorkspaceSessionCredential',
+  'Sessão externa deixou de obter lease/credencial antes de liberar dados operacionais.'
 );
 requireText(
   access,
