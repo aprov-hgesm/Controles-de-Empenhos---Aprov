@@ -8,6 +8,7 @@ import {
   GoogleAuthProvider,
   linkWithCredential,
   signInWithCredential,
+  signInWithCustomToken,
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
@@ -188,6 +189,75 @@ async function createSession(label, email, provider = 'password') {
   connectFirestoreEmulator(firestore, '127.0.0.1', 8080);
   return { auth, db: firestore, user: credential.user };
 }
+function base64UrlJson(value) {
+  return Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
+}
+
+function emulatorCustomToken(uid, claims) {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  return [
+    base64UrlJson({ alg: 'none', typ: 'JWT' }),
+    base64UrlJson({
+      iss: 'emprovex-security-tests@example.test',
+      sub: 'emprovex-security-tests@example.test',
+      aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',
+      iat: nowSeconds,
+      exp: nowSeconds + 3600,
+      uid,
+      claims,
+    }),
+    '',
+  ].join('.');
+}
+
+async function createBoundOperationalSession(
+  label,
+  identity,
+  {
+    workspaceId,
+    ug,
+    slotId,
+    sessionId,
+    browserInstanceId,
+  }
+) {
+  const app = initializeApp(
+    {
+      projectId: PROJECT_ID,
+      apiKey: API_KEY,
+      authDomain: `${PROJECT_ID}.firebaseapp.com`,
+    },
+    `security-custom-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
+  apps.push(app);
+
+  const auth = getAuth(app);
+  connectAuthEmulator(auth, AUTH_BASE, { disableWarnings: true });
+  const credential = await signInWithCustomToken(
+    auth,
+    emulatorCustomToken(identity.uid, {
+      emprovexSessionVersion: 'emprovex_session_auth_v1',
+      emprovexSessionId: sessionId,
+      emprovexSessionSlotId: slotId,
+      emprovexBrowserInstanceId: browserInstanceId,
+      emprovexWorkspaceId: workspaceId,
+      emprovexUg: ug,
+      emprovexSourceProvider: 'password',
+    })
+  );
+  const tokenResult = await credential.user.getIdTokenResult(true);
+  assert.equal(credential.user.uid, identity.uid);
+  assert.equal(credential.user.email, identity.email);
+  assert.equal(credential.user.emailVerified, true);
+  assert.equal(tokenResult.signInProvider, 'custom');
+  assert.equal(tokenResult.claims.emprovexSessionId, sessionId);
+  assert.equal(tokenResult.claims.emprovexSessionSlotId, slotId);
+
+  const firestore = getFirestore(app);
+  connectFirestoreEmulator(firestore, '127.0.0.1', 8080);
+  return { auth, db: firestore, user: credential.user };
+}
+
 async function allowed(label, operation) {
   try {
     await operation();
@@ -466,8 +536,49 @@ async function main() {
     billingAccountSeed('workspace-b', identities.b.email, '160417')
   );
 
-  let sessionA = await createSession('a', identities.a.email);
-  const sessionB = await createSession('b', identities.b.email);
+  const sessionABootstrap = await createSession('a-bootstrap', identities.a.email);
+
+  await ownerSet('workspaces/workspace-a/sessionSlots/slot-1', {
+    leaseVersion: 'emprovex_session_v1',
+    slotId: 'slot-1',
+    sessionId: 'session-browser-a1',
+    workspaceId: 'workspace-a',
+    ug: '160416',
+    uid: identities.a.uid,
+    accountEmail: identities.a.email,
+    browserInstanceId: 'browser-instance-a1',
+    startedAt: new Date(Date.now() - (60 * 1000)),
+    lastSeenAt: new Date(),
+    expiresAt: new Date(Date.now() + (30 * 60 * 1000)),
+  });
+  await ownerSet('workspaces/workspace-b/sessionSlots/slot-1', {
+    leaseVersion: 'emprovex_session_v1',
+    slotId: 'slot-1',
+    sessionId: 'session-browser-b1',
+    workspaceId: 'workspace-b',
+    ug: '160417',
+    uid: identities.b.uid,
+    accountEmail: identities.b.email,
+    browserInstanceId: 'browser-instance-b1',
+    startedAt: new Date(Date.now() - (60 * 1000)),
+    lastSeenAt: new Date(),
+    expiresAt: new Date(Date.now() + (30 * 60 * 1000)),
+  });
+
+  let sessionA = await createBoundOperationalSession('a1', identities.a, {
+    workspaceId: 'workspace-a',
+    ug: '160416',
+    slotId: 'slot-1',
+    sessionId: 'session-browser-a1',
+    browserInstanceId: 'browser-instance-a1',
+  });
+  const sessionB = await createBoundOperationalSession('b1', identities.b, {
+    workspaceId: 'workspace-b',
+    ug: '160417',
+    slotId: 'slot-1',
+    sessionId: 'session-browser-b1',
+    browserInstanceId: 'browser-instance-b1',
+  });
   const sessionWrongUid = await createSession('wrong', identities.wrongUid.email);
   const sessionBootstrap = await createSession('bootstrap', identities.bootstrap.email);
   const sessionPrebound = await createSession('prebound', identities.prebound.email);
@@ -526,13 +637,13 @@ async function main() {
     'O teste de provider precisa usar o mesmo UID do setor.'
   );
 
-  sessionA = await createSession(
+  const sessionAPasswordLinked = await createSession(
     'sector-a-password-linked',
     identities.a.email,
     'password'
   );
   assert.equal(
-    sessionA.user.uid,
+    sessionAPasswordLinked.user.uid,
     identities.a.uid,
     'A sessão legítima do setor deve continuar usando o mesmo UID após o vínculo Google.'
   );
@@ -776,22 +887,29 @@ async function main() {
   });
 
   const sessionSlot1 = doc(
-    sessionA.db,
+    sessionABootstrap.db,
     'workspaces',
     'workspace-a',
     'sessionSlots',
     'slot-1'
   );
   const sessionSlot2 = doc(
-    sessionA.db,
+    sessionABootstrap.db,
     'workspaces',
     'workspace-a',
     'sessionSlots',
     'slot-2'
   );
+  const operationalSessionSlot1 = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'sessionSlots',
+    'slot-1'
+  );
 
-  await allowed('Setor externo ocupa o primeiro slot de sessão', () =>
-    setDoc(sessionSlot1, sessionLeasePayload('slot-1', 'session-browser-a1', 'browser-instance-a1'))
+  await allowed('Sessão vinculada consulta o próprio primeiro slot', () =>
+    getDoc(operationalSessionSlot1)
   );
   await allowed('Setor externo ocupa o segundo slot de sessão', () =>
     setDoc(sessionSlot2, sessionLeasePayload('slot-2', 'session-browser-a2', 'browser-instance-a2'))
@@ -809,7 +927,7 @@ async function main() {
     )
   );
   await allowed('Mesma sessão renova diretamente o slot conhecido com identidade confirmada', () =>
-    updateDoc(sessionSlot1, {
+    updateDoc(operationalSessionSlot1, {
       leaseVersion: 'emprovex_session_v1',
       slotId: 'slot-1',
       sessionId: 'session-browser-a1',
@@ -902,6 +1020,14 @@ async function main() {
     })
   );
 
+  const sessionA2 = await createBoundOperationalSession('a2', identities.a, {
+    workspaceId: 'workspace-a',
+    ug: '160416',
+    slotId: 'slot-2',
+    sessionId: 'session-browser-reclaimed',
+    browserInstanceId: 'browser-instance-reclaimed',
+  });
+
   console.log('\nBloco 16.2 — painel e encerramento remoto de sessões');
 
   await allowed('Administrador lista slots de sessão de toda a plataforma', () =>
@@ -972,7 +1098,7 @@ async function main() {
   await allowed('Setor pode verificar tombstone inexistente antes de adquirir lease', () =>
     getDoc(
       doc(
-        sessionA.db,
+        sessionABootstrap.db,
         'workspaces',
         'workspace-a',
         'sessionRevocations',
@@ -1016,6 +1142,21 @@ async function main() {
       }
     )
   );
+
+  await denied('Sessão revogada perde leitura direta mesmo com ID token Firebase ainda válido', () =>
+    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))
+  );
+  await denied('Sessão revogada perde gravação direta sem depender de signOut da UI', () =>
+    setDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'alerts', 'revoked-direct-write'), {
+      workspaceId: 'workspace-a',
+      marker: 'must-deny',
+    })
+  );
+  await allowed('Outra sessão legítima do mesmo UID continua autorizada', () =>
+    getDoc(doc(sessionA2.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))
+  );
+
+  sessionA = sessionA2;
 
   console.log('\nBloco 16.3 — telemetria estimada por UG');
 
