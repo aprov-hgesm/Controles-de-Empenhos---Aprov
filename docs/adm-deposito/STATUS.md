@@ -22,8 +22,13 @@ Repositório:
 Branch oficial:
 `main`
 
-Último commit de referência confirmado da `main` no fechamento desta inicialização documental:
-`00d922fe1f8dba5ddd4af45737aa9a7cf210f549`
+Commit-base do código operacional anterior à memória oficial:
+`04fada7d74ee346e0db19699a969d74f1c329ebb`
+
+Merge que introduziu a memória oficial:
+`b9a139ab6a3c905878e279342760d35210fdd52d`
+
+Observação: commits posteriores que alterem apenas este `STATUS.md` fazem parte da própria manutenção documental e não redefinem o baseline operacional. O próximo chat deve sempre consultar a `main` real e comparar mudanças posteriores ao baseline relevante, em vez de assumir que um SHA textual dentro deste arquivo é o HEAD atual.
 
 Esse commit corresponde ao merge da memória oficial do projeto. O commit-base anterior à documentação era `04fada7d74ee346e0db19699a969d74f1c329ebb` e já continha, entre outras alterações anteriores ao módulo, a configuração de billing com mensalidade padrão de R$ 50,00.
 
