@@ -3,6 +3,7 @@
 import {
   Activity,
   BellRing,
+  Boxes,
   CalendarDays,
   FileSpreadsheet,
   FileText,
@@ -37,6 +38,8 @@ interface AppSidebarProps {
   onClose: () => void;
   onNavigate: (tab: AppTab) => void;
   onLogout: () => void | Promise<void>;
+  warehouseModuleEnabled?: boolean;
+  onOpenWarehouse?: () => void;
 }
 
 export function AppSidebar({
@@ -47,6 +50,8 @@ export function AppSidebar({
   onClose,
   onNavigate,
   onLogout,
+  warehouseModuleEnabled = false,
+  onOpenWarehouse,
 }: AppSidebarProps) {
   return (
     <>
@@ -208,6 +213,17 @@ export function AppSidebar({
               <CalendarDays className="w-5 h-5" aria-hidden="true" />
               <span>Cronogramas</span>
             </button>
+
+            {warehouseModuleEnabled && onOpenWarehouse && (
+              <button
+                data-testid="nav-adm-deposito"
+                onClick={onOpenWarehouse}
+                className="emprovex-sidebar-nav-item"
+              >
+                <Boxes className="w-5 h-5" aria-hidden="true" />
+                <span>ADM Depósito</span>
+              </button>
+            )}
           </nav>
         </div>
 
