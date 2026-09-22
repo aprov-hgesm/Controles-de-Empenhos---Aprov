@@ -262,6 +262,9 @@ jobs:
       - name: Admin usage intelligence guard
         run: npm run verify:admin-usage-intelligence
 
+      - name: UG telemetry v2 reconciliation guard
+        run: npm run verify:ug-telemetry-v2
+
       - name: Block 16.7 security and concurrency hardening guard
         run: npm run verify:block-16-7-security-concurrency
 
