@@ -8,6 +8,10 @@ import {
 } from 'firebase/firestore';
 
 import { auth, db } from './firebase';
+import {
+  getFirestoreBillingDayKey,
+  getFirestoreBillingDayWindow,
+} from './firestoreBillingDay';
 import { USAGE_TELEMETRY_VERSION } from './platformCapacity';
 import { isValidUnitUg } from './platformIdentity';
 
@@ -57,7 +61,7 @@ function safeSessionStorage(): Storage | null {
 }
 
 export function getWorkspaceUsageDayKey(date = new Date()): string {
-  return date.toISOString().slice(0, 10);
+  return getFirestoreBillingDayKey(date);
 }
 
 function buildUsageKey(scope: WorkspaceUsageScope, dayKey: string): string {
@@ -298,6 +302,7 @@ export async function flushWorkspaceUsageTelemetry(
   };
 
   flushInFlight.add(key);
+  const billingWindow = getFirestoreBillingDayWindow(requestedDayKey);
 
   try {
     await setDoc(
@@ -314,8 +319,8 @@ export async function flushWorkspaceUsageTelemetry(
         workspaceId: scope.workspaceId,
         ug: scope.ug,
         dayKey: requestedDayKey,
-        windowStartedAt: `${requestedDayKey}T00:00:00.000Z`,
-        windowEndedAt: `${requestedDayKey}T23:59:59.999Z`,
+        windowStartedAt: billingWindow.startedAt,
+        windowEndedAt: billingWindow.endedAt,
         estimatedDocumentReads: increment(snapshot.estimatedDocumentReads),
         estimatedDocumentWrites: increment(snapshot.estimatedDocumentWrites),
         estimatedDocumentDeletes: increment(snapshot.estimatedDocumentDeletes),
