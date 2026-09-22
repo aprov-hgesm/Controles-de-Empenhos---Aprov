@@ -47,6 +47,57 @@ service cloud.firestore {
         && isHgesmFounder();
     }
 
+    function validWarehouseMaterialUnit(unit) {
+      return unit is map
+        && unit.keys().hasOnly(['code', 'label'])
+        && unit.keys().hasAll(['code', 'label'])
+        && unit.code is string
+        && unit.code in ['unit', 'kg', 'g', 'l', 'ml', 'package', 'box', 'bundle', 'other']
+        && (unit.label == null || (unit.label is string && unit.label.size() > 0 && unit.label.size() <= 80))
+        && (unit.code != 'other' || (unit.label is string && unit.label.size() > 0));
+    }
+
+    function validWarehouseMaterialDocument(workspaceId, materialId) {
+      return request.resource.data is map
+        && request.resource.data.keys().hasOnly([
+          'schemaVersion',
+          'id',
+          'workspaceId',
+          'ug',
+          'description',
+          'aliases',
+          'unit',
+          'status',
+          'conversions'
+        ])
+        && request.resource.data.keys().hasAll([
+          'schemaVersion',
+          'id',
+          'workspaceId',
+          'ug',
+          'description',
+          'aliases',
+          'unit',
+          'status',
+          'conversions'
+        ])
+        && request.resource.data.schemaVersion == 'warehouse_material_v1'
+        && request.resource.data.id == materialId
+        && materialId.matches('^mat_[a-f0-9]{32}$')
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.ug is string
+        && request.resource.data.ug.matches('^[0-9]{6}$')
+        && request.resource.data.description is string
+        && request.resource.data.description.size() > 0
+        && request.resource.data.description.size() <= 240
+        && request.resource.data.aliases is list
+        && request.resource.data.aliases.size() <= 32
+        && validWarehouseMaterialUnit(request.resource.data.unit)
+        && request.resource.data.status in ['active', 'inactive']
+        && request.resource.data.conversions is list
+        && request.resource.data.conversions.size() <= 32;
+    }
+
     function workspaceExists(workspaceId) {
       return exists(/databases/$(database)/documents/workspaces/$(workspaceId));
     }
@@ -2106,8 +2157,17 @@ service cloud.firestore {
     match /warehouse/{workspaceId} {
       allow read, write: if canAccessWarehouseModule(workspaceId);
 
-      match /{document=**} {
-        allow read, write: if canAccessWarehouseModule(workspaceId);
+      // FASE 1 / DEP-1 + DEP-1.1 — material canônico.
+      match /materials/{materialId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create, update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseMaterialDocument(workspaceId, materialId);
+        allow delete: if canAccessWarehouseModule(workspaceId);
+      }
+
+      match /{domain}/{document=**} {
+        allow read, write: if canAccessWarehouseModule(workspaceId)
+          && domain != 'materials';
       }
     }
 

@@ -1,8 +1,6 @@
 import { isValidWorkspaceId, normalizeWorkspaceId } from '../platformIdentity';
 
 /**
- * FASE 0 / DEP-0.1
- *
  * Namespace Firestore dedicado ao ADM Depósito.
  *
  * Estrutura:
@@ -42,4 +40,18 @@ export function warehouseDomainPath(
   domain: WarehouseDomain
 ): string {
   return `${warehouseWorkspaceRoot(workspaceId)}/${WAREHOUSE_DOMAIN_COLLECTIONS[domain]}`;
+}
+
+export function warehouseDocumentPath(
+  workspaceId: string,
+  domain: WarehouseDomain,
+  documentId: string
+): string {
+  const normalizedDocumentId = documentId.trim();
+
+  if (!normalizedDocumentId || normalizedDocumentId.includes('/')) {
+    throw new Error('WAREHOUSE_INVALID_DOCUMENT_ID');
+  }
+
+  return `${warehouseDomainPath(workspaceId, domain)}/${normalizedDocumentId}`;
 }
