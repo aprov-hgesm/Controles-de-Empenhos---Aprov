@@ -197,6 +197,24 @@ function rememberLocalLease(record: LocalLeaseRecord): void {
   );
 }
 
+export function rememberBoundWorkspaceSessionIdentity(
+  record: WorkspaceSessionLeaseIdentity
+): void {
+  if (
+    !record.workspaceId
+    || !record.uid
+    || !SESSION_SLOT_IDS.includes(record.slotId)
+    || record.sessionId.length <= 8
+    || record.browserInstanceId.length <= 8
+  ) {
+    throw new PlatformSessionLeaseError(
+      'SESSION_INVALID_CONTEXT',
+      'A identidade vinculada da sessão é inválida.'
+    );
+  }
+  rememberLocalLease(record);
+}
+
 function markLeaseRenewed(workspaceId: string, uid: string, at = Date.now()): void {
   browserStorage()?.setItem(
     scopedKey(LAST_RENEWED_KEY_PREFIX, workspaceId, uid),
@@ -322,6 +340,130 @@ export function isTerminalSessionLeaseError(error: unknown): boolean {
     : '';
 
   return code.includes('permission-denied') || code.includes('unauthenticated');
+}
+
+export async function acquireBoundWorkspaceSessionLease(
+  user: User,
+  context: SectorWorkspaceContext,
+  identity: WorkspaceSessionLeaseIdentity
+): Promise<WorkspaceSessionLeaseAcquisition> {
+  const ug = validateExternalSessionContext(user, context);
+  const accountEmail = normalizePlatformEmail(user.email || '');
+
+  if (
+    identity.workspaceId !== context.workspaceId
+    || identity.uid !== user.uid
+    || !SESSION_SLOT_IDS.includes(identity.slotId)
+    || identity.sessionId.length <= 8
+    || identity.browserInstanceId.length <= 8
+  ) {
+    throw new PlatformSessionLeaseError(
+      'SESSION_INVALID_CONTEXT',
+      'A credencial não corresponde ao workspace/sessão atual.'
+    );
+  }
+
+  const slotRef = doc(
+    db,
+    'workspaces',
+    context.workspaceId,
+    'sessionSlots',
+    identity.slotId
+  );
+  const revocationRef = doc(
+    db,
+    'workspaces',
+    context.workspaceId,
+    'sessionRevocations',
+    identity.sessionId
+  );
+
+  const result = await runTransaction(db, async (transaction) => {
+    const [revocationSnapshot, slotSnapshot] = await Promise.all([
+      transaction.get(revocationRef),
+      transaction.get(slotRef),
+    ]);
+
+    if (revocationSnapshot.exists()) {
+      throw new PlatformSessionLeaseError(
+        'SESSION_REVOKED',
+        'Esta sessão foi encerrada pela administração. Faça login novamente.'
+      );
+    }
+
+    const attemptNowMs = Date.now();
+    const existing = slotSnapshot.exists()
+      ? slotSnapshot.data() as StoredWorkspaceSessionLeaseDocument
+      : null;
+    const owned = Boolean(
+      existing
+      && leaseBelongsToLogicalSession(
+        existing,
+        user,
+        context,
+        identity.sessionId,
+        identity.browserInstanceId
+      )
+    );
+
+    if (existing && !owned && !isExpiredLease(existing, attemptNowMs)) {
+      throw new PlatformSessionLeaseError(
+        'SESSION_CAPACITY_EXCEEDED',
+        SESSION_CAPACITY_EXCEEDED_MESSAGE
+      );
+    }
+
+    const expiresAt = Timestamp.fromMillis(attemptNowMs + SESSION_LEASE_DURATION_MS);
+    const keepStartedAt = Boolean(owned && existing && isTimestamp(existing.startedAt));
+
+    transaction.set(slotRef, {
+      leaseVersion: SESSION_LEASE_VERSION,
+      slotId: identity.slotId,
+      sessionId: identity.sessionId,
+      workspaceId: context.workspaceId,
+      ug,
+      uid: user.uid,
+      accountEmail,
+      browserInstanceId: identity.browserInstanceId,
+      startedAt: keepStartedAt ? existing!.startedAt! : serverTimestamp(),
+      lastSeenAt: serverTimestamp(),
+      expiresAt,
+    });
+
+    return {
+      expiresAt,
+      startedAt: keepStartedAt && existing?.startedAt
+        ? existing.startedAt
+        : Timestamp.fromMillis(attemptNowMs),
+      renewedAtMs: attemptNowMs,
+    };
+  });
+
+  recordWorkspaceUsage(
+    { workspaceId: context.workspaceId, ug },
+    { documentReads: 2, documentWrites: 1 }
+  );
+
+  rememberBoundWorkspaceSessionIdentity(identity);
+  markLeaseRenewed(context.workspaceId, user.uid, result.renewedAtMs);
+
+  const lease: WorkspaceSessionLease = {
+    sessionId: identity.sessionId,
+    workspaceId: context.workspaceId,
+    ug,
+    uid: user.uid,
+    accountEmail,
+    browserInstanceId: identity.browserInstanceId,
+    startedAt: result.startedAt.toDate().toISOString(),
+    lastSeenAt: new Date(result.renewedAtMs).toISOString(),
+    expiresAt: result.expiresAt.toDate().toISOString(),
+  };
+
+  return {
+    status: 'acquired',
+    slotId: identity.slotId,
+    lease,
+  };
 }
 
 export async function acquireWorkspaceSessionLease(
