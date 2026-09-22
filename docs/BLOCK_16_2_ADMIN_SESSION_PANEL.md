@@ -98,12 +98,15 @@ credencial em `/api/auth/session-credential`.
 
 O servidor:
 
-1. verifica o ID token Firebase apresentado;
-2. exige autenticação `password` recente para abrir uma nova sessão, ou uma credencial
-   `custom` já vinculada exatamente à mesma sessão para renovação/reconexão;
-3. verifica o slot ativo e a ausência do tombstone usando a própria autorização do usuário;
-4. vincula UID, e-mail, workspace, UG, slot, `sessionId` e `browserInstanceId`;
-5. emite um Firebase custom token assinado com a credencial server-side já existente.
+1. verifica o ID token Firebase `password` apresentado;
+2. valida novamente conta, UID, workspace e UG;
+3. consulta somente a capacidade dos dois slots e escolhe exclusivamente uma vaga ausente
+   ou expirada;
+4. gera no servidor novos `sessionId` e `browserInstanceId` — o cliente não escolhe
+   nem pode pedir a identidade de um slot já ativo;
+5. emite um Firebase custom token assinado com a credencial server-side já existente,
+   contendo a vaga escolhida e a identidade nova;
+6. já sob o provider `custom`, o cliente materializa o lease exatamente nesse slot.
 
 Os claims de autorização são versionados por `emprovex_session_auth_v1`. O navegador
 usa `signInWithCustomToken()` sem nova tela, código, CAPTCHA, MFA ou seleção manual de
@@ -125,9 +128,11 @@ token Firebase ainda não tenha expirado. Uma segunda sessão legítima do mesmo
 válida porque possui outro slot/`sessionId`.
 
 Os caminhos de **bootstrap e manutenção do lease** são deliberadamente separados da
-autorização de dados. O token `password` pode criar/adquirir um lease e o token `custom`
-pode renovar somente a sessão a que está vinculado. Uma credencial customizada não pode
-trocar silenciosamente de `sessionId`, navegador, workspace, UG ou slot.
+autorização de dados. Em modo final, o token `password` pode somente resolver a identidade
+e inspecionar a capacidade necessária ao bootstrap; ele não cria, renova nem exclui slots.
+A criação/renovação/liberação pertence ao token `custom` vinculado. Uma credencial
+customizada não pode trocar silenciosamente de `sessionId`, navegador, workspace, UG ou
+slot.
 
 ### Revogação, refresh e limites
 
@@ -135,11 +140,16 @@ A revogação administrativa continua criando o tombstone e excluindo o slot na 
 transação. O bloqueio autoritativo das novas leituras/gravações depende do estado do slot
 nas Rules, não do tempo restante do ID token.
 
-O refresh normal do Firebase preserva a sessão autenticada. Se for necessário reemitir a
-credencial operacional pelo endpoint, uma credencial `custom` só pode pedir novamente
-a identidade exata já vinculada. Um login `password` inicial é aceito para emissão
-apenas dentro de uma janela curta de autenticação, reduzindo a reutilização de um token
-de bootstrap antigo.
+O refresh normal do Firebase preserva a sessão autenticada e os claims de autorização.
+Em uma recarga normal, o token `custom` já existente restaura o estado local necessário
+ao heartbeat a partir dos próprios claims assinados; `localStorage` não volta a ser
+autoridade.
+
+O endpoint de bootstrap aceita somente `password` e sempre cria **uma identidade nova**.
+Mesmo que duas sessões compartilhem UID/e-mail, uma credencial `password` não pode pedir
+o `sessionId`, o navegador ou o slot de outra sessão legítima. Em corrida pela mesma
+vaga, o cliente repete silenciosamente a seleção usando o token inicial mantido apenas em
+memória durante a tentativa.
 
 Este mecanismo não promete neutralizar toda credencial deliberadamente compartilhada ou
 roubada: uma credencial `password` recém-obtida ainda pode tentar abrir **uma nova sessão**
@@ -155,7 +165,8 @@ Mudanças de custo esperadas:
 
 - cada avaliação operacional das Rules passa a consultar também o documento do slot
   exato da sessão; isso pode acrescentar uma leitura dependente de Rules;
-- a emissão/reemissão da credencial consulta pontualmente o slot e o tombstone;
+- o bootstrap consulta pontualmente conta, workspace e os dois slots para escolher uma
+  vaga disponível;
 - o heartbeat continua com 15 minutos e o lease com 30 minutos;
 - o listener de revogação existente continua sendo usado pelo cliente oficial para
   reação imediata de UX.
@@ -169,11 +180,13 @@ A mudança foi construída com um gate interno de Rules,
 `requireBoundSessionAuthorization()`, para permitir ativação em duas etapas sem janela
 de indisponibilidade:
 
-1. publicar Rules de compatibilidade, que aceitam tanto o fluxo legado `password`
-   quanto a nova credencial vinculada;
-2. publicar aplicação/servidor com a troca silenciosa para custom auth;
+1. publicar Rules de compatibilidade, que ainda permitem ao cliente legado administrar
+   leases e já aceitam a nova credencial vinculada;
+2. publicar aplicação/servidor com o bootstrap server-side e a troca silenciosa para
+   custom auth;
 3. confirmar que não permanecem sessões legadas ativas (janela controlada de rollout);
-4. publicar as Rules finais com o gate obrigatório.
+4. publicar as Rules finais com o gate obrigatório, quando tokens `password` deixam de
+   criar/renovar/excluir slots e deixam de autorizar dados operacionais.
 
 Não se deve inverter a ordem: Rules finais antes do cliente novo bloqueariam usuários
 legítimos; cliente novo antes das Rules de compatibilidade teria o provider `custom`
