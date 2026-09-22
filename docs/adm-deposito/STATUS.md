@@ -22,10 +22,10 @@ Repositório:
 Branch oficial:
 `main`
 
-Commit-base confirmado no momento da criação da memória:
-`04fada7d74ee346e0db19699a969d74f1c329ebb`
+Último commit de referência confirmado da `main`:
+`b9a139ab6a3c905878e279342760d35210fdd52d`
 
-Esse commit já contém, entre outras alterações anteriores ao módulo, a configuração de billing com mensalidade padrão de R$ 50,00.
+Esse commit corresponde ao merge da memória oficial do projeto. O commit-base anterior à documentação era `04fada7d74ee346e0db19699a969d74f1c329ebb` e já continha, entre outras alterações anteriores ao módulo, a configuração de billing com mensalidade padrão de R$ 50,00.
 
 ## Última fase concluída
 
@@ -76,7 +76,16 @@ Ainda não executados, pois a implementação não começou.
 
 Nenhum PR de implementação do ADM Depósito concluído até esta data.
 
-O PR que criar esta memória deve ser registrado abaixo após o merge.
+Memória oficial criada e integrada:
+- PR #154 — `docs: establish ADM Depósito project memory`;
+- merge via squash;
+- commit da `main`: `b9a139ab6a3c905878e279342760d35210fdd52d`;
+- Application CI: aprovado;
+- Browser E2E com Firebase Emulator: aprovado;
+- release gates 16, 17, 18, 19, 20 e 21: aprovados;
+- Vercel preview: aprovado.
+
+Nenhum código operacional do ADM Depósito foi implementado por esse PR.
 
 ## Riscos conhecidos antes da FASE 0
 
