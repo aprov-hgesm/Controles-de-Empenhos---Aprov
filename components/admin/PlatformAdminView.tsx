@@ -45,7 +45,11 @@ import type {
 import type { Workspace } from '../../lib/platformIdentity';
 import type { AdminWorkspaceSession } from '../../lib/platformAdminSessions';
 import type { AdminWorkspaceUsageEstimate } from '../../lib/platformAdminUsage';
-import type { FirebaseGlobalUsageSnapshot } from '../../lib/platformCapacity';
+import type {
+  FirebaseGlobalMetricDataThrough,
+  FirebaseGlobalUsageSnapshot,
+  GoogleMonitoringCredentialSource,
+} from '../../lib/platformCapacity';
 import { setActiveProfileMode } from '../../lib/profileMode';
 import type {
   BillingAccount,
@@ -166,6 +170,8 @@ interface PlatformAdminViewProps {
   globalUsageConfigured: boolean | null;
   globalUsageObservedAt: string | null;
   globalUsageDataThrough: string | null;
+  globalUsageMetricDataThrough: FirebaseGlobalMetricDataThrough | null;
+  globalUsageCredentialSource: GoogleMonitoringCredentialSource | null;
   loadingGlobalUsage: boolean;
   globalUsageError: string | null;
   billing: AdminBillingViewState;
@@ -203,6 +209,8 @@ export function PlatformAdminView({
   globalUsageConfigured,
   globalUsageObservedAt,
   globalUsageDataThrough,
+  globalUsageMetricDataThrough,
+  globalUsageCredentialSource,
   loadingGlobalUsage,
   globalUsageError,
   billing,
@@ -820,6 +828,8 @@ export function PlatformAdminView({
             globalUsageConfigured={globalUsageConfigured}
             globalUsageObservedAt={globalUsageObservedAt}
             globalUsageDataThrough={globalUsageDataThrough}
+            globalUsageMetricDataThrough={globalUsageMetricDataThrough}
+            globalUsageCredentialSource={globalUsageCredentialSource}
             loadingUsage={loadingUsage}
             loadingGlobalUsage={loadingGlobalUsage}
             usageError={usageError}
