@@ -5,19 +5,11 @@ import type { User } from 'firebase/auth';
 
 import type { FirebaseGlobalUsageSnapshot } from '../lib/platformCapacity';
 
-export interface FirebaseApiMethodUsage {
-  apiMethod: string;
-  billableReadUnits: number;
-  billableRealtimeReadUnits: number;
-  billableWriteUnits: number;
-}
-
 interface GlobalUsageApiSuccess {
   configured: true;
   snapshot: FirebaseGlobalUsageSnapshot;
   observedAt: string;
   dataThrough: string | null;
-  apiMethodUsage?: FirebaseApiMethodUsage[];
 }
 
 interface GlobalUsageApiError {
@@ -30,7 +22,6 @@ export function usePlatformAdminGlobalUsage(adminUser: User | null) {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [observedAt, setObservedAt] = useState<string | null>(null);
   const [dataThrough, setDataThrough] = useState<string | null>(null);
-  const [apiMethodUsage, setApiMethodUsage] = useState<FirebaseApiMethodUsage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestSequence = useRef(0);
@@ -43,7 +34,6 @@ export function usePlatformAdminGlobalUsage(adminUser: User | null) {
       setConfigured(null);
       setObservedAt(null);
       setDataThrough(null);
-      setApiMethodUsage([]);
       setLoading(false);
       setError(null);
       return;
@@ -74,8 +64,7 @@ export function usePlatformAdminGlobalUsage(adminUser: User | null) {
         setConfigured(false);
         setObservedAt(null);
         setDataThrough(null);
-        setApiMethodUsage([]);
-        return;
+          return;
       }
 
       if (!response.ok || !('snapshot' in payload)) {
@@ -91,7 +80,6 @@ export function usePlatformAdminGlobalUsage(adminUser: User | null) {
       setConfigured(true);
       setObservedAt(payload.observedAt);
       setDataThrough(payload.dataThrough);
-      setApiMethodUsage(payload.apiMethodUsage || []);
     } catch (loadError) {
       if (requestSequence.current !== requestId) return;
       setError(
@@ -113,7 +101,6 @@ export function usePlatformAdminGlobalUsage(adminUser: User | null) {
     configured,
     observedAt,
     dataThrough,
-    apiMethodUsage,
     loading,
     error,
     refresh,
