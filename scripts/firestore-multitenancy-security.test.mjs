@@ -564,6 +564,19 @@ async function main() {
     lastSeenAt: new Date(),
     expiresAt: new Date(Date.now() + (30 * 60 * 1000)),
   });
+  await ownerSet('workspaces/workspace-lifecycle/sessionSlots/slot-1', {
+    leaseVersion: 'emprovex_session_v1',
+    slotId: 'slot-1',
+    sessionId: 'session-lifecycle-1',
+    workspaceId: 'workspace-lifecycle',
+    ug: '160416',
+    uid: identities.lifecycle.uid,
+    accountEmail: identities.lifecycle.email,
+    browserInstanceId: 'browser-lifecycle-1',
+    startedAt: new Date(Date.now() - (60 * 1000)),
+    lastSeenAt: new Date(),
+    expiresAt: new Date(Date.now() + (30 * 60 * 1000)),
+  });
 
   let sessionA = await createBoundOperationalSession('a1', identities.a, {
     workspaceId: 'workspace-a',
@@ -584,7 +597,17 @@ async function main() {
   const sessionPrebound = await createSession('prebound', identities.prebound.email);
   const sessionSuspended = await createSession('suspended', identities.suspended.email);
   const sessionTampered = await createSession('tampered', identities.tampered.email);
-  const sessionLifecycle = await createSession('lifecycle', identities.lifecycle.email);
+  const sessionLifecycle = await createBoundOperationalSession(
+    'lifecycle',
+    identities.lifecycle,
+    {
+      workspaceId: 'workspace-lifecycle',
+      ug: '160416',
+      slotId: 'slot-1',
+      sessionId: 'session-lifecycle-1',
+      browserInstanceId: 'browser-lifecycle-1',
+    }
+  );
 
   console.log('\nBilling em modo de observação');
 
