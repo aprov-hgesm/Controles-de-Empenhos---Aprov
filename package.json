@@ -143,7 +143,8 @@
     "verify:tr-workspace-documents": "node scripts/verify-tr-workspace-documents.mjs",
     "verify:inicio-background-texture": "node scripts/verify-inicio-background-texture.mjs",
     "verify:inicio-slow-planet-orbits": "node scripts/verify-inicio-slow-planet-orbits.mjs",
-    "verify:block-22-billing": "node scripts/verify-block-22-billing.mjs"
+    "verify:block-22-billing": "node scripts/verify-block-22-billing.mjs",
+    "verify:workspace-usage-reconciliation": "node scripts/verify-workspace-usage-reconciliation.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
