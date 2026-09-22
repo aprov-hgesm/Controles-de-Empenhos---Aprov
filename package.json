@@ -144,7 +144,8 @@
     "verify:inicio-background-texture": "node scripts/verify-inicio-background-texture.mjs",
     "verify:inicio-slow-planet-orbits": "node scripts/verify-inicio-slow-planet-orbits.mjs",
     "verify:block-22-billing": "node scripts/verify-block-22-billing.mjs",
-    "verify:ug-telemetry-v2": "node scripts/verify-ug-telemetry-v2.mjs"
+    "verify:ug-telemetry-v2": "node scripts/verify-ug-telemetry-v2.mjs",
+    "verify:admin-sidebar-google-usage": "node scripts/verify-admin-sidebar-google-usage.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
