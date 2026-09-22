@@ -112,6 +112,9 @@ jobs:
       - name: Multi-tenant Firestore security tests
         run: npm run test:security:multitenant
 
+      - name: ADM Depósito Phase 0 isolation guard
+        run: npm run verify:adm-deposito-phase-0
+
       - name: Production multi-tenant readiness guard
         run: npm run verify:production-multitenant-readiness
 
