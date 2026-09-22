@@ -84,6 +84,33 @@ export async function ensurePlatformBillingFoundation(
     const snapshot = await transaction.get(configRef);
     if (!snapshot.exists()) {
       transaction.set(configRef, buildPlatformBillingConfig(actor));
+      return;
+    }
+
+    const current = snapshot.data() as PlatformBillingConfig;
+    if (current.monthlyPriceCents === 7000) {
+      const now = new Date().toISOString();
+      const updated: PlatformBillingConfig = {
+        ...current,
+        monthlyPriceCents: DEFAULT_PLATFORM_BILLING_CONFIG.monthlyPriceCents,
+        updatedAt: now,
+        updatedBy: actor,
+      };
+      transaction.set(configRef, updated);
+
+      appendPlatformAuditEvent(transaction, {
+        operation: 'billing.price_migration',
+        source: 'admin',
+        entityType: 'billing_config',
+        entityId: EMPROVEX_BILLING_CONFIG_ID,
+        correlationId: createPlatformAuditCorrelationId(),
+        workspaceId: HGESM_WORKSPACE_ID,
+        ug: HGESM_UG,
+        actorEmail: actor,
+        before: { monthlyPriceCents: 7000 },
+        after: { monthlyPriceCents: updated.monthlyPriceCents },
+        metadata: { reason: 'monthly_price_reduced_to_50_brl' },
+      });
     }
   });
 
@@ -91,7 +118,37 @@ export async function ensurePlatformBillingFoundation(
     const ref = accountRef(workspace.id);
     await runTransaction(db, async (transaction) => {
       const snapshot = await transaction.get(ref);
-      if (snapshot.exists()) return;
+      if (snapshot.exists()) {
+        const current = snapshot.data() as BillingAccount;
+        if (
+          workspace.id !== HGESM_WORKSPACE_ID
+          && current.monthlyPriceCents === 7000
+        ) {
+          const now = new Date().toISOString();
+          const updated: BillingAccount = {
+            ...current,
+            monthlyPriceCents: DEFAULT_PLATFORM_BILLING_CONFIG.monthlyPriceCents,
+            updatedAt: now,
+            updatedBy: actor,
+          };
+          transaction.set(ref, updated);
+
+          appendPlatformAuditEvent(transaction, {
+            operation: 'billing.price_migration',
+            source: 'admin',
+            entityType: 'billing_account',
+            entityId: workspace.id,
+            correlationId: createPlatformAuditCorrelationId(),
+            workspaceId: workspace.id,
+            ug: workspace.ug || null,
+            actorEmail: actor,
+            before: { monthlyPriceCents: 7000 },
+            after: { monthlyPriceCents: updated.monthlyPriceCents },
+            metadata: { reason: 'monthly_price_reduced_to_50_brl' },
+          });
+        }
+        return;
+      }
 
       transaction.set(
         ref,

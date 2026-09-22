@@ -35,6 +35,7 @@ export type AuditOperation =
   | 'sector.delete'
   | 'session.terminate'
   | 'billing.config_update'
+  | 'billing.price_migration'
   | 'billing.trial_grant'
   | 'billing.status_change'
   | 'billing.payment_confirm'

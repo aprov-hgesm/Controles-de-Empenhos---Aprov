@@ -78,7 +78,7 @@ export const DEFAULT_PLATFORM_BILLING_CONFIG: Omit<
   billingMode: 'observe',
   requirePayment: false,
   automaticSuspension: false,
-  monthlyPriceCents: 7000,
+  monthlyPriceCents: 5000,
   currency: 'BRL',
   defaultTrialDays: 30,
   dueBusinessDay: 5,

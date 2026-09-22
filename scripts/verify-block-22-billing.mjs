@@ -27,7 +27,7 @@ const platformAccess = read('lib/platformAccess.ts');
 const workspaceContext = read('lib/workspaceContext.ts');
 const securityTest = read('scripts/firestore-multitenancy-security.test.mjs');
 
-requireText(domain, "monthlyPriceCents: 7000", 'Mensalidade padrão deixou de ser R$ 70.');
+requireText(domain, "monthlyPriceCents: 5000", 'Mensalidade padrão deixou de ser R$ 50.');
 requireText(domain, "defaultTrialDays: 30", 'Trial padrão deixou de ser 30 dias.');
 requireText(domain, "dueBusinessDay: 5", 'Vencimento deixou de usar o 5º dia útil.');
 requireText(domain, "gracePeriodDays: 10", 'Tolerância comercial deixou de ser 10 dias.');
@@ -92,7 +92,7 @@ if (findings.length > 0) {
 }
 
 console.log('Bloco 22 — Assinaturas, Trial e Billing OBSERVE\n');
-console.log('Mensalidade: R$ 70,00');
+console.log('Mensalidade: R$ 50,00');
 console.log('Trial padrão: 30 dias');
 console.log('Vencimento: 5º dia útil');
 console.log('Tolerância: 10 dias corridos');

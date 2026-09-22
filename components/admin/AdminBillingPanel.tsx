@@ -107,7 +107,7 @@ export function AdminBillingPanel({
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | BillingAccountStatus>('all');
   const [editingConfig, setEditingConfig] = useState(false);
-  const [price, setPrice] = useState('70,00');
+  const [price, setPrice] = useState('50,00');
   const [trialDays, setTrialDays] = useState('30');
   const [graceDays, setGraceDays] = useState('10');
   const [pixKey, setPixKey] = useState('');
@@ -325,7 +325,7 @@ export function AdminBillingPanel({
 
         {!editingConfig ? (
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <InfoBox label="Mensalidade" value={money(config?.monthlyPriceCents ?? 7000)} />
+            <InfoBox label="Mensalidade" value={money(config?.monthlyPriceCents ?? 5000)} />
             <InfoBox label="Trial padrão" value={`${config?.defaultTrialDays ?? 30} dias`} />
             <InfoBox label="Vencimento" value="5º dia útil" />
             <InfoBox label="Tolerância" value={`${config?.gracePeriodDays ?? 10} dias`} />
