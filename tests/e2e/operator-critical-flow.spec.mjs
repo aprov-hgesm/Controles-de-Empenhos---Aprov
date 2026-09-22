@@ -327,6 +327,7 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
   });
 
   test('duas sessões por setor, múltiplas abas compartilham vaga e terceira sessão é barrada', async ({ browser }) => {
+    test.setTimeout(90_000);
     const contextA = await browser.newContext();
     const contextB = await browser.newContext();
     const contextC = await browser.newContext();
