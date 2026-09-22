@@ -6,7 +6,6 @@ import {
   BarChart3,
   BellRing,
   Cloud,
-  Database,
   Gauge,
 } from 'lucide-react';
 
