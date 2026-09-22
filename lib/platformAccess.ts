@@ -5,6 +5,7 @@ import { doc, runTransaction } from 'firebase/firestore';
 
 import { db } from './firebase';
 import { HGESM_SECTOR_EMAIL } from './hgesmWorkspace';
+import { SESSION_AUTHORIZATION_VERSION, SESSION_SLOT_IDS } from './platformCapacity';
 import {
   FOUNDER_AUTH_PROVIDER,
   SECTOR_AUTH_PROVIDER,
@@ -63,17 +64,33 @@ function failIdentityResolution(code: string): never {
   throw new ExternalIdentityResolutionError(code);
 }
 
-async function resolveSessionAuthProvider(
+type ResolvedFirebaseProvider = PlatformAuthProvider | 'custom';
+
+interface ResolvedSessionAuth {
+  provider: ResolvedFirebaseProvider | null;
+  claims: Record<string, unknown>;
+}
+
+function sessionClaim(claims: Record<string, unknown>, name: string): string {
+  const value = claims[name];
+  return typeof value === 'string' ? value : '';
+}
+
+async function resolveSessionAuth(
   user: User
-): Promise<PlatformAuthProvider | null> {
+): Promise<ResolvedSessionAuth> {
   const tokenResult = await user.getIdTokenResult();
   const provider = tokenResult.signInProvider;
 
-  if (provider === FOUNDER_AUTH_PROVIDER || provider === SECTOR_AUTH_PROVIDER) {
-    return provider;
+  if (
+    provider === FOUNDER_AUTH_PROVIDER
+    || provider === SECTOR_AUTH_PROVIDER
+    || provider === 'custom'
+  ) {
+    return { provider, claims: tokenResult.claims };
   }
 
-  return null;
+  return { provider: null, claims: tokenResult.claims };
 }
 
 /**
@@ -87,10 +104,12 @@ async function resolveSessionAuthProvider(
 async function resolveAndBindExternalIdentity(
   user: User,
   normalizedEmail: string,
-  signInProvider: PlatformAuthProvider
+  sessionAuth: ResolvedSessionAuth
 ): Promise<ResolvedExternalIdentity | null> {
   const now = new Date().toISOString();
   const accountRef = doc(db, PLATFORM_ACCOUNTS_COLLECTION, normalizedEmail);
+  const signInProvider = sessionAuth.provider;
+  const sessionClaims = sessionAuth.claims;
 
   return runTransaction(db, async (transaction) => {
     const accountSnapshot = await transaction.get(accountRef);
@@ -106,7 +125,15 @@ async function resolveAndBindExternalIdentity(
     // como password até que o Bloco 2 materialize o campo explicitamente.
     const expectedProvider = account.authProvider || SECTOR_AUTH_PROVIDER;
     if (expectedProvider !== SECTOR_AUTH_PROVIDER) failIdentityResolution('ACCOUNT_PROVIDER_MISMATCH');
-    if (signInProvider !== SECTOR_AUTH_PROVIDER) failIdentityResolution('SESSION_PROVIDER_MISMATCH');
+    if (signInProvider !== SECTOR_AUTH_PROVIDER && signInProvider !== 'custom') {
+      failIdentityResolution('SESSION_PROVIDER_MISMATCH');
+    }
+    if (
+      signInProvider === 'custom'
+      && sessionClaim(sessionClaims, 'emprovexSessionVersion') !== SESSION_AUTHORIZATION_VERSION
+    ) {
+      failIdentityResolution('SESSION_CREDENTIAL_MISSING');
+    }
 
     // Depois do primeiro vínculo, e-mail idêntico não é suficiente: o UID precisa
     // continuar sendo exatamente o mesmo.
@@ -132,11 +159,27 @@ async function resolveAndBindExternalIdentity(
       failIdentityResolution('UG_MISMATCH');
     }
 
+    if (signInProvider === 'custom') {
+      const claimedSlot = sessionClaim(sessionClaims, 'emprovexSessionSlotId');
+      if (
+        sessionClaim(sessionClaims, 'emprovexWorkspaceId') !== workspace.id
+        || normalizeUnitUg(sessionClaim(sessionClaims, 'emprovexUg')) !== workspaceUg
+        || sessionClaim(sessionClaims, 'emprovexSessionId').length <= 8
+        || sessionClaim(sessionClaims, 'emprovexBrowserInstanceId').length <= 8
+        || !SESSION_SLOT_IDS.includes(claimedSlot as (typeof SESSION_SLOT_IDS)[number])
+        || sessionClaim(sessionClaims, 'emprovexSourceProvider') !== SECTOR_AUTH_PROVIDER
+      ) {
+        failIdentityResolution('SESSION_CREDENTIAL_MISMATCH');
+      }
+    }
+
     // Novos setores do Bloco 2 já chegam pré-vinculados ao UID pelo servidor.
     // Apenas contas legadas sem UID executam o bootstrap histórico de primeiro acesso.
     let boundAccount: SectorAccount;
 
-    if (account.firebaseUid) {
+    if (signInProvider === 'custom') {
+      boundAccount = account;
+    } else if (account.firebaseUid) {
       const firstLoginAt = account.firstLoginAt || now;
 
       boundAccount = {
@@ -197,13 +240,15 @@ export async function resolveAuthenticatedWorkspaceContext(
 
   const normalizedEmail = normalizePlatformEmail(user.email);
 
-  let signInProvider: PlatformAuthProvider | null = null;
+  let sessionAuth: ResolvedSessionAuth = { provider: null, claims: {} };
   try {
-    signInProvider = await resolveSessionAuthProvider(user);
+    sessionAuth = await resolveSessionAuth(user);
   } catch (error) {
     console.warn('Não foi possível identificar o provedor da sessão EMPROVEX.', error);
     return unauthorized(normalizedEmail);
   }
+
+  const signInProvider = sessionAuth.provider;
 
   if (normalizedEmail === HGESM_SECTOR_EMAIL) {
     // O perfil fundador preserva exclusivamente o login federado Google.
@@ -219,12 +264,14 @@ export async function resolveAuthenticatedWorkspaceContext(
   }
 
   try {
-    if (signInProvider !== SECTOR_AUTH_PROVIDER) return unauthorized(normalizedEmail);
+    if (signInProvider !== SECTOR_AUTH_PROVIDER && signInProvider !== 'custom') {
+      return unauthorized(normalizedEmail);
+    }
 
     const resolvedIdentity = await resolveAndBindExternalIdentity(
       user,
       normalizedEmail,
-      signInProvider
+      sessionAuth
     );
     if (!resolvedIdentity) return unauthorized(normalizedEmail);
 
