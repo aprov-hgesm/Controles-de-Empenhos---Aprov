@@ -146,7 +146,8 @@
     "verify:block-22-billing": "node scripts/verify-block-22-billing.mjs",
     "verify:ug-telemetry-v2": "node scripts/verify-ug-telemetry-v2.mjs",
     "verify:admin-sidebar-google-usage": "node scripts/verify-admin-sidebar-google-usage.mjs",
-    "verify:sped-nup-reporting": "node scripts/verify-sped-nup-reporting.mjs"
+    "verify:sped-nup-reporting": "node scripts/verify-sped-nup-reporting.mjs",
+    "verify:adm-deposito-phase-0": "node scripts/verify-adm-deposito-phase-0.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
