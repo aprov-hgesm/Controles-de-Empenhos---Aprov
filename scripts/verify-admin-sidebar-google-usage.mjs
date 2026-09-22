@@ -54,7 +54,7 @@ for (const marker of [
   'resource.labels.database_id',
   'firebaseConfig.firestoreDatabaseId',
   'google-cloud-monitoring',
-  'America/Los_Angeles',
+  'FIRESTORE_BILLING_TIME_ZONE',
   'metricDataThrough',
   'credentialSource',
 ]) requireText(monitoring, marker, `Leitor Google perdeu requisito técnico: ${marker}`);
