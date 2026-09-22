@@ -212,6 +212,12 @@ export function rememberBoundWorkspaceSessionIdentity(
       'A identidade vinculada da sessão é inválida.'
     );
   }
+  const storage = browserStorage();
+  storage?.setItem(BROWSER_INSTANCE_KEY, record.browserInstanceId);
+  storage?.setItem(
+    scopedKey(SESSION_ID_KEY_PREFIX, record.workspaceId, record.uid),
+    record.sessionId
+  );
   rememberLocalLease(record);
 }
 
