@@ -27,6 +27,23 @@ Antes de qualquer nova fase:
 10. Atualizar `DECISIONS.md` somente quando uma nova decisão arquitetural definitiva for tomada.
 11. Não avançar automaticamente para a fase seguinte no mesmo chat.
 
+## Regra de intervenção externa / Cloud Shell
+
+O desenvolvimento deve ser o mais autônomo possível.
+
+Quando uma ação puder ser executada diretamente pelas integrações disponíveis ao agente, ela deve ser executada sem pedir intervenção manual do operador.
+
+Quando uma etapa realmente exigir acesso externo que o agente não possua — por exemplo publicação de Firestore Rules, comandos Firebase/Google Cloud ou outra ação autenticada disponível ao operador via Cloud Shell — o agente deve:
+
+1. identificar exatamente por que a intervenção é necessária;
+2. evitar interromper o desenvolvimento por ações pequenas que possam ser postergadas com segurança;
+3. preferir consolidar várias publicações/ações compatíveis em um único momento, idealmente após várias fases ou em um gate de release;
+4. fornecer um bloco único de comandos Cloud Shell, pronto para copiar e executar;
+5. solicitar ao operador apenas o retorno essencial do comando para validação;
+6. nunca presumir que a publicação ocorreu sem confirmação do resultado.
+
+Exceção: se a ação externa for requisito de segurança, bloqueio técnico ou condição indispensável para validar a fase atual, ela deve ser solicitada imediatamente, sem aguardar consolidação futura.
+
 ## Princípio de fonte da verdade
 
 Quando houver divergência entre uma conversa antiga e estes arquivos:
