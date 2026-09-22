@@ -8,8 +8,10 @@ import {
   shiftFirestoreBillingDayKey,
 } from '../firestoreBillingDay';
 import type {
+  FirebaseGlobalMetricDataThrough,
   FirebaseGlobalUsageSnapshot,
   FirestoreBillingReference,
+  GoogleMonitoringCredentialSource,
 } from '../platformCapacity';
 import { USAGE_TELEMETRY_VERSION } from '../platformCapacity';
 
@@ -94,7 +96,7 @@ interface MetricObservation {
 interface ServiceAccountCredentials {
   clientEmail: string;
   privateKey: string;
-  source: 'firebase-admin' | 'dedicated-monitoring';
+  source: GoogleMonitoringCredentialSource;
 }
 
 interface CachedAccessToken {
@@ -382,12 +384,15 @@ export interface FirebaseGlobalUsageObservation {
   snapshot: FirebaseGlobalUsageSnapshot;
   observedAt: string;
   dataThrough: string | null;
+  metricDataThrough: FirebaseGlobalMetricDataThrough;
+  credentialSource: GoogleMonitoringCredentialSource;
 }
 
 async function loadObservationWithAccessToken(
   accessToken: string,
   startTime: string,
-  endTime: string
+  endTime: string,
+  credentialSource: GoogleMonitoringCredentialSource
 ): Promise<FirebaseGlobalUsageObservation> {
   const billingReference = loadBillingReference();
 
@@ -428,6 +433,17 @@ async function loadObservationWithAccessToken(
       )
     : null;
 
+  const metricDataThrough: FirebaseGlobalMetricDataThrough = {
+    documentReads: reads.latestPointAt,
+    documentWrites: writes.latestPointAt,
+    documentDeletes: deletes.latestPointAt,
+    billableReadUnits: billableReadUnits.latestPointAt,
+    billableRealtimeReadUnits: billableRealtimeReadUnits.latestPointAt,
+    billableWriteUnits: billableWriteUnits.latestPointAt,
+    activeConnections: activeConnections.latestPointAt,
+    snapshotListeners: snapshotListeners.latestPointAt,
+  };
+
   return {
     snapshot: {
       telemetryVersion: USAGE_TELEMETRY_VERSION,
@@ -448,6 +464,8 @@ async function loadObservationWithAccessToken(
     },
     observedAt: endTime,
     dataThrough,
+    metricDataThrough,
+    credentialSource,
   };
 }
 
@@ -465,7 +483,12 @@ async function loadFirebaseGlobalUsageObservationForInterval(
   for (const credentials of candidates) {
     try {
       const accessToken = await mintServiceAccountAccessToken(credentials);
-      return await loadObservationWithAccessToken(accessToken, startTime, endTime);
+      return await loadObservationWithAccessToken(
+        accessToken,
+        startTime,
+        endTime,
+        credentials.source
+      );
     } catch (error) {
       cachedAccessTokens.delete(`${credentials.source}:${credentials.clientEmail}`);
       const message = error instanceof Error ? error.message : 'falha desconhecida';
