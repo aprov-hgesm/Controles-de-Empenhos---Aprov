@@ -99,3 +99,51 @@ export async function loadPlatformWorkspaceUsage(
     })
   );
 }
+
+
+export interface WorkspaceUsageReconciliation {
+  globalDocumentReads: number;
+  attributedDocumentReads: number;
+  unattributedDocumentReads: number;
+  coveragePercentage: number | null;
+  globalDocumentWrites: number;
+  attributedDocumentWrites: number;
+  unattributedDocumentWrites: number;
+  writeCoveragePercentage: number | null;
+}
+
+export function reconcileWorkspaceUsage(
+  usage: AdminWorkspaceUsageEstimate[],
+  globalUsage: {
+    documentReads: number;
+    documentWrites: number;
+  } | null
+): WorkspaceUsageReconciliation | null {
+  if (!globalUsage) return null;
+
+  const attributedDocumentReads = usage.reduce(
+    (sum, item) => sum + item.estimatedDocumentReads,
+    0
+  );
+  const attributedDocumentWrites = usage.reduce(
+    (sum, item) => sum + item.estimatedDocumentWrites,
+    0
+  );
+  const globalDocumentReads = Math.max(0, Math.floor(globalUsage.documentReads || 0));
+  const globalDocumentWrites = Math.max(0, Math.floor(globalUsage.documentWrites || 0));
+
+  return {
+    globalDocumentReads,
+    attributedDocumentReads,
+    unattributedDocumentReads: Math.max(0, globalDocumentReads - attributedDocumentReads),
+    coveragePercentage: globalDocumentReads > 0
+      ? Math.min(100, (attributedDocumentReads / globalDocumentReads) * 100)
+      : null,
+    globalDocumentWrites,
+    attributedDocumentWrites,
+    unattributedDocumentWrites: Math.max(0, globalDocumentWrites - attributedDocumentWrites),
+    writeCoveragePercentage: globalDocumentWrites > 0
+      ? Math.min(100, (attributedDocumentWrites / globalDocumentWrites) * 100)
+      : null,
+  };
+}
