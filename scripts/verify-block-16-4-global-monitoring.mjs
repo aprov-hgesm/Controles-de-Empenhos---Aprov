@@ -15,6 +15,7 @@ const forbidText = (source, forbidden, message) => {
 
 const auth = read('lib/server/firebaseFounderAuth.ts');
 const monitoring = read('lib/server/googleCloudMonitoring.ts');
+const billingDay = read('lib/firestoreBillingDay.ts');
 const route = read('app/api/admin/firebase-global-usage/route.ts');
 const requestSecurity = read('lib/server/requestSecurity.ts');
 const hook = read('hooks/usePlatformAdminGlobalUsage.ts');
@@ -40,7 +41,6 @@ for (const marker of [
   'EMPROVEX_GCP_MONITORING_PRIVATE_KEY',
   'FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON',
   'EMPROVEX_FIRESTORE_DAILY_READ_UNIT_FREE_LIMIT',
-  'America/Los_Angeles',
   'firestore.googleapis.com/api/billable_read_units',
   'firestore.googleapis.com/api/billable_realtime_read_units',
   'firestore.googleapis.com/api/billable_write_units',
@@ -54,6 +54,18 @@ for (const marker of [
   'firebaseConfig.firestoreDatabaseId',
   "source: 'google-cloud-monitoring'",
 ]) requireText(monitoring, marker, `Cloud Monitoring perdeu requisito: ${marker}`);
+
+for (const marker of [
+  "FIRESTORE_BILLING_TIME_ZONE = 'America/Los_Angeles'",
+  'getFirestoreBillingDayKey',
+  'getFirestoreBillingDayWindow',
+]) requireText(billingDay, marker, `Janela diária compartilhada perdeu requisito: ${marker}`);
+
+requireText(
+  monitoring,
+  'FIRESTORE_BILLING_TIME_ZONE',
+  'Cloud Monitoring deixou de reutilizar o fuso de faturamento compartilhado.'
+);
 
 forbidText(monitoring, 'NEXT_PUBLIC_', 'Credencial sensível não pode usar NEXT_PUBLIC_.');
 forbidText(
