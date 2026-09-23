@@ -726,7 +726,11 @@ service cloud.firestore {
               getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)).data.source.fromBalanceId == locationBalanceId
               || getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)).data.source.toBalanceId == locationBalanceId
             )
-            && warehouseTransferHasMatchingLocationBalancesAfter(workspaceId, movementId, request.resource.data)
+            && warehouseTransferHasMatchingLocationBalancesAfter(
+              workspaceId,
+              movementId,
+              getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)).data
+            )
           )
           || warehouseLocationBalanceMatchesNonTransfer(workspaceId, locationBalanceId)
         );
@@ -3036,7 +3040,11 @@ service cloud.firestore {
           && warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId)
           && (
             request.resource.data.type != 'TRANSFER'
-            || warehouseTransferHasMatchingLocationBalancesAfter(workspaceId, movementId)
+            || warehouseTransferHasMatchingLocationBalancesAfter(
+              workspaceId,
+              movementId,
+              request.resource.data
+            )
           );
         allow update, delete: if false;
       }
