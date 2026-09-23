@@ -464,13 +464,28 @@ export function InicioConstellation({
   const counts = useMemo(
     () => ({
       regular: nodes.filter(
-        (node) => node.severity === 'normal' && node.stage !== 'closed'
+        (node) =>
+          (node.invoicePendingStage ?? 'none') === 'none'
+          && node.severity === 'normal'
+          && node.stage !== 'closed'
       ).length,
-      attention: nodes.filter((node) => node.severity === 'attention').length,
-      critical: nodes.filter((node) => node.severity === 'critical').length,
+      attention: nodes.filter(
+        (node) =>
+          (node.invoicePendingStage ?? 'none') === 'none'
+          && node.severity === 'attention'
+      ).length,
+      critical: nodes.filter(
+        (node) =>
+          (node.invoicePendingStage ?? 'none') === 'none'
+          && node.severity === 'critical'
+      ).length,
       commissionPending: nodes.filter((node) => node.invoicePendingStage === 'commission').length,
       treasuryPending: nodes.filter((node) => node.invoicePendingStage === 'treasury').length,
-      closed: nodes.filter((node) => node.stage === 'closed').length,
+      closed: nodes.filter(
+        (node) =>
+          (node.invoicePendingStage ?? 'none') === 'none'
+          && node.stage === 'closed'
+      ).length,
     }),
     [nodes]
   );
