@@ -892,6 +892,211 @@ async function main() {
     )
   );
 
+  console.log('\nFASE 4 — NF → estoque, cutoff e rastreabilidade');
+
+  const phase4MaterialId = 'mat_' + '4'.repeat(32);
+  const phase4Movement1Id = 'mov_' + '4'.repeat(64);
+  const phase4Movement2Id = 'mov_' + '5'.repeat(64);
+  const phase4InvalidMovementId = 'mov_' + '6'.repeat(64);
+  const phase4Settings = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'settings',
+    'invoice-integration'
+  );
+  const phase4Material = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'materials',
+    phase4MaterialId
+  );
+  const phase4Balance = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'balances',
+    phase4MaterialId
+  );
+  const phase4Movement1 = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'movements',
+    phase4Movement1Id
+  );
+
+  await allowed('Fundador ativa cutoff e cria material + entrada + saldo na mesma operação', async () => {
+    const batch = writeBatch(admin.db);
+    batch.set(phase4Settings, {
+      schemaVersion: 'warehouse_invoice_settings_v1',
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      cutoffAt: '2026-09-23T15:00:00.000Z',
+      activatedBy: admin.user.uid,
+    });
+    batch.set(phase4Material, {
+      schemaVersion: 'warehouse_material_v1',
+      id: phase4MaterialId,
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      description: 'Material criado pela NF',
+      aliases: [],
+      unit: { code: 'unit', label: null },
+      status: 'active',
+      conversions: [],
+    });
+    batch.set(phase4Movement1, {
+      schemaVersion: 'warehouse_movement_v1',
+      id: phase4Movement1Id,
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: phase4MaterialId,
+      type: 'INVOICE_ENTRY',
+      quantityDelta: 4,
+      idempotencyKeyHash: '4'.repeat(64),
+      reversesMovementId: null,
+      note: 'NF 12345 · Empenho 2026NE001',
+      source: {
+        kind: 'INVOICE',
+        action: 'ENTRY',
+        invoiceRecordKey: '12345678000199__12345',
+        invoiceId: '12345',
+        empenhoId: '2026NE001',
+        itemIds: ['00001'],
+        supplier: 'Fornecedor Teste',
+        supplierCnpj: '12345678000199',
+        actorUid: admin.user.uid,
+      },
+      createdAt: serverTimestamp(),
+    });
+    batch.set(phase4Balance, {
+      schemaVersion: 'warehouse_balance_v1',
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: phase4MaterialId,
+      quantity: 4,
+      revision: 1,
+      lastMovementId: phase4Movement1Id,
+      updatedAt: serverTimestamp(),
+    });
+    return batch.commit();
+  });
+
+  await allowed('Fundador lê movimento de NF da FASE 4', () => getDoc(phase4Movement1));
+  await allowed('Fundador lê cutoff imutável da FASE 4', () => getDoc(phase4Settings));
+
+  await allowed('Correção de NF gera novo movimento e nova revisão do mesmo saldo', async () => {
+    const batch = writeBatch(admin.db);
+    batch.set(
+      doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase4Movement2Id),
+      {
+        schemaVersion: 'warehouse_movement_v1',
+        id: phase4Movement2Id,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: phase4MaterialId,
+        type: 'INVOICE_CORRECTION',
+        quantityDelta: 2,
+        idempotencyKeyHash: '5'.repeat(64),
+        reversesMovementId: null,
+        note: 'NF 12345 · correção',
+        source: {
+          kind: 'INVOICE',
+          action: 'CORRECTION',
+          invoiceRecordKey: '12345678000199__12345',
+          invoiceId: '12345',
+          empenhoId: '2026NE001',
+          itemIds: ['00001'],
+          supplier: 'Fornecedor Teste',
+          supplierCnpj: '12345678000199',
+          actorUid: admin.user.uid,
+        },
+        createdAt: serverTimestamp(),
+      }
+    );
+    batch.set(phase4Balance, {
+      schemaVersion: 'warehouse_balance_v1',
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: phase4MaterialId,
+      quantity: 6,
+      revision: 2,
+      lastMovementId: phase4Movement2Id,
+      updatedAt: serverTimestamp(),
+    });
+    return batch.commit();
+  });
+
+  await denied('Origem de NF não pode falsificar o operador', async () => {
+    const batch = writeBatch(admin.db);
+    batch.set(
+      doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase4InvalidMovementId),
+      {
+        schemaVersion: 'warehouse_movement_v1',
+        id: phase4InvalidMovementId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: phase4MaterialId,
+        type: 'INVOICE_CORRECTION',
+        quantityDelta: 1,
+        idempotencyKeyHash: '6'.repeat(64),
+        reversesMovementId: null,
+        note: 'tentativa inválida',
+        source: {
+          kind: 'INVOICE',
+          action: 'CORRECTION',
+          invoiceRecordKey: '12345678000199__12345',
+          invoiceId: '12345',
+          empenhoId: '2026NE001',
+          itemIds: ['00001'],
+          supplier: 'Fornecedor Teste',
+          supplierCnpj: '12345678000199',
+          actorUid: 'uid-falsificado',
+        },
+        createdAt: serverTimestamp(),
+      }
+    );
+    batch.set(phase4Balance, {
+      schemaVersion: 'warehouse_balance_v1',
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: phase4MaterialId,
+      quantity: 7,
+      revision: 3,
+      lastMovementId: phase4InvalidMovementId,
+      updatedAt: serverTimestamp(),
+    });
+    return batch.commit();
+  });
+
+  await denied('Cutoff da FASE 4 não pode ser reescrito após ativação', () =>
+    updateDoc(phase4Settings, { cutoffAt: '2020-01-01T00:00:00.000Z' })
+  );
+  await denied('Setor externo não lê cutoff do ADM Depósito', () =>
+    getDoc(
+      doc(
+        sessionA.db,
+        'warehouse',
+        'hgesm-aprov',
+        'settings',
+        'invoice-integration'
+      )
+    )
+  );
+  await denied('Setor externo não lê movimento de NF do fundador', () =>
+    getDoc(
+      doc(
+        sessionA.db,
+        'warehouse',
+        'hgesm-aprov',
+        'movements',
+        phase4Movement1Id
+      )
+    )
+  );
+
   console.log('Isolamento A ↔ B');
   await allowed('Setor A lê o próprio empenho', () =>
     getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))

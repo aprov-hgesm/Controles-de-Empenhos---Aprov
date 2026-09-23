@@ -5,6 +5,8 @@ export interface Item {
   quantity: number; // total quantity committed (empenhada)
   unitPrice: number;
   received: number; // total quantity already received (liquidado/recebido)
+  /** Vínculo estável com o material canônico do ADM Depósito, quando já resolvido. */
+  warehouseMaterialId?: string;
 }
 
 export type DocumentStorageProvider = 'google-drive';
@@ -74,6 +76,19 @@ export interface InvoiceItem {
   quantity: number;
   unitPrice: number;
   subtotal: number;
+  /** Material canônico que recebeu a entrada logística deste item. */
+  warehouseMaterialId?: string;
+  /** Histórico dos movimentos do ledger produzidos por este item de NF. */
+  warehouseMovementIds?: string[];
+}
+
+export interface WarehouseInvoiceIntegrationState {
+  schemaVersion: 'warehouse_invoice_link_v1';
+  status: 'integrated';
+  workspaceId: string;
+  cutoffAt: string;
+  revision: number;
+  lastMovementIds: string[];
 }
 
 export interface Invoice {
@@ -99,6 +114,8 @@ export interface Invoice {
   /** Espelho da Nota Fiscal: anexo opcional usado no consolidado de liquidação. */
   espelhoNotaFiscalPdf?: InvoicePdfDocument;
   espelhoNotaFiscalPdfVersions?: InvoicePdfDocument[];
+  /** Estado da fatia NF → estoque; ausente para NFs anteriores ao cutoff ou tenants sem o piloto. */
+  warehouseIntegration?: WarehouseInvoiceIntegrationState;
 }
 
 export interface MembroComissao {

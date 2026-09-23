@@ -1,6 +1,11 @@
 import {
+  collection,
   doc,
   getDoc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
   runTransaction,
   serverTimestamp,
 } from 'firebase/firestore';
@@ -20,6 +25,7 @@ import {
   WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
   type WarehouseBalance,
   type WarehouseMovement,
+  type WarehouseMovementSource,
   type WarehouseMovementType,
 } from './movement';
 import { warehouseDocumentPath } from './namespace';
@@ -31,12 +37,18 @@ export interface ApplyWarehouseMovementInput {
   idempotencyKey: string;
   reversesMovementId?: string | null;
   note?: string | null;
+  source?: WarehouseMovementSource | null;
 }
 
 export interface ApplyWarehouseMovementResult {
   applied: boolean;
   movement: WarehouseMovement;
   balance: WarehouseBalance;
+}
+
+export interface WarehouseMovementListItem {
+  movement: WarehouseMovement;
+  createdAt: string | null;
 }
 
 function normalizeRequiredWorkspace(workspaceId: string): string {
@@ -82,6 +94,7 @@ function parseMovement(
       idempotencyKeyHash: data.idempotencyKeyHash,
       reversesMovementId: data.reversesMovementId ?? null,
       note: data.note ?? null,
+      source: data.source ?? null,
     },
     { expectedWorkspaceId: workspaceId }
   );
@@ -165,6 +178,64 @@ export async function getWarehouseMovement(
   }
 }
 
+export async function listWarehouseBalances(
+  workspaceId: string,
+  maxResults = 250
+): Promise<WarehouseBalance[]> {
+  const normalizedWorkspaceId = normalizeRequiredWorkspace(workspaceId);
+  const path = warehouseDocumentPath(normalizedWorkspaceId, 'balances', '__probe__')
+    .replace('/__probe__', '');
+
+  try {
+    const snapshot = await getDocs(
+      query(collection(db, path), limit(Math.max(1, Math.min(maxResults, 500))))
+    );
+    return snapshot.docs.map((item) =>
+      parseBalance(
+        normalizedWorkspaceId,
+        item.id,
+        item.data() as Record<string, unknown>
+      )
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return [];
+  }
+}
+
+export async function listWarehouseMovements(
+  workspaceId: string,
+  maxResults = 100
+): Promise<WarehouseMovementListItem[]> {
+  const normalizedWorkspaceId = normalizeRequiredWorkspace(workspaceId);
+  const path = warehouseDocumentPath(normalizedWorkspaceId, 'movements', '__probe__')
+    .replace('/__probe__', '');
+
+  try {
+    const snapshot = await getDocs(
+      query(
+        collection(db, path),
+        orderBy('createdAt', 'desc'),
+        limit(Math.max(1, Math.min(maxResults, 250)))
+      )
+    );
+    return snapshot.docs.map((item) => {
+      const data = item.data() as Record<string, unknown>;
+      const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
+      return {
+        movement: parseMovement(normalizedWorkspaceId, item.id, data),
+        createdAt:
+          rawCreatedAt && typeof rawCreatedAt.toDate === 'function'
+            ? rawCreatedAt.toDate().toISOString()
+            : null,
+      };
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return [];
+  }
+}
+
 export async function applyWarehouseMovement(
   workspaceId: string,
   input: ApplyWarehouseMovementInput
@@ -234,6 +305,7 @@ export async function applyWarehouseMovement(
           idempotencyKeyHash,
           reversesMovementId: input.reversesMovementId ?? null,
           note: input.note ?? null,
+          source: input.source ?? null,
         },
         {
           expectedWorkspaceId: normalizedWorkspaceId,

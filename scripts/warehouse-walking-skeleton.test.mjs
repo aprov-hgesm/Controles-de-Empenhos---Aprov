@@ -51,7 +51,7 @@ test('layout compartilhado preserva gate founder-only em todas as rotas', () => 
   assert.ok(gate.includes("window.location.replace('/')"));
 });
 
-test('walking skeleton reutiliza contratos oficiais sem persistência paralela', () => {
+test('walking skeleton reutiliza contratos oficiais sem persistência paralela direta', () => {
   const content = read('features/warehouse/components/WarehouseSectionContent.tsx');
   assert.ok(content.includes('WAREHOUSE_MATERIAL_SCHEMA_VERSION'));
   assert.ok(content.includes('WAREHOUSE_MOVEMENT_SCHEMA_VERSION'));
@@ -71,8 +71,6 @@ test('walking skeleton reutiliza contratos oficiais sem persistência paralela',
     'setDoc(',
     'addDoc(',
     'runTransaction(',
-    'ledgerRepository',
-    'materialRepository',
     'applyWarehouseMovement(',
     'saveWarehouseMaterial(',
   ]) {
@@ -84,7 +82,6 @@ test('estados futuros são explícitos e não simulam indicadores', () => {
   const content = read('features/warehouse/components/WarehouseSectionContent.tsx');
   assert.ok(content.includes('Capacidade futura'));
   assert.ok(content.includes('não exibe números fictícios'));
-  assert.ok(content.includes('Nenhuma consulta automática ou listener'));
 });
 
 test('shell nasce responsivo e sem depender de animações pesadas', () => {

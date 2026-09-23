@@ -23,6 +23,21 @@ export const WAREHOUSE_MOVEMENT_TYPES = [
 
 export type WarehouseMovementType = (typeof WAREHOUSE_MOVEMENT_TYPES)[number];
 
+export const WAREHOUSE_MOVEMENT_SOURCE_ACTIONS = ['ENTRY', 'CORRECTION', 'DELETE'] as const;
+export type WarehouseMovementSourceAction = (typeof WAREHOUSE_MOVEMENT_SOURCE_ACTIONS)[number];
+
+export interface WarehouseMovementSource {
+  kind: 'INVOICE';
+  action: WarehouseMovementSourceAction;
+  invoiceRecordKey: string;
+  invoiceId: string;
+  empenhoId: string;
+  itemIds: string[];
+  supplier: string;
+  supplierCnpj: string | null;
+  actorUid: string;
+}
+
 export interface WarehouseMovement {
   schemaVersion: typeof WAREHOUSE_MOVEMENT_SCHEMA_VERSION;
   id: string;
@@ -34,6 +49,7 @@ export interface WarehouseMovement {
   idempotencyKeyHash: string;
   reversesMovementId: string | null;
   note: string | null;
+  source: WarehouseMovementSource | null;
 }
 
 export interface WarehouseBalance {
@@ -81,6 +97,18 @@ const MOVEMENT_FIELDS = new Set([
   'idempotencyKeyHash',
   'reversesMovementId',
   'note',
+  'source',
+]);
+const MOVEMENT_SOURCE_FIELDS = new Set([
+  'kind',
+  'action',
+  'invoiceRecordKey',
+  'invoiceId',
+  'empenhoId',
+  'itemIds',
+  'supplier',
+  'supplierCnpj',
+  'actorUid',
 ]);
 const BALANCE_FIELDS = new Set([
   'schemaVersion',
@@ -110,6 +138,61 @@ function issue(
 
 function normalizeText(value: string): string {
   return value.trim().replace(/\s+/g, ' ');
+}
+
+function normalizeWarehouseMovementSource(input: unknown): WarehouseMovementSource | null {
+  if (input === null || input === undefined) return null;
+  if (!isPlainObject(input) || !hasOnlyFields(input, MOVEMENT_SOURCE_FIELDS)) return null;
+
+  const action = typeof input.action === 'string' ? input.action.trim().toUpperCase() : '';
+  const invoiceRecordKey = typeof input.invoiceRecordKey === 'string' ? normalizeText(input.invoiceRecordKey) : '';
+  const invoiceId = typeof input.invoiceId === 'string' ? normalizeText(input.invoiceId) : '';
+  const empenhoId = typeof input.empenhoId === 'string' ? normalizeText(input.empenhoId) : '';
+  const actorUid = typeof input.actorUid === 'string' ? normalizeText(input.actorUid) : '';
+  const supplier = typeof input.supplier === 'string' ? normalizeText(input.supplier) : '';
+  const supplierCnpj = input.supplierCnpj === null || input.supplierCnpj === undefined
+    ? null
+    : typeof input.supplierCnpj === 'string'
+      ? input.supplierCnpj.trim()
+      : '';
+
+  if (
+    input.kind !== 'INVOICE'
+    || !WAREHOUSE_MOVEMENT_SOURCE_ACTIONS.includes(action as WarehouseMovementSourceAction)
+    || !invoiceRecordKey || invoiceRecordKey.length > 160
+    || !invoiceId || invoiceId.length > 120
+    || !empenhoId || empenhoId.length > 120
+    || !actorUid || actorUid.length > 160
+    || !supplier || supplier.length > 240
+    || (supplierCnpj !== null && !/^[0-9]{14}$/.test(supplierCnpj))
+    || !Array.isArray(input.itemIds)
+    || input.itemIds.length < 1
+    || input.itemIds.length > 32
+  ) {
+    return null;
+  }
+
+  const itemIds: string[] = [];
+  for (const value of input.itemIds) {
+    if (typeof value !== 'string') return null;
+    const normalized = normalizeText(value);
+    if (!normalized || normalized.length > 120) return null;
+    if (!itemIds.includes(normalized)) itemIds.push(normalized);
+  }
+
+  if (itemIds.length < 1) return null;
+
+  return {
+    kind: 'INVOICE',
+    action: action as WarehouseMovementSourceAction,
+    invoiceRecordKey,
+    invoiceId,
+    empenhoId,
+    itemIds,
+    supplier,
+    supplierCnpj,
+    actorUid,
+  };
 }
 
 export function normalizeWarehouseIdempotencyKey(value: unknown): string | null {
@@ -392,6 +475,29 @@ export function validateWarehouseMovement(
     }
   }
 
+  const source = normalizeWarehouseMovementSource(input.source);
+  if (input.source !== null && input.source !== undefined && !source) {
+    issues.push(
+      issue(
+        'invalid_source',
+        '$.source',
+        'Origem estruturada da movimentação é inválida.'
+      )
+    );
+  }
+  if (
+    source
+    && !['INVOICE_ENTRY', 'INVOICE_CORRECTION'].includes(type)
+  ) {
+    issues.push(
+      issue(
+        'invalid_source_type',
+        '$.source',
+        'Origem INVOICE só pode acompanhar entrada ou correção de Nota Fiscal.'
+      )
+    );
+  }
+
   if (issues.length || quantityDelta === null) {
     return { ok: false, issues };
   }
@@ -410,6 +516,7 @@ export function validateWarehouseMovement(
       idempotencyKeyHash,
       reversesMovementId,
       note,
+      source,
     },
   };
 }
@@ -573,5 +680,6 @@ export function warehouseMovementMatchesReplay(
     && existing.quantityDelta === candidate.quantityDelta
     && existing.idempotencyKeyHash === candidate.idempotencyKeyHash
     && existing.reversesMovementId === candidate.reversesMovementId
-    && existing.note === candidate.note;
+    && existing.note === candidate.note
+    && JSON.stringify(existing.source) === JSON.stringify(candidate.source);
 }

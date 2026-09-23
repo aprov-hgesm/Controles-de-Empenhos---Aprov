@@ -31,7 +31,10 @@ Regras:
 - execute gates adequados;
 - abra PR e valide checks;
 - faça merge somente após validação técnica;
-- use Cloud Shell apenas quando necessário, preferindo consolidação;
+- consulte `docs/DEVELOPMENT_CI_WORKFLOW.md` para definir a bateria proporcional ao impacto;
+- use Cloud Shell de forma ativa para pré-validação/diagnóstico quando isso reduzir uma rodada longa de CI;
+- quando pedir intervenção manual, forneça comandos curtos, seguros e copiáveis;
+- Browser E2E completo é prioritário para mudanças que alterem jornada/interação do usuário;
 - atualize STATUS ao concluir;
 - atualize DECISIONS apenas se houver decisão arquitetural definitiva;
 - não inicie a fase seguinte no mesmo chat.
@@ -42,3 +45,34 @@ Regras:
 O template inicia a conversa; a fonte da verdade continua sendo a `main` e os documentos oficiais.
 
 Se o texto do chat divergir deles, prevalecem GitHub e documentação versionada.
+
+
+## Estado corrente após a FASE 4
+
+Última fase concluída:
+- **FASE 4 — NF → Estoque**;
+- PR de implementação: **#167**;
+- decisão permanente adicionada: **D-033**.
+
+Capacidades que o próximo chat deve considerar já existentes:
+- material canônico;
+- ledger append-only;
+- saldo materializado;
+- Walking Skeleton completo;
+- vínculo persistido NF → material → movimento → saldo;
+- idempotência de recebimento;
+- correção e exclusão por movimento compensatório;
+- cutoff de histórico;
+- leitura real de Estoque e Movimentações;
+- isolamento founder-only e multitenancy preservado.
+
+Próxima fase oficial:
+- **FASE 5 — SISCOFIS / Marco Zero / Conciliação**.
+
+Regras adicionais para a FASE 5:
+- não criar fonte de verdade paralela ao ledger;
+- não fazer backfill silencioso do histórico;
+- não enfraquecer o cutoff estabelecido na FASE 4;
+- não liberar ADM Depósito para usuários externos;
+- não iniciar FASE 6 no mesmo chat;
+- reconciliar qualquer commit novo da `main` antes de editar código.

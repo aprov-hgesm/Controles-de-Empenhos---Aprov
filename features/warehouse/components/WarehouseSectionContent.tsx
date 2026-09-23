@@ -1,7 +1,12 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Boxes, Database, FileJson2, Layers3, MapPinned, PackageCheck, ShieldCheck } from 'lucide-react';
 
-import { WAREHOUSE_MATERIAL_SCHEMA_VERSION, WAREHOUSE_MATERIAL_UNIT_CODES } from '../../../lib/warehouse/material';
-import { WAREHOUSE_BALANCE_SCHEMA_VERSION, WAREHOUSE_MOVEMENT_SCHEMA_VERSION, WAREHOUSE_MOVEMENT_TYPES } from '../../../lib/warehouse/movement';
+import { WAREHOUSE_MATERIAL_SCHEMA_VERSION, WAREHOUSE_MATERIAL_UNIT_CODES, type WarehouseMaterial } from '../../../lib/warehouse/material';
+import { WAREHOUSE_BALANCE_SCHEMA_VERSION, WAREHOUSE_MOVEMENT_SCHEMA_VERSION, WAREHOUSE_MOVEMENT_TYPES, type WarehouseBalance } from '../../../lib/warehouse/movement';
+import { listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
+import { listWarehouseBalances, listWarehouseMovements, type WarehouseMovementListItem } from '../../../lib/warehouse/ledgerRepository';
 import { WAREHOUSE_DOMAIN_COLLECTIONS, WAREHOUSE_NAMESPACE_ROOT } from '../../../lib/warehouse/namespace';
 import type { WarehouseSectionId } from '../navigation';
 
@@ -61,28 +66,197 @@ function OverviewContent() {
   );
 }
 
-function StockContent() {
+interface WarehousePhase4Data {
+  loading: boolean;
+  error: string | null;
+  materials: WarehouseMaterial[];
+  balances: WarehouseBalance[];
+  movements: WarehouseMovementListItem[];
+}
+
+function useWarehousePhase4Data(
+  workspaceId: string,
+  section: WarehouseSectionId
+): WarehousePhase4Data {
+  const [state, setState] = useState<WarehousePhase4Data>({
+    loading: section === 'stock' || section === 'movements',
+    error: null,
+    materials: [],
+    balances: [],
+    movements: [],
+  });
+
+  useEffect(() => {
+    if (section !== 'stock' && section !== 'movements') {
+      setState({ loading: false, error: null, materials: [], balances: [], movements: [] });
+      return;
+    }
+
+    let active = true;
+    setState((current) => ({ ...current, loading: true, error: null }));
+
+    void (async () => {
+      try {
+        if (section === 'stock') {
+          const [materials, balances] = await Promise.all([
+            listWarehouseMaterials(workspaceId, 250),
+            listWarehouseBalances(workspaceId, 250),
+          ]);
+          if (active) {
+            setState({ loading: false, error: null, materials, balances, movements: [] });
+          }
+          return;
+        }
+
+        const [materials, movements] = await Promise.all([
+          listWarehouseMaterials(workspaceId, 250),
+          listWarehouseMovements(workspaceId, 100),
+        ]);
+        if (active) {
+          setState({ loading: false, error: null, materials, balances: [], movements });
+        }
+      } catch (error) {
+        if (active) {
+          setState({
+            loading: false,
+            error: error instanceof Error ? error.message : 'Falha ao consultar o estoque.',
+            materials: [],
+            balances: [],
+            movements: [],
+          });
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [section, workspaceId]);
+
+  return state;
+}
+
+function WarehouseDataState({ children }: { children: string }) {
   return (
-    <div className="mt-6">
-      <div className="grid gap-3 md:grid-cols-2">
-        <ContractCard title="Identidade do material" code={WAREHOUSE_MATERIAL_SCHEMA_VERSION} description={'Unidades canônicas já previstas: ' + WAREHOUSE_MATERIAL_UNIT_CODES.join(', ') + '.'} />
-        <ContractCard title="Fonte de saldo" code={WAREHOUSE_BALANCE_SCHEMA_VERSION} description="Toda leitura futura de saldo deverá partir da projeção oficial do ledger." />
-      </div>
-      <PlannedItems items={['Pesquisa por descrição e código','Saldo e empenhos associados','Lotes e validade','Depósito e localização','Fornecedor e Nota Fiscal','Ação “Localizar no depósito”']} />
-      <div className="mt-5"><FutureNotice phase="FASE 7">Esta capacidade será disponibilizada em uma fase posterior. Nenhuma consulta automática ou listener é disparado apenas por abrir esta superfície.</FutureNotice></div>
+    <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-5 text-sm leading-6 text-slate-400">
+      {children}
     </div>
   );
 }
 
-function MovementsContent() {
+function StockContent({ data }: { data: WarehousePhase4Data }) {
+  const materialById = useMemo(
+    () => new Map(data.materials.map((material) => [material.id, material])),
+    [data.materials]
+  );
+
   return (
-    <div className="mt-6">
-      <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-5">
-        <div className="flex items-center gap-2"><Layers3 className="h-4 w-4 text-blue-200" aria-hidden="true" /><p className="text-xs font-bold text-slate-300">Tipos já reconhecidos pelo ledger oficial</p></div>
-        <div className="mt-4 flex flex-wrap gap-2">{WAREHOUSE_MOVEMENT_TYPES.map((movementType) => <code key={movementType} className="rounded-lg border border-white/[0.06] bg-white/[0.025] px-2 py-1 text-[11px] text-slate-400">{movementType}</code>)}</div>
-        <p className="mt-4 text-xs leading-5 text-slate-500">Contrato {WAREHOUSE_MOVEMENT_SCHEMA_VERSION} · saldo {WAREHOUSE_BALANCE_SCHEMA_VERSION}.</p>
+    <div className="mt-6 space-y-5">
+      <div className="grid gap-3 md:grid-cols-2">
+        <ContractCard title="Identidade do material" code={WAREHOUSE_MATERIAL_SCHEMA_VERSION} description="Cada saldo aponta para o material canônico da FASE 1." />
+        <ContractCard title="Fonte de saldo" code={WAREHOUSE_BALANCE_SCHEMA_VERSION} description="Saldo real materializado pelo ledger. Esta tela não recalcula histórico nem mantém um segundo saldo." />
       </div>
-      <div className="mt-5"><FutureNotice phase="FASES 4–10">A consulta do histórico será conectada ao ledger existente quando houver necessidade operacional. Esta fase não cria outro ledger e não oferece botões de entrada, saída, transferência ou ajuste.</FutureNotice></div>
+
+      {data.loading ? (
+        <WarehouseDataState>Consultando saldos reais do workspace…</WarehouseDataState>
+      ) : data.error ? (
+        <WarehouseDataState>{'Não foi possível consultar o estoque: ' + data.error}</WarehouseDataState>
+      ) : data.balances.length === 0 ? (
+        <WarehouseDataState>Nenhuma entrada de estoque foi registrada após o cutoff logístico deste workspace.</WarehouseDataState>
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-black/10">
+          <div className="border-b border-white/[0.06] px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+            Saldos reais · até 250 materiais por consulta
+          </div>
+          <div className="divide-y divide-white/[0.05]">
+            {data.balances.map((balance) => {
+              const material = materialById.get(balance.materialId);
+              const unitLabel = material?.unit.label || material?.unit.code || '—';
+              return (
+                <div key={balance.materialId} className="grid gap-3 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-slate-200">{material?.description || balance.materialId}</p>
+                    <p className="mt-1 truncate font-mono text-[10px] text-slate-600">{balance.materialId}</p>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <p className="text-lg font-black text-emerald-200">{balance.quantity.toLocaleString('pt-BR', { maximumFractionDigits: 6 })}</p>
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-slate-600">{unitLabel}</p>
+                  </div>
+                  <div className="text-[10px] text-slate-600 sm:text-right">
+                    revisão {balance.revision}<br />ledger
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <FutureNotice phase="FASE 7">Pesquisa avançada, lotes, validade, FEFO, localização e ficha operacional do material continuam reservados para a FASE 7.</FutureNotice>
+    </div>
+  );
+}
+
+function MovementsContent({ data }: { data: WarehousePhase4Data }) {
+  const materialById = useMemo(
+    () => new Map(data.materials.map((material) => [material.id, material])),
+    [data.materials]
+  );
+
+  return (
+    <div className="mt-6 space-y-5">
+      <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-5">
+        <div className="flex items-center gap-2"><Layers3 className="h-4 w-4 text-blue-200" aria-hidden="true" /><p className="text-xs font-bold text-slate-300">Ledger oficial · histórico append-only</p></div>
+        <div className="mt-4 flex flex-wrap gap-2">{WAREHOUSE_MOVEMENT_TYPES.map((movementType) => <code key={movementType} className="rounded-lg border border-white/[0.06] bg-white/[0.025] px-2 py-1 text-[11px] text-slate-400">{movementType}</code>)}</div>
+        <p className="mt-4 text-xs leading-5 text-slate-500">A FASE 4 passa a produzir INVOICE_ENTRY e INVOICE_CORRECTION com origem estruturada da NF.</p>
+      </div>
+
+      {data.loading ? (
+        <WarehouseDataState>Consultando os movimentos mais recentes…</WarehouseDataState>
+      ) : data.error ? (
+        <WarehouseDataState>{'Não foi possível consultar os movimentos: ' + data.error}</WarehouseDataState>
+      ) : data.movements.length === 0 ? (
+        <WarehouseDataState>Nenhuma movimentação de estoque foi registrada neste workspace.</WarehouseDataState>
+      ) : (
+        <div className="space-y-3">
+          {data.movements.map(({ movement, createdAt }) => {
+            const material = materialById.get(movement.materialId);
+            const source = movement.source;
+            const dateLabel = createdAt
+              ? new Date(createdAt).toLocaleString('pt-BR')
+              : 'horário pendente';
+            return (
+              <div key={movement.id} className="rounded-2xl border border-white/[0.07] bg-black/10 p-4 sm:p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <code className="rounded-lg bg-blue-400/[0.08] px-2 py-1 text-[10px] font-bold text-blue-200">{movement.type}</code>
+                      {source && <span className="rounded-lg bg-emerald-400/[0.06] px-2 py-1 text-[10px] font-bold text-emerald-200">NF {source.invoiceId}</span>}
+                    </div>
+                    <p className="mt-3 truncate text-sm font-bold text-slate-200">{material?.description || movement.materialId}</p>
+                    {source ? (
+                      <p className="mt-2 text-xs leading-5 text-slate-500">
+                        Empenho {source.empenhoId} · {source.supplier} · item(ns) {source.itemIds.join(', ')}
+                      </p>
+                    ) : (
+                      <p className="mt-2 text-xs leading-5 text-slate-600">{movement.note || 'Movimento sem origem de NF.'}</p>
+                    )}
+                  </div>
+                  <div className="shrink-0 text-left sm:text-right">
+                    <p className={movement.quantityDelta >= 0 ? 'text-lg font-black text-emerald-200' : 'text-lg font-black text-amber-200'}>
+                      {movement.quantityDelta > 0 ? '+' : ''}{movement.quantityDelta.toLocaleString('pt-BR', { maximumFractionDigits: 6 })}
+                    </p>
+                    <p className="mt-1 text-[10px] text-slate-600">{dateLabel}</p>
+                  </div>
+                </div>
+                <p className="mt-3 break-all font-mono text-[9px] text-slate-700">{movement.id}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <FutureNotice phase="FASES 6–10">Transferências, saídas, localização, inventário e demais movimentos operacionais continuam nas fases previstas no roadmap.</FutureNotice>
     </div>
   );
 }
@@ -149,11 +323,13 @@ function SettingsContent() {
   );
 }
 
-export function WarehouseSectionContent({ section }: { section: WarehouseSectionId }) {
+export function WarehouseSectionContent({ section, workspaceId }: { section: WarehouseSectionId; workspaceId: string }) {
+  const phase4Data = useWarehousePhase4Data(workspaceId, section);
+
   switch (section) {
     case 'overview': return <OverviewContent />;
-    case 'stock': return <StockContent />;
-    case 'movements': return <MovementsContent />;
+    case 'stock': return <StockContent data={phase4Data} />;
+    case 'movements': return <MovementsContent data={phase4Data} />;
     case 'locations': return <LocationsContent />;
     case 'warehouseView': return <WarehouseViewContent />;
     case 'inventory': return <InventoryContent />;

@@ -153,7 +153,9 @@
     "test:adm-deposito-ledger": "node --test scripts/warehouse-ledger-contract.test.mjs",
     "verify:adm-deposito-phase-2": "node scripts/verify-adm-deposito-phase-2.mjs",
     "test:adm-deposito-walking-skeleton": "node --test scripts/warehouse-walking-skeleton.test.mjs",
-    "verify:adm-deposito-phase-3": "node scripts/verify-adm-deposito-phase-3.mjs"
+    "verify:adm-deposito-phase-3": "node scripts/verify-adm-deposito-phase-3.mjs",
+    "test:adm-deposito-nf-stock": "node --test scripts/warehouse-nf-stock-integration.test.mjs",
+    "verify:adm-deposito-phase-4": "node scripts/verify-adm-deposito-phase-4.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
