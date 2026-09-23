@@ -8,6 +8,11 @@ import {
   WAREHOUSE_MATERIAL_SCHEMA_VERSION,
   WAREHOUSE_MATERIAL_UNIT_CODES,
 } from '../../../lib/warehouse/material';
+import {
+  WAREHOUSE_BALANCE_SCHEMA_VERSION,
+  WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
+  WAREHOUSE_MOVEMENT_TYPES,
+} from '../../../lib/warehouse/movement';
 
 export function WarehouseFoundationView() {
   return (
@@ -20,7 +25,7 @@ export function WarehouseFoundationView() {
             </div>
             <div>
               <p className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300/65">
-                EMPROVEX // FASE 1
+                EMPROVEX // FASE 2
               </p>
               <h1 className="mt-1 text-2xl font-black tracking-tight text-white">
                 ADM Depósito
@@ -35,14 +40,15 @@ export function WarehouseFoundationView() {
                 Piloto fundador protegido
               </p>
               <p className="mt-1 text-xs leading-5 text-slate-400">
-                O isolamento da FASE 0 permanece ativo. A FASE 1 adiciona somente
-                a fundação canônica de materiais, sem movimentações ou saldo de estoque.
+                O isolamento da FASE 0 permanece ativo. A FASE 2 adiciona o ledger
+                auditável, saldo materializado e proteção idempotente, ainda sem integrar
+                Nota Fiscal ao estoque.
               </p>
             </div>
           </div>
         </header>
 
-        <section className="mt-6 grid gap-4 md:grid-cols-2">
+        <section className="mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-3xl border border-white/[0.07] bg-white/[0.025] p-6 sm:p-8">
             <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
               Namespace reservado
@@ -69,7 +75,20 @@ export function WarehouseFoundationView() {
             </p>
             <p className="mt-2 text-xs leading-5 text-slate-500">
               Unidades suportadas: {WAREHOUSE_MATERIAL_UNIT_CODES.join(', ')}.
-              Operações de estoque permanecem fora do escopo desta fase.
+              O material segue como identidade única do ledger.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/[0.07] bg-white/[0.025] p-6 sm:p-8">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
+              Ledger e saldo
+            </p>
+            <p className="mt-3 text-sm font-semibold text-slate-200">
+              {WAREHOUSE_MOVEMENT_SCHEMA_VERSION}
+            </p>
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              {WAREHOUSE_MOVEMENT_TYPES.length} tipos iniciais · saldo {WAREHOUSE_BALANCE_SCHEMA_VERSION}.
+              Movimentos consolidados são append-only e operações repetidas usam idempotência.
             </p>
           </div>
         </section>
