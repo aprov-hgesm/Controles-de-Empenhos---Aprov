@@ -1239,8 +1239,8 @@ async function main() {
   );
 
   const phase6TransferMovementId = 'mov_' + '7'.repeat(64);
-  const phase6FromBalanceId = 'locbal_' + '7'.repeat(64);
-  const phase6ToBalanceId = 'locbal_' + '8'.repeat(64);
+  const phase6FromBalanceId = 'locbal_1f4db6d13593019e244c182002ecfbbb2764d28ce246c65fa31daa5bcb60c43f';
+  const phase6ToBalanceId = 'locbal_44d9ac45e4e3ccec26b4bd88bb4d76964dbeb04f4716483f486329c99e96d722';
   const phase6FromBalanceRef = doc(
     admin.db,
     'warehouse',
