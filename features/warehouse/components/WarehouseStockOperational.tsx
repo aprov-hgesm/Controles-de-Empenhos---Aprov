@@ -599,10 +599,28 @@ export function WarehouseStockOperational({
                 <div className="min-w-0">
                   <p className="truncate text-sm font-black text-slate-200">{summary.material.description}</p>
                   <p className="mt-1 truncate font-mono text-[9px] text-slate-600">{summary.material.id}</p>
+                  <p className="mt-1 truncate text-[9px] text-slate-600">
+                    {summary.locationLabels.length > 0
+                      ? summary.locationLabels.slice(0, 2).join(' · ')
+                      : 'sem posição física materializada'}
+                  </p>
+                  {summary.lots.some((lot) => lot.origin.kind === 'INVOICE') && (
+                    <p className="mt-1 truncate text-[9px] text-blue-300/55">
+                      {warehouseLotOriginLabel(
+                        summary.lots.find((lot) => lot.origin.kind === 'INVOICE')!
+                          .origin
+                      )}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Saldo total</p>
-                  <p className="mt-1 text-base font-black text-emerald-200">{numberLabel(summary.balance.quantity)}</p>
+                  <p className="mt-1 text-base font-black text-emerald-200">
+                    {numberLabel(summary.balance.quantity)}{' '}
+                    <span className="text-[10px] font-bold text-emerald-200/55">
+                      {summary.material.unit.label || summary.material.unit.code}
+                    </span>
+                  </p>
                 </div>
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Distribuído</p>
