@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 
-import type { Alert, Empenho } from '../../../lib/types';
+import type { Alert, Empenho, Invoice } from '../../../lib/types';
 import type { OperationalActiveTab } from '../../../lib/operationalSubscriptionPlan';
 import {
   operationalScopeFromContext,
@@ -33,8 +33,10 @@ interface UseInicioOperationalSnapshotInput {
   activeTab: OperationalActiveTab;
   empenhos: Empenho[];
   alerts: Alert[];
+  invoices: Invoice[];
   empenhosReady: boolean;
   alertsReady: boolean;
+  invoicesReady: boolean;
 }
 
 interface KnownRemoteState {
@@ -46,7 +48,9 @@ interface KnownRemoteState {
 const SNAPSHOT_PUBLISH_DEBOUNCE_MS = 900;
 
 function shouldPublishSnapshot(activeTab: OperationalActiveTab): boolean {
-  return activeTab === 'empenhos' || activeTab === 'nova_nf' || activeTab === 'avisos';
+  // Publica somente em superfícies que já carregam invoices. Assim a Home recebe
+  // pendências de tramitação sem abrir uma coleção realtime adicional.
+  return activeTab === 'empenhos' || activeTab === 'nova_nf';
 }
 
 export function useInicioOperationalSnapshot({
@@ -55,8 +59,10 @@ export function useInicioOperationalSnapshot({
   activeTab,
   empenhos,
   alerts,
+  invoices,
   empenhosReady,
   alertsReady,
+  invoicesReady,
 }: UseInicioOperationalSnapshotInput) {
   const [snapshot, setSnapshot] = useState<InicioOperationalSnapshot | null>(null);
   const [snapshotReady, setSnapshotReady] = useState(false);
@@ -152,6 +158,7 @@ export function useInicioOperationalSnapshot({
       || !shouldPublishSnapshot(activeTab)
       || !empenhosReady
       || !alertsReady
+      || !invoicesReady
     ) {
       return;
     }
@@ -163,6 +170,7 @@ export function useInicioOperationalSnapshot({
       generatedBy: user.uid,
       empenhos,
       alerts,
+      invoices,
     });
 
     const timer = window.setTimeout(() => {
@@ -233,6 +241,8 @@ export function useInicioOperationalSnapshot({
     alertsReady,
     empenhos,
     empenhosReady,
+    invoices,
+    invoicesReady,
     user,
     workspaceContext,
   ]);
