@@ -52,6 +52,7 @@ Se o texto do chat divergir deles, prevalecem GitHub e documentação versionada
 Última fase concluída:
 - **FASE 5 — SISCOFIS / Marco Zero / Conciliação**;
 - PR de implementação: **#171**;
+- baseline funcional da FASE 5 na `main`: `f0aa080ff48b10ba04c18c9fb6b54ab51ecfbfaa`;
 - decisão permanente adicionada: **D-036**;
 - contrato técnico: `docs/adm-deposito/PHASE_5_SISCOFIS.md`.
 

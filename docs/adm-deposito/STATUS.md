@@ -28,12 +28,17 @@ Branch oficial:
 Baseline funcional da FASE 3:
 `0b8aed23da504deeb0bd18de404f0298a7c7cf2c`
 
-Baseline da `main` imediatamente antes do desenvolvimento da FASE 5:
+Baseline funcional da FASE 5 na `main` após o merge do PR #171:
+`f0aa080ff48b10ba04c18c9fb6b54ab51ecfbfaa`
+
+**Este é o baseline oficial para o próximo chat.**
+
+Baseline imediatamente anterior ao desenvolvimento da FASE 5:
 `b376def63732eda84fe1ff9c1507527d0a96bcfd`
 
-Esse baseline:
-- já contém a FASE 4;
-- já contém o PR #169 e as mudanças posteriores reconciliadas antes do desenvolvimento;
+O baseline anterior:
+- já continha a FASE 4;
+- já continha o PR #169 e as mudanças posteriores reconciliadas antes do desenvolvimento;
 - foi auditado antes da criação da branch da FASE 5.
 
 Branch da FASE 5:
@@ -50,9 +55,10 @@ PR da FASE 5:
 - diff hygiene aprovado;
 - Browser E2E com Firebase Emulator aprovado.
 
-Observação de deploy:
-- o check automático da Vercel retornou `build-rate-limit`, uma limitação de cota da plataforma, não uma falha de build do código;
-- a publicação/estado de produção deve ser conferida separadamente do gate técnico do GitHub.
+Deploy:
+- o primeiro disparo de preview encontrou `build-rate-limit`, limitação temporária de cota da plataforma;
+- um preview posterior do PR ficou `Ready`;
+- após o merge, o check Vercel do commit `f0aa080ff48b10ba04c18c9fb6b54ab51ecfbfaa` concluiu com `success`.
 
 ## Fases concluídas
 
