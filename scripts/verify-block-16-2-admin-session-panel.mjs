@@ -70,8 +70,8 @@ for (const marker of [
 
 requireText(
   access,
-  'error instanceof PlatformSessionLeaseError',
-  'platformAccess não preserva diagnóstico de revogação.'
+  "signInProvider !== SECTOR_AUTH_PROVIDER && signInProvider !== 'custom'",
+  'platformAccess deixou de reconhecer o provider operacional custom.'
 );
 
 for (const marker of [
@@ -98,6 +98,7 @@ for (const marker of [
 for (const marker of [
   'verifyFirebaseSectorRequest',
   'resolveBootstrapIdentity',
+  'emprovexAccountEmail',
   'emprovexSessionId',
   'emprovexSessionSlotId',
   'emprovexBrowserInstanceId',
@@ -131,6 +132,7 @@ for (const marker of [
   'function canInspectWorkspaceSessionCapacity',
   'function requestLeaseMatchesSessionCredential',
   'function resourceLeaseMatchesSessionCredential',
+  "request.auth.token.get('emprovexAccountEmail', '')",
   "request.auth.token.get('emprovexSessionId', '')",
   'data.expiresAt > request.time',
 ]) requireText(rules, marker, `Rules perderam autorização vinculada à sessão: ${marker}`);
@@ -148,6 +150,11 @@ for (const marker of [
 ]) requireText(rules, marker, `Rules perderam proteção 16.2: ${marker}`);
 
 for (const marker of [
+  'Token password válido sem sessão operacional não lê dados do workspace',
+  'Token password válido sem sessão operacional não grava dados do workspace',
+  'Token password não cria slot após o cutover seguro',
+  'Token password não renova slot ativo após o cutover seguro',
+  'Token password não libera slot de outra sessão lógica',
   'Sessão revogada perde leitura direta mesmo com ID token Firebase ainda válido',
   'Sessão revogada perde gravação direta sem depender de signOut da UI',
   'Outra sessão legítima do mesmo UID continua autorizada',
