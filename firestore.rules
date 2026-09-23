@@ -6275,23 +6275,25 @@ service cloud.firestore {
         && material.ug == ug;
     }
 
-    function warehouseLotInvoiceOriginMatches(workspaceId, materialId, ug, origin) {
+    function warehouseLotInvoiceMovementMatches(workspaceId, materialId, ug, origin) {
       let movement = get(
         /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(origin.movementId)
       ).data;
+      return exists(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(origin.movementId)
+        )
+        && movement.workspaceId == workspaceId
+        && movement.ug == ug
+        && movement.materialId == materialId
+        && movement.source is map
+        && movement.source.kind == 'INVOICE'
+        && movement.source.invoiceRecordKey == origin.invoiceRecordKey
+        && movement.source.invoiceId == origin.invoiceId;
+    }
+
+    function warehouseLotInvoiceOriginMatches(workspaceId, materialId, ug, origin) {
       return origin.kind != 'INVOICE'
-        || (
-          exists(
-            /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(origin.movementId)
-          )
-          && movement.workspaceId == workspaceId
-          && movement.ug == ug
-          && movement.materialId == materialId
-          && movement.source is map
-          && movement.source.kind == 'INVOICE'
-          && movement.source.invoiceRecordKey == origin.invoiceRecordKey
-          && movement.source.invoiceId == origin.invoiceId
-        );
+        || warehouseLotInvoiceMovementMatches(workspaceId, materialId, ug, origin);
     }
 
     function validWarehouseLotDocument(workspaceId, lotId) {
