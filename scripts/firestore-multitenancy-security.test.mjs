@@ -237,6 +237,7 @@ async function createBoundOperationalSession(
     auth,
     emulatorCustomToken(identity.uid, {
       emprovexSessionVersion: 'emprovex_session_auth_v1',
+      emprovexAccountEmail: identity.email,
       emprovexSessionId: sessionId,
       emprovexSessionSlotId: slotId,
       emprovexBrowserInstanceId: browserInstanceId,
