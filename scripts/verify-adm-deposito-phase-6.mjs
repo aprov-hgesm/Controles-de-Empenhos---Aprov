@@ -20,6 +20,7 @@ const ledger = read('lib/warehouse/ledgerRepository.ts');
 const movement = read('lib/warehouse/movement.ts');
 const namespace = read('lib/warehouse/namespace.ts');
 const content = read('features/warehouse/components/WarehouseSectionContent.tsx');
+const locationsUi = read('features/warehouse/components/WarehouseLocationsOperational.tsx');
 const navigation = read('features/warehouse/navigation.ts');
 const shell = read('features/warehouse/components/WarehouseModuleShell.tsx');
 const rules = read('firestore.rules');
@@ -75,7 +76,7 @@ for (const marker of [
   'warehouse-transfer-start',
   'warehouse-transfer-confirm',
   'Sem localização',
-]) requireText(content, marker, 'Jornada UI da FASE 6 incompleta: ' + marker);
+]) requireText(locationsUi, marker, 'Jornada UI da FASE 6 incompleta: ' + marker);
 
 requireText(
   navigation,
