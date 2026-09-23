@@ -8,6 +8,7 @@ import {
   query,
   runTransaction,
   serverTimestamp,
+  where,
 } from 'firebase/firestore';
 
 import { db, handleFirestoreError, OperationType } from '../firebase';
@@ -266,6 +267,42 @@ export async function listWarehouseMovements(
             : null,
       };
     });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return [];
+  }
+}
+
+export async function listWarehouseMovementsForMaterial(
+  workspaceId: string,
+  materialId: string,
+  maxResults = 50
+): Promise<WarehouseMovementListItem[]> {
+  const normalizedWorkspaceId = normalizeRequiredWorkspace(workspaceId);
+  const path = warehouseDocumentPath(normalizedWorkspaceId, 'movements', '__probe__')
+    .replace('/__probe__', '');
+
+  try {
+    const snapshot = await getDocs(
+      query(
+        collection(db, path),
+        where('materialId', '==', materialId),
+        limit(Math.max(1, Math.min(maxResults, 100)))
+      )
+    );
+    return snapshot.docs
+      .map((item) => {
+        const data = item.data() as Record<string, unknown>;
+        const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
+        return {
+          movement: parseMovement(normalizedWorkspaceId, item.id, data),
+          createdAt:
+            rawCreatedAt && typeof rawCreatedAt.toDate === 'function'
+              ? rawCreatedAt.toDate().toISOString()
+              : null,
+        };
+      })
+      .sort((left, right) => (right.createdAt || '').localeCompare(left.createdAt || ''));
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
     return [];
