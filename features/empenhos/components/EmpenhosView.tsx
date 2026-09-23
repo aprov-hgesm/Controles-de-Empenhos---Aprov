@@ -7,7 +7,10 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActions';
 import type { Alert, Empenho, Invoice, EmpenhoPdfDocument } from '../../../lib/types';
 import { formatSupplierCnpj } from '../../../lib/invoiceIdentity';
-import type { EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
+import {
+  classRequiresTermoRecebimento,
+  type EmpenhoClassDefinition,
+} from '../../../lib/empenhoClasses';
 import { summarizeEmpenhoInvoicePending } from '../../notas-fiscais/domain/invoiceOperationalPending';
 import {
   compareEmpenhosByRpnpPriority,
@@ -626,6 +629,10 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                   const itemsComSaldo = targetEmp.items.filter(i => (i.quantity - i.received) > 0).length;
                   const targetInvoices = invoices.filter(inv => inv.empenhoId === targetEmp.id);
                   const totalInvoicesValue = targetInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
+                  const requiresCommission = classRequiresTermoRecebimento(
+                    targetEmp.classification,
+                    empenhoClasses
+                  );
                   const invoicePendingSummary = summarizeEmpenhoInvoicePending(
                     targetEmp,
                     targetInvoices,
@@ -1470,7 +1477,9 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                       {formatDateOnly(inv.issueDate)}
                                     </td>
                                     <td className="p-3.5">
-                                      {inv.termoEmissaoDate ? (
+                                      {!requiresCommission ? (
+                                        <span className="text-gray-400 font-semibold text-[11px]">Dispensado</span>
+                                      ) : inv.termoEmissaoDate ? (
                                         <div className="flex items-center gap-1">
                                           <span className="font-bold text-gray-700">{formatDateOnly(inv.termoEmissaoDate)}</span>
                                           {inv.termoNumero && (
@@ -1484,7 +1493,9 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                       )}
                                     </td>
                                     <td className="p-3.5">
-                                      {inv.comissaoDate ? (
+                                      {!requiresCommission ? (
+                                        <span className="text-gray-400 font-semibold text-[11px]">Dispensada</span>
+                                      ) : inv.comissaoDate ? (
                                         <span className="font-bold text-gray-700">{formatDateOnly(inv.comissaoDate)}</span>
                                       ) : (
                                         <span className="text-amber-600 font-semibold text-[11px]">Falta Enviar</span>
