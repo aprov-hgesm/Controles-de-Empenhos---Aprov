@@ -159,7 +159,9 @@
     "test:adm-deposito-siscofis": "node --test scripts/warehouse-siscofis-contract.test.mjs",
     "verify:adm-deposito-phase-5": "node scripts/verify-adm-deposito-phase-5.mjs",
     "test:adm-deposito-locations": "node --test scripts/warehouse-location-transfer.test.mjs",
-    "verify:adm-deposito-phase-6": "node scripts/verify-adm-deposito-phase-6.mjs"
+    "verify:adm-deposito-phase-6": "node scripts/verify-adm-deposito-phase-6.mjs",
+    "test:adm-deposito-stock-operational": "node --test scripts/warehouse-stock-operational.test.mjs",
+    "verify:adm-deposito-phase-7": "node scripts/verify-adm-deposito-phase-7.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
