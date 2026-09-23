@@ -455,4 +455,3 @@ Regras permanentes:
 - Firestore Rules exigem coerência entre o movimento e as projeções físicas correspondentes.
 
 Documento técnico: `docs/adm-deposito/PHASE_6_LOCATIONS.md`.
-
