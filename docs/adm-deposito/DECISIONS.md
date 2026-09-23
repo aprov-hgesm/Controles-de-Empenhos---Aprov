@@ -415,3 +415,44 @@ Contratos:
 - snapshots posteriores: `warehouse/{workspaceId}/siscofisSnapshots/snapshot_<hash>`.
 
 Documento técnico: `docs/adm-deposito/PHASE_5_SISCOFIS.md`.
+
+## D-037 — Distribuição física é projeção derivada do ledger, com Sem localização para legado
+
+A FASE 6 adiciona localização física sem criar nova fonte de verdade para quantidade.
+
+Regras permanentes:
+- `warehouse_balance_v1` continua sendo o saldo geral do material na OM;
+- `warehouse_location_balance_v1` registra somente a distribuição física desse saldo;
+- a projeção física é vinculada ao mesmo ledger e nunca substitui `warehouse_balance_v1`;
+- um material pode existir em N localizações;
+- saldo anterior à FASE 6 que ainda não possui posição física é representado como `UNASSIGNED` / “Sem localização”;
+- esse estado pode ser derivado virtualmente do saldo agregado menos posições já materializadas;
+- a primeira movimentação a partir de saldo legado materializa `UNASSIGNED` sem alterar o total;
+- novos movimentos externos processados pelo serviço oficial do ledger projetam sua variação em `UNASSIGNED` até organização física;
+- IDs de depósito/local/subposição sobrevivem a renomeações e códigos lógicos não são usados como chave técnica.
+
+Contratos:
+- `warehouse_depot_v1`;
+- `warehouse_location_v1`;
+- `warehouse_location_balance_v1`.
+
+Documento técnico: `docs/adm-deposito/PHASE_6_LOCATIONS.md`.
+
+## D-038 — Transferência interna reutiliza TRANSFER e é uma única operação atômica
+
+A transferência física não altera o saldo total da OM.
+
+Regras permanentes:
+- reutilizar `warehouse_movement_v1.type = TRANSFER`;
+- `quantityDelta` do saldo geral permanece `0`;
+- todo novo TRANSFER operacional da FASE 6 possui origem estruturada `LOCATION_TRANSFER`;
+- o movimento registra ator, quantidade, origem, destino e IDs das duas projeções físicas;
+- origem e destino são atualizados na mesma transação que cria o movimento e avança a revisão do saldo agregado;
+- saldo insuficiente, origem igual ao destino, posição inativa/inexistente e escopo divergente são rejeitados;
+- o serviço genérico do ledger não executa TRANSFER: a operação deve passar pelo fluxo específico de localização;
+- a identidade idempotente existente continua sendo a autoridade para retry;
+- replay idêntico não movimenta novamente; replay divergente falha;
+- Firestore Rules exigem coerência entre o movimento e as projeções físicas correspondentes.
+
+Documento técnico: `docs/adm-deposito/PHASE_6_LOCATIONS.md`.
+
