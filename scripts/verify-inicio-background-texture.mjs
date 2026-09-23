@@ -11,7 +11,7 @@ const docs = read('docs/block-19-home-experience.md');
 
 assert(view.includes('className={styles.texture}'), 'A Home precisa manter a camada dedicada de textura.');
 assert(css.includes('.texture {'), 'A folha de estilo precisa definir a textura do Início.');
-assert(css.includes('radial-gradient(circle at 1px 1px'), 'A textura precisa manter microgrão pontilhado leve.');
+assert(!css.includes('radial-gradient(circle at 1px 1px'), 'A textura do Início não deve manter pontos decorativos confundíveis com estrelas de empenho.');
 assert(css.includes('repeating-linear-gradient('), 'A textura precisa manter a trama técnica estática.');
 assert(css.includes('repeating-radial-gradient('), 'A textura precisa manter os anéis topográficos discretos.');
 assert(css.includes("z-index: 1;"), 'A textura deve ficar abaixo da constelação e acima da atmosfera.');
