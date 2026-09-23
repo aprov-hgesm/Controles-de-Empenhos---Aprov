@@ -2,7 +2,6 @@ import type { Alert, Empenho, Invoice } from '../../../lib/types';
 import {
   buildDefaultInvoicePendingClassDefinitions,
   summarizeEmpenhoInvoicePending,
-  type EmpenhoInvoicePendingSummary,
   type InvoiceOperationalPendingStage,
 } from '../../notas-fiscais/domain/invoiceOperationalPending';
 import {
@@ -80,8 +79,7 @@ interface BuildInicioSnapshotInput {
   generatedBy: string;
   empenhos: Empenho[];
   alerts: Alert[];
-  invoices: Invoice[] | null;
-  previousSnapshot?: InicioOperationalSnapshot | null;
+  invoices: Invoice[];
   generatedAt?: string;
 }
 
@@ -245,43 +243,14 @@ export function buildInicioOperationalSnapshot({
   empenhos,
   alerts,
   invoices,
-  previousSnapshot = null,
   generatedAt = new Date().toISOString(),
 }: BuildInicioSnapshotInput): InicioOperationalSnapshot {
   const alertsByEmpenho = buildAlertsByEmpenho(alerts);
   const classDefinitions = buildDefaultInvoicePendingClassDefinitions(empenhos);
-  const previousPendingByEmpenho = new Map<string, EmpenhoInvoicePendingSummary>(
-    (previousSnapshot?.stars ?? []).map((star) => {
-      const stage = star.invoicePendingStage ?? 'none';
-      const count = star.invoicePendingCount ?? 0;
-      return [
-        star.id,
-        {
-          stage,
-          count,
-          commissionCount: stage === 'commission' ? count : 0,
-          treasuryCount: stage === 'treasury' ? count : 0,
-          invoiceIds: star.invoicePendingInvoiceIds ?? [],
-          message:
-            star.invoicePendingMessage
-            || 'Nenhuma Nota Fiscal com pendência de tramitação.',
-        },
-      ];
-    })
-  );
   const invoicePendingByEmpenho = new Map(
     empenhos.map((empenho) => [
       empenho.id,
-      invoices
-        ? summarizeEmpenhoInvoicePending(empenho, invoices, classDefinitions)
-        : previousPendingByEmpenho.get(empenho.id) ?? {
-            stage: 'none' as const,
-            count: 0,
-            commissionCount: 0,
-            treasuryCount: 0,
-            invoiceIds: [],
-            message: 'Nenhuma Nota Fiscal com pendência de tramitação.',
-          },
+      summarizeEmpenhoInvoicePending(empenho, invoices, classDefinitions),
     ])
   );
 
