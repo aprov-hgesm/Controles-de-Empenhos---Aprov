@@ -350,6 +350,7 @@ async function createSessionCustomToken(
   const now = Math.floor(Date.now() / 1000);
   const claims = {
     emprovexSessionVersion: SESSION_AUTHORIZATION_VERSION,
+    emprovexAccountEmail: identity.email,
     emprovexSessionId: session.sessionId,
     emprovexSessionSlotId: session.slotId,
     emprovexBrowserInstanceId: session.browserInstanceId,
