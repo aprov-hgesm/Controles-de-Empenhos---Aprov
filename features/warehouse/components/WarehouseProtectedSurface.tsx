@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 
 import { EmprovexAuthLoading } from '../../../components/auth/EmprovexAuthLoading';
@@ -14,7 +13,6 @@ import { WarehouseModuleShell } from './WarehouseModuleShell';
 type GateState = 'checking' | 'allowed' | 'denied';
 
 export function WarehouseProtectedSurface({ section }: { section: WarehouseSectionId }) {
-  const router = useRouter();
   const [gateState, setGateState] = useState<GateState>('checking');
 
   useEffect(() => {
@@ -23,7 +21,7 @@ export function WarehouseProtectedSurface({ section }: { section: WarehouseSecti
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
         if (active) setGateState('denied');
-        router.replace('/');
+        window.location.replace('/');
         return;
       }
 
@@ -33,7 +31,7 @@ export function WarehouseProtectedSurface({ section }: { section: WarehouseSecti
 
         if (!canAccessWarehouseModule(context)) {
           setGateState('denied');
-          router.replace('/');
+          window.location.replace('/');
           return;
         }
 
@@ -48,7 +46,7 @@ export function WarehouseProtectedSurface({ section }: { section: WarehouseSecti
 
         if (!response.ok) {
           setGateState('denied');
-          router.replace('/');
+          window.location.replace('/');
           return;
         }
 
@@ -56,7 +54,7 @@ export function WarehouseProtectedSurface({ section }: { section: WarehouseSecti
       } catch {
         if (!active) return;
         setGateState('denied');
-        router.replace('/');
+        window.location.replace('/');
       }
     });
 
@@ -64,7 +62,7 @@ export function WarehouseProtectedSurface({ section }: { section: WarehouseSecti
       active = false;
       unsubscribe();
     };
-  }, [router]);
+  }, [];
 
   if (gateState !== 'allowed') {
     return <EmprovexAuthLoading hasAuthenticatedIdentity={gateState === 'checking'} />;

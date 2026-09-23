@@ -48,7 +48,7 @@ test('layout compartilhado preserva gate founder-only em todas as rotas', () => 
   assert.ok(gate.includes('resolveAuthenticatedWorkspaceContext(currentUser)'));
   assert.ok(gate.includes('canAccessWarehouseModule(context)'));
   assert.ok(gate.includes("fetch('/api/adm-deposito/status'"));
-  assert.ok(gate.includes("router.replace('/')"));
+  assert.ok(gate.includes("window.location.replace('/')"));
 });
 
 test('walking skeleton reutiliza contratos oficiais sem persistência paralela', () => {

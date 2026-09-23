@@ -80,7 +80,7 @@ requireText(
 );
 requireText(
   route,
-  "router.replace('/')",
+  "window.location.replace('/')",
   'Rota ADM Depósito não fecha acesso direto não autorizado.'
 );
 

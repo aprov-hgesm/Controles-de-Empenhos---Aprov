@@ -55,7 +55,7 @@ for (const marker of [
   'resolveAuthenticatedWorkspaceContext(currentUser)',
   'canAccessWarehouseModule(context)',
   "fetch('/api/adm-deposito/status'",
-  "router.replace('/')",
+  "window.location.replace('/')",
 ]) {
   requireText(gate, marker, `Gate founder-only não preservado no layout: ${marker}`);
 }
