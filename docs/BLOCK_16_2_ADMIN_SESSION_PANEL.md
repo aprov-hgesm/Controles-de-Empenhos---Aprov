@@ -108,7 +108,12 @@ O servidor:
    contendo a vaga escolhida e a identidade nova;
 6. já sob o provider `custom`, o cliente materializa o lease exatamente nesse slot.
 
-Os claims de autorização são versionados por `emprovex_session_auth_v1`. O navegador
+Os claims de autorização são versionados por `emprovex_session_auth_v1` e incluem
+`emprovexAccountEmail`, com o e-mail normalizado validado no bootstrap. O caminho
+`password` continua usando o e-mail verificado nativo do Firebase; o caminho `custom`
+usa o e-mail explicitamente assinado pelo servidor.
+
+O navegador
 usa `signInWithCustomToken()` sem nova tela, código, CAPTCHA, MFA ou seleção manual de
 slot. O UID e o e-mail permanecem os mesmos.
 
@@ -173,6 +178,14 @@ Mudanças de custo esperadas:
 
 Métricas estimadas devem continuar separadas das métricas efetivamente observadas no
 Google Cloud Monitoring.
+
+### Pré-requisito de ativação
+
+A emissão server-side reutiliza `FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON`, variável já
+referenciada pela infraestrutura administrativa existente do repositório. Antes de
+ativar o cliente novo em produção, o rollout deve **confirmar apenas a presença e a
+validade dessa configuração no ambiente de destino**, sem expor seu conteúdo. Esta
+correção não cria nem autoriza rotação, inclusão ou alteração de segredo/IAM.
 
 ### Rollout compatível
 
