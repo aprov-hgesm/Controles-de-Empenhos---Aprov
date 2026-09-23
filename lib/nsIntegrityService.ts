@@ -1,5 +1,5 @@
 import { deleteField, getDocs, query, runTransaction, where } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from './firebase';
+import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import {
   assertEmpenhoRevision,
   buildNextEmpenho,
@@ -38,6 +38,25 @@ import {
   type NsIntegrityMutation,
   type NsLockDocument,
 } from './nsIntegrity';
+import { canAccessWarehouseModule } from './warehouse/featureFlag';
+import {
+  assertBulkInvoiceDeletionDoesNotBypassWarehouse,
+  integrateInvoiceDeletionInTransaction,
+  integrateInvoiceReceiptInTransaction,
+} from './warehouse/invoiceIntegrationService';
+import {
+  getResolvedWorkspaceContextForSession,
+  resolveWorkspaceContext,
+} from './workspaceContext';
+
+function currentSessionCanIntegrateWarehouse(userId: string): boolean {
+  const currentUser = auth.currentUser;
+  if (!currentUser || currentUser.uid !== userId) return false;
+  const context =
+    getResolvedWorkspaceContextForSession(currentUser.uid, currentUser.email)
+    || resolveWorkspaceContext(currentUser.email);
+  return canAccessWarehouseModule(context);
+}
 
 export const MAX_NS_INTEGRITY_TRANSACTION_MUTATIONS = 6;
 export const MAX_NS_INTEGRITY_KNOWN_OWNER_READS = 200;
@@ -405,6 +424,7 @@ export interface CommitInvoiceReceiptLifecycleInput {
 export interface CommitInvoiceReceiptLifecycleResult {
   updatedTargetEmpenho: Empenho;
   updatedPreviousEmpenho?: Empenho;
+  updatedInvoice: Invoice;
 }
 
 export interface CommitInvoiceDeletionLifecycleInput {
@@ -468,6 +488,7 @@ export async function commitInvoiceReceiptLifecycle(
   );
   const path = `${getOperationalCollectionPath(scope, 'invoices')}/receipt-lifecycle`;
   const correlationId = createWorkspaceAuditCorrelationId(scope);
+  const warehouseIntegrationEnabled = currentSessionCanIntegrateWarehouse(userId);
 
   try {
     return await runTransaction(db, async (transaction) => {
@@ -525,7 +546,7 @@ export async function commitInvoiceReceiptLifecycle(
         assertEmpenhoRevision(storedPreviousEmpenho, input.previousEmpenho.revision);
       }
 
-      const committedTargetEmpenho = buildNextEmpenho(
+      let committedTargetEmpenho = buildNextEmpenho(
         input.targetEmpenho,
         storedTargetEmpenho,
         userId
@@ -647,6 +668,27 @@ export async function commitInvoiceReceiptLifecycle(
         );
       }
 
+      const warehouseResult = await integrateInvoiceReceiptInTransaction(
+        transaction,
+        {
+          enabled: warehouseIntegrationEnabled,
+          scope,
+          userId,
+          invoice: input.invoice,
+          previousInvoice: oldInvoice,
+          previousInvoiceRecordKey: previousRecordKey,
+          targetEmpenho: input.targetEmpenho,
+          storedTargetEmpenho,
+          invoiceRecordKey: nextRecordKey,
+        }
+      );
+      if (warehouseResult.integrated) {
+        committedTargetEmpenho = {
+          ...committedTargetEmpenho,
+          items: warehouseResult.targetEmpenho.items,
+        };
+      }
+
       transaction.set(
         targetEmpenhoRef,
         { ...committedTargetEmpenho, userId }
@@ -659,7 +701,7 @@ export async function commitInvoiceReceiptLifecycle(
       }
 
       transaction.set(nextInvoiceRef, {
-        ...input.invoice,
+        ...warehouseResult.invoice,
         recordKey: nextRecordKey,
         userId,
       });
@@ -743,6 +785,10 @@ export async function commitInvoiceReceiptLifecycle(
         ...(committedPreviousEmpenho
           ? { updatedPreviousEmpenho: committedPreviousEmpenho }
           : {}),
+        updatedInvoice: {
+          ...warehouseResult.invoice,
+          recordKey: nextRecordKey,
+        },
       };
     });
   } catch (error) {
@@ -760,6 +806,7 @@ export async function commitInvoiceDeletionLifecycle(
   const invoiceRef = operationalDocRef(scope, 'invoices', input.invoiceRecordKey);
   const path = getOperationalDocumentPath(scope, 'invoices', input.invoiceRecordKey);
   const correlationId = createWorkspaceAuditCorrelationId(scope);
+  const warehouseIntegrationEnabled = currentSessionCanIntegrateWarehouse(userId);
 
   try {
     return await runTransaction(db, async (transaction) => {
@@ -837,6 +884,17 @@ export async function commitInvoiceDeletionLifecycle(
         }
       }
 
+      const warehouseMovementIds = await integrateInvoiceDeletionInTransaction(
+        transaction,
+        {
+          enabled: warehouseIntegrationEnabled,
+          scope,
+          userId,
+          invoice,
+          invoiceRecordKey: input.invoiceRecordKey,
+        }
+      );
+
       transaction.set(
         empenhoRef,
         { ...committedEmpenho, userId }
@@ -868,6 +926,7 @@ export async function commitInvoiceDeletionLifecycle(
           },
           metadata: {
             lockRemoved: Boolean(lockRef && lockExists),
+            warehouseMovementIds,
           },
         },
         userId
@@ -910,6 +969,7 @@ export async function commitAllInvoicesDeletionLifecycle(
       const invoices = invoiceSnapshots.map((snapshot) =>
         invoiceWithRecordKey(snapshot.id, snapshot.data() as Invoice)
       );
+      assertBulkInvoiceDeletionDoesNotBypassWarehouse(invoices);
 
       const affectedEmpenhoIds = Array.from(
         new Set(invoices.map((invoice) => invoice.empenhoId))

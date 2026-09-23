@@ -133,6 +133,12 @@ jobs:
       - name: ADM Depósito Phase 3 walking skeleton guard
         run: npm run verify:adm-deposito-phase-3
 
+      - name: ADM Depósito Phase 4 NF → estoque domain tests
+        run: npm run test:adm-deposito-nf-stock
+
+      - name: ADM Depósito Phase 4 NF → estoque guard
+        run: npm run verify:adm-deposito-phase-4
+
       - name: Production multi-tenant readiness guard
         run: npm run verify:production-multitenant-readiness
 

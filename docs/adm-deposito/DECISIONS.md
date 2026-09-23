@@ -334,3 +334,18 @@ Quando aplicável, a mesma fase deve fechar:
 - documentação.
 
 Exceções precisam estar explicitamente previstas no ROADMAP ou documentadas como decisão técnica.
+
+## D-033 — NF vincula item de empenho ao material canônico por identidade estável
+
+A fatia NF → Estoque não faz conciliação por descrição textual.
+
+Regras permanentes:
+- o item da Nota Fiscal reutiliza o `itemId` já ligado ao item do empenho;
+- o item do empenho passa a guardar, quando resolvido, o `warehouseMaterialId` do contrato canônico da FASE 1;
+- na primeira entrada de um item ainda sem vínculo, o material canônico pode ser criado de forma determinística a partir de `workspace + empenho + item`, sem criar um segundo modelo de material;
+- NF, vínculo do item, movimento do ledger e saldo materializado são confirmados no mesmo ciclo transacional;
+- NFs anteriores ao cutoff de ativação do workspace não são retrointegradas silenciosamente;
+- edições e exclusões de NFs já integradas produzem movimentos compensatórios, preservando a origem anterior quando houver troca de identidade/empenho;
+- o vínculo persistido por ID passa a ser a autoridade; descrição, fornecedor ou texto livre não substituem esse identificador.
+
+Consequência: futuras rotinas de catálogo/conciliação podem unificar materiais conscientemente, mas não podem reintroduzir matching textual implícito no fluxo de recebimento.
