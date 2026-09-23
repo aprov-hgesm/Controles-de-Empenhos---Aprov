@@ -1442,6 +1442,240 @@ async function main() {
     })
   );
 
+  console.log('\nFASE 7 — Estoque Operável / Lotes / Validade / FEFO');
+
+  const phase7InvoiceLotId = 'lot_' + '7'.repeat(32);
+  const phase7InvoiceLotRef = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'lots',
+    phase7InvoiceLotId
+  );
+  const phase7InvoiceOrigin = {
+    kind: 'INVOICE',
+    movementId: phase4Movement1Id,
+    invoiceRecordKey: '12345678000199__12345',
+    invoiceId: '12345',
+    supplier: 'Fornecedor Teste',
+    supplierCnpj: '12345678000199',
+  };
+
+  await allowed('Fundador cria lote FASE 7 vinculado a material e origem de NF', () =>
+    setDoc(phase7InvoiceLotRef, {
+      schemaVersion: 'warehouse_lot_v1',
+      id: phase7InvoiceLotId,
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: phase4MaterialId,
+      code: 'NF-12345-L1',
+      expiresOn: '2027-01-15',
+      quantity: 4,
+      position: { kind: 'UNASSIGNED' },
+      origin: phase7InvoiceOrigin,
+      status: 'active',
+      createdBy: admin.user.uid,
+      updatedBy: admin.user.uid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await denied('Lote FASE 7 rejeita validade fora do contrato', () =>
+    setDoc(
+      doc(admin.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + '8'.repeat(32)),
+      {
+        schemaVersion: 'warehouse_lot_v1',
+        id: 'lot_' + '8'.repeat(32),
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: phase4MaterialId,
+        code: 'INVALID-DATE',
+        expiresOn: '15/01/2027',
+        quantity: 1,
+        position: { kind: 'UNASSIGNED' },
+        origin: phase7InvoiceOrigin,
+        status: 'active',
+        createdBy: admin.user.uid,
+        updatedBy: admin.user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+    )
+  );
+
+  await denied('Lote FASE 7 não pode trocar material canônico após criação', () =>
+    updateDoc(phase7InvoiceLotRef, {
+      materialId: canonicalMaterialId,
+      updatedBy: admin.user.uid,
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await denied('Lote FASE 7 não aceita origem de NF pertencente a outro material', () =>
+    setDoc(
+      doc(admin.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + '9'.repeat(32)),
+      {
+        schemaVersion: 'warehouse_lot_v1',
+        id: 'lot_' + '9'.repeat(32),
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        code: 'ORIGIN-MISMATCH',
+        expiresOn: '2027-03-01',
+        quantity: 1,
+        position: { kind: 'UNASSIGNED' },
+        origin: phase7InvoiceOrigin,
+        status: 'active',
+        createdBy: admin.user.uid,
+        updatedBy: admin.user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+    )
+  );
+
+  await denied('Lote FASE 7 não aceita UG adulterada', () =>
+    setDoc(
+      doc(admin.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + 'a'.repeat(32)),
+      {
+        schemaVersion: 'warehouse_lot_v1',
+        id: 'lot_' + 'a'.repeat(32),
+        workspaceId: 'hgesm-aprov',
+        ug: '999999',
+        materialId: canonicalMaterialId,
+        code: 'UG-INVALID',
+        expiresOn: null,
+        quantity: 1,
+        position: { kind: 'UNASSIGNED' },
+        origin: {
+          kind: 'MANUAL_ENRICHMENT',
+          movementId: null,
+          invoiceRecordKey: null,
+          invoiceId: null,
+          supplier: null,
+          supplierCnpj: null,
+        },
+        status: 'active',
+        createdBy: admin.user.uid,
+        updatedBy: admin.user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+    )
+  );
+
+  await denied('Setor externo continua sem acesso aos lotes da FASE 7', () =>
+    getDoc(
+      doc(
+        sessionA.db,
+        'warehouse',
+        'hgesm-aprov',
+        'lots',
+        phase7InvoiceLotId
+      )
+    )
+  );
+
+  await denied('Setor externo não cria lote nem no namespace fundador', () =>
+    setDoc(
+      doc(sessionA.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + 'b'.repeat(32)),
+      {
+        schemaVersion: 'warehouse_lot_v1',
+        id: 'lot_' + 'b'.repeat(32),
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: phase4MaterialId,
+        code: 'EXTERNAL',
+        expiresOn: null,
+        quantity: 1,
+        position: { kind: 'UNASSIGNED' },
+        origin: {
+          kind: 'MANUAL_ENRICHMENT',
+          movementId: null,
+          invoiceRecordKey: null,
+          invoiceId: null,
+          supplier: null,
+          supplierCnpj: null,
+        },
+        status: 'active',
+        createdBy: sessionA.user.uid,
+        updatedBy: sessionA.user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+    )
+  );
+
+  await denied('Lote FASE 7 não pode ser excluído e perder histórico logístico', () =>
+    deleteDoc(phase7InvoiceLotRef)
+  );
+
+  const phase7ManualOrigin = {
+    kind: 'MANUAL_ENRICHMENT',
+    movementId: null,
+    invoiceRecordKey: null,
+    invoiceId: null,
+    supplier: null,
+    supplierCnpj: null,
+  };
+  await allowed('Fundador cria lotes FEFO sem alterar saldo oficial', async () => {
+    const batch = writeBatch(admin.db);
+    batch.set(
+      doc(admin.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + 'c'.repeat(32)),
+      {
+        schemaVersion: 'warehouse_lot_v1',
+        id: 'lot_' + 'c'.repeat(32),
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        code: 'LOTE-FEFO-PRIMEIRO',
+        expiresOn: '2026-11-10',
+        quantity: 2,
+        position: { kind: 'UNASSIGNED' },
+        origin: phase7ManualOrigin,
+        status: 'active',
+        createdBy: admin.user.uid,
+        updatedBy: admin.user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+    );
+    batch.set(
+      doc(admin.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + 'd'.repeat(32)),
+      {
+        schemaVersion: 'warehouse_lot_v1',
+        id: 'lot_' + 'd'.repeat(32),
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        code: 'LOTE-FEFO-DEPOIS',
+        expiresOn: '2026-12-15',
+        quantity: 2,
+        position: {
+          kind: 'LOCATION',
+          depotId: phase6DepotId,
+          locationId: phase6LocationId,
+          subpositionId: null,
+        },
+        origin: phase7ManualOrigin,
+        status: 'active',
+        createdBy: admin.user.uid,
+        updatedBy: admin.user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+    );
+    return batch.commit();
+  });
+
+  const phase7BalanceAfter = await getDoc(founderBalance);
+  assert.equal(
+    phase7BalanceAfter.data().quantity,
+    8,
+    'Enriquecimento de lotes jamais altera warehouse_balance_v1'
+  );
+
   console.log('Isolamento A ↔ B');
   await allowed('Setor A lê o próprio empenho', () =>
     getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))

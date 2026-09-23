@@ -371,6 +371,175 @@ service cloud.firestore {
         );
     }
 
+    function validWarehouseLotOrigin(origin) {
+      return origin is map
+        && origin.keys().hasOnly([
+          'kind', 'movementId', 'invoiceRecordKey', 'invoiceId', 'supplier', 'supplierCnpj'
+        ])
+        && origin.keys().hasAll([
+          'kind', 'movementId', 'invoiceRecordKey', 'invoiceId', 'supplier', 'supplierCnpj'
+        ])
+        && origin.kind in ['INVOICE', 'MANUAL_ENRICHMENT', 'LEGACY']
+        && (
+          origin.movementId == null
+          || (
+            origin.movementId is string
+            && origin.movementId.matches('^mov_[a-f0-9]{64}$')
+          )
+        )
+        && (
+          origin.invoiceRecordKey == null
+          || (origin.invoiceRecordKey is string && origin.invoiceRecordKey.size() > 0 && origin.invoiceRecordKey.size() <= 180)
+        )
+        && (
+          origin.invoiceId == null
+          || (origin.invoiceId is string && origin.invoiceId.size() > 0 && origin.invoiceId.size() <= 120)
+        )
+        && (
+          origin.supplier == null
+          || (origin.supplier is string && origin.supplier.size() > 0 && origin.supplier.size() <= 240)
+        )
+        && (
+          origin.supplierCnpj == null
+          || (origin.supplierCnpj is string && origin.supplierCnpj.size() > 0 && origin.supplierCnpj.size() <= 24)
+        )
+        && (
+          (
+            origin.kind == 'INVOICE'
+            && origin.movementId is string
+            && origin.invoiceRecordKey is string
+            && origin.invoiceId is string
+            && origin.supplier is string
+          )
+          || (
+            origin.kind != 'INVOICE'
+            && origin.invoiceRecordKey == null
+            && origin.invoiceId == null
+            && origin.supplier == null
+            && origin.supplierCnpj == null
+          )
+        );
+    }
+
+    function warehouseLotMaterialMatches(workspaceId, materialId, ug) {
+      let material = get(
+        /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(materialId)
+      ).data;
+      return materialId is string
+        && materialId.matches('^mat_[a-f0-9]{32}$')
+        && exists(/databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(materialId))
+        && material.workspaceId == workspaceId
+        && material.ug == ug;
+    }
+
+    function warehouseLotInvoiceMovementMatches(workspaceId, materialId, ug, origin) {
+      let movement = get(
+        /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(origin.movementId)
+      ).data;
+      return exists(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(origin.movementId)
+        )
+        && movement.workspaceId == workspaceId
+        && movement.ug == ug
+        && movement.materialId == materialId
+        && movement.source is map
+        && movement.source.kind == 'INVOICE'
+        && movement.source.invoiceRecordKey == origin.invoiceRecordKey
+        && movement.source.invoiceId == origin.invoiceId;
+    }
+
+    function warehouseLotInvoiceOriginMatches(workspaceId, materialId, ug, origin) {
+      return origin.kind != 'INVOICE'
+        || warehouseLotInvoiceMovementMatches(workspaceId, materialId, ug, origin);
+    }
+
+    function validWarehouseLotDocument(workspaceId, lotId) {
+      return request.resource.data is map
+        && request.resource.data.keys().hasOnly([
+          'schemaVersion', 'id', 'workspaceId', 'ug', 'materialId', 'code',
+          'expiresOn', 'quantity', 'position', 'origin', 'status',
+          'createdBy', 'updatedBy', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'schemaVersion', 'id', 'workspaceId', 'ug', 'materialId', 'code',
+          'expiresOn', 'quantity', 'position', 'origin', 'status',
+          'createdBy', 'updatedBy', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.schemaVersion == 'warehouse_lot_v1'
+        && request.resource.data.id == lotId
+        && lotId.matches('^lot_[a-f0-9]{32}$')
+        && request.resource.data.workspaceId == workspaceId
+        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && request.resource.data.materialId is string
+        && request.resource.data.materialId.matches('^mat_[a-f0-9]{32}$')
+        && request.resource.data.code is string
+        && request.resource.data.code.size() > 0
+        && request.resource.data.code.size() <= 80
+        && (
+          request.resource.data.expiresOn == null
+          || (
+            request.resource.data.expiresOn is string
+            && request.resource.data.expiresOn.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          )
+        )
+        && request.resource.data.quantity is number
+        && request.resource.data.quantity >= 0
+        && request.resource.data.quantity <= 1000000000
+        && validWarehouseStockPosition(request.resource.data.position)
+        && validWarehouseLotOrigin(request.resource.data.origin)
+        && request.resource.data.status in ['active', 'inactive']
+        && request.resource.data.createdBy is string
+        && request.resource.data.createdBy.size() > 0
+        && request.resource.data.updatedBy is string
+        && request.resource.data.updatedBy.size() > 0
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function validWarehouseLotCreate(workspaceId, lotId) {
+      return validWarehouseLotDocument(workspaceId, lotId)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && warehouseLotMaterialMatches(
+          workspaceId,
+          request.resource.data.materialId,
+          request.resource.data.ug
+        )
+        && warehousePositionActive(
+          workspaceId,
+          request.resource.data.position,
+          request.resource.data.ug
+        )
+        && warehouseLotInvoiceOriginMatches(
+          workspaceId,
+          request.resource.data.materialId,
+          request.resource.data.ug,
+          request.resource.data.origin
+        );
+    }
+
+    function validWarehouseLotUpdate(workspaceId, lotId) {
+      return validWarehouseLotDocument(workspaceId, lotId)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.ug == resource.data.ug
+        && request.resource.data.materialId == resource.data.materialId
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && warehousePositionActive(
+          workspaceId,
+          request.resource.data.position,
+          request.resource.data.ug
+        )
+        && warehouseLotInvoiceOriginMatches(
+          workspaceId,
+          request.resource.data.materialId,
+          request.resource.data.ug,
+          request.resource.data.origin
+        );
+    }
+
     function validWarehouseMovementSource(workspaceId, type, source) {
       return (
           source == null
@@ -3071,6 +3240,16 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      // FASE 7 / DEP-11..15 — lote é enriquecimento logístico; não escreve saldos.
+      match /lots/{lotId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLotCreate(workspaceId, lotId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLotUpdate(workspaceId, lotId);
+        allow delete: if false;
+      }
+
       // FASE 4 / DEP-4 — cutoff imutável de ativação do fluxo NF → estoque.
       // FASE 5 / DEP-5.x — snapshots são privados, bounded e não podem ser apagados.
       match /siscofisSnapshots/{snapshotId} {
@@ -3097,6 +3276,7 @@ service cloud.firestore {
           && domain != 'movements'
           && domain != 'balances'
           && domain != 'locationBalances'
+          && domain != 'lots'
           && domain != 'settings'
           && domain != 'siscofisSnapshots';
       }

@@ -20,7 +20,7 @@ export interface WarehouseSectionDefinition {
 
 export const WAREHOUSE_SECTIONS: readonly WarehouseSectionDefinition[] = [
   { id: 'overview', label: 'Visão Geral', href: '/adm-deposito', eyebrow: 'Estrutura do módulo', description: 'Ponto de entrada do ADM Depósito e visão honesta das fundações já disponíveis.', futurePhase: null },
-  { id: 'stock', label: 'Estoque', href: '/adm-deposito/estoque', eyebrow: 'Consulta logística', description: 'Superfície-base para materiais, saldo, lotes, validade, localização e histórico.', futurePhase: 'FASE 7' },
+  { id: 'stock', label: 'Estoque', href: '/adm-deposito/estoque', eyebrow: 'Consulta logística', description: 'Consulta operacional de saldo, lotes, validade, localização, origem, pendências e recomendação FEFO.', futurePhase: null },
   { id: 'movements', label: 'Movimentações', href: '/adm-deposito/movimentacoes', eyebrow: 'Ledger auditável', description: 'Superfície estrutural para consulta futura do ledger canônico criado na FASE 2.', futurePhase: 'FASES 4–10' },
   { id: 'locations', label: 'Localizações', href: '/adm-deposito/localizacoes', eyebrow: 'Estrutura física operacional', description: 'Depósitos, locais, subposições, distribuição física e transferências internas auditáveis.', futurePhase: null },
   { id: 'warehouseView', label: 'Visão do Depósito', href: '/adm-deposito/visao-do-deposito', eyebrow: 'Croqui operacional', description: 'Espaço reservado ao croqui 2D com perspectiva tridimensional e destaque de locais.', futurePhase: 'FASE 9' },
