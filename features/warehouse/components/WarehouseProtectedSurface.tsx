@@ -62,7 +62,7 @@ export function WarehouseProtectedSurface({ section }: { section: WarehouseSecti
       active = false;
       unsubscribe();
     };
-  }, [];
+  }, []);
 
   if (gateState !== 'allowed') {
     return <EmprovexAuthLoading hasAuthenticatedIdentity={gateState === 'checking'} />;
