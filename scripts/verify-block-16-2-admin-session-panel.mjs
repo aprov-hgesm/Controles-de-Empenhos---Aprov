@@ -126,6 +126,8 @@ for (const marker of [
 
 for (const marker of [
   'function requireBoundSessionAuthorization()',
+  'return true;',
+  '5e1778657bc8d52ed21244b7f1fdfea6d61816cc',
   'function activeSessionSlotMatchesCredential',
   'function sessionCredentialMatchesAccount',
   'function canManageWorkspaceSession',
