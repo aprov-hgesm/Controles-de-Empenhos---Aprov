@@ -222,10 +222,6 @@ export async function applyWarehouseMovement(
         materialSnapshot.id,
         materialSnapshot.data() as Record<string, unknown>
       );
-      if (material.status !== 'active') {
-        throw new Error('WAREHOUSE_MATERIAL_INACTIVE');
-      }
-
       const candidateResult = validateWarehouseMovement(
         {
           schemaVersion: WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
@@ -282,6 +278,10 @@ export async function applyWarehouseMovement(
           movement: existing,
           balance: currentBalance,
         };
+      }
+
+      if (material.status !== 'active') {
+        throw new Error('WAREHOUSE_MATERIAL_INACTIVE');
       }
 
       if (candidate.type === 'REVERSAL') {
