@@ -1,4 +1,4 @@
-import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
+import { createRemoteJWKSet, decodeJwt, jwtVerify, type JWTPayload } from 'jose';
 
 import firebaseConfig from '../../firebase-applet-config.json';
 import { HGESM_SECTOR_EMAIL } from '../hgesmWorkspace';
@@ -12,6 +12,47 @@ const FIREBASE_JWKS = createRemoteJWKSet(
 );
 
 const FIREBASE_ISSUER = `https://securetoken.google.com/${firebaseConfig.projectId}`;
+
+function emulatorAuthContext(): { projectId: string; issuer: string } | null {
+  const enabled = process.env.EMPROVEX_E2E_SERVER_AUTH === '1';
+  const emulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST?.trim() || '';
+  const projectId = process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID?.trim() || '';
+  const localEmulator = emulatorHost === '127.0.0.1:9099' || emulatorHost === 'localhost:9099';
+
+  if (!enabled || !localEmulator || !projectId.startsWith('demo-')) return null;
+
+  return {
+    projectId,
+    issuer: `https://securetoken.google.com/${projectId}`,
+  };
+}
+
+function decodeVerifiedEmulatorPayload(token: string): JWTPayload {
+  const context = emulatorAuthContext();
+  if (!context) {
+    throw new FounderAuthError('Sessão Firebase inválida ou expirada.', 401);
+  }
+
+  let payload: JWTPayload;
+  try {
+    payload = decodeJwt(token);
+  } catch {
+    throw new FounderAuthError('Sessão Firebase inválida ou expirada.', 401);
+  }
+
+  const audience = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+  const now = Math.floor(Date.now() / 1000);
+
+  if (
+    payload.iss !== context.issuer
+    || !audience.includes(context.projectId)
+    || (typeof payload.exp === 'number' && payload.exp <= now)
+  ) {
+    throw new FounderAuthError('Sessão Firebase inválida ou expirada.', 401);
+  }
+
+  return payload;
+}
 
 export class FounderAuthError extends Error {
   constructor(
@@ -65,14 +106,20 @@ export async function verifyFounderFirebaseRequest(
   const token = readBearerToken(authorization);
 
   let payload: JWTPayload;
-  try {
-    ({ payload } = await jwtVerify(token, FIREBASE_JWKS, {
-      issuer: FIREBASE_ISSUER,
-      audience: firebaseConfig.projectId,
-      algorithms: ['RS256'],
-    }));
-  } catch {
-    throw new FounderAuthError('Sessão Firebase inválida ou expirada.', 401);
+  const emulatorContext = emulatorAuthContext();
+
+  if (emulatorContext) {
+    payload = decodeVerifiedEmulatorPayload(token);
+  } else {
+    try {
+      ({ payload } = await jwtVerify(token, FIREBASE_JWKS, {
+        issuer: FIREBASE_ISSUER,
+        audience: firebaseConfig.projectId,
+        algorithms: ['RS256'],
+      }));
+    } catch {
+      throw new FounderAuthError('Sessão Firebase inválida ou expirada.', 401);
+    }
   }
 
   const email = verifiedEmail(payload);
