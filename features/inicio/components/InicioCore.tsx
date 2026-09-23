@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 
+import type { InicioOperationalSnapshot } from '../domain/homeOperationalSnapshot';
 import styles from './InicioCore.module.css';
 
 interface InicioCoreProps {
+  snapshot: InicioOperationalSnapshot | null;
   totalEmpenhos: number;
   totalValueLabel: string;
   activeAlertCount: number;
@@ -13,6 +15,7 @@ interface InicioCoreProps {
 }
 
 export function InicioCore({
+  snapshot,
   totalEmpenhos,
   totalValueLabel,
   activeAlertCount,
@@ -101,16 +104,46 @@ export function InicioCore({
     [totalEmpenhos]
   );
 
+  const alertSeverity = snapshot?.alerts ?? {
+    total: 0,
+    critical: 0,
+    attention: 0,
+  };
+  const receiving = snapshot?.receiving ?? {
+    pendingEmpenhos: 0,
+    pendingItems: 0,
+    balance: 0,
+  };
+  const execution = snapshot?.execution ?? {
+    committed: 0,
+    received: 0,
+    percentage: 0,
+  };
+  const classStats = ['QR', 'CALI', 'PASA', 'FUNADOM'].map((code) =>
+    snapshot?.classStats.find((item) => item.code === code) ?? {
+      code,
+      count: 0,
+      value: 0,
+    }
+  );
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      maximumFractionDigits: 2,
+    }).format(value);
+
   return (
     <motion.div
       ref={rootRef}
       className={styles.root}
       data-alert={activeAlertCount > 0 ? 'true' : 'false'}
+      data-static-core="true"
       data-inicio-star-exclusion="core"
       tabIndex={0}
       role="group"
       aria-label={`Núcleo EMPROVEX. ${totalEmpenhos} empenhos cadastrados, ${totalValueLabel} empenhados.`}
-      initial={reduceMotion ? false : { opacity: 0, scale: 0.82 }}
+      initial={false}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.78, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
       style={{
@@ -159,10 +192,55 @@ export function InicioCore({
       </span>
 
       <span className={styles.tooltip}>
-        <strong>Núcleo EMPROVEX</strong>
-        <span>{totalEmpenhos} empenhos cadastrados</span>
-        <small>{totalValueLabel} empenhados</small>
-        <em>{activeAlertCount > 0 ? `${activeAlertCount} alerta(s) ativos no ambiente` : 'Operação sem alertas ativos'}</em>
+        <span className={styles.telemetryHeader}>
+          <strong>Núcleo EMPROVEX</strong>
+          <small>{totalEmpenhos} empenhos · {totalValueLabel}</small>
+        </span>
+
+        <span className={styles.telemetryGrid}>
+          <span className={styles.telemetryCard}>
+            <b>Avisos</b>
+            <strong>{alertSeverity.total}</strong>
+            <small>
+              {alertSeverity.critical} crítico(s) · {alertSeverity.attention} atenção
+            </small>
+          </span>
+
+          <span className={styles.telemetryCard}>
+            <b>Recebimentos</b>
+            <strong>{receiving.pendingEmpenhos} empenho(s)</strong>
+            <small>
+              {receiving.pendingItems} item(ns) · {formatCurrency(receiving.balance)}
+            </small>
+          </span>
+
+          <span className={styles.telemetryCard}>
+            <b>Execução</b>
+            <strong>{execution.percentage}%</strong>
+            <small>
+              {formatCurrency(execution.received)} de {formatCurrency(execution.committed)}
+            </small>
+          </span>
+
+          <span className={styles.telemetryCard}>
+            <b>Painel</b>
+            <strong>Visão analítica</strong>
+            <small>Saldos, filtros e indicadores detalhados</small>
+          </span>
+        </span>
+
+        <span className={styles.classTelemetry}>
+          <b>Classes de empenho</b>
+          <span className={styles.classTelemetryGrid}>
+            {classStats.map((item) => (
+              <span key={item.code}>
+                <strong>{item.code}</strong>
+                <small>{item.count} empenho(s)</small>
+                <em>{formatCurrency(item.value)}</em>
+              </span>
+            ))}
+          </span>
+        </span>
       </span>
     </motion.div>
   );
