@@ -13,6 +13,8 @@ export interface EmpenhoInvoicePendingSummary {
   commissionCount: number;
   treasuryCount: number;
   invoiceIds: string[];
+  commissionInvoiceIds: string[];
+  treasuryInvoiceIds: string[];
   message: string;
 }
 
@@ -77,13 +79,19 @@ export function summarizeEmpenhoInvoicePending(
   const count = invoiceIds.length;
 
   if (commissionIds.length > 0) {
+    const commissionMessage = `${formatInvoiceReference(commissionIds)} ${commissionIds.length === 1 ? 'precisa' : 'precisam'} ser enviada${commissionIds.length === 1 ? '' : 's'} à Comissão de Recebimento.`;
+    const treasuryMessage = treasuryIds.length > 0
+      ? ` ${formatInvoiceReference(treasuryIds)} ${treasuryIds.length === 1 ? 'aguarda' : 'aguardam'} envio à Tesouraria.`
+      : '';
     return {
       stage: 'commission',
       count,
       commissionCount: commissionIds.length,
       treasuryCount: treasuryIds.length,
       invoiceIds,
-      message: `${formatInvoiceReference(commissionIds)} ${commissionIds.length === 1 ? 'precisa' : 'precisam'} ser enviada${commissionIds.length === 1 ? '' : 's'} à Comissão de Recebimento.`,
+      commissionInvoiceIds: commissionIds,
+      treasuryInvoiceIds: treasuryIds,
+      message: commissionMessage + treasuryMessage,
     };
   }
 
@@ -94,6 +102,8 @@ export function summarizeEmpenhoInvoicePending(
       commissionCount: 0,
       treasuryCount: treasuryIds.length,
       invoiceIds,
+      commissionInvoiceIds: [],
+      treasuryInvoiceIds: treasuryIds,
       message: `${formatInvoiceReference(treasuryIds)} ${treasuryIds.length === 1 ? 'aguarda' : 'aguardam'} envio à Tesouraria.`,
     };
   }
@@ -104,6 +114,8 @@ export function summarizeEmpenhoInvoicePending(
     commissionCount: 0,
     treasuryCount: 0,
     invoiceIds: [],
+    commissionInvoiceIds: [],
+    treasuryInvoiceIds: [],
     message: 'Nenhuma Nota Fiscal com pendência de tramitação.',
   };
 }
