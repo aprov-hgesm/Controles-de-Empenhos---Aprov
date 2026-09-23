@@ -37,7 +37,7 @@ for (const marker of [
 
 for (const marker of [
   "warehouseDocumentPath(normalizedWorkspaceId, 'movements', movementId)",
-  "warehouseDocumentPath(normalizedWorkspaceId, 'balances', input.materialId)",
+  'const balancePath = warehouseDocumentPath(',
   'runTransaction',
   'existingMovementSnapshot.exists()',
   'WAREHOUSE_IDEMPOTENCY_CONFLICT',
