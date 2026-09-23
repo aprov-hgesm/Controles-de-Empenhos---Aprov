@@ -632,12 +632,12 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
     }
 
-    function warehouseTransferHasMatchingLocationBalancesAfter(workspaceId, movementId) {
-      let source = request.resource.data.source;
-      let materialId = request.resource.data.materialId;
+    function warehouseTransferHasMatchingLocationBalancesAfter(workspaceId, movementId, movement) {
+      let source = movement.source;
+      let materialId = movement.materialId;
       let fromId = source.fromBalanceId;
       let toId = source.toBalanceId;
-      return request.resource.data.type == 'TRANSFER'
+      return movement.type == 'TRANSFER'
         && source != null
         && source.kind == 'LOCATION_TRANSFER'
         && exists(/databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId))
@@ -726,7 +726,7 @@ service cloud.firestore {
               getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)).data.source.fromBalanceId == locationBalanceId
               || getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)).data.source.toBalanceId == locationBalanceId
             )
-            && warehouseTransferHasMatchingLocationBalancesAfter(workspaceId, movementId)
+            && warehouseTransferHasMatchingLocationBalancesAfter(workspaceId, movementId, request.resource.data)
           )
           || warehouseLocationBalanceMatchesNonTransfer(workspaceId, locationBalanceId)
         );
