@@ -169,7 +169,7 @@ service cloud.firestore {
       return isVerifiedUser()
         && isPasswordSectorSession()
         && sectorAccountUsesPasswordProvider(account)
-        && account.email == request.auth.token.email
+        && account.email == request.auth.token.get('emprovexAccountEmail', '')
         && hasBoundUid(account)
         && account.firebaseUid == request.auth.uid;
     }
@@ -190,6 +190,8 @@ service cloud.firestore {
       return isVerifiedUser()
         && hasSignInProvider('custom')
         && request.auth.token.get('emprovexSessionVersion', '') == 'emprovex_session_auth_v1'
+        && request.auth.token.get('emprovexAccountEmail', '') is string
+        && request.auth.token.get('emprovexAccountEmail', '').size() > 3
         && request.auth.token.get('emprovexSessionId', '') is string
         && request.auth.token.get('emprovexSessionId', '').size() > 8
         && request.auth.token.get('emprovexBrowserInstanceId', '') is string
@@ -239,7 +241,7 @@ service cloud.firestore {
         ).data.uid == request.auth.uid
         && get(
           /databases/$(database)/documents/workspaces/$(workspaceId)/sessionSlots/$(slotId)
-        ).data.accountEmail == request.auth.token.email
+        ).data.accountEmail == request.auth.token.get('emprovexAccountEmail', '')
         && get(
           /databases/$(database)/documents/workspaces/$(workspaceId)/sessionSlots/$(slotId)
         ).data.sessionId == request.auth.token.get('emprovexSessionId', '')
@@ -331,6 +333,17 @@ service cloud.firestore {
         );
     }
 
+    function authenticatedSectorEmailMatches(value) {
+      return (
+          isCustomSectorSession()
+          && value == request.auth.token.get('emprovexAccountEmail', '')
+        )
+        || (
+          !isCustomSectorSession()
+          && value == request.auth.token.email
+        );
+    }
+
     function requestLeaseMatchesSessionCredential() {
       return !isCustomSectorSession()
         || (
@@ -399,7 +412,7 @@ service cloud.firestore {
         && request.resource.data.workspaceId == workspaceId
         && request.resource.data.ug == workspace.ug
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.accountEmail == request.auth.token.email
+        && authenticatedSectorEmailMatches(request.resource.data.accountEmail)
         && request.resource.data.sessionId is string
         && request.resource.data.sessionId.size() > 8
         && request.resource.data.browserInstanceId is string
@@ -419,7 +432,7 @@ service cloud.firestore {
 
     function sameWorkspaceSessionLeaseOwner() {
       return resource.data.uid == request.auth.uid
-        && resource.data.accountEmail == request.auth.token.email
+        && authenticatedSectorEmailMatches(resource.data.accountEmail)
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.accountEmail == resource.data.accountEmail
         && request.resource.data.sessionId == resource.data.sessionId
@@ -457,7 +470,7 @@ service cloud.firestore {
         && resource.data.workspaceId == workspaceId
         && resource.data.slotId == slotId
         && resource.data.uid == request.auth.uid
-        && resource.data.accountEmail == request.auth.token.email
+        && authenticatedSectorEmailMatches(resource.data.accountEmail)
         && resourceLeaseMatchesSessionCredential();
     }
 
