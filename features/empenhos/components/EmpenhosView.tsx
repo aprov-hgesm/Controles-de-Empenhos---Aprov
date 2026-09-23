@@ -8,6 +8,7 @@ import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActio
 import type { Alert, Empenho, Invoice, EmpenhoPdfDocument } from '../../../lib/types';
 import { formatSupplierCnpj } from '../../../lib/invoiceIdentity';
 import type { EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
+import { summarizeEmpenhoInvoicePending } from '../../notas-fiscais/domain/invoiceOperationalPending';
 import {
   compareEmpenhosByRpnpPriority,
   getEmpenhoBaseClassification,
@@ -630,6 +631,11 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                     targetInvoices,
                     empenhoClasses
                   );
+                  const invoicePendingSummary = summarizeEmpenhoInvoicePending(
+                    targetEmp,
+                    targetInvoices,
+                    empenhoClasses
+                  );
                   const activeEmpenhoNotices = alerts
                     .filter((alert) => alert.empenhoId === targetEmp.id && isNoticeVisibleInActiveQueue(alert))
                     .sort((left, right) => {
@@ -913,6 +919,61 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                           </div>
                         </div>
                       </div>
+
+                      {invoicePendingSummary.stage !== 'none' && (
+                        <div
+                          data-testid="empenho-invoice-pending-summary"
+                          data-invoice-pending={invoicePendingSummary.stage}
+                          className={`rounded-xl border px-3.5 py-3 shadow-sm ${
+                            invoicePendingSummary.stage === 'commission'
+                              ? 'border-rose-200 bg-rose-50/85 text-rose-800'
+                              : 'border-amber-200 bg-amber-50/85 text-amber-900'
+                          }`}
+                        >
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.12em]">
+                                  <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                                  Pendência de Nota Fiscal
+                                </span>
+                                <span className="rounded-full border border-current/15 bg-white/65 px-2 py-0.5 text-[10px] font-extrabold">
+                                  {invoicePendingSummary.count} {invoicePendingSummary.count === 1 ? 'NF pendente' : 'NFs pendentes'}
+                                </span>
+                              </div>
+
+                              <p className="mt-1 text-[11px] font-bold leading-relaxed">
+                                {invoicePendingSummary.message}
+                              </p>
+
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {invoicePendingSummary.commissionInvoiceIds.length > 0 && (
+                                  <span className="rounded-lg border border-rose-200 bg-white/70 px-2 py-1 text-[10px] font-extrabold text-rose-700">
+                                    Comissão: {invoicePendingSummary.commissionInvoiceIds.map((id) => `NF #${id}`).join(', ')}
+                                  </span>
+                                )}
+                                {invoicePendingSummary.treasuryInvoiceIds.length > 0 && (
+                                  <span className="rounded-lg border border-amber-200 bg-white/70 px-2 py-1 text-[10px] font-extrabold text-amber-800">
+                                    Tesouraria: {invoicePendingSummary.treasuryInvoiceIds.map((id) => `NF #${id}`).join(', ')}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedNFCommitmentId(targetEmp.id);
+                                setActiveTab('nova_nf');
+                                setNfSubTab('acompanhar');
+                              }}
+                              className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-current/15 bg-white/70 px-3 text-[10px] font-extrabold transition hover:bg-white"
+                            >
+                              Acompanhar NFs
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
                       {activeEmpenhoNotices.length > 0 && (
                         <div
