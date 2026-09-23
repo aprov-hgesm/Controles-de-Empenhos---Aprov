@@ -280,3 +280,28 @@ Princípio central:
 Critério de adoção:
 
 > o sistema deve reduzir trabalho, não apenas digitalizar burocracia.
+
+
+## D-029 — Identidade idempotente de movimentos
+
+Todo movimento repetível do ADM Depósito deve possuir uma chave de idempotência estável.
+
+O ID persistido do movimento é derivado deterministicamente do workspace e dessa chave.
+
+Consequências:
+- repetir a mesma operação não pode duplicar saldo;
+- mesma chave com conteúdo divergente é conflito;
+- consumidores futuros, especialmente NF → estoque, devem produzir chaves estáveis;
+- idempotência pertence ao domínio do ledger, não apenas à interface.
+
+## D-030 — Saldo materializado é projeção do ledger
+
+O saldo rápido por material existe como projeção materializada do histórico de movimentos.
+
+Regras:
+- ledger continua sendo a trilha auditável;
+- movimento e saldo correspondente são persistidos atomicamente;
+- saldo não pode ser alterado isoladamente;
+- revisão do saldo é monotônica;
+- correções e reversões criam novos movimentos;
+- nenhuma funcionalidade futura deve manter um segundo saldo concorrente fora deste contrato.
