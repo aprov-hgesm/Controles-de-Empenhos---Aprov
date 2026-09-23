@@ -46,7 +46,7 @@ const flowParticles = Array.from({ length: 22 }, (_, index) => ({
 
 export function InicioAtmosphere() {
   return (
-    <div className={styles.root} aria-hidden="true">
+    <div className={styles.root} data-lean="true" aria-hidden="true">
       <div className={`${styles.nebula} ${styles.nebulaOne}`} />
       <div className={`${styles.nebula} ${styles.nebulaTwo}`} />
       <div className={`${styles.nebula} ${styles.nebulaThree}`} />
@@ -69,7 +69,7 @@ export function InicioAtmosphere() {
       </div>
 
       <div className={styles.dust}>
-        {dust.map((particle) => (
+        {false && dust.map((particle) => (
           <span
             key={particle.id}
             className={styles.dustParticle}
@@ -85,7 +85,7 @@ export function InicioAtmosphere() {
       </div>
 
       <div className={styles.shootingStars}>
-        {shootingStars.map((star) => (
+        {false && shootingStars.map((star) => (
           <span
             key={star.id}
             className={styles.shootingStar}
@@ -105,7 +105,7 @@ export function InicioAtmosphere() {
       </div>
 
       <div className={styles.flowParticles}>
-        {flowParticles.map((particle) => (
+        {false && flowParticles.map((particle) => (
           <span
             key={particle.id}
             className={styles.flowParticle}

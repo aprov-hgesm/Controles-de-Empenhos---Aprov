@@ -164,8 +164,8 @@
   z-index: 5;
   width: min(610px, 68vw);
   aspect-ratio: 1;
-  transform: translate3d(calc(-50% + var(--home-shift-x)), calc(-50% + var(--home-shift-y)), 0);
-  transition: transform 80ms linear;
+  transform: translate3d(-50%, -50%, 0);
+  transition: none;
 }
 
 .snapshotNotice {
