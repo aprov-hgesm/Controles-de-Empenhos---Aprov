@@ -179,6 +179,7 @@ for (const marker of [
   'emprovex_session_auth_v1',
   'signInWithCustomToken()',
   'requireBoundSessionAuthorization()',
+  'FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON',
   'Rollout compatível',
   'Rollback',
 ]) requireText(docs, marker, `Documentação do hardening perdeu requisito: ${marker}`);
