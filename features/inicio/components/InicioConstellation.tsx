@@ -468,6 +468,8 @@ export function InicioConstellation({
       ).length,
       attention: nodes.filter((node) => node.severity === 'attention').length,
       critical: nodes.filter((node) => node.severity === 'critical').length,
+      commissionPending: nodes.filter((node) => node.invoicePendingStage === 'commission').length,
+      treasuryPending: nodes.filter((node) => node.invoicePendingStage === 'treasury').length,
       closed: nodes.filter((node) => node.stage === 'closed').length,
     }),
     [nodes]
@@ -506,6 +508,9 @@ export function InicioConstellation({
           && hoveredNode.id !== node.id
           && hoveredNode.supplierKey === node.supplierKey;
 
+        const invoicePendingStage = node.invoicePendingStage ?? 'none';
+        const invoicePendingMessage = node.invoicePendingMessage
+          || 'Nenhuma Nota Fiscal com pendência de tramitação.';
         const hitSize = Math.max(STAR_DESKTOP_HITBOX_MIN_PX, node.size + 12);
         const tooltipX = node.left < 28 ? 'start' : node.left > 72 ? 'end' : 'center';
         const tooltipY = node.top < 30 ? 'below' : 'above';
@@ -517,6 +522,7 @@ export function InicioConstellation({
             className={styles.star}
             data-severity={node.severity}
             data-stage={node.stage}
+            data-invoice-pending={invoicePendingStage}
             data-related={isRelated ? 'true' : 'false'}
             data-dimmed={hoveredNode && !isHovered && !isRelated ? 'true' : 'false'}
             data-tooltip-x={tooltipX}
@@ -537,7 +543,7 @@ export function InicioConstellation({
             onFocus={() => setHoveredId(node.id)}
             onBlur={() => setHoveredId(null)}
             onClick={() => onSelectEmpenho(node.id)}
-            aria-label={`${node.id}. ${node.message}. Abrir empenho.`}
+            aria-label={`${node.id}. ${invoicePendingStage !== 'none' ? invoicePendingMessage : node.message}. Abrir empenho.`}
           >
             <span className={styles.halo} aria-hidden="true" />
             <span className={styles.core} aria-hidden="true">
@@ -553,14 +559,28 @@ export function InicioConstellation({
 
             <span className={styles.tooltip}>
               <span className={styles.tooltipEyebrow}>
-                <i data-severity={node.severity} />
+                <i data-severity={node.severity} data-invoice-pending={invoicePendingStage} />
                 {node.classification} · {node.status}
               </span>
               <strong>{node.id}</strong>
               <span className={styles.tooltipMessage}>
-                <small>{node.severity === 'normal' ? 'Situação' : 'Pendência identificada'}</small>
-                {node.message}
+                <small>
+                  {invoicePendingStage !== 'none'
+                    ? 'Pendência da Nota Fiscal'
+                    : node.severity === 'normal'
+                      ? 'Situação'
+                      : 'Pendência identificada'}
+                </small>
+                {invoicePendingStage !== 'none' ? invoicePendingMessage : node.message}
               </span>
+              {invoicePendingStage !== 'none' && (
+                <span className={styles.invoicePendingDetail}>
+                  {node.invoicePendingCount ?? 0} NF(s) em tramitação
+                  {(node.invoicePendingInvoiceIds?.length ?? 0) > 0
+                    ? ` · ${node.invoicePendingInvoiceIds.slice(0, 3).map((id) => `#${id}`).join(', ')}`
+                    : ''}
+                </span>
+              )}
               <span className={styles.tooltipSupplier}>{node.supplier}</span>
               <span className={styles.metrics}>
                 <span>
@@ -590,6 +610,8 @@ export function InicioConstellation({
         data-testid="inicio-constellation-legend"
         aria-label="Legenda da constelação"
       >
+        <span><i data-invoice-pending="commission" /> NF → Comissão <b>{counts.commissionPending}</b></span>
+        <span><i data-invoice-pending="treasury" /> NF → Tesouraria <b>{counts.treasuryPending}</b></span>
         <span><i data-severity="normal" /> Regular <b>{counts.regular}</b></span>
         <span><i data-severity="attention" /> Atenção <b>{counts.attention}</b></span>
         <span><i data-severity="critical" /> Crítico <b>{counts.critical}</b></span>
