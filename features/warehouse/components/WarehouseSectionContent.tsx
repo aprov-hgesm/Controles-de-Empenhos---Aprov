@@ -12,6 +12,7 @@ import { WAREHOUSE_SISCOFIS_IMPORT_SCHEMA_VERSION, WAREHOUSE_SISCOFIS_SNAPSHOT_S
 import { confirmWarehouseSiscofisImport, loadWarehouseSiscofisContext, prepareWarehouseSiscofisImport, type WarehouseSiscofisContext } from '../../../lib/warehouse/siscofisService';
 import type { WarehouseSectionId } from '../navigation';
 import { WarehouseLocationsOperational } from './WarehouseLocationsOperational';
+import { WarehouseStockOperational } from './WarehouseStockOperational';
 
 function FutureNotice({ phase, children }: { phase: string; children: string }) {
   return (
@@ -82,7 +83,7 @@ function useWarehousePhase4Data(
   section: WarehouseSectionId
 ): WarehousePhase4Data {
   const [state, setState] = useState<WarehousePhase4Data>({
-    loading: section === 'stock' || section === 'movements',
+    loading: section === 'movements',
     error: null,
     materials: [],
     balances: [],
@@ -90,7 +91,7 @@ function useWarehousePhase4Data(
   });
 
   useEffect(() => {
-    if (section !== 'stock' && section !== 'movements') {
+    if (section !== 'movements') {
       setState({ loading: false, error: null, materials: [], balances: [], movements: [] });
       return;
     }
@@ -100,17 +101,6 @@ function useWarehousePhase4Data(
 
     void (async () => {
       try {
-        if (section === 'stock') {
-          const [materials, balances] = await Promise.all([
-            listWarehouseMaterials(workspaceId, 250),
-            listWarehouseBalances(workspaceId, 250),
-          ]);
-          if (active) {
-            setState({ loading: false, error: null, materials, balances, movements: [] });
-          }
-          return;
-        }
-
         const [materials, movements] = await Promise.all([
           listWarehouseMaterials(workspaceId, 250),
           listWarehouseMovements(workspaceId, 100),
@@ -517,7 +507,7 @@ export function WarehouseSectionContent({ section, workspaceId }: { section: War
 
   switch (section) {
     case 'overview': return <OverviewContent />;
-    case 'stock': return <StockContent data={phase4Data} />;
+    case 'stock': return <WarehouseStockOperational workspaceId={workspaceId} />;
     case 'movements': return <MovementsContent data={phase4Data} />;
     case 'locations': return <WarehouseLocationsOperational workspaceId={workspaceId} />;
     case 'warehouseView': return <WarehouseViewContent />;
