@@ -4,16 +4,14 @@ import {
   normalizeUnitUg,
   normalizeWorkspaceId,
 } from '../platformIdentity';
-import {
-  addWarehouseQuantities,
-  normalizeWarehouseQuantity,
-} from './movement';
 import { isValidWarehouseMaterialId } from './material';
 
 export const WAREHOUSE_DEPOT_SCHEMA_VERSION = 'warehouse_depot_v1' as const;
 export const WAREHOUSE_LOCATION_SCHEMA_VERSION = 'warehouse_location_v1' as const;
 export const WAREHOUSE_LOCATION_BALANCE_SCHEMA_VERSION =
   'warehouse_location_balance_v1' as const;
+export const WAREHOUSE_LOCATION_QUANTITY_DECIMALS = 6;
+export const WAREHOUSE_LOCATION_MAX_ABSOLUTE_QUANTITY = 1_000_000_000;
 
 export type WarehouseEntityStatus = 'active' | 'inactive';
 export type WarehouseLocationKind = 'LOCAL' | 'SUBPOSITION';
@@ -144,6 +142,31 @@ function issue(code: string, path: string, message: string): WarehouseLocationVa
 
 function normalizeText(value: string): string {
   return value.trim().replace(/\s+/g, ' ');
+}
+
+export function normalizeWarehouseLocationQuantity(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  if (Math.abs(value) > WAREHOUSE_LOCATION_MAX_ABSOLUTE_QUANTITY) return null;
+
+  const scale = 10 ** WAREHOUSE_LOCATION_QUANTITY_DECIMALS;
+  const scaled = Math.round(value * scale);
+  if (!Number.isSafeInteger(scaled)) return null;
+
+  const normalized = scaled / scale;
+  if (Math.abs(normalized - value) > 1e-9) return null;
+  return Object.is(normalized, -0) ? 0 : normalized;
+}
+
+function addWarehouseLocationQuantities(left: number, right: number): number {
+  const normalizedLeft = normalizeWarehouseLocationQuantity(left);
+  const normalizedRight = normalizeWarehouseLocationQuantity(right);
+  if (normalizedLeft === null || normalizedRight === null) {
+    throw new Error('WAREHOUSE_INVALID_LOCATION_QUANTITY');
+  }
+
+  const result = normalizeWarehouseLocationQuantity(normalizedLeft + normalizedRight);
+  if (result === null) throw new Error('WAREHOUSE_LOCATION_QUANTITY_OVERFLOW');
+  return result;
 }
 
 export function normalizeWarehouseLogicalCode(value: unknown): string | null {
@@ -419,7 +442,7 @@ export function validateWarehouseLocationBalance(
   }
   const position = validateWarehouseStockPosition(input.position);
   if (!position) issues.push(issue('invalid_position', '$.position', 'Posição física é inválida.'));
-  const quantity = normalizeWarehouseQuantity(input.quantity);
+  const quantity = normalizeWarehouseLocationQuantity(input.quantity);
   if (quantity === null) issues.push(issue('invalid_quantity', '$.quantity', 'Quantidade por localização é inválida.'));
   const revision = input.revision;
   if (typeof revision !== 'number' || !Number.isSafeInteger(revision) || revision < 1) {
@@ -460,7 +483,7 @@ export function applyWarehouseLocationDelta(
   }
 ): WarehouseLocationBalance {
   const startQuantity = base ? base.quantity : (input.initialQuantity || 0);
-  const nextQuantity = addWarehouseQuantities(startQuantity, input.quantityDelta);
+  const nextQuantity = addWarehouseLocationQuantities(startQuantity, input.quantityDelta);
   return {
     schemaVersion: WAREHOUSE_LOCATION_BALANCE_SCHEMA_VERSION,
     id: input.id,
@@ -477,5 +500,5 @@ export function applyWarehouseLocationDelta(
 export function deriveUnassignedQuantity(total: number, physicalBalances: WarehouseLocationBalance[]): number {
   return physicalBalances
     .filter((item) => item.position.kind !== 'UNASSIGNED')
-    .reduce((remaining, item) => addWarehouseQuantities(remaining, -item.quantity), total);
+    .reduce((remaining, item) => addWarehouseLocationQuantities(remaining, -item.quantity), total);
 }
