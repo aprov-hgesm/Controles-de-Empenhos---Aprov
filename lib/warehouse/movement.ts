@@ -5,6 +5,13 @@ import {
   normalizeWorkspaceId,
 } from '../platformIdentity';
 import { isValidWarehouseMaterialId } from './material';
+import {
+  isValidWarehouseLocationBalanceId,
+  normalizeWarehouseLocationQuantity,
+  validateWarehouseStockPosition,
+  warehouseStockPositionsEqual,
+  type WarehouseStockPosition,
+} from './location';
 
 export const WAREHOUSE_MOVEMENT_SCHEMA_VERSION = 'warehouse_movement_v1' as const;
 export const WAREHOUSE_BALANCE_SCHEMA_VERSION = 'warehouse_balance_v1' as const;
@@ -26,7 +33,7 @@ export type WarehouseMovementType = (typeof WAREHOUSE_MOVEMENT_TYPES)[number];
 export const WAREHOUSE_MOVEMENT_SOURCE_ACTIONS = ['ENTRY', 'CORRECTION', 'DELETE'] as const;
 export type WarehouseMovementSourceAction = (typeof WAREHOUSE_MOVEMENT_SOURCE_ACTIONS)[number];
 
-export interface WarehouseMovementSource {
+export interface WarehouseInvoiceMovementSource {
   kind: 'INVOICE';
   action: WarehouseMovementSourceAction;
   invoiceRecordKey: string;
@@ -37,6 +44,20 @@ export interface WarehouseMovementSource {
   supplierCnpj: string | null;
   actorUid: string;
 }
+
+export interface WarehouseLocationTransferMovementSource {
+  kind: 'LOCATION_TRANSFER';
+  actorUid: string;
+  quantity: number;
+  from: WarehouseStockPosition;
+  to: WarehouseStockPosition;
+  fromBalanceId: string;
+  toBalanceId: string;
+}
+
+export type WarehouseMovementSource =
+  | WarehouseInvoiceMovementSource
+  | WarehouseLocationTransferMovementSource;
 
 export interface WarehouseMovement {
   schemaVersion: typeof WAREHOUSE_MOVEMENT_SCHEMA_VERSION;
@@ -99,7 +120,7 @@ const MOVEMENT_FIELDS = new Set([
   'note',
   'source',
 ]);
-const MOVEMENT_SOURCE_FIELDS = new Set([
+const INVOICE_MOVEMENT_SOURCE_FIELDS = new Set([
   'kind',
   'action',
   'invoiceRecordKey',
@@ -109,6 +130,15 @@ const MOVEMENT_SOURCE_FIELDS = new Set([
   'supplier',
   'supplierCnpj',
   'actorUid',
+]);
+const TRANSFER_MOVEMENT_SOURCE_FIELDS = new Set([
+  'kind',
+  'actorUid',
+  'quantity',
+  'from',
+  'to',
+  'fromBalanceId',
+  'toBalanceId',
 ]);
 const BALANCE_FIELDS = new Set([
   'schemaVersion',
@@ -141,58 +171,96 @@ function normalizeText(value: string): string {
 }
 
 function normalizeWarehouseMovementSource(input: unknown): WarehouseMovementSource | null {
-  if (input === null || input === undefined) return null;
-  if (!isPlainObject(input) || !hasOnlyFields(input, MOVEMENT_SOURCE_FIELDS)) return null;
+  if (input === null || input === undefined || !isPlainObject(input)) return null;
 
-  const action = typeof input.action === 'string' ? input.action.trim().toUpperCase() : '';
-  const invoiceRecordKey = typeof input.invoiceRecordKey === 'string' ? normalizeText(input.invoiceRecordKey) : '';
-  const invoiceId = typeof input.invoiceId === 'string' ? normalizeText(input.invoiceId) : '';
-  const empenhoId = typeof input.empenhoId === 'string' ? normalizeText(input.empenhoId) : '';
-  const actorUid = typeof input.actorUid === 'string' ? normalizeText(input.actorUid) : '';
-  const supplier = typeof input.supplier === 'string' ? normalizeText(input.supplier) : '';
-  const supplierCnpj = input.supplierCnpj === null || input.supplierCnpj === undefined
-    ? null
-    : typeof input.supplierCnpj === 'string'
-      ? input.supplierCnpj.trim()
+  if (input.kind === 'INVOICE') {
+    if (!hasOnlyFields(input, INVOICE_MOVEMENT_SOURCE_FIELDS)) return null;
+
+    const action = typeof input.action === 'string' ? input.action.trim().toUpperCase() : '';
+    const invoiceRecordKey = typeof input.invoiceRecordKey === 'string' ? normalizeText(input.invoiceRecordKey) : '';
+    const invoiceId = typeof input.invoiceId === 'string' ? normalizeText(input.invoiceId) : '';
+    const empenhoId = typeof input.empenhoId === 'string' ? normalizeText(input.empenhoId) : '';
+    const actorUid = typeof input.actorUid === 'string' ? normalizeText(input.actorUid) : '';
+    const supplier = typeof input.supplier === 'string' ? normalizeText(input.supplier) : '';
+    const supplierCnpj = input.supplierCnpj === null || input.supplierCnpj === undefined
+      ? null
+      : typeof input.supplierCnpj === 'string'
+        ? input.supplierCnpj.trim()
+        : '';
+
+    if (
+      !WAREHOUSE_MOVEMENT_SOURCE_ACTIONS.includes(action as WarehouseMovementSourceAction)
+      || !invoiceRecordKey || invoiceRecordKey.length > 160
+      || !invoiceId || invoiceId.length > 120
+      || !empenhoId || empenhoId.length > 120
+      || !actorUid || actorUid.length > 160
+      || !supplier || supplier.length > 240
+      || (supplierCnpj !== null && !/^[0-9]{14}$/.test(supplierCnpj))
+      || !Array.isArray(input.itemIds)
+      || input.itemIds.length < 1
+      || input.itemIds.length > 32
+    ) {
+      return null;
+    }
+
+    const itemIds: string[] = [];
+    for (const value of input.itemIds) {
+      if (typeof value !== 'string') return null;
+      const normalized = normalizeText(value);
+      if (!normalized || normalized.length > 120) return null;
+      if (!itemIds.includes(normalized)) itemIds.push(normalized);
+    }
+    if (itemIds.length < 1) return null;
+
+    return {
+      kind: 'INVOICE',
+      action: action as WarehouseMovementSourceAction,
+      invoiceRecordKey,
+      invoiceId,
+      empenhoId,
+      itemIds,
+      supplier,
+      supplierCnpj,
+      actorUid,
+    };
+  }
+
+  if (input.kind === 'LOCATION_TRANSFER') {
+    if (!hasOnlyFields(input, TRANSFER_MOVEMENT_SOURCE_FIELDS)) return null;
+    const actorUid = typeof input.actorUid === 'string' ? normalizeText(input.actorUid) : '';
+    const quantity = normalizeWarehouseLocationQuantity(input.quantity);
+    const from = validateWarehouseStockPosition(input.from);
+    const to = validateWarehouseStockPosition(input.to);
+    const fromBalanceId = typeof input.fromBalanceId === 'string'
+      ? input.fromBalanceId.trim().toLowerCase()
+      : '';
+    const toBalanceId = typeof input.toBalanceId === 'string'
+      ? input.toBalanceId.trim().toLowerCase()
       : '';
 
-  if (
-    input.kind !== 'INVOICE'
-    || !WAREHOUSE_MOVEMENT_SOURCE_ACTIONS.includes(action as WarehouseMovementSourceAction)
-    || !invoiceRecordKey || invoiceRecordKey.length > 160
-    || !invoiceId || invoiceId.length > 120
-    || !empenhoId || empenhoId.length > 120
-    || !actorUid || actorUid.length > 160
-    || !supplier || supplier.length > 240
-    || (supplierCnpj !== null && !/^[0-9]{14}$/.test(supplierCnpj))
-    || !Array.isArray(input.itemIds)
-    || input.itemIds.length < 1
-    || input.itemIds.length > 32
-  ) {
-    return null;
+    if (
+      !actorUid || actorUid.length > 160
+      || quantity === null || quantity <= 0
+      || !from || !to || warehouseStockPositionsEqual(from, to)
+      || !isValidWarehouseLocationBalanceId(fromBalanceId)
+      || !isValidWarehouseLocationBalanceId(toBalanceId)
+      || fromBalanceId === toBalanceId
+    ) {
+      return null;
+    }
+
+    return {
+      kind: 'LOCATION_TRANSFER',
+      actorUid,
+      quantity,
+      from,
+      to,
+      fromBalanceId,
+      toBalanceId,
+    };
   }
 
-  const itemIds: string[] = [];
-  for (const value of input.itemIds) {
-    if (typeof value !== 'string') return null;
-    const normalized = normalizeText(value);
-    if (!normalized || normalized.length > 120) return null;
-    if (!itemIds.includes(normalized)) itemIds.push(normalized);
-  }
-
-  if (itemIds.length < 1) return null;
-
-  return {
-    kind: 'INVOICE',
-    action: action as WarehouseMovementSourceAction,
-    invoiceRecordKey,
-    invoiceId,
-    empenhoId,
-    itemIds,
-    supplier,
-    supplierCnpj,
-    actorUid,
-  };
+  return null;
 }
 
 export function normalizeWarehouseIdempotencyKey(value: unknown): string | null {
@@ -486,7 +554,7 @@ export function validateWarehouseMovement(
     );
   }
   if (
-    source
+    source?.kind === 'INVOICE'
     && !['INVOICE_ENTRY', 'INVOICE_CORRECTION'].includes(type)
   ) {
     issues.push(
@@ -494,6 +562,15 @@ export function validateWarehouseMovement(
         'invalid_source_type',
         '$.source',
         'Origem INVOICE só pode acompanhar entrada ou correção de Nota Fiscal.'
+      )
+    );
+  }
+  if (source?.kind === 'LOCATION_TRANSFER' && type !== 'TRANSFER') {
+    issues.push(
+      issue(
+        'invalid_source_type',
+        '$.source',
+        'Origem LOCATION_TRANSFER só pode acompanhar movimento TRANSFER.'
       )
     );
   }
