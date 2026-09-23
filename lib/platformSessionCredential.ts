@@ -39,7 +39,8 @@ function claimString(result: IdTokenResult, name: string): string {
 function identityFromToken(
   result: IdTokenResult,
   context: SectorWorkspaceContext,
-  uid: string
+  uid: string,
+  email: string | null
 ): WorkspaceSessionLeaseIdentity | null {
   const slotId = claimString(result, 'emprovexSessionSlotId');
   const sessionId = claimString(result, 'emprovexSessionId');
@@ -48,6 +49,7 @@ function identityFromToken(
   if (
     result.signInProvider !== 'custom'
     || claimString(result, 'emprovexSessionVersion') !== SESSION_AUTHORIZATION_VERSION
+    || claimString(result, 'emprovexAccountEmail') !== normalizePlatformEmail(email || '')
     || !SESSION_SLOT_IDS.includes(slotId as WorkspaceSessionSlotId)
     || sessionId.length <= 8
     || browserInstanceId.length <= 8
@@ -146,7 +148,7 @@ export async function ensureWorkspaceSessionCredential(
   const currentToken = await user.getIdTokenResult();
 
   if (currentToken.signInProvider === 'custom') {
-    const existingIdentity = identityFromToken(currentToken, context, user.uid);
+    const existingIdentity = identityFromToken(currentToken, context, user.uid, user.email);
     if (!existingIdentity) {
       throw new PlatformSessionLeaseError(
         'SESSION_LEASE_LOST',
@@ -184,7 +186,8 @@ export async function ensureWorkspaceSessionCredential(
     const confirmedIdentity = identityFromToken(
       confirmedToken,
       context,
-      credential.user.uid
+      credential.user.uid,
+      credential.user.email
     );
     if (
       !confirmedIdentity
