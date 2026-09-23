@@ -305,3 +305,32 @@ Regras:
 - revisão do saldo é monotônica;
 - correções e reversões criam novos movimentos;
 - nenhuma funcionalidade futura deve manter um segundo saldo concorrente fora deste contrato.
+
+## D-031 — Desenvolvimento por Walking Skeleton e fatias verticais
+
+Após a conclusão das FASES 0, 1 e 2, o desenvolvimento do ADM Depósito passa a seguir o modelo:
+
+> Fundação concluída → Walking Skeleton → fatias verticais completas → integração progressiva → hardening.
+
+Consequências:
+- preservar FASES 0–2 como histórico concluído;
+- criar primeiro a estrutura navegável e arquitetural completa do módulo;
+- depois concluir uma capacidade funcional de cada vez;
+- evitar separar artificialmente UI, domínio, persistência e testes em fases diferentes;
+- requisitos DEP/EXT continuam válidos, apenas reagrupados;
+- a mudança não autoriza antecipar funcionalidades de fases futuras.
+
+## D-032 — Integração essencial pertence à própria fatia vertical
+
+Uma capacidade não deve ser considerada concluída se sua integração essencial com o domínio existente foi adiada sem necessidade.
+
+Quando aplicável, a mesma fase deve fechar:
+- interface;
+- regra de domínio;
+- persistência;
+- segurança/Rules;
+- integração com capacidades anteriores;
+- testes relevantes;
+- documentação.
+
+Exceções precisam estar explicitamente previstas no ROADMAP ou documentadas como decisão técnica.
