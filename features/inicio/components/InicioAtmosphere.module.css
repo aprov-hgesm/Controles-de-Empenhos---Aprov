@@ -360,3 +360,30 @@
 .root[data-lean='true'] .vignette {
   animation: none !important;
 }
+
+
+/* 2026-09-23 — estrelas decorativas uniformes com cintilação econômica.
+   Todas usam a mesma faixa de brilho e apenas opacity é animada. */
+.root[data-lean='true'] .deepStar {
+  display: block !important;
+  opacity: 0.86;
+  animation: leanStarTwinkle 6.2s ease-in-out infinite !important;
+}
+
+@keyframes leanStarTwinkle {
+  0%,
+  100% {
+    opacity: 0.78;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root[data-lean='true'] .deepStar {
+    animation: none !important;
+    opacity: 0.86;
+  }
+}

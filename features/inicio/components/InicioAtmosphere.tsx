@@ -7,7 +7,6 @@ const deepStars = Array.from({ length: 34 }, (_, index) => ({
   left: 4 + ((index * 37) % 92),
   top: 3 + ((index * 53) % 90),
   size: 1 + (index % 2),
-  opacity: 0.12 + ((index % 5) * 0.055),
   delay: -((index % 11) * 0.63),
 }));
 
@@ -61,7 +60,6 @@ export function InicioAtmosphere() {
               top: `${star.top}%`,
               width: star.size,
               height: star.size,
-              opacity: star.opacity,
               animationDelay: `${star.delay}s`,
             }}
           />
