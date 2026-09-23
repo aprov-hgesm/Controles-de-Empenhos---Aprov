@@ -2,14 +2,6 @@
 
 import styles from './InicioAtmosphere.module.css';
 
-const deepStars = Array.from({ length: 34 }, (_, index) => ({
-  id: `deep-${index}`,
-  left: 4 + ((index * 37) % 92),
-  top: 3 + ((index * 53) % 90),
-  size: 1 + (index % 2),
-  delay: -((index % 11) * 0.63),
-}));
-
 const dust = Array.from({ length: 18 }, (_, index) => ({
   id: `dust-${index}`,
   left: 8 + ((index * 41) % 84),
@@ -49,22 +41,6 @@ export function InicioAtmosphere() {
       <div className={`${styles.nebula} ${styles.nebulaOne}`} />
       <div className={`${styles.nebula} ${styles.nebulaTwo}`} />
       <div className={`${styles.nebula} ${styles.nebulaThree}`} />
-
-      <div className={styles.deepStars}>
-        {deepStars.map((star) => (
-          <span
-            key={star.id}
-            className={styles.deepStar}
-            style={{
-              left: `${star.left}%`,
-              top: `${star.top}%`,
-              width: star.size,
-              height: star.size,
-              animationDelay: `${star.delay}s`,
-            }}
-          />
-        ))}
-      </div>
 
       <div className={styles.dust}>
         {false && dust.map((particle) => (

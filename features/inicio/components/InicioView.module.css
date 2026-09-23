@@ -87,7 +87,6 @@
   pointer-events: none;
   opacity: 0.46;
   background-image:
-    radial-gradient(circle at 1px 1px, rgba(186, 208, 255, 0.12) 0.55px, transparent 0.7px),
     repeating-linear-gradient(
       116deg,
       rgba(255, 255, 255, 0.017) 0,
@@ -102,10 +101,6 @@
       transparent 1px,
       transparent 17px
     );
-  background-size:
-    7px 7px,
-    auto,
-    auto;
   mix-blend-mode: soft-light;
   mask-image:
     radial-gradient(circle at 50% 52%, rgba(0, 0, 0, 0.86) 0%, rgba(0, 0, 0, 0.68) 54%, rgba(0, 0, 0, 0.26) 82%, transparent 100%);

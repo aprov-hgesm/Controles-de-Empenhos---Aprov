@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 
-import type { Alert, Empenho } from '../../../lib/types';
+import type { Alert, Empenho, Invoice } from '../../../lib/types';
 import type { OperationalActiveTab } from '../../../lib/operationalSubscriptionPlan';
 import {
   operationalScopeFromContext,
@@ -22,6 +22,7 @@ import {
 } from '../../../lib/workspaceUsageTelemetry';
 import {
   buildInicioOperationalSnapshot,
+  refreshInicioOperationalSnapshotAlerts,
   INICIO_SNAPSHOT_DOCUMENT_ID,
   isInicioOperationalSnapshot,
   type InicioOperationalSnapshot,
@@ -33,8 +34,10 @@ interface UseInicioOperationalSnapshotInput {
   activeTab: OperationalActiveTab;
   empenhos: Empenho[];
   alerts: Alert[];
+  invoices: Invoice[];
   empenhosReady: boolean;
   alertsReady: boolean;
+  invoicesReady: boolean;
 }
 
 interface KnownRemoteState {
@@ -46,6 +49,8 @@ interface KnownRemoteState {
 const SNAPSHOT_PUBLISH_DEBOUNCE_MS = 900;
 
 function shouldPublishSnapshot(activeTab: OperationalActiveTab): boolean {
+  // Empenhos/NF publicam o snapshot completo. A Central de Avisos publica apenas
+  // a projeção de avisos sobre o snapshot remoto já existente.
   return activeTab === 'empenhos' || activeTab === 'nova_nf' || activeTab === 'avisos';
 }
 
@@ -55,11 +60,14 @@ export function useInicioOperationalSnapshot({
   activeTab,
   empenhos,
   alerts,
+  invoices,
   empenhosReady,
   alertsReady,
+  invoicesReady,
 }: UseInicioOperationalSnapshotInput) {
   const [snapshot, setSnapshot] = useState<InicioOperationalSnapshot | null>(null);
   const [snapshotReady, setSnapshotReady] = useState(false);
+  const knownSnapshotRef = useRef<InicioOperationalSnapshot | null>(null);
   const knownRemoteRef = useRef<KnownRemoteState>({
     workspaceId: null,
     loaded: false,
@@ -73,6 +81,7 @@ export function useInicioOperationalSnapshot({
         loaded: false,
         hash: null,
       };
+      knownSnapshotRef.current = null;
       setSnapshot(null);
       setSnapshotReady(false);
       return;
@@ -84,6 +93,7 @@ export function useInicioOperationalSnapshot({
         loaded: false,
         hash: null,
       };
+      knownSnapshotRef.current = null;
       setSnapshot(null);
       setSnapshotReady(false);
     }
@@ -130,6 +140,7 @@ export function useInicioOperationalSnapshot({
           hash: parsed?.contentHash ?? null,
         };
 
+        knownSnapshotRef.current = parsed;
         setSnapshot(parsed);
         setSnapshotReady(true);
       },
@@ -152,18 +163,12 @@ export function useInicioOperationalSnapshot({
       || !shouldPublishSnapshot(activeTab)
       || !empenhosReady
       || !alertsReady
+      || (activeTab !== 'avisos' && !invoicesReady)
     ) {
       return;
     }
 
     const scope = operationalScopeFromContext(workspaceContext);
-    const candidate = buildInicioOperationalSnapshot({
-      workspaceId: scope.workspaceId,
-      ug: scope.ug,
-      generatedBy: user.uid,
-      empenhos,
-      alerts,
-    });
 
     const timer = window.setTimeout(() => {
       void (async () => {
@@ -197,6 +202,7 @@ export function useInicioOperationalSnapshot({
               hash: parsed?.contentHash ?? null,
             };
             knownRemoteRef.current = knownRemote;
+            knownSnapshotRef.current = parsed;
 
             if (parsed) setSnapshot(parsed);
           } catch (error) {
@@ -208,7 +214,29 @@ export function useInicioOperationalSnapshot({
           }
         }
 
-        if (knownRemote.hash === candidate.contentHash) return;
+        const candidate = activeTab === 'avisos'
+          ? (
+              knownSnapshotRef.current
+                ? refreshInicioOperationalSnapshotAlerts({
+                    previousSnapshot: knownSnapshotRef.current,
+                    empenhos,
+                    alerts,
+                    generatedBy: user.uid,
+                  })
+                : null
+            )
+          : buildInicioOperationalSnapshot({
+              workspaceId: scope.workspaceId,
+              ug: scope.ug,
+              generatedBy: user.uid,
+              empenhos,
+              alerts,
+              invoices,
+            });
+
+        // Sem snapshot remoto prévio, a Central não cria um snapshot incompleto.
+        // Ele será materializado por Empenhos/NF quando invoices estiverem prontas.
+        if (!candidate || knownRemote.hash === candidate.contentHash) return;
 
         try {
           await setDoc(snapshotRef, candidate);
@@ -219,6 +247,7 @@ export function useInicioOperationalSnapshot({
             loaded: true,
             hash: candidate.contentHash,
           };
+          knownSnapshotRef.current = candidate;
           setSnapshot(candidate);
         } catch (error) {
           console.warn('Não foi possível atualizar o snapshot econômico do Início.', error);
@@ -233,6 +262,8 @@ export function useInicioOperationalSnapshot({
     alertsReady,
     empenhos,
     empenhosReady,
+    invoices,
+    invoicesReady,
     user,
     workspaceContext,
   ]);

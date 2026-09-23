@@ -115,8 +115,8 @@ requireText(
 );
 requireText(
   atmosphere,
-  'className={styles.shootingStar}',
-  'Estrelas cadentes não são renderizadas.'
+  '{false && shootingStars.map((star) => (',
+  'Estrelas cadentes voltaram a ser renderizadas.'
 );
 requireText(
   atmosphereCss,
@@ -128,15 +128,30 @@ requireText(
   '@keyframes shootingStarFlight',
   'Movimento rápido das estrelas cadentes ausente.'
 );
-requireText(
-  atmosphereCss,
-  '.deepStar {',
-  'Partículas profundas circulares foram removidas.'
+forbidText(
+  atmosphere,
+  'deepStars.map(',
+  'Pontos decorativos sem vínculo com empenhos voltaram a ser renderizados.'
 );
 requireText(
-  atmosphereCss,
-  'border-radius: 999px',
-  'Partículas decorativas deixaram de ser circulares.'
+  constellation,
+  'data-invoice-pending={invoicePendingStage}',
+  'Estrelas não expõem pendência de tramitação de Nota Fiscal.'
+);
+requireText(
+  constellationCss,
+  ".star[data-invoice-pending='commission'] .core",
+  'Pendência de Comissão não possui brilho vermelho suave.'
+);
+requireText(
+  constellationCss,
+  ".star[data-invoice-pending='treasury'] .core",
+  'Pendência de Tesouraria não possui brilho amarelo suave.'
+);
+requireText(
+  constellationCss,
+  '@keyframes invoicePendingBlink',
+  'Cintilação econômica das pendências de NF está ausente.'
 );
 requireText(
   atmosphereCss,
@@ -174,8 +189,9 @@ if (findings.length) {
   console.log('BLOCK 21 OPERATIONAL STARS + SHOOTING STARS: READY');
   console.log('Empenhos em estrela de quatro pontas: ATIVO');
   console.log('Hitbox ampliada: ATIVA');
-  console.log('Partículas decorativas circulares: PRESERVADAS');
-  console.log('Estrelas cadentes rápidas: ATIVAS');
+  console.log('Pontos decorativos sem empenho: REMOVIDOS');
+  console.log('Estrelas cadentes: DESATIVADAS');
+  console.log('Pendências NF Comissão/Tesouraria: SINALIZADAS');
   console.log('Balanced/static/reduced motion: PROTEGIDOS');
   console.log('Firestore adicional: ZERO');
 }

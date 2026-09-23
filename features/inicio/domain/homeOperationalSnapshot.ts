@@ -1,4 +1,9 @@
-import type { Alert, Empenho } from '../../../lib/types';
+import type { Alert, Empenho, Invoice } from '../../../lib/types';
+import {
+  buildDefaultInvoicePendingClassDefinitions,
+  summarizeEmpenhoInvoicePending,
+  type InvoiceOperationalPendingStage,
+} from '../../notas-fiscais/domain/invoiceOperationalPending';
 import {
   getNoticeSeverity,
   isNoticePending,
@@ -26,6 +31,10 @@ export interface InicioSnapshotStar {
   severity: InicioStarSeverity;
   stage: InicioStarStage;
   message: string;
+  invoicePendingStage: InvoiceOperationalPendingStage;
+  invoicePendingCount: number;
+  invoicePendingInvoiceIds: string[];
+  invoicePendingMessage: string;
 }
 
 export interface InicioSnapshotClass {
@@ -70,6 +79,7 @@ interface BuildInicioSnapshotInput {
   generatedBy: string;
   empenhos: Empenho[];
   alerts: Alert[];
+  invoices: Invoice[];
   generatedAt?: string;
 }
 
@@ -182,7 +192,8 @@ function getMessage(
 
 function selectSnapshotEmpenhos(
   empenhos: Empenho[],
-  alertsByEmpenho: Map<string, Alert[]>
+  alertsByEmpenho: Map<string, Alert[]>,
+  invoicePendingByEmpenho: Map<string, ReturnType<typeof summarizeEmpenhoInvoicePending>>
 ): Empenho[] {
   const severityWeight: Record<InicioStarSeverity, number> = {
     critical: 0,
@@ -190,9 +201,22 @@ function selectSnapshotEmpenhos(
     normal: 2,
   };
 
+  const pendingWeight: Record<InvoiceOperationalPendingStage, number> = {
+    commission: 0,
+    treasury: 1,
+    none: 2,
+  };
+
   const active = empenhos
-    .filter((empenho) => empenho.status !== 'Encerrado')
+    .filter((empenho) =>
+      empenho.status !== 'Encerrado'
+      || (invoicePendingByEmpenho.get(empenho.id)?.stage ?? 'none') !== 'none'
+    )
     .sort((left, right) => {
+      const pendingDelta =
+        pendingWeight[invoicePendingByEmpenho.get(left.id)?.stage ?? 'none']
+        - pendingWeight[invoicePendingByEmpenho.get(right.id)?.stage ?? 'none'];
+      if (pendingDelta !== 0) return pendingDelta;
       const severityDelta =
         severityWeight[getSeverity(left, alertsByEmpenho)]
         - severityWeight[getSeverity(right, alertsByEmpenho)];
@@ -202,7 +226,10 @@ function selectSnapshotEmpenhos(
     .slice(0, INICIO_ACTIVE_STAR_BUDGET);
 
   const closed = empenhos
-    .filter((empenho) => empenho.status === 'Encerrado')
+    .filter((empenho) =>
+      empenho.status === 'Encerrado'
+      && (invoicePendingByEmpenho.get(empenho.id)?.stage ?? 'none') === 'none'
+    )
     .sort((left, right) => left.id.localeCompare(right.id))
     .slice(0, INICIO_CLOSED_STAR_BUDGET);
 
@@ -215,9 +242,17 @@ export function buildInicioOperationalSnapshot({
   generatedBy,
   empenhos,
   alerts,
+  invoices,
   generatedAt = new Date().toISOString(),
 }: BuildInicioSnapshotInput): InicioOperationalSnapshot {
   const alertsByEmpenho = buildAlertsByEmpenho(alerts);
+  const classDefinitions = buildDefaultInvoicePendingClassDefinitions(empenhos);
+  const invoicePendingByEmpenho = new Map(
+    empenhos.map((empenho) => [
+      empenho.id,
+      summarizeEmpenhoInvoicePending(empenho, invoices, classDefinitions),
+    ])
+  );
 
   let committed = 0;
   let received = 0;
@@ -255,10 +290,20 @@ export function buildInicioOperationalSnapshot({
     (alert) => getNoticeSeverity(alert) === 'ATENÇÃO'
   ).length;
 
-  const selectedEmpenhos = selectSnapshotEmpenhos(empenhos, alertsByEmpenho);
+  const selectedEmpenhos = selectSnapshotEmpenhos(
+    empenhos,
+    alertsByEmpenho,
+    invoicePendingByEmpenho
+  );
 
   const stars: InicioSnapshotStar[] = selectedEmpenhos.map((empenho) => {
     const totals = getEmpenhoTotals(empenho);
+    const invoicePending = invoicePendingByEmpenho.get(empenho.id) ?? {
+      stage: 'none' as const,
+      count: 0,
+      invoiceIds: [],
+      message: 'Nenhuma Nota Fiscal com pendência de tramitação.',
+    };
     return {
       id: empenho.id,
       supplier: empenho.supplier,
@@ -274,6 +319,10 @@ export function buildInicioOperationalSnapshot({
       severity: getSeverity(empenho, alertsByEmpenho),
       stage: getStage(empenho),
       message: getMessage(empenho, alertsByEmpenho),
+      invoicePendingStage: invoicePending.stage,
+      invoicePendingCount: invoicePending.count,
+      invoicePendingInvoiceIds: invoicePending.invoiceIds,
+      invoicePendingMessage: invoicePending.message,
     };
   });
 
@@ -309,6 +358,72 @@ export function buildInicioOperationalSnapshot({
     snapshotVersion: INICIO_SNAPSHOT_VERSION,
     workspaceId,
     ug,
+    contentHash: stableHash(JSON.stringify(content)),
+    generatedAt,
+    generatedBy,
+    ...content,
+  };
+}
+
+export function refreshInicioOperationalSnapshotAlerts({
+  previousSnapshot,
+  empenhos,
+  alerts,
+  generatedBy,
+  generatedAt = new Date().toISOString(),
+}: {
+  previousSnapshot: InicioOperationalSnapshot;
+  empenhos: Empenho[];
+  alerts: Alert[];
+  generatedBy: string;
+  generatedAt?: string;
+}): InicioOperationalSnapshot {
+  const alertsByEmpenho = buildAlertsByEmpenho(alerts);
+  const empenhosById = new Map(empenhos.map((empenho) => [empenho.id, empenho]));
+  const pendingAlerts = alerts.filter(isNoticePending);
+  const criticalAlerts = pendingAlerts.filter(
+    (alert) => getNoticeSeverity(alert) === 'CRÍTICO'
+  ).length;
+  const attentionAlerts = pendingAlerts.filter(
+    (alert) => getNoticeSeverity(alert) === 'ATENÇÃO'
+  ).length;
+
+  // A Central de Avisos não carrega invoices. Por isso ela atualiza apenas os
+  // sinais derivados de avisos nas estrelas já materializadas, preservando
+  // integralmente a pendência de NF gravada pelo último snapshot completo.
+  const stars = previousSnapshot.stars.map((star) => {
+    const empenho = empenhosById.get(star.id);
+    if (!empenho) return star;
+
+    return {
+      ...star,
+      supplier: empenho.supplier,
+      supplierKey: normalizeInicioSupplierKey(empenho),
+      classification: (empenho.classification || 'QR').trim().toUpperCase(),
+      status: empenho.status,
+      severity: getSeverity(empenho, alertsByEmpenho),
+      stage: getStage(empenho),
+      message: getMessage(empenho, alertsByEmpenho),
+    };
+  });
+
+  const content = {
+    metrics: previousSnapshot.metrics,
+    alerts: {
+      total: pendingAlerts.length,
+      critical: criticalAlerts,
+      attention: attentionAlerts,
+    },
+    receiving: previousSnapshot.receiving,
+    execution: previousSnapshot.execution,
+    classStats: previousSnapshot.classStats,
+    stars,
+  };
+
+  return {
+    snapshotVersion: INICIO_SNAPSHOT_VERSION,
+    workspaceId: previousSnapshot.workspaceId,
+    ug: previousSnapshot.ug,
     contentHash: stableHash(JSON.stringify(content)),
     generatedAt,
     generatedBy,

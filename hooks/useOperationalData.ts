@@ -83,8 +83,10 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     activeTab,
     empenhos,
     alerts,
+    invoices,
     empenhosReady: readiness.empenhos,
     alertsReady: readiness.alerts,
+    invoicesReady: readiness.invoices,
   });
 
   const activeOperationalDataReady =
