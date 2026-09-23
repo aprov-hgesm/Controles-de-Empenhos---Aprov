@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 
 import { EmprovexAuthLoading } from '../../components/auth/EmprovexAuthLoading';
@@ -12,6 +13,7 @@ import { canAccessWarehouseModule } from '../../lib/warehouse/featureFlag';
 type GateState = 'checking' | 'allowed' | 'denied';
 
 export default function WarehouseModulePage() {
+  const router = useRouter();
   const [gateState, setGateState] = useState<GateState>('checking');
 
   useEffect(() => {
@@ -20,7 +22,7 @@ export default function WarehouseModulePage() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
         if (active) setGateState('denied');
-        window.location.replace('/');
+        router.replace('/');
         return;
       }
 
@@ -30,7 +32,7 @@ export default function WarehouseModulePage() {
 
         if (!canAccessWarehouseModule(context)) {
           setGateState('denied');
-          window.location.replace('/');
+          router.replace('/');
           return;
         }
 
@@ -45,7 +47,7 @@ export default function WarehouseModulePage() {
 
         if (!response.ok) {
           setGateState('denied');
-          window.location.replace('/');
+          router.replace('/');
           return;
         }
 
@@ -53,7 +55,7 @@ export default function WarehouseModulePage() {
       } catch {
         if (!active) return;
         setGateState('denied');
-        window.location.replace('/');
+        router.replace('/');
       }
     });
 
@@ -61,7 +63,7 @@ export default function WarehouseModulePage() {
       active = false;
       unsubscribe();
     };
-  }, []);
+  }, [router]);
 
   if (gateState !== 'allowed') {
     return <EmprovexAuthLoading hasAuthenticatedIdentity={gateState === 'checking'} />;
