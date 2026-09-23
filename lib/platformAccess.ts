@@ -157,7 +157,8 @@ async function resolveAndBindExternalIdentity(
     if (signInProvider === 'custom') {
       const claimedSlot = sessionClaim(sessionClaims, 'emprovexSessionSlotId');
       if (
-        sessionClaim(sessionClaims, 'emprovexWorkspaceId') !== workspace.id
+        sessionClaim(sessionClaims, 'emprovexAccountEmail') !== normalizedEmail
+        || sessionClaim(sessionClaims, 'emprovexWorkspaceId') !== workspace.id
         || normalizeUnitUg(sessionClaim(sessionClaims, 'emprovexUg')) !== workspaceUg
         || sessionClaim(sessionClaims, 'emprovexSessionId').length <= 8
         || sessionClaim(sessionClaims, 'emprovexBrowserInstanceId').length <= 8
