@@ -43,7 +43,10 @@ test.after(() => {
 const materialId = 'mat_123e4567e89b12d3a456426614174000';
 
 async function sample(overrides = {}) {
-  const idempotencyKey = overrides.idempotencyKey || 'phase2:test:initial-balance';
+  const {
+    idempotencyKey = 'phase2:test:initial-balance',
+    ...movementOverrides
+  } = overrides;
   const id = await movement.createWarehouseMovementId('hgesm-aprov', idempotencyKey);
   return {
     schemaVersion: movement.WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
@@ -56,7 +59,7 @@ async function sample(overrides = {}) {
     idempotencyKeyHash: id.slice(4),
     reversesMovementId: null,
     note: null,
-    ...overrides,
+    ...movementOverrides,
   };
 }
 
