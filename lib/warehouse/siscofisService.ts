@@ -255,7 +255,7 @@ export async function loadWarehouseSiscofisContext(
 
   return {
     prompt: buildWarehouseSiscofisPrompt(scope.ug, materials),
-    hasMarcoZero: Boolean(marcoZero),
+    hasMarcoZero: marcoZero?.status === 'CONFIRMED',
     cutoffAt: settings?.cutoffAt || marcoZero?.cutoffAt || null,
     snapshots,
   };
@@ -373,7 +373,7 @@ export async function confirmWarehouseSiscofisImport(
 
   const settings = await getInvoiceSettings(workspaceId);
   const existingMarcoZero = await getMarcoZero(workspaceId);
-  const expectedKind = existingMarcoZero ? 'SNAPSHOT' : 'MARCO_ZERO';
+  const expectedKind = existingMarcoZero?.status === 'CONFIRMED' ? 'SNAPSHOT' : 'MARCO_ZERO';
 
   if (preview.kind !== expectedKind) {
     throw new Error('WAREHOUSE_SISCOFIS_PREVIEW_STALE');
