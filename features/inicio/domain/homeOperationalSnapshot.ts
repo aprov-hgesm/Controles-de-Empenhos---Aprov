@@ -365,6 +365,72 @@ export function buildInicioOperationalSnapshot({
   };
 }
 
+export function refreshInicioOperationalSnapshotAlerts({
+  previousSnapshot,
+  empenhos,
+  alerts,
+  generatedBy,
+  generatedAt = new Date().toISOString(),
+}: {
+  previousSnapshot: InicioOperationalSnapshot;
+  empenhos: Empenho[];
+  alerts: Alert[];
+  generatedBy: string;
+  generatedAt?: string;
+}): InicioOperationalSnapshot {
+  const alertsByEmpenho = buildAlertsByEmpenho(alerts);
+  const empenhosById = new Map(empenhos.map((empenho) => [empenho.id, empenho]));
+  const pendingAlerts = alerts.filter(isNoticePending);
+  const criticalAlerts = pendingAlerts.filter(
+    (alert) => getNoticeSeverity(alert) === 'CRÍTICO'
+  ).length;
+  const attentionAlerts = pendingAlerts.filter(
+    (alert) => getNoticeSeverity(alert) === 'ATENÇÃO'
+  ).length;
+
+  // A Central de Avisos não carrega invoices. Por isso ela atualiza apenas os
+  // sinais derivados de avisos nas estrelas já materializadas, preservando
+  // integralmente a pendência de NF gravada pelo último snapshot completo.
+  const stars = previousSnapshot.stars.map((star) => {
+    const empenho = empenhosById.get(star.id);
+    if (!empenho) return star;
+
+    return {
+      ...star,
+      supplier: empenho.supplier,
+      supplierKey: normalizeInicioSupplierKey(empenho),
+      classification: (empenho.classification || 'QR').trim().toUpperCase(),
+      status: empenho.status,
+      severity: getSeverity(empenho, alertsByEmpenho),
+      stage: getStage(empenho),
+      message: getMessage(empenho, alertsByEmpenho),
+    };
+  });
+
+  const content = {
+    metrics: previousSnapshot.metrics,
+    alerts: {
+      total: pendingAlerts.length,
+      critical: criticalAlerts,
+      attention: attentionAlerts,
+    },
+    receiving: previousSnapshot.receiving,
+    execution: previousSnapshot.execution,
+    classStats: previousSnapshot.classStats,
+    stars,
+  };
+
+  return {
+    snapshotVersion: INICIO_SNAPSHOT_VERSION,
+    workspaceId: previousSnapshot.workspaceId,
+    ug: previousSnapshot.ug,
+    contentHash: stableHash(JSON.stringify(content)),
+    generatedAt,
+    generatedBy,
+    ...content,
+  };
+}
+
 export function isInicioOperationalSnapshot(
   value: unknown,
   expectedWorkspaceId: string,
