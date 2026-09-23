@@ -61,7 +61,7 @@ Proteção contra duplicação de operações repetíveis.
 
 # NOVA SEQUÊNCIA DE DESENVOLVIMENTO
 
-## FASE 3 — Walking Skeleton do ADM Depósito
+## FASE 3 — Walking Skeleton do ADM Depósito — CONCLUÍDA
 
 Objetivo: criar o esqueleto completo do módulo antes de aprofundar as próximas funcionalidades.
 
@@ -83,7 +83,7 @@ Gate:
 - o esqueleto não cria segunda fonte de verdade para material, ledger ou saldo;
 - testes estruturais e build verdes.
 
-## FASE 4 — NF → Estoque
+## FASE 4 — NF → Estoque — CONCLUÍDA
 
 Blocos: DEP-3, DEP-3.1, DEP-3.2, DEP-3.3 e DEP-4.
 
@@ -98,7 +98,7 @@ Capacidade completa:
 
 Gate vertical: cadastrar, repetir, corrigir e estornar NF preservando ledger, saldo e histórico.
 
-## FASE 5 — SISCOFIS, Marco Zero e Conciliação
+## FASE 5 — SISCOFIS, Marco Zero e Conciliação — CONCLUÍDA
 
 Blocos: DEP-5, DEP-5.1, DEP-5.2, DEP-5.3, DEP-6, DEP-7, DEP-7.1, DEP-21, DEP-21.1, DEP-21.2 e DEP-21.3.
 
@@ -289,9 +289,9 @@ Não deixar para uma fase futura a integração essencial da capacidade atual, s
 FASE 0 Fundação e isolamento ✓
 → FASE 1 Material ✓
 → FASE 2 Ledger e saldos ✓
-→ FASE 3 Walking Skeleton
-→ FASE 4 NF → estoque
-→ FASE 5 SISCOFIS / Marco Zero
+→ FASE 3 Walking Skeleton ✓
+→ FASE 4 NF → estoque ✓
+→ FASE 5 SISCOFIS / Marco Zero ✓
 → FASE 6 Depósitos / localizações
 → FASE 7 Estoque operável
 → FASE 8 Saída / scanner

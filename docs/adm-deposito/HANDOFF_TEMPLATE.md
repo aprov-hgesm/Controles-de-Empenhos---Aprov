@@ -47,32 +47,43 @@ O template inicia a conversa; a fonte da verdade continua sendo a `main` e os do
 Se o texto do chat divergir deles, prevalecem GitHub e documentação versionada.
 
 
-## Estado corrente após a FASE 4
+## Estado corrente após a FASE 5
 
 Última fase concluída:
-- **FASE 4 — NF → Estoque**;
-- PR de implementação: **#167**;
-- decisão permanente adicionada: **D-033**.
+- **FASE 5 — SISCOFIS / Marco Zero / Conciliação**;
+- PR de implementação: **#171**;
+- decisão permanente adicionada: **D-036**;
+- contrato técnico: `docs/adm-deposito/PHASE_5_SISCOFIS.md`.
 
 Capacidades que o próximo chat deve considerar já existentes:
 - material canônico;
 - ledger append-only;
 - saldo materializado;
 - Walking Skeleton completo;
-- vínculo persistido NF → material → movimento → saldo;
-- idempotência de recebimento;
-- correção e exclusão por movimento compensatório;
-- cutoff de histórico;
-- leitura real de Estoque e Movimentações;
+- NF → material → movimento → saldo;
+- cutoff da integração NF → estoque;
+- prompt oficial para IA externa;
+- contrato `warehouse_siscofis_import_v1`;
+- validação rígida e preview antes da confirmação;
+- Marco Zero auditável por `INITIAL_BALANCE`;
+- recuperação idempotente de Marco Zero `APPLYING → CONFIRMED`;
+- contrato `warehouse_siscofis_snapshot_v1`;
+- snapshots posteriores somente para conciliação;
+- estados `MATCHED`, `DIVERGENT` e `UNRESOLVED`;
+- divergência sem autocorreção;
+- Firestore Rules próprias para snapshots;
 - isolamento founder-only e multitenancy preservado.
 
 Próxima fase oficial:
-- **FASE 5 — SISCOFIS / Marco Zero / Conciliação**.
+- **FASE 6 — Depósitos / Localizações / Transferências**.
 
-Regras adicionais para a FASE 5:
-- não criar fonte de verdade paralela ao ledger;
-- não fazer backfill silencioso do histórico;
-- não enfraquecer o cutoff estabelecido na FASE 4;
+Regras adicionais para a FASE 6:
+- preservar o ledger e o saldo existentes;
+- transferência interna deve mudar localização sem alterar o total da OM;
+- não transformar localização em uma segunda fonte de saldo;
+- preservar Marco Zero, snapshots e cutoff da FASE 5;
+- não usar divergência SISCOFIS para ajuste automático;
 - não liberar ADM Depósito para usuários externos;
-- não iniciar FASE 6 no mesmo chat;
+- não antecipar lotes/validade/FEFO da FASE 7;
+- não iniciar FASE 7 no mesmo chat;
 - reconciliar qualquer commit novo da `main` antes de editar código.

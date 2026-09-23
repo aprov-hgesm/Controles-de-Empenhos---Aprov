@@ -388,3 +388,30 @@ Consequências:
 - toda evidência manual deve ser tratada como pré-validação, sem mascarar falhas reais do CI.
 
 Documento global: `docs/DEVELOPMENT_CI_WORKFLOW.md`.
+
+## D-036 — SISCOFIS estabelece Marco Zero no ledger e depois opera somente por snapshots de conciliação
+
+A FASE 5 consolida a transição entre a realidade externa do SISCOFIS e o estoque operacional do EMPROVEX sem criar segunda fonte de verdade.
+
+Regras permanentes:
+- o primeiro SISCOFIS confirmado, enquanto não existir Marco Zero confirmado, representa o Marco Zero;
+- saldo inicial é registrado exclusivamente como movimento `INITIAL_BALANCE` no ledger da FASE 2;
+- saldo materializado nunca é escrito diretamente;
+- a importação possui hash determinístico e cada movimento inicial possui chave de idempotência estável;
+- o Marco Zero é auditável, não pode ser substituído por outra fonte e pode retomar uma aplicação interrompida sem duplicar movimentos;
+- o cutoff da integração NF → estoque é reutilizado; se ainda não existir, a confirmação do Marco Zero o estabelece no contrato oficial da FASE 4;
+- quando já existem saldos posteriores ao cutoff, a data-base do Marco Zero deve anteceder o dia do cutoff;
+- após o Marco Zero, todo novo relatório SISCOFIS é snapshot de comparação e não produz movimento de estoque;
+- divergência nunca gera autocorreção;
+- vínculo com material existente só é aceito por `materialId` canônico explícito e validado;
+- o prompt oficial pode fornecer um catálogo bounded de IDs à IA externa, mas o EMPROVEX não reintroduz matching textual implícito;
+- linha sem materialId no Marco Zero pode criar material canônico determinístico; linha sem materialId em snapshot posterior permanece não conciliada;
+- Número de Ficha SISCOFIS não integra o contrato inicial.
+
+Contratos:
+- importação: `warehouse_siscofis_import_v1`;
+- snapshot: `warehouse_siscofis_snapshot_v1`;
+- documento permanente do Marco Zero: `warehouse/{workspaceId}/siscofisSnapshots/marco-zero`;
+- snapshots posteriores: `warehouse/{workspaceId}/siscofisSnapshots/snapshot_<hash>`.
+
+Documento técnico: `docs/adm-deposito/PHASE_5_SISCOFIS.md`.

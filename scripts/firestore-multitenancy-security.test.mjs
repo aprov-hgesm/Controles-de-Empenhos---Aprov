@@ -3446,6 +3446,119 @@ async function main() {
     deleteDoc(driveRefA)
   );
 
+  console.log('\nFASE 5 — SISCOFIS / Marco Zero / Conciliação');
+
+  const siscofisMarcoZeroRef = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'siscofisSnapshots',
+    'marco-zero'
+  );
+  const siscofisBaseRow = {
+    rowId: 'linha-001',
+    materialId: canonicalMaterialId,
+    description: 'Arroz parboilizado',
+    unit: { code: 'kg', label: null },
+    siscofisQuantity: 12,
+    emprovexQuantity: 12,
+    projectedQuantity: 12,
+    difference: 0,
+    state: 'MATCHED',
+    createsMaterial: false,
+    issue: null,
+  };
+  const siscofisSummary = {
+    totalRows: 1,
+    matchedRows: 1,
+    unresolvedRows: 0,
+    divergentRows: 0,
+    createsMaterials: 0,
+  };
+  const siscofisApplying = {
+    schemaVersion: 'warehouse_siscofis_snapshot_v1',
+    id: 'marco-zero',
+    workspaceId: 'hgesm-aprov',
+    ug: '160416',
+    kind: 'MARCO_ZERO',
+    status: 'APPLYING',
+    sourceHash: 'd'.repeat(64),
+    importSchemaVersion: 'warehouse_siscofis_import_v1',
+    sourceLabel: 'Posição SISCOFIS 22/09/2026',
+    referenceDate: '2026-09-22',
+    cutoffAt: '2026-09-23T12:00:00.000Z',
+    actorUid: admin.user.uid,
+    rows: [siscofisBaseRow],
+    summary: siscofisSummary,
+    movementIds: [],
+    createdAt: serverTimestamp(),
+    confirmedAt: null,
+  };
+
+  await allowed('Fundador cria Marco Zero SISCOFIS em estado APPLYING', () =>
+    setDoc(siscofisMarcoZeroRef, siscofisApplying)
+  );
+  await allowed('Fundador conclui Marco Zero sem alterar identidade da importação', () =>
+    updateDoc(siscofisMarcoZeroRef, {
+      status: 'CONFIRMED',
+      movementIds: ['mov_' + 'e'.repeat(64)],
+      confirmedAt: serverTimestamp(),
+    })
+  );
+  await denied('Marco Zero confirmado não pode voltar a ser alterado', () =>
+    updateDoc(siscofisMarcoZeroRef, {
+      status: 'APPLYING',
+      confirmedAt: null,
+    })
+  );
+  await denied('Snapshot SISCOFIS não pode ser excluído', () =>
+    deleteDoc(siscofisMarcoZeroRef)
+  );
+  await denied('Setor externo não cria snapshot SISCOFIS nem no próprio workspace', () =>
+    setDoc(
+      doc(
+        sessionA.db,
+        'warehouse',
+        'workspace-a',
+        'siscofisSnapshots',
+        'snapshot_' + 'a'.repeat(32)
+      ),
+      {
+        ...siscofisApplying,
+        id: 'snapshot_' + 'a'.repeat(32),
+        workspaceId: 'workspace-a',
+        ug: '123456',
+        kind: 'SNAPSHOT',
+        status: 'CONFIRMED',
+        actorUid: sessionA.user.uid,
+        movementIds: [],
+        createdAt: serverTimestamp(),
+        confirmedAt: serverTimestamp(),
+      }
+    )
+  );
+  await denied('Snapshot SISCOFIS rejeita campo fora do contrato', () =>
+    setDoc(
+      doc(
+        admin.db,
+        'warehouse',
+        'hgesm-aprov',
+        'siscofisSnapshots',
+        'snapshot_' + 'b'.repeat(32)
+      ),
+      {
+        ...siscofisApplying,
+        id: 'snapshot_' + 'b'.repeat(32),
+        kind: 'SNAPSHOT',
+        status: 'CONFIRMED',
+        movementIds: [],
+        unexpectedField: true,
+        createdAt: serverTimestamp(),
+        confirmedAt: serverTimestamp(),
+      }
+    )
+  );
+
   console.log('\nCiclo de vida administrativo');
   await denied('Admin não pode suspender somente o workspace', () =>
     updateDoc(doc(admin.db, 'workspaces', 'workspace-lifecycle'), {
