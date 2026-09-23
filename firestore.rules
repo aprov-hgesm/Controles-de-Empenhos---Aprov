@@ -174,12 +174,12 @@ service cloud.firestore {
         && account.firebaseUid == request.auth.uid;
     }
 
-    // Rollout em duas etapas: o commit de compatibilidade mantém false para que
-    // clientes antigos continuem trabalhando enquanto o novo cliente troca
-    // silenciosamente password -> custom. O commit final altera somente este
-    // retorno para true, tornando a identidade exata da sessão obrigatória.
+    // Cutover final: clientes operacionais de setor precisam apresentar a
+    // credencial custom vinculada ao slot/sessão. Para rollback controlado,
+    // retornar este gate a false restaura o modo de compatibilidade registrado
+    // no commit 5e1778657bc8d52ed21244b7f1fdfea6d61816cc.
     function requireBoundSessionAuthorization() {
-      return false;
+      return true;
     }
 
     function isValidSessionSlotId(slotId) {
