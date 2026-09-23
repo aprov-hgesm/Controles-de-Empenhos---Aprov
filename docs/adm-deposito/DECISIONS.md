@@ -497,4 +497,3 @@ Regras permanentes:
 - a tela Estoque não carrega o ledger global para montar uma listagem simples.
 
 Documento técnico: `docs/adm-deposito/PHASE_7_STOCK_LOTS_FEFO.md`.
-
