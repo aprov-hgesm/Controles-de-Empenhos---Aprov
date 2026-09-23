@@ -11,6 +11,7 @@ import { WAREHOUSE_DOMAIN_COLLECTIONS, WAREHOUSE_NAMESPACE_ROOT } from '../../..
 import { WAREHOUSE_SISCOFIS_IMPORT_SCHEMA_VERSION, WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION, type WarehouseSiscofisIssue, type WarehouseSiscofisPreview } from '../../../lib/warehouse/siscofis';
 import { confirmWarehouseSiscofisImport, loadWarehouseSiscofisContext, prepareWarehouseSiscofisImport, type WarehouseSiscofisContext } from '../../../lib/warehouse/siscofisService';
 import type { WarehouseSectionId } from '../navigation';
+import { WarehouseLocationsOperational } from './WarehouseLocationsOperational';
 
 function FutureNotice({ phase, children }: { phase: string; children: string }) {
   return (
@@ -194,7 +195,7 @@ function StockContent({ data }: { data: WarehousePhase4Data }) {
         </div>
       )}
 
-      <FutureNotice phase="FASE 7">Pesquisa avançada, lotes, validade, FEFO, localização e ficha operacional do material continuam reservados para a FASE 7.</FutureNotice>
+      <FutureNotice phase="FASE 7">Pesquisa avançada, lotes, validade, FEFO e ficha operacional do material continuam reservados para a FASE 7. A distribuição física já está disponível em Localizações.</FutureNotice>
     </div>
   );
 }
@@ -224,6 +225,8 @@ function MovementsContent({ data }: { data: WarehousePhase4Data }) {
           {data.movements.map(({ movement, createdAt }) => {
             const material = materialById.get(movement.materialId);
             const source = movement.source;
+            const invoiceSource = source?.kind === 'INVOICE' ? source : null;
+            const transferSource = source?.kind === 'LOCATION_TRANSFER' ? source : null;
             const dateLabel = createdAt
               ? new Date(createdAt).toLocaleString('pt-BR')
               : 'horário pendente';
@@ -233,15 +236,20 @@ function MovementsContent({ data }: { data: WarehousePhase4Data }) {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <code className="rounded-lg bg-blue-400/[0.08] px-2 py-1 text-[10px] font-bold text-blue-200">{movement.type}</code>
-                      {source && <span className="rounded-lg bg-emerald-400/[0.06] px-2 py-1 text-[10px] font-bold text-emerald-200">NF {source.invoiceId}</span>}
+                      {invoiceSource && <span className="rounded-lg bg-emerald-400/[0.06] px-2 py-1 text-[10px] font-bold text-emerald-200">NF {invoiceSource.invoiceId}</span>}
+                      {transferSource && <span className="rounded-lg bg-blue-400/[0.08] px-2 py-1 text-[10px] font-bold text-blue-200">transferência interna</span>}
                     </div>
                     <p className="mt-3 truncate text-sm font-bold text-slate-200">{material?.description || movement.materialId}</p>
-                    {source ? (
+                    {invoiceSource ? (
                       <p className="mt-2 text-xs leading-5 text-slate-500">
-                        Empenho {source.empenhoId} · {source.supplier} · item(ns) {source.itemIds.join(', ')}
+                        Empenho {invoiceSource.empenhoId} · {invoiceSource.supplier} · item(ns) {invoiceSource.itemIds.join(', ')}
+                      </p>
+                    ) : transferSource ? (
+                      <p className="mt-2 text-xs leading-5 text-slate-500">
+                        {transferSource.quantity.toLocaleString('pt-BR', { maximumFractionDigits: 6 })} unidade(s) redistribuída(s) sem alterar o saldo total da OM.
                       </p>
                     ) : (
-                      <p className="mt-2 text-xs leading-5 text-slate-600">{movement.note || 'Movimento sem origem de NF.'}</p>
+                      <p className="mt-2 text-xs leading-5 text-slate-600">{movement.note || 'Movimento sem origem estruturada.'}</p>
                     )}
                   </div>
                   <div className="shrink-0 text-left sm:text-right">
@@ -258,21 +266,7 @@ function MovementsContent({ data }: { data: WarehousePhase4Data }) {
         </div>
       )}
 
-      <FutureNotice phase="FASES 6–10">Transferências, saídas, localização, inventário e demais movimentos operacionais continuam nas fases previstas no roadmap.</FutureNotice>
-    </div>
-  );
-}
-
-function LocationsContent() {
-  return (
-    <div className="mt-6">
-      <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-5">
-        <div className="flex items-center gap-2 text-slate-300"><MapPinned className="h-4 w-4 text-blue-200" aria-hidden="true" /><p className="text-xs font-bold">Modelo lógico previsto</p></div>
-        <div className="mt-5 flex flex-wrap items-center gap-2 text-sm font-bold text-slate-300">
-          <span className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2">Depósito</span><ArrowRight className="h-4 w-4 text-slate-600" aria-hidden="true" /><span className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2">Local</span><ArrowRight className="h-4 w-4 text-slate-600" aria-hidden="true" /><span className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2">Subposição opcional</span>
-        </div>
-      </div>
-      <div className="mt-5"><FutureNotice phase="FASE 6">Esta capacidade será disponibilizada em uma fase posterior. O Walking Skeleton não cria CRUD, documentos de localização ou transferências antecipadamente.</FutureNotice></div>
+      <FutureNotice phase="FASES 7–10">Transferências internas e localização já estão operacionais na FASE 6. Lotes, saídas expressas e inventário continuam nas fases previstas no roadmap.</FutureNotice>
     </div>
   );
 }
@@ -525,7 +519,7 @@ export function WarehouseSectionContent({ section, workspaceId }: { section: War
     case 'overview': return <OverviewContent />;
     case 'stock': return <StockContent data={phase4Data} />;
     case 'movements': return <MovementsContent data={phase4Data} />;
-    case 'locations': return <LocationsContent />;
+    case 'locations': return <WarehouseLocationsOperational workspaceId={workspaceId} />;
     case 'warehouseView': return <WarehouseViewContent />;
     case 'inventory': return <InventoryContent />;
     case 'siscofis': return <SiscofisContent workspaceId={workspaceId} />;

@@ -555,19 +555,29 @@ async function main() {
 
   console.log('\nFASE 0 — isolamento do ADM Depósito');
 
+  const phaseZeroDepotId = 'dep_' + '0'.repeat(32);
   const founderWarehouseProbe = doc(
     admin.db,
     'warehouse',
     'hgesm-aprov',
     'depots',
-    'phase-zero-probe'
+    phaseZeroDepotId
   );
 
   await allowed('Fundador grava no namespace ADM Depósito', () =>
     setDoc(founderWarehouseProbe, {
-      phase: 0,
+      schemaVersion: 'warehouse_depot_v1',
+      id: phaseZeroDepotId,
       workspaceId: 'hgesm-aprov',
-      marker: 'founder-only',
+      ug: '160416',
+      code: 'DEP-00',
+      name: 'Depósito de prova da fundação',
+      description: null,
+      status: 'active',
+      createdBy: admin.user.uid,
+      updatedBy: admin.user.uid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     })
   );
   await allowed('Fundador lê o namespace ADM Depósito', () =>
@@ -583,7 +593,7 @@ async function main() {
         'warehouse',
         'hgesm-aprov',
         'depots',
-        'phase-zero-probe'
+        phaseZeroDepotId
       )
     )
   );
@@ -606,7 +616,7 @@ async function main() {
         'warehouse',
         'hgesm-aprov',
         'depots',
-        'phase-zero-probe'
+        phaseZeroDepotId
       )
     )
   );
@@ -1095,6 +1105,341 @@ async function main() {
         phase4Movement1Id
       )
     )
+  );
+
+  console.log('\nFASE 6 — Depósitos / Localizações / Transferências');
+
+  const phase6DepotId = 'dep_' + '6'.repeat(32);
+  const phase6LocationId = 'loc_' + '6'.repeat(32);
+  const phase6SubpositionId = 'sub_' + '6'.repeat(32);
+  const phase6DepotRef = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'depots',
+    phase6DepotId
+  );
+  const phase6LocationRef = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'locations',
+    phase6LocationId
+  );
+  const phase6SubpositionRef = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'locations',
+    phase6SubpositionId
+  );
+
+  await allowed('Fundador cria depósito da FASE 6', () =>
+    setDoc(phase6DepotRef, {
+      schemaVersion: 'warehouse_depot_v1',
+      id: phase6DepotId,
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      code: 'DEP-06',
+      name: 'Depósito FASE 6',
+      description: 'Estrutura física operacional',
+      status: 'active',
+      createdBy: admin.user.uid,
+      updatedBy: admin.user.uid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await allowed('Fundador cria local dentro do depósito da FASE 6', () =>
+    setDoc(phase6LocationRef, {
+      schemaVersion: 'warehouse_location_v1',
+      id: phase6LocationId,
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      depotId: phase6DepotId,
+      kind: 'LOCAL',
+      parentLocationId: null,
+      code: 'LOC-06',
+      name: 'Local FASE 6',
+      description: null,
+      status: 'active',
+      createdBy: admin.user.uid,
+      updatedBy: admin.user.uid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await allowed('Fundador cria subposição opcional da FASE 6', () =>
+    setDoc(phase6SubpositionRef, {
+      schemaVersion: 'warehouse_location_v1',
+      id: phase6SubpositionId,
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      depotId: phase6DepotId,
+      kind: 'SUBPOSITION',
+      parentLocationId: phase6LocationId,
+      code: 'SUB-06',
+      name: 'Subposição FASE 6',
+      description: null,
+      status: 'active',
+      createdBy: admin.user.uid,
+      updatedBy: admin.user.uid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await allowed('Fundador edita nome sem alterar identidade lógica do depósito', () =>
+    updateDoc(phase6DepotRef, {
+      name: 'Depósito FASE 6 renomeado',
+      updatedBy: admin.user.uid,
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await denied('Depósito da FASE 6 não aceita UG adulterada', () =>
+    setDoc(
+      doc(admin.db, 'warehouse', 'hgesm-aprov', 'depots', 'dep_' + 'a'.repeat(32)),
+      {
+        schemaVersion: 'warehouse_depot_v1',
+        id: 'dep_' + 'a'.repeat(32),
+        workspaceId: 'hgesm-aprov',
+        ug: '999999',
+        code: 'DEP-X',
+        name: 'Depósito adulterado',
+        description: null,
+        status: 'active',
+        createdBy: admin.user.uid,
+        updatedBy: admin.user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+    )
+  );
+
+  await denied('Setor externo continua sem acesso às localizações da FASE 6', () =>
+    getDoc(
+      doc(
+        sessionA.db,
+        'warehouse',
+        'hgesm-aprov',
+        'locations',
+        phase6LocationId
+      )
+    )
+  );
+
+  await denied('Depósito da FASE 6 não pode ser excluído fisicamente', () =>
+    deleteDoc(phase6DepotRef)
+  );
+  await denied('Localização da FASE 6 não pode ser excluída fisicamente', () =>
+    deleteDoc(phase6LocationRef)
+  );
+
+  const phase6TransferMovementId = 'mov_' + '7'.repeat(64);
+  const phase6FromBalanceId = 'locbal_1f4db6d13593019e244c182002ecfbbb2764d28ce246c65fa31daa5bcb60c43f';
+  const phase6ToBalanceId = 'locbal_44d9ac45e4e3ccec26b4bd88bb4d76964dbeb04f4716483f486329c99e96d722';
+  const phase6FromBalanceRef = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'locationBalances',
+    phase6FromBalanceId
+  );
+  const phase6ToBalanceRef = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'locationBalances',
+    phase6ToBalanceId
+  );
+
+  await allowed('Transferência interna mantém saldo total e altera distribuição física', async () => {
+    const batch = writeBatch(admin.db);
+    batch.set(
+      doc(
+        admin.db,
+        'warehouse',
+        'hgesm-aprov',
+        'movements',
+        phase6TransferMovementId
+      ),
+      {
+        schemaVersion: 'warehouse_movement_v1',
+        id: phase6TransferMovementId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        type: 'TRANSFER',
+        quantityDelta: 0,
+        idempotencyKeyHash: '7'.repeat(64),
+        reversesMovementId: null,
+        note: 'Transferência operacional FASE 6',
+        source: {
+          kind: 'LOCATION_TRANSFER',
+          actorUid: admin.user.uid,
+          quantity: 3,
+          from: { kind: 'UNASSIGNED' },
+          to: {
+            kind: 'LOCATION',
+            depotId: phase6DepotId,
+            locationId: phase6LocationId,
+            subpositionId: null,
+          },
+          fromBalanceId: phase6FromBalanceId,
+          toBalanceId: phase6ToBalanceId,
+        },
+        createdAt: serverTimestamp(),
+      }
+    );
+    batch.set(founderBalance, {
+      schemaVersion: 'warehouse_balance_v1',
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: canonicalMaterialId,
+      quantity: 8,
+      revision: 3,
+      lastMovementId: phase6TransferMovementId,
+      updatedAt: serverTimestamp(),
+    });
+    batch.set(phase6FromBalanceRef, {
+      schemaVersion: 'warehouse_location_balance_v1',
+      id: phase6FromBalanceId,
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: canonicalMaterialId,
+      position: { kind: 'UNASSIGNED' },
+      quantity: 5,
+      revision: 1,
+      lastMovementId: phase6TransferMovementId,
+      updatedAt: serverTimestamp(),
+    });
+    batch.set(phase6ToBalanceRef, {
+      schemaVersion: 'warehouse_location_balance_v1',
+      id: phase6ToBalanceId,
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: canonicalMaterialId,
+      position: {
+        kind: 'LOCATION',
+        depotId: phase6DepotId,
+        locationId: phase6LocationId,
+        subpositionId: null,
+      },
+      quantity: 3,
+      revision: 1,
+      lastMovementId: phase6TransferMovementId,
+      updatedAt: serverTimestamp(),
+    });
+    return batch.commit();
+  });
+
+  const phase6AggregateAfter = await getDoc(founderBalance);
+  const phase6OriginAfter = await getDoc(phase6FromBalanceRef);
+  const phase6DestinationAfter = await getDoc(phase6ToBalanceRef);
+  assert.equal(phase6AggregateAfter.data().quantity, 8);
+  assert.equal(phase6OriginAfter.data().quantity, 5);
+  assert.equal(phase6DestinationAfter.data().quantity, 3);
+
+  await denied('Projeção física não aceita gravação avulsa sem movimento novo', () =>
+    updateDoc(phase6ToBalanceRef, {
+      quantity: 99,
+      revision: 2,
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await allowed('Fundador inativa local sem apagá-lo', () =>
+    updateDoc(phase6LocationRef, {
+      status: 'inactive',
+      updatedBy: admin.user.uid,
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  const phase6InactiveTransferId = 'mov_' + '9'.repeat(64);
+  await denied('Local inativo não pode receber transferência', async () => {
+    const batch = writeBatch(admin.db);
+    batch.set(
+      doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase6InactiveTransferId),
+      {
+        schemaVersion: 'warehouse_movement_v1',
+        id: phase6InactiveTransferId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        type: 'TRANSFER',
+        quantityDelta: 0,
+        idempotencyKeyHash: '9'.repeat(64),
+        reversesMovementId: null,
+        note: null,
+        source: {
+          kind: 'LOCATION_TRANSFER',
+          actorUid: admin.user.uid,
+          quantity: 1,
+          from: { kind: 'UNASSIGNED' },
+          to: {
+            kind: 'LOCATION',
+            depotId: phase6DepotId,
+            locationId: phase6LocationId,
+            subpositionId: null,
+          },
+          fromBalanceId: phase6FromBalanceId,
+          toBalanceId: phase6ToBalanceId,
+        },
+        createdAt: serverTimestamp(),
+      }
+    );
+    batch.set(founderBalance, {
+      schemaVersion: 'warehouse_balance_v1',
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: canonicalMaterialId,
+      quantity: 8,
+      revision: 4,
+      lastMovementId: phase6InactiveTransferId,
+      updatedAt: serverTimestamp(),
+    });
+    batch.set(phase6FromBalanceRef, {
+      schemaVersion: 'warehouse_location_balance_v1',
+      id: phase6FromBalanceId,
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: canonicalMaterialId,
+      position: { kind: 'UNASSIGNED' },
+      quantity: 4,
+      revision: 2,
+      lastMovementId: phase6InactiveTransferId,
+      updatedAt: serverTimestamp(),
+    });
+    batch.set(phase6ToBalanceRef, {
+      schemaVersion: 'warehouse_location_balance_v1',
+      id: phase6ToBalanceId,
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: canonicalMaterialId,
+      position: {
+        kind: 'LOCATION',
+        depotId: phase6DepotId,
+        locationId: phase6LocationId,
+        subpositionId: null,
+      },
+      quantity: 4,
+      revision: 2,
+      lastMovementId: phase6InactiveTransferId,
+      updatedAt: serverTimestamp(),
+    });
+    return batch.commit();
+  });
+
+  await allowed('Fundador reativa local para uso posterior', () =>
+    updateDoc(phase6LocationRef, {
+      status: 'active',
+      updatedBy: admin.user.uid,
+      updatedAt: serverTimestamp(),
+    })
   );
 
   console.log('Isolamento A ↔ B');

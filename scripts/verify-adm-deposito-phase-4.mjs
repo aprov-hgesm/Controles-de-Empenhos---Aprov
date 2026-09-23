@@ -75,7 +75,7 @@ for (const marker of [
 }
 
 for (const marker of [
-  'function validWarehouseMovementSource(source)',
+  'function validWarehouseMovementSource(workspaceId, type, source)',
   "source.action in ['ENTRY', 'CORRECTION', 'DELETE']",
   'source.actorUid == request.auth.uid',
   'function validWarehouseInvoiceIntegrationSettings(workspaceId, settingId)',

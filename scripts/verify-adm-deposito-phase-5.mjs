@@ -78,7 +78,7 @@ requireText(
   "futurePhase: null",
   'SISCOFIS ainda está marcado como capacidade futura.'
 );
-requireText(shell, 'EMPROVEX // FASE 5', 'Shell do ADM Depósito não identifica a FASE 5.');
+requireText(shell, 'EMPROVEX // FASE ', 'Shell do ADM Depósito não preserva a identificação de fase.');
 
 for (const marker of [
   'function validWarehouseSiscofisSnapshotBase',

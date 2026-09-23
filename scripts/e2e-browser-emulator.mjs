@@ -56,6 +56,7 @@ const server = spawn(
       ...process.env,
       NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1',
       NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: 'demo-emprovex-security',
+      EMPROVEX_E2E_SERVER_AUTH: '1',
       NEXT_TELEMETRY_DISABLED: '1',
       // O Playwright cria traces/resultados dentro do workspace durante a execução.
       // Sem isso, o watcher do Next dev interpreta esses arquivos como mudanças e

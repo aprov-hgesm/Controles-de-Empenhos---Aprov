@@ -28,6 +28,13 @@ import {
   type WarehouseMovementSource,
   type WarehouseMovementType,
 } from './movement';
+import {
+  applyWarehouseLocationDelta,
+  createWarehouseLocationBalanceId,
+  validateWarehouseLocationBalance,
+  type WarehouseLocationBalance,
+  type WarehouseStockPosition,
+} from './location';
 import { warehouseDocumentPath } from './namespace';
 
 export interface ApplyWarehouseMovementInput {
@@ -136,6 +143,35 @@ function parseBalance(
   return result.data;
 }
 
+function parseLocationBalance(
+  workspaceId: string,
+  locationBalanceId: string,
+  data: Record<string, unknown>
+): WarehouseLocationBalance {
+  const result = validateWarehouseLocationBalance(
+    {
+      schemaVersion: data.schemaVersion,
+      id: locationBalanceId,
+      workspaceId: data.workspaceId,
+      ug: data.ug,
+      materialId: data.materialId,
+      position: data.position,
+      quantity: data.quantity,
+      revision: data.revision,
+      lastMovementId: data.lastMovementId,
+    },
+    { expectedWorkspaceId: workspaceId }
+  );
+  if (!result.ok) {
+    throw new Error(
+      'WAREHOUSE_INVALID_LOCATION_BALANCE: ' +
+      result.issues.map((item) => item.path + ': ' + item.message).join('; ')
+    );
+  }
+  return result.data;
+}
+
+
 export async function getWarehouseBalance(
   workspaceId: string,
   materialId: string
@@ -241,6 +277,9 @@ export async function applyWarehouseMovement(
   input: ApplyWarehouseMovementInput
 ): Promise<ApplyWarehouseMovementResult> {
   const normalizedWorkspaceId = normalizeRequiredWorkspace(workspaceId);
+  if (input.type === 'TRANSFER') {
+    throw new Error('WAREHOUSE_TRANSFER_REQUIRES_LOCATION_FLOW');
+  }
   const movementId = await createWarehouseMovementId(
     normalizedWorkspaceId,
     input.idempotencyKey
@@ -269,6 +308,17 @@ export async function applyWarehouseMovement(
         input.reversesMovementId
       )
     : null;
+  const unassignedPosition: WarehouseStockPosition = { kind: 'UNASSIGNED' };
+  const unassignedBalanceId = await createWarehouseLocationBalanceId(
+    normalizedWorkspaceId,
+    input.materialId,
+    unassignedPosition
+  );
+  const unassignedBalancePath = warehouseDocumentPath(
+    normalizedWorkspaceId,
+    'locationBalances',
+    unassignedBalanceId
+  );
 
   try {
     return await runTransaction(db, async (transaction) => {
@@ -276,10 +326,12 @@ export async function applyWarehouseMovement(
       const movementRef = doc(db, movementPath);
       const balanceRef = doc(db, balancePath);
       const reversalRef = reversalPath ? doc(db, reversalPath) : null;
+      const unassignedBalanceRef = doc(db, unassignedBalancePath);
 
       const materialSnapshot = await transaction.get(materialRef);
       const existingMovementSnapshot = await transaction.get(movementRef);
       const balanceSnapshot = await transaction.get(balanceRef);
+      const unassignedBalanceSnapshot = await transaction.get(unassignedBalanceRef);
       const reversedSnapshot = reversalRef
         ? await transaction.get(reversalRef)
         : null;
@@ -374,6 +426,26 @@ export async function applyWarehouseMovement(
       }
 
       const nextBalance = applyWarehouseMovementToBalance(candidate, currentBalance);
+      const currentUnassignedBalance = unassignedBalanceSnapshot.exists()
+        ? parseLocationBalance(
+            normalizedWorkspaceId,
+            unassignedBalanceSnapshot.id,
+            unassignedBalanceSnapshot.data() as Record<string, unknown>
+          )
+        : null;
+      const nextUnassignedBalance = applyWarehouseLocationDelta(
+        currentUnassignedBalance,
+        {
+          id: unassignedBalanceId,
+          workspaceId: normalizedWorkspaceId,
+          ug: material.ug,
+          materialId: material.id,
+          position: unassignedPosition,
+          quantityDelta: candidate.quantityDelta,
+          movementId: candidate.id,
+          initialQuantity: currentUnassignedBalance ? 0 : (currentBalance?.quantity || 0),
+        }
+      );
 
       transaction.set(movementRef, {
         ...candidate,
@@ -381,6 +453,10 @@ export async function applyWarehouseMovement(
       });
       transaction.set(balanceRef, {
         ...nextBalance,
+        updatedAt: serverTimestamp(),
+      });
+      transaction.set(unassignedBalanceRef, {
+        ...nextUnassignedBalance,
         updatedAt: serverTimestamp(),
       });
 
