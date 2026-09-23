@@ -437,8 +437,6 @@ service cloud.firestore {
           && source.toBalanceId is string
           && source.toBalanceId.matches('^locbal_[a-f0-9]{64}$')
           && source.fromBalanceId != source.toBalanceId
-          && warehousePositionActive(workspaceId, source.from, request.resource.data.ug)
-          && warehousePositionActive(workspaceId, source.to, request.resource.data.ug)
         );
     }
 
@@ -665,20 +663,14 @@ service cloud.firestore {
       let toAfter = getAfter(
         /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(source.toBalanceId)
       ).data;
-      return movement.type == 'TRANSFER'
-        && source.kind == 'LOCATION_TRANSFER'
-        && existsAfter(
+      return existsAfter(
           /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(source.fromBalanceId)
         )
         && existsAfter(
           /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(source.toBalanceId)
         )
         && fromAfter.lastMovementId == movementId
-        && toAfter.lastMovementId == movementId
-        && fromAfter.materialId == movement.materialId
-        && toAfter.materialId == movement.materialId
-        && fromAfter.position == source.from
-        && toAfter.position == source.to;
+        && toAfter.lastMovementId == movementId;
     }
 
     function warehouseLocationBalanceMatchesTransfer(workspaceId, locationBalanceId, movement) {
@@ -3070,6 +3062,11 @@ service cloud.firestore {
         allow read: if canAccessWarehouseModule(workspaceId);
         allow create, update: if canAccessWarehouseModule(workspaceId)
           && validWarehouseLocationBalanceDocument(workspaceId, locationBalanceId)
+          && warehousePositionActive(
+            workspaceId,
+            request.resource.data.position,
+            request.resource.data.ug
+          )
           && warehouseLocationBalanceWriteBackedByNewMovement(workspaceId, locationBalanceId);
         allow delete: if false;
       }
