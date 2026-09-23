@@ -2,407 +2,316 @@
 
 Este é o passo a passo oficial do módulo ADM Depósito / Área Logística do EMPROVEX.
 
-Total planejado:
-- 21 fases de desenvolvimento/validação do fundador: FASE 0 a FASE 20;
-- 1 fase posterior de expansão externa: FASE 21;
-- blocos DEP-0 a DEP-37;
-- blocos EXT-1 a EXT-6.
+## Estratégia vigente — Roadmap V2
 
-## FASE 0 — Fundação e isolamento
+A partir do fechamento da FASE 2, o desenvolvimento deixa de avançar por microcamadas horizontais e passa a seguir um modelo híbrido:
+
+**Fundação concluída → Walking Skeleton → fatias verticais completas → integração progressiva → hardening → expansão externa.**
+
+Objetivos da mudança:
+- reduzir retrabalho entre telas, domínio e persistência;
+- entregar capacidades utilizáveis ao fim de cada fase;
+- integrar dados progressivamente, em vez de adiar integrações para o final;
+- preservar contratos canônicos já concluídos;
+- diminuir a quantidade de fases futuras sem remover requisitos funcionais.
+
+Os blocos DEP e EXT continuam sendo os requisitos oficiais. O que muda é o agrupamento e a ordem de execução.
+
+Total vigente:
+- FASES 0 a 2: concluídas e preservadas como histórico;
+- FASES 3 a 13: desenvolvimento e validação do piloto fundador;
+- FASE 14: expansão externa futura;
+- blocos DEP-0 a DEP-37 preservados;
+- blocos EXT-1 a EXT-6 preservados.
+
+---
+
+## FASE 0 — Fundação e isolamento — CONCLUÍDA
 
 ### DEP-0 — Feature flag exclusiva da conta fundadora
-- criar `warehouseModuleEnabled`;
-- liberar inicialmente apenas para a conta fundadora;
-- proteger sidebar, rotas, APIs e dados;
-- acesso externo direto deve ser bloqueado.
+- `warehouseModuleEnabled`;
+- sidebar, rotas, APIs e dados protegidos;
+- acesso externo direto bloqueado.
 
 ### DEP-0.1 — Namespace próprio do módulo
-Definir domínio separado para estoque, depósitos, localizações, movimentos, lotes, inventários e snapshots SISCOFIS.
+Domínio separado para estoque, depósitos, localizações, movimentos, lotes, inventários e snapshots.
 
 Gate: usuário externo não vê nem acessa nenhuma funcionalidade logística.
 
-## FASE 1 — Fundação do material
+## FASE 1 — Fundação do material — CONCLUÍDA
 
 ### DEP-1 — Modelo canônico de material
-- identidade interna de material;
-- descrição principal;
-- aliases;
-- unidade;
-- status;
-- workspace/UG.
+Identidade interna, descrição, aliases, unidade, status e workspace/UG.
 
 ### DEP-1.1 — Unidades e conversões
-Suportar unidade, kg, g, L, mL, pacote, caixa, fardo e outras apresentações necessárias.
+Suporte às unidades e apresentações necessárias ao domínio.
 
-## FASE 2 — Ledger e saldos
+## FASE 2 — Ledger e saldos — CONCLUÍDA
 
 ### DEP-2 — Ledger de movimentações
-Tipos iniciais:
-- INITIAL_BALANCE;
-- INVOICE_ENTRY;
-- OUTBOUND;
-- TRANSFER;
-- INVENTORY_ADJUSTMENT;
-- INVOICE_CORRECTION;
-- REVERSAL.
+Tipos iniciais: INITIAL_BALANCE, INVOICE_ENTRY, OUTBOUND, TRANSFER, INVENTORY_ADJUSTMENT, INVOICE_CORRECTION e REVERSAL.
 
 ### DEP-2.1 — Saldo agregado
-Criar saldo materializado para leitura rápida sem perder o ledger auditável.
+Saldo materializado para leitura rápida sem perder o ledger auditável.
 
 ### DEP-2.2 — Idempotência
-Evitar duplicação em NF→estoque e demais operações repetíveis.
+Proteção contra duplicação de operações repetíveis.
 
-## FASE 3 — Nota Fiscal → estoque
+---
 
-### DEP-3 — Entrada automática pela NF
-NF cadastrada gera estoque imediatamente.
+# NOVA SEQUÊNCIA DE DESENVOLVIMENTO
 
-### DEP-3.1 — Ligação permanente NF ↔ estoque
-Guardar `sourceType`, `sourceId` e `sourceItemId`.
+## FASE 3 — Walking Skeleton do ADM Depósito
 
-### DEP-3.2 — Alterações de NF
-Usar movimentos compensatórios.
+Objetivo: criar o esqueleto completo do módulo antes de aprofundar as próximas funcionalidades.
 
-### DEP-3.3 — Exclusão/estorno controlado
-Nunca destruir histórico silenciosamente.
+Esta fase é transversal e não substitui nem renumera blocos DEP.
 
-### DEP-4 — Data de ativação logística
-Definir cutoff por workspace/UG para evitar duplicação de histórico.
+Entregas:
+- arquitetura de navegação interna do ADM Depósito;
+- superfícies-base para Visão Geral, Estoque, Movimentações, Localizações, Visão do Depósito, Inventário, SISCOFIS/Conciliação, Entregas e Configurações;
+- rotas e estados vazios consistentes;
+- contratos de integração entre UI, domínio e repositories;
+- fronteiras claras entre módulos;
+- carregamento e erros padronizados;
+- preservação da feature flag e do isolamento founder-only;
+- nenhum comportamento funcional futuro deve ser simulado como concluído.
+
+Gate:
+- todas as superfícies estruturais abrem sem regressão;
+- usuário externo continua sem acesso;
+- o esqueleto não cria segunda fonte de verdade para material, ledger ou saldo;
+- testes estruturais e build verdes.
 
-## FASE 4 — SISCOFIS e Marco Zero
+## FASE 4 — NF → Estoque
 
-### DEP-5 — Prompt oficial SISCOFIS
-EMPROVEX gera prompt; IA permanece externa.
+Blocos: DEP-3, DEP-3.1, DEP-3.2, DEP-3.3 e DEP-4.
 
-### DEP-5.1 — Contrato JSON
-Schema oficial versionado, sem Número de Ficha por padrão.
+Capacidade completa:
+- NF cadastrada gera INVOICE_ENTRY no ledger;
+- vínculo permanente NF ↔ movimento ↔ item de origem;
+- chave de idempotência estável;
+- edição/correção usa movimento compensatório;
+- cancelamento/exclusão usa estorno controlado;
+- cutoff/data de ativação logística por workspace;
+- nenhuma segunda lógica de saldo.
 
-### DEP-5.2 — Importador JSON
-Operador cola/importa retorno da IA externa.
+Gate vertical: cadastrar, repetir, corrigir e estornar NF preservando ledger, saldo e histórico.
 
-### DEP-5.3 — Validador
-Validar schema, unidades, quantidades, valores e possíveis duplicidades.
+## FASE 5 — SISCOFIS, Marco Zero e Conciliação
 
-### DEP-6 — Pré-visualização
-Mostrar resumo de válidos, inconsistências e possíveis duplicidades antes de confirmar.
+Blocos: DEP-5, DEP-5.1, DEP-5.2, DEP-5.3, DEP-6, DEP-7, DEP-7.1, DEP-21, DEP-21.1, DEP-21.2 e DEP-21.3.
 
-### DEP-7 — Marco Zero
-Criar saldo inicial com origem SISCOFIS_INITIAL_BALANCE e data-base.
+Capacidade completa:
+- prompt oficial gerado pelo EMPROVEX;
+- IA permanece externa;
+- contrato JSON versionado;
+- importador e validador;
+- pré-visualização antes da confirmação;
+- Marco Zero auditável;
+- proteção contra duplicidade histórica via cutoff;
+- snapshots posteriores apenas conciliam EMPROVEX x SISCOFIS;
+- divergência nunca autocorrige estoque.
 
-### DEP-7.1 — Proteção contra duplicidade histórica
-Conciliar cutoff e NFs existentes antes de confirmar o saldo inicial.
+Gate vertical: prompt → JSON → validação → preview → Marco Zero/snapshot → conciliação.
 
-## FASE 5 — Depósitos e localizações
+## FASE 6 — Depósitos, Localizações e Transferências
 
-### DEP-8 — Múltiplos depósitos por UG
-Permitir 1..N depósitos por workspace.
+Blocos: DEP-8, DEP-8.1, DEP-9, DEP-9.1 e DEP-10.
 
-### DEP-8.1 — Cadastro simples
-Nome, código, status e descrição opcional.
+Capacidade completa:
+- 1..N depósitos por UG;
+- cadastro simples de depósitos;
+- modelo Depósito → Local → Subposição opcional;
+- código lógico estável;
+- transferência interna muda localização sem alterar o total da OM;
+- IDs lógicos preparados para uso posterior pela Visão do Depósito.
 
-### DEP-9 — Localizações
-Modelo mínimo Depósito → Local; subposição opcional.
+Gate vertical: cadastrar estrutura física, localizar material e transferi-lo preservando saldo total.
 
-### DEP-9.1 — Código lógico
-Exemplos: DS-E04, DS-E04-N02, CF-P03.
+## FASE 7 — Estoque Operável, Lotes, Validade e FEFO
 
-### DEP-10 — Movimentação interna
-Transferências alteram localização, não o total da OM.
+Blocos: DEP-11, DEP-11.1, DEP-11.2, DEP-12, DEP-15, DEP-15.1 e DEP-15.2.
 
-## FASE 6 — Lotes, validade e FEFO
+Capacidade completa:
+- lotes e validade como enriquecimento do estoque existente;
+- pendências logísticas geram aviso, não bloqueio;
+- recomendação FEFO;
+- tela Estoque com pesquisa por descrição, código, depósito, local, lote, validade, NF e fornecedor;
+- ficha do material com saldo, origem, lotes, locais e histórico;
+- ação Localizar no depósito preparada para a FASE 9.
 
-### DEP-11 — Estrutura de lotes
-Permitir classificar posteriormente uma quantidade já existente em lotes.
+Gate vertical: material pode ser consultado e operado de ponta a ponta com contexto logístico.
 
-### DEP-11.1 — Validade
-Validade pertence ao lote.
-
-### DEP-11.2 — Dados logísticos pendentes
-Lote, validade e localização ausentes geram aviso, não bloqueio.
-
-### DEP-12 — FEFO
-Recomendar lote com vencimento mais próximo.
-
-## FASE 7 — Código de barras
-
-### DEP-13 — Catálogo de códigos
-Um material pode possuir múltiplos códigos/apresentações.
-
-### DEP-13.1 — Embalagens
-Conversão por código de barras, por exemplo caixa→unidades.
-
-### DEP-14 — Scanner
-Suporte a leitores USB tipo teclado.
-
-### DEP-14.1 — Scanner para lote/validade
-Fluxo rápido de enriquecimento logístico.
-
-### DEP-14.2 — Scanner de localização
-Permitir scan do local + scan do produto + quantidade.
-
-## FASE 8 — Tela Estoque
-
-### DEP-15 — Consulta
-Pesquisar por descrição, código, depósito, local, lote, validade, NF e fornecedor.
-
-### DEP-15.1 — Ficha do material
-Saldo, lotes, validades, depósitos, locais, origem e histórico.
-
-### DEP-15.2 — Localizar no depósito
-Ação que abre a Visão do Depósito focada nos locais do material.
-
-## FASE 9 — Saída Expressa
-
-### DEP-16 — Retirada simples
-Fluxo mínimo por scan ou pesquisa.
-
-### DEP-16.1 — FEFO sugerido
-Pré-selecionar lote recomendado quando houver.
-
-### DEP-16.2 — Proteção de saldo
-Impedir retirada acidental acima do saldo.
-
-### DEP-16.3 — Operação contínua
-Evitar modais repetitivos em sequência de retiradas.
-
-## FASE 10 — Visão do Depósito
-
-### DEP-17 — Aba própria
-Criar aba `Visão do Depósito` com identidade visual EMPROVEX.
-
-### DEP-17.1 — Croqui 2D com perspectiva tridimensional
-Implementação leve, sem motor 3D.
-
-### DEP-17.2 — Objetos básicos
-Estante, câmara, freezer, pallet, área, armário e porta.
-
-### DEP-17.3 — Nenhum produto desenhado
-Mapa exibe somente locais/estrutura.
-
-### DEP-17.4 — Pesquisa destaca locais
-Produto pesquisado retorna IDs; os locais correspondentes mudam de cor/estado visual.
-
-### DEP-17.5 — Destaque de prioridade
-FEFO pode definir destaque principal e secundário.
-
-### DEP-17.6 — Clique no local
-Mostrar apenas contexto estrutural simples; detalhes de estoque permanecem na tela Estoque.
-
-## FASE 11 — Editor do depósito
-
-### DEP-18 — Editor simplificado
-Criar/mover objetos em um croqui operacional.
-
-### DEP-18.1 — Criar objeto
-Nome/código + tamanho visual simples + posição.
-
-### DEP-18.2 — Sem medidas técnicas
-Não exigir CAD ou dimensões arquitetônicas.
-
-### DEP-18.3 — Ligação ao ID lógico
-Objeto visual deve referenciar `warehouseLocationId`.
-
-### DEP-18.4 — Movimento visual não move estoque
-Alterar coordenadas do objeto não altera vínculo dos materiais.
-
-## FASE 12 — Persistência e Drive
-
-### DEP-19 — Layout ativo no Firestore
-Guardar versão operacional pequena e rápida.
-
-### DEP-19.1 — Layout JSON
-Serialização versionada do croqui.
-
-### DEP-19.2 — Sincronização com Drive
-Guardar layout no Drive próprio da UG.
-
-### DEP-19.3 — IDs estáveis do Drive
-Persistir IDs, nunca depender do caminho textual.
-
-### DEP-19.4 — Histórico de versões
-Versionar alterações do layout.
-
-### DEP-19.5 — Preview SVG
-Opcional; visualização somente, não fonte da verdade.
-
-## FASE 13 — Inventário
-
-### DEP-20 — Inventário por depósito/local
-Contagem total ou parcial.
-
-### DEP-20.1 — Contagem física e divergência
-Mostrar esperado vs contado.
-
-### DEP-20.2 — Ajuste explícito
-Gerar INVENTORY_ADJUSTMENT auditável.
-
-### DEP-20.3 — Materiais sem localização
-Fila específica para organização progressiva.
-
-## FASE 14 — SISCOFIS contínuo
-
-### DEP-21 — Snapshot
-Novos relatórios após Marco Zero não somam estoque.
-
-### DEP-21.1 — Mesmo fluxo de prompt externo
-Prompt → IA externa → JSON → validação.
-
-### DEP-21.2 — Conciliação
-Comparar EMPROVEX vs SISCOFIS.
-
-### DEP-21.3 — Nunca autocorrigir
-Divergência exige decisão humana.
-
-## FASE 15 — Entregas
-
-### DEP-22 — Migração do Cronograma
-Trazer Planejamento/Cronograma para a área logística reaproveitando os dados existentes.
-
-### DEP-22.1 — Entrega → NF → estoque
-Conectar expectativa de entrega ao recebimento via NF.
-
-## FASE 16 — Dashboard logístico e alertas
-
-### DEP-23 — Início Logístico
-Indicadores acionáveis: sem localização, sem validade, vencimentos, baixo estoque, inventário, SISCOFIS e entregas.
-
-### DEP-23.1 — Sem status de recebimento pendente
-NF cadastrada já significa recebido.
-
-### DEP-23.2 — Central de alertas existente
-Integrar logística ao sistema de alertas atual.
-
-## FASE 17 — Papel ADM Depósito
-
-### DEP-24 — Role interna no piloto
-Preparar papel com acesso somente ao necessário.
-
-### DEP-24.1 — Sem funções financeiras
-Não conceder billing, administração global ou funções financeiras desnecessárias.
-
-## FASE 18 — Performance, telemetria e segurança
-
-### DEP-25 — Estratégia de consultas
-Consultas sob demanda e agregações.
-
-### DEP-25.1 — Visão do Depósito econômica
-Abrir mapa carrega layout; localização de produto só é consultada na pesquisa.
-
-### DEP-25.2 — Listeners controlados
-Sem listener por estante/local.
-
-### DEP-25.3 — Métricas por UG
-Reads, writes, movimentos, saídas, inventários, scans e sincronizações.
-
-### DEP-25.4 — Métricas específicas do módulo
-Painel administrativo para consumo logístico.
-
-### DEP-26 — Isolamento por UG
-Todas as entidades vinculadas a workspace/UG.
-
-### DEP-26.1 — Drive por workspace
-Usar Drive autorizado da própria UG.
-
-### DEP-26.2 — Layout restrito
-Croquis não são públicos.
-
-### DEP-26.3 — Auditoria completa
-Mapa, depósitos, locais, inventário, ajustes, importações, transferências e conciliações.
-
-## FASE 19 — Testes do fundador
-
-### DEP-27 — Teste funcional inicial
-Fluxo ponta a ponta de depósito, Marco Zero, NF, estoque, pesquisa e destaque visual.
-
-### DEP-28 — Teste de scanner
-Códigos conhecidos/desconhecidos, embalagens, lote e localização.
-
-### DEP-29 — Teste de NF
-Salvar, repetir, editar, cancelar/excluir e corrigir após saída.
-
-### DEP-30 — Teste da Visão do Depósito
-Um local, vários, nenhum, múltiplos depósitos, FEFO, mapa vazio, 50+ objetos, mobile e desktop.
-
-### DEP-31 — Teste de inventário
-Saldo correto, menor, maior, localização errada e sem localização.
-
-### DEP-32 — Testes SISCOFIS
-JSON válido/inválido, unidade desconhecida, duplicidade, repetição e snapshot.
-
-### DEP-33 — Teste de concorrência
-Saídas simultâneas, inventário+saída, NF+retirada, transferência+retirada.
-
-### DEP-34 — Teste de consumo
-Comparar custo/consumo do EMPROVEX antes e depois do módulo.
-
-## FASE 20 — Auditoria e fechamento do piloto fundador
-
-### DEP-35 — Auditoria técnica
-TypeScript, build, Firestore, Rules, índices, concorrência, segurança, Drive, isolamento e consumo.
-
-### DEP-36 — Auditoria funcional
-Medir se o módulo efetivamente reduz trabalho.
-
-### DEP-37 — Gate final
-Classificar o módulo como apto ou não apto para piloto externo.
+## FASE 8 — Código de Barras, Scanner e Saída Expressa
+
+Blocos: DEP-13, DEP-13.1, DEP-14, DEP-14.1, DEP-14.2, DEP-16, DEP-16.1, DEP-16.2 e DEP-16.3.
+
+Capacidade completa:
+- múltiplos códigos/apresentações por material;
+- conversão de embalagem;
+- leitor USB tipo teclado;
+- enriquecimento de lote/validade/localização;
+- fluxo SCAN → quantidade → ENTER ou pesquisa → quantidade → confirmar;
+- FEFO sugerido;
+- proteção contra saldo negativo;
+- operação contínua sem modais repetitivos.
+
+Gate vertical: retirada rápida, segura e auditável por pesquisa ou scanner.
+
+## FASE 9 — Visão do Depósito, Editor e Persistência
+
+Blocos: DEP-17 a DEP-19.5.
+
+Capacidade completa:
+- aba Visão do Depósito;
+- croqui 2D com perspectiva tridimensional leve;
+- objetos estruturais simples;
+- nenhum produto desenhado;
+- pesquisa de material destaca IDs de localização;
+- FEFO pode destacar prioridade;
+- editor simplificado;
+- objeto visual vinculado a warehouseLocationId;
+- mover objeto não move estoque;
+- layout ativo versionado no Firestore;
+- JSON versionado;
+- sincronização complementar com Drive da UG;
+- IDs estáveis do Drive;
+- histórico de versões;
+- preview SVG opcional.
+
+Gate vertical: pesquisar material → abrir mapa → destacar local correto → editar layout sem alterar estoque.
+
+## FASE 10 — Inventário Físico
+
+Blocos: DEP-20, DEP-20.1, DEP-20.2 e DEP-20.3.
+
+Capacidade completa:
+- inventário total ou parcial por depósito/local;
+- esperado x contado;
+- divergência exige confirmação humana;
+- INVENTORY_ADJUSTMENT auditável;
+- fila de materiais sem localização.
+
+Gate vertical: contagem → divergência → confirmação → ajuste auditável → novo saldo.
+
+## FASE 11 — Entregas, Dashboard Logístico e Alertas
+
+Blocos: DEP-22, DEP-22.1, DEP-23, DEP-23.1 e DEP-23.2.
+
+Capacidade completa:
+- migração conceitual do Planejamento/Cronograma para Logística sem duplicar dados;
+- Entrega → NF → estoque;
+- dashboard com indicadores acionáveis;
+- alertas de localização, validade, vencimento, baixo estoque, inventário, SISCOFIS e entregas;
+- uso da Central de Avisos existente;
+- NF cadastrada continua significando recebido.
+
+Gate vertical: expectativa de entrega e situação logística aparecem numa visão operacional única.
+
+## FASE 12 — Operacionalização, Segurança, Performance e Telemetria
+
+Blocos: DEP-24, DEP-24.1, DEP-25, DEP-25.1, DEP-25.2, DEP-25.3, DEP-25.4, DEP-26, DEP-26.1, DEP-26.2 e DEP-26.3.
+
+Capacidade completa:
+- preparar role ADM Depósito sem privilégios financeiros desnecessários;
+- consultas sob demanda e agregações;
+- Visão do Depósito econômica;
+- listeners controlados;
+- métricas logísticas por UG;
+- painel administrativo de consumo logístico;
+- isolamento integral por workspace/UG;
+- Drive por workspace;
+- layouts privados;
+- trilha de auditoria completa.
+
+Gate vertical: módulo mensurável, isolado, econômico e seguro para o piloto fundador.
+
+## FASE 13 — Validação Integrada e Fechamento do Piloto Fundador
+
+Blocos: DEP-27 a DEP-37.
+
+Executar como uma campanha integrada de qualidade, não como dez microfases separadas.
+
+Cobertura obrigatória:
+- fluxo ponta a ponta;
+- scanner;
+- NF e correções;
+- Visão do Depósito;
+- inventário;
+- SISCOFIS;
+- concorrência;
+- consumo;
+- TypeScript/build;
+- Firestore/Rules/índices;
+- segurança e isolamento;
+- Drive;
+- auditoria funcional;
+- gate final apto/não apto para piloto externo.
 
 Até DEP-37 aprovado, usuários externos continuam sem acesso.
 
-## FASE 21 — Expansão externa futura
+## FASE 14 — Expansão Externa Futura
 
-Esta fase só pode começar com autorização explícita após DEP-37.
+Blocos: EXT-1 a EXT-6.
 
-### EXT-1 — Ativar role ADM Depósito
-Permissões reais para usuários externos.
+Esta fase só começa com autorização explícita após DEP-37.
 
-### EXT-2 — Feature flag por UG
-Ativação individual por workspace.
+Capacidade:
+- ativar role ADM Depósito;
+- feature flag por UG;
+- primeira OM piloto;
+- validar depósito estruturalmente diferente;
+- piloto ampliado em 3 a 5 OMs;
+- liberação geral/comercial controlada por UG.
 
-### EXT-3 — Primeira OM piloto
-Somente uma OM externa.
+---
 
-### EXT-4 — Validar depósito estruturalmente diferente
-Garantir que o modelo não dependa do HGeSM.
+## Definition of Done de uma fatia vertical
 
-### EXT-5 — Piloto ampliado
-3 a 5 OMs.
+Uma fase funcional só é concluída quando, conforme aplicável:
+- interface utilizável;
+- regra de domínio implementada;
+- persistência integrada;
+- Firestore Rules/segurança coerentes;
+- integração com capacidades anteriores concluída;
+- testes unitários/contrato relevantes;
+- testes de integração/E2E relevantes;
+- build e TypeScript aprovados;
+- documentação e STATUS atualizados;
+- nenhuma fonte de verdade paralela criada.
 
-### EXT-6 — Liberação geral/comercial
-Habilitação controlada por UG.
+Não deixar para uma fase futura a integração essencial da capacidade atual, salvo dependência explicitamente prevista neste roadmap.
 
-## Ordem macro de execução
+## Ordem macro vigente
 
-```
-DEP-0
-→ DEP-1
-→ DEP-2
-→ DEP-3/4
-→ DEP-5/7
-→ DEP-8/10
-→ DEP-11/12
-→ DEP-13/14
-→ DEP-15
-→ DEP-16
-→ DEP-17
-→ DEP-18
-→ DEP-19
-→ DEP-20
-→ DEP-21
-→ DEP-22
-→ DEP-23
-→ DEP-24
-→ DEP-25/26
-→ DEP-27/34
-→ DEP-35/37
-→ EXT-1/6
+```text
+FASE 0 Fundação e isolamento ✓
+→ FASE 1 Material ✓
+→ FASE 2 Ledger e saldos ✓
+→ FASE 3 Walking Skeleton
+→ FASE 4 NF → estoque
+→ FASE 5 SISCOFIS / Marco Zero
+→ FASE 6 Depósitos / localizações
+→ FASE 7 Estoque operável
+→ FASE 8 Saída / scanner
+→ FASE 9 Visão do Depósito
+→ FASE 10 Inventário
+→ FASE 11 Entregas / dashboard / alertas
+→ FASE 12 Segurança / performance / telemetria
+→ FASE 13 Validação integrada / fechamento
+→ FASE 14 Expansão externa
 ```
 
 ## Regras permanentes de execução
 
-- uma fase por chat como padrão;
+- uma capacidade vertical por chat/branch como padrão;
 - uma branch e um PR por fase, salvo motivo técnico documentado;
+- fases grandes podem ser divididas em commits/subtarefas internas sem criar microfases artificiais;
 - nenhuma fase seguinte começa antes do fechamento da anterior;
-- todo chat novo consulta GitHub e estes documentos antes de alterar código;
-- mudanças paralelas na `main` devem ser comparadas com o commit registrado em `STATUS.md`;
+- todo chat novo consulta GitHub e os documentos oficiais antes de alterar código;
+- mudanças paralelas na `main` devem ser comparadas com o baseline registrado em `STATUS.md`;
 - qualquer desvio do roadmap deve ser documentado;
-- usuários externos permanecem protegidos durante todo o piloto fundador.
+- integrações essenciais devem acontecer dentro da própria fatia vertical;
+- usuários externos permanecem protegidos durante todo o piloto fundador;
+- Cloud Shell deve ser usado de forma consolidada sempre que a intervenção externa não for bloqueante.

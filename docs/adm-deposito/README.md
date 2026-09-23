@@ -2,57 +2,69 @@
 
 Esta pasta é a **fonte oficial de continuidade** do desenvolvimento do módulo ADM Depósito / Área Logística do EMPROVEX.
 
-A partir da criação desta pasta, decisões, estado de implementação, sequência de fases e handoff entre conversas devem ser registrados aqui. Conversas do ChatGPT, mensagens isoladas e memória informal não substituem estes documentos.
+Conversas, prompts e memória informal não substituem estes documentos.
 
 ## Documentos oficiais
 
-- `ROADMAP.md` — plano completo de implementação, fases, blocos, gates e ordem de execução.
+- `ROADMAP.md` — plano oficial, ordem de capacidades, gates e mapeamento dos blocos DEP/EXT.
 - `DECISIONS.md` — decisões arquiteturais e funcionais congeladas.
-- `STATUS.md` — estado atual real do desenvolvimento, último commit validado, PRs, testes, riscos e próxima fase.
-- `HANDOFF_TEMPLATE.md` — mensagem padrão para abrir o chat da fase seguinte.
+- `STATUS.md` — estado real, baseline, fase concluída e próxima capacidade.
+- `HANDOFF_TEMPLATE.md` — mensagem padrão para abrir a próxima fase.
+
+## Estratégia de desenvolvimento vigente
+
+Desde o fechamento da FASE 2, o módulo segue:
+
+**Fundação concluída → Walking Skeleton → fatias verticais completas → integração progressiva → hardening → expansão externa.**
+
+O objetivo é evitar o padrão de criar muitas telas parcialmente funcionais e deixar integrações essenciais para o final.
+
+Cada fatia vertical deve, quando aplicável, entregar UI + domínio + persistência + segurança + testes + integração com capacidades anteriores.
 
 ## Regra de continuidade
 
 Antes de qualquer nova fase:
+1. ler README, ROADMAP, DECISIONS e STATUS;
+2. consultar a `main` real;
+3. comparar a `main` com o baseline registrado em STATUS;
+4. analisar commits intermediários;
+5. desenvolver somente a capacidade designada;
+6. usar branch própria;
+7. executar gates adequados;
+8. abrir PR e validar tecnicamente;
+9. atualizar STATUS ao final;
+10. atualizar DECISIONS somente para nova decisão definitiva;
+11. não avançar automaticamente para a fase seguinte.
 
-1. Ler `README.md`, `ROADMAP.md`, `DECISIONS.md` e `STATUS.md`.
-2. Consultar a branch `main` real no GitHub.
-3. Comparar a `main` atual com o último commit registrado em `STATUS.md`.
-4. Se houver commits intermediários, avaliar impacto sobre o módulo antes de alterar código.
-5. Desenvolver somente a fase designada para a conversa atual.
-6. Trabalhar em branch própria.
-7. Executar os gates adequados.
-8. Abrir PR e só integrar após validação técnica.
-9. Atualizar `STATUS.md` ao final da fase.
-10. Atualizar `DECISIONS.md` somente quando uma nova decisão arquitetural definitiva for tomada.
-11. Não avançar automaticamente para a fase seguinte no mesmo chat.
+## Regra de granularidade
+
+- uma capacidade vertical por chat/branch como padrão;
+- fases maiores podem ter subtarefas e vários commits internos;
+- não criar microfases apenas para separar UI, backend e testes da mesma capacidade;
+- integração essencial da capacidade deve ser concluída na própria fase.
 
 ## Regra de intervenção externa / Cloud Shell
 
 O desenvolvimento deve ser o mais autônomo possível.
 
-Quando uma ação puder ser executada diretamente pelas integrações disponíveis ao agente, ela deve ser executada sem pedir intervenção manual do operador.
+Quando uma ação exigir acesso externo não disponível ao agente:
+1. identificar exatamente a necessidade;
+2. evitar interrupções por ações pequenas que possam ser postergadas;
+3. consolidar publicações compatíveis, idealmente após várias fases ou em gate de release;
+4. fornecer um único bloco de comandos pronto para copiar;
+5. pedir somente o retorno essencial;
+6. nunca presumir publicação sem confirmação.
 
-Quando uma etapa realmente exigir acesso externo que o agente não possua — por exemplo publicação de Firestore Rules, comandos Firebase/Google Cloud ou outra ação autenticada disponível ao operador via Cloud Shell — o agente deve:
+Exceção: segurança, bloqueio técnico ou validação indispensável exigem intervenção imediata.
 
-1. identificar exatamente por que a intervenção é necessária;
-2. evitar interromper o desenvolvimento por ações pequenas que possam ser postergadas com segurança;
-3. preferir consolidar várias publicações/ações compatíveis em um único momento, idealmente após várias fases ou em um gate de release;
-4. fornecer um bloco único de comandos Cloud Shell, pronto para copiar e executar;
-5. solicitar ao operador apenas o retorno essencial do comando para validação;
-6. nunca presumir que a publicação ocorreu sem confirmação do resultado.
+## Fonte da verdade
 
-Exceção: se a ação externa for requisito de segurança, bloqueio técnico ou condição indispensável para validar a fase atual, ela deve ser solicitada imediatamente, sem aguardar consolidação futura.
+Em divergências:
+- `DECISIONS.md` prevalece para arquitetura/produto;
+- `ROADMAP.md` prevalece para sequência;
+- `STATUS.md` prevalece para continuidade;
+- GitHub/`main` prevalece para o estado efetivo do código.
 
-## Princípio de fonte da verdade
+## Escopo do piloto
 
-Quando houver divergência entre uma conversa antiga e estes arquivos:
-
-- `DECISIONS.md` prevalece para decisões de arquitetura e produto;
-- `ROADMAP.md` prevalece para sequência planejada;
-- `STATUS.md` prevalece para estado de implementação;
-- o GitHub/`main` prevalece para o estado efetivo do código.
-
-## Escopo inicial
-
-O módulo será desenvolvido e validado **primeiro somente na conta fundadora**. Usuários externos permanecem sem acesso às funcionalidades logísticas até o encerramento dos blocos DEP e autorização explícita para iniciar a expansão EXT.
+O módulo permanece disponível somente para a conta fundadora até o fechamento da FASE 13 e autorização explícita para a FASE 14.
