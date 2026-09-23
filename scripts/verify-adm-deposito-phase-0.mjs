@@ -9,7 +9,7 @@ const findings = [];
 const featureFlag = read('lib/warehouse/featureFlag.ts');
 const namespace = read('lib/warehouse/namespace.ts');
 const serverAccess = read('lib/server/warehouseAccess.ts');
-const route = read('app/adm-deposito/page.tsx');
+const route = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
 const api = read('app/api/adm-deposito/status/route.ts');
 const sidebar = read('components/layout/AppSidebar.tsx');
 const home = read('app/page.tsx');
@@ -80,7 +80,7 @@ requireText(
 );
 requireText(
   route,
-  "router.replace('/')",
+  "window.location.replace('/')",
   'Rota ADM Depósito não fecha acesso direto não autorizado.'
 );
 
