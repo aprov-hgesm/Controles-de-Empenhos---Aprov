@@ -443,7 +443,7 @@ export function validateWarehouseLocationBalance(
   const position = validateWarehouseStockPosition(input.position);
   if (!position) issues.push(issue('invalid_position', '$.position', 'Posição física é inválida.'));
   const quantity = normalizeWarehouseLocationQuantity(input.quantity);
-  if (quantity === null) issues.push(issue('invalid_quantity', '$.quantity', 'Quantidade por localização é inválida.'));
+  if (quantity === null || quantity < 0) issues.push(issue('invalid_quantity', '$.quantity', 'Quantidade por localização deve ser válida e não negativa.'));
   const revision = input.revision;
   if (typeof revision !== 'number' || !Number.isSafeInteger(revision) || revision < 1) {
     issues.push(issue('invalid_revision', '$.revision', 'Revisão é inválida.'));
@@ -484,6 +484,7 @@ export function applyWarehouseLocationDelta(
 ): WarehouseLocationBalance {
   const startQuantity = base ? base.quantity : (input.initialQuantity || 0);
   const nextQuantity = addWarehouseLocationQuantities(startQuantity, input.quantityDelta);
+  if (nextQuantity < 0) throw new Error('WAREHOUSE_LOCATION_NEGATIVE_QUANTITY');
   return {
     schemaVersion: WAREHOUSE_LOCATION_BALANCE_SCHEMA_VERSION,
     id: input.id,
