@@ -18,6 +18,7 @@ export const WAREHOUSE_DOMAIN_COLLECTIONS = {
   locations: 'locations',
   movements: 'movements',
   balances: 'balances',
+  locationBalances: 'locationBalances',
   settings: 'settings',
   lots: 'lots',
   inventories: 'inventories',
