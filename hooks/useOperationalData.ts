@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   browserLocalPersistence,
+  GoogleAuthProvider,
   onAuthStateChanged,
   setPersistence,
+  signInWithCredential,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -294,7 +296,18 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     setSyncing(true);
     try {
       await setPersistence(auth, browserLocalPersistence);
-      const credential = await signInWithPopup(auth, googleProvider);
+      const credential = process.env.NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1'
+        ? await signInWithCredential(
+            auth,
+            GoogleAuthProvider.credential(
+              JSON.stringify({
+                sub: 'google-admin-google',
+                email: 'aprov1hgesm@gmail.com',
+                email_verified: true,
+              })
+            )
+          )
+        : await signInWithPopup(auth, googleProvider);
       return await finalizeSignIn(credential.user);
     } finally {
       explicitSignInRef.current = false;
