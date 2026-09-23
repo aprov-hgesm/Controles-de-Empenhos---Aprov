@@ -173,12 +173,15 @@ service cloud.firestore {
     }
 
     function warehouseDepotActive(workspaceId, depotId, ug) {
+      let depot = get(
+        /databases/$(database)/documents/warehouse/$(workspaceId)/depots/$(depotId)
+      ).data;
       return depotId is string
         && depotId.matches('^dep_[a-f0-9]{32}$')
         && exists(/databases/$(database)/documents/warehouse/$(workspaceId)/depots/$(depotId))
-        && get(/databases/$(database)/documents/warehouse/$(workspaceId)/depots/$(depotId)).data.workspaceId == workspaceId
-        && get(/databases/$(database)/documents/warehouse/$(workspaceId)/depots/$(depotId)).data.ug == ug
-        && get(/databases/$(database)/documents/warehouse/$(workspaceId)/depots/$(depotId)).data.status == 'active';
+        && depot.workspaceId == workspaceId
+        && depot.ug == ug
+        && depot.status == 'active';
     }
 
     function validWarehouseLocationBase(workspaceId, locationId) {
@@ -229,13 +232,16 @@ service cloud.firestore {
 
     function warehouseParentLocationActive(workspaceId, location) {
       let parentId = location.parentLocationId;
+      let parent = get(
+        /databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(parentId)
+      ).data;
       return location.kind != 'SUBPOSITION'
         || (
           exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(parentId))
-          && get(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(parentId)).data.kind == 'LOCAL'
-          && get(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(parentId)).data.depotId == location.depotId
-          && get(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(parentId)).data.ug == location.ug
-          && get(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(parentId)).data.status == 'active'
+          && parent.kind == 'LOCAL'
+          && parent.depotId == location.depotId
+          && parent.ug == location.ug
+          && parent.status == 'active'
         );
     }
 
@@ -315,30 +321,56 @@ service cloud.firestore {
         );
     }
 
+    function warehouseLocalActive(workspaceId, locationId, depotId, ug) {
+      let local = get(
+        /databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(locationId)
+      ).data;
+      return locationId is string
+        && locationId.matches('^loc_[a-f0-9]{32}$')
+        && exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(locationId))
+        && local.kind == 'LOCAL'
+        && local.depotId == depotId
+        && local.ug == ug
+        && local.status == 'active';
+    }
+
+    function warehouseSubpositionActive(workspaceId, subpositionId, depotId, locationId, ug) {
+      let subposition = get(
+        /databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(subpositionId)
+      ).data;
+      return subpositionId is string
+        && subpositionId.matches('^sub_[a-f0-9]{32}$')
+        && exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(subpositionId))
+        && subposition.kind == 'SUBPOSITION'
+        && subposition.depotId == depotId
+        && subposition.parentLocationId == locationId
+        && subposition.ug == ug
+        && subposition.status == 'active';
+    }
+
     function warehousePositionActive(workspaceId, position, ug) {
       return position.kind == 'UNASSIGNED'
         || (
           warehouseDepotActive(workspaceId, position.depotId, ug)
-          && exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(position.locationId))
-          && get(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(position.locationId)).data.kind == 'LOCAL'
-          && get(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(position.locationId)).data.depotId == position.depotId
-          && get(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(position.locationId)).data.ug == ug
-          && get(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(position.locationId)).data.status == 'active'
+          && warehouseLocalActive(
+            workspaceId,
+            position.locationId,
+            position.depotId,
+            ug
+          )
           && (
             position.kind == 'LOCATION'
-            || (
-              exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(position.subpositionId))
-              && get(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(position.subpositionId)).data.kind == 'SUBPOSITION'
-              && get(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(position.subpositionId)).data.depotId == position.depotId
-              && get(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(position.subpositionId)).data.parentLocationId == position.locationId
-              && get(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(position.subpositionId)).data.ug == ug
-              && get(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(position.subpositionId)).data.status == 'active'
+            || warehouseSubpositionActive(
+              workspaceId,
+              position.subpositionId,
+              position.depotId,
+              position.locationId,
+              ug
             )
           )
         );
     }
 
-    // FASE 4 / DEP-3.x + FASE 6 / DEP-10 — origem estruturada e auditável.
     function validWarehouseMovementSource(workspaceId, type, source) {
       return (
           source == null
@@ -555,24 +587,17 @@ service cloud.firestore {
     }
 
     function warehouseMaterialMatchesMovement(workspaceId) {
+      let material = getAfter(
+        /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
+      ).data;
       return existsAfter(
           /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
         )
-        && getAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
-        ).data.schemaVersion == 'warehouse_material_v1'
-        && getAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
-        ).data.id == request.resource.data.materialId
-        && getAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
-        ).data.workspaceId == workspaceId
-        && getAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
-        ).data.ug == request.resource.data.ug
-        && getAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
-        ).data.status == 'active';
+        && material.schemaVersion == 'warehouse_material_v1'
+        && material.id == request.resource.data.materialId
+        && material.workspaceId == workspaceId
+        && material.ug == request.resource.data.ug
+        && material.status == 'active';
     }
 
     function validWarehouseReversalReference(workspaceId, movementId) {
@@ -634,57 +659,77 @@ service cloud.firestore {
 
     function warehouseTransferHasMatchingLocationBalancesAfter(workspaceId, movementId, movement) {
       let source = movement.source;
-      let materialId = movement.materialId;
-      let fromId = source.fromBalanceId;
-      let toId = source.toBalanceId;
+      let fromAfter = getAfter(
+        /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(source.fromBalanceId)
+      ).data;
+      let toAfter = getAfter(
+        /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(source.toBalanceId)
+      ).data;
       return movement.type == 'TRANSFER'
-        && source != null
         && source.kind == 'LOCATION_TRANSFER'
-        && exists(/databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId))
-        && existsAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(fromId))
-        && existsAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(toId))
-        && getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(fromId)).data.lastMovementId == movementId
-        && getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(toId)).data.lastMovementId == movementId
-        && getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(fromId)).data.materialId == materialId
-        && getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(toId)).data.materialId == materialId
-        && getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(fromId)).data.position == source.from
-        && getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(toId)).data.position == source.to
-        && (
-          (
-            exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(fromId))
-            && getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(fromId)).data.revision
-              == get(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(fromId)).data.revision + 1
-            && getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(fromId)).data.quantity
-              == get(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(fromId)).data.quantity - source.quantity
-          )
-          || (
-            !exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(fromId))
-            && source.from.kind == 'UNASSIGNED'
-            && getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(fromId)).data.revision == 1
-            && getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(fromId)).data.quantity
-              == get(/databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)).data.quantity - source.quantity
-          )
+        && existsAfter(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(source.fromBalanceId)
         )
+        && existsAfter(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(source.toBalanceId)
+        )
+        && fromAfter.lastMovementId == movementId
+        && toAfter.lastMovementId == movementId
+        && fromAfter.materialId == movement.materialId
+        && toAfter.materialId == movement.materialId
+        && fromAfter.position == source.from
+        && toAfter.position == source.to;
+    }
+
+    function warehouseLocationBalanceMatchesTransfer(workspaceId, locationBalanceId, movement) {
+      let source = movement.source;
+      return movement.type == 'TRANSFER'
+        && source.kind == 'LOCATION_TRANSFER'
+        && request.resource.data.materialId == movement.materialId
+        && request.resource.data.workspaceId == movement.workspaceId
+        && request.resource.data.ug == movement.ug
         && (
           (
-            exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(toId))
-            && getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(toId)).data.revision
-              == get(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(toId)).data.revision + 1
-            && getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(toId)).data.quantity
-              == get(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(toId)).data.quantity + source.quantity
+            source.fromBalanceId == locationBalanceId
+            && request.resource.data.position == source.from
+            && (
+              (
+                exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(locationBalanceId))
+                && request.resource.data.revision == resource.data.revision + 1
+                && request.resource.data.quantity == resource.data.quantity - source.quantity
+              )
+              || (
+                !exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(locationBalanceId))
+                && source.from.kind == 'UNASSIGNED'
+                && request.resource.data.revision == 1
+                && exists(/databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(movement.materialId))
+                && request.resource.data.quantity
+                  == get(/databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(movement.materialId)).data.quantity
+                    - source.quantity
+              )
+            )
           )
           || (
-            !exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(toId))
-            && getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(toId)).data.revision == 1
-            && getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(toId)).data.quantity == source.quantity
+            source.toBalanceId == locationBalanceId
+            && request.resource.data.position == source.to
+            && (
+              (
+                exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(locationBalanceId))
+                && request.resource.data.revision == resource.data.revision + 1
+                && request.resource.data.quantity == resource.data.quantity + source.quantity
+              )
+              || (
+                !exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(locationBalanceId))
+                && request.resource.data.revision == 1
+                && request.resource.data.quantity == source.quantity
+              )
+            )
           )
         );
     }
 
-    function warehouseLocationBalanceMatchesNonTransfer(workspaceId, locationBalanceId) {
-      let movementId = request.resource.data.lastMovementId;
+    function warehouseLocationBalanceMatchesNonTransfer(workspaceId, locationBalanceId, movement) {
       let materialId = request.resource.data.materialId;
-      let movement = getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)).data;
       return movement.type != 'TRANSFER'
         && movement.materialId == materialId
         && movement.workspaceId == workspaceId
@@ -717,22 +762,22 @@ service cloud.firestore {
 
     function warehouseLocationBalanceWriteBackedByNewMovement(workspaceId, locationBalanceId) {
       let movementId = request.resource.data.lastMovementId;
+      let movement = getAfter(
+        /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
+      ).data;
       return !exists(/databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId))
         && existsAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId))
         && (
-          (
-            getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)).data.type == 'TRANSFER'
-            && (
-              getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)).data.source.fromBalanceId == locationBalanceId
-              || getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)).data.source.toBalanceId == locationBalanceId
-            )
-            && warehouseTransferHasMatchingLocationBalancesAfter(
-              workspaceId,
-              movementId,
-              getAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)).data
-            )
+          warehouseLocationBalanceMatchesTransfer(
+            workspaceId,
+            locationBalanceId,
+            movement
           )
-          || warehouseLocationBalanceMatchesNonTransfer(workspaceId, locationBalanceId)
+          || warehouseLocationBalanceMatchesNonTransfer(
+            workspaceId,
+            locationBalanceId,
+            movement
+          )
         );
     }
 
@@ -846,97 +891,59 @@ service cloud.firestore {
 
     function warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId) {
       let materialId = request.resource.data.materialId;
+      let nextBalance = getAfter(
+        /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
+      ).data;
       return existsAfter(
           /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
         )
-        && getAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
-        ).data.schemaVersion == 'warehouse_balance_v1'
-        && getAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
-        ).data.workspaceId == workspaceId
-        && getAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
-        ).data.ug == request.resource.data.ug
-        && getAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
-        ).data.materialId == materialId
-        && getAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
-        ).data.lastMovementId == movementId
+        && nextBalance.schemaVersion == 'warehouse_balance_v1'
+        && nextBalance.workspaceId == workspaceId
+        && nextBalance.ug == request.resource.data.ug
+        && nextBalance.materialId == materialId
+        && nextBalance.lastMovementId == movementId
         && (
           (
-            !exists(
-              /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
-            )
-            && getAfter(
-              /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
-            ).data.revision == 1
-            && getAfter(
-              /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
-            ).data.quantity == request.resource.data.quantityDelta
+            !exists(/databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId))
+            && nextBalance.revision == 1
+            && nextBalance.quantity == request.resource.data.quantityDelta
           )
           || (
-            exists(
-              /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
-            )
-            && getAfter(
-              /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
-            ).data.revision
-              == get(
-                /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
-              ).data.revision + 1
-            && getAfter(
-              /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
-            ).data.quantity
-              == get(
-                /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
-              ).data.quantity + request.resource.data.quantityDelta
+            exists(/databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId))
+            && nextBalance.revision
+              == get(/databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)).data.revision + 1
+            && nextBalance.quantity
+              == get(/databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)).data.quantity
+                + request.resource.data.quantityDelta
           )
         );
     }
 
     function warehouseBalanceWriteBackedByNewMovement(workspaceId, materialId) {
       let movementId = request.resource.data.lastMovementId;
+      let movement = getAfter(
+        /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
+      ).data;
       return !exists(
           /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
         )
         && existsAfter(
           /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
         )
-        && getAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
-        ).data.schemaVersion == 'warehouse_movement_v1'
-        && getAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
-        ).data.workspaceId == workspaceId
-        && getAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
-        ).data.ug == request.resource.data.ug
-        && getAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
-        ).data.materialId == materialId
+        && movement.schemaVersion == 'warehouse_movement_v1'
+        && movement.workspaceId == workspaceId
+        && movement.ug == request.resource.data.ug
+        && movement.materialId == materialId
         && (
           (
-            !exists(
-              /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
-            )
+            !exists(/databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId))
             && request.resource.data.revision == 1
-            && request.resource.data.quantity
-              == getAfter(
-                /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
-              ).data.quantityDelta
+            && request.resource.data.quantity == movement.quantityDelta
           )
           || (
-            exists(
-              /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
-            )
+            exists(/databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId))
             && request.resource.data.revision == resource.data.revision + 1
-            && request.resource.data.quantity
-              == resource.data.quantity
-                + getAfter(
-                  /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
-                ).data.quantityDelta
+            && request.resource.data.quantity == resource.data.quantity + movement.quantityDelta
             && request.resource.data.workspaceId == resource.data.workspaceId
             && request.resource.data.ug == resource.data.ug
             && request.resource.data.materialId == resource.data.materialId
