@@ -115,7 +115,7 @@ Capacidade completa:
 
 Gate vertical: prompt → JSON → validação → preview → Marco Zero/snapshot → conciliação.
 
-## FASE 6 — Depósitos, Localizações e Transferências
+## FASE 6 — Depósitos, Localizações e Transferências — CONCLUÍDA
 
 Blocos: DEP-8, DEP-8.1, DEP-9, DEP-9.1 e DEP-10.
 
@@ -292,7 +292,7 @@ FASE 0 Fundação e isolamento ✓
 → FASE 3 Walking Skeleton ✓
 → FASE 4 NF → estoque ✓
 → FASE 5 SISCOFIS / Marco Zero ✓
-→ FASE 6 Depósitos / localizações
+→ FASE 6 Depósitos / localizações ✓
 → FASE 7 Estoque operável
 → FASE 8 Saída / scanner
 → FASE 9 Visão do Depósito
