@@ -35,6 +35,7 @@ import {
   isValidWarehouseLocationId,
   isValidWarehouseSubpositionId,
   normalizeWarehouseLogicalCode,
+  normalizeWarehouseLocationQuantity,
   validateWarehouseDepot,
   validateWarehouseLocation,
   validateWarehouseLocationBalance,
@@ -554,8 +555,8 @@ export async function transferWarehouseStock(
   if (!from || !to) throw new Error('WAREHOUSE_TRANSFER_INVALID_POSITION');
   if (warehouseStockPositionsEqual(from, to)) throw new Error('WAREHOUSE_TRANSFER_SAME_POSITION');
 
-  const normalizedQuantity = typeof input.quantity === 'number' ? input.quantity : Number.NaN;
-  if (!Number.isFinite(normalizedQuantity) || normalizedQuantity <= 0) {
+  const normalizedQuantity = normalizeWarehouseLocationQuantity(input.quantity);
+  if (normalizedQuantity === null || normalizedQuantity <= 0) {
     throw new Error('WAREHOUSE_TRANSFER_INVALID_QUANTITY');
   }
 
