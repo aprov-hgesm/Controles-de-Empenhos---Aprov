@@ -555,19 +555,29 @@ async function main() {
 
   console.log('\nFASE 0 — isolamento do ADM Depósito');
 
+  const phaseZeroDepotId = 'dep_' + '0'.repeat(32);
   const founderWarehouseProbe = doc(
     admin.db,
     'warehouse',
     'hgesm-aprov',
     'depots',
-    'phase-zero-probe'
+    phaseZeroDepotId
   );
 
   await allowed('Fundador grava no namespace ADM Depósito', () =>
     setDoc(founderWarehouseProbe, {
-      phase: 0,
+      schemaVersion: 'warehouse_depot_v1',
+      id: phaseZeroDepotId,
       workspaceId: 'hgesm-aprov',
-      marker: 'founder-only',
+      ug: '160416',
+      code: 'DEP-00',
+      name: 'Depósito de prova da fundação',
+      description: null,
+      status: 'active',
+      createdBy: admin.user.uid,
+      updatedBy: admin.user.uid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     })
   );
   await allowed('Fundador lê o namespace ADM Depósito', () =>
@@ -583,7 +593,7 @@ async function main() {
         'warehouse',
         'hgesm-aprov',
         'depots',
-        'phase-zero-probe'
+        phaseZeroDepotId
       )
     )
   );
@@ -606,7 +616,7 @@ async function main() {
         'warehouse',
         'hgesm-aprov',
         'depots',
-        'phase-zero-probe'
+        phaseZeroDepotId
       )
     )
   );
