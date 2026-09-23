@@ -4,42 +4,55 @@ Este arquivo registra o estado real de continuidade do projeto e deve ser tratad
 
 ## Estado geral
 
-Status: **FASE 4 CONCLUÍDA — NF → ESTOQUE**
+Status: **FASE 5 CONCLUÍDA — SISCOFIS / MARCO ZERO / CONCILIAÇÃO**
 
 Data de fechamento: 2026-09-23.
 
 Situação:
-- FASES 0, 1, 2, 3 e 4 concluídas;
-- FASE 3 — Walking Skeleton integrada à `main` pelo PR #164;
+- FASES 0, 1, 2, 3, 4 e 5 concluídas;
+- FASE 3 — Walking Skeleton integrada à \`main\` pelo PR #164;
 - FASE 4 — NF → Estoque implementada e validada no PR #167;
+- FASE 5 — SISCOFIS / Marco Zero / Conciliação implementada no PR #171;
 - piloto permanece exclusivo da conta fundadora;
 - usuários externos continuam sem visibilidade e sem acesso ao módulo ADM Depósito;
-- nenhum requisito futuro foi antecipado;
-- FASE 5 ainda não foi iniciada.
+- nenhuma capacidade da FASE 6 foi iniciada.
 
 ## Repositório e baseline
 
 Repositório:
-`aprov-hgesm/Controles-de-Empenhos---Aprov`
+\`aprov-hgesm/Controles-de-Empenhos---Aprov\`
 
 Branch oficial:
-`main`
+\`main\`
 
-Baseline funcional da FASE 3 na `main`:
-`0b8aed23da504deeb0bd18de404f0298a7c7cf2c`
+Baseline funcional da FASE 3:
+\`0b8aed23da504deeb0bd18de404f0298a7c7cf2c\`
 
-Baseline da `main` imediatamente antes do fechamento da FASE 4:
-`1b391a24216fbcda0ea7f1e8945d332d965cb4ba`
+Baseline da \`main\` imediatamente antes do desenvolvimento da FASE 5:
+\`b376def63732eda84fe1ff9c1507527d0a96bcfd\`
 
-Esse baseline já inclui o PR #168, que estabilizou o Browser E2E ao desabilitar HMR/file watching durante os testes Playwright.
+Esse baseline:
+- já contém a FASE 4;
+- já contém o PR #169 e as mudanças posteriores reconciliadas antes do desenvolvimento;
+- foi auditado antes da criação da branch da FASE 5.
 
-PR da FASE 4:
-- PR #167 — `feat: integrate NF receipts with ADM Depósito stock`;
-- implementação reconstruída sobre a `main` atual para incorporar o #168 sem conflito;
-- Application CI aprovado;
+Branch da FASE 5:
+\`feat/adm-deposito-phase-5-siscofis\`
+
+PR da FASE 5:
+- PR #171 — \`feat: add SISCOFIS Marco Zero and reconciliation\`;
 - Recovery guardrails aprovado;
-- Browser E2E com Firebase Emulator aprovado;
-- release gates dos blocos 16, 17, 18, 19, 20 e 21 aprovados.
+- Application CI aprovado na validação técnica inicial;
+- testes multi-tenant/Firestore aprovados;
+- gates das FASES 0–5 aprovados;
+- build de produção aprovado;
+- TypeScript final aprovado;
+- diff hygiene aprovado;
+- Browser E2E com Firebase Emulator aprovado.
+
+Observação de deploy:
+- o check automático da Vercel retornou \`build-rate-limit\`, uma limitação de cota da plataforma, não uma falha de build do código;
+- a publicação/estado de produção deve ser conferida separadamente do gate técnico do GitHub.
 
 ## Fases concluídas
 
@@ -50,7 +63,7 @@ Concluída.
 Concluída.
 
 Contrato canônico:
-- `warehouse_material_v1`;
+- \`warehouse_material_v1\`;
 - identidade estável de material;
 - unidade/apresentação normalizada;
 - isolamento por workspace/UG.
@@ -59,8 +72,8 @@ Contrato canônico:
 Concluída.
 
 Contratos oficiais:
-- `warehouse_movement_v1`;
-- `warehouse_balance_v1`;
+- \`warehouse_movement_v1\`;
+- \`warehouse_balance_v1\`;
 - ledger append-only;
 - saldo materializado como projeção do ledger;
 - idempotência determinística.
@@ -68,7 +81,7 @@ Contratos oficiais:
 ### FASE 3 — Walking Skeleton
 Concluída e integrada.
 
-Superfícies estruturais preservadas:
+Superfícies estruturais:
 - Visão Geral;
 - Estoque;
 - Movimentações;
@@ -79,82 +92,130 @@ Superfícies estruturais preservadas:
 - Entregas;
 - Configurações.
 
-A FASE 3 não implementou antecipadamente capacidades funcionais futuras.
-
 ### FASE 4 — NF → Estoque
 Concluída.
 
+Capacidade vertical preservada:
+- NF confirmada gera \`INVOICE_ENTRY\`;
+- edição/correção usa \`INVOICE_CORRECTION\`;
+- exclusão integrada usa estorno compensatório;
+- vínculo persistido NF → empenho → item → material → movimento → saldo;
+- material é autoridade por ID persistido, sem matching textual implícito;
+- idempotência protege retry/duplo clique;
+- cutoff por workspace impede backfill silencioso;
+- Estoque e Movimentações leem as fontes reais do warehouse.
+
+Decisão correspondente:
+- D-033 em \`DECISIONS.md\`.
+
+### FASE 5 — SISCOFIS / Marco Zero / Conciliação
+Concluída.
+
 Capacidade vertical entregue:
-- confirmação existente de Nota Fiscal permanece como único ponto operacional de entrada;
-- item de empenho é vinculado ao material canônico por identidade persistida, sem matching por texto livre;
-- primeira relação pode criar deterministicamente o material canônico a partir de workspace + empenho + item;
-- NF, empenho, material, movimento e saldo são tratados no mesmo lifecycle transacional;
-- recebimento confirmado gera movimento `INVOICE_ENTRY`;
-- edição gera apenas o delta por `INVOICE_CORRECTION`;
-- exclusão individual de NF integrada gera estorno compensatório auditável;
-- exclusão em lote não pode contornar o estorno de NFs já integradas;
-- origem estruturada preserva NF, empenho, itens, fornecedor/CNPJ, operador, workspace/UG e data/hora;
-- vínculo NF → movimentos é persistido;
-- idempotência protege contra duplo clique/retry;
-- cutoff por workspace impede backfill silencioso de histórico anterior ao piloto;
-- NFs históricas não integradas permanecem históricas até uma migração explícita futura;
-- integração continua founder-only durante o piloto;
-- fluxo dos usuários externos permanece inalterado;
-- aba Estoque lê saldos reais materializados;
-- aba Movimentações lê o ledger oficial;
-- consultas são bounded e não introduzem listeners globais.
+- aba SISCOFIS / Conciliação deixou de ser placeholder e tornou-se operacional;
+- EMPROVEX gera prompt oficial para interpretação por IA externa;
+- IA continua fora do EMPROVEX;
+- contrato de importação versionado: \`warehouse_siscofis_import_v1\`;
+- validação rígida recusa JSON inválido, campos inesperados, UG divergente, IDs inválidos, unidades desconhecidas e duplicidades críticas;
+- avisos de inconsistência são exibidos antes da confirmação;
+- preview identifica explicitamente \`MARCO_ZERO\` ou \`SNAPSHOT\`;
+- primeiro SISCOFIS confirmado estabelece o Marco Zero;
+- Marco Zero persiste auditoria em \`siscofisSnapshots/marco-zero\`;
+- saldo inicial entra exclusivamente pelo ledger oficial como \`INITIAL_BALANCE\`;
+- saldo materializado continua sendo projeção do ledger;
+- hash da importação e chaves idempotentes permitem retry sem duplicar estoque;
+- Marco Zero usa transição \`APPLYING → CONFIRMED\` para permitir recuperação segura de interrupção;
+- uma fonte diferente não pode substituir Marco Zero em andamento ou confirmado;
+- cutoff da FASE 4 é reutilizado e sobreposição histórica ambígua é bloqueada;
+- se o cutoff ainda não existir, a confirmação do Marco Zero o estabelece no contrato existente da FASE 4;
+- linhas explicitamente vinculadas exigem \`materialId\` canônico válido, mesma UG e unidade compatível;
+- no Marco Zero, linha sem \`materialId\` pode criar material canônico determinístico sem criar catálogo paralelo;
+- após o Marco Zero, linha sem vínculo permanece \`UNRESOLVED\`;
+- relatórios posteriores são snapshots de conciliação e nunca geram movimento de estoque;
+- conciliação mostra quantidade SISCOFIS, quantidade EMPROVEX, diferença e estado;
+- estados: \`MATCHED\`, \`DIVERGENT\` e \`UNRESOLVED\`;
+- divergência nunca corrige saldo automaticamente;
+- histórico é consultado sob demanda e bounded;
+- Firestore Rules específicas protegem criação, transição e imutabilidade dos snapshots;
+- founder-only e isolamento por workspace/UG permanecem intactos;
+- Número de Ficha SISCOFIS continua fora do núcleo da primeira versão.
 
-Decisão arquitetural correspondente:
-- D-033 em `DECISIONS.md`.
+Contratos/documentos:
+- \`warehouse_siscofis_import_v1\`;
+- \`warehouse_siscofis_snapshot_v1\`;
+- \`docs/adm-deposito/PHASE_5_SISCOFIS.md\`;
+- decisão permanente D-036 em \`DECISIONS.md\`.
 
-## Regras permanentes após a FASE 4
+## Regras permanentes após a FASE 5
 
-1. NF → estoque deve continuar reutilizando o ledger oficial da FASE 2.
-2. Não criar segundo saldo concorrente.
-3. Correções e cancelamentos devem usar movimentos compensatórios.
-4. O identificador persistido do material é a autoridade; texto descritivo não é chave de identidade.
-5. Isolamento por workspace/UG continua obrigatório.
-6. Founder-only continua obrigatório durante o piloto.
-7. Histórico anterior ao cutoff não deve ser integrado silenciosamente.
-8. Usuários externos não podem ganhar acesso ao módulo por consequência de fases internas.
-9. Cloud Shell pode ser usado de forma ativa para pré-validação, diagnóstico e publicação quando isso reduzir ciclos de espera, seguindo `docs/DEVELOPMENT_CI_WORKFLOW.md`.
-10. O operador/fundador pode executar comandos manuais direcionados como parte normal do desenvolvimento, sem substituir gates obrigatórios.
-11. Browser E2E deve evoluir para execução seletiva conforme impacto; mudanças funcionais de jornada continuam exigindo cobertura de navegador.
-12. Toda fase futura deve preservar gates permanentes das fases anteriores.
+1. NF → estoque continua reutilizando o ledger oficial da FASE 2.
+2. Não existe segundo saldo concorrente.
+3. Correções, cancelamentos e futuros ajustes devem permanecer auditáveis por movimentos.
+4. O identificador persistido do material é a autoridade; descrição textual não é chave de identidade.
+5. Marco Zero usa \`INITIAL_BALANCE\` no ledger e nunca grava saldo diretamente.
+6. Após Marco Zero, SISCOFIS é snapshot de comparação e nunca entrada automática de estoque.
+7. Divergência SISCOFIS nunca pode autocorrigir o EMPROVEX.
+8. O cutoff da FASE 4 continua protegendo o histórico contra duplicação.
+9. Isolamento por workspace/UG continua obrigatório.
+10. Founder-only continua obrigatório durante o piloto.
+11. Usuários externos não podem ganhar acesso ao módulo por consequência de fases internas.
+12. Consultas devem permanecer bounded e sem listeners globais desnecessários.
+13. Cloud Shell pode ser usado de forma ativa quando reduzir ciclos, conforme \`docs/DEVELOPMENT_CI_WORKFLOW.md\`.
+14. Browser E2E deve continuar cobrindo mudanças reais de jornada; gates das fases anteriores permanecem permanentes.
+
+## Validação da FASE 5
+
+Gates específicos:
+- \`npm run test:adm-deposito-siscofis\`;
+- \`npm run verify:adm-deposito-phase-5\`;
+- cenários SISCOFIS/Marco Zero no teste multi-tenant Firestore.
+
+Gates integrados executados no PR #171:
+- Multi-tenant Firestore security;
+- FASES 0–4;
+- FASE 5 domain tests;
+- FASE 5 permanent guard;
+- build de produção;
+- TypeScript final;
+- diff hygiene;
+- Browser E2E com Firebase Emulator;
+- Recovery guardrails.
+
+A suíte Browser E2E valida regressão de navegador e preservação do bloqueio externo. A lógica específica do novo fluxo SISCOFIS é coberta por testes de domínio, Rules/emulador e guard estrutural permanente.
 
 ## Próxima fase oficial
 
-**FASE 5 — SISCOFIS / Marco Zero / Conciliação**
+**FASE 6 — Depósitos / Localizações / Transferências**
 
 Objetivo de alto nível:
-- iniciar a integração operacional com a realidade existente do estoque/SISCOFIS;
-- estabelecer Marco Zero explícito;
-- permitir conciliação sem recriar ou competir com o ledger oficial;
-- preservar toda a rastreabilidade criada na FASE 4.
+- permitir 1..N depósitos por UG;
+- criar estrutura Depósito → Local → Subposição opcional;
+- localizar materiais por identidade lógica estável;
+- transferir localização sem alterar o saldo total da OM;
+- preparar IDs lógicos para a futura Visão do Depósito.
 
-A FASE 5 deve ser executada em novo chat e não deve avançar automaticamente para a FASE 6.
+A FASE 6 ainda não foi iniciada e deve ser executada em novo chat/branch.
 
 ## Sequência futura resumida
 
-1. FASE 5 — SISCOFIS / Marco Zero / conciliação;
-2. FASE 6 — depósitos / localizações / transferências;
-3. FASE 7 — estoque operável / lotes / FEFO;
-4. FASE 8 — saída expressa / código de barras / scanner;
-5. FASE 9 — Visão do Depósito / editor / persistência;
-6. FASE 10 — inventário;
-7. FASE 11 — entregas / dashboard / alertas;
-8. FASE 12 — segurança / performance / telemetria;
-9. FASE 13 — validação integrada e fechamento do piloto;
-10. FASE 14 — expansão externa futura.
+1. FASE 6 — depósitos / localizações / transferências;
+2. FASE 7 — estoque operável / lotes / FEFO;
+3. FASE 8 — saída expressa / código de barras / scanner;
+4. FASE 9 — Visão do Depósito / editor / persistência;
+5. FASE 10 — inventário;
+6. FASE 11 — entregas / dashboard / alertas;
+7. FASE 12 — segurança / performance / telemetria;
+8. FASE 13 — validação integrada e fechamento do piloto;
+9. FASE 14 — expansão externa futura.
 
 ## Gate para o próximo chat
 
 Antes de modificar código:
-1. consultar a `main` real;
-2. ler `README.md`, `ROADMAP.md`, `DECISIONS.md`, `STATUS.md` e `HANDOFF_TEMPLATE.md`;
-3. comparar a `main` com o baseline registrado aqui;
-4. analisar commits posteriores ao fechamento da FASE 4;
-5. preservar os contratos canônicos de material, ledger, saldo e NF → estoque;
-6. executar exclusivamente a FASE 5 — SISCOFIS / Marco Zero / Conciliação;
-7. não iniciar a FASE 6 no mesmo chat;
+1. consultar a \`main\` real;
+2. ler \`README.md\`, \`ROADMAP.md\`, \`DECISIONS.md\`, \`STATUS.md\`, \`HANDOFF_TEMPLATE.md\` e \`PHASE_5_SISCOFIS.md\`;
+3. comparar a \`main\` com o baseline registrado aqui;
+4. analisar commits posteriores ao fechamento da FASE 5;
+5. preservar material canônico, ledger, saldo, NF → estoque, cutoff, Marco Zero e snapshots SISCOFIS;
+6. executar exclusivamente a FASE 6 — Depósitos / Localizações / Transferências;
+7. não iniciar a FASE 7 no mesmo chat;
 8. atualizar STATUS ao fechar a fase.
