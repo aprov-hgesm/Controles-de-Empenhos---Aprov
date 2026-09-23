@@ -157,7 +157,7 @@ for (const marker of [
 for (const marker of [
   'warehouse_lot_v1',
   'FEFO',
-  'pendências logísticas',
+  'Pendências logísticas',
   'warehouse_balance_v1',
   'warehouse_location_balance_v1',
   'não altera saldo',
