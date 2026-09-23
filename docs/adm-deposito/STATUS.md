@@ -117,8 +117,10 @@ Decisão arquitetural correspondente:
 6. Founder-only continua obrigatório durante o piloto.
 7. Histórico anterior ao cutoff não deve ser integrado silenciosamente.
 8. Usuários externos não podem ganhar acesso ao módulo por consequência de fases internas.
-9. Cloud Shell deve ser usado apenas quando necessário, preferencialmente de forma consolidada.
-10. Toda fase futura deve preservar gates permanentes das fases anteriores.
+9. Cloud Shell pode ser usado de forma ativa para pré-validação, diagnóstico e publicação quando isso reduzir ciclos de espera, seguindo `docs/DEVELOPMENT_CI_WORKFLOW.md`.
+10. O operador/fundador pode executar comandos manuais direcionados como parte normal do desenvolvimento, sem substituir gates obrigatórios.
+11. Browser E2E deve evoluir para execução seletiva conforme impacto; mudanças funcionais de jornada continuam exigindo cobertura de navegador.
+12. Toda fase futura deve preservar gates permanentes das fases anteriores.
 
 ## Próxima fase oficial
 
