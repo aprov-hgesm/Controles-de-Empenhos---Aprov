@@ -4,19 +4,20 @@ Este arquivo registra o estado real de continuidade do projeto e deve ser tratad
 
 ## Estado geral
 
-Status: **FASE 6 CONCLUÍDA — DEPÓSITOS / LOCALIZAÇÕES / TRANSFERÊNCIAS**
+Status: **FASE 7 CONCLUÍDA — ESTOQUE OPERÁVEL / LOTES / VALIDADE / FEFO**
 
 Data de fechamento: 2026-09-23.
 
 Situação:
-- FASES 0, 1, 2, 3, 4, 5 e 6 concluídas;
+- FASES 0, 1, 2, 3, 4, 5, 6 e 7 concluídas;
 - FASE 3 — Walking Skeleton integrada à `main` pelo PR #164;
 - FASE 4 — NF → Estoque implementada e validada no PR #167;
 - FASE 5 — SISCOFIS / Marco Zero / Conciliação implementada no PR #171;
 - FASE 6 — Depósitos / Localizações / Transferências implementada e validada no PR #173;
+- FASE 7 — Estoque Operável / Lotes / Validade / FEFO implementada e validada no PR #174;
 - piloto permanece exclusivo da conta fundadora;
 - usuários externos continuam sem visibilidade e sem acesso ao módulo ADM Depósito;
-- nenhuma capacidade da FASE 7 foi iniciada.
+- nenhuma capacidade da FASE 8 foi iniciada.
 
 ## Repositório e baseline
 
@@ -39,6 +40,25 @@ Esse baseline:
 
 Branch da FASE 6:
 `feat/adm-deposito-phase-6-locations`
+
+Baseline da `main` imediatamente antes do desenvolvimento da FASE 7:
+`a2eb3f7853bac9a13ccc0e8e7d09b46fee97f970`
+
+Branch da FASE 7:
+`feat/adm-deposito-phase-7-stock-lots-fefo`
+
+PR da FASE 7:
+- PR #174 — `feat: implement ADM Depósito phase 7 stock lots FEFO`;
+- squash merge na `main`: `7a469d1700b2783ba7f789a63617c90e349dced9`;
+- Recovery guardrails aprovado;
+- Application CI aprovado;
+- testes multi-tenant/Firestore aprovados;
+- gates permanentes das FASES 0–7 aprovados;
+- FASE 7 domain tests aprovados;
+- build de produção aprovado;
+- TypeScript final aprovado;
+- diff hygiene aprovado;
+- Browser E2E com Firebase Emulator aprovado.
 
 PR da FASE 6:
 - PR #173 — `feat: implement ADM Depósito phase 6 locations and transfers`;
@@ -175,7 +195,33 @@ Contratos/documentos:
 - `docs/adm-deposito/PHASE_6_LOCATIONS.md`;
 - decisões permanentes D-037 e D-038 em `DECISIONS.md`.
 
-## Regras permanentes após a FASE 6
+### FASE 7 — Estoque Operável / Lotes / Validade / FEFO
+Concluída.
+
+Capacidade vertical entregue:
+- contrato `warehouse_lot_v1` para lote, validade, posição e origem logística;
+- lote atua como enriquecimento do estoque existente e não cria saldo concorrente;
+- criar/editar lote não gera entrada, saída, transferência nem ajuste no ledger;
+- validade opcional em formato ISO real, com estados válido, próximo do vencimento, vencido e sem validade;
+- recomendação FEFO prioriza lote ativo, com saldo atribuído, validade futura e vencimento mais próximo;
+- FEFO é recomendação e não executa baixa automática;
+- pendências logísticas são avisos não bloqueantes para estoque sem lote, sem validade, `UNASSIGNED`, vencidos e inconsistências;
+- tela Estoque tornou-se operacional com pesquisa por material, lote, validade, NF, fornecedor e localização;
+- filtros por depósito, localização e situação de validade;
+- ficha do material consolida saldo, distribuição física, lotes, validade, origem e histórico do ledger;
+- ação “Localizar no depósito” reutiliza IDs estáveis da FASE 6 sem antecipar o croqui da FASE 9;
+- histórico por material é bounded e carregado sob demanda;
+- origem de NF, quando informada, referencia movimento oficial do mesmo material/workspace/UG;
+- Firestore Rules próprias para `lots`, com founder-only, integridade material/origem/UG e delete físico bloqueado;
+- usuários externos permanecem sem visibilidade nem acesso ao módulo;
+- código de barras, scanner, saída expressa, croqui e inventário não foram antecipados.
+
+Contratos/documentos:
+- `warehouse_lot_v1`;
+- `docs/adm-deposito/PHASE_7_STOCK_LOTS_FEFO.md`;
+- decisões permanentes D-039, D-040 e D-041 em `DECISIONS.md`.
+
+## Regras permanentes após a FASE 7
 
 1. NF → estoque continua reutilizando o ledger oficial da FASE 2.
 2. Não existe segundo saldo concorrente.
@@ -195,6 +241,10 @@ Contratos/documentos:
 16. Saldo legado sem posição explícita permanece representado como `UNASSIGNED` até transferência/localização operacional.
 17. Transferência interna deve usar `TRANSFER`, preservar o saldo agregado da OM e atualizar origem/destino atomicamente.
 18. Depósitos, locais e subposições possuem identidade lógica estável; renomear não pode trocar a identidade técnica.
+19. `warehouse_lot_v1` é enriquecimento logístico; `warehouse_balance_v1` e `warehouse_location_balance_v1` continuam autoridades quantitativas.
+20. Ausência de lote/validade continua não bloqueante; o sistema deve avisar sem inventar dado nem autocorrigir saldo.
+21. FEFO é recomendação derivada e nunca pode executar saída automática.
+22. Histórico do material deve continuar bounded e sob demanda; a listagem Estoque não deve carregar o ledger global.
 
 ## Validação da FASE 5
 
@@ -240,39 +290,63 @@ Correções de fechamento:
 - guards estruturais das FASES 4 e 5 tornados compatíveis com a evolução da FASE 6 sem remover suas invariantes;
 - autenticação founder no Browser E2E aceita token do Auth Emulator somente sob gate explícito de teste, host local e projeto `demo-*`, sem bypass em produção.
 
+## Validação da FASE 7
+
+Gates específicos:
+- `npm run test:adm-deposito-stock-operational`;
+- `npm run verify:adm-deposito-phase-7`;
+- cenários de lotes/validade/FEFO no teste multi-tenant Firestore;
+- Browser E2E específico da jornada Estoque.
+
+Gates integrados executados no PR #174:
+- Multi-tenant Firestore security: aprovado;
+- FASES 0–6: aprovadas sem regressão;
+- FASE 7 domain tests: aprovado;
+- FASE 7 permanent guard: aprovado;
+- build de produção: aprovado;
+- TypeScript final: aprovado;
+- diff hygiene: aprovado;
+- Browser E2E com Firebase Emulator: aprovado;
+- Recovery guardrails: aprovado.
+
+Correções de fechamento:
+- `firestore.rules` foi reconstruído a partir do baseline limpo após detecção de expansão textual acidental no diff, reduzindo a alteração para o bloco real da FASE 7;
+- teste externo de leitura de lote foi corrigido para usar efetivamente a sessão externa;
+- guard documental da FASE 7 foi alinhado ao título oficial sem alterar a regra de domínio.
+
 ## Próxima fase oficial
 
-**FASE 7 — Estoque Operável / Lotes / Validade / FEFO**
+**FASE 8 — Código de Barras, Scanner e Saída Expressa**
 
 Objetivo de alto nível:
-- enriquecer o estoque existente com lotes e validade;
-- tratar pendências logísticas como avisos, sem criar bloqueios indevidos;
-- introduzir recomendação FEFO;
-- tornar a tela Estoque pesquisável por contexto logístico;
-- oferecer ficha do material com saldo, origem, lotes, locais e histórico;
-- preparar a ação “Localizar no depósito” para a futura FASE 9.
+- suportar múltiplos códigos/apresentações por material;
+- implementar conversão de embalagem;
+- integrar leitor USB tipo teclado;
+- oferecer saída expressa por scanner ou pesquisa;
+- reutilizar FEFO como recomendação;
+- proteger saldo negativo;
+- manter operação contínua sem modais repetitivos.
 
-A FASE 7 ainda não foi iniciada e deve ser executada em novo chat/branch.
+A FASE 8 ainda não foi iniciada e deve ser executada em novo chat/branch.
 
 ## Sequência futura resumida
 
-1. FASE 7 — estoque operável / lotes / FEFO;
-2. FASE 8 — saída expressa / código de barras / scanner;
-3. FASE 9 — Visão do Depósito / editor / persistência;
-4. FASE 10 — inventário;
-5. FASE 11 — entregas / dashboard / alertas;
-6. FASE 12 — segurança / performance / telemetria;
-7. FASE 13 — validação integrada e fechamento do piloto;
-8. FASE 14 — expansão externa futura.
+1. FASE 8 — saída expressa / código de barras / scanner;
+2. FASE 9 — Visão do Depósito / editor / persistência;
+3. FASE 10 — inventário;
+4. FASE 11 — entregas / dashboard / alertas;
+5. FASE 12 — segurança / performance / telemetria;
+6. FASE 13 — validação integrada e fechamento do piloto;
+7. FASE 14 — expansão externa futura.
 
 ## Gate para o próximo chat
 
 Antes de modificar código:
 1. consultar a `main` real;
-2. ler `README.md`, `ROADMAP.md`, `DECISIONS.md`, `STATUS.md`, `HANDOFF_TEMPLATE.md`, `PHASE_5_SISCOFIS.md` e `PHASE_6_LOCATIONS.md`;
+2. ler `README.md`, `ROADMAP.md`, `DECISIONS.md`, `STATUS.md`, `HANDOFF_TEMPLATE.md`, `PHASE_5_SISCOFIS.md`, `PHASE_6_LOCATIONS.md` e `PHASE_7_STOCK_LOTS_FEFO.md`;
 3. comparar a `main` com o baseline registrado aqui;
-4. analisar commits posteriores ao fechamento da FASE 6;
-5. preservar material canônico, ledger, saldo, NF → estoque, cutoff, Marco Zero, snapshots SISCOFIS e distribuição física da FASE 6;
-6. executar exclusivamente a FASE 7 — Estoque Operável / Lotes / Validade / FEFO;
-7. não iniciar a FASE 8 no mesmo chat;
+4. analisar commits posteriores ao fechamento da FASE 7;
+5. preservar material canônico, ledger, saldo, NF → estoque, cutoff, Marco Zero, snapshots SISCOFIS, distribuição física, lotes e FEFO;
+6. executar exclusivamente a FASE 8 — Código de Barras, Scanner e Saída Expressa;
+7. não iniciar a FASE 9 no mesmo chat;
 8. atualizar STATUS ao fechar a fase.

@@ -129,7 +129,7 @@ Capacidade completa:
 
 Gate vertical: cadastrar estrutura física, localizar material e transferi-lo preservando saldo total.
 
-## FASE 7 — Estoque Operável, Lotes, Validade e FEFO
+## FASE 7 — Estoque Operável, Lotes, Validade e FEFO — CONCLUÍDA
 
 Blocos: DEP-11, DEP-11.1, DEP-11.2, DEP-12, DEP-15, DEP-15.1 e DEP-15.2.
 
@@ -293,7 +293,7 @@ FASE 0 Fundação e isolamento ✓
 → FASE 4 NF → estoque ✓
 → FASE 5 SISCOFIS / Marco Zero ✓
 → FASE 6 Depósitos / localizações ✓
-→ FASE 7 Estoque operável
+→ FASE 7 Estoque operável ✓
 → FASE 8 Saída / scanner
 → FASE 9 Visão do Depósito
 → FASE 10 Inventário
