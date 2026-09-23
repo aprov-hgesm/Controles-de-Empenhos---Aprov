@@ -35,10 +35,12 @@ export function InicioView({
 }: InicioViewProps) {
   const rootRef = useRef<HTMLElement>(null);
   const { mode: performanceMode, ambientPaused } = useInicioPerformanceProfile();
+  // Home enxuta: a cena permanece espacial, mas sem parallax contínuo.
+  const allowSceneParallax = false;
 
   useEffect(() => {
     const root = rootRef.current;
-    if (!root || performanceMode !== 'full' || ambientPaused) return;
+    if (!allowSceneParallax || !root || performanceMode !== 'full' || ambientPaused) return;
 
     const finePointer = window.matchMedia('(pointer: fine)');
     if (!finePointer.matches) return;
@@ -107,7 +109,7 @@ export function InicioView({
   const totalEmpenhos = snapshot?.metrics.totalEmpenhos ?? 0;
   const totalValue = snapshot?.metrics.totalValue ?? 0;
   const activeAlertCount = snapshot?.alerts.total ?? 0;
-  const enableFineMotion = performanceMode === 'full' && !ambientPaused;
+  const enableFineMotion = false;
 
   return (
     <section
@@ -118,6 +120,7 @@ export function InicioView({
       data-snapshot={snapshot ? 'ready' : 'empty'}
       data-performance={performanceMode}
       data-ambient-paused={ambientPaused ? 'true' : 'false'}
+      data-lean-home="true"
       aria-label="Início EMPROVEX"
     >
       <InicioEntrySequence />
@@ -141,15 +144,16 @@ export function InicioView({
       <div
         className={styles.system}
         data-testid="inicio-system"
-        aria-label="Sistema solar operacional EMPROVEX"
+        aria-label="Núcleo operacional EMPROVEX"
       >
-        <InicioOrbitSystem snapshot={snapshot} />
+        {false && <InicioOrbitSystem snapshot={snapshot} />}
 
         <InicioCore
+          snapshot={snapshot}
           totalEmpenhos={totalEmpenhos}
           totalValueLabel={formatCurrency(totalValue)}
           activeAlertCount={activeAlertCount}
-          interactiveMotion={enableFineMotion}
+          interactiveMotion={false}
         />
       </div>
 
