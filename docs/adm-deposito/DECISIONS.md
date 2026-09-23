@@ -415,4 +415,3 @@ Contratos:
 - snapshots posteriores: `warehouse/{workspaceId}/siscofisSnapshots/snapshot_<hash>`.
 
 Documento técnico: `docs/adm-deposito/PHASE_5_SISCOFIS.md`.
-
