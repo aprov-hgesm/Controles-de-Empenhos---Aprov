@@ -139,6 +139,12 @@ jobs:
       - name: ADM Depósito Phase 4 NF → estoque guard
         run: npm run verify:adm-deposito-phase-4
 
+      - name: ADM Depósito Phase 5 SISCOFIS domain tests
+        run: npm run test:adm-deposito-siscofis
+
+      - name: ADM Depósito Phase 5 SISCOFIS guard
+        run: npm run verify:adm-deposito-phase-5
+
       - name: Production multi-tenant readiness guard
         run: npm run verify:production-multitenant-readiness
 
