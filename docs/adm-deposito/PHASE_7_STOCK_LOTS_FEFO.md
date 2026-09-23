@@ -27,16 +27,16 @@ Essas capacidades continuam nas fases posteriores, começando pela FASE 8.
 
 A FASE 7 não altera as fontes de verdade anteriores:
 
-- material canônico: \`warehouse_material_v1\`;
-- ledger: \`warehouse_movement_v1\`;
-- saldo agregado: \`warehouse_balance_v1\`;
-- distribuição física: \`warehouse_location_balance_v1\`.
+- material canônico: `warehouse_material_v1`;
+- ledger: `warehouse_movement_v1`;
+- saldo agregado: `warehouse_balance_v1`;
+- distribuição física: `warehouse_location_balance_v1`.
 
 O lote **não é um saldo concorrente**.
 
-A quantidade registrada no lote é uma atribuição/rastreabilidade logística. Criar ou editar \`warehouse_lot_v1\`:
-- não altera \`warehouse_balance_v1\`;
-- não altera \`warehouse_location_balance_v1\`;
+A quantidade registrada no lote é uma atribuição/rastreabilidade logística. Criar ou editar `warehouse_lot_v1`:
+- não altera `warehouse_balance_v1`;
+- não altera `warehouse_location_balance_v1`;
 - não cria entrada, saída, transferência ou ajuste;
 - não cria um movimento no ledger.
 
@@ -46,51 +46,51 @@ A persistência valida que a quantidade informada não ultrapasse o saldo oficia
 
 O contrato canônico é:
 
-\`warehouse_lot_v1\`
+`warehouse_lot_v1`
 
 Campos de domínio:
-- \`id\` técnico estável no formato \`lot_<32 hex>\`;
-- \`workspaceId\`;
-- \`ug\`;
-- \`materialId\` canônico;
-- \`code\`;
-- \`expiresOn\` no formato \`YYYY-MM-DD\` ou \`null\`;
-- \`quantity\` como atribuição logística;
-- \`position\` reutilizando \`WarehouseStockPosition\`;
-- \`origin\`;
-- \`status\`;
-- \`createdBy\`;
-- \`updatedBy\`.
+- `id` técnico estável no formato `lot_<32 hex>`;
+- `workspaceId`;
+- `ug`;
+- `materialId` canônico;
+- `code`;
+- `expiresOn` no formato `YYYY-MM-DD` ou `null`;
+- `quantity` como atribuição logística;
+- `position` reutilizando `WarehouseStockPosition`;
+- `origin`;
+- `status`;
+- `createdBy`;
+- `updatedBy`.
 
 Persistência acrescenta:
-- \`createdAt\`;
-- \`updatedAt\`.
+- `createdAt`;
+- `updatedAt`.
 
-A descrição textual do material nunca é usada como chave de identidade. O vínculo é sempre pelo \`materialId\` canônico.
+A descrição textual do material nunca é usada como chave de identidade. O vínculo é sempre pelo `materialId` canônico.
 
 ## 4. Origem
 
 Origem de lote possui contrato estruturado:
 
-- \`INVOICE\`;
-- \`MANUAL_ENRICHMENT\`;
-- \`LEGACY\`.
+- `INVOICE`;
+- `MANUAL_ENRICHMENT`;
+- `LEGACY`.
 
-Quando a origem é \`INVOICE\`, o lote referencia o \`movementId\` oficial e os identificadores da NF. As Firestore Rules verificam que o movimento:
+Quando a origem é `INVOICE`, o lote referencia o `movementId` oficial e os identificadores da NF. As Firestore Rules verificam que o movimento:
 - existe no mesmo workspace;
 - pertence à mesma UG;
 - pertence ao mesmo material;
-- possui origem \`INVOICE\`;
+- possui origem `INVOICE`;
 - corresponde à mesma NF.
 
 NF sem informação de lote continua apta a gerar estoque conforme a FASE 4. O lote enriquece a entrada existente; ele nunca duplica a entrada.
 
 ## 5. Validade
 
-\`expiresOn\` é opcional porque nem todo material possui validade aplicável.
+`expiresOn` é opcional porque nem todo material possui validade aplicável.
 
 Quando informado:
-- deve ser uma data ISO real no formato \`YYYY-MM-DD\`;
+- deve ser uma data ISO real no formato `YYYY-MM-DD`;
 - datas impossíveis são rejeitadas pelo domínio;
 - lote vencido recebe estado operacional próprio;
 - lote próximo do vencimento é destacado;
@@ -119,7 +119,7 @@ A FASE 8 poderá consumir essa recomendação para a futura saída expressa sem 
 As pendências são avisos auditáveis e não bloqueios artificiais.
 
 A FASE 7 identifica:
-- saldo \`UNASSIGNED\`;
+- saldo `UNASSIGNED`;
 - ausência de informação de lote;
 - lote sem validade;
 - lote vencido;
@@ -177,7 +177,7 @@ A ficha consolida:
 - origem;
 - histórico oficial do ledger.
 
-O histórico é consultado por \`materialId\` e carregado sob demanda.
+O histórico é consultado por `materialId` e carregado sob demanda.
 
 A ficha permite criar/editar enriquecimento de lote, mas essa ação não altera saldo.
 
@@ -197,7 +197,7 @@ A FASE 9 continuará recebendo os mesmos IDs para destacar visualmente a posiç�
 
 A FASE 5 permanece integralmente preservada:
 - primeiro relatório confirmado pode estabelecer Marco Zero;
-- Marco Zero usa \`INITIAL_BALANCE\`;
+- Marco Zero usa `INITIAL_BALANCE`;
 - snapshots posteriores são apenas conciliação;
 - divergência nunca autocorrige estoque;
 - lote/validade não são inferidos quando a fonte não os fornece.
@@ -206,7 +206,7 @@ A FASE 5 permanece integralmente preservada:
 
 O módulo continua founder-only.
 
-Firestore Rules específicas de \`lots\` protegem:
+Firestore Rules específicas de `lots` protegem:
 - workspace fundador;
 - UG;
 - ID técnico de lote;
@@ -217,15 +217,15 @@ Firestore Rules específicas de \`lots\` protegem:
 - impossibilidade de delete físico;
 - bloqueio de usuários externos.
 
-A coleção \`lots\` foi retirada do fallback genérico e passou a possuir regras próprias.
+A coleção `lots` foi retirada do fallback genérico e passou a possuir regras próprias.
 
 ## 13. Testes
 
 Gates permanentes da FASE 7:
-- \`npm run test:adm-deposito-stock-operational\`;
-- \`npm run verify:adm-deposito-phase-7\`;
-- cenários da FASE 7 na suíte \`test:security:multitenant\`;
-- Browser E2E em \`tests/e2e/warehouse-phase-7.spec.mjs\`.
+- `npm run test:adm-deposito-stock-operational`;
+- `npm run verify:adm-deposito-phase-7`;
+- cenários da FASE 7 na suíte `test:security:multitenant`;
+- Browser E2E em `tests/e2e/warehouse-phase-7.spec.mjs`.
 
 Coberturas principais:
 - contrato de lote;
