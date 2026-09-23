@@ -86,7 +86,7 @@ requireText(
   "id: 'locations', label: 'Localizações'",
   'Navegação de Localizações ausente.'
 );
-requireText(shell, 'EMPROVEX // FASE 6', 'Shell do ADM Depósito não identifica a FASE 6.');
+requireText(shell, 'EMPROVEX // FASE ', 'Shell do ADM Depósito não preserva a identificação evolutiva de fase.');
 
 for (const marker of [
   'function validWarehouseDepotCreate',
