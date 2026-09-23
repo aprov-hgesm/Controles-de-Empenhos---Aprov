@@ -1,5 +1,5 @@
-import { WarehouseModuleShell } from '../../../features/warehouse/components/WarehouseModuleShell';
+import { WarehouseProtectedSurface } from '../../../features/warehouse/components/WarehouseProtectedSurface';
 
 export default function WarehouseLocationsPage() {
-  return <WarehouseModuleShell section="locations" />;
+  return <WarehouseProtectedSurface section="locations" />;
 }

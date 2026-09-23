@@ -7,7 +7,7 @@ const root = process.cwd();
 const findings = [];
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
-const layout = read('app/adm-deposito/layout.tsx');
+const gate = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
 const navigation = read('features/warehouse/navigation.ts');
 const shell = read('features/warehouse/components/WarehouseModuleShell.tsx');
 const content = read('features/warehouse/components/WarehouseSectionContent.tsx');
@@ -33,7 +33,7 @@ const routeFiles = [
 
 for (const [path, section] of routeFiles) {
   const route = read(path);
-  requireText(route, 'WarehouseModuleShell', `Rota estrutural sem shell compartilhado: ${path}`);
+  requireText(route, 'WarehouseProtectedSurface', `Rota estrutural sem gate compartilhado: ${path}`);
   requireText(route, `section="${section}"`, `Rota estrutural aponta para seção incorreta: ${path}`);
 }
 
@@ -57,7 +57,7 @@ for (const marker of [
   "fetch('/api/adm-deposito/status'",
   "router.replace('/')",
 ]) {
-  requireText(layout, marker, `Gate founder-only não preservado no layout: ${marker}`);
+  requireText(gate, marker, `Gate founder-only não preservado no layout: ${marker}`);
 }
 
 for (const marker of [

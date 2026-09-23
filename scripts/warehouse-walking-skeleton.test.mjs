@@ -21,7 +21,7 @@ const routes = {
 test('walking skeleton possui as nove superfícies estruturais roteáveis', () => {
   for (const [id, [path, section]] of Object.entries(routes)) {
     const source = read(path);
-    assert.match(source, /WarehouseModuleShell/);
+    assert.match(source, /WarehouseProtectedSurface/);
     assert.ok(source.includes(`section="${section}"`), `${id} deve apontar para ${section}`);
   }
 });
@@ -44,11 +44,11 @@ test('navegação interna expõe todas as superfícies oficiais', () => {
 });
 
 test('layout compartilhado preserva gate founder-only em todas as rotas', () => {
-  const layout = read('app/adm-deposito/layout.tsx');
-  assert.ok(layout.includes('resolveAuthenticatedWorkspaceContext(currentUser)'));
-  assert.ok(layout.includes('canAccessWarehouseModule(context)'));
-  assert.ok(layout.includes("fetch('/api/adm-deposito/status'"));
-  assert.ok(layout.includes("router.replace('/')"));
+  const gate = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
+  assert.ok(gate.includes('resolveAuthenticatedWorkspaceContext(currentUser)'));
+  assert.ok(gate.includes('canAccessWarehouseModule(context)'));
+  assert.ok(gate.includes("fetch('/api/adm-deposito/status'"));
+  assert.ok(gate.includes("router.replace('/')"));
 });
 
 test('walking skeleton reutiliza contratos oficiais sem persistência paralela', () => {
