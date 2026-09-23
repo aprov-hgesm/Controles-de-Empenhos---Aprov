@@ -26,7 +26,7 @@ requireText(view, '<InicioAtmosphere />', 'Início não compõe a atmosfera cine
 requireText(view, '<InicioEntrySequence />', 'Início não compõe a sequência de entrada.');
 requireText(view, 'data-ready="true"', 'Cena não ativa o reveal controlado.');
 requireText(atmosphere, "import styles from './InicioAtmosphere.module.css'", 'Atmosfera não usa CSS Module isolado.');
-requireText(atmosphere, 'deepStars', 'Atmosfera perdeu estrelas de profundidade.');
+forbidText(atmosphere, 'deepStars', 'Pontos decorativos de profundidade voltaram à atmosfera.');
 requireText(atmosphere, 'dust', 'Atmosfera perdeu poeira ambiental.');
 requireText(atmosphereCss, '@keyframes nebulaDriftA', 'Nebulosas não possuem deriva cinematográfica.');
 requireText(atmosphereCss, '@keyframes scanSweep', 'Cena não possui varredura luminosa.');
@@ -47,7 +47,7 @@ if (findings.length) {
   process.exitCode = 2;
 } else {
   console.log('BLOCK 19.2 CINEMATIC SCENE: READY');
-  console.log('Atmosfera profunda: ATIVA');
+  console.log('Atmosfera profunda sem pontos decorativos: ATIVA');
   console.log('Entrada por sessão: CONTROLADA');
   console.log('Reduced motion: PRESERVADO');
   console.log('Firestore adicional: ZERO');
