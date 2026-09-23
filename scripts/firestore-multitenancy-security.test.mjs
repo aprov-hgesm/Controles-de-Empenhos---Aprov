@@ -1566,7 +1566,15 @@ async function main() {
   );
 
   await denied('Setor externo continua sem acesso aos lotes da FASE 7', () =>
-    getDoc(phase7InvoiceLotRef)
+    getDoc(
+      doc(
+        sessionA.db,
+        'warehouse',
+        'hgesm-aprov',
+        'lots',
+        phase7InvoiceLotId
+      )
+    )
   );
 
   await denied('Setor externo não cria lote nem no namespace fundador', () =>
