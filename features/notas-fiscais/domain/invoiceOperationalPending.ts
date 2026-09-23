@@ -23,10 +23,6 @@ export function getInvoiceOperationalPendingStage(
   empenho: Empenho,
   classDefinitions: EmpenhoClassDefinition[]
 ): InvoiceOperationalPendingStage {
-  if (invoice.localizacaoAtual === 'TESOURARIA' || invoice.tesourariaDate) {
-    return 'none';
-  }
-
   const requiresCommission = classRequiresTermoRecebimento(
     empenho.classification,
     classDefinitions
@@ -34,12 +30,20 @@ export function getInvoiceOperationalPendingStage(
 
   // localizacaoAtual é a fonte operacional quando existe; as datas permanecem
   // como histórico e servem apenas de fallback para registros legados.
+  if (invoice.localizacaoAtual === 'TESOURARIA') {
+    return 'none';
+  }
+
   if (invoice.localizacaoAtual === 'COMISSAO') {
     return 'treasury';
   }
 
   if (invoice.localizacaoAtual === 'APROVISIONAMENTO') {
     return requiresCommission ? 'commission' : 'treasury';
+  }
+
+  if (invoice.tesourariaDate) {
+    return 'none';
   }
 
   if (!requiresCommission) {
