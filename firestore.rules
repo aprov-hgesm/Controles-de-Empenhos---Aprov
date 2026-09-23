@@ -169,7 +169,7 @@ service cloud.firestore {
       return isVerifiedUser()
         && isPasswordSectorSession()
         && sectorAccountUsesPasswordProvider(account)
-        && account.email == request.auth.token.get('emprovexAccountEmail', '')
+        && account.email == request.auth.token.email
         && hasBoundUid(account)
         && account.firebaseUid == request.auth.uid;
     }
@@ -207,7 +207,7 @@ service cloud.firestore {
     function sessionCredentialMatchesAccount(workspaceId, account) {
       return isCustomSectorSession()
         && sectorAccountUsesPasswordProvider(account)
-        && account.email == request.auth.token.email
+        && account.email == request.auth.token.get('emprovexAccountEmail', '')
         && hasBoundUid(account)
         && account.firebaseUid == request.auth.uid
         && account.workspaceId == workspaceId
