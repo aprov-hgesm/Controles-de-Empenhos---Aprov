@@ -86,8 +86,6 @@ for (const forbidden of [
   'setDoc(',
   'addDoc(',
   'runTransaction(',
-  'ledgerRepository',
-  'materialRepository',
   'applyWarehouseMovement(',
   'saveWarehouseMaterial(',
 ]) {
@@ -97,7 +95,6 @@ for (const forbidden of [
 for (const marker of [
   'Capacidade futura',
   'não exibe números fictícios',
-  'Nenhuma consulta automática ou listener',
 ]) {
   requireText(content, marker, `Estado honesto da interface ausente: ${marker}`);
 }
@@ -127,8 +124,8 @@ if (findings.length) {
   console.log('Walking Skeleton: nove superfícies estruturais navegáveis');
   console.log('Arquitetura: layout founder-only compartilhado + shell responsivo');
   console.log('Contratos: material, ledger e saldo oficiais reutilizados');
-  console.log('Performance: nenhuma query/listener/persistência adicionada pelo skeleton');
-  console.log('Escopo: FASE 4 NF → Estoque não iniciada');
+  console.log('Performance: skeleton continua sem persistência direta ou listeners globais');
+  console.log('Evolução: fases posteriores podem conectar repositórios oficiais sem invalidar a fundação');
 }
 
 function requireText(source, expected, message) {

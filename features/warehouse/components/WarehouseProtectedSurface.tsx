@@ -14,6 +14,7 @@ type GateState = 'checking' | 'allowed' | 'denied';
 
 export function WarehouseProtectedSurface({ section }: { section: WarehouseSectionId }) {
   const [gateState, setGateState] = useState<GateState>('checking');
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -29,7 +30,7 @@ export function WarehouseProtectedSurface({ section }: { section: WarehouseSecti
         const context = await resolveAuthenticatedWorkspaceContext(currentUser);
         if (!active) return;
 
-        if (!canAccessWarehouseModule(context)) {
+        if (!canAccessWarehouseModule(context) || context.status !== 'sector') {
           setGateState('denied');
           window.location.replace('/');
           return;
@@ -50,6 +51,7 @@ export function WarehouseProtectedSurface({ section }: { section: WarehouseSecti
           return;
         }
 
+        setWorkspaceId(context.workspaceId);
         setGateState('allowed');
       } catch {
         if (!active) return;
@@ -64,9 +66,9 @@ export function WarehouseProtectedSurface({ section }: { section: WarehouseSecti
     };
   }, []);
 
-  if (gateState !== 'allowed') {
+  if (gateState !== 'allowed' || !workspaceId) {
     return <EmprovexAuthLoading hasAuthenticatedIdentity={gateState === 'checking'} />;
   }
 
-  return <WarehouseModuleShell section={section} />;
+  return <WarehouseModuleShell section={section} workspaceId={workspaceId} />;
 }

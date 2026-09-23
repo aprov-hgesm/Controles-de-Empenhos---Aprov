@@ -460,6 +460,11 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                     <Check className="w-3 h-3" /> Termo Nº {inv.termoNumero} ({formatDateOnly(inv.termoEmissaoDate || inv.registeredAt || inv.issueDate)})
                                   </span>
                                 )}
+                                {inv.warehouseIntegration?.status === 'integrated' && (
+                                  <span className="bg-cyan-50 text-cyan-800 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-cyan-100 flex items-center gap-1" title="Esta NF já gerou movimentação no ledger do ADM Depósito.">
+                                    <Check className="w-3 h-3" /> Estoque integrado
+                                  </span>
+                                )}
                                 <span className="text-gray-400 text-xs font-semibold">
                                   Empenho: <span className="font-bold text-gray-600">{inv.empenhoId}</span>
                                 </span>
@@ -790,6 +795,9 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                         <div>
                           <p className="text-sm font-bold text-amber-900">Modo de Edição de Nota Fiscal</p>
                           <p className="text-xs font-semibold text-amber-700">Você está alterando os dados da Nota Fiscal nº {editingInvoice.id}.</p>
+                          {editingInvoice.warehouseIntegration?.status === 'integrated' && (
+                            <p className="mt-1 text-[11px] font-bold text-cyan-800">NF integrada ao estoque: mudanças de quantidade gerarão correção compensatória no ledger; o histórico anterior será preservado.</p>
+                          )}
                         </div>
                       </div>
                       <button
@@ -1016,7 +1024,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                                 aria-busy={isSavingInvoice}
                                 className="h-12 px-6 sm:px-8 bg-[#00288e] text-white rounded-full font-bold text-xs sm:text-sm shadow-md active:scale-95 transition-all duration-100 hover:bg-[#1e40af] flex items-center gap-2 disabled:opacity-60 disabled:cursor-wait"
                               >
-                                {isSavingInvoice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {isSavingInvoice ? 'Salvando e enviando PDF…' : 'Salvar Recebimento'}
+                                {isSavingInvoice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {isSavingInvoice ? 'Salvando recebimento…' : 'Salvar Recebimento'}
                               </button>
                             </div>
                           </footer>

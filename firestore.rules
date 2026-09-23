@@ -99,6 +99,89 @@ service cloud.firestore {
     }
 
 
+    // FASE 4 / DEP-3.x — origem estruturada e auditável da NF.
+    function validWarehouseMovementSource(source) {
+      return source == null
+        || (
+          source is map
+          && source.keys().hasOnly([
+            'kind',
+            'action',
+            'invoiceRecordKey',
+            'invoiceId',
+            'empenhoId',
+            'itemIds',
+            'supplier',
+            'supplierCnpj',
+            'actorUid'
+          ])
+          && source.keys().hasAll([
+            'kind',
+            'action',
+            'invoiceRecordKey',
+            'invoiceId',
+            'empenhoId',
+            'itemIds',
+            'supplier',
+            'supplierCnpj',
+            'actorUid'
+          ])
+          && source.kind == 'INVOICE'
+          && source.action in ['ENTRY', 'CORRECTION', 'DELETE']
+          && source.invoiceRecordKey is string
+          && source.invoiceRecordKey.size() > 0
+          && source.invoiceRecordKey.size() <= 160
+          && source.invoiceId is string
+          && source.invoiceId.size() > 0
+          && source.invoiceId.size() <= 120
+          && source.empenhoId is string
+          && source.empenhoId.size() > 0
+          && source.empenhoId.size() <= 120
+          && source.itemIds is list
+          && source.itemIds.size() > 0
+          && source.itemIds.size() <= 32
+          && source.supplier is string
+          && source.supplier.size() > 0
+          && source.supplier.size() <= 240
+          && (
+            source.supplierCnpj == null
+            || (
+              source.supplierCnpj is string
+              && source.supplierCnpj.matches('^[0-9]{14}$')
+            )
+          )
+          && source.actorUid is string
+          && source.actorUid == request.auth.uid
+        );
+    }
+
+    function validWarehouseInvoiceIntegrationSettings(workspaceId, settingId) {
+      return settingId == 'invoice-integration'
+        && request.resource.data is map
+        && request.resource.data.keys().hasOnly([
+          'schemaVersion',
+          'workspaceId',
+          'ug',
+          'cutoffAt',
+          'activatedBy'
+        ])
+        && request.resource.data.keys().hasAll([
+          'schemaVersion',
+          'workspaceId',
+          'ug',
+          'cutoffAt',
+          'activatedBy'
+        ])
+        && request.resource.data.schemaVersion == 'warehouse_invoice_settings_v1'
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.ug is string
+        && request.resource.data.ug.matches('^[0-9]{6}$')
+        && request.resource.data.cutoffAt is string
+        && request.resource.data.cutoffAt.size() >= 20
+        && request.resource.data.cutoffAt.size() <= 40
+        && request.resource.data.activatedBy == request.auth.uid;
+    }
+
     // FASE 2 / DEP-2 + DEP-2.1 + DEP-2.2 — ledger append-only, saldo
     // materializado e idempotência por ID determinístico.
     function validWarehouseMovementDelta(type, quantityDelta) {
@@ -117,22 +200,22 @@ service cloud.firestore {
     }
 
     function warehouseMaterialMatchesMovement(workspaceId) {
-      return exists(
+      return existsAfter(
           /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
         )
-        && get(
+        && getAfter(
           /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
         ).data.schemaVersion == 'warehouse_material_v1'
-        && get(
+        && getAfter(
           /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
         ).data.id == request.resource.data.materialId
-        && get(
+        && getAfter(
           /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
         ).data.workspaceId == workspaceId
-        && get(
+        && getAfter(
           /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
         ).data.ug == request.resource.data.ug
-        && get(
+        && getAfter(
           /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
         ).data.status == 'active';
     }
@@ -179,6 +262,7 @@ service cloud.firestore {
           'idempotencyKeyHash',
           'reversesMovementId',
           'note',
+          'source',
           'createdAt'
         ])
         && request.resource.data.keys().hasAll([
@@ -225,6 +309,10 @@ service cloud.firestore {
             && request.resource.data.note.size() > 0
             && request.resource.data.note.size() <= 240
           )
+        )
+        && (
+          !('source' in request.resource.data)
+          || validWarehouseMovementSource(request.resource.data.source)
         )
         && request.resource.data.createdAt == request.time
         && warehouseMaterialMatchesMovement(workspaceId)
@@ -2455,11 +2543,20 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      // FASE 4 / DEP-4 — cutoff imutável de ativação do fluxo NF → estoque.
+      match /settings/{settingId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseInvoiceIntegrationSettings(workspaceId, settingId);
+        allow update, delete: if false;
+      }
+
       match /{domain}/{document=**} {
         allow read, write: if canAccessWarehouseModule(workspaceId)
           && domain != 'materials'
           && domain != 'movements'
-          && domain != 'balances';
+          && domain != 'balances'
+          && domain != 'settings';
       }
     }
 

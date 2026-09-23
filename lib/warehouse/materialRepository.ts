@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, query, setDoc } from 'firebase/firestore';
 
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { normalizeWorkspaceId } from '../platformIdentity';
@@ -31,12 +31,15 @@ function validateForWorkspace(
 }
 
 export async function listWarehouseMaterials(
-  workspaceId: string
+  workspaceId: string,
+  maxResults = 250
 ): Promise<WarehouseMaterial[]> {
   const path = warehouseDomainPath(workspaceId, 'materials');
 
   try {
-    const snapshot = await getDocs(collection(db, path));
+    const snapshot = await getDocs(
+      query(collection(db, path), limit(Math.max(1, Math.min(maxResults, 500))))
+    );
     return snapshot.docs.map((item) =>
       validateForWorkspace(workspaceId, {
         ...item.data(),

@@ -268,6 +268,11 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
         committedEmpenhos = updatedEmpenhos.map((empenho) =>
           committedById.get(empenho.id) || empenho
         );
+        updatedInvoices = updatedInvoices.map((invoice) =>
+          getInvoiceRecordKey(invoice) === nextRecordKey
+            ? result.updatedInvoice
+            : invoice
+        );
       } catch (error) {
         if (uploadedInvoicePdf) {
           await deleteInvoicePdfUpload(user, selectedNFCommitmentId, cleanNfNum, uploadedInvoicePdf.pathname).catch(() => undefined);

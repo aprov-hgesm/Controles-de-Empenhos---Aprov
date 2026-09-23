@@ -42,3 +42,34 @@ Regras:
 O template inicia a conversa; a fonte da verdade continua sendo a `main` e os documentos oficiais.
 
 Se o texto do chat divergir deles, prevalecem GitHub e documentação versionada.
+
+
+## Estado corrente após a FASE 4
+
+Última fase concluída:
+- **FASE 4 — NF → Estoque**;
+- PR de implementação: **#167**;
+- decisão permanente adicionada: **D-033**.
+
+Capacidades que o próximo chat deve considerar já existentes:
+- material canônico;
+- ledger append-only;
+- saldo materializado;
+- Walking Skeleton completo;
+- vínculo persistido NF → material → movimento → saldo;
+- idempotência de recebimento;
+- correção e exclusão por movimento compensatório;
+- cutoff de histórico;
+- leitura real de Estoque e Movimentações;
+- isolamento founder-only e multitenancy preservado.
+
+Próxima fase oficial:
+- **FASE 5 — SISCOFIS / Marco Zero / Conciliação**.
+
+Regras adicionais para a FASE 5:
+- não criar fonte de verdade paralela ao ledger;
+- não fazer backfill silencioso do histórico;
+- não enfraquecer o cutoff estabelecido na FASE 4;
+- não liberar ADM Depósito para usuários externos;
+- não iniciar FASE 6 no mesmo chat;
+- reconciliar qualquer commit novo da `main` antes de editar código.
