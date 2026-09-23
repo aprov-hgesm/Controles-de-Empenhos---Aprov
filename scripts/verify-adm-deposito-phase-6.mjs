@@ -27,6 +27,9 @@ const rules = read('firestore.rules');
 const securityTests = read('scripts/firestore-multitenancy-security.test.mjs');
 const packageJson = read('package.json');
 const ci = read('.github/workflows/application-ci.yml');
+const browserE2e = read('tests/e2e/warehouse-phase-6.spec.mjs');
+const phaseDoc = read('docs/adm-deposito/PHASE_6_LOCATIONS.md');
+const decisions = read('docs/adm-deposito/DECISIONS.md');
 
 for (const marker of [
   "WAREHOUSE_DEPOT_SCHEMA_VERSION = 'warehouse_depot_v1'",
@@ -102,6 +105,23 @@ for (const marker of [
   'Setor externo continua sem acesso às localizações da FASE 6',
   'Depósito da FASE 6 não pode ser excluído fisicamente',
 ]) requireText(securityTests, marker, 'Cobertura de segurança da FASE 6 ausente: ' + marker);
+
+for (const marker of [
+  'warehouse-locations-operational',
+  'warehouse-transfer-confirm',
+  'fundador cria local, transfere estoque e confirma a distribuição física',
+]) requireText(browserE2e, marker, 'Browser E2E específico da FASE 6 incompleto: ' + marker);
+
+for (const marker of [
+  'warehouse_location_balance_v1',
+  'UNASSIGNED',
+  'TRANSFER',
+]) requireText(phaseDoc, marker, 'Documento técnico da FASE 6 incompleto: ' + marker);
+
+for (const marker of [
+  'D-037',
+  'D-038',
+]) requireText(decisions, marker, 'Decisão arquitetural permanente da FASE 6 ausente: ' + marker);
 
 for (const marker of [
   '"test:adm-deposito-locations"',
