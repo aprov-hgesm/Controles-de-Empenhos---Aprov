@@ -102,3 +102,16 @@ O Bloco 9 está pronto quando:
 7. o guard permanente do Bloco 9 passa;
 8. a Application CI permanece verde;
 9. o Browser E2E job permanece verde.
+
+
+## Política operacional posterior — execução seletiva
+
+A existência desta suíte completa permanece obrigatória, mas sua execução em CI deve seguir a política global definida em `docs/DEVELOPMENT_CI_WORKFLOW.md`.
+
+Diretriz:
+- mudanças que alteram jornada funcional do usuário devem executar Browser E2E adequado;
+- alterações puramente visuais, documentais ou estáticas podem usar guards/testes direcionados e smoke E2E quando suficiente;
+- a regressão completa continua indicada para integrações, releases, alterações de infraestrutura compartilhada, regressões e execução periódica;
+- nenhuma otimização de tempo pode remover a capacidade de executar a suíte completa.
+
+Enquanto o workflow vigente ainda disparar este job em todo PR, o comportamento atual deve ser respeitado até a refatoração oficial do CI.
