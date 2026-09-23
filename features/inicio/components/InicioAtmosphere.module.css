@@ -367,7 +367,7 @@
 .root[data-lean='true'] .deepStar {
   display: block !important;
   opacity: 0.86;
-  animation: leanStarTwinkle 6.2s ease-in-out infinite;
+  animation: leanStarTwinkle 6.2s ease-in-out infinite !important;
 }
 
 @keyframes leanStarTwinkle {
