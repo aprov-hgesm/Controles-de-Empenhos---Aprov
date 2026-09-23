@@ -145,6 +145,12 @@ jobs:
       - name: ADM Depósito Phase 5 SISCOFIS guard
         run: npm run verify:adm-deposito-phase-5
 
+      - name: ADM Depósito Phase 6 locations and transfers domain tests
+        run: npm run test:adm-deposito-locations
+
+      - name: ADM Depósito Phase 6 permanent guard
+        run: npm run verify:adm-deposito-phase-6
+
       - name: Production multi-tenant readiness guard
         run: npm run verify:production-multitenant-readiness
 
