@@ -64,8 +64,6 @@ interface EditTarget {
 
 const fieldClass =
   'h-10 w-full rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-sm text-slate-200 outline-none transition placeholder:text-slate-700 focus:border-blue-300/30';
-const areaClass =
-  'min-h-20 w-full resize-y rounded-xl border border-white/[0.08] bg-[#01050d] px-3 py-2 text-sm text-slate-200 outline-none transition placeholder:text-slate-700 focus:border-blue-300/30';
 const primaryButton =
   'inline-flex h-10 items-center justify-center rounded-xl bg-blue-500/90 px-4 text-xs font-black text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-40';
 const secondaryButton =
@@ -160,10 +158,6 @@ export function WarehouseLocationsOperational({
     () => new Map(state.materials.map((material) => [material.id, material])),
     [state.materials]
   );
-  const aggregateByMaterial = useMemo(
-    () => new Map(state.balances.map((balance) => [balance.materialId, balance])),
-    [state.balances]
-  );
   const activeDepotIds = useMemo(
     () =>
       new Set(
@@ -255,9 +249,14 @@ export function WarehouseLocationsOperational({
   const sourceOptions = useMemo(
     () =>
       (distributionByMaterial.get(transferMaterialId) || []).filter(
-        (row) => row.quantity > 0
+        (row) =>
+          row.quantity > 0
+          && (
+            row.position.kind === 'UNASSIGNED'
+            || positions.has(warehouseStockPositionKey(row.position))
+          )
       ),
-    [distributionByMaterial, transferMaterialId]
+    [distributionByMaterial, positions, transferMaterialId]
   );
 
   const destinationOptions = useMemo(
