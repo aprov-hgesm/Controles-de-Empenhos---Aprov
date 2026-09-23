@@ -48,10 +48,9 @@ interface KnownRemoteState {
 const SNAPSHOT_PUBLISH_DEBOUNCE_MS = 900;
 
 function shouldPublishSnapshot(activeTab: OperationalActiveTab): boolean {
-  // O snapshot pode ser atualizado também pela Central de Avisos. Nessa superfície
-  // invoices não ficam em realtime; as pendências já conhecidas são preservadas do
-  // próprio homeSnapshot, sem abrir uma coleção adicional.
-  return activeTab === 'empenhos' || activeTab === 'nova_nf' || activeTab === 'avisos';
+  // Publica apenas onde invoices já fazem parte do perfil realtime. Assim as
+  // pendências de NF chegam à Home sem abrir coleção adicional no Início.
+  return activeTab === 'empenhos' || activeTab === 'nova_nf';
 }
 
 export function useInicioOperationalSnapshot({
@@ -67,7 +66,6 @@ export function useInicioOperationalSnapshot({
 }: UseInicioOperationalSnapshotInput) {
   const [snapshot, setSnapshot] = useState<InicioOperationalSnapshot | null>(null);
   const [snapshotReady, setSnapshotReady] = useState(false);
-  const snapshotRef = useRef<InicioOperationalSnapshot | null>(null);
   const knownRemoteRef = useRef<KnownRemoteState>({
     workspaceId: null,
     loaded: false,
@@ -81,7 +79,6 @@ export function useInicioOperationalSnapshot({
         loaded: false,
         hash: null,
       };
-      snapshotRef.current = null;
       setSnapshot(null);
       setSnapshotReady(false);
       return;
@@ -93,7 +90,6 @@ export function useInicioOperationalSnapshot({
         loaded: false,
         hash: null,
       };
-      snapshotRef.current = null;
       setSnapshot(null);
       setSnapshotReady(false);
     }
@@ -140,7 +136,6 @@ export function useInicioOperationalSnapshot({
           hash: parsed?.contentHash ?? null,
         };
 
-        snapshotRef.current = parsed;
         setSnapshot(parsed);
         setSnapshotReady(true);
       },
@@ -157,25 +152,30 @@ export function useInicioOperationalSnapshot({
   }, [activeTab, user, workspaceContext]);
 
   useEffect(() => {
-    const invoicesRequired =
-      activeTab === 'empenhos' || activeTab === 'nova_nf';
-
     if (
       !user
       || !isOperationalSectorContext(workspaceContext)
       || !shouldPublishSnapshot(activeTab)
       || !empenhosReady
       || !alertsReady
-      || (invoicesRequired && !invoicesReady)
+      || !invoicesReady
     ) {
       return;
     }
 
     const scope = operationalScopeFromContext(workspaceContext);
+    const candidate = buildInicioOperationalSnapshot({
+      workspaceId: scope.workspaceId,
+      ug: scope.ug,
+      generatedBy: user.uid,
+      empenhos,
+      alerts,
+      invoices,
+    });
 
     const timer = window.setTimeout(() => {
       void (async () => {
-        const remoteSnapshotRef = operationalSettingsDocRef(
+        const snapshotRef = operationalSettingsDocRef(
           scope,
           INICIO_SNAPSHOT_DOCUMENT_ID
         );
@@ -187,7 +187,7 @@ export function useInicioOperationalSnapshot({
           || !knownRemote.loaded
         ) {
           try {
-            const current = await getDoc(remoteSnapshotRef);
+            const current = await getDoc(snapshotRef);
             recordWorkspaceDocumentReads(scope, 1);
 
             const data = current.exists() ? current.data() : null;
@@ -205,7 +205,6 @@ export function useInicioOperationalSnapshot({
               hash: parsed?.contentHash ?? null,
             };
             knownRemoteRef.current = knownRemote;
-            snapshotRef.current = parsed;
 
             if (parsed) setSnapshot(parsed);
           } catch (error) {
@@ -217,20 +216,10 @@ export function useInicioOperationalSnapshot({
           }
         }
 
-        const candidate = buildInicioOperationalSnapshot({
-          workspaceId: scope.workspaceId,
-          ug: scope.ug,
-          generatedBy: user.uid,
-          empenhos,
-          alerts,
-          invoices: invoicesReady ? invoices : null,
-          previousSnapshot: snapshotRef.current,
-        });
-
         if (knownRemote.hash === candidate.contentHash) return;
 
         try {
-          await setDoc(remoteSnapshotRef, candidate);
+          await setDoc(snapshotRef, candidate);
           recordWorkspaceDocumentWrites(scope, 1);
 
           knownRemoteRef.current = {
@@ -238,7 +227,6 @@ export function useInicioOperationalSnapshot({
             loaded: true,
             hash: candidate.contentHash,
           };
-          snapshotRef.current = candidate;
           setSnapshot(candidate);
         } catch (error) {
           console.warn('Não foi possível atualizar o snapshot econômico do Início.', error);
