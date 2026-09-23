@@ -101,10 +101,10 @@ for (const marker of [
 
 for (const marker of [
   'Sessão vinculada consulta o próprio primeiro slot',
-  'Setor externo ocupa o segundo slot de sessão',
+  'Segunda sessão vinculada ocupa o segundo slot',
   'Terceiro slot não existe no contrato de capacidade',
   'Sessão diferente não sobrescreve slot ainda ativo',
-  'Slot expirado pode ser retomado por uma nova sessão',
+  'Slot expirado pode ser retomado por uma nova sessão vinculada',
   'Conta fundadora não consome slot no workspace fundador',
 ]) {
   requireText(security, marker, `Suíte Firestore perdeu cenário 16.1: ${marker}`);
