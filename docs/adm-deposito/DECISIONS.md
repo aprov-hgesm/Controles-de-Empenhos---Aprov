@@ -455,3 +455,46 @@ Regras permanentes:
 - Firestore Rules exigem coerência entre o movimento e as projeções físicas correspondentes.
 
 Documento técnico: `docs/adm-deposito/PHASE_6_LOCATIONS.md`.
+
+## D-039 — Lote é enriquecimento logístico e nunca saldo concorrente
+
+A FASE 7 introduz o contrato \`warehouse_lot_v1\` sem alterar a autoridade quantitativa construída nas fases anteriores.
+
+Regras permanentes:
+- \`warehouse_balance_v1\` continua sendo o saldo agregado oficial;
+- \`warehouse_location_balance_v1\` continua sendo a distribuição física oficial;
+- \`warehouse_lot_v1.quantity\` é atribuição/rastreabilidade logística e não um terceiro saldo;
+- criar, editar ou inativar lote não produz movimento de estoque;
+- lote não pode escrever diretamente saldo agregado nem projeção física;
+- inconsistências entre atribuição logística e saldo viram pendência, não autocorreção;
+- identidade do lote referencia sempre \`materialId\` canônico, nunca descrição textual.
+
+Documento técnico: \`docs/adm-deposito/PHASE_7_STOCK_LOTS_FEFO.md\`.
+
+## D-040 — FEFO é recomendação derivada e não executa saída
+
+A recomendação FEFO considera somente lotes ativos, com quantidade positiva, validade informada e não vencida.
+
+Regras permanentes:
+- priorizar a validade futura mais próxima;
+- vencidos permanecem visíveis como situação separada;
+- lotes sem validade não são escolhidos automaticamente pelo FEFO;
+- FEFO não reduz saldo, não cria movimento e não bloqueia exceção operacional;
+- a futura FASE 8 poderá consumir a recomendação sem substituir o ledger.
+
+Documento técnico: \`docs/adm-deposito/PHASE_7_STOCK_LOTS_FEFO.md\`.
+
+## D-041 — Ausência de lote/validade é pendência não bloqueante e o histórico é consultado sob demanda
+
+Estoque legado ou material sem informação logística completa permanece operável.
+
+Regras permanentes:
+- ausência de lote e validade gera contexto/aviso quando aplicável, sem invalidar o saldo;
+- posição \`UNASSIGNED\` continua válida conforme D-037;
+- nenhum dado é inventado para eliminar aviso;
+- vínculo documental de lote com NF é explícito e, quando presente, referencia movimento oficial;
+- histórico da ficha do material é carregado por \`materialId\`, de forma bounded e sob demanda;
+- a tela Estoque não carrega o ledger global para montar uma listagem simples.
+
+Documento técnico: \`docs/adm-deposito/PHASE_7_STOCK_LOTS_FEFO.md\`.
+
