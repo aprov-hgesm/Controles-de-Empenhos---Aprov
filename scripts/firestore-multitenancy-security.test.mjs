@@ -886,6 +886,15 @@ async function main() {
       marker: 'allowed',
     })
   );
+  await denied('Token password válido sem sessão operacional não lê dados do workspace', () =>
+    getDoc(doc(sessionAPasswordLinked.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))
+  );
+  await denied('Token password válido sem sessão operacional não grava dados do workspace', () =>
+    setDoc(doc(sessionAPasswordLinked.db, 'workspaces', 'workspace-a', 'alerts', 'password-no-session'), {
+      workspaceId: 'workspace-a',
+      marker: 'must-deny',
+    })
+  );
   await denied('Setor A não grava no workspace B', () =>
     setDoc(doc(sessionA.db, 'workspaces', 'workspace-b', 'alerts', 'cross-write'), {
       workspaceId: 'workspace-b',
@@ -910,14 +919,14 @@ async function main() {
     expiresAt: sessionLeaseExpiry(),
   });
 
-  const sessionSlot1 = doc(
+  const passwordSlot1 = doc(
     sessionABootstrap.db,
     'workspaces',
     'workspace-a',
     'sessionSlots',
     'slot-1'
   );
-  const sessionSlot2 = doc(
+  const passwordSlot2 = doc(
     sessionABootstrap.db,
     'workspaces',
     'workspace-a',
@@ -935,21 +944,57 @@ async function main() {
   await allowed('Sessão vinculada consulta o próprio primeiro slot', () =>
     getDoc(operationalSessionSlot1)
   );
-  await allowed('Setor externo ocupa o segundo slot de sessão', () =>
-    setDoc(sessionSlot2, sessionLeasePayload('slot-2', 'session-browser-a2', 'browser-instance-a2'))
+
+  const sessionA2Initial = await createBoundOperationalSession('a2-initial', identities.a, {
+    workspaceId: 'workspace-a',
+    ug: '160416',
+    slotId: 'slot-2',
+    sessionId: 'session-browser-a2',
+    browserInstanceId: 'browser-instance-a2',
+  });
+  const operationalSessionSlot2Initial = doc(
+    sessionA2Initial.db,
+    'workspaces',
+    'workspace-a',
+    'sessionSlots',
+    'slot-2'
   );
+
+  await allowed('Segunda sessão vinculada ocupa o segundo slot', () =>
+    setDoc(
+      operationalSessionSlot2Initial,
+      sessionLeasePayload('slot-2', 'session-browser-a2', 'browser-instance-a2')
+    )
+  );
+
+  await denied('Token password não cria slot após o cutover seguro', () =>
+    setDoc(
+      passwordSlot1,
+      sessionLeasePayload('slot-1', 'password-forged-session', 'password-forged-browser')
+    )
+  );
+
   await denied('Terceiro slot não existe no contrato de capacidade', () =>
     setDoc(
       doc(sessionA.db, 'workspaces', 'workspace-a', 'sessionSlots', 'slot-3'),
       sessionLeasePayload('slot-3', 'session-browser-a3', 'browser-instance-a3')
     )
   );
+
+  const sessionAIntruder = await createBoundOperationalSession('a-intruder', identities.a, {
+    workspaceId: 'workspace-a',
+    ug: '160416',
+    slotId: 'slot-1',
+    sessionId: 'session-browser-intruso',
+    browserInstanceId: 'browser-instance-intruso',
+  });
   await denied('Sessão diferente não sobrescreve slot ainda ativo', () =>
     setDoc(
-      sessionSlot1,
+      doc(sessionAIntruder.db, 'workspaces', 'workspace-a', 'sessionSlots', 'slot-1'),
       sessionLeasePayload('slot-1', 'session-browser-intruso', 'browser-instance-intruso')
     )
   );
+
   await allowed('Mesma sessão renova diretamente o slot conhecido com identidade confirmada', () =>
     updateDoc(operationalSessionSlot1, {
       leaseVersion: 'emprovex_session_v1',
@@ -964,6 +1009,14 @@ async function main() {
       expiresAt: sessionLeaseExpiry(),
     })
   );
+
+  await denied('Token password não renova slot ativo após o cutover seguro', () =>
+    updateDoc(passwordSlot1, {
+      lastSeenAt: serverTimestamp(),
+      expiresAt: sessionLeaseExpiry(),
+    })
+  );
+
   await denied('Outro workspace não lê slots de sessão do Setor A', () =>
     getDoc(doc(sessionB.db, 'workspaces', 'workspace-a', 'sessionSlots', 'slot-1'))
   );
@@ -989,8 +1042,11 @@ async function main() {
     )
   );
 
-  await allowed('Logout explícito pode liberar o slot da própria conta', () =>
-    deleteDoc(sessionSlot2)
+  await denied('Token password não libera slot de outra sessão lógica', () =>
+    deleteDoc(passwordSlot2)
+  );
+  await allowed('Logout explícito da sessão vinculada libera o próprio slot', () =>
+    deleteDoc(operationalSessionSlot2Initial)
   );
 
   await ownerSet('workspaces/workspace-a/sessionSlots/slot-2', {
@@ -1018,15 +1074,30 @@ async function main() {
     getDoc(doc(expiredSessionA.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))
   );
 
-  await allowed('Slot expirado pode ser retomado por uma nova sessão', () =>
+  const sessionA2 = await createBoundOperationalSession('a2', identities.a, {
+    workspaceId: 'workspace-a',
+    ug: '160416',
+    slotId: 'slot-2',
+    sessionId: 'session-browser-reclaimed',
+    browserInstanceId: 'browser-instance-reclaimed',
+  });
+  const reclaimedSessionSlot2 = doc(
+    sessionA2.db,
+    'workspaces',
+    'workspace-a',
+    'sessionSlots',
+    'slot-2'
+  );
+
+  await allowed('Slot expirado pode ser retomado por uma nova sessão vinculada', () =>
     setDoc(
-      sessionSlot2,
+      reclaimedSessionSlot2,
       sessionLeasePayload('slot-2', 'session-browser-reclaimed', 'browser-instance-reclaimed')
     )
   );
 
   await denied('Sessão antiga não renova slot retomado por outra identidade lógica', () =>
-    updateDoc(sessionSlot2, {
+    updateDoc(doc(expiredSessionA.db, 'workspaces', 'workspace-a', 'sessionSlots', 'slot-2'), {
       leaseVersion: 'emprovex_session_v1',
       slotId: 'slot-2',
       sessionId: 'expired-session',
@@ -1041,7 +1112,7 @@ async function main() {
   );
 
   await allowed('Sessão vencedora renova diretamente o slot retomado', () =>
-    updateDoc(sessionSlot2, {
+    updateDoc(reclaimedSessionSlot2, {
       leaseVersion: 'emprovex_session_v1',
       slotId: 'slot-2',
       sessionId: 'session-browser-reclaimed',
@@ -1054,14 +1125,6 @@ async function main() {
       expiresAt: sessionLeaseExpiry(),
     })
   );
-
-  const sessionA2 = await createBoundOperationalSession('a2', identities.a, {
-    workspaceId: 'workspace-a',
-    ug: '160416',
-    slotId: 'slot-2',
-    sessionId: 'session-browser-reclaimed',
-    browserInstanceId: 'browser-instance-reclaimed',
-  });
 
   console.log('\nBloco 16.2 — painel e encerramento remoto de sessões');
 
@@ -1360,7 +1423,7 @@ async function main() {
     deleteDoc(usageRefA)
   );
 
-  await deleteDoc(sessionSlot2);
+  await deleteDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'sessionSlots', 'slot-2'));
 
   console.log('\nConcorrência otimista de empenhos');
 
