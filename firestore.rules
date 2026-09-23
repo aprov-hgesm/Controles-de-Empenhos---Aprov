@@ -98,6 +98,277 @@ service cloud.firestore {
         && request.resource.data.conversions.size() <= 32;
     }
 
+
+    // FASE 2 / DEP-2 + DEP-2.1 + DEP-2.2 — ledger append-only, saldo
+    // materializado e idempotência por ID determinístico.
+    function validWarehouseMovementDelta(type, quantityDelta) {
+      return quantityDelta is number
+        && quantityDelta >= -1000000000
+        && quantityDelta <= 1000000000
+        && (
+          (type in ['INITIAL_BALANCE', 'INVOICE_ENTRY'] && quantityDelta > 0)
+          || (type == 'OUTBOUND' && quantityDelta < 0)
+          || (type == 'TRANSFER' && quantityDelta == 0)
+          || (
+            type in ['INVENTORY_ADJUSTMENT', 'INVOICE_CORRECTION', 'REVERSAL']
+            && quantityDelta != 0
+          )
+        );
+    }
+
+    function warehouseMaterialMatchesMovement(workspaceId) {
+      return exists(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
+        )
+        && get(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
+        ).data.schemaVersion == 'warehouse_material_v1'
+        && get(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
+        ).data.id == request.resource.data.materialId
+        && get(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
+        ).data.workspaceId == workspaceId
+        && get(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
+        ).data.ug == request.resource.data.ug
+        && get(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
+        ).data.status == 'active';
+    }
+
+    function validWarehouseReversalReference(workspaceId, movementId) {
+      return (
+          request.resource.data.type != 'REVERSAL'
+          && request.resource.data.reversesMovementId == null
+        )
+        || (
+          request.resource.data.type == 'REVERSAL'
+          && request.resource.data.reversesMovementId is string
+          && request.resource.data.reversesMovementId.matches('^mov_[a-f0-9]{64}$')
+          && request.resource.data.reversesMovementId != movementId
+          && exists(
+            /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(request.resource.data.reversesMovementId)
+          )
+          && get(
+            /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(request.resource.data.reversesMovementId)
+          ).data.workspaceId == workspaceId
+          && get(
+            /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(request.resource.data.reversesMovementId)
+          ).data.ug == request.resource.data.ug
+          && get(
+            /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(request.resource.data.reversesMovementId)
+          ).data.materialId == request.resource.data.materialId
+          && request.resource.data.quantityDelta
+            == -get(
+              /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(request.resource.data.reversesMovementId)
+            ).data.quantityDelta
+        );
+    }
+
+    function validWarehouseMovementDocument(workspaceId, movementId) {
+      return request.resource.data is map
+        && request.resource.data.keys().hasOnly([
+          'schemaVersion',
+          'id',
+          'workspaceId',
+          'ug',
+          'materialId',
+          'type',
+          'quantityDelta',
+          'idempotencyKeyHash',
+          'reversesMovementId',
+          'note',
+          'createdAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'schemaVersion',
+          'id',
+          'workspaceId',
+          'ug',
+          'materialId',
+          'type',
+          'quantityDelta',
+          'idempotencyKeyHash',
+          'reversesMovementId',
+          'note',
+          'createdAt'
+        ])
+        && request.resource.data.schemaVersion == 'warehouse_movement_v1'
+        && request.resource.data.id == movementId
+        && movementId.matches('^mov_[a-f0-9]{64}$')
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.ug is string
+        && request.resource.data.ug.matches('^[0-9]{6}$')
+        && request.resource.data.materialId is string
+        && request.resource.data.materialId.matches('^mat_[a-f0-9]{32}$')
+        && request.resource.data.type in [
+          'INITIAL_BALANCE',
+          'INVOICE_ENTRY',
+          'OUTBOUND',
+          'TRANSFER',
+          'INVENTORY_ADJUSTMENT',
+          'INVOICE_CORRECTION',
+          'REVERSAL'
+        ]
+        && validWarehouseMovementDelta(
+          request.resource.data.type,
+          request.resource.data.quantityDelta
+        )
+        && request.resource.data.idempotencyKeyHash is string
+        && request.resource.data.idempotencyKeyHash.matches('^[a-f0-9]{64}$')
+        && movementId == 'mov_' + request.resource.data.idempotencyKeyHash
+        && (
+          request.resource.data.note == null
+          || (
+            request.resource.data.note is string
+            && request.resource.data.note.size() > 0
+            && request.resource.data.note.size() <= 240
+          )
+        )
+        && request.resource.data.createdAt == request.time
+        && warehouseMaterialMatchesMovement(workspaceId)
+        && validWarehouseReversalReference(workspaceId, movementId);
+    }
+
+    function validWarehouseBalanceDocument(workspaceId, materialId) {
+      return request.resource.data is map
+        && request.resource.data.keys().hasOnly([
+          'schemaVersion',
+          'workspaceId',
+          'ug',
+          'materialId',
+          'quantity',
+          'revision',
+          'lastMovementId',
+          'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'schemaVersion',
+          'workspaceId',
+          'ug',
+          'materialId',
+          'quantity',
+          'revision',
+          'lastMovementId',
+          'updatedAt'
+        ])
+        && request.resource.data.schemaVersion == 'warehouse_balance_v1'
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.ug is string
+        && request.resource.data.ug.matches('^[0-9]{6}$')
+        && request.resource.data.materialId == materialId
+        && materialId.matches('^mat_[a-f0-9]{32}$')
+        && request.resource.data.quantity is number
+        && request.resource.data.quantity >= -1000000000
+        && request.resource.data.quantity <= 1000000000
+        && request.resource.data.revision is int
+        && request.resource.data.revision >= 1
+        && request.resource.data.lastMovementId is string
+        && request.resource.data.lastMovementId.matches('^mov_[a-f0-9]{64}$')
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId) {
+      let materialId = request.resource.data.materialId;
+      return existsAfter(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
+        )
+        && getAfter(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
+        ).data.schemaVersion == 'warehouse_balance_v1'
+        && getAfter(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
+        ).data.workspaceId == workspaceId
+        && getAfter(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
+        ).data.ug == request.resource.data.ug
+        && getAfter(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
+        ).data.materialId == materialId
+        && getAfter(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
+        ).data.lastMovementId == movementId
+        && (
+          (
+            !exists(
+              /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
+            )
+            && getAfter(
+              /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
+            ).data.revision == 1
+            && getAfter(
+              /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
+            ).data.quantity == request.resource.data.quantityDelta
+          )
+          || (
+            exists(
+              /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
+            )
+            && getAfter(
+              /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
+            ).data.revision
+              == get(
+                /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
+              ).data.revision + 1
+            && getAfter(
+              /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
+            ).data.quantity
+              == get(
+                /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
+              ).data.quantity + request.resource.data.quantityDelta
+          )
+        );
+    }
+
+    function warehouseBalanceWriteBackedByNewMovement(workspaceId, materialId) {
+      let movementId = request.resource.data.lastMovementId;
+      return !exists(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
+        )
+        && existsAfter(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
+        )
+        && getAfter(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
+        ).data.schemaVersion == 'warehouse_movement_v1'
+        && getAfter(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
+        ).data.workspaceId == workspaceId
+        && getAfter(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
+        ).data.ug == request.resource.data.ug
+        && getAfter(
+          /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
+        ).data.materialId == materialId
+        && (
+          (
+            !exists(
+              /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
+            )
+            && request.resource.data.revision == 1
+            && request.resource.data.quantity
+              == getAfter(
+                /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
+              ).data.quantityDelta
+          )
+          || (
+            exists(
+              /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)
+            )
+            && request.resource.data.revision == resource.data.revision + 1
+            && request.resource.data.quantity
+              == resource.data.quantity
+                + getAfter(
+                  /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
+                ).data.quantityDelta
+            && request.resource.data.workspaceId == resource.data.workspaceId
+            && request.resource.data.ug == resource.data.ug
+            && request.resource.data.materialId == resource.data.materialId
+          )
+        );
+    }
+
     function workspaceExists(workspaceId) {
       return exists(/databases/$(database)/documents/workspaces/$(workspaceId));
     }
@@ -2165,9 +2436,30 @@ service cloud.firestore {
         allow delete: if canAccessWarehouseModule(workspaceId);
       }
 
+      // FASE 2 / DEP-2 — ledger imutável. Toda criação precisa materializar
+      // a mesma alteração no saldo na operação atômica.
+      match /movements/{movementId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseMovementDocument(workspaceId, movementId)
+          && warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId);
+        allow update, delete: if false;
+      }
+
+      // FASE 2 / DEP-2.1 — saldo derivado do ledger. Escrita avulsa é negada.
+      match /balances/{materialId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create, update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseBalanceDocument(workspaceId, materialId)
+          && warehouseBalanceWriteBackedByNewMovement(workspaceId, materialId);
+        allow delete: if false;
+      }
+
       match /{domain}/{document=**} {
         allow read, write: if canAccessWarehouseModule(workspaceId)
-          && domain != 'materials';
+          && domain != 'materials'
+          && domain != 'movements'
+          && domain != 'balances';
       }
     }
 

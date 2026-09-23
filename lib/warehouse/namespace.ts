@@ -17,6 +17,7 @@ export const WAREHOUSE_DOMAIN_COLLECTIONS = {
   depots: 'depots',
   locations: 'locations',
   movements: 'movements',
+  balances: 'balances',
   lots: 'lots',
   inventories: 'inventories',
   siscofisSnapshots: 'siscofisSnapshots',

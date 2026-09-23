@@ -732,6 +732,166 @@ async function main() {
     )
   );
 
+
+  console.log('\nFASE 2 — ledger, saldo agregado e idempotência');
+
+  const phase2Movement1Id = 'mov_' + '1'.repeat(64);
+  const phase2Movement2Id = 'mov_' + '2'.repeat(64);
+  const phase2Movement3Id = 'mov_' + '3'.repeat(64);
+  const founderMovement1 = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'movements',
+    phase2Movement1Id
+  );
+  const founderMovement2 = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'movements',
+    phase2Movement2Id
+  );
+  const founderBalance = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'balances',
+    canonicalMaterialId
+  );
+
+  await allowed('Fundador cria movimento e saldo atômicos da FASE 2', async () => {
+    const batch = writeBatch(admin.db);
+    batch.set(founderMovement1, {
+      schemaVersion: 'warehouse_movement_v1',
+      id: phase2Movement1Id,
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: canonicalMaterialId,
+      type: 'INITIAL_BALANCE',
+      quantityDelta: 10,
+      idempotencyKeyHash: '1'.repeat(64),
+      reversesMovementId: null,
+      note: null,
+      createdAt: serverTimestamp(),
+    });
+    batch.set(founderBalance, {
+      schemaVersion: 'warehouse_balance_v1',
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: canonicalMaterialId,
+      quantity: 10,
+      revision: 1,
+      lastMovementId: phase2Movement1Id,
+      updatedAt: serverTimestamp(),
+    });
+    return batch.commit();
+  });
+
+  await allowed('Fundador lê ledger da FASE 2', () => getDoc(founderMovement1));
+  await allowed('Fundador lê saldo materializado da FASE 2', () => getDoc(founderBalance));
+
+  await allowed('Fundador aplica segundo movimento e atualiza saldo da FASE 2', async () => {
+    const batch = writeBatch(admin.db);
+    batch.set(founderMovement2, {
+      schemaVersion: 'warehouse_movement_v1',
+      id: phase2Movement2Id,
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: canonicalMaterialId,
+      type: 'OUTBOUND',
+      quantityDelta: -2,
+      idempotencyKeyHash: '2'.repeat(64),
+      reversesMovementId: null,
+      note: 'Saída de teste',
+      createdAt: serverTimestamp(),
+    });
+    batch.set(founderBalance, {
+      schemaVersion: 'warehouse_balance_v1',
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: canonicalMaterialId,
+      quantity: 8,
+      revision: 2,
+      lastMovementId: phase2Movement2Id,
+      updatedAt: serverTimestamp(),
+    });
+    return batch.commit();
+  });
+
+  await denied('Ledger da FASE 2 é append-only', () =>
+    updateDoc(founderMovement1, { note: 'Tentativa de sobrescrita' })
+  );
+
+  await denied('Saldo da FASE 2 não aceita alteração sem novo movimento', () =>
+    updateDoc(founderBalance, {
+      quantity: 999,
+      revision: 3,
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await denied('Movimento da FASE 2 não existe sem atualização de saldo correspondente', () =>
+    setDoc(
+      doc(
+        admin.db,
+        'warehouse',
+        'hgesm-aprov',
+        'movements',
+        phase2Movement3Id
+      ),
+      {
+        schemaVersion: 'warehouse_movement_v1',
+        id: phase2Movement3Id,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        type: 'INVENTORY_ADJUSTMENT',
+        quantityDelta: 1,
+        idempotencyKeyHash: '3'.repeat(64),
+        reversesMovementId: null,
+        note: null,
+        createdAt: serverTimestamp(),
+      }
+    )
+  );
+
+  await denied('Setor externo não lê ledger da FASE 2', () =>
+    getDoc(
+      doc(
+        sessionA.db,
+        'warehouse',
+        'hgesm-aprov',
+        'movements',
+        phase2Movement1Id
+      )
+    )
+  );
+
+  await denied('Setor externo não lê saldo da FASE 2', () =>
+    getDoc(
+      doc(
+        sessionA.db,
+        'warehouse',
+        'hgesm-aprov',
+        'balances',
+        canonicalMaterialId
+      )
+    )
+  );
+
+  await denied('Sessão fundadora por senha não lê ledger da FASE 2', () =>
+    getDoc(
+      doc(
+        founderPassword.db,
+        'warehouse',
+        'hgesm-aprov',
+        'movements',
+        phase2Movement1Id
+      )
+    )
+  );
+
   console.log('Isolamento A ↔ B');
   await allowed('Setor A lê o próprio empenho', () =>
     getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))

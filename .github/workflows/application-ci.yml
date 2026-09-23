@@ -121,6 +121,12 @@ jobs:
       - name: ADM Depósito Phase 1 material foundation guard
         run: npm run verify:adm-deposito-phase-1
 
+      - name: ADM Depósito Phase 2 ledger contract tests
+        run: npm run test:adm-deposito-ledger
+
+      - name: ADM Depósito Phase 2 ledger and balance guard
+        run: npm run verify:adm-deposito-phase-2
+
       - name: Production multi-tenant readiness guard
         run: npm run verify:production-multitenant-readiness
 

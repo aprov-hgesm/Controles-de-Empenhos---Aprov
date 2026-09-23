@@ -15,6 +15,11 @@ import {
   WAREHOUSE_MATERIAL_SCHEMA_VERSION,
   WAREHOUSE_MATERIAL_UNIT_CODES,
 } from '../../../../lib/warehouse/material';
+import {
+  WAREHOUSE_BALANCE_SCHEMA_VERSION,
+  WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
+  WAREHOUSE_MOVEMENT_TYPES,
+} from '../../../../lib/warehouse/movement';
 
 export async function GET(request: Request) {
   try {
@@ -22,7 +27,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       enabled: true,
-      phase: 1,
+      phase: 2,
       workspaceId: HGESM_WORKSPACE_ID,
       namespace: WAREHOUSE_NAMESPACE_ROOT,
       namespaceVersion: WAREHOUSE_NAMESPACE_VERSION,
@@ -30,6 +35,14 @@ export async function GET(request: Request) {
       material: {
         schemaVersion: WAREHOUSE_MATERIAL_SCHEMA_VERSION,
         units: WAREHOUSE_MATERIAL_UNIT_CODES,
+      },
+      ledger: {
+        schemaVersion: WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
+        types: WAREHOUSE_MOVEMENT_TYPES,
+      },
+      balance: {
+        schemaVersion: WAREHOUSE_BALANCE_SCHEMA_VERSION,
+        materialized: true,
       },
     });
   } catch (error) {

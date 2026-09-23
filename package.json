@@ -149,7 +149,9 @@
     "verify:sped-nup-reporting": "node scripts/verify-sped-nup-reporting.mjs",
     "verify:adm-deposito-phase-0": "node scripts/verify-adm-deposito-phase-0.mjs",
     "test:adm-deposito-material": "node --test scripts/warehouse-material-contract.test.mjs",
-    "verify:adm-deposito-phase-1": "node scripts/verify-adm-deposito-phase-1.mjs"
+    "verify:adm-deposito-phase-1": "node scripts/verify-adm-deposito-phase-1.mjs",
+    "test:adm-deposito-ledger": "node --test scripts/warehouse-ledger-contract.test.mjs",
+    "verify:adm-deposito-phase-2": "node scripts/verify-adm-deposito-phase-2.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
