@@ -10,7 +10,7 @@ Data de fechamento: 2026-09-23.
 
 Situação:
 - FASES 0, 1, 2, 3, 4 e 5 concluídas;
-- FASE 3 — Walking Skeleton integrada à \`main\` pelo PR #164;
+- FASE 3 — Walking Skeleton integrada à `main` pelo PR #164;
 - FASE 4 — NF → Estoque implementada e validada no PR #167;
 - FASE 5 — SISCOFIS / Marco Zero / Conciliação implementada no PR #171;
 - piloto permanece exclusivo da conta fundadora;
@@ -20,16 +20,16 @@ Situação:
 ## Repositório e baseline
 
 Repositório:
-\`aprov-hgesm/Controles-de-Empenhos---Aprov\`
+`aprov-hgesm/Controles-de-Empenhos---Aprov`
 
 Branch oficial:
-\`main\`
+`main`
 
 Baseline funcional da FASE 3:
-\`0b8aed23da504deeb0bd18de404f0298a7c7cf2c\`
+`0b8aed23da504deeb0bd18de404f0298a7c7cf2c`
 
-Baseline da \`main\` imediatamente antes do desenvolvimento da FASE 5:
-\`b376def63732eda84fe1ff9c1507527d0a96bcfd\`
+Baseline da `main` imediatamente antes do desenvolvimento da FASE 5:
+`b376def63732eda84fe1ff9c1507527d0a96bcfd`
 
 Esse baseline:
 - já contém a FASE 4;
@@ -37,10 +37,10 @@ Esse baseline:
 - foi auditado antes da criação da branch da FASE 5.
 
 Branch da FASE 5:
-\`feat/adm-deposito-phase-5-siscofis\`
+`feat/adm-deposito-phase-5-siscofis`
 
 PR da FASE 5:
-- PR #171 — \`feat: add SISCOFIS Marco Zero and reconciliation\`;
+- PR #171 — `feat: add SISCOFIS Marco Zero and reconciliation`;
 - Recovery guardrails aprovado;
 - Application CI aprovado na validação técnica inicial;
 - testes multi-tenant/Firestore aprovados;
@@ -51,7 +51,7 @@ PR da FASE 5:
 - Browser E2E com Firebase Emulator aprovado.
 
 Observação de deploy:
-- o check automático da Vercel retornou \`build-rate-limit\`, uma limitação de cota da plataforma, não uma falha de build do código;
+- o check automático da Vercel retornou `build-rate-limit`, uma limitação de cota da plataforma, não uma falha de build do código;
 - a publicação/estado de produção deve ser conferida separadamente do gate técnico do GitHub.
 
 ## Fases concluídas
@@ -63,7 +63,7 @@ Concluída.
 Concluída.
 
 Contrato canônico:
-- \`warehouse_material_v1\`;
+- `warehouse_material_v1`;
 - identidade estável de material;
 - unidade/apresentação normalizada;
 - isolamento por workspace/UG.
@@ -72,8 +72,8 @@ Contrato canônico:
 Concluída.
 
 Contratos oficiais:
-- \`warehouse_movement_v1\`;
-- \`warehouse_balance_v1\`;
+- `warehouse_movement_v1`;
+- `warehouse_balance_v1`;
 - ledger append-only;
 - saldo materializado como projeção do ledger;
 - idempotência determinística.
@@ -96,8 +96,8 @@ Superfícies estruturais:
 Concluída.
 
 Capacidade vertical preservada:
-- NF confirmada gera \`INVOICE_ENTRY\`;
-- edição/correção usa \`INVOICE_CORRECTION\`;
+- NF confirmada gera `INVOICE_ENTRY`;
+- edição/correção usa `INVOICE_CORRECTION`;
 - exclusão integrada usa estorno compensatório;
 - vínculo persistido NF → empenho → item → material → movimento → saldo;
 - material é autoridade por ID persistido, sem matching textual implícito;
@@ -106,7 +106,7 @@ Capacidade vertical preservada:
 - Estoque e Movimentações leem as fontes reais do warehouse.
 
 Decisão correspondente:
-- D-033 em \`DECISIONS.md\`.
+- D-033 em `DECISIONS.md`.
 
 ### FASE 5 — SISCOFIS / Marco Zero / Conciliação
 Concluída.
@@ -115,25 +115,25 @@ Capacidade vertical entregue:
 - aba SISCOFIS / Conciliação deixou de ser placeholder e tornou-se operacional;
 - EMPROVEX gera prompt oficial para interpretação por IA externa;
 - IA continua fora do EMPROVEX;
-- contrato de importação versionado: \`warehouse_siscofis_import_v1\`;
+- contrato de importação versionado: `warehouse_siscofis_import_v1`;
 - validação rígida recusa JSON inválido, campos inesperados, UG divergente, IDs inválidos, unidades desconhecidas e duplicidades críticas;
 - avisos de inconsistência são exibidos antes da confirmação;
-- preview identifica explicitamente \`MARCO_ZERO\` ou \`SNAPSHOT\`;
+- preview identifica explicitamente `MARCO_ZERO` ou `SNAPSHOT`;
 - primeiro SISCOFIS confirmado estabelece o Marco Zero;
-- Marco Zero persiste auditoria em \`siscofisSnapshots/marco-zero\`;
-- saldo inicial entra exclusivamente pelo ledger oficial como \`INITIAL_BALANCE\`;
+- Marco Zero persiste auditoria em `siscofisSnapshots/marco-zero`;
+- saldo inicial entra exclusivamente pelo ledger oficial como `INITIAL_BALANCE`;
 - saldo materializado continua sendo projeção do ledger;
 - hash da importação e chaves idempotentes permitem retry sem duplicar estoque;
-- Marco Zero usa transição \`APPLYING → CONFIRMED\` para permitir recuperação segura de interrupção;
+- Marco Zero usa transição `APPLYING → CONFIRMED` para permitir recuperação segura de interrupção;
 - uma fonte diferente não pode substituir Marco Zero em andamento ou confirmado;
 - cutoff da FASE 4 é reutilizado e sobreposição histórica ambígua é bloqueada;
 - se o cutoff ainda não existir, a confirmação do Marco Zero o estabelece no contrato existente da FASE 4;
-- linhas explicitamente vinculadas exigem \`materialId\` canônico válido, mesma UG e unidade compatível;
-- no Marco Zero, linha sem \`materialId\` pode criar material canônico determinístico sem criar catálogo paralelo;
-- após o Marco Zero, linha sem vínculo permanece \`UNRESOLVED\`;
+- linhas explicitamente vinculadas exigem `materialId` canônico válido, mesma UG e unidade compatível;
+- no Marco Zero, linha sem `materialId` pode criar material canônico determinístico sem criar catálogo paralelo;
+- após o Marco Zero, linha sem vínculo permanece `UNRESOLVED`;
 - relatórios posteriores são snapshots de conciliação e nunca geram movimento de estoque;
 - conciliação mostra quantidade SISCOFIS, quantidade EMPROVEX, diferença e estado;
-- estados: \`MATCHED\`, \`DIVERGENT\` e \`UNRESOLVED\`;
+- estados: `MATCHED`, `DIVERGENT` e `UNRESOLVED`;
 - divergência nunca corrige saldo automaticamente;
 - histórico é consultado sob demanda e bounded;
 - Firestore Rules específicas protegem criação, transição e imutabilidade dos snapshots;
@@ -141,10 +141,10 @@ Capacidade vertical entregue:
 - Número de Ficha SISCOFIS continua fora do núcleo da primeira versão.
 
 Contratos/documentos:
-- \`warehouse_siscofis_import_v1\`;
-- \`warehouse_siscofis_snapshot_v1\`;
-- \`docs/adm-deposito/PHASE_5_SISCOFIS.md\`;
-- decisão permanente D-036 em \`DECISIONS.md\`.
+- `warehouse_siscofis_import_v1`;
+- `warehouse_siscofis_snapshot_v1`;
+- `docs/adm-deposito/PHASE_5_SISCOFIS.md`;
+- decisão permanente D-036 em `DECISIONS.md`.
 
 ## Regras permanentes após a FASE 5
 
@@ -152,7 +152,7 @@ Contratos/documentos:
 2. Não existe segundo saldo concorrente.
 3. Correções, cancelamentos e futuros ajustes devem permanecer auditáveis por movimentos.
 4. O identificador persistido do material é a autoridade; descrição textual não é chave de identidade.
-5. Marco Zero usa \`INITIAL_BALANCE\` no ledger e nunca grava saldo diretamente.
+5. Marco Zero usa `INITIAL_BALANCE` no ledger e nunca grava saldo diretamente.
 6. Após Marco Zero, SISCOFIS é snapshot de comparação e nunca entrada automática de estoque.
 7. Divergência SISCOFIS nunca pode autocorrigir o EMPROVEX.
 8. O cutoff da FASE 4 continua protegendo o histórico contra duplicação.
@@ -160,14 +160,14 @@ Contratos/documentos:
 10. Founder-only continua obrigatório durante o piloto.
 11. Usuários externos não podem ganhar acesso ao módulo por consequência de fases internas.
 12. Consultas devem permanecer bounded e sem listeners globais desnecessários.
-13. Cloud Shell pode ser usado de forma ativa quando reduzir ciclos, conforme \`docs/DEVELOPMENT_CI_WORKFLOW.md\`.
+13. Cloud Shell pode ser usado de forma ativa quando reduzir ciclos, conforme `docs/DEVELOPMENT_CI_WORKFLOW.md`.
 14. Browser E2E deve continuar cobrindo mudanças reais de jornada; gates das fases anteriores permanecem permanentes.
 
 ## Validação da FASE 5
 
 Gates específicos:
-- \`npm run test:adm-deposito-siscofis\`;
-- \`npm run verify:adm-deposito-phase-5\`;
+- `npm run test:adm-deposito-siscofis`;
+- `npm run verify:adm-deposito-phase-5`;
 - cenários SISCOFIS/Marco Zero no teste multi-tenant Firestore.
 
 Gates integrados executados no PR #171:
@@ -211,9 +211,9 @@ A FASE 6 ainda não foi iniciada e deve ser executada em novo chat/branch.
 ## Gate para o próximo chat
 
 Antes de modificar código:
-1. consultar a \`main\` real;
-2. ler \`README.md\`, \`ROADMAP.md\`, \`DECISIONS.md\`, \`STATUS.md\`, \`HANDOFF_TEMPLATE.md\` e \`PHASE_5_SISCOFIS.md\`;
-3. comparar a \`main\` com o baseline registrado aqui;
+1. consultar a `main` real;
+2. ler `README.md`, `ROADMAP.md`, `DECISIONS.md`, `STATUS.md`, `HANDOFF_TEMPLATE.md` e `PHASE_5_SISCOFIS.md`;
+3. comparar a `main` com o baseline registrado aqui;
 4. analisar commits posteriores ao fechamento da FASE 5;
 5. preservar material canônico, ledger, saldo, NF → estoque, cutoff, Marco Zero e snapshots SISCOFIS;
 6. executar exclusivamente a FASE 6 — Depósitos / Localizações / Transferências;
