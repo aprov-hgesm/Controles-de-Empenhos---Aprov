@@ -699,12 +699,18 @@ service cloud.firestore {
           || (
             !exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(locationBalanceId))
             && request.resource.data.revision == 1
-            && request.resource.data.quantity
-              == (
+            && (
+              (
+                !exists(/databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId))
+                && request.resource.data.quantity == movement.quantityDelta
+              )
+              || (
                 exists(/databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId))
-                  ? get(/databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)).data.quantity
-                  : 0
-              ) + movement.quantityDelta
+                && request.resource.data.quantity
+                  == get(/databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId)).data.quantity
+                    + movement.quantityDelta
+              )
+            )
           )
         );
     }
