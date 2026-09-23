@@ -53,7 +53,7 @@ Se o texto do chat divergir deles, prevalecem GitHub e documentação versionada
 - **FASE 5 — SISCOFIS / Marco Zero / Conciliação**;
 - PR de implementação: **#171**;
 - decisão permanente adicionada: **D-036**;
-- contrato técnico: \`docs/adm-deposito/PHASE_5_SISCOFIS.md\`.
+- contrato técnico: `docs/adm-deposito/PHASE_5_SISCOFIS.md`.
 
 Capacidades que o próximo chat deve considerar já existentes:
 - material canônico;
@@ -63,13 +63,13 @@ Capacidades que o próximo chat deve considerar já existentes:
 - NF → material → movimento → saldo;
 - cutoff da integração NF → estoque;
 - prompt oficial para IA externa;
-- contrato \`warehouse_siscofis_import_v1\`;
+- contrato `warehouse_siscofis_import_v1`;
 - validação rígida e preview antes da confirmação;
-- Marco Zero auditável por \`INITIAL_BALANCE\`;
-- recuperação idempotente de Marco Zero \`APPLYING → CONFIRMED\`;
-- contrato \`warehouse_siscofis_snapshot_v1\`;
+- Marco Zero auditável por `INITIAL_BALANCE`;
+- recuperação idempotente de Marco Zero `APPLYING → CONFIRMED`;
+- contrato `warehouse_siscofis_snapshot_v1`;
 - snapshots posteriores somente para conciliação;
-- estados \`MATCHED\`, \`DIVERGENT\` e \`UNRESOLVED\`;
+- estados `MATCHED`, `DIVERGENT` e `UNRESOLVED`;
 - divergência sem autocorreção;
 - Firestore Rules próprias para snapshots;
 - isolamento founder-only e multitenancy preservado.
@@ -86,4 +86,4 @@ Regras adicionais para a FASE 6:
 - não liberar ADM Depósito para usuários externos;
 - não antecipar lotes/validade/FEFO da FASE 7;
 - não iniciar FASE 7 no mesmo chat;
-- reconciliar qualquer commit novo da \`main\` antes de editar código.
+- reconciliar qualquer commit novo da `main` antes de editar código.
