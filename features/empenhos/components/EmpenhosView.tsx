@@ -11,7 +11,6 @@ import {
   classRequiresTermoRecebimento,
   type EmpenhoClassDefinition,
 } from '../../../lib/empenhoClasses';
-import { summarizeEmpenhoInvoicePending } from '../../notas-fiscais/domain/invoiceOperationalPending';
 import {
   compareEmpenhosByRpnpPriority,
   getEmpenhoBaseClassification,
@@ -638,11 +637,6 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                     targetInvoices,
                     empenhoClasses
                   );
-                  const invoicePendingSummary = summarizeEmpenhoInvoicePending(
-                    targetEmp,
-                    targetInvoices,
-                    empenhoClasses
-                  );
                   const activeEmpenhoNotices = alerts
                     .filter((alert) => alert.empenhoId === targetEmp.id && isNoticeVisibleInActiveQueue(alert))
                     .sort((left, right) => {
@@ -1021,51 +1015,6 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                             className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-current/15 bg-white/70 px-3 text-[10px] font-extrabold transition hover:bg-white"
                           >
                             Abrir Central
-                          </button>
-                        </div>
-                      )}
-
-                      {invoicePendingSummary.stage !== 'none' && (
-                        <div
-                          data-testid="empenho-invoice-pending-summary"
-                          className={`flex flex-col gap-3 rounded-xl border px-3.5 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between ${
-                            invoicePendingSummary.stage === 'commission'
-                              ? 'border-rose-200 bg-rose-50/85 text-rose-800'
-                              : 'border-amber-200 bg-amber-50/85 text-amber-900'
-                          }`}
-                        >
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.12em]">
-                                <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-                                Pendência de Nota Fiscal
-                              </span>
-                              {invoicePendingSummary.commissionCount > 0 && (
-                                <span className="rounded-full border border-rose-200 bg-white/75 px-2 py-0.5 text-[10px] font-black text-rose-700">
-                                  {invoicePendingSummary.commissionCount} aguardando Comissão
-                                </span>
-                              )}
-                              {invoicePendingSummary.treasuryCount > 0 && (
-                                <span className="rounded-full border border-amber-200 bg-white/75 px-2 py-0.5 text-[10px] font-black text-amber-800">
-                                  {invoicePendingSummary.treasuryCount} aguardando Tesouraria
-                                </span>
-                              )}
-                            </div>
-                            <p className="mt-1 text-[11px] font-semibold leading-relaxed opacity-85">
-                              {invoicePendingSummary.message}
-                            </p>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedNFCommitmentId(targetEmp.id);
-                              setActiveTab('nova_nf');
-                              setNfSubTab('acompanhar');
-                            }}
-                            className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-current/15 bg-white/75 px-3 text-[10px] font-extrabold transition hover:bg-white"
-                          >
-                            Acompanhar NFs
                           </button>
                         </div>
                       )}
