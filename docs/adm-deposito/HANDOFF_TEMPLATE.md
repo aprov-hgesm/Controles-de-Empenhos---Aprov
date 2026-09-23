@@ -31,7 +31,10 @@ Regras:
 - execute gates adequados;
 - abra PR e valide checks;
 - faça merge somente após validação técnica;
-- use Cloud Shell apenas quando necessário, preferindo consolidação;
+- consulte `docs/DEVELOPMENT_CI_WORKFLOW.md` para definir a bateria proporcional ao impacto;
+- use Cloud Shell de forma ativa para pré-validação/diagnóstico quando isso reduzir uma rodada longa de CI;
+- quando pedir intervenção manual, forneça comandos curtos, seguros e copiáveis;
+- Browser E2E completo é prioritário para mudanças que alterem jornada/interação do usuário;
 - atualize STATUS ao concluir;
 - atualize DECISIONS apenas se houver decisão arquitetural definitiva;
 - não inicie a fase seguinte no mesmo chat.

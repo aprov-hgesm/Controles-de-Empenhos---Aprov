@@ -10,6 +10,7 @@ Conversas, prompts e memória informal não substituem estes documentos.
 - `DECISIONS.md` — decisões arquiteturais e funcionais congeladas.
 - `STATUS.md` — estado real, baseline, fase concluída e próxima capacidade.
 - `HANDOFF_TEMPLATE.md` — mensagem padrão para abrir a próxima fase.
+- `../DEVELOPMENT_CI_WORKFLOW.md` — política global de CI seletivo, E2E e colaboração via Cloud Shell.
 
 ## Estratégia de desenvolvimento vigente
 
@@ -43,19 +44,26 @@ Antes de qualquer nova fase:
 - não criar microfases apenas para separar UI, backend e testes da mesma capacidade;
 - integração essencial da capacidade deve ser concluída na própria fase.
 
-## Regra de intervenção externa / Cloud Shell
+## Regra de colaboração / Cloud Shell
 
-O desenvolvimento deve ser o mais autônomo possível.
+O desenvolvimento deve continuar autônomo sempre que a ação puder ser executada diretamente pelo agente, mas o Cloud Shell passa a ser uma **ferramenta ativa de coexecução** quando isso reduzir espera ou antecipar validações.
 
-Quando uma ação exigir acesso externo não disponível ao agente:
-1. identificar exatamente a necessidade;
-2. evitar interrupções por ações pequenas que possam ser postergadas;
-3. consolidar publicações compatíveis, idealmente após várias fases ou em gate de release;
-4. fornecer um único bloco de comandos pronto para copiar;
-5. pedir somente o retorno essencial;
-6. nunca presumir publicação sem confirmação.
+O operador/fundador pode ser acionado para:
+1. pré-validar guards específicos antes de um CI longo;
+2. executar testes direcionados;
+3. confirmar build/deploy quando o acesso externo exigir sessão própria;
+4. executar comandos consolidados de publicação;
+5. colher evidência objetiva de ambiente.
 
-Exceção: segurança, bloqueio técnico ou validação indispensável exigem intervenção imediata.
+Regras:
+- fornecer blocos curtos e seguros;
+- preferir clone persistente em `~/...` quando a sessão puder ser reciclada;
+- evitar testes pesados sem necessidade;
+- pedir apenas o retorno essencial;
+- nunca presumir publicação sem confirmação;
+- pré-validação manual não autoriza ignorar erro real.
+
+A política completa está em `docs/DEVELOPMENT_CI_WORKFLOW.md`.
 
 ## Fonte da verdade
 

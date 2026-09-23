@@ -349,3 +349,42 @@ Regras permanentes:
 - o vínculo persistido por ID passa a ser a autoridade; descrição, fornecedor ou texto livre não substituem esse identificador.
 
 Consequência: futuras rotinas de catálogo/conciliação podem unificar materiais conscientemente, mas não podem reintroduzir matching textual implícito no fluxo de recebimento.
+
+
+## D-034 — CI proporcional ao impacto da mudança
+
+O EMPROVEX adota como diretriz oficial a evolução de um CI monolítico para validação proporcional ao risco.
+
+Regras:
+- todo PR mantém validações essenciais de compilação, tipos e higiene;
+- guards e testes de domínio devem ser selecionados conforme os arquivos/capacidades alterados;
+- Browser E2E completo é obrigatório quando houver mudança em jornada funcional do usuário;
+- alterações puramente visuais, documentais ou estáticas não devem, por regra, exigir regressão completa de navegador;
+- smoke E2E pode cobrir PRs de baixo risco quando houver necessidade de confirmar navegador/interação básica;
+- E2E completo permanece disponível para mudanças funcionais, integrações, releases, regressões e execuções periódicas;
+- a redução de execução redundante não autoriza reduzir cobertura crítica.
+
+Enquanto o workflow atual ainda executar a suíte completa em todo PR, suas regras continuam válidas. A próxima refatoração do CI deve implementar esta decisão.
+
+Documento global: `docs/DEVELOPMENT_CI_WORKFLOW.md`.
+
+## D-035 — Cloud Shell como ferramenta oficial de coexecução
+
+O Cloud Shell deixa de ser tratado apenas como último recurso.
+
+O operador/fundador pode atuar de forma presente e deliberada no desenvolvimento para:
+- executar pré-validações rápidas;
+- antecipar falhas de guards;
+- testar hipóteses antes de novo push;
+- executar builds/deploys quando isso for mais eficiente;
+- fornecer evidência de ambiente que o agente não consegue obter diretamente.
+
+Consequências:
+- o agente deve preferir autonomia para tarefas que consegue executar;
+- quando a participação manual trouxer ganho claro, deve fornecer comandos curtos, copiáveis e de baixo risco;
+- clones de trabalho que precisem sobreviver a reciclagem de sessão devem preferir `~/...` a `/tmp`;
+- testes leves e específicos devem vir antes de `npm ci`, build e E2E completos;
+- a intervenção manual é parte normal da estratégia de aceleração e não uma exceção arquitetural;
+- toda evidência manual deve ser tratada como pré-validação, sem mascarar falhas reais do CI.
+
+Documento global: `docs/DEVELOPMENT_CI_WORKFLOW.md`.
