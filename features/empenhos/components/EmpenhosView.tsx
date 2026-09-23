@@ -22,6 +22,10 @@ import {
   isNoticePending,
   isNoticeVisibleInActiveQueue,
 } from '../../avisos/domain/noticeLifecycle';
+import {
+  getInvoiceOperationalPendingStage,
+  summarizeEmpenhoInvoicePending,
+} from '../../notas-fiscais/domain/invoiceOperationalPending';
 import type { User } from 'firebase/auth';
 type Setter<T = any> = Dispatch<SetStateAction<T>>;
 
@@ -621,6 +625,11 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                   const itemsComSaldo = targetEmp.items.filter(i => (i.quantity - i.received) > 0).length;
                   const targetInvoices = invoices.filter(inv => inv.empenhoId === targetEmp.id);
                   const totalInvoicesValue = targetInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
+                  const invoicePendingSummary = summarizeEmpenhoInvoicePending(
+                    targetEmp,
+                    targetInvoices,
+                    empenhoClasses
+                  );
                   const activeEmpenhoNotices = alerts
                     .filter((alert) => alert.empenhoId === targetEmp.id && isNoticeVisibleInActiveQueue(alert))
                     .sort((left, right) => {
@@ -944,6 +953,51 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                             className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-current/15 bg-white/70 px-3 text-[10px] font-extrabold transition hover:bg-white"
                           >
                             Abrir Central
+                          </button>
+                        </div>
+                      )}
+
+                      {invoicePendingSummary.stage !== 'none' && (
+                        <div
+                          data-testid="empenho-invoice-pending-summary"
+                          className={`flex flex-col gap-3 rounded-xl border px-3.5 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between ${
+                            invoicePendingSummary.stage === 'commission'
+                              ? 'border-rose-200 bg-rose-50/85 text-rose-800'
+                              : 'border-amber-200 bg-amber-50/85 text-amber-900'
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.12em]">
+                                <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                                Pendência de Nota Fiscal
+                              </span>
+                              {invoicePendingSummary.commissionCount > 0 && (
+                                <span className="rounded-full border border-rose-200 bg-white/75 px-2 py-0.5 text-[10px] font-black text-rose-700">
+                                  {invoicePendingSummary.commissionCount} aguardando Comissão
+                                </span>
+                              )}
+                              {invoicePendingSummary.treasuryCount > 0 && (
+                                <span className="rounded-full border border-amber-200 bg-white/75 px-2 py-0.5 text-[10px] font-black text-amber-800">
+                                  {invoicePendingSummary.treasuryCount} aguardando Tesouraria
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-1 text-[11px] font-semibold leading-relaxed opacity-85">
+                              {invoicePendingSummary.message}
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedNFCommitmentId(targetEmp.id);
+                              setActiveTab('nova_nf');
+                              setNfSubTab('acompanhar');
+                            }}
+                            className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-current/15 bg-white/75 px-3 text-[10px] font-extrabold transition hover:bg-white"
+                          >
+                            Acompanhar NFs
                           </button>
                         </div>
                       )}
@@ -1332,6 +1386,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                   <th className="p-3.5">Data do TR</th>
                                   <th className="p-3.5">Comissão</th>
                                   <th className="p-3.5">Tesouraria</th>
+                                  <th className="p-3.5">Pendência</th>
                                   <th className="p-3.5">Nº da NS</th>
                                   <th className="p-3.5 text-right">Valor da NF</th>
                                   <th className="p-3.5 pr-5 text-center">Ações</th>
@@ -1380,6 +1435,37 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                       ) : (
                                         <span className="text-amber-600 font-semibold text-[11px]">Falta Enviar</span>
                                       )}
+                                    </td>
+                                    <td className="p-3.5">
+                                      {(() => {
+                                        const pendingStage = getInvoiceOperationalPendingStage(
+                                          inv,
+                                          targetEmp,
+                                          empenhoClasses
+                                        );
+
+                                        if (pendingStage === 'commission') {
+                                          return (
+                                            <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-extrabold text-rose-700">
+                                              Aguardando Comissão
+                                            </span>
+                                          );
+                                        }
+
+                                        if (pendingStage === 'treasury') {
+                                          return (
+                                            <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-extrabold text-amber-800">
+                                              Aguardando Tesouraria
+                                            </span>
+                                          );
+                                        }
+
+                                        return (
+                                          <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-extrabold text-emerald-700">
+                                            Concluída
+                                          </span>
+                                        );
+                                      })()}
                                     </td>
                                     <td className="p-3.5">
                                       {inv.numeroNS ? (
@@ -1438,7 +1524,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                               </tbody>
                               <tfoot>
                                 <tr className="bg-gray-50 font-black text-xs text-[#0b1c30] border-t border-gray-200">
-                                  <td colSpan={6} className="p-3.5 pl-5 uppercase tracking-wider text-gray-500 text-[10px]">
+                                  <td colSpan={7} className="p-3.5 pl-5 uppercase tracking-wider text-gray-500 text-[10px]">
                                     Total de Notas Fiscais Lançadas ({targetInvoices.length})
                                   </td>
                                   <td className="p-3.5 text-right font-black text-emerald-600">
