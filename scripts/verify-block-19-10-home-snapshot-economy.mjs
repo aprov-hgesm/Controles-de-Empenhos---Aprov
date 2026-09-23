@@ -75,13 +75,18 @@ forbidText(
 );
 requireText(
   snapshotHook,
-  "return activeTab === 'empenhos' || activeTab === 'nova_nf';",
-  'Publicação do snapshot com pendências de NF não está restrita a telas que já carregam empenhos, alertas e invoices.'
+  "return activeTab === 'empenhos' || activeTab === 'nova_nf' || activeTab === 'avisos';",
+  'Publicação do snapshot não contempla Empenhos, NF e Central de Avisos.'
 );
 requireText(
   snapshotHook,
-  '|| !invoicesReady',
-  'Publisher pode gravar snapshot de pendências antes de invoices estarem prontos.'
+  "(activeTab !== 'avisos' && !invoicesReady)",
+  'Empenhos/NF podem publicar snapshot antes de invoices estarem prontos.'
+);
+requireText(
+  snapshotHook,
+  'refreshInicioOperationalSnapshotAlerts',
+  'Central de Avisos não preserva pendências de NF ao atualizar homeSnapshot.'
 );
 requireText(
   snapshotHook,
