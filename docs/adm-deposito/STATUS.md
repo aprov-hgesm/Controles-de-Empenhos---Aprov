@@ -4,16 +4,16 @@ Este arquivo registra o estado real de continuidade do projeto.
 
 ## Estado geral
 
-Status: **FASE 1 — CONCLUÍDA E APROVADA TECNICAMENTE**
+Status: **FASE 2 — CONCLUÍDA, VALIDADA E INTEGRADA À MAIN**
 
-Data de fechamento técnico: 2026-09-22.
+Data de fechamento técnico: 2026-09-23.
 
 Módulo:
 - ADM Depósito / Área Logística;
 - piloto permanece exclusivo da conta fundadora;
 - usuários externos continuam sem visibilidade e sem acesso ao módulo;
-- DEP-1 e DEP-1.1 estão concluídos;
-- nenhuma funcionalidade da FASE 2 foi iniciada.
+- DEP-2, DEP-2.1 e DEP-2.2 estão concluídos;
+- nenhuma funcionalidade da FASE 3 foi iniciada.
 
 ## Repositório e baseline
 
@@ -23,214 +23,294 @@ Repositório:
 Branch oficial:
 `main`
 
-Branch da FASE 1:
-`feat/adm-deposito-phase-1-material-foundation`
+Branch da FASE 2:
+`feat/adm-deposito-phase-2-ledger-balances`
 
 Branch de fechamento documental:
-`docs/adm-deposito-phase-1-closure`
+`docs/adm-deposito-phase-2-closure`
 
-HEAD real da `main` no início da FASE 1:
-`86be9a1db7dc340939cdd7a8ac76b679297b4ad5`
+HEAD real da `main` no início da FASE 2:
+`8a94a3f28c1ebaad4170d811e416d250252fce69`
 
-Baseline operacional final da FASE 0:
-`cb1e0b652248122d7e49975c34f2362c04d7761f`
+Baseline técnico final da FASE 1:
+`74e271e5b2b04367e75002dce4e8d7bebe72d63a`
 
-Auditoria inicial:
-- a `main` ainda estava exatamente em `86be9a1db7dc340939cdd7a8ac76b679297b4ad5`;
-- não existiam commits nem PRs mesclados após o fechamento documental da FASE 0;
-- autenticação fundadora, isolamento por workspace/UG e namespace `warehouse` permaneciam íntegros;
-- `firestore.rules` continuava sem fallback de `canAccessWorkspace(workspaceId)` para o namespace logístico;
-- FASE 1 ainda não havia sido iniciada.
-
-Commit técnico final da branch aprovado pelos gates:
-`62d34f1ac0941d0eb16fd671504099f24d51c30c`
+Commit técnico final da branch da FASE 2 aprovado pelos gates:
+`c806820a515bdecf928d19098e1e0d6d9e77c366`
 
 PR da implementação:
-- PR #157 — `feat: establish ADM Depósito phase 1 material foundation`;
+- PR #161 — `feat: implement ADM Depósito phase 2 ledger and balances`;
 - merge via squash;
-- commit final da implementação na `main`: `74e271e5b2b04367e75002dce4e8d7bebe72d63a`.
+- commit final da implementação na `main`: `9d4156a8e37cd6c3337afdd31747456eb9935664`.
 
-Após o merge do PR #157, a comparação de `74e271e5b2b04367e75002dce4e8d7bebe72d63a...main` retornou `identical`, 0 ahead e 0 behind.
+Após o merge do PR #161, a comparação de
+`9d4156a8e37cd6c3337afdd31747456eb9935664...main`
+retornou `identical`, 0 ahead e 0 behind.
+
+## Auditoria inicial da FASE 2
+
+Antes da implementação:
+- a `main` continha a FASE 1 concluída e o fechamento documental correspondente;
+- commits posteriores ao baseline técnico da FASE 1 eram apenas documentação;
+- o namespace `warehouse` continuava isolado e founder-only;
+- a FASE 2 não possuía branch, commit ou PR anterior parcialmente executado;
+- o PR #160 — `security: bind Firestore authorization to operational sessions` — estava e permanece em draft, fora do escopo da FASE 2;
+- o PR #160 altera autenticação e `firestore.rules`, portanto deverá ser reconciliado com a `main` atual antes de qualquer futura integração.
 
 ## Última fase concluída
 
-**FASE 1 — Fundação do material**
+**FASE 2 — Ledger e saldos**
 
 Blocos concluídos:
-- DEP-1 — Modelo canônico de material;
-- DEP-1.1 — Unidades e conversões.
+- DEP-2 — Ledger de movimentações;
+- DEP-2.1 — Saldo agregado;
+- DEP-2.2 — Idempotência.
 
 ## Implementação concluída
 
-### DEP-1 — Modelo canônico de material
+### DEP-2 — Ledger de movimentações
 
-Foi criado o contrato de domínio versionado:
+Foi criado o contrato versionado:
 
-`warehouse_material_v1`
+`warehouse_movement_v1`
 
-O material canônico possui:
-- ID interno estável no formato `mat_<uuid sem hífens>`;
-- `workspaceId`;
-- UG;
-- descrição principal;
-- aliases normalizados e deduplicados;
-- unidade canônica;
-- status `active` ou `inactive`;
-- lista explícita de conversões de apresentação.
+Tipos iniciais suportados:
+- `INITIAL_BALANCE`;
+- `INVOICE_ENTRY`;
+- `OUTBOUND`;
+- `TRANSFER`;
+- `INVENTORY_ADJUSTMENT`;
+- `INVOICE_CORRECTION`;
+- `REVERSAL`.
 
-A validação de domínio:
-- normaliza workspace, UG, descrição, aliases e unidades;
-- rejeita IDs, workspaces, UGs, status, unidades e conversões inválidos;
-- pode exigir workspace e UG esperados;
-- permanece independente de React e das futuras telas operacionais.
+Características:
+- cada movimento possui ID interno determinístico;
+- cada movimento pertence explicitamente a `workspaceId`, UG e material canônico;
+- quantidades usam precisão controlada;
+- direção/sinal da quantidade é validada por tipo;
+- `REVERSAL` exige referência explícita ao movimento revertido;
+- o ledger é append-only após persistência;
+- update e delete de movimentos consolidados são negados pelas Firestore Rules.
 
 Persistência:
-- domínio reservado utilizado: `warehouse/{workspaceId}/materials/{materialId}`;
-- foi criado repositório Firestore específico para listar, obter e salvar materiais;
-- nenhuma árvore paralela de dados foi criada;
-- o documento persistido continua declarando o mesmo `workspaceId` do caminho Firestore.
+`warehouse/{workspaceId}/movements/{movementId}`
 
-### DEP-1.1 — Unidades e conversões
+### DEP-2.1 — Saldo agregado
 
-Unidades/apresentações iniciais suportadas:
-- unidade;
-- kg;
-- g;
-- L;
-- mL;
-- pacote;
-- caixa;
-- fardo;
-- `other` para outras apresentações necessárias.
+Foi criado o contrato versionado:
 
-O contrato permite rótulos de apresentação, por exemplo:
-- `Caixa 30 kg`;
-- `Bombona 20 L`.
+`warehouse_balance_v1`
 
-Conversões são explícitas para a unidade canônica do material por `factorToBaseUnit`.
+Persistência:
+`warehouse/{workspaceId}/balances/{materialId}`
 
-A FASE 1 não cria saldo nem movimentação ao converter quantidades; a função de conversão é apenas parte do contrato reutilizável de domínio.
+O saldo materializado possui:
+- `workspaceId`;
+- UG;
+- `materialId`;
+- quantidade agregada;
+- revisão monotônica;
+- referência ao último movimento aplicado.
+
+Invariantes:
+- movimento e saldo são gravados na mesma transação Firestore;
+- um novo movimento não pode ser persistido sem o saldo correspondente;
+- um saldo não pode ser alterado sem um novo movimento correspondente;
+- criação do primeiro saldo inicia revisão 1;
+- cada novo movimento incrementa a revisão;
+- saldo continua derivado do ledger auditável.
+
+### DEP-2.2 — Idempotência
+
+A chave de idempotência:
+- é normalizada;
+- é combinada com o workspace;
+- gera SHA-256;
+- produz ID determinístico no formato `mov_<sha256>`.
+
+Comportamento:
+- repetir a mesma operação com a mesma chave e mesmo payload não reaplica o delta;
+- replay idempotente retorna o movimento e saldo já existentes;
+- mesma chave com payload divergente gera `WAREHOUSE_IDEMPOTENCY_CONFLICT`;
+- a proteção é estrutural, não apenas de interface.
+
+Isso prepara a futura FASE 3 para NF → estoque sem duplicar entradas quando uma operação for repetida.
 
 ## Segurança e isolamento
 
-A FASE 0 permanece integralmente preservada.
+A FASE 0 continua preservada.
 
-O gate continua exigindo:
-- módulo habilitado;
-- identidade fundadora;
-- sessão Google válida;
-- workspace fundador `hgesm-aprov`;
-- contexto compatível com o bootstrap fundador.
+O módulo permanece:
+- habilitado somente para o fundador;
+- vinculado ao workspace `hgesm-aprov`;
+- protegido na rota, API e Firestore;
+- invisível e inacessível para usuários externos.
 
-As Firestore Rules da FASE 1:
-- mantêm o gate fundador como condição obrigatória;
-- validam o envelope canônico dos documentos em `materials`;
-- exigem que `workspaceId` do documento corresponda ao workspace do caminho;
-- impedem que o match genérico dos demais domínios funcione como bypass para `materials`;
-- continuam sem usar `canAccessWorkspace(workspaceId)` como fallback para `warehouse`.
+As Firestore Rules:
+- continuam sem fallback de `canAccessWorkspace(workspaceId)` no namespace `warehouse`;
+- validam os contratos de movimento e saldo;
+- exigem correspondência com o material canônico ativo;
+- impedem alteração/remoção do ledger consolidado;
+- impedem saldo avulso sem movimento;
+- impedem movimento sem atualização atômica do saldo.
 
-Cenários aprovados no Firebase Emulator:
-- fundador grava material canônico;
-- fundador lê material canônico;
-- fundador lista materiais;
-- documento não pode declarar workspace diferente do caminho;
-- usuário externo não lê material do fundador;
-- usuário externo não grava material nem usando o próprio workspace;
-- sessão fundadora autenticada por senha não lê materiais;
-- fundador não grava material em workspace externo.
+Cenários aprovados no Firebase Emulator incluem:
+- fundador cria movimento e saldo atomicamente;
+- segundo movimento atualiza saldo e revisão;
+- ledger é append-only;
+- saldo não aceita alteração sem novo movimento;
+- movimento não é aceito sem saldo correspondente;
+- usuário externo não lê ledger;
+- usuário externo não lê saldo;
+- sessão fundadora por senha continua sem acesso ao módulo.
 
-O Browser E2E legado que comprova invisibilidade e bloqueio da rota para usuários externos também permaneceu aprovado.
+## Correções realizadas durante a FASE 2
 
-## Arquivos principais alterados
+### Reconstrução segura de Firestore Rules
 
-- `lib/warehouse/material.ts`;
-- `lib/warehouse/materialRepository.ts`;
+Durante uma edição intermediária, uma substituição textual gerou duplicação anormal no arquivo `firestore.rules`.
+
+O problema:
+- foi detectado pela auditoria do diff antes do merge;
+- chegou a produzir mais de 18 mil linhas adicionadas na branch intermediária;
+- nunca foi integrado à `main`.
+
+Correção:
+- `firestore.rules` foi reconstruído a partir da versão íntegra da `main`;
+- somente o bloco necessário da FASE 2 foi reaplicado;
+- o diff final ficou restrito a aproximadamente 293 adições e 1 remoção no arquivo;
+- Emulator, CI e diff hygiene aprovaram a versão final.
+
+### Redirect da rota ADM Depósito
+
+O Browser E2E revelou uma condição de runtime ao redirecionar usuário externo de
+`/adm-deposito` para `/` usando `window.location.replace('/')`.
+
+Sintoma observado no ambiente E2E:
+- `SyntaxError: Unexpected end of JSON input`;
+- resposta 500 transitória da página inicial;
+- Fast Refresh realizando reload completo.
+
+Correção:
+- a rota passou a usar `useRouter().replace('/')`;
+- o gate da FASE 0 foi atualizado para validar o redirect via router;
+- o isolamento de acesso permaneceu o mesmo;
+- Browser E2E completo passou após a correção.
+
+## Arquivos principais alterados na FASE 2
+
+- `lib/warehouse/movement.ts`;
+- `lib/warehouse/ledgerRepository.ts`;
 - `lib/warehouse/namespace.ts`;
 - `firestore.rules`;
-- `scripts/warehouse-material-contract.test.mjs`;
+- `scripts/warehouse-ledger-contract.test.mjs`;
 - `scripts/firestore-multitenancy-security.test.mjs`;
-- `scripts/verify-adm-deposito-phase-1.mjs`;
+- `scripts/verify-adm-deposito-phase-2.mjs`;
+- `scripts/verify-adm-deposito-phase-0.mjs`;
 - `.github/workflows/application-ci.yml`;
 - `package.json`;
+- `app/adm-deposito/page.tsx`;
 - `app/api/adm-deposito/status/route.ts`;
 - `features/warehouse/components/WarehouseFoundationView.tsx`.
 
 ## Testes e checks
 
-Resultado final do commit técnico `62d34f1ac0941d0eb16fd671504099f24d51c30c`:
+Resultado final do commit técnico
+`c806820a515bdecf928d19098e1e0d6d9e77c366`:
+
 - Recovery guardrails: **aprovado**;
 - Application CI: **aprovado**;
+- Browser E2E com Firebase Emulator: **aprovado**;
 - suíte multi-tenant Firestore Emulator: **aprovada**;
 - gate `verify:adm-deposito-phase-0`: **aprovado**;
 - testes `test:adm-deposito-material`: **aprovados**;
 - gate `verify:adm-deposito-phase-1`: **aprovado**;
-- Browser E2E com Firebase Emulator: **aprovado**;
-- Production build: **aprovado**;
+- testes `test:adm-deposito-ledger`: **aprovados**;
+- gate `verify:adm-deposito-phase-2`: **aprovado**;
+- Production build: **aprovado** na tentativa final;
 - TypeScript final: **aprovado**;
 - Diff hygiene: **aprovado**;
-- release gates 16, 17, 18, 19, 20 e 21: **aprovados**;
-- Vercel preview do PR #157: **Ready**;
-- deploy automático da Vercel para o commit `74e271e5b2b04367e75002dce4e8d7bebe72d63a`: **success**.
+- release gates 16, 17, 18, 19, 20 e 21: **aprovados**.
 
-Ocorrência resolvida durante o desenvolvimento:
-- uma edição intermediária de `firestore.rules` na branch foi corrompida pelo mecanismo de substituição textual usado durante a automação;
-- o problema foi detectado antes da abertura/validação final do PR;
-- o arquivo foi reconstruído a partir da versão íntegra da `main`;
-- o diff final de Rules ficou restrito à alteração esperada da FASE 1;
-- CI, emulator, build e diff hygiene validaram a versão corrigida.
+Ocorrência externa não bloqueante:
+- uma tentativa de Production build falhou dentro do loader `next/font`/Google Fonts;
+- a repetição do mesmo commit passou sem alteração de código;
+- foi classificado como falha transitória do carregamento de fonte no ambiente do runner.
+
+## Deploy / publicação externa
+
+O status automático da Vercel para o commit final da branch retornou:
+
+`Deployment rate limited — retry in 24 hours.`
+
+Isso não impediu:
+- CI;
+- build final;
+- Emulator;
+- Browser E2E;
+- merge do PR #161;
+- integração da FASE 2 à `main`.
+
+Nenhuma publicação manual via Cloud Shell foi exigida para validar a FASE 2.
+
+Conforme a diretriz oficial do projeto, publicação externa pode ser consolidada com fases posteriores quando tecnicamente seguro.
+
+As alterações de `firestore.rules` estão versionadas na `main`, mas não se deve presumir publicação produtiva dessas Rules sem confirmação explícita do pipeline/Cloud Shell correspondente.
 
 ## Decisões arquiteturais
 
-Nenhuma decisão definitiva nova foi necessária.
+Nenhuma nova decisão definitiva foi adicionada a `DECISIONS.md`.
 
-`docs/adm-deposito/DECISIONS.md` não foi alterado.
-
-A FASE 1 permanece alinhada especialmente a:
+A FASE 2 implementa decisões já congeladas, especialmente:
 - D-001 — piloto exclusivo da conta fundadora;
-- D-012 — apresentações/conversões preparadas desde a fundação do material, sem antecipar scanner operacional;
-- D-026 — isolamento estrutural por workspace/UG;
-- D-028 — reduzir redigitação e manter contratos reutilizáveis.
+- D-004 — estoque baseado em movimentos;
+- D-005 — correções por compensação;
+- D-026 — isolamento por workspace/UG;
+- D-028 — reduzir redigitação e preservar contratos reutilizáveis.
 
 ## Riscos e pendências
 
-Riscos conhecidos após a FASE 1:
-1. Toda futura rota/API/serviço do ADM Depósito deve continuar reutilizando o gate fundador enquanto D-001 permanecer vigente.
-2. A FASE 2 deverá usar o material canônico sem introduzir uma segunda identidade concorrente de item/material.
-3. Conversões de apresentação existem como contrato; não devem ser confundidas com saldo, movimentação, código de barras ou embalagem operacional antes das fases correspondentes.
-4. Alterações futuras em autenticação, workspace/UG ou Firestore Rules precisam ser comparadas com a `main` real antes de cada nova fase.
-5. O deploy da aplicação na Vercel foi confirmado. Para ações externas não disponíveis diretamente ao agente, o operador pode executar comandos via Cloud Shell. A diretriz é minimizar essas intervenções e, quando tecnicamente seguro, consolidar publicações compatíveis de várias fases em um único gate operacional. Se uma publicação for indispensável para segurança ou validação da fase corrente, o agente deve solicitá-la imediatamente com comandos prontos para copiar e nunca presumir sucesso sem conferir o retorno.
+1. O PR #160 permanece draft e agora está baseado em uma `main` anterior à FASE 2. Antes de qualquer merge futuro, deve ser atualizado/reconciliado, principalmente em `firestore.rules`.
+2. A FASE 3 deverá reutilizar `warehouse_movement_v1`, `warehouse_balance_v1` e o mecanismo de idempotência; não deve criar uma segunda fonte de saldo.
+3. A ligação NF → estoque deve usar movimentos e nunca sobrescrever saldo diretamente.
+4. Correção/exclusão de NF deverá usar movimentos compensatórios conforme D-005.
+5. Deploy produtivo de Rules e Vercel deve ser confirmado em gate operacional futuro; não presumir publicação apenas porque o código foi integrado.
+6. O piloto continua founder-only; usuários externos não devem ser habilitados antes do gate previsto no roadmap.
 
-Pendências bloqueantes da FASE 1:
-- nenhuma no código, testes, CI ou integração com a `main`.
+Pendências bloqueantes da FASE 2:
+- nenhuma no código;
+- nenhuma nos testes;
+- nenhuma no CI;
+- nenhuma na integração com a `main`.
 
 ## Fora do escopo confirmado
 
 Não foram implementados nesta fase:
-- ledger de movimentações;
-- saldo agregado;
-- NF → estoque;
-- entrada/saída operacional;
-- lotes;
-- validade;
+- geração automática de estoque a partir de NF;
+- ligação permanente NF ↔ movimento;
+- correção/exclusão de NF conectada ao ledger;
+- cutoff/data de ativação logística;
+- Marco Zero SISCOFIS;
 - depósitos/localizações operacionais;
-- inventário;
-- SISCOFIS;
+- lotes/validade/FEFO;
 - scanner/código de barras operacional;
-- FEFO;
 - mapa do depósito;
-- dashboard ou alertas de estoque;
+- inventário;
+- dashboard/alertas logísticos;
 - liberação para usuários externos.
 
 ## Próxima fase prevista
 
-**FASE 2 — Ledger e saldos**
+**FASE 3 — Nota Fiscal → estoque**
 
 Blocos previstos conforme `ROADMAP.md`:
-- DEP-2 — Ledger de movimentações;
-- DEP-2.1 — Saldo agregado;
-- DEP-2.2 — Idempotência.
+- DEP-3 — Entrada automática pela NF;
+- DEP-3.1 — Ligação permanente NF ↔ estoque;
+- DEP-3.2 — Alterações de NF por movimentos compensatórios;
+- DEP-3.3 — Exclusão/estorno controlado;
+- DEP-4 — Data de ativação logística.
 
-**A FASE 2 NÃO FOI INICIADA NESTE CHAT.**
+**A FASE 3 NÃO FOI INICIADA NESTE CHAT.**
 
 ## Gate para o próximo chat
 
@@ -238,7 +318,8 @@ Antes de qualquer modificação:
 
 1. Ler `README.md`, `ROADMAP.md`, `DECISIONS.md`, este `STATUS.md` e `HANDOFF_TEMPLATE.md`.
 2. Consultar a `main` real.
-3. Usar `74e271e5b2b04367e75002dce4e8d7bebe72d63a` como baseline operacional final da FASE 1.
+3. Usar `9d4156a8e37cd6c3337afdd31747456eb9935664` como baseline técnico final da FASE 2.
 4. Comparar qualquer commit posterior a esse SHA.
-5. Avaliar impacto de mudanças intermediárias em autenticação, workspace/UG, Firestore Rules, Firebase e contratos de material.
-6. Executar somente a FASE 2 em um novo chat.
+5. Auditar o estado do PR #160 e qualquer alteração intermediária em autenticação, workspace/UG, Firestore Rules, Firebase ou contratos do ADM Depósito.
+6. Reutilizar o ledger, saldo materializado e idempotência existentes.
+7. Executar somente a FASE 3 em um novo chat.
