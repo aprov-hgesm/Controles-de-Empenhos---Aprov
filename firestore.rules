@@ -4132,11 +4132,27 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
-      // Domínio reservado para inventários futuros. Mantido explícito para
-      // evitar que um wildcard recursivo sobreponha as regras específicas acima.
-      // Demais domínios desconhecidos são negados por padrão.
-      match /inventories/{document=**} {
-        allow read, write: if canAccessWarehouseModule(workspaceId);
+      // FASE 10 / DEP-20..20.3 — inventário founder-only e auditável.
+      match /inventories/{inventoryId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseInventorySessionCreate(workspaceId, inventoryId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseInventorySessionUpdate(workspaceId, inventoryId);
+        allow delete: if false;
+
+        match /items/{itemId} {
+          allow read: if canAccessWarehouseModule(workspaceId);
+          allow create: if canAccessWarehouseModule(workspaceId)
+            && validWarehouseInventoryItemCreate(workspaceId, inventoryId, itemId);
+          allow update: if canAccessWarehouseModule(workspaceId)
+            && (
+              validWarehouseInventoryCountUpdate(workspaceId, inventoryId)
+              || validWarehouseInventoryAdjustmentUpdate(workspaceId, inventoryId, itemId)
+              || validWarehouseInventoryStaleUpdate(workspaceId, inventoryId, itemId)
+            );
+          allow delete: if false;
+        }
       }
     }
 
