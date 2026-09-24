@@ -93,7 +93,7 @@ requireText(
   "recomendação FEFO.', futurePhase: null",
   'Estoque ainda está marcado como capacidade futura.'
 );
-requireText(shell, 'EMPROVEX // FASE 7', 'Shell não identifica a FASE 7.');
+requireText(shell, 'EMPROVEX // FASE ', 'Shell não preserva a identificação evolutiva de fase.');
 
 for (const marker of [
   'function validWarehouseLotOrigin',
