@@ -16,6 +16,9 @@ import { WarehouseLocationsOperational } from './WarehouseLocationsOperational';
 import { WarehouseDepotViewOperational } from './WarehouseDepotViewOperational';
 import { WarehouseInventoryOperational } from './WarehouseInventoryOperational';
 import { WarehouseStockOperational } from './WarehouseStockOperational';
+import { WarehouseDeliveriesOperational } from './WarehouseDeliveriesOperational';
+import { WarehouseLogisticsDashboard } from './WarehouseLogisticsDashboard';
+import { WarehouseLogisticsSettings } from './WarehouseLogisticsSettings';
 
 function FutureNotice({ phase, children }: { phase: string; children: string }) {
   return (
@@ -49,28 +52,8 @@ function PlannedItems({ items }: { items: readonly string[] }) {
   );
 }
 
-function OverviewContent() {
-  return (
-    <div className="mt-6 space-y-5">
-      <div className="grid gap-3 md:grid-cols-3">
-        <ContractCard title="Material canônico" code={WAREHOUSE_MATERIAL_SCHEMA_VERSION} description="Identidade única de material e unidades da FASE 1. Nenhum modelo concorrente foi criado." />
-        <ContractCard title="Ledger auditável" code={WAREHOUSE_MOVEMENT_SCHEMA_VERSION} description="Histórico append-only da FASE 2, preservado como fonte de movimentos." />
-        <ContractCard title="Saldo materializado" code={WAREHOUSE_BALANCE_SCHEMA_VERSION} description="Projeção do ledger para leitura rápida. Não existe segundo saldo no Walking Skeleton." />
-      </div>
-      <div className="grid gap-3 lg:grid-cols-2">
-        <div className="rounded-2xl border border-emerald-300/10 bg-emerald-400/[0.035] p-5">
-          <div className="flex items-center gap-2 text-emerald-200"><ShieldCheck className="h-4 w-4" aria-hidden="true" /><p className="text-xs font-black uppercase tracking-[0.12em]">Piloto fundador preservado</p></div>
-          <p className="mt-3 text-sm leading-6 text-slate-400">O módulo continua protegido pela feature flag, pelo gate de identidade fundadora, pela API segura e pelo namespace logístico isolado.</p>
-        </div>
-        <div className="rounded-2xl border border-blue-300/10 bg-blue-400/[0.035] p-5">
-          <div className="flex items-center gap-2 text-blue-200"><Database className="h-4 w-4" aria-hidden="true" /><p className="text-xs font-black uppercase tracking-[0.12em]">Namespace existente</p></div>
-          <p className="mt-3 text-sm leading-6 text-slate-400"><code className="text-blue-200">{WAREHOUSE_NAMESPACE_ROOT}/&#123;workspaceId&#125;/...</code>{' '}continua sendo a única fronteira de persistência logística.</p>
-          <p className="mt-2 text-xs leading-5 text-slate-600">Domínios reservados: {Object.values(WAREHOUSE_DOMAIN_COLLECTIONS).join(', ')}.</p>
-        </div>
-      </div>
-      <FutureNotice phase="FASES 4–11">Os indicadores operacionais serão adicionados somente quando as respectivas fontes reais existirem. Esta Visão Geral não exibe números fictícios de estoque, entregas, inventário ou conciliação.</FutureNotice>
-    </div>
-  );
+function OverviewContent({ workspaceId }: { workspaceId: string }) {
+  return <WarehouseLogisticsDashboard workspaceId={workspaceId} />;
 }
 
 interface WarehousePhase4Data {
@@ -469,22 +452,18 @@ function SiscofisContent({ workspaceId }: { workspaceId: string }) {
   );
 }
 
-function DeliveriesContent() {
-  return (
-    <div className="mt-6">
-      <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-5"><div className="flex items-center gap-2"><PackageCheck className="h-4 w-4 text-blue-200" aria-hidden="true" /><p className="text-xs font-bold text-slate-300">Integração sem duplicação</p></div><p className="mt-3 text-sm leading-6 text-slate-400">Esta área será conectada ao Planejamento/Cronograma existente. O Walking Skeleton não copia, migra ou mantém uma segunda fonte de entregas.</p></div>
-      <div className="mt-5"><FutureNotice phase="FASE 11">Entrega → NF → estoque e os indicadores logísticos serão conectados somente quando as fatias anteriores estiverem operacionais.</FutureNotice></div>
-    </div>
-  );
+function DeliveriesContent({ workspaceId }: { workspaceId: string }) {
+  return <WarehouseDeliveriesOperational workspaceId={workspaceId} />;
 }
 
-function SettingsContent() {
+function SettingsContent({ workspaceId }: { workspaceId: string }) {
   return (
     <div className="mt-6">
       <div className="grid gap-3 md:grid-cols-2">
         <div className="rounded-2xl border border-emerald-300/10 bg-emerald-400/[0.035] p-5"><div className="flex items-center gap-2 text-emerald-200"><ShieldCheck className="h-4 w-4" aria-hidden="true" /><p className="text-xs font-bold">Escopo do piloto</p></div><p className="mt-3 text-sm leading-6 text-slate-400">A configuração efetiva continua no contrato founder-only existente. Nenhum novo papel externo foi criado.</p></div>
         <div className="rounded-2xl border border-blue-300/10 bg-blue-400/[0.035] p-5"><div className="flex items-center gap-2 text-blue-200"><Boxes className="h-4 w-4" aria-hidden="true" /><p className="text-xs font-bold">Configuração logística</p></div><p className="mt-3 text-sm leading-6 text-slate-400">Não existem toggles fictícios nesta fase. Parâmetros serão adicionados apenas quando possuírem contrato funcional e de segurança definido.</p></div>
       </div>
+      <div className="mt-5"><WarehouseLogisticsSettings workspaceId={workspaceId} /></div>
       <div className="mt-5"><FutureNotice phase="FASES 12–14">Configurações de operacionalização, telemetria e expansão externa serão tratadas nas fases específicas do roadmap.</FutureNotice></div>
     </div>
   );
@@ -494,7 +473,7 @@ export function WarehouseSectionContent({ section, workspaceId }: { section: War
   const phase4Data = useWarehousePhase4Data(workspaceId, section);
 
   switch (section) {
-    case 'overview': return <OverviewContent />;
+    case 'overview': return <OverviewContent workspaceId={workspaceId} />;
     case 'stock': return <WarehouseStockOperational workspaceId={workspaceId} />;
     case 'outbound': return <WarehouseExpressOutbound workspaceId={workspaceId} />;
     case 'movements': return <MovementsContent data={phase4Data} />;
@@ -502,7 +481,7 @@ export function WarehouseSectionContent({ section, workspaceId }: { section: War
     case 'warehouseView': return <WarehouseDepotViewOperational workspaceId={workspaceId} />;
     case 'inventory': return <WarehouseInventoryOperational workspaceId={workspaceId} />;
     case 'siscofis': return <SiscofisContent workspaceId={workspaceId} />;
-    case 'deliveries': return <DeliveriesContent />;
-    case 'settings': return <SettingsContent />;
+    case 'deliveries': return <DeliveriesContent workspaceId={workspaceId} />;
+    case 'settings': return <SettingsContent workspaceId={workspaceId} />;
   }
 }
