@@ -12,7 +12,6 @@ import {
 
 import {
   findWarehouseBarcodeAssociation,
-  warehousePresentationFactor,
   type WarehouseBarcodeAssociation,
 } from '../../../lib/warehouse/barcode';
 import {
@@ -774,7 +773,7 @@ export function WarehouseExpressOutbound({ workspaceId }: { workspaceId: string 
                   </div>
                   <div className="rounded-xl border border-emerald-300/15 bg-emerald-400/[0.05] px-3 py-2 text-right">
                     <p className="text-[10px] uppercase tracking-wide text-slate-500">saldo oficial</p>
-                    <p className="font-black text-emerald-200">
+                    <p data-testid="warehouse-outbound-balance" className="font-black text-emerald-200">
                       {numberLabel(selectedBalance.quantity)} {unitLabel(selectedMaterial.unit)}
                     </p>
                   </div>
