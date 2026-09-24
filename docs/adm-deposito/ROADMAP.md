@@ -182,11 +182,11 @@ Capacidade completa:
 
 Gate vertical: pesquisar material → abrir mapa → destacar local correto → editar layout sem alterar estoque.
 
-## FASE 10 — Inventário Físico — EM VALIDAÇÃO TÉCNICA
+## FASE 10 — Inventário Físico — CONCLUÍDA
 
 Blocos: DEP-20, DEP-20.1, DEP-20.2 e DEP-20.3.
 
-Capacidade implementada:
+Capacidade concluída:
 - inventário total ou parcial por depósito/local/subposição;
 - sessão versionada warehouse_inventory_v1 com itens bounded em subcoleção;
 - snapshot histórico do esperado derivado das projeções oficiais;
@@ -202,7 +202,7 @@ Capacidade implementada:
 
 Gate vertical: contagem → divergência → confirmação → ajuste auditável → novo saldo.
 
-Fechamento definitivo depende dos checks obrigatórios do PR da FASE 10.
+Fechamento: PR #180 aprovado e integrado à `main` por squash merge `0a15586ff39d740f48f71c33c7cbff578835e11f`, com Application CI #702 e Recovery guardrails #463 aprovados.
 
 ## FASE 11 — Entregas, Dashboard Logístico e Alertas
 
@@ -329,8 +329,8 @@ FASE 0 Fundação e isolamento ✓
 → FASE 6 Depósitos / localizações ✓
 → FASE 7 Estoque operável ✓
 → FASE 8 Saída / scanner ✓
-→ FASE 9 Visão do Depósito
-→ FASE 10 Inventário
+→ FASE 9 Visão do Depósito ✓
+→ FASE 10 Inventário ✓
 → FASE 11 Entregas / dashboard / alertas
 → FASE 11.5 Consolidação Visual / UX
 → FASE 12 Segurança / performance / telemetria
