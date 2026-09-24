@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const MATERIAL_ID = 'mat_123e4567e89b12d3a456426614174000';
+const LOCATION_ID = 'loc_' + '6'.repeat(32);
 
 test.describe.serial('ADM Depósito FASE 9 — Visão do Depósito', () => {
   test('fundador pesquisa posição, edita layout, salva versão e preserva estoque', async ({ page }) => {
@@ -16,14 +17,14 @@ test.describe.serial('ADM Depósito FASE 9 — Visão do Depósito', () => {
     await page.getByTestId('warehouse-layout-add-object').click();
     await page.getByTestId('warehouse-layout-object-label').fill('Estante E2E');
     const locationSelect = page.getByTestId('warehouse-layout-object-location');
-    const locationOptions = await locationSelect.locator('option').count();
-    if (locationOptions > 1) await locationSelect.selectOption({ index: 1 });
+    await locationSelect.selectOption(LOCATION_ID);
     await page.getByTestId('warehouse-layout-save').click();
     await expect(page.getByTestId('warehouse-layout-message')).toContainText('Layout salvo como versão');
 
     await page.getByTestId('warehouse-layout-material-search').fill('Arroz parboilizado');
     await page.getByTestId('warehouse-layout-material-' + MATERIAL_ID).click();
     await expect(page.getByTestId('warehouse-layout-highlight-summary')).toContainText('posição(ões) real(is)');
+    await expect(page.locator('[data-location-id="' + LOCATION_ID + '"][data-highlighted="true"]')).toBeVisible();
 
     const summaryBefore = await page.getByTestId('warehouse-layout-highlight-summary').textContent();
     await page.reload();
