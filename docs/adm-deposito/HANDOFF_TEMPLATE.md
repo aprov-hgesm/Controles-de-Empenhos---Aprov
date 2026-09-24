@@ -35,6 +35,7 @@ Regras:
 - use Cloud Shell de forma ativa para pré-validação/diagnóstico quando isso reduzir uma rodada longa de CI;
 - quando pedir intervenção manual, forneça comandos curtos, seguros e copiáveis;
 - Browser E2E completo é prioritário para mudanças que alterem jornada/interação do usuário;
+- mudanças exclusivamente em `docs/**` não devem disparar o Application CI; não misture fechamento documental com arquivos funcionais/configuracionais se a intenção for usar essa exceção;
 - atualize STATUS ao concluir;
 - atualize DECISIONS apenas se houver decisão arquitetural definitiva;
 - não inicie a fase seguinte no mesmo chat.
@@ -92,6 +93,13 @@ Regras adicionais para a FASE 11:
 - continuar founder-only;
 - não antecipar a consolidação visual global da FASE 11.5;
 - reconciliar qualquer commit novo da main antes de editar código.
+
+## Regra de fechamento documental
+
+Depois que uma fase funcional estiver validada e integrada:
+- atualizações exclusivamente documentais em `docs/**` podem registrar o fechamento oficial sem nova bateria do Application CI;
+- mantenha essas atualizações separadas de código, Rules, scripts, testes, workflows ou configuração;
+- se qualquer arquivo fora de `docs/**` fizer parte do diff, aplique novamente os gates proporcionais ao impacto.
 
 ## Planejamento visual já aprovado
 
