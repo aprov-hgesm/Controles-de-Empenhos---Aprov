@@ -15,10 +15,11 @@ const routes = {
   inventory: ['app/adm-deposito/inventario/page.tsx', 'inventory'],
   siscofis: ['app/adm-deposito/siscofis-conciliacao/page.tsx', 'siscofis'],
   deliveries: ['app/adm-deposito/entregas/page.tsx', 'deliveries'],
+  alerts: ['app/adm-deposito/alertas/page.tsx', 'alerts'],
   settings: ['app/adm-deposito/configuracoes/page.tsx', 'settings'],
 };
 
-test('walking skeleton possui as nove superfícies estruturais roteáveis', () => {
+test('walking skeleton possui as superfícies estruturais roteáveis', () => {
   for (const [id, [path, section]] of Object.entries(routes)) {
     const source = read(path);
     assert.match(source, /WarehouseProtectedSurface/);
@@ -37,6 +38,7 @@ test('navegação interna expõe todas as superfícies oficiais', () => {
     'Inventário',
     'SISCOFIS / Conciliação',
     'Entregas',
+    'Alertas',
     'Configurações',
   ]) {
     assert.ok(navigation.includes(`label: '${label}'`), `Navegação ausente: ${label}`);
