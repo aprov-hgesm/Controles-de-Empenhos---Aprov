@@ -4393,8 +4393,14 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time
         && warehouseItemIntakeMaterialMatches(workspaceId)
         && (
-          warehouseAllocatedIntakeReferencesMatch(workspaceId)
-          || warehouseImmediateIntakeIsValid()
+          (
+            request.resource.data.mode == 'ALLOCATED'
+            && warehouseAllocatedIntakeReferencesMatch(workspaceId)
+          )
+          || (
+            request.resource.data.mode == 'IMMEDIATE_CONSUMPTION'
+            && warehouseImmediateIntakeIsValid()
+          )
         );
     }
 
