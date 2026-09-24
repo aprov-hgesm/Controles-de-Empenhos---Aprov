@@ -50,17 +50,15 @@ Se o texto do chat divergir deles, prevalecem GitHub e documentação versionada
 ## Estado corrente após a FASE 9
 
 Última fase concluída:
-- **FASE 9 — Código de Barras / Scanner / Saída Expressa**;
-- PR de implementação: **#176**;
-- squash merge funcional: `de11ad4f742eed3ca25a7f526c1ea5c78e113ec2`;
-- decisões permanentes da fase: **D-042, D-043 e D-044**;
+- **FASE 9 — Visão do Depósito, Editor e Persistência**;
+- PR de implementação: **#179**;
+- decisões permanentes da fase: **D-046, D-047 e D-048**;
 - contrato técnico: `docs/adm-deposito/PHASE_9_DEPOT_VIEW_LAYOUT.md`.
 
 Capacidades que o próximo chat deve considerar já existentes:
 - material canônico `warehouse_material_v1`;
 - ledger append-only `warehouse_movement_v1`;
 - saldo agregado `warehouse_balance_v1`;
-- Walking Skeleton completo;
 - NF → material → movimento → saldo;
 - cutoff da integração NF → estoque;
 - SISCOFIS com Marco Zero e snapshots de conciliação;
@@ -71,31 +69,34 @@ Capacidades que o próximo chat deve considerar já existentes:
 - Estoque operacional com ficha, origem, lotes, locais e histórico bounded;
 - múltiplos barcodes/apresentações por material;
 - scanner USB HID como teclado;
-- pesquisa manual compartilhando o mesmo fluxo transacional;
-- Saída Expressa como `OUTBOUND` atômico;
+- pesquisa manual e Saída Expressa como `OUTBOUND` atômico;
 - proteção contra saldo agregado e físico negativo;
-- lote opcional e FEFO sempre dependente de ação humana;
-- idempotência preservada em retry;
-- Firestore Rules especializadas para a Saída Expressa e validadas dentro do orçamento de avaliação;
+- croqui operacional `warehouse_depot_layout_v1`;
+- objetos visuais vinculados opcionalmente a `warehouseLocationId` real;
+- pesquisa de material destacando múltiplas posições reais;
+- FEFO apenas como sinalização consultiva no croqui;
+- editor separado do modo de visualização;
+- versionamento ativo/arquivado com recuperação por nova versão;
+- JSON e SVG derivados/exportáveis;
+- Firestore como estado operacional do croqui e Drive apenas complementar;
 - founder-only e isolamento por workspace/UG preservados;
 - FASE 11.5 já reservada para consolidação visual/UX conduzida pelo fundador.
 
 Próxima fase oficial:
 - **FASE 10 — Inventário Físico**.
 
-Regras adicionais para a FASE 9:
-- usar croqui 2D com perspectiva tridimensional leve;
-- representar estrutura física simples, sem desenhar produtos;
-- vincular cada objeto operacional a `warehouseLocationId` estável;
-- pesquisar material deve apenas destacar a localização real existente;
-- mover objeto visual não pode movimentar estoque;
-- FEFO pode orientar destaque, mas continua consultivo;
-- persistir layout versionado sem criar fonte de verdade paralela para localização ou saldo;
-- sincronização com Drive é complementar, não substitui Firestore/contratos logísticos;
-- preservar completamente Visão do Depósito, editor e persistência versionada da FASE 9;
-- não liberar ADM Depósito para usuários externos;
-- não antecipar Inventário Físico da FASE 10;
-- não iniciar FASE 10 no mesmo chat;
+Regras adicionais para a FASE 10:
+- inventário não pode criar segunda fonte de saldo;
+- esperado deve vir das autoridades de saldo/distribuição já existentes;
+- contado deve permanecer separado até confirmação humana;
+- divergência não pode autocorrigir estoque;
+- ajuste confirmado deve usar movimento auditável `INVENTORY_ADJUSTMENT`;
+- suportar inventário total ou parcial por depósito/local;
+- preservar layout versionado da FASE 9 sem transformar o croqui em motor de inventário;
+- preservar barcodes, lotes, FEFO e Saída Expressa;
+- continuar founder-only;
+- não antecipar Dashboard/Alertas da FASE 11;
+- não iniciar a FASE 11 no mesmo chat;
 - reconciliar qualquer commit novo da `main` antes de editar código.
 
 ## Planejamento visual já aprovado
