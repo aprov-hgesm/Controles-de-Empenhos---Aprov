@@ -772,3 +772,49 @@ Regras vigentes a partir desta decisão:
 - intervenções por PowerShell devem ser solicitadas apenas quando realmente necessárias e preferencialmente de forma consolidada.
 
 D-057 substitui, quanto à **cadência de execução**, a exigência intermediária de gates rápidos descrita em D-054; a cobertura final prevista em D-054 permanece integralmente obrigatória.
+
+
+## D-058 — Navegação do ADM Depósito consolidada em quatro áreas operacionais
+
+A navegação plana anterior é substituída por quatro áreas principais definidas pelo fundador:
+
+1. **Início** — central visual com croqui do depósito selecionado, consulta de item e destaque da posição física.
+2. **Cadastro de Itens** — porta de entrada logística das NFs do EMPROVEX, decisão entre alocação física e consumo imediato, além da migração SISCOFIS manual/JSON.
+3. **Meus Depósitos** — cadastro dos depósitos e localizações e edição/versionamento dos croquis físicos.
+4. **Controle de Itens** — consulta do estoque disponível e acesso consolidado a resumo logístico, lotes/validade, saída expressa, movimentações, inventário, entregas, alertas e configurações.
+
+As rotas antigas permanecem apenas como redirecionamentos de compatibilidade. Elas não formam mais a navegação principal.
+
+Regras de preservação:
+- o Dashboard Logístico passa a ser uma subárea de Controle de Itens;
+- SISCOFIS deixa de ser aba principal e passa a integrar Cadastro de Itens;
+- Localizações e Visão do Depósito passam a compor Meus Depósitos;
+- Estoque, Saída Expressa, Movimentações, Inventário, Entregas, Alertas e Configurações passam a compor Controle de Itens;
+- a reorganização não cria fonte de verdade paralela.
+
+## D-059 — NF registrada no EMPROVEX gera decisão logística no ADM sem reacoplar o núcleo
+
+O EMPROVEX permanece a fonte canônica da Nota Fiscal e do Empenho. O ADM Depósito apenas lê essas fontes e registra sua própria decisão logística em `warehouse/{workspaceId}/intakes`.
+
+Contrato:
+- cada item elegível de NF aparece em **Cadastro de Itens** como pendente até existir decisão logística completa;
+- **Alocar no depósito** cria/resolve o material canônico do ADM, registra entrada no ledger, materializa saldo não localizado, transfere para a posição física escolhida, registra lote/validade e associa código de barras quando informado;
+- a posição é composta por depósito + estrutura/local + nível/subposição opcional;
+- **Consumo imediato** não cria entrada física, lote nem localização de estoque; o item é registrado como pendência para lançamento manual no SISCOFIS;
+- o relatório de consumo imediato permite marcar o item como lançado no SISCOFIS sem modificar a NF original;
+- a NF e o Empenho continuam sem importação ou dependência de `lib/warehouse`;
+- falha do ADM nunca converte o cadastro operacional da NF em falha.
+
+O contrato persistido é `warehouse_item_intake_v1`, imutável quanto à decisão original. Somente o estado SISCOFIS de um consumo imediato pode avançar de `PENDING` para `POSTED`.
+
+## D-060 — Croqui ativo é independente por depósito e exclusão física é arquivamento operacional
+
+Cada depósito pode possuir seu próprio croqui ativo e seu próprio histórico de versões. Criar ou editar o croqui de um depósito não arquiva o croqui de outro.
+
+Estruturas visuais admitidas incluem estante, rack, armário, câmara, freezer, geladeira, palete, bancada, corredor, zona e outras estruturas, com dimensões, posição, rotação e elevação visual personalizáveis.
+
+Para preservar auditoria:
+- depósito/localização já utilizado não é apagado fisicamente;
+- a ação apresentada ao usuário como **Excluir da operação** altera o status para inativo e preserva histórico e referências;
+- o registro pode ser restaurado posteriormente;
+- versões antigas de croqui permanecem arquivadas, nunca reescritas como histórico mutável.
