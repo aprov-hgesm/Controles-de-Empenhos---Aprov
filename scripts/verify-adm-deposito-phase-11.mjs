@@ -16,6 +16,8 @@ const section = read('features/warehouse/components/WarehouseSectionContent.tsx'
 const navigation = read('features/warehouse/navigation.ts');
 const page = read('app/page.tsx');
 const rules = read('firestore.rules');
+const security = read('scripts/firestore-multitenancy-security.test.mjs');
+const e2e = read('tests/e2e/warehouse-phase-11.spec.mjs');
 const phaseDoc = read('docs/adm-deposito/PHASE_11_DELIVERIES_DASHBOARD_ALERTS.md');
 const packageJson = JSON.parse(read('package.json'));
 const workflow = read('.github/workflows/application-ci.yml');
@@ -64,6 +66,16 @@ assert.match(rules, /warehouse_logistics_alert_settings_v1/);
 assert.match(rules, /isWarehouseLogisticsAlertId/);
 assert.match(rules, /canAccessWarehouseModule\(workspaceId\)/);
 assert.match(rules, /allow delete: if canAccessWorkspace\(workspaceId\)[\s\S]{0,120}!isWarehouseLogisticsAlertId\(id\)/);
+
+assert.match(security, /FASE 11 — Entregas, Dashboard Logístico e Alertas/);
+assert.match(security, /Setor externo não cria configuração logística/);
+assert.match(security, /Alerta logístico gerenciado não pode ser apagado fisicamente/);
+assert.match(security, /Setor externo não cria alerta logístico gerenciado/);
+assert.match(e2e, /warehouse-logistics-dashboard/);
+assert.match(e2e, /warehouse-deliveries-operational/);
+assert.match(e2e, /phase11-e2e/);
+assert.match(e2e, /tab=cronogramas/);
+assert.match(e2e, /tab=avisos/);
 
 assert.match(phaseDoc, /Cronograma/);
 assert.match(phaseDoc, /Nota Fiscal/);
