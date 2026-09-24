@@ -86,10 +86,14 @@ test('estados futuros são explícitos e não simulam indicadores', () => {
   assert.ok(content.includes('não exibe números fictícios'));
 });
 
-test('shell nasce responsivo e sem depender de animações pesadas', () => {
+test('shell reutiliza o chrome responsivo oficial do EMPROVEX', () => {
   const shell = read('features/warehouse/components/WarehouseModuleShell.tsx');
-  assert.ok(shell.includes('overflow-x-hidden'));
-  assert.ok(shell.includes('sm:grid-cols-3'));
-  assert.ok(shell.includes('lg:grid-cols-[250px_minmax(0,1fr)]'));
+  const sidebar = read('features/warehouse/components/WarehouseSidebar.tsx');
+  assert.ok(shell.includes('AppHeader'));
+  assert.ok(shell.includes('AppBackground'));
+  assert.ok(shell.includes('WarehouseSidebar'));
+  assert.ok(shell.includes('lg:pl-72'));
+  assert.ok(sidebar.includes('emprovex-app-sidebar'));
+  assert.ok(sidebar.includes('emprovex-sidebar-nav-item'));
   assert.equal(shell.includes('framer-motion'), false);
 });
