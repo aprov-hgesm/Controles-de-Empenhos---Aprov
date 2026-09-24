@@ -354,13 +354,13 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
   const selectedLayout = useMemo(() => {
     if (!selectedDepotId) return null;
     const exact = data.layouts
-      .filter((item) => item.layout.depotId === selectedDepotId)
+      .filter((item) => item.layout.status === 'active' && item.layout.depotId === selectedDepotId)
       .sort((left, right) => right.layout.version - left.layout.version);
     if (exact.length) return exact[0].layout;
 
     if (activeDepots.length === 1) {
       return data.layouts
-        .filter((item) => item.layout.depotId === null)
+        .filter((item) => item.layout.status === 'active' && item.layout.depotId === null)
         .sort((left, right) => right.layout.version - left.layout.version)[0]?.layout || null;
     }
 
@@ -703,7 +703,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
                     esta área passa a representar as posições físicas e os itens encontrados.
                   </p>
                   <Link
-                    href="/adm-deposito/visao-do-deposito"
+                    href="/adm-deposito/meus-depositos?aba=croquis"
                     className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-lg shadow-blue-900/15"
                   >
                     <LocateFixed className="h-4 w-4" />
@@ -723,7 +723,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
                   : 'Pesquise um item para destacar sua localização'}
               </div>
               <Link
-                href="/adm-deposito/visao-do-deposito"
+                href="/adm-deposito/meus-depositos?aba=croquis"
                 className="text-[10px] font-black uppercase tracking-[0.12em] text-[#00288e] hover:underline"
               >
                 Editar visão do depósito
