@@ -129,13 +129,14 @@ export async function listWarehouseDepotLayouts(
 }
 
 export async function getActiveWarehouseDepotLayout(
-  workspaceId: string
+  workspaceId: string,
+  depotId?: string | null
 ): Promise<WarehouseDepotLayoutListItem | null> {
   const scope = currentScope(workspaceId);
   const path = warehouseDomainPath(scope.workspaceId, 'layouts');
   try {
     const snapshot = await getDocs(
-      query(collection(db, path), where('status', '==', 'active'), limit(2))
+      query(collection(db, path), where('status', '==', 'active'), limit(100))
     );
     const active = snapshot.docs
       .map((item) => {
@@ -146,8 +147,11 @@ export async function getActiveWarehouseDepotLayout(
           updatedAt: timestampToIso(data.updatedAt),
         };
       })
+      .filter((item) => depotId === undefined || item.layout.depotId === depotId)
       .sort((a, b) => b.layout.version - a.layout.version);
-    if (active.length > 1) throw new Error('WAREHOUSE_LAYOUT_MULTIPLE_ACTIVE');
+    if (depotId !== undefined && active.length > 1) {
+      throw new Error('WAREHOUSE_LAYOUT_MULTIPLE_ACTIVE_FOR_DEPOT');
+    }
     return active[0] || null;
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
@@ -203,7 +207,7 @@ export async function saveWarehouseDepotLayoutVersion(
     input.objects
   );
 
-  const active = await getActiveWarehouseDepotLayout(scope.workspaceId);
+  const active = await getActiveWarehouseDepotLayout(scope.workspaceId, input.depotId);
   const baseLayoutId = input.baseLayoutId || active?.layout.id || null;
   const baseVersion = input.expectedVersion ?? active?.layout.version ?? null;
 
