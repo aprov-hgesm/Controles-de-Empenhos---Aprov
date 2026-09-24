@@ -172,10 +172,24 @@ Um CI vermelho só pode ser tratado como não bloqueante quando houver evidênci
 
 Esta documentação registra a **diretriz oficial**.
 
-Enquanto o workflow atual ainda executar Browser E2E completo em todo PR, suas exigências continuam válidas para merge.
+### 10.1 Alterações exclusivamente documentais — regra já implementada
 
-A otimização futura do `.github/workflows/application-ci.yml` deverá implementar esta política sem reduzir cobertura crítica:
-- path filtering;
+Desde 2026-09-24, o `.github/workflows/application-ci.yml` usa `paths-ignore: docs/**` em `pull_request` e em pushes para `main`.
+
+Regra permanente:
+- se o diff contiver **somente arquivos em `docs/**`**, o Application CI não deve ser disparado;
+- isso inclui atualização de ROADMAP, STATUS, HANDOFF, documentação técnica e memória operacional oficial;
+- se o mesmo diff incluir qualquer arquivo fora de `docs/**`, a alteração deixa de ser documental-only e volta a seguir o CI normal;
+- mudanças em código, Firestore Rules, scripts, testes, configuração, workflows ou infraestrutura **não** podem usar esta exceção;
+- `workflow_dispatch` continua disponível para execução manual quando houver motivo objetivo;
+- o workflow `Recovery guardrails` mantém seu próprio filtro de paths e só roda quando seus arquivos de recuperação forem afetados.
+
+Objetivo: permitir que o fechamento documental posterior a uma fase já validada seja registrado sem repetir TypeScript, Firebase Emulator e Browser E2E sem evidência técnica nova.
+
+### 10.2 Próximas otimizações
+
+O restante da otimização do CI continua evolutivo:
+- path filtering por domínio;
 - jobs paralelos;
 - smoke E2E;
 - E2E seletivo;
@@ -194,4 +208,4 @@ Antes de iniciar uma fase relevante:
 7. quando a intervenção do operador for útil, fornecer comandos curtos, copiáveis e de baixo risco;
 8. preservar CI completo/E2E quando a mudança realmente afetar jornada de usuário.
 
-Última consolidação: 2026-09-23.
+Última consolidação: 2026-09-24.
