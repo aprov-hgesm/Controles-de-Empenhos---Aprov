@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 
 const root = process.cwd();
 const appBase = 'http://127.0.0.1:3100';
-const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+const playwrightCli = 'node_modules/@playwright/test/cli.js';
 
 async function waitForApp(url, timeoutMs = 60_000) {
   const startedAt = Date.now();
@@ -75,8 +75,8 @@ try {
   process.stdout.write('Next.js E2E: READY\n');
 
   await run(
-    npxCommand,
-    ['playwright', 'test', '--config=playwright.e2e.config.mjs'],
+    process.execPath,
+    [playwrightCli, 'test', '--config=playwright.e2e.config.mjs'],
     {
       ...process.env,
       EMPROVEX_E2E_BASE_URL: appBase,
