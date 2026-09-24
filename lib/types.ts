@@ -136,6 +136,14 @@ export type AlertType = 'INFORMATIVO' | 'CRÍTICO' | 'ATENÇÃO' | 'ESTOQUE ZERA
 export type AlertStatus = 'NOVO' | 'LIDO' | 'RESOLVIDO' | 'ARQUIVADO';
 export type AlertSource = 'EMPENHO' | 'NOTA_FISCAL' | 'SISTEMA';
 
+export interface AlertLogisticsMetadata {
+  managedBy: 'warehouse-phase-11';
+  kind: string;
+  entityId: string;
+  active: boolean;
+  fingerprint: string;
+}
+
 export interface Alert {
   id: string;
   empenhoId?: string;
@@ -150,6 +158,8 @@ export interface Alert {
   readAt?: string;
   resolvedAt?: string;
   archivedAt?: string;
+  /** Metadados derivados da FASE 11; não constituem uma segunda fonte logística. */
+  logistics?: AlertLogisticsMetadata;
 }
 
 export interface CronogramaEntregaColuna {
