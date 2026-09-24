@@ -3690,20 +3690,373 @@ service cloud.firestore {
         && request.resource.data.updatedAt is timestamp;
     }
 
-    function warehouseLayoutPreviousVersionTransitionIsValid(workspaceId) {
-      let previousId = request.resource.data.previousVersionId;
+    function warehouseLayoutPreviousVersionArchivedAfter(
+      workspaceId,
+      previousId,
+      expectedUg,
+      expectedVersion
+    ) {
       let previousPath =
         /databases/$(database)/documents/warehouse/$(workspaceId)/layouts/$(previousId);
-      return request.resource.data.version == 1
+      return previousId is string
+        && previousId.matches('^lay_[a-f0-9]{32}
+    function validWarehouseDepotLayoutCreate(workspaceId, layoutId) {
+      return validWarehouseDepotLayoutBase(workspaceId, layoutId)
+        && request.resource.data.status == 'active'
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && (
+          request.resource.data.depotId == null
+          || warehouseDepotActive(
+            workspaceId,
+            request.resource.data.depotId,
+            request.resource.data.ug
+          )
+        )
+        && warehouseLayoutPreviousVersionTransitionIsValid(workspaceId);
+    }
+
+    function validWarehouseDepotLayoutArchive(workspaceId, layoutId) {
+      return validWarehouseDepotLayoutBase(workspaceId, layoutId)
+        && resource.data.status == 'active'
+        && request.resource.data.status == 'archived'
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.ug == resource.data.ug
+        && request.resource.data.name == resource.data.name
+        && request.resource.data.depotId == resource.data.depotId
+        && request.resource.data.logicalWidth == resource.data.logicalWidth
+        && request.resource.data.logicalHeight == resource.data.logicalHeight
+        && request.resource.data.objects == resource.data.objects
+        && request.resource.data.version == resource.data.version
+        && request.resource.data.previousVersionId == resource.data.previousVersionId
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'updatedBy', 'updatedAt'
+        ]);
+    }
+
+    match /warehouse/{workspaceId} {
+      allow read, write: if canAccessWarehouseModule(workspaceId);
+
+      // FASE 1 / DEP-1 + DEP-1.1 — material canônico.
+      match /materials/{materialId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create, update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseMaterialDocument(workspaceId, materialId);
+        allow delete: if canAccessWarehouseModule(workspaceId);
+      }
+
+      // FASE 6 / DEP-8..9 — depósitos e localizações têm identidade
+      // estável; referências operacionais nunca são apagadas fisicamente.
+      match /depots/{depotId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseDepotCreate(workspaceId, depotId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseDepotUpdate(workspaceId, depotId);
+        allow delete: if false;
+      }
+
+      match /locations/{locationId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLocationCreate(workspaceId, locationId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLocationUpdate(workspaceId, locationId);
+        allow delete: if false;
+      }
+
+      // FASE 2 / DEP-2 — ledger imutável. Toda criação precisa materializar
+      // a mesma alteração no saldo na operação atômica.
+      match /movements/{movementId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && warehouseMovementCreateAllowed(workspaceId, movementId);
+        allow update, delete: if false;
+      }
+
+      // FASE 2 / DEP-2.1 — saldo derivado do ledger. Escrita avulsa é negada.
+      match /balances/{materialId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create, update: if canAccessWarehouseModule(workspaceId)
+          && warehouseBalanceWriteAllowed(workspaceId, materialId);
+        allow delete: if false;
+      }
+
+      // FASE 6 / DEP-10 — distribuição física é uma projeção do ledger.
+      match /locationBalances/{locationBalanceId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create, update: if canAccessWarehouseModule(workspaceId)
+          && warehouseLocationBalanceWriteAllowed(workspaceId, locationBalanceId);
+        allow delete: if false;
+      }
+
+      // FASE 7 / DEP-11..15 — lote é enriquecimento logístico; não escreve saldos.
+      match /lots/{lotId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLotCreate(workspaceId, lotId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLotUpdate(workspaceId, lotId);
+        allow delete: if false;
+      }
+
+      // FASE 8 / DEP-13 — barcode é associação auxiliar, nunca saldo/material.
+      match /barcodes/{barcodeId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseBarcodeCreate(workspaceId, barcodeId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseBarcodeUpdate(workspaceId, barcodeId);
+        allow delete: if false;
+      }
+
+
+      // FASE 9 / DEP-17..19.5 — layout visual versionado.
+      match /layouts/{layoutId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseDepotLayoutCreate(workspaceId, layoutId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseDepotLayoutArchive(workspaceId, layoutId);
+        allow delete: if false;
+      }
+
+      // FASE 4 / DEP-4 — cutoff imutável de ativação do fluxo NF → estoque.
+      // FASE 5 / DEP-5.x — snapshots são privados, bounded e não podem ser apagados.
+      match /siscofisSnapshots/{snapshotId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseSiscofisSnapshotCreate(workspaceId, snapshotId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseSiscofisSnapshotUpdate(workspaceId, snapshotId);
+        allow delete: if false;
+      }
+
+      match /settings/{settingId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseInvoiceIntegrationSettings(workspaceId, settingId);
+        allow update, delete: if false;
+      }
+
+      // Domínio reservado para inventários futuros. Mantido explícito para
+      // evitar que um wildcard recursivo sobreponha as regras específicas acima.
+      // Demais domínios desconhecidos são negados por padrão.
+      match /inventories/{document=**} {
+        allow read, write: if canAccessWarehouseModule(workspaceId);
+      }
+    }
+
+    // Workspace-scoped operational data. There is deliberately no admin bypass:
+    // a platform administrator cannot read another sector's operational records.
+    match /workspaces/{workspaceId}/auditEvents/{eventId} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validWorkspaceAuditEvent(eventId, workspaceId);
+      allow update, delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/empenhos/{id} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validEmpenhoRevisionCreate(request.resource.data)
+        && empenhoCnpjCreateIsValid(request.resource.data);
+      allow update: if canAccessWorkspace(workspaceId)
+        && !empenhoDeletionIsLockedAfter(workspaceId, id)
+        && validEmpenhoRevisionUpdate()
+        && empenhoCnpjUpdateIsValid();
+      allow delete: if canAccessWorkspace(workspaceId)
+        && validEmpenhoLifecycleDelete(workspaceId, id);
+    }
+
+    match /workspaces/{workspaceId}/alerts/{id} {
+      allow read, delete: if canAccessWorkspace(workspaceId);
+      allow create, update: if canAccessWorkspace(workspaceId)
+        && linkedEmpenhoWriteAllowedAfter(workspaceId, request.resource.data);
+    }
+
+    match /workspaces/{workspaceId}/invoices/{id} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validInvoiceCreate(workspaceId, id);
+      allow update: if canAccessWorkspace(workspaceId)
+        && validInvoiceUpdate(workspaceId, id);
+      allow delete: if canAccessWorkspace(workspaceId)
+        && validInvoiceDelete(workspaceId, id);
+    }
+
+    match /workspaces/{workspaceId}/comissoes/{id} {
+      allow read, write: if canAccessWorkspace(workspaceId);
+    }
+
+    match /workspaces/{workspaceId}/cronogramas/{id} {
+      allow read, delete: if canAccessWorkspace(workspaceId);
+      allow create, update: if canAccessWorkspace(workspaceId)
+        && linkedEmpenhoWriteAllowedAfter(workspaceId, request.resource.data);
+    }
+
+    // Block 19.10 — snapshot econômico do Início.
+    // Um único documento derivado alimenta a Home; ele não concede autorização
+    // e nunca substitui as coleções operacionais como fonte de verdade.
+    match /workspaces/{workspaceId}/settings/homeSnapshot {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create, update: if validHomeSnapshot(workspaceId);
+      allow delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/settings/termoRecebimentoCounter {
+      // O cadastro administrativo verifica se existe contador residual antes de
+      // provisionar um workspace novo. Essa leitura prévia só é permitida enquanto
+      // o workspace ainda não existe; depois da criação, o administrador volta a
+      // não possuir acesso ao contador operacional do tenant.
+      allow read: if canAccessWorkspace(workspaceId)
         || (
-          exists(previousPath)
-          && get(previousPath).data.schemaVersion == 'warehouse_depot_layout_v1'
-          && get(previousPath).data.workspaceId == workspaceId
-          && get(previousPath).data.ug == request.resource.data.ug
-          && get(previousPath).data.version == request.resource.data.version - 1
-          && get(previousPath).data.status == 'active'
-          && existsAfter(previousPath)
-          && getAfter(previousPath).data.status == 'archived'
+          isPlatformAdmin()
+          && !workspaceExists(workspaceId)
+        );
+      allow create: if canAdminProvisionTermCounter(workspaceId)
+        || (
+          canAccessWorkspace(workspaceId)
+          && validInitialTermCounter()
+        );
+      allow update: if canAccessWorkspace(workspaceId)
+        && validOperationalTermCounterUpdate();
+      allow delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/settings/documentStorage {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validWorkspaceDocumentStorage(workspaceId);
+      allow update: if canAccessWorkspace(workspaceId)
+        && validWorkspaceDocumentStorageUpdate(workspaceId);
+      allow delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/settings/{id} {
+      // Listagem é limitada ao próprio workspace autenticado. Os settings atuais
+      // já são individualmente legíveis pelo setor; o list habilita diagnósticos
+      // de integridade sem ampliar acesso entre tenants.
+      allow list: if canAccessWorkspace(workspaceId);
+      allow get: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId);
+      allow create: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId)
+        && (
+          (
+            isEmpenhoDeletionLockId(id)
+            && validEmpenhoDeletionLockCreate(workspaceId, id)
+          )
+          || (
+            !isEmpenhoDeletionLockId(id)
+            && (
+              !isSagNsLockId(id)
+              || validSagNsLock(workspaceId, id)
+            )
+          )
+        );
+      allow update: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId)
+        && !isEmpenhoDeletionLockId(id)
+        && (
+          !isSagNsLockId(id)
+          || validSagNsLockUpdate(workspaceId, id)
+        );
+      allow delete: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId)
+        && (
+          (
+            isEmpenhoDeletionLockId(id)
+            && validEmpenhoDeletionLockDelete(workspaceId, id)
+          )
+          || (
+            !isEmpenhoDeletionLockId(id)
+            && (
+              !isSagNsLockId(id)
+              || validSagNsLockDelete(workspaceId, id)
+            )
+          )
+        );
+    }
+
+    // Bloco 13 — compatibilidade legada somente leitura.
+    // O runtime oficial já usa /workspaces/hgesm-aprov/...; os dados raiz ficam
+    // preservados apenas para consulta, auditoria e recuperação controlada.
+    // Qualquer rollback com escrita exige mudança explícita de Rules, evitando que
+    // uma simples regressão de frontend volte silenciosamente a gravar no legado.
+    match /empenhos/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /alerts/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /invoices/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /comissoes/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /cronogramas/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    // A identidade visual global precisa continuar disponível antes do login.
+    // A marca institucional é imutável no runtime: qualquer troca futura exige
+    // manutenção deliberada fora da aplicação e revisão explícita destas Rules.
+    match /settings/global {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Demais settings raiz (incluindo o contador histórico) ficam somente leitura.
+    match /settings/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+  }
+}
+)
+        && exists(previousPath)
+        && get(previousPath).data.schemaVersion == 'warehouse_depot_layout_v1'
+        && get(previousPath).data.workspaceId == workspaceId
+        && get(previousPath).data.ug == expectedUg
+        && get(previousPath).data.version == expectedVersion
+        && get(previousPath).data.status == 'active'
+        && existsAfter(previousPath)
+        && getAfter(previousPath).data.status == 'archived';
+    }
+
+    function warehouseLayoutPreviousVersionTransitionIsValid(workspaceId) {
+      return request.resource.data.version == 1
+        || warehouseLayoutPreviousVersionArchivedAfter(
+          workspaceId,
+          request.resource.data.previousVersionId,
+          request.resource.data.ug,
+          request.resource.data.version - 1
         );
     }
 
