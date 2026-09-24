@@ -21,6 +21,8 @@ export const WAREHOUSE_DEPOT_LAYOUT_OBJECT_KINDS = [
   'CABINET',
   'CHAMBER',
   'FREEZER',
+  'REFRIGERATOR',
+  'PALLET',
   'BENCH',
   'ZONE',
   'OTHER',
