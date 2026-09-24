@@ -695,11 +695,11 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
 
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => {
-                  setDraftObjects(data.active?.objects || []);
-                  setDraftName(data.active?.name || 'Croqui principal');
-                  setDraftDepotId(data.active?.depotId || '');
-                  setDraftWidth(data.active?.logicalWidth || DEFAULT_WIDTH);
-                  setDraftHeight(data.active?.logicalHeight || DEFAULT_HEIGHT);
+                  setDraftObjects(selectedActiveLayout?.objects || []);
+                  setDraftName(selectedActiveLayout?.name || 'Croqui principal');
+                  setDraftDepotId(selectedDepotId);
+                  setDraftWidth(selectedActiveLayout?.logicalWidth || DEFAULT_WIDTH);
+                  setDraftHeight(selectedActiveLayout?.logicalHeight || DEFAULT_HEIGHT);
                   setSelectedObjectId(null);
                 }} className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/[0.08] px-3 py-2.5 text-xs font-bold text-slate-300">
                   <RotateCcw className="h-4 w-4" /> Cancelar
@@ -707,7 +707,7 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                 <button
                   type="button"
                   data-testid="warehouse-layout-save"
-                  disabled={saving}
+                  disabled={saving || !draftDepotId}
                   onClick={async () => {
                     setSaving(true);
                     setMessage(null);
@@ -721,6 +721,7 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                         baseLayoutId: selectedActiveLayout?.depotId === (draftDepotId || null) ? selectedActiveLayout.id : null,
                         expectedVersion: selectedActiveLayout?.depotId === (draftDepotId || null) ? selectedActiveLayout.version : null,
                       });
+                      setSelectedDepotId(saved.depotId || draftDepotId);
                       setMessage('Layout salvo como versão ' + saved.version + '. Nenhum saldo ou movimento de estoque foi alterado.');
                       setMode('view');
                       setSelectedObjectId(null);
