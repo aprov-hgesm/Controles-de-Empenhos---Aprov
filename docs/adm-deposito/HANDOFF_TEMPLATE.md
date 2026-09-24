@@ -47,14 +47,14 @@ O template inicia a conversa; a fonte da verdade continua sendo a `main` e os do
 Se o texto do chat divergir deles, prevalecem GitHub e documentação versionada.
 
 
-## Estado corrente após a FASE 8
+## Estado corrente após a FASE 9
 
 Última fase concluída:
-- **FASE 8 — Código de Barras / Scanner / Saída Expressa**;
+- **FASE 9 — Código de Barras / Scanner / Saída Expressa**;
 - PR de implementação: **#176**;
 - squash merge funcional: `de11ad4f742eed3ca25a7f526c1ea5c78e113ec2`;
 - decisões permanentes da fase: **D-042, D-043 e D-044**;
-- contrato técnico: `docs/adm-deposito/PHASE_8_BARCODE_SCANNER_EXPRESS_OUTBOUND.md`.
+- contrato técnico: `docs/adm-deposito/PHASE_9_DEPOT_VIEW_LAYOUT.md`.
 
 Capacidades que o próximo chat deve considerar já existentes:
 - material canônico `warehouse_material_v1`;
@@ -81,7 +81,7 @@ Capacidades que o próximo chat deve considerar já existentes:
 - FASE 11.5 já reservada para consolidação visual/UX conduzida pelo fundador.
 
 Próxima fase oficial:
-- **FASE 9 — Visão do Depósito, Editor e Persistência**.
+- **FASE 10 — Inventário Físico**.
 
 Regras adicionais para a FASE 9:
 - usar croqui 2D com perspectiva tridimensional leve;
@@ -92,7 +92,7 @@ Regras adicionais para a FASE 9:
 - FEFO pode orientar destaque, mas continua consultivo;
 - persistir layout versionado sem criar fonte de verdade paralela para localização ou saldo;
 - sincronização com Drive é complementar, não substitui Firestore/contratos logísticos;
-- preservar completamente barcode, scanner e Saída Expressa da FASE 8;
+- preservar completamente Visão do Depósito, editor e persistência versionada da FASE 9;
 - não liberar ADM Depósito para usuários externos;
 - não antecipar Inventário Físico da FASE 10;
 - não iniciar FASE 10 no mesmo chat;
