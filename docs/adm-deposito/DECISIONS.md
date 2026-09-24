@@ -716,3 +716,24 @@ Ambiente preferencial:
 - a validação local é pré-certificação técnica; não substitui o gate final do GitHub/FASE 13.
 
 Objetivo: maximizar velocidade de implementação sem abrir mão da fronteira de segurança do EMPROVEX nem da regressão completa antes do fechamento.
+
+
+## D-055 — ADM Depósito reutiliza o chrome visual oficial do EMPROVEX
+
+A FASE 11.5 abandona a aparência de painel administrativo isolado e passa a usar a mesma linguagem estrutural da plataforma operacional EMPROVEX.
+
+Diretriz:
+- o ADM Depósito deve reutilizar o mesmo Header oficial por meio de `AppHeader`;
+- a sidebar do ADM deve replicar as mesmas classes, hierarquia, operador, status, assinatura visual, comportamento responsivo e footer do `AppSidebar`;
+- a navegação interna continua específica do domínio logístico, mas visualmente pertence ao mesmo produto;
+- o fundo, espaçamento principal, largura de conteúdo, offsets de Header/Sidebar e composição geral devem seguir o shell operacional do EMPROVEX;
+- o ADM não deve voltar a usar uma moldura própria semelhante à área administrativa;
+- alterações desta decisão são exclusivamente visuais/UX e não autorizam mudança de regras de negócio, ledger, saldo, Rules operacionais ou dependências do núcleo.
+
+A referência visual de verdade para o chrome é:
+- `components/layout/AppHeader.tsx`;
+- `components/layout/AppSidebar.tsx`;
+- `components/layout/AppBackground.tsx`;
+- composição do shell em `app/page.tsx`.
+
+A sidebar logística pode possuir seus próprios itens, desde que preserve a mesma estrutura visual e comportamental da sidebar principal.
