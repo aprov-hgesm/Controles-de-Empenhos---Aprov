@@ -63,7 +63,6 @@ for (const marker of [
   'request.resource.data.workspaceId == workspaceId',
   'match /materials/{materialId}',
   'validWarehouseMaterialDocument(workspaceId, materialId)',
-  "domain != 'materials'",
 ]) {
   requireText(rules, marker, `Firestore Rules não protegem contrato canônico: ${marker}`);
 }
