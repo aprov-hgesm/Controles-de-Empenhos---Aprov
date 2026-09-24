@@ -9,7 +9,7 @@ import {
   appendWorkspaceAuditEvent,
   createWorkspaceAuditCorrelationId,
 } from './auditTrail';
-import type { Alert, Empenho, Invoice } from './types';
+import type { Empenho, Invoice } from './types';
 import { getInvoiceRecordKey, isValidSupplierCnpj, normalizeSupplierCnpj } from './invoiceIdentity';
 import {
   buildSupplierCnpjMigrationPlan,
@@ -397,7 +397,6 @@ export interface CommitInvoiceReceiptLifecycleInput {
   targetEmpenho: Empenho;
   previousEmpenho?: Empenho;
   invoice: Invoice;
-  alert: Alert;
   previousInvoiceRecordKey?: string;
 }
 
@@ -663,11 +662,6 @@ export async function commitInvoiceReceiptLifecycle(
         recordKey: nextRecordKey,
         userId,
       });
-      transaction.set(
-        operationalDocRef(scope, 'alerts', input.alert.id),
-        { ...input.alert, userId }
-      );
-
       if (isIdentityMigration && previousInvoiceRef) {
         transaction.delete(previousInvoiceRef);
       }
