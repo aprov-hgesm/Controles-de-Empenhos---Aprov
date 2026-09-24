@@ -110,8 +110,11 @@ export function buildWarehouseDeliveryProjection(
   today: Date = new Date()
 ): WarehouseDeliveryProjection {
   const currentDay = warehouseIsoDay(today);
-  const committedQuantity = empenho.items.reduce((total, item) => total + positive(item.quantity), 0);
-  const receivedQuantity = empenho.items.reduce((total, item) => total + positive(item.received), 0);
+  // Dados operacionais antigos podem existir com contrato parcial. A FASE 11
+  // deve degradar para zero/sem cronograma, nunca derrubar o Dashboard inteiro.
+  const empenhoItems = Array.isArray(empenhoItems) ? empenhoItems : [];
+  const committedQuantity = empenhoItems.reduce((total, item) => total + positive(item.quantity), 0);
+  const receivedQuantity = empenhoItems.reduce((total, item) => total + positive(item.received), 0);
   const remainingQuantity = Math.max(0, committedQuantity - receivedQuantity);
   const progressPercent = committedQuantity > 0
     ? Math.min(100, Math.max(0, (receivedQuantity / committedQuantity) * 100))
@@ -135,7 +138,7 @@ export function buildWarehouseDeliveryProjection(
 
   const balanceByMaterial = new Map(balances.map((balance) => [balance.materialId, balance]));
   const linkedMaterialIds = Array.from(new Set(
-    empenho.items
+    empenhoItems
       .map((item) => item.warehouseMaterialId)
       .filter((value): value is string => Boolean(value))
   ));
@@ -154,7 +157,9 @@ export function buildWarehouseDeliveryProjection(
 
   const base = {
     empenhoId: empenho.id,
-    supplier: empenho.supplier,
+    supplier: typeof empenho.supplier === 'string' && empenho.supplier.trim()
+      ? empenho.supplier
+      : 'Fornecedor não informado',
     committedQuantity,
     receivedQuantity,
     remainingQuantity,
@@ -184,13 +189,16 @@ export function buildWarehouseDeliveryProjection(
     };
   }
 
-  const columns = cronograma.colunasEntregas
+  const cronogramaColumns = Array.isArray(cronograma.colunasEntregas)
+    ? cronograma.colunasEntregas
+    : [];
+  const columns = cronogramaColumns
     .map((column) => ({
       id: column.id,
       title: column.titulo,
       date: column.dataPrevista,
       observation: column.observacao || null,
-      quantity: empenho.items.reduce(
+      quantity: empenhoItems.reduce(
         (total, item) => total + scheduleQuantity(cronograma, item.id, column.id),
         0
       ),
@@ -205,8 +213,8 @@ export function buildWarehouseDeliveryProjection(
 
   // Calculado por item para que excesso de um item não masque falta de outro.
   // A lógica não cria associação NF ↔ remessa.
-  const overdueQuantity = empenho.items.reduce((total, item) => {
-    const expectedForItem = cronograma.colunasEntregas
+  const overdueQuantity = empenhoItems.reduce((total, item) => {
+    const expectedForItem = cronogramaColumns
       .filter((column) => column.dataPrevista <= currentDay)
       .reduce(
         (subtotal, column) => subtotal + scheduleQuantity(cronograma, item.id, column.id),
