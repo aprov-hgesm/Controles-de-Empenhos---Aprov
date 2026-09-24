@@ -64,6 +64,23 @@ Deve incluir apenas o necessário para o domínio alterado, por exemplo:
 
 Objetivo: detectar rapidamente erros locais e guards desatualizados antes de consumir uma rodada completa de CI.
 
+### Gate zero — EMPROVEX Core Protection
+
+Desde 2026-09-24, todo PR funcional executa também o workflow leve `.github/workflows/emprovex-core-protection.yml`.
+
+Características:
+- não executa `npm ci`;
+- valida a fronteira do núcleo antes da suíte longa;
+- impede imports da implementação do ADM Depósito pelo core operacional;
+- impede que o ADM comande mutações de NF, Empenho, Cronograma ou Avisos;
+- garante que as Rules operacionais não dependam do namespace `warehouse`;
+- garante que recebimento de NF seja confirmado antes de efeitos auxiliares como alerta informativo e PDF/Drive;
+- repete os guards de isolamento EMPROVEX/ADM e da fundação da FASE 0.
+
+Uma falha neste gate é bloqueante e deve ser corrigida antes de investigar otimizações ou prosseguir com a fase funcional.
+
+Documento arquitetural: `docs/EMPROVEX_CORE_PROTECTION.md`.
+
 ### Nível B — CI rápido de Pull Request
 
 Diretriz alvo do projeto:
