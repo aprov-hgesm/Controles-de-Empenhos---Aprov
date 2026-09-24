@@ -245,6 +245,22 @@ Escopo:
 - preservar legibilidade e eficiência acima de efeitos puramente decorativos;
 - não alterar regras de negócio, ledger, saldos, contratos logísticos ou Firestore Rules, salvo ajuste estritamente necessário para suportar a interface.
 
+Arquitetura de informação aprovada durante a execução:
+- Sidebar principal reduzida a **Início**, **Cadastro de Itens**, **Meus Depósitos** e **Controle de Itens**;
+- Início concentra croqui/consulta/localização visual;
+- Cadastro de Itens concentra fila derivada das NFs, decisão entre alocação física e consumo imediato, relatório de consumo imediato para SISCOFIS e migração SISCOFIS manual/JSON;
+- Meus Depósitos concentra cadastro/inativação de depósitos e localizações e croquis independentes por depósito;
+- estruturas de croqui incluem estante, rack, armário, câmara, freezer, geladeira, palete, bancada, corredor, zona e outras, com dimensões/posição/rotação personalizáveis;
+- Controle de Itens concentra resumo logístico, estoque consultável, lotes/validade, saída expressa, movimentações, inventário, entregas, alertas e configurações;
+- rotas antigas permanecem apenas como redirecionamentos de compatibilidade;
+- `warehouse_item_intake_v1` registra a decisão logística no namespace warehouse sem escrever de volta em NF/Empenho;
+- cada depósito pode manter seu próprio croqui ativo e histórico versionado.
+
+Desvio funcional autorizado durante a fase:
+- a pedido do fundador, a FASE 11.5 passou a consolidar também a arquitetura de informação e o fluxo de entrada logística;
+- alterações de domínio ficam restritas ao ADM/namespace `warehouse` e não autorizam reacoplamento ao núcleo EMPROVEX;
+- D-059 e D-060 definem os limites permanentes dessa ampliação.
+
 Direção criativa:
 - a definição estética será conduzida pessoalmente pelo fundador de forma iterativa durante esta fase;
 - cores, referências visuais, intensidade de efeitos, composição e prioridades estéticas não devem ser fechadas antecipadamente;
