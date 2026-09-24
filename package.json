@@ -171,7 +171,8 @@
     "verify:emprovex-warehouse-isolation": "node scripts/verify-emprovex-warehouse-isolation.mjs",
     "verify:emprovex-core-protection": "node scripts/verify-emprovex-core-protection.mjs",
     "test:adm-deposito-logistics": "node --test scripts/warehouse-logistics.test.mjs",
-    "verify:adm-deposito-phase-11": "node scripts/verify-adm-deposito-phase-11.mjs"
+    "verify:adm-deposito-phase-11": "node scripts/verify-adm-deposito-phase-11.mjs",
+    "verify:adm-deposito-phase-11-5": "node scripts/verify-adm-deposito-phase-11-5.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
