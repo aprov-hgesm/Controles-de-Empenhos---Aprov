@@ -178,7 +178,11 @@ test('INVENTORY_ADJUSTMENT exige origem PHYSICAL_INVENTORY e delta coerente', ()
     note: null,
     source: null,
   });
-  assert.equal(legacyWithoutSource.ok, true, 'parser preserva compatibilidade da FASE 2');
+  assert.equal(legacyWithoutSource.ok, false, 'FASE 10 exige origem física auditável');
+  assert.match(
+    legacyWithoutSource.issues.map((item) => item.code).join(','),
+    /inventory_source_required/
+  );
 
   const wrongDelta = movement.validateWarehouseMovement({
     schemaVersion: 'warehouse_movement_v1',
