@@ -159,7 +159,7 @@ Capacidade completa:
 
 Gate vertical: retirada rápida, segura e auditável por pesquisa ou scanner.
 
-## FASE 9 — Visão do Depósito, Editor e Persistência
+## FASE 9 — Visão do Depósito, Editor e Persistência — CONCLUÍDA
 
 Blocos: DEP-17 a DEP-19.5.
 
@@ -175,10 +175,10 @@ Capacidade completa:
 - mover objeto não move estoque;
 - layout ativo versionado no Firestore;
 - JSON versionado;
-- sincronização complementar com Drive da UG;
-- IDs estáveis do Drive;
-- histórico de versões;
-- preview SVG opcional.
+- Firestore como estado operacional ativo;
+- histórico de versões com recuperação por nova versão;
+- JSON versionado e preview SVG derivados/exportáveis;
+- contrato preparado para sincronização complementar com Drive da UG sem transformar o Drive em fonte de verdade nem bloquear o croqui quando a autorização temporária não estiver disponível.
 
 Gate vertical: pesquisar material → abrir mapa → destacar local correto → editar layout sem alterar estoque.
 

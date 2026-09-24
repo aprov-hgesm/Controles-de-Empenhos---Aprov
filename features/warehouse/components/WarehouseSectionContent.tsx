@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowRight, Boxes, CheckCircle2, Clipboard, Database, FileJson2, Layers3, MapPinned, PackageCheck, RefreshCw, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Boxes, CheckCircle2, Clipboard, Database, FileJson2, Layers3, PackageCheck, RefreshCw, ShieldCheck } from 'lucide-react';
 
 import { WAREHOUSE_MATERIAL_SCHEMA_VERSION, WAREHOUSE_MATERIAL_UNIT_CODES, type WarehouseMaterial } from '../../../lib/warehouse/material';
 import { WAREHOUSE_BALANCE_SCHEMA_VERSION, WAREHOUSE_MOVEMENT_SCHEMA_VERSION, WAREHOUSE_MOVEMENT_TYPES, type WarehouseBalance } from '../../../lib/warehouse/movement';
@@ -13,6 +13,7 @@ import { confirmWarehouseSiscofisImport, loadWarehouseSiscofisContext, prepareWa
 import type { WarehouseSectionId } from '../navigation';
 import { WarehouseExpressOutbound } from './WarehouseExpressOutbound';
 import { WarehouseLocationsOperational } from './WarehouseLocationsOperational';
+import { WarehouseDepotViewOperational } from './WarehouseDepotViewOperational';
 import { WarehouseStockOperational } from './WarehouseStockOperational';
 
 function FutureNotice({ phase, children }: { phase: string; children: string }) {
@@ -262,17 +263,6 @@ function MovementsContent({ data }: { data: WarehousePhase4Data }) {
   );
 }
 
-function WarehouseViewContent() {
-  return (
-    <div className="mt-6">
-      <div className="rounded-3xl border border-dashed border-blue-300/15 bg-[linear-gradient(135deg,rgba(59,130,246,0.035),rgba(255,255,255,0.015))] p-6 sm:p-8">
-        <div className="mx-auto max-w-2xl text-center"><MapPinned className="mx-auto h-8 w-8 text-blue-200/60" aria-hidden="true" /><p className="mt-4 text-sm font-black text-slate-200">Área estrutural do futuro croqui operacional</p><p className="mt-2 text-xs leading-6 text-slate-500">O mapa será 2D com perspectiva tridimensional leve e representará locais, não produtos. Nenhum motor 3D, editor ou layout fictício foi criado nesta fase.</p></div>
-      </div>
-      <div className="mt-5"><FutureNotice phase="FASE 9">Pesquisa, destaque visual de locais, editor simplificado e persistência versionada serão implementados como uma fatia vertical própria.</FutureNotice></div>
-    </div>
-  );
-}
-
 function InventoryContent() {
   return <div className="mt-6"><PlannedItems items={['Selecionar depósito/local','Registrar contagem','Comparar esperado x contado','Exibir divergência','Confirmar ajuste humano','Gerar ajuste auditável']} /><div className="mt-5"><FutureNotice phase="FASE 10">Esta capacidade será disponibilizada em uma fase posterior. INVENTORY_ADJUSTMENT permanece apenas como tipo reconhecido pelo ledger; nenhum ajuste operacional é disparado aqui.</FutureNotice></div></div>;
 }
@@ -512,7 +502,7 @@ export function WarehouseSectionContent({ section, workspaceId }: { section: War
     case 'outbound': return <WarehouseExpressOutbound workspaceId={workspaceId} />;
     case 'movements': return <MovementsContent data={phase4Data} />;
     case 'locations': return <WarehouseLocationsOperational workspaceId={workspaceId} />;
-    case 'warehouseView': return <WarehouseViewContent />;
+    case 'warehouseView': return <WarehouseDepotViewOperational workspaceId={workspaceId} />;
     case 'inventory': return <InventoryContent />;
     case 'siscofis': return <SiscofisContent workspaceId={workspaceId} />;
     case 'deliveries': return <DeliveriesContent />;

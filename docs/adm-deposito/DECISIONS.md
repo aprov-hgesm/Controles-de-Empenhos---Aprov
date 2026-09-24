@@ -560,3 +560,47 @@ Regras permanentes:
 - a FASE 12 inicia sobre a interface visual consolidada para que segurança, performance e telemetria sejam avaliadas sobre a experiência definitiva.
 
 Documento de planejamento: `docs/adm-deposito/ROADMAP.md`.
+
+
+## D-046 — Layout visual é representação versionada, nunca fonte de estoque
+
+A FASE 9 introduz `warehouse_depot_layout_v1` exclusivamente como representação da estrutura física.
+
+Regras permanentes:
+- o layout não persiste saldo, lote ou quantidade;
+- objetos visuais referenciam localizações reais por `warehouseLocationId`;
+- mover, redimensionar, renomear ou remover um objeto visual não movimenta estoque;
+- `warehouse_balance_v1`, `warehouse_location_balance_v1` e `warehouse_movement_v1` permanecem autoridades quantitativa, física e auditável;
+- cada salvamento relevante cria nova versão ativa e arquiva a anterior, sem sobrescrever silenciosamente o histórico;
+- uma versão arquivada pode servir de base para uma nova versão ativa, preservando auditoria;
+- versões não são excluídas fisicamente no piloto.
+
+Documento técnico: `docs/adm-deposito/PHASE_9_DEPOT_VIEW_LAYOUT.md`.
+
+## D-047 — Firestore é estado operacional do croqui; Drive permanece complementar e não bloqueante
+
+O estado operacional ativo da Visão do Depósito é mantido no Firestore.
+
+Regras permanentes:
+- Firestore é a fonte operacional da configuração do croqui;
+- JSON e SVG são artefatos derivados/exportáveis, nunca autoridade;
+- o Drive da UG não substitui o Firestore;
+- sincronização Drive deve reutilizar a autorização temporária existente e nunca introduzir dependência capaz de encerrar a sessão EMPROVEX;
+- enquanto o runtime Drive não estiver autorizado, a Visão do Depósito continua plenamente utilizável pelo Firestore;
+- IDs estáveis do layout/versionamento devem ser preservados em qualquer futura cópia complementar no Drive.
+
+Documento técnico: `docs/adm-deposito/PHASE_9_DEPOT_VIEW_LAYOUT.md`.
+
+## D-048 — Destaque visual usa posições reais e FEFO permanece consultivo
+
+A busca da Visão do Depósito deriva seus destaques das fontes logísticas existentes.
+
+Regras permanentes:
+- material selecionado é identificado pelo `materialId` canônico;
+- posições são obtidas de `warehouse_location_balance_v1`;
+- todas as posições positivas aplicáveis podem ser destacadas simultaneamente;
+- a recomendação FEFO pode sinalizar visualmente uma posição prioritária;
+- FEFO nunca executa saída, altera saldo ou seleciona lote silenciosamente;
+- ausência de objeto visual vinculado não altera nem invalida a localização logística real.
+
+Documento técnico: `docs/adm-deposito/PHASE_9_DEPOT_VIEW_LAYOUT.md`.

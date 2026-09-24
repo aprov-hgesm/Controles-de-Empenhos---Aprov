@@ -4,21 +4,22 @@ Este arquivo registra o estado real de continuidade do projeto e deve ser tratad
 
 ## Estado geral
 
-Status: **FASE 8 CONCLUÍDA — CÓDIGO DE BARRAS / SCANNER / SAÍDA EXPRESSA**
+Status: **FASE 9 CONCLUÍDA — VISÃO DO DEPÓSITO / EDITOR / PERSISTÊNCIA**
 
-Data de fechamento: 2026-09-23.
+Data de fechamento: 2026-09-24.
 
 Situação:
-- FASES 0, 1, 2, 3, 4, 5, 6, 7 e 8 concluídas;
+- FASES 0, 1, 2, 3, 4, 5, 6, 7, 8 e 9 concluídas;
 - FASE 3 — Walking Skeleton integrada à `main` pelo PR #164;
 - FASE 4 — NF → Estoque implementada e validada no PR #167;
 - FASE 5 — SISCOFIS / Marco Zero / Conciliação implementada no PR #171;
 - FASE 6 — Depósitos / Localizações / Transferências implementada e validada no PR #173;
 - FASE 7 — Estoque Operável / Lotes / Validade / FEFO implementada e validada no PR #174;
 - FASE 8 — Código de Barras / Scanner / Saída Expressa implementada e validada no PR #176;
+- FASE 9 — Visão do Depósito / Editor / Persistência implementada no PR #179;
 - piloto permanece exclusivo da conta fundadora;
 - usuários externos continuam sem visibilidade e sem acesso ao módulo ADM Depósito;
-- nenhuma capacidade da FASE 9 foi iniciada.
+- nenhuma capacidade da FASE 10 foi iniciada.
 
 ## Repositório e baseline
 
@@ -53,6 +54,18 @@ Baseline da `main` imediatamente antes do desenvolvimento da FASE 8:
 
 Branch da FASE 8:
 `feat/adm-deposito-phase-8-barcode-scanner-express-outbound`
+
+Baseline da `main` imediatamente antes do desenvolvimento da FASE 9:
+`ac523b4e29cfd6aaf723427ddeb104581860c3cd`
+
+Branch da FASE 9:
+`feat/adm-deposito-phase-9-depot-view-layout`
+
+PR técnico da FASE 9:
+- PR #179 — `feat: ADM Depósito phase 9 depot view layout`;
+- escopo exclusivo DEP-17 a DEP-19.5;
+- FASE 10 não iniciada.
+
 
 PR da FASE 8:
 - PR #176 — `feat: ADM Depósito phase 8 barcode scanner express outbound`;
@@ -372,6 +385,34 @@ Correções de fechamento:
 - teste externo de leitura de lote foi corrigido para usar efetivamente a sessão externa;
 - guard documental da FASE 7 foi alinhado ao título oficial sem alterar a regra de domínio.
 
+
+### FASE 9 — Visão do Depósito / Editor / Persistência
+Concluída.
+
+Capacidade vertical entregue:
+- contrato `warehouse_depot_layout_v1`;
+- croqui 2D com perspectiva tridimensional leve, sem WebGL/engine 3D;
+- objetos estruturais simples sem desenhar produtos;
+- vínculo opcional por `warehouseLocationId` com IDs reais da FASE 6;
+- pesquisa por material canônico destacando todas as posições físicas positivas aplicáveis;
+- FEFO reutilizado somente como destaque consultivo;
+- editor separado do modo operacional;
+- adicionar, mover, redimensionar, renomear, tipar, vincular e remover representação visual;
+- mover/remover objeto visual nunca movimenta estoque nem apaga localização logística;
+- layout ativo no Firestore com histórico versionado;
+- versão anterior arquivada sem sobrescrita silenciosa;
+- recuperação de versão arquivada como base para uma nova versão;
+- JSON e SVG derivados/exportáveis;
+- Firestore permanece fonte operacional da configuração;
+- Drive permanece complementar e não bloqueante; sincronização automática não foi fingida quando a autorização temporária não está disponível;
+- consultas bounded e sem listener global/ledger global;
+- founder-only e isolamento workspace/UG preservados.
+
+Contratos/documentos:
+- `warehouse_depot_layout_v1`;
+- `docs/adm-deposito/PHASE_9_DEPOT_VIEW_LAYOUT.md`;
+- decisões permanentes D-046, D-047 e D-048 em `DECISIONS.md`.
+
 ## Validação da FASE 8
 
 Gates específicos:
@@ -399,6 +440,25 @@ Correções de fechamento:
 - validações de barcode e lote evitam leituras desnecessárias nos fluxos em que não são aplicáveis;
 - `firestore.rules` permaneceu estruturalmente íntegro e o CI final confirmou a operação válida de Saída Expressa.
 
+
+## Validação da FASE 9
+
+Gates específicos:
+- `npm run test:adm-deposito-depot-layout`;
+- `npm run verify:adm-deposito-phase-9`;
+- cenários de layout/versionamento/isolamento no teste multi-tenant Firestore;
+- Browser E2E específico da Visão do Depósito.
+
+O PR #179 é o gate técnico da fase. O fechamento somente é válido com Application CI, Recovery guardrails, build, TypeScript, diff hygiene e Browser E2E verdes.
+
+Decisões de segurança/performance:
+- layout não importa ou escreve repository de saldo/ledger;
+- histórico é bounded;
+- layout ativo é consultado diretamente;
+- lotes são carregados apenas para o material selecionado;
+- Rules mantêm caminho explícito `/layouts/{layoutId}` sem wildcard recursivo;
+- versões arquivadas não podem ter conteúdo reescrito.
+
 ## Planejamento futuro aprovado — FASE 11.5
 
 Foi aprovada a inclusão da **FASE 11.5 — Consolidação Visual e UX do ADM Depósito**, posicionada entre a FASE 11 e a FASE 12.
@@ -415,39 +475,36 @@ Diretrizes:
 A definição detalhada da FASE 11.5 está registrada em `docs/adm-deposito/ROADMAP.md`.
 ## Próxima fase oficial
 
-**FASE 9 — Visão do Depósito, Editor e Persistência**
+**FASE 10 — Inventário Físico**
 
 Objetivo de alto nível:
-- transformar a superfície Visão do Depósito em croqui 2D operacional com perspectiva tridimensional leve;
-- representar apenas estrutura física simples, sem desenhar produtos;
-- vincular objetos visuais a `warehouseLocationId` estável;
-- pesquisar material e destacar no croqui a localização real já existente;
-- permitir destaque consultivo de prioridade FEFO quando aplicável;
-- oferecer editor simplificado sem fazer movimento de estoque ao mover objetos;
-- persistir layout versionado em Firestore com JSON versionado;
-- preparar sincronização complementar com Drive da UG e histórico de versões;
-- manter estoque, ledger, barcode e Saída Expressa como fontes já consolidadas.
+- inventário total ou parcial por depósito/local;
+- esperado x contado;
+- divergência com confirmação humana;
+- `INVENTORY_ADJUSTMENT` auditável;
+- fila de materiais sem localização;
+- preservar integralmente layout, ledger, saldos, lotes, FEFO, barcodes e Saída Expressa;
+- não iniciar FASE 11 no mesmo ciclo.
 
-A FASE 9 deve ser executada em novo chat/branch e não deve iniciar a FASE 10 no mesmo ciclo.
+A FASE 10 deve ser executada em novo chat/branch.
 
 ## Sequência futura resumida
 
-1. FASE 9 — Visão do Depósito / editor / persistência;
-2. FASE 10 — inventário;
-3. FASE 11 — entregas / dashboard / alertas;
-4. FASE 11.5 — consolidação visual / UX conduzida pelo fundador;
-5. FASE 12 — segurança / performance / telemetria;
-6. FASE 13 — validação integrada e fechamento do piloto;
-7. FASE 14 — expansão externa futura.
+1. FASE 10 — inventário;
+2. FASE 11 — entregas / dashboard / alertas;
+3. FASE 11.5 — consolidação visual / UX conduzida pelo fundador;
+4. FASE 12 — segurança / performance / telemetria;
+5. FASE 13 — validação integrada e fechamento do piloto;
+6. FASE 14 — expansão externa futura.
 
 ## Gate para o próximo chat
 
 Antes de modificar código:
 1. consultar a `main` real;
-2. ler `README.md`, `ROADMAP.md`, `DECISIONS.md`, `STATUS.md`, `HANDOFF_TEMPLATE.md`, `PHASE_6_LOCATIONS.md`, `PHASE_7_STOCK_LOTS_FEFO.md` e `PHASE_8_BARCODE_SCANNER_EXPRESS_OUTBOUND.md`;
-3. comparar a `main` com o baseline funcional da FASE 8 registrado aqui;
+2. ler `README.md`, `ROADMAP.md`, `DECISIONS.md`, `STATUS.md`, `HANDOFF_TEMPLATE.md`, `PHASE_6_LOCATIONS.md`, `PHASE_7_STOCK_LOTS_FEFO.md`, `PHASE_8_BARCODE_SCANNER_EXPRESS_OUTBOUND.md` e `PHASE_9_DEPOT_VIEW_LAYOUT.md`;
+3. comparar a `main` com o baseline funcional da FASE 9 registrado aqui;
 4. analisar commits posteriores ao fechamento da FASE 8;
-5. preservar material canônico, ledger, saldo, NF → estoque, cutoff, Marco Zero, snapshots SISCOFIS, distribuição física, lotes, FEFO, barcodes e Saída Expressa;
-6. executar exclusivamente a FASE 9 — Visão do Depósito, Editor e Persistência;
-7. não iniciar a FASE 10 no mesmo chat;
+5. preservar material canônico, ledger, saldo, NF → estoque, cutoff, Marco Zero, snapshots SISCOFIS, distribuição física, lotes, FEFO, barcodes, Saída Expressa e layout versionado;
+6. executar exclusivamente a FASE 10 — Inventário Físico;
+7. não iniciar a FASE 11 no mesmo chat;
 8. atualizar STATUS ao fechar a fase.

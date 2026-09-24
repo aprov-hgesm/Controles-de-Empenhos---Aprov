@@ -22,6 +22,7 @@ export const WAREHOUSE_DOMAIN_COLLECTIONS = {
   settings: 'settings',
   lots: 'lots',
   barcodes: 'barcodes',
+  layouts: 'layouts',
   inventories: 'inventories',
   siscofisSnapshots: 'siscofisSnapshots',
 } as const;

@@ -1927,6 +1927,145 @@ async function main() {
     deleteDoc(phase8BarcodeRef)
   );
 
+
+  console.log('\nFASE 9 — Visão do Depósito / Editor / Persistência');
+
+  const phase9LayoutV1Id = 'lay_' + '1'.repeat(32);
+  const phase9LayoutV2Id = 'lay_' + '2'.repeat(32);
+  const phase9Object = {
+    id: 'obj_' + '9'.repeat(32),
+    kind: 'SHELF',
+    label: 'Estante FASE 9',
+    x: 32,
+    y: 40,
+    width: 180,
+    height: 80,
+    rotation: 0,
+    layer: 1,
+    elevation: 1,
+    visualVariant: 'solid',
+    warehouseLocationId: phase6LocationId,
+  };
+  const phase9LayoutV1Ref = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'layouts',
+    phase9LayoutV1Id
+  );
+  const phase9LayoutV2Ref = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'layouts',
+    phase9LayoutV2Id
+  );
+  const phase9LayoutBase = {
+    schemaVersion: 'warehouse_depot_layout_v1',
+    workspaceId: 'hgesm-aprov',
+    ug: '160416',
+    name: 'Croqui principal FASE 9',
+    depotId: phase6DepotId,
+    logicalWidth: 1000,
+    logicalHeight: 620,
+    objects: [phase9Object],
+    createdBy: admin.user.uid,
+    updatedBy: admin.user.uid,
+  };
+
+  await allowed('Fundador cria layout ativo FASE 9 sem tocar no estoque', () =>
+    setDoc(phase9LayoutV1Ref, {
+      ...phase9LayoutBase,
+      id: phase9LayoutV1Id,
+      version: 1,
+      status: 'active',
+      previousVersionId: null,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await allowed('Fundador lê layout FASE 9', () => getDoc(phase9LayoutV1Ref));
+
+  await denied('Layout FASE 9 rejeita UG adulterada', () =>
+    setDoc(
+      doc(admin.db, 'warehouse', 'hgesm-aprov', 'layouts', 'lay_' + '3'.repeat(32)),
+      {
+        ...phase9LayoutBase,
+        id: 'lay_' + '3'.repeat(32),
+        ug: '999999',
+        version: 1,
+        status: 'active',
+        previousVersionId: null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+    )
+  );
+
+  await allowed('FASE 9 arquiva versão anterior e ativa nova versão atomicamente', async () => {
+    const batch = writeBatch(admin.db);
+    batch.update(phase9LayoutV1Ref, {
+      status: 'archived',
+      updatedBy: admin.user.uid,
+      updatedAt: serverTimestamp(),
+    });
+    batch.set(phase9LayoutV2Ref, {
+      ...phase9LayoutBase,
+      id: phase9LayoutV2Id,
+      name: 'Croqui principal FASE 9 v2',
+      objects: [{ ...phase9Object, x: 96 }],
+      version: 2,
+      status: 'active',
+      previousVersionId: phase9LayoutV1Id,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return batch.commit();
+  });
+
+  await denied('Layout arquivado não pode ter geometria reescrita', () =>
+    updateDoc(phase9LayoutV1Ref, {
+      objects: [{ ...phase9Object, x: 999 }],
+      updatedBy: admin.user.uid,
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await denied('Setor externo não lê layout da FASE 9', () =>
+    getDoc(
+      doc(
+        sessionA.db,
+        'warehouse',
+        'hgesm-aprov',
+        'layouts',
+        phase9LayoutV2Id
+      )
+    )
+  );
+
+  await denied('Setor externo não cria layout nem no próprio workspace', () =>
+    setDoc(
+      doc(sessionA.db, 'warehouse', 'workspace-a', 'layouts', 'lay_' + '4'.repeat(32)),
+      {
+        ...phase9LayoutBase,
+        id: 'lay_' + '4'.repeat(32),
+        workspaceId: 'workspace-a',
+        version: 1,
+        status: 'active',
+        previousVersionId: null,
+        createdBy: sessionA.user.uid,
+        updatedBy: sessionA.user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+    )
+  );
+
+  await denied('Layout FASE 9 não pode ser excluído fisicamente', () =>
+    deleteDoc(phase9LayoutV2Ref)
+  );
+
   console.log('Isolamento A ↔ B');
   await allowed('Setor A lê o próprio empenho', () =>
     getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))

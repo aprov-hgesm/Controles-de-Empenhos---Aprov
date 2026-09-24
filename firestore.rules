@@ -3629,6 +3629,132 @@ service cloud.firestore {
     // FASE 0 / DEP-0.1 — namespace independente do ADM Depósito.
     // Não existe fallback para canAccessWorkspace(): setores externos continuam
     // bloqueados mesmo no próprio workspace durante todo o piloto fundador.
+
+    // FASE 9 / DEP-17..19.5 — croqui versionado é configuração visual.
+    // Não contém saldo, lote ou quantidade e não escreve no ledger.
+    function validWarehouseDepotLayoutBase(workspaceId, layoutId) {
+      return request.resource.data is map
+        && request.resource.data.keys().hasOnly([
+          'schemaVersion', 'id', 'workspaceId', 'ug', 'name', 'depotId',
+          'logicalWidth', 'logicalHeight', 'objects', 'version', 'status',
+          'previousVersionId', 'createdBy', 'updatedBy', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'schemaVersion', 'id', 'workspaceId', 'ug', 'name', 'depotId',
+          'logicalWidth', 'logicalHeight', 'objects', 'version', 'status',
+          'previousVersionId', 'createdBy', 'updatedBy', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.schemaVersion == 'warehouse_depot_layout_v1'
+        && request.resource.data.id == layoutId
+        && layoutId.matches('^lay_[a-f0-9]{32}$')
+        && request.resource.data.workspaceId == workspaceId
+        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 120
+        && (
+          request.resource.data.depotId == null
+          || (
+            request.resource.data.depotId is string
+            && request.resource.data.depotId.matches('^dep_[a-f0-9]{32}$')
+          )
+        )
+        && request.resource.data.logicalWidth is number
+        && request.resource.data.logicalWidth >= 240
+        && request.resource.data.logicalWidth <= 5000
+        && request.resource.data.logicalHeight is number
+        && request.resource.data.logicalHeight >= 240
+        && request.resource.data.logicalHeight <= 5000
+        && request.resource.data.objects is list
+        && request.resource.data.objects.size() <= 160
+        && request.resource.data.version is int
+        && request.resource.data.version >= 1
+        && request.resource.data.version <= 100000
+        && request.resource.data.status in ['active', 'archived']
+        && (
+          (
+            request.resource.data.version == 1
+            && request.resource.data.previousVersionId == null
+          )
+          || (
+            request.resource.data.version > 1
+            && request.resource.data.previousVersionId is string
+            && request.resource.data.previousVersionId.matches('^lay_[a-f0-9]{32}$')
+          )
+        )
+        && request.resource.data.createdBy is string
+        && request.resource.data.createdBy.size() > 0
+        && request.resource.data.updatedBy is string
+        && request.resource.data.updatedBy.size() > 0
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp;
+    }
+
+    function warehouseLayoutPreviousVersionArchivedAfter(workspaceId, previousId, expectedUg, expectedVersion) {
+      let previousPath = /databases/$(database)/documents/warehouse/$(workspaceId)/layouts/$(previousId);
+      return previousId is string
+        && previousId.matches('^lay_[a-f0-9]{32}$')
+        && exists(previousPath)
+        && get(previousPath).data.schemaVersion == 'warehouse_depot_layout_v1'
+        && get(previousPath).data.workspaceId == workspaceId
+        && get(previousPath).data.ug == expectedUg
+        && get(previousPath).data.version == expectedVersion
+        && get(previousPath).data.status == 'active'
+        && existsAfter(previousPath)
+        && getAfter(previousPath).data.status == 'archived';
+    }
+
+    function warehouseLayoutPreviousVersionTransitionIsValid(workspaceId) {
+      return request.resource.data.version == 1
+        || warehouseLayoutPreviousVersionArchivedAfter(
+          workspaceId,
+          request.resource.data.previousVersionId,
+          request.resource.data.ug,
+          request.resource.data.version - 1
+        );
+    }
+
+    function validWarehouseDepotLayoutCreate(workspaceId, layoutId) {
+      return validWarehouseDepotLayoutBase(workspaceId, layoutId)
+        && request.resource.data.status == 'active'
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && (
+          request.resource.data.depotId == null
+          || warehouseDepotActive(
+            workspaceId,
+            request.resource.data.depotId,
+            request.resource.data.ug
+          )
+        )
+        && warehouseLayoutPreviousVersionTransitionIsValid(workspaceId);
+    }
+
+    function validWarehouseDepotLayoutArchive(workspaceId, layoutId) {
+      return validWarehouseDepotLayoutBase(workspaceId, layoutId)
+        && resource.data.status == 'active'
+        && request.resource.data.status == 'archived'
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.ug == resource.data.ug
+        && request.resource.data.name == resource.data.name
+        && request.resource.data.depotId == resource.data.depotId
+        && request.resource.data.logicalWidth == resource.data.logicalWidth
+        && request.resource.data.logicalHeight == resource.data.logicalHeight
+        && request.resource.data.objects == resource.data.objects
+        && request.resource.data.version == resource.data.version
+        && request.resource.data.previousVersionId == resource.data.previousVersionId
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'updatedBy', 'updatedAt'
+        ]);
+    }
+
     match /warehouse/{workspaceId} {
       allow read, write: if canAccessWarehouseModule(workspaceId);
 
@@ -3702,6 +3828,17 @@ service cloud.firestore {
           && validWarehouseBarcodeCreate(workspaceId, barcodeId);
         allow update: if canAccessWarehouseModule(workspaceId)
           && validWarehouseBarcodeUpdate(workspaceId, barcodeId);
+        allow delete: if false;
+      }
+
+
+      // FASE 9 / DEP-17..19.5 — layout visual versionado.
+      match /layouts/{layoutId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseDepotLayoutCreate(workspaceId, layoutId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseDepotLayoutArchive(workspaceId, layoutId);
         allow delete: if false;
       }
 
