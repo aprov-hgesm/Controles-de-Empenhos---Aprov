@@ -67,6 +67,10 @@ export function validateWarehouseItemIntake(
     return candidate.trim();
   };
 
+  if (raw.schemaVersion !== WAREHOUSE_ITEM_INTAKE_SCHEMA_VERSION) {
+    issues.push({ path: 'schemaVersion', message: 'Versão de entrada inválida.' });
+  }
+
   const id = text('id', 80) || '';
   const workspaceId = text('workspaceId', 120) || '';
   const ug = text('ug', 6) || '';
