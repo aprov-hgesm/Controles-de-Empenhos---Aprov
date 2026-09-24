@@ -501,10 +501,10 @@ A FASE 10 deve ser executada em novo chat/branch.
 
 Antes de modificar código:
 1. consultar a `main` real;
-2. ler `README.md`, `ROADMAP.md`, `DECISIONS.md`, `STATUS.md`, `HANDOFF_TEMPLATE.md`, `PHASE_6_LOCATIONS.md`, `PHASE_7_STOCK_LOTS_FEFO.md` e `PHASE_8_BARCODE_SCANNER_EXPRESS_OUTBOUND.md`;
-3. comparar a `main` com o baseline funcional da FASE 8 registrado aqui;
+2. ler `README.md`, `ROADMAP.md`, `DECISIONS.md`, `STATUS.md`, `HANDOFF_TEMPLATE.md`, `PHASE_6_LOCATIONS.md`, `PHASE_7_STOCK_LOTS_FEFO.md`, `PHASE_8_BARCODE_SCANNER_EXPRESS_OUTBOUND.md` e `PHASE_9_DEPOT_VIEW_LAYOUT.md`;
+3. comparar a `main` com o baseline funcional da FASE 9 registrado aqui;
 4. analisar commits posteriores ao fechamento da FASE 8;
-5. preservar material canônico, ledger, saldo, NF → estoque, cutoff, Marco Zero, snapshots SISCOFIS, distribuição física, lotes, FEFO, barcodes e Saída Expressa;
+5. preservar material canônico, ledger, saldo, NF → estoque, cutoff, Marco Zero, snapshots SISCOFIS, distribuição física, lotes, FEFO, barcodes, Saída Expressa e layout versionado;
 6. executar exclusivamente a FASE 10 — Inventário Físico;
 7. não iniciar a FASE 11 no mesmo chat;
 8. atualizar STATUS ao fechar a fase.
