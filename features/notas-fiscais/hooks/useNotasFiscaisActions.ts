@@ -3,7 +3,7 @@
 import type React from 'react';
 import type { User } from 'firebase/auth';
 import type { Alert, Comissao, Empenho, Invoice, InvoiceItem, InvoicePdfDocument } from '../../../lib/types';
-import { commitAllComissoesDeletion, commitAllInvoicesDeletion, commitInvoiceDeletion, commitInvoiceReceiptChanges, saveInvoice, removeComissao, saveComissao } from '../../../lib/firebaseSync';
+import { commitAllComissoesDeletion, commitAllInvoicesDeletion, commitInvoiceDeletion, commitInvoiceReceiptChanges, saveAlert, saveInvoice, removeComissao, saveComissao } from '../../../lib/firebaseSync';
 import { deleteInvoicePdfUpload, uploadInvoicePdf } from '../../../lib/invoiceDocuments';
 import { isValidNsUg, normalizeNsNumber, normalizeNsUg } from '../../../lib/nsIntegrity';
 import { isValidOptionalSpedNup, normalizeSpedNup } from '../../../lib/spedNup';
@@ -137,29 +137,6 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
      // Process & update database state
     const invoiceTotal = enteredItems.reduce((sum, item) => sum + item.subtotal, 0);
 
-    let uploadedInvoicePdf: InvoicePdfDocument | undefined;
-    if (invoicePdfFile) {
-      if (!user) {
-        showToast('Faça login novamente antes de anexar o PDF da Nota Fiscal.', 'error');
-        return false;
-      }
-      try {
-        uploadedInvoicePdf = await uploadInvoicePdf(user, selectedNFCommitmentId, cleanNfNum, invoicePdfFile);
-      } catch (error) {
-        showToast(error instanceof Error ? error.message : 'Falha ao anexar o PDF da Nota Fiscal.', 'error');
-        return false;
-      }
-    }
-
-    const previousPdfVersions = editingInvoice?.notaFiscalPdfVersions ||
-      (editingInvoice?.notaFiscalPdf ? [editingInvoice.notaFiscalPdf] : []);
-    const nextPdfVersions = uploadedInvoicePdf
-      ? [...previousPdfVersions, uploadedInvoicePdf]
-          .filter((document, index, all) => all.findIndex((item) => item.pathname === document.pathname) === index)
-          .slice(-25)
-      : editingInvoice?.notaFiscalPdfVersions;
-    const currentInvoicePdf = uploadedInvoicePdf || editingInvoice?.notaFiscalPdf;
-
      const invoiceToSave: Invoice = {
       id: cleanNfNum,
       recordKey: nextRecordKey,
@@ -178,8 +155,10 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       ...(editingInvoice?.numeroNS ? { numeroNS: editingInvoice.numeroNS } : {}),
       ...(editingInvoice?.nsUg ? { nsUg: editingInvoice.nsUg } : {}),
       ...(editingInvoice?.spedNup ? { spedNup: editingInvoice.spedNup } : {}),
-      ...(currentInvoicePdf ? { notaFiscalPdf: currentInvoicePdf } : {}),
-      ...(nextPdfVersions?.length ? { notaFiscalPdfVersions: nextPdfVersions } : {}),
+      ...(editingInvoice?.notaFiscalPdf ? { notaFiscalPdf: editingInvoice.notaFiscalPdf } : {}),
+      ...(editingInvoice?.notaFiscalPdfVersions?.length
+        ? { notaFiscalPdfVersions: editingInvoice.notaFiscalPdfVersions }
+        : {}),
       ...(editingInvoice?.espelhoNotaFiscalPdf
         ? { espelhoNotaFiscalPdf: editingInvoice.espelhoNotaFiscalPdf }
         : {}),
@@ -241,9 +220,6 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       : undefined;
 
     if (!updatedTargetEmpenho) {
-      if (uploadedInvoicePdf && user) {
-        await deleteInvoicePdfUpload(user, selectedNFCommitmentId, cleanNfNum, uploadedInvoicePdf.pathname).catch(() => undefined);
-      }
       showToast('Não foi possível consolidar o saldo do empenho selecionado.', 'error');
       return false;
     }
@@ -255,7 +231,6 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
           targetEmpenho: updatedTargetEmpenho,
           previousEmpenho: oldEmpenhoAdjusted,
           invoice: invoiceToSave,
-          alert: newAlert,
           previousInvoiceRecordKey:
             editingInvoice ? previousRecordKey : undefined,
         });
@@ -274,9 +249,6 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
             : invoice
         );
       } catch (error) {
-        if (uploadedInvoicePdf) {
-          await deleteInvoicePdfUpload(user, selectedNFCommitmentId, cleanNfNum, uploadedInvoicePdf.pathname).catch(() => undefined);
-        }
         console.error('Erro ao salvar recebimento de NF atomicamente:', error);
         showToast(
           error instanceof Error
@@ -295,6 +267,70 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       ? `Recebimento da NF nº ${nfNumber} editado com sucesso!`
       : `Recebimento da NF nº ${nfNumber} salvo com sucesso!`
     );
+
+    // Efeitos auxiliares nunca podem bloquear o recebimento já confirmado.
+    if (user) {
+      void saveAlert(user.uid, newAlert).catch((error) => {
+        console.warn('NF confirmada; alerta informativo não pôde ser persistido.', error);
+      });
+    }
+
+    if (invoicePdfFile && user) {
+      const committedInvoice = updatedInvoices.find(
+        (invoice) => getInvoiceRecordKey(invoice) === nextRecordKey
+      );
+
+      if (committedInvoice) {
+        void (async () => {
+          let uploadedDocument: InvoicePdfDocument | undefined;
+          try {
+            uploadedDocument = await uploadInvoicePdf(
+              user,
+              selectedNFCommitmentId,
+              cleanNfNum,
+              invoicePdfFile
+            );
+            const priorVersions = committedInvoice.notaFiscalPdfVersions ||
+              (committedInvoice.notaFiscalPdf ? [committedInvoice.notaFiscalPdf] : []);
+            const versions = [...priorVersions, uploadedDocument]
+              .filter(
+                (document, index, all) =>
+                  all.findIndex((item) => item.pathname === document.pathname) === index
+              )
+              .slice(-25);
+            const invoiceWithDocument: Invoice = {
+              ...committedInvoice,
+              notaFiscalPdf: uploadedDocument,
+              notaFiscalPdfVersions: versions,
+            };
+
+            await saveInvoice(user.uid, invoiceWithDocument);
+            setInvoices((current) =>
+              current.map((invoice) =>
+                getInvoiceRecordKey(invoice) === nextRecordKey
+                  ? invoiceWithDocument
+                  : invoice
+              )
+            );
+            showToast('Nota Fiscal confirmada e PDF anexado com segurança.', 'success');
+          } catch (error) {
+            if (uploadedDocument) {
+              await deleteInvoicePdfUpload(
+                user,
+                selectedNFCommitmentId,
+                cleanNfNum,
+                uploadedDocument.pathname
+              ).catch(() => undefined);
+            }
+            console.warn('NF confirmada; o PDF não pôde ser anexado.', error);
+            showToast(
+              'A Nota Fiscal foi salva, mas o PDF não pôde ser anexado. Você pode anexá-lo depois em Acompanhar NFs.',
+              'info'
+            );
+          }
+        })();
+      }
+    }
 
     // Reset form fields and editing status
     setNfNumber('');
