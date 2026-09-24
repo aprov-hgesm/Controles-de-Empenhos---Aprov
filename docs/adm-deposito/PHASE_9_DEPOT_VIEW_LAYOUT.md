@@ -80,6 +80,8 @@ O editor suporta:
 
 O editor não é CAD.
 
+O histórico apresenta versões preservadas e permite carregar uma versão arquivada como base de edição. A recuperação sempre resulta em uma nova versão ativa; a versão histórica original permanece imutável.
+
 ## 8. Firestore
 
 **Firestore = estado operacional ativo**.
