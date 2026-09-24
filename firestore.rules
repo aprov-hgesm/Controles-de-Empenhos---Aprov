@@ -924,7 +924,6 @@ service cloud.firestore {
     function isWarehouseLogisticsAlertId(id) {
       return id is string
         && id.matches('^warehouse-logistics-.*
-    function validWarehouseSiscofisSnapshotBase(workspaceId, snapshotId) {
       return request.resource.data is map
         && request.resource.data.keys().hasOnly([
           'schemaVersion', 'id', 'workspaceId', 'ug', 'kind', 'status',
