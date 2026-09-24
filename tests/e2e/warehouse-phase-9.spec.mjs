@@ -24,7 +24,9 @@ test.describe.serial('ADM Depósito FASE 9 — Visão do Depósito', () => {
     await page.getByTestId('warehouse-layout-material-search').fill('Arroz parboilizado');
     await page.getByTestId('warehouse-layout-material-' + MATERIAL_ID).click();
     await expect(page.getByTestId('warehouse-layout-highlight-summary')).toContainText('posição(ões) real(is)');
-    await expect(page.locator('[data-location-id="' + LOCATION_ID + '"][data-highlighted="true"]')).toBeVisible();
+    const highlightedObjects = page.locator('[data-location-id="' + LOCATION_ID + '"][data-highlighted="true"]');
+    expect(await highlightedObjects.count()).toBeGreaterThan(0);
+    await expect(highlightedObjects.first()).toBeVisible();
 
     const summaryBefore = await page.getByTestId('warehouse-layout-highlight-summary').textContent();
     await page.reload();
