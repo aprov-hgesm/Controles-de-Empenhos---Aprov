@@ -31,8 +31,8 @@ import {
   applyWarehouseMovementToBalance,
   createWarehouseMovementId,
   validateWarehouseBalance,
+  normalizeWarehouseQuantity,
   validateWarehouseMovement,
-  warehouseMovementMatchesReplay,
   WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
   type WarehouseBalance,
   type WarehouseExpressOutboundMovementSource,
@@ -320,6 +320,65 @@ export async function applyWarehouseExpressOutbound(
         : null;
       if (input.lotId && !lot) throw new Error('WAREHOUSE_OUTBOUND_LOT_NOT_FOUND');
 
+      if (movementSnapshot.exists()) {
+        const existingMovement = parseMovement(
+          scope.workspaceId,
+          movementSnapshot.id,
+          movementSnapshot.data() as Record<string, unknown>
+        );
+        const source = existingMovement.source;
+        const requestedQuantity = normalizeWarehouseQuantity(input.requestedQuantity);
+        const barcodeId = input.barcodeAssociation?.id || null;
+        const lotId = input.lotId || null;
+        const sameRequest =
+          existingMovement.type === 'OUTBOUND'
+          && existingMovement.workspaceId === scope.workspaceId
+          && existingMovement.ug === scope.ug
+          && existingMovement.materialId === input.materialId
+          && source?.kind === 'EXPRESS_OUTBOUND'
+          && requestedQuantity !== null
+          && source.requestedQuantity === requestedQuantity
+          && JSON.stringify(source.presentation) === JSON.stringify(input.presentation)
+          && JSON.stringify(source.position) === JSON.stringify(position)
+          && source.barcodeId === barcodeId
+          && source.lotId === lotId
+          && (existingMovement.note ?? null) === (input.note ?? null);
+
+        if (!sameRequest || source?.kind !== 'EXPRESS_OUTBOUND') {
+          throw new Error('WAREHOUSE_IDEMPOTENCY_CONFLICT');
+        }
+
+        return {
+          applied: false,
+          movement: existingMovement,
+          previousBalance: currentBalance,
+          balance: currentBalance,
+          locationBalance:
+            currentLocationBalance
+            || applyWarehouseLocationDelta(null, {
+              id: locationBalanceId,
+              workspaceId: scope.workspaceId,
+              ug: scope.ug,
+              materialId: material.id,
+              position,
+              quantityDelta: 0,
+              movementId: existingMovement.id,
+              initialQuantity: 0,
+            }),
+          plan: {
+            requestedQuantity: source.requestedQuantity,
+            baseQuantity: source.quantity,
+            factorToBaseUnit: source.factorToBaseUnit,
+            presentation: source.presentation,
+            position: source.position,
+            interface: source.interface,
+            barcodeAssociation: liveBarcode,
+            lot,
+          },
+          lot,
+        };
+      }
+
       const plan = prepareWarehouseExpressOutbound({
         material,
         balance: currentBalance,
@@ -382,29 +441,6 @@ export async function applyWarehouseExpressOutbound(
         );
       }
       const candidate = candidateResult.data;
-
-      if (movementSnapshot.exists()) {
-        const existingMovement = parseMovement(
-          scope.workspaceId,
-          movementSnapshot.id,
-          movementSnapshot.data() as Record<string, unknown>
-        );
-        if (!warehouseMovementMatchesReplay(existingMovement, candidate)) {
-          throw new Error('WAREHOUSE_IDEMPOTENCY_CONFLICT');
-        }
-        if (!currentLocationBalance) {
-          throw new Error('WAREHOUSE_LOCATION_BALANCE_INCONSISTENT');
-        }
-        return {
-          applied: false,
-          movement: existingMovement,
-          previousBalance: currentBalance,
-          balance: currentBalance,
-          locationBalance: currentLocationBalance,
-          plan,
-          lot,
-        };
-      }
 
       if (currentBalance.quantity + 0.000001 < plan.baseQuantity) {
         throw new Error('WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK');
