@@ -209,6 +209,30 @@ Capacidade completa:
 
 Gate vertical: expectativa de entrega e situação logística aparecem numa visão operacional única.
 
+## FASE 11.5 — Consolidação Visual e UX do ADM Depósito
+
+Objetivo: consolidar a identidade visual definitiva do módulo depois que suas principais capacidades operacionais estiverem implementadas e antes do hardening técnico final.
+
+Escopo:
+- criar e consolidar um design system próprio do ADM Depósito, coerente com a identidade geral do EMPROVEX;
+- revisar hierarquia visual, navegação interna, sidebar, cabeçalhos, cards, tabelas, filtros, badges, estados, formulários e feedbacks;
+- harmonizar Estoque, Saída Expressa, Localizações, Visão do Depósito, Inventário, Entregas, Dashboard, Alertas e demais superfícies do módulo;
+- melhorar responsividade, densidade de informação, ergonomia e consistência;
+- aplicar microinterações e acabamento visual com foco em aparência profissional, elegante e operacional;
+- preservar legibilidade e eficiência acima de efeitos puramente decorativos;
+- não alterar regras de negócio, ledger, saldos, contratos logísticos ou Firestore Rules, salvo ajuste estritamente necessário para suportar a interface.
+
+Direção criativa:
+- a definição estética será conduzida pessoalmente pelo fundador de forma iterativa durante esta fase;
+- cores, referências visuais, intensidade de efeitos, composição e prioridades estéticas não devem ser fechadas antecipadamente;
+- o agente deve transformar as decisões do fundador em componentes, tokens, padrões e implementação técnica consistentes;
+- nas FASES 8 a 11, realizar apenas ajustes visuais necessários para usabilidade, consistência ou conclusão funcional, sem antecipar a reformulação estética global.
+
+Gate:
+- todas as superfícies operacionais do ADM Depósito compartilham linguagem visual consistente;
+- a interface está responsiva e adequada ao uso real;
+- nenhuma alteração estética modifica a fonte de verdade ou o comportamento funcional do estoque;
+- a identidade final está aprovada pelo fundador antes do início da FASE 12.
 ## FASE 12 — Operacionalização, Segurança, Performance e Telemetria
 
 Blocos: DEP-24, DEP-24.1, DEP-25, DEP-25.1, DEP-25.2, DEP-25.3, DEP-25.4, DEP-26, DEP-26.1, DEP-26.2 e DEP-26.3.
@@ -298,6 +322,7 @@ FASE 0 Fundação e isolamento ✓
 → FASE 9 Visão do Depósito
 → FASE 10 Inventário
 → FASE 11 Entregas / dashboard / alertas
+→ FASE 11.5 Consolidação Visual / UX
 → FASE 12 Segurança / performance / telemetria
 → FASE 13 Validação integrada / fechamento
 → FASE 14 Expansão externa

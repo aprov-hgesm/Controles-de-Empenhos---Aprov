@@ -314,6 +314,20 @@ Correções de fechamento:
 - teste externo de leitura de lote foi corrigido para usar efetivamente a sessão externa;
 - guard documental da FASE 7 foi alinhado ao título oficial sem alterar a regra de domínio.
 
+## Planejamento futuro aprovado — FASE 11.5
+
+Foi aprovada a inclusão da **FASE 11.5 — Consolidação Visual e UX do ADM Depósito**, posicionada entre a FASE 11 e a FASE 12.
+
+Diretrizes:
+- a fase será dedicada à consolidação estética e de experiência do módulo já funcional;
+- a direção criativa será conduzida pessoalmente pelo fundador, de forma iterativa;
+- detalhes como cores, referências, composição, intensidade de efeitos e prioridades visuais permanecem deliberadamente abertos até a execução da fase;
+- o agente atuará na tradução dessas decisões em design system, componentes, tokens, responsividade, consistência e implementação técnica;
+- FASES 8 a 11 não devem antecipar uma reformulação estética global; nelas cabem apenas ajustes necessários à usabilidade e à conclusão funcional;
+- a FASE 11.5 não deverá alterar regras de negócio, ledger, saldos ou contratos logísticos;
+- a FASE 12 começará sobre a interface visual consolidada, permitindo hardening, segurança, performance e telemetria sobre a experiência definitiva.
+
+A definição detalhada da FASE 11.5 está registrada em `docs/adm-deposito/ROADMAP.md`.
 ## Próxima fase oficial
 
 **FASE 8 — Código de Barras, Scanner e Saída Expressa**
@@ -335,9 +349,10 @@ A FASE 8 ainda não foi iniciada e deve ser executada em novo chat/branch.
 2. FASE 9 — Visão do Depósito / editor / persistência;
 3. FASE 10 — inventário;
 4. FASE 11 — entregas / dashboard / alertas;
-5. FASE 12 — segurança / performance / telemetria;
-6. FASE 13 — validação integrada e fechamento do piloto;
-7. FASE 14 — expansão externa futura.
+5. FASE 11.5 — consolidação visual / UX conduzida pelo fundador;
+6. FASE 12 — segurança / performance / telemetria;
+7. FASE 13 — validação integrada e fechamento do piloto;
+8. FASE 14 — expansão externa futura.
 
 ## Gate para o próximo chat
 
