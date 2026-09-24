@@ -4789,6 +4789,136 @@ async function main() {
     )
   );
 
+  console.log('\nFASE 11 — Entregas, Dashboard Logístico e Alertas');
+
+  const logisticsSettingsRef = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'settings',
+    'logistics-alerts'
+  );
+  await allowed('Fundador cria configuração explícita de baixo estoque da FASE 11', () =>
+    setDoc(logisticsSettingsRef, {
+      schemaVersion: 'warehouse_logistics_alert_settings_v1',
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      lowStockThreshold: 5,
+      updatedBy: admin.user.uid,
+      updatedAt: serverTimestamp(),
+    })
+  );
+  await allowed('Fundador atualiza limiar explícito de baixo estoque', () =>
+    updateDoc(logisticsSettingsRef, {
+      lowStockThreshold: 10,
+      updatedBy: admin.user.uid,
+      updatedAt: serverTimestamp(),
+    })
+  );
+  await denied('Setor externo não cria configuração logística nem no próprio workspace', () =>
+    setDoc(
+      doc(sessionA.db, 'warehouse', 'workspace-a', 'settings', 'logistics-alerts'),
+      {
+        schemaVersion: 'warehouse_logistics_alert_settings_v1',
+        workspaceId: 'workspace-a',
+        ug: '123456',
+        lowStockThreshold: 5,
+        updatedBy: sessionA.user.uid,
+        updatedAt: serverTimestamp(),
+      }
+    )
+  );
+
+  const managedLogisticsAlertId =
+    'warehouse-logistics-stock-zero-hgesm-aprov-phase11-security';
+  const managedLogisticsAlertRef = doc(
+    admin.db,
+    'workspaces',
+    'hgesm-aprov',
+    'alerts',
+    managedLogisticsAlertId
+  );
+  await allowed('Fundador cria alerta logístico gerenciado na Central de Avisos', () =>
+    setDoc(managedLogisticsAlertRef, {
+      id: managedLogisticsAlertId,
+      type: 'ESTOQUE ZERADO',
+      status: 'NOVO',
+      source: 'SISTEMA',
+      title: 'Estoque zerado',
+      subtitle: 'Fixture FASE 11',
+      description: 'Alerta determinístico para teste de segurança.',
+      date: now(),
+      createdAt: now(),
+      logistics: {
+        managedBy: 'warehouse-phase-11',
+        kind: 'STOCK_ZERO',
+        entityId: 'phase11-security',
+        active: true,
+        fingerprint: 'phase11-security-stock-zero',
+      },
+      userId: admin.user.uid,
+    })
+  );
+  await allowed('Fundador resolve alerta logístico sem apagá-lo', () =>
+    updateDoc(managedLogisticsAlertRef, {
+      status: 'RESOLVIDO',
+      resolvedAt: now(),
+      logistics: {
+        managedBy: 'warehouse-phase-11',
+        kind: 'STOCK_ZERO',
+        entityId: 'phase11-security',
+        active: false,
+        fingerprint: 'phase11-security-stock-zero',
+      },
+      userId: admin.user.uid,
+    })
+  );
+  await denied('Alerta logístico gerenciado não pode ser apagado fisicamente', () =>
+    deleteDoc(managedLogisticsAlertRef)
+  );
+
+  const externalManagedAlertId =
+    'warehouse-logistics-stock-zero-workspace-a-phase11-security';
+  await denied('Setor externo não cria alerta logístico gerenciado no próprio workspace', () =>
+    setDoc(
+      doc(sessionA.db, 'workspaces', 'workspace-a', 'alerts', externalManagedAlertId),
+      {
+        id: externalManagedAlertId,
+        type: 'ESTOQUE ZERADO',
+        status: 'NOVO',
+        source: 'SISTEMA',
+        title: 'Alerta indevido',
+        subtitle: 'Setor externo',
+        description: 'Deve ser bloqueado.',
+        date: now(),
+        logistics: {
+          managedBy: 'warehouse-phase-11',
+          kind: 'STOCK_ZERO',
+          entityId: 'phase11-security',
+          active: true,
+          fingerprint: 'external-phase11-security',
+        },
+        userId: sessionA.user.uid,
+      }
+    )
+  );
+  await allowed('Alerta operacional normal do setor continua permitido', () =>
+    setDoc(
+      doc(sessionA.db, 'workspaces', 'workspace-a', 'alerts', 'phase11-normal-alert'),
+      {
+        id: 'phase11-normal-alert',
+        type: 'INFORMATIVO',
+        status: 'NOVO',
+        source: 'SISTEMA',
+        title: 'Aviso operacional normal',
+        subtitle: 'Compatibilidade',
+        description: 'A FASE 11 não bloqueia a Central de Avisos existente.',
+        date: now(),
+        userId: sessionA.user.uid,
+      }
+    )
+  );
+
   console.log('\nCiclo de vida administrativo');
   await denied('Admin não pode suspender somente o workspace', () =>
     updateDoc(doc(admin.db, 'workspaces', 'workspace-lifecycle'), {
@@ -5092,6 +5222,79 @@ async function main() {
     distribuicao: {},
     userId: identities.lifecycle.uid,
   });
+
+  await ownerSet('workspaces/hgesm-aprov/empenhos/phase11-e2e', {
+    id: 'phase11-e2e',
+    supplier: 'Fornecedor FASE 11 E2E',
+    supplierCnpj: '33333333000191',
+    description: 'Empenho para Entregas e Dashboard Logístico',
+    date: '2026-09-01',
+    status: 'Ativo',
+    classification: 'QR',
+    pregao: '90011/2026',
+    items: [
+      {
+        id: 'item-1',
+        name: 'Material FASE 11 E2E',
+        unit: 'UN',
+        quantity: 100,
+        unitPrice: 10,
+        received: 20,
+      },
+    ],
+    userId: identities.founder.uid,
+  });
+
+  await ownerSet('workspaces/hgesm-aprov/cronogramas/phase11-e2e', {
+    id: 'phase11-e2e',
+    empenhoId: 'phase11-e2e',
+    dataCriacao: '2026-09-01',
+    localEntrega: 'Depósito HGeSM',
+    horarioEntrega: '08:00–12:00',
+    observacoes: 'Fixture FASE 11',
+    colunasEntregas: [
+      {
+        id: 'remessa_1',
+        titulo: '1ª Remessa',
+        dataPrevista: '2026-09-20',
+      },
+      {
+        id: 'remessa_2',
+        titulo: '2ª Remessa',
+        dataPrevista: '2099-10-10',
+      },
+    ],
+    distribuicao: {
+      'item-1': {
+        remessa_1: 50,
+        remessa_2: 50,
+      },
+    },
+    userId: identities.founder.uid,
+  });
+
+  await ownerSet(
+    'workspaces/hgesm-aprov/invoices/nf_33333333000191_phase11',
+    {
+      id: 'PHASE11',
+      empenhoId: 'phase11-e2e',
+      issueDate: '2026-09-21',
+      items: [
+        {
+          itemId: 'item-1',
+          quantity: 20,
+          unitPrice: 10,
+          subtotal: 200,
+        },
+      ],
+      totalValue: 200,
+      supplier: 'Fornecedor FASE 11 E2E',
+      supplierCnpj: '33333333000191',
+      recordKey: 'nf_33333333000191_phase11',
+      registeredAt: browserFixtureTimestamp,
+      userId: identities.founder.uid,
+    }
+  );
 
   console.log('BROWSER E2E FIXTURE: READY');
 
