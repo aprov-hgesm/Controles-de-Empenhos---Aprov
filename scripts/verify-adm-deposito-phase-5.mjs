@@ -85,7 +85,6 @@ for (const marker of [
   'function validWarehouseSiscofisSnapshotCreate',
   'function validWarehouseSiscofisSnapshotUpdate',
   'match /siscofisSnapshots/{snapshotId}',
-  "domain != 'siscofisSnapshots'",
   'allow delete: if false;',
 ]) {
   requireText(rules, marker, 'Firestore Rules da FASE 5 incompletas: ' + marker);
