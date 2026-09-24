@@ -54,15 +54,22 @@ for (const marker of [
   requireText(service, marker, 'Serviço transacional da FASE 4 incompleto: ' + marker);
 }
 
-for (const marker of [
+for (const forbidden of [
   'currentSessionCanIntegrateWarehouse',
   'integrateInvoiceReceiptInTransaction',
   'integrateInvoiceDeletionInTransaction',
-  'updatedInvoice',
   'assertBulkInvoiceDeletionDoesNotBypassWarehouse',
+  "from './warehouse/",
 ]) {
-  requireText(nsLifecycle, marker, 'Lifecycle de NF não está acoplado à FASE 4: ' + marker);
+  if (nsLifecycle.includes(forbidden)) {
+    findings.push('EMPROVEX voltou a depender do ADM Depósito no lifecycle de NF: ' + forbidden);
+  }
 }
+requireText(
+  nsLifecycle,
+  'updatedInvoice',
+  'Lifecycle central de NF perdeu seu retorno operacional.'
+);
 
 for (const marker of [
   'WarehouseMovementSource',
@@ -95,13 +102,11 @@ for (const marker of [
   requireText(content, marker, 'Superfícies reais da FASE 4 incompletas: ' + marker);
 }
 
-for (const marker of [
-  'Estoque integrado',
-  'correção compensatória no ledger',
+requireText(
+  nfView,
   'disabled={isSavingInvoice}',
-]) {
-  requireText(nfView, marker, 'UX de integração da NF incompleta: ' + marker);
-}
+  'Fluxo de NF perdeu proteção contra duplo envio.'
+);
 
 for (const marker of [
   '"test:adm-deposito-nf-stock"',
@@ -116,9 +121,8 @@ if (findings.length) {
   process.exit(1);
 }
 
-console.log('FASE 4 — NF → Estoque: OK');
-console.log('- NF/recebimento acoplado atomicamente ao ledger oficial');
-console.log('- material canônico vinculado por identificador estável');
-console.log('- idempotência, cutoff e correção/estorno auditável presentes');
-console.log('- telas Estoque e Movimentações consultam dados reais de forma limitada');
-console.log('- gate founder-only preservado pelas Rules e pelo runtime');
+console.log('FASE 4 — isolamento EMPROVEX/ADM Depósito: OK');
+console.log('- lifecycle de NF do EMPROVEX não depende do namespace warehouse');
+console.log('- domínio histórico de integração permanece isolado dentro do ADM Depósito');
+console.log('- EMPROVEX pode cadastrar, editar e excluir NFs sem movimentar estoque');
+console.log('- namespace warehouse continua founder-only e separado');
