@@ -47,6 +47,23 @@ Validação local concluída:
 
 A regressão pesada completa e o GitHub CI permanecem diferidos até o fechamento da implementação do ADM Depósito, conforme D-054. O PR #186 foi fechado sem merge para evitar CI prematuro; a branch da FASE 11 permanece como baseline de continuidade para as fases seguintes.
 
+## FASE 11.5 — Consolidação Visual e UX
+
+Direção estética aprovada pelo fundador:
+- ADM Depósito deve parecer parte da plataforma operacional EMPROVEX, e não da área administrativa;
+- Header oficial do EMPROVEX reutilizado diretamente;
+- sidebar logística reconstruída sobre a mesma gramática visual do AppSidebar;
+- operador, status, logout, assinatura visual, responsividade e proporções preservados;
+- fundo e framework principal passam a seguir a plataforma EMPROVEX;
+- navegação permanece específica do ADM Depósito;
+- conteúdo interno será harmonizado progressivamente sem alterar regras funcionais.
+
+Branch de trabalho:
+`feat/adm-deposito-phase-11-5-visual-ux`
+
+Gate local específico:
+`npm.cmd run verify:adm-deposito-phase-11-5`
+
 ## Estratégia de validação vigente
 
 A partir de 2026-09-24, a execução das fases restantes adota a decisão D-054:
