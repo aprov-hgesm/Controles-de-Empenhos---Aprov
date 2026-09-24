@@ -595,7 +595,7 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                 <div className="space-y-3 rounded-xl border border-white/[0.07] bg-black/15 p-3" data-testid="warehouse-layout-object-editor">
                   <input data-testid="warehouse-layout-object-label" value={selectedObject.label} onChange={(e) => updateObject(selectedObject.id, { label: e.target.value })} className="h-9 w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 text-xs text-slate-200" />
                   <select value={selectedObject.kind} onChange={(e) => updateObject(selectedObject.id, { kind: e.target.value as WarehouseDepotLayoutObjectKind })} className="h-9 w-full rounded-lg border border-white/[0.08] bg-[#08101f] px-3 text-xs text-slate-200">
-                    {['WALL','CORRIDOR','AREA','SHELF','RACK','CABINET','CHAMBER','FREEZER','BENCH','ZONE','OTHER'].map((kind) => <option key={kind} value={kind}>{kind}</option>)}
+                    {['WALL','CORRIDOR','AREA','SHELF','RACK','CABINET','CHAMBER','FREEZER','REFRIGERATOR','PALLET','BENCH','ZONE','OTHER'].map((kind) => <option key={kind} value={kind}>{kind}</option>)}
                   </select>
                   <select data-testid="warehouse-layout-object-location" value={selectedObject.warehouseLocationId || ''} onChange={(e) => updateObject(selectedObject.id, { warehouseLocationId: e.target.value || null })} className="h-9 w-full rounded-lg border border-white/[0.08] bg-[#08101f] px-3 text-xs text-slate-200">
                     <option value="">Sem vínculo logístico</option>
@@ -653,8 +653,8 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                         logicalWidth: draftWidth,
                         logicalHeight: draftHeight,
                         objects: draftObjects,
-                        baseLayoutId: data.active?.id || null,
-                        expectedVersion: data.active?.version || null,
+                        baseLayoutId: data.active?.depotId === (draftDepotId || null) ? data.active.id : null,
+                        expectedVersion: data.active?.depotId === (draftDepotId || null) ? data.active.version : null,
                       });
                       setMessage('Layout salvo como versão ' + saved.version + '. Nenhum saldo ou movimento de estoque foi alterado.');
                       setMode('view');
