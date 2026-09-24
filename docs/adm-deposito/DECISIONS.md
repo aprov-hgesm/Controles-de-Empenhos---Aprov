@@ -17,15 +17,22 @@ Usuários externos:
 
 A liberação externa só começa após o gate final do piloto fundador.
 
-## D-002 — NF cadastrada significa material recebido
+## D-002 — NF cadastrada significa material recebido, sem dependência do ADM Depósito
 
 No EMPROVEX:
 
 > Nota Fiscal cadastrada com sucesso = material já conferido, aceito e fisicamente disponível.
 
-Não haverá uma segunda etapa de "confirmar recebimento" pelo ADM Depósito.
+Não haverá uma segunda etapa de "confirmar recebimento" no fluxo principal.
 
-O cadastro da NF gera a entrada de estoque automaticamente.
+Regra de isolamento:
+- o cadastro, edição ou exclusão da NF pertence exclusivamente ao núcleo operacional do EMPROVEX;
+- nenhuma dessas operações depende de leitura ou escrita no namespace `warehouse`;
+- indisponibilidade, erro de permissão ou regressão do ADM Depósito nunca pode impedir a operação da NF;
+- o ADM Depósito consome posteriormente os dados canônicos já confirmados pelo EMPROVEX e projeta a entrada/correção/reversão de forma idempotente em seu próprio namespace;
+- eventual atraso da projeção logística gera pendência/reconciliação dentro do ADM, nunca rollback da operação já válida do EMPROVEX.
+
+A decisão anterior de integrar NF e estoque no mesmo ciclo transacional está formalmente revogada.
 
 ## D-003 — Pendências logísticas não bloqueiam operação
 
@@ -335,20 +342,22 @@ Quando aplicável, a mesma fase deve fechar:
 
 Exceções precisam estar explicitamente previstas no ROADMAP ou documentadas como decisão técnica.
 
-## D-033 — NF vincula item de empenho ao material canônico por identidade estável
+## D-033 — ADM projeta NF e item de empenho por identidade estável, sem escrever no núcleo
 
-A fatia NF → Estoque não faz conciliação por descrição textual.
+A fatia NF → Estoque não faz conciliação por descrição textual e não participa da transação operacional da NF.
 
 Regras permanentes:
-- o item da Nota Fiscal reutiliza o `itemId` já ligado ao item do empenho;
-- o item do empenho passa a guardar, quando resolvido, o `warehouseMaterialId` do contrato canônico da FASE 1;
-- na primeira entrada de um item ainda sem vínculo, o material canônico pode ser criado de forma determinística a partir de `workspace + empenho + item`, sem criar um segundo modelo de material;
-- NF, vínculo do item, movimento do ledger e saldo materializado são confirmados no mesmo ciclo transacional;
-- NFs anteriores ao cutoff de ativação do workspace não são retrointegradas silenciosamente;
-- edições e exclusões de NFs já integradas produzem movimentos compensatórios, preservando a origem anterior quando houver troca de identidade/empenho;
-- o vínculo persistido por ID passa a ser a autoridade; descrição, fornecedor ou texto livre não substituem esse identificador.
+- a Nota Fiscal e o empenho confirmados pelo EMPROVEX são fontes canônicas somente de leitura para o ADM Depósito;
+- o item da NF reutiliza o `itemId` operacional já existente;
+- vínculos `itemId ↔ materialId`, estado de projeção, idempotência e histórico logístico pertencem ao namespace `warehouse/{workspaceId}`;
+- o ADM não grava `warehouseMaterialId`, `warehouseMovementIds` ou `warehouseIntegration` em documentos operacionais novos;
+- campos logísticos legados já existentes em documentos antigos podem ser lidos apenas para compatibilidade/migração controlada, sem voltar a ser requisito do EMPROVEX;
+- a primeira projeção pode criar material canônico determinístico a partir de `workspace + empenho + item`;
+- NFs anteriores ao cutoff não são retrointegradas silenciosamente;
+- edição ou exclusão da NF nunca é bloqueada pelo ADM; na sincronização seguinte, o módulo gera correção/reversão idempotente ou sinaliza reconciliação;
+- descrição, fornecedor ou texto livre não substituem os identificadores estáveis.
 
-Consequência: futuras rotinas de catálogo/conciliação podem unificar materiais conscientemente, mas não podem reintroduzir matching textual implícito no fluxo de recebimento.
+Consequência: o fluxo é unidirecional — `EMPROVEX → dados canônicos → ADM Depósito → warehouse/*`.
 
 
 ## D-034 — CI proporcional ao impacto da mudança
@@ -648,3 +657,34 @@ Regras permanentes:
 - uma futura contagem por lote deverá ampliar o contrato de forma explícita e reutilizar warehouse_lot_v1, sem criar saldo paralelo.
 
 Documento técnico: docs/adm-deposito/PHASE_10_PHYSICAL_INVENTORY.md.
+
+
+## D-052 — EMPROVEX Core Protection é gate permanente e anterior às integrações opcionais
+
+A operacionalidade do EMPROVEX tem prioridade sobre qualquer módulo complementar.
+
+Regras permanentes:
+- serviços críticos de NF, empenhos, cronogramas, avisos, sincronização e paths operacionais não importam implementação de `lib/warehouse` ou `features/warehouse`;
+- o shell principal consulta políticas de módulo por uma camada neutra de plataforma, nunca pela implementação do ADM;
+- módulos opcionais não chamam serviços de mutação do núcleo;
+- Firestore Rules do bloco operacional `workspaces/{workspaceId}/...` não podem referenciar `warehouse` nem autorização do ADM;
+- qualquer PR funcional executa o workflow rápido `EMPROVEX Core Protection` antes da suíte longa;
+- o Application CI repete o guard para impedir bypass;
+- a proteção é obrigatória já durante FASE 11 e seguintes, não apenas no fechamento do ADM.
+
+Documento global: `docs/EMPROVEX_CORE_PROTECTION.md`.
+
+## D-053 — Efeitos auxiliares são best-effort após a confirmação operacional
+
+Uma operação crítica deve persistir primeiro seu estado canônico mínimo.
+
+Classificação inicial:
+- **crítico/atômico:** NF + saldo recebido do empenho + locks/identidade NS + auditoria de integridade quando aplicável;
+- **auxiliar/não bloqueante:** alerta informativo, anexo de PDF/Drive, telemetria de consumo e projeções do ADM Depósito.
+
+Regras:
+- falha de efeito auxiliar não converte operação crítica já válida em erro;
+- o usuário recebe mensagem clara quando um complemento não foi concluído;
+- anexos podem ser reenviados posteriormente pelas superfícies próprias;
+- alertas auxiliares podem ser reconstruídos/reconciliados;
+- nenhuma dependência externa deve ser adicionada antes do commit crítico sem decisão arquitetural explícita e teste de falha correspondente.
