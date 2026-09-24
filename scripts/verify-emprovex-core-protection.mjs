@@ -83,8 +83,12 @@ if (receiptStart < 0 || receiptEnd <= receiptStart) {
   const receipt = nsLifecycle.slice(receiptStart, receiptEnd);
   forbidText(receipt, /operationalDocRef\(scope,\s*['"]alerts['"]/, 'Alerta informativo voltou para a transação crítica da NF.');
   forbidText(receipt, /warehouse/i, 'Lifecycle crítico da NF voltou a depender do ADM Depósito.');
-  requireText(receipt, "operationalDocRef(scope, 'invoices'", 'Lifecycle de NF perdeu a gravação operacional da invoice.');
-  requireText(receipt, "operationalDocRef(\n        scope,\n        'empenhos'", 'Lifecycle de NF perdeu a atualização operacional do empenho.');
+  if (!/operationalDocRef\(\s*scope,\s*['"]invoices['"]/.test(receipt)) {
+    findings.push('Lifecycle de NF perdeu a gravação operacional da invoice.');
+  }
+  if (!/operationalDocRef\(\s*scope,\s*['"]empenhos['"]/.test(receipt)) {
+    findings.push('Lifecycle de NF perdeu a atualização operacional do empenho.');
+  }
 }
 
 const nfActions = read('features/notas-fiscais/hooks/useNotasFiscaisActions.ts');
