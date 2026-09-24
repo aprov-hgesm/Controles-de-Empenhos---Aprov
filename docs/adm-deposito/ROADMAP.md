@@ -392,3 +392,158 @@ FASE 0 Fundação e isolamento ✓
 - preservar todos os testes/guards existentes e concentrar sua execução na estabilização/FASE 13;
 - usar PowerShell local do fundador quando uma intervenção prática for necessária, preferencialmente de forma consolidada;
 - reservar o GitHub CI como certificação final, após a campanha local consolidada.
+
+## Replanejamento oficial — módulos de desenvolvimento após a reorganização funcional
+
+Este plano substitui, para o trabalho ainda pendente do ADM Depósito, a interpretação de que as antigas abas independentes devem continuar evoluindo isoladamente.
+
+A navegação alvo é: **Início · Cadastro de Itens · Meus Depósitos · Controle de Itens**.
+
+### Módulo 1 — Motor de pendências das Notas Fiscais
+
+Objetivo:
+- transformar os itens das NFs canônicas em fila logística tratável pelo ADM;
+- distinguir quantidade pendente, quantidade alocada e quantidade destinada a consumo imediato;
+- permitir tratamento parcial;
+- persistir o estado somente no namespace `warehouse`;
+- preservar independência absoluta do cadastro/edição/exclusão da NF no EMPROVEX.
+
+### Módulo 2 — Alocação física do item recebido
+
+Objetivo:
+- implementar a ação **Alocar no depósito**;
+- mover quantidade de `UNASSIGNED` para depósito/local/subposição por operação auditável;
+- reutilizar ledger e `warehouse_location_balance_v1`;
+- impedir duplicação de saldo e preservar idempotência.
+
+### Módulo 3 — Lote, validade e código de barras no recebimento
+
+Objetivo:
+- incorporar lote, validade e barcode ao mesmo fluxo de alocação;
+- permitir múltiplos lotes para um mesmo item recebido;
+- aceitar digitação e scanner HID/teclado;
+- reutilizar `warehouse_lot_v1` e `warehouse_barcode_v1`.
+
+### Módulo 4 — Consumo imediato e fila SISCOFIS
+
+Objetivo:
+- implementar o destino **Consumo imediato**;
+- não criar posição física para essa quantidade;
+- registrar a decisão de forma auditável no ADM;
+- criar fila/relatório de itens pendentes de lançamento no SISCOFIS;
+- permitir estado pendente/l lançado sem autocorreção do SISCOFIS.
+
+### Módulo 5 — Migração inicial do SISCOFIS
+
+Objetivo:
+- consolidar na subaba de Cadastro de Itens os dois métodos:
+  - entrada manual;
+  - JSON por prompt com IA externa;
+- fazer ambos convergirem para o contrato SISCOFIS versionado;
+- manter validação, prévia e confirmação humana;
+- preservar Marco Zero e snapshots conforme decisões anteriores.
+
+### Módulo 6 — Meus Depósitos multi-depósito
+
+Objetivo:
+- adaptar o modelo para 1..N depósitos efetivamente administráveis pela UI;
+- suportar criação, edição e inativação conforme contratos existentes;
+- tornar explícito o layout ativo por depósito;
+- manter históricos de layout independentes.
+
+### Módulo 7 — Biblioteca de estruturas físicas
+
+Objetivo:
+- oferecer estruturas reutilizáveis no editor;
+- incluir estantes, racks, armários, freezers, geladeiras, câmaras, paletes, áreas de paletes, bancadas, corredores, áreas livres e outros;
+- permitir dimensões proporcionais, rotação e níveis/subposições.
+
+### Módulo 8 — Editor visual do croqui
+
+Objetivo:
+- converter o editor técnico atual em experiência visual de composição;
+- arrastar, redimensionar, girar, duplicar, excluir, renomear e vincular;
+- usar grid/snap, zoom, vista superior, perspectiva isométrica e rotação;
+- permanecer leve, 2D/2.5D e sem engine 3D pesada.
+
+### Módulo 9 — Integração croqui ↔ estoque
+
+Objetivo:
+- ligar estrutura visual, localização lógica e saldos por posição;
+- destacar no croqui todos os locais de um material consultado;
+- preservar destaque FEFO como recomendação;
+- mostrar depósito, estrutura, nível, quantidade, lote e validade na ficha de consulta.
+
+### Módulo 10 — Finalização da aba Início
+
+Objetivo:
+- apresentar o croqui ativo do depósito selecionado;
+- permitir seleção de depósito e pesquisa de item;
+- destacar a localização no croqui;
+- consolidar saldo, lotes e validade na mesma experiência visual.
+
+### Módulo 11 — Consolidação do Controle de Itens
+
+Objetivo:
+- finalizar a absorção das antigas superfícies operacionais;
+- disponibilizar subabas para estoque, saída, movimentações, inventário, entregas, alertas, SISCOFIS operacional e configurações;
+- evitar duplicação de componentes ou domínios.
+
+### Módulo 12 — Relatórios logísticos
+
+Objetivo:
+- disponibilizar relatórios derivados, no mínimo:
+  - estoque atual;
+  - itens por depósito/localização;
+  - itens sem localização;
+  - próximos do vencimento;
+  - vencidos;
+  - lotes;
+  - consumo imediato;
+  - pendências SISCOFIS;
+  - entradas por NF;
+  - saídas;
+  - movimentações;
+  - inventário;
+- sempre derivados das fontes oficiais existentes.
+
+### Módulo 13 — Segurança, Firestore, performance e telemetria
+
+Objetivo:
+- revisar Rules, índices, bounded queries, idempotência, concorrência, atomicidade, isolamento `warehouse`, multi-tenant e tratamento de erros;
+- resolver bloqueios de permissão observados no piloto fundador;
+- preservar Core Protection e independência operacional do EMPROVEX.
+
+### Módulo 14 — Campanha final de validação e fechamento
+
+Executar de forma consolidada:
+- Core Protection;
+- TypeScript;
+- build;
+- guards permanentes do ADM;
+- testes de domínio;
+- Firestore Emulator;
+- multi-tenant/security;
+- walking skeleton;
+- Browser E2E;
+- regressão EMPROVEX;
+- regressão ADM Depósito;
+- correções finais;
+- PR;
+- Application CI;
+- merge e deploy quando aprovados.
+
+### Ordem oficial
+
+`M1 → M2 → M3 → M4 → M5 → M6 → M7 → M8 → M9 → M10 → M11 → M12 → M13 → M14`
+
+### Regras de execução
+
+- desenvolver sobre a branch oficial da FASE 11.5 enquanto a consolidação funcional/visual permanecer em andamento;
+- não reabrir as antigas abas como áreas primárias;
+- não reimplementar contratos já existentes;
+- NF/Empenho/Cronograma permanecem fontes canônicas somente de leitura para o ADM;
+- escritas logísticas permanecem no namespace `warehouse`;
+- a execução de testes completos e CI continua diferida para o Módulo 14 conforme D-057;
+- testes dirigidos durante os Módulos 1–13 somente quando indispensáveis para diagnosticar falha concreta.
+
