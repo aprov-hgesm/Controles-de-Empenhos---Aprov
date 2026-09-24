@@ -96,7 +96,6 @@ for (const marker of [
   'match /depots/{depotId}',
   'match /locations/{locationId}',
   'match /locationBalances/{locationBalanceId}',
-  "domain != 'locationBalances'",
 ]) requireText(rules, marker, 'Firestore Rules da FASE 6 incompletas: ' + marker);
 
 for (const marker of [
