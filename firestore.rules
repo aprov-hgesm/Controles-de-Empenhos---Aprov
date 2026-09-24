@@ -776,7 +776,7 @@ service cloud.firestore {
           && source.toBalanceId is string
           && source.toBalanceId.matches('^locbal_[a-f0-9]{64}$')
           && source.fromBalanceId != source.toBalanceId
-        
+
         )
         || (
           source is map
