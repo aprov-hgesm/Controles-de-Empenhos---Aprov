@@ -14,6 +14,7 @@ import type { WarehouseSectionId } from '../navigation';
 import { WarehouseExpressOutbound } from './WarehouseExpressOutbound';
 import { WarehouseLocationsOperational } from './WarehouseLocationsOperational';
 import { WarehouseDepotViewOperational } from './WarehouseDepotViewOperational';
+import { WarehouseInventoryOperational } from './WarehouseInventoryOperational';
 import { WarehouseStockOperational } from './WarehouseStockOperational';
 
 function FutureNotice({ phase, children }: { phase: string; children: string }) {
@@ -263,10 +264,6 @@ function MovementsContent({ data }: { data: WarehousePhase4Data }) {
   );
 }
 
-function InventoryContent() {
-  return <div className="mt-6"><PlannedItems items={['Selecionar depósito/local','Registrar contagem','Comparar esperado x contado','Exibir divergência','Confirmar ajuste humano','Gerar ajuste auditável']} /><div className="mt-5"><FutureNotice phase="FASE 10">Esta capacidade será disponibilizada em uma fase posterior. INVENTORY_ADJUSTMENT permanece apenas como tipo reconhecido pelo ledger; nenhum ajuste operacional é disparado aqui.</FutureNotice></div></div>;
-}
-
 function SiscofisContent({ workspaceId }: { workspaceId: string }) {
   const [context, setContext] = useState<WarehouseSiscofisContext | null>(null);
   const [rawJson, setRawJson] = useState('');
@@ -503,7 +500,7 @@ export function WarehouseSectionContent({ section, workspaceId }: { section: War
     case 'movements': return <MovementsContent data={phase4Data} />;
     case 'locations': return <WarehouseLocationsOperational workspaceId={workspaceId} />;
     case 'warehouseView': return <WarehouseDepotViewOperational workspaceId={workspaceId} />;
-    case 'inventory': return <InventoryContent />;
+    case 'inventory': return <WarehouseInventoryOperational workspaceId={workspaceId} />;
     case 'siscofis': return <SiscofisContent workspaceId={workspaceId} />;
     case 'deliveries': return <DeliveriesContent />;
     case 'settings': return <SettingsContent />;
