@@ -49,25 +49,29 @@ A regressão pesada completa e o GitHub CI permanecem diferidos até o fechament
 
 ## FASE 11.5 — Consolidação Visual e UX
 
-Estado atual: **EM EXECUÇÃO — shell EMPROVEX aplicado e nova Home/Início visual implementada na branch da fase**.
+Estado atual: **EM EXECUÇÃO — shell EMPROVEX, nova Home e reorganização funcional em quatro áreas implementados na branch da fase**.
 
-Direção estética aprovada pelo fundador:
-- ADM Depósito visualmente integrado à plataforma operacional EMPROVEX;
-- Header oficial reutilizado;
-- Sidebar logística reconstruída com a mesma gramática visual do AppSidebar;
-- antiga “Visão Geral” renomeada para **Início**;
-- Início com fundo branco e composição própria;
-- consulta de material à esquerda;
-- seletor de depósito imediatamente abaixo;
-- ficha do item com saldo total, quantidade no depósito, posições, lotes e validade;
-- croqui principal 2.5D/isométrico sem paredes, usando o piso como limitador físico;
-- item pesquisado destaca suas localizações reais;
-- controles de rotação e vista superior;
-- edição/versionamento do croqui continua na superfície Visão do Depósito;
-- nenhuma nova fonte de verdade foi criada.
+Estrutura atual:
+- **Início** — croqui 2.5D branco, seleção de depósito, consulta de material, localização, saldo, lotes e validade;
+- **Cadastro de Itens** — fila de itens de NF lida do EMPROVEX, alocação física, consumo imediato, relatório para lançamento no SISCOFIS e migração SISCOFIS manual/JSON por prompt externo;
+- **Meus Depósitos** — depósitos/localizações e croquis por depósito, com estante, rack, armário, freezer, geladeira, palete e demais estruturas personalizáveis;
+- **Controle de Itens** — resumo logístico, itens disponíveis, saída expressa, movimentações, inventário, entregas, alertas e configurações.
+
+Integração nova:
+- contrato `warehouse_item_intake_v1`;
+- persistência exclusiva em `warehouse/{workspaceId}/intakes`;
+- NFs/Empenhos continuam somente leitura para o ADM;
+- alocação de NF usa ledger/saldos/localizações/lotes/barcode do próprio ADM;
+- consumo imediato não entra no estoque e gera fila própria para lançamento no SISCOFIS;
+- layouts passam a ter ativo/histórico por depósito, sem conflito global entre depósitos;
+- “excluir” depósito/localização significa inativar e preservar auditoria.
 
 Branch:
 `feat/adm-deposito-phase-11-5-visual-ux`
+
+Pendência operacional conhecida:
+- as Firestore Rules atualizadas desta branch ainda precisam ser publicadas no banco nomeado antes de testar cadastros reais no Preview;
+- o erro observado anteriormente ao listar `warehouse/hgesm-aprov/depots` permanece compatível com Rules de produção desatualizadas ou sessão não reconhecida, e deve ser reavaliado após publicação das Rules atuais.
 
 Política de validação:
 - por D-057, não executar agora suites/CI por incremento;
@@ -77,17 +81,13 @@ Política de validação:
 
 ## Estratégia de validação vigente
 
-A partir de 2026-09-24, a execução das fases restantes adota a decisão D-054:
+D-057 substitui a cadência intermediária anteriormente descrita em D-054:
 
-- desenvolvimento contínuo das FASES 11, 11.5 e 12 com **gates rápidos obrigatórios** de EMPROVEX Core Protection/isolamento;
-- testes direcionados ao domínio alterado permanecem obrigatórios quando houver risco funcional específico;
-- não repetir Browser E2E completo, suíte multi-tenant integral, build/regressão ampla a cada pequena alteração sem evidência nova;
-- concentrar a bateria pesada em uma campanha de estabilização após a implementação funcional do ADM Depósito;
-- usar a FASE 13 como validação integrada formal e fechamento do piloto fundador;
-- GitHub CI continua sendo certificação final antes de merge/release relevantes;
-- a estação local de validação EMPROVEX está apta a executar Firebase Emulator + Next.js + Playwright/Chromium e deve ser preferida para feedback rápido antes do CI remoto.
-
-A proteção do núcleo permanece não negociável: qualquer regressão detectada pelo Core Protection interrompe o avanço imediatamente.
+- não executar baterias de testes ou CI a cada incremento restante das FASES 11.5 e 12;
+- preservar guards, testes de domínio, Firestore Emulator, Browser E2E, TypeScript/build e regressão para execução consolidada na FASE 13;
+- não abrir PR nem disparar intencionalmente Application CI durante a implementação restante;
+- usar PowerShell local apenas quando necessário para publicação/configuração ou diagnóstico pontual;
+- Core Protection continua sendo uma invariável arquitetural, mesmo sem execução repetida do guard a cada commit.
 
 
 ## Repositório e baseline
@@ -599,16 +599,8 @@ Diretrizes:
 A definição detalhada da FASE 11.5 está registrada em `docs/adm-deposito/ROADMAP.md`.
 ## Próxima fase oficial
 
-**FASE 11 — Entregas, Dashboard Logístico e Alertas, somente após o Core Protection**
+**Concluir a FASE 11.5 — Consolidação Visual e UX**, incluindo revisão visual pelo fundador e ajustes restantes da experiência. Depois, iniciar a FASE 12 — segurança, performance e telemetria. A FASE 13 executará a validação consolidada.
 
-A FASE 10 está integrada à `main`. O PR #182, primeira tentativa da FASE 11, foi fechado sem merge porque ainda alterava superfícies operacionais do EMPROVEX.
-
-Antes de reiniciar a FASE 11, o projeto passa a exigir:
-- `docs/EMPROVEX_CORE_PROTECTION.md`;
-- workflow rápido `EMPROVEX Core Protection`;
-- guard `verify:emprovex-core-protection`;
-- NF/Empenho independentes de `warehouse`, alertas logísticos e Drive;
-- direção de dados unidirecional EMPROVEX → ADM Depósito.
 
 ## Sequência futura resumida
 
