@@ -215,6 +215,12 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
         parsed
       );
       setItems(await listWarehouseInventoryItems(workspaceId, active.session.id));
+      setDrafts((current) => {
+        if (!(record.item.id in current)) return current;
+        const next = { ...current };
+        delete next[record.item.id];
+        return next;
+      });
       setMessage('Contagem salva. Nenhum saldo ou movimento de estoque foi alterado.');
     } catch (error) {
       setMessage(errorMessage(error));
