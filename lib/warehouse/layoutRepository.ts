@@ -6,6 +6,7 @@ import {
   limit,
   query,
   runTransaction,
+  where,
   serverTimestamp,
 } from 'firebase/firestore';
 
@@ -125,8 +126,28 @@ export async function listWarehouseDepotLayouts(
 export async function getActiveWarehouseDepotLayout(
   workspaceId: string
 ): Promise<WarehouseDepotLayoutListItem | null> {
-  const layouts = await listWarehouseDepotLayouts(workspaceId, 100);
-  return layouts.find((item) => item.layout.status === 'active') || null;
+  const scope = currentScope(workspaceId);
+  const path = warehouseDomainPath(scope.workspaceId, 'layouts');
+  try {
+    const snapshot = await getDocs(
+      query(collection(db, path), where('status', '==', 'active'), limit(2))
+    );
+    const active = snapshot.docs
+      .map((item) => {
+        const data = item.data() as Record<string, unknown>;
+        return {
+          layout: parseLayout(scope.workspaceId, item.id, data),
+          createdAt: timestampToIso(data.createdAt),
+          updatedAt: timestampToIso(data.updatedAt),
+        };
+      })
+      .sort((a, b) => b.layout.version - a.layout.version);
+    if (active.length > 1) throw new Error('WAREHOUSE_LAYOUT_MULTIPLE_ACTIVE');
+    return active[0] || null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return null;
+  }
 }
 
 async function assertLayoutLocationReferences(
