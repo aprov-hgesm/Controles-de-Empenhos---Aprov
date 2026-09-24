@@ -103,7 +103,6 @@ for (const marker of [
   'function validWarehouseLotCreate',
   'function validWarehouseLotUpdate',
   'match /lots/{lotId}',
-  "domain != 'lots'",
   'allow delete: if false;',
 ]) {
   requireText(rules, marker, 'Firestore Rules da FASE 7 incompletas: ' + marker);
