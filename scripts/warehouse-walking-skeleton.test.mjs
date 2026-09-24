@@ -78,10 +78,12 @@ test('walking skeleton reutiliza contratos oficiais sem persistência paralela d
   }
 });
 
-test('estados futuros são explícitos e não simulam indicadores', () => {
+test('estados futuros são explícitos e a visão geral não simula indicadores', () => {
   const content = read('features/warehouse/components/WarehouseSectionContent.tsx');
+  const dashboard = read('features/warehouse/components/WarehouseLogisticsDashboard.tsx');
   assert.ok(content.includes('Capacidade futura'));
-  assert.ok(content.includes('não exibe números fictícios'));
+  assert.ok(dashboard.includes('Indicadores derivados das fontes operacionais existentes'));
+  assert.ok(dashboard.includes('métricas mockadas'));
 });
 
 test('shell nasce responsivo e sem depender de animações pesadas', () => {
