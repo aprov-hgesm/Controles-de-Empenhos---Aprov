@@ -3698,6 +3698,210 @@ service cloud.firestore {
     // Não existe fallback para canAccessWorkspace(): setores externos continuam
     // bloqueados mesmo no próprio workspace durante todo o piloto fundador.
 
+    // FASE 10 / DEP-20..20.3 — ciclo de vida e itens do inventário.
+    function warehouseInventorySessionIdentityUnchanged() {
+      return request.resource.data.schemaVersion == resource.data.schemaVersion
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.ug == resource.data.ug
+        && request.resource.data.scope == resource.data.scope
+        && request.resource.data.itemCount == resource.data.itemCount
+        && request.resource.data.openedBy == resource.data.openedBy
+        && request.resource.data.referenceCapturedAt == resource.data.referenceCapturedAt
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    function validWarehouseInventorySessionCreate(workspaceId, inventoryId) {
+      return request.resource.data.schemaVersion == 'warehouse_inventory_v1'
+        && request.resource.data.id == inventoryId
+        && inventoryId.matches('^inv_[a-f0-9]{32}$')
+        && request.resource.data.workspaceId == workspaceId
+        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && request.resource.data.scope is map
+        && request.resource.data.scope.kind in ['TOTAL','DEPOT','LOCATION','SUBPOSITION']
+        && request.resource.data.status == 'OPENING'
+        && request.resource.data.itemCount is int
+        && request.resource.data.itemCount > 0
+        && request.resource.data.itemCount <= 1200
+        && request.resource.data.openedBy == request.auth.uid
+        && request.resource.data.reviewedBy == null
+        && request.resource.data.confirmationStartedBy == null
+        && request.resource.data.confirmedBy == null
+        && request.resource.data.cancelledBy == null
+        && request.resource.data.reviewSummary == null
+        && request.resource.data.staleItemId == null
+        && request.resource.data.referenceCapturedAt == request.time
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.reviewedAt == null
+        && request.resource.data.confirmationStartedAt == null
+        && request.resource.data.confirmedAt == null
+        && request.resource.data.cancelledAt == null;
+    }
+
+    function validWarehouseInventorySessionUpdate(workspaceId, inventoryId) {
+      return request.resource.data.id == inventoryId
+        && request.resource.data.workspaceId == workspaceId
+        && warehouseInventorySessionIdentityUnchanged()
+        && request.resource.data.updatedAt == request.time
+        && (
+          (resource.data.status == 'OPENING'
+            && request.resource.data.status == 'COUNTING'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt']))
+          || (resource.data.status == 'COUNTING'
+            && request.resource.data.status == 'REVIEW'
+            && request.resource.data.reviewedBy == request.auth.uid
+            && request.resource.data.reviewSummary is map
+            && request.resource.data.reviewedAt == request.time
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','reviewedBy','reviewSummary','reviewedAt','updatedAt','staleItemId'
+            ]))
+          || (resource.data.status == 'REVIEW'
+            && request.resource.data.status == 'COUNTING'
+            && request.resource.data.reviewedBy == null
+            && request.resource.data.reviewSummary == null
+            && request.resource.data.reviewedAt == null
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','reviewedBy','reviewSummary','reviewedAt','updatedAt'
+            ]))
+          || (resource.data.status == 'REVIEW'
+            && request.resource.data.status == 'CONFIRMING'
+            && request.resource.data.confirmationStartedBy == request.auth.uid
+            && request.resource.data.confirmationStartedAt == request.time
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','confirmationStartedBy','confirmationStartedAt','updatedAt'
+            ]))
+          || (resource.data.status == 'CONFIRMING'
+            && request.resource.data.status == 'CONFIRMED'
+            && request.resource.data.confirmedBy == request.auth.uid
+            && request.resource.data.confirmedAt == request.time
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','confirmedBy','confirmedAt','updatedAt','staleItemId'
+            ]))
+          || (resource.data.status == 'CONFIRMING'
+            && request.resource.data.status == 'RECONCILIATION_REQUIRED'
+            && request.resource.data.staleItemId is string
+            && request.resource.data.staleItemId.matches('^invit_[a-f0-9]{64}$')
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','staleItemId','updatedAt'
+            ]))
+          || (resource.data.status in ['OPENING','COUNTING','REVIEW','RECONCILIATION_REQUIRED']
+            && request.resource.data.status == 'CANCELLED'
+            && request.resource.data.cancelledBy == request.auth.uid
+            && request.resource.data.cancelledAt == request.time
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','cancelledBy','cancelledAt','updatedAt'
+            ]))
+        );
+    }
+
+    function warehouseInventoryItemIdentityUnchanged() {
+      return request.resource.data.schemaVersion == resource.data.schemaVersion
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.inventoryId == resource.data.inventoryId
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.ug == resource.data.ug
+        && request.resource.data.materialId == resource.data.materialId
+        && request.resource.data.position == resource.data.position
+        && request.resource.data.locationBalanceId == resource.data.locationBalanceId
+        && request.resource.data.expectedQuantity == resource.data.expectedQuantity
+        && request.resource.data.expectedBalanceRevision == resource.data.expectedBalanceRevision
+        && request.resource.data.expectedBalanceLastMovementId == resource.data.expectedBalanceLastMovementId
+        && request.resource.data.expectedLocationRevision == resource.data.expectedLocationRevision
+        && request.resource.data.expectedLocationLastMovementId == resource.data.expectedLocationLastMovementId;
+    }
+
+    function validWarehouseInventoryItemCreate(workspaceId, inventoryId, itemId) {
+      let s = /databases/$(database)/documents/warehouse/$(workspaceId)/inventories/$(inventoryId);
+      return request.resource.data.schemaVersion == 'warehouse_inventory_item_v1'
+        && request.resource.data.id == itemId
+        && itemId.matches('^invit_[a-f0-9]{64}$')
+        && request.resource.data.inventoryId == inventoryId
+        && request.resource.data.workspaceId == workspaceId
+        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && request.resource.data.materialId is string
+        && request.resource.data.materialId.matches('^mat_[a-f0-9]{32}$')
+        && validWarehouseStockPosition(request.resource.data.position)
+        && request.resource.data.locationBalanceId is string
+        && request.resource.data.locationBalanceId.matches('^locbal_[a-f0-9]{64}$')
+        && request.resource.data.expectedQuantity is number
+        && request.resource.data.expectedQuantity >= 0
+        && request.resource.data.expectedBalanceRevision is int
+        && request.resource.data.expectedBalanceRevision >= 1
+        && request.resource.data.expectedLocationRevision is int
+        && request.resource.data.expectedLocationRevision >= 1
+        && request.resource.data.status == 'PENDING'
+        && request.resource.data.countedQuantity == null
+        && request.resource.data.difference == null
+        && request.resource.data.countedBy == null
+        && request.resource.data.countedAt == null
+        && request.resource.data.adjustmentMovementId == null
+        && request.resource.data.adjustedBy == null
+        && request.resource.data.adjustedAt == null
+        && exists(s)
+        && get(s).data.status == 'OPENING'
+        && get(s).data.ug == request.resource.data.ug;
+    }
+
+    function validWarehouseInventoryCountUpdate(workspaceId, inventoryId) {
+      let s = /databases/$(database)/documents/warehouse/$(workspaceId)/inventories/$(inventoryId);
+      return warehouseInventoryItemIdentityUnchanged()
+        && exists(s)
+        && get(s).data.status == 'COUNTING'
+        && resource.data.status in ['PENDING','MATCHED','DIVERGENT']
+        && request.resource.data.countedQuantity is number
+        && request.resource.data.countedQuantity >= 0
+        && request.resource.data.difference == request.resource.data.countedQuantity - request.resource.data.expectedQuantity
+        && ((request.resource.data.difference == 0 && request.resource.data.status == 'MATCHED')
+          || (request.resource.data.difference != 0 && request.resource.data.status == 'DIVERGENT'))
+        && request.resource.data.countedBy == request.auth.uid
+        && request.resource.data.countedAt == request.time
+        && request.resource.data.adjustmentMovementId == null
+        && request.resource.data.adjustedBy == null
+        && request.resource.data.adjustedAt == null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'countedQuantity','difference','status','countedBy','countedAt',
+          'adjustmentMovementId','adjustedBy','adjustedAt'
+        ]);
+    }
+
+    function validWarehouseInventoryAdjustmentUpdate(workspaceId, inventoryId, itemId) {
+      let s = /databases/$(database)/documents/warehouse/$(workspaceId)/inventories/$(inventoryId);
+      let m = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(request.resource.data.adjustmentMovementId);
+      return warehouseInventoryItemIdentityUnchanged()
+        && get(s).data.status == 'CONFIRMING'
+        && resource.data.status == 'DIVERGENT'
+        && request.resource.data.status == 'ADJUSTED'
+        && request.resource.data.countedQuantity == resource.data.countedQuantity
+        && request.resource.data.difference == resource.data.difference
+        && request.resource.data.countedBy == resource.data.countedBy
+        && request.resource.data.countedAt == resource.data.countedAt
+        && request.resource.data.adjustedBy == request.auth.uid
+        && request.resource.data.adjustedAt == request.time
+        && !exists(m)
+        && existsAfter(m)
+        && getAfter(m).data.type == 'INVENTORY_ADJUSTMENT'
+        && getAfter(m).data.source.inventoryId == inventoryId
+        && getAfter(m).data.source.inventoryItemId == itemId
+        && getAfter(m).data.quantityDelta == resource.data.difference
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','adjustmentMovementId','adjustedBy','adjustedAt'
+        ]);
+    }
+
+    function validWarehouseInventoryStaleUpdate(workspaceId, inventoryId, itemId) {
+      let s = /databases/$(database)/documents/warehouse/$(workspaceId)/inventories/$(inventoryId);
+      return warehouseInventoryItemIdentityUnchanged()
+        && resource.data.status == 'DIVERGENT'
+        && request.resource.data.status == 'STALE'
+        && request.resource.data.countedQuantity == resource.data.countedQuantity
+        && request.resource.data.difference == resource.data.difference
+        && existsAfter(s)
+        && getAfter(s).data.status == 'RECONCILIATION_REQUIRED'
+        && getAfter(s).data.staleItemId == itemId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+    }
+
     // FASE 9 / DEP-17..19.5 — croqui versionado é configuração visual.
     // Não contém saldo, lote ou quantidade e não escreve no ledger.
     function validWarehouseDepotLayoutBase(workspaceId, layoutId) {
