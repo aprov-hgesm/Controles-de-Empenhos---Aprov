@@ -165,7 +165,7 @@ test('INVENTORY_ADJUSTMENT exige origem PHYSICAL_INVENTORY e delta coerente', ()
   });
   assert.equal(valid.ok, true);
 
-  const missingSource = movement.validateWarehouseMovement({
+  const legacyWithoutSource = movement.validateWarehouseMovement({
     schemaVersion: 'warehouse_movement_v1',
     id: 'mov_' + 'f'.repeat(64),
     workspaceId: WORKSPACE,
@@ -178,6 +178,21 @@ test('INVENTORY_ADJUSTMENT exige origem PHYSICAL_INVENTORY e delta coerente', ()
     note: null,
     source: null,
   });
-  assert.equal(missingSource.ok, false);
-  assert.match(missingSource.issues.map((item) => item.code).join(','), /inventory_source_required/);
+  assert.equal(legacyWithoutSource.ok, true, 'parser preserva compatibilidade da FASE 2');
+
+  const wrongDelta = movement.validateWarehouseMovement({
+    schemaVersion: 'warehouse_movement_v1',
+    id: 'mov_' + '1'.repeat(64),
+    workspaceId: WORKSPACE,
+    ug: UG,
+    materialId: MATERIAL,
+    type: 'INVENTORY_ADJUSTMENT',
+    quantityDelta: 5,
+    idempotencyKeyHash: '1'.repeat(64),
+    reversesMovementId: null,
+    note: null,
+    source,
+  });
+  assert.equal(wrongDelta.ok, false);
+  assert.match(wrongDelta.issues.map((item) => item.code).join(','), /inventory_difference_mismatch/);
 });
