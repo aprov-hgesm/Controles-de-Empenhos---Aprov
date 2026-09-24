@@ -4,7 +4,7 @@ Este arquivo registra o estado real de continuidade do projeto e deve ser tratad
 
 ## Estado geral
 
-Status: **FASE 11 IMPLEMENTADA E VALIDADA LOCALMENTE — AGUARDANDO CERTIFICAÇÃO/INTEGRAÇÃO**
+Status: **FASE 11 IMPLEMENTADA E VALIDADA LOCALMENTE — CI/MERGE DIFERIDOS ATÉ O FECHAMENTO DO ADM DEPÓSITO**
 
 Data de fechamento: 2026-09-24.
 
@@ -45,7 +45,7 @@ Validação local concluída:
 - `verify:adm-deposito-phase-11` — PASS;
 - `test:adm-deposito-walking-skeleton` — 6/6.
 
-A regressão pesada completa permanece consolidada para a FASE 13 conforme D-054. O GitHub CI da integração continua sendo a certificação final do merge.
+A regressão pesada completa e o GitHub CI permanecem diferidos até o fechamento da implementação do ADM Depósito, conforme D-054. O PR #186 foi fechado sem merge para evitar CI prematuro; a branch da FASE 11 permanece como baseline de continuidade para as fases seguintes.
 
 ## Estratégia de validação vigente
 
