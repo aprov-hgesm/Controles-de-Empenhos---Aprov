@@ -737,3 +737,38 @@ A referência visual de verdade para o chrome é:
 - composição do shell em `app/page.tsx`.
 
 A sidebar logística pode possuir seus próprios itens, desde que preserve a mesma estrutura visual e comportamental da sidebar principal.
+
+
+## D-056 — Início do ADM Depósito é uma central visual de localização sobre croqui 2.5D
+
+A antiga superfície “Visão Geral” passa a se chamar **Início** e deixa de ser um dashboard convencional.
+
+Direção aprovada pelo fundador:
+- fundo predominantemente branco, mantendo Header e Sidebar oficiais do EMPROVEX;
+- coluna esquerda dedicada à consulta de material;
+- imediatamente abaixo da consulta, seletor do depósito cadastrado;
+- ao selecionar um material, mostrar saldo total, quantidade no depósito selecionado, localizações físicas, lotes e validade;
+- a área principal é o croqui do depósito, com o item pesquisado destacado na posição real;
+- o croqui é 2D com perspectiva leve (2.5D), inspirado em visão isométrica de armazenagem;
+- paredes não são renderizadas na home; o limite físico do depósito é representado pelo piso;
+- permitir vista isométrica, vista superior e rotação em incrementos controlados;
+- evitar engine 3D pesada, WebGL obrigatório ou animações que prejudiquem desempenho;
+- o croqui continua derivado de warehouse_depot_layout_v1 e das localizações oficiais já existentes;
+- a home é somente leitura para material, saldo, lote, localização e layout; edição estrutural permanece na superfície Visão do Depósito.
+
+Objetivo: transformar o Início em uma superfície operacional de consulta e orientação física, sem criar nova fonte de verdade.
+
+## D-057 — Execução de testes e CI do restante do ADM Depósito fica consolidada no fechamento
+
+Por orientação do fundador durante a FASE 11.5, a execução de baterias de teste deixa de ocorrer a cada incremento restante do ADM Depósito.
+
+Regras vigentes a partir desta decisão:
+- implementação visual/funcional restante pode prosseguir sem executar suites locais a cada commit;
+- Core Protection, guards, testes de domínio, TypeScript, build, Firestore Emulator, Browser E2E e regressão integrada permanecem obrigatórios, mas sua **execução é consolidada na FASE 13**, antes do encerramento do piloto;
+- nenhum CI remoto deve ser disparado intencionalmente durante a implementação restante;
+- testes existentes não são removidos; ficam acumulados para a campanha final;
+- se surgir um bloqueio concreto que só possa ser diagnosticado por execução dirigida, um teste pontual pode ser usado como ferramenta de diagnóstico, sem transformar isso em gate de fase;
+- a estação local do fundador possui PowerShell e pode executar comandos quando intervenção local for necessária;
+- intervenções por PowerShell devem ser solicitadas apenas quando realmente necessárias e preferencialmente de forma consolidada.
+
+D-057 substitui, quanto à **cadência de execução**, a exigência intermediária de gates rápidos descrita em D-054; a cobertura final prevista em D-054 permanece integralmente obrigatória.
