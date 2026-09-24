@@ -710,13 +710,9 @@ service cloud.firestore {
           && validWarehouseStockPosition(source.to)
           && warehousePositionsDiffer(source.from, source.to)
           && source.fromBalanceId is string
-          && source.fromBalanceId.matches('^locbal_[a-f0-9]{64}
-    }
-)
+          && source.fromBalanceId.matches('^locbal_[a-f0-9]{64}$')
           && source.toBalanceId is string
-          && source.toBalanceId.matches('^locbal_[a-f0-9]{64}
-    }
-)
+          && source.toBalanceId.matches('^locbal_[a-f0-9]{64}$')
           && source.fromBalanceId != source.toBalanceId
         
         )
@@ -749,15 +745,11 @@ service cloud.firestore {
           && validWarehouseMaterialUnit(source.presentation)
           && validWarehouseStockPosition(source.position)
           && source.locationBalanceId is string
-          && source.locationBalanceId.matches('^locbal_[a-f0-9]{64}
-    }
-)
+          && source.locationBalanceId.matches('^locbal_[a-f0-9]{64}$')
           && (
             (source.interface == 'BARCODE_SCANNER'
               && source.barcodeId is string
-              && source.barcodeId.matches('^bar_[a-f0-9]{64}
-    }
-)
+              && source.barcodeId.matches('^bar_[a-f0-9]{64}$')
               && source.barcode is string
               && source.barcode.size() > 0
               && source.barcode.size() <= 128)
@@ -768,9 +760,7 @@ service cloud.firestore {
           && (
             (source.lotId == null && source.lotCode == null)
             || (source.lotId is string
-              && source.lotId.matches('^lot_[a-f0-9]{32}
-    }
-)
+              && source.lotId.matches('^lot_[a-f0-9]{32}$')
               && source.lotCode is string
               && source.lotCode.size() > 0
               && source.lotCode.size() <= 80)
