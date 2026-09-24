@@ -162,6 +162,8 @@ function WarehouseCanvas({
               type="button"
               data-testid={'warehouse-layout-object-' + object.id}
               data-location-id={object.warehouseLocationId || ''}
+              data-highlighted={highlighted ? 'true' : 'false'}
+              data-fefo-highlighted={fefo ? 'true' : 'false'}
               className={objectClass(
                 object,
                 highlighted,
