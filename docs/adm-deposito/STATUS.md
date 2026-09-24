@@ -4,7 +4,7 @@ Este arquivo registra o estado real de continuidade do projeto e deve ser tratad
 
 ## Estado geral
 
-Status: **FASE 10 CONCLUÍDA — INVENTÁRIO FÍSICO INTEGRADO À MAIN**
+Status: **FASE 10 CONCLUÍDA — EMPROVEX CORE PROTECTION EM IMPLANTAÇÃO ANTES DA FASE 11**
 
 Data de fechamento: 2026-09-24.
 
@@ -12,7 +12,7 @@ Situação:
 - FASES 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 e 10 concluídas;
 - FASE 10 — Inventário Físico integrada à `main` pelo PR #180;
 - FASE 3 — Walking Skeleton integrada à `main` pelo PR #164;
-- FASE 4 — NF → Estoque implementada e validada no PR #167;
+- FASE 4 — NF → Estoque implementada originalmente no PR #167 e posteriormente desacoplada do lifecycle operacional pelo hotfix #184;
 - FASE 5 — SISCOFIS / Marco Zero / Conciliação implementada no PR #171;
 - FASE 6 — Depósitos / Localizações / Transferências implementada e validada no PR #173;
 - FASE 7 — Estoque Operável / Lotes / Validade / FEFO implementada e validada no PR #174;
@@ -20,7 +20,7 @@ Situação:
 - FASE 9 — Visão do Depósito / Editor / Persistência implementada no PR #179;
 - piloto permanece exclusivo da conta fundadora;
 - usuários externos continuam sem visibilidade e sem acesso ao módulo ADM Depósito;
-- nenhuma capacidade da FASE 11 foi iniciada.
+- houve uma tentativa de FASE 11 no PR #182, fechada sem merge após a revisão arquitetural que priorizou a independência operacional do EMPROVEX.
 
 ## Repositório e baseline
 
@@ -77,7 +77,7 @@ PR técnico da FASE 10:
 - `validate-application` aprovado;
 - Browser E2E com Firebase Emulator aprovado;
 - gates finais dos Blocos 16, 17, 18, 19, 20 e 21 aprovados;
-- FASE 11 não iniciada.
+- FASE 11 ainda não integrada; PR #182 foi encerrado sem merge e deverá ser refeito sobre a fronteira de isolamento atual.
 
 PR técnico da FASE 9:
 - PR #179 — `feat: ADM Depósito phase 9 depot view layout`;
@@ -166,7 +166,7 @@ Superfícies estruturais:
 - Entregas;
 - Configurações.
 
-### FASE 4 — NF → Estoque
+### FASE 4 — NF → Estoque / projeção logística desacoplada
 Concluída.
 
 Capacidade vertical preservada:
@@ -304,7 +304,7 @@ Contratos/documentos:
 
 ## Regras permanentes após a FASE 8
 
-1. NF → estoque continua reutilizando o ledger oficial da FASE 2.
+1. NF permanece fonte canônica do EMPROVEX; a projeção NF → estoque reutiliza o ledger da FASE 2 sem participar da transação operacional da NF.
 2. Não existe segundo saldo concorrente.
 3. Correções, cancelamentos e futuros ajustes devem permanecer auditáveis por movimentos.
 4. O identificador persistido do material é a autoridade; descrição textual não é chave de identidade.
@@ -531,17 +531,25 @@ Diretrizes:
 A definição detalhada da FASE 11.5 está registrada em `docs/adm-deposito/ROADMAP.md`.
 ## Próxima fase oficial
 
-**FASE 11 — Entregas, Dashboard Logístico e Alertas**
+**FASE 11 — Entregas, Dashboard Logístico e Alertas, somente após o Core Protection**
 
-A FASE 11 não foi iniciada. A FASE 10 já está integrada à `main` com os gates obrigatórios aprovados.
+A FASE 10 está integrada à `main`. O PR #182, primeira tentativa da FASE 11, foi fechado sem merge porque ainda alterava superfícies operacionais do EMPROVEX.
+
+Antes de reiniciar a FASE 11, o projeto passa a exigir:
+- `docs/EMPROVEX_CORE_PROTECTION.md`;
+- workflow rápido `EMPROVEX Core Protection`;
+- guard `verify:emprovex-core-protection`;
+- NF/Empenho independentes de `warehouse`, alertas logísticos e Drive;
+- direção de dados unidirecional EMPROVEX → ADM Depósito.
 
 ## Sequência futura resumida
 
-1. FASE 11 — entregas / dashboard / alertas;
-2. FASE 11.5 — consolidação visual / UX conduzida pelo fundador;
-3. FASE 12 — segurança / performance / telemetria;
-4. FASE 13 — validação integrada e fechamento do piloto;
-5. FASE 14 — expansão externa futura.
+1. Core Protection — gate permanente de operacionalidade do EMPROVEX;
+2. FASE 11 — entregas / dashboard / alertas;
+3. FASE 11.5 — consolidação visual / UX conduzida pelo fundador;
+4. FASE 12 — segurança / performance / telemetria + testes de falha controlada;
+5. FASE 13 — validação integrada e fechamento do piloto;
+6. FASE 14 — expansão externa futura.
 
 ## Regra operacional de CI documental
 
@@ -558,10 +566,10 @@ A regra foi implementada na `main` em 2026-09-24 pelo commit `a09efba4d9dc595073
 
 Antes de modificar código:
 1. consultar a `main` real;
-2. ler `README.md`, `ROADMAP.md`, `DECISIONS.md`, `STATUS.md`, `HANDOFF_TEMPLATE.md`, `PHASE_6_LOCATIONS.md`, `PHASE_7_STOCK_LOTS_FEFO.md`, `PHASE_8_BARCODE_SCANNER_EXPRESS_OUTBOUND.md` e `PHASE_9_DEPOT_VIEW_LAYOUT.md`;
+2. ler `README.md`, `ROADMAP.md`, `DECISIONS.md`, `STATUS.md`, `HANDOFF_TEMPLATE.md`, `../EMPROVEX_CORE_PROTECTION.md`, `PHASE_6_LOCATIONS.md`, `PHASE_7_STOCK_LOTS_FEFO.md`, `PHASE_8_BARCODE_SCANNER_EXPRESS_OUTBOUND.md` e `PHASE_9_DEPOT_VIEW_LAYOUT.md`;
 3. comparar a `main` com o fechamento funcional da FASE 10 registrado aqui;
 4. analisar commits posteriores ao merge da FASE 10;
-5. preservar material canônico, ledger, saldo, NF → estoque, cutoff, Marco Zero, snapshots SISCOFIS, distribuição física, lotes, FEFO, barcodes, Saída Expressa e layout versionado;
-6. executar exclusivamente a FASE 11 — Entregas, Dashboard Logístico e Alertas;
+5. preservar material canônico, ledger, saldo, projeção NF → estoque desacoplada, cutoff, Marco Zero, snapshots SISCOFIS, distribuição física, lotes, FEFO, barcodes, Saída Expressa, layout versionado e, acima de tudo, a independência operacional do EMPROVEX;
+6. executar a FASE 11 somente se todos os gates de Core Protection permanecerem verdes e sem introduzir escrita do ADM no namespace operacional;
 7. não iniciar a FASE 11.5 no mesmo chat;
 8. atualizar STATUS ao fechar a fase.
