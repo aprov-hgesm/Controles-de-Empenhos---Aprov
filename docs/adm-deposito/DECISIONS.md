@@ -818,3 +818,142 @@ Para preservar auditoria:
 - a ação apresentada ao usuário como **Excluir da operação** altera o status para inativo e preserva histórico e referências;
 - o registro pode ser restaurado posteriormente;
 - versões antigas de croqui permanecem arquivadas, nunca reescritas como histórico mutável.
+
+## D-058 — Navegação operacional consolidada em quatro áreas
+
+A navegação principal do ADM Depósito passa a possuir quatro áreas funcionais definitivas:
+
+1. **Início** — croqui do depósito selecionado, consulta de item e localização visual;
+2. **Cadastro de Itens** — tratamento logístico dos itens oriundos de NF e migração inicial SISCOFIS;
+3. **Meus Depósitos** — cadastro de depósitos, localizações, estruturas físicas e croquis;
+4. **Controle de Itens** — consulta do estoque e demais operações recorrentes do depósito.
+
+As antigas superfícies `Estoque`, `Saída Expressa`, `Movimentações`, `Localizações`, `Visão do Depósito`, `Inventário`, `SISCOFIS / Conciliação`, `Entregas`, `Alertas` e `Configurações` deixam de ser áreas primárias de navegação.
+
+Elas devem ser:
+- absorvidas como subabas ou capacidades internas das quatro áreas acima;
+- preservadas tecnicamente quando ainda necessárias;
+- mantidas por redirecionamento quando houver rota legada;
+- nunca duplicadas como uma segunda implementação concorrente.
+
+A reorganização é de experiência e composição funcional; material canônico, ledger, saldos, lotes, barcodes, inventário, SISCOFIS, alertas e demais contratos existentes continuam sendo reutilizados.
+
+## D-059 — Toda NF recebida gera tratamento logístico pendente no ADM, sem voltar a acoplar o núcleo EMPROVEX
+
+O cadastro da Nota Fiscal continua pertencendo exclusivamente ao núcleo operacional do EMPROVEX e permanece independente do ADM Depósito, conforme D-002, D-033 e Core Protection.
+
+O ADM passa a interpretar cada item de NF disponível como uma **pendência de tratamento logístico** até que sua quantidade seja classificada.
+
+Destinos admitidos:
+- **Alocação no depósito** — quantidade passa de `UNASSIGNED` para posição física do ADM;
+- **Consumo imediato** — quantidade não ocupa posição física do depósito e passa a integrar a fila/relatório de lançamentos a realizar no SISCOFIS.
+
+O tratamento pode ser parcial. Portanto, uma mesma quantidade recebida pode ser dividida entre armazenamento físico e consumo imediato.
+
+O estado logístico deve pertencer ao namespace `warehouse/{workspaceId}`, referenciando a identidade estável da NF/item sem escrever de volta na NF para controlar o fluxo.
+
+A alocação deverá reutilizar os contratos existentes de:
+- material canônico;
+- ledger;
+- `warehouse_location_balance_v1`;
+- lote/validade;
+- barcode;
+- localização física.
+
+Não criar segundo saldo nem uma nova fonte de verdade quantitativa.
+
+## D-060 — Cadastro de Itens concentra entrada logística e migração SISCOFIS
+
+A área **Cadastro de Itens** possui duas responsabilidades operacionais relacionadas à formação do estoque:
+
+### Notas Fiscais pendentes
+
+A superfície lê NFs e empenhos canônicos do EMPROVEX e apresenta os itens que ainda exigem decisão logística.
+
+O fluxo de alocação deverá reunir, em uma única jornada:
+- depósito;
+- estrutura/local;
+- nível/subposição;
+- quantidade;
+- lote;
+- validade;
+- código de barras;
+- confirmação.
+
+Lote, validade e barcode reutilizam os contratos existentes e não criam um catálogo paralelo.
+
+### Migração SISCOFIS
+
+A migração inicial do inventário SISCOFIS permanece dentro de Cadastro de Itens e admite:
+- lançamento manual;
+- importação JSON gerada por prompt para IA externa.
+
+As duas modalidades devem convergir para o mesmo contrato versionado e validação antes da confirmação.
+
+A IA permanece externa, conforme D-008. Não introduzir agente ou interpretação automática interna do relatório.
+
+## D-061 — Meus Depósitos é a autoridade de configuração física e cada depósito possui croqui próprio
+
+A área **Meus Depósitos** concentra:
+- criação e manutenção de 1..N depósitos;
+- criação de localizações e subposições;
+- configuração das estruturas físicas;
+- edição e versionamento dos croquis.
+
+O modelo alvo passa a ser **um layout ativo por depósito**, com histórico independente por depósito.
+
+Estruturas físicas previstas incluem, no mínimo:
+- estante;
+- rack;
+- armário;
+- freezer;
+- geladeira;
+- câmara;
+- palete;
+- área de paletes;
+- bancada;
+- corredor;
+- área livre;
+- outros.
+
+O editor permanece um croqui operacional 2D/2.5D, não CAD e não motor 3D.
+
+A experiência alvo permite:
+- adicionar estrutura;
+- arrastar;
+- redimensionar;
+- rotacionar;
+- duplicar;
+- excluir;
+- renomear;
+- alinhar/encaixar em grid;
+- associar a localização lógica;
+- configurar níveis/subposições quando aplicável.
+
+Mover ou redimensionar um objeto visual nunca movimenta estoque. A associação continua baseada no ID lógico da localização.
+
+## D-062 — Controle de Itens absorve a operação recorrente e a execução segue módulos oficiais
+
+A área **Controle de Itens** concentra as capacidades recorrentes do depósito.
+
+Subáreas previstas:
+- Itens disponíveis;
+- Saída Expressa;
+- Movimentações;
+- Inventário;
+- Entregas;
+- Alertas;
+- SISCOFIS operacional/conciliação quando aplicável;
+- Configurações.
+
+Relatórios logísticos derivados deverão ser incorporados nessa área ou em superfície subordinada, sem criar novo saldo ou duplicar dados.
+
+A execução das pendências restantes segue o plano modular oficial registrado no ROADMAP.
+
+A cadência de validação continua obedecendo D-057:
+- não executar suítes completas a cada módulo;
+- não abrir PR/CI intermediário apenas para marcar cada módulo;
+- preservar todos os testes e guards existentes;
+- executar a campanha consolidada na etapa final prevista;
+- teste dirigido durante implementação somente quando necessário para diagnosticar bloqueio concreto.
+
