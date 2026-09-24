@@ -21,7 +21,7 @@ export interface WarehouseSectionDefinition {
 }
 
 export const WAREHOUSE_SECTIONS: readonly WarehouseSectionDefinition[] = [
-  { id: 'overview', label: 'Visão Geral', href: '/adm-deposito', eyebrow: 'Dashboard logístico', description: 'Indicadores acionáveis derivados de estoque, entregas, localização, inventário e SISCOFIS.', futurePhase: null },
+  { id: 'overview', label: 'Início', href: '/adm-deposito', eyebrow: 'Central visual do depósito', description: 'Consulta de itens, seleção do depósito e localização visual sobre croqui 2.5D com saldo, lotes e validade.', futurePhase: null },
   { id: 'stock', label: 'Estoque', href: '/adm-deposito/estoque', eyebrow: 'Consulta logística', description: 'Consulta operacional de saldo, barcodes, lotes, validade, localização, origem, pendências e recomendação FEFO.', futurePhase: null },
   { id: 'outbound', label: 'Saída Expressa', href: '/adm-deposito/saida-expressa', eyebrow: 'Scanner e retirada', description: 'Leitura HID/teclado, apresentações, conversão e saída auditável com proteção contra saldo negativo.', futurePhase: null },
   { id: 'movements', label: 'Movimentações', href: '/adm-deposito/movimentacoes', eyebrow: 'Ledger auditável', description: 'Superfície estrutural para consulta futura do ledger canônico criado na FASE 2.', futurePhase: 'FASES 4–10' },
