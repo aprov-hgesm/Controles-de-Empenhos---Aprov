@@ -31,7 +31,7 @@ export function WarehouseModuleShell({ section, workspaceId }: { section: Wareho
                 <Boxes className="h-6 w-6 text-blue-200" aria-hidden="true" />
               </div>
               <div>
-                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300/65">EMPROVEX // FASE 9</p>
+                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300/65">EMPROVEX // FASE 10</p>
                 <h1 className="mt-1 text-2xl font-black tracking-tight text-white">ADM Depósito</h1>
                 <p className="mt-1 text-xs leading-5 text-slate-500">Croqui operacional · localização visual · editor versionado</p>
               </div>
@@ -80,7 +80,7 @@ export function WarehouseModuleShell({ section, workspaceId }: { section: Wareho
         </div>
 
         <footer className="px-2 pb-2 pt-5 text-center text-[11px] leading-5 text-slate-600">
-          FASE 9 preserva o piloto founder-only e as autoridades anteriores. O croqui referencia posições reais; editar a representação nunca movimenta estoque.
+          FASE 10 preserva o piloto founder-only e as autoridades anteriores. Contagens físicas ficam separadas do estoque oficial até a confirmação humana explícita.
         </footer>
       </div>
     </main>
