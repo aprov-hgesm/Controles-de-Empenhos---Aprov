@@ -348,23 +348,16 @@ export async function applyWarehouseExpressOutbound(
           throw new Error('WAREHOUSE_IDEMPOTENCY_CONFLICT');
         }
 
+        if (!currentLocationBalance) {
+          throw new Error('WAREHOUSE_LOCATION_BALANCE_INCONSISTENT');
+        }
+
         return {
           applied: false,
           movement: existingMovement,
           previousBalance: currentBalance,
           balance: currentBalance,
-          locationBalance:
-            currentLocationBalance
-            || applyWarehouseLocationDelta(null, {
-              id: locationBalanceId,
-              workspaceId: scope.workspaceId,
-              ug: scope.ug,
-              materialId: material.id,
-              position,
-              quantityDelta: 0,
-              movementId: existingMovement.id,
-              initialQuantity: 0,
-            }),
+          locationBalance: currentLocationBalance,
           plan: {
             requestedQuantity: source.requestedQuantity,
             baseQuantity: source.quantity,
