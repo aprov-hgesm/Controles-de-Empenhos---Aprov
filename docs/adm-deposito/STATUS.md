@@ -49,20 +49,31 @@ A regressão pesada completa e o GitHub CI permanecem diferidos até o fechament
 
 ## FASE 11.5 — Consolidação Visual e UX
 
-Direção estética aprovada pelo fundador:
-- ADM Depósito deve parecer parte da plataforma operacional EMPROVEX, e não da área administrativa;
-- Header oficial do EMPROVEX reutilizado diretamente;
-- sidebar logística reconstruída sobre a mesma gramática visual do AppSidebar;
-- operador, status, logout, assinatura visual, responsividade e proporções preservados;
-- fundo e framework principal passam a seguir a plataforma EMPROVEX;
-- navegação permanece específica do ADM Depósito;
-- conteúdo interno será harmonizado progressivamente sem alterar regras funcionais.
+Estado atual: **EM EXECUÇÃO — shell EMPROVEX aplicado e nova Home/Início visual implementada na branch da fase**.
 
-Branch de trabalho:
+Direção estética aprovada pelo fundador:
+- ADM Depósito visualmente integrado à plataforma operacional EMPROVEX;
+- Header oficial reutilizado;
+- Sidebar logística reconstruída com a mesma gramática visual do AppSidebar;
+- antiga “Visão Geral” renomeada para **Início**;
+- Início com fundo branco e composição própria;
+- consulta de material à esquerda;
+- seletor de depósito imediatamente abaixo;
+- ficha do item com saldo total, quantidade no depósito, posições, lotes e validade;
+- croqui principal 2.5D/isométrico sem paredes, usando o piso como limitador físico;
+- item pesquisado destaca suas localizações reais;
+- controles de rotação e vista superior;
+- edição/versionamento do croqui continua na superfície Visão do Depósito;
+- nenhuma nova fonte de verdade foi criada.
+
+Branch:
 `feat/adm-deposito-phase-11-5-visual-ux`
 
-Gate local específico:
-`npm.cmd run verify:adm-deposito-phase-11-5`
+Política de validação:
+- por D-057, não executar agora suites/CI por incremento;
+- todos os testes, guards, TypeScript/build, Emulator, E2E e regressão integrada ficam consolidados para a FASE 13;
+- PowerShell local do fundador está disponível para intervenções necessárias e deve ser usado de forma consolidada.
+
 
 ## Estratégia de validação vigente
 
