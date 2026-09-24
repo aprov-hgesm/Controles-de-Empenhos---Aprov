@@ -83,20 +83,20 @@ Gate:
 - o esqueleto não cria segunda fonte de verdade para material, ledger ou saldo;
 - testes estruturais e build verdes.
 
-## FASE 4 — NF → Estoque — CONCLUÍDA
+## FASE 4 — NF → Estoque — CONCLUÍDA E DESACOPLADA DO NÚCLEO
 
 Blocos: DEP-3, DEP-3.1, DEP-3.2, DEP-3.3 e DEP-4.
 
-Capacidade completa:
-- NF cadastrada gera INVOICE_ENTRY no ledger;
-- vínculo permanente NF ↔ movimento ↔ item de origem;
-- chave de idempotência estável;
-- edição/correção usa movimento compensatório;
-- cancelamento/exclusão usa estorno controlado;
-- cutoff/data de ativação logística por workspace;
+Capacidade vigente:
+- NF cadastrada no EMPROVEX representa material recebido;
+- o ADM lê a NF já confirmada e projeta INVOICE_ENTRY no ledger em seu próprio namespace;
+- vínculo NF ↔ movimento ↔ item de origem e idempotência pertencem ao ADM;
+- edição/correção/exclusão da NF nunca dependem do warehouse;
+- correção/reversão logística acontece em reconciliação subsequente;
+- cutoff/data de ativação logística por workspace continua protegido;
 - nenhuma segunda lógica de saldo.
 
-Gate vertical: cadastrar, repetir, corrigir e estornar NF preservando ledger, saldo e histórico.
+Gate vertical: o EMPROVEX deve permanecer operável com o ADM indisponível; a projeção logística é idempotente e reconciliável.
 
 ## FASE 5 — SISCOFIS, Marco Zero e Conciliação — CONCLUÍDA
 
@@ -209,14 +209,14 @@ Fechamento: PR #180 aprovado e integrado à `main` por squash merge `0a15586ff39
 Blocos: DEP-22, DEP-22.1, DEP-23, DEP-23.1 e DEP-23.2.
 
 Capacidade completa:
-- migração conceitual do Planejamento/Cronograma para Logística sem duplicar dados;
-- Entrega → NF → estoque;
+- consumir Planejamento/Cronograma existente em modo somente leitura, sem duplicar dados;
+- correlacionar Entrega → NF → projeção de estoque dentro do ADM;
 - dashboard com indicadores acionáveis;
-- alertas de localização, validade, vencimento, baixo estoque, inventário, SISCOFIS e entregas;
-- uso da Central de Avisos existente;
-- NF cadastrada continua significando recebido.
+- alertas de localização, validade, vencimento, baixo estoque, inventário, SISCOFIS e entregas persistidos no namespace warehouse;
+- nenhuma alteração das Rules ou coleções operacionais do EMPROVEX para atender alertas logísticos;
+- NF cadastrada continua significando recebido, independentemente da disponibilidade do ADM.
 
-Gate vertical: expectativa de entrega e situação logística aparecem numa visão operacional única.
+Gate vertical: expectativa de entrega e situação logística aparecem no ADM sem introduzir dependência operacional no EMPROVEX.
 
 ## FASE 11.5 — Consolidação Visual e UX do ADM Depósito
 
@@ -331,6 +331,7 @@ FASE 0 Fundação e isolamento ✓
 → FASE 8 Saída / scanner ✓
 → FASE 9 Visão do Depósito ✓
 → FASE 10 Inventário ✓
+→ CORE PROTECTION EMPROVEX ✓ obrigatório antes da FASE 11
 → FASE 11 Entregas / dashboard / alertas
 → FASE 11.5 Consolidação Visual / UX
 → FASE 12 Segurança / performance / telemetria
