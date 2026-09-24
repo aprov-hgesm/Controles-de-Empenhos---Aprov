@@ -4,7 +4,7 @@ import {
   normalizeUnitUg,
   normalizeWorkspaceId,
 } from '../platformIdentity';
-import { isValidWarehouseMaterialId } from './material';
+import { isValidWarehouseMaterialId, normalizeWarehouseMaterialUnit, type WarehouseMaterialUnit } from './material';
 import {
   isValidWarehouseLocationBalanceId,
   normalizeWarehouseLocationQuantity,
@@ -55,9 +55,26 @@ export interface WarehouseLocationTransferMovementSource {
   toBalanceId: string;
 }
 
+export interface WarehouseExpressOutboundMovementSource {
+  kind: 'EXPRESS_OUTBOUND';
+  interface: 'BARCODE_SCANNER' | 'MANUAL_SEARCH';
+  actorUid: string;
+  requestedQuantity: number;
+  quantity: number;
+  presentation: WarehouseMaterialUnit;
+  factorToBaseUnit: number;
+  barcodeId: string | null;
+  barcode: string | null;
+  position: WarehouseStockPosition;
+  locationBalanceId: string;
+  lotId: string | null;
+  lotCode: string | null;
+}
+
 export type WarehouseMovementSource =
   | WarehouseInvoiceMovementSource
-  | WarehouseLocationTransferMovementSource;
+  | WarehouseLocationTransferMovementSource
+  | WarehouseExpressOutboundMovementSource;
 
 export interface WarehouseMovement {
   schemaVersion: typeof WAREHOUSE_MOVEMENT_SCHEMA_VERSION;
@@ -139,6 +156,21 @@ const TRANSFER_MOVEMENT_SOURCE_FIELDS = new Set([
   'to',
   'fromBalanceId',
   'toBalanceId',
+]);
+const EXPRESS_OUTBOUND_MOVEMENT_SOURCE_FIELDS = new Set([
+  'kind',
+  'interface',
+  'actorUid',
+  'requestedQuantity',
+  'quantity',
+  'presentation',
+  'factorToBaseUnit',
+  'barcodeId',
+  'barcode',
+  'position',
+  'locationBalanceId',
+  'lotId',
+  'lotCode',
 ]);
 const BALANCE_FIELDS = new Set([
   'schemaVersion',
@@ -257,6 +289,97 @@ function normalizeWarehouseMovementSource(input: unknown): WarehouseMovementSour
       to,
       fromBalanceId,
       toBalanceId,
+    };
+  }
+
+  if (input.kind === 'EXPRESS_OUTBOUND') {
+    if (!hasOnlyFields(input, EXPRESS_OUTBOUND_MOVEMENT_SOURCE_FIELDS)) return null;
+    const actorUid = typeof input.actorUid === 'string' ? normalizeText(input.actorUid) : '';
+    const interfaceName = typeof input.interface === 'string'
+      ? input.interface.trim().toUpperCase()
+      : '';
+    const requestedQuantity = normalizeWarehouseQuantity(input.requestedQuantity);
+    const quantity = normalizeWarehouseQuantity(input.quantity);
+    const factorToBaseUnit = normalizeWarehouseQuantity(input.factorToBaseUnit);
+    const presentation = normalizeWarehouseMaterialUnit(input.presentation);
+    const position = validateWarehouseStockPosition(input.position);
+    const locationBalanceId = typeof input.locationBalanceId === 'string'
+      ? input.locationBalanceId.trim().toLowerCase()
+      : '';
+    const barcodeId = input.barcodeId === null
+      ? null
+      : typeof input.barcodeId === 'string'
+        ? input.barcodeId.trim().toLowerCase()
+        : '';
+    const barcode = input.barcode === null
+      ? null
+      : typeof input.barcode === 'string'
+        ? input.barcode.trim()
+        : '';
+    const lotId = input.lotId === null
+      ? null
+      : typeof input.lotId === 'string'
+        ? input.lotId.trim().toLowerCase()
+        : '';
+    const lotCode = input.lotCode === null
+      ? null
+      : typeof input.lotCode === 'string'
+        ? normalizeText(input.lotCode)
+        : '';
+    const expectedQuantity = requestedQuantity !== null && factorToBaseUnit !== null
+      ? normalizeWarehouseQuantity(requestedQuantity * factorToBaseUnit)
+      : null;
+
+    if (
+      !actorUid || actorUid.length > 160
+      || !['BARCODE_SCANNER', 'MANUAL_SEARCH'].includes(interfaceName)
+      || requestedQuantity === null || requestedQuantity <= 0
+      || quantity === null || quantity <= 0
+      || factorToBaseUnit === null || factorToBaseUnit <= 0
+      || expectedQuantity === null || expectedQuantity !== quantity
+      || !presentation
+      || !position
+      || !isValidWarehouseLocationBalanceId(locationBalanceId)
+      || (lotId !== null && !/^lot_[a-f0-9]{32}$/.test(lotId))
+      || (lotCode !== null && (!lotCode || lotCode.length > 80))
+      || ((lotId === null) !== (lotCode === null))
+    ) {
+      return null;
+    }
+
+    if (
+      interfaceName === 'BARCODE_SCANNER'
+      && (
+        typeof barcodeId !== 'string'
+        || !/^bar_[a-f0-9]{64}$/.test(barcodeId)
+        || typeof barcode !== 'string'
+        || !barcode
+        || barcode.length > 128
+      )
+    ) {
+      return null;
+    }
+    if (
+      interfaceName === 'MANUAL_SEARCH'
+      && (barcodeId !== null || barcode !== null)
+    ) {
+      return null;
+    }
+
+    return {
+      kind: 'EXPRESS_OUTBOUND',
+      interface: interfaceName as 'BARCODE_SCANNER' | 'MANUAL_SEARCH',
+      actorUid,
+      requestedQuantity,
+      quantity,
+      presentation,
+      factorToBaseUnit,
+      barcodeId,
+      barcode,
+      position,
+      locationBalanceId,
+      lotId,
+      lotCode,
     };
   }
 
@@ -571,6 +694,28 @@ export function validateWarehouseMovement(
         'invalid_source_type',
         '$.source',
         'Origem LOCATION_TRANSFER só pode acompanhar movimento TRANSFER.'
+      )
+    );
+  }
+  if (source?.kind === 'EXPRESS_OUTBOUND' && type !== 'OUTBOUND') {
+    issues.push(
+      issue(
+        'invalid_source_type',
+        '$.source',
+        'Origem EXPRESS_OUTBOUND só pode acompanhar movimento OUTBOUND.'
+      )
+    );
+  }
+  if (
+    source?.kind === 'EXPRESS_OUTBOUND'
+    && quantityDelta !== null
+    && source.quantity !== -quantityDelta
+  ) {
+    issues.push(
+      issue(
+        'outbound_quantity_mismatch',
+        '$.source.quantity',
+        'Quantidade auditável da saída deve corresponder ao delta do ledger.'
       )
     );
   }

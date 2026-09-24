@@ -80,7 +80,6 @@ for (const marker of [
   'source.actorUid == request.auth.uid',
   'function validWarehouseInvoiceIntegrationSettings(workspaceId, settingId)',
   "match /settings/{settingId}",
-  "domain != 'settings'",
   'existsAfter(',
   'getAfter(',
 ]) {

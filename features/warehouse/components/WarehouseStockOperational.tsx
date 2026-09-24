@@ -21,6 +21,10 @@ import {
   type WarehouseStockPosition,
 } from '../../../lib/warehouse/location';
 import {
+  listWarehouseBarcodes,
+  type WarehouseBarcodeListItem,
+} from '../../../lib/warehouse/barcodeRepository';
+import {
   buildWarehousePositionLabel,
   listWarehouseDepots,
   listWarehouseLocationBalances,
@@ -62,6 +66,7 @@ interface WarehouseStockState {
   locations: WarehouseLocationListItem[];
   locationBalances: WarehouseLocationBalanceListItem[];
   lots: WarehouseLotListItem[];
+  barcodes: WarehouseBarcodeListItem[];
 }
 
 interface MaterialSummary {
@@ -69,6 +74,7 @@ interface MaterialSummary {
   balance: WarehouseBalance;
   locationBalances: WarehouseLocationBalance[];
   lots: WarehouseLot[];
+  barcodes: string[];
   unassigned: number;
   distributed: number;
   locationLabels: string[];
@@ -151,6 +157,7 @@ export function WarehouseStockOperational({
     locations: [],
     locationBalances: [],
     lots: [],
+    barcodes: [],
   });
   const [queryText, setQueryText] = useState('');
   const [depotFilter, setDepotFilter] = useState('');
@@ -173,7 +180,7 @@ export function WarehouseStockOperational({
   const refresh = async () => {
     setState((current) => ({ ...current, loading: true, error: null }));
     try {
-      const [materials, balances, depots, locations, locationBalances, lots] =
+      const [materials, balances, depots, locations, locationBalances, lots, barcodes] =
         await Promise.all([
           listWarehouseMaterials(workspaceId, 250),
           listWarehouseBalances(workspaceId, 250),
@@ -181,6 +188,7 @@ export function WarehouseStockOperational({
           listWarehouseLocations(workspaceId, 500),
           listWarehouseLocationBalances(workspaceId, 500),
           listWarehouseLots(workspaceId, 500),
+          listWarehouseBarcodes(workspaceId, 500),
         ]);
       setState({
         loading: false,
@@ -191,6 +199,7 @@ export function WarehouseStockOperational({
         locations,
         locationBalances,
         lots,
+        barcodes,
       });
     } catch (error) {
       setState((current) => ({
@@ -255,6 +264,9 @@ export function WarehouseStockOperational({
         const lots = state.lots
           .filter((item) => item.lot.materialId === balance.materialId)
           .map((item) => item.lot);
+        const barcodes = state.barcodes
+          .filter((item) => item.association.materialId === balance.materialId)
+          .map((item) => item.association.barcode);
         const locationLabels = Array.from(
           new Set([
             ...physical
@@ -280,6 +292,7 @@ export function WarehouseStockOperational({
           balance,
           locationBalances,
           lots,
+          barcodes,
           unassigned,
           distributed: Math.max(0, balance.quantity - unassigned),
           locationLabels,
@@ -297,6 +310,7 @@ export function WarehouseStockOperational({
   }, [
     materialById,
     state.balances,
+    state.barcodes,
     state.depots,
     state.locationBalances,
     state.locations,
@@ -351,6 +365,7 @@ export function WarehouseStockOperational({
           summary.material.id,
           summary.material.description,
           ...summary.material.aliases,
+          ...summary.barcodes,
           ...summary.locationLabels,
           ...summary.lots.flatMap((lot) => [
             lot.id,
@@ -653,6 +668,15 @@ export function WarehouseStockOperational({
               <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-blue-300/65">Ficha do material</p>
               <h3 className="mt-2 text-xl font-black text-white">{selected.material.description}</h3>
               <p className="mt-1 font-mono text-[9px] text-slate-600">{selected.material.id} · {selected.material.unit.label || selected.material.unit.code}</p>
+              <div data-testid="warehouse-material-barcodes" className="mt-2 flex flex-wrap gap-1.5">
+                {selected.barcodes.length > 0 ? selected.barcodes.map((barcode) => (
+                  <span key={barcode} className="rounded-md border border-blue-300/10 bg-blue-400/[0.04] px-2 py-1 font-mono text-[9px] text-blue-200/70">
+                    {barcode}
+                  </span>
+                )) : (
+                  <span className="text-[10px] text-slate-600">Nenhum código de barras associado.</span>
+                )}
+              </div>
             </div>
             <button
               type="button"

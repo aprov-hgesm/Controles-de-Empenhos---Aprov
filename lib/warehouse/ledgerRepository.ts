@@ -462,6 +462,13 @@ export async function applyWarehouseMovement(
         }
       }
 
+      if (
+        candidate.type === 'OUTBOUND'
+        && (!currentBalance || currentBalance.quantity + candidate.quantityDelta < -0.000001)
+      ) {
+        throw new Error('WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK');
+      }
+
       const nextBalance = applyWarehouseMovementToBalance(candidate, currentBalance);
       const currentUnassignedBalance = unassignedBalanceSnapshot.exists()
         ? parseLocationBalance(

@@ -497,3 +497,51 @@ Regras permanentes:
 - a tela Estoque não carrega o ledger global para montar uma listagem simples.
 
 Documento técnico: `docs/adm-deposito/PHASE_7_STOCK_LOTS_FEFO.md`.
+
+
+## D-042 — Barcode é identificador auxiliar subordinado ao material e à conversão canônica
+
+A FASE 8 introduz `warehouse_barcode_v1` sem alterar a identidade principal do estoque.
+
+Regras permanentes:
+- um material canônico pode possuir 0..N barcodes;
+- barcode nunca substitui `materialId`;
+- a apresentação de um barcode deve existir como unidade canônica ou conversão de `warehouse_material_v1`;
+- `factorToBaseUnit` não cria nova autoridade de conversão: ele materializa a conversão canônica já existente;
+- código desconhecido nunca cria material automaticamente;
+- a associação crítica barcode → material/apresentação é imutável após criação; pode ser inativada;
+- ID técnico é determinístico por workspace + código no repository;
+- barcode não cria saldo ou ledger paralelo.
+
+Documento técnico: `docs/adm-deposito/PHASE_8_BARCODE_SCANNER_EXPRESS_OUTBOUND.md`.
+
+## D-043 — Saída expressa é OUTBOUND atômico, idempotente e não admite saldo negativo
+
+A operação rápida da FASE 8 é uma especialização transacional do ledger oficial.
+
+Regras permanentes:
+- reutilizar `warehouse_movement_v1.type = OUTBOUND`;
+- origem estruturada `EXPRESS_OUTBOUND` registra interface, ator, apresentação, fator, posição, barcode e lote quando aplicáveis;
+- quantidade da apresentação é convertida para unidade oficial antes do movimento;
+- movimento, `warehouse_balance_v1` e a `warehouse_location_balance_v1` escolhida avançam na mesma transação;
+- saldo oficial insuficiente ou saldo insuficiente na posição aborta toda a operação;
+- nenhuma saída produz quantidade agregada ou física negativa;
+- retry usa a idempotência do ledger; replay idêntico não baixa duas vezes;
+- lote escolhido explicitamente tem sua atribuição logística reduzida na mesma transação, sem se tornar saldo oficial.
+
+Documento técnico: `docs/adm-deposito/PHASE_8_BARCODE_SCANNER_EXPRESS_OUTBOUND.md`.
+
+## D-044 — Scanner HID compartilha o fluxo manual e FEFO continua exigindo ação humana
+
+A interface operacional da FASE 8 não depende de integração proprietária de hardware.
+
+Regras permanentes:
+- leitores USB HID são tratados como teclado: código + ENTER;
+- digitação manual utiliza o mesmo campo e o mesmo resolvedor;
+- após operação bem-sucedida, o foco retorna ao scanner para permitir sequência contínua;
+- pesquisa manual converge para o mesmo serviço transacional da leitura por barcode;
+- FEFO é exibido como recomendação;
+- usar o lote FEFO exige ação explícita do operador;
+- ausência de lote/validade continua não bloqueante conforme D-041.
+
+Documento técnico: `docs/adm-deposito/PHASE_8_BARCODE_SCANNER_EXPRESS_OUTBOUND.md`.

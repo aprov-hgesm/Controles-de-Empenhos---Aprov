@@ -152,6 +152,13 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
       timeout: 20_000,
     });
     await expect(page.getByTestId('nav-adm-deposito')).toHaveCount(0);
+
+    await page.goto('/adm-deposito/saida-expressa');
+    await expect(page).toHaveURL(/\/$/, { timeout: 20_000 });
+    await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByTestId('warehouse-express-outbound')).toHaveCount(0);
   });
 
   test('segundo workspace não enxerga a NS nem o fornecedor do primeiro', async ({ page }) => {

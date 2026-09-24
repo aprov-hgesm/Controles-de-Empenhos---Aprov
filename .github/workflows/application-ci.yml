@@ -157,6 +157,12 @@ jobs:
       - name: ADM Depósito Phase 7 permanent guard
         run: npm run verify:adm-deposito-phase-7
 
+      - name: ADM Depósito Phase 8 barcode and outbound domain tests
+        run: npm run test:adm-deposito-barcode-outbound
+
+      - name: ADM Depósito Phase 8 permanent guard
+        run: npm run verify:adm-deposito-phase-8
+
       - name: Production multi-tenant readiness guard
         run: npm run verify:production-multitenant-readiness
 

@@ -1676,6 +1676,257 @@ async function main() {
     'Enriquecimento de lotes jamais altera warehouse_balance_v1'
   );
 
+
+  console.log('\nFASE 8 — Código de barras / Scanner / Saída Expressa');
+
+  const phase8BarcodeId = 'bar_' + '8'.repeat(64);
+  const phase8BarcodeRef = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'barcodes',
+    phase8BarcodeId
+  );
+  const phase8Barcode = {
+    schemaVersion: 'warehouse_barcode_v1',
+    id: phase8BarcodeId,
+    workspaceId: 'hgesm-aprov',
+    ug: '160416',
+    materialId: canonicalMaterialId,
+    barcode: '7891234567808',
+    presentation: { code: 'kg', label: null },
+    factorToBaseUnit: 1,
+    status: 'active',
+    createdBy: admin.user.uid,
+    updatedBy: admin.user.uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  await allowed('Fundador associa barcode FASE 8 ao material canônico', () =>
+    setDoc(phase8BarcodeRef, phase8Barcode)
+  );
+  await allowed('Fundador lê barcode FASE 8', () => getDoc(phase8BarcodeRef));
+
+  await denied('Barcode FASE 8 rejeita UG adulterada', () =>
+    setDoc(
+      doc(admin.db, 'warehouse', 'hgesm-aprov', 'barcodes', 'bar_' + 'a'.repeat(64)),
+      {
+        ...phase8Barcode,
+        id: 'bar_' + 'a'.repeat(64),
+        barcode: '7891234567809',
+        ug: '999999',
+      }
+    )
+  );
+
+  await denied('Barcode FASE 8 não pode trocar material após associação', () =>
+    updateDoc(phase8BarcodeRef, {
+      materialId: phase4MaterialId,
+      updatedBy: admin.user.uid,
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await denied('Setor externo não lê códigos de barras da FASE 8', () =>
+    getDoc(
+      doc(
+        sessionA.db,
+        'warehouse',
+        'hgesm-aprov',
+        'barcodes',
+        phase8BarcodeId
+      )
+    )
+  );
+
+  await denied('Setor externo não cria barcode nem no namespace fundador', () =>
+    setDoc(
+      doc(sessionA.db, 'warehouse', 'hgesm-aprov', 'barcodes', 'bar_' + 'b'.repeat(64)),
+      {
+        ...phase8Barcode,
+        id: 'bar_' + 'b'.repeat(64),
+        barcode: '7891234567810',
+        createdBy: sessionA.user.uid,
+        updatedBy: sessionA.user.uid,
+      }
+    )
+  );
+
+  const phase8MovementId = 'mov_' + 'e'.repeat(64);
+  await allowed('Saída expressa FASE 8 baixa ledger, saldo e posição na mesma operação', async () => {
+    const batch = writeBatch(admin.db);
+    batch.set(
+      doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase8MovementId),
+      {
+        schemaVersion: 'warehouse_movement_v1',
+        id: phase8MovementId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        type: 'OUTBOUND',
+        quantityDelta: -1,
+        idempotencyKeyHash: 'e'.repeat(64),
+        reversesMovementId: null,
+        note: 'Saída expressa security test',
+        source: {
+          kind: 'EXPRESS_OUTBOUND',
+          interface: 'BARCODE_SCANNER',
+          actorUid: admin.user.uid,
+          requestedQuantity: 1,
+          quantity: 1,
+          presentation: { code: 'kg', label: null },
+          factorToBaseUnit: 1,
+          barcodeId: phase8BarcodeId,
+          barcode: '7891234567808',
+          position: { kind: 'UNASSIGNED' },
+          locationBalanceId: phase6FromBalanceId,
+          lotId: null,
+          lotCode: null,
+        },
+        createdAt: serverTimestamp(),
+      }
+    );
+    batch.set(founderBalance, {
+      schemaVersion: 'warehouse_balance_v1',
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: canonicalMaterialId,
+      quantity: 7,
+      revision: 4,
+      lastMovementId: phase8MovementId,
+      updatedAt: serverTimestamp(),
+    });
+    batch.set(phase6FromBalanceRef, {
+      schemaVersion: 'warehouse_location_balance_v1',
+      id: phase6FromBalanceId,
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: canonicalMaterialId,
+      position: { kind: 'UNASSIGNED' },
+      quantity: 4,
+      revision: 2,
+      lastMovementId: phase8MovementId,
+      updatedAt: serverTimestamp(),
+    });
+    return batch.commit();
+  });
+
+  const phase8BalanceAfter = await getDoc(founderBalance);
+  const phase8PositionAfter = await getDoc(phase6FromBalanceRef);
+  assert.equal(phase8BalanceAfter.data().quantity, 7);
+  assert.equal(phase8PositionAfter.data().quantity, 4);
+
+  const phase8MissingPositionId = 'mov_' + 'd'.repeat(64);
+  await denied('Saída expressa FASE 8 exige baixa física atômica correspondente', async () => {
+    const batch = writeBatch(admin.db);
+    batch.set(
+      doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase8MissingPositionId),
+      {
+        schemaVersion: 'warehouse_movement_v1',
+        id: phase8MissingPositionId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        type: 'OUTBOUND',
+        quantityDelta: -1,
+        idempotencyKeyHash: 'd'.repeat(64),
+        reversesMovementId: null,
+        note: null,
+        source: {
+          kind: 'EXPRESS_OUTBOUND',
+          interface: 'BARCODE_SCANNER',
+          actorUid: admin.user.uid,
+          requestedQuantity: 1,
+          quantity: 1,
+          presentation: { code: 'kg', label: null },
+          factorToBaseUnit: 1,
+          barcodeId: phase8BarcodeId,
+          barcode: '7891234567808',
+          position: { kind: 'UNASSIGNED' },
+          locationBalanceId: phase6FromBalanceId,
+          lotId: null,
+          lotCode: null,
+        },
+        createdAt: serverTimestamp(),
+      }
+    );
+    batch.set(founderBalance, {
+      schemaVersion: 'warehouse_balance_v1',
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: canonicalMaterialId,
+      quantity: 6,
+      revision: 5,
+      lastMovementId: phase8MissingPositionId,
+      updatedAt: serverTimestamp(),
+    });
+    return batch.commit();
+  });
+
+  const phase8NegativeId = 'mov_' + 'c'.repeat(64);
+  await denied('Saída expressa FASE 8 não pode produzir saldo negativo', async () => {
+    const batch = writeBatch(admin.db);
+    batch.set(
+      doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase8NegativeId),
+      {
+        schemaVersion: 'warehouse_movement_v1',
+        id: phase8NegativeId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        type: 'OUTBOUND',
+        quantityDelta: -8,
+        idempotencyKeyHash: 'c'.repeat(64),
+        reversesMovementId: null,
+        note: null,
+        source: {
+          kind: 'EXPRESS_OUTBOUND',
+          interface: 'BARCODE_SCANNER',
+          actorUid: admin.user.uid,
+          requestedQuantity: 8,
+          quantity: 8,
+          presentation: { code: 'kg', label: null },
+          factorToBaseUnit: 1,
+          barcodeId: phase8BarcodeId,
+          barcode: '7891234567808',
+          position: { kind: 'UNASSIGNED' },
+          locationBalanceId: phase6FromBalanceId,
+          lotId: null,
+          lotCode: null,
+        },
+        createdAt: serverTimestamp(),
+      }
+    );
+    batch.set(founderBalance, {
+      schemaVersion: 'warehouse_balance_v1',
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: canonicalMaterialId,
+      quantity: -1,
+      revision: 5,
+      lastMovementId: phase8NegativeId,
+      updatedAt: serverTimestamp(),
+    });
+    batch.set(phase6FromBalanceRef, {
+      schemaVersion: 'warehouse_location_balance_v1',
+      id: phase6FromBalanceId,
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: canonicalMaterialId,
+      position: { kind: 'UNASSIGNED' },
+      quantity: -4,
+      revision: 3,
+      lastMovementId: phase8NegativeId,
+      updatedAt: serverTimestamp(),
+    });
+    return batch.commit();
+  });
+
+  await denied('Barcode FASE 8 não pode ser excluído fisicamente', () =>
+    deleteDoc(phase8BarcodeRef)
+  );
+
   console.log('Isolamento A ↔ B');
   await allowed('Setor A lê o próprio empenho', () =>
     getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))

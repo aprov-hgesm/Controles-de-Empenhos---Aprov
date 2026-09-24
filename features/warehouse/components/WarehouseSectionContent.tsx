@@ -11,6 +11,7 @@ import { WAREHOUSE_DOMAIN_COLLECTIONS, WAREHOUSE_NAMESPACE_ROOT } from '../../..
 import { WAREHOUSE_SISCOFIS_IMPORT_SCHEMA_VERSION, WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION, type WarehouseSiscofisIssue, type WarehouseSiscofisPreview } from '../../../lib/warehouse/siscofis';
 import { confirmWarehouseSiscofisImport, loadWarehouseSiscofisContext, prepareWarehouseSiscofisImport, type WarehouseSiscofisContext } from '../../../lib/warehouse/siscofisService';
 import type { WarehouseSectionId } from '../navigation';
+import { WarehouseExpressOutbound } from './WarehouseExpressOutbound';
 import { WarehouseLocationsOperational } from './WarehouseLocationsOperational';
 import { WarehouseStockOperational } from './WarehouseStockOperational';
 
@@ -508,6 +509,7 @@ export function WarehouseSectionContent({ section, workspaceId }: { section: War
   switch (section) {
     case 'overview': return <OverviewContent />;
     case 'stock': return <WarehouseStockOperational workspaceId={workspaceId} />;
+    case 'outbound': return <WarehouseExpressOutbound workspaceId={workspaceId} />;
     case 'movements': return <MovementsContent data={phase4Data} />;
     case 'locations': return <WarehouseLocationsOperational workspaceId={workspaceId} />;
     case 'warehouseView': return <WarehouseViewContent />;

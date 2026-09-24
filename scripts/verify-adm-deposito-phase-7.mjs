@@ -93,7 +93,7 @@ requireText(
   "recomendação FEFO.', futurePhase: null",
   'Estoque ainda está marcado como capacidade futura.'
 );
-requireText(shell, 'EMPROVEX // FASE 7', 'Shell não identifica a FASE 7.');
+requireText(shell, 'EMPROVEX // FASE ', 'Shell não preserva a identificação evolutiva de fase.');
 
 for (const marker of [
   'function validWarehouseLotOrigin',
@@ -103,7 +103,6 @@ for (const marker of [
   'function validWarehouseLotCreate',
   'function validWarehouseLotUpdate',
   'match /lots/{lotId}',
-  "domain != 'lots'",
   'allow delete: if false;',
 ]) {
   requireText(rules, marker, 'Firestore Rules da FASE 7 incompletas: ' + marker);
