@@ -252,11 +252,18 @@ O cronograma atual deve ser reaproveitado, sem duplicar dados.
 
 Transição visual pode manter compatibilidade temporária com a rota atual.
 
-## D-025 — Alertas logísticos integram a central existente
+## D-025 — Alertas logísticos pertencem ao namespace warehouse
 
-Não criar um sistema paralelo de notificações.
+Não criar dependência de escrita do ADM Depósito sobre a Central de Avisos operacional do EMPROVEX.
 
-Alertas de validade, localização, divergência, estoque e SISCOFIS entram na central atual do EMPROVEX.
+Regras:
+- alertas de validade, localização, divergência, estoque, SISCOFIS e entregas são persistidos exclusivamente em `warehouse/{workspaceId}/alerts`;
+- IDs são determinísticos por tipo + entidade e a reconciliação é idempotente;
+- quando a causa desaparece, o alerta é resolvido no próprio namespace logístico, não apagado;
+- uma superfície agregadora futura poderá ler alertas logísticos por uma camada neutra, mas o ADM não pode chamar `saveAlert` nem escrever em `workspaces/{workspaceId}/alerts`;
+- falha na persistência de alertas do ADM é best-effort e nunca bloqueia Dashboard, NF, Empenho, Cronograma ou qualquer fluxo operacional do EMPROVEX.
+
+Esta decisão substitui a redação anterior de integração por escrita na Central de Avisos e é subordinada à D-052/D-053.
 
 ## D-026 — Toda entidade é isolada por workspace/UG
 
