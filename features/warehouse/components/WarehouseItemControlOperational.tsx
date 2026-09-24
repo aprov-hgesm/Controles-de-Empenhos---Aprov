@@ -19,8 +19,10 @@ import { WarehouseInventoryOperational } from './WarehouseInventoryOperational';
 import { WarehouseDeliveriesOperational } from './WarehouseDeliveriesOperational';
 import { WarehouseLogisticsAlerts } from './WarehouseLogisticsAlerts';
 import { WarehouseLogisticsSettings } from './WarehouseLogisticsSettings';
+import { WarehouseLogisticsDashboard } from './WarehouseLogisticsDashboard';
 
 type ControlTab =
+  | 'summary'
   | 'stock'
   | 'outbound'
   | 'movements'
@@ -34,6 +36,7 @@ const CONTROL_TABS: Array<{
   label: string;
   icon: typeof Boxes;
 }> = [
+  { id: 'summary', label: 'Resumo logístico', icon: Gauge },
   { id: 'stock', label: 'Itens disponíveis', icon: Boxes },
   { id: 'outbound', label: 'Saída Expressa', icon: ScanLine },
   { id: 'movements', label: 'Movimentações', icon: Gauge },
@@ -80,6 +83,7 @@ export function WarehouseItemControlOperational({ workspaceId }: { workspaceId: 
         })}
       </div>
 
+      {tab === 'summary' && <WarehouseLogisticsDashboard workspaceId={workspaceId} />}
       {tab === 'stock' && <WarehouseStockOperational workspaceId={workspaceId} />}
       {tab === 'outbound' && <WarehouseExpressOutbound workspaceId={workspaceId} />}
       {tab === 'movements' && <WarehouseMovementsOperational workspaceId={workspaceId} />}
