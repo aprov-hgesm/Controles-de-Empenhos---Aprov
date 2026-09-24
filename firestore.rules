@@ -4188,7 +4188,7 @@ service cloud.firestore {
         && request.resource.data.updatedAt is timestamp;
     }
 
-    function warehouseLayoutPreviousVersionArchivedAfter(workspaceId, previousId, expectedUg, expectedVersion) {
+    function warehouseLayoutPreviousVersionArchivedAfter(workspaceId, previousId, expectedUg, expectedDepotId, expectedVersion) {
       let previousPath = /databases/$(database)/documents/warehouse/$(workspaceId)/layouts/$(previousId);
       return previousId is string
         && previousId.matches('^lay_[a-f0-9]{32}$')
@@ -4196,6 +4196,7 @@ service cloud.firestore {
         && get(previousPath).data.schemaVersion == 'warehouse_depot_layout_v1'
         && get(previousPath).data.workspaceId == workspaceId
         && get(previousPath).data.ug == expectedUg
+        && get(previousPath).data.depotId == expectedDepotId
         && get(previousPath).data.version == expectedVersion
         && get(previousPath).data.status == 'active'
         && existsAfter(previousPath)
@@ -4208,6 +4209,7 @@ service cloud.firestore {
           workspaceId,
           request.resource.data.previousVersionId,
           request.resource.data.ug,
+          request.resource.data.depotId,
           request.resource.data.version - 1
         );
     }
