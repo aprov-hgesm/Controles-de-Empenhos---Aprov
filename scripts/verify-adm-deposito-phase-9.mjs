@@ -30,7 +30,8 @@ assert.match(repository, /saveWarehouseDepotLayoutVersion/);
 assert.match(repository, /runTransaction/);
 assert.match(repository, /status: 'archived'/);
 assert.match(repository, /WAREHOUSE_LAYOUT_LOCATION_INVALID/);
-assert.match(repository, /listWarehouseLocationBalances/);
+assert.doesNotMatch(repository, /warehouse_balance_v1|warehouse_movement_v1/);
+assert.match(ui, /listWarehouseLocationBalances/);
 
 assert.match(ui, /warehouse-depot-view-operational/);
 assert.match(ui, /warehouse-layout-material-search/);
@@ -60,7 +61,7 @@ assert.match(roadmap, /## FASE 9 — Visão do Depósito, Editor e Persistência
 
 assert.equal(
   packageJson.scripts['test:adm-deposito-depot-layout'],
-  'node --experimental-strip-types --test scripts/warehouse-depot-layout.test.mjs'
+  'node --test scripts/warehouse-depot-layout.test.mjs'
 );
 assert.equal(
   packageJson.scripts['verify:adm-deposito-phase-9'],
