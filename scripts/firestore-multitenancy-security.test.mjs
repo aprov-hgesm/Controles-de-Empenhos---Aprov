@@ -1107,6 +1107,210 @@ async function main() {
     )
   );
 
+  console.log('\nDiagnóstico — receipt lifecycle NF + warehouse em transação única');
+
+  for (const itemCount of [1, 2, 3, 4]) {
+    const probeEmpenhoId = `2026NE-RECEIPT-${itemCount}`;
+    const probeInvoiceKey = `nf_11222333000181_receipt_${itemCount}`;
+    const probeItems = Array.from({ length: itemCount }, (_, index) => ({
+      id: `item-${index + 1}`,
+      name: `Material receipt ${itemCount}-${index + 1}`,
+      unit: 'UN',
+      quantity: 10,
+      unitPrice: 5,
+      received: 0,
+    }));
+
+    await ownerSet(`workspaces/hgesm-aprov/empenhos/${probeEmpenhoId}`, {
+      id: probeEmpenhoId,
+      supplier: 'Fornecedor Receipt Probe',
+      supplierCnpj: '11222333000181',
+      description: `Probe receipt lifecycle com ${itemCount} item(ns)`,
+      date: '2026-09-24',
+      status: 'Ativo',
+      classification: 'QR',
+      items: probeItems,
+      revision: 1,
+      updatedAt: '2026-09-24T12:00:00.000Z',
+      updatedBy: admin.user.uid,
+      userId: admin.user.uid,
+    });
+
+    await allowed(`Receipt lifecycle com ${itemCount} material(is) integra NF + estoque atomicamente`, () =>
+      runTransaction(admin.db, async (transaction) => {
+        const empenhoRef = doc(
+          admin.db,
+          'workspaces',
+          'hgesm-aprov',
+          'empenhos',
+          probeEmpenhoId
+        );
+        const invoiceRef = doc(
+          admin.db,
+          'workspaces',
+          'hgesm-aprov',
+          'invoices',
+          probeInvoiceKey
+        );
+        const alertRef = doc(
+          admin.db,
+          'workspaces',
+          'hgesm-aprov',
+          'alerts',
+          `receipt-probe-${itemCount}`
+        );
+
+        const empenhoSnapshot = await transaction.get(empenhoRef);
+        assert.equal(empenhoSnapshot.exists(), true);
+
+        const updatedItems = [];
+        const invoiceItems = [];
+
+        for (let index = 0; index < itemCount; index += 1) {
+          const materialId = 'mat_' + String(itemCount) + String(index + 1).padStart(2, '0') + 'a'.repeat(29);
+          const movementHash = String(itemCount) + String(index + 1).padStart(2, '0') + 'b'.repeat(61);
+          const movementId = 'mov_' + movementHash;
+
+          const materialRef = doc(
+            admin.db,
+            'warehouse',
+            'hgesm-aprov',
+            'materials',
+            materialId
+          );
+          const movementRef = doc(
+            admin.db,
+            'warehouse',
+            'hgesm-aprov',
+            'movements',
+            movementId
+          );
+          const balanceRef = doc(
+            admin.db,
+            'warehouse',
+            'hgesm-aprov',
+            'balances',
+            materialId
+          );
+
+          const [materialSnapshot, movementSnapshot, balanceSnapshot] = await Promise.all([
+            transaction.get(materialRef),
+            transaction.get(movementRef),
+            transaction.get(balanceRef),
+          ]);
+          assert.equal(materialSnapshot.exists(), false);
+          assert.equal(movementSnapshot.exists(), false);
+          assert.equal(balanceSnapshot.exists(), false);
+
+          transaction.set(materialRef, {
+            schemaVersion: 'warehouse_material_v1',
+            id: materialId,
+            workspaceId: 'hgesm-aprov',
+            ug: '160416',
+            description: probeItems[index].name,
+            aliases: [],
+            unit: { code: 'unit', label: null },
+            status: 'active',
+            conversions: [],
+          });
+          transaction.set(movementRef, {
+            schemaVersion: 'warehouse_movement_v1',
+            id: movementId,
+            workspaceId: 'hgesm-aprov',
+            ug: '160416',
+            materialId,
+            type: 'INVOICE_ENTRY',
+            quantityDelta: 1,
+            idempotencyKeyHash: movementHash,
+            reversesMovementId: null,
+            note: `NF RECEIPT-${itemCount} · Empenho ${probeEmpenhoId}`,
+            source: {
+              kind: 'INVOICE',
+              action: 'ENTRY',
+              invoiceRecordKey: probeInvoiceKey,
+              invoiceId: `RECEIPT-${itemCount}`,
+              empenhoId: probeEmpenhoId,
+              itemIds: [probeItems[index].id],
+              supplier: 'Fornecedor Receipt Probe',
+              supplierCnpj: '11222333000181',
+              actorUid: admin.user.uid,
+            },
+            createdAt: serverTimestamp(),
+          });
+          transaction.set(balanceRef, {
+            schemaVersion: 'warehouse_balance_v1',
+            workspaceId: 'hgesm-aprov',
+            ug: '160416',
+            materialId,
+            quantity: 1,
+            revision: 1,
+            lastMovementId: movementId,
+            updatedAt: serverTimestamp(),
+          });
+
+          updatedItems.push({
+            ...probeItems[index],
+            received: 1,
+            warehouseMaterialId: materialId,
+          });
+          invoiceItems.push({
+            itemId: probeItems[index].id,
+            quantity: 1,
+            unitPrice: 5,
+            subtotal: 5,
+            warehouseMaterialId: materialId,
+            warehouseMovementIds: [movementId],
+          });
+        }
+
+        transaction.set(empenhoRef, {
+          ...empenhoSnapshot.data(),
+          items: updatedItems,
+          revision: 2,
+          updatedAt: now(),
+          updatedBy: admin.user.uid,
+          userId: admin.user.uid,
+        });
+
+        transaction.set(invoiceRef, {
+          id: `RECEIPT-${itemCount}`,
+          recordKey: probeInvoiceKey,
+          empenhoId: probeEmpenhoId,
+          issueDate: '2026-09-24',
+          items: invoiceItems,
+          totalValue: itemCount * 5,
+          supplier: 'Fornecedor Receipt Probe',
+          supplierCnpj: '11222333000181',
+          registeredAt: now(),
+          localizacaoAtual: 'APROVISIONAMENTO',
+          warehouseIntegration: {
+            schemaVersion: 'warehouse_invoice_link_v1',
+            status: 'integrated',
+            workspaceId: 'hgesm-aprov',
+            cutoffAt: '2026-09-23T15:00:00.000Z',
+            revision: 1,
+            lastMovementIds: invoiceItems.flatMap((item) => item.warehouseMovementIds),
+          },
+          userId: admin.user.uid,
+        });
+
+        transaction.set(alertRef, {
+          id: `receipt-probe-${itemCount}`,
+          empenhoId: probeEmpenhoId,
+          type: 'INFORMATIVO',
+          status: 'NOVO',
+          source: 'NOTA_FISCAL',
+          title: `NF RECEIPT-${itemCount} recebida com sucesso!`,
+          subtitle: 'Fornecedor: Fornecedor Receipt Probe',
+          description: `Probe com ${itemCount} material(is).`,
+          date: 'Agora',
+          createdAt: now(),
+          userId: admin.user.uid,
+        });
+      })
+    );
+  }
+
   console.log('\nFASE 6 — Depósitos / Localizações / Transferências');
 
   const phase6DepotId = 'dep_' + '6'.repeat(32);
