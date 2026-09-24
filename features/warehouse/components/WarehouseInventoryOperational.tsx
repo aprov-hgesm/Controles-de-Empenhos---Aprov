@@ -549,6 +549,7 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
                           <td className="p-3">
                             <input
                               data-testid="warehouse-inventory-count"
+                              data-expected={item.expectedQuantity}
                               inputMode="decimal"
                               value={drafts[item.id] ?? (item.countedQuantity === null ? '' : String(item.countedQuantity))}
                               onChange={(event) => setDrafts((current) => ({ ...current, [item.id]: event.target.value }))}
