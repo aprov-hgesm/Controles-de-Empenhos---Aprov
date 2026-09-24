@@ -1,8 +1,44 @@
 #!/usr/bin/env node
-import test from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, resolve } from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import test from 'node:test';
 
-const source = await import('../lib/warehouse/layout.ts');
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const outDir = mkdtempSync(resolve(tmpdir(), 'emprovex-phase9-domain-'));
+
+execFileSync(
+  process.execPath,
+  [
+    resolve(root, 'node_modules/typescript/bin/tsc'),
+    resolve(root, 'lib/warehouse/layout.ts'),
+    resolve(root, 'lib/warehouse/location.ts'),
+    resolve(root, 'lib/warehouse/material.ts'),
+    resolve(root, 'lib/platformIdentity.ts'),
+    '--outDir',
+    outDir,
+    '--module',
+    'commonjs',
+    '--target',
+    'ES2020',
+    '--moduleResolution',
+    'node',
+    '--skipLibCheck',
+    '--esModuleInterop',
+  ],
+  { cwd: root, stdio: 'pipe' }
+);
+
+const require = createRequire(import.meta.url);
+const source = require(resolve(outDir, 'warehouse/layout.js'));
+
+test.after(() => {
+  rmSync(outDir, { recursive: true, force: true });
+});
 
 const WORKSPACE = 'hgesm-aprov';
 const UG = '160416';
