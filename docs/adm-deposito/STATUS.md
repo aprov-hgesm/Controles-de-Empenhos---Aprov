@@ -543,6 +543,17 @@ A FASE 11 não foi iniciada. A FASE 10 já está integrada à `main` com os gate
 4. FASE 13 — validação integrada e fechamento do piloto;
 5. FASE 14 — expansão externa futura.
 
+## Regra operacional de CI documental
+
+Política oficial registrada em `docs/DEVELOPMENT_CI_WORKFLOW.md`:
+- alterações exclusivamente em `docs/**` não disparam o Application CI;
+- encerramentos documentais de fase, atualização de STATUS, ROADMAP e HANDOFF podem ser feitos sem repetir a bateria completa quando nenhum arquivo funcional/configuracional fizer parte do diff;
+- qualquer alteração fora de `docs/**` restaura o fluxo normal de CI;
+- esta exceção não se aplica a código, Firestore Rules, scripts, testes, workflows ou infraestrutura;
+- `Recovery guardrails` continua obedecendo seu filtro específico de arquivos.
+
+A regra foi implementada na `main` em 2026-09-24 pelo commit `a09efba4d9dc595073fdb629791d44fc47135e5e`.
+
 ## Gate para o próximo chat
 
 Antes de modificar código:
