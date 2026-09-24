@@ -4,7 +4,7 @@ Este arquivo registra o estado real de continuidade do projeto e deve ser tratad
 
 ## Estado geral
 
-Status: **FASE 10 CONCLUÍDA — EMPROVEX CORE PROTECTION EM IMPLANTAÇÃO ANTES DA FASE 11**
+Status: **FASE 11 IMPLEMENTADA E VALIDADA LOCALMENTE — AGUARDANDO CERTIFICAÇÃO/INTEGRAÇÃO**
 
 Data de fechamento: 2026-09-24.
 
@@ -20,7 +20,32 @@ Situação:
 - FASE 9 — Visão do Depósito / Editor / Persistência implementada no PR #179;
 - piloto permanece exclusivo da conta fundadora;
 - usuários externos continuam sem visibilidade e sem acesso ao módulo ADM Depósito;
-- houve uma tentativa de FASE 11 no PR #182, fechada sem merge após a revisão arquitetural que priorizou a independência operacional do EMPROVEX.
+- houve uma tentativa de FASE 11 no PR #182, fechada sem merge após a revisão arquitetural que priorizou a independência operacional do EMPROVEX;
+- EMPROVEX Core Protection foi integrado à `main` pelo PR #185, squash merge `55e53c6724f8bf34f0bfe94bc771150c5f009398`;
+- FASE 11 foi reconstruída sobre essa fronteira na branch `feat/adm-deposito-phase-11-protected`;
+- gates locais da FASE 11 aprovados em 2026-09-24: Core Protection `OK`, domínio logístico 5/5, guard protegido `PASS` e walking skeleton 6/6.
+
+## FASE 11 — implementação atual
+
+Capacidades implementadas:
+- Entregas derivadas de Empenhos + Cronogramas + NFs em modo somente leitura;
+- correlação NF/Empenho → material por movimentos `source.kind = INVOICE` do ledger do ADM;
+- Dashboard Logístico real na Visão Geral;
+- alertas logísticos próprios em `warehouse/{workspaceId}/alerts`;
+- limiar opcional de baixo estoque em `warehouse/{workspaceId}/settings/logistics-alerts`;
+- aba/rota Alertas no ADM Depósito;
+- Rules novas restritas ao bloco `warehouse/{workspaceId}`;
+- D-025 atualizada para proibir escrita do ADM na Central de Avisos operacional;
+- sem associação artificial de NF a remessa do Cronograma;
+- sem mutação de Empenhos, Cronogramas, NFs ou Alertas operacionais pelo ADM.
+
+Validação local concluída:
+- `verify:emprovex-core-protection` — OK;
+- `test:adm-deposito-logistics` — 5/5;
+- `verify:adm-deposito-phase-11` — PASS;
+- `test:adm-deposito-walking-skeleton` — 6/6.
+
+A regressão pesada completa permanece consolidada para a FASE 13 conforme D-054. O GitHub CI da integração continua sendo a certificação final do merge.
 
 ## Estratégia de validação vigente
 
