@@ -4,20 +4,12 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Activity,
   ArrowLeft,
-  ArrowLeftRight,
-  BellRing,
   Boxes,
-  ClipboardCheck,
+  ClipboardPlus,
   LayoutDashboard,
   LogOut,
-  Map,
-  MapPin,
-  PackageSearch,
-  ScanLine,
-  Settings2,
+  Warehouse,
   ShieldCheck,
-  SlidersHorizontal,
-  Truck,
   UserRound,
   X,
 } from 'lucide-react';
@@ -28,16 +20,9 @@ import { WAREHOUSE_SECTIONS, type WarehouseSectionId } from '../navigation';
 
 const SECTION_ICONS: Record<WarehouseSectionId, LucideIcon> = {
   overview: LayoutDashboard,
-  stock: PackageSearch,
-  outbound: ScanLine,
-  movements: ArrowLeftRight,
-  locations: MapPin,
-  warehouseView: Map,
-  inventory: ClipboardCheck,
-  siscofis: SlidersHorizontal,
-  deliveries: Truck,
-  alerts: BellRing,
-  settings: Settings2,
+  registration: ClipboardPlus,
+  depots: Warehouse,
+  control: Boxes,
 };
 
 interface WarehouseSidebarProps {
