@@ -2066,6 +2066,267 @@ async function main() {
     deleteDoc(phase9LayoutV2Ref)
   );
 
+  console.log('\nFASE 10 — Inventário Físico');
+
+  const phase10InventoryId = 'inv_' + 'a'.repeat(32);
+  const phase10ItemId = 'invit_' + 'b'.repeat(64);
+  const phase10MovementId = 'mov_' + 'd'.repeat(64);
+  const phase10InventoryRef = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'inventories',
+    phase10InventoryId
+  );
+  const phase10ItemRef = doc(
+    admin.db,
+    'warehouse',
+    'hgesm-aprov',
+    'inventories',
+    phase10InventoryId,
+    'items',
+    phase10ItemId
+  );
+
+  const phase10BalanceBefore = await getDoc(founderBalance);
+  const phase10LocationBefore = await getDoc(phase6FromBalanceRef);
+  assert.equal(phase10BalanceBefore.exists(), true);
+  assert.equal(phase10LocationBefore.exists(), true);
+  const phase10Aggregate = phase10BalanceBefore.data();
+  const phase10Physical = phase10LocationBefore.data();
+  const phase10Counted = phase10Physical.quantity + 1;
+
+  await allowed('Fundador abre sessão de inventário FASE 10', () =>
+    setDoc(phase10InventoryRef, {
+      schemaVersion: 'warehouse_inventory_v1',
+      id: phase10InventoryId,
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      scope: { kind: 'TOTAL' },
+      status: 'OPENING',
+      itemCount: 1,
+      openedBy: admin.user.uid,
+      reviewedBy: null,
+      confirmationStartedBy: null,
+      confirmedBy: null,
+      cancelledBy: null,
+      reviewSummary: null,
+      staleItemId: null,
+      referenceCapturedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      reviewedAt: null,
+      confirmationStartedAt: null,
+      confirmedAt: null,
+      cancelledAt: null,
+    })
+  );
+
+  await allowed('Fundador cria item separado do estoque oficial', () =>
+    setDoc(phase10ItemRef, {
+      schemaVersion: 'warehouse_inventory_item_v1',
+      id: phase10ItemId,
+      inventoryId: phase10InventoryId,
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: canonicalMaterialId,
+      position: { kind: 'UNASSIGNED' },
+      locationBalanceId: phase6FromBalanceId,
+      expectedQuantity: phase10Physical.quantity,
+      expectedBalanceRevision: phase10Aggregate.revision,
+      expectedBalanceLastMovementId: phase10Aggregate.lastMovementId,
+      expectedLocationRevision: phase10Physical.revision,
+      expectedLocationLastMovementId: phase10Physical.lastMovementId,
+      countedQuantity: null,
+      difference: null,
+      status: 'PENDING',
+      countedBy: null,
+      countedAt: null,
+      adjustmentMovementId: null,
+      adjustedBy: null,
+      adjustedAt: null,
+    })
+  );
+
+  await allowed('Sessão FASE 10 entra em contagem', () =>
+    updateDoc(phase10InventoryRef, {
+      status: 'COUNTING',
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await allowed('Salvar contagem não altera saldo oficial', () =>
+    updateDoc(phase10ItemRef, {
+      countedQuantity: phase10Counted,
+      difference: 1,
+      status: 'DIVERGENT',
+      countedBy: admin.user.uid,
+      countedAt: serverTimestamp(),
+      adjustmentMovementId: null,
+      adjustedBy: null,
+      adjustedAt: null,
+    })
+  );
+  const phase10BalanceAfterCount = await getDoc(founderBalance);
+  const phase10LocationAfterCount = await getDoc(phase6FromBalanceRef);
+  assert.equal(phase10BalanceAfterCount.data().quantity, phase10Aggregate.quantity);
+  assert.equal(phase10LocationAfterCount.data().quantity, phase10Physical.quantity);
+
+  await denied('Contagem isolada não pode escrever saldo diretamente', () =>
+    updateDoc(founderBalance, {
+      quantity: phase10Aggregate.quantity + 1,
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await allowed('Fundador fecha contagem para revisão', () =>
+    updateDoc(phase10InventoryRef, {
+      status: 'REVIEW',
+      reviewedBy: admin.user.uid,
+      reviewSummary: {
+        totalItems: 1,
+        countedItems: 1,
+        matchedItems: 0,
+        divergentItems: 1,
+        adjustedItems: 0,
+        positiveDifference: 1,
+        negativeDifference: 0,
+      },
+      reviewedAt: serverTimestamp(),
+      staleItemId: null,
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await allowed('Fundador inicia confirmação explícita', () =>
+    updateDoc(phase10InventoryRef, {
+      status: 'CONFIRMING',
+      confirmationStartedBy: admin.user.uid,
+      confirmationStartedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await allowed('INVENTORY_ADJUSTMENT atualiza ledger e projeções atomicamente', async () => {
+    const batch = writeBatch(admin.db);
+    batch.set(
+      doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase10MovementId),
+      {
+        schemaVersion: 'warehouse_movement_v1',
+        id: phase10MovementId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        type: 'INVENTORY_ADJUSTMENT',
+        quantityDelta: 1,
+        idempotencyKeyHash: 'd'.repeat(64),
+        reversesMovementId: null,
+        note: 'Ajuste confirmado no inventário físico ' + phase10InventoryId,
+        source: {
+          kind: 'PHYSICAL_INVENTORY',
+          actorUid: admin.user.uid,
+          inventoryId: phase10InventoryId,
+          inventoryItemId: phase10ItemId,
+          expectedQuantity: phase10Physical.quantity,
+          countedQuantity: phase10Counted,
+          position: { kind: 'UNASSIGNED' },
+          locationBalanceId: phase6FromBalanceId,
+          expectedLocationRevision: phase10Physical.revision,
+          expectedLocationLastMovementId: phase10Physical.lastMovementId,
+        },
+        createdAt: serverTimestamp(),
+      }
+    );
+    batch.set(founderBalance, {
+      schemaVersion: 'warehouse_balance_v1',
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: canonicalMaterialId,
+      quantity: phase10Aggregate.quantity + 1,
+      revision: phase10Aggregate.revision + 1,
+      lastMovementId: phase10MovementId,
+      updatedAt: serverTimestamp(),
+    });
+    batch.set(phase6FromBalanceRef, {
+      schemaVersion: 'warehouse_location_balance_v1',
+      id: phase6FromBalanceId,
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      materialId: canonicalMaterialId,
+      position: { kind: 'UNASSIGNED' },
+      quantity: phase10Physical.quantity + 1,
+      revision: phase10Physical.revision + 1,
+      lastMovementId: phase10MovementId,
+      updatedAt: serverTimestamp(),
+    });
+    batch.update(phase10ItemRef, {
+      status: 'ADJUSTED',
+      adjustmentMovementId: phase10MovementId,
+      adjustedBy: admin.user.uid,
+      adjustedAt: serverTimestamp(),
+    });
+    return batch.commit();
+  });
+
+  await allowed('Fundador finaliza sessão FASE 10', () =>
+    updateDoc(phase10InventoryRef, {
+      status: 'CONFIRMED',
+      confirmedBy: admin.user.uid,
+      confirmedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      staleItemId: null,
+    })
+  );
+
+  await denied('Sessão finalizada FASE 10 não pode ser reescrita', () =>
+    updateDoc(phase10InventoryRef, {
+      status: 'COUNTING',
+      updatedAt: serverTimestamp(),
+    })
+  );
+  await denied('Histórico FASE 10 não pode ser excluído', () =>
+    deleteDoc(phase10InventoryRef)
+  );
+  await denied('Setor externo não lê inventário da FASE 10', () =>
+    getDoc(
+      doc(
+        sessionA.db,
+        'warehouse',
+        'hgesm-aprov',
+        'inventories',
+        phase10InventoryId
+      )
+    )
+  );
+  await denied('Inventário FASE 10 rejeita UG adulterada', () =>
+    setDoc(
+      doc(admin.db, 'warehouse', 'hgesm-aprov', 'inventories', 'inv_' + 'e'.repeat(32)),
+      {
+        schemaVersion: 'warehouse_inventory_v1',
+        id: 'inv_' + 'e'.repeat(32),
+        workspaceId: 'hgesm-aprov',
+        ug: '999999',
+        scope: { kind: 'TOTAL' },
+        status: 'OPENING',
+        itemCount: 1,
+        openedBy: admin.user.uid,
+        reviewedBy: null,
+        confirmationStartedBy: null,
+        confirmedBy: null,
+        cancelledBy: null,
+        reviewSummary: null,
+        staleItemId: null,
+        referenceCapturedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        reviewedAt: null,
+        confirmationStartedAt: null,
+        confirmedAt: null,
+        cancelledAt: null,
+      }
+    )
+  );
+
   console.log('Isolamento A ↔ B');
   await allowed('Setor A lê o próprio empenho', () =>
     getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))

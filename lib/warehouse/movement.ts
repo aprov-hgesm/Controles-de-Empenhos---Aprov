@@ -71,10 +71,24 @@ export interface WarehouseExpressOutboundMovementSource {
   lotCode: string | null;
 }
 
+export interface WarehousePhysicalInventoryMovementSource {
+  kind: 'PHYSICAL_INVENTORY';
+  actorUid: string;
+  inventoryId: string;
+  inventoryItemId: string;
+  expectedQuantity: number;
+  countedQuantity: number;
+  position: WarehouseStockPosition;
+  locationBalanceId: string;
+  expectedLocationRevision: number;
+  expectedLocationLastMovementId: string;
+}
+
 export type WarehouseMovementSource =
   | WarehouseInvoiceMovementSource
   | WarehouseLocationTransferMovementSource
-  | WarehouseExpressOutboundMovementSource;
+  | WarehouseExpressOutboundMovementSource
+  | WarehousePhysicalInventoryMovementSource;
 
 export interface WarehouseMovement {
   schemaVersion: typeof WAREHOUSE_MOVEMENT_SCHEMA_VERSION;
@@ -171,6 +185,18 @@ const EXPRESS_OUTBOUND_MOVEMENT_SOURCE_FIELDS = new Set([
   'locationBalanceId',
   'lotId',
   'lotCode',
+]);
+const PHYSICAL_INVENTORY_MOVEMENT_SOURCE_FIELDS = new Set([
+  'kind',
+  'actorUid',
+  'inventoryId',
+  'inventoryItemId',
+  'expectedQuantity',
+  'countedQuantity',
+  'position',
+  'locationBalanceId',
+  'expectedLocationRevision',
+  'expectedLocationLastMovementId',
 ]);
 const BALANCE_FIELDS = new Set([
   'schemaVersion',
@@ -380,6 +406,52 @@ function normalizeWarehouseMovementSource(input: unknown): WarehouseMovementSour
       locationBalanceId,
       lotId,
       lotCode,
+    };
+  }
+
+  if (input.kind === 'PHYSICAL_INVENTORY') {
+    if (!hasOnlyFields(input, PHYSICAL_INVENTORY_MOVEMENT_SOURCE_FIELDS)) return null;
+    const actorUid = typeof input.actorUid === 'string' ? normalizeText(input.actorUid) : '';
+    const inventoryId = typeof input.inventoryId === 'string' ? input.inventoryId.trim().toLowerCase() : '';
+    const inventoryItemId = typeof input.inventoryItemId === 'string' ? input.inventoryItemId.trim().toLowerCase() : '';
+    const expectedQuantity = normalizeWarehouseQuantity(input.expectedQuantity);
+    const countedQuantity = normalizeWarehouseQuantity(input.countedQuantity);
+    const position = validateWarehouseStockPosition(input.position);
+    const locationBalanceId = typeof input.locationBalanceId === 'string'
+      ? input.locationBalanceId.trim().toLowerCase()
+      : '';
+    const expectedLocationRevision = input.expectedLocationRevision;
+    const expectedLocationLastMovementId = typeof input.expectedLocationLastMovementId === 'string'
+      ? input.expectedLocationLastMovementId.trim().toLowerCase()
+      : '';
+
+    if (
+      !actorUid || actorUid.length > 160
+      || !/^inv_[a-f0-9]{32}$/.test(inventoryId)
+      || !/^invit_[a-f0-9]{64}$/.test(inventoryItemId)
+      || expectedQuantity === null || expectedQuantity < 0
+      || countedQuantity === null || countedQuantity < 0
+      || !position
+      || !isValidWarehouseLocationBalanceId(locationBalanceId)
+      || typeof expectedLocationRevision !== 'number'
+      || !Number.isSafeInteger(expectedLocationRevision)
+      || expectedLocationRevision < 1
+      || !MOVEMENT_ID_PATTERN.test(expectedLocationLastMovementId)
+    ) {
+      return null;
+    }
+
+    return {
+      kind: 'PHYSICAL_INVENTORY',
+      actorUid,
+      inventoryId,
+      inventoryItemId,
+      expectedQuantity,
+      countedQuantity,
+      position,
+      locationBalanceId,
+      expectedLocationRevision,
+      expectedLocationLastMovementId,
     };
   }
 
@@ -716,6 +788,37 @@ export function validateWarehouseMovement(
         'outbound_quantity_mismatch',
         '$.source.quantity',
         'Quantidade auditável da saída deve corresponder ao delta do ledger.'
+      )
+    );
+  }
+  if (source?.kind === 'PHYSICAL_INVENTORY' && type !== 'INVENTORY_ADJUSTMENT') {
+    issues.push(
+      issue(
+        'invalid_source_type',
+        '$.source',
+        'Origem PHYSICAL_INVENTORY só pode acompanhar INVENTORY_ADJUSTMENT.'
+      )
+    );
+  }
+  if (
+    source?.kind === 'PHYSICAL_INVENTORY'
+    && quantityDelta !== null
+    && normalizeWarehouseQuantity(source.countedQuantity - source.expectedQuantity) !== quantityDelta
+  ) {
+    issues.push(
+      issue(
+        'inventory_difference_mismatch',
+        '$.source.countedQuantity',
+        'Ajuste de inventário deve corresponder a contado - esperado.'
+      )
+    );
+  }
+  if (type === 'INVENTORY_ADJUSTMENT' && source?.kind !== 'PHYSICAL_INVENTORY') {
+    issues.push(
+      issue(
+        'inventory_source_required',
+        '$.source',
+        'INVENTORY_ADJUSTMENT exige origem PHYSICAL_INVENTORY auditável.'
       )
     );
   }

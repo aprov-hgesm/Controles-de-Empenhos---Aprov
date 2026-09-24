@@ -113,6 +113,20 @@ test('valida direção da quantidade conforme o tipo', async () => {
       reversesMovementId: type === 'REVERSAL'
         ? 'mov_' + 'a'.repeat(64)
         : null,
+      source: type === 'INVENTORY_ADJUSTMENT'
+        ? {
+            kind: 'PHYSICAL_INVENTORY',
+            actorUid: 'founder-phase2-test',
+            inventoryId: 'inv_' + '1'.repeat(32),
+            inventoryItemId: 'invit_' + '2'.repeat(64),
+            expectedQuantity: 10,
+            countedQuantity: 9,
+            position: { kind: 'UNASSIGNED' },
+            locationBalanceId: 'locbal_' + '3'.repeat(64),
+            expectedLocationRevision: 1,
+            expectedLocationLastMovementId: 'mov_' + '4'.repeat(64),
+          }
+        : undefined,
     });
     candidate.idempotencyKeyHash = candidate.id.slice(4);
     const result = movement.validateWarehouseMovement(candidate);

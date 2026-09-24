@@ -714,6 +714,7 @@ service cloud.firestore {
       return (
           source == null
           && type != 'TRANSFER'
+          && type != 'INVENTORY_ADJUSTMENT'
         )
         || (
           source is map
@@ -827,6 +828,34 @@ service cloud.firestore {
               && source.lotCode.size() > 0
               && source.lotCode.size() <= 80)
           )
+        )
+        || (
+          source is map
+          && source.kind == 'PHYSICAL_INVENTORY'
+          && type == 'INVENTORY_ADJUSTMENT'
+          && source.keys().hasOnly([
+            'kind', 'actorUid', 'inventoryId', 'inventoryItemId',
+            'expectedQuantity', 'countedQuantity', 'position',
+            'locationBalanceId', 'expectedLocationRevision',
+            'expectedLocationLastMovementId'
+          ])
+          && source.actorUid == request.auth.uid
+          && source.inventoryId is string
+          && source.inventoryId.matches('^inv_[a-f0-9]{32}$')
+          && source.inventoryItemId is string
+          && source.inventoryItemId.matches('^invit_[a-f0-9]{64}$')
+          && source.expectedQuantity is number
+          && source.expectedQuantity >= 0
+          && source.countedQuantity is number
+          && source.countedQuantity >= 0
+          && source.countedQuantity - source.expectedQuantity == request.resource.data.quantityDelta
+          && validWarehouseStockPosition(source.position)
+          && source.locationBalanceId is string
+          && source.locationBalanceId.matches('^locbal_[a-f0-9]{64}$')
+          && source.expectedLocationRevision is int
+          && source.expectedLocationRevision >= 1
+          && source.expectedLocationLastMovementId is string
+          && source.expectedLocationLastMovementId.matches('^mov_[a-f0-9]{64}$')
         );
     }
 
@@ -1166,7 +1195,7 @@ service cloud.firestore {
         && (
           !('source' in movement)
           || movement.source == null
-          || movement.source.kind != 'EXPRESS_OUTBOUND'
+          || (movement.source.kind != 'EXPRESS_OUTBOUND' && movement.source.kind != 'PHYSICAL_INVENTORY')
         )
         && movement.materialId == materialId
         && movement.workspaceId == workspaceId
@@ -1223,6 +1252,59 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
     }
 
+    function warehouseMovementIsInventoryAdjustment(movement) {
+      return movement is map
+        && movement.type == 'INVENTORY_ADJUSTMENT'
+        && movement.source is map
+        && movement.source.kind == 'PHYSICAL_INVENTORY';
+    }
+
+    function warehouseInventoryLocationMatches(workspaceId, locationBalanceId, movement) {
+      return movement.source.locationBalanceId == locationBalanceId
+        && exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(locationBalanceId))
+        && resource.data.revision == movement.source.expectedLocationRevision
+        && resource.data.lastMovementId == movement.source.expectedLocationLastMovementId
+        && request.resource.data.materialId == movement.materialId
+        && request.resource.data.position == movement.source.position
+        && request.resource.data.revision == resource.data.revision + 1
+        && request.resource.data.lastMovementId == movement.id
+        && request.resource.data.quantity == resource.data.quantity + movement.quantityDelta
+        && request.resource.data.quantity >= 0;
+    }
+
+    function warehouseInventoryMovementLinksItem(workspaceId, movementId, movement) {
+      let p = /databases/$(database)/documents/warehouse/$(workspaceId)/inventories/$(movement.source.inventoryId)/items/$(movement.source.inventoryItemId);
+      let itemAfter = getAfter(p).data;
+      return existsAfter(p)
+        && itemAfter.status == 'ADJUSTED'
+        && itemAfter.adjustmentMovementId == movementId
+        && itemAfter.difference == movement.quantityDelta
+        && itemAfter.materialId == movement.materialId
+        && itemAfter.locationBalanceId == movement.source.locationBalanceId;
+    }
+
+    function warehouseInventoryHasMatchingLocationBalanceAfter(workspaceId, movementId, movement) {
+      let p = /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(movement.source.locationBalanceId);
+      return existsAfter(p) && getAfter(p).data.lastMovementId == movementId;
+    }
+
+    function validWarehouseInventoryLocationBalanceUpdate(workspaceId, locationBalanceId, movement) {
+      return request.resource.data is map
+        && request.resource.data.schemaVersion == 'warehouse_location_balance_v1'
+        && request.resource.data.id == locationBalanceId
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.ug == movement.ug
+        && request.resource.data.materialId == movement.materialId
+        && request.resource.data.position == movement.source.position
+        && request.resource.data.quantity is number
+        && request.resource.data.quantity >= 0
+        && request.resource.data.quantity <= 1000000000
+        && request.resource.data.revision == resource.data.revision + 1
+        && request.resource.data.lastMovementId == movement.id
+        && request.resource.data.updatedAt == request.time
+        && warehouseInventoryLocationMatches(workspaceId, locationBalanceId, movement);
+    }
+
     function warehouseLocationBalanceWriteAllowed(workspaceId, locationBalanceId) {
       let movementId = request.resource.data.lastMovementId;
       let movementPath = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId);
@@ -1249,7 +1331,21 @@ service cloud.firestore {
             )
           )
           || (
+            warehouseMovementIsInventoryAdjustment(movement)
+            && validWarehouseInventoryLocationBalanceUpdate(
+              workspaceId,
+              locationBalanceId,
+              movement
+            )
+            && warehousePositionActive(
+              workspaceId,
+              request.resource.data.position,
+              request.resource.data.ug
+            )
+          )
+          || (
             !warehouseMovementIsExpressOutbound(movement)
+            && !warehouseMovementIsInventoryAdjustment(movement)
             && validWarehouseLocationBalanceDocument(workspaceId, locationBalanceId)
             && warehousePositionActive(
               workspaceId,
@@ -1324,6 +1420,51 @@ service cloud.firestore {
         && warehouseExpressOutboundLotMatchesAfter(workspaceId, movement);
     }
 
+    function validWarehouseInventoryMovementCreate(workspaceId, movementId) {
+      let movement = request.resource.data;
+      let source = movement.source;
+      return movement is map
+        && movement.schemaVersion == 'warehouse_movement_v1'
+        && movement.id == movementId
+        && movementId.matches('^mov_[a-f0-9]{64}$')
+        && movement.workspaceId == workspaceId
+        && warehouseUgMatchesPilot(workspaceId, movement.ug)
+        && movement.materialId is string
+        && movement.materialId.matches('^mat_[a-f0-9]{32}$')
+        && movement.type == 'INVENTORY_ADJUSTMENT'
+        && movement.quantityDelta is number
+        && movement.quantityDelta != 0
+        && movement.quantityDelta >= -1000000000
+        && movement.quantityDelta <= 1000000000
+        && movement.idempotencyKeyHash is string
+        && movement.idempotencyKeyHash.matches('^[a-f0-9]{64}$')
+        && movementId == 'mov_' + movement.idempotencyKeyHash
+        && movement.reversesMovementId == null
+        && source is map
+        && source.kind == 'PHYSICAL_INVENTORY'
+        && source.actorUid == request.auth.uid
+        && source.inventoryId is string
+        && source.inventoryId.matches('^inv_[a-f0-9]{32}$')
+        && source.inventoryItemId is string
+        && source.inventoryItemId.matches('^invit_[a-f0-9]{64}$')
+        && source.expectedQuantity is number
+        && source.expectedQuantity >= 0
+        && source.countedQuantity is number
+        && source.countedQuantity >= 0
+        && source.countedQuantity - source.expectedQuantity == movement.quantityDelta
+        && source.locationBalanceId is string
+        && source.locationBalanceId.matches('^locbal_[a-f0-9]{64}$')
+        && source.expectedLocationRevision is int
+        && source.expectedLocationRevision >= 1
+        && source.expectedLocationLastMovementId is string
+        && source.expectedLocationLastMovementId.matches('^mov_[a-f0-9]{64}$')
+        && movement.createdAt == request.time
+        && warehouseMaterialMatchesMovement(workspaceId)
+        && warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId)
+        && warehouseInventoryHasMatchingLocationBalanceAfter(workspaceId, movementId, movement)
+        && warehouseInventoryMovementLinksItem(workspaceId, movementId, movement);
+    }
+
     function warehouseMovementCreateAllowed(workspaceId, movementId) {
       let movement = request.resource.data;
       return (
@@ -1331,16 +1472,17 @@ service cloud.firestore {
           && validWarehouseExpressOutboundMovementCreate(workspaceId, movementId)
         )
         || (
+          warehouseMovementIsInventoryAdjustment(movement)
+          && validWarehouseInventoryMovementCreate(workspaceId, movementId)
+        )
+        || (
           !warehouseMovementIsExpressOutbound(movement)
+          && !warehouseMovementIsInventoryAdjustment(movement)
           && validWarehouseMovementDocument(workspaceId, movementId)
           && warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId)
           && (
             movement.type != 'TRANSFER'
-            || warehouseTransferHasMatchingLocationBalancesAfter(
-              workspaceId,
-              movementId,
-              movement
-            )
+            || warehouseTransferHasMatchingLocationBalancesAfter(workspaceId, movementId, movement)
           )
         );
     }
@@ -1418,6 +1560,9 @@ service cloud.firestore {
             request.resource.data.source
           )
         )
+        && (request.resource.data.type != 'INVENTORY_ADJUSTMENT'
+          || (request.resource.data.source is map
+            && request.resource.data.source.kind == 'PHYSICAL_INVENTORY'))
         && request.resource.data.createdAt == request.time
         && warehouseMaterialMatchesMovement(workspaceId)
         && validWarehouseReversalReference(workspaceId, movementId);
@@ -1473,7 +1618,7 @@ service cloud.firestore {
         && nextBalance.ug == request.resource.data.ug
         && nextBalance.materialId == materialId
         && nextBalance.lastMovementId == movementId
-        && (request.resource.data.type != 'OUTBOUND' || nextBalance.quantity >= 0)
+        && (!(request.resource.data.type in ['OUTBOUND', 'INVENTORY_ADJUSTMENT']) || nextBalance.quantity >= 0)
         && (
           (!currentExists
             && nextBalance.revision == 1
@@ -1533,6 +1678,26 @@ service cloud.firestore {
           == resource.data.quantity + movement.quantityDelta;
     }
 
+    function validWarehouseInventoryBalanceUpdate(workspaceId, materialId, movement) {
+      return request.resource.data is map
+        && request.resource.data.schemaVersion == 'warehouse_balance_v1'
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.ug == movement.ug
+        && request.resource.data.materialId == materialId
+        && materialId == movement.materialId
+        && request.resource.data.quantity is number
+        && request.resource.data.quantity >= 0
+        && request.resource.data.quantity <= 1000000000
+        && request.resource.data.revision == resource.data.revision + 1
+        && request.resource.data.lastMovementId == movement.id
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.ug == resource.data.ug
+        && request.resource.data.materialId == resource.data.materialId
+        && request.resource.data.quantity
+          == resource.data.quantity + movement.quantityDelta;
+    }
+
     function warehouseBalanceWriteAllowed(workspaceId, materialId) {
       let movementId = request.resource.data.lastMovementId;
       let movementPath = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId);
@@ -1552,7 +1717,17 @@ service cloud.firestore {
             )
           )
           || (
+            warehouseMovementIsInventoryAdjustment(movement)
+            && balanceExists
+            && validWarehouseInventoryBalanceUpdate(
+              workspaceId,
+              materialId,
+              movement
+            )
+          )
+          || (
             !warehouseMovementIsExpressOutbound(movement)
+            && !warehouseMovementIsInventoryAdjustment(movement)
             && validWarehouseBalanceDocument(workspaceId, materialId)
             && movement.schemaVersion == 'warehouse_movement_v1'
             && movement.workspaceId == workspaceId
@@ -3630,6 +3805,210 @@ service cloud.firestore {
     // Não existe fallback para canAccessWorkspace(): setores externos continuam
     // bloqueados mesmo no próprio workspace durante todo o piloto fundador.
 
+    // FASE 10 / DEP-20..20.3 — ciclo de vida e itens do inventário.
+    function warehouseInventorySessionIdentityUnchanged() {
+      return request.resource.data.schemaVersion == resource.data.schemaVersion
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.ug == resource.data.ug
+        && request.resource.data.scope == resource.data.scope
+        && request.resource.data.itemCount == resource.data.itemCount
+        && request.resource.data.openedBy == resource.data.openedBy
+        && request.resource.data.referenceCapturedAt == resource.data.referenceCapturedAt
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    function validWarehouseInventorySessionCreate(workspaceId, inventoryId) {
+      return request.resource.data.schemaVersion == 'warehouse_inventory_v1'
+        && request.resource.data.id == inventoryId
+        && inventoryId.matches('^inv_[a-f0-9]{32}$')
+        && request.resource.data.workspaceId == workspaceId
+        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && request.resource.data.scope is map
+        && request.resource.data.scope.kind in ['TOTAL','DEPOT','LOCATION','SUBPOSITION']
+        && request.resource.data.status == 'OPENING'
+        && request.resource.data.itemCount is int
+        && request.resource.data.itemCount > 0
+        && request.resource.data.itemCount <= 1200
+        && request.resource.data.openedBy == request.auth.uid
+        && request.resource.data.reviewedBy == null
+        && request.resource.data.confirmationStartedBy == null
+        && request.resource.data.confirmedBy == null
+        && request.resource.data.cancelledBy == null
+        && request.resource.data.reviewSummary == null
+        && request.resource.data.staleItemId == null
+        && request.resource.data.referenceCapturedAt == request.time
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.reviewedAt == null
+        && request.resource.data.confirmationStartedAt == null
+        && request.resource.data.confirmedAt == null
+        && request.resource.data.cancelledAt == null;
+    }
+
+    function validWarehouseInventorySessionUpdate(workspaceId, inventoryId) {
+      return request.resource.data.id == inventoryId
+        && request.resource.data.workspaceId == workspaceId
+        && warehouseInventorySessionIdentityUnchanged()
+        && request.resource.data.updatedAt == request.time
+        && (
+          (resource.data.status == 'OPENING'
+            && request.resource.data.status == 'COUNTING'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt']))
+          || (resource.data.status == 'COUNTING'
+            && request.resource.data.status == 'REVIEW'
+            && request.resource.data.reviewedBy == request.auth.uid
+            && request.resource.data.reviewSummary is map
+            && request.resource.data.reviewedAt == request.time
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','reviewedBy','reviewSummary','reviewedAt','updatedAt','staleItemId'
+            ]))
+          || (resource.data.status == 'REVIEW'
+            && request.resource.data.status == 'COUNTING'
+            && request.resource.data.reviewedBy == null
+            && request.resource.data.reviewSummary == null
+            && request.resource.data.reviewedAt == null
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','reviewedBy','reviewSummary','reviewedAt','updatedAt'
+            ]))
+          || (resource.data.status == 'REVIEW'
+            && request.resource.data.status == 'CONFIRMING'
+            && request.resource.data.confirmationStartedBy == request.auth.uid
+            && request.resource.data.confirmationStartedAt == request.time
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','confirmationStartedBy','confirmationStartedAt','updatedAt'
+            ]))
+          || (resource.data.status == 'CONFIRMING'
+            && request.resource.data.status == 'CONFIRMED'
+            && request.resource.data.confirmedBy == request.auth.uid
+            && request.resource.data.confirmedAt == request.time
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','confirmedBy','confirmedAt','updatedAt','staleItemId'
+            ]))
+          || (resource.data.status == 'CONFIRMING'
+            && request.resource.data.status == 'RECONCILIATION_REQUIRED'
+            && request.resource.data.staleItemId is string
+            && request.resource.data.staleItemId.matches('^invit_[a-f0-9]{64}$')
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','staleItemId','updatedAt'
+            ]))
+          || (resource.data.status in ['OPENING','COUNTING','REVIEW','RECONCILIATION_REQUIRED']
+            && request.resource.data.status == 'CANCELLED'
+            && request.resource.data.cancelledBy == request.auth.uid
+            && request.resource.data.cancelledAt == request.time
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status','cancelledBy','cancelledAt','updatedAt'
+            ]))
+        );
+    }
+
+    function warehouseInventoryItemIdentityUnchanged() {
+      return request.resource.data.schemaVersion == resource.data.schemaVersion
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.inventoryId == resource.data.inventoryId
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.ug == resource.data.ug
+        && request.resource.data.materialId == resource.data.materialId
+        && request.resource.data.position == resource.data.position
+        && request.resource.data.locationBalanceId == resource.data.locationBalanceId
+        && request.resource.data.expectedQuantity == resource.data.expectedQuantity
+        && request.resource.data.expectedBalanceRevision == resource.data.expectedBalanceRevision
+        && request.resource.data.expectedBalanceLastMovementId == resource.data.expectedBalanceLastMovementId
+        && request.resource.data.expectedLocationRevision == resource.data.expectedLocationRevision
+        && request.resource.data.expectedLocationLastMovementId == resource.data.expectedLocationLastMovementId;
+    }
+
+    function validWarehouseInventoryItemCreate(workspaceId, inventoryId, itemId) {
+      let s = /databases/$(database)/documents/warehouse/$(workspaceId)/inventories/$(inventoryId);
+      return request.resource.data.schemaVersion == 'warehouse_inventory_item_v1'
+        && request.resource.data.id == itemId
+        && itemId.matches('^invit_[a-f0-9]{64}$')
+        && request.resource.data.inventoryId == inventoryId
+        && request.resource.data.workspaceId == workspaceId
+        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && request.resource.data.materialId is string
+        && request.resource.data.materialId.matches('^mat_[a-f0-9]{32}$')
+        && validWarehouseStockPosition(request.resource.data.position)
+        && request.resource.data.locationBalanceId is string
+        && request.resource.data.locationBalanceId.matches('^locbal_[a-f0-9]{64}$')
+        && request.resource.data.expectedQuantity is number
+        && request.resource.data.expectedQuantity >= 0
+        && request.resource.data.expectedBalanceRevision is int
+        && request.resource.data.expectedBalanceRevision >= 1
+        && request.resource.data.expectedLocationRevision is int
+        && request.resource.data.expectedLocationRevision >= 1
+        && request.resource.data.status == 'PENDING'
+        && request.resource.data.countedQuantity == null
+        && request.resource.data.difference == null
+        && request.resource.data.countedBy == null
+        && request.resource.data.countedAt == null
+        && request.resource.data.adjustmentMovementId == null
+        && request.resource.data.adjustedBy == null
+        && request.resource.data.adjustedAt == null
+        && exists(s)
+        && get(s).data.status == 'OPENING'
+        && get(s).data.ug == request.resource.data.ug;
+    }
+
+    function validWarehouseInventoryCountUpdate(workspaceId, inventoryId) {
+      let s = /databases/$(database)/documents/warehouse/$(workspaceId)/inventories/$(inventoryId);
+      return warehouseInventoryItemIdentityUnchanged()
+        && exists(s)
+        && get(s).data.status == 'COUNTING'
+        && resource.data.status in ['PENDING','MATCHED','DIVERGENT']
+        && request.resource.data.countedQuantity is number
+        && request.resource.data.countedQuantity >= 0
+        && request.resource.data.difference == request.resource.data.countedQuantity - request.resource.data.expectedQuantity
+        && ((request.resource.data.difference == 0 && request.resource.data.status == 'MATCHED')
+          || (request.resource.data.difference != 0 && request.resource.data.status == 'DIVERGENT'))
+        && request.resource.data.countedBy == request.auth.uid
+        && request.resource.data.countedAt == request.time
+        && request.resource.data.adjustmentMovementId == null
+        && request.resource.data.adjustedBy == null
+        && request.resource.data.adjustedAt == null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'countedQuantity','difference','status','countedBy','countedAt',
+          'adjustmentMovementId','adjustedBy','adjustedAt'
+        ]);
+    }
+
+    function validWarehouseInventoryAdjustmentUpdate(workspaceId, inventoryId, itemId) {
+      let s = /databases/$(database)/documents/warehouse/$(workspaceId)/inventories/$(inventoryId);
+      let m = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(request.resource.data.adjustmentMovementId);
+      return warehouseInventoryItemIdentityUnchanged()
+        && get(s).data.status == 'CONFIRMING'
+        && resource.data.status == 'DIVERGENT'
+        && request.resource.data.status == 'ADJUSTED'
+        && request.resource.data.countedQuantity == resource.data.countedQuantity
+        && request.resource.data.difference == resource.data.difference
+        && request.resource.data.countedBy == resource.data.countedBy
+        && request.resource.data.countedAt == resource.data.countedAt
+        && request.resource.data.adjustedBy == request.auth.uid
+        && request.resource.data.adjustedAt == request.time
+        && !exists(m)
+        && existsAfter(m)
+        && getAfter(m).data.type == 'INVENTORY_ADJUSTMENT'
+        && getAfter(m).data.source.inventoryId == inventoryId
+        && getAfter(m).data.source.inventoryItemId == itemId
+        && getAfter(m).data.quantityDelta == resource.data.difference
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','adjustmentMovementId','adjustedBy','adjustedAt'
+        ]);
+    }
+
+    function validWarehouseInventoryStaleUpdate(workspaceId, inventoryId, itemId) {
+      let s = /databases/$(database)/documents/warehouse/$(workspaceId)/inventories/$(inventoryId);
+      return warehouseInventoryItemIdentityUnchanged()
+        && resource.data.status == 'DIVERGENT'
+        && request.resource.data.status == 'STALE'
+        && request.resource.data.countedQuantity == resource.data.countedQuantity
+        && request.resource.data.difference == resource.data.difference
+        && existsAfter(s)
+        && getAfter(s).data.status == 'RECONCILIATION_REQUIRED'
+        && getAfter(s).data.staleItemId == itemId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+    }
+
     // FASE 9 / DEP-17..19.5 — croqui versionado é configuração visual.
     // Não contém saldo, lote ou quantidade e não escreve no ledger.
     function validWarehouseDepotLayoutBase(workspaceId, layoutId) {
@@ -3860,11 +4239,27 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
-      // Domínio reservado para inventários futuros. Mantido explícito para
-      // evitar que um wildcard recursivo sobreponha as regras específicas acima.
-      // Demais domínios desconhecidos são negados por padrão.
-      match /inventories/{document=**} {
-        allow read, write: if canAccessWarehouseModule(workspaceId);
+      // FASE 10 / DEP-20..20.3 — inventário founder-only e auditável.
+      match /inventories/{inventoryId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseInventorySessionCreate(workspaceId, inventoryId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseInventorySessionUpdate(workspaceId, inventoryId);
+        allow delete: if false;
+
+        match /items/{itemId} {
+          allow read: if canAccessWarehouseModule(workspaceId);
+          allow create: if canAccessWarehouseModule(workspaceId)
+            && validWarehouseInventoryItemCreate(workspaceId, inventoryId, itemId);
+          allow update: if canAccessWarehouseModule(workspaceId)
+            && (
+              validWarehouseInventoryCountUpdate(workspaceId, inventoryId)
+              || validWarehouseInventoryAdjustmentUpdate(workspaceId, inventoryId, itemId)
+              || validWarehouseInventoryStaleUpdate(workspaceId, inventoryId, itemId)
+            );
+          allow delete: if false;
+        }
       }
     }
 

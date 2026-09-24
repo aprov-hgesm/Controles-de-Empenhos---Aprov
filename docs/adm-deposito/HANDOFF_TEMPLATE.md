@@ -47,57 +47,50 @@ O template inicia a conversa; a fonte da verdade continua sendo a `main` e os do
 Se o texto do chat divergir deles, prevalecem GitHub e documentação versionada.
 
 
-## Estado corrente após a FASE 9
+## Estado corrente da FASE 10
 
-Última fase concluída:
-- **FASE 9 — Visão do Depósito, Editor e Persistência**;
-- PR de implementação: **#179**;
-- decisões permanentes da fase: **D-046, D-047 e D-048**;
-- contrato técnico: `docs/adm-deposito/PHASE_9_DEPOT_VIEW_LAYOUT.md`.
+Fase implementada e em validação técnica:
+- **FASE 10 — Inventário Físico**;
+- branch: **feat/adm-deposito-phase-10-physical-inventory**;
+- baseline auditado da main: **44bd77451138ace7b113704abd8bd873675f09e5**;
+- decisões permanentes: **D-049, D-050 e D-051**;
+- contrato técnico: **docs/adm-deposito/PHASE_10_PHYSICAL_INVENTORY.md**.
 
-Capacidades que o próximo chat deve considerar já existentes:
-- material canônico `warehouse_material_v1`;
-- ledger append-only `warehouse_movement_v1`;
-- saldo agregado `warehouse_balance_v1`;
-- NF → material → movimento → saldo;
-- cutoff da integração NF → estoque;
-- SISCOFIS com Marco Zero e snapshots de conciliação;
-- depósitos, locais e subposições com identidade estável;
-- distribuição física `warehouse_location_balance_v1`;
-- transferências internas atômicas sem alterar o saldo total;
+Capacidades que o próximo chat deve considerar existentes após o merge:
+- material canônico warehouse_material_v1;
+- ledger append-only warehouse_movement_v1;
+- saldo agregado warehouse_balance_v1;
+- distribuição física warehouse_location_balance_v1;
+- NF → estoque e cutoff;
+- SISCOFIS / Marco Zero / conciliação;
+- depósitos, localizações, subposições e transferências;
 - lotes, validade e FEFO consultivo;
-- Estoque operacional com ficha, origem, lotes, locais e histórico bounded;
-- múltiplos barcodes/apresentações por material;
-- scanner USB HID como teclado;
-- pesquisa manual e Saída Expressa como `OUTBOUND` atômico;
-- proteção contra saldo agregado e físico negativo;
-- croqui operacional `warehouse_depot_layout_v1`;
-- objetos visuais vinculados opcionalmente a `warehouseLocationId` real;
-- pesquisa de material destacando múltiplas posições reais;
-- FEFO apenas como sinalização consultiva no croqui;
-- editor separado do modo de visualização;
-- versionamento ativo/arquivado com recuperação por nova versão;
-- JSON e SVG derivados/exportáveis;
-- Firestore como estado operacional do croqui e Drive apenas complementar;
-- founder-only e isolamento por workspace/UG preservados;
-- FASE 11.5 já reservada para consolidação visual/UX conduzida pelo fundador.
+- múltiplos barcodes e Saída Expressa;
+- croqui operacional warehouse_depot_layout_v1;
+- inventário total ou parcial por depósito/local/subposição;
+- contrato warehouse_inventory_v1;
+- itens warehouse_inventory_item_v1 em subcoleção bounded;
+- contagem separada do saldo oficial;
+- revisão e confirmação humana obrigatória;
+- INVENTORY_ADJUSTMENT auditável e idempotente;
+- controle otimista de concorrência por posição física;
+- fila derivada de materiais sem localização;
+- histórico de inventário preservado;
+- founder-only e isolamento por workspace/UG.
 
-Próxima fase oficial:
-- **FASE 10 — Inventário Físico**.
+Próxima fase oficial depois do fechamento da FASE 10:
+- **FASE 11 — Entregas, Dashboard Logístico e Alertas**.
 
-Regras adicionais para a FASE 10:
-- inventário não pode criar segunda fonte de saldo;
-- esperado deve vir das autoridades de saldo/distribuição já existentes;
-- contado deve permanecer separado até confirmação humana;
-- divergência não pode autocorrigir estoque;
-- ajuste confirmado deve usar movimento auditável `INVENTORY_ADJUSTMENT`;
-- suportar inventário total ou parcial por depósito/local;
-- preservar layout versionado da FASE 9 sem transformar o croqui em motor de inventário;
-- preservar barcodes, lotes, FEFO e Saída Expressa;
+Regras adicionais para a FASE 11:
+- não duplicar o Planejamento/Cronograma já existente;
+- NF cadastrada continua significando material recebido;
+- integrar entrega → NF → estoque reutilizando contratos existentes;
+- reutilizar a Central de Avisos em vez de criar sistema paralelo de alertas;
+- dashboard deve consumir projeções/materializações existentes e consultas bounded;
+- preservar Inventário, SISCOFIS, lotes, FEFO, barcodes, Saída Expressa e Visão do Depósito;
 - continuar founder-only;
-- não antecipar Dashboard/Alertas da FASE 11;
-- não iniciar a FASE 11 no mesmo chat;
-- reconciliar qualquer commit novo da `main` antes de editar código.
+- não antecipar a consolidação visual global da FASE 11.5;
+- reconciliar qualquer commit novo da main antes de editar código.
 
 ## Planejamento visual já aprovado
 

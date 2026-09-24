@@ -182,18 +182,27 @@ Capacidade completa:
 
 Gate vertical: pesquisar material → abrir mapa → destacar local correto → editar layout sem alterar estoque.
 
-## FASE 10 — Inventário Físico
+## FASE 10 — Inventário Físico — EM VALIDAÇÃO TÉCNICA
 
 Blocos: DEP-20, DEP-20.1, DEP-20.2 e DEP-20.3.
 
-Capacidade completa:
-- inventário total ou parcial por depósito/local;
-- esperado x contado;
-- divergência exige confirmação humana;
-- INVENTORY_ADJUSTMENT auditável;
-- fila de materiais sem localização.
+Capacidade implementada:
+- inventário total ou parcial por depósito/local/subposição;
+- sessão versionada warehouse_inventory_v1 com itens bounded em subcoleção;
+- snapshot histórico do esperado derivado das projeções oficiais;
+- contagem separada do estoque oficial;
+- esperado x contado e divergência explícita;
+- revisão e confirmação humana obrigatória;
+- INVENTORY_ADJUSTMENT auditável, idempotente e atômico;
+- controle otimista de concorrência por revisão da posição física;
+- estado RECONCILIATION_REQUIRED quando a referência ficou obsoleta;
+- fila derivada de materiais sem localização;
+- histórico imutável e founder-only;
+- Browser E2E e guards específicos incluídos.
 
 Gate vertical: contagem → divergência → confirmação → ajuste auditável → novo saldo.
+
+Fechamento definitivo depende dos checks obrigatórios do PR da FASE 10.
 
 ## FASE 11 — Entregas, Dashboard Logístico e Alertas
 

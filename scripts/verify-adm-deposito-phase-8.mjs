@@ -76,8 +76,18 @@ assert.match(rules, /match \/barcodes\/\{barcodeId\}/);
 assert.match(rules, /warehouseExpressOutboundHasMatchingLocationBalanceAfter/);
 assert.match(rules, /warehouseExpressOutboundBarcodeMatches/);
 assert.match(rules, /warehouseExpressOutboundLotMatchesAfter/);
-assert.match(rules, /request\.resource\.data\.type != 'OUTBOUND'[\s\S]*nextBalance\.quantity >= 0/);
-assert.match(rules, /match \/inventories\/\{document=\*\*\}/);
+assert.match(
+  rules,
+  /validWarehouseExpressOutboundBalanceUpdate[\s\S]*request\.resource\.data\.quantity >= 0/
+);
+assert.match(
+  rules,
+  /match \/inventories\/\{(?:document=\*\*|inventoryId)\}/
+);
+assert.doesNotMatch(
+  rules,
+  /match \/inventories\/\{document=\*\*\}[\s\S]{0,160}allow read, write/
+);
 assert.doesNotMatch(rules, /match \/\{domain\}\/\{document=\*\*\}/);
 assert.match(rules, /warehouseMovementCreateAllowed/);
 assert.match(rules, /warehouseBalanceWriteAllowed/);

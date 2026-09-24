@@ -604,3 +604,47 @@ Regras permanentes:
 - ausência de objeto visual vinculado não altera nem invalida a localização logística real.
 
 Documento técnico: `docs/adm-deposito/PHASE_9_DEPOT_VIEW_LAYOUT.md`.
+
+
+## D-049 — Inventário é sessão auditável; snapshot esperado nunca se torna saldo
+
+A FASE 10 introduz warehouse_inventory_v1 e warehouse_inventory_item_v1 sem criar uma quarta autoridade quantitativa.
+
+Regras permanentes:
+- esperado é capturado das projeções oficiais existentes ao abrir a sessão;
+- esperado persistido é snapshot histórico, não saldo operacional;
+- contado pertence somente ao domínio de inventário enquanto não houver confirmação;
+- salvar ou corrigir contagem nunca cria movimento nem altera saldo;
+- toda divergência exige confirmação humana explícita;
+- somente a confirmação pode gerar warehouse_movement_v1.type = INVENTORY_ADJUSTMENT;
+- movimento, saldo agregado, distribuição física e item ajustado devem convergir atomicamente;
+- sessão finalizada não é reaberta nem apagada; correção posterior usa nova sessão/movimento.
+
+Documento técnico: docs/adm-deposito/PHASE_10_PHYSICAL_INVENTORY.md.
+
+## D-050 — Concorrência do inventário é otimista e validada na posição física contada
+
+A confirmação de uma divergência nunca aplica cegamente um cálculo feito sobre uma posição que mudou.
+
+Regras permanentes:
+- cada item captura revision e lastMovementId da warehouse_location_balance_v1 usada como referência;
+- antes do ajuste, a transação compara esses valores com a posição oficial atual;
+- alteração concorrente bloqueia o ajuste e leva a sessão para RECONCILIATION_REQUIRED;
+- não existe lock global de depósito ou UG;
+- a revisão agregada capturada permanece evidência histórica, mas não bloqueia ajustes de outras posições da mesma sessão gerados pelo próprio inventário;
+- a posição física contada é a autoridade de concorrência para o item;
+- reconciliação posterior preserva a sessão anterior e usa novo inventário parcial.
+
+Documento técnico: docs/adm-deposito/PHASE_10_PHYSICAL_INVENTORY.md.
+
+## D-051 — Inventário por posição não redistribui divergência entre lotes sem evidência de contagem por lote
+
+A FASE 10 preserva a natureza de enriquecimento logístico de warehouse_lot_v1 definida em D-039.
+
+Regras permanentes:
+- uma divergência observada em depósito/local/subposição não é atribuída artificialmente a lotes;
+- inventário não altera validade, origem ou FEFO;
+- lotes continuam subordinados ao material e às autoridades oficiais de saldo/distribuição;
+- uma futura contagem por lote deverá ampliar o contrato de forma explícita e reutilizar warehouse_lot_v1, sem criar saldo paralelo.
+
+Documento técnico: docs/adm-deposito/PHASE_10_PHYSICAL_INVENTORY.md.
