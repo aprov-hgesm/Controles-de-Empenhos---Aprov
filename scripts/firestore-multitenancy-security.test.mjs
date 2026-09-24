@@ -440,6 +440,143 @@ async function main() {
     ownerWorkspaceId: 'hgesm-aprov',
   });
 
+  console.log('\nEMPROVEX — cadastro de NF independente do ADM Depósito');
+
+  const coreReceiptEmpenhoId = '2026NECORE001';
+  const coreReceiptInvoiceKey = 'nf_11222333000181_core001';
+  await ownerSet(`workspaces/hgesm-aprov/empenhos/${coreReceiptEmpenhoId}`, {
+    id: coreReceiptEmpenhoId,
+    supplier: 'Fornecedor Core EMPROVEX',
+    supplierCnpj: '11222333000181',
+    description: 'Empenho de regressão do cadastro independente de NF',
+    date: '2026-09-24',
+    status: 'Ativo',
+    classification: 'QR',
+    items: [
+      {
+        id: 'item-core-1',
+        name: 'Material operacional EMPROVEX',
+        unit: 'UN',
+        quantity: 10,
+        unitPrice: 25,
+        received: 0,
+      },
+    ],
+    revision: 1,
+    updatedAt: '2026-09-24T12:00:00.000Z',
+    updatedBy: admin.user.uid,
+    userId: admin.user.uid,
+  });
+
+  await allowed('Fundador cadastra NF no EMPROVEX sem qualquer escrita do ADM Depósito', () =>
+    runTransaction(admin.db, async (transaction) => {
+      const empenhoRef = doc(
+        admin.db,
+        'workspaces',
+        'hgesm-aprov',
+        'empenhos',
+        coreReceiptEmpenhoId
+      );
+      const invoiceRef = doc(
+        admin.db,
+        'workspaces',
+        'hgesm-aprov',
+        'invoices',
+        coreReceiptInvoiceKey
+      );
+      const alertRef = doc(
+        admin.db,
+        'workspaces',
+        'hgesm-aprov',
+        'alerts',
+        'core-receipt-alert'
+      );
+
+      const [empenhoSnapshot, invoiceSnapshot] = await Promise.all([
+        transaction.get(empenhoRef),
+        transaction.get(invoiceRef),
+      ]);
+      assert.equal(empenhoSnapshot.exists(), true);
+      assert.equal(invoiceSnapshot.exists(), false);
+
+      const storedEmpenho = empenhoSnapshot.data();
+      transaction.set(empenhoRef, {
+        ...storedEmpenho,
+        items: storedEmpenho.items.map((item) =>
+          item.id === 'item-core-1'
+            ? { ...item, received: 2 }
+            : item
+        ),
+        revision: 2,
+        updatedAt: now(),
+        updatedBy: admin.user.uid,
+        userId: admin.user.uid,
+      });
+
+      transaction.set(invoiceRef, {
+        id: 'CORE001',
+        recordKey: coreReceiptInvoiceKey,
+        empenhoId: coreReceiptEmpenhoId,
+        issueDate: '2026-09-24',
+        items: [
+          {
+            itemId: 'item-core-1',
+            quantity: 2,
+            unitPrice: 25,
+            subtotal: 50,
+          },
+        ],
+        totalValue: 50,
+        supplier: 'Fornecedor Core EMPROVEX',
+        supplierCnpj: '11222333000181',
+        registeredAt: now(),
+        localizacaoAtual: 'APROVISIONAMENTO',
+        userId: admin.user.uid,
+      });
+
+      transaction.set(alertRef, {
+        id: 'core-receipt-alert',
+        empenhoId: coreReceiptEmpenhoId,
+        type: 'INFORMATIVO',
+        status: 'NOVO',
+        source: 'NOTA_FISCAL',
+        title: 'NF CORE001 recebida com sucesso!',
+        subtitle: 'Fornecedor: Fornecedor Core EMPROVEX',
+        description: 'Cadastro operacional independente do ADM Depósito.',
+        date: 'Agora',
+        createdAt: now(),
+        userId: admin.user.uid,
+      });
+    })
+  );
+
+  await allowed('NF independente permanece legível no workspace fundador', async () => {
+    const snapshot = await getDoc(
+      doc(
+        admin.db,
+        'workspaces',
+        'hgesm-aprov',
+        'invoices',
+        coreReceiptInvoiceKey
+      )
+    );
+    assert.equal(snapshot.exists(), true);
+    assert.equal(snapshot.data()?.warehouseIntegration, undefined);
+  });
+
+  await allowed('Cadastro de NF não cria configuração warehouse implicitamente', async () => {
+    const snapshot = await getDoc(
+      doc(
+        admin.db,
+        'warehouse',
+        'hgesm-aprov',
+        'settings',
+        'invoice-integration'
+      )
+    );
+    assert.equal(snapshot.exists(), false);
+  });
+
   const billingAccountSeed = (workspaceId, email, ug) => ({
     version: 'emprovex_billing_v1',
     workspaceId,
