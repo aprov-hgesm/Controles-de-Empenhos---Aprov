@@ -182,6 +182,12 @@ jobs:
       - name: ADM Depósito Phase 10 permanent guard
         run: npm run verify:adm-deposito-phase-10
 
+      - name: ADM Depósito Phase 11 logistics domain tests
+        run: npm run test:adm-deposito-logistics
+
+      - name: ADM Depósito Phase 11 protected guard
+        run: npm run verify:adm-deposito-phase-11
+
       - name: Production multi-tenant readiness guard
         run: npm run verify:production-multitenant-readiness
 
