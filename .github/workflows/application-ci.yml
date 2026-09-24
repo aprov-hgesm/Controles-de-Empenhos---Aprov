@@ -257,6 +257,9 @@ jobs:
       - name: Invoice NS lifecycle guard
         run: npm run verify:invoice-ns-lifecycle
 
+      - name: EMPROVEX / ADM Depósito isolation guard
+        run: npm run verify:emprovex-warehouse-isolation
+
       - name: Invoice mirror document guard
         run: npm run verify:invoice-mirror-document
 
