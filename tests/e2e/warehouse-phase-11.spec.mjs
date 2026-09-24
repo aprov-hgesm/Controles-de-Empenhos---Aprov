@@ -15,10 +15,9 @@ test.describe.serial('ADM Depósito FASE 11 — Entregas, Dashboard e Alertas', 
     await expect(page.getByTestId('warehouse-logistics-dashboard')).toBeVisible({
       timeout: 20_000,
     });
-    await expect(page.getByTestId('warehouse-dashboard-deliveries-overdue')).not.toContainText(
-      /^0$/,
-      { timeout: 20_000 }
-    );
+    await expect(
+      page.getByTestId('warehouse-dashboard-deliveries-overdue').locator('p').nth(1)
+    ).not.toHaveText('0', { timeout: 20_000 });
 
     await page.goto('/adm-deposito/entregas');
     await expect(page.getByTestId('warehouse-deliveries-operational')).toBeVisible({
