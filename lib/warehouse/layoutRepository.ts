@@ -4,6 +4,7 @@ import {
   getDoc,
   getDocs,
   limit,
+  orderBy,
   query,
   runTransaction,
   where,
@@ -105,7 +106,11 @@ export async function listWarehouseDepotLayouts(
   const path = warehouseDomainPath(scope.workspaceId, 'layouts');
   try {
     const snapshot = await getDocs(
-      query(collection(db, path), limit(Math.max(1, Math.min(maxResults, 150))))
+      query(
+        collection(db, path),
+        orderBy('version', 'desc'),
+        limit(Math.max(1, Math.min(maxResults, 150)))
+      )
     );
     return snapshot.docs
       .map((item) => {
