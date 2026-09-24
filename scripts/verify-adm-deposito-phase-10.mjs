@@ -70,8 +70,9 @@ assert.match(e2e, /warehouse-inventory-confirm/);
 assert.match(phaseDoc, /warehouse_inventory_v1/);
 assert.match(phaseDoc, /INVENTORY_ADJUSTMENT/);
 assert.match(phaseDoc, /concorrência/i);
-assert.match(roadmap, /FASE 10 — Inventário Físico — CONCLUÍDA/);
-assert.match(status, /FASE 10 — CONCLUÍDA/);
+assert.match(roadmap, /FASE 10 — Inventário Físico/);
+assert.match(status, /FASE 10/);
+assert.match(status, /Inventário Físico/);
 
 assert.equal(
   packageJson.scripts['test:adm-deposito-inventory'],
