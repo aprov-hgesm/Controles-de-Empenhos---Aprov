@@ -18,6 +18,7 @@ import {
   applyWarehouseLocationDelta,
   createWarehouseLocationBalanceId,
   deriveUnassignedQuantity,
+  validateWarehouseLocationBalance,
   type WarehouseLocationBalance,
   type WarehouseStockPosition,
 } from './location';
@@ -244,41 +245,22 @@ function parseLocationBalance(
   id: string,
   data: Record<string, unknown>
 ): WarehouseLocationBalance {
-  const result = validateWarehouseInventoryLocationBalance(workspaceId, id, data);
-  return result;
-}
-
-function validateWarehouseInventoryLocationBalance(
-  workspaceId: string,
-  id: string,
-  data: Record<string, unknown>
-): WarehouseLocationBalance {
-  const raw = {
-    schemaVersion: data.schemaVersion,
-    id,
-    workspaceId: data.workspaceId,
-    ug: data.ug,
-    materialId: data.materialId,
-    position: data.position,
-    quantity: data.quantity,
-    revision: data.revision,
-    lastMovementId: data.lastMovementId,
-  };
-  // Reuse the canonical validator without creating an inventory-specific projection.
-  const position = raw.position as WarehouseStockPosition;
-  if (
-    raw.schemaVersion !== 'warehouse_location_balance_v1'
-    || raw.workspaceId !== workspaceId
-    || typeof raw.ug !== 'string'
-    || typeof raw.materialId !== 'string'
-    || typeof raw.quantity !== 'number'
-    || typeof raw.revision !== 'number'
-    || typeof raw.lastMovementId !== 'string'
-    || !position
-  ) {
-    throw new Error('WAREHOUSE_INVALID_LOCATION_BALANCE');
-  }
-  return raw as WarehouseLocationBalance;
+  const result = validateWarehouseLocationBalance(
+    {
+      schemaVersion: data.schemaVersion,
+      id,
+      workspaceId: data.workspaceId,
+      ug: data.ug,
+      materialId: data.materialId,
+      position: data.position,
+      quantity: data.quantity,
+      revision: data.revision,
+      lastMovementId: data.lastMovementId,
+    },
+    { expectedWorkspaceId: workspaceId }
+  );
+  if (!result.ok) throw new Error('WAREHOUSE_INVALID_LOCATION_BALANCE');
+  return result.data;
 }
 
 function validateScopeAgainstStructure(
