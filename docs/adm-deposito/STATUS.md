@@ -4,13 +4,13 @@ Este arquivo registra o estado real de continuidade do projeto e deve ser tratad
 
 ## Estado geral
 
-Status: **FASE 10 IMPLEMENTADA — INVENTÁRIO FÍSICO EM VALIDAÇÃO TÉCNICA**
+Status: **FASE 10 CONCLUÍDA — INVENTÁRIO FÍSICO INTEGRADO À MAIN**
 
 Data de fechamento: 2026-09-24.
 
 Situação:
-- FASES 0, 1, 2, 3, 4, 5, 6, 7, 8 e 9 concluídas;
-- FASE 10 — Inventário Físico implementada na branch própria e em validação de PR;
+- FASES 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 e 10 concluídas;
+- FASE 10 — Inventário Físico integrada à `main` pelo PR #180;
 - FASE 3 — Walking Skeleton integrada à `main` pelo PR #164;
 - FASE 4 — NF → Estoque implementada e validada no PR #167;
 - FASE 5 — SISCOFIS / Marco Zero / Conciliação implementada no PR #171;
@@ -69,8 +69,14 @@ Branch da FASE 10:
 `feat/adm-deposito-phase-10-physical-inventory`
 
 PR técnico da FASE 10:
-- será registrado após a abertura do PR;
+- PR #180 — `feat: ADM Depósito phase 10 physical inventory`;
 - escopo exclusivo DEP-20 a DEP-20.3;
+- squash merge na `main`: `0a15586ff39d740f48f71c33c7cbff578835e11f`;
+- Application CI #702 aprovado integralmente;
+- Recovery guardrails #463 aprovado;
+- `validate-application` aprovado;
+- Browser E2E com Firebase Emulator aprovado;
+- gates finais dos Blocos 16, 17, 18, 19, 20 e 21 aprovados;
 - FASE 11 não iniciada.
 
 PR técnico da FASE 9:
@@ -472,7 +478,7 @@ Decisões de segurança/performance:
 - versões arquivadas não podem ter conteúdo reescrito.
 
 ### FASE 10 — Inventário Físico
-Implementada; validação final do PR em andamento.
+Concluída e integrada à `main`.
 
 Capacidade vertical implementada:
 - contrato de sessão warehouse_inventory_v1;
@@ -497,16 +503,17 @@ Contratos/documentos:
 - docs/adm-deposito/PHASE_10_PHYSICAL_INVENTORY.md;
 - decisões D-049, D-050 e D-051.
 
-Validação obrigatória antes do fechamento:
+Validação de fechamento aprovada:
 - domain tests FASE 10;
 - permanent guard FASE 10;
 - multi-tenant Firestore;
-- fases anteriores;
+- gates permanentes das fases anteriores;
 - TypeScript;
 - build;
 - diff hygiene;
 - Browser E2E;
-- Recovery guardrails.
+- Recovery guardrails;
+- Application CI #702 integralmente verde.
 
 ## Planejamento futuro aprovado — FASE 11.5
 
@@ -522,29 +529,28 @@ Diretrizes:
 - a FASE 12 começará sobre a interface visual consolidada, permitindo hardening, segurança, performance e telemetria sobre a experiência definitiva.
 
 A definição detalhada da FASE 11.5 está registrada em `docs/adm-deposito/ROADMAP.md`.
-## Próxima fase oficial após o fechamento da FASE 10
+## Próxima fase oficial
 
 **FASE 11 — Entregas, Dashboard Logístico e Alertas**
 
-A FASE 11 não foi iniciada. O desenvolvimento só deve começar após a FASE 10 estar integrada à main com gates obrigatórios aprovados.
+A FASE 11 não foi iniciada. A FASE 10 já está integrada à `main` com os gates obrigatórios aprovados.
 
 ## Sequência futura resumida
 
-1. FASE 10 — inventário;
-2. FASE 11 — entregas / dashboard / alertas;
-3. FASE 11.5 — consolidação visual / UX conduzida pelo fundador;
-4. FASE 12 — segurança / performance / telemetria;
-5. FASE 13 — validação integrada e fechamento do piloto;
-6. FASE 14 — expansão externa futura.
+1. FASE 11 — entregas / dashboard / alertas;
+2. FASE 11.5 — consolidação visual / UX conduzida pelo fundador;
+3. FASE 12 — segurança / performance / telemetria;
+4. FASE 13 — validação integrada e fechamento do piloto;
+5. FASE 14 — expansão externa futura.
 
 ## Gate para o próximo chat
 
 Antes de modificar código:
 1. consultar a `main` real;
 2. ler `README.md`, `ROADMAP.md`, `DECISIONS.md`, `STATUS.md`, `HANDOFF_TEMPLATE.md`, `PHASE_6_LOCATIONS.md`, `PHASE_7_STOCK_LOTS_FEFO.md`, `PHASE_8_BARCODE_SCANNER_EXPRESS_OUTBOUND.md` e `PHASE_9_DEPOT_VIEW_LAYOUT.md`;
-3. comparar a `main` com o baseline funcional da FASE 9 registrado aqui;
-4. analisar commits posteriores ao fechamento da FASE 8;
+3. comparar a `main` com o fechamento funcional da FASE 10 registrado aqui;
+4. analisar commits posteriores ao merge da FASE 10;
 5. preservar material canônico, ledger, saldo, NF → estoque, cutoff, Marco Zero, snapshots SISCOFIS, distribuição física, lotes, FEFO, barcodes, Saída Expressa e layout versionado;
-6. executar exclusivamente a FASE 10 — Inventário Físico;
-7. não iniciar a FASE 11 no mesmo chat;
+6. executar exclusivamente a FASE 11 — Entregas, Dashboard Logístico e Alertas;
+7. não iniciar a FASE 11.5 no mesmo chat;
 8. atualizar STATUS ao fechar a fase.

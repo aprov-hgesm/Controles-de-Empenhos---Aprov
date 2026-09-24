@@ -47,16 +47,17 @@ O template inicia a conversa; a fonte da verdade continua sendo a `main` e os do
 Se o texto do chat divergir deles, prevalecem GitHub e documentação versionada.
 
 
-## Estado corrente da FASE 10
+## Estado corrente após a FASE 10
 
-Fase implementada e em validação técnica:
+Fase concluída e integrada à `main`:
 - **FASE 10 — Inventário Físico**;
-- branch: **feat/adm-deposito-phase-10-physical-inventory**;
-- baseline auditado da main: **44bd77451138ace7b113704abd8bd873675f09e5**;
+- PR: **#180 — feat: ADM Depósito phase 10 physical inventory**;
+- squash merge funcional: **0a15586ff39d740f48f71c33c7cbff578835e11f**;
+- Application CI #702 e Recovery guardrails #463: **aprovados**;
 - decisões permanentes: **D-049, D-050 e D-051**;
 - contrato técnico: **docs/adm-deposito/PHASE_10_PHYSICAL_INVENTORY.md**.
 
-Capacidades que o próximo chat deve considerar existentes após o merge:
+Capacidades que o próximo chat deve considerar existentes:
 - material canônico warehouse_material_v1;
 - ledger append-only warehouse_movement_v1;
 - saldo agregado warehouse_balance_v1;
@@ -78,7 +79,7 @@ Capacidades que o próximo chat deve considerar existentes após o merge:
 - histórico de inventário preservado;
 - founder-only e isolamento por workspace/UG.
 
-Próxima fase oficial depois do fechamento da FASE 10:
+Próxima fase oficial:
 - **FASE 11 — Entregas, Dashboard Logístico e Alertas**.
 
 Regras adicionais para a FASE 11:
