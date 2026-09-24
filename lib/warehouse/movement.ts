@@ -813,15 +813,6 @@ export function validateWarehouseMovement(
       )
     );
   }
-  if (type === 'INVENTORY_ADJUSTMENT' && source?.kind !== 'PHYSICAL_INVENTORY') {
-    issues.push(
-      issue(
-        'inventory_source_required',
-        '$.source',
-        'INVENTORY_ADJUSTMENT exige origem PHYSICAL_INVENTORY auditável.'
-      )
-    );
-  }
 
   if (issues.length || quantityDelta === null) {
     return { ok: false, issues };
