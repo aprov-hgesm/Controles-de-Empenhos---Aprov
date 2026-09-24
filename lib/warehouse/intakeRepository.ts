@@ -211,6 +211,23 @@ async function persistCompletedIntake(
   }
 }
 
+export async function getWarehouseInvoiceIntakeCutoff(
+  workspaceId: string
+): Promise<string | null> {
+  const scope = currentScope(workspaceId);
+  const path = warehouseDocumentPath(scope.workspaceId, 'settings', 'invoice-integration');
+  try {
+    const snapshot = await getDoc(doc(db, path));
+    if (!snapshot.exists()) return null;
+    const data = snapshot.data() as Record<string, unknown>;
+    const cutoffAt = typeof data.cutoffAt === 'string' ? data.cutoffAt : null;
+    return cutoffAt && Number.isFinite(Date.parse(cutoffAt)) ? cutoffAt : null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, path);
+    return null;
+  }
+}
+
 export async function listWarehouseItemIntakes(
   workspaceId: string,
   maxResults = 500
