@@ -7,6 +7,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
 } from 'firebase/firestore';
 
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
@@ -405,25 +406,40 @@ export async function reconcileWarehouseLogisticsAlerts(
     if (prior?.active && prior.fingerprint === fingerprint) continue;
 
     const path = warehouseDocumentPath(normalized, 'alerts', id);
-    await setDoc(doc(db, path), {
-      schemaVersion: WAREHOUSE_LOGISTICS_ALERT_SCHEMA_VERSION,
-      id,
-      workspaceId: normalized,
-      ug: scope.ug,
-      kind: candidate.kind,
-      entityId: candidate.entityId,
-      empenhoId: candidate.empenhoId,
-      severity: candidate.severity,
-      status: 'OPEN',
-      title: candidate.title,
-      subtitle: candidate.subtitle,
-      description: candidate.description,
-      fingerprint,
-      active: true,
-      createdAt: prior?.createdAt || serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      resolvedAt: null,
-    });
+    const ref = doc(db, path);
+    if (prior) {
+      await updateDoc(ref, {
+        severity: candidate.severity,
+        status: 'OPEN',
+        title: candidate.title,
+        subtitle: candidate.subtitle,
+        description: candidate.description,
+        fingerprint,
+        active: true,
+        updatedAt: serverTimestamp(),
+        resolvedAt: null,
+      });
+    } else {
+      await setDoc(ref, {
+        schemaVersion: WAREHOUSE_LOGISTICS_ALERT_SCHEMA_VERSION,
+        id,
+        workspaceId: normalized,
+        ug: scope.ug,
+        kind: candidate.kind,
+        entityId: candidate.entityId,
+        empenhoId: candidate.empenhoId,
+        severity: candidate.severity,
+        status: 'OPEN',
+        title: candidate.title,
+        subtitle: candidate.subtitle,
+        description: candidate.description,
+        fingerprint,
+        active: true,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        resolvedAt: null,
+      });
+    }
     createdOrUpdated += 1;
   }
 
@@ -431,22 +447,9 @@ export async function reconcileWarehouseLogisticsAlerts(
     for (const prior of existing) {
       if (!prior.active || candidateIds.has(prior.id)) continue;
       const path = warehouseDocumentPath(normalized, 'alerts', prior.id);
-      await setDoc(doc(db, path), {
-        schemaVersion: prior.schemaVersion,
-        id: prior.id,
-        workspaceId: prior.workspaceId,
-        ug: prior.ug,
-        kind: prior.kind,
-        entityId: prior.entityId,
-        empenhoId: prior.empenhoId,
-        severity: prior.severity,
+      await updateDoc(doc(db, path), {
         status: 'RESOLVED',
-        title: prior.title,
-        subtitle: prior.subtitle,
-        description: prior.description,
-        fingerprint: prior.fingerprint,
         active: false,
-        createdAt: prior.createdAt,
         updatedAt: serverTimestamp(),
         resolvedAt: serverTimestamp(),
       });
