@@ -163,7 +163,6 @@ interface CommitInvoiceReceiptChangesInput {
   targetEmpenho: Empenho;
   previousEmpenho?: Empenho;
   invoice: Invoice;
-  alert: Alert;
   previousInvoiceRecordKey?: string;
 }
 

@@ -33,7 +33,7 @@ import { EmprovexAuthLoading } from '../components/auth/EmprovexAuthLoading';
 import { LoginSuccessTransition } from '../components/auth/LoginSuccessTransition';
 import type { OperationalActiveTab } from '../lib/operationalSubscriptionPlan';
 import { countPendingNotices } from '../features/avisos/domain/noticeLifecycle';
-import { canAccessWarehouseModule } from '../lib/warehouse/featureFlag';
+import { canAccessWarehouseModule } from '../lib/platformModuleAccess';
 export default function Home() {
   // Toast / Notifications helper
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);

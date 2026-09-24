@@ -10,7 +10,7 @@ aprov-hgesm/Controles-de-Empenhos---Aprov
 
 Antes de alterar qualquer código:
 1. confira a branch main real;
-2. leia README.md, ROADMAP.md, DECISIONS.md, STATUS.md e este HANDOFF_TEMPLATE.md;
+2. leia README.md, ROADMAP.md, DECISIONS.md, STATUS.md, `../EMPROVEX_CORE_PROTECTION.md` e este HANDOFF_TEMPLATE.md;
 3. compare a main com o baseline do STATUS.md;
 4. analise commits posteriores;
 5. preserve decisões congeladas;
@@ -63,7 +63,7 @@ Capacidades que o próximo chat deve considerar existentes:
 - ledger append-only warehouse_movement_v1;
 - saldo agregado warehouse_balance_v1;
 - distribuição física warehouse_location_balance_v1;
-- NF → estoque e cutoff;
+- projeção NF → estoque desacoplada e cutoff;
 - SISCOFIS / Marco Zero / conciliação;
 - depósitos, localizações, subposições e transferências;
 - lotes, validade e FEFO consultivo;
@@ -86,12 +86,14 @@ Próxima fase oficial:
 Regras adicionais para a FASE 11:
 - não duplicar o Planejamento/Cronograma já existente;
 - NF cadastrada continua significando material recebido;
-- integrar entrega → NF → estoque reutilizando contratos existentes;
-- reutilizar a Central de Avisos em vez de criar sistema paralelo de alertas;
+- integrar entrega → NF → projeção de estoque somente por leitura dos dados canônicos do EMPROVEX;
+- manter alertas logísticos no namespace warehouse; não alterar a Central de Avisos nem suas Rules para atender o ADM;
 - dashboard deve consumir projeções/materializações existentes e consultas bounded;
 - preservar Inventário, SISCOFIS, lotes, FEFO, barcodes, Saída Expressa e Visão do Depósito;
 - continuar founder-only;
 - não antecipar a consolidação visual global da FASE 11.5;
+- executar `npm run verify:emprovex-core-protection` e preservar o workflow `EMPROVEX Core Protection`;
+- nenhuma falha do ADM, Drive, alerta logístico ou telemetria pode bloquear NF, empenho ou cronograma do EMPROVEX;
 - reconciliar qualquer commit novo da main antes de editar código.
 
 ## Regra de fechamento documental

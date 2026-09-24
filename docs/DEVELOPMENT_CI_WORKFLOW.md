@@ -64,6 +64,23 @@ Deve incluir apenas o necessário para o domínio alterado, por exemplo:
 
 Objetivo: detectar rapidamente erros locais e guards desatualizados antes de consumir uma rodada completa de CI.
 
+### Gate zero — EMPROVEX Core Protection
+
+Desde 2026-09-24, todo PR funcional executa também o workflow leve `.github/workflows/emprovex-core-protection.yml`.
+
+Características:
+- não executa `npm ci`;
+- valida a fronteira do núcleo antes da suíte longa;
+- impede imports da implementação do ADM Depósito pelo core operacional;
+- impede que o ADM comande mutações de NF, Empenho, Cronograma ou Avisos;
+- garante que as Rules operacionais não dependam do namespace `warehouse`;
+- garante que recebimento de NF seja confirmado antes de efeitos auxiliares como alerta informativo e PDF/Drive;
+- repete os guards de isolamento EMPROVEX/ADM e da fundação da FASE 0.
+
+Uma falha neste gate é bloqueante e deve ser corrigida antes de investigar otimizações ou prosseguir com a fase funcional.
+
+Documento arquitetural: `docs/EMPROVEX_CORE_PROTECTION.md`.
+
 ### Nível B — CI rápido de Pull Request
 
 Diretriz alvo do projeto:
@@ -168,11 +185,41 @@ Um CI vermelho só pode ser tratado como não bloqueante quando houver evidênci
 - indisponibilidade externa;
 - status duplicado já coberto por gate equivalente.
 
-## 10. Estado de implementação desta política
+## 10. Estação local e cadência consolidada do ADM Depósito
+
+Desde 2026-09-24, o desenvolvimento do ADM Depósito adota uma estação local de validação como ambiente preferencial de feedback rápido.
+
+Capacidades disponíveis localmente:
+- Node/Java;
+- Firebase Auth + Firestore Emulator;
+- Next.js local;
+- Playwright;
+- Chromium headless;
+- suíte de segurança multi-tenant;
+- Browser E2E.
+
+Cadência oficial para as fases restantes do ADM:
+1. desenvolver a capacidade;
+2. executar Core Protection/isolamento e guards rápidos;
+3. executar somente testes direcionados que correspondam ao domínio alterado;
+4. continuar a implementação quando esses gates estiverem verdes;
+5. após o fechamento funcional das capacidades restantes, executar a regressão pesada completa localmente;
+6. corrigir de forma consolidada as falhas encontradas;
+7. repetir os testes afetados e, ao final, a suíte completa;
+8. usar GitHub CI como certificação final antes do fechamento/merge/release correspondente.
+
+Esta regra não autoriza acumular uma falha conhecida:
+- gate de Core Protection vermelho é bloqueante imediato;
+- teste direcionado que demonstra regressão real deve ser corrigido antes de seguir;
+- o que é diferido é a **repetição da regressão pesada completa**, não a correção de defeitos conhecidos.
+
+Para o ADM Depósito, a FASE 13 continua sendo o gate formal de validação integrada e fechamento do piloto fundador.
+
+## 11. Estado de implementação desta política
 
 Esta documentação registra a **diretriz oficial**.
 
-### 10.1 Alterações exclusivamente documentais — regra já implementada
+### 11.1 Alterações exclusivamente documentais — regra já implementada
 
 Desde 2026-09-24, o `.github/workflows/application-ci.yml` usa `paths-ignore: docs/**` em `pull_request` e em pushes para `main`.
 
@@ -186,7 +233,7 @@ Regra permanente:
 
 Objetivo: permitir que o fechamento documental posterior a uma fase já validada seja registrado sem repetir TypeScript, Firebase Emulator e Browser E2E sem evidência técnica nova.
 
-### 10.2 Próximas otimizações
+### 11.2 Próximas otimizações
 
 O restante da otimização do CI continua evolutivo:
 - path filtering por domínio;
@@ -196,7 +243,7 @@ O restante da otimização do CI continua evolutivo:
 - regressão completa sob condição apropriada;
 - melhor reaproveitamento/cache de dependências e Playwright.
 
-## 11. Regra para futuros chats/agentes
+## 12. Regra para futuros chats/agentes
 
 Antes de iniciar uma fase relevante:
 1. consultar a `main`;

@@ -1,0 +1,41 @@
+name: EMPROVEX Core Protection
+
+on:
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: emprovex-core-protection-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core-protection:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Core operational firewall
+        run: node scripts/verify-emprovex-core-protection.mjs
+
+      - name: EMPROVEX / ADM Depósito isolation
+        run: node scripts/verify-emprovex-warehouse-isolation.mjs
+
+      - name: ADM Depósito phase 0 isolation
+        run: node scripts/verify-adm-deposito-phase-0.mjs

@@ -134,6 +134,11 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
   });
 
   test('usuário externo não vê nem acessa a rota ADM Depósito', async ({ page }) => {
+    // Este cenário visita várias rotas protegidas em sequência. Em máquinas locais,
+    // o Next.js dev pode compilar cada rota a frio na primeira execução; preserve
+    // os timeouts das asserções e amplie apenas o orçamento total deste cenário.
+    test.setTimeout(90_000);
+
     await page.goto('/');
     await loginSector(page, OPERATOR_A);
 

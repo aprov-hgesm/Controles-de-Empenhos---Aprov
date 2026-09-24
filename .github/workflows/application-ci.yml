@@ -56,6 +56,9 @@ jobs:
             exit 1
           fi
 
+      - name: EMPROVEX core operational protection
+        run: npm run verify:emprovex-core-protection
+
       - name: Recovery tests
         run: npm run test:recovery
 

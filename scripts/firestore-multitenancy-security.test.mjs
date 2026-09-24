@@ -484,14 +484,6 @@ async function main() {
         'invoices',
         coreReceiptInvoiceKey
       );
-      const alertRef = doc(
-        admin.db,
-        'workspaces',
-        'hgesm-aprov',
-        'alerts',
-        'core-receipt-alert'
-      );
-
       const [empenhoSnapshot, invoiceSnapshot] = await Promise.all([
         transaction.get(empenhoRef),
         transaction.get(invoiceRef),
@@ -534,21 +526,21 @@ async function main() {
         userId: admin.user.uid,
       });
 
-      transaction.set(alertRef, {
-        id: 'core-receipt-alert',
-        empenhoId: coreReceiptEmpenhoId,
-        type: 'INFORMATIVO',
-        status: 'NOVO',
-        source: 'NOTA_FISCAL',
-        title: 'NF CORE001 recebida com sucesso!',
-        subtitle: 'Fornecedor: Fornecedor Core EMPROVEX',
-        description: 'Cadastro operacional independente do ADM Depósito.',
-        date: 'Agora',
-        createdAt: now(),
-        userId: admin.user.uid,
-      });
     })
   );
+
+  await allowed('Transação crítica da NF não depende de alerta informativo', async () => {
+    const snapshot = await getDoc(
+      doc(
+        admin.db,
+        'workspaces',
+        'hgesm-aprov',
+        'alerts',
+        'core-receipt-alert'
+      )
+    );
+    assert.equal(snapshot.exists(), false);
+  });
 
   await allowed('NF independente permanece legível no workspace fundador', async () => {
     const snapshot = await getDoc(
