@@ -612,44 +612,48 @@ service cloud.firestore {
         ]);
     }
 
-    function warehouseExpressOutboundBarcodeMatches(workspaceId, movement) {
+    function warehouseExpressOutboundScannerBarcodeMatches(workspaceId, movement) {
       let source = movement.source;
       let barcodePath = /databases/$(database)/documents/warehouse/$(workspaceId)/barcodes/$(source.barcodeId);
       let barcode = get(barcodePath).data;
-      return source.interface != 'BARCODE_SCANNER'
+      return exists(barcodePath)
+        && barcode.workspaceId == workspaceId
+        && barcode.ug == movement.ug
+        && barcode.materialId == movement.materialId
+        && barcode.barcode == source.barcode
+        && barcode.presentation == source.presentation
+        && barcode.factorToBaseUnit == source.factorToBaseUnit
+        && barcode.status == 'active';
+    }
+
+    function warehouseExpressOutboundBarcodeMatches(workspaceId, movement) {
+      let source = movement.source;
+      return source.interface == 'MANUAL_SEARCH'
         || (
-          source.barcodeId is string
-          && source.barcodeId.matches('^bar_[a-f0-9]{64}$')
-          && exists(barcodePath)
-          && barcode.workspaceId == workspaceId
-          && barcode.ug == movement.ug
-          && barcode.materialId == movement.materialId
-          && barcode.barcode == source.barcode
-          && barcode.presentation == source.presentation
-          && barcode.factorToBaseUnit == source.factorToBaseUnit
-          && barcode.status == 'active'
+          source.interface == 'BARCODE_SCANNER'
+          && warehouseExpressOutboundScannerBarcodeMatches(workspaceId, movement)
         );
     }
 
-    function warehouseExpressOutboundLotMatchesAfter(workspaceId, movement) {
+    function warehouseExpressOutboundSelectedLotMatchesAfter(workspaceId, movement) {
       let source = movement.source;
       let lotPath = /databases/$(database)/documents/warehouse/$(workspaceId)/lots/$(source.lotId);
       let lotBefore = get(lotPath).data;
       let lotAfter = getAfter(lotPath).data;
-      return source.lotId == null
-        || (
-          source.lotId is string
-          && source.lotId.matches('^lot_[a-f0-9]{32}$')
-          && exists(lotPath)
-          && existsAfter(lotPath)
-          && lotBefore.materialId == movement.materialId
-          && lotBefore.ug == movement.ug
-          && lotBefore.code == source.lotCode
-          && lotBefore.position == source.position
-          && lotBefore.status == 'active'
-          && lotBefore.quantity >= source.quantity
-          && lotAfter.quantity == lotBefore.quantity - source.quantity
-        );
+      return exists(lotPath)
+        && existsAfter(lotPath)
+        && lotBefore.materialId == movement.materialId
+        && lotBefore.ug == movement.ug
+        && lotBefore.code == source.lotCode
+        && lotBefore.position == source.position
+        && lotBefore.status == 'active'
+        && lotBefore.quantity >= source.quantity
+        && lotAfter.quantity == lotBefore.quantity - source.quantity;
+    }
+
+    function warehouseExpressOutboundLotMatchesAfter(workspaceId, movement) {
+      return movement.source.lotId == null
+        || warehouseExpressOutboundSelectedLotMatchesAfter(workspaceId, movement);
     }
 
     // FASE 8 — caminho curto para reduzir o orçamento de expressões
@@ -659,11 +663,6 @@ service cloud.firestore {
         && source.kind == 'EXPRESS_OUTBOUND'
         && type == 'OUTBOUND'
         && source.keys().hasOnly([
-          'kind', 'interface', 'actorUid', 'requestedQuantity', 'quantity',
-          'presentation', 'factorToBaseUnit', 'barcodeId', 'barcode',
-          'position', 'locationBalanceId', 'lotId', 'lotCode'
-        ])
-        && source.keys().hasAll([
           'kind', 'interface', 'actorUid', 'requestedQuantity', 'quantity',
           'presentation', 'factorToBaseUnit', 'barcodeId', 'barcode',
           'position', 'locationBalanceId', 'lotId', 'lotCode'
@@ -1122,31 +1121,42 @@ service cloud.firestore {
         );
     }
 
+    function warehouseNewUnassignedBalanceMatchesExpressOutbound(workspaceId, movement) {
+      let balancePath = /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(movement.materialId);
+      let aggregateBalance = get(balancePath).data;
+      return movement.source.position.kind == 'UNASSIGNED'
+        && request.resource.data.revision == 1
+        && exists(balancePath)
+        && aggregateBalance.quantity >= movement.source.quantity
+        && request.resource.data.quantity
+          == aggregateBalance.quantity - movement.source.quantity;
+    }
+
     function warehouseLocationBalanceMatchesExpressOutbound(workspaceId, locationBalanceId, movement) {
       let source = movement.source;
       let locationPath = /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(locationBalanceId);
-      let balancePath = /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(movement.materialId);
       let locationExists = exists(locationPath);
-      let aggregateBalance = get(balancePath).data;
-      return movement.type == 'OUTBOUND'
-        && source.kind == 'EXPRESS_OUTBOUND'
-        && source.locationBalanceId == locationBalanceId
+      return source.locationBalanceId == locationBalanceId
         && source.quantity == -movement.quantityDelta
         && request.resource.data.materialId == movement.materialId
         && request.resource.data.workspaceId == workspaceId
         && request.resource.data.ug == movement.ug
         && request.resource.data.position == source.position
         && (
-          (locationExists
+          (
+            locationExists
             && request.resource.data.revision == resource.data.revision + 1
             && resource.data.quantity >= source.quantity
-            && request.resource.data.quantity == resource.data.quantity - source.quantity)
-          || (!locationExists
-            && source.position.kind == 'UNASSIGNED'
-            && request.resource.data.revision == 1
-            && exists(balancePath)
-            && aggregateBalance.quantity >= source.quantity
-            && request.resource.data.quantity == aggregateBalance.quantity - source.quantity)
+            && request.resource.data.quantity
+              == resource.data.quantity - source.quantity
+          )
+          || (
+            !locationExists
+            && warehouseNewUnassignedBalanceMatchesExpressOutbound(
+              workspaceId,
+              movement
+            )
+          )
         );
     }
 
@@ -1187,28 +1197,150 @@ service cloud.firestore {
         );
     }
 
-    function warehouseLocationBalanceWriteBackedByNewMovement(workspaceId, locationBalanceId) {
+    function validWarehouseExpressOutboundLocationBalanceDocument(
+      workspaceId,
+      locationBalanceId,
+      movement
+    ) {
+      return request.resource.data is map
+        && request.resource.data.keys().hasOnly([
+          'schemaVersion', 'id', 'workspaceId', 'ug', 'materialId', 'position',
+          'quantity', 'revision', 'lastMovementId', 'updatedAt'
+        ])
+        && request.resource.data.schemaVersion == 'warehouse_location_balance_v1'
+        && request.resource.data.id == locationBalanceId
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.ug == movement.ug
+        && request.resource.data.materialId == movement.materialId
+        && request.resource.data.position == movement.source.position
+        && validWarehouseStockPosition(request.resource.data.position)
+        && request.resource.data.quantity is number
+        && request.resource.data.quantity >= 0
+        && request.resource.data.quantity <= 1000000000
+        && request.resource.data.revision is int
+        && request.resource.data.revision >= 1
+        && request.resource.data.lastMovementId == movement.id
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function warehouseLocationBalanceWriteAllowed(workspaceId, locationBalanceId) {
       let movementId = request.resource.data.lastMovementId;
-      let movement = getAfter(
-        /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId)
-      ).data;
-      return !exists(/databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId))
-        && existsAfter(/databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId))
+      let movementPath = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId);
+      let movement = getAfter(movementPath).data;
+      return !exists(movementPath)
+        && existsAfter(movementPath)
         && (
-          warehouseLocationBalanceMatchesTransfer(
-            workspaceId,
-            locationBalanceId,
-            movement
+          (
+            warehouseMovementIsExpressOutbound(movement)
+            && validWarehouseExpressOutboundLocationBalanceDocument(
+              workspaceId,
+              locationBalanceId,
+              movement
+            )
+            && warehousePositionActive(
+              workspaceId,
+              request.resource.data.position,
+              request.resource.data.ug
+            )
+            && warehouseLocationBalanceMatchesExpressOutbound(
+              workspaceId,
+              locationBalanceId,
+              movement
+            )
           )
-          || warehouseLocationBalanceMatchesExpressOutbound(
-            workspaceId,
-            locationBalanceId,
-            movement
+          || (
+            !warehouseMovementIsExpressOutbound(movement)
+            && validWarehouseLocationBalanceDocument(workspaceId, locationBalanceId)
+            && warehousePositionActive(
+              workspaceId,
+              request.resource.data.position,
+              request.resource.data.ug
+            )
+            && (
+              warehouseLocationBalanceMatchesTransfer(
+                workspaceId,
+                locationBalanceId,
+                movement
+              )
+              || warehouseLocationBalanceMatchesNonTransfer(
+                workspaceId,
+                locationBalanceId,
+                movement
+              )
+            )
           )
-          || warehouseLocationBalanceMatchesNonTransfer(
-            workspaceId,
-            locationBalanceId,
-            movement
+        );
+    }
+
+    function warehouseMovementIsExpressOutbound(movement) {
+      return movement is map
+        && ('source' in movement)
+        && movement.type == 'OUTBOUND'
+        && movement.source is map
+        && movement.source.kind == 'EXPRESS_OUTBOUND';
+    }
+
+    function validWarehouseExpressOutboundMovementCreate(workspaceId, movementId) {
+      let movement = request.resource.data;
+      return movement is map
+        && movement.keys().hasOnly([
+          'schemaVersion', 'id', 'workspaceId', 'ug', 'materialId', 'type',
+          'quantityDelta', 'idempotencyKeyHash', 'reversesMovementId',
+          'note', 'source', 'createdAt'
+        ])
+        && movement.schemaVersion == 'warehouse_movement_v1'
+        && movement.id == movementId
+        && movementId.matches('^mov_[a-f0-9]{64}$')
+        && movement.workspaceId == workspaceId
+        && warehouseUgMatchesPilot(workspaceId, movement.ug)
+        && movement.materialId is string
+        && movement.materialId.matches('^mat_[a-f0-9]{32}$')
+        && movement.type == 'OUTBOUND'
+        && movement.quantityDelta is number
+        && movement.quantityDelta < 0
+        && movement.quantityDelta >= -1000000000
+        && movement.idempotencyKeyHash is string
+        && movement.idempotencyKeyHash.matches('^[a-f0-9]{64}$')
+        && movementId == 'mov_' + movement.idempotencyKeyHash
+        && movement.reversesMovementId == null
+        && (
+          movement.note == null
+          || (
+            movement.note is string
+            && movement.note.size() > 0
+            && movement.note.size() <= 240
+          )
+        )
+        && validWarehouseExpressOutboundSource(movement.type, movement.source)
+        && movement.createdAt == request.time
+        && warehouseMaterialMatchesMovement(workspaceId)
+        && warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId)
+        && warehouseExpressOutboundHasMatchingLocationBalanceAfter(
+          workspaceId,
+          movementId,
+          movement
+        )
+        && warehouseExpressOutboundBarcodeMatches(workspaceId, movement)
+        && warehouseExpressOutboundLotMatchesAfter(workspaceId, movement);
+    }
+
+    function warehouseMovementCreateAllowed(workspaceId, movementId) {
+      let movement = request.resource.data;
+      return (
+          warehouseMovementIsExpressOutbound(movement)
+          && validWarehouseExpressOutboundMovementCreate(workspaceId, movementId)
+        )
+        || (
+          !warehouseMovementIsExpressOutbound(movement)
+          && validWarehouseMovementDocument(workspaceId, movementId)
+          && warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId)
+          && (
+            movement.type != 'TRANSFER'
+            || warehouseTransferHasMatchingLocationBalancesAfter(
+              workspaceId,
+              movementId,
+              movement
+            )
           )
         );
     }
@@ -1374,6 +1506,70 @@ service cloud.firestore {
             && request.resource.data.workspaceId == resource.data.workspaceId
             && request.resource.data.ug == resource.data.ug
             && request.resource.data.materialId == resource.data.materialId)
+        );
+    }
+
+    function validWarehouseExpressOutboundBalanceUpdate(workspaceId, materialId, movement) {
+      return request.resource.data is map
+        && request.resource.data.keys().hasOnly([
+          'schemaVersion', 'workspaceId', 'ug', 'materialId',
+          'quantity', 'revision', 'lastMovementId', 'updatedAt'
+        ])
+        && request.resource.data.schemaVersion == 'warehouse_balance_v1'
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.ug == movement.ug
+        && request.resource.data.materialId == materialId
+        && materialId == movement.materialId
+        && request.resource.data.quantity is number
+        && request.resource.data.quantity >= 0
+        && request.resource.data.quantity <= 1000000000
+        && request.resource.data.revision == resource.data.revision + 1
+        && request.resource.data.lastMovementId == movement.id
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.ug == resource.data.ug
+        && request.resource.data.materialId == resource.data.materialId
+        && request.resource.data.quantity
+          == resource.data.quantity + movement.quantityDelta;
+    }
+
+    function warehouseBalanceWriteAllowed(workspaceId, materialId) {
+      let movementId = request.resource.data.lastMovementId;
+      let movementPath = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId);
+      let balancePath = /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId);
+      let movement = getAfter(movementPath).data;
+      let balanceExists = exists(balancePath);
+      return !exists(movementPath)
+        && existsAfter(movementPath)
+        && (
+          (
+            warehouseMovementIsExpressOutbound(movement)
+            && balanceExists
+            && validWarehouseExpressOutboundBalanceUpdate(
+              workspaceId,
+              materialId,
+              movement
+            )
+          )
+          || (
+            !warehouseMovementIsExpressOutbound(movement)
+            && validWarehouseBalanceDocument(workspaceId, materialId)
+            && movement.schemaVersion == 'warehouse_movement_v1'
+            && movement.workspaceId == workspaceId
+            && movement.ug == request.resource.data.ug
+            && movement.materialId == materialId
+            && (
+              (!balanceExists
+                && request.resource.data.revision == 1
+                && request.resource.data.quantity == movement.quantityDelta)
+              || (balanceExists
+                && request.resource.data.revision == resource.data.revision + 1
+                && request.resource.data.quantity == resource.data.quantity + movement.quantityDelta
+                && request.resource.data.workspaceId == resource.data.workspaceId
+                && request.resource.data.ug == resource.data.ug
+                && request.resource.data.materialId == resource.data.materialId)
+            )
+          )
         );
     }
 
@@ -3469,30 +3665,7 @@ service cloud.firestore {
       match /movements/{movementId} {
         allow read: if canAccessWarehouseModule(workspaceId);
         allow create: if canAccessWarehouseModule(workspaceId)
-          && validWarehouseMovementDocument(workspaceId, movementId)
-          && warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId)
-          && (
-            request.resource.data.type != 'TRANSFER'
-            || warehouseTransferHasMatchingLocationBalancesAfter(
-              workspaceId,
-              movementId,
-              request.resource.data
-            )
-          )
-          && (
-            !('source' in request.resource.data)
-            || request.resource.data.source == null
-            || request.resource.data.source.kind != 'EXPRESS_OUTBOUND'
-            || (
-              warehouseExpressOutboundHasMatchingLocationBalanceAfter(
-                workspaceId,
-                movementId,
-                request.resource.data
-              )
-              && warehouseExpressOutboundBarcodeMatches(workspaceId, request.resource.data)
-              && warehouseExpressOutboundLotMatchesAfter(workspaceId, request.resource.data)
-            )
-          );
+          && warehouseMovementCreateAllowed(workspaceId, movementId);
         allow update, delete: if false;
       }
 
@@ -3500,8 +3673,7 @@ service cloud.firestore {
       match /balances/{materialId} {
         allow read: if canAccessWarehouseModule(workspaceId);
         allow create, update: if canAccessWarehouseModule(workspaceId)
-          && validWarehouseBalanceDocument(workspaceId, materialId)
-          && warehouseBalanceWriteBackedByNewMovement(workspaceId, materialId);
+          && warehouseBalanceWriteAllowed(workspaceId, materialId);
         allow delete: if false;
       }
 
@@ -3509,13 +3681,7 @@ service cloud.firestore {
       match /locationBalances/{locationBalanceId} {
         allow read: if canAccessWarehouseModule(workspaceId);
         allow create, update: if canAccessWarehouseModule(workspaceId)
-          && validWarehouseLocationBalanceDocument(workspaceId, locationBalanceId)
-          && warehousePositionActive(
-            workspaceId,
-            request.resource.data.position,
-            request.resource.data.ug
-          )
-          && warehouseLocationBalanceWriteBackedByNewMovement(workspaceId, locationBalanceId);
+          && warehouseLocationBalanceWriteAllowed(workspaceId, locationBalanceId);
         allow delete: if false;
       }
 
