@@ -187,7 +187,9 @@ function DepotCanvas({
               object.kind === 'SHELF' ||
               object.kind === 'CABINET' ||
               object.kind === 'CHAMBER' ||
-              object.kind === 'FREEZER'
+              object.kind === 'FREEZER' ||
+              object.kind === 'REFRIGERATOR' ||
+              object.kind === 'PALLET'
             );
             const objectDepth = raised ? Math.max(8, Math.min(34, object.elevation * 3 + 10)) : 1;
 
