@@ -204,7 +204,7 @@ Gate vertical: contagem → divergência → confirmação → ajuste auditável
 
 Fechamento: PR #180 aprovado e integrado à `main` por squash merge `0a15586ff39d740f48f71c33c7cbff578835e11f`, com Application CI #702 e Recovery guardrails #463 aprovados.
 
-## FASE 11 — Entregas, Dashboard Logístico e Alertas
+## FASE 11 — Entregas, Dashboard Logístico e Alertas — IMPLEMENTADA / VALIDAÇÃO LOCAL CONCLUÍDA
 
 Blocos: DEP-22, DEP-22.1, DEP-23, DEP-23.1 e DEP-23.2.
 
@@ -217,6 +217,14 @@ Capacidade completa:
 - NF cadastrada continua significando recebido, independentemente da disponibilidade do ADM.
 
 Gate vertical: expectativa de entrega e situação logística aparecem no ADM sem introduzir dependência operacional no EMPROVEX.
+
+Estado de fechamento:
+- implementação funcional concluída na branch protegida da FASE 11;
+- Core Protection aprovado localmente;
+- testes de domínio logístico 5/5;
+- guard permanente da FASE 11 aprovado;
+- walking skeleton 6/6;
+- integração à `main` depende apenas da certificação final do PR correspondente.
 
 ## FASE 11.5 — Consolidação Visual e UX do ADM Depósito
 
