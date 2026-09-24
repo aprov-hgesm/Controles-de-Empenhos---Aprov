@@ -338,7 +338,6 @@ export async function startWarehouseInventory(
 
   validateScopeAgainstStructure(inventoryScope, depots, locations);
   const locationBalances = locationRecords.map((record) => record.balance);
-  assertProjectionConsistency(balances, locationBalances);
 
   const materialById = new Map(materials.map((material) => [material.id, material]));
   const balanceByMaterial = new Map(balances.map((balance) => [balance.materialId, balance]));
@@ -349,6 +348,15 @@ export async function startWarehouseInventory(
   );
 
   if (selected.length === 0) throw new Error('WAREHOUSE_INVENTORY_SCOPE_EMPTY');
+
+  // Inventário parcial não deve ser bloqueado por lacunas históricas de materiais
+  // fora do escopo. A coerência continua obrigatória para cada material efetivamente
+  // inventariado, somando todas as suas posições oficiais.
+  const selectedMaterialIds = new Set(selected.map((balance) => balance.materialId));
+  assertProjectionConsistency(
+    balances.filter((balance) => selectedMaterialIds.has(balance.materialId)),
+    locationBalances.filter((balance) => selectedMaterialIds.has(balance.materialId))
+  );
   if (selected.length > 1200) throw new Error('WAREHOUSE_INVENTORY_SCOPE_TOO_LARGE');
 
   const inventoryId = createWarehouseInventoryId();
