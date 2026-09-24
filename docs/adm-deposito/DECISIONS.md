@@ -252,7 +252,7 @@ O cronograma atual deve ser reaproveitado, sem duplicar dados.
 
 Transição visual pode manter compatibilidade temporária com a rota atual.
 
-## D-025 — Alertas logísticos pertencem ao namespace warehouse
+## D-025 — Alertas logísticos pertencem ao namespace `warehouse`
 
 Não criar dependência de escrita do ADM Depósito sobre a Central de Avisos operacional do EMPROVEX.
 
