@@ -229,6 +229,7 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
   const [mode, setMode] = useState<Mode>('view');
   const [draftObjects, setDraftObjects] = useState<WarehouseDepotLayoutObject[]>([]);
   const [draftName, setDraftName] = useState('Croqui principal');
+  const [selectedDepotId, setSelectedDepotId] = useState<string>('');
   const [draftDepotId, setDraftDepotId] = useState<string>('');
   const [draftWidth, setDraftWidth] = useState(DEFAULT_WIDTH);
   const [draftHeight, setDraftHeight] = useState(DEFAULT_HEIGHT);
@@ -249,23 +250,26 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
         listWarehouseLocations(workspaceId, 500),
         listWarehouseLocationBalances(workspaceId, 500),
       ]);
+      const depotList = depots.map((item) => item.depot);
       setData({
         loading: false,
         error: null,
         active: active?.layout || null,
         history,
         materials,
-        depots: depots.map((item) => item.depot),
+        depots: depotList,
         locations: locations.map((item) => item.location),
         balances: balances.map((item) => item.balance),
       });
-      if (active?.layout) {
-        setDraftObjects(active.layout.objects);
-        setDraftName(active.layout.name);
-        setDraftDepotId(active.layout.depotId || '');
-        setDraftWidth(active.layout.logicalWidth);
-        setDraftHeight(active.layout.logicalHeight);
-      }
+      setSelectedDepotId((current) => {
+        if (current && depotList.some((depot) => depot.id === current && depot.status === 'active')) {
+          return current;
+        }
+        const firstLayoutDepot = history.find(
+          (item) => item.layout.status === 'active' && item.layout.depotId
+        )?.layout.depotId;
+        return firstLayoutDepot || depotList.find((depot) => depot.status === 'active')?.id || '';
+      });
     } catch (error) {
       setData((current) => ({
         ...current,
@@ -307,6 +311,49 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
     [highlightedBalances]
   );
 
+  const selectedActiveLayout = useMemo(
+    () =>
+      data.history
+        .filter(
+          (item) =>
+            item.layout.status === 'active'
+            && (item.layout.depotId || '') === selectedDepotId
+        )
+        .sort((left, right) => right.layout.version - left.layout.version)[0]?.layout
+      || (
+        data.active && (data.active.depotId || '') === selectedDepotId
+          ? data.active
+          : null
+      ),
+    [data.active, data.history, selectedDepotId]
+  );
+
+  const selectedDepotHistory = useMemo(
+    () =>
+      data.history
+        .filter((item) => (item.layout.depotId || '') === selectedDepotId)
+        .sort((left, right) => right.layout.version - left.layout.version),
+    [data.history, selectedDepotId]
+  );
+
+  useEffect(() => {
+    if (mode !== 'view') return;
+    if (selectedActiveLayout) {
+      setDraftObjects(selectedActiveLayout.objects);
+      setDraftName(selectedActiveLayout.name);
+      setDraftDepotId(selectedActiveLayout.depotId || '');
+      setDraftWidth(selectedActiveLayout.logicalWidth);
+      setDraftHeight(selectedActiveLayout.logicalHeight);
+    } else {
+      setDraftObjects([]);
+      setDraftName('Croqui principal');
+      setDraftDepotId(selectedDepotId);
+      setDraftWidth(DEFAULT_WIDTH);
+      setDraftHeight(DEFAULT_HEIGHT);
+    }
+    setSelectedObjectId(null);
+  }, [mode, selectedActiveLayout, selectedDepotId]);
+
   const [fefoLocationId, setFefoLocationId] = useState<string | null>(null);
   useEffect(() => {
     let active = true;
@@ -327,21 +374,21 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
   const currentLayout = mode === 'edit'
     ? {
         schemaVersion: 'warehouse_depot_layout_v1' as const,
-        id: data.active?.id || 'lay_00000000000000000000000000000000',
+        id: selectedActiveLayout?.id || 'lay_00000000000000000000000000000000',
         workspaceId,
-        ug: data.active?.ug || '160416',
+        ug: selectedActiveLayout?.ug || '160416',
         name: draftName,
         depotId: draftDepotId || null,
         logicalWidth: draftWidth,
         logicalHeight: draftHeight,
         objects: draftObjects,
-        version: data.active?.version || 0,
+        version: selectedActiveLayout?.version || 0,
         status: 'active' as const,
-        previousVersionId: data.active?.previousVersionId || null,
-        createdBy: data.active?.createdBy || 'draft',
-        updatedBy: data.active?.updatedBy || 'draft',
+        previousVersionId: selectedActiveLayout?.previousVersionId || null,
+        createdBy: selectedActiveLayout?.createdBy || 'draft',
+        updatedBy: selectedActiveLayout?.updatedBy || 'draft',
       }
-    : data.active;
+    : selectedActiveLayout;
 
   const selectedObject = draftObjects.find((item) => item.id === selectedObjectId) || null;
   const activeLocations = data.locations.filter((item) =>
@@ -398,15 +445,33 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                   </div>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2">
-                {data.active && (
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="min-w-[220px]">
+                  <span className="mb-1 block text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">Depósito do croqui</span>
+                  <select
+                    value={selectedDepotId}
+                    onChange={(event) => {
+                      const next = event.target.value;
+                      setSelectedDepotId(next);
+                      if (mode === 'edit') setMode('view');
+                    }}
+                    className="h-9 w-full rounded-xl border border-white/[0.08] bg-[#08101f] px-3 text-xs font-bold text-slate-200"
+                    aria-label="Selecionar depósito do croqui"
+                  >
+                    {!data.depots.some((depot) => depot.status === 'active') && <option value="">Nenhum depósito ativo</option>}
+                    {data.depots.filter((depot) => depot.status === 'active').map((depot) => (
+                      <option key={depot.id} value={depot.id}>{depot.code} · {depot.name}</option>
+                    ))}
+                  </select>
+                </label>
+                {selectedActiveLayout && (
                   <>
                     <button
                       type="button"
                       onClick={() => {
                         downloadText(
-                          'warehouse-layout-v' + data.active!.version + '.json',
-                          JSON.stringify(data.active, null, 2),
+                          'warehouse-layout-v' + selectedActiveLayout!.version + '.json',
+                          JSON.stringify(selectedActiveLayout, null, 2),
                           'application/json'
                         );
                       }}
@@ -418,8 +483,8 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                       type="button"
                       onClick={() => {
                         downloadText(
-                          'warehouse-layout-v' + data.active!.version + '.svg',
-                          renderWarehouseDepotLayoutSvg(data.active!),
+                          'warehouse-layout-v' + selectedActiveLayout!.version + '.svg',
+                          renderWarehouseDepotLayoutSvg(selectedActiveLayout!),
                           'image/svg+xml'
                         );
                       }}
@@ -434,11 +499,11 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                   data-testid="warehouse-layout-toggle-edit"
                   onClick={() => {
                     if (mode === 'view') {
-                      setDraftObjects(data.active?.objects || []);
-                      setDraftName(data.active?.name || 'Croqui principal');
-                      setDraftDepotId(data.active?.depotId || '');
-                      setDraftWidth(data.active?.logicalWidth || DEFAULT_WIDTH);
-                      setDraftHeight(data.active?.logicalHeight || DEFAULT_HEIGHT);
+                      setDraftObjects(selectedActiveLayout?.objects || []);
+                      setDraftName(selectedActiveLayout?.name || 'Croqui principal');
+                      setDraftDepotId(selectedDepotId);
+                      setDraftWidth(selectedActiveLayout?.logicalWidth || DEFAULT_WIDTH);
+                      setDraftHeight(selectedActiveLayout?.logicalHeight || DEFAULT_HEIGHT);
                       setMode('edit');
                     } else {
                       setMode('view');
@@ -502,21 +567,21 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
               <Layers3 className="h-4 w-4 text-blue-200" />
               <p className="text-xs font-black">Layout ativo</p>
             </div>
-            <p className="mt-3 text-sm font-bold text-white">{data.active?.name || 'Ainda não criado'}</p>
+            <p className="mt-3 text-sm font-bold text-white">{selectedActiveLayout?.name || 'Ainda não criado'}</p>
             <p className="mt-1 font-mono text-[10px] text-slate-600">
-              {data.active ? 'versão ' + data.active.version + ' · ' + data.active.id : 'primeira versão pendente'}
+              {selectedActiveLayout ? 'versão ' + selectedActiveLayout.version + ' · ' + selectedActiveLayout.id : 'primeira versão pendente'}
             </p>
             <p className="mt-3 text-xs leading-5 text-slate-500">
-              {data.history.length} versão(ões) preservada(s). Alterar geometria nunca movimenta estoque.
+              {selectedDepotHistory.length} versão(ões) deste depósito preservada(s). Alterar geometria nunca movimenta estoque.
             </p>
           </div>
 
-          {data.history.length > 0 && (
+          {selectedDepotHistory.length > 0 && (
             <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-4" data-testid="warehouse-layout-history">
               <p className="text-xs font-black text-slate-200">Histórico de versões</p>
               <p className="mt-1 text-[11px] leading-5 text-slate-600">Versões anteriores permanecem auditáveis e podem servir de base para uma nova versão.</p>
               <div className="mt-3 space-y-2">
-                {data.history.slice(0, 8).map((item) => (
+                {selectedDepotHistory.slice(0, 8).map((item) => (
                   <div key={item.layout.id} className="flex items-center justify-between gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2">
                     <div className="min-w-0">
                       <p className="truncate text-[11px] font-bold text-slate-300">v{item.layout.version} · {item.layout.name}</p>
@@ -559,8 +624,8 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
               </label>
               <label className="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
                 Depósito relacionado
-                <select data-testid="warehouse-layout-depot" value={draftDepotId} onChange={(e) => setDraftDepotId(e.target.value)} className="mt-1 h-9 w-full rounded-lg border border-white/[0.08] bg-[#08101f] px-3 text-xs text-slate-200">
-                  <option value="">Layout geral da UG</option>
+                <select data-testid="warehouse-layout-depot" value={draftDepotId} onChange={(e) => { setDraftDepotId(e.target.value); setSelectedDepotId(e.target.value); }} className="mt-1 h-9 w-full rounded-lg border border-white/[0.08] bg-[#08101f] px-3 text-xs text-slate-200">
+                  <option value="">Selecione um depósito</option>
                   {data.depots.filter((depot) => depot.status === 'active').map((depot) => (
                     <option key={depot.id} value={depot.id}>{depot.code} · {depot.name}</option>
                   ))}
@@ -653,8 +718,8 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                         logicalWidth: draftWidth,
                         logicalHeight: draftHeight,
                         objects: draftObjects,
-                        baseLayoutId: data.active?.depotId === (draftDepotId || null) ? data.active.id : null,
-                        expectedVersion: data.active?.depotId === (draftDepotId || null) ? data.active.version : null,
+                        baseLayoutId: selectedActiveLayout?.depotId === (draftDepotId || null) ? selectedActiveLayout.id : null,
+                        expectedVersion: selectedActiveLayout?.depotId === (draftDepotId || null) ? selectedActiveLayout.version : null,
                       });
                       setMessage('Layout salvo como versão ' + saved.version + '. Nenhum saldo ou movimento de estoque foi alterado.');
                       setMode('view');
