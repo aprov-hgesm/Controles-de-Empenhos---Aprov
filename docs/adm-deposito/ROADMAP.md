@@ -224,7 +224,7 @@ Estado de fechamento:
 - testes de domínio logístico 5/5;
 - guard permanente da FASE 11 aprovado;
 - walking skeleton 6/6;
-- integração à `main` depende apenas da certificação final do PR correspondente.
+- CI remoto e integração à `main` ficam deliberadamente diferidos até a conclusão das fases restantes do ADM Depósito; até lá, a continuidade usa a branch/baseline protegida e gates locais rápidos.
 
 ## FASE 11.5 — Consolidação Visual e UX do ADM Depósito
 
