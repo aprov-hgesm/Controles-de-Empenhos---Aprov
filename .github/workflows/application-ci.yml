@@ -163,6 +163,12 @@ jobs:
       - name: ADM Depósito Phase 8 permanent guard
         run: npm run verify:adm-deposito-phase-8
 
+      - name: ADM Depósito Phase 9 depot layout domain tests
+        run: npm run test:adm-deposito-depot-layout
+
+      - name: ADM Depósito Phase 9 permanent guard
+        run: npm run verify:adm-deposito-phase-9
+
       - name: Production multi-tenant readiness guard
         run: npm run verify:production-multitenant-readiness
 
