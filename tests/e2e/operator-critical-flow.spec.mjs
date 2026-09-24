@@ -154,6 +154,10 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     await expect(page.getByTestId('nav-adm-deposito')).toHaveCount(0);
 
     await page.goto('/adm-deposito/visao-do-deposito');
+    await expect(page).toHaveURL(/\/$/, { timeout: 20_000 });
+    await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
+      timeout: 20_000,
+    });
     await expect(page.getByTestId('nav-adm-deposito')).toHaveCount(0);
 
     await page.goto('/adm-deposito/saida-expressa');
