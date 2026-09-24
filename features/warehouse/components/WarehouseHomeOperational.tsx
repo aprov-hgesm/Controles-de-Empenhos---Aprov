@@ -376,14 +376,16 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
     [data.locationBalances, selectedDepotId, selectedMaterialId]
   );
 
-  const highlightedLocationIds = useMemo(
-    () => new Set(
-      depotMaterialBalances
-        .map((item) => warehouseLocationIdForPosition(item.balance.position))
-        .filter(Boolean) as string[]
-    ),
-    [depotMaterialBalances]
-  );
+  const highlightedLocationIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const item of depotMaterialBalances) {
+      const position = item.balance.position;
+      const primary = warehouseLocationIdForPosition(position);
+      if (primary) ids.add(primary);
+      if (position.kind === 'SUBPOSITION') ids.add(position.locationId);
+    }
+    return ids;
+  }, [depotMaterialBalances]);
 
   const totalQuantity = useMemo(
     () => data.balances.find((balance) => balance.materialId === selectedMaterialId)?.quantity || 0,
@@ -490,8 +492,11 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
                 <input
                   value={query}
                   onChange={(event) => {
-                    setQuery(event.target.value);
-                    if (!event.target.value.trim()) setSelectedMaterialId('');
+                    const nextQuery = event.target.value;
+                    setQuery(nextQuery);
+                    if (!selectedMaterial || nextQuery !== selectedMaterial.description) {
+                      setSelectedMaterialId('');
+                    }
                   }}
                   placeholder="Nome, descrição ou código"
                   className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10"
