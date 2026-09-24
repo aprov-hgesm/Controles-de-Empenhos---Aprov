@@ -1109,7 +1109,7 @@ async function main() {
 
   console.log('\nDiagnóstico — receipt lifecycle NF + warehouse em transação única');
 
-  for (const itemCount of [1, 2, 3, 4]) {
+  for (const itemCount of [1, 2, 3, 4, 5]) {
     const probeEmpenhoId = `2026NE-RECEIPT-${itemCount}`;
     const probeInvoiceKey = `nf_11222333000181_receipt_${itemCount}`;
     const probeItems = Array.from({ length: itemCount }, (_, index) => ({
@@ -1160,68 +1160,82 @@ async function main() {
           `receipt-probe-${itemCount}`
         );
 
-        const empenhoSnapshot = await transaction.get(empenhoRef);
+        const refs = Array.from({ length: itemCount }, (_, index) => {
+          const materialId =
+            'mat_' + String(itemCount) + String(index + 1).padStart(2, '0') + 'a'.repeat(29);
+          const movementHash =
+            String(itemCount) + String(index + 1).padStart(2, '0') + 'b'.repeat(61);
+          const movementId = 'mov_' + movementHash;
+          return {
+            index,
+            materialId,
+            movementHash,
+            movementId,
+            materialRef: doc(
+              admin.db,
+              'warehouse',
+              'hgesm-aprov',
+              'materials',
+              materialId
+            ),
+            movementRef: doc(
+              admin.db,
+              'warehouse',
+              'hgesm-aprov',
+              'movements',
+              movementId
+            ),
+            balanceRef: doc(
+              admin.db,
+              'warehouse',
+              'hgesm-aprov',
+              'balances',
+              materialId
+            ),
+          };
+        });
+
+        const [empenhoSnapshot, invoiceSnapshot, materialSnapshots, movementSnapshots, balanceSnapshots] =
+          await Promise.all([
+            transaction.get(empenhoRef),
+            transaction.get(invoiceRef),
+            Promise.all(refs.map((entry) => transaction.get(entry.materialRef))),
+            Promise.all(refs.map((entry) => transaction.get(entry.movementRef))),
+            Promise.all(refs.map((entry) => transaction.get(entry.balanceRef))),
+          ]);
+
         assert.equal(empenhoSnapshot.exists(), true);
+        assert.equal(invoiceSnapshot.exists(), false);
+        materialSnapshots.forEach((snapshot) => assert.equal(snapshot.exists(), false));
+        movementSnapshots.forEach((snapshot) => assert.equal(snapshot.exists(), false));
+        balanceSnapshots.forEach((snapshot) => assert.equal(snapshot.exists(), false));
 
         const updatedItems = [];
         const invoiceItems = [];
 
-        for (let index = 0; index < itemCount; index += 1) {
-          const materialId = 'mat_' + String(itemCount) + String(index + 1).padStart(2, '0') + 'a'.repeat(29);
-          const movementHash = String(itemCount) + String(index + 1).padStart(2, '0') + 'b'.repeat(61);
-          const movementId = 'mov_' + movementHash;
+        for (const entry of refs) {
+          const sourceItem = probeItems[entry.index];
 
-          const materialRef = doc(
-            admin.db,
-            'warehouse',
-            'hgesm-aprov',
-            'materials',
-            materialId
-          );
-          const movementRef = doc(
-            admin.db,
-            'warehouse',
-            'hgesm-aprov',
-            'movements',
-            movementId
-          );
-          const balanceRef = doc(
-            admin.db,
-            'warehouse',
-            'hgesm-aprov',
-            'balances',
-            materialId
-          );
-
-          const [materialSnapshot, movementSnapshot, balanceSnapshot] = await Promise.all([
-            transaction.get(materialRef),
-            transaction.get(movementRef),
-            transaction.get(balanceRef),
-          ]);
-          assert.equal(materialSnapshot.exists(), false);
-          assert.equal(movementSnapshot.exists(), false);
-          assert.equal(balanceSnapshot.exists(), false);
-
-          transaction.set(materialRef, {
+          transaction.set(entry.materialRef, {
             schemaVersion: 'warehouse_material_v1',
-            id: materialId,
+            id: entry.materialId,
             workspaceId: 'hgesm-aprov',
             ug: '160416',
-            description: probeItems[index].name,
+            description: sourceItem.name,
             aliases: [],
             unit: { code: 'unit', label: null },
             status: 'active',
             conversions: [],
           });
-          transaction.set(movementRef, {
+          transaction.set(entry.movementRef, {
             schemaVersion: 'warehouse_movement_v1',
-            id: movementId,
+            id: entry.movementId,
             workspaceId: 'hgesm-aprov',
             ug: '160416',
-            materialId,
+            materialId: entry.materialId,
             type: 'INVOICE_ENTRY',
             quantityDelta: 1,
-            idempotencyKeyHash: movementHash,
+            idempotencyKeyHash: entry.movementHash,
             reversesMovementId: null,
             note: `NF RECEIPT-${itemCount} · Empenho ${probeEmpenhoId}`,
             source: {
@@ -1230,36 +1244,36 @@ async function main() {
               invoiceRecordKey: probeInvoiceKey,
               invoiceId: `RECEIPT-${itemCount}`,
               empenhoId: probeEmpenhoId,
-              itemIds: [probeItems[index].id],
+              itemIds: [sourceItem.id],
               supplier: 'Fornecedor Receipt Probe',
               supplierCnpj: '11222333000181',
               actorUid: admin.user.uid,
             },
             createdAt: serverTimestamp(),
           });
-          transaction.set(balanceRef, {
+          transaction.set(entry.balanceRef, {
             schemaVersion: 'warehouse_balance_v1',
             workspaceId: 'hgesm-aprov',
             ug: '160416',
-            materialId,
+            materialId: entry.materialId,
             quantity: 1,
             revision: 1,
-            lastMovementId: movementId,
+            lastMovementId: entry.movementId,
             updatedAt: serverTimestamp(),
           });
 
           updatedItems.push({
-            ...probeItems[index],
+            ...sourceItem,
             received: 1,
-            warehouseMaterialId: materialId,
+            warehouseMaterialId: entry.materialId,
           });
           invoiceItems.push({
-            itemId: probeItems[index].id,
+            itemId: sourceItem.id,
             quantity: 1,
             unitPrice: 5,
             subtotal: 5,
-            warehouseMaterialId: materialId,
-            warehouseMovementIds: [movementId],
+            warehouseMaterialId: entry.materialId,
+            warehouseMovementIds: [entry.movementId],
           });
         }
 
