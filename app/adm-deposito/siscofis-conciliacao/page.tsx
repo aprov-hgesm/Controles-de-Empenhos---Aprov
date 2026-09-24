@@ -1,5 +1,5 @@
-import { WarehouseProtectedSurface } from '../../../features/warehouse/components/WarehouseProtectedSurface';
+import { redirect } from 'next/navigation';
 
-export default function WarehouseSiscofisPage() {
-  return <WarehouseProtectedSurface section="siscofis" />;
+export default function LegacyWarehouseRoute() {
+  redirect('/adm-deposito/cadastro-de-itens?aba=siscofis');
 }
