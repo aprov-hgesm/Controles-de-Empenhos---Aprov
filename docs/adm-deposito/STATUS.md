@@ -4,12 +4,13 @@ Este arquivo registra o estado real de continuidade do projeto e deve ser tratad
 
 ## Estado geral
 
-Status: **FASE 9 CONCLUÍDA — VISÃO DO DEPÓSITO / EDITOR / PERSISTÊNCIA**
+Status: **FASE 10 IMPLEMENTADA — INVENTÁRIO FÍSICO EM VALIDAÇÃO TÉCNICA**
 
 Data de fechamento: 2026-09-24.
 
 Situação:
 - FASES 0, 1, 2, 3, 4, 5, 6, 7, 8 e 9 concluídas;
+- FASE 10 — Inventário Físico implementada na branch própria e em validação de PR;
 - FASE 3 — Walking Skeleton integrada à `main` pelo PR #164;
 - FASE 4 — NF → Estoque implementada e validada no PR #167;
 - FASE 5 — SISCOFIS / Marco Zero / Conciliação implementada no PR #171;
@@ -19,7 +20,7 @@ Situação:
 - FASE 9 — Visão do Depósito / Editor / Persistência implementada no PR #179;
 - piloto permanece exclusivo da conta fundadora;
 - usuários externos continuam sem visibilidade e sem acesso ao módulo ADM Depósito;
-- nenhuma capacidade da FASE 10 foi iniciada.
+- nenhuma capacidade da FASE 11 foi iniciada.
 
 ## Repositório e baseline
 
@@ -60,6 +61,17 @@ Baseline da `main` imediatamente antes do desenvolvimento da FASE 9:
 
 Branch da FASE 9:
 `feat/adm-deposito-phase-9-depot-view-layout`
+
+Baseline da `main` imediatamente antes do desenvolvimento da FASE 10:
+`44bd77451138ace7b113704abd8bd873675f09e5`
+
+Branch da FASE 10:
+`feat/adm-deposito-phase-10-physical-inventory`
+
+PR técnico da FASE 10:
+- será registrado após a abertura do PR;
+- escopo exclusivo DEP-20 a DEP-20.3;
+- FASE 11 não iniciada.
 
 PR técnico da FASE 9:
 - PR #179 — `feat: ADM Depósito phase 9 depot view layout`;
@@ -459,6 +471,43 @@ Decisões de segurança/performance:
 - Rules mantêm caminho explícito `/layouts/{layoutId}` sem wildcard recursivo;
 - versões arquivadas não podem ter conteúdo reescrito.
 
+### FASE 10 — Inventário Físico
+Implementada; validação final do PR em andamento.
+
+Capacidade vertical implementada:
+- contrato de sessão warehouse_inventory_v1;
+- itens bounded warehouse_inventory_item_v1;
+- inventário total/parcial por depósito, localização ou subposição;
+- esperado derivado de warehouse_balance_v1 e warehouse_location_balance_v1;
+- contagem sem efeito colateral no estoque;
+- revisão de divergências e confirmação humana;
+- INVENTORY_ADJUSTMENT com origem PHYSICAL_INVENTORY;
+- idempotência estável por sessão/item;
+- atualização transacional de ledger, saldo agregado e posição;
+- detecção de concorrência por revision/lastMovementId da posição;
+- RECONCILIATION_REQUIRED em referência obsoleta;
+- fila derivada de materiais sem localização;
+- histórico sem exclusão física;
+- bloqueio integral de usuários externos;
+- Browser E2E e guards específicos adicionados.
+
+Contratos/documentos:
+- warehouse_inventory_v1;
+- warehouse_inventory_item_v1;
+- docs/adm-deposito/PHASE_10_PHYSICAL_INVENTORY.md;
+- decisões D-049, D-050 e D-051.
+
+Validação obrigatória antes do fechamento:
+- domain tests FASE 10;
+- permanent guard FASE 10;
+- multi-tenant Firestore;
+- fases anteriores;
+- TypeScript;
+- build;
+- diff hygiene;
+- Browser E2E;
+- Recovery guardrails.
+
 ## Planejamento futuro aprovado — FASE 11.5
 
 Foi aprovada a inclusão da **FASE 11.5 — Consolidação Visual e UX do ADM Depósito**, posicionada entre a FASE 11 e a FASE 12.
@@ -473,20 +522,11 @@ Diretrizes:
 - a FASE 12 começará sobre a interface visual consolidada, permitindo hardening, segurança, performance e telemetria sobre a experiência definitiva.
 
 A definição detalhada da FASE 11.5 está registrada em `docs/adm-deposito/ROADMAP.md`.
-## Próxima fase oficial
+## Próxima fase oficial após o fechamento da FASE 10
 
-**FASE 10 — Inventário Físico**
+**FASE 11 — Entregas, Dashboard Logístico e Alertas**
 
-Objetivo de alto nível:
-- inventário total ou parcial por depósito/local;
-- esperado x contado;
-- divergência com confirmação humana;
-- `INVENTORY_ADJUSTMENT` auditável;
-- fila de materiais sem localização;
-- preservar integralmente layout, ledger, saldos, lotes, FEFO, barcodes e Saída Expressa;
-- não iniciar FASE 11 no mesmo ciclo.
-
-A FASE 10 deve ser executada em novo chat/branch.
+A FASE 11 não foi iniciada. O desenvolvimento só deve começar após a FASE 10 estar integrada à main com gates obrigatórios aprovados.
 
 ## Sequência futura resumida
 
