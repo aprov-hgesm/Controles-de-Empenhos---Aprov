@@ -560,4 +560,3 @@ Regras permanentes:
 - a FASE 12 inicia sobre a interface visual consolidada para que segurança, performance e telemetria sejam avaliadas sobre a experiência definitiva.
 
 Documento de planejamento: `docs/adm-deposito/ROADMAP.md`.
-
