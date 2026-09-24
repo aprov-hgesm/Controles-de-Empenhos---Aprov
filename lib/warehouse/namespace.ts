@@ -25,6 +25,7 @@ export const WAREHOUSE_DOMAIN_COLLECTIONS = {
   layouts: 'layouts',
   inventories: 'inventories',
   siscofisSnapshots: 'siscofisSnapshots',
+  alerts: 'alerts',
 } as const;
 
 export type WarehouseDomain =
