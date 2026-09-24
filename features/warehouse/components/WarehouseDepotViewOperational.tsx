@@ -624,12 +624,13 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
               </label>
               <label className="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
                 Depósito relacionado
-                <select data-testid="warehouse-layout-depot" value={draftDepotId} onChange={(e) => { setDraftDepotId(e.target.value); setSelectedDepotId(e.target.value); }} className="mt-1 h-9 w-full rounded-lg border border-white/[0.08] bg-[#08101f] px-3 text-xs text-slate-200">
+                <select data-testid="warehouse-layout-depot" value={draftDepotId} disabled className="mt-1 h-9 w-full rounded-lg border border-white/[0.08] bg-[#08101f] px-3 text-xs text-slate-400 disabled:opacity-80">
                   <option value="">Selecione um depósito</option>
                   {data.depots.filter((depot) => depot.status === 'active').map((depot) => (
                     <option key={depot.id} value={depot.id}>{depot.code} · {depot.name}</option>
                   ))}
                 </select>
+                <span className="mt-1 block text-[9px] normal-case tracking-normal text-slate-600">Troque o depósito pelo seletor superior antes de entrar na edição.</span>
               </label>
 
               <div className="grid grid-cols-2 gap-2">
