@@ -7,6 +7,7 @@ const root = process.cwd();
 const findings = [];
 
 const featureFlag = read('lib/warehouse/featureFlag.ts');
+const platformModuleAccess = read('lib/platformModuleAccess.ts');
 const namespace = read('lib/warehouse/namespace.ts');
 const serverAccess = read('lib/server/warehouseAccess.ts');
 const route = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
@@ -21,21 +22,26 @@ const pkg = JSON.parse(read('package.json'));
 
 requireText(
   featureFlag,
+  "from '../platformModuleAccess'",
+  'ADM Depósito não reutiliza a política neutra de acesso da plataforma.'
+);
+requireText(
+  platformModuleAccess,
   'export const warehouseModuleEnabled = true;',
   'Feature flag warehouseModuleEnabled não está explicitamente habilitada.'
 );
 requireText(
-  featureFlag,
+  platformModuleAccess,
   'context.workspaceId === HGESM_WORKSPACE_ID',
   'Feature flag não está vinculada ao workspace fundador.'
 );
 requireText(
-  featureFlag,
+  platformModuleAccess,
   "context.status === 'sector'",
   'Feature flag não exige perfil operacional do fundador.'
 );
 requireText(
-  featureFlag,
+  platformModuleAccess,
   "context.resolutionSource === 'legacy-hgesm-bootstrap'",
   'Feature flag não exige a resolução fundadora consolidada.'
 );
