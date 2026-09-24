@@ -4,20 +4,21 @@ Este arquivo registra o estado real de continuidade do projeto e deve ser tratad
 
 ## Estado geral
 
-Status: **FASE 7 CONCLUÍDA — ESTOQUE OPERÁVEL / LOTES / VALIDADE / FEFO**
+Status: **FASE 8 CONCLUÍDA — CÓDIGO DE BARRAS / SCANNER / SAÍDA EXPRESSA**
 
 Data de fechamento: 2026-09-23.
 
 Situação:
-- FASES 0, 1, 2, 3, 4, 5, 6 e 7 concluídas;
+- FASES 0, 1, 2, 3, 4, 5, 6, 7 e 8 concluídas;
 - FASE 3 — Walking Skeleton integrada à `main` pelo PR #164;
 - FASE 4 — NF → Estoque implementada e validada no PR #167;
 - FASE 5 — SISCOFIS / Marco Zero / Conciliação implementada no PR #171;
 - FASE 6 — Depósitos / Localizações / Transferências implementada e validada no PR #173;
 - FASE 7 — Estoque Operável / Lotes / Validade / FEFO implementada e validada no PR #174;
+- FASE 8 — Código de Barras / Scanner / Saída Expressa implementada e validada no PR #176;
 - piloto permanece exclusivo da conta fundadora;
 - usuários externos continuam sem visibilidade e sem acesso ao módulo ADM Depósito;
-- nenhuma capacidade da FASE 8 foi iniciada.
+- nenhuma capacidade da FASE 9 foi iniciada.
 
 ## Repositório e baseline
 
@@ -46,6 +47,26 @@ Baseline da `main` imediatamente antes do desenvolvimento da FASE 7:
 
 Branch da FASE 7:
 `feat/adm-deposito-phase-7-stock-lots-fefo`
+
+Baseline da `main` imediatamente antes do desenvolvimento da FASE 8:
+`12ea72a1a7e18a6d1b819fc8a8749da081fbb72e`
+
+Branch da FASE 8:
+`feat/adm-deposito-phase-8-barcode-scanner-express-outbound`
+
+PR da FASE 8:
+- PR #176 — `feat: ADM Depósito phase 8 barcode scanner express outbound`;
+- squash merge na `main`: `de11ad4f742eed3ca25a7f526c1ea5c78e113ec2`;
+- Recovery guardrails aprovado;
+- Application CI aprovado;
+- testes multi-tenant/Firestore aprovados com 218/218 cenários;
+- FASE 8 domain tests aprovados;
+- FASE 8 permanent guard aprovado;
+- build de produção aprovado;
+- TypeScript final aprovado;
+- diff hygiene aprovado;
+- Browser E2E com Firebase Emulator aprovado;
+- PR encerrado mergeável e sem regressão funcional conhecida.
 
 PR da FASE 7:
 - PR #174 — `feat: implement ADM Depósito phase 7 stock lots FEFO`;
@@ -221,7 +242,36 @@ Contratos/documentos:
 - `docs/adm-deposito/PHASE_7_STOCK_LOTS_FEFO.md`;
 - decisões permanentes D-039, D-040 e D-041 em `DECISIONS.md`.
 
-## Regras permanentes após a FASE 7
+### FASE 8 — Código de Barras / Scanner / Saída Expressa
+Concluída.
+
+Capacidade vertical entregue:
+- contrato `warehouse_barcode_v1` para múltiplos códigos e apresentações por material canônico;
+- barcode permanece identificador auxiliar e nunca substitui `materialId`;
+- associação explícita de código desconhecido, sem criação automática de material;
+- conversão de embalagem reutiliza a conversão canônica do material;
+- leitor USB HID funciona como teclado, com fluxo código + ENTER;
+- digitação/pesquisa manual converge para o mesmo serviço transacional;
+- fluxo operacional contínuo `SCAN → quantidade → ENTER`, com retorno de foco ao scanner;
+- saída expressa reutiliza `warehouse_movement_v1.type = OUTBOUND`;
+- movimento, saldo agregado e projeção física são atualizados atomicamente;
+- saldo agregado ou físico insuficiente aborta toda a operação;
+- saldo negativo é bloqueado;
+- lote é opcional; quando selecionado, sua atribuição logística é reduzida na mesma transação;
+- FEFO permanece recomendação consultiva e exige ação explícita do operador;
+- retry idêntico reutiliza a idempotência do ledger e não baixa estoque duas vezes;
+- tela Estoque pesquisa e exibe associações de barcode;
+- rota `/adm-deposito/saida-expressa` integrada ao shell e à navegação;
+- usuários externos permanecem sem acesso ao namespace logístico;
+- nenhuma capacidade de croqui/Visão do Depósito da FASE 9 foi antecipada.
+
+Contratos/documentos:
+- `warehouse_barcode_v1`;
+- `EXPRESS_OUTBOUND` como origem estruturada de `OUTBOUND`;
+- `docs/adm-deposito/PHASE_8_BARCODE_SCANNER_EXPRESS_OUTBOUND.md`;
+- decisões permanentes D-042, D-043 e D-044 em `DECISIONS.md`.
+
+## Regras permanentes após a FASE 8
 
 1. NF → estoque continua reutilizando o ledger oficial da FASE 2.
 2. Não existe segundo saldo concorrente.
@@ -245,6 +295,14 @@ Contratos/documentos:
 20. Ausência de lote/validade continua não bloqueante; o sistema deve avisar sem inventar dado nem autocorrigir saldo.
 21. FEFO é recomendação derivada e nunca pode executar saída automática.
 22. Histórico do material deve continuar bounded e sob demanda; a listagem Estoque não deve carregar o ledger global.
+23. Barcode é identidade auxiliar; `materialId` continua sendo a identidade canônica.
+24. Código desconhecido exige associação explícita e nunca cria material automaticamente.
+25. Saída expressa deve continuar sendo `OUTBOUND` no ledger oficial, sem saldo paralelo.
+26. Movimento, saldo agregado e projeção física da saída expressa devem permanecer atômicos.
+27. Nenhuma saída pode produzir saldo agregado ou físico negativo.
+28. Scanner HID e pesquisa manual devem convergir para o mesmo serviço transacional.
+29. FEFO continua consultivo; escolha de lote exige ação humana explícita.
+30. Firestore Rules da Saída Expressa usam caminho especializado para permanecer dentro do orçamento de avaliação sem enfraquecer isolamento, atomicidade ou integridade.
 
 ## Validação da FASE 5
 
@@ -314,6 +372,33 @@ Correções de fechamento:
 - teste externo de leitura de lote foi corrigido para usar efetivamente a sessão externa;
 - guard documental da FASE 7 foi alinhado ao título oficial sem alterar a regra de domínio.
 
+## Validação da FASE 8
+
+Gates específicos:
+- `npm run test:adm-deposito-barcode-outbound`;
+- `npm run verify:adm-deposito-phase-8`;
+- cenários de barcode, scanner, saída expressa, saldo e posição no teste multi-tenant Firestore;
+- Browser E2E específico da jornada da Saída Expressa.
+
+Gates integrados executados no PR #176:
+- Multi-tenant Firestore security: aprovado, 218/218 cenários;
+- FASES 0–7: aprovadas sem regressão;
+- FASE 8 domain tests: aprovado;
+- FASE 8 permanent guard: aprovado;
+- build de produção: aprovado;
+- TypeScript final: aprovado;
+- diff hygiene: aprovado;
+- Browser E2E com Firebase Emulator: aprovado;
+- Recovery guardrails: aprovado;
+- gates finais globais dos blocos existentes: aprovados.
+
+Correções de fechamento:
+- caminho de segurança `EXPRESS_OUTBOUND` foi especializado em movimento, saldo e projeção física para eliminar o estouro do limite de 1.000 expressões do Firestore;
+- wildcard recursivo do namespace warehouse foi removido e o domínio `inventories` passou a possuir regra explícita, mantendo domínios desconhecidos negados por padrão;
+- guards permanentes das fases anteriores foram tornados compatíveis com a evolução estrutural das Rules sem remover suas invariantes;
+- validações de barcode e lote evitam leituras desnecessárias nos fluxos em que não são aplicáveis;
+- `firestore.rules` permaneceu estruturalmente íntegro e o CI final confirmou a operação válida de Saída Expressa.
+
 ## Planejamento futuro aprovado — FASE 11.5
 
 Foi aprovada a inclusão da **FASE 11.5 — Consolidação Visual e UX do ADM Depósito**, posicionada entre a FASE 11 e a FASE 12.
@@ -330,38 +415,39 @@ Diretrizes:
 A definição detalhada da FASE 11.5 está registrada em `docs/adm-deposito/ROADMAP.md`.
 ## Próxima fase oficial
 
-**FASE 8 — Código de Barras, Scanner e Saída Expressa**
+**FASE 9 — Visão do Depósito, Editor e Persistência**
 
 Objetivo de alto nível:
-- suportar múltiplos códigos/apresentações por material;
-- implementar conversão de embalagem;
-- integrar leitor USB tipo teclado;
-- oferecer saída expressa por scanner ou pesquisa;
-- reutilizar FEFO como recomendação;
-- proteger saldo negativo;
-- manter operação contínua sem modais repetitivos.
+- transformar a superfície Visão do Depósito em croqui 2D operacional com perspectiva tridimensional leve;
+- representar apenas estrutura física simples, sem desenhar produtos;
+- vincular objetos visuais a `warehouseLocationId` estável;
+- pesquisar material e destacar no croqui a localização real já existente;
+- permitir destaque consultivo de prioridade FEFO quando aplicável;
+- oferecer editor simplificado sem fazer movimento de estoque ao mover objetos;
+- persistir layout versionado em Firestore com JSON versionado;
+- preparar sincronização complementar com Drive da UG e histórico de versões;
+- manter estoque, ledger, barcode e Saída Expressa como fontes já consolidadas.
 
-A FASE 8 ainda não foi iniciada e deve ser executada em novo chat/branch.
+A FASE 9 deve ser executada em novo chat/branch e não deve iniciar a FASE 10 no mesmo ciclo.
 
 ## Sequência futura resumida
 
-1. FASE 8 — saída expressa / código de barras / scanner;
-2. FASE 9 — Visão do Depósito / editor / persistência;
-3. FASE 10 — inventário;
-4. FASE 11 — entregas / dashboard / alertas;
-5. FASE 11.5 — consolidação visual / UX conduzida pelo fundador;
-6. FASE 12 — segurança / performance / telemetria;
-7. FASE 13 — validação integrada e fechamento do piloto;
-8. FASE 14 — expansão externa futura.
+1. FASE 9 — Visão do Depósito / editor / persistência;
+2. FASE 10 — inventário;
+3. FASE 11 — entregas / dashboard / alertas;
+4. FASE 11.5 — consolidação visual / UX conduzida pelo fundador;
+5. FASE 12 — segurança / performance / telemetria;
+6. FASE 13 — validação integrada e fechamento do piloto;
+7. FASE 14 — expansão externa futura.
 
 ## Gate para o próximo chat
 
 Antes de modificar código:
 1. consultar a `main` real;
-2. ler `README.md`, `ROADMAP.md`, `DECISIONS.md`, `STATUS.md`, `HANDOFF_TEMPLATE.md`, `PHASE_5_SISCOFIS.md`, `PHASE_6_LOCATIONS.md` e `PHASE_7_STOCK_LOTS_FEFO.md`;
-3. comparar a `main` com o baseline registrado aqui;
-4. analisar commits posteriores ao fechamento da FASE 7;
-5. preservar material canônico, ledger, saldo, NF → estoque, cutoff, Marco Zero, snapshots SISCOFIS, distribuição física, lotes e FEFO;
-6. executar exclusivamente a FASE 8 — Código de Barras, Scanner e Saída Expressa;
-7. não iniciar a FASE 9 no mesmo chat;
+2. ler `README.md`, `ROADMAP.md`, `DECISIONS.md`, `STATUS.md`, `HANDOFF_TEMPLATE.md`, `PHASE_6_LOCATIONS.md`, `PHASE_7_STOCK_LOTS_FEFO.md` e `PHASE_8_BARCODE_SCANNER_EXPRESS_OUTBOUND.md`;
+3. comparar a `main` com o baseline funcional da FASE 8 registrado aqui;
+4. analisar commits posteriores ao fechamento da FASE 8;
+5. preservar material canônico, ledger, saldo, NF → estoque, cutoff, Marco Zero, snapshots SISCOFIS, distribuição física, lotes, FEFO, barcodes e Saída Expressa;
+6. executar exclusivamente a FASE 9 — Visão do Depósito, Editor e Persistência;
+7. não iniciar a FASE 10 no mesmo chat;
 8. atualizar STATUS ao fechar a fase.
