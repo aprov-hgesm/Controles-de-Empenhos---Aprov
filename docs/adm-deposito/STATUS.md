@@ -22,6 +22,21 @@ Situação:
 - usuários externos continuam sem visibilidade e sem acesso ao módulo ADM Depósito;
 - houve uma tentativa de FASE 11 no PR #182, fechada sem merge após a revisão arquitetural que priorizou a independência operacional do EMPROVEX.
 
+## Estratégia de validação vigente
+
+A partir de 2026-09-24, a execução das fases restantes adota a decisão D-054:
+
+- desenvolvimento contínuo das FASES 11, 11.5 e 12 com **gates rápidos obrigatórios** de EMPROVEX Core Protection/isolamento;
+- testes direcionados ao domínio alterado permanecem obrigatórios quando houver risco funcional específico;
+- não repetir Browser E2E completo, suíte multi-tenant integral, build/regressão ampla a cada pequena alteração sem evidência nova;
+- concentrar a bateria pesada em uma campanha de estabilização após a implementação funcional do ADM Depósito;
+- usar a FASE 13 como validação integrada formal e fechamento do piloto fundador;
+- GitHub CI continua sendo certificação final antes de merge/release relevantes;
+- a estação local de validação EMPROVEX está apta a executar Firebase Emulator + Next.js + Playwright/Chromium e deve ser preferida para feedback rápido antes do CI remoto.
+
+A proteção do núcleo permanece não negociável: qualquer regressão detectada pelo Core Protection interrompe o avanço imediatamente.
+
+
 ## Repositório e baseline
 
 Repositório:
