@@ -168,7 +168,8 @@
     "verify:adm-deposito-phase-9": "node scripts/verify-adm-deposito-phase-9.mjs",
     "test:adm-deposito-inventory": "node --test scripts/warehouse-inventory.test.mjs",
     "verify:adm-deposito-phase-10": "node scripts/verify-adm-deposito-phase-10.mjs",
-    "verify:emprovex-warehouse-isolation": "node scripts/verify-emprovex-warehouse-isolation.mjs"
+    "verify:emprovex-warehouse-isolation": "node scripts/verify-emprovex-warehouse-isolation.mjs",
+    "verify:emprovex-core-protection": "node scripts/verify-emprovex-core-protection.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
