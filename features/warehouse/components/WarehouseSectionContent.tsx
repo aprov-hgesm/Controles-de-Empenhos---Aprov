@@ -17,7 +17,7 @@ import { WarehouseDepotViewOperational } from './WarehouseDepotViewOperational';
 import { WarehouseInventoryOperational } from './WarehouseInventoryOperational';
 import { WarehouseStockOperational } from './WarehouseStockOperational';
 import { WarehouseDeliveriesOperational } from './WarehouseDeliveriesOperational';
-import { WarehouseLogisticsDashboard } from './WarehouseLogisticsDashboard';
+import { WarehouseHomeOperational } from './WarehouseHomeOperational';
 import { WarehouseLogisticsAlerts } from './WarehouseLogisticsAlerts';
 import { WarehouseLogisticsSettings } from './WarehouseLogisticsSettings';
 
@@ -498,7 +498,7 @@ export function WarehouseSectionContent({ section, workspaceId }: { section: War
   const phase4Data = useWarehousePhase4Data(workspaceId, section);
 
   switch (section) {
-    case 'overview': return <WarehouseLogisticsDashboard workspaceId={workspaceId} />;
+    case 'overview': return <WarehouseHomeOperational workspaceId={workspaceId} />;
     case 'stock': return <WarehouseStockOperational workspaceId={workspaceId} />;
     case 'outbound': return <WarehouseExpressOutbound workspaceId={workspaceId} />;
     case 'movements': return <MovementsContent data={phase4Data} />;
