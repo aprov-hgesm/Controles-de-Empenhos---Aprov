@@ -66,8 +66,6 @@ for (const marker of [
   'match /movements/{movementId}',
   'allow update, delete: if false;',
   'match /balances/{materialId}',
-  "domain != 'movements'",
-  "domain != 'balances'",
 ]) {
   requireText(rules, marker, 'Firestore Rules da FASE 2 incompletas: ' + marker);
 }
