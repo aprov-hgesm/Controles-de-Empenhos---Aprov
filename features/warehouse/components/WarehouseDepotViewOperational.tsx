@@ -60,6 +60,24 @@ interface WarehouseViewData {
 const DEFAULT_WIDTH = 1000;
 const DEFAULT_HEIGHT = 620;
 
+const STRUCTURE_LABELS: Record<WarehouseDepotLayoutObjectKind, string> = {
+  WALL: 'Limite / parede',
+  CORRIDOR: 'Corredor',
+  AREA: 'Área livre',
+  SHELF: 'Estante',
+  RACK: 'Rack',
+  CABINET: 'Armário',
+  CHAMBER: 'Câmara',
+  FREEZER: 'Freezer',
+  REFRIGERATOR: 'Geladeira',
+  PALLET: 'Palete',
+  BENCH: 'Bancada',
+  ZONE: 'Zona',
+  OTHER: 'Outra estrutura',
+};
+
+const STRUCTURE_KINDS = Object.keys(STRUCTURE_LABELS) as WarehouseDepotLayoutObjectKind[];
+
 function downloadText(name: string, content: string, type: string) {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
@@ -661,7 +679,7 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                 <div className="space-y-3 rounded-xl border border-white/[0.07] bg-black/15 p-3" data-testid="warehouse-layout-object-editor">
                   <input data-testid="warehouse-layout-object-label" value={selectedObject.label} onChange={(e) => updateObject(selectedObject.id, { label: e.target.value })} className="h-9 w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 text-xs text-slate-200" />
                   <select value={selectedObject.kind} onChange={(e) => updateObject(selectedObject.id, { kind: e.target.value as WarehouseDepotLayoutObjectKind })} className="h-9 w-full rounded-lg border border-white/[0.08] bg-[#08101f] px-3 text-xs text-slate-200">
-                    {['WALL','CORRIDOR','AREA','SHELF','RACK','CABINET','CHAMBER','FREEZER','REFRIGERATOR','PALLET','BENCH','ZONE','OTHER'].map((kind) => <option key={kind} value={kind}>{kind}</option>)}
+                    {STRUCTURE_KINDS.map((kind) => <option key={kind} value={kind}>{STRUCTURE_LABELS[kind]}</option>)}
                   </select>
                   <select data-testid="warehouse-layout-object-location" value={selectedObject.warehouseLocationId || ''} onChange={(e) => updateObject(selectedObject.id, { warehouseLocationId: e.target.value || null })} className="h-9 w-full rounded-lg border border-white/[0.08] bg-[#08101f] px-3 text-xs text-slate-200">
                     <option value="">Sem vínculo logístico</option>
@@ -671,7 +689,8 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                   </select>
                   <div className="grid grid-cols-2 gap-2">
                     {([
-                      ['x','X'],['y','Y'],['width','Largura'],['height','Altura']
+                      ['x','X'],['y','Y'],['width','Largura'],['height','Profundidade'],
+                      ['rotation','Rotação'],['elevation','Elevação visual']
                     ] as const).map(([key,label]) => (
                       <label key={key} className="text-[9px] font-bold uppercase tracking-[0.1em] text-slate-600">
                         {label}
