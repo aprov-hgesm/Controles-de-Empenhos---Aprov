@@ -545,3 +545,19 @@ Regras permanentes:
 - ausência de lote/validade continua não bloqueante conforme D-041.
 
 Documento técnico: `docs/adm-deposito/PHASE_8_BARCODE_SCANNER_EXPRESS_OUTBOUND.md`.
+
+## D-045 — Consolidação visual do ADM Depósito ocorre na FASE 11.5 e é conduzida pelo fundador
+
+A identidade visual definitiva do ADM Depósito será consolidada somente depois que as principais capacidades operacionais estiverem implementadas, em uma fase própria entre as FASES 11 e 12.
+
+Regras permanentes:
+- a FASE 11.5 é dedicada a design system, hierarquia visual, navegação, cards, tabelas, filtros, badges, formulários, estados, responsividade, microinterações, ergonomia e acabamento;
+- a direção criativa será conduzida pessoalmente pelo fundador, de forma iterativa;
+- cores, referências, intensidade de efeitos, composição e prioridades estéticas permanecem deliberadamente abertas até a execução da fase;
+- o agente atua como executor técnico e guardião de consistência das decisões estéticas aprovadas pelo fundador;
+- FASES 8 a 11 podem receber ajustes necessários de usabilidade e coerência, mas não devem antecipar a reformulação estética global;
+- a FASE 11.5 não altera regras de negócio, ledger, saldos ou contratos logísticos, salvo suporte estritamente necessário à interface;
+- a FASE 12 inicia sobre a interface visual consolidada para que segurança, performance e telemetria sejam avaliadas sobre a experiência definitiva.
+
+Documento de planejamento: `docs/adm-deposito/ROADMAP.md`.
+
