@@ -3557,22 +3557,11 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
-      match /{domain}/{document=**} {
-        allow read, write: if !(
-            domain in [
-              'materials',
-              'depots',
-              'locations',
-              'movements',
-              'balances',
-              'locationBalances',
-              'lots',
-              'barcodes',
-              'settings',
-              'siscofisSnapshots'
-            ]
-          )
-          && canAccessWarehouseModule(workspaceId);
+      // Domínio reservado para inventários futuros. Mantido explícito para
+      // evitar que um wildcard recursivo sobreponha as regras específicas acima.
+      // Demais domínios desconhecidos são negados por padrão.
+      match /inventories/{document=**} {
+        allow read, write: if canAccessWarehouseModule(workspaceId);
       }
     }
 
