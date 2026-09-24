@@ -16,6 +16,10 @@ import { WarehouseLocationsOperational } from './WarehouseLocationsOperational';
 import { WarehouseDepotViewOperational } from './WarehouseDepotViewOperational';
 import { WarehouseInventoryOperational } from './WarehouseInventoryOperational';
 import { WarehouseStockOperational } from './WarehouseStockOperational';
+import { WarehouseDeliveriesOperational } from './WarehouseDeliveriesOperational';
+import { WarehouseLogisticsDashboard } from './WarehouseLogisticsDashboard';
+import { WarehouseLogisticsAlerts } from './WarehouseLogisticsAlerts';
+import { WarehouseLogisticsSettings } from './WarehouseLogisticsSettings';
 
 function FutureNotice({ phase, children }: { phase: string; children: string }) {
   return (
@@ -494,7 +498,7 @@ export function WarehouseSectionContent({ section, workspaceId }: { section: War
   const phase4Data = useWarehousePhase4Data(workspaceId, section);
 
   switch (section) {
-    case 'overview': return <OverviewContent />;
+    case 'overview': return <WarehouseLogisticsDashboard workspaceId={workspaceId} />;
     case 'stock': return <WarehouseStockOperational workspaceId={workspaceId} />;
     case 'outbound': return <WarehouseExpressOutbound workspaceId={workspaceId} />;
     case 'movements': return <MovementsContent data={phase4Data} />;
@@ -502,7 +506,8 @@ export function WarehouseSectionContent({ section, workspaceId }: { section: War
     case 'warehouseView': return <WarehouseDepotViewOperational workspaceId={workspaceId} />;
     case 'inventory': return <WarehouseInventoryOperational workspaceId={workspaceId} />;
     case 'siscofis': return <SiscofisContent workspaceId={workspaceId} />;
-    case 'deliveries': return <DeliveriesContent />;
-    case 'settings': return <SettingsContent />;
+    case 'deliveries': return <WarehouseDeliveriesOperational workspaceId={workspaceId} />;
+    case 'alerts': return <WarehouseLogisticsAlerts workspaceId={workspaceId} />;
+    case 'settings': return <WarehouseLogisticsSettings workspaceId={workspaceId} />;
   }
 }
