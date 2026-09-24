@@ -509,6 +509,41 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
             </p>
           </div>
 
+          {data.history.length > 0 && (
+            <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-4" data-testid="warehouse-layout-history">
+              <p className="text-xs font-black text-slate-200">Histórico de versões</p>
+              <p className="mt-1 text-[11px] leading-5 text-slate-600">Versões anteriores permanecem auditáveis e podem servir de base para uma nova versão.</p>
+              <div className="mt-3 space-y-2">
+                {data.history.slice(0, 8).map((item) => (
+                  <div key={item.layout.id} className="flex items-center justify-between gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-[11px] font-bold text-slate-300">v{item.layout.version} · {item.layout.name}</p>
+                      <p className="mt-0.5 font-mono text-[9px] text-slate-600">{item.layout.status}</p>
+                    </div>
+                    {mode === 'edit' && item.layout.status === 'archived' && (
+                      <button
+                        type="button"
+                        data-testid={'warehouse-layout-restore-' + item.layout.version}
+                        onClick={() => {
+                          setDraftObjects(item.layout.objects);
+                          setDraftName(item.layout.name + ' · recuperada');
+                          setDraftDepotId(item.layout.depotId || '');
+                          setDraftWidth(item.layout.logicalWidth);
+                          setDraftHeight(item.layout.logicalHeight);
+                          setSelectedObjectId(null);
+                          setMessage('Versão ' + item.layout.version + ' carregada como base. Salve para criar uma nova versão ativa.');
+                        }}
+                        className="shrink-0 rounded-lg border border-white/[0.08] px-2 py-1 text-[9px] font-bold text-slate-400 hover:text-slate-200"
+                      >
+                        Usar como base
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {mode === 'edit' && (
             <div className="space-y-4 rounded-2xl border border-blue-300/10 bg-blue-400/[0.025] p-4" data-testid="warehouse-layout-editor">
               <div>
