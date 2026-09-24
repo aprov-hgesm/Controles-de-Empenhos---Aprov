@@ -633,3 +633,32 @@ Antes de modificar código:
 6. executar a FASE 11 somente se todos os gates de Core Protection permanecerem verdes e sem introduzir escrita do ADM no namespace operacional;
 7. não iniciar a FASE 11.5 no mesmo chat;
 8. atualizar STATUS ao fechar a fase.
+
+## Atualização 2026-09-24 — nova estrutura funcional e módulos oficiais
+
+Estado atual da FASE 11.5:
+- **EM EXECUÇÃO**;
+- branch: `feat/adm-deposito-phase-11-5-visual-ux`;
+- navegação principal reorganizada para quatro áreas:
+  - **Início**;
+  - **Cadastro de Itens**;
+  - **Meus Depósitos**;
+  - **Controle de Itens**;
+- rotas legadas estão sendo preservadas por redirecionamento/compatibilidade, não como áreas paralelas;
+- a fila inicial de itens de NF foi criada em Cadastro de Itens;
+- a migração SISCOFIS foi reposicionada sob Cadastro de Itens;
+- Localizações e Visão do Depósito foram agrupadas sob Meus Depósitos;
+- Estoque, Saída Expressa, Movimentações, Inventário, Entregas, Alertas e Configurações foram agrupados sob Controle de Itens;
+- a Home/Início com consulta e croqui permanece como superfície central de visualização.
+
+Pendências funcionais oficiais passam a seguir os 14 módulos descritos no ROADMAP.
+
+Próximo módulo:
+- **Módulo 1 — Motor de pendências das Notas Fiscais**.
+
+Importante:
+- a fila atual já apresenta os itens das NFs, mas a classificação persistida entre **Alocar no depósito** e **Consumo imediato** ainda não é considerada concluída;
+- o fluxo completo de alocação física, lote/validade/barcode, consumo imediato, multi-depósito com layout ativo próprio e editor visual avançado permanece pendente nos módulos seguintes;
+- nenhuma suíte completa ou CI foi executada para esta reorganização, em conformidade com D-057;
+- a campanha consolidada de validação permanece reservada ao Módulo 14.
+
