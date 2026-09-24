@@ -57,6 +57,14 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<OperationalActiveTab>('inicio');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // FASE 11: navegação para recursos já existentes, sem duplicá-los no ADM Depósito.
+  useEffect(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get('tab');
+    if (requestedTab === 'cronogramas' || requestedTab === 'avisos') {
+      setActiveTab(requestedTab);
+    }
+  }, []);
+
   const {
     user, loadingAuth, syncing, workspaceContext,
     activeOperationalDataReady, activeRealtimeCollectionCount, inicioSnapshot,
