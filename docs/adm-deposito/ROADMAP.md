@@ -231,6 +231,12 @@ Estado de fechamento:
 Objetivo: consolidar a identidade visual definitiva do módulo depois que suas principais capacidades operacionais estiverem implementadas e antes do hardening técnico final.
 
 Escopo:
+- usar o mesmo chrome visual oficial do EMPROVEX para Header, Sidebar e framework principal;
+- transformar a antiga Visão Geral em **Início**, central visual branca de consulta e localização;
+- posicionar consulta de itens e seletor de depósito na coluna esquerda;
+- mostrar saldo, quantidade no depósito, localizações, lotes e validade do item selecionado;
+- usar croqui 2.5D/isométrico sem paredes na home, com piso delimitador, destaque de localização, vista superior e rotação controlada;
+- preservar a edição/versionamento do croqui na superfície Visão do Depósito;
 - criar e consolidar um design system próprio do ADM Depósito, coerente com a identidade geral do EMPROVEX;
 - revisar hierarquia visual, navegação interna, sidebar, cabeçalhos, cards, tabelas, filtros, badges, estados, formulários e feedbacks;
 - harmonizar Estoque, Saída Expressa, Localizações, Visão do Depósito, Inventário, Entregas, Dashboard, Alertas e demais superfícies do módulo;
@@ -276,8 +282,9 @@ Blocos: DEP-27 a DEP-37.
 Executar como uma campanha integrada de qualidade, não como dez microfases separadas.
 
 Política de entrada na FASE 13:
-- FASES 11, 11.5 e 12 podem avançar com gates rápidos de Core Protection/isolamento e testes direcionados ao domínio alterado;
-- a regressão pesada completa é deliberadamente consolidada aqui, após a implementação funcional do ADM Depósito;
+- por D-057, a execução de testes do restante das FASES 11.5 e 12 é deliberadamente acumulada para esta campanha final;
+- os testes e guards existentes continuam preservados no repositório, mas não precisam ser executados a cada incremento;
+- a regressão completa é consolidada aqui, após a implementação funcional do ADM Depósito;
 - esta fase inclui estabilização, correção consolidada das falhas encontradas e reexecução até todos os gates finais ficarem verdes;
 - o objetivo é evitar repetição de suítes longas durante cada pequeno incremento sem reduzir a cobertura final.
 
@@ -365,7 +372,7 @@ FASE 0 Fundação e isolamento ✓
 - integrações essenciais devem acontecer dentro da própria fatia vertical;
 - usuários externos permanecem protegidos durante todo o piloto fundador;
 - Cloud Shell deve ser usado de forma consolidada sempre que a intervenção externa não for bloqueante;
-- durante FASES 11–12, manter Core Protection/isolamento e testes direcionados como gates rápidos obrigatórios;
-- evitar regressão pesada completa após cada pequena alteração quando ela não acrescentar evidência nova;
-- concentrar Browser E2E completo, suíte multi-tenant integral, build/regressão ampla e campanha integrada na estabilização/FASE 13;
-- preferir a estação local EMPROVEX para feedback rápido e reservar o GitHub CI como certificação final.
+- conforme D-057, não executar baterias de teste/CI a cada incremento restante das FASES 11.5–12;
+- preservar todos os testes/guards existentes e concentrar sua execução na estabilização/FASE 13;
+- usar PowerShell local do fundador quando uma intervenção prática for necessária, preferencialmente de forma consolidada;
+- reservar o GitHub CI como certificação final, após a campanha local consolidada.
