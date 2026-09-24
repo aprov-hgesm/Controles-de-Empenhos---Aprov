@@ -143,7 +143,7 @@ Capacidade completa:
 
 Gate vertical: material pode ser consultado e operado de ponta a ponta com contexto logístico.
 
-## FASE 8 — Código de Barras, Scanner e Saída Expressa
+## FASE 8 — Código de Barras, Scanner e Saída Expressa — CONCLUÍDA
 
 Blocos: DEP-13, DEP-13.1, DEP-14, DEP-14.1, DEP-14.2, DEP-16, DEP-16.1, DEP-16.2 e DEP-16.3.
 
@@ -233,6 +233,7 @@ Gate:
 - a interface está responsiva e adequada ao uso real;
 - nenhuma alteração estética modifica a fonte de verdade ou o comportamento funcional do estoque;
 - a identidade final está aprovada pelo fundador antes do início da FASE 12.
+
 ## FASE 12 — Operacionalização, Segurança, Performance e Telemetria
 
 Blocos: DEP-24, DEP-24.1, DEP-25, DEP-25.1, DEP-25.2, DEP-25.3, DEP-25.4, DEP-26, DEP-26.1, DEP-26.2 e DEP-26.3.
@@ -318,7 +319,7 @@ FASE 0 Fundação e isolamento ✓
 → FASE 5 SISCOFIS / Marco Zero ✓
 → FASE 6 Depósitos / localizações ✓
 → FASE 7 Estoque operável ✓
-→ FASE 8 Saída / scanner
+→ FASE 8 Saída / scanner ✓
 → FASE 9 Visão do Depósito
 → FASE 10 Inventário
 → FASE 11 Entregas / dashboard / alertas
