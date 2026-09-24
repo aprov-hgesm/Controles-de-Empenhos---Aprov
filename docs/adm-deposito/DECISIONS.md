@@ -688,3 +688,24 @@ Regras:
 - anexos podem ser reenviados posteriormente pelas superfícies próprias;
 - alertas auxiliares podem ser reconstruídos/reconciliados;
 - nenhuma dependência externa deve ser adicionada antes do commit crítico sem decisão arquitetural explícita e teste de falha correspondente.
+
+
+## D-054 — Desenvolvimento contínuo com gates rápidos; regressão pesada consolidada no fechamento
+
+Com o EMPROVEX protegido por D-052 e o fluxo unidirecional definido em D-002/D-033, o desenvolvimento das capacidades restantes do ADM Depósito não deve repetir a suíte pesada completa a cada incremento.
+
+Regras permanentes:
+- durante a implementação das FASES 11, 11.5 e 12, executar obrigatoriamente os gates rápidos de isolamento/Core Protection e os testes direcionados ao domínio efetivamente alterado;
+- Browser E2E completo, suíte multi-tenant integral, build/regressão ampla e campanha integrada não são exigidos após cada pequena alteração quando não agregarem evidência nova;
+- nenhum incremento pode prosseguir se o gate de Core Protection indicar acoplamento do ADM ao núcleo operacional do EMPROVEX;
+- falhas em testes direcionados da capacidade em desenvolvimento devem ser corrigidas antes de continuar naquela capacidade;
+- ao concluir a implementação funcional do ADM Depósito, executar uma campanha consolidada de estabilização com segurança, Firestore Emulator, Browser E2E/Chromium, TypeScript/build, guards, concorrência e integrações relevantes;
+- as correções encontradas nessa campanha devem ser tratadas de forma consolidada e os testes afetados repetidos até ficarem verdes;
+- a FASE 13 permanece o gate de validação integrada e fechamento do piloto fundador; nenhuma expansão externa ocorre antes de sua aprovação;
+- o CI do GitHub permanece como certificação final, não como mecanismo primário para descobrir erros que podem ser detectados localmente.
+
+Ambiente preferencial:
+- a estação local de validação do EMPROVEX pode executar Node, Java, Firebase Emulator, Next.js, Playwright e Chromium;
+- a validação local é pré-certificação técnica; não substitui o gate final do GitHub/FASE 13.
+
+Objetivo: maximizar velocidade de implementação sem abrir mão da fronteira de segurança do EMPROVEX nem da regressão completa antes do fechamento.
