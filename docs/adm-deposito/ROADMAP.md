@@ -267,6 +267,12 @@ Blocos: DEP-27 a DEP-37.
 
 Executar como uma campanha integrada de qualidade, não como dez microfases separadas.
 
+Política de entrada na FASE 13:
+- FASES 11, 11.5 e 12 podem avançar com gates rápidos de Core Protection/isolamento e testes direcionados ao domínio alterado;
+- a regressão pesada completa é deliberadamente consolidada aqui, após a implementação funcional do ADM Depósito;
+- esta fase inclui estabilização, correção consolidada das falhas encontradas e reexecução até todos os gates finais ficarem verdes;
+- o objetivo é evitar repetição de suítes longas durante cada pequeno incremento sem reduzir a cobertura final.
+
 Cobertura obrigatória:
 - fluxo ponta a ponta;
 - scanner;
@@ -350,4 +356,8 @@ FASE 0 Fundação e isolamento ✓
 - qualquer desvio do roadmap deve ser documentado;
 - integrações essenciais devem acontecer dentro da própria fatia vertical;
 - usuários externos permanecem protegidos durante todo o piloto fundador;
-- Cloud Shell deve ser usado de forma consolidada sempre que a intervenção externa não for bloqueante.
+- Cloud Shell deve ser usado de forma consolidada sempre que a intervenção externa não for bloqueante;
+- durante FASES 11–12, manter Core Protection/isolamento e testes direcionados como gates rápidos obrigatórios;
+- evitar regressão pesada completa após cada pequena alteração quando ela não acrescentar evidência nova;
+- concentrar Browser E2E completo, suíte multi-tenant integral, build/regressão ampla e campanha integrada na estabilização/FASE 13;
+- preferir a estação local EMPROVEX para feedback rápido e reservar o GitHub CI como certificação final.
