@@ -652,6 +652,65 @@ service cloud.firestore {
         );
     }
 
+    // FASE 8 — caminho curto para reduzir o orçamento de expressões
+    // durante a saída expressa atômica, sem alterar o contrato funcional.
+    function validWarehouseExpressOutboundSource(type, source) {
+      return source is map
+        && source.kind == 'EXPRESS_OUTBOUND'
+        && type == 'OUTBOUND'
+        && source.keys().hasOnly([
+          'kind', 'interface', 'actorUid', 'requestedQuantity', 'quantity',
+          'presentation', 'factorToBaseUnit', 'barcodeId', 'barcode',
+          'position', 'locationBalanceId', 'lotId', 'lotCode'
+        ])
+        && source.keys().hasAll([
+          'kind', 'interface', 'actorUid', 'requestedQuantity', 'quantity',
+          'presentation', 'factorToBaseUnit', 'barcodeId', 'barcode',
+          'position', 'locationBalanceId', 'lotId', 'lotCode'
+        ])
+        && source.interface in ['BARCODE_SCANNER', 'MANUAL_SEARCH']
+        && source.actorUid == request.auth.uid
+        && source.requestedQuantity is number
+        && source.requestedQuantity > 0
+        && source.requestedQuantity <= 1000000000
+        && source.quantity is number
+        && source.quantity > 0
+        && source.quantity <= 1000000000
+        && source.quantity == -request.resource.data.quantityDelta
+        && source.factorToBaseUnit is number
+        && source.factorToBaseUnit > 0
+        && source.factorToBaseUnit <= 1000000000
+        && validWarehouseMaterialUnit(source.presentation)
+        && validWarehouseStockPosition(source.position)
+        && source.locationBalanceId is string
+        && source.locationBalanceId.matches('^locbal_[a-f0-9]{64}$')
+        && (
+          (
+            source.interface == 'BARCODE_SCANNER'
+            && source.barcodeId is string
+            && source.barcodeId.matches('^bar_[a-f0-9]{64}$')
+            && source.barcode is string
+            && source.barcode.size() > 0
+            && source.barcode.size() <= 128
+          )
+          || (
+            source.interface == 'MANUAL_SEARCH'
+            && source.barcodeId == null
+            && source.barcode == null
+          )
+        )
+        && (
+          (source.lotId == null && source.lotCode == null)
+          || (
+            source.lotId is string
+            && source.lotId.matches('^lot_[a-f0-9]{32}$')
+            && source.lotCode is string
+            && source.lotCode.size() > 0
+            && source.lotCode.size() <= 80
+          )
+        );
+    }
+
     function validWarehouseMovementSource(workspaceId, type, source) {
       return (
           source == null
@@ -1217,7 +1276,15 @@ service cloud.firestore {
         )
         && (
           !('source' in request.resource.data)
-          || validWarehouseMovementSource(workspaceId, request.resource.data.type, request.resource.data.source)
+          || validWarehouseExpressOutboundSource(
+            request.resource.data.type,
+            request.resource.data.source
+          )
+          || validWarehouseMovementSource(
+            workspaceId,
+            request.resource.data.type,
+            request.resource.data.source
+          )
         )
         && request.resource.data.createdAt == request.time
         && warehouseMaterialMatchesMovement(workspaceId)
@@ -3491,17 +3558,21 @@ service cloud.firestore {
       }
 
       match /{domain}/{document=**} {
-        allow read, write: if canAccessWarehouseModule(workspaceId)
-          && domain != 'materials'
-          && domain != 'depots'
-          && domain != 'locations'
-          && domain != 'movements'
-          && domain != 'balances'
-          && domain != 'locationBalances'
-          && domain != 'lots'
-          && domain != 'barcodes'
-          && domain != 'settings'
-          && domain != 'siscofisSnapshots';
+        allow read, write: if !(
+            domain in [
+              'materials',
+              'depots',
+              'locations',
+              'movements',
+              'balances',
+              'locationBalances',
+              'lots',
+              'barcodes',
+              'settings',
+              'siscofisSnapshots'
+            ]
+          )
+          && canAccessWarehouseModule(workspaceId);
       }
     }
 
