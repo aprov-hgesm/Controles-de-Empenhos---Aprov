@@ -121,6 +121,45 @@ test('adapter preserva ficha e usa fallback canônico explícito quando unidade 
   assert.equal(adapted.issues.some((issue) => issue.code === 'unit_fallback_applied'), true);
 });
 
+
+test('ambiguidade canônica exige override explícito', async () => {
+  const parsed = siscofis.parseEmprovexSiscofisInventoryJson(JSON.stringify({
+    schemaVersion: 'emprovex_siscofis_inventory_v1',
+    items: [{ numeroItem: '2416P', descricao: 'CAFETEIRA', quantidade: 1, valorUnitario: 804 }],
+  }));
+  assert.equal(parsed.ok, true);
+  const one = material({ id: 'mat_' + 'b'.repeat(32), description: 'CAFETEIRA' });
+  const two = material({ id: 'mat_' + 'c'.repeat(32), description: 'CAFETEIRA' });
+  const ambiguous = siscofis.adaptEmprovexSiscofisInventory({
+    inventory: parsed.data,
+    ug: '160416',
+    referenceDate: '2026-09-24',
+    materials: [one, two],
+  });
+  assert.equal(ambiguous.issues.some((issue) => issue.code === 'ambiguous_material_match' && issue.severity === 'error'), true);
+  const preview = await siscofis.buildWarehouseSiscofisPreview({
+    workspaceId: 'hgesm-aprov',
+    importData: ambiguous.importData,
+    materials: [one, two],
+    balances: [],
+    hasMarcoZero: false,
+    cutoffAt: null,
+    priorIssues: ambiguous.issues,
+  });
+  assert.equal(preview.canConfirm, false);
+  assert.equal(preview.rows[0].materialId, null);
+
+  const resolved = siscofis.adaptEmprovexSiscofisInventory({
+    inventory: parsed.data,
+    ug: '160416',
+    referenceDate: '2026-09-24',
+    materials: [one, two],
+    materialOverrides: { 'siscofis-0001': one.id },
+  });
+  assert.equal(resolved.issues.some((issue) => issue.code === 'ambiguous_material_match'), false);
+  assert.equal(resolved.importData.rows[0].materialId, one.id);
+});
+
 test('aceita contrato JSON versionado e estrito', () => {
   const parsed = siscofis.parseWarehouseSiscofisJson(validJson, '160416');
   assert.equal(parsed.ok, true);
