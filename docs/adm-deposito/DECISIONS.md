@@ -957,3 +957,44 @@ A cadência de validação continua obedecendo D-057:
 - executar a campanha consolidada na etapa final prevista;
 - teste dirigido durante implementação somente quando necessário para diagnosticar bloqueio concreto.
 
+## D-063 — Motor de pendências usa `warehouse_item_intake_v2` como estado de tratamento, sem criar saldo paralelo
+
+O **Módulo 1 — Motor de pendências das Notas Fiscais** evolui a fila de Cadastro de Itens para suportar tratamento parcial sem antecipar a alocação física.
+
+Contrato permanente:
+- o path continua sendo `warehouse/{workspaceId}/intakes/{intakeId}`;
+- novos estados parciais usam `schemaVersion = warehouse_item_intake_v2`;
+- `warehouse_item_intake_v1` permanece preservado como contrato legado de decisões inteiras já registradas e não é reescrito para v2;
+- a identidade permanece determinística por `workspaceId + invoiceRecordKey + itemId`, usando o mesmo formato `intake_<sha256>`;
+- descrição textual, fornecedor ou número exibido da NF nunca formam a identidade;
+- a ausência de documento `intakes` é o estado inicial canônico **PENDING** para a fila; refresh/reentrada não cria documentos nem duplica pendências;
+- a persistência v2 começa quando um módulo operacional efetivamente registrar tratamento;
+- `materialId` pode permanecer nulo até ser resolvido e, uma vez definido no estado v2, não pode ser trocado silenciosamente;
+- `receivedQuantity` é o snapshot da quantidade canônica no início do tratamento e torna-se imutável no documento v2;
+- `allocatedQuantity` e `immediateConsumptionQuantity` são progresso de tratamento, nunca saldo de estoque;
+- `pendingQuantity = receivedQuantity - allocatedQuantity - immediateConsumptionQuantity`;
+- os estados persistidos são `PENDING`, `PARTIALLY_PROCESSED` e `PROCESSED`;
+- `warehouse_balance_v1` continua sendo a única autoridade quantitativa de estoque; `warehouse_location_balance_v1` continua sendo a distribuição física e `warehouse_movement_v1` a trilha auditável.
+
+Reconciliação e compatibilidade:
+- quando a quantidade atual da NF diverge do snapshot warehouse, a fila apresenta `RECONCILIATION_REQUIRED` como **estado efetivo de leitura** e não altera automaticamente o documento histórico;
+- quando NF/item deixa de existir na fonte canônica, o estado histórico é preservado e a fila só conclui `CANONICAL_SOURCE_MISSING` quando a consulta de NFs não estiver truncada;
+- quando existe projeção/movimento legado de NF sem estado `intakes` compatível, a fila usa `LEGACY_INVOICE_PROJECTION` e exige reconciliação antes de qualquer nova movimentação;
+- NFs anteriores ao cutoff existente continuam fora da fila operacional; não existe retrointegração histórica automática;
+- nenhum desses casos corrige saldo, ledger, NF ou Empenho silenciosamente.
+
+Segurança e performance:
+- Rules v2 são explícitas em `/warehouse/{workspaceId}/intakes/{intakeId}`, sem wildcard permissivo e sem delete físico;
+- o piloto continua founder-only por `canAccessWarehouseModule`; usuários externos permanecem sem acesso;
+- updates v2 preservam identidade, UG, snapshot recebido e metadados de criação e só admitem progresso monotônico de tratamento;
+- a leitura da fila é bounded em até 250 empenhos, 300 NFs, 500 estados `intakes` e 250 movimentos recentes usados somente para detectar compatibilidade legada;
+- Cadastro de Itens não carrega mais cronogramas, saldos, depósitos e localizações apenas para montar a fila;
+- nenhuma escrita é feita no namespace operacional de NF/Empenho/Cronograma.
+
+Limite deste módulo:
+- **Alocar no depósito** permanece apenas como porta para o Módulo 2 e não executa transferência, localização, lote, validade ou barcode;
+- **Consumo imediato** permanece apenas como porta para módulo posterior e não classifica/baixa quantidade nem conclui SISCOFIS neste Módulo 1;
+- o `warehouse_item_intake_v1` já existente continua legível para compatibilidade histórica, mas não autoriza reuso do fluxo inteiro como implementação do tratamento parcial.
+
+Esta decisão substitui a interpretação anterior de D-059 de que uma decisão nova precisaria consumir o item inteiro de uma vez; o v1 continua válido apenas para registros legados já materializados.
+

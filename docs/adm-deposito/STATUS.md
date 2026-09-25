@@ -662,3 +662,61 @@ Importante:
 - nenhuma suíte completa ou CI foi executada para esta reorganização, em conformidade com D-057;
 - a campanha consolidada de validação permanece reservada ao Módulo 14.
 
+## Atualização 2026-09-24 — Módulo 1 concluído: Motor de pendências das Notas Fiscais
+
+Estado:
+- **MÓDULO 1 CONCLUÍDO** na branch `feat/adm-deposito-phase-11-5-visual-ux`;
+- HEAD de entrada auditado: `8e8c1d7b1606076322e02fda56d427ef563c611a`;
+- commit funcional principal: `e9bfeccebcaf8636214c510309f455abb3d4cbae`;
+- correção de integridade das Rules durante inspeção estática: `d86f20ed433bd789e3acdc204946b9af40217531`;
+- nenhum Módulo 2 foi iniciado.
+
+Implementação:
+- criado `warehouse_item_intake_v2` como estado versionado de tratamento parcial no path `warehouse/{workspaceId}/intakes/{intakeId}`;
+- identidade determinística continua usando `workspaceId + invoiceRecordKey + itemId`, portanto refresh/reentrada não cria pendências concorrentes;
+- a fila mostra NF, fornecedor, empenho, material, recebido, alocado, consumo imediato, pendente e status;
+- cálculo: `pendingQuantity = receivedQuantity - allocatedQuantity - immediateConsumptionQuantity`;
+- estados persistidos: `PENDING`, `PARTIALLY_PROCESSED`, `PROCESSED`;
+- `RECONCILIATION_REQUIRED` é derivado na leitura quando o warehouse diverge da fonte canônica, sem reescrever histórico;
+- ausência de estado persistido continua representando PENDING, com ID logístico estável calculado e sem escrita durante refresh;
+- `warehouse_item_intake_v1` foi preservado para registros históricos completos;
+- o relatório legado de consumo imediato continua lendo somente v1 e ignora documentos v2, evitando quebra de compatibilidade.
+
+Alteração/exclusão da NF:
+- quantidade recebida persistida no v2 é imutável;
+- mudança posterior da quantidade canônica gera `CANONICAL_QUANTITY_CHANGED`;
+- NF/item ausente gera `CANONICAL_SOURCE_MISSING` somente quando a janela canônica não está truncada;
+- projeção legada de NF sem intake compatível gera `LEGACY_INVOICE_PROJECTION`;
+- nenhum caso executa compensação de saldo ou correção silenciosa;
+- cutoff logístico existente continua sendo respeitado e não foi criada retrointegração de NFs antigas.
+
+Performance e isolamento:
+- nova leitura da fila não reutiliza `loadWarehouseDeliveriesContext` e, portanto, não carrega cronogramas, balances e demais domínios desnecessários;
+- limites atuais: 250 empenhos, 300 NFs, 500 intakes e 250 movimentos recentes de compatibilidade legada;
+- não existem listeners globais nem N+1 para montar a fila;
+- Rules v2 permanecem sob `warehouse`, com founder-only no piloto, UG/workspace validados e delete negado;
+- nenhum arquivo do fluxo operacional de cadastro/edição/exclusão de NF, Empenho ou Cronograma foi alterado;
+- `warehouse_balance_v1` continua sendo a autoridade quantitativa de estoque.
+
+Interface:
+- botões **Alocar no depósito** e **Consumo imediato** não fingem conclusão;
+- **Alocar no depósito** apenas informa que a execução física será habilitada no Módulo 2;
+- **Consumo imediato** apenas informa que a classificação operacional pertence a módulo posterior;
+- itens divergentes bloqueiam continuação visual e exibem a causa da reconciliação.
+
+Arquivos funcionais principais:
+- `lib/warehouse/intakeState.ts`;
+- `lib/warehouse/intakeStateRepository.ts`;
+- `lib/warehouse/intakeRepository.ts`;
+- `features/warehouse/components/WarehouseItemRegistrationOperational.tsx`;
+- `firestore.rules`.
+
+Validação:
+- por decisão D-057 e pela ordem modular vigente, **não foram executados** suíte completa, Browser E2E, Application CI, regressão completa ou PR;
+- nenhum teste pontual foi necessário, pois os bloqueios encontrados foram diagnosticados e resolvidos por inspeção do diff;
+- campanha consolidada permanece reservada ao **Módulo 14**.
+
+Próximo módulo oficial:
+- **Módulo 2 — Alocação física do item recebido**;
+- não iniciado neste fechamento.
+

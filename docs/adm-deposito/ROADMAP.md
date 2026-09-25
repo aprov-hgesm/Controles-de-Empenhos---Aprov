@@ -399,14 +399,33 @@ Este plano substitui, para o trabalho ainda pendente do ADM Depósito, a interpr
 
 A navegação alvo é: **Início · Cadastro de Itens · Meus Depósitos · Controle de Itens**.
 
-### Módulo 1 — Motor de pendências das Notas Fiscais
+### Módulo 1 — Motor de pendências das Notas Fiscais — CONCLUÍDO
 
-Objetivo:
-- transformar os itens das NFs canônicas em fila logística tratável pelo ADM;
-- distinguir quantidade pendente, quantidade alocada e quantidade destinada a consumo imediato;
-- permitir tratamento parcial;
-- persistir o estado somente no namespace `warehouse`;
-- preservar independência absoluta do cadastro/edição/exclusão da NF no EMPROVEX.
+Capacidade implementada:
+- fila derivada das NFs e empenhos canônicos em modo somente leitura;
+- identidade determinística por `workspaceId + invoiceRecordKey + itemId`;
+- novo contrato `warehouse_item_intake_v2` no path `warehouse/{workspaceId}/intakes/{intakeId}`;
+- distinção explícita entre quantidade recebida, alocada, consumo imediato e pendente;
+- fórmula invariável `pendente = recebido - alocado - consumo imediato`;
+- estados persistidos `PENDING`, `PARTIALLY_PROCESSED` e `PROCESSED`;
+- suporte contratual a processamento parcial e progresso monotônico;
+- estado inicial pendente derivado sem escrita automática: ausência de documento warehouse não altera a NF e não cria duplicação por refresh;
+- compatibilidade somente leitura com `warehouse_item_intake_v1` e com projeções legadas de NF;
+- `RECONCILIATION_REQUIRED` efetivo quando a quantidade canônica mudou, a fonte canônica deixou de existir de forma confirmável ou há projeção legada sem estado compatível;
+- cutoff existente preservado, sem retrointegração histórica automática;
+- consulta dedicada e bounded: até 250 empenhos, 300 NFs, 500 estados e 250 movimentos recentes para detecção de legado;
+- Rules explícitas, founder-only no piloto, sem delete físico e sem wildcard novo;
+- nenhuma escrita em NF, Empenho ou Cronograma e nenhuma nova autoridade de saldo.
+
+Limites deliberados:
+- **Alocar no depósito** não executa operação física neste módulo; a ação real pertence ao Módulo 2;
+- lote, validade, barcode, scanner e confirmação física continuam para os módulos seguintes;
+- **Consumo imediato** ainda não classifica quantidade nem conclui SISCOFIS; o fluxo operacional pertence ao Módulo 4;
+- `warehouse_balance_v1`, `warehouse_location_balance_v1` e `warehouse_movement_v1` permanecem as autoridades de estoque/distribuição/auditoria.
+
+Validação:
+- nenhuma suíte, Browser E2E, Application CI ou PR foi executado neste fechamento, conforme D-057 e a regra modular vigente;
+- a execução consolidada permanece reservada ao Módulo 14.
 
 ### Módulo 2 — Alocação física do item recebido
 
