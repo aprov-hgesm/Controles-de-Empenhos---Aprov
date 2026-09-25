@@ -1625,3 +1625,23 @@ Ordem de campanha aprovada:
 Execução local deverá usar PowerShell de forma consolidada e evitar comando monolítico excessivamente grande. GitHub CI será certificação final. Cloud Shell somente quando houver necessidade remota real.
 
 Nenhum teste pesado, PR, merge, deploy ou expansão externa foi realizado por este registro documental.
+
+
+## PRIORIDADE OPERACIONAL REGISTRADA — 2026-09-25
+
+Decisão do fundador:
+- foco atual: terminar o ADM Depósito;
+- depois: bateria dedicada de testes e melhorias do ADM;
+- em seguida: pacote de hardening de segurança de dados do EMPROVEX.
+
+Estado:
+- conclusão ADM/Módulo 14: **PRIORIDADE ATUAL**;
+- estabilização e melhoria pós-ADM: **PLANEJADA**;
+- hardening transversal de segurança: **PLANEJADO**;
+- base externa atual: pequena, com um usuário externo;
+- expansão ampla: não autorizada automaticamente.
+
+A auditoria preventiva de segurança não apontou evidência de vazamento ativo, mas gerou um backlog de hardening que deve ser retomado após a estabilização do ADM. Vulnerabilidade crítica confirmada é exceção e interrompe a fila normal.
+
+Plano oficial:
+`docs/adm-deposito/POST_ADM_STABILIZATION_AND_SECURITY_PLAN.md`
