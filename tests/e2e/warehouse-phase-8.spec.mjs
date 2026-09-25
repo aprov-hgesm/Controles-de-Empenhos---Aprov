@@ -47,14 +47,20 @@ test.describe.serial('ADM Depósito FASE 8 — barcode / Saída de Material', ()
       'adicionado ao carrinho'
     );
     await expect(page.getByText('Carrinho da saída', { exact: true })).toBeVisible();
-    await expect(page.getByText('Arroz parboilizado', { exact: true }).first()).toBeVisible();
+    const cartSection = page.locator('section').filter({
+      has: page.getByText('Carrinho da saída', { exact: true }),
+    });
+    await expect(cartSection.getByText('Arroz parboilizado', { exact: true })).toBeVisible();
 
     await page.reload();
     await expect(page.getByTestId('warehouse-material-withdrawal')).toBeVisible({
       timeout: 20_000,
     });
     await expect(page.getByText('Carrinho da saída', { exact: true })).toBeVisible();
-    await expect(page.getByText('Arroz parboilizado', { exact: true }).first()).toBeVisible();
+    const cartSection = page.locator('section').filter({
+      has: page.getByText('Carrinho da saída', { exact: true }),
+    });
+    await expect(cartSection.getByText('Arroz parboilizado', { exact: true })).toBeVisible();
 
     await page.getByTestId('warehouse-scanner-input').fill(UNKNOWN_BARCODE);
     await page.getByTestId('warehouse-scanner-input').press('Enter');
