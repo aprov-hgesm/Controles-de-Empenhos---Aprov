@@ -5016,6 +5016,7 @@ service cloud.firestore {
       }
     }
 
+    // Workspace-scoped operational data.
     match /workspaces/{workspaceId}/auditEvents/{eventId} {
       allow read: if canAccessWorkspace(workspaceId);
       allow create: if canAccessWorkspace(workspaceId)
