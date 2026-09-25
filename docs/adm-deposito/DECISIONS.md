@@ -1448,3 +1448,39 @@ A Etapa 3 de hardening inclui, inicialmente, dependências, CSP, App Check, sess
 **Exceção permanente:** qualquer vulnerabilidade crítica confirmada — vazamento, bypass de autorização, acesso cross-tenant, segredo exposto, comprometimento ou vulnerabilidade crítica aplicável à produção — é bloqueante e deve ser corrigida imediatamente, mesmo durante as etapas 1 ou 2.
 
 Esta decisão não reduz nem substitui Core Protection, Firestore Rules, multi-tenant ou os gates do Módulo 14.
+
+## D-071 — Publicação inicial founder-only e liberação granular futura do ADM Depósito
+
+Data: 2026-09-25.
+
+Fica estabelecido o modelo oficial de disponibilização do ADM Depósito após o encerramento técnico do Módulo 14:
+
+1. **Publicação inicial em produção (Vercel) permanece founder-only.**
+   - a conta fundadora continua com acesso ao ADM Depósito;
+   - usuários externos não recebem acesso automaticamente por causa de merge, deploy ou publicação;
+   - a fase inicial em produção será utilizada para testes reais, observação e ajustes antes de qualquer expansão externa.
+
+2. **A expansão externa será individual e opt-in por usuário.**
+   - o painel administrativo deverá futuramente oferecer um controle do tipo `ADM Depósito habilitado`;
+   - o valor padrão para usuários externos será **desativado**;
+   - o fundador poderá habilitar ou desabilitar o ADM Depósito para cada usuário externo individualmente;
+   - habilitar um usuário não altera o estado dos demais usuários.
+
+3. **A autorização deve ser efetiva em navegação e em acesso direto.**
+   - usuário externo sem autorização não deve visualizar o ADM Depósito na navegação;
+   - acesso direto às rotas do ADM também deve ser negado;
+   - a proteção não pode depender apenas de esconder itens de interface;
+   - qualquer futura implementação deve preservar workspace/UG, isolamento multi-tenant e Core Protection.
+
+4. **A abertura externa não muda as autoridades canônicas.**
+   - Empenhos, Nota Fiscal, Comissão, Liquidação/Tesouraria, Cronograma e demais módulos Core permanecem independentes do ADM;
+   - nenhuma nova fonte de verdade é criada por esta autorização;
+   - founder-only atual permanece vigente até uma implementação específica, testada e explicitamente aprovada desse controle granular.
+
+5. **Ordem operacional prevista.**
+   - concluir Módulo 14;
+   - publicar/testar em produção com a conta fundadora;
+   - executar ajustes e estabilização pós-publicação;
+   - somente depois implementar e validar a liberação granular por usuário externo.
+
+Esta decisão não autoriza agora a expansão externa e não altera o escopo de certificação founder-only do Módulo 14.
