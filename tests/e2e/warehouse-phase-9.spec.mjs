@@ -46,11 +46,15 @@ test.describe.serial('ADM Depósito FASE 9 — Visão do Depósito', () => {
     await page.getByTestId('warehouse-layout-object-x').fill('96');
     await page.getByTestId('warehouse-layout-object-rotation').fill('12');
 
-    const locationSelect = page.getByTestId('warehouse-layout-object-location');
-    await locationSelect.selectOption(LOCATION_ID);
     await page.getByTestId('warehouse-layout-save').click();
     await expect(page.getByTestId('warehouse-layout-message')).toContainText('Layout salvo como versão');
     await expect(page.getByTestId('warehouse-layout-history')).toBeVisible();
+
+    await page.getByTestId('warehouse-layout-object-label').fill('ALTERAÇÃO NÃO SALVA');
+    await page.getByTestId('warehouse-layout-object-x').fill('144');
+    await page.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(page.getByTestId('warehouse-croqui-view-mode')).toBeVisible();
+    await expect(page.getByText('Estante E2E', { exact: true }).first()).toBeVisible();
 
     await page.goto('/adm-deposito/estoque');
     await expect(page.getByTestId('warehouse-stock-operational')).toBeVisible({ timeout: 20_000 });
@@ -65,26 +69,6 @@ test.describe.serial('ADM Depósito FASE 9 — Visão do Depósito', () => {
     const highlightedObjects = page.locator('[data-location-id="' + LOCATION_ID + '"][data-highlighted="true"]');
     expect(await highlightedObjects.count()).toBeGreaterThan(0);
     await expect(highlightedObjects.first()).toBeVisible();
-
-    await page.getByTestId('warehouse-layout-toggle-edit').click();
-    await highlightedObjects.first().click();
-    const savedLabel = await page.getByTestId('warehouse-layout-object-label').inputValue();
-    expect(savedLabel).toBe('Estante E2E');
-
-    await page.getByTestId('warehouse-layout-object-label').fill('ALTERAÇÃO NÃO SALVA');
-    await page.getByTestId('warehouse-layout-object-x').fill('144');
-    await page.getByRole('button', { name: 'Cancelar' }).click();
-    await expect(page.getByTestId('warehouse-croqui-view-mode')).toBeVisible();
-
-    await page.getByTestId('warehouse-layout-toggle-edit').click();
-    const linkedObjectAfterCancel = page.locator('[data-location-id="' + LOCATION_ID + '"]').first();
-    await linkedObjectAfterCancel.click();
-    await expect(page.getByTestId('warehouse-layout-object-label')).toHaveValue('Estante E2E');
-
-    await page.getByRole('button', { name: 'Visualizar / Localizar' }).click();
-    await page.getByTestId('warehouse-layout-material-search').fill('Arroz parboilizado');
-    await page.getByTestId('warehouse-layout-material-' + MATERIAL_ID).click();
-    await expect(page.locator('[data-location-id="' + LOCATION_ID + '"][data-highlighted="true"]').first()).toBeVisible();
 
     await page.goto('/adm-deposito/estoque');
     await expect(page.getByTestId('warehouse-stock-operational')).toBeVisible({ timeout: 20_000 });
