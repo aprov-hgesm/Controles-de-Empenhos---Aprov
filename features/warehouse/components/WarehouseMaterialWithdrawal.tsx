@@ -39,7 +39,7 @@ import {
   type WarehouseLocationBalanceListItem,
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
-import { selectWarehouseFefoLot } from '../../../lib/warehouse/lot';
+import { selectWarehouseFefoLot, warehouseLotExpiryState } from '../../../lib/warehouse/lot';
 import {
   listWarehouseLots,
   type WarehouseLotListItem,
@@ -677,6 +677,16 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     }
   };
 
+  const lotAlertForLine = (line: CartLine): string | null => {
+    if (!line.lotId) return null;
+    const lot = state.lots.find((item) => item.lot.id === line.lotId)?.lot;
+    if (!lot) return 'Lote não encontrado na leitura atual';
+    const expiry = warehouseLotExpiryState(lot);
+    if (expiry === 'EXPIRED') return 'Lote vencido';
+    if (expiry === 'NEAR_EXPIRY') return 'Lote próximo do vencimento';
+    return null;
+  };
+
   if (state.loading) {
     return (
       <div className="mt-6 flex min-h-[320px] items-center justify-center" data-testid="warehouse-material-withdrawal">
@@ -948,6 +958,16 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                               <p className="mt-1 text-[10px] text-slate-500">
                                 {line.presentationLabel}{line.barcode ? ' · barcode ' + line.barcode : ''}{line.lotCode ? ' · lote ' + line.lotCode : ''}
                               </p>
+                              {lotAlertForLine(line) && (
+                                <p className={
+                                  'mt-1 text-[9px] font-black uppercase tracking-wide '
+                                  + (lotAlertForLine(line) === 'Lote vencido'
+                                    ? 'text-rose-300'
+                                    : 'text-amber-200')
+                                }>
+                                  {lotAlertForLine(line)}
+                                </p>
+                              )}
                               <p className="mt-1 text-[10px] text-slate-600">{line.positionLabel}</p>
                             </div>
                             <button type="button"
