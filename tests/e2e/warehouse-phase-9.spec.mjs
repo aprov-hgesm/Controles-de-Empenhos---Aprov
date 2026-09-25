@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const MATERIAL_ID = 'mat_123e4567e89b12d3a456426614174000';
+const DEPOT_ID = 'dep_' + '6'.repeat(32);
 const LOCATION_ID = 'loc_' + '6'.repeat(32);
 
 test.describe.serial('ADM Depósito FASE 9 — Visão do Depósito', () => {
@@ -12,6 +13,7 @@ test.describe.serial('ADM Depósito FASE 9 — Visão do Depósito', () => {
     await page.goto('/adm-deposito/visao-do-deposito');
     await expect(page.getByTestId('warehouse-depot-view-operational')).toBeVisible({ timeout: 20_000 });
 
+    await page.getByLabel('Selecionar depósito do croqui').selectOption(DEPOT_ID);
     await page.getByTestId('warehouse-layout-toggle-edit').click();
     await expect(page.getByTestId('warehouse-layout-editor')).toBeVisible();
     await page.getByTestId('warehouse-structure-shelf').click();
