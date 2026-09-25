@@ -81,3 +81,20 @@ O módulo permanece disponível somente para a conta fundadora até o fechamento
 ## Consolidação SISCOFIS no Módulo 5
 
 A arquitetura 11.5 mantém o motor histórico de Marco Zero/Conciliação, mas a entrada operacional foi simplificada. O contrato externo oficial é `emprovex_siscofis_inventory_v1`, com somente Nº Ficha, descrição, quantidade e valor unitário. Entrada manual e JSON de IA externa convergem antes da validação. A IA não recebe UG, catálogo, materialId, unidade nem estruturas internas. O Nº Ficha é dado auditável de origem e nunca identidade canônica. O ledger continua sendo a única autoridade quantitativa; `INITIAL_BALANCE` materializa também a posição `UNASSIGNED` pelo repository oficial. Novos snapshots usam v2, com leitura retrocompatível de v1. Ver D-066 e `PHASE_5_SISCOFIS.md`.
+
+
+## Consolidação dos Módulos 6 e 7
+
+Em 2026-09-25, **Meus Depósitos multi-depósito** e a **Biblioteca de estruturas físicas** foram consolidados na branch oficial da FASE 11.5.
+
+Pontos de continuidade:
+- depósitos/localizações continuam nos contratos históricos `warehouse_depot_v1` e `warehouse_location_v1`;
+- `UNASSIGNED` continua sendo posição logística, nunca depósito;
+- `warehouse_depot_layout_v1` continua sendo a única persistência do croqui;
+- ativo e histórico são recuperados explicitamente por `depotId`;
+- a biblioteca padrão vive em código (`WAREHOUSE_STRUCTURE_LIBRARY`) e persiste somente as instâncias realmente utilizadas no layout;
+- nenhuma coleção Firestore de tipos de estrutura foi criada;
+- Firestore Rules não precisaram ser alteradas;
+- Módulo 8 é o próximo passo oficial e deverá consumir essa biblioteca sem reimplementar os contratos existentes.
+
+Ver D-067 e ROADMAP.
