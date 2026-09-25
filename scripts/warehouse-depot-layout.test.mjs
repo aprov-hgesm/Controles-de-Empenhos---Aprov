@@ -209,3 +209,21 @@ test('editor visual mantém edição local, 2D/2.5D e sem persistência paralela
   assert.match(operational, /saveWarehouseDepotLayoutVersion/);
   assert.match(operational, /warehouseLocationId/);
 });
+
+test('Início consome somente layout ativo e mantém croqui como consulta do estoque', () => {
+  const home = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseHomeOperational.tsx'),
+    'utf8'
+  );
+
+  assert.match(home, /getActiveWarehouseDepotLayout/);
+  assert.doesNotMatch(home, /listWarehouseDepotLayouts/);
+  assert.match(home, /listWarehouseLocationBalances/);
+  assert.match(home, /listWarehouseBalances/);
+  assert.match(home, /selectWarehouseFefoLot/);
+  assert.match(home, /Ainda não representada no croqui/);
+  assert.match(home, /Prioridade FEFO/);
+  assert.match(home, /selectedStructureRows/);
+  assert.doesNotMatch(home, /saveWarehouseDepotLayoutVersion/);
+  assert.doesNotMatch(home, /warehouse_visual_balance|warehouse_map_balance|warehouse_stock_map/);
+});
