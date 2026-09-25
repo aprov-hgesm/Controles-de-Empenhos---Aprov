@@ -22,9 +22,10 @@ test.describe.serial('ADM Depósito FASE 8 — barcode / Saída de Material', ()
     await page.getByTestId('warehouse-scanner-input').fill(BARCODE);
     await page.getByTestId('warehouse-scanner-input').press('Enter');
 
-    const associationPanel = page.locator('section').filter({
-      hasText: 'Código não cadastrado: ' + BARCODE,
-    });
+    const associationPanel = page
+      .getByTestId('warehouse-material-withdrawal')
+      .locator('section')
+      .filter({ hasText: 'Código não cadastrado: ' + BARCODE });
     await expect(associationPanel).toBeVisible();
     await expect(associationPanel).toContainText(
       'O barcode nunca substitui materialId'
