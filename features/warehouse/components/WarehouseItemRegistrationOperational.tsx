@@ -39,6 +39,8 @@ import {
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
 import { WarehouseSiscofisOperational } from './WarehouseSiscofisOperational';
+import { WarehouseImmediateConsumptionPanel } from './WarehouseImmediateConsumptionPanel';
+import type { ApplyWarehouseImmediateConsumptionResult } from '../../../lib/warehouse/withdrawalRepository';
 
 type RegistrationTab = 'invoices' | 'siscofis' | 'immediate';
 
@@ -632,6 +634,8 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
   const [message, setMessage] = useState<string | null>(null);
   const [allocationRow, setAllocationRow] =
     useState<WarehouseInvoiceIntakeQueueRow | null>(null);
+  const [immediateRow, setImmediateRow] =
+    useState<WarehouseInvoiceIntakeQueueRow | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -663,17 +667,14 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
     ).length,
   }), [rows]);
 
-  const explainImmediateAction = (row: WarehouseInvoiceIntakeQueueRow) => {
+  const openImmediateAction = (row: WarehouseInvoiceIntakeQueueRow) => {
     if (row.status === 'RECONCILIATION_REQUIRED') {
       setMessage(
         'Este item exige reconciliação antes de qualquer nova classificação logística.'
       );
       return;
     }
-
-    setMessage(
-      'A pendência está preparada para tratamento parcial. A classificação operacional de consumo imediato será habilitada no Módulo 4; nenhuma quantidade foi alterada agora.'
-    );
+    setImmediateRow(row);
   };
 
   const handleAllocationSuccess = async (
@@ -688,6 +689,21 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
       + '. Novo pendente: '
       + formatQuantity(result.intake.pendingQuantity, result.intake.unitLabel)
       + '.'
+    );
+  };
+
+  const handleImmediateSuccess = async (
+    result: ApplyWarehouseImmediateConsumptionResult,
+    quantity: number
+  ) => {
+    setImmediateRow(null);
+    await refresh();
+    setMessage(
+      'Consumo imediato confirmado: '
+      + formatQuantity(quantity, result.intake.unitLabel)
+      + '. Novo pendente: '
+      + formatQuantity(result.intake.pendingQuantity, result.intake.unitLabel)
+      + '. O registro já integra o relatório operacional SISCOFIS.'
     );
   };
 
@@ -859,7 +875,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
                           </button>
                           <button
                             type="button"
-                            onClick={() => explainImmediateAction(row)}
+                            onClick={() => openImmediateAction(row)}
                             className="inline-flex h-9 items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 text-[10px] font-black text-violet-700"
                           >
                             <Sparkles className="h-3.5 w-3.5" />
@@ -940,6 +956,15 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
           onSuccess={handleAllocationSuccess}
         />
       )}
+
+      {immediateRow && (
+        <WarehouseImmediateConsumptionPanel
+          workspaceId={workspaceId}
+          row={immediateRow}
+          onClose={() => setImmediateRow(null)}
+          onSuccess={handleImmediateSuccess}
+        />
+      )}
     </div>
   );
 }
@@ -1011,12 +1036,13 @@ function ImmediateConsumptionReport({ workspaceId }: { workspaceId: string }) {
             <div className="flex items-center gap-2 text-violet-700">
               <ClipboardCheck className="h-4 w-4" />
               <p className="text-xs font-black uppercase tracking-[0.12em]">
-                Relatório para lançamento no SISCOFIS
+                Histórico legado de consumo imediato
               </p>
             </div>
             <p className="mt-2 text-xs leading-5 text-slate-600">
-              Itens classificados como consumo imediato não entram no depósito. Eles permanecem
-              nesta fila até o operador registrar a movimentação correspondente no SISCOFIS.
+              Esta subaba preserva registros do contrato legado. Novas classificações e a
+              fila operacional SISCOFIS são consolidadas em Controle de Itens → Saída de
+              Material → Relatórios.
             </p>
           </div>
           <button
@@ -1158,7 +1184,7 @@ export function WarehouseItemRegistrationOperational({
               : 'rounded-xl px-4 py-2 text-xs font-bold text-slate-500'
           }
         >
-          Consumo imediato / SISCOFIS
+          Histórico legado / SISCOFIS
         </button>
       </div>
 
