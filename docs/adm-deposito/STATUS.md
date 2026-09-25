@@ -720,3 +720,255 @@ Próximo módulo oficial:
 - **Módulo 2 — Alocação física do item recebido**;
 - não iniciado neste fechamento.
 
+
+
+## Atualização 2026-09-24 — Módulos 2 e 3 concluídos: Alocação física + lote, validade e barcode
+
+Estado:
+- **MÓDULO 2 CONCLUÍDO**;
+- **MÓDULO 3 CONCLUÍDO**;
+- branch: `feat/adm-deposito-phase-11-5-visual-ux`;
+- HEAD de entrada auditado antes das alterações: `c81db9c129938da3a59dfb9f6c724b468bfb7993`;
+- repository transacional criado em `7166820098f4f2a88cec0c99e04473f775f0433a`;
+- normalização defensiva de identidade de material em `44c24f9744300959ba772d4e2e9f9a8d83416ea3`;
+- jornada operacional de interface em `cd35f7db308e357439b351d1a65f31e3fa68570f`;
+- nenhuma implementação do Módulo 4 foi iniciada.
+
+### Fluxo final de alocação
+
+A ação **Alocar no depósito** agora executa uma jornada única:
+`item de NF → quantidade parcial → depósito → localização → subposição opcional → lote → validade/sem validade → barcode opcional → resumo → confirmar`.
+
+A interface apresenta:
+- material;
+- NF;
+- fornecedor;
+- empenho;
+- quantidade recebida;
+- já alocada;
+- consumo imediato;
+- pendente;
+- seleção de quantidade limitada ao pendente;
+- somente depósitos/localizações/subposições ativos;
+- lote;
+- validade ou opção explícita **Sem validade**;
+- barcode por digitação ou scanner USB HID;
+- resumo antes da confirmação;
+- atualização automática da fila após sucesso.
+
+### Quantidade parcial e intake v2
+
+Uma confirmação pode tratar apenas parte da pendência.
+
+Exemplo válido:
+- recebido: 100;
+- alocação 1: 40;
+- `allocatedQuantity = 40`;
+- `pendingQuantity = 60`;
+- status `PARTIALLY_PROCESSED`;
+- nova operação futura pode tratar os 60 restantes sem repetir a primeira.
+
+Após cada transferência confirmada:
+`allocatedQuantity += quantidadeAlocada`
+
+e:
+`pendingQuantity = receivedQuantity - allocatedQuantity - immediateConsumptionQuantity`.
+
+O status permanece derivado entre `PENDING`, `PARTIALLY_PROCESSED` e `PROCESSED`.
+
+### Relação entre intake, ledger e saldos
+
+O intake continua sendo somente estado de tratamento.
+
+Autoridades:
+- `warehouse_movement_v1`: trilha auditável;
+- `warehouse_balance_v1`: saldo agregado;
+- `warehouse_location_balance_v1`: distribuição física;
+- `warehouse_item_intake_v2`: progresso de tratamento.
+
+A primeira operação v2 garante uma entrada quantitativa idempotente por item/NF quando ainda não existe projeção anterior. Essa entrada usa o repository oficial do ledger e coloca a quantidade recebida em `UNASSIGNED`.
+
+Cada alocação parcial posterior usa:
+`UNASSIGNED → depósito/local/subposição`
+
+com movimento `TRANSFER` e `quantityDelta = 0`.
+
+O saldo agregado não é somado novamente durante a alocação; apenas recebe a revisão auditável do movimento. Origem e destino físicos são atualizados conjuntamente.
+
+### Prevenção de duplicação da antiga projeção NF → estoque
+
+Antes de criar a entrada quantitativa v2, o repository consulta de forma bounded movimentos `INVOICE` da mesma `invoiceRecordKey`.
+
+Se outro movimento já representar o mesmo `itemId`, a nova entrada é bloqueada com reconciliação necessária. Nenhuma segunda entrada é criada.
+
+Identidade da entrada v2:
+`adm-intake-v2:<intakeId>:invoice-entry`.
+
+Repetições da própria entrada v2 retornam como replay idempotente.
+
+A fila continua marcando projeções legadas detectadas como `LEGACY_INVOICE_PROJECTION`; esses itens não recebem alocação automática.
+
+### Atomicidade e recuperação
+
+As Firestore Rules atuais exigem que cada movimento seja refletido como `lastMovementId` do saldo final. Portanto, entrada e transferência permanecem duas fronteiras de movimento.
+
+Estratégia segura:
+1. criar/reutilizar `INVOICE_ENTRY` idempotente;
+2. executar uma única transação de alocação contendo:
+   - `TRANSFER`;
+   - revisão do saldo agregado sem mudar a quantidade;
+   - débito de `UNASSIGNED`;
+   - crédito da posição física;
+   - lote;
+   - barcode novo, quando aplicável;
+   - avanço do intake v2.
+
+Se a entrada existir e a alocação falhar, a quantidade permanece em `UNASSIGNED`, o intake não avança e o retry reutiliza a entrada. Não existe compensação silenciosa.
+
+### Idempotência e concorrência
+
+Cada confirmação recebe um `operationId` estável.
+
+Identidade da transferência:
+`adm-intake-v2:<intakeId>:allocation:<operationId>`.
+
+O `operationId` é mantido em `sessionStorage` durante a tentativa, permitindo replay seguro após refresh, duplo clique ou resposta de rede ambígua.
+
+Dentro da transação, o repository relê:
+- intake;
+- saldo agregado;
+- origem/destino físicos;
+- depósito/local/subposição;
+- lote;
+- barcode;
+- movimento de entrada;
+- eventual movimento de transferência existente.
+
+A operação exige que `allocatedQuantity` e `immediateConsumptionQuantity` ainda sejam iguais aos valores observados pela tela. Se outra tela avançou o item, ocorre conflito explícito e nenhuma quantidade é movimentada.
+
+### Lote e validade
+
+Contrato reutilizado:
+`warehouse_lot_v1`.
+
+O lote não altera saldo.
+
+A identidade usada pela jornada é determinística por:
+- workspace;
+- intake;
+- movimento de entrada;
+- código de lote;
+- posição física.
+
+Consequências:
+- mesmo lote + mesma posição pode receber várias parcelas e acumular a atribuição;
+- mesmo item pode ser dividido entre múltiplos lotes;
+- mesmo lote em posições diferentes permanece rastreável separadamente.
+
+Validade:
+- data ISO válida; ou
+- escolha explícita **Sem validade**.
+
+Nenhuma validade é inferida automaticamente.
+
+### Barcode e scanner
+
+Contrato reutilizado:
+`warehouse_barcode_v1`.
+
+Regras preservadas:
+- barcode nunca substitui `materialId`;
+- código conhecido precisa permanecer vinculado ao mesmo material/apresentação;
+- conflito com outro material é bloqueado;
+- barcode inativo ou associação incompatível é bloqueado;
+- código desconhecido pode ser associado somente ao material canônico já resolvido;
+- nenhum material é criado a partir de barcode desconhecido.
+
+Na interface:
+- digitação manual e leitor USB HID usam o mesmo campo;
+- ENTER captura a leitura;
+- não foi criado SDK específico de scanner;
+- scanner de saída continua pertencendo às capacidades já existentes e não foi expandido neste módulo.
+
+### Firestore paths utilizados
+
+- `warehouse/{workspaceId}/materials/{materialId}`;
+- `warehouse/{workspaceId}/movements/{movementId}`;
+- `warehouse/{workspaceId}/balances/{materialId}`;
+- `warehouse/{workspaceId}/locationBalances/{locationBalanceId}`;
+- `warehouse/{workspaceId}/depots/{depotId}`;
+- `warehouse/{workspaceId}/locations/{locationId}`;
+- `warehouse/{workspaceId}/lots/{lotId}`;
+- `warehouse/{workspaceId}/barcodes/{barcodeId}`;
+- `warehouse/{workspaceId}/intakes/{intakeId}`.
+
+Nenhuma escrita nova foi adicionada em `workspaces/{workspaceId}/invoices`, Empenho ou Cronograma.
+
+### Performance
+
+A fila principal permanece com os limites do Módulo 1.
+
+Ao abrir a alocação:
+- depósitos: até 250;
+- localizações/subposições: até 500;
+- nenhuma leitura de histórico global de lotes;
+- nenhum carregamento global de barcodes;
+- prevenção de projeção antiga: até 51 movimentos da NF específica;
+- nenhuma consulta de movimentos completa por linha da fila;
+- nenhum listener global novo.
+
+### Compatibilidade
+
+`warehouse_item_intake_v1` continua histórico e não é convertido para v2.
+
+Registro v1 já tratado não recebe nova alocação.
+
+`RECONCILIATION_REQUIRED` continua bloqueando execução e não corrige:
+- ledger;
+- saldo;
+- quantidade recebida;
+- posição;
+- lote;
+- NF/Empenho.
+
+### Firestore Rules e Core Protection
+
+As Rules existentes já suportavam material, `INVOICE_ENTRY`, `TRANSFER`, saldos, localizações, lotes, barcodes e intake v2 com as invariantes necessárias.
+
+Por isso:
+- **nenhuma alteração de Firestore Rules foi necessária**;
+- founder-only permanece;
+- workspace e UG permanecem isolados;
+- movimentos continuam imutáveis;
+- saldos continuam derivados do ledger;
+- lotes e barcodes não criam saldo;
+- deletes físicos continuam negados nos domínios históricos;
+- nenhum wildcard permissivo foi introduzido.
+
+Inspeção estática do escopo funcional confirmou alterações somente em:
+- `lib/warehouse/intakeAllocationRepository.ts`;
+- `features/warehouse/components/WarehouseItemRegistrationOperational.tsx`.
+
+Nenhum serviço crítico de cadastro/edição/exclusão de NF, Empenho ou Cronograma foi alterado. Nenhuma dependência `lib/warehouse` foi adicionada ao núcleo operacional.
+
+### Validação
+
+Conforme D-057:
+- não foi executada suíte completa;
+- não foi executado Browser E2E completo;
+- não foi executado Application CI;
+- não foi executada regressão completa;
+- não foi executada campanha multi-tenant completa;
+- nenhum PR de fechamento foi aberto;
+- nenhum merge foi realizado;
+- nenhum deploy foi realizado.
+
+Nenhum teste pontual foi necessário; a implementação e os contratos foram verificados por inspeção estática.
+
+A campanha consolidada continua reservada ao **Módulo 14**.
+
+### Próximo módulo oficial
+
+**Módulo 4 — Consumo imediato e fila SISCOFIS**.
+
+Ele permanece **NÃO INICIADO** neste fechamento.
