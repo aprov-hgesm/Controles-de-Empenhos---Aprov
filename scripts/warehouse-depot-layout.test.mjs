@@ -16,6 +16,7 @@ execFileSync(
   [
     resolve(root, 'node_modules/typescript/bin/tsc'),
     resolve(root, 'lib/warehouse/layout.ts'),
+    resolve(root, 'lib/warehouse/structureLibrary.ts'),
     resolve(root, 'lib/warehouse/location.ts'),
     resolve(root, 'lib/warehouse/material.ts'),
     resolve(root, 'lib/platformIdentity.ts'),
@@ -35,6 +36,7 @@ execFileSync(
 
 const require = createRequire(import.meta.url);
 const source = require(resolve(outDir, 'warehouse/layout.js'));
+const structureLibrary = require(resolve(outDir, 'warehouse/structureLibrary.js'));
 
 test.after(() => {
   rmSync(outDir, { recursive: true, force: true });
@@ -149,4 +151,33 @@ test('SVG é derivado do layout e não contém quantidade/saldo', () => {
   assert.match(svg, /<svg/);
   assert.match(svg, /Estante A/);
   assert.doesNotMatch(svg, /quantity|balance|saldo/i);
+});
+
+
+test('biblioteca física cobre os tipos obrigatórios sem novo schema de layout', () => {
+  const required = [
+    'Estante',
+    'Rack',
+    'Armário',
+    'Freezer',
+    'Geladeira',
+    'Câmara',
+    'Palete',
+    'Área de Paletes',
+    'Bancada',
+    'Corredor',
+    'Área Livre',
+    'Outra estrutura',
+  ];
+  const names = new Set(
+    structureLibrary.WAREHOUSE_STRUCTURE_LIBRARY.map((definition) => definition.name)
+  );
+  for (const name of required) assert.equal(names.has(name), true, name);
+
+  for (const definition of structureLibrary.WAREHOUSE_STRUCTURE_LIBRARY) {
+    assert.equal(source.WAREHOUSE_DEPOT_LAYOUT_OBJECT_KINDS.includes(definition.kind), true);
+    assert.equal(Number.isFinite(definition.defaultWidth) && definition.defaultWidth >= 12, true);
+    assert.equal(Number.isFinite(definition.defaultHeight) && definition.defaultHeight >= 12, true);
+    assert.equal(Number.isFinite(definition.defaultRotation), true);
+  }
 });
