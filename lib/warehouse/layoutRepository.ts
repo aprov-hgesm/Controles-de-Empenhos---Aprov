@@ -169,7 +169,12 @@ export async function getActiveWarehouseDepotLayout(
     const snapshot = await getDocs(
       depotId === undefined
         ? query(collection(db, path), where('status', '==', 'active'), limit(100))
-        : query(collection(db, path), where('depotId', '==', depotId), limit(150))
+        : query(
+            collection(db, path),
+            where('depotId', '==', depotId),
+            where('status', '==', 'active'),
+            limit(2)
+          )
     );
     const active = snapshot.docs
       .map((item) => {
