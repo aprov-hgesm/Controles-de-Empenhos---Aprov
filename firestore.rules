@@ -4416,6 +4416,840 @@ service cloud.firestore {
         ]);
     }
 
+
+    // Módulo 1 / FASE 11.5 — estado parcial de tratamento de item de NF.
+    // Não representa saldo: apenas classifica quanto do recebido já foi tratado.
+    function warehouseItemIntakeV2StatusMatchesQuantities() {
+      return (
+          request.resource.data.status == 'PENDING'
+          && request.resource.data.allocatedQuantity == 0
+          && request.resource.data.immediateConsumptionQuantity == 0
+          && request.resource.data.pendingQuantity == request.resource.data.receivedQuantity
+        )
+        || (
+          request.resource.data.status == 'PARTIALLY_PROCESSED'
+          && request.resource.data.allocatedQuantity + request.resource.data.immediateConsumptionQuantity > 0
+          && request.resource.data.pendingQuantity > 0
+        )
+        || (
+          request.resource.data.status == 'PROCESSED'
+          && request.resource.data.pendingQuantity == 0
+          && request.resource.data.allocatedQuantity + request.resource.data.immediateConsumptionQuantity == request.resource.data.receivedQuantity
+        );
+    }
+
+    function validWarehouseItemIntakeV2Base(workspaceId, intakeId) {
+      return request.resource.data is map
+        && request.resource.data.keys().hasOnly([
+          'schemaVersion', 'id', 'workspaceId', 'ug', 'invoiceRecordKey',
+          'invoiceId', 'empenhoId', 'itemId', 'materialId', 'description',
+          'unitLabel', 'supplier', 'receivedQuantity', 'allocatedQuantity',
+          'immediateConsumptionQuantity', 'pendingQuantity', 'status',
+          'createdBy', 'updatedBy', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'schemaVersion', 'id', 'workspaceId', 'ug', 'invoiceRecordKey',
+          'invoiceId', 'empenhoId', 'itemId', 'materialId', 'description',
+          'unitLabel', 'supplier', 'receivedQuantity', 'allocatedQuantity',
+          'immediateConsumptionQuantity', 'pendingQuantity', 'status',
+          'createdBy', 'updatedBy', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.schemaVersion == 'warehouse_item_intake_v2'
+        && request.resource.data.id == intakeId
+        && intakeId.matches('^intake_[a-f0-9]{64}
+      allow read, write: if canAccessWarehouseModule(workspaceId);
+
+      // FASE 1 / DEP-1 + DEP-1.1 — material canônico.
+      match /materials/{materialId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create, update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseMaterialDocument(workspaceId, materialId);
+        allow delete: if canAccessWarehouseModule(workspaceId);
+      }
+
+      // FASE 6 / DEP-8..9 — depósitos e localizações têm identidade
+      // estável; referências operacionais nunca são apagadas fisicamente.
+      match /depots/{depotId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseDepotCreate(workspaceId, depotId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseDepotUpdate(workspaceId, depotId);
+        allow delete: if false;
+      }
+
+      match /locations/{locationId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLocationCreate(workspaceId, locationId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLocationUpdate(workspaceId, locationId);
+        allow delete: if false;
+      }
+
+      // FASE 2 / DEP-2 — ledger imutável. Toda criação precisa materializar
+      // a mesma alteração no saldo na operação atômica.
+      match /movements/{movementId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && warehouseMovementCreateAllowed(workspaceId, movementId);
+        allow update, delete: if false;
+      }
+
+      // FASE 2 / DEP-2.1 — saldo derivado do ledger. Escrita avulsa é negada.
+      match /balances/{materialId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create, update: if canAccessWarehouseModule(workspaceId)
+          && warehouseBalanceWriteAllowed(workspaceId, materialId);
+        allow delete: if false;
+      }
+
+      // FASE 6 / DEP-10 — distribuição física é uma projeção do ledger.
+      match /locationBalances/{locationBalanceId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create, update: if canAccessWarehouseModule(workspaceId)
+          && warehouseLocationBalanceWriteAllowed(workspaceId, locationBalanceId);
+        allow delete: if false;
+      }
+
+      // FASE 7 / DEP-11..15 — lote é enriquecimento logístico; não escreve saldos.
+      match /lots/{lotId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLotCreate(workspaceId, lotId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLotUpdate(workspaceId, lotId);
+        allow delete: if false;
+      }
+
+      // FASE 8 / DEP-13 — barcode é associação auxiliar, nunca saldo/material.
+      match /barcodes/{barcodeId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseBarcodeCreate(workspaceId, barcodeId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseBarcodeUpdate(workspaceId, barcodeId);
+        allow delete: if false;
+      }
+
+
+      // FASE 9 / DEP-17..19.5 — layout visual versionado.
+      match /layouts/{layoutId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseDepotLayoutCreate(workspaceId, layoutId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseDepotLayoutArchive(workspaceId, layoutId);
+        allow delete: if false;
+      }
+
+      // FASE 4 / DEP-4 — cutoff imutável de ativação do fluxo NF → estoque.
+      // FASE 5 / DEP-5.x — snapshots são privados, bounded e não podem ser apagados.
+      match /siscofisSnapshots/{snapshotId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseSiscofisSnapshotCreate(workspaceId, snapshotId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseSiscofisSnapshotUpdate(workspaceId, snapshotId);
+        allow delete: if false;
+      }
+
+      match /settings/{settingId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && (
+            validWarehouseInvoiceIntegrationSettings(workspaceId, settingId)
+            || validWarehouseLogisticsSettings(workspaceId, settingId)
+          );
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLogisticsSettings(workspaceId, settingId);
+        allow delete: if false;
+      }
+
+      // FASE 11.5 — fila de entrada/alocação de itens recebidos por NF.
+      match /intakes/{intakeId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && (
+            validWarehouseItemIntakeCreate(workspaceId, intakeId)
+            || validWarehouseItemIntakeV2Create(workspaceId, intakeId)
+          );
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && (
+            validWarehouseItemIntakeUpdate(workspaceId, intakeId)
+            || validWarehouseItemIntakeV2Update(workspaceId, intakeId)
+          );
+        allow delete: if false;
+      }
+
+      // FASE 11 / DEP-23.1 — alertas logísticos pertencem exclusivamente ao ADM.
+      match /alerts/{alertId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLogisticsAlertCreate(workspaceId, alertId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLogisticsAlertUpdate(workspaceId, alertId);
+        allow delete: if false;
+      }
+
+      // FASE 10 / DEP-20..20.3 — inventário founder-only e auditável.
+      match /inventories/{inventoryId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseInventorySessionCreate(workspaceId, inventoryId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseInventorySessionUpdate(workspaceId, inventoryId);
+        allow delete: if false;
+
+        match /items/{itemId} {
+          allow read: if canAccessWarehouseModule(workspaceId);
+          allow create: if canAccessWarehouseModule(workspaceId)
+            && validWarehouseInventoryItemCreate(workspaceId, inventoryId, itemId);
+          allow update: if canAccessWarehouseModule(workspaceId)
+            && (
+              validWarehouseInventoryCountUpdate(workspaceId, inventoryId)
+              || validWarehouseInventoryAdjustmentUpdate(workspaceId, inventoryId, itemId)
+              || validWarehouseInventoryStaleUpdate(workspaceId, inventoryId, itemId)
+            );
+          allow delete: if false;
+        }
+      }
+    }
+
+    // Workspace-scoped operational data. There is deliberately no admin bypass:
+    // a platform administrator cannot read another sector's operational records.
+    match /workspaces/{workspaceId}/auditEvents/{eventId} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validWorkspaceAuditEvent(eventId, workspaceId);
+      allow update, delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/empenhos/{id} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validEmpenhoRevisionCreate(request.resource.data)
+        && empenhoCnpjCreateIsValid(request.resource.data);
+      allow update: if canAccessWorkspace(workspaceId)
+        && !empenhoDeletionIsLockedAfter(workspaceId, id)
+        && validEmpenhoRevisionUpdate()
+        && empenhoCnpjUpdateIsValid();
+      allow delete: if canAccessWorkspace(workspaceId)
+        && validEmpenhoLifecycleDelete(workspaceId, id);
+    }
+
+    match /workspaces/{workspaceId}/alerts/{id} {
+      allow read, delete: if canAccessWorkspace(workspaceId);
+      allow create, update: if canAccessWorkspace(workspaceId)
+        && linkedEmpenhoWriteAllowedAfter(workspaceId, request.resource.data);
+    }
+
+    match /workspaces/{workspaceId}/invoices/{id} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validInvoiceCreate(workspaceId, id);
+      allow update: if canAccessWorkspace(workspaceId)
+        && validInvoiceUpdate(workspaceId, id);
+      allow delete: if canAccessWorkspace(workspaceId)
+        && validInvoiceDelete(workspaceId, id);
+    }
+
+    match /workspaces/{workspaceId}/comissoes/{id} {
+      allow read, write: if canAccessWorkspace(workspaceId);
+    }
+
+    match /workspaces/{workspaceId}/cronogramas/{id} {
+      allow read, delete: if canAccessWorkspace(workspaceId);
+      allow create, update: if canAccessWorkspace(workspaceId)
+        && linkedEmpenhoWriteAllowedAfter(workspaceId, request.resource.data);
+    }
+
+    // Block 19.10 — snapshot econômico do Início.
+    // Um único documento derivado alimenta a Home; ele não concede autorização
+    // e nunca substitui as coleções operacionais como fonte de verdade.
+    match /workspaces/{workspaceId}/settings/homeSnapshot {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create, update: if validHomeSnapshot(workspaceId);
+      allow delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/settings/termoRecebimentoCounter {
+      // O cadastro administrativo verifica se existe contador residual antes de
+      // provisionar um workspace novo. Essa leitura prévia só é permitida enquanto
+      // o workspace ainda não existe; depois da criação, o administrador volta a
+      // não possuir acesso ao contador operacional do tenant.
+      allow read: if canAccessWorkspace(workspaceId)
+        || (
+          isPlatformAdmin()
+          && !workspaceExists(workspaceId)
+        );
+      allow create: if canAdminProvisionTermCounter(workspaceId)
+        || (
+          canAccessWorkspace(workspaceId)
+          && validInitialTermCounter()
+        );
+      allow update: if canAccessWorkspace(workspaceId)
+        && validOperationalTermCounterUpdate();
+      allow delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/settings/documentStorage {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validWorkspaceDocumentStorage(workspaceId);
+      allow update: if canAccessWorkspace(workspaceId)
+        && validWorkspaceDocumentStorageUpdate(workspaceId);
+      allow delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/settings/{id} {
+      // Listagem é limitada ao próprio workspace autenticado. Os settings atuais
+      // já são individualmente legíveis pelo setor; o list habilita diagnósticos
+      // de integridade sem ampliar acesso entre tenants.
+      allow list: if canAccessWorkspace(workspaceId);
+      allow get: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId);
+      allow create: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId)
+        && (
+          (
+            isEmpenhoDeletionLockId(id)
+            && validEmpenhoDeletionLockCreate(workspaceId, id)
+          )
+          || (
+            !isEmpenhoDeletionLockId(id)
+            && (
+              !isSagNsLockId(id)
+              || validSagNsLock(workspaceId, id)
+            )
+          )
+        );
+      allow update: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId)
+        && !isEmpenhoDeletionLockId(id)
+        && (
+          !isSagNsLockId(id)
+          || validSagNsLockUpdate(workspaceId, id)
+        );
+      allow delete: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId)
+        && (
+          (
+            isEmpenhoDeletionLockId(id)
+            && validEmpenhoDeletionLockDelete(workspaceId, id)
+          )
+          || (
+            !isEmpenhoDeletionLockId(id)
+            && (
+              !isSagNsLockId(id)
+              || validSagNsLockDelete(workspaceId, id)
+            )
+          )
+        );
+    }
+
+    // Bloco 13 — compatibilidade legada somente leitura.
+    // O runtime oficial já usa /workspaces/hgesm-aprov/...; os dados raiz ficam
+    // preservados apenas para consulta, auditoria e recuperação controlada.
+    // Qualquer rollback com escrita exige mudança explícita de Rules, evitando que
+    // uma simples regressão de frontend volte silenciosamente a gravar no legado.
+    match /empenhos/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /alerts/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /invoices/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /comissoes/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /cronogramas/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    // A identidade visual global precisa continuar disponível antes do login.
+    // A marca institucional é imutável no runtime: qualquer troca futura exige
+    // manutenção deliberada fora da aplicação e revisão explícita destas Rules.
+    match /settings/global {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Demais settings raiz (incluindo o contador histórico) ficam somente leitura.
+    match /settings/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+  }
+}
+)
+        && request.resource.data.workspaceId == workspaceId
+        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && request.resource.data.invoiceRecordKey is string
+        && request.resource.data.invoiceRecordKey.size() > 0
+        && request.resource.data.invoiceRecordKey.size() <= 180
+        && request.resource.data.invoiceId is string
+        && request.resource.data.invoiceId.size() > 0
+        && request.resource.data.invoiceId.size() <= 120
+        && request.resource.data.empenhoId is string
+        && request.resource.data.empenhoId.size() > 0
+        && request.resource.data.empenhoId.size() <= 120
+        && request.resource.data.itemId is string
+        && request.resource.data.itemId.size() > 0
+        && request.resource.data.itemId.size() <= 120
+        && (
+          request.resource.data.materialId == null
+          || (
+            request.resource.data.materialId is string
+            && request.resource.data.materialId.matches('^mat_[a-f0-9]{32}
+      allow read, write: if canAccessWarehouseModule(workspaceId);
+
+      // FASE 1 / DEP-1 + DEP-1.1 — material canônico.
+      match /materials/{materialId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create, update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseMaterialDocument(workspaceId, materialId);
+        allow delete: if canAccessWarehouseModule(workspaceId);
+      }
+
+      // FASE 6 / DEP-8..9 — depósitos e localizações têm identidade
+      // estável; referências operacionais nunca são apagadas fisicamente.
+      match /depots/{depotId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseDepotCreate(workspaceId, depotId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseDepotUpdate(workspaceId, depotId);
+        allow delete: if false;
+      }
+
+      match /locations/{locationId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLocationCreate(workspaceId, locationId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLocationUpdate(workspaceId, locationId);
+        allow delete: if false;
+      }
+
+      // FASE 2 / DEP-2 — ledger imutável. Toda criação precisa materializar
+      // a mesma alteração no saldo na operação atômica.
+      match /movements/{movementId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && warehouseMovementCreateAllowed(workspaceId, movementId);
+        allow update, delete: if false;
+      }
+
+      // FASE 2 / DEP-2.1 — saldo derivado do ledger. Escrita avulsa é negada.
+      match /balances/{materialId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create, update: if canAccessWarehouseModule(workspaceId)
+          && warehouseBalanceWriteAllowed(workspaceId, materialId);
+        allow delete: if false;
+      }
+
+      // FASE 6 / DEP-10 — distribuição física é uma projeção do ledger.
+      match /locationBalances/{locationBalanceId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create, update: if canAccessWarehouseModule(workspaceId)
+          && warehouseLocationBalanceWriteAllowed(workspaceId, locationBalanceId);
+        allow delete: if false;
+      }
+
+      // FASE 7 / DEP-11..15 — lote é enriquecimento logístico; não escreve saldos.
+      match /lots/{lotId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLotCreate(workspaceId, lotId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLotUpdate(workspaceId, lotId);
+        allow delete: if false;
+      }
+
+      // FASE 8 / DEP-13 — barcode é associação auxiliar, nunca saldo/material.
+      match /barcodes/{barcodeId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseBarcodeCreate(workspaceId, barcodeId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseBarcodeUpdate(workspaceId, barcodeId);
+        allow delete: if false;
+      }
+
+
+      // FASE 9 / DEP-17..19.5 — layout visual versionado.
+      match /layouts/{layoutId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseDepotLayoutCreate(workspaceId, layoutId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseDepotLayoutArchive(workspaceId, layoutId);
+        allow delete: if false;
+      }
+
+      // FASE 4 / DEP-4 — cutoff imutável de ativação do fluxo NF → estoque.
+      // FASE 5 / DEP-5.x — snapshots são privados, bounded e não podem ser apagados.
+      match /siscofisSnapshots/{snapshotId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseSiscofisSnapshotCreate(workspaceId, snapshotId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseSiscofisSnapshotUpdate(workspaceId, snapshotId);
+        allow delete: if false;
+      }
+
+      match /settings/{settingId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && (
+            validWarehouseInvoiceIntegrationSettings(workspaceId, settingId)
+            || validWarehouseLogisticsSettings(workspaceId, settingId)
+          );
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLogisticsSettings(workspaceId, settingId);
+        allow delete: if false;
+      }
+
+      // FASE 11.5 — fila de entrada/alocação de itens recebidos por NF.
+      match /intakes/{intakeId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseItemIntakeCreate(workspaceId, intakeId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseItemIntakeUpdate(workspaceId, intakeId);
+        allow delete: if false;
+      }
+
+      // FASE 11 / DEP-23.1 — alertas logísticos pertencem exclusivamente ao ADM.
+      match /alerts/{alertId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLogisticsAlertCreate(workspaceId, alertId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseLogisticsAlertUpdate(workspaceId, alertId);
+        allow delete: if false;
+      }
+
+      // FASE 10 / DEP-20..20.3 — inventário founder-only e auditável.
+      match /inventories/{inventoryId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseInventorySessionCreate(workspaceId, inventoryId);
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseInventorySessionUpdate(workspaceId, inventoryId);
+        allow delete: if false;
+
+        match /items/{itemId} {
+          allow read: if canAccessWarehouseModule(workspaceId);
+          allow create: if canAccessWarehouseModule(workspaceId)
+            && validWarehouseInventoryItemCreate(workspaceId, inventoryId, itemId);
+          allow update: if canAccessWarehouseModule(workspaceId)
+            && (
+              validWarehouseInventoryCountUpdate(workspaceId, inventoryId)
+              || validWarehouseInventoryAdjustmentUpdate(workspaceId, inventoryId, itemId)
+              || validWarehouseInventoryStaleUpdate(workspaceId, inventoryId, itemId)
+            );
+          allow delete: if false;
+        }
+      }
+    }
+
+    // Workspace-scoped operational data. There is deliberately no admin bypass:
+    // a platform administrator cannot read another sector's operational records.
+    match /workspaces/{workspaceId}/auditEvents/{eventId} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validWorkspaceAuditEvent(eventId, workspaceId);
+      allow update, delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/empenhos/{id} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validEmpenhoRevisionCreate(request.resource.data)
+        && empenhoCnpjCreateIsValid(request.resource.data);
+      allow update: if canAccessWorkspace(workspaceId)
+        && !empenhoDeletionIsLockedAfter(workspaceId, id)
+        && validEmpenhoRevisionUpdate()
+        && empenhoCnpjUpdateIsValid();
+      allow delete: if canAccessWorkspace(workspaceId)
+        && validEmpenhoLifecycleDelete(workspaceId, id);
+    }
+
+    match /workspaces/{workspaceId}/alerts/{id} {
+      allow read, delete: if canAccessWorkspace(workspaceId);
+      allow create, update: if canAccessWorkspace(workspaceId)
+        && linkedEmpenhoWriteAllowedAfter(workspaceId, request.resource.data);
+    }
+
+    match /workspaces/{workspaceId}/invoices/{id} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validInvoiceCreate(workspaceId, id);
+      allow update: if canAccessWorkspace(workspaceId)
+        && validInvoiceUpdate(workspaceId, id);
+      allow delete: if canAccessWorkspace(workspaceId)
+        && validInvoiceDelete(workspaceId, id);
+    }
+
+    match /workspaces/{workspaceId}/comissoes/{id} {
+      allow read, write: if canAccessWorkspace(workspaceId);
+    }
+
+    match /workspaces/{workspaceId}/cronogramas/{id} {
+      allow read, delete: if canAccessWorkspace(workspaceId);
+      allow create, update: if canAccessWorkspace(workspaceId)
+        && linkedEmpenhoWriteAllowedAfter(workspaceId, request.resource.data);
+    }
+
+    // Block 19.10 — snapshot econômico do Início.
+    // Um único documento derivado alimenta a Home; ele não concede autorização
+    // e nunca substitui as coleções operacionais como fonte de verdade.
+    match /workspaces/{workspaceId}/settings/homeSnapshot {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create, update: if validHomeSnapshot(workspaceId);
+      allow delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/settings/termoRecebimentoCounter {
+      // O cadastro administrativo verifica se existe contador residual antes de
+      // provisionar um workspace novo. Essa leitura prévia só é permitida enquanto
+      // o workspace ainda não existe; depois da criação, o administrador volta a
+      // não possuir acesso ao contador operacional do tenant.
+      allow read: if canAccessWorkspace(workspaceId)
+        || (
+          isPlatformAdmin()
+          && !workspaceExists(workspaceId)
+        );
+      allow create: if canAdminProvisionTermCounter(workspaceId)
+        || (
+          canAccessWorkspace(workspaceId)
+          && validInitialTermCounter()
+        );
+      allow update: if canAccessWorkspace(workspaceId)
+        && validOperationalTermCounterUpdate();
+      allow delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/settings/documentStorage {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validWorkspaceDocumentStorage(workspaceId);
+      allow update: if canAccessWorkspace(workspaceId)
+        && validWorkspaceDocumentStorageUpdate(workspaceId);
+      allow delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/settings/{id} {
+      // Listagem é limitada ao próprio workspace autenticado. Os settings atuais
+      // já são individualmente legíveis pelo setor; o list habilita diagnósticos
+      // de integridade sem ampliar acesso entre tenants.
+      allow list: if canAccessWorkspace(workspaceId);
+      allow get: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId);
+      allow create: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId)
+        && (
+          (
+            isEmpenhoDeletionLockId(id)
+            && validEmpenhoDeletionLockCreate(workspaceId, id)
+          )
+          || (
+            !isEmpenhoDeletionLockId(id)
+            && (
+              !isSagNsLockId(id)
+              || validSagNsLock(workspaceId, id)
+            )
+          )
+        );
+      allow update: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId)
+        && !isEmpenhoDeletionLockId(id)
+        && (
+          !isSagNsLockId(id)
+          || validSagNsLockUpdate(workspaceId, id)
+        );
+      allow delete: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId)
+        && (
+          (
+            isEmpenhoDeletionLockId(id)
+            && validEmpenhoDeletionLockDelete(workspaceId, id)
+          )
+          || (
+            !isEmpenhoDeletionLockId(id)
+            && (
+              !isSagNsLockId(id)
+              || validSagNsLockDelete(workspaceId, id)
+            )
+          )
+        );
+    }
+
+    // Bloco 13 — compatibilidade legada somente leitura.
+    // O runtime oficial já usa /workspaces/hgesm-aprov/...; os dados raiz ficam
+    // preservados apenas para consulta, auditoria e recuperação controlada.
+    // Qualquer rollback com escrita exige mudança explícita de Rules, evitando que
+    // uma simples regressão de frontend volte silenciosamente a gravar no legado.
+    match /empenhos/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /alerts/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /invoices/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /comissoes/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /cronogramas/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    // A identidade visual global precisa continuar disponível antes do login.
+    // A marca institucional é imutável no runtime: qualquer troca futura exige
+    // manutenção deliberada fora da aplicação e revisão explícita destas Rules.
+    match /settings/global {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Demais settings raiz (incluindo o contador histórico) ficam somente leitura.
+    match /settings/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+  }
+}
+)
+          )
+        )
+        && request.resource.data.description is string
+        && request.resource.data.description.size() > 0
+        && request.resource.data.description.size() <= 240
+        && request.resource.data.unitLabel is string
+        && request.resource.data.unitLabel.size() > 0
+        && request.resource.data.unitLabel.size() <= 80
+        && request.resource.data.supplier is string
+        && request.resource.data.supplier.size() > 0
+        && request.resource.data.supplier.size() <= 240
+        && request.resource.data.receivedQuantity is number
+        && request.resource.data.receivedQuantity > 0
+        && request.resource.data.receivedQuantity <= 1000000000
+        && request.resource.data.allocatedQuantity is number
+        && request.resource.data.allocatedQuantity >= 0
+        && request.resource.data.allocatedQuantity <= request.resource.data.receivedQuantity
+        && request.resource.data.immediateConsumptionQuantity is number
+        && request.resource.data.immediateConsumptionQuantity >= 0
+        && request.resource.data.immediateConsumptionQuantity <= request.resource.data.receivedQuantity
+        && request.resource.data.allocatedQuantity + request.resource.data.immediateConsumptionQuantity <= request.resource.data.receivedQuantity
+        && request.resource.data.pendingQuantity is number
+        && request.resource.data.pendingQuantity >= 0
+        && request.resource.data.pendingQuantity == request.resource.data.receivedQuantity - request.resource.data.allocatedQuantity - request.resource.data.immediateConsumptionQuantity
+        && request.resource.data.status in ['PENDING', 'PARTIALLY_PROCESSED', 'PROCESSED']
+        && warehouseItemIntakeV2StatusMatchesQuantities()
+        && request.resource.data.createdBy is string
+        && request.resource.data.createdBy.size() > 0
+        && request.resource.data.createdBy.size() <= 180
+        && request.resource.data.updatedBy is string
+        && request.resource.data.updatedBy.size() > 0
+        && request.resource.data.updatedBy.size() <= 180
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp;
+    }
+
+    function warehouseItemIntakeV2MaterialMatches(workspaceId) {
+      let p = /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId);
+      return request.resource.data.materialId == null
+        || (
+          exists(p)
+          && get(p).data.workspaceId == workspaceId
+          && get(p).data.ug == request.resource.data.ug
+          && get(p).data.status == 'active'
+        );
+    }
+
+    function validWarehouseItemIntakeV2Create(workspaceId, intakeId) {
+      return validWarehouseItemIntakeV2Base(workspaceId, intakeId)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && warehouseItemIntakeV2MaterialMatches(workspaceId);
+    }
+
+    function validWarehouseItemIntakeV2Update(workspaceId, intakeId) {
+      return validWarehouseItemIntakeV2Base(workspaceId, intakeId)
+        && resource.data.schemaVersion == 'warehouse_item_intake_v2'
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.ug == resource.data.ug
+        && request.resource.data.invoiceRecordKey == resource.data.invoiceRecordKey
+        && request.resource.data.invoiceId == resource.data.invoiceId
+        && request.resource.data.empenhoId == resource.data.empenhoId
+        && request.resource.data.itemId == resource.data.itemId
+        && request.resource.data.description == resource.data.description
+        && request.resource.data.unitLabel == resource.data.unitLabel
+        && request.resource.data.supplier == resource.data.supplier
+        && request.resource.data.receivedQuantity == resource.data.receivedQuantity
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.allocatedQuantity >= resource.data.allocatedQuantity
+        && request.resource.data.immediateConsumptionQuantity >= resource.data.immediateConsumptionQuantity
+        && (
+          request.resource.data.materialId == resource.data.materialId
+          || (
+            resource.data.materialId == null
+            && request.resource.data.materialId is string
+          )
+        )
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'materialId', 'allocatedQuantity', 'immediateConsumptionQuantity',
+          'pendingQuantity', 'status', 'updatedBy', 'updatedAt'
+        ])
+        && warehouseItemIntakeV2MaterialMatches(workspaceId);
+    }
+
     match /warehouse/{workspaceId} {
       allow read, write: if canAccessWarehouseModule(workspaceId);
 

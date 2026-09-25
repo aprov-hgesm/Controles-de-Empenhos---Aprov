@@ -22,6 +22,7 @@ import {
 import {
   createWarehouseItemIntakeId,
   validateWarehouseItemIntake,
+  WAREHOUSE_ITEM_INTAKE_SCHEMA_VERSION,
   type WarehouseItemIntake,
   type WarehouseItemIntakeListItem,
 } from './intake';
@@ -239,13 +240,16 @@ export async function listWarehouseItemIntakes(
       query(collection(db, path), limit(Math.max(1, Math.min(maxResults, 500))))
     );
     return snapshot.docs
-      .map((entry) => {
+      .flatMap((entry) => {
         const data = entry.data() as Record<string, unknown>;
-        return {
+        if (data.schemaVersion !== WAREHOUSE_ITEM_INTAKE_SCHEMA_VERSION) {
+          return [];
+        }
+        return [{
           intake: parseIntake(scope.workspaceId, entry.id, data),
           createdAt: timestampToIso(data.createdAt),
           updatedAt: timestampToIso(data.updatedAt),
-        };
+        }];
       })
       .sort((left, right) =>
         (right.createdAt || '').localeCompare(left.createdAt || '')
