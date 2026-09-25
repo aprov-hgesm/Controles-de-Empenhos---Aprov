@@ -1672,3 +1672,22 @@ Achados não bloqueantes principais:
 
 A produção real não pôde ser vinculada a um SHA com a integração Vercel disponível; branch, `main` e produção continuam estados distintos.
 
+## DECISÃO DE PUBLICAÇÃO E EXPANSÃO — 2026-09-25
+
+Estado autorizado para o encerramento atual:
+- ADM Depósito em produção: **FOUNDER-ONLY**;
+- usuários externos: **SEM ACESSO AO ADM POR PADRÃO**;
+- publicação na Vercel não autoriza abertura externa;
+- testes e ajustes pós-publicação serão realizados primeiro pela conta fundadora.
+
+Planejamento posterior:
+- criar no Admin um controle individual `ADM Depósito habilitado` por usuário externo;
+- controle externo deve iniciar desativado;
+- habilitação deve liberar navegação e rota somente para o usuário autorizado;
+- desabilitação deve retirar ambos os acessos;
+- autorização de um usuário não pode afetar os demais;
+- implementação futura deve ser testada contra acesso direto, isolamento workspace/UG e multi-tenant antes de qualquer piloto externo.
+
+Referência: **D-071** em `docs/adm-deposito/DECISIONS.md`.
+
+Esta atualização é documental. O modelo de acesso atual continua founder-only e nenhuma expansão externa foi executada.
