@@ -263,7 +263,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
             <table className="min-w-[760px] w-full text-left text-xs">
               <thead className="bg-white/[0.025] text-[9px] uppercase tracking-[0.12em] text-slate-600"><tr><th className="p-3">Nº Ficha</th><th className="p-3">Material</th><th className="p-3">Qtd.</th><th className="p-3">Valor unit.</th><th className="p-3">Total</th><th className="p-3">Estado</th></tr></thead>
               <tbody className="divide-y divide-white/[0.05]">
-                {preview.rows.map((row, index) => { const source = preview.import.rows.find((item) => item.rowId === row.rowId); return <tr key={row.rowId}>
+                {preview.rows.map((row, index) => { const source = preview.import.rows.find((item) => item.rowId === row.rowId); return <tr key={preview.sourceHash + row.rowId}>
                   <td className="p-2"><input defaultValue={row.sourceItemNumber || ''} onChange={(event) => editPreviewItem(index, 'numeroItem', event.target.value)} className="h-9 w-28 rounded-lg border border-white/[0.08] bg-black/20 px-2 font-mono text-xs text-slate-200" /></td>
                   <td className="p-2"><input defaultValue={row.description} onChange={(event) => editPreviewItem(index, 'descricao', event.target.value)} className="h-9 min-w-[280px] w-full rounded-lg border border-white/[0.08] bg-black/20 px-2 text-xs font-bold text-slate-200" /></td>
                   <td className="p-2"><input defaultValue={String(row.siscofisQuantity)} onChange={(event) => editPreviewItem(index, 'quantidade', event.target.value)} inputMode="decimal" className="h-9 w-24 rounded-lg border border-white/[0.08] bg-black/20 px-2 text-xs text-slate-200" /></td>
