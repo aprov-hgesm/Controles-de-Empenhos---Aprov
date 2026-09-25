@@ -216,7 +216,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
           <input value={manualDescription} onChange={(e) => setManualDescription(e.target.value)} placeholder="Descrição" className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-200" />
           <input value={manualQuantity} onChange={(e) => setManualQuantity(e.target.value)} inputMode="decimal" placeholder="Quantidade" className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-200" />
           <input value={manualUnitValue} onChange={(e) => setManualUnitValue(e.target.value)} inputMode="decimal" placeholder="Valor unitário" className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-200" />
-          <input type="date" value={manualReferenceDate} onChange={(e) => setManualReferenceDate(e.target.value)} className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-300" />
+          <input type="date" value={manualReferenceDate} onChange={(e) => { setManualReferenceDate(e.target.value); if (preview) setPreviewDirty(true); }} className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-300" />
           <button type="button" onClick={prepareManualRow} className="h-10 rounded-xl border border-emerald-300/15 bg-emerald-400/[0.08] px-4 text-xs font-black text-emerald-100">Adicionar</button>
         </div>
       </div>
@@ -236,7 +236,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
 
       <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-5">
         <div className="flex items-center gap-2 text-slate-200"><FileJson2 className="h-4 w-4 text-blue-200" /><p className="text-xs font-black uppercase tracking-[0.12em]">JSON / linha manual preparada</p></div>
-        <textarea value={rawJson} onChange={(event) => setRawJson(event.target.value)} data-testid="warehouse-siscofis-json" placeholder={'{\n  "schemaVersion": "emprovex_siscofis_inventory_v1",\n  "items": [...]\n}'} className="mt-4 h-56 w-full resize-y rounded-xl border border-white/[0.08] bg-[#01050d] p-4 font-mono text-xs leading-5 text-slate-300" />
+        <textarea value={rawJson} onChange={(event) => { setRawJson(event.target.value); if (preview) setPreviewDirty(true); }} data-testid="warehouse-siscofis-json" placeholder={'{\n  "schemaVersion": "emprovex_siscofis_inventory_v1",\n  "items": [...]\n}'} className="mt-4 h-56 w-full resize-y rounded-xl border border-white/[0.08] bg-[#01050d] p-4 font-mono text-xs leading-5 text-slate-300" />
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button type="button" onClick={validateImport} disabled={working || !rawJson.trim()} data-testid="warehouse-siscofis-validate" className="inline-flex h-9 items-center gap-2 rounded-xl bg-blue-500/90 px-4 text-xs font-black text-white disabled:opacity-40">
             {working ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} {previewDirty ? 'Revalidar alterações' : 'Validar e gerar prévia'}
