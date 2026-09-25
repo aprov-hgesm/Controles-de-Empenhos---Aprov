@@ -118,4 +118,20 @@ Em 2026-09-25, o Módulo 8 foi concluído na branch oficial da FASE 11.5.
 
 A camada visual foi implementada sem Fabric.js/Konva: a auditoria concluiu que evoluir o canvas React já existente era mais simples e leve para a base atual, evitando dependência imperativa adicional e mantendo a meta de baixo custo gráfico em máquinas antigas.
 
-Próximo módulo oficial: **Módulo 9 — Integração croqui ↔ estoque**.
+## Consolidação dos Módulos 9 e 10 — Croqui ↔ Estoque e Início
+
+Em 2026-09-25, os Módulos 9 e 10 foram concluídos, nesta ordem, na branch oficial da FASE 11.5.
+
+- a aba **Início** consome somente o layout ativo do depósito selecionado;
+- a pesquisa usa o material canônico e saldos oficiais já materializados;
+- `warehouseLocationId` continua sendo a ponte entre posição logística e objeto visual;
+- múltiplas posições do mesmo material podem ser destacadas simultaneamente;
+- FEFO reutiliza `selectWarehouseFefoLot` e permanece apenas recomendação operacional;
+- localizações com saldo sem objeto visual continuam visíveis textualmente;
+- clique em estrutura destacada mostra o contexto do material naquela posição;
+- a Início não edita geometria e não persiste saldo, lote ou quantidade no croqui;
+- o editor continua em **Meus Depósitos / Croquis**;
+- o croqui ativo é carregado sob demanda por depósito, sem carregar histórico na Início;
+- nenhuma Firestore Rule, coleção paralela ou parte do Core EMPROVEX foi alterada.
+
+Próximo módulo oficial: **Módulo 11 — Consolidação do Controle de Itens**.
