@@ -8131,7 +8131,8 @@ service cloud.firestore {
         && request.resource.data.withdrawnBy is string
         && request.resource.data.withdrawnBy.size() > 0
         && request.resource.data.withdrawnBy.size() <= 160
-        && request.resource.data.operatorUid == request.auth.uid
+        && request.resource.data.operatorUid is string
+        && request.resource.data.operatorUid.size() > 0
         && request.resource.data.movementId is string
         && request.resource.data.movementId.matches('^mov_[a-f0-9]{64}    // Não representa saldo: apenas classifica quanto do recebido já foi tratado.
     function warehouseItemIntakeV2StatusMatchesQuantities() {
@@ -10197,6 +10198,7 @@ service cloud.firestore {
 
     function validWarehouseConsumptionCreate(workspaceId, consumptionId) {
       return validWarehouseConsumptionBase(workspaceId, consumptionId)
+        && request.resource.data.operatorUid == request.auth.uid
         && request.resource.data.siscofisStatus == 'PENDING'
         && request.resource.data.occurredAt == request.time
         && request.resource.data.siscofisUpdatedBy == null
