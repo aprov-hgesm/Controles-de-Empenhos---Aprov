@@ -320,6 +320,8 @@ function parseWithdrawal(
     || !normalizeWarehouseDestinationName(data.destinationName)
     || typeof data.withdrawnBy !== 'string'
     || !normalizeWarehouseWithdrawnBy(data.withdrawnBy)
+    || typeof data.payloadHash !== 'string'
+    || !/^[a-f0-9]{64}$/.test(data.payloadHash)
     || typeof data.expectedLineCount !== 'number'
     || !Number.isSafeInteger(data.expectedLineCount)
     || data.expectedLineCount < 1
@@ -343,6 +345,7 @@ function parseWithdrawal(
     destinationId: data.destinationId as string,
     destinationName: normalizeWarehouseDestinationName(data.destinationName as string),
     withdrawnBy: normalizeWarehouseWithdrawnBy(data.withdrawnBy as string),
+    payloadHash: data.payloadHash as string,
     expectedLineCount: data.expectedLineCount as number,
     appliedLineCount: data.appliedLineCount as number,
     status: data.status as WarehouseMaterialWithdrawal['status'],
@@ -541,6 +544,23 @@ export async function setWarehouseDestinationStatus(
   }
 }
 
+async function createWithdrawalPayloadHash(
+  input: FinalizeWarehouseMaterialWithdrawalInput
+): Promise<string> {
+  const payload = input.lines.map((line) => ({
+    lineId: line.lineId,
+    materialId: line.materialId,
+    requestedQuantity: normalizeWarehouseQuantity(line.requestedQuantity),
+    baseQuantity: normalizeWarehouseQuantity(line.baseQuantity),
+    presentation: line.presentation,
+    position: line.position,
+    barcodeId: line.barcodeAssociation?.id || null,
+    barcode: line.barcode || null,
+    lotId: line.lotId,
+  }));
+  return stableHex(JSON.stringify(payload));
+}
+
 async function ensureWithdrawalHeader(
   workspaceId: string,
   input: FinalizeWarehouseMaterialWithdrawalInput,
@@ -558,6 +578,7 @@ async function ensureWithdrawalHeader(
   }
   const withdrawnBy = normalizeWarehouseWithdrawnBy(input.withdrawnBy);
   if (!withdrawnBy) throw new Error('WAREHOUSE_WITHDRAWN_BY_REQUIRED');
+  const payloadHash = await createWithdrawalPayloadHash(input);
   const path = warehouseDocumentPath(
     scope.workspaceId,
     'withdrawals',
@@ -576,6 +597,7 @@ async function ensureWithdrawalHeader(
         existing.destinationId !== destination.id
         || existing.destinationName !== destination.name
         || existing.withdrawnBy !== withdrawnBy
+        || existing.payloadHash !== payloadHash
         || existing.expectedLineCount !== input.lines.length
       ) {
         throw new Error('WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT');
@@ -591,6 +613,7 @@ async function ensureWithdrawalHeader(
       destinationId: destination.id,
       destinationName: destination.name,
       withdrawnBy,
+      payloadHash,
       expectedLineCount: input.lines.length,
       appliedLineCount: 0,
       status: 'FINALIZING',
