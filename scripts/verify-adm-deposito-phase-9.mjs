@@ -97,6 +97,11 @@ assert.match(security, /FASE 9 — Visão do Depósito/);
 assert.match(security, /Setor externo não lê layout da FASE 9/);
 assert.match(e2e, /warehouse-layout-material-search/);
 assert.match(e2e, /warehouse-layout-save/);
+assert.match(e2e, /ALTERAÇÃO NÃO SALVA/);
+assert.match(e2e, /name: 'Cancelar'/);
+assert.match(e2e, /warehouse-croqui-editor-toolbar/);
+assert.match(e2e, /warehouse-croqui-editor-viewport/);
+assert.match(e2e, /setViewportSize\(\{ width: 1100, height: 900 \}\)/);
 
 assert.match(phaseDoc, /warehouse_depot_layout_v1/);
 assert.match(phaseDoc, /Firestore = estado operacional ativo/);

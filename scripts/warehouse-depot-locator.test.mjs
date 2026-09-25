@@ -137,3 +137,53 @@ test('cobertura visual considera somente objetos vinculados a warehouseLocationI
 
   assert.deepEqual([...ids], [LOC_A]);
 });
+
+
+test('subposição do depósito atual permanece destacável como posição logística real', () => {
+  const subposition = 'sub_' + '6'.repeat(32);
+  const result = locator.deriveWarehouseMaterialPositions([
+    balance('5', MATERIAL, 7, {
+      kind: 'SUBPOSITION',
+      depotId: DEPOT_A,
+      locationId: LOC_A,
+      subpositionId: subposition,
+    }),
+  ], MATERIAL, DEPOT_A);
+
+  assert.equal(result.currentDepotBalances.length, 1);
+  assert.equal(result.currentDepotBalances[0].position.kind, 'SUBPOSITION');
+  assert.equal(result.totalPositiveQuantity, 7);
+});
+
+test('quantidades negativas e material diferente não entram na projeção de localização', () => {
+  const result = locator.deriveWarehouseMaterialPositions([
+    balance('6', MATERIAL, -3, { kind: 'LOCATION', depotId: DEPOT_A, locationId: LOC_A, subpositionId: null }),
+    balance('7', OTHER_MATERIAL, 40, { kind: 'LOCATION', depotId: DEPOT_A, locationId: LOC_B, subpositionId: null }),
+  ], MATERIAL, DEPOT_A);
+
+  assert.equal(result.positiveBalances.length, 0);
+  assert.equal(result.currentDepotBalances.length, 0);
+  assert.equal(result.totalPositiveQuantity, 0);
+});
+
+test('IDs visuais representados são únicos mesmo quando a entrada contém repetição', () => {
+  const template = {
+    kind: 'SHELF',
+    label: 'Estante',
+    x: 0,
+    y: 0,
+    width: 100,
+    height: 50,
+    rotation: 0,
+    layer: 1,
+    elevation: 1,
+    visualVariant: 'solid',
+    warehouseLocationId: LOC_A,
+  };
+  const ids = locator.representedWarehouseLocationIds([
+    { ...template, id: 'obj_' + '7'.repeat(32) },
+    { ...template, id: 'obj_' + '8'.repeat(32) },
+  ]);
+
+  assert.deepEqual([...ids], [LOC_A]);
+});

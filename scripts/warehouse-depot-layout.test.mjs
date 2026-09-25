@@ -311,3 +311,39 @@ test('Início consome somente layout ativo e mantém croqui como consulta do est
   assert.doesNotMatch(home, /saveWarehouseDepotLayoutVersion/);
   assert.doesNotMatch(home, /warehouse_visual_balance|warehouse_map_balance|warehouse_stock_map/);
 });
+
+
+test('geometria fora dos limites lógicos é rejeitada pelo contrato', () => {
+  const result = source.validateWarehouseDepotLayout(
+    layout({
+      objects: [object({ x: 950, width: 100 })],
+    })
+  );
+  assert.equal(result.ok, false);
+  assert.match(result.issues.map((item) => item.code).join(','), /object_out_of_bounds/);
+});
+
+test('gate 9.7 mantém editor sem acesso direto a saldo, ledger, lotes, NF ou Core', () => {
+  const editor = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotLayoutEditor.tsx'),
+    'utf8'
+  );
+  const operational = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotViewOperational.tsx'),
+    'utf8'
+  );
+
+  for (const forbidden of [
+    'warehouse_balance_v1',
+    'warehouse_location_balance_v1',
+    'warehouse_movement_v1',
+    'warehouse_lot_v1',
+    'invoices',
+    'empenhos',
+  ]) {
+    assert.doesNotMatch(editor, new RegExp(forbidden));
+  }
+
+  assert.doesNotMatch(editor, /firebase\/firestore|runTransaction|setDoc|updateDoc|writeBatch/);
+  assert.match(operational, /Nenhum saldo ou movimento de estoque foi alterado/);
+});
