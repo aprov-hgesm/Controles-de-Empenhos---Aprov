@@ -83,7 +83,20 @@ import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
 const LEGACY_MOVEMENTS_PER_INVOICE_LIMIT = 51;
 const QUANTITY_EPSILON = 0.000001;
 
-export interface AllocateWarehousePendingItemInput {
+export interface WarehouseIntakeEntryInput {
+  intakeId: string;
+  invoiceRecordKey: string;
+  invoiceId: string;
+  empenhoId: string;
+  itemId: string;
+  materialId: string | null;
+  description: string;
+  unitLabel: string;
+  supplier: string;
+  receivedQuantity: number;
+}
+
+export interface AllocateWarehousePendingItemInput extends WarehouseIntakeEntryInput {
   intakeId: string;
   invoiceRecordKey: string;
   invoiceId: string;
@@ -411,7 +424,7 @@ async function createIntakeLotId(input: {
 
 async function ensureCanonicalMaterial(
   scope: { workspaceId: string; ug: string },
-  input: AllocateWarehousePendingItemInput
+  input: WarehouseIntakeEntryInput
 ): Promise<WarehouseMaterial> {
   const materialId = input.materialId?.trim().toLowerCase()
     || await deriveWarehouseMaterialIdForEmpenhoItem(
@@ -502,7 +515,7 @@ async function findLegacyInvoiceMovements(
 async function ensureInvoiceEntry(
   scope: { workspaceId: string; ug: string; uid: string },
   material: WarehouseMaterial,
-  input: AllocateWarehousePendingItemInput
+  input: WarehouseIntakeEntryInput
 ): Promise<WarehouseMovement> {
   const idempotencyKey = [
     'adm-intake-v2',
@@ -583,11 +596,26 @@ function ensureActivePosition(
   }
 }
 
+export async function ensureWarehouseIntakeEntryContext(
+  workspaceId: string,
+  input: WarehouseIntakeEntryInput
+): Promise<{
+  scope: { workspaceId: string; ug: string; uid: string };
+  material: WarehouseMaterial;
+  entryMovement: WarehouseMovement;
+}> {
+  const scope = currentScope(workspaceId);
+  const material = await ensureCanonicalMaterial(scope, input);
+  const entryMovement = await ensureInvoiceEntry(scope, material, input);
+  return { scope, material, entryMovement };
+}
+
 export async function allocateWarehousePendingItem(
   workspaceId: string,
   input: AllocateWarehousePendingItemInput
 ): Promise<AllocateWarehousePendingItemResult> {
-  const scope = currentScope(workspaceId);
+  const entryContext = await ensureWarehouseIntakeEntryContext(workspaceId, input);
+  const scope = entryContext.scope;
 
   if (
     input.effectiveStatus === 'RECONCILIATION_REQUIRED'
@@ -637,8 +665,8 @@ export async function allocateWarehousePendingItem(
     ].join('\n'))
   ).slice(0, 20);
 
-  const material = await ensureCanonicalMaterial(scope, input);
-  const entryMovement = await ensureInvoiceEntry(scope, material, input);
+  const material = entryContext.material;
+  const entryMovement = entryContext.entryMovement;
 
   const from: WarehouseStockPosition = { kind: 'UNASSIGNED' };
   const transferIdempotencyKey = [
