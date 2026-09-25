@@ -25,7 +25,7 @@ import {
 } from '../../../lib/warehouse/layout';
 import {
   getActiveWarehouseDepotLayout,
-  listWarehouseDepotLayouts,
+  listWarehouseDepotLayoutsForDepot,
   saveWarehouseDepotLayoutVersion,
   type WarehouseDepotLayoutListItem,
 } from '../../../lib/warehouse/layoutRepository';
@@ -43,6 +43,10 @@ import type {
   WarehouseLocation,
   WarehouseLocationBalance,
 } from '../../../lib/warehouse/location';
+import {
+  WAREHOUSE_STRUCTURE_LIBRARY,
+  type WarehouseStructureDefinition,
+} from '../../../lib/warehouse/structureLibrary';
 
 type Mode = 'view' | 'edit';
 
@@ -260,33 +264,27 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
   const reload = async () => {
     setData((current) => ({ ...current, loading: true, error: null }));
     try {
-      const [active, history, materials, depots, locations, balances] = await Promise.all([
-        getActiveWarehouseDepotLayout(workspaceId),
-        listWarehouseDepotLayouts(workspaceId, 100),
+      const [materials, depots, locations, balances] = await Promise.all([
         listWarehouseMaterials(workspaceId, 250),
         listWarehouseDepots(workspaceId, 250),
         listWarehouseLocations(workspaceId, 500),
         listWarehouseLocationBalances(workspaceId, 500),
       ]);
       const depotList = depots.map((item) => item.depot);
-      setData({
+      setData((current) => ({
+        ...current,
         loading: false,
         error: null,
-        active: active?.layout || null,
-        history,
         materials,
         depots: depotList,
         locations: locations.map((item) => item.location),
         balances: balances.map((item) => item.balance),
-      });
+      }));
       setSelectedDepotId((current) => {
         if (current && depotList.some((depot) => depot.id === current && depot.status === 'active')) {
           return current;
         }
-        const firstLayoutDepot = history.find(
-          (item) => item.layout.status === 'active' && item.layout.depotId
-        )?.layout.depotId;
-        return firstLayoutDepot || depotList.find((depot) => depot.status === 'active')?.id || '';
+        return depotList.find((depot) => depot.status === 'active')?.id || '';
       });
     } catch (error) {
       setData((current) => ({
@@ -301,6 +299,34 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
     void reload();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedDepotId) {
+      setData((current) => ({ ...current, active: null, history: [] }));
+      return () => { cancelled = true; };
+    }
+
+    void Promise.all([
+      getActiveWarehouseDepotLayout(workspaceId, selectedDepotId),
+      listWarehouseDepotLayoutsForDepot(workspaceId, selectedDepotId, 100),
+    ]).then(([active, history]) => {
+      if (cancelled) return;
+      setData((current) => ({
+        ...current,
+        active: active?.layout || null,
+        history,
+      }));
+    }).catch((error) => {
+      if (cancelled) return;
+      setData((current) => ({
+        ...current,
+        error: error instanceof Error ? error.message : 'Falha ao carregar o histórico deste depósito.',
+      }));
+    });
+
+    return () => { cancelled = true; };
+  }, [selectedDepotId, workspaceId]);
 
   const materialMatches = useMemo(() => {
     const normalized = queryText.trim().toLocaleLowerCase('pt-BR');
@@ -564,9 +590,9 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
             <div className="grid min-h-[360px] place-items-center rounded-2xl border border-dashed border-blue-300/15 bg-blue-400/[0.025] p-8 text-center">
               <div>
                 <BoxSelect className="mx-auto h-8 w-8 text-blue-200/60" />
-                <p className="mt-4 text-sm font-black text-slate-200">Nenhum layout ativo</p>
+                <p className="mt-4 text-sm font-black text-slate-200">Este depósito ainda não possui layout.</p>
                 <p className="mt-2 max-w-md text-xs leading-6 text-slate-500">
-                  Entre no modo de edição para criar a primeira representação visual. O estoque existente não será alterado.
+                  Entre no modo de edição para criar a primeira representação visual deste depósito. O estoque existente não será alterado.
                 </p>
               </div>
             </div>
@@ -662,18 +688,49 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                 </label>
               </div>
 
-              <button
-                type="button"
-                data-testid="warehouse-layout-add-object"
-                onClick={() => {
-                  const object = createWarehouseDepotLayoutObject({ kind: 'SHELF', label: 'Nova estrutura', x: 40 + draftObjects.length * 12, y: 40 + draftObjects.length * 12 });
-                  setDraftObjects((items) => [...items, object]);
-                  setSelectedObjectId(object.id);
-                }}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.035] px-3 py-2.5 text-xs font-black text-slate-200"
-              >
-                <Plus className="h-4 w-4" /> Adicionar objeto
-              </button>
+              <div className="space-y-2" data-testid="warehouse-structure-library">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Biblioteca de estruturas</p>
+                  <p className="mt-1 text-[10px] leading-5 text-slate-600">
+                    Os tamanhos são proporções iniciais do croqui, não medidas arquitetônicas.
+                  </p>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {WAREHOUSE_STRUCTURE_LIBRARY.map((definition: WarehouseStructureDefinition) => (
+                    <button
+                      key={definition.id}
+                      type="button"
+                      data-testid={'warehouse-structure-' + definition.id}
+                      onClick={() => {
+                        const object = createWarehouseDepotLayoutObject({
+                          kind: definition.kind,
+                          label: definition.name,
+                          x: 40 + draftObjects.length * 12,
+                          y: 40 + draftObjects.length * 12,
+                          width: definition.defaultWidth,
+                          height: definition.defaultHeight,
+                          rotation: definition.defaultRotation,
+                          visualVariant: definition.visualVariant,
+                        });
+                        setDraftObjects((items) => [...items, object]);
+                        setSelectedObjectId(object.id);
+                      }}
+                      className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3 text-left transition hover:bg-white/[0.05]"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-black text-slate-200">{definition.name}</span>
+                        <Plus className="h-3.5 w-3.5 text-blue-200/70" aria-hidden="true" />
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-[9px] leading-4 text-slate-600">{definition.description}</p>
+                      <div className="mt-2 flex flex-wrap gap-1.5 text-[8px] font-bold uppercase tracking-[0.08em] text-slate-600">
+                        <span>{definition.defaultWidth}×{definition.defaultHeight}</span>
+                        {definition.acceptsLevels && <span>· níveis</span>}
+                        {definition.acceptsSubpositions && <span>· subposições</span>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {selectedObject && (
                 <div className="space-y-3 rounded-xl border border-white/[0.07] bg-black/15 p-3" data-testid="warehouse-layout-object-editor">
