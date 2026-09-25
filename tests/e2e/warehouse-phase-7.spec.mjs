@@ -70,6 +70,6 @@ test.describe.serial('ADM Depósito FASE 7 — estoque operável', () => {
     );
 
     await page.goto('/adm-deposito/movimentacoes');
-    await expect(page.getByText('Ledger oficial · histórico append-only')).toBeVisible();
+    await expect(page.getByText('Histórico de movimentações', { exact: true })).toBeVisible();
   });
 });
