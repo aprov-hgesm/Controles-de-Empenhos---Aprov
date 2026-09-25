@@ -210,6 +210,88 @@ test('editor visual mantém edição local, 2D/2.5D e sem persistência paralela
   assert.match(operational, /warehouseLocationId/);
 });
 
+test('croqui v2 preserva integridade logística e vínculos inequívocos nas novas edições', () => {
+  const editor = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotLayoutEditor.tsx'),
+    'utf8'
+  );
+  const operational = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotViewOperational.tsx'),
+    'utf8'
+  );
+  const repository = readFileSync(
+    resolve(root, 'lib/warehouse/layoutRepository.ts'),
+    'utf8'
+  );
+
+  const clearedLinks = editor.match(/warehouseLocationId:\s*null/g) || [];
+  assert.ok(clearedLinks.length >= 2, 'duplicar e colar devem nascer sem vínculo logístico');
+  assert.match(operational, /já está representada por/);
+  assert.match(operational, /duplicateWarehouseLocationIds/);
+  assert.match(repository, /WAREHOUSE_LAYOUT_DUPLICATE_LOCATION_REFERENCE/);
+  assert.match(repository, /assertUniqueLayoutLocationReferences/);
+  assert.doesNotMatch(repository, /warehouse_balance_v1|warehouse_location_balance_v1|warehouse_movement_v1|warehouse_lot_v1/);
+});
+
+test('croqui v2 usa um único histórico local para canvas e painel de propriedades', () => {
+  const editor = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotLayoutEditor.tsx'),
+    'utf8'
+  );
+  const operational = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotViewOperational.tsx'),
+    'utf8'
+  );
+
+  assert.match(editor, /onHistoryCheckpoint/);
+  assert.match(editor, /canUndo/);
+  assert.match(editor, /onUndo/);
+  assert.doesNotMatch(editor, /setHistory\(/);
+  assert.match(operational, /draftHistory/);
+  assert.match(operational, /commitDraftObjects/);
+  assert.match(operational, /resetDraftHistory/);
+  assert.match(operational, /onHistoryCheckpoint=\{checkpointDraft\}/);
+});
+
+test('croqui v2 possui estrutura responsiva sem sobreposição artificial', () => {
+  const editor = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotLayoutEditor.tsx'),
+    'utf8'
+  );
+  const operational = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotViewOperational.tsx'),
+    'utf8'
+  );
+  const structure = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotCroquis.tsx'),
+    'utf8'
+  );
+
+  assert.match(editor, /warehouse-croqui-editor-toolbar/);
+  assert.match(editor, /warehouse-croqui-editor-viewport/);
+  assert.match(editor, /flex-wrap/);
+  assert.match(editor, /max-w-full/);
+  assert.match(operational, /2xl:grid-cols-\[minmax\(0,1fr\)_330px\]/);
+  assert.match(operational, /warehouse-croqui-properties-panel/);
+  assert.match(operational, /2xl:overflow-y-auto/);
+  assert.match(structure, /min-w-0/);
+  assert.doesNotMatch(structure, /position:\s*(absolute|fixed)|z-index:\s*\d{3,}/);
+});
+
+test('cancelamento e restauração histórica preservam persistência explícita', () => {
+  const operational = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotViewOperational.tsx'),
+    'utf8'
+  );
+
+  assert.match(operational, /setMode\('view'\)/);
+  assert.match(operational, /Usar como base/);
+  assert.match(operational, /Salve para criar uma nova versão ativa/);
+  assert.match(operational, /expectedVersion:/);
+  assert.match(operational, /baseLayoutId:/);
+  assert.match(operational, /WAREHOUSE_LAYOUT_DEPOT_CONTEXT_CHANGED/);
+});
+
 test('Início consome somente layout ativo e mantém croqui como consulta do estoque', () => {
   const home = readFileSync(
     resolve(root, 'features/warehouse/components/WarehouseHomeOperational.tsx'),
