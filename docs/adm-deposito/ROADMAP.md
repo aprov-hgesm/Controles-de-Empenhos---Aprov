@@ -829,3 +829,23 @@ Achados preparatórios:
 - `verify:adm-deposito-phase-11-5` existe no projeto e deverá ser executado localmente; sua inclusão no CI final deve ser avaliada durante a campanha.
 
 PowerShell local do fundador permanece o ambiente preferencial para a campanha pesada. Cloud Shell fica reservado a necessidade remota real. Módulo 14 continua **NÃO INICIADO** até a execução prática.
+
+
+## PRIORIDADE PÓS-ADM — DEFINIDA EM 2026-09-25
+
+A sequência oficial após a auditoria preventiva de segurança passa a ser:
+
+1. **concluir o ADM Depósito**, incluindo o fechamento do Módulo 14;
+2. **executar uma bateria dedicada de testes, uso real e melhorias do ADM Depósito**;
+3. **executar o hardening transversal de segurança de dados da plataforma**.
+
+Documento detalhado:
+`docs/adm-deposito/POST_ADM_STABILIZATION_AND_SECURITY_PLAN.md`
+
+Motivação operacional:
+- existe apenas um usuário externo no cenário atual;
+- a prioridade imediata é concluir e estabilizar o ADM;
+- a auditoria preventiva não identificou evidência de vazamento ativo, permitindo tratar os hardenings preventivos em uma etapa própria;
+- vulnerabilidade crítica/ativamente explorável continua sendo exceção bloqueante e deve ser corrigida imediatamente, independentemente da etapa corrente.
+
+O Módulo 14 continua válido e não é substituído por essa decisão.
