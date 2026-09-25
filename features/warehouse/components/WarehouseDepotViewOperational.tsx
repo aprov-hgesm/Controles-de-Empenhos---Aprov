@@ -345,20 +345,83 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
     ).slice(0, 12);
   }, [data.materials, queryText]);
 
-  const highlightedBalances = useMemo(
+  const selectedMaterial = useMemo(
+    () => data.materials.find((material) => material.id === selectedMaterialId) || null,
+    [data.materials, selectedMaterialId]
+  );
+
+  const positiveMaterialBalances = useMemo(
     () => data.balances.filter(
       (balance) => balance.materialId === selectedMaterialId && balance.quantity > 0
     ),
     [data.balances, selectedMaterialId]
   );
 
+  const unassignedQuantity = useMemo(
+    () => positiveMaterialBalances
+      .filter((balance) => balance.position.kind === 'UNASSIGNED')
+      .reduce((total, balance) => total + balance.quantity, 0),
+    [positiveMaterialBalances]
+  );
+
+  const physicalMaterialBalances = useMemo(
+    () => positiveMaterialBalances.filter((balance) => balance.position.kind !== 'UNASSIGNED'),
+    [positiveMaterialBalances]
+  );
+
+  const currentDepotBalances = useMemo(
+    () => physicalMaterialBalances.filter(
+      (balance) => balance.position.kind !== 'UNASSIGNED'
+        && balance.position.depotId === selectedDepotId
+    ),
+    [physicalMaterialBalances, selectedDepotId]
+  );
+
   const highlightedLocationIds = useMemo(
     () => new Set(
-      highlightedBalances
+      currentDepotBalances
         .map((balance) => warehouseLocationIdForPosition(balance.position))
         .filter(Boolean) as string[]
     ),
-    [highlightedBalances]
+    [currentDepotBalances]
+  );
+
+  const locationById = useMemo(
+    () => new Map(data.locations.map((location) => [location.id, location])),
+    [data.locations]
+  );
+
+  const depotById = useMemo(
+    () => new Map(data.depots.map((depot) => [depot.id, depot])),
+    [data.depots]
+  );
+
+  const currentDepotPositionRows = useMemo(
+    () => currentDepotBalances.map((balance) => {
+      const locationId = warehouseLocationIdForPosition(balance.position);
+      const location = locationId ? locationById.get(locationId) : null;
+      return {
+        balance,
+        locationId,
+        label: location
+          ? location.code + ' · ' + location.name
+          : locationId || 'Localização não identificada',
+      };
+    }),
+    [currentDepotBalances, locationById]
+  );
+
+  const otherDepotPositionCount = useMemo(
+    () => physicalMaterialBalances.filter(
+      (balance) => balance.position.kind !== 'UNASSIGNED'
+        && balance.position.depotId !== selectedDepotId
+    ).length,
+    [physicalMaterialBalances, selectedDepotId]
+  );
+
+  const totalPositiveQuantity = useMemo(
+    () => positiveMaterialBalances.reduce((total, balance) => total + balance.quantity, 0),
+    [positiveMaterialBalances]
   );
 
   const selectedActiveLayout = useMemo(
@@ -405,21 +468,63 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
   }, [mode, selectedActiveLayout, selectedDepotId]);
 
   const [fefoLocationId, setFefoLocationId] = useState<string | null>(null);
+  const [fefoDepotId, setFefoDepotId] = useState<string | null>(null);
+  const [fefoUnassigned, setFefoUnassigned] = useState(false);
   useEffect(() => {
     let active = true;
     if (!selectedMaterialId) {
       setFefoLocationId(null);
+      setFefoDepotId(null);
+      setFefoUnassigned(false);
       return;
     }
     void listWarehouseLots(workspaceId, 500, selectedMaterialId).then((lots) => {
       if (!active) return;
       const lot = selectWarehouseFefoLot(lots.map((item) => item.lot));
-      setFefoLocationId(lot ? warehouseLocationIdForPosition(lot.position) : null);
+      if (!lot) {
+        setFefoLocationId(null);
+        setFefoDepotId(null);
+        setFefoUnassigned(false);
+        return;
+      }
+      setFefoLocationId(warehouseLocationIdForPosition(lot.position));
+      setFefoDepotId(lot.position.kind === 'UNASSIGNED' ? null : lot.position.depotId);
+      setFefoUnassigned(lot.position.kind === 'UNASSIGNED');
     }).catch(() => {
-      if (active) setFefoLocationId(null);
+      if (active) {
+        setFefoLocationId(null);
+        setFefoDepotId(null);
+        setFefoUnassigned(false);
+      }
     });
     return () => { active = false; };
   }, [selectedMaterialId, workspaceId]);
+
+  const currentDepotFefoLocationId =
+    fefoDepotId === selectedDepotId ? fefoLocationId : null;
+
+  const representedLocationIds = useMemo(
+    () => new Set(
+      (selectedActiveLayout?.objects || [])
+        .map((object) => object.warehouseLocationId)
+        .filter(Boolean) as string[]
+    ),
+    [selectedActiveLayout]
+  );
+
+  const representedCurrentDepotPositions = useMemo(
+    () => currentDepotPositionRows.filter(
+      (row) => row.locationId && representedLocationIds.has(row.locationId)
+    ),
+    [currentDepotPositionRows, representedLocationIds]
+  );
+
+  const unrepresentedCurrentDepotPositions = useMemo(
+    () => currentDepotPositionRows.filter(
+      (row) => !row.locationId || !representedLocationIds.has(row.locationId)
+    ),
+    [currentDepotPositionRows, representedLocationIds]
+  );
 
   const currentLayout = mode === 'edit'
     ? {
@@ -507,24 +612,39 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                   </div>
 
                   {queryText && (
-                    <div className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-white/[0.05] p-2">
-                      <div className="grid min-w-0 gap-2 sm:grid-cols-2">
-                        {materialMatches.map((material) => (
-                          <button
-                            type="button"
-                            key={material.id}
-                            data-testid={'warehouse-layout-material-' + material.id}
-                            onClick={() => {
-                              setSelectedMaterialId(material.id);
-                              setQueryText(material.description);
-                              setMessage(null);
-                            }}
-                            className="min-w-0 rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2 text-left text-xs text-slate-300 hover:bg-white/[0.05]"
-                          >
-                            <span className="block truncate">{material.description}</span>
-                          </button>
-                        ))}
-                      </div>
+                    <div
+                      className="mt-2 max-h-44 overflow-y-auto rounded-xl border border-white/[0.05] p-2"
+                      data-testid="warehouse-layout-material-results"
+                    >
+                      {materialMatches.length > 0 ? (
+                        <div className="grid min-w-0 gap-2 sm:grid-cols-2">
+                          {materialMatches.map((material) => (
+                            <button
+                              type="button"
+                              key={material.id}
+                              data-testid={'warehouse-layout-material-' + material.id}
+                              aria-pressed={selectedMaterialId === material.id}
+                              onClick={() => {
+                                setSelectedMaterialId(material.id);
+                                setQueryText(material.description);
+                                setMessage(null);
+                              }}
+                              className={
+                                selectedMaterialId === material.id
+                                  ? 'min-w-0 rounded-lg border border-emerald-300/20 bg-emerald-400/[0.06] px-3 py-2 text-left text-xs text-emerald-100'
+                                  : 'min-w-0 rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2 text-left text-xs text-slate-300 hover:bg-white/[0.05]'
+                              }
+                            >
+                              <span className="block truncate font-bold">{material.description}</span>
+                              <span className="mt-1 block truncate font-mono text-[9px] text-slate-600">{material.id}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="px-2 py-3 text-xs text-slate-500">
+                          Nenhum material encontrado para esta pesquisa.
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -532,15 +652,86 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                 {selectedMaterialId && (
                   <div
                     data-testid="warehouse-layout-highlight-summary"
-                    className="mt-4 rounded-xl border border-emerald-300/10 bg-emerald-400/[0.035] px-4 py-3 text-xs text-slate-300"
+                    className="mt-4 space-y-3 rounded-xl border border-emerald-300/10 bg-emerald-400/[0.035] px-4 py-3 text-xs text-slate-300"
                   >
-                    <div className="flex items-center gap-2 font-bold text-emerald-200">
-                      <LocateFixed className="h-4 w-4" />
-                      {highlightedLocationIds.size} posição(ões) real(is) destacada(s)
+                    <div>
+                      <div className="flex items-center gap-2 font-bold text-emerald-200">
+                        <LocateFixed className="h-4 w-4" />
+                        {selectedMaterial?.description || 'Material selecionado'}
+                      </div>
+                      <p className="mt-1 text-slate-500">
+                        Quantidade positiva total: <span className="font-bold text-slate-300">{totalPositiveQuantity}</span>
+                        {selectedMaterial?.unit?.label ? ' ' + selectedMaterial.unit.label : ''}
+                        {' · '}
+                        {currentDepotPositionRows.length} posição(ões) física(s) neste depósito.
+                      </p>
                     </div>
-                    <p className="mt-1 text-slate-500">
-                      FEFO {fefoLocationId ? 'também sinaliza a posição prioritária em âmbar.' : 'não possui posição prioritária aplicável.'}
-                    </p>
+
+                    {positiveMaterialBalances.length === 0 && (
+                      <p className="rounded-lg border border-white/[0.06] bg-black/15 px-3 py-2 text-slate-400">
+                        Material localizado no cadastro, mas sem posição física com saldo positivo.
+                      </p>
+                    )}
+
+                    {unassignedQuantity > 0 && (
+                      <p
+                        className="rounded-lg border border-amber-300/10 bg-amber-400/[0.035] px-3 py-2 text-amber-100"
+                        data-testid="warehouse-layout-unassigned-summary"
+                      >
+                        Quantidade sem posição física: <span className="font-black">{unassignedQuantity}</span>
+                        {selectedMaterial?.unit?.label ? ' ' + selectedMaterial.unit.label : ''}.
+                      </p>
+                    )}
+
+                    {currentDepotPositionRows.length > 0 && (
+                      <div className="max-h-36 overflow-y-auto rounded-lg border border-white/[0.06] bg-black/10 p-2" data-testid="warehouse-layout-position-summary">
+                        <div className="space-y-1.5">
+                          {currentDepotPositionRows.map((row) => (
+                            <div key={row.balance.id} className="flex min-w-0 items-center justify-between gap-3 rounded-md px-2 py-1.5">
+                              <span className="min-w-0 truncate text-slate-400">{row.label}</span>
+                              <span className="shrink-0 font-black text-slate-200">{row.balance.quantity}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-1 text-slate-500">
+                      <p>
+                        {representedCurrentDepotPositions.length} posição(ões) representada(s) no croqui
+                        {unrepresentedCurrentDepotPositions.length > 0
+                          ? ' · ' + unrepresentedCurrentDepotPositions.length + ' ainda não representada(s) visualmente.'
+                          : '.'}
+                      </p>
+                      {otherDepotPositionCount > 0 && (
+                        <p>{otherDepotPositionCount} posição(ões) física(s) adicional(is) existem em outro(s) depósito(s).</p>
+                      )}
+                      {fefoUnassigned ? (
+                        <p>FEFO prioritário está sem posição física atribuída.</p>
+                      ) : fefoDepotId && fefoDepotId !== selectedDepotId ? (
+                        <p>
+                          Posição FEFO prioritária localizada em outro depósito
+                          {depotById.get(fefoDepotId) ? ': ' + depotById.get(fefoDepotId)!.name : ''}.
+                        </p>
+                      ) : currentDepotFefoLocationId ? (
+                        <p>FEFO sinaliza em âmbar a posição prioritária deste depósito.</p>
+                      ) : (
+                        <p>FEFO não possui posição prioritária aplicável.</p>
+                      )}
+                    </div>
+
+                    {unrepresentedCurrentDepotPositions.length > 0 && (
+                      <div className="rounded-lg border border-sky-300/10 bg-sky-400/[0.03] px-3 py-2 text-slate-400">
+                        {unrepresentedCurrentDepotPositions.slice(0, 3).map((row) => (
+                          <p key={row.balance.id}>
+                            {row.label} possui saldo, mas ainda não está vinculada a um objeto do croqui.
+                          </p>
+                        ))}
+                        {unrepresentedCurrentDepotPositions.length > 3 && (
+                          <p>+ {unrepresentedCurrentDepotPositions.length - 3} posição(ões) sem representação visual.</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -584,7 +775,7 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                     mode={mode}
                     selectedObjectId={selectedObjectId}
                     highlightedLocationIds={highlightedLocationIds}
-                    fefoLocationId={fefoLocationId}
+                    fefoLocationId={currentDepotFefoLocationId}
                     onSelect={() => undefined}
                     onMove={() => undefined}
                   />
