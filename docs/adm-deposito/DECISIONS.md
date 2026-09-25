@@ -1425,3 +1425,26 @@ No Módulo 13, ficam congeladas as seguintes decisões:
    - nenhum índice composto é criado preventivamente.
 
 Essas decisões preservam a fronteira `EMPROVEX → ADM Depósito` e não alteram a política D-057 de campanha consolidada no Módulo 14.
+
+
+## D-070 — Prioridade operacional: concluir ADM, estabilizar e só então executar hardening transversal de segurança
+
+Data: 2026-09-25.
+
+Fica estabelecida a sequência oficial:
+
+1. concluir o ADM Depósito e seu fechamento atual;
+2. executar bateria específica de testes, uso real e melhorias do ADM;
+3. executar o pacote transversal de segurança de dados do EMPROVEX originado da auditoria preventiva.
+
+Racional:
+- o cenário atual possui apenas um usuário externo;
+- o risco operacional de ampliar complexidade no meio do fechamento do ADM é maior do que o benefício de interromper agora por hardenings preventivos não explorados;
+- a auditoria não encontrou evidência de vazamento ativo nem Firestore operacional publicamente aberto;
+- o ADM deve ser estabilizado antes da próxima expansão externa significativa.
+
+A Etapa 3 de hardening inclui, inicialmente, dependências, CSP, App Check, sessão, política de senha, OIDC/WIF para credenciais administrativas, configuração pública, PDFs, especificação de segurança e automação de segurança.
+
+**Exceção permanente:** qualquer vulnerabilidade crítica confirmada — vazamento, bypass de autorização, acesso cross-tenant, segredo exposto, comprometimento ou vulnerabilidade crítica aplicável à produção — é bloqueante e deve ser corrigida imediatamente, mesmo durante as etapas 1 ou 2.
+
+Esta decisão não reduz nem substitui Core Protection, Firestore Rules, multi-tenant ou os gates do Módulo 14.
