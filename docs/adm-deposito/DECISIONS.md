@@ -1379,3 +1379,19 @@ Decisão permanente:
 - mover, redimensionar ou rotacionar objeto visual nunca altera `warehouse_balance_v1`, `warehouse_location_balance_v1` ou `warehouse_movement_v1`.
 
 O catálogo pode oferecer dimensões, proporções, rotação e comportamento visual iniciais, mas esses valores não são medidas arquitetônicas oficiais e não transformam o editor em CAD.
+
+## D-068 — Editor visual permanece leve e sem engine gráfica externa
+
+No Módulo 8 da reorganização funcional, Fabric.js foi avaliado como primeira opção e Konva/react-konva como alternativa.
+
+Decisão permanente para o baseline atual:
+- não adicionar Fabric.js, Konva, Three.js ou outro motor gráfico;
+- evoluir a camada React/pointer-events já existente;
+- manter `warehouse_depot_layout_v1` como único modelo persistido;
+- manter todas as interações geométricas em memória até o comando explícito Salvar versão;
+- prévia 2.5D é somente representação derivada, nunca segundo layout;
+- não persistir estado proprietário de canvas;
+- priorizar baixo custo de CPU/GPU, compatibilidade com máquinas antigas e ausência de animações contínuas;
+- uma futura troca de camada gráfica só é justificável se complexidade funcional concreta superar a solução atual, sem alterar o contrato persistido.
+
+A decisão evita dependência imperativa adicional e mantém a separação entre camada de interação visual e domínio logístico.
