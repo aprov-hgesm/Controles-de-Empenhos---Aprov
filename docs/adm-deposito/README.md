@@ -76,3 +76,8 @@ Em divergências:
 ## Escopo do piloto
 
 O módulo permanece disponível somente para a conta fundadora até o fechamento da FASE 13 e autorização explícita para a FASE 14.
+
+
+## Consolidação SISCOFIS no Módulo 5
+
+A arquitetura 11.5 mantém o motor histórico de Marco Zero/Conciliação, mas a entrada operacional foi simplificada. O contrato externo oficial é `emprovex_siscofis_inventory_v1`, com somente Nº Ficha, descrição, quantidade e valor unitário. Entrada manual e JSON de IA externa convergem antes da validação. A IA não recebe UG, catálogo, materialId, unidade nem estruturas internas. O Nº Ficha é dado auditável de origem e nunca identidade canônica. O ledger continua sendo a única autoridade quantitativa; `INITIAL_BALANCE` materializa também a posição `UNASSIGNED` pelo repository oficial. Novos snapshots usam v2, com leitura retrocompatível de v1. Ver D-066 e `PHASE_5_SISCOFIS.md`.
