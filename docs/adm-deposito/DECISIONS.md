@@ -998,3 +998,86 @@ Limite deste módulo:
 
 Esta decisão substitui a interpretação anterior de D-059 de que uma decisão nova precisaria consumir o item inteiro de uma vez; o v1 continua válido apenas para registros legados já materializados.
 
+
+
+## D-064 — Módulos 2 e 3 usam uma única jornada transacional de alocação parcial, com entrada quantitativa idempotente e enriquecimento logístico
+
+Os **Módulos 2 e 3** passam a formar uma única jornada operacional em **Cadastro de Itens → Notas Fiscais pendentes**. Não existe segunda tela concorrente para lote/barcode e não existe novo saldo.
+
+### Autoridades preservadas
+
+Permanecem autoridades:
+- material: `warehouse_material_v1`;
+- ledger: `warehouse_movement_v1`;
+- saldo agregado: `warehouse_balance_v1`;
+- distribuição física: `warehouse_location_balance_v1`;
+- lote/validade: `warehouse_lot_v1`, como atribuição logística e não saldo;
+- barcode: `warehouse_barcode_v1`, como identificador auxiliar;
+- tratamento da pendência: `warehouse_item_intake_v2`.
+
+A quantidade `allocatedQuantity` do intake só avança depois de uma transferência física confirmada. O intake nunca é usado para recalcular ou substituir o saldo oficial.
+
+### Entrada da NF e prevenção de duplicação
+
+Antes da primeira alocação v2, o serviço resolve o material canônico pela vinculação existente ou por `deriveWarehouseMaterialIdForEmpenhoItem`.
+
+A entrada quantitativa da NF usa uma identidade idempotente única por `intakeId`:
+`adm-intake-v2:<intakeId>:invoice-entry`.
+
+Antes de criar essa entrada, o repository executa uma busca bounded dos movimentos da mesma `invoiceRecordKey`. Se houver outro movimento `INVOICE` que já represente o mesmo item, a operação é interrompida como reconciliação necessária. Assim, uma projeção NF → estoque anterior nunca é somada novamente.
+
+Quando não existe entrada oficial anterior, é criado exatamente um `INVOICE_ENTRY` para a quantidade recebida inteira pelo repository oficial do ledger. Essa entrada materializa a quantidade em `UNASSIGNED`. Alocações parciais posteriores não criam novas entradas: apenas transferem parcelas de `UNASSIGNED` para posições físicas.
+
+### Fronteira transacional e recuperação segura
+
+As Rules atuais vinculam cada movimento ao `lastMovementId` final do saldo agregado. Por isso, a criação inicial de `INVOICE_ENTRY` e a transferência física não podem ser dois movimentos independentes dentro do mesmo commit sem violar essa invariável.
+
+A fronteira adotada é:
+1. **entrada quantitativa idempotente** pelo ledger oficial;
+2. **transação de alocação** que grava conjuntamente:
+   - `TRANSFER` com `quantityDelta = 0`;
+   - nova revisão de `warehouse_balance_v1` sem alterar a quantidade total;
+   - redução de `UNASSIGNED`;
+   - aumento da `warehouse_location_balance_v1` de destino;
+   - criação/incremento da atribuição `warehouse_lot_v1`;
+   - criação de `warehouse_barcode_v1` somente quando o código ainda é desconhecido;
+   - criação/avanço monotônico do `warehouse_item_intake_v2`.
+
+Se a etapa 1 confirmar e a etapa 2 falhar, nenhuma alocação é fingida: a quantidade permanece oficialmente em `UNASSIGNED`, o intake não avança e a repetição reutiliza a mesma entrada. Não existe compensação silenciosa.
+
+### Quantidade parcial e concorrência
+
+Cada confirmação aceita apenas:
+`0 < quantidade <= pendingQuantity`.
+
+A transação relê o intake antes da escrita e compara `allocatedQuantity` e `immediateConsumptionQuantity` com a revisão observada pela tela. Se outra tela tiver avançado a pendência, a operação aborta com conflito e exige recarga. A retry do Firestore não pode transformar uma tela obsoleta em sobrealocação.
+
+O status continua derivado exclusivamente por:
+`pendingQuantity = receivedQuantity - allocatedQuantity - immediateConsumptionQuantity`.
+
+### Idempotência da confirmação
+
+Cada tentativa confirmável recebe `operationId` estável. A transferência usa:
+`adm-intake-v2:<intakeId>:allocation:<operationId>`.
+
+Na interface, o `operationId` é preservado em `sessionStorage` durante a tentativa. Refresh, duplo clique ou resposta de rede ambígua reutilizam a mesma identidade. Replay idêntico retorna o movimento existente; payload divergente conflita e não movimenta novamente.
+
+O lote usa identidade determinística por intake + movimento de entrada + código do lote + posição. Repetidas parcelas do mesmo lote na mesma posição incrementam a atribuição existente; lote igual em outra posição permanece uma atribuição distinta.
+
+### Lote, validade e barcode
+
+O lote é obrigatório na jornada atual porque a confirmação cria ou amplia uma atribuição `warehouse_lot_v1`. A validade pode ser uma data ISO válida ou `null` mediante escolha humana explícita **Sem validade**. Nenhuma validade é inferida automaticamente.
+
+Barcode é opcional. Digitação manual e scanner USB HID usam o mesmo campo; ENTER apenas captura a leitura na interface. Código conhecido precisa pertencer ao mesmo material e a uma apresentação válida; código de outro material, incompatível ou inativo é bloqueado. Código desconhecido pode ser associado ao material canônico já resolvido, nunca cria material implicitamente.
+
+### Estrutura física e performance
+
+Somente depósitos, locais e subposições ativos da UG/workspace corrente podem receber a quantidade. A interface carrega depósitos/localizações somente ao abrir o painel de alocação, com limites existentes de 250 depósitos e 500 localizações. A prevenção de projeção legada consulta no máximo 51 movimentos para a NF específica. A fila principal continua usando os limites definidos em D-063.
+
+### Segurança e Core Protection
+
+Nenhuma Firestore Rule precisou ser relaxada ou ampliada. Founder-only, UG, workspace, ledger imutável, saldos derivados, delete físico negado para histórico, lote sem autoridade quantitativa e barcode auxiliar continuam valendo.
+
+Os Módulos 2 e 3 não alteram cadastro, edição ou exclusão de NF, Empenho ou Cronograma e não escrevem pendência no namespace operacional. A única dependência do núcleo é leitura da fonte canônica.
+
+O **Módulo 4 — Consumo imediato e fila SISCOFIS** permanece explicitamente fora deste fechamento. Testes completos, Browser E2E, Application CI, regressão e PR continuam diferidos para o Módulo 14 conforme D-057.
