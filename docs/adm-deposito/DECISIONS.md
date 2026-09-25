@@ -1358,3 +1358,24 @@ O **Módulo 5 permanece explicitamente NÃO INICIADO**.
 ## D-066 — Migração SISCOFIS simplificada preserva Nº Ficha na origem
 
 A partir do Módulo 5 da consolidação 11.5, o contrato externo oficial é `emprovex_siscofis_inventory_v1` e contém somente `numeroItem`, `descricao`, `quantidade` e `valorUnitario`. A IA permanece externa e somente extratora; UG, data-base, materialId e unidade não são solicitados à IA. O Nº Ficha passa a ser preservado por linha para auditoria, sem se tornar materialId, ID Firestore ou chave de deduplicação. Linhas repetidas permanecem independentes. O adaptador converge para o motor histórico `warehouse_siscofis_import_v1`; snapshots novos usam `warehouse_siscofis_snapshot_v2` para tornar explícita a presença do Nº Ficha, enquanto v1 permanece legível. Material canônico reutiliza correspondência segura; quando a unidade não está disponível para material novo, o fluxo reutiliza explicitamente o fallback canônico já existente na integração de NF (`other` / `Apresentação não informada`), sem inventar uma unidade concreta e permitindo enriquecimento posterior.
+
+
+## D-067 — Biblioteca de estruturas é catálogo estático e layouts permanecem a única persistência visual por depósito
+
+Os Módulos 6 e 7 consolidam capacidades já existentes sem criar nova fonte de verdade.
+
+Decisão permanente:
+- `warehouse_depot_v1` continua sendo a identidade do depósito;
+- `warehouse_location_v1` continua sendo a identidade de local/subposição;
+- `warehouse_depot_layout_v1` continua sendo o único contrato persistido de croqui;
+- layout ativo e histórico são consultados explicitamente por `depotId`, evitando dependência de listagem global limitada;
+- salvar nova versão continua arquivando somente a versão ativa anterior do mesmo depósito;
+- a biblioteca padrão de estruturas físicas é versionada no código, como catálogo de defaults de composição;
+- não existe coleção Firestore de tipos de estrutura;
+- somente instâncias efetivamente usadas são persistidas em `layout.objects`;
+- tipos novos de biblioteca devem preferir mapear para `kind` já suportado quando semanticamente compatível;
+- layouts históricos não são migrados nem sobrescritos apenas para adotar nomes/defaults novos;
+- níveis/subposições visuais não criam estoque próprio: quando houver vínculo operacional, ele referencia IDs logísticos existentes;
+- mover, redimensionar ou rotacionar objeto visual nunca altera `warehouse_balance_v1`, `warehouse_location_balance_v1` ou `warehouse_movement_v1`.
+
+O catálogo pode oferecer dimensões, proporções, rotação e comportamento visual iniciais, mas esses valores não são medidas arquitetônicas oficiais e não transformam o editor em CAD.
