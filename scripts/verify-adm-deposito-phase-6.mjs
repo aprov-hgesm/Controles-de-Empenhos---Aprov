@@ -19,10 +19,9 @@ const repository = read('lib/warehouse/locationRepository.ts');
 const ledger = read('lib/warehouse/ledgerRepository.ts');
 const movement = read('lib/warehouse/movement.ts');
 const namespace = read('lib/warehouse/namespace.ts');
-const content = read('features/warehouse/components/WarehouseSectionContent.tsx');
+const depotsUi = read('features/warehouse/components/WarehouseDepotsOperational.tsx');
 const locationsUi = read('features/warehouse/components/WarehouseLocationsOperational.tsx');
 const navigation = read('features/warehouse/navigation.ts');
-const shell = read('features/warehouse/components/WarehouseModuleShell.tsx');
 const rules = read('firestore.rules');
 const securityTests = read('scripts/firestore-multitenancy-security.test.mjs');
 const packageJson = read('package.json');
@@ -81,12 +80,10 @@ for (const marker of [
   'Sem localização',
 ]) requireText(locationsUi, marker, 'Jornada UI da FASE 6 incompleta: ' + marker);
 
-requireText(
-  navigation,
-  "id: 'locations', label: 'Localizações'",
-  'Navegação de Localizações ausente.'
-);
-requireText(shell, 'EMPROVEX // FASE ', 'Shell do ADM Depósito não preserva a identificação evolutiva de fase.');
+requireText(navigation, "id: 'depots'", 'Navegação Meus Depósitos ausente.');
+requireText(navigation, "label: 'Meus Depósitos'", 'Rótulo Meus Depósitos ausente.');
+requireText(depotsUi, 'WarehouseLocationsOperational', 'Meus Depósitos não expõe Localizações.');
+requireText(depotsUi, "requested === 'croquis'", 'Meus Depósitos perdeu seleção de subaba estrutural/croqui.');
 
 for (const marker of [
   'function validWarehouseDepotCreate',
