@@ -677,3 +677,25 @@ Executar de forma consolidada:
 - a execução de testes completos e CI continua diferida para o Módulo 14 conforme D-057;
 - testes dirigidos durante os Módulos 1–13 somente quando indispensáveis para diagnosticar falha concreta.
 
+### Módulo 8 — Editor visual do croqui — CONCLUÍDO
+
+Capacidade entregue:
+- composição em planta superior 2D sobre `warehouse_depot_layout_v1`;
+- inserção a partir de `WAREHOUSE_STRUCTURE_LIBRARY`;
+- drag, resize por alça, rotação controlada e controle numérico legado;
+- duplicação com novo ID e deslocamento;
+- exclusão somente do objeto visual;
+- renomeação e vínculo a `warehouseLocationId` preservados;
+- grade e snap opcionais;
+- zoom e pan;
+- indicação clara de seleção;
+- bring-to-front/send-to-back usando `layer`;
+- atalhos Delete, Ctrl/Cmd+C, Ctrl/Cmd+V, Ctrl/Cmd+D, Ctrl/Cmd+Z e redo;
+- undo/redo local sem writes por interação;
+- alternância Vista superior / Prévia 2.5D usando os mesmos dados;
+- persistência somente em Salvar versão, preservando histórico e um ativo por depósito;
+- nenhuma coleção paralela, nenhum motor 3D e nenhuma mudança de saldo/movimento.
+
+Decisão técnica: manter editor React/canvas DOM leve existente em vez de adicionar Fabric.js/Konva. Ver D-068.
+
+Próximo módulo oficial: **Módulo 9 — Integração croqui ↔ estoque**.
