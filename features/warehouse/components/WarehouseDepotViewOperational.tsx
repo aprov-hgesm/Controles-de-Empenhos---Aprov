@@ -42,6 +42,10 @@ import type {
   WarehouseLocationBalance,
 } from '../../../lib/warehouse/location';
 import {
+  deriveWarehouseMaterialPositions,
+  representedWarehouseLocationIds,
+} from '../../../lib/warehouse/depotLocator';
+import {
   WAREHOUSE_STRUCTURE_LIBRARY,
   type WarehouseStructureDefinition,
 } from '../../../lib/warehouse/structureLibrary';
@@ -350,32 +354,22 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
     [data.materials, selectedMaterialId]
   );
 
-  const positiveMaterialBalances = useMemo(
-    () => data.balances.filter(
-      (balance) => balance.materialId === selectedMaterialId && balance.quantity > 0
+  const materialPositionProjection = useMemo(
+    () => deriveWarehouseMaterialPositions(
+      data.balances,
+      selectedMaterialId,
+      selectedDepotId
     ),
-    [data.balances, selectedMaterialId]
+    [data.balances, selectedDepotId, selectedMaterialId]
   );
 
-  const unassignedQuantity = useMemo(
-    () => positiveMaterialBalances
-      .filter((balance) => balance.position.kind === 'UNASSIGNED')
-      .reduce((total, balance) => total + balance.quantity, 0),
-    [positiveMaterialBalances]
-  );
-
-  const physicalMaterialBalances = useMemo(
-    () => positiveMaterialBalances.filter((balance) => balance.position.kind !== 'UNASSIGNED'),
-    [positiveMaterialBalances]
-  );
-
-  const currentDepotBalances = useMemo(
-    () => physicalMaterialBalances.filter(
-      (balance) => balance.position.kind !== 'UNASSIGNED'
-        && balance.position.depotId === selectedDepotId
-    ),
-    [physicalMaterialBalances, selectedDepotId]
-  );
+  const {
+    positiveBalances: positiveMaterialBalances,
+    currentDepotBalances,
+    otherDepotBalances,
+    unassignedQuantity,
+    totalPositiveQuantity,
+  } = materialPositionProjection;
 
   const highlightedLocationIds = useMemo(
     () => new Set(
@@ -411,18 +405,7 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
     [currentDepotBalances, locationById]
   );
 
-  const otherDepotPositionCount = useMemo(
-    () => physicalMaterialBalances.filter(
-      (balance) => balance.position.kind !== 'UNASSIGNED'
-        && balance.position.depotId !== selectedDepotId
-    ).length,
-    [physicalMaterialBalances, selectedDepotId]
-  );
-
-  const totalPositiveQuantity = useMemo(
-    () => positiveMaterialBalances.reduce((total, balance) => total + balance.quantity, 0),
-    [positiveMaterialBalances]
-  );
+  const otherDepotPositionCount = otherDepotBalances.length;
 
   const selectedActiveLayout = useMemo(
     () =>
@@ -504,11 +487,7 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
     fefoDepotId === selectedDepotId ? fefoLocationId : null;
 
   const representedLocationIds = useMemo(
-    () => new Set(
-      (selectedActiveLayout?.objects || [])
-        .map((object) => object.warehouseLocationId)
-        .filter(Boolean) as string[]
-    ),
+    () => representedWarehouseLocationIds(selectedActiveLayout?.objects || []),
     [selectedActiveLayout]
   );
 
