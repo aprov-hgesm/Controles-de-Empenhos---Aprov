@@ -28,7 +28,8 @@ for (const marker of [
   'bg-gradient-to-br from-[#f0f4f8] via-[#e8ecf3] to-[#f4f6fa]',
   'pt-16',
   'lg:pl-72',
-  'max-w-7xl mx-auto',
+  'mx-auto',
+  'max-w-7xl',
 ]) {
   requireText(shell, marker, 'Shell ADM não replica o framework visual EMPROVEX: ' + marker);
 }
