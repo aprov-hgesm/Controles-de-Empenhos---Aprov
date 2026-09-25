@@ -965,16 +965,56 @@ Arquivos principais:
 - `scripts/verify-adm-deposito-phase-9.mjs`;
 - `package.json`.
 
-Próximo módulo oficial: **9.4 — Editor de Croqui v2**.
+Módulos 9.4–9.6: **CONCLUÍDOS**. Próximo módulo oficial: **9.7 — Testes específicos**.
 
-#### 9.4 — Editor de Croqui v2
-Concentrar geometria, estruturas, propriedades e vínculo com localizações em modo dedicado, sem pesquisa de materiais.
+#### 9.4 — Editor de Croqui v2 — CONCLUÍDO
+Capacidade entregue:
+- modo de edição dedicado, sem pesquisa de materiais;
+- geometria, estruturas, propriedades e vínculo com localizações concentrados no editor;
+- histórico local único de undo/redo compartilhado entre canvas e painel de propriedades;
+- duplicar/colar objeto limpa `warehouseLocationId`, evitando duas representações da mesma localização real;
+- vínculo com localização real é inequívoco e protegido contra duplicidade;
+- cancelamento descarta o rascunho sem persistir alterações;
+- croqui continua sendo representação visual: mover, redimensionar ou girar objeto não altera estoque, saldo ou ledger.
 
-#### 9.5 — Persistência e versionamento
-Preservar `warehouse_depot_layout_v1`, histórico, versão ativa e independência absoluta do estoque.
+Gate 9.4:
+- edição local e independente do estoque: **OK**;
+- integridade dos vínculos `warehouseLocationId`: **OK**;
+- histórico único do rascunho: **OK**;
+- Core/Rules/saldos/ledger: **NÃO ALTERADOS**.
 
-#### 9.6 — UX e estabilidade visual
-Validar responsividade, Linux/Windows, ausência de overlaps, controles ocultos e carga visual excessiva.
+#### 9.5 — Persistência e versionamento — CONCLUÍDO
+Capacidade entregue:
+- `warehouse_depot_layout_v1` preservado como único contrato persistido;
+- salvamento continua versionado e transacional;
+- versão ativa anterior é arquivada e a nova versão passa a ativa;
+- histórico existente é preservado;
+- restauração histórica continua gerando nova versão, sem sobrescrever o passado;
+- leitura estrita do layout ativo foi adicionada ao caminho de pré-salvamento, impedindo erro de leitura de ser interpretado como ausência de layout;
+- referências duplicadas de `warehouseLocationId` são recusadas antes da persistência;
+- nenhuma escrita em estoque, saldos, location balances ou ledger foi introduzida.
+
+Gate 9.5:
+- contrato e histórico preservados: **OK**;
+- uma única versão ativa: **OK**;
+- persistência independente do estoque: **OK**;
+- schema/índices/Rules novos: **NÃO**.
+
+#### 9.6 — UX e estabilidade visual — CONCLUÍDO
+Capacidade entregue:
+- composição responsiva com empilhamento do painel em larguras menores e layout lado a lado apenas em telas amplas;
+- toolbar e viewport com estrutura estável e identificadores permanentes para validação;
+- viewport com altura limitada por `clamp`, evitando crescimento/deslocamentos imprevisíveis;
+- painel de propriedades com rolagem controlada quando necessário;
+- controles críticos receberam rótulos acessíveis;
+- estado transitório do editor é reiniciado corretamente quando muda o contexto do depósito/layout;
+- nenhuma animação contínua, engine gráfica pesada ou efeito de alto custo foi adicionado.
+
+Gate 9.6:
+- responsividade estrutural: **OK**;
+- prevenção de overlap/controles ocultos por composição: **OK**;
+- carga visual/GPU adicional relevante: **NÃO**;
+- validação Browser E2E permanece reservada ao 9.7, conforme D-073.
 
 #### 9.7 — Testes específicos
 Separar Localização, Editor, Persistência, Integridade logística, Segurança e Geometria visual.
