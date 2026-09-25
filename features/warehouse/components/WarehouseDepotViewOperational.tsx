@@ -299,6 +299,62 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
   const [selectedMaterialId, setSelectedMaterialId] = useState<string>('');
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [draftHistory, setDraftHistory] = useState<{
+    past: WarehouseDepotLayoutObject[][];
+    future: WarehouseDepotLayoutObject[][];
+  }>({ past: [], future: [] });
+
+  const cloneDraftObjects = (objects: WarehouseDepotLayoutObject[]) =>
+    objects.map((item) => ({ ...item }));
+
+  const resetDraftHistory = () => setDraftHistory({ past: [], future: [] });
+
+  const checkpointDraft = (previousObjects: WarehouseDepotLayoutObject[]) => {
+    setDraftHistory((current) => ({
+      past: [...current.past.slice(-49), cloneDraftObjects(previousObjects)],
+      future: [],
+    }));
+  };
+
+  const commitDraftObjects = (
+    next: WarehouseDepotLayoutObject[] | ((items: WarehouseDepotLayoutObject[]) => WarehouseDepotLayoutObject[])
+  ) => {
+    setDraftObjects((items) => {
+      const nextItems = typeof next === 'function' ? next(items) : next;
+      checkpointDraft(items);
+      return nextItems;
+    });
+  };
+
+  const undoDraft = () => {
+    setDraftHistory((current) => {
+      const previous = current.past[current.past.length - 1];
+      if (!previous) return current;
+      setDraftObjects(() => {
+        setSelectedObjectId(null);
+        return cloneDraftObjects(previous);
+      });
+      return {
+        past: current.past.slice(0, -1),
+        future: [cloneDraftObjects(draftObjects), ...current.future.slice(0, 49)],
+      };
+    });
+  };
+
+  const redoDraft = () => {
+    setDraftHistory((current) => {
+      const nextSnapshot = current.future[0];
+      if (!nextSnapshot) return current;
+      setDraftObjects(() => {
+        setSelectedObjectId(null);
+        return cloneDraftObjects(nextSnapshot);
+      });
+      return {
+        past: [...current.past.slice(-49), cloneDraftObjects(draftObjects)],
+        future: current.future.slice(1),
+      };
+    });
+  };
 
   const reload = async () => {
     setData((current) => ({ ...current, loading: true, error: null }));
@@ -559,11 +615,11 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
   );
 
   const updateObject = (id: string, patch: Partial<WarehouseDepotLayoutObject>) => {
-    setDraftObjects((items) => items.map((item) => item.id === id ? { ...item, ...patch } : item));
+    commitDraftObjects((items) => items.map((item) => item.id === id ? { ...item, ...patch } : item));
   };
 
   const updateObjectNumber = (id: string, key: NumericObjectField, value: number) => {
-    setDraftObjects((items) => items.map((item) => {
+    commitDraftObjects((items) => items.map((item) => {
       if (item.id !== id) return item;
       return { ...item, [key]: clampObjectNumber(key, value, item, draftWidth, draftHeight) };
     }));
@@ -578,6 +634,7 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
       setDraftWidth(selectedActiveLayout?.logicalWidth || DEFAULT_WIDTH);
       setDraftHeight(selectedActiveLayout?.logicalHeight || DEFAULT_HEIGHT);
       setSelectedObjectId(null);
+      resetDraftHistory();
       setMode('edit');
       return;
     }
@@ -818,6 +875,11 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                   selectedObjectId={selectedObjectId}
                   onSelectedObjectIdChange={setSelectedObjectId}
                   onObjectsChange={setDraftObjects}
+                  onHistoryCheckpoint={checkpointDraft}
+                  canUndo={draftHistory.past.length > 0}
+                  canRedo={draftHistory.future.length > 0}
+                  onUndo={undoDraft}
+                  onRedo={redoDraft}
                 />
               </WarehouseCroquiMainRegion>
             </WarehouseCroquiEditMode>
@@ -867,6 +929,7 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                           setDraftWidth(item.layout.logicalWidth);
                           setDraftHeight(item.layout.logicalHeight);
                           setSelectedObjectId(null);
+                          resetDraftHistory();
                           setMessage('Versão ' + item.layout.version + ' carregada como base. Salve para criar uma nova versão ativa.');
                         }}
                         className="shrink-0 rounded-lg border border-white/[0.08] px-2 py-1 text-[9px] font-bold text-slate-400 hover:text-slate-200"
@@ -937,7 +1000,7 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                           rotation: definition.defaultRotation,
                           visualVariant: definition.visualVariant,
                         });
-                        setDraftObjects((items) => [...items, object]);
+                        commitDraftObjects((items) => [...items, object]);
                         setSelectedObjectId(object.id);
                       }}
                       className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3 text-left transition hover:bg-white/[0.05]"
@@ -1018,7 +1081,7 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                     ))}
                   </div>
                   <button type="button" onClick={() => {
-                    setDraftObjects((items) => items.filter((item) => item.id !== selectedObject.id));
+                    commitDraftObjects((items) => items.filter((item) => item.id !== selectedObject.id));
                     setSelectedObjectId(null);
                   }} className="w-full rounded-lg border border-rose-300/10 px-3 py-2 text-[11px] font-bold text-rose-200">
                     Remover somente do croqui
@@ -1035,6 +1098,7 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                   setDraftHeight(selectedActiveLayout?.logicalHeight || DEFAULT_HEIGHT);
                   setSelectedObjectId(null);
                   setMessage(null);
+                  resetDraftHistory();
                   setMode('view');
                 }} className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/[0.08] px-3 py-2.5 text-xs font-bold text-slate-300">
                   <RotateCcw className="h-4 w-4" /> Cancelar
