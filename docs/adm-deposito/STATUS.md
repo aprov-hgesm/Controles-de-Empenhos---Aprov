@@ -1691,3 +1691,37 @@ Planejamento posterior:
 Referência: **D-071** em `docs/adm-deposito/DECISIONS.md`.
 
 Esta atualização é documental. O modelo de acesso atual continua founder-only e nenhuma expansão externa foi executada.
+
+## MÓDULO 14 — REGRESSÃO LOCAL FINAL APROVADA — 2026-09-25
+
+Estado atual:
+- 14.0 baseline: **CONCLUÍDO**;
+- 14.1 auditoria estática: **CONCLUÍDO**;
+- 14.2 gates rápidos: **CONCLUÍDO**;
+- 14.3 domínio ADM: **CONCLUÍDO**;
+- 14.4 TypeScript: **CONCLUÍDO**;
+- 14.5 Emulator/multi-tenant: **CONCLUÍDO**;
+- 14.6 walking skeleton integrado: **CONCLUÍDO**;
+- 14.7 build: **CONCLUÍDO**;
+- Browser E2E específico ADM: **CONCLUÍDO**;
+- regressão local final EMPROVEX + ADM: **APROVADA**;
+- Application CI final: **PENDENTE**;
+- merge/deploy: **NÃO REALIZADOS**.
+
+Resultados consolidados:
+- domínio completo da campanha: **91/91**;
+- regressão de domínio final principal: **85/85**;
+- walking skeleton integrado: **70/70**;
+- TypeScript: **0 erros**;
+- multi-tenant: **244/244**;
+- homeSnapshot: **1/1**;
+- build Next.js 15.5.24: **PASS**, 24/24 páginas estáticas;
+- Browser E2E: **21/21**, 0 falhas, code 0;
+- Core Protection e isolamento EMPROVEX/ADM: verdes.
+
+Nenhuma regressão real bloqueante permanece conhecida na estação local.
+
+Próximo passo obrigatório:
+**certificação remota via PR + Application CI**, após revisão do diff final.
+
+O ADM Depósito permanece founder-only. A futura liberação granular por usuário externo continua registrada em D-071 e não faz parte da certificação atual.
