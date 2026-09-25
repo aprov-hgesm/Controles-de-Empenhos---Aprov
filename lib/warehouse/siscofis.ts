@@ -36,6 +36,7 @@ export interface WarehouseSiscofisImportRow {
   unitValue: number | null;
   totalValue: number | null;
   sourceItemNumber?: string | null;
+  requiresCanonicalResolution?: boolean;
 }
 
 export interface WarehouseSiscofisImport {
@@ -82,6 +83,11 @@ export interface WarehouseSiscofisPreview {
   canConfirm: boolean;
   issues: WarehouseSiscofisIssue[];
   rows: WarehouseSiscofisPreviewRow[];
+  materialOptions: Array<{
+    id: string;
+    description: string;
+    unit: WarehouseMaterialUnit;
+  }>;
   summary: {
     totalRows: number;
     matchedRows: number;
@@ -468,6 +474,7 @@ export async function hashWarehouseSiscofisImport(
       unitValue: row.unitValue,
       totalValue: row.totalValue,
       sourceItemNumber: row.sourceItemNumber ?? null,
+      requiresCanonicalResolution: row.requiresCanonicalResolution ?? false,
     })),
   });
   const digest = await crypto.subtle.digest(
@@ -615,6 +622,7 @@ export function adaptEmprovexSiscofisInventory(input: {
   referenceDate: string;
   sourceLabel?: string;
   materials: WarehouseMaterial[];
+  materialOverrides?: Record<string, string>;
 }): { importData: WarehouseSiscofisImport; issues: WarehouseSiscofisIssue[] } {
   const issues: WarehouseSiscofisIssue[] = [];
   const byDescription = new Map<string, WarehouseMaterial[]>();
@@ -623,12 +631,19 @@ export function adaptEmprovexSiscofisInventory(input: {
     byDescription.set(key, [...(byDescription.get(key) || []), material]);
   }
   const rows: WarehouseSiscofisImportRow[] = input.inventory.items.map((item, index) => {
+    const rowId = 'siscofis-' + String(index + 1).padStart(4, '0');
     const matches = (byDescription.get(lookupText(item.descricao)) || []).filter((material) => material.status === 'active');
-    const matched = matches.length === 1 ? matches[0] : null;
-    if (matches.length > 1) pushIssue(issues, 'warning', 'ambiguous_material_match', '$.items[' + index + ']', 'Mais de um material canônico possui a mesma descrição; vínculo exige revisão humana.');
-    if (!matched) pushIssue(issues, 'warning', 'unit_fallback_applied', '$.items[' + index + ']', 'Material novo/não resolvido: apresentação marcada explicitamente como não informada, reutilizando o fallback canônico do fluxo de NF.');
+    const overrideId = input.materialOverrides?.[rowId]?.trim().toLowerCase() || '';
+    const override = overrideId
+      ? input.materials.find((material) => material.id === overrideId && material.status === 'active') || null
+      : null;
+    if (overrideId && !override) pushIssue(issues, 'error', 'invalid_material_override', '$.items[' + index + ']', 'O vínculo canônico escolhido não está disponível neste workspace.');
+    const requiresCanonicalResolution = !override && matches.length > 1;
+    const matched = override || (matches.length === 1 ? matches[0] : null);
+    if (requiresCanonicalResolution) pushIssue(issues, 'error', 'ambiguous_material_match', '$.items[' + index + ']', 'Mais de um material canônico possui a mesma descrição. Selecione explicitamente o vínculo na prévia.');
+    if (!matched && !requiresCanonicalResolution) pushIssue(issues, 'warning', 'unit_fallback_applied', '$.items[' + index + ']', 'Material novo/não resolvido: apresentação marcada explicitamente como não informada, reutilizando o fallback canônico do fluxo de NF.');
     return {
-      rowId: 'siscofis-' + String(index + 1).padStart(4, '0'),
+      rowId,
       materialId: matched?.id || null,
       description: item.descricao,
       unit: matched?.unit || warehouseUnitFromOperationalLabel(''),
@@ -636,6 +651,7 @@ export function adaptEmprovexSiscofisInventory(input: {
       unitValue: item.valorUnitario,
       totalValue: Math.round(item.quantidade * item.valorUnitario * 100) / 100,
       sourceItemNumber: item.numeroItem,
+      requiresCanonicalResolution,
     };
   });
   return {
@@ -798,6 +814,15 @@ export async function buildWarehouseSiscofisPreview(input: {
         rowIssue = 'Unidade do SISCOFIS diverge da unidade canônica do material.';
         pushIssue(issues, 'error', 'material_unit_mismatch', '$.rows.' + row.rowId + '.unit', rowIssue);
       }
+    } else if (row.requiresCanonicalResolution) {
+      rowIssue = 'Selecione explicitamente o material canônico antes de confirmar.';
+      pushIssue(
+        issues,
+        'error',
+        'canonical_resolution_required',
+        '$.rows.' + row.rowId + '.materialId',
+        rowIssue
+      );
     } else if (kind === 'MARCO_ZERO') {
       const key = materialLookupKey(row.description, row.unit);
       materialId = newMaterialByLookup.get(key) || await deriveSiscofisMarcoZeroMaterialId(
@@ -858,6 +883,7 @@ export async function buildWarehouseSiscofisPreview(input: {
     canConfirm: errors.length === 0,
     issues,
     rows,
+    materialOptions: input.materials.filter((material) => material.status === 'active').map((material) => ({ id: material.id, description: material.description, unit: material.unit })),
     summary: {
       totalRows: rows.length,
       matchedRows: rows.filter((row) => row.state === 'MATCHED').length,
