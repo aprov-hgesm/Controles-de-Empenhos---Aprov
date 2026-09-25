@@ -1433,3 +1433,89 @@ Data: 2026-09-25.
 
 Próximo módulo oficial: **Módulo 11 — Consolidação do Controle de Itens**.
 Módulo 11: **NÃO INICIADO**.
+
+
+## FECHAMENTO 2026-09-25 — MÓDULOS 11 E 12
+
+### Baseline inicial auditada
+- branch: `feat/adm-deposito-phase-11-5-visual-ux`;
+- HEAD inicial real: `1e6fbc905182698cf14a27d4e2c77fce206272f6`;
+- nenhum commit posterior precisava ser reconciliado;
+- Módulos 1 a 10 tratados como concluídos e não refeitos.
+
+### Módulo 11 — CONCLUÍDO
+`WarehouseItemControlOperational` passou a concentrar:
+- Resumo logístico;
+- Estoque;
+- Saída de Material;
+- Movimentações;
+- Inventário;
+- Entregas;
+- Alertas;
+- SISCOFIS;
+- Relatórios;
+- Configurações.
+
+Reutilizações principais:
+- `WarehouseLogisticsDashboard`;
+- `WarehouseStockOperational`;
+- `WarehouseMaterialWithdrawal` via `WarehouseExpressOutbound`;
+- `WarehouseMovementsOperational`;
+- `WarehouseInventoryOperational`;
+- `WarehouseDeliveriesOperational`;
+- `WarehouseLogisticsAlerts`;
+- `WarehouseSiscofisOperational`;
+- `WarehouseLogisticsSettings`.
+
+Rotas antigas continuam compatíveis por redirect; nenhuma segunda tela de domínio foi criada.
+
+### Módulo 12 — CONCLUÍDO
+Novo componente:
+- `features/warehouse/components/WarehouseLogisticsReports.tsx`.
+
+Cobertura:
+- estoque/localizações/lotes/validade: reutiliza `WarehouseStockOperational`;
+- consumo imediato/saídas: reutiliza `WarehouseConsumptionReports`;
+- movimentações/entradas por NF: leitura bounded de `warehouse_movement_v1` + join em memória com materiais + filtros + CSV;
+- inventários: reutiliza `WarehouseInventoryOperational`;
+- SISCOFIS: reutiliza `WarehouseSiscofisOperational`.
+
+Rota adicionada:
+- `/adm-deposito/relatorios` → `/adm-deposito/controle-de-itens?aba=reports`.
+
+### Performance / Firestore
+- nenhum listener novo;
+- nenhuma consulta por hover;
+- nenhuma consulta por linha;
+- nenhum N+1 intencional;
+- movimentos limitados a 250;
+- materiais carregados uma vez e indexados em `Map`;
+- relatórios derivados sem coleção/cache paralelo;
+- Firestore Rules: **não alteradas**;
+- índices Firestore: **não alterados**.
+
+### Core e autoridades
+- Core EMPROVEX: **não alterado**;
+- ledger continua autoridade de movimentos;
+- `warehouse_balance_v1` e `warehouse_location_balance_v1` continuam autoridades quantitativas;
+- relatórios não possuem autoridade e não escrevem saldo.
+
+### Validação conforme D-057
+Executado:
+- auditoria estática de imports, rotas, contratos e limites;
+- inspeção de compatibilidade das superfícies reutilizadas.
+
+Deliberadamente NÃO executado:
+- Application CI;
+- Browser E2E completo;
+- regressão global;
+- suíte Firestore completa;
+- build global;
+- TypeScript global;
+- bateria multi-tenant completa.
+
+### Continuidade
+- Módulo 11: **ENCERRADO**;
+- Módulo 12: **ENCERRADO**;
+- Módulo 13: **NÃO INICIADO**;
+- próximo módulo oficial: **Módulo 13 — Segurança, Firestore, performance e telemetria**.

@@ -202,3 +202,30 @@ Próximo módulo oficial:
 - **Módulo 11 — Consolidação do Controle de Itens**.
 
 O Módulo 11 ainda não foi iniciado.
+
+
+## Handoff após Módulos 11 e 12 — 2026-09-25
+
+Estado oficial para o próximo chat:
+
+- branch de continuidade: `feat/adm-deposito-phase-11-5-visual-ux`;
+- Módulo 11 — Consolidação do Controle de Itens: **CONCLUÍDO**;
+- Módulo 12 — Relatórios Logísticos: **CONCLUÍDO**;
+- Módulo 13: **NÃO INICIADO**;
+- Core EMPROVEX não foi alterado;
+- Firestore Rules e índices não foram alterados;
+- nenhuma publicação, PR ou merge foi realizada;
+- campanha global de CI/E2E permanece reservada pela D-057.
+
+Antes de iniciar o próximo módulo, recupere o HEAD real da branch e releia:
+- README.md;
+- ROADMAP.md;
+- DECISIONS.md;
+- STATUS.md;
+- EMPROVEX_CORE_PROTECTION.md.
+
+Próximo trabalho autorizado:
+
+**Módulo 13 — Segurança, Firestore, performance e telemetria.**
+
+O Módulo 13 deve auditar e endurecer a implementação existente; não deve reimplementar Controle de Itens nem Relatórios Logísticos e não deve criar materialização/cache de relatórios sem decisão arquitetural formal.

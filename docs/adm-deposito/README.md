@@ -135,3 +135,31 @@ Em 2026-09-25, os Módulos 9 e 10 foram concluídos, nesta ordem, na branch ofic
 - nenhuma Firestore Rule, coleção paralela ou parte do Core EMPROVEX foi alterada.
 
 Próximo módulo oficial: **Módulo 11 — Consolidação do Controle de Itens**.
+
+
+## Consolidação dos Módulos 11 e 12 — Controle de Itens e Relatórios Logísticos
+
+Em 2026-09-25, os Módulos 11 e 12 da consolidação 11.5 foram executados em sequência, sem avançar para o Módulo 13.
+
+### Módulo 11 — Controle de Itens
+- **Controle de Itens** é a superfície operacional principal do ciclo do material;
+- subabas consolidadas: Resumo logístico, Estoque, Saída de Material, Movimentações, Inventário, Entregas, Alertas, SISCOFIS, Relatórios e Configurações;
+- superfícies históricas continuam sendo reutilizadas; não existe segundo motor de estoque, saída, inventário, alerta ou SISCOFIS;
+- rotas históricas continuam por redirects/compatibilidade;
+- a migração SISCOFIS permanece no componente oficial já existente, sem novo contrato ou nova coleção;
+- somente a subaba aberta monta sua superfície e dispara as leituras necessárias.
+
+### Módulo 12 — Relatórios Logísticos
+- nova camada oficial em `WarehouseLogisticsReports`;
+- relatórios de estoque/localização/lotes/validade reutilizam `WarehouseStockOperational`;
+- consumo imediato e saídas reutilizam `WarehouseConsumptionReports`, incluindo períodos diário/semanal/quinzenal/mensal e CSV;
+- movimentações e entradas por NF derivam diretamente de `warehouse_movement_v1`, com consulta bounded de até 250 movimentos, filtros locais e CSV;
+- inventários reutilizam o histórico oficial de `warehouse_inventory_v1`;
+- SISCOFIS reutiliza o contexto/snapshots oficiais, sem autocorreção;
+- joins são feitos em memória com `Map` e nenhum relatório recalcula saldo via ledger;
+- nenhuma coleção de relatório/cache foi criada;
+- nenhuma Firestore Rule ou índice foi alterado.
+
+**Estado oficial:** Módulo 11 CONCLUÍDO; Módulo 12 CONCLUÍDO; Módulo 13 NÃO INICIADO.
+
+Próximo módulo oficial: **Módulo 13 — Segurança, Firestore, performance e telemetria**.

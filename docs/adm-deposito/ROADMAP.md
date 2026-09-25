@@ -710,3 +710,62 @@ Capacidade entregue:
 Decisão técnica: manter editor React/canvas DOM leve existente em vez de adicionar Fabric.js/Konva. Ver D-068.
 
 Próximo módulo oficial: **Módulo 11 — Consolidação do Controle de Itens**.
+
+
+## CONSOLIDAÇÃO 11.5 — MÓDULOS 11 E 12 — CONCLUÍDOS
+
+Data de fechamento: 2026-09-25.
+
+### Módulo 11 — Consolidação do Controle de Itens — CONCLUÍDO
+Objetivo atingido: transformar **Controle de Itens** na superfície operacional consolidada do material sem reimplementar domínios existentes.
+
+Arquitetura final:
+- Resumo logístico;
+- Estoque;
+- Saída de Material;
+- Movimentações;
+- Inventário;
+- Entregas;
+- Alertas;
+- SISCOFIS;
+- Relatórios;
+- Configurações relacionadas ao item.
+
+Regras preservadas:
+- Cadastro de Itens continua responsável por cadastro/intake/migração inicial;
+- Meus Depósitos continua responsável pela estrutura física/croquis;
+- Início continua responsável pela consulta visual;
+- ledger, saldos, lotes, inventários, retiradas, consumos e SISCOFIS continuam nas fontes oficiais existentes;
+- rotas legadas permanecem como redirect ou reutilização do mesmo componente;
+- nenhuma Firestore Rule foi alterada.
+
+### Módulo 12 — Relatórios Logísticos — CONCLUÍDO
+Camada oficial implementada como leitura derivada e bounded:
+- estoque atual;
+- estoque por depósito/localização;
+- itens sem localização;
+- lotes ativos, próximos do vencimento e vencidos;
+- consumo imediato;
+- saídas de material;
+- movimentações;
+- entradas por NF;
+- inventários;
+- pendências e histórico SISCOFIS;
+- consumo por período/destino/responsável conforme dados existentes.
+
+Estratégia:
+- somente a subaba de relatório aberta é montada;
+- componentes operacionais oficiais são reutilizados quando já fornecem a consulta necessária;
+- movimentações/entradas por NF leem no máximo 250 movimentos por abertura;
+- materiais são carregados em lote e indexados em memória;
+- filtros de período/tipo/material/origem são aplicados sem N+1;
+- CSV é oferecido onde já é simples e leve;
+- nenhuma coleção `warehouse_report_*` ou cache paralelo foi criada;
+- nenhum saldo é recalculado via ledger.
+
+### Gate de continuidade
+- Módulo 11: **CONCLUÍDO**;
+- Módulo 12: **CONCLUÍDO**;
+- Módulo 13: **NÃO INICIADO**;
+- próximo módulo oficial: **Módulo 13 — Segurança, Firestore, performance e telemetria**;
+- campanha consolidada de CI/E2E continua reservada ao Módulo 14 pela D-057.
