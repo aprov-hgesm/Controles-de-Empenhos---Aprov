@@ -268,7 +268,8 @@ export async function prepareEmprovexSiscofisInventoryImport(
   workspaceId: string,
   rawJson: string,
   referenceDate: string,
-  sourceLabel = 'Inventário SISCOFIS — Migração inicial'
+  sourceLabel = 'Inventário SISCOFIS — Migração inicial',
+  materialOverrides: Record<string, string> = {}
 ): Promise<WarehouseSiscofisPreview> {
   const scope = assertCurrentScope(workspaceId);
   const external = parseEmprovexSiscofisInventoryJson(rawJson);
@@ -283,7 +284,7 @@ export async function prepareEmprovexSiscofisInventoryImport(
     getInvoiceSettings(workspaceId),
     getMarcoZero(workspaceId),
   ]);
-  const adapted = adaptEmprovexSiscofisInventory({ inventory: external.data, ug: scope.ug, referenceDate, sourceLabel, materials });
+  const adapted = adaptEmprovexSiscofisInventory({ inventory: external.data, ug: scope.ug, referenceDate, sourceLabel, materials, materialOverrides });
   return buildWarehouseSiscofisPreview({
     workspaceId,
     importData: adapted.importData,
