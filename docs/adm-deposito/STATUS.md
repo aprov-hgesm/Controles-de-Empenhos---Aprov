@@ -1725,3 +1725,19 @@ Próximo passo obrigatório:
 **certificação remota via PR + Application CI**, após revisão do diff final.
 
 O ADM Depósito permanece founder-only. A futura liberação granular por usuário externo continua registrada em D-071 e não faz parte da certificação atual.
+
+## ESTRATÉGIA DE PUBLICAÇÃO DO FECHAMENTO — 2026-09-25
+
+Após a certificação final do Módulo 14, a publicação do ADM Depósito seguirá D-072:
+
+- a PR de fechamento deverá preferir **Squash and Merge**;
+- os muitos commits históricos da branch não serão publicados individualmente na Vercel;
+- a `main` receberá um único commit consolidado representando o estado final certificado;
+- evitar novos commits pequenos na `main` entre o merge e a publicação;
+- preferir publicação única/controlada em produção;
+- quando útil, executar `vercel build --prod` antes e publicar o artefato validado com `vercel deploy --prebuilt --prod`;
+- a economia de cota da Vercel não autoriza bypass de CI, segurança ou E2E;
+- após deploy, validar produção com a conta fundadora;
+- ADM permanece founder-only durante a estabilização inicial, conforme D-071.
+
+Objetivo operacional: permitir a publicação integral das melhorias acumuladas do ADM sem transformar cada commit histórico em um deployment separado.
