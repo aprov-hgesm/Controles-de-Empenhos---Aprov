@@ -101,9 +101,12 @@ assert.match(security, /FASE 8 — Código de barras \/ Scanner \/ Saída Expres
 assert.match(security, /não pode produzir saldo negativo/);
 assert.match(security, /Setor externo não lê códigos de barras da FASE 8/);
 assert.match(e2e, /warehouse-scanner-input/);
-assert.match(e2e, /Segunda operação sem reload/);
-assert.match(e2e, /Saldo oficial insuficiente/);
-assert.match(e2e, /warehouse-stock-search/);
+assert.match(e2e, /warehouse-barcode-association-panel/);
+assert.match(e2e, /warehouse-outbound-cart/);
+assert.match(e2e, /warehouse-outbound-cart-line/);
+assert.match(e2e, /page\.reload\(\)/);
+assert.match(e2e, /UNKNOWN_BARCODE/);
+assert.match(e2e, /warehouse-movements-operational/);
 assert.match(externalE2e, /\/adm-deposito\/saida-expressa/);
 
 assert.match(decisions, /D-042 — Barcode é identificador auxiliar/);
