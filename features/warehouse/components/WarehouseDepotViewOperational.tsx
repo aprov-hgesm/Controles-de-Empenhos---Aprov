@@ -47,6 +47,7 @@ import {
   WAREHOUSE_STRUCTURE_LIBRARY,
   type WarehouseStructureDefinition,
 } from '../../../lib/warehouse/structureLibrary';
+import { WarehouseDepotLayoutEditor } from './WarehouseDepotLayoutEditor';
 
 type Mode = 'view' | 'edit';
 
@@ -576,16 +577,27 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
           </div>
 
           {currentLayout ? (
-            <WarehouseCanvas
-              layout={currentLayout}
-              objects={mode === 'edit' ? draftObjects : currentLayout.objects}
-              mode={mode}
-              selectedObjectId={selectedObjectId}
-              highlightedLocationIds={highlightedLocationIds}
-              fefoLocationId={fefoLocationId}
-              onSelect={(id) => { if (mode === 'edit') setSelectedObjectId(id); }}
-              onMove={(id, x, y) => updateObject(id, { x, y })}
-            />
+            mode === 'edit' ? (
+              <WarehouseDepotLayoutEditor
+                logicalWidth={draftWidth}
+                logicalHeight={draftHeight}
+                objects={draftObjects}
+                selectedObjectId={selectedObjectId}
+                onSelectedObjectIdChange={setSelectedObjectId}
+                onObjectsChange={setDraftObjects}
+              />
+            ) : (
+              <WarehouseCanvas
+                layout={currentLayout}
+                objects={currentLayout.objects}
+                mode={mode}
+                selectedObjectId={selectedObjectId}
+                highlightedLocationIds={highlightedLocationIds}
+                fefoLocationId={fefoLocationId}
+                onSelect={() => undefined}
+                onMove={() => undefined}
+              />
+            )
           ) : (
             <div className="grid min-h-[360px] place-items-center rounded-2xl border border-dashed border-blue-300/15 bg-blue-400/[0.025] p-8 text-center">
               <div>
@@ -658,8 +670,8 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
           {mode === 'edit' && (
             <div className="space-y-4 rounded-2xl border border-blue-300/10 bg-blue-400/[0.025] p-4" data-testid="warehouse-layout-editor">
               <div>
-                <p className="text-xs font-black text-blue-100">Editor simplificado</p>
-                <p className="mt-1 text-[11px] leading-5 text-slate-500">Arraste objetos no croqui ou ajuste os campos. Salvar cria nova versão.</p>
+                <p className="text-xs font-black text-blue-100">Editor visual</p>
+                <p className="mt-1 text-[11px] leading-5 text-slate-500">Edite em planta superior 2D com grade, snap, zoom, pan, resize, rotação e undo/redo. A prévia 2.5D usa os mesmos objetos. Salvar cria uma nova versão.</p>
               </div>
 
               <label className="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
