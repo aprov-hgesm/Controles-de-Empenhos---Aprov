@@ -798,11 +798,21 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                         baseLayoutId: selectedActiveLayout?.depotId === (draftDepotId || null) ? selectedActiveLayout.id : null,
                         expectedVersion: selectedActiveLayout?.depotId === (draftDepotId || null) ? selectedActiveLayout.version : null,
                       });
-                      setSelectedDepotId(saved.depotId || draftDepotId);
+                      const savedDepotId = saved.depotId || draftDepotId;
+                      setSelectedDepotId(savedDepotId);
                       setMessage('Layout salvo como versão ' + saved.version + '. Nenhum saldo ou movimento de estoque foi alterado.');
                       setMode('view');
                       setSelectedObjectId(null);
                       await reload();
+                      const [active, history] = await Promise.all([
+                        getActiveWarehouseDepotLayout(workspaceId, savedDepotId),
+                        listWarehouseDepotLayoutsForDepot(workspaceId, savedDepotId, 100),
+                      ]);
+                      setData((current) => ({
+                        ...current,
+                        active: active?.layout || null,
+                        history,
+                      }));
                     } catch (error) {
                       setMessage(error instanceof Error ? error.message : 'Falha ao salvar o layout.');
                     } finally {
