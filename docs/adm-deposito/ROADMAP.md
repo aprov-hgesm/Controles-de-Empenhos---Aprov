@@ -865,3 +865,18 @@ Relatório:
 
 Gate: auditoria estática sem bloqueio crítico confirmado; autorizado seguir para 14.2 quando PowerShell estiver disponível. A autorização não substitui os gates dinâmicos posteriores.
 
+## PÓS-PUBLICAÇÃO — PILOTO FOUNDER-ONLY E EXPANSÃO GRANULAR
+
+Após o fechamento técnico do Módulo 14:
+
+1. publicar o ADM Depósito mantendo acesso exclusivo da conta fundadora;
+2. realizar testes em produção na Vercel e ajustes de estabilidade/UX;
+3. preservar usuários externos sem acesso durante essa etapa;
+4. em etapa posterior, implementar no Admin um controle individual `ADM Depósito habilitado`;
+5. manter esse controle desativado por padrão para usuários externos;
+6. exigir autorização tanto para exibição na navegação quanto para acesso direto às rotas;
+7. revalidar Firestore Rules, multi-tenant, workspace/UG e Browser E2E antes de liberar qualquer usuário externo.
+
+Referência arquitetural: **D-071** em `docs/adm-deposito/DECISIONS.md`.
+
+A implementação desse controle granular é trabalho **pós-Módulo 14** e não deve ser misturada com a certificação founder-only atual.
