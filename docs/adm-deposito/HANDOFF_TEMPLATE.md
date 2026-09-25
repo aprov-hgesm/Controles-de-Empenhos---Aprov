@@ -254,3 +254,42 @@ Próximo trabalho autorizado, somente em novo passo:
 **Módulo 14 — Campanha final de validação e fechamento.**
 
 O Módulo 14 deverá executar a campanha consolidada prevista em D-057 antes de qualquer conclusão sobre merge, deploy ou expansão externa.
+
+
+## Handoff de planejamento para o Módulo 14 — 2026-09-25
+
+O próximo chat de execução deve tratar como fonte oficial adicional:
+
+`docs/adm-deposito/MODULE_14_FINAL_VALIDATION_PLAN.md`
+
+Baseline registrada:
+- branch: `feat/adm-deposito-phase-11-5-visual-ux`;
+- HEAD auditado: `2d8160db956296779bcf86c7040829776d4e20ef`;
+- no momento do planejamento, a branch estava idêntica ao HEAD acima.
+
+Antes de testar:
+1. recuperar HEAD real novamente;
+2. comparar com a baseline;
+3. ler README, ROADMAP, DECISIONS, STATUS, PHASE_13_HARDENING, EMPROVEX_CORE_PROTECTION, DEVELOPMENT_CI_WORKFLOW e o plano do Módulo 14;
+4. não reimplementar funcionalidades dos Módulos 1–13;
+5. tratar o Módulo 14 como estabilização/validação, não como nova fase funcional.
+
+Ordem operacional:
+- Core Protection/isolamento/guards;
+- testes de domínio;
+- TypeScript;
+- Firestore Emulator/multitenancy;
+- walking skeleton;
+- build;
+- Browser E2E específico do ADM;
+- regressão EMPROVEX/ADM;
+- correções consolidadas;
+- reexecução seletiva;
+- regressão final completa;
+- PR e Application CI.
+
+Achados preparatórios a não esquecer:
+- E2E genérico atual não cobre explicitamente as jornadas ADM;
+- `verify:adm-deposito-phase-11-5` deve fazer parte da campanha local e ser avaliado para o CI final.
+
+PowerShell é o ambiente preferencial da campanha local; solicitar intervenção do fundador em blocos curtos/consolidados. Cloud Shell apenas quando necessário. Não autorizar expansão externa automaticamente após sucesso técnico.
