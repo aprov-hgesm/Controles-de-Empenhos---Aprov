@@ -22,10 +22,7 @@ test.describe.serial('ADM Depósito FASE 8 — barcode / Saída de Material', ()
     await page.getByTestId('warehouse-scanner-input').fill(BARCODE);
     await page.getByTestId('warehouse-scanner-input').press('Enter');
 
-    const associationPanel = page
-      .getByTestId('warehouse-material-withdrawal')
-      .locator('section')
-      .filter({ hasText: 'Código não cadastrado: ' + BARCODE });
+    const associationPanel = page.getByTestId('warehouse-barcode-association-panel');
     await expect(associationPanel).toBeVisible();
     await expect(associationPanel).toContainText(
       'O barcode nunca substitui materialId'
@@ -46,18 +43,21 @@ test.describe.serial('ADM Depósito FASE 8 — barcode / Saída de Material', ()
     await expect(page.getByTestId('warehouse-outbound-message')).toContainText(
       'adicionado ao carrinho'
     );
-    await expect(page.getByText('Carrinho da saída', { exact: true })).toBeVisible();
-    const cartMaterial = page.getByRole('paragraph').filter({
-      hasText: /^Arroz parboilizado$/,
-    });
-    await expect(cartMaterial).toBeVisible();
+    const cart = page.getByTestId('warehouse-outbound-cart');
+    await expect(cart).toBeVisible();
+    const cartLine = cart
+      .getByTestId('warehouse-outbound-cart-line')
+      .filter({ has: page.locator('[data-material-id="' + MATERIAL_ID + '"]') });
+    await expect(cartLine).toHaveCount(1);
+    await expect(cartLine).toContainText('Arroz parboilizado');
 
     await page.reload();
     await expect(page.getByTestId('warehouse-material-withdrawal')).toBeVisible({
       timeout: 20_000,
     });
-    await expect(page.getByText('Carrinho da saída', { exact: true })).toBeVisible();
-    await expect(cartMaterial).toBeVisible();
+    await expect(cart).toBeVisible();
+    await expect(cartLine).toHaveCount(1);
+    await expect(cartLine).toContainText('Arroz parboilizado');
 
     await page.getByTestId('warehouse-scanner-input').fill(UNKNOWN_BARCODE);
     await page.getByTestId('warehouse-scanner-input').press('Enter');
