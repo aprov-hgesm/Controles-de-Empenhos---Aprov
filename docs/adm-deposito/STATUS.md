@@ -1741,3 +1741,48 @@ Após a certificação final do Módulo 14, a publicação do ADM Depósito segu
 - ADM permanece founder-only durante a estabilização inicial, conforme D-071.
 
 Objetivo operacional: permitir a publicação integral das melhorias acumuladas do ADM sem transformar cada commit histórico em um deployment separado.
+
+## REABERTURA CONTROLADA DA FASE 9 — CROQUI OPERACIONAL v2
+
+Data: 2026-09-25.
+
+Motivo:
+- a regressão local completa chegou a 21/21 no Browser E2E;
+- no GitHub Actions/Linux, a Fase 9 apresentou falhas visuais recorrentes e não determinísticas de sobreposição/visibilidade;
+- Core Protection, Recovery, validate-application, segurança multi-tenant, domínio, TypeScript, build e demais jornadas permaneceram aprovados;
+- decidiu-se não continuar adicionando workarounds ao teste/interface antiga.
+
+Estado oficial:
+- Fase 9 antiga — domínio: **PRESERVADO**;
+- Fase 9 antiga — UI: **SUPERSEDIDA**;
+- Fase 9 v2: **PLANEJADA / NÃO INICIADA**;
+- Módulo 14: **PAUSADO NA CERTIFICAÇÃO REMOTA**;
+- merge: **NÃO AUTORIZADO**;
+- deploy: **NÃO REALIZADO**;
+- acesso ADM: **FOUNDER-ONLY**.
+
+Plano aprovado:
+- 9.0 auditoria/congelamento;
+- 9.1 estrutura da tela;
+- 9.2 Visualizar/Localizar;
+- 9.3 destaque operacional;
+- 9.4 Editor v2;
+- 9.5 persistência/versionamento;
+- 9.6 UX/estabilidade;
+- 9.7 testes específicos;
+- 9.8 integração/regressão;
+- 9.9 fechamento/certificação.
+
+Invariantes:
+- `warehouse_depot_layout_v1` continua único contrato persistido do croqui;
+- croqui não altera saldos ou ledger;
+- nenhum novo domínio quantitativo será criado;
+- Core EMPROVEX permanece independente;
+- workspace/UG e founder-only permanecem inalterados;
+- sem Application CI completo durante 9.0–9.6;
+- certificação ampla somente após 9.7–9.9.
+
+Referência: **D-073** em `docs/adm-deposito/DECISIONS.md`.
+
+Próximo trabalho oficial:
+**Fase 9 v2 — Módulo 9.0, Auditoria e congelamento da implementação atual.**
