@@ -73,3 +73,144 @@ O Bloco 16.2 não:
 - altera empenhos, NFs, NS, CNPJ ou Google Drive.
 
 A telemetria e o visor de consumo continuam nos próximos subblocos do Bloco 16.
+
+
+## Hardening 2026-09-22 — autorização vinculada à sessão
+
+### Ameaça confirmada
+
+O desenho original do Bloco 16.2 fazia o cliente oficial observar o tombstone e executar
+`signOut`, mas a função `canAccessWorkspace()` das Firestore Rules não consultava a
+sessão operacional. Um cliente que preservasse um ID token Firebase `password` válido
+podia continuar tentando acessar o próprio workspace diretamente, mesmo depois de o
+administrador excluir o slot daquela sessão.
+
+Isso não demonstrou acesso entre UGs e não altera o isolamento multi-tenant já existente.
+A falha estava na granularidade da autorização **dentro do mesmo UID/workspace**: duas
+sessões legítimas podem usar o mesmo UID/e-mail e, portanto, o UID sozinho não identifica
+qual sessão foi encerrada.
+
+### Identidade autoritativa da sessão
+
+O login visível do operador continua sendo e-mail + senha. Depois que o diretório,
+workspace/UG e lease são validados, o cliente executa silenciosamente uma troca de
+credencial em `/api/auth/session-credential`.
+
+O servidor:
+
+1. verifica o ID token Firebase `password` apresentado;
+2. valida novamente conta, UID, workspace e UG;
+3. consulta somente a capacidade dos dois slots e escolhe exclusivamente uma vaga ausente
+   ou expirada;
+4. gera no servidor novos `sessionId` e `browserInstanceId` — o cliente não escolhe
+   nem pode pedir a identidade de um slot já ativo;
+5. emite um Firebase custom token assinado com a credencial server-side já existente,
+   contendo a vaga escolhida e a identidade nova;
+6. já sob o provider `custom`, o cliente materializa o lease exatamente nesse slot.
+
+Os claims de autorização são versionados por `emprovex_session_auth_v1` e incluem
+`emprovexAccountEmail`, com o e-mail normalizado validado no bootstrap. O caminho
+`password` continua usando o e-mail verificado nativo do Firebase; o caminho `custom`
+usa o e-mail explicitamente assinado pelo servidor.
+
+O navegador
+usa `signInWithCustomToken()` sem nova tela, código, CAPTCHA, MFA ou seleção manual de
+slot. O UID e o e-mail permanecem os mesmos.
+
+### Enforcement nas Firestore Rules
+
+Para dados operacionais de setor, a autorização passa a exigir simultaneamente:
+
+- conta/workspace ativos e coerentes;
+- UID/e-mail/UG corretos;
+- claims de sessão emitidos pelo servidor;
+- slot indicado no token ainda existente;
+- slot pertencente ao mesmo UID, e-mail, workspace, UG, `sessionId` e navegador;
+- `expiresAt > request.time`.
+
+Assim, excluir o slot faz a credencial antiga perder autorização de dados mesmo que o ID
+token Firebase ainda não tenha expirado. Uma segunda sessão legítima do mesmo UID continua
+válida porque possui outro slot/`sessionId`.
+
+Os caminhos de **bootstrap e manutenção do lease** são deliberadamente separados da
+autorização de dados. Em modo final, o token `password` pode somente resolver a identidade
+e inspecionar a capacidade necessária ao bootstrap; ele não cria, renova nem exclui slots.
+A criação/renovação/liberação pertence ao token `custom` vinculado. Uma credencial
+customizada não pode trocar silenciosamente de `sessionId`, navegador, workspace, UG ou
+slot.
+
+### Revogação, refresh e limites
+
+A revogação administrativa continua criando o tombstone e excluindo o slot na mesma
+transação. O bloqueio autoritativo das novas leituras/gravações depende do estado do slot
+nas Rules, não do tempo restante do ID token.
+
+O refresh normal do Firebase preserva a sessão autenticada e os claims de autorização.
+Em uma recarga normal, o token `custom` já existente restaura o estado local necessário
+ao heartbeat a partir dos próprios claims assinados; `localStorage` não volta a ser
+autoridade.
+
+O endpoint de bootstrap aceita somente `password` e sempre cria **uma identidade nova**.
+Mesmo que duas sessões compartilhem UID/e-mail, uma credencial `password` não pode pedir
+o `sessionId`, o navegador ou o slot de outra sessão legítima. Em corrida pela mesma
+vaga, o cliente repete silenciosamente a seleção usando o token inicial mantido apenas em
+memória durante a tentativa.
+
+Este mecanismo não promete neutralizar toda credencial deliberadamente compartilhada ou
+roubada: uma credencial `password` recém-obtida ainda pode tentar abrir **uma nova sessão**
+sujeita ao limite normal de capacidade e às demais validações. O objetivo deste hardening
+é garantir que **uma sessão específica já revogada** não herde a autorização de outra
+sessão legítima do mesmo UID.
+
+### Custo e desempenho
+
+Não existe polling por entidade nem validação remota em cada clique da UI.
+
+Mudanças de custo esperadas:
+
+- cada avaliação operacional das Rules passa a consultar também o documento do slot
+  exato da sessão; isso pode acrescentar uma leitura dependente de Rules;
+- o bootstrap consulta pontualmente conta, workspace e os dois slots para escolher uma
+  vaga disponível;
+- o heartbeat continua com 15 minutos e o lease com 30 minutos;
+- o listener de revogação existente continua sendo usado pelo cliente oficial para
+  reação imediata de UX.
+
+Métricas estimadas devem continuar separadas das métricas efetivamente observadas no
+Google Cloud Monitoring.
+
+### Pré-requisito de ativação
+
+A emissão server-side reutiliza `FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON`, variável já
+referenciada pela infraestrutura administrativa existente do repositório. Antes de
+ativar o cliente novo em produção, o rollout deve **confirmar apenas a presença e a
+validade dessa configuração no ambiente de destino**, sem expor seu conteúdo. Esta
+correção não cria nem autoriza rotação, inclusão ou alteração de segredo/IAM.
+
+### Rollout compatível
+
+A mudança foi construída com um gate interno de Rules,
+`requireBoundSessionAuthorization()`, para permitir ativação em duas etapas sem janela
+de indisponibilidade:
+
+1. publicar Rules de compatibilidade, que ainda permitem ao cliente legado administrar
+   leases e já aceitam a nova credencial vinculada;
+2. publicar aplicação/servidor com o bootstrap server-side e a troca silenciosa para
+   custom auth;
+3. confirmar que não permanecem sessões legadas ativas (janela controlada de rollout);
+4. publicar as Rules finais com o gate obrigatório, quando tokens `password` deixam de
+   criar/renovar/excluir slots e deixam de autorizar dados operacionais.
+
+Não se deve inverter a ordem: Rules finais antes do cliente novo bloqueariam usuários
+legítimos; cliente novo antes das Rules de compatibilidade teria o provider `custom`
+recusado pelo modelo anterior.
+
+### Rollback
+
+Se o cutover final precisar ser revertido, o rollback seguro é retornar apenas o gate
+`requireBoundSessionAuthorization()` ao modo de compatibilidade. A aplicação nova pode
+continuar instalada, pois credenciais vinculadas também são aceitas nesse modo. Não é
+necessário excluir dados, slots ou tombstones.
+
+Nenhuma etapa deste documento, por si só, autoriza merge, deploy, publicação de Rules,
+alteração de IAM/segredos ou revogação de sessões reais.

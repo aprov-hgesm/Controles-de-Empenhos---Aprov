@@ -1824,18 +1824,89 @@ service cloud.firestore {
         && account.firebaseUid == request.auth.uid;
     }
 
-    function operationalIdentityMatchesAccount(workspaceId, account) {
-      return (
-          workspaceId == 'hgesm-aprov'
-          && isHgesmFounder()
-          && account.email == 'aprov1hgesm@gmail.com'
-        )
-        || boundIdentityMatchesAccount(account);
+    // Cutover final: clientes operacionais de setor precisam apresentar a
+    // credencial custom vinculada ao slot/sessão. Para rollback controlado,
+    // retornar este gate a false restaura o modo de compatibilidade registrado
+    // no commit 5e1778657bc8d52ed21244b7f1fdfea6d61816cc.
+    function requireBoundSessionAuthorization() {
+      return true;
     }
 
-    function canAccessWorkspace(workspaceId) {
-      let workspace = workspaceData(workspaceId);
-      let account = workspaceAccountData(workspaceId);
+    function isValidSessionSlotId(slotId) {
+      return slotId in ['slot-1', 'slot-2'];
+    }
+
+    function isCustomSectorSession() {
+      return isVerifiedUser()
+        && hasSignInProvider('custom')
+        && request.auth.token.get('emprovexSessionVersion', '') == 'emprovex_session_auth_v1'
+        && request.auth.token.get('emprovexAccountEmail', '') is string
+        && request.auth.token.get('emprovexAccountEmail', '').size() > 3
+        && request.auth.token.get('emprovexSessionId', '') is string
+        && request.auth.token.get('emprovexSessionId', '').size() > 8
+        && request.auth.token.get('emprovexBrowserInstanceId', '') is string
+        && request.auth.token.get('emprovexBrowserInstanceId', '').size() > 8
+        && request.auth.token.get('emprovexWorkspaceId', '') is string
+        && request.auth.token.get('emprovexUg', '') is string
+        && request.auth.token.get('emprovexSourceProvider', '') == 'password'
+        && isValidSessionSlotId(
+          request.auth.token.get('emprovexSessionSlotId', '')
+        );
+    }
+
+    function sessionCredentialMatchesAccount(workspaceId, account) {
+      return isCustomSectorSession()
+        && sectorAccountUsesPasswordProvider(account)
+        && account.email == request.auth.token.get('emprovexAccountEmail', '')
+        && hasBoundUid(account)
+        && account.firebaseUid == request.auth.uid
+        && account.workspaceId == workspaceId
+        && request.auth.token.get('emprovexWorkspaceId', '') == workspaceId
+        && 'ug' in account
+        && isValidUnitUg(account.ug)
+        && request.auth.token.get('emprovexUg', '') == account.ug;
+    }
+
+    function activeSessionSlotMatchesCredential(workspaceId, account) {
+      let slotId = request.auth.token.get('emprovexSessionSlotId', '');
+      return sessionCredentialMatchesAccount(workspaceId, account)
+        && isValidSessionSlotId(slotId)
+        && exists(
+          /databases/$(database)/documents/workspaces/$(workspaceId)/sessionSlots/$(slotId)
+        )
+        && get(
+          /databases/$(database)/documents/workspaces/$(workspaceId)/sessionSlots/$(slotId)
+        ).data.leaseVersion == 'emprovex_session_v1'
+        && get(
+          /databases/$(database)/documents/workspaces/$(workspaceId)/sessionSlots/$(slotId)
+        ).data.slotId == slotId
+        && get(
+          /databases/$(database)/documents/workspaces/$(workspaceId)/sessionSlots/$(slotId)
+        ).data.workspaceId == workspaceId
+        && get(
+          /databases/$(database)/documents/workspaces/$(workspaceId)/sessionSlots/$(slotId)
+        ).data.ug == request.auth.token.get('emprovexUg', '')
+        && get(
+          /databases/$(database)/documents/workspaces/$(workspaceId)/sessionSlots/$(slotId)
+        ).data.uid == request.auth.uid
+        && get(
+          /databases/$(database)/documents/workspaces/$(workspaceId)/sessionSlots/$(slotId)
+        ).data.accountEmail == request.auth.token.get('emprovexAccountEmail', '')
+        && get(
+          /databases/$(database)/documents/workspaces/$(workspaceId)/sessionSlots/$(slotId)
+        ).data.sessionId == request.auth.token.get('emprovexSessionId', '')
+        && get(
+          /databases/$(database)/documents/workspaces/$(workspaceId)/sessionSlots/$(slotId)
+        ).data.browserInstanceId == request.auth.token.get('emprovexBrowserInstanceId', '')
+        && get(
+          /databases/$(database)/documents/workspaces/$(workspaceId)/sessionSlots/$(slotId)
+        ).data.expiresAt is timestamp
+        && get(
+          /databases/$(database)/documents/workspaces/$(workspaceId)/sessionSlots/$(slotId)
+        ).data.expiresAt > request.time;
+    }
+
+    function workspaceAccountAccessBase(workspaceId, workspace, account) {
       return workspaceAccountExists(workspaceId)
         && workspace.status == 'active'
         && account.accountType == 'sector'
@@ -1853,18 +1924,110 @@ service cloud.firestore {
             && isValidUnitUg(workspace.ug)
             && workspace.ug == account.ug
           )
+        );
+    }
+
+    function operationalIdentityMatchesAccount(workspaceId, account) {
+      return (
+          workspaceId == 'hgesm-aprov'
+          && isHgesmFounder()
+          && account.email == 'aprov1hgesm@gmail.com'
         )
+        || activeSessionSlotMatchesCredential(workspaceId, account)
+        || (
+          !requireBoundSessionAuthorization()
+          && boundIdentityMatchesAccount(account)
+        );
+    }
+
+    function canAccessWorkspace(workspaceId) {
+      let workspace = workspaceData(workspaceId);
+      let account = workspaceAccountData(workspaceId);
+      return workspaceAccountAccessBase(workspaceId, workspace, account)
         && operationalIdentityMatchesAccount(workspaceId, account);
     }
 
-    function isValidSessionSlotId(slotId) {
-      return slotId in ['slot-1', 'slot-2'];
+    function sessionCredentialNotRevoked(workspaceId) {
+      let sessionId = request.auth.token.get('emprovexSessionId', '');
+      return isCustomSectorSession()
+        && !exists(
+          /databases/$(database)/documents/workspaces/$(workspaceId)/sessionRevocations/$(sessionId)
+        );
+    }
+
+    function canInspectWorkspaceSessionCapacity(workspaceId) {
+      let workspace = workspaceData(workspaceId);
+      let account = workspaceAccountData(workspaceId);
+      return workspaceAccountAccessBase(workspaceId, workspace, account)
+        && !isHgesmFounder()
+        && (
+          boundIdentityMatchesAccount(account)
+          || sessionCredentialMatchesAccount(workspaceId, account)
+        );
+    }
+
+    function canManageWorkspaceSession(workspaceId) {
+      let workspace = workspaceData(workspaceId);
+      let account = workspaceAccountData(workspaceId);
+      return workspaceAccountAccessBase(workspaceId, workspace, account)
+        && !isHgesmFounder()
+        && (
+          (
+            !requireBoundSessionAuthorization()
+            && boundIdentityMatchesAccount(account)
+          )
+          || (
+            sessionCredentialMatchesAccount(workspaceId, account)
+            && sessionCredentialNotRevoked(workspaceId)
+          )
+        );
+    }
+
+    function authenticatedSectorEmailMatches(value) {
+      return (
+          isCustomSectorSession()
+          && value == request.auth.token.get('emprovexAccountEmail', '')
+        )
+        || (
+          !isCustomSectorSession()
+          && value == request.auth.token.email
+        );
+    }
+
+    function requestLeaseMatchesSessionCredential() {
+      return !isCustomSectorSession()
+        || (
+          request.resource.data.slotId == request.auth.token.get('emprovexSessionSlotId', '')
+          && request.resource.data.sessionId == request.auth.token.get('emprovexSessionId', '')
+          && request.resource.data.browserInstanceId == request.auth.token.get('emprovexBrowserInstanceId', '')
+        );
+    }
+
+    function resourceLeaseMatchesSessionCredential() {
+      return !isCustomSectorSession()
+        || (
+          resource.data.slotId == request.auth.token.get('emprovexSessionSlotId', '')
+          && resource.data.sessionId == request.auth.token.get('emprovexSessionId', '')
+          && resource.data.browserInstanceId == request.auth.token.get('emprovexBrowserInstanceId', '')
+        );
+    }
+
+    function canReadSessionRevocation(workspaceId, sessionId) {
+      let workspace = workspaceData(workspaceId);
+      let account = workspaceAccountData(workspaceId);
+      return workspaceAccountAccessBase(workspaceId, workspace, account)
+        && (
+          boundIdentityMatchesAccount(account)
+          || (
+            sessionCredentialMatchesAccount(workspaceId, account)
+            && request.auth.token.get('emprovexSessionId', '') == sessionId
+          )
+        );
     }
 
     function validWorkspaceSessionLeaseShape(workspaceId, slotId) {
       let workspace = workspaceData(workspaceId);
-      return canAccessWorkspace(workspaceId)
-        && !isHgesmFounder()
+      return canManageWorkspaceSession(workspaceId)
         && isValidSessionSlotId(slotId)
         && 'ug' in workspace
         && isValidUnitUg(workspace.ug)
@@ -1899,11 +2062,12 @@ service cloud.firestore {
         && request.resource.data.workspaceId == workspaceId
         && request.resource.data.ug == workspace.ug
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.accountEmail == request.auth.token.email
+        && authenticatedSectorEmailMatches(request.resource.data.accountEmail)
         && request.resource.data.sessionId is string
         && request.resource.data.sessionId.size() > 8
         && request.resource.data.browserInstanceId is string
         && request.resource.data.browserInstanceId.size() > 8
+        && requestLeaseMatchesSessionCredential()
         && request.resource.data.startedAt is timestamp
         && request.resource.data.lastSeenAt == request.time
         && request.resource.data.expiresAt is timestamp
@@ -1918,7 +2082,7 @@ service cloud.firestore {
 
     function sameWorkspaceSessionLeaseOwner() {
       return resource.data.uid == request.auth.uid
-        && resource.data.accountEmail == request.auth.token.email
+        && authenticatedSectorEmailMatches(resource.data.accountEmail)
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.accountEmail == resource.data.accountEmail
         && request.resource.data.sessionId == resource.data.sessionId
@@ -1951,13 +2115,13 @@ service cloud.firestore {
     }
 
     function validWorkspaceSessionLeaseDelete(workspaceId, slotId) {
-      return canAccessWorkspace(workspaceId)
-        && !isHgesmFounder()
+      return canManageWorkspaceSession(workspaceId)
         && isValidSessionSlotId(slotId)
         && resource.data.workspaceId == workspaceId
         && resource.data.slotId == slotId
         && resource.data.uid == request.auth.uid
-        && resource.data.accountEmail == request.auth.token.email;
+        && authenticatedSectorEmailMatches(resource.data.accountEmail)
+        && resourceLeaseMatchesSessionCredential();
     }
 
     function validWorkspaceUsageCounter(value) {
@@ -2122,10 +2286,18 @@ service cloud.firestore {
           /databases/$(database)/documents/platformAccounts/$(resource.data.authorizedEmail)
         ).data.workspaceId == workspaceId
         && workspaceAndAccountUgMatch(workspaceId)
-        && identityMatchesAccount(
-          get(
-            /databases/$(database)/documents/platformAccounts/$(resource.data.authorizedEmail)
-          ).data
+        && (
+          identityMatchesAccount(
+            get(
+              /databases/$(database)/documents/platformAccounts/$(resource.data.authorizedEmail)
+            ).data
+          )
+          || activeSessionSlotMatchesCredential(
+            workspaceId,
+            get(
+              /databases/$(database)/documents/platformAccounts/$(resource.data.authorizedEmail)
+            ).data
+          )
         );
     }
 
@@ -3177,7 +3349,13 @@ service cloud.firestore {
     function isSelfPlatformAccount() {
       return isVerifiedUser()
         && resource.data.accountType == 'sector'
-        && identityMatchesAccount(resource.data);
+        && (
+          identityMatchesAccount(resource.data)
+          || activeSessionSlotMatchesCredential(
+            resource.data.workspaceId,
+            resource.data
+          )
+        );
     }
 
     function selfAccountImmutableFieldsPreserved(accountId) {
@@ -3662,7 +3840,10 @@ service cloud.firestore {
     // two simultaneous external-sector browser sessions without query/count races.
     // The founder is exempt and never claims a slot.
     match /workspaces/{workspaceId}/sessionSlots/{slotId} {
-      allow get, list: if canAccessWorkspace(workspaceId) || isPlatformAdmin();
+      // Password pode inspecionar capacidade durante o bootstrap, mas no modo
+      // final não pode criar/renovar/excluir slots. Mutações pertencem ao token
+      // custom vinculado à identidade exata da sessão.
+      allow get, list: if canInspectWorkspaceSessionCapacity(workspaceId) || isPlatformAdmin();
       allow create: if validWorkspaceSessionLeaseCreate(workspaceId, slotId);
       allow update: if validWorkspaceSessionLeaseUpdate(workspaceId, slotId);
       allow delete: if validWorkspaceSessionLeaseDelete(workspaceId, slotId)
@@ -3675,7 +3856,8 @@ service cloud.firestore {
       // O cliente precisa poder consultar um sessionId que normalmente ainda não
       // existe. Por isso o GET é tenant-scoped pelo workspace, sem depender de
       // resource.data; LIST continua exclusivo da administração.
-      allow get: if isPlatformAdmin() || canAccessWorkspace(workspaceId);
+      allow get: if isPlatformAdmin()
+        || canReadSessionRevocation(workspaceId, sessionId);
       allow list: if isPlatformAdmin();
       allow create: if validSessionRevocationCreate(workspaceId, sessionId);
       allow update, delete: if false;
