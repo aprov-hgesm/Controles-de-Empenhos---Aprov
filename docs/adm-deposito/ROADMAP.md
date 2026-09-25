@@ -880,3 +880,57 @@ Após o fechamento técnico do Módulo 14:
 Referência arquitetural: **D-071** em `docs/adm-deposito/DECISIONS.md`.
 
 A implementação desse controle granular é trabalho **pós-Módulo 14** e não deve ser misturada com a certificação founder-only atual.
+
+## REPLANEJAMENTO OFICIAL — FASE 9 v2 — CROQUI OPERACIONAL
+
+Data: 2026-09-25.
+
+A Fase 9 originalmente marcada como concluída permanece válida quanto ao domínio, contratos e integração croqui ↔ estoque, porém sua **interface visual foi reaberta para refatoração estrutural** após falhas recorrentes de estabilidade no Browser E2E remoto.
+
+Novo estado:
+- Fase 9 domínio/contratos: **PRESERVADOS**;
+- Fase 9 interface atual: **SUPERSEDIDA / EM SUBSTITUIÇÃO**;
+- Fase 9 v2: **PLANEJADA / NÃO INICIADA**;
+- Módulo 14 certificação remota: **PAUSADA ATÉ A FASE 9 v2**.
+
+### Sequência oficial
+
+`9.0 → 9.1 → 9.2 → 9.3 → 9.4 → 9.5 → 9.6 → 9.7 → 9.8 → 9.9`
+
+#### 9.0 — Auditoria e congelamento
+Mapear e preservar repositories, schemas, histórico, editor, renderização e invariantes existentes.
+
+#### 9.1 — Nova estrutura de Croquis
+Separar seletor de depósito, modo Visualizar/Localizar e modo Editar Croqui.
+
+#### 9.2 — Visualizar / Localizar
+Criar pesquisa em painel próprio com resultados visualmente bounded e sem sobreposição com controles globais.
+
+#### 9.3 — Destaque operacional
+Reutilizar saldos por localização e FEFO para destacar posições reais sem qualquer mutação quantitativa.
+
+#### 9.4 — Editor de Croqui v2
+Concentrar geometria, estruturas, propriedades e vínculo com localizações em modo dedicado, sem pesquisa de materiais.
+
+#### 9.5 — Persistência e versionamento
+Preservar `warehouse_depot_layout_v1`, histórico, versão ativa e independência absoluta do estoque.
+
+#### 9.6 — UX e estabilidade visual
+Validar responsividade, Linux/Windows, ausência de overlaps, controles ocultos e carga visual excessiva.
+
+#### 9.7 — Testes específicos
+Separar Localização, Editor, Persistência, Integridade logística, Segurança e Geometria visual.
+
+#### 9.8 — Integração/regressão ADM
+Revalidar Fases 6–8 e 10, redirects, navegação e autoridades.
+
+#### 9.9 — Fechamento/certificação
+Atualizar documentação, executar regressão ampla e retomar Application CI final do Módulo 14.
+
+### Política de execução
+- sem CI global por submódulo durante 9.0–9.6;
+- testes locais/direcionados primeiro;
+- Browser E2E específico no 9.7;
+- regressão ampla e Application CI apenas no fechamento 9.8/9.9.
+
+Referência arquitetural: **D-073** em `docs/adm-deposito/DECISIONS.md`.
