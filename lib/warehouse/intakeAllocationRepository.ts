@@ -626,6 +626,16 @@ export async function allocateWarehousePendingItem(
     throw new Error('WAREHOUSE_INVALID_BARCODE');
   }
   const operationId = normalizeOperationId(input.operationId);
+  const allocationFingerprint = (
+    await stableHex([
+      operationId,
+      String(quantity),
+      warehouseStockPositionKey(position),
+      lotCode,
+      normalizedExpiry || 'NO_EXPIRY',
+      barcode || 'NO_BARCODE',
+    ].join('\n'))
+  ).slice(0, 20);
 
   const material = await ensureCanonicalMaterial(scope, input);
   const entryMovement = await ensureInvoiceEntry(scope, material, input);
@@ -869,7 +879,7 @@ export async function allocateWarehousePendingItem(
           quantityDelta: 0,
           idempotencyKeyHash: transferMovementId.slice('mov_'.length),
           reversesMovementId: null,
-          note: 'Alocação parcial confirmada pelo intake v2',
+          note: 'Alocação parcial intake v2 · ' + allocationFingerprint,
           source,
         },
         {
