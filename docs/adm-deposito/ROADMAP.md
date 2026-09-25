@@ -537,6 +537,26 @@ Objetivo:
 - manter validação, prévia e confirmação humana;
 - preservar Marco Zero e snapshots conforme decisões anteriores.
 
+
+### Módulo 5 — Migração inicial do SISCOFIS — CONCLUÍDO
+
+Capacidade consolidada sobre o motor histórico da FASE 5:
+- superfície permanece em **Cadastro de Itens → Migração SISCOFIS**;
+- entrada manual e JSON externo usam o mesmo contrato `emprovex_siscofis_inventory_v1`;
+- somente `numeroItem`, `descricao`, `quantidade` e `valorUnitario` vêm da extração;
+- UG vem do contexto autenticado e data-base é informada pelo operador;
+- valor total é calculado deterministicamente;
+- Nº Ficha é preservado por linha, inclusive quando repetido, sem virar `materialId` nem chave de consolidação;
+- IA permanece externa, sem catálogo/materialId/workspace/estruturas internas;
+- prévia permite correção humana dos quatro campos e exige revalidação antes da confirmação;
+- correspondência canônica segura reutiliza unidade do material existente; material novo reutiliza o fallback explícito do fluxo de NF (`other / Apresentação não informada`) sem inventar unidade concreta;
+- Marco Zero continua usando `INITIAL_BALANCE` no ledger e a projeção física oficial em `UNASSIGNED`;
+- snapshots posteriores somente conciliam e não alteram saldo;
+- novos snapshots usam `warehouse_siscofis_snapshot_v2`, mantendo leitura histórica de v1;
+- sem avanço para o Módulo 6.
+
+Gate: manual/JSON → validação → prévia editável → confirmação humana → motor oficial de Marco Zero/snapshot, sem escrita direta de saldo.
+
 ### Módulo 6 — Meus Depósitos multi-depósito
 
 Objetivo:
