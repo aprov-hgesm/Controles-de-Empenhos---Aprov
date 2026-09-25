@@ -244,3 +244,17 @@ A FASE 6 não implementa:
 - expansão para usuários externos.
 
 Essas capacidades permanecem nas fases posteriores do ROADMAP.
+
+
+## Consolidação no Módulo 6 (2026-09-25)
+
+A capacidade histórica desta fase foi reaproveitada, não reimplementada.
+
+A reorganização funcional mantém:
+- `warehouse_depot_v1` para depósitos 1..N;
+- `warehouse_location_v1` para Local/Subposição;
+- códigos e IDs lógicos estáveis;
+- inativação em vez de delete físico;
+- `UNASSIGNED` como posição logística de material ainda não alocado.
+
+**Meus Depósitos** passou a consumir essas mesmas APIs como central administrativa física. Nenhuma segunda coleção de depósitos/localizações foi criada.
