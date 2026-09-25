@@ -2054,9 +2054,15 @@ service cloud.firestore {
 
     match /warehouse/{workspaceId} {
 
+    function warehouseModuleEnabled() {
+      return true;
+    }
+
     function canAccessWarehouseModule(workspaceId) {
-        return workspaceId == 'hgesm-aprov' && isHgesmFounder();
-      }
+      return warehouseModuleEnabled()
+        && workspaceId == 'hgesm-aprov'
+        && isHgesmFounder();
+    }
 
     function validWarehouseMaterialUnit(unit) {
       return unit is map
