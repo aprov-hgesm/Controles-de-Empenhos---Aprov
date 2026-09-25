@@ -328,3 +328,35 @@ Próximo trabalho autorizado, somente quando o PowerShell estiver disponível:
 
 Não interpretar esse gate como aprovação de build, Emulator, E2E, Application CI, merge, deploy ou expansão externa. Nenhuma dessas etapas foi executada no fechamento 14.0/14.1.
 
+## Handoff — Módulo 14 após regressão local final — 2026-09-25
+
+A campanha local de validação foi concluída com sucesso.
+
+Estado:
+- Módulos 1–13: concluídos;
+- Módulo 14 local: **REGRESSÃO FINAL VERDE**;
+- certificação GitHub/Application CI: **PENDENTE**;
+- merge: não realizado;
+- deploy: não realizado;
+- expansão externa: não autorizada;
+- acesso ADM: founder-only.
+
+Resultados que não devem ser repetidos sem motivo:
+- domínio completo: 91/91;
+- regressão final principal de domínio: 85/85;
+- walking skeleton integrado: 70/70;
+- typecheck: 0 erros;
+- multi-tenant: 244/244;
+- homeSnapshot: 1/1;
+- build: PASS;
+- Browser E2E: 21/21.
+
+Próximo trabalho autorizado:
+1. revisar diff final da branch;
+2. preparar/atualizar PR de fechamento;
+3. confirmar EMPROVEX Core Protection;
+4. executar Application CI;
+5. classificar eventual divergência CI x local;
+6. com checks verdes, registrar encerramento técnico do Módulo 14.
+
+Não refazer módulos nem alterar domínio/Rules para obter CI verde. Não fazer merge/deploy automaticamente.
