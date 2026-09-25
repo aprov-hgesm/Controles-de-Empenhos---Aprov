@@ -1020,7 +1020,7 @@ service cloud.firestore {
           'cutoffAt', 'actorUid', 'rows', 'summary', 'movementIds',
           'createdAt', 'confirmedAt'
         ])
-        && request.resource.data.schemaVersion == 'warehouse_siscofis_snapshot_v1'
+        && request.resource.data.schemaVersion in ['warehouse_siscofis_snapshot_v1', 'warehouse_siscofis_snapshot_v2']
         && request.resource.data.id == snapshotId
         && request.resource.data.workspaceId == workspaceId
         && request.resource.data.ug is string

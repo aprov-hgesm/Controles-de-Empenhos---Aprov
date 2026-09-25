@@ -1310,3 +1310,16 @@ A inspeção final acrescentou dois ajustes sem alterar arquitetura:
 - `fc9d1012c437f74921a187ae94c7b8d7e9a2fb76`: a projeção de relatório da saída passou a usar `result.plan.baseQuantity` efetivamente aplicada pelo OUTBOUND oficial, garantindo que o relatório permaneça coerente com o ledger mesmo se a configuração de apresentação tiver mudado entre montagem do carrinho e finalização.
 
 Esses ajustes não alteraram NF, Empenho, Cronograma, política multi-tenant, Módulo 5 ou o diferimento de testes/CI definido por D-057.
+
+
+## Módulo 5 — Migração inicial do SISCOFIS — IMPLEMENTADO NA BRANCH 11.5
+
+- contrato externo `emprovex_siscofis_inventory_v1` com quatro campos;
+- entrada manual e JSON convergem para o mesmo draft externo e adaptador;
+- prompt oficial não expõe catálogo, materialId, UG ou estruturas internas;
+- Nº Ficha é preservado por linha e não é usado como identidade canônica;
+- valor total é calculado deterministicamente pelo EMPROVEX;
+- motor histórico de Marco Zero/snapshot/ledger foi reutilizado;
+- snapshots novos usam `warehouse_siscofis_snapshot_v2`, com leitura retrocompatível de v1;
+- Rules alteradas somente para aceitar explicitamente snapshot v1 ou v2;
+- sem PR, merge ou deploy; Módulo 6 não iniciado.

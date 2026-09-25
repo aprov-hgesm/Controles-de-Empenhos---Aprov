@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 
 import {
-  WAREHOUSE_SISCOFIS_IMPORT_SCHEMA_VERSION,
+  EMPROVEX_SISCOFIS_INVENTORY_SCHEMA_VERSION,
   WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION,
   type WarehouseSiscofisIssue,
   type WarehouseSiscofisPreview,
@@ -19,7 +19,7 @@ import {
 import {
   confirmWarehouseSiscofisImport,
   loadWarehouseSiscofisContext,
-  prepareWarehouseSiscofisImport,
+  prepareEmprovexSiscofisInventoryImport,
   type WarehouseSiscofisContext,
 } from '../../../lib/warehouse/siscofisService';
 
@@ -49,9 +49,10 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [manualNumeroItem, setManualNumeroItem] = useState('');
   const [manualDescription, setManualDescription] = useState('');
   const [manualQuantity, setManualQuantity] = useState('');
-  const [manualUnit, setManualUnit] = useState('unit');
+  const [manualUnitValue, setManualUnitValue] = useState('');
   const [manualReferenceDate, setManualReferenceDate] = useState(
     () => new Date().toISOString().slice(0, 10)
   );
@@ -77,7 +78,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
     setPreview(null);
     setIssues([]);
     try {
-      const nextPreview = await prepareWarehouseSiscofisImport(workspaceId, rawJson);
+      const nextPreview = await prepareEmprovexSiscofisInventoryImport(workspaceId, rawJson, manualReferenceDate);
       setPreview(nextPreview);
       setIssues(nextPreview.issues);
     } catch (error) {
@@ -123,29 +124,25 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
 
   const prepareManualRow = () => {
     const quantity = Number(manualQuantity.replace(',', '.'));
-    if (!manualDescription.trim() || !Number.isFinite(quantity) || quantity < 0) {
-      setMessage('Informe descrição e quantidade válida para a migração manual.');
+    const unitValue = Number(manualUnitValue.replace(/\./g, '').replace(',', '.'));
+    if (!manualNumeroItem.trim() || !manualDescription.trim() || !Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(unitValue) || unitValue < 0) {
+      setMessage('Informe Nº Ficha, descrição, quantidade maior que zero e valor unitário válido.');
       return;
     }
-    const unitLabel = manualUnit === 'other' ? 'Apresentação manual' : null;
+    let currentItems: unknown[] = [];
+    try {
+      const parsed = rawJson.trim() ? JSON.parse(rawJson) : null;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Array.isArray((parsed as { items?: unknown[] }).items)) {
+        currentItems = (parsed as { items: unknown[] }).items;
+      }
+    } catch { currentItems = []; }
     setRawJson(JSON.stringify({
-      schemaVersion: WAREHOUSE_SISCOFIS_IMPORT_SCHEMA_VERSION,
-      ug: '160416',
-      referenceDate: manualReferenceDate,
-      sourceLabel: 'Migração manual SISCOFIS',
-      rows: [{
-        rowId: 'manual-' + Date.now(),
-        materialId: null,
-        description: manualDescription.trim(),
-        unit: { code: manualUnit, label: unitLabel },
-        quantity,
-        unitValue: null,
-        totalValue: null,
-      }],
+      schemaVersion: EMPROVEX_SISCOFIS_INVENTORY_SCHEMA_VERSION,
+      items: [...currentItems, { numeroItem: manualNumeroItem.trim(), descricao: manualDescription.trim(), quantidade: quantity, valorUnitario: unitValue }],
     }, null, 2));
-    setPreview(null);
-    setIssues([]);
-    setMessage('Linha manual preparada no mesmo contrato JSON. Revise e valide antes de confirmar.');
+    setManualNumeroItem(''); setManualDescription(''); setManualQuantity(''); setManualUnitValue('');
+    setPreview(null); setIssues([]);
+    setMessage('Linha adicionada ao mesmo draft oficial. Revise e valide antes de confirmar.');
   };
 
   if (loading && !context) {
@@ -162,14 +159,13 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
       <div className="rounded-2xl border border-emerald-300/10 bg-emerald-400/[0.025] p-5">
         <p className="text-xs font-black uppercase tracking-[0.12em] text-emerald-200">Migração manual de item</p>
         <p className="mt-2 text-xs leading-5 text-slate-500">Para inventários pequenos ou correções de digitação. A linha manual é convertida para o mesmo JSON auditável antes da confirmação.</p>
-        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.7fr)_0.7fr_0.7fr_0.8fr_auto]">
-          <input value={manualDescription} onChange={(e) => setManualDescription(e.target.value)} placeholder="Descrição do item" className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-200" />
+        <div className="mt-4 grid gap-3 lg:grid-cols-[0.7fr_minmax(0,1.7fr)_0.7fr_0.8fr_0.8fr_auto]">
+          <input value={manualNumeroItem} onChange={(e) => setManualNumeroItem(e.target.value)} placeholder="Nº Ficha" className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-200" />
+          <input value={manualDescription} onChange={(e) => setManualDescription(e.target.value)} placeholder="Descrição" className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-200" />
           <input value={manualQuantity} onChange={(e) => setManualQuantity(e.target.value)} inputMode="decimal" placeholder="Quantidade" className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-200" />
-          <select value={manualUnit} onChange={(e) => setManualUnit(e.target.value)} className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-300">
-            <option value="unit">Unidade</option><option value="kg">kg</option><option value="g">g</option><option value="l">L</option><option value="ml">mL</option><option value="package">Pacote</option><option value="box">Caixa</option><option value="bundle">Fardo</option><option value="other">Outro</option>
-          </select>
+          <input value={manualUnitValue} onChange={(e) => setManualUnitValue(e.target.value)} inputMode="decimal" placeholder="Valor unitário" className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-200" />
           <input type="date" value={manualReferenceDate} onChange={(e) => setManualReferenceDate(e.target.value)} className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-300" />
-          <button type="button" onClick={prepareManualRow} className="h-10 rounded-xl border border-emerald-300/15 bg-emerald-400/[0.08] px-4 text-xs font-black text-emerald-100">Preparar</button>
+          <button type="button" onClick={prepareManualRow} className="h-10 rounded-xl border border-emerald-300/15 bg-emerald-400/[0.08] px-4 text-xs font-black text-emerald-100">Adicionar</button>
         </div>
       </div>
 
@@ -188,7 +184,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
 
       <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-5">
         <div className="flex items-center gap-2 text-slate-200"><FileJson2 className="h-4 w-4 text-blue-200" /><p className="text-xs font-black uppercase tracking-[0.12em]">JSON / linha manual preparada</p></div>
-        <textarea value={rawJson} onChange={(event) => setRawJson(event.target.value)} data-testid="warehouse-siscofis-json" placeholder={'{\n  "schemaVersion": "warehouse_siscofis_import_v1",\n  ...\n}'} className="mt-4 h-56 w-full resize-y rounded-xl border border-white/[0.08] bg-[#01050d] p-4 font-mono text-xs leading-5 text-slate-300" />
+        <textarea value={rawJson} onChange={(event) => setRawJson(event.target.value)} data-testid="warehouse-siscofis-json" placeholder={'{\n  "schemaVersion": "emprovex_siscofis_inventory_v1",\n  "items": [...]\n}'} className="mt-4 h-56 w-full resize-y rounded-xl border border-white/[0.08] bg-[#01050d] p-4 font-mono text-xs leading-5 text-slate-300" />
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button type="button" onClick={validateImport} disabled={working || !rawJson.trim()} data-testid="warehouse-siscofis-validate" className="inline-flex h-9 items-center gap-2 rounded-xl bg-blue-500/90 px-4 text-xs font-black text-white disabled:opacity-40">
             {working ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} Validar e gerar prévia
@@ -224,9 +220,9 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
           </div>
           <div className="mt-4 overflow-x-auto rounded-xl border border-white/[0.06]">
             <table className="min-w-[760px] w-full text-left text-xs">
-              <thead className="bg-white/[0.025] text-[9px] uppercase tracking-[0.12em] text-slate-600"><tr><th className="p-3">Material</th><th className="p-3">SISCOFIS</th><th className="p-3">EMPROVEX</th><th className="p-3">Estado</th></tr></thead>
+              <thead className="bg-white/[0.025] text-[9px] uppercase tracking-[0.12em] text-slate-600"><tr><th className="p-3">Nº Ficha</th><th className="p-3">Material</th><th className="p-3">Qtd.</th><th className="p-3">Valor unit.</th><th className="p-3">Total</th><th className="p-3">Estado</th></tr></thead>
               <tbody className="divide-y divide-white/[0.05]">
-                {preview.rows.map((row) => <tr key={row.rowId}><td className="p-3 font-bold text-slate-300">{row.description}</td><td className="p-3 text-slate-300">{row.siscofisQuantity.toLocaleString('pt-BR')}</td><td className="p-3 text-slate-400">{row.emprovexQuantity.toLocaleString('pt-BR')}</td><td className="p-3 text-slate-400">{row.state}</td></tr>)}
+                {preview.rows.map((row) => { const source = preview.import.rows.find((item) => item.rowId === row.rowId); return <tr key={row.rowId}><td className="p-3 font-mono text-slate-300">{row.sourceItemNumber || "—"}</td><td className="p-3 font-bold text-slate-300">{row.description}</td><td className="p-3 text-slate-300">{row.siscofisQuantity.toLocaleString("pt-BR")}</td><td className="p-3 text-slate-400">{source?.unitValue?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00"}</td><td className="p-3 text-slate-400">{source?.totalValue?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00"}</td><td className="p-3 text-slate-400">{row.state}</td></tr>; })}
               </tbody>
             </table>
           </div>
