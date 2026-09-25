@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { createRequire } from 'node:module';
@@ -180,4 +180,32 @@ test('biblioteca física cobre os tipos obrigatórios sem novo schema de layout'
     assert.equal(Number.isFinite(definition.defaultHeight) && definition.defaultHeight >= 12, true);
     assert.equal(Number.isFinite(definition.defaultRotation), true);
   }
+});
+
+
+test('editor visual mantém edição local, 2D/2.5D e sem persistência paralela', () => {
+  const editor = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotLayoutEditor.tsx'),
+    'utf8'
+  );
+  const operational = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotViewOperational.tsx'),
+    'utf8'
+  );
+
+  assert.match(editor, /Vista superior/);
+  assert.match(editor, /Prévia 2\.5D/);
+  assert.match(editor, /Snap/);
+  assert.match(editor, /Undo2/);
+  assert.match(editor, /Redo2/);
+  assert.match(editor, /Duplicar/);
+  assert.match(editor, /Trazer para frente/);
+  assert.match(editor, /Enviar para trás/);
+  assert.match(editor, /nenhum movimento grava no Firestore/);
+  assert.doesNotMatch(editor, /saveWarehouseDepotLayoutVersion|firebase\/firestore|warehouse_balance_v1/);
+
+  assert.match(operational, /WAREHOUSE_STRUCTURE_LIBRARY\.map/);
+  assert.match(operational, /WarehouseDepotLayoutEditor/);
+  assert.match(operational, /saveWarehouseDepotLayoutVersion/);
+  assert.match(operational, /warehouseLocationId/);
 });
