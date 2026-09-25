@@ -1589,3 +1589,39 @@ Essas baterias pertencem ao Módulo 14.
 - Módulo 14: **NÃO INICIADO**;
 - expansão externa: **NÃO AUTORIZADA**;
 - publicação/merge: **NÃO REALIZADOS**.
+
+
+## PLANEJAMENTO 2026-09-25 — MÓDULO 14 AUDITADO E REGISTRADO
+
+Estado:
+- Módulo 13: **ENCERRADO**;
+- Módulo 14: **PLANEJADO / NÃO INICIADO**;
+- branch: `feat/adm-deposito-phase-11-5-visual-ux`;
+- baseline confirmada: `2d8160db956296779bcf86c7040829776d4e20ef`;
+- comparação branch x baseline: idêntica, sem commits posteriores.
+
+Documento oficial:
+- `docs/adm-deposito/MODULE_14_FINAL_VALIDATION_PLAN.md`.
+
+A auditoria preparatória confirmou que o repositório já possui ampla cobertura de domínio/guards do ADM e suíte multi-tenant.
+
+Pendências de cobertura a tratar no Módulo 14:
+- preparar/rodar jornada Browser E2E específica do ADM, pois o E2E genérico atual não contém referências identificáveis às novas superfícies warehouse;
+- executar obrigatoriamente `verify:adm-deposito-phase-11-5` localmente e avaliar sua presença na certificação remota final.
+
+Ordem de campanha aprovada:
+- gates rápidos;
+- domínio;
+- TypeScript;
+- Emulator/security;
+- walking skeleton;
+- build;
+- E2E ADM;
+- regressão EMPROVEX/ADM;
+- correções consolidadas;
+- regressão final;
+- PR/Application CI.
+
+Execução local deverá usar PowerShell de forma consolidada e evitar comando monolítico excessivamente grande. GitHub CI será certificação final. Cloud Shell somente quando houver necessidade remota real.
+
+Nenhum teste pesado, PR, merge, deploy ou expansão externa foi realizado por este registro documental.
