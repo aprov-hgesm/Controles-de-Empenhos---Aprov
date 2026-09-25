@@ -19,7 +19,6 @@ import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
 
 type EditorView = 'top' | 'perspective';
 type InteractionMode = 'select' | 'pan';
-type HistoryState = { past: WarehouseDepotLayoutObject[][]; future: WarehouseDepotLayoutObject[][] };
 
 const GRID_SIZE = 20;
 const MIN_SIZE = 20;
@@ -62,6 +61,11 @@ export function WarehouseDepotLayoutEditor({
   selectedObjectId,
   onSelectedObjectIdChange,
   onObjectsChange,
+  onHistoryCheckpoint,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
   scopeKey,
 }: {
   logicalWidth: number;
@@ -70,6 +74,11 @@ export function WarehouseDepotLayoutEditor({
   selectedObjectId: string | null;
   onSelectedObjectIdChange: (id: string | null) => void;
   onObjectsChange: (objects: WarehouseDepotLayoutObject[]) => void;
+  onHistoryCheckpoint: (previousObjects: WarehouseDepotLayoutObject[]) => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
   scopeKey: string;
 }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -92,12 +101,10 @@ export function WarehouseDepotLayoutEditor({
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [history, setHistory] = useState<HistoryState>({ past: [], future: [] });
 
   useEffect(() => {
     interactionRef.current = null;
     copiedRef.current = null;
-    setHistory({ past: [], future: [] });
     setView('top');
     setMode('select');
     setZoom(1);
@@ -111,12 +118,9 @@ export function WarehouseDepotLayoutEditor({
   );
 
   const commit = useCallback((next: WarehouseDepotLayoutObject[]) => {
-    setHistory((current) => ({
-      past: [...current.past.slice(-49), cloneObjects(objects)],
-      future: [],
-    }));
+    onHistoryCheckpoint(cloneObjects(objects));
     onObjectsChange(next);
-  }, [objects, onObjectsChange]);
+  }, [objects, onHistoryCheckpoint, onObjectsChange]);
 
   const patchObject = useCallback((
     id: string,
@@ -127,30 +131,6 @@ export function WarehouseDepotLayoutEditor({
     if (withHistory) commit(next);
     else onObjectsChange(next);
   }, [commit, objects, onObjectsChange]);
-
-  const undo = useCallback(() => {
-    setHistory((current) => {
-      const previous = current.past[current.past.length - 1];
-      if (!previous) return current;
-      onObjectsChange(cloneObjects(previous));
-      return {
-        past: current.past.slice(0, -1),
-        future: [cloneObjects(objects), ...current.future.slice(0, 49)],
-      };
-    });
-  }, [objects, onObjectsChange]);
-
-  const redo = useCallback(() => {
-    setHistory((current) => {
-      const next = current.future[0];
-      if (!next) return current;
-      onObjectsChange(cloneObjects(next));
-      return {
-        past: [...current.past.slice(-49), cloneObjects(objects)],
-        future: current.future.slice(1),
-      };
-    });
-  }, [objects, onObjectsChange]);
 
   const duplicateSelected = useCallback(() => {
     if (!selected) return;
@@ -215,17 +195,17 @@ export function WarehouseDepotLayoutEditor({
       }
       if (modifier && event.key.toLowerCase() === 'z' && !event.shiftKey) {
         event.preventDefault();
-        undo();
+        onUndo();
         return;
       }
       if ((modifier && event.key.toLowerCase() === 'y') || (modifier && event.shiftKey && event.key.toLowerCase() === 'z')) {
         event.preventDefault();
-        redo();
+        onRedo();
       }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [duplicateSelected, pasteCopied, redo, removeSelected, selected, undo]);
+  }, [duplicateSelected, onRedo, onUndo, pasteCopied, removeSelected, selected]);
 
   const startInteraction = (
     event: React.PointerEvent,
@@ -256,12 +236,9 @@ export function WarehouseDepotLayoutEditor({
     if (interaction && interaction.type !== 'pan' && interaction.startObject && interaction.objectId) {
       const current = objects.find((item) => item.id === interaction.objectId);
       if (current && JSON.stringify(current) !== JSON.stringify(interaction.startObject)) {
-        setHistory((state) => ({
-          past: [...state.past.slice(-49), cloneObjects(
-            objects.map((item) => item.id === interaction.objectId ? interaction.startObject! : item)
-          )],
-          future: [],
-        }));
+        onHistoryCheckpoint(cloneObjects(
+          objects.map((item) => item.id === interaction.objectId ? interaction.startObject! : item)
+        ));
       }
     }
     interactionRef.current = null;
@@ -290,8 +267,8 @@ export function WarehouseDepotLayoutEditor({
             Snap {snapEnabled ? 'on' : 'off'}
           </button>
           <span className="mx-1 h-5 w-px bg-white/[0.07]" />
-          <button type="button" aria-label="Desfazer" disabled={!history.past.length} onClick={undo} className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.05] disabled:opacity-30"><Undo2 className="h-3.5 w-3.5" /></button>
-          <button type="button" aria-label="Refazer" disabled={!history.future.length} onClick={redo} className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.05] disabled:opacity-30"><Redo2 className="h-3.5 w-3.5" /></button>
+          <button type="button" aria-label="Desfazer" disabled={!canUndo} onClick={onUndo} className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.05] disabled:opacity-30"><Undo2 className="h-3.5 w-3.5" /></button>
+          <button type="button" aria-label="Refazer" disabled={!canRedo} onClick={onRedo} className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.05] disabled:opacity-30"><Redo2 className="h-3.5 w-3.5" /></button>
         </div>
         <div className="flex flex-wrap items-center gap-1">
           <button type="button" aria-label="Diminuir zoom" onClick={() => setZoom((value) => clamp(value - 0.1, ZOOM_MIN, ZOOM_MAX))} className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.05]"><ZoomOut className="h-3.5 w-3.5" /></button>
