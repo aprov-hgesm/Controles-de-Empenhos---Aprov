@@ -319,41 +319,32 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
   const commitDraftObjects = (
     next: WarehouseDepotLayoutObject[] | ((items: WarehouseDepotLayoutObject[]) => WarehouseDepotLayoutObject[])
   ) => {
-    setDraftObjects((items) => {
-      const nextItems = typeof next === 'function' ? next(items) : next;
-      checkpointDraft(items);
-      return nextItems;
-    });
+    const previous = cloneDraftObjects(draftObjects);
+    const nextItems = typeof next === 'function' ? next(previous) : next;
+    checkpointDraft(previous);
+    setDraftObjects(nextItems);
   };
 
   const undoDraft = () => {
-    setDraftHistory((current) => {
-      const previous = current.past[current.past.length - 1];
-      if (!previous) return current;
-      setDraftObjects(() => {
-        setSelectedObjectId(null);
-        return cloneDraftObjects(previous);
-      });
-      return {
-        past: current.past.slice(0, -1),
-        future: [cloneDraftObjects(draftObjects), ...current.future.slice(0, 49)],
-      };
+    const previous = draftHistory.past[draftHistory.past.length - 1];
+    if (!previous) return;
+    setDraftHistory({
+      past: draftHistory.past.slice(0, -1),
+      future: [cloneDraftObjects(draftObjects), ...draftHistory.future.slice(0, 49)],
     });
+    setDraftObjects(cloneDraftObjects(previous));
+    setSelectedObjectId(null);
   };
 
   const redoDraft = () => {
-    setDraftHistory((current) => {
-      const nextSnapshot = current.future[0];
-      if (!nextSnapshot) return current;
-      setDraftObjects(() => {
-        setSelectedObjectId(null);
-        return cloneDraftObjects(nextSnapshot);
-      });
-      return {
-        past: [...current.past.slice(-49), cloneDraftObjects(draftObjects)],
-        future: current.future.slice(1),
-      };
+    const nextSnapshot = draftHistory.future[0];
+    if (!nextSnapshot) return;
+    setDraftHistory({
+      past: [...draftHistory.past.slice(-49), cloneDraftObjects(draftObjects)],
+      future: draftHistory.future.slice(1),
     });
+    setDraftObjects(cloneDraftObjects(nextSnapshot));
+    setSelectedObjectId(null);
   };
 
   const reload = async () => {
