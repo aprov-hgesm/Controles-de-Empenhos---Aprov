@@ -38,6 +38,7 @@ import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import { listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
 import type { WarehouseBalance } from '../../../lib/warehouse/movement';
 import {
+  selectWarehouseFefoLot,
   warehouseLotExpiryState,
   type WarehouseLot,
   type WarehouseLotExpiryState,
@@ -483,7 +484,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
   );
 
   const fefoLot = useMemo(
-    () => depotLots.find((lot) => Boolean(lot.expiresOn)) || null,
+    () => selectWarehouseFefoLot(depotLots),
     [depotLots]
   );
 
