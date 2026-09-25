@@ -11,6 +11,8 @@ const layout = read('lib/warehouse/layout.ts');
 const repository = read('lib/warehouse/layoutRepository.ts');
 const ui = read('features/warehouse/components/WarehouseDepotViewOperational.tsx');
 const croquiStructure = read('features/warehouse/components/WarehouseDepotCroquis.tsx');
+const locator = read('lib/warehouse/depotLocator.ts');
+const locatorTest = read('scripts/warehouse-depot-locator.test.mjs');
 const depots = read('features/warehouse/components/WarehouseDepotsOperational.tsx');
 const navigation = read('features/warehouse/navigation.ts');
 const rules = read('firestore.rules');
@@ -53,6 +55,20 @@ assert.match(ui, /warehouse-layout-save/);
 assert.match(ui, /renderWarehouseDepotLayoutSvg/);
 assert.match(ui, /selectWarehouseFefoLot/);
 assert.match(ui, /warehouseLocationIdForPosition/);
+assert.match(ui, /deriveWarehouseMaterialPositions/);
+assert.match(ui, /representedWarehouseLocationIds/);
+assert.match(ui, /warehouse-layout-material-results/);
+assert.match(ui, /warehouse-layout-position-summary/);
+assert.match(ui, /warehouse-layout-unassigned-summary/);
+assert.match(ui, /fefoDepotId === selectedDepotId/);
+assert.match(ui, /ainda não está vinculada a um objeto do croqui/);
+assert.match(locator, /balance\.position\.depotId === depotId/);
+assert.match(locator, /balance\.position\.kind === 'UNASSIGNED'/);
+assert.match(locator, /balance\.quantity > 0/);
+assert.doesNotMatch(locator, /firebase|firestore|saveWarehouse|runTransaction/);
+assert.match(locatorTest, /separa UNASSIGNED/);
+assert.match(locatorTest, /somente posições do depósito atual/);
+assert.match(locatorTest, /sem saldo positivo não produz destaque/);
 assert.match(ui, /Nenhum saldo ou movimento de estoque foi alterado/);
 assert.match(depots, /WarehouseDepotViewOperational/);
 assert.match(depots, /requested === 'croquis'/);
@@ -80,6 +96,10 @@ assert.equal(
 assert.equal(
   packageJson.scripts['verify:adm-deposito-phase-9'],
   'node scripts/verify-adm-deposito-phase-9.mjs'
+);
+assert.equal(
+  packageJson.scripts['test:adm-deposito-depot-locator'],
+  'node --test scripts/warehouse-depot-locator.test.mjs'
 );
 assert.match(workflow, /ADM Depósito Phase 9 depot layout domain tests/);
 assert.match(workflow, /ADM Depósito Phase 9 permanent guard/);
