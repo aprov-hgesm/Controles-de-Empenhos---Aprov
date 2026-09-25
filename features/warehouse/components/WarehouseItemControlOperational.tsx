@@ -6,6 +6,7 @@ import {
   BellRing,
   Boxes,
   ClipboardCheck,
+  FileSpreadsheet,
   Gauge,
   ScanLine,
   Settings2,
@@ -22,6 +23,7 @@ import { WarehouseLogisticsAlerts } from './WarehouseLogisticsAlerts';
 import { WarehouseLogisticsSettings } from './WarehouseLogisticsSettings';
 import { WarehouseLogisticsDashboard } from './WarehouseLogisticsDashboard';
 import { WarehouseSiscofisOperational } from './WarehouseSiscofisOperational';
+import { WarehouseLogisticsReports } from './WarehouseLogisticsReports';
 
 type ControlTab =
   | 'summary'
@@ -32,9 +34,14 @@ type ControlTab =
   | 'deliveries'
   | 'alerts'
   | 'siscofis'
+  | 'reports'
   | 'settings';
 
-const CONTROL_TABS: Array<{ id: ControlTab; label: string; icon: typeof Boxes }> = [
+const CONTROL_TABS: Array<{
+  id: ControlTab;
+  label: string;
+  icon: typeof Boxes;
+}> = [
   { id: 'summary', label: 'Resumo logístico', icon: Gauge },
   { id: 'stock', label: 'Estoque', icon: Boxes },
   { id: 'outbound', label: 'Saída de Material', icon: ScanLine },
@@ -43,11 +50,14 @@ const CONTROL_TABS: Array<{ id: ControlTab; label: string; icon: typeof Boxes }>
   { id: 'deliveries', label: 'Entregas', icon: Truck },
   { id: 'alerts', label: 'Alertas', icon: BellRing },
   { id: 'siscofis', label: 'SISCOFIS', icon: ShieldCheck },
+  { id: 'reports', label: 'Relatórios', icon: FileSpreadsheet },
   { id: 'settings', label: 'Configurações', icon: Settings2 },
 ];
 
 function normalizeRequestedTab(value: string | null): ControlTab {
-  return CONTROL_TABS.some((item) => item.id === value) ? value as ControlTab : 'stock';
+  return CONTROL_TABS.some((item) => item.id === value)
+    ? value as ControlTab
+    : 'stock';
 }
 
 export function WarehouseItemControlOperational({ workspaceId }: { workspaceId: string }) {
@@ -66,10 +76,14 @@ export function WarehouseItemControlOperational({ workspaceId }: { workspaceId: 
           const Icon = item.icon;
           const active = tab === item.id;
           return (
-            <button key={item.id} type="button" onClick={() => setTab(item.id)}
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setTab(item.id)}
               className={active
                 ? 'inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-xs font-black text-[#00288e] shadow-sm'
-                : 'inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-500 hover:text-slate-700'}>
+                : 'inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-500 hover:text-slate-700'}
+            >
               <Icon className="h-3.5 w-3.5" />
               {item.label}
             </button>
@@ -85,6 +99,7 @@ export function WarehouseItemControlOperational({ workspaceId }: { workspaceId: 
       {tab === 'deliveries' && <WarehouseDeliveriesOperational workspaceId={workspaceId} />}
       {tab === 'alerts' && <WarehouseLogisticsAlerts workspaceId={workspaceId} />}
       {tab === 'siscofis' && <WarehouseSiscofisOperational workspaceId={workspaceId} />}
+      {tab === 'reports' && <WarehouseLogisticsReports workspaceId={workspaceId} />}
       {tab === 'settings' && <WarehouseLogisticsSettings workspaceId={workspaceId} />}
     </div>
   );
