@@ -128,6 +128,37 @@ export async function listWarehouseDepotLayouts(
   }
 }
 
+export async function listWarehouseDepotLayoutsForDepot(
+  workspaceId: string,
+  depotId: string,
+  maxResults = 100
+): Promise<WarehouseDepotLayoutListItem[]> {
+  const scope = currentScope(workspaceId);
+  const path = warehouseDomainPath(scope.workspaceId, 'layouts');
+  try {
+    const snapshot = await getDocs(
+      query(
+        collection(db, path),
+        where('depotId', '==', depotId),
+        limit(Math.max(1, Math.min(maxResults, 150)))
+      )
+    );
+    return snapshot.docs
+      .map((item) => {
+        const data = item.data() as Record<string, unknown>;
+        return {
+          layout: parseLayout(scope.workspaceId, item.id, data),
+          createdAt: timestampToIso(data.createdAt),
+          updatedAt: timestampToIso(data.updatedAt),
+        };
+      })
+      .sort((a, b) => b.layout.version - a.layout.version);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return [];
+  }
+}
+
 export async function getActiveWarehouseDepotLayout(
   workspaceId: string,
   depotId?: string | null
@@ -136,7 +167,9 @@ export async function getActiveWarehouseDepotLayout(
   const path = warehouseDomainPath(scope.workspaceId, 'layouts');
   try {
     const snapshot = await getDocs(
-      query(collection(db, path), where('status', '==', 'active'), limit(100))
+      depotId === undefined
+        ? query(collection(db, path), where('status', '==', 'active'), limit(100))
+        : query(collection(db, path), where('depotId', '==', depotId), limit(150))
     );
     const active = snapshot.docs
       .map((item) => {
@@ -147,7 +180,11 @@ export async function getActiveWarehouseDepotLayout(
           updatedAt: timestampToIso(data.updatedAt),
         };
       })
-      .filter((item) => depotId === undefined || item.layout.depotId === depotId)
+      .filter(
+        (item) =>
+          item.layout.status === 'active'
+          && (depotId === undefined || item.layout.depotId === depotId)
+      )
       .sort((a, b) => b.layout.version - a.layout.version);
     if (depotId !== undefined && active.length > 1) {
       throw new Error('WAREHOUSE_LAYOUT_MULTIPLE_ACTIVE_FOR_DEPOT');
