@@ -890,7 +890,7 @@ A Fase 9 originalmente marcada como concluída permanece válida quanto ao domí
 Novo estado:
 - Fase 9 domínio/contratos: **PRESERVADOS**;
 - Fase 9 interface atual: **SUPERSEDIDA / EM SUBSTITUIÇÃO**;
-- Fase 9 v2: **EM DESENVOLVIMENTO — 9.0 e 9.1 CONCLUÍDOS**;
+- Fase 9 v2: **EM DESENVOLVIMENTO — 9.0 a 9.3 CONCLUÍDOS**;
 - Módulo 14 certificação remota: **PAUSADA ATÉ A FASE 9 v2**.
 
 ### Sequência oficial
@@ -924,11 +924,48 @@ Guard estrutural preparado em `scripts/verify-adm-deposito-phase-9.mjs`.
 
 Testes completos, Application CI e Browser E2E não foram executados, conforme D-073. Próximo módulo oficial: **9.2 — Visualizar / Localizar**.
 
-#### 9.2 — Visualizar / Localizar
-Criar pesquisa em painel próprio com resultados visualmente bounded e sem sobreposição com controles globais.
+#### 9.2 — Visualizar / Localizar — CONCLUÍDO em 2026-09-25
+Implementado o modo consultivo de localização:
+- pesquisa por descrição, aliases e ID técnico sobre o conjunto bounded de materiais já carregado;
+- nenhuma leitura Firestore por tecla, hover, polling ou listener novo;
+- resultados em painel próprio com `max-height` e scroll interno;
+- seleção explícita por clique, com hitbox estável e estado `aria-pressed`;
+- material sem saldo positivo tratado sem destaque falso;
+- `UNASSIGNED` exibido como quantidade sem posição física;
+- resumo operacional com quantidade total positiva e quantidade por posição;
+- múltiplas posições preservadas;
+- troca de depósito não reaproveita destaque de outro depósito;
+- nenhuma mutação de estoque, layout ou Core.
 
-#### 9.3 — Destaque operacional
-Reutilizar saldos por localização e FEFO para destacar posições reais sem qualquer mutação quantitativa.
+Validação dirigida:
+- `test:adm-deposito-depot-locator`: **4/4 PASS**;
+- `verify:adm-deposito-phase-9`: **PASS**;
+- `typecheck`: **PASS / 0 erros**.
+
+Gate 9.2: **CONCLUÍDO**, autorizado avançar para 9.3 sem bloqueio.
+
+#### 9.3 — Destaque operacional — CONCLUÍDO em 2026-09-25
+Implementado o destaque derivado exclusivamente das fontes logísticas oficiais:
+- distribuição física continua vindo de `warehouse_location_balance_v1`;
+- somente saldos positivos são considerados;
+- `warehouseLocationIdForPosition` continua sendo a ponte oficial posição → croqui;
+- canvas destaca apenas posições pertencentes ao depósito atualmente selecionado;
+- posições do mesmo material em outros depósitos são informadas no resumo, mas não destacadas no canvas atual;
+- posição física sem objeto correspondente no layout é informada explicitamente;
+- `UNASSIGNED` nunca é transformado em objeto visual;
+- FEFO permanece consultivo e reutiliza `selectWarehouseFefoLot`;
+- FEFO do depósito atual é diferenciado visualmente; FEFO em outro depósito é apenas informado;
+- canvas em Visualizar/Localizar permanece read-only;
+- nenhuma Rule, coleção, schema, índice, saldo, ledger ou contrato Core foi alterado.
+
+Arquivos principais:
+- `lib/warehouse/depotLocator.ts`;
+- `features/warehouse/components/WarehouseDepotViewOperational.tsx`;
+- `scripts/warehouse-depot-locator.test.mjs`;
+- `scripts/verify-adm-deposito-phase-9.mjs`;
+- `package.json`.
+
+Próximo módulo oficial: **9.4 — Editor de Croqui v2**.
 
 #### 9.4 — Editor de Croqui v2
 Concentrar geometria, estruturas, propriedades e vínculo com localizações em modo dedicado, sem pesquisa de materiais.
