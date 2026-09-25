@@ -890,18 +890,39 @@ A Fase 9 originalmente marcada como concluída permanece válida quanto ao domí
 Novo estado:
 - Fase 9 domínio/contratos: **PRESERVADOS**;
 - Fase 9 interface atual: **SUPERSEDIDA / EM SUBSTITUIÇÃO**;
-- Fase 9 v2: **PLANEJADA / NÃO INICIADA**;
+- Fase 9 v2: **EM DESENVOLVIMENTO — 9.0 e 9.1 CONCLUÍDOS**;
 - Módulo 14 certificação remota: **PAUSADA ATÉ A FASE 9 v2**.
 
 ### Sequência oficial
 
 `9.0 → 9.1 → 9.2 → 9.3 → 9.4 → 9.5 → 9.6 → 9.7 → 9.8 → 9.9`
 
-#### 9.0 — Auditoria e congelamento
-Mapear e preservar repositories, schemas, histórico, editor, renderização e invariantes existentes.
+#### 9.0 — Auditoria e congelamento — CONCLUÍDO em 2026-09-25
+Baseline inicial: `6642a3cbd37e17352a83bb330ad99cdbb0449381`.
 
-#### 9.1 — Nova estrutura de Croquis
-Separar seletor de depósito, modo Visualizar/Localizar e modo Editar Croqui.
+Auditoria confirmou:
+- `warehouse_depot_layout_v1`, versionamento, histórico e `warehouseLocationId`: **PRESERVAR**;
+- `layoutRepository`, repositories de depósitos/localizações/materiais/lotes e FEFO consultivo: **PRESERVAR**;
+- `WarehouseDepotLayoutEditor`: **REUTILIZAR COM ADAPTAÇÃO**;
+- composição antiga de pesquisa + seletor + edição na mesma faixa: **SUBSTITUIR NA UI**;
+- `warehouse_balance_v1`, `warehouse_location_balance_v1`, `warehouse_movement_v1`, Core, Rules e autoridade de estoque: **NÃO TOCAR**.
+
+Acoplamento principal identificado: `selectedDepotId`, `queryText`, `selectedMaterialId` e o controle de modo eram coordenados dentro de `WarehouseDepotViewOperational`, com pesquisa e seletor compartilhando o mesmo cartão/flex dinâmico.
+
+#### 9.1 — Nova estrutura de Croquis — CONCLUÍDO em 2026-09-25
+Implementada a fundação estrutural do Croqui Operacional v2:
+- `WarehouseDepotSelector` em região própria e estável;
+- `WarehouseCroquiModeSwitch` com modos explícitos **Visualizar / Localizar** e **Editar Croqui**;
+- `WarehouseCroquiViewMode` e `WarehouseCroquiEditMode` em containers independentes;
+- `WarehouseCroquiMainRegion` para isolar a superfície principal;
+- resultados de pesquisa mantidos com altura limitada e scroll interno, sem disputar a região do seletor;
+- `min-w-0` aplicado nas regiões críticas para evitar overflow horizontal;
+- sem posicionamento absoluto/fixed para controles operacionais;
+- contratos e comportamento histórico preservados.
+
+Guard estrutural preparado em `scripts/verify-adm-deposito-phase-9.mjs`.
+
+Testes completos, Application CI e Browser E2E não foram executados, conforme D-073. Próximo módulo oficial: **9.2 — Visualizar / Localizar**.
 
 #### 9.2 — Visualizar / Localizar
 Criar pesquisa em painel próprio com resultados visualmente bounded e sem sobreposição com controles globais.
