@@ -69,6 +69,37 @@ Integração nova:
 Branch:
 `feat/adm-deposito-phase-11-5-visual-ux`
 
+## Módulos 6 e 7 — fechamento consolidado em 2026-09-25
+
+HEAD auditado no início do trabalho:
+`8eeacf083d6424980c67a63697ef361e1b06e620`.
+
+**Módulo 6 — Meus Depósitos multi-depósito: CONCLUÍDO.**
+- os contratos históricos de depósito/localização foram reaproveitados sem nova fonte de verdade;
+- criação, edição, inativação, locais e subposições continuam nas APIs oficiais da FASE 6;
+- `UNASSIGNED` permanece intacto;
+- layout ativo e histórico agora são recuperados por consulta scoped ao `depotId`;
+- a interface mostra somente ativo/histórico do depósito selecionado e possui estado vazio próprio para depósito sem layout;
+- versionamento continua criando documento novo e arquivando a versão anterior do mesmo depósito.
+
+**Módulo 7 — Biblioteca de estruturas físicas: CONCLUÍDO.**
+- criado catálogo estático central `WAREHOUSE_STRUCTURE_LIBRARY`;
+- catálogo inclui Estante, Rack, Armário, Freezer, Geladeira, Câmara, Palete, Área de Paletes, Bancada, Corredor, Área Livre e Outra estrutura;
+- defaults incluem proporções/dimensões iniciais, rotação, categoria, variante visual e suporte conceitual a níveis/subposições;
+- instâncias continuam persistidas somente em `warehouse_depot_layout_v1.objects`;
+- nenhum tipo de estrutura foi persistido em coleção própria;
+- layouts legados continuam aceitos, inclusive tipos que não aparecem como template principal;
+- biblioteca foi exposta no editor existente sem antecipar drag/resize/grid/zoom/pan/undo-redo do Módulo 8;
+- teste contratual do croqui foi preparado para validar o catálogo na campanha do Módulo 14.
+
+Firestore Rules: **sem alteração nos Módulos 6/7**. A auditoria confirmou founder-only, isolamento por workspace/UG, delete físico negado para depósito/localização/layout e versionamento de layout já compatível.
+
+Core Protection: preservada. Nenhum arquivo do Core operacional de NF, Empenho, Cronograma, Comissão, Liquidação ou Tesouraria foi alterado.
+
+Validação: conforme D-057, não foram executados Application CI completo, Browser E2E completo, suíte Firestore completa, build global ou regressão global. Não houve PR, merge ou deploy.
+
+Próximo módulo oficial: **Módulo 8 — Editor visual do croqui**.
+
 Pendência operacional conhecida:
 - as Firestore Rules atualizadas desta branch ainda precisam ser publicadas no banco nomeado antes de testar cadastros reais no Preview;
 - o erro observado anteriormente ao listar `warehouse/hgesm-aprov/depots` permanece compatível com Rules de produção desatualizadas ou sessão não reconhecida, e deve ser reavaliado após publicação das Rules atuais.
