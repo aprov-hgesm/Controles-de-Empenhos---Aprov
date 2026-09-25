@@ -805,7 +805,10 @@ export async function finalizeWarehouseMaterialWithdrawal(
       await recordStockConsumption({
         workspaceId: scope.workspaceId,
         withdrawal,
-        line,
+        line: {
+          ...line,
+          baseQuantity: result.plan.baseQuantity,
+        },
         movement: result.movement,
       });
       completed = Math.max(completed, index + 1);
