@@ -174,3 +174,31 @@ Para o Módulo 9:
 - focar destaque/consulta de material e integração visual com saldos/posições;
 - não fazer geometria mover estoque;
 - manter D-057 e não executar campanha global antes do Módulo 14.
+
+
+## Estado corrente após os Módulos 9 e 10 da reorganização funcional
+
+Branch de continuidade:
+`feat/adm-deposito-phase-11-5-visual-ux`.
+
+Concluído em 2026-09-25, nesta ordem:
+- **Módulo 9 — Integração croqui ↔ estoque**;
+- **Módulo 10 — Finalização da aba Início**.
+
+Tratar como existente:
+- `warehouse_depot_layout_v1` continua autoridade do croqui;
+- saldos/lotes continuam autoridades quantitativas;
+- `warehouseLocationId` liga posição real a objeto visual;
+- Início carrega somente o layout ativo do depósito selecionado;
+- múltiplas posições podem ser destacadas;
+- FEFO usa o motor oficial;
+- localização sem objeto visual continua informada;
+- clique em estrutura mostra apenas contexto da pesquisa;
+- geometria nunca movimenta estoque;
+- Firestore Rules e Core EMPROVEX permaneceram inalterados;
+- D-057 continua reservando campanha global ao Módulo 14.
+
+Próximo módulo oficial:
+- **Módulo 11 — Consolidação do Controle de Itens**.
+
+O Módulo 11 ainda não foi iniciado.
