@@ -144,3 +144,19 @@ Não implementados:
 - IA interna.
 
 A próxima fase oficial permanece a FASE 10 — Inventário Físico.
+
+
+## Consolidação nos Módulos 6 e 7 (2026-09-25)
+
+O contrato `warehouse_depot_layout_v1` permanece inalterado e continua sendo a fonte de verdade do croqui.
+
+A consolidação atual:
+- consulta layout ativo e histórico explicitamente por `depotId`;
+- preserva histórico independente entre depósitos;
+- mantém layouts antigos compatíveis e imutáveis;
+- adiciona a biblioteca estática `WAREHOUSE_STRUCTURE_LIBRARY` como catálogo de defaults, sem coleção Firestore;
+- persiste somente as instâncias usadas em `objects`;
+- mantém `warehouseLocationId` como referência opcional à identidade logística real;
+- não adiciona saldo, lote ou movimento ao layout.
+
+O editor avançado continua reservado ao Módulo 8.
