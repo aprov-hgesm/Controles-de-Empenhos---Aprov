@@ -404,3 +404,96 @@ Gate: **B — permitido avançar para 14.2 quando PowerShell estiver disponível
 
 Nenhum teste dinâmico, CI, PR, merge ou deploy foi executado neste registro.
 
+## 16. Registro de execução consolidado — 14.2 até regressão local final — 2026-09-25
+
+A campanha dinâmica do Módulo 14 foi executada na estação local Windows/PowerShell do fundador, preservando a política D-057.
+
+### 14.2 — Gates rápidos
+Resultado: **CONCLUÍDO / APROVADO**.
+
+Foram validados:
+- Core Protection;
+- isolamento EMPROVEX / ADM Depósito;
+- guards ADM das fases anteriores;
+- guard 11.5;
+- guard do Módulo 13;
+- readiness/multitenancy aplicáveis.
+
+Falhas encontradas nesta etapa foram classificadas como **B — guards desatualizados**, reconciliadas somente após confirmação dos contratos oficiais vigentes. Não houve regressão funcional de domínio nem relaxamento de Rules.
+
+### 14.3 — Testes de domínio ADM
+Resultado: **CONCLUÍDO / APROVADO**.
+
+Campanha completa: **91/91 testes aprovados** após correções estritamente de teste/fixture classificadas como B.
+
+Na regressão local final posterior, a bateria consolidada principal de domínio foi novamente executada e fechou **85/85**, sem falhas.
+
+### 14.4 — TypeScript
+Resultado: **CONCLUÍDO / APROVADO**.
+
+- `npm run typecheck`;
+- `tsc --noEmit`;
+- **0 erros**.
+
+### 14.5 — Firestore Emulator + segurança multi-tenant
+Resultado: **CONCLUÍDO / APROVADO**.
+
+- Auth/Firestore Emulator inicializados corretamente;
+- **244/244 cenários multi-tenant aprovados**;
+- `MULTI-TENANT SECURITY: READY`;
+- `homeSnapshot`: **1/1 aprovado**;
+- saída final: **code 0**.
+
+Os `PERMISSION_DENIED` observados no log correspondem aos cenários DENY esperados e aprovados.
+
+### 14.6 — Walking skeleton integrado
+Resultado: **CONCLUÍDO / APROVADO**.
+
+Regressão integrada da cadeia operacional: **70/70 testes aprovados**.
+
+A cadeia material → entrada → movimento → saldo → localização → lote → barcode → saída → novo saldo → histórico permaneceu coerente.
+
+### 14.7 — Build de produção
+Resultado: **CONCLUÍDO / APROVADO**.
+
+- Next.js 15.5.24;
+- build de produção concluído;
+- geração estática: **24/24**;
+- sem falha bloqueante.
+
+### Browser E2E específico do ADM
+Resultado: **CONCLUÍDO / APROVADO**.
+
+A cobertura do Browser E2E foi atualizada para refletir a IA 11.5 e recebeu hooks técnicos estáveis sem alterar regra de negócio.
+
+Resultado final:
+- **21/21 testes aprovados**;
+- **0 falhas**;
+- processo finalizado com **code 0**.
+
+### Regressão local final consolidada
+Resultado: **CONCLUÍDA / APROVADA**.
+
+Na rodada final, após sincronização documental:
+- Core Protection: OK;
+- isolamento EMPROVEX / ADM: PASS;
+- guard 11.5: PASS;
+- Módulo 13: READY;
+- domínio principal: **85/85**;
+- TypeScript: **0 erros**;
+- segurança multi-tenant: **244/244**;
+- homeSnapshot: **1/1**;
+- build: PASS;
+- Browser E2E: **21/21**.
+
+Nenhuma regressão A permaneceu aberta.
+
+### Próximo gate
+A estação local está verde. Restam para o encerramento técnico do Módulo 14:
+1. revisão do diff final;
+2. PR de fechamento;
+3. workflow leve EMPROVEX Core Protection;
+4. **Application CI** como certificação remota final;
+5. documentação de encerramento após os checks remotos.
+
+Merge, deploy e expansão externa continuam dependendo de decisão explícita do fundador.
