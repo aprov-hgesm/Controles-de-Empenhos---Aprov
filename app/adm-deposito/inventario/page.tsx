@@ -1,5 +1,5 @@
-import { WarehouseProtectedSurface } from '../../../features/warehouse/components/WarehouseProtectedSurface';
+import { redirect } from 'next/navigation';
 
-export default function WarehouseInventoryPage() {
-  return <WarehouseProtectedSurface section="inventory" />;
+export default function LegacyWarehouseRoute() {
+  redirect('/adm-deposito/controle-de-itens?aba=inventory');
 }

@@ -19,9 +19,8 @@ const lotRepository = read('lib/warehouse/lotRepository.ts');
 const ledger = read('lib/warehouse/ledgerRepository.ts');
 const namespace = read('lib/warehouse/namespace.ts');
 const stock = read('features/warehouse/components/WarehouseStockOperational.tsx');
-const content = read('features/warehouse/components/WarehouseSectionContent.tsx');
+const control = read('features/warehouse/components/WarehouseItemControlOperational.tsx');
 const navigation = read('features/warehouse/navigation.ts');
-const shell = read('features/warehouse/components/WarehouseModuleShell.tsx');
 const rules = read('firestore.rules');
 const securityTests = read('scripts/firestore-multitenancy-security.test.mjs');
 const browserE2e = read('tests/e2e/warehouse-phase-7.spec.mjs');
@@ -78,22 +77,10 @@ for (const marker of [
   requireText(stock, marker, 'Superfície Estoque FASE 7 incompleta: ' + marker);
 }
 
-requireText(
-  content,
-  '<WarehouseStockOperational workspaceId={workspaceId} />',
-  'A aba Estoque não está ligada à superfície operacional da FASE 7.'
-);
-requireText(
-  navigation,
-  "id: 'stock', label: 'Estoque'",
-  'Navegação Estoque foi removida.'
-);
-requireText(
-  navigation,
-  "recomendação FEFO.', futurePhase: null",
-  'Estoque ainda está marcado como capacidade futura.'
-);
-requireText(shell, 'EMPROVEX // FASE ', 'Shell não preserva a identificação evolutiva de fase.');
+requireText(control, 'WarehouseStockOperational', 'Controle de Itens não expõe Estoque.');
+requireText(control, "{ id: 'stock', label: 'Estoque'", 'Subaba Estoque ausente no Controle de Itens.');
+requireText(navigation, "id: 'control'", 'Navegação Controle de Itens ausente.');
+requireText(navigation, "label: 'Controle de Itens'", 'Rótulo Controle de Itens ausente.');
 
 for (const marker of [
   'function validWarehouseLotOrigin',

@@ -1,5 +1,5 @@
-import { WarehouseProtectedSurface } from '../../../features/warehouse/components/WarehouseProtectedSurface';
+import { redirect } from 'next/navigation';
 
-export default function WarehouseLocationsPage() {
-  return <WarehouseProtectedSurface section="locations" />;
+export default function LegacyWarehouseRoute() {
+  redirect('/adm-deposito/meus-depositos?aba=estrutura');
 }

@@ -241,13 +241,42 @@ export function WarehouseStockOperational({
     [state.materials]
   );
 
+  const locationBalancesByMaterial = useMemo(() => {
+    const index = new Map<string, typeof state.locationBalances>();
+    for (const item of state.locationBalances) {
+      const current = index.get(item.balance.materialId);
+      if (current) current.push(item);
+      else index.set(item.balance.materialId, [item]);
+    }
+    return index;
+  }, [state.locationBalances]);
+
+  const lotsByMaterial = useMemo(() => {
+    const index = new Map<string, typeof state.lots>();
+    for (const item of state.lots) {
+      const current = index.get(item.lot.materialId);
+      if (current) current.push(item);
+      else index.set(item.lot.materialId, [item]);
+    }
+    return index;
+  }, [state.lots]);
+
+  const barcodesByMaterial = useMemo(() => {
+    const index = new Map<string, typeof state.barcodes>();
+    for (const item of state.barcodes) {
+      const current = index.get(item.association.materialId);
+      if (current) current.push(item);
+      else index.set(item.association.materialId, [item]);
+    }
+    return index;
+  }, [state.barcodes]);
+
   const summaries = useMemo<MaterialSummary[]>(() => {
     return state.balances
       .map((balance) => {
         const material = materialById.get(balance.materialId);
         if (!material) return null;
-        const locationBalances = state.locationBalances
-          .filter((item) => item.balance.materialId === balance.materialId)
+        const locationBalances = (locationBalancesByMaterial.get(balance.materialId) || [])
           .map((item) => item.balance);
         const physical = locationBalances.filter(
           (item) => item.position.kind !== 'UNASSIGNED'
@@ -261,11 +290,9 @@ export function WarehouseStockOperational({
         } catch {
           unassigned = 0;
         }
-        const lots = state.lots
-          .filter((item) => item.lot.materialId === balance.materialId)
+        const lots = (lotsByMaterial.get(balance.materialId) || [])
           .map((item) => item.lot);
-        const barcodes = state.barcodes
-          .filter((item) => item.association.materialId === balance.materialId)
+        const barcodes = (barcodesByMaterial.get(balance.materialId) || [])
           .map((item) => item.association.barcode);
         const locationLabels = Array.from(
           new Set([
@@ -308,13 +335,13 @@ export function WarehouseStockOperational({
       })
       .filter((item): item is MaterialSummary => Boolean(item));
   }, [
+    barcodesByMaterial,
+    locationBalancesByMaterial,
+    lotsByMaterial,
     materialById,
     state.balances,
-    state.barcodes,
     state.depots,
-    state.locationBalances,
     state.locations,
-    state.lots,
   ]);
 
   const filtered = useMemo(() => {

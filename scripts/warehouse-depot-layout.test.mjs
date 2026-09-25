@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { createRequire } from 'node:module';
@@ -16,6 +16,7 @@ execFileSync(
   [
     resolve(root, 'node_modules/typescript/bin/tsc'),
     resolve(root, 'lib/warehouse/layout.ts'),
+    resolve(root, 'lib/warehouse/structureLibrary.ts'),
     resolve(root, 'lib/warehouse/location.ts'),
     resolve(root, 'lib/warehouse/material.ts'),
     resolve(root, 'lib/platformIdentity.ts'),
@@ -35,6 +36,7 @@ execFileSync(
 
 const require = createRequire(import.meta.url);
 const source = require(resolve(outDir, 'warehouse/layout.js'));
+const structureLibrary = require(resolve(outDir, 'warehouse/structureLibrary.js'));
 
 test.after(() => {
   rmSync(outDir, { recursive: true, force: true });
@@ -149,4 +151,199 @@ test('SVG é derivado do layout e não contém quantidade/saldo', () => {
   assert.match(svg, /<svg/);
   assert.match(svg, /Estante A/);
   assert.doesNotMatch(svg, /quantity|balance|saldo/i);
+});
+
+
+test('biblioteca física cobre os tipos obrigatórios sem novo schema de layout', () => {
+  const required = [
+    'Estante',
+    'Rack',
+    'Armário',
+    'Freezer',
+    'Geladeira',
+    'Câmara',
+    'Palete',
+    'Área de Paletes',
+    'Bancada',
+    'Corredor',
+    'Área Livre',
+    'Outra estrutura',
+  ];
+  const names = new Set(
+    structureLibrary.WAREHOUSE_STRUCTURE_LIBRARY.map((definition) => definition.name)
+  );
+  for (const name of required) assert.equal(names.has(name), true, name);
+
+  for (const definition of structureLibrary.WAREHOUSE_STRUCTURE_LIBRARY) {
+    assert.equal(source.WAREHOUSE_DEPOT_LAYOUT_OBJECT_KINDS.includes(definition.kind), true);
+    assert.equal(Number.isFinite(definition.defaultWidth) && definition.defaultWidth >= 12, true);
+    assert.equal(Number.isFinite(definition.defaultHeight) && definition.defaultHeight >= 12, true);
+    assert.equal(Number.isFinite(definition.defaultRotation), true);
+  }
+});
+
+
+test('editor visual mantém edição local, 2D/2.5D e sem persistência paralela', () => {
+  const editor = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotLayoutEditor.tsx'),
+    'utf8'
+  );
+  const operational = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotViewOperational.tsx'),
+    'utf8'
+  );
+
+  assert.match(editor, /Vista superior/);
+  assert.match(editor, /Prévia 2\.5D/);
+  assert.match(editor, /Snap/);
+  assert.match(editor, /Undo2/);
+  assert.match(editor, /Redo2/);
+  assert.match(editor, /Duplicar/);
+  assert.match(editor, /Trazer para frente/);
+  assert.match(editor, /Enviar para trás/);
+  assert.match(editor, /nenhum movimento grava no Firestore/);
+  assert.doesNotMatch(editor, /saveWarehouseDepotLayoutVersion|firebase\/firestore|warehouse_balance_v1/);
+
+  assert.match(operational, /WAREHOUSE_STRUCTURE_LIBRARY\.map/);
+  assert.match(operational, /WarehouseDepotLayoutEditor/);
+  assert.match(operational, /saveWarehouseDepotLayoutVersion/);
+  assert.match(operational, /warehouseLocationId/);
+});
+
+test('croqui v2 preserva integridade logística e vínculos inequívocos nas novas edições', () => {
+  const editor = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotLayoutEditor.tsx'),
+    'utf8'
+  );
+  const operational = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotViewOperational.tsx'),
+    'utf8'
+  );
+  const repository = readFileSync(
+    resolve(root, 'lib/warehouse/layoutRepository.ts'),
+    'utf8'
+  );
+
+  const clearedLinks = editor.match(/warehouseLocationId:\s*null/g) || [];
+  assert.ok(clearedLinks.length >= 2, 'duplicar e colar devem nascer sem vínculo logístico');
+  assert.match(operational, /já está representada por/);
+  assert.match(operational, /duplicateWarehouseLocationIds/);
+  assert.match(repository, /WAREHOUSE_LAYOUT_DUPLICATE_LOCATION_REFERENCE/);
+  assert.match(repository, /assertUniqueLayoutLocationReferences/);
+  assert.match(repository, /getActiveWarehouseDepotLayoutStrict/);
+  assert.match(repository, /const active = await getActiveWarehouseDepotLayoutStrict/);
+  assert.doesNotMatch(repository, /warehouse_balance_v1|warehouse_location_balance_v1|warehouse_movement_v1|warehouse_lot_v1/);
+});
+
+test('croqui v2 usa um único histórico local para canvas e painel de propriedades', () => {
+  const editor = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotLayoutEditor.tsx'),
+    'utf8'
+  );
+  const operational = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotViewOperational.tsx'),
+    'utf8'
+  );
+
+  assert.match(editor, /onHistoryCheckpoint/);
+  assert.match(editor, /canUndo/);
+  assert.match(editor, /onUndo/);
+  assert.doesNotMatch(editor, /setHistory\(/);
+  assert.match(operational, /draftHistory/);
+  assert.match(operational, /commitDraftObjects/);
+  assert.match(operational, /resetDraftHistory/);
+  assert.match(operational, /onHistoryCheckpoint=\{checkpointDraft\}/);
+});
+
+test('croqui v2 possui estrutura responsiva sem sobreposição artificial', () => {
+  const editor = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotLayoutEditor.tsx'),
+    'utf8'
+  );
+  const operational = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotViewOperational.tsx'),
+    'utf8'
+  );
+  const structure = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotCroquis.tsx'),
+    'utf8'
+  );
+
+  assert.match(editor, /warehouse-croqui-editor-toolbar/);
+  assert.match(editor, /warehouse-croqui-editor-viewport/);
+  assert.match(editor, /flex-wrap/);
+  assert.match(editor, /max-w-full/);
+  assert.match(operational, /2xl:grid-cols-\[minmax\(0,1fr\)_330px\]/);
+  assert.match(operational, /warehouse-croqui-properties-panel/);
+  assert.match(operational, /2xl:overflow-y-auto/);
+  assert.match(structure, /min-w-0/);
+  assert.doesNotMatch(structure, /position:\s*(absolute|fixed)|z-index:\s*\d{3,}/);
+});
+
+test('cancelamento e restauração histórica preservam persistência explícita', () => {
+  const operational = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotViewOperational.tsx'),
+    'utf8'
+  );
+
+  assert.match(operational, /setMode\('view'\)/);
+  assert.match(operational, /Usar como base/);
+  assert.match(operational, /Salve para criar uma nova versão ativa/);
+  assert.match(operational, /expectedVersion:/);
+  assert.match(operational, /baseLayoutId:/);
+  assert.match(operational, /WAREHOUSE_LAYOUT_DEPOT_CONTEXT_CHANGED/);
+});
+
+test('Início consome somente layout ativo e mantém croqui como consulta do estoque', () => {
+  const home = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseHomeOperational.tsx'),
+    'utf8'
+  );
+
+  assert.match(home, /getActiveWarehouseDepotLayout/);
+  assert.doesNotMatch(home, /listWarehouseDepotLayouts/);
+  assert.match(home, /listWarehouseLocationBalances/);
+  assert.match(home, /listWarehouseBalances/);
+  assert.match(home, /selectWarehouseFefoLot/);
+  assert.match(home, /Ainda não representada no croqui/);
+  assert.match(home, /Prioridade FEFO/);
+  assert.match(home, /selectedStructureRows/);
+  assert.doesNotMatch(home, /saveWarehouseDepotLayoutVersion/);
+  assert.doesNotMatch(home, /warehouse_visual_balance|warehouse_map_balance|warehouse_stock_map/);
+});
+
+
+test('geometria fora dos limites lógicos é rejeitada pelo contrato', () => {
+  const result = source.validateWarehouseDepotLayout(
+    layout({
+      objects: [object({ x: 950, width: 100 })],
+    })
+  );
+  assert.equal(result.ok, false);
+  assert.match(result.issues.map((item) => item.code).join(','), /object_out_of_bounds/);
+});
+
+test('gate 9.7 mantém editor sem acesso direto a saldo, ledger, lotes, NF ou Core', () => {
+  const editor = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotLayoutEditor.tsx'),
+    'utf8'
+  );
+  const operational = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotViewOperational.tsx'),
+    'utf8'
+  );
+
+  for (const forbidden of [
+    'warehouse_balance_v1',
+    'warehouse_location_balance_v1',
+    'warehouse_movement_v1',
+    'warehouse_lot_v1',
+    'invoices',
+    'empenhos',
+  ]) {
+    assert.doesNotMatch(editor, new RegExp(forbidden));
+  }
+
+  assert.doesNotMatch(editor, /firebase\/firestore|runTransaction|setDoc|updateDoc|writeBatch/);
+  assert.match(operational, /Nenhum saldo ou movimento de estoque foi alterado/);
 });

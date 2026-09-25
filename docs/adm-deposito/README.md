@@ -76,3 +76,114 @@ Em divergências:
 ## Escopo do piloto
 
 O módulo permanece disponível somente para a conta fundadora até o fechamento da FASE 13 e autorização explícita para a FASE 14.
+
+
+## Consolidação SISCOFIS no Módulo 5
+
+A arquitetura 11.5 mantém o motor histórico de Marco Zero/Conciliação, mas a entrada operacional foi simplificada. O contrato externo oficial é `emprovex_siscofis_inventory_v1`, com somente Nº Ficha, descrição, quantidade e valor unitário. Entrada manual e JSON de IA externa convergem antes da validação. A IA não recebe UG, catálogo, materialId, unidade nem estruturas internas. O Nº Ficha é dado auditável de origem e nunca identidade canônica. O ledger continua sendo a única autoridade quantitativa; `INITIAL_BALANCE` materializa também a posição `UNASSIGNED` pelo repository oficial. Novos snapshots usam v2, com leitura retrocompatível de v1. Ver D-066 e `PHASE_5_SISCOFIS.md`.
+
+
+## Consolidação dos Módulos 6 e 7
+
+Em 2026-09-25, **Meus Depósitos multi-depósito** e a **Biblioteca de estruturas físicas** foram consolidados na branch oficial da FASE 11.5.
+
+Pontos de continuidade:
+- depósitos/localizações continuam nos contratos históricos `warehouse_depot_v1` e `warehouse_location_v1`;
+- `UNASSIGNED` continua sendo posição logística, nunca depósito;
+- `warehouse_depot_layout_v1` continua sendo a única persistência do croqui;
+- ativo e histórico são recuperados explicitamente por `depotId`;
+- a biblioteca padrão vive em código (`WAREHOUSE_STRUCTURE_LIBRARY`) e persiste somente as instâncias realmente utilizadas no layout;
+- nenhuma coleção Firestore de tipos de estrutura foi criada;
+- Firestore Rules não precisaram ser alteradas;
+- Módulo 8 é o próximo passo oficial e deverá consumir essa biblioteca sem reimplementar os contratos existentes.
+
+Ver D-067 e ROADMAP.
+
+## Consolidação do Módulo 8 — Editor visual do croqui
+
+Em 2026-09-25, o Módulo 8 foi concluído na branch oficial da FASE 11.5.
+
+- edição oficial permanece em planta baixa 2D;
+- prévia 2.5D é derivada dos mesmos objetos do layout, sem segundo formato;
+- grade e snap são opcionais;
+- zoom e pan são locais ao editor;
+- drag, resize e rotação não escrevem no Firestore;
+- duplicação, exclusão visual, camadas e atalhos operam somente sobre o draft local;
+- undo/redo existe somente durante a sessão do editor;
+- biblioteca permanece em `WAREHOUSE_STRUCTURE_LIBRARY`;
+- persistência continua exclusivamente em `warehouse_depot_layout_v1`;
+- salvar versão continua sendo a única ação de persistência do editor;
+- múltiplos depósitos permanecem isolados por `depotId`;
+- Firestore Rules e Core EMPROVEX não foram alterados.
+
+A camada visual foi implementada sem Fabric.js/Konva: a auditoria concluiu que evoluir o canvas React já existente era mais simples e leve para a base atual, evitando dependência imperativa adicional e mantendo a meta de baixo custo gráfico em máquinas antigas.
+
+## Consolidação dos Módulos 9 e 10 — Croqui ↔ Estoque e Início
+
+Em 2026-09-25, os Módulos 9 e 10 foram concluídos, nesta ordem, na branch oficial da FASE 11.5.
+
+- a aba **Início** consome somente o layout ativo do depósito selecionado;
+- a pesquisa usa o material canônico e saldos oficiais já materializados;
+- `warehouseLocationId` continua sendo a ponte entre posição logística e objeto visual;
+- múltiplas posições do mesmo material podem ser destacadas simultaneamente;
+- FEFO reutiliza `selectWarehouseFefoLot` e permanece apenas recomendação operacional;
+- localizações com saldo sem objeto visual continuam visíveis textualmente;
+- clique em estrutura destacada mostra o contexto do material naquela posição;
+- a Início não edita geometria e não persiste saldo, lote ou quantidade no croqui;
+- o editor continua em **Meus Depósitos / Croquis**;
+- o croqui ativo é carregado sob demanda por depósito, sem carregar histórico na Início;
+- nenhuma Firestore Rule, coleção paralela ou parte do Core EMPROVEX foi alterada.
+
+Próximo módulo oficial: **Módulo 11 — Consolidação do Controle de Itens**.
+
+
+## Consolidação dos Módulos 11 e 12 — Controle de Itens e Relatórios Logísticos
+
+Em 2026-09-25, os Módulos 11 e 12 da consolidação 11.5 foram executados em sequência, sem avançar para o Módulo 13.
+
+### Módulo 11 — Controle de Itens
+- **Controle de Itens** é a superfície operacional principal do ciclo do material;
+- subabas consolidadas: Resumo logístico, Estoque, Saída de Material, Movimentações, Inventário, Entregas, Alertas, SISCOFIS, Relatórios e Configurações;
+- superfícies históricas continuam sendo reutilizadas; não existe segundo motor de estoque, saída, inventário, alerta ou SISCOFIS;
+- rotas históricas continuam por redirects/compatibilidade;
+- a migração SISCOFIS permanece no componente oficial já existente, sem novo contrato ou nova coleção;
+- somente a subaba aberta monta sua superfície e dispara as leituras necessárias.
+
+### Módulo 12 — Relatórios Logísticos
+- nova camada oficial em `WarehouseLogisticsReports`;
+- relatórios de estoque/localização/lotes/validade reutilizam `WarehouseStockOperational`;
+- consumo imediato e saídas reutilizam `WarehouseConsumptionReports`, incluindo períodos diário/semanal/quinzenal/mensal e CSV;
+- movimentações e entradas por NF derivam diretamente de `warehouse_movement_v1`, com consulta bounded de até 250 movimentos, filtros locais e CSV;
+- inventários reutilizam o histórico oficial de `warehouse_inventory_v1`;
+- SISCOFIS reutiliza o contexto/snapshots oficiais, sem autocorreção;
+- joins são feitos em memória com `Map` e nenhum relatório recalcula saldo via ledger;
+- nenhuma coleção de relatório/cache foi criada;
+- nenhuma Firestore Rule ou índice foi alterado.
+
+**Estado oficial:** Módulo 11 CONCLUÍDO; Módulo 12 CONCLUÍDO; Módulo 13 NÃO INICIADO.
+
+Próximo módulo oficial: **Módulo 13 — Segurança, Firestore, performance e telemetria**.
+
+
+## Consolidação do Módulo 13 — Segurança, Firestore, performance e telemetria
+
+Em 2026-09-25, o Módulo 13 foi encerrado como fase de hardening técnico, sem criar nova funcionalidade operacional relevante.
+
+Resultados permanentes:
+- founder-only preservado em UI, API/server gate e Firestore Rules;
+- usuário externo continua sem acesso ao namespace `warehouse`;
+- delete físico de material canônico foi negado nas Rules; o ciclo continua por status/inativação;
+- ledger permanece append-only e saldos permanecem projeções protegidas;
+- Dashboard/Alertas degradam fontes auxiliares sem derrubar o restante da superfície e não resolvem alertas com contexto incompleto;
+- Estoque indexa localização/lotes/barcodes em `Map` antes de montar os resumos, evitando varreduras repetidas por material;
+- Inventário deixou de reler o catálogo de materiais para calcular itens sem localização;
+- leituras bounded relevantes do ADM passaram a alimentar a telemetria estimada já existente do workspace, de forma bufferizada e best-effort;
+- nenhuma coleção de telemetria paralela foi criada;
+- nenhum listener realtime foi adicionado;
+- nenhum cache/materialização de relatório foi criado;
+- nenhum índice Firestore preventivo foi criado; `firestore.indexes.json` continua ausente no repositório;
+- Core EMPROVEX e fluxos críticos de NF/Empenho/Cronograma permanecem independentes do ADM.
+
+Documento técnico: `PHASE_13_HARDENING.md`.
+
+**Estado oficial:** Módulo 13 CONCLUÍDO. Módulo 14 NÃO INICIADO.

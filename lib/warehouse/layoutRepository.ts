@@ -11,6 +11,8 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 
+import { recordWarehouseDocumentReads } from './telemetry';
+
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { getCurrentOperationalScope } from '../operationalPaths';
 import {
@@ -112,6 +114,7 @@ export async function listWarehouseDepotLayouts(
         limit(Math.max(1, Math.min(maxResults, 150)))
       )
     );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs
       .map((item) => {
         const data = item.data() as Record<string, unknown>;
@@ -128,16 +131,23 @@ export async function listWarehouseDepotLayouts(
   }
 }
 
-export async function getActiveWarehouseDepotLayout(
-  workspaceId: string
-): Promise<WarehouseDepotLayoutListItem | null> {
+export async function listWarehouseDepotLayoutsForDepot(
+  workspaceId: string,
+  depotId: string,
+  maxResults = 100
+): Promise<WarehouseDepotLayoutListItem[]> {
   const scope = currentScope(workspaceId);
   const path = warehouseDomainPath(scope.workspaceId, 'layouts');
   try {
     const snapshot = await getDocs(
-      query(collection(db, path), where('status', '==', 'active'), limit(2))
+      query(
+        collection(db, path),
+        where('depotId', '==', depotId),
+        limit(Math.max(1, Math.min(maxResults, 150)))
+      )
     );
-    const active = snapshot.docs
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
+    return snapshot.docs
       .map((item) => {
         const data = item.data() as Record<string, unknown>;
         return {
@@ -147,11 +157,75 @@ export async function getActiveWarehouseDepotLayout(
         };
       })
       .sort((a, b) => b.layout.version - a.layout.version);
-    if (active.length > 1) throw new Error('WAREHOUSE_LAYOUT_MULTIPLE_ACTIVE');
-    return active[0] || null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return [];
+  }
+}
+
+async function getActiveWarehouseDepotLayoutStrict(
+  workspaceId: string,
+  depotId?: string | null
+): Promise<WarehouseDepotLayoutListItem | null> {
+  const scope = currentScope(workspaceId);
+  const path = warehouseDomainPath(scope.workspaceId, 'layouts');
+  const snapshot = await getDocs(
+    depotId === undefined
+      ? query(collection(db, path), where('status', '==', 'active'), limit(100))
+      : query(
+          collection(db, path),
+          where('depotId', '==', depotId),
+          where('status', '==', 'active'),
+          limit(2)
+        )
+  );
+  recordWarehouseDocumentReads(workspaceId, snapshot.size);
+  const active = snapshot.docs
+    .map((item) => {
+      const data = item.data() as Record<string, unknown>;
+      return {
+        layout: parseLayout(scope.workspaceId, item.id, data),
+        createdAt: timestampToIso(data.createdAt),
+        updatedAt: timestampToIso(data.updatedAt),
+      };
+    })
+    .filter(
+      (item) =>
+        item.layout.status === 'active'
+        && (depotId === undefined || item.layout.depotId === depotId)
+    )
+    .sort((a, b) => b.layout.version - a.layout.version);
+  if (depotId !== undefined && active.length > 1) {
+    throw new Error('WAREHOUSE_LAYOUT_MULTIPLE_ACTIVE_FOR_DEPOT');
+  }
+  return active[0] || null;
+}
+
+export async function getActiveWarehouseDepotLayout(
+  workspaceId: string,
+  depotId?: string | null
+): Promise<WarehouseDepotLayoutListItem | null> {
+  const scope = currentScope(workspaceId);
+  const path = warehouseDomainPath(scope.workspaceId, 'layouts');
+  try {
+    return await getActiveWarehouseDepotLayoutStrict(scope.workspaceId, depotId);
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
     return null;
+  }
+}
+
+function assertUniqueLayoutLocationReferences(
+  objects: WarehouseDepotLayoutObject[]
+): void {
+  const represented = new Set<string>();
+  for (const object of objects) {
+    const locationId = object.warehouseLocationId;
+    if (!locationId) continue;
+    if (represented.has(locationId)) {
+      throw new Error('WAREHOUSE_LAYOUT_DUPLICATE_LOCATION_REFERENCE');
+    }
+    represented.add(locationId);
   }
 }
 
@@ -161,6 +235,7 @@ async function assertLayoutLocationReferences(
   depotId: string | null,
   objects: WarehouseDepotLayoutObject[]
 ): Promise<void> {
+  assertUniqueLayoutLocationReferences(objects);
   const referencedIds = Array.from(
     new Set(objects.map((item) => item.warehouseLocationId).filter(Boolean) as string[])
   );
@@ -203,7 +278,7 @@ export async function saveWarehouseDepotLayoutVersion(
     input.objects
   );
 
-  const active = await getActiveWarehouseDepotLayout(scope.workspaceId);
+  const active = await getActiveWarehouseDepotLayoutStrict(scope.workspaceId, input.depotId);
   const baseLayoutId = input.baseLayoutId || active?.layout.id || null;
   const baseVersion = input.expectedVersion ?? active?.layout.version ?? null;
 

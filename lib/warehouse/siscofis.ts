@@ -6,13 +6,19 @@ import {
   type WarehouseMaterial,
   type WarehouseMaterialUnit,
 } from './material';
+import { warehouseUnitFromOperationalLabel } from './invoiceIntegration';
 import {
   normalizeWarehouseQuantity,
   type WarehouseBalance,
 } from './movement';
 
 export const WAREHOUSE_SISCOFIS_IMPORT_SCHEMA_VERSION = 'warehouse_siscofis_import_v1' as const;
-export const WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION = 'warehouse_siscofis_snapshot_v1' as const;
+export const EMPROVEX_SISCOFIS_INVENTORY_SCHEMA_VERSION = 'emprovex_siscofis_inventory_v1' as const;
+export const WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION_V1 = 'warehouse_siscofis_snapshot_v1' as const;
+export const WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION = 'warehouse_siscofis_snapshot_v2' as const;
+export type WarehouseSiscofisSnapshotSchemaVersion =
+  | typeof WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION_V1
+  | typeof WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION;
 export const WAREHOUSE_SISCOFIS_MAX_ROWS = 500;
 
 export type WarehouseSiscofisImportKind = 'MARCO_ZERO' | 'SNAPSHOT';
@@ -29,6 +35,8 @@ export interface WarehouseSiscofisImportRow {
   quantity: number;
   unitValue: number | null;
   totalValue: number | null;
+  sourceItemNumber?: string | null;
+  requiresCanonicalResolution?: boolean;
 }
 
 export interface WarehouseSiscofisImport {
@@ -64,6 +72,7 @@ export interface WarehouseSiscofisPreviewRow {
   state: WarehouseSiscofisReconciliationState;
   createsMaterial: boolean;
   issue: string | null;
+  sourceItemNumber?: string | null;
 }
 
 export interface WarehouseSiscofisPreview {
@@ -74,6 +83,11 @@ export interface WarehouseSiscofisPreview {
   canConfirm: boolean;
   issues: WarehouseSiscofisIssue[];
   rows: WarehouseSiscofisPreviewRow[];
+  materialOptions: Array<{
+    id: string;
+    description: string;
+    unit: WarehouseMaterialUnit;
+  }>;
   summary: {
     totalRows: number;
     matchedRows: number;
@@ -459,6 +473,8 @@ export async function hashWarehouseSiscofisImport(
       quantity: row.quantity,
       unitValue: row.unitValue,
       totalValue: row.totalValue,
+      sourceItemNumber: row.sourceItemNumber ?? null,
+      requiresCanonicalResolution: row.requiresCanonicalResolution ?? false,
     })),
   });
   const digest = await crypto.subtle.digest(
@@ -516,51 +532,227 @@ export function createMaterialFromSiscofisRow(input: {
   return result.data;
 }
 
-export function buildWarehouseSiscofisPrompt(
-  ug: string,
-  materials: WarehouseMaterial[]
-): string {
-  const catalog = materials
-    .slice(0, 500)
-    .map((material) => ({
-      materialId: material.id,
-      description: material.description,
-      unit: material.unit,
-    }));
 
-  return [
-    'Você está interpretando um relatório de posição de estoque do SISCOFIS para o EMPROVEX.',
-    'Retorne SOMENTE JSON válido, sem Markdown, comentários ou texto fora do JSON.',
-    'Não invente dados. Se um valor não estiver no relatório, use null quando o contrato permitir.',
-    'Não inclua Número de Ficha SISCOFIS nem campos patrimoniais.',
-    'UG esperada: ' + ug + '.',
-    '',
-    'CONTRATO OBRIGATÓRIO:',
-    JSON.stringify({
+export interface EmprovexSiscofisInventoryItem {
+  numeroItem: string;
+  descricao: string;
+  quantidade: number;
+  valorUnitario: number;
+}
+
+export interface EmprovexSiscofisInventory {
+  schemaVersion: typeof EMPROVEX_SISCOFIS_INVENTORY_SCHEMA_VERSION;
+  items: EmprovexSiscofisInventoryItem[];
+}
+
+export interface EmprovexSiscofisInventoryValidationResult {
+  ok: boolean;
+  data: EmprovexSiscofisInventory | null;
+  issues: WarehouseSiscofisIssue[];
+}
+
+const EXTERNAL_ROOT_FIELDS = new Set(['schemaVersion', 'items']);
+const EXTERNAL_ITEM_FIELDS = new Set(['numeroItem', 'descricao', 'quantidade', 'valorUnitario']);
+
+function parseLegacyBrazilianMoney(value: string): number | null {
+  const text = value.trim();
+  if (!/^(?:\d{1,3}(?:\.\d{3})+|\d+),\d{1,2}$/.test(text)) return null;
+  const parsed = Number(text.replace(/\./g, '').replace(',', '.'));
+  const normalized = normalizeMoney(parsed);
+  return normalized === undefined || normalized === null ? null : normalized;
+}
+
+export function parseEmprovexSiscofisInventoryJson(raw: string): EmprovexSiscofisInventoryValidationResult {
+  const issues: WarehouseSiscofisIssue[] = [];
+  let input: unknown;
+  try { input = JSON.parse(raw); } catch {
+    return { ok: false, data: null, issues: [{ severity: 'error', code: 'invalid_json', path: '$', message: 'O conteúdo não é um JSON válido.' }] };
+  }
+  if (Array.isArray(input)) {
+    input = { schemaVersion: EMPROVEX_SISCOFIS_INVENTORY_SCHEMA_VERSION, items: input };
+    pushIssue(issues, 'warning', 'legacy_root_array', '$', 'Array legado normalizado para o contrato oficial.');
+  }
+  if (!isPlainObject(input) || !hasOnlyFields(input, EXTERNAL_ROOT_FIELDS)) {
+    return { ok: false, data: null, issues: [...issues, { severity: 'error', code: 'invalid_external_root', path: '$', message: 'A raiz deve conter somente schemaVersion e items.' }] };
+  }
+  if (input.schemaVersion !== EMPROVEX_SISCOFIS_INVENTORY_SCHEMA_VERSION) {
+    pushIssue(issues, 'error', 'invalid_external_schema', '$.schemaVersion', 'schemaVersion deve ser emprovex_siscofis_inventory_v1.');
+  }
+  if (!Array.isArray(input.items) || input.items.length < 1 || input.items.length > WAREHOUSE_SISCOFIS_MAX_ROWS) {
+    pushIssue(issues, 'error', 'invalid_external_items', '$.items', 'items deve conter entre 1 e 500 linhas.');
+    return { ok: false, data: null, issues };
+  }
+  const items: EmprovexSiscofisInventoryItem[] = [];
+  const exactRows = new Set<string>();
+  input.items.forEach((candidate, index) => {
+    const path = '$.items[' + index + ']';
+    if (!isPlainObject(candidate) || !hasOnlyFields(candidate, EXTERNAL_ITEM_FIELDS)) {
+      pushIssue(issues, 'error', 'invalid_external_item_shape', path, 'Cada item deve conter somente numeroItem, descricao, quantidade e valorUnitario.');
+      return;
+    }
+    const numeroItem = typeof candidate.numeroItem === 'string' ? candidate.numeroItem.trim() : '';
+    const descricao = typeof candidate.descricao === 'string' ? normalizeText(candidate.descricao) : '';
+    const quantidade = normalizeWarehouseQuantity(candidate.quantidade);
+    let valorUnitario = normalizeMoney(candidate.valorUnitario);
+    if (typeof candidate.valorUnitario === 'string') {
+      const legacy = parseLegacyBrazilianMoney(candidate.valorUnitario);
+      if (legacy !== null) {
+        valorUnitario = legacy;
+        pushIssue(issues, 'warning', 'legacy_brazilian_money', path + '.valorUnitario', 'Valor monetário legado foi normalizado deterministicamente.');
+      }
+    }
+    if (!numeroItem || numeroItem.length > 80 || /[\u0000-\u001f\u007f]/.test(numeroItem)) pushIssue(issues, 'error', 'invalid_numero_item', path + '.numeroItem', 'Nº Ficha deve ser texto não vazio de até 80 caracteres.');
+    if (!descricao || descricao.length > 240) pushIssue(issues, 'error', 'invalid_external_description', path + '.descricao', 'Descrição deve possuir entre 1 e 240 caracteres.');
+    if (quantidade === null || quantidade <= 0) pushIssue(issues, 'error', 'invalid_external_quantity', path + '.quantidade', 'Quantidade deve ser número finito maior que zero.');
+    if (valorUnitario === undefined || valorUnitario === null) pushIssue(issues, 'error', 'invalid_external_unit_value', path + '.valorUnitario', 'Valor unitário deve ser número não negativo com até 2 casas.');
+    if (numeroItem && descricao && quantidade !== null && quantidade > 0 && valorUnitario !== undefined && valorUnitario !== null) {
+      const signature = JSON.stringify([numeroItem, descricao, quantidade, valorUnitario]);
+      if (exactRows.has(signature)) pushIssue(issues, 'warning', 'duplicate_source_row', path, 'Linha exatamente repetida preservada para revisão humana.');
+      exactRows.add(signature);
+      items.push({ numeroItem, descricao, quantidade, valorUnitario });
+    }
+  });
+  if (issues.some((issue) => issue.severity === 'error')) return { ok: false, data: null, issues };
+  return { ok: true, data: { schemaVersion: EMPROVEX_SISCOFIS_INVENTORY_SCHEMA_VERSION, items }, issues };
+}
+
+export function adaptEmprovexSiscofisInventory(input: {
+  inventory: EmprovexSiscofisInventory;
+  ug: string;
+  referenceDate: string;
+  sourceLabel?: string;
+  materials: WarehouseMaterial[];
+  materialOverrides?: Record<string, string>;
+}): { importData: WarehouseSiscofisImport; issues: WarehouseSiscofisIssue[] } {
+  const issues: WarehouseSiscofisIssue[] = [];
+  const byDescription = new Map<string, WarehouseMaterial[]>();
+  for (const material of input.materials) {
+    const key = lookupText(material.description);
+    byDescription.set(key, [...(byDescription.get(key) || []), material]);
+  }
+  const rows: WarehouseSiscofisImportRow[] = input.inventory.items.map((item, index) => {
+    const rowId = 'siscofis-' + String(index + 1).padStart(4, '0');
+    const matches = (byDescription.get(lookupText(item.descricao)) || []).filter((material) => material.status === 'active');
+    const overrideId = input.materialOverrides?.[rowId]?.trim().toLowerCase() || '';
+    const override = overrideId
+      ? input.materials.find((material) => material.id === overrideId && material.status === 'active') || null
+      : null;
+    if (overrideId && !override) pushIssue(issues, 'error', 'invalid_material_override', '$.items[' + index + ']', 'O vínculo canônico escolhido não está disponível neste workspace.');
+    const requiresCanonicalResolution = !override && matches.length > 1;
+    const matched = override || (matches.length === 1 ? matches[0] : null);
+    if (requiresCanonicalResolution) pushIssue(issues, 'error', 'ambiguous_material_match', '$.items[' + index + ']', 'Mais de um material canônico possui a mesma descrição. Selecione explicitamente o vínculo na prévia.');
+    if (!matched && !requiresCanonicalResolution) pushIssue(issues, 'warning', 'unit_fallback_applied', '$.items[' + index + ']', 'Material novo/não resolvido: apresentação marcada explicitamente como não informada, reutilizando o fallback canônico do fluxo de NF.');
+    return {
+      rowId,
+      materialId: matched?.id || null,
+      description: item.descricao,
+      unit: matched?.unit || warehouseUnitFromOperationalLabel(''),
+      quantity: item.quantidade,
+      unitValue: item.valorUnitario,
+      totalValue: Math.round(item.quantidade * item.valorUnitario * 100) / 100,
+      sourceItemNumber: item.numeroItem,
+      requiresCanonicalResolution,
+    };
+  });
+  return {
+    importData: {
       schemaVersion: WAREHOUSE_SISCOFIS_IMPORT_SCHEMA_VERSION,
-      ug,
-      referenceDate: 'YYYY-MM-DD',
-      sourceLabel: 'Relatório SISCOFIS - posição de estoque',
-      rows: [{
-        rowId: 'linha-001',
-        materialId: null,
-        description: 'Descrição exatamente conforme o relatório',
-        unit: { code: 'unit', label: null },
-        quantity: 0,
-        unitValue: null,
-        totalValue: null,
-      }],
-    }, null, 2),
+      ug: input.ug,
+      referenceDate: input.referenceDate,
+      sourceLabel: normalizeText(input.sourceLabel || 'Inventário SISCOFIS — Migração inicial'),
+      rows,
+    },
+    issues,
+  };
+}
+
+export function buildWarehouseSiscofisPrompt(): string {
+  return [
+    'PROMPT OFICIAL EMPROVEX — EXTRAÇÃO SISCOFIS',
     '',
-    'Códigos de unidade aceitos: unit, kg, g, l, ml, package, box, bundle, other.',
-    'Se a apresentação não corresponder com segurança a um código conhecido, use {"code":"other","label":"texto original da unidade"}.',
-    'materialId só pode ser preenchido quando houver correspondência segura com o catálogo EMPROVEX abaixo. Em caso de dúvida, use null.',
-    'Não altere descrição ou unidade apenas para forçar uma correspondência.',
-    'rowId deve ser único dentro deste relatório.',
+    'Você receberá um PDF de inventário ou relatório de materiais emitido pelo SISCOFIS.',
+    'Sua tarefa é extrair TODOS os itens materiais do documento e retornar SOMENTE JSON válido compatível com o EMPROVEX.',
     '',
-    'CATÁLOGO EMPROVEX DISPONÍVEL PARA VÍNCULO:',
-    JSON.stringify(catalog, null, 2),
-  ].join('\n');
+    'Extraia SOMENTE:',
+    '1. numeroItem — Origem: "Nr Ficha"',
+    '2. descricao — Origem: "ESPECIFICAÇÃO"',
+    '3. quantidade — Origem: "QTDE"',
+    '4. valorUnitario — Origem: "VALOR UNITÁRIO"',
+    '',
+    'A estrutura obrigatória é:',
+    '{',
+    '  "schemaVersion": "emprovex_siscofis_inventory_v1",',
+    '  "items": [',
+    '    {',
+    '      "numeroItem": "CODIGO",',
+    '      "descricao": "DESCRIÇÃO",',
+    '      "quantidade": 1,',
+    '      "valorUnitario": 10.50',
+    '    }',
+    '  ]',
+    '}',
+    '',
+    'A raiz deve ser obrigatoriamente um objeto JSON. Não retorne um array diretamente.',
+    'A raiz deve possuir somente schemaVersion e items.',
+    'Cada item deve possuir somente numeroItem, descricao, quantidade e valorUnitario.',
+    '',
+    'REGRAS PARA numeroItem:',
+    '- use exatamente o Nr Ficha;',
+    '- preserve pontos, letras, zeros à esquerda, prefixos e sufixos;',
+    '- retorne sempre como string.',
+    'Exemplos: "3393P", "0173P", "21.1000C", "10.9156C", "2314".',
+    '',
+    'REGRAS PARA descricao:',
+    '- transcreva fielmente a ESPECIFICAÇÃO;',
+    '- reúna descrições quebradas entre linhas na ordem correta;',
+    '- não resuma, não reescreva, não melhore a redação, não corrija ortografia, não substitua palavras, não altere letras e não invente especificações;',
+    '- somente una trechos separados por quebra de linha e remova espaços duplicados produzidos pela formatação do PDF.',
+    'A fidelidade ao documento tem prioridade sobre correções linguísticas.',
+    '',
+    'REGRAS PARA quantidade:',
+    '- retornar como número JSON, nunca como string.',
+    'Correto: "quantidade": 120',
+    'Incorreto: "quantidade": "120"',
+    '',
+    'REGRAS PARA valorUnitario:',
+    'Converter notação monetária brasileira para número JSON.',
+    '810,00 → 810.00; 246,03 → 246.03; 1.944,00 → 1944.00; 15.231,67 → 15231.67; 73.330,00 → 73330.00.',
+    'Nunca usar aspas.',
+    'Correto: "valorUnitario": 1944.00',
+    'Incorreto: "valorUnitario": "1.944,00"',
+    'Incorreto: "valorUnitario": "1944.00"',
+    '',
+    'NÃO CONSOLIDAR ITENS.',
+    'Mesmo que duas linhas tenham o mesmo Nr Ficha e a mesma descrição, mantenha-as como objetos independentes.',
+    'Não some quantidades, não calcule média, não elimine linhas e não agrupe registros.',
+    '',
+    'IGNORE NR ORD, conta contábil, unidade de medida, valor total, situação, SUB TOTAL, TOTAL, TOTAL GERAL, UG, exercício, dependência, responsáveis, datas, cabeçalhos e rodapés.',
+    'Use NR ORD somente internamente, se existir, para conferir se percorreu todos os itens. Nunca inclua NR ORD no JSON.',
+    '',
+    'Percorra TODAS as páginas. Não forneça amostra. Não trunque. Não escreva "continua". Não use "etc.". Nunca invente informações.',
+    'Se um dos quatro campos realmente não puder ser identificado, utilize null em vez de adivinhar.',
+    '',
+    'RESPOSTA:',
+    '- somente JSON;',
+    '- sem Markdown ou cercas de código;',
+    '- sem introdução, conclusão, comentários ou observações;',
+    '- nenhuma frase antes, depois ou entre objetos.',
+    'A primeira caractere deve ser { e a última caractere deve ser }.',
+    '',
+    'Antes de responder, confira internamente:',
+    '- todas as páginas e todos os itens foram processados;',
+    '- Nr Ficha está preservado como string;',
+    '- descrições multilinha foram reconstruídas sem correção ou reescrita;',
+    '- itens repetidos continuam separados;',
+    '- quantidade e valorUnitario são números;',
+    '- separadores de milhar foram removidos e vírgula decimal virou ponto;',
+    '- subtotal/total não virou item;',
+    '- nenhum campo extra foi incluído;',
+    '- a raiz contém schemaVersion e items;',
+    '- JSON.parse() aceitaria integralmente o conteúdo.',
+    '',
+    'Responda SOMENTE com o objeto JSON.',
+  ].join('\\n');
 }
 
 export async function buildWarehouseSiscofisPreview(input: {
@@ -622,6 +814,15 @@ export async function buildWarehouseSiscofisPreview(input: {
         rowIssue = 'Unidade do SISCOFIS diverge da unidade canônica do material.';
         pushIssue(issues, 'error', 'material_unit_mismatch', '$.rows.' + row.rowId + '.unit', rowIssue);
       }
+    } else if (row.requiresCanonicalResolution) {
+      rowIssue = 'Selecione explicitamente o material canônico antes de confirmar.';
+      pushIssue(
+        issues,
+        'error',
+        'canonical_resolution_required',
+        '$.rows.' + row.rowId + '.materialId',
+        rowIssue
+      );
     } else if (kind === 'MARCO_ZERO') {
       const key = materialLookupKey(row.description, row.unit);
       materialId = newMaterialByLookup.get(key) || await deriveSiscofisMarcoZeroMaterialId(
@@ -669,6 +870,7 @@ export async function buildWarehouseSiscofisPreview(input: {
       state,
       createsMaterial,
       issue: rowIssue,
+      sourceItemNumber: row.sourceItemNumber ?? null,
     });
   }
 
@@ -681,6 +883,7 @@ export async function buildWarehouseSiscofisPreview(input: {
     canConfirm: errors.length === 0,
     issues,
     rows,
+    materialOptions: input.materials.filter((material) => material.status === 'active').map((material) => ({ id: material.id, description: material.description, unit: material.unit })),
     summary: {
       totalRows: rows.length,
       matchedRows: rows.filter((row) => row.state === 'MATCHED').length,

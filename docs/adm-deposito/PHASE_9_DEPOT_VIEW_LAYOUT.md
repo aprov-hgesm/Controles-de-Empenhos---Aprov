@@ -144,3 +144,50 @@ Não implementados:
 - IA interna.
 
 A próxima fase oficial permanece a FASE 10 — Inventário Físico.
+
+
+## Consolidação nos Módulos 6 e 7 (2026-09-25)
+
+O contrato `warehouse_depot_layout_v1` permanece inalterado e continua sendo a fonte de verdade do croqui.
+
+A consolidação atual:
+- consulta layout ativo e histórico explicitamente por `depotId`;
+- preserva histórico independente entre depósitos;
+- mantém layouts antigos compatíveis e imutáveis;
+- adiciona a biblioteca estática `WAREHOUSE_STRUCTURE_LIBRARY` como catálogo de defaults, sem coleção Firestore;
+- persiste somente as instâncias usadas em `objects`;
+- mantém `warehouseLocationId` como referência opcional à identidade logística real;
+- não adiciona saldo, lote ou movimento ao layout.
+
+O editor avançado continua reservado ao Módulo 8.
+
+## Consolidação do editor visual no Módulo 8 (2026-09-25)
+
+A superfície histórica da Visão do Depósito foi evoluída sem alterar o contrato da FASE 9:
+- planta 2D permanece modo oficial de edição;
+- prévia 2.5D é uma projeção visual dos mesmos objetos;
+- interação local inclui grid/snap, zoom, pan, resize, rotação, duplicação, camadas e undo/redo;
+- `warehouseLocationId` continua sendo somente referência visual para localização logística existente;
+- nenhum objeto do croqui possui autoridade quantitativa;
+- persistência continua versionada e explícita;
+- Fabric.js/Konva não foram adicionados porque a camada manual existente era suficiente e mais leve para a arquitetura atual.
+
+
+## Consolidação funcional — Módulos 9 e 10 (2026-09-25)
+
+- Início usa `getActiveWarehouseDepotLayout(workspaceId, depotId)`, sem carregar histórico;
+- saldos por posição vêm de `warehouse_location_balance_v1`;
+- saldo geral vem de `warehouse_balance_v1`;
+- lotes vêm de `warehouse_lot_v1`;
+- FEFO usa `selectWarehouseFefoLot`;
+- objetos são relacionados exclusivamente por `warehouseLocationId`;
+- subposições respeitam o vínculo próprio e o local pai quando a estrutura representa o pai;
+- localização com saldo sem objeto visual é informada textualmente e não gera objeto;
+- estrutura sem `warehouseLocationId` permanece válida;
+- clicar em estrutura apenas inspeciona o contexto pesquisado;
+- nenhum dado quantitativo é persistido no layout;
+- mover/redimensionar/girar continua sem efeito no estoque;
+- Início é somente consulta; edição permanece em Meus Depósitos / Croquis;
+- nenhuma Firestore Rule foi alterada.
+
+Módulos 9 e 10 encerrados. Próximo módulo: **Módulo 11 — Consolidação do Controle de Itens**.

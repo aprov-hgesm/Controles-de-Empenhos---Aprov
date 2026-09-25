@@ -5,14 +5,12 @@ import {
   BoxSelect,
   CheckCircle2,
   Download,
-  Edit3,
   Layers3,
   LocateFixed,
   Plus,
   RotateCcw,
   Save,
   Search,
-  X,
 } from 'lucide-react';
 
 import {
@@ -25,7 +23,7 @@ import {
 } from '../../../lib/warehouse/layout';
 import {
   getActiveWarehouseDepotLayout,
-  listWarehouseDepotLayouts,
+  listWarehouseDepotLayoutsForDepot,
   saveWarehouseDepotLayoutVersion,
   type WarehouseDepotLayoutListItem,
 } from '../../../lib/warehouse/layoutRepository';
@@ -43,6 +41,22 @@ import type {
   WarehouseLocation,
   WarehouseLocationBalance,
 } from '../../../lib/warehouse/location';
+import {
+  deriveWarehouseMaterialPositions,
+  representedWarehouseLocationIds,
+} from '../../../lib/warehouse/depotLocator';
+import {
+  WAREHOUSE_STRUCTURE_LIBRARY,
+  type WarehouseStructureDefinition,
+} from '../../../lib/warehouse/structureLibrary';
+import { WarehouseDepotLayoutEditor } from './WarehouseDepotLayoutEditor';
+import {
+  WarehouseCroquiEditMode,
+  WarehouseCroquiMainRegion,
+  WarehouseCroquiModeSwitch,
+  WarehouseCroquiViewMode,
+  WarehouseDepotSelector,
+} from './WarehouseDepotCroquis';
 
 type Mode = 'view' | 'edit';
 
@@ -60,6 +74,24 @@ interface WarehouseViewData {
 const DEFAULT_WIDTH = 1000;
 const DEFAULT_HEIGHT = 620;
 
+const STRUCTURE_LABELS: Record<WarehouseDepotLayoutObjectKind, string> = {
+  WALL: 'Limite / parede',
+  CORRIDOR: 'Corredor',
+  AREA: 'Área livre',
+  SHELF: 'Estante',
+  RACK: 'Rack',
+  CABINET: 'Armário',
+  CHAMBER: 'Câmara',
+  FREEZER: 'Freezer',
+  REFRIGERATOR: 'Geladeira',
+  PALLET: 'Palete',
+  BENCH: 'Bancada',
+  ZONE: 'Zona',
+  OTHER: 'Outra estrutura',
+};
+
+const STRUCTURE_KINDS = Object.keys(STRUCTURE_LABELS) as WarehouseDepotLayoutObjectKind[];
+
 function downloadText(name: string, content: string, type: string) {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
@@ -68,6 +100,35 @@ function downloadText(name: string, content: string, type: string) {
   anchor.download = name;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+type NumericObjectField = 'x' | 'y' | 'width' | 'height' | 'rotation' | 'elevation';
+
+function clampObjectNumber(
+  key: NumericObjectField,
+  rawValue: number,
+  object: WarehouseDepotLayoutObject,
+  logicalWidth: number,
+  logicalHeight: number
+): number {
+  const value = Number.isFinite(rawValue) ? rawValue : 0;
+  if (key === 'x') return Math.max(0, Math.min(value, Math.max(0, logicalWidth - object.width)));
+  if (key === 'y') return Math.max(0, Math.min(value, Math.max(0, logicalHeight - object.height)));
+  if (key === 'width') return Math.max(12, Math.min(value, Math.max(12, logicalWidth - object.x)));
+  if (key === 'height') return Math.max(12, Math.min(value, Math.max(12, logicalHeight - object.y)));
+  if (key === 'rotation') return Math.max(-180, Math.min(value, 180));
+  return Math.max(0, Math.min(Math.round(value), 4));
+}
+
+function duplicateWarehouseLocationIds(objects: WarehouseDepotLayoutObject[]): string[] {
+  const counts = new Map<string, number>();
+  for (const object of objects) {
+    if (!object.warehouseLocationId) continue;
+    counts.set(object.warehouseLocationId, (counts.get(object.warehouseLocationId) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([locationId]) => locationId);
 }
 
 function objectClass(
@@ -229,6 +290,7 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
   const [mode, setMode] = useState<Mode>('view');
   const [draftObjects, setDraftObjects] = useState<WarehouseDepotLayoutObject[]>([]);
   const [draftName, setDraftName] = useState('Croqui principal');
+  const [selectedDepotId, setSelectedDepotId] = useState<string>('');
   const [draftDepotId, setDraftDepotId] = useState<string>('');
   const [draftWidth, setDraftWidth] = useState(DEFAULT_WIDTH);
   const [draftHeight, setDraftHeight] = useState(DEFAULT_HEIGHT);
@@ -237,35 +299,79 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
   const [selectedMaterialId, setSelectedMaterialId] = useState<string>('');
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [draftHistory, setDraftHistory] = useState<{
+    past: WarehouseDepotLayoutObject[][];
+    future: WarehouseDepotLayoutObject[][];
+  }>({ past: [], future: [] });
+
+  const cloneDraftObjects = (objects: WarehouseDepotLayoutObject[]) =>
+    objects.map((item) => ({ ...item }));
+
+  const resetDraftHistory = () => setDraftHistory({ past: [], future: [] });
+
+  const checkpointDraft = (previousObjects: WarehouseDepotLayoutObject[]) => {
+    setDraftHistory((current) => ({
+      past: [...current.past.slice(-49), cloneDraftObjects(previousObjects)],
+      future: [],
+    }));
+  };
+
+  const commitDraftObjects = (
+    next: WarehouseDepotLayoutObject[] | ((items: WarehouseDepotLayoutObject[]) => WarehouseDepotLayoutObject[])
+  ) => {
+    const previous = cloneDraftObjects(draftObjects);
+    const nextItems = typeof next === 'function' ? next(previous) : next;
+    checkpointDraft(previous);
+    setDraftObjects(nextItems);
+  };
+
+  const undoDraft = () => {
+    const previous = draftHistory.past[draftHistory.past.length - 1];
+    if (!previous) return;
+    setDraftHistory({
+      past: draftHistory.past.slice(0, -1),
+      future: [cloneDraftObjects(draftObjects), ...draftHistory.future.slice(0, 49)],
+    });
+    setDraftObjects(cloneDraftObjects(previous));
+    setSelectedObjectId(null);
+  };
+
+  const redoDraft = () => {
+    const nextSnapshot = draftHistory.future[0];
+    if (!nextSnapshot) return;
+    setDraftHistory({
+      past: [...draftHistory.past.slice(-49), cloneDraftObjects(draftObjects)],
+      future: draftHistory.future.slice(1),
+    });
+    setDraftObjects(cloneDraftObjects(nextSnapshot));
+    setSelectedObjectId(null);
+  };
 
   const reload = async () => {
     setData((current) => ({ ...current, loading: true, error: null }));
     try {
-      const [active, history, materials, depots, locations, balances] = await Promise.all([
-        getActiveWarehouseDepotLayout(workspaceId),
-        listWarehouseDepotLayouts(workspaceId, 100),
+      const [materials, depots, locations, balances] = await Promise.all([
         listWarehouseMaterials(workspaceId, 250),
         listWarehouseDepots(workspaceId, 250),
         listWarehouseLocations(workspaceId, 500),
         listWarehouseLocationBalances(workspaceId, 500),
       ]);
-      setData({
+      const depotList = depots.map((item) => item.depot);
+      setData((current) => ({
+        ...current,
         loading: false,
         error: null,
-        active: active?.layout || null,
-        history,
         materials,
-        depots: depots.map((item) => item.depot),
+        depots: depotList,
         locations: locations.map((item) => item.location),
         balances: balances.map((item) => item.balance),
+      }));
+      setSelectedDepotId((current) => {
+        if (current && depotList.some((depot) => depot.id === current && depot.status === 'active')) {
+          return current;
+        }
+        return depotList.find((depot) => depot.status === 'active')?.id || '';
       });
-      if (active?.layout) {
-        setDraftObjects(active.layout.objects);
-        setDraftName(active.layout.name);
-        setDraftDepotId(active.layout.depotId || '');
-        setDraftWidth(active.layout.logicalWidth);
-        setDraftHeight(active.layout.logicalHeight);
-      }
     } catch (error) {
       setData((current) => ({
         ...current,
@@ -280,6 +386,34 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedDepotId) {
+      setData((current) => ({ ...current, active: null, history: [] }));
+      return () => { cancelled = true; };
+    }
+
+    void Promise.all([
+      getActiveWarehouseDepotLayout(workspaceId, selectedDepotId),
+      listWarehouseDepotLayoutsForDepot(workspaceId, selectedDepotId, 100),
+    ]).then(([active, history]) => {
+      if (cancelled) return;
+      setData((current) => ({
+        ...current,
+        active: active?.layout || null,
+        history,
+      }));
+    }).catch((error) => {
+      if (cancelled) return;
+      setData((current) => ({
+        ...current,
+        error: error instanceof Error ? error.message : 'Falha ao carregar o histórico deste depósito.',
+      }));
+    });
+
+    return () => { cancelled = true; };
+  }, [selectedDepotId, workspaceId]);
+
   const materialMatches = useMemo(() => {
     const normalized = queryText.trim().toLocaleLowerCase('pt-BR');
     if (!normalized) return data.materials.slice(0, 12);
@@ -291,57 +425,180 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
     ).slice(0, 12);
   }, [data.materials, queryText]);
 
-  const highlightedBalances = useMemo(
-    () => data.balances.filter(
-      (balance) => balance.materialId === selectedMaterialId && balance.quantity > 0
-    ),
-    [data.balances, selectedMaterialId]
+  const selectedMaterial = useMemo(
+    () => data.materials.find((material) => material.id === selectedMaterialId) || null,
+    [data.materials, selectedMaterialId]
   );
+
+  const materialPositionProjection = useMemo(
+    () => deriveWarehouseMaterialPositions(
+      data.balances,
+      selectedMaterialId,
+      selectedDepotId
+    ),
+    [data.balances, selectedDepotId, selectedMaterialId]
+  );
+
+  const {
+    positiveBalances: positiveMaterialBalances,
+    currentDepotBalances,
+    otherDepotBalances,
+    unassignedQuantity,
+    totalPositiveQuantity,
+  } = materialPositionProjection;
 
   const highlightedLocationIds = useMemo(
     () => new Set(
-      highlightedBalances
+      currentDepotBalances
         .map((balance) => warehouseLocationIdForPosition(balance.position))
         .filter(Boolean) as string[]
     ),
-    [highlightedBalances]
+    [currentDepotBalances]
   );
 
+  const locationById = useMemo(
+    () => new Map(data.locations.map((location) => [location.id, location])),
+    [data.locations]
+  );
+
+  const depotById = useMemo(
+    () => new Map(data.depots.map((depot) => [depot.id, depot])),
+    [data.depots]
+  );
+
+  const currentDepotPositionRows = useMemo(
+    () => currentDepotBalances.map((balance) => {
+      const locationId = warehouseLocationIdForPosition(balance.position);
+      const location = locationId ? locationById.get(locationId) : null;
+      return {
+        balance,
+        locationId,
+        label: location
+          ? location.code + ' · ' + location.name
+          : locationId || 'Localização não identificada',
+      };
+    }),
+    [currentDepotBalances, locationById]
+  );
+
+  const otherDepotPositionCount = otherDepotBalances.length;
+
+  const selectedActiveLayout = useMemo(
+    () =>
+      data.history
+        .filter(
+          (item) =>
+            item.layout.status === 'active'
+            && (item.layout.depotId || '') === selectedDepotId
+        )
+        .sort((left, right) => right.layout.version - left.layout.version)[0]?.layout
+      || (
+        data.active && (data.active.depotId || '') === selectedDepotId
+          ? data.active
+          : null
+      ),
+    [data.active, data.history, selectedDepotId]
+  );
+
+  const selectedDepotHistory = useMemo(
+    () =>
+      data.history
+        .filter((item) => (item.layout.depotId || '') === selectedDepotId)
+        .sort((left, right) => right.layout.version - left.layout.version),
+    [data.history, selectedDepotId]
+  );
+
+  useEffect(() => {
+    if (mode !== 'view') return;
+    if (selectedActiveLayout) {
+      setDraftObjects(selectedActiveLayout.objects);
+      setDraftName(selectedActiveLayout.name);
+      setDraftDepotId(selectedActiveLayout.depotId || '');
+      setDraftWidth(selectedActiveLayout.logicalWidth);
+      setDraftHeight(selectedActiveLayout.logicalHeight);
+    } else {
+      setDraftObjects([]);
+      setDraftName('Croqui principal');
+      setDraftDepotId(selectedDepotId);
+      setDraftWidth(DEFAULT_WIDTH);
+      setDraftHeight(DEFAULT_HEIGHT);
+    }
+    setSelectedObjectId(null);
+  }, [mode, selectedActiveLayout, selectedDepotId]);
+
   const [fefoLocationId, setFefoLocationId] = useState<string | null>(null);
+  const [fefoDepotId, setFefoDepotId] = useState<string | null>(null);
+  const [fefoUnassigned, setFefoUnassigned] = useState(false);
   useEffect(() => {
     let active = true;
     if (!selectedMaterialId) {
       setFefoLocationId(null);
+      setFefoDepotId(null);
+      setFefoUnassigned(false);
       return;
     }
     void listWarehouseLots(workspaceId, 500, selectedMaterialId).then((lots) => {
       if (!active) return;
       const lot = selectWarehouseFefoLot(lots.map((item) => item.lot));
-      setFefoLocationId(lot ? warehouseLocationIdForPosition(lot.position) : null);
+      if (!lot) {
+        setFefoLocationId(null);
+        setFefoDepotId(null);
+        setFefoUnassigned(false);
+        return;
+      }
+      setFefoLocationId(warehouseLocationIdForPosition(lot.position));
+      setFefoDepotId(lot.position.kind === 'UNASSIGNED' ? null : lot.position.depotId);
+      setFefoUnassigned(lot.position.kind === 'UNASSIGNED');
     }).catch(() => {
-      if (active) setFefoLocationId(null);
+      if (active) {
+        setFefoLocationId(null);
+        setFefoDepotId(null);
+        setFefoUnassigned(false);
+      }
     });
     return () => { active = false; };
   }, [selectedMaterialId, workspaceId]);
 
+  const currentDepotFefoLocationId =
+    fefoDepotId === selectedDepotId ? fefoLocationId : null;
+
+  const representedLocationIds = useMemo(
+    () => representedWarehouseLocationIds(selectedActiveLayout?.objects || []),
+    [selectedActiveLayout]
+  );
+
+  const representedCurrentDepotPositions = useMemo(
+    () => currentDepotPositionRows.filter(
+      (row) => row.locationId && representedLocationIds.has(row.locationId)
+    ),
+    [currentDepotPositionRows, representedLocationIds]
+  );
+
+  const unrepresentedCurrentDepotPositions = useMemo(
+    () => currentDepotPositionRows.filter(
+      (row) => !row.locationId || !representedLocationIds.has(row.locationId)
+    ),
+    [currentDepotPositionRows, representedLocationIds]
+  );
+
   const currentLayout = mode === 'edit'
     ? {
         schemaVersion: 'warehouse_depot_layout_v1' as const,
-        id: data.active?.id || 'lay_00000000000000000000000000000000',
+        id: selectedActiveLayout?.id || 'lay_00000000000000000000000000000000',
         workspaceId,
-        ug: data.active?.ug || '160416',
+        ug: selectedActiveLayout?.ug || '160416',
         name: draftName,
         depotId: draftDepotId || null,
         logicalWidth: draftWidth,
         logicalHeight: draftHeight,
         objects: draftObjects,
-        version: data.active?.version || 0,
+        version: selectedActiveLayout?.version || 0,
         status: 'active' as const,
-        previousVersionId: data.active?.previousVersionId || null,
-        createdBy: data.active?.createdBy || 'draft',
-        updatedBy: data.active?.updatedBy || 'draft',
+        previousVersionId: selectedActiveLayout?.previousVersionId || null,
+        createdBy: selectedActiveLayout?.createdBy || 'draft',
+        updatedBy: selectedActiveLayout?.updatedBy || 'draft',
       }
-    : data.active;
+    : selectedActiveLayout;
 
   const selectedObject = draftObjects.find((item) => item.id === selectedObjectId) || null;
   const activeLocations = data.locations.filter((item) =>
@@ -349,7 +606,31 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
   );
 
   const updateObject = (id: string, patch: Partial<WarehouseDepotLayoutObject>) => {
-    setDraftObjects((items) => items.map((item) => item.id === id ? { ...item, ...patch } : item));
+    commitDraftObjects((items) => items.map((item) => item.id === id ? { ...item, ...patch } : item));
+  };
+
+  const updateObjectNumber = (id: string, key: NumericObjectField, value: number) => {
+    commitDraftObjects((items) => items.map((item) => {
+      if (item.id !== id) return item;
+      return { ...item, [key]: clampObjectNumber(key, value, item, draftWidth, draftHeight) };
+    }));
+  };
+
+  const changeMode = (nextMode: Mode) => {
+    if (nextMode === mode) return;
+    if (nextMode === 'edit') {
+      setDraftObjects(selectedActiveLayout?.objects || []);
+      setDraftName(selectedActiveLayout?.name || 'Croqui principal');
+      setDraftDepotId(selectedDepotId);
+      setDraftWidth(selectedActiveLayout?.logicalWidth || DEFAULT_WIDTH);
+      setDraftHeight(selectedActiveLayout?.logicalHeight || DEFAULT_HEIGHT);
+      setSelectedObjectId(null);
+      resetDraftHistory();
+      setMode('edit');
+      return;
+    }
+    setMode('view');
+    setSelectedObjectId(null);
   };
 
   if (data.loading) {
@@ -362,51 +643,169 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
 
   return (
     <div className="mt-6 space-y-5" data-testid="warehouse-depot-view-operational">
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_330px]">
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <div className="min-w-0 flex-1">
-                <label className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Pesquisar material</label>
-                <div className="mt-2 flex items-center gap-2 rounded-xl border border-white/[0.08] bg-black/20 px-3">
-                  <Search className="h-4 w-4 text-slate-500" aria-hidden="true" />
-                  <input
-                    data-testid="warehouse-layout-material-search"
-                    value={queryText}
-                    onChange={(event) => setQueryText(event.target.value)}
-                    placeholder="Descrição, alias ou ID"
-                    className="h-10 min-w-0 flex-1 bg-transparent text-sm text-slate-200 outline-none placeholder:text-slate-600"
-                  />
+      <WarehouseDepotSelector
+        depots={data.depots}
+        value={selectedDepotId}
+        onChange={(nextDepotId) => {
+          setSelectedDepotId(nextDepotId);
+          if (mode === 'edit') changeMode('view');
+        }}
+      />
+
+      <WarehouseCroquiModeSwitch mode={mode} onChange={changeMode} />
+
+      <div className="grid min-w-0 max-w-full gap-4 2xl:grid-cols-[minmax(0,1fr)_330px]">
+        <div className="min-w-0 space-y-4">
+          {mode === 'view' ? (
+            <WarehouseCroquiViewMode>
+              <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-4">
+                <div className="min-w-0">
+                  <label className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                    Pesquisar material
+                  </label>
+                  <div className="mt-2 flex min-w-0 items-center gap-2 rounded-xl border border-white/[0.08] bg-black/20 px-3">
+                    <Search className="h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
+                    <input
+                      data-testid="warehouse-layout-material-search"
+                      value={queryText}
+                      onChange={(event) => setQueryText(event.target.value)}
+                      placeholder="Descrição, alias ou ID"
+                      className="h-10 min-w-0 flex-1 bg-transparent text-sm text-slate-200 outline-none placeholder:text-slate-600"
+                    />
+                  </div>
+
+                  {queryText && (
+                    <div
+                      className="mt-2 max-h-44 overflow-y-auto rounded-xl border border-white/[0.05] p-2"
+                      data-testid="warehouse-layout-material-results"
+                    >
+                      {materialMatches.length > 0 ? (
+                        <div className="grid min-w-0 gap-2 sm:grid-cols-2">
+                          {materialMatches.map((material) => (
+                            <button
+                              type="button"
+                              key={material.id}
+                              data-testid={'warehouse-layout-material-' + material.id}
+                              aria-pressed={selectedMaterialId === material.id}
+                              onClick={() => {
+                                setSelectedMaterialId(material.id);
+                                setQueryText(material.description);
+                                setMessage(null);
+                              }}
+                              className={
+                                selectedMaterialId === material.id
+                                  ? 'min-w-0 rounded-lg border border-emerald-300/20 bg-emerald-400/[0.06] px-3 py-2 text-left text-xs text-emerald-100'
+                                  : 'min-w-0 rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2 text-left text-xs text-slate-300 hover:bg-white/[0.05]'
+                              }
+                            >
+                              <span className="block truncate font-bold">{material.description}</span>
+                              <span className="mt-1 block truncate font-mono text-[9px] text-slate-600">{material.id}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="px-2 py-3 text-xs text-slate-500">
+                          Nenhum material encontrado para esta pesquisa.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
-                {queryText && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {materialMatches.map((material) => (
-                      <button
-                        type="button"
-                        key={material.id}
-                        data-testid={'warehouse-layout-material-' + material.id}
-                        onClick={() => {
-                          setSelectedMaterialId(material.id);
-                          setQueryText(material.description);
-                          setMessage(null);
-                        }}
-                        className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2 text-left text-xs text-slate-300 hover:bg-white/[0.05]"
+
+                {selectedMaterialId && (
+                  <div
+                    data-testid="warehouse-layout-highlight-summary"
+                    className="mt-4 space-y-3 rounded-xl border border-emerald-300/10 bg-emerald-400/[0.035] px-4 py-3 text-xs text-slate-300"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 font-bold text-emerald-200">
+                        <LocateFixed className="h-4 w-4" />
+                        {selectedMaterial?.description || 'Material selecionado'}
+                      </div>
+                      <p className="mt-1 text-slate-500">
+                        Quantidade positiva total: <span className="font-bold text-slate-300">{totalPositiveQuantity}</span>
+                        {selectedMaterial?.unit?.label ? ' ' + selectedMaterial.unit.label : ''}
+                        {' · '}
+                        {currentDepotPositionRows.length} posição(ões) física(s) neste depósito.
+                      </p>
+                    </div>
+
+                    {positiveMaterialBalances.length === 0 && (
+                      <p className="rounded-lg border border-white/[0.06] bg-black/15 px-3 py-2 text-slate-400">
+                        Material localizado no cadastro, mas sem posição física com saldo positivo.
+                      </p>
+                    )}
+
+                    {unassignedQuantity > 0 && (
+                      <p
+                        className="rounded-lg border border-amber-300/10 bg-amber-400/[0.035] px-3 py-2 text-amber-100"
+                        data-testid="warehouse-layout-unassigned-summary"
                       >
-                        {material.description}
-                      </button>
-                    ))}
+                        Quantidade sem posição física: <span className="font-black">{unassignedQuantity}</span>
+                        {selectedMaterial?.unit?.label ? ' ' + selectedMaterial.unit.label : ''}.
+                      </p>
+                    )}
+
+                    {currentDepotPositionRows.length > 0 && (
+                      <div className="max-h-36 overflow-y-auto rounded-lg border border-white/[0.06] bg-black/10 p-2" data-testid="warehouse-layout-position-summary">
+                        <div className="space-y-1.5">
+                          {currentDepotPositionRows.map((row) => (
+                            <div key={row.balance.id} className="flex min-w-0 items-center justify-between gap-3 rounded-md px-2 py-1.5">
+                              <span className="min-w-0 truncate text-slate-400">{row.label}</span>
+                              <span className="shrink-0 font-black text-slate-200">{row.balance.quantity}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-1 text-slate-500">
+                      <p>
+                        {representedCurrentDepotPositions.length} posição(ões) representada(s) no croqui
+                        {unrepresentedCurrentDepotPositions.length > 0
+                          ? ' · ' + unrepresentedCurrentDepotPositions.length + ' ainda não representada(s) visualmente.'
+                          : '.'}
+                      </p>
+                      {otherDepotPositionCount > 0 && (
+                        <p>{otherDepotPositionCount} posição(ões) física(s) adicional(is) existem em outro(s) depósito(s).</p>
+                      )}
+                      {fefoUnassigned ? (
+                        <p>FEFO prioritário está sem posição física atribuída.</p>
+                      ) : fefoDepotId && fefoDepotId !== selectedDepotId ? (
+                        <p>
+                          Posição FEFO prioritária localizada em outro depósito
+                          {depotById.get(fefoDepotId) ? ': ' + depotById.get(fefoDepotId)!.name : ''}.
+                        </p>
+                      ) : currentDepotFefoLocationId ? (
+                        <p>FEFO sinaliza em âmbar a posição prioritária deste depósito.</p>
+                      ) : (
+                        <p>FEFO não possui posição prioritária aplicável.</p>
+                      )}
+                    </div>
+
+                    {unrepresentedCurrentDepotPositions.length > 0 && (
+                      <div className="rounded-lg border border-sky-300/10 bg-sky-400/[0.03] px-3 py-2 text-slate-400">
+                        {unrepresentedCurrentDepotPositions.slice(0, 3).map((row) => (
+                          <p key={row.balance.id}>
+                            {row.label} possui saldo, mas ainda não está vinculada a um objeto do croqui.
+                          </p>
+                        ))}
+                        {unrepresentedCurrentDepotPositions.length > 3 && (
+                          <p>+ {unrepresentedCurrentDepotPositions.length - 3} posição(ões) sem representação visual.</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {data.active && (
-                  <>
+
+                {selectedActiveLayout && (
+                  <div className="mt-4 flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={() => {
                         downloadText(
-                          'warehouse-layout-v' + data.active!.version + '.json',
-                          JSON.stringify(data.active, null, 2),
+                          'warehouse-layout-v' + selectedActiveLayout.version + '.json',
+                          JSON.stringify(selectedActiveLayout, null, 2),
                           'application/json'
                         );
                       }}
@@ -418,8 +817,8 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                       type="button"
                       onClick={() => {
                         downloadText(
-                          'warehouse-layout-v' + data.active!.version + '.svg',
-                          renderWarehouseDepotLayoutSvg(data.active!),
+                          'warehouse-layout-v' + selectedActiveLayout.version + '.svg',
+                          renderWarehouseDepotLayoutSvg(selectedActiveLayout),
                           'image/svg+xml'
                         );
                       }}
@@ -427,66 +826,54 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                     >
                       <Download className="h-4 w-4" /> SVG
                     </button>
-                  </>
+                  </div>
                 )}
-                <button
-                  type="button"
-                  data-testid="warehouse-layout-toggle-edit"
-                  onClick={() => {
-                    if (mode === 'view') {
-                      setDraftObjects(data.active?.objects || []);
-                      setDraftName(data.active?.name || 'Croqui principal');
-                      setDraftDepotId(data.active?.depotId || '');
-                      setDraftWidth(data.active?.logicalWidth || DEFAULT_WIDTH);
-                      setDraftHeight(data.active?.logicalHeight || DEFAULT_HEIGHT);
-                      setMode('edit');
-                    } else {
-                      setMode('view');
-                      setSelectedObjectId(null);
-                    }
-                  }}
-                  className="inline-flex items-center gap-2 rounded-xl border border-blue-300/15 bg-blue-400/[0.07] px-3 py-2 text-xs font-black text-blue-100"
-                >
-                  {mode === 'edit' ? <X className="h-4 w-4" /> : <Edit3 className="h-4 w-4" />}
-                  {mode === 'edit' ? 'Sair da edição' : 'Editar layout'}
-                </button>
               </div>
-            </div>
 
-            {selectedMaterialId && (
-              <div data-testid="warehouse-layout-highlight-summary" className="mt-4 rounded-xl border border-emerald-300/10 bg-emerald-400/[0.035] px-4 py-3 text-xs text-slate-300">
-                <div className="flex items-center gap-2 font-bold text-emerald-200">
-                  <LocateFixed className="h-4 w-4" />
-                  {highlightedLocationIds.size} posição(ões) real(is) destacada(s)
-                </div>
-                <p className="mt-1 text-slate-500">
-                  FEFO {fefoLocationId ? 'também sinaliza a posição prioritária em âmbar.' : 'não possui posição prioritária aplicável.'}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {currentLayout ? (
-            <WarehouseCanvas
-              layout={currentLayout}
-              objects={mode === 'edit' ? draftObjects : currentLayout.objects}
-              mode={mode}
-              selectedObjectId={selectedObjectId}
-              highlightedLocationIds={highlightedLocationIds}
-              fefoLocationId={fefoLocationId}
-              onSelect={(id) => { if (mode === 'edit') setSelectedObjectId(id); }}
-              onMove={(id, x, y) => updateObject(id, { x, y })}
-            />
+              <WarehouseCroquiMainRegion>
+                {currentLayout ? (
+                  <WarehouseCanvas
+                    layout={currentLayout}
+                    objects={currentLayout.objects}
+                    mode={mode}
+                    selectedObjectId={selectedObjectId}
+                    highlightedLocationIds={highlightedLocationIds}
+                    fefoLocationId={currentDepotFefoLocationId}
+                    onSelect={() => undefined}
+                    onMove={() => undefined}
+                  />
+                ) : (
+                  <div className="grid min-h-[360px] place-items-center rounded-2xl border border-dashed border-blue-300/15 bg-blue-400/[0.025] p-8 text-center">
+                    <div>
+                      <BoxSelect className="mx-auto h-8 w-8 text-blue-200/60" />
+                      <p className="mt-4 text-sm font-black text-slate-200">Este depósito ainda não possui layout.</p>
+                      <p className="mt-2 max-w-md text-xs leading-6 text-slate-500">
+                        Entre no modo de edição para criar a primeira representação visual deste depósito. O estoque existente não será alterado.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </WarehouseCroquiMainRegion>
+            </WarehouseCroquiViewMode>
           ) : (
-            <div className="grid min-h-[360px] place-items-center rounded-2xl border border-dashed border-blue-300/15 bg-blue-400/[0.025] p-8 text-center">
-              <div>
-                <BoxSelect className="mx-auto h-8 w-8 text-blue-200/60" />
-                <p className="mt-4 text-sm font-black text-slate-200">Nenhum layout ativo</p>
-                <p className="mt-2 max-w-md text-xs leading-6 text-slate-500">
-                  Entre no modo de edição para criar a primeira representação visual. O estoque existente não será alterado.
-                </p>
-              </div>
-            </div>
+            <WarehouseCroquiEditMode>
+              <WarehouseCroquiMainRegion>
+                <WarehouseDepotLayoutEditor
+                  scopeKey={workspaceId + ':' + selectedDepotId}
+                  logicalWidth={draftWidth}
+                  logicalHeight={draftHeight}
+                  objects={draftObjects}
+                  selectedObjectId={selectedObjectId}
+                  onSelectedObjectIdChange={setSelectedObjectId}
+                  onObjectsChange={setDraftObjects}
+                  onHistoryCheckpoint={checkpointDraft}
+                  canUndo={draftHistory.past.length > 0}
+                  canRedo={draftHistory.future.length > 0}
+                  onUndo={undoDraft}
+                  onRedo={redoDraft}
+                />
+              </WarehouseCroquiMainRegion>
+            </WarehouseCroquiEditMode>
           )}
 
           {message && (
@@ -496,27 +883,27 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
           )}
         </div>
 
-        <aside className="space-y-4">
+        <aside className="min-w-0 space-y-4 2xl:max-h-[calc(100vh-10rem)] 2xl:overflow-y-auto 2xl:pr-1" data-testid="warehouse-croqui-properties-panel">
           <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-4">
             <div className="flex items-center gap-2 text-slate-200">
               <Layers3 className="h-4 w-4 text-blue-200" />
               <p className="text-xs font-black">Layout ativo</p>
             </div>
-            <p className="mt-3 text-sm font-bold text-white">{data.active?.name || 'Ainda não criado'}</p>
+            <p className="mt-3 text-sm font-bold text-white">{selectedActiveLayout?.name || 'Ainda não criado'}</p>
             <p className="mt-1 font-mono text-[10px] text-slate-600">
-              {data.active ? 'versão ' + data.active.version + ' · ' + data.active.id : 'primeira versão pendente'}
+              {selectedActiveLayout ? 'versão ' + selectedActiveLayout.version + ' · ' + selectedActiveLayout.id : 'primeira versão pendente'}
             </p>
             <p className="mt-3 text-xs leading-5 text-slate-500">
-              {data.history.length} versão(ões) preservada(s). Alterar geometria nunca movimenta estoque.
+              {selectedDepotHistory.length} versão(ões) deste depósito preservada(s). Alterar geometria nunca movimenta estoque.
             </p>
           </div>
 
-          {data.history.length > 0 && (
+          {selectedDepotHistory.length > 0 && (
             <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-4" data-testid="warehouse-layout-history">
               <p className="text-xs font-black text-slate-200">Histórico de versões</p>
               <p className="mt-1 text-[11px] leading-5 text-slate-600">Versões anteriores permanecem auditáveis e podem servir de base para uma nova versão.</p>
               <div className="mt-3 space-y-2">
-                {data.history.slice(0, 8).map((item) => (
+                {selectedDepotHistory.slice(0, 8).map((item) => (
                   <div key={item.layout.id} className="flex items-center justify-between gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2">
                     <div className="min-w-0">
                       <p className="truncate text-[11px] font-bold text-slate-300">v{item.layout.version} · {item.layout.name}</p>
@@ -533,6 +920,7 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                           setDraftWidth(item.layout.logicalWidth);
                           setDraftHeight(item.layout.logicalHeight);
                           setSelectedObjectId(null);
+                          resetDraftHistory();
                           setMessage('Versão ' + item.layout.version + ' carregada como base. Salve para criar uma nova versão ativa.');
                         }}
                         className="shrink-0 rounded-lg border border-white/[0.08] px-2 py-1 text-[9px] font-bold text-slate-400 hover:text-slate-200"
@@ -549,8 +937,8 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
           {mode === 'edit' && (
             <div className="space-y-4 rounded-2xl border border-blue-300/10 bg-blue-400/[0.025] p-4" data-testid="warehouse-layout-editor">
               <div>
-                <p className="text-xs font-black text-blue-100">Editor simplificado</p>
-                <p className="mt-1 text-[11px] leading-5 text-slate-500">Arraste objetos no croqui ou ajuste os campos. Salvar cria nova versão.</p>
+                <p className="text-xs font-black text-blue-100">Editor visual</p>
+                <p className="mt-1 text-[11px] leading-5 text-slate-500">Edite em planta superior 2D com grade, snap, zoom, pan, resize, rotação e undo/redo. A prévia 2.5D usa os mesmos objetos. Salvar cria uma nova versão.</p>
               </div>
 
               <label className="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
@@ -559,12 +947,13 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
               </label>
               <label className="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
                 Depósito relacionado
-                <select data-testid="warehouse-layout-depot" value={draftDepotId} onChange={(e) => setDraftDepotId(e.target.value)} className="mt-1 h-9 w-full rounded-lg border border-white/[0.08] bg-[#08101f] px-3 text-xs text-slate-200">
-                  <option value="">Layout geral da UG</option>
+                <select data-testid="warehouse-layout-depot" value={draftDepotId} disabled className="mt-1 h-9 w-full rounded-lg border border-white/[0.08] bg-[#08101f] px-3 text-xs text-slate-400 disabled:opacity-80">
+                  <option value="">Selecione um depósito</option>
                   {data.depots.filter((depot) => depot.status === 'active').map((depot) => (
                     <option key={depot.id} value={depot.id}>{depot.code} · {depot.name}</option>
                   ))}
                 </select>
+                <span className="mt-1 block text-[9px] normal-case tracking-normal text-slate-600">Troque o depósito pelo seletor superior antes de entrar na edição.</span>
               </label>
 
               <div className="grid grid-cols-2 gap-2">
@@ -578,34 +967,95 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                 </label>
               </div>
 
-              <button
-                type="button"
-                data-testid="warehouse-layout-add-object"
-                onClick={() => {
-                  const object = createWarehouseDepotLayoutObject({ kind: 'SHELF', label: 'Nova estrutura', x: 40 + draftObjects.length * 12, y: 40 + draftObjects.length * 12 });
-                  setDraftObjects((items) => [...items, object]);
-                  setSelectedObjectId(object.id);
-                }}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.035] px-3 py-2.5 text-xs font-black text-slate-200"
-              >
-                <Plus className="h-4 w-4" /> Adicionar objeto
-              </button>
+              <div className="space-y-2" data-testid="warehouse-structure-library">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Biblioteca de estruturas</p>
+                  <p className="mt-1 text-[10px] leading-5 text-slate-600">
+                    Os tamanhos são proporções iniciais do croqui, não medidas arquitetônicas.
+                  </p>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {WAREHOUSE_STRUCTURE_LIBRARY.map((definition: WarehouseStructureDefinition) => (
+                    <button
+                      key={definition.id}
+                      type="button"
+                      data-testid={'warehouse-structure-' + definition.id}
+                      onClick={() => {
+                        const object = createWarehouseDepotLayoutObject({
+                          kind: definition.kind,
+                          label: definition.name,
+                          x: 40 + draftObjects.length * 12,
+                          y: 40 + draftObjects.length * 12,
+                          width: definition.defaultWidth,
+                          height: definition.defaultHeight,
+                          rotation: definition.defaultRotation,
+                          visualVariant: definition.visualVariant,
+                        });
+                        commitDraftObjects((items) => [...items, object]);
+                        setSelectedObjectId(object.id);
+                      }}
+                      className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3 text-left transition hover:bg-white/[0.05]"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-black text-slate-200">{definition.name}</span>
+                        <Plus className="h-3.5 w-3.5 text-blue-200/70" aria-hidden="true" />
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-[9px] leading-4 text-slate-600">{definition.description}</p>
+                      <div className="mt-2 flex flex-wrap gap-1.5 text-[8px] font-bold uppercase tracking-[0.08em] text-slate-600">
+                        <span>{definition.defaultWidth}×{definition.defaultHeight}</span>
+                        {definition.acceptsLevels && <span>· níveis</span>}
+                        {definition.acceptsSubpositions && <span>· subposições</span>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {selectedObject && (
                 <div className="space-y-3 rounded-xl border border-white/[0.07] bg-black/15 p-3" data-testid="warehouse-layout-object-editor">
                   <input data-testid="warehouse-layout-object-label" value={selectedObject.label} onChange={(e) => updateObject(selectedObject.id, { label: e.target.value })} className="h-9 w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 text-xs text-slate-200" />
                   <select value={selectedObject.kind} onChange={(e) => updateObject(selectedObject.id, { kind: e.target.value as WarehouseDepotLayoutObjectKind })} className="h-9 w-full rounded-lg border border-white/[0.08] bg-[#08101f] px-3 text-xs text-slate-200">
-                    {['WALL','CORRIDOR','AREA','SHELF','RACK','CABINET','CHAMBER','FREEZER','BENCH','ZONE','OTHER'].map((kind) => <option key={kind} value={kind}>{kind}</option>)}
+                    {STRUCTURE_KINDS.map((kind) => <option key={kind} value={kind}>{STRUCTURE_LABELS[kind]}</option>)}
                   </select>
-                  <select data-testid="warehouse-layout-object-location" value={selectedObject.warehouseLocationId || ''} onChange={(e) => updateObject(selectedObject.id, { warehouseLocationId: e.target.value || null })} className="h-9 w-full rounded-lg border border-white/[0.08] bg-[#08101f] px-3 text-xs text-slate-200">
+                  <select
+                    data-testid="warehouse-layout-object-location"
+                    value={selectedObject.warehouseLocationId || ''}
+                    onChange={(e) => {
+                      const nextLocationId = e.target.value || null;
+                      const alreadyLinked = nextLocationId
+                        ? draftObjects.find(
+                            (item) =>
+                              item.id !== selectedObject.id
+                              && item.warehouseLocationId === nextLocationId
+                          )
+                        : null;
+                      if (alreadyLinked) {
+                        setMessage('Esta localização já está representada por "' + alreadyLinked.label + '". Desvincule o outro objeto antes de reutilizá-la.');
+                        return;
+                      }
+                      updateObject(selectedObject.id, { warehouseLocationId: nextLocationId });
+                      setMessage(null);
+                    }}
+                    className="h-9 w-full rounded-lg border border-white/[0.08] bg-[#08101f] px-3 text-xs text-slate-200"
+                  >
                     <option value="">Sem vínculo logístico</option>
-                    {activeLocations.map((location) => (
-                      <option key={location.id} value={location.id}>{location.code} · {location.name}</option>
-                    ))}
+                    {activeLocations.map((location) => {
+                      const linkedElsewhere = draftObjects.some(
+                        (item) =>
+                          item.id !== selectedObject.id
+                          && item.warehouseLocationId === location.id
+                      );
+                      return (
+                        <option key={location.id} value={location.id} disabled={linkedElsewhere}>
+                          {location.code} · {location.name}{linkedElsewhere ? ' · já representada' : ''}
+                        </option>
+                      );
+                    })}
                   </select>
                   <div className="grid grid-cols-2 gap-2">
                     {([
-                      ['x','X'],['y','Y'],['width','Largura'],['height','Altura']
+                      ['x','X'],['y','Y'],['width','Largura'],['height','Profundidade'],
+                      ['rotation','Rotação'],['elevation','Elevação visual']
                     ] as const).map(([key,label]) => (
                       <label key={key} className="text-[9px] font-bold uppercase tracking-[0.1em] text-slate-600">
                         {label}
@@ -613,14 +1063,16 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                           data-testid={'warehouse-layout-object-' + key}
                           type="number"
                           value={selectedObject[key]}
-                          onChange={(e) => updateObject(selectedObject.id, { [key]: Number(e.target.value) })}
+                          min={key === 'width' || key === 'height' ? 12 : key === 'rotation' ? -180 : 0}
+                          max={key === 'elevation' ? 4 : key === 'rotation' ? 180 : key === 'x' || key === 'width' ? draftWidth : draftHeight}
+                          onChange={(e) => updateObjectNumber(selectedObject.id, key, Number(e.target.value))}
                           className="mt-1 h-8 w-full rounded-lg border border-white/[0.07] bg-black/20 px-2 text-xs text-slate-300"
                         />
                       </label>
                     ))}
                   </div>
                   <button type="button" onClick={() => {
-                    setDraftObjects((items) => items.filter((item) => item.id !== selectedObject.id));
+                    commitDraftObjects((items) => items.filter((item) => item.id !== selectedObject.id));
                     setSelectedObjectId(null);
                   }} className="w-full rounded-lg border border-rose-300/10 px-3 py-2 text-[11px] font-bold text-rose-200">
                     Remover somente do croqui
@@ -630,36 +1082,59 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
 
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => {
-                  setDraftObjects(data.active?.objects || []);
-                  setDraftName(data.active?.name || 'Croqui principal');
-                  setDraftDepotId(data.active?.depotId || '');
-                  setDraftWidth(data.active?.logicalWidth || DEFAULT_WIDTH);
-                  setDraftHeight(data.active?.logicalHeight || DEFAULT_HEIGHT);
+                  setDraftObjects(selectedActiveLayout?.objects || []);
+                  setDraftName(selectedActiveLayout?.name || 'Croqui principal');
+                  setDraftDepotId(selectedDepotId);
+                  setDraftWidth(selectedActiveLayout?.logicalWidth || DEFAULT_WIDTH);
+                  setDraftHeight(selectedActiveLayout?.logicalHeight || DEFAULT_HEIGHT);
                   setSelectedObjectId(null);
+                  setMessage(null);
+                  resetDraftHistory();
+                  setMode('view');
                 }} className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/[0.08] px-3 py-2.5 text-xs font-bold text-slate-300">
                   <RotateCcw className="h-4 w-4" /> Cancelar
                 </button>
                 <button
                   type="button"
                   data-testid="warehouse-layout-save"
-                  disabled={saving}
+                  disabled={saving || !draftDepotId}
                   onClick={async () => {
                     setSaving(true);
                     setMessage(null);
                     try {
+                      if (draftDepotId !== selectedDepotId) {
+                        throw new Error('WAREHOUSE_LAYOUT_DEPOT_CONTEXT_CHANGED');
+                      }
+                      const duplicateLocations = duplicateWarehouseLocationIds(draftObjects);
+                      if (duplicateLocations.length > 0) {
+                        throw new Error(
+                          'Há localizações logísticas representadas por mais de um objeto. Corrija os vínculos antes de salvar.'
+                        );
+                      }
                       const saved = await saveWarehouseDepotLayoutVersion(workspaceId, {
                         name: draftName,
                         depotId: draftDepotId || null,
                         logicalWidth: draftWidth,
                         logicalHeight: draftHeight,
                         objects: draftObjects,
-                        baseLayoutId: data.active?.id || null,
-                        expectedVersion: data.active?.version || null,
+                        baseLayoutId: selectedActiveLayout?.depotId === (draftDepotId || null) ? selectedActiveLayout.id : null,
+                        expectedVersion: selectedActiveLayout?.depotId === (draftDepotId || null) ? selectedActiveLayout.version : null,
                       });
+                      const savedDepotId = saved.depotId || draftDepotId;
+                      setSelectedDepotId(savedDepotId);
                       setMessage('Layout salvo como versão ' + saved.version + '. Nenhum saldo ou movimento de estoque foi alterado.');
                       setMode('view');
                       setSelectedObjectId(null);
                       await reload();
+                      const [active, history] = await Promise.all([
+                        getActiveWarehouseDepotLayout(workspaceId, savedDepotId),
+                        listWarehouseDepotLayoutsForDepot(workspaceId, savedDepotId, 100),
+                      ]);
+                      setData((current) => ({
+                        ...current,
+                        active: active?.layout || null,
+                        history,
+                      }));
                     } catch (error) {
                       setMessage(error instanceof Error ? error.message : 'Falha ao salvar o layout.');
                     } finally {

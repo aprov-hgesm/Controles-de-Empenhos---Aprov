@@ -16,6 +16,7 @@ execFileSync(
   [
     resolve(root, 'node_modules/typescript/bin/tsc'),
     resolve(root, 'lib/warehouse/siscofis.ts'),
+    resolve(root, 'lib/warehouse/invoiceIntegration.ts'),
     resolve(root, 'lib/warehouse/material.ts'),
     resolve(root, 'lib/warehouse/movement.ts'),
     resolve(root, 'lib/platformIdentity.ts'),
@@ -43,6 +44,14 @@ test.after(() => {
 });
 
 const materialId = 'mat_' + 'a'.repeat(32);
+const externalJson = JSON.stringify({
+  schemaVersion: 'emprovex_siscofis_inventory_v1',
+  items: [
+    { numeroItem: '0173P', descricao: 'ARROZ TIPO 1', quantidade: 2, valorUnitario: 10.5 },
+    { numeroItem: '21.1000C', descricao: 'CAFÉ', quantidade: 1, valorUnitario: 15.25 },
+    { numeroItem: '0173P', descricao: 'ARROZ TIPO 1', quantidade: 3, valorUnitario: 11.0 },
+  ],
+});
 const validJson = JSON.stringify({
   schemaVersion: 'warehouse_siscofis_import_v1',
   ug: '160416',
@@ -61,7 +70,7 @@ const validJson = JSON.stringify({
   ],
 });
 
-function material() {
+function material(overrides = {}) {
   return {
     schemaVersion: 'warehouse_material_v1',
     id: materialId,
@@ -72,8 +81,85 @@ function material() {
     unit: { code: 'kg', label: null },
     status: 'active',
     conversions: [],
+    ...overrides,
   };
 }
+
+test('aceita contrato externo simplificado e preserva Nr Ficha repetido', () => {
+  const parsed = siscofis.parseEmprovexSiscofisInventoryJson(externalJson);
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.data.schemaVersion, 'emprovex_siscofis_inventory_v1');
+  assert.equal(parsed.data.items[0].numeroItem, '0173P');
+  assert.equal(parsed.data.items[1].numeroItem, '21.1000C');
+  assert.equal(parsed.data.items.length, 3);
+});
+
+test('normaliza somente compatibilidade monetária brasileira determinística', () => {
+  const parsed = siscofis.parseEmprovexSiscofisInventoryJson(JSON.stringify({
+    schemaVersion: 'emprovex_siscofis_inventory_v1',
+    items: [{ numeroItem: '2416P', descricao: 'CAFETEIRA', quantidade: 1, valorUnitario: '1.944,00' }],
+  }));
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.data.items[0].valorUnitario, 1944);
+  assert.equal(parsed.issues.some((issue) => issue.code === 'legacy_brazilian_money'), true);
+});
+
+
+test('adapter preserva ficha e usa fallback canônico explícito quando unidade não vem da IA', () => {
+  const parsed = siscofis.parseEmprovexSiscofisInventoryJson(externalJson);
+  assert.equal(parsed.ok, true);
+  const adapted = siscofis.adaptEmprovexSiscofisInventory({
+    inventory: parsed.data,
+    ug: '160416',
+    referenceDate: '2026-09-24',
+    materials: [],
+  });
+  assert.equal(adapted.importData.rows[0].sourceItemNumber, '0173P');
+  assert.deepEqual(adapted.importData.rows[0].unit, {
+    code: 'other',
+    label: 'Apresentação não informada',
+  });
+  assert.equal(adapted.issues.some((issue) => issue.code === 'unit_fallback_applied'), true);
+});
+
+
+test('ambiguidade canônica exige override explícito', async () => {
+  const parsed = siscofis.parseEmprovexSiscofisInventoryJson(JSON.stringify({
+    schemaVersion: 'emprovex_siscofis_inventory_v1',
+    items: [{ numeroItem: '2416P', descricao: 'CAFETEIRA', quantidade: 1, valorUnitario: 804 }],
+  }));
+  assert.equal(parsed.ok, true);
+  const one = material({ id: 'mat_' + 'b'.repeat(32), description: 'CAFETEIRA' });
+  const two = material({ id: 'mat_' + 'c'.repeat(32), description: 'CAFETEIRA' });
+  const ambiguous = siscofis.adaptEmprovexSiscofisInventory({
+    inventory: parsed.data,
+    ug: '160416',
+    referenceDate: '2026-09-24',
+    materials: [one, two],
+  });
+  assert.equal(ambiguous.issues.some((issue) => issue.code === 'ambiguous_material_match' && issue.severity === 'error'), true);
+  const preview = await siscofis.buildWarehouseSiscofisPreview({
+    workspaceId: 'hgesm-aprov',
+    importData: ambiguous.importData,
+    materials: [one, two],
+    balances: [],
+    hasMarcoZero: false,
+    cutoffAt: null,
+    priorIssues: ambiguous.issues,
+  });
+  assert.equal(preview.canConfirm, false);
+  assert.equal(preview.rows[0].materialId, null);
+
+  const resolved = siscofis.adaptEmprovexSiscofisInventory({
+    inventory: parsed.data,
+    ug: '160416',
+    referenceDate: '2026-09-24',
+    materials: [one, two],
+    materialOverrides: { 'siscofis-0001': one.id },
+  });
+  assert.equal(resolved.issues.some((issue) => issue.code === 'ambiguous_material_match'), false);
+  assert.equal(resolved.importData.rows[0].materialId, one.id);
+});
 
 test('aceita contrato JSON versionado e estrito', () => {
   const parsed = siscofis.parseWarehouseSiscofisJson(validJson, '160416');
@@ -100,13 +186,14 @@ test('recusa campos inesperados, UG divergente e rowId duplicado', () => {
   assert.equal(parsed.issues.some((item) => item.code === 'duplicate_row_id'), true);
 });
 
-test('prompt mantém IA externa, JSON puro, schema e catálogo por materialId', () => {
-  const prompt = siscofis.buildWarehouseSiscofisPrompt('160416', [material()]);
-  assert.match(prompt, /SOMENTE JSON válido/);
-  assert.match(prompt, /warehouse_siscofis_import_v1/);
-  assert.match(prompt, /materialId/);
-  assert.match(prompt, /mat_a{32}/);
-  assert.match(prompt, /Não inclua Número de Ficha SISCOFIS/);
+test('prompt oficial usa somente quatro campos e mantém IA como extratora', () => {
+  const prompt = siscofis.buildWarehouseSiscofisPrompt();
+  assert.match(prompt, /emprovex_siscofis_inventory_v1/);
+  assert.match(prompt, /numeroItem/);
+  assert.match(prompt, /valorUnitario/);
+  assert.match(prompt, /NÃO CONSOLIDAR ITENS/);
+  assert.doesNotMatch(prompt, /materialId/);
+  assert.doesNotMatch(prompt, /workspaceId/);
 });
 
 test('Marco Zero usa identidade canônica e cria material somente quando materialId é nulo', async () => {

@@ -84,6 +84,7 @@ for (const scenario of [
   'Fundador grava material canônico da FASE 1',
   'Fundador lê material canônico da FASE 1',
   'Fundador lista materiais da FASE 1',
+  'Material canônico não pode ser apagado fisicamente',
   'Material não pode declarar workspace diferente do caminho',
   'Setor externo não lê material do fundador',
   'Setor externo não grava material nem no próprio workspace',

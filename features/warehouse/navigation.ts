@@ -1,14 +1,8 @@
 export type WarehouseSectionId =
   | 'overview'
-  | 'stock'
-  | 'outbound'
-  | 'movements'
-  | 'locations'
-  | 'warehouseView'
-  | 'inventory'
-  | 'siscofis'
-  | 'deliveries'
-  | 'settings';
+  | 'registration'
+  | 'depots'
+  | 'control';
 
 export interface WarehouseSectionDefinition {
   id: WarehouseSectionId;
@@ -16,20 +10,37 @@ export interface WarehouseSectionDefinition {
   href: string;
   eyebrow: string;
   description: string;
-  futurePhase: string | null;
 }
 
 export const WAREHOUSE_SECTIONS: readonly WarehouseSectionDefinition[] = [
-  { id: 'overview', label: 'Visão Geral', href: '/adm-deposito', eyebrow: 'Estrutura do módulo', description: 'Ponto de entrada do ADM Depósito e visão honesta das fundações já disponíveis.', futurePhase: null },
-  { id: 'stock', label: 'Estoque', href: '/adm-deposito/estoque', eyebrow: 'Consulta logística', description: 'Consulta operacional de saldo, barcodes, lotes, validade, localização, origem, pendências e recomendação FEFO.', futurePhase: null },
-  { id: 'outbound', label: 'Saída Expressa', href: '/adm-deposito/saida-expressa', eyebrow: 'Scanner e retirada', description: 'Leitura HID/teclado, apresentações, conversão e saída auditável com proteção contra saldo negativo.', futurePhase: null },
-  { id: 'movements', label: 'Movimentações', href: '/adm-deposito/movimentacoes', eyebrow: 'Ledger auditável', description: 'Superfície estrutural para consulta futura do ledger canônico criado na FASE 2.', futurePhase: 'FASES 4–10' },
-  { id: 'locations', label: 'Localizações', href: '/adm-deposito/localizacoes', eyebrow: 'Estrutura física operacional', description: 'Depósitos, locais, subposições, distribuição física e transferências internas auditáveis.', futurePhase: null },
-  { id: 'warehouseView', label: 'Visão do Depósito', href: '/adm-deposito/visao-do-deposito', eyebrow: 'Croqui operacional', description: 'Croqui 2D versionado com perspectiva leve, pesquisa de materiais, destaque de posições reais e editor simplificado.', futurePhase: null },
-  { id: 'inventory', label: 'Inventário', href: '/adm-deposito/inventario', eyebrow: 'Contagem física', description: 'Inventário total ou parcial, esperado x contado, divergências, confirmação humana e ajustes auditáveis.', futurePhase: null },
-  { id: 'siscofis', label: 'SISCOFIS / Conciliação', href: '/adm-deposito/siscofis-conciliacao', eyebrow: 'Referência externa', description: 'Prompt externo, JSON versionado, Marco Zero auditável, snapshots e conciliação sem autocorreção.', futurePhase: null },
-  { id: 'deliveries', label: 'Entregas', href: '/adm-deposito/entregas', eyebrow: 'Planejamento logístico', description: 'Ponto futuro de integração com o Planejamento/Cronograma já existente no EMPROVEX.', futurePhase: 'FASE 11' },
-  { id: 'settings', label: 'Configurações', href: '/adm-deposito/configuracoes', eyebrow: 'Parâmetros do módulo', description: 'Área estrutural para configurações logísticas futuras sem criar permissões fictícias.', futurePhase: 'FASES 12–14' },
+  {
+    id: 'overview',
+    label: 'Início',
+    href: '/adm-deposito',
+    eyebrow: 'Central visual do depósito',
+    description: 'Croqui do depósito selecionado, consulta de itens e localização visual do material.',
+  },
+  {
+    id: 'registration',
+    label: 'Cadastro de Itens',
+    href: '/adm-deposito/cadastro-de-itens',
+    eyebrow: 'Entrada e migração',
+    description: 'Notas fiscais pendentes de tratamento logístico, alocação de itens e migração do inventário SISCOFIS.',
+  },
+  {
+    id: 'depots',
+    label: 'Meus Depósitos',
+    href: '/adm-deposito/meus-depositos',
+    eyebrow: 'Estrutura física',
+    description: 'Cadastro de depósitos, localizações e croquis com estruturas físicas personalizadas.',
+  },
+  {
+    id: 'control',
+    label: 'Controle de Itens',
+    href: '/adm-deposito/controle-de-itens',
+    eyebrow: 'Estoque e operação',
+    description: 'Consulta de saldo, lotes, validade, saídas, inventário, entregas, alertas e histórico.',
+  },
 ] as const;
 
 export function getWarehouseSection(sectionId: WarehouseSectionId): WarehouseSectionDefinition {

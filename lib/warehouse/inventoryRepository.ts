@@ -12,6 +12,8 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 
+import { recordWarehouseDocumentReads } from './telemetry';
+
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { getCurrentOperationalScope } from '../operationalPaths';
 import {
@@ -480,6 +482,7 @@ export async function listWarehouseInventorySessions(
         limit(Math.max(1, Math.min(maxResults, 60)))
       )
     );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs.map((item) =>
       parseSession(scope.workspaceId, item.id, item.data() as Record<string, unknown>)
     );
@@ -500,6 +503,7 @@ export async function listWarehouseInventoryItems(
     const snapshot = await getDocs(
       query(collection(db, path), limit(Math.max(1, Math.min(maxResults, INVENTORY_PAGE_LIMIT))))
     );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs.map((item) =>
       parseItem(scope.workspaceId, inventoryId, item.id, item.data() as Record<string, unknown>)
     );
@@ -1034,15 +1038,11 @@ export async function cancelWarehouseInventory(
   });
 }
 
-export async function listWarehouseUnlocatedStock(
-  workspaceId: string
-): Promise<WarehouseUnlocatedStock[]> {
-  const scope = currentScope(workspaceId);
-  const [materials, balances, locations] = await Promise.all([
-    listWarehouseMaterials(scope.workspaceId, INVENTORY_PAGE_LIMIT),
-    listWarehouseBalances(scope.workspaceId, INVENTORY_PAGE_LIMIT),
-    listWarehouseLocationBalances(scope.workspaceId, INVENTORY_PAGE_LIMIT),
-  ]);
+export function deriveWarehouseUnlocatedStock(
+  materials: readonly WarehouseMaterial[],
+  balances: readonly WarehouseBalance[],
+  locations: readonly { balance: WarehouseLocationBalance }[]
+): WarehouseUnlocatedStock[] {
   const materialById = new Map(materials.map((material) => [material.id, material]));
   const physicalByMaterial = new Map<string, WarehouseLocationBalance[]>();
   for (const record of locations) {
@@ -1066,6 +1066,18 @@ export async function listWarehouseUnlocatedStock(
     })
     .filter((item): item is WarehouseUnlocatedStock => Boolean(item))
     .sort((a, b) => b.quantity - a.quantity);
+}
+
+export async function listWarehouseUnlocatedStock(
+  workspaceId: string
+): Promise<WarehouseUnlocatedStock[]> {
+  const scope = currentScope(workspaceId);
+  const [materials, balances, locations] = await Promise.all([
+    listWarehouseMaterials(scope.workspaceId, INVENTORY_PAGE_LIMIT),
+    listWarehouseBalances(scope.workspaceId, INVENTORY_PAGE_LIMIT),
+    listWarehouseLocationBalances(scope.workspaceId, INVENTORY_PAGE_LIMIT),
+  ]);
+  return deriveWarehouseUnlocatedStock(materials, balances, locations);
 }
 
 export function warehouseInventoryScopeLabel(

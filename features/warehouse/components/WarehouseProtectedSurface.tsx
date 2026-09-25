@@ -7,6 +7,7 @@ import { EmprovexAuthLoading } from '../../../components/auth/EmprovexAuthLoadin
 import { auth } from '../../../lib/firebase';
 import { resolveAuthenticatedWorkspaceContext } from '../../../lib/platformAccess';
 import { canAccessWarehouseModule } from '../../../lib/warehouse/featureFlag';
+import type { SectorWorkspaceContext } from '../../../lib/workspaceContext';
 import type { WarehouseSectionId } from '../navigation';
 import { WarehouseModuleShell } from './WarehouseModuleShell';
 
@@ -14,7 +15,7 @@ type GateState = 'checking' | 'allowed' | 'denied';
 
 export function WarehouseProtectedSurface({ section }: { section: WarehouseSectionId }) {
   const [gateState, setGateState] = useState<GateState>('checking');
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [workspaceContext, setWorkspaceContext] = useState<SectorWorkspaceContext | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -51,7 +52,7 @@ export function WarehouseProtectedSurface({ section }: { section: WarehouseSecti
           return;
         }
 
-        setWorkspaceId(context.workspaceId);
+        setWorkspaceContext(context);
         setGateState('allowed');
       } catch {
         if (!active) return;
@@ -66,9 +67,9 @@ export function WarehouseProtectedSurface({ section }: { section: WarehouseSecti
     };
   }, []);
 
-  if (gateState !== 'allowed' || !workspaceId) {
+  if (gateState !== 'allowed' || !workspaceContext) {
     return <EmprovexAuthLoading hasAuthenticatedIdentity={gateState === 'checking'} />;
   }
 
-  return <WarehouseModuleShell section={section} workspaceId={workspaceId} />;
+  return <WarehouseModuleShell section={section} workspaceContext={workspaceContext} />;
 }

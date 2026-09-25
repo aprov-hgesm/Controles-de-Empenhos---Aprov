@@ -11,6 +11,8 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 
+import { recordWarehouseDocumentReads } from './telemetry';
+
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { getCurrentOperationalScope } from '../operationalPaths';
 import {
@@ -297,6 +299,7 @@ export async function listWarehouseDepots(
   const path = warehouseDomainPath(scope.workspaceId, 'depots');
   try {
     const snapshot = await getDocs(query(collection(db, path), limit(Math.max(1, Math.min(maxResults, 250)))));
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs
       .map((item) => {
         const data = item.data() as Record<string, unknown>;
@@ -387,6 +390,7 @@ export async function listWarehouseLocations(
   const path = warehouseDomainPath(scope.workspaceId, 'locations');
   try {
     const snapshot = await getDocs(query(collection(db, path), limit(Math.max(1, Math.min(maxResults, 500)))));
+  recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs
       .map((item) => {
         const data = item.data() as Record<string, unknown>;
@@ -502,6 +506,7 @@ export async function listWarehouseLocationBalances(
   const path = warehouseDomainPath(scope.workspaceId, 'locationBalances');
   try {
     const snapshot = await getDocs(query(collection(db, path), limit(Math.max(1, Math.min(maxResults, 500)))));
+  recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs.map((item) => {
       const data = item.data() as Record<string, unknown>;
       return {

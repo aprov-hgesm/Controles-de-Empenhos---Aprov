@@ -112,3 +112,251 @@ Diretriz principal:
 - não fechar previamente cores, referências, intensidade de efeitos ou composição;
 - até a FASE 11, limitar mudanças estéticas a usabilidade e consistência funcional;
 - a reformulação visual global não deve ser antecipada.
+
+
+## Estado corrente após os Módulos 6 e 7 da reorganização funcional
+
+Branch de continuidade:
+`feat/adm-deposito-phase-11-5-visual-ux`.
+
+Concluído em 2026-09-25:
+- **Módulo 6 — Meus Depósitos multi-depósito**;
+- **Módulo 7 — Biblioteca de estruturas físicas**.
+
+Capacidades a tratar como existentes:
+- 1..N depósitos administráveis pelos contratos históricos;
+- localizações/subposições com IDs estáveis e `UNASSIGNED` preservado;
+- layout ativo e histórico independentes por `depotId`;
+- `warehouse_depot_layout_v1` preservado sem schema concorrente;
+- biblioteca estática `WAREHOUSE_STRUCTURE_LIBRARY` com Estante, Rack, Armário, Freezer, Geladeira, Câmara, Palete, Área de Paletes, Bancada, Corredor, Área Livre e Outra estrutura;
+- defaults proporcionais/rotação e flags conceituais de níveis/subposições;
+- objetos do croqui continuam sem autoridade sobre saldo;
+- Firestore Rules permaneceram inalteradas.
+
+Próximo módulo oficial:
+- **Módulo 8 — Editor visual do croqui**.
+
+Para o Módulo 8:
+- consumir a biblioteca central existente;
+- não criar outro catálogo, schema ou coleção;
+- preservar layouts legados;
+- não mover estoque ao mover/redimensionar/rotacionar objetos;
+- manter editor leve 2D/2.5D;
+- D-057 continua reservando a campanha completa de testes/CI para o Módulo 14.
+
+## Estado corrente após o Módulo 8 da reorganização funcional
+
+Branch de continuidade:
+`feat/adm-deposito-phase-11-5-visual-ux`.
+
+Concluído em 2026-09-25:
+- **Módulo 8 — Editor visual do croqui**.
+
+Tratar como existente:
+- `warehouse_depot_layout_v1` como único contrato persistido;
+- `WAREHOUSE_STRUCTURE_LIBRARY` como catálogo único;
+- editor em planta 2D com drag/resize/rotação;
+- grade/snap opcionais, zoom e pan;
+- undo/redo local;
+- duplicação, exclusão visual e camadas;
+- prévia 2.5D leve derivada dos mesmos objetos;
+- vínculo `warehouseLocationId` limitado ao depósito selecionado;
+- versionamento explícito por Salvar versão;
+- ausência de writes Firestore durante interação;
+- Firestore Rules e Core EMPROVEX inalterados.
+
+Próximo módulo oficial:
+- **Módulo 9 — Integração croqui ↔ estoque**.
+
+Para o Módulo 9:
+- não reimplementar o editor;
+- consumir o layout ativo e os vínculos `warehouseLocationId` existentes;
+- focar destaque/consulta de material e integração visual com saldos/posições;
+- não fazer geometria mover estoque;
+- manter D-057 e não executar campanha global antes do Módulo 14.
+
+
+## Estado corrente após os Módulos 9 e 10 da reorganização funcional
+
+Branch de continuidade:
+`feat/adm-deposito-phase-11-5-visual-ux`.
+
+Concluído em 2026-09-25, nesta ordem:
+- **Módulo 9 — Integração croqui ↔ estoque**;
+- **Módulo 10 — Finalização da aba Início**.
+
+Tratar como existente:
+- `warehouse_depot_layout_v1` continua autoridade do croqui;
+- saldos/lotes continuam autoridades quantitativas;
+- `warehouseLocationId` liga posição real a objeto visual;
+- Início carrega somente o layout ativo do depósito selecionado;
+- múltiplas posições podem ser destacadas;
+- FEFO usa o motor oficial;
+- localização sem objeto visual continua informada;
+- clique em estrutura mostra apenas contexto da pesquisa;
+- geometria nunca movimenta estoque;
+- Firestore Rules e Core EMPROVEX permaneceram inalterados;
+- D-057 continua reservando campanha global ao Módulo 14.
+
+Próximo módulo oficial:
+- **Módulo 11 — Consolidação do Controle de Itens**.
+
+O Módulo 11 ainda não foi iniciado.
+
+
+## Handoff após Módulos 11 e 12 — 2026-09-25
+
+Estado oficial para o próximo chat:
+
+- branch de continuidade: `feat/adm-deposito-phase-11-5-visual-ux`;
+- Módulo 11 — Consolidação do Controle de Itens: **CONCLUÍDO**;
+- Módulo 12 — Relatórios Logísticos: **CONCLUÍDO**;
+- Módulo 13: **NÃO INICIADO**;
+- Core EMPROVEX não foi alterado;
+- Firestore Rules e índices não foram alterados;
+- nenhuma publicação, PR ou merge foi realizada;
+- campanha global de CI/E2E permanece reservada pela D-057.
+
+Antes de iniciar o próximo módulo, recupere o HEAD real da branch e releia:
+- README.md;
+- ROADMAP.md;
+- DECISIONS.md;
+- STATUS.md;
+- EMPROVEX_CORE_PROTECTION.md.
+
+Próximo trabalho autorizado:
+
+**Módulo 13 — Segurança, Firestore, performance e telemetria.**
+
+O Módulo 13 deve auditar e endurecer a implementação existente; não deve reimplementar Controle de Itens nem Relatórios Logísticos e não deve criar materialização/cache de relatórios sem decisão arquitetural formal.
+
+
+## Handoff após Módulo 13 — 2026-09-25
+
+Estado oficial:
+- branch de continuidade: `feat/adm-deposito-phase-11-5-visual-ux`;
+- Módulos 1–13: concluídos conforme documentação modular;
+- Módulo 14: **NÃO INICIADO**;
+- founder-only permanece obrigatório;
+- nenhuma expansão externa foi autorizada;
+- nenhuma publicação/merge decorre automaticamente deste fechamento.
+
+Hardening consolidado:
+- Rules sem delete físico de material canônico;
+- ledger/saldos preservados;
+- Dashboard/Alertas com degradação segura de fontes auxiliares;
+- Estoque com índices em memória;
+- Inventário sem releitura duplicada do catálogo;
+- telemetria warehouse reutilizando o estimador bufferizado do EMPROVEX;
+- sem listeners novos, sem cache de relatório, sem índice composto preventivo.
+
+Próximo trabalho autorizado, somente em novo passo:
+**Módulo 14 — Campanha final de validação e fechamento.**
+
+O Módulo 14 deverá executar a campanha consolidada prevista em D-057 antes de qualquer conclusão sobre merge, deploy ou expansão externa.
+
+
+## Handoff de planejamento para o Módulo 14 — 2026-09-25
+
+O próximo chat de execução deve tratar como fonte oficial adicional:
+
+`docs/adm-deposito/MODULE_14_FINAL_VALIDATION_PLAN.md`
+
+Baseline registrada:
+- branch: `feat/adm-deposito-phase-11-5-visual-ux`;
+- HEAD auditado: `2d8160db956296779bcf86c7040829776d4e20ef`;
+- no momento do planejamento, a branch estava idêntica ao HEAD acima.
+
+Antes de testar:
+1. recuperar HEAD real novamente;
+2. comparar com a baseline;
+3. ler README, ROADMAP, DECISIONS, STATUS, PHASE_13_HARDENING, EMPROVEX_CORE_PROTECTION, DEVELOPMENT_CI_WORKFLOW e o plano do Módulo 14;
+4. não reimplementar funcionalidades dos Módulos 1–13;
+5. tratar o Módulo 14 como estabilização/validação, não como nova fase funcional.
+
+Ordem operacional:
+- Core Protection/isolamento/guards;
+- testes de domínio;
+- TypeScript;
+- Firestore Emulator/multitenancy;
+- walking skeleton;
+- build;
+- Browser E2E específico do ADM;
+- regressão EMPROVEX/ADM;
+- correções consolidadas;
+- reexecução seletiva;
+- regressão final completa;
+- PR e Application CI.
+
+Achados preparatórios a não esquecer:
+- E2E genérico atual não cobre explicitamente as jornadas ADM;
+- `verify:adm-deposito-phase-11-5` deve fazer parte da campanha local e ser avaliado para o CI final.
+
+PowerShell é o ambiente preferencial da campanha local; solicitar intervenção do fundador em blocos curtos/consolidados. Cloud Shell apenas quando necessário. Não autorizar expansão externa automaticamente após sucesso técnico.
+
+
+## Handoff de prioridade pós-ADM — 2026-09-25
+
+Além do plano do Módulo 14, o próximo trabalho deve respeitar a sequência oficial registrada em:
+
+`docs/adm-deposito/POST_ADM_STABILIZATION_AND_SECURITY_PLAN.md`
+
+Ordem:
+1. concluir ADM Depósito/Módulo 14;
+2. bateria dedicada de testes e melhorias do ADM com uso real;
+3. hardening de segurança de dados da plataforma.
+
+Não iniciar o pacote transversal de hardening preventivo no meio do fechamento do ADM sem motivo crítico. Se surgir vulnerabilidade crítica confirmada, ela se torna bloqueante e deve ser tratada imediatamente.
+
+Não interpretar essa priorização como autorização para expansão ampla de usuários externos antes da estabilização e revisão de segurança.
+
+## Handoff — fechamento dos Módulos 14.0 e 14.1 — 2026-09-25
+
+Baseline oficial de entrada:
+`88dff395649f7700f2c9c080ba9d7de0acf13ae9`.
+
+Estado:
+- 14.0 concluído;
+- 14.1 concluído;
+- 14.2 não iniciado;
+- relatório: `docs/adm-deposito/MODULE_14_STATIC_AUDIT.md`.
+
+Gate da auditoria estática: **B**.
+
+Próximo trabalho autorizado, somente quando o PowerShell estiver disponível:
+**Módulo 14.2 — gates rápidos**.
+
+Não interpretar esse gate como aprovação de build, Emulator, E2E, Application CI, merge, deploy ou expansão externa. Nenhuma dessas etapas foi executada no fechamento 14.0/14.1.
+
+## Handoff — Módulo 14 após regressão local final — 2026-09-25
+
+A campanha local de validação foi concluída com sucesso.
+
+Estado:
+- Módulos 1–13: concluídos;
+- Módulo 14 local: **REGRESSÃO FINAL VERDE**;
+- certificação GitHub/Application CI: **PENDENTE**;
+- merge: não realizado;
+- deploy: não realizado;
+- expansão externa: não autorizada;
+- acesso ADM: founder-only.
+
+Resultados que não devem ser repetidos sem motivo:
+- domínio completo: 91/91;
+- regressão final principal de domínio: 85/85;
+- walking skeleton integrado: 70/70;
+- typecheck: 0 erros;
+- multi-tenant: 244/244;
+- homeSnapshot: 1/1;
+- build: PASS;
+- Browser E2E: 21/21.
+
+Próximo trabalho autorizado:
+1. revisar diff final da branch;
+2. preparar/atualizar PR de fechamento;
+3. confirmar EMPROVEX Core Protection;
+4. executar Application CI;
+5. classificar eventual divergência CI x local;
+6. com checks verdes, registrar encerramento técnico do Módulo 14.
+
+Não refazer módulos nem alterar domínio/Rules para obter CI verde. Não fazer merge/deploy automaticamente.

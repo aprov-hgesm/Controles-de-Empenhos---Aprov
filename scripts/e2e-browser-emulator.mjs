@@ -76,7 +76,7 @@ try {
 
   await run(
     process.execPath,
-    [playwrightCli, 'test', '--config=playwright.e2e.config.mjs'],
+    [playwrightCli, 'test', ...process.argv.slice(2), '--config=playwright.e2e.config.mjs'],
     {
       ...process.env,
       EMPROVEX_E2E_BASE_URL: appBase,

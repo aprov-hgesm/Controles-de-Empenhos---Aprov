@@ -18,10 +18,10 @@ import type { WarehouseInventoryScope } from '../../../lib/warehouse/inventory';
 import {
   beginWarehouseInventoryReview,
   cancelWarehouseInventory,
+  deriveWarehouseUnlocatedStock,
   confirmWarehouseInventory,
   listWarehouseInventoryItems,
   listWarehouseInventorySessions,
-  listWarehouseUnlocatedStock,
   reopenWarehouseInventoryCounting,
   saveWarehouseInventoryCount,
   startWarehouseInventory,
@@ -31,8 +31,10 @@ import {
   type WarehouseInventorySessionRecord,
   type WarehouseUnlocatedStock,
 } from '../../../lib/warehouse/inventoryRepository';
+import { listWarehouseBalances } from '../../../lib/warehouse/ledgerRepository';
 import {
   listWarehouseDepots,
+  listWarehouseLocationBalances,
   listWarehouseLocations,
   type WarehouseDepotListItem,
   type WarehouseLocationListItem,
@@ -115,18 +117,28 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
   );
 
   const loadBase = async () => {
-    const [nextSessions, nextMaterials, nextDepots, nextLocations, nextUnlocated] = await Promise.all([
+    const [
+      nextSessions,
+      nextMaterials,
+      nextDepots,
+      nextLocations,
+      nextBalances,
+      nextLocationBalances,
+    ] = await Promise.all([
       listWarehouseInventorySessions(workspaceId, 24),
       listWarehouseMaterials(workspaceId, 500),
       listWarehouseDepots(workspaceId, 250),
       listWarehouseLocations(workspaceId, 500),
-      listWarehouseUnlocatedStock(workspaceId),
+      listWarehouseBalances(workspaceId, 500),
+      listWarehouseLocationBalances(workspaceId, 500),
     ]);
     setSessions(nextSessions);
     setMaterials(nextMaterials);
     setDepots(nextDepots);
     setLocations(nextLocations);
-    setUnlocated(nextUnlocated);
+    setUnlocated(
+      deriveWarehouseUnlocatedStock(nextMaterials, nextBalances, nextLocationBalances)
+    );
 
     const currentId = active?.session.id;
     const selected = currentId

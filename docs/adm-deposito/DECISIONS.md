@@ -252,11 +252,18 @@ O cronograma atual deve ser reaproveitado, sem duplicar dados.
 
 Transição visual pode manter compatibilidade temporária com a rota atual.
 
-## D-025 — Alertas logísticos integram a central existente
+## D-025 — Alertas logísticos pertencem ao namespace `warehouse`
 
-Não criar um sistema paralelo de notificações.
+Não criar dependência de escrita do ADM Depósito sobre a Central de Avisos operacional do EMPROVEX.
 
-Alertas de validade, localização, divergência, estoque e SISCOFIS entram na central atual do EMPROVEX.
+Regras:
+- alertas de validade, localização, divergência, estoque, SISCOFIS e entregas são persistidos exclusivamente em `warehouse/{workspaceId}/alerts`;
+- IDs são determinísticos por tipo + entidade e a reconciliação é idempotente;
+- quando a causa desaparece, o alerta é resolvido no próprio namespace logístico, não apagado;
+- uma superfície agregadora futura poderá ler alertas logísticos por uma camada neutra, mas o ADM não pode chamar `saveAlert` nem escrever em `workspaces/{workspaceId}/alerts`;
+- falha na persistência de alertas do ADM é best-effort e nunca bloqueia Dashboard, NF, Empenho, Cronograma ou qualquer fluxo operacional do EMPROVEX.
+
+Esta decisão substitui a redação anterior de integração por escrita na Central de Avisos e é subordinada à D-052/D-053.
 
 ## D-026 — Toda entidade é isolada por workspace/UG
 
@@ -709,3 +716,969 @@ Ambiente preferencial:
 - a validação local é pré-certificação técnica; não substitui o gate final do GitHub/FASE 13.
 
 Objetivo: maximizar velocidade de implementação sem abrir mão da fronteira de segurança do EMPROVEX nem da regressão completa antes do fechamento.
+
+
+## D-055 — ADM Depósito reutiliza o chrome visual oficial do EMPROVEX
+
+A FASE 11.5 abandona a aparência de painel administrativo isolado e passa a usar a mesma linguagem estrutural da plataforma operacional EMPROVEX.
+
+Diretriz:
+- o ADM Depósito deve reutilizar o mesmo Header oficial por meio de `AppHeader`;
+- a sidebar do ADM deve replicar as mesmas classes, hierarquia, operador, status, assinatura visual, comportamento responsivo e footer do `AppSidebar`;
+- a navegação interna continua específica do domínio logístico, mas visualmente pertence ao mesmo produto;
+- o fundo, espaçamento principal, largura de conteúdo, offsets de Header/Sidebar e composição geral devem seguir o shell operacional do EMPROVEX;
+- o ADM não deve voltar a usar uma moldura própria semelhante à área administrativa;
+- alterações desta decisão são exclusivamente visuais/UX e não autorizam mudança de regras de negócio, ledger, saldo, Rules operacionais ou dependências do núcleo.
+
+A referência visual de verdade para o chrome é:
+- `components/layout/AppHeader.tsx`;
+- `components/layout/AppSidebar.tsx`;
+- `components/layout/AppBackground.tsx`;
+- composição do shell em `app/page.tsx`.
+
+A sidebar logística pode possuir seus próprios itens, desde que preserve a mesma estrutura visual e comportamental da sidebar principal.
+
+
+## D-056 — Início do ADM Depósito é uma central visual de localização sobre croqui 2.5D
+
+A antiga superfície “Visão Geral” passa a se chamar **Início** e deixa de ser um dashboard convencional.
+
+Direção aprovada pelo fundador:
+- fundo predominantemente branco, mantendo Header e Sidebar oficiais do EMPROVEX;
+- coluna esquerda dedicada à consulta de material;
+- imediatamente abaixo da consulta, seletor do depósito cadastrado;
+- ao selecionar um material, mostrar saldo total, quantidade no depósito selecionado, localizações físicas, lotes e validade;
+- a área principal é o croqui do depósito, com o item pesquisado destacado na posição real;
+- o croqui é 2D com perspectiva leve (2.5D), inspirado em visão isométrica de armazenagem;
+- paredes não são renderizadas na home; o limite físico do depósito é representado pelo piso;
+- permitir vista isométrica, vista superior e rotação em incrementos controlados;
+- evitar engine 3D pesada, WebGL obrigatório ou animações que prejudiquem desempenho;
+- o croqui continua derivado de warehouse_depot_layout_v1 e das localizações oficiais já existentes;
+- a home é somente leitura para material, saldo, lote, localização e layout; edição estrutural permanece na superfície Visão do Depósito.
+
+Objetivo: transformar o Início em uma superfície operacional de consulta e orientação física, sem criar nova fonte de verdade.
+
+## D-057 — Execução de testes e CI do restante do ADM Depósito fica consolidada no fechamento
+
+Por orientação do fundador durante a FASE 11.5, a execução de baterias de teste deixa de ocorrer a cada incremento restante do ADM Depósito.
+
+Regras vigentes a partir desta decisão:
+- implementação visual/funcional restante pode prosseguir sem executar suites locais a cada commit;
+- Core Protection, guards, testes de domínio, TypeScript, build, Firestore Emulator, Browser E2E e regressão integrada permanecem obrigatórios, mas sua **execução é consolidada na campanha final do roadmap modular vigente — Módulo 14**, antes do encerramento do piloto;
+- nenhum CI remoto deve ser disparado intencionalmente durante a implementação restante;
+- testes existentes não são removidos; ficam acumulados para a campanha final;
+- se surgir um bloqueio concreto que só possa ser diagnosticado por execução dirigida, um teste pontual pode ser usado como ferramenta de diagnóstico, sem transformar isso em gate de fase;
+- a estação local do fundador possui PowerShell e pode executar comandos quando intervenção local for necessária;
+- intervenções por PowerShell devem ser solicitadas apenas quando realmente necessárias e preferencialmente de forma consolidada.
+
+D-057 substitui, quanto à **cadência de execução**, a exigência intermediária de gates rápidos descrita em D-054; a cobertura final prevista em D-054 permanece integralmente obrigatória.
+
+
+## D-058 — Navegação do ADM Depósito consolidada em quatro áreas operacionais
+
+A navegação plana anterior é substituída por quatro áreas principais definidas pelo fundador:
+
+1. **Início** — central visual com croqui do depósito selecionado, consulta de item e destaque da posição física.
+2. **Cadastro de Itens** — porta de entrada logística das NFs do EMPROVEX, decisão entre alocação física e consumo imediato, além da migração SISCOFIS manual/JSON.
+3. **Meus Depósitos** — cadastro dos depósitos e localizações e edição/versionamento dos croquis físicos.
+4. **Controle de Itens** — consulta do estoque disponível e acesso consolidado a resumo logístico, lotes/validade, saída expressa, movimentações, inventário, entregas, alertas e configurações.
+
+As rotas antigas permanecem apenas como redirecionamentos de compatibilidade. Elas não formam mais a navegação principal.
+
+Regras de preservação:
+- o Dashboard Logístico passa a ser uma subárea de Controle de Itens;
+- SISCOFIS deixa de ser aba principal e passa a integrar Cadastro de Itens;
+- Localizações e Visão do Depósito passam a compor Meus Depósitos;
+- Estoque, Saída Expressa, Movimentações, Inventário, Entregas, Alertas e Configurações passam a compor Controle de Itens;
+- a reorganização não cria fonte de verdade paralela.
+
+## D-059 — NF registrada no EMPROVEX gera decisão logística no ADM sem reacoplar o núcleo
+
+O EMPROVEX permanece a fonte canônica da Nota Fiscal e do Empenho. O ADM Depósito apenas lê essas fontes e registra sua própria decisão logística em `warehouse/{workspaceId}/intakes`.
+
+Contrato:
+- cada item elegível de NF aparece em **Cadastro de Itens** como pendente até existir decisão logística completa;
+- **Alocar no depósito** cria/resolve o material canônico do ADM, registra entrada no ledger, materializa saldo não localizado, transfere para a posição física escolhida, registra lote/validade e associa código de barras quando informado;
+- a posição é composta por depósito + estrutura/local + nível/subposição opcional;
+- **Consumo imediato** não cria entrada física, lote nem localização de estoque; o item é registrado como pendência para lançamento manual no SISCOFIS;
+- o relatório de consumo imediato permite marcar o item como lançado no SISCOFIS sem modificar a NF original;
+- a NF e o Empenho continuam sem importação ou dependência de `lib/warehouse`;
+- falha do ADM nunca converte o cadastro operacional da NF em falha.
+
+O contrato persistido é `warehouse_item_intake_v1`, imutável quanto à decisão original. Somente o estado SISCOFIS de um consumo imediato pode avançar de `PENDING` para `POSTED`.
+
+## D-060 — Croqui ativo é independente por depósito e exclusão física é arquivamento operacional
+
+Cada depósito pode possuir seu próprio croqui ativo e seu próprio histórico de versões. Criar ou editar o croqui de um depósito não arquiva o croqui de outro.
+
+Estruturas visuais admitidas incluem estante, rack, armário, câmara, freezer, geladeira, palete, bancada, corredor, zona e outras estruturas, com dimensões, posição, rotação e elevação visual personalizáveis.
+
+Para preservar auditoria:
+- depósito/localização já utilizado não é apagado fisicamente;
+- a ação apresentada ao usuário como **Excluir da operação** altera o status para inativo e preserva histórico e referências;
+- o registro pode ser restaurado posteriormente;
+- versões antigas de croqui permanecem arquivadas, nunca reescritas como histórico mutável.
+
+## D-058 — Navegação operacional consolidada em quatro áreas
+
+A navegação principal do ADM Depósito passa a possuir quatro áreas funcionais definitivas:
+
+1. **Início** — croqui do depósito selecionado, consulta de item e localização visual;
+2. **Cadastro de Itens** — tratamento logístico dos itens oriundos de NF e migração inicial SISCOFIS;
+3. **Meus Depósitos** — cadastro de depósitos, localizações, estruturas físicas e croquis;
+4. **Controle de Itens** — consulta do estoque e demais operações recorrentes do depósito.
+
+As antigas superfícies `Estoque`, `Saída Expressa`, `Movimentações`, `Localizações`, `Visão do Depósito`, `Inventário`, `SISCOFIS / Conciliação`, `Entregas`, `Alertas` e `Configurações` deixam de ser áreas primárias de navegação.
+
+Elas devem ser:
+- absorvidas como subabas ou capacidades internas das quatro áreas acima;
+- preservadas tecnicamente quando ainda necessárias;
+- mantidas por redirecionamento quando houver rota legada;
+- nunca duplicadas como uma segunda implementação concorrente.
+
+A reorganização é de experiência e composição funcional; material canônico, ledger, saldos, lotes, barcodes, inventário, SISCOFIS, alertas e demais contratos existentes continuam sendo reutilizados.
+
+## D-059 — Toda NF recebida gera tratamento logístico pendente no ADM, sem voltar a acoplar o núcleo EMPROVEX
+
+O cadastro da Nota Fiscal continua pertencendo exclusivamente ao núcleo operacional do EMPROVEX e permanece independente do ADM Depósito, conforme D-002, D-033 e Core Protection.
+
+O ADM passa a interpretar cada item de NF disponível como uma **pendência de tratamento logístico** até que sua quantidade seja classificada.
+
+Destinos admitidos:
+- **Alocação no depósito** — quantidade passa de `UNASSIGNED` para posição física do ADM;
+- **Consumo imediato** — quantidade não ocupa posição física do depósito e passa a integrar a fila/relatório de lançamentos a realizar no SISCOFIS.
+
+O tratamento pode ser parcial. Portanto, uma mesma quantidade recebida pode ser dividida entre armazenamento físico e consumo imediato.
+
+O estado logístico deve pertencer ao namespace `warehouse/{workspaceId}`, referenciando a identidade estável da NF/item sem escrever de volta na NF para controlar o fluxo.
+
+A alocação deverá reutilizar os contratos existentes de:
+- material canônico;
+- ledger;
+- `warehouse_location_balance_v1`;
+- lote/validade;
+- barcode;
+- localização física.
+
+Não criar segundo saldo nem uma nova fonte de verdade quantitativa.
+
+## D-060 — Cadastro de Itens concentra entrada logística e migração SISCOFIS
+
+A área **Cadastro de Itens** possui duas responsabilidades operacionais relacionadas à formação do estoque:
+
+### Notas Fiscais pendentes
+
+A superfície lê NFs e empenhos canônicos do EMPROVEX e apresenta os itens que ainda exigem decisão logística.
+
+O fluxo de alocação deverá reunir, em uma única jornada:
+- depósito;
+- estrutura/local;
+- nível/subposição;
+- quantidade;
+- lote;
+- validade;
+- código de barras;
+- confirmação.
+
+Lote, validade e barcode reutilizam os contratos existentes e não criam um catálogo paralelo.
+
+### Migração SISCOFIS
+
+A migração inicial do inventário SISCOFIS permanece dentro de Cadastro de Itens e admite:
+- lançamento manual;
+- importação JSON gerada por prompt para IA externa.
+
+As duas modalidades devem convergir para o mesmo contrato versionado e validação antes da confirmação.
+
+A IA permanece externa, conforme D-008. Não introduzir agente ou interpretação automática interna do relatório.
+
+## D-061 — Meus Depósitos é a autoridade de configuração física e cada depósito possui croqui próprio
+
+A área **Meus Depósitos** concentra:
+- criação e manutenção de 1..N depósitos;
+- criação de localizações e subposições;
+- configuração das estruturas físicas;
+- edição e versionamento dos croquis.
+
+O modelo alvo passa a ser **um layout ativo por depósito**, com histórico independente por depósito.
+
+Estruturas físicas previstas incluem, no mínimo:
+- estante;
+- rack;
+- armário;
+- freezer;
+- geladeira;
+- câmara;
+- palete;
+- área de paletes;
+- bancada;
+- corredor;
+- área livre;
+- outros.
+
+O editor permanece um croqui operacional 2D/2.5D, não CAD e não motor 3D.
+
+A experiência alvo permite:
+- adicionar estrutura;
+- arrastar;
+- redimensionar;
+- rotacionar;
+- duplicar;
+- excluir;
+- renomear;
+- alinhar/encaixar em grid;
+- associar a localização lógica;
+- configurar níveis/subposições quando aplicável.
+
+Mover ou redimensionar um objeto visual nunca movimenta estoque. A associação continua baseada no ID lógico da localização.
+
+## D-062 — Controle de Itens absorve a operação recorrente e a execução segue módulos oficiais
+
+A área **Controle de Itens** concentra as capacidades recorrentes do depósito.
+
+Subáreas previstas:
+- Itens disponíveis;
+- Saída Expressa;
+- Movimentações;
+- Inventário;
+- Entregas;
+- Alertas;
+- SISCOFIS operacional/conciliação quando aplicável;
+- Configurações.
+
+Relatórios logísticos derivados deverão ser incorporados nessa área ou em superfície subordinada, sem criar novo saldo ou duplicar dados.
+
+A execução das pendências restantes segue o plano modular oficial registrado no ROADMAP.
+
+A cadência de validação continua obedecendo D-057:
+- não executar suítes completas a cada módulo;
+- não abrir PR/CI intermediário apenas para marcar cada módulo;
+- preservar todos os testes e guards existentes;
+- executar a campanha consolidada na etapa final prevista;
+- teste dirigido durante implementação somente quando necessário para diagnosticar bloqueio concreto.
+
+## D-063 — Motor de pendências usa `warehouse_item_intake_v2` como estado de tratamento, sem criar saldo paralelo
+
+O **Módulo 1 — Motor de pendências das Notas Fiscais** evolui a fila de Cadastro de Itens para suportar tratamento parcial sem antecipar a alocação física.
+
+Contrato permanente:
+- o path continua sendo `warehouse/{workspaceId}/intakes/{intakeId}`;
+- novos estados parciais usam `schemaVersion = warehouse_item_intake_v2`;
+- `warehouse_item_intake_v1` permanece preservado como contrato legado de decisões inteiras já registradas e não é reescrito para v2;
+- a identidade permanece determinística por `workspaceId + invoiceRecordKey + itemId`, usando o mesmo formato `intake_<sha256>`;
+- descrição textual, fornecedor ou número exibido da NF nunca formam a identidade;
+- a ausência de documento `intakes` é o estado inicial canônico **PENDING** para a fila; refresh/reentrada não cria documentos nem duplica pendências;
+- a persistência v2 começa quando um módulo operacional efetivamente registrar tratamento;
+- `materialId` pode permanecer nulo até ser resolvido e, uma vez definido no estado v2, não pode ser trocado silenciosamente;
+- `receivedQuantity` é o snapshot da quantidade canônica no início do tratamento e torna-se imutável no documento v2;
+- `allocatedQuantity` e `immediateConsumptionQuantity` são progresso de tratamento, nunca saldo de estoque;
+- `pendingQuantity = receivedQuantity - allocatedQuantity - immediateConsumptionQuantity`;
+- os estados persistidos são `PENDING`, `PARTIALLY_PROCESSED` e `PROCESSED`;
+- `warehouse_balance_v1` continua sendo a única autoridade quantitativa de estoque; `warehouse_location_balance_v1` continua sendo a distribuição física e `warehouse_movement_v1` a trilha auditável.
+
+Reconciliação e compatibilidade:
+- quando a quantidade atual da NF diverge do snapshot warehouse, a fila apresenta `RECONCILIATION_REQUIRED` como **estado efetivo de leitura** e não altera automaticamente o documento histórico;
+- quando NF/item deixa de existir na fonte canônica, o estado histórico é preservado e a fila só conclui `CANONICAL_SOURCE_MISSING` quando a consulta de NFs não estiver truncada;
+- quando existe projeção/movimento legado de NF sem estado `intakes` compatível, a fila usa `LEGACY_INVOICE_PROJECTION` e exige reconciliação antes de qualquer nova movimentação;
+- NFs anteriores ao cutoff existente continuam fora da fila operacional; não existe retrointegração histórica automática;
+- nenhum desses casos corrige saldo, ledger, NF ou Empenho silenciosamente.
+
+Segurança e performance:
+- Rules v2 são explícitas em `/warehouse/{workspaceId}/intakes/{intakeId}`, sem wildcard permissivo e sem delete físico;
+- o piloto continua founder-only por `canAccessWarehouseModule`; usuários externos permanecem sem acesso;
+- updates v2 preservam identidade, UG, snapshot recebido e metadados de criação e só admitem progresso monotônico de tratamento;
+- a leitura da fila é bounded em até 250 empenhos, 300 NFs, 500 estados `intakes` e 250 movimentos recentes usados somente para detectar compatibilidade legada;
+- Cadastro de Itens não carrega mais cronogramas, saldos, depósitos e localizações apenas para montar a fila;
+- nenhuma escrita é feita no namespace operacional de NF/Empenho/Cronograma.
+
+Limite deste módulo:
+- **Alocar no depósito** permanece apenas como porta para o Módulo 2 e não executa transferência, localização, lote, validade ou barcode;
+- **Consumo imediato** permanece apenas como porta para módulo posterior e não classifica/baixa quantidade nem conclui SISCOFIS neste Módulo 1;
+- o `warehouse_item_intake_v1` já existente continua legível para compatibilidade histórica, mas não autoriza reuso do fluxo inteiro como implementação do tratamento parcial.
+
+Esta decisão substitui a interpretação anterior de D-059 de que uma decisão nova precisaria consumir o item inteiro de uma vez; o v1 continua válido apenas para registros legados já materializados.
+
+
+
+## D-064 — Módulos 2 e 3 usam uma única jornada transacional de alocação parcial, com entrada quantitativa idempotente e enriquecimento logístico
+
+Os **Módulos 2 e 3** passam a formar uma única jornada operacional em **Cadastro de Itens → Notas Fiscais pendentes**. Não existe segunda tela concorrente para lote/barcode e não existe novo saldo.
+
+### Autoridades preservadas
+
+Permanecem autoridades:
+- material: `warehouse_material_v1`;
+- ledger: `warehouse_movement_v1`;
+- saldo agregado: `warehouse_balance_v1`;
+- distribuição física: `warehouse_location_balance_v1`;
+- lote/validade: `warehouse_lot_v1`, como atribuição logística e não saldo;
+- barcode: `warehouse_barcode_v1`, como identificador auxiliar;
+- tratamento da pendência: `warehouse_item_intake_v2`.
+
+A quantidade `allocatedQuantity` do intake só avança depois de uma transferência física confirmada. O intake nunca é usado para recalcular ou substituir o saldo oficial.
+
+### Entrada da NF e prevenção de duplicação
+
+Antes da primeira alocação v2, o serviço resolve o material canônico pela vinculação existente ou por `deriveWarehouseMaterialIdForEmpenhoItem`.
+
+A entrada quantitativa da NF usa uma identidade idempotente única por `intakeId`:
+`adm-intake-v2:<intakeId>:invoice-entry`.
+
+Antes de criar essa entrada, o repository executa uma busca bounded dos movimentos da mesma `invoiceRecordKey`. Se houver outro movimento `INVOICE` que já represente o mesmo item, a operação é interrompida como reconciliação necessária. Assim, uma projeção NF → estoque anterior nunca é somada novamente.
+
+Quando não existe entrada oficial anterior, é criado exatamente um `INVOICE_ENTRY` para a quantidade recebida inteira pelo repository oficial do ledger. Essa entrada materializa a quantidade em `UNASSIGNED`. Alocações parciais posteriores não criam novas entradas: apenas transferem parcelas de `UNASSIGNED` para posições físicas.
+
+### Fronteira transacional e recuperação segura
+
+As Rules atuais vinculam cada movimento ao `lastMovementId` final do saldo agregado. Por isso, a criação inicial de `INVOICE_ENTRY` e a transferência física não podem ser dois movimentos independentes dentro do mesmo commit sem violar essa invariável.
+
+A fronteira adotada é:
+1. **entrada quantitativa idempotente** pelo ledger oficial;
+2. **transação de alocação** que grava conjuntamente:
+   - `TRANSFER` com `quantityDelta = 0`;
+   - nova revisão de `warehouse_balance_v1` sem alterar a quantidade total;
+   - redução de `UNASSIGNED`;
+   - aumento da `warehouse_location_balance_v1` de destino;
+   - criação/incremento da atribuição `warehouse_lot_v1`;
+   - criação de `warehouse_barcode_v1` somente quando o código ainda é desconhecido;
+   - criação/avanço monotônico do `warehouse_item_intake_v2`.
+
+Se a etapa 1 confirmar e a etapa 2 falhar, nenhuma alocação é fingida: a quantidade permanece oficialmente em `UNASSIGNED`, o intake não avança e a repetição reutiliza a mesma entrada. Não existe compensação silenciosa.
+
+### Quantidade parcial e concorrência
+
+Cada confirmação aceita apenas:
+`0 < quantidade <= pendingQuantity`.
+
+A transação relê o intake antes da escrita e compara `allocatedQuantity` e `immediateConsumptionQuantity` com a revisão observada pela tela. Se outra tela tiver avançado a pendência, a operação aborta com conflito e exige recarga. A retry do Firestore não pode transformar uma tela obsoleta em sobrealocação.
+
+O status continua derivado exclusivamente por:
+`pendingQuantity = receivedQuantity - allocatedQuantity - immediateConsumptionQuantity`.
+
+### Idempotência da confirmação
+
+Cada tentativa confirmável recebe `operationId` estável. A transferência usa:
+`adm-intake-v2:<intakeId>:allocation:<operationId>`.
+
+Na interface, o `operationId` é preservado em `sessionStorage` durante a tentativa. Refresh, duplo clique ou resposta de rede ambígua reutilizam a mesma identidade. O movimento também recebe um fingerprint compacto de quantidade + posição + lote + validade + barcode, incorporado ao payload auditável comparado pelo replay. Assim, replay idêntico retorna o movimento existente; payload divergente conflita e não movimenta novamente.
+
+O lote usa identidade determinística por intake + movimento de entrada + código do lote + posição. Repetidas parcelas do mesmo lote na mesma posição incrementam a atribuição existente; lote igual em outra posição permanece uma atribuição distinta.
+
+### Lote, validade e barcode
+
+O lote é obrigatório na jornada atual porque a confirmação cria ou amplia uma atribuição `warehouse_lot_v1`. A validade pode ser uma data ISO válida ou `null` mediante escolha humana explícita **Sem validade**. Nenhuma validade é inferida automaticamente.
+
+Barcode é opcional. Digitação manual e scanner USB HID usam o mesmo campo; ENTER apenas captura a leitura na interface. Código conhecido precisa pertencer ao mesmo material e a uma apresentação válida; código de outro material, incompatível ou inativo é bloqueado. Código desconhecido pode ser associado ao material canônico já resolvido, nunca cria material implicitamente.
+
+### Estrutura física e performance
+
+Somente depósitos, locais e subposições ativos da UG/workspace corrente podem receber a quantidade. A interface carrega depósitos/localizações somente ao abrir o painel de alocação, com limites existentes de 250 depósitos e 500 localizações. A prevenção de projeção legada consulta no máximo 51 movimentos para a NF específica. A fila principal continua usando os limites definidos em D-063.
+
+### Segurança e Core Protection
+
+Nenhuma Firestore Rule precisou ser relaxada ou ampliada. Founder-only, UG, workspace, ledger imutável, saldos derivados, delete físico negado para histórico, lote sem autoridade quantitativa e barcode auxiliar continuam valendo.
+
+Os Módulos 2 e 3 não alteram cadastro, edição ou exclusão de NF, Empenho ou Cronograma e não escrevem pendência no namespace operacional. A única dependência do núcleo é leitura da fonte canônica.
+
+O **Módulo 4 — Consumo imediato e fila SISCOFIS** permanece explicitamente fora deste fechamento. Testes completos, Browser E2E, Application CI, regressão e PR continuam diferidos para o Módulo 14 conforme D-057.
+
+
+## D-065 — Saída de Material absorve Saída Expressa e compartilha a projeção de consumo/SISCOFIS com o consumo imediato
+
+Os **Módulos 3.5 e 4** consolidam a retirada de materiais e o consumo imediato sem criar uma segunda autoridade quantitativa, um segundo scanner ou um segundo motor de relatórios.
+
+### Superfície operacional e compatibilidade da Saída Expressa
+
+A superfície principal passa a ser:
+
+**Controle de Itens → Saída de Material**
+
+com as subabas:
+- **Nova Saída**;
+- **Relatórios**.
+
+A antiga `WarehouseExpressOutbound` permanece somente como wrapper de compatibilidade para rota/imports históricos. Ela renderiza a nova `WarehouseMaterialWithdrawal`; portanto não existe fluxo concorrente de baixa.
+
+O movimento oficial continua sendo:
+- contrato `warehouse_movement_v1`;
+- tipo `OUTBOUND`;
+- source legado compatível `EXPRESS_OUTBOUND`.
+
+Não foi criado novo tipo de movimento apenas para renomear a experiência visual.
+
+### Checkout e carrinho
+
+A jornada operacional é:
+
+`barcode → material → quantidade → ENTER/TAB → próxima leitura`.
+
+Regras:
+- foco retorna ao campo de barcode após a inclusão da linha;
+- scanner USB HID e digitação manual usam o mesmo campo;
+- barcode conhecido resolve a associação `warehouse_barcode_v1`;
+- barcode nunca substitui `materialId`;
+- barcode desconhecido não cria material; pode apenas ser associado a material canônico já existente;
+- ENTER no barcode resolve o material;
+- ENTER ou TAB na quantidade adiciona a linha ao carrinho;
+- adicionar ao carrinho não altera saldo;
+- quantidade/apresentação é convertida para unidade-base antes da finalização;
+- linha pode ser editada ou removida enquanto nenhuma tentativa de finalização tiver iniciado;
+- após tentativa de finalização ambígua/parcial, o carrinho fica bloqueado para preservar identidade e permitir retry seguro.
+
+O checkout reutiliza posição, lote, barcode, conversões de apresentação e o seletor FEFO existentes. A recomendação FEFO continua sendo recomendação; não existe segunda implementação de FEFO.
+
+### Contrato de retirada
+
+Foi criado o contrato operacional:
+- `warehouse_material_withdrawal_v1`;
+- path `warehouse/{workspaceId}/withdrawals/{withdrawalId}`.
+
+O cabeçalho registra:
+- ID estável `wd_<32 hex>`;
+- workspace/UG;
+- destino;
+- `withdrawnBy`;
+- `createdBy`;
+- `payloadHash`;
+- quantidade esperada/aplicada de linhas;
+- status `FINALIZING | PARTIALLY_APPLIED | FINALIZED`;
+- timestamps de servidor.
+
+Limite operacional:
+- no máximo **40 linhas por retirada**.
+
+A retirada não replica o ledger. Cada linha chama o repository oficial de Saída Expressa/OUTBOUND com identidade:
+`material-withdrawal:<withdrawalId>:<lineId>`.
+
+A operação possui ainda `payloadHash` SHA-256 de todas as linhas. Um retry com o mesmo `withdrawalId` e conteúdo diferente é rejeitado.
+
+### Atomicidade, concorrência e recuperação
+
+A finalização é deliberadamente idempotente por linha porque cada OUTBOUND já possui sua própria transação oficial de:
+- movimento;
+- saldo agregado;
+- locationBalance;
+- lote, quando aplicável.
+
+O cabeçalho registra progresso após cada linha.
+
+Se houver falha após parte das linhas:
+- status permanece `PARTIALLY_APPLIED`;
+- nenhuma mensagem de sucesso completo é exibida;
+- as mesmas identidades são reapresentadas no retry;
+- movimentos já aplicados são reconhecidos como replay;
+- linhas faltantes podem prosseguir;
+- a retirada só vira `FINALIZED` quando todas as linhas estiverem aplicadas.
+
+Antes de cada OUTBOUND, o repository existente relê material, saldo, posição, barcode e lote. Assim, saldo alterado entre carrinho e finalização é detectado e nunca produz estoque negativo.
+
+### Destinos
+
+Foi criado o contrato:
+- `warehouse_destination_v1`;
+- path `warehouse/{workspaceId}/destinations/{destinationId}`.
+
+Campos:
+- ID estável `dest_<32 hex>`;
+- workspace/UG;
+- nome;
+- status `active | inactive`;
+- createdBy/updatedBy;
+- timestamps.
+
+Destinos não são hardcoded. Cozinha, Padaria, Copa ou qualquer outro nome são dados cadastráveis.
+
+Delete físico é negado. Destino histórico deve ser inativado.
+
+O mesmo catálogo é reutilizado por:
+- saída normal de estoque;
+- consumo imediato.
+
+### Retirante e operador
+
+`withdrawnBy` representa a pessoa que recebeu/retirou fisicamente o material.
+
+Ele permanece separado de:
+- usuário autenticado;
+- `createdBy`;
+- `operatorUid`.
+
+Isso permite registrar, por exemplo, um operador do EMPROVEX diferente do militar/servidor que retirou o material.
+
+### Projeção operacional de consumo e relatórios SISCOFIS
+
+Foi criado:
+- `warehouse_consumption_record_v1`;
+- path `warehouse/{workspaceId}/consumptions/{consumptionId}`.
+
+Essa coleção é **projeção operacional para relatório**, não autoridade de saldo.
+
+Cada registro possui exatamente um `movementId` OUTBOUND e origem:
+- `STOCK_OUTBOUND`;
+- `IMMEDIATE_CONSUMPTION`.
+
+Estado local SISCOFIS:
+- `PENDING`;
+- `PREPARED`;
+- `POSTED`.
+
+Não existe integração automática com SISCOFIS.
+
+O relatório principal fica em:
+**Controle de Itens → Saída de Material → Relatórios**.
+
+Presets:
+- Diário;
+- Semanal: segunda a domingo;
+- Quinzenal: 1–15 ou 16–último dia do mês;
+- Mensal: mês-calendário;
+- período personalizado.
+
+Filtros:
+- Todos;
+- Saída de estoque;
+- Consumo imediato;
+- destino;
+- retirante.
+
+Consolidações:
+- por material;
+- por destino;
+- por retirante/recebedor;
+- por dia;
+- detalhamento de movimento.
+
+Saídas adicionais:
+- copiar;
+- imprimir;
+- CSV sem biblioteca pesada.
+
+Consulta moderna é bounded em até 250 consumos por período. Compatibilidade com Saída Expressa legada consulta no máximo 100 movimentos do período e só projeta movimento não representado por `consumptions`, impedindo dupla contabilização.
+
+### Consumo imediato do intake v2
+
+O botão **Consumo imediato** em **Cadastro de Itens → Notas Fiscais pendentes** passa a ser operacional.
+
+A quantidade aceita:
+`0 < quantidade <= pendingQuantity`.
+
+Pode ser parcial.
+
+A operação registra:
+- destino compartilhado;
+- recebido/retirado por;
+- operador autenticado;
+- consumo projetado;
+- estado SISCOFIS pendente.
+
+O efeito sobre o intake é:
+`immediateConsumptionQuantity += quantidade`
+
+e:
+`pendingQuantity = receivedQuantity - allocatedQuantity - immediateConsumptionQuantity`.
+
+O status continua derivado por `warehouse_item_intake_v2`.
+
+### Efeito quantitativo real do consumo imediato
+
+D-064 estabeleceu que a primeira operação de tratamento cria/reutiliza um único `INVOICE_ENTRY` da quantidade recebida inteira e a materializa em `UNASSIGNED`.
+
+Consequentemente, consumo imediato não pode apenas incrementar o intake: isso deixaria saldo físico inflado.
+
+A decisão adotada é:
+1. criar/reutilizar a mesma entrada quantitativa idempotente do intake;
+2. na confirmação do consumo imediato, executar **uma única transação** que:
+   - cria `OUTBOUND` da parcela a partir de `UNASSIGNED`;
+   - reduz `warehouse_balance_v1`;
+   - reduz a `warehouse_location_balance_v1` de `UNASSIGNED`;
+   - avança `immediateConsumptionQuantity`;
+   - recalcula `pendingQuantity/status`;
+   - cria uma projeção `warehouse_consumption_record_v1`.
+
+Não é criada localização física, lote ou transferência para depósito.
+
+Esse OUTBOUND não representa uma segunda saída: ele é a retirada quantitativa necessária porque D-064 já materializou a NF no saldo oficial antes da classificação. A mesma parcela nunca deve receber posteriormente outro OUTBOUND por consumo imediato.
+
+Idempotência:
+`adm-intake-v2:<intakeId>:immediate:<operationId>`.
+
+O `operationId` é preservado em `sessionStorage`; retry idêntico retorna o movimento/consumo existentes, enquanto revisão obsoleta do intake gera conflito.
+
+### Compatibilidade histórica
+
+Permanecem preservados:
+- `EXPRESS_OUTBOUND` histórico;
+- `warehouse_item_intake_v1`;
+- consumo imediato legado;
+- relatórios legados.
+
+A subaba antiga de consumo imediato/SISCOFIS foi renomeada visualmente como **Histórico legado / SISCOFIS** para não competir com o novo motor consolidado de relatórios.
+
+Não foi feita migração em massa.
+
+### Firestore Rules
+
+Foram adicionadas Rules explícitas para:
+- `destinations`;
+- `withdrawals`;
+- `consumptions`.
+
+Permanecem:
+- founder-only do piloto;
+- workspace/UG;
+- movimentos imutáveis;
+- saldo/locationBalance derivados;
+- lote/barcode sem autoridade de saldo;
+- intake v2 monotônico;
+- deletes físicos negados para os novos históricos;
+- nenhum wildcard permissivo.
+
+As Rules foram reconstruídas a partir do baseline limpo após a inspeção detectar uma corrupção textual local durante edição; a correção ocorreu antes de qualquer deploy.
+
+### Core Protection e validação
+
+Nenhum código de cadastro/edição/exclusão de NF, Empenho ou Cronograma foi alterado.
+
+Fluxo continua:
+`EMPROVEX → NF/Empenho canônicos → ADM Warehouse`.
+
+Nenhuma dependência inversa foi criada.
+
+Conforme D-057:
+- suíte completa não executada;
+- Browser E2E completo não executado;
+- Application CI não executado;
+- regressão completa não executada;
+- campanha multi-tenant completa não executada;
+- nenhum PR, merge ou deploy realizado.
+
+O **Módulo 5 permanece explicitamente NÃO INICIADO**.
+
+
+## D-066 — Migração SISCOFIS simplificada preserva Nº Ficha na origem
+
+A partir do Módulo 5 da consolidação 11.5, o contrato externo oficial é `emprovex_siscofis_inventory_v1` e contém somente `numeroItem`, `descricao`, `quantidade` e `valorUnitario`. A IA permanece externa e somente extratora; UG, data-base, materialId e unidade não são solicitados à IA. O Nº Ficha passa a ser preservado por linha para auditoria, sem se tornar materialId, ID Firestore ou chave de deduplicação. Linhas repetidas permanecem independentes. O adaptador converge para o motor histórico `warehouse_siscofis_import_v1`; snapshots novos usam `warehouse_siscofis_snapshot_v2` para tornar explícita a presença do Nº Ficha, enquanto v1 permanece legível. Material canônico reutiliza correspondência segura; quando a unidade não está disponível para material novo, o fluxo reutiliza explicitamente o fallback canônico já existente na integração de NF (`other` / `Apresentação não informada`), sem inventar uma unidade concreta e permitindo enriquecimento posterior.
+
+
+## D-067 — Biblioteca de estruturas é catálogo estático e layouts permanecem a única persistência visual por depósito
+
+Os Módulos 6 e 7 consolidam capacidades já existentes sem criar nova fonte de verdade.
+
+Decisão permanente:
+- `warehouse_depot_v1` continua sendo a identidade do depósito;
+- `warehouse_location_v1` continua sendo a identidade de local/subposição;
+- `warehouse_depot_layout_v1` continua sendo o único contrato persistido de croqui;
+- layout ativo e histórico são consultados explicitamente por `depotId`, evitando dependência de listagem global limitada;
+- salvar nova versão continua arquivando somente a versão ativa anterior do mesmo depósito;
+- a biblioteca padrão de estruturas físicas é versionada no código, como catálogo de defaults de composição;
+- não existe coleção Firestore de tipos de estrutura;
+- somente instâncias efetivamente usadas são persistidas em `layout.objects`;
+- tipos novos de biblioteca devem preferir mapear para `kind` já suportado quando semanticamente compatível;
+- layouts históricos não são migrados nem sobrescritos apenas para adotar nomes/defaults novos;
+- níveis/subposições visuais não criam estoque próprio: quando houver vínculo operacional, ele referencia IDs logísticos existentes;
+- mover, redimensionar ou rotacionar objeto visual nunca altera `warehouse_balance_v1`, `warehouse_location_balance_v1` ou `warehouse_movement_v1`.
+
+O catálogo pode oferecer dimensões, proporções, rotação e comportamento visual iniciais, mas esses valores não são medidas arquitetônicas oficiais e não transformam o editor em CAD.
+
+## D-068 — Editor visual permanece leve e sem engine gráfica externa
+
+No Módulo 8 da reorganização funcional, Fabric.js foi avaliado como primeira opção e Konva/react-konva como alternativa.
+
+Decisão permanente para o baseline atual:
+- não adicionar Fabric.js, Konva, Three.js ou outro motor gráfico;
+- evoluir a camada React/pointer-events já existente;
+- manter `warehouse_depot_layout_v1` como único modelo persistido;
+- manter todas as interações geométricas em memória até o comando explícito Salvar versão;
+- prévia 2.5D é somente representação derivada, nunca segundo layout;
+- não persistir estado proprietário de canvas;
+- priorizar baixo custo de CPU/GPU, compatibilidade com máquinas antigas e ausência de animações contínuas;
+- uma futura troca de camada gráfica só é justificável se complexidade funcional concreta superar a solução atual, sem alterar o contrato persistido.
+
+A decisão evita dependência imperativa adicional e mantém a separação entre camada de interação visual e domínio logístico.
+
+
+## D-069 — Hardening do ADM reutiliza telemetria existente, preserva históricos e degrada fontes auxiliares com segurança
+
+No Módulo 13, ficam congeladas as seguintes decisões:
+
+1. **Material canônico é histórico e não sofre delete físico.**
+   - `warehouse_material_v1` pode ser inativado pelo contrato já existente;
+   - Firestore Rules negam delete físico;
+   - referências de ledger, saldo, lote, barcode, inventário e relatórios não devem ser órfãs por exclusão do catálogo.
+
+2. **Telemetria do ADM não cria sistema paralelo.**
+   - o namespace warehouse utiliza um adaptador leve sobre `workspaceUsageTelemetry`;
+   - snapshots bounded registram contagens estimadas no mesmo buffer de consumo do workspace;
+   - a telemetria é best-effort, sem listener e sem bloquear operação;
+   - não existe write Firestore por render ou por simples interação visual;
+   - eventual granularidade adicional deve continuar aproveitando a mesma infraestrutura, salvo decisão arquitetural futura explícita.
+
+3. **Fonte auxiliar degradada não transforma ausência de dado em estado resolvido.**
+   - Dashboard pode continuar com dados principais quando Inventários, SISCOFIS ou Configurações estiverem temporariamente indisponíveis;
+   - a indisponibilidade deve ser explicitada na UI;
+   - enquanto o contexto estiver incompleto, reconciliação pode criar/atualizar condições observáveis, mas não resolver automaticamente alertas históricos que podem depender da fonte ausente.
+
+4. **Otimização não cria nova autoridade.**
+   - `Map`/`Set` em memória e derivação sobre lotes já carregados são preferidos a novas coleções/caches;
+   - relatórios continuam derivados;
+   - nenhuma materialização de relatório foi autorizada;
+   - nenhum índice composto é criado preventivamente.
+
+Essas decisões preservam a fronteira `EMPROVEX → ADM Depósito` e não alteram a política D-057 de campanha consolidada no Módulo 14.
+
+
+## D-070 — Prioridade operacional: concluir ADM, estabilizar e só então executar hardening transversal de segurança
+
+Data: 2026-09-25.
+
+Fica estabelecida a sequência oficial:
+
+1. concluir o ADM Depósito e seu fechamento atual;
+2. executar bateria específica de testes, uso real e melhorias do ADM;
+3. executar o pacote transversal de segurança de dados do EMPROVEX originado da auditoria preventiva.
+
+Racional:
+- o cenário atual possui apenas um usuário externo;
+- o risco operacional de ampliar complexidade no meio do fechamento do ADM é maior do que o benefício de interromper agora por hardenings preventivos não explorados;
+- a auditoria não encontrou evidência de vazamento ativo nem Firestore operacional publicamente aberto;
+- o ADM deve ser estabilizado antes da próxima expansão externa significativa.
+
+A Etapa 3 de hardening inclui, inicialmente, dependências, CSP, App Check, sessão, política de senha, OIDC/WIF para credenciais administrativas, configuração pública, PDFs, especificação de segurança e automação de segurança.
+
+**Exceção permanente:** qualquer vulnerabilidade crítica confirmada — vazamento, bypass de autorização, acesso cross-tenant, segredo exposto, comprometimento ou vulnerabilidade crítica aplicável à produção — é bloqueante e deve ser corrigida imediatamente, mesmo durante as etapas 1 ou 2.
+
+Esta decisão não reduz nem substitui Core Protection, Firestore Rules, multi-tenant ou os gates do Módulo 14.
+
+## D-071 — Publicação inicial founder-only e liberação granular futura do ADM Depósito
+
+Data: 2026-09-25.
+
+Fica estabelecido o modelo oficial de disponibilização do ADM Depósito após o encerramento técnico do Módulo 14:
+
+1. **Publicação inicial em produção (Vercel) permanece founder-only.**
+   - a conta fundadora continua com acesso ao ADM Depósito;
+   - usuários externos não recebem acesso automaticamente por causa de merge, deploy ou publicação;
+   - a fase inicial em produção será utilizada para testes reais, observação e ajustes antes de qualquer expansão externa.
+
+2. **A expansão externa será individual e opt-in por usuário.**
+   - o painel administrativo deverá futuramente oferecer um controle do tipo `ADM Depósito habilitado`;
+   - o valor padrão para usuários externos será **desativado**;
+   - o fundador poderá habilitar ou desabilitar o ADM Depósito para cada usuário externo individualmente;
+   - habilitar um usuário não altera o estado dos demais usuários.
+
+3. **A autorização deve ser efetiva em navegação e em acesso direto.**
+   - usuário externo sem autorização não deve visualizar o ADM Depósito na navegação;
+   - acesso direto às rotas do ADM também deve ser negado;
+   - a proteção não pode depender apenas de esconder itens de interface;
+   - qualquer futura implementação deve preservar workspace/UG, isolamento multi-tenant e Core Protection.
+
+4. **A abertura externa não muda as autoridades canônicas.**
+   - Empenhos, Nota Fiscal, Comissão, Liquidação/Tesouraria, Cronograma e demais módulos Core permanecem independentes do ADM;
+   - nenhuma nova fonte de verdade é criada por esta autorização;
+   - founder-only atual permanece vigente até uma implementação específica, testada e explicitamente aprovada desse controle granular.
+
+5. **Ordem operacional prevista.**
+   - concluir Módulo 14;
+   - publicar/testar em produção com a conta fundadora;
+   - executar ajustes e estabilização pós-publicação;
+   - somente depois implementar e validar a liberação granular por usuário externo.
+
+Esta decisão não autoriza agora a expansão externa e não altera o escopo de certificação founder-only do Módulo 14.
+
+## D-072 — Publicação consolidada na main e deploy único/controlado na Vercel
+
+Data: 2026-09-25.
+
+Fica estabelecida a política oficial de fechamento e publicação do ADM Depósito após a certificação final do Módulo 14:
+
+1. **A branch de desenvolvimento pode manter histórico granular.**
+   - commits intermediários de implementação, auditoria, correção e testes permanecem válidos na branch e na PR;
+   - não é necessário reproduzir cada commit histórico como publicação independente na Vercel.
+
+2. **A entrada na `main` deve ser consolidada.**
+   - após todos os gates obrigatórios ficarem verdes, a PR de fechamento do ADM deve preferir **Squash and Merge**;
+   - o estado final completo da branch entra na `main` como um único commit consolidado;
+   - o squash não reduz funcionalidades nem apaga o histórico observável da PR; apenas simplifica o histórico principal.
+
+3. **Produção deve receber uma publicação consolidada.**
+   - evitar múltiplos pushes/deploys pequenos na `main` durante o fechamento;
+   - após o squash merge, executar uma única publicação de produção do estado final certificado;
+   - quando operacionalmente vantajoso, separar build e deploy usando fluxo prebuilt:
+     - `vercel build --prod`;
+     - validação do build;
+     - `vercel deploy --prebuilt --prod`.
+   - se existir preview já validado e apropriado, `vercel promote` pode ser usado para promover o mesmo artefato sem reconstrução.
+
+4. **Economia de cota é requisito operacional, não bypass de validação.**
+   - a estratégia consolidada existe para reduzir consumo desnecessário de deployments e evitar atingir limites da Vercel;
+   - nenhum CI, gate de segurança, Core Protection, Browser E2E ou validação obrigatória pode ser ignorado apenas para economizar deployment.
+
+5. **Sequência oficial do fechamento atual.**
+   - concluir o Application CI final do Módulo 14;
+   - fazer o fechamento documental;
+   - realizar Squash and Merge da PR de fechamento na `main`;
+   - confirmar o commit consolidado na `main`;
+   - executar build/deploy de produção de forma controlada;
+   - validar produção com a conta fundadora;
+   - manter o ADM founder-only durante a estabilização inicial, conforme D-071.
+
+Esta decisão complementa D-057 e D-071 e deve orientar releases futuras de grande porte quando houver muitas alterações acumuladas em branch de desenvolvimento.
+
+## D-073 — Fase 9 v2: separar Localização de Materiais e Edição do Croqui
+
+Data: 2026-09-25.
+
+Após a campanha remota do Módulo 14 expor falhas visuais recorrentes no Browser E2E da Fase 9 sob Chromium/Linux, fica decidido que a solução oficial não será continuar acumulando workarounds de teste ou pequenos ajustes sobre a interface atual.
+
+A Fase 9 será refatorada estruturalmente como **Croqui Operacional v2**, preservando o domínio e os contratos persistidos já aprovados.
+
+### 1. O que permanece imutável
+
+Permanecem válidos:
+- `warehouse_depot_v1` como identidade do depósito;
+- `warehouse_location_v1` como identidade de localização/subposição;
+- `warehouse_depot_layout_v1` como único contrato persistido de croqui;
+- versionamento e histórico de layouts;
+- vínculo `warehouseLocationId` como ponte visual;
+- FEFO apenas consultivo;
+- founder-only durante o piloto atual;
+- isolamento por workspace/UG;
+- Core Protection.
+
+O croqui continua sendo somente representação visual. Editar, mover, redimensionar, girar, criar ou remover objetos do layout **não pode**:
+- alterar `warehouse_balance_v1`;
+- alterar `warehouse_location_balance_v1`;
+- criar `warehouse_movement_v1`;
+- criar nova autoridade quantitativa;
+- escrever de volta no Core EMPROVEX.
+
+### 2. Nova arquitetura visual
+
+A superfície **Meus Depósitos → Croquis** será reorganizada em três responsabilidades independentes:
+
+1. **Seleção de depósito**
+   - fica em área própria e estável no topo;
+   - não compartilha a mesma faixa dinâmica com resultados de busca ou ferramentas do editor.
+
+2. **Modo Visualizar / Localizar**
+   - dedicado somente à consulta de materiais e destaque de posições;
+   - pesquisa em painel próprio;
+   - lista de resultados com altura limitada e scroll próprio;
+   - resultados não podem deslocar, sobrepor ou ocultar o seletor de depósito ou o canvas;
+   - seleção de material apenas lê projeções logísticas oficiais e destaca posições correspondentes.
+
+3. **Modo Editar Croqui**
+   - superfície independente da pesquisa de materiais;
+   - dedicado à geometria, estruturas, propriedades e vínculo com localizações;
+   - busca de material não participa do modo de edição;
+   - alterações permanecem em memória até o comando explícito de salvar versão.
+
+### 3. Plano modular da Fase 9 v2
+
+A implementação será executada em módulos:
+
+- **9.0 — Auditoria e congelamento da Fase 9 atual**
+  - mapear componentes, repositories, contratos e capacidades reaproveitáveis;
+  - registrar baseline e invariantes;
+  - não alterar domínio.
+
+- **9.1 — Nova estrutura da tela Croquis**
+  - separar seleção de depósito, modo de consulta e modo de edição;
+  - criar layout estável e responsivo.
+
+- **9.2 — Modo Visualizar / Localizar**
+  - pesquisa em painel dedicado;
+  - resultados bounded visualmente;
+  - seleção de material sem alterar geometria dos demais controles.
+
+- **9.3 — Destaque operacional**
+  - destacar uma ou várias posições reais;
+  - apresentar quantidade por posição e FEFO consultivo;
+  - manter locais sem representação visual explicitamente informados.
+
+- **9.4 — Editor de Croqui v2**
+  - adicionar/mover/redimensionar/rotacionar estruturas;
+  - editar propriedades;
+  - vincular localização;
+  - cancelar/salvar versão;
+  - sem pesquisa de materiais dentro do editor.
+
+- **9.5 — Persistência e versionamento**
+  - validar arquivamento da versão anterior;
+  - garantir uma versão ativa por depósito;
+  - comprovar que salvar layout não altera estoque ou ledger.
+
+- **9.6 — UX, responsividade e estabilidade visual**
+  - validar diferentes viewports e Chromium Windows/Linux;
+  - impedir sobreposição, controles ocultos e scroll horizontal indevido;
+  - manter baixo custo de CPU/GPU e ausência de animações pesadas.
+
+- **9.7 — Testes específicos da Fase 9 v2**
+  - 9.7A Localização;
+  - 9.7B Editor;
+  - 9.7C Persistência;
+  - 9.7D Integridade logística;
+  - 9.7E Segurança;
+  - 9.7F Geometria/estabilidade visual.
+
+- **9.8 — Integração e regressão do ADM Depósito**
+  - revalidar compatibilidade com Fases 6, 7, 8 e 10;
+  - validar redirects e navegação consolidada;
+  - não reabrir domínios já aprovados sem evidência de regressão.
+
+- **9.9 — Encerramento documental e certificação**
+  - atualizar documentação oficial;
+  - executar regressão final;
+  - retomar a certificação remota do Módulo 14.
+
+### 4. Estratégia de testes e CI
+
+Durante 9.0–9.6:
+- preferir verificações locais e testes direcionados;
+- não executar Application CI completo a cada submódulo;
+- não disparar Browser E2E global a cada ajuste.
+
+No 9.7:
+- executar testes específicos da Fase 9 v2.
+
+No 9.8/9.9:
+- executar regressão integrada e certificação ampla;
+- Application CI volta a ser gate final.
+
+### 5. Relação com o Módulo 14
+
+O Módulo 14 fica **temporariamente pausado na certificação remota**, pois a Fase 9 atual demonstrou fragilidade visual específica no runner Linux mesmo após aprovação local 21/21.
+
+A Fase 9 anterior não é apagada do histórico: seu domínio e contratos permanecem válidos, mas sua organização visual passa a ser considerada **substituída pela Fase 9 v2**.
+
+O Módulo 14 somente poderá ser encerrado após:
+1. implementação da Fase 9 v2;
+2. testes específicos verdes;
+3. regressão integrada;
+4. nova certificação remota final.
+
+Esta decisão substitui a estratégia de continuar adicionando reloads, waits ou compensações de teste para estabilizar a interface antiga.
+
+
+## D-074 — Módulo 14: Browser E2E do Croqui diferido para validação controlada na main
+
+Data: 2026-09-25.
+
+Após a conclusão da Fase 9 v2 e da certificação ampla do job principal `validate-application`, fica decidido que a falha remota específica do Browser E2E do Croqui não será tratada como bloqueio de domínio do ADM Depósito nesta branch.
+
+Evidências:
+- `validate-application`: **SUCCESS** no Application CI #765;
+- Fases 6–10, 11, 11.5 e Módulo 13: **PASS**;
+- segurança multi-tenant, build, TypeScript final e diff hygiene: **PASS**;
+- EMPROVEX Core Protection e Recovery guardrails: **PASS**;
+- falha remota isolada em `tests/e2e/warehouse-phase-9.spec.mjs`, por timeout durante a jornada visual do Croqui.
+
+Decisão operacional:
+1. o Browser E2E do Croqui continua **PENDENTE**;
+2. não deve ser marcado como PASS;
+3. não deve ser reinterpretado como falha de Rules, saldo, ledger, Auth, workspace/UG ou Core sem nova evidência;
+4. a validação visual/operacional do Croqui será executada após a integração à `main`, com o fundador operando junto;
+5. essa validação permanece obrigatória antes da publicação definitiva do ADM Depósito em produção;
+6. merge e deploy continuam dependendo de autorização explícita do fundador.
+
+Esta decisão não elimina o gate de navegador; apenas desloca o gate para a etapa controlada de integração/release na `main`.

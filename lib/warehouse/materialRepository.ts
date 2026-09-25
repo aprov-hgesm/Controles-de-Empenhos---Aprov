@@ -1,5 +1,7 @@
 import { collection, doc, getDoc, getDocs, limit, query, setDoc } from 'firebase/firestore';
 
+import { recordWarehouseDocumentReads } from './telemetry';
+
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { normalizeWorkspaceId } from '../platformIdentity';
 import {
@@ -40,6 +42,7 @@ export async function listWarehouseMaterials(
     const snapshot = await getDocs(
       query(collection(db, path), limit(Math.max(1, Math.min(maxResults, 500))))
     );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs.map((item) =>
       validateForWorkspace(workspaceId, {
         ...item.data(),

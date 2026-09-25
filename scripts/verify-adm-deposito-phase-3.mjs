@@ -9,8 +9,9 @@ const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
 const gate = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
 const navigation = read('features/warehouse/navigation.ts');
-const shell = read('features/warehouse/components/WarehouseModuleShell.tsx');
-const content = read('features/warehouse/components/WarehouseSectionContent.tsx');
+const registration = read('features/warehouse/components/WarehouseItemRegistrationOperational.tsx');
+const depots = read('features/warehouse/components/WarehouseDepotsOperational.tsx');
+const control = read('features/warehouse/components/WarehouseItemControlOperational.tsx');
 const namespace = read('lib/warehouse/namespace.ts');
 const phase0 = read('scripts/verify-adm-deposito-phase-0.mjs');
 const phase1 = read('scripts/verify-adm-deposito-phase-1.mjs');
@@ -19,36 +20,38 @@ const e2e = read('tests/e2e/operator-critical-flow.spec.mjs');
 const ci = read('.github/workflows/application-ci.yml');
 const pkg = JSON.parse(read('package.json'));
 
-const routeFiles = [
+const primaryRoutes = [
   ['app/adm-deposito/page.tsx', 'overview'],
-  ['app/adm-deposito/estoque/page.tsx', 'stock'],
-  ['app/adm-deposito/movimentacoes/page.tsx', 'movements'],
-  ['app/adm-deposito/localizacoes/page.tsx', 'locations'],
-  ['app/adm-deposito/visao-do-deposito/page.tsx', 'warehouseView'],
-  ['app/adm-deposito/inventario/page.tsx', 'inventory'],
-  ['app/adm-deposito/siscofis-conciliacao/page.tsx', 'siscofis'],
-  ['app/adm-deposito/entregas/page.tsx', 'deliveries'],
-  ['app/adm-deposito/configuracoes/page.tsx', 'settings'],
+  ['app/adm-deposito/cadastro-de-itens/page.tsx', 'registration'],
+  ['app/adm-deposito/meus-depositos/page.tsx', 'depots'],
+  ['app/adm-deposito/controle-de-itens/page.tsx', 'control'],
 ];
 
-for (const [path, section] of routeFiles) {
+for (const [path, section] of primaryRoutes) {
   const route = read(path);
-  requireText(route, 'WarehouseProtectedSurface', `Rota estrutural sem gate compartilhado: ${path}`);
-  requireText(route, `section="${section}"`, `Rota estrutural aponta para seção incorreta: ${path}`);
+  requireText(route, 'WarehouseProtectedSurface', `Rota principal sem gate compartilhado: ${path}`);
+  requireText(route, `section="${section}"`, `Rota principal aponta para seção incorreta: ${path}`);
 }
 
-for (const marker of [
-  'Visão Geral',
-  'Estoque',
-  'Movimentações',
-  'Localizações',
-  'Visão do Depósito',
-  'Inventário',
-  'SISCOFIS / Conciliação',
-  'Entregas',
-  'Configurações',
-]) {
-  requireText(navigation, marker, `Superfície ausente na navegação da FASE 3: ${marker}`);
+const legacyRoutes = [
+  ['app/adm-deposito/estoque/page.tsx', "/adm-deposito/controle-de-itens?aba=stock"],
+  ['app/adm-deposito/movimentacoes/page.tsx', "/adm-deposito/controle-de-itens?aba=movements"],
+  ['app/adm-deposito/localizacoes/page.tsx', "/adm-deposito/meus-depositos?aba=estrutura"],
+  ['app/adm-deposito/visao-do-deposito/page.tsx', "/adm-deposito/meus-depositos?aba=croquis"],
+  ['app/adm-deposito/inventario/page.tsx', "/adm-deposito/controle-de-itens?aba=inventory"],
+  ['app/adm-deposito/siscofis-conciliacao/page.tsx', "/adm-deposito/cadastro-de-itens?aba=siscofis"],
+  ['app/adm-deposito/entregas/page.tsx', "/adm-deposito/controle-de-itens?aba=deliveries"],
+  ['app/adm-deposito/configuracoes/page.tsx', "/adm-deposito/controle-de-itens?aba=settings"],
+];
+
+for (const [path, target] of legacyRoutes) {
+  const route = read(path);
+  requireText(route, "import { redirect } from 'next/navigation';", `Rota legada deixou de ser redirect: ${path}`);
+  requireText(route, `redirect('${target}')`, `Rota legada aponta para destino incorreto: ${path}`);
+}
+
+for (const marker of ['Início', 'Cadastro de Itens', 'Meus Depósitos', 'Controle de Itens']) {
+  requireText(navigation, marker, `Superfície principal ausente na navegação atual: ${marker}`);
 }
 
 for (const marker of [
@@ -61,13 +64,23 @@ for (const marker of [
 }
 
 for (const marker of [
-  'WAREHOUSE_MATERIAL_SCHEMA_VERSION',
-  'WAREHOUSE_MOVEMENT_SCHEMA_VERSION',
-  'WAREHOUSE_BALANCE_SCHEMA_VERSION',
-  'WAREHOUSE_MOVEMENT_TYPES',
-  'WAREHOUSE_NAMESPACE_ROOT',
+  'WarehouseSiscofisOperational',
+  'InvoiceRegistrationQueue',
 ]) {
-  requireText(content, marker, `Walking Skeleton não reutiliza contrato oficial: ${marker}`);
+  requireText(registration, marker, `Cadastro de Itens perdeu capacidade oficial: ${marker}`);
+}
+for (const marker of ['WarehouseLocationsOperational', 'WarehouseDepotViewOperational']) {
+  requireText(depots, marker, `Meus Depósitos perdeu capacidade oficial: ${marker}`);
+}
+for (const marker of [
+  'WarehouseStockOperational',
+  'WarehouseMovementsOperational',
+  'WarehouseInventoryOperational',
+  'WarehouseDeliveriesOperational',
+  'WarehouseLogisticsAlerts',
+  'WarehouseLogisticsSettings',
+]) {
+  requireText(control, marker, `Controle de Itens perdeu capacidade oficial: ${marker}`);
 }
 
 for (const marker of [
@@ -76,27 +89,6 @@ for (const marker of [
   "balances: 'balances'",
 ]) {
   requireText(namespace, marker, `Fonte canônica anterior foi removida: ${marker}`);
-}
-
-const uiSources = [shell, content, ...routeFiles.map(([path]) => read(path))].join('\n');
-for (const forbidden of [
-  'firebase/firestore',
-  'onSnapshot(',
-  'getDocs(',
-  'setDoc(',
-  'addDoc(',
-  'runTransaction(',
-  'applyWarehouseMovement(',
-  'saveWarehouseMaterial(',
-]) {
-  forbidText(uiSources, forbidden, `FASE 3 antecipou persistência/operação: ${forbidden}`);
-}
-
-for (const marker of [
-  'Capacidade futura',
-  'não exibe números fictícios',
-]) {
-  requireText(content, marker, `Estado honesto da interface ausente: ${marker}`);
 }
 
 requireText(phase0, 'ADM DEPÓSITO FASE 0: READY', 'Gate permanente da FASE 0 foi removido.');
@@ -121,17 +113,12 @@ if (findings.length) {
   process.exitCode = 2;
 } else {
   console.log('ADM DEPÓSITO FASE 3: READY');
-  console.log('Walking Skeleton: nove superfícies estruturais navegáveis');
-  console.log('Arquitetura: layout founder-only compartilhado + shell responsivo');
-  console.log('Contratos: material, ledger e saldo oficiais reutilizados');
-  console.log('Performance: skeleton continua sem persistência direta ou listeners globais');
-  console.log('Evolução: fases posteriores podem conectar repositórios oficiais sem invalidar a fundação');
+  console.log('Navegação atual: quatro superfícies principais protegidas');
+  console.log('Compatibilidade: rotas legadas redirecionam para as novas superfícies');
+  console.log('Contratos: namespace oficial de material, ledger e saldo preservado');
+  console.log('Segurança: gate founder-only compartilhado permanece obrigatório');
 }
 
 function requireText(source, expected, message) {
   if (!source.includes(expected)) findings.push(message);
-}
-
-function forbidText(source, forbidden, message) {
-  if (source.includes(forbidden)) findings.push(message);
 }
