@@ -16,6 +16,7 @@ execFileSync(
   [
     resolve(root, 'node_modules/typescript/bin/tsc'),
     resolve(root, 'lib/warehouse/siscofis.ts'),
+    resolve(root, 'lib/warehouse/invoiceIntegration.ts'),
     resolve(root, 'lib/warehouse/material.ts'),
     resolve(root, 'lib/warehouse/movement.ts'),
     resolve(root, 'lib/platformIdentity.ts'),
@@ -100,6 +101,24 @@ test('normaliza somente compatibilidade monetária brasileira determinística', 
   assert.equal(parsed.ok, true);
   assert.equal(parsed.data.items[0].valorUnitario, 1944);
   assert.equal(parsed.issues.some((issue) => issue.code === 'legacy_brazilian_money'), true);
+});
+
+
+test('adapter preserva ficha e usa fallback canônico explícito quando unidade não vem da IA', () => {
+  const parsed = siscofis.parseEmprovexSiscofisInventoryJson(externalJson);
+  assert.equal(parsed.ok, true);
+  const adapted = siscofis.adaptEmprovexSiscofisInventory({
+    inventory: parsed.data,
+    ug: '160416',
+    referenceDate: '2026-09-24',
+    materials: [],
+  });
+  assert.equal(adapted.importData.rows[0].sourceItemNumber, '0173P');
+  assert.deepEqual(adapted.importData.rows[0].unit, {
+    code: 'other',
+    label: 'Apresentação não informada',
+  });
+  assert.equal(adapted.issues.some((issue) => issue.code === 'unit_fallback_applied'), true);
 });
 
 test('aceita contrato JSON versionado e estrito', () => {
