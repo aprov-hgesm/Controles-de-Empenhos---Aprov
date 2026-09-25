@@ -293,3 +293,19 @@ Achados preparatórios a não esquecer:
 - `verify:adm-deposito-phase-11-5` deve fazer parte da campanha local e ser avaliado para o CI final.
 
 PowerShell é o ambiente preferencial da campanha local; solicitar intervenção do fundador em blocos curtos/consolidados. Cloud Shell apenas quando necessário. Não autorizar expansão externa automaticamente após sucesso técnico.
+
+
+## Handoff de prioridade pós-ADM — 2026-09-25
+
+Além do plano do Módulo 14, o próximo trabalho deve respeitar a sequência oficial registrada em:
+
+`docs/adm-deposito/POST_ADM_STABILIZATION_AND_SECURITY_PLAN.md`
+
+Ordem:
+1. concluir ADM Depósito/Módulo 14;
+2. bateria dedicada de testes e melhorias do ADM com uso real;
+3. hardening de segurança de dados da plataforma.
+
+Não iniciar o pacote transversal de hardening preventivo no meio do fechamento do ADM sem motivo crítico. Se surgir vulnerabilidade crítica confirmada, ela se torna bloqueante e deve ser tratada imediatamente.
+
+Não interpretar essa priorização como autorização para expansão ampla de usuários externos antes da estabilização e revisão de segurança.
