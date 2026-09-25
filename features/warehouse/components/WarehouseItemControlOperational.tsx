@@ -38,7 +38,7 @@ const CONTROL_TABS: Array<{
 }> = [
   { id: 'summary', label: 'Resumo logístico', icon: Gauge },
   { id: 'stock', label: 'Itens disponíveis', icon: Boxes },
-  { id: 'outbound', label: 'Saída Expressa', icon: ScanLine },
+  { id: 'outbound', label: 'Saída de Material', icon: ScanLine },
   { id: 'movements', label: 'Movimentações', icon: Gauge },
   { id: 'inventory', label: 'Inventário', icon: ClipboardCheck },
   { id: 'deliveries', label: 'Entregas', icon: Truck },
