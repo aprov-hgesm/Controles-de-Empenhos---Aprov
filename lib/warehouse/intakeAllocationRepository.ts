@@ -446,7 +446,10 @@ async function ensureCanonicalMaterial(
   if (material.ug !== scope.ug || material.status !== 'active') {
     throw new Error('WAREHOUSE_INTAKE_MATERIAL_INACTIVE');
   }
-  if (input.materialId && input.materialId !== material.id) {
+  if (
+    input.materialId
+    && input.materialId.trim().toLowerCase() !== material.id
+  ) {
     throw new Error('WAREHOUSE_ITEM_INTAKE_MATERIAL_CONFLICT');
   }
   return material;
