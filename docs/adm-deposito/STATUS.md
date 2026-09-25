@@ -1645,3 +1645,30 @@ A auditoria preventiva de segurança não apontou evidência de vazamento ativo,
 
 Plano oficial:
 `docs/adm-deposito/POST_ADM_STABILIZATION_AND_SECURITY_PLAN.md`
+
+## MÓDULO 14.0 + 14.1 — CONCLUÍDOS EM 2026-09-25
+
+Baseline oficial de entrada da campanha:
+`88dff395649f7700f2c9c080ba9d7de0acf13ae9`.
+
+Resultado:
+- 14.0 — baseline congelada: **CONCLUÍDO**;
+- 14.1 — auditoria estática final: **CONCLUÍDO**;
+- 14.2+ — **NÃO INICIADOS**;
+- nenhum teste dinâmico, build, Emulator, E2E, CI, PR, merge ou deploy foi executado;
+- nenhum arquivo funcional/Rule/API/dependência foi alterado.
+
+Relatório oficial:
+`docs/adm-deposito/MODULE_14_STATIC_AUDIT.md`.
+
+Gate estático: **B — autorizado avançar para 14.2 quando PowerShell estiver disponível**, sem alegar aprovação de testes dinâmicos.
+
+Achados não bloqueantes principais:
+- jsPDF 2.5.2 em faixas com advisories de 2026, sem caminho explorável confirmado nesta inspeção;
+- CSP ausente;
+- App Check client-side presente, enforcement do Console não verificável;
+- `security_spec.md` desatualizado para o modelo workspace/UG;
+- leitura pública deliberada de `settings/global` exige disciplina para permanecer somente com dados públicos.
+
+A produção real não pôde ser vinculada a um SHA com a integração Vercel disponível; branch, `main` e produção continuam estados distintos.
+

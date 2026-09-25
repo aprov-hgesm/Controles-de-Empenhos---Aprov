@@ -373,3 +373,34 @@ Na data de criação:
 - nenhum PR, merge ou deploy foi realizado.
 
 A próxima etapa prática é executar a campanha quando a estação PowerShell do fundador estiver disponível.
+
+## 15. Registro de execução — 14.0 e 14.1 — 2026-09-25
+
+A baseline de planejamento `2d8160db956296779bcf86c7040829776d4e20ef` foi superada por commits documentais legítimos antes da execução.
+
+Na entrada real da campanha:
+- branch: `feat/adm-deposito-phase-11-5-visual-ux`;
+- HEAD real: `88dff395649f7700f2c9c080ba9d7de0acf13ae9`;
+- comparação contra a referência conhecida: 0 ahead / 0 behind;
+- `88dff395649f7700f2c9c080ba9d7de0acf13ae9` passa a ser a **baseline oficial de entrada do Módulo 14**.
+
+Execução:
+- 14.0: **CONCLUÍDO**;
+- 14.1: **CONCLUÍDO**;
+- 14.2+: **NÃO INICIADOS**.
+
+Relatório:
+`docs/adm-deposito/MODULE_14_STATIC_AUDIT.md`.
+
+Resultado estático:
+- Core Protection preservada;
+- founder-only em client/server/Rules;
+- warehouse sem abertura pública operacional identificada;
+- nenhum secret privado versionado identificado;
+- achados médios/baixos registrados para hardening futuro;
+- nenhuma vulnerabilidade crítica/bloqueante confirmada.
+
+Gate: **B — permitido avançar para 14.2 quando PowerShell estiver disponível**.
+
+Nenhum teste dinâmico, CI, PR, merge ou deploy foi executado neste registro.
+

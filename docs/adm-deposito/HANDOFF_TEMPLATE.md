@@ -309,3 +309,22 @@ Ordem:
 Não iniciar o pacote transversal de hardening preventivo no meio do fechamento do ADM sem motivo crítico. Se surgir vulnerabilidade crítica confirmada, ela se torna bloqueante e deve ser tratada imediatamente.
 
 Não interpretar essa priorização como autorização para expansão ampla de usuários externos antes da estabilização e revisão de segurança.
+
+## Handoff — fechamento dos Módulos 14.0 e 14.1 — 2026-09-25
+
+Baseline oficial de entrada:
+`88dff395649f7700f2c9c080ba9d7de0acf13ae9`.
+
+Estado:
+- 14.0 concluído;
+- 14.1 concluído;
+- 14.2 não iniciado;
+- relatório: `docs/adm-deposito/MODULE_14_STATIC_AUDIT.md`.
+
+Gate da auditoria estática: **B**.
+
+Próximo trabalho autorizado, somente quando o PowerShell estiver disponível:
+**Módulo 14.2 — gates rápidos**.
+
+Não interpretar esse gate como aprovação de build, Emulator, E2E, Application CI, merge, deploy ou expansão externa. Nenhuma dessas etapas foi executada no fechamento 14.0/14.1.
+

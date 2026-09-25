@@ -849,3 +849,19 @@ Motivação operacional:
 - vulnerabilidade crítica/ativamente explorável continua sendo exceção bloqueante e deve ser corrigida imediatamente, independentemente da etapa corrente.
 
 O Módulo 14 continua válido e não é substituído por essa decisão.
+
+## Atualização de execução do Módulo 14 — 2026-09-25
+
+A campanha foi iniciada apenas nas duas primeiras subetapas:
+- **14.0 — Congelamento da baseline: CONCLUÍDO**;
+- **14.1 — Auditoria estática final: CONCLUÍDO**;
+- **14.2+ — NÃO INICIADOS**.
+
+Baseline congelada:
+`88dff395649f7700f2c9c080ba9d7de0acf13ae9`.
+
+Relatório:
+`docs/adm-deposito/MODULE_14_STATIC_AUDIT.md`.
+
+Gate: auditoria estática sem bloqueio crítico confirmado; autorizado seguir para 14.2 quando PowerShell estiver disponível. A autorização não substitui os gates dinâmicos posteriores.
+
