@@ -256,3 +256,22 @@ Antes de iniciar uma fase relevante:
 8. preservar CI completo/E2E quando a mudança realmente afetar jornada de usuário.
 
 Última consolidação: 2026-09-24.
+
+## 13. Publicações consolidadas e proteção de cota da Vercel
+
+Para branches longas ou releases com muitos commits acumulados, o número de commits de desenvolvimento não deve determinar o número de deployments de produção.
+
+Política oficial:
+1. desenvolver e validar normalmente em branch/PR;
+2. concluir os gates obrigatórios;
+3. preferir **Squash and Merge** para a entrada final na `main`;
+4. evitar uma sequência de commits pequenos na `main` durante a janela de publicação;
+5. realizar uma publicação consolidada do estado final;
+6. quando conveniente, separar build e deploy com:
+   - `vercel build --prod`;
+   - `vercel deploy --prebuilt --prod`;
+7. usar `vercel promote` quando houver preview validado e a promoção do mesmo artefato for tecnicamente apropriada.
+
+O objetivo é reduzir deployments desnecessários e preservar a cota operacional da Vercel sem reduzir cobertura de testes, segurança ou rastreabilidade.
+
+Para o fechamento atual do ADM Depósito, esta política está formalizada também como D-072 em `docs/adm-deposito/DECISIONS.md`.
