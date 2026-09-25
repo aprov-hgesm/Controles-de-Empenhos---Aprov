@@ -797,3 +797,35 @@ A campanha pesada de TypeScript/build/Firestore Emulator/Browser E2E/regressão/
 - Módulo 14: **NÃO INICIADO**;
 - próximo trabalho oficial: **Módulo 14 — Campanha final de validação e fechamento**;
 - este fechamento não autoriza expansão externa nem publicação por si só.
+
+
+## PLANEJAMENTO OFICIAL DO MÓDULO 14 — AUDITADO EM 2026-09-25
+
+O plano operacional detalhado da campanha final está registrado em:
+
+`docs/adm-deposito/MODULE_14_FINAL_VALIDATION_PLAN.md`
+
+Baseline do planejamento:
+- branch: `feat/adm-deposito-phase-11-5-visual-ux`;
+- HEAD: `2d8160db956296779bcf86c7040829776d4e20ef`;
+- branch idêntica a essa baseline no momento da auditoria.
+
+A campanha será executada em ordem de custo crescente:
+1. congelamento da baseline e auditoria estática;
+2. Core Protection/isolamento/guards;
+3. testes de domínio ADM;
+4. TypeScript;
+5. Firestore Emulator + multitenancy/security;
+6. walking skeleton integrado;
+7. build;
+8. Browser E2E específico do ADM;
+9. regressão EMPROVEX + ADM;
+10. correções consolidadas e reexecução seletiva;
+11. regressão final completa;
+12. PR + Application CI como certificação final.
+
+Achados preparatórios:
+- o Browser E2E atual não oferece cobertura identificável das novas jornadas ADM; o Módulo 14 deverá complementar essa cobertura;
+- `verify:adm-deposito-phase-11-5` existe no projeto e deverá ser executado localmente; sua inclusão no CI final deve ser avaliada durante a campanha.
+
+PowerShell local do fundador permanece o ambiente preferencial para a campanha pesada. Cloud Shell fica reservado a necessidade remota real. Módulo 14 continua **NÃO INICIADO** até a execução prática.
