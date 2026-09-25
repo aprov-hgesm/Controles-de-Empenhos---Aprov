@@ -497,3 +497,18 @@ A estação local está verde. Restam para o encerramento técnico do Módulo 14
 5. documentação de encerramento após os checks remotos.
 
 Merge, deploy e expansão externa continuam dependendo de decisão explícita do fundador.
+
+## 17. Ajuste final da certificação remota — 2026-09-25
+
+Durante a revisão pré-PR foi confirmada a lacuna prevista em 4.3: o guard `verify:adm-deposito-phase-11-5` ainda não fazia parte do Application CI.
+
+Ação:
+- incluído o passo **ADM Depósito Phase 11.5 visual guard** no workflow `.github/workflows/application-ci.yml`;
+- comando: `npm run verify:adm-deposito-phase-11-5`;
+- o guard já havia sido aprovado localmente na regressão final;
+- nenhuma regra de negócio, Firestore Rule ou contrato de domínio foi alterado por esse ajuste.
+
+Commit do workflow:
+`eb6844b1931ebd115990891ec77bf5c04752bacf`.
+
+Com isso, a cobertura remota final passa a incluir explicitamente a consolidação visual 11.5.
