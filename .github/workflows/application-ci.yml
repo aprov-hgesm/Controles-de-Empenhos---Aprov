@@ -188,6 +188,9 @@ jobs:
       - name: ADM Depósito Phase 11 protected guard
         run: npm run verify:adm-deposito-phase-11
 
+      - name: ADM Depósito Phase 11.5 visual guard
+        run: npm run verify:adm-deposito-phase-11-5
+
       - name: ADM Depósito Module 13 hardening guard
         run: npm run verify:adm-deposito-phase-13
 
