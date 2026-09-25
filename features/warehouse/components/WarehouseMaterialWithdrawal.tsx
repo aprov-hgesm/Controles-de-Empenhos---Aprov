@@ -881,7 +881,10 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
           )}
 
           {unknownBarcode && !retryRequired && (
-            <section className="rounded-2xl border border-amber-300/15 bg-amber-400/[0.04] p-4">
+            <section
+              data-testid="warehouse-barcode-association-panel"
+              className="rounded-2xl border border-amber-300/15 bg-amber-400/[0.04] p-4"
+            >
               <div className="flex items-start gap-3">
                 <AlertTriangle className="mt-0.5 h-4 w-4 text-amber-200" />
                 <div className="min-w-0 flex-1">
@@ -921,7 +924,10 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
           )}
 
           <section className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)]">
-            <div className="rounded-[24px] border border-white/[0.08] bg-white/[0.025] p-4 sm:p-5">
+            <div
+              data-testid="warehouse-outbound-cart"
+              className="rounded-[24px] border border-white/[0.08] bg-white/[0.025] p-4 sm:p-5"
+            >
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
@@ -946,7 +952,12 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
               ) : (
                 <div className="mt-4 space-y-2">
                   {cart.map((line, index) => (
-                    <article key={line.lineId} className="rounded-2xl border border-white/[0.07] bg-black/15 p-3.5">
+                    <article
+                      key={line.lineId}
+                      data-testid="warehouse-outbound-cart-line"
+                      data-material-id={line.materialId}
+                      className="rounded-2xl border border-white/[0.07] bg-black/15 p-3.5"
+                    >
                       <div className="flex gap-3">
                         <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-[10px] font-black text-slate-400">
                           {index + 1}
