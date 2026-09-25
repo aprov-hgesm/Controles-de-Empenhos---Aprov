@@ -17,7 +17,21 @@ test.describe.serial('ADM Depósito FASE 9 — Visão do Depósito', () => {
 
     const initialMaterialSearch = page.getByTestId('warehouse-layout-material-search');
     await initialMaterialSearch.fill('Arroz parboilizado');
-    await page.getByTestId('warehouse-layout-material-' + MATERIAL_ID).click();
+    const materialResult = page.getByTestId('warehouse-layout-material-' + MATERIAL_ID);
+    const depotSelect = page.getByLabel('Selecionar depósito do croqui');
+    await expect(materialResult).toBeVisible();
+    const materialBox = await materialResult.boundingBox();
+    const depotBox = await depotSelect.boundingBox();
+    expect(materialBox).toBeTruthy();
+    expect(depotBox).toBeTruthy();
+    const overlaps = !(
+      materialBox.x + materialBox.width <= depotBox.x
+      || depotBox.x + depotBox.width <= materialBox.x
+      || materialBox.y + materialBox.height <= depotBox.y
+      || depotBox.y + depotBox.height <= materialBox.y
+    );
+    expect(overlaps).toBe(false);
+    await materialResult.click();
     await expect(page.getByTestId('warehouse-layout-highlight-summary')).toContainText('posição(ões) real(is)');
 
     await page.getByTestId('warehouse-layout-toggle-edit').click();
