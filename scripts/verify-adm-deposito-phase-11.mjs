@@ -13,7 +13,7 @@ const deliveries = read('features/warehouse/components/WarehouseDeliveriesOperat
 const dashboard = read('features/warehouse/components/WarehouseLogisticsDashboard.tsx');
 const alertsUi = read('features/warehouse/components/WarehouseLogisticsAlerts.tsx');
 const settings = read('features/warehouse/components/WarehouseLogisticsSettings.tsx');
-const section = read('features/warehouse/components/WarehouseSectionContent.tsx');
+const control = read('features/warehouse/components/WarehouseItemControlOperational.tsx');
 const navigation = read('features/warehouse/navigation.ts');
 const namespace = read('lib/warehouse/namespace.ts');
 const rules = read('firestore.rules');
@@ -44,10 +44,14 @@ assert.doesNotMatch(deliveries, /Confirmar entrega|Registrar entrega|Receber mat
 assert.match(dashboard, /namespace warehouse/);
 assert.match(alertsUi, /não alteram a Central de Avisos operacional/);
 assert.match(settings, /namespace\s*warehouse/);
-assert.match(section, /WarehouseLogisticsDashboard/);
-assert.match(section, /WarehouseDeliveriesOperational/);
-assert.match(section, /WarehouseLogisticsAlerts/);
-assert.match(navigation, /label: 'Alertas'/);
+assert.match(control, /WarehouseLogisticsDashboard/);
+assert.match(control, /WarehouseDeliveriesOperational/);
+assert.match(control, /WarehouseLogisticsAlerts/);
+assert.match(control, /WarehouseLogisticsSettings/);
+assert.match(control, /label: 'Resumo logístico'/);
+assert.match(control, /label: 'Entregas'/);
+assert.match(control, /label: 'Alertas'/);
+assert.match(navigation, /label: 'Controle de Itens'/);
 
 assert.match(rules, /validWarehouseLogisticsSettings/);
 assert.match(rules, /validWarehouseLogisticsAlertCreate/);
