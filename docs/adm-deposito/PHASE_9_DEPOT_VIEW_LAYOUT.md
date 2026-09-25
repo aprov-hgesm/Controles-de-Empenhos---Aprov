@@ -171,3 +171,23 @@ A superfície histórica da Visão do Depósito foi evoluída sem alterar o cont
 - nenhum objeto do croqui possui autoridade quantitativa;
 - persistência continua versionada e explícita;
 - Fabric.js/Konva não foram adicionados porque a camada manual existente era suficiente e mais leve para a arquitetura atual.
+
+
+## Consolidação funcional — Módulos 9 e 10 (2026-09-25)
+
+- Início usa `getActiveWarehouseDepotLayout(workspaceId, depotId)`, sem carregar histórico;
+- saldos por posição vêm de `warehouse_location_balance_v1`;
+- saldo geral vem de `warehouse_balance_v1`;
+- lotes vêm de `warehouse_lot_v1`;
+- FEFO usa `selectWarehouseFefoLot`;
+- objetos são relacionados exclusivamente por `warehouseLocationId`;
+- subposições respeitam o vínculo próprio e o local pai quando a estrutura representa o pai;
+- localização com saldo sem objeto visual é informada textualmente e não gera objeto;
+- estrutura sem `warehouseLocationId` permanece válida;
+- clicar em estrutura apenas inspeciona o contexto pesquisado;
+- nenhum dado quantitativo é persistido no layout;
+- mover/redimensionar/girar continua sem efeito no estoque;
+- Início é somente consulta; edição permanece em Meus Depósitos / Croquis;
+- nenhuma Firestore Rule foi alterada.
+
+Módulos 9 e 10 encerrados. Próximo módulo: **Módulo 11 — Consolidação do Controle de Itens**.
