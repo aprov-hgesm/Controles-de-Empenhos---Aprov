@@ -230,6 +230,8 @@ test('croqui v2 preserva integridade logística e vínculos inequívocos nas nov
   assert.match(operational, /duplicateWarehouseLocationIds/);
   assert.match(repository, /WAREHOUSE_LAYOUT_DUPLICATE_LOCATION_REFERENCE/);
   assert.match(repository, /assertUniqueLayoutLocationReferences/);
+  assert.match(repository, /getActiveWarehouseDepotLayoutStrict/);
+  assert.match(repository, /const active = await getActiveWarehouseDepotLayoutStrict/);
   assert.doesNotMatch(repository, /warehouse_balance_v1|warehouse_location_balance_v1|warehouse_movement_v1|warehouse_lot_v1/);
 });
 
