@@ -97,16 +97,6 @@ export interface WarehouseIntakeEntryInput {
 }
 
 export interface AllocateWarehousePendingItemInput extends WarehouseIntakeEntryInput {
-  intakeId: string;
-  invoiceRecordKey: string;
-  invoiceId: string;
-  empenhoId: string;
-  itemId: string;
-  materialId: string | null;
-  description: string;
-  unitLabel: string;
-  supplier: string;
-  receivedQuantity: number;
   expectedAllocatedQuantity: number;
   expectedImmediateConsumptionQuantity: number;
   effectiveStatus: WarehouseItemIntakeEffectiveStatus;
