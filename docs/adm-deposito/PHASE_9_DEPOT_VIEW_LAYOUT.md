@@ -160,3 +160,14 @@ A consolidação atual:
 - não adiciona saldo, lote ou movimento ao layout.
 
 O editor avançado continua reservado ao Módulo 8.
+
+## Consolidação do editor visual no Módulo 8 (2026-09-25)
+
+A superfície histórica da Visão do Depósito foi evoluída sem alterar o contrato da FASE 9:
+- planta 2D permanece modo oficial de edição;
+- prévia 2.5D é uma projeção visual dos mesmos objetos;
+- interação local inclui grid/snap, zoom, pan, resize, rotação, duplicação, camadas e undo/redo;
+- `warehouseLocationId` continua sendo somente referência visual para localização logística existente;
+- nenhum objeto do croqui possui autoridade quantitativa;
+- persistência continua versionada e explícita;
+- Fabric.js/Konva não foram adicionados porque a camada manual existente era suficiente e mais leve para a arquitetura atual.
