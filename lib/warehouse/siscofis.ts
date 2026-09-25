@@ -6,6 +6,7 @@ import {
   type WarehouseMaterial,
   type WarehouseMaterialUnit,
 } from './material';
+import { warehouseUnitFromOperationalLabel } from './invoiceIntegration';
 import {
   normalizeWarehouseQuantity,
   type WarehouseBalance,
@@ -15,6 +16,9 @@ export const WAREHOUSE_SISCOFIS_IMPORT_SCHEMA_VERSION = 'warehouse_siscofis_impo
 export const EMPROVEX_SISCOFIS_INVENTORY_SCHEMA_VERSION = 'emprovex_siscofis_inventory_v1' as const;
 export const WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION_V1 = 'warehouse_siscofis_snapshot_v1' as const;
 export const WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION = 'warehouse_siscofis_snapshot_v2' as const;
+export type WarehouseSiscofisSnapshotSchemaVersion =
+  | typeof WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION_V1
+  | typeof WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION;
 export const WAREHOUSE_SISCOFIS_MAX_ROWS = 500;
 
 export type WarehouseSiscofisImportKind = 'MARCO_ZERO' | 'SNAPSHOT';
@@ -622,12 +626,12 @@ export function adaptEmprovexSiscofisInventory(input: {
     const matches = (byDescription.get(lookupText(item.descricao)) || []).filter((material) => material.status === 'active');
     const matched = matches.length === 1 ? matches[0] : null;
     if (matches.length > 1) pushIssue(issues, 'warning', 'ambiguous_material_match', '$.items[' + index + ']', 'Mais de um material canônico possui a mesma descrição; vínculo exige revisão humana.');
-    if (!matched) pushIssue(issues, 'warning', 'unit_review_required', '$.items[' + index + ']', 'Material novo/não resolvido: unidade local precisa ser revisada antes da confirmação.');
+    if (!matched) pushIssue(issues, 'warning', 'unit_fallback_applied', '$.items[' + index + ']', 'Material novo/não resolvido: apresentação marcada explicitamente como não informada, reutilizando o fallback canônico do fluxo de NF.');
     return {
       rowId: 'siscofis-' + String(index + 1).padStart(4, '0'),
       materialId: matched?.id || null,
       description: item.descricao,
-      unit: matched?.unit || { code: 'unit', label: null },
+      unit: matched?.unit || warehouseUnitFromOperationalLabel(''),
       quantity: item.quantidade,
       unitValue: item.valorUnitario,
       totalValue: Math.round(item.quantidade * item.valorUnitario * 100) / 100,
@@ -654,28 +658,85 @@ export function buildWarehouseSiscofisPrompt(): string {
     'Sua tarefa é extrair TODOS os itens materiais do documento e retornar SOMENTE JSON válido compatível com o EMPROVEX.',
     '',
     'Extraia SOMENTE:',
-    '1. numeroItem — origem: Nr Ficha',
-    '2. descricao — origem: ESPECIFICAÇÃO',
-    '3. quantidade — origem: QTDE',
-    '4. valorUnitario — origem: VALOR UNITÁRIO',
+    '1. numeroItem — Origem: "Nr Ficha"',
+    '2. descricao — Origem: "ESPECIFICAÇÃO"',
+    '3. quantidade — Origem: "QTDE"',
+    '4. valorUnitario — Origem: "VALOR UNITÁRIO"',
     '',
-    'Estrutura obrigatória:',
-    '{"schemaVersion":"emprovex_siscofis_inventory_v1","items":[{"numeroItem":"CODIGO","descricao":"DESCRIÇÃO","quantidade":1,"valorUnitario":10.50}]}',
+    'A estrutura obrigatória é:',
+    '{',
+    '  "schemaVersion": "emprovex_siscofis_inventory_v1",',
+    '  "items": [',
+    '    {',
+    '      "numeroItem": "CODIGO",',
+    '      "descricao": "DESCRIÇÃO",',
+    '      "quantidade": 1,',
+    '      "valorUnitario": 10.50',
+    '    }',
+    '  ]',
+    '}',
     '',
-    'A raiz deve ser um objeto com somente schemaVersion e items. Cada item deve conter somente os quatro campos acima.',
-    'numeroItem: preserve exatamente pontos, letras, zeros à esquerda, prefixos e sufixos; sempre string.',
-    'descricao: transcreva fielmente; apenas una quebras de linha e remova espaços duplicados artificiais. Não resuma, corrija ou reescreva.',
-    'quantidade: número JSON, nunca string, maior que zero.',
-    'valorUnitario: número JSON, nunca string. Converta notação brasileira: 1.944,00 → 1944.00 e 15.231,67 → 15231.67.',
-    'NÃO CONSOLIDAR ITENS. Mesmo Nr Ficha e descrição devem permanecer como linhas independentes. Não some, não calcule média, não elimine e não agrupe.',
-    'IGNORE NR ORD, conta contábil, unidade de medida, valor total, situação, subtotais, totais, UG, exercício, dependência, responsáveis, datas, cabeçalhos e rodapés.',
-    'Use NR ORD apenas internamente para conferir cobertura; nunca o inclua no JSON.',
-    'Percorra TODAS as páginas. Não forneça amostra, não trunque, não escreva continua e nunca invente informações.',
-    'Se um dos quatro campos realmente não puder ser identificado, use null em vez de adivinhar.',
-    'Responda SOMENTE com o objeto JSON: sem Markdown, sem comentários, sem introdução e sem conclusão.',
-    'A primeira caractere deve ser { e a última deve ser }.',
-    'Antes de responder, confira internamente que todas as páginas e itens foram processados, fichas repetidas continuam separadas, números estão no formato JSON e JSON.parse() aceitaria o conteúdo.',
-  ].join('\n');
+    'A raiz deve ser obrigatoriamente um objeto JSON. Não retorne um array diretamente.',
+    'A raiz deve possuir somente schemaVersion e items.',
+    'Cada item deve possuir somente numeroItem, descricao, quantidade e valorUnitario.',
+    '',
+    'REGRAS PARA numeroItem:',
+    '- use exatamente o Nr Ficha;',
+    '- preserve pontos, letras, zeros à esquerda, prefixos e sufixos;',
+    '- retorne sempre como string.',
+    'Exemplos: "3393P", "0173P", "21.1000C", "10.9156C", "2314".',
+    '',
+    'REGRAS PARA descricao:',
+    '- transcreva fielmente a ESPECIFICAÇÃO;',
+    '- reúna descrições quebradas entre linhas na ordem correta;',
+    '- não resuma, não reescreva, não melhore a redação, não corrija ortografia, não substitua palavras, não altere letras e não invente especificações;',
+    '- somente una trechos separados por quebra de linha e remova espaços duplicados produzidos pela formatação do PDF.',
+    'A fidelidade ao documento tem prioridade sobre correções linguísticas.',
+    '',
+    'REGRAS PARA quantidade:',
+    '- retornar como número JSON, nunca como string.',
+    'Correto: "quantidade": 120',
+    'Incorreto: "quantidade": "120"',
+    '',
+    'REGRAS PARA valorUnitario:',
+    'Converter notação monetária brasileira para número JSON.',
+    '810,00 → 810.00; 246,03 → 246.03; 1.944,00 → 1944.00; 15.231,67 → 15231.67; 73.330,00 → 73330.00.',
+    'Nunca usar aspas.',
+    'Correto: "valorUnitario": 1944.00',
+    'Incorreto: "valorUnitario": "1.944,00"',
+    'Incorreto: "valorUnitario": "1944.00"',
+    '',
+    'NÃO CONSOLIDAR ITENS.',
+    'Mesmo que duas linhas tenham o mesmo Nr Ficha e a mesma descrição, mantenha-as como objetos independentes.',
+    'Não some quantidades, não calcule média, não elimine linhas e não agrupe registros.',
+    '',
+    'IGNORE NR ORD, conta contábil, unidade de medida, valor total, situação, SUB TOTAL, TOTAL, TOTAL GERAL, UG, exercício, dependência, responsáveis, datas, cabeçalhos e rodapés.',
+    'Use NR ORD somente internamente, se existir, para conferir se percorreu todos os itens. Nunca inclua NR ORD no JSON.',
+    '',
+    'Percorra TODAS as páginas. Não forneça amostra. Não trunque. Não escreva "continua". Não use "etc.". Nunca invente informações.',
+    'Se um dos quatro campos realmente não puder ser identificado, utilize null em vez de adivinhar.',
+    '',
+    'RESPOSTA:',
+    '- somente JSON;',
+    '- sem Markdown ou cercas de código;',
+    '- sem introdução, conclusão, comentários ou observações;',
+    '- nenhuma frase antes, depois ou entre objetos.',
+    'A primeira caractere deve ser { e a última caractere deve ser }.',
+    '',
+    'Antes de responder, confira internamente:',
+    '- todas as páginas e todos os itens foram processados;',
+    '- Nr Ficha está preservado como string;',
+    '- descrições multilinha foram reconstruídas sem correção ou reescrita;',
+    '- itens repetidos continuam separados;',
+    '- quantidade e valorUnitario são números;',
+    '- separadores de milhar foram removidos e vírgula decimal virou ponto;',
+    '- subtotal/total não virou item;',
+    '- nenhum campo extra foi incluído;',
+    '- a raiz contém schemaVersion e items;',
+    '- JSON.parse() aceitaria integralmente o conteúdo.',
+    '',
+    'Responda SOMENTE com o objeto JSON.',
+  ].join('\\n');
 }
 
 export async function buildWarehouseSiscofisPreview(input: {
