@@ -33,13 +33,14 @@ import {
   type WarehouseSiscofisIssue,
   type WarehouseSiscofisPreview,
   type WarehouseSiscofisPreviewRow,
+  type WarehouseSiscofisSnapshotSchemaVersion,
 } from './siscofis';
 
 export type WarehouseSiscofisSnapshotKind = 'MARCO_ZERO' | 'SNAPSHOT';
 export type WarehouseSiscofisSnapshotStatus = 'APPLYING' | 'CONFIRMED';
 
 export interface WarehouseSiscofisSnapshot {
-  schemaVersion: typeof WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION;
+  schemaVersion: WarehouseSiscofisSnapshotSchemaVersion;
   id: string;
   workspaceId: string;
   ug: string;
@@ -111,7 +112,7 @@ function parseSnapshot(
   }
 
   return {
-    schemaVersion: data.schemaVersion as typeof WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION,
+    schemaVersion: data.schemaVersion as WarehouseSiscofisSnapshotSchemaVersion,
     id,
     workspaceId,
     ug: data.ug,
@@ -241,8 +242,7 @@ export async function loadWarehouseSiscofisContext(
   workspaceId: string
 ): Promise<WarehouseSiscofisContext> {
   const scope = assertCurrentScope(workspaceId);
-  const [materials, settings, marcoZero, snapshots] = await Promise.all([
-    listWarehouseMaterials(workspaceId, 500),
+  const [settings, marcoZero, snapshots] = await Promise.all([
     getInvoiceSettings(workspaceId),
     getMarcoZero(workspaceId),
     listWarehouseSiscofisSnapshots(workspaceId, 12),
