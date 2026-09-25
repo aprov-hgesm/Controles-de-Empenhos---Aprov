@@ -1523,3 +1523,138 @@ Fica estabelecida a política oficial de fechamento e publicação do ADM Depós
    - manter o ADM founder-only durante a estabilização inicial, conforme D-071.
 
 Esta decisão complementa D-057 e D-071 e deve orientar releases futuras de grande porte quando houver muitas alterações acumuladas em branch de desenvolvimento.
+
+## D-073 — Fase 9 v2: separar Localização de Materiais e Edição do Croqui
+
+Data: 2026-09-25.
+
+Após a campanha remota do Módulo 14 expor falhas visuais recorrentes no Browser E2E da Fase 9 sob Chromium/Linux, fica decidido que a solução oficial não será continuar acumulando workarounds de teste ou pequenos ajustes sobre a interface atual.
+
+A Fase 9 será refatorada estruturalmente como **Croqui Operacional v2**, preservando o domínio e os contratos persistidos já aprovados.
+
+### 1. O que permanece imutável
+
+Permanecem válidos:
+- `warehouse_depot_v1` como identidade do depósito;
+- `warehouse_location_v1` como identidade de localização/subposição;
+- `warehouse_depot_layout_v1` como único contrato persistido de croqui;
+- versionamento e histórico de layouts;
+- vínculo `warehouseLocationId` como ponte visual;
+- FEFO apenas consultivo;
+- founder-only durante o piloto atual;
+- isolamento por workspace/UG;
+- Core Protection.
+
+O croqui continua sendo somente representação visual. Editar, mover, redimensionar, girar, criar ou remover objetos do layout **não pode**:
+- alterar `warehouse_balance_v1`;
+- alterar `warehouse_location_balance_v1`;
+- criar `warehouse_movement_v1`;
+- criar nova autoridade quantitativa;
+- escrever de volta no Core EMPROVEX.
+
+### 2. Nova arquitetura visual
+
+A superfície **Meus Depósitos → Croquis** será reorganizada em três responsabilidades independentes:
+
+1. **Seleção de depósito**
+   - fica em área própria e estável no topo;
+   - não compartilha a mesma faixa dinâmica com resultados de busca ou ferramentas do editor.
+
+2. **Modo Visualizar / Localizar**
+   - dedicado somente à consulta de materiais e destaque de posições;
+   - pesquisa em painel próprio;
+   - lista de resultados com altura limitada e scroll próprio;
+   - resultados não podem deslocar, sobrepor ou ocultar o seletor de depósito ou o canvas;
+   - seleção de material apenas lê projeções logísticas oficiais e destaca posições correspondentes.
+
+3. **Modo Editar Croqui**
+   - superfície independente da pesquisa de materiais;
+   - dedicado à geometria, estruturas, propriedades e vínculo com localizações;
+   - busca de material não participa do modo de edição;
+   - alterações permanecem em memória até o comando explícito de salvar versão.
+
+### 3. Plano modular da Fase 9 v2
+
+A implementação será executada em módulos:
+
+- **9.0 — Auditoria e congelamento da Fase 9 atual**
+  - mapear componentes, repositories, contratos e capacidades reaproveitáveis;
+  - registrar baseline e invariantes;
+  - não alterar domínio.
+
+- **9.1 — Nova estrutura da tela Croquis**
+  - separar seleção de depósito, modo de consulta e modo de edição;
+  - criar layout estável e responsivo.
+
+- **9.2 — Modo Visualizar / Localizar**
+  - pesquisa em painel dedicado;
+  - resultados bounded visualmente;
+  - seleção de material sem alterar geometria dos demais controles.
+
+- **9.3 — Destaque operacional**
+  - destacar uma ou várias posições reais;
+  - apresentar quantidade por posição e FEFO consultivo;
+  - manter locais sem representação visual explicitamente informados.
+
+- **9.4 — Editor de Croqui v2**
+  - adicionar/mover/redimensionar/rotacionar estruturas;
+  - editar propriedades;
+  - vincular localização;
+  - cancelar/salvar versão;
+  - sem pesquisa de materiais dentro do editor.
+
+- **9.5 — Persistência e versionamento**
+  - validar arquivamento da versão anterior;
+  - garantir uma versão ativa por depósito;
+  - comprovar que salvar layout não altera estoque ou ledger.
+
+- **9.6 — UX, responsividade e estabilidade visual**
+  - validar diferentes viewports e Chromium Windows/Linux;
+  - impedir sobreposição, controles ocultos e scroll horizontal indevido;
+  - manter baixo custo de CPU/GPU e ausência de animações pesadas.
+
+- **9.7 — Testes específicos da Fase 9 v2**
+  - 9.7A Localização;
+  - 9.7B Editor;
+  - 9.7C Persistência;
+  - 9.7D Integridade logística;
+  - 9.7E Segurança;
+  - 9.7F Geometria/estabilidade visual.
+
+- **9.8 — Integração e regressão do ADM Depósito**
+  - revalidar compatibilidade com Fases 6, 7, 8 e 10;
+  - validar redirects e navegação consolidada;
+  - não reabrir domínios já aprovados sem evidência de regressão.
+
+- **9.9 — Encerramento documental e certificação**
+  - atualizar documentação oficial;
+  - executar regressão final;
+  - retomar a certificação remota do Módulo 14.
+
+### 4. Estratégia de testes e CI
+
+Durante 9.0–9.6:
+- preferir verificações locais e testes direcionados;
+- não executar Application CI completo a cada submódulo;
+- não disparar Browser E2E global a cada ajuste.
+
+No 9.7:
+- executar testes específicos da Fase 9 v2.
+
+No 9.8/9.9:
+- executar regressão integrada e certificação ampla;
+- Application CI volta a ser gate final.
+
+### 5. Relação com o Módulo 14
+
+O Módulo 14 fica **temporariamente pausado na certificação remota**, pois a Fase 9 atual demonstrou fragilidade visual específica no runner Linux mesmo após aprovação local 21/21.
+
+A Fase 9 anterior não é apagada do histórico: seu domínio e contratos permanecem válidos, mas sua organização visual passa a ser considerada **substituída pela Fase 9 v2**.
+
+O Módulo 14 somente poderá ser encerrado após:
+1. implementação da Fase 9 v2;
+2. testes específicos verdes;
+3. regressão integrada;
+4. nova certificação remota final.
+
+Esta decisão substitui a estratégia de continuar adicionando reloads, waits ou compensações de teste para estabilizar a interface antiga.
