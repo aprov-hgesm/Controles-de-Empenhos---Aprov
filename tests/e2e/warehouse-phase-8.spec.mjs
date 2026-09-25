@@ -45,9 +45,9 @@ test.describe.serial('ADM Depósito FASE 8 — barcode / Saída de Material', ()
     );
     const cart = page.getByTestId('warehouse-outbound-cart');
     await expect(cart).toBeVisible();
-    const cartLine = cart
-      .getByTestId('warehouse-outbound-cart-line')
-      .filter({ has: page.locator('[data-material-id="' + MATERIAL_ID + '"]') });
+    const cartLine = cart.locator(
+      '[data-testid="warehouse-outbound-cart-line"][data-material-id="' + MATERIAL_ID + '"]'
+    );
     await expect(cartLine).toHaveCount(1);
     await expect(cartLine).toContainText('Arroz parboilizado');
 
