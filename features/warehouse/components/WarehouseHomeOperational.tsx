@@ -33,10 +33,7 @@ import {
   type WarehouseDepotLayout,
   type WarehouseDepotLayoutObject,
 } from '../../../lib/warehouse/layout';
-import {
-  listWarehouseDepotLayouts,
-  type WarehouseDepotLayoutListItem,
-} from '../../../lib/warehouse/layoutRepository';
+import { getActiveWarehouseDepotLayout } from '../../../lib/warehouse/layoutRepository';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import { listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
 import type { WarehouseBalance } from '../../../lib/warehouse/movement';
@@ -57,7 +54,6 @@ interface WarehouseHomeData {
   locations: WarehouseLocationListItem[];
   locationBalances: WarehouseLocationBalanceListItem[];
   balances: WarehouseBalance[];
-  layouts: WarehouseDepotLayoutListItem[];
 }
 
 const INITIAL_DATA: WarehouseHomeData = {
@@ -68,7 +64,6 @@ const INITIAL_DATA: WarehouseHomeData = {
   locations: [],
   locationBalances: [],
   balances: [],
-  layouts: [],
 };
 
 const formatQuantity = (value: number) =>
@@ -131,15 +126,21 @@ function objectVisualClass(
 function DepotCanvas({
   layout,
   highlightedLocationIds,
+  fefoLocationIds,
   searchActive,
   mode,
   rotation,
+  selectedStructureId,
+  onSelectStructure,
 }: {
   layout: WarehouseDepotLayout;
   highlightedLocationIds: Set<string>;
+  fefoLocationIds: Set<string>;
   searchActive: boolean;
   mode: ViewMode;
   rotation: number;
+  selectedStructureId: string;
+  onSelectStructure: (objectId: string) => void;
 }) {
   const objects = useMemo(
     () => layout.objects
@@ -181,6 +182,11 @@ function DepotCanvas({
               object.warehouseLocationId &&
               highlightedLocationIds.has(object.warehouseLocationId)
             );
+            const fefoPriority = Boolean(
+              object.warehouseLocationId &&
+              fefoLocationIds.has(object.warehouseLocationId)
+            );
+            const selected = object.id === selectedStructureId;
             const dimmed = searchActive && Boolean(object.warehouseLocationId) && !highlighted;
             const raised = (
               object.kind === 'RACK' ||
@@ -194,12 +200,14 @@ function DepotCanvas({
             const objectDepth = raised ? Math.max(8, Math.min(34, object.elevation * 3 + 10)) : 1;
 
             return (
-              <div
+              <button
+                type="button"
                 key={object.id}
+                onClick={() => onSelectStructure(object.id)}
                 data-testid={'warehouse-home-object-' + object.id}
                 data-location-id={object.warehouseLocationId || ''}
                 data-highlighted={highlighted ? 'true' : 'false'}
-                className={objectVisualClass(object, highlighted, dimmed)}
+                className={objectVisualClass(object, highlighted, dimmed) + (selected ? ' outline outline-2 outline-offset-2 outline-slate-500/50' : '')}
                 style={{
                   left: (object.x / layout.logicalWidth * 100) + '%',
                   top: (object.y / layout.logicalHeight * 100) + '%',
@@ -223,7 +231,15 @@ function DepotCanvas({
                 {highlighted && (
                   <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-blue-600 shadow-[0_0_0_5px_rgba(37,99,235,0.14)]" />
                 )}
-              </div>
+                {fefoPriority && (
+                  <span
+                    className="absolute left-1.5 top-1.5 rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-[0.08em] text-amber-700"
+                    title="Prioridade FEFO"
+                  >
+                    FEFO
+                  </span>
+                )}
+              </button>
             );
           })}
         </div>
@@ -252,18 +268,20 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
   const [lotsLoading, setLotsLoading] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('isometric');
   const [rotation, setRotation] = useState(0);
+  const [activeLayout, setActiveLayout] = useState<WarehouseDepotLayout | null>(null);
+  const [layoutLoading, setLayoutLoading] = useState(false);
+  const [selectedStructureId, setSelectedStructureId] = useState('');
 
   const reload = useCallback(async () => {
     setData((current) => ({ ...current, loading: true, error: null }));
     try {
-      const [materials, depots, locations, locationBalances, balances, layouts] =
+      const [materials, depots, locations, locationBalances, balances] =
         await Promise.all([
           listWarehouseMaterials(workspaceId, 250),
           listWarehouseDepots(workspaceId, 250),
           listWarehouseLocations(workspaceId, 500),
           listWarehouseLocationBalances(workspaceId, 500),
           listWarehouseBalances(workspaceId, 250),
-          listWarehouseDepotLayouts(workspaceId, 100),
         ]);
 
       setData({
@@ -274,16 +292,12 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
         locations,
         locationBalances,
         balances,
-        layouts,
       });
 
       const activeDepots = depots.filter((item) => item.depot.status === 'active');
       setSelectedDepotId((current) => {
         if (current && activeDepots.some((item) => item.depot.id === current)) return current;
-        const depotWithLayout = activeDepots.find((depotItem) =>
-          layouts.some((layoutItem) => layoutItem.layout.depotId === depotItem.depot.id)
-        );
-        return depotWithLayout?.depot.id || activeDepots[0]?.depot.id || '';
+        return activeDepots[0]?.depot.id || '';
       });
     } catch (error) {
       setData((current) => ({
@@ -351,21 +365,33 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
       .slice(0, 8);
   }, [data.materials, query]);
 
-  const selectedLayout = useMemo(() => {
-    if (!selectedDepotId) return null;
-    const exact = data.layouts
-      .filter((item) => item.layout.status === 'active' && item.layout.depotId === selectedDepotId)
-      .sort((left, right) => right.layout.version - left.layout.version);
-    if (exact.length) return exact[0].layout;
-
-    if (activeDepots.length === 1) {
-      return data.layouts
-        .filter((item) => item.layout.status === 'active' && item.layout.depotId === null)
-        .sort((left, right) => right.layout.version - left.layout.version)[0]?.layout || null;
+  useEffect(() => {
+    let active = true;
+    setSelectedStructureId('');
+    if (!selectedDepotId) {
+      setActiveLayout(null);
+      setLayoutLoading(false);
+      return;
     }
 
-    return null;
-  }, [activeDepots.length, data.layouts, selectedDepotId]);
+    setLayoutLoading(true);
+    void getActiveWarehouseDepotLayout(workspaceId, selectedDepotId)
+      .then((item) => {
+        if (active) setActiveLayout(item?.layout || null);
+      })
+      .catch(() => {
+        if (active) setActiveLayout(null);
+      })
+      .finally(() => {
+        if (active) setLayoutLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedDepotId, workspaceId]);
+
+  const selectedLayout = activeLayout;
 
   const depotMaterialBalances = useMemo(
     () => data.locationBalances.filter(
@@ -389,6 +415,15 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
     return ids;
   }, [depotMaterialBalances]);
 
+  const representedLocationIds = useMemo(
+    () => new Set(
+      (selectedLayout?.objects || [])
+        .map((object) => object.warehouseLocationId)
+        .filter(Boolean) as string[]
+    ),
+    [selectedLayout]
+  );
+
   const totalQuantity = useMemo(
     () => data.balances.find((balance) => balance.materialId === selectedMaterialId)?.quantity || 0,
     [data.balances, selectedMaterialId]
@@ -408,6 +443,10 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
       ? data.locations.find((candidate) => candidate.location.id === position.locationId)?.location
       : null;
 
+    const visualIds = position.kind === 'SUBPOSITION'
+      ? [position.subpositionId, position.locationId]
+      : [position.locationId];
+
     return {
       id: item.balance.id,
       label: position.kind === 'SUBPOSITION'
@@ -415,10 +454,20 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
         : location?.code || primaryId,
       name: location?.name || 'Localização cadastrada',
       quantity: item.balance.quantity,
+      represented: visualIds.some((id) => representedLocationIds.has(id)),
+      visualIds,
     };
-  }).filter(Boolean) as Array<{ id: string; label: string; name: string; quantity: number }>, [
+  }).filter(Boolean) as Array<{
+    id: string;
+    label: string;
+    name: string;
+    quantity: number;
+    represented: boolean;
+    visualIds: string[];
+  }>, [
     data.locations,
     depotMaterialBalances,
+    representedLocationIds,
   ]);
 
   const depotLots = useMemo(
@@ -432,6 +481,30 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
       .sort((left, right) => (left.expiresOn || '9999-12-31').localeCompare(right.expiresOn || '9999-12-31')),
     [lots, selectedDepotId]
   );
+
+  const fefoLot = useMemo(
+    () => depotLots.find((lot) => Boolean(lot.expiresOn)) || null,
+    [depotLots]
+  );
+
+  const fefoLocationIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (!fefoLot) return ids;
+    const primary = warehouseLocationIdForPosition(fefoLot.position);
+    if (primary) ids.add(primary);
+    if (fefoLot.position.kind === 'SUBPOSITION') ids.add(fefoLot.position.locationId);
+    return ids;
+  }, [fefoLot]);
+
+  const selectedStructure = useMemo(
+    () => selectedLayout?.objects.find((object) => object.id === selectedStructureId) || null,
+    [selectedLayout, selectedStructureId]
+  );
+
+  const selectedStructureRows = useMemo(() => {
+    if (!selectedStructure?.warehouseLocationId) return [];
+    return locationRows.filter((row) => row.visualIds.includes(selectedStructure.warehouseLocationId!));
+  }, [locationRows, selectedStructure]);
 
   const selectMaterial = (material: WarehouseMaterial) => {
     setSelectedMaterialId(material.id);
@@ -582,6 +655,11 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
                           <div className="min-w-0">
                             <p className="truncate text-xs font-black text-slate-700">{row.label}</p>
                             <p className="mt-0.5 truncate text-[9px] text-slate-400">{row.name}</p>
+                            {!row.represented && (
+                              <p className="mt-1 text-[8px] font-black uppercase tracking-[0.08em] text-amber-600">
+                                Ainda não representada no croqui
+                              </p>
+                            )}
                           </div>
                           <p className="shrink-0 text-xs font-black text-[#00288e]">{formatQuantity(row.quantity)}</p>
                         </div>
@@ -618,6 +696,11 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
                               <p className={state === 'EXPIRED' ? 'mt-1 text-[8px] font-black uppercase text-rose-500' : state === 'NEAR_EXPIRY' ? 'mt-1 text-[8px] font-black uppercase text-amber-500' : 'mt-1 text-[8px] font-black uppercase text-emerald-500'}>
                                 {expiryLabel[state]}
                               </p>
+                              {fefoLot?.id === lot.id && (
+                                <p className="mt-1 text-[8px] font-black uppercase tracking-[0.08em] text-amber-600">
+                                  Prioridade FEFO
+                                </p>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -685,13 +768,20 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
               </div>
             </div>
 
-            {selectedLayout ? (
+            {layoutLoading ? (
+              <div className="flex min-h-[520px] items-center justify-center rounded-[28px] border border-slate-200 bg-slate-50/70 text-xs font-bold text-slate-400">
+                Carregando o croqui ativo deste depósito…
+              </div>
+            ) : selectedLayout ? (
               <DepotCanvas
                 layout={selectedLayout}
                 highlightedLocationIds={highlightedLocationIds}
+                fefoLocationIds={fefoLocationIds}
                 searchActive={Boolean(selectedMaterial)}
                 mode={viewMode}
                 rotation={rotation}
+                selectedStructureId={selectedStructureId}
+                onSelectStructure={setSelectedStructureId}
               />
             ) : (
               <div className="flex min-h-[520px] items-center justify-center rounded-[28px] border border-dashed border-slate-300 bg-slate-50/70 px-6 text-center">
@@ -710,6 +800,41 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
                     Configurar croqui
                   </Link>
                 </div>
+              </div>
+            )}
+
+            {selectedStructure && selectedMaterial && (
+              <div className="mt-3 rounded-2xl border border-blue-100 bg-blue-50/55 px-4 py-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-[0.14em] text-blue-500">
+                      Estrutura selecionada
+                    </p>
+                    <p className="mt-1 text-sm font-black text-slate-800">{selectedStructure.label}</p>
+                  </div>
+                  {selectedStructure.warehouseLocationId && (
+                    <span className="rounded-full border border-blue-200 bg-white px-2.5 py-1 font-mono text-[9px] font-bold text-blue-700">
+                      {selectedStructure.warehouseLocationId}
+                    </span>
+                  )}
+                </div>
+                {selectedStructureRows.length ? (
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {selectedStructureRows.map((row) => (
+                      <div key={row.id} className="rounded-xl border border-blue-100 bg-white px-3 py-2.5">
+                        <p className="text-[10px] font-black text-slate-700">{row.label}</p>
+                        <p className="mt-1 text-[9px] text-slate-400">{row.name}</p>
+                        <p className="mt-2 text-xs font-black text-[#00288e]">
+                          {formatQuantity(row.quantity)} {unitLabel(selectedMaterial)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-[10px] text-slate-500">
+                    Esta estrutura não contém saldo do material pesquisado.
+                  </p>
+                )}
               </div>
             )}
 
