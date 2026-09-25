@@ -469,14 +469,63 @@ Validação dos Módulos 2 e 3:
 - nenhuma suíte completa, Browser E2E, Application CI, PR, merge ou deploy foi executado, conforme D-057;
 - campanha consolidada permanece reservada ao Módulo 14.
 
-### Módulo 4 — Consumo imediato e fila SISCOFIS
+### Módulo 3.5 — Saída de Material e relatórios operacionais — CONCLUÍDO
 
-Objetivo:
-- implementar o destino **Consumo imediato**;
-- não criar posição física para essa quantidade;
-- registrar a decisão de forma auditável no ADM;
-- criar fila/relatório de itens pendentes de lançamento no SISCOFIS;
-- permitir estado pendente/l lançado sem autocorreção do SISCOFIS.
+Capacidade implementada em **Controle de Itens → Saída de Material**:
+- antiga Saída Expressa absorvida como wrapper de compatibilidade, sem segundo motor de baixa;
+- checkout orientado a teclado/leitor HID: barcode ENTER → quantidade ENTER/TAB → próxima leitura;
+- carrinho sem baixa imediata, com revisão, edição e remoção antes da tentativa de finalização;
+- limite bounded de 40 linhas por retirada;
+- destino obrigatório por catálogo compartilhado, cadastrável e inativável;
+- `Retirado por` obrigatório e separado do operador autenticado;
+- baixa somente na finalização por `OUTBOUND` oficial;
+- posição, lotes, conversão de apresentação, barcode e recomendação FEFO reutilizados dos contratos existentes;
+- identidade estável por retirada e linha;
+- fingerprint SHA-256 do carrinho para rejeitar replay divergente;
+- progresso `FINALIZING | PARTIALLY_APPLIED | FINALIZED` para recuperação segura quando alguma linha falha;
+- nenhuma retirada parcialmente aplicada é apresentada como sucesso completo;
+- relatório principal com presets Diário, Semanal, Quinzenal, Mensal e período personalizado;
+- filtros por origem, destino e retirante;
+- consolidação por material, destino, retirante e dia;
+- copiar, imprimir e CSV sem biblioteca pesada;
+- compatibilidade bounded com `EXPRESS_OUTBOUND` legado sem dupla projeção.
+
+Novos contratos:
+- `warehouse_destination_v1`;
+- `warehouse_material_withdrawal_v1`;
+- `warehouse_consumption_record_v1`.
+
+Paths:
+- `warehouse/{workspaceId}/destinations/{destinationId}`;
+- `warehouse/{workspaceId}/withdrawals/{withdrawalId}`;
+- `warehouse/{workspaceId}/consumptions/{consumptionId}`.
+
+### Módulo 4 — Consumo imediato e fila/relatórios SISCOFIS — CONCLUÍDO
+
+Capacidade implementada:
+- botão **Consumo imediato** operacional em **Cadastro de Itens → Notas Fiscais pendentes**;
+- quantidade parcial limitada a `0 < quantidade <= pendingQuantity`;
+- destino reutiliza exatamente o catálogo do Módulo 3.5;
+- recebedor/retirante obrigatório;
+- `warehouse_item_intake_v2.immediateConsumptionQuantity` avança monotonicamente;
+- `pendingQuantity` e status são recalculados no mesmo commit da classificação;
+- como D-064 materializa a quantidade recebida em `UNASSIGNED`, a parcela de consumo imediato é retirada desse saldo pelo `OUTBOUND` oficial na mesma transação que avança o intake;
+- nenhum depósito, localização física, lote ou transferência é criado para consumo imediato;
+- a mesma parcela não recebe segunda saída posterior;
+- operação usa identidade `adm-intake-v2:<intakeId>:immediate:<operationId>`;
+- concorrência compara as quantidades observadas pela tela antes de escrever;
+- projeção operacional entra no mesmo `warehouse_consumption_record_v1` usado pela saída normal;
+- relatório principal de Saída de Material distingue **Saída de estoque** e **Consumo imediato** e também consolida ambos;
+- estados locais SISCOFIS: `PENDING | PREPARED | POSTED`;
+- nenhuma integração automática externa foi criada;
+- histórico de consumo imediato v1 permanece preservado na superfície **Histórico legado / SISCOFIS**.
+
+Validação dos Módulos 3.5 e 4:
+- inspeção estática confirmou isolamento funcional em `features/warehouse/**`, `lib/warehouse/**` e Rules dedicadas;
+- nenhuma escrita foi adicionada em NF, Empenho ou Cronograma;
+- nenhum wildcard permissivo foi criado;
+- nenhum CI completo, Browser E2E completo, PR, merge ou deploy foi executado, conforme D-057;
+- campanha consolidada permanece reservada ao Módulo 14.
 
 ### Módulo 5 — Migração inicial do SISCOFIS
 
@@ -580,7 +629,7 @@ Executar de forma consolidada:
 
 ### Ordem oficial
 
-`M1 → M2 → M3 → M4 → M5 → M6 → M7 → M8 → M9 → M10 → M11 → M12 → M13 → M14`
+`M1 → M2 → M3 → M3.5 → M4 → M5 → M6 → M7 → M8 → M9 → M10 → M11 → M12 → M13 → M14`
 
 ### Regras de execução
 
