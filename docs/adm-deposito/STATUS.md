@@ -2144,3 +2144,26 @@ Conforme D-073:
 Próximo trabalho oficial:
 **Fase 9 v2 — Módulo 9.7, testes específicos do Croqui Operacional v2.**
 
+
+
+## FASE 9 v2 — Módulo 9.7 — decisão operacional sobre Browser E2E
+
+Data: 2026-09-25.
+
+Validações específicas já aprovadas na estação PowerShell do fundador:
+- `npm.cmd run test:adm-deposito-depot-locator` — **7/7 PASS**;
+- `npm.cmd run test:adm-deposito-depot-layout` — **16/16 PASS**;
+- `npm.cmd run verify:adm-deposito-phase-9` — **PASS**;
+- `npm.cmd run typecheck` — **PASS / 0 erros**.
+
+Browser E2E:
+- a execução automatizada específica do Croqui foi interrompida durante o refinamento dos cenários de teste;
+- não foi identificada falha de integridade do Croqui que justificasse alteração de Rules, schema, saldo, ledger ou Core EMPROVEX;
+- por decisão operacional do fundador, o Browser E2E do Croqui será **ADIADO** para a validação da versão já integrada à `main`, com operação acompanhada pelo próprio fundador;
+- este adiamento **não deve ser registrado como PASS** e também **não deve ser tratado como falha funcional comprovada**;
+- até essa validação na `main`, permanece pendente apenas o gate visual/operacional de navegador do Módulo 9.7.
+
+Impacto no fluxo:
+- os gates locais não-browser do 9.7 permanecem válidos;
+- o desenvolvimento pode seguir para o **Módulo 9.8 — integração/regressão**, preservando a pendência explícita do Browser E2E para a `main`;
+- merge/deploy continuam **NÃO REALIZADOS / NÃO AUTORIZADOS** neste registro.
