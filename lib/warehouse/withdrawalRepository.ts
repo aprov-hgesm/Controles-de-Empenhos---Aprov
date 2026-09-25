@@ -772,24 +772,7 @@ export async function finalizeWarehouseMaterialWithdrawal(
         requestedQuantity: line.requestedQuantity,
         presentation: line.presentation,
         position: line.position,
-        barcodeAssociation: line.barcodeAssociationId
-          ? {
-              schemaVersion: 'warehouse_barcode_v1',
-              id: line.barcodeAssociationId,
-              workspaceId: scope.workspaceId,
-              ug: scope.ug,
-              materialId: line.materialId,
-              barcode: line.barcode || '',
-              presentation: line.presentation,
-              factorToBaseUnit:
-                line.requestedQuantity > 0
-                  ? line.baseQuantity / line.requestedQuantity
-                  : 1,
-              status: 'active',
-              createdBy: scope.uid,
-              updatedBy: scope.uid,
-            }
-          : null,
+        barcodeAssociation: line.barcodeAssociation,
         lotId: line.lotId,
         idempotencyKey:
           'material-withdrawal:' + input.withdrawalId + ':' + line.lineId,
