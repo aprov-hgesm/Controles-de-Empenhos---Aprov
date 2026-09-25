@@ -57,9 +57,6 @@ test.describe.serial('ADM Depósito FASE 8 — barcode / Saída de Material', ()
       timeout: 20_000,
     });
     await expect(page.getByText('Carrinho da saída', { exact: true })).toBeVisible();
-    const cartSection = page.locator('section').filter({
-      has: page.getByText('Carrinho da saída', { exact: true }),
-    });
     await expect(cartSection.getByText('Arroz parboilizado', { exact: true })).toBeVisible();
 
     await page.getByTestId('warehouse-scanner-input').fill(UNKNOWN_BARCODE);
