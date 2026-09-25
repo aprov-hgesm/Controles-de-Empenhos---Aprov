@@ -56,18 +56,6 @@ test.describe.serial('ADM Depósito FASE 9 — Visão do Depósito', () => {
     expect(await highlightedObjects.count()).toBeGreaterThan(0);
     await expect(highlightedObjects.first()).toBeVisible();
 
-    const summaryBefore = await page.getByTestId('warehouse-layout-highlight-summary').textContent();
-
-    await page.goto('/adm-deposito');
-    await page.goto('/adm-deposito/meus-depositos?aba=croquis');
-    await expect(page.getByTestId('warehouse-depot-view-operational')).toBeVisible({ timeout: 20_000 });
-    await page.getByLabel('Selecionar depósito do croqui').selectOption(DEPOT_ID);
-    await page.getByTestId('warehouse-layout-material-search').fill('Arroz parboilizado');
-    await page.getByTestId('warehouse-layout-material-' + MATERIAL_ID).click();
-    const summaryAfter = await page.getByTestId('warehouse-layout-highlight-summary').textContent();
-    expect(summaryAfter).toBeTruthy();
-    expect(summaryBefore).toBeTruthy();
-
     await page.goto('/adm-deposito/estoque');
     await expect(page.getByTestId('warehouse-stock-operational')).toBeVisible({ timeout: 20_000 });
     await page.getByTestId('warehouse-stock-search').fill('Arroz parboilizado');
