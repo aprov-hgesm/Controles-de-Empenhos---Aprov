@@ -427,21 +427,47 @@ Validação:
 - nenhuma suíte, Browser E2E, Application CI ou PR foi executado neste fechamento, conforme D-057 e a regra modular vigente;
 - a execução consolidada permanece reservada ao Módulo 14.
 
-### Módulo 2 — Alocação física do item recebido
+### Módulo 2 — Alocação física do item recebido — CONCLUÍDO
 
-Objetivo:
-- implementar a ação **Alocar no depósito**;
-- mover quantidade de `UNASSIGNED` para depósito/local/subposição por operação auditável;
-- reutilizar ledger e `warehouse_location_balance_v1`;
-- impedir duplicação de saldo e preservar idempotência.
+Capacidade implementada:
+- ação **Alocar no depósito** operacional dentro de **Cadastro de Itens → Notas Fiscais pendentes**;
+- quantidade parcial por confirmação, limitada por `0 < quantidade <= pendingQuantity`;
+- seleção somente de depósito/localização/subposição ativos do mesmo workspace/UG;
+- material canônico resolvido pela vinculação existente ou pelo mecanismo oficial de derivação;
+- entrada quantitativa única e idempotente por intake quando não existe projeção anterior;
+- bloqueio por reconciliação quando movimento de NF anterior já representa o mesmo item;
+- alocação física por `TRANSFER` de `UNASSIGNED` para a posição selecionada;
+- `warehouse_balance_v1` permanece com a mesma quantidade total e recebe apenas a revisão do movimento;
+- `warehouse_location_balance_v1` reduz origem e aumenta destino;
+- `warehouse_item_intake_v2.allocatedQuantity` avança somente após a operação física confirmada;
+- `pendingQuantity` e status são recalculados no mesmo commit da transferência;
+- concorrência controlada pela releitura transacional das quantidades observadas;
+- idempotência forte por `operationId` preservado durante refresh/retry;
+- falha após a entrada inicial deixa a quantidade em `UNASSIGNED` e não avança o intake.
 
-### Módulo 3 — Lote, validade e código de barras no recebimento
+### Módulo 3 — Lote, validade e código de barras no recebimento — CONCLUÍDO
 
-Objetivo:
-- incorporar lote, validade e barcode ao mesmo fluxo de alocação;
-- permitir múltiplos lotes para um mesmo item recebido;
-- aceitar digitação e scanner HID/teclado;
-- reutilizar `warehouse_lot_v1` e `warehouse_barcode_v1`.
+Capacidade implementada na mesma jornada do Módulo 2:
+- lote integrado à confirmação da alocação, sem segunda tela concorrente;
+- `warehouse_lot_v1` reutilizado como atribuição logística e nunca como saldo;
+- mesma NF/item pode ser dividida em múltiplas operações, lotes e posições;
+- parcelas do mesmo lote na mesma posição incrementam a atribuição determinística existente;
+- validade aceita data ISO real ou escolha humana explícita **Sem validade**;
+- nenhuma validade é inferida automaticamente;
+- barcode opcional reutilizando `warehouse_barcode_v1`;
+- código conhecido é validado contra material/apresentação e conflito com outro material é bloqueado;
+- código desconhecido pode ser associado somente ao material canônico já resolvido;
+- digitação manual e scanner USB HID/teclado usam o mesmo campo, com ENTER para captura;
+- lote, barcode, transferência e avanço do intake são confirmados dentro da mesma transação de alocação;
+- depósitos/localizações são carregados sob demanda, somente ao abrir a jornada;
+- Firestore Rules existentes foram suficientes e não foram enfraquecidas;
+- Core Protection preservada: NF, Empenho e Cronograma continuam apenas como fontes canônicas de leitura para esta jornada.
+
+Validação dos Módulos 2 e 3:
+- inspeção estática confirmou que o diff funcional permanece em `features/warehouse/**` e `lib/warehouse/**`;
+- nenhum serviço crítico de cadastro/edição/exclusão de NF foi alterado;
+- nenhuma suíte completa, Browser E2E, Application CI, PR, merge ou deploy foi executado, conforme D-057;
+- campanha consolidada permanece reservada ao Módulo 14.
 
 ### Módulo 4 — Consumo imediato e fila SISCOFIS
 
