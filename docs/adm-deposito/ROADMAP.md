@@ -596,21 +596,32 @@ Objetivo:
 - usar grid/snap, zoom, vista superior, perspectiva isométrica e rotação;
 - permanecer leve, 2D/2.5D e sem engine 3D pesada.
 
-### Módulo 9 — Integração croqui ↔ estoque
+### Módulo 9 — Integração croqui ↔ estoque — CONCLUÍDO
 
-Objetivo:
-- ligar estrutura visual, localização lógica e saldos por posição;
-- destacar no croqui todos os locais de um material consultado;
-- preservar destaque FEFO como recomendação;
-- mostrar depósito, estrutura, nível, quantidade, lote e validade na ficha de consulta.
+Capacidade entregue:
+- material canônico relacionado a posições reais por saldo de localização;
+- destaque simultâneo de uma ou várias posições;
+- isolamento estrito pelo depósito selecionado;
+- `warehouseLocationId` preservado como ponte visual;
+- local/subposição tratados sem inventar níveis;
+- FEFO consultivo reutilizando o motor oficial;
+- localização com saldo sem objeto visual continua informada;
+- estrutura sem vínculo lógico continua visual;
+- nenhuma ação no croqui movimenta estoque.
 
-### Módulo 10 — Finalização da aba Início
+### Módulo 10 — Finalização da aba Início — CONCLUÍDO
 
-Objetivo:
-- apresentar o croqui ativo do depósito selecionado;
-- permitir seleção de depósito e pesquisa de item;
-- destacar a localização no croqui;
-- consolidar saldo, lotes e validade na mesma experiência visual.
+Capacidade entregue:
+- seletor de depósito;
+- leitura sob demanda somente do layout ativo;
+- pesquisa central de material;
+- saldo total e saldo no depósito;
+- localizações, lotes, validade e FEFO;
+- consulta 2.5D / vista superior;
+- inspeção da estrutura clicada;
+- estado profissional para depósito sem croqui e item sem saldo;
+- nenhuma edição de geometria na Início;
+- editor preservado em Meus Depósitos / Croquis.
 
 ### Módulo 11 — Consolidação do Controle de Itens
 
@@ -698,4 +709,4 @@ Capacidade entregue:
 
 Decisão técnica: manter editor React/canvas DOM leve existente em vez de adicionar Fabric.js/Konva. Ver D-068.
 
-Próximo módulo oficial: **Módulo 9 — Integração croqui ↔ estoque**.
+Próximo módulo oficial: **Módulo 11 — Consolidação do Controle de Itens**.
