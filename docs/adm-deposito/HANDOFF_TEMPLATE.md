@@ -143,3 +143,34 @@ Para o Módulo 8:
 - não mover estoque ao mover/redimensionar/rotacionar objetos;
 - manter editor leve 2D/2.5D;
 - D-057 continua reservando a campanha completa de testes/CI para o Módulo 14.
+
+## Estado corrente após o Módulo 8 da reorganização funcional
+
+Branch de continuidade:
+`feat/adm-deposito-phase-11-5-visual-ux`.
+
+Concluído em 2026-09-25:
+- **Módulo 8 — Editor visual do croqui**.
+
+Tratar como existente:
+- `warehouse_depot_layout_v1` como único contrato persistido;
+- `WAREHOUSE_STRUCTURE_LIBRARY` como catálogo único;
+- editor em planta 2D com drag/resize/rotação;
+- grade/snap opcionais, zoom e pan;
+- undo/redo local;
+- duplicação, exclusão visual e camadas;
+- prévia 2.5D leve derivada dos mesmos objetos;
+- vínculo `warehouseLocationId` limitado ao depósito selecionado;
+- versionamento explícito por Salvar versão;
+- ausência de writes Firestore durante interação;
+- Firestore Rules e Core EMPROVEX inalterados.
+
+Próximo módulo oficial:
+- **Módulo 9 — Integração croqui ↔ estoque**.
+
+Para o Módulo 9:
+- não reimplementar o editor;
+- consumir o layout ativo e os vínculos `warehouseLocationId` existentes;
+- focar destaque/consulta de material e integração visual com saldos/posições;
+- não fazer geometria mover estoque;
+- manter D-057 e não executar campanha global antes do Módulo 14.
