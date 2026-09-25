@@ -1755,7 +1755,7 @@ Motivo:
 Estado oficial:
 - Fase 9 antiga — domínio: **PRESERVADO**;
 - Fase 9 antiga — UI: **SUPERSEDIDA**;
-- Fase 9 v2: **PLANEJADA / NÃO INICIADA**;
+- Fase 9 v2: **EM DESENVOLVIMENTO — 9.0 e 9.1 CONCLUÍDOS**;
 - Módulo 14: **PAUSADO NA CERTIFICAÇÃO REMOTA**;
 - merge: **NÃO AUTORIZADO**;
 - deploy: **NÃO REALIZADO**;
@@ -1784,5 +1784,122 @@ Invariantes:
 
 Referência: **D-073** em `docs/adm-deposito/DECISIONS.md`.
 
+## FECHAMENTO DOS MÓDULOS 9.0 E 9.1 — FASE 9 v2
+
+Data: 2026-09-25.
+
+### Estado inicial
+
+- branch: `feat/adm-deposito-phase-11-5-visual-ux`;
+- HEAD inicial auditado: `6642a3cbd37e17352a83bb330ad99cdbb0449381`;
+- branch estava 241 commits à frente da `main` e 0 atrás;
+- D-073 confirmada;
+- Fase 9 antiga: domínio preservado e UI supersedida;
+- Módulo 14 continua pausado na certificação remota;
+- merge/deploy não autorizados.
+
+### Módulo 9.0 — CONCLUÍDO
+
+Arquivos/domínios auditados:
+- `WarehouseDepotViewOperational`;
+- `WarehouseDepotLayoutEditor`;
+- `WarehouseDepotsOperational`;
+- rota `Meus Depósitos`;
+- `layoutRepository`;
+- repositories de depósitos/localizações, materiais e lotes;
+- contrato/renderização de `warehouse_depot_layout_v1`;
+- guard permanente da Fase 9;
+- Browser E2E histórico da Fase 9;
+- documentação oficial e Core Protection.
+
+Matriz de reaproveitamento:
+- `warehouse_depot_layout_v1`: **PRESERVAR**;
+- `layoutRepository`: **PRESERVAR**;
+- depósitos/localizações/materiais/lotes e FEFO consultivo: **PRESERVAR**;
+- `WarehouseDepotLayoutEditor`: **REUTILIZAR COM ADAPTAÇÃO**;
+- pesquisa + seletor + edição na mesma faixa dinâmica: **SUBSTITUIR NA UI**;
+- saldos, locationBalances, ledger, Firestore Rules e Core: **NÃO TOCAR**.
+
+Acoplamentos encontrados:
+- `selectedDepotId`, `queryText`, `selectedMaterialId` e `mode` viviam no mesmo componente operacional;
+- o layout ativo/histórico já era carregado por depósito e foi preservado;
+- FEFO já era derivado somente para consulta e foi preservado;
+- a fragilidade estava na composição visual: pesquisa e seletor compartilhavam o mesmo cartão/flex e a lista de resultados alterava a geometria da faixa superior.
+
+Gate 9.0:
+- contratos preservados: **SIM**;
+- bloqueio arquitetural: **NÃO**;
+- autorização para 9.1: **SIM**.
+
+### Módulo 9.1 — CONCLUÍDO
+
+Criado:
+- `features/warehouse/components/WarehouseDepotCroquis.tsx`.
+
+Refatorado:
+- `features/warehouse/components/WarehouseDepotViewOperational.tsx`;
+- `scripts/verify-adm-deposito-phase-9.mjs`.
+
+Estrutura resultante:
+- `WarehouseDepotSelector`;
+- `WarehouseCroquiModeSwitch`;
+- `WarehouseCroquiViewMode`;
+- `WarehouseCroquiEditMode`;
+- `WarehouseCroquiMainRegion`;
+- canvas/editor existentes preservados.
+
+Estabilidade geométrica:
+- seletor em container próprio;
+- modo consulta e modo edição não dividem a mesma superfície dinâmica;
+- resultados de pesquisa com altura limitada e scroll interno;
+- `min-w-0` nas regiões críticas;
+- sem overlay/absolute/fixed em controles operacionais;
+- seletor independente da altura da pesquisa;
+- editor não contém a pesquisa de materiais.
+
+Compatibilidade preservada:
+- rota `Meus Depósitos → Croquis`;
+- redirects existentes;
+- acesso founder-only;
+- depósitos existentes;
+- layouts ativos e históricos;
+- versões antigas;
+- `warehouse_depot_layout_v1`;
+- `warehouseLocationId`;
+- FEFO consultivo.
+
+Segurança/domínio:
+- Firestore Rules: **NÃO ALTERADAS**;
+- nova coleção/schema/índice: **NÃO**;
+- `warehouse_balance_v1`: **NÃO ALTERADO**;
+- `warehouse_location_balance_v1`: **NÃO ALTERADO**;
+- `warehouse_movement_v1`: **NÃO ALTERADO**;
+- Core EMPROVEX: **NÃO ALTERADO**;
+- workspace/UG: **PRESERVADOS**;
+- founder-only: **PRESERVADO**.
+
+Validação:
+- auditoria estática e inspeção dos imports/contratos: realizadas;
+- guard estrutural da Fase 9 atualizado para proteger a nova composição;
+- Application CI completo: **NÃO EXECUTADO**, conforme D-073;
+- Browser E2E completo: **NÃO EXECUTADO**, conforme D-073;
+- regressão global: **NÃO EXECUTADA**, conforme D-073;
+- nenhuma aprovação dinâmica foi presumida sem evidência.
+
+Commits:
+- `2283a9f8e7f06cea4713f3d90c21c3bfe69f52cd` — estrutura base do Croqui v2;
+- `7549ab75f5131b38f73f291f928b3d88fa70616a` — separação de seleção e modos;
+- `74d051f30cbd5687843282fe813c56a2dc55fade` — guard estrutural;
+- fechamento documental registrado em commits subsequentes.
+
+Estado:
+- Módulo 9.0: **CONCLUÍDO**;
+- Módulo 9.1: **CONCLUÍDO**;
+- Fase 9 v2: **EM DESENVOLVIMENTO**;
+- Módulo 14: **PAUSADO**;
+- Merge: **NÃO REALIZADO**;
+- Deploy: **NÃO REALIZADO**;
+- Próximo módulo: **9.2 — Visualizar / Localizar**.
+
 Próximo trabalho oficial:
-**Fase 9 v2 — Módulo 9.0, Auditoria e congelamento da implementação atual.**
+**Fase 9 v2 — Módulo 9.2, Visualizar / Localizar.**
