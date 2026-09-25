@@ -1484,3 +1484,42 @@ Fica estabelecido o modelo oficial de disponibilização do ADM Depósito após 
    - somente depois implementar e validar a liberação granular por usuário externo.
 
 Esta decisão não autoriza agora a expansão externa e não altera o escopo de certificação founder-only do Módulo 14.
+
+## D-072 — Publicação consolidada na main e deploy único/controlado na Vercel
+
+Data: 2026-09-25.
+
+Fica estabelecida a política oficial de fechamento e publicação do ADM Depósito após a certificação final do Módulo 14:
+
+1. **A branch de desenvolvimento pode manter histórico granular.**
+   - commits intermediários de implementação, auditoria, correção e testes permanecem válidos na branch e na PR;
+   - não é necessário reproduzir cada commit histórico como publicação independente na Vercel.
+
+2. **A entrada na `main` deve ser consolidada.**
+   - após todos os gates obrigatórios ficarem verdes, a PR de fechamento do ADM deve preferir **Squash and Merge**;
+   - o estado final completo da branch entra na `main` como um único commit consolidado;
+   - o squash não reduz funcionalidades nem apaga o histórico observável da PR; apenas simplifica o histórico principal.
+
+3. **Produção deve receber uma publicação consolidada.**
+   - evitar múltiplos pushes/deploys pequenos na `main` durante o fechamento;
+   - após o squash merge, executar uma única publicação de produção do estado final certificado;
+   - quando operacionalmente vantajoso, separar build e deploy usando fluxo prebuilt:
+     - `vercel build --prod`;
+     - validação do build;
+     - `vercel deploy --prebuilt --prod`.
+   - se existir preview já validado e apropriado, `vercel promote` pode ser usado para promover o mesmo artefato sem reconstrução.
+
+4. **Economia de cota é requisito operacional, não bypass de validação.**
+   - a estratégia consolidada existe para reduzir consumo desnecessário de deployments e evitar atingir limites da Vercel;
+   - nenhum CI, gate de segurança, Core Protection, Browser E2E ou validação obrigatória pode ser ignorado apenas para economizar deployment.
+
+5. **Sequência oficial do fechamento atual.**
+   - concluir o Application CI final do Módulo 14;
+   - fazer o fechamento documental;
+   - realizar Squash and Merge da PR de fechamento na `main`;
+   - confirmar o commit consolidado na `main`;
+   - executar build/deploy de produção de forma controlada;
+   - validar produção com a conta fundadora;
+   - manter o ADM founder-only durante a estabilização inicial, conforme D-071.
+
+Esta decisão complementa D-057 e D-071 e deve orientar releases futuras de grande porte quando houver muitas alterações acumuladas em branch de desenvolvimento.
