@@ -12,6 +12,8 @@ import {
   where,
 } from 'firebase/firestore';
 
+import { recordWarehouseDocumentReads } from './telemetry';
+
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { getCurrentOperationalScope } from '../operationalPaths';
 import { normalizeWorkspaceId } from '../platformIdentity';
@@ -466,6 +468,7 @@ export async function listWarehouseDestinations(
     const snapshot = await getDocs(
       query(collection(db, path), limit(Math.max(1, Math.min(maxResults, 250))))
     );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs
       .map((entry) => {
         const data = entry.data() as Record<string, unknown>;
@@ -1308,6 +1311,7 @@ export async function listWarehouseConsumptionReport(
       limit(maxResults)
     )
   );
+  recordWarehouseDocumentReads(workspaceId, snapshot.size);
   const records = snapshot.docs.map((entry) =>
     parseConsumption(
       scope.workspaceId,
@@ -1329,6 +1333,7 @@ export async function listWarehouseConsumptionReport(
         limit(100)
       )
     );
+    recordWarehouseDocumentReads(workspaceId, movementSnapshot.size);
     legacyCoverageLimited = movementSnapshot.size >= 100;
     const projectedMovementIds = new Set(
       records.map((record) => record.movementId)

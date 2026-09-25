@@ -8,6 +8,8 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 
+import { recordWarehouseDocumentReads } from './telemetry';
+
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import {
   getCurrentOperationalScope,
@@ -151,6 +153,7 @@ async function listOperationalBounded<T>(
     const snapshot = await getDocs(
       query(operationalCollectionRef(scope, collectionName), limit(maxResults))
     );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return {
       items: snapshot.docs.map((entry) => {
         const data = entry.data() as T & { id?: string; recordKey?: string };
@@ -223,6 +226,7 @@ async function listPersistedIntakes(
     const snapshot = await getDocs(
       query(collection(db, path), limit(WAREHOUSE_INTAKE_QUEUE_STATES_LIMIT))
     );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return {
       items: snapshot.docs.flatMap((entry) => {
         const parsed = parsePersistedIntake(

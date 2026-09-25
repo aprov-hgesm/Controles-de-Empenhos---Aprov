@@ -11,6 +11,8 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 
+import { recordWarehouseDocumentReads } from './telemetry';
+
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { getCurrentOperationalScope } from '../operationalPaths';
 import {
@@ -112,6 +114,7 @@ export async function listWarehouseDepotLayouts(
         limit(Math.max(1, Math.min(maxResults, 150)))
       )
     );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs
       .map((item) => {
         const data = item.data() as Record<string, unknown>;
@@ -143,6 +146,7 @@ export async function listWarehouseDepotLayoutsForDepot(
         limit(Math.max(1, Math.min(maxResults, 150)))
       )
     );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs
       .map((item) => {
         const data = item.data() as Record<string, unknown>;
@@ -176,6 +180,7 @@ export async function getActiveWarehouseDepotLayout(
             limit(2)
           )
     );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     const active = snapshot.docs
       .map((item) => {
         const data = item.data() as Record<string, unknown>;

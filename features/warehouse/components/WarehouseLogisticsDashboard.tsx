@@ -49,7 +49,7 @@ export function WarehouseLogisticsDashboard({ workspaceId }: { workspaceId: stri
       void reconcileWarehouseLogisticsAlerts(
         workspaceId,
         next.alertCandidates,
-        !next.truncated
+        !next.truncated && next.degradedSources.length === 0
       ).catch((error) => console.warn('Falha best-effort ao reconciliar alertas logísticos.', error));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Falha ao carregar o Dashboard Logístico.');
@@ -105,6 +105,12 @@ export function WarehouseLogisticsDashboard({ workspaceId }: { workspaceId: stri
           sobre registros que possam estar fora da janela consultada.
         </div>
       )}
+      {context.degradedSources.length > 0 && (
+        <div className="rounded-xl border border-amber-300/15 bg-amber-400/[0.05] px-4 py-3 text-xs leading-5 text-amber-100/80">
+          Indicadores auxiliares temporariamente indisponíveis: {context.degradedSources.join(', ')}.
+          Os dados principais continuam visíveis e nenhum alerta é resolvido automaticamente com contexto incompleto.
+        </div>
+      )}
       {message && <div className="rounded-xl border border-rose-300/15 bg-rose-400/[0.04] px-4 py-3 text-xs text-rose-100">{message}</div>}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -114,10 +120,10 @@ export function WarehouseLogisticsDashboard({ workspaceId }: { workspaceId: stri
         <MetricCard testId="warehouse-dashboard-near-expiry" label="Próximos do vencimento" value={summary.nearExpiryLots} detail="Janela canônica da FASE 7" href="/adm-deposito/estoque" />
         <MetricCard testId="warehouse-dashboard-deliveries-overdue" label="Previsões vencidas" value={summary.overdueDeliveries} detail="Previsto acumulado ainda não recebido" href="/adm-deposito/entregas" />
         <MetricCard testId="warehouse-dashboard-deliveries-upcoming" label="Entregas futuras" value={summary.upcomingDeliveries} detail="Cronogramas ativos com próxima previsão" href="/adm-deposito/entregas" />
-        <MetricCard testId="warehouse-dashboard-inventory" label="Inventários em atenção" value={summary.inventoryAttention} detail="Reconciliação física requerida" href="/adm-deposito/inventario" />
-        <MetricCard testId="warehouse-dashboard-siscofis" label="Divergências SISCOFIS" value={summary.siscofisDivergences} detail="Último snapshot confirmado" href="/adm-deposito/siscofis-conciliacao" />
+        <MetricCard testId="warehouse-dashboard-inventory" label="Inventários em atenção" value={context.degradedSources.includes('inventories') ? '—' : summary.inventoryAttention} detail={context.degradedSources.includes('inventories') ? 'Fonte temporariamente indisponível' : 'Reconciliação física requerida'} href="/adm-deposito/inventario" />
+        <MetricCard testId="warehouse-dashboard-siscofis" label="Divergências SISCOFIS" value={context.degradedSources.includes('siscofis') ? '—' : summary.siscofisDivergences} detail={context.degradedSources.includes('siscofis') ? 'Fonte temporariamente indisponível' : 'Último snapshot confirmado'} href="/adm-deposito/siscofis-conciliacao" />
         <MetricCard testId="warehouse-dashboard-zero" label="Estoque zerado" value={summary.zeroStock} detail="Saldo canônico igual a zero" href="/adm-deposito/estoque" />
-        <MetricCard testId="warehouse-dashboard-low-stock" label="Baixo estoque" value={summary.lowStock == null ? '—' : summary.lowStock} detail={summary.lowStock == null ? 'Mínimo não configurado' : 'Conforme mínimo explícito configurado'} href={summary.lowStock == null ? '/adm-deposito/configuracoes' : '/adm-deposito/estoque'} />
+        <MetricCard testId="warehouse-dashboard-low-stock" label="Baixo estoque" value={context.degradedSources.includes('settings') ? '—' : summary.lowStock == null ? '—' : summary.lowStock} detail={context.degradedSources.includes('settings') ? 'Configuração temporariamente indisponível' : summary.lowStock == null ? 'Mínimo não configurado' : 'Conforme mínimo explícito configurado'} href={summary.lowStock == null ? '/adm-deposito/configuracoes' : '/adm-deposito/estoque'} />
         <MetricCard testId="warehouse-dashboard-active-schedules" label="Cronogramas ativos" value={summary.activeSchedules} detail="Fonte operacional somente leitura" href="/adm-deposito/entregas" />
         <MetricCard testId="warehouse-dashboard-alerts" label="Alertas detectados" value={context.alertCandidates.length} detail="Persistência isolada no ADM Depósito" href="/adm-deposito/alertas" />
       </div>

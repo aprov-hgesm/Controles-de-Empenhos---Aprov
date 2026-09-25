@@ -11,6 +11,8 @@ import {
   where,
 } from 'firebase/firestore';
 
+import { recordWarehouseDocumentReads } from './telemetry';
+
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { isValidWorkspaceId, normalizeWorkspaceId } from '../platformIdentity';
 import {
@@ -227,6 +229,7 @@ export async function listWarehouseBalances(
     const snapshot = await getDocs(
       query(collection(db, path), limit(Math.max(1, Math.min(maxResults, 500))))
     );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs.map((item) =>
       parseBalance(
         normalizedWorkspaceId,
@@ -256,6 +259,7 @@ export async function listWarehouseMovements(
         limit(Math.max(1, Math.min(maxResults, 250)))
       )
     );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs.map((item) => {
       const data = item.data() as Record<string, unknown>;
       const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
@@ -290,6 +294,7 @@ export async function listWarehouseMovementsForMaterial(
         limit(Math.max(1, Math.min(maxResults, 100)))
       )
     );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs
       .map((item) => {
         const data = item.data() as Record<string, unknown>;

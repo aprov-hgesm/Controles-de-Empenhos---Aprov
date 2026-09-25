@@ -229,3 +229,28 @@ Próximo trabalho autorizado:
 **Módulo 13 — Segurança, Firestore, performance e telemetria.**
 
 O Módulo 13 deve auditar e endurecer a implementação existente; não deve reimplementar Controle de Itens nem Relatórios Logísticos e não deve criar materialização/cache de relatórios sem decisão arquitetural formal.
+
+
+## Handoff após Módulo 13 — 2026-09-25
+
+Estado oficial:
+- branch de continuidade: `feat/adm-deposito-phase-11-5-visual-ux`;
+- Módulos 1–13: concluídos conforme documentação modular;
+- Módulo 14: **NÃO INICIADO**;
+- founder-only permanece obrigatório;
+- nenhuma expansão externa foi autorizada;
+- nenhuma publicação/merge decorre automaticamente deste fechamento.
+
+Hardening consolidado:
+- Rules sem delete físico de material canônico;
+- ledger/saldos preservados;
+- Dashboard/Alertas com degradação segura de fontes auxiliares;
+- Estoque com índices em memória;
+- Inventário sem releitura duplicada do catálogo;
+- telemetria warehouse reutilizando o estimador bufferizado do EMPROVEX;
+- sem listeners novos, sem cache de relatório, sem índice composto preventivo.
+
+Próximo trabalho autorizado, somente em novo passo:
+**Módulo 14 — Campanha final de validação e fechamento.**
+
+O Módulo 14 deverá executar a campanha consolidada prevista em D-057 antes de qualquer conclusão sobre merge, deploy ou expansão externa.

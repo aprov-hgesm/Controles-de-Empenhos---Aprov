@@ -163,3 +163,27 @@ Em 2026-09-25, os Módulos 11 e 12 da consolidação 11.5 foram executados em se
 **Estado oficial:** Módulo 11 CONCLUÍDO; Módulo 12 CONCLUÍDO; Módulo 13 NÃO INICIADO.
 
 Próximo módulo oficial: **Módulo 13 — Segurança, Firestore, performance e telemetria**.
+
+
+## Consolidação do Módulo 13 — Segurança, Firestore, performance e telemetria
+
+Em 2026-09-25, o Módulo 13 foi encerrado como fase de hardening técnico, sem criar nova funcionalidade operacional relevante.
+
+Resultados permanentes:
+- founder-only preservado em UI, API/server gate e Firestore Rules;
+- usuário externo continua sem acesso ao namespace `warehouse`;
+- delete físico de material canônico foi negado nas Rules; o ciclo continua por status/inativação;
+- ledger permanece append-only e saldos permanecem projeções protegidas;
+- Dashboard/Alertas degradam fontes auxiliares sem derrubar o restante da superfície e não resolvem alertas com contexto incompleto;
+- Estoque indexa localização/lotes/barcodes em `Map` antes de montar os resumos, evitando varreduras repetidas por material;
+- Inventário deixou de reler o catálogo de materiais para calcular itens sem localização;
+- leituras bounded relevantes do ADM passaram a alimentar a telemetria estimada já existente do workspace, de forma bufferizada e best-effort;
+- nenhuma coleção de telemetria paralela foi criada;
+- nenhum listener realtime foi adicionado;
+- nenhum cache/materialização de relatório foi criado;
+- nenhum índice Firestore preventivo foi criado; `firestore.indexes.json` continua ausente no repositório;
+- Core EMPROVEX e fluxos críticos de NF/Empenho/Cronograma permanecem independentes do ADM.
+
+Documento técnico: `PHASE_13_HARDENING.md`.
+
+**Estado oficial:** Módulo 13 CONCLUÍDO. Módulo 14 NÃO INICIADO.

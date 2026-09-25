@@ -10,6 +10,8 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 
+import { recordWarehouseDocumentReads } from './telemetry';
+
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { normalizeSupplierCnpj } from '../invoiceIdentity';
 import { getCurrentOperationalScope } from '../operationalPaths';
@@ -239,6 +241,7 @@ export async function listWarehouseItemIntakes(
     const snapshot = await getDocs(
       query(collection(db, path), limit(Math.max(1, Math.min(maxResults, 500))))
     );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs
       .flatMap((entry) => {
         const data = entry.data() as Record<string, unknown>;

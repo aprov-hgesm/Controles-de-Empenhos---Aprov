@@ -10,6 +10,8 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 
+import { recordWarehouseDocumentReads, recordWarehouseDocumentWrites } from './telemetry';
+
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import {
   getCurrentOperationalScope,
@@ -69,6 +71,8 @@ export interface WarehouseDeliveriesContext {
   truncated: boolean;
 }
 
+export type WarehouseLogisticsDegradedSource = 'inventories' | 'siscofis' | 'settings';
+
 export interface WarehouseLogisticsDashboardContext extends WarehouseDeliveriesContext {
   materials: WarehouseMaterial[];
   locationBalances: WarehouseLocationBalance[];
@@ -78,6 +82,7 @@ export interface WarehouseLogisticsDashboardContext extends WarehouseDeliveriesC
   settings: WarehouseLogisticsSettings | null;
   summary: WarehouseLogisticsDashboardSummary;
   alertCandidates: WarehouseLogisticsAlertCandidate[];
+  degradedSources: WarehouseLogisticsDegradedSource[];
 }
 
 function currentScopeForWorkspace(workspaceId: string) {
@@ -100,6 +105,7 @@ async function listOperationalBounded<T>(
     const snapshot = await getDocs(
       query(operationalCollectionRef(scope, collectionName), limit(maxResults))
     );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return {
       items: snapshot.docs.map((entry) => {
         const data = entry.data() as T & { id?: string; recordKey?: string };
@@ -292,6 +298,21 @@ export async function loadWarehouseLogisticsDashboardContext(
   workspaceId: string,
   today: Date = new Date()
 ): Promise<WarehouseLogisticsDashboardContext> {
+  const degradedSources = new Set<WarehouseLogisticsDegradedSource>();
+  const optional = async <T,>(
+    source: WarehouseLogisticsDegradedSource,
+    load: Promise<T>,
+    fallback: T
+  ): Promise<T> => {
+    try {
+      return await load;
+    } catch (error) {
+      degradedSources.add(source);
+      console.warn(`Fonte auxiliar do Dashboard Logístico indisponível: ${source}.`, error);
+      return fallback;
+    }
+  };
+
   const [
     deliveries,
     materials,
@@ -305,9 +326,9 @@ export async function loadWarehouseLogisticsDashboardContext(
     listWarehouseMaterials(workspaceId, WAREHOUSE_DASHBOARD_DOMAIN_LIMIT),
     listWarehouseLocationBalances(workspaceId, WAREHOUSE_DASHBOARD_DOMAIN_LIMIT),
     listWarehouseLots(workspaceId, WAREHOUSE_DASHBOARD_DOMAIN_LIMIT),
-    listWarehouseInventorySessions(workspaceId, 60),
-    listWarehouseSiscofisSnapshots(workspaceId, 1),
-    getWarehouseLogisticsSettings(workspaceId),
+    optional('inventories', listWarehouseInventorySessions(workspaceId, 60), []),
+    optional('siscofis', listWarehouseSiscofisSnapshots(workspaceId, 1), []),
+    optional('settings', getWarehouseLogisticsSettings(workspaceId), null),
   ]);
 
   const locationBalances = locationRecords.map((record) => record.balance);
@@ -346,6 +367,7 @@ export async function loadWarehouseLogisticsDashboardContext(
     settings,
     summary: buildWarehouseLogisticsDashboardSummary(alertInput),
     alertCandidates: buildWarehouseLogisticsAlertCandidates(alertInput),
+    degradedSources: Array.from(degradedSources),
     truncated:
       deliveries.truncated
       || materials.length >= WAREHOUSE_DASHBOARD_DOMAIN_LIMIT
@@ -365,6 +387,7 @@ export async function listWarehouseLogisticsAlerts(
     const snapshot = await getDocs(
       query(collection(db, path), limit(Math.max(1, Math.min(maxResults, WAREHOUSE_LOGISTICS_ALERT_LIMIT))))
     );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs
       .map((entry) =>
         parseWarehouseLogisticsAlert(
@@ -440,6 +463,7 @@ export async function reconcileWarehouseLogisticsAlerts(
         resolvedAt: null,
       });
     }
+    recordWarehouseDocumentWrites(normalized, 1);
     createdOrUpdated += 1;
   }
 
@@ -453,6 +477,7 @@ export async function reconcileWarehouseLogisticsAlerts(
         updatedAt: serverTimestamp(),
         resolvedAt: serverTimestamp(),
       });
+      recordWarehouseDocumentWrites(normalized, 1);
       resolved += 1;
     }
   }

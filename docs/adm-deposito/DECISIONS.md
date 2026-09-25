@@ -1395,3 +1395,33 @@ Decisão permanente para o baseline atual:
 - uma futura troca de camada gráfica só é justificável se complexidade funcional concreta superar a solução atual, sem alterar o contrato persistido.
 
 A decisão evita dependência imperativa adicional e mantém a separação entre camada de interação visual e domínio logístico.
+
+
+## D-069 — Hardening do ADM reutiliza telemetria existente, preserva históricos e degrada fontes auxiliares com segurança
+
+No Módulo 13, ficam congeladas as seguintes decisões:
+
+1. **Material canônico é histórico e não sofre delete físico.**
+   - `warehouse_material_v1` pode ser inativado pelo contrato já existente;
+   - Firestore Rules negam delete físico;
+   - referências de ledger, saldo, lote, barcode, inventário e relatórios não devem ser órfãs por exclusão do catálogo.
+
+2. **Telemetria do ADM não cria sistema paralelo.**
+   - o namespace warehouse utiliza um adaptador leve sobre `workspaceUsageTelemetry`;
+   - snapshots bounded registram contagens estimadas no mesmo buffer de consumo do workspace;
+   - a telemetria é best-effort, sem listener e sem bloquear operação;
+   - não existe write Firestore por render ou por simples interação visual;
+   - eventual granularidade adicional deve continuar aproveitando a mesma infraestrutura, salvo decisão arquitetural futura explícita.
+
+3. **Fonte auxiliar degradada não transforma ausência de dado em estado resolvido.**
+   - Dashboard pode continuar com dados principais quando Inventários, SISCOFIS ou Configurações estiverem temporariamente indisponíveis;
+   - a indisponibilidade deve ser explicitada na UI;
+   - enquanto o contexto estiver incompleto, reconciliação pode criar/atualizar condições observáveis, mas não resolver automaticamente alertas históricos que podem depender da fonte ausente.
+
+4. **Otimização não cria nova autoridade.**
+   - `Map`/`Set` em memória e derivação sobre lotes já carregados são preferidos a novas coleções/caches;
+   - relatórios continuam derivados;
+   - nenhuma materialização de relatório foi autorizada;
+   - nenhum índice composto é criado preventivamente.
+
+Essas decisões preservam a fronteira `EMPROVEX → ADM Depósito` e não alteram a política D-057 de campanha consolidada no Módulo 14.

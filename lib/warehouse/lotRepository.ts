@@ -11,6 +11,8 @@ import {
   where,
 } from 'firebase/firestore';
 
+import { recordWarehouseDocumentReads } from './telemetry';
+
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { getCurrentOperationalScope } from '../operationalPaths';
 import {
@@ -243,6 +245,7 @@ export async function listWarehouseLots(
     const snapshot = materialId
       ? await getDocs(query(base, where('materialId', '==', materialId), limit(bounded)))
       : await getDocs(query(base, limit(bounded)));
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
 
     return snapshot.docs
       .map((item) => {

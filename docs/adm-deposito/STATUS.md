@@ -1519,3 +1519,73 @@ Deliberadamente NÃO executado:
 - Módulo 12: **ENCERRADO**;
 - Módulo 13: **NÃO INICIADO**;
 - próximo módulo oficial: **Módulo 13 — Segurança, Firestore, performance e telemetria**.
+
+
+## FECHAMENTO 2026-09-25 — MÓDULO 13
+
+### Baseline real
+- branch: `feat/adm-deposito-phase-11-5-visual-ux`;
+- HEAD inicial confirmado: `0c35f723c87b366d2b50b3b511d0e8e356115d75`;
+- HEAD conhecido e HEAD real eram idênticos;
+- nenhum commit posterior legítimo precisou ser reconciliado.
+
+### Segurança
+- founder-only confirmado no gate cliente, API/server e Firestore Rules;
+- workspace piloto permanece `hgesm-aprov`, UG `160416`;
+- setores externos continuam sem leitura/escrita no namespace warehouse;
+- material canônico não pode mais ser apagado fisicamente;
+- ledger continua append-only;
+- saldos agregado e por localização continuam protegidos por movimento/revisão;
+- relatórios não ganharam caminhos de escrita;
+- nenhuma Rule operacional do Core foi aberta para atender o ADM.
+
+### Firestore / performance
+- nenhuma consulta por hover;
+- nenhum listener realtime novo;
+- consultas principais continuam bounded;
+- `listWarehouseMovementsForMaterial` continua bounded e ordena em memória, sem índice composto preventivo;
+- Estoque passou a indexar locationBalances/lots/barcodes por material antes de derivar cards;
+- Inventário reutiliza o mesmo lote de materiais já carregado para derivar saldo sem localização, eliminando uma leitura duplicada de até 500 materiais por abertura;
+- layout continua limitado a 160 objetos;
+- SISCOFIS continua limitado a 500 linhas por importação/snapshot;
+- itens de inventário permanecem em subcoleção, não em array crescente dentro da sessão;
+- `firestore.indexes.json` não existe na branch e nenhum índice foi criado no Módulo 13.
+
+### Resiliência
+- falha em Inventários, SISCOFIS ou Configurações como fonte auxiliar do Dashboard gera estado degradado explícito;
+- dados principais permanecem visíveis quando possível;
+- alertas existentes não são resolvidos automaticamente enquanto o contexto estiver degradado;
+- reconciliação de alertas permanece best-effort;
+- Core EMPROVEX continua independente do ADM.
+
+### Telemetria
+- criado `lib/warehouse/telemetry.ts` como adaptador best-effort para a infraestrutura existente `workspaceUsageTelemetry`;
+- leituras de snapshots bounded nos repositories principais passam a registrar contagem estimada;
+- reconciliações de alertas registram writes estimados;
+- nenhum acesso Firestore paralelo foi criado pela telemetria;
+- nenhuma gravação por render/interação foi adicionada;
+- flush continua bufferizado pela infraestrutura existente.
+
+### Guard/testes preparados
+- novo `scripts/verify-adm-deposito-phase-13.mjs`;
+- `package.json` registra `verify:adm-deposito-phase-13`;
+- Application CI passa a incluir o guard quando a campanha oficial for executada;
+- suíte multi-tenant ganhou cenário que nega delete físico de material;
+- guard da FASE 1 passou a exigir esse cenário.
+
+### Validação conforme D-057
+Neste módulo foi feita auditoria estática direcionada e validação do conteúdo consolidado. Deliberadamente não foram disparados:
+- Application CI;
+- build global;
+- TypeScript global;
+- Firestore Emulator completo;
+- Browser E2E completo;
+- regressão EMPROVEX/ADM completa.
+
+Essas baterias pertencem ao Módulo 14.
+
+### Continuidade
+- Módulo 13: **ENCERRADO**;
+- Módulo 14: **NÃO INICIADO**;
+- expansão externa: **NÃO AUTORIZADA**;
+- publicação/merge: **NÃO REALIZADOS**.

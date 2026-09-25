@@ -803,6 +803,10 @@ async function main() {
     getDocs(collection(admin.db, 'warehouse', 'hgesm-aprov', 'materials'))
   );
 
+  await denied('Material canônico não pode ser apagado fisicamente', () =>
+    deleteDoc(founderMaterialProbe)
+  );
+
   await denied('Material não pode declarar workspace diferente do caminho', () =>
     setDoc(founderMaterialProbe, {
       ...canonicalMaterial,

@@ -11,6 +11,8 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 
+import { recordWarehouseDocumentReads } from './telemetry';
+
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { getCurrentOperationalScope } from '../operationalPaths';
 import {
@@ -229,6 +231,7 @@ export async function listWarehouseSiscofisSnapshots(
         limit(Math.max(1, Math.min(maxResults, 25)))
       )
     );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs.map((item) =>
       parseSnapshot(workspaceId, item.id, item.data() as Record<string, unknown>)
     );

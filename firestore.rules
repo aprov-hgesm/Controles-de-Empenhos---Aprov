@@ -4944,7 +4944,7 @@ service cloud.firestore {
         allow read: if canAccessWarehouseModule(workspaceId);
         allow create, update: if canAccessWarehouseModule(workspaceId)
           && validWarehouseMaterialDocument(workspaceId, materialId);
-        allow delete: if canAccessWarehouseModule(workspaceId);
+        allow delete: if false;
       }
 
       // FASE 6 / DEP-8..9 — depósitos e localizações têm identidade

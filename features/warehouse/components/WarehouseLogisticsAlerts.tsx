@@ -34,11 +34,16 @@ export function WarehouseLogisticsAlerts({ workspaceId }: { workspaceId: string 
     setMessage(null);
     try {
       const context = await loadWarehouseLogisticsDashboardContext(workspaceId);
+      if (context.degradedSources.length > 0) {
+        setMessage(
+          'Algumas fontes auxiliares estão indisponíveis; os alertas existentes permanecem visíveis e não serão resolvidos automaticamente nesta tentativa.'
+        );
+      }
       try {
         await reconcileWarehouseLogisticsAlerts(
           workspaceId,
           context.alertCandidates,
-          !context.truncated
+          !context.truncated && context.degradedSources.length === 0
         );
       } catch (error) {
         console.warn('Falha ao reconciliar alertas do ADM Depósito.', error);

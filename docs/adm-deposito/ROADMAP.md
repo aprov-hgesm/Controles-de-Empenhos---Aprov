@@ -769,3 +769,31 @@ Estratégia:
 - Módulo 13: **NÃO INICIADO**;
 - próximo módulo oficial: **Módulo 13 — Segurança, Firestore, performance e telemetria**;
 - campanha consolidada de CI/E2E continua reservada ao Módulo 14 pela D-057.
+
+
+## CONSOLIDAÇÃO 11.5 — MÓDULO 13 — CONCLUÍDO
+
+Data de fechamento: 2026-09-25.
+
+O Módulo 13 executou hardening da implementação existente, sem reabrir os Módulos 1–12.
+
+Entregue:
+- auditoria founder-only/multi-tenant e proteção de dados;
+- material canônico protegido contra delete físico;
+- confirmação de ledger append-only e saldos derivados;
+- resiliência parcial do Dashboard/Alertas para fontes auxiliares;
+- otimização em memória do Estoque com índices por material;
+- remoção de releitura duplicada de materiais na abertura do Inventário;
+- instrumentação leve das leituras bounded usando `workspaceUsageTelemetry`;
+- guard permanente `verify:adm-deposito-phase-13`;
+- cenário de segurança para impedir delete físico do material;
+- auditoria de documentos grandes, consultas, listeners e índices;
+- nenhum índice composto novo e nenhuma coleção/cache de relatório.
+
+A campanha pesada de TypeScript/build/Firestore Emulator/Browser E2E/regressão/CI permanece deliberadamente no **Módulo 14**, conforme D-057.
+
+### Gate de continuidade
+- Módulo 13: **CONCLUÍDO**;
+- Módulo 14: **NÃO INICIADO**;
+- próximo trabalho oficial: **Módulo 14 — Campanha final de validação e fechamento**;
+- este fechamento não autoriza expansão externa nem publicação por si só.
