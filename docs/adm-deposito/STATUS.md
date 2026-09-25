@@ -732,6 +732,8 @@ Estado:
 - repository transacional criado em `7166820098f4f2a88cec0c99e04473f775f0433a`;
 - normalização defensiva de identidade de material em `44c24f9744300959ba772d4e2e9f9a8d83416ea3`;
 - jornada operacional de interface em `cd35f7db308e357439b351d1a65f31e3fa68570f`;
+- fingerprint do payload incorporado ao replay idempotente em `cc548560a200191998902d65bc85f1a414061484`;
+- preservação correta de data-only de validade e captura HID/ENTER em `a451b48d75c9aa437e2024fd5b95576ba5863c76`;
 - nenhuma implementação do Módulo 4 foi iniciada.
 
 ### Fluxo final de alocação
@@ -832,7 +834,7 @@ Cada confirmação recebe um `operationId` estável.
 Identidade da transferência:
 `adm-intake-v2:<intakeId>:allocation:<operationId>`.
 
-O `operationId` é mantido em `sessionStorage` durante a tentativa, permitindo replay seguro após refresh, duplo clique ou resposta de rede ambígua.
+O `operationId` é mantido em `sessionStorage` durante a tentativa, permitindo replay seguro após refresh, duplo clique ou resposta de rede ambígua. O movimento registra ainda um fingerprint compacto de quantidade, posição, lote, validade e barcode; a mesma identidade com payload divergente gera conflito em vez de reaplicar a transferência.
 
 Dentro da transação, o repository relê:
 - intake;
