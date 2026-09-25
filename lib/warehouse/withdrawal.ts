@@ -45,6 +45,7 @@ export interface WarehouseMaterialWithdrawal {
   destinationId: string;
   destinationName: string;
   withdrawnBy: string;
+  payloadHash: string;
   expectedLineCount: number;
   appliedLineCount: number;
   status: WarehouseWithdrawalStatus;
