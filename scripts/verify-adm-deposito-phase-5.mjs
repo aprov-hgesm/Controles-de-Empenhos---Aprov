@@ -28,7 +28,8 @@ const ci = read('.github/workflows/application-ci.yml');
 
 for (const marker of [
   "WAREHOUSE_SISCOFIS_IMPORT_SCHEMA_VERSION = 'warehouse_siscofis_import_v1'",
-  "WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION = 'warehouse_siscofis_snapshot_v1'",
+  "WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION_V1 = 'warehouse_siscofis_snapshot_v1'",
+  "WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION = 'warehouse_siscofis_snapshot_v2'",
   'parseWarehouseSiscofisJson',
   'buildWarehouseSiscofisPrompt',
   'buildWarehouseSiscofisPreview',
