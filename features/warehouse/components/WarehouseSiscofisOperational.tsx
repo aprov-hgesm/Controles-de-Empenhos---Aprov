@@ -50,6 +50,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [previewDirty, setPreviewDirty] = useState(false);
+  const [materialOverrides, setMaterialOverrides] = useState<Record<string, string>>({});
   const [manualNumeroItem, setManualNumeroItem] = useState('');
   const [manualDescription, setManualDescription] = useState('');
   const [manualQuantity, setManualQuantity] = useState('');
@@ -79,7 +80,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
     setPreview(null);
     setIssues([]);
     try {
-      const nextPreview = await prepareEmprovexSiscofisInventoryImport(workspaceId, rawJson, manualReferenceDate);
+      const nextPreview = await prepareEmprovexSiscofisInventoryImport(workspaceId, rawJson, manualReferenceDate, 'Inventário SISCOFIS — Migração inicial', materialOverrides);
       setPreview(nextPreview);
       setPreviewDirty(false);
       setIssues(nextPreview.issues);
@@ -105,6 +106,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
       );
       setPreview(null);
       setPreviewDirty(false);
+      setMaterialOverrides({});
       setRawJson('');
       setIssues([]);
       await refresh();
@@ -178,8 +180,20 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
     setRawJson('');
     setPreview(null);
     setPreviewDirty(false);
+    setMaterialOverrides({});
     setIssues([]);
     setMessage('Rascunho limpo.');
+  };
+
+  const selectCanonicalMaterial = (rowId: string, materialId: string) => {
+    setMaterialOverrides((current) => {
+      const next = { ...current };
+      if (materialId) next[rowId] = materialId;
+      else delete next[rowId];
+      return next;
+    });
+    setPreviewDirty(true);
+    setMessage('Vínculo canônico alterado. Revalide antes de confirmar.');
   };
 
 
@@ -261,7 +275,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
           </div>
           <div className="mt-4 overflow-x-auto rounded-xl border border-white/[0.06]">
             <table className="min-w-[760px] w-full text-left text-xs">
-              <thead className="bg-white/[0.025] text-[9px] uppercase tracking-[0.12em] text-slate-600"><tr><th className="p-3">Nº Ficha</th><th className="p-3">Material</th><th className="p-3">Qtd.</th><th className="p-3">Valor unit.</th><th className="p-3">Total</th><th className="p-3">Estado</th></tr></thead>
+              <thead className="bg-white/[0.025] text-[9px] uppercase tracking-[0.12em] text-slate-600"><tr><th className="p-3">Nº Ficha</th><th className="p-3">Material</th><th className="p-3">Qtd.</th><th className="p-3">Valor unit.</th><th className="p-3">Total</th><th className="p-3">Vínculo</th><th className="p-3">Estado</th></tr></thead>
               <tbody className="divide-y divide-white/[0.05]">
                 {preview.rows.map((row, index) => { const source = preview.import.rows.find((item) => item.rowId === row.rowId); return <tr key={preview.sourceHash + row.rowId}>
                   <td className="p-2"><input defaultValue={row.sourceItemNumber || ''} onChange={(event) => editPreviewItem(index, 'numeroItem', event.target.value)} className="h-9 w-28 rounded-lg border border-white/[0.08] bg-black/20 px-2 font-mono text-xs text-slate-200" /></td>
@@ -269,6 +283,24 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
                   <td className="p-2"><input defaultValue={String(row.siscofisQuantity)} onChange={(event) => editPreviewItem(index, 'quantidade', event.target.value)} inputMode="decimal" className="h-9 w-24 rounded-lg border border-white/[0.08] bg-black/20 px-2 text-xs text-slate-200" /></td>
                   <td className="p-2"><input defaultValue={String(source?.unitValue ?? 0)} onChange={(event) => editPreviewItem(index, 'valorUnitario', event.target.value)} inputMode="decimal" className="h-9 w-28 rounded-lg border border-white/[0.08] bg-black/20 px-2 text-xs text-slate-200" /></td>
                   <td className="p-3 text-slate-400">{source?.totalValue?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00"}</td>
+                  <td className="p-2">
+                    {row.createsMaterial ? (
+                      <span className="text-[10px] font-bold text-blue-200">Novo material</span>
+                    ) : (
+                      <select
+                        value={materialOverrides[row.rowId] || (preview.materialOptions.some((option) => option.id === row.materialId) ? row.materialId || '' : '')}
+                        onChange={(event) => selectCanonicalMaterial(row.rowId, event.target.value)}
+                        className="h-9 max-w-[260px] rounded-lg border border-white/[0.08] bg-black/20 px-2 text-[10px] text-slate-200"
+                      >
+                        <option value="">{row.materialId ? 'Vínculo automático' : 'Selecione o material'}</option>
+                        {preview.materialOptions.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.description} · {option.unit.code}{option.unit.label ? ' / ' + option.unit.label : ''}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </td>
                   <td className="p-3 text-slate-400">{row.state}{previewDirty ? ' · revalidar' : ''}</td>
                 </tr>; })}
               </tbody>
