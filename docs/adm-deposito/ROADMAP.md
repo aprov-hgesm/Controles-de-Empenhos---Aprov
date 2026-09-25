@@ -557,20 +557,36 @@ Capacidade consolidada sobre o motor histórico da FASE 5:
 
 Gate: manual/JSON → validação → prévia editável → confirmação humana → motor oficial de Marco Zero/snapshot, sem escrita direta de saldo.
 
-### Módulo 6 — Meus Depósitos multi-depósito
+### Módulo 6 — Meus Depósitos multi-depósito — CONCLUÍDO
 
-Objetivo:
-- adaptar o modelo para 1..N depósitos efetivamente administráveis pela UI;
-- suportar criação, edição e inativação conforme contratos existentes;
-- tornar explícito o layout ativo por depósito;
-- manter históricos de layout independentes.
+Capacidade consolidada:
+- 1..N depósitos continuam usando exclusivamente `warehouse_depot_v1`;
+- criação, edição e inativação reutilizam o repository e as invariantes históricas da FASE 6;
+- código lógico, workspace, UG, IDs e metadados de criação permanecem imutáveis;
+- localizações/subposições continuam em `warehouse_location_v1`, vinculadas ao `depotId` correto;
+- `UNASSIGNED` permanece posição logística de material não alocado e nunca vira depósito fictício;
+- a seleção de depósito em **Meus Depósitos → Croquis** carrega layout ativo e histórico de forma explicitamente scoped por `depotId`;
+- histórico de um depósito não depende mais de uma listagem global limitada de layouts;
+- salvar uma versão arquiva a versão ativa anterior somente do mesmo depósito;
+- depósito sem croqui apresenta estado vazio próprio e não recebe layout fictício;
+- nenhuma coleção, saldo ou fonte de verdade paralela foi criada;
+- Firestore Rules existentes foram suficientes e permaneceram inalteradas.
 
-### Módulo 7 — Biblioteca de estruturas físicas
+### Módulo 7 — Biblioteca de estruturas físicas — CONCLUÍDO
 
-Objetivo:
-- oferecer estruturas reutilizáveis no editor;
-- incluir estantes, racks, armários, freezers, geladeiras, câmaras, paletes, áreas de paletes, bancadas, corredores, áreas livres e outros;
-- permitir dimensões proporcionais, rotação e níveis/subposições.
+Capacidade consolidada:
+- catálogo central estático `WAREHOUSE_STRUCTURE_LIBRARY`, sem coleção Firestore de tipos;
+- biblioteca contempla Estante, Rack, Armário, Freezer, Geladeira, Câmara, Palete, Área de Paletes, Bancada, Corredor, Área Livre e Outra estrutura;
+- cada definição possui tipo legado compatível, categoria, dimensões/proporções iniciais, rotação inicial, variante visual e indicação de níveis/subposições;
+- instâncias usadas continuam persistidas exclusivamente como `objects` de `warehouse_depot_layout_v1`;
+- Área de Paletes e Área Livre reutilizam o `kind = AREA` existente em vez de criar schema concorrente;
+- tipos legados válidos como WALL/ZONE continuam editáveis e históricos antigos permanecem compatíveis;
+- objetos visuais podem continuar referenciando `warehouseLocationId`, mas não representam material, saldo ou movimento;
+- biblioteca integrada ao editor atual apenas como seleção de estruturas; drag avançado, resize por handles, grid/snap, zoom/pan e demais capacidades permanecem para o Módulo 8;
+- teste contratual do layout foi preparado para cobrir o catálogo na campanha consolidada do Módulo 14;
+- nenhuma Firestore Rule foi alterada.
+
+Próximo módulo oficial: **Módulo 8 — Editor visual do croqui**.
 
 ### Módulo 8 — Editor visual do croqui
 
