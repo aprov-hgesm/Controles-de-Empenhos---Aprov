@@ -1399,3 +1399,37 @@ Decisão de biblioteca:
 - ver D-068.
 
 Próximo módulo oficial: **Módulo 9 — Integração croqui ↔ estoque**.
+
+
+## Módulo 9 — Integração croqui ↔ estoque — CONCLUÍDO
+
+Data: 2026-09-25.
+
+- material canônico ligado às posições por saldos oficiais;
+- `warehouseLocationId` reutilizado como ponte visual;
+- múltiplas posições destacadas;
+- depósito selecionado respeitado integralmente;
+- FEFO usa `selectWarehouseFefoLot`;
+- localizações sem representação visual continuam listadas;
+- estruturas sem localização continuam válidas;
+- clique em estrutura mostra contexto da pesquisa;
+- croqui não movimenta estoque nem cria nova fonte quantitativa.
+
+## Módulo 10 — Finalização da aba Início — CONCLUÍDO
+
+Data: 2026-09-25.
+
+- seletor de depósito e troca segura de contexto;
+- layout ativo carregado sob demanda com `getActiveWarehouseDepotLayout`;
+- histórico não é carregado na Início;
+- pesquisa, saldo, localizações, lotes, validade e FEFO consolidados;
+- croqui em consulta 2.5D/vista superior;
+- estados para depósito sem croqui e item sem saldo;
+- edição permanece em Meus Depósitos / Croquis;
+- Firestore Rules inalteradas;
+- Core EMPROVEX inalterado;
+- D-057 preservada: sem CI global, Browser E2E completo, build/typecheck global ou regressão global;
+- sem PR, merge ou deploy.
+
+Próximo módulo oficial: **Módulo 11 — Consolidação do Controle de Itens**.
+Módulo 11: **NÃO INICIADO**.
