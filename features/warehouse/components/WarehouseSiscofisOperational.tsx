@@ -51,6 +51,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
   const [message, setMessage] = useState<string | null>(null);
   const [previewDirty, setPreviewDirty] = useState(false);
   const [materialOverrides, setMaterialOverrides] = useState<Record<string, string>>({});
+  const [editedRows, setEditedRows] = useState<Record<string, boolean>>({});
   const [manualNumeroItem, setManualNumeroItem] = useState('');
   const [manualDescription, setManualDescription] = useState('');
   const [manualQuantity, setManualQuantity] = useState('');
@@ -107,6 +108,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
       setPreview(null);
       setPreviewDirty(false);
       setMaterialOverrides({});
+      setEditedRows({});
       setRawJson('');
       setIssues([]);
       await refresh();
@@ -170,6 +172,8 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
       });
       setRawJson(JSON.stringify({ ...parsed, items: nextItems }, null, 2));
       setPreviewDirty(true);
+      const editedRowId = preview?.rows[index]?.rowId;
+      if (editedRowId) setEditedRows((current) => ({ ...current, [editedRowId]: true }));
       setMessage('Prévia alterada manualmente. Revalide antes de confirmar.');
     } catch {
       setMessage('Não foi possível aplicar a edição à origem JSON. Revise o conteúdo colado.');
@@ -181,6 +185,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
     setPreview(null);
     setPreviewDirty(false);
     setMaterialOverrides({});
+    setEditedRows({});
     setIssues([]);
     setMessage('Rascunho limpo.');
   };
@@ -193,6 +198,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
       return next;
     });
     setPreviewDirty(true);
+    setEditedRows((current) => ({ ...current, [rowId]: true }));
     setMessage('Vínculo canônico alterado. Revalide antes de confirmar.');
   };
 
@@ -266,7 +272,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
             <div>
               <p className="font-mono text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300/75">Prévia · {preview.kind === 'MARCO_ZERO' ? 'Marco Zero' : 'Snapshot'}</p>
               <p className="mt-2 text-sm font-bold text-slate-200">{preview.summary.totalRows} linha(s) · {preview.summary.createsMaterials} novo(s) · {preview.summary.unresolvedRows} sem vínculo · {preview.summary.divergentRows} divergente(s)</p>
-              <p className="mt-1 text-[10px] text-slate-500">{issues.filter((item) => item.severity === 'error').length} erro(s) · {issues.filter((item) => item.severity === 'warning').length} aviso(s) · valor total {preview.import.rows.reduce((sum, row) => sum + (row.totalValue || 0), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} · data-base {preview.import.referenceDate}</p>
+              <p className="mt-1 text-[10px] text-slate-500">{issues.filter((item) => item.severity === 'error').length} erro(s) · {issues.filter((item) => item.severity === 'warning').length} aviso(s) · valor total {preview.import.rows.reduce((sum, row) => sum + (row.totalValue || 0), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} · {Object.keys(editedRows).length} corrigida(s) · data-base {preview.import.referenceDate}</p>
               {previewDirty && <p className="mt-2 text-[10px] font-bold text-amber-300">Há correções manuais ainda não revalidadas. A confirmação permanece bloqueada.</p>}
             </div>
             <button type="button" onClick={confirmImport} disabled={working || !preview.canConfirm || previewDirty} className="inline-flex h-9 items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-400/[0.11] px-4 text-xs font-black text-emerald-100 disabled:opacity-40">
@@ -301,7 +307,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
                       </select>
                     )}
                   </td>
-                  <td className="p-3 text-slate-400">{row.state}{previewDirty ? ' · revalidar' : ''}</td>
+                  <td className="p-3 text-slate-400">{row.state}{editedRows[row.rowId] ? ' · corrigida' : ''}{previewDirty ? ' · revalidar' : ''}</td>
                 </tr>; })}
               </tbody>
             </table>
