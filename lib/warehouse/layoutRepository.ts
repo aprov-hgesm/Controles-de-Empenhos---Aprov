@@ -206,12 +206,27 @@ export async function getActiveWarehouseDepotLayout(
   }
 }
 
+function assertUniqueLayoutLocationReferences(
+  objects: WarehouseDepotLayoutObject[]
+): void {
+  const represented = new Set<string>();
+  for (const object of objects) {
+    const locationId = object.warehouseLocationId;
+    if (!locationId) continue;
+    if (represented.has(locationId)) {
+      throw new Error('WAREHOUSE_LAYOUT_DUPLICATE_LOCATION_REFERENCE');
+    }
+    represented.add(locationId);
+  }
+}
+
 async function assertLayoutLocationReferences(
   workspaceId: string,
   ug: string,
   depotId: string | null,
   objects: WarehouseDepotLayoutObject[]
 ): Promise<void> {
+  assertUniqueLayoutLocationReferences(objects);
   const referencedIds = Array.from(
     new Set(objects.map((item) => item.warehouseLocationId).filter(Boolean) as string[])
   );
