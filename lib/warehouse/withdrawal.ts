@@ -1,4 +1,5 @@
 import type { WarehouseMaterialUnit } from './material';
+import type { WarehouseBarcodeAssociation } from './barcode';
 import type { WarehouseStockPosition } from './location';
 
 export const WAREHOUSE_DESTINATION_SCHEMA_VERSION = 'warehouse_destination_v1' as const;
@@ -64,7 +65,7 @@ export interface WarehouseWithdrawalLineInput {
   unitLabel: string;
   position: WarehouseStockPosition;
   positionLabel: string;
-  barcodeAssociationId: string | null;
+  barcodeAssociation: WarehouseBarcodeAssociation | null;
   barcode: string | null;
   lotId: string | null;
   lotCode: string | null;
