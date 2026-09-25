@@ -457,7 +457,7 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_330px]">
         <div className="space-y-4">
           <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0 flex-1">
                 <label className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Pesquisar material</label>
                 <div className="mt-2 flex items-center gap-2 rounded-xl border border-white/[0.08] bg-black/20 px-3">
@@ -490,7 +490,7 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                   </div>
                 )}
               </div>
-              <div className="flex flex-wrap items-end gap-2">
+              <div className="flex flex-wrap items-end gap-2 lg:pt-[18px]">
                 <label className="min-w-[220px]">
                   <span className="mb-1 block text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">Depósito do croqui</span>
                   <select
