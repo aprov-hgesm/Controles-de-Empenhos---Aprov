@@ -70,7 +70,7 @@ const validJson = JSON.stringify({
   ],
 });
 
-function material() {
+function material(overrides = {}) {
   return {
     schemaVersion: 'warehouse_material_v1',
     id: materialId,
@@ -81,6 +81,7 @@ function material() {
     unit: { code: 'kg', label: null },
     status: 'active',
     conversions: [],
+    ...overrides,
   };
 }
 
