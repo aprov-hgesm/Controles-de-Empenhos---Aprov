@@ -239,6 +239,17 @@ export function WarehouseLocationsOperational({
     return grouped;
   }, [state.balances, state.locationBalances]);
 
+  const depotLocationStats = useMemo(() => {
+    const stats = new Map<string, { locals: number; subpositions: number }>();
+    for (const item of state.locations) {
+      const current = stats.get(item.location.depotId) || { locals: 0, subpositions: 0 };
+      if (item.location.kind === 'LOCAL') current.locals += 1;
+      else current.subpositions += 1;
+      stats.set(item.location.depotId, current);
+    }
+    return stats;
+  }, [state.locations]);
+
   const selectedDepot = state.depots.find(
     (item) => item.depot.id === selectedDepotId
   )?.depot;
@@ -542,6 +553,16 @@ export function WarehouseLocationsOperational({
                       </span>
                     </div>
                     <p className="mt-2 text-xs font-bold text-slate-300">{item.depot.name}</p>
+                    <p className="mt-1 text-[9px] text-slate-600">
+                      {(depotLocationStats.get(item.depot.id)?.locals || 0)} local(is)
+                      {' · '}
+                      {(depotLocationStats.get(item.depot.id)?.subpositions || 0)} subposição(ões)
+                    </p>
+                    {item.updatedAt && (
+                      <p className="mt-1 text-[8px] text-slate-700">
+                        Atualizado em {new Date(item.updatedAt).toLocaleDateString('pt-BR')}
+                      </p>
+                    )}
                   </button>
                 );
               })}
