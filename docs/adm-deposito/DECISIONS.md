@@ -1060,7 +1060,7 @@ O status continua derivado exclusivamente por:
 Cada tentativa confirmável recebe `operationId` estável. A transferência usa:
 `adm-intake-v2:<intakeId>:allocation:<operationId>`.
 
-Na interface, o `operationId` é preservado em `sessionStorage` durante a tentativa. Refresh, duplo clique ou resposta de rede ambígua reutilizam a mesma identidade. Replay idêntico retorna o movimento existente; payload divergente conflita e não movimenta novamente.
+Na interface, o `operationId` é preservado em `sessionStorage` durante a tentativa. Refresh, duplo clique ou resposta de rede ambígua reutilizam a mesma identidade. O movimento também recebe um fingerprint compacto de quantidade + posição + lote + validade + barcode, incorporado ao payload auditável comparado pelo replay. Assim, replay idêntico retorna o movimento existente; payload divergente conflita e não movimenta novamente.
 
 O lote usa identidade determinística por intake + movimento de entrada + código do lote + posição. Repetidas parcelas do mesmo lote na mesma posição incrementam a atribuição existente; lote igual em outra posição permanece uma atribuição distinta.
 
