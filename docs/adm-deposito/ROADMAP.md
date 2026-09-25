@@ -1016,14 +1016,42 @@ Gate 9.6:
 - carga visual/GPU adicional relevante: **NÃO**;
 - validação Browser E2E permanece reservada ao 9.7, conforme D-073.
 
-#### 9.7 — Testes específicos
-Separar Localização, Editor, Persistência, Integridade logística, Segurança e Geometria visual.
+#### 9.7 — Testes específicos — CONCLUÍDO COM E2E OPERACIONAL DIFERIDO
+Validações locais concluídas:
+- Localização: **7/7 PASS**;
+- Layout/editor: **16/16 PASS**;
+- guard permanente da Fase 9: **PASS**;
+- TypeScript: **PASS / 0 erros**.
 
-#### 9.8 — Integração/regressão ADM
-Revalidar Fases 6–8 e 10, redirects, navegação e autoridades.
+Por decisão operacional do fundador, o Browser E2E específico do Croqui não é gate desta branch e será validado na versão integrada à `main`, com operação acompanhada pelo fundador. O adiamento não é registrado como PASS nem como falha funcional.
 
-#### 9.9 — Fechamento/certificação
-Atualizar documentação, executar regressão ampla e retomar Application CI final do Módulo 14.
+#### 9.8 — Integração/regressão ADM — CONCLUÍDO
+Revalidação integrada concluída no `Application CI`:
+- Fase 6 — locations/transfers + guard: **PASS**;
+- Fase 7 — estoque/lotes/FEFO + guard: **PASS**;
+- Fase 8 — barcode/saída + guard: **PASS**;
+- Fase 9 — layout + guard: **PASS**;
+- Fase 10 — inventário + guard: **PASS**;
+- Fases 11, 11.5 e Módulo 13: **PASS**;
+- multi-tenant/security: **PASS**;
+- nenhuma alteração de autoridade, saldo, ledger, Rules ou Core identificada.
+
+#### 9.9 — Fechamento/certificação — CONCLUÍDO TECNICAMENTE
+Certificação ampla concluída no job principal `validate-application` do Application CI:
+- regressão de domínio e guards: **PASS**;
+- Production build: **PASS**;
+- TypeScript final: **PASS**;
+- Diff hygiene: **PASS**;
+- EMPROVEX Core Protection: **PASS**;
+- Recovery guardrails: **PASS**.
+
+Auditoria do diff desde o baseline da reabertura `6642a3cbd37e17352a83bb330ad99cdbb0449381`:
+- alterações restritas a UI do Croqui, locator, repository de layout, testes e documentação;
+- `firestore.rules`, índices, autenticação, sessões, Empenhos/NF/Comissão/Tesouraria, saldo e ledger: **NÃO ALTERADOS**.
+
+Pendência controlada:
+- validação Browser E2E/visual do Croqui será realizada na `main` com o fundador;
+- merge/deploy permanecem fora deste fechamento e exigem decisão explícita.
 
 ### Política de execução
 - sem CI global por submódulo durante 9.0–9.6;

@@ -2167,3 +2167,83 @@ Impacto no fluxo:
 - os gates locais não-browser do 9.7 permanecem válidos;
 - o desenvolvimento pode seguir para o **Módulo 9.8 — integração/regressão**, preservando a pendência explícita do Browser E2E para a `main`;
 - merge/deploy continuam **NÃO REALIZADOS / NÃO AUTORIZADOS** neste registro.
+
+
+## FECHAMENTO CONSOLIDADO — MÓDULOS 9.8 E 9.9 — FASE 9 v2
+
+Data: 2026-09-25.
+
+### Módulo 9.8 — Integração/regressão ADM — CONCLUÍDO
+
+Revalidação integrada executada no Application CI da PR #187:
+- Fase 6 — locations/transfers: **PASS**;
+- Fase 6 — permanent guard: **PASS**;
+- Fase 7 — estoque/lotes/FEFO: **PASS**;
+- Fase 7 — permanent guard: **PASS**;
+- Fase 8 — barcode/saída: **PASS**;
+- Fase 8 — permanent guard: **PASS**;
+- Fase 9 — depot layout: **PASS**;
+- Fase 9 — permanent guard: **PASS**;
+- Fase 10 — inventário físico: **PASS**;
+- Fase 10 — permanent guard: **PASS**;
+- Fases 11, 11.5 e Módulo 13: **PASS**;
+- multi-tenant Firestore security: **PASS**;
+- production multi-tenant readiness: **PASS**.
+
+Auditoria de integração/performance:
+- listeners novos no Croqui: **0**;
+- polling novo: **0**;
+- leitura Firestore por tecla/hover: **0**;
+- UI do Croqui sem acesso direto ao Firestore;
+- persistência Firestore continua encapsulada no `layoutRepository`;
+- workspace/UG e founder-only: **PRESERVADOS**;
+- autoridade de estoque permanece fora do Croqui.
+
+### Módulo 9.9 — Fechamento/certificação — CONCLUÍDO TECNICAMENTE
+
+Baseline oficial da reabertura controlada:
+- `6642a3cbd37e17352a83bb330ad99cdbb0449381`.
+
+Diff auditado até o fechamento:
+- 30 commits à frente do baseline e 0 atrás no ponto da auditoria;
+- mudanças funcionais restritas a componentes do Croqui, `depotLocator`, `layoutRepository`, testes e infraestrutura de teste;
+- documentação atualizada em `ROADMAP.md` e `STATUS.md`;
+- `firestore.rules`: **NÃO ALTERADO**;
+- índices Firestore: **NÃO ALTERADOS**;
+- schemas quantitativos: **NÃO CRIADOS**;
+- Auth/sessões: **NÃO ALTERADOS**;
+- Empenhos/NF/Comissão/Tesouraria/Cronograma: **NÃO ALTERADOS**;
+- `warehouse_balance_v1`, `warehouse_location_balance_v1` e `warehouse_movement_v1`: autoridade preservada;
+- `warehouse_depot_layout_v1`: permanece o único contrato persistido do Croqui.
+
+Certificação remota — Application CI run #765:
+- job principal `validate-application`: **SUCCESS**;
+- Production build: **PASS**;
+- Final TypeScript validation: **PASS**;
+- Diff hygiene: **PASS**;
+- EMPROVEX Core Protection automático: **PASS**;
+- Recovery guardrails automático: **PASS**.
+
+### Browser E2E — pendência deliberada para a main
+
+Por decisão operacional do fundador:
+- o Browser E2E/validação visual do Croqui não é requisito de fechamento desta branch;
+- a validação será feita após integração à `main`, com o fundador operando junto;
+- esta pendência não é registrada como PASS nem como falha funcional;
+- qualquer execução automática de Browser E2E no workflow atual não substitui a validação operacional acordada na `main`.
+
+### Estado final da Fase 9 v2
+
+- Módulos 9.0–9.6: **CONCLUÍDOS**;
+- Módulo 9.7: **CONCLUÍDO NOS GATES NÃO-BROWSER; E2E OPERACIONAL DIFERIDO PARA A MAIN**;
+- Módulo 9.8: **CONCLUÍDO**;
+- Módulo 9.9: **CONCLUÍDO TECNICAMENTE**;
+- Fase 9 v2: **FECHADA TECNICAMENTE, COM VALIDAÇÃO VISUAL/OPERACIONAL CONTROLADA PENDENTE NA MAIN**;
+- Módulo 14: **PODE SER RETOMADO EM ETAPA PRÓPRIA**;
+- merge: **NÃO REALIZADO**;
+- deploy: **NÃO REALIZADO**;
+- acesso ADM: **FOUNDER-ONLY**.
+
+Próximo passo autorizado pela memória oficial:
+- retomar o Módulo 14 em fluxo próprio, sem confundir essa retomada com merge/deploy;
+- quando houver decisão explícita de integração à `main`, realizar a validação visual/operacional do Croqui com o fundador antes da publicação definitiva.
