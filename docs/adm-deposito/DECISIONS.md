@@ -764,7 +764,7 @@ Por orientação do fundador durante a FASE 11.5, a execução de baterias de te
 
 Regras vigentes a partir desta decisão:
 - implementação visual/funcional restante pode prosseguir sem executar suites locais a cada commit;
-- Core Protection, guards, testes de domínio, TypeScript, build, Firestore Emulator, Browser E2E e regressão integrada permanecem obrigatórios, mas sua **execução é consolidada na FASE 13**, antes do encerramento do piloto;
+- Core Protection, guards, testes de domínio, TypeScript, build, Firestore Emulator, Browser E2E e regressão integrada permanecem obrigatórios, mas sua **execução é consolidada na campanha final do roadmap modular vigente — Módulo 14**, antes do encerramento do piloto;
 - nenhum CI remoto deve ser disparado intencionalmente durante a implementação restante;
 - testes existentes não são removidos; ficam acumulados para a campanha final;
 - se surgir um bloqueio concreto que só possa ser diagnosticado por execução dirigida, um teste pontual pode ser usado como ferramenta de diagnóstico, sem transformar isso em gate de fase;
