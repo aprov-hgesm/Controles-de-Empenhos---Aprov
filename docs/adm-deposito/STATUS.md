@@ -2043,3 +2043,104 @@ Também observado no GitHub:
 - Deploy: **NÃO REALIZADO**;
 - Próximo módulo: **9.4 — Editor de Croqui v2**.
 
+## FECHAMENTO DOS MÓDULOS 9.4, 9.5 E 9.6 — FASE 9 v2
+
+Data: 2026-09-25.
+
+### Estado inicial
+
+- branch: `feat/adm-deposito-phase-11-5-visual-ux`;
+- baseline funcional de entrada: `4c265d420742c998570766bc0e15f4a1759b5f79`;
+- Módulos 9.2 e 9.3: **CONCLUÍDOS**;
+- D-073 preservada;
+- Módulo 14: **PAUSADO NA CERTIFICAÇÃO REMOTA**;
+- merge/deploy: **NÃO AUTORIZADOS / NÃO REALIZADOS**;
+- acesso ADM: **FOUNDER-ONLY**.
+
+### Módulo 9.4 — Editor de Croqui v2 — CONCLUÍDO
+
+Entregas:
+- editor dedicado continua separado da pesquisa/localização de materiais;
+- operações de geometria e propriedades permanecem locais até salvamento explícito;
+- histórico de undo/redo foi unificado entre canvas e painel de propriedades;
+- duplicar/colar objeto remove o vínculo `warehouseLocationId` da cópia;
+- o painel impede novo vínculo com localização real já representada por outro objeto;
+- validação pré-save também recusa vínculos duplicados;
+- campos geométricos são limitados aos bounds lógicos do canvas;
+- cancelar edição descarta o draft e retorna ao modo de consulta.
+
+### Módulo 9.5 — Persistência e versionamento — CONCLUÍDO
+
+Entregas:
+- `warehouse_depot_layout_v1` continua sendo o único contrato persistido;
+- histórico e versão ativa foram preservados;
+- salvamento permanece transacional e versionado;
+- foi criada leitura estrita do layout ativo para o caminho de pré-salvamento;
+- falha de leitura não pode mais degradar para `null` e produzir falsa primeira versão;
+- referências duplicadas de `warehouseLocationId` são bloqueadas no repository;
+- nenhuma escrita em `warehouse_balance_v1`, `warehouse_location_balance_v1`, `warehouse_movement_v1` ou estoque foi adicionada;
+- restauração histórica continua produzindo nova versão em vez de sobrescrever histórico.
+
+### Módulo 9.6 — UX e estabilidade visual — CONCLUÍDO
+
+Entregas:
+- layout do editor passa a empilhar painel/canvas em larguras menores e usar colunas apenas em telas muito amplas;
+- toolbar e viewport receberam estrutura estável e testável;
+- viewport usa altura responsiva limitada;
+- painel de propriedades possui rolagem controlada;
+- controles críticos receberam `aria-label`;
+- estado transitório do editor é resetado ao mudar o contexto;
+- nenhuma engine gráfica adicional, listener, polling ou animação contínua foi introduzida.
+
+### Arquivos funcionais/testes alterados neste bloco
+
+- `features/warehouse/components/WarehouseDepotLayoutEditor.tsx`;
+- `features/warehouse/components/WarehouseDepotViewOperational.tsx`;
+- `lib/warehouse/layoutRepository.ts`;
+- `scripts/warehouse-depot-layout.test.mjs`;
+- `scripts/verify-adm-deposito-phase-9.mjs`.
+
+### Segurança e arquitetura preservadas
+
+- Firestore Rules: **NÃO ALTERADAS**;
+- novos índices/schemas quantitativos: **NÃO**;
+- Core EMPROVEX: **NÃO ALTERADO**;
+- workspace/UG: **PRESERVADOS**;
+- founder-only: **PRESERVADO**;
+- saldo/ledger: **NÃO ALTERADOS**;
+- `warehouse_depot_layout_v1`: **PRESERVADO**;
+- croqui continua representação visual, não fonte de quantidade.
+
+### Validação executada na estação PowerShell do fundador
+
+1. `npm.cmd run test:adm-deposito-depot-layout`
+   - **14/14 PASS**;
+   - 0 falhas.
+
+2. `npm.cmd run verify:adm-deposito-phase-9`
+   - **ADM Depósito FASE 9 guard: PASS**.
+
+3. `npm.cmd run typecheck`
+   - **PASS**;
+   - TypeScript: **0 erros**.
+
+Conforme D-073:
+- Browser E2E específico: **NÃO EXECUTADO NESTE BLOCO** — reservado ao Módulo 9.7;
+- regressão ampla: **NÃO EXECUTADA**;
+- Application CI global: **NÃO UTILIZADO COMO GATE**;
+- nenhum CI global foi disparado manualmente para certificar 9.4–9.6.
+
+### Estado final
+
+- Módulo 9.4: **CONCLUÍDO**;
+- Módulo 9.5: **CONCLUÍDO**;
+- Módulo 9.6: **CONCLUÍDO**;
+- Fase 9 v2: **EM DESENVOLVIMENTO — 9.0 a 9.6 CONCLUÍDOS**;
+- Módulo 9.7: **NÃO INICIADO**;
+- Módulo 14: **PAUSADO**;
+- Merge: **NÃO REALIZADO**;
+- Deploy: **NÃO REALIZADO**.
+
+Próximo trabalho oficial:
+**Fase 9 v2 — Módulo 9.7, testes específicos do Croqui Operacional v2.**
+
