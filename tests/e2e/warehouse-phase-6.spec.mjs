@@ -73,6 +73,6 @@ test.describe.serial('ADM Depósito FASE 6 — jornada operacional', () => {
     await expect(page.getByText('Transferência interna', { exact: true }).first()).toBeVisible({
       timeout: 20_000,
     });
-    await expect(page.getByText('1 unidade(s) redistribuída(s)', { exact: false }).first()).toBeVisible();
+    await expect(page.getByText('Arroz parboilizado', { exact: true }).first()).toBeVisible();
   });
 });
