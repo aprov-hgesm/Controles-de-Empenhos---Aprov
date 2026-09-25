@@ -106,7 +106,7 @@ Pendência operacional conhecida:
 
 Política de validação:
 - por D-057, não executar agora suites/CI por incremento;
-- todos os testes, guards, TypeScript/build, Emulator, E2E e regressão integrada ficam consolidados para a FASE 13;
+- todos os testes, guards, TypeScript/build, Emulator, E2E e regressão integrada ficam consolidados para o Módulo 14;
 - PowerShell local do fundador está disponível para intervenções necessárias e deve ser usado de forma consolidada.
 
 
@@ -115,7 +115,7 @@ Política de validação:
 D-057 substitui a cadência intermediária anteriormente descrita em D-054:
 
 - não executar baterias de testes ou CI a cada incremento restante das FASES 11.5 e 12;
-- preservar guards, testes de domínio, Firestore Emulator, Browser E2E, TypeScript/build e regressão para execução consolidada na FASE 13;
+- preservar guards, testes de domínio, Firestore Emulator, Browser E2E, TypeScript/build e regressão para execução consolidada no Módulo 14;
 - não abrir PR nem disparar intencionalmente Application CI durante a implementação restante;
 - usar PowerShell local apenas quando necessário para publicação/configuração ou diagnóstico pontual;
 - Core Protection continua sendo uma invariável arquitetural, mesmo sem execução repetida do guard a cada commit.
