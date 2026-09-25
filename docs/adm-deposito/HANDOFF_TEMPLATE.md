@@ -112,3 +112,34 @@ Diretriz principal:
 - não fechar previamente cores, referências, intensidade de efeitos ou composição;
 - até a FASE 11, limitar mudanças estéticas a usabilidade e consistência funcional;
 - a reformulação visual global não deve ser antecipada.
+
+
+## Estado corrente após os Módulos 6 e 7 da reorganização funcional
+
+Branch de continuidade:
+`feat/adm-deposito-phase-11-5-visual-ux`.
+
+Concluído em 2026-09-25:
+- **Módulo 6 — Meus Depósitos multi-depósito**;
+- **Módulo 7 — Biblioteca de estruturas físicas**.
+
+Capacidades a tratar como existentes:
+- 1..N depósitos administráveis pelos contratos históricos;
+- localizações/subposições com IDs estáveis e `UNASSIGNED` preservado;
+- layout ativo e histórico independentes por `depotId`;
+- `warehouse_depot_layout_v1` preservado sem schema concorrente;
+- biblioteca estática `WAREHOUSE_STRUCTURE_LIBRARY` com Estante, Rack, Armário, Freezer, Geladeira, Câmara, Palete, Área de Paletes, Bancada, Corredor, Área Livre e Outra estrutura;
+- defaults proporcionais/rotação e flags conceituais de níveis/subposições;
+- objetos do croqui continuam sem autoridade sobre saldo;
+- Firestore Rules permaneceram inalteradas.
+
+Próximo módulo oficial:
+- **Módulo 8 — Editor visual do croqui**.
+
+Para o Módulo 8:
+- consumir a biblioteca central existente;
+- não criar outro catálogo, schema ou coleção;
+- preservar layouts legados;
+- não mover estoque ao mover/redimensionar/rotacionar objetos;
+- manter editor leve 2D/2.5D;
+- D-057 continua reservando a campanha completa de testes/CI para o Módulo 14.
