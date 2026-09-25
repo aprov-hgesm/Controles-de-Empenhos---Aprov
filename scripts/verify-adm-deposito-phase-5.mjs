@@ -17,9 +17,10 @@ function requireText(content, marker, message) {
 const domain = read('lib/warehouse/siscofis.ts');
 const service = read('lib/warehouse/siscofisService.ts');
 const movement = read('lib/warehouse/movement.ts');
-const content = read('features/warehouse/components/WarehouseSectionContent.tsx');
+const siscofisUi = read('features/warehouse/components/WarehouseSiscofisOperational.tsx');
+const registration = read('features/warehouse/components/WarehouseItemRegistrationOperational.tsx');
+const control = read('features/warehouse/components/WarehouseItemControlOperational.tsx');
 const navigation = read('features/warehouse/navigation.ts');
-const shell = read('features/warehouse/components/WarehouseModuleShell.tsx');
 const rules = read('firestore.rules');
 const securityTests = read('scripts/firestore-multitenancy-security.test.mjs');
 const packageJson = read('package.json');
@@ -62,23 +63,20 @@ for (const marker of [
 }
 
 for (const marker of [
-  'warehouse-siscofis-operational',
-  'warehouse-siscofis-copy-prompt',
-  'warehouse-siscofis-json',
-  'warehouse-siscofis-validate',
-  'warehouse-siscofis-preview',
-  'warehouse-siscofis-confirm',
-  'Divergências SISCOFIS nunca corrigem o estoque automaticamente',
+  'data-testid="warehouse-siscofis-operational"',
+  'data-testid="warehouse-siscofis-json"',
+  'data-testid="warehouse-siscofis-validate"',
+  'data-testid="warehouse-siscofis-preview"',
+  'confirmWarehouseSiscofisImport',
+  'Nenhuma alteração automática foi feita no estoque',
 ]) {
-  requireText(content, marker, 'Jornada operacional SISCOFIS incompleta: ' + marker);
+  requireText(siscofisUi, marker, 'Jornada operacional SISCOFIS incompleta: ' + marker);
 }
 
-requireText(
-  navigation,
-  "futurePhase: null",
-  'SISCOFIS ainda está marcado como capacidade futura.'
-);
-requireText(shell, 'EMPROVEX // FASE ', 'Shell do ADM Depósito não preserva a identificação de fase.');
+requireText(registration, 'WarehouseSiscofisOperational', 'Cadastro de Itens deixou de expor Migração SISCOFIS.');
+requireText(registration, "requested === 'siscofis'", 'Redirect legado para SISCOFIS deixou de ser aceito.');
+requireText(control, 'WarehouseSiscofisOperational', 'Controle de Itens deixou de expor consulta SISCOFIS.');
+requireText(navigation, 'Cadastro de Itens', 'Arquitetura atual perdeu a superfície Cadastro de Itens.');
 
 for (const marker of [
   'function validWarehouseSiscofisSnapshotBase',
@@ -122,9 +120,8 @@ if (findings.length) {
 }
 
 console.log('FASE 5 — SISCOFIS / Marco Zero / Conciliação: OK');
-console.log('- JSON versionado, validação estrita e prompt para IA externa presentes');
+console.log('- contratos versionados, validação estrita e prompt para IA externa presentes');
 console.log('- Marco Zero usa INITIAL_BALANCE no ledger oficial e replay idempotente');
 console.log('- snapshots posteriores conciliam sem gerar movimentação automática');
-console.log('- cutoff da FASE 4 protege contra sobreposição histórica');
+console.log('- jornada atual está integrada à arquitetura Cadastro de Itens / Controle de Itens');
 console.log('- Rules e suíte multitenant preservam founder-only e imutabilidade');
-console.log('- jornada UI prompt → JSON → preview → confirmação está operacional');
