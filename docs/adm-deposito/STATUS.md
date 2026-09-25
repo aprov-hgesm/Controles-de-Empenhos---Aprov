@@ -1322,4 +1322,7 @@ Esses ajustes não alteraram NF, Empenho, Cronograma, política multi-tenant, M�
 - motor histórico de Marco Zero/snapshot/ledger foi reutilizado;
 - snapshots novos usam `warehouse_siscofis_snapshot_v2`, com leitura retrocompatível de v1;
 - Rules alteradas somente para aceitar explicitamente snapshot v1 ou v2;
+- `INITIAL_BALANCE` já materializa `UNASSIGNED` atomicamente pelo ledger oficial; nenhuma adaptação paralela foi necessária;
+- prévia editável bloqueia confirmação após correção até nova validação;
+- unidade ausente em material novo usa o fallback canônico explícito da integração de NF, sem inventar unidade concreta;
 - sem PR, merge ou deploy; Módulo 6 não iniciado.
