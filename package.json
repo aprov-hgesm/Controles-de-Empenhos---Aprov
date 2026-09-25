@@ -173,7 +173,8 @@
     "test:adm-deposito-logistics": "node --test scripts/warehouse-logistics.test.mjs",
     "verify:adm-deposito-phase-11": "node scripts/verify-adm-deposito-phase-11.mjs",
     "verify:adm-deposito-phase-11-5": "node scripts/verify-adm-deposito-phase-11-5.mjs",
-    "verify:adm-deposito-phase-13": "node scripts/verify-adm-deposito-phase-13.mjs"
+    "verify:adm-deposito-phase-13": "node scripts/verify-adm-deposito-phase-13.mjs",
+    "test:adm-deposito-depot-locator": "node --test scripts/warehouse-depot-locator.test.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
