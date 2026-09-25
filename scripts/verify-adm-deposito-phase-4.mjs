@@ -20,7 +20,9 @@ const service = read('lib/warehouse/invoiceIntegrationService.ts');
 const nsLifecycle = read('lib/nsIntegrityService.ts');
 const movement = read('lib/warehouse/movement.ts');
 const rules = read('firestore.rules');
-const content = read('features/warehouse/components/WarehouseSectionContent.tsx');
+const stock = read('features/warehouse/components/WarehouseStockOperational.tsx');
+const movements = read('features/warehouse/components/WarehouseMovementsOperational.tsx');
+const control = read('features/warehouse/components/WarehouseItemControlOperational.tsx');
 const nfView = read('features/notas-fiscais/components/NotasFiscaisView.tsx');
 const packageJson = read('package.json');
 
@@ -51,7 +53,7 @@ for (const marker of [
   'WAREHOUSE_INVOICE_SETTINGS_SCHEMA_VERSION',
   'assertBulkInvoiceDeletionDoesNotBypassWarehouse',
 ]) {
-  requireText(service, marker, 'Serviço transacional da FASE 4 incompleto: ' + marker);
+  requireText(service, marker, 'Serviço transacional histórico da FASE 4 incompleto: ' + marker);
 }
 
 for (const forbidden of [
@@ -65,11 +67,7 @@ for (const forbidden of [
     findings.push('EMPROVEX voltou a depender do ADM Depósito no lifecycle de NF: ' + forbidden);
   }
 }
-requireText(
-  nsLifecycle,
-  'updatedInvoice',
-  'Lifecycle central de NF perdeu seu retorno operacional.'
-);
+requireText(nsLifecycle, 'updatedInvoice', 'Lifecycle central de NF perdeu seu retorno operacional.');
 
 for (const marker of [
   'WarehouseMovementSource',
@@ -94,19 +92,25 @@ for (const marker of [
 }
 
 for (const marker of [
-  'listWarehouseBalances',
-  'listWarehouseMovements',
-  'Saldos reais',
-  'Ledger oficial · histórico append-only',
+  'warehouse_balance_v1 continua sendo a autoridade do saldo agregado',
+  'Consulta sob demanda',
 ]) {
-  requireText(content, marker, 'Superfícies reais da FASE 4 incompletas: ' + marker);
+  requireText(stock, marker, 'Superfície atual de estoque incompleta: ' + marker);
+}
+for (const marker of [
+  'listWarehouseMovements',
+  'Ledger auditável do ADM Depósito',
+]) {
+  requireText(movements, marker, 'Superfície atual de movimentações incompleta: ' + marker);
+}
+for (const marker of [
+  'WarehouseStockOperational',
+  'WarehouseMovementsOperational',
+]) {
+  requireText(control, marker, 'Controle de Itens não expõe capacidade operacional: ' + marker);
 }
 
-requireText(
-  nfView,
-  'disabled={isSavingInvoice}',
-  'Fluxo de NF perdeu proteção contra duplo envio.'
-);
+requireText(nfView, 'disabled={isSavingInvoice}', 'Fluxo de NF perdeu proteção contra duplo envio.');
 
 for (const marker of [
   '"test:adm-deposito-nf-stock"',
@@ -124,5 +128,5 @@ if (findings.length) {
 console.log('FASE 4 — isolamento EMPROVEX/ADM Depósito: OK');
 console.log('- lifecycle de NF do EMPROVEX não depende do namespace warehouse');
 console.log('- domínio histórico de integração permanece isolado dentro do ADM Depósito');
-console.log('- EMPROVEX pode cadastrar, editar e excluir NFs sem movimentar estoque');
+console.log('- superfícies atuais expõem saldo oficial e ledger sem reintroduzir acoplamento');
 console.log('- namespace warehouse continua founder-only e separado');
