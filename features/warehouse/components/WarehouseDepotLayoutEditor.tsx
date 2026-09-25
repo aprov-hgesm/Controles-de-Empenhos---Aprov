@@ -62,6 +62,7 @@ export function WarehouseDepotLayoutEditor({
   selectedObjectId,
   onSelectedObjectIdChange,
   onObjectsChange,
+  scopeKey,
 }: {
   logicalWidth: number;
   logicalHeight: number;
@@ -69,6 +70,7 @@ export function WarehouseDepotLayoutEditor({
   selectedObjectId: string | null;
   onSelectedObjectIdChange: (id: string | null) => void;
   onObjectsChange: (objects: WarehouseDepotLayoutObject[]) => void;
+  scopeKey: string;
 }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const interactionRef = useRef<null | {
@@ -91,6 +93,17 @@ export function WarehouseDepotLayoutEditor({
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [history, setHistory] = useState<HistoryState>({ past: [], future: [] });
+
+  useEffect(() => {
+    interactionRef.current = null;
+    copiedRef.current = null;
+    setHistory({ past: [], future: [] });
+    setView('top');
+    setMode('select');
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+    onSelectedObjectIdChange(null);
+  }, [scopeKey, onSelectedObjectIdChange]);
 
   const selected = useMemo(
     () => objects.find((item) => item.id === selectedObjectId) || null,
@@ -148,6 +161,7 @@ export function WarehouseDepotLayoutEditor({
       x: clamp(selected.x + 24, 0, Math.max(0, logicalWidth - selected.width)),
       y: clamp(selected.y + 24, 0, Math.max(0, logicalHeight - selected.height)),
       layer: Math.max(...objects.map((item) => item.layer), 0) + 1,
+      warehouseLocationId: null,
     };
     commit([...objects, copy]);
     onSelectedObjectIdChange(copy.id);
@@ -169,6 +183,7 @@ export function WarehouseDepotLayoutEditor({
       x: clamp(source.x + 24, 0, Math.max(0, logicalWidth - source.width)),
       y: clamp(source.y + 24, 0, Math.max(0, logicalHeight - source.height)),
       layer: Math.max(...objects.map((item) => item.layer), 0) + 1,
+      warehouseLocationId: null,
     };
     commit([...objects, copy]);
     onSelectedObjectIdChange(copy.id);
@@ -262,10 +277,10 @@ export function WarehouseDepotLayoutEditor({
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#050b16]" data-testid="warehouse-layout-professional-editor">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.07] bg-white/[0.025] px-3 py-2">
+    <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-white/[0.08] bg-[#050b16]" data-testid="warehouse-layout-professional-editor">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-white/[0.07] bg-white/[0.025] px-3 py-2" data-testid="warehouse-croqui-editor-toolbar">
         <div className="flex flex-wrap items-center gap-1">
-          <button type="button" onClick={() => setMode(mode === 'pan' ? 'select' : 'pan')} aria-pressed={mode === 'pan'} className="rounded-lg border border-white/[0.07] px-2.5 py-2 text-[10px] font-bold text-slate-300 hover:bg-white/[0.05]">
+          <button type="button" aria-label="Alternar modo de pan" onClick={() => setMode(mode === 'pan' ? 'select' : 'pan')} aria-pressed={mode === 'pan'} className="rounded-lg border border-white/[0.07] px-2.5 py-2 text-[10px] font-bold text-slate-300 hover:bg-white/[0.05]">
             <Hand className="h-3.5 w-3.5" /> <span className="sr-only">Pan</span>
           </button>
           <button type="button" onClick={() => setShowGrid((value) => !value)} aria-pressed={showGrid} className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.07] px-2.5 py-2 text-[10px] font-bold text-slate-300 hover:bg-white/[0.05]">
@@ -275,13 +290,13 @@ export function WarehouseDepotLayoutEditor({
             Snap {snapEnabled ? 'on' : 'off'}
           </button>
           <span className="mx-1 h-5 w-px bg-white/[0.07]" />
-          <button type="button" disabled={!history.past.length} onClick={undo} className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.05] disabled:opacity-30"><Undo2 className="h-3.5 w-3.5" /></button>
-          <button type="button" disabled={!history.future.length} onClick={redo} className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.05] disabled:opacity-30"><Redo2 className="h-3.5 w-3.5" /></button>
+          <button type="button" aria-label="Desfazer" disabled={!history.past.length} onClick={undo} className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.05] disabled:opacity-30"><Undo2 className="h-3.5 w-3.5" /></button>
+          <button type="button" aria-label="Refazer" disabled={!history.future.length} onClick={redo} className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.05] disabled:opacity-30"><Redo2 className="h-3.5 w-3.5" /></button>
         </div>
         <div className="flex flex-wrap items-center gap-1">
-          <button type="button" onClick={() => setZoom((value) => clamp(value - 0.1, ZOOM_MIN, ZOOM_MAX))} className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.05]"><ZoomOut className="h-3.5 w-3.5" /></button>
+          <button type="button" aria-label="Diminuir zoom" onClick={() => setZoom((value) => clamp(value - 0.1, ZOOM_MIN, ZOOM_MAX))} className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.05]"><ZoomOut className="h-3.5 w-3.5" /></button>
           <span className="min-w-11 text-center text-[10px] font-bold text-slate-500">{Math.round(zoom * 100)}%</span>
-          <button type="button" onClick={() => setZoom((value) => clamp(value + 0.1, ZOOM_MIN, ZOOM_MAX))} className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.05]"><ZoomIn className="h-3.5 w-3.5" /></button>
+          <button type="button" aria-label="Aumentar zoom" onClick={() => setZoom((value) => clamp(value + 0.1, ZOOM_MIN, ZOOM_MAX))} className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.05]"><ZoomIn className="h-3.5 w-3.5" /></button>
           <span className="mx-1 h-5 w-px bg-white/[0.07]" />
           <button type="button" onClick={() => setView('top')} aria-pressed={view === 'top'} className="rounded-lg border border-white/[0.07] px-2.5 py-2 text-[10px] font-bold text-slate-300 aria-pressed:bg-blue-400/10 aria-pressed:text-blue-100">Vista superior</button>
           <button type="button" onClick={() => setView('perspective')} aria-pressed={view === 'perspective'} className="rounded-lg border border-white/[0.07] px-2.5 py-2 text-[10px] font-bold text-slate-300 aria-pressed:bg-blue-400/10 aria-pressed:text-blue-100">Prévia 2.5D</button>
@@ -290,7 +305,8 @@ export function WarehouseDepotLayoutEditor({
 
       <div
         ref={viewportRef}
-        className={`relative min-h-[440px] overflow-hidden ${mode === 'pan' ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
+        data-testid="warehouse-croqui-editor-viewport"
+        className={`relative h-[clamp(440px,62vh,720px)] min-h-[440px] max-w-full overflow-hidden ${mode === 'pan' ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
         onPointerDown={(event) => {
           if (mode !== 'pan') {
             if (event.target === event.currentTarget) onSelectedObjectIdChange(null);
@@ -415,9 +431,9 @@ export function WarehouseDepotLayoutEditor({
         </p>
         <div className="flex items-center gap-1">
           <button type="button" disabled={!selected} onClick={duplicateSelected} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[9px] font-bold text-slate-400 hover:bg-white/[0.05] disabled:opacity-30"><Copy className="h-3 w-3" /> Duplicar</button>
-          <button type="button" disabled={!selected} onClick={() => layerShift('front')} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/[0.05] disabled:opacity-30" title="Trazer para frente"><BringToFront className="h-3.5 w-3.5" /></button>
-          <button type="button" disabled={!selected} onClick={() => layerShift('back')} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/[0.05] disabled:opacity-30" title="Enviar para trás"><SendToBack className="h-3.5 w-3.5" /></button>
-          <button type="button" disabled={!selected} onClick={removeSelected} className="rounded-lg p-1.5 text-rose-300 hover:bg-rose-400/[0.06] disabled:opacity-30" title="Excluir somente do croqui"><Trash2 className="h-3.5 w-3.5" /></button>
+          <button type="button" aria-label="Trazer objeto para frente" disabled={!selected} onClick={() => layerShift('front')} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/[0.05] disabled:opacity-30" title="Trazer para frente"><BringToFront className="h-3.5 w-3.5" /></button>
+          <button type="button" aria-label="Enviar objeto para trás" disabled={!selected} onClick={() => layerShift('back')} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/[0.05] disabled:opacity-30" title="Enviar para trás"><SendToBack className="h-3.5 w-3.5" /></button>
+          <button type="button" aria-label="Remover somente do croqui" disabled={!selected} onClick={removeSelected} className="rounded-lg p-1.5 text-rose-300 hover:bg-rose-400/[0.06] disabled:opacity-30" title="Excluir somente do croqui"><Trash2 className="h-3.5 w-3.5" /></button>
         </div>
       </div>
     </div>
