@@ -14,7 +14,7 @@ test.describe.serial('ADM Depósito FASE 9 — Visão do Depósito', () => {
 
     await page.getByTestId('warehouse-layout-toggle-edit').click();
     await expect(page.getByTestId('warehouse-layout-editor')).toBeVisible();
-    await page.getByTestId('warehouse-layout-add-object').click();
+    await page.getByTestId('warehouse-structure-shelf').click();
     await page.getByTestId('warehouse-layout-object-label').fill('Estante E2E');
     const locationSelect = page.getByTestId('warehouse-layout-object-location');
     await locationSelect.selectOption(LOCATION_ID);
