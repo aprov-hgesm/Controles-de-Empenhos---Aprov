@@ -2247,3 +2247,42 @@ Por decisão operacional do fundador:
 Próximo passo autorizado pela memória oficial:
 - retomar o Módulo 14 em fluxo próprio, sem confundir essa retomada com merge/deploy;
 - quando houver decisão explícita de integração à `main`, realizar a validação visual/operacional do Croqui com o fundador antes da publicação definitiva.
+
+
+## MÓDULO 14 — RETOMADA E FECHAMENTO TÉCNICO — 2026-09-25
+
+A certificação foi retomada após o fechamento técnico da Fase 9 v2.
+
+Estado confirmado:
+- 14.0 — baseline: **CONCLUÍDO**;
+- 14.1 — auditoria estática: **CONCLUÍDO**;
+- 14.2 — gates rápidos: **CONCLUÍDO**;
+- 14.3 — domínio ADM: **CONCLUÍDO**;
+- 14.4 — TypeScript: **CONCLUÍDO / 0 regressões**;
+- 14.5 — Firestore Emulator + multi-tenant: **CONCLUÍDO**;
+- 14.6 — walking skeleton: **CONCLUÍDO**;
+- 14.7 — build de produção: **CONCLUÍDO**;
+- regressão integrada ADM/Core: **CONCLUÍDA**;
+- PR de fechamento: **#187 aberta**;
+- Application CI #765 — `validate-application`: **SUCCESS**;
+- EMPROVEX Core Protection: **SUCCESS**;
+- Recovery guardrails: **SUCCESS**.
+
+Browser E2E remoto:
+- job específico: **FAILURE**;
+- causa observada: timeout em `tests/e2e/warehouse-phase-9.spec.mjs` durante a jornada visual do Croqui;
+- os demais gates técnicos não apontaram regressão de domínio associada;
+- conforme D-074, essa pendência foi deslocada para validação controlada na `main`, com o fundador operando junto;
+- não registrar como PASS.
+
+Estado final do Módulo 14:
+- **ENCERRADO TECNICAMENTE COM RELEASE GATE VISUAL PENDENTE NA MAIN**;
+- merge: **NÃO REALIZADO**;
+- deploy: **NÃO REALIZADO**;
+- ADM: **FOUNDER-ONLY**;
+- abertura para usuário externo: **NÃO AUTORIZADA**.
+
+Próximo passo somente mediante decisão explícita do fundador:
+1. preparar integração consolidada na `main` conforme D-072;
+2. validar o Browser E2E/uso real do Croqui na `main` com o fundador;
+3. somente após essa validação, decidir publicação em produção.

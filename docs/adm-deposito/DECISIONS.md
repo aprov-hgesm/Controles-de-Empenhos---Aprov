@@ -1658,3 +1658,27 @@ O Módulo 14 somente poderá ser encerrado após:
 4. nova certificação remota final.
 
 Esta decisão substitui a estratégia de continuar adicionando reloads, waits ou compensações de teste para estabilizar a interface antiga.
+
+
+## D-074 — Módulo 14: Browser E2E do Croqui diferido para validação controlada na main
+
+Data: 2026-09-25.
+
+Após a conclusão da Fase 9 v2 e da certificação ampla do job principal `validate-application`, fica decidido que a falha remota específica do Browser E2E do Croqui não será tratada como bloqueio de domínio do ADM Depósito nesta branch.
+
+Evidências:
+- `validate-application`: **SUCCESS** no Application CI #765;
+- Fases 6–10, 11, 11.5 e Módulo 13: **PASS**;
+- segurança multi-tenant, build, TypeScript final e diff hygiene: **PASS**;
+- EMPROVEX Core Protection e Recovery guardrails: **PASS**;
+- falha remota isolada em `tests/e2e/warehouse-phase-9.spec.mjs`, por timeout durante a jornada visual do Croqui.
+
+Decisão operacional:
+1. o Browser E2E do Croqui continua **PENDENTE**;
+2. não deve ser marcado como PASS;
+3. não deve ser reinterpretado como falha de Rules, saldo, ledger, Auth, workspace/UG ou Core sem nova evidência;
+4. a validação visual/operacional do Croqui será executada após a integração à `main`, com o fundador operando junto;
+5. essa validação permanece obrigatória antes da publicação definitiva do ADM Depósito em produção;
+6. merge e deploy continuam dependendo de autorização explícita do fundador.
+
+Esta decisão não elimina o gate de navegador; apenas desloca o gate para a etapa controlada de integração/release na `main`.

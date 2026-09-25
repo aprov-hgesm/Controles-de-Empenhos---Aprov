@@ -1060,3 +1060,14 @@ Pendência controlada:
 - regressão ampla e Application CI apenas no fechamento 9.8/9.9.
 
 Referência arquitetural: **D-073** em `docs/adm-deposito/DECISIONS.md`.
+
+
+## FECHAMENTO TÉCNICO DO MÓDULO 14 — 2026-09-25
+
+O Módulo 14 está **ENCERRADO TECNICAMENTE**, com uma pendência de release explicitamente controlada:
+- `validate-application`, Core Protection, Recovery, domínio, multi-tenant, build, TypeScript e diff hygiene: **PASS**;
+- Browser E2E do Croqui: **PENDENTE PARA A MAIN**, conforme D-074;
+- merge/deploy: **NÃO REALIZADOS**;
+- ADM permanece **FOUNDER-ONLY**.
+
+A próxima etapa não é novo desenvolvimento do Módulo 14. É a integração/release controlada, que exige decisão explícita do fundador e validação visual do Croqui na `main` antes da produção.

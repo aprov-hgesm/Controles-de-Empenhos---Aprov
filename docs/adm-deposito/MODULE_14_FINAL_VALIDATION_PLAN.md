@@ -512,3 +512,27 @@ Commit do workflow:
 `eb6844b1931ebd115990891ec77bf5c04752bacf`.
 
 Com isso, a cobertura remota final passa a incluir explicitamente a consolidação visual 11.5.
+
+
+## 18. Fechamento técnico final — 2026-09-25
+
+Após a reabertura e conclusão da Fase 9 v2, a campanha foi retomada.
+
+Certificação remota:
+- PR #187: aberta;
+- Application CI #765 — job `validate-application`: **SUCCESS**;
+- Core Protection: **SUCCESS**;
+- Recovery guardrails: **SUCCESS**;
+- Browser E2E: **FAILURE isolada na jornada do Croqui**, por timeout;
+- release gates dependentes do Browser E2E falharam por consequência.
+
+Classificação da pendência de navegador:
+- não foi encontrada evidência de regressão A de domínio;
+- a falha permanece como pendência visual/operacional da Fase 9 v2;
+- conforme D-074 e decisão do fundador, será validada na `main` com operação acompanhada;
+- não deve ser registrada como PASS.
+
+Conclusão:
+- Módulo 14: **ENCERRADO TECNICAMENTE COM RELEASE GATE VISUAL PENDENTE NA MAIN**;
+- merge/deploy não autorizados por este fechamento;
+- founder-only preservado.
