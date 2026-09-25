@@ -969,8 +969,332 @@ Nenhum teste pontual foi necessário; a implementação e os contratos foram ver
 
 A campanha consolidada continua reservada ao **Módulo 14**.
 
+## Fechamento consolidado — Módulo 3.5 + Módulo 4
+
+Data do fechamento: 2026-09-24.
+
+HEAD inicial auditado:
+`515508b577420ed0b3635643113c4a3245fdee3e`.
+
+O hash esperado do fechamento anterior coincidiu com o HEAD real de entrada; nenhum commit legítimo posterior precisou ser preservado antes do início deste trabalho.
+
+### Módulo 3.5 — Saída de Material — CONCLUÍDO
+
+A área operacional continua com quatro áreas principais. Nenhuma quinta área foi criada.
+
+Superfície:
+**Controle de Itens → Saída de Material**.
+
+Subabas:
+- **Nova Saída**;
+- **Relatórios**.
+
+A antiga `WarehouseExpressOutbound` foi transformada em wrapper de compatibilidade que renderiza `WarehouseMaterialWithdrawal`. A rota antiga continua funcional sem manter dois motores concorrentes.
+
+#### Checkout
+
+Fluxo:
+`SCAN/barcode → material → quantidade → ENTER/TAB → próximo barcode`.
+
+Comportamento:
+- foco automático no barcode;
+- leitor USB HID funciona como teclado;
+- entrada manual usa o mesmo campo;
+- ENTER no barcode resolve associação existente;
+- barcode desconhecido não cria material;
+- associação de barcode desconhecido só pode apontar para material canônico existente;
+- quantidade aceita ENTER e TAB;
+- ambas as teclas adicionam a linha ao carrinho e devolvem foco ao barcode;
+- adicionar linha não baixa estoque;
+- carrinho permite edição e remoção antes da primeira tentativa de finalização.
+
+O carrinho exibe:
+- material;
+- apresentação;
+- barcode quando utilizado;
+- quantidade solicitada;
+- quantidade convertida para unidade-base;
+- posição;
+- lote quando selecionado;
+- saldo observado da posição.
+
+A interface usa a estética do ADM/EMPROVEX, com terminal escuro, hierarquia de checkout, foco visual no item e carrinho.
+
+#### Destino e retirante
+
+Contrato:
+`warehouse_destination_v1`.
+
+Path:
+`warehouse/{workspaceId}/destinations/{destinationId}`.
+
+Campos:
+- `dest_<32 hex>`;
+- workspace/UG;
+- nome;
+- `active | inactive`;
+- createdBy/updatedBy;
+- timestamps.
+
+Destinos são cadastráveis e não hardcoded. Delete físico é negado; o ciclo normal é inativação.
+
+`withdrawnBy` é obrigatório e separado do operador autenticado.
+
+#### Operação auditável de retirada
+
+Contrato:
+`warehouse_material_withdrawal_v1`.
+
+Path:
+`warehouse/{workspaceId}/withdrawals/{withdrawalId}`.
+
+Identidade:
+- retirada: `wd_<32 hex>`;
+- linha: `wline_<32 hex>`;
+- baixa: `material-withdrawal:<withdrawalId>:<lineId>`.
+
+Estados:
+- `FINALIZING`;
+- `PARTIALLY_APPLIED`;
+- `FINALIZED`.
+
+Limite:
+- máximo de 40 linhas por retirada.
+
+O cabeçalho armazena `payloadHash` SHA-256 do carrinho. Repetição com a mesma identidade e conteúdo divergente é bloqueada.
+
+A baixa real só ocorre durante **Finalizar saída**.
+
+Cada linha reutiliza `applyWarehouseExpressOutbound`; portanto:
+- ledger continua `warehouse_movement_v1`;
+- movimento continua `OUTBOUND`;
+- balance continua derivado;
+- locationBalance continua derivado;
+- barcode, lote, posição e conversão continuam sob os contratos da FASE 8;
+- não existe novo saldo nem novo ledger.
+
+#### FEFO, lote e posição
+
+A implementação reutiliza `selectWarehouseFefoLot`.
+
+O FEFO permanece recomendação operacional, conforme a Saída Expressa anterior:
+- não cria baixa automática;
+- lote continua opcional no contrato de saída existente;
+- posição selecionada continua sendo validada no OUTBOUND;
+- saldo, posição, barcode e lote são relidos no momento de cada baixa.
+
+A concorrência entre montagem do carrinho e finalização é detectada pelo repository existente.
+
+#### Falha parcial e retry
+
+A retirada usa finalização idempotente por linha.
+
+Se uma linha já foi aplicada:
+- replay com a mesma identidade não duplica movimento;
+- projeção de consumo também é idempotente.
+
+Se uma linha posterior falhar:
+- operação permanece `PARTIALLY_APPLIED`;
+- interface não mostra sucesso completo;
+- carrinho fica bloqueado para preservar identidade;
+- retry usa o mesmo `withdrawalId`, `lineId` e fingerprint;
+- `FINALIZED` só é gravado quando todas as linhas foram aplicadas.
+
+#### Relatórios e SISCOFIS
+
+Contrato:
+`warehouse_consumption_record_v1`.
+
+Path:
+`warehouse/{workspaceId}/consumptions/{consumptionId}`.
+
+A coleção é projeção operacional de consumo, nunca autoridade de saldo.
+
+Origens:
+- `STOCK_OUTBOUND`;
+- `IMMEDIATE_CONSUMPTION`.
+
+Estados locais SISCOFIS:
+- `PENDING`;
+- `PREPARED`;
+- `POSTED`.
+
+Não existe integração automática com SISCOFIS.
+
+Presets:
+- Diário;
+- Semanal: segunda a domingo;
+- Quinzenal: 1–15 e 16–último dia;
+- Mensal: mês-calendário;
+- personalizado.
+
+Filtros:
+- Todos;
+- Saída de estoque;
+- Consumo imediato;
+- destino;
+- retirante.
+
+Consolidações:
+- material;
+- destino;
+- retirante/recebedor;
+- dia.
+
+Detalhamento:
+- data/hora;
+- origem;
+- material;
+- quantidade/unidade;
+- destino;
+- retirante;
+- retirada/intake;
+- movementId;
+- estado SISCOFIS.
+
+Saídas:
+- copiar;
+- CSV;
+- imprimir.
+
+Performance:
+- consumos modernos: consulta temporal limitada a 250;
+- compatibilidade de Saída Expressa legada: até 100 movimentos do período;
+- movimento legado já representado por `warehouse_consumption_record_v1` não é somado novamente;
+- nenhum listener global;
+- nenhuma reconstrução de histórico completo.
+
+### Módulo 4 — Consumo imediato e fila/relatórios SISCOFIS — CONCLUÍDO
+
+O botão **Consumo imediato** em **Cadastro de Itens → Notas Fiscais pendentes** está operacional.
+
+Campos:
+- quantidade;
+- destino;
+- recebido/retirado por;
+- confirmação.
+
+Regra:
+`0 < quantidade <= pendingQuantity`.
+
+A classificação pode ser parcial.
+
+Exemplo preservado pelo contrato:
+- recebido 100;
+- alocado 40;
+- consumo imediato 30;
+- pendente 30;
+- status `PARTIALLY_PROCESSED`.
+
+#### Efeito quantitativo real
+
+D-064 materializa a quantidade recebida inteira em `UNASSIGNED` através do `INVOICE_ENTRY` antes da primeira classificação física.
+
+Por isso, o consumo imediato implementado neste módulo não se limita a incrementar o intake.
+
+A operação:
+1. cria/reutiliza a entrada quantitativa idempotente;
+2. abre uma transação;
+3. relê intake, material, saldo, `UNASSIGNED`, entrada da NF, destino, movimento/consumo de replay;
+4. cria `OUTBOUND` da quantidade consumida em `UNASSIGNED`;
+5. reduz `warehouse_balance_v1`;
+6. reduz `warehouse_location_balance_v1` de `UNASSIGNED`;
+7. incrementa `immediateConsumptionQuantity`;
+8. recalcula `pendingQuantity`;
+9. deriva `PENDING | PARTIALLY_PROCESSED | PROCESSED`;
+10. cria a projeção `warehouse_consumption_record_v1`.
+
+Não cria:
+- depósito/localização física;
+- lote;
+- transferência para posição;
+- segunda baixa posterior para a mesma parcela.
+
+Idempotência:
+`adm-intake-v2:<intakeId>:immediate:<operationId>`.
+
+O `operationId` é mantido em `sessionStorage`.
+
+Concorrência:
+- `allocatedQuantity` e `immediateConsumptionQuantity` são comparados com a revisão observada pela tela;
+- divergência aborta a operação;
+- quantidade nunca pode ultrapassar o pendente atual.
+
+### Motor SISCOFIS compartilhado
+
+Saída normal e consumo imediato convergem para a mesma subaba:
+**Saída de Material → Relatórios**.
+
+Uma mesma movimentação é representada uma única vez pelo `movementId`.
+
+O histórico legado de `warehouse_item_intake_v1` continua preservado na subaba renomeada:
+**Histórico legado / SISCOFIS**.
+
+Não foi executada migração em massa.
+
+### Firestore Rules
+
+Novos matches explícitos:
+- `/warehouse/{workspaceId}/destinations/{destinationId}`;
+- `/warehouse/{workspaceId}/withdrawals/{withdrawalId}`;
+- `/warehouse/{workspaceId}/consumptions/{consumptionId}`.
+
+Preservado:
+- founder-only do piloto;
+- workspace/UG;
+- movimento imutável;
+- saldo/locationBalance derivados;
+- lote sem autoridade quantitativa;
+- barcode sem autoridade quantitativa;
+- intake v2 monotônico;
+- delete físico negado em destinos históricos, retiradas e consumos;
+- nenhum wildcard permissivo.
+
+Durante a inspeção estática foi detectada corrupção textual local em uma edição intermediária de `firestore.rules` causada pelo tratamento de `$` em substituição textual. O arquivo foi reconstruído a partir do baseline limpo do HEAD inicial antes de qualquer deploy.
+
+Validação final da estrutura do Rules após reconstrução:
+- 1 bloco `service cloud.firestore`;
+- 1 helper de destinos;
+- 1 helper de retiradas;
+- 1 helper de consumos;
+- 1 match de destinos;
+- 1 match de retiradas;
+- 1 match de consumos;
+- marcadores originais de intake preservados uma única vez.
+
+### Core Protection
+
+Inspeção estática do diff funcional confirmou alterações somente em:
+- `features/warehouse/**`;
+- `lib/warehouse/**`;
+- `firestore.rules`;
+- documentação ADM.
+
+Não houve alteração em código de:
+- cadastro de NF;
+- edição de NF;
+- exclusão permitida de NF;
+- Empenho;
+- Cronograma.
+
+Nenhum fluxo EMPROVEX Core passou a depender do ADM.
+
+### Validação diferida — D-057
+
+Não foram executados:
+- suíte completa;
+- Browser E2E completo;
+- Application CI;
+- regressão completa;
+- campanha multi-tenant completa;
+- PR;
+- merge;
+- deploy.
+
+Nenhum teste pontual foi necessário após a correção por inspeção estática.
+
 ### Próximo módulo oficial
 
-**Módulo 4 — Consumo imediato e fila SISCOFIS**.
+**Módulo 5 — Migração inicial do SISCOFIS**.
 
 Ele permanece **NÃO INICIADO** neste fechamento.
