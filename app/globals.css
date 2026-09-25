@@ -4530,3 +4530,116 @@ button.emprovex-header-control:hover .emprovex-header-control__icon {
     will-change: transform;
   }
 }
+
+
+/* ADM Depósito — consolidação visual EMPROVEX.
+   Neutraliza superfícies escuras legadas da antiga área administrativa sem tocar
+   no comportamento operacional, mantendo o módulo sobre o mesmo fundo do app. */
+.warehouse-emprovex-surface,
+.warehouse-emprovex-content {
+  color: #0b1c30;
+}
+
+.warehouse-emprovex-content [class*="text-slate-200"] {
+  color: #0f172a !important;
+}
+
+.warehouse-emprovex-content [class*="text-slate-300"] {
+  color: #334155 !important;
+}
+
+.warehouse-emprovex-content [class*="text-slate-400"] {
+  color: #64748b !important;
+}
+
+.warehouse-emprovex-content [class*="text-slate-500"] {
+  color: #475569 !important;
+}
+
+.warehouse-emprovex-content [class*="bg-black/10"],
+.warehouse-emprovex-content [class*="bg-white/[0.02]"],
+.warehouse-emprovex-content [class*="bg-white/[0.025]"],
+.warehouse-emprovex-content [class*="bg-white/[0.035]"],
+.warehouse-emprovex-content [class*="bg-white/[0.04]"] {
+  background-color: rgba(255, 255, 255, 0.86) !important;
+}
+
+.warehouse-emprovex-content [class*="bg-[#01050d]"] {
+  background-color: #ffffff !important;
+}
+
+.warehouse-emprovex-content [class*="border-white/[0.06]"],
+.warehouse-emprovex-content [class*="border-white/[0.07]"],
+.warehouse-emprovex-content [class*="border-white/[0.08]"],
+.warehouse-emprovex-content [class*="border-white/[0.09]"] {
+  border-color: rgba(203, 213, 225, 0.9) !important;
+}
+
+.warehouse-emprovex-content input[class*="bg-[#01050d]"],
+.warehouse-emprovex-content select[class*="bg-[#01050d]"],
+.warehouse-emprovex-content textarea[class*="bg-[#01050d]"] {
+  color: #0f172a !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: inset 0 1px 0 rgba(15, 23, 42, 0.02);
+}
+
+.warehouse-emprovex-content input[class*="bg-[#01050d]"]::placeholder,
+.warehouse-emprovex-content textarea[class*="bg-[#01050d]"]::placeholder {
+  color: #94a3b8 !important;
+}
+
+.warehouse-emprovex-content [class*="bg-blue-400/[0.035]"] {
+  background-color: rgba(239, 246, 255, 0.92) !important;
+  border-color: rgba(147, 197, 253, 0.62) !important;
+}
+
+.warehouse-emprovex-content [class*="bg-emerald-400/[0.035]"] {
+  background-color: rgba(236, 253, 245, 0.92) !important;
+  border-color: rgba(110, 231, 183, 0.62) !important;
+}
+
+.warehouse-emprovex-content [class*="bg-amber-400/[0.035]"] {
+  background-color: rgba(255, 251, 235, 0.94) !important;
+  border-color: rgba(252, 211, 77, 0.62) !important;
+}
+
+.warehouse-emprovex-content [class*="text-blue-300/70"] {
+  color: #2563eb !important;
+}
+
+.warehouse-emprovex-content [class*="text-emerald-300/70"] {
+  color: #059669 !important;
+}
+
+.warehouse-emprovex-content [class*="text-amber-300/70"] {
+  color: #d97706 !important;
+}
+
+.warehouse-emprovex-content [class*="text-blue-200"] {
+  color: #2563eb !important;
+}
+
+.warehouse-emprovex-content button[class*="bg-white/[0.035]"] {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.warehouse-emprovex-content button[class*="bg-white/[0.035]"]:hover {
+  background-color: #f8fafc !important;
+  border-color: #93c5fd !important;
+  color: #00288e !important;
+}
+
+@media (prefers-contrast: more) {
+  .warehouse-emprovex-content [class*="text-slate-400"],
+  .warehouse-emprovex-content [class*="text-slate-500"] {
+    color: #334155 !important;
+  }
+
+  .warehouse-emprovex-content [class*="border-white/"] {
+    border-color: #94a3b8 !important;
+  }
+}

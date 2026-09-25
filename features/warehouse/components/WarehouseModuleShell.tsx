@@ -97,7 +97,10 @@ export function WarehouseModuleShell({
           }`}
         >
           {isHome ? (
-            <section data-testid="warehouse-surface" className="min-w-0">
+            <section
+              data-testid="warehouse-surface"
+              className="warehouse-emprovex-content min-w-0"
+            >
               <WarehouseSectionContent
                 section={section}
                 workspaceId={workspaceContext.workspaceId}
@@ -105,33 +108,33 @@ export function WarehouseModuleShell({
             </section>
           ) : (
             <section
-              className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/82 shadow-[0_24px_70px_-36px_rgba(15,23,42,0.35)] backdrop-blur-xl"
+              className="warehouse-emprovex-surface space-y-4"
               data-testid="warehouse-surface"
             >
-              <div className="border-b border-slate-200/80 bg-[radial-gradient(circle_at_top_right,rgba(37,99,235,0.08),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] px-5 py-5 sm:px-7 sm:py-6 lg:px-8">
+              <div className="rounded-2xl border border-slate-200/80 bg-white/88 px-5 py-5 shadow-[0_18px_50px_-34px_rgba(15,23,42,0.28)] backdrop-blur-xl sm:px-7 sm:py-6 lg:px-8">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="font-mono text-[10px] font-black uppercase tracking-[0.22em] text-[#00288e]/60">
+                    <p className="font-mono text-[10px] font-black uppercase tracking-[0.22em] text-[#00288e]/70">
                       ADM Depósito · {activeSection.eyebrow}
                     </p>
                     <h1 className="mt-2 text-2xl font-black tracking-tight text-[#0b1c30] sm:text-3xl">
                       {activeSection.label}
                     </h1>
-                    <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-500">
+                    <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-600">
                       {activeSection.description}
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/80 px-3 py-2">
+                  <div className="flex items-center gap-2 rounded-xl border border-blue-200/80 bg-blue-50/90 px-3 py-2 shadow-sm">
                     <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" aria-hidden="true" />
-                    <span className="font-mono text-[9px] font-black uppercase tracking-[0.16em] text-[#00288e]/70">
+                    <span className="font-mono text-[9px] font-black uppercase tracking-[0.16em] text-[#00288e]/80">
                       Módulo operacional
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="warehouse-emprovex-content bg-white px-5 pb-7 sm:px-7 lg:px-8">
+              <div className="warehouse-emprovex-content min-w-0">
                 <WarehouseSectionContent
                   section={section}
                   workspaceId={workspaceContext.workspaceId}
