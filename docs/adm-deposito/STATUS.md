@@ -1357,3 +1357,45 @@ Esses ajustes não alteraram NF, Empenho, Cronograma, política multi-tenant, M�
 - prévia editável bloqueia confirmação após correção até nova validação;
 - unidade ausente em material novo usa o fallback canônico explícito da integração de NF, sem inventar unidade concreta;
 - sem PR, merge ou deploy; Módulo 6 não iniciado.
+
+## Módulo 8 — Editor visual do croqui — CONCLUÍDO
+
+Data: 2026-09-25.
+
+Baseline inicial confirmado:
+`ba651652426964adf4c3cd331a99c988250959a1`.
+
+Implementado:
+- novo componente `WarehouseDepotLayoutEditor.tsx`;
+- edição 2D com grade, snap, zoom e pan;
+- drag, resize por alças e rotação em passos de 45°;
+- prévia 2.5D leve derivada dos mesmos `layout.objects`;
+- duplicar, copiar/colar, excluir somente do croqui;
+- bring-to-front/send-to-back por `layer`;
+- undo/redo local com histórico limitado em memória;
+- atalhos de teclado sem interceptar inputs/selects;
+- editor continua consumindo `WAREHOUSE_STRUCTURE_LIBRARY`;
+- propriedades, renomeação e vínculo logístico existentes foram preservados;
+- versionamento segue pelo repository histórico, somente no comando Salvar versão.
+
+Arquitetura:
+- `warehouse_depot_layout_v1` continua autoridade;
+- nenhum schema/coleção visual paralela;
+- nenhum write durante drag/resize/rotate;
+- mover geometria não altera estoque, posição lógica ou movimento;
+- isolamento por `depotId` permanece no repository;
+- Firestore Rules: sem alteração;
+- Core EMPROVEX: sem alteração.
+
+Validação:
+- teste contratual do editor foi preparado em `scripts/warehouse-depot-layout.test.mjs`;
+- por D-057, Application CI, Browser E2E completo, suíte Firestore, build/typecheck global e regressão global NÃO foram executados;
+- nenhum PR, merge ou deploy foi realizado.
+
+Decisão de biblioteca:
+- Fabric.js foi avaliado, mas não adotado;
+- a base já possuía interação visual manual compatível com o contrato atual;
+- manter essa camada evita dependência/peso extra e favorece máquinas antigas;
+- ver D-068.
+
+Próximo módulo oficial: **Módulo 9 — Integração croqui ↔ estoque**.
