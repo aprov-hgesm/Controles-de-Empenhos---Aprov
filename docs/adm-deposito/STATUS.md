@@ -1298,3 +1298,15 @@ Nenhum teste pontual foi necessário após a correção por inspeção estática
 **Módulo 5 — Migração inicial do SISCOFIS**.
 
 Ele permanece **NÃO INICIADO** neste fechamento.
+
+
+### Endurecimentos finais após o fechamento funcional
+
+HEAD funcional imediatamente antes da atualização documental final:
+`fc9d1012c437f74921a187ae94c7b8d7e9a2fb76`.
+
+A inspeção final acrescentou dois ajustes sem alterar arquitetura:
+- `2fdfc343ed158a4fd6e2851eed581d28b5f8e538`: carrinho passou a sinalizar lote vencido e lote próximo do vencimento usando `warehouseLotExpiryState`, sem criar nova lógica de FEFO;
+- `fc9d1012c437f74921a187ae94c7b8d7e9a2fb76`: a projeção de relatório da saída passou a usar `result.plan.baseQuantity` efetivamente aplicada pelo OUTBOUND oficial, garantindo que o relatório permaneça coerente com o ledger mesmo se a configuração de apresentação tiver mudado entre montagem do carrinho e finalização.
+
+Esses ajustes não alteraram NF, Empenho, Cronograma, política multi-tenant, Módulo 5 ou o diferimento de testes/CI definido por D-057.
