@@ -98,3 +98,24 @@ Pontos de continuidade:
 - Módulo 8 é o próximo passo oficial e deverá consumir essa biblioteca sem reimplementar os contratos existentes.
 
 Ver D-067 e ROADMAP.
+
+## Consolidação do Módulo 8 — Editor visual do croqui
+
+Em 2026-09-25, o Módulo 8 foi concluído na branch oficial da FASE 11.5.
+
+- edição oficial permanece em planta baixa 2D;
+- prévia 2.5D é derivada dos mesmos objetos do layout, sem segundo formato;
+- grade e snap são opcionais;
+- zoom e pan são locais ao editor;
+- drag, resize e rotação não escrevem no Firestore;
+- duplicação, exclusão visual, camadas e atalhos operam somente sobre o draft local;
+- undo/redo existe somente durante a sessão do editor;
+- biblioteca permanece em `WAREHOUSE_STRUCTURE_LIBRARY`;
+- persistência continua exclusivamente em `warehouse_depot_layout_v1`;
+- salvar versão continua sendo a única ação de persistência do editor;
+- múltiplos depósitos permanecem isolados por `depotId`;
+- Firestore Rules e Core EMPROVEX não foram alterados.
+
+A camada visual foi implementada sem Fabric.js/Konva: a auditoria concluiu que evoluir o canvas React já existente era mais simples e leve para a base atual, evitando dependência imperativa adicional e mantendo a meta de baixo custo gráfico em máquinas antigas.
+
+Próximo módulo oficial: **Módulo 9 — Integração croqui ↔ estoque**.
