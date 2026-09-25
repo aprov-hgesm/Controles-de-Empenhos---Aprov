@@ -1755,7 +1755,7 @@ Motivo:
 Estado oficial:
 - Fase 9 antiga — domínio: **PRESERVADO**;
 - Fase 9 antiga — UI: **SUPERSEDIDA**;
-- Fase 9 v2: **EM DESENVOLVIMENTO — 9.0 e 9.1 CONCLUÍDOS**;
+- Fase 9 v2: **EM DESENVOLVIMENTO — 9.0 a 9.3 CONCLUÍDOS**;
 - Módulo 14: **PAUSADO NA CERTIFICAÇÃO REMOTA**;
 - merge: **NÃO AUTORIZADO**;
 - deploy: **NÃO REALIZADO**;
@@ -1902,4 +1902,144 @@ Estado:
 - Próximo módulo: **9.2 — Visualizar / Localizar**.
 
 Próximo trabalho oficial:
-**Fase 9 v2 — Módulo 9.2, Visualizar / Localizar.**
+**Fase 9 v2 — Módulo 9.4, Editor de Croqui v2.**
+
+
+## FECHAMENTO DOS MÓDULOS 9.2 E 9.3 — FASE 9 v2
+
+Data: 2026-09-25.
+
+### Estado inicial
+
+- branch: `feat/adm-deposito-phase-11-5-visual-ux`;
+- HEAD inicial confirmado antes da implementação: `efd7fba8da19e91a277ff2724a04d365aaaf9574`;
+- baseline coincidia exatamente com o fechamento de 9.0/9.1;
+- D-073 confirmada;
+- Módulo 14 permaneceu pausado;
+- merge/deploy não autorizados.
+
+### Módulo 9.2 — CONCLUÍDO
+
+Arquitetura/UX:
+- o modo **Visualizar / Localizar** permanece separado do seletor de depósito e do editor;
+- a busca continua usando o conjunto bounded de materiais já carregado;
+- filtro é realizado em memória por descrição, aliases e ID técnico;
+- resultados possuem altura limitada e scroll interno;
+- nenhuma lista principal usa `position: absolute`;
+- seleção é feita por clique explícito e não depende de hover;
+- material selecionado possui resumo operacional.
+
+Estados tratados:
+- material sem saldo positivo: mensagem clara e nenhum destaque;
+- `UNASSIGNED`: quantidade apresentada como estoque sem posição física;
+- múltiplas posições: todas consideradas;
+- múltiplos depósitos: resumo preserva a existência das demais posições;
+- troca de depósito: destaque passa a ser recalculado para o depósito atual.
+
+Gate 9.2:
+- Pesquisa: **OK**;
+- Resultados bounded: **OK**;
+- Seleção estável: **OK**;
+- Sem mutação de estoque: **OK**;
+- Sem sobreposição estrutural com seletor: **OK**;
+- Autorização para 9.3: **SIM**.
+
+### Módulo 9.3 — CONCLUÍDO
+
+Fonte das posições:
+- `warehouse_location_balance_v1`;
+- somente `quantity > 0`;
+- ponte visual oficial: `warehouseLocationIdForPosition(...)`;
+- nenhum segundo algoritmo concorrente de identidade visual foi criado.
+
+Filtro por depósito:
+- somente posições cujo `position.depotId` corresponde ao depósito atual entram no conjunto de destaque;
+- posições do mesmo material em outros depósitos permanecem informativas no resumo.
+
+Destaque e cobertura visual:
+- todas as posições reais do depósito atual vinculadas a objetos do layout são destacadas;
+- objetos não relacionados são apenas atenuados visualmente;
+- localização física válida sem objeto correspondente continua aparecendo no resumo;
+- nenhum objeto é criado automaticamente;
+- `UNASSIGNED` nunca recebe representação visual.
+
+FEFO:
+- continua sendo apenas recomendação consultiva;
+- reutiliza `selectWarehouseFefoLot`;
+- FEFO do depósito atual pode receber diferenciação visual própria;
+- FEFO em outro depósito gera informação textual, sem destaque falso no canvas atual;
+- FEFO em `UNASSIGNED` é informado como sem posição física.
+
+Canvas:
+- modo Visualizar / Localizar permanece read-only;
+- nenhuma seleção de material altera geometria;
+- nenhuma ação de consulta salva layout;
+- drag/resize/rotate continuam pertencendo ao editor, não ao modo consulta.
+
+### Segurança e domínio
+
+- Firestore Rules: **NÃO ALTERADAS**;
+- workspace/UG: **PRESERVADOS**;
+- founder-only: **PRESERVADO**;
+- Core EMPROVEX: **NÃO ALTERADO**;
+- `warehouse_balance_v1`: **NÃO ALTERADO**;
+- `warehouse_location_balance_v1`: somente leitura;
+- `warehouse_movement_v1`: **NÃO ALTERADO**;
+- `warehouse_depot_layout_v1`: somente leitura no modo consulta;
+- nova coleção/schema/índice: **NÃO**.
+
+### Performance
+
+- listeners novos: **0**;
+- polling novo: **0**;
+- leitura Firestore por tecla: **0**;
+- leitura Firestore por hover: **0**;
+- filtros: em memória;
+- engine gráfica adicional: **NÃO**;
+- animação contínua nova: **NÃO**.
+
+### Testes executados na estação PowerShell do fundador
+
+1. `npm.cmd run test:adm-deposito-depot-locator`
+   - 4 testes;
+   - 4 PASS;
+   - 0 falhas.
+
+Cenários comprovados:
+- saldo positivo + separação de `UNASSIGNED`;
+- destaque somente no depósito atual;
+- preservação das posições de outros depósitos no resumo;
+- material sem saldo positivo;
+- cobertura visual somente por objetos com `warehouseLocationId`.
+
+2. `npm.cmd run verify:adm-deposito-phase-9`
+   - resultado: **ADM Depósito FASE 9 guard: PASS**.
+
+3. `npm.cmd run typecheck`
+   - resultado: **PASS**;
+   - TypeScript: **0 erros**.
+
+Também observado no GitHub:
+- EMPROVEX Core Protection automático: **PASS**;
+- Recovery guardrails automático: **PASS**;
+- Application CI foi disparado automaticamente pela configuração da PR após push, embora D-073 determine que ele não é gate destes submódulos; não foi usado como requisito para declarar 9.2/9.3 concluídos.
+
+### Commits funcionais principais
+
+- `01a0f7c8821f1b60bfbd7620ccc7d56003d87216` — localizar materiais por posição física;
+- `f8697529ed0758f70ddc4d199d8c58568aa87226` — isolar derivação de localização;
+- `ffc346ac8489737c0573f29b40d483c707077640` — usar projeção testável de posições;
+- `e1c612d91c7d81da244bc2992867e8f71a5116ee` — testes de localização e destaque;
+- `d63f7f25b9e994a3ae9a0e2872204c47a7da3aba` — registrar comando de teste;
+- `62c0eeae57ffe3e416860f44e53e0bef7fe70175` — reforçar guard permanente da Fase 9.
+
+### Estado final
+
+- Módulo 9.2: **CONCLUÍDO**;
+- Módulo 9.3: **CONCLUÍDO**;
+- Fase 9 v2: **EM DESENVOLVIMENTO**;
+- Módulo 14: **PAUSADO**;
+- Merge: **NÃO REALIZADO**;
+- Deploy: **NÃO REALIZADO**;
+- Próximo módulo: **9.4 — Editor de Croqui v2**.
+
