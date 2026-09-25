@@ -49,6 +49,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [previewDirty, setPreviewDirty] = useState(false);
   const [manualNumeroItem, setManualNumeroItem] = useState('');
   const [manualDescription, setManualDescription] = useState('');
   const [manualQuantity, setManualQuantity] = useState('');
@@ -80,6 +81,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
     try {
       const nextPreview = await prepareEmprovexSiscofisInventoryImport(workspaceId, rawJson, manualReferenceDate);
       setPreview(nextPreview);
+      setPreviewDirty(false);
       setIssues(nextPreview.issues);
     } catch (error) {
       const candidate = error as Error & { issues?: WarehouseSiscofisIssue[] };
@@ -91,7 +93,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
   };
 
   const confirmImport = async () => {
-    if (!preview?.canConfirm) return;
+    if (!preview?.canConfirm || previewDirty) return;
     setWorking(true);
     setMessage(null);
     try {
@@ -102,6 +104,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
           : 'Snapshot salvo. Nenhuma alteração automática foi feita no estoque.'
       );
       setPreview(null);
+      setPreviewDirty(false);
       setRawJson('');
       setIssues([]);
       await refresh();
@@ -141,9 +144,44 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
       items: [...currentItems, { numeroItem: manualNumeroItem.trim(), descricao: manualDescription.trim(), quantidade: quantity, valorUnitario: unitValue }],
     }, null, 2));
     setManualNumeroItem(''); setManualDescription(''); setManualQuantity(''); setManualUnitValue('');
-    setPreview(null); setIssues([]);
+    setPreview(null); setPreviewDirty(false); setIssues([]);
     setMessage('Linha adicionada ao mesmo draft oficial. Revise e valide antes de confirmar.');
   };
+
+  const editPreviewItem = (
+    index: number,
+    field: 'numeroItem' | 'descricao' | 'quantidade' | 'valorUnitario',
+    value: string
+  ) => {
+    try {
+      const parsed = JSON.parse(rawJson) as {
+        schemaVersion?: string;
+        items?: Array<Record<string, unknown>>;
+      };
+      if (!parsed || !Array.isArray(parsed.items) || !parsed.items[index]) return;
+      const nextItems = parsed.items.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+        const nextValue = field === 'quantidade' || field === 'valorUnitario'
+          ? Number(value.replace(',', '.'))
+          : value;
+        return { ...item, [field]: nextValue };
+      });
+      setRawJson(JSON.stringify({ ...parsed, items: nextItems }, null, 2));
+      setPreviewDirty(true);
+      setMessage('Prévia alterada manualmente. Revalide antes de confirmar.');
+    } catch {
+      setMessage('Não foi possível aplicar a edição à origem JSON. Revise o conteúdo colado.');
+    }
+  };
+
+  const clearDraft = () => {
+    setRawJson('');
+    setPreview(null);
+    setPreviewDirty(false);
+    setIssues([]);
+    setMessage('Rascunho limpo.');
+  };
+
 
   if (loading && !context) {
     return <div className="mt-6"><WarehouseDataState>Carregando estado do SISCOFIS e do Marco Zero…</WarehouseDataState></div>;
@@ -152,7 +190,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
   return (
     <div className="mt-6 space-y-5" data-testid="warehouse-siscofis-operational">
       <div className="grid gap-3 md:grid-cols-2">
-        <ContractCard title="Contrato de importação" code={WAREHOUSE_SISCOFIS_IMPORT_SCHEMA_VERSION} description="Migração manual e JSON usam o mesmo contrato versionado e passam pela mesma validação." />
+        <ContractCard title="Contrato de importação" code={EMPROVEX_SISCOFIS_INVENTORY_SCHEMA_VERSION} description="Migração manual e JSON usam o mesmo contrato versionado e passam pela mesma validação." />
         <ContractCard title="Snapshot auditável" code={WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION} description="Marco Zero e conciliações ficam no namespace logístico. Snapshots posteriores não alteram saldo automaticamente." />
       </div>
 
@@ -187,8 +225,9 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
         <textarea value={rawJson} onChange={(event) => setRawJson(event.target.value)} data-testid="warehouse-siscofis-json" placeholder={'{\n  "schemaVersion": "emprovex_siscofis_inventory_v1",\n  "items": [...]\n}'} className="mt-4 h-56 w-full resize-y rounded-xl border border-white/[0.08] bg-[#01050d] p-4 font-mono text-xs leading-5 text-slate-300" />
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button type="button" onClick={validateImport} disabled={working || !rawJson.trim()} data-testid="warehouse-siscofis-validate" className="inline-flex h-9 items-center gap-2 rounded-xl bg-blue-500/90 px-4 text-xs font-black text-white disabled:opacity-40">
-            {working ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} Validar e gerar prévia
+            {working ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} {previewDirty ? 'Revalidar alterações' : 'Validar e gerar prévia'}
           </button>
+          <button type="button" onClick={clearDraft} disabled={working || !rawJson.trim()} className="inline-flex h-9 items-center rounded-xl border border-white/[0.08] px-3 text-xs font-bold text-slate-400 disabled:opacity-40">Limpar</button>
           <span className="text-[10px] text-slate-600">Modo: {context?.hasMarcoZero ? 'snapshot de conciliação' : 'Marco Zero inicial'}</span>
         </div>
       </div>
@@ -212,9 +251,11 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="font-mono text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300/75">Prévia · {preview.kind === 'MARCO_ZERO' ? 'Marco Zero' : 'Snapshot'}</p>
-              <p className="mt-2 text-sm font-bold text-slate-200">{preview.summary.totalRows} linha(s) · {preview.summary.unresolvedRows} sem vínculo · {preview.summary.divergentRows} divergente(s)</p>
+              <p className="mt-2 text-sm font-bold text-slate-200">{preview.summary.totalRows} linha(s) · {preview.summary.createsMaterials} novo(s) · {preview.summary.unresolvedRows} sem vínculo · {preview.summary.divergentRows} divergente(s)</p>
+              <p className="mt-1 text-[10px] text-slate-500">{issues.filter((item) => item.severity === 'error').length} erro(s) · {issues.filter((item) => item.severity === 'warning').length} aviso(s) · valor total {preview.import.rows.reduce((sum, row) => sum + (row.totalValue || 0), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} · data-base {preview.import.referenceDate}</p>
+              {previewDirty && <p className="mt-2 text-[10px] font-bold text-amber-300">Há correções manuais ainda não revalidadas. A confirmação permanece bloqueada.</p>}
             </div>
-            <button type="button" onClick={confirmImport} disabled={working || !preview.canConfirm} className="inline-flex h-9 items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-400/[0.11] px-4 text-xs font-black text-emerald-100 disabled:opacity-40">
+            <button type="button" onClick={confirmImport} disabled={working || !preview.canConfirm || previewDirty} className="inline-flex h-9 items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-400/[0.11] px-4 text-xs font-black text-emerald-100 disabled:opacity-40">
               <ShieldCheck className="h-3.5 w-3.5" /> {preview.kind === 'MARCO_ZERO' ? 'Confirmar Marco Zero' : 'Salvar snapshot'}
             </button>
           </div>
@@ -222,7 +263,14 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
             <table className="min-w-[760px] w-full text-left text-xs">
               <thead className="bg-white/[0.025] text-[9px] uppercase tracking-[0.12em] text-slate-600"><tr><th className="p-3">Nº Ficha</th><th className="p-3">Material</th><th className="p-3">Qtd.</th><th className="p-3">Valor unit.</th><th className="p-3">Total</th><th className="p-3">Estado</th></tr></thead>
               <tbody className="divide-y divide-white/[0.05]">
-                {preview.rows.map((row) => { const source = preview.import.rows.find((item) => item.rowId === row.rowId); return <tr key={row.rowId}><td className="p-3 font-mono text-slate-300">{row.sourceItemNumber || "—"}</td><td className="p-3 font-bold text-slate-300">{row.description}</td><td className="p-3 text-slate-300">{row.siscofisQuantity.toLocaleString("pt-BR")}</td><td className="p-3 text-slate-400">{source?.unitValue?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00"}</td><td className="p-3 text-slate-400">{source?.totalValue?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00"}</td><td className="p-3 text-slate-400">{row.state}</td></tr>; })}
+                {preview.rows.map((row, index) => { const source = preview.import.rows.find((item) => item.rowId === row.rowId); return <tr key={row.rowId}>
+                  <td className="p-2"><input defaultValue={row.sourceItemNumber || ''} onChange={(event) => editPreviewItem(index, 'numeroItem', event.target.value)} className="h-9 w-28 rounded-lg border border-white/[0.08] bg-black/20 px-2 font-mono text-xs text-slate-200" /></td>
+                  <td className="p-2"><input defaultValue={row.description} onChange={(event) => editPreviewItem(index, 'descricao', event.target.value)} className="h-9 min-w-[280px] w-full rounded-lg border border-white/[0.08] bg-black/20 px-2 text-xs font-bold text-slate-200" /></td>
+                  <td className="p-2"><input defaultValue={String(row.siscofisQuantity)} onChange={(event) => editPreviewItem(index, 'quantidade', event.target.value)} inputMode="decimal" className="h-9 w-24 rounded-lg border border-white/[0.08] bg-black/20 px-2 text-xs text-slate-200" /></td>
+                  <td className="p-2"><input defaultValue={String(source?.unitValue ?? 0)} onChange={(event) => editPreviewItem(index, 'valorUnitario', event.target.value)} inputMode="decimal" className="h-9 w-28 rounded-lg border border-white/[0.08] bg-black/20 px-2 text-xs text-slate-200" /></td>
+                  <td className="p-3 text-slate-400">{source?.totalValue?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00"}</td>
+                  <td className="p-3 text-slate-400">{row.state}{previewDirty ? ' · revalidar' : ''}</td>
+                </tr>; })}
               </tbody>
             </table>
           </div>
