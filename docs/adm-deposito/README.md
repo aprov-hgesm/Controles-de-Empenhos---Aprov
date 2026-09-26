@@ -187,3 +187,8 @@ Resultados permanentes:
 Documento técnico: `PHASE_13_HARDENING.md`.
 
 **Estado oficial:** Módulo 13 CONCLUÍDO. Módulo 14 NÃO INICIADO.
+
+
+## Referência visual obrigatória
+
+- `docs/adm-deposito/VISUAL_IDENTITY.md` — identidade visual operacional do EMPROVEX e regras de coerência para o ADM Depósito.
