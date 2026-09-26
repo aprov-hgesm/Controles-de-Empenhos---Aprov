@@ -1734,8 +1734,10 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - IDs técnicos permanecem imutáveis e continuam sendo a identidade canônica.
 - A remoção operacional é implementada como **exclusão lógica segura** (`status = inactive`), preservando histórico e evitando perda destrutiva de referências.
 - Um Local só pode ser excluído da operação quando não possui Subposições ativas.
-- Um Depósito só pode ser excluído da operação quando não possui nenhum Local ou Subposição ativa.
-- A interface deve orientar o operador a remover primeiro a estrutura filha, em ordem Subposição → Local → Depósito.
+- O critério de “depósito vazio” refere-se à ausência de **itens/estoque vinculados**, e não à ausência de Locais ou Subposições.
+- Locais e Subposições pertencentes ao depósito acompanham a exclusão lógica do depósito e são inativados junto com ele, preservando o histórico.
+- A estrutura filha não precisa ser removida manualmente antes da exclusão do depósito.
+- A verificação quantitativa de “sem itens” deve usar as fontes oficiais de estoque/localização quando esse domínio estiver habilitado no fluxo modular; a ADM-R1 não deve simular essa checagem com base apenas na existência de Locais/Subposições.
 - Códigos alterados continuam sujeitos à validação e unicidade no mesmo escopo lógico.
 - Esta etapa não reativa estoque, `locationBalances`, lotes ou movimentações; portanto nenhuma exclusão física de dados logísticos avançados é autorizada na ADM-R1.
 
