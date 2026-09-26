@@ -262,13 +262,17 @@ export function validateWarehouseDepot(
   if (name.length < 2 || name.length > 120) issues.push(issue('invalid_name', '$.name', 'Nome deve possuir entre 2 e 120 caracteres.'));
   const description = normalizeDescription(input.description);
   if (description === undefined) issues.push(issue('invalid_description', '$.description', 'Descrição deve possuir no máximo 240 caracteres.'));
-  const visualType = input.visualType === 'STANDARD' || input.visualType === 'CONTAINER' || input.visualType === 'COLD_CONTAINER'
-    ? input.visualType
-    : null;
+  const visualType = input.visualType === undefined
+    ? 'STANDARD'
+    : input.visualType === 'STANDARD' || input.visualType === 'CONTAINER' || input.visualType === 'COLD_CONTAINER'
+      ? input.visualType
+      : null;
   if (!visualType) issues.push(issue('invalid_visual_type', '$.visualType', 'Tipo visual do depósito é inválido.'));
-  const sizeProfile = input.sizeProfile === 'SMALL' || input.sizeProfile === 'MEDIUM' || input.sizeProfile === 'LARGE'
-    ? input.sizeProfile
-    : null;
+  const sizeProfile = input.sizeProfile === undefined
+    ? 'MEDIUM'
+    : input.sizeProfile === 'SMALL' || input.sizeProfile === 'MEDIUM' || input.sizeProfile === 'LARGE'
+      ? input.sizeProfile
+      : null;
   if (!sizeProfile) issues.push(issue('invalid_size_profile', '$.sizeProfile', 'Porte do depósito é inválido.'));
   const status = input.status;
   if (status !== 'active' && status !== 'inactive') issues.push(issue('invalid_status', '$.status', 'Status deve ser active ou inactive.'));
