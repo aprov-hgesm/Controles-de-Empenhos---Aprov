@@ -732,139 +732,165 @@ export function WarehouseLocationsR1Operational({
         )}
       </section>
 
-      <section className="rounded-2xl border border-blue-100/80 bg-white/75 p-5 shadow-sm backdrop-blur-md">
-        <div>
-          <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.16em] text-gray-400">2 · Locais</p>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <h3 className="text-base font-black text-[#00288e]">
-              {selectedDepot ? selectedDepot.name : 'Selecione um depósito'}
-            </h3>
-            {selectedDepot && (
-              <>
-                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#00288e]">
-                  {localItems.length} locais
-                </span>
-                <button type="button" onClick={() => openPanel('editDepot')} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-black text-gray-600 transition hover:border-blue-200 hover:text-[#00288e]">
-                  <Pencil className="h-3 w-3" />
-                  Editar depósito
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {!selectedDepot ? (
-          <div className="mt-4 rounded-2xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
-            Selecione um depósito acima para visualizar seus locais.
-          </div>
-        ) : localItems.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-dashed border-blue-200 bg-blue-50/40 p-8 text-center">
-            <MapPin className="mx-auto h-7 w-7 text-blue-300" />
-            <p className="mt-3 text-sm font-black text-gray-700">Este depósito ainda não possui locais</p>
-            <button type="button" onClick={() => openPanel('location')} className="mt-3 text-xs font-black text-[#00288e] hover:underline">
-              Criar primeiro local
-            </button>
-          </div>
-        ) : (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-            {localItems.map((item) => {
-              const count = state.locations.filter(
-                (candidate) =>
-                  candidate.location.kind === 'SUBPOSITION'
-                  && candidate.location.status === 'active'
-                  && candidate.location.parentLocationId === item.location.id
-              ).length;
-              const active = item.location.id === selectedLocationId;
-
-              return (
-                <button
-                  type="button"
-                  key={item.location.id}
-                  onClick={() => setSelectedLocationId(item.location.id)}
-                  className={
-                    active
-                      ? 'rounded-2xl border border-blue-300 bg-blue-50 p-4 text-left shadow-sm ring-2 ring-[#00288e]/10'
-                      : 'rounded-2xl border border-gray-200 bg-white p-4 text-left transition hover:border-blue-200 hover:bg-blue-50/40 hover:shadow-sm'
-                  }
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className={active ? 'grid h-10 w-10 place-items-center rounded-xl bg-[#00288e] text-white' : 'grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-[#00288e]'}>
-                      {locationIcon(item.location.name, item.location.code)}
-                    </div>
-                    <span className="rounded-md bg-gray-100 px-2 py-0.5 font-mono text-[9px] font-black text-gray-500">
-                      {item.location.code}
-                    </span>
-                  </div>
-                  <p className="mt-3 truncate text-sm font-black text-gray-900">{item.location.name}</p>
-                  <p className="mt-1 text-[10px] font-bold text-gray-400">
-                    {count === 1 ? '1 subposição' : count + ' subposições'}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-2xl border border-blue-100/80 bg-white/75 p-5 shadow-sm backdrop-blur-md">
-        <div>
-          <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.16em] text-gray-400">3 · Subposições</p>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <h3 className="text-base font-black text-[#00288e]">
-              {selectedLocation ? selectedLocation.name : 'Selecione um local'}
-            </h3>
-            {selectedLocation && (
-              <>
-                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#00288e]">
-                  {subpositions.length} subposições
-                </span>
-                <button type="button" onClick={() => openPanel('editLocation')} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-black text-gray-600 transition hover:border-blue-200 hover:text-[#00288e]">
-                  <Pencil className="h-3 w-3" />
-                  Editar local
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {!selectedLocation ? (
-          <div className="mt-4 rounded-2xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
-            Selecione um local para visualizar suas divisões internas.
-          </div>
-        ) : subpositions.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-dashed border-blue-200 bg-blue-50/40 p-8 text-center">
-            <Archive className="mx-auto h-7 w-7 text-blue-300" />
-            <p className="mt-3 text-sm font-black text-gray-700">Nenhuma subposição cadastrada</p>
-            <p className="mt-1 text-xs text-gray-500">Prateleiras, níveis e nichos aparecerão aqui.</p>
-            <button type="button" onClick={() => openPanel('subposition')} className="mt-3 text-xs font-black text-[#00288e] hover:underline">
-              Criar primeira subposição
-            </button>
-          </div>
-        ) : (
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
-            {subpositions.map((item) => (
-              <div key={item.location.id} className="rounded-xl border border-gray-200 bg-white px-3 py-3 shadow-xs">
-                <div className="flex items-center gap-2">
-                  <span className="grid h-8 w-8 place-items-center rounded-lg bg-blue-50 text-[#00288e]">
-                    <Archive className="h-4 w-4" />
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_400px]">
+        <section className="min-w-0 rounded-2xl border border-blue-100/80 bg-white/75 p-5 shadow-sm backdrop-blur-md">
+          <div>
+            <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.16em] text-gray-400">2 · Locais</p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <h3 className="text-base font-black text-[#00288e]">
+                {selectedDepot ? selectedDepot.name : 'Selecione um depósito'}
+              </h3>
+              {selectedDepot && (
+                <>
+                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#00288e]">
+                    {localItems.length} locais
                   </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-black text-gray-800">{item.location.name}</p>
-                    <p className="mt-0.5 truncate font-mono text-[9px] font-bold text-gray-400">{item.location.code}</p>
-                  </div>
+                  <button type="button" onClick={() => openPanel('editDepot')} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-black text-gray-600 transition hover:border-blue-200 hover:text-[#00288e]">
+                    <Pencil className="h-3 w-3" />
+                    Editar depósito
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {!selectedDepot ? (
+            <div className="mt-4 rounded-2xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
+              Selecione um depósito acima para visualizar seus locais.
+            </div>
+          ) : localItems.length === 0 ? (
+            <div className="mt-4 rounded-2xl border border-dashed border-blue-200 bg-blue-50/40 p-8 text-center">
+              <MapPin className="mx-auto h-7 w-7 text-blue-300" />
+              <p className="mt-3 text-sm font-black text-gray-700">Este depósito ainda não possui locais</p>
+              <button type="button" onClick={() => openPanel('location')} className="mt-3 text-xs font-black text-[#00288e] hover:underline">
+                Criar primeiro local
+              </button>
+            </div>
+          ) : (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3">
+              {localItems.map((item) => {
+                const count = state.locations.filter(
+                  (candidate) =>
+                    candidate.location.kind === 'SUBPOSITION'
+                    && candidate.location.status === 'active'
+                    && candidate.location.parentLocationId === item.location.id
+                ).length;
+                const active = item.location.id === selectedLocationId;
+
+                return (
                   <button
                     type="button"
-                    onClick={() => openSubpositionEdit(item.location.id)}
-                    className="ml-auto grid h-7 w-7 place-items-center rounded-lg border border-gray-200 bg-white text-gray-400 transition hover:border-blue-200 hover:text-[#00288e]"
-                    aria-label={'Editar ' + item.location.name}
+                    key={item.location.id}
+                    onClick={() => setSelectedLocationId(item.location.id)}
+                    className={
+                      active
+                        ? 'rounded-2xl border border-blue-300 bg-blue-50 p-4 text-left shadow-sm ring-2 ring-[#00288e]/10'
+                        : 'rounded-2xl border border-gray-200 bg-white p-4 text-left transition hover:border-blue-200 hover:bg-blue-50/40 hover:shadow-sm'
+                    }
                   >
-                    <Pencil className="h-3 w-3" />
+                    <div className="flex items-start justify-between gap-3">
+                      <div className={active ? 'grid h-10 w-10 place-items-center rounded-xl bg-[#00288e] text-white' : 'grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-[#00288e]'}>
+                        {locationIcon(item.location.name, item.location.code)}
+                      </div>
+                      <span className="rounded-md bg-gray-100 px-2 py-0.5 font-mono text-[9px] font-black text-gray-500">
+                        {item.location.code}
+                      </span>
+                    </div>
+                    <p className="mt-3 truncate text-sm font-black text-gray-900">{item.location.name}</p>
+                    <p className="mt-1 text-[10px] font-bold text-gray-400">
+                      {count === 1 ? '1 subposição' : count + ' subposições'}
+                    </p>
                   </button>
-                </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <aside className="xl:sticky xl:top-24">
+          <section className="rounded-2xl border border-blue-100/80 bg-white/95 p-5 shadow-md backdrop-blur-md">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.16em] text-gray-400">Detalhamento do local</p>
+                <h3 className="mt-1 truncate text-base font-black text-[#00288e]">
+                  {selectedLocation ? selectedLocation.name : 'Selecione um local'}
+                </h3>
+                {selectedLocation && (
+                  <p className="mt-1 font-mono text-[10px] font-bold text-gray-400">{selectedLocation.code}</p>
+                )}
               </div>
-            ))}
-          </div>
-        )}
+              {selectedLocation && (
+                <button
+                  type="button"
+                  onClick={() => openPanel('editLocation')}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-black text-gray-600 transition hover:border-blue-200 hover:text-[#00288e]"
+                >
+                  <Pencil className="h-3 w-3" />
+                  Editar
+                </button>
+              )}
+            </div>
+
+            {selectedLocation && (
+              <div className="mt-3 flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50/60 px-3 py-2">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Subposições</span>
+                <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-[#00288e] shadow-xs">
+                  {subpositions.length}
+                </span>
+              </div>
+            )}
+
+            {!selectedLocation ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-gray-200 p-6 text-center">
+                <MapPin className="mx-auto h-7 w-7 text-gray-300" />
+                <p className="mt-3 text-sm font-black text-gray-700">Nenhum local selecionado</p>
+                <p className="mt-1 text-xs leading-5 text-gray-500">
+                  Selecione um Local à esquerda. O detalhamento permanecerá visível aqui enquanto você percorre a lista.
+                </p>
+              </div>
+            ) : subpositions.length === 0 ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-blue-200 bg-blue-50/40 p-6 text-center">
+                <Archive className="mx-auto h-7 w-7 text-blue-300" />
+                <p className="mt-3 text-sm font-black text-gray-700">Nenhuma subposição cadastrada</p>
+                <p className="mt-1 text-xs text-gray-500">Prateleiras, níveis e nichos aparecerão aqui.</p>
+                <button
+                  type="button"
+                  onClick={() => openPanel('subposition')}
+                  className="mt-3 inline-flex items-center gap-1 text-xs font-black text-[#00288e] hover:underline"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Criar subposição
+                </button>
+              </div>
+            ) : (
+              <div className="mt-4 max-h-[calc(100vh-14rem)] space-y-2 overflow-y-auto pr-1">
+                {subpositions.map((item) => (
+                  <div key={item.location.id} className="rounded-xl border border-gray-200 bg-white px-3 py-3 shadow-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-blue-50 text-[#00288e]">
+                        <Archive className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-black text-gray-800">{item.location.name}</p>
+                        <p className="mt-0.5 truncate font-mono text-[9px] font-bold text-gray-400">{item.location.code}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => openSubpositionEdit(item.location.id)}
+                        className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-gray-200 bg-white text-gray-400 transition hover:border-blue-200 hover:text-[#00288e]"
+                        aria-label={'Editar ' + item.location.name}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </aside>
+      </div>
+
       </section>
 
       </div>
