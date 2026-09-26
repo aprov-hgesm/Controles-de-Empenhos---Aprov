@@ -2722,7 +2722,7 @@ service cloud.firestore {
         );
     }
 
-    function validWarehouseMovementSource(workspaceId, type, source) {
+    function validWarehouseMovementSource(type, source) {
       return (
           source == null
           && type != 'TRANSFER'
@@ -3682,7 +3682,6 @@ service cloud.firestore {
             request.resource.data.source
           )
           || validWarehouseMovementSource(
-            workspaceId,
             request.resource.data.type,
             request.resource.data.source
           )
@@ -3756,30 +3755,6 @@ service cloud.firestore {
         );
     }
 
-    function warehouseBalanceWriteBackedByNewMovement(workspaceId, materialId) {
-      let movementId = request.resource.data.lastMovementId;
-      let movementPath = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId);
-      let balancePath = /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId);
-      let balanceExists = exists(balancePath);
-      let movement = getAfter(movementPath).data;
-      return !exists(movementPath)
-        && existsAfter(movementPath)
-        && movement.schemaVersion == 'warehouse_movement_v1'
-        && movement.workspaceId == workspaceId
-        && movement.ug == request.resource.data.ug
-        && movement.materialId == materialId
-        && (
-          (!balanceExists
-            && request.resource.data.revision == 1
-            && request.resource.data.quantity == movement.quantityDelta)
-          || (balanceExists
-            && request.resource.data.revision == resource.data.revision + 1
-            && request.resource.data.quantity == resource.data.quantity + movement.quantityDelta
-            && request.resource.data.workspaceId == resource.data.workspaceId
-            && request.resource.data.ug == resource.data.ug
-            && request.resource.data.materialId == resource.data.materialId)
-        );
-    }
 
     function validWarehouseExpressOutboundBalanceUpdate(workspaceId, materialId, movement) {
       return request.resource.data is map
@@ -5048,10 +5023,6 @@ service cloud.firestore {
       }
     }
 
-    function invoiceLockMatchesAfter(workspaceId, id, data) {
-      return canonicalInvoiceLockMatchesAfter(workspaceId, id, data)
-        || legacyInvoiceLockMatchesAfter(workspaceId, id, data);
-    }
 
     // a platform administrator cannot read another sector's operational records.
     // Workspace-scoped operational data.
