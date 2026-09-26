@@ -2593,6 +2593,13 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      // ADM-R1.1 — projeção física somente leitura para a prévia 2.5D.
+      // Continua sem autoridade de escrita sobre estoque/ledger.
+      match /locationBalances/{balanceId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create, update, delete: if false;
+      }
+
       // ADM-R1 — croqui versionado sem autoridade sobre estoque.
       match /layouts/{layoutId} {
         allow read: if canAccessWarehouseModule(workspaceId);
