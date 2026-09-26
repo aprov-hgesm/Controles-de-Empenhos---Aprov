@@ -19,6 +19,22 @@ import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
 
 type EditorView = 'top' | 'perspective';
 type InteractionMode = 'select' | 'pan';
+type PreviewAngle = 'front' | 'right' | 'back' | 'left' | 'iso-front' | 'iso-back';
+
+const PREVIEW_ANGLES: ReadonlyArray<{
+  id: PreviewAngle;
+  label: string;
+  rotation: number;
+  depthX: number;
+  depthY: number;
+}> = [
+  { id: 'front', label: 'Frente', rotation: 0, depthX: 0.12, depthY: 0.58 },
+  { id: 'right', label: 'Direita', rotation: 90, depthX: -0.58, depthY: 0.12 },
+  { id: 'back', label: 'Trás', rotation: 180, depthX: -0.12, depthY: -0.58 },
+  { id: 'left', label: 'Esquerda', rotation: -90, depthX: 0.58, depthY: -0.12 },
+  { id: 'iso-front', label: 'Iso frontal', rotation: -28, depthX: 0.48, depthY: 0.42 },
+  { id: 'iso-back', label: 'Iso traseira', rotation: 152, depthX: -0.48, depthY: -0.42 },
+];
 
 const GRID_SIZE = 20;
 const MIN_SIZE = 20;
@@ -45,13 +61,46 @@ function isTextInput(target: EventTarget | null): boolean {
     || (target instanceof HTMLElement && target.isContentEditable);
 }
 
-function perspectiveStyle(object: WarehouseDepotLayoutObject, logicalHeight: number) {
+function previewAngleDefinition(angle: PreviewAngle) {
+  return PREVIEW_ANGLES.find((item) => item.id === angle) || PREVIEW_ANGLES[4];
+}
+
+function perspectiveStyle(
+  object: WarehouseDepotLayoutObject,
+  logicalHeight: number,
+  angle: PreviewAngle
+) {
   const depth = Math.max(5, Math.min(18, object.elevation * 4 + 6));
-  const yLift = ((logicalHeight - object.y) / logicalHeight) * 4;
+  const preset = previewAngleDefinition(angle);
+  const verticalBias = ((logicalHeight - object.y) / logicalHeight) * 1.5;
+  const shadowX = depth * preset.depthX;
+  const shadowY = depth * preset.depthY + verticalBias * Math.sign(preset.depthY || 1);
+
   return {
-    transform: `rotate(${object.rotation}deg) translate(${depth * 0.35}px, ${-depth * 0.28 - yLift}px)`,
-    boxShadow: `${depth * 0.45}px ${depth * 0.55}px 0 rgba(15,23,42,0.42), 0 10px 24px rgba(2,8,23,0.18)`,
+    transform: `rotate(${object.rotation + preset.rotation}deg) translate(${shadowX * 0.58}px, ${shadowY * 0.58}px)`,
+    boxShadow: `${shadowX}px ${shadowY}px 0 rgba(15,23,42,0.42), 0 10px 24px rgba(2,8,23,0.18)`,
   };
+}
+
+function previewDepthScore(object: WarehouseDepotLayoutObject, angle: PreviewAngle): number {
+  const centerX = object.x + object.width / 2;
+  const centerY = object.y + object.height / 2;
+
+  switch (angle) {
+    case 'front':
+      return centerY;
+    case 'back':
+      return -centerY;
+    case 'right':
+      return centerX;
+    case 'left':
+      return -centerX;
+    case 'iso-back':
+      return -(centerX + centerY);
+    case 'iso-front':
+    default:
+      return centerX + centerY;
+  }
 }
 
 export function WarehouseDepotLayoutEditor({
@@ -96,6 +145,7 @@ export function WarehouseDepotLayoutEditor({
   }>(null);
   const copiedRef = useRef<WarehouseDepotLayoutObject | null>(null);
   const [view, setView] = useState<EditorView>('top');
+  const [previewAngle, setPreviewAngle] = useState<PreviewAngle>('iso-front');
   const [mode, setMode] = useState<InteractionMode>('select');
   const [showGrid, setShowGrid] = useState(true);
   const [snapEnabled, setSnapEnabled] = useState(true);
@@ -106,6 +156,7 @@ export function WarehouseDepotLayoutEditor({
     interactionRef.current = null;
     copiedRef.current = null;
     setView('top');
+    setPreviewAngle('iso-front');
     setMode('select');
     setZoom(1);
     setPan({ x: 0, y: 0 });
@@ -280,9 +331,36 @@ export function WarehouseDepotLayoutEditor({
         </div>
       </div>
 
+      {view === 'perspective' && (
+        <div
+          className="flex min-w-0 flex-wrap items-center gap-1.5 border-b border-white/[0.07] bg-blue-400/[0.025] px-3 py-2"
+          data-testid="warehouse-preview-angle-toolbar"
+        >
+          <span className="mr-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-500">
+            Ângulo
+          </span>
+          {PREVIEW_ANGLES.map((angle) => (
+            <button
+              key={angle.id}
+              type="button"
+              onClick={() => setPreviewAngle(angle.id)}
+              aria-pressed={previewAngle === angle.id}
+              data-testid={'warehouse-preview-angle-' + angle.id}
+              className="rounded-lg border border-white/[0.07] px-2.5 py-1.5 text-[9px] font-bold text-slate-400 transition hover:bg-white/[0.05] hover:text-slate-200 aria-pressed:border-blue-300/20 aria-pressed:bg-blue-400/10 aria-pressed:text-blue-100"
+            >
+              {angle.label}
+            </button>
+          ))}
+          <span className="ml-auto text-[9px] text-slate-600">
+            Prévia somente para inspeção · edição permanece na vista superior
+          </span>
+        </div>
+      )}
+
       <div
         ref={viewportRef}
         data-testid="warehouse-croqui-editor-viewport"
+        data-preview-angle={view === 'perspective' ? previewAngle : 'top'}
         className={`relative h-[clamp(440px,62vh,720px)] min-h-[440px] max-w-full overflow-hidden ${mode === 'pan' ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
         onPointerDown={(event) => {
           if (mode !== 'pan') {
@@ -350,9 +428,15 @@ export function WarehouseDepotLayoutEditor({
             transformStyle: 'preserve-3d',
           }}
         >
-          {objects.slice().sort((a, b) => a.layer - b.layer).map((object) => {
+          {objects.slice().sort((a, b) => {
+            if (view !== 'perspective') return a.layer - b.layer;
+            return previewDepthScore(a, previewAngle) - previewDepthScore(b, previewAngle)
+              || a.layer - b.layer;
+          }).map((object, previewIndex) => {
             const active = object.id === selectedObjectId;
-            const style25d = view === 'perspective' ? perspectiveStyle(object, logicalHeight) : {};
+            const style25d = view === 'perspective'
+              ? perspectiveStyle(object, logicalHeight, previewAngle)
+              : {};
             return (
               <div
                 key={object.id}
@@ -363,7 +447,7 @@ export function WarehouseDepotLayoutEditor({
                   top: object.y,
                   width: object.width,
                   height: object.height,
-                  zIndex: object.layer + 20,
+                  zIndex: view === 'perspective' ? previewIndex + 20 : object.layer + 20,
                   transformOrigin: 'center',
                   ...(view === 'top' ? { transform: `rotate(${object.rotation}deg)` } : style25d),
                 }}
@@ -404,7 +488,7 @@ export function WarehouseDepotLayoutEditor({
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.07] bg-white/[0.02] px-3 py-2">
         <p className="text-[9px] text-slate-600">
-          Edição local · grade {showGrid ? 'visível' : 'oculta'} · snap {snapEnabled ? 'ativo' : 'livre'} · nenhum movimento grava no Firestore
+          Edição local · grade {showGrid ? 'visível' : 'oculta'} · snap {snapEnabled ? 'ativo' : 'livre'}{view === 'perspective' ? ' · ângulo ' + previewAngleDefinition(previewAngle).label : ''} · nenhum movimento grava no Firestore
         </p>
         <div className="flex items-center gap-1">
           <button type="button" disabled={!selected} onClick={duplicateSelected} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[9px] font-bold text-slate-400 hover:bg-white/[0.05] disabled:opacity-30"><Copy className="h-3 w-3" /> Duplicar</button>
