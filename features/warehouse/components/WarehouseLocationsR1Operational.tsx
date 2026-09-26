@@ -210,7 +210,7 @@ export function WarehouseLocationsR1Operational({
     }
 
     if (panel === 'editLocation' && selectedLocation) {
-      setEditingLocationId(editingLocation.id);
+      setEditingLocationId(selectedLocation.id);
       setLocationCode(selectedLocation.code);
       setLocationName(selectedLocation.name);
       setLocationDescription(selectedLocation.description || '');
