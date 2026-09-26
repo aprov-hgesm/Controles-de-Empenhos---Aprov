@@ -132,6 +132,8 @@ async function main() {
       code: 'DEP-R1',
       name: 'Depósito ADM-R1',
       description: null,
+      visualType: 'CONTAINER',
+      sizeProfile: 'MEDIUM',
       status: 'active',
       createdBy: founder.user.uid,
       updatedBy: founder.user.uid,
