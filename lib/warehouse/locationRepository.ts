@@ -45,6 +45,8 @@ import {
   warehouseStockPositionKey,
   warehouseStockPositionsEqual,
   type WarehouseDepot,
+  type WarehouseDepotSizeProfile,
+  type WarehouseDepotVisualType,
   type WarehouseEntityStatus,
   type WarehouseLocation,
   type WarehouseLocationBalance,
@@ -75,11 +77,15 @@ export interface CreateWarehouseDepotInput {
   code: string;
   name: string;
   description?: string | null;
+  visualType?: WarehouseDepotVisualType;
+  sizeProfile?: WarehouseDepotSizeProfile;
 }
 
 export interface UpdateWarehouseDepotInput {
   name?: string;
   description?: string | null;
+  visualType?: WarehouseDepotVisualType;
+  sizeProfile?: WarehouseDepotSizeProfile;
   status?: WarehouseEntityStatus;
 }
 
@@ -149,6 +155,8 @@ function parseDepot(workspaceId: string, id: string, data: Record<string, unknow
       code: data.code,
       name: data.name,
       description: data.description ?? null,
+      visualType: data.visualType ?? 'STANDARD',
+      sizeProfile: data.sizeProfile ?? 'MEDIUM',
       status: data.status,
       createdBy: data.createdBy,
       updatedBy: data.updatedBy,
@@ -331,6 +339,8 @@ export async function createWarehouseDepot(
     code: input.code,
     name: input.name,
     description: input.description ?? null,
+    visualType: input.visualType ?? 'STANDARD',
+    sizeProfile: input.sizeProfile ?? 'MEDIUM',
     status: 'active',
     createdBy: scope.uid,
     updatedBy: scope.uid,
@@ -368,6 +378,8 @@ export async function updateWarehouseDepot(
     ...current,
     name: input.name ?? current.name,
     description: input.description === undefined ? current.description : input.description,
+    visualType: input.visualType ?? current.visualType,
+    sizeProfile: input.sizeProfile ?? current.sizeProfile,
     status: input.status ?? current.status,
     updatedBy: scope.uid,
   }, { expectedWorkspaceId: scope.workspaceId, expectedUg: scope.ug });
@@ -376,6 +388,8 @@ export async function updateWarehouseDepot(
   await updateDoc(doc(db, path), {
     name: candidate.data.name,
     description: candidate.data.description,
+    visualType: candidate.data.visualType,
+    sizeProfile: candidate.data.sizeProfile,
     status: candidate.data.status,
     updatedBy: scope.uid,
     updatedAt: serverTimestamp(),
