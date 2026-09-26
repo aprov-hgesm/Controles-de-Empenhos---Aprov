@@ -124,11 +124,11 @@ service cloud.firestore {
       return request.resource.data is map
         && request.resource.data.keys().hasOnly([
           'schemaVersion', 'id', 'workspaceId', 'ug', 'code', 'name',
-          'description', 'status', 'createdBy', 'updatedBy', 'createdAt', 'updatedAt'
+          'description', 'visualType', 'sizeProfile', 'status', 'createdBy', 'updatedBy', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.keys().hasAll([
           'schemaVersion', 'id', 'workspaceId', 'ug', 'code', 'name',
-          'description', 'status', 'createdBy', 'updatedBy', 'createdAt', 'updatedAt'
+          'description', 'visualType', 'sizeProfile', 'status', 'createdBy', 'updatedBy', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.schemaVersion == 'warehouse_depot_v1'
         && request.resource.data.id == depotId
@@ -140,6 +140,8 @@ service cloud.firestore {
         && request.resource.data.name.size() >= 2
         && request.resource.data.name.size() <= 120
         && validWarehouseOptionalDescription(request.resource.data.description)
+        && request.resource.data.visualType in ['STANDARD', 'CONTAINER', 'COLD_CONTAINER']
+        && request.resource.data.sizeProfile in ['SMALL', 'MEDIUM', 'LARGE']
         && request.resource.data.status in ['active', 'inactive']
         && request.resource.data.createdBy is string
         && request.resource.data.createdBy.size() > 0
@@ -168,7 +170,7 @@ service cloud.firestore {
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.updatedAt == request.time
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'name', 'description', 'status', 'updatedBy', 'updatedAt'
+          'name', 'description', 'visualType', 'sizeProfile', 'status', 'updatedBy', 'updatedAt'
         ]);
     }
 
