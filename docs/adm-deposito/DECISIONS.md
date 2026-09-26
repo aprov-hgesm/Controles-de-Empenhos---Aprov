@@ -1867,3 +1867,15 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - A leitura de materiais/saldos da prévia é feita sob demanda ao entrar no modo 2.5D, evitando listener global e leituras contínuas.
 - Se o domínio de saldo estiver indisponível por regra/permissão na release modular, a prévia estrutural continua utilizável sem inventar ocupação.
 - A prévia não escreve estoque, saldos, lotes, movimentos ou ledger.
+
+
+## D-090 — Prévia 2.5D usa renderer isométrico real e leitura limitada de locationBalances
+
+- A primeira versão visual baseada em cartões inclinados foi rejeitada por não representar adequadamente a essência de um depósito isométrico.
+- A prévia 2.5D passa a usar renderer SVG isométrico dedicado, com piso em losango, paredes, profundidade, faces laterais/superiores e representação específica para estantes/racks, paletes e equipamentos refrigerados.
+- Estantes/racks usam montantes e níveis visuais; paletes usam geometria baixa; equipamentos frios usam volumes fechados claros.
+- Caixas continuam simbólicas e aparecem somente quando existe saldo físico positivo.
+- Para suportar ocupação real sem reativar o domínio avançado de escrita, `warehouse/{workspaceId}/locationBalances/{balanceId}` passa a ter leitura founder-only pelo mesmo gate `canAccessWarehouseModule`.
+- Escritas em `locationBalances` permanecem explicitamente negadas nesta release modular.
+- Usuários externos continuam sem leitura dos saldos físicos do ADM.
+- Os demais domínios avançados permanecem desligados.
