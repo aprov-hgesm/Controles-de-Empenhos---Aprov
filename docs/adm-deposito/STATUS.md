@@ -2286,3 +2286,28 @@ Próximo passo somente mediante decisão explícita do fundador:
 1. preparar integração consolidada na `main` conforme D-072;
 2. validar o Browser E2E/uso real do Croqui na `main` com o fundador;
 3. somente após essa validação, decidir publicação em produção.
+
+
+## PUBLICAÇÃO MODULAR DO ADM DEPÓSITO — INICIADA EM 2026-09-26
+
+Motivação:
+- a arquitetura funcional completa foi preservada;
+- a tentativa de publicação integral das Firestore Rules revelou excesso de complexidade operacional no bloco warehouse, incluindo estouro do orçamento de expressões em fluxos integrados;
+- não há decisão de reconstruir o domínio do zero.
+
+Baseline congelada:
+- branch: `archive/adm-deposito-full-2026-09`;
+- commit: `5b7e6cdad09381ac6e0c6c62c4934e18357e6347`.
+
+Branch ativa de modularização:
+- `feat/adm-deposito-modular-release`.
+
+Plano oficial:
+- `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
+
+Estado:
+- ADM-R1: **INICIADA**;
+- R2–R5: **BLOQUEADAS até validação real da R1**;
+- acesso externo: **NÃO AUTORIZADO**;
+- estética nova: **PAUSADA**;
+- prioridade: compilação/publicação das Rules mínimas e operação real da fundação independente.
