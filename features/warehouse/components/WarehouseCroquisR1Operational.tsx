@@ -429,10 +429,12 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       return copy;
     }
 
-    const sourceCode = persistedSource?.code || pendingSource.code;
-    const sourceName = persistedSource?.name || pendingSource.name;
-    const sourceDescription = persistedSource?.description ?? pendingSource.description;
-    const sourceLocationId = persistedSource?.id || pendingSource.sourceLocationId;
+    const sourceCode = persistedSource?.code || pendingSource!.code;
+    const sourceName = persistedSource?.name || pendingSource!.name;
+    const sourceDescription = persistedSource
+      ? persistedSource.description
+      : pendingSource?.description ?? null;
+    const sourceLocationId = persistedSource?.id || pendingSource!.sourceLocationId;
 
     const usedCodes = new Set(
       locations
