@@ -3,14 +3,13 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const outDir = mkdtempSync(resolve(tmpdir(), 'emprovex-labels-r1-'));
+const outDir = mkdtempSync(resolve(root, '.tmp-emprovex-labels-r1-'));
 
 execFileSync(
   process.execPath,
