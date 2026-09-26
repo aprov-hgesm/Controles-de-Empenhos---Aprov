@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Map, MapPin } from 'lucide-react';
 
+import { WarehouseCroquisR1Operational } from './WarehouseCroquisR1Operational';
 import { WarehouseLocationsR1Operational } from './WarehouseLocationsR1Operational';
 
 type DepotTab = 'structure' | 'layout';
@@ -40,15 +41,7 @@ export function WarehouseDepotsOperational({ workspaceId }: { workspaceId: strin
 
       {tab === 'structure'
         ? <WarehouseLocationsR1Operational workspaceId={workspaceId} />
-        : (
-            <div className="rounded-2xl border border-amber-300/10 bg-amber-400/[0.035] p-5 text-sm text-slate-300">
-              <p className="font-black text-amber-100">Croquis preservados, temporariamente isolados na ADM-R1</p>
-              <p className="mt-2 leading-6 text-slate-500">
-                O editor completo permanece no código, mas sua tela ainda consulta saldos físicos e lotes.
-                Ele será reativado após receber uma leitura R1 independente de operações de estoque.
-              </p>
-            </div>
-          )}
+        : <WarehouseCroquisR1Operational workspaceId={workspaceId} />}
     </div>
   );
 }
