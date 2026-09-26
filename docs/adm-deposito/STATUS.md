@@ -2367,3 +2367,17 @@ Commits:
 - `ba9cd5c49a44b7b81778b7317b3db693fb24fc16` — renderer isométrico;
 - `08523406e52848f35cac3e460a43e17420952bbf` — leitura segura de locationBalances;
 - `ae275e0e76a61601694f6a310afad6ea3b933997` — teste de segurança atualizado.
+
+
+### Catálogo visual fixo — cinco elementos — 2026-09-26
+
+Decisão aplicada na branch `feat/adm-deposito-modular-release`:
+- seleção de tipo visual do croqui limitada a **Estante, Palete, Freezer, Geladeira industrial e Mesa**;
+- aliases legados são normalizados para um desses cinco tipos;
+- dimensões continuam livres dentro dos limites do croqui;
+- Subposições continuam variáveis;
+- porta permanece estrutural e fora do catálogo de Locais;
+- objetivo: manter uma linguagem 2.5D uniforme para todos os usuários e concentrar o refinamento estético em cinco modelos profissionais.
+
+Commit funcional:
+- `ca7417505061839370b20efacdb079277b859866`.
