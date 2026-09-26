@@ -12,7 +12,6 @@ import {
   Plus,
   RefreshCw,
   Snowflake,
-  Trash2,
   Warehouse,
   X,
 } from 'lucide-react';
@@ -104,6 +103,7 @@ export function WarehouseLocationsR1Operational({
 
   const [selectedDepotId, setSelectedDepotId] = useState('');
   const [selectedLocationId, setSelectedLocationId] = useState('');
+  const [editingLocationId, setEditingLocationId] = useState('');
 
   const [depotCode, setDepotCode] = useState('');
   const [depotName, setDepotName] = useState('');
@@ -164,6 +164,11 @@ export function WarehouseLocationsR1Operational({
     [localItems, selectedLocationId]
   );
 
+  const editingLocation = useMemo(
+    () => state.locations.find((item) => item.location.id === editingLocationId)?.location ?? null,
+    [editingLocationId, state.locations]
+  );
+
   const subpositions = useMemo(
     () =>
       state.locations.filter(
@@ -204,7 +209,8 @@ export function WarehouseLocationsR1Operational({
       return;
     }
 
-    if ((panel === 'editLocation' || panel === 'editSubposition') && selectedLocation) {
+    if (panel === 'editLocation' && selectedLocation) {
+      setEditingLocationId(editingLocation.id);
       setLocationCode(selectedLocation.code);
       setLocationName(selectedLocation.name);
       setLocationDescription(selectedLocation.description || '');
@@ -340,18 +346,18 @@ export function WarehouseLocationsR1Operational({
 
   async function saveLocationEdits(event: FormEvent) {
     event.preventDefault();
-    if (!selectedLocation) return;
+    if (!editingLocation) return;
 
     setWorking(true);
     setMessage(null);
     try {
-      await updateWarehouseLocation(workspaceId, selectedLocation.id, {
+      await updateWarehouseLocation(workspaceId, editingLocation.id, {
         code: locationCode,
         name: locationName,
         description: locationDescription || null,
       });
       setCreatePanel(null);
-      setMessage(selectedLocation.kind === 'LOCAL' ? 'Local atualizado com sucesso.' : 'Subposição atualizada com sucesso.');
+      setMessage(editingLocation.kind === 'LOCAL' ? 'Local atualizado com sucesso.' : 'Subposição atualizada com sucesso.');
       await refresh();
     } catch (error) {
       setMessage(messageFromError(error));
@@ -361,13 +367,13 @@ export function WarehouseLocationsR1Operational({
   }
 
   async function archiveSelectedLocation() {
-    if (!selectedLocation) return;
+    if (!editingLocation) return;
 
-    if (selectedLocation.kind === 'LOCAL') {
+    if (editingLocation.kind === 'LOCAL') {
       const children = state.locations.filter(
         (item) =>
           item.location.kind === 'SUBPOSITION'
-          && item.location.parentLocationId === selectedLocation.id
+          && item.location.parentLocationId === editingLocation.id
           && item.location.status === 'active'
       );
       if (children.length > 0) {
@@ -376,12 +382,12 @@ export function WarehouseLocationsR1Operational({
       }
     }
 
-    const label = selectedLocation.kind === 'LOCAL' ? 'Local' : 'Subposição';
+    const label = editingLocation.kind === 'LOCAL' ? 'Local' : 'Subposição';
     if (!window.confirm('Excluir ' + label.toLowerCase() + ' da operação? O registro histórico será preservado como inativo.')) return;
 
     setWorking(true);
     try {
-      await updateWarehouseLocation(workspaceId, selectedLocation.id, { status: 'inactive' });
+      await updateWarehouseLocation(workspaceId, editingLocation.id, { status: 'inactive' });
       setCreatePanel(null);
       setSelectedLocationId('');
       setMessage(label + ' excluído(a) da operação e preservado(a) no histórico.');
@@ -391,6 +397,17 @@ export function WarehouseLocationsR1Operational({
     } finally {
       setWorking(false);
     }
+  }
+
+  function openSubpositionEdit(locationId: string) {
+    const target = state.locations.find((item) => item.location.id === locationId)?.location;
+    if (!target || target.kind !== 'SUBPOSITION') return;
+    setEditingLocationId(target.id);
+    setLocationCode(target.code);
+    setLocationName(target.name);
+    setLocationDescription(target.description || '');
+    setMessage(null);
+    setCreatePanel('editSubposition');
   }
 
   const fieldClass =
@@ -783,10 +800,7 @@ export function WarehouseLocationsR1Operational({
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      setSelectedLocationId(item.location.id);
-                      openPanel('editSubposition');
-                    }}
+                    onClick={() => openSubpositionEdit(item.location.id)}
                     className="ml-auto grid h-7 w-7 place-items-center rounded-lg border border-gray-200 bg-white text-gray-400 transition hover:border-blue-200 hover:text-[#00288e]"
                     aria-label={'Editar ' + item.location.name}
                   >
