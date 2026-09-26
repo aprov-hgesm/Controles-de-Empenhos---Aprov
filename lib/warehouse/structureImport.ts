@@ -15,6 +15,9 @@ export interface WarehouseStructureImportLocal {
   name: string;
   kind: 'LOCAL';
   description: string | null;
+  visualType?: string | null;
+  widthCm?: number | null;
+  depthCm?: number | null;
   children: WarehouseStructureImportSubposition[];
 }
 
@@ -30,6 +33,9 @@ export interface WarehouseStructureImportPayload {
     code: string;
     name: string;
     description: string | null;
+    widthCm?: number | null;
+    lengthCm?: number | null;
+    doors?: Array<{ widthCm: number | null }>;
   };
   locations: WarehouseStructureImportLocal[];
   summary: WarehouseStructureDeclaredSummary;
@@ -65,6 +71,14 @@ function code(value: unknown, field: string): string {
   return normalized;
 }
 
+function optionalPositiveNumber(value: unknown, field: string): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    throw new Error('Medida inválida: ' + field);
+  }
+  return Math.round(value * 100) / 100;
+}
+
 function nonNegativeInteger(value: unknown, field: string): number {
   if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
     throw new Error('Resumo inválido: ' + field);
@@ -90,10 +104,21 @@ export function parseWarehouseStructureImport(raw: string): WarehouseStructureIm
   if (!Array.isArray(parsed.locations)) throw new Error('O JSON precisa conter locations.');
   if (!isRecord(parsed.summary)) throw new Error('O JSON precisa conter summary.');
 
+  const rawDoors = parsed.depot.doors ?? [];
+  if (!Array.isArray(rawDoors)) throw new Error('Campo inválido: depot.doors');
+
   const depot = {
     code: code(parsed.depot.code, 'depot.code'),
     name: text(parsed.depot.name, 'depot.name'),
     description: description(parsed.depot.description, 'depot.description'),
+    widthCm: optionalPositiveNumber(parsed.depot.widthCm, 'depot.widthCm'),
+    lengthCm: optionalPositiveNumber(parsed.depot.lengthCm, 'depot.lengthCm'),
+    doors: rawDoors.map((door, index) => {
+      if (!isRecord(door)) throw new Error('Porta inválida na posição ' + (index + 1));
+      return {
+        widthCm: optionalPositiveNumber(door.widthCm, 'depot.doors[' + index + '].widthCm'),
+      };
+    }),
   };
 
   const localCodes = new Set<string>();
@@ -140,6 +165,11 @@ export function parseWarehouseStructureImport(raw: string): WarehouseStructureIm
       name: text(item.name, 'location.name'),
       kind: 'LOCAL' as const,
       description: description(item.description, 'location.description'),
+      visualType: item.visualType === null || item.visualType === undefined || item.visualType === ''
+        ? null
+        : text(item.visualType, 'location.visualType', 40),
+      widthCm: optionalPositiveNumber(item.widthCm, 'location.widthCm'),
+      depthCm: optionalPositiveNumber(item.depthCm, 'location.depthCm'),
       children,
     };
   });
@@ -216,27 +246,70 @@ export function buildWarehouseStructureAiPrompt(userDescription: string): string
     '11. Antes de responder, confira matematicamente todas as quantidades descritas pelo usuário.',
     '12. Inclua summary com locals, subpositions e total. Esses números DEVEM ser exatamente iguais à estrutura expandida no próprio JSON.',
     '13. Se houver múltiplos grupos da mesma estrutura, some corretamente todos os grupos e não omita o último item da sequência.',
+    '14. Medidas físicas são OPCIONAIS. Nunca rejeite nem invente uma medida ausente.',
+    '15. Se o usuário informar medidas do depósito, use depot.widthCm e depot.lengthCm em centímetros; se não informar, use null.',
+    '16. Se o usuário informar portas, liste depot.doors com widthCm; se não houver informação de portas, use [].',
+    '17. Se o usuário informar medidas de um Local, use widthCm e depthCm em centímetros; se não informar, use null.',
+    '18. Quando a descrição indicar claramente o tipo visual do Local, use visualType com valores descritivos curtos como SHELF, FREEZER, PALLET, RACK, CABINET, CHAMBER ou OTHER; se não estiver claro, use null.',
+    '19. Não transforme ausência de medidas em erro: o EMPROVEX permitirá completar ou ajustar essas informações posteriormente.',
     '',
     'FORMATO EXATO:',
     JSON.stringify({
       version: WAREHOUSE_STRUCTURE_IMPORT_VERSION,
-      depot: { code: 'DEP-01', name: 'Depósito Principal', description: null },
-      locations: [{
-        code: 'EST-01',
-        name: 'Estante 01',
-        kind: 'LOCAL',
+      depot: {
+        code: 'DEP-01',
+        name: 'Depósito Principal',
         description: null,
-        children: [{
-          code: 'EST-01-PRAT-01',
-          name: 'Prateleira 01',
-          kind: 'SUBPOSITION',
+        widthCm: 500,
+        lengthCm: 500,
+        doors: [{ widthCm: 100 }],
+      },
+      locations: [
+        {
+          code: 'EST-01',
+          name: 'Estante 01',
+          kind: 'LOCAL',
           description: null,
-        }],
-      }],
+          visualType: 'SHELF',
+          widthCm: 120,
+          depthCm: 40,
+          children: [
+            { code: 'EST-01-PRAT-01', name: 'Prateleira 01', kind: 'SUBPOSITION', description: null },
+            { code: 'EST-01-PRAT-02', name: 'Prateleira 02', kind: 'SUBPOSITION', description: null },
+            { code: 'EST-01-PRAT-03', name: 'Prateleira 03', kind: 'SUBPOSITION', description: null },
+            { code: 'EST-01-PRAT-04', name: 'Prateleira 04', kind: 'SUBPOSITION', description: null },
+          ],
+        },
+        {
+          code: 'EST-02',
+          name: 'Estante 02',
+          kind: 'LOCAL',
+          description: null,
+          visualType: 'SHELF',
+          widthCm: 120,
+          depthCm: 40,
+          children: [
+            { code: 'EST-02-PRAT-01', name: 'Prateleira 01', kind: 'SUBPOSITION', description: null },
+            { code: 'EST-02-PRAT-02', name: 'Prateleira 02', kind: 'SUBPOSITION', description: null },
+            { code: 'EST-02-PRAT-03', name: 'Prateleira 03', kind: 'SUBPOSITION', description: null },
+            { code: 'EST-02-PRAT-04', name: 'Prateleira 04', kind: 'SUBPOSITION', description: null },
+          ],
+        },
+        {
+          code: 'PLT-01',
+          name: 'Palete 01',
+          kind: 'LOCAL',
+          description: null,
+          visualType: 'PALLET',
+          widthCm: 120,
+          depthCm: 120,
+          children: [],
+        },
+      ],
       summary: {
-        locals: 1,
-        subpositions: 1,
-        total: 2,
+        locals: 3,
+        subpositions: 8,
+        total: 11,
       },
     }, null, 2),
     '',
