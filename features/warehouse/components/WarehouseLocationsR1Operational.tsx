@@ -10,12 +10,14 @@ import {
   Package,
   Pencil,
   Plus,
+  Printer,
   RefreshCw,
   Snowflake,
   Warehouse,
   X,
 } from 'lucide-react';
 
+import { WarehouseLabelsR1 } from './WarehouseLabelsR1';
 import { WarehouseStructureImportR1 } from './WarehouseStructureImportR1';
 
 import {
@@ -100,6 +102,7 @@ export function WarehouseLocationsR1Operational({
   const [message, setMessage] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [createPanel, setCreatePanel] = useState<CreatePanel>(null);
+  const [labelsOpen, setLabelsOpen] = useState(false);
 
   const [selectedDepotId, setSelectedDepotId] = useState('');
   const [selectedLocationId, setSelectedLocationId] = useState('');
@@ -472,6 +475,15 @@ export function WarehouseLocationsR1Operational({
           </button>
           <button
             type="button"
+            onClick={() => setLabelsOpen(true)}
+            disabled={!selectedDepotId}
+            className="inline-flex h-9 items-center gap-2 rounded-xl border border-blue-200 bg-white px-3 text-xs font-black text-[#00288e] transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Printer className="h-3.5 w-3.5" />
+            Imprimir etiquetas
+          </button>
+          <button
+            type="button"
             onClick={() => void refresh()}
             disabled={state.loading || working}
             className="inline-flex h-9 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-xs font-bold text-gray-600 transition hover:bg-gray-50 disabled:opacity-40"
@@ -818,6 +830,15 @@ export function WarehouseLocationsR1Operational({
         depots={state.depots}
         locations={state.locations}
         onImported={refresh}
+      />
+
+      <WarehouseLabelsR1
+        open={labelsOpen}
+        onClose={() => setLabelsOpen(false)}
+        depots={state.depots}
+        locations={state.locations}
+        selectedDepotId={selectedDepotId}
+        selectedLocationId={selectedLocationId}
       />
     </div>
   );
