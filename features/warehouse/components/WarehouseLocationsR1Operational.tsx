@@ -3,6 +3,8 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { MapPin, Plus, RefreshCw } from 'lucide-react';
 
+import { WarehouseStructureImportR1 } from './WarehouseStructureImportR1';
+
 import {
   createWarehouseDepot,
   createWarehouseLocation,
@@ -177,6 +179,13 @@ export function WarehouseLocationsR1Operational({
           {message}
         </div>
       )}
+
+      <WarehouseStructureImportR1
+        workspaceId={workspaceId}
+        depots={state.depots}
+        locations={state.locations}
+        onImported={refresh}
+      />
 
       <section className="rounded-2xl border border-white/[0.07] bg-black/10 p-5">
         <div className="flex items-center justify-between gap-3">
