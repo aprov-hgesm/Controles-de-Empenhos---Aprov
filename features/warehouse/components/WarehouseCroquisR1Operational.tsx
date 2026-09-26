@@ -27,12 +27,17 @@ import {
 import {
   createWarehouseLocation,
   listWarehouseDepots,
+  listWarehouseLocationBalances,
   listWarehouseLocations,
   updateWarehouseLocation,
   type WarehouseDepotListItem,
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
+import { listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
+import type { WarehouseLocationBalance } from '../../../lib/warehouse/location';
+import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import { WarehouseDepotLayoutEditor } from './WarehouseDepotLayoutEditor';
+import { WarehouseIsometricPreview } from './WarehouseIsometricPreview';
 
 const MIN_ROOM_CM = 240;
 const DEFAULT_ROOM_LENGTH_CM = 1000;
@@ -166,6 +171,12 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const [localDrafts, setLocalDrafts] = useState<Record<string, LocalDraft>>({});
   const [pendingDuplicatedLocals, setPendingDuplicatedLocals] = useState<Record<string, PendingDuplicatedLocal>>({});
   const [pendingRemovedLocationIds, setPendingRemovedLocationIds] = useState<string[]>([]);
+  const [croquiMode, setCroquiMode] = useState<'edit' | 'preview'>('edit');
+  const [previewMaterials, setPreviewMaterials] = useState<WarehouseMaterial[]>([]);
+  const [previewBalances, setPreviewBalances] = useState<WarehouseLocationBalance[]>([]);
+  const [previewQuery, setPreviewQuery] = useState('');
+  const [previewMaterialId, setPreviewMaterialId] = useState('');
+  const [previewLoaded, setPreviewLoaded] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -226,12 +237,50 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       setDraftHistory({ past: [], future: [] });
       setPendingDuplicatedLocals({});
       setPendingRemovedLocationIds([]);
+      setCroquiMode('edit');
+      setPreviewQuery('');
+      setPreviewMaterialId('');
+      setPreviewLoaded(false);
     }).catch((error) => {
       if (!cancelled) setMessage(messageFrom(error));
     });
 
     return () => { cancelled = true; };
   }, [selectedDepotId, workspaceId]);
+
+  useEffect(() => {
+    if (croquiMode !== 'preview' || previewLoaded) return;
+    let cancelled = false;
+
+    void Promise.all([
+      listWarehouseMaterials(workspaceId, 250),
+      listWarehouseLocationBalances(workspaceId, 500),
+    ]).then(([materials, balances]) => {
+      if (cancelled) return;
+      setPreviewMaterials(materials);
+      setPreviewBalances(
+        balances
+          .map((item) => item.balance)
+          .filter((balance) =>
+            balance.position.kind === 'UNASSIGNED'
+            || balance.position.depotId === selectedDepotId
+          )
+      );
+      setPreviewLoaded(true);
+    }).catch((error) => {
+      if (!cancelled) {
+        setMessage(
+          'A prévia 2.5D estrutural continua disponível, mas a ocupação por estoque não pôde ser carregada. '
+          + messageFrom(error)
+        );
+        setPreviewMaterials([]);
+        setPreviewBalances([]);
+        setPreviewLoaded(true);
+      }
+    });
+
+    return () => { cancelled = true; };
+  }, [croquiMode, previewLoaded, selectedDepotId, workspaceId]);
 
   const selectedDepot = useMemo(
     () => depots.find((item) => item.depot.id === selectedDepotId)?.depot || null,
@@ -623,6 +672,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       setPendingDuplicatedLocals({});
       setPendingRemovedLocationIds([]);
       setDraftHistory({ past: [], future: [] });
+      setPreviewLoaded(false);
       await reloadBase();
     } catch (error) {
       setMessage('Não foi possível salvar o croqui. ' + messageFrom(error));
@@ -816,6 +866,50 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
             </div>
           </div>
 
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setCroquiMode('edit')}
+              className={
+                croquiMode === 'edit'
+                  ? 'h-10 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm'
+                  : 'h-10 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black text-slate-600 hover:bg-blue-50'
+              }
+            >
+              Edição 2D
+            </button>
+            <button
+              type="button"
+              onClick={() => setCroquiMode('preview')}
+              className={
+                croquiMode === 'preview'
+                  ? 'h-10 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm'
+                  : 'h-10 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black text-slate-600 hover:bg-blue-50'
+              }
+            >
+              Prévia 2.5D
+            </button>
+            <p className="ml-1 text-[11px] font-semibold text-slate-500">
+              A prévia deriva do mesmo croqui; editar continua sendo feito no modo 2D.
+            </p>
+          </div>
+
+          {croquiMode === 'preview' ? (
+            <WarehouseIsometricPreview
+              logicalWidth={draftWidth}
+              logicalHeight={draftHeight}
+              objects={draftObjects}
+              locations={locations
+                .filter((item) => item.location.depotId === selectedDepotId)
+                .map((item) => item.location)}
+              balances={previewBalances}
+              materials={previewMaterials}
+              selectedMaterialId={previewMaterialId}
+              queryText={previewQuery}
+              onQueryTextChange={setPreviewQuery}
+              onSelectedMaterialIdChange={setPreviewMaterialId}
+            />
+          ) : (
           <div className="grid gap-4 2xl:grid-cols-[320px_minmax(0,1fr)_260px]">
             <aside className="space-y-3">
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -1005,6 +1099,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
               </div>
             </aside>
           </div>
+          )}
         </>
       )}
 
