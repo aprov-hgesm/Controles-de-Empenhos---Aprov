@@ -1754,3 +1754,12 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - A hierarquia física e a UG podem ser incluídas ou ocultadas antes da geração.
 - Apenas estruturas ativas entram na geração automática.
 - A geração de etiquetas é função de apresentação e não cria nem altera documentos do Firestore.
+
+
+## D-080 — Etiquetas como subaba integrada em Meus Depósitos
+
+- A central de Etiquetas deixa de usar janela modal/suspensa.
+- Dentro de **Meus Depósitos**, a navegação passa a oferecer as subabas **Estrutura** e **Etiquetas**.
+- A subaba Etiquetas ocupa o fluxo normal da página, evitando sobreposição com a barra superior do EMPROVEX e melhorando leitura em telas menores.
+- O botão “Imprimir etiquetas” na Estrutura permanece como atalho e apenas alterna para a subaba Etiquetas.
+- O gerador de PDF, escopos, presets A4 e regras da D-079 permanecem inalterados.
