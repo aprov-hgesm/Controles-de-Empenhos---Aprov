@@ -168,18 +168,18 @@ export function WarehouseStructureImportR1({
 
   return (
     <section
-      className="rounded-2xl border border-cyan-300/10 bg-cyan-400/[0.025] p-5"
+      className="rounded-2xl border border-cyan-300/15 bg-[#07111f]/90 p-5 shadow-[0_20px_60px_rgba(2,8,23,0.28)] backdrop-blur-sm"
       data-testid="warehouse-r1-ai-import"
     >
       <div className="flex items-start gap-3">
-        <div className="rounded-xl border border-cyan-300/10 bg-cyan-400/[0.05] p-2 text-cyan-200">
+        <div className="rounded-xl border border-cyan-300/20 bg-cyan-400/[0.08] p-2 text-cyan-200 shadow-inner">
           <Bot className="h-4 w-4" />
         </div>
         <div>
           <h3 className="text-base font-black text-slate-100">
             Importar estrutura via IA externa
           </h3>
-          <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">
+          <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-300">
             O EMPROVEX não envia dados para a IA. Você copia o prompt oficial, usa Gemini,
             ChatGPT ou outra IA externa e cola aqui somente o JSON retornado.
           </p>
@@ -187,27 +187,27 @@ export function WarehouseStructureImportR1({
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        <div className="rounded-xl border border-white/[0.06] bg-black/10 p-4">
-          <p className="text-xs font-black text-slate-300">1. Descreva o depósito</p>
+        <div className="rounded-xl border border-white/[0.10] bg-[#0b1726]/90 p-4 shadow-inner">
+          <p className="text-xs font-black text-slate-100">1. Descreva o depósito</p>
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             rows={7}
             placeholder="Ex.: Meu depósito tem 10 estantes com 5 prateleiras cada, 5 estantes com 4 prateleiras cada, 2 freezers, 2 geladeiras industriais e 6 paletes."
-            className="mt-3 w-full resize-y rounded-xl border border-white/[0.08] bg-[#01050d] p-3 text-sm text-slate-200 outline-none placeholder:text-slate-700"
+            className="mt-3 w-full resize-y rounded-xl border border-white/[0.12] bg-[#030b15] p-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-300/35 focus:ring-2 focus:ring-cyan-300/10"
           />
           <button
             type="button"
             onClick={() => void copyPrompt()}
-            className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl border border-cyan-300/10 bg-cyan-400/[0.05] px-4 text-xs font-black text-cyan-100"
+            className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-400/[0.10] px-4 text-xs font-black text-cyan-50 transition hover:border-cyan-200/40 hover:bg-cyan-300/[0.14]"
           >
             <Clipboard className="h-3.5 w-3.5" />
             Copiar prompt para IA
           </button>
         </div>
 
-        <div className="rounded-xl border border-white/[0.06] bg-black/10 p-4">
-          <p className="text-xs font-black text-slate-300">2. Cole o JSON retornado</p>
+        <div className="rounded-xl border border-white/[0.10] bg-[#0b1726]/90 p-4 shadow-inner">
+          <p className="text-xs font-black text-slate-100">2. Cole o JSON retornado</p>
           <textarea
             value={jsonText}
             onChange={(event) => {
@@ -216,13 +216,13 @@ export function WarehouseStructureImportR1({
             }}
             rows={7}
             placeholder='{"version":"emprovex_warehouse_import_v1", ...}'
-            className="mt-3 w-full resize-y rounded-xl border border-white/[0.08] bg-[#01050d] p-3 font-mono text-xs text-slate-200 outline-none placeholder:text-slate-700"
+            className="mt-3 w-full resize-y rounded-xl border border-white/[0.12] bg-[#030b15] p-3 font-mono text-xs text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-blue-300/40 focus:ring-2 focus:ring-blue-300/10"
           />
           <button
             type="button"
             onClick={validateJson}
             disabled={!jsonText.trim()}
-            className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl bg-blue-500/90 px-4 text-xs font-black text-white disabled:opacity-40"
+            className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl bg-blue-500 px-4 text-xs font-black text-white shadow-[0_8px_24px_rgba(59,130,246,0.22)] transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <CheckCircle2 className="h-3.5 w-3.5" />
             Validar e revisar
@@ -231,9 +231,9 @@ export function WarehouseStructureImportR1({
       </div>
 
       {preview && summary && (
-        <div className="mt-4 rounded-xl border border-emerald-300/10 bg-emerald-400/[0.035] p-4">
+        <div className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-400/[0.08] p-4 shadow-inner">
           <p className="text-xs font-black text-emerald-100">Prévia da importação</p>
-          <div className="mt-3 grid gap-2 text-xs text-slate-400 sm:grid-cols-4">
+          <div className="mt-3 grid gap-2 text-xs text-slate-300 sm:grid-cols-4">
             <p>
               <span className="font-black text-slate-200">{preview.payload.depot.code}</span>
               <br />
@@ -256,7 +256,7 @@ export function WarehouseStructureImportR1({
             </p>
           </div>
 
-          <p className="mt-3 text-[11px] text-slate-500">
+          <p className="mt-3 text-[11px] text-slate-300">
             {preview.depotExists
               ? 'O código do depósito já existe; a importação reutilizará esse depósito e preservará códigos já cadastrados.'
               : 'O depósito será criado antes das localizações.'}
@@ -266,7 +266,7 @@ export function WarehouseStructureImportR1({
             type="button"
             onClick={() => void importStructure()}
             disabled={working}
-            className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-500/90 px-4 text-xs font-black text-white disabled:opacity-40"
+            className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-500 px-4 text-xs font-black text-white shadow-[0_8px_24px_rgba(16,185,129,0.20)] transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Upload className="h-3.5 w-3.5" />
             {working ? 'Importando…' : 'Confirmar importação'}
@@ -275,7 +275,7 @@ export function WarehouseStructureImportR1({
       )}
 
       {message && (
-        <div className="mt-4 rounded-xl border border-white/[0.07] bg-black/10 px-4 py-3 text-xs leading-5 text-slate-300">
+        <div className="mt-4 rounded-xl border border-sky-300/15 bg-sky-400/[0.06] px-4 py-3 text-xs leading-5 text-slate-200">
           {message}
         </div>
       )}
