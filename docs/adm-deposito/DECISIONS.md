@@ -1796,3 +1796,16 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
   - marque conscientemente a opção de reutilizar o depósito existente.
 - O contrato JSON permanece simples e não passa a exigir porte/tipo; esses metadados são confirmados na interface do EMPROVEX.
 - Essa regra evita que descrições diferentes geradas com o código padrão `DEP-01` sejam agregadas acidentalmente ao mesmo depósito.
+
+
+## D-084 — Croqui guiado por medidas reais e Locais cadastrados
+
+- A criação de um novo croqui passa a ser guiada por etapas: seleção do depósito, medidas internas aproximadas em centímetros, portas e somente então composição visual.
+- `logicalWidth` e `logicalHeight` do `warehouse_depot_layout_v1` representam centímetros para preservar a proporção visual do ambiente.
+- Portas são os primeiros elementos da base visual e recebem largura informada em centímetros.
+- Após gerar a base, a paleta principal deixa de oferecer estruturas genéricas livres e passa a listar apenas os Locais ativos já vinculados ao depósito selecionado.
+- Antes da primeira inserção de cada Local, o operador informa tipo visual e dimensões aproximadas em centímetros.
+- As dimensões informadas nesta etapa pertencem ao croqui/layout; nesta decisão não foi criado novo campo persistente no documento de Localização. A eventual promoção dessas medidas para metadados compartilhados do Local/importador será tratada separadamente para não ampliar o schema/Rules sem necessidade.
+- O redimensionamento livre por alça fica desabilitado no fluxo guiado; objetos entram predefinidos e continuam podendo ser movidos e girados.
+- O editor do croqui segue a identidade visual clara do EMPROVEX, e controles de visualização devem ter estado selecionado claramente destacado.
+- Alterações visuais continuam sem efeito sobre estoque, saldos, lotes ou ledger.
