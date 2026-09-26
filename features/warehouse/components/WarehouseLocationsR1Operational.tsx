@@ -807,8 +807,8 @@ export function WarehouseLocationsR1Operational({
           )}
         </section>
 
-        <aside className="self-start">
-          <section className="sticky top-[7.5rem] max-h-[calc(100vh-8.5rem)] overflow-hidden rounded-2xl border border-blue-100/80 bg-white/95 p-5 shadow-md backdrop-blur-md">
+        <aside className="self-start xl:min-h-[1px]">
+          <section className="rounded-2xl border border-blue-100/80 bg-white/95 p-5 shadow-md backdrop-blur-md xl:fixed xl:right-6 xl:top-[5.75rem] xl:z-30 xl:max-h-[calc(100vh-7rem)] xl:w-[360px] xl:overflow-hidden 2xl:right-8 2xl:w-[400px]">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.16em] text-gray-400">Detalhamento do local</p>
