@@ -2349,3 +2349,21 @@ Implementada na branch `feat/adm-deposito-modular-release`:
 Commits funcionais:
 - `a8fe7dce23de36a3a41bb4513d4ee57b948a1f9e` — renderer isométrico;
 - `dbbe30f080e8c6dd11ee9a218a97cdb3acb70bc4` — integração no Croqui, ocupação e consulta.
+
+
+### Redesign isométrico 2.5D — 2026-09-26
+
+Após validação visual do primeiro protótipo, a implementação foi reformulada:
+- substituído o visual de cartões inclinados por renderer SVG isométrico;
+- piso, paredes e volumes agora seguem projeção isométrica coerente;
+- estantes/racks exibem níveis e estrutura metálica;
+- paletes e equipamentos frios possuem representação volumétrica própria;
+- caixas aparecem somente em posições com saldo físico positivo;
+- destaque de consulta continua iluminando Local e Subposição;
+- `locationBalances` ganhou leitura founder-only específica para a prévia, mantendo toda escrita bloqueada;
+- teste de segurança direcionado atualizado para validar leitura do fundador, negação externa e negação de escrita.
+
+Commits:
+- `ba9cd5c49a44b7b81778b7317b3db693fb24fc16` — renderer isométrico;
+- `08523406e52848f35cac3e460a43e17420952bbf` — leitura segura de locationBalances;
+- `ae275e0e76a61601694f6a310afad6ea3b933997` — teste de segurança atualizado.
