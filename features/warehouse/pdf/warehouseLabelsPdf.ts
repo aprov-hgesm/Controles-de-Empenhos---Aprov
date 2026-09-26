@@ -46,13 +46,13 @@ function drawLabel(
   const large = options.preset === 'LARGE';
   const pad = compact ? 3.2 : large ? 5 : 4.2;
 
-  doc.setDrawColor(20);
-  doc.setTextColor(10);
+  doc.setDrawColor(20, 20, 20);
+  doc.setTextColor(10, 10, 10);
   doc.setLineWidth(compact ? 0.25 : 0.35);
   doc.roundedRect(x, y, width, height, compact ? 1.5 : 2, compact ? 1.5 : 2);
 
   // Faixa institucional monocromática: funciona bem em toner e diferencia o EMPROVEX.
-  doc.setFillColor(20);
+  doc.setFillColor(20, 20, 20);
   doc.rect(x, y, compact ? 2.4 : 3.2, height, 'F');
 
   const innerX = x + pad + (compact ? 1 : 1.5);
@@ -118,7 +118,7 @@ function drawLabel(
   }
 
   const footerY = y + height - (compact ? 3 : 3.8);
-  doc.setDrawColor(165);
+  doc.setDrawColor(165, 165, 165);
   doc.setLineWidth(0.15);
   doc.line(innerX, footerY - (compact ? 3 : 3.7), x + width - pad, footerY - (compact ? 3 : 3.7));
 
