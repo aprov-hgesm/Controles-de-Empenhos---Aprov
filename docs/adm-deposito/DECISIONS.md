@@ -1916,3 +1916,43 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - Portas continuam existindo como elementos estruturais do croqui, mas não pertencem ao catálogo de Locais.
 - Novos Locais inseridos no croqui só podem escolher entre os cinco tipos oficiais.
 - A Prévia 2.5D continuará refinando uma estética fixa e profissional para cada um desses cinco elementos.
+
+
+## D-093 — Modelos 2.5D oficiais passam a ter acabamento profissional dedicado
+
+- Os cinco modelos visuais oficiais permanecem fixos: Estante, Palete, Freezer, Geladeira industrial e Mesa.
+- Cada modelo recebe geometria e materiais próprios, em vez de depender de um volume genérico.
+- Estante:
+  - montantes estruturais duplos;
+  - contraventamentos;
+  - decks/prateleiras metálicas;
+  - travessas frontais e traseiras;
+  - pés e protetores amarelos;
+  - níveis derivados das Subposições.
+- Palete:
+  - sete ripas superiores;
+  - longarinas inferiores;
+  - blocos de apoio;
+  - madeira em gradiente próprio.
+- Freezer:
+  - corpo com faces distintas;
+  - tampa/visor translúcido;
+  - puxador;
+  - painel de controle;
+  - grelha/ventilação;
+  - conteúdo somente com saldo físico.
+- Geladeira industrial:
+  - moldura metálica;
+  - duas portas de vidro;
+  - iluminação fria;
+  - prateleiras internas;
+  - puxadores;
+  - painel superior;
+  - conteúdo somente com saldo físico.
+- Mesa:
+  - tampo inox;
+  - saia frontal;
+  - prateleira inferior;
+  - pés tubulares e sapatas.
+- Piso e ambiente passam a usar rodapé, guias de circulação internas, luzes de parede e sombras mais realistas.
+- A solução continua SVG/React e sem engine 3D pesada.
