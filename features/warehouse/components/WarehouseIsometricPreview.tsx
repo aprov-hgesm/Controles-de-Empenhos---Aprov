@@ -56,11 +56,11 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 function objectHeight(kind: WarehouseDepotLayoutObject['kind'], subpositions: number): number {
-  if (kind === 'SHELF' || kind === 'RACK') return 112 + clamp(subpositions, 0, 8) * 5;
-  if (kind === 'REFRIGERATOR') return 122;
-  if (kind === 'FREEZER' || kind === 'CHAMBER') return 82;
-  if (kind === 'PALLET') return 16;
-  if (kind === 'BENCH') return 58;
+  if (kind === 'SHELF' || kind === 'RACK') return 118 + clamp(subpositions, 0, 8) * 5;
+  if (kind === 'REFRIGERATOR') return 132;
+  if (kind === 'FREEZER' || kind === 'CHAMBER') return 78;
+  if (kind === 'PALLET') return 14;
+  if (kind === 'BENCH') return 62;
   return 46;
 }
 
@@ -223,7 +223,10 @@ function WarehouseStructure({
   ) : null;
 
   if (object.kind === 'PALLET') {
-    const slatCount = 6;
+    const slatCount = 7;
+    const lowerZ = 4;
+    const supportRatios = [0.13, 0.5, 0.87];
+
     return (
       <g
         data-location-id={object.warehouseLocationId || ''}
@@ -232,37 +235,108 @@ function WarehouseStructure({
         filter={highlightFilter}
       >
         {commonHighlight}
-        <polygon points={polygonPoints([d, c, ct, dt])} fill="#8b5a2b" stroke="#68421e" strokeWidth="1.4" />
-        <polygon points={polygonPoints([b, c, ct, bt])} fill="#77491f" stroke="#5d3817" strokeWidth="1.4" />
-        <polygon points={polygonPoints([at, bt, ct, dt])} fill="#d5a563" stroke="#8c5a2b" strokeWidth="1.7" />
+
+        <polygon points={polygonPoints([d, c, ct, dt])} fill="url(#palletSideDark)" stroke="#68431f" strokeWidth="1.4" />
+        <polygon points={polygonPoints([b, c, ct, bt])} fill="url(#palletSide)" stroke="#5f3b1a" strokeWidth="1.4" />
+        <polygon points={polygonPoints([at, bt, ct, dt])} fill="url(#palletWood)" stroke="#855426" strokeWidth="1.7" />
+
         {Array.from({ length: slatCount }, (_, index) => {
           const ratio = (index + 0.5) / slatCount;
-          const p1 = isoPoint(object.x + object.width * ratio, object.y, z + 0.4, logicalWidth, logicalHeight);
-          const p2 = isoPoint(object.x + object.width * ratio, object.y + object.height, z + 0.4, logicalWidth, logicalHeight);
-          return <line key={index} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#9f6d35" strokeWidth="1.1" />;
+          const p1 = isoPoint(object.x + object.width * ratio, object.y, z + 0.7, logicalWidth, logicalHeight);
+          const p2 = isoPoint(object.x + object.width * ratio, object.y + object.height, z + 0.7, logicalWidth, logicalHeight);
+          return (
+            <line
+              key={'slat-' + index}
+              x1={p1.x}
+              y1={p1.y}
+              x2={p2.x}
+              y2={p2.y}
+              stroke={index % 2 === 0 ? '#9a6631' : '#aa7438'}
+              strokeWidth="1.1"
+              opacity="0.95"
+            />
+          );
         })}
-        {[0.18, 0.5, 0.82].map((ratio) => {
-          const foot = isoPoint(object.x + object.width * ratio, object.y + object.height * 0.55, 0, logicalWidth, logicalHeight);
-          return <rect key={ratio} x={foot.x - 5} y={foot.y - 1} width="10" height="7" rx="1" fill="#6f431d" />;
+
+        {supportRatios.map((ratio) => {
+          const p1 = isoPoint(object.x + object.width * ratio, object.y + object.height * 0.08, lowerZ, logicalWidth, logicalHeight);
+          const p2 = isoPoint(object.x + object.width * ratio, object.y + object.height * 0.92, lowerZ, logicalWidth, logicalHeight);
+          return (
+            <line
+              key={'runner-' + ratio}
+              x1={p1.x}
+              y1={p1.y}
+              x2={p2.x}
+              y2={p2.y}
+              stroke="#6f431d"
+              strokeWidth="5.5"
+              strokeLinecap="round"
+              opacity="0.92"
+            />
+          );
         })}
+
+        {supportRatios.flatMap((rx) => [0.16, 0.5, 0.84].map((ry) => ({ rx, ry }))).map((block, index) => {
+          const p = isoPoint(
+            object.x + object.width * block.rx,
+            object.y + object.height * block.ry,
+            1.5,
+            logicalWidth,
+            logicalHeight
+          );
+          return (
+            <rect
+              key={'block-' + index}
+              x={p.x - 5}
+              y={p.y - 3}
+              width="10"
+              height="7"
+              rx="1.5"
+              fill="#65401e"
+              stroke="#4d2f16"
+              strokeWidth="0.8"
+            />
+          );
+        })}
+
         {boxCount > 0 && Array.from({ length: boxCount }, (_, index) =>
           boxGroup(
             'pal-box-' + index,
-            centerTop.x + (index - (boxCount - 1) / 2) * 28,
-            centerTop.y - 10 - (index % 2) * 14,
-            0.9,
+            centerTop.x + (index - (boxCount - 1) / 2) * 26,
+            centerTop.y - 12 - (index % 2) * 14,
+            0.88,
             highlighted
           )
         )}
-        {renderLabel(centerTop, code, 'Palete', subpositions.length ? subpositions.length + ' subposições' : 'Local aberto', highlighted, 0, -6)}
+
+        {renderLabel(
+          centerTop,
+          code,
+          'Palete',
+          subpositions.length ? subpositions.length + ' subposições' : 'Local aberto',
+          highlighted,
+          0,
+          -8
+        )}
       </g>
     );
   }
 
   if (object.kind === 'SHELF' || object.kind === 'RACK') {
     const levels = clamp(subpositions.length || 4, 2, 6);
-    const rackStroke = '#173f67';
-    const beam = '#f28a1a';
+    const rackStroke = '#123f66';
+    const beam = '#f47f13';
+    const guard = '#f7b928';
+
+    const frontBottomLeft = d;
+    const frontBottomRight = c;
+    const frontTopLeft = dt;
+    const frontTopRight = ct;
+    const backBottomLeft = a;
+    const backBottomRight = b;
+    const backTopLeft = at;
+    const backTopRight = bt;
+
     return (
       <g
         data-location-id={object.warehouseLocationId || ''}
@@ -271,22 +345,35 @@ function WarehouseStructure({
         filter={highlightFilter}
       >
         {commonHighlight}
-        {[a, b, c, d].map((base, index) => {
-          const top = [at, bt, ct, dt][index];
-          return <line key={'post-' + index} x1={base.x} y1={base.y} x2={top.x} y2={top.y} stroke={rackStroke} strokeWidth="4.2" />;
-        })}
-        {[0, 1].map((side) => {
-          const lowerA = side === 0 ? a : b;
-          const lowerB = side === 0 ? d : c;
-          const upperA = side === 0 ? at : bt;
-          const upperB = side === 0 ? dt : ct;
+
+        <polygon
+          points={polygonPoints([a, b, c, d])}
+          fill="#dfe7ed"
+          opacity="0.18"
+        />
+
+        {[frontBottomLeft, frontBottomRight, backBottomLeft, backBottomRight].map((base, index) => {
+          const top = [frontTopLeft, frontTopRight, backTopLeft, backTopRight][index];
           return (
-            <g key={'brace-' + side} opacity="0.75">
-              <line x1={lowerA.x} y1={lowerA.y} x2={upperB.x} y2={upperB.y} stroke="#345f83" strokeWidth="1.7" />
-              <line x1={lowerB.x} y1={lowerB.y} x2={upperA.x} y2={upperA.y} stroke="#345f83" strokeWidth="1.7" />
+            <g key={'upright-' + index}>
+              <line x1={base.x} y1={base.y} x2={top.x} y2={top.y} stroke="#0e3556" strokeWidth="6.5" />
+              <line x1={base.x + 1.5} y1={base.y} x2={top.x + 1.5} y2={top.y} stroke="#315f80" strokeWidth="1.5" opacity="0.9" />
             </g>
           );
         })}
+
+        {[
+          [frontBottomLeft, backBottomLeft, backTopLeft, frontTopLeft],
+          [frontBottomRight, backBottomRight, backTopRight, frontTopRight],
+        ].map((frame, side) => (
+          <g key={'side-frame-' + side}>
+            <line x1={frame[0].x} y1={frame[0].y} x2={frame[2].x} y2={frame[2].y} stroke="#426b89" strokeWidth="2" opacity="0.88" />
+            <line x1={frame[1].x} y1={frame[1].y} x2={frame[3].x} y2={frame[3].y} stroke="#426b89" strokeWidth="2" opacity="0.88" />
+            <line x1={frame[0].x} y1={frame[0].y} x2={frame[1].x} y2={frame[1].y} stroke="#254f70" strokeWidth="2.2" />
+            <line x1={frame[2].x} y1={frame[2].y} x2={frame[3].x} y2={frame[3].y} stroke="#254f70" strokeWidth="2.2" />
+          </g>
+        ))}
+
         {Array.from({ length: levels }, (_, index) => {
           const ratio = (index + 1) / (levels + 0.35);
           const shelfZ = z * ratio;
@@ -294,8 +381,12 @@ function WarehouseStructure({
           const p2 = isoPoint(object.x + object.width, object.y, shelfZ, logicalWidth, logicalHeight);
           const p3 = isoPoint(object.x + object.width, object.y + object.height, shelfZ, logicalWidth, logicalHeight);
           const p4 = isoPoint(object.x, object.y + object.height, shelfZ, logicalWidth, logicalHeight);
-          const front1 = isoPoint(object.x, object.y + object.height, shelfZ - 2, logicalWidth, logicalHeight);
-          const front2 = isoPoint(object.x + object.width, object.y + object.height, shelfZ - 2, logicalWidth, logicalHeight);
+
+          const frontBeamLeft = isoPoint(object.x, object.y + object.height, shelfZ - 2.5, logicalWidth, logicalHeight);
+          const frontBeamRight = isoPoint(object.x + object.width, object.y + object.height, shelfZ - 2.5, logicalWidth, logicalHeight);
+          const rearBeamLeft = isoPoint(object.x, object.y, shelfZ - 2.5, logicalWidth, logicalHeight);
+          const rearBeamRight = isoPoint(object.x + object.width, object.y, shelfZ - 2.5, logicalWidth, logicalHeight);
+
           return (
             <g key={'level-' + index}>
               <polygon
@@ -303,47 +394,100 @@ function WarehouseStructure({
                 fill="url(#rackDeck)"
                 stroke="#9fb2c3"
                 strokeWidth="0.8"
-                opacity="0.92"
+                opacity="0.96"
               />
-              <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke={beam} strokeWidth="4.2" strokeLinecap="round" />
-              <line x1={front1.x} y1={front1.y} x2={front2.x} y2={front2.y} stroke={beam} strokeWidth="4.8" strokeLinecap="round" />
-              <line x1={p2.x} y1={p2.y} x2={p3.x} y2={p3.y} stroke="#345f83" strokeWidth="1.3" opacity="0.72" />
-              <line x1={p1.x} y1={p1.y} x2={p4.x} y2={p4.y} stroke="#345f83" strokeWidth="1.3" opacity="0.72" />
+              {Array.from({ length: 6 }, (_, deckIndex) => {
+                const t = (deckIndex + 1) / 7;
+                const dl = isoPoint(
+                  object.x + object.width * t,
+                  object.y + object.height * 0.04,
+                  shelfZ + 0.8,
+                  logicalWidth,
+                  logicalHeight
+                );
+                const dr = isoPoint(
+                  object.x + object.width * t,
+                  object.y + object.height * 0.96,
+                  shelfZ + 0.8,
+                  logicalWidth,
+                  logicalHeight
+                );
+                return (
+                  <line
+                    key={'deck-line-' + deckIndex}
+                    x1={dl.x}
+                    y1={dl.y}
+                    x2={dr.x}
+                    y2={dr.y}
+                    stroke="#c4d0da"
+                    strokeWidth="0.7"
+                    opacity="0.8"
+                  />
+                );
+              })}
+              <line x1={frontBeamLeft.x} y1={frontBeamLeft.y} x2={frontBeamRight.x} y2={frontBeamRight.y} stroke={beam} strokeWidth="6.2" strokeLinecap="round" />
+              <line x1={rearBeamLeft.x} y1={rearBeamLeft.y} x2={rearBeamRight.x} y2={rearBeamRight.y} stroke="#d96f0f" strokeWidth="4.4" strokeLinecap="round" opacity="0.9" />
+              <line x1={p2.x} y1={p2.y} x2={p3.x} y2={p3.y} stroke="#244e6f" strokeWidth="1.4" opacity="0.8" />
+              <line x1={p1.x} y1={p1.y} x2={p4.x} y2={p4.y} stroke="#244e6f" strokeWidth="1.4" opacity="0.8" />
             </g>
           );
         })}
-        {[a, b, c, d].map((base, index) => (
-          <rect
-            key={'foot-' + index}
-            x={base.x - 5}
-            y={base.y - 2}
-            width="10"
-            height="5"
-            rx="1.5"
-            fill="#f4b942"
-            stroke="#b27b13"
-            strokeWidth="0.9"
-          />
+
+        {[frontBottomLeft, frontBottomRight, backBottomLeft, backBottomRight].map((base, index) => (
+          <g key={'foot-' + index}>
+            <rect
+              x={base.x - 6}
+              y={base.y - 2}
+              width="12"
+              height="6"
+              rx="1.8"
+              fill={guard}
+              stroke="#b97a10"
+              strokeWidth="1"
+            />
+            <rect
+              x={base.x - 3}
+              y={base.y - 11}
+              width="6"
+              height="9"
+              rx="1.5"
+              fill="#f3b51e"
+              stroke="#c08012"
+              strokeWidth="0.8"
+              opacity={index < 2 ? 0.95 : 0.68}
+            />
+          </g>
         ))}
+
         {boxCount > 0 && Array.from({ length: boxCount }, (_, index) => {
           const row = index % Math.max(1, levels);
-          const shelfZ = z * ((row + 1) / (levels + 0.4)) + 12;
+          const shelfZ = z * ((row + 1) / (levels + 0.35)) + 11;
           const p = isoPoint(
-            object.x + object.width * (0.3 + (index % 2) * 0.36),
-            object.y + object.height * 0.52,
+            object.x + object.width * (0.28 + (index % 2) * 0.4),
+            object.y + object.height * 0.56,
             shelfZ,
             logicalWidth,
             logicalHeight
           );
-          return boxGroup('rack-box-' + index, p.x, p.y, 0.82, highlighted);
+          return boxGroup('rack-box-' + index, p.x, p.y, 0.78, highlighted);
         })}
-        {renderLabel(centerTop, code, object.kind === 'RACK' ? 'Rack industrial' : 'Estante industrial', levels + ' níveis', highlighted, 0, -8)}
+
+        {renderLabel(
+          centerTop,
+          code,
+          'Estante industrial',
+          levels + ' níveis',
+          highlighted,
+          0,
+          -10
+        )}
+
         {highlightedSubpositions.length > 0 && highlightedSubpositions.slice(0, 5).map((subposition, index) => {
           const y = centerTop.y + 20 + index * 19;
           return (
-            <g key={subposition.id} transform={'translate(' + (centerTop.x + 56) + ' ' + y + ')'}>
-              <rect x="0" y="-10" width="72" height="18" rx="6" fill="#2563eb" stroke="#bfdbfe" strokeWidth="1.5" />
-              <text x="36" y="3" textAnchor="middle" fontSize="8.2" fontWeight="900" fill="#ffffff">
+            <g key={subposition.id} transform={'translate(' + (centerTop.x + 58) + ' ' + y + ')'}>
+              <rect x="0" y="-10" width="74" height="18" rx="6" fill="#2563eb" stroke="#bfdbfe" strokeWidth="1.5" />
+              <text x="37" y="3" textAnchor="middle" fontSize="8.2" fontWeight="900" fill="#ffffff">
                 {subposition.code}
               </text>
             </g>
@@ -355,10 +499,16 @@ function WarehouseStructure({
 
   if (object.kind === 'FREEZER' || object.kind === 'CHAMBER') {
     const lidZ = z;
-    const innerA = isoPoint(object.x + object.width * 0.08, object.y + object.height * 0.08, lidZ + 1, logicalWidth, logicalHeight);
-    const innerB = isoPoint(object.x + object.width * 0.92, object.y + object.height * 0.08, lidZ + 1, logicalWidth, logicalHeight);
-    const innerC = isoPoint(object.x + object.width * 0.92, object.y + object.height * 0.92, lidZ + 1, logicalWidth, logicalHeight);
-    const innerD = isoPoint(object.x + object.width * 0.08, object.y + object.height * 0.92, lidZ + 1, logicalWidth, logicalHeight);
+    const bodyTopA = isoPoint(object.x, object.y, lidZ, logicalWidth, logicalHeight);
+    const bodyTopB = isoPoint(object.x + object.width, object.y, lidZ, logicalWidth, logicalHeight);
+    const bodyTopC = isoPoint(object.x + object.width, object.y + object.height, lidZ, logicalWidth, logicalHeight);
+    const bodyTopD = isoPoint(object.x, object.y + object.height, lidZ, logicalWidth, logicalHeight);
+
+    const innerA = isoPoint(object.x + object.width * 0.07, object.y + object.height * 0.08, lidZ + 1.5, logicalWidth, logicalHeight);
+    const innerB = isoPoint(object.x + object.width * 0.93, object.y + object.height * 0.08, lidZ + 1.5, logicalWidth, logicalHeight);
+    const innerC = isoPoint(object.x + object.width * 0.93, object.y + object.height * 0.92, lidZ + 1.5, logicalWidth, logicalHeight);
+    const innerD = isoPoint(object.x + object.width * 0.07, object.y + object.height * 0.92, lidZ + 1.5, logicalWidth, logicalHeight);
+
     return (
       <g
         data-location-id={object.warehouseLocationId || ''}
@@ -367,28 +517,88 @@ function WarehouseStructure({
         filter={highlightFilter}
       >
         {commonHighlight}
-        <polygon points={polygonPoints([d, c, ct, dt])} fill="#d8e6ef" stroke="#7897aa" strokeWidth="1.8" />
-        <polygon points={polygonPoints([b, c, ct, bt])} fill="#c4d8e5" stroke="#7897aa" strokeWidth="1.8" />
-        <polygon points={polygonPoints([at, bt, ct, dt])} fill="#eef7fb" stroke="#7897aa" strokeWidth="1.8" />
-        <polygon points={polygonPoints([innerA, innerB, innerC, innerD])} fill="#bde7f8" stroke="#6ea6bf" strokeWidth="1.4" opacity="0.75" />
-        <line x1={innerA.x} y1={innerA.y} x2={innerC.x} y2={innerC.y} stroke="#8cc9df" strokeWidth="1" opacity="0.8" />
-        <line x1={innerB.x} y1={innerB.y} x2={innerD.x} y2={innerD.y} stroke="#8cc9df" strokeWidth="1" opacity="0.8" />
-        <rect x={centerTop.x - 13} y={centerTop.y + 30} width="26" height="7" rx="2" fill="#55758d" opacity="0.9" />
-        <g transform={'translate(' + (centerTop.x + 30) + ' ' + (centerTop.y + 18) + ')'}>
-          <circle r="7" fill="#eaf5fb" stroke="#6f91aa" strokeWidth="1.4" />
-          <path d="M0 -5 L2 -1 L6 0 L2 1 L0 5 L-2 1 L-6 0 L-2 -1 Z" fill="#70b8d8" />
-        </g>
+
+        <polygon points={polygonPoints([d, c, ct, dt])} fill="url(#freezerFront)" stroke="#6c8ba1" strokeWidth="1.9" />
+        <polygon points={polygonPoints([b, c, ct, bt])} fill="url(#freezerSide)" stroke="#6c8ba1" strokeWidth="1.9" />
+        <polygon points={polygonPoints([bodyTopA, bodyTopB, bodyTopC, bodyTopD])} fill="#f7fbfd" stroke="#7897aa" strokeWidth="1.8" />
+
+        <polygon
+          points={polygonPoints([innerA, innerB, innerC, innerD])}
+          fill="url(#freezerGlass)"
+          stroke="#5e9fbc"
+          strokeWidth="1.5"
+          opacity="0.9"
+        />
+        <line x1={innerA.x} y1={innerA.y} x2={innerC.x} y2={innerC.y} stroke="#d7f5ff" strokeWidth="1.4" opacity="0.85" />
+        <line x1={innerB.x} y1={innerB.y} x2={innerD.x} y2={innerD.y} stroke="#d7f5ff" strokeWidth="1.4" opacity="0.85" />
+
+        <rect
+          x={centerTop.x - 18}
+          y={centerTop.y + 30}
+          width="36"
+          height="7"
+          rx="2.5"
+          fill="#4a6579"
+          stroke="#314b5e"
+          strokeWidth="0.8"
+        />
+        <rect
+          x={centerTop.x + 27}
+          y={centerTop.y + 19}
+          width="22"
+          height="12"
+          rx="3"
+          fill="#163a57"
+          stroke="#6e93aa"
+          strokeWidth="0.9"
+        />
+        <rect
+          x={centerTop.x + 31}
+          y={centerTop.y + 22}
+          width="7"
+          height="3"
+          rx="1"
+          fill="#65d8ff"
+        />
+
+        {Array.from({ length: 5 }, (_, index) => (
+          <line
+            key={'vent-' + index}
+            x1={centerTop.x - 42 + index * 8}
+            y1={centerTop.y + 47}
+            x2={centerTop.x - 38 + index * 8}
+            y2={centerTop.y + 47}
+            stroke="#7a96a8"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
+        ))}
+
         {boxCount > 0 && Array.from({ length: Math.min(2, boxCount) }, (_, index) =>
-          boxGroup('freezer-box-' + index, centerTop.x + (index ? 22 : -16), centerTop.y + 10, 0.64, highlighted)
+          boxGroup('freezer-box-' + index, centerTop.x + (index ? 22 : -18), centerTop.y + 12, 0.6, highlighted)
         )}
-        {renderLabel(centerTop, code, 'Freezer industrial', subpositions.length ? subpositions.length + ' subposições' : 'Compartimento único', highlighted, 0, -6)}
+
+        {renderLabel(
+          centerTop,
+          code,
+          'Freezer industrial',
+          subpositions.length ? subpositions.length + ' subposições' : 'Compartimento único',
+          highlighted,
+          0,
+          -8
+        )}
       </g>
     );
   }
 
   if (object.kind === 'REFRIGERATOR') {
-    const doorMidBottom = isoPoint(object.x + object.width / 2, object.y + object.height, 4, logicalWidth, logicalHeight);
-    const doorMidTop = isoPoint(object.x + object.width / 2, object.y + object.height, z - 4, logicalWidth, logicalHeight);
+    const frontBottomLeft = d;
+    const frontBottomRight = c;
+    const frontTopLeft = dt;
+    const frontTopRight = ct;
+    const doorSplitBottom = isoPoint(object.x + object.width / 2, object.y + object.height, 4, logicalWidth, logicalHeight);
+    const doorSplitTop = isoPoint(object.x + object.width / 2, object.y + object.height, z - 4, logicalWidth, logicalHeight);
+
     return (
       <g
         data-location-id={object.warehouseLocationId || ''}
@@ -397,22 +607,79 @@ function WarehouseStructure({
         filter={highlightFilter}
       >
         {commonHighlight}
-        <polygon points={polygonPoints([d, c, ct, dt])} fill="#e6f3f9" stroke="#658aa3" strokeWidth="1.8" />
-        <polygon points={polygonPoints([b, c, ct, bt])} fill="#cce5ef" stroke="#658aa3" strokeWidth="1.8" />
-        <polygon points={polygonPoints([at, bt, ct, dt])} fill="#f8fcff" stroke="#658aa3" strokeWidth="1.8" />
-        <polygon points={polygonPoints([d, c, ct, dt])} fill="url(#fridgeGlass)" stroke="#6aa7c2" strokeWidth="1.1" opacity="0.72" />
-        <line x1={doorMidBottom.x} y1={doorMidBottom.y} x2={doorMidTop.x} y2={doorMidTop.y} stroke="#ffffff" strokeWidth="2.4" opacity="0.9" />
-        {[0.25, 0.5, 0.75].map((ratio) => {
+
+        <polygon points={polygonPoints([d, c, ct, dt])} fill="url(#fridgeFrame)" stroke="#5e7f96" strokeWidth="2" />
+        <polygon points={polygonPoints([b, c, ct, bt])} fill="#c8dbe7" stroke="#5e7f96" strokeWidth="1.8" />
+        <polygon points={polygonPoints([at, bt, ct, dt])} fill="#f9fcff" stroke="#5e7f96" strokeWidth="1.8" />
+
+        <polygon points={polygonPoints([frontBottomLeft, frontBottomRight, frontTopRight, frontTopLeft])} fill="url(#fridgeGlass)" stroke="#6aa7c2" strokeWidth="1.2" opacity="0.82" />
+        <line x1={doorSplitBottom.x} y1={doorSplitBottom.y} x2={doorSplitTop.x} y2={doorSplitTop.y} stroke="#eefaff" strokeWidth="3" opacity="0.98" />
+
+        {[0.22, 0.42, 0.62, 0.82].map((ratio) => {
           const p1 = isoPoint(object.x, object.y + object.height, z * ratio, logicalWidth, logicalHeight);
           const p2 = isoPoint(object.x + object.width, object.y + object.height, z * ratio, logicalWidth, logicalHeight);
-          return <line key={ratio} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#bce6f5" strokeWidth="1.5" />;
+          return (
+            <g key={'fridge-shelf-' + ratio}>
+              <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#dff7ff" strokeWidth="2.2" opacity="0.96" />
+              <line x1={p1.x} y1={p1.y + 2} x2={p2.x} y2={p2.y + 2} stroke="#5fa5c1" strokeWidth="0.7" opacity="0.65" />
+            </g>
+          );
         })}
-        <rect x={centerTop.x + 30} y={centerTop.y + 26} width="6" height="28" rx="3" fill="#54738a" />
-        <circle cx={centerTop.x - 32} cy={centerTop.y + 24} r="5" fill="#86d2f1" stroke="#4f8aa6" strokeWidth="1" />
-        {boxCount > 0 && Array.from({ length: Math.min(2, boxCount) }, (_, index) =>
-          boxGroup('fridge-box-' + index, centerTop.x + (index ? 18 : -18), centerTop.y + 34 + index * 15, 0.55, highlighted)
+
+        <line
+          x1={frontTopLeft.x + 8}
+          y1={frontTopLeft.y + 14}
+          x2={frontBottomLeft.x + 8}
+          y2={frontBottomLeft.y - 8}
+          stroke="#a8e8ff"
+          strokeWidth="3"
+          opacity="0.7"
+        />
+        <line
+          x1={frontTopRight.x - 8}
+          y1={frontTopRight.y + 14}
+          x2={frontBottomRight.x - 8}
+          y2={frontBottomRight.y - 8}
+          stroke="#a8e8ff"
+          strokeWidth="3"
+          opacity="0.7"
+        />
+
+        <rect x={centerTop.x + 27} y={centerTop.y + 26} width="5" height="30" rx="2.5" fill="#4f6c80" />
+        <rect x={centerTop.x - 32} y={centerTop.y + 26} width="5" height="30" rx="2.5" fill="#4f6c80" />
+
+        <rect
+          x={centerTop.x - 28}
+          y={centerTop.y - 2}
+          width="56"
+          height="12"
+          rx="3"
+          fill="#173a55"
+          stroke="#6f93aa"
+          strokeWidth="0.8"
+        />
+        <circle cx={centerTop.x - 16} cy={centerTop.y + 4} r="2.4" fill="#54ddff" />
+        <rect x={centerTop.x - 8} y={centerTop.y + 1.5} width="17" height="5" rx="1.5" fill="#8be7ff" opacity="0.9" />
+
+        {boxCount > 0 && Array.from({ length: Math.min(3, boxCount) }, (_, index) =>
+          boxGroup(
+            'fridge-box-' + index,
+            centerTop.x + (index - 1) * 17,
+            centerTop.y + 44 + (index % 2) * 14,
+            0.5,
+            highlighted
+          )
         )}
-        {renderLabel(centerTop, code, 'Geladeira industrial', subpositions.length ? subpositions.length + ' subposições' : 'Compartimento único', highlighted, 0, -8)}
+
+        {renderLabel(
+          centerTop,
+          code,
+          'Geladeira industrial',
+          subpositions.length ? subpositions.length + ' subposições' : 'Compartimento único',
+          highlighted,
+          0,
+          -10
+        )}
       </g>
     );
   }
@@ -420,7 +687,75 @@ function WarehouseStructure({
   if (object.kind === 'BENCH') {
     const topZ = z;
     const legZ = 4;
+    const lowerShelfZ = z * 0.28;
+
+    const lowerA = isoPoint(object.x + object.width * 0.08, object.y + object.height * 0.12, lowerShelfZ, logicalWidth, logicalHeight);
+    const lowerB = isoPoint(object.x + object.width * 0.92, object.y + object.height * 0.12, lowerShelfZ, logicalWidth, logicalHeight);
+    const lowerC = isoPoint(object.x + object.width * 0.92, object.y + object.height * 0.88, lowerShelfZ, logicalWidth, logicalHeight);
+    const lowerD = isoPoint(object.x + object.width * 0.08, object.y + object.height * 0.88, lowerShelfZ, logicalWidth, logicalHeight);
+
+    const legPoints = [0.08, 0.92].flatMap((rx) => [0.12, 0.88].map((ry) => ({ rx, ry })));
+
     return (
+      <g
+        data-location-id={object.warehouseLocationId || ''}
+        data-occupied={boxCount > 0 ? 'true' : 'false'}
+        data-highlighted={highlighted ? 'true' : 'false'}
+        filter={highlightFilter}
+      >
+        {commonHighlight}
+
+        <polygon points={polygonPoints([at, bt, ct, dt])} fill="url(#metalSheen)" stroke="#657d8e" strokeWidth="1.8" />
+        <polygon
+          points={polygonPoints([
+            isoPoint(object.x, object.y + object.height, topZ - 8, logicalWidth, logicalHeight),
+            isoPoint(object.x + object.width, object.y + object.height, topZ - 8, logicalWidth, logicalHeight),
+            ct,
+            dt,
+          ])}
+          fill="url(#benchFront)"
+          stroke="#657d8e"
+          strokeWidth="1.5"
+        />
+
+        <polygon
+          points={polygonPoints([lowerA, lowerB, lowerC, lowerD])}
+          fill="#c7d2da"
+          stroke="#6d8393"
+          strokeWidth="1.2"
+          opacity="0.94"
+        />
+
+        {legPoints.map((leg, index) => {
+          const bottom = isoPoint(object.x + object.width * leg.rx, object.y + object.height * leg.ry, legZ, logicalWidth, logicalHeight);
+          const top = isoPoint(object.x + object.width * leg.rx, object.y + object.height * leg.ry, topZ - 2, logicalWidth, logicalHeight);
+          return (
+            <g key={'bench-leg-' + index}>
+              <line x1={bottom.x} y1={bottom.y} x2={top.x} y2={top.y} stroke="#5f7484" strokeWidth="5" />
+              <circle cx={bottom.x} cy={bottom.y + 1} r="3.3" fill="#334b5c" />
+            </g>
+          );
+        })}
+
+        <line x1={at.x} y1={at.y} x2={bt.x} y2={bt.y} stroke="#ffffff" strokeWidth="2.6" opacity="0.95" />
+        <line x1={dt.x} y1={dt.y} x2={ct.x} y2={ct.y} stroke="#90a4b3" strokeWidth="1.2" opacity="0.85" />
+
+        {boxCount > 0 && boxGroup('bench-box', centerTop.x, centerTop.y - 6, 0.68, highlighted)}
+
+        {renderLabel(
+          centerTop,
+          code,
+          'Mesa inox',
+          subpositions.length ? subpositions.length + ' subposições' : 'Superfície única',
+          highlighted,
+          0,
+          -8
+        )}
+      </g>
+    );
+  }
+
+  return (
       <g
         data-location-id={object.warehouseLocationId || ''}
         data-occupied={boxCount > 0 ? 'true' : 'false'}
@@ -645,10 +980,46 @@ export function WarehouseIsometricPreview({
               </linearGradient>
               <linearGradient id="rackDeck" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#ffffff" />
-                <stop offset="55%" stopColor="#eef3f7" />
-                <stop offset="100%" stopColor="#dbe3ea" />
+                <stop offset="52%" stopColor="#edf2f6" />
+                <stop offset="100%" stopColor="#cfd9e2" />
               </linearGradient>
-              <linearGradient id="metalSheen" x1="0" y1="0" x2="1" y2="1">
+              <linearGradient id="palletWood" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#e6bd7b" />
+                <stop offset="48%" stopColor="#cf9650" />
+                <stop offset="100%" stopColor="#b87939" />
+              </linearGradient>
+              <linearGradient id="palletSide" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#99602d" />
+                <stop offset="100%" stopColor="#6e421d" />
+              </linearGradient>
+              <linearGradient id="palletSideDark" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#8c5728" />
+                <stop offset="100%" stopColor="#5e3718" />
+              </linearGradient>
+              <linearGradient id="freezerFront" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#f8fbfd" />
+                <stop offset="58%" stopColor="#d7e4ec" />
+                <stop offset="100%" stopColor="#b7cad7" />
+              </linearGradient>
+              <linearGradient id="freezerSide" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#d6e4ec" />
+                <stop offset="100%" stopColor="#9fb6c6" />
+              </linearGradient>
+              <linearGradient id="freezerGlass" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#e8fbff" stopOpacity="0.96" />
+                <stop offset="55%" stopColor="#9bdcf2" stopOpacity="0.62" />
+                <stop offset="100%" stopColor="#c7eff9" stopOpacity="0.88" />
+              </linearGradient>
+              <linearGradient id="fridgeFrame" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#f8fcff" />
+                <stop offset="60%" stopColor="#dce9f0" />
+                <stop offset="100%" stopColor="#b9cbd7" />
+              </linearGradient>
+              <linearGradient id="benchFront" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#dfe7ec" />
+                <stop offset="50%" stopColor="#bccbd5" />
+                <stop offset="100%" stopColor="#98acba" />
+              </linearGradient>              <linearGradient id="metalSheen" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#ffffff" />
                 <stop offset="45%" stopColor="#e5edf3" />
                 <stop offset="100%" stopColor="#b9c9d6" />
@@ -686,6 +1057,10 @@ export function WarehouseIsometricPreview({
                 stroke="#b8c8d8"
                 strokeWidth="2"
               />
+              <line x1={floor[0].x} y1={floor[0].y} x2={floor[1].x} y2={floor[1].y} stroke="#7f96aa" strokeWidth="5" opacity="0.42" />
+              <line x1={floor[0].x} y1={floor[0].y} x2={floor[3].x} y2={floor[3].y} stroke="#7f96aa" strokeWidth="5" opacity="0.42" />
+              <line x1={backWallTop[0].x} y1={backWallTop[0].y} x2={backWallTop[1].x} y2={backWallTop[1].y} stroke="#ffffff" strokeWidth="2" opacity="0.72" />
+              <line x1={leftWallTop[0].x} y1={leftWallTop[0].y} x2={leftWallTop[1].x} y2={leftWallTop[1].y} stroke="#ffffff" strokeWidth="2" opacity="0.72" />
 
               {[0.16, 0.5, 0.84].map((ratio) => {
                 const p = isoPoint(logicalWidth * ratio, 0, wallHeight * 0.62, logicalWidth, logicalHeight);
@@ -709,11 +1084,33 @@ export function WarehouseIsometricPreview({
 
               <polygon points={polygonPoints(floor)} fill="url(#floorGradient)" stroke="#9fb2c5" strokeWidth="2.5" />
               <polygon points={polygonPoints(floor)} fill="url(#floorGrid)" opacity="0.75" />
-            </g>
 
-            <g opacity="0.55">
-              <line x1="235" y1="552" x2="520" y2="700" stroke="#f5c04a" strokeWidth="3" strokeDasharray="10 8" />
-              <line x1="680" y1="700" x2="955" y2="555" stroke="#f5c04a" strokeWidth="3" strokeDasharray="10 8" />
+              <line x1={floor[0].x} y1={floor[0].y} x2={floor[1].x} y2={floor[1].y} stroke="#6e879b" strokeWidth="4" opacity="0.55" />
+              <line x1={floor[0].x} y1={floor[0].y} x2={floor[3].x} y2={floor[3].y} stroke="#6e879b" strokeWidth="4" opacity="0.55" />
+
+              <polyline
+                points={polygonPoints([
+                  isoPoint(logicalWidth * 0.06, logicalHeight * 0.86, 0.8, logicalWidth, logicalHeight),
+                  isoPoint(logicalWidth * 0.38, logicalHeight * 0.86, 0.8, logicalWidth, logicalHeight),
+                  isoPoint(logicalWidth * 0.38, logicalHeight * 0.68, 0.8, logicalWidth, logicalHeight),
+                ])}
+                fill="none"
+                stroke="#f4c247"
+                strokeWidth="2.5"
+                strokeDasharray="9 7"
+                opacity="0.62"
+              />
+              <polyline
+                points={polygonPoints([
+                  isoPoint(logicalWidth * 0.62, logicalHeight * 0.76, 0.8, logicalWidth, logicalHeight),
+                  isoPoint(logicalWidth * 0.9, logicalHeight * 0.76, 0.8, logicalWidth, logicalHeight),
+                ])}
+                fill="none"
+                stroke="#f4c247"
+                strokeWidth="2.5"
+                strokeDasharray="9 7"
+                opacity="0.62"
+              />
             </g>
 
             <g>
