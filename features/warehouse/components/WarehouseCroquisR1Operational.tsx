@@ -310,6 +310,50 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     [locations, selectedDepotId]
   );
 
+  const activeLocationIdsForSelectedDepot = useMemo(
+    () => new Set(
+      locations
+        .filter(
+          (item) =>
+            item.location.depotId === selectedDepotId
+            && item.location.status === 'active'
+        )
+        .map((item) => item.location.id)
+    ),
+    [locations, selectedDepotId]
+  );
+
+  useEffect(() => {
+    if (!selectedDepotId || locations.length === 0) return;
+
+    setDraftObjects((current) => {
+      const next = current.filter(
+        (object) =>
+          !object.warehouseLocationId
+          || activeLocationIdsForSelectedDepot.has(object.warehouseLocationId)
+      );
+
+      if (next.length === current.length) return current;
+
+      setSelectedObjectId((selectedId) =>
+        selectedId && next.some((object) => object.id === selectedId)
+          ? selectedId
+          : null
+      );
+
+      return next;
+    });
+  }, [activeLocationIdsForSelectedDepot, locations.length, selectedDepotId]);
+
+  const previewObjects = useMemo(
+    () => draftObjects.filter(
+      (object) =>
+        !object.warehouseLocationId
+        || activeLocationIdsForSelectedDepot.has(object.warehouseLocationId)
+    ),
+    [activeLocationIdsForSelectedDepot, draftObjects]
+  );
+
   const subpositionsByParent = useMemo(() => {
     const counts = new Map<string, number>();
     for (const item of locations) {
@@ -911,9 +955,13 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
             <WarehouseIsometricPreview
               logicalWidth={draftWidth}
               logicalHeight={draftHeight}
-              objects={draftObjects}
+              objects={previewObjects}
               locations={locations
-                .filter((item) => item.location.depotId === selectedDepotId)
+                .filter(
+                  (item) =>
+                    item.location.depotId === selectedDepotId
+                    && item.location.status === 'active'
+                )
                 .map((item) => item.location)}
               balances={previewBalances}
               materials={previewMaterials}
