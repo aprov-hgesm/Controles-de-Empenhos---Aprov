@@ -125,14 +125,27 @@ export function WarehouseIsometricPreview({
   );
 
   const highlightedLocalIds = useMemo(
-    () => new Set(selectedMaterialBalances.map((balance) => balance.position.locationId)),
+    () => new Set(
+      selectedMaterialBalances
+        .filter((balance) => balance.position.kind !== 'UNASSIGNED')
+        .map((balance) => balance.position.locationId)
+    ),
     [selectedMaterialBalances]
   );
 
   const highlightedSubpositionIds = useMemo(
     () => new Set(
       selectedMaterialBalances
-        .filter((balance) => balance.position.kind === 'SUBPOSITION')
+        .filter(
+          (balance): balance is WarehouseLocationBalance & {
+            position: {
+              kind: 'SUBPOSITION';
+              depotId: string;
+              locationId: string;
+              subpositionId: string;
+            };
+          } => balance.position.kind === 'SUBPOSITION'
+        )
         .map((balance) => balance.position.subpositionId)
     ),
     [selectedMaterialBalances]
