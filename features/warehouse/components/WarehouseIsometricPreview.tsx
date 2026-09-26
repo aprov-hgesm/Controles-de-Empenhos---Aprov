@@ -99,8 +99,8 @@ function renderLabel(
   center: IsoPoint,
   code: string,
   subtitle: string,
-  highlighted: boolean,
-  detail?: string
+  detail: string | undefined,
+  highlighted: boolean
 ) {
   const width = detail ? 112 : 90;
   const height = detail ? 48 : 30;
