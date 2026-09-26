@@ -164,13 +164,12 @@ service cloud.firestore {
         && request.resource.data.id == resource.data.id
         && request.resource.data.workspaceId == resource.data.workspaceId
         && request.resource.data.ug == resource.data.ug
-        && request.resource.data.code == resource.data.code
         && request.resource.data.createdBy == resource.data.createdBy
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.updatedAt == request.time
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'name', 'description', 'visualType', 'sizeProfile', 'status', 'updatedBy', 'updatedAt'
+          'code', 'name', 'description', 'visualType', 'sizeProfile', 'status', 'updatedBy', 'updatedAt'
         ]);
     }
 
@@ -269,13 +268,12 @@ service cloud.firestore {
         && request.resource.data.depotId == resource.data.depotId
         && request.resource.data.kind == resource.data.kind
         && request.resource.data.parentLocationId == resource.data.parentLocationId
-        && request.resource.data.code == resource.data.code
         && request.resource.data.createdBy == resource.data.createdBy
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.updatedAt == request.time
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'name', 'description', 'status', 'updatedBy', 'updatedAt'
+          'code', 'name', 'description', 'status', 'updatedBy', 'updatedAt'
         ]);
     }
 
