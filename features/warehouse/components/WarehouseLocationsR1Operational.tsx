@@ -891,8 +891,6 @@ export function WarehouseLocationsR1Operational({
         </aside>
       </div>
 
-      </section>
-
       </div>
 
       {activeSubtab === 'labels' && (
