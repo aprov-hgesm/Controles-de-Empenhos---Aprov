@@ -1773,3 +1773,14 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - A importação continua usando IA externa; o EMPROVEX não chama modelos diretamente.
 - O contrato `emprovex_warehouse_import_v1`, validações, limites, contagens matemáticas e comportamento de preservação permanecem inalterados.
 - Esta mudança é apenas de organização visual/UX e não altera Firestore Rules nem domínios operacionais da ADM-R1.
+
+
+## D-082 — Painel lateral fixo para detalhamento das Subposições
+
+- Na subaba **Estrutura** de **Meus Depósitos**, a listagem de Locais passa a ocupar a coluna principal.
+- O detalhamento do Local selecionado e suas Subposições passa para um painel lateral direito.
+- Em telas largas, o painel usa comportamento `sticky` e permanece visível durante a rolagem da lista de Locais, evitando que o operador precise subir ou descer a página para conferir as Subposições.
+- Em telas menores, o layout continua responsivo e o painel retorna ao fluxo normal da página para preservar legibilidade.
+- O painel lateral mantém ações de edição do Local e das Subposições e permite criar a primeira Subposição quando necessário.
+- A lista interna de Subposições possui rolagem própria quando excede a altura útil da tela.
+- Esta mudança é exclusivamente de UX/layout e não altera contratos, Firestore Rules, identidade técnica, estoque ou hierarquia dos dados.
