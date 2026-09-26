@@ -411,10 +411,11 @@ function WarehouseStructure({
         {contactShadow(object, logicalWidth, logicalHeight, 0.18)}
         {commonHighlight}
 
-        {[frontBottomLeft, frontBottomRight, backBottomLeft, backBottomRight].map((base, index) => {
-          const top = [frontTopLeft, frontTopRight, backTopLeft, backTopRight][index];
+        {/* Camada traseira: deve ser pintada antes das prateleiras. */}
+        {[backBottomLeft, backBottomRight].map((base, index) => {
+          const top = [backTopLeft, backTopRight][index];
           return (
-            <g key={'upright-' + index}>
+            <g key={'back-upright-' + index}>
               <line x1={base.x} y1={base.y} x2={top.x} y2={top.y} stroke="#0e3556" strokeWidth="6.6" />
               <line x1={base.x + 1.6} y1={base.y} x2={top.x + 1.6} y2={top.y} stroke="#4f7895" strokeWidth="1.3" opacity="0.88" />
               {Array.from({ length: 8 }, (_, holeIndex) => {
@@ -426,6 +427,13 @@ function WarehouseStructure({
             </g>
           );
         })}
+
+        {[backBottomLeft, backBottomRight].map((base, index) => (
+          <g key={'back-foot-' + index}>
+            <rect x={base.x - 6} y={base.y - 2} width="12" height="6" rx="1.8" fill="#f5ba25" stroke="#b97910" strokeWidth="1" opacity="0.72" />
+            <rect x={base.x - 3} y={base.y - 12} width="6" height="10" rx="1.5" fill="#f2b31d" stroke="#c07d11" strokeWidth="0.8" opacity="0.62" />
+          </g>
+        ))}
 
         {[
           [frontBottomLeft, backBottomLeft, backTopLeft, frontTopLeft],
@@ -531,10 +539,27 @@ function WarehouseStructure({
           );
         })}
 
-        {[frontBottomLeft, frontBottomRight, backBottomLeft, backBottomRight].map((base, index) => (
-          <g key={'foot-' + index}>
+        {/* Camada frontal: pintada depois das prateleiras para oclusão isométrica correta. */}
+        {[frontBottomLeft, frontBottomRight].map((base, index) => {
+          const top = [frontTopLeft, frontTopRight][index];
+          return (
+            <g key={'front-upright-' + index}>
+              <line x1={base.x} y1={base.y} x2={top.x} y2={top.y} stroke="#0e3556" strokeWidth="6.6" />
+              <line x1={base.x + 1.6} y1={base.y} x2={top.x + 1.6} y2={top.y} stroke="#4f7895" strokeWidth="1.3" opacity="0.9" />
+              {Array.from({ length: 8 }, (_, holeIndex) => {
+                const t = (holeIndex + 1) / 9;
+                const hx = base.x + (top.x - base.x) * t;
+                const hy = base.y + (top.y - base.y) * t;
+                return <circle key={holeIndex} cx={hx} cy={hy} r="1.05" fill="#8ab0c9" opacity="0.78" />;
+              })}
+            </g>
+          );
+        })}
+
+        {[frontBottomLeft, frontBottomRight].map((base, index) => (
+          <g key={'front-foot-' + index}>
             <rect x={base.x - 6} y={base.y - 2} width="12" height="6" rx="1.8" fill="#f5ba25" stroke="#b97910" strokeWidth="1" />
-            <rect x={base.x - 3} y={base.y - 12} width="6" height="10" rx="1.5" fill="#f2b31d" stroke="#c07d11" strokeWidth="0.8" opacity={index < 2 ? 0.96 : 0.7} />
+            <rect x={base.x - 3} y={base.y - 12} width="6" height="10" rx="1.5" fill="#f2b31d" stroke="#c07d11" strokeWidth="0.8" opacity="0.98" />
           </g>
         ))}
 
