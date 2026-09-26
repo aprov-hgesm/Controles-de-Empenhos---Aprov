@@ -89,6 +89,11 @@ test('JSON válido é normalizado e resumido', () => {
         children: [],
       },
     ],
+    summary: {
+      locals: 2,
+      subpositions: 2,
+      total: 4,
+    },
   }));
 
   assert.equal(parsed.depot.code, 'DEP-01');
@@ -109,6 +114,7 @@ test('rejeita versão errada, código duplicado e subposição solta', () => {
       version: 'outra-versao',
       depot: { code: 'DEP-01', name: 'Depósito', description: null },
       locations: [],
+      summary: { locals: 0, subpositions: 0, total: 0 },
     })),
     /Versão de importação incompatível/
   );
@@ -121,6 +127,7 @@ test('rejeita versão errada, código duplicado e subposição solta', () => {
         { code: 'EST-01', name: 'A', kind: 'LOCAL', description: null, children: [] },
         { code: 'EST-01', name: 'B', kind: 'LOCAL', description: null, children: [] },
       ],
+      summary: { locals: 2, subpositions: 0, total: 2 },
     })),
     /Código de Local duplicado/
   );
@@ -132,6 +139,7 @@ test('rejeita versão errada, código duplicado e subposição solta', () => {
       locations: [
         { code: 'PRAT-01', name: 'Prateleira', kind: 'SUBPOSITION', description: null, children: [] },
       ],
+      summary: { locals: 1, subpositions: 0, total: 1 },
     })),
     /kind=LOCAL/
   );
@@ -143,7 +151,36 @@ test('rejeita importação vazia', () => {
       version: 'emprovex_warehouse_import_v1',
       depot: { code: 'DEP-01', name: 'Depósito', description: null },
       locations: [],
+      summary: { locals: 0, subpositions: 0, total: 0 },
     })),
     /nenhuma localização/
+  );
+});
+
+
+test('rejeita summary que não confere com a estrutura expandida', () => {
+  assert.throws(
+    () => structureImport.parseWarehouseStructureImport(JSON.stringify({
+      version: 'emprovex_warehouse_import_v1',
+      depot: { code: 'DEP-01', name: 'Depósito', description: null },
+      locations: [
+        {
+          code: 'EST-01',
+          name: 'Estante 01',
+          kind: 'LOCAL',
+          description: null,
+          children: [
+            {
+              code: 'EST-01-PRAT-01',
+              name: 'Prateleira 01',
+              kind: 'SUBPOSITION',
+              description: null,
+            },
+          ],
+        },
+      ],
+      summary: { locals: 2, subpositions: 5, total: 7 },
+    })),
+    /Resumo inconsistente/
   );
 });
