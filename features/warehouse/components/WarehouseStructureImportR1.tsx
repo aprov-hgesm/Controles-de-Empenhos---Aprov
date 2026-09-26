@@ -232,7 +232,7 @@ export function WarehouseStructureImportR1({
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             rows={7}
-            placeholder="Ex.: Meu depósito tem 10 estantes com 5 prateleiras cada, 5 estantes com 4 prateleiras cada, 2 freezers, 2 geladeiras industriais e 6 paletes."
+            placeholder="Ex.: Meu Depósito Principal tem 500 cm de largura e 500 cm de comprimento, tem uma porta de 100 cm, duas estantes de 120 cm por 40 cm com 4 prateleiras cada e um palete de 120 cm por 120 cm. Se você não souber as medidas, pode descrever apenas as estruturas e quantidades."
             className="mt-3 w-full resize-y rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
           />
           <button
