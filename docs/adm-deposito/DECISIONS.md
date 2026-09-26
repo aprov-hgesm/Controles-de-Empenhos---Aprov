@@ -1763,3 +1763,13 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - A subaba Etiquetas ocupa o fluxo normal da página, evitando sobreposição com a barra superior do EMPROVEX e melhorando leitura em telas menores.
 - O botão “Imprimir etiquetas” na Estrutura permanece como atalho e apenas alterna para a subaba Etiquetas.
 - O gerador de PDF, escopos, presets A4 e regras da D-079 permanecem inalterados.
+
+
+## D-081 — Importação via IA externa como subaba de Meus Depósitos
+
+- O fluxo **Importar estrutura via IA externa** deixa de ficar exposto no fim da subaba Estrutura.
+- Dentro de **Meus Depósitos**, a navegação passa a oferecer três subabas: **Estrutura**, **Etiquetas** e **Importar via IA**.
+- A subaba **Importar via IA** concentra exclusivamente o fluxo de prompt padronizado, colagem do JSON, validação, preview e confirmação da importação.
+- A importação continua usando IA externa; o EMPROVEX não chama modelos diretamente.
+- O contrato `emprovex_warehouse_import_v1`, validações, limites, contagens matemáticas e comportamento de preservação permanecem inalterados.
+- Esta mudança é apenas de organização visual/UX e não altera Firestore Rules nem domínios operacionais da ADM-R1.
