@@ -1811,3 +1811,12 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - O redimensionamento livre por alça fica desabilitado no fluxo guiado; objetos entram predefinidos e continuam podendo ser movidos e girados.
 - O editor do croqui segue a identidade visual clara do EMPROVEX, e controles de visualização devem ter estado selecionado claramente destacado.
 - Alterações visuais continuam sem efeito sobre estoque, saldos, lotes ou ledger.
+
+
+## D-085 — Código de depósito inativo não bloqueia nova importação
+
+- Depósito com `status = inactive` não é apresentado como conflito ativo na confirmação de importação.
+- Se uma importação usar o mesmo código lógico de um depósito inativo, o EMPROVEX restaura o registro histórico existente em vez de criar uma segunda identidade técnica com o mesmo código.
+- Locais e Subposições inativos com códigos correspondentes à estrutura importada também são restaurados e atualizados; estruturas antigas não presentes na nova importação permanecem inativas.
+- Somente depósito ativo com o mesmo código exige confirmação explícita para reutilização.
+- Essa regra preserva auditoria, evita IDs duplicados para a mesma identidade lógica histórica e faz a experiência de exclusão lógica se comportar como exclusão para o operador.
