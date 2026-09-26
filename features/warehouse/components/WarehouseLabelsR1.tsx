@@ -6,7 +6,6 @@ import {
   Eye,
   Printer,
   Tags,
-  X,
 } from 'lucide-react';
 
 import {
@@ -32,8 +31,6 @@ type Scope =
   | 'LOCATION_SUBPOSITIONS';
 
 interface Props {
-  open: boolean;
-  onClose: () => void;
   depots: WarehouseDepotListItem[];
   locations: WarehouseLocationListItem[];
   selectedDepotId: string;
@@ -76,8 +73,6 @@ const scopeOptions: Array<{
 ];
 
 export function WarehouseLabelsR1({
-  open,
-  onClose,
   depots,
   locations,
   selectedDepotId,
@@ -119,7 +114,6 @@ export function WarehouseLabelsR1({
     ? 0
     : Math.ceil(labels.length / selectedPreset.perPage);
 
-  if (!open) return null;
 
   function buildPdf() {
     if (!selectedDepot) {
@@ -161,41 +155,29 @@ export function WarehouseLabelsR1({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[2px]"
-      role="dialog"
-      aria-modal="true"
+    <section
+      className="rounded-2xl border border-blue-100/80 bg-white/75 p-5 shadow-sm backdrop-blur-md"
       aria-label="Imprimir etiquetas ADM Depósito"
+      data-testid="warehouse-labels-r1"
     >
-      <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-blue-100 bg-[#f7f9fc] shadow-2xl">
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-blue-100 bg-white/95 px-6 py-5 backdrop-blur">
-          <div className="flex items-start gap-3">
-            <div className="grid h-11 w-11 place-items-center rounded-2xl border border-blue-100 bg-blue-50 text-[#00288e]">
-              <Printer className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="font-mono text-[9px] font-black uppercase tracking-[0.18em] text-[#00288e]/60">
-                EMPROVEX · ADM Depósito
-              </p>
-              <h2 className="mt-1 text-xl font-black text-[#00288e]">
-                Imprimir etiquetas
-              </h2>
-              <p className="mt-1 text-sm font-medium text-gray-500">
-                PDF A4 monocromático, otimizado para toner e identificação física.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-9 w-9 place-items-center rounded-xl border border-gray-200 bg-white text-gray-500 transition hover:bg-gray-50"
-            aria-label="Fechar"
-          >
-            <X className="h-4 w-4" />
-          </button>
+      <div className="flex items-start gap-3 border-b border-blue-100 pb-5">
+        <div className="grid h-11 w-11 place-items-center rounded-2xl border border-blue-100 bg-blue-50 text-[#00288e]">
+          <Printer className="h-5 w-5" />
         </div>
+        <div>
+          <p className="font-mono text-[9px] font-black uppercase tracking-[0.18em] text-[#00288e]/60">
+            EMPROVEX · ADM Depósito
+          </p>
+          <h2 className="mt-1 text-xl font-black text-[#00288e]">
+            Etiquetas
+          </h2>
+          <p className="mt-1 text-sm font-medium text-gray-500">
+            Prepare e gere PDFs A4 monocromáticos para identificação física de depósitos, locais e subposições.
+          </p>
+        </div>
+      </div>
 
-        <div className="grid gap-5 p-6 lg:grid-cols-[1.15fr_0.85fr]">
+      <div className="grid gap-5 pt-5 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-5">
             <section className="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-2">
@@ -361,8 +343,7 @@ export function WarehouseLabelsR1({
               </button>
             </div>
           </aside>
-        </div>
       </div>
-    </div>
+    </section>
   );
 }
