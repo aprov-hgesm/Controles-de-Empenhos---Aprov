@@ -100,6 +100,7 @@ export function WarehouseDepotLayoutEditor({
   lightTheme = false,
   allowResize = true,
   onDuplicateObject,
+  onRemoveObject,
 }: {
   logicalWidth: number;
   logicalHeight: number;
@@ -119,6 +120,7 @@ export function WarehouseDepotLayoutEditor({
     source: WarehouseDepotLayoutObject,
     copy: WarehouseDepotLayoutObject
   ) => WarehouseDepotLayoutObject;
+  onRemoveObject?: (object: WarehouseDepotLayoutObject) => void;
 }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const interactionRef = useRef<null | {
@@ -189,9 +191,10 @@ export function WarehouseDepotLayoutEditor({
 
   const removeSelected = useCallback(() => {
     if (!selected) return;
+    onRemoveObject?.(selected);
     commit(objects.filter((item) => item.id !== selected.id));
     onSelectedObjectIdChange(null);
-  }, [commit, objects, onSelectedObjectIdChange, selected]);
+  }, [commit, objects, onRemoveObject, onSelectedObjectIdChange, selected]);
 
   const pasteCopied = useCallback(() => {
     const source = copiedRef.current;
