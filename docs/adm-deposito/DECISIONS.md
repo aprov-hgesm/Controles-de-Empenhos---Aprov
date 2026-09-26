@@ -1956,3 +1956,17 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
   - pés tubulares e sapatas.
 - Piso e ambiente passam a usar rodapé, guias de circulação internas, luzes de parede e sombras mais realistas.
 - A solução continua SVG/React e sem engine 3D pesada.
+
+
+## D-094 — Prévia 2.5D tratada como motor visual premium oficial do EMPROVEX
+
+- A Prévia 2.5D deixa de ser apenas um desenho auxiliar e passa a ser tratada como uma biblioteca visual operacional oficial.
+- Os cinco tipos canônicos permanecem fixos: Estante, Palete, Freezer, Geladeira industrial e Mesa.
+- Tipos legados continuam convergindo para um dos cinco modelos oficiais.
+- Cada modelo possui geometria, materialidade, sombra de contato e detalhes próprios.
+- A ocupação por estoque passa a considerar Subposições individualmente quando existirem.
+- Em Estantes, caixas são distribuídas pelos níveis correspondentes às Subposições ocupadas; nível consultado recebe highlight próprio.
+- Na consulta de item, os Locais não correspondentes são atenuados e o Local/Subposição correspondente recebe glow institucional.
+- O motor continua baseado em SVG/React, preservando baixo custo de CPU/GPU e evitando dependência de WebGL/Three.js.
+- A ordenação visual considera profundidade lógica do croqui.
+- Etiquetas permanecem compactas por padrão e expandem detalhes apenas no estado destacado.
