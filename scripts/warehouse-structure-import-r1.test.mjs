@@ -50,6 +50,67 @@ test('prompt inclui contrato oficial e texto informal do usuário', () => {
   assert.match(prompt, /kind="LOCAL"/);
   assert.match(prompt, /kind="SUBPOSITION"/);
   assert.match(prompt, /não inclua IDs internos/i);
+  assert.match(prompt, /Medidas físicas são OPCIONAIS/i);
+  assert.match(prompt, /widthCm/);
+  assert.match(prompt, /lengthCm/);
+  assert.match(prompt, /doors/);
+});
+
+
+test('aceita medidas opcionais e continua aceitando ausência de medidas', () => {
+  const withMeasures = structureImport.parseWarehouseStructureImport(JSON.stringify({
+    version: 'emprovex_warehouse_import_v1',
+    depot: {
+      code: 'DEP-02',
+      name: 'Depósito Principal',
+      description: null,
+      widthCm: 500,
+      lengthCm: 500,
+      doors: [{ widthCm: 100 }],
+    },
+    locations: [
+      {
+        code: 'EST-01',
+        name: 'Estante 01',
+        kind: 'LOCAL',
+        description: null,
+        visualType: 'SHELF',
+        widthCm: 120,
+        depthCm: 40,
+        children: [],
+      },
+    ],
+    summary: { locals: 1, subpositions: 0, total: 1 },
+  }));
+  assert.equal(withMeasures.depot.widthCm, 500);
+  assert.equal(withMeasures.depot.lengthCm, 500);
+  assert.equal(withMeasures.depot.doors[0].widthCm, 100);
+  assert.equal(withMeasures.locations[0].widthCm, 120);
+  assert.equal(withMeasures.locations[0].depthCm, 40);
+
+  const withoutMeasures = structureImport.parseWarehouseStructureImport(JSON.stringify({
+    version: 'emprovex_warehouse_import_v1',
+    depot: {
+      code: 'DEP-03',
+      name: 'Sem medidas',
+      description: null,
+    },
+    locations: [
+      {
+        code: 'PLT-01',
+        name: 'Palete 01',
+        kind: 'LOCAL',
+        description: null,
+        children: [],
+      },
+    ],
+    summary: { locals: 1, subpositions: 0, total: 1 },
+  }));
+  assert.equal(withoutMeasures.depot.widthCm, null);
+  assert.equal(withoutMeasures.depot.lengthCm, null);
+  assert.deepEqual(withoutMeasures.depot.doors, []);
+  assert.equal(withoutMeasures.locations[0].widthCm, null);
+  assert.equal(withoutMeasures.locations[0].depthCm, null);
 });
 
 test('JSON válido é normalizado e resumido', () => {
