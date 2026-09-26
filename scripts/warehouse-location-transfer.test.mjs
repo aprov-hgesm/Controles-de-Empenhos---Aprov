@@ -294,3 +294,22 @@ test('projeção de localização rejeita quantidade negativa e escopo divergent
   }, { expectedWorkspaceId: workspaceId });
   assert.equal(result.ok, false);
 });
+
+
+test('depósito aceita tipo visual e porte com defaults retrocompatíveis', () => {
+  const legacy = location.validateWarehouseDepot(sampleDepot());
+  assert.equal(legacy.ok, true);
+  assert.equal(legacy.data.visualType, 'STANDARD');
+  assert.equal(legacy.data.sizeProfile, 'MEDIUM');
+
+  const coldContainer = location.validateWarehouseDepot(sampleDepot({
+    visualType: 'COLD_CONTAINER',
+    sizeProfile: 'LARGE',
+  }));
+  assert.equal(coldContainer.ok, true);
+  assert.equal(coldContainer.data.visualType, 'COLD_CONTAINER');
+  assert.equal(coldContainer.data.sizeProfile, 'LARGE');
+
+  assert.equal(location.validateWarehouseDepot(sampleDepot({ visualType: 'NAVIO' })).ok, false);
+  assert.equal(location.validateWarehouseDepot(sampleDepot({ sizeProfile: 'GIGANTE' })).ok, false);
+});
