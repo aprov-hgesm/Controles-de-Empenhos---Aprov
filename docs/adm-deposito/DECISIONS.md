@@ -1900,3 +1900,19 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - A iluminação por consulta mantém halo azul institucional de alto contraste.
 - Caixas continuam aparecendo somente com saldo físico positivo e permanecem simbólicas/bounded.
 - A biblioteca visual continua em SVG/React, sem engine 3D/WebGL obrigatória, preservando baixo custo de CPU/GPU.
+
+
+## D-092 — Catálogo visual fixo de cinco elementos para Croqui e Prévia 2.5D
+
+- O catálogo visual oficial de Locais físicos do ADM Depósito fica padronizado em apenas cinco elementos:
+  1. Estante;
+  2. Palete;
+  3. Freezer;
+  4. Geladeira industrial;
+  5. Mesa.
+- O objetivo é garantir identidade visual consistente entre UGs e permitir evolução estética profunda de cada elemento sem multiplicar variações difíceis de manter.
+- Tamanho continua configurável por Local e a quantidade de Subposições continua variável.
+- Nomes legados como rack passam a convergir visualmente para Estante; câmara converge para Freezer; bancada/armário convergem para Mesa.
+- Portas continuam existindo como elementos estruturais do croqui, mas não pertencem ao catálogo de Locais.
+- Novos Locais inseridos no croqui só podem escolher entre os cinco tipos oficiais.
+- A Prévia 2.5D continuará refinando uma estética fixa e profissional para cada um desses cinco elementos.
