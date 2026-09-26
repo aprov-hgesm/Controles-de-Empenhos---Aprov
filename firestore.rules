@@ -3594,17 +3594,19 @@ service cloud.firestore {
 
     function warehouseMovementCreateAllowed(workspaceId, movementId) {
       let movement = request.resource.data;
+      let isExpressOutbound = warehouseMovementIsExpressOutbound(movement);
+      let isInventoryAdjustment = warehouseMovementIsInventoryAdjustment(movement);
       return (
-          warehouseMovementIsExpressOutbound(movement)
+          isExpressOutbound
           && validWarehouseExpressOutboundMovementCreate(workspaceId, movementId)
         )
         || (
-          warehouseMovementIsInventoryAdjustment(movement)
+          isInventoryAdjustment
           && validWarehouseInventoryMovementCreate(workspaceId, movementId)
         )
         || (
-          !warehouseMovementIsExpressOutbound(movement)
-          && !warehouseMovementIsInventoryAdjustment(movement)
+          !isExpressOutbound
+          && !isInventoryAdjustment
           && validWarehouseMovementDocument(workspaceId, movementId)
           && warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId)
           && (
@@ -3806,11 +3808,13 @@ service cloud.firestore {
       let balancePath = /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(materialId);
       let movement = getAfter(movementPath).data;
       let balanceExists = exists(balancePath);
+      let isExpressOutbound = warehouseMovementIsExpressOutbound(movement);
+      let isInventoryAdjustment = warehouseMovementIsInventoryAdjustment(movement);
       return !exists(movementPath)
         && existsAfter(movementPath)
         && (
           (
-            warehouseMovementIsExpressOutbound(movement)
+            isExpressOutbound
             && balanceExists
             && validWarehouseExpressOutboundBalanceUpdate(
               workspaceId,
@@ -3819,7 +3823,7 @@ service cloud.firestore {
             )
           )
           || (
-            warehouseMovementIsInventoryAdjustment(movement)
+            isInventoryAdjustment
             && balanceExists
             && validWarehouseInventoryBalanceUpdate(
               workspaceId,
@@ -3828,8 +3832,8 @@ service cloud.firestore {
             )
           )
           || (
-            !warehouseMovementIsExpressOutbound(movement)
-            && !warehouseMovementIsInventoryAdjustment(movement)
+            !isExpressOutbound
+            && !isInventoryAdjustment
             && validWarehouseBalanceDocument(workspaceId, materialId)
             && movement.schemaVersion == 'warehouse_movement_v1'
             && movement.workspaceId == workspaceId
