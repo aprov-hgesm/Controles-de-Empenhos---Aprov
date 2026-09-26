@@ -2394,3 +2394,23 @@ Implementado na branch `feat/adm-deposito-modular-release`:
 
 Commit funcional:
 - `0666499de89598d8d95091eedbaac075362941da`.
+
+
+### Motor visual premium 2.5D — 2026-09-26
+
+A Prévia 2.5D foi reconstruída como motor visual operacional:
+- biblioteca canônica de cinco modelos;
+- sombras de contato por objeto;
+- materiais diferenciados;
+- Estantes com montantes perfurados, contraventamentos, decks e travessas;
+- Paletes com ripas, longarinas e blocos inferiores;
+- Freezers com tampa de vidro, painel, puxador e ventilação;
+- Geladeiras industriais com portas de vidro, iluminação fria, prateleiras e painel;
+- Mesas inox com tampo, prateleira inferior, pés e sapatas;
+- porta estrutural ganhou representação metálica dedicada;
+- ocupação em Estantes respeita Subposições individualmente;
+- consulta de item atenua objetos não relacionados e ilumina o destino correto;
+- profundidade de cena usa ordenação por X+Y e camada.
+
+Commit funcional:
+- `d5b704ebae9a77fa40d4d412abe28debdca7ddbd`.
