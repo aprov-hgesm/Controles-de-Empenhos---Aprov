@@ -91,7 +91,7 @@ export function WarehouseModuleShell({
         />
 
         <main
-          className={`flex-1 w-full overflow-hidden pb-24 md:pb-12 mx-auto ${isHome
+          className={`flex-1 w-full overflow-x-hidden pb-24 md:pb-12 mx-auto ${isHome
             ? 'lg:pl-5 pt-4 px-3 max-w-[1600px]'
             : 'lg:pl-6 pt-6 px-4 max-w-7xl'
           }`}
