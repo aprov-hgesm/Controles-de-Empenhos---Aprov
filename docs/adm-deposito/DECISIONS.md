@@ -1970,3 +1970,12 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - O motor continua baseado em SVG/React, preservando baixo custo de CPU/GPU e evitando dependência de WebGL/Three.js.
 - A ordenação visual considera profundidade lógica do croqui.
 - Etiquetas permanecem compactas por padrão e expandem detalhes apenas no estado destacado.
+
+
+## D-095 — Croqui e Prévia 2.5D reconciliam Locais inativos automaticamente
+
+- Um objeto do croqui vinculado a um Local que foi posteriormente inativado/excluído em "Depósitos e localizações" não deve continuar aparecendo como estrutura operacional.
+- Ao carregar o Croqui, objetos vinculados a Locais/Subposições inativos ou inexistentes são removidos do estado visual corrente.
+- A Prévia 2.5D também filtra diretamente por Locais ativos, evitando exibir estrutura obsoleta mesmo antes de uma nova versão do croqui ser salva.
+- Elementos estruturais sem `warehouseLocationId`, como portas, continuam preservados.
+- Não é necessário excluir e recriar o depósito para receber atualizações visuais ou reconciliar a estrutura.
