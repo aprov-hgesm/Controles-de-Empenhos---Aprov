@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Bot, CheckCircle2, Clipboard, Upload } from 'lucide-react';
+import { Bot, CheckCircle2, Clipboard, Upload, Warehouse } from 'lucide-react';
 
 import {
   createWarehouseDepot,
@@ -9,6 +9,11 @@ import {
   type WarehouseDepotListItem,
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
+import {
+  normalizeWarehouseLogicalCode,
+  type WarehouseDepotSizeProfile,
+  type WarehouseDepotVisualType,
+} from '../../../lib/warehouse/location';
 import {
   buildWarehouseStructureAiPrompt,
   parseWarehouseStructureImport,
@@ -25,7 +30,15 @@ interface Props {
 
 type Preview = {
   payload: WarehouseStructureImportPayload;
-  depotExists: boolean;
+};
+
+type DepotConfirmation = {
+  code: string;
+  name: string;
+  description: string;
+  visualType: WarehouseDepotVisualType;
+  sizeProfile: WarehouseDepotSizeProfile;
+  reuseExisting: boolean;
 };
 
 function errorMessage(error: unknown): string {
@@ -41,6 +54,7 @@ export function WarehouseStructureImportR1({
   const [description, setDescription] = useState('');
   const [jsonText, setJsonText] = useState('');
   const [preview, setPreview] = useState<Preview | null>(null);
+  const [depotConfirmation, setDepotConfirmation] = useState<DepotConfirmation | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
 
@@ -64,16 +78,24 @@ export function WarehouseStructureImportR1({
     setMessage(null);
     try {
       const payload = parseWarehouseStructureImport(jsonText);
-      const depotExists = depots.some((item) => item.depot.code === payload.depot.code);
-      setPreview({ payload, depotExists });
+      setPreview({ payload });
+      setDepotConfirmation({
+        code: payload.depot.code,
+        name: payload.depot.name,
+        description: payload.depot.description || '',
+        visualType: 'STANDARD',
+        sizeProfile: 'MEDIUM',
+        reuseExisting: false,
+      });
     } catch (error) {
       setPreview(null);
+      setDepotConfirmation(null);
       setMessage(errorMessage(error));
     }
   }
 
   async function importStructure() {
-    if (!preview) return;
+    if (!preview || !depotConfirmation) return;
 
     setWorking(true);
     setMessage(null);
@@ -85,10 +107,26 @@ export function WarehouseStructureImportR1({
 
     try {
       const payload = preview.payload;
-      let depot = depots.find((item) => item.depot.code === payload.depot.code)?.depot;
+      const confirmedCode = normalizeWarehouseLogicalCode(depotConfirmation.code);
+      if (!confirmedCode) throw new Error('Informe um código válido para o depósito.');
+      const existingDepot = depots.find((item) => item.depot.code === confirmedCode)?.depot;
+      let depot = depotConfirmation.reuseExisting ? existingDepot : undefined;
+
+      if (existingDepot && !depotConfirmation.reuseExisting) {
+        throw new Error(
+          'Já existe um depósito com o código ' + confirmedCode
+          + '. Altere o código para criar um novo depósito ou marque a opção de reutilizar o existente.'
+        );
+      }
 
       if (!depot) {
-        depot = await createWarehouseDepot(workspaceId, payload.depot);
+        depot = await createWarehouseDepot(workspaceId, {
+          code: confirmedCode,
+          name: depotConfirmation.name,
+          description: depotConfirmation.description || null,
+          visualType: depotConfirmation.visualType,
+          sizeProfile: depotConfirmation.sizeProfile,
+        });
         createdDepot += 1;
       }
 
@@ -154,6 +192,7 @@ export function WarehouseStructureImportR1({
         + skipped + ' registro(s) já existente(s) foram preservados.'
       );
       setPreview(null);
+      setDepotConfirmation(null);
       setJsonText('');
     } catch (error) {
       setMessage(
@@ -213,6 +252,7 @@ export function WarehouseStructureImportR1({
             onChange={(event) => {
               setJsonText(event.target.value);
               setPreview(null);
+              setDepotConfirmation(null);
             }}
             rows={7}
             placeholder='{"version":"emprovex_warehouse_import_v1", ...}'
@@ -230,46 +270,120 @@ export function WarehouseStructureImportR1({
         </div>
       </div>
 
-      {preview && summary && (
-        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/80 p-4">
-          <p className="text-xs font-black text-emerald-800">Prévia da importação</p>
-          <div className="mt-3 grid gap-2 text-xs text-gray-600 sm:grid-cols-4">
-            <p>
-              <span className="font-black text-gray-800">{preview.payload.depot.code}</span>
-              <br />
-              {preview.payload.depot.name}
-            </p>
-            <p>
-              <span className="font-black text-gray-800">{summary.localCount}</span>
-              <br />
-              Locais
-            </p>
-            <p>
-              <span className="font-black text-gray-800">{summary.subpositionCount}</span>
-              <br />
-              Subposições
-            </p>
-            <p>
-              <span className="font-black text-gray-800">{summary.totalCount}</span>
-              <br />
-              Total
-            </p>
+      {preview && summary && depotConfirmation && (
+        <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="rounded-xl border border-emerald-200 bg-white p-2 text-emerald-700">
+              <Warehouse className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-sm font-black text-emerald-900">Confirmar dados do depósito</p>
+              <p className="mt-1 text-xs leading-5 text-gray-600">
+                Revise os dados antes da importação. O JSON define a estrutura; aqui você confirma a identidade visual e operacional do novo depósito.
+              </p>
+            </div>
           </div>
 
-          <p className="mt-3 text-[11px] font-medium text-gray-500">
-            {preview.depotExists
-              ? 'O código do depósito já existe; a importação reutilizará esse depósito e preservará códigos já cadastrados.'
-              : 'O depósito será criado antes das localizações.'}
-          </p>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <label className="space-y-1">
+              <span className="text-[10px] font-black uppercase tracking-wide text-gray-500">Código</span>
+              <input
+                value={depotConfirmation.code}
+                onChange={(event) => setDepotConfirmation((current) => current ? { ...current, code: event.target.value, reuseExisting: false } : current)}
+                className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs font-bold text-gray-800 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+              />
+            </label>
+            <label className="space-y-1 xl:col-span-2">
+              <span className="text-[10px] font-black uppercase tracking-wide text-gray-500">Nome</span>
+              <input
+                value={depotConfirmation.name}
+                onChange={(event) => setDepotConfirmation((current) => current ? { ...current, name: event.target.value } : current)}
+                className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs font-bold text-gray-800 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-[10px] font-black uppercase tracking-wide text-gray-500">Tipo</span>
+              <select
+                value={depotConfirmation.visualType}
+                onChange={(event) => setDepotConfirmation((current) => current ? { ...current, visualType: event.target.value as WarehouseDepotVisualType } : current)}
+                className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs font-bold text-gray-800 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="STANDARD">Depósito padrão</option>
+                <option value="CONTAINER">Contêiner</option>
+                <option value="COLD_CONTAINER">Contêiner frigorífico</option>
+              </select>
+            </label>
+            <label className="space-y-1">
+              <span className="text-[10px] font-black uppercase tracking-wide text-gray-500">Porte</span>
+              <select
+                value={depotConfirmation.sizeProfile}
+                onChange={(event) => setDepotConfirmation((current) => current ? { ...current, sizeProfile: event.target.value as WarehouseDepotSizeProfile } : current)}
+                className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs font-bold text-gray-800 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="SMALL">Pequeno</option>
+                <option value="MEDIUM">Médio</option>
+                <option value="LARGE">Grande</option>
+              </select>
+            </label>
+          </div>
+
+          <label className="mt-3 block space-y-1">
+            <span className="text-[10px] font-black uppercase tracking-wide text-gray-500">Descrição opcional</span>
+            <input
+              value={depotConfirmation.description}
+              onChange={(event) => setDepotConfirmation((current) => current ? { ...current, description: event.target.value } : current)}
+              className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs text-gray-700 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+            />
+          </label>
+
+          {(() => {
+            const normalized = normalizeWarehouseLogicalCode(depotConfirmation.code);
+            const existing = normalized
+              ? depots.find((item) => item.depot.code === normalized)?.depot
+              : undefined;
+            return existing ? (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <p className="text-xs font-black text-amber-900">
+                  Já existe um depósito com o código {existing.code}: {existing.name}
+                </p>
+                <p className="mt-1 text-[11px] leading-4 text-amber-800">
+                  Para criar um novo depósito, altere o código acima. Só reutilize o existente se a nova estrutura realmente pertencer a ele.
+                </p>
+                <label className="mt-3 flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={depotConfirmation.reuseExisting}
+                    onChange={(event) => setDepotConfirmation((current) => current ? { ...current, reuseExisting: event.target.checked } : current)}
+                    className="h-4 w-4 accent-[#00288e]"
+                  />
+                  <span className="text-xs font-black text-amber-900">Reutilizar este depósito existente</span>
+                </label>
+              </div>
+            ) : null;
+          })()}
+
+          <div className="mt-4 grid gap-2 text-xs text-gray-600 sm:grid-cols-3">
+            <p><span className="font-black text-gray-800">{summary.localCount}</span><br />Locais</p>
+            <p><span className="font-black text-gray-800">{summary.subpositionCount}</span><br />Subposições</p>
+            <p><span className="font-black text-gray-800">{summary.totalCount}</span><br />Total</p>
+          </div>
 
           <button
             type="button"
             onClick={() => void importStructure()}
-            disabled={working}
+            disabled={
+              working
+              || !depotConfirmation.name.trim()
+              || !normalizeWarehouseLogicalCode(depotConfirmation.code)
+              || Boolean(
+                depots.some((item) => item.depot.code === normalizeWarehouseLogicalCode(depotConfirmation.code))
+                && !depotConfirmation.reuseExisting
+              )
+            }
             className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-xs font-black text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Upload className="h-3.5 w-3.5" />
-            {working ? 'Importando…' : 'Confirmar importação'}
+            {working ? 'Importando…' : 'Confirmar e importar estrutura'}
           </button>
         </div>
       )}
