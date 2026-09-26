@@ -102,7 +102,7 @@ export function WarehouseLocationsR1Operational({
   const [message, setMessage] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [createPanel, setCreatePanel] = useState<CreatePanel>(null);
-  const [labelsOpen, setLabelsOpen] = useState(false);
+  const [activeSubtab, setActiveSubtab] = useState<'structure' | 'labels'>('structure');
 
   const [selectedDepotId, setSelectedDepotId] = useState('');
   const [selectedLocationId, setSelectedLocationId] = useState('');
@@ -418,6 +418,35 @@ export function WarehouseLocationsR1Operational({
 
   return (
     <div className="mt-6 space-y-6" data-testid="warehouse-locations-r1-operational">
+      <nav className="flex flex-wrap gap-2 rounded-2xl border border-blue-100/80 bg-white/75 p-2 shadow-sm backdrop-blur-md" aria-label="Subabas de Meus Depósitos">
+        <button
+          type="button"
+          onClick={() => setActiveSubtab('structure')}
+          className={
+            activeSubtab === 'structure'
+              ? 'inline-flex h-10 items-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm'
+              : 'inline-flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-black text-gray-600 transition hover:bg-blue-50 hover:text-[#00288e]'
+          }
+        >
+          <Warehouse className="h-4 w-4" />
+          Estrutura
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSubtab('labels')}
+          disabled={!selectedDepotId}
+          className={
+            activeSubtab === 'labels'
+              ? 'inline-flex h-10 items-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm'
+              : 'inline-flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-black text-gray-600 transition hover:bg-blue-50 hover:text-[#00288e] disabled:cursor-not-allowed disabled:opacity-40'
+          }
+        >
+          <Printer className="h-4 w-4" />
+          Etiquetas
+        </button>
+      </nav>
+
+      <div className={activeSubtab === 'structure' ? 'space-y-6' : 'hidden'}>
       <section className="rounded-2xl border border-blue-100/80 bg-white/75 p-5 shadow-sm backdrop-blur-md">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
@@ -475,7 +504,7 @@ export function WarehouseLocationsR1Operational({
           </button>
           <button
             type="button"
-            onClick={() => setLabelsOpen(true)}
+            onClick={() => setActiveSubtab('labels')}
             disabled={!selectedDepotId}
             className="inline-flex h-9 items-center gap-2 rounded-xl border border-blue-200 bg-white px-3 text-xs font-black text-[#00288e] transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
@@ -831,15 +860,16 @@ export function WarehouseLocationsR1Operational({
         locations={state.locations}
         onImported={refresh}
       />
+      </div>
 
-      <WarehouseLabelsR1
-        open={labelsOpen}
-        onClose={() => setLabelsOpen(false)}
-        depots={state.depots}
-        locations={state.locations}
-        selectedDepotId={selectedDepotId}
-        selectedLocationId={selectedLocationId}
-      />
+      {activeSubtab === 'labels' && (
+        <WarehouseLabelsR1
+          depots={state.depots}
+          locations={state.locations}
+          selectedDepotId={selectedDepotId}
+          selectedLocationId={selectedLocationId}
+        />
+      )}
     </div>
   );
 }
