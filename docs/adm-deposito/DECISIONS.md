@@ -1701,3 +1701,14 @@ Decisão:
 10. Browser E2E continua reservado a releases com interação relevante e ao gate consolidado.
 
 O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
+
+
+## D-076 — Identidade visual operacional do EMPROVEX é clara e vinculante
+
+- O tema claro é o padrão das superfícies operacionais do EMPROVEX, incluindo o ADM Depósito.
+- A tela Início pode manter experiência escura/imersiva como exceção deliberada.
+- Novas telas operacionais devem usar como referência o padrão já consolidado em Painel e Relatórios: fundo claro frio, cards brancos translúcidos, azul institucional `#00288e`, textos gray-800/500, bordas suaves e sombras discretas.
+- Header e sidebar podem permanecer escuros como moldura institucional, sem transformar o conteúdo em dark mode.
+- Formulários operacionais não devem adotar inputs quase pretos ou texto de baixo contraste.
+- A referência detalhada e obrigatória passa a ser `docs/adm-deposito/VISUAL_IDENTITY.md`.
+- Mudanças visuais futuras que se afastem desse contrato precisam ser deliberadas e documentadas antes da implementação.
