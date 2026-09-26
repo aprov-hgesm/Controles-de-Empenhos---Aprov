@@ -28,6 +28,7 @@ import {
   createWarehouseLocation,
   listWarehouseDepots,
   listWarehouseLocations,
+  updateWarehouseLocation,
   type WarehouseDepotListItem,
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
@@ -76,6 +77,17 @@ function nextDuplicatedName(sourceName: string, code: string): string {
     if (codeNumber) return (match[1] + codeNumber.padStart(width, '0')).slice(0, 120);
   }
   return (sourceName + ' ' + (code.match(/(\d+)$/)?.[1] || '02')).slice(0, 120);
+}
+
+function duplicatedSubpositionCode(
+  sourceChildCode: string,
+  sourceLocalCode: string,
+  targetLocalCode: string
+): string {
+  if (sourceChildCode.startsWith(sourceLocalCode)) {
+    return (targetLocalCode + sourceChildCode.slice(sourceLocalCode.length)).slice(0, 32);
+  }
+  return sourceChildCode.slice(0, 32);
 }
 
 function messageFrom(error: unknown): string {
@@ -153,6 +165,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const [setupReady, setSetupReady] = useState(false);
   const [localDrafts, setLocalDrafts] = useState<Record<string, LocalDraft>>({});
   const [pendingDuplicatedLocals, setPendingDuplicatedLocals] = useState<Record<string, PendingDuplicatedLocal>>({});
+  const [pendingRemovedLocationIds, setPendingRemovedLocationIds] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -212,6 +225,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       setSelectedObjectId(null);
       setDraftHistory({ past: [], future: [] });
       setPendingDuplicatedLocals({});
+      setPendingRemovedLocationIds([]);
     }).catch((error) => {
       if (!cancelled) setMessage(messageFrom(error));
     });
@@ -260,6 +274,15 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     ),
     [draftObjects]
   );
+
+  useEffect(() => {
+    setPendingRemovedLocationIds((current) => {
+      const next = current.filter((locationId) => !representedLocationIds.has(locationId));
+      return next.length === current.length && next.every((value, index) => value === current[index])
+        ? current
+        : next;
+    });
+  }, [representedLocationIds]);
 
   useEffect(() => {
     const next: Record<string, LocalDraft> = {};
@@ -359,7 +382,32 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     });
     checkpoint(draftObjects);
     setDraftObjects([...draftObjects, next]);
+    setPendingRemovedLocationIds((current) => current.filter((id) => id !== item.location.id));
     setSelectedObjectId(next.id);
+  }
+
+  function handleRemoveObject(object: WarehouseDepotLayoutObject) {
+    const pending = pendingDuplicatedLocals[object.id];
+    if (pending) {
+      setPendingDuplicatedLocals((current) => {
+        const next = { ...current };
+        delete next[object.id];
+        return next;
+      });
+      setMessage('A cópia ainda não salva foi removida e nenhum Local foi criado.');
+      return;
+    }
+
+    if (!object.warehouseLocationId) return;
+
+    setPendingRemovedLocationIds((current) =>
+      current.includes(object.warehouseLocationId!)
+        ? current
+        : [...current, object.warehouseLocationId!]
+    );
+    setMessage(
+      'Local removido do croqui. Ao salvar, ele e suas Subposições serão excluídos da operação em Depósitos e localizações.'
+    );
   }
 
   function prepareDuplicatedObject(
@@ -431,6 +479,10 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
         .filter((pending) => objectsForSave.some((object) => object.id === pending.objectId));
 
       for (const pending of pendingEntries) {
+        const sourceLocation = locations.find(
+          (item) => item.location.id === pending.sourceLocationId
+        )?.location;
+
         const created = await createWarehouseLocation(workspaceId, {
           kind: 'LOCAL',
           depotId: selectedDepotId,
@@ -438,6 +490,31 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
           name: pending.name,
           description: pending.description,
         });
+
+        if (sourceLocation) {
+          const sourceChildren = locations.filter(
+            (item) =>
+              item.location.kind === 'SUBPOSITION'
+              && item.location.parentLocationId === sourceLocation.id
+              && item.location.status === 'active'
+          );
+
+          for (const child of sourceChildren) {
+            await createWarehouseLocation(workspaceId, {
+              kind: 'SUBPOSITION',
+              depotId: selectedDepotId,
+              parentLocationId: created.id,
+              code: duplicatedSubpositionCode(
+                child.location.code,
+                sourceLocation.code,
+                created.code
+              ),
+              name: child.location.name,
+              description: child.location.description,
+            });
+          }
+        }
+
         objectsForSave = objectsForSave.map((object) =>
           object.id === pending.objectId
             ? {
@@ -458,7 +535,35 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
         baseLayoutId: activeLayout?.id || null,
         expectedVersion: activeLayout?.version ?? null,
       });
-      setMessage('Croqui salvo com sucesso. Versão ' + saved.version + ' ativa.');
+
+      for (const locationId of pendingRemovedLocationIds) {
+        const activeChildren = locations.filter(
+          (item) =>
+            item.location.kind === 'SUBPOSITION'
+            && item.location.parentLocationId === locationId
+            && item.location.status === 'active'
+        );
+        for (const child of activeChildren) {
+          await updateWarehouseLocation(workspaceId, child.location.id, { status: 'inactive' });
+        }
+
+        const local = locations.find(
+          (item) =>
+            item.location.id === locationId
+            && item.location.kind === 'LOCAL'
+            && item.location.status === 'active'
+        );
+        if (local) {
+          await updateWarehouseLocation(workspaceId, local.location.id, { status: 'inactive' });
+        }
+      }
+
+      setMessage(
+        'Croqui salvo com sucesso. Versão ' + saved.version + ' ativa.'
+        + (pendingRemovedLocationIds.length > 0
+          ? ' Os Locais removidos e suas Subposições também foram excluídos da operação.'
+          : '')
+      );
       const [active, versions] = await Promise.all([
         getActiveWarehouseDepotLayout(workspaceId, selectedDepotId),
         listWarehouseDepotLayoutsForDepot(workspaceId, selectedDepotId, 100),
@@ -467,6 +572,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       setHistory(versions);
       setDraftObjects(objectsForSave);
       setPendingDuplicatedLocals({});
+      setPendingRemovedLocationIds([]);
       setDraftHistory({ past: [], future: [] });
       await reloadBase();
     } catch (error) {
@@ -786,6 +892,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                 lightTheme
                 allowResize={false}
                 onDuplicateObject={prepareDuplicatedObject}
+                onRemoveObject={handleRemoveObject}
               />
             </div>
 
@@ -802,7 +909,10 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                   Para corrigir o tamanho de um Local já inserido, remova-o do croqui e insira novamente com as medidas corretas.
                 </p>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
-                  Ao duplicar um Local, a cópia recebe um novo código. Ao salvar o croqui, esse novo Local também é cadastrado automaticamente em Depósitos e localizações.
+                  Ao duplicar um Local, a cópia recebe um novo código e também replica suas Subposições. Ao salvar o croqui, toda essa nova estrutura é cadastrada automaticamente em Depósitos e localizações.
+                </p>
+                <p className="mt-2 text-xs leading-5 text-slate-500">
+                  Ao remover do croqui um Local já cadastrado, a exclusão fica pendente. Ao salvar, o Local e suas Subposições são excluídos da operação também em Depósitos e localizações.
                 </p>
                 {Object.values(pendingDuplicatedLocals).filter((pending) =>
                   draftObjects.some((object) => object.id === pending.objectId)
