@@ -42,6 +42,41 @@ type LocalDraft = {
   kind: WarehouseDepotLayoutObjectKind;
 };
 
+type PendingDuplicatedLocal = {
+  objectId: string;
+  sourceLocationId: string;
+  code: string;
+  name: string;
+  description: string | null;
+};
+
+function nextDuplicatedCode(sourceCode: string, usedCodes: Set<string>): string {
+  const match = sourceCode.match(/^(.*?)(\d+)$/);
+  const rawPrefix = match ? match[1] : sourceCode + '-';
+  const digits = match?.[2] || '01';
+  const width = Math.max(2, digits.length);
+  let number = match ? Number(digits) + 1 : 2;
+
+  for (let attempts = 0; attempts < 999; attempts += 1, number += 1) {
+    const suffix = String(number).padStart(width, '0');
+    const prefix = rawPrefix.slice(0, Math.max(1, 32 - suffix.length));
+    const candidate = prefix + suffix;
+    if (!usedCodes.has(candidate)) return candidate;
+  }
+
+  throw new Error('Não foi possível gerar um código único para o Local duplicado.');
+}
+
+function nextDuplicatedName(sourceName: string, code: string): string {
+  const match = sourceName.match(/^(.*?)(\d+)$/);
+  if (match) {
+    const width = match[2].length;
+    const codeNumber = code.match(/(\d+)$/)?.[1];
+    if (codeNumber) return (match[1] + codeNumber.padStart(width, '0')).slice(0, 120);
+  }
+  return (sourceName + ' ' + (code.match(/(\d+)$/)?.[1] || '02')).slice(0, 120);
+}
+
 function messageFrom(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -116,6 +151,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   const [doorWidths, setDoorWidths] = useState<number[]>([90]);
   const [setupReady, setSetupReady] = useState(false);
   const [localDrafts, setLocalDrafts] = useState<Record<string, LocalDraft>>({});
+  const [pendingDuplicatedLocals, setPendingDuplicatedLocals] = useState<Record<string, PendingDuplicatedLocal>>({});
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -174,6 +210,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       setSetupReady(Boolean(layout));
       setSelectedObjectId(null);
       setDraftHistory({ past: [], future: [] });
+      setPendingDuplicatedLocals({});
     }).catch((error) => {
       if (!cancelled) setMessage(messageFrom(error));
     });
@@ -324,17 +361,95 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     setSelectedObjectId(next.id);
   }
 
+  function prepareDuplicatedObject(
+    source: WarehouseDepotLayoutObject,
+    copy: WarehouseDepotLayoutObject
+  ): WarehouseDepotLayoutObject {
+    if (!source.warehouseLocationId) {
+      return copy;
+    }
+
+    const sourceLocation = locations.find(
+      (item) =>
+        item.location.id === source.warehouseLocationId
+        && item.location.kind === 'LOCAL'
+        && item.location.depotId === selectedDepotId
+    )?.location;
+
+    if (!sourceLocation) {
+      setMessage('A cópia visual foi criada sem vínculo porque o Local original não foi encontrado.');
+      return copy;
+    }
+
+    const usedCodes = new Set(
+      locations
+        .filter((item) => item.location.depotId === selectedDepotId)
+        .map((item) => item.location.code)
+    );
+    for (const pending of Object.values(pendingDuplicatedLocals)) {
+      usedCodes.add(pending.code);
+    }
+
+    const code = nextDuplicatedCode(sourceLocation.code, usedCodes);
+    const name = nextDuplicatedName(sourceLocation.name, code);
+    const pending: PendingDuplicatedLocal = {
+      objectId: copy.id,
+      sourceLocationId: sourceLocation.id,
+      code,
+      name,
+      description: sourceLocation.description,
+    };
+
+    setPendingDuplicatedLocals((current) => ({
+      ...current,
+      [copy.id]: pending,
+    }));
+    setMessage(
+      'Cópia preparada como novo Local ' + code
+      + '. Ele será cadastrado em Depósitos e localizações quando você salvar o croqui.'
+    );
+
+    return {
+      ...copy,
+      label: code + ' · ' + name,
+      warehouseLocationId: null,
+    };
+  }
+
   async function saveLayout() {
     if (!selectedDepotId || !selectedDepot || !setupReady) return;
     setSaving(true);
     setMessage(null);
     try {
+      let objectsForSave = cloneObjects(draftObjects);
+      const pendingEntries = Object.values(pendingDuplicatedLocals)
+        .filter((pending) => objectsForSave.some((object) => object.id === pending.objectId));
+
+      for (const pending of pendingEntries) {
+        const created = await createWarehouseLocation(workspaceId, {
+          kind: 'LOCAL',
+          depotId: selectedDepotId,
+          code: pending.code,
+          name: pending.name,
+          description: pending.description,
+        });
+        objectsForSave = objectsForSave.map((object) =>
+          object.id === pending.objectId
+            ? {
+                ...object,
+                label: created.code + ' · ' + created.name,
+                warehouseLocationId: created.id,
+              }
+            : object
+        );
+      }
+
       const saved = await saveWarehouseDepotLayoutVersion(workspaceId, {
         name: draftName.trim() || 'Croqui principal',
         depotId: selectedDepotId,
         logicalWidth: draftWidth,
         logicalHeight: draftHeight,
-        objects: draftObjects,
+        objects: objectsForSave,
         baseLayoutId: activeLayout?.id || null,
         expectedVersion: activeLayout?.version ?? null,
       });
@@ -345,7 +460,10 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       ]);
       setActiveLayout(active?.layout || saved);
       setHistory(versions);
+      setDraftObjects(objectsForSave);
+      setPendingDuplicatedLocals({});
       setDraftHistory({ past: [], future: [] });
+      await reloadBase();
     } catch (error) {
       setMessage('Não foi possível salvar o croqui. ' + messageFrom(error));
     } finally {
@@ -662,6 +780,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                 scopeKey={selectedDepotId + ':' + (activeLayout?.id || 'new')}
                 lightTheme
                 allowResize={false}
+                onDuplicateObject={prepareDuplicatedObject}
               />
             </div>
 
@@ -677,6 +796,27 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                 <p className="mt-2 text-xs leading-5 text-slate-500">
                   Para corrigir o tamanho de um Local já inserido, remova-o do croqui e insira novamente com as medidas corretas.
                 </p>
+                <p className="mt-2 text-xs leading-5 text-slate-500">
+                  Ao duplicar um Local, a cópia recebe um novo código. Ao salvar o croqui, esse novo Local também é cadastrado automaticamente em Depósitos e localizações.
+                </p>
+                {Object.values(pendingDuplicatedLocals).filter((pending) =>
+                  draftObjects.some((object) => object.id === pending.objectId)
+                ).length > 0 && (
+                  <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-[#00288e]">
+                      Novos Locais ao salvar
+                    </p>
+                    <div className="mt-2 space-y-1">
+                      {Object.values(pendingDuplicatedLocals)
+                        .filter((pending) => draftObjects.some((object) => object.id === pending.objectId))
+                        .map((pending) => (
+                          <p key={pending.objectId} className="text-[11px] font-bold text-slate-700">
+                            {pending.code} · {pending.name}
+                          </p>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
