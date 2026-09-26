@@ -1830,3 +1830,16 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - O novo Local aparece também em **Meus Depósitos → Depósitos e localizações**, fazendo da duplicação no croqui uma segunda forma válida de cadastrar Local.
 - Cópias de objetos puramente visuais, como portas sem `warehouseLocationId`, continuam sendo apenas visuais e não criam Local.
 - A operação continua sem movimentar estoque, saldo, lotes ou ledger.
+
+
+## D-087 — Croqui sincroniza duplicação e exclusão estrutural
+
+- Duplicar no croqui um objeto vinculado a um `LOCAL` replica também todas as `SUBPOSITION` ativas daquele Local.
+- O novo Local recebe novo ID técnico e novo código lógico; as Subposições duplicadas recebem novos IDs e códigos compatíveis com o novo Local quando o padrão do código original permitir substituição segura.
+- A nova estrutura é criada somente ao salvar o croqui.
+- Remover do croqui um objeto vinculado a um Local cadastrado marca esse Local para exclusão lógica.
+- Ao salvar o croqui, as Subposições ativas desse Local são inativadas primeiro e, em seguida, o próprio Local é inativado, fazendo a alteração aparecer também em **Meus Depósitos → Depósitos e localizações**.
+- Remover uma cópia ainda não salva apenas cancela sua criação; nenhum documento é persistido.
+- Desfazer/reinserir o Local antes do salvamento cancela a exclusão pendente.
+- Objetos sem `warehouseLocationId`, como portas puramente visuais, não criam nem excluem Localizações.
+- A sincronização estrutural não movimenta estoque, saldo, lotes ou ledger. Quando o domínio quantitativo estiver ativo, exclusões estruturais deverão respeitar o gate oficial de ausência de itens/estoque.
