@@ -324,25 +324,55 @@ export function WarehouseLocationsR1Operational({
 
   async function archiveDepot() {
     if (!selectedDepot) return;
-    const children = state.locations.filter(
+
+    const activeChildren = state.locations.filter(
       (item) => item.location.depotId === selectedDepot.id && item.location.status === 'active'
     );
-    if (children.length > 0) {
-      setMessage('O depósito só pode ser excluído quando estiver vazio. Remova primeiro todos os Locais e Subposições ativos.');
-      return;
-    }
-    if (!window.confirm('Excluir este depósito da operação? O EMPROVEX preservará o registro histórico como inativo.')) return;
+    const activeSubpositions = activeChildren.filter(
+      (item) => item.location.kind === 'SUBPOSITION'
+    );
+    const activeLocals = activeChildren.filter(
+      (item) => item.location.kind === 'LOCAL'
+    );
+
+    const structuralSummary = activeChildren.length
+      ? ' Também serão excluídos da operação '
+        + activeLocals.length + ' Local(is) e '
+        + activeSubpositions.length + ' Subposição(ões) vinculados.'
+      : '';
+
+    if (!window.confirm(
+      'Excluir este depósito da operação?'
+      + structuralSummary
+      + ' Os registros históricos serão preservados como inativos.'
+    )) return;
 
     setWorking(true);
+    setMessage(null);
     try {
+      // A estrutura filha acompanha a exclusão lógica do depósito.
+      // Subposições são inativadas antes dos Locais para preservar a hierarquia durante a operação.
+      for (const child of activeSubpositions) {
+        await updateWarehouseLocation(workspaceId, child.location.id, { status: 'inactive' });
+      }
+      for (const child of activeLocals) {
+        await updateWarehouseLocation(workspaceId, child.location.id, { status: 'inactive' });
+      }
       await updateWarehouseDepot(workspaceId, selectedDepot.id, { status: 'inactive' });
+
       setCreatePanel(null);
       setSelectedDepotId('');
       setSelectedLocationId('');
-      setMessage('Depósito excluído da operação e preservado no histórico.');
+      setMessage(
+        'Depósito, Locais e Subposições vinculados foram excluídos da operação e preservados no histórico.'
+      );
       await refresh();
     } catch (error) {
-      setMessage(messageFromError(error));
+      setMessage(
+        'A exclusão foi interrompida. Atualize a tela para conferir a estrutura já processada. '
+        + messageFromError(error)
+      );
+      await refresh();
     } finally {
       setWorking(false);
     }
