@@ -1843,3 +1843,13 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - Desfazer/reinserir o Local antes do salvamento cancela a exclusão pendente.
 - Objetos sem `warehouseLocationId`, como portas puramente visuais, não criam nem excluem Localizações.
 - A sincronização estrutural não movimenta estoque, saldo, lotes ou ledger. Quando o domínio quantitativo estiver ativo, exclusões estruturais deverão respeitar o gate oficial de ausência de itens/estoque.
+
+
+## D-088 — Numeração de Locais reutiliza lacunas deixadas por registros inativos
+
+- A geração automática de código para um Local duplicado considera apenas Locais ativos do depósito e cópias pendentes ainda não salvas.
+- Registros com `status = inactive` não reservam mais o próximo número da sequência operacional.
+- Se a sequência disponível apontar para um código pertencente a um Local inativo, o EMPROVEX restaura essa identidade histórica em vez de criar um segundo documento com o mesmo código.
+- Ao restaurar um Local inativo por duplicação, nome, descrição e status são atualizados para refletir a nova cópia.
+- Subposições inativas compatíveis com a nova estrutura também podem ser restauradas; quando não existirem, novas Subposições são criadas normalmente.
+- Exemplo esperado: PAL-01 e PAL-02 ativos, PAL-03 inativo → duplicar PAL-02 gera PAL-03, não PAL-04.
