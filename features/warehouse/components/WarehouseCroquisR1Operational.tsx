@@ -438,7 +438,11 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
 
     const usedCodes = new Set(
       locations
-        .filter((item) => item.location.depotId === selectedDepotId)
+        .filter(
+          (item) =>
+            item.location.depotId === selectedDepotId
+            && item.location.status === 'active'
+        )
         .map((item) => item.location.code)
     );
     for (const pending of Object.values(pendingDuplicatedLocals)) {
@@ -485,13 +489,38 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
           (item) => item.location.id === pending.sourceLocationId
         )?.location;
 
-        const created = await createWarehouseLocation(workspaceId, {
-          kind: 'LOCAL',
-          depotId: selectedDepotId,
-          code: pending.code,
-          name: pending.name,
-          description: pending.description,
-        });
+        const inactiveLocal = locations.find(
+          (item) =>
+            item.location.depotId === selectedDepotId
+            && item.location.kind === 'LOCAL'
+            && item.location.status === 'inactive'
+            && item.location.code === pending.code
+        )?.location;
+
+        let created;
+        if (inactiveLocal) {
+          await updateWarehouseLocation(workspaceId, inactiveLocal.id, {
+            code: pending.code,
+            name: pending.name,
+            description: pending.description,
+            status: 'active',
+          });
+          created = {
+            ...inactiveLocal,
+            code: pending.code,
+            name: pending.name,
+            description: pending.description,
+            status: 'active' as const,
+          };
+        } else {
+          created = await createWarehouseLocation(workspaceId, {
+            kind: 'LOCAL',
+            depotId: selectedDepotId,
+            code: pending.code,
+            name: pending.name,
+            description: pending.description,
+          });
+        }
 
         if (sourceLocation) {
           const sourceChildren = locations.filter(
@@ -502,18 +531,36 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
           );
 
           for (const child of sourceChildren) {
-            await createWarehouseLocation(workspaceId, {
-              kind: 'SUBPOSITION',
-              depotId: selectedDepotId,
-              parentLocationId: created.id,
-              code: duplicatedSubpositionCode(
-                child.location.code,
-                sourceLocation.code,
-                created.code
-              ),
-              name: child.location.name,
-              description: child.location.description,
-            });
+            const duplicatedCode = duplicatedSubpositionCode(
+              child.location.code,
+              sourceLocation.code,
+              created.code
+            );
+            const inactiveChild = locations.find(
+              (item) =>
+                item.location.kind === 'SUBPOSITION'
+                && item.location.status === 'inactive'
+                && item.location.parentLocationId === created.id
+                && item.location.code === duplicatedCode
+            )?.location;
+
+            if (inactiveChild) {
+              await updateWarehouseLocation(workspaceId, inactiveChild.id, {
+                code: duplicatedCode,
+                name: child.location.name,
+                description: child.location.description,
+                status: 'active',
+              });
+            } else {
+              await createWarehouseLocation(workspaceId, {
+                kind: 'SUBPOSITION',
+                depotId: selectedDepotId,
+                parentLocationId: created.id,
+                code: duplicatedCode,
+                name: child.location.name,
+                description: child.location.description,
+              });
+            }
           }
         }
 
