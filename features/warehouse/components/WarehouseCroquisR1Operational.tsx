@@ -43,10 +43,25 @@ const MIN_ROOM_CM = 240;
 const DEFAULT_ROOM_LENGTH_CM = 1000;
 const DEFAULT_ROOM_WIDTH_CM = 620;
 
+type CanonicalWarehouseVisualKind =
+  | 'SHELF'
+  | 'PALLET'
+  | 'FREEZER'
+  | 'REFRIGERATOR'
+  | 'BENCH';
+
+const CANONICAL_VISUAL_KINDS: CanonicalWarehouseVisualKind[] = [
+  'SHELF',
+  'PALLET',
+  'FREEZER',
+  'REFRIGERATOR',
+  'BENCH',
+];
+
 type LocalDraft = {
   widthCm: number;
   depthCm: number;
-  kind: WarehouseDepotLayoutObjectKind;
+  kind: CanonicalWarehouseVisualKind;
 };
 
 type PendingDuplicatedLocal = {
@@ -103,44 +118,42 @@ function cloneObjects(objects: WarehouseDepotLayoutObject[]): WarehouseDepotLayo
   return objects.map((item) => ({ ...item }));
 }
 
-function inferKind(name: string): WarehouseDepotLayoutObjectKind {
+function inferKind(name: string): CanonicalWarehouseVisualKind {
   const normalized = name.toLocaleLowerCase('pt-BR');
-  if (normalized.includes('freezer')) return 'FREEZER';
-  if (normalized.includes('geladeira')) return 'REFRIGERATOR';
-  if (normalized.includes('câmara') || normalized.includes('camara')) return 'CHAMBER';
-  if (normalized.includes('rack')) return 'RACK';
-  if (normalized.includes('armário') || normalized.includes('armario')) return 'CABINET';
+  if (normalized.includes('freezer') || normalized.includes('câmara') || normalized.includes('camara')) {
+    return 'FREEZER';
+  }
+  if (normalized.includes('geladeira') || normalized.includes('refrigerador')) return 'REFRIGERATOR';
   if (normalized.includes('palete') || normalized.includes('pallet')) return 'PALLET';
-  if (normalized.includes('bancada')) return 'BENCH';
-  if (normalized.includes('estante')) return 'SHELF';
-  return 'OTHER';
+  if (
+    normalized.includes('mesa')
+    || normalized.includes('bancada')
+    || normalized.includes('armário')
+    || normalized.includes('armario')
+  ) {
+    return 'BENCH';
+  }
+  if (normalized.includes('estante') || normalized.includes('rack')) return 'SHELF';
+  return 'SHELF';
 }
 
-function defaultSize(kind: WarehouseDepotLayoutObjectKind): { widthCm: number; depthCm: number } {
+function defaultSize(kind: CanonicalWarehouseVisualKind): { widthCm: number; depthCm: number } {
   if (kind === 'SHELF') return { widthCm: 180, depthCm: 50 };
-  if (kind === 'RACK') return { widthCm: 200, depthCm: 70 };
-  if (kind === 'CABINET') return { widthCm: 120, depthCm: 55 };
   if (kind === 'FREEZER') return { widthCm: 140, depthCm: 75 };
   if (kind === 'REFRIGERATOR') return { widthCm: 90, depthCm: 75 };
-  if (kind === 'CHAMBER') return { widthCm: 250, depthCm: 180 };
   if (kind === 'PALLET') return { widthCm: 120, depthCm: 100 };
-  if (kind === 'BENCH') return { widthCm: 180, depthCm: 70 };
-  return { widthCm: 120, depthCm: 80 };
+  return { widthCm: 180, depthCm: 70 };
 }
 
-function kindLabel(kind: WarehouseDepotLayoutObjectKind): string {
-  const labels: Partial<Record<WarehouseDepotLayoutObjectKind, string>> = {
+function kindLabel(kind: CanonicalWarehouseVisualKind): string {
+  const labels: Record<CanonicalWarehouseVisualKind, string> = {
     SHELF: 'Estante',
-    RACK: 'Rack',
-    CABINET: 'Armário',
-    FREEZER: 'Freezer',
-    REFRIGERATOR: 'Geladeira',
-    CHAMBER: 'Câmara',
     PALLET: 'Palete',
-    BENCH: 'Bancada',
-    OTHER: 'Outra estrutura',
+    FREEZER: 'Freezer',
+    REFRIGERATOR: 'Geladeira industrial',
+    BENCH: 'Mesa',
   };
-  return labels[kind] || 'Outra estrutura';
+  return labels[kind];
 }
 
 function clampDimension(value: number, roomLimit: number): number {
@@ -918,7 +931,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                   <h3 className="text-sm font-black text-slate-900">Locais do depósito</h3>
                 </div>
                 <p className="mt-1 text-[11px] leading-4 text-slate-500">
-                  Somente os Locais já cadastrados podem ser inseridos. Informe o tamanho em centímetros antes da primeira inserção.
+                  Somente os Locais já cadastrados podem ser inseridos. O tipo visual é padronizado em cinco modelos: Estante, Palete, Freezer, Geladeira industrial e Mesa.
                 </p>
 
                 <div className="mt-3 max-h-[640px] space-y-3 overflow-y-auto pr-1">
@@ -953,13 +966,13 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                                     ...current,
                                     [item.location.id]: {
                                       ...current[item.location.id],
-                                      kind: event.target.value as WarehouseDepotLayoutObjectKind,
+                                      kind: event.target.value as CanonicalWarehouseVisualKind,
                                     },
                                   }))
                                 }
                                 className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-bold text-slate-700"
                               >
-                                {(['SHELF','RACK','CABINET','FREEZER','REFRIGERATOR','CHAMBER','PALLET','BENCH','OTHER'] as WarehouseDepotLayoutObjectKind[]).map((kind) => (
+                                {CANONICAL_VISUAL_KINDS.map((kind) => (
                                   <option key={kind} value={kind}>{kindLabel(kind)}</option>
                                 ))}
                               </select>
