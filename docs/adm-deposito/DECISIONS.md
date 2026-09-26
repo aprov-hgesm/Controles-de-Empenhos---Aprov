@@ -1725,3 +1725,16 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - O tipo e o porte são metadados visuais/organizacionais; não alteram estoque, saldos, movimentações ou segurança.
 - Cards de Locais usam pistas visuais derivadas de nome/código apenas para apresentação, sem criar uma nova identidade técnica.
 - A implementação deve seguir `docs/adm-deposito/VISUAL_IDENTITY.md` e preservar o tema claro operacional.
+
+
+## D-078 — Edição estrutural e exclusão lógica segura na ADM-R1
+
+- Depósitos, Locais e Subposições podem ser editados pela interface do explorer visual.
+- A edição pode alterar nome, descrição e código lógico; depósitos também podem alterar `visualType` e `sizeProfile`.
+- IDs técnicos permanecem imutáveis e continuam sendo a identidade canônica.
+- A remoção operacional é implementada como **exclusão lógica segura** (`status = inactive`), preservando histórico e evitando perda destrutiva de referências.
+- Um Local só pode ser excluído da operação quando não possui Subposições ativas.
+- Um Depósito só pode ser excluído da operação quando não possui nenhum Local ou Subposição ativa.
+- A interface deve orientar o operador a remover primeiro a estrutura filha, em ordem Subposição → Local → Depósito.
+- Códigos alterados continuam sujeitos à validação e unicidade no mesmo escopo lógico.
+- Esta etapa não reativa estoque, `locationBalances`, lotes ou movimentações; portanto nenhuma exclusão física de dados logísticos avançados é autorizada na ADM-R1.
