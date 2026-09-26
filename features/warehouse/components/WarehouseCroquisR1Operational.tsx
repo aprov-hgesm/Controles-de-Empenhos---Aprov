@@ -366,21 +366,25 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     source: WarehouseDepotLayoutObject,
     copy: WarehouseDepotLayoutObject
   ): WarehouseDepotLayoutObject {
-    if (!source.warehouseLocationId) {
+    const persistedSource = source.warehouseLocationId
+      ? locations.find(
+          (item) =>
+            item.location.id === source.warehouseLocationId
+            && item.location.kind === 'LOCAL'
+            && item.location.depotId === selectedDepotId
+        )?.location
+      : undefined;
+
+    const pendingSource = pendingDuplicatedLocals[source.id];
+
+    if (!persistedSource && !pendingSource) {
       return copy;
     }
 
-    const sourceLocation = locations.find(
-      (item) =>
-        item.location.id === source.warehouseLocationId
-        && item.location.kind === 'LOCAL'
-        && item.location.depotId === selectedDepotId
-    )?.location;
-
-    if (!sourceLocation) {
-      setMessage('A cópia visual foi criada sem vínculo porque o Local original não foi encontrado.');
-      return copy;
-    }
+    const sourceCode = persistedSource?.code || pendingSource.code;
+    const sourceName = persistedSource?.name || pendingSource.name;
+    const sourceDescription = persistedSource?.description ?? pendingSource.description;
+    const sourceLocationId = persistedSource?.id || pendingSource.sourceLocationId;
 
     const usedCodes = new Set(
       locations
@@ -391,14 +395,14 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       usedCodes.add(pending.code);
     }
 
-    const code = nextDuplicatedCode(sourceLocation.code, usedCodes);
-    const name = nextDuplicatedName(sourceLocation.name, code);
+    const code = nextDuplicatedCode(sourceCode, usedCodes);
+    const name = nextDuplicatedName(sourceName, code);
     const pending: PendingDuplicatedLocal = {
       objectId: copy.id,
-      sourceLocationId: sourceLocation.id,
+      sourceLocationId,
       code,
       name,
-      description: sourceLocation.description,
+      description: sourceDescription,
     };
 
     setPendingDuplicatedLocals((current) => ({
