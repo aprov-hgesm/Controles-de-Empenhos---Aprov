@@ -1,3 +1,12 @@
+## Atualização modular — Croqui R1 reativado
+
+- A aba **Meus Depósitos → Croquis** voltou a ser operacional na branch modular.
+- O novo fluxo R1 consulta somente domínios liberados nesta release: `depots`, `locations` e `layouts`.
+- O editor não carrega `locationBalances`, lotes, materiais, movimentos ou outros domínios avançados bloqueados.
+- O operador seleciona um depósito cadastrado, insere estruturas da biblioteca, move/redimensiona/gira no editor, vincula o objeto a um Local/Subposição real e salva versões do `warehouse_depot_layout_v1`.
+- Alterações no croqui permanecem estritamente visuais e não movimentam estoque.
+- O histórico versionado por depósito permanece preservado.
+
 ## Atualização modular — Etiquetas físicas A4
 
 - Implementada central de impressão de etiquetas na ADM-R1.
