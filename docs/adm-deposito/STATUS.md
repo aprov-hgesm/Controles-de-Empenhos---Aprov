@@ -2329,3 +2329,23 @@ Estado:
 - acesso externo: **NÃO AUTORIZADO**;
 - estética nova: **PAUSADA**;
 - prioridade: compilação/publicação das Rules mínimas e operação real da fundação independente.
+
+
+## Atualização 2026-09-26 — Prévia 2.5D modular do Croqui
+
+Implementada na branch `feat/adm-deposito-modular-release`:
+- novo componente `WarehouseIsometricPreview.tsx`;
+- alternância explícita entre **Edição 2D** e **Prévia 2.5D**;
+- visão isométrica clara, leve e derivada do croqui atual;
+- estruturas físicas posicionadas de acordo com as coordenadas do layout;
+- caixas/volumes aparecem somente quando existe saldo físico positivo;
+- consulta de item disponível dentro da prévia;
+- Local correspondente recebe brilho/destaque;
+- Subposição específica recebe marcador luminoso quando o saldo consultado está nela;
+- materiais e saldos são carregados sob demanda ao abrir a prévia;
+- nenhuma mutação quantitativa é executada pela visualização;
+- fallback estrutural preservado quando o domínio quantitativo não puder ser lido.
+
+Commits funcionais:
+- `a8fe7dce23de36a3a41bb4513d4ee57b948a1f9e` — renderer isométrico;
+- `dbbe30f080e8c6dd11ee9a218a97cdb3acb70bc4` — integração no Croqui, ocupação e consulta.
