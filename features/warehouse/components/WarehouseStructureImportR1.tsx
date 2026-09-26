@@ -6,6 +6,8 @@ import { Bot, CheckCircle2, Clipboard, Upload, Warehouse } from 'lucide-react';
 import {
   createWarehouseDepot,
   createWarehouseLocation,
+  updateWarehouseDepot,
+  updateWarehouseLocation,
   type WarehouseDepotListItem,
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
@@ -110,13 +112,36 @@ export function WarehouseStructureImportR1({
       const confirmedCode = normalizeWarehouseLogicalCode(depotConfirmation.code);
       if (!confirmedCode) throw new Error('Informe um código válido para o depósito.');
       const existingDepot = depots.find((item) => item.depot.code === confirmedCode)?.depot;
-      let depot = depotConfirmation.reuseExisting ? existingDepot : undefined;
+      const activeExistingDepot = existingDepot?.status === 'active' ? existingDepot : undefined;
+      const inactiveExistingDepot = existingDepot?.status === 'inactive' ? existingDepot : undefined;
+      let depot = depotConfirmation.reuseExisting ? activeExistingDepot : undefined;
 
-      if (existingDepot && !depotConfirmation.reuseExisting) {
+      if (activeExistingDepot && !depotConfirmation.reuseExisting) {
         throw new Error(
-          'Já existe um depósito com o código ' + confirmedCode
+          'Já existe um depósito ativo com o código ' + confirmedCode
           + '. Altere o código para criar um novo depósito ou marque a opção de reutilizar o existente.'
         );
+      }
+
+      if (!depot && inactiveExistingDepot) {
+        await updateWarehouseDepot(workspaceId, inactiveExistingDepot.id, {
+          code: confirmedCode,
+          name: depotConfirmation.name,
+          description: depotConfirmation.description || null,
+          visualType: depotConfirmation.visualType,
+          sizeProfile: depotConfirmation.sizeProfile,
+          status: 'active',
+        });
+        depot = {
+          ...inactiveExistingDepot,
+          code: confirmedCode,
+          name: depotConfirmation.name,
+          description: depotConfirmation.description || null,
+          visualType: depotConfirmation.visualType,
+          sizeProfile: depotConfirmation.sizeProfile,
+          status: 'active',
+        };
+        createdDepot += 1;
       }
 
       if (!depot) {
@@ -150,23 +175,50 @@ export function WarehouseStructureImportR1({
           });
           localByCode.set(local.code, local);
           createdLocals += 1;
+        } else if (local.status === 'inactive') {
+          await updateWarehouseLocation(workspaceId, local.id, {
+            code: localInput.code,
+            name: localInput.name,
+            description: localInput.description,
+            status: 'active',
+          });
+          local = {
+            ...local,
+            code: localInput.code,
+            name: localInput.name,
+            description: localInput.description,
+            status: 'active',
+          };
+          localByCode.set(local.code, local);
+          createdLocals += 1;
         } else {
           skipped += 1;
         }
 
-        const existingChildren = new Set(
+        const existingChildren = new Map(
           knownLocations
             .filter(
               (item) =>
                 item.location.kind === 'SUBPOSITION'
                 && item.location.parentLocationId === local.id
             )
-            .map((item) => item.location.code)
+            .map((item) => [item.location.code, item.location])
         );
 
         for (const child of localInput.children) {
-          if (existingChildren.has(child.code)) {
+          const existingChild = existingChildren.get(child.code);
+          if (existingChild?.status === 'active') {
             skipped += 1;
+            continue;
+          }
+          if (existingChild?.status === 'inactive') {
+            await updateWarehouseLocation(workspaceId, existingChild.id, {
+              code: child.code,
+              name: child.name,
+              description: child.description,
+              status: 'active',
+            });
+            createdSubpositions += 1;
             continue;
           }
 
@@ -178,7 +230,6 @@ export function WarehouseStructureImportR1({
             name: child.name,
             description: child.description,
           });
-          existingChildren.add(child.code);
           createdSubpositions += 1;
         }
       }
@@ -339,7 +390,7 @@ export function WarehouseStructureImportR1({
           {(() => {
             const normalized = normalizeWarehouseLogicalCode(depotConfirmation.code);
             const existing = normalized
-              ? depots.find((item) => item.depot.code === normalized)?.depot
+              ? depots.find((item) => item.depot.code === normalized && item.depot.status === 'active')?.depot
               : undefined;
             return existing ? (
               <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
@@ -376,7 +427,11 @@ export function WarehouseStructureImportR1({
               || !depotConfirmation.name.trim()
               || !normalizeWarehouseLogicalCode(depotConfirmation.code)
               || Boolean(
-                depots.some((item) => item.depot.code === normalizeWarehouseLogicalCode(depotConfirmation.code))
+                depots.some(
+                  (item) =>
+                    item.depot.code === normalizeWarehouseLogicalCode(depotConfirmation.code)
+                    && item.depot.status === 'active'
+                )
                 && !depotConfirmation.reuseExisting
               )
             }
