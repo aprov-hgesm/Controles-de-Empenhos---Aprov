@@ -15,6 +15,8 @@ export const WAREHOUSE_LOCATION_MAX_ABSOLUTE_QUANTITY = 1_000_000_000;
 
 export type WarehouseEntityStatus = 'active' | 'inactive';
 export type WarehouseLocationKind = 'LOCAL' | 'SUBPOSITION';
+export type WarehouseDepotVisualType = 'STANDARD' | 'CONTAINER' | 'COLD_CONTAINER';
+export type WarehouseDepotSizeProfile = 'SMALL' | 'MEDIUM' | 'LARGE';
 
 export interface WarehouseDepot {
   schemaVersion: typeof WAREHOUSE_DEPOT_SCHEMA_VERSION;
@@ -24,6 +26,8 @@ export interface WarehouseDepot {
   code: string;
   name: string;
   description: string | null;
+  visualType: WarehouseDepotVisualType;
+  sizeProfile: WarehouseDepotSizeProfile;
   status: WarehouseEntityStatus;
   createdBy: string;
   updatedBy: string;
@@ -95,6 +99,8 @@ const DEPOT_FIELDS = new Set([
   'code',
   'name',
   'description',
+  'visualType',
+  'sizeProfile',
   'status',
   'createdBy',
   'updatedBy',
@@ -256,6 +262,14 @@ export function validateWarehouseDepot(
   if (name.length < 2 || name.length > 120) issues.push(issue('invalid_name', '$.name', 'Nome deve possuir entre 2 e 120 caracteres.'));
   const description = normalizeDescription(input.description);
   if (description === undefined) issues.push(issue('invalid_description', '$.description', 'Descrição deve possuir no máximo 240 caracteres.'));
+  const visualType = input.visualType === 'STANDARD' || input.visualType === 'CONTAINER' || input.visualType === 'COLD_CONTAINER'
+    ? input.visualType
+    : null;
+  if (!visualType) issues.push(issue('invalid_visual_type', '$.visualType', 'Tipo visual do depósito é inválido.'));
+  const sizeProfile = input.sizeProfile === 'SMALL' || input.sizeProfile === 'MEDIUM' || input.sizeProfile === 'LARGE'
+    ? input.sizeProfile
+    : null;
+  if (!sizeProfile) issues.push(issue('invalid_size_profile', '$.sizeProfile', 'Porte do depósito é inválido.'));
   const status = input.status;
   if (status !== 'active' && status !== 'inactive') issues.push(issue('invalid_status', '$.status', 'Status deve ser active ou inactive.'));
   const createdBy = normalizeActor(input.createdBy);
@@ -263,7 +277,7 @@ export function validateWarehouseDepot(
   if (!createdBy) issues.push(issue('invalid_created_by', '$.createdBy', 'createdBy é obrigatório.'));
   if (!updatedBy) issues.push(issue('invalid_updated_by', '$.updatedBy', 'updatedBy é obrigatório.'));
 
-  if (issues.length || !code || description === undefined || !createdBy || !updatedBy) return { ok: false, issues };
+  if (issues.length || !code || description === undefined || !visualType || !sizeProfile || !createdBy || !updatedBy) return { ok: false, issues };
   return {
     ok: true,
     issues: [],
@@ -275,6 +289,8 @@ export function validateWarehouseDepot(
       code,
       name,
       description,
+      visualType,
+      sizeProfile,
       status: status as WarehouseEntityStatus,
       createdBy,
       updatedBy,
