@@ -8,9 +8,11 @@ import {
   Container,
   MapPin,
   Package,
+  Pencil,
   Plus,
   RefreshCw,
   Snowflake,
+  Trash2,
   Warehouse,
   X,
 } from 'lucide-react';
@@ -22,6 +24,8 @@ import {
   createWarehouseLocation,
   listWarehouseDepots,
   listWarehouseLocations,
+  updateWarehouseDepot,
+  updateWarehouseLocation,
   type WarehouseDepotListItem,
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
@@ -36,7 +40,7 @@ type State = {
   locations: WarehouseLocationListItem[];
 };
 
-type CreatePanel = 'depot' | 'location' | 'subposition' | null;
+type CreatePanel = 'depot' | 'location' | 'subposition' | 'editDepot' | 'editLocation' | 'editSubposition' | null;
 
 function messageFromError(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
@@ -190,9 +194,33 @@ export function WarehouseLocationsR1Operational({
   function openPanel(panel: CreatePanel) {
     setCreatePanel(panel);
     setMessage(null);
+
+    if (panel === 'editDepot' && selectedDepot) {
+      setDepotCode(selectedDepot.code);
+      setDepotName(selectedDepot.name);
+      setDepotDescription(selectedDepot.description || '');
+      setDepotVisualType(selectedDepot.visualType);
+      setDepotSizeProfile(selectedDepot.sizeProfile);
+      return;
+    }
+
+    if ((panel === 'editLocation' || panel === 'editSubposition') && selectedLocation) {
+      setLocationCode(selectedLocation.code);
+      setLocationName(selectedLocation.name);
+      setLocationDescription(selectedLocation.description || '');
+      return;
+    }
+
     setLocationCode('');
     setLocationName('');
     setLocationDescription('');
+    if (panel === 'depot') {
+      setDepotCode('');
+      setDepotName('');
+      setDepotDescription('');
+      setDepotVisualType('STANDARD');
+      setDepotSizeProfile('MEDIUM');
+    }
   }
 
   async function submitDepot(event: FormEvent) {
@@ -252,6 +280,111 @@ export function WarehouseLocationsR1Operational({
       setCreatePanel(null);
       if (kind === 'LOCAL') setSelectedLocationId(created.id);
       setMessage(kind === 'LOCAL' ? 'Local criado com sucesso.' : 'Subposição criada com sucesso.');
+      await refresh();
+    } catch (error) {
+      setMessage(messageFromError(error));
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function saveDepotEdits(event: FormEvent) {
+    event.preventDefault();
+    if (!selectedDepot) return;
+
+    setWorking(true);
+    setMessage(null);
+    try {
+      await updateWarehouseDepot(workspaceId, selectedDepot.id, {
+        code: depotCode,
+        name: depotName,
+        description: depotDescription || null,
+        visualType: depotVisualType,
+        sizeProfile: depotSizeProfile,
+      });
+      setCreatePanel(null);
+      setMessage('Depósito atualizado com sucesso.');
+      await refresh();
+    } catch (error) {
+      setMessage(messageFromError(error));
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function archiveDepot() {
+    if (!selectedDepot) return;
+    const children = state.locations.filter(
+      (item) => item.location.depotId === selectedDepot.id && item.location.status === 'active'
+    );
+    if (children.length > 0) {
+      setMessage('O depósito só pode ser excluído quando estiver vazio. Remova primeiro todos os Locais e Subposições ativos.');
+      return;
+    }
+    if (!window.confirm('Excluir este depósito da operação? O EMPROVEX preservará o registro histórico como inativo.')) return;
+
+    setWorking(true);
+    try {
+      await updateWarehouseDepot(workspaceId, selectedDepot.id, { status: 'inactive' });
+      setCreatePanel(null);
+      setSelectedDepotId('');
+      setSelectedLocationId('');
+      setMessage('Depósito excluído da operação e preservado no histórico.');
+      await refresh();
+    } catch (error) {
+      setMessage(messageFromError(error));
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function saveLocationEdits(event: FormEvent) {
+    event.preventDefault();
+    if (!selectedLocation) return;
+
+    setWorking(true);
+    setMessage(null);
+    try {
+      await updateWarehouseLocation(workspaceId, selectedLocation.id, {
+        code: locationCode,
+        name: locationName,
+        description: locationDescription || null,
+      });
+      setCreatePanel(null);
+      setMessage(selectedLocation.kind === 'LOCAL' ? 'Local atualizado com sucesso.' : 'Subposição atualizada com sucesso.');
+      await refresh();
+    } catch (error) {
+      setMessage(messageFromError(error));
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function archiveSelectedLocation() {
+    if (!selectedLocation) return;
+
+    if (selectedLocation.kind === 'LOCAL') {
+      const children = state.locations.filter(
+        (item) =>
+          item.location.kind === 'SUBPOSITION'
+          && item.location.parentLocationId === selectedLocation.id
+          && item.location.status === 'active'
+      );
+      if (children.length > 0) {
+        setMessage('Este Local ainda possui Subposições. Remova as Subposições antes de excluir o Local.');
+        return;
+      }
+    }
+
+    const label = selectedLocation.kind === 'LOCAL' ? 'Local' : 'Subposição';
+    if (!window.confirm('Excluir ' + label.toLowerCase() + ' da operação? O registro histórico será preservado como inativo.')) return;
+
+    setWorking(true);
+    try {
+      await updateWarehouseLocation(workspaceId, selectedLocation.id, { status: 'inactive' });
+      setCreatePanel(null);
+      setSelectedLocationId('');
+      setMessage(label + ' excluído(a) da operação e preservado(a) no histórico.');
       await refresh();
     } catch (error) {
       setMessage(messageFromError(error));
@@ -350,7 +483,13 @@ export function WarehouseLocationsR1Operational({
                   ? 'Novo depósito'
                   : createPanel === 'location'
                     ? 'Novo local'
-                    : 'Nova subposição'}
+                    : createPanel === 'subposition'
+                      ? 'Nova subposição'
+                      : createPanel === 'editDepot'
+                        ? 'Editar depósito'
+                        : createPanel === 'editLocation'
+                          ? 'Editar local'
+                          : 'Editar subposição'}
               </h3>
             </div>
             <button
@@ -363,8 +502,8 @@ export function WarehouseLocationsR1Operational({
             </button>
           </div>
 
-          {createPanel === 'depot' ? (
-            <form onSubmit={submitDepot} className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+          {createPanel === 'depot' || createPanel === 'editDepot' ? (
+            <form onSubmit={createPanel === 'editDepot' ? saveDepotEdits : submitDepot} className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
               <input value={depotCode} onChange={(event) => setDepotCode(event.target.value)} placeholder="Código · DEP-01" className={fieldClass} required />
               <input value={depotName} onChange={(event) => setDepotName(event.target.value)} placeholder="Nome do depósito" className={fieldClass} required />
               <input value={depotDescription} onChange={(event) => setDepotDescription(event.target.value)} placeholder="Descrição opcional" className={fieldClass} />
@@ -379,19 +518,28 @@ export function WarehouseLocationsR1Operational({
                 <option value="LARGE">Grande</option>
               </select>
               <button type="submit" disabled={working} className="h-11 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm transition hover:bg-blue-800 disabled:opacity-40">
-                Criar depósito
+                {createPanel === 'editDepot' ? 'Salvar alterações' : 'Criar depósito'}
               </button>
+              {createPanel === 'editDepot' && (
+                <button type="button" onClick={() => void archiveDepot()} disabled={working} className="h-11 rounded-xl border border-rose-200 bg-rose-50 px-4 text-xs font-black text-rose-700 transition hover:bg-rose-100 disabled:opacity-40">
+                  Excluir depósito
+                </button>
+              )}
             </form>
           ) : (
             <form
-              onSubmit={(event) => void submitLocation(event, createPanel === 'location' ? 'LOCAL' : 'SUBPOSITION')}
+              onSubmit={
+                createPanel === 'editLocation' || createPanel === 'editSubposition'
+                  ? saveLocationEdits
+                  : (event) => void submitLocation(event, createPanel === 'location' ? 'LOCAL' : 'SUBPOSITION')
+              }
               className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-3"
             >
               <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-3 py-2">
                 <p className="text-[9px] font-bold uppercase tracking-wide text-gray-400">Depósito</p>
                 <p className="mt-0.5 text-xs font-black text-[#00288e]">{selectedDepot?.code} · {selectedDepot?.name}</p>
               </div>
-              {createPanel === 'subposition' && (
+              {(createPanel === 'subposition' || createPanel === 'editSubposition') && (
                 <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-3 py-2">
                   <p className="text-[9px] font-bold uppercase tracking-wide text-gray-400">Local pai</p>
                   <p className="mt-0.5 text-xs font-black text-[#00288e]">{selectedLocation?.code} · {selectedLocation?.name}</p>
@@ -401,8 +549,17 @@ export function WarehouseLocationsR1Operational({
               <input value={locationName} onChange={(event) => setLocationName(event.target.value)} placeholder={createPanel === 'location' ? 'Nome do local' : 'Nome da subposição'} className={fieldClass} required />
               <input value={locationDescription} onChange={(event) => setLocationDescription(event.target.value)} placeholder="Descrição opcional" className={fieldClass} />
               <button type="submit" disabled={working} className="h-11 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm transition hover:bg-blue-800 disabled:opacity-40">
-                {createPanel === 'location' ? 'Criar local' : 'Criar subposição'}
+                {createPanel === 'editLocation' || createPanel === 'editSubposition'
+                  ? 'Salvar alterações'
+                  : createPanel === 'location'
+                    ? 'Criar local'
+                    : 'Criar subposição'}
               </button>
+              {(createPanel === 'editLocation' || createPanel === 'editSubposition') && (
+                <button type="button" onClick={() => void archiveSelectedLocation()} disabled={working} className="h-11 rounded-xl border border-rose-200 bg-rose-50 px-4 text-xs font-black text-rose-700 transition hover:bg-rose-100 disabled:opacity-40">
+                  {createPanel === 'editLocation' ? 'Excluir local' : 'Excluir subposição'}
+                </button>
+              )}
             </form>
           )}
         </section>
@@ -512,9 +669,15 @@ export function WarehouseLocationsR1Operational({
               {selectedDepot ? selectedDepot.name : 'Selecione um depósito'}
             </h3>
             {selectedDepot && (
-              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#00288e]">
-                {localItems.length} locais
-              </span>
+              <>
+                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#00288e]">
+                  {localItems.length} locais
+                </span>
+                <button type="button" onClick={() => openPanel('editDepot')} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-black text-gray-600 transition hover:border-blue-200 hover:text-[#00288e]">
+                  <Pencil className="h-3 w-3" />
+                  Editar depósito
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -580,9 +743,15 @@ export function WarehouseLocationsR1Operational({
               {selectedLocation ? selectedLocation.name : 'Selecione um local'}
             </h3>
             {selectedLocation && (
-              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#00288e]">
-                {subpositions.length} subposições
-              </span>
+              <>
+                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#00288e]">
+                  {subpositions.length} subposições
+                </span>
+                <button type="button" onClick={() => openPanel('editLocation')} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-black text-gray-600 transition hover:border-blue-200 hover:text-[#00288e]">
+                  <Pencil className="h-3 w-3" />
+                  Editar local
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -612,6 +781,17 @@ export function WarehouseLocationsR1Operational({
                     <p className="truncate text-xs font-black text-gray-800">{item.location.name}</p>
                     <p className="mt-0.5 truncate font-mono text-[9px] font-bold text-gray-400">{item.location.code}</p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedLocationId(item.location.id);
+                      openPanel('editSubposition');
+                    }}
+                    className="ml-auto grid h-7 w-7 place-items-center rounded-lg border border-gray-200 bg-white text-gray-400 transition hover:border-blue-200 hover:text-[#00288e]"
+                    aria-label={'Editar ' + item.location.name}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
                 </div>
               </div>
             ))}
