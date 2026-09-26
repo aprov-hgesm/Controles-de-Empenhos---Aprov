@@ -756,38 +756,6 @@ function WarehouseStructure({
   }
 
   return (
-      <g
-        data-location-id={object.warehouseLocationId || ''}
-        data-occupied={boxCount > 0 ? 'true' : 'false'}
-        data-highlighted={highlighted ? 'true' : 'false'}
-        filter={highlightFilter}
-      >
-        {commonHighlight}
-        <polygon points={polygonPoints([at, bt, ct, dt])} fill="url(#metalSheen)" stroke="#70889a" strokeWidth="1.8" />
-        <polygon
-          points={polygonPoints([
-            isoPoint(object.x, object.y + object.height, topZ - 8, logicalWidth, logicalHeight),
-            isoPoint(object.x + object.width, object.y + object.height, topZ - 8, logicalWidth, logicalHeight),
-            ct,
-            dt,
-          ])}
-          fill="#cfd9e0"
-          stroke="#70889a"
-          strokeWidth="1.5"
-        />
-        {[0.08, 0.92].flatMap((rx) => [0.12, 0.88].map((ry) => ({ rx, ry }))).map((leg, index) => {
-          const bottom = isoPoint(object.x + object.width * leg.rx, object.y + object.height * leg.ry, legZ, logicalWidth, logicalHeight);
-          const top = isoPoint(object.x + object.width * leg.rx, object.y + object.height * leg.ry, topZ - 2, logicalWidth, logicalHeight);
-          return <line key={index} x1={bottom.x} y1={bottom.y} x2={top.x} y2={top.y} stroke="#6c7f8d" strokeWidth="4" />;
-        })}
-        <line x1={at.x} y1={at.y} x2={bt.x} y2={bt.y} stroke="#ffffff" strokeWidth="2.2" opacity="0.9" />
-        {boxCount > 0 && boxGroup('bench-box', centerTop.x, centerTop.y - 4, 0.7, highlighted)}
-        {renderLabel(centerTop, code, 'Mesa inox', subpositions.length ? subpositions.length + ' subposições' : 'Superfície única', highlighted, 0, -6)}
-      </g>
-    );
-  }
-
-  return (
     <g filter={highlightFilter}>
       {commonHighlight}
       <polygon points={polygonPoints([d, c, ct, dt])} fill="#dbe6ee" stroke="#8299aa" strokeWidth="1.5" />
