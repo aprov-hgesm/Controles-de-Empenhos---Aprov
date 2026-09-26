@@ -25,6 +25,7 @@ import {
   type WarehouseDepotLayoutListItem,
 } from '../../../lib/warehouse/layoutRepository';
 import {
+  createWarehouseLocation,
   listWarehouseDepots,
   listWarehouseLocations,
   type WarehouseDepotListItem,
