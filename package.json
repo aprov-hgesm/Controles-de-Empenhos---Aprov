@@ -177,7 +177,8 @@
     "test:adm-deposito-depot-locator": "node --test scripts/warehouse-depot-locator.test.mjs",
     "verify:adm-deposito-modular-r1": "node scripts/verify-adm-deposito-modular-r1.mjs",
     "test:adm-deposito-modular-r1-security": "npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore \"node scripts/warehouse-modular-r1-security.test.mjs\"",
-    "test:adm-deposito-structure-import-r1": "node --test scripts/warehouse-structure-import-r1.test.mjs"
+    "test:adm-deposito-structure-import-r1": "node --test scripts/warehouse-structure-import-r1.test.mjs",
+    "test:adm-deposito-labels-r1": "node --test scripts/warehouse-labels-r1.test.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
