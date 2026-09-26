@@ -1738,3 +1738,19 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - A interface deve orientar o operador a remover primeiro a estrutura filha, em ordem Subposição → Local → Depósito.
 - Códigos alterados continuam sujeitos à validação e unicidade no mesmo escopo lógico.
 - Esta etapa não reativa estoque, `locationBalances`, lotes ou movimentações; portanto nenhuma exclusão física de dados logísticos avançados é autorizada na ADM-R1.
+
+
+## D-079 — Etiquetas físicas A4 monocromáticas para a ADM-R1
+
+- A ADM-R1 passa a gerar etiquetas físicas para Depósitos, Locais e Subposições sem depender de estoque, saldos, lotes ou movimentações.
+- O PDF é gerado no cliente em formato A4 e preparado para impressão monocromática em impressoras a laser/toner.
+- A identidade visual da etiqueta é deliberadamente simples: fundo branco, preto/cinza, moldura fina, faixa institucional e assinatura textual `EMPROVEX · ADM DEPÓSITO`.
+- A legibilidade deve permanecer boa mesmo sem cor; nenhuma informação depende de cor para ser compreendida.
+- Presets oficiais:
+  - `COMPACT`: 21 etiquetas por A4, priorizando prateleiras, níveis e nichos;
+  - `MEDIUM`: 12 etiquetas por A4, uso geral em estantes e demais Locais;
+  - `LARGE`: 8 etiquetas por A4, recomendada para depósitos, freezers, paletes e identificação de maior distância.
+- O operador pode gerar uma única etiqueta ou lotes conforme o escopo selecionado: depósito, Locais, estrutura completa, Local selecionado ou Subposições do Local.
+- A hierarquia física e a UG podem ser incluídas ou ocultadas antes da geração.
+- Apenas estruturas ativas entram na geração automática.
+- A geração de etiquetas é função de apresentação e não cria nem altera documentos do Firestore.
