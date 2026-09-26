@@ -1879,3 +1879,24 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - Escritas em `locationBalances` permanecem explicitamente negadas nesta release modular.
 - Usuários externos continuam sem leitura dos saldos físicos do ADM.
 - Os demais domínios avançados permanecem desligados.
+
+
+## D-091 — Biblioteca visual premium da Prévia 2.5D
+
+- A Prévia 2.5D passa a usar uma biblioteca visual especializada por tipo de Local, em vez de um volume genérico.
+- Os Locais operacionais inicialmente suportados visualmente são:
+  - estante/rack industrial;
+  - palete;
+  - freezer industrial;
+  - geladeira industrial;
+  - mesa/bancada inox.
+- Variações de tamanho continuam derivadas das dimensões do croqui.
+- A quantidade de Subposições influencia o detalhamento visual quando aplicável, especialmente níveis de estantes/racks e metadados do Local.
+- Estantes/racks passam a exibir montantes, contraventamentos, níveis e travessas laranja.
+- Paletes passam a exibir ripas e pés estruturais.
+- Freezers passam a exibir tampa/visor, puxador, ventilação/símbolo frio e volume interno.
+- Geladeiras industriais passam a exibir portas de vidro, divisória, prateleiras internas, puxador e iluminação fria.
+- Mesas passam a usar aparência de inox, tampo, saia e pés.
+- A iluminação por consulta mantém halo azul institucional de alto contraste.
+- Caixas continuam aparecendo somente com saldo físico positivo e permanecem simbólicas/bounded.
+- A biblioteca visual continua em SVG/React, sem engine 3D/WebGL obrigatória, preservando baixo custo de CPU/GPU.
