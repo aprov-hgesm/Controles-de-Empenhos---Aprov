@@ -1,3 +1,12 @@
+## Atualização modular — Etiquetas físicas A4
+
+- Implementada central de impressão de etiquetas na ADM-R1.
+- Escopos: depósito, Locais, estrutura completa, Local selecionado e Subposições.
+- Presets A4: 21, 12 ou 8 etiquetas por folha.
+- PDF monocromático otimizado para toner, com identidade EMPROVEX e opção de hierarquia/UG.
+- Implementação não altera Firestore Rules nem reativa domínios avançados.
+- Validação específica: `npm run test:adm-deposito-labels-r1`.
+
 # ADM Depósito — Estado Atual
 
 Este arquivo registra o estado real de continuidade do projeto e deve ser tratado como memória operacional oficial do módulo.
