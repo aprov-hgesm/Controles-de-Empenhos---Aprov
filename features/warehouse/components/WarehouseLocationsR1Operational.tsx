@@ -807,8 +807,8 @@ export function WarehouseLocationsR1Operational({
           )}
         </section>
 
-        <aside className="xl:sticky xl:top-24">
-          <section className="rounded-2xl border border-blue-100/80 bg-white/95 p-5 shadow-md backdrop-blur-md">
+        <aside className="self-start">
+          <section className="sticky top-[7.5rem] max-h-[calc(100vh-8.5rem)] overflow-hidden rounded-2xl border border-blue-100/80 bg-white/95 p-5 shadow-md backdrop-blur-md">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.16em] text-gray-400">Detalhamento do local</p>
@@ -863,7 +863,7 @@ export function WarehouseLocationsR1Operational({
                 </button>
               </div>
             ) : (
-              <div className="mt-4 max-h-[calc(100vh-14rem)] space-y-2 overflow-y-auto pr-1">
+              <div className="mt-4 max-h-[calc(100vh-18rem)] space-y-2 overflow-y-auto pr-1">
                 {subpositions.map((item) => (
                   <div key={item.location.id} className="rounded-xl border border-gray-200 bg-white px-3 py-3 shadow-xs">
                     <div className="flex items-center gap-2">
