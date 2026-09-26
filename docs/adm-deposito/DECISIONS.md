@@ -1784,3 +1784,15 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - O painel lateral mantém ações de edição do Local e das Subposições e permite criar a primeira Subposição quando necessário.
 - A lista interna de Subposições possui rolagem própria quando excede a altura útil da tela.
 - Esta mudança é exclusivamente de UX/layout e não altera contratos, Firestore Rules, identidade técnica, estoque ou hierarquia dos dados.
+
+
+## D-083 — Confirmação de identidade do depósito antes da importação via IA
+
+- Após validar o JSON de `emprovex_warehouse_import_v1`, o operador deve confirmar os metadados do depósito antes de gravar a estrutura.
+- A etapa de confirmação permite revisar/alterar: código, nome, descrição, tipo visual (`STANDARD`, `CONTAINER`, `COLD_CONTAINER`) e porte (`SMALL`, `MEDIUM`, `LARGE`).
+- A importação não pode mais reutilizar silenciosamente um depósito existente apenas porque o JSON retornou um código já cadastrado.
+- Quando o código confirmado já existir, o fluxo deve avisar explicitamente e bloquear a confirmação até que o operador:
+  - altere o código para criar um novo depósito; ou
+  - marque conscientemente a opção de reutilizar o depósito existente.
+- O contrato JSON permanece simples e não passa a exigir porte/tipo; esses metadados são confirmados na interface do EMPROVEX.
+- Essa regra evita que descrições diferentes geradas com o código padrão `DEP-01` sejam agregadas acidentalmente ao mesmo depósito.
