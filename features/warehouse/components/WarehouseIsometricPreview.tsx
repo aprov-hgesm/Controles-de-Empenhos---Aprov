@@ -126,9 +126,11 @@ export function WarehouseIsometricPreview({
 
   const highlightedLocalIds = useMemo(
     () => new Set(
-      selectedMaterialBalances
-        .filter((balance) => balance.position.kind !== 'UNASSIGNED')
-        .map((balance) => balance.position.locationId)
+      selectedMaterialBalances.flatMap((balance) => {
+        const position = balance.position;
+        if (position.kind === 'UNASSIGNED') return [];
+        return [position.locationId];
+      })
     ),
     [selectedMaterialBalances]
   );
