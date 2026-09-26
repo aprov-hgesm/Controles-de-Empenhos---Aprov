@@ -268,10 +268,24 @@ async function main() {
     })
   );
 
+  await allowed('fundador lista saldos físicos somente leitura para a prévia 2.5D', () =>
+    getDocs(collection(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances'))
+  );
+
+  await denied('usuário não fundador não lista saldos físicos', () =>
+    getDocs(collection(outsider.db, 'warehouse', WORKSPACE_ID, 'locationBalances'))
+  );
+
+  await denied('fundador não grava saldos físicos na release modular', () =>
+    setDoc(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', 'probe-r1'),
+      { marker: 'read-only-preview' }
+    )
+  );
+
   const advancedDomains = [
     'movements',
     'balances',
-    'locationBalances',
     'lots',
     'barcodes',
     'siscofisSnapshots',
@@ -297,8 +311,9 @@ async function main() {
 
   console.log('\nADM Depósito ADM-R1 security test: PASS');
   console.log('- 6 domínios independentes liberados ao fundador');
+  console.log('- locationBalances liberado somente para leitura do fundador na prévia 2.5D');
   console.log('- acesso externo negado');
-  console.log('- 11 domínios avançados permanecem bloqueados');
+  console.log('- 10 domínios avançados permanecem bloqueados');
 }
 
 main()
