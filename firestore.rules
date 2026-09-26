@@ -85,6 +85,19 @@ service cloud.firestore {
         || account.authProvider == 'password';
     }
 
+    function identityMatchesAccount(account) {
+      return isVerifiedUser()
+        && isPasswordSectorSession()
+        && sectorAccountUsesPasswordProvider(account)
+        && account.email == request.auth.token.email
+        && (
+          (
+            hasBoundUid(account)
+            && account.firebaseUid == request.auth.uid
+          )
+          || !hasBoundUid(account)
+        );
+    }
 
     function boundIdentityMatchesAccount(account) {
       return isVerifiedUser()
@@ -492,9 +505,96 @@ service cloud.firestore {
         );
     }
 
+    function validSectorAccountWrite(accountId) {
+      return request.resource.data.keys().hasAll([
+          'email',
+          'accountType',
+          'workspaceId',
+          'status',
+          'createdAt',
+          'updatedAt',
+          'createdBy'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'email',
+          'authProvider',
+          'firebaseUid',
+          'accountType',
+          'workspaceId',
+          'ug',
+          'status',
+          'createdAt',
+          'updatedAt',
+          'createdBy',
+          'firstLoginAt',
+          'lastLoginAt'
+        ])
+        && request.resource.data.email == accountId
+        && request.resource.data.accountType == 'sector'
+        && (
+          !('authProvider' in request.resource.data)
+          || request.resource.data.authProvider == 'password'
+        )
+        && request.resource.data.workspaceId is string
+        && request.resource.data.workspaceId.size() > 0
+        && (
+          !('ug' in request.resource.data)
+          || isValidUnitUg(request.resource.data.ug)
+        )
+        && request.resource.data.status in ['active', 'disabled'];
+    }
 
+    function validSectorAccountCreate(accountId) {
+      return validSectorAccountWrite(accountId)
+        && 'ug' in request.resource.data
+        && isValidUnitUg(request.resource.data.ug);
+    }
 
+    function accountHasMatchingWorkspaceAfterWrite(accountId) {
+      return request.resource.data.workspaceId is string
+        && existsAfter(
+          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+        )
+        && getAfter(
+          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+        ).data.id == request.resource.data.workspaceId
+        && getAfter(
+          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+        ).data.authorizedEmail == accountId
+        && getAfter(
+          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+        ).data.status == request.resource.data.status
+        && (
+          (
+            !('ug' in request.resource.data)
+            && !('ug' in getAfter(
+              /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+            ).data)
+          )
+          || (
+            'ug' in request.resource.data
+            && 'ug' in getAfter(
+              /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+            ).data
+            && request.resource.data.ug == getAfter(
+              /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+            ).data.ug
+          )
+        );
+    }
 
+    function validSectorAccountAdminUpdate(accountId) {
+      return validSectorAccountWrite(accountId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'ug',
+          'updatedAt'
+        ])
+        && (
+          !('ug' in resource.data)
+          || request.resource.data.ug == resource.data.ug
+        );
+    }
 
     function validPlatformBillingConfig() {
       return request.resource.data.keys().hasAll([
@@ -560,9 +660,141 @@ service cloud.firestore {
         && request.resource.data.updatedBy is string;
     }
 
+    function validBillingAccount(workspaceId) {
+      let workspace = workspaceData(workspaceId);
+      return workspaceExists(workspaceId)
+        && request.resource.data.keys().hasAll([
+          'version',
+          'workspaceId',
+          'ug',
+          'authorizedEmail',
+          'status',
+          'monthlyPriceCents',
+          'currency',
+          'trialGranted',
+          'trialStartedAt',
+          'trialEndsAt',
+          'paymentRequired',
+          'createdAt',
+          'updatedAt',
+          'createdBy',
+          'updatedBy'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'version',
+          'workspaceId',
+          'ug',
+          'authorizedEmail',
+          'status',
+          'monthlyPriceCents',
+          'currency',
+          'trialGranted',
+          'trialStartedAt',
+          'trialEndsAt',
+          'paymentRequired',
+          'createdAt',
+          'updatedAt',
+          'createdBy',
+          'updatedBy'
+        ])
+        && request.resource.data.version == 'emprovex_billing_v1'
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.ug == workspace.ug
+        && request.resource.data.authorizedEmail == workspace.authorizedEmail
+        && request.resource.data.status in [
+          'trial',
+          'active',
+          'pending',
+          'suspended',
+          'canceled',
+          'exempt'
+        ]
+        && request.resource.data.monthlyPriceCents is int
+        && request.resource.data.monthlyPriceCents >= 0
+        && request.resource.data.currency == 'BRL'
+        && request.resource.data.trialGranted is bool
+        && request.resource.data.trialStartedAt is string
+        && request.resource.data.trialEndsAt is string
+        && request.resource.data.paymentRequired == false
+        && request.resource.data.createdAt is string
+        && request.resource.data.updatedAt is string
+        && request.resource.data.createdBy is string
+        && request.resource.data.updatedBy is string;
+    }
 
+    function validBillingAccountUpdate(workspaceId) {
+      return validBillingAccount(workspaceId)
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.ug == resource.data.ug
+        && request.resource.data.authorizedEmail == resource.data.authorizedEmail
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy;
+    }
 
+    function validBillingCycle(cycleId) {
+      let workspaceId = request.resource.data.workspaceId;
+      return request.resource.data.keys().hasAll([
+          'version',
+          'id',
+          'workspaceId',
+          'ug',
+          'referenceMonth',
+          'amountCents',
+          'dueDate',
+          'status',
+          'confirmedAt',
+          'confirmedBy',
+          'note',
+          'createdAt',
+          'updatedAt',
+          'updatedBy'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'version',
+          'id',
+          'workspaceId',
+          'ug',
+          'referenceMonth',
+          'amountCents',
+          'dueDate',
+          'status',
+          'confirmedAt',
+          'confirmedBy',
+          'note',
+          'createdAt',
+          'updatedAt',
+          'updatedBy'
+        ])
+        && request.resource.data.version == 'emprovex_billing_v1'
+        && request.resource.data.id == cycleId
+        && workspaceId is string
+        && workspaceExists(workspaceId)
+        && request.resource.data.ug == workspaceData(workspaceId).ug
+        && request.resource.data.referenceMonth is string
+        && request.resource.data.referenceMonth.matches('^[0-9]{4}-[0-9]{2}$')
+        && request.resource.data.amountCents is int
+        && request.resource.data.amountCents >= 0
+        && request.resource.data.dueDate is string
+        && request.resource.data.dueDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.status in ['open', 'pending', 'paid', 'waived']
+        && request.resource.data.confirmedAt is string
+        && request.resource.data.confirmedBy is string
+        && request.resource.data.note is string
+        && request.resource.data.createdAt is string
+        && request.resource.data.updatedAt is string
+        && request.resource.data.updatedBy is string;
+    }
 
+    function validBillingCycleUpdate(cycleId) {
+      return validBillingCycle(cycleId)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.ug == resource.data.ug
+        && request.resource.data.referenceMonth == resource.data.referenceMonth
+        && request.resource.data.amountCents == resource.data.amountCents
+        && request.resource.data.dueDate == resource.data.dueDate
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
 
     function validInitialTermCounter() {
       return request.resource.data.keys().hasOnly(['currentNumber'])
@@ -1220,166 +1452,6 @@ service cloud.firestore {
         );
     }
 
-
-
-
-
-
-
-
-
-
-    function auditUgMatchesWorkspace(workspaceId, ug) {
-      let workspace = workspaceData(workspaceId);
-      return (
-          workspaceId == 'hgesm-aprov'
-          && ug == '160416'
-          && (
-            !('ug' in workspace)
-            || workspace.ug == '160416'
-          )
-        )
-        || (
-          ug == null
-          && !('ug' in workspace)
-        )
-        || (
-          ug is string
-          && 'ug' in workspace
-          && workspace.ug == ug
-          && isValidUnitUg(ug)
-        );
-    }
-
-
-    function validWorkspaceAuditEvent(eventId, workspaceId) {
-      return validAuditEventShape(eventId, workspaceId)
-        && auditUgMatchesWorkspace(workspaceId, request.resource.data.ug);
-    }
-
-
-
-
-    match /workspaces/{workspaceId} {
-      allow get: if isPlatformAdmin()
-        || canReadWorkspaceMetadataFromResource(workspaceId);
-      allow list: if isPlatformAdmin();
-      allow create: if isPlatformAdmin()
-        && validWorkspaceCreate(workspaceId)
-        && workspaceHasMatchingAccountAfterWrite(workspaceId);
-      allow update: if isPlatformAdmin()
-        && workspaceId != 'hgesm-aprov'
-        && validWorkspaceAdminUpdate(workspaceId)
-        && workspaceHasMatchingAccountAfterWrite(workspaceId);
-      allow delete: if false;
-    }
-
-    match /platformAccounts/{
-    function identityMatchesAccount(account) {
-      return isVerifiedUser()
-        && isPasswordSectorSession()
-        && sectorAccountUsesPasswordProvider(account)
-        && account.email == request.auth.token.email
-        && (
-          (
-            hasBoundUid(account)
-            && account.firebaseUid == request.auth.uid
-          )
-          || !hasBoundUid(account)
-        );
-    }
-
-    function validSectorAccountWrite(accountId) {
-      return request.resource.data.keys().hasAll([
-          'email',
-          'accountType',
-          'workspaceId',
-          'status',
-          'createdAt',
-          'updatedAt',
-          'createdBy'
-        ])
-        && request.resource.data.keys().hasOnly([
-          'email',
-          'authProvider',
-          'firebaseUid',
-          'accountType',
-          'workspaceId',
-          'ug',
-          'status',
-          'createdAt',
-          'updatedAt',
-          'createdBy',
-          'firstLoginAt',
-          'lastLoginAt'
-        ])
-        && request.resource.data.email == accountId
-        && request.resource.data.accountType == 'sector'
-        && (
-          !('authProvider' in request.resource.data)
-          || request.resource.data.authProvider == 'password'
-        )
-        && request.resource.data.workspaceId is string
-        && request.resource.data.workspaceId.size() > 0
-        && (
-          !('ug' in request.resource.data)
-          || isValidUnitUg(request.resource.data.ug)
-        )
-        && request.resource.data.status in ['active', 'disabled'];
-    }
-
-    function validSectorAccountCreate(accountId) {
-      return validSectorAccountWrite(accountId)
-        && 'ug' in request.resource.data
-        && isValidUnitUg(request.resource.data.ug);
-    }
-
-    function accountHasMatchingWorkspaceAfterWrite(accountId) {
-      return request.resource.data.workspaceId is string
-        && existsAfter(
-          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
-        )
-        && getAfter(
-          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
-        ).data.id == request.resource.data.workspaceId
-        && getAfter(
-          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
-        ).data.authorizedEmail == accountId
-        && getAfter(
-          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
-        ).data.status == request.resource.data.status
-        && (
-          (
-            !('ug' in request.resource.data)
-            && !('ug' in getAfter(
-              /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
-            ).data)
-          )
-          || (
-            'ug' in request.resource.data
-            && 'ug' in getAfter(
-              /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
-            ).data
-            && request.resource.data.ug == getAfter(
-              /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
-            ).data.ug
-          )
-        );
-    }
-
-    function validSectorAccountAdminUpdate(accountId) {
-      return validSectorAccountWrite(accountId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'status',
-          'ug',
-          'updatedAt'
-        ])
-        && (
-          !('ug' in resource.data)
-          || request.resource.data.ug == resource.data.ug
-        );
-    }
-
     function isSelfPlatformAccount() {
       return isVerifiedUser()
         && resource.data.accountType == 'sector'
@@ -1508,188 +1580,7 @@ service cloud.firestore {
           'updatedAt'
         ]);
     }
-accountId} {
-      allow get: if isPlatformAdmin() || isSelfPlatformAccount();
-      allow list: if isPlatformAdmin();
-      allow create: if isPlatformAdmin()
-        && validSectorAccountCreate(accountId)
-        && accountHasMatchingWorkspaceAfterWrite(accountId);
-      allow update: if (
-          isPlatformAdmin()
-          && accountId != 'aprov1hgesm@gmail.com'
-          && validSectorAccountAdminUpdate(accountId)
-          && accountHasMatchingWorkspaceAfterWrite(accountId)
-        )
-        || isSelfUidBinding(accountId)
-        || isSelfPreboundFirstLogin(accountId)
-        || isSelfBoundSessionRefresh(accountId);
-      allow delete: if false;
-    }
 
-    match /platformBillingConfig/{configId} {
-      allow get, list: if isPlatformAdmin();
-      allow create, update: if isPlatformAdmin()
-        && configId == 'main'
-        && validPlatformBillingConfig();
-      allow delete: if false;
-    }
-
-    match /billingAccounts/{
-    function validBillingAccount(workspaceId) {
-      let workspace = workspaceData(workspaceId);
-      return workspaceExists(workspaceId)
-        && request.resource.data.keys().hasAll([
-          'version',
-          'workspaceId',
-          'ug',
-          'authorizedEmail',
-          'status',
-          'monthlyPriceCents',
-          'currency',
-          'trialGranted',
-          'trialStartedAt',
-          'trialEndsAt',
-          'paymentRequired',
-          'createdAt',
-          'updatedAt',
-          'createdBy',
-          'updatedBy'
-        ])
-        && request.resource.data.keys().hasOnly([
-          'version',
-          'workspaceId',
-          'ug',
-          'authorizedEmail',
-          'status',
-          'monthlyPriceCents',
-          'currency',
-          'trialGranted',
-          'trialStartedAt',
-          'trialEndsAt',
-          'paymentRequired',
-          'createdAt',
-          'updatedAt',
-          'createdBy',
-          'updatedBy'
-        ])
-        && request.resource.data.version == 'emprovex_billing_v1'
-        && request.resource.data.workspaceId == workspaceId
-        && request.resource.data.ug == workspace.ug
-        && request.resource.data.authorizedEmail == workspace.authorizedEmail
-        && request.resource.data.status in [
-          'trial',
-          'active',
-          'pending',
-          'suspended',
-          'canceled',
-          'exempt'
-        ]
-        && request.resource.data.monthlyPriceCents is int
-        && request.resource.data.monthlyPriceCents >= 0
-        && request.resource.data.currency == 'BRL'
-        && request.resource.data.trialGranted is bool
-        && request.resource.data.trialStartedAt is string
-        && request.resource.data.trialEndsAt is string
-        && request.resource.data.paymentRequired == false
-        && request.resource.data.createdAt is string
-        && request.resource.data.updatedAt is string
-        && request.resource.data.createdBy is string
-        && request.resource.data.updatedBy is string;
-    }
-
-    function validBillingAccountUpdate(workspaceId) {
-      return validBillingAccount(workspaceId)
-        && request.resource.data.workspaceId == resource.data.workspaceId
-        && request.resource.data.ug == resource.data.ug
-        && request.resource.data.authorizedEmail == resource.data.authorizedEmail
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.createdBy == resource.data.createdBy;
-    }
-workspaceId} {
-      allow get: if isPlatformAdmin() || canAccessWorkspace(workspaceId);
-      allow list: if isPlatformAdmin();
-      allow create: if isPlatformAdmin()
-        && validBillingAccount(workspaceId);
-      allow update: if isPlatformAdmin()
-        && validBillingAccountUpdate(workspaceId);
-      allow delete: if false;
-    }
-
-    match /billingCycles/{
-    function validBillingCycle(cycleId) {
-      let workspaceId = request.resource.data.workspaceId;
-      return request.resource.data.keys().hasAll([
-          'version',
-          'id',
-          'workspaceId',
-          'ug',
-          'referenceMonth',
-          'amountCents',
-          'dueDate',
-          'status',
-          'confirmedAt',
-          'confirmedBy',
-          'note',
-          'createdAt',
-          'updatedAt',
-          'updatedBy'
-        ])
-        && request.resource.data.keys().hasOnly([
-          'version',
-          'id',
-          'workspaceId',
-          'ug',
-          'referenceMonth',
-          'amountCents',
-          'dueDate',
-          'status',
-          'confirmedAt',
-          'confirmedBy',
-          'note',
-          'createdAt',
-          'updatedAt',
-          'updatedBy'
-        ])
-        && request.resource.data.version == 'emprovex_billing_v1'
-        && request.resource.data.id == cycleId
-        && workspaceId is string
-        && workspaceExists(workspaceId)
-        && request.resource.data.ug == workspaceData(workspaceId).ug
-        && request.resource.data.referenceMonth is string
-        && request.resource.data.referenceMonth.matches('^[0-9]{4}-[0-9]{2}$')
-        && request.resource.data.amountCents is int
-        && request.resource.data.amountCents >= 0
-        && request.resource.data.dueDate is string
-        && request.resource.data.dueDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-        && request.resource.data.status in ['open', 'pending', 'paid', 'waived']
-        && request.resource.data.confirmedAt is string
-        && request.resource.data.confirmedBy is string
-        && request.resource.data.note is string
-        && request.resource.data.createdAt is string
-        && request.resource.data.updatedAt is string
-        && request.resource.data.updatedBy is string;
-    }
-
-    function validBillingCycleUpdate(cycleId) {
-      return validBillingCycle(cycleId)
-        && request.resource.data.id == resource.data.id
-        && request.resource.data.workspaceId == resource.data.workspaceId
-        && request.resource.data.ug == resource.data.ug
-        && request.resource.data.referenceMonth == resource.data.referenceMonth
-        && request.resource.data.amountCents == resource.data.amountCents
-        && request.resource.data.dueDate == resource.data.dueDate
-        && request.resource.data.createdAt == resource.data.createdAt;
-    }
-cycleId} {
-      allow get, list: if isPlatformAdmin();
-      allow create: if isPlatformAdmin()
-        && validBillingCycle(cycleId);
-      allow update: if isPlatformAdmin()
-        && validBillingCycleUpdate(cycleId);
-      allow delete: if false;
-    }
-
-    match /platformAuditEvents/{
     function isValidAuditOperation(operation) {
       return operation in [
         'ns.assign',
@@ -1732,6 +1623,28 @@ cycleId} {
         'billing_cycle',
         'ns_lock'
       ];
+    }
+
+    function auditUgMatchesWorkspace(workspaceId, ug) {
+      let workspace = workspaceData(workspaceId);
+      return (
+          workspaceId == 'hgesm-aprov'
+          && ug == '160416'
+          && (
+            !('ug' in workspace)
+            || workspace.ug == '160416'
+          )
+        )
+        || (
+          ug == null
+          && !('ug' in workspace)
+        )
+        || (
+          ug is string
+          && 'ug' in workspace
+          && workspace.ug == ug
+          && isValidUnitUg(ug)
+        );
     }
 
     function validAuditEventShape(eventId, workspaceId) {
@@ -1787,6 +1700,11 @@ cycleId} {
         && request.resource.data.createdAt == request.time;
     }
 
+    function validWorkspaceAuditEvent(eventId, workspaceId) {
+      return validAuditEventShape(eventId, workspaceId)
+        && auditUgMatchesWorkspace(workspaceId, request.resource.data.ug);
+    }
+
     function validPlatformAuditEvent(eventId) {
       return isPlatformAdmin()
         && validAuditEventShape(
@@ -1809,48 +1727,7 @@ cycleId} {
           'billing.payment_reopen'
         ];
     }
-eventId} {
-      allow get, list: if isPlatformAdmin();
-      allow create: if validPlatformAuditEvent(eventId);
-      allow update, delete: if false;
-    }
 
-    match /platformUgIndex/{ug} {
-      allow get, list: if isPlatformAdmin();
-      allow create: if isPlatformAdmin()
-        && request.resource.data.keys().hasOnly([
-          'ug',
-          'workspaceId',
-          'email',
-          'createdAt',
-          'createdBy'
-        ])
-        && request.resource.data.ug == ug
-        && isValidUnitUg(ug)
-        && request.resource.data.workspaceId is string
-        && request.resource.data.email is string
-        && existsAfter(
-          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
-        )
-        && existsAfter(
-          /databases/$(database)/documents/platformAccounts/$(request.resource.data.email)
-        )
-        && getAfter(
-          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
-        ).data.ug == ug
-        && getAfter(
-          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
-        ).data.authorizedEmail == request.resource.data.email
-        && getAfter(
-          /databases/$(database)/documents/platformAccounts/$(request.resource.data.email)
-        ).data.ug == ug
-        && getAfter(
-          /databases/$(database)/documents/platformAccounts/$(request.resource.data.email)
-        ).data.workspaceId == request.resource.data.workspaceId;
-      allow update, delete: if false;
-    }
-
-    match /workspaceBackupStatus/{
     function backupUgMatchesWorkspace(workspaceId, ug) {
       let workspace = workspaceData(workspaceId);
       return isValidUnitUg(ug)
@@ -1925,7 +1802,108 @@ eventId} {
         && request.resource.data.lastError is string
         && request.resource.data.updatedBy == request.auth.uid;
     }
-workspaceId} {
+
+    match /workspaces/{workspaceId} {
+      allow get: if isPlatformAdmin()
+        || canReadWorkspaceMetadataFromResource(workspaceId);
+      allow list: if isPlatformAdmin();
+      allow create: if isPlatformAdmin()
+        && validWorkspaceCreate(workspaceId)
+        && workspaceHasMatchingAccountAfterWrite(workspaceId);
+      allow update: if isPlatformAdmin()
+        && workspaceId != 'hgesm-aprov'
+        && validWorkspaceAdminUpdate(workspaceId)
+        && workspaceHasMatchingAccountAfterWrite(workspaceId);
+      allow delete: if false;
+    }
+
+    match /platformAccounts/{accountId} {
+      allow get: if isPlatformAdmin() || isSelfPlatformAccount();
+      allow list: if isPlatformAdmin();
+      allow create: if isPlatformAdmin()
+        && validSectorAccountCreate(accountId)
+        && accountHasMatchingWorkspaceAfterWrite(accountId);
+      allow update: if (
+          isPlatformAdmin()
+          && accountId != 'aprov1hgesm@gmail.com'
+          && validSectorAccountAdminUpdate(accountId)
+          && accountHasMatchingWorkspaceAfterWrite(accountId)
+        )
+        || isSelfUidBinding(accountId)
+        || isSelfPreboundFirstLogin(accountId)
+        || isSelfBoundSessionRefresh(accountId);
+      allow delete: if false;
+    }
+
+    match /platformBillingConfig/{configId} {
+      allow get, list: if isPlatformAdmin();
+      allow create, update: if isPlatformAdmin()
+        && configId == 'main'
+        && validPlatformBillingConfig();
+      allow delete: if false;
+    }
+
+    match /billingAccounts/{workspaceId} {
+      allow get: if isPlatformAdmin() || canAccessWorkspace(workspaceId);
+      allow list: if isPlatformAdmin();
+      allow create: if isPlatformAdmin()
+        && validBillingAccount(workspaceId);
+      allow update: if isPlatformAdmin()
+        && validBillingAccountUpdate(workspaceId);
+      allow delete: if false;
+    }
+
+    match /billingCycles/{cycleId} {
+      allow get, list: if isPlatformAdmin();
+      allow create: if isPlatformAdmin()
+        && validBillingCycle(cycleId);
+      allow update: if isPlatformAdmin()
+        && validBillingCycleUpdate(cycleId);
+      allow delete: if false;
+    }
+
+    match /platformAuditEvents/{eventId} {
+      allow get, list: if isPlatformAdmin();
+      allow create: if validPlatformAuditEvent(eventId);
+      allow update, delete: if false;
+    }
+
+    match /platformUgIndex/{ug} {
+      allow get, list: if isPlatformAdmin();
+      allow create: if isPlatformAdmin()
+        && request.resource.data.keys().hasOnly([
+          'ug',
+          'workspaceId',
+          'email',
+          'createdAt',
+          'createdBy'
+        ])
+        && request.resource.data.ug == ug
+        && isValidUnitUg(ug)
+        && request.resource.data.workspaceId is string
+        && request.resource.data.email is string
+        && existsAfter(
+          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+        )
+        && existsAfter(
+          /databases/$(database)/documents/platformAccounts/$(request.resource.data.email)
+        )
+        && getAfter(
+          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+        ).data.ug == ug
+        && getAfter(
+          /databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)
+        ).data.authorizedEmail == request.resource.data.email
+        && getAfter(
+          /databases/$(database)/documents/platformAccounts/$(request.resource.data.email)
+        ).data.ug == ug
+        && getAfter(
+          /databases/$(database)/documents/platformAccounts/$(request.resource.data.email)
+        ).data.workspaceId == request.resource.data.workspaceId;
+      allow update, delete: if false;
+    }
+
+    match /workspaceBackupStatus/{workspaceId} {
       allow get: if isPlatformAdmin() || canAccessWorkspace(workspaceId);
       allow list: if isPlatformAdmin();
       allow create, update: if validWorkspaceBackupStatus(workspaceId);
