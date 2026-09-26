@@ -22,7 +22,7 @@ type InteractionMode = 'select' | 'pan';
 
 const GRID_SIZE = 20;
 const MIN_SIZE = 20;
-const ROTATION_STEP = 45;
+const ROTATION_STEP = 90;
 const ZOOM_MIN = 0.55;
 const ZOOM_MAX = 2.2;
 
@@ -36,6 +36,36 @@ function clamp(value: number, min: number, max: number): number {
 
 function snap(value: number, enabled: boolean): number {
   return enabled ? Math.round(value / GRID_SIZE) * GRID_SIZE : Math.round(value);
+}
+
+function normalizeCardinalRotation(
+  object: WarehouseDepotLayoutObject,
+  logicalWidth: number,
+  logicalHeight: number
+): WarehouseDepotLayoutObject {
+  const rotation = ((Math.round(object.rotation) % 360) + 360) % 360;
+  if (rotation === 0) return object;
+
+  if (rotation === 90 || rotation === 270) {
+    const centerX = object.x + object.width / 2;
+    const centerY = object.y + object.height / 2;
+    const width = object.height;
+    const height = object.width;
+    return {
+      ...object,
+      width,
+      height,
+      x: clamp(centerX - width / 2, 0, Math.max(0, logicalWidth - width)),
+      y: clamp(centerY - height / 2, 0, Math.max(0, logicalHeight - height)),
+      rotation: 0,
+    };
+  }
+
+  if (rotation === 180) {
+    return { ...object, rotation: 0 };
+  }
+
+  return object;
 }
 
 function isTextInput(target: EventTarget | null): boolean {
@@ -244,6 +274,15 @@ export function WarehouseDepotLayoutEditor({
         onHistoryCheckpoint(cloneObjects(
           objects.map((item) => item.id === interaction.objectId ? interaction.startObject! : item)
         ));
+
+        if (interaction.type === 'rotate') {
+          const normalized = normalizeCardinalRotation(current, logicalWidth, logicalHeight);
+          if (JSON.stringify(normalized) !== JSON.stringify(current)) {
+            onObjectsChange(
+              objects.map((item) => item.id === interaction.objectId ? normalized : item)
+            );
+          }
+        }
       }
     }
     interactionRef.current = null;
