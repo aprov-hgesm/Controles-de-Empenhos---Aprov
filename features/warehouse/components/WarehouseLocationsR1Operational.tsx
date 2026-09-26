@@ -6,6 +6,7 @@ import {
   Box,
   ChevronRight,
   Container,
+  FileJson,
   MapPin,
   Package,
   Pencil,
@@ -102,7 +103,7 @@ export function WarehouseLocationsR1Operational({
   const [message, setMessage] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [createPanel, setCreatePanel] = useState<CreatePanel>(null);
-  const [activeSubtab, setActiveSubtab] = useState<'structure' | 'labels'>('structure');
+  const [activeSubtab, setActiveSubtab] = useState<'structure' | 'labels' | 'aiImport'>('structure');
 
   const [selectedDepotId, setSelectedDepotId] = useState('');
   const [selectedLocationId, setSelectedLocationId] = useState('');
@@ -443,6 +444,18 @@ export function WarehouseLocationsR1Operational({
         >
           <Printer className="h-4 w-4" />
           Etiquetas
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSubtab('aiImport')}
+          className={
+            activeSubtab === 'aiImport'
+              ? 'inline-flex h-10 items-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm'
+              : 'inline-flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-black text-gray-600 transition hover:bg-blue-50 hover:text-[#00288e]'
+          }
+        >
+          <FileJson className="h-4 w-4" />
+          Importar via IA
         </button>
       </nav>
 
@@ -854,12 +867,6 @@ export function WarehouseLocationsR1Operational({
         )}
       </section>
 
-      <WarehouseStructureImportR1
-        workspaceId={workspaceId}
-        depots={state.depots}
-        locations={state.locations}
-        onImported={refresh}
-      />
       </div>
 
       {activeSubtab === 'labels' && (
@@ -868,6 +875,15 @@ export function WarehouseLocationsR1Operational({
           locations={state.locations}
           selectedDepotId={selectedDepotId}
           selectedLocationId={selectedLocationId}
+        />
+      )}
+
+      {activeSubtab === 'aiImport' && (
+        <WarehouseStructureImportR1
+          workspaceId={workspaceId}
+          depots={state.depots}
+          locations={state.locations}
+          onImported={refresh}
         />
       )}
     </div>
