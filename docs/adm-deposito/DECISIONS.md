@@ -1682,3 +1682,22 @@ Decisão operacional:
 6. merge e deploy continuam dependendo de autorização explícita do fundador.
 
 Esta decisão não elimina o gate de navegador; apenas desloca o gate para a etapa controlada de integração/release na `main`.
+
+
+## D-075 — Publicação modular e regressão controlada do ADM Depósito
+
+Data: 2026-09-26.
+
+Decisão:
+1. preservar integralmente a arquitetura completa já construída na branch `archive/adm-deposito-full-2026-09`;
+2. iniciar a branch `feat/adm-deposito-modular-release` a partir da baseline `5b7e6cdad09381ac6e0c6c62c4934e18357e6347`;
+3. substituir temporariamente a tentativa de publicação integral por releases R1–R5;
+4. a R1 conterá somente Materiais, Depósitos, Localizações, Destinos, Croquis e Configurações básicas;
+5. funcionalidades avançadas permanecem no código preservado, mas não devem ser reintroduzidas nas Rules de produção antes da sua release;
+6. toda release deve compilar, publicar e ser validada manualmente pela conta fundadora antes do avanço;
+7. o EMPROVEX operacional deve permanecer independente do ADM Depósito;
+8. não remover código funcional apenas para reduzir Rules; a redução deve ocorrer pela fronteira de publicação;
+9. usuário externo continua sem acesso ao ADM durante todo o processo;
+10. Browser E2E continua reservado a releases com interação relevante e ao gate consolidado.
+
+O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
