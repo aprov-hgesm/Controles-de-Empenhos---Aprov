@@ -1712,3 +1712,16 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - Formulários operacionais não devem adotar inputs quase pretos ou texto de baixo contraste.
 - A referência detalhada e obrigatória passa a ser `docs/adm-deposito/VISUAL_IDENTITY.md`.
 - Mudanças visuais futuras que se afastem desse contrato precisam ser deliberadas e documentadas antes da implementação.
+
+
+## D-077 — Explorer visual hierárquico e identidade visual dos depósitos
+
+- A área **Meus Depósitos** passa a priorizar exploração visual em três níveis: **Depósito → Local → Subposição**.
+- Cadastros deixam de permanecer expostos o tempo todo e passam a abrir sob demanda, reduzindo poluição visual.
+- Cada depósito pode possuir identidade visual própria por dois atributos leves:
+  - `visualType`: `STANDARD`, `CONTAINER` ou `COLD_CONTAINER`;
+  - `sizeProfile`: `SMALL`, `MEDIUM` ou `LARGE`.
+- Depósitos históricos sem esses campos são interpretados como `STANDARD` + `MEDIUM`, sem migração destrutiva.
+- O tipo e o porte são metadados visuais/organizacionais; não alteram estoque, saldos, movimentações ou segurança.
+- Cards de Locais usam pistas visuais derivadas de nome/código apenas para apresentação, sem criar uma nova identidade técnica.
+- A implementação deve seguir `docs/adm-deposito/VISUAL_IDENTITY.md` e preservar o tema claro operacional.
