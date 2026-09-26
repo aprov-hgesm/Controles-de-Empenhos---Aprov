@@ -82,6 +82,7 @@ export interface CreateWarehouseDepotInput {
 }
 
 export interface UpdateWarehouseDepotInput {
+  code?: string;
   name?: string;
   description?: string | null;
   visualType?: WarehouseDepotVisualType;
@@ -99,6 +100,7 @@ export interface CreateWarehouseLocationInput {
 }
 
 export interface UpdateWarehouseLocationInput {
+  code?: string;
   name?: string;
   description?: string | null;
   status?: WarehouseEntityStatus;
@@ -273,18 +275,19 @@ function parseMaterial(workspaceId: string, id: string, data: Record<string, unk
   return result.data;
 }
 
-async function assertDepotCodeAvailable(workspaceId: string, code: string): Promise<void> {
+async function assertDepotCodeAvailable(workspaceId: string, code: string, ignoreDepotId?: string): Promise<void> {
   const normalized = normalizeWarehouseLogicalCode(code);
   if (!normalized) throw new Error('WAREHOUSE_INVALID_LOGICAL_CODE');
   const depots = await listWarehouseDepots(workspaceId, 250);
-  if (depots.some((item) => item.depot.code === normalized)) {
+  if (depots.some((item) => item.depot.code === normalized && item.depot.id !== ignoreDepotId)) {
     throw new Error('WAREHOUSE_DEPOT_CODE_ALREADY_EXISTS');
   }
 }
 
 async function assertLocationCodeAvailable(
   workspaceId: string,
-  input: { kind: WarehouseLocationKind; depotId: string; parentLocationId: string | null; code: string }
+  input: { kind: WarehouseLocationKind; depotId: string; parentLocationId: string | null; code: string },
+  ignoreLocationId?: string
 ): Promise<void> {
   const normalized = normalizeWarehouseLogicalCode(input.code);
   if (!normalized) throw new Error('WAREHOUSE_INVALID_LOGICAL_CODE');
@@ -294,6 +297,7 @@ async function assertLocationCodeAvailable(
     && location.depotId === input.depotId
     && location.parentLocationId === input.parentLocationId
     && location.code === normalized
+    && location.id !== ignoreLocationId
   )) {
     throw new Error('WAREHOUSE_LOCATION_CODE_ALREADY_EXISTS');
   }
@@ -374,8 +378,12 @@ export async function updateWarehouseDepot(
   const snapshot = await getDoc(doc(db, path));
   if (!snapshot.exists()) throw new Error('WAREHOUSE_DEPOT_NOT_FOUND');
   const current = parseDepot(scope.workspaceId, depotId, snapshot.data() as Record<string, unknown>);
+  if (input.code !== undefined && input.code !== current.code) {
+    await assertDepotCodeAvailable(scope.workspaceId, input.code, depotId);
+  }
   const candidate = validateWarehouseDepot({
     ...current,
+    code: input.code ?? current.code,
     name: input.name ?? current.name,
     description: input.description === undefined ? current.description : input.description,
     visualType: input.visualType ?? current.visualType,
@@ -386,6 +394,7 @@ export async function updateWarehouseDepot(
   if (!candidate.ok) throw new Error('WAREHOUSE_INVALID_DEPOT_UPDATE');
 
   await updateDoc(doc(db, path), {
+    code: candidate.data.code,
     name: candidate.data.name,
     description: candidate.data.description,
     visualType: candidate.data.visualType,
@@ -494,8 +503,17 @@ export async function updateWarehouseLocation(
   const snapshot = await getDoc(doc(db, path));
   if (!snapshot.exists()) throw new Error('WAREHOUSE_LOCATION_NOT_FOUND');
   const current = parseLocation(scope.workspaceId, locationId, snapshot.data() as Record<string, unknown>);
+  if (input.code !== undefined && input.code !== current.code) {
+    await assertLocationCodeAvailable(scope.workspaceId, {
+      kind: current.kind,
+      depotId: current.depotId,
+      parentLocationId: current.parentLocationId,
+      code: input.code,
+    }, locationId);
+  }
   const candidate = validateWarehouseLocation({
     ...current,
+    code: input.code ?? current.code,
     name: input.name ?? current.name,
     description: input.description === undefined ? current.description : input.description,
     status: input.status ?? current.status,
@@ -504,6 +522,7 @@ export async function updateWarehouseLocation(
   if (!candidate.ok) throw new Error('WAREHOUSE_INVALID_LOCATION_UPDATE');
 
   await updateDoc(doc(db, path), {
+    code: candidate.data.code,
     name: candidate.data.name,
     description: candidate.data.description,
     status: candidate.data.status,
