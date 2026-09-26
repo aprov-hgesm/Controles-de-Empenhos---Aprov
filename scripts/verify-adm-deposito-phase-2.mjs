@@ -62,7 +62,7 @@ for (const marker of [
   'function warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId)',
   'function validWarehouseBalanceDocument(workspaceId, materialId)',
   "request.resource.data.schemaVersion == 'warehouse_balance_v1'",
-  'function warehouseBalanceWriteBackedByNewMovement(workspaceId, materialId)',
+  'function warehouseBalanceWriteAllowed(workspaceId, materialId)',
   'match /movements/{movementId}',
   'allow update, delete: if false;',
   'match /balances/{materialId}',
