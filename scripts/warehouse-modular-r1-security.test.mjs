@@ -17,6 +17,7 @@ import {
   getFirestore,
   serverTimestamp,
   setDoc,
+  updateDoc,
 } from 'firebase/firestore';
 
 const PROJECT_ID = 'demo-emprovex-security';
@@ -142,6 +143,16 @@ async function main() {
     })
   );
 
+  await allowed('fundador edita código, tipo visual e porte do depósito', () =>
+    updateDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'depots', depotId), {
+      code: 'DEP-R1-EDIT',
+      visualType: 'COLD_CONTAINER',
+      sizeProfile: 'LARGE',
+      updatedBy: founder.user.uid,
+      updatedAt: serverTimestamp(),
+    })
+  );
+
   await allowed('fundador cria localização vinculada ao depósito', () =>
     setDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'locations', locationId), {
       schemaVersion: 'warehouse_location_v1',
@@ -158,6 +169,15 @@ async function main() {
       createdBy: founder.user.uid,
       updatedBy: founder.user.uid,
       createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await allowed('fundador edita código e nome da localização', () =>
+    updateDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'locations', locationId), {
+      code: 'LOC-R1-EDIT',
+      name: 'Localização ADM-R1 editada',
+      updatedBy: founder.user.uid,
       updatedAt: serverTimestamp(),
     })
   );
