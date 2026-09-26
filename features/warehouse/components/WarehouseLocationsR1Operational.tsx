@@ -1,7 +1,19 @@
 'use client';
 
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
-import { MapPin, Plus, RefreshCw } from 'lucide-react';
+import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
+import {
+  Archive,
+  Box,
+  ChevronRight,
+  Container,
+  MapPin,
+  Package,
+  Plus,
+  RefreshCw,
+  Snowflake,
+  Warehouse,
+  X,
+} from 'lucide-react';
 
 import { WarehouseStructureImportR1 } from './WarehouseStructureImportR1';
 
@@ -13,12 +25,18 @@ import {
   type WarehouseDepotListItem,
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
+import type {
+  WarehouseDepotSizeProfile,
+  WarehouseDepotVisualType,
+} from '../../../lib/warehouse/location';
 
 type State = {
   loading: boolean;
   depots: WarehouseDepotListItem[];
   locations: WarehouseLocationListItem[];
 };
+
+type CreatePanel = 'depot' | 'location' | 'subposition' | null;
 
 function messageFromError(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
@@ -31,33 +49,70 @@ function messageFromError(error: unknown): string {
   return raw;
 }
 
+function depotVisualLabel(value: WarehouseDepotVisualType): string {
+  if (value === 'CONTAINER') return 'Contêiner';
+  if (value === 'COLD_CONTAINER') return 'Contêiner frigorífico';
+  return 'Depósito padrão';
+}
+
+function depotSizeLabel(value: WarehouseDepotSizeProfile): string {
+  if (value === 'SMALL') return 'Pequeno';
+  if (value === 'LARGE') return 'Grande';
+  return 'Médio';
+}
+
+function depotVisualIcon(value: WarehouseDepotVisualType, className = 'h-8 w-8'): ReactNode {
+  if (value === 'CONTAINER') return <Container className={className} aria-hidden="true" />;
+  if (value === 'COLD_CONTAINER') {
+    return (
+      <span className="relative inline-flex">
+        <Container className={className} aria-hidden="true" />
+        <Snowflake className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-white p-0.5 text-cyan-600" aria-hidden="true" />
+      </span>
+    );
+  }
+  return <Warehouse className={className} aria-hidden="true" />;
+}
+
+function locationIcon(name: string, code: string): ReactNode {
+  const normalized = (name + ' ' + code).toLocaleLowerCase('pt-BR');
+  if (normalized.includes('freezer') || normalized.includes('geladeira') || normalized.includes('frigor')) {
+    return <Snowflake className="h-5 w-5" aria-hidden="true" />;
+  }
+  if (normalized.includes('palete') || normalized.includes('pallet')) {
+    return <Package className="h-5 w-5" aria-hidden="true" />;
+  }
+  if (normalized.includes('estante') || normalized.includes('prateleira') || normalized.includes('armário') || normalized.includes('armario')) {
+    return <Archive className="h-5 w-5" aria-hidden="true" />;
+  }
+  return <Box className="h-5 w-5" aria-hidden="true" />;
+}
+
 export function WarehouseLocationsR1Operational({
   workspaceId,
 }: {
   workspaceId: string;
 }) {
-  const [state, setState] = useState<State>({
-    loading: true,
-    depots: [],
-    locations: [],
-  });
+  const [state, setState] = useState<State>({ loading: true, depots: [], locations: [] });
   const [message, setMessage] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
+  const [createPanel, setCreatePanel] = useState<CreatePanel>(null);
+
+  const [selectedDepotId, setSelectedDepotId] = useState('');
+  const [selectedLocationId, setSelectedLocationId] = useState('');
 
   const [depotCode, setDepotCode] = useState('');
   const [depotName, setDepotName] = useState('');
   const [depotDescription, setDepotDescription] = useState('');
-  const [selectedDepotId, setSelectedDepotId] = useState('');
+  const [depotVisualType, setDepotVisualType] = useState<WarehouseDepotVisualType>('STANDARD');
+  const [depotSizeProfile, setDepotSizeProfile] = useState<WarehouseDepotSizeProfile>('MEDIUM');
 
-  const [locationKind, setLocationKind] = useState<'LOCAL' | 'SUBPOSITION'>('LOCAL');
-  const [parentLocationId, setParentLocationId] = useState('');
   const [locationCode, setLocationCode] = useState('');
   const [locationName, setLocationName] = useState('');
   const [locationDescription, setLocationDescription] = useState('');
 
   const refresh = async () => {
     setState((current) => ({ ...current, loading: true }));
-    setMessage(null);
     try {
       const [depots, locations] = await Promise.all([
         listWarehouseDepots(workspaceId, 250),
@@ -84,23 +139,61 @@ export function WarehouseLocationsR1Operational({
     [state.depots]
   );
 
-  const selectedDepotLocations = useMemo(
+  const selectedDepot = useMemo(
+    () => state.depots.find((item) => item.depot.id === selectedDepotId)?.depot ?? null,
+    [selectedDepotId, state.depots]
+  );
+
+  const localItems = useMemo(
     () =>
       state.locations.filter(
         (item) =>
           item.location.depotId === selectedDepotId
           && item.location.status === 'active'
+          && item.location.kind === 'LOCAL'
       ),
     [selectedDepotId, state.locations]
   );
 
-  const selectedDepotLocals = useMemo(
-    () =>
-      selectedDepotLocations.filter(
-        (item) => item.location.kind === 'LOCAL'
-      ),
-    [selectedDepotLocations]
+  const selectedLocation = useMemo(
+    () => localItems.find((item) => item.location.id === selectedLocationId)?.location ?? null,
+    [localItems, selectedLocationId]
   );
+
+  const subpositions = useMemo(
+    () =>
+      state.locations.filter(
+        (item) =>
+          item.location.depotId === selectedDepotId
+          && item.location.status === 'active'
+          && item.location.kind === 'SUBPOSITION'
+          && item.location.parentLocationId === selectedLocationId
+      ),
+    [selectedDepotId, selectedLocationId, state.locations]
+  );
+
+  const totalLocals = useMemo(
+    () => state.locations.filter((item) => item.location.kind === 'LOCAL' && item.location.status === 'active').length,
+    [state.locations]
+  );
+  const totalSubpositions = useMemo(
+    () => state.locations.filter((item) => item.location.kind === 'SUBPOSITION' && item.location.status === 'active').length,
+    [state.locations]
+  );
+
+  useEffect(() => {
+    if (!localItems.some((item) => item.location.id === selectedLocationId)) {
+      setSelectedLocationId(localItems[0]?.location.id ?? '');
+    }
+  }, [localItems, selectedLocationId]);
+
+  function openPanel(panel: CreatePanel) {
+    setCreatePanel(panel);
+    setMessage(null);
+    setLocationCode('');
+    setLocationName('');
+    setLocationDescription('');
+  }
 
   async function submitDepot(event: FormEvent) {
     event.preventDefault();
@@ -111,11 +204,17 @@ export function WarehouseLocationsR1Operational({
         code: depotCode,
         name: depotName,
         description: depotDescription || null,
+        visualType: depotVisualType,
+        sizeProfile: depotSizeProfile,
       });
       setDepotCode('');
       setDepotName('');
       setDepotDescription('');
+      setDepotVisualType('STANDARD');
+      setDepotSizeProfile('MEDIUM');
       setSelectedDepotId(depot.id);
+      setSelectedLocationId('');
+      setCreatePanel(null);
       setMessage('Depósito criado com sucesso.');
       await refresh();
     } catch (error) {
@@ -125,20 +224,24 @@ export function WarehouseLocationsR1Operational({
     }
   }
 
-  async function submitLocation(event: FormEvent) {
+  async function submitLocation(event: FormEvent, kind: 'LOCAL' | 'SUBPOSITION') {
     event.preventDefault();
     if (!selectedDepotId) {
-      setMessage('Crie ou selecione um depósito primeiro.');
+      setMessage('Selecione um depósito primeiro.');
       return;
     }
+    if (kind === 'SUBPOSITION' && !selectedLocationId) {
+      setMessage('Selecione um Local antes de criar a subposição.');
+      return;
+    }
+
     setWorking(true);
     setMessage(null);
     try {
-      await createWarehouseLocation(workspaceId, {
-        kind: locationKind,
+      const created = await createWarehouseLocation(workspaceId, {
+        kind,
         depotId: selectedDepotId,
-        parentLocationId:
-          locationKind === 'SUBPOSITION' ? parentLocationId : null,
+        parentLocationId: kind === 'SUBPOSITION' ? selectedLocationId : null,
         code: locationCode,
         name: locationName,
         description: locationDescription || null,
@@ -146,12 +249,9 @@ export function WarehouseLocationsR1Operational({
       setLocationCode('');
       setLocationName('');
       setLocationDescription('');
-      setParentLocationId('');
-      setMessage(
-        locationKind === 'LOCAL'
-          ? 'Localização criada com sucesso.'
-          : 'Subposição criada com sucesso.'
-      );
+      setCreatePanel(null);
+      if (kind === 'LOCAL') setSelectedLocationId(created.id);
+      setMessage(kind === 'LOCAL' ? 'Local criado com sucesso.' : 'Subposição criada com sucesso.');
       await refresh();
     } catch (error) {
       setMessage(messageFromError(error));
@@ -160,19 +260,77 @@ export function WarehouseLocationsR1Operational({
     }
   }
 
+  const fieldClass =
+    'h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100';
+
   return (
     <div className="mt-6 space-y-6" data-testid="warehouse-locations-r1-operational">
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/75 p-4 shadow-sm">
-        <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-700">
-          ADM-R1 · estrutura independente
-        </p>
-        <p className="mt-2 text-sm font-black text-gray-800">
-          Depósitos e localizações sem operações de estoque
-        </p>
-        <p className="mt-2 text-xs font-medium leading-5 text-gray-500">
-          Esta etapa consulta somente depots e locations. Transferências, saldos e distribuição física permanecem desligados.
-        </p>
-      </div>
+      <section className="rounded-2xl border border-blue-100/80 bg-white/75 p-5 shadow-sm backdrop-blur-md">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#00288e]/65">
+              Estrutura física
+            </p>
+            <h2 className="mt-1 text-xl font-black tracking-tight text-[#00288e]">
+              Mapa estrutural dos depósitos
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm font-medium text-gray-500">
+              Navegue do depósito para seus locais e, em seguida, para as subposições. O cadastro só aparece quando você precisar dele.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              ['Depósitos', activeDepots.length],
+              ['Locais', totalLocals],
+              ['Subposições', totalSubpositions],
+            ].map(([label, value]) => (
+              <div key={label} className="min-w-[105px] rounded-xl border border-blue-100 bg-blue-50/60 px-3 py-2 text-center">
+                <p className="text-lg font-black text-[#00288e]">{value}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">{label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => openPanel('depot')}
+            className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#00288e] px-3 text-xs font-black text-white shadow-sm transition hover:bg-blue-800"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Novo depósito
+          </button>
+          <button
+            type="button"
+            onClick={() => openPanel('location')}
+            disabled={!selectedDepotId}
+            className="inline-flex h-9 items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 text-xs font-black text-[#00288e] transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Novo local
+          </button>
+          <button
+            type="button"
+            onClick={() => openPanel('subposition')}
+            disabled={!selectedLocationId}
+            className="inline-flex h-9 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-xs font-black text-gray-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-[#00288e] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Nova subposição
+          </button>
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            disabled={state.loading || working}
+            className="inline-flex h-9 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-xs font-bold text-gray-600 transition hover:bg-gray-50 disabled:opacity-40"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Atualizar
+          </button>
+        </div>
+      </section>
 
       {message && (
         <div className="rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-3 text-sm font-medium text-gray-700">
@@ -180,188 +338,293 @@ export function WarehouseLocationsR1Operational({
         </div>
       )}
 
+      {createPanel && (
+        <section className="rounded-2xl border border-blue-200 bg-white p-5 shadow-md">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#00288e]/60">
+                Cadastro rápido
+              </p>
+              <h3 className="mt-1 text-base font-black text-[#00288e]">
+                {createPanel === 'depot'
+                  ? 'Novo depósito'
+                  : createPanel === 'location'
+                    ? 'Novo local'
+                    : 'Nova subposição'}
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCreatePanel(null)}
+              className="grid h-9 w-9 place-items-center rounded-xl border border-gray-200 bg-white text-gray-500 transition hover:bg-gray-50"
+              aria-label="Fechar cadastro"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {createPanel === 'depot' ? (
+            <form onSubmit={submitDepot} className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+              <input value={depotCode} onChange={(event) => setDepotCode(event.target.value)} placeholder="Código · DEP-01" className={fieldClass} required />
+              <input value={depotName} onChange={(event) => setDepotName(event.target.value)} placeholder="Nome do depósito" className={fieldClass} required />
+              <input value={depotDescription} onChange={(event) => setDepotDescription(event.target.value)} placeholder="Descrição opcional" className={fieldClass} />
+              <select value={depotVisualType} onChange={(event) => setDepotVisualType(event.target.value as WarehouseDepotVisualType)} className={fieldClass}>
+                <option value="STANDARD">Depósito padrão</option>
+                <option value="CONTAINER">Contêiner</option>
+                <option value="COLD_CONTAINER">Contêiner frigorífico</option>
+              </select>
+              <select value={depotSizeProfile} onChange={(event) => setDepotSizeProfile(event.target.value as WarehouseDepotSizeProfile)} className={fieldClass}>
+                <option value="SMALL">Pequeno</option>
+                <option value="MEDIUM">Médio</option>
+                <option value="LARGE">Grande</option>
+              </select>
+              <button type="submit" disabled={working} className="h-11 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm transition hover:bg-blue-800 disabled:opacity-40">
+                Criar depósito
+              </button>
+            </form>
+          ) : (
+            <form
+              onSubmit={(event) => void submitLocation(event, createPanel === 'location' ? 'LOCAL' : 'SUBPOSITION')}
+              className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-3"
+            >
+              <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-3 py-2">
+                <p className="text-[9px] font-bold uppercase tracking-wide text-gray-400">Depósito</p>
+                <p className="mt-0.5 text-xs font-black text-[#00288e]">{selectedDepot?.code} · {selectedDepot?.name}</p>
+              </div>
+              {createPanel === 'subposition' && (
+                <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-3 py-2">
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-gray-400">Local pai</p>
+                  <p className="mt-0.5 text-xs font-black text-[#00288e]">{selectedLocation?.code} · {selectedLocation?.name}</p>
+                </div>
+              )}
+              <input value={locationCode} onChange={(event) => setLocationCode(event.target.value)} placeholder={createPanel === 'location' ? 'Código · EST-01' : 'Código · PRAT-01'} className={fieldClass} required />
+              <input value={locationName} onChange={(event) => setLocationName(event.target.value)} placeholder={createPanel === 'location' ? 'Nome do local' : 'Nome da subposição'} className={fieldClass} required />
+              <input value={locationDescription} onChange={(event) => setLocationDescription(event.target.value)} placeholder="Descrição opcional" className={fieldClass} />
+              <button type="submit" disabled={working} className="h-11 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm transition hover:bg-blue-800 disabled:opacity-40">
+                {createPanel === 'location' ? 'Criar local' : 'Criar subposição'}
+              </button>
+            </form>
+          )}
+        </section>
+      )}
+
+      <section className="rounded-2xl border border-blue-100/80 bg-white/75 p-5 shadow-sm backdrop-blur-md">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.16em] text-gray-400">1 · Depósitos</p>
+            <h3 className="mt-1 text-base font-black text-[#00288e]">Escolha o ambiente físico</h3>
+          </div>
+        </div>
+
+        {activeDepots.length === 0 && !state.loading ? (
+          <div className="mt-4 rounded-2xl border border-dashed border-blue-200 bg-blue-50/40 p-8 text-center">
+            <Warehouse className="mx-auto h-8 w-8 text-blue-300" />
+            <p className="mt-3 text-sm font-black text-gray-700">Nenhum depósito ativo</p>
+            <p className="mt-1 text-xs text-gray-500">Crie o primeiro depósito para começar a organizar a estrutura física.</p>
+          </div>
+        ) : (
+          <div className="mt-4 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+            {activeDepots.map((item) => {
+              const depotLocals = state.locations.filter(
+                (location) =>
+                  location.location.depotId === item.depot.id
+                  && location.location.kind === 'LOCAL'
+                  && location.location.status === 'active'
+              );
+              const depotLocalIds = new Set(depotLocals.map((location) => location.location.id));
+              const depotSubs = state.locations.filter(
+                (location) =>
+                  location.location.kind === 'SUBPOSITION'
+                  && location.location.status === 'active'
+                  && Boolean(location.location.parentLocationId)
+                  && depotLocalIds.has(location.location.parentLocationId!)
+              );
+              const active = item.depot.id === selectedDepotId;
+
+              return (
+                <button
+                  key={item.depot.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedDepotId(item.depot.id);
+                    setSelectedLocationId('');
+                  }}
+                  className={
+                    active
+                      ? 'group relative overflow-hidden rounded-2xl border border-blue-300 bg-blue-50 p-4 text-left shadow-md ring-2 ring-[#00288e]/10 transition'
+                      : 'group relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-xs transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md'
+                  }
+                >
+                  <div className="absolute right-3 top-3 h-20 w-20 rounded-full bg-blue-100/50 blur-2xl" />
+                  <div className="relative flex items-start gap-4">
+                    <div
+                      className={
+                        'grid shrink-0 place-items-center rounded-2xl border ' +
+                        (item.depot.sizeProfile === 'LARGE'
+                          ? 'h-16 w-16 border-blue-200 bg-blue-100 text-[#00288e]'
+                          : item.depot.sizeProfile === 'SMALL'
+                            ? 'h-12 w-12 border-gray-200 bg-gray-50 text-gray-600'
+                            : 'h-14 w-14 border-blue-100 bg-blue-50 text-[#00288e]')
+                      }
+                    >
+                      {depotVisualIcon(
+                        item.depot.visualType,
+                        item.depot.sizeProfile === 'LARGE' ? 'h-9 w-9' : item.depot.sizeProfile === 'SMALL' ? 'h-6 w-6' : 'h-8 w-8'
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="rounded-md bg-[#00288e]/8 px-2 py-0.5 font-mono text-[9px] font-black uppercase tracking-wide text-[#00288e]">
+                          {item.depot.code}
+                        </span>
+                        <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-[9px] font-bold text-gray-500">
+                          {depotVisualLabel(item.depot.visualType)}
+                        </span>
+                        <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-[9px] font-bold text-gray-500">
+                          {depotSizeLabel(item.depot.sizeProfile)}
+                        </span>
+                      </div>
+                      <p className="mt-2 truncate text-base font-black text-gray-900">{item.depot.name}</p>
+                      {item.depot.description && (
+                        <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-500">{item.depot.description}</p>
+                      )}
+                      <div className="mt-3 flex items-center gap-4 text-[10px] font-bold text-gray-500">
+                        <span><strong className="text-gray-800">{depotLocals.length}</strong> locais</span>
+                        <span><strong className="text-gray-800">{depotSubs.length}</strong> subposições</span>
+                      </div>
+                    </div>
+
+                    <ChevronRight className={active ? 'mt-1 h-5 w-5 text-[#00288e]' : 'mt-1 h-5 w-5 text-gray-300 transition group-hover:text-blue-400'} />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-blue-100/80 bg-white/75 p-5 shadow-sm backdrop-blur-md">
+        <div>
+          <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.16em] text-gray-400">2 · Locais</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-black text-[#00288e]">
+              {selectedDepot ? selectedDepot.name : 'Selecione um depósito'}
+            </h3>
+            {selectedDepot && (
+              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#00288e]">
+                {localItems.length} locais
+              </span>
+            )}
+          </div>
+        </div>
+
+        {!selectedDepot ? (
+          <div className="mt-4 rounded-2xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
+            Selecione um depósito acima para visualizar seus locais.
+          </div>
+        ) : localItems.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-dashed border-blue-200 bg-blue-50/40 p-8 text-center">
+            <MapPin className="mx-auto h-7 w-7 text-blue-300" />
+            <p className="mt-3 text-sm font-black text-gray-700">Este depósito ainda não possui locais</p>
+            <button type="button" onClick={() => openPanel('location')} className="mt-3 text-xs font-black text-[#00288e] hover:underline">
+              Criar primeiro local
+            </button>
+          </div>
+        ) : (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            {localItems.map((item) => {
+              const count = state.locations.filter(
+                (candidate) =>
+                  candidate.location.kind === 'SUBPOSITION'
+                  && candidate.location.status === 'active'
+                  && candidate.location.parentLocationId === item.location.id
+              ).length;
+              const active = item.location.id === selectedLocationId;
+
+              return (
+                <button
+                  type="button"
+                  key={item.location.id}
+                  onClick={() => setSelectedLocationId(item.location.id)}
+                  className={
+                    active
+                      ? 'rounded-2xl border border-blue-300 bg-blue-50 p-4 text-left shadow-sm ring-2 ring-[#00288e]/10'
+                      : 'rounded-2xl border border-gray-200 bg-white p-4 text-left transition hover:border-blue-200 hover:bg-blue-50/40 hover:shadow-sm'
+                  }
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className={active ? 'grid h-10 w-10 place-items-center rounded-xl bg-[#00288e] text-white' : 'grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-[#00288e]'}>
+                      {locationIcon(item.location.name, item.location.code)}
+                    </div>
+                    <span className="rounded-md bg-gray-100 px-2 py-0.5 font-mono text-[9px] font-black text-gray-500">
+                      {item.location.code}
+                    </span>
+                  </div>
+                  <p className="mt-3 truncate text-sm font-black text-gray-900">{item.location.name}</p>
+                  <p className="mt-1 text-[10px] font-bold text-gray-400">
+                    {count === 1 ? '1 subposição' : count + ' subposições'}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-blue-100/80 bg-white/75 p-5 shadow-sm backdrop-blur-md">
+        <div>
+          <p className="font-mono text-[9px] font-extrabold uppercase tracking-[0.16em] text-gray-400">3 · Subposições</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-black text-[#00288e]">
+              {selectedLocation ? selectedLocation.name : 'Selecione um local'}
+            </h3>
+            {selectedLocation && (
+              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#00288e]">
+                {subpositions.length} subposições
+              </span>
+            )}
+          </div>
+        </div>
+
+        {!selectedLocation ? (
+          <div className="mt-4 rounded-2xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
+            Selecione um local para visualizar suas divisões internas.
+          </div>
+        ) : subpositions.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-dashed border-blue-200 bg-blue-50/40 p-8 text-center">
+            <Archive className="mx-auto h-7 w-7 text-blue-300" />
+            <p className="mt-3 text-sm font-black text-gray-700">Nenhuma subposição cadastrada</p>
+            <p className="mt-1 text-xs text-gray-500">Prateleiras, níveis e nichos aparecerão aqui.</p>
+            <button type="button" onClick={() => openPanel('subposition')} className="mt-3 text-xs font-black text-[#00288e] hover:underline">
+              Criar primeira subposição
+            </button>
+          </div>
+        ) : (
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+            {subpositions.map((item) => (
+              <div key={item.location.id} className="rounded-xl border border-gray-200 bg-white px-3 py-3 shadow-xs">
+                <div className="flex items-center gap-2">
+                  <span className="grid h-8 w-8 place-items-center rounded-lg bg-blue-50 text-[#00288e]">
+                    <Archive className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-black text-gray-800">{item.location.name}</p>
+                    <p className="mt-0.5 truncate font-mono text-[9px] font-bold text-gray-400">{item.location.code}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       <WarehouseStructureImportR1
         workspaceId={workspaceId}
         depots={state.depots}
         locations={state.locations}
         onImported={refresh}
       />
-
-      <section className="rounded-2xl border border-blue-100/80 bg-white/75 p-5 shadow-sm backdrop-blur-md">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h3 className="text-base font-black text-[#00288e]">Depósitos</h3>
-            <p className="mt-1 text-xs font-medium text-gray-500">Cadastre a estrutura física básica da UG.</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => void refresh()}
-            disabled={state.loading || working}
-            className="inline-flex h-9 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-xs font-bold text-gray-600 shadow-xs transition hover:bg-blue-50 hover:text-[#00288e] disabled:opacity-40"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            Atualizar
-          </button>
-        </div>
-
-        <form onSubmit={submitDepot} className="mt-4 grid gap-3 lg:grid-cols-[170px_1fr_1fr_auto]">
-          <input
-            value={depotCode}
-            onChange={(event) => setDepotCode(event.target.value)}
-            placeholder="DEP-01"
-            className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-            required
-          />
-          <input
-            value={depotName}
-            onChange={(event) => setDepotName(event.target.value)}
-            placeholder="Nome do depósito"
-            className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-            required
-          />
-          <input
-            value={depotDescription}
-            onChange={(event) => setDepotDescription(event.target.value)}
-            placeholder="Descrição opcional"
-            className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-          />
-          <button
-            type="submit"
-            disabled={working}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm transition hover:bg-blue-800 disabled:opacity-40"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Criar depósito
-          </button>
-        </form>
-
-        <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-          {state.depots.length === 0 && !state.loading ? (
-            <p className="text-sm text-gray-500">Nenhum depósito cadastrado.</p>
-          ) : (
-            state.depots.map((item) => (
-              <button
-                key={item.depot.id}
-                type="button"
-                onClick={() => setSelectedDepotId(item.depot.id)}
-                className={
-                  selectedDepotId === item.depot.id
-                    ? 'rounded-xl border border-blue-200 bg-blue-50 p-3 text-left shadow-xs'
-                    : 'rounded-xl border border-gray-200 bg-white/80 p-3 text-left transition hover:border-blue-200 hover:bg-blue-50/60'
-                }
-              >
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-3.5 w-3.5 text-[#00288e]" />
-                  <span className="font-mono text-[10px] font-black text-[#00288e]">{item.depot.code}</span>
-                </div>
-                <p className="mt-1 text-sm font-black text-gray-800">{item.depot.name}</p>
-                <p className="mt-1 text-[11px] text-gray-500">{item.depot.status}</p>
-              </button>
-            ))
-          )}
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-blue-100/80 bg-white/75 p-5 shadow-sm backdrop-blur-md">
-        <h3 className="text-base font-black text-[#00288e]">Localizações</h3>
-        <p className="mt-1 text-xs font-medium text-gray-500">
-          Selecione um depósito ativo e cadastre Local ou Subposição.
-        </p>
-
-        <form onSubmit={submitLocation} className="mt-4 grid gap-3 lg:grid-cols-2">
-          <select
-            value={selectedDepotId}
-            onChange={(event) => setSelectedDepotId(event.target.value)}
-            className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-sm text-gray-800"
-            required
-          >
-            <option value="">Selecione o depósito</option>
-            {activeDepots.map((item) => (
-              <option key={item.depot.id} value={item.depot.id}>
-                {item.depot.code} · {item.depot.name}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={locationKind}
-            onChange={(event) => {
-              const next = event.target.value as 'LOCAL' | 'SUBPOSITION';
-              setLocationKind(next);
-              if (next === 'LOCAL') setParentLocationId('');
-            }}
-            className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-sm text-gray-800"
-          >
-            <option value="LOCAL">Local</option>
-            <option value="SUBPOSITION">Subposição</option>
-          </select>
-
-          {locationKind === 'SUBPOSITION' && (
-            <select
-              value={parentLocationId}
-              onChange={(event) => setParentLocationId(event.target.value)}
-              className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-sm text-gray-800"
-              required
-            >
-              <option value="">Selecione o Local pai</option>
-              {selectedDepotLocals.map((item) => (
-                <option key={item.location.id} value={item.location.id}>
-                  {item.location.code} · {item.location.name}
-                </option>
-              ))}
-            </select>
-          )}
-
-          <input
-            value={locationCode}
-            onChange={(event) => setLocationCode(event.target.value)}
-            placeholder={locationKind === 'LOCAL' ? 'LOC-01' : 'PRAT-A'}
-            className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-            required
-          />
-          <input
-            value={locationName}
-            onChange={(event) => setLocationName(event.target.value)}
-            placeholder="Nome da localização"
-            className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-            required
-          />
-          <input
-            value={locationDescription}
-            onChange={(event) => setLocationDescription(event.target.value)}
-            placeholder="Descrição opcional"
-            className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-          />
-          <button
-            type="submit"
-            disabled={working || !selectedDepotId}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm transition hover:bg-blue-800 disabled:opacity-40"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Criar localização
-          </button>
-        </form>
-
-        <div className="mt-4 space-y-2">
-          {selectedDepotId && selectedDepotLocations.length === 0 ? (
-            <p className="text-sm text-gray-500">Nenhuma localização ativa neste depósito.</p>
-          ) : (
-            selectedDepotLocations.map((item) => (
-              <div
-                key={item.location.id}
-                className="rounded-xl border border-gray-200 bg-white/80 px-3 py-2"
-              >
-                <p className="text-xs font-black text-gray-800">
-                  {item.location.code} · {item.location.name}
-                </p>
-                <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-slate-600">
-                  {item.location.kind === 'LOCAL' ? 'Local' : 'Subposição'}
-                </p>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
     </div>
   );
 }
