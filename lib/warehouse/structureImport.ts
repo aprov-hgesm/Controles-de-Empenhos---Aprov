@@ -18,6 +18,12 @@ export interface WarehouseStructureImportLocal {
   children: WarehouseStructureImportSubposition[];
 }
 
+export interface WarehouseStructureDeclaredSummary {
+  locals: number;
+  subpositions: number;
+  total: number;
+}
+
 export interface WarehouseStructureImportPayload {
   version: typeof WAREHOUSE_STRUCTURE_IMPORT_VERSION;
   depot: {
@@ -26,6 +32,7 @@ export interface WarehouseStructureImportPayload {
     description: string | null;
   };
   locations: WarehouseStructureImportLocal[];
+  summary: WarehouseStructureDeclaredSummary;
 }
 
 export interface WarehouseStructureImportSummary {
@@ -58,6 +65,13 @@ function code(value: unknown, field: string): string {
   return normalized;
 }
 
+function nonNegativeInteger(value: unknown, field: string): number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+    throw new Error('Resumo inválido: ' + field);
+  }
+  return value;
+}
+
 export function parseWarehouseStructureImport(raw: string): WarehouseStructureImportPayload {
   if (!raw.trim()) throw new Error('Cole o JSON retornado pela IA.');
 
@@ -74,6 +88,7 @@ export function parseWarehouseStructureImport(raw: string): WarehouseStructureIm
   }
   if (!isRecord(parsed.depot)) throw new Error('O JSON precisa conter depot.');
   if (!Array.isArray(parsed.locations)) throw new Error('O JSON precisa conter locations.');
+  if (!isRecord(parsed.summary)) throw new Error('O JSON precisa conter summary.');
 
   const depot = {
     code: code(parsed.depot.code, 'depot.code'),
@@ -136,10 +151,38 @@ export function parseWarehouseStructureImport(raw: string): WarehouseStructureIm
     );
   }
 
+  const computedSummary = {
+    locals: locations.length,
+    subpositions: locations.reduce((sum, item) => sum + item.children.length, 0),
+    total: totalCount,
+  };
+  const declaredSummary = {
+    locals: nonNegativeInteger(parsed.summary.locals, 'summary.locals'),
+    subpositions: nonNegativeInteger(parsed.summary.subpositions, 'summary.subpositions'),
+    total: nonNegativeInteger(parsed.summary.total, 'summary.total'),
+  };
+
+  if (
+    declaredSummary.locals !== computedSummary.locals
+    || declaredSummary.subpositions !== computedSummary.subpositions
+    || declaredSummary.total !== computedSummary.total
+  ) {
+    throw new Error(
+      'Resumo inconsistente: a IA declarou '
+      + declaredSummary.locals + ' Local(is), '
+      + declaredSummary.subpositions + ' Subposição(ões) e '
+      + declaredSummary.total + ' total, mas o JSON contém '
+      + computedSummary.locals + ', '
+      + computedSummary.subpositions + ' e '
+      + computedSummary.total + '.'
+    );
+  }
+
   return {
     version: WAREHOUSE_STRUCTURE_IMPORT_VERSION,
     depot,
     locations,
+    summary: declaredSummary,
   };
 }
 
@@ -170,6 +213,9 @@ export function buildWarehouseStructureAiPrompt(userDescription: string): string
     '8. Não invente divisões internas que o usuário não informou.',
     '9. Se o usuário não informar nome/código do depósito, use code="DEP-01" e name="Depósito Principal".',
     '10. description pode ser null quando não houver informação útil.',
+    '11. Antes de responder, confira matematicamente todas as quantidades descritas pelo usuário.',
+    '12. Inclua summary com locals, subpositions e total. Esses números DEVEM ser exatamente iguais à estrutura expandida no próprio JSON.',
+    '13. Se houver múltiplos grupos da mesma estrutura, some corretamente todos os grupos e não omita o último item da sequência.',
     '',
     'FORMATO EXATO:',
     JSON.stringify({
@@ -181,12 +227,17 @@ export function buildWarehouseStructureAiPrompt(userDescription: string): string
         kind: 'LOCAL',
         description: null,
         children: [{
-          code: 'PRAT-01',
+          code: 'EST-01-PRAT-01',
           name: 'Prateleira 01',
           kind: 'SUBPOSITION',
           description: null,
         }],
       }],
+      summary: {
+        locals: 1,
+        subpositions: 1,
+        total: 2,
+      },
     }, null, 2),
     '',
     'DESCRIÇÃO DO USUÁRIO:',
