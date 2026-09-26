@@ -99,6 +99,7 @@ export function WarehouseDepotLayoutEditor({
   scopeKey,
   lightTheme = false,
   allowResize = true,
+  onDuplicateObject,
 }: {
   logicalWidth: number;
   logicalHeight: number;
@@ -114,6 +115,10 @@ export function WarehouseDepotLayoutEditor({
   scopeKey: string;
   lightTheme?: boolean;
   allowResize?: boolean;
+  onDuplicateObject?: (
+    source: WarehouseDepotLayoutObject,
+    copy: WarehouseDepotLayoutObject
+  ) => WarehouseDepotLayoutObject;
 }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const interactionRef = useRef<null | {
@@ -177,9 +182,10 @@ export function WarehouseDepotLayoutEditor({
       layer: Math.max(...objects.map((item) => item.layer), 0) + 1,
       warehouseLocationId: null,
     };
-    commit([...objects, copy]);
-    onSelectedObjectIdChange(copy.id);
-  }, [commit, logicalHeight, logicalWidth, objects, onSelectedObjectIdChange, selected]);
+    const preparedCopy = onDuplicateObject ? onDuplicateObject(selected, copy) : copy;
+    commit([...objects, preparedCopy]);
+    onSelectedObjectIdChange(preparedCopy.id);
+  }, [commit, logicalHeight, logicalWidth, objects, onDuplicateObject, onSelectedObjectIdChange, selected]);
 
   const removeSelected = useCallback(() => {
     if (!selected) return;
@@ -199,9 +205,10 @@ export function WarehouseDepotLayoutEditor({
       layer: Math.max(...objects.map((item) => item.layer), 0) + 1,
       warehouseLocationId: null,
     };
-    commit([...objects, copy]);
-    onSelectedObjectIdChange(copy.id);
-  }, [commit, logicalHeight, logicalWidth, objects, onSelectedObjectIdChange]);
+    const preparedCopy = onDuplicateObject ? onDuplicateObject(source, copy) : copy;
+    commit([...objects, preparedCopy]);
+    onSelectedObjectIdChange(preparedCopy.id);
+  }, [commit, logicalHeight, logicalWidth, objects, onDuplicateObject, onSelectedObjectIdChange]);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
