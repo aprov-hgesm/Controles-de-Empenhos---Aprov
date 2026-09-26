@@ -175,7 +175,8 @@
     "verify:adm-deposito-phase-11-5": "node scripts/verify-adm-deposito-phase-11-5.mjs",
     "verify:adm-deposito-phase-13": "node scripts/verify-adm-deposito-phase-13.mjs",
     "test:adm-deposito-depot-locator": "node --test scripts/warehouse-depot-locator.test.mjs",
-    "verify:adm-deposito-modular-r1": "node scripts/verify-adm-deposito-modular-r1.mjs"
+    "verify:adm-deposito-modular-r1": "node scripts/verify-adm-deposito-modular-r1.mjs",
+    "test:adm-deposito-modular-r1-security": "firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-security --only auth,firestore \"node scripts/warehouse-modular-r1-security.test.mjs\""
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -207,4 +208,4 @@
   "overrides": {
     "undici": "6.28.1"
   }
-}
+}\n
