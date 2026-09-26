@@ -1820,3 +1820,13 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - Locais e Subposições inativos com códigos correspondentes à estrutura importada também são restaurados e atualizados; estruturas antigas não presentes na nova importação permanecem inativas.
 - Somente depósito ativo com o mesmo código exige confirmação explícita para reutilização.
 - Essa regra preserva auditoria, evita IDs duplicados para a mesma identidade lógica histórica e faz a experiência de exclusão lógica se comportar como exclusão para o operador.
+
+
+## D-086 — Duplicar Local no croqui cria nova identidade lógica ao salvar
+
+- Duplicar um objeto visual que esteja vinculado a um `LOCAL` não pode manter o mesmo `warehouseLocationId`.
+- A cópia recebe imediatamente um novo código lógico sugerido e permanece pendente até o salvamento do croqui.
+- Ao salvar, o EMPROVEX cria um novo documento `warehouse_location_v1` no mesmo depósito e vincula o novo objeto visual ao novo ID técnico.
+- O novo Local aparece também em **Meus Depósitos → Depósitos e localizações**, fazendo da duplicação no croqui uma segunda forma válida de cadastrar Local.
+- Cópias de objetos puramente visuais, como portas sem `warehouseLocationId`, continuam sendo apenas visuais e não criam Local.
+- A operação continua sem movimentar estoque, saldo, lotes ou ledger.
