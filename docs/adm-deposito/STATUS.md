@@ -2381,3 +2381,16 @@ Decisão aplicada na branch `feat/adm-deposito-modular-release`:
 
 Commit funcional:
 - `ca7417505061839370b20efacdb079277b859866`.
+
+
+### Realismo profissional dos cinco modelos — 2026-09-26
+
+Implementado na branch `feat/adm-deposito-modular-release`:
+- refinamento profundo dos cinco modelos oficiais da Prévia 2.5D;
+- Estante, Palete, Freezer, Geladeira industrial e Mesa agora possuem geometria e materiais próprios;
+- adição de decks, contraventamentos, longarinas, blocos, vidro, iluminação fria, painéis, ventilação, prateleiras e detalhes metálicos;
+- piso e paredes receberam rodapés, marcações internas e acabamento mais coerente;
+- continua sem WebGL/engine 3D pesada.
+
+Commit funcional:
+- `0666499de89598d8d95091eedbaac075362941da`.
