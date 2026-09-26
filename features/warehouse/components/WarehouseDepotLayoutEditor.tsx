@@ -328,6 +328,23 @@ export function WarehouseDepotLayoutEditor({
           <span className="mx-1 h-5 w-px bg-white/[0.07]" />
           <button type="button" onClick={() => setView('top')} aria-pressed={view === 'top'} className="rounded-lg border border-white/[0.07] px-2.5 py-2 text-[10px] font-bold text-slate-300 aria-pressed:bg-blue-400/10 aria-pressed:text-blue-100">Vista superior</button>
           <button type="button" onClick={() => setView('perspective')} aria-pressed={view === 'perspective'} className="rounded-lg border border-white/[0.07] px-2.5 py-2 text-[10px] font-bold text-slate-300 aria-pressed:bg-blue-400/10 aria-pressed:text-blue-100">Prévia 2.5D</button>
+          <label className="ml-1 inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.08em] text-slate-500">
+            Ângulo
+            <select
+              value={previewAngle}
+              onChange={(event) => {
+                setPreviewAngle(event.target.value as PreviewAngle);
+                setView('perspective');
+              }}
+              data-testid="warehouse-preview-angle-select"
+              aria-label="Selecionar ângulo da prévia 2.5D"
+              className="h-8 rounded-lg border border-blue-300/15 bg-[#08101f] px-2 text-[10px] font-bold normal-case tracking-normal text-blue-100 outline-none"
+            >
+              {PREVIEW_ANGLES.map((angle) => (
+                <option key={angle.id} value={angle.id}>{angle.label}</option>
+              ))}
+            </select>
+          </label>
         </div>
       </div>
 
