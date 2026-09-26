@@ -213,6 +213,7 @@ service cloud.firestore {
         && request.resource.data.leaseVersion == resource.data.leaseVersion;
     }
 
+    // Avalia o shape/tenant uma única vez. Separar renewal e takeover em duas branches completas excedia o orçamento de 1000 expressões das Rules.
     function validWorkspaceSessionLeaseUpdate(workspaceId, slotId) {
       return validWorkspaceSessionLeaseShape(workspaceId, slotId)
         && (
@@ -5052,6 +5053,7 @@ service cloud.firestore {
         || legacyInvoiceLockMatchesAfter(workspaceId, id, data);
     }
 
+    // a platform administrator cannot read another sector's operational records.
     // Workspace-scoped operational data.
     match /workspaces/{workspaceId}/auditEvents/{eventId} {
       allow read: if canAccessWorkspace(workspaceId);
