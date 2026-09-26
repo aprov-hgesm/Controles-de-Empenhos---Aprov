@@ -67,6 +67,8 @@ export function WarehouseDepotLayoutEditor({
   onUndo,
   onRedo,
   scopeKey,
+  lightTheme = false,
+  allowResize = true,
 }: {
   logicalWidth: number;
   logicalHeight: number;
@@ -80,6 +82,8 @@ export function WarehouseDepotLayoutEditor({
   onUndo: () => void;
   onRedo: () => void;
   scopeKey: string;
+  lightTheme?: boolean;
+  allowResize?: boolean;
 }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const interactionRef = useRef<null | {
@@ -212,6 +216,7 @@ export function WarehouseDepotLayoutEditor({
     type: 'move' | 'resize' | 'rotate',
     object: WarehouseDepotLayoutObject
   ) => {
+    if (type === 'resize' && !allowResize) return;
     if (view !== 'top' || mode === 'pan') return;
     const viewport = viewportRef.current;
     if (!viewport) return;
@@ -254,29 +259,29 @@ export function WarehouseDepotLayoutEditor({
   };
 
   return (
-    <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-white/[0.08] bg-[#050b16]" data-testid="warehouse-layout-professional-editor">
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-white/[0.07] bg-white/[0.025] px-3 py-2" data-testid="warehouse-croqui-editor-toolbar">
+    <div className={`min-w-0 max-w-full overflow-hidden rounded-2xl border ${lightTheme ? 'border-slate-200 bg-white shadow-sm' : 'border-white/[0.08] bg-[#050b16]'}`} data-testid="warehouse-layout-professional-editor">
+      <div className={`flex min-w-0 flex-wrap items-center justify-between gap-2 border-b px-3 py-2 ${lightTheme ? 'border-slate-200 bg-slate-50' : 'border-white/[0.07] bg-white/[0.025]'}`} data-testid="warehouse-croqui-editor-toolbar">
         <div className="flex flex-wrap items-center gap-1">
-          <button type="button" aria-label="Alternar modo de pan" onClick={() => setMode(mode === 'pan' ? 'select' : 'pan')} aria-pressed={mode === 'pan'} className="rounded-lg border border-white/[0.07] px-2.5 py-2 text-[10px] font-bold text-slate-300 hover:bg-white/[0.05]">
+          <button type="button" aria-label="Alternar modo de pan" onClick={() => setMode(mode === 'pan' ? 'select' : 'pan')} aria-pressed={mode === 'pan'} className={`rounded-lg border px-2.5 py-2 text-[10px] font-bold transition ${mode === 'pan' ? 'border-[#00288e] bg-[#00288e] text-white shadow-sm' : lightTheme ? 'border-slate-200 bg-white text-slate-600 hover:bg-blue-50' : 'border-white/[0.07] text-slate-300 hover:bg-white/[0.05]'}`}>
             <Hand className="h-3.5 w-3.5" /> <span className="sr-only">Pan</span>
           </button>
-          <button type="button" onClick={() => setShowGrid((value) => !value)} aria-pressed={showGrid} className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.07] px-2.5 py-2 text-[10px] font-bold text-slate-300 hover:bg-white/[0.05]">
+          <button type="button" onClick={() => setShowGrid((value) => !value)} aria-pressed={showGrid} className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-[10px] font-bold transition ${showGrid ? 'border-[#00288e] bg-[#00288e] text-white shadow-sm' : lightTheme ? 'border-slate-200 bg-white text-slate-600 hover:bg-blue-50' : 'border-white/[0.07] text-slate-300 hover:bg-white/[0.05]'}`}>
             <Grid3X3 className="h-3.5 w-3.5" /> Grade
           </button>
-          <button type="button" onClick={() => setSnapEnabled((value) => !value)} aria-pressed={snapEnabled} className="rounded-lg border border-white/[0.07] px-2.5 py-2 text-[10px] font-bold text-slate-300 hover:bg-white/[0.05]">
+          <button type="button" onClick={() => setSnapEnabled((value) => !value)} aria-pressed={snapEnabled} className={`rounded-lg border px-2.5 py-2 text-[10px] font-bold transition ${snapEnabled ? 'border-[#00288e] bg-[#00288e] text-white shadow-sm' : lightTheme ? 'border-slate-200 bg-white text-slate-600 hover:bg-blue-50' : 'border-white/[0.07] text-slate-300 hover:bg-white/[0.05]'}`}>
             Snap {snapEnabled ? 'on' : 'off'}
           </button>
           <span className="mx-1 h-5 w-px bg-white/[0.07]" />
-          <button type="button" aria-label="Desfazer" disabled={!canUndo} onClick={onUndo} className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.05] disabled:opacity-30"><Undo2 className="h-3.5 w-3.5" /></button>
-          <button type="button" aria-label="Refazer" disabled={!canRedo} onClick={onRedo} className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.05] disabled:opacity-30"><Redo2 className="h-3.5 w-3.5" /></button>
+          <button type="button" aria-label="Desfazer" disabled={!canUndo} onClick={onUndo} className={`rounded-lg p-2 disabled:opacity-30 ${lightTheme ? 'text-slate-500 hover:bg-slate-100' : 'text-slate-400 hover:bg-white/[0.05]'}`}><Undo2 className="h-3.5 w-3.5" /></button>
+          <button type="button" aria-label="Refazer" disabled={!canRedo} onClick={onRedo} className={`rounded-lg p-2 disabled:opacity-30 ${lightTheme ? 'text-slate-500 hover:bg-slate-100' : 'text-slate-400 hover:bg-white/[0.05]'}`}><Redo2 className="h-3.5 w-3.5" /></button>
         </div>
         <div className="flex flex-wrap items-center gap-1">
-          <button type="button" aria-label="Diminuir zoom" onClick={() => setZoom((value) => clamp(value - 0.1, ZOOM_MIN, ZOOM_MAX))} className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.05]"><ZoomOut className="h-3.5 w-3.5" /></button>
+          <button type="button" aria-label="Diminuir zoom" onClick={() => setZoom((value) => clamp(value - 0.1, ZOOM_MIN, ZOOM_MAX))} className={`rounded-lg p-2 ${lightTheme ? 'text-slate-500 hover:bg-slate-100' : 'text-slate-400 hover:bg-white/[0.05]'}`}><ZoomOut className="h-3.5 w-3.5" /></button>
           <span className="min-w-11 text-center text-[10px] font-bold text-slate-500">{Math.round(zoom * 100)}%</span>
-          <button type="button" aria-label="Aumentar zoom" onClick={() => setZoom((value) => clamp(value + 0.1, ZOOM_MIN, ZOOM_MAX))} className="rounded-lg p-2 text-slate-400 hover:bg-white/[0.05]"><ZoomIn className="h-3.5 w-3.5" /></button>
+          <button type="button" aria-label="Aumentar zoom" onClick={() => setZoom((value) => clamp(value + 0.1, ZOOM_MIN, ZOOM_MAX))} className={`rounded-lg p-2 ${lightTheme ? 'text-slate-500 hover:bg-slate-100' : 'text-slate-400 hover:bg-white/[0.05]'}`}><ZoomIn className="h-3.5 w-3.5" /></button>
           <span className="mx-1 h-5 w-px bg-white/[0.07]" />
-          <button type="button" onClick={() => setView('top')} aria-pressed={view === 'top'} className="rounded-lg border border-white/[0.07] px-2.5 py-2 text-[10px] font-bold text-slate-300 aria-pressed:bg-blue-400/10 aria-pressed:text-blue-100">Vista superior</button>
-          <button type="button" onClick={() => setView('perspective')} aria-pressed={view === 'perspective'} className="rounded-lg border border-white/[0.07] px-2.5 py-2 text-[10px] font-bold text-slate-300 aria-pressed:bg-blue-400/10 aria-pressed:text-blue-100">Prévia 2.5D</button>
+          <button type="button" onClick={() => setView('top')} aria-pressed={view === 'top'} className={`rounded-lg border px-2.5 py-2 text-[10px] font-bold transition ${view === 'top' ? 'border-[#00288e] bg-[#00288e] text-white shadow-sm' : lightTheme ? 'border-slate-200 bg-white text-slate-600 hover:bg-blue-50' : 'border-white/[0.07] text-slate-300 hover:bg-white/[0.05]'}`}>Vista superior</button>
+          <button type="button" onClick={() => setView('perspective')} aria-pressed={view === 'perspective'} className={`rounded-lg border px-2.5 py-2 text-[10px] font-bold transition ${view === 'perspective' ? 'border-[#00288e] bg-[#00288e] text-white shadow-sm' : lightTheme ? 'border-slate-200 bg-white text-slate-600 hover:bg-blue-50' : 'border-white/[0.07] text-slate-300 hover:bg-white/[0.05]'}`}>Prévia 2.5D</button>
         </div>
       </div>
 
@@ -342,11 +347,13 @@ export function WarehouseDepotLayoutEditor({
             height: logicalHeight,
             transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px)) scale(${zoom})`,
             backgroundImage: showGrid
-              ? 'linear-gradient(rgba(148,163,184,0.09) 1px, transparent 1px),linear-gradient(90deg,rgba(148,163,184,0.09) 1px, transparent 1px)'
+              ? lightTheme
+                ? 'linear-gradient(rgba(148,163,184,0.20) 1px, transparent 1px),linear-gradient(90deg,rgba(148,163,184,0.20) 1px, transparent 1px)'
+                : 'linear-gradient(rgba(148,163,184,0.09) 1px, transparent 1px),linear-gradient(90deg,rgba(148,163,184,0.09) 1px, transparent 1px)'
               : undefined,
             backgroundSize: showGrid ? `${GRID_SIZE}px ${GRID_SIZE}px` : undefined,
-            backgroundColor: '#07101f',
-            border: '1px solid rgba(148,163,184,0.12)',
+            backgroundColor: lightTheme ? '#ffffff' : '#07101f',
+            border: lightTheme ? '1px solid rgb(203 213 225)' : '1px solid rgba(148,163,184,0.12)',
             transformStyle: 'preserve-3d',
           }}
         >
@@ -357,7 +364,7 @@ export function WarehouseDepotLayoutEditor({
               <div
                 key={object.id}
                 data-testid={'warehouse-editor-object-' + object.id}
-                className={`absolute select-none rounded-lg border text-left ${active ? 'border-blue-300 ring-2 ring-blue-300/25' : 'border-slate-500/60'} ${object.visualVariant === 'zone' ? 'bg-slate-500/10' : object.visualVariant === 'outline' ? 'bg-transparent' : 'bg-slate-700/55'}`}
+                className={`absolute select-none rounded-lg border text-left shadow-sm ${active ? 'border-[#00288e] ring-2 ring-blue-200' : lightTheme ? 'border-slate-300' : 'border-slate-500/60'} ${object.visualVariant === 'zone' ? (lightTheme ? 'bg-blue-50/70' : 'bg-slate-500/10') : object.visualVariant === 'outline' ? 'bg-transparent' : (lightTheme ? 'bg-slate-100' : 'bg-slate-700/55')}`}
                 style={{
                   left: object.x,
                   top: object.y,
@@ -376,16 +383,18 @@ export function WarehouseDepotLayoutEditor({
                   startInteraction(event, 'move', object);
                 }}
               >
-                <div className="pointer-events-none truncate px-2 pt-2 text-[10px] font-black text-slate-100">{object.label}</div>
-                {object.warehouseLocationId && <div className="pointer-events-none truncate px-2 pt-1 font-mono text-[8px] text-slate-400">{object.warehouseLocationId}</div>}
+                <div className={`pointer-events-none truncate px-2 pt-2 text-[10px] font-black ${lightTheme ? 'text-slate-800' : 'text-slate-100'}`}>{object.label}</div>
+                {object.warehouseLocationId && <div className={`pointer-events-none truncate px-2 pt-1 font-mono text-[8px] ${lightTheme ? 'text-slate-500' : 'text-slate-400'}`}>{object.warehouseLocationId}</div>}
                 {active && view === 'top' && (
                   <>
-                    <button
-                      type="button"
-                      aria-label="Redimensionar"
-                      className="absolute -bottom-2 -right-2 h-4 w-4 cursor-nwse-resize rounded-sm border border-blue-200 bg-blue-400"
-                      onPointerDown={(event) => startInteraction(event, 'resize', object)}
-                    />
+                    {allowResize && (
+                      <button
+                        type="button"
+                        aria-label="Redimensionar"
+                        className="absolute -bottom-2 -right-2 h-4 w-4 cursor-nwse-resize rounded-sm border border-blue-200 bg-blue-400"
+                        onPointerDown={(event) => startInteraction(event, 'resize', object)}
+                      />
+                    )}
                     <button
                       type="button"
                       aria-label="Girar"
@@ -402,8 +411,8 @@ export function WarehouseDepotLayoutEditor({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.07] bg-white/[0.02] px-3 py-2">
-        <p className="text-[9px] text-slate-600">
+      <div className={`flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2 ${lightTheme ? 'border-slate-200 bg-slate-50' : 'border-white/[0.07] bg-white/[0.02]'}`}>
+        <p className={`text-[9px] ${lightTheme ? 'text-slate-500' : 'text-slate-600'}`}>
           Edição local · grade {showGrid ? 'visível' : 'oculta'} · snap {snapEnabled ? 'ativo' : 'livre'} · nenhum movimento grava no Firestore
         </p>
         <div className="flex items-center gap-1">
