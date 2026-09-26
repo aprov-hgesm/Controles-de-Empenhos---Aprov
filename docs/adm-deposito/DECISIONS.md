@@ -1853,3 +1853,17 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - Ao restaurar um Local inativo por duplicação, nome, descrição e status são atualizados para refletir a nova cópia.
 - Subposições inativas compatíveis com a nova estrutura também podem ser restauradas; quando não existirem, novas Subposições são criadas normalmente.
 - Exemplo esperado: PAL-01 e PAL-02 ativos, PAL-03 inativo → duplicar PAL-02 gera PAL-03, não PAL-04.
+
+
+## D-089 — Prévia 2.5D derivada do croqui com ocupação visual e destaque por consulta
+
+- A prévia 2.5D é uma representação derivada do mesmo `warehouse_depot_layout_v1`; não cria uma segunda fonte de verdade para geometria ou estoque.
+- O modo de edição permanece 2D. A prévia 2.5D é somente leitura e reaproveita posição, dimensão, rotação, tipo e vínculo `warehouseLocationId` dos objetos do croqui.
+- A renderização é leve, implementada em React/CSS, sem engine 3D/WebGL obrigatória.
+- Caixas/volumes visuais só aparecem quando existe saldo físico positivo associado ao Local ou a alguma Subposição daquele Local.
+- A quantidade de caixas é simbólica e bounded; não representa uma unidade visual por item real.
+- A consulta de item usa os materiais e `warehouse_location_balance_v1` existentes para iluminar o Local correspondente.
+- Quando o saldo consultado pertence a uma Subposição, o Local é destacado e a Subposição correspondente recebe marcador luminoso próprio.
+- A leitura de materiais/saldos da prévia é feita sob demanda ao entrar no modo 2.5D, evitando listener global e leituras contínuas.
+- Se o domínio de saldo estiver indisponível por regra/permissão na release modular, a prévia estrutural continua utilizável sem inventar ocupação.
+- A prévia não escreve estoque, saldos, lotes, movimentos ou ledger.
