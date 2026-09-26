@@ -162,20 +162,20 @@ export function WarehouseLocationsR1Operational({
 
   return (
     <div className="mt-6 space-y-6" data-testid="warehouse-locations-r1-operational">
-      <div className="rounded-2xl border border-emerald-300/10 bg-emerald-400/[0.035] p-4">
-        <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-300/70">
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/75 p-4 shadow-sm">
+        <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-700">
           ADM-R1 · estrutura independente
         </p>
-        <p className="mt-2 text-sm font-black text-slate-200">
+        <p className="mt-2 text-sm font-black text-gray-800">
           Depósitos e localizações sem operações de estoque
         </p>
-        <p className="mt-2 text-xs leading-5 text-slate-500">
+        <p className="mt-2 text-xs font-medium leading-5 text-gray-500">
           Esta etapa consulta somente depots e locations. Transferências, saldos e distribuição física permanecem desligados.
         </p>
       </div>
 
       {message && (
-        <div className="rounded-2xl border border-white/[0.08] bg-black/10 px-4 py-3 text-sm text-slate-300">
+        <div className="rounded-2xl border border-blue-100 bg-blue-50/80 px-4 py-3 text-sm font-medium text-gray-700">
           {message}
         </div>
       )}
@@ -187,17 +187,17 @@ export function WarehouseLocationsR1Operational({
         onImported={refresh}
       />
 
-      <section className="rounded-2xl border border-white/[0.07] bg-black/10 p-5">
+      <section className="rounded-2xl border border-blue-100/80 bg-white/75 p-5 shadow-sm backdrop-blur-md">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-base font-black text-slate-100">Depósitos</h3>
-            <p className="mt-1 text-xs text-slate-500">Cadastre a estrutura física básica da UG.</p>
+            <h3 className="text-base font-black text-[#00288e]">Depósitos</h3>
+            <p className="mt-1 text-xs font-medium text-gray-500">Cadastre a estrutura física básica da UG.</p>
           </div>
           <button
             type="button"
             onClick={() => void refresh()}
             disabled={state.loading || working}
-            className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/[0.09] bg-white/[0.035] px-3 text-xs font-bold text-slate-300 disabled:opacity-40"
+            className="inline-flex h-9 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-xs font-bold text-gray-600 shadow-xs transition hover:bg-blue-50 hover:text-[#00288e] disabled:opacity-40"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             Atualizar
@@ -209,26 +209,26 @@ export function WarehouseLocationsR1Operational({
             value={depotCode}
             onChange={(event) => setDepotCode(event.target.value)}
             placeholder="DEP-01"
-            className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-sm text-slate-200 outline-none"
+            className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
             required
           />
           <input
             value={depotName}
             onChange={(event) => setDepotName(event.target.value)}
             placeholder="Nome do depósito"
-            className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-sm text-slate-200 outline-none"
+            className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
             required
           />
           <input
             value={depotDescription}
             onChange={(event) => setDepotDescription(event.target.value)}
             placeholder="Descrição opcional"
-            className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-sm text-slate-200 outline-none"
+            className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
           />
           <button
             type="submit"
             disabled={working}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-500/90 px-4 text-xs font-black text-white disabled:opacity-40"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm transition hover:bg-blue-800 disabled:opacity-40"
           >
             <Plus className="h-3.5 w-3.5" />
             Criar depósito
@@ -237,7 +237,7 @@ export function WarehouseLocationsR1Operational({
 
         <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
           {state.depots.length === 0 && !state.loading ? (
-            <p className="text-sm text-slate-500">Nenhum depósito cadastrado.</p>
+            <p className="text-sm text-gray-500">Nenhum depósito cadastrado.</p>
           ) : (
             state.depots.map((item) => (
               <button
@@ -246,25 +246,25 @@ export function WarehouseLocationsR1Operational({
                 onClick={() => setSelectedDepotId(item.depot.id)}
                 className={
                   selectedDepotId === item.depot.id
-                    ? 'rounded-xl border border-blue-300/20 bg-blue-400/[0.06] p-3 text-left'
-                    : 'rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-left'
+                    ? 'rounded-xl border border-blue-200 bg-blue-50 p-3 text-left shadow-xs'
+                    : 'rounded-xl border border-gray-200 bg-white/80 p-3 text-left transition hover:border-blue-200 hover:bg-blue-50/60'
                 }
               >
                 <div className="flex items-center gap-2">
-                  <MapPin className="h-3.5 w-3.5 text-blue-300" />
-                  <span className="font-mono text-[10px] font-black text-blue-200">{item.depot.code}</span>
+                  <MapPin className="h-3.5 w-3.5 text-[#00288e]" />
+                  <span className="font-mono text-[10px] font-black text-[#00288e]">{item.depot.code}</span>
                 </div>
-                <p className="mt-1 text-sm font-black text-slate-200">{item.depot.name}</p>
-                <p className="mt-1 text-[11px] text-slate-500">{item.depot.status}</p>
+                <p className="mt-1 text-sm font-black text-gray-800">{item.depot.name}</p>
+                <p className="mt-1 text-[11px] text-gray-500">{item.depot.status}</p>
               </button>
             ))
           )}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-white/[0.07] bg-black/10 p-5">
-        <h3 className="text-base font-black text-slate-100">Localizações</h3>
-        <p className="mt-1 text-xs text-slate-500">
+      <section className="rounded-2xl border border-blue-100/80 bg-white/75 p-5 shadow-sm backdrop-blur-md">
+        <h3 className="text-base font-black text-[#00288e]">Localizações</h3>
+        <p className="mt-1 text-xs font-medium text-gray-500">
           Selecione um depósito ativo e cadastre Local ou Subposição.
         </p>
 
@@ -272,7 +272,7 @@ export function WarehouseLocationsR1Operational({
           <select
             value={selectedDepotId}
             onChange={(event) => setSelectedDepotId(event.target.value)}
-            className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-sm text-slate-200"
+            className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-sm text-gray-800"
             required
           >
             <option value="">Selecione o depósito</option>
@@ -290,7 +290,7 @@ export function WarehouseLocationsR1Operational({
               setLocationKind(next);
               if (next === 'LOCAL') setParentLocationId('');
             }}
-            className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-sm text-slate-200"
+            className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-sm text-gray-800"
           >
             <option value="LOCAL">Local</option>
             <option value="SUBPOSITION">Subposição</option>
@@ -300,7 +300,7 @@ export function WarehouseLocationsR1Operational({
             <select
               value={parentLocationId}
               onChange={(event) => setParentLocationId(event.target.value)}
-              className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-sm text-slate-200"
+              className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-sm text-gray-800"
               required
             >
               <option value="">Selecione o Local pai</option>
@@ -316,26 +316,26 @@ export function WarehouseLocationsR1Operational({
             value={locationCode}
             onChange={(event) => setLocationCode(event.target.value)}
             placeholder={locationKind === 'LOCAL' ? 'LOC-01' : 'PRAT-A'}
-            className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-sm text-slate-200 outline-none"
+            className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
             required
           />
           <input
             value={locationName}
             onChange={(event) => setLocationName(event.target.value)}
             placeholder="Nome da localização"
-            className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-sm text-slate-200 outline-none"
+            className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
             required
           />
           <input
             value={locationDescription}
             onChange={(event) => setLocationDescription(event.target.value)}
             placeholder="Descrição opcional"
-            className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-sm text-slate-200 outline-none"
+            className="h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
           />
           <button
             type="submit"
             disabled={working || !selectedDepotId}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-500/90 px-4 text-xs font-black text-white disabled:opacity-40"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm transition hover:bg-blue-800 disabled:opacity-40"
           >
             <Plus className="h-3.5 w-3.5" />
             Criar localização
@@ -344,14 +344,14 @@ export function WarehouseLocationsR1Operational({
 
         <div className="mt-4 space-y-2">
           {selectedDepotId && selectedDepotLocations.length === 0 ? (
-            <p className="text-sm text-slate-500">Nenhuma localização ativa neste depósito.</p>
+            <p className="text-sm text-gray-500">Nenhuma localização ativa neste depósito.</p>
           ) : (
             selectedDepotLocations.map((item) => (
               <div
                 key={item.location.id}
-                className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2"
+                className="rounded-xl border border-gray-200 bg-white/80 px-3 py-2"
               >
-                <p className="text-xs font-black text-slate-200">
+                <p className="text-xs font-black text-gray-800">
                   {item.location.code} · {item.location.name}
                 </p>
                 <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-slate-600">
