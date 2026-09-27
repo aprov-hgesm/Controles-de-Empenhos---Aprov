@@ -9,7 +9,7 @@ import {
   where,
 } from 'firebase/firestore';
 
-import { auth, db, handleFirestoreError, OperationType } from '../firebase';
+import { auth, warehouseDb as db, handleFirestoreError, OperationType } from '../firebase';
 import { getCurrentOperationalScope } from '../operationalPaths';
 import { normalizeWorkspaceId } from '../platformIdentity';
 import {

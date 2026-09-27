@@ -2,7 +2,7 @@ import { collection, doc, getDoc, getDocs, limit, query, setDoc } from 'firebase
 
 import { recordWarehouseDocumentReads } from './telemetry';
 
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { warehouseDb as db, handleFirestoreError, OperationType } from '../firebase';
 import { normalizeWorkspaceId } from '../platformIdentity';
 import {
   validateWarehouseMaterial,

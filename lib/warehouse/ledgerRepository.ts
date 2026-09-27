@@ -13,7 +13,7 @@ import {
 
 import { recordWarehouseDocumentReads } from './telemetry';
 
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { warehouseDb as db, handleFirestoreError, OperationType } from '../firebase';
 import { isValidWorkspaceId, normalizeWorkspaceId } from '../platformIdentity';
 import {
   validateWarehouseMaterial,

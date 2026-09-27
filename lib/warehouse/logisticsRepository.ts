@@ -12,7 +12,7 @@ import {
 
 import { recordWarehouseDocumentReads, recordWarehouseDocumentWrites } from './telemetry';
 
-import { auth, db, handleFirestoreError, OperationType } from '../firebase';
+import { auth, warehouseDb as db, handleFirestoreError, OperationType } from '../firebase';
 import {
   getCurrentOperationalScope,
   getOperationalCollectionPath,

@@ -13,7 +13,7 @@ import {
 
 import { recordWarehouseDocumentReads } from './telemetry';
 
-import { auth, db, handleFirestoreError, OperationType } from '../firebase';
+import { auth, warehouseDb as db, handleFirestoreError, OperationType } from '../firebase';
 import { getCurrentOperationalScope } from '../operationalPaths';
 import {
   createWarehouseMovementId,
