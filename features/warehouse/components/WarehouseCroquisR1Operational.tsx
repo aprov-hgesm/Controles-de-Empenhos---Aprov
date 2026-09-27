@@ -283,7 +283,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     }).catch((error) => {
       if (!cancelled) {
         setMessage(
-          'A prévia 2.5D estrutural continua disponível, mas a ocupação por estoque não pôde ser carregada. '
+          'A prévia 3D estrutural continua disponível, mas a ocupação por estoque não pôde ser carregada. '
           + messageFrom(error)
         );
         setPreviewMaterials([]);
@@ -944,7 +944,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                   : 'h-10 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black text-slate-600 hover:bg-blue-50'
               }
             >
-              Prévia 2.5D
+              Prévia 3D
             </button>
             <p className="ml-1 text-[11px] font-semibold text-slate-500">
               A prévia deriva do mesmo croqui; editar continua sendo feito no modo 2D.
