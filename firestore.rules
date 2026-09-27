@@ -4360,42 +4360,6 @@ service cloud.firestore {
         && warehouseItemIntakeV2MaterialMatches(workspaceId);
     }
 
-    function validWarehouseQueueExclusion(workspaceId, exclusionId) {
-      return request.resource.data is map
-        && request.resource.data.keys().hasOnly([
-          'schemaVersion', 'id', 'workspaceId', 'ug', 'invoiceRecordKey',
-          'invoiceId', 'empenhoId', 'pregao', 'removedBy', 'removedAt'
-        ])
-        && request.resource.data.keys().hasAll([
-          'schemaVersion', 'id', 'workspaceId', 'ug', 'invoiceRecordKey',
-          'invoiceId', 'empenhoId', 'pregao', 'removedBy', 'removedAt'
-        ])
-        && request.resource.data.schemaVersion == 'warehouse_intake_queue_exclusion_v1'
-        && request.resource.data.id == exclusionId
-        && exclusionId.matches('^qex_[a-f0-9]{64}$')
-        && request.resource.data.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
-        && request.resource.data.invoiceRecordKey is string
-        && request.resource.data.invoiceRecordKey.size() > 0
-        && request.resource.data.invoiceRecordKey.size() <= 180
-        && request.resource.data.invoiceId is string
-        && request.resource.data.invoiceId.size() > 0
-        && request.resource.data.invoiceId.size() <= 120
-        && request.resource.data.empenhoId is string
-        && request.resource.data.empenhoId.size() > 0
-        && request.resource.data.empenhoId.size() <= 120
-        && (
-          request.resource.data.pregao == null
-          || (
-            request.resource.data.pregao is string
-            && request.resource.data.pregao.size() > 0
-            && request.resource.data.pregao.size() <= 120
-          )
-        )
-        && request.resource.data.removedBy == request.auth.uid
-        && request.resource.data.removedAt == request.time;
-    }
-
     match /warehouse/{workspaceId} {
       allow read, write: if canAccessWarehouseModule(workspaceId);
 
@@ -4527,10 +4491,256 @@ service cloud.firestore {
       }
 
       // Fila ADM — exclusão lógica de NFs que não ingressarão no depósito.
+      // O validador fica local a este match para não inflar o binário compilado
+      // das Rules ao ser herdado por todas as demais coleções.
       match /queueExclusions/{exclusionId} {
+        function validWarehouseQueueExclusion() {
+          return request.resource.data is map
+            && request.resource.data.keys().hasOnly([
+              'schemaVersion', 'id', 'workspaceId', 'ug', 'invoiceRecordKey',
+              'invoiceId', 'empenhoId', 'pregao', 'removedBy', 'removedAt'
+            ])
+            && request.resource.data.keys().hasAll([
+              'schemaVersion', 'id', 'workspaceId', 'ug', 'invoiceRecordKey',
+              'invoiceId', 'empenhoId', 'pregao', 'removedBy', 'removedAt'
+            ])
+            && request.resource.data.schemaVersion == 'warehouse_intake_queue_exclusion_v1'
+            && request.resource.data.id == exclusionId
+            && exclusionId.matches('^qex_[a-f0-9]{64}
+
+      // FASE 11.5 — fila de entrada/alocação de itens recebidos por NF.
+      match /intakes/{intakeId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create: if canAccessWarehouseModule(workspaceId)
+          && (
+            validWarehouseItemIntakeCreate(workspaceId, intakeId)
+            || validWarehouseItemIntakeV2Create(workspaceId, intakeId)
+          );
+        allow update: if canAccessWarehouseModule(workspaceId)
+          && (
+            validWarehouseItemIntakeUpdate(workspaceId, intakeId)
+            || validWarehouseItemIntakeV2Update(workspaceId, intakeId)
+          );
+        allow delete: if false;
+      }
+
+      // FASE 11 / DEP-23.1 — alertas logísticos pertencem exclusivamente ao ADM.
+
+      // FASE 10 / DEP-20..20.3 — inventário founder-only e auditável.
+    }
+
+    // Workspace-scoped operational data. There is deliberately no admin bypass:
+    // a platform administrator cannot read another sector's operational records.
+    match /workspaces/{workspaceId}/auditEvents/{eventId} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validWorkspaceAuditEvent(eventId, workspaceId);
+      allow update, delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/empenhos/{id} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validEmpenhoRevisionCreate(request.resource.data)
+        && empenhoCnpjCreateIsValid(request.resource.data);
+      allow update: if canAccessWorkspace(workspaceId)
+        && !empenhoDeletionIsLockedAfter(workspaceId, id)
+        && validEmpenhoRevisionUpdate()
+        && empenhoCnpjUpdateIsValid();
+      allow delete: if canAccessWorkspace(workspaceId)
+        && validEmpenhoLifecycleDelete(workspaceId, id);
+    }
+
+    match /workspaces/{workspaceId}/alerts/{id} {
+      allow read, delete: if canAccessWorkspace(workspaceId);
+      allow create, update: if canAccessWorkspace(workspaceId)
+        && linkedEmpenhoWriteAllowedAfter(workspaceId, request.resource.data);
+    }
+
+    match /workspaces/{workspaceId}/invoices/{id} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validInvoiceCreate(workspaceId, id);
+      allow update: if canAccessWorkspace(workspaceId)
+        && validInvoiceUpdate(workspaceId, id);
+      allow delete: if canAccessWorkspace(workspaceId)
+        && validInvoiceDelete(workspaceId, id);
+    }
+
+    match /workspaces/{workspaceId}/comissoes/{id} {
+      allow read, write: if canAccessWorkspace(workspaceId);
+    }
+
+    match /workspaces/{workspaceId}/cronogramas/{id} {
+      allow read, delete: if canAccessWorkspace(workspaceId);
+      allow create, update: if canAccessWorkspace(workspaceId)
+        && linkedEmpenhoWriteAllowedAfter(workspaceId, request.resource.data);
+    }
+
+    // Block 19.10 — snapshot econômico do Início.
+    // Um único documento derivado alimenta a Home; ele não concede autorização
+    // e nunca substitui as coleções operacionais como fonte de verdade.
+    match /workspaces/{workspaceId}/settings/homeSnapshot {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create, update: if validHomeSnapshot(workspaceId);
+      allow delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/settings/termoRecebimentoCounter {
+      // O cadastro administrativo verifica se existe contador residual antes de
+      // provisionar um workspace novo. Essa leitura prévia só é permitida enquanto
+      // o workspace ainda não existe; depois da criação, o administrador volta a
+      // não possuir acesso ao contador operacional do tenant.
+      allow read: if canAccessWorkspace(workspaceId)
+        || (
+          isPlatformAdmin()
+          && !workspaceExists(workspaceId)
+        );
+      allow create: if canAdminProvisionTermCounter(workspaceId)
+        || (
+          canAccessWorkspace(workspaceId)
+          && validInitialTermCounter()
+        );
+      allow update: if canAccessWorkspace(workspaceId)
+        && validOperationalTermCounterUpdate();
+      allow delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/settings/documentStorage {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && validWorkspaceDocumentStorage(workspaceId);
+      allow update: if canAccessWorkspace(workspaceId)
+        && validWorkspaceDocumentStorageUpdate(workspaceId);
+      allow delete: if false;
+    }
+
+    match /workspaces/{workspaceId}/settings/{id} {
+      // Listagem é limitada ao próprio workspace autenticado. Os settings atuais
+      // já são individualmente legíveis pelo setor; o list habilita diagnósticos
+      // de integridade sem ampliar acesso entre tenants.
+      allow list: if canAccessWorkspace(workspaceId);
+      allow get: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId);
+      allow create: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId)
+        && (
+          (
+            isEmpenhoDeletionLockId(id)
+            && validEmpenhoDeletionLockCreate(workspaceId, id)
+          )
+          || (
+            !isEmpenhoDeletionLockId(id)
+            && (
+              !isSagNsLockId(id)
+              || validSagNsLock(workspaceId, id)
+            )
+          )
+        );
+      allow update: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId)
+        && !isEmpenhoDeletionLockId(id)
+        && (
+          !isSagNsLockId(id)
+          || validSagNsLockUpdate(workspaceId, id)
+        );
+      allow delete: if id != 'termoRecebimentoCounter'
+        && id != 'documentStorage'
+        && id != 'homeSnapshot'
+        && canAccessWorkspace(workspaceId)
+        && (
+          (
+            isEmpenhoDeletionLockId(id)
+            && validEmpenhoDeletionLockDelete(workspaceId, id)
+          )
+          || (
+            !isEmpenhoDeletionLockId(id)
+            && (
+              !isSagNsLockId(id)
+              || validSagNsLockDelete(workspaceId, id)
+            )
+          )
+        );
+    }
+
+    // Bloco 13 — compatibilidade legada somente leitura.
+    // O runtime oficial já usa /workspaces/hgesm-aprov/...; os dados raiz ficam
+    // preservados apenas para consulta, auditoria e recuperação controlada.
+    // Qualquer rollback com escrita exige mudança explícita de Rules, evitando que
+    // uma simples regressão de frontend volte silenciosamente a gravar no legado.
+    match /empenhos/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /alerts/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /invoices/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /comissoes/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    match /cronogramas/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+
+    // A identidade visual global precisa continuar disponível antes do login.
+    // A marca institucional é imutável no runtime: qualquer troca futura exige
+    // manutenção deliberada fora da aplicação e revisão explícita destas Rules.
+    match /settings/global {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Demais settings raiz (incluindo o contador histórico) ficam somente leitura.
+    match /settings/{id} {
+      allow read: if isHgesmFounder();
+      allow write: if false;
+    }
+  }
+}
+)
+            && request.resource.data.workspaceId == workspaceId
+            && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+            && request.resource.data.invoiceRecordKey is string
+            && request.resource.data.invoiceRecordKey.size() > 0
+            && request.resource.data.invoiceRecordKey.size() <= 180
+            && request.resource.data.invoiceId is string
+            && request.resource.data.invoiceId.size() > 0
+            && request.resource.data.invoiceId.size() <= 120
+            && request.resource.data.empenhoId is string
+            && request.resource.data.empenhoId.size() > 0
+            && request.resource.data.empenhoId.size() <= 120
+            && (
+              request.resource.data.pregao == null
+              || (
+                request.resource.data.pregao is string
+                && request.resource.data.pregao.size() > 0
+                && request.resource.data.pregao.size() <= 120
+              )
+            )
+            && request.resource.data.removedBy == request.auth.uid
+            && request.resource.data.removedAt == request.time;
+        }
+
         allow read: if canAccessWarehouseModule(workspaceId);
         allow create, update: if canAccessWarehouseModule(workspaceId)
-          && validWarehouseQueueExclusion(workspaceId, exclusionId);
+          && validWarehouseQueueExclusion();
         allow delete: if false;
       }
 
