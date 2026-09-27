@@ -2932,3 +2932,20 @@ Diagnóstico real da NF 46546:
 Próximo gate:
 - publicar exclusivamente `firestore.warehouse.rules` no database `emprovex-warehouse`;
 - depois repetir uma única alocação controlada da NF 46546.
+
+
+### Deploy das Rules otimizadas do warehouse — PASS — 2026-09-27
+
+Publicação concluída com sucesso no projeto `gen-lang-client-0982077967`, database `emprovex-warehouse`.
+
+Resultado:
+- `firestore.warehouse.rules` compilado com sucesso;
+- rules publicadas em `cloud.firestore`;
+- deploy concluído com `Deploy complete!`;
+- nenhum dado do Firestore foi alterado por esse deploy;
+- banco principal e suas rules não foram publicados nesta operação;
+- warning de variável não utilizada permaneceu não bloqueante.
+
+Próximo gate:
+- repetir uma única alocação controlada da NF 46546 / item Camomila no localhost;
+- verificar se `UNASSIGNED` cai de 100 para 0, localização escolhida sobe para 100 e intake fica `PROCESSED`.
