@@ -5,9 +5,11 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronRight,
+  Download,
   Keyboard,
   PackageSearch,
   Plus,
+  Printer,
   RefreshCw,
   ScanLine,
   Settings2,
@@ -51,7 +53,11 @@ import {
 } from '../../../lib/warehouse/material';
 import { listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
 import type { WarehouseBalance } from '../../../lib/warehouse/movement';
-import { listWarehouseBalances } from '../../../lib/warehouse/ledgerRepository';
+import {
+  getWarehouseMovement,
+  listWarehouseBalances,
+} from '../../../lib/warehouse/ledgerRepository';
+import { auth } from '../../../lib/firebase';
 import {
   createWarehouseDestination,
   finalizeWarehouseMaterialWithdrawal,
@@ -65,6 +71,12 @@ import {
   type WarehouseDestinationListItem,
   type WarehouseWithdrawalLineInput,
 } from '../../../lib/warehouse/withdrawal';
+import {
+  downloadWarehouseOutboundDocuments,
+  printWarehouseOutboundDocuments,
+  type WarehouseOutboundDocumentLine,
+  type WarehouseOutboundDocumentsInput,
+} from '../pdf/WarehouseOutboundDocuments';
 import { WarehouseConsumptionReports } from './WarehouseConsumptionReports';
 
 type SurfaceTab = 'checkout' | 'reports';
@@ -230,6 +242,62 @@ function readDraft(workspaceId: string): PersistedDraft | null {
   }
 }
 
+
+async function resolveOutboundDocumentLines(
+  workspaceId: string,
+  cart: CartLine[],
+  lots: WarehouseLotListItem[]
+): Promise<WarehouseOutboundDocumentLine[]> {
+  const lotById = new Map(
+    lots.map((item) => [item.lot.id, item.lot])
+  );
+  const movementIds = Array.from(
+    new Set(
+      cart
+        .map((line) => line.lotId ? lotById.get(line.lotId)?.origin.movementId || null : null)
+        .filter((value): value is string => Boolean(value))
+    )
+  );
+
+  const movements = new Map<string, Awaited<ReturnType<typeof getWarehouseMovement>>>();
+  await Promise.all(
+    movementIds.map(async (movementId) => {
+      movements.set(
+        movementId,
+        await getWarehouseMovement(workspaceId, movementId)
+      );
+    })
+  );
+
+  return cart.map((line) => {
+    const lot = line.lotId ? lotById.get(line.lotId) || null : null;
+    const originMovement = lot?.origin.movementId
+      ? movements.get(lot.origin.movementId) || null
+      : null;
+    const source = originMovement?.source?.kind === 'INVOICE'
+      ? originMovement.source
+      : null;
+
+    return {
+      lineId: line.lineId,
+      materialDescription: line.materialDescription,
+      quantity: line.baseQuantity,
+      unitLabel: line.unitLabel,
+      presentationLabel: line.presentationLabel,
+      positionLabel: line.positionLabel,
+      lotCode: line.lotCode,
+      barcode: line.barcode,
+      invoiceId:
+        source?.invoiceId
+        || (lot?.origin.kind === 'INVOICE' ? lot.origin.invoiceId : null),
+      empenhoId: source?.empenhoId || null,
+      supplier:
+        source?.supplier
+        || (lot?.origin.kind === 'INVOICE' ? lot.origin.supplier : null),
+    };
+  });
+}
+
 export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: string }) {
   const scannerRef = useRef<HTMLInputElement>(null);
   const quantityRef = useRef<HTMLInputElement>(null);
@@ -272,6 +340,8 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
   const [manageDestinations, setManageDestinations] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageKind, setMessageKind] = useState<'success' | 'error' | 'info'>('info');
+  const [lastDocuments, setLastDocuments] =
+    useState<WarehouseOutboundDocumentsInput | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -647,22 +717,89 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
   };
 
   const finalize = async () => {
-    if (working || cart.length === 0 || !destinationId || !withdrawnBy.trim() || cartIssues.length > 0) return;
+    if (
+      working
+      || cart.length === 0
+      || !destinationId
+      || !withdrawnBy.trim()
+      || cartIssues.length > 0
+    ) return;
+
+    const cartSnapshot = cart.map((line) => ({ ...line }));
+    const destinationName =
+      activeDestinations.find((item) => item.destination.id === destinationId)?.destination.name
+      || 'Destino não identificado';
+
     setWorking(true);
     setMessage(null);
+
+    let finalizedInput: WarehouseOutboundDocumentsInput | null = null;
+
     try {
       const result = await finalizeWarehouseMaterialWithdrawal(workspaceId, {
         withdrawalId,
         destinationId,
         withdrawnBy,
-        lines: cart,
+        lines: cartSnapshot,
       });
-      if (result.withdrawal.status !== 'FINALIZED') throw new Error('WAREHOUSE_WITHDRAWAL_INCOMPLETE');
+
+      if (result.withdrawal.status !== 'FINALIZED') {
+        throw new Error('WAREHOUSE_WITHDRAWAL_INCOMPLETE');
+      }
+
+      const documentLines = await resolveOutboundDocumentLines(
+        workspaceId,
+        cartSnapshot,
+        state.lots
+      );
+      const currentUser = auth.currentUser;
+
+      finalizedInput = {
+        workspaceId,
+        ug: result.withdrawal.ug,
+        operatorName:
+          currentUser?.displayName?.trim()
+          || currentUser?.email?.trim()
+          || null,
+        withdrawalId: result.withdrawal.id,
+        destinationName: result.withdrawal.destinationName,
+        withdrawnBy: result.withdrawal.withdrawnBy,
+        finalizedAt: result.withdrawal.finalizedAt || new Date().toISOString(),
+        lines: documentLines,
+      };
+
+      setLastDocuments(finalizedInput);
+
+      let pdfNote = '';
+      try {
+        const identity = await downloadWarehouseOutboundDocuments(finalizedInput);
+        const unresolved = documentLines.filter(
+          (line) => !line.invoiceId || !line.empenhoId
+        ).length;
+        pdfNote =
+          ' PDF gerado automaticamente · controle '
+          + identity.controlNumber
+          + ' · código '
+          + identity.controlCode
+          + (unresolved > 0
+            ? ' · ' + unresolved + ' linha(s) exigem conferência manual de NF/NE no documento SISCOFIS.'
+            : '.');
+      } catch (pdfError) {
+        pdfNote =
+          ' A saída foi concluída, mas o PDF não pôde ser baixado automaticamente. '
+          + (pdfError instanceof Error ? pdfError.message : 'Use “Baixar novamente”.');
+      }
+
       setMessageKind('success');
       setMessage(
-        'Saída finalizada com sucesso · ' + result.withdrawal.id + ' · '
-          + result.withdrawal.expectedLineCount + ' linha(s).'
+        'Saída finalizada com sucesso · '
+        + result.withdrawal.id
+        + ' · '
+        + result.withdrawal.expectedLineCount
+        + ' linha(s).'
+        + pdfNote
       );
+
       resetAfterSuccess();
       await refresh();
       setTimeout(() => scannerRef.current?.focus(), 0);
@@ -670,7 +807,10 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       setRetryRequired(true);
       setReviewing(true);
       setMessageKind('error');
-      setMessage(errorMessage(error) + ' O carrinho foi bloqueado para preservar a identidade e permitir retry seguro.');
+      setMessage(
+        errorMessage(error)
+        + ' O carrinho foi bloqueado para preservar a identidade e permitir retry seguro.'
+      );
       await refresh();
     } finally {
       setWorking(false);
@@ -877,6 +1017,40 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                     ? 'border-rose-300/15 bg-rose-400/[0.06] text-rose-200'
                     : 'border-blue-300/12 bg-blue-400/[0.04] text-blue-100')}>
               {message}
+            </div>
+          )}
+
+          {lastDocuments && (
+            <div
+              data-testid="warehouse-outbound-last-documents"
+              className="flex flex-col gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div>
+                <p className="text-xs font-black text-white">
+                  Documentos da última saída
+                </p>
+                <p className="mt-1 text-[10px] leading-4 text-slate-500">
+                  Um único PDF contém a Ficha de Saída de Material e a Ficha Auxiliar de Pedido SISCOFIS.
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => void downloadWarehouseOutboundDocuments(lastDocuments)}
+                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 text-[10px] font-black text-slate-200"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Baixar novamente
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void printWarehouseOutboundDocuments(lastDocuments)}
+                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 text-[10px] font-black text-slate-200"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  Imprimir
+                </button>
+              </div>
             </div>
           )}
 
@@ -1104,6 +1278,10 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                     Destino: <strong className="text-white">{activeDestinations.find((item) => item.destination.id === destinationId)?.destination.name || '—'}</strong><br />
                     Retirado por: <strong className="text-white">{withdrawnBy}</strong><br />
                     Itens: <strong className="text-white">{cart.length}</strong>
+                  </p>
+                  <p className="mt-2 rounded-xl border border-white/[0.07] bg-black/15 px-3 py-2 text-[9px] leading-4 text-slate-500">
+                    Ao finalizar, o EMPROVEX gera automaticamente um PDF com dois documentos:
+                    ficha para retirada física com localização exata e ficha auxiliar para o Pedido de Material no SISCOFIS.
                   </p>
                   <div className="mt-2 max-h-24 overflow-y-auto text-[9px] leading-5 text-slate-500">
                     {cart.slice(0, 12).map((line) => (
