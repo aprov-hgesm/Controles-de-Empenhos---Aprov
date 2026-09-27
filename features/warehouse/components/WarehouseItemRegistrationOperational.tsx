@@ -40,9 +40,10 @@ import {
 } from '../../../lib/warehouse/locationRepository';
 import { WarehouseSiscofisOperational } from './WarehouseSiscofisOperational';
 import { WarehouseImmediateConsumptionPanel } from './WarehouseImmediateConsumptionPanel';
+import { WarehouseAllocatedItemsOperational } from './WarehouseAllocatedItemsOperational';
 import type { ApplyWarehouseImmediateConsumptionResult } from '../../../lib/warehouse/withdrawalRepository';
 
-type RegistrationTab = 'invoices' | 'siscofis' | 'immediate';
+type RegistrationTab = 'invoices' | 'stored' | 'siscofis' | 'immediate';
 
 function formatDate(value: string | null): string {
   if (!value) return '—';
@@ -1128,11 +1129,13 @@ export function WarehouseItemRegistrationOperational({
   const searchParams = useSearchParams();
   const requested = searchParams.get('aba');
   const requestedTab: RegistrationTab =
-    requested === 'siscofis'
-      ? 'siscofis'
-      : requested === 'consumo-imediato'
-        ? 'immediate'
-        : 'invoices';
+    requested === 'itens-armazenados'
+      ? 'stored'
+      : requested === 'siscofis'
+        ? 'siscofis'
+        : requested === 'consumo-imediato'
+          ? 'immediate'
+          : 'invoices';
   const [tab, setTab] = useState<RegistrationTab>(requestedTab);
 
   useEffect(() => {
@@ -1152,6 +1155,17 @@ export function WarehouseItemRegistrationOperational({
           }
         >
           Notas Fiscais pendentes
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('stored')}
+          className={
+            tab === 'stored'
+              ? 'rounded-xl bg-white px-4 py-2 text-xs font-black text-[#00288e] shadow-sm'
+              : 'rounded-xl px-4 py-2 text-xs font-bold text-slate-500'
+          }
+        >
+          Itens armazenados
         </button>
         <button
           type="button"
@@ -1178,6 +1192,7 @@ export function WarehouseItemRegistrationOperational({
       </div>
 
       {tab === 'invoices' && <InvoiceRegistrationQueue workspaceId={workspaceId} />}
+      {tab === 'stored' && <WarehouseAllocatedItemsOperational workspaceId={workspaceId} />}
       {tab === 'siscofis' && <WarehouseSiscofisOperational workspaceId={workspaceId} />}
       {tab === 'immediate' && <ImmediateConsumptionReport workspaceId={workspaceId} />}
     </div>
