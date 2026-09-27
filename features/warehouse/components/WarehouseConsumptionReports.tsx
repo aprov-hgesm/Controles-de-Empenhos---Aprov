@@ -310,20 +310,20 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
 
   return (
     <div className="space-y-5" data-testid="warehouse-consumption-reports">
-      <section className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 sm:p-5">
+      <section className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur-md sm:p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-blue-300/70">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#00288e]/70">
               consumo operacional · base SISCOFIS
             </p>
-            <h3 className="mt-1 text-lg font-black text-white">Relatórios de Saída e Consumo</h3>
-            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">
+            <h3 className="mt-1 text-lg font-black text-slate-900">Relatórios de Saída e Consumo</h3>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-600">
               Consolidação auditável sem substituir o ledger. Saídas de estoque e consumos
               imediatos podem ser separados ou analisados juntos.
             </p>
           </div>
           <button type="button" onClick={() => void generate()} disabled={loading}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-blue-300/20 bg-blue-400/[0.1] px-4 text-xs font-black text-blue-100 disabled:opacity-50">
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm hover:bg-[#001f6f] disabled:opacity-50">
             <RefreshCw className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
             Gerar relatório
           </button>
@@ -339,8 +339,8 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
           ] as Array<[PeriodPreset, string]>).map(([id, label]) => (
             <button key={id} type="button" onClick={() => applyPreset(id)}
               className={preset === id
-                ? 'rounded-xl border border-blue-300/25 bg-blue-400/[0.12] px-3 py-2 text-[11px] font-black text-blue-100'
-                : 'rounded-xl border border-white/[0.08] px-3 py-2 text-[11px] font-bold text-slate-400 hover:text-white'}>
+                ? 'rounded-xl bg-[#00288e] px-3 py-2 text-[11px] font-black text-white shadow-sm'
+                : 'rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-600 hover:bg-blue-50 hover:text-[#00288e]'}>
               {label}
             </button>
           ))}
@@ -350,17 +350,17 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
           <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
             Início
             <input type="date" value={startDate} onChange={(event) => { setPreset('custom'); setStartDate(event.target.value); }}
-              className="mt-1.5 h-10 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-sm text-white" />
+              className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-[#00288e]" />
           </label>
           <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
             Fim
             <input type="date" value={endDate} onChange={(event) => { setPreset('custom'); setEndDate(event.target.value); }}
-              className="mt-1.5 h-10 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-sm text-white" />
+              className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-[#00288e]" />
           </label>
           <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
             Origem
             <select value={originFilter} onChange={(event) => setOriginFilter(event.target.value as OriginFilter)}
-              className="mt-1.5 h-10 w-full rounded-xl border border-white/10 bg-[#071020] px-3 text-sm text-white">
+              className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-[#00288e]">
               <option value="ALL">Todos</option>
               <option value="STOCK_OUTBOUND">Saída de estoque</option>
               <option value="IMMEDIATE_CONSUMPTION">Consumo imediato</option>
@@ -369,7 +369,7 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
           <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
             Destino
             <select value={destinationFilter} onChange={(event) => setDestinationFilter(event.target.value)}
-              className="mt-1.5 h-10 w-full rounded-xl border border-white/10 bg-[#071020] px-3 text-sm text-white">
+              className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-[#00288e]">
               <option value="ALL">Todos os destinos</option>
               {destinations.map((destination) => <option key={destination} value={destination}>{destination}</option>)}
             </select>
@@ -378,7 +378,7 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
             Retirante
             <input value={withdrawnFilter} onChange={(event) => setWithdrawnFilter(event.target.value)}
               placeholder="Filtrar por nome"
-              className="mt-1.5 h-10 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-sm text-white" />
+              className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-[#00288e]" />
           </label>
         </div>
         <p className="mt-3 flex items-center gap-2 text-[10px] text-slate-500">
@@ -387,10 +387,10 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
         </p>
       </section>
 
-      {message && <div className="rounded-xl border border-blue-300/10 bg-blue-400/[0.04] px-4 py-3 text-xs font-semibold text-blue-100">{message}</div>}
+      {message && <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-semibold text-[#00288e]">{message}</div>}
 
       {(truncated || legacyCoverageLimited) && (
-        <div className="rounded-xl border border-amber-300/15 bg-amber-400/[0.05] px-4 py-3 text-xs leading-5 text-amber-100">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-800">
           A consulta atingiu um limite bounded. Refine o período para cobertura integral; registros fora da janela não são inferidos.
         </div>
       )}
@@ -402,35 +402,35 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
           ['Saídas de estoque', filtered.filter((item) => item.origin === 'STOCK_OUTBOUND').length],
           ['Consumo imediato', filtered.filter((item) => item.origin === 'IMMEDIATE_CONSUMPTION').length],
         ].map(([label, value]) => (
-          <div key={String(label)} className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4">
+          <div key={String(label)} className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur-md">
             <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-500">{label}</p>
-            <p className="mt-2 text-2xl font-black text-white">{value}</p>
+            <p className="mt-2 text-2xl font-black text-slate-900">{value}</p>
           </div>
         ))}
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4">
-          <h4 className="text-sm font-black text-white">Consolidado por material</h4>
+        <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur-md">
+          <h4 className="text-sm font-black text-slate-900">Consolidado por material</h4>
           <div className="mt-3 space-y-2">
             {materialGroups.length === 0 ? <p className="text-xs text-slate-600">Sem dados no filtro atual.</p> : materialGroups.map((item) => (
-              <div key={item.description + item.unit} className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-black/15 px-3 py-2.5">
-                <div><p className="text-xs font-bold text-white">{item.description}</p><p className="text-[10px] text-slate-500">{item.rows} registro(s)</p></div>
-                <p className="text-sm font-black text-blue-100">{numberLabel(item.quantity)} {item.unit}</p>
+              <div key={item.description + item.unit} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+                <div><p className="text-xs font-bold text-slate-800">{item.description}</p><p className="text-[10px] text-slate-500">{item.rows} registro(s)</p></div>
+                <p className="text-sm font-black text-[#00288e]">{numberLabel(item.quantity)} {item.unit}</p>
               </div>
             ))}
           </div>
         </div>
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4">
-          <h4 className="text-sm font-black text-white">Consolidado por destino</h4>
+        <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur-md">
+          <h4 className="text-sm font-black text-slate-900">Consolidado por destino</h4>
           <div className="mt-3 space-y-2">
             {destinationGroups.length === 0 ? <p className="text-xs text-slate-600">Sem dados no filtro atual.</p> : destinationGroups.map(([destination, items]) => (
-              <div key={destination} className="rounded-xl border border-white/[0.06] bg-black/15 px-3 py-2.5">
+              <div key={destination} className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs font-bold text-white">{destination}</p>
+                  <p className="text-xs font-bold text-slate-800">{destination}</p>
                   <p className="text-[10px] font-bold text-slate-400">{items.length} registro(s)</p>
                 </div>
-                <p className="mt-1 text-[10px] text-blue-100">{unitTotals(items)}</p>
+                <p className="mt-1 text-[10px] text-[#00288e]">{unitTotals(items)}</p>
               </div>
             ))}
           </div>
@@ -438,23 +438,23 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4">
-          <h4 className="text-sm font-black text-white">Por retirante/recebedor</h4>
+        <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur-md">
+          <h4 className="text-sm font-black text-slate-900">Por retirante/recebedor</h4>
           <div className="mt-3 space-y-2">
             {withdrawnGroups.map(([name, items]) => (
-              <div key={name} className="rounded-xl border border-white/[0.06] bg-black/15 px-3 py-2.5">
-                <p className="text-xs font-bold text-white">{name}</p>
+              <div key={name} className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+                <p className="text-xs font-bold text-slate-800">{name}</p>
                 <p className="mt-1 text-[10px] text-slate-500">{items.length} registro(s) · {unitTotals(items)}</p>
               </div>
             ))}
           </div>
         </div>
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4">
-          <h4 className="text-sm font-black text-white">Por dia</h4>
+        <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur-md">
+          <h4 className="text-sm font-black text-slate-900">Por dia</h4>
           <div className="mt-3 space-y-2">
             {dayGroups.map(([day, items]) => (
-              <div key={day} className="rounded-xl border border-white/[0.06] bg-black/15 px-3 py-2.5">
-                <p className="text-xs font-bold text-white">{day}</p>
+              <div key={day} className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+                <p className="text-xs font-bold text-slate-800">{day}</p>
                 <p className="mt-1 text-[10px] text-slate-500">{items.length} registro(s) · {unitTotals(items)}</p>
               </div>
             ))}
@@ -462,23 +462,23 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
         </div>
       </section>
 
-      <section className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 sm:p-5">
+      <section className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur-md sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h4 className="text-sm font-black text-white">Detalhamento auditável</h4>
+            <h4 className="text-sm font-black text-slate-900">Detalhamento auditável</h4>
             <p className="mt-1 text-[10px] text-slate-500">Uma projeção por movimento evita dupla contabilização. Registros legados permanecem identificados.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => void copyReport()} disabled={!filtered.length}
-              className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/10 px-3 text-[10px] font-black text-slate-300 disabled:opacity-40">
+              className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-[10px] font-black text-slate-700 hover:border-blue-200 hover:text-[#00288e] disabled:opacity-40">
               <Clipboard className="h-3.5 w-3.5" /> Copiar
             </button>
             <button type="button" onClick={exportCsv} disabled={!filtered.length}
-              className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/10 px-3 text-[10px] font-black text-slate-300 disabled:opacity-40">
+              className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-[10px] font-black text-slate-700 hover:border-blue-200 hover:text-[#00288e] disabled:opacity-40">
               <Download className="h-3.5 w-3.5" /> CSV
             </button>
             <button type="button" onClick={() => window.print()} disabled={!filtered.length}
-              className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/10 px-3 text-[10px] font-black text-slate-300 disabled:opacity-40">
+              className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-[10px] font-black text-slate-700 hover:border-blue-200 hover:text-[#00288e] disabled:opacity-40">
               <Printer className="h-3.5 w-3.5" /> Imprimir
             </button>
           </div>
@@ -487,7 +487,7 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-[1100px] w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-white/[0.08] text-[9px] uppercase tracking-wide text-slate-500">
+              <tr className="border-b border-slate-200 bg-slate-50/70 text-[9px] uppercase tracking-wide text-slate-500">
                 {['Data/hora','Origem','Material','Quantidade','Destino','Retirante','Saída / Intake','Movimento','SISCOFIS'].map((label) =>
                   <th key={label} className="px-2 py-2">{label}</th>
                 )}
@@ -495,11 +495,11 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
             </thead>
             <tbody>
               {filtered.map((record) => (
-                <tr key={record.id} className="border-b border-white/[0.05] text-slate-300">
+                <tr key={record.id} className="border-b border-slate-100 text-slate-700">
                   <td className="px-2 py-3 whitespace-nowrap">{dateTimeLabel(record.occurredAt)}</td>
                   <td className="px-2 py-3">{originLabel(record.origin)}</td>
                   <td className="px-2 py-3">
-                    <p className="font-bold text-white">{record.materialDescription}</p>
+                    <p className="font-bold text-slate-900">{record.materialDescription}</p>
                     <p className="mt-1 font-mono text-[9px] text-slate-600">{record.materialId || 'sem entrada em estoque'}</p>
                   </td>
                   <td className="px-2 py-3 whitespace-nowrap">{numberLabel(record.quantity)} {record.unitLabel}</td>
@@ -509,23 +509,23 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
                   <td className="px-2 py-3 font-mono text-[9px]">{record.movementId || '—'}</td>
                   <td className="px-2 py-3">
                     {record.legacy ? (
-                      <span className="rounded-full border border-slate-600 px-2 py-1 text-[9px] font-black text-slate-400">Legado</span>
+                      <span className="rounded-full border border-slate-300 bg-slate-50 px-2 py-1 text-[9px] font-black text-slate-600">Legado</span>
                     ) : (
                       <div className="flex flex-wrap items-center gap-1">
-                        <span className="rounded-full border border-blue-300/15 bg-blue-400/[0.06] px-2 py-1 text-[9px] font-black text-blue-100">
+                        <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-[9px] font-black text-[#00288e]">
                           {siscofisLabel(record.siscofisStatus)}
                         </span>
                         {record.siscofisStatus === 'PENDING' && (
                           <button type="button" disabled={workingId === record.id}
                             onClick={() => void updateSiscofis(record, 'PREPARED')}
-                            className="rounded-lg border border-white/10 px-2 py-1 text-[9px] font-bold text-slate-300 disabled:opacity-40">
+                            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[9px] font-bold text-slate-700 hover:text-[#00288e] disabled:opacity-40">
                             Preparar
                           </button>
                         )}
                         {record.siscofisStatus !== 'POSTED' && (
                           <button type="button" disabled={workingId === record.id}
                             onClick={() => void updateSiscofis(record, 'POSTED')}
-                            className="inline-flex items-center gap-1 rounded-lg border border-emerald-300/15 px-2 py-1 text-[9px] font-bold text-emerald-200 disabled:opacity-40">
+                            className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[9px] font-bold text-emerald-700 disabled:opacity-40">
                             <CheckCircle2 className="h-3 w-3" /> Lançado
                           </button>
                         )}
