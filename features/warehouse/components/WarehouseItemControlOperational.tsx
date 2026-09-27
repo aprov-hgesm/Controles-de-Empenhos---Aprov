@@ -8,14 +8,12 @@ import {
   ClipboardCheck,
   FileSpreadsheet,
   Gauge,
-  ScanLine,
   Settings2,
   ShieldCheck,
   Truck,
 } from 'lucide-react';
 
 import { WarehouseStockOperational } from './WarehouseStockOperational';
-import { WarehouseExpressOutbound } from './WarehouseExpressOutbound';
 import { WarehouseMovementsOperational } from './WarehouseMovementsOperational';
 import { WarehouseInventoryOperational } from './WarehouseInventoryOperational';
 import { WarehouseDeliveriesOperational } from './WarehouseDeliveriesOperational';
@@ -28,7 +26,6 @@ import { WarehouseLogisticsReports } from './WarehouseLogisticsReports';
 type ControlTab =
   | 'summary'
   | 'stock'
-  | 'outbound'
   | 'movements'
   | 'inventory'
   | 'deliveries'
@@ -44,7 +41,6 @@ const CONTROL_TABS: Array<{
 }> = [
   { id: 'summary', label: 'Resumo logístico', icon: Gauge },
   { id: 'stock', label: 'Estoque', icon: Boxes },
-  { id: 'outbound', label: 'Saída de Material', icon: ScanLine },
   { id: 'movements', label: 'Movimentações', icon: Gauge },
   { id: 'inventory', label: 'Inventário', icon: ClipboardCheck },
   { id: 'deliveries', label: 'Entregas', icon: Truck },
@@ -93,7 +89,6 @@ export function WarehouseItemControlOperational({ workspaceId }: { workspaceId: 
 
       {tab === 'summary' && <WarehouseLogisticsDashboard workspaceId={workspaceId} />}
       {tab === 'stock' && <WarehouseStockOperational workspaceId={workspaceId} />}
-      {tab === 'outbound' && <WarehouseExpressOutbound workspaceId={workspaceId} />}
       {tab === 'movements' && <WarehouseMovementsOperational workspaceId={workspaceId} />}
       {tab === 'inventory' && <WarehouseInventoryOperational workspaceId={workspaceId} />}
       {tab === 'deliveries' && <WarehouseDeliveriesOperational workspaceId={workspaceId} />}
