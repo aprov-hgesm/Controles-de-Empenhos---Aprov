@@ -1526,7 +1526,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
 
   const summary = useMemo(() => ({
     invoices: invoiceGroups.length,
-    pregões: pregaoOptions.length,
+    pregaos: pregaoOptions.length,
     actionableInvoices: invoiceGroups.filter(
       (group) => group.actionableItems > 0
     ).length,
@@ -1622,7 +1622,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
           ['Notas Fiscais', summary.invoices, 'NFs carregadas na fila'],
           ['NFs a tratar', summary.actionableInvoices, 'possuem item pendente'],
           ['Itens pendentes', summary.pendingItems, 'visíveis apenas ao detalhar a NF'],
-          ['Pregões', summary.pregões, 'para filtro e encaminhamento em lote'],
+          ['Pregões', summary.pregaos, 'para filtro e encaminhamento em lote'],
           ['Reconciliação', summary.reconciliationInvoices, 'NFs que exigem revisão'],
         ].map(([label, value, description], index) => (
           <div
