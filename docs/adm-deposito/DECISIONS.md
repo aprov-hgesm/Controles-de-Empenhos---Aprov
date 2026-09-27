@@ -2026,3 +2026,15 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - A ação da NF considera somente itens `PENDING` ou `PARTIALLY_PROCESSED` com quantidade pendente positiva.
 - Itens `PROCESSED` ou em reconciliação não devem ser reprocessados automaticamente.
 - A cobertura global da fila não deve bloquear uma NF individual já carregada, pois o conjunto de itens daquela NF é conhecido no documento canônico.
+
+
+## D-099 — NF/Pregão fora do depósito = remoção lógica da fila
+
+- Para decisões coletivas no Cadastro de Itens, `Consumo imediato` deixa de ser opção de NF/Pregão.
+- Uma NF ou as NFs pendentes de um Pregão que não devam ingressar no depósito devem usar `Remover da fila`.
+- A remoção deve afetar somente a fila do ADM Depósito; nunca deve apagar a NF canônica, empenho ou dados de recebimento.
+- A remoção não representa consumo, baixa, transferência ou movimentação de estoque.
+- Nenhum ledger, saldo, lote, barcode, material ou relatório de consumo deve ser criado por essa ação.
+- A persistência usa uma exclusão determinística por `invoiceRecordKey`, permitindo idempotência e evitando documentos agregados crescentes.
+- O carregamento da fila resolve exclusões pelos IDs exatos das NFs consultadas, sem listener e sem varredura global.
+- O fluxo de consumo imediato já existente fica preservado apenas para compatibilidade histórica e operação individual; não deve ser usado como destino coletivo de NF/Pregão.
