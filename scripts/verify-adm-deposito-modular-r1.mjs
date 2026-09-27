@@ -110,8 +110,13 @@ for (const helper of [
 
 requireText(
   rules,
-  "request.resource.data.schemaVersion == 'warehouse_intake_queue_exclusion_v1'",
-  'Contrato inline de queueExclusions ausente.'
+  "match /queueExclusions/{exclusionId}",
+  'Contrato de queueExclusions ausente.'
+);
+requireText(
+  rules,
+  "allow read, create, update: if canAccessWarehouseModule(workspaceId);",
+  'queueExclusions perdeu o gate founder-only/workspace.'
 );
 
 requireText(
