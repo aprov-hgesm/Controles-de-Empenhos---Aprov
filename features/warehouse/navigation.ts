@@ -22,10 +22,10 @@ export const WAREHOUSE_SECTIONS: readonly WarehouseSectionDefinition[] = [
   },
   {
     id: 'registration',
-    label: 'Cadastro de Itens',
+    label: 'Alocação de Material',
     href: '/adm-deposito/cadastro-de-itens',
-    eyebrow: 'Entrada e migração',
-    description: 'Notas fiscais pendentes de tratamento logístico, alocação de itens e migração do inventário SISCOFIS.',
+    eyebrow: 'Alocação e migração',
+    description: 'Notas fiscais pendentes de tratamento logístico, alocação física de materiais e migração do inventário SISCOFIS.',
   },
   {
     id: 'depots',
