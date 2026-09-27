@@ -830,8 +830,8 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
   if (state.loading) {
     return (
       <div className="mt-6 flex min-h-[320px] items-center justify-center" data-testid="warehouse-material-withdrawal">
-        <RefreshCw className="h-5 w-5 animate-spin text-blue-300" />
-        <span className="ml-3 text-sm text-slate-400">Preparando terminal de saída…</span>
+        <RefreshCw className="h-5 w-5 animate-spin text-[#00288e]" />
+        <span className="ml-3 text-sm text-slate-600">Preparando terminal de saída…</span>
       </div>
     );
   }
@@ -840,17 +840,17 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     <div className="mt-6 space-y-5" data-testid="warehouse-material-withdrawal">
       <div data-testid="warehouse-express-outbound" className="hidden" />
 
-      <div className="inline-flex rounded-2xl border border-white/[0.08] bg-black/20 p-1">
+      <div className="inline-flex rounded-2xl border border-slate-200 bg-slate-100 p-1">
         <button type="button" onClick={() => setTab('checkout')}
           className={tab === 'checkout'
-            ? 'rounded-xl bg-white/[0.09] px-4 py-2 text-xs font-black text-white shadow-sm'
-            : 'rounded-xl px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-300'}>
+            ? 'rounded-xl bg-[#00288e] px-4 py-2 text-xs font-black text-slate-900 shadow-sm'
+            : 'rounded-xl px-4 py-2 text-xs font-bold text-slate-500 hover:bg-blue-50 hover:text-[#00288e]'}>
           Nova Saída
         </button>
         <button type="button" onClick={() => setTab('reports')}
           className={tab === 'reports'
-            ? 'rounded-xl bg-white/[0.09] px-4 py-2 text-xs font-black text-white shadow-sm'
-            : 'rounded-xl px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-300'}>
+            ? 'rounded-xl bg-[#00288e] px-4 py-2 text-xs font-black text-slate-900 shadow-sm'
+            : 'rounded-xl px-4 py-2 text-xs font-bold text-slate-500 hover:bg-blue-50 hover:text-[#00288e]'}>
           Relatórios
         </button>
       </div>
@@ -859,19 +859,19 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
         <WarehouseConsumptionReports workspaceId={workspaceId} />
       ) : (
         <>
-          <section className="overflow-hidden rounded-[24px] border border-blue-300/15 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.11),transparent_35%),linear-gradient(135deg,rgba(4,12,28,0.97),rgba(5,15,31,0.93))] shadow-[0_24px_70px_rgba(0,0,0,0.28)]">
+          <section className="overflow-hidden rounded-2xl border border-blue-100/80 bg-white/80 shadow-sm backdrop-blur-md">
             <div className="grid gap-0 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
-              <div className="border-b border-white/[0.06] p-5 xl:border-b-0 xl:border-r sm:p-6">
+              <div className="border-b border-slate-200 p-5 xl:border-b-0 xl:border-r sm:p-6">
                 <div className="flex items-start gap-3">
-                  <div className="rounded-2xl border border-blue-300/15 bg-blue-400/[0.08] p-3">
-                    <ScanLine className="h-5 w-5 text-blue-200" />
+                  <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3">
+                    <ScanLine className="h-5 w-5 text-[#00288e]" />
                   </div>
                   <div className="min-w-0">
-                    <p className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-blue-300/70">
+                    <p className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-[#00288e]/70">
                       terminal premium · scanner HID
                     </p>
-                    <h3 className="mt-1 text-xl font-black text-white">SCAN → quantidade → TAB</h3>
-                    <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">
+                    <h3 className="mt-1 text-xl font-black text-slate-900">SCAN → quantidade → TAB</h3>
+                    <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600">
                       Leitor USB e teclado usam o mesmo fluxo. Adicionar uma linha apenas prepara o carrinho; o estoque só muda em Finalizar saída.
                     </p>
                   </div>
@@ -881,29 +881,29 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                   <input ref={scannerRef} data-testid="warehouse-scanner-input" value={scannerCode}
                     onChange={(event) => setScannerCode(event.target.value)} disabled={retryRequired}
                     autoComplete="off" placeholder="Leia ou digite o código de barras"
-                    className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/25 px-4 py-3.5 font-mono text-sm text-white outline-none transition focus:border-blue-300/45 focus:ring-2 focus:ring-blue-400/10 disabled:opacity-40" />
+                    className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3.5 font-mono text-sm text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-[#00288e] focus:ring-2 focus:ring-blue-100 disabled:opacity-40" />
                   <button type="submit" disabled={!scannerCode.trim() || working || retryRequired}
-                    className="rounded-2xl border border-blue-300/20 bg-blue-400/[0.1] px-4 text-xs font-black text-blue-100 disabled:opacity-40">
+                    className="rounded-xl bg-[#00288e] px-4 text-xs font-black text-slate-900 shadow-sm hover:bg-[#001f6f] disabled:opacity-40">
                     Identificar
                   </button>
                 </form>
 
-                <div className="mt-4 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                   <div className="flex items-center gap-2">
-                    <PackageSearch className="h-4 w-4 text-slate-300" />
-                    <p className="text-xs font-black text-white">Pesquisa manual</p>
+                    <PackageSearch className="h-4 w-4 text-[#00288e]" />
+                    <p className="text-xs font-black text-slate-900">Pesquisa manual</p>
                   </div>
                   <div className="mt-3 grid gap-2 md:grid-cols-2">
                     <input value={materialSearch} onChange={(event) => setMaterialSearch(event.target.value)}
                       disabled={retryRequired} placeholder="Descrição, alias ou ID"
-                      className="rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-300/30 disabled:opacity-40" />
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#00288e] disabled:opacity-40" />
                     <select value={selectedMaterialId} disabled={retryRequired}
                       onChange={(event) => {
                         const material = state.materials.find((item) => item.id === event.target.value);
                         if (material) selectMaterial(material, null);
                         else clearCurrentLine();
                       }}
-                      className="rounded-xl border border-white/10 bg-[#071020] px-3 py-2.5 text-sm text-white disabled:opacity-40">
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-[#00288e] disabled:opacity-40">
                       <option value="">Selecione um material…</option>
                       {filteredMaterials.map((material) => <option key={material.id} value={material.id}>{material.description}</option>)}
                     </select>
@@ -915,28 +915,28 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                 {!selectedMaterial || !selectedBalance ? (
                   <div className="grid min-h-[260px] place-items-center text-center">
                     <div>
-                      <ShoppingCart className="mx-auto h-8 w-8 text-slate-700" />
-                      <p className="mt-3 text-sm font-bold text-slate-400">Aguardando material</p>
-                      <p className="mt-1 text-[11px] text-slate-600">O foco retorna ao barcode após cada linha.</p>
+                      <ShoppingCart className="mx-auto h-8 w-8 text-slate-300" />
+                      <p className="mt-3 text-sm font-bold text-slate-600">Aguardando material</p>
+                      <p className="mt-1 text-[11px] text-slate-500">O foco retorna ao barcode após cada linha.</p>
                     </div>
                   </div>
                 ) : (
                   <div>
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-base font-black text-white">{selectedMaterial.description}</p>
+                        <p className="truncate text-base font-black text-slate-900">{selectedMaterial.description}</p>
                         <p className="mt-1 font-mono text-[9px] text-slate-600">{selectedMaterial.id}</p>
                       </div>
-                      <div className="rounded-xl border border-emerald-300/15 bg-emerald-400/[0.05] px-3 py-2 text-right">
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-right">
                         <p className="text-[8px] uppercase tracking-wide text-slate-500">saldo oficial</p>
-                        <p className="text-sm font-black text-emerald-200">
+                        <p className="text-sm font-black text-emerald-700">
                           {numberLabel(selectedBalance.quantity)} {unitLabel(selectedMaterial.unit)}
                         </p>
                       </div>
                     </div>
 
                     {selectedBarcode && (
-                      <p className="mt-3 rounded-xl border border-blue-300/10 bg-blue-400/[0.04] px-3 py-2 text-[10px] text-blue-100">
+                      <p className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[10px] text-[#00288e]">
                         Barcode {selectedBarcode.barcode} · fator {numberLabel(selectedBarcode.factorToBaseUnit)}
                       </p>
                     )}
@@ -946,7 +946,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                         Apresentação
                         <select value={selectedPresentation?.key || ''} disabled={Boolean(selectedBarcode)}
                           onChange={(event) => setSelectedPresentationKey(event.target.value)}
-                          className="mt-1.5 h-11 w-full rounded-xl border border-white/10 bg-[#071020] px-3 text-sm text-white disabled:opacity-60">
+                          className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-[#00288e] disabled:opacity-60">
                           {presentations.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
                         </select>
                       </label>
@@ -961,7 +961,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                             }
                           }}
                           inputMode="decimal" autoComplete="off" placeholder="Ex.: 3"
-                          className="mt-1.5 h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-sm text-white outline-none focus:border-blue-300/40 focus:ring-2 focus:ring-blue-400/10" />
+                          className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-[#00288e] focus:ring-2 focus:ring-blue-100" />
                       </label>
                     </div>
 
@@ -969,7 +969,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                       <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
                         Posição
                         <select value={positionKey} onChange={(event) => { setPositionKey(event.target.value); setSelectedLotId(''); }}
-                          className="mt-1.5 h-11 w-full rounded-xl border border-white/10 bg-[#071020] px-3 text-sm text-white">
+                          className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-[#00288e]">
                           {positionOptions.map((option) => (
                             <option key={option.key} value={option.key}>{option.label} · {numberLabel(option.quantity)}</option>
                           ))}
@@ -978,7 +978,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                       <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
                         Lote / FEFO
                         <select value={selectedLotId} onChange={(event) => setSelectedLotId(event.target.value)}
-                          className="mt-1.5 h-11 w-full rounded-xl border border-white/10 bg-[#071020] px-3 text-sm text-white">
+                          className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-[#00288e]">
                           <option value="">Sem lote explícito</option>
                           {lotOptions.map((lot) => (
                             <option key={lot.id} value={lot.id}>
@@ -990,14 +990,14 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                     </div>
 
                     {fefo && selectedLotId === fefo.id && (
-                      <p className="mt-3 rounded-xl border border-amber-300/12 bg-amber-400/[0.035] px-3 py-2 text-[10px] text-amber-100">
+                      <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] text-amber-800">
                         FEFO recomendado: {fefo.code} · validade {fefo.expiresOn || 'não informada'}. A baixa só ocorrerá na finalização.
                       </p>
                     )}
 
                     <button data-testid="warehouse-outbound-submit" type="button" onClick={addCurrentLine}
                       disabled={!requestedQuantity || !selectedPosition || !selectedPresentation}
-                      className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-400/[0.09] px-4 py-3 text-sm font-black text-emerald-100 disabled:opacity-40">
+                      className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00288e] px-4 py-3 text-sm font-black text-slate-900 shadow-sm hover:bg-[#001f6f] disabled:opacity-40">
                       <Plus className="h-4 w-4" /> Adicionar ao carrinho · ENTER/TAB
                     </button>
                   </div>
@@ -1006,16 +1006,16 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
             </div>
           </section>
 
-          {state.error && <div className="rounded-xl border border-rose-300/15 bg-rose-400/[0.06] px-4 py-3 text-xs text-rose-200">{state.error}</div>}
+          {state.error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700">{state.error}</div>}
 
           {message && (
             <div data-testid="warehouse-outbound-message"
               className={'rounded-xl border px-4 py-3 text-xs font-semibold '
                 + (messageKind === 'success'
-                  ? 'border-emerald-300/15 bg-emerald-400/[0.06] text-emerald-200'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
                   : messageKind === 'error'
-                    ? 'border-rose-300/15 bg-rose-400/[0.06] text-rose-200'
-                    : 'border-blue-300/12 bg-blue-400/[0.04] text-blue-100')}>
+                    ? 'border-rose-200 bg-rose-50 text-rose-700'
+                    : 'border-blue-100 bg-blue-50 text-[#00288e]')}>
               {message}
             </div>
           )}
@@ -1023,10 +1023,10 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
           {lastDocuments && (
             <div
               data-testid="warehouse-outbound-last-documents"
-              className="flex flex-col gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur-md sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
-                <p className="text-xs font-black text-white">
+                <p className="text-xs font-black text-slate-900">
                   Documentos da última saída
                 </p>
                 <p className="mt-1 text-[10px] leading-4 text-slate-500">
@@ -1037,7 +1037,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                 <button
                   type="button"
                   onClick={() => void downloadWarehouseOutboundDocuments(lastDocuments)}
-                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 text-[10px] font-black text-slate-200"
+                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-[10px] font-black text-slate-700 hover:border-blue-200 hover:text-[#00288e]"
                 >
                   <Download className="h-3.5 w-3.5" />
                   Baixar novamente
@@ -1045,7 +1045,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                 <button
                   type="button"
                   onClick={() => void printWarehouseOutboundDocuments(lastDocuments)}
-                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 text-[10px] font-black text-slate-200"
+                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-[10px] font-black text-slate-700 hover:border-blue-200 hover:text-[#00288e]"
                 >
                   <Printer className="h-3.5 w-3.5" />
                   Imprimir
@@ -1057,13 +1057,13 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
           {unknownBarcode && !retryRequired && (
             <section
               data-testid="warehouse-barcode-association-panel"
-              className="rounded-2xl border border-amber-300/15 bg-amber-400/[0.04] p-4"
+              className="rounded-2xl border border-amber-200 bg-amber-50 p-4"
             >
               <div className="flex items-start gap-3">
-                <AlertTriangle className="mt-0.5 h-4 w-4 text-amber-200" />
+                <AlertTriangle className="mt-0.5 h-4 w-4 text-amber-700" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-black text-white">Código não cadastrado: {unknownBarcode}</p>
-                  <p className="mt-1 text-[10px] leading-5 text-slate-400">
+                  <p className="text-sm font-black text-slate-900">Código não cadastrado: {unknownBarcode}</p>
+                  <p className="mt-1 text-[10px] leading-5 text-slate-600">
                     Associe somente a um material canônico já existente. O barcode nunca substitui materialId.
                   </p>
                   <div className="mt-3 grid gap-2 md:grid-cols-2">
@@ -1073,7 +1073,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                         const material = state.materials.find((item) => item.id === event.target.value);
                         setAssociationPresentationKey(material ? warehouseMaterialUnitKey(material.unit) : '');
                       }}
-                      className="rounded-xl border border-white/10 bg-[#071020] px-3 py-2.5 text-sm text-white">
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-[#00288e]">
                       <option value="">Material existente…</option>
                       {state.materials.filter((item) => item.status === 'active').map((item) => (
                         <option key={item.id} value={item.id}>{item.description}</option>
@@ -1082,14 +1082,14 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                     <select value={associationPresentationKey}
                       onChange={(event) => setAssociationPresentationKey(event.target.value)}
                       disabled={!associationMaterial}
-                      className="rounded-xl border border-white/10 bg-[#071020] px-3 py-2.5 text-sm text-white disabled:opacity-40">
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-[#00288e] disabled:opacity-40">
                       <option value="">Apresentação…</option>
                       {associationPresentations.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
                     </select>
                   </div>
                   <button type="button" onClick={() => void associateUnknownBarcode()}
                     disabled={working || !associationMaterial || !associationPresentationKey}
-                    className="mt-3 rounded-xl border border-amber-300/15 px-3 py-2 text-[10px] font-black text-amber-100 disabled:opacity-40">
+                    className="mt-3 rounded-xl border border-amber-300 bg-white px-3 py-2 text-[10px] font-black text-amber-800 disabled:opacity-40">
                     Associar código
                   </button>
                 </div>
@@ -1100,27 +1100,27 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
           <section className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)]">
             <div
               data-testid="warehouse-outbound-cart"
-              className="rounded-[24px] border border-white/[0.08] bg-white/[0.025] p-4 sm:p-5"
+              className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur-md sm:p-5"
             >
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <ShoppingCart className="h-4 w-4 text-blue-200" />
-                    <h3 className="text-sm font-black text-white">Carrinho da saída</h3>
+                    <ShoppingCart className="h-4 w-4 text-[#00288e]" />
+                    <h3 className="text-sm font-black text-slate-900">Carrinho da saída</h3>
                   </div>
                   <p className="mt-1 text-[10px] text-slate-500">
                     {cart.length} linha(s) · {new Set(cart.map((line) => line.materialId)).size} material(is) distinto(s)
                   </p>
                 </div>
                 {retryRequired && (
-                  <span className="rounded-full border border-amber-300/20 bg-amber-400/[0.06] px-2.5 py-1 text-[9px] font-black uppercase text-amber-100">
+                  <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[9px] font-black uppercase text-amber-800">
                     retry protegido
                   </span>
                 )}
               </div>
 
               {cart.length === 0 ? (
-                <div className="mt-4 rounded-2xl border border-dashed border-white/[0.08] p-8 text-center text-xs text-slate-600">
+                <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-8 text-center text-xs text-slate-500">
                   Leia um material para iniciar a retirada.
                 </div>
               ) : (
@@ -1130,16 +1130,16 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                       key={line.lineId}
                       data-testid="warehouse-outbound-cart-line"
                       data-material-id={line.materialId}
-                      className="rounded-2xl border border-white/[0.07] bg-black/15 p-3.5"
+                      className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3.5"
                     >
                       <div className="flex gap-3">
-                        <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-white/[0.08] bg-white/[0.03] text-[10px] font-black text-slate-400">
+                        <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-blue-100 bg-blue-50 text-[10px] font-black text-[#00288e]">
                           {index + 1}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <div>
-                              <p className="text-sm font-black text-white">{line.materialDescription}</p>
+                              <p className="text-sm font-black text-slate-900">{line.materialDescription}</p>
                               <p className="mt-1 text-[10px] text-slate-500">
                                 {line.presentationLabel}{line.barcode ? ' · barcode ' + line.barcode : ''}{line.lotCode ? ' · lote ' + line.lotCode : ''}
                               </p>
@@ -1148,7 +1148,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                                   'mt-1 text-[9px] font-black uppercase tracking-wide '
                                   + (lotAlertForLine(line) === 'Lote vencido'
                                     ? 'text-rose-300'
-                                    : 'text-amber-200')
+                                    : 'text-amber-700')
                                 }>
                                   {lotAlertForLine(line)}
                                 </p>
@@ -1162,7 +1162,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                                 setReviewing(false);
                               }}
                               disabled={retryRequired}
-                              className="rounded-lg border border-white/[0.08] p-2 text-slate-500 hover:text-rose-300 disabled:opacity-30"
+                              className="rounded-lg border border-slate-200 bg-white p-2 text-slate-500 hover:border-rose-200 hover:text-rose-700 disabled:opacity-30"
                               aria-label="Remover linha">
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
@@ -1173,15 +1173,15 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                               <input type="number" step="any" min="0.000001" value={line.requestedQuantity}
                                 disabled={retryRequired}
                                 onChange={(event) => updateCartQuantity(line.lineId, Number(event.target.value))}
-                                className="mt-1 h-9 w-full rounded-lg border border-white/[0.08] bg-black/20 px-2 text-xs font-bold text-white disabled:opacity-50" />
+                                className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-800 outline-none focus:border-[#00288e] disabled:opacity-50" />
                             </label>
-                            <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2 py-2">
+                            <div className="rounded-lg border border-slate-200 bg-white px-2 py-2">
                               <p className="text-[8px] uppercase tracking-wide text-slate-600">Unidade-base</p>
-                              <p className="mt-1 text-xs font-black text-white">{numberLabel(line.baseQuantity)} {line.unitLabel}</p>
+                              <p className="mt-1 text-xs font-black text-slate-900">{numberLabel(line.baseQuantity)} {line.unitLabel}</p>
                             </div>
-                            <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2 py-2">
+                            <div className="rounded-lg border border-slate-200 bg-white px-2 py-2">
                               <p className="text-[8px] uppercase tracking-wide text-slate-600">Saldo da posição</p>
-                              <p className="mt-1 text-xs font-black text-emerald-200">{numberLabel(line.availableAtPosition)} {line.unitLabel}</p>
+                              <p className="mt-1 text-xs font-black text-emerald-700">{numberLabel(line.availableAtPosition)} {line.unitLabel}</p>
                             </div>
                           </div>
                         </div>
@@ -1192,21 +1192,21 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
               )}
 
               {cartIssues.length > 0 && (
-                <div className="mt-4 rounded-xl border border-rose-300/15 bg-rose-400/[0.05] px-4 py-3 text-[10px] leading-5 text-rose-200">
+                <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[10px] leading-5 text-rose-700">
                   {cartIssues.join(' ')}
                 </div>
               )}
             </div>
 
-            <aside className="rounded-[24px] border border-white/[0.08] bg-[linear-gradient(160deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] p-4 sm:p-5">
+            <aside className="rounded-2xl border border-blue-100/80 bg-white/80 p-4 shadow-sm backdrop-blur-md sm:p-5">
               <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500">fechamento da retirada</p>
-              <h3 className="mt-1 text-base font-black text-white">Destino e responsável</h3>
+              <h3 className="mt-1 text-base font-black text-slate-900">Destino e responsável</h3>
 
               <label className="mt-4 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
                 Destino obrigatório
                 <select value={destinationId} disabled={retryRequired}
                   onChange={(event) => { setDestinationId(event.target.value); setReviewing(false); }}
-                  className="mt-1.5 h-11 w-full rounded-xl border border-white/10 bg-[#071020] px-3 text-sm text-white disabled:opacity-50">
+                  className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-[#00288e] disabled:opacity-50">
                   <option value="">Selecione…</option>
                   {activeDestinations.map(({ destination }) => <option key={destination.id} value={destination.id}>{destination.name}</option>)}
                 </select>
@@ -1215,31 +1215,31 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
               <div className="mt-2 flex gap-2">
                 <input value={newDestinationName} onChange={(event) => setNewDestinationName(event.target.value)}
                   disabled={retryRequired} placeholder="Novo destino"
-                  className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs text-white disabled:opacity-40" />
+                  className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#00288e] disabled:opacity-40" />
                 <button type="button" onClick={() => void createDestination()}
                   disabled={!newDestinationName.trim() || working || retryRequired}
-                  className="rounded-xl border border-white/10 px-3 text-slate-300 disabled:opacity-40" aria-label="Cadastrar destino">
+                  className="rounded-xl border border-slate-200 bg-white px-3 text-[#00288e] disabled:opacity-40" aria-label="Cadastrar destino">
                   <Plus className="h-4 w-4" />
                 </button>
                 <button type="button" onClick={() => setManageDestinations((value) => !value)}
-                  className="rounded-xl border border-white/10 px-3 text-slate-400" aria-label="Gerenciar destinos">
+                  className="rounded-xl border border-slate-200 bg-white px-3 text-slate-600 hover:text-[#00288e]" aria-label="Gerenciar destinos">
                   <Settings2 className="h-4 w-4" />
                 </button>
               </div>
 
               {manageDestinations && (
-                <div className="mt-3 max-h-44 space-y-1 overflow-y-auto rounded-xl border border-white/[0.07] bg-black/20 p-2">
+                <div className="mt-3 max-h-44 space-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2">
                   {state.destinations.length === 0 ? (
                     <p className="p-2 text-[10px] text-slate-600">Nenhum destino cadastrado.</p>
                   ) : state.destinations.map((item) => (
                     <div key={item.destination.id} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5">
                       <div>
-                        <p className="text-[10px] font-bold text-slate-300">{item.destination.name}</p>
+                        <p className="text-[10px] font-bold text-slate-700">{item.destination.name}</p>
                         <p className="text-[8px] uppercase text-slate-600">{item.destination.status === 'active' ? 'Ativo' : 'Inativo'}</p>
                       </div>
                       <button type="button" onClick={() => void toggleDestination(item)}
                         disabled={working || retryRequired}
-                        className="text-[9px] font-bold text-blue-200 disabled:opacity-40">
+                        className="text-[9px] font-bold text-[#00288e] disabled:opacity-40">
                         {item.destination.status === 'active' ? 'Inativar' : 'Reativar'}
                       </button>
                     </div>
@@ -1252,34 +1252,34 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                 <input value={withdrawnBy}
                   onChange={(event) => { setWithdrawnBy(event.target.value); setReviewing(false); }}
                   disabled={retryRequired} placeholder="Ex.: Cb João da Silva"
-                  className="mt-1.5 h-11 w-full rounded-xl border border-white/10 bg-black/20 px-3 text-sm text-white outline-none focus:border-blue-300/35 disabled:opacity-50" />
+                  className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#00288e] disabled:opacity-50" />
               </label>
               <p className="mt-2 text-[9px] leading-4 text-slate-600">
                 O operador autenticado é registrado separadamente. “Retirado por” identifica quem recebeu fisicamente o material.
               </p>
 
-              <div className="mt-5 rounded-2xl border border-white/[0.07] bg-black/15 p-3">
+              <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
                 <div className="flex items-center justify-between text-[10px] text-slate-500">
                   <span>Identidade da saída</span><span>{cart.length}/{WAREHOUSE_WITHDRAWAL_MAX_LINES} linhas</span>
                 </div>
-                <p className="mt-2 break-all font-mono text-[9px] text-slate-400">{withdrawalId}</p>
+                <p className="mt-2 break-all font-mono text-[9px] text-slate-500">{withdrawalId}</p>
               </div>
 
               {!reviewing ? (
                 <button type="button" onClick={() => setReviewing(true)}
                   disabled={cart.length === 0 || !destinationId || !withdrawnBy.trim() || cartIssues.length > 0}
-                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-blue-300/20 bg-blue-400/[0.09] px-4 py-3 text-xs font-black text-blue-100 disabled:opacity-40">
+                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00288e] px-4 py-3 text-xs font-black text-white shadow-sm hover:bg-[#001f6f] disabled:opacity-40">
                   Revisar saída <ChevronRight className="h-4 w-4" />
                 </button>
               ) : (
-                <div className="mt-4 rounded-2xl border border-emerald-300/15 bg-emerald-400/[0.04] p-3">
-                  <p className="text-xs font-black text-white">Saída de Material</p>
+                <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+                  <p className="text-xs font-black text-slate-900">Saída de Material</p>
                   <p className="mt-2 text-[10px] leading-5 text-slate-400">
-                    Destino: <strong className="text-white">{activeDestinations.find((item) => item.destination.id === destinationId)?.destination.name || '—'}</strong><br />
-                    Retirado por: <strong className="text-white">{withdrawnBy}</strong><br />
-                    Itens: <strong className="text-white">{cart.length}</strong>
+                    Destino: <strong className="text-slate-900">{activeDestinations.find((item) => item.destination.id === destinationId)?.destination.name || '—'}</strong><br />
+                    Retirado por: <strong className="text-slate-900">{withdrawnBy}</strong><br />
+                    Itens: <strong className="text-slate-900">{cart.length}</strong>
                   </p>
-                  <p className="mt-2 rounded-xl border border-white/[0.07] bg-black/15 px-3 py-2 text-[9px] leading-4 text-slate-500">
+                  <p className="mt-2 rounded-xl border border-emerald-200/70 bg-white px-3 py-2 text-[9px] leading-4 text-slate-600">
                     Ao finalizar, o EMPROVEX gera automaticamente um PDF com dois documentos:
                     ficha para retirada física com localização exata e ficha auxiliar para o Pedido de Material no SISCOFIS.
                   </p>
@@ -1289,13 +1289,13 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                     ))}
                   </div>
                   <button type="button" onClick={() => void finalize()} disabled={working}
-                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-400/15 px-4 py-3 text-xs font-black text-emerald-100 disabled:opacity-50">
+                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-black text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50">
                     {working ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                     {retryRequired ? 'Retomar finalização' : 'Finalizar saída'}
                   </button>
                   {!retryRequired && (
                     <button type="button" onClick={() => setReviewing(false)}
-                      className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] px-3 py-2 text-[10px] font-bold text-slate-400">
+                      className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold text-slate-600 hover:text-[#00288e]">
                       <X className="h-3.5 w-3.5" /> Voltar ao carrinho
                     </button>
                   )}
@@ -1304,7 +1304,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
             </aside>
           </section>
 
-          <p className="flex items-center gap-2 text-[10px] text-slate-600">
+          <p className="flex items-center gap-2 text-[10px] text-slate-500">
             <Keyboard className="h-3.5 w-3.5" />
             Operação comum sem mouse: barcode ENTER → quantidade ENTER/TAB → próximo barcode. A concorrência é validada novamente na baixa.
           </p>
