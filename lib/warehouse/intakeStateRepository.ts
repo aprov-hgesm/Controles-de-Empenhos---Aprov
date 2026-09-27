@@ -1,11 +1,13 @@
 import {
   collection,
   doc,
+  documentId,
   getDocs,
   limit,
   query,
   runTransaction,
   serverTimestamp,
+  where,
 } from 'firebase/firestore';
 
 import { recordWarehouseDocumentReads } from './telemetry';
@@ -587,6 +589,97 @@ export async function loadWarehouseInvoiceIntakeQueue(
     pregaoCoverageLimited:
       invoicesResult.truncated || empenhosResult.truncated,
   };
+}
+
+export async function refreshWarehouseInvoiceIntakeQueueRows(
+  workspaceId: string,
+  rows: WarehouseInvoiceIntakeQueueRow[]
+): Promise<WarehouseInvoiceIntakeQueueRow[]> {
+  const scope = currentScopeForWorkspace(workspaceId);
+  if (rows.length === 0) return [];
+
+  const path = warehouseDomainPath(scope.workspaceId, 'intakes');
+  const uniqueIds = Array.from(new Set(rows.map((row) => row.stateId)));
+  const persistedById = new Map<string, PersistedIntake>();
+
+  try {
+    for (let index = 0; index < uniqueIds.length; index += 30) {
+      const ids = uniqueIds.slice(index, index + 30);
+      const snapshot = await getDocs(
+        query(
+          collection(db, path),
+          where(documentId(), 'in', ids)
+        )
+      );
+      recordWarehouseDocumentReads(workspaceId, snapshot.size);
+
+      for (const entry of snapshot.docs) {
+        const parsed = parsePersistedIntake(
+          scope.workspaceId,
+          entry.id,
+          entry.data() as Record<string, unknown>
+        );
+        if (parsed) persistedById.set(entry.id, parsed);
+      }
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    throw error;
+  }
+
+  return rows.map((row) => {
+    const persisted = persistedById.get(row.stateId);
+    if (!persisted) {
+      if (!row.persisted) return row;
+      return {
+        ...row,
+        allocatedQuantity: 0,
+        immediateConsumptionQuantity: 0,
+        pendingQuantity: row.receivedQuantity,
+        status: 'PENDING',
+        persisted: false,
+        source: 'VIRTUAL_PENDING',
+        reconciliationReason: null,
+      };
+    }
+
+    const quantities = quantitiesFromPersisted(
+      row.receivedQuantity,
+      persisted
+    );
+    const canonicalChanged =
+      quantities.storedReceivedQuantity !== null
+      && Math.abs(
+        quantities.storedReceivedQuantity - row.receivedQuantity
+      ) > 0.000001;
+
+    const persistedMaterialId = persisted.kind === 'V2'
+      ? persisted.state.materialId
+      : persisted.intake.materialId;
+
+    return {
+      ...row,
+      materialId: row.materialId || persistedMaterialId || null,
+      allocatedQuantity: quantities.allocatedQuantity,
+      immediateConsumptionQuantity:
+        quantities.immediateConsumptionQuantity,
+      pendingQuantity: quantities.pendingQuantity,
+      status: canonicalChanged
+        ? 'RECONCILIATION_REQUIRED'
+        : deriveWarehouseItemIntakeStatus(
+          row.receivedQuantity,
+          quantities.allocatedQuantity,
+          quantities.immediateConsumptionQuantity
+        ),
+      persisted: true,
+      source: persisted.kind === 'V2'
+        ? 'STATE_V2'
+        : 'LEGACY_INTAKE_V1',
+      reconciliationReason: canonicalChanged
+        ? 'CANONICAL_QUANTITY_CHANGED'
+        : null,
+    };
+  });
 }
 
 export async function saveWarehouseItemIntakeState(
