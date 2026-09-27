@@ -2523,3 +2523,15 @@ Commit funcional:
 - o helper foi movido para dentro de `match /queueExclusions/{exclusionId}`, preservando a mesma validação e restringindo sua compilação somente à coleção que o utiliza;
 - nenhuma regra operacional existente foi relaxada;
 - commits: `0cafb735148b27904a48c5eae0b03ad1ffcf0e22` e `dbdfd60a7d87e08d34b087007cb8fbfb6379007b`.
+
+
+### Correção da reconstrução das Rules — 2026-09-27
+
+- o primeiro ajuste de escopo local do validador de `queueExclusions` introduziu truncamento acidental no regex do ID e deixou o arquivo sintaticamente inválido;
+- o arquivo foi reconstruído a partir do último estado válido anterior à quebra;
+- removido o helper específico de `queueExclusions`;
+- a validação passou a ficar inline apenas no `match /queueExclusions/{exclusionId}`, evitando herança/replicação de helper global;
+- o regex `^qex_[a-f0-9]{64}$` foi restaurado integralmente;
+- o arquivo voltou para aproximadamente 192 KiB, abaixo do orçamento interno de 200 KiB;
+- nenhum domínio operacional foi reaberto e a exclusão continua restrita ao fundador do workspace piloto;
+- commits: `eca90bd90e42a1e74555bdaffd8757f57802064c` e `d834bb72dd31ac42178682b9243e63640a617ce9`.
