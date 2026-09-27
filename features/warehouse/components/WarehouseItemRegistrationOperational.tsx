@@ -178,6 +178,50 @@ function clearAllocationOperationId(
   );
 }
 
+interface InvoiceDefaultDestination {
+  depotId: string;
+  locationId: string;
+  subpositionId: string;
+}
+
+function invoiceDestinationStorageKey(
+  workspaceId: string,
+  invoiceRecordKey: string
+): string {
+  return ['emprovex', 'warehouse', 'invoice-destination', workspaceId, invoiceRecordKey].join(':');
+}
+
+function readInvoiceDefaultDestination(
+  workspaceId: string,
+  invoiceRecordKey: string
+): InvoiceDefaultDestination {
+  try {
+    const raw = window.sessionStorage.getItem(
+      invoiceDestinationStorageKey(workspaceId, invoiceRecordKey)
+    );
+    if (!raw) return { depotId: '', locationId: '', subpositionId: '' };
+    const parsed = JSON.parse(raw) as Partial<InvoiceDefaultDestination>;
+    return {
+      depotId: typeof parsed.depotId === 'string' ? parsed.depotId : '',
+      locationId: typeof parsed.locationId === 'string' ? parsed.locationId : '',
+      subpositionId: typeof parsed.subpositionId === 'string' ? parsed.subpositionId : '',
+    };
+  } catch {
+    return { depotId: '', locationId: '', subpositionId: '' };
+  }
+}
+
+function saveInvoiceDefaultDestination(
+  workspaceId: string,
+  invoiceRecordKey: string,
+  destination: InvoiceDefaultDestination
+): void {
+  window.sessionStorage.setItem(
+    invoiceDestinationStorageKey(workspaceId, invoiceRecordKey),
+    JSON.stringify(destination)
+  );
+}
+
 function AllocationPanel({
   workspaceId,
   row,
@@ -197,10 +241,14 @@ function AllocationPanel({
   const [loadingStructure, setLoadingStructure] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const defaultDestination = readInvoiceDefaultDestination(
+    workspaceId,
+    row.invoiceRecordKey
+  );
   const [quantity, setQuantity] = useState(String(row.pendingQuantity));
-  const [depotId, setDepotId] = useState('');
-  const [locationId, setLocationId] = useState('');
-  const [subpositionId, setSubpositionId] = useState('');
+  const [depotId, setDepotId] = useState(defaultDestination.depotId);
+  const [locationId, setLocationId] = useState(defaultDestination.locationId);
+  const [subpositionId, setSubpositionId] = useState(defaultDestination.subpositionId);
   const [lotCode, setLotCode] = useState('');
   const [expiresOn, setExpiresOn] = useState('');
   const [barcode, setBarcode] = useState('');
@@ -329,6 +377,11 @@ function AllocationPanel({
         barcode: barcode.trim() || null,
         operationId,
       });
+      saveInvoiceDefaultDestination(workspaceId, row.invoiceRecordKey, {
+        depotId,
+        locationId,
+        subpositionId,
+      });
       clearAllocationOperationId(workspaceId, row.stateId);
       await onSuccess(result, numericQuantity);
     } catch (allocationError) {
@@ -406,6 +459,12 @@ function AllocationPanel({
               {error}
             </div>
           )}
+
+          <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-[10px] leading-5 text-slate-600">
+            <span className="font-black text-[#00288e]">Destino padrão da NF:</span>{' '}
+            o depósito/localização escolhido neste item será lembrado para os demais itens da NF {row.invoiceId}.
+            Se um item precisar ir para outro local, basta alterar o destino antes de confirmar.
+          </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
             <label className="block">
