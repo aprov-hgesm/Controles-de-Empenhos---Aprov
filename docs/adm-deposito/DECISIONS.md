@@ -2074,3 +2074,21 @@ Data: 2026-09-27.
 - `referenceValue` Firestore precisa ser remapeado do database antigo para o novo antes da comparação de integridade, para que `copy` e `verify` sejam idempotentes.
 - A origem permanece intacta durante o cutover; exclusão do legado é uma decisão posterior e separada.
 - A ordem operacional obrigatória é: testes locais -> Rules do database dedicado -> plan -> copy -> verify -> validação founder-only -> limpeza posterior do ruleset principal.
+
+
+## D-102 — Controle de Itens é consulta, rastreabilidade e inventário do material armazenado
+
+Data: 2026-09-27.
+
+- **Controle de Itens** passa a ter cinco subabas oficiais: **Resumo, Estoque, Movimentações, Inventário e Relatórios**.
+- A função da área é acompanhar o material depois que ele já ingressou no estoque; ela não é uma segunda porta de entrada nem uma segunda porta de saída.
+- **Alocação de Material** permanece como autoridade operacional de tratamento de NF, intake, alocação física inicial e migração/importação SISCOFIS.
+- **Saída de Material** permanece como aba principal independente e exclusiva para retirada física, baixa do ledger/saldos/lotes e geração da documentação de saída.
+- Entregas permanecem vinculadas ao fluxo de Cronogramas/Entregas; Alertas e Configurações não devem ser duplicados em Controle de Itens.
+- **Estoque** pode consultar saldo agregado, distribuição física, lotes, validade, FEFO, barcode, origem e histórico; enriquecimento de lote continua sem autoridade para criar saldo.
+- **Movimentações** é leitura do ledger oficial.
+- **Inventário** é a única subaba de Controle autorizada a executar a jornada de contagem física; salvar contagem não altera estoque e somente confirmação explícita pode gerar `INVENTORY_ADJUSTMENT`.
+- O domínio `inventories/{inventoryId}/items/{itemId}` fica liberado no database dedicado `emprovex-warehouse` usando o contrato transacional já certificado na Fase 10.
+- Em **Relatórios**, Inventário e SISCOFIS são somente leitura. Relatórios não podem reabrir contagem, aplicar ajuste de inventário nem iniciar migração SISCOFIS.
+- As superfícies operacionais de Controle de Itens seguem obrigatoriamente o tema claro definido em `VISUAL_IDENTITY.md` / D-076.
+- As consultas permanecem bounded e sob demanda; não são introduzidos listeners globais permanentes, polling ou coleções de cache/relatório.
