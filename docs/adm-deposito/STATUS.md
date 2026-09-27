@@ -2971,3 +2971,20 @@ Resultados:
 Próximo gate:
 - publicar exclusivamente `firestore.warehouse.rules` no database `emprovex-warehouse`;
 - repetir uma única tentativa controlada dos 50 restantes da NF 46546.
+
+
+### Deploy da correção do limite de expressões — PASS — 2026-09-27
+
+Publicação concluída no projeto `gen-lang-client-0982077967`, database `emprovex-warehouse`, com HEAD `a372a0c`.
+
+Resultado:
+- `firestore.warehouse.rules` compilado com sucesso;
+- Rules publicadas em `cloud.firestore`;
+- deploy concluído com `Deploy complete!`;
+- correção do limite de 1000 expressões está ativa no banco real;
+- nenhuma alteração de dados foi executada;
+- banco operacional principal não foi publicado nesta etapa.
+
+Próximo gate:
+- repetir uma única tentativa controlada dos 50 restantes da NF 46546;
+- validar estado final 50 + 50 em subposições distintas, `UNASSIGNED = 0`, intake `PROCESSED`.
