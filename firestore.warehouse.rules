@@ -171,7 +171,6 @@ service cloud.firestore {
       ).data;
       return depotId is string
         && depotId.matches('^dep_[a-f0-9]{32}$')
-        && exists(/databases/$(database)/documents/warehouse/$(workspaceId)/depots/$(depotId))
         && depot.workspaceId == workspaceId
         && depot.ug == ug
         && depot.status == 'active';
@@ -319,7 +318,6 @@ service cloud.firestore {
       ).data;
       return locationId is string
         && locationId.matches('^loc_[a-f0-9]{32}$')
-        && exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(locationId))
         && local.kind == 'LOCAL'
         && local.depotId == depotId
         && local.ug == ug
@@ -332,7 +330,6 @@ service cloud.firestore {
       ).data;
       return subpositionId is string
         && subpositionId.matches('^sub_[a-f0-9]{32}$')
-        && exists(/databases/$(database)/documents/warehouse/$(workspaceId)/locations/$(subpositionId))
         && subposition.kind == 'SUBPOSITION'
         && subposition.depotId == depotId
         && subposition.parentLocationId == locationId
@@ -419,7 +416,6 @@ service cloud.firestore {
       ).data;
       return materialId is string
         && materialId.matches('^mat_[a-f0-9]{32}$')
-        && exists(/databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(materialId))
         && material.workspaceId == workspaceId
         && material.ug == ug;
     }
@@ -428,10 +424,7 @@ service cloud.firestore {
       let movement = get(
         /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(origin.movementId)
       ).data;
-      return exists(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(origin.movementId)
-        )
-        && movement.workspaceId == workspaceId
+      return movement.workspaceId == workspaceId
         && movement.ug == ug
         && movement.materialId == materialId
         && movement.source is map
@@ -939,10 +932,7 @@ service cloud.firestore {
       let material = getAfter(
         /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
       ).data;
-      return existsAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(request.resource.data.materialId)
-        )
-        && material.schemaVersion == 'warehouse_material_v1'
+      return material.schemaVersion == 'warehouse_material_v1'
         && material.id == request.resource.data.materialId
         && material.workspaceId == workspaceId
         && material.ug == request.resource.data.ug
@@ -1014,13 +1004,7 @@ service cloud.firestore {
       let toAfter = getAfter(
         /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(source.toBalanceId)
       ).data;
-      return existsAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(source.fromBalanceId)
-        )
-        && existsAfter(
-          /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(source.toBalanceId)
-        )
-        && fromAfter.lastMovementId == movementId
+      return fromAfter.lastMovementId == movementId
         && toAfter.lastMovementId == movementId;
     }
 
@@ -1189,7 +1173,8 @@ service cloud.firestore {
       let movementPath = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId);
       let movement = getAfter(movementPath).data;
       return !exists(movementPath)
-        && existsAfter(movementPath)
+        && movement.id == movementId
+        && movement.schemaVersion == 'warehouse_movement_v1'
         && (
           (
             warehouseMovementIsExpressOutbound(movement)
@@ -1294,7 +1279,10 @@ service cloud.firestore {
         || (
           !warehouseMovementIsExpressOutbound(movement)
           && validWarehouseMovementDocument(workspaceId, movementId)
-          && warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId)
+          && (
+            movement.type == 'TRANSFER'
+            || warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId)
+          )
           && (
             movement.type != 'TRANSFER'
             || warehouseTransferHasMatchingLocationBalancesAfter(
@@ -2198,11 +2186,12 @@ service cloud.firestore {
     }
 
     function warehouseItemIntakeV2ResolvedMaterialMatches(workspaceId, materialId) {
-      let p = /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(materialId);
-      return exists(p)
-        && get(p).data.workspaceId == workspaceId
-        && get(p).data.ug == request.resource.data.ug
-        && get(p).data.status == 'active';
+      let material = get(
+        /databases/$(database)/documents/warehouse/$(workspaceId)/materials/$(materialId)
+      ).data;
+      return material.workspaceId == workspaceId
+        && material.ug == request.resource.data.ug
+        && material.status == 'active';
     }
 
     function warehouseItemIntakeV2MaterialMatches(workspaceId) {
