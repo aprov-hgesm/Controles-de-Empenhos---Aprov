@@ -2789,3 +2789,43 @@ Próximo gate obrigatório:
 - executar `warehouse:db:verify` de forma independente;
 - somente após PASS do verify considerar a cópia validada;
 - manter origem e rules legadas intactas para rollback até validação funcional pelo fundador.
+
+
+### VERIFY independente da migração — PASS — 2026-09-27
+
+Execução real no Cloud Shell:
+
+- modo: `verify`;
+- origem: `ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1`;
+- destino: `emprovex-warehouse`;
+- workspace: `hgesm-aprov`;
+- documentos na origem: **2897**;
+- documentos no destino: **2897**;
+- todas as coleções previstas: **PASS**;
+- resultado final: **WAREHOUSE DATABASE MIGRATION: PASS**;
+- exit code: **0**.
+
+Contagens verificadas:
+- materials 47 = 47;
+- depots 5 = 5;
+- locations 146 = 146;
+- movements 780 = 780;
+- balances 47 = 47;
+- locationBalances 47 = 47;
+- layouts 14 = 14;
+- intakes 905 = 905;
+- destinations 1 = 1;
+- consumptions 905 = 905;
+- coleções vazias previstas também permaneceram equivalentes.
+
+Conclusão:
+- cópia do namespace ADM Depósito validada de forma independente;
+- database dedicado `emprovex-warehouse` contém a réplica íntegra do escopo migrado;
+- origem permanece intacta para rollback;
+- dados canônicos do EMPROVEX fora do ADM Depósito permanecem no database operacional principal;
+- não remover ainda dados/rules legados antes da validação funcional do cutover da aplicação pelo fundador.
+
+Próxima etapa:
+- validar a aplicação apontando os repositories do ADM para `warehouseDb`;
+- realizar teste funcional direcionado do fundador;
+- somente depois considerar merge/deploy de produção e posterior limpeza controlada do legado.
