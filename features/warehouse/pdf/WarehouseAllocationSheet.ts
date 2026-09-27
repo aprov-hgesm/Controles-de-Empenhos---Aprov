@@ -58,6 +58,47 @@ function formatQuantity(value: number): string {
   });
 }
 
+function compactList(values: string[], maxItems = 4): string {
+  if (values.length <= maxItems) return values.join(', ') || '—';
+  return values.slice(0, maxItems).join(', ') + ' +' + (values.length - maxItems);
+}
+
+function fitTextLines(
+  doc: JsPDF,
+  value: string,
+  maxWidth: number,
+  maxLines: number,
+  startSize: number,
+  minSize: number
+): { lines: string[]; fontSize: number } {
+  let fontSize = startSize;
+  let lines: string[] = [];
+
+  while (fontSize >= minSize) {
+    doc.setFontSize(fontSize);
+    lines = doc.splitTextToSize(value || '—', maxWidth);
+    if (lines.length <= maxLines) {
+      return { lines, fontSize };
+    }
+    fontSize -= 0.4;
+  }
+
+  doc.setFontSize(minSize);
+  lines = doc.splitTextToSize(value || '—', maxWidth);
+
+  if (lines.length > maxLines) {
+    const visible = lines.slice(0, maxLines);
+    let last = visible[maxLines - 1] || '';
+    while (last.length > 1 && doc.getTextWidth(last + '…') > maxWidth) {
+      last = last.slice(0, -1);
+    }
+    visible[maxLines - 1] = last.trimEnd() + '…';
+    lines = visible;
+  }
+
+  return { lines, fontSize: minSize };
+}
+
 function sanitizeFilenamePart(value: string): string {
   return value
     .normalize('NFD')
@@ -142,9 +183,9 @@ function drawPageHeader(
   y += 4;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text(invoices.join(', ') || '—', MARGIN_X, y, { maxWidth: 54 });
-  doc.text(empenhos.join(', ') || '—', 72, y, { maxWidth: 58 });
-  doc.text(pregaos.join(', ') || '—', 137, y, { maxWidth: 60 });
+  doc.text(compactList(invoices), MARGIN_X, y, { maxWidth: 54 });
+  doc.text(compactList(empenhos), 72, y, { maxWidth: 58 });
+  doc.text(compactList(pregaos), 137, y, { maxWidth: 60 });
 
   y += 6;
   doc.setFontSize(7);
@@ -155,10 +196,18 @@ function drawPageHeader(
   y += 4;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  const supplierLines = doc.splitTextToSize(suppliers.join(' · ') || '—', 128);
-  doc.text(supplierLines.slice(0, 2), MARGIN_X, y);
+  const supplierFit = fitTextLines(
+    doc,
+    compactList(suppliers, 3).replace(/, /g, ' · '),
+    128,
+    2,
+    8,
+    6.4
+  );
+  doc.setFontSize(supplierFit.fontSize);
+  doc.text(supplierFit.lines, MARGIN_X, y);
   doc.text(issueDates.map(formatDate).join(', ') || '—', 147, y, { maxWidth: 50 });
-  y += Math.max(5, Math.min(2, supplierLines.length) * 3.4);
+  y += Math.max(5, supplierFit.lines.length * 3.4);
 
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
@@ -172,26 +221,31 @@ function drawPageHeader(
   doc.text(input.workspaceId, 119, y, { maxWidth: 78 });
 
   y += 5;
-  doc.setFillColor('246');
-  doc.rect(MARGIN_X, y, CONTENT_WIDTH, 16, 'F');
-  doc.rect(MARGIN_X, y, CONTENT_WIDTH, 16, 'S');
+  doc.setFillColor('#F2F2F2');
+  doc.setTextColor(15);
+  doc.rect(MARGIN_X, y, CONTENT_WIDTH, 20, 'F');
+  doc.setLineWidth(0.45);
+  doc.rect(MARGIN_X, y, CONTENT_WIDTH, 20, 'S');
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.2);
-  doc.text('INSTRUÇÕES DE PREENCHIMENTO', MARGIN_X + 3, y + 4);
+  doc.text('INSTRUÇÕES DE PREENCHIMENTO', MARGIN_X + 3, y + 4.5);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
+  doc.setFontSize(6.8);
   const instructions = [
-    '1. Registre o depósito, local, subposição (se houver) e a quantidade realmente armazenada.',
-    '2. Quando um item for dividido entre destinos, utilize uma linha de alocação para cada parcela.',
-    '3. A soma das parcelas deve corresponder à quantidade indicada como “Qtd. para alocação”.',
+    '1. Registre depósito, local, subposição (se houver) e a quantidade realmente armazenada.',
+    '2. Se o item for dividido entre destinos, use uma linha de alocação para cada parcela.',
+    '3. A soma das parcelas deve corresponder à quantidade indicada como “Para alocar”.',
     '4. Após a conferência física, entregue esta ficha ao operador para lançamento no EMPROVEX.',
   ];
-  doc.text(instructions.slice(0, 2), MARGIN_X + 3, y + 8);
-  doc.text(instructions.slice(2), MARGIN_X + 3, y + 13);
+  instructions.forEach((instruction, index) => {
+    doc.text(instruction, MARGIN_X + 3, y + 8.5 + (index * 2.8), {
+      maxWidth: CONTENT_WIDTH - 6,
+    });
+  });
 
-  return y + 21;
+  return y + 25;
 }
 
 function drawItemBlock(
@@ -200,40 +254,93 @@ function drawItemBlock(
   itemIndex: number,
   y: number
 ): number {
-  const headerHeight = 12;
+  const headerHeight = 15;
   const rowHeight = 9;
   const blockHeight = headerHeight + (ALLOCATION_ROWS_PER_ITEM * rowHeight);
 
-  doc.setDrawColor(55);
-  doc.setLineWidth(0.28);
+  doc.setDrawColor(35);
+  doc.setLineWidth(0.32);
 
-  doc.setFillColor('242');
+  // Cinza neutro real: alto contraste em impressão P&B sem consumir toner como faixa preta.
+  doc.setFillColor('#EDEDED');
+  doc.setTextColor(10);
   doc.rect(MARGIN_X, y, CONTENT_WIDTH, headerHeight, 'F');
   doc.rect(MARGIN_X, y, CONTENT_WIDTH, blockHeight, 'S');
   line(doc, MARGIN_X, y + headerHeight, PAGE_WIDTH - MARGIN_X, y + headerHeight);
 
-  doc.setTextColor(20);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.6);
-  doc.text('ITEM ' + String(itemIndex + 1).padStart(2, '0'), MARGIN_X + 2.5, y + 4);
+  const itemColumnWidth = 18;
+  const descriptionX = MARGIN_X + itemColumnWidth;
+  const descriptionWidth = 99;
+  const unitX = 129;
+  const unitWidth = 14;
+  const receivedX = 143;
+  const receivedWidth = 24;
+  const pendingX = 167;
+  const pendingWidth = PAGE_WIDTH - MARGIN_X - pendingX;
 
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.2);
-  const description = row.itemName || 'Material sem descrição';
-  const descriptionLines = doc.splitTextToSize(description, 100);
-  doc.text(descriptionLines.slice(0, 2), MARGIN_X + 20, y + 4);
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6.7);
-  doc.text('UN', 139, y + 4);
-  doc.text('RECEBIDO', 153, y + 4);
-  doc.text('QTD. PARA ALOCAÇÃO', 176, y + 4);
+  doc.text(
+    'ITEM ' + String(itemIndex + 1).padStart(2, '0'),
+    MARGIN_X + 2.5,
+    y + 5
+  );
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.6);
-  doc.text(row.unitLabel || '—', 139, y + 8);
-  doc.text(formatQuantity(row.receivedQuantity), 153, y + 8);
-  doc.text(formatQuantity(row.pendingQuantity), 176, y + 8);
+  const descriptionFit = fitTextLines(
+    doc,
+    row.itemName || 'Material sem descrição',
+    descriptionWidth - 3,
+    2,
+    7.2,
+    5.8
+  );
+  doc.setFontSize(descriptionFit.fontSize);
+  doc.text(descriptionFit.lines, descriptionX + 1.5, y + 4.5);
+
+  const infoFields = [
+    {
+      label: 'UN.',
+      value: row.unitLabel || '—',
+      x: unitX,
+      width: unitWidth,
+    },
+    {
+      label: 'RECEBIDO',
+      value: formatQuantity(row.receivedQuantity),
+      x: receivedX,
+      width: receivedWidth,
+    },
+    {
+      label: 'PARA ALOCAR',
+      value: formatQuantity(row.pendingQuantity),
+      x: pendingX,
+      width: pendingWidth,
+    },
+  ];
+
+  for (const field of infoFields) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(5.8);
+    doc.text(field.label, field.x + (field.width / 2), y + 4.4, {
+      align: 'center',
+      maxWidth: field.width - 2,
+    });
+
+    doc.setFont('helvetica', 'normal');
+    const valueFit = fitTextLines(
+      doc,
+      field.value,
+      field.width - 2,
+      1,
+      7.1,
+      5.6
+    );
+    doc.setFontSize(valueFit.fontSize);
+    doc.text(valueFit.lines[0], field.x + (field.width / 2), y + 9.2, {
+      align: 'center',
+    });
+  }
 
   const x = {
     slot: MARGIN_X,
@@ -251,6 +358,7 @@ function drawItemBlock(
   line(doc, x.qty, y + headerHeight, x.qty, y + blockHeight);
   line(doc, x.obs, y + headerHeight, x.obs, y + blockHeight);
 
+  doc.setTextColor(10);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(5.9);
   const labelY = y + headerHeight + 3.2;
@@ -386,7 +494,7 @@ export async function createWarehouseAllocationSheetPdf(
   let y = drawPageHeader(doc, { ...input, rows }, emittedAt);
 
   rows.forEach((row, index) => {
-    const estimatedBlockHeight = 12 + (ALLOCATION_ROWS_PER_ITEM * 9) + 3;
+    const estimatedBlockHeight = 15 + (ALLOCATION_ROWS_PER_ITEM * 9) + 3;
     if (y + estimatedBlockHeight > PAGE_HEIGHT - BOTTOM_SAFE_AREA) {
       doc.addPage();
       y = drawPageHeader(doc, { ...input, rows }, emittedAt);
