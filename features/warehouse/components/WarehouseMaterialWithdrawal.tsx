@@ -837,19 +837,19 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
   }
 
   return (
-    <div className="mt-6 space-y-5" data-testid="warehouse-material-withdrawal">
+    <div className="mt-4 space-y-5" data-testid="warehouse-material-withdrawal">
       <div data-testid="warehouse-express-outbound" className="hidden" />
 
       <div className="inline-flex rounded-2xl border border-slate-200 bg-slate-100 p-1">
         <button type="button" onClick={() => setTab('checkout')}
           className={tab === 'checkout'
-            ? 'rounded-xl bg-[#00288e] px-4 py-2 text-xs font-black text-slate-900 shadow-sm'
+            ? 'rounded-xl bg-[#00288e] px-4 py-2 text-xs font-black text-white shadow-sm'
             : 'rounded-xl px-4 py-2 text-xs font-bold text-slate-500 hover:bg-blue-50 hover:text-[#00288e]'}>
           Nova Saída
         </button>
         <button type="button" onClick={() => setTab('reports')}
           className={tab === 'reports'
-            ? 'rounded-xl bg-[#00288e] px-4 py-2 text-xs font-black text-slate-900 shadow-sm'
+            ? 'rounded-xl bg-[#00288e] px-4 py-2 text-xs font-black text-white shadow-sm'
             : 'rounded-xl px-4 py-2 text-xs font-bold text-slate-500 hover:bg-blue-50 hover:text-[#00288e]'}>
           Relatórios
         </button>
@@ -868,7 +868,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                   </div>
                   <div className="min-w-0">
                     <p className="font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-[#00288e]/70">
-                      terminal premium · scanner HID
+                      terminal de saída · scanner HID
                     </p>
                     <h3 className="mt-1 text-xl font-black text-slate-900">SCAN → quantidade → TAB</h3>
                     <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600">
@@ -883,7 +883,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                     autoComplete="off" placeholder="Leia ou digite o código de barras"
                     className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3.5 font-mono text-sm text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-[#00288e] focus:ring-2 focus:ring-blue-100 disabled:opacity-40" />
                   <button type="submit" disabled={!scannerCode.trim() || working || retryRequired}
-                    className="rounded-xl bg-[#00288e] px-4 text-xs font-black text-slate-900 shadow-sm hover:bg-[#001f6f] disabled:opacity-40">
+                    className="rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm hover:bg-[#001f6f] disabled:opacity-40">
                     Identificar
                   </button>
                 </form>
@@ -997,7 +997,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
 
                     <button data-testid="warehouse-outbound-submit" type="button" onClick={addCurrentLine}
                       disabled={!requestedQuantity || !selectedPosition || !selectedPresentation}
-                      className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00288e] px-4 py-3 text-sm font-black text-slate-900 shadow-sm hover:bg-[#001f6f] disabled:opacity-40">
+                      className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00288e] px-4 py-3 text-sm font-black text-white shadow-sm hover:bg-[#001f6f] disabled:opacity-40">
                       <Plus className="h-4 w-4" /> Adicionar ao carrinho · ENTER/TAB
                     </button>
                   </div>
@@ -1147,7 +1147,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                                 <p className={
                                   'mt-1 text-[9px] font-black uppercase tracking-wide '
                                   + (lotAlertForLine(line) === 'Lote vencido'
-                                    ? 'text-rose-300'
+                                    ? 'text-rose-700'
                                     : 'text-amber-700')
                                 }>
                                   {lotAlertForLine(line)}
@@ -1274,7 +1274,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
               ) : (
                 <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
                   <p className="text-xs font-black text-slate-900">Saída de Material</p>
-                  <p className="mt-2 text-[10px] leading-5 text-slate-400">
+                  <p className="mt-2 text-[10px] leading-5 text-slate-600">
                     Destino: <strong className="text-slate-900">{activeDestinations.find((item) => item.destination.id === destinationId)?.destination.name || '—'}</strong><br />
                     Retirado por: <strong className="text-slate-900">{withdrawnBy}</strong><br />
                     Itens: <strong className="text-slate-900">{cart.length}</strong>
