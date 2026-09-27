@@ -707,6 +707,235 @@ async function main() {
     assert.equal(lotSnapshot.data()?.quantity, 0);
   });
 
+  const inventoryId = 'inv_' + 'a'.repeat(32);
+  const inventoryItemId = 'invit_' + 'b'.repeat(64);
+  const inventoryMovementId = 'mov_' + 'e'.repeat(64);
+  const inventoryRef = doc(
+    founder.db, 'warehouse', WORKSPACE_ID, 'inventories', inventoryId
+  );
+  const inventoryItemRef = doc(
+    founder.db, 'warehouse', WORKSPACE_ID, 'inventories', inventoryId, 'items', inventoryItemId
+  );
+
+  const [inventoryBalanceBefore, inventoryLocationBefore] = await Promise.all([
+    getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId)),
+    getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', unassignedBalanceId)),
+  ]);
+  assert.equal(inventoryBalanceBefore.exists(), true);
+  assert.equal(inventoryLocationBefore.exists(), true);
+  const inventoryAggregate = inventoryBalanceBefore.data();
+  const inventoryPhysical = inventoryLocationBefore.data();
+  const inventoryCounted = inventoryPhysical.quantity + 1;
+
+  await allowed('fundador abre sessão de inventário no database dedicado', () =>
+    setDoc(inventoryRef, {
+      schemaVersion: 'warehouse_inventory_v1',
+      id: inventoryId,
+      workspaceId: WORKSPACE_ID,
+      ug: UG,
+      scope: { kind: 'TOTAL' },
+      status: 'OPENING',
+      itemCount: 1,
+      openedBy: founder.user.uid,
+      reviewedBy: null,
+      confirmationStartedBy: null,
+      confirmedBy: null,
+      cancelledBy: null,
+      reviewSummary: null,
+      staleItemId: null,
+      referenceCapturedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      reviewedAt: null,
+      confirmationStartedAt: null,
+      confirmedAt: null,
+      cancelledAt: null,
+    })
+  );
+
+  await allowed('fundador cria item de inventário separado do saldo oficial', () =>
+    setDoc(inventoryItemRef, {
+      schemaVersion: 'warehouse_inventory_item_v1',
+      id: inventoryItemId,
+      inventoryId,
+      workspaceId: WORKSPACE_ID,
+      ug: UG,
+      materialId,
+      position: { kind: 'UNASSIGNED' },
+      locationBalanceId: unassignedBalanceId,
+      expectedQuantity: inventoryPhysical.quantity,
+      expectedBalanceRevision: inventoryAggregate.revision,
+      expectedBalanceLastMovementId: inventoryAggregate.lastMovementId,
+      expectedLocationRevision: inventoryPhysical.revision,
+      expectedLocationLastMovementId: inventoryPhysical.lastMovementId,
+      countedQuantity: null,
+      difference: null,
+      status: 'PENDING',
+      countedBy: null,
+      countedAt: null,
+      adjustmentMovementId: null,
+      adjustedBy: null,
+      adjustedAt: null,
+    })
+  );
+
+  await allowed('sessão de inventário entra em contagem', () =>
+    updateDoc(inventoryRef, {
+      status: 'COUNTING',
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await allowed('salvar contagem de inventário não altera estoque', () =>
+    updateDoc(inventoryItemRef, {
+      countedQuantity: inventoryCounted,
+      difference: 1,
+      status: 'DIVERGENT',
+      countedBy: founder.user.uid,
+      countedAt: serverTimestamp(),
+      adjustmentMovementId: null,
+      adjustedBy: null,
+      adjustedAt: null,
+    })
+  );
+
+  const [inventoryBalanceAfterCount, inventoryLocationAfterCount] = await Promise.all([
+    getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId)),
+    getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', unassignedBalanceId)),
+  ]);
+  assert.equal(inventoryBalanceAfterCount.data()?.quantity, inventoryAggregate.quantity);
+  assert.equal(inventoryLocationAfterCount.data()?.quantity, inventoryPhysical.quantity);
+
+  await denied('contagem isolada não pode alterar saldo diretamente', () =>
+    updateDoc(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId),
+      {
+        quantity: inventoryAggregate.quantity + 1,
+        updatedAt: serverTimestamp(),
+      }
+    )
+  );
+
+  await allowed('fundador fecha inventário para revisão', () =>
+    updateDoc(inventoryRef, {
+      status: 'REVIEW',
+      reviewedBy: founder.user.uid,
+      reviewSummary: {
+        totalItems: 1,
+        countedItems: 1,
+        matchedItems: 0,
+        divergentItems: 1,
+        adjustedItems: 0,
+        positiveDifference: 1,
+        negativeDifference: 0,
+      },
+      reviewedAt: serverTimestamp(),
+      staleItemId: null,
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await allowed('fundador inicia confirmação explícita do inventário', () =>
+    updateDoc(inventoryRef, {
+      status: 'CONFIRMING',
+      confirmationStartedBy: founder.user.uid,
+      confirmationStartedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await allowed('INVENTORY_ADJUSTMENT atualiza ledger, saldo e posição atomicamente', async () => {
+    const batch = writeBatch(founder.db);
+    batch.set(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'movements', inventoryMovementId),
+      {
+        schemaVersion: 'warehouse_movement_v1',
+        id: inventoryMovementId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        type: 'INVENTORY_ADJUSTMENT',
+        quantityDelta: 1,
+        idempotencyKeyHash: 'e'.repeat(64),
+        reversesMovementId: null,
+        note: 'Ajuste confirmado no inventário físico ' + inventoryId,
+        source: {
+          kind: 'PHYSICAL_INVENTORY',
+          actorUid: founder.user.uid,
+          inventoryId,
+          inventoryItemId,
+          expectedQuantity: inventoryPhysical.quantity,
+          countedQuantity: inventoryCounted,
+          position: { kind: 'UNASSIGNED' },
+          locationBalanceId: unassignedBalanceId,
+          expectedLocationRevision: inventoryPhysical.revision,
+          expectedLocationLastMovementId: inventoryPhysical.lastMovementId,
+        },
+        createdAt: serverTimestamp(),
+      }
+    );
+    batch.set(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId),
+      {
+        schemaVersion: 'warehouse_balance_v1',
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        quantity: inventoryAggregate.quantity + 1,
+        revision: inventoryAggregate.revision + 1,
+        lastMovementId: inventoryMovementId,
+        updatedAt: serverTimestamp(),
+      }
+    );
+    batch.set(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', unassignedBalanceId),
+      {
+        schemaVersion: 'warehouse_location_balance_v1',
+        id: unassignedBalanceId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        position: { kind: 'UNASSIGNED' },
+        quantity: inventoryPhysical.quantity + 1,
+        revision: inventoryPhysical.revision + 1,
+        lastMovementId: inventoryMovementId,
+        updatedAt: serverTimestamp(),
+      }
+    );
+    batch.update(inventoryItemRef, {
+      status: 'ADJUSTED',
+      adjustmentMovementId: inventoryMovementId,
+      adjustedBy: founder.user.uid,
+      adjustedAt: serverTimestamp(),
+    });
+    await batch.commit();
+  });
+
+  await allowed('fundador finaliza inventário confirmado', () =>
+    updateDoc(inventoryRef, {
+      status: 'CONFIRMED',
+      confirmedBy: founder.user.uid,
+      confirmedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      staleItemId: null,
+    })
+  );
+
+  await denied('inventário confirmado não pode ser reaberto', () =>
+    updateDoc(inventoryRef, {
+      status: 'COUNTING',
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await denied('histórico de inventário não pode ser excluído', () =>
+    deleteDoc(inventoryRef)
+  );
+
+  await denied('usuário não fundador não lê inventário', () =>
+    getDoc(doc(outsider.db, 'warehouse', WORKSPACE_ID, 'inventories', inventoryId))
+  );
+
   await allowed('fundador cria croqui versionado', () =>
     setDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'layouts', layoutId), {
       schemaVersion: 'warehouse_depot_layout_v1',
@@ -1026,6 +1255,7 @@ async function main() {
   console.log('- alocação completa TRANSFER + posições + lote + intake é coberta pelo teste positivo');
   console.log('- duas alocações sequenciais em subposições distintas levam o intake parcial a PROCESSED');
   console.log('- retirada total OUTBOUND reduz saldo agregado, zera a posição física e zera o lote correspondente');
+  console.log('- inventário conta sem alterar estoque e só INVENTORY_ADJUSTMENT confirmado modifica ledger/saldos');
   console.log('- TRANSFER não regrava o saldo agregado quando a quantidade total não muda');
   console.log('- operações com estoque continuam obrigadas a respeitar ledger e invariantes');
 }
