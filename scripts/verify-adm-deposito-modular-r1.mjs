@@ -73,6 +73,10 @@ const siscofisHistoryReport = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseSiscofisHistoryReport.tsx'),
   'utf8'
 );
+const inventoryHistoryReport = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseInventoryHistoryReport.tsx'),
+  'utf8'
+);
 const navigation = readFileSync(
   resolve(root, 'features/warehouse/navigation.ts'),
   'utf8'
@@ -619,6 +623,24 @@ if (logisticsReports.includes('WarehouseSiscofisOperational')) {
   fail('Controle de Itens voltou a duplicar a migração SISCOFIS da Alocação de Material.');
 }
 requireText(
+  logisticsReports,
+  'WarehouseInventoryHistoryReport',
+  'Relatórios do Controle voltaram a usar a superfície operacional de Inventário.'
+);
+if (logisticsReports.includes('WarehouseInventoryOperational')) {
+  fail('Relatórios voltaram a permitir mutação de inventário fora da subaba Inventário.');
+}
+requireText(
+  inventoryHistoryReport,
+  'listWarehouseInventorySessions(workspaceId, 60)',
+  'Histórico de inventários perdeu a consulta bounded de sessões.'
+);
+requireText(
+  inventoryHistoryReport,
+  'listWarehouseInventoryItems(workspaceId, record.session.id, 500)',
+  'Histórico de inventários perdeu o detalhamento bounded de itens.'
+);
+requireText(
   siscofisHistoryReport,
   'listWarehouseSiscofisSnapshots(workspaceId, 24)',
   'Relatório SISCOFIS perdeu a consulta somente leitura bounded.'
@@ -644,6 +666,7 @@ for (const [surfaceName, surfaceSource] of [
   ['Inventário do Controle de Itens', inventoryOperational],
   ['Relatórios do Controle de Itens', logisticsReports],
   ['Histórico SISCOFIS do Controle', siscofisHistoryReport],
+  ['Histórico de Inventários do Controle', inventoryHistoryReport],
 ]) {
   for (const forbiddenToken of [
     'bg-[#071020]',
@@ -738,6 +761,7 @@ console.log('- Saída de Material reduz ledger/posição/lote e saldo zero deixa
 console.log('- Controle de Itens consolidado em Resumo, Estoque, Movimentações, Inventário e Relatórios');
 console.log('- Inventário opera no database dedicado com contagem isolada e ajuste confirmado');
 console.log('- SISCOFIS no Controle é somente leitura; migração permanece em Alocação de Material');
+console.log('- Inventário em Relatórios é somente leitura; contagem/ajuste permanece na subaba Inventário');
 console.log('- consumo imediato em lote reutiliza o motor oficial com destino, responsável e idempotência por item');
 console.log('- INVOICE_ENTRY v2 isolado não gera falso positivo de reconciliação legada');
 console.log('- TRANSFER redistribui locationBalances sem regravar o saldo agregado');
