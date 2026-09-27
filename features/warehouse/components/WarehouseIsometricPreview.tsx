@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { PackageSearch, Search, Sparkles } from 'lucide-react';
 
 import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
@@ -25,6 +25,14 @@ type Props = {
 
 type IsoPoint = { x: number; y: number };
 type CanonicalVisualKind = 'SHELF' | 'PALLET' | 'FREEZER' | 'REFRIGERATOR' | 'BENCH';
+type PreviewView = 'front' | 'right' | 'back' | 'left';
+
+const PREVIEW_VIEWS: ReadonlyArray<{ id: PreviewView; label: string }> = [
+  { id: 'front', label: 'Frente' },
+  { id: 'right', label: 'Direita' },
+  { id: 'back', label: 'Trás' },
+  { id: 'left', label: 'Esquerda' },
+];
 
 const VIEW_WIDTH = 1200;
 const VIEW_HEIGHT = 760;
@@ -54,6 +62,48 @@ function isoPoint(
 
 function polygonPoints(pointsList: IsoPoint[]): string {
   return pointsList.map((point) => point.x.toFixed(1) + ',' + point.y.toFixed(1)).join(' ');
+}
+
+function transformObjectForView(
+  object: WarehouseDepotLayoutObject,
+  logicalWidth: number,
+  logicalHeight: number,
+  view: PreviewView
+): WarehouseDepotLayoutObject {
+  if (view === 'front') return object;
+
+  const widthBase = Math.max(1, logicalWidth);
+  const heightBase = Math.max(1, logicalHeight);
+  const nx = object.x / widthBase;
+  const ny = object.y / heightBase;
+  const nw = object.width / widthBase;
+  const nh = object.height / heightBase;
+
+  if (view === 'back') {
+    return {
+      ...object,
+      x: (1 - nx - nw) * widthBase,
+      y: (1 - ny - nh) * heightBase,
+    };
+  }
+
+  if (view === 'right') {
+    return {
+      ...object,
+      x: ny * widthBase,
+      y: (1 - nx - nw) * heightBase,
+      width: nh * widthBase,
+      height: nw * heightBase,
+    };
+  }
+
+  return {
+    ...object,
+    x: (1 - ny - nh) * widthBase,
+    y: nx * heightBase,
+    width: nh * widthBase,
+    height: nw * heightBase,
+  };
 }
 
 function canonicalKind(kind: WarehouseDepotLayoutObject['kind']): CanonicalVisualKind {
@@ -796,6 +846,8 @@ export function WarehouseIsometricPreview({
   onQueryTextChange,
   onSelectedMaterialIdChange,
 }: Props) {
+  const [previewView, setPreviewView] = useState<PreviewView>('front');
+
   const locationById = useMemo(
     () => new Map(locations.map((location) => [location.id, location])),
     [locations]
@@ -885,13 +937,18 @@ export function WarehouseIsometricPreview({
     () =>
       objects
         .filter((object) => object.kind !== 'WALL' && object.kind !== 'CORRIDOR')
-        .slice()
+        .map((object) => transformObjectForView(
+          object,
+          logicalWidth,
+          logicalHeight,
+          previewView
+        ))
         .sort((left, right) => {
           const leftDepth = left.x + left.y + left.layer * 0.001;
           const rightDepth = right.x + right.y + right.layer * 0.001;
           return leftDepth - rightDepth;
         }),
-    [objects]
+    [logicalHeight, logicalWidth, objects, previewView]
   );
 
   const floor = [
@@ -926,7 +983,34 @@ export function WarehouseIsometricPreview({
           </p>
         </div>
 
-        <div className="relative w-full sm:w-[390px]">
+        <div className="flex w-full flex-col gap-2 sm:w-[520px]">
+          <div
+            className="flex flex-wrap items-center justify-end gap-1"
+            data-testid="warehouse-isometric-view-controls"
+            aria-label="Ângulos da prévia 2.5D"
+          >
+            <span className="mr-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">
+              Vista
+            </span>
+            {PREVIEW_VIEWS.map((view) => (
+              <button
+                key={view.id}
+                type="button"
+                onClick={() => setPreviewView(view.id)}
+                aria-pressed={previewView === view.id}
+                data-testid={'warehouse-isometric-view-' + view.id}
+                className={
+                  previewView === view.id
+                    ? 'rounded-lg border border-[#00288e] bg-[#00288e] px-2.5 py-1.5 text-[9px] font-black text-white shadow-sm'
+                    : 'rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[9px] font-bold text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-[#00288e]'
+                }
+              >
+                {view.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="relative w-full">
           <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
           <input
             value={queryText}
@@ -959,6 +1043,7 @@ export function WarehouseIsometricPreview({
               ))}
             </div>
           )}
+          </div>
         </div>
       </div>
 
@@ -975,7 +1060,7 @@ export function WarehouseIsometricPreview({
             viewBox={'0 0 ' + VIEW_WIDTH + ' ' + VIEW_HEIGHT}
             className="absolute inset-0 h-full w-full"
             role="img"
-            aria-label="Prévia isométrica 2.5D do depósito"
+            aria-label={'Prévia isométrica 2.5D do depósito · vista ' + PREVIEW_VIEWS.find((view) => view.id === previewView)?.label}
           >
             <defs>
               <linearGradient id="floorGradient" x1="0" y1="0" x2="1" y2="1">
