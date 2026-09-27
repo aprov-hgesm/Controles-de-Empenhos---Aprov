@@ -2474,3 +2474,15 @@ Implementado em Cadastro de Itens:
 
 Commit funcional:
 - `3731d0e713e59c084d046a10b24eaa41b8d34a7e`.
+
+
+## Correção de falso conflito no encaminhamento em lote — 2026-09-27
+
+- identificado falso `WAREHOUSE_ITEM_INTAKE_CONCURRENT_MODIFICATION` após a fila ultrapassar a janela global de 500 estados persistidos;
+- causa: itens com estado já salvo podiam reaparecer na projeção canônica como `VIRTUAL_PENDING` quando seu documento de intake ficava fora da janela global;
+- não foi aumentado o limite global, para evitar transformar cada abertura da tela em leitura massiva;
+- antes de encaminhar NF ou Pregão, o sistema agora revalida sob demanda somente os `stateId` dos itens efetivamente selecionados, em lotes de até 30 IDs;
+- itens já tratados são removidos da operação;
+- itens parcialmente tratados entram com os quantitativos reais atuais;
+- a transação continua mantendo a proteção de concorrência para alterações que ocorram depois da revalidação;
+- commits funcionais: `a77d1b750d9df0ae720f8369c35b6bff007fbc6f` e `d61c3d9fda1ef985990bd0d95aaab5ffe77f02e3`.
