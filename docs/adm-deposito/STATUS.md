@@ -3115,3 +3115,22 @@ Segurança:
 - finalização exige `appliedLineCount == expectedLineCount`;
 - retirada `FINALIZED` não pode ser reaberta;
 - delete físico permanece proibido.
+
+
+### Correção estrutural das Rules após liberação de withdrawals — 2026-09-27
+
+Durante o primeiro gate de segurança da nova aba **Saída de Material**, o emulador recusou a compilação de `firestore.warehouse.rules`.
+
+Causa identificada:
+- a rotina usada para inserir o novo bloco de `withdrawals` tratou a sequência `$'`, presente no final das regex das Rules, como token especial de substituição JavaScript;
+- isso duplicou um grande sufixo do arquivo;
+- o sintoma foi o crescimento anormal das Rules de ~110 KiB para ~197 KiB e erros `Unexpected let` / `Unexpected allow`.
+
+Correção:
+- restaurada a última versão íntegra das Rules anterior à liberação de `withdrawals`;
+- reaplicado somente o contrato de `withdrawals` usando inserção por posição, sem interpretação de tokens de replacement;
+- arquivo voltou para ~115 mil caracteres / ~2,5 mil linhas;
+- exatamente um `rules_version`, um helper `validWarehouseWithdrawalBase` e um `match /withdrawals/{withdrawalId}`;
+- guard interno reduzido de 200 KiB para 150 KiB e fortalecido para detectar duplicações estruturais e conteúdo residual após o fechamento final.
+
+Nenhuma Rule foi publicada no banco real nesta etapa. O próximo gate continua sendo emulator security PASS + typecheck PASS antes de qualquer deploy.
