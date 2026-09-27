@@ -111,17 +111,15 @@ async function requestJson(url, options = {}) {
   return data;
 }
 
-async function listDomainDocuments(databaseId, domain) {
+async function listCollectionDocuments(databaseId, pathSegments) {
   const documents = [];
   let pageToken = '';
 
   do {
     const url = new URL(
       documentsBase(databaseId)
-      + '/warehouse/'
-      + encodeSegment(WORKSPACE_ID)
       + '/'
-      + encodeSegment(domain)
+      + pathSegments.map(encodeSegment).join('/')
     );
     url.searchParams.set('pageSize', String(PAGE_SIZE));
     url.searchParams.set('showMissing', 'false');
@@ -133,6 +131,40 @@ async function listDomainDocuments(databaseId, domain) {
       ? data.nextPageToken
       : '';
   } while (pageToken);
+
+  return documents;
+}
+
+async function listDomainDocuments(databaseId, domain) {
+  return listCollectionDocuments(
+    databaseId,
+    ['warehouse', WORKSPACE_ID, domain]
+  );
+}
+
+async function listInventoryItemDocuments(databaseId, inventoryDocuments) {
+  const documents = [];
+
+  for (const inventory of inventoryDocuments) {
+    const pathSegments = relativeDocumentPath(inventory).split('/');
+    if (
+      pathSegments.length !== 4
+      || pathSegments[0] !== 'warehouse'
+      || pathSegments[1] !== WORKSPACE_ID
+      || pathSegments[2] !== 'inventories'
+    ) {
+      throw new Error(
+        'Inventário fora do namespace esperado: ' + relativeDocumentPath(inventory)
+      );
+    }
+
+    documents.push(
+      ...await listCollectionDocuments(
+        databaseId,
+        [...pathSegments, 'items']
+      )
+    );
+  }
 
   return documents;
 }
@@ -155,11 +187,25 @@ function relativeDocumentPath(document) {
   return document.name.slice(index + marker.length);
 }
 
-function canonicalFields(document) {
-  return JSON.stringify(canonicalize(document.fields || {}));
+function fieldsForComparison(document, projectReferencesToTarget = false) {
+  const fields = document.fields || {};
+  if (!projectReferencesToTarget) return fields;
+
+  return Object.fromEntries(
+    Object.entries(fields).map(([key, value]) => [
+      key,
+      replaceDatabaseInReferenceValue(value),
+    ])
+  );
 }
 
-function domainDigest(documents) {
+function canonicalFields(document, projectReferencesToTarget = false) {
+  return JSON.stringify(
+    canonicalize(fieldsForComparison(document, projectReferencesToTarget))
+  );
+}
+
+function domainDigest(documents, projectReferencesToTarget = false) {
   const hash = createHash('sha256');
   const sorted = [...documents].sort((left, right) =>
     relativeDocumentPath(left).localeCompare(relativeDocumentPath(right))
@@ -168,7 +214,7 @@ function domainDigest(documents) {
   for (const document of sorted) {
     hash.update(relativeDocumentPath(document));
     hash.update('\n');
-    hash.update(canonicalFields(document));
+    hash.update(canonicalFields(document, projectReferencesToTarget));
     hash.update('\n');
   }
 
@@ -221,12 +267,7 @@ function replaceDatabaseInReferenceValue(value) {
 
 function targetDocument(document) {
   const relativePath = relativeDocumentPath(document);
-  const fields = Object.fromEntries(
-    Object.entries(document.fields || {}).map(([key, value]) => [
-      key,
-      replaceDatabaseInReferenceValue(value),
-    ])
-  );
+  const fields = fieldsForComparison(document, true);
 
   return {
     name:
@@ -266,7 +307,7 @@ async function copyDomain(domain, sourceDocuments, targetDocuments) {
   const pending = sourceDocuments
     .filter((document) => {
       const target = targetByPath.get(relativeDocumentPath(document));
-      return target !== canonicalFields(document);
+      return target !== canonicalFields(document, true);
     })
     .map((document) => ({
       update: targetDocument(document),
@@ -280,7 +321,10 @@ async function copyDomain(domain, sourceDocuments, targetDocuments) {
 }
 
 function formatDomain(domain, sourceDocuments, targetDocuments) {
-  const sourceDigest = domainDigest(sourceDocuments);
+  // Referências Firestore da origem são comparadas como ficarão no destino.
+  // Assim copy/verify permanecem idempotentes mesmo quando um documento contém
+  // referenceValue apontando para o database antigo.
+  const sourceDigest = domainDigest(sourceDocuments, true);
   const targetDigest = domainDigest(targetDocuments);
   const equal =
     sourceDocuments.length === targetDocuments.length
@@ -309,23 +353,23 @@ let totalTarget = 0;
 let totalWrites = 0;
 let verifyFailed = false;
 
-for (const domain of DOMAINS) {
-  const sourceBefore = await listDomainDocuments(SOURCE_DATABASE_ID, domain);
-  const targetBefore = await listDomainDocuments(TARGET_DATABASE_ID, domain);
+async function processScope(label, sourceLoader, targetLoader) {
+  const sourceBefore = await sourceLoader();
+  const targetBefore = await targetLoader();
 
   totalSource += sourceBefore.length;
   totalTarget += targetBefore.length;
 
   if (MODE === 'copy') {
-    const writes = await copyDomain(domain, sourceBefore, targetBefore);
+    const writes = await copyDomain(label, sourceBefore, targetBefore);
     totalWrites += writes;
 
-    const targetAfter = await listDomainDocuments(TARGET_DATABASE_ID, domain);
-    const result = formatDomain(domain, sourceBefore, targetAfter);
+    const targetAfter = await targetLoader();
+    const result = formatDomain(label, sourceBefore, targetAfter);
 
     console.log(
       (result.equal ? '[OK]   ' : '[FAIL] ')
-      + domain
+      + label
       + ': origem='
       + result.source
       + ' destino='
@@ -335,38 +379,70 @@ for (const domain of DOMAINS) {
     );
 
     if (!result.equal) verifyFailed = true;
-    continue;
+    return;
   }
 
-  const result = formatDomain(domain, sourceBefore, targetBefore);
+  const result = formatDomain(label, sourceBefore, targetBefore);
 
   if (MODE === 'plan') {
     console.log(
       '[PLAN] '
-      + domain
+      + label
       + ': origem='
       + result.source
       + ' destino='
       + result.target
       + (result.equal ? ' (já sincronizado)' : '')
     );
-  } else {
-    console.log(
-      (result.equal ? '[PASS] ' : '[FAIL] ')
-      + domain
-      + ': origem='
-      + result.source
-      + ' destino='
-      + result.target
-    );
-    if (!result.equal) {
-      console.log('       origem sha256=' + result.sourceDigest);
-      console.log('       destino sha256=' + result.targetDigest);
-      verifyFailed = true;
-    }
+    return;
+  }
+
+  console.log(
+    (result.equal ? '[PASS] ' : '[FAIL] ')
+    + label
+    + ': origem='
+    + result.source
+    + ' destino='
+    + result.target
+  );
+  if (!result.equal) {
+    console.log('       origem sha256=' + result.sourceDigest);
+    console.log('       destino sha256=' + result.targetDigest);
+    verifyFailed = true;
   }
 }
 
+for (const domain of DOMAINS) {
+  await processScope(
+    domain,
+    () => listDomainDocuments(SOURCE_DATABASE_ID, domain),
+    () => listDomainDocuments(TARGET_DATABASE_ID, domain)
+  );
+
+  // Inventário possui itens em subcoleção:
+  // warehouse/{workspaceId}/inventories/{inventoryId}/items/{itemId}.
+  // Eles precisam ser copiados e verificados separadamente; listar apenas a
+  // coleção inventories não percorre descendentes no Firestore REST.
+  if (domain === 'inventories') {
+    await processScope(
+      'inventories/*/items',
+      async () => {
+        const parents = await listDomainDocuments(
+          SOURCE_DATABASE_ID,
+          'inventories'
+        );
+        return listInventoryItemDocuments(SOURCE_DATABASE_ID, parents);
+      },
+      async () => {
+        const parents = await listDomainDocuments(
+          TARGET_DATABASE_ID,
+          'inventories'
+        );
+        return listInventoryItemDocuments(TARGET_DATABASE_ID, parents);
+      }
+    );
+  }
+}
 console.log('');
 console.log('Documentos na origem:', totalSource);
 console.log('Documentos no destino antes da operação:', totalTarget);
