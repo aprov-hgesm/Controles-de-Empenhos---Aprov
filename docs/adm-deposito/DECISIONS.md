@@ -2038,3 +2038,19 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - A persistência usa uma exclusão determinística por `invoiceRecordKey`, permitindo idempotência e evitando documentos agregados crescentes.
 - O carregamento da fila resolve exclusões pelos IDs exatos das NFs consultadas, sem listener e sem varredura global.
 - O fluxo de consumo imediato já existente fica preservado apenas para compatibilidade histórica e operação individual; não deve ser usado como destino coletivo de NF/Pregão.
+
+
+## D-100 — ADM Depósito passa a usar Firestore dedicado
+
+Data: 2026-09-27.
+
+- O ADM Depósito deixa de disputar o ruleset do banco operacional principal do EMPROVEX.
+- Database dedicado oficial: `emprovex-warehouse`.
+- Projeto Firebase permanece `gen-lang-client-0982077967`; Firebase Auth continua compartilhado.
+- Região: `us-east1`.
+- Edição: Firestore Standard / Native.
+- O banco principal continua sendo a fonte canônica de Empenhos e Notas Fiscais.
+- O banco warehouse será a fonte canônica de materiais, depósitos, localizações, layouts, movimentos, saldos, lotes, códigos de barras, intakes, consumos, inventários, alertas e demais domínios logísticos.
+- Integração NF → ADM deve ocorrer por projeção/idempotência; não haverá transação distribuída entre databases.
+- Durante a migração, os dados `warehouse/hgesm-aprov/*` do banco antigo permanecem intactos para rollback.
+- O cutover dos repositories só ocorrerá depois de: Rules dedicadas válidas, migração verificada e testes direcionados aprovados.
