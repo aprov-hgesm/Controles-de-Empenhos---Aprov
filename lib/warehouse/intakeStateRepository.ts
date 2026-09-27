@@ -37,6 +37,9 @@ import {
   type WarehouseItemIntakeState,
 } from './intakeState';
 import { listWarehouseMovements } from './ledgerRepository';
+import {
+  listWarehouseQueueExcludedInvoiceKeys,
+} from './intakeQueueExclusionRepository';
 import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
 
 export const WAREHOUSE_INTAKE_QUEUE_EMPENHOS_LIMIT = 250;
@@ -390,12 +393,20 @@ export async function loadWarehouseInvoiceIntakeQueue(
   }
 
   const cutoffMs = cutoffAt ? Date.parse(cutoffAt) : NaN;
-  const eligibleInvoices = invoicesResult.items
+  const eligibleInvoicesBeforeExclusions = invoicesResult.items
     .filter((invoice) => {
       if (!Number.isFinite(cutoffMs)) return true;
       const registered = Date.parse(invoice.registeredAt || '');
       return Number.isFinite(registered) && registered >= cutoffMs;
-    })
+    });
+
+  const excludedInvoiceKeys = await listWarehouseQueueExcludedInvoiceKeys(
+    workspaceId,
+    eligibleInvoicesBeforeExclusions.map((invoice) => recordKey(invoice))
+  );
+
+  const eligibleInvoices = eligibleInvoicesBeforeExclusions
+    .filter((invoice) => !excludedInvoiceKeys.has(recordKey(invoice)))
     .slice()
     .sort((left, right) =>
       (right.registeredAt || right.issueDate || '').localeCompare(
