@@ -2949,3 +2949,25 @@ Resultado:
 Próximo gate:
 - repetir uma única alocação controlada da NF 46546 / item Camomila no localhost;
 - verificar se `UNASSIGNED` cai de 100 para 0, localização escolhida sobe para 100 e intake fica `PROCESSED`.
+
+
+### Segunda alocação parcial em subposição distinta — gates PASS — 2026-09-27
+
+Validação concluída no HEAD `3c23e47`.
+
+Resultados:
+- `npm run verify:adm-deposito-modular-r1`: **PASS**;
+- `npm run test:adm-deposito-modular-r1-security`: **PASS**;
+- `npm run typecheck`: **PASS**;
+- primeira alocação parcial em subposição A: **ALLOW**;
+- segunda alocação do mesmo intake em subposição B: **ALLOW**;
+- transição `PARTIALLY_PROCESSED → PROCESSED`: **ALLOW**;
+- gravações arbitrárias continuam **DENY**;
+- acesso externo continua **DENY**;
+- founder-only preservado;
+- causa do erro real confirmada como limite de 1000 expressões das Security Rules;
+- `TRANSFER` agora usa validador dedicado e o update de intake elimina comparações redundantes já cobertas por `diff().affectedKeys().hasOnly(...)`.
+
+Próximo gate:
+- publicar exclusivamente `firestore.warehouse.rules` no database `emprovex-warehouse`;
+- repetir uma única tentativa controlada dos 50 restantes da NF 46546.
