@@ -110,6 +110,7 @@ async function main() {
   const locationId = 'loc_' + '3'.repeat(32);
   const layoutId = 'lay_' + '4'.repeat(32);
   const destinationId = 'dest_' + '5'.repeat(32);
+  const queueExclusionId = 'qex_' + '8'.repeat(64);
 
   await allowed('fundador cria material canônico', () =>
     setDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'materials', materialId), {
@@ -230,6 +231,30 @@ async function main() {
     })
   );
 
+  await allowed('fundador remove NF apenas da fila do ADM', () =>
+    setDoc(
+      doc(
+        founder.db,
+        'warehouse',
+        WORKSPACE_ID,
+        'queueExclusions',
+        queueExclusionId
+      ),
+      {
+        schemaVersion: 'warehouse_intake_queue_exclusion_v1',
+        id: queueExclusionId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        invoiceRecordKey: 'nf-r1-removida',
+        invoiceId: 'NF-R1-REMOVIDA',
+        empenhoId: '2026NE000099',
+        pregao: '90001/2026',
+        removedBy: founder.user.uid,
+        removedAt: serverTimestamp(),
+      }
+    )
+  );
+
   const lightweightIntakeId = 'intake_' + '6'.repeat(64);
   const lightweightConsumptionId = 'cons_' + '7'.repeat(64);
 
@@ -314,6 +339,7 @@ async function main() {
     ['layouts', layoutId],
     ['settings', 'logistics-alerts'],
     ['destinations', destinationId],
+    ['queueExclusions', queueExclusionId],
   ]) {
     const [collectionName, documentId] = domain;
     await allowed('fundador lê ' + collectionName, async () => {
@@ -369,6 +395,7 @@ async function main() {
     'siscofisSnapshots',
     'consumptions',
     'intakes',
+    'queueExclusions',
   ];
 
   for (const domain of operationalDomains) {
@@ -399,7 +426,8 @@ async function main() {
   console.log('- alertas, inventários e withdrawals continuam estacionados');
   console.log('- gravações arbitrárias continuam negadas pelos contratos');
   console.log('- acesso externo permanece negado');
-  console.log('- consumo imediato integral pode encerrar o intake sem criar movimento de estoque');
+  console.log('- exclusão lógica retira NF da fila sem criar consumo ou movimento de estoque');
+  console.log('- consumo imediato histórico continua protegido para compatibilidade');
   console.log('- operações com estoque continuam obrigadas a respeitar ledger e invariantes');
 }
 
