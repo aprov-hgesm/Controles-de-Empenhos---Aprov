@@ -497,6 +497,23 @@ export async function loadWarehouseInvoiceIntakeQueue(
     })
   );
 
+  let resolvedCanonicalRows = canonicalRows;
+  if (persistedResult.truncated) {
+    const unresolvedRows = canonicalRows.filter((row) => !row.persisted);
+    if (unresolvedRows.length > 0) {
+      const refreshedRows = await refreshWarehouseInvoiceIntakeQueueRows(
+        workspaceId,
+        unresolvedRows
+      );
+      const refreshedByStateId = new Map(
+        refreshedRows.map((row) => [row.stateId, row])
+      );
+      resolvedCanonicalRows = canonicalRows.map(
+        (row) => refreshedByStateId.get(row.stateId) || row
+      );
+    }
+  }
+
   const orphanRows: WarehouseInvoiceIntakeQueueRow[] = [];
   if (!invoicesResult.truncated) {
     for (const persisted of persistedResult.items) {
@@ -582,7 +599,7 @@ export async function loadWarehouseInvoiceIntakeQueue(
     || movementRecords.length >= WAREHOUSE_INTAKE_QUEUE_LEGACY_MOVEMENTS_LIMIT;
 
   return {
-    rows: [...canonicalRows, ...orphanRows],
+    rows: [...resolvedCanonicalRows, ...orphanRows],
     cutoffAt,
     truncated,
     reconciliationCoverageLimited: invoicesResult.truncated,
