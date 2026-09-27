@@ -33,6 +33,10 @@ const materialWithdrawal = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseMaterialWithdrawal.tsx'),
   'utf8'
 );
+const consumptionReports = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseConsumptionReports.tsx'),
+  'utf8'
+);
 const itemControl = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseItemControlOperational.tsx'),
   'utf8'
@@ -487,6 +491,48 @@ if (itemControl.includes("id: 'outbound'")) {
   fail('Saída de Material voltou a ficar duplicada dentro de Controle de Itens.');
 }
 
+for (const [surfaceName, surfaceSource] of [
+  ['Saída de Material', materialWithdrawal],
+  ['Relatórios da Saída de Material', consumptionReports],
+]) {
+  for (const forbiddenToken of [
+    'bg-[#071020]',
+    'bg-black/20',
+    'bg-black/25',
+    'bg-black/15',
+    'border-white/[0.08]',
+    'border-white/[0.07]',
+    'border-white/10',
+    'bg-[linear-gradient(160deg,rgba(255,255,255,0.04)',
+    'linear-gradient(135deg,rgba(4,12,28',
+  ]) {
+    if (surfaceSource.includes(forbiddenToken)) {
+      fail(surfaceName + ' voltou a introduzir dark mode operacional: ' + forbiddenToken);
+    }
+  }
+}
+
+requireText(
+  materialWithdrawal,
+  "bg-[#00288e]",
+  'Saída de Material perdeu o azul institucional nas ações primárias.'
+);
+requireText(
+  materialWithdrawal,
+  'border border-slate-200 bg-white',
+  'Saída de Material perdeu formulários claros de alto contraste.'
+);
+requireText(
+  consumptionReports,
+  "bg-[#00288e]",
+  'Relatórios da Saída perderam o azul institucional.'
+);
+requireText(
+  consumptionReports,
+  'border border-slate-200 bg-white',
+  'Relatórios da Saída perderam o tema claro operacional.'
+);
+
 requireText(
   intakeStateRepository,
   "createWarehouseMovementId(",
@@ -537,6 +583,7 @@ console.log('- NF/Pregão podem ser armazenados, consumidos imediatamente ou rem
 console.log('- ficha institucional PDF de alocação física disponível por NF e por Pregão');
 console.log('- ficha PDF otimizada para toner P&B, com grayscale neutro e contenção de textos');
 console.log('- Saída de Material gera PDF duplo: retirada física + ficha auxiliar SISCOFIS com controle/código');
+console.log('- Saída de Material e seus Relatórios seguem o tema claro oficial D-076/VISUAL_IDENTITY');
 console.log('- consumo imediato em lote reutiliza o motor oficial com destino, responsável e idempotência por item');
 console.log('- INVOICE_ENTRY v2 isolado não gera falso positivo de reconciliação legada');
 console.log('- TRANSFER redistribui locationBalances sem regravar o saldo agregado');
