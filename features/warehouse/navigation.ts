@@ -1,6 +1,7 @@
 export type WarehouseSectionId =
   | 'overview'
   | 'registration'
+  | 'outbound'
   | 'depots'
   | 'control';
 
@@ -28,6 +29,13 @@ export const WAREHOUSE_SECTIONS: readonly WarehouseSectionDefinition[] = [
     description: 'Notas fiscais pendentes de tratamento logístico, alocação física de materiais e migração do inventário SISCOFIS.',
   },
   {
+    id: 'outbound',
+    label: 'Saída de Material',
+    href: '/adm-deposito/saida-de-material',
+    eyebrow: 'Retirada e SISCOFIS',
+    description: 'Separação física, baixa de estoque, destino, responsável e documentos auxiliares para retirada e Pedido de Material no SISCOFIS.',
+  },
+  {
     id: 'depots',
     label: 'Meus Depósitos',
     href: '/adm-deposito/meus-depositos',
@@ -39,7 +47,7 @@ export const WAREHOUSE_SECTIONS: readonly WarehouseSectionDefinition[] = [
     label: 'Controle de Itens',
     href: '/adm-deposito/controle-de-itens',
     eyebrow: 'Estoque e operação',
-    description: 'Consulta de saldo, lotes, validade, saídas, inventário, entregas, alertas e histórico.',
+    description: 'Consulta de saldo, lotes, validade, inventário, entregas, alertas e histórico.',
   },
 ] as const;
 
