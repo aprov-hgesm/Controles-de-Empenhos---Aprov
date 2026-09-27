@@ -336,13 +336,13 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
     || (scopeKind === 'SUBPOSITION' && Boolean(depotId && locationId && subpositionId));
 
   return (
-    <div className="mt-6 space-y-5" data-testid="warehouse-inventory-operational">
-      <div className="rounded-2xl border border-blue-300/10 bg-blue-400/[0.035] p-5">
+    <div className="space-y-5" data-testid="warehouse-inventory-operational">
+      <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
         <div className="flex items-start gap-3">
-          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-blue-200" aria-hidden="true" />
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#00288e]" aria-hidden="true" />
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.12em] text-blue-100">Contagem não movimenta estoque</p>
-            <p className="mt-2 text-sm leading-6 text-slate-400">
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-[#00288e]">Contagem não movimenta estoque</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
               O esperado é um snapshot das projeções oficiais. Digitar e salvar contagens não altera ledger, saldo agregado ou distribuição física. Somente a confirmação humana gera INVENTORY_ADJUSTMENT.
             </p>
           </div>
@@ -350,10 +350,10 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
       </div>
 
       {!active && (
-        <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-5" data-testid="warehouse-inventory-new">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="warehouse-inventory-new">
           <div className="flex items-center gap-2">
-            <ClipboardCheck className="h-4 w-4 text-emerald-200" aria-hidden="true" />
-            <p className="text-sm font-black text-slate-200">Nova sessão de inventário</p>
+            <ClipboardCheck className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+            <p className="text-sm font-black text-slate-900">Nova sessão de inventário</p>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <label className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
@@ -367,7 +367,7 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
                   setLocationId('');
                   setSubpositionId('');
                 }}
-                className="mt-2 h-10 w-full rounded-xl border border-white/[0.08] bg-[#030a16] px-3 text-xs text-slate-200 outline-none"
+                className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-[#00288e]"
               >
                 <option value="TOTAL">Inventário total</option>
                 <option value="DEPOT">Por depósito</option>
@@ -387,7 +387,7 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
                     setLocationId('');
                     setSubpositionId('');
                   }}
-                  className="mt-2 h-10 w-full rounded-xl border border-white/[0.08] bg-[#030a16] px-3 text-xs text-slate-200 outline-none"
+                  className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-[#00288e]"
                 >
                   <option value="">Selecione</option>
                   {depots.filter(({ depot }) => depot.status === 'active').map(({ depot }) => (
@@ -407,7 +407,7 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
                     setLocationId(event.target.value);
                     setSubpositionId('');
                   }}
-                  className="mt-2 h-10 w-full rounded-xl border border-white/[0.08] bg-[#030a16] px-3 text-xs text-slate-200 outline-none"
+                  className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-[#00288e]"
                 >
                   <option value="">Selecione</option>
                   {depotLocations.map(({ location }) => (
@@ -424,7 +424,7 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
                   data-testid="warehouse-inventory-subposition"
                   value={subpositionId}
                   onChange={(event) => setSubpositionId(event.target.value)}
-                  className="mt-2 h-10 w-full rounded-xl border border-white/[0.08] bg-[#030a16] px-3 text-xs text-slate-200 outline-none"
+                  className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-[#00288e]"
                 >
                   <option value="">Selecione</option>
                   {localSubpositions.map(({ location }) => (
@@ -449,13 +449,13 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
 
       {active && (
         <div className="space-y-4" data-testid="warehouse-inventory-active">
-          <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-5">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-300/70">
+                <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-700">
                   {statusLabel(active.session.status)} · {active.session.id}
                 </p>
-                <p className="mt-2 text-lg font-black text-slate-100">
+                <p className="mt-2 text-lg font-black text-slate-900">
                   {warehouseInventoryScopeLabel(active.session.scope, depots, locations)}
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
@@ -468,7 +468,7 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
                     type="button"
                     onClick={() => void cancel()}
                     disabled={busy}
-                    className="rounded-xl border border-rose-300/15 bg-rose-400/[0.05] px-3 py-2 text-xs font-bold text-rose-200 disabled:opacity-40"
+                    className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 disabled:opacity-40"
                   >
                     Cancelar sessão
                   </button>
@@ -477,7 +477,7 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
                   <button
                     type="button"
                     onClick={() => { setActive(null); setItems([]); setMessage(null); }}
-                    className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-bold text-slate-300"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700"
                   >
                     Nova sessão
                   </button>
@@ -486,32 +486,32 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
             </div>
 
             <div className="mt-4 grid gap-2 sm:grid-cols-3">
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3">
                 <p className="text-[9px] uppercase tracking-[0.12em] text-slate-600">Progresso</p>
-                <p className="mt-1 text-lg font-black text-slate-200">{progress.counted}/{progress.total}</p>
+                <p className="mt-1 text-lg font-black text-slate-900">{progress.counted}/{progress.total}</p>
               </div>
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3">
                 <p className="text-[9px] uppercase tracking-[0.12em] text-slate-600">Divergências</p>
-                <p className="mt-1 text-lg font-black text-amber-200">{progress.divergent}</p>
+                <p className="mt-1 text-lg font-black text-amber-700">{progress.divergent}</p>
               </div>
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3">
                 <p className="text-[9px] uppercase tracking-[0.12em] text-slate-600">Estoque alterado pela contagem</p>
-                <p className="mt-1 text-lg font-black text-emerald-200">0</p>
+                <p className="mt-1 text-lg font-black text-emerald-700">0</p>
               </div>
             </div>
           </div>
 
           {active.session.status === 'COUNTING' && (
             <>
-              <div className="flex flex-col gap-3 rounded-2xl border border-white/[0.07] bg-black/10 p-4 md:flex-row md:items-center md:justify-between">
-                <div className="flex flex-1 items-center gap-2 rounded-xl border border-white/[0.07] bg-[#030a16] px-3">
+              <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
+                <div className="flex flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3">
                   <PackageSearch className="h-4 w-4 text-slate-600" aria-hidden="true" />
                   <input
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Buscar material"
                     data-testid="warehouse-inventory-search"
-                    className="h-10 w-full bg-transparent text-xs text-slate-200 outline-none placeholder:text-slate-700"
+                    className="h-10 w-full bg-transparent text-xs text-slate-800 outline-none placeholder:text-slate-400"
                   />
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -526,8 +526,8 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
                       type="button"
                       onClick={() => setFilter(value)}
                       className={filter === value
-                        ? 'rounded-lg border border-blue-300/20 bg-blue-400/[0.1] px-3 py-2 text-[10px] font-bold text-blue-100'
-                        : 'rounded-lg border border-white/[0.06] px-3 py-2 text-[10px] font-bold text-slate-500'}
+                        ? 'rounded-lg border border-blue-300/20 bg-blue-400/[0.1] px-3 py-2 text-[10px] font-bold text-[#00288e]'
+                        : 'rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold text-slate-600'}
                     >
                       {label}
                     </button>
@@ -535,9 +535,9 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
                 </div>
               </div>
 
-              <div className="overflow-x-auto rounded-2xl border border-white/[0.07] bg-black/10">
+              <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <table className="min-w-[900px] w-full text-left text-xs">
-                  <thead className="bg-white/[0.025] text-[9px] uppercase tracking-[0.12em] text-slate-600">
+                  <thead className="bg-slate-50 text-[9px] uppercase tracking-[0.12em] text-slate-500">
                     <tr>
                       <th className="p-3">Material / posição</th>
                       <th className="p-3">Esperado</th>
@@ -546,7 +546,7 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
                       <th className="p-3">Situação</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/[0.05]">
+                  <tbody className="divide-y divide-slate-100">
                     {filteredItems.map((record) => {
                       const item = record.item;
                       const material = materialById.get(item.materialId);
@@ -554,14 +554,14 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
                       return (
                         <tr key={item.id} data-testid={'warehouse-inventory-item-' + item.id}>
                           <td className="p-3">
-                            <p className="max-w-md font-bold text-slate-300">{material?.description || item.materialId}</p>
+                            <p className="max-w-md font-bold text-slate-800">{material?.description || item.materialId}</p>
                             <p className="mt-1 flex items-center gap-1 text-[10px] text-slate-600">
                               <MapPin className="h-3 w-3" aria-hidden="true" />
                               {warehouseInventoryPositionLabel(item.position, depots, locations)}
                             </p>
                           </td>
                           <td className="p-3">
-                            <p className="font-black text-slate-200">{quantity(item.expectedQuantity)}</p>
+                            <p className="font-black text-slate-800">{quantity(item.expectedQuantity)}</p>
                             <p className="text-[9px] text-slate-600">{unit} · rev. {item.expectedLocationRevision}</p>
                           </td>
                           <td className="p-3">
@@ -580,20 +580,20 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
                               onBlur={() => {
                                 if (drafts[item.id] !== undefined) void saveCount(record);
                               }}
-                              className="h-9 w-28 rounded-lg border border-white/[0.08] bg-[#030a16] px-3 text-xs font-bold text-slate-200 outline-none focus:border-blue-300/25"
+                              className="h-9 w-28 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-800 outline-none focus:border-[#00288e]"
                             />
                           </td>
                           <td className="p-3 font-black">
-                            <span className={item.difference === null ? 'text-slate-600' : item.difference > 0 ? 'text-blue-200' : item.difference < 0 ? 'text-rose-200' : 'text-emerald-200'}>
+                            <span className={item.difference === null ? 'text-slate-600' : item.difference > 0 ? 'text-[#00288e]' : item.difference < 0 ? 'text-rose-700' : 'text-emerald-700'}>
                               {item.difference === null ? '—' : (item.difference > 0 ? '+' : '') + quantity(item.difference)}
                             </span>
                           </td>
                           <td className="p-3">
                             {item.status === 'PENDING' && <span className="text-slate-500">Não contado</span>}
-                            {item.status === 'MATCHED' && <span className="font-bold text-emerald-200">Conferido</span>}
-                            {item.status === 'DIVERGENT' && <span className="font-bold text-amber-200">Divergente</span>}
-                            {item.status === 'ADJUSTED' && <span className="font-bold text-blue-200">Ajustado</span>}
-                            {item.status === 'STALE' && <span className="font-bold text-rose-200">Referência alterada</span>}
+                            {item.status === 'MATCHED' && <span className="font-bold text-emerald-700">Conferido</span>}
+                            {item.status === 'DIVERGENT' && <span className="font-bold text-amber-700">Divergente</span>}
+                            {item.status === 'ADJUSTED' && <span className="font-bold text-[#00288e]">Ajustado</span>}
+                            {item.status === 'STALE' && <span className="font-bold text-rose-700">Referência alterada</span>}
                           </td>
                         </tr>
                       );
@@ -607,7 +607,7 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
                 data-testid="warehouse-inventory-review"
                 onClick={() => void beginReview()}
                 disabled={busy || progress.counted !== progress.total || progress.total === 0}
-                className="inline-flex h-10 items-center gap-2 rounded-xl border border-amber-300/20 bg-amber-400/[0.08] px-4 text-xs font-black text-amber-100 disabled:opacity-40"
+                className="inline-flex h-10 items-center gap-2 rounded-xl border border-amber-300/20 bg-amber-400/[0.08] px-4 text-xs font-black text-amber-800 disabled:opacity-40"
               >
                 <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
                 Revisar divergências
@@ -616,29 +616,29 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
           )}
 
           {active.session.status === 'REVIEW' && (
-            <div className="rounded-2xl border border-amber-300/12 bg-amber-400/[0.035] p-5" data-testid="warehouse-inventory-review-summary">
-              <div className="flex items-center gap-2 text-amber-100">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5" data-testid="warehouse-inventory-review-summary">
+              <div className="flex items-center gap-2 text-amber-800">
                 <AlertTriangle className="h-4 w-4" aria-hidden="true" />
                 <p className="text-sm font-black">Confirmação humana obrigatória</p>
               </div>
-              <p className="mt-3 text-sm leading-6 text-slate-400">
+              <p className="mt-3 text-sm leading-6 text-slate-600">
                 {active.session.reviewSummary?.divergentItems || 0} divergência(s) gerarão movimentos INVENTORY_ADJUSTMENT. Itens sem diferença não geram movimento.
               </p>
               <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                <div className="rounded-xl border border-white/[0.06] bg-black/10 p-3">
+                <div className="rounded-xl border border-amber-200 bg-white p-3">
                   <p className="text-[9px] uppercase text-slate-600">Positivas</p>
-                  <p className="mt-1 font-black text-blue-200">+{quantity(active.session.reviewSummary?.positiveDifference || 0)}</p>
+                  <p className="mt-1 font-black text-[#00288e]">+{quantity(active.session.reviewSummary?.positiveDifference || 0)}</p>
                 </div>
-                <div className="rounded-xl border border-white/[0.06] bg-black/10 p-3">
+                <div className="rounded-xl border border-amber-200 bg-white p-3">
                   <p className="text-[9px] uppercase text-slate-600">Negativas</p>
-                  <p className="mt-1 font-black text-rose-200">{quantity(active.session.reviewSummary?.negativeDifference || 0)}</p>
+                  <p className="mt-1 font-black text-rose-700">{quantity(active.session.reviewSummary?.negativeDifference || 0)}</p>
                 </div>
-                <div className="rounded-xl border border-white/[0.06] bg-black/10 p-3">
+                <div className="rounded-xl border border-amber-200 bg-white p-3">
                   <p className="text-[9px] uppercase text-slate-600">Sem divergência</p>
-                  <p className="mt-1 font-black text-emerald-200">{active.session.reviewSummary?.matchedItems || 0}</p>
+                  <p className="mt-1 font-black text-emerald-700">{active.session.reviewSummary?.matchedItems || 0}</p>
                 </div>
               </div>
-              <label className="mt-4 flex items-start gap-2 rounded-xl border border-white/[0.06] bg-black/10 p-3 text-xs leading-5 text-slate-400">
+              <label className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-white p-3 text-xs leading-5 text-slate-400">
                 <input
                   data-testid="warehouse-inventory-confirm-ack"
                   type="checkbox"
@@ -663,7 +663,7 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
                   type="button"
                   onClick={() => void reopen()}
                   disabled={busy}
-                  className="h-10 rounded-xl border border-white/[0.08] px-4 text-xs font-bold text-slate-300 disabled:opacity-40"
+                  className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 disabled:opacity-40"
                 >
                   Voltar à contagem
                 </button>
@@ -672,12 +672,12 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
           )}
 
           {active.session.status === 'RECONCILIATION_REQUIRED' && (
-            <div className="rounded-2xl border border-rose-300/15 bg-rose-400/[0.04] p-5">
-              <div className="flex items-center gap-2 text-rose-200">
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5">
+              <div className="flex items-center gap-2 text-rose-700">
                 <XCircle className="h-4 w-4" aria-hidden="true" />
                 <p className="text-sm font-black">Sessão pausada por concorrência</p>
               </div>
-              <p className="mt-3 text-sm leading-6 text-slate-400">
+              <p className="mt-3 text-sm leading-6 text-slate-600">
                 Uma posição mudou depois da contagem. O sistema não aplicou cegamente a divergência. Cancele esta sessão de forma auditável e abra um novo inventário parcial para reconciliar a posição indicada.
               </p>
               <p className="mt-2 break-all font-mono text-[9px] text-slate-600">
@@ -687,8 +687,8 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
           )}
 
           {active.session.status === 'CONFIRMED' && (
-            <div className="rounded-2xl border border-emerald-300/12 bg-emerald-400/[0.035] p-5">
-              <div className="flex items-center gap-2 text-emerald-200">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+              <div className="flex items-center gap-2 text-emerald-700">
                 <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                 <p className="text-sm font-black">Inventário finalizado e auditável</p>
               </div>
@@ -701,46 +701,46 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
       {message && (
         <div
           data-testid="warehouse-inventory-message"
-          className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3 text-xs leading-5 text-slate-300"
+          className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-700"
         >
           {message}
         </div>
       )}
 
-      <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-5" data-testid="warehouse-inventory-unlocated">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="warehouse-inventory-unlocated">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-black text-slate-200">Materiais sem localização</p>
+            <p className="text-sm font-black text-slate-900">Materiais sem localização</p>
             <p className="mt-1 text-xs text-slate-600">Fila derivada do saldo oficial menos a distribuição física. Organize usando Localizações/Transferências.</p>
           </div>
-          <span className="rounded-full border border-amber-300/10 bg-amber-400/[0.05] px-3 py-1 text-[10px] font-bold text-amber-200">{unlocated.length}</span>
+          <span className="rounded-full border border-amber-300/10 bg-amber-400/[0.05] px-3 py-1 text-[10px] font-bold text-amber-700">{unlocated.length}</span>
         </div>
         <div className="mt-4 space-y-2">
           {unlocated.length === 0 ? (
             <p className="text-xs text-slate-600">Nenhum saldo sem localização física.</p>
           ) : unlocated.slice(0, 20).map((entry) => (
-            <div key={entry.material.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-3">
+            <div key={entry.material.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-3">
               <div>
-                <p className="text-xs font-bold text-slate-300">{entry.material.description}</p>
+                <p className="text-xs font-bold text-slate-800">{entry.material.description}</p>
                 <p className="mt-1 font-mono text-[9px] text-slate-700">{entry.material.id}</p>
               </div>
-              <p className="shrink-0 text-sm font-black text-amber-200">{quantity(entry.quantity)} {entry.material.unit.label || entry.material.unit.code}</p>
+              <p className="shrink-0 text-sm font-black text-amber-700">{quantity(entry.quantity)} {entry.material.unit.label || entry.material.unit.code}</p>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-5" data-testid="warehouse-inventory-history">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="warehouse-inventory-history">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-black text-slate-200">Histórico de inventários</p>
+            <p className="text-sm font-black text-slate-900">Histórico de inventários</p>
             <p className="mt-1 text-xs text-slate-600">Leitura sob demanda · até 24 sessões</p>
           </div>
           <button
             type="button"
             onClick={() => void refresh()}
             disabled={loading || busy}
-            className="rounded-lg border border-white/[0.07] p-2 text-slate-400"
+            className="rounded-lg border border-slate-200 bg-white p-2 text-slate-500 hover:text-[#00288e]"
           >
             <RefreshCw className={loading ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} aria-hidden="true" />
           </button>
@@ -753,10 +753,10 @@ export function WarehouseInventoryOperational({ workspaceId }: { workspaceId: st
               key={record.session.id}
               type="button"
               onClick={() => void chooseSession(record)}
-              className="flex w-full flex-col gap-2 rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-3 text-left transition hover:bg-white/[0.035] sm:flex-row sm:items-center sm:justify-between"
+              className="flex w-full flex-col gap-2 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-3 text-left transition hover:border-blue-200 hover:bg-blue-50/40 sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
-                <p className="text-xs font-bold text-slate-300">{warehouseInventoryScopeLabel(record.session.scope, depots, locations)}</p>
+                <p className="text-xs font-bold text-slate-800">{warehouseInventoryScopeLabel(record.session.scope, depots, locations)}</p>
                 <p className="mt-1 font-mono text-[9px] text-slate-700">{record.session.id}</p>
               </div>
               <div className="text-[10px] text-slate-500 sm:text-right">
