@@ -2872,3 +2872,21 @@ Restrições durante a validação:
 - manter o banco antigo disponível para rollback;
 - validar prioritariamente carregamento do ADM Depósito, Meus Depósitos, Cadastro de Itens, croqui/layout, movimentos/saldos e fila de intakes;
 - somente após a validação funcional considerar promoção/merge para produção.
+
+
+### Consumo imediato em lote por NF/Pregão — gates PASS — 2026-09-27
+
+Implementação validada localmente na branch `feat/adm-deposito-modular-release`, HEAD `3b7901c`.
+
+Resultado:
+- `npm run verify:adm-deposito-modular-r1`: **PASS**;
+- `npm run typecheck`: **PASS**;
+- Pregão/NF suportam três ações: armazenamento, consumo imediato e remoção lógica da fila;
+- consumo imediato em lote reutiliza o motor oficial `applyWarehouseImmediateConsumption`;
+- destino, responsável e idempotência por item preservados;
+- contratos de ledger/saldo/localização/lote/barcode/intake preservados;
+- repositories permanecem em `warehouseDb`;
+- founder-only preservado.
+
+Próximo gate:
+- validação funcional no localhost em `/adm-deposito/cadastro-de-itens`, conferindo visualmente ações por Pregão/NF/item e comportamento de saída da fila quando `pendingQuantity = 0`.
