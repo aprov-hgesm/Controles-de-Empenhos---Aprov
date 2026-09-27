@@ -199,8 +199,9 @@ export function WarehouseImmediateConsumptionPanel({
               Classificar consumo imediato
             </h3>
             <p className="mt-1 max-w-xl text-xs leading-5 text-slate-500">
-              A parcela não será alocada em depósito. O ledger retira a quantidade da
-              projeção UNASSIGNED e o intake avança na mesma transação, evitando dupla baixa.
+              Quando todo o item ainda está pendente, o consumo imediato apenas encerra
+              a pendência e grava o registro operacional, sem criar entrada e saída de estoque.
+              Se o item já teve movimentação parcial, o EMPROVEX preserva o ajuste quantitativo necessário.
             </p>
           </div>
           <button
@@ -316,11 +317,11 @@ export function WarehouseImmediateConsumptionPanel({
           </div>
 
           <div className="rounded-2xl border border-violet-100 bg-violet-50/60 px-4 py-3 text-[10px] leading-5 text-slate-600">
-            <strong className="text-violet-800">Efeito quantitativo:</strong>{' '}
-            consumo imediato soma à classificação do intake e reduz o pendente. A quantidade
-            já projetada pela NF em UNASSIGNED é retirada pelo OUTBOUND oficial na mesma
-            transação; não haverá alocação física, lote ou segunda saída posterior para o
-            mesmo fato.
+            <strong className="text-violet-800">Efeito operacional:</strong>{' '}
+            item integralmente pendente é tratado como consumo direto: não entra no estoque,
+            não cria lote e não gera movimento de entrada/saída. O sistema mantém somente o
+            estado do intake e o registro de consumo para auditoria/SISCOFIS. Em casos parciais
+            já movimentados, o ajuste de saldo continua sendo preservado.
           </div>
 
           <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
