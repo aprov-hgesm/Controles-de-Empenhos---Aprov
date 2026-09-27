@@ -686,6 +686,18 @@ async function main() {
     )
   );
 
+  await allowed('fundador registra última linha antes do fechamento final', () =>
+    updateDoc(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'withdrawals', withdrawalId),
+      {
+        appliedLineCount: 2,
+        status: 'PARTIALLY_APPLIED',
+        updatedAt: serverTimestamp(),
+        finalizedAt: null,
+      }
+    )
+  );
+
   await allowed('fundador finaliza cabeçalho da retirada', () =>
     updateDoc(
       doc(founder.db, 'warehouse', WORKSPACE_ID, 'withdrawals', withdrawalId),
