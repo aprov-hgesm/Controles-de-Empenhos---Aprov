@@ -2596,3 +2596,48 @@ Pendências imediatas antes de operação real:
 4. validar visualmente o ADM com a conta fundadora;
 5. revisar a ponte legada `invoiceIntegrationService.ts`, pois transações não podem atravessar os dois databases;
 6. somente após o cutover validado retirar o bloco warehouse das Rules do banco principal.
+
+
+## Auditoria da fundação multi-database — 2026-09-27
+
+Auditoria executada diretamente na branch `feat/adm-deposito-modular-release`.
+
+Constatações:
+- a branch já havia avançado além do handoff inicial e continha a fundação do database dedicado;
+- `db` continua apontando para o banco operacional principal;
+- `warehouseDb` aponta explicitamente para `emprovex-warehouse`;
+- `firebase.json` mantém configurações independentes de Rules para os dois databases;
+- os repositories operacionais do ADM e `siscofisService.ts` estão direcionados para `warehouseDb`;
+- a fila de Cadastro de Itens lê NF/Empenho canônicos no banco principal e combina essas leituras, fora de transação distribuída, com estados logísticos persistidos no `warehouseDb`;
+- nenhuma transação Firestore válida precisa abranger os dois databases.
+
+Correções aplicadas durante a auditoria:
+1. o migrador passou a copiar e verificar também
+   `warehouse/{workspaceId}/inventories/{inventoryId}/items/{itemId}`;
+2. a comparação `plan/copy/verify` passou a projetar `referenceValue` da origem para o database de destino antes do SHA-256, preservando idempotência real;
+3. a antiga ponte `invoiceIntegrationService.ts`, que aceitava `Transaction` externa e construía referências warehouse no `db` principal, foi aposentada como integração ativa e agora falha de forma explícita caso algum código legado tente reutilizá-la;
+4. o guard modular passou a exigir:
+   - `warehouseDb`;
+   - repositories apontando para o database dedicado;
+   - migração da subcoleção de itens de inventário;
+   - normalização de referências Firestore;
+   - ausência de imports de runtime da ponte transacional legada.
+
+Commits da correção:
+- `4c8eb10afee63aeb29a61973edf3628870107271` — migrador completo/idempotente;
+- `5957e04e7354873fae69fe8148c3f8cf8e1bfae3` — bloqueio seguro da ponte transacional legada;
+- `fd26f1949f42bfa92fc502fca06c296df0afb8ff` — guard da separação de databases.
+
+### Fronteira operacional atual
+
+Ainda **não remover** o namespace warehouse de `firestore.rules` do banco principal e **não apagar** os dados antigos.
+
+Ordem de cutover:
+1. validar TypeScript + guard + testes direcionados;
+2. validar/publicar `firestore.warehouse.rules` exclusivamente em `emprovex-warehouse`;
+3. executar migração `plan -> copy -> verify`;
+4. validar o ADM com a conta fundadora usando o database dedicado;
+5. manter a origem intacta durante a janela de rollback;
+6. somente após validação real retirar o bloco warehouse do ruleset principal em alteração separada.
+
+O deploy do aplicativo que efetiva o uso de `warehouseDb` não deve preceder a cópia/verificação dos dados atuais.
