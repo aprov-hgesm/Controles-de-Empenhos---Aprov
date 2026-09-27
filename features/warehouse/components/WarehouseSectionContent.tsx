@@ -4,6 +4,7 @@ import type { WarehouseSectionId } from '../navigation';
 import { WarehouseDepotsOperational } from './WarehouseDepotsOperational';
 import { WarehouseItemRegistrationOperational } from './WarehouseItemRegistrationOperational';
 import { WarehouseMaterialWithdrawal } from './WarehouseMaterialWithdrawal';
+import { WarehouseItemControlOperational } from './WarehouseItemControlOperational';
 
 function WarehouseModularR1Notice({ section }: { section: WarehouseSectionId }) {
   const labels: Record<WarehouseSectionId, string> = {
@@ -52,6 +53,10 @@ export function WarehouseSectionContent({
 
   if (section === 'outbound') {
     return <WarehouseMaterialWithdrawal workspaceId={workspaceId} />;
+  }
+
+  if (section === 'control') {
+    return <WarehouseItemControlOperational workspaceId={workspaceId} />;
   }
 
   return <WarehouseModularR1Notice section={section} />;
