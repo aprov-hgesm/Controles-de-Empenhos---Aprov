@@ -52,6 +52,7 @@ import {
   applyWarehouseMovement,
 } from './ledgerRepository';
 import {
+  createWarehousePendingLotCode,
   normalizeWarehouseExpiryDate,
   normalizeWarehouseLotCode,
   validateWarehouseLot,
@@ -631,8 +632,11 @@ export async function allocateWarehousePendingItem(
     throw new Error('WAREHOUSE_INTAKE_LOCATION_REQUIRED');
   }
 
-  const lotCode = normalizeWarehouseLotCode(input.lotCode);
-  if (!lotCode) throw new Error('WAREHOUSE_INTAKE_LOT_REQUIRED');
+  const requestedLotCode = input.lotCode.trim();
+  const lotCode = requestedLotCode
+    ? normalizeWarehouseLotCode(requestedLotCode)
+    : createWarehousePendingLotCode(input.intakeId);
+  if (!lotCode) throw new Error('WAREHOUSE_INTAKE_INVALID_LOT');
 
   const normalizedExpiry = normalizeWarehouseExpiryDate(input.expiresOn);
   if (normalizedExpiry === undefined) {
