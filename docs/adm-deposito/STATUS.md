@@ -2562,3 +2562,37 @@ Ainda pendente:
 4. trocar os repositories ADM de `db` para `warehouseDb`;
 5. validar operação real founder-only;
 6. somente então remover o bloco warehouse das Rules do banco principal.
+
+
+## Migração database dedicado — cutover de repositories iniciado
+
+Data: 2026-09-27.
+
+Estado:
+- database `emprovex-warehouse`: **CRIADO**;
+- `lib/firebase.ts`: expõe `warehouseDb`;
+- `firebase.json`: registra Rules separadas para o database principal e para `emprovex-warehouse`;
+- `firestore.warehouse.rules`: Rules dedicadas do ADM preparadas;
+- teste de segurança modular: configurado para o database nomeado;
+- repositories puramente logísticos do ADM: **redirecionados para `warehouseDb`**;
+- migrador controlado `scripts/migrate-warehouse-database.mjs`: **CRIADO**;
+- comandos disponíveis:
+  - `npm run warehouse:db:plan`;
+  - `npm run warehouse:db:copy`;
+  - `npm run warehouse:db:verify`.
+
+Segurança do cutover:
+- banco antigo permanece intacto e continua servindo como rollback;
+- a migração não apaga documentos na origem;
+- o migrador copia somente `warehouse/hgesm-aprov/*`;
+- documentos já idênticos no destino são ignorados;
+- verificação compara contagem e SHA-256 canônico por domínio;
+- referências Firestore internas, se existirem, são remapeadas para o database de destino.
+
+Pendências imediatas antes de operação real:
+1. `typecheck` + guard modular + Emulator do database nomeado;
+2. publicar `firestore.warehouse.rules` no `emprovex-warehouse`;
+3. executar `warehouse:db:plan`, `warehouse:db:copy` e `warehouse:db:verify` no Cloud Shell;
+4. validar visualmente o ADM com a conta fundadora;
+5. revisar a ponte legada `invoiceIntegrationService.ts`, pois transações não podem atravessar os dois databases;
+6. somente após o cutover validado retirar o bloco warehouse das Rules do banco principal.
