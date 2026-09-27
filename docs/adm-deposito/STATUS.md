@@ -3134,3 +3134,25 @@ Correção:
 - guard interno reduzido de 200 KiB para 150 KiB e fortalecido para detectar duplicações estruturais e conteúdo residual após o fechamento final.
 
 Nenhuma Rule foi publicada no banco real nesta etapa. O próximo gate continua sendo emulator security PASS + typecheck PASS antes de qualquer deploy.
+
+
+### Alinhamento visual da Saída de Material ao tema claro oficial — 2026-09-27
+
+A primeira versão da aba principal **Saída de Material** reaproveitou o fluxo funcional antigo ainda com dívida visual de tema escuro. A revisão foi feita contra a referência obrigatória `docs/adm-deposito/VISUAL_IDENTITY.md` e a decisão D-076.
+
+Correção aplicada:
+- conteúdo operacional migrado integralmente para tema claro;
+- cards principais em branco/translúcido, bordas slate/blue suaves e sombra discreta;
+- azul institucional `#00288e` voltou a comandar tabs ativas, ícones de contexto e ações primárias;
+- inputs e selects passaram para fundo branco, texto slate-800 e foco institucional;
+- títulos passaram para slate-900 e textos auxiliares para slate-500/600;
+- estados de sucesso/aviso/erro usam emerald/amber/rose em fundos claros;
+- carrinho, fechamento da retirada, gestão de destinos e último PDF deixaram de usar superfícies pretas;
+- a subaba **Relatórios** foi migrada junto para evitar que a mesma aba alternasse entre tema claro e dark mode;
+- rótulo visual “terminal premium” foi substituído por “terminal de saída”, mais institucional.
+
+Guard adicional:
+- `verify:adm-deposito-modular-r1` agora falha se Saída de Material ou seus Relatórios reintroduzirem tokens centrais do dark mode operacional (`bg-[#071020]`, `bg-black/*`, bordas brancas escuras ou gradiente preto);
+- o guard também exige azul institucional e formulários claros nessas superfícies.
+
+Nenhum contrato de estoque, ledger, PDF, Firestore Rules ou persistência foi alterado por esta revisão visual.
