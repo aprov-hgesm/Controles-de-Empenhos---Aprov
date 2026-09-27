@@ -193,7 +193,7 @@ requireText(
 );
 requireText(
   migrationScript,
-  "method: 'POST'"
+  "method: 'POST'",
   'Migrador perdeu o commit explícito no database de destino.'
 );
 
