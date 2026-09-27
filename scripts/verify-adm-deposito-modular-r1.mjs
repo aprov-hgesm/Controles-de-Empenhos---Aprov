@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const rules = readFileSync(resolve(root, 'firestore.warehouse.rules'), 'utf8');
@@ -215,7 +215,7 @@ function listSourceFiles(directory) {
   const files = [];
 
   for (const entry of entries) {
-    const relativePath = join(directory, entry).replaceAll('\\\\', '/');
+    const relativePath = directory + '/' + entry;
     const child = resolve(root, relativePath);
     if (statSync(child).isDirectory()) {
       files.push(...listSourceFiles(relativePath));
