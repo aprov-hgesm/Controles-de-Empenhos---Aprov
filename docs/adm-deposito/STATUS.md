@@ -3022,3 +3022,27 @@ Próximo gate:
 - `npm run typecheck`;
 - teste visual no navegador gerando uma ficha por NF e outra por Pregão;
 - Browser E2E é justificável por se tratar de nova interação do usuário, mas deve ser executado apenas após os gates estáticos passarem.
+
+
+### Refinamento visual da Ficha de Alocação Física — 2026-09-27
+
+A primeira ficha real gerada para a NF 46546 foi revisada visualmente.
+
+Problemas identificados:
+- os tons que deveriam ser cinza foram interpretados pelo jsPDF como cores escuras, gerando faixas azul/verde;
+- o contraste ficou inadequado para impressão com toner preto e branco;
+- o cabeçalho longo de quantidade pendente ultrapassava a largura disponível;
+- campos com listas longas de NFs, empenhos, fornecedores e descrições precisavam de contenção mais robusta.
+
+Correções aplicadas:
+- grayscale neutro explícito em hexadecimal (#F2F2F2 e #EDEDED);
+- texto preto e bordas mais definidas;
+- bloco de instruções com maior respiro vertical;
+- “QTD. PARA ALOCAÇÃO” simplificado visualmente para “PARA ALOCAR”;
+- colunas de UN., recebido e para alocar centralizadas e dimensionadas;
+- helper de ajuste automático de fonte/quebra/reticências para impedir extravasamento;
+- compactação segura de listas longas de NFs, empenhos, Pregões e fornecedores;
+- altura do cabeçalho do item e cálculo de paginação ajustados.
+
+Objetivo preservado:
+- documento institucional, legível, econômico em toner e adequado para preenchimento manual na ponta física da operação.
