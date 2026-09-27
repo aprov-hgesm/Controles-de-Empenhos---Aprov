@@ -2752,3 +2752,40 @@ Hardening aplicado no migrador:
 Correção: commit `72324517849bc7e62e23f0652060fc766e1f46ca`.
 
 Próximo passo: atualizar a cópia local no Cloud Shell e repetir `warehouse:db:plan` até obter `WAREHOUSE DATABASE MIGRATION PLAN: OK`. Não executar `copy` antes disso.
+
+
+### COPY da migração para `emprovex-warehouse` — PASS — 2026-09-27
+
+Execução real no Cloud Shell:
+
+- modo: `copy`;
+- origem: `ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1`;
+- destino: `emprovex-warehouse`;
+- workspace: `hgesm-aprov`;
+- documentos na origem: **2897**;
+- documentos no destino antes da operação: **0**;
+- documentos gravados/atualizados: **2897**;
+- resultado: **WAREHOUSE DATABASE MIGRATION: PASS**;
+- exit code: **0**.
+
+Coleções com dados migrados e conferidos durante o próprio COPY:
+- materials 47;
+- depots 5;
+- locations 146;
+- movements 780;
+- balances 47;
+- locationBalances 47;
+- layouts 14;
+- intakes 905;
+- destinations 1;
+- consumptions 905.
+
+Coleções vazias também foram verificadas e permaneceram coerentes:
+settings, lots, barcodes, inventories, inventories/*/items, siscofisSnapshots, alerts, queueExclusions e withdrawals.
+
+A origem foi preservada e não houve operação de exclusão. O banco operacional principal do EMPROVEX continua sendo a fonte canônica para empenhos, notas fiscais, usuários e demais módulos não pertencentes ao ADM Depósito.
+
+Próximo gate obrigatório:
+- executar `warehouse:db:verify` de forma independente;
+- somente após PASS do verify considerar a cópia validada;
+- manter origem e rules legadas intactas para rollback até validação funcional pelo fundador.
