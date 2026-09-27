@@ -691,6 +691,70 @@ service cloud.firestore {
         );
     }
 
+    function validWarehouseTransferSource(source) {
+      return source is map
+        && source.kind == 'LOCATION_TRANSFER'
+        && source.keys().hasOnly([
+          'kind', 'actorUid', 'quantity', 'from', 'to',
+          'fromBalanceId', 'toBalanceId'
+        ])
+        && source.keys().hasAll([
+          'kind', 'actorUid', 'quantity', 'from', 'to',
+          'fromBalanceId', 'toBalanceId'
+        ])
+        && source.actorUid == request.auth.uid
+        && source.quantity is number
+        && source.quantity > 0
+        && source.quantity <= 1000000000
+        && validWarehouseStockPosition(source.from)
+        && validWarehouseStockPosition(source.to)
+        && warehousePositionsDiffer(source.from, source.to)
+        && source.fromBalanceId is string
+        && source.fromBalanceId.matches('^locbal_[a-f0-9]{64}$')
+        && source.toBalanceId is string
+        && source.toBalanceId.matches('^locbal_[a-f0-9]{64}$')
+        && source.fromBalanceId != source.toBalanceId;
+    }
+
+    function validWarehouseTransferMovementCreate(workspaceId, movementId) {
+      let movement = request.resource.data;
+      return movement is map
+        && movement.keys().hasOnly([
+          'schemaVersion', 'id', 'workspaceId', 'ug', 'materialId', 'type',
+          'quantityDelta', 'idempotencyKeyHash', 'reversesMovementId',
+          'note', 'source', 'createdAt'
+        ])
+        && movement.schemaVersion == 'warehouse_movement_v1'
+        && movement.id == movementId
+        && movementId.matches('^mov_[a-f0-9]{64}$')
+        && movement.workspaceId == workspaceId
+        && warehouseUgMatchesPilot(workspaceId, movement.ug)
+        && movement.materialId is string
+        && movement.materialId.matches('^mat_[a-f0-9]{32}$')
+        && movement.type == 'TRANSFER'
+        && movement.quantityDelta == 0
+        && movement.idempotencyKeyHash is string
+        && movement.idempotencyKeyHash.matches('^[a-f0-9]{64}$')
+        && movementId == 'mov_' + movement.idempotencyKeyHash
+        && movement.reversesMovementId == null
+        && (
+          movement.note == null
+          || (
+            movement.note is string
+            && movement.note.size() > 0
+            && movement.note.size() <= 240
+          )
+        )
+        && validWarehouseTransferSource(movement.source)
+        && movement.createdAt == request.time
+        && warehouseMaterialMatchesMovement(workspaceId)
+        && warehouseTransferHasMatchingLocationBalancesAfter(
+          workspaceId,
+          movementId,
+          movement
+        );
+    }
+
     function validWarehouseMovementSource(workspaceId, type, source) {
       return (
           source == null
@@ -1273,24 +1337,18 @@ service cloud.firestore {
     function warehouseMovementCreateAllowed(workspaceId, movementId) {
       let movement = request.resource.data;
       return (
+          movement.type == 'TRANSFER'
+          && validWarehouseTransferMovementCreate(workspaceId, movementId)
+        )
+        || (
           warehouseMovementIsExpressOutbound(movement)
           && validWarehouseExpressOutboundMovementCreate(workspaceId, movementId)
         )
         || (
-          !warehouseMovementIsExpressOutbound(movement)
+          movement.type != 'TRANSFER'
+          && !warehouseMovementIsExpressOutbound(movement)
           && validWarehouseMovementDocument(workspaceId, movementId)
-          && (
-            movement.type == 'TRANSFER'
-            || warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId)
-          )
-          && (
-            movement.type != 'TRANSFER'
-            || warehouseTransferHasMatchingLocationBalancesAfter(
-              workspaceId,
-              movementId,
-              movement
-            )
-          )
+          && warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId)
         );
     }
 
@@ -2214,19 +2272,10 @@ service cloud.firestore {
     function validWarehouseItemIntakeV2Update(workspaceId, intakeId) {
       return validWarehouseItemIntakeV2Base(workspaceId, intakeId)
         && resource.data.schemaVersion == 'warehouse_item_intake_v2'
-        && request.resource.data.id == resource.data.id
-        && request.resource.data.workspaceId == resource.data.workspaceId
-        && request.resource.data.ug == resource.data.ug
-        && request.resource.data.invoiceRecordKey == resource.data.invoiceRecordKey
-        && request.resource.data.invoiceId == resource.data.invoiceId
-        && request.resource.data.empenhoId == resource.data.empenhoId
-        && request.resource.data.itemId == resource.data.itemId
-        && request.resource.data.description == resource.data.description
-        && request.resource.data.unitLabel == resource.data.unitLabel
-        && request.resource.data.supplier == resource.data.supplier
-        && request.resource.data.receivedQuantity == resource.data.receivedQuantity
-        && request.resource.data.createdBy == resource.data.createdBy
-        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'materialId', 'allocatedQuantity', 'immediateConsumptionQuantity',
+          'pendingQuantity', 'status', 'updatedBy', 'updatedAt'
+        ])
         && request.resource.data.allocatedQuantity >= resource.data.allocatedQuantity
         && request.resource.data.immediateConsumptionQuantity >= resource.data.immediateConsumptionQuantity
         && (
@@ -2238,10 +2287,6 @@ service cloud.firestore {
         )
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.updatedAt == request.time
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'materialId', 'allocatedQuantity', 'immediateConsumptionQuantity',
-          'pendingQuantity', 'status', 'updatedBy', 'updatedAt'
-        ])
         && warehouseItemIntakeV2MaterialMatches(workspaceId);
     }
 
