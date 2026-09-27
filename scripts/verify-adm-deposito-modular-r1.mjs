@@ -39,9 +39,20 @@ if (warehouseStart < 0) {
     'materials',
     'depots',
     'locations',
+    'movements',
+    'balances',
+    'locationBalances',
+    'lots',
+    'barcodes',
     'layouts',
+    'siscofisSnapshots',
     'settings',
     'destinations',
+    'withdrawals',
+    'consumptions',
+    'intakes',
+    'alerts',
+    'inventories',
   ]) {
     requireText(
       warehouseBlock,
@@ -50,23 +61,6 @@ if (warehouseStart < 0) {
     );
   }
 
-  for (const collection of [
-    'movements',
-    'balances',
-    'locationBalances',
-    'lots',
-    'barcodes',
-    'siscofisSnapshots',
-    'withdrawals',
-    'consumptions',
-    'intakes',
-    'alerts',
-    'inventories',
-  ]) {
-    if (warehouseBlock.includes('match /' + collection + '/{')) {
-      fail('ADM-R1 expôs coleção avançada antes da hora: ' + collection);
-    }
-  }
 }
 
 for (const helper of [
@@ -82,18 +76,26 @@ for (const helper of [
   'function validWarehouseDestinationCreate(workspaceId, destinationId)',
   'function validWarehouseDestinationUpdate(workspaceId, destinationId)',
   'function validWarehouseLogisticsSettings(workspaceId, settingId)',
+  'function warehouseMovementCreateAllowed(workspaceId, movementId)',
+  'function warehouseBalanceWriteAllowed(workspaceId, materialId)',
+  'function warehouseLocationBalanceWriteAllowed(workspaceId, locationBalanceId)',
+  'function validWarehouseLotCreate(workspaceId, lotId)',
+  'function validWarehouseBarcodeCreate(workspaceId, barcodeId)',
+  'function validWarehouseItemIntakeV2Create(workspaceId, intakeId)',
+  'function validWarehouseItemIntakeV2Update(workspaceId, intakeId)',
 ]) {
   requireText(rules, helper, 'Helper obrigatório da ADM-R1 ausente: ' + helper);
-}
-
-if (rules.includes('function warehouseBalanceWriteBackedByNewMovement(')) {
-  fail('Helper morto de saldo voltou para a ADM-R1.');
 }
 
 requireText(
   sectionContent,
   "if (section === 'depots')",
-  'ADM-R1 deve manter apenas Meus Depósitos como superfície operacional completa.'
+  'Meus Depósitos deve permanecer operacional.'
+);
+requireText(
+  sectionContent,
+  "if (section === 'registration')",
+  'Cadastro de Itens deve estar operacional nesta etapa modular.'
 );
 requireText(
   sectionContent,
@@ -112,7 +114,7 @@ if (findings.length) {
   process.exit(1);
 }
 
-console.log('ADM Depósito ADM-R1 guard: PASS');
-console.log('- Rules limitadas ao núcleo independente da R1');
-console.log('- superfícies avançadas preservadas, porém não operacionais');
-console.log('- founder-only e proteção estrutural mantidos');
+console.log('ADM Depósito modular guard: PASS');
+console.log('- Meus Depósitos e Cadastro de Itens operacionais');
+console.log('- contratos de ledger, saldo, localização, lote, barcode e intake restaurados');
+console.log('- founder-only e validações transacionais preservados');
