@@ -2851,3 +2851,24 @@ Conclusão:
 - o bloqueio anterior de publicação foi superado;
 - a separação multi-database permanece preservada;
 - ainda não remover o namespace warehouse legado nem seus dados do database principal até a validação funcional final do cutover.
+
+
+### Cutover funcional — preview autorizado — 2026-09-27
+
+Após os gates de segurança e migração:
+- guard modular: PASS;
+- security emulator: PASS;
+- typecheck: PASS;
+- Rules do database principal: publicadas;
+- Rules do `emprovex-warehouse`: publicadas;
+- migração: 2897 documentos copiados;
+- verify independente: 2897 = 2897 / PASS.
+
+Fica autorizado o primeiro deploy funcional da branch `feat/adm-deposito-modular-release` para validação founder-only usando `warehouseDb` / `emprovex-warehouse`.
+
+Restrições durante a validação:
+- não apagar dados legados do namespace warehouse no database principal;
+- não remover ainda as Rules legadas do database principal;
+- manter o banco antigo disponível para rollback;
+- validar prioritariamente carregamento do ADM Depósito, Meus Depósitos, Cadastro de Itens, croqui/layout, movimentos/saldos e fila de intakes;
+- somente após a validação funcional considerar promoção/merge para produção.
