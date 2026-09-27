@@ -8,6 +8,7 @@ import {
   ClipboardPlus,
   LayoutDashboard,
   LogOut,
+  ScanLine,
   Warehouse,
   ShieldCheck,
   UserRound,
@@ -21,6 +22,7 @@ import { WAREHOUSE_SECTIONS, type WarehouseSectionId } from '../navigation';
 const SECTION_ICONS: Record<WarehouseSectionId, LucideIcon> = {
   overview: LayoutDashboard,
   registration: ClipboardPlus,
+  outbound: ScanLine,
   depots: Warehouse,
   control: Boxes,
 };
