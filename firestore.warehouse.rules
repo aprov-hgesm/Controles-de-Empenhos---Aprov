@@ -3670,16 +3670,6 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'appliedLineCount', 'status', 'updatedAt', 'finalizedAt'
         ])
-        && request.resource.data.id == resource.data.id
-        && request.resource.data.workspaceId == resource.data.workspaceId
-        && request.resource.data.ug == resource.data.ug
-        && request.resource.data.destinationId == resource.data.destinationId
-        && request.resource.data.destinationName == resource.data.destinationName
-        && request.resource.data.withdrawnBy == resource.data.withdrawnBy
-        && request.resource.data.payloadHash == resource.data.payloadHash
-        && request.resource.data.expectedLineCount == resource.data.expectedLineCount
-        && request.resource.data.createdBy == resource.data.createdBy
-        && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.appliedLineCount >= resource.data.appliedLineCount
         && request.resource.data.updatedAt == request.time
         && (
