@@ -66,6 +66,7 @@ export interface WarehouseInvoiceIntakeQueueRow {
   registeredAt: string | null;
   supplier: string;
   empenhoId: string;
+  pregao: string | null;
   itemId: string;
   itemName: string;
   unitLabel: string;
@@ -449,6 +450,7 @@ export async function loadWarehouseInvoiceIntakeQueue(
           registeredAt: invoice.registeredAt || null,
           supplier: invoice.supplier || empenho?.supplier || 'Fornecedor não informado',
           empenhoId: invoice.empenhoId,
+          pregao: empenho?.pregao || null,
           itemId: invoiceItem.itemId,
           itemName:
             empenhoItem?.name
@@ -508,6 +510,7 @@ export async function loadWarehouseInvoiceIntakeQueue(
           registeredAt: null,
           supplier: persisted.state.supplier,
           empenhoId: persisted.state.empenhoId,
+          pregao: null,
           itemId: persisted.state.itemId,
           itemName: persisted.state.description,
           unitLabel: persisted.state.unitLabel,
@@ -544,6 +547,7 @@ export async function loadWarehouseInvoiceIntakeQueue(
         registeredAt: null,
         supplier: 'Fornecedor indisponível na fonte canônica',
         empenhoId: persisted.intake.empenhoId,
+        pregao: null,
         itemId: persisted.intake.itemId,
         itemName: persisted.intake.description,
         unitLabel: persisted.intake.unitLabel,
