@@ -1979,3 +1979,19 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - A Prévia 2.5D também filtra diretamente por Locais ativos, evitando exibir estrutura obsoleta mesmo antes de uma nova versão do croqui ser salva.
 - Elementos estruturais sem `warehouseLocationId`, como portas, continuam preservados.
 - Não é necessário excluir e recriar o depósito para receber atualizações visuais ou reconciliar a estrutura.
+
+
+## D-096 — Cadastro de Itens usa NF como unidade visual e Pregão como agrupador operacional
+
+- A fila de entrada não deve apresentar centenas ou milhares de itens soltos como visão principal.
+- A unidade principal de navegação passa a ser a **Nota Fiscal**; os itens permanecem disponíveis no detalhamento da NF.
+- Cada NF deve expor fornecedor, empenho, Pregão, data, quantidade de itens e estado de tratamento.
+- Busca e filtros devem permitir localizar por NF, fornecedor, empenho, Pregão e item.
+- O Pregão passa a ser também um agrupador operacional para encaminhamento em lote.
+- Um Pregão específico pode encaminhar todos os itens pendentes das NFs carregadas para:
+  - um mesmo depósito/localização/subposição; ou
+  - consumo imediato para um mesmo destino operacional.
+- O lote por Pregão deve reutilizar as operações oficiais `allocateWarehousePendingItem` e `applyWarehouseImmediateConsumption`; é proibido criar uma segunda fonte de saldo ou gravar diretamente nos documentos quantitativos.
+- A atomicidade é por item, não por Pregão inteiro. Falhas individuais não revertem operações já confirmadas; devem permanecer visíveis para retry controlado.
+- Identidades de operação do lote são persistidas em sessão para preservar idempotência durante retry.
+- Se a consulta canônica estiver limitada/truncada, a ação que afirma cobrir “todas as NFs do Pregão” deve ser bloqueada.
