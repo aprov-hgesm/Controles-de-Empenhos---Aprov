@@ -535,25 +535,25 @@ export function WarehouseStockOperational({
     : [];
 
   return (
-    <div className="mt-6 space-y-5" data-testid="warehouse-stock-operational">
+    <div className="space-y-5" data-testid="warehouse-stock-operational">
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-2xl border border-blue-300/10 bg-blue-400/[0.035] p-4">
-          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-blue-300/70">Saldo oficial</p>
-          <p className="mt-2 text-xs leading-5 text-slate-400">warehouse_balance_v1 continua sendo a autoridade do saldo agregado.</p>
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-[#00288e]/70">Saldo oficial</p>
+          <p className="mt-2 text-xs leading-5 text-slate-600">warehouse_balance_v1 continua sendo a autoridade do saldo agregado.</p>
         </div>
-        <div className="rounded-2xl border border-emerald-300/10 bg-emerald-400/[0.035] p-4">
-          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-300/70">Enriquecimento</p>
-          <p className="mt-2 text-xs leading-5 text-slate-400">{WAREHOUSE_LOT_SCHEMA_VERSION} adiciona lote, validade, origem e posição sem gerar movimento.</p>
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-700">Enriquecimento</p>
+          <p className="mt-2 text-xs leading-5 text-slate-600">{WAREHOUSE_LOT_SCHEMA_VERSION} adiciona lote, validade, origem e posição sem gerar movimento.</p>
         </div>
-        <div className="rounded-2xl border border-amber-300/10 bg-amber-400/[0.035] p-4">
-          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-amber-300/70">FEFO</p>
-          <p className="mt-2 text-xs leading-5 text-slate-400">Recomendação operacional apenas. A retirada permanece uma ação posterior e auditável.</p>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-amber-700">FEFO</p>
+          <p className="mt-2 text-xs leading-5 text-slate-600">Recomendação operacional apenas. A retirada permanece uma ação posterior e auditável.</p>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-4">
-        <div className="flex items-center gap-2 text-slate-300">
-          <Search className="h-4 w-4 text-blue-200" aria-hidden="true" />
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex items-center gap-2 text-slate-800">
+          <Search className="h-4 w-4 text-[#00288e]" aria-hidden="true" />
           <p className="text-xs font-black uppercase tracking-[0.12em]">Pesquisa operacional</p>
         </div>
         <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.7fr)_1fr_1fr_1fr_auto]">
@@ -563,7 +563,7 @@ export function WarehouseStockOperational({
             data-testid="warehouse-stock-search"
             aria-label="Pesquisar estoque"
             placeholder="Material, ID, lote, validade, NF, fornecedor ou localização"
-            className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-200 outline-none focus:border-blue-300/25"
+            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-[#00288e] focus:ring-2 focus:ring-blue-100"
           />
           <select
             value={depotFilter}
@@ -572,7 +572,7 @@ export function WarehouseStockOperational({
               setLocationFilter('');
             }}
             aria-label="Filtrar por depósito"
-            className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-300"
+            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e]"
           >
             <option value="">Todos os depósitos</option>
             {state.depots.map(({ depot }) => (
@@ -583,7 +583,7 @@ export function WarehouseStockOperational({
             value={locationFilter}
             onChange={(event) => setLocationFilter(event.target.value)}
             aria-label="Filtrar por localização"
-            className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-300"
+            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e]"
           >
             <option value="">Todas as localizações</option>
             {state.locations
@@ -596,7 +596,7 @@ export function WarehouseStockOperational({
             value={expiryFilter}
             onChange={(event) => setExpiryFilter(event.target.value)}
             aria-label="Filtrar por validade"
-            className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-300"
+            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e]"
           >
             <option value="">Todas as validades</option>
             <option value="near">Próximo do vencimento</option>
@@ -608,7 +608,7 @@ export function WarehouseStockOperational({
             type="button"
             onClick={() => void refresh()}
             disabled={state.loading}
-            className="inline-flex h-10 items-center justify-center rounded-xl border border-white/[0.08] px-3 text-slate-400 hover:text-slate-200"
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-slate-500 hover:border-blue-200 hover:text-[#00288e]"
             aria-label="Atualizar estoque"
           >
             <RefreshCw className={state.loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" />
@@ -617,11 +617,11 @@ export function WarehouseStockOperational({
       </div>
 
       {state.loading ? (
-        <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-5 text-sm text-slate-400">Consultando estoque, distribuição física e lotes…</div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500 shadow-sm">Consultando estoque, distribuição física e lotes…</div>
       ) : state.error ? (
-        <div className="rounded-2xl border border-rose-300/10 bg-rose-400/[0.04] p-5 text-sm text-rose-200">{state.error}</div>
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">{state.error}</div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-5 text-sm text-slate-400">Nenhum material corresponde aos filtros informados.</div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500 shadow-sm">Nenhum material corresponde aos filtros informados.</div>
       ) : (
         <div className="space-y-3">
           {filtered.map((summary) => (
@@ -635,11 +635,11 @@ export function WarehouseStockOperational({
                 resetLotForm();
                 setMessage(null);
               }}
-              className="w-full rounded-2xl border border-white/[0.07] bg-black/10 p-4 text-left transition hover:border-blue-300/15 hover:bg-blue-400/[0.025]"
+              className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm text-left transition hover:border-blue-300/15 hover:bg-blue-400/[0.025]"
             >
               <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_0.55fr_0.65fr_0.65fr_minmax(0,1fr)_auto] xl:items-center">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-black text-slate-200">{summary.material.description}</p>
+                  <p className="truncate text-sm font-black text-slate-900">{summary.material.description}</p>
                   <p className="mt-1 truncate font-mono text-[9px] text-slate-600">{summary.material.id}</p>
                   <p className="mt-1 truncate text-[9px] text-slate-600">
                     {summary.locationLabels.length > 0
@@ -647,7 +647,7 @@ export function WarehouseStockOperational({
                       : 'sem posição física materializada'}
                   </p>
                   {summary.lots.some((lot) => lot.origin.kind === 'INVOICE') && (
-                    <p className="mt-1 truncate text-[9px] text-blue-300/55">
+                    <p className="mt-1 truncate text-[9px] text-[#00288e]/65">
                       {warehouseLotOriginLabel(
                         summary.lots.find((lot) => lot.origin.kind === 'INVOICE')!
                           .origin
@@ -657,26 +657,26 @@ export function WarehouseStockOperational({
                 </div>
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Saldo total</p>
-                  <p className="mt-1 text-base font-black text-emerald-200">
+                  <p className="mt-1 text-base font-black text-emerald-700">
                     {numberLabel(summary.balance.quantity)}{' '}
-                    <span className="text-[10px] font-bold text-emerald-200/55">
+                    <span className="text-[10px] font-bold text-emerald-600">
                       {summary.material.unit.label || summary.material.unit.code}
                     </span>
                   </p>
                 </div>
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Distribuído</p>
-                  <p className="mt-1 text-sm font-bold text-slate-300">{numberLabel(summary.distributed)}</p>
+                  <p className="mt-1 text-sm font-bold text-slate-700">{numberLabel(summary.distributed)}</p>
                   <p className="text-[9px] text-slate-600">{numberLabel(summary.unassigned)} sem localização</p>
                 </div>
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Lotes</p>
-                  <p className="mt-1 text-sm font-bold text-slate-300">{summary.lots.length}</p>
+                  <p className="mt-1 text-sm font-bold text-slate-700">{summary.lots.length}</p>
                   <p className="text-[9px] text-slate-600">próxima {dateLabel(summary.nearestExpiry)}</p>
                 </div>
                 <div className="min-w-0">
                   <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">FEFO / pendências</p>
-                  <p className="mt-1 truncate text-xs font-bold text-blue-200">
+                  <p className="mt-1 truncate text-xs font-bold text-[#00288e]">
                     {summary.fefo ? summary.fefo.code + ' · ' + dateLabel(summary.fefo.expiresOn) : 'sem recomendação FEFO'}
                   </p>
                   <p className="mt-1 text-[9px] text-slate-600">{summary.pendencies.length} pendência(s) logística(s)</p>
@@ -689,15 +689,15 @@ export function WarehouseStockOperational({
       )}
 
       {selected && (
-        <div className="rounded-3xl border border-blue-300/12 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.08),transparent_32%),rgba(0,0,0,0.16)] p-5 sm:p-6" data-testid="warehouse-material-sheet">
-          <div className="flex flex-col gap-4 border-b border-white/[0.07] pb-5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm sm:p-6" data-testid="warehouse-material-sheet">
+          <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-blue-300/65">Ficha do material</p>
-              <h3 className="mt-2 text-xl font-black text-white">{selected.material.description}</h3>
+              <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-[#00288e]/65">Ficha do material</p>
+              <h3 className="mt-2 text-xl font-black text-slate-900">{selected.material.description}</h3>
               <p className="mt-1 font-mono text-[9px] text-slate-600">{selected.material.id} · {selected.material.unit.label || selected.material.unit.code}</p>
               <div data-testid="warehouse-material-barcodes" className="mt-2 flex flex-wrap gap-1.5">
                 {selected.barcodes.length > 0 ? selected.barcodes.map((barcode) => (
-                  <span key={barcode} className="rounded-md border border-blue-300/10 bg-blue-400/[0.04] px-2 py-1 font-mono text-[9px] text-blue-200/70">
+                  <span key={barcode} className="rounded-md border border-blue-100 bg-blue-50 px-2 py-1 font-mono text-[9px] text-[#00288e]">
                     {barcode}
                   </span>
                 )) : (
@@ -708,46 +708,46 @@ export function WarehouseStockOperational({
             <button
               type="button"
               onClick={() => setSelectedMaterialId('')}
-              className="w-fit rounded-xl border border-white/[0.08] px-3 py-2 text-xs font-bold text-slate-400 hover:text-slate-200"
+              className="w-fit rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:border-blue-200 hover:text-[#00288e]"
             >
               Fechar ficha
             </button>
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-white/[0.06] bg-black/10 p-4">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
               <p className="text-[9px] uppercase tracking-[0.12em] text-slate-600">Saldo agregado</p>
-              <p className="mt-2 text-2xl font-black text-emerald-200">{numberLabel(selected.balance.quantity)}</p>
+              <p className="mt-2 text-2xl font-black text-emerald-700">{numberLabel(selected.balance.quantity)}</p>
             </div>
-            <div className="rounded-2xl border border-white/[0.06] bg-black/10 p-4">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
               <p className="text-[9px] uppercase tracking-[0.12em] text-slate-600">Distribuição física</p>
-              <p className="mt-2 text-sm font-black text-slate-200">{numberLabel(selected.distributed)} localizado</p>
+              <p className="mt-2 text-sm font-black text-slate-800">{numberLabel(selected.distributed)} localizado</p>
               <p className="mt-1 text-[10px] text-slate-600">{numberLabel(selected.unassigned)} sem localização</p>
             </div>
-            <div className="rounded-2xl border border-white/[0.06] bg-black/10 p-4">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
               <p className="text-[9px] uppercase tracking-[0.12em] text-slate-600">Lotes rastreados</p>
-              <p className="mt-2 text-2xl font-black text-slate-200">{selected.lots.length}</p>
+              <p className="mt-2 text-2xl font-black text-slate-900">{selected.lots.length}</p>
             </div>
-            <div className="rounded-2xl border border-blue-300/10 bg-blue-400/[0.035] p-4" data-testid="warehouse-fefo-recommendation">
-              <p className="text-[9px] uppercase tracking-[0.12em] text-blue-300/70">Recomendação FEFO</p>
-              <p className="mt-2 text-sm font-black text-blue-100">{selected.fefo?.code || 'Sem lote elegível'}</p>
+            <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4" data-testid="warehouse-fefo-recommendation">
+              <p className="text-[9px] uppercase tracking-[0.12em] text-[#00288e]/70">Recomendação FEFO</p>
+              <p className="mt-2 text-sm font-black text-[#00288e]">{selected.fefo?.code || 'Sem lote elegível'}</p>
               <p className="mt-1 text-[10px] text-slate-500">{selected.fefo ? 'validade ' + dateLabel(selected.fefo.expiresOn) : 'nenhuma saída é executada automaticamente'}</p>
             </div>
           </div>
 
           <div className="mt-5 grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
             <div className="space-y-5">
-              <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-blue-200" aria-hidden="true" />
-                    <p className="text-xs font-black text-slate-300">Localização física</p>
+                    <MapPin className="h-4 w-4 text-[#00288e]" aria-hidden="true" />
+                    <p className="text-xs font-black text-slate-800">Localização física</p>
                   </div>
                   <button
                     type="button"
                     data-testid="warehouse-locate-in-depot"
                     onClick={() => setLocateOpen((current) => !current)}
-                    className="rounded-xl border border-blue-300/15 bg-blue-400/[0.06] px-3 py-2 text-xs font-bold text-blue-100"
+                    className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-[#00288e]"
                   >
                     Localizar no depósito
                   </button>
@@ -758,34 +758,34 @@ export function WarehouseStockOperational({
                   ) : (
                     <>
                       {selectedLocations.map((item) => (
-                        <div key={item.key} className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-                          <span className="text-xs font-bold text-slate-300">{item.label}</span>
+                        <div key={item.key} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                          <span className="text-xs font-bold text-slate-700">{item.label}</span>
                           <span className="text-xs text-slate-500">{numberLabel(item.quantity)}</span>
                         </div>
                       ))}
                       {selected.unassigned > 0 && (
-                        <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-300/10 bg-amber-400/[0.03] px-3 py-2">
-                          <span className="text-xs font-bold text-amber-100/80">Sem localização</span>
-                          <span className="text-xs text-amber-200/60">{numberLabel(selected.unassigned)}</span>
+                        <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+                          <span className="text-xs font-bold text-amber-800">Sem localização</span>
+                          <span className="text-xs text-amber-700">{numberLabel(selected.unassigned)}</span>
                         </div>
                       )}
                     </>
                   )}
                 </div>
                 {locateOpen && (
-                  <div className="mt-4 rounded-xl border border-blue-300/12 bg-blue-400/[0.04] p-3" data-testid="warehouse-location-highlight">
-                    <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-blue-300/70">Contrato preparado para a FASE 9</p>
-                    <p className="mt-2 text-xs leading-5 text-slate-400">
+                  <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-3" data-testid="warehouse-location-highlight">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#00288e]/70">Contrato preparado para a FASE 9</p>
+                    <p className="mt-2 text-xs leading-5 text-slate-600">
                       {selected.locationLabels.join(' · ') || 'Sem posição física definida'}. Os IDs técnicos de depósito/local/subposição já estão preservados; nenhum croqui foi antecipado.
                     </p>
                   </div>
                 )}
               </div>
 
-              <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-4" data-testid="warehouse-lot-list">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" data-testid="warehouse-lot-list">
                 <div className="flex items-center gap-2">
-                  <Boxes className="h-4 w-4 text-blue-200" aria-hidden="true" />
-                  <p className="text-xs font-black text-slate-300">Lotes e validade</p>
+                  <Boxes className="h-4 w-4 text-[#00288e]" aria-hidden="true" />
+                  <p className="text-xs font-black text-slate-800">Lotes e validade</p>
                 </div>
                 {selected.lots.length === 0 ? (
                   <p className="mt-3 text-xs leading-5 text-slate-500">Nenhum lote foi enriquecido. Isso não bloqueia o saldo legado.</p>
@@ -795,17 +795,17 @@ export function WarehouseStockOperational({
                       .slice()
                       .sort((a, b) => (a.expiresOn || '9999').localeCompare(b.expiresOn || '9999'))
                       .map((lot) => (
-                        <div key={lot.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+                        <div key={lot.id} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                               <div className="flex flex-wrap items-center gap-2">
-                                <p className="text-xs font-black text-slate-200">{lot.code}</p>
+                                <p className="text-xs font-black text-slate-800">{lot.code}</p>
                                 <span className={'rounded-full border px-2 py-0.5 text-[9px] font-bold ' + lotStateClass(lot)}>{lotStateLabel(lot)}</span>
                               </div>
                               <p className="mt-1 text-[10px] text-slate-500">validade {dateLabel(lot.expiresOn)} · qtd. {numberLabel(lot.quantity)}</p>
                               <p className="mt-1 text-[10px] text-slate-600">{buildWarehousePositionLabel(lot.position, state.depots, state.locations)} · {warehouseLotOriginLabel(lot.origin)}</p>
                             </div>
-                            <button type="button" onClick={() => editLot(lot)} className="rounded-lg border border-white/[0.08] px-2.5 py-1.5 text-[10px] font-bold text-slate-400 hover:text-slate-200">Editar</button>
+                            <button type="button" onClick={() => editLot(lot)} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-slate-600 hover:border-blue-200 hover:text-[#00288e]">Editar</button>
                           </div>
                         </div>
                       ))}
@@ -813,18 +813,18 @@ export function WarehouseStockOperational({
                 )}
               </div>
 
-              <div className="rounded-2xl border border-amber-300/10 bg-amber-400/[0.025] p-4" data-testid="warehouse-logistics-pendencies">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4" data-testid="warehouse-logistics-pendencies">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-200" aria-hidden="true" />
-                  <p className="text-xs font-black text-amber-100/90">Pendências logísticas</p>
+                  <AlertTriangle className="h-4 w-4 text-amber-700" aria-hidden="true" />
+                  <p className="text-xs font-black text-amber-800">Pendências logísticas</p>
                 </div>
                 {selected.pendencies.length === 0 ? (
                   <p className="mt-3 text-xs text-slate-500">Nenhuma pendência logística identificada nesta leitura.</p>
                 ) : (
                   <div className="mt-3 space-y-2">
                     {selected.pendencies.map((item) => (
-                      <div key={item.code} className="rounded-xl border border-white/[0.06] bg-black/10 px-3 py-2">
-                        <p className="text-xs font-bold text-slate-300">{item.title}</p>
+                      <div key={item.code} className="rounded-xl border border-amber-200 bg-white px-3 py-2">
+                        <p className="text-xs font-bold text-slate-700">{item.title}</p>
                         <p className="mt-1 text-[10px] leading-5 text-slate-500">{item.message}</p>
                       </div>
                     ))}
@@ -834,10 +834,10 @@ export function WarehouseStockOperational({
             </div>
 
             <div className="space-y-5">
-              <div className="rounded-2xl border border-emerald-300/10 bg-emerald-400/[0.025] p-4">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-emerald-200" aria-hidden="true" />
-                  <p className="text-xs font-black text-emerald-100/90">{editingLotId ? 'Editar enriquecimento do lote' : 'Enriquecer com lote'}</p>
+                  <ShieldCheck className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+                  <p className="text-xs font-black text-emerald-800">{editingLotId ? 'Editar enriquecimento do lote' : 'Enriquecer com lote'}</p>
                 </div>
                 <p className="mt-2 text-[10px] leading-5 text-slate-500">Esta ação não gera entrada, saída ou transferência de estoque. Ela apenas associa informação logística ao saldo já existente.</p>
 
@@ -848,7 +848,7 @@ export function WarehouseStockOperational({
                     data-testid="warehouse-lot-create-code"
                     aria-label="Código do lote"
                     placeholder="Código do lote"
-                    className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-200"
+                    className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-[#00288e]"
                   />
                   <div className="grid gap-3 sm:grid-cols-2">
                     <input
@@ -857,7 +857,7 @@ export function WarehouseStockOperational({
                       onChange={(event) => setLotExpiry(event.target.value)}
                       data-testid="warehouse-lot-create-expiry"
                       aria-label="Validade do lote"
-                      className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-300"
+                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e]"
                     />
                     <input
                       inputMode="decimal"
@@ -866,7 +866,7 @@ export function WarehouseStockOperational({
                       data-testid="warehouse-lot-create-quantity"
                       aria-label="Quantidade rastreada no lote"
                       placeholder="Quantidade"
-                      className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-200"
+                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-[#00288e]"
                     />
                   </div>
                   <select
@@ -874,7 +874,7 @@ export function WarehouseStockOperational({
                     onChange={(event) => setLotPositionKey(event.target.value)}
                     data-testid="warehouse-lot-create-position"
                     aria-label="Posição do lote"
-                    className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-300"
+                    className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e]"
                   >
                     {Array.from(positions.entries()).map(([key, position]) => (
                       <option key={key} value={key}>
@@ -886,7 +886,7 @@ export function WarehouseStockOperational({
                     value={lotOriginMovementId}
                     onChange={(event) => setLotOriginMovementId(event.target.value)}
                     aria-label="Origem documental do lote"
-                    className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-300"
+                    className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e]"
                   >
                     <option value="">Origem manual / legado</option>
                     {invoiceMovements.map(({ movement }) => {
@@ -910,16 +910,16 @@ export function WarehouseStockOperational({
                       {editingLotId ? 'Salvar lote' : 'Registrar lote'}
                     </button>
                     {editingLotId && (
-                      <button type="button" onClick={resetLotForm} className="h-9 rounded-xl border border-white/[0.08] px-3 text-xs font-bold text-slate-400">Cancelar edição</button>
+                      <button type="button" onClick={resetLotForm} className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600">Cancelar edição</button>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-blue-200" aria-hidden="true" />
-                  <p className="text-xs font-black text-slate-300">Origem e histórico oficial</p>
+                  <FileText className="h-4 w-4 text-[#00288e]" aria-hidden="true" />
+                  <p className="text-xs font-black text-slate-800">Origem e histórico oficial</p>
                 </div>
                 <p className="mt-2 text-[10px] text-slate-600">Consulta sob demanda · até 50 movimentos do material</p>
                 {historyLoading ? (
@@ -932,9 +932,9 @@ export function WarehouseStockOperational({
                       const source = movement.source;
                       const invoiceSource = source?.kind === 'INVOICE' ? source : null;
                       return (
-                        <div key={movement.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                        <div key={movement.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
                           <div className="flex items-center justify-between gap-3">
-                            <span className="font-mono text-[9px] font-bold text-blue-200">{movement.type}</span>
+                            <span className="font-mono text-[9px] font-bold text-[#00288e]">{movement.type}</span>
                             <span className="text-[9px] text-slate-600">{createdAt ? new Date(createdAt).toLocaleString('pt-BR') : 'horário pendente'}</span>
                           </div>
                           <p className="mt-1 text-[10px] text-slate-500">
@@ -954,16 +954,16 @@ export function WarehouseStockOperational({
           </div>
 
           {message && (
-            <div className="mt-5 rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3 text-xs leading-5 text-slate-300" data-testid="warehouse-phase7-message">
+            <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-700" data-testid="warehouse-phase7-message">
               {message}
             </div>
           )}
         </div>
       )}
 
-      <div className="rounded-2xl border border-white/[0.06] bg-black/10 px-4 py-3 text-[10px] leading-5 text-slate-600">
+      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[10px] leading-5 text-slate-500 shadow-sm">
         <div className="flex items-center gap-2 text-slate-500"><CalendarClock className="h-3.5 w-3.5" aria-hidden="true" /><span>Consultas bounded: 250 materiais/saldos, 500 posições/lotes e histórico por material somente quando a ficha é aberta.</span></div>
-        <div className="mt-1 flex items-center gap-2 text-slate-500"><PackageSearch className="h-3.5 w-3.5" aria-hidden="true" /><span>Código de barras, scanner e saída expressa não fazem parte desta fase.</span></div>
+        <div className="mt-1 flex items-center gap-2 text-slate-500"><PackageSearch className="h-3.5 w-3.5" aria-hidden="true" /><span>Código de barras e lotes enriquecem a consulta. A retirada física e a baixa de estoque são executadas exclusivamente na aba Saída de Material.</span></div>
       </div>
     </div>
   );
