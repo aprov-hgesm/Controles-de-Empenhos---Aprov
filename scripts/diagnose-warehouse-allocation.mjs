@@ -260,10 +260,11 @@ const materialIds = new Set(
 );
 
 for (const materialId of materialIds) {
-  const [materialDoc, balanceDoc, locationBalances] = await Promise.all([
+  const [materialDoc, balanceDoc, locationBalances, materialMovements] = await Promise.all([
     getDocument('materials', materialId),
     getDocument('balances', materialId),
     runQuery('locationBalances', 'materialId', materialId),
+    runQuery('movements', 'materialId', materialId),
   ]);
 
   const material = decodeDocument(materialDoc);
@@ -285,6 +286,7 @@ for (const materialId of materialIds) {
       lastMovementId: balance.lastMovementId,
     } : null,
     locationBalances: locationBalances.map(compactLocationBalance),
+    movements: materialMovements.map(compactMovement),
   }, null, 2));
   console.log('');
 }
