@@ -68,7 +68,12 @@ function accessToken() {
   }
 }
 
-const TOKEN = accessToken();
+let cachedToken = accessToken();
+
+function refreshAccessToken() {
+  cachedToken = accessToken();
+  return cachedToken;
+}
 
 function encodeSegment(value) {
   return encodeURIComponent(value);
@@ -84,15 +89,22 @@ function documentsBase(databaseId) {
   );
 }
 
-async function requestJson(url, options = {}) {
-  const response = await fetch(url, {
+async function requestJson(url, options = {}, retryAuth = true) {
+  const doRequest = (token) => fetch(url, {
     ...options,
     headers: {
-      Authorization: 'Bearer ' + TOKEN,
+      Authorization: 'Bearer ' + token,
       'Content-Type': 'application/json',
       ...(options.headers || {}),
     },
   });
+
+  let response = await doRequest(cachedToken);
+
+  if (response.status === 401 && retryAuth && !process.env.GOOGLE_OAUTH_ACCESS_TOKEN?.trim()) {
+    console.warn('[AUTH] Token OAuth expirou; renovando credencial do gcloud e repetindo a requisição...');
+    response = await doRequest(refreshAccessToken());
+  }
 
   const text = await response.text();
   const data = text ? JSON.parse(text) : {};
