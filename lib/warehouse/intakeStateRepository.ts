@@ -87,6 +87,7 @@ export interface WarehouseInvoiceIntakeQueueContext {
   cutoffAt: string | null;
   truncated: boolean;
   reconciliationCoverageLimited: boolean;
+  pregaoCoverageLimited: boolean;
 }
 
 export interface SaveWarehouseItemIntakeStateInput {
@@ -583,6 +584,8 @@ export async function loadWarehouseInvoiceIntakeQueue(
     cutoffAt,
     truncated,
     reconciliationCoverageLimited: invoicesResult.truncated,
+    pregaoCoverageLimited:
+      invoicesResult.truncated || empenhosResult.truncated,
   };
 }
 
