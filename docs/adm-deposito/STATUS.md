@@ -3156,3 +3156,37 @@ Guard adicional:
 - o guard também exige azul institucional e formulários claros nessas superfícies.
 
 Nenhum contrato de estoque, ledger, PDF, Firestore Rules ou persistência foi alterado por esta revisão visual.
+
+
+### Auditoria da Saída de Material e reflexo no croqui — 2026-09-27
+
+Foi auditado o fluxo completo **Saída de Material → ledger → saldo agregado → saldo físico por posição → lote → projeção visual do croqui**.
+
+Comportamento confirmado:
+- cada linha finalizada usa `applyWarehouseExpressOutbound`;
+- o movimento gerado é `OUTBOUND` com `quantityDelta` negativo;
+- `balances/{materialId}` é reduzido na mesma operação;
+- `locationBalances/{locationBalanceId}` da posição escolhida é reduzido na mesma operação;
+- lote selecionado é reduzido pela mesma quantidade;
+- saldo negativo é recusado;
+- retirada total de uma posição deixa o `locationBalance` com `quantity = 0`, preservando o documento para auditoria em vez de apagá-lo;
+- o cadastro canônico do material também é preservado;
+- Início/croqui e Prévia 3D consideram somente posições com quantidade positiva para localização e ocupação;
+- portanto uma posição zerada deixa de representar aquele material no croqui; se houver saldo do mesmo material em outra posição, apenas a posição zerada deixa de destacá-lo;
+- estruturas físicas do croqui não são apagadas por saída de estoque.
+
+Rules confirmadas:
+- `OUTBOUND` exige redução correspondente do saldo agregado;
+- exige redução correspondente do `locationBalance`;
+- exige posição física válida/ativa;
+- quando há lote, exige redução correspondente do lote;
+- gravações arbitrárias e saldos negativos continuam bloqueados;
+- documentos de ledger, saldos, locationBalances, lots e withdrawals permanecem sem delete físico.
+
+Cobertura reforçada:
+- teste modular de segurança passou a incluir retirada total real de uma subposição, comprovando saldo agregado reduzido, `locationBalance = 0` e lote = 0;
+- teste do localizador passou a comprovar que saldo zerado deixa de compor a projeção do croqui;
+- guard modular passou a proteger os vínculos entre saída, baixa física e filtros de saldo positivo da visualização.
+
+Observação operacional:
+- “excluir do depósito” significa retirar quantitativamente a presença física da posição, não apagar o cadastro/histórico do material.
