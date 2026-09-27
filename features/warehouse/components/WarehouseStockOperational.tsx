@@ -115,8 +115,8 @@ function lotStateClass(lot: WarehouseLot): string {
   const state = warehouseLotExpiryState(lot);
   if (state === 'EXPIRED') return 'border-rose-300/15 bg-rose-400/[0.06] text-rose-200';
   if (state === 'NEAR_EXPIRY') return 'border-amber-300/15 bg-amber-400/[0.06] text-amber-200';
-  if (state === 'VALID') return 'border-emerald-300/15 bg-emerald-400/[0.06] text-emerald-200';
-  return 'border-white/[0.08] bg-white/[0.035] text-slate-400';
+  if (state === 'VALID') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  return 'border-slate-200 bg-slate-50 text-slate-600';
 }
 
 function logisticsMessage(error: unknown): string {
