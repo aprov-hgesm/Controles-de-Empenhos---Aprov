@@ -4,13 +4,19 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Barcode,
+  Building2,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   ClipboardCheck,
   ClipboardList,
   Copy,
+  ListFilter,
   MapPin,
   PackagePlus,
   RefreshCw,
+  Search,
+  Send,
   Sparkles,
   TriangleAlert,
   X,
@@ -41,7 +47,12 @@ import {
 import { WarehouseSiscofisOperational } from './WarehouseSiscofisOperational';
 import { WarehouseImmediateConsumptionPanel } from './WarehouseImmediateConsumptionPanel';
 import { WarehouseAllocatedItemsOperational } from './WarehouseAllocatedItemsOperational';
-import type { ApplyWarehouseImmediateConsumptionResult } from '../../../lib/warehouse/withdrawalRepository';
+import {
+  applyWarehouseImmediateConsumption,
+  listWarehouseDestinations,
+  type ApplyWarehouseImmediateConsumptionResult,
+} from '../../../lib/warehouse/withdrawalRepository';
+import type { WarehouseDestinationListItem } from '../../../lib/warehouse/withdrawal';
 
 type RegistrationTab = 'invoices' | 'stored' | 'siscofis' | 'immediate';
 
@@ -676,6 +687,700 @@ function AllocationPanel({
   );
 }
 
+type InvoiceQueueStatusFilter =
+  | 'actionable'
+  | 'all'
+  | 'processed'
+  | 'reconciliation';
+
+type PregaoBulkMode = 'storage' | 'immediate';
+
+interface WarehouseInvoiceQueueGroup {
+  key: string;
+  invoiceRecordKey: string;
+  invoiceId: string;
+  issueDate: string | null;
+  registeredAt: string | null;
+  supplier: string;
+  empenhoId: string;
+  pregao: string | null;
+  rows: WarehouseInvoiceIntakeQueueRow[];
+  totalItems: number;
+  processedItems: number;
+  actionableItems: number;
+  reconciliationItems: number;
+}
+
+function normalizeQueueSearch(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR')
+    .trim();
+}
+
+function invoiceGroupStatus(
+  group: WarehouseInvoiceQueueGroup
+): WarehouseItemIntakeEffectiveStatus {
+  if (group.reconciliationItems > 0) return 'RECONCILIATION_REQUIRED';
+  if (group.processedItems === group.totalItems) return 'PROCESSED';
+  if (group.processedItems > 0 || group.rows.some(
+    (row) => row.status === 'PARTIALLY_PROCESSED'
+  )) {
+    return 'PARTIALLY_PROCESSED';
+  }
+  return 'PENDING';
+}
+
+function pregaoBulkOperationStorageKey(
+  workspaceId: string,
+  pregao: string,
+  mode: PregaoBulkMode,
+  intakeId: string
+): string {
+  return [
+    'emprovex',
+    'warehouse',
+    'pregao-bulk',
+    workspaceId,
+    pregao,
+    mode,
+    intakeId,
+  ].join(':');
+}
+
+function getOrCreatePregaoBulkOperationId(
+  workspaceId: string,
+  pregao: string,
+  mode: PregaoBulkMode,
+  intakeId: string
+): string {
+  const key = pregaoBulkOperationStorageKey(
+    workspaceId,
+    pregao,
+    mode,
+    intakeId
+  );
+  const existing = window.sessionStorage.getItem(key);
+  if (existing) return existing;
+  const created = window.crypto.randomUUID();
+  window.sessionStorage.setItem(key, created);
+  return created;
+}
+
+function clearPregaoBulkOperationId(
+  workspaceId: string,
+  pregao: string,
+  mode: PregaoBulkMode,
+  intakeId: string
+): void {
+  window.sessionStorage.removeItem(
+    pregaoBulkOperationStorageKey(
+      workspaceId,
+      pregao,
+      mode,
+      intakeId
+    )
+  );
+}
+
+function immediateConsumptionErrorMessage(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error || '');
+  const mappings: Array<[string, string]> = [
+    [
+      'WAREHOUSE_ITEM_INTAKE_CONCURRENT_MODIFICATION',
+      'A pendência foi alterada em outra tela.',
+    ],
+    [
+      'WAREHOUSE_IMMEDIATE_CONSUMPTION_EXCEEDS_PENDING',
+      'A quantidade supera o pendente atual.',
+    ],
+    [
+      'WAREHOUSE_IMMEDIATE_CONSUMPTION_STOCK_MISMATCH',
+      'A projeção de estoque não comporta esta parcela.',
+    ],
+    [
+      'WAREHOUSE_ITEM_INTAKE_RECONCILIATION_REQUIRED',
+      'O item exige reconciliação antes do consumo imediato.',
+    ],
+    [
+      'WAREHOUSE_DESTINATION_INACTIVE',
+      'O destino selecionado está inativo.',
+    ],
+    [
+      'WAREHOUSE_IDEMPOTENCY_CONFLICT',
+      'Existe uma tentativa anterior incompatível para este item.',
+    ],
+  ];
+  for (const [code, message] of mappings) {
+    if (raw.includes(code)) return message;
+  }
+  return raw || 'Não foi possível confirmar o consumo imediato.';
+}
+
+function PregaoBulkActionPanel({
+  workspaceId,
+  pregao,
+  rows,
+  coverageLimited,
+  onClose,
+  onComplete,
+}: {
+  workspaceId: string;
+  pregao: string;
+  rows: WarehouseInvoiceIntakeQueueRow[];
+  coverageLimited: boolean;
+  onClose: () => void;
+  onComplete: (
+    successful: number,
+    failures: Array<{ row: WarehouseInvoiceIntakeQueueRow; message: string }>
+  ) => Promise<void>;
+}) {
+  const [mode, setMode] = useState<PregaoBulkMode>('storage');
+  const [depots, setDepots] = useState<WarehouseDepotListItem[]>([]);
+  const [locations, setLocations] = useState<WarehouseLocationListItem[]>([]);
+  const [destinations, setDestinations] =
+    useState<WarehouseDestinationListItem[]>([]);
+  const [loadingStructure, setLoadingStructure] = useState(true);
+  const [depotId, setDepotId] = useState('');
+  const [locationId, setLocationId] = useState('');
+  const [subpositionId, setSubpositionId] = useState('');
+  const [destinationId, setDestinationId] = useState('');
+  const [withdrawnBy, setWithdrawnBy] = useState('');
+  const [confirmed, setConfirmed] = useState(false);
+  const [working, setWorking] = useState(false);
+  const [progress, setProgress] = useState({ completed: 0, total: 0 });
+  const [error, setError] = useState<string | null>(null);
+  const [failures, setFailures] = useState<
+    Array<{ row: WarehouseInvoiceIntakeQueueRow; message: string }>
+  >([]);
+
+  const eligibleRows = useMemo(
+    () => rows.filter(
+      (row) =>
+        (row.status === 'PENDING' || row.status === 'PARTIALLY_PROCESSED')
+        && row.pendingQuantity > 0.000001
+    ),
+    [rows]
+  );
+  const invoiceCount = useMemo(
+    () => new Set(eligibleRows.map((row) => row.invoiceRecordKey)).size,
+    [eligibleRows]
+  );
+
+  useEffect(() => {
+    let active = true;
+    setLoadingStructure(true);
+    Promise.all([
+      listWarehouseDepots(workspaceId, 250),
+      listWarehouseLocations(workspaceId, 500),
+      listWarehouseDestinations(workspaceId, 250),
+    ])
+      .then(([depotItems, locationItems, destinationItems]) => {
+        if (!active) return;
+        setDepots(
+          depotItems.filter((item) => item.depot.status === 'active')
+        );
+        setLocations(
+          locationItems.filter((item) => item.location.status === 'active')
+        );
+        setDestinations(
+          destinationItems.filter(
+            (item) => item.destination.status === 'active'
+          )
+        );
+        const firstDestination = destinationItems.find(
+          (item) => item.destination.status === 'active'
+        );
+        if (firstDestination) {
+          setDestinationId(firstDestination.destination.id);
+        }
+      })
+      .catch((loadError) => {
+        if (!active) return;
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : 'Não foi possível carregar os destinos.'
+        );
+      })
+      .finally(() => {
+        if (active) setLoadingStructure(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [workspaceId]);
+
+  const localOptions = useMemo(
+    () => locations.filter(
+      (item) =>
+        item.location.kind === 'LOCAL'
+        && item.location.depotId === depotId
+    ),
+    [locations, depotId]
+  );
+  const subpositionOptions = useMemo(
+    () => locations.filter(
+      (item) =>
+        item.location.kind === 'SUBPOSITION'
+        && item.location.depotId === depotId
+        && item.location.parentLocationId === locationId
+    ),
+    [locations, depotId, locationId]
+  );
+
+  const buildPosition = (): WarehouseStockPosition | null => {
+    if (!depotId || !locationId) return null;
+    if (subpositionId) {
+      return {
+        kind: 'SUBPOSITION',
+        depotId,
+        locationId,
+        subpositionId,
+      };
+    }
+    return {
+      kind: 'LOCATION',
+      depotId,
+      locationId,
+      subpositionId: null,
+    };
+  };
+
+  const runBulk = async () => {
+    setError(null);
+    setFailures([]);
+
+    if (coverageLimited) {
+      setError(
+        'A fila canônica atingiu o limite de consulta. Para não deixar NFs do Pregão de fora, a ação em lote foi bloqueada até a cobertura estar completa.'
+      );
+      return;
+    }
+    if (!eligibleRows.length) {
+      setError('Não há itens pendentes neste Pregão.');
+      return;
+    }
+    if (!confirmed) {
+      setError('Confirme a ação em lote antes de continuar.');
+      return;
+    }
+
+    const position = mode === 'storage' ? buildPosition() : null;
+    if (mode === 'storage' && !position) {
+      setError('Selecione depósito e localização.');
+      return;
+    }
+    if (mode === 'immediate' && !destinationId) {
+      setError('Selecione o destino do consumo imediato.');
+      return;
+    }
+    if (mode === 'immediate' && !withdrawnBy.trim()) {
+      setError('Informe quem recebeu/retirou os materiais.');
+      return;
+    }
+
+    setWorking(true);
+    setProgress({ completed: 0, total: eligibleRows.length });
+    const failed: Array<{
+      row: WarehouseInvoiceIntakeQueueRow;
+      message: string;
+    }> = [];
+    let successful = 0;
+
+    for (let index = 0; index < eligibleRows.length; index += 1) {
+      const row = eligibleRows[index];
+      const operationId = getOrCreatePregaoBulkOperationId(
+        workspaceId,
+        pregao,
+        mode,
+        row.stateId
+      );
+
+      try {
+        if (mode === 'storage' && position) {
+          await allocateWarehousePendingItem(workspaceId, {
+            intakeId: row.stateId,
+            invoiceRecordKey: row.invoiceRecordKey,
+            invoiceId: row.invoiceId,
+            empenhoId: row.empenhoId,
+            itemId: row.itemId,
+            materialId: row.materialId,
+            description: row.itemName,
+            unitLabel: row.unitLabel,
+            supplier: row.supplier,
+            receivedQuantity: row.receivedQuantity,
+            expectedAllocatedQuantity: row.allocatedQuantity,
+            expectedImmediateConsumptionQuantity:
+              row.immediateConsumptionQuantity,
+            effectiveStatus: row.status,
+            quantity: row.pendingQuantity,
+            position,
+            lotCode: '',
+            expiresOn: null,
+            barcode: null,
+            operationId,
+          });
+          saveInvoiceDefaultDestination(
+            workspaceId,
+            row.invoiceRecordKey,
+            {
+              depotId,
+              locationId,
+              subpositionId,
+            }
+          );
+        } else {
+          await applyWarehouseImmediateConsumption(workspaceId, {
+            intakeId: row.stateId,
+            invoiceRecordKey: row.invoiceRecordKey,
+            invoiceId: row.invoiceId,
+            empenhoId: row.empenhoId,
+            itemId: row.itemId,
+            materialId: row.materialId,
+            description: row.itemName,
+            unitLabel: row.unitLabel,
+            supplier: row.supplier,
+            receivedQuantity: row.receivedQuantity,
+            expectedAllocatedQuantity: row.allocatedQuantity,
+            expectedImmediateConsumptionQuantity:
+              row.immediateConsumptionQuantity,
+            effectiveStatus: row.status,
+            quantity: row.pendingQuantity,
+            destinationId,
+            withdrawnBy: withdrawnBy.trim(),
+            operationId,
+          });
+        }
+
+        clearPregaoBulkOperationId(
+          workspaceId,
+          pregao,
+          mode,
+          row.stateId
+        );
+        successful += 1;
+      } catch (bulkError) {
+        failed.push({
+          row,
+          message:
+            mode === 'storage'
+              ? allocationErrorMessage(bulkError)
+              : immediateConsumptionErrorMessage(bulkError),
+        });
+      } finally {
+        setProgress({
+          completed: index + 1,
+          total: eligibleRows.length,
+        });
+      }
+    }
+
+    setFailures(failed);
+    setWorking(false);
+    await onComplete(successful, failed);
+    if (failed.length === 0) onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[130] flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-label={'Encaminhar Pregão ' + pregao}
+    >
+      <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-t-3xl border border-slate-200 bg-white shadow-2xl sm:rounded-3xl">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
+          <div>
+            <div className="flex items-center gap-2 text-[#00288e]">
+              <Send className="h-4 w-4" />
+              <p className="text-[10px] font-black uppercase tracking-[0.14em]">
+                Encaminhamento em lote
+              </p>
+            </div>
+            <h3 className="mt-1 text-lg font-black text-slate-900">
+              Pregão {pregao}
+            </h3>
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              {invoiceCount} NF(s) · {eligibleRows.length} item(ns) com quantidade pendente
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={working}
+            className="rounded-xl border border-slate-200 p-2 text-slate-500 disabled:opacity-40"
+            aria-label="Fechar"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-5 p-5">
+          {coverageLimited && (
+            <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold leading-5 text-rose-700">
+              <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+              A consulta de NFs está limitada. O EMPROVEX não executará uma ação chamada
+              “todas as NFs do Pregão” sem garantir que todas estão carregadas.
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold leading-5 text-rose-700">
+              {error}
+            </div>
+          )}
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setMode('storage')}
+              disabled={working}
+              className={
+                mode === 'storage'
+                  ? 'rounded-2xl border-2 border-[#00288e] bg-blue-50 p-4 text-left'
+                  : 'rounded-2xl border border-slate-200 bg-white p-4 text-left'
+              }
+            >
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-[#00288e]" />
+                <span className="text-xs font-black text-slate-900">
+                  Mesmo local de armazenamento
+                </span>
+              </div>
+              <p className="mt-2 text-[10px] leading-5 text-slate-500">
+                Todos os itens pendentes das NFs do Pregão serão alocados no mesmo
+                depósito/localização. Depois, itens específicos ainda poderão ser movimentados.
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('immediate')}
+              disabled={working}
+              className={
+                mode === 'immediate'
+                  ? 'rounded-2xl border-2 border-violet-600 bg-violet-50 p-4 text-left'
+                  : 'rounded-2xl border border-slate-200 bg-white p-4 text-left'
+              }
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-violet-700" />
+                <span className="text-xs font-black text-slate-900">
+                  Consumo imediato
+                </span>
+              </div>
+              <p className="mt-2 text-[10px] leading-5 text-slate-500">
+                Todo o pendente será classificado como consumo imediato para o mesmo
+                destino operacional, sem alocação física no depósito.
+              </p>
+            </button>
+          </div>
+
+          {mode === 'storage' ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                  Depósito
+                </span>
+                <select
+                  value={depotId}
+                  onChange={(event) => {
+                    setDepotId(event.target.value);
+                    setLocationId('');
+                    setSubpositionId('');
+                  }}
+                  disabled={working || loadingStructure}
+                  className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-[#00288e] disabled:opacity-50"
+                >
+                  <option value="">
+                    {loadingStructure ? 'Carregando…' : 'Selecione'}
+                  </option>
+                  {depots.map(({ depot }) => (
+                    <option key={depot.id} value={depot.id}>
+                      {depot.code} · {depot.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                  Localização
+                </span>
+                <select
+                  value={locationId}
+                  onChange={(event) => {
+                    setLocationId(event.target.value);
+                    setSubpositionId('');
+                  }}
+                  disabled={working || !depotId || loadingStructure}
+                  className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-[#00288e] disabled:opacity-50"
+                >
+                  <option value="">Selecione</option>
+                  {localOptions.map(({ location }) => (
+                    <option key={location.id} value={location.id}>
+                      {location.code} · {location.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block sm:col-span-2">
+                <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                  Subposição · opcional
+                </span>
+                <select
+                  value={subpositionId}
+                  onChange={(event) => setSubpositionId(event.target.value)}
+                  disabled={working || !locationId || loadingStructure}
+                  className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-[#00288e] disabled:opacity-50"
+                >
+                  <option value="">Sem subposição</option>
+                  {subpositionOptions.map(({ location }) => (
+                    <option key={location.id} value={location.id}>
+                      {location.code} · {location.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                  Destino operacional
+                </span>
+                <select
+                  value={destinationId}
+                  onChange={(event) => setDestinationId(event.target.value)}
+                  disabled={working || loadingStructure}
+                  className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-violet-500 disabled:opacity-50"
+                >
+                  <option value="">
+                    {loadingStructure ? 'Carregando…' : 'Selecione'}
+                  </option>
+                  {destinations.map(({ destination }) => (
+                    <option key={destination.id} value={destination.id}>
+                      {destination.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                  Recebido / retirado por
+                </span>
+                <input
+                  value={withdrawnBy}
+                  onChange={(event) => setWithdrawnBy(event.target.value)}
+                  placeholder="Ex.: Cb João da Silva"
+                  disabled={working}
+                  className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-900 outline-none focus:border-violet-500 disabled:opacity-50"
+                />
+              </label>
+            </div>
+          )}
+
+          <label className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-slate-700">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(event) => setConfirmed(event.target.checked)}
+              disabled={working || coverageLimited}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300"
+            />
+            <span>
+              Confirmo o encaminhamento de <strong>{eligibleRows.length} item(ns)</strong>{' '}
+              pertencentes a <strong>{invoiceCount} NF(s)</strong> do Pregão {pregao}.
+              A execução é atômica por item; se algum item falhar, os anteriores não serão
+              revertidos e o EMPROVEX apresentará a lista de falhas.
+            </span>
+          </label>
+
+          {working && (
+            <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-black text-[#00288e]">
+                  Processando Pregão…
+                </span>
+                <span className="text-xs font-black text-slate-700">
+                  {progress.completed}/{progress.total}
+                </span>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-blue-100">
+                <div
+                  className="h-full rounded-full bg-[#00288e] transition-all"
+                  style={{
+                    width:
+                      progress.total > 0
+                        ? ((progress.completed / progress.total) * 100) + '%'
+                        : '0%',
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {failures.length > 0 && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+              <p className="text-xs font-black text-rose-800">
+                {failures.length} item(ns) não foram concluídos
+              </p>
+              <div className="mt-3 max-h-48 space-y-2 overflow-y-auto">
+                {failures.map(({ row, message }) => (
+                  <div
+                    key={row.stateId}
+                    className="rounded-xl border border-rose-100 bg-white px-3 py-2 text-[10px] leading-5 text-slate-600"
+                  >
+                    <strong className="text-slate-800">
+                      NF {row.invoiceId} · {row.itemName}
+                    </strong>
+                    <br />
+                    {message}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={working}
+              className="h-10 rounded-xl border border-slate-200 px-4 text-xs font-black text-slate-600 disabled:opacity-40"
+            >
+              Fechar
+            </button>
+            <button
+              type="button"
+              onClick={() => void runBulk()}
+              disabled={
+                working
+                || loadingStructure
+                || coverageLimited
+                || !confirmed
+                || eligibleRows.length === 0
+              }
+              className={
+                'inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-xs font-black text-white disabled:opacity-40 '
+                + (mode === 'storage' ? 'bg-[#00288e]' : 'bg-violet-700')
+              }
+            >
+              {working ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              Encaminhar Pregão
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
   const [context, setContext] =
     useState<WarehouseInvoiceIntakeQueueContext | null>(null);
@@ -685,6 +1390,14 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
     useState<WarehouseInvoiceIntakeQueueRow | null>(null);
   const [immediateRow, setImmediateRow] =
     useState<WarehouseInvoiceIntakeQueueRow | null>(null);
+  const [search, setSearch] = useState('');
+  const [pregaoFilter, setPregaoFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] =
+    useState<InvoiceQueueStatusFilter>('actionable');
+  const [expandedInvoices, setExpandedInvoices] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [bulkPregao, setBulkPregao] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -707,14 +1420,141 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
   }, [refresh]);
 
   const rows = context?.rows || [];
+
+  const invoiceGroups = useMemo<WarehouseInvoiceQueueGroup[]>(() => {
+    const grouped = new Map<string, WarehouseInvoiceIntakeQueueRow[]>();
+    for (const row of rows) {
+      const existing = grouped.get(row.invoiceRecordKey) || [];
+      existing.push(row);
+      grouped.set(row.invoiceRecordKey, existing);
+    }
+
+    return Array.from(grouped.entries())
+      .map(([invoiceRecordKey, groupRows]) => {
+        const first = groupRows[0];
+        const processedItems = groupRows.filter(
+          (row) => row.status === 'PROCESSED'
+        ).length;
+        const reconciliationItems = groupRows.filter(
+          (row) => row.status === 'RECONCILIATION_REQUIRED'
+        ).length;
+        const actionableItems = groupRows.filter(
+          (row) =>
+            row.status === 'PENDING'
+            || row.status === 'PARTIALLY_PROCESSED'
+        ).length;
+
+        return {
+          key: invoiceRecordKey,
+          invoiceRecordKey,
+          invoiceId: first.invoiceId,
+          issueDate: first.issueDate,
+          registeredAt: first.registeredAt,
+          supplier: first.supplier,
+          empenhoId: first.empenhoId,
+          pregao: first.pregao,
+          rows: groupRows.slice().sort((left, right) =>
+            left.itemName.localeCompare(right.itemName, 'pt-BR')
+          ),
+          totalItems: groupRows.length,
+          processedItems,
+          actionableItems,
+          reconciliationItems,
+        };
+      })
+      .sort((left, right) =>
+        (right.registeredAt || right.issueDate || '').localeCompare(
+          left.registeredAt || left.issueDate || ''
+        )
+      );
+  }, [rows]);
+
+  const pregaoOptions = useMemo(
+    () => Array.from(
+      new Set(
+        invoiceGroups
+          .map((group) => group.pregao?.trim() || '')
+          .filter(Boolean)
+      )
+    ).sort((left, right) => left.localeCompare(right, 'pt-BR')),
+    [invoiceGroups]
+  );
+
+  const filteredGroups = useMemo(() => {
+    const query = normalizeQueueSearch(search);
+
+    return invoiceGroups.filter((group) => {
+      if (
+        pregaoFilter !== 'ALL'
+        && (
+          pregaoFilter === 'NONE'
+            ? Boolean(group.pregao)
+            : group.pregao !== pregaoFilter
+        )
+      ) {
+        return false;
+      }
+
+      const status = invoiceGroupStatus(group);
+      if (
+        statusFilter === 'actionable'
+        && group.actionableItems === 0
+        && group.reconciliationItems === 0
+      ) {
+        return false;
+      }
+      if (statusFilter === 'processed' && status !== 'PROCESSED') {
+        return false;
+      }
+      if (
+        statusFilter === 'reconciliation'
+        && group.reconciliationItems === 0
+      ) {
+        return false;
+      }
+
+      if (!query) return true;
+      return normalizeQueueSearch([
+        group.invoiceId,
+        group.supplier,
+        group.empenhoId,
+        group.pregao || '',
+        ...group.rows.map((row) => row.itemName),
+      ].join(' ')).includes(query);
+    });
+  }, [invoiceGroups, pregaoFilter, search, statusFilter]);
+
   const summary = useMemo(() => ({
-    pending: rows.filter((row) => row.status === 'PENDING').length,
-    partial: rows.filter((row) => row.status === 'PARTIALLY_PROCESSED').length,
-    processed: rows.filter((row) => row.status === 'PROCESSED').length,
-    reconciliation: rows.filter(
-      (row) => row.status === 'RECONCILIATION_REQUIRED'
+    invoices: invoiceGroups.length,
+    pregões: pregaoOptions.length,
+    actionableInvoices: invoiceGroups.filter(
+      (group) => group.actionableItems > 0
     ).length,
-  }), [rows]);
+    pendingItems: rows.filter(
+      (row) =>
+        row.status === 'PENDING'
+        || row.status === 'PARTIALLY_PROCESSED'
+    ).length,
+    reconciliationInvoices: invoiceGroups.filter(
+      (group) => group.reconciliationItems > 0
+    ).length,
+  }), [invoiceGroups, pregaoOptions.length, rows]);
+
+  const selectedPregaoRows = useMemo(
+    () => bulkPregao
+      ? rows.filter((row) => row.pregao === bulkPregao)
+      : [],
+    [bulkPregao, rows]
+  );
+
+  const toggleInvoice = (key: string) => {
+    setExpandedInvoices((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const openImmediateAction = (row: WarehouseInvoiceIntakeQueueRow) => {
     if (row.status === 'RECONCILIATION_REQUIRED') {
@@ -756,72 +1596,73 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
     );
   };
 
+  const handleBulkComplete = async (
+    successful: number,
+    bulkFailures: Array<{
+      row: WarehouseInvoiceIntakeQueueRow;
+      message: string;
+    }>
+  ) => {
+    await refresh();
+    setMessage(
+      successful
+        + ' item(ns) do Pregão concluído(s)'
+        + (
+          bulkFailures.length
+            ? '; ' + bulkFailures.length + ' falharam e permanecem pendentes.'
+            : ' sem falhas.'
+        )
+    );
+  };
+
   return (
     <div className="space-y-5">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-          <p className="text-[9px] font-black uppercase tracking-[0.15em] text-blue-500">
-            Itens de NF
-          </p>
-          <p className="mt-2 text-2xl font-black text-slate-900">{rows.length}</p>
-          <p className="mt-1 text-[10px] text-slate-500">
-            lidos do EMPROVEX em modo somente leitura
-          </p>
-        </div>
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-[9px] font-black uppercase tracking-[0.15em] text-amber-600">
-            Pendentes
-          </p>
-          <p className="mt-2 text-2xl font-black text-slate-900">
-            {summary.pending}
-          </p>
-          <p className="mt-1 text-[10px] text-slate-500">nenhuma quantidade tratada</p>
-        </div>
-        <div className="rounded-2xl border border-blue-200 bg-white p-4">
-          <p className="text-[9px] font-black uppercase tracking-[0.15em] text-blue-600">
-            Parciais
-          </p>
-          <p className="mt-2 text-2xl font-black text-slate-900">
-            {summary.partial}
-          </p>
-          <p className="mt-1 text-[10px] text-slate-500">ainda possuem saldo de tratamento</p>
-        </div>
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-          <p className="text-[9px] font-black uppercase tracking-[0.15em] text-emerald-600">
-            Tratados
-          </p>
-          <p className="mt-2 text-2xl font-black text-slate-900">
-            {summary.processed}
-          </p>
-          <p className="mt-1 text-[10px] text-slate-500">pendência logística zerada</p>
-        </div>
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
-          <p className="text-[9px] font-black uppercase tracking-[0.15em] text-rose-600">
-            Reconciliação
-          </p>
-          <p className="mt-2 text-2xl font-black text-slate-900">
-            {summary.reconciliation}
-          </p>
-          <p className="mt-1 text-[10px] text-slate-500">fonte canônica divergente ou legado</p>
-        </div>
+        {[
+          ['Notas Fiscais', summary.invoices, 'NFs carregadas na fila'],
+          ['NFs a tratar', summary.actionableInvoices, 'possuem item pendente'],
+          ['Itens pendentes', summary.pendingItems, 'visíveis apenas ao detalhar a NF'],
+          ['Pregões', summary.pregões, 'para filtro e encaminhamento em lote'],
+          ['Reconciliação', summary.reconciliationInvoices, 'NFs que exigem revisão'],
+        ].map(([label, value, description], index) => (
+          <div
+            key={String(label)}
+            className={
+              'rounded-2xl border p-4 '
+              + (
+                index === 4
+                  ? 'border-rose-200 bg-rose-50'
+                  : index === 1
+                    ? 'border-amber-200 bg-amber-50'
+                    : 'border-blue-200 bg-white'
+              )
+            }
+          >
+            <p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-500">
+              {label}
+            </p>
+            <p className="mt-2 text-2xl font-black text-slate-900">
+              {value}
+            </p>
+            <p className="mt-1 text-[10px] text-slate-500">
+              {description}
+            </p>
+          </div>
+        ))}
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <div className="flex items-center gap-2 text-[#00288e]">
               <ClipboardList className="h-4 w-4" />
               <p className="text-xs font-black uppercase tracking-[0.12em]">
-                Fila de Notas Fiscais
+                Notas Fiscais para alocação
               </p>
             </div>
             <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-500">
-              Cada item recebido possui identidade logística estável. O motor distingue
-              recebido, alocado, consumo imediato e pendente sem escrever de volta na NF.
-            </p>
-            <p className="mt-1 max-w-3xl text-[10px] leading-4 text-slate-400">
-              A ausência de documento warehouse representa o estado inicial Pendente.
-              A persistência versionada começa quando houver tratamento logístico.
+              A visualização principal é por NF. Abra somente a nota que deseja tratar;
+              os itens aparecem dentro do detalhamento e mantêm suas operações individuais.
             </p>
             {context?.cutoffAt && (
               <p className="mt-1 text-[9px] font-semibold text-slate-400">
@@ -840,6 +1681,84 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
           </button>
         </div>
 
+        <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(180px,0.7fr)_minmax(170px,0.6fr)_auto]">
+          <label className="relative block">
+            <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Buscar NF, fornecedor, empenho, pregão ou item"
+              className="h-11 w-full rounded-xl border border-slate-200 pl-10 pr-3 text-sm font-semibold text-slate-800 outline-none focus:border-[#00288e]"
+            />
+          </label>
+
+          <label className="relative block">
+            <ListFilter className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+            <select
+              value={pregaoFilter}
+              onChange={(event) => setPregaoFilter(event.target.value)}
+              className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-bold text-slate-800 outline-none focus:border-[#00288e]"
+              aria-label="Filtrar por Pregão"
+            >
+              <option value="ALL">Todos os Pregões</option>
+              {pregaoOptions.map((pregao) => (
+                <option key={pregao} value={pregao}>
+                  Pregão {pregao}
+                </option>
+              ))}
+              <option value="NONE">Sem Pregão</option>
+            </select>
+          </label>
+
+          <select
+            value={statusFilter}
+            onChange={(event) =>
+              setStatusFilter(event.target.value as InvoiceQueueStatusFilter)
+            }
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-[#00288e]"
+            aria-label="Filtrar por situação"
+          >
+            <option value="actionable">A tratar</option>
+            <option value="all">Todas as situações</option>
+            <option value="processed">Tratadas</option>
+            <option value="reconciliation">Reconciliação</option>
+          </select>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (pregaoFilter !== 'ALL' && pregaoFilter !== 'NONE') {
+                setBulkPregao(pregaoFilter);
+              }
+            }}
+            disabled={
+              pregaoFilter === 'ALL'
+              || pregaoFilter === 'NONE'
+              || loading
+            }
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-35"
+            title={
+              pregaoFilter === 'ALL'
+                ? 'Selecione um Pregão específico para habilitar'
+                : undefined
+            }
+          >
+            <Send className="h-4 w-4" />
+            Encaminhar Pregão
+          </button>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500">
+          <span>
+            {filteredGroups.length} NF(s) exibida(s) · {rows.length} item(ns) carregado(s)
+          </span>
+          {pregaoFilter !== 'ALL' && pregaoFilter !== 'NONE' && (
+            <span className="rounded-full bg-blue-50 px-2.5 py-1 font-black text-[#00288e]">
+              Pregão {pregaoFilter}
+            </span>
+          )}
+        </div>
+
         {message && (
           <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-semibold leading-5 text-slate-700">
             {message}
@@ -850,132 +1769,196 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
           <p className="mt-5 text-sm text-slate-500">
             Consultando NFs e estados logísticos…
           </p>
-        ) : rows.length === 0 ? (
+        ) : invoiceGroups.length === 0 ? (
           <div className="mt-5 rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">
-            Nenhum item de NF elegível encontrado na janela consultada.
+            Nenhuma NF elegível encontrada na janela consultada.
+          </div>
+        ) : filteredGroups.length === 0 ? (
+          <div className="mt-5 rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">
+            Nenhuma NF corresponde aos filtros atuais.
           </div>
         ) : (
           <div className="mt-5 space-y-3">
-            {rows.map((row) => {
-              const reconciliation = reconciliationMessage(row);
-              const canContinue =
-                row.status === 'PENDING'
-                || row.status === 'PARTIALLY_PROCESSED';
+            {filteredGroups.map((group) => {
+              const expanded = expandedInvoices.has(group.key);
+              const status = invoiceGroupStatus(group);
+              const progress = group.totalItems > 0
+                ? Math.round((group.processedItems / group.totalItems) * 100)
+                : 0;
 
               return (
                 <div
-                  key={row.stateId}
-                  className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+                  key={group.key}
+                  className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/60"
                 >
-                  <div className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="min-w-0">
+                  <div className="p-4">
+                    <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                      <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span
                             className={
                               'rounded-full px-2 py-1 text-[9px] font-black uppercase '
-                              + intakeStatusClass(row.status)
+                              + intakeStatusClass(status)
                             }
                           >
-                            {intakeStatusLabel(row.status)}
+                            {intakeStatusLabel(status)}
                           </span>
+                          {group.pregao && (
+                            <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-[9px] font-black text-[#00288e]">
+                              Pregão {group.pregao}
+                            </span>
+                          )}
                           <span className="text-[10px] font-bold text-slate-400">
-                            NF {row.invoiceId} · {formatDate(row.issueDate)}
+                            {formatDate(group.issueDate)}
                           </span>
-                          {!row.persisted && row.status === 'PENDING' && (
-                            <span className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[8px] font-black uppercase text-slate-400">
-                              estado inicial derivado
+                        </div>
+
+                        <div className="mt-2 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-3">
+                          <h3 className="text-base font-black text-slate-900">
+                            NF {group.invoiceId}
+                          </h3>
+                          <span className="truncate text-xs font-semibold text-slate-500">
+                            {group.supplier}
+                          </span>
+                        </div>
+
+                        <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[10px] text-slate-500">
+                          <span>
+                            <strong className="text-slate-700">Empenho:</strong>{' '}
+                            {group.empenhoId}
+                          </span>
+                          <span>
+                            <strong className="text-slate-700">Itens:</strong>{' '}
+                            {group.totalItems}
+                          </span>
+                          <span>
+                            <strong className="text-slate-700">A tratar:</strong>{' '}
+                            {group.actionableItems}
+                          </span>
+                          {group.reconciliationItems > 0 && (
+                            <span className="font-black text-rose-600">
+                              {group.reconciliationItems} em reconciliação
                             </span>
                           )}
                         </div>
+                      </div>
 
-                        <p className="mt-2 truncate text-sm font-black text-slate-800">
-                          {row.itemName}
-                        </p>
-                        <div className="mt-2 grid gap-1 text-[10px] text-slate-500 sm:grid-cols-2">
-                          <p>
-                            <span className="font-black text-slate-600">Fornecedor:</span>{' '}
-                            {row.supplier}
-                          </p>
-                          <p>
-                            <span className="font-black text-slate-600">Empenho:</span>{' '}
-                            {row.empenhoId}
-                          </p>
-                          <p>
-                            <span className="font-black text-slate-600">Material:</span>{' '}
-                            {row.itemName}
-                          </p>
-                          <p>
-                            <span className="font-black text-slate-600">ID material:</span>{' '}
-                            {row.materialId || 'a resolver'}
-                          </p>
+                      <div className="flex shrink-0 flex-col gap-2 sm:min-w-56">
+                        <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-wide text-slate-400">
+                          <span>Itens concluídos</span>
+                          <span>{group.processedItems}/{group.totalItems}</span>
                         </div>
-                      </div>
-
-                      {canContinue && (
-                        <div className="flex shrink-0 flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setAllocationRow(row)}
-                            className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#00288e] px-3 text-[10px] font-black text-white"
-                          >
-                            <PackagePlus className="h-3.5 w-3.5" />
-                            Alocar no depósito
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openImmediateAction(row)}
-                            className="inline-flex h-9 items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 text-[10px] font-black text-violet-700"
-                          >
-                            <Sparkles className="h-3.5 w-3.5" />
-                            Consumo imediato
-                          </button>
+                        <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                          <div
+                            className="h-full rounded-full bg-emerald-500 transition-all"
+                            style={{ width: progress + '%' }}
+                          />
                         </div>
-                      )}
-                    </div>
-
-                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                      <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                        <p className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-400">
-                          Recebido
-                        </p>
-                        <p className="mt-1 text-sm font-black text-slate-800">
-                          {formatQuantity(row.receivedQuantity, row.unitLabel)}
-                        </p>
-                      </div>
-                      <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                        <p className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-400">
-                          Alocado
-                        </p>
-                        <p className="mt-1 text-sm font-black text-slate-800">
-                          {formatQuantity(row.allocatedQuantity, row.unitLabel)}
-                        </p>
-                      </div>
-                      <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                        <p className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-400">
-                          Consumo imediato
-                        </p>
-                        <p className="mt-1 text-sm font-black text-slate-800">
-                          {formatQuantity(row.immediateConsumptionQuantity, row.unitLabel)}
-                        </p>
-                      </div>
-                      <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
-                        <p className="text-[8px] font-black uppercase tracking-[0.12em] text-amber-600">
-                          Pendente
-                        </p>
-                        <p className="mt-1 text-sm font-black text-slate-800">
-                          {formatQuantity(row.pendingQuantity, row.unitLabel)}
-                        </p>
+                        <button
+                          type="button"
+                          onClick={() => toggleInvoice(group.key)}
+                          aria-expanded={expanded}
+                          className="mt-1 inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-[10px] font-black text-[#00288e]"
+                        >
+                          {expanded ? (
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          ) : (
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          )}
+                          {expanded ? 'Ocultar itens' : 'Detalhar NF'}
+                        </button>
                       </div>
                     </div>
-
-                    {reconciliation && (
-                      <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-[10px] leading-5 text-rose-700">
-                        <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                        {reconciliation}
-                      </div>
-                    )}
                   </div>
+
+                  {expanded && (
+                    <div className="border-t border-slate-200 bg-white p-4">
+                      <div className="space-y-3">
+                        {group.rows.map((row) => {
+                          const reconciliation = reconciliationMessage(row);
+                          const canContinue =
+                            row.status === 'PENDING'
+                            || row.status === 'PARTIALLY_PROCESSED';
+
+                          return (
+                            <div
+                              key={row.stateId}
+                              className="rounded-xl border border-slate-200 bg-slate-50/60 p-3"
+                            >
+                              <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span
+                                      className={
+                                        'rounded-full px-2 py-1 text-[8px] font-black uppercase '
+                                        + intakeStatusClass(row.status)
+                                      }
+                                    >
+                                      {intakeStatusLabel(row.status)}
+                                    </span>
+                                    {!row.persisted && row.status === 'PENDING' && (
+                                      <span className="text-[8px] font-bold text-slate-400">
+                                        estado inicial
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="mt-2 text-sm font-black text-slate-800">
+                                    {row.itemName}
+                                  </p>
+                                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[9px] text-slate-500">
+                                    <span>
+                                      Recebido:{' '}
+                                      <strong>{formatQuantity(row.receivedQuantity, row.unitLabel)}</strong>
+                                    </span>
+                                    <span>
+                                      Alocado:{' '}
+                                      <strong>{formatQuantity(row.allocatedQuantity, row.unitLabel)}</strong>
+                                    </span>
+                                    <span>
+                                      Consumo imediato:{' '}
+                                      <strong>{formatQuantity(row.immediateConsumptionQuantity, row.unitLabel)}</strong>
+                                    </span>
+                                    <span className="text-amber-700">
+                                      Pendente:{' '}
+                                      <strong>{formatQuantity(row.pendingQuantity, row.unitLabel)}</strong>
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {canContinue && (
+                                  <div className="flex shrink-0 flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => setAllocationRow(row)}
+                                      className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#00288e] px-3 text-[10px] font-black text-white"
+                                    >
+                                      <PackagePlus className="h-3.5 w-3.5" />
+                                      Alocar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => openImmediateAction(row)}
+                                      className="inline-flex h-9 items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 text-[10px] font-black text-violet-700"
+                                    >
+                                      <Sparkles className="h-3.5 w-3.5" />
+                                      Consumo imediato
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+
+                              {reconciliation && (
+                                <div className="mt-3 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-[10px] leading-5 text-rose-700">
+                                  <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                  {reconciliation}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -985,14 +1968,9 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
         {context?.truncated && (
           <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[10px] leading-5 text-amber-700">
             <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            A consulta atingiu um limite bounded. O motor não conclui sobre registros fora da janela carregada.
-          </div>
-        )}
-
-        {context?.reconciliationCoverageLimited && (
-          <div className="mt-2 flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-[10px] leading-5 text-slate-600">
-            <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            Como a janela canônica de NFs está limitada, ausência de NF fora dessa janela não é interpretada como exclusão.
+            A consulta atingiu um limite bounded. A visualização continua disponível,
+            mas o encaminhamento de um Pregão inteiro é bloqueado para evitar uma operação
+            incompleta.
           </div>
         )}
       </div>
@@ -1012,6 +1990,17 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
           row={immediateRow}
           onClose={() => setImmediateRow(null)}
           onSuccess={handleImmediateSuccess}
+        />
+      )}
+
+      {bulkPregao && (
+        <PregaoBulkActionPanel
+          workspaceId={workspaceId}
+          pregao={bulkPregao}
+          rows={selectedPregaoRows}
+          coverageLimited={Boolean(context?.truncated)}
+          onClose={() => setBulkPregao(null)}
+          onComplete={handleBulkComplete}
         />
       )}
     </div>
