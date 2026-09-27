@@ -2906,3 +2906,29 @@ Próximo diagnóstico:
 1. atualizar o Cadastro de Itens e confirmar que o item afetado retorna a estado PENDENTE;
 2. confirmar o valor efetivo de `NEXT_PUBLIC_EMPROVEX_WAREHOUSE_FIRESTORE_DATABASE_ID` no ambiente local antes de nova tentativa de alocação;
 3. somente então repetir a alocação controlada.
+
+
+### TRANSFER sem escrita redundante no saldo agregado — gates PASS — 2026-09-27
+
+Validação local concluída na branch `feat/adm-deposito-modular-release`, HEAD `a5a3843`.
+
+Resultados:
+- `npm run verify:adm-deposito-modular-r1`: **PASS**;
+- `npm run test:adm-deposito-modular-r1-security`: **PASS**;
+- `npm run typecheck`: **PASS**;
+- `INVOICE_ENTRY` válido continua aceito sobre saldo existente;
+- alocação positiva `TRANSFER + locationBalances + lote + intake` passou no emulador;
+- `TRANSFER` não regrava mais `balances` quando `quantityDelta = 0`;
+- Rules reduziram acessos cruzados redundantes sem liberar gravação arbitrária;
+- founder-only e domínios estacionados continuam preservados.
+
+Diagnóstico real da NF 46546:
+- `INVOICE_ENTRY` existente e coerente;
+- saldo agregado = 100;
+- `UNASSIGNED` = 100;
+- nenhuma alocação parcial foi commitada;
+- movimento `mov_10d8166020457f238cf6ab5139df5de4da932295df45c819a9b0f44dd7152045` não existe no banco, compatível com TRANSFER rejeitado integralmente.
+
+Próximo gate:
+- publicar exclusivamente `firestore.warehouse.rules` no database `emprovex-warehouse`;
+- depois repetir uma única alocação controlada da NF 46546.
