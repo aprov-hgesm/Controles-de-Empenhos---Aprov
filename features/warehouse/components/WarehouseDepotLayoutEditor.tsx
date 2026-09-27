@@ -330,7 +330,7 @@ export function WarehouseDepotLayoutEditor({
           <button type="button" aria-label="Aumentar zoom" onClick={() => setZoom((value) => clamp(value + 0.1, ZOOM_MIN, ZOOM_MAX))} className={`rounded-lg p-2 ${lightTheme ? 'text-slate-500 hover:bg-slate-100' : 'text-slate-400 hover:bg-white/[0.05]'}`}><ZoomIn className="h-3.5 w-3.5" /></button>
           <span className="mx-1 h-5 w-px bg-white/[0.07]" />
           <button type="button" onClick={() => setView('top')} aria-pressed={view === 'top'} className={`rounded-lg border px-2.5 py-2 text-[10px] font-bold transition ${view === 'top' ? 'border-[#00288e] bg-[#00288e] text-white shadow-sm' : lightTheme ? 'border-slate-200 bg-white text-slate-600 hover:bg-blue-50' : 'border-white/[0.07] text-slate-300 hover:bg-white/[0.05]'}`}>Vista superior</button>
-          <button type="button" onClick={() => setView('perspective')} aria-pressed={view === 'perspective'} className={`rounded-lg border px-2.5 py-2 text-[10px] font-bold transition ${view === 'perspective' ? 'border-[#00288e] bg-[#00288e] text-white shadow-sm' : lightTheme ? 'border-slate-200 bg-white text-slate-600 hover:bg-blue-50' : 'border-white/[0.07] text-slate-300 hover:bg-white/[0.05]'}`}>Prévia 2.5D</button>
+          <button type="button" onClick={() => setView('perspective')} aria-pressed={view === 'perspective'} className={`rounded-lg border px-2.5 py-2 text-[10px] font-bold transition ${view === 'perspective' ? 'border-[#00288e] bg-[#00288e] text-white shadow-sm' : lightTheme ? 'border-slate-200 bg-white text-slate-600 hover:bg-blue-50' : 'border-white/[0.07] text-slate-300 hover:bg-white/[0.05]'}`}>Prévia 3D</button>
         </div>
       </div>
 
