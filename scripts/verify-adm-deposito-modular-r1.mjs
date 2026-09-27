@@ -9,6 +9,10 @@ const sectionContent = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseSectionContent.tsx'),
   'utf8'
 );
+const itemRegistration = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseItemRegistrationOperational.tsx'),
+  'utf8'
+);
 const plan = readFileSync(
   resolve(root, 'docs/adm-deposito/MODULAR_RELEASE_PLAN.md'),
   'utf8'
@@ -261,6 +265,31 @@ requireText(
   'Superfícies avançadas precisam permanecer explicitamente estacionadas na ADM-R1.'
 );
 requireText(
+  itemRegistration,
+  "type PregaoBulkMode = 'storage' | 'immediate' | 'remove';",
+  'Ações em lote de Pregão/NF perderam o modo de consumo imediato.'
+);
+requireText(
+  itemRegistration,
+  'applyWarehouseImmediateConsumption(workspaceId, {',
+  'Consumo imediato em lote deixou de reutilizar o motor transacional oficial.'
+);
+requireText(
+  itemRegistration,
+  'destinationId,',
+  'Consumo imediato em lote perdeu o destino operacional.'
+);
+requireText(
+  itemRegistration,
+  'withdrawnBy: withdrawnBy.trim(),',
+  'Consumo imediato em lote perdeu a identificação de quem retirou/recebeu.'
+);
+requireText(
+  itemRegistration,
+  "quantity: row.pendingQuantity,",
+  'Consumo imediato em lote deixou de tratar integralmente o saldo pendente de cada item.'
+);
+requireText(
   plan,
   'ADM-R1 — Fundação independente',
   'Plano modular oficial da ADM-R1 ausente.'
@@ -275,7 +304,8 @@ if (findings.length) {
 console.log('ADM Depósito modular guard: PASS');
 console.log('- Meus Depósitos e Cadastro de Itens operacionais');
 console.log('- rules em ' + (rulesBytes / 1024).toFixed(2) + ' KiB (orçamento interno: 200 KiB)');
-console.log('- NF/Pregão podem sair da fila por exclusão lógica sem movimentar estoque');
+console.log('- NF/Pregão podem ser armazenados, consumidos imediatamente ou removidos logicamente da fila');
+console.log('- consumo imediato em lote reutiliza o motor oficial com destino, responsável e idempotência por item');
 console.log('- contratos de ledger, saldo, localização, lote, barcode e intake preservados');
 console.log('- founder-only e validações transacionais preservados');
 console.log('- repositories persistem exclusivamente em warehouseDb');
