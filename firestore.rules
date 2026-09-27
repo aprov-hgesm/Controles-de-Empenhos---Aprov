@@ -4474,18 +4474,12 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // Fila ADM — exclusão lógica de NFs que não ingressarão no depósito.
-      // Nesta release founder-only, a fronteira crítica é identidade/workspace;
-      // o formato completo continua validado pela aplicação e pelo repository.
+      // Fila ADM — marcador lógico founder-only; não é fonte canônica nem quantitativa.
+      // Validação de payload permanece no repository; Rules preservam a fronteira
+      // de identidade/workspace e proíbem exclusão física do marcador.
       match /queueExclusions/{exclusionId} {
-        allow read: if canAccessWarehouseModule(workspaceId);
-        allow create, update: if canAccessWarehouseModule(workspaceId)
-          && request.resource.data.schemaVersion == 'warehouse_intake_queue_exclusion_v1'
-          && request.resource.data.id == exclusionId
-          && request.resource.data.workspaceId == workspaceId
-          && request.resource.data.invoiceRecordKey is string
-          && request.resource.data.invoiceRecordKey.size() > 0
-          && request.resource.data.removedBy == request.auth.uid;
+        allow read, create, update: if canAccessWarehouseModule(workspaceId);
+        allow delete: if false;
       }
 
       // FASE 11.5 — fila de entrada/alocação de itens recebidos por NF.
