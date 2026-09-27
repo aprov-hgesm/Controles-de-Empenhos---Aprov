@@ -2535,3 +2535,30 @@ Commit funcional:
 - o arquivo voltou para aproximadamente 192 KiB, abaixo do orçamento interno de 200 KiB;
 - nenhum domínio operacional foi reaberto e a exclusão continua restrita ao fundador do workspace piloto;
 - commits: `eca90bd90e42a1e74555bdaffd8757f57802064c` e `d834bb72dd31ac42178682b9243e63640a617ce9`.
+
+
+## Migração para database dedicado — iniciada em 2026-09-27
+
+Infraestrutura criada:
+- database: `emprovex-warehouse`;
+- projeto: `gen-lang-client-0982077967`;
+- região: `us-east1`;
+- edição: `STANDARD`;
+- modo: `FIRESTORE_NATIVE`;
+- delete protection: habilitada;
+- freeTier: false.
+
+Preparação no repositório:
+- `lib/firebase.ts` passa a expor `warehouseDb`;
+- `firestore.warehouse.rules` contém as Rules exclusivas do ADM;
+- `firebase.json` registra os dois databases;
+- teste de segurança modular passa a usar `firebase.warehouse-security-test.json`;
+- guard modular passa a validar `firestore.warehouse.rules`.
+
+Ainda pendente:
+1. validar localmente guard + Emulator no database nomeado;
+2. publicar `firestore.warehouse.rules` em `emprovex-warehouse`;
+3. migrar/verificar `warehouse/hgesm-aprov/*` do banco antigo;
+4. trocar os repositories ADM de `db` para `warehouseDb`;
+5. validar operação real founder-only;
+6. somente então remover o bloco warehouse das Rules do banco principal.
