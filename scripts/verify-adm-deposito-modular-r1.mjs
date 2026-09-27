@@ -33,6 +33,18 @@ const materialWithdrawal = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseMaterialWithdrawal.tsx'),
   'utf8'
 );
+const outboundRepository = readFileSync(
+  resolve(root, 'lib/warehouse/outboundRepository.ts'),
+  'utf8'
+);
+const warehouseHome = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseHomeOperational.tsx'),
+  'utf8'
+);
+const isometricPreview = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseIsometricPreview.tsx'),
+  'utf8'
+);
 const consumptionReports = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseConsumptionReports.tsx'),
   'utf8'
@@ -463,6 +475,41 @@ requireText(
   'Saída perdeu a resolução documental NF/NE por lote/movimento de origem.'
 );
 requireText(
+  outboundRepository,
+  'quantityDelta: -plan.baseQuantity',
+  'Saída de Material deixou de produzir delta negativo no ledger.'
+);
+requireText(
+  outboundRepository,
+  'quantityDelta: -plan.baseQuantity,',
+  'Saída de Material deixou de reduzir a posição física selecionada.'
+);
+requireText(
+  outboundRepository,
+  'transaction.set(locationBalanceRef',
+  'Saída de Material deixou de persistir a baixa do locationBalance.'
+);
+requireText(
+  outboundRepository,
+  'lot.quantity - plan.baseQuantity',
+  'Saída de Material deixou de reduzir o lote selecionado.'
+);
+requireText(
+  warehouseHome,
+  'item.balance.quantity > 0',
+  'Início voltou a projetar no depósito posições com saldo zero.'
+);
+requireText(
+  isometricPreview,
+  'if (balance.quantity <= 0) continue;',
+  'Prévia 3D voltou a considerar saldo físico zerado como ocupação.'
+);
+requireText(
+  isometricPreview,
+  'balance.materialId !== selectedMaterialId || balance.quantity <= 0',
+  'Prévia 3D voltou a destacar material sem saldo positivo.'
+);
+requireText(
   outboundDocuments,
   'FICHA DE SAÍDA DE MATERIAL',
   'PDF de saída perdeu a ficha de orientação para retirada física.'
@@ -584,6 +631,7 @@ console.log('- ficha institucional PDF de alocação física disponível por NF 
 console.log('- ficha PDF otimizada para toner P&B, com grayscale neutro e contenção de textos');
 console.log('- Saída de Material gera PDF duplo: retirada física + ficha auxiliar SISCOFIS com controle/código');
 console.log('- Saída de Material e seus Relatórios seguem o tema claro oficial D-076/VISUAL_IDENTITY');
+console.log('- Saída de Material reduz ledger/posição/lote e saldo zero deixa de ser projetado no croqui');
 console.log('- consumo imediato em lote reutiliza o motor oficial com destino, responsável e idempotência por item');
 console.log('- INVOICE_ENTRY v2 isolado não gera falso positivo de reconciliação legada');
 console.log('- TRANSFER redistribui locationBalances sem regravar o saldo agregado');
