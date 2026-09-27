@@ -17,6 +17,10 @@ const intakeStateRepository = readFileSync(
   resolve(root, 'lib/warehouse/intakeStateRepository.ts'),
   'utf8'
 );
+const intakeAllocationRepository = readFileSync(
+  resolve(root, 'lib/warehouse/intakeAllocationRepository.ts'),
+  'utf8'
+);
 const plan = readFileSync(
   resolve(root, 'docs/adm-deposito/MODULAR_RELEASE_PLAN.md'),
   'utf8'
@@ -304,6 +308,17 @@ requireText(
   'INVOICE_ENTRY v2 voltou a ser classificado como projeção legada após tentativa interrompida.'
 );
 requireText(
+  rules,
+  "movement.type == 'TRANSFER'",
+  'Rules deixaram de tratar TRANSFER como redistribuição física sem delta agregado.'
+);
+if (intakeAllocationRepository.includes('applyWarehouseMovementToBalance(')) {
+  fail('TRANSFER voltou a recalcular o saldo agregado dentro da alocação.');
+}
+if (intakeAllocationRepository.includes('transaction.set(balanceRef')) {
+  fail('TRANSFER voltou a regravar balances apesar de quantityDelta=0.');
+}
+requireText(
   plan,
   'ADM-R1 — Fundação independente',
   'Plano modular oficial da ADM-R1 ausente.'
@@ -321,6 +336,7 @@ console.log('- rules em ' + (rulesBytes / 1024).toFixed(2) + ' KiB (orçamento i
 console.log('- NF/Pregão podem ser armazenados, consumidos imediatamente ou removidos logicamente da fila');
 console.log('- consumo imediato em lote reutiliza o motor oficial com destino, responsável e idempotência por item');
 console.log('- INVOICE_ENTRY v2 isolado não gera falso positivo de reconciliação legada');
+console.log('- TRANSFER redistribui locationBalances sem regravar o saldo agregado');
 console.log('- contratos de ledger, saldo, localização, lote, barcode e intake preservados');
 console.log('- founder-only e validações transacionais preservados');
 console.log('- repositories persistem exclusivamente em warehouseDb');
