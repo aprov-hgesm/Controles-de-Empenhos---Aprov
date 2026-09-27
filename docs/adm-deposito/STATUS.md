@@ -2456,3 +2456,21 @@ Validação adicionada:
 - teste de segurança direcionado cobre consumo imediato integral sem movimento de estoque;
 - guard modular exige o helper de consistência do intake;
 - `firestore.rules` permanece abaixo do orçamento interno de 200 KiB.
+
+
+## Encaminhamento integral por Nota Fiscal — 2026-09-27
+
+Implementado em Cadastro de Itens:
+- cada card de NF que possui itens pendentes ganhou a ação **Encaminhar NF**;
+- não é necessário abrir `Detalhar NF` para tratar a nota inteira;
+- o encaminhamento da NF reutiliza o mesmo motor de lote do Pregão;
+- modos disponíveis:
+  - mesmo depósito/localização/subposição para todos os itens pendentes da NF;
+  - consumo imediato para o mesmo destino operacional;
+- somente os itens ainda pendentes/parcialmente tratados entram na ação;
+- itens já concluídos não são processados novamente;
+- a ação por NF não depende da cobertura global de outras NFs/Pregões, pois todos os itens da nota já estão contidos no documento canônico carregado;
+- continuam disponíveis os três níveis de operação: Pregão, NF e item individual.
+
+Commit funcional:
+- `3731d0e713e59c084d046a10b24eaa41b8d34a7e`.
