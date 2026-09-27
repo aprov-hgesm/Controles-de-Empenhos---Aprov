@@ -112,6 +112,7 @@ async function main() {
   const locationId = 'loc_' + '3'.repeat(32);
   const layoutId = 'lay_' + '4'.repeat(32);
   const destinationId = 'dest_' + '5'.repeat(32);
+  const withdrawalId = 'wd_' + '9'.repeat(32);
   const queueExclusionId = 'qex_' + '8'.repeat(64);
 
   await allowed('fundador cria material canônico', () =>
@@ -652,6 +653,51 @@ async function main() {
     })
   );
 
+
+  await allowed('fundador abre retirada auditável', () =>
+    setDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'withdrawals', withdrawalId), {
+      schemaVersion: 'warehouse_material_withdrawal_v1',
+      id: withdrawalId,
+      workspaceId: WORKSPACE_ID,
+      ug: UG,
+      destinationId,
+      destinationName: 'Cozinha ADM-R1',
+      withdrawnBy: 'Militar ADM-R1',
+      payloadHash: 'a'.repeat(64),
+      expectedLineCount: 2,
+      appliedLineCount: 0,
+      status: 'FINALIZING',
+      createdBy: founder.user.uid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      finalizedAt: null,
+    })
+  );
+
+  await allowed('fundador registra progresso parcial da retirada', () =>
+    updateDoc(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'withdrawals', withdrawalId),
+      {
+        appliedLineCount: 1,
+        status: 'PARTIALLY_APPLIED',
+        updatedAt: serverTimestamp(),
+        finalizedAt: null,
+      }
+    )
+  );
+
+  await allowed('fundador finaliza cabeçalho da retirada', () =>
+    updateDoc(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'withdrawals', withdrawalId),
+      {
+        appliedLineCount: 2,
+        status: 'FINALIZED',
+        updatedAt: serverTimestamp(),
+        finalizedAt: serverTimestamp(),
+      }
+    )
+  );
+
   await allowed('fundador remove NF apenas da fila do ADM', () =>
     setDoc(
       doc(
@@ -760,6 +806,7 @@ async function main() {
     ['layouts', layoutId],
     ['settings', 'logistics-alerts'],
     ['destinations', destinationId],
+    ['withdrawals', withdrawalId],
     ['queueExclusions', queueExclusionId],
   ]) {
     const [collectionName, documentId] = domain;
@@ -815,6 +862,7 @@ async function main() {
     'barcodes',
     'siscofisSnapshots',
     'consumptions',
+    'withdrawals',
     'intakes',
   ];
 
@@ -843,7 +891,7 @@ async function main() {
     )
   );
 
-  for (const domain of ['alerts', 'inventories', 'withdrawals']) {
+  for (const domain of ['alerts', 'inventories']) {
     await denied('domínio estacionado permanece bloqueado: ' + domain, () =>
       getDocs(collection(founder.db, 'warehouse', WORKSPACE_ID, domain))
     );
@@ -855,11 +903,12 @@ async function main() {
 
   console.log('\nADM Depósito modular security test: PASS');
   console.log('- fundador pode ler somente os domínios operacionais liberados');
-  console.log('- alertas, inventários e withdrawals continuam estacionados');
+  console.log('- withdrawals foi liberado com progressão auditável; alertas e inventários continuam estacionados');
   console.log('- gravações arbitrárias continuam negadas pelos contratos');
   console.log('- acesso externo permanece negado');
   console.log('- exclusão lógica retira NF da fila sem criar consumo ou movimento de estoque');
   console.log('- consumo imediato histórico continua protegido para compatibilidade');
+  console.log('- cabeçalho de Saída de Material é founder-only, monotônico e não pode ser reaberto após FINALIZED');
   console.log('- INVOICE_ENTRY válido é aceito sobre saldo existente e preserva ledger/locationBalance');
   console.log('- alocação completa TRANSFER + posições + lote + intake é coberta pelo teste positivo');
   console.log('- duas alocações sequenciais em subposições distintas levam o intake parcial a PROCESSED');
