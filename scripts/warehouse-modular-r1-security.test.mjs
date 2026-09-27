@@ -15,6 +15,7 @@ import {
   getDoc,
   getDocs,
   getFirestore,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -229,6 +230,83 @@ async function main() {
     })
   );
 
+  const lightweightIntakeId = 'intake_' + '6'.repeat(64);
+  const lightweightConsumptionId = 'cons_' + '7'.repeat(64);
+
+  await allowed('fundador registra consumo imediato leve sem movimento de estoque', () =>
+    runTransaction(founder.db, async (transaction) => {
+      const intakeRef = doc(
+        founder.db,
+        'warehouse',
+        WORKSPACE_ID,
+        'intakes',
+        lightweightIntakeId
+      );
+      const consumptionRef = doc(
+        founder.db,
+        'warehouse',
+        WORKSPACE_ID,
+        'consumptions',
+        lightweightConsumptionId
+      );
+
+      transaction.set(intakeRef, {
+        schemaVersion: 'warehouse_item_intake_v2',
+        id: lightweightIntakeId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        invoiceRecordKey: 'nf-r1-light',
+        invoiceId: 'NF-R1-LIGHT',
+        empenhoId: '2026NE000001',
+        itemId: 'ITEM-R1-LIGHT',
+        materialId: null,
+        description: 'Material de consumo imediato',
+        unitLabel: 'UN',
+        supplier: 'Fornecedor ADM-R1',
+        receivedQuantity: 10,
+        allocatedQuantity: 0,
+        immediateConsumptionQuantity: 10,
+        pendingQuantity: 0,
+        status: 'PROCESSED',
+        createdBy: founder.user.uid,
+        updatedBy: founder.user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      transaction.set(consumptionRef, {
+        schemaVersion: 'warehouse_consumption_record_v1',
+        id: lightweightConsumptionId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        origin: 'IMMEDIATE_CONSUMPTION',
+        materialId: null,
+        materialDescription: 'Material de consumo imediato',
+        unitLabel: 'UN',
+        quantity: 10,
+        requestedQuantity: 10,
+        presentationLabel: 'UN',
+        destinationId,
+        destinationName: 'Cozinha ADM-R1',
+        withdrawnBy: 'Militar ADM-R1',
+        operatorUid: founder.user.uid,
+        movementId: null,
+        withdrawalId: null,
+        lineId: null,
+        intakeId: lightweightIntakeId,
+        invoiceRecordKey: 'nf-r1-light',
+        barcode: null,
+        lotCode: null,
+        positionLabel: 'Consumo imediato · sem entrada em estoque',
+        siscofisStatus: 'PENDING',
+        occurredAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        siscofisUpdatedBy: null,
+        siscofisUpdatedAt: null,
+      });
+    })
+  );
+
   for (const domain of [
     ['materials', materialId],
     ['depots', depotId],
@@ -321,7 +399,8 @@ async function main() {
   console.log('- alertas, inventários e withdrawals continuam estacionados');
   console.log('- gravações arbitrárias continuam negadas pelos contratos');
   console.log('- acesso externo permanece negado');
-  console.log('- operações válidas continuam obrigadas a respeitar ledger e invariantes');
+  console.log('- consumo imediato integral pode encerrar o intake sem criar movimento de estoque');
+  console.log('- operações com estoque continuam obrigadas a respeitar ledger e invariantes');
 }
 
 main()
