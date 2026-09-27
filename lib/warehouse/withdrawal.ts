@@ -78,7 +78,7 @@ export interface WarehouseConsumptionRecord {
   workspaceId: string;
   ug: string;
   origin: WarehouseConsumptionOrigin;
-  materialId: string;
+  materialId: string | null;
   materialDescription: string;
   unitLabel: string;
   quantity: number;
@@ -88,7 +88,7 @@ export interface WarehouseConsumptionRecord {
   destinationName: string;
   withdrawnBy: string;
   operatorUid: string;
-  movementId: string;
+  movementId: string | null;
   withdrawalId: string | null;
   lineId: string | null;
   intakeId: string | null;
