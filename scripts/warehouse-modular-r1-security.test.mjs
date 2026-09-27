@@ -302,12 +302,55 @@ async function main() {
     })
   );
 
+  const subpositionAId = 'sub_' + '4'.repeat(32);
+  const subpositionBId = 'sub_' + '5'.repeat(32);
+
+  await allowed('fundador cria primeira subposição ativa', () =>
+    setDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'locations', subpositionAId), {
+      schemaVersion: 'warehouse_location_v1',
+      id: subpositionAId,
+      workspaceId: WORKSPACE_ID,
+      ug: UG,
+      depotId,
+      kind: 'SUBPOSITION',
+      parentLocationId: locationId,
+      code: 'SUB-R1-A',
+      name: 'Subposição ADM-R1 A',
+      description: null,
+      status: 'active',
+      createdBy: founder.user.uid,
+      updatedBy: founder.user.uid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await allowed('fundador cria segunda subposição ativa', () =>
+    setDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'locations', subpositionBId), {
+      schemaVersion: 'warehouse_location_v1',
+      id: subpositionBId,
+      workspaceId: WORKSPACE_ID,
+      ug: UG,
+      depotId,
+      kind: 'SUBPOSITION',
+      parentLocationId: locationId,
+      code: 'SUB-R1-B',
+      name: 'Subposição ADM-R1 B',
+      description: null,
+      status: 'active',
+      createdBy: founder.user.uid,
+      updatedBy: founder.user.uid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  );
+
   const transferMovementId = 'mov_' + 'd'.repeat(64);
   const targetBalanceId = 'locbal_' + 'e'.repeat(64);
   const intakeAllocationLotId = 'lot_' + 'f'.repeat(32);
   const intakeAllocationId = 'intake_' + '9'.repeat(64);
 
-  await allowed('fundador aloca item de NF com TRANSFER + posições + lote + intake', () =>
+  await allowed('fundador faz primeira alocação parcial em subposição A', () =>
     runTransaction(founder.db, async (transaction) => {
       const movementRef = doc(
         founder.db, 'warehouse', WORKSPACE_ID, 'movements', transferMovementId
@@ -335,17 +378,17 @@ async function main() {
         quantityDelta: 0,
         idempotencyKeyHash: 'd'.repeat(64),
         reversesMovementId: null,
-        note: 'Alocação intake v2 de teste',
+        note: 'Primeira alocação intake v2 de teste',
         source: {
           kind: 'LOCATION_TRANSFER',
           actorUid: founder.user.uid,
           quantity: 2,
           from: { kind: 'UNASSIGNED' },
           to: {
-            kind: 'LOCATION',
+            kind: 'SUBPOSITION',
             depotId,
             locationId,
-            subpositionId: null,
+            subpositionId: subpositionAId,
           },
           fromBalanceId: unassignedBalanceId,
           toBalanceId: targetBalanceId,
@@ -373,10 +416,10 @@ async function main() {
         ug: UG,
         materialId,
         position: {
-          kind: 'LOCATION',
+          kind: 'SUBPOSITION',
           depotId,
           locationId,
-          subpositionId: null,
+          subpositionId: subpositionAId,
         },
         quantity: 2,
         revision: 1,
@@ -394,10 +437,10 @@ async function main() {
         expiresOn: null,
         quantity: 2,
         position: {
-          kind: 'LOCATION',
+          kind: 'SUBPOSITION',
           depotId,
           locationId,
-          subpositionId: null,
+          subpositionId: subpositionAId,
         },
         origin: {
           kind: 'INVOICE',
@@ -435,6 +478,128 @@ async function main() {
         createdBy: founder.user.uid,
         updatedBy: founder.user.uid,
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    })
+  );
+
+  const secondTransferMovementId = 'mov_' + '6'.repeat(64);
+  const secondTargetBalanceId = 'locbal_' + '7'.repeat(64);
+  const secondAllocationLotId = 'lot_' + '8'.repeat(32);
+
+  await allowed('fundador conclui segunda alocação do mesmo intake em subposição B', () =>
+    runTransaction(founder.db, async (transaction) => {
+      const movementRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'movements', secondTransferMovementId
+      );
+      const fromBalanceRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', unassignedBalanceId
+      );
+      const toBalanceRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', secondTargetBalanceId
+      );
+      const lotRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'lots', secondAllocationLotId
+      );
+      const intakeRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'intakes', intakeAllocationId
+      );
+
+      transaction.set(movementRef, {
+        schemaVersion: 'warehouse_movement_v1',
+        id: secondTransferMovementId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        type: 'TRANSFER',
+        quantityDelta: 0,
+        idempotencyKeyHash: '6'.repeat(64),
+        reversesMovementId: null,
+        note: 'Segunda alocação intake v2 de teste',
+        source: {
+          kind: 'LOCATION_TRANSFER',
+          actorUid: founder.user.uid,
+          quantity: 1,
+          from: { kind: 'UNASSIGNED' },
+          to: {
+            kind: 'SUBPOSITION',
+            depotId,
+            locationId,
+            subpositionId: subpositionBId,
+          },
+          fromBalanceId: unassignedBalanceId,
+          toBalanceId: secondTargetBalanceId,
+        },
+        createdAt: serverTimestamp(),
+      });
+
+      transaction.set(fromBalanceRef, {
+        schemaVersion: 'warehouse_location_balance_v1',
+        id: unassignedBalanceId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        position: { kind: 'UNASSIGNED' },
+        quantity: 5,
+        revision: 4,
+        lastMovementId: secondTransferMovementId,
+        updatedAt: serverTimestamp(),
+      });
+
+      transaction.set(toBalanceRef, {
+        schemaVersion: 'warehouse_location_balance_v1',
+        id: secondTargetBalanceId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        position: {
+          kind: 'SUBPOSITION',
+          depotId,
+          locationId,
+          subpositionId: subpositionBId,
+        },
+        quantity: 1,
+        revision: 1,
+        lastMovementId: secondTransferMovementId,
+        updatedAt: serverTimestamp(),
+      });
+
+      transaction.set(lotRef, {
+        schemaVersion: 'warehouse_lot_v1',
+        id: secondAllocationLotId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        code: 'PEND-R1',
+        expiresOn: null,
+        quantity: 1,
+        position: {
+          kind: 'SUBPOSITION',
+          depotId,
+          locationId,
+          subpositionId: subpositionBId,
+        },
+        origin: {
+          kind: 'INVOICE',
+          movementId: invoiceEntryMovementId,
+          invoiceRecordKey: 'nf-r1-entry',
+          invoiceId: 'NF-R1-ENTRY',
+          supplier: 'Fornecedor ADM-R1',
+          supplierCnpj: null,
+        },
+        status: 'active',
+        createdBy: founder.user.uid,
+        updatedBy: founder.user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      transaction.update(intakeRef, {
+        allocatedQuantity: 3,
+        immediateConsumptionQuantity: 0,
+        pendingQuantity: 0,
+        status: 'PROCESSED',
+        updatedBy: founder.user.uid,
         updatedAt: serverTimestamp(),
       });
     })
@@ -697,6 +862,7 @@ async function main() {
   console.log('- consumo imediato histórico continua protegido para compatibilidade');
   console.log('- INVOICE_ENTRY válido é aceito sobre saldo existente e preserva ledger/locationBalance');
   console.log('- alocação completa TRANSFER + posições + lote + intake é coberta pelo teste positivo');
+  console.log('- duas alocações sequenciais em subposições distintas levam o intake parcial a PROCESSED');
   console.log('- TRANSFER não regrava o saldo agregado quando a quantidade total não muda');
   console.log('- operações com estoque continuam obrigadas a respeitar ledger e invariantes');
 }
