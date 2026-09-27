@@ -62,10 +62,6 @@ export function WarehouseInventoryHistoryReport({
       ]);
       setSessions(nextSessions);
       setMaterials(nextMaterials);
-      if (selectedId && !nextSessions.some((item) => item.session.id === selectedId)) {
-        setSelectedId(null);
-        setItems([]);
-      }
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -75,7 +71,7 @@ export function WarehouseInventoryHistoryReport({
     } finally {
       setLoading(false);
     }
-  }, [selectedId, workspaceId]);
+  }, [workspaceId]);
 
   useEffect(() => {
     void refresh();
