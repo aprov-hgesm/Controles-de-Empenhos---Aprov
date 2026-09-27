@@ -2677,3 +2677,22 @@ Após o TypeScript passar, a próxima etapa autorizável é:
 3. executar `warehouse:db:copy`;
 4. executar `warehouse:db:verify`;
 5. manter origem intacta para rollback.
+
+
+### TypeScript gate da separação multi-database — PASS — 2026-09-27
+
+Executado no PowerShell:
+
+- `npm.cmd run typecheck` — **PASS / 0 erros**.
+
+Com isso, os três gates locais da fundação multi-database estão aprovados:
+1. guard modular — PASS;
+2. Firestore Emulator/security — PASS;
+3. TypeScript — PASS.
+
+A etapa seguinte deixa de ser alteração estrutural local e passa a ser **cutover controlado de infraestrutura**:
+- publicar somente as Rules do database `emprovex-warehouse`;
+- executar migração em ordem `plan -> copy -> verify`;
+- manter o database antigo e seus dados intactos como rollback;
+- não remover ainda o bloco warehouse do ruleset principal;
+- não realizar deploy da aplicação antes da migração e verificação dos dados.
