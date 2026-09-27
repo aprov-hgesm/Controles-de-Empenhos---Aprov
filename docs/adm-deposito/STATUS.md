@@ -2718,3 +2718,37 @@ Próximo gate:
 - somente após conferência das contagens executar `warehouse:db:copy`;
 - em seguida executar `warehouse:db:verify`;
 - preservar integralmente a origem para rollback.
+
+
+### PLAN da migração — leitura parcial + hardening de autenticação — 2026-09-27
+
+Primeira execução real de `warehouse:db:plan` no Cloud Shell:
+- `materials`: origem 47 / destino 0;
+- `depots`: 5 / 0;
+- `locations`: 146 / 0;
+- `movements`: 780 / 0;
+- `balances`: 47 / 0;
+- `locationBalances`: 47 / 0;
+- `settings`: 0 / 0;
+- `lots`: 0 / 0;
+- `barcodes`: 0 / 0;
+- `layouts`: 14 / 0;
+- `inventories`: 0 / 0;
+- `inventories/*/items`: 0 / 0;
+- `siscofisSnapshots`: 0 / 0;
+- `alerts`: 0 / 0;
+- `intakes`: 905 / 0;
+- `queueExclusions`: 0 / 0;
+- `destinations`: 1 / 0;
+- `withdrawals`: 0 / 0.
+
+A execução foi interrompida durante a paginação de `consumptions` por HTTP 401 após expiração do token OAuth obtido no início do processo. Nenhuma gravação ocorreu porque o modo era `plan`.
+
+Hardening aplicado no migrador:
+- cache do token continua evitando chamadas desnecessárias ao `gcloud`;
+- em HTTP 401, quando não há token explícito fixado via ambiente, o migrador renova `gcloud auth print-access-token` e repete a requisição uma vez;
+- isso protege também execuções longas de `copy` e `verify`.
+
+Correção: commit `72324517849bc7e62e23f0652060fc766e1f46ca`.
+
+Próximo passo: atualizar a cópia local no Cloud Shell e repetir `warehouse:db:plan` até obter `WAREHOUSE DATABASE MIGRATION PLAN: OK`. Não executar `copy` antes disso.
