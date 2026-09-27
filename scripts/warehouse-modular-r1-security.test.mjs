@@ -27,6 +27,7 @@ const API_KEY = 'fake-api-key';
 const AUTH_BASE = 'http://127.0.0.1:9099';
 const WORKSPACE_ID = 'hgesm-aprov';
 const UG = '160416';
+const WAREHOUSE_DATABASE_ID = 'emprovex-warehouse';
 
 const apps = [];
 const results = [];
@@ -62,7 +63,7 @@ async function createSession(label, email) {
   assert.equal(credential.user.emailVerified, true);
   assert.equal(token.signInProvider, 'google.com');
 
-  const db = getFirestore(app);
+  const db = getFirestore(app, WAREHOUSE_DATABASE_ID);
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
   return { db, user: credential.user };
 }
