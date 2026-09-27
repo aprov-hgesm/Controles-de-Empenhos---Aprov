@@ -2696,3 +2696,25 @@ A etapa seguinte deixa de ser alteração estrutural local e passa a ser **cutov
 - manter o database antigo e seus dados intactos como rollback;
 - não remover ainda o bloco warehouse do ruleset principal;
 - não realizar deploy da aplicação antes da migração e verificação dos dados.
+
+
+### Rules do database dedicado publicadas — 2026-09-27
+
+Publicação realizada com sucesso no projeto `gen-lang-client-0982077967`:
+
+- database alvo: `emprovex-warehouse`;
+- ruleset: `firestore.warehouse.rules`;
+- compilação: **PASS**;
+- publicação: **PASS**;
+- banco operacional principal: **não alterado**.
+
+O Firebase CLI em execução via `npx` falhou inicialmente por ausência de `@grpc/grpc-js` na instalação temporária. O deploy foi repetido com instalação isolada de `firebase-tools@15.31.0` + `@grpc/grpc-js@1.14.3` em `/tmp/firebase-cli-emprovex`, sem modificar as dependências do repositório.
+
+Aviso não bloqueante observado na compilação:
+- `firestore.warehouse.rules` — variável `workspaceId` não utilizada na linha indicada pelo compilador.
+
+Próximo gate:
+- concluir e revisar `warehouse:db:plan`;
+- somente após conferência das contagens executar `warehouse:db:copy`;
+- em seguida executar `warehouse:db:verify`;
+- preservar integralmente a origem para rollback.
