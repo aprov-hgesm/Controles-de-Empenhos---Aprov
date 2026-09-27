@@ -202,7 +202,6 @@ function AllocationPanel({
   const [subpositionId, setSubpositionId] = useState('');
   const [lotCode, setLotCode] = useState('');
   const [expiresOn, setExpiresOn] = useState('');
-  const [noExpiry, setNoExpiry] = useState(false);
   const [barcode, setBarcode] = useState('');
   const [barcodeRead, setBarcodeRead] = useState(false);
   const [operationId, setOperationId] = useState('');
@@ -301,14 +300,6 @@ function AllocationPanel({
       setError('Selecione um depósito e uma localização ativos.');
       return;
     }
-    if (!lotCode.trim()) {
-      setError('Informe o lote para concluir a alocação.');
-      return;
-    }
-    if (!noExpiry && !expiresOn) {
-      setError('Informe a validade ou marque explicitamente Sem validade.');
-      return;
-    }
     if (!operationId) {
       setError('A identidade da operação ainda não está pronta. Reabra a alocação.');
       return;
@@ -333,7 +324,7 @@ function AllocationPanel({
         quantity: numericQuantity,
         position,
         lotCode: lotCode.trim(),
-        expiresOn: noExpiry ? null : expiresOn,
+        expiresOn: expiresOn || null,
         barcode: barcode.trim() || null,
         operationId,
       });
@@ -502,7 +493,7 @@ function AllocationPanel({
 
             <label className="block">
               <span className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">
-                Lote
+                Lote · opcional
               </span>
               <input
                 type="text"
@@ -514,34 +505,31 @@ function AllocationPanel({
               />
             </label>
 
-            <div>
-              <span className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">
-                Validade
+            <label className="block">
+              <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">
+                Validade · opcional
+                <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[8px] text-rose-700">
+                  pendência vermelha se ausente
+                </span>
               </span>
               <input
                 type="date"
                 value={expiresOn}
                 onChange={(event) => setExpiresOn(event.target.value)}
-                disabled={noExpiry}
-                className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-800 outline-none focus:border-[#00288e] disabled:bg-slate-100 disabled:text-slate-400"
+                className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-800 outline-none focus:border-[#00288e]"
               />
-              <label className="mt-2 flex items-center gap-2 text-[10px] font-bold text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={noExpiry}
-                  onChange={(event) => {
-                    setNoExpiry(event.target.checked);
-                    if (event.target.checked) setExpiresOn('');
-                  }}
-                />
-                Sem validade
-              </label>
-            </div>
+              <span className="mt-1 block text-[9px] text-slate-400">
+                Pode ser preenchida depois pela edição do item armazenado.
+              </span>
+            </label>
 
             <label className="block lg:col-span-2">
               <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">
                 <Barcode className="h-3.5 w-3.5" />
                 Código de barras — opcional
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[8px] text-amber-700">
+                  pendência amarela se ausente
+                </span>
               </span>
               <input
                 type="text"
@@ -581,13 +569,14 @@ function AllocationPanel({
             <div className="mt-2 grid gap-1 text-[10px] leading-5 text-slate-600 sm:grid-cols-2">
               <p><span className="font-black">NF:</span> {row.invoiceId}</p>
               <p><span className="font-black">Posição:</span> {positionLabel || '—'}</p>
-              <p><span className="font-black">Lote:</span> {lotCode.trim() || '—'}</p>
+              <p><span className="font-black">Lote:</span> {lotCode.trim() || 'Não informado'}</p>
               <p>
                 <span className="font-black">Validade:</span>{' '}
-                {noExpiry ? 'Sem validade' : expiresOn ? formatDate(expiresOn) : '—'}
+                {expiresOn ? formatDate(expiresOn) : 'Não informada · pendência vermelha'}
               </p>
               <p className="sm:col-span-2">
-                <span className="font-black">Barcode:</span> {barcode.trim() || 'Não informado'}
+                <span className="font-black">Barcode:</span>{' '}
+                {barcode.trim() || 'Não informado · pendência amarela'}
               </p>
             </div>
           </div>
