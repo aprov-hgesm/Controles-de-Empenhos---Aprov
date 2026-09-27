@@ -172,7 +172,7 @@ function drawPageHeader(
   doc.text(input.workspaceId, 119, y, { maxWidth: 78 });
 
   y += 5;
-  doc.setFillColor(246);
+  doc.setFillColor('246');
   doc.rect(MARGIN_X, y, CONTENT_WIDTH, 16, 'F');
   doc.rect(MARGIN_X, y, CONTENT_WIDTH, 16, 'S');
 
@@ -207,7 +207,7 @@ function drawItemBlock(
   doc.setDrawColor(55);
   doc.setLineWidth(0.28);
 
-  doc.setFillColor(242);
+  doc.setFillColor('242');
   doc.rect(MARGIN_X, y, CONTENT_WIDTH, headerHeight, 'F');
   doc.rect(MARGIN_X, y, CONTENT_WIDTH, blockHeight, 'S');
   line(doc, MARGIN_X, y + headerHeight, PAGE_WIDTH - MARGIN_X, y + headerHeight);
