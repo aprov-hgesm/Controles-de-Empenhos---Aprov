@@ -717,33 +717,39 @@ function WarehouseStructure({
         {contactShadow(object, logicalWidth, logicalHeight, 0.22)}
         {commonHighlight}
 
-        <polygon points={polygonPoints([d, c, ct, dt])} fill="url(#fridgeFrame)" stroke="#597b93" strokeWidth="2" />
-        <polygon points={polygonPoints([b, c, ct, bt])} fill="#c7dae6" stroke="#597b93" strokeWidth="1.8" />
-        <polygon points={polygonPoints([at, bt, ct, dt])} fill="#fbfdff" stroke="#597b93" strokeWidth="1.8" />
+        <polygon points={polygonPoints([d, c, ct, dt])} fill="url(#fridgeStainlessDoor)" stroke="#526875" strokeWidth="2.2" />
+        <polygon points={polygonPoints([b, c, ct, bt])} fill="url(#fridgeStainlessSide)" stroke="#526875" strokeWidth="2" />
+        <polygon points={polygonPoints([at, bt, ct, dt])} fill="url(#fridgeStainlessTop)" stroke="#526875" strokeWidth="1.9" />
 
-        <polygon points={polygonPoints([frontBottomLeft, frontBottomRight, frontTopRight, frontTopLeft])} fill="url(#fridgeGlass)" stroke="#65a4c0" strokeWidth="1.2" opacity="0.84" />
-        <line x1={doorSplitBottom.x} y1={doorSplitBottom.y} x2={doorSplitTop.x} y2={doorSplitTop.y} stroke="#eefaff" strokeWidth="3" opacity="0.98" />
+        <polygon
+          points={polygonPoints([frontBottomLeft, frontBottomRight, frontTopRight, frontTopLeft])}
+          fill="url(#fridgeStainlessDoor)"
+          stroke="#607783"
+          strokeWidth="1.45"
+          opacity="0.98"
+        />
+        <line x1={doorSplitBottom.x} y1={doorSplitBottom.y} x2={doorSplitTop.x} y2={doorSplitTop.y} stroke="#6f8792" strokeWidth="2.4" opacity="0.9" />
 
-        {[0.2, 0.4, 0.6, 0.8].map((ratio) => {
+        {[0.18, 0.38, 0.58, 0.78].map((ratio) => {
           const p1 = isoPoint(object.x, object.y + object.height, z * ratio, logicalWidth, logicalHeight);
           const p2 = isoPoint(object.x + object.width, object.y + object.height, z * ratio, logicalWidth, logicalHeight);
           return (
-            <g key={'fridge-shelf-' + ratio}>
-              <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#e4f9ff" strokeWidth="2.2" opacity="0.97" />
-              <line x1={p1.x} y1={p1.y + 2} x2={p2.x} y2={p2.y + 2} stroke="#5e9db8" strokeWidth="0.7" opacity="0.66" />
+            <g key={'fridge-brush-' + ratio}>
+              <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#f8fafc" strokeWidth="1.25" opacity="0.52" />
+              <line x1={p1.x} y1={p1.y + 1.8} x2={p2.x} y2={p2.y + 1.8} stroke="#9aa9b1" strokeWidth="0.65" opacity="0.42" />
             </g>
           );
         })}
 
-        <line x1={frontTopLeft.x + 8} y1={frontTopLeft.y + 14} x2={frontBottomLeft.x + 8} y2={frontBottomLeft.y - 8} stroke="#a8e8ff" strokeWidth="3.2" opacity="0.75" />
-        <line x1={frontTopRight.x - 8} y1={frontTopRight.y + 14} x2={frontBottomRight.x - 8} y2={frontBottomRight.y - 8} stroke="#a8e8ff" strokeWidth="3.2" opacity="0.75" />
+        <line x1={frontTopLeft.x + 8} y1={frontTopLeft.y + 13} x2={frontBottomLeft.x + 8} y2={frontBottomLeft.y - 8} stroke="#ffffff" strokeWidth="2.4" opacity="0.5" />
+        <line x1={frontTopRight.x - 8} y1={frontTopRight.y + 13} x2={frontBottomRight.x - 8} y2={frontBottomRight.y - 8} stroke="#8799a2" strokeWidth="1.5" opacity="0.62" />
 
-        <rect x={centerTop.x + 27} y={centerTop.y + 28} width="5" height="31" rx="2.5" fill="#4b697e" />
-        <rect x={centerTop.x - 32} y={centerTop.y + 28} width="5" height="31" rx="2.5" fill="#4b697e" />
+        <rect x={centerTop.x + 27} y={centerTop.y + 28} width="5" height="31" rx="2.5" fill="#4d5d65" stroke="#c7d0d5" strokeWidth="0.7" />
+        <rect x={centerTop.x - 32} y={centerTop.y + 28} width="5" height="31" rx="2.5" fill="#4d5d65" stroke="#c7d0d5" strokeWidth="0.7" />
 
-        <rect x={centerTop.x - 29} y={centerTop.y - 2} width="58" height="13" rx="3" fill="#173a55" stroke="#7194aa" strokeWidth="0.8" />
-        <circle cx={centerTop.x - 17} cy={centerTop.y + 4.5} r="2.5" fill="#54ddff" />
-        <rect x={centerTop.x - 8} y={centerTop.y + 2} width="18" height="5" rx="1.5" fill="#8be7ff" opacity="0.92" />
+        <rect x={centerTop.x - 29} y={centerTop.y - 2} width="58" height="13" rx="3" fill="#2f414b" stroke="#aebbc2" strokeWidth="0.9" />
+        <circle cx={centerTop.x - 17} cy={centerTop.y + 4.5} r="2.5" fill="#58d8e8" />
+        <rect x={centerTop.x - 8} y={centerTop.y + 2} width="18" height="5" rx="1.5" fill="#a8edf2" opacity="0.88" />
 
         {generalBoxCount > 0 && Array.from({ length: Math.min(3, generalBoxCount) }, (_, index) =>
           boxGroup(
@@ -787,34 +793,50 @@ function WarehouseStructure({
         {contactShadow(object, logicalWidth, logicalHeight, 0.18)}
         {commonHighlight}
 
-        <polygon points={polygonPoints([at, bt, ct, dt])} fill="url(#metalSheen)" stroke="#657d8e" strokeWidth="1.8" />
+        <polygon points={polygonPoints([at, bt, ct, dt])} fill="url(#metalSheen)" stroke="#4f6878" strokeWidth="2.4" />
         <polygon
           points={polygonPoints([
-            isoPoint(object.x, object.y + object.height, z - 8, logicalWidth, logicalHeight),
-            isoPoint(object.x + object.width, object.y + object.height, z - 8, logicalWidth, logicalHeight),
+            isoPoint(object.x, object.y + object.height, z - 9, logicalWidth, logicalHeight),
+            isoPoint(object.x + object.width, object.y + object.height, z - 9, logicalWidth, logicalHeight),
             ct,
             dt,
           ])}
           fill="url(#benchFront)"
-          stroke="#657d8e"
-          strokeWidth="1.5"
+          stroke="#536d7d"
+          strokeWidth="2"
+        />
+        <polygon
+          points={polygonPoints([
+            isoPoint(object.x + object.width, object.y, z - 9, logicalWidth, logicalHeight),
+            isoPoint(object.x + object.width, object.y + object.height, z - 9, logicalWidth, logicalHeight),
+            ct,
+            bt,
+          ])}
+          fill="#aebdc7"
+          stroke="#5a7180"
+          strokeWidth="1.7"
+          opacity="0.96"
         />
 
-        <polygon points={polygonPoints([lowerA, lowerB, lowerC, lowerD])} fill="#c7d2da" stroke="#6d8393" strokeWidth="1.2" opacity="0.95" />
+        <polygon points={polygonPoints([lowerA, lowerB, lowerC, lowerD])} fill="url(#benchLowerShelf)" stroke="#5d7482" strokeWidth="1.55" opacity="0.98" />
 
         {legPoints.map((leg, index) => {
           const bottom = isoPoint(object.x + object.width * leg.rx, object.y + object.height * leg.ry, 4, logicalWidth, logicalHeight);
           const top = isoPoint(object.x + object.width * leg.rx, object.y + object.height * leg.ry, z - 2, logicalWidth, logicalHeight);
           return (
             <g key={'bench-leg-' + index}>
-              <line x1={bottom.x} y1={bottom.y} x2={top.x} y2={top.y} stroke="#5e7484" strokeWidth="5" />
-              <circle cx={bottom.x} cy={bottom.y + 1} r="3.3" fill="#334b5c" />
+              <line x1={bottom.x} y1={bottom.y} x2={top.x} y2={top.y} stroke="#405766" strokeWidth="6.4" strokeLinecap="round" />
+              <line x1={bottom.x + 1.4} y1={bottom.y - 1} x2={top.x + 1.4} y2={top.y - 1} stroke="#b9c7cf" strokeWidth="1.35" opacity="0.9" />
+              <ellipse cx={bottom.x} cy={bottom.y + 2} rx="5" ry="2.8" fill="#2f4350" />
+              <ellipse cx={bottom.x} cy={bottom.y + 1.2} rx="3.2" ry="1.5" fill="#899aa4" opacity="0.72" />
             </g>
           );
         })}
 
-        <line x1={at.x} y1={at.y} x2={bt.x} y2={bt.y} stroke="#ffffff" strokeWidth="2.6" opacity="0.95" />
-        <line x1={dt.x} y1={dt.y} x2={ct.x} y2={ct.y} stroke="#90a4b3" strokeWidth="1.2" opacity="0.85" />
+        <line x1={at.x} y1={at.y} x2={bt.x} y2={bt.y} stroke="#ffffff" strokeWidth="3.2" opacity="0.96" />
+        <line x1={bt.x} y1={bt.y} x2={ct.x} y2={ct.y} stroke="#708795" strokeWidth="2.1" opacity="0.9" />
+        <line x1={dt.x} y1={dt.y} x2={ct.x} y2={ct.y} stroke="#4f6878" strokeWidth="2.5" opacity="0.96" />
+        <line x1={at.x} y1={at.y} x2={dt.x} y2={dt.y} stroke="#7d929f" strokeWidth="1.8" opacity="0.9" />
 
         {generalBoxCount > 0 && boxGroup('bench-box', centerTop.x, centerTop.y - 6, 0.68, highlighted)}
 
@@ -1130,10 +1152,22 @@ export function WarehouseIsometricPreview({
                 <stop offset="55%" stopColor="#9bdcf2" stopOpacity="0.62" />
                 <stop offset="100%" stopColor="#c7eff9" stopOpacity="0.88" />
               </linearGradient>
-              <linearGradient id="fridgeFrame" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#fbfdff" />
-                <stop offset="60%" stopColor="#dce9f0" />
-                <stop offset="100%" stopColor="#b7cad6" />
+              <linearGradient id="fridgeStainlessDoor" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#eef2f3" />
+                <stop offset="18%" stopColor="#cfd6d9" />
+                <stop offset="43%" stopColor="#f8fafb" />
+                <stop offset="68%" stopColor="#b8c1c5" />
+                <stop offset="100%" stopColor="#e2e7e9" />
+              </linearGradient>
+              <linearGradient id="fridgeStainlessSide" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#d2d9dc" />
+                <stop offset="52%" stopColor="#adb8bd" />
+                <stop offset="100%" stopColor="#8f9da4" />
+              </linearGradient>
+              <linearGradient id="fridgeStainlessTop" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#ffffff" />
+                <stop offset="48%" stopColor="#e3e8ea" />
+                <stop offset="100%" stopColor="#bcc5c9" />
               </linearGradient>
               <linearGradient id="metalSheen" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#ffffff" />
@@ -1145,10 +1179,10 @@ export function WarehouseIsometricPreview({
                 <stop offset="50%" stopColor="#bccbd5" />
                 <stop offset="100%" stopColor="#98acba" />
               </linearGradient>
-              <linearGradient id="fridgeGlass" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#dff7ff" stopOpacity="0.94" />
-                <stop offset="55%" stopColor="#86d6ee" stopOpacity="0.5" />
-                <stop offset="100%" stopColor="#b9edf9" stopOpacity="0.8" />
+              <linearGradient id="benchLowerShelf" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#edf2f4" />
+                <stop offset="55%" stopColor="#c4d0d6" />
+                <stop offset="100%" stopColor="#98aab4" />
               </linearGradient>
               <linearGradient id="doorMetal" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#f5f8fa" />
