@@ -11,6 +11,7 @@ import {
 import {
   collection,
   connectFirestoreEmulator,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -395,7 +396,6 @@ async function main() {
     'siscofisSnapshots',
     'consumptions',
     'intakes',
-    'queueExclusions',
   ];
 
   for (const domain of operationalDomains) {
@@ -410,6 +410,18 @@ async function main() {
       )
     );
   }
+
+  await denied('fundador não exclui fisicamente queueExclusions', () =>
+    deleteDoc(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'queueExclusions', queueExclusionId)
+    )
+  );
+
+  await denied('usuário não fundador não lê queueExclusions', () =>
+    getDoc(
+      doc(outsider.db, 'warehouse', WORKSPACE_ID, 'queueExclusions', queueExclusionId)
+    )
+  );
 
   for (const domain of ['alerts', 'inventories', 'withdrawals']) {
     await denied('domínio estacionado permanece bloqueado: ' + domain, () =>
