@@ -18,6 +18,7 @@ export const WAREHOUSE_LOT_SCHEMA_VERSION = 'warehouse_lot_v1' as const;
 export const WAREHOUSE_EXPIRY_WARNING_DAYS = 30;
 
 export const WAREHOUSE_LOT_STATUSES = ['active', 'inactive'] as const;
+export const WAREHOUSE_PENDING_LOT_PREFIX = '__EMPROVEX_PENDING_LOT__:' as const;
 export type WarehouseLotStatus = (typeof WAREHOUSE_LOT_STATUSES)[number];
 
 export const WAREHOUSE_LOT_ORIGIN_KINDS = [
@@ -177,6 +178,22 @@ export function normalizeWarehouseLotCode(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const normalized = normalizeText(value);
   if (!normalized || normalized.length > 80) return null;
+  return normalized;
+}
+
+export function createWarehousePendingLotCode(intakeId: string): string {
+  const compact = intakeId.trim().replace(/\s+/g, '').slice(0, 48);
+  return (WAREHOUSE_PENDING_LOT_PREFIX + compact).slice(0, 80);
+}
+
+export function isWarehousePendingLotCode(value: unknown): boolean {
+  const normalized = normalizeWarehouseLotCode(value);
+  return Boolean(normalized && normalized.startsWith(WAREHOUSE_PENDING_LOT_PREFIX));
+}
+
+export function warehouseLotDisplayCode(value: unknown): string {
+  const normalized = normalizeWarehouseLotCode(value);
+  if (!normalized || isWarehousePendingLotCode(normalized)) return 'Não informado';
   return normalized;
 }
 
