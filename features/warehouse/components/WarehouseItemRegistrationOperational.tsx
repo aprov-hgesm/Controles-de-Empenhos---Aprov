@@ -734,32 +734,32 @@ function invoiceGroupStatus(
   return 'PENDING';
 }
 
-function pregaoBulkOperationStorageKey(
+function bulkOperationStorageKey(
   workspaceId: string,
-  pregao: string,
+  subjectKey: string,
   mode: PregaoBulkMode,
   intakeId: string
 ): string {
   return [
     'emprovex',
     'warehouse',
-    'pregao-bulk',
+    'intake-bulk',
     workspaceId,
-    pregao,
+    subjectKey,
     mode,
     intakeId,
   ].join(':');
 }
 
-function getOrCreatePregaoBulkOperationId(
+function getOrCreateBulkOperationId(
   workspaceId: string,
-  pregao: string,
+  subjectKey: string,
   mode: PregaoBulkMode,
   intakeId: string
 ): string {
-  const key = pregaoBulkOperationStorageKey(
+  const key = bulkOperationStorageKey(
     workspaceId,
-    pregao,
+    subjectKey,
     mode,
     intakeId
   );
@@ -770,16 +770,16 @@ function getOrCreatePregaoBulkOperationId(
   return created;
 }
 
-function clearPregaoBulkOperationId(
+function clearBulkOperationId(
   workspaceId: string,
-  pregao: string,
+  subjectKey: string,
   mode: PregaoBulkMode,
   intakeId: string
 ): void {
   window.sessionStorage.removeItem(
-    pregaoBulkOperationStorageKey(
+    bulkOperationStorageKey(
       workspaceId,
-      pregao,
+      subjectKey,
       mode,
       intakeId
     )
@@ -820,16 +820,20 @@ function immediateConsumptionErrorMessage(error: unknown): string {
   return raw || 'Não foi possível confirmar o consumo imediato.';
 }
 
-function PregaoBulkActionPanel({
+function IntakeBulkActionPanel({
   workspaceId,
-  pregao,
+  subjectKind,
+  subjectKey,
+  subjectLabel,
   rows,
   coverageLimited,
   onClose,
   onComplete,
 }: {
   workspaceId: string;
-  pregao: string;
+  subjectKind: 'pregao' | 'invoice';
+  subjectKey: string;
+  subjectLabel: string;
   rows: WarehouseInvoiceIntakeQueueRow[];
   coverageLimited: boolean;
   onClose: () => void;
@@ -1003,7 +1007,11 @@ function PregaoBulkActionPanel({
       return;
     }
     if (!eligibleRows.length) {
-      setError('Não há itens pendentes neste Pregão.');
+      setError(
+        subjectKind === 'pregao'
+          ? 'Não há itens pendentes neste Pregão.'
+          : 'Não há itens pendentes nesta NF.'
+      );
       return;
     }
     if (!confirmed) {
@@ -1035,9 +1043,9 @@ function PregaoBulkActionPanel({
 
     for (let index = 0; index < eligibleRows.length; index += 1) {
       const row = eligibleRows[index];
-      const operationId = getOrCreatePregaoBulkOperationId(
+      const operationId = getOrCreateBulkOperationId(
         workspaceId,
-        pregao,
+        subjectKey,
         mode,
         row.stateId
       );
@@ -1098,9 +1106,9 @@ function PregaoBulkActionPanel({
           });
         }
 
-        clearPregaoBulkOperationId(
+        clearBulkOperationId(
           workspaceId,
-          pregao,
+          subjectKey,
           mode,
           row.stateId
         );
@@ -1132,7 +1140,7 @@ function PregaoBulkActionPanel({
       className="fixed inset-0 z-[130] flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-6"
       role="dialog"
       aria-modal="true"
-      aria-label={'Encaminhar Pregão ' + pregao}
+      aria-label={'Encaminhar ' + subjectLabel}
     >
       <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-t-3xl border border-slate-200 bg-white shadow-2xl sm:rounded-3xl">
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
@@ -1144,10 +1152,13 @@ function PregaoBulkActionPanel({
               </p>
             </div>
             <h3 className="mt-1 text-lg font-black text-slate-900">
-              Pregão {pregao}
+              {subjectLabel}
             </h3>
             <p className="mt-1 text-xs leading-5 text-slate-500">
-              {invoiceCount} NF(s) · {eligibleRows.length} item(ns) com quantidade pendente
+              {subjectKind === 'pregao'
+                ? invoiceCount + ' NF(s) · '
+                : ''}
+              {eligibleRows.length} item(ns) com quantidade pendente
             </p>
           </div>
           <button
@@ -1194,8 +1205,10 @@ function PregaoBulkActionPanel({
                 </span>
               </div>
               <p className="mt-2 text-[10px] leading-5 text-slate-500">
-                Todos os itens pendentes das NFs do Pregão serão alocados no mesmo
-                depósito/localização. Depois, itens específicos ainda poderão ser movimentados.
+                {subjectKind === 'pregao'
+                  ? 'Todos os itens pendentes das NFs do Pregão serão alocados no mesmo depósito/localização.'
+                  : 'Todos os itens pendentes desta NF serão alocados no mesmo depósito/localização.'}
+                {' '}Depois, itens específicos ainda poderão ser movimentados.
               </p>
             </button>
             <button
@@ -1383,8 +1396,12 @@ function PregaoBulkActionPanel({
             />
             <span>
               Confirmo o encaminhamento de <strong>{eligibleRows.length} item(ns)</strong>{' '}
-              pertencentes a <strong>{invoiceCount} NF(s)</strong> do Pregão {pregao}.
-              A execução é atômica por item; se algum item falhar, os anteriores não serão
+              {subjectKind === 'pregao' ? (
+                <>pertencentes a <strong>{invoiceCount} NF(s)</strong> do {subjectLabel}.</>
+              ) : (
+                <>da <strong>{subjectLabel}</strong>.</>
+              )}
+              {' '}A execução é atômica por item; se algum item falhar, os anteriores não serão
               revertidos e o EMPROVEX apresentará a lista de falhas.
             </span>
           </label>
@@ -1393,7 +1410,7 @@ function PregaoBulkActionPanel({
             <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-xs font-black text-[#00288e]">
-                  Processando Pregão…
+                  Processando {subjectKind === 'pregao' ? 'Pregão' : 'NF'}…
                 </span>
                 <span className="text-xs font-black text-slate-700">
                   {progress.completed}/{progress.total}
@@ -1464,7 +1481,7 @@ function PregaoBulkActionPanel({
               ) : (
                 <Send className="h-4 w-4" />
               )}
-              Encaminhar Pregão
+              Encaminhar {subjectKind === 'pregao' ? 'Pregão' : 'NF'}
             </button>
           </div>
         </div>
@@ -1490,6 +1507,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
     () => new Set()
   );
   const [bulkPregao, setBulkPregao] = useState<string | null>(null);
+  const [bulkInvoiceKey, setBulkInvoiceKey] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -1639,6 +1657,13 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
     [bulkPregao, rows]
   );
 
+  const selectedInvoiceGroup = useMemo(
+    () => bulkInvoiceKey
+      ? invoiceGroups.find((group) => group.invoiceRecordKey === bulkInvoiceKey) || null
+      : null,
+    [bulkInvoiceKey, invoiceGroups]
+  );
+
   const toggleInvoice = (key: string) => {
     setExpandedInvoices((current) => {
       const next = new Set(current);
@@ -1689,6 +1714,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
   };
 
   const handleBulkComplete = async (
+    subjectLabel: string,
     successful: number,
     bulkFailures: Array<{
       row: WarehouseInvoiceIntakeQueueRow;
@@ -1698,7 +1724,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
     await refresh();
     setMessage(
       successful
-        + ' item(ns) do Pregão concluído(s)'
+        + ' item(ns) de ' + subjectLabel + ' concluído(s)'
         + (
           bulkFailures.length
             ? '; ' + bulkFailures.length + ' falharam e permanecem pendentes.'
@@ -1946,11 +1972,21 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
                             style={{ width: progress + '%' }}
                           />
                         </div>
+                        {group.actionableItems > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setBulkInvoiceKey(group.invoiceRecordKey)}
+                            className="mt-1 inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-[#00288e] px-3 text-[10px] font-black text-white"
+                          >
+                            <Send className="h-3.5 w-3.5" />
+                            Encaminhar NF
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => toggleInvoice(group.key)}
                           aria-expanded={expanded}
-                          className="mt-1 inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-[10px] font-black text-[#00288e]"
+                          className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-[10px] font-black text-[#00288e]"
                         >
                           {expanded ? (
                             <ChevronDown className="h-3.5 w-3.5" />
@@ -2086,13 +2122,36 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
       )}
 
       {bulkPregao && (
-        <PregaoBulkActionPanel
+        <IntakeBulkActionPanel
           workspaceId={workspaceId}
-          pregao={bulkPregao}
+          subjectKind="pregao"
+          subjectKey={'pregao:' + bulkPregao}
+          subjectLabel={'Pregão ' + bulkPregao}
           rows={selectedPregaoRows}
           coverageLimited={Boolean(context?.pregaoCoverageLimited)}
           onClose={() => setBulkPregao(null)}
-          onComplete={handleBulkComplete}
+          onComplete={(successful, failures) =>
+            handleBulkComplete('Pregão ' + bulkPregao, successful, failures)
+          }
+        />
+      )}
+
+      {selectedInvoiceGroup && (
+        <IntakeBulkActionPanel
+          workspaceId={workspaceId}
+          subjectKind="invoice"
+          subjectKey={'invoice:' + selectedInvoiceGroup.invoiceRecordKey}
+          subjectLabel={'NF ' + selectedInvoiceGroup.invoiceId}
+          rows={selectedInvoiceGroup.rows}
+          coverageLimited={false}
+          onClose={() => setBulkInvoiceKey(null)}
+          onComplete={(successful, failures) =>
+            handleBulkComplete(
+              'NF ' + selectedInvoiceGroup.invoiceId,
+              successful,
+              failures
+            )
+          }
         />
       )}
     </div>
