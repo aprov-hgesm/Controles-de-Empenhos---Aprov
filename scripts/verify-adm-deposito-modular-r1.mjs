@@ -104,10 +104,15 @@ for (const helper of [
   'function validWarehouseItemIntakeV2Update(workspaceId, intakeId)',
   'function warehouseImmediateConsumptionIntakeMatchesAfter(workspaceId)',
   'function validWarehouseConsumptionCreate(workspaceId, consumptionId)',
-  'function validWarehouseQueueExclusion()',
 ]) {
   requireText(rules, helper, 'Helper obrigatório da ADM-R1 ausente: ' + helper);
 }
+
+requireText(
+  rules,
+  "request.resource.data.schemaVersion == 'warehouse_intake_queue_exclusion_v1'",
+  'Contrato inline de queueExclusions ausente.'
+);
 
 requireText(
   sectionContent,
