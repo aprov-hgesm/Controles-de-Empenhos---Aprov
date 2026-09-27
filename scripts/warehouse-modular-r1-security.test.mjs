@@ -276,10 +276,10 @@ async function main() {
     getDocs(collection(outsider.db, 'warehouse', WORKSPACE_ID, 'locationBalances'))
   );
 
-  await denied('fundador não grava saldos físicos na release modular', () =>
+  await denied('gravação física arbitrária continua bloqueada pelos validadores', () =>
     setDoc(
       doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', 'probe-r1'),
-      { marker: 'read-only-preview' }
+      { marker: 'invalid-write-must-stay-denied' }
     )
   );
 
@@ -297,23 +297,27 @@ async function main() {
   ];
 
   for (const domain of advancedDomains) {
-    await denied('fundador não lista domínio avançado desligado: ' + domain, () =>
+    await allowed('fundador lista domínio operacional: ' + domain, () =>
       getDocs(collection(founder.db, 'warehouse', WORKSPACE_ID, domain))
     );
 
-    await denied('fundador não grava domínio avançado desligado: ' + domain, () =>
+    await denied('gravação arbitrária segue negada em ' + domain, () =>
       setDoc(
         doc(founder.db, 'warehouse', WORKSPACE_ID, domain, 'probe-r1'),
-        { marker: 'must-stay-denied' }
+        { marker: 'invalid-write-must-stay-denied' }
       )
     );
   }
 
-  console.log('\nADM Depósito ADM-R1 security test: PASS');
-  console.log('- 6 domínios independentes liberados ao fundador');
-  console.log('- locationBalances liberado somente para leitura do fundador na prévia 2.5D');
-  console.log('- acesso externo negado');
-  console.log('- 10 domínios avançados permanecem bloqueados');
+  await denied('usuário não fundador não lista intakes', () =>
+    getDocs(collection(outsider.db, 'warehouse', WORKSPACE_ID, 'intakes'))
+  );
+
+  console.log('\nADM Depósito modular security test: PASS');
+  console.log('- fundador pode ler os domínios operacionais necessários');
+  console.log('- gravações arbitrárias continuam negadas pelos contratos');
+  console.log('- acesso externo permanece negado');
+  console.log('- operações válidas continuam obrigadas a respeitar ledger e invariantes');
 }
 
 main()
