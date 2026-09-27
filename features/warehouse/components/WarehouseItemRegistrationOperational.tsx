@@ -1646,7 +1646,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
           ['Notas Fiscais', summary.invoices, 'NFs carregadas na fila'],
           ['NFs a tratar', summary.actionableInvoices, 'possuem item pendente'],
           ['Itens pendentes', summary.pendingItems, 'visíveis apenas ao detalhar a NF'],
-          ['Pregões', summary.pregaos, 'para filtro e encaminhamento em lote'],
+          ['Pregões', summary.pregaos, 'para filtro e ações em lote'],
           ['Reconciliação', summary.reconciliationInvoices, 'NFs que exigem revisão'],
         ].map(([label, value, description], index) => (
           <div
@@ -1681,12 +1681,12 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
             <div className="flex items-center gap-2 text-[#00288e]">
               <ClipboardList className="h-4 w-4" />
               <p className="text-xs font-black uppercase tracking-[0.12em]">
-                Notas Fiscais para alocação
+                Notas Fiscais do ADM Depósito
               </p>
             </div>
             <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-500">
-              A visualização principal é por NF. Abra somente a nota que deseja tratar;
-              os itens aparecem dentro do detalhamento e mantêm suas operações individuais.
+              A visualização principal é por NF. Você pode encaminhar a nota para armazenamento
+              ou removê-la apenas desta fila; os itens continuam disponíveis no detalhamento.
             </p>
             {context?.cutoffAt && (
               <p className="mt-1 text-[9px] font-semibold text-slate-400">
