@@ -13,6 +13,10 @@ const itemRegistration = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseItemRegistrationOperational.tsx'),
   'utf8'
 );
+const intakeStateRepository = readFileSync(
+  resolve(root, 'lib/warehouse/intakeStateRepository.ts'),
+  'utf8'
+);
 const plan = readFileSync(
   resolve(root, 'docs/adm-deposito/MODULAR_RELEASE_PLAN.md'),
   'utf8'
@@ -290,6 +294,16 @@ requireText(
   'Consumo imediato em lote deixou de tratar integralmente o saldo pendente de cada item.'
 );
 requireText(
+  intakeStateRepository,
+  "createWarehouseMovementId(",
+  'Fila deixou de reconhecer deterministicamente o INVOICE_ENTRY do intake v2.'
+);
+requireText(
+  intakeStateRepository,
+  "record.movement.id !== expectedV2EntryMovementId",
+  'INVOICE_ENTRY v2 voltou a ser classificado como projeção legada após tentativa interrompida.'
+);
+requireText(
   plan,
   'ADM-R1 — Fundação independente',
   'Plano modular oficial da ADM-R1 ausente.'
@@ -306,6 +320,7 @@ console.log('- Meus Depósitos e Cadastro de Itens operacionais');
 console.log('- rules em ' + (rulesBytes / 1024).toFixed(2) + ' KiB (orçamento interno: 200 KiB)');
 console.log('- NF/Pregão podem ser armazenados, consumidos imediatamente ou removidos logicamente da fila');
 console.log('- consumo imediato em lote reutiliza o motor oficial com destino, responsável e idempotência por item');
+console.log('- INVOICE_ENTRY v2 isolado não gera falso positivo de reconciliação legada');
 console.log('- contratos de ledger, saldo, localização, lote, barcode e intake preservados');
 console.log('- founder-only e validações transacionais preservados');
 console.log('- repositories persistem exclusivamente em warehouseDb');
