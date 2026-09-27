@@ -11,10 +11,12 @@ import {
   ClipboardCheck,
   ClipboardList,
   Copy,
+  FileDown,
   ListFilter,
   MapPin,
   PackagePlus,
   Plus,
+  Printer,
   RefreshCw,
   Search,
   Send,
@@ -60,6 +62,13 @@ import type { WarehouseDestinationListItem } from '../../../lib/warehouse/withdr
 import {
   excludeWarehouseInvoicesFromPendingQueue,
 } from '../../../lib/warehouse/intakeQueueExclusionRepository';
+import { auth } from '../../../lib/firebase';
+import { getCurrentOperationalScope } from '../../../lib/operationalPaths';
+import {
+  downloadWarehouseAllocationSheet,
+  printWarehouseAllocationSheet,
+  type WarehouseAllocationSheetInput,
+} from '../pdf/WarehouseAllocationSheet';
 
 type RegistrationTab = 'invoices' | 'stored' | 'siscofis' | 'immediate';
 
@@ -1645,6 +1654,8 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
   );
   const [bulkPregao, setBulkPregao] = useState<string | null>(null);
   const [bulkInvoiceKey, setBulkInvoiceKey] = useState<string | null>(null);
+  const [allocationSheetWorking, setAllocationSheetWorking] =
+    useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -1794,6 +1805,14 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
     [bulkPregao, rows]
   );
 
+  const filteredPregaoRows = useMemo(
+    () =>
+      pregaoFilter !== 'ALL' && pregaoFilter !== 'NONE'
+        ? rows.filter((row) => row.pregao === pregaoFilter)
+        : [],
+    [pregaoFilter, rows]
+  );
+
   const selectedInvoiceGroup = useMemo(
     () => bulkInvoiceKey
       ? invoiceGroups.find((group) => group.invoiceRecordKey === bulkInvoiceKey) || null
@@ -1818,6 +1837,78 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
       return;
     }
     setImmediateRow(row);
+  };
+
+  const handleAllocationSheet = async ({
+    kind,
+    subjectLabel,
+    sheetRows,
+    action,
+    operationKey,
+  }: {
+    kind: WarehouseAllocationSheetInput['kind'];
+    subjectLabel: string;
+    sheetRows: WarehouseInvoiceIntakeQueueRow[];
+    action: 'download' | 'print';
+    operationKey: string;
+  }) => {
+    if (
+      kind === 'pregao'
+      && context?.pregaoCoverageLimited
+    ) {
+      setMessage(
+        'A ficha do Pregão foi bloqueada porque a consulta atual não garante cobertura completa de todas as NFs.'
+      );
+      return;
+    }
+
+    const workingKey = operationKey + ':' + action;
+    setAllocationSheetWorking(workingKey);
+    setMessage(null);
+
+    try {
+      const currentUser = auth.currentUser;
+      const scope = currentUser
+        ? getCurrentOperationalScope(currentUser.uid)
+        : null;
+      const input: WarehouseAllocationSheetInput = {
+        workspaceId,
+        ug: scope?.ug || null,
+        issuedBy:
+          currentUser?.displayName?.trim()
+          || currentUser?.email?.trim()
+          || null,
+        kind,
+        subjectLabel,
+        rows: sheetRows,
+      };
+
+      if (action === 'download') {
+        await downloadWarehouseAllocationSheet(input);
+        setMessage(
+          'Ficha de Alocação Física gerada em PDF para '
+          + subjectLabel
+          + '.'
+        );
+      } else {
+        await printWarehouseAllocationSheet(input);
+        setMessage(
+          'Ficha de Alocação Física aberta para impressão: '
+          + subjectLabel
+          + '.'
+        );
+      }
+    } catch (error) {
+      const raw = error instanceof Error ? error.message : String(error || '');
+      setMessage(
+        raw.includes('WAREHOUSE_ALLOCATION_SHEET_NO_PENDING_ITEMS')
+          ? 'Não há itens pendentes de alocação para compor esta ficha.'
+          : 'Não foi possível gerar a Ficha de Alocação Física. '
+            + (raw || 'Tente novamente.')
+      );
+    } finally {
+      setAllocationSheetWorking(null);
+    }
   };
 
   const handleAllocationSuccess = async (
@@ -2024,6 +2115,70 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
           </button>
         </div>
 
+        {pregaoFilter !== 'ALL' && pregaoFilter !== 'NONE' && (
+          <div className="mt-3 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <Printer className="h-4 w-4 text-[#00288e]" />
+                <p className="text-xs font-black text-slate-800">
+                  Ficha de Alocação Física · Pregão {pregaoFilter}
+                </p>
+              </div>
+              <p className="mt-1 text-[10px] leading-4 text-slate-500">
+                PDF operacional em preto e branco, com campos para depósito, local, subposição e divisão de quantidade.
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void handleAllocationSheet({
+                  kind: 'pregao',
+                  subjectLabel: 'Pregão ' + pregaoFilter,
+                  sheetRows: filteredPregaoRows,
+                  action: 'download',
+                  operationKey: 'pregao:' + pregaoFilter,
+                })}
+                disabled={
+                  loading
+                  || Boolean(context?.pregaoCoverageLimited)
+                  || allocationSheetWorking !== null
+                }
+                className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 text-[10px] font-black text-slate-700 disabled:opacity-40"
+              >
+                {allocationSheetWorking === 'pregao:' + pregaoFilter + ':download' ? (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FileDown className="h-3.5 w-3.5" />
+                )}
+                Baixar PDF
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleAllocationSheet({
+                  kind: 'pregao',
+                  subjectLabel: 'Pregão ' + pregaoFilter,
+                  sheetRows: filteredPregaoRows,
+                  action: 'print',
+                  operationKey: 'pregao:' + pregaoFilter,
+                })}
+                disabled={
+                  loading
+                  || Boolean(context?.pregaoCoverageLimited)
+                  || allocationSheetWorking !== null
+                }
+                className="inline-flex h-9 items-center gap-2 rounded-xl bg-slate-900 px-3 text-[10px] font-black text-white disabled:opacity-40"
+              >
+                {allocationSheetWorking === 'pregao:' + pregaoFilter + ':print' ? (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Printer className="h-3.5 w-3.5" />
+                )}
+                Imprimir
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500">
           <span>
             {filteredGroups.length} NF(s) exibida(s) · {rows.length} item(ns) carregado(s)
@@ -2131,10 +2286,52 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
                           />
                         </div>
                         {group.actionableItems > 0 && (
+                          <div className="mt-1 grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void handleAllocationSheet({
+                                kind: 'invoice',
+                                subjectLabel: 'NF ' + group.invoiceId,
+                                sheetRows: group.rows,
+                                action: 'download',
+                                operationKey: 'nf:' + group.invoiceRecordKey,
+                              })}
+                              disabled={allocationSheetWorking !== null}
+                              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-2 text-[9px] font-black text-slate-700 disabled:opacity-40"
+                            >
+                              {allocationSheetWorking === 'nf:' + group.invoiceRecordKey + ':download' ? (
+                                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <FileDown className="h-3.5 w-3.5" />
+                              )}
+                              Ficha PDF
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleAllocationSheet({
+                                kind: 'invoice',
+                                subjectLabel: 'NF ' + group.invoiceId,
+                                sheetRows: group.rows,
+                                action: 'print',
+                                operationKey: 'nf:' + group.invoiceRecordKey,
+                              })}
+                              disabled={allocationSheetWorking !== null}
+                              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-2 text-[9px] font-black text-slate-700 disabled:opacity-40"
+                            >
+                              {allocationSheetWorking === 'nf:' + group.invoiceRecordKey + ':print' ? (
+                                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Printer className="h-3.5 w-3.5" />
+                              )}
+                              Imprimir
+                            </button>
+                          </div>
+                        )}
+                        {group.actionableItems > 0 && (
                           <button
                             type="button"
                             onClick={() => setBulkInvoiceKey(group.invoiceRecordKey)}
-                            className="mt-1 inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-[#00288e] px-3 text-[10px] font-black text-white"
+                            className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-[#00288e] px-3 text-[10px] font-black text-white"
                           >
                             <Send className="h-3.5 w-3.5" />
                             Ações da NF
