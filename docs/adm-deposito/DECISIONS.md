@@ -2054,3 +2054,23 @@ Data: 2026-09-27.
 - Integração NF → ADM deve ocorrer por projeção/idempotência; não haverá transação distribuída entre databases.
 - Durante a migração, os dados `warehouse/hgesm-aprov/*` do banco antigo permanecem intactos para rollback.
 - O cutover dos repositories só ocorrerá depois de: Rules dedicadas válidas, migração verificada e testes direcionados aprovados.
+
+
+## D-101 — Cutover multi-database usa projeção logística desacoplada e migração de árvore completa
+
+Data: 2026-09-27.
+
+- A NF e o Empenho permanecem canônicos no database principal do EMPROVEX.
+- O ADM pode ler essas fontes canônicas sob demanda para montar a fila logística, mas qualquer persistência própria do warehouse deve ocorrer exclusivamente em `warehouseDb`.
+- Nenhuma `Transaction` ou `WriteBatch` pode combinar referências de `db` e `warehouseDb`.
+- A antiga integração `integrateInvoiceReceiptInTransaction` / `integrateInvoiceDeletionInTransaction` fica aposentada e protegida por fail-safe; ela não deve voltar a ser conectada ao ciclo transacional da NF.
+- A projeção operacional atual é deliberadamente leve:
+  - NF/Empenho são lidos do banco principal;
+  - a fila deriva linhas virtuais quando ainda não existe decisão logística;
+  - alocação, consumo, exclusão de fila e demais decisões persistem somente no database warehouse;
+  - não se duplica a NF canônica inteira como segunda fonte de verdade.
+- A migração entre databases deve copiar a árvore efetivamente persistida, não apenas as coleções de primeiro nível.
+- Em especial, `inventories/{inventoryId}/items/{itemId}` é parte obrigatória da migração e da verificação.
+- `referenceValue` Firestore precisa ser remapeado do database antigo para o novo antes da comparação de integridade, para que `copy` e `verify` sejam idempotentes.
+- A origem permanece intacta durante o cutover; exclusão do legado é uma decisão posterior e separada.
+- A ordem operacional obrigatória é: testes locais -> Rules do database dedicado -> plan -> copy -> verify -> validação founder-only -> limpeza posterior do ruleset principal.
