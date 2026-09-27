@@ -108,7 +108,7 @@ export interface ApplyWarehouseImmediateConsumptionInput
 export interface ApplyWarehouseImmediateConsumptionResult {
   applied: boolean;
   intake: WarehouseItemIntakeState;
-  movementId: string;
+  movementId: string | null;
   consumptionId: string;
 }
 
@@ -191,7 +191,7 @@ function parseBalance(
       schemaVersion: data.schemaVersion,
       workspaceId: data.workspaceId,
       ug: data.ug,
-      materialId: data.materialId,
+      materialId: typeof data.materialId === 'string' ? data.materialId : null,
       quantity: data.quantity,
       revision: data.revision,
       lastMovementId: data.lastMovementId,
@@ -375,8 +375,23 @@ function parseConsumption(
     || typeof data.ug !== 'string'
     || !/^\d{6}$/.test(data.ug)
     || !['STOCK_OUTBOUND', 'IMMEDIATE_CONSUMPTION'].includes(String(origin))
-    || typeof data.materialId !== 'string'
-    || !/^mat_[a-f0-9]{32}$/.test(data.materialId)
+    || !(
+      (
+        origin === 'STOCK_OUTBOUND'
+        && typeof data.materialId === 'string'
+        && /^mat_[a-f0-9]{32}$/.test(data.materialId)
+      )
+      || (
+        origin === 'IMMEDIATE_CONSUMPTION'
+        && (
+          data.materialId == null
+          || (
+            typeof data.materialId === 'string'
+            && /^mat_[a-f0-9]{32}$/.test(data.materialId)
+          )
+        )
+      )
+    )
     || typeof data.materialDescription !== 'string'
     || !data.materialDescription.trim()
     || typeof data.unitLabel !== 'string'
@@ -394,8 +409,23 @@ function parseConsumption(
     || !normalizeWarehouseWithdrawnBy(data.withdrawnBy)
     || typeof data.operatorUid !== 'string'
     || !data.operatorUid
-    || typeof data.movementId !== 'string'
-    || !/^mov_[a-f0-9]{64}$/.test(data.movementId)
+    || !(
+      (
+        origin === 'STOCK_OUTBOUND'
+        && typeof data.movementId === 'string'
+        && /^mov_[a-f0-9]{64}$/.test(data.movementId)
+      )
+      || (
+        origin === 'IMMEDIATE_CONSUMPTION'
+        && (
+          data.movementId == null
+          || (
+            typeof data.movementId === 'string'
+            && /^mov_[a-f0-9]{64}$/.test(data.movementId)
+          )
+        )
+      )
+    )
     || !['PENDING', 'PREPARED', 'POSTED'].includes(String(siscofisStatus))
   ) {
     throw new Error('WAREHOUSE_INVALID_CONSUMPTION_RECORD');
@@ -416,7 +446,7 @@ function parseConsumption(
     destinationName: normalizeWarehouseDestinationName(data.destinationName as string),
     withdrawnBy: normalizeWarehouseWithdrawnBy(data.withdrawnBy as string),
     operatorUid: data.operatorUid,
-    movementId: data.movementId,
+    movementId: typeof data.movementId === 'string' ? data.movementId : null,
     withdrawalId: typeof data.withdrawalId === 'string' ? data.withdrawalId : null,
     lineId: typeof data.lineId === 'string' ? data.lineId : null,
     intakeId: typeof data.intakeId === 'string' ? data.intakeId : null,
@@ -846,6 +876,215 @@ export async function finalizeWarehouseMaterialWithdrawal(
   }
 }
 
+async function applyWarehouseImmediateConsumptionLightweight(
+  scope: { workspaceId: string; ug: string; uid: string },
+  input: ApplyWarehouseImmediateConsumptionInput,
+  destination: WarehouseDestination,
+  withdrawnBy: string,
+  quantity: number,
+  receivedQuantity: number,
+  operationId: string
+): Promise<ApplyWarehouseImmediateConsumptionResult> {
+  const consumptionId = await createConsumptionId(
+    scope.workspaceId,
+    'immediate-light:' + input.intakeId + ':' + operationId
+  );
+  const intakePath = warehouseDocumentPath(
+    scope.workspaceId,
+    'intakes',
+    input.intakeId
+  );
+  const consumptionPath = warehouseDocumentPath(
+    scope.workspaceId,
+    'consumptions',
+    consumptionId
+  );
+
+  try {
+    return await runTransaction(db, async (transaction) => {
+      const intakeRef = doc(db, intakePath);
+      const consumptionRef = doc(db, consumptionPath);
+      const [intakeSnapshot, consumptionSnapshot] = await Promise.all([
+        transaction.get(intakeRef),
+        transaction.get(consumptionRef),
+      ]);
+
+      const currentIntake = intakeSnapshot.exists()
+        ? parseIntake(
+            scope.workspaceId,
+            intakeSnapshot.id,
+            intakeSnapshot.data() as Record<string, unknown>
+          )
+        : null;
+
+      if (
+        currentIntake
+        && (
+          currentIntake.invoiceRecordKey !== input.invoiceRecordKey
+          || currentIntake.invoiceId !== input.invoiceId
+          || currentIntake.empenhoId !== input.empenhoId
+          || currentIntake.itemId !== input.itemId
+          || Math.abs(currentIntake.receivedQuantity - receivedQuantity) > EPSILON
+        )
+      ) {
+        throw new Error('WAREHOUSE_ITEM_INTAKE_RECONCILIATION_REQUIRED');
+      }
+
+      if (consumptionSnapshot.exists()) {
+        const existingConsumption = parseConsumption(
+          scope.workspaceId,
+          consumptionSnapshot.id,
+          consumptionSnapshot.data() as Record<string, unknown>
+        );
+        if (
+          !currentIntake
+          || existingConsumption.origin !== 'IMMEDIATE_CONSUMPTION'
+          || existingConsumption.movementId !== null
+          || existingConsumption.intakeId !== input.intakeId
+          || existingConsumption.invoiceRecordKey !== input.invoiceRecordKey
+          || existingConsumption.destinationId !== destination.id
+          || existingConsumption.withdrawnBy !== withdrawnBy
+          || Math.abs(existingConsumption.quantity - quantity) > EPSILON
+        ) {
+          throw new Error('WAREHOUSE_CONSUMPTION_IDEMPOTENCY_CONFLICT');
+        }
+        return {
+          applied: false,
+          intake: currentIntake,
+          movementId: null,
+          consumptionId: existingConsumption.id,
+        };
+      }
+
+      const currentAllocated = currentIntake?.allocatedQuantity || 0;
+      const currentImmediate =
+        currentIntake?.immediateConsumptionQuantity || 0;
+
+      if (
+        Math.abs(currentAllocated - input.expectedAllocatedQuantity) > EPSILON
+        || Math.abs(
+          currentImmediate - input.expectedImmediateConsumptionQuantity
+        ) > EPSILON
+        || currentAllocated > EPSILON
+        || currentImmediate > EPSILON
+      ) {
+        throw new Error('WAREHOUSE_ITEM_INTAKE_CONCURRENT_MODIFICATION');
+      }
+
+      const pending = calculateWarehouseItemIntakePendingQuantity(
+        receivedQuantity,
+        currentAllocated,
+        currentImmediate
+      );
+      if (
+        Math.abs(quantity - pending) > EPSILON
+        || Math.abs(quantity - receivedQuantity) > EPSILON
+      ) {
+        throw new Error('WAREHOUSE_IMMEDIATE_CONSUMPTION_REQUIRES_LEDGER');
+      }
+
+      const nextImmediate = normalizeWarehouseQuantity(
+        currentImmediate + quantity
+      );
+      if (nextImmediate === null) {
+        throw new Error('WAREHOUSE_IMMEDIATE_CONSUMPTION_INVALID_QUANTITY');
+      }
+
+      const nowIso = new Date().toISOString();
+      const intakeCandidate = validateWarehouseItemIntakeState(
+        {
+          schemaVersion: WAREHOUSE_ITEM_INTAKE_STATE_SCHEMA_VERSION,
+          id: input.intakeId,
+          workspaceId: scope.workspaceId,
+          ug: scope.ug,
+          invoiceRecordKey: input.invoiceRecordKey,
+          invoiceId: input.invoiceId,
+          empenhoId: input.empenhoId,
+          itemId: input.itemId,
+          materialId: currentIntake?.materialId || null,
+          description: currentIntake?.description || input.description,
+          unitLabel: currentIntake?.unitLabel || input.unitLabel,
+          supplier: currentIntake?.supplier || input.supplier,
+          receivedQuantity,
+          allocatedQuantity: 0,
+          immediateConsumptionQuantity: nextImmediate,
+          pendingQuantity: 0,
+          status: 'PROCESSED',
+          createdAt: currentIntake?.createdAt || nowIso,
+          updatedAt: nowIso,
+          createdBy: currentIntake?.createdBy || scope.uid,
+          updatedBy: scope.uid,
+        },
+        {
+          expectedWorkspaceId: scope.workspaceId,
+          expectedUg: scope.ug,
+        }
+      );
+      if (!intakeCandidate.ok) {
+        throw new Error('WAREHOUSE_INVALID_ITEM_INTAKE_STATE');
+      }
+
+      if (currentIntake) {
+        transaction.update(intakeRef, {
+          immediateConsumptionQuantity:
+            intakeCandidate.data.immediateConsumptionQuantity,
+          pendingQuantity: 0,
+          status: 'PROCESSED',
+          updatedBy: scope.uid,
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        transaction.set(intakeRef, {
+          ...intakeCandidate.data,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      transaction.set(consumptionRef, {
+        schemaVersion: WAREHOUSE_CONSUMPTION_SCHEMA_VERSION,
+        id: consumptionId,
+        workspaceId: scope.workspaceId,
+        ug: scope.ug,
+        origin: 'IMMEDIATE_CONSUMPTION',
+        materialId: input.materialId?.trim().toLowerCase() || null,
+        materialDescription: input.description.trim(),
+        unitLabel: input.unitLabel.trim(),
+        quantity,
+        requestedQuantity: quantity,
+        presentationLabel: input.unitLabel.trim(),
+        destinationId: destination.id,
+        destinationName: destination.name,
+        withdrawnBy,
+        operatorUid: scope.uid,
+        movementId: null,
+        withdrawalId: null,
+        lineId: null,
+        intakeId: input.intakeId,
+        invoiceRecordKey: input.invoiceRecordKey,
+        barcode: null,
+        lotCode: null,
+        positionLabel: 'Consumo imediato · sem entrada em estoque',
+        siscofisStatus: 'PENDING',
+        occurredAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        siscofisUpdatedBy: null,
+        siscofisUpdatedAt: null,
+      });
+
+      return {
+        applied: true,
+        intake: intakeCandidate.data,
+        movementId: null,
+        consumptionId,
+      };
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, consumptionPath);
+    throw error;
+  }
+}
+
 export async function applyWarehouseImmediateConsumption(
   workspaceId: string,
   input: ApplyWarehouseImmediateConsumptionInput
@@ -872,6 +1111,23 @@ export async function applyWarehouseImmediateConsumption(
     scope.workspaceId,
     input.destinationId
   );
+
+  const canUseLightweightPath =
+    Math.abs(input.expectedAllocatedQuantity) <= EPSILON
+    && Math.abs(input.expectedImmediateConsumptionQuantity) <= EPSILON
+    && Math.abs(quantity - receivedQuantity) <= EPSILON;
+
+  if (canUseLightweightPath) {
+    return applyWarehouseImmediateConsumptionLightweight(
+      scope,
+      input,
+      destination,
+      withdrawnBy,
+      quantity,
+      receivedQuantity,
+      operationId
+    );
+  }
 
   const entryContext = await ensureWarehouseIntakeEntryContext(
     scope.workspaceId,
