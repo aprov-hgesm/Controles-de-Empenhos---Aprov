@@ -2988,3 +2988,37 @@ Resultado:
 Próximo gate:
 - repetir uma única tentativa controlada dos 50 restantes da NF 46546;
 - validar estado final 50 + 50 em subposições distintas, `UNASSIGNED = 0`, intake `PROCESSED`.
+
+
+### Ficha de Alocação Física de Materiais — implementada — 2026-09-27
+
+Nova ponte operacional entre o depósito físico e o lançamento digital do EMPROVEX.
+
+Escopo implementado:
+- emissão da **Ficha de Alocação Física de Materiais** por Nota Fiscal;
+- emissão consolidada por Pregão;
+- download direto em PDF e abertura para impressão;
+- A4 retrato, preto e branco, otimizado para impressora de toner;
+- cabeçalho institucional EMPROVEX / ADM Depósito / Área Logística;
+- identificação de NF(s), empenho(s), Pregão, fornecedor(es), UG, workspace, emissor e data/hora;
+- somente itens ainda pendentes ou parcialmente processados entram na ficha;
+- cada item possui três linhas independentes de alocação manual;
+- campos por parcela: depósito, local, subposição, quantidade e observação;
+- quantidade recebida e quantidade ainda a alocar impressas para conferência;
+- instruções de preenchimento operacional;
+- bloco final de conferência com assinatura do responsável pela alocação física e do operador que lançou no EMPROVEX;
+- paginação e rodapé institucional;
+- emissão por Pregão é bloqueada quando a consulta não garante cobertura completa das NFs;
+- nenhuma nova leitura/listener do Firestore foi adicionada: o PDF usa os dados já carregados na fila.
+
+Arquitetura:
+- gerador dedicado em `features/warehouse/pdf/WarehouseAllocationSheet.ts`;
+- integração em `WarehouseItemRegistrationOperational.tsx`;
+- geração client-side com `jsPDF`, dependência já existente;
+- guard da ADM-R1 atualizado para proteger a funcionalidade.
+
+Próximo gate:
+- `npm run verify:adm-deposito-modular-r1`;
+- `npm run typecheck`;
+- teste visual no navegador gerando uma ficha por NF e outra por Pregão;
+- Browser E2E é justificável por se tratar de nova interação do usuário, mas deve ser executado apenas após os gates estáticos passarem.
