@@ -101,6 +101,8 @@ for (const helper of [
   'function validWarehouseBarcodeCreate(workspaceId, barcodeId)',
   'function validWarehouseItemIntakeV2Create(workspaceId, intakeId)',
   'function validWarehouseItemIntakeV2Update(workspaceId, intakeId)',
+  'function warehouseImmediateConsumptionIntakeMatchesAfter(workspaceId)',
+  'function validWarehouseConsumptionCreate(workspaceId, consumptionId)',
 ]) {
   requireText(rules, helper, 'Helper obrigatório da ADM-R1 ausente: ' + helper);
 }
@@ -135,5 +137,6 @@ if (findings.length) {
 console.log('ADM Depósito modular guard: PASS');
 console.log('- Meus Depósitos e Cadastro de Itens operacionais');
 console.log('- rules em ' + (rulesBytes / 1024).toFixed(2) + ' KiB (orçamento interno: 200 KiB)');
+console.log('- consumo imediato integral usa trilha leve sem movimento de estoque');
 console.log('- contratos de ledger, saldo, localização, lote, barcode e intake preservados');
 console.log('- founder-only e validações transacionais preservados');
