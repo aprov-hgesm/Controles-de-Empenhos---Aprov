@@ -2060,9 +2060,9 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
         {context?.truncated && (
           <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[10px] leading-5 text-amber-700">
             <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            A consulta atingiu um limite bounded. A visualização continua disponível,
-            mas o encaminhamento de um Pregão inteiro é bloqueado para evitar uma operação
-            incompleta.
+            Parte da consulta auxiliar atingiu o limite de segurança. A visualização
+            continua disponível. O encaminhamento por Pregão só será bloqueado se a
+            cobertura de NFs ou de empenhos/Pregões estiver realmente incompleta.
           </div>
         )}
       </div>
@@ -2090,7 +2090,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
           workspaceId={workspaceId}
           pregao={bulkPregao}
           rows={selectedPregaoRows}
-          coverageLimited={Boolean(context?.truncated)}
+          coverageLimited={Boolean(context?.pregaoCoverageLimited)}
           onClose={() => setBulkPregao(null)}
           onComplete={handleBulkComplete}
         />
