@@ -283,20 +283,17 @@ async function main() {
     )
   );
 
-  const advancedDomains = [
+  const operationalDomains = [
     'movements',
     'balances',
     'lots',
     'barcodes',
     'siscofisSnapshots',
-    'withdrawals',
     'consumptions',
     'intakes',
-    'alerts',
-    'inventories',
   ];
 
-  for (const domain of advancedDomains) {
+  for (const domain of operationalDomains) {
     await allowed('fundador lista domínio operacional: ' + domain, () =>
       getDocs(collection(founder.db, 'warehouse', WORKSPACE_ID, domain))
     );
@@ -309,12 +306,19 @@ async function main() {
     );
   }
 
+  for (const domain of ['alerts', 'inventories', 'withdrawals']) {
+    await denied('domínio estacionado permanece bloqueado: ' + domain, () =>
+      getDocs(collection(founder.db, 'warehouse', WORKSPACE_ID, domain))
+    );
+  }
+
   await denied('usuário não fundador não lista intakes', () =>
     getDocs(collection(outsider.db, 'warehouse', WORKSPACE_ID, 'intakes'))
   );
 
   console.log('\nADM Depósito modular security test: PASS');
-  console.log('- fundador pode ler os domínios operacionais necessários');
+  console.log('- fundador pode ler somente os domínios operacionais liberados');
+  console.log('- alertas, inventários e withdrawals continuam estacionados');
   console.log('- gravações arbitrárias continuam negadas pelos contratos');
   console.log('- acesso externo permanece negado');
   console.log('- operações válidas continuam obrigadas a respeitar ledger e invariantes');
