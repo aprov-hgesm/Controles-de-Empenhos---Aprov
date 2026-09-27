@@ -2013,3 +2013,16 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - As Rules devem vincular a criação do registro de consumo ao intake correspondente via `getAfter`, impedindo registro de consumo sem avanço coerente da pendência.
 - Se já existir alocação ou tratamento quantitativo anterior, o fluxo completo de ledger continua obrigatório para preservar os saldos existentes.
 - Prioridade: menor latência, menos leituras/escritas Firestore e menor custo operacional, sem perder rastreabilidade.
+
+
+## D-098 — Três níveis de encaminhamento: Pregão, NF e item
+
+- O Cadastro de Itens deve permitir tratamento em três níveis:
+  1. **Pregão** — encaminhamento coletivo de todas as NFs carregadas daquele Pregão;
+  2. **Nota Fiscal** — encaminhamento de todos os itens pendentes de uma única NF;
+  3. **Item** — tratamento individual dentro de `Detalhar NF`.
+- O card da NF deve expor `Encaminhar NF` sem exigir expansão dos itens.
+- `Encaminhar NF` reutiliza o motor transacional de lote já existente; não deve criar outra implementação de saldo/consumo.
+- A ação da NF considera somente itens `PENDING` ou `PARTIALLY_PROCESSED` com quantidade pendente positiva.
+- Itens `PROCESSED` ou em reconciliação não devem ser reprocessados automaticamente.
+- A cobertura global da fila não deve bloquear uma NF individual já carregada, pois o conjunto de itens daquela NF é conhecido no documento canônico.
