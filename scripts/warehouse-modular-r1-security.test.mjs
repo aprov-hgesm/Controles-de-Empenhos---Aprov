@@ -307,13 +307,10 @@ async function main() {
   const intakeAllocationLotId = 'lot_' + 'f'.repeat(32);
   const intakeAllocationId = 'intake_' + '9'.repeat(64);
 
-  await allowed('fundador aloca item de NF com TRANSFER + saldos + lote + intake', () =>
+  await allowed('fundador aloca item de NF com TRANSFER + posições + lote + intake', () =>
     runTransaction(founder.db, async (transaction) => {
       const movementRef = doc(
         founder.db, 'warehouse', WORKSPACE_ID, 'movements', transferMovementId
-      );
-      const balanceRef = doc(
-        founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId
       );
       const fromBalanceRef = doc(
         founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', unassignedBalanceId
@@ -354,17 +351,6 @@ async function main() {
           toBalanceId: targetBalanceId,
         },
         createdAt: serverTimestamp(),
-      });
-
-      transaction.set(balanceRef, {
-        schemaVersion: 'warehouse_balance_v1',
-        workspaceId: WORKSPACE_ID,
-        ug: UG,
-        materialId,
-        quantity: 8,
-        revision: 3,
-        lastMovementId: transferMovementId,
-        updatedAt: serverTimestamp(),
       });
 
       transaction.set(fromBalanceRef, {
@@ -710,7 +696,8 @@ async function main() {
   console.log('- exclusão lógica retira NF da fila sem criar consumo ou movimento de estoque');
   console.log('- consumo imediato histórico continua protegido para compatibilidade');
   console.log('- INVOICE_ENTRY válido é aceito sobre saldo existente e preserva ledger/locationBalance');
-  console.log('- alocação completa TRANSFER + saldos + lote + intake é coberta pelo teste positivo');
+  console.log('- alocação completa TRANSFER + posições + lote + intake é coberta pelo teste positivo');
+  console.log('- TRANSFER não regrava o saldo agregado quando a quantidade total não muda');
   console.log('- operações com estoque continuam obrigadas a respeitar ledger e invariantes');
 }
 
