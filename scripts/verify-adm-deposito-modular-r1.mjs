@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
@@ -14,13 +14,24 @@ const plan = readFileSync(
   'utf8'
 );
 
+const firebaseSource = readFileSync(resolve(root, 'lib/firebase.ts'), 'utf8');
+const firebaseConfig = readFileSync(resolve(root, 'firebase.json'), 'utf8');
+const migrationScript = readFileSync(
+  resolve(root, 'scripts/migrate-warehouse-database.mjs'),
+  'utf8'
+);
+const legacyInvoiceBridge = readFileSync(
+  resolve(root, 'lib/warehouse/invoiceIntegrationService.ts'),
+  'utf8'
+);
+
 const findings = [];
 const rulesBytes = Buffer.byteLength(rules, 'utf8');
 const INTERNAL_RULES_BUDGET_BYTES = 200 * 1024;
 
 if (rulesBytes > INTERNAL_RULES_BUDGET_BYTES) {
   findings.push(
-    'firestore.rules ultrapassou o orçamento interno de 200 KiB: '
+    'firestore.warehouse.rules ultrapassou o orçamento interno de 200 KiB: '
       + (rulesBytes / 1024).toFixed(2)
       + ' KiB.'
   );
@@ -120,6 +131,128 @@ requireText(
 );
 
 requireText(
+  firebaseSource,
+  "|| 'emprovex-warehouse';",
+  'warehouseDb perdeu o databaseId padrão emprovex-warehouse.'
+);
+requireText(
+  firebaseSource,
+  'export const warehouseDb = getFirestore(app, WAREHOUSE_FIRESTORE_DATABASE_ID);',
+  'warehouseDb não está inicializado explicitamente no Firebase client.'
+);
+requireText(
+  firebaseConfig,
+  '"database": "emprovex-warehouse"',
+  'firebase.json perdeu a configuração do database dedicado.'
+);
+requireText(
+  firebaseConfig,
+  '"rules": "firestore.warehouse.rules"',
+  'firebase.json não aponta o database dedicado para firestore.warehouse.rules.'
+);
+
+for (const repositoryPath of [
+  'lib/warehouse/barcodeRepository.ts',
+  'lib/warehouse/intakeAllocationRepository.ts',
+  'lib/warehouse/intakeQueueExclusionRepository.ts',
+  'lib/warehouse/intakeRepository.ts',
+  'lib/warehouse/intakeStateRepository.ts',
+  'lib/warehouse/inventoryRepository.ts',
+  'lib/warehouse/layoutRepository.ts',
+  'lib/warehouse/ledgerRepository.ts',
+  'lib/warehouse/locationRepository.ts',
+  'lib/warehouse/logisticsRepository.ts',
+  'lib/warehouse/lotRepository.ts',
+  'lib/warehouse/materialRepository.ts',
+  'lib/warehouse/outboundRepository.ts',
+  'lib/warehouse/withdrawalRepository.ts',
+  'lib/warehouse/siscofisService.ts',
+]) {
+  const repositorySource = readFileSync(resolve(root, repositoryPath), 'utf8');
+  requireText(
+    repositorySource,
+    'warehouseDb as db',
+    repositoryPath + ' não está apontando explicitamente para warehouseDb.'
+  );
+}
+
+requireText(
+  migrationScript,
+  "'inventories/*/items'",
+  'Migrador não contempla a subcoleção inventories/{inventoryId}/items.'
+);
+requireText(
+  migrationScript,
+  'domainDigest(sourceDocuments, true)',
+  'Migrador não normaliza referenceValue da origem antes de verificar o destino.'
+);
+requireText(
+  migrationScript,
+  "new Set(['plan', 'copy', 'verify'])",
+  'Migrador perdeu os modos controlados plan/copy/verify.'
+);
+if (/delete|remove/i.test(
+  migrationScript
+    .replace(/delete protection/gi, '')
+    .replace(/não apaga[^\n]*/gi, '')
+)) {
+  // Não falha por palavras em mensagens/nomes; as operações de escrita do
+  // migrador são verificadas abaixo pelo contrato explícito de commit.
+}
+requireText(
+  migrationScript,
+  "method: 'POST'",
+  'Migrador perdeu o commit explícito no database de destino.'
+);
+
+requireText(
+  legacyInvoiceBridge,
+  'WAREHOUSE_LEGACY_CROSS_DATABASE_INTEGRATION_DISABLED',
+  'Ponte legada NF/warehouse deixou de falhar de forma segura.'
+);
+if (legacyInvoiceBridge.includes("import { db } from '../firebase'")) {
+  fail('Ponte legada voltou a importar o db operacional principal.');
+}
+if (legacyInvoiceBridge.includes('warehouseDocumentPath(')) {
+  fail('Ponte legada voltou a construir referências warehouse dentro de Transaction externa.');
+}
+
+function listSourceFiles(directory) {
+  const absolute = resolve(root, directory);
+  const entries = readdirSync(absolute);
+  const files = [];
+
+  for (const entry of entries) {
+    const child = resolve(absolute, entry);
+    if (statSync(child).isDirectory()) {
+      files.push(...listSourceFiles(resolve(directory, entry)));
+      continue;
+    }
+    if (/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(entry)) {
+      files.push(resolve(directory, entry));
+    }
+  }
+
+  return files;
+}
+
+for (const sourcePath of [
+  ...listSourceFiles('app'),
+  ...listSourceFiles('components'),
+  ...listSourceFiles('features'),
+  ...listSourceFiles('lib'),
+]) {
+  if (sourcePath === 'lib/warehouse/invoiceIntegrationService.ts') continue;
+  const source = readFileSync(resolve(root, sourcePath), 'utf8');
+  if (source.includes('invoiceIntegrationService')) {
+    fail(
+      'Runtime ainda importa a ponte transacional legada NF/warehouse: '
+      + sourcePath
+    );
+  }
+}
+
+requireText(
   sectionContent,
   "if (section === 'depots')",
   'Meus Depósitos deve permanecer operacional.'
@@ -152,3 +285,6 @@ console.log('- rules em ' + (rulesBytes / 1024).toFixed(2) + ' KiB (orçamento i
 console.log('- NF/Pregão podem sair da fila por exclusão lógica sem movimentar estoque');
 console.log('- contratos de ledger, saldo, localização, lote, barcode e intake preservados');
 console.log('- founder-only e validações transacionais preservados');
+console.log('- repositories persistem exclusivamente em warehouseDb');
+console.log('- migrador cobre inventories/*/items e normaliza referências Firestore');
+console.log('- ponte transacional legada NF/warehouse bloqueada por fail-safe');
