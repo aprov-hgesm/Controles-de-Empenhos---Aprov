@@ -333,6 +333,27 @@ requireText(
   'const ALLOCATION_ROWS_PER_ITEM = 3;',
   'Ficha deixou de reservar três linhas de alocação física por item.'
 );
+
+requireText(
+  allocationSheet,
+  "doc.setFillColor('#F2F2F2');",
+  'Ficha perdeu o fundo cinza neutro das instruções.'
+);
+requireText(
+  allocationSheet,
+  "doc.setFillColor('#EDEDED');",
+  'Ficha perdeu o cabeçalho neutro em grayscale dos itens.'
+);
+requireText(
+  allocationSheet,
+  "label: 'PARA ALOCAR'",
+  'Cabeçalho da quantidade pendente voltou ao texto longo que extravasava a célula.'
+);
+requireText(
+  allocationSheet,
+  'function fitTextLines(',
+  'Ficha perdeu a contenção automática de textos longos.'
+);
 requireText(
   allocationSheet,
   "orientation: 'portrait'",
@@ -401,6 +422,7 @@ console.log('- Meus Depósitos e Cadastro de Itens operacionais');
 console.log('- rules em ' + (rulesBytes / 1024).toFixed(2) + ' KiB (orçamento interno: 200 KiB)');
 console.log('- NF/Pregão podem ser armazenados, consumidos imediatamente ou removidos logicamente da fila');
 console.log('- ficha institucional PDF de alocação física disponível por NF e por Pregão');
+console.log('- ficha PDF otimizada para toner P&B, com grayscale neutro e contenção de textos');
 console.log('- consumo imediato em lote reutiliza o motor oficial com destino, responsável e idempotência por item');
 console.log('- INVOICE_ENTRY v2 isolado não gera falso positivo de reconciliação legada');
 console.log('- TRANSFER redistribui locationBalances sem regravar o saldo agregado');
