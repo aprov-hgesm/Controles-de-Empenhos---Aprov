@@ -7,7 +7,7 @@ import { WarehouseItemRegistrationOperational } from './WarehouseItemRegistratio
 function WarehouseModularR1Notice({ section }: { section: WarehouseSectionId }) {
   const labels: Record<WarehouseSectionId, string> = {
     overview: 'Início',
-    registration: 'Cadastro de Itens',
+    registration: 'Alocação de Material',
     depots: 'Meus Depósitos',
     control: 'Controle de Itens',
   };
