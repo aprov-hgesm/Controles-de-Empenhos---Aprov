@@ -14,6 +14,7 @@ import {
   ListFilter,
   MapPin,
   PackagePlus,
+  Plus,
   RefreshCw,
   Search,
   Send,
@@ -49,6 +50,7 @@ import { WarehouseImmediateConsumptionPanel } from './WarehouseImmediateConsumpt
 import { WarehouseAllocatedItemsOperational } from './WarehouseAllocatedItemsOperational';
 import {
   applyWarehouseImmediateConsumption,
+  createWarehouseDestination,
   listWarehouseDestinations,
   type ApplyWarehouseImmediateConsumptionResult,
 } from '../../../lib/warehouse/withdrawalRepository';
@@ -846,6 +848,8 @@ function PregaoBulkActionPanel({
   const [locationId, setLocationId] = useState('');
   const [subpositionId, setSubpositionId] = useState('');
   const [destinationId, setDestinationId] = useState('');
+  const [newDestinationName, setNewDestinationName] = useState('');
+  const [creatingDestination, setCreatingDestination] = useState(false);
   const [withdrawnBy, setWithdrawnBy] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [working, setWorking] = useState(false);
@@ -947,6 +951,45 @@ function PregaoBulkActionPanel({
       locationId,
       subpositionId: null,
     };
+  };
+
+  const addDestination = async () => {
+    const name = newDestinationName.trim();
+    if (!name || working || creatingDestination) return;
+
+    setCreatingDestination(true);
+    setError(null);
+    try {
+      const destination = await createWarehouseDestination(workspaceId, {
+        name,
+      });
+      setDestinations((currentItems) =>
+        [
+          ...currentItems.filter(
+            (item) => item.destination.id !== destination.id
+          ),
+          {
+            destination,
+            createdAt: null,
+            updatedAt: null,
+          },
+        ].sort((left, right) =>
+          left.destination.name.localeCompare(
+            right.destination.name,
+            'pt-BR'
+          )
+        )
+      );
+      setDestinationId(destination.id);
+      setNewDestinationName('');
+    } catch (createError) {
+      setError(
+        immediateConsumptionErrorMessage(createError)
+        || 'Não foi possível cadastrar o destino operacional.'
+      );
+    } finally {
+      setCreatingDestination(false);
+    }
   };
 
   const runBulk = async () => {
@@ -1245,39 +1288,88 @@ function PregaoBulkActionPanel({
               </label>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block">
-                <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">
-                  Destino operacional
-                </span>
-                <select
-                  value={destinationId}
-                  onChange={(event) => setDestinationId(event.target.value)}
-                  disabled={working || loadingStructure}
-                  className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-violet-500 disabled:opacity-50"
-                >
-                  <option value="">
-                    {loadingStructure ? 'Carregando…' : 'Selecione'}
-                  </option>
-                  {destinations.map(({ destination }) => (
-                    <option key={destination.id} value={destination.id}>
-                      {destination.name}
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                    Destino operacional
+                  </span>
+                  <select
+                    value={destinationId}
+                    onChange={(event) => setDestinationId(event.target.value)}
+                    disabled={working || creatingDestination || loadingStructure}
+                    className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-violet-500 disabled:opacity-50"
+                  >
+                    <option value="">
+                      {loadingStructure
+                        ? 'Carregando…'
+                        : destinations.length
+                          ? 'Selecione'
+                          : 'Nenhum destino cadastrado'}
                     </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block">
-                <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">
-                  Recebido / retirado por
-                </span>
-                <input
-                  value={withdrawnBy}
-                  onChange={(event) => setWithdrawnBy(event.target.value)}
-                  placeholder="Ex.: Cb João da Silva"
-                  disabled={working}
-                  className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-900 outline-none focus:border-violet-500 disabled:opacity-50"
-                />
-              </label>
+                    {destinations.map(({ destination }) => (
+                      <option key={destination.id} value={destination.id}>
+                        {destination.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                    Recebido / retirado por
+                  </span>
+                  <input
+                    value={withdrawnBy}
+                    onChange={(event) => setWithdrawnBy(event.target.value)}
+                    placeholder="Ex.: Cb João da Silva"
+                    disabled={working}
+                    className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-900 outline-none focus:border-violet-500 disabled:opacity-50"
+                  />
+                </label>
+              </div>
+
+              <div className="rounded-2xl border border-violet-100 bg-violet-50/60 p-4">
+                <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">
+                  Novo destino operacional
+                </p>
+                <p className="mt-1 text-[10px] leading-5 text-slate-500">
+                  Cadastre aqui destinos como Cozinha, Padaria, Copa ou outro setor de consumo.
+                  O novo destino será selecionado automaticamente.
+                </p>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    value={newDestinationName}
+                    onChange={(event) => setNewDestinationName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        void addDestination();
+                      }
+                    }}
+                    placeholder="Ex.: Cozinha"
+                    disabled={working || creatingDestination}
+                    className="h-11 min-w-0 flex-1 rounded-xl border border-violet-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-violet-500 disabled:opacity-50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void addDestination()}
+                    disabled={
+                      working
+                      || creatingDestination
+                      || !newDestinationName.trim()
+                    }
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-violet-200 bg-white px-4 text-xs font-black text-violet-700 disabled:opacity-40"
+                  >
+                    {creatingDestination ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
+                    Cadastrar destino
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
