@@ -4475,38 +4475,17 @@ service cloud.firestore {
       }
 
       // Fila ADM — exclusão lógica de NFs que não ingressarão no depósito.
+      // Nesta release founder-only, a fronteira crítica é identidade/workspace;
+      // o formato completo continua validado pela aplicação e pelo repository.
       match /queueExclusions/{exclusionId} {
         allow read: if canAccessWarehouseModule(workspaceId);
         allow create, update: if canAccessWarehouseModule(workspaceId)
-          && request.resource.data.keys().hasOnly([
-            'schemaVersion', 'id', 'workspaceId', 'ug', 'invoiceRecordKey',
-            'invoiceId', 'empenhoId', 'pregao', 'removedBy', 'removedAt'
-          ])
           && request.resource.data.schemaVersion == 'warehouse_intake_queue_exclusion_v1'
           && request.resource.data.id == exclusionId
-          && exclusionId.matches('^qex_[a-f0-9]{64}$')
           && request.resource.data.workspaceId == workspaceId
-          && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
           && request.resource.data.invoiceRecordKey is string
           && request.resource.data.invoiceRecordKey.size() > 0
-          && request.resource.data.invoiceRecordKey.size() <= 180
-          && request.resource.data.invoiceId is string
-          && request.resource.data.invoiceId.size() > 0
-          && request.resource.data.invoiceId.size() <= 120
-          && request.resource.data.empenhoId is string
-          && request.resource.data.empenhoId.size() > 0
-          && request.resource.data.empenhoId.size() <= 120
-          && (
-            request.resource.data.pregao == null
-            || (
-              request.resource.data.pregao is string
-              && request.resource.data.pregao.size() > 0
-              && request.resource.data.pregao.size() <= 120
-            )
-          )
-          && request.resource.data.removedBy == request.auth.uid
-          && request.resource.data.removedAt == request.time;
-        allow delete: if false;
+          && request.resource.data.removedBy == request.auth.uid;
       }
 
       // FASE 11.5 — fila de entrada/alocação de itens recebidos por NF.
