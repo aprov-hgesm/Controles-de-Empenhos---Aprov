@@ -2414,3 +2414,26 @@ A Prévia 2.5D foi reconstruída como motor visual operacional:
 
 Commit funcional:
 - `d5b704ebae9a77fa40d4d412abe28debdca7ddbd`.
+
+
+## Cadastro de Itens — visualização por NF e encaminhamento por Pregão — 2026-09-27
+
+Implementado na branch `feat/adm-deposito-modular-release`:
+- a fila de Cadastro de Itens deixa de renderizar cada item de NF como unidade principal;
+- a unidade principal de visualização passa a ser a **Nota Fiscal**;
+- itens ficam recolhidos e aparecem somente em **Detalhar NF**;
+- a NF exibe fornecedor, data, empenho, Pregão, quantidade de itens, itens a tratar, reconciliação e progresso;
+- busca cobre NF, fornecedor, empenho, Pregão e descrição de item;
+- filtro dedicado por **Pregão** foi adicionado;
+- filtro por situação mantém foco em NFs a tratar, tratadas ou em reconciliação;
+- quando um Pregão específico é selecionado, fica disponível a ação **Encaminhar Pregão**;
+- Encaminhar Pregão possui dois modos:
+  - mesmo depósito/localização/subposição para todos os itens pendentes das NFs carregadas daquele Pregão;
+  - consumo imediato para um mesmo destino operacional e recebedor;
+- o processamento em lote reutiliza os repositórios transacionais oficiais de alocação e consumo imediato;
+- não há escrita direta de saldo fora do ledger;
+- cada item é atômico e idempotente; falhas isoladas são apresentadas sem desfazer itens já concluídos;
+- se a cobertura da fila estiver truncada, o encaminhamento integral do Pregão é bloqueado para não prometer tratamento incompleto.
+
+Commit funcional inicial:
+- `7cbd6d2f6dd94cb25fe21bd5e210c68587b92183`.
