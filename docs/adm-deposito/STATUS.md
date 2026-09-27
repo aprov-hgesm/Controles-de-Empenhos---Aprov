@@ -2437,3 +2437,22 @@ Implementado na branch `feat/adm-deposito-modular-release`:
 
 Commit funcional inicial:
 - `7cbd6d2f6dd94cb25fe21bd5e210c68587b92183`.
+
+
+## Consumo imediato leve — 2026-09-27
+
+O fluxo de consumo imediato foi simplificado para refletir a operação real:
+- consumo imediato integral de um item ainda totalmente pendente **não é tratado como transferência nem como entrada seguida de saída de estoque**;
+- nesse cenário o EMPROVEX não cria material canônico, movimento `INVOICE_ENTRY`, movimento `OUTBOUND`, saldo agregado ou `locationBalance`;
+- a operação mantém somente:
+  - o estado `warehouse_item_intake_v2`, encerrando a pendência;
+  - um registro `warehouse_consumption_record_v1` para auditoria e SISCOFIS;
+- o registro leve pode ter `movementId = null` e `materialId = null`, pois o material nunca ingressou no estoque;
+- as Firestore Rules exigem que o registro de consumo imediato esteja ligado ao intake atualizado na mesma transação;
+- quando o item já teve alocação ou consumo parcial anterior, o fluxo quantitativo completo continua sendo usado para não deixar saldo fantasma;
+- o objetivo é reduzir leituras/escritas, latência e custo sem perder rastreabilidade.
+
+Validação adicionada:
+- teste de segurança direcionado cobre consumo imediato integral sem movimento de estoque;
+- guard modular exige o helper de consistência do intake;
+- `firestore.rules` permanece abaixo do orçamento interno de 200 KiB.
