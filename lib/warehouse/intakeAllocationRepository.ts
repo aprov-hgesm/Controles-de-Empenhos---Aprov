@@ -69,7 +69,6 @@ import {
   saveWarehouseMaterial,
 } from './materialRepository';
 import {
-  applyWarehouseMovementToBalance,
   createWarehouseMovementId,
   normalizeWarehouseQuantity,
   validateWarehouseBalance,
@@ -1037,11 +1036,9 @@ export async function allocateWarehousePendingItem(
         quantityDelta: quantity,
         movementId: transferMovementId,
       });
-      const nextBalance = applyWarehouseMovementToBalance(
-        transferMovement,
-        currentBalance
-      );
-
+      // TRANSFER apenas redistribui o saldo físico entre posições.
+      // O saldo agregado do material não muda e, portanto, não precisa
+      // ganhar nova revisão/lastMovementId nesta transação.
       let nextLot: WarehouseLot;
       if (lotSnapshot.exists()) {
         const currentLot = parseLot(
@@ -1231,10 +1228,6 @@ export async function allocateWarehousePendingItem(
       transaction.set(transferMovementRef, {
         ...transferMovement,
         createdAt: serverTimestamp(),
-      });
-      transaction.set(balanceRef, {
-        ...nextBalance,
-        updatedAt: serverTimestamp(),
       });
       transaction.set(fromBalanceRef, {
         ...nextFrom,
