@@ -142,23 +142,24 @@ Próximo módulo oficial: **Módulo 11 — Consolidação do Controle de Itens**
 Em 2026-09-25, os Módulos 11 e 12 da consolidação 11.5 foram executados em sequência, sem avançar para o Módulo 13.
 
 ### Módulo 11 — Controle de Itens
-- **Controle de Itens** é a superfície operacional principal do ciclo do material;
-- subabas consolidadas: Resumo logístico, Estoque, Saída de Material, Movimentações, Inventário, Entregas, Alertas, SISCOFIS, Relatórios e Configurações;
-- superfícies históricas continuam sendo reutilizadas; não existe segundo motor de estoque, saída, inventário, alerta ou SISCOFIS;
-- rotas históricas continuam por redirects/compatibilidade;
-- a migração SISCOFIS permanece no componente oficial já existente, sem novo contrato ou nova coleção;
-- somente a subaba aberta monta sua superfície e dispara as leituras necessárias.
+- **Controle de Itens** é a superfície permanente de consulta e rastreabilidade do material que já ingressou no estoque;
+- configuração final: **Resumo, Estoque, Movimentações, Inventário e Relatórios**;
+- **Alocação de Material** permanece responsável pelo tratamento das NFs, entrada inicial, localização física e migração SISCOFIS;
+- **Saída de Material** é uma aba principal independente e exclusiva para retirada/baixa de estoque;
+- Entregas permanecem no fluxo de Cronogramas/Entregas; Alertas e Configurações não são duplicados dentro de Controle de Itens;
+- a subaba SISCOFIS de Relatórios é somente leitura e consulta snapshots já existentes;
+- somente a subaba aberta monta sua superfície e dispara as leituras necessárias;
+- todas as superfícies operacionais seguem o tema claro oficial do ADM Depósito.
 
 ### Módulo 12 — Relatórios Logísticos
-- nova camada oficial em `WarehouseLogisticsReports`;
-- relatórios de estoque/localização/lotes/validade reutilizam `WarehouseStockOperational`;
+- camada oficial em `WarehouseLogisticsReports`;
+- relatórios de estoque/localização/lotes/validade reutilizam as fontes oficiais do estoque;
 - consumo imediato e saídas reutilizam `WarehouseConsumptionReports`, incluindo períodos diário/semanal/quinzenal/mensal e CSV;
 - movimentações e entradas por NF derivam diretamente de `warehouse_movement_v1`, com consulta bounded de até 250 movimentos, filtros locais e CSV;
-- inventários reutilizam o histórico oficial de `warehouse_inventory_v1`;
-- SISCOFIS reutiliza o contexto/snapshots oficiais, sem autocorreção;
-- joins são feitos em memória com `Map` e nenhum relatório recalcula saldo via ledger;
-- nenhuma coleção de relatório/cache foi criada;
-- nenhuma Firestore Rule ou índice foi alterado.
+- inventários usam o domínio oficial `warehouse_inventory_v1`;
+- SISCOFIS usa somente leitura de `siscofisSnapshots` dentro de Controle de Itens; importação/migração permanece em Alocação de Material;
+- joins são feitos em memória e nenhum relatório recalcula saldo via ledger;
+- nenhuma coleção de relatório/cache foi criada.
 
 **Estado oficial:** Módulo 11 CONCLUÍDO; Módulo 12 CONCLUÍDO; Módulo 13 NÃO INICIADO.
 
