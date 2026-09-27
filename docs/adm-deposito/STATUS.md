@@ -2829,3 +2829,25 @@ Próxima etapa:
 - validar a aplicação apontando os repositories do ADM para `warehouseDb`;
 - realizar teste funcional direcionado do fundador;
 - somente depois considerar merge/deploy de produção e posterior limpeza controlada do legado.
+
+
+### Rules do database principal publicadas — PASS — 2026-09-27
+
+Publicação realizada com sucesso no database operacional principal:
+
+- database: `ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1`;
+- ruleset: `firestore.rules`;
+- compilação: **PASS**;
+- publicação: **PASS**;
+- deploy seletivo: somente o database principal;
+- database `emprovex-warehouse`: não alterado nesta operação.
+
+Avisos não bloqueantes do compilador:
+- função `invoiceLockMatchesAfter` não utilizada;
+- variável `workspaceId` não utilizada.
+
+Conclusão:
+- o ruleset principal atual cabe no limite aceito pelo Firebase e foi publicado com sucesso;
+- o bloqueio anterior de publicação foi superado;
+- a separação multi-database permanece preservada;
+- ainda não remover o namespace warehouse legado nem seus dados do database principal até a validação funcional final do cutover.
