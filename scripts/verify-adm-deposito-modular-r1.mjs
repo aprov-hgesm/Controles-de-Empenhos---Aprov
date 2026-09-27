@@ -53,6 +53,26 @@ const itemControl = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseItemControlOperational.tsx'),
   'utf8'
 );
+const itemControlSummary = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseItemControlSummary.tsx'),
+  'utf8'
+);
+const stockOperational = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseStockOperational.tsx'),
+  'utf8'
+);
+const inventoryOperational = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseInventoryOperational.tsx'),
+  'utf8'
+);
+const logisticsReports = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseLogisticsReports.tsx'),
+  'utf8'
+);
+const siscofisHistoryReport = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseSiscofisHistoryReport.tsx'),
+  'utf8'
+);
 const navigation = readFileSync(
   resolve(root, 'features/warehouse/navigation.ts'),
   'utf8'
@@ -139,6 +159,7 @@ if (warehouseStart < 0) {
     'destinations',
     'consumptions',
     'withdrawals',
+    'inventories',
     'intakes',
     'queueExclusions',
   ]) {
@@ -151,7 +172,6 @@ if (warehouseStart < 0) {
 
   for (const collection of [
     'alerts',
-    'inventories',
   ]) {
     if (warehouseBlock.includes('match /' + collection + '/{')) {
       fail('Domínio estacionado voltou às rules antes da liberação: ' + collection);
@@ -175,6 +195,14 @@ for (const helper of [
   'function validWarehouseDestinationUpdate(workspaceId, destinationId)',
   'function validWarehouseWithdrawalCreate(workspaceId, withdrawalId)',
   'function validWarehouseWithdrawalUpdate(workspaceId, withdrawalId)',
+  'function validWarehouseInventorySessionCreate(workspaceId, inventoryId)',
+  'function validWarehouseInventorySessionUpdate(workspaceId, inventoryId)',
+  'function validWarehouseInventoryItemCreate(workspaceId, inventoryId, itemId)',
+  'function validWarehouseInventoryCountUpdate(workspaceId, inventoryId)',
+  'function validWarehouseInventoryAdjustmentUpdate(workspaceId, inventoryId, itemId)',
+  'function validWarehouseInventoryMovementCreate(workspaceId, movementId)',
+  'function validWarehouseInventoryBalanceUpdate(workspaceId, materialId, movement)',
+  'function validWarehouseInventoryLocationBalanceUpdate(workspaceId, locationBalanceId, movement)',
   'function validWarehouseLogisticsSettings(workspaceId, settingId)',
   'function validWarehouseTransferMovementCreate(workspaceId, movementId)',
   'function warehouseMovementCreateAllowed(workspaceId, movementId)',
@@ -346,6 +374,11 @@ requireText(
   sectionContent,
   "if (section === 'outbound')",
   'Saída de Material deve estar operacional nesta etapa modular.'
+);
+requireText(
+  sectionContent,
+  "if (section === 'control')",
+  'Controle de Itens deve estar operacional nesta etapa modular.'
 );
 requireText(
   sectionContent,
@@ -537,10 +570,80 @@ requireText(
 if (itemControl.includes("id: 'outbound'")) {
   fail('Saída de Material voltou a ficar duplicada dentro de Controle de Itens.');
 }
+requireText(
+  itemControl,
+  "id: 'summary'",
+  'Controle de Itens perdeu a subaba Resumo.'
+);
+requireText(
+  itemControl,
+  "id: 'stock'",
+  'Controle de Itens perdeu a subaba Estoque.'
+);
+requireText(
+  itemControl,
+  "id: 'movements'",
+  'Controle de Itens perdeu a subaba Movimentações.'
+);
+requireText(
+  itemControl,
+  "id: 'inventory'",
+  'Controle de Itens perdeu a subaba Inventário.'
+);
+requireText(
+  itemControl,
+  "id: 'reports'",
+  'Controle de Itens perdeu a subaba Relatórios.'
+);
+for (const redundantTab of ["id: 'outbound'", "id: 'deliveries'", "id: 'alerts'", "id: 'siscofis'", "id: 'settings'"]) {
+  if (itemControl.includes(redundantTab)) {
+    fail('Controle de Itens voltou a duplicar superfície externa: ' + redundantTab);
+  }
+}
+requireText(
+  itemControlSummary,
+  'listWarehouseInventorySessions(workspaceId, 24)',
+  'Resumo do Controle perdeu a leitura bounded de inventários.'
+);
+requireText(
+  itemControlSummary,
+  'listWarehouseMovements(workspaceId, 40)',
+  'Resumo do Controle perdeu o histórico bounded de movimentações.'
+);
+requireText(
+  logisticsReports,
+  'WarehouseSiscofisHistoryReport',
+  'Relatórios do Controle voltaram a usar a superfície operacional de migração SISCOFIS.'
+);
+if (logisticsReports.includes('WarehouseSiscofisOperational')) {
+  fail('Controle de Itens voltou a duplicar a migração SISCOFIS da Alocação de Material.');
+}
+requireText(
+  siscofisHistoryReport,
+  'listWarehouseSiscofisSnapshots(workspaceId, 24)',
+  'Relatório SISCOFIS perdeu a consulta somente leitura bounded.'
+);
+requireText(
+  rules,
+  'match /inventories/{inventoryId}',
+  'Inventário não está liberado no database dedicado.'
+);
+requireText(
+  rules,
+  "movement.type == 'INVENTORY_ADJUSTMENT'",
+  'Rules perderam o ajuste auditável de inventário.'
+);
+
 
 for (const [surfaceName, surfaceSource] of [
   ['Saída de Material', materialWithdrawal],
   ['Relatórios da Saída de Material', consumptionReports],
+  ['Controle de Itens', itemControl],
+  ['Resumo do Controle de Itens', itemControlSummary],
+  ['Estoque do Controle de Itens', stockOperational],
+  ['Inventário do Controle de Itens', inventoryOperational],
+  ['Relatórios do Controle de Itens', logisticsReports],
+  ['Histórico SISCOFIS do Controle', siscofisHistoryReport],
 ]) {
   for (const forbiddenToken of [
     'bg-[#071020]',
@@ -624,7 +727,7 @@ if (findings.length) {
 }
 
 console.log('ADM Depósito modular guard: PASS');
-console.log('- Meus Depósitos, Alocação de Material e Saída de Material operacionais');
+console.log('- Meus Depósitos, Alocação de Material, Saída de Material e Controle de Itens operacionais');
 console.log('- rules em ' + (rulesBytes / 1024).toFixed(2) + ' KiB (orçamento interno: 150 KiB)');
 console.log('- NF/Pregão podem ser armazenados, consumidos imediatamente ou removidos logicamente da fila');
 console.log('- ficha institucional PDF de alocação física disponível por NF e por Pregão');
@@ -632,6 +735,9 @@ console.log('- ficha PDF otimizada para toner P&B, com grayscale neutro e conten
 console.log('- Saída de Material gera PDF duplo: retirada física + ficha auxiliar SISCOFIS com controle/código');
 console.log('- Saída de Material e seus Relatórios seguem o tema claro oficial D-076/VISUAL_IDENTITY');
 console.log('- Saída de Material reduz ledger/posição/lote e saldo zero deixa de ser projetado no croqui');
+console.log('- Controle de Itens consolidado em Resumo, Estoque, Movimentações, Inventário e Relatórios');
+console.log('- Inventário opera no database dedicado com contagem isolada e ajuste confirmado');
+console.log('- SISCOFIS no Controle é somente leitura; migração permanece em Alocação de Material');
 console.log('- consumo imediato em lote reutiliza o motor oficial com destino, responsável e idempotência por item');
 console.log('- INVOICE_ENTRY v2 isolado não gera falso positivo de reconciliação legada');
 console.log('- TRANSFER redistribui locationBalances sem regravar o saldo agregado');
