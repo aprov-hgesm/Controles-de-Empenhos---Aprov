@@ -20,6 +20,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
 
 const PROJECT_ID = 'demo-emprovex-security';
@@ -606,6 +607,106 @@ async function main() {
     })
   );
 
+  const outboundMovementId = 'mov_' + '4'.repeat(64);
+
+  await allowed('Saída de Material zera posição física e lote na retirada total', async () => {
+    const batch = writeBatch(founder.db);
+
+    batch.set(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'movements', outboundMovementId),
+      {
+        schemaVersion: 'warehouse_movement_v1',
+        id: outboundMovementId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        type: 'OUTBOUND',
+        quantityDelta: -1,
+        idempotencyKeyHash: '4'.repeat(64),
+        reversesMovementId: null,
+        note: 'Saída total da subposição B para validar reflexo no croqui',
+        source: {
+          kind: 'EXPRESS_OUTBOUND',
+          interface: 'MANUAL_SEARCH',
+          actorUid: founder.user.uid,
+          requestedQuantity: 1,
+          quantity: 1,
+          presentation: { code: 'unit', label: null },
+          factorToBaseUnit: 1,
+          barcodeId: null,
+          barcode: null,
+          position: {
+            kind: 'SUBPOSITION',
+            depotId,
+            locationId,
+            subpositionId: subpositionBId,
+          },
+          locationBalanceId: secondTargetBalanceId,
+          lotId: secondAllocationLotId,
+          lotCode: 'PEND-R1',
+        },
+        createdAt: serverTimestamp(),
+      }
+    );
+
+    batch.set(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId),
+      {
+        schemaVersion: 'warehouse_balance_v1',
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        quantity: 7,
+        revision: 3,
+        lastMovementId: outboundMovementId,
+        updatedAt: serverTimestamp(),
+      }
+    );
+
+    batch.set(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', secondTargetBalanceId),
+      {
+        schemaVersion: 'warehouse_location_balance_v1',
+        id: secondTargetBalanceId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        position: {
+          kind: 'SUBPOSITION',
+          depotId,
+          locationId,
+          subpositionId: subpositionBId,
+        },
+        quantity: 0,
+        revision: 2,
+        lastMovementId: outboundMovementId,
+        updatedAt: serverTimestamp(),
+      }
+    );
+
+    batch.update(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'lots', secondAllocationLotId),
+      {
+        quantity: 0,
+        updatedBy: founder.user.uid,
+        updatedAt: serverTimestamp(),
+      }
+    );
+
+    await batch.commit();
+  });
+
+  await allowed('fundador confirma saldo zero da posição retirada', async () => {
+    const [aggregateSnapshot, locationSnapshot, lotSnapshot] = await Promise.all([
+      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId)),
+      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', secondTargetBalanceId)),
+      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'lots', secondAllocationLotId)),
+    ]);
+    assert.equal(aggregateSnapshot.data()?.quantity, 7);
+    assert.equal(locationSnapshot.data()?.quantity, 0);
+    assert.equal(lotSnapshot.data()?.quantity, 0);
+  });
+
   await allowed('fundador cria croqui versionado', () =>
     setDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'layouts', layoutId), {
       schemaVersion: 'warehouse_depot_layout_v1',
@@ -924,6 +1025,7 @@ async function main() {
   console.log('- INVOICE_ENTRY válido é aceito sobre saldo existente e preserva ledger/locationBalance');
   console.log('- alocação completa TRANSFER + posições + lote + intake é coberta pelo teste positivo');
   console.log('- duas alocações sequenciais em subposições distintas levam o intake parcial a PROCESSED');
+  console.log('- retirada total OUTBOUND reduz saldo agregado, zera a posição física e zera o lote correspondente');
   console.log('- TRANSFER não regrava o saldo agregado quando a quantidade total não muda');
   console.log('- operações com estoque continuam obrigadas a respeitar ledger e invariantes');
 }
