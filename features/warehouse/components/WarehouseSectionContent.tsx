@@ -2,6 +2,7 @@
 
 import type { WarehouseSectionId } from '../navigation';
 import { WarehouseDepotsOperational } from './WarehouseDepotsOperational';
+import { WarehouseItemRegistrationOperational } from './WarehouseItemRegistrationOperational';
 
 function WarehouseModularR1Notice({ section }: { section: WarehouseSectionId }) {
   const labels: Record<WarehouseSectionId, string> = {
@@ -41,6 +42,10 @@ export function WarehouseSectionContent({
 }) {
   if (section === 'depots') {
     return <WarehouseDepotsOperational workspaceId={workspaceId} />;
+  }
+
+  if (section === 'registration') {
+    return <WarehouseItemRegistrationOperational workspaceId={workspaceId} />;
   }
 
   return <WarehouseModularR1Notice section={section} />;
