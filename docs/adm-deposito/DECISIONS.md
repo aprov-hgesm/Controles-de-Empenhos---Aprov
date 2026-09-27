@@ -1995,3 +1995,21 @@ O plano detalhado está em `docs/adm-deposito/MODULAR_RELEASE_PLAN.md`.
 - A atomicidade é por item, não por Pregão inteiro. Falhas individuais não revertem operações já confirmadas; devem permanecer visíveis para retry controlado.
 - Identidades de operação do lote são persistidas em sessão para preservar idempotência durante retry.
 - Se a consulta canônica estiver limitada/truncada, a ação que afirma cobrir “todas as NFs do Pregão” deve ser bloqueada.
+
+
+## D-097 — Consumo imediato integral não deve entrar no estoque
+
+- “Consumo imediato” representa material recebido e imediatamente destinado ao consumo, sem ingresso físico no depósito.
+- Quando o item está integralmente pendente e toda a quantidade é classificada como consumo imediato:
+  - não criar `INVOICE_ENTRY`;
+  - não criar `OUTBOUND`;
+  - não criar/alterar `balances` ou `locationBalances`;
+  - não criar lote ou código de barras;
+  - não exigir criação de material canônico apenas para registrar esse fato.
+- O mínimo persistido é:
+  - atualização/criação do `warehouse_item_intake_v2` com pendência zerada;
+  - `warehouse_consumption_record_v1` leve para auditoria, relatório e SISCOFIS.
+- Nesse registro leve, `movementId` pode ser `null`; `materialId` também pode ser `null` quando o item nunca ingressou no estoque.
+- As Rules devem vincular a criação do registro de consumo ao intake correspondente via `getAfter`, impedindo registro de consumo sem avanço coerente da pendência.
+- Se já existir alocação ou tratamento quantitativo anterior, o fluxo completo de ledger continua obrigatório para preservar os saldos existentes.
+- Prioridade: menor latência, menos leituras/escritas Firestore e menor custo operacional, sem perder rastreabilidade.
