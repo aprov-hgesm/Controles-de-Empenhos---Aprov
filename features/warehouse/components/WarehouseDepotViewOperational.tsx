@@ -938,7 +938,7 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
             <div className="space-y-4 rounded-2xl border border-blue-300/10 bg-blue-400/[0.025] p-4" data-testid="warehouse-layout-editor">
               <div>
                 <p className="text-xs font-black text-blue-100">Editor visual</p>
-                <p className="mt-1 text-[11px] leading-5 text-slate-500">Edite em planta superior 2D com grade, snap, zoom, pan, resize, rotação e undo/redo. A prévia 2.5D usa os mesmos objetos. Salvar cria uma nova versão.</p>
+                <p className="mt-1 text-[11px] leading-5 text-slate-500">Edite em planta superior 2D com grade, snap, zoom, pan, resize, rotação e undo/redo. A prévia 3D usa os mesmos objetos. Salvar cria uma nova versão.</p>
               </div>
 
               <label className="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
