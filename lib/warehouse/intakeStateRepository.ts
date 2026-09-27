@@ -497,7 +497,7 @@ export async function loadWarehouseInvoiceIntakeQueue(
     })
   );
 
-  let resolvedCanonicalRows = canonicalRows;
+  let resolvedCanonicalRows: WarehouseInvoiceIntakeQueueRow[] = canonicalRows;
   if (persistedResult.truncated) {
     const unresolvedRows = canonicalRows.filter((row) => !row.persisted);
     if (unresolvedRows.length > 0) {
