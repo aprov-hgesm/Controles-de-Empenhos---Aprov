@@ -2890,3 +2890,19 @@ Resultado:
 
 Próximo gate:
 - validação funcional no localhost em `/adm-deposito/cadastro-de-itens`, conferindo visualmente ações por Pregão/NF/item e comportamento de saída da fila quando `pendingQuantity = 0`.
+
+
+### Correção do falso positivo de reconciliação — gates PASS — 2026-09-27
+
+Validado localmente após o commit `738cf49`:
+- `npm run verify:adm-deposito-modular-r1`: **PASS**;
+- `npm run typecheck`: **PASS**;
+- `INVOICE_ENTRY` do intake v2 isolado não é mais classificado como `LEGACY_INVOICE_PROJECTION`;
+- contratos de ledger/saldo/localização/lote/barcode/intake preservados;
+- founder-only preservado;
+- repositories continuam em `warehouseDb`.
+
+Próximo diagnóstico:
+1. atualizar o Cadastro de Itens e confirmar que o item afetado retorna a estado PENDENTE;
+2. confirmar o valor efetivo de `NEXT_PUBLIC_EMPROVEX_WAREHOUSE_FIRESTORE_DATABASE_ID` no ambiente local antes de nova tentativa de alocação;
+3. somente então repetir a alocação controlada.
