@@ -103,6 +103,32 @@ test('material sem saldo positivo não produz destaque', () => {
   assert.equal(result.totalPositiveQuantity, 0);
 });
 
+
+test('saída total de uma posição remove o material da projeção do croqui', () => {
+  const before = locator.deriveWarehouseMaterialPositions([
+    balance('9', MATERIAL, 1, {
+      kind: 'LOCATION',
+      depotId: DEPOT_A,
+      locationId: LOC_A,
+      subpositionId: null,
+    }),
+  ], MATERIAL, DEPOT_A);
+
+  const after = locator.deriveWarehouseMaterialPositions([
+    balance('9', MATERIAL, 0, {
+      kind: 'LOCATION',
+      depotId: DEPOT_A,
+      locationId: LOC_A,
+      subpositionId: null,
+    }),
+  ], MATERIAL, DEPOT_A);
+
+  assert.equal(before.currentDepotBalances.length, 1);
+  assert.equal(before.totalPositiveQuantity, 1);
+  assert.equal(after.currentDepotBalances.length, 0);
+  assert.equal(after.totalPositiveQuantity, 0);
+});
+
 test('cobertura visual considera somente objetos vinculados a warehouseLocationId', () => {
   const ids = locator.representedWarehouseLocationIds([
     {
