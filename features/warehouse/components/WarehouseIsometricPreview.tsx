@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PackageSearch, Search, Sparkles } from 'lucide-react';
 
 import type { WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
@@ -847,6 +847,28 @@ export function WarehouseIsometricPreview({
   onSelectedMaterialIdChange,
 }: Props) {
   const [previewView, setPreviewView] = useState<PreviewView>('front');
+  const [viewTransitioning, setViewTransitioning] = useState(false);
+  const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+    };
+  }, []);
+
+  const changePreviewView = (nextView: PreviewView) => {
+    if (nextView === previewView || viewTransitioning) return;
+
+    setViewTransitioning(true);
+    if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+
+    transitionTimerRef.current = setTimeout(() => {
+      setPreviewView(nextView);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setViewTransitioning(false));
+      });
+    }, 110);
+  };
 
   const locationById = useMemo(
     () => new Map(locations.map((location) => [location.id, location])),
@@ -996,7 +1018,7 @@ export function WarehouseIsometricPreview({
               <button
                 key={view.id}
                 type="button"
-                onClick={() => setPreviewView(view.id)}
+                onClick={() => changePreviewView(view.id)}
                 aria-pressed={previewView === view.id}
                 data-testid={'warehouse-isometric-view-' + view.id}
                 className={
@@ -1058,7 +1080,12 @@ export function WarehouseIsometricPreview({
         ) : (
           <svg
             viewBox={'0 0 ' + VIEW_WIDTH + ' ' + VIEW_HEIGHT}
-            className="absolute inset-0 h-full w-full"
+            className={
+              'absolute inset-0 h-full w-full origin-center transition-[opacity,transform,filter] duration-200 ease-out '
+              + (viewTransitioning
+                ? 'scale-[0.992] opacity-20 blur-[1px]'
+                : 'scale-100 opacity-100 blur-0')
+            }
             role="img"
             aria-label={'Prévia isométrica 2.5D do depósito · vista ' + PREVIEW_VIEWS.find((view) => view.id === previewView)?.label}
           >
