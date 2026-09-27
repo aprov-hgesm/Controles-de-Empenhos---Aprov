@@ -175,7 +175,7 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
   const materialGroups = useMemo(() => {
     const groups = new Map<string, { description: string; unit: string; quantity: number; rows: number }>();
     for (const record of filtered) {
-      const key = record.materialId + '|' + record.unitLabel;
+      const key = (record.materialId || 'immediate-no-stock') + '|' + record.unitLabel;
       const current = groups.get(key) || {
         description: record.materialDescription,
         unit: record.unitLabel,
@@ -270,7 +270,7 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
       record.destinationName,
       record.withdrawnBy,
       record.withdrawalId || record.intakeId || '',
-      record.movementId,
+      record.movementId || '',
       record.barcode || '',
       record.lotCode || '',
       record.legacy ? 'Legado' : siscofisLabel(record.siscofisStatus),
@@ -497,13 +497,13 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
                   <td className="px-2 py-3">{originLabel(record.origin)}</td>
                   <td className="px-2 py-3">
                     <p className="font-bold text-white">{record.materialDescription}</p>
-                    <p className="mt-1 font-mono text-[9px] text-slate-600">{record.materialId}</p>
+                    <p className="mt-1 font-mono text-[9px] text-slate-600">{record.materialId || 'sem entrada em estoque'}</p>
                   </td>
                   <td className="px-2 py-3 whitespace-nowrap">{numberLabel(record.quantity)} {record.unitLabel}</td>
                   <td className="px-2 py-3">{record.destinationName}</td>
                   <td className="px-2 py-3">{record.withdrawnBy}</td>
                   <td className="px-2 py-3 font-mono text-[9px]">{record.withdrawalId || record.intakeId || 'legado'}</td>
-                  <td className="px-2 py-3 font-mono text-[9px]">{record.movementId}</td>
+                  <td className="px-2 py-3 font-mono text-[9px]">{record.movementId || '—'}</td>
                   <td className="px-2 py-3">
                     {record.legacy ? (
                       <span className="rounded-full border border-slate-600 px-2 py-1 text-[9px] font-black text-slate-400">Legado</span>
