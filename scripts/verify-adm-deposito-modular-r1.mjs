@@ -25,6 +25,26 @@ const allocationSheet = readFileSync(
   resolve(root, 'features/warehouse/pdf/WarehouseAllocationSheet.ts'),
   'utf8'
 );
+const outboundDocuments = readFileSync(
+  resolve(root, 'features/warehouse/pdf/WarehouseOutboundDocuments.ts'),
+  'utf8'
+);
+const materialWithdrawal = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseMaterialWithdrawal.tsx'),
+  'utf8'
+);
+const itemControl = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseItemControlOperational.tsx'),
+  'utf8'
+);
+const navigation = readFileSync(
+  resolve(root, 'features/warehouse/navigation.ts'),
+  'utf8'
+);
+const outboundRoute = readFileSync(
+  resolve(root, 'app/adm-deposito/saida-de-material/page.tsx'),
+  'utf8'
+);
 const plan = readFileSync(
   resolve(root, 'docs/adm-deposito/MODULAR_RELEASE_PLAN.md'),
   'utf8'
@@ -86,6 +106,7 @@ if (warehouseStart < 0) {
     'settings',
     'destinations',
     'consumptions',
+    'withdrawals',
     'intakes',
     'queueExclusions',
   ]) {
@@ -99,7 +120,6 @@ if (warehouseStart < 0) {
   for (const collection of [
     'alerts',
     'inventories',
-    'withdrawals',
   ]) {
     if (warehouseBlock.includes('match /' + collection + '/{')) {
       fail('Domínio estacionado voltou às rules antes da liberação: ' + collection);
@@ -121,6 +141,8 @@ for (const helper of [
   'function validWarehouseDepotLayoutArchive(workspaceId, layoutId)',
   'function validWarehouseDestinationCreate(workspaceId, destinationId)',
   'function validWarehouseDestinationUpdate(workspaceId, destinationId)',
+  'function validWarehouseWithdrawalCreate(workspaceId, withdrawalId)',
+  'function validWarehouseWithdrawalUpdate(workspaceId, withdrawalId)',
   'function validWarehouseLogisticsSettings(workspaceId, settingId)',
   'function validWarehouseTransferMovementCreate(workspaceId, movementId)',
   'function warehouseMovementCreateAllowed(workspaceId, movementId)',
@@ -135,6 +157,22 @@ for (const helper of [
 ]) {
   requireText(rules, helper, 'Helper obrigatório da ADM-R1 ausente: ' + helper);
 }
+
+requireText(
+  rules,
+  "match /withdrawals/{withdrawalId}",
+  'Contrato founder-only de withdrawals ausente.'
+);
+requireText(
+  rules,
+  "validWarehouseWithdrawalCreate(workspaceId, withdrawalId)",
+  'withdrawals perdeu o validador de criação auditável.'
+);
+requireText(
+  rules,
+  "validWarehouseWithdrawalUpdate(workspaceId, withdrawalId)",
+  'withdrawals perdeu o validador de progressão/finalização.'
+);
 
 requireText(
   rules,
@@ -270,7 +308,12 @@ requireText(
 requireText(
   sectionContent,
   "if (section === 'registration')",
-  'Cadastro de Itens deve estar operacional nesta etapa modular.'
+  'Alocação de Material deve estar operacional nesta etapa modular.'
+);
+requireText(
+  sectionContent,
+  "if (section === 'outbound')",
+  'Saída de Material deve estar operacional nesta etapa modular.'
 );
 requireText(
   sectionContent,
@@ -375,6 +418,60 @@ requireText(
   'Ficha perdeu o campo de conferência do operador do sistema.'
 );
 requireText(
+  navigation,
+  "label: 'Saída de Material'",
+  'Navegação perdeu a aba principal Saída de Material.'
+);
+requireText(
+  navigation,
+  "href: '/adm-deposito/saida-de-material'",
+  'Navegação perdeu a rota dedicada de Saída de Material.'
+);
+requireText(
+  outboundRoute,
+  'section="outbound"',
+  'Rota dedicada de Saída de Material deixou de usar a superfície protegida.'
+);
+requireText(
+  materialWithdrawal,
+  'downloadWarehouseOutboundDocuments(finalizedInput)',
+  'Finalização da saída deixou de gerar automaticamente o PDF duplo.'
+);
+requireText(
+  materialWithdrawal,
+  'resolveOutboundDocumentLines(',
+  'Saída perdeu a resolução documental NF/NE por lote/movimento de origem.'
+);
+requireText(
+  outboundDocuments,
+  'FICHA DE SAÍDA DE MATERIAL',
+  'PDF de saída perdeu a ficha de orientação para retirada física.'
+);
+requireText(
+  outboundDocuments,
+  'FICHA AUXILIAR DE PEDIDO DE MATERIAL - SISCOFIS',
+  'PDF de saída perdeu a ficha auxiliar obrigatória do SISCOFIS.'
+);
+requireText(
+  outboundDocuments,
+  'LOCALIZAÇÃO EXATA',
+  'Ficha de saída perdeu a localização física exata do material.'
+);
+requireText(
+  outboundDocuments,
+  'NOTA DE EMPENHO',
+  'Ficha SISCOFIS perdeu a Nota de Empenho.'
+);
+requireText(
+  outboundDocuments,
+  "controlCode: 'EMX-SM-'",
+  'Documentos de saída perderam o código alfanumérico derivado da data/controle.'
+);
+if (itemControl.includes("id: 'outbound'")) {
+  fail('Saída de Material voltou a ficar duplicada dentro de Controle de Itens.');
+}
+
+requireText(
   intakeStateRepository,
   "createWarehouseMovementId(",
   'Fila deixou de reconhecer deterministicamente o INVOICE_ENTRY do intake v2.'
@@ -418,11 +515,12 @@ if (findings.length) {
 }
 
 console.log('ADM Depósito modular guard: PASS');
-console.log('- Meus Depósitos e Cadastro de Itens operacionais');
+console.log('- Meus Depósitos, Alocação de Material e Saída de Material operacionais');
 console.log('- rules em ' + (rulesBytes / 1024).toFixed(2) + ' KiB (orçamento interno: 200 KiB)');
 console.log('- NF/Pregão podem ser armazenados, consumidos imediatamente ou removidos logicamente da fila');
 console.log('- ficha institucional PDF de alocação física disponível por NF e por Pregão');
 console.log('- ficha PDF otimizada para toner P&B, com grayscale neutro e contenção de textos');
+console.log('- Saída de Material gera PDF duplo: retirada física + ficha auxiliar SISCOFIS com controle/código');
 console.log('- consumo imediato em lote reutiliza o motor oficial com destino, responsável e idempotência por item');
 console.log('- INVOICE_ENTRY v2 isolado não gera falso positivo de reconciliação legada');
 console.log('- TRANSFER redistribui locationBalances sem regravar o saldo agregado');
