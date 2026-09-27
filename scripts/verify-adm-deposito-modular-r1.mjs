@@ -15,6 +15,16 @@ const plan = readFileSync(
 );
 
 const findings = [];
+const rulesBytes = Buffer.byteLength(rules, 'utf8');
+const INTERNAL_RULES_BUDGET_BYTES = 200 * 1024;
+
+if (rulesBytes > INTERNAL_RULES_BUDGET_BYTES) {
+  findings.push(
+    'firestore.rules ultrapassou o orçamento interno de 200 KiB: '
+      + (rulesBytes / 1024).toFixed(2)
+      + ' KiB.'
+  );
+}
 
 function fail(message) {
   findings.push(message);
@@ -48,11 +58,8 @@ if (warehouseStart < 0) {
     'siscofisSnapshots',
     'settings',
     'destinations',
-    'withdrawals',
     'consumptions',
     'intakes',
-    'alerts',
-    'inventories',
   ]) {
     requireText(
       warehouseBlock,
@@ -60,6 +67,17 @@ if (warehouseStart < 0) {
       'ADM-R1 perdeu coleção permitida: ' + collection
     );
   }
+
+  for (const collection of [
+    'alerts',
+    'inventories',
+    'withdrawals',
+  ]) {
+    if (warehouseBlock.includes('match /' + collection + '/{')) {
+      fail('Domínio estacionado voltou às rules antes da liberação: ' + collection);
+    }
+  }
+
 
 }
 
@@ -116,5 +134,6 @@ if (findings.length) {
 
 console.log('ADM Depósito modular guard: PASS');
 console.log('- Meus Depósitos e Cadastro de Itens operacionais');
-console.log('- contratos de ledger, saldo, localização, lote, barcode e intake restaurados');
+console.log('- rules em ' + (rulesBytes / 1024).toFixed(2) + ' KiB (orçamento interno: 200 KiB)');
+console.log('- contratos de ledger, saldo, localização, lote, barcode e intake preservados');
 console.log('- founder-only e validações transacionais preservados');
