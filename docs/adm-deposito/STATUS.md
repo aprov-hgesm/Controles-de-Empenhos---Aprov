@@ -2486,3 +2486,13 @@ Commit funcional:
 - itens parcialmente tratados entram com os quantitativos reais atuais;
 - a transação continua mantendo a proteção de concorrência para alterações que ocorram depois da revalidação;
 - commits funcionais: `a77d1b750d9df0ae720f8369c35b6bff007fbc6f` e `d61c3d9fda1ef985990bd0d95aaab5ffe77f02e3`.
+
+
+### Complementação da fila após atingir 500 estados
+
+- corrigido o caso em que a operação confirmava que os itens já estavam tratados, mas a NF continuava aparecendo como pendente após o refresh;
+- quando a consulta global de `intakes` atinge 500 documentos, a fila agora identifica apenas as linhas canônicas ainda marcadas como não persistidas e consulta seus `stateId` exatos;
+- os 500 estados já carregados não são relidos;
+- o resultado complementado passa a alimentar diretamente a lista principal de NFs, evitando que itens tratados reapareçam como `VIRTUAL_PENDING`;
+- preservada a estratégia de baixo consumo do Firestore, sem elevar indiscriminadamente o limite global;
+- commit funcional: `7751c953cba6a70d88b1a95a3172761c72098e5d`.
