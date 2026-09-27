@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const rules = readFileSync(resolve(root, 'firestore.warehouse.rules'), 'utf8');
@@ -191,17 +191,9 @@ requireText(
   "new Set(['plan', 'copy', 'verify'])",
   'Migrador perdeu os modos controlados plan/copy/verify.'
 );
-if (/delete|remove/i.test(
-  migrationScript
-    .replace(/delete protection/gi, '')
-    .replace(/não apaga[^\n]*/gi, '')
-)) {
-  // Não falha por palavras em mensagens/nomes; as operações de escrita do
-  // migrador são verificadas abaixo pelo contrato explícito de commit.
-}
 requireText(
   migrationScript,
-  "method: 'POST'",
+  "method: 'POST'"
   'Migrador perdeu o commit explícito no database de destino.'
 );
 
@@ -223,13 +215,14 @@ function listSourceFiles(directory) {
   const files = [];
 
   for (const entry of entries) {
-    const child = resolve(absolute, entry);
+    const relativePath = join(directory, entry).replaceAll('\\\\', '/');
+    const child = resolve(root, relativePath);
     if (statSync(child).isDirectory()) {
-      files.push(...listSourceFiles(resolve(directory, entry)));
+      files.push(...listSourceFiles(relativePath));
       continue;
     }
     if (/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(entry)) {
-      files.push(resolve(directory, entry));
+      files.push(relativePath);
     }
   }
 
