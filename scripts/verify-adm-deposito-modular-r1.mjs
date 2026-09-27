@@ -63,14 +63,30 @@ const legacyInvoiceBridge = readFileSync(
 
 const findings = [];
 const rulesBytes = Buffer.byteLength(rules, 'utf8');
-const INTERNAL_RULES_BUDGET_BYTES = 200 * 1024;
+const INTERNAL_RULES_BUDGET_BYTES = 150 * 1024;
 
 if (rulesBytes > INTERNAL_RULES_BUDGET_BYTES) {
   findings.push(
-    'firestore.warehouse.rules ultrapassou o orçamento interno de 200 KiB: '
+    'firestore.warehouse.rules ultrapassou o orçamento interno de 150 KiB: '
       + (rulesBytes / 1024).toFixed(2)
       + ' KiB.'
   );
+}
+
+if ((rules.match(/rules_version = '2';/g) || []).length !== 1) {
+  findings.push('firestore.warehouse.rules deve conter exatamente uma declaração rules_version.');
+}
+
+if ((rules.match(/function validWarehouseWithdrawalBase\(/g) || []).length > 1) {
+  findings.push('Rules de withdrawals foram duplicadas acidentalmente.');
+}
+
+if ((rules.match(/match \/withdrawals\/\{withdrawalId\}/g) || []).length > 1) {
+  findings.push('Bloco match de withdrawals foi duplicado acidentalmente.');
+}
+
+if (!rules.trimEnd().endsWith('}')) {
+  findings.push('firestore.warehouse.rules possui conteúdo residual após o fechamento final.');
 }
 
 function fail(message) {
@@ -516,7 +532,7 @@ if (findings.length) {
 
 console.log('ADM Depósito modular guard: PASS');
 console.log('- Meus Depósitos, Alocação de Material e Saída de Material operacionais');
-console.log('- rules em ' + (rulesBytes / 1024).toFixed(2) + ' KiB (orçamento interno: 200 KiB)');
+console.log('- rules em ' + (rulesBytes / 1024).toFixed(2) + ' KiB (orçamento interno: 150 KiB)');
 console.log('- NF/Pregão podem ser armazenados, consumidos imediatamente ou removidos logicamente da fila');
 console.log('- ficha institucional PDF de alocação física disponível por NF e por Pregão');
 console.log('- ficha PDF otimizada para toner P&B, com grayscale neutro e contenção de textos');
