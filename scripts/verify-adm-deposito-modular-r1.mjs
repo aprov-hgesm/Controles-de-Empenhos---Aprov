@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
-const rules = readFileSync(resolve(root, 'firestore.rules'), 'utf8');
+const rules = readFileSync(resolve(root, 'firestore.warehouse.rules'), 'utf8');
 const sectionContent = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseSectionContent.tsx'),
   'utf8'
