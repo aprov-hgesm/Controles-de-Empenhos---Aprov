@@ -3046,3 +3046,16 @@ Correções aplicadas:
 
 Objetivo preservado:
 - documento institucional, legível, econômico em toner e adequado para preenchimento manual na ponta física da operação.
+
+
+### Renomeação da aba para Alocação de Material — 2026-09-27
+
+A aba anteriormente exibida como **Cadastro de Itens** passa a ser apresentada ao usuário como **Alocação de Material**.
+
+Motivo:
+- o nome passa a refletir melhor a função operacional real da tela: tratar NFs pendentes e registrar a destinação física dos materiais entre depósito, local e subposição.
+
+Preservado:
+- rota interna `/adm-deposito/cadastro-de-itens` mantida por compatibilidade;
+- IDs internos e contratos técnicos mantidos;
+- nenhuma alteração de dados, Firestore Rules ou persistência.
