@@ -51,8 +51,12 @@ import { WarehouseSiscofisOperational } from './WarehouseSiscofisOperational';
 import { WarehouseImmediateConsumptionPanel } from './WarehouseImmediateConsumptionPanel';
 import { WarehouseAllocatedItemsOperational } from './WarehouseAllocatedItemsOperational';
 import {
+  applyWarehouseImmediateConsumption,
+  createWarehouseDestination,
+  listWarehouseDestinations,
   type ApplyWarehouseImmediateConsumptionResult,
 } from '../../../lib/warehouse/withdrawalRepository';
+import type { WarehouseDestinationListItem } from '../../../lib/warehouse/withdrawal';
 import {
   excludeWarehouseInvoicesFromPendingQueue,
 } from '../../../lib/warehouse/intakeQueueExclusionRepository';
@@ -113,6 +117,24 @@ function reconciliationMessage(row: WarehouseInvoiceIntakeQueueRow): string | nu
   }
 }
 
+
+function immediateConsumptionErrorMessage(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error || '');
+  const mappings: Array<[string, string]> = [
+    ['WAREHOUSE_ITEM_INTAKE_CONCURRENT_MODIFICATION', 'A pendência foi alterada em outra tela. Atualize a fila antes de repetir.'],
+    ['WAREHOUSE_IMMEDIATE_CONSUMPTION_EXCEEDS_PENDING', 'A quantidade supera o pendente atual.'],
+    ['WAREHOUSE_IMMEDIATE_CONSUMPTION_STOCK_MISMATCH', 'A projeção logística não comporta esta parcela. O item precisa ser reconciliado.'],
+    ['WAREHOUSE_ITEM_INTAKE_RECONCILIATION_REQUIRED', 'O item exige reconciliação antes do consumo imediato.'],
+    ['WAREHOUSE_DESTINATION_INACTIVE', 'O destino selecionado está inativo.'],
+    ['WAREHOUSE_WITHDRAWN_BY_REQUIRED', 'Informe quem recebeu/retirou o material.'],
+    ['WAREHOUSE_IDEMPOTENCY_CONFLICT', 'A tentativa anterior possui conteúdo diferente. Atualize a fila antes de continuar.'],
+    ['WAREHOUSE_CONSUMPTION_IDEMPOTENCY_CONFLICT', 'A tentativa anterior de consumo possui conteúdo diferente. Atualize a fila antes de continuar.'],
+  ];
+  for (const [code, message] of mappings) {
+    if (raw.includes(code)) return message;
+  }
+  return raw || 'Não foi possível confirmar o consumo imediato.';
+}
 
 function allocationErrorMessage(error: unknown): string {
   const code = error instanceof Error ? error.message : String(error || '');
@@ -696,7 +718,7 @@ type InvoiceQueueStatusFilter =
   | 'processed'
   | 'reconciliation';
 
-type PregaoBulkMode = 'storage' | 'remove';
+type PregaoBulkMode = 'storage' | 'immediate' | 'remove';
 
 interface WarehouseInvoiceQueueGroup {
   key: string;
@@ -815,9 +837,14 @@ function IntakeBulkActionPanel({
   const [depots, setDepots] = useState<WarehouseDepotListItem[]>([]);
   const [locations, setLocations] = useState<WarehouseLocationListItem[]>([]);
   const [loadingStructure, setLoadingStructure] = useState(true);
+  const [destinations, setDestinations] = useState<WarehouseDestinationListItem[]>([]);
+  const [loadingDestinations, setLoadingDestinations] = useState(false);
   const [depotId, setDepotId] = useState('');
   const [locationId, setLocationId] = useState('');
   const [subpositionId, setSubpositionId] = useState('');
+  const [destinationId, setDestinationId] = useState('');
+  const [withdrawnBy, setWithdrawnBy] = useState('');
+  const [newDestinationName, setNewDestinationName] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [working, setWorking] = useState(false);
   const [progress, setProgress] = useState({ completed: 0, total: 0 });
@@ -889,6 +916,59 @@ function IntakeBulkActionPanel({
       active = false;
     };
   }, [workspaceId]);
+
+  useEffect(() => {
+    if (mode !== 'immediate' || destinations.length > 0) return;
+    let active = true;
+    setLoadingDestinations(true);
+    listWarehouseDestinations(workspaceId, 250)
+      .then((items) => {
+        if (!active) return;
+        setDestinations(items);
+        const first = items.find((item) => item.destination.status === 'active');
+        if (first) setDestinationId((current) => current || first.destination.id);
+      })
+      .catch((loadError) => {
+        if (!active) return;
+        setError(immediateConsumptionErrorMessage(loadError));
+      })
+      .finally(() => {
+        if (active) setLoadingDestinations(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [destinations.length, mode, workspaceId]);
+
+  const activeDestinations = useMemo(
+    () => destinations.filter((item) => item.destination.status === 'active'),
+    [destinations]
+  );
+
+  const addBulkDestination = async () => {
+    if (!newDestinationName.trim() || working) return;
+    setWorking(true);
+    setError(null);
+    try {
+      const destination = await createWarehouseDestination(workspaceId, {
+        name: newDestinationName,
+      });
+      setDestinations((current) =>
+        [
+          ...current,
+          { destination, createdAt: null, updatedAt: null },
+        ].sort((a, b) =>
+          a.destination.name.localeCompare(b.destination.name, 'pt-BR')
+        )
+      );
+      setDestinationId(destination.id);
+      setNewDestinationName('');
+    } catch (createError) {
+      setError(immediateConsumptionErrorMessage(createError));
+    } finally {
+      setWorking(false);
+    }
+  };
 
   const localOptions = useMemo(
     () => locations.filter(
@@ -972,9 +1052,17 @@ function IntakeBulkActionPanel({
       return;
     }
 
-    const position = buildPosition();
-    if (!position) {
+    const position = mode === 'storage' ? buildPosition() : null;
+    if (mode === 'storage' && !position) {
       setError('Selecione depósito e localização.');
+      return;
+    }
+    if (mode === 'immediate' && !destinationId) {
+      setError('Selecione o destino do consumo imediato.');
+      return;
+    }
+    if (mode === 'immediate' && !withdrawnBy.trim()) {
+      setError('Informe quem recebeu/retirou o material.');
       return;
     }
 
@@ -1009,7 +1097,7 @@ function IntakeBulkActionPanel({
           ? 'Os itens deste Pregão já constam como tratados no estado atual. A fila foi atualizada.'
           : 'Os itens desta NF já constam como tratados no estado atual. A fila foi atualizada.'
       );
-      await onComplete('storage', 0, []);
+      await onComplete(mode, 0, []);
       return;
     }
 
@@ -1025,53 +1113,79 @@ function IntakeBulkActionPanel({
       const operationId = getOrCreateBulkOperationId(
         workspaceId,
         subjectKey,
-        'storage',
+        mode,
         row.stateId
       );
 
       try {
-        await allocateWarehousePendingItem(workspaceId, {
-          intakeId: row.stateId,
-          invoiceRecordKey: row.invoiceRecordKey,
-          invoiceId: row.invoiceId,
-          empenhoId: row.empenhoId,
-          itemId: row.itemId,
-          materialId: row.materialId,
-          description: row.itemName,
-          unitLabel: row.unitLabel,
-          supplier: row.supplier,
-          receivedQuantity: row.receivedQuantity,
-          expectedAllocatedQuantity: row.allocatedQuantity,
-          expectedImmediateConsumptionQuantity:
-            row.immediateConsumptionQuantity,
-          effectiveStatus: row.status,
-          quantity: row.pendingQuantity,
-          position,
-          lotCode: '',
-          expiresOn: null,
-          barcode: null,
-          operationId,
-        });
-        saveInvoiceDefaultDestination(
-          workspaceId,
-          row.invoiceRecordKey,
-          {
-            depotId,
-            locationId,
-            subpositionId,
-          }
-        );
+        if (mode === 'storage') {
+          if (!position) throw new Error('WAREHOUSE_POSITION_NOT_FOUND');
+          await allocateWarehousePendingItem(workspaceId, {
+            intakeId: row.stateId,
+            invoiceRecordKey: row.invoiceRecordKey,
+            invoiceId: row.invoiceId,
+            empenhoId: row.empenhoId,
+            itemId: row.itemId,
+            materialId: row.materialId,
+            description: row.itemName,
+            unitLabel: row.unitLabel,
+            supplier: row.supplier,
+            receivedQuantity: row.receivedQuantity,
+            expectedAllocatedQuantity: row.allocatedQuantity,
+            expectedImmediateConsumptionQuantity:
+              row.immediateConsumptionQuantity,
+            effectiveStatus: row.status,
+            quantity: row.pendingQuantity,
+            position,
+            lotCode: '',
+            expiresOn: null,
+            barcode: null,
+            operationId,
+          });
+          saveInvoiceDefaultDestination(
+            workspaceId,
+            row.invoiceRecordKey,
+            {
+              depotId,
+              locationId,
+              subpositionId,
+            }
+          );
+        } else {
+          await applyWarehouseImmediateConsumption(workspaceId, {
+            intakeId: row.stateId,
+            invoiceRecordKey: row.invoiceRecordKey,
+            invoiceId: row.invoiceId,
+            empenhoId: row.empenhoId,
+            itemId: row.itemId,
+            materialId: row.materialId,
+            description: row.itemName,
+            unitLabel: row.unitLabel,
+            supplier: row.supplier,
+            receivedQuantity: row.receivedQuantity,
+            expectedAllocatedQuantity: row.allocatedQuantity,
+            expectedImmediateConsumptionQuantity:
+              row.immediateConsumptionQuantity,
+            effectiveStatus: row.status,
+            quantity: row.pendingQuantity,
+            destinationId,
+            withdrawnBy: withdrawnBy.trim(),
+            operationId,
+          });
+        }
         clearBulkOperationId(
           workspaceId,
           subjectKey,
-          'storage',
+          mode,
           row.stateId
         );
         successful += 1;
       } catch (bulkError) {
         failed.push({
           row,
-          message: allocationErrorMessage(bulkError),
+          message: mode === 'immediate'
+            ? immediateConsumptionErrorMessage(bulkError)
+            : allocationErrorMessage(bulkError),
         });
       } finally {
         setProgress({
@@ -1083,7 +1197,7 @@ function IntakeBulkActionPanel({
 
     setFailures(failed);
     setWorking(false);
-    await onComplete('storage', successful, failed);
+    await onComplete(mode, successful, failed);
     if (failed.length === 0) onClose();
   };
 
@@ -1139,7 +1253,7 @@ function IntakeBulkActionPanel({
             </div>
           )}
 
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-3">
             <button
               type="button"
               onClick={() => setMode('storage')}
@@ -1160,6 +1274,29 @@ function IntakeBulkActionPanel({
                 {subjectKind === 'pregao'
                   ? 'Todos os itens pendentes das NFs do Pregão serão alocados no mesmo depósito/localização.'
                   : 'Todos os itens pendentes desta NF serão alocados no mesmo depósito/localização.'}
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMode('immediate')}
+              disabled={working}
+              className={
+                mode === 'immediate'
+                  ? 'rounded-2xl border-2 border-violet-500 bg-violet-50 p-4 text-left'
+                  : 'rounded-2xl border border-slate-200 bg-white p-4 text-left'
+              }
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-violet-700" />
+                <span className="text-xs font-black text-slate-900">
+                  Consumo imediato
+                </span>
+              </div>
+              <p className="mt-2 text-[10px] leading-5 text-slate-500">
+                {subjectKind === 'pregao'
+                  ? 'Consome integralmente o pendente de todos os itens das NFs deste Pregão, sem armazená-los.'
+                  : 'Consome integralmente o pendente de todos os itens desta NF, sem armazená-los.'}
               </p>
             </button>
 
@@ -1254,6 +1391,80 @@ function IntakeBulkActionPanel({
                 </select>
               </label>
             </div>
+          ) : mode === 'immediate' ? (
+            <div className="space-y-4 rounded-2xl border border-violet-200 bg-violet-50/60 p-4">
+              <div className="flex items-start gap-3">
+                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-violet-700" />
+                <div>
+                  <p className="text-xs font-black text-violet-800">
+                    Consumo imediato em lote
+                  </p>
+                  <p className="mt-1 text-[10px] leading-5 text-slate-600">
+                    Todo o saldo pendente de cada item selecionado será registrado como consumo imediato.
+                    Os itens tratados deixam a fila de pendências, mas permanecem preservados no histórico e
+                    no relatório operacional/SISCOFIS.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                    Destino
+                  </span>
+                  <select
+                    value={destinationId}
+                    onChange={(event) => setDestinationId(event.target.value)}
+                    disabled={working || loadingDestinations}
+                    className="mt-1.5 h-11 w-full rounded-xl border border-violet-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-violet-500 disabled:opacity-50"
+                  >
+                    <option value="">
+                      {loadingDestinations ? 'Carregando…' : 'Selecione um destino'}
+                    </option>
+                    {activeDestinations.map(({ destination }) => (
+                      <option key={destination.id} value={destination.id}>
+                        {destination.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                    Recebido / retirado por
+                  </span>
+                  <input
+                    value={withdrawnBy}
+                    onChange={(event) => setWithdrawnBy(event.target.value)}
+                    placeholder="Ex.: Cb João da Silva"
+                    className="mt-1.5 h-11 w-full rounded-xl border border-violet-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-violet-500"
+                  />
+                </label>
+
+                <div className="sm:col-span-2">
+                  <span className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                    Novo destino
+                  </span>
+                  <div className="mt-1.5 flex gap-2">
+                    <input
+                      value={newDestinationName}
+                      onChange={(event) => setNewDestinationName(event.target.value)}
+                      placeholder="Cadastrar destino"
+                      className="h-11 min-w-0 flex-1 rounded-xl border border-violet-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-violet-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void addBulkDestination()}
+                      disabled={working || !newDestinationName.trim()}
+                      className="inline-flex h-11 items-center gap-2 rounded-xl border border-violet-200 bg-white px-3 text-[10px] font-black text-violet-700 disabled:opacity-40"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Cadastrar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
               <div className="flex items-start gap-3">
@@ -1287,6 +1498,15 @@ function IntakeBulkActionPanel({
                 ) : (
                   <>Confirmo a remoção da <strong>{subjectLabel}</strong> apenas da fila do ADM Depósito.</>
                 )
+              ) : mode === 'immediate' ? (
+                <>
+                  Confirmo o consumo imediato integral do pendente de <strong>{eligibleRows.length} item(ns)</strong>{' '}
+                  {subjectKind === 'pregao' ? (
+                    <>pertencentes a <strong>{invoiceCount} NF(s)</strong> do {subjectLabel}.</>
+                  ) : (
+                    <>da <strong>{subjectLabel}</strong>.</>
+                  )}
+                </>
               ) : (
                 <>
                   Confirmo o encaminhamento de <strong>{eligibleRows.length} item(ns)</strong>{' '}
@@ -1304,7 +1524,11 @@ function IntakeBulkActionPanel({
             <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-xs font-black text-[#00288e]">
-                  {mode === 'remove' ? 'Removendo da fila…' : 'Processando alocação…'}
+                  {mode === 'remove'
+                    ? 'Removendo da fila…'
+                    : mode === 'immediate'
+                      ? 'Registrando consumo imediato…'
+                      : 'Processando alocação…'}
                 </span>
                 <span className="text-xs font-black text-slate-700">
                   {progress.completed}/{progress.total}
@@ -1364,22 +1588,37 @@ function IntakeBulkActionPanel({
                 || !confirmed
                 || eligibleRows.length === 0
                 || (mode === 'storage' && loadingStructure)
+                || (mode === 'immediate' && (
+                  loadingDestinations
+                  || !destinationId
+                  || !withdrawnBy.trim()
+                ))
               }
               className={
                 'inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-xs font-black text-white disabled:opacity-40 '
-                + (mode === 'storage' ? 'bg-[#00288e]' : 'bg-rose-600')
+                + (
+                  mode === 'storage'
+                    ? 'bg-[#00288e]'
+                    : mode === 'immediate'
+                      ? 'bg-violet-700'
+                      : 'bg-rose-600'
+                )
               }
             >
               {working ? (
                 <RefreshCw className="h-4 w-4 animate-spin" />
               ) : mode === 'remove' ? (
                 <Trash2 className="h-4 w-4" />
+              ) : mode === 'immediate' ? (
+                <Sparkles className="h-4 w-4" />
               ) : (
                 <Send className="h-4 w-4" />
               )}
               {mode === 'remove'
                 ? 'Remover da fila'
-                : 'Encaminhar ' + (subjectKind === 'pregao' ? 'Pregão' : 'NF')}
+                : mode === 'immediate'
+                  ? 'Consumir ' + (subjectKind === 'pregao' ? 'Pregão' : 'NF')
+                  : 'Encaminhar ' + (subjectKind === 'pregao' ? 'Pregão' : 'NF')}
             </button>
           </div>
         </div>
@@ -1628,6 +1867,18 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
       );
       return;
     }
+    if (mode === 'immediate') {
+      setMessage(
+        successful
+        + ' item(ns) de ' + subjectLabel + ' registrado(s) como consumo imediato'
+        + (
+          bulkFailures.length
+            ? '; ' + bulkFailures.length + ' falharam e permanecem pendentes.'
+            : '. Os itens integralmente tratados saíram da fila de pendências.'
+        )
+      );
+      return;
+    }
     setMessage(
       successful
         + ' item(ns) de ' + subjectLabel + ' concluído(s)'
@@ -1685,8 +1936,9 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
               </p>
             </div>
             <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-500">
-              A visualização principal é por NF. Você pode encaminhar a nota para armazenamento
-              ou removê-la apenas desta fila; os itens continuam disponíveis no detalhamento.
+              A visualização principal é por NF. Você pode encaminhar a nota para armazenamento,
+              registrar todo o pendente como consumo imediato ou removê-la apenas desta fila;
+              os itens continuam disponíveis no detalhamento e no histórico.
             </p>
             {context?.cutoffAt && (
               <p className="mt-1 text-[9px] font-semibold text-slate-400">
