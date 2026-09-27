@@ -787,53 +787,6 @@ function clearBulkOperationId(
   );
 }
 
-function isFirestorePermissionDenied(error: unknown): boolean {
-  const raw = error instanceof Error ? error.message : String(error || '');
-  return raw.includes('Missing or insufficient permissions')
-    || raw.includes('permission-denied');
-}
-
-function immediateConsumptionErrorMessage(error: unknown): string {
-  const raw = error instanceof Error ? error.message : String(error || '');
-  const mappings: Array<[string, string]> = [
-    [
-      'Missing or insufficient permissions',
-      'As Firestore Rules publicadas ainda não permitem o consumo imediato leve. Nenhum item foi alterado; publique as Rules atuais antes de tentar novamente.',
-    ],
-    [
-      'permission-denied',
-      'As Firestore Rules publicadas ainda não permitem o consumo imediato leve. Nenhum item foi alterado; publique as Rules atuais antes de tentar novamente.',
-    ],
-    [
-      'WAREHOUSE_ITEM_INTAKE_CONCURRENT_MODIFICATION',
-      'A pendência foi alterada em outra tela.',
-    ],
-    [
-      'WAREHOUSE_IMMEDIATE_CONSUMPTION_EXCEEDS_PENDING',
-      'A quantidade supera o pendente atual.',
-    ],
-    [
-      'WAREHOUSE_IMMEDIATE_CONSUMPTION_STOCK_MISMATCH',
-      'A projeção de estoque não comporta esta parcela.',
-    ],
-    [
-      'WAREHOUSE_ITEM_INTAKE_RECONCILIATION_REQUIRED',
-      'O item exige reconciliação antes do consumo imediato.',
-    ],
-    [
-      'WAREHOUSE_DESTINATION_INACTIVE',
-      'O destino selecionado está inativo.',
-    ],
-    [
-      'WAREHOUSE_IDEMPOTENCY_CONFLICT',
-      'Existe uma tentativa anterior incompatível para este item.',
-    ],
-  ];
-  for (const [code, message] of mappings) {
-    if (raw.includes(code)) return message;
-  }
-  return raw || 'Não foi possível confirmar o consumo imediato.';
-}
 
 function IntakeBulkActionPanel({
   workspaceId,
