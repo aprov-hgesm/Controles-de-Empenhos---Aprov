@@ -719,25 +719,24 @@ Data de fechamento: 2026-09-25.
 ### Módulo 11 — Consolidação do Controle de Itens — CONCLUÍDO
 Objetivo atingido: transformar **Controle de Itens** na superfície operacional consolidada do material sem reimplementar domínios existentes.
 
-Arquitetura final:
-- Resumo logístico;
+Arquitetura final atualizada em 2026-09-27 após a separação operacional de Saída de Material:
+- Resumo;
 - Estoque;
-- Saída de Material;
 - Movimentações;
 - Inventário;
-- Entregas;
-- Alertas;
-- SISCOFIS;
-- Relatórios;
-- Configurações relacionadas ao item.
+- Relatórios.
 
 Regras preservadas:
-- Cadastro de Itens continua responsável por cadastro/intake/migração inicial;
+- Alocação de Material é responsável por NF/intake/alocação inicial e migração SISCOFIS;
+- Saída de Material é uma aba principal própria e exclusiva para retirada/baixa;
 - Meus Depósitos continua responsável pela estrutura física/croquis;
 - Início continua responsável pela consulta visual;
+- Entregas permanecem no fluxo de Cronogramas/Entregas;
+- Alertas e Configurações não são duplicados em Controle de Itens;
+- SISCOFIS dentro de Relatórios é somente leitura;
 - ledger, saldos, lotes, inventários, retiradas, consumos e SISCOFIS continuam nas fontes oficiais existentes;
-- rotas legadas permanecem como redirect ou reutilização do mesmo componente;
-- nenhuma Firestore Rule foi alterada.
+- Inventário foi liberado no database dedicado `emprovex-warehouse` com o contrato transacional já certificado na Fase 10;
+- nenhuma coleção paralela de relatório foi criada.
 
 ### Módulo 12 — Relatórios Logísticos — CONCLUÍDO
 Camada oficial implementada como leitura derivada e bounded:
