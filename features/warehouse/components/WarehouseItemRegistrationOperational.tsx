@@ -786,9 +786,23 @@ function clearBulkOperationId(
   );
 }
 
+function isFirestorePermissionDenied(error: unknown): boolean {
+  const raw = error instanceof Error ? error.message : String(error || '');
+  return raw.includes('Missing or insufficient permissions')
+    || raw.includes('permission-denied');
+}
+
 function immediateConsumptionErrorMessage(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error || '');
   const mappings: Array<[string, string]> = [
+    [
+      'Missing or insufficient permissions',
+      'As Firestore Rules publicadas ainda não permitem o consumo imediato leve. Nenhum item foi alterado; publique as Rules atuais antes de tentar novamente.',
+    ],
+    [
+      'permission-denied',
+      'As Firestore Rules publicadas ainda não permitem o consumo imediato leve. Nenhum item foi alterado; publique as Rules atuais antes de tentar novamente.',
+    ],
     [
       'WAREHOUSE_ITEM_INTAKE_CONCURRENT_MODIFICATION',
       'A pendência foi alterada em outra tela.',
@@ -1114,6 +1128,9 @@ function IntakeBulkActionPanel({
         );
         successful += 1;
       } catch (bulkError) {
+        const permissionDenied =
+          mode === 'immediate' && isFirestorePermissionDenied(bulkError);
+
         failed.push({
           row,
           message:
@@ -1121,11 +1138,22 @@ function IntakeBulkActionPanel({
               ? allocationErrorMessage(bulkError)
               : immediateConsumptionErrorMessage(bulkError),
         });
+
+        if (permissionDenied) {
+          setError(
+            'O lote foi interrompido na primeira tentativa porque as Firestore Rules publicadas ainda não aceitam o consumo imediato leve. Nenhum outro item será tentado até a publicação das Rules atuais.'
+          );
+          setProgress({
+            completed: index + 1,
+            total: eligibleRows.length,
+          });
+          break;
+        }
       } finally {
-        setProgress({
-          completed: index + 1,
+        setProgress((current) => ({
+          completed: Math.max(current.completed, index + 1),
           total: eligibleRows.length,
-        });
+        }));
       }
     }
 
