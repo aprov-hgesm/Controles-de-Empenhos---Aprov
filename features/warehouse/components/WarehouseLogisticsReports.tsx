@@ -10,7 +10,7 @@ import type { WarehouseMovementType } from '../../../lib/warehouse/movement';
 import { WAREHOUSE_MOVEMENT_TYPES } from '../../../lib/warehouse/movement';
 import { WarehouseStockOperational } from './WarehouseStockOperational';
 import { WarehouseConsumptionReports } from './WarehouseConsumptionReports';
-import { WarehouseInventoryOperational } from './WarehouseInventoryOperational';
+import { WarehouseInventoryHistoryReport } from './WarehouseInventoryHistoryReport';
 import { WarehouseSiscofisHistoryReport } from './WarehouseSiscofisHistoryReport';
 
 type ReportTab = 'stock' | 'consumption' | 'ledger' | 'inventory' | 'siscofis';
@@ -242,7 +242,7 @@ export function WarehouseLogisticsReports({ workspaceId }: { workspaceId: string
       {tab === 'stock' && <WarehouseStockOperational workspaceId={workspaceId} />}
       {tab === 'consumption' && <WarehouseConsumptionReports workspaceId={workspaceId} />}
       {tab === 'ledger' && <LedgerAndInvoiceReport workspaceId={workspaceId} />}
-      {tab === 'inventory' && <WarehouseInventoryOperational workspaceId={workspaceId} />}
+      {tab === 'inventory' && <WarehouseInventoryHistoryReport workspaceId={workspaceId} />}
       {tab === 'siscofis' && <WarehouseSiscofisHistoryReport workspaceId={workspaceId} />}
     </div>
   );
