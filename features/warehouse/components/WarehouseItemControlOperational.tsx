@@ -1,59 +1,78 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
-  BellRing,
   Boxes,
   ClipboardCheck,
   FileSpreadsheet,
   Gauge,
-  Settings2,
-  ShieldCheck,
-  Truck,
+  History,
 } from 'lucide-react';
 
 import { WarehouseStockOperational } from './WarehouseStockOperational';
 import { WarehouseMovementsOperational } from './WarehouseMovementsOperational';
 import { WarehouseInventoryOperational } from './WarehouseInventoryOperational';
-import { WarehouseDeliveriesOperational } from './WarehouseDeliveriesOperational';
-import { WarehouseLogisticsAlerts } from './WarehouseLogisticsAlerts';
-import { WarehouseLogisticsSettings } from './WarehouseLogisticsSettings';
-import { WarehouseLogisticsDashboard } from './WarehouseLogisticsDashboard';
-import { WarehouseSiscofisOperational } from './WarehouseSiscofisOperational';
 import { WarehouseLogisticsReports } from './WarehouseLogisticsReports';
+import {
+  WarehouseItemControlSummary,
+  type WarehouseItemControlCoreTab,
+} from './WarehouseItemControlSummary';
 
 type ControlTab =
   | 'summary'
-  | 'stock'
-  | 'movements'
-  | 'inventory'
-  | 'deliveries'
-  | 'alerts'
-  | 'siscofis'
-  | 'reports'
-  | 'settings';
+  | WarehouseItemControlCoreTab;
 
 const CONTROL_TABS: Array<{
   id: ControlTab;
   label: string;
   icon: typeof Boxes;
+  description: string;
 }> = [
-  { id: 'summary', label: 'Resumo logístico', icon: Gauge },
-  { id: 'stock', label: 'Estoque', icon: Boxes },
-  { id: 'movements', label: 'Movimentações', icon: Gauge },
-  { id: 'inventory', label: 'Inventário', icon: ClipboardCheck },
-  { id: 'deliveries', label: 'Entregas', icon: Truck },
-  { id: 'alerts', label: 'Alertas', icon: BellRing },
-  { id: 'siscofis', label: 'SISCOFIS', icon: ShieldCheck },
-  { id: 'reports', label: 'Relatórios', icon: FileSpreadsheet },
-  { id: 'settings', label: 'Configurações', icon: Settings2 },
+  {
+    id: 'summary',
+    label: 'Resumo',
+    icon: Gauge,
+    description: 'Situação atual dos itens armazenados e principais pendências operacionais.',
+  },
+  {
+    id: 'stock',
+    label: 'Estoque',
+    icon: Boxes,
+    description: 'Saldos, posições físicas, lotes, validade, FEFO, barcodes e origem documental.',
+  },
+  {
+    id: 'movements',
+    label: 'Movimentações',
+    icon: History,
+    description: 'Histórico auditável do ledger oficial, sem recalcular saldo.',
+  },
+  {
+    id: 'inventory',
+    label: 'Inventário',
+    icon: ClipboardCheck,
+    description: 'Contagem física, divergências e ajustes confirmados de forma auditável.',
+  },
+  {
+    id: 'reports',
+    label: 'Relatórios',
+    icon: FileSpreadsheet,
+    description: 'Consultas derivadas de estoque, saídas, NF, inventários e SISCOFIS.',
+  },
 ];
 
+const LEGACY_TAB_MAP: Record<string, ControlTab> = {
+  outbound: 'summary',
+  deliveries: 'summary',
+  alerts: 'summary',
+  siscofis: 'reports',
+  settings: 'summary',
+};
+
 function normalizeRequestedTab(value: string | null): ControlTab {
-  return CONTROL_TABS.some((item) => item.id === value)
-    ? value as ControlTab
-    : 'stock';
+  if (!value) return 'summary';
+  if (CONTROL_TABS.some((item) => item.id === value)) return value as ControlTab;
+  return LEGACY_TAB_MAP[value] || 'summary';
 }
 
 export function WarehouseItemControlOperational({ workspaceId }: { workspaceId: string }) {
@@ -65,9 +84,43 @@ export function WarehouseItemControlOperational({ workspaceId }: { workspaceId: 
     setTab(normalizeRequestedTab(requested));
   }, [requested]);
 
+  const activeTab = useMemo(
+    () => CONTROL_TABS.find((item) => item.id === tab) || CONTROL_TABS[0],
+    [tab]
+  );
+
   return (
     <div className="mt-4 space-y-5" data-testid="warehouse-item-control-operational">
-      <div className="flex gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100 p-1">
+      <section className="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <p className="font-mono text-[10px] font-black uppercase tracking-[0.18em] text-[#00288e]/65">
+              ADM Depósito · ciclo do item armazenado
+            </p>
+            <h2 className="mt-2 text-xl font-black text-slate-900">
+              Controle de Itens
+            </h2>
+            <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-600">
+              Acompanhe o material depois da entrada e da alocação física. Esta área concentra
+              consulta permanente de estoque, rastreabilidade, inventário e relatórios sem
+              duplicar Alocação de Material, Saída de Material, Cronogramas ou configurações administrativas.
+            </p>
+          </div>
+          <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 xl:max-w-sm">
+            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#00288e]/70">
+              {activeTab.label}
+            </p>
+            <p className="mt-1 text-[11px] leading-4 text-slate-600">
+              {activeTab.description}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <nav
+        className="flex gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100 p-1"
+        aria-label="Seções de Controle de Itens"
+      >
         {CONTROL_TABS.map((item) => {
           const Icon = item.icon;
           const active = tab === item.id;
@@ -75,27 +128,29 @@ export function WarehouseItemControlOperational({ workspaceId }: { workspaceId: 
             <button
               key={item.id}
               type="button"
+              aria-pressed={active}
               onClick={() => setTab(item.id)}
               className={active
-                ? 'inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-xs font-black text-[#00288e] shadow-sm'
-                : 'inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-500 hover:text-slate-700'}
+                ? 'inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#00288e] px-3.5 py-2.5 text-xs font-black text-white shadow-sm'
+                : 'inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-500 transition hover:bg-white hover:text-[#00288e]'}
             >
               <Icon className="h-3.5 w-3.5" />
               {item.label}
             </button>
           );
         })}
-      </div>
+      </nav>
 
-      {tab === 'summary' && <WarehouseLogisticsDashboard workspaceId={workspaceId} />}
+      {tab === 'summary' && (
+        <WarehouseItemControlSummary
+          workspaceId={workspaceId}
+          onOpenTab={(nextTab) => setTab(nextTab)}
+        />
+      )}
       {tab === 'stock' && <WarehouseStockOperational workspaceId={workspaceId} />}
       {tab === 'movements' && <WarehouseMovementsOperational workspaceId={workspaceId} />}
       {tab === 'inventory' && <WarehouseInventoryOperational workspaceId={workspaceId} />}
-      {tab === 'deliveries' && <WarehouseDeliveriesOperational workspaceId={workspaceId} />}
-      {tab === 'alerts' && <WarehouseLogisticsAlerts workspaceId={workspaceId} />}
-      {tab === 'siscofis' && <WarehouseSiscofisOperational workspaceId={workspaceId} />}
       {tab === 'reports' && <WarehouseLogisticsReports workspaceId={workspaceId} />}
-      {tab === 'settings' && <WarehouseLogisticsSettings workspaceId={workspaceId} />}
     </div>
   );
 }
