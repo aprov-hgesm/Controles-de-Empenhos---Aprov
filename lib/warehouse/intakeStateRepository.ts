@@ -37,6 +37,7 @@ import {
   type WarehouseItemIntakeState,
 } from './intakeState';
 import { listWarehouseMovements } from './ledgerRepository';
+import { createWarehouseMovementId } from './movement';
 import {
   listWarehouseQueueExcludedInvoiceKeys,
 } from './intakeQueueExclusionRepository';
@@ -375,12 +376,15 @@ export async function loadWarehouseInvoiceIntakeQueue(
     persistedResult.items.map((record) => [persistedKey(record), record])
   );
 
-  const legacyMovementKeys = new Set<string>();
+  const invoiceMovementsByKey = new Map<string, typeof movementRecords>();
   for (const record of movementRecords) {
     const source = record.movement.source;
     if (source?.kind !== 'INVOICE') continue;
     for (const sourceItemId of source.itemIds) {
-      legacyMovementKeys.add(itemKey(source.invoiceRecordKey, sourceItemId));
+      const key = itemKey(source.invoiceRecordKey, sourceItemId);
+      const existing = invoiceMovementsByKey.get(key) || [];
+      existing.push(record);
+      invoiceMovementsByKey.set(key, existing);
     }
   }
 
@@ -434,8 +438,29 @@ export async function loadWarehouseInvoiceIntakeQueue(
           && Math.abs(
             quantities.storedReceivedQuantity - invoiceItem.quantity
           ) > 0.000001;
+        const stateId = persisted
+          ? persistedStateId(persisted)
+          : await createWarehouseItemIntakeId(
+            workspaceId,
+            invoiceKey,
+            invoiceItem.itemId
+          );
+        const expectedV2EntryMovementId = persisted
+          ? null
+          : await createWarehouseMovementId(
+            workspaceId,
+            [
+              'adm-intake-v2',
+              stateId,
+              'invoice-entry',
+            ].join(':').slice(0, 240)
+          );
+        const invoiceMovements = invoiceMovementsByKey.get(key) || [];
         const legacyProjection =
-          !persisted && legacyMovementKeys.has(key);
+          !persisted
+          && invoiceMovements.some(
+            (record) => record.movement.id !== expectedV2EntryMovementId
+          );
         const reconciliationReason: WarehouseItemIntakeReconciliationReason | null =
           canonicalChanged
             ? 'CANONICAL_QUANTITY_CHANGED'
@@ -451,13 +476,7 @@ export async function loadWarehouseInvoiceIntakeQueue(
 
         return {
           key,
-          stateId: persisted
-            ? persistedStateId(persisted)
-            : await createWarehouseItemIntakeId(
-              workspaceId,
-              invoiceKey,
-              invoiceItem.itemId
-            ),
+          stateId,
           invoiceRecordKey: invoiceKey,
           invoiceId: invoice.id,
           issueDate: invoice.issueDate || null,
