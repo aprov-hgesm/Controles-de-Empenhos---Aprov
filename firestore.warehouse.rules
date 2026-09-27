@@ -3687,7 +3687,7 @@ service cloud.firestore {
             request.resource.data.status == 'PARTIALLY_APPLIED'
             && request.resource.data.appliedLineCount > 0
             && request.resource.data.appliedLineCount
-              < request.resource.data.expectedLineCount
+              <= request.resource.data.expectedLineCount
             && request.resource.data.finalizedAt == null
           )
           || (
