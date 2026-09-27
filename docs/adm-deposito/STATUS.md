@@ -2513,3 +2513,13 @@ Commit funcional:
 - o consumo imediato histórico e a operação individual permanecem preservados por compatibilidade;
 - nova coleção protegida por Rules founder-only e contrato próprio;
 - Rules permaneceram abaixo do orçamento interno de 200 KiB após reconstrução segura do arquivo.
+
+
+### Ajuste de compilação das Firestore Rules — 2026-09-27
+
+- a ativação do ruleset novo no Google Cloud Console retornou `400 Invalid Argument` após sucessivos `503` no compilador da Rules API;
+- diagnóstico alinhado à documentação oficial do Firebase: o arquivo fonte pode permanecer abaixo de 256 KiB e ainda exceder o limite de 250 KiB do binário compilado;
+- o helper novo `validWarehouseQueueExclusion` havia sido definido no escopo global das Rules, o que aumenta o custo de compilação por herança nos vários `match`;
+- o helper foi movido para dentro de `match /queueExclusions/{exclusionId}`, preservando a mesma validação e restringindo sua compilação somente à coleção que o utiliza;
+- nenhuma regra operacional existente foi relaxada;
+- commits: `0cafb735148b27904a48c5eae0b03ad1ffcf0e22` e `dbdfd60a7d87e08d34b087007cb8fbfb6379007b`.
