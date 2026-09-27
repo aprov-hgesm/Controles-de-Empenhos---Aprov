@@ -1020,10 +1020,10 @@ export function WarehouseIsometricPreview({
       <div className="flex flex-col gap-3 border-b border-blue-100 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#00288e]">
-            <Sparkles className="h-3.5 w-3.5" /> Prévia 2.5D
+            <Sparkles className="h-3.5 w-3.5" /> Prévia 3D
           </p>
           <p className="mt-1 text-xs font-semibold text-slate-500">
-            Biblioteca visual isométrica oficial do EMPROVEX. Ocupação e localização refletem o saldo físico.
+            Visualização em perspectiva oficial do EMPROVEX. Ocupação e localização refletem o saldo físico.
           </p>
         </div>
 
@@ -1031,7 +1031,7 @@ export function WarehouseIsometricPreview({
           <div
             className="flex flex-wrap items-center justify-end gap-1"
             data-testid="warehouse-isometric-view-controls"
-            aria-label="Ângulos da prévia 2.5D"
+            aria-label="Ângulos da prévia 3D"
           >
             <span className="mr-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">
               Vista
@@ -1109,7 +1109,7 @@ export function WarehouseIsometricPreview({
                 : 'scale-100 opacity-100 blur-0')
             }
             role="img"
-            aria-label={'Prévia isométrica 2.5D do depósito · vista ' + PREVIEW_VIEWS.find((view) => view.id === previewView)?.label}
+            aria-label={'Prévia 3D do depósito · vista ' + PREVIEW_VIEWS.find((view) => view.id === previewView)?.label}
           >
             <defs>
               <linearGradient id="floorGradient" x1="0" y1="0" x2="1" y2="1">
