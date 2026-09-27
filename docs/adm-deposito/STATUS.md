@@ -3059,3 +3059,59 @@ Preservado:
 - rota interna `/adm-deposito/cadastro-de-itens` mantida por compatibilidade;
 - IDs internos e contratos técnicos mantidos;
 - nenhuma alteração de dados, Firestore Rules ou persistência.
+
+
+### Aba Saída de Material + PDF operacional/SISCOFIS — 2026-09-27
+
+A **Saída de Material** passa a ser uma aba principal própria do ADM Depósito, separada de Controle de Itens.
+
+Fluxo preservado/reutilizado:
+- leitor de código de barras e pesquisa manual;
+- quantidade e apresentação;
+- seleção da posição física;
+- FEFO consultivo;
+- lote opcional;
+- carrinho;
+- destino cadastrado;
+- identificação de quem retirou/recebeu;
+- finalização auditável via OUTBOUND oficial;
+- idempotência e retry seguro;
+- relatórios de saída/consumo.
+
+Nova documentação automática ao finalizar:
+1. **Ficha de Saída de Material**
+   - localização física exata (depósito/local/subposição);
+   - descrição, quantidade, unidade, lote e código de barras quando existentes;
+   - destino e retirante;
+   - campos de conferência/assinatura.
+2. **Ficha Auxiliar de Pedido de Material - SISCOFIS**
+   - detalhamento do material;
+   - Nota Fiscal de origem quando resolvida;
+   - Nota de Empenho obtida do movimento INVOICE de origem;
+   - fornecedor quando disponível;
+   - quantidade e unidade;
+   - campos para número/data do pedido SISCOFIS e assinaturas.
+
+Os dois documentos são gerados dentro de um único PDF em preto e branco, otimizado para toner.
+
+Controle documental:
+- número de controle determinístico no formato `AAAAMMDD-NNNNNN`;
+- código alfanumérico no formato `EMX-SM-DDMMAA-XXXX`, derivado da data e do número de controle;
+- número/código permanecem estáveis para a mesma retirada porque derivam do `withdrawalId` persistido e da data de finalização;
+- se a origem NF/NE não puder ser determinada automaticamente (por exemplo, estoque legado sem vínculo documental), a ficha sinaliza explicitamente a necessidade de conferência manual, sem inventar dados.
+
+Arquitetura:
+- nova rota `/adm-deposito/saida-de-material`;
+- nova seção principal `outbound` na navegação;
+- `WarehouseMaterialWithdrawal` ativado diretamente na release modular;
+- subaba duplicada de Saída de Material removida de Controle de Itens;
+- gerador PDF dedicado em `features/warehouse/pdf/WarehouseOutboundDocuments.ts`;
+- após finalização, o PDF é baixado automaticamente e permanece disponível para baixar novamente/imprimir enquanto a tela estiver aberta.
+
+Segurança:
+- domínio `warehouse/{workspaceId}/withdrawals` liberado no database dedicado;
+- criação founder-only exige destino ativo, payload válido e estado `FINALIZING`;
+- progresso é monotônico;
+- finalização exige `appliedLineCount == expectedLineCount`;
+- retirada `FINALIZED` não pode ser reaberta;
+- delete físico permanece proibido.
