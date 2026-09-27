@@ -21,6 +21,10 @@ const intakeAllocationRepository = readFileSync(
   resolve(root, 'lib/warehouse/intakeAllocationRepository.ts'),
   'utf8'
 );
+const allocationSheet = readFileSync(
+  resolve(root, 'features/warehouse/pdf/WarehouseAllocationSheet.ts'),
+  'utf8'
+);
 const plan = readFileSync(
   resolve(root, 'docs/adm-deposito/MODULAR_RELEASE_PLAN.md'),
   'utf8'
@@ -298,6 +302,57 @@ requireText(
   "quantity: row.pendingQuantity,",
   'Consumo imediato em lote deixou de tratar integralmente o saldo pendente de cada item.'
 );
+
+requireText(
+  itemRegistration,
+  'Ficha de Alocação Física · Pregão',
+  'Cadastro de Itens perdeu a emissão de ficha por Pregão.'
+);
+requireText(
+  itemRegistration,
+  'Ficha PDF',
+  'Cadastro de Itens perdeu a emissão de ficha por NF.'
+);
+requireText(
+  itemRegistration,
+  'downloadWarehouseAllocationSheet',
+  'Cadastro de Itens perdeu a ação de download da ficha de alocação.'
+);
+requireText(
+  itemRegistration,
+  'printWarehouseAllocationSheet',
+  'Cadastro de Itens perdeu a ação de impressão da ficha de alocação.'
+);
+requireText(
+  allocationSheet,
+  'FICHA DE ALOCAÇÃO FÍSICA DE MATERIAIS',
+  'Gerador PDF perdeu o título institucional da ficha.'
+);
+requireText(
+  allocationSheet,
+  'const ALLOCATION_ROWS_PER_ITEM = 3;',
+  'Ficha deixou de reservar três linhas de alocação física por item.'
+);
+requireText(
+  allocationSheet,
+  "orientation: 'portrait'",
+  'Ficha deixou de usar A4 retrato.'
+);
+requireText(
+  allocationSheet,
+  "row.status === 'PENDING' || row.status === 'PARTIALLY_PROCESSED'",
+  'Ficha deixou de limitar a emissão aos itens ainda pendentes de alocação.'
+);
+requireText(
+  allocationSheet,
+  'Responsável pela alocação física · nome/assinatura',
+  'Ficha perdeu o campo de assinatura da ponta física.'
+);
+requireText(
+  allocationSheet,
+  'Operador que lançou no EMPROVEX · nome/assinatura',
+  'Ficha perdeu o campo de conferência do operador do sistema.'
+);
 requireText(
   intakeStateRepository,
   "createWarehouseMovementId(",
@@ -345,6 +400,7 @@ console.log('ADM Depósito modular guard: PASS');
 console.log('- Meus Depósitos e Cadastro de Itens operacionais');
 console.log('- rules em ' + (rulesBytes / 1024).toFixed(2) + ' KiB (orçamento interno: 200 KiB)');
 console.log('- NF/Pregão podem ser armazenados, consumidos imediatamente ou removidos logicamente da fila');
+console.log('- ficha institucional PDF de alocação física disponível por NF e por Pregão');
 console.log('- consumo imediato em lote reutiliza o motor oficial com destino, responsável e idempotência por item');
 console.log('- INVOICE_ENTRY v2 isolado não gera falso positivo de reconciliação legada');
 console.log('- TRANSFER redistribui locationBalances sem regravar o saldo agregado');
