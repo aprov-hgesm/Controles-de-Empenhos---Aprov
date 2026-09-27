@@ -31,6 +31,7 @@ import {
 import type { WarehouseItemIntakeEffectiveStatus } from '../../../lib/warehouse/intakeState';
 import {
   loadWarehouseInvoiceIntakeQueue,
+  refreshWarehouseInvoiceIntakeQueueRows,
   type WarehouseInvoiceIntakeQueueContext,
   type WarehouseInvoiceIntakeQueueRow,
 } from '../../../lib/warehouse/intakeStateRepository';
@@ -1048,15 +1049,49 @@ function IntakeBulkActionPanel({
     }
 
     setWorking(true);
-    setProgress({ completed: 0, total: eligibleRows.length });
+
+    let operationRows: WarehouseInvoiceIntakeQueueRow[];
+    try {
+      const refreshedRows = await refreshWarehouseInvoiceIntakeQueueRows(
+        workspaceId,
+        eligibleRows
+      );
+      operationRows = refreshedRows.filter(
+        (row) =>
+          (row.status === 'PENDING' || row.status === 'PARTIALLY_PROCESSED')
+          && row.pendingQuantity > 0.000001
+      );
+    } catch (refreshError) {
+      setWorking(false);
+      setError(
+        refreshError instanceof Error
+          ? refreshError.message
+          : 'Não foi possível confirmar o estado atual dos itens antes do encaminhamento.'
+      );
+      return;
+    }
+
+    if (operationRows.length === 0) {
+      setWorking(false);
+      setProgress({ completed: 0, total: 0 });
+      setError(
+        subjectKind === 'pregao'
+          ? 'Os itens deste Pregão já constam como tratados no estado atual. A fila foi atualizada.'
+          : 'Os itens desta NF já constam como tratados no estado atual. A fila foi atualizada.'
+      );
+      await onComplete(0, []);
+      return;
+    }
+
+    setProgress({ completed: 0, total: operationRows.length });
     const failed: Array<{
       row: WarehouseInvoiceIntakeQueueRow;
       message: string;
     }> = [];
     let successful = 0;
 
-    for (let index = 0; index < eligibleRows.length; index += 1) {
-      const row = eligibleRows[index];
+    for (let index = 0; index < operationRows.length; index += 1) {
+      const row = operationRows[index];
       const operationId = getOrCreateBulkOperationId(
         workspaceId,
         subjectKey,
@@ -1145,14 +1180,14 @@ function IntakeBulkActionPanel({
           );
           setProgress({
             completed: index + 1,
-            total: eligibleRows.length,
+            total: operationRows.length,
           });
           break;
         }
       } finally {
         setProgress((current) => ({
           completed: Math.max(current.completed, index + 1),
-          total: eligibleRows.length,
+          total: operationRows.length,
         }));
       }
     }
