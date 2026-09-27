@@ -2641,3 +2641,39 @@ Ordem de cutover:
 6. somente após validação real retirar o bloco warehouse do ruleset principal em alteração separada.
 
 O deploy do aplicativo que efetiva o uso de `warehouseDb` não deve preceder a cópia/verificação dos dados atuais.
+
+
+### Validação local da separação multi-database — PASS — 2026-09-27
+
+Executado no PowerShell do ambiente de desenvolvimento:
+
+- `npm.cmd run verify:adm-deposito-modular-r1` — **PASS**;
+- `npm.cmd run test:adm-deposito-modular-r1-security` — **PASS**.
+
+Resultados relevantes do guard:
+- Meus Depósitos e Cadastro de Itens permanecem operacionais;
+- `firestore.warehouse.rules` em aproximadamente 109,73 KiB, abaixo do orçamento interno de 200 KiB;
+- repositories persistem exclusivamente em `warehouseDb`;
+- migrador cobre `inventories/*/items`;
+- referências Firestore são normalizadas na verificação;
+- ponte transacional legada NF/warehouse permanece bloqueada por fail-safe.
+
+Resultados relevantes do Emulator:
+- fundador autorizado nos domínios liberados;
+- usuário não fundador sem acesso ao ADM;
+- gravações arbitrárias em ledger/saldos/lotes/barcodes/intakes permanecem negadas;
+- exclusão física de `queueExclusions` permanece negada;
+- `alerts`, `inventories` e `withdrawals` continuam estacionados nesta release;
+- consumo imediato histórico e invariantes de estoque permanecem protegidos.
+
+Os registros `PERMISSION_DENIED` observados durante o teste correspondem aos cenários deliberados `[PASS] DENY` e não representam falha.
+
+Gate ainda pendente antes do cutover real:
+- `npm.cmd run typecheck`.
+
+Após o TypeScript passar, a próxima etapa autorizável é:
+1. publicar somente `firestore.warehouse.rules` no database `emprovex-warehouse`;
+2. executar `warehouse:db:plan`;
+3. executar `warehouse:db:copy`;
+4. executar `warehouse:db:verify`;
+5. manter origem intacta para rollback.
