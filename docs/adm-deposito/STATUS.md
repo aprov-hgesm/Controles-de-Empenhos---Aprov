@@ -2496,3 +2496,20 @@ Commit funcional:
 - o resultado complementado passa a alimentar diretamente a lista principal de NFs, evitando que itens tratados reapareçam como `VIRTUAL_PENDING`;
 - preservada a estratégia de baixo consumo do Firestore, sem elevar indiscriminadamente o limite global;
 - commit funcional: `7751c953cba6a70d88b1a95a3172761c72098e5d`.
+
+
+## Remoção lógica de NF/Pregão da fila — 2026-09-27
+
+- alterada a sistemática de tratamento coletivo da fila de NFs;
+- ações de NF/Pregão passam a oferecer:
+  - encaminhar para armazenamento;
+  - remover da fila do ADM Depósito;
+- removido o consumo imediato como opção coletiva de NF/Pregão;
+- a remoção é lógica e persistente por NF, em `warehouse/{workspaceId}/queueExclusions`;
+- remover da fila NÃO apaga a NF canônica, empenho ou recebimento;
+- remover da fila NÃO cria material, consumo, movimento, saldo, lote ou barcode;
+- Pregão é removido criando uma exclusão por NF pendente pertencente ao Pregão, preservando granularidade e idempotência;
+- a leitura da fila consulta somente os IDs determinísticos das NFs carregadas, evitando varredura global da coleção de exclusões;
+- o consumo imediato histórico e a operação individual permanecem preservados por compatibilidade;
+- nova coleção protegida por Rules founder-only e contrato próprio;
+- Rules permaneceram abaixo do orçamento interno de 200 KiB após reconstrução segura do arquivo.
