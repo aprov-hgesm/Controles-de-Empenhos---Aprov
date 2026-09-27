@@ -1149,6 +1149,7 @@ async function main() {
     ['settings', 'logistics-alerts'],
     ['destinations', destinationId],
     ['withdrawals', withdrawalId],
+    ['inventories', inventoryId],
     ['queueExclusions', queueExclusionId],
   ]) {
     const [collectionName, documentId] = domain;
@@ -1205,6 +1206,7 @@ async function main() {
     'siscofisSnapshots',
     'consumptions',
     'withdrawals',
+    'inventories',
     'intakes',
   ];
 
@@ -1233,7 +1235,7 @@ async function main() {
     )
   );
 
-  for (const domain of ['alerts', 'inventories']) {
+  for (const domain of ['alerts']) {
     await denied('domínio estacionado permanece bloqueado: ' + domain, () =>
       getDocs(collection(founder.db, 'warehouse', WORKSPACE_ID, domain))
     );
@@ -1245,7 +1247,7 @@ async function main() {
 
   console.log('\nADM Depósito modular security test: PASS');
   console.log('- fundador pode ler somente os domínios operacionais liberados');
-  console.log('- withdrawals foi liberado com progressão auditável; alertas e inventários continuam estacionados');
+  console.log('- withdrawals e inventories estão operacionais; alerts permanece estacionado');
   console.log('- gravações arbitrárias continuam negadas pelos contratos');
   console.log('- acesso externo permanece negado');
   console.log('- exclusão lógica retira NF da fila sem criar consumo ou movimento de estoque');
