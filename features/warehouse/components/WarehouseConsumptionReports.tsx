@@ -175,7 +175,10 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
   const materialGroups = useMemo(() => {
     const groups = new Map<string, { description: string; unit: string; quantity: number; rows: number }>();
     for (const record of filtered) {
-      const key = (record.materialId || 'immediate-no-stock') + '|' + record.unitLabel;
+      const key = (
+        record.materialId
+        || 'immediate:' + record.materialDescription.toLocaleLowerCase('pt-BR')
+      ) + '|' + record.unitLabel;
       const current = groups.get(key) || {
         description: record.materialDescription,
         unit: record.unitLabel,
