@@ -3190,3 +3190,49 @@ Cobertura reforçada:
 
 Observação operacional:
 - “excluir do depósito” significa retirar quantitativamente a presença física da posição, não apagar o cadastro/histórico do material.
+
+
+### Controle de Itens — configuração completa e reativação do Inventário — 2026-09-27
+
+A aba **Controle de Itens** foi retirada do estado estacionado da release modular e configurada como superfície permanente para o material já armazenado.
+
+Arquitetura final:
+- **Resumo** — indicadores bounded de materiais com saldo, material sem posição, validade, inventários em andamento e movimentações recentes;
+- **Estoque** — saldo oficial, distribuição física, localização, lotes, validade, FEFO, barcodes, origem documental e histórico;
+- **Movimentações** — histórico somente leitura do ledger;
+- **Inventário** — contagem física operacional, revisão humana e ajuste auditável;
+- **Relatórios** — estoque/localização/validade, consumo/saídas, ledger/NF, histórico de inventários e histórico SISCOFIS.
+
+Duplicidades removidas:
+- Saída de Material não existe mais dentro de Controle de Itens;
+- Entregas não são duplicadas e permanecem no fluxo de Cronogramas/Entregas;
+- Alertas e Configurações não são subabas do Controle;
+- migração/importação SISCOFIS permanece em Alocação de Material;
+- SISCOFIS dentro de Relatórios é somente leitura;
+- Inventário dentro de Relatórios é somente leitura; contagem e ajustes permanecem somente na subaba Inventário.
+
+UX:
+- Controle de Itens, Estoque e Inventário foram alinhados ao tema claro oficial D-076/VISUAL_IDENTITY;
+- cards brancos, bordas slate/blue, azul institucional `#00288e`, formulários claros e estados semânticos de alto contraste;
+- guard modular protege contra regressão para dark mode nas superfícies do Controle.
+
+Firestore dedicado:
+- `inventories/{inventoryId}` e `inventories/{inventoryId}/items/{itemId}` foram reintegrados a `firestore.warehouse.rules`;
+- foi reutilizado o contrato certificado da Fase 10, adaptado ao ruleset dedicado atual;
+- contagem isolada não altera saldo;
+- ajuste exige `INVENTORY_ADJUSTMENT` / `PHYSICAL_INVENTORY`, vínculo com o item do inventário, atualização atômica de ledger + saldo agregado + saldo físico e estado `CONFIRMING`;
+- concorrência/stale, histórico imutável, UG/workspace e founder-only permanecem protegidos;
+- `alerts` continua estacionado e não foi liberado nesta etapa.
+
+Cobertura adicionada:
+- segurança direcionada agora inclui abertura, contagem, revisão, confirmação, `INVENTORY_ADJUSTMENT`, bloqueio de alteração direta, bloqueio de reabertura, delete físico e acesso externo;
+- guard modular exige a ativação do Controle, as cinco subabas, Rules de inventário, tema claro e relatórios de Inventário/SISCOFIS somente leitura.
+
+Próximos gates obrigatórios antes de publicar as novas Rules:
+- `verify:adm-deposito-modular-r1`;
+- `typecheck`;
+- `test:adm-deposito-stock-operational`;
+- `test:adm-deposito-inventory`;
+- `test:adm-deposito-modular-r1-security`.
+
+As novas Rules de inventário **ainda não devem ser consideradas publicadas** até os gates acima passarem e houver deploy explícito somente de `firestore:emprovex-warehouse`.
