@@ -128,6 +128,122 @@ async function main() {
     })
   );
 
+  const unassignedBalanceId = 'locbal_' + 'a'.repeat(64);
+  const initialMovementId = 'mov_' + 'b'.repeat(64);
+  const invoiceEntryMovementId = 'mov_' + 'c'.repeat(64);
+
+  await allowed('fundador cria ledger inicial válido com saldo sem localização', () =>
+    runTransaction(founder.db, async (transaction) => {
+      const movementRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'movements', initialMovementId
+      );
+      const balanceRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId
+      );
+      const locationBalanceRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', unassignedBalanceId
+      );
+
+      transaction.set(movementRef, {
+        schemaVersion: 'warehouse_movement_v1',
+        id: initialMovementId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        type: 'INITIAL_BALANCE',
+        quantityDelta: 5,
+        idempotencyKeyHash: 'b'.repeat(64),
+        reversesMovementId: null,
+        note: 'Saldo inicial de teste',
+        source: null,
+        createdAt: serverTimestamp(),
+      });
+      transaction.set(balanceRef, {
+        schemaVersion: 'warehouse_balance_v1',
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        quantity: 5,
+        revision: 1,
+        lastMovementId: initialMovementId,
+        updatedAt: serverTimestamp(),
+      });
+      transaction.set(locationBalanceRef, {
+        schemaVersion: 'warehouse_location_balance_v1',
+        id: unassignedBalanceId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        position: { kind: 'UNASSIGNED' },
+        quantity: 5,
+        revision: 1,
+        lastMovementId: initialMovementId,
+        updatedAt: serverTimestamp(),
+      });
+    })
+  );
+
+  await allowed('fundador registra INVOICE_ENTRY válido sobre saldo existente', () =>
+    runTransaction(founder.db, async (transaction) => {
+      const movementRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'movements', invoiceEntryMovementId
+      );
+      const balanceRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId
+      );
+      const locationBalanceRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', unassignedBalanceId
+      );
+
+      transaction.set(movementRef, {
+        schemaVersion: 'warehouse_movement_v1',
+        id: invoiceEntryMovementId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        type: 'INVOICE_ENTRY',
+        quantityDelta: 3,
+        idempotencyKeyHash: 'c'.repeat(64),
+        reversesMovementId: null,
+        note: 'Entrada quantitativa da NF para tratamento pelo intake v2',
+        source: {
+          kind: 'INVOICE',
+          action: 'ENTRY',
+          invoiceRecordKey: 'nf-r1-entry',
+          invoiceId: 'NF-R1-ENTRY',
+          empenhoId: '2026NE000002',
+          itemIds: ['ITEM-R1-ENTRY'],
+          supplier: 'Fornecedor ADM-R1',
+          supplierCnpj: null,
+          actorUid: founder.user.uid,
+        },
+        createdAt: serverTimestamp(),
+      });
+      transaction.set(balanceRef, {
+        schemaVersion: 'warehouse_balance_v1',
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        quantity: 8,
+        revision: 2,
+        lastMovementId: invoiceEntryMovementId,
+        updatedAt: serverTimestamp(),
+      });
+      transaction.set(locationBalanceRef, {
+        schemaVersion: 'warehouse_location_balance_v1',
+        id: unassignedBalanceId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        position: { kind: 'UNASSIGNED' },
+        quantity: 8,
+        revision: 2,
+        lastMovementId: invoiceEntryMovementId,
+        updatedAt: serverTimestamp(),
+      });
+    })
+  );
+
   await allowed('fundador cria depósito', () =>
     setDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'depots', depotId), {
       schemaVersion: 'warehouse_depot_v1',
@@ -441,6 +557,7 @@ async function main() {
   console.log('- acesso externo permanece negado');
   console.log('- exclusão lógica retira NF da fila sem criar consumo ou movimento de estoque');
   console.log('- consumo imediato histórico continua protegido para compatibilidade');
+  console.log('- INVOICE_ENTRY válido é aceito sobre saldo existente e preserva ledger/locationBalance');
   console.log('- operações com estoque continuam obrigadas a respeitar ledger e invariantes');
 }
 
