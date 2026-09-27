@@ -118,6 +118,7 @@ for (const helper of [
   'function validWarehouseDestinationCreate(workspaceId, destinationId)',
   'function validWarehouseDestinationUpdate(workspaceId, destinationId)',
   'function validWarehouseLogisticsSettings(workspaceId, settingId)',
+  'function validWarehouseTransferMovementCreate(workspaceId, movementId)',
   'function warehouseMovementCreateAllowed(workspaceId, movementId)',
   'function warehouseBalanceWriteAllowed(workspaceId, materialId)',
   'function warehouseLocationBalanceWriteAllowed(workspaceId, locationBalanceId)',
@@ -312,6 +313,16 @@ requireText(
   "movement.type == 'TRANSFER'",
   'Rules deixaram de tratar TRANSFER como redistribuição física sem delta agregado.'
 );
+requireText(
+  rules,
+  'validWarehouseTransferSource(movement.source)',
+  'TRANSFER perdeu o validador enxuto e dedicado de source.'
+);
+requireText(
+  rules,
+  "request.resource.data.diff(resource.data).affectedKeys().hasOnly([",
+  'Update de intake perdeu a whitelist de campos mutáveis.'
+);
 if (intakeAllocationRepository.includes('applyWarehouseMovementToBalance(')) {
   fail('TRANSFER voltou a recalcular o saldo agregado dentro da alocação.');
 }
@@ -337,6 +348,7 @@ console.log('- NF/Pregão podem ser armazenados, consumidos imediatamente ou rem
 console.log('- consumo imediato em lote reutiliza o motor oficial com destino, responsável e idempotência por item');
 console.log('- INVOICE_ENTRY v2 isolado não gera falso positivo de reconciliação legada');
 console.log('- TRANSFER redistribui locationBalances sem regravar o saldo agregado');
+console.log('- TRANSFER usa validador dedicado para permanecer abaixo do orçamento de expressões das Rules');
 console.log('- contratos de ledger, saldo, localização, lote, barcode e intake preservados');
 console.log('- founder-only e validações transacionais preservados');
 console.log('- repositories persistem exclusivamente em warehouseDb');
