@@ -40,11 +40,18 @@ if (
 export const db = useE2eEmulators
   ? getFirestore(app)
   : getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: production uses the named Firestore database */
+
+export const WAREHOUSE_FIRESTORE_DATABASE_ID =
+  process.env.NEXT_PUBLIC_EMPROVEX_WAREHOUSE_FIRESTORE_DATABASE_ID?.trim()
+  || 'emprovex-warehouse';
+
+export const warehouseDb = getFirestore(app, WAREHOUSE_FIRESTORE_DATABASE_ID);
 export const auth = getAuth();
 
 if (useE2eEmulators) {
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
+  connectFirestoreEmulator(warehouseDb, '127.0.0.1', 8080);
 }
 
 export const googleProvider = new GoogleAuthProvider();
