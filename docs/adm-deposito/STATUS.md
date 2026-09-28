@@ -3480,3 +3480,16 @@ Saneamento aplicado sem alteração funcional:
 - guard da FASE 9 passou a exigir que o Croquis R1 mantenha editor, renderer 3D, persistência versionada e leitura de saldos físicos.
 
 Nenhuma Firestore Rule ou lógica de saldo foi alterada neste saneamento.
+
+
+### Entrada avulsa — validação local concluída — 2026-09-28
+
+Validação concluída no commit `e777910`:
+- `npm.cmd run typecheck` — PASS;
+- `npm.cmd run test:adm-deposito-manual-entry` — PASS, 4/4;
+- `npm.cmd run test:adm-deposito-stock-operational` — PASS, 20/20;
+- `npm.cmd run test:adm-deposito-barcode-outbound` — PASS, 10/10;
+- `npm.cmd run verify:adm-deposito-modular-r1` — PASS;
+- `npm.cmd run test:adm-deposito-modular-r1-security` — PASS;
+- Rules reconhecem `MANUAL_ENTRY` somente com procedência estruturada e continuam bloqueando gravações arbitrárias e usuários externos;
+- próximo passo: deploy exclusivo de `firestore:emprovex-warehouse` e smoke test funcional da Entrada avulsa na interface.
