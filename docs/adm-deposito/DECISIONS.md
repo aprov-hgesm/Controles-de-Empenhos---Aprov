@@ -2092,3 +2092,18 @@ Data: 2026-09-27.
 - Em **Relatórios**, Inventário e SISCOFIS são somente leitura. Relatórios não podem reabrir contagem, aplicar ajuste de inventário nem iniciar migração SISCOFIS.
 - As superfícies operacionais de Controle de Itens seguem obrigatoriamente o tema claro definido em `VISUAL_IDENTITY.md` / D-076.
 - As consultas permanecem bounded e sob demanda; não são introduzidos listeners globais permanentes, polling ou coleções de cache/relatório.
+
+
+## D-103 — Estoque mostra somente saldo positivo e prioriza menor validade
+
+Data: 2026-09-27.
+
+- A subaba **Estoque** de Controle de Itens representa exclusivamente o estoque atual disponível no ledger: somente materiais com `warehouse_balance_v1.quantity > 0` podem aparecer na lista principal.
+- Materiais tratados integralmente como consumo imediato, retiradas totais ou qualquer outro fluxo que deixe saldo agregado em zero não devem permanecer visíveis como estoque.
+- A consulta Firestore dessa superfície deve usar filtro de saldo positivo na origem para evitar leituras desnecessárias de documentos zerados.
+- A ordenação padrão é pela **menor data de validade ativa com quantidade positiva**, em ordem crescente.
+- Materiais sem validade informada ficam depois dos materiais com validade.
+- Em empate de validade, a descrição do material é usada como critério estável secundário.
+- Lotes inativos ou com quantidade zero não participam do filtro/ordenação de validade atual, embora possam continuar acessíveis no detalhe histórico do material.
+- Lotes vencidos com saldo físico positivo continuam visíveis e naturalmente aparecem no topo pela data menor, com sua sinalização crítica; não se apaga ou oculta estoque físico existente apenas por estar vencido.
+- A recomendação FEFO continua independente e não recomenda lote vencido para retirada.
