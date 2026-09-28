@@ -19,6 +19,7 @@ execFileSync(
     resolve(root, 'lib/warehouse/lot.ts'),
     resolve(root, 'lib/warehouse/location.ts'),
     resolve(root, 'lib/warehouse/material.ts'),
+    resolve(root, 'lib/warehouse/stockView.ts'),
     resolve(root, 'lib/platformIdentity.ts'),
     '--outDir',
     outDir,
@@ -36,6 +37,7 @@ execFileSync(
 
 const require = createRequire(import.meta.url);
 const lot = require(resolve(outDir, 'warehouse/lot.js'));
+const stockView = require(resolve(outDir, 'warehouse/stockView.js'));
 
 test.after(() => {
   rmSync(outDir, { recursive: true, force: true });
@@ -289,4 +291,54 @@ test('origem de NF exige vínculo estrutural mínimo e não aceita texto solto',
     },
   }));
   assert.equal(valid.ok, true);
+});
+
+
+test('visão de Estoque exclui qualquer material sem saldo disponível', () => {
+  assert.equal(stockView.hasWarehouseAvailableStock(10), true);
+  assert.equal(stockView.hasWarehouseAvailableStock(0.0001), true);
+  assert.equal(stockView.hasWarehouseAvailableStock(0), false);
+  assert.equal(stockView.hasWarehouseAvailableStock(-1), false);
+});
+
+test('visão de Estoque ordena primeiro a menor validade e deixa sem validade por último', () => {
+  const rows = [
+    {
+      balance: { quantity: 10 },
+      material: { description: 'Material sem validade' },
+      nearestExpiry: null,
+    },
+    {
+      balance: { quantity: 2 },
+      material: { description: 'Validade posterior' },
+      nearestExpiry: '2026-12-20',
+    },
+    {
+      balance: { quantity: 5 },
+      material: { description: 'Validade mais próxima' },
+      nearestExpiry: '2026-10-03',
+    },
+  ].sort(stockView.compareWarehouseStockAvailability);
+
+  assert.deepEqual(
+    rows.map((item) => item.material.description),
+    ['Validade mais próxima', 'Validade posterior', 'Material sem validade']
+  );
+});
+
+test('empate de validade mantém ordenação estável por descrição', () => {
+  const rows = [
+    {
+      balance: { quantity: 1 },
+      material: { description: 'Óleo' },
+      nearestExpiry: '2026-11-01',
+    },
+    {
+      balance: { quantity: 1 },
+      material: { description: 'Arroz' },
+      nearestExpiry: '2026-11-01',
+    },
+  ].sort(stockView.compareWarehouseStockAvailability);
+
+  assert.deepEqual(rows.map((item) => item.material.description), ['Arroz', 'Óleo']);
 });
