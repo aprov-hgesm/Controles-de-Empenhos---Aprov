@@ -794,13 +794,33 @@ requireText(
 );
 requireText(
   stockOperational,
-  "lot.expiresOn === expiryDateFilter",
-  'Estoque perdeu o filtro por data exata de validade.'
+  'matchesWarehouseExpiryState(',
+  'Estoque perdeu o filtro por estado de validade.'
 );
 requireText(
   stockOperational,
-  'type="date"',
-  'Filtro de validade deixou de usar seletor de data.'
+  'summary.availableLots.map((lot) => warehouseLotExpiryState(lot))',
+  'Filtro de validade voltou a considerar lotes sem saldo/inativos como estoque atual.'
+);
+requireText(
+  stockOperational,
+  '<option value="NEAR_EXPIRY">Próximo do vencimento</option>',
+  'Filtro de validade perdeu o estado Próximo do vencimento.'
+);
+requireText(
+  stockOperational,
+  '<option value="EXPIRED">Vencido</option>',
+  'Filtro de validade perdeu o estado Vencido.'
+);
+requireText(
+  stockOperational,
+  '<option value="VALID">Válido</option>',
+  'Filtro de validade perdeu o estado Válido.'
+);
+requireText(
+  stockOperational,
+  '<option value="NO_EXPIRY">Sem validade informada</option>',
+  'Filtro de validade perdeu o estado Sem validade.'
 );
 if (stockOperational.includes("item.position.subpositionId === locationFilter")) {
   fail('Filtro de localização voltou a aceitar subposição como opção selecionável.');
@@ -861,7 +881,7 @@ console.log('- Saída de Material reduz ledger/posição/lote e saldo zero deixa
 console.log('- Controle de Itens consolidado em Resumo, Estoque, Movimentações, Inventário e Relatórios');
 console.log('- Relatórios separados em Saída e Consumo Imediato, sem mistura de origens');
 console.log('- Estoque exibe somente saldo positivo e prioriza a menor validade ativa');
-console.log('- filtros do Estoque exibem apenas depósitos ativos, locais-pai e data de validade');
+console.log('- filtros do Estoque exibem apenas depósitos ativos, locais-pai e estados de validade');
 console.log('- Inventário opera no database dedicado com contagem isolada e ajuste confirmado');
 console.log('- SISCOFIS no Controle é somente leitura; migração permanece em Alocação de Material');
 console.log('- Inventário em Relatórios é somente leitura; contagem/ajuste permanece na subaba Inventário');
