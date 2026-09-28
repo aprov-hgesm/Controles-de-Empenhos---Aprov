@@ -675,16 +675,20 @@ requireText(
   "id: 'home'",
   'Navegação perdeu a nova aba Início.'
 );
-requireText(
-  navigation,
-  "label: 'Meus Depósitos',\n    href: '/adm-deposito/meus-depositos'",
-  'Meus Depósitos perdeu sua rota dedicada.'
-);
-requireText(
-  navigation,
-  "label: 'Controle de Depósitos',\n    href: '/adm-deposito/controle-de-depositos'",
-  'Controle de Depósitos perdeu sua rota dedicada.'
-);
+if (
+  !/id: 'overview',[\\s\\S]{0,180}label: 'Meus Depósitos',\\r?\\n\\s+href: '\\/adm-deposito\\/meus-depositos'/.test(
+    navigation
+  )
+) {
+  fail('Meus Depósitos perdeu sua rota dedicada.');
+}
+if (
+  !/id: 'depots',[\\s\\S]{0,180}label: 'Controle de Depósitos',\\r?\\n\\s+href: '\\/adm-deposito\\/controle-de-depositos'/.test(
+    navigation
+  )
+) {
+  fail('Controle de Depósitos perdeu sua rota dedicada.');
+}
 requireText(
   warehouseRootRoute,
   'section="home"',
