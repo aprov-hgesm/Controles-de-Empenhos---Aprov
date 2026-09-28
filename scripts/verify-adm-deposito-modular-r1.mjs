@@ -93,6 +93,14 @@ const isometricPreview = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseIsometricPreview.tsx'),
   'utf8'
 );
+const warehouseCroquisR1 = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseCroquisR1Operational.tsx'),
+  'utf8'
+);
+const warehouseVisualStyle = readFileSync(
+  resolve(root, 'features/warehouse/visualStyle.ts'),
+  'utf8'
+);
 const consumptionReports = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseConsumptionReports.tsx'),
   'utf8'
@@ -646,6 +654,43 @@ requireText(
   '<WarehouseIsometricPreview',
   'Meus Depósitos deixou de reutilizar o renderer 3D oficial do ADM Depósito.'
 );
+requireText(
+  warehouseCroquisR1,
+  '<WarehouseIsometricPreview',
+  'Controle de Depósitos deixou de reutilizar o renderer 3D oficial na prévia do Croqui.'
+);
+requireText(
+  warehouseLanding,
+  "import { WAREHOUSE_BOX_VISUAL } from '../visualStyle';",
+  'Início deixou de usar a paleta oficial compartilhada das caixas.'
+);
+requireText(
+  isometricPreview,
+  "import { WAREHOUSE_BOX_VISUAL } from '../visualStyle';",
+  'Renderer 3D deixou de usar a paleta oficial compartilhada das caixas.'
+);
+requireText(
+  isometricPreview,
+  'data-visual-role="warehouse-stock-box"',
+  'Renderer 3D perdeu a caixa isométrica padronizada.'
+);
+for (const visualToken of [
+  "frontFill: '#bf7834'",
+  "frontStroke: '#e1ad6b'",
+  "sideFill: '#925528'",
+  "sideStroke: '#c98745'",
+  "topFill: '#dda05a'",
+  "topStroke: '#efc183'",
+]) {
+  requireText(
+    warehouseVisualStyle,
+    visualToken,
+    'Paleta oficial compartilhada das caixas foi alterada fora da decisão visual consolidada.'
+  );
+}
+if (isometricPreview.includes("fill={selected ? '#ffe8a8' : '#e7b26b'}")) {
+  fail('Renderer 3D voltou a usar a caixa visual antiga em vez da paleta compartilhada.');
+}
 requireText(
   warehouseHome,
   'embedded',
