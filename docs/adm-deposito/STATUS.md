@@ -3493,3 +3493,17 @@ Validação concluída no commit `e777910`:
 - `npm.cmd run test:adm-deposito-modular-r1-security` — PASS;
 - Rules reconhecem `MANUAL_ENTRY` somente com procedência estruturada e continuam bloqueando gravações arbitrárias e usuários externos;
 - próximo passo: deploy exclusivo de `firestore:emprovex-warehouse` e smoke test funcional da Entrada avulsa na interface.
+
+
+### Entrada avulsa — Rules publicadas no banco dedicado — 2026-09-28
+
+Deploy confirmado no projeto `gen-lang-client-0982077967`, database `emprovex-warehouse`:
+- HEAD usado no Cloud Shell: `9f7422f`;
+- alvo exclusivo: `firestore:emprovex-warehouse`;
+- `firestore.warehouse.rules` compilou com sucesso;
+- Rules publicadas em `cloud.firestore`;
+- deploy concluído com sucesso;
+- único aviso de compilação: variável `workspaceId` não utilizada em helper de Rules; aviso não bloqueante, sem falha de compilação/deploy;
+- Firestore principal do EMPROVEX não foi incluído no deploy.
+
+Próximo passo: smoke test funcional da subaba **Alocação de Material → Entrada avulsa** com material real de teste, confirmando cadastro, ledger `MANUAL_ENTRY`, posicionamento físico por `TRANSFER`, validade/barcode opcionais e reflexo em Estoque/Relatórios.
