@@ -3324,3 +3324,9 @@ Ajuste aplicado na subaba **Controle de Itens → Estoque**:
 Correção de aderência ao requisito original: uma implementação intermediária havia trocado o filtro de status por data exata; o seletor por estados operacionais foi restaurado e passou a ter cobertura no teste direcionado e no guard modular.
 
 Nenhuma Firestore Rule ou contrato de persistência foi alterado nesta correção. O guard modular foi reforçado para impedir regressão desses filtros.
+
+Validação local concluída em 2026-09-27 no commit `a4de2a6`:
+- `npm.cmd run typecheck` — PASS;
+- `npm.cmd run test:adm-deposito-stock-operational` — PASS, 18/18 testes;
+- `npm.cmd run verify:adm-deposito-modular-r1` — PASS;
+- Rules permaneceram inalteradas, portanto sem necessidade de novo deploy no database `emprovex-warehouse`.
