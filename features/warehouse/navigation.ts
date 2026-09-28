@@ -37,7 +37,7 @@ export const WAREHOUSE_SECTIONS: readonly WarehouseSectionDefinition[] = [
   },
   {
     id: 'depots',
-    label: 'Meus Depósitos',
+    label: 'Controle de Depósitos',
     href: '/adm-deposito/meus-depositos',
     eyebrow: 'Estrutura física',
     description: 'Cadastro de depósitos, localizações e croquis com estruturas físicas personalizadas.',
