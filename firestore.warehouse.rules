@@ -1554,7 +1554,7 @@ service cloud.firestore {
     function warehouseOutboundReturnOriginalMatches(workspaceId, movement) {
       let p = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movement.source.originalMovementId);
       let original = get(p).data;
-      return exists(p)
+      return original is map
         && original.workspaceId == workspaceId
         && original.ug == movement.ug
         && original.materialId == movement.materialId
@@ -1569,13 +1569,13 @@ service cloud.firestore {
     function warehouseOutboundReturnConsumptionAllows(workspaceId, movement) {
       let p = /databases/$(database)/documents/warehouse/$(workspaceId)/consumptions/$(movement.source.consumptionId);
       let consumption = get(p).data;
-      let returnedBefore = warehouseConsumptionReturnedQuantity(consumption);
-      return exists(p)
+      return consumption is map
         && consumption.origin == 'STOCK_OUTBOUND'
         && consumption.materialId == movement.materialId
         && consumption.movementId == movement.source.originalMovementId
-        && returnedBefore >= 0
-        && returnedBefore + movement.source.quantity <= consumption.quantity;
+        && warehouseConsumptionReturnedQuantity(consumption) >= 0
+        && warehouseConsumptionReturnedQuantity(consumption)
+          + movement.source.quantity <= consumption.quantity;
     }
 
     function warehouseOutboundReturnCompanionsMatchAfter(workspaceId, movementId, movement) {
