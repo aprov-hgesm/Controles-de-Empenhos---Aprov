@@ -19,7 +19,5 @@ export const WAREHOUSE_PALLET_VISUAL = {
   slatDark: '#9b642f',
   runnerFill: '#70431f',
   runnerStroke: '#4d2d15',
-  blockFill: '#65411f',
-  blockStroke: '#462a14',
   highlight: '#f5d39d',
 } as const;
