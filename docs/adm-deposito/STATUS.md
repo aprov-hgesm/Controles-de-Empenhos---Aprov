@@ -3285,3 +3285,25 @@ Impacto:
 Cobertura:
 - testes unitários adicionados para saldo > 0, ordenação por validade e desempate por descrição;
 - guard modular protege a consulta Firestore positiva, o filtro local e a ordenação por validade.
+
+
+### Relatórios — separação Saída x Consumo Imediato — 2026-09-27
+
+A apresentação combinada de consumo/saídas foi separada conforme a semântica operacional do ADM Depósito.
+
+Nova configuração em **Controle de Itens → Relatórios**:
+- **Relatórios de Saída** — exibe somente registros `STOCK_OUTBOUND`;
+- **Relatórios de Consumo Imediato** — exibe somente registros `IMMEDIATE_CONSUMPTION`;
+- Estoque/localização/validade, Movimentações/NF, Inventários e SISCOFIS permanecem como relatórios independentes já existentes.
+
+A aba principal **Saída de Material → Relatórios** também foi restringida a `STOCK_OUTBOUND`, impedindo que consumos imediatos apareçam dentro da área de retirada física.
+
+O componente comum continua sendo reutilizado, mas recebe a origem fixa:
+- título e explicação mudam conforme a superfície;
+- seletor manual de origem desaparece;
+- indicadores passam a mostrar registros, materiais, destinos e retirantes/recebedores daquela origem;
+- CSV recebe nome específico;
+- consumo imediato não solicita compatibilidade legada de `EXPRESS_OUTBOUND`.
+
+Nenhuma Rule, coleção ou contrato de persistência foi alterado nesta separação.
+O guard modular agora falha se as duas origens voltarem a ser apresentadas como uma única subaba.
