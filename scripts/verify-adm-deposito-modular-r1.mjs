@@ -792,6 +792,16 @@ requireText(
 );
 requireText(
   stockOperational,
+  '.filter((item) => isWarehouseLocatedBalance(item))',
+  'Ficha do item voltou a misturar saldo UNASSIGNED com localizações físicas.'
+);
+requireText(
+  stockOperational,
+  "position: { kind: 'UNASSIGNED' } as WarehouseStockPosition",
+  'Ficha do item perdeu a representação única do saldo sem localização.'
+);
+requireText(
+  stockOperational,
   'relocateLotIds,',
   'Realocação do item deixou de transportar os lotes ativos da posição.'
 );
@@ -942,6 +952,7 @@ console.log('- Saída de Material reduz ledger/posição/lote e saldo zero deixa
 console.log('- Controle de Itens consolidado em Resumo, Estoque, Movimentações, Inventário e Relatórios');
 console.log('- Relatórios separados em Saída e Consumo Imediato, sem mistura de origens');
 console.log('- Estoque exibe somente saldo positivo e prioriza a menor validade ativa');
+console.log('- ficha do item separa localização física de saldo UNASSIGNED sem duplicação');
 console.log('- ficha do item centraliza realocação, lote, validade e códigos de barras');
 console.log('- realocação usa TRANSFER sem regravar saldo agregado e move lotes ativos na mesma transação');
 console.log('- edição de barcode preserva o código anterior inativo');
