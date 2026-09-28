@@ -166,9 +166,6 @@ function warehousePallet(
 ) {
   const deckBaseZ = Math.max(2, height * 0.55);
   const center = isoPoint(x + width / 2, y + depth / 2, 0);
-  const blockWidth = Math.max(2.8, width * 0.11);
-  const blockDepth = Math.max(2.4, depth * 0.16);
-  const blockHeight = Math.max(2, deckBaseZ * 0.72);
 
   return (
     <g
@@ -186,43 +183,6 @@ function warehousePallet(
         opacity="0.18"
         filter="url(#worldSoftBlur)"
       />
-
-      {[0.12, 0.5, 0.88].flatMap((rx) =>
-        [0.18, 0.5, 0.82].map((ry) => ({ rx, ry }))
-      ).map((block, index) => {
-        const bx = x + width * block.rx - blockWidth / 2;
-        const by = y + depth * block.ry - blockDepth / 2;
-        const ba = isoPoint(bx, by, 0.7);
-        const bb = isoPoint(bx + blockWidth, by, 0.7);
-        const bc = isoPoint(bx + blockWidth, by + blockDepth, 0.7);
-        const bd = isoPoint(bx, by + blockDepth, 0.7);
-        const bat = isoPoint(bx, by, blockHeight);
-        const bbt = isoPoint(bx + blockWidth, by, blockHeight);
-        const bct = isoPoint(bx + blockWidth, by + blockDepth, blockHeight);
-        const bdt = isoPoint(bx, by + blockDepth, blockHeight);
-        return (
-          <g key={'pallet-block-' + index}>
-            <polygon
-              points={polygonPoints([bd, bc, bct, bdt])}
-              fill={WAREHOUSE_PALLET_VISUAL.blockFill}
-              stroke={WAREHOUSE_PALLET_VISUAL.blockStroke}
-              strokeWidth="0.55"
-            />
-            <polygon
-              points={polygonPoints([bb, bc, bct, bbt])}
-              fill={WAREHOUSE_PALLET_VISUAL.sideFill}
-              stroke={WAREHOUSE_PALLET_VISUAL.sideStroke}
-              strokeWidth="0.5"
-            />
-            <polygon
-              points={polygonPoints([bat, bbt, bct, bdt])}
-              fill={WAREHOUSE_PALLET_VISUAL.runnerFill}
-              stroke={WAREHOUSE_PALLET_VISUAL.runnerStroke}
-              strokeWidth="0.5"
-            />
-          </g>
-        );
-      })}
 
       {[0.14, 0.5, 0.86].map((ratio) => {
         const p1 = isoPoint(x + width * ratio, y + depth * 0.08, deckBaseZ - 0.4);
