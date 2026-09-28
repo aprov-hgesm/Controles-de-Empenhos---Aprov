@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 const MATERIAL_ID = 'mat_123e4567e89b12d3a456426614174000';
 
 test.describe.serial('ADM Depósito FASE 7 — estoque operável', () => {
-  test('fundador pesquisa material, consulta ficha, FEFO, pendências e persiste lote', async ({ page }) => {
+  test('fundador pesquisa material, consulta ficha, FEFO, pendências e persiste validade', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Entrar com Google — HGeSM' }).click();
 
@@ -20,7 +20,6 @@ test.describe.serial('ADM Depósito FASE 7 — estoque operável', () => {
     const row = page.getByTestId('warehouse-stock-row-' + MATERIAL_ID);
     await expect(row).toBeVisible();
     await expect(row).toContainText('Arroz parboilizado');
-    await expect(row).toContainText('LOTE-FEFO-PRIMEIRO');
     await row.click();
 
     const sheet = page.getByTestId('warehouse-material-sheet');
@@ -29,10 +28,10 @@ test.describe.serial('ADM Depósito FASE 7 — estoque operável', () => {
     await expect(sheet).toContainText('Saldo agregado');
     await expect(sheet).toContainText('Distribuição física');
     await expect(page.getByTestId('warehouse-fefo-recommendation')).toContainText(
-      'LOTE-FEFO-PRIMEIRO'
+      'Recomendação FEFO'
     );
     await expect(page.getByTestId('warehouse-lot-list')).toContainText(
-      'LOTE-FEFO-DEPOIS'
+      'Validade'
     );
     await expect(page.getByTestId('warehouse-logistics-pendencies')).toBeVisible();
 
@@ -44,30 +43,23 @@ test.describe.serial('ADM Depósito FASE 7 — estoque operável', () => {
       'LOC-06'
     );
 
-    await page.getByTestId('warehouse-lot-create-code').fill('E2E-FASE7');
     await page.getByTestId('warehouse-lot-create-expiry').fill('2026-10-30');
     await page.getByTestId('warehouse-lot-create-quantity').fill('1');
     await page.getByTestId('warehouse-lot-create-position').selectOption('UNASSIGNED');
     await page.getByTestId('warehouse-lot-save').click();
 
     await expect(page.getByTestId('warehouse-phase7-message')).toContainText(
-      'Lote registrado como enriquecimento logístico'
+      'Validade registrada como informação logística'
     );
-    await expect(page.getByTestId('warehouse-lot-list')).toContainText('E2E-FASE7');
-    await expect(page.getByTestId('warehouse-fefo-recommendation')).toContainText(
-      'E2E-FASE7'
-    );
+    await expect(page.getByTestId('warehouse-lot-list')).toContainText('30/10/2026');
 
     await page.reload();
     await expect(page.getByTestId('warehouse-stock-operational')).toBeVisible({
       timeout: 20_000,
     });
-    await page.getByTestId('warehouse-stock-search').fill('E2E-FASE7');
+    await page.getByTestId('warehouse-stock-search').fill('2026-10-30');
     await page.getByTestId('warehouse-stock-row-' + MATERIAL_ID).click();
-    await expect(page.getByTestId('warehouse-lot-list')).toContainText('E2E-FASE7');
-    await expect(page.getByTestId('warehouse-fefo-recommendation')).toContainText(
-      'E2E-FASE7'
-    );
+    await expect(page.getByTestId('warehouse-lot-list')).toContainText('30/10/2026');
 
     await page.goto('/adm-deposito/movimentacoes');
     await expect(page.getByText('Histórico de movimentações', { exact: true })).toBeVisible();
