@@ -56,6 +56,7 @@ import {
 import {
   applyWarehouseExpressOutbound,
 } from './outboundRepository';
+import { transferWarehouseStock } from './locationRepository';
 import {
   warehouseDocumentPath,
   warehouseDomainPath,
@@ -235,18 +236,20 @@ function createWarehouseOutboundReturnLotId(movementId: string): string {
   return 'lot_' + match[1].slice(32);
 }
 
-async function ensureWarehouseOutboundReturnLotEnrichment(
+async function ensureWarehouseReturnedValidity(
   scope: { workspaceId: string; ug: string; uid: string },
-  movement: WarehouseMovement
+  movement: WarehouseMovement,
+  originalLotId: string | null,
+  position: WarehouseStockPosition,
+  quantity: number
 ): Promise<WarehouseLot | null> {
-  const source = movement.source;
-  if (source?.kind !== 'OUTBOUND_RETURN' || !source.lotId) return null;
+  if (!originalLotId) return null;
 
   const returnLotId = createWarehouseOutboundReturnLotId(movement.id);
   const originalLotPath = warehouseDocumentPath(
     scope.workspaceId,
     'lots',
-    source.lotId
+    originalLotId
   );
   const returnLotPath = warehouseDocumentPath(
     scope.workspaceId,
@@ -271,8 +274,8 @@ async function ensureWarehouseOutboundReturnLotEnrichment(
       if (
         existing.ug !== scope.ug
         || existing.materialId !== movement.materialId
-        || existing.quantity !== source.quantity
-        || JSON.stringify(existing.position) !== JSON.stringify(source.position)
+        || existing.quantity !== quantity
+        || JSON.stringify(existing.position) !== JSON.stringify(position)
         || existing.origin.kind !== 'MANUAL_ENRICHMENT'
         || existing.origin.movementId !== movement.id
       ) {
@@ -293,7 +296,7 @@ async function ensureWarehouseOutboundReturnLotEnrichment(
       original.ug !== scope.ug
       || original.materialId !== movement.materialId
       || original.status !== 'active'
-      || JSON.stringify(original.position) !== JSON.stringify(source.position)
+      || JSON.stringify(original.position) !== JSON.stringify(position)
     ) {
       throw new Error('WAREHOUSE_OUTBOUND_RETURN_LOT_MISMATCH');
     }
@@ -307,8 +310,8 @@ async function ensureWarehouseOutboundReturnLotEnrichment(
         materialId: movement.materialId,
         code: original.code,
         expiresOn: original.expiresOn,
-        quantity: source.quantity,
-        position: source.position,
+        quantity,
+        position,
         origin: {
           kind: 'MANUAL_ENRICHMENT',
           movementId: movement.id,
@@ -1078,8 +1081,9 @@ export async function returnWarehouseStockOutbound(
   const operationId = normalizeOperationId(input.operationId);
   const movementId = await createWarehouseMovementId(
     scope.workspaceId,
-    ('outbound-return:' + consumptionId + ':' + operationId).slice(0, 240)
+    ('outbound-return-entry:' + consumptionId + ':' + operationId).slice(0, 240)
   );
+  const unassigned: WarehouseStockPosition = { kind: 'UNASSIGNED' };
 
   const consumptionPath = warehouseDocumentPath(
     scope.workspaceId,
@@ -1092,20 +1096,22 @@ export async function returnWarehouseStockOutbound(
     movementId
   );
 
-  let coreResult: Omit<ReturnWarehouseStockOutboundResult, 'lot' | 'warnings'>;
+  let originalPosition: WarehouseStockPosition = unassigned;
+  let originalLotId: string | null = null;
+  let coreLocationBalance: WarehouseLocationBalance;
 
   try {
-    coreResult = await runTransaction(db, async (transaction) => {
+    const coreResult = await runTransaction(db, async (transaction) => {
       const consumptionRef = doc(db, consumptionPath);
       const movementRef = doc(db, movementPath);
       const [consumptionSnapshot, replaySnapshot] = await Promise.all([
         transaction.get(consumptionRef),
         transaction.get(movementRef),
       ]);
+
       if (!consumptionSnapshot.exists()) {
         throw new Error('WAREHOUSE_OUTBOUND_RETURN_CONSUMPTION_NOT_FOUND');
       }
-
       const consumption = parseConsumption(
         scope.workspaceId,
         consumptionSnapshot.id,
@@ -1144,15 +1150,30 @@ export async function returnWarehouseStockOutbound(
           consumption.materialId
         )
       );
+      const unassignedBalanceId = await createWarehouseLocationBalanceId(
+        scope.workspaceId,
+        consumption.materialId,
+        unassigned
+      );
+      const unassignedBalanceRef = doc(
+        db,
+        warehouseDocumentPath(
+          scope.workspaceId,
+          'locationBalances',
+          unassignedBalanceId
+        )
+      );
 
       const [
         originalMovementSnapshot,
         materialSnapshot,
         balanceSnapshot,
+        unassignedBalanceSnapshot,
       ] = await Promise.all([
         transaction.get(originalMovementRef),
         transaction.get(materialRef),
         transaction.get(balanceRef),
+        transaction.get(unassignedBalanceRef),
       ]);
 
       if (!originalMovementSnapshot.exists()) {
@@ -1175,6 +1196,8 @@ export async function returnWarehouseStockOutbound(
       ) {
         throw new Error('WAREHOUSE_OUTBOUND_RETURN_ORIGINAL_INVALID');
       }
+      originalPosition = originalSource.position;
+      originalLotId = originalSource.lotId;
 
       const material = parseMaterial(
         scope.workspaceId,
@@ -1194,43 +1217,6 @@ export async function returnWarehouseStockOutbound(
         throw new Error('WAREHOUSE_OUTBOUND_RETURN_SCOPE_MISMATCH');
       }
 
-      const locationBalanceRef = doc(
-        db,
-        warehouseDocumentPath(
-          scope.workspaceId,
-          'locationBalances',
-          originalSource.locationBalanceId
-        )
-      );
-      const locationSnapshot = await transaction.get(locationBalanceRef);
-      if (!locationSnapshot.exists()) {
-        throw new Error('WAREHOUSE_OUTBOUND_RETURN_LOCATION_NOT_FOUND');
-      }
-
-      const currentLocation = parseLocationBalance(
-        scope.workspaceId,
-        locationSnapshot.id,
-        locationSnapshot.data() as Record<string, unknown>
-      );
-      if (
-        currentLocation.materialId !== material.id
-        || JSON.stringify(currentLocation.position)
-          !== JSON.stringify(originalSource.position)
-      ) {
-        throw new Error('WAREHOUSE_OUTBOUND_RETURN_LOCATION_MISMATCH');
-      }
-
-      const source = {
-        kind: 'OUTBOUND_RETURN' as const,
-        actorUid: scope.uid,
-        consumptionId,
-        originalMovementId: originalMovement.id,
-        quantity,
-        position: originalSource.position,
-        locationBalanceId: originalSource.locationBalanceId,
-        lotId: originalSource.lotId,
-        reason,
-      };
       const candidateResult = validateWarehouseMovement(
         {
           schemaVersion: WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
@@ -1238,12 +1224,17 @@ export async function returnWarehouseStockOutbound(
           workspaceId: scope.workspaceId,
           ug: scope.ug,
           materialId: material.id,
-          type: 'OUTBOUND_RETURN',
+          type: 'MANUAL_ENTRY',
           quantityDelta: quantity,
           idempotencyKeyHash: movementId.slice('mov_'.length),
           reversesMovementId: null,
           note: 'Devolução/cancelamento de saída · ' + consumptionId,
-          source,
+          source: {
+            kind: 'MANUAL_ENTRY',
+            actorUid: scope.uid,
+            provenance: 'Devolução de saída',
+            reference: consumptionId,
+          },
         },
         {
           expectedWorkspaceId: scope.workspaceId,
@@ -1253,11 +1244,19 @@ export async function returnWarehouseStockOutbound(
       );
       if (!candidateResult.ok) {
         throw new Error(
-          'WAREHOUSE_INVALID_OUTBOUND_RETURN: '
+          'WAREHOUSE_INVALID_OUTBOUND_RETURN_ENTRY: '
           + candidateResult.issues.map((item) => item.message).join('; ')
         );
       }
       const candidate = candidateResult.data;
+
+      const currentUnassigned = unassignedBalanceSnapshot.exists()
+        ? parseLocationBalance(
+            scope.workspaceId,
+            unassignedBalanceSnapshot.id,
+            unassignedBalanceSnapshot.data() as Record<string, unknown>
+          )
+        : null;
 
       if (replaySnapshot.exists()) {
         const existingMovement = parseMovement(
@@ -1268,17 +1267,33 @@ export async function returnWarehouseStockOutbound(
         if (!warehouseMovementMatchesReplay(existingMovement, candidate)) {
           throw new Error('WAREHOUSE_IDEMPOTENCY_CONFLICT');
         }
+        if (
+          consumption.lastReturnMovementId !== existingMovement.id
+          || consumption.returnedQuantity <= 0
+        ) {
+          throw new Error('WAREHOUSE_OUTBOUND_RETURN_REPLAY_INCONSISTENT');
+        }
+        const replayLocation = currentUnassigned
+          || applyWarehouseLocationDelta(null, {
+            id: unassignedBalanceId,
+            workspaceId: scope.workspaceId,
+            ug: scope.ug,
+            materialId: material.id,
+            position: unassigned,
+            quantityDelta: 0,
+            movementId: existingMovement.id,
+            initialQuantity: currentBalance.quantity,
+          });
         return {
           movement: existingMovement,
           consumption,
           balance: currentBalance,
-          locationBalance: currentLocation,
+          locationBalance: replayLocation,
         };
       }
 
-      const currentReturned = consumption.returnedQuantity;
       const remaining = normalizeWarehouseQuantity(
-        consumption.quantity - currentReturned
+        consumption.quantity - consumption.returnedQuantity
       );
       if (remaining === null || quantity > remaining + EPSILON) {
         throw new Error('WAREHOUSE_OUTBOUND_RETURN_EXCEEDS_REMAINING');
@@ -1288,19 +1303,23 @@ export async function returnWarehouseStockOutbound(
         candidate,
         currentBalance
       );
-      const nextLocation = applyWarehouseLocationDelta(currentLocation, {
-        id: currentLocation.id,
-        workspaceId: scope.workspaceId,
-        ug: scope.ug,
-        materialId: material.id,
-        position: originalSource.position,
-        quantityDelta: quantity,
-        movementId,
-      });
-      const nextReturned = normalizeWarehouseQuantity(
-        currentReturned + quantity
+      const nextUnassigned = applyWarehouseLocationDelta(
+        currentUnassigned,
+        {
+          id: unassignedBalanceId,
+          workspaceId: scope.workspaceId,
+          ug: scope.ug,
+          materialId: material.id,
+          position: unassigned,
+          quantityDelta: quantity,
+          movementId,
+          initialQuantity: currentUnassigned ? 0 : currentBalance.quantity,
+        }
       );
-      if (nextReturned === null) {
+      const nextReturned = normalizeWarehouseQuantity(
+        consumption.returnedQuantity + quantity
+      );
+      if (nextReturned === null || nextReturned > consumption.quantity + EPSILON) {
         throw new Error('WAREHOUSE_OUTBOUND_RETURN_OVERFLOW');
       }
 
@@ -1312,8 +1331,8 @@ export async function returnWarehouseStockOutbound(
         ...nextBalance,
         updatedAt: serverTimestamp(),
       });
-      transaction.set(locationBalanceRef, {
-        ...nextLocation,
+      transaction.set(unassignedBalanceRef, {
+        ...nextUnassigned,
         updatedAt: serverTimestamp(),
       });
       transaction.update(consumptionRef, {
@@ -1337,37 +1356,64 @@ export async function returnWarehouseStockOutbound(
           updatedAt: new Date().toISOString(),
         },
         balance: nextBalance,
-        locationBalance: nextLocation,
+        locationBalance: nextUnassigned,
       };
     });
+
+    coreLocationBalance = coreResult.locationBalance;
+
+    const warnings: string[] = [];
+    let finalLocationBalance = coreLocationBalance;
+
+    if (originalPosition.kind !== 'UNASSIGNED') {
+      try {
+        const transfer = await transferWarehouseStock(scope.workspaceId, {
+          materialId: coreResult.movement.materialId,
+          quantity,
+          from: unassigned,
+          to: originalPosition,
+          idempotencyKey: (
+            'outbound-return-position:' + consumptionId + ':' + operationId
+          ).slice(0, 240),
+          note: 'Reposicionamento da devolução · ' + consumptionId,
+        });
+        finalLocationBalance = transfer.toBalance;
+      } catch {
+        warnings.push(
+          'O material voltou ao estoque, mas ficou temporariamente sem localização. Realoque-o no Controle de Itens.'
+        );
+      }
+    }
+
+    let lot: WarehouseLot | null = null;
+    if (originalLotId && !warnings.length) {
+      try {
+        lot = await ensureWarehouseReturnedValidity(
+          scope,
+          coreResult.movement,
+          originalLotId,
+          originalPosition,
+          quantity
+        );
+      } catch {
+        warnings.push(
+          'O material voltou ao estoque, mas a validade precisa ser revisada no Controle de Itens.'
+        );
+      }
+    }
+
+    return {
+      movement: coreResult.movement,
+      consumption: coreResult.consumption,
+      balance: coreResult.balance,
+      locationBalance: finalLocationBalance,
+      lot,
+      warnings,
+    };
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, movementPath);
     throw error;
   }
-
-  const warnings: string[] = [];
-  let lot: WarehouseLot | null = null;
-  if (
-    coreResult.movement.source?.kind === 'OUTBOUND_RETURN'
-    && coreResult.movement.source.lotId
-  ) {
-    try {
-      lot = await ensureWarehouseOutboundReturnLotEnrichment(
-        scope,
-        coreResult.movement
-      );
-    } catch {
-      warnings.push(
-        'O saldo voltou ao estoque, mas a validade técnica não pôde ser recomposta automaticamente. Revise a validade no Controle de Itens.'
-      );
-    }
-  }
-
-  return {
-    ...coreResult,
-    lot,
-    warnings,
-  };
 }
 
 async function applyWarehouseImmediateConsumptionLightweight(
