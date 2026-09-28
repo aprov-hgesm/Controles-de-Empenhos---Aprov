@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  documentId,
   getDoc,
   getDocs,
   limit,
@@ -129,6 +130,31 @@ export interface ReturnWarehouseStockOutboundResult {
   locationBalance: WarehouseLocationBalance;
   lot: WarehouseLot | null;
   warnings: string[];
+}
+
+const WAREHOUSE_OUTBOUND_RETURN_SCHEMA_VERSION =
+  'warehouse_outbound_return_v1' as const;
+
+interface WarehouseOutboundReturnSummary {
+  schemaVersion: typeof WAREHOUSE_OUTBOUND_RETURN_SCHEMA_VERSION;
+  id: string;
+  workspaceId: string;
+  ug: string;
+  consumptionId: string;
+  materialId: string;
+  originalQuantity: number;
+  returnedQuantity: number;
+  pendingOperationId: string | null;
+  pendingQuantity: number;
+  pendingReason: string | null;
+  pendingBy: string | null;
+  lastReturnOperationId: string | null;
+  lastReturnMovementId: string | null;
+  lastReturnAt: string | null;
+  lastReturnBy: string | null;
+  lastReturnReason: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
 }
 
 function currentScope(workspaceId: string): {
@@ -500,6 +526,124 @@ function parseConsumption(
       typeof data.lastReturnReason === 'string' ? data.lastReturnReason : null,
     legacy: false,
   };
+}
+
+function parseOutboundReturnSummary(
+  workspaceId: string,
+  id: string,
+  data: Record<string, unknown>
+): WarehouseOutboundReturnSummary {
+  const originalQuantity = normalizeWarehouseQuantity(data.originalQuantity);
+  const returnedQuantity = normalizeWarehouseQuantity(data.returnedQuantity);
+  const pendingQuantity = data.pendingQuantity == null
+    ? null
+    : normalizeWarehouseQuantity(data.pendingQuantity);
+
+  if (
+    data.schemaVersion !== WAREHOUSE_OUTBOUND_RETURN_SCHEMA_VERSION
+    || !/^cons_[a-f0-9]{64}$/.test(id)
+    || data.id !== id
+    || data.workspaceId !== workspaceId
+    || typeof data.ug !== 'string'
+    || !/^\d{6}$/.test(data.ug)
+    || data.consumptionId !== id
+    || typeof data.materialId !== 'string'
+    || !/^mat_[a-f0-9]{32}$/.test(data.materialId)
+    || originalQuantity === null
+    || originalQuantity <= 0
+    || returnedQuantity === null
+    || returnedQuantity < 0
+    || returnedQuantity > originalQuantity
+    || (pendingQuantity !== null && pendingQuantity <= 0)
+  ) {
+    throw new Error('WAREHOUSE_INVALID_OUTBOUND_RETURN_SUMMARY');
+  }
+
+  return {
+    schemaVersion: WAREHOUSE_OUTBOUND_RETURN_SCHEMA_VERSION,
+    id,
+    workspaceId,
+    ug: data.ug,
+    consumptionId: id,
+    materialId: data.materialId,
+    originalQuantity,
+    returnedQuantity,
+    pendingOperationId:
+      typeof data.pendingOperationId === 'string' ? data.pendingOperationId : null,
+    pendingQuantity,
+    pendingReason:
+      typeof data.pendingReason === 'string' ? data.pendingReason : null,
+    pendingBy:
+      typeof data.pendingBy === 'string' ? data.pendingBy : null,
+    lastReturnOperationId:
+      typeof data.lastReturnOperationId === 'string'
+        ? data.lastReturnOperationId
+        : null,
+    lastReturnMovementId:
+      typeof data.lastReturnMovementId === 'string'
+        ? data.lastReturnMovementId
+        : null,
+    lastReturnAt: timestampToIso(data.lastReturnAt),
+    lastReturnBy:
+      typeof data.lastReturnBy === 'string' ? data.lastReturnBy : null,
+    lastReturnReason:
+      typeof data.lastReturnReason === 'string' ? data.lastReturnReason : null,
+    createdAt: timestampToIso(data.createdAt),
+    updatedAt: timestampToIso(data.updatedAt),
+  };
+}
+
+async function getWarehouseOutboundReturnSummary(
+  workspaceId: string,
+  consumptionId: string
+): Promise<WarehouseOutboundReturnSummary | null> {
+  const path = warehouseDocumentPath(
+    workspaceId,
+    'outboundReturns',
+    consumptionId
+  );
+  const snapshot = await getDoc(doc(db, path));
+  recordWarehouseDocumentReads(workspaceId, snapshot.exists() ? 1 : 0);
+  if (!snapshot.exists()) return null;
+  return parseOutboundReturnSummary(
+    workspaceId,
+    snapshot.id,
+    snapshot.data() as Record<string, unknown>
+  );
+}
+
+async function listWarehouseOutboundReturnSummaries(
+  workspaceId: string,
+  consumptionIds: string[]
+): Promise<Map<string, WarehouseOutboundReturnSummary>> {
+  const ids = Array.from(
+    new Set(
+      consumptionIds.filter((id) => /^cons_[a-f0-9]{64}$/.test(id))
+    )
+  );
+  const result = new Map<string, WarehouseOutboundReturnSummary>();
+  if (!ids.length) return result;
+
+  const path = warehouseDomainPath(workspaceId, 'outboundReturns');
+  for (let index = 0; index < ids.length; index += 30) {
+    const chunk = ids.slice(index, index + 30);
+    const snapshot = await getDocs(
+      query(
+        collection(db, path),
+        where(documentId(), 'in', chunk)
+      )
+    );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
+    for (const entry of snapshot.docs) {
+      const summary = parseOutboundReturnSummary(
+        workspaceId,
+        entry.id,
+        entry.data() as Record<string, unknown>
+      );
+      result.set(summary.consumptionId, summary);
+    }
+  }
+  return result;
 }
 
 async function requireActiveDestination(
@@ -942,6 +1086,11 @@ export async function returnWarehouseStockOutbound(
     'consumptions',
     consumptionId
   );
+  const returnSummaryPath = warehouseDocumentPath(
+    scope.workspaceId,
+    'outboundReturns',
+    consumptionId
+  );
 
   const consumptionSnapshot = await getDoc(doc(db, consumptionPath));
   if (!consumptionSnapshot.exists()) {
@@ -960,13 +1109,6 @@ export async function returnWarehouseStockOutbound(
     || consumption.legacy
   ) {
     throw new Error('WAREHOUSE_OUTBOUND_RETURN_NOT_SUPPORTED');
-  }
-
-  const remaining = normalizeWarehouseQuantity(
-    consumption.quantity - consumption.returnedQuantity
-  );
-  if (remaining === null || quantity > remaining + EPSILON) {
-    throw new Error('WAREHOUSE_OUTBOUND_RETURN_EXCEEDS_REMAINING');
   }
 
   const originalMovementPath = warehouseDocumentPath(
@@ -992,6 +1134,78 @@ export async function returnWarehouseStockOutbound(
   ) {
     throw new Error('WAREHOUSE_OUTBOUND_RETURN_ORIGINAL_INVALID');
   }
+
+  const summaryRef = doc(db, returnSummaryPath);
+
+  await runTransaction(db, async (transaction) => {
+    const summarySnapshot = await transaction.get(summaryRef);
+    const existing = summarySnapshot.exists()
+      ? parseOutboundReturnSummary(
+          scope.workspaceId,
+          summarySnapshot.id,
+          summarySnapshot.data() as Record<string, unknown>
+        )
+      : null;
+
+    if (
+      existing?.pendingOperationId === operationId
+      && existing.pendingQuantity === quantity
+      && existing.pendingReason === reason
+    ) {
+      return;
+    }
+
+    if (existing?.lastReturnOperationId === operationId) {
+      return;
+    }
+
+    if (existing?.pendingOperationId) {
+      throw new Error('WAREHOUSE_OUTBOUND_RETURN_OPERATION_PENDING');
+    }
+
+    const baseReturned = Math.max(
+      consumption.returnedQuantity,
+      existing?.returnedQuantity || 0
+    );
+    const remaining = normalizeWarehouseQuantity(
+      consumption.quantity - baseReturned
+    );
+    if (remaining === null || quantity > remaining + EPSILON) {
+      throw new Error('WAREHOUSE_OUTBOUND_RETURN_EXCEEDS_REMAINING');
+    }
+
+    const common = {
+      schemaVersion: WAREHOUSE_OUTBOUND_RETURN_SCHEMA_VERSION,
+      id: consumptionId,
+      workspaceId: scope.workspaceId,
+      ug: scope.ug,
+      consumptionId,
+      materialId: consumption.materialId,
+      originalQuantity: consumption.quantity,
+      returnedQuantity: baseReturned,
+      pendingOperationId: operationId,
+      pendingQuantity: quantity,
+      pendingReason: reason,
+      pendingBy: scope.uid,
+      lastReturnOperationId: existing?.lastReturnOperationId || null,
+      lastReturnMovementId:
+        existing?.lastReturnMovementId || consumption.lastReturnMovementId,
+      lastReturnAt: existing?.lastReturnAt || consumption.lastReturnAt,
+      lastReturnBy: existing?.lastReturnBy || consumption.lastReturnBy,
+      lastReturnReason:
+        existing?.lastReturnReason || consumption.lastReturnReason,
+      updatedAt: serverTimestamp(),
+    };
+
+    if (existing) {
+      transaction.update(summaryRef, common);
+    } else {
+      transaction.set(summaryRef, {
+        ...common,
+        createdAt: serverTimestamp(),
+      });
+    }
+  });
 
   let expiresOn: string | null = null;
   const warnings: string[] = [];
@@ -1026,42 +1240,53 @@ export async function returnWarehouseStockOutbound(
   );
   warnings.push(...returnedEntry.warnings);
 
-  let updatedConsumption: WarehouseConsumptionRecord;
-
-  try {
-    updatedConsumption = await runTransaction(db, async (transaction) => {
-      const consumptionRef = doc(db, consumptionPath);
-      const latestSnapshot = await transaction.get(consumptionRef);
-      if (!latestSnapshot.exists()) {
-        throw new Error('WAREHOUSE_OUTBOUND_RETURN_CONSUMPTION_NOT_FOUND');
+  const finalizedSummary = await runTransaction(
+    db,
+    async (transaction): Promise<WarehouseOutboundReturnSummary> => {
+      const summarySnapshot = await transaction.get(summaryRef);
+      if (!summarySnapshot.exists()) {
+        throw new Error('WAREHOUSE_OUTBOUND_RETURN_SUMMARY_NOT_FOUND');
       }
 
-      const latest = parseConsumption(
+      const current = parseOutboundReturnSummary(
         scope.workspaceId,
-        latestSnapshot.id,
-        latestSnapshot.data() as Record<string, unknown>
+        summarySnapshot.id,
+        summarySnapshot.data() as Record<string, unknown>
       );
 
-      if (latest.lastReturnMovementId === returnedEntry.entry.movement.id) {
-        return latest;
+      if (
+        current.lastReturnOperationId === operationId
+        && current.lastReturnMovementId === returnedEntry.entry.movement.id
+      ) {
+        return current;
       }
 
-      const latestRemaining = normalizeWarehouseQuantity(
-        latest.quantity - latest.returnedQuantity
-      );
-      if (latestRemaining === null || quantity > latestRemaining + EPSILON) {
-        throw new Error('WAREHOUSE_OUTBOUND_RETURN_EXCEEDS_REMAINING');
+      if (
+        current.pendingOperationId !== operationId
+        || current.pendingQuantity !== quantity
+        || current.pendingReason !== reason
+        || current.pendingBy !== scope.uid
+      ) {
+        throw new Error('WAREHOUSE_OUTBOUND_RETURN_RESERVATION_CONFLICT');
       }
 
       const nextReturned = normalizeWarehouseQuantity(
-        latest.returnedQuantity + quantity
+        current.returnedQuantity + quantity
       );
-      if (nextReturned === null || nextReturned > latest.quantity + EPSILON) {
-        throw new Error('WAREHOUSE_OUTBOUND_RETURN_OVERFLOW');
+      if (
+        nextReturned === null
+        || nextReturned > current.originalQuantity + EPSILON
+      ) {
+        throw new Error('WAREHOUSE_OUTBOUND_RETURN_EXCEEDS_REMAINING');
       }
 
-      transaction.update(consumptionRef, {
+      transaction.update(summaryRef, {
         returnedQuantity: nextReturned,
+        pendingOperationId: null,
+        pendingQuantity: null,
+        pendingReason: null,
+        pendingBy: null,
+        lastReturnOperationId: operationId,
         lastReturnMovementId: returnedEntry.entry.movement.id,
         lastReturnAt: serverTimestamp(),
         lastReturnBy: scope.uid,
@@ -1070,23 +1295,32 @@ export async function returnWarehouseStockOutbound(
       });
 
       return {
-        ...latest,
+        ...current,
         returnedQuantity: nextReturned,
+        pendingOperationId: null,
+        pendingQuantity: null,
+        pendingReason: null,
+        pendingBy: null,
+        lastReturnOperationId: operationId,
         lastReturnMovementId: returnedEntry.entry.movement.id,
         lastReturnAt: new Date().toISOString(),
         lastReturnBy: scope.uid,
         lastReturnReason: reason,
         updatedAt: new Date().toISOString(),
       };
-    });
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, consumptionPath);
-    throw error;
-  }
+    }
+  );
 
   return {
     movement: returnedEntry.entry.movement,
-    consumption: updatedConsumption,
+    consumption: {
+      ...consumption,
+      returnedQuantity: finalizedSummary.returnedQuantity,
+      lastReturnMovementId: finalizedSummary.lastReturnMovementId,
+      lastReturnAt: finalizedSummary.lastReturnAt,
+      lastReturnBy: finalizedSummary.lastReturnBy,
+      lastReturnReason: finalizedSummary.lastReturnReason,
+    },
     balance: returnedEntry.entry.balance,
     locationBalance: returnedEntry.transfer.toBalance,
     lot: returnedEntry.validity,
@@ -1864,6 +2098,31 @@ export async function listWarehouseConsumptionReport(
     records.sort((left, right) =>
       (right.occurredAt || '').localeCompare(left.occurredAt || '')
     );
+  }
+
+  const returnSummaries = await listWarehouseOutboundReturnSummaries(
+    scope.workspaceId,
+    records
+      .filter((record) => record.origin === 'STOCK_OUTBOUND' && !record.legacy)
+      .map((record) => record.id)
+  );
+
+  for (let index = 0; index < records.length; index += 1) {
+    const record = records[index];
+    const summary = returnSummaries.get(record.id);
+    if (!summary) continue;
+    records[index] = {
+      ...record,
+      returnedQuantity: Math.max(
+        record.returnedQuantity,
+        summary.returnedQuantity
+      ),
+      lastReturnMovementId:
+        summary.lastReturnMovementId || record.lastReturnMovementId,
+      lastReturnAt: summary.lastReturnAt || record.lastReturnAt,
+      lastReturnBy: summary.lastReturnBy || record.lastReturnBy,
+      lastReturnReason: summary.lastReturnReason || record.lastReturnReason,
+    };
   }
 
   return { records, truncated, legacyCoverageLimited };
