@@ -1,5 +1,5 @@
 import { WarehouseProtectedSurface } from '../../../features/warehouse/components/WarehouseProtectedSurface';
 
-export default function WarehouseDepotsPage() {
-  return <WarehouseProtectedSurface section="depots" />;
+export default function WarehouseOverviewPage() {
+  return <WarehouseProtectedSurface section="overview" />;
 }
