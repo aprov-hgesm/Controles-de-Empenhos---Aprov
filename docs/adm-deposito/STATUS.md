@@ -3351,3 +3351,17 @@ Consolidação aplicada:
 - edição de código de barras por substituição auditável, mantendo o código anterior inativo.
 
 Nenhuma alteração em `firestore.warehouse.rules` foi necessária. A etapa deve ser validada com typecheck, teste de estoque, guard modular e security test.
+
+
+### Controle de Itens — correção de localização física na ficha — 2026-09-27
+
+Correção aplicada após inspeção visual de material parcialmente alocado:
+- saldo em `LOCATION` é considerado localizado mesmo quando `subpositionId = null`;
+- saldo em `SUBPOSITION` também permanece localizado;
+- apenas `UNASSIGNED` representa quantidade sem localização;
+- a lista visual de localizações físicas deixou de incluir o documento `UNASSIGNED`, eliminando a exibição duplicada de “Sem localização”;
+- o saldo não atribuído continua aparecendo uma única vez, derivado do saldo agregado menos as posições físicas reais;
+- palete, freezer, geladeira, mesa, bancada e demais locais não exigem subposição para receber estoque;
+- subposições continuam opcionais para estruturas que precisem de granularidade adicional.
+
+A correção não altera ledger, balances, locationBalances, lotes ou Firestore Rules. Foram adicionados testes direcionados e proteção no guard modular.
