@@ -77,6 +77,14 @@ const warehouseHomeStyles = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseHomeOperational.module.css'),
   'utf8'
 );
+const warehouseLanding = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseLandingOperational.tsx'),
+  'utf8'
+);
+const warehouseLandingStyles = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseLandingOperational.module.css'),
+  'utf8'
+);
 const warehouseModuleShell = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseModuleShell.tsx'),
   'utf8'
@@ -119,6 +127,18 @@ const inventoryHistoryReport = readFileSync(
 );
 const navigation = readFileSync(
   resolve(root, 'features/warehouse/navigation.ts'),
+  'utf8'
+);
+const warehouseRootRoute = readFileSync(
+  resolve(root, 'app/adm-deposito/page.tsx'),
+  'utf8'
+);
+const warehouseOverviewRoute = readFileSync(
+  resolve(root, 'app/adm-deposito/meus-depositos/page.tsx'),
+  'utf8'
+);
+const warehouseDepotsRoute = readFileSync(
+  resolve(root, 'app/adm-deposito/controle-de-depositos/page.tsx'),
   'utf8'
 );
 const outboundRoute = readFileSync(
@@ -415,6 +435,16 @@ for (const sourcePath of [
 
 requireText(
   sectionContent,
+  "if (section === 'home')",
+  'Início deve permanecer como superfície visual real.'
+);
+requireText(
+  sectionContent,
+  '<WarehouseLandingOperational workspaceId={workspaceId} />',
+  'Início perdeu a visão geral visual dos depósitos.'
+);
+requireText(
+  sectionContent,
   "if (section === 'overview')",
   'Meus Depósitos deve permanecer como superfície operacional real.'
 );
@@ -632,9 +662,88 @@ requireText(
 );
 requireText(
   warehouseModuleShell,
-  '<AppBackground immersive={isHome} />',
-  'Shell do ADM deixou de ativar o fundo imersivo exclusivamente no Meus Depósitos.'
+  "const isImmersive = section === 'home' || section === 'overview';",
+  'Shell do ADM deixou de manter Início e Meus Depósitos como superfícies imersivas.'
 );
+requireText(
+  warehouseModuleShell,
+  '<AppBackground immersive={isImmersive} />',
+  'Shell do ADM deixou de aplicar o fundo imersivo ao Início e Meus Depósitos.'
+);
+requireText(
+  navigation,
+  "id: 'home'",
+  'Navegação perdeu a nova aba Início.'
+);
+requireText(
+  navigation,
+  "href: '/adm-deposito/meus-depositos'",
+  'Meus Depósitos perdeu sua rota dedicada.'
+);
+requireText(
+  navigation,
+  "href: '/adm-deposito/controle-de-depositos'",
+  'Controle de Depósitos perdeu sua rota dedicada.'
+);
+requireText(
+  warehouseRootRoute,
+  'section="home"',
+  'Rota raiz do ADM Depósito deixou de abrir o novo Início.'
+);
+requireText(
+  warehouseOverviewRoute,
+  'section="overview"',
+  'Rota Meus Depósitos deixou de abrir a central visual premium.'
+);
+requireText(
+  warehouseDepotsRoute,
+  'section="depots"',
+  'Rota Controle de Depósitos deixou de abrir a manutenção estrutural.'
+);
+requireText(
+  warehouseLanding,
+  'listWarehouseDepots(workspaceId, 250)',
+  'Início deixou de carregar os depósitos de forma bounded.'
+);
+requireText(
+  warehouseLanding,
+  'listWarehouseDepotLayouts(workspaceId, 150)',
+  'Início deixou de reutilizar os croquis oficiais de forma bounded.'
+);
+requireText(
+  warehouseLanding,
+  'loadWarehouseInvoiceIntakeQueue(workspaceId)',
+  'Início deixou de refletir as pendências reais de alocação.'
+);
+requireText(
+  warehouseLanding,
+  "row.pendingQuantity > 0.000001",
+  'Paletes do Início deixaram de representar somente itens realmente pendentes.'
+);
+requireText(
+  warehouseLanding,
+  '/adm-deposito/meus-depositos?deposito=',
+  'Clique em depósito no Início deixou de direcionar para Meus Depósitos.'
+);
+requireText(
+  warehouseLandingStyles,
+  'transform: perspective(610px) rotateX(64deg);',
+  'Início perdeu a grade em perspectiva compatível com os croquis 3D.'
+);
+for (const forbiddenLandingToken of [
+  'listWarehouseMaterials(',
+  'listWarehousePositiveBalances(',
+  'listWarehousePositiveLocationBalances(',
+  'listWarehouseLots(',
+  'transferWarehouseStock(',
+  'saveWarehouseMaterial(',
+  'allocateWarehousePendingItem(',
+]) {
+  if (warehouseLanding.includes(forbiddenLandingToken)) {
+    fail('Início visual voltou a carregar ou executar operação desnecessária: ' + forbiddenLandingToken);
+  }
+}
+
 for (const forbiddenToken of [
   'Lotes e validade',
   'Lote {lot.code}',
@@ -1274,8 +1383,8 @@ if (findings.length) {
 }
 
 console.log('ADM Depósito modular guard: PASS');
-console.log('- Meus Depósitos premium, Controle de Depósitos, Alocação de Material, Saída de Material e Controle de Materiais operacionais');
-console.log('- Meus Depósitos reutiliza a Visão 3D oficial, sem lote visível nem ações operacionais duplicadas');
+console.log('- Início visual, Meus Depósitos premium, Controle de Depósitos, Alocação de Material, Saída de Material e Controle de Materiais operacionais');
+console.log('- Início projeta todos os depósitos e pendências sem operações; Meus Depósitos mantém a Visão 3D consultiva');
 console.log('- rules em ' + (rulesBytes / 1024).toFixed(2) + ' KiB (orçamento interno: 150 KiB)');
 console.log('- NF/Pregão podem ser armazenados, consumidos imediatamente ou removidos logicamente da fila');
 console.log('- Entrada avulsa registra procedência diversa via MANUAL_ENTRY e reutiliza ledger + TRANSFER oficiais');
