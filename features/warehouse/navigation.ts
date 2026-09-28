@@ -16,7 +16,7 @@ export interface WarehouseSectionDefinition {
 export const WAREHOUSE_SECTIONS: readonly WarehouseSectionDefinition[] = [
   {
     id: 'overview',
-    label: 'Início',
+    label: 'Meus Depósitos',
     href: '/adm-deposito',
     eyebrow: 'Central visual do depósito',
     description: 'Central visual com Visão 3D do depósito, consulta de materiais, saldo, localização e validade.'
