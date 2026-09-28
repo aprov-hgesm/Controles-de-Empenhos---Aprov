@@ -1,4 +1,5 @@
 export type WarehouseSectionId =
+  | 'home'
   | 'overview'
   | 'registration'
   | 'outbound'
@@ -15,9 +16,16 @@ export interface WarehouseSectionDefinition {
 
 export const WAREHOUSE_SECTIONS: readonly WarehouseSectionDefinition[] = [
   {
+    id: 'home',
+    label: 'Início',
+    href: '/adm-deposito',
+    eyebrow: 'Visão geral',
+    description: 'Visão visual consolidada dos depósitos e das pendências de alocação.'
+  },
+  {
     id: 'overview',
     label: 'Meus Depósitos',
-    href: '/adm-deposito',
+    href: '/adm-deposito/controle-de-depositos',
     eyebrow: 'Central visual do depósito',
     description: 'Central visual com Visão 3D do depósito, consulta de materiais, saldo, localização e validade.'
   },
