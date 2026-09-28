@@ -593,25 +593,6 @@ function parseOutboundReturnSummary(
   };
 }
 
-async function getWarehouseOutboundReturnSummary(
-  workspaceId: string,
-  consumptionId: string
-): Promise<WarehouseOutboundReturnSummary | null> {
-  const path = warehouseDocumentPath(
-    workspaceId,
-    'outboundReturns',
-    consumptionId
-  );
-  const snapshot = await getDoc(doc(db, path));
-  recordWarehouseDocumentReads(workspaceId, snapshot.exists() ? 1 : 0);
-  if (!snapshot.exists()) return null;
-  return parseOutboundReturnSummary(
-    workspaceId,
-    snapshot.id,
-    snapshot.data() as Record<string, unknown>
-  );
-}
-
 async function listWarehouseOutboundReturnSummaries(
   workspaceId: string,
   consumptionIds: string[]
@@ -1188,12 +1169,10 @@ export async function returnWarehouseStockOutbound(
       pendingReason: reason,
       pendingBy: scope.uid,
       lastReturnOperationId: existing?.lastReturnOperationId || null,
-      lastReturnMovementId:
-        existing?.lastReturnMovementId || consumption.lastReturnMovementId,
-      lastReturnAt: existing?.lastReturnAt || consumption.lastReturnAt,
-      lastReturnBy: existing?.lastReturnBy || consumption.lastReturnBy,
-      lastReturnReason:
-        existing?.lastReturnReason || consumption.lastReturnReason,
+      lastReturnMovementId: existing?.lastReturnMovementId || null,
+      lastReturnAt: existing?.lastReturnAt || null,
+      lastReturnBy: existing?.lastReturnBy || null,
+      lastReturnReason: existing?.lastReturnReason || null,
       updatedAt: serverTimestamp(),
     };
 
