@@ -12,6 +12,20 @@ export function hasWarehouseAvailableStock(quantity: number): boolean {
   return Number.isFinite(quantity) && quantity > 0;
 }
 
+export type WarehouseStockExpiryFilter =
+  | ''
+  | 'EXPIRED'
+  | 'NEAR_EXPIRY'
+  | 'VALID'
+  | 'NO_EXPIRY';
+
+export function matchesWarehouseExpiryState(
+  states: readonly string[],
+  filter: WarehouseStockExpiryFilter
+): boolean {
+  return !filter || states.includes(filter);
+}
+
 export function compareWarehouseStockAvailability(
   left: WarehouseStockAvailabilityLike,
   right: WarehouseStockAvailabilityLike
