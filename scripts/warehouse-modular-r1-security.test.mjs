@@ -1817,6 +1817,7 @@ async function main() {
   console.log('- edição de barcode preserva o código anterior inativo e cria o substituto ativo');
   console.log('- inventário conta sem alterar estoque e só INVENTORY_ADJUSTMENT confirmado modifica ledger/saldos');
   console.log('- TRANSFER não regrava o saldo agregado quando a quantidade total não muda');
+  console.log('- OUTBOUND_RETURN devolve somente o remanescente permitido e preserva a saída original');
   console.log('- operações com estoque continuam obrigadas a respeitar ledger e invariantes');
 }
 
