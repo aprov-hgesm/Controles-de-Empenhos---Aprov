@@ -2286,3 +2286,4 @@ Data: 2026-09-28.
 - Para evitar poluição visual, a **Início não exibe etiquetas individuais dos locais nem códigos de subposição sobre as estruturas**; esses detalhes permanecem disponíveis em Meus Depósitos.
 - Textos essenciais da cena (nome dos depósitos, identificação dos paletes e cabeçalho de recebimento) devem ser renderizados em **camada final de overlay**, acima da geometria SVG, com fundo/contorno de contraste quando necessário.
 - A ocupação física do estoque deve ser mostrada por pequenas caixas sobre a estrutura correspondente, reutilizando a mesma lógica visual por faixas da Visão 3D oficial (`<=0`: nenhuma; `<5`: 1; `<20`: 2; `<60`: 3; demais: 4), sem desenhar uma unidade por item e sem exibir legendas permanentes dos materiais.
+- A **caixa oficial da Início é única**: estoque já alocado e caixas da área de recebimento reutilizam o mesmo renderer isométrico (mesmos volumes, faces, cores, contornos e sombra), variando apenas tamanho e posição.
