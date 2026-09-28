@@ -3420,3 +3420,16 @@ Correção aplicada:
 - guard da FASE 7 agora valida `id: 'stock'` e `label: 'Estoque'` separadamente;
 - referências visíveis residuais a lote foram removidas da descrição do Controle de Itens, do Resumo e da navegação;
 - permanecem internos apenas os contratos técnicos necessários à compatibilidade de validade/FEFO/baixa.
+
+
+### Simplificação do item — validação final — 2026-09-28
+
+Validação concluída no commit `36da7dc`:
+- `npm.cmd run typecheck` — PASS;
+- `npm.cmd run verify:adm-deposito-phase-7` — PASS;
+- `npm.cmd run verify:adm-deposito-modular-r1` — PASS;
+- testes direcionados anteriores permanecem válidos: Estoque 20/20 PASS e barcode/saída 10/10 PASS;
+- o dado de lote foi removido da experiência do operador;
+- Descritivo, Validade e Código de Barras são os dados editáveis visíveis do item;
+- referências a lote remanescentes são exclusivamente técnicas/internas para compatibilidade de validade, FEFO, baixa, histórico e segurança;
+- nenhuma Firestore Rule foi alterada e nenhum deploy adicional é necessário.
