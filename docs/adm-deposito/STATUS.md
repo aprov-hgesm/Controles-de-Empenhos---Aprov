@@ -3330,3 +3330,24 @@ Validação local concluída em 2026-09-27 no commit `a4de2a6`:
 - `npm.cmd run test:adm-deposito-stock-operational` — PASS, 18/18 testes;
 - `npm.cmd run verify:adm-deposito-modular-r1` — PASS;
 - Rules permaneceram inalteradas, portanto sem necessidade de novo deploy no database `emprovex-warehouse`.
+
+
+### Controle de Itens — manutenção logística unificada — 2026-09-27
+
+A ficha detalhada de Controle de Itens → Estoque passou a concentrar a manutenção logística do material já armazenado.
+
+Reaproveitamento confirmado:
+- `WarehouseAllocatedItemsOperational` já possuía edição de lote, validade e inclusão de barcode;
+- `WarehouseStockOperational` já possuía criação/edição de lote e validade;
+- `transferWarehouseStock` já era o motor oficial de transferência física entre posições.
+
+Consolidação aplicada:
+- alteração de localidade pela própria ficha;
+- transferência integral da posição, registrada como `TRANSFER`;
+- saldo agregado não é regravado em transferência de posição;
+- lotes ativos da posição acompanham a realocação na mesma transação;
+- inclusão e edição de lote e validade;
+- inclusão de código de barras;
+- edição de código de barras por substituição auditável, mantendo o código anterior inativo.
+
+Nenhuma alteração em `firestore.warehouse.rules` foi necessária. A etapa deve ser validada com typecheck, teste de estoque, guard modular e security test.
