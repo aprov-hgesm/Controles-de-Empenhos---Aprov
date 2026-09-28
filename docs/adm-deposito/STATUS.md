@@ -3254,3 +3254,34 @@ Confirmações do Cloud Shell:
 Com isso, o domínio `inventories` e a configuração completa de **Controle de Itens** passaram a estar habilitados também no banco real dedicado, mantendo founder-only, workspace/UG, invariantes de ledger/saldo e bloqueio de gravações arbitrárias.
 
 Próxima validação operacional: smoke test no localhost das subabas **Resumo, Estoque, Movimentações, Inventário e Relatórios**, sem necessidade de novo deploy Vercel.
+
+
+### Estoque — somente saldo disponível e prioridade por validade — 2026-09-27
+
+Correção aplicada após validação visual da subaba **Estoque**:
+
+Problema encontrado:
+- documentos de `balances` com quantidade zero ainda eram carregados e materializados na lista;
+- isso fazia materiais consumidos integralmente como **consumo imediato** continuarem aparecendo como se fossem estoque;
+- a lista não tinha prioridade explícita pela menor validade.
+
+Correção:
+- nova consulta `listWarehousePositiveBalances` usa `where('quantity', '>', 0)` diretamente no Firestore dedicado;
+- a UI mantém uma segunda defesa local com `hasWarehouseAvailableStock(balance.quantity)`;
+- somente lotes ativos e com quantidade positiva compõem a validade atual do item;
+- a lista é ordenada por menor `nearestExpiry`;
+- materiais sem validade ficam ao final;
+- empate é resolvido pela descrição;
+- o cartão passa a contar apenas lotes atuais com saldo;
+- o filtro por validade ignora lotes esgotados/inativos.
+
+Impacto:
+- consumo imediato com saldo zero deixa de aparecer em Estoque;
+- saída total também retira o item da lista;
+- estoque físico positivo continua visível;
+- nenhuma Firestore Rule ou contrato de persistência foi alterado;
+- a mudança reduz leituras desnecessárias de balances zerados.
+
+Cobertura:
+- testes unitários adicionados para saldo > 0, ordenação por validade e desempate por descrição;
+- guard modular protege a consulta Firestore positiva, o filtro local e a ordenação por validade.
