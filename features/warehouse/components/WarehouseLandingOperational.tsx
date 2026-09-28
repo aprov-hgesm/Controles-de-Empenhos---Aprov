@@ -8,10 +8,12 @@ import {
   listWarehouseDepotLayouts,
   type WarehouseDepotLayoutListItem,
 } from '../../../lib/warehouse/layoutRepository';
-import type { WarehouseDepot } from '../../../lib/warehouse/location';
+import type { WarehouseDepot, WarehouseLocation } from '../../../lib/warehouse/location';
 import {
   listWarehouseDepots,
+  listWarehouseLocations,
   type WarehouseDepotListItem,
+  type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
 import {
   loadWarehouseInvoiceIntakeQueue,
@@ -24,6 +26,7 @@ interface LandingData {
   error: string | null;
   depots: WarehouseDepotListItem[];
   layouts: WarehouseDepotLayoutListItem[];
+  locations: WarehouseLocationListItem[];
   pendingRows: WarehouseInvoiceIntakeQueueRow[];
   pendingAvailable: boolean;
 }
@@ -53,6 +56,7 @@ const INITIAL_DATA: LandingData = {
   error: null,
   depots: [],
   layouts: [],
+  locations: [],
   pendingRows: [],
   pendingAvailable: true,
 };
@@ -86,77 +90,59 @@ function polygonPoints(points: IsoPoint[]): string {
   return points.map((point) => point.x.toFixed(1) + ',' + point.y.toFixed(1)).join(' ');
 }
 
-function objectHeight(kind: WarehouseDepotLayoutObject['kind'], scale: number): number {
-  const base = kind === 'SHELF'
-    ? 90
+function objectHeight(kind: WarehouseDepotLayoutObject['kind'], scale: number, subpositions = 0): number {
+  const base = kind === 'SHELF' || kind === 'RACK'
+    ? 112 + Math.min(7, subpositions) * 4
     : kind === 'REFRIGERATOR'
-      ? 92
+      ? 124
       : kind === 'FREEZER' || kind === 'CHAMBER'
-        ? 54
+        ? 72
         : kind === 'PALLET'
-          ? 12
+          ? 15
           : kind === 'BENCH' || kind === 'CABINET'
-            ? 44
-            : kind === 'OTHER'
-              ? 40
-              : 28;
-  return Math.max(7, base * Math.min(1.05, Math.max(0.48, scale)));
+            ? 58
+            : kind === 'WALL'
+              ? 78
+              : 34;
+  return Math.max(8, base * Math.min(1.02, Math.max(0.48, scale)));
 }
 
-function objectPalette(kind: WarehouseDepotLayoutObject['kind']): {
-  top: string;
-  front: string;
-  side: string;
-  stroke: string;
-  accent?: string;
-} {
-  if (kind === 'PALLET') {
-    return {
-      top: '#b9864d',
-      front: '#79502d',
-      side: '#5c3a21',
-      stroke: '#d7ad79',
-    };
-  }
-  if (kind === 'FREEZER' || kind === 'CHAMBER') {
-    return {
-      top: '#e3eef4',
-      front: '#91aebc',
-      side: '#698696',
-      stroke: '#dcf4ff',
-    };
-  }
-  if (kind === 'REFRIGERATOR') {
-    return {
-      top: '#edf2f4',
-      front: '#a3b1b8',
-      side: '#71828b',
-      stroke: '#f8fbfc',
-    };
-  }
-  if (kind === 'BENCH' || kind === 'CABINET') {
-    return {
-      top: '#dce5e9',
-      front: '#889aa3',
-      side: '#647681',
-      stroke: '#eef5f7',
-    };
-  }
-  if (kind === 'OTHER') {
-    return {
-      top: '#5d72a0',
-      front: '#35466a',
-      side: '#273550',
-      stroke: '#92a8dc',
-    };
-  }
-  return {
-    top: '#175b8d',
-    front: '#0e3f69',
-    side: '#082d4f',
-    stroke: '#61a9df',
-    accent: '#ed8d21',
-  };
+function renderLocationTag(
+  point: IsoPoint,
+  location: WarehouseLocation | null,
+  fallback: string,
+  detail?: string
+) {
+  const code = location?.code || fallback;
+  const name = location?.name || '';
+  const width = Math.max(42, Math.min(92, 18 + code.length * 5.3));
+  return (
+    <g transform={'translate(' + point.x + ' ' + point.y + ')'} pointerEvents="none">
+      <line x1="0" y1="0" x2="0" y2="-11" stroke="#9fb0bf" strokeWidth="0.85" opacity="0.7" />
+      <circle cy="-11" r="1.8" fill="#94a3b8" />
+      <g transform="translate(0 -15)">
+        <rect
+          x={-width / 2}
+          y="-22"
+          width={width}
+          height={detail || name ? 30 : 21}
+          rx="5.5"
+          fill="#ffffff"
+          stroke="#d6e0e8"
+          strokeWidth="0.8"
+          opacity="0.96"
+        />
+        <text x="0" y="-9" textAnchor="middle" fontSize="7.2" fontWeight="900" fill="#173a5e">
+          {code}
+        </text>
+        {(detail || name) && (
+          <text x="0" y="1" textAnchor="middle" fontSize="5.4" fontWeight="700" fill="#60758a">
+            {(detail || name).slice(0, 20)}
+          </text>
+        )}
+      </g>
+    </g>
+  );
 }
 
 function buildPendingGroups(rows: WarehouseInvoiceIntakeQueueRow[]): PendingInvoiceGroup[] {
@@ -230,14 +216,22 @@ function derivePlacements(
 
 function renderDepotObject(
   object: WarehouseDepotLayoutObject,
-  placement: DepotPlacement
+  placement: DepotPlacement,
+  locationById: Map<string, WarehouseLocation>,
+  subpositionsByParent: Map<string, WarehouseLocation[]>
 ) {
   const localScale = placement.scale;
   const x = placement.x + object.x * localScale;
   const y = placement.y + object.y * localScale;
   const width = Math.max(2.6, object.width * localScale);
   const height = Math.max(2.6, object.height * localScale);
-  const z = objectHeight(object.kind, localScale);
+  const location = object.warehouseLocationId
+    ? locationById.get(object.warehouseLocationId) || null
+    : null;
+  const subpositions = object.warehouseLocationId
+    ? subpositionsByParent.get(object.warehouseLocationId) || []
+    : [];
+  const z = objectHeight(object.kind, localScale, subpositions.length);
   const a = isoPoint(x, y, 0);
   const b = isoPoint(x + width, y, 0);
   const c = isoPoint(x + width, y + height, 0);
@@ -246,69 +240,242 @@ function renderDepotObject(
   const bt = isoPoint(x + width, y, z);
   const ct = isoPoint(x + width, y + height, z);
   const dt = isoPoint(x, y + height, z);
-  const colors = objectPalette(object.kind);
+  const centerTop = isoPoint(x + width / 2, y + height / 2, z);
 
-  if (object.kind === 'WALL') {
+  if (object.kind === 'CORRIDOR' || object.kind === 'AREA' || object.kind === 'ZONE') {
+    const zoneFill = object.kind === 'CORRIDOR' ? '#eef5fa' : '#e6f0f8';
     return (
-      <g key={object.id} opacity="0.58">
+      <g key={object.id} opacity="0.76">
         <polygon
-          points={polygonPoints([d, c, ct, dt])}
-          fill="#22365e"
-          stroke="#6684c1"
-          strokeOpacity="0.48"
-          strokeWidth="0.9"
+          points={polygonPoints([a, b, c, d])}
+          fill={zoneFill}
+          fillOpacity={object.kind === 'CORRIDOR' ? '0.32' : '0.22'}
+          stroke="#b8c9d9"
+          strokeOpacity="0.72"
+          strokeWidth="0.7"
+          strokeDasharray={object.kind === 'CORRIDOR' ? '4 4' : undefined}
         />
+        {object.warehouseLocationId && renderLocationTag(
+          isoPoint(x + width / 2, y + height / 2, 2),
+          location,
+          object.label
+        )}
       </g>
     );
   }
 
-  if (object.kind === 'CORRIDOR') {
+  if (object.kind === 'WALL') {
     return (
-      <polygon
-        key={object.id}
-        points={polygonPoints([a, b, c, d])}
-        fill="#5b78bc"
-        fillOpacity="0.055"
-        stroke="#7594d7"
-        strokeOpacity="0.13"
-        strokeWidth="0.75"
-        strokeDasharray="4 5"
-      />
+      <g key={object.id} opacity="0.9">
+        <polygon points={polygonPoints([d, c, ct, dt])} fill="#e7eef3" stroke="#9bb0c1" strokeWidth="0.9" />
+        <polygon points={polygonPoints([b, c, ct, bt])} fill="#c9d6df" stroke="#91a7b8" strokeWidth="0.8" />
+        <line x1={dt.x} y1={dt.y} x2={ct.x} y2={ct.y} stroke="#ffffff" strokeWidth="1.2" opacity="0.9" />
+      </g>
+    );
+  }
+
+  if (object.kind === 'PALLET') {
+    return (
+      <g key={object.id} filter="url(#worldObjectShadow)">
+        <polygon points={polygonPoints([d, c, ct, dt])} fill="#c4813c" stroke="#895426" strokeWidth="0.8" />
+        <polygon points={polygonPoints([b, c, ct, bt])} fill="#ac6930" stroke="#75431e" strokeWidth="0.8" />
+        <polygon points={polygonPoints([at, bt, ct, dt])} fill="#dfaa68" stroke="#93602e" strokeWidth="0.9" />
+        {Array.from({ length: 6 }, (_, index) => {
+          const ratio = (index + 0.5) / 6;
+          const p1 = isoPoint(x + width * ratio, y, z + 0.5);
+          const p2 = isoPoint(x + width * ratio, y + height, z + 0.5);
+          return <line key={index} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#a06932" strokeWidth="0.7" />;
+        })}
+        {object.warehouseLocationId && renderLocationTag(centerTop, location, object.label, 'Palete')}
+      </g>
+    );
+  }
+
+  if (object.kind === 'SHELF' || object.kind === 'RACK') {
+    const levels = Math.max(2, Math.min(6, subpositions.length || 4));
+    const frontBottomLeft = d;
+    const frontBottomRight = c;
+    const frontTopLeft = dt;
+    const frontTopRight = ct;
+    const backBottomLeft = a;
+    const backBottomRight = b;
+    const backTopLeft = at;
+    const backTopRight = bt;
+
+    return (
+      <g key={object.id} filter="url(#worldObjectShadow)">
+        {[backBottomLeft, backBottomRight].map((base, index) => {
+          const top = [backTopLeft, backTopRight][index];
+          return (
+            <line
+              key={'back-post-' + index}
+              x1={base.x}
+              y1={base.y}
+              x2={top.x}
+              y2={top.y}
+              stroke="#123f66"
+              strokeWidth="3.4"
+              strokeLinecap="round"
+            />
+          );
+        })}
+
+        {Array.from({ length: levels }, (_, index) => {
+          const ratio = (index + 1) / (levels + 0.34);
+          const shelfZ = z * ratio;
+          const p1 = isoPoint(x, y, shelfZ);
+          const p2 = isoPoint(x + width, y, shelfZ);
+          const p3 = isoPoint(x + width, y + height, shelfZ);
+          const p4 = isoPoint(x, y + height, shelfZ);
+          const frontLeft = isoPoint(x, y + height, shelfZ - 1.4);
+          const frontRight = isoPoint(x + width, y + height, shelfZ - 1.4);
+          const linked = subpositions[index] || null;
+
+          return (
+            <g key={'level-' + index}>
+              <polygon
+                points={polygonPoints([p1, p2, p3, p4])}
+                fill="#edf2f5"
+                stroke="#aab9c5"
+                strokeWidth="0.55"
+                opacity="0.98"
+              />
+              <line
+                x1={frontLeft.x}
+                y1={frontLeft.y}
+                x2={frontRight.x}
+                y2={frontRight.y}
+                stroke="#f47f13"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+              {linked && (
+                <text
+                  x={(frontLeft.x + frontRight.x) / 2}
+                  y={(frontLeft.y + frontRight.y) / 2 - 3}
+                  textAnchor="middle"
+                  fontSize="4.7"
+                  fontWeight="900"
+                  fill="#234b67"
+                  paintOrder="stroke"
+                  stroke="#ffffff"
+                  strokeWidth="1.8"
+                >
+                  {linked.code}
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+        {[frontBottomLeft, frontBottomRight].map((base, index) => {
+          const top = [frontTopLeft, frontTopRight][index];
+          return (
+            <g key={'front-post-' + index}>
+              <line x1={base.x} y1={base.y} x2={top.x} y2={top.y} stroke="#0e3556" strokeWidth="4.2" strokeLinecap="round" />
+              <line x1={base.x + 1.1} y1={base.y} x2={top.x + 1.1} y2={top.y} stroke="#7196b0" strokeWidth="0.8" opacity="0.75" />
+            </g>
+          );
+        })}
+
+        {object.warehouseLocationId && renderLocationTag(
+          centerTop,
+          location,
+          object.label,
+          subpositions.length ? subpositions.length + ' posições' : 'Estante'
+        )}
+      </g>
+    );
+  }
+
+  if (object.kind === 'REFRIGERATOR') {
+    const splitBottom = isoPoint(x + width / 2, y + height, 3);
+    const splitTop = isoPoint(x + width / 2, y + height, z - 3);
+    return (
+      <g key={object.id} filter="url(#worldObjectShadow)">
+        <polygon points={polygonPoints([d, c, ct, dt])} fill="#cbd4d8" stroke="#657985" strokeWidth="1" />
+        <polygon points={polygonPoints([b, c, ct, bt])} fill="#9eafb8" stroke="#5b707c" strokeWidth="0.9" />
+        <polygon points={polygonPoints([at, bt, ct, dt])} fill="#edf2f4" stroke="#82939d" strokeWidth="0.9" />
+        <line x1={splitBottom.x} y1={splitBottom.y} x2={splitTop.x} y2={splitTop.y} stroke="#71838c" strokeWidth="1.3" />
+        <line x1={dt.x + 3} y1={dt.y + 5} x2={d.x + 3} y2={d.y - 4} stroke="#ffffff" strokeWidth="1.4" opacity="0.55" />
+        {object.warehouseLocationId && renderLocationTag(centerTop, location, object.label, 'Geladeira')}
+      </g>
+    );
+  }
+
+  if (object.kind === 'FREEZER' || object.kind === 'CHAMBER') {
+    return (
+      <g key={object.id} filter="url(#worldObjectShadow)">
+        <polygon points={polygonPoints([d, c, ct, dt])} fill="#b8cad5" stroke="#6c8798" strokeWidth="0.9" />
+        <polygon points={polygonPoints([b, c, ct, bt])} fill="#91adbd" stroke="#648193" strokeWidth="0.9" />
+        <polygon points={polygonPoints([at, bt, ct, dt])} fill="#f4f8fa" stroke="#809cac" strokeWidth="0.9" />
+        <polygon
+          points={polygonPoints([
+            isoPoint(x + width * 0.09, y + height * 0.1, z + 1),
+            isoPoint(x + width * 0.91, y + height * 0.1, z + 1),
+            isoPoint(x + width * 0.91, y + height * 0.9, z + 1),
+            isoPoint(x + width * 0.09, y + height * 0.9, z + 1),
+          ])}
+          fill="#d9f2fb"
+          fillOpacity="0.64"
+          stroke="#73a9bf"
+          strokeWidth="0.7"
+        />
+        {object.warehouseLocationId && renderLocationTag(centerTop, location, object.label, 'Refrigeração')}
+      </g>
+    );
+  }
+
+  if (object.kind === 'BENCH' || object.kind === 'CABINET') {
+    const legPoints = [
+      [x + width * 0.1, y + height * 0.12],
+      [x + width * 0.9, y + height * 0.12],
+      [x + width * 0.1, y + height * 0.88],
+      [x + width * 0.9, y + height * 0.88],
+    ];
+    return (
+      <g key={object.id} filter="url(#worldObjectShadow)">
+        {legPoints.map(([lx, ly], index) => {
+          const bottom = isoPoint(lx, ly, 2);
+          const top = isoPoint(lx, ly, z - 2);
+          return <line key={index} x1={bottom.x} y1={bottom.y} x2={top.x} y2={top.y} stroke="#536a78" strokeWidth="2.8" />;
+        })}
+        <polygon points={polygonPoints([at, bt, ct, dt])} fill="#e8eef1" stroke="#657b88" strokeWidth="1" />
+        <polygon
+          points={polygonPoints([
+            isoPoint(x, y + height, z - 7),
+            isoPoint(x + width, y + height, z - 7),
+            ct,
+            dt,
+          ])}
+          fill="#aebdc5"
+          stroke="#667d8b"
+          strokeWidth="0.85"
+        />
+        {object.warehouseLocationId && renderLocationTag(centerTop, location, object.label, 'Bancada')}
+      </g>
     );
   }
 
   return (
     <g key={object.id} filter="url(#worldObjectShadow)">
-      <polygon points={polygonPoints([d, c, ct, dt])} fill={colors.front} stroke={colors.stroke} strokeWidth="0.85" />
-      <polygon points={polygonPoints([b, c, ct, bt])} fill={colors.side} stroke={colors.stroke} strokeWidth="0.85" />
-      <polygon points={polygonPoints([at, bt, ct, dt])} fill={colors.top} stroke={colors.stroke} strokeWidth="0.95" />
-
-      {object.kind === 'SHELF' && [0.28, 0.52, 0.76].map((ratio) => {
-        const left = isoPoint(x, y + height, z * ratio);
-        const right = isoPoint(x + width, y + height, z * ratio);
-        return (
-          <line
-            key={ratio}
-            x1={left.x}
-            y1={left.y}
-            x2={right.x}
-            y2={right.y}
-            stroke={colors.accent}
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            opacity="0.92"
-          />
-        );
-      })}
+      <polygon points={polygonPoints([d, c, ct, dt])} fill="#dce6ec" stroke="#7e94a4" strokeWidth="0.9" />
+      <polygon points={polygonPoints([b, c, ct, bt])} fill="#b7c7d1" stroke="#718899" strokeWidth="0.85" />
+      <polygon points={polygonPoints([at, bt, ct, dt])} fill="#f4f7f9" stroke="#8fa3b1" strokeWidth="0.9" />
+      {object.warehouseLocationId && renderLocationTag(centerTop, location, object.label)}
     </g>
   );
 }
 
 function DepotWorld({
   placement,
+  locationById,
+  subpositionsByParent,
   onOpen,
 }: {
   placement: DepotPlacement;
+  locationById: Map<string, WarehouseLocation>;
+  subpositionsByParent: Map<string, WarehouseLocation[]>;
   onOpen: (depotId: string) => void;
 }) {
   const { depot, layout } = placement;
@@ -357,7 +524,7 @@ function DepotWorld({
               const rightDepth = (right.x + right.y) * placement.scale + right.layer * 0.001;
               return leftDepth - rightDepth;
             })
-            .map((object) => renderDepotObject(object, placement))
+            .map((object) => renderDepotObject(object, placement, locationById, subpositionsByParent))
         : (
           <g opacity="0.58">
             <polygon
@@ -491,9 +658,10 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
   const load = useCallback(async () => {
     setData((current) => ({ ...current, loading: true, error: null }));
     try {
-      const [depots, layouts, queue] = await Promise.all([
+      const [depots, layouts, locations, queue] = await Promise.all([
         listWarehouseDepots(workspaceId, 250),
         listWarehouseDepotLayouts(workspaceId, 150),
+        listWarehouseLocations(workspaceId, 500),
         loadWarehouseInvoiceIntakeQueue(workspaceId).catch(() => null),
       ]);
 
@@ -502,6 +670,7 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
         error: null,
         depots,
         layouts,
+        locations,
         pendingRows: queue?.rows || [],
         pendingAvailable: Boolean(queue),
       });
@@ -544,6 +713,34 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
     () => derivePlacements(activeDepots, activeLayoutByDepot),
     [activeDepots, activeLayoutByDepot]
   );
+
+  const activeLocations = useMemo(
+    () => data.locations
+      .map((item) => item.location)
+      .filter((location) => location.status === 'active'),
+    [data.locations]
+  );
+
+  const locationById = useMemo(
+    () => new Map(activeLocations.map((location) => [location.id, location])),
+    [activeLocations]
+  );
+
+  const subpositionsByParent = useMemo(() => {
+    const map = new Map<string, WarehouseLocation[]>();
+    for (const location of activeLocations) {
+      if (location.kind !== 'SUBPOSITION' || !location.parentLocationId) continue;
+      const current = map.get(location.parentLocationId) || [];
+      current.push(location);
+      map.set(location.parentLocationId, current);
+    }
+    for (const current of map.values()) {
+      current.sort((left, right) =>
+        left.code.localeCompare(right.code, 'pt-BR', { numeric: true })
+      );
+    }
+    return map;
+  }, [activeLocations]);
 
   const pendingGroups = useMemo(
     () => buildPendingGroups(data.pendingRows),
@@ -699,6 +896,8 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
             <DepotWorld
               key={placement.depot.id}
               placement={placement}
+              locationById={locationById}
+              subpositionsByParent={subpositionsByParent}
               onOpen={openDepot}
             />
           ))}
