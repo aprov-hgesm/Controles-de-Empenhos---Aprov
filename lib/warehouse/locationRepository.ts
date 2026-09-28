@@ -54,6 +54,7 @@ import {
   type WarehouseStockPosition,
 } from './location';
 import { validateWarehouseBalance } from './movement';
+import { isValidWarehouseLotId } from './lot';
 import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
 
 export interface WarehouseDepotListItem {
@@ -113,6 +114,11 @@ export interface TransferWarehouseStockInput {
   to: WarehouseStockPosition;
   idempotencyKey: string;
   note?: string | null;
+  /**
+   * Lotes ativos que ocupam a posição de origem e devem acompanhar uma
+   * realocação integral. A atualização ocorre na mesma transação do TRANSFER.
+   */
+  relocateLotIds?: string[];
 }
 
 export interface TransferWarehouseStockResult {
@@ -608,11 +614,19 @@ export async function transferWarehouseStock(
   const fromBalanceId = await createWarehouseLocationBalanceId(scope.workspaceId, input.materialId, from);
   const toBalanceId = await createWarehouseLocationBalanceId(scope.workspaceId, input.materialId, to);
 
+  const relocateLotIds = Array.from(new Set(input.relocateLotIds || []));
+  if (relocateLotIds.length > 24 || relocateLotIds.some((lotId) => !isValidWarehouseLotId(lotId))) {
+    throw new Error('WAREHOUSE_TRANSFER_INVALID_LOT_RELOCATION');
+  }
+
   const materialPath = warehouseDocumentPath(scope.workspaceId, 'materials', input.materialId);
   const movementPath = warehouseDocumentPath(scope.workspaceId, 'movements', movementId);
   const balancePath = warehouseDocumentPath(scope.workspaceId, 'balances', input.materialId);
   const fromBalancePath = warehouseDocumentPath(scope.workspaceId, 'locationBalances', fromBalanceId);
   const toBalancePath = warehouseDocumentPath(scope.workspaceId, 'locationBalances', toBalanceId);
+  const relocateLotPaths = relocateLotIds.map((lotId) =>
+    warehouseDocumentPath(scope.workspaceId, 'lots', lotId)
+  );
 
   try {
     return await runTransaction(db, async (transaction) => {
@@ -621,6 +635,7 @@ export async function transferWarehouseStock(
       const balanceRef = doc(db, balancePath);
       const fromBalanceRef = doc(db, fromBalancePath);
       const toBalanceRef = doc(db, toBalancePath);
+      const relocateLotRefs = relocateLotPaths.map((path) => doc(db, path));
 
       const [materialSnapshot, movementSnapshot, balanceSnapshot, fromSnapshot, toSnapshot] = await Promise.all([
         transaction.get(materialRef),
@@ -629,6 +644,9 @@ export async function transferWarehouseStock(
         transaction.get(fromBalanceRef),
         transaction.get(toBalanceRef),
       ]);
+      const relocateLotSnapshots = await Promise.all(
+        relocateLotRefs.map((lotRef) => transaction.get(lotRef))
+      );
 
       if (!materialSnapshot.exists()) throw new Error('WAREHOUSE_MATERIAL_NOT_FOUND');
       if (!balanceSnapshot.exists()) throw new Error('WAREHOUSE_BALANCE_NOT_FOUND');
@@ -715,6 +733,29 @@ export async function transferWarehouseStock(
         movementId,
       });
       const nextBalance = applyWarehouseMovementToBalance(candidate, currentBalance);
+
+      relocateLotSnapshots.forEach((lotSnapshot, index) => {
+        if (!lotSnapshot.exists()) throw new Error('WAREHOUSE_TRANSFER_LOT_NOT_FOUND');
+        const lot = lotSnapshot.data() as Record<string, unknown>;
+        const lotPosition = validateWarehouseStockPosition(lot.position);
+        if (
+          lot.workspaceId !== scope.workspaceId
+          || lot.ug !== scope.ug
+          || lot.materialId !== material.id
+          || lot.status !== 'active'
+          || typeof lot.quantity !== 'number'
+          || lot.quantity <= 0
+          || !lotPosition
+          || !warehouseStockPositionsEqual(lotPosition, from)
+        ) {
+          throw new Error('WAREHOUSE_TRANSFER_LOT_POSITION_MISMATCH');
+        }
+        transaction.update(relocateLotRefs[index], {
+          position: to,
+          updatedBy: scope.uid,
+          updatedAt: serverTimestamp(),
+        });
+      });
 
       transaction.set(movementRef, { ...candidate, createdAt: serverTimestamp() });
       transaction.set(balanceRef, { ...nextBalance, updatedAt: serverTimestamp() });
