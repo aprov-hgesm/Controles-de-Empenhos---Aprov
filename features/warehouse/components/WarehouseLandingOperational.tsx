@@ -190,6 +190,7 @@ function renderDepotObject(
     ? subpositionsByParent.get(object.warehouseLocationId) || []
     : [];
   const z = objectHeight(object.kind, localScale, subpositions.length);
+  const a = isoPoint(x, y, 0);
   const b = isoPoint(x + width, y, 0);
   const c = isoPoint(x + width, y + height, 0);
   const d = isoPoint(x, y + height, 0);
