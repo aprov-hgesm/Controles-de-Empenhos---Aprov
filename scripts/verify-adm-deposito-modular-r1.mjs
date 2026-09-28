@@ -37,6 +37,10 @@ const outboundRepository = readFileSync(
   resolve(root, 'lib/warehouse/outboundRepository.ts'),
   'utf8'
 );
+const ledgerRepository = readFileSync(
+  resolve(root, 'lib/warehouse/ledgerRepository.ts'),
+  'utf8'
+);
 const warehouseHome = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseHomeOperational.tsx'),
   'utf8'
@@ -709,6 +713,16 @@ requireText(
   stockOperational,
   '.filter((balance) => hasWarehouseAvailableStock(balance.quantity))',
   'Estoque voltou a exibir materiais sem saldo disponível.'
+);
+requireText(
+  stockOperational,
+  'listWarehousePositiveBalances(workspaceId, 250)',
+  'Estoque voltou a consultar balances sem restringir saldo positivo.'
+);
+requireText(
+  ledgerRepository,
+  "where('quantity', '>', 0)",
+  'Consulta bounded de Estoque perdeu o filtro Firestore de saldo positivo.'
 );
 requireText(
   stockOperational,
