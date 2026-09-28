@@ -6,8 +6,8 @@ Este documento é a referência obrigatória para novas telas, componentes e mó
 
 O EMPROVEX possui dois contextos visuais distintos:
 
-1. **Superfície operacional padrão** — tema claro. É o padrão para Painel, Empenhos, Notas Fiscais, Relatórios, Cronogramas, Administração operacional e ADM Depósito.
-2. **Superfície imersiva da tela Início** — tema escuro/cinematográfico. É uma exceção deliberada e não deve ser copiada para formulários, cadastros, tabelas ou fluxos operacionais.
+1. **Superfície operacional padrão** — tema claro. É o padrão para Painel, Empenhos, Notas Fiscais, Relatórios, Cronogramas, Administração operacional e para as superfícies operacionais do ADM Depósito.
+2. **Superfícies imersivas de Início** — tema escuro/cinematográfico. A Home principal do EMPROVEX e o Início do ADM Depósito são exceções deliberadas e não devem ser copiadas para formulários, cadastros, tabelas ou fluxos operacionais.
 
 A regra prática é simples: se a tela contém leitura, cadastro, filtros, formulários, relatórios, importações, tabelas ou ações administrativas, ela deve usar o tema claro operacional.
 
@@ -88,7 +88,7 @@ Tema escuro é permitido apenas quando:
 - há justificativa registrada;
 - não há fluxo denso de formulário/tabela que dependa de legibilidade contínua.
 
-O ADM Depósito é um módulo operacional e, portanto, segue o tema claro. Elementos escuros herdados de fases anteriores devem ser tratados como dívida visual e migrados gradualmente para esta referência.
+O ADM Depósito segue o tema claro em todas as superfícies operacionais. A única exceção é **ADM Depósito → Início**, que pode usar a experiência imersiva premium definida em D-106 por ser uma central visual consultiva, e não uma superfície de cadastro/manutenção.
 
 ## 9. Regra de consistência para novas implementações
 
