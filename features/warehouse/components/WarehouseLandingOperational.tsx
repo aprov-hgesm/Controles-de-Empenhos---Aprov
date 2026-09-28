@@ -509,12 +509,45 @@ function DepotWorld({
       <polygon
         className={styles.depotAura}
         points={polygonPoints([floorA, floorB, floorC, floorD])}
-        fill="#335ba6"
-        fillOpacity="0.055"
-        stroke="#6f97e1"
-        strokeOpacity="0.22"
-        strokeWidth="1.05"
+        fill="#f5f8fa"
+        fillOpacity="0.96"
+        stroke="#b8cad8"
+        strokeOpacity="0.92"
+        strokeWidth="1.15"
+        filter="url(#depotFloorShadow)"
       />
+
+      <g className={styles.depotFloorGrid} pointerEvents="none">
+        {Array.from({ length: 5 }, (_, index) => {
+          const ratio = (index + 1) / 6;
+          const gx1 = isoPoint(
+            placement.x - 7 + (placement.width + 14) * ratio,
+            placement.y - 7,
+            0.8
+          );
+          const gx2 = isoPoint(
+            placement.x - 7 + (placement.width + 14) * ratio,
+            placement.y + placement.height + 7,
+            0.8
+          );
+          const gy1 = isoPoint(
+            placement.x - 7,
+            placement.y - 7 + (placement.height + 14) * ratio,
+            0.8
+          );
+          const gy2 = isoPoint(
+            placement.x + placement.width + 7,
+            placement.y - 7 + (placement.height + 14) * ratio,
+            0.8
+          );
+          return (
+            <g key={index}>
+              <line x1={gx1.x} y1={gx1.y} x2={gx2.x} y2={gx2.y} stroke="#c8d5de" strokeWidth="0.45" opacity="0.58" />
+              <line x1={gy1.x} y1={gy1.y} x2={gy2.x} y2={gy2.y} stroke="#c8d5de" strokeWidth="0.45" opacity="0.58" />
+            </g>
+          );
+        })}
+      </g>
 
       {layout
         ? layout.objects
@@ -834,7 +867,10 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
             <stop offset="100%" stopColor="#4a79e8" stopOpacity="0" />
           </radialGradient>
           <filter id="worldObjectShadow" x="-40%" y="-40%" width="180%" height="210%">
-            <feDropShadow dx="0" dy="8" stdDeviation="5.5" floodColor="#000713" floodOpacity="0.45" />
+            <feDropShadow dx="0" dy="8" stdDeviation="5.5" floodColor="#000713" floodOpacity="0.36" />
+          </filter>
+          <filter id="depotFloorShadow" x="-30%" y="-35%" width="160%" height="185%">
+            <feDropShadow dx="0" dy="10" stdDeviation="9" floodColor="#000713" floodOpacity="0.28" />
           </filter>
           <filter id="worldSoftBlur" x="-60%" y="-120%" width="220%" height="340%">
             <feGaussianBlur stdDeviation="5" />
