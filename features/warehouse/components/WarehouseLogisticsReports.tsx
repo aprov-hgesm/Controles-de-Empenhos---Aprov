@@ -25,7 +25,7 @@ const REPORT_TABS: Array<{ id: ReportTab; label: string }> = [
   { id: 'stock', label: 'Estoque, locais e validade' },
   { id: 'outbound', label: 'Relatórios de Saída' },
   { id: 'immediate', label: 'Relatórios de Consumo Imediato' },
-  { id: 'ledger', label: 'Movimentações e entradas por NF' },
+  { id: 'ledger', label: 'Movimentações e entradas' },
   { id: 'inventory', label: 'Inventários' },
   { id: 'siscofis', label: 'SISCOFIS' },
 ];
@@ -43,6 +43,7 @@ function csvCell(value: string | number): string {
 function movementSourceLabel(item: WarehouseMovementListItem): string {
   const source = item.movement.source;
   if (source?.kind === 'INVOICE') return 'NF ' + source.invoiceId + ' · ' + source.supplier;
+  if (source?.kind === 'MANUAL_ENTRY') return 'Entrada avulsa · ' + source.provenance;
   if (source?.kind === 'LOCATION_TRANSFER') return 'Transferência interna';
   if (source?.kind === 'EXPRESS_OUTBOUND') return 'Saída de material';
   if (source?.kind === 'PHYSICAL_INVENTORY') return 'Inventário físico';
@@ -147,7 +148,7 @@ function LedgerAndInvoiceReport({ workspaceId }: { workspaceId: string }) {
               <p className="text-xs font-black uppercase tracking-[0.12em]">Movimentações e entradas por NF</p>
             </div>
             <p className="mt-2 text-xs leading-5 text-slate-500">
-              Leitura bounded do ledger oficial. Entradas por NF são filtradas pela origem INVOICE e nunca escrevem de volta na Nota Fiscal.
+              Leitura bounded do ledger oficial. Entradas por NF e entradas avulsas permanecem auditáveis pela origem estruturada, sem criar fonte paralela de saldo.
             </p>
           </div>
           <div className="flex gap-2">
@@ -196,7 +197,9 @@ function LedgerAndInvoiceReport({ workspaceId }: { workspaceId: string }) {
               const source = item.movement.source;
               const reference = source?.kind === 'INVOICE'
                 ? 'NF ' + source.invoiceId + ' · Empenho ' + source.empenhoId
-                : item.movement.id;
+                : source?.kind === 'MANUAL_ENTRY'
+                  ? source.reference || 'Sem referência adicional'
+                  : item.movement.id;
               return (
                 <tr key={item.movement.id}>
                   <td className="p-3 text-slate-500">{item.createdAt ? new Date(item.createdAt).toLocaleString('pt-BR') : '—'}</td>
