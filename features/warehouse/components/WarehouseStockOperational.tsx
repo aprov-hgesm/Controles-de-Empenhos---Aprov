@@ -59,6 +59,8 @@ import {
 import {
   compareWarehouseStockAvailability,
   hasWarehouseAvailableStock,
+  matchesWarehouseExpiryState,
+  type WarehouseStockExpiryFilter,
 } from '../../../lib/warehouse/stockView';
 
 interface WarehouseStockState {
@@ -167,7 +169,8 @@ export function WarehouseStockOperational({
   const [queryText, setQueryText] = useState('');
   const [depotFilter, setDepotFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
-  const [expiryDateFilter, setExpiryDateFilter] = useState('');
+  const [expiryStatusFilter, setExpiryStatusFilter] =
+    useState<WarehouseStockExpiryFilter>('');
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
   const [movements, setMovements] = useState<WarehouseMovementListItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -400,8 +403,10 @@ export function WarehouseStockOperational({
         return false;
       }
       if (
-        expiryDateFilter
-        && !summary.availableLots.some((lot) => lot.expiresOn === expiryDateFilter)
+        !matchesWarehouseExpiryState(
+          summary.availableLots.map((lot) => warehouseLotExpiryState(lot)),
+          expiryStatusFilter
+        )
       ) {
         return false;
       }
@@ -429,7 +434,7 @@ export function WarehouseStockOperational({
       );
       return haystack.includes(q);
     }).sort(compareWarehouseStockAvailability);
-  }, [depotFilter, expiryDateFilter, locationFilter, queryText, summaries]);
+  }, [depotFilter, expiryStatusFilter, locationFilter, queryText, summaries]);
 
   const selected = summaries.find(
     (item) => item.material.id === selectedMaterialId
@@ -617,18 +622,20 @@ export function WarehouseStockOperational({
                 <option key={location.id} value={location.id}>{location.code} · {location.name}</option>
               ))}
           </select>
-          <label className="relative">
-            <span className="pointer-events-none absolute -top-2 left-3 bg-white px-1 text-[8px] font-black uppercase tracking-[0.12em] text-slate-500">
-              Validade
-            </span>
-            <input
-              type="date"
-              value={expiryDateFilter}
-              onChange={(event) => setExpiryDateFilter(event.target.value)}
-              aria-label="Filtrar por data de validade"
-              className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e]"
-            />
-          </label>
+          <select
+            value={expiryStatusFilter}
+            onChange={(event) =>
+              setExpiryStatusFilter(event.target.value as WarehouseStockExpiryFilter)
+            }
+            aria-label="Filtrar por estado de validade"
+            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e]"
+          >
+            <option value="">Todas as validades</option>
+            <option value="NEAR_EXPIRY">Próximo do vencimento</option>
+            <option value="EXPIRED">Vencido</option>
+            <option value="VALID">Válido</option>
+            <option value="NO_EXPIRY">Sem validade informada</option>
+          </select>
           <button
             type="button"
             onClick={() => void refresh()}
