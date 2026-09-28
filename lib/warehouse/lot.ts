@@ -553,21 +553,18 @@ export function buildWarehouseLogisticsPendencies(input: {
     });
   }
 
-  if (input.totalQuantity > 0 && relevantLots.length === 0) {
-    pendencies.push({
-      code: 'LOT_INFORMATION_MISSING',
-      severity: 'info',
-      title: 'Lote não informado',
-      message: 'Verifique se este material exige rastreabilidade por lote. O saldo permanece operável.',
-    });
-  }
-
-  if (relevantLots.some((lot) => lot.quantity > 0 && !lot.expiresOn)) {
+  if (
+    input.totalQuantity > 0
+    && (
+      relevantLots.length === 0
+      || relevantLots.some((lot) => lot.quantity > 0 && !lot.expiresOn)
+    )
+  ) {
     pendencies.push({
       code: 'LOT_EXPIRY_MISSING',
       severity: 'info',
       title: 'Validade não informada',
-      message: 'Existe lote ativo sem validade. Materiais sem validade continuam permitidos.',
+      message: 'O item possui saldo sem validade informada. Materiais sem validade continuam permitidos.',
     });
   }
 
@@ -579,8 +576,8 @@ export function buildWarehouseLogisticsPendencies(input: {
     pendencies.push({
       code: 'EXPIRED_LOT',
       severity: 'critical',
-      title: 'Lote vencido',
-      message: 'Existe quantidade rastreada em lote vencido. O FEFO não recomenda esse lote.',
+      title: 'Validade vencida',
+      message: 'Existe quantidade com validade vencida. O FEFO não recomenda essa referência para retirada.',
     });
   }
 
@@ -592,8 +589,8 @@ export function buildWarehouseLogisticsPendencies(input: {
     pendencies.push({
       code: 'LOT_ATTRIBUTION_EXCEEDS_STOCK',
       severity: 'critical',
-      title: 'Atribuição de lotes excede o saldo',
-      message: 'A soma informativa dos lotes supera o saldo oficial. O saldo não foi alterado.',
+      title: 'Rastreabilidade de validade excede o saldo',
+      message: 'A soma das quantidades vinculadas às validades supera o saldo oficial. O saldo não foi alterado.',
     });
   }
 
@@ -606,7 +603,7 @@ export function buildWarehouseLogisticsPendencies(input: {
       code: 'ORIGIN_LINK_INCOMPLETE',
       severity: 'info',
       title: 'Origem documental incompleta',
-      message: 'Existe lote sem vínculo com Nota Fiscal. O vínculo pode ser enriquecido posteriormente.',
+      message: 'Existe referência de validade sem vínculo com Nota Fiscal. O vínculo pode ser enriquecido posteriormente.',
     });
   }
 
