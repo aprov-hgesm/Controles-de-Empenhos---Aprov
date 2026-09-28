@@ -1776,21 +1776,16 @@ async function main() {
           workspaceId: WORKSPACE_ID,
           ug: UG,
           materialId: manualMaterialId,
-          type: 'OUTBOUND_RETURN',
+          type: 'MANUAL_ENTRY',
           quantityDelta: 1,
           idempotencyKeyHash: 'abcdef1234567890'.repeat(4),
           reversesMovementId: null,
-          note: 'Devolução parcial da saída',
+          note: 'Devolução/cancelamento de saída',
           source: {
-            kind: 'OUTBOUND_RETURN',
+            kind: 'MANUAL_ENTRY',
             actorUid: founder.user.uid,
-            consumptionId: returnConsumptionId,
-            originalMovementId: returnOutboundMovementId,
-            quantity: 1,
-            position: { kind: 'UNASSIGNED' },
-            locationBalanceId: manualLocationBalanceId,
-            lotId: null,
-            reason: 'Material devolvido',
+            provenance: 'Devolução de saída',
+            reference: returnConsumptionId,
           },
           createdAt: serverTimestamp(),
         }
@@ -1861,21 +1856,16 @@ async function main() {
           workspaceId: WORKSPACE_ID,
           ug: UG,
           materialId: manualMaterialId,
-          type: 'OUTBOUND_RETURN',
+          type: 'MANUAL_ENTRY',
           quantityDelta: 2,
           idempotencyKeyHash: 'deadbeefcafefeed'.repeat(4),
           reversesMovementId: null,
           note: 'Devolução inválida acima do remanescente',
           source: {
-            kind: 'OUTBOUND_RETURN',
+            kind: 'MANUAL_ENTRY',
             actorUid: founder.user.uid,
-            consumptionId: returnConsumptionId,
-            originalMovementId: returnOutboundMovementId,
-            quantity: 2,
-            position: { kind: 'UNASSIGNED' },
-            locationBalanceId: manualLocationBalanceId,
-            lotId: null,
-            reason: 'Tentativa acima do remanescente',
+            provenance: 'Devolução de saída',
+            reference: returnConsumptionId,
           },
           createdAt: serverTimestamp(),
         }
@@ -2092,7 +2082,7 @@ async function main() {
   console.log('- edição de barcode preserva o código anterior inativo e cria o substituto ativo');
   console.log('- inventário conta sem alterar estoque e só INVENTORY_ADJUSTMENT confirmado modifica ledger/saldos');
   console.log('- TRANSFER não regrava o saldo agregado quando a quantidade total não muda');
-  console.log('- OUTBOUND_RETURN devolve somente o remanescente permitido e preserva a saída original');
+  console.log('- devolução reutiliza MANUAL_ENTRY auditável, limita o remanescente e preserva a saída original');
   console.log('- operações com estoque continuam obrigadas a respeitar ledger e invariantes');
 }
 
