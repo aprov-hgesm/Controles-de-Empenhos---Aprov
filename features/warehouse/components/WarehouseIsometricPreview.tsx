@@ -365,35 +365,50 @@ function WarehouseStructure({
         {contactShadow(object, logicalWidth, logicalHeight, 0.2)}
         {commonHighlight}
 
-        <polygon points={polygonPoints([d, c, ct, dt])} fill="url(#palletSideDark)" stroke={WAREHOUSE_PALLET_VISUAL.sideStroke} strokeWidth="1.4" />
-        <polygon points={polygonPoints([b, c, ct, bt])} fill="url(#palletSide)" stroke={WAREHOUSE_PALLET_VISUAL.frontStroke} strokeWidth="1.4" />
-        <polygon points={polygonPoints([at, bt, ct, dt])} fill="url(#palletWood)" stroke={WAREHOUSE_PALLET_VISUAL.frontStroke} strokeWidth="1.6" />
-
-        <line
-          x1={at.x}
-          y1={at.y}
-          x2={bt.x}
-          y2={bt.y}
-          stroke={WAREHOUSE_PALLET_VISUAL.highlight}
-          strokeWidth="1.5"
-          opacity="0.8"
-        />
-
         {Array.from({ length: slatCount }, (_, index) => {
-          const ratio = (index + 0.5) / slatCount;
-          const p1 = isoPoint(object.x + object.width * ratio, object.y, z + 0.5, logicalWidth, logicalHeight);
-          const p2 = isoPoint(object.x + object.width * ratio, object.y + object.height, z + 0.5, logicalWidth, logicalHeight);
+          const cellWidth = object.width / slatCount;
+          const gap = Math.max(1.2, cellWidth * 0.18);
+          const slatX = object.x + index * cellWidth + gap / 2;
+          const slatWidth = Math.max(2, cellWidth - gap);
+          const slatBottomZ = z - 3.2;
+          const sa = isoPoint(slatX, object.y, z, logicalWidth, logicalHeight);
+          const sb = isoPoint(slatX + slatWidth, object.y, z, logicalWidth, logicalHeight);
+          const sc = isoPoint(slatX + slatWidth, object.y + object.height, z, logicalWidth, logicalHeight);
+          const sd = isoPoint(slatX, object.y + object.height, z, logicalWidth, logicalHeight);
+          const sdb = isoPoint(slatX, object.y + object.height, slatBottomZ, logicalWidth, logicalHeight);
+          const scb = isoPoint(slatX + slatWidth, object.y + object.height, slatBottomZ, logicalWidth, logicalHeight);
+          const sbb = isoPoint(slatX + slatWidth, object.y, slatBottomZ, logicalWidth, logicalHeight);
+
           return (
-            <line
-              key={'slat-' + index}
-              x1={p1.x}
-              y1={p1.y}
-              x2={p2.x}
-              y2={p2.y}
-              stroke={index % 2 === 0 ? WAREHOUSE_PALLET_VISUAL.slatDark : WAREHOUSE_PALLET_VISUAL.slatLight}
-              strokeWidth="1.1"
-              opacity="0.96"
-            />
+            <g key={'slat-' + index}>
+              <polygon
+                points={polygonPoints([sa, sb, sc, sd])}
+                fill="url(#palletWood)"
+                stroke={WAREHOUSE_PALLET_VISUAL.frontStroke}
+                strokeWidth="1"
+              />
+              <polygon
+                points={polygonPoints([sd, sc, scb, sdb])}
+                fill={WAREHOUSE_PALLET_VISUAL.frontFill}
+                stroke={WAREHOUSE_PALLET_VISUAL.frontStroke}
+                strokeWidth="0.85"
+              />
+              <polygon
+                points={polygonPoints([sb, sc, scb, sbb])}
+                fill={WAREHOUSE_PALLET_VISUAL.sideFill}
+                stroke={WAREHOUSE_PALLET_VISUAL.sideStroke}
+                strokeWidth="0.75"
+              />
+              <line
+                x1={sa.x}
+                y1={sa.y}
+                x2={sb.x}
+                y2={sb.y}
+                stroke={WAREHOUSE_PALLET_VISUAL.highlight}
+                strokeWidth="0.95"
+                opacity="0.78"
+              />
+            </g>
           );
         })}
 
@@ -408,7 +423,7 @@ function WarehouseStructure({
               x2={p2.x}
               y2={p2.y}
               stroke={WAREHOUSE_PALLET_VISUAL.runnerFill}
-              strokeWidth="5.5"
+              strokeWidth="6.2"
               strokeLinecap="round"
               opacity="0.95"
             />
@@ -426,10 +441,10 @@ function WarehouseStructure({
           return (
             <rect
               key={'block-' + index}
-              x={p.x - 5}
-              y={p.y - 3}
-              width="10"
-              height="7"
+              x={p.x - 5.5}
+              y={p.y - 3.5}
+              width="11"
+              height="8"
               rx="1.4"
               fill={WAREHOUSE_PALLET_VISUAL.blockFill}
               stroke={WAREHOUSE_PALLET_VISUAL.blockStroke}
