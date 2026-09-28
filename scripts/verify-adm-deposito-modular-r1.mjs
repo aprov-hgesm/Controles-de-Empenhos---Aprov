@@ -718,6 +718,26 @@ requireText(
 );
 requireText(
   warehouseLanding,
+  'listWarehousePositiveLocationBalances(workspaceId, 500)',
+  'Início deixou de carregar somente saldos físicos positivos para projetar ocupação.'
+);
+requireText(
+  warehouseLanding,
+  'data-visual-role="allocated-stock-box"',
+  'Início deixou de projetar visualmente os itens alocados nos depósitos.'
+);
+requireText(
+  warehouseLanding,
+  'occupancyBySubposition',
+  'Início deixou de posicionar ocupação por subposição nas estantes.'
+);
+requireText(
+  warehouseLanding,
+  'visualBoxes(quantity',
+  'Início deixou de limitar a representação visual de estoque por faixa de quantidade.'
+);
+requireText(
+  warehouseLanding,
   'subpositionsByParent',
   'Início deixou de representar subposições internas vinculadas aos locais.'
 );
@@ -803,7 +823,7 @@ for (const forbiddenLandingSurface of [
 for (const forbiddenLandingToken of [
   'listWarehouseMaterials(',
   'listWarehousePositiveBalances(',
-  'listWarehousePositiveLocationBalances(',
+
   'listWarehouseLots(',
   'transferWarehouseStock(',
   'saveWarehouseMaterial(',
