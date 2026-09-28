@@ -17,6 +17,14 @@ const allocatedItems = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseAllocatedItemsOperational.tsx'),
   'utf8'
 );
+const manualEntryOperational = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseManualEntryOperational.tsx'),
+  'utf8'
+);
+const manualEntryRepository = readFileSync(
+  resolve(root, 'lib/warehouse/manualEntryRepository.ts'),
+  'utf8'
+);
 const intakeStateRepository = readFileSync(
   resolve(root, 'lib/warehouse/intakeStateRepository.ts'),
   'utf8'
@@ -886,6 +894,56 @@ requireText(
 );
 requireText(
   itemRegistration,
+  "setTab('manual')",
+  'Alocação de Material perdeu a subaba Entrada avulsa.'
+);
+requireText(
+  itemRegistration,
+  '<WarehouseManualEntryOperational workspaceId={workspaceId} />',
+  'Entrada avulsa deixou de montar a superfície operacional própria.'
+);
+requireText(
+  manualEntryOperational,
+  'Procedência diversa',
+  'Entrada avulsa perdeu o campo obrigatório de procedência.'
+);
+requireText(
+  manualEntryOperational,
+  'Registrar entrada avulsa',
+  'Entrada avulsa perdeu a ação explícita de confirmação.'
+);
+requireText(
+  manualEntryRepository,
+  "type: 'MANUAL_ENTRY'",
+  'Entrada avulsa deixou de usar movimento próprio no ledger.'
+);
+requireText(
+  manualEntryRepository,
+  "from: { kind: 'UNASSIGNED' }",
+  'Entrada avulsa deixou de passar pela projeção UNASSIGNED antes da localização física.'
+);
+requireText(
+  manualEntryRepository,
+  'transferWarehouseStock(scope.workspaceId, {',
+  'Entrada avulsa deixou de reutilizar o motor oficial de TRANSFER.'
+);
+requireText(
+  rules,
+  "'INITIAL_BALANCE', 'MANUAL_ENTRY', 'INVOICE_ENTRY'",
+  'Rules deixaram de reconhecer MANUAL_ENTRY como entrada quantitativa positiva.'
+);
+requireText(
+  rules,
+  "source.kind == 'MANUAL_ENTRY'",
+  'Rules perderam a procedência estruturada da entrada avulsa.'
+);
+requireText(
+  rules,
+  "request.resource.data.type == 'MANUAL_ENTRY'",
+  'Rules deixaram de exigir source auditável na entrada avulsa.'
+);
+requireText(
+  itemRegistration,
   "lotCode: ''",
   'Alocação deixou de ocultar o código técnico de lote do operador.'
 );
@@ -1053,6 +1111,7 @@ console.log('- Início premium, Meus Depósitos, Alocação de Material, Saída 
 console.log('- Início reutiliza a Visão 3D oficial, sem lote visível nem ações operacionais duplicadas');
 console.log('- rules em ' + (rulesBytes / 1024).toFixed(2) + ' KiB (orçamento interno: 150 KiB)');
 console.log('- NF/Pregão podem ser armazenados, consumidos imediatamente ou removidos logicamente da fila');
+console.log('- Entrada avulsa registra procedência diversa via MANUAL_ENTRY e reutiliza ledger + TRANSFER oficiais');
 console.log('- ficha institucional PDF de alocação física disponível por NF e por Pregão');
 console.log('- ficha PDF otimizada para toner P&B, com grayscale neutro e contenção de textos');
 console.log('- Saída de Material gera PDF duplo: retirada física + ficha auxiliar SISCOFIS com controle/código');
