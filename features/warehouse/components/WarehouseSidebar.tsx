@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Boxes,
   ClipboardPlus,
+  House,
   LayoutDashboard,
   LogOut,
   ScanLine,
@@ -20,6 +21,7 @@ import { AppShellSignature } from '../../../components/layout/chrome/AppShellSig
 import { WAREHOUSE_SECTIONS, type WarehouseSectionId } from '../navigation';
 
 const SECTION_ICONS: Record<WarehouseSectionId, LucideIcon> = {
+  home: House,
   overview: LayoutDashboard,
   registration: ClipboardPlus,
   outbound: ScanLine,
