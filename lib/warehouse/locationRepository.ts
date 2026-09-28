@@ -19,7 +19,6 @@ import {
   createWarehouseMovementId,
   validateWarehouseMovement,
   warehouseMovementMatchesReplay,
-  applyWarehouseMovementToBalance,
   type WarehouseBalance,
   type WarehouseMovement,
   WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
@@ -732,8 +731,6 @@ export async function transferWarehouseStock(
         quantityDelta: normalizedQuantity,
         movementId,
       });
-      const nextBalance = applyWarehouseMovementToBalance(candidate, currentBalance);
-
       relocateLotSnapshots.forEach((lotSnapshot, index) => {
         if (!lotSnapshot.exists()) throw new Error('WAREHOUSE_TRANSFER_LOT_NOT_FOUND');
         const lot = lotSnapshot.data() as Record<string, unknown>;
@@ -758,14 +755,13 @@ export async function transferWarehouseStock(
       });
 
       transaction.set(movementRef, { ...candidate, createdAt: serverTimestamp() });
-      transaction.set(balanceRef, { ...nextBalance, updatedAt: serverTimestamp() });
       transaction.set(fromBalanceRef, { ...nextFrom, updatedAt: serverTimestamp() });
       transaction.set(toBalanceRef, { ...nextTo, updatedAt: serverTimestamp() });
 
       return {
         applied: true,
         movement: candidate,
-        balance: nextBalance,
+        balance: currentBalance,
         fromBalance: nextFrom,
         toBalance: nextTo,
       };
