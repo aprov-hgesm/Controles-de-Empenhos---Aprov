@@ -713,6 +713,26 @@ requireText(
 );
 requireText(
   warehouseLanding,
+  'listWarehouseLocations(workspaceId, 500)',
+  'Início deixou de carregar os locais internos necessários à representação dos croquis.'
+);
+requireText(
+  warehouseLanding,
+  'subpositionsByParent',
+  'Início deixou de representar subposições internas vinculadas aos locais.'
+);
+requireText(
+  warehouseLanding,
+  'fill="#f5f8fa"',
+  'Depósitos do Início deixaram de usar a base clara coerente com a Visão 3D oficial.'
+);
+requireText(
+  warehouseLanding,
+  "object.kind === 'SHELF' || object.kind === 'RACK'",
+  'Início perdeu a representação detalhada de estantes/racks.'
+);
+requireText(
+  warehouseLanding,
   'loadWarehouseInvoiceIntakeQueue(workspaceId)',
   'Início deixou de refletir as pendências reais de alocação.'
 );
