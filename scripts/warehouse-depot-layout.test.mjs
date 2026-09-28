@@ -183,7 +183,7 @@ test('biblioteca física cobre os tipos obrigatórios sem novo schema de layout'
 });
 
 
-test('editor visual mantém edição local, 2D/2.5D e sem persistência paralela', () => {
+test('editor visual mantém edição local, 2D/Prévia 3D e sem persistência paralela', () => {
   const editor = readFileSync(
     resolve(root, 'features/warehouse/components/WarehouseDepotLayoutEditor.tsx'),
     'utf8'
@@ -194,7 +194,7 @@ test('editor visual mantém edição local, 2D/2.5D e sem persistência paralela
   );
 
   assert.match(editor, /Vista superior/);
-  assert.match(editor, /Prévia 2\.5D/);
+  assert.match(editor, /Prévia 3D/);
   assert.match(editor, /Snap/);
   assert.match(editor, /Undo2/);
   assert.match(editor, /Redo2/);
@@ -305,9 +305,11 @@ test('Início consome somente layout ativo e mantém croqui como consulta do est
   assert.match(home, /listWarehouseLocationBalances/);
   assert.match(home, /listWarehouseBalances/);
   assert.match(home, /selectWarehouseFefoLot/);
-  assert.match(home, /Ainda não representada no croqui/);
-  assert.match(home, /Prioridade FEFO/);
-  assert.match(home, /selectedStructureRows/);
+  assert.match(home, /fora da visão atual/);
+  assert.match(home, /prioridade FEFO/);
+  assert.match(home, /locationRows/);
+  assert.match(home, /WarehouseIsometricPreview/);
+  assert.match(home, /embedded/);
   assert.doesNotMatch(home, /saveWarehouseDepotLayoutVersion/);
   assert.doesNotMatch(home, /warehouse_visual_balance|warehouse_map_balance|warehouse_stock_map/);
 });
