@@ -3318,7 +3318,9 @@ Ajuste aplicado na subaba **Controle de Itens → Estoque**:
 - subposições removidas da lista de opções;
 - seleção de um local-pai continua encontrando estoque armazenado em suas subposições;
 - localizações de depósitos inativos não são oferecidas;
-- filtro por estado de validade foi substituído por **data de validade exata**;
+- filtro por validade preserva os estados **Próximo do vencimento**, **Vencido**, **Válido** e **Sem validade informada**;
 - validade considera somente lotes ativos e com saldo positivo.
+
+Correção de aderência ao requisito original: uma implementação intermediária havia trocado o filtro de status por data exata; o seletor por estados operacionais foi restaurado e passou a ter cobertura no teste direcionado e no guard modular.
 
 Nenhuma Firestore Rule ou contrato de persistência foi alterado nesta correção. O guard modular foi reforçado para impedir regressão desses filtros.
