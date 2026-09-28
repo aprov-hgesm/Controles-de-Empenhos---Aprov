@@ -1208,6 +1208,7 @@ async function main() {
   const stockConsumptionId = 'cons_' + 'd'.repeat(64);
   const stockLineId = 'wline_' + 'e'.repeat(32);
   const physicalOutboundReturnMovementId = 'mov_' + 'f'.repeat(64);
+  const physicalReturnLotId = 'lot_' + 'f'.repeat(32);
 
   await allowed('fundador projeta saída finalizada no registro auditável', () =>
     setDoc(
@@ -1260,9 +1261,6 @@ async function main() {
       );
       const locationBalanceRef = doc(
         founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', secondTargetBalanceId
-      );
-      const lotRef = doc(
-        founder.db, 'warehouse', WORKSPACE_ID, 'lots', secondAllocationLotId
       );
       const consumptionRef = doc(
         founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', stockConsumptionId
@@ -1327,12 +1325,6 @@ async function main() {
         updatedAt: serverTimestamp(),
       });
 
-      transaction.update(lotRef, {
-        quantity: 1,
-        updatedBy: founder.user.uid,
-        updatedAt: serverTimestamp(),
-      });
-
       transaction.update(consumptionRef, {
         returnedQuantity: 1,
         lastReturnMovementId: physicalOutboundReturnMovementId,
@@ -1345,7 +1337,7 @@ async function main() {
   );
 
   await allowed('devolução recompõe saldo e mantém o registro da saída', async () => {
-    const [aggregateSnapshot, locationSnapshot, lotSnapshot, consumptionSnapshot] =
+    const [aggregateSnapshot, locationSnapshot, originalLotSnapshot, consumptionSnapshot] =
       await Promise.all([
         getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId)),
         getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', secondTargetBalanceId)),
@@ -1354,9 +1346,56 @@ async function main() {
       ]);
     assert.equal(aggregateSnapshot.data()?.quantity, 8);
     assert.equal(locationSnapshot.data()?.quantity, 3);
-    assert.equal(lotSnapshot.data()?.quantity, 1);
+    assert.equal(originalLotSnapshot.data()?.quantity, 0);
     assert.equal(consumptionSnapshot.data()?.quantity, 1);
     assert.equal(consumptionSnapshot.data()?.returnedQuantity, 1);
+  });
+
+  await allowed('validade devolvida é recomposta em enriquecimento idempotente separado', () =>
+    setDoc(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'lots', physicalReturnLotId),
+      {
+        schemaVersion: 'warehouse_lot_v1',
+        id: physicalReturnLotId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        code: 'PEND-R1',
+        expiresOn: null,
+        quantity: 1,
+        position: {
+          kind: 'SUBPOSITION',
+          depotId,
+          locationId,
+          subpositionId: subpositionBId,
+        },
+        origin: {
+          kind: 'MANUAL_ENRICHMENT',
+          movementId: physicalOutboundReturnMovementId,
+          invoiceRecordKey: null,
+          invoiceId: null,
+          supplier: null,
+          supplierCnpj: null,
+        },
+        status: 'active',
+        createdBy: founder.user.uid,
+        updatedBy: founder.user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+    )
+  );
+
+  await allowed('enriquecimento devolvido preserva validade sem alterar o saldo oficial', async () => {
+    const [returnLotSnapshot, aggregateSnapshot, locationSnapshot] = await Promise.all([
+      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'lots', physicalReturnLotId)),
+      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId)),
+      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', secondTargetBalanceId)),
+    ]);
+    assert.equal(returnLotSnapshot.data()?.quantity, 1);
+    assert.equal(returnLotSnapshot.data()?.origin?.movementId, physicalOutboundReturnMovementId);
+    assert.equal(aggregateSnapshot.data()?.quantity, 8);
+    assert.equal(locationSnapshot.data()?.quantity, 3);
   });
 
   const invalidReturnMovementId = 'mov_' + '0'.repeat(64);
@@ -1424,14 +1463,6 @@ async function main() {
           quantity: 4,
           revision: 5,
           lastMovementId: invalidReturnMovementId,
-          updatedAt: serverTimestamp(),
-        }
-      );
-      transaction.update(
-        doc(founder.db, 'warehouse', WORKSPACE_ID, 'lots', secondAllocationLotId),
-        {
-          quantity: 2,
-          updatedBy: founder.user.uid,
           updatedAt: serverTimestamp(),
         }
       );
