@@ -416,12 +416,12 @@ for (const sourcePath of [
 requireText(
   sectionContent,
   "if (section === 'overview')",
-  'Início deve permanecer como superfície operacional real.'
+  'Meus Depósitos deve permanecer como superfície operacional real.'
 );
 requireText(
   sectionContent,
   '<WarehouseHomeOperational workspaceId={workspaceId} />',
-  'Início voltou a ser substituído por placeholder em vez do localizador visual.'
+  'Meus Depósitos voltou a ser substituído por placeholder em vez do localizador visual.'
 );
 requireText(
   sectionContent,
@@ -593,47 +593,47 @@ requireText(
 requireText(
   warehouseHome,
   'item.balance.quantity > 0',
-  'Início voltou a projetar no depósito posições com saldo zero.'
+  'Meus Depósitos voltou a projetar no depósito posições com saldo zero.'
 );
 requireText(
   warehouseHome,
   'listWarehousePositiveLocationBalances(workspaceId, 500)',
-  'Início voltou a ler locationBalances zerados sem necessidade.'
+  'Meus Depósitos voltou a ler locationBalances zerados sem necessidade.'
 );
 requireText(
   warehouseHome,
   'listWarehousePositiveBalances(workspaceId, 250)',
-  'Início voltou a consultar saldo agregado sem restringir saldo positivo.'
+  'Meus Depósitos voltou a consultar saldo agregado sem restringir saldo positivo.'
 );
 requireText(
   warehouseHome,
   'depotMaterialIds.has(material.id)',
-  'Pesquisa do Início voltou a oferecer material sem saldo físico no depósito selecionado.'
+  'Pesquisa do Meus Depósitos voltou a oferecer material sem saldo físico no depósito selecionado.'
 );
 requireText(
   warehouseHome,
   '<WarehouseIsometricPreview',
-  'Início deixou de reutilizar o renderer 3D oficial do ADM Depósito.'
+  'Meus Depósitos deixou de reutilizar o renderer 3D oficial do ADM Depósito.'
 );
 requireText(
   warehouseHome,
   'embedded',
-  'Renderer 3D do Início deixou de usar o modo embutido dedicado.'
+  'Renderer 3D do Meus Depósitos deixou de usar o modo embutido dedicado.'
 );
 requireText(
   warehouseHome,
   'Validade / FEFO',
-  'Início perdeu a leitura consultiva de validade/FEFO.'
+  'Meus Depósitos perdeu a leitura consultiva de validade/FEFO.'
 );
 requireText(
   warehouseHomeStyles,
   'linear-gradient(145deg, #030714 0%, #07101f 46%, #02040b 100%)',
-  'Início perdeu a identidade visual imersiva alinhada à Home do EMPROVEX.'
+  'Meus Depósitos perdeu a identidade visual imersiva alinhada à Home do EMPROVEX.'
 );
 requireText(
   warehouseModuleShell,
   '<AppBackground immersive={isHome} />',
-  'Shell do ADM deixou de ativar o fundo imersivo exclusivamente no Início.'
+  'Shell do ADM deixou de ativar o fundo imersivo exclusivamente no Meus Depósitos.'
 );
 for (const forbiddenToken of [
   'Lotes e validade',
@@ -644,7 +644,7 @@ for (const forbiddenToken of [
   'saveWarehouseMaterial(',
 ]) {
   if (warehouseHome.includes(forbiddenToken)) {
-    fail('Início voltou a duplicar manutenção/operação ou expor lote: ' + forbiddenToken);
+    fail('Meus Depósitos voltou a duplicar manutenção/operação ou expor lote: ' + forbiddenToken);
   }
 }
 requireText(
@@ -1274,8 +1274,8 @@ if (findings.length) {
 }
 
 console.log('ADM Depósito modular guard: PASS');
-console.log('- Início premium, Controle de Depósitos, Alocação de Material, Saída de Material e Controle de Materiais operacionais');
-console.log('- Início reutiliza a Visão 3D oficial, sem lote visível nem ações operacionais duplicadas');
+console.log('- Meus Depósitos premium, Controle de Depósitos, Alocação de Material, Saída de Material e Controle de Materiais operacionais');
+console.log('- Meus Depósitos reutiliza a Visão 3D oficial, sem lote visível nem ações operacionais duplicadas');
 console.log('- rules em ' + (rulesBytes / 1024).toFixed(2) + ' KiB (orçamento interno: 150 KiB)');
 console.log('- NF/Pregão podem ser armazenados, consumidos imediatamente ou removidos logicamente da fila');
 console.log('- Entrada avulsa registra procedência diversa via MANUAL_ENTRY e reutiliza ledger + TRANSFER oficiais');
