@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  ArrowRightLeft,
+  Barcode,
   Boxes,
   CalendarClock,
   ChevronRight,
@@ -20,15 +22,20 @@ import {
   type WarehouseLocationBalance,
   type WarehouseStockPosition,
 } from '../../../lib/warehouse/location';
+import type { WarehouseBarcodeAssociation } from '../../../lib/warehouse/barcode';
 import {
   listWarehouseBarcodes,
+  replaceWarehouseBarcodeAssociation,
+  saveWarehouseBarcodeAssociation,
   type WarehouseBarcodeListItem,
 } from '../../../lib/warehouse/barcodeRepository';
 import {
   buildWarehousePositionLabel,
+  createWarehouseTransferIdempotencyKey,
   listWarehouseDepots,
   listWarehouseLocationBalances,
   listWarehouseLocations,
+  transferWarehouseStock,
   type WarehouseDepotListItem,
   type WarehouseLocationBalanceListItem,
   type WarehouseLocationListItem,
@@ -82,6 +89,7 @@ interface MaterialSummary {
   lots: WarehouseLot[];
   availableLots: WarehouseLot[];
   barcodes: string[];
+  barcodeAssociations: WarehouseBarcodeAssociation[];
   unassigned: number;
   distributed: number;
   locationLabels: string[];
@@ -184,6 +192,13 @@ export function WarehouseStockOperational({
   const [lotQuantity, setLotQuantity] = useState('');
   const [lotPositionKey, setLotPositionKey] = useState('UNASSIGNED');
   const [lotOriginMovementId, setLotOriginMovementId] = useState('');
+
+  const [barcodeDraft, setBarcodeDraft] = useState('');
+  const [editingBarcodeId, setEditingBarcodeId] = useState('');
+  const [relocateSourceKey, setRelocateSourceKey] = useState('');
+  const [relocateDepotId, setRelocateDepotId] = useState('');
+  const [relocateLocationId, setRelocateLocationId] = useState('');
+  const [relocateSubpositionId, setRelocateSubpositionId] = useState('');
 
   const refresh = async () => {
     setState((current) => ({ ...current, loading: true, error: null }));
@@ -324,8 +339,11 @@ export function WarehouseStockOperational({
         const availableLots = lots.filter(
           (lot) => lot.status === 'active' && lot.quantity > 0
         );
-        const barcodes = (barcodesByMaterial.get(balance.materialId) || [])
-          .map((item) => item.association.barcode);
+        const barcodeAssociations = (barcodesByMaterial.get(balance.materialId) || [])
+          .map((item) => item.association);
+        const barcodes = barcodeAssociations
+          .filter((association) => association.status === 'active')
+          .map((association) => association.barcode);
         const locationLabels = Array.from(
           new Set([
             ...physical
@@ -353,6 +371,7 @@ export function WarehouseStockOperational({
           lots,
           availableLots,
           barcodes,
+          barcodeAssociations,
           unassigned,
           distributed: Math.max(0, balance.quantity - unassigned),
           locationLabels,
@@ -472,6 +491,17 @@ export function WarehouseStockOperational({
     setLotOriginMovementId('');
   };
 
+  const resetBarcodeForm = () => {
+    setBarcodeDraft('');
+    setEditingBarcodeId('');
+  };
+
+  const editBarcode = (association: WarehouseBarcodeAssociation) => {
+    setEditingBarcodeId(association.id);
+    setBarcodeDraft(association.barcode);
+    setMessage(null);
+  };
+
   const editLot = (lot: WarehouseLot) => {
     setEditingLotId(lot.id);
     setLotCode(lot.code);
@@ -550,6 +580,41 @@ export function WarehouseStockOperational({
     }
   };
 
+  const saveBarcode = async () => {
+    if (!selected) return;
+    const barcode = barcodeDraft.trim();
+    if (!barcode) {
+      setMessage('Informe o código de barras.');
+      return;
+    }
+
+    setWorking(true);
+    setMessage(null);
+    try {
+      if (editingBarcodeId) {
+        await replaceWarehouseBarcodeAssociation(
+          workspaceId,
+          editingBarcodeId,
+          barcode
+        );
+        setMessage('Código de barras atualizado com histórico preservado.');
+      } else {
+        await saveWarehouseBarcodeAssociation(workspaceId, {
+          materialId: selected.material.id,
+          barcode,
+          presentation: selected.material.unit,
+        });
+        setMessage('Código de barras associado ao item.');
+      }
+      resetBarcodeForm();
+      await refresh();
+    } catch (error) {
+      setMessage(logisticsMessage(error));
+    } finally {
+      setWorking(false);
+    }
+  };
+
   const selectedLocations = selected
     ? selected.locationBalances
         .filter((item) => item.quantity > 0)
@@ -561,8 +626,96 @@ export function WarehouseStockOperational({
             state.locations
           ),
           quantity: item.quantity,
+          position: item.position,
         }))
     : [];
+
+  const relocationSources = selected
+    ? [
+        ...selectedLocations,
+        ...(selected.unassigned > 0
+          ? [{
+              key: 'UNASSIGNED',
+              label: 'Sem localização',
+              quantity: selected.unassigned,
+              position: { kind: 'UNASSIGNED' } as WarehouseStockPosition,
+            }]
+          : []),
+      ]
+    : [];
+
+  const relocationLocations = activeTopLevelLocations.filter(
+    ({ location }) => location.depotId === relocateDepotId
+  );
+
+  const relocationSubpositions = state.locations.filter(({ location }) =>
+    location.status === 'active'
+    && location.kind === 'SUBPOSITION'
+    && location.depotId === relocateDepotId
+    && location.parentLocationId === relocateLocationId
+  );
+
+  const relocateSelectedStock = async () => {
+    if (!selected) return;
+    const source = relocationSources.find((item) => item.key === relocateSourceKey);
+    if (!source) {
+      setMessage('Selecione a localidade atual do saldo que será movimentado.');
+      return;
+    }
+    if (!relocateDepotId || !relocateLocationId) {
+      setMessage('Selecione o depósito e a localização de destino.');
+      return;
+    }
+
+    const to: WarehouseStockPosition = relocateSubpositionId
+      ? {
+          kind: 'SUBPOSITION',
+          depotId: relocateDepotId,
+          locationId: relocateLocationId,
+          subpositionId: relocateSubpositionId,
+        }
+      : {
+          kind: 'LOCATION',
+          depotId: relocateDepotId,
+          locationId: relocateLocationId,
+          subpositionId: null,
+        };
+
+    if (warehouseStockPositionKey(to) === source.key) {
+      setMessage('A nova localidade precisa ser diferente da posição atual.');
+      return;
+    }
+
+    const relocateLotIds = selected.availableLots
+      .filter((lot) => warehouseStockPositionKey(lot.position) === source.key)
+      .map((lot) => lot.id);
+
+    setWorking(true);
+    setMessage(null);
+    try {
+      await transferWarehouseStock(workspaceId, {
+        materialId: selected.material.id,
+        quantity: source.quantity,
+        from: source.position,
+        to,
+        relocateLotIds,
+        idempotencyKey: createWarehouseTransferIdempotencyKey(),
+        note: 'Alteração de localidade pela ficha do material em Controle de Itens',
+      });
+      setRelocateSourceKey('');
+      setRelocateDepotId('');
+      setRelocateLocationId('');
+      setRelocateSubpositionId('');
+      setMessage(
+        'Localidade atualizada. O saldo inteiro da posição e os lotes ativos vinculados foram realocados.'
+      );
+      await refresh();
+    } catch (error) {
+      setMessage(logisticsMessage(error));
+    } finally {
+      setWorking(false);
+    }
+  };
 
   return (
     <div className="space-y-5" data-testid="warehouse-stock-operational">
