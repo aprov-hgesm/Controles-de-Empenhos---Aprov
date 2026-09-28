@@ -677,12 +677,12 @@ requireText(
 );
 requireText(
   navigation,
-  "href: '/adm-deposito/meus-depositos'",
+  "label: 'Meus Depósitos',\n    href: '/adm-deposito/meus-depositos'",
   'Meus Depósitos perdeu sua rota dedicada.'
 );
 requireText(
   navigation,
-  "href: '/adm-deposito/controle-de-depositos'",
+  "label: 'Controle de Depósitos',\n    href: '/adm-deposito/controle-de-depositos'",
   'Controle de Depósitos perdeu sua rota dedicada.'
 );
 requireText(
