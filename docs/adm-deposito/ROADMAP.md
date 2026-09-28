@@ -232,11 +232,11 @@ Objetivo: consolidar a identidade visual definitiva do módulo depois que suas p
 
 Escopo:
 - usar o mesmo chrome visual oficial do EMPROVEX para Header, Sidebar e framework principal;
-- transformar a antiga Visão Geral em **Início**, central visual branca de consulta e localização;
+- transformar a antiga Visão Geral em **Início**, central visual imersiva premium de consulta e localização, alinhada ao acabamento da Home principal do EMPROVEX;
 - posicionar consulta de itens e seletor de depósito na coluna esquerda;
-- mostrar saldo, quantidade no depósito, localizações, lotes e validade do item selecionado;
-- usar croqui 2.5D/isométrico sem paredes na home, com piso delimitador, destaque de localização, vista superior e rotação controlada;
-- preservar a edição/versionamento do croqui na superfície Visão do Depósito;
+- mostrar saldo, quantidade no depósito, localizações e validade/FEFO do item selecionado, sem expor código/número de lote;
+- reutilizar a **Visão 3D** oficial derivada do mesmo croqui ativo, com destaque de localização e ângulos Frente/Direita/Trás/Esquerda;
+- preservar a edição/versionamento do croqui exclusivamente em **Meus Depósitos**, mantendo o Início somente leitura;
 - criar e consolidar um design system próprio do ADM Depósito, coerente com a identidade geral do EMPROVEX;
 - revisar hierarquia visual, navegação interna, sidebar, cabeçalhos, cards, tabelas, filtros, badges, estados, formulários e feedbacks;
 - harmonizar Estoque, Saída Expressa, Localizações, Visão do Depósito, Inventário, Entregas, Dashboard, Alertas e demais superfícies do módulo;
