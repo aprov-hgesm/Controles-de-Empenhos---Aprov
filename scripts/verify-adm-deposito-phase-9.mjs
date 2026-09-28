@@ -92,7 +92,7 @@ assert.match(croquisR1, /WarehouseDepotLayoutEditor/);
 assert.match(croquisR1, /WarehouseIsometricPreview/);
 assert.match(croquisR1, /saveWarehouseDepotLayoutVersion/);
 assert.match(croquisR1, /listWarehouseLocationBalances/);
-assert.match(locationsR1, /warehouse-r1-locations/);
+assert.match(locationsR1, /warehouse-locations-r1-operational/);
 assert.match(depots, /requested === 'croquis'/);
 assert.match(navigation, /id: 'depots'/);
 assert.match(navigation, /label: 'Meus Depósitos'/);
