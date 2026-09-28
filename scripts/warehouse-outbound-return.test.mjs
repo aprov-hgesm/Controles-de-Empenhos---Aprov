@@ -39,6 +39,10 @@ const repositorySource = readFileSync(
   resolve(root, 'lib/warehouse/withdrawalRepository.ts'),
   'utf8'
 );
+const manualEntrySource = readFileSync(
+  resolve(root, 'lib/warehouse/manualEntryRepository.ts'),
+  'utf8'
+);
 
 const WORKSPACE = 'hgesm-aprov';
 const UG = '160416';
@@ -113,6 +117,36 @@ test('status de devolução usa marcador separado e não atualiza consumptions',
   assert.equal(
     /transaction\.update\(consumptionRef,[\s\S]*returnedQuantity/.test(repositorySource),
     false
+  );
+});
+
+test('devolução interna aceita posição UNASSIGNED sem afrouxar Entrada Avulsa comum', () => {
+  assert.match(
+    manualEntrySource,
+    /position\.kind === 'UNASSIGNED' && !input\.allowUnassignedPosition/
+  );
+  assert.match(
+    repositorySource,
+    /allowUnassignedPosition: originalSource\.position\.kind === 'UNASSIGNED'/
+  );
+  assert.match(
+    manualEntrySource,
+    /position\.kind === 'UNASSIGNED'\s*\? null\s*:\s*await transferWarehouseStock/
+  );
+});
+
+test('reserva pendente sem movimento pode ser assumida por nova tentativa', () => {
+  assert.match(
+    repositorySource,
+    /existing\.pendingOperationId !== operationId/
+  );
+  assert.match(
+    repositorySource,
+    /if \(pendingMovementSnapshot\.exists\(\)\)/
+  );
+  assert.match(
+    repositorySource,
+    /Reserva antiga sem movimento correspondente/
   );
 });
 
