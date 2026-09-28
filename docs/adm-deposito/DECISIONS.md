@@ -2259,3 +2259,20 @@ Data: 2026-09-28.
 - O formato especial client-side `OUTBOUND_RETURN` deixa de ser necessário para novas devoluções e permanece bloqueado pelas Rules.
 - A arquitetura reduz a complexidade específica da devolução e reutiliza componentes já validados do ADM Depósito, preservando idempotência, histórico, rastreabilidade e segregação por workspace/UG.
 
+
+
+## D-111 — Início é vitrine visual consolidada; Meus Depósitos mantém a consulta 3D
+
+Data: 2026-09-28.
+
+- A rota raiz `/adm-deposito` passa a ser a aba **Início**, sem operações de estoque, cadastros, edição ou filtros operacionais.
+- A antiga superfície premium passa a se chamar **Meus Depósitos** e ocupa a rota dedicada `/adm-deposito/meus-depositos`, preservando pesquisa de material, saldo, localização, validade/FEFO e a Visão 3D oficial.
+- **Controle de Depósitos** passa a usar a rota `/adm-deposito/controle-de-depositos` e continua concentrando cadastro de depósitos, localizações e edição de croquis.
+- O Início mostra todos os depósitos ativos lado a lado e deriva sua geometria exclusivamente dos layouts `warehouse_depot_layout_v1`; não existe segunda fonte visual de verdade.
+- Cada depósito do Início é apenas um acesso visual. O clique abre **Meus Depósitos** com o depósito correspondente pré-selecionado por `?deposito=<depotId>`.
+- A cena mantém identidade imersiva compatível com a Home principal do EMPROVEX: azul profundo, vidro técnico, luz radial e grade em perspectiva alinhada ao desenho isométrico dos croquis.
+- A implementação permanece leve em React/SVG/CSS, sem WebGL, engine 3D, parallax contínuo ou animação pesada.
+- O Início não carrega materiais, lotes, saldos ou locationBalances de todos os depósitos. Para preservar custo e desempenho, carrega apenas depósitos, layouts bounded e a fila necessária para representar pendências.
+- A área lateral de recebimento representa NFs e itens pendentes de alocação com paletes e caixas: cada palete ocupado corresponde a uma NF em espera e cada caixa representa um item pendente; quando não há pendências os paletes ficam visualmente vazios.
+- A fila visual considera somente linhas `PENDING` ou `PARTIALLY_PROCESSED` com `pendingQuantity > 0`; não cria estado paralelo nem infere pendências inexistentes.
+- A aba Início é estritamente consultiva e estética. Ações continuam nas abas especializadas.
