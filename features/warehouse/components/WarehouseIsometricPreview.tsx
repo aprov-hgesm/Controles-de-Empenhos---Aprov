@@ -430,29 +430,6 @@ function WarehouseStructure({
           );
         })}
 
-        {runnerRatios.flatMap((rx) => [0.17, 0.5, 0.83].map((ry) => ({ rx, ry }))).map((block, index) => {
-          const p = isoPoint(
-            object.x + object.width * block.rx,
-            object.y + object.height * block.ry,
-            1.5,
-            logicalWidth,
-            logicalHeight
-          );
-          return (
-            <rect
-              key={'block-' + index}
-              x={p.x - 5.5}
-              y={p.y - 3.5}
-              width="11"
-              height="8"
-              rx="1.4"
-              fill={WAREHOUSE_PALLET_VISUAL.blockFill}
-              stroke={WAREHOUSE_PALLET_VISUAL.blockStroke}
-              strokeWidth="0.8"
-            />
-          );
-        })}
-
         {generalBoxCount > 0 && Array.from({ length: generalBoxCount }, (_, index) =>
           boxGroup(
             'pal-box-' + index,
@@ -463,6 +440,15 @@ function WarehouseStructure({
           )
         )}
 
+        {renderLabel(
+          centerTop,
+          code,
+          'Palete',
+          subpositions.length ? subpositions.length + ' subposições' : 'Local aberto',
+          highlighted,
+          0,
+          -8
+        )}
       </g>
     );
   }
