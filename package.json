@@ -181,7 +181,8 @@
     "test:adm-deposito-labels-r1": "node --test scripts/warehouse-labels-r1.test.mjs",
     "warehouse:db:plan": "node scripts/migrate-warehouse-database.mjs plan",
     "warehouse:db:copy": "node scripts/migrate-warehouse-database.mjs copy",
-    "warehouse:db:verify": "node scripts/migrate-warehouse-database.mjs verify"
+    "warehouse:db:verify": "node scripts/migrate-warehouse-database.mjs verify",
+    "test:adm-deposito-manual-entry": "node --test scripts/warehouse-manual-entry.test.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
