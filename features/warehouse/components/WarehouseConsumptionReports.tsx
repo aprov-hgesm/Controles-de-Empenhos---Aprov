@@ -380,7 +380,7 @@ export function WarehouseConsumptionReports({
     setWorkingId(record.id);
     setMessage(null);
     try {
-      await returnWarehouseStockOutbound(workspaceId, {
+      const result = await returnWarehouseStockOutbound(workspaceId, {
         consumptionId: record.id,
         quantity,
         reason: returnReason,
@@ -397,6 +397,7 @@ export function WarehouseConsumptionReports({
         + (record.siscofisStatus === 'POSTED'
           ? ' A saída já estava marcada como lançada no SISCOFIS; faça também a correção administrativa correspondente.'
           : '')
+        + (result.warnings.length ? ' ' + result.warnings.join(' ') : '')
       );
     } catch (error) {
       setMessage(
