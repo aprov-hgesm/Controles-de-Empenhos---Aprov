@@ -23,10 +23,7 @@ import {
   type WarehouseLocationBalanceListItem,
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
-import {
-  warehouseLocationIdForPosition,
-  type WarehouseDepotLayout,
-} from '../../../lib/warehouse/layout';
+import type { WarehouseDepotLayout } from '../../../lib/warehouse/layout';
 import { getActiveWarehouseDepotLayout } from '../../../lib/warehouse/layoutRepository';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import { listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
