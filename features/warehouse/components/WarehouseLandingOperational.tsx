@@ -107,44 +107,6 @@ function objectHeight(kind: WarehouseDepotLayoutObject['kind'], scale: number, s
   return Math.max(8, base * Math.min(1.02, Math.max(0.48, scale)));
 }
 
-function renderLocationTag(
-  point: IsoPoint,
-  location: WarehouseLocation | null,
-  fallback: string,
-  detail?: string
-) {
-  const code = location?.code || fallback;
-  const name = location?.name || '';
-  const width = Math.max(42, Math.min(92, 18 + code.length * 5.3));
-  return (
-    <g transform={'translate(' + point.x + ' ' + point.y + ')'} pointerEvents="none">
-      <line x1="0" y1="0" x2="0" y2="-11" stroke="#9fb0bf" strokeWidth="0.85" opacity="0.7" />
-      <circle cy="-11" r="1.8" fill="#94a3b8" />
-      <g transform="translate(0 -15)">
-        <rect
-          x={-width / 2}
-          y="-22"
-          width={width}
-          height={detail || name ? 30 : 21}
-          rx="5.5"
-          fill="#ffffff"
-          stroke="#d6e0e8"
-          strokeWidth="0.8"
-          opacity="0.96"
-        />
-        <text x="0" y="-9" textAnchor="middle" fontSize="7.2" fontWeight="900" fill="#173a5e">
-          {code}
-        </text>
-        {(detail || name) && (
-          <text x="0" y="1" textAnchor="middle" fontSize="5.4" fontWeight="700" fill="#60758a">
-            {(detail || name).slice(0, 20)}
-          </text>
-        )}
-      </g>
-    </g>
-  );
-}
-
 function buildPendingGroups(rows: WarehouseInvoiceIntakeQueueRow[]): PendingInvoiceGroup[] {
   const actionable = rows.filter(
     (row) =>
@@ -217,7 +179,6 @@ function derivePlacements(
 function renderDepotObject(
   object: WarehouseDepotLayoutObject,
   placement: DepotPlacement,
-  locationById: Map<string, WarehouseLocation>,
   subpositionsByParent: Map<string, WarehouseLocation[]>
 ) {
   const localScale = placement.scale;
@@ -225,9 +186,6 @@ function renderDepotObject(
   const y = placement.y + object.y * localScale;
   const width = Math.max(2.6, object.width * localScale);
   const height = Math.max(2.6, object.height * localScale);
-  const location = object.warehouseLocationId
-    ? locationById.get(object.warehouseLocationId) || null
-    : null;
   const subpositions = object.warehouseLocationId
     ? subpositionsByParent.get(object.warehouseLocationId) || []
     : [];
@@ -240,7 +198,6 @@ function renderDepotObject(
   const bt = isoPoint(x + width, y, z);
   const ct = isoPoint(x + width, y + height, z);
   const dt = isoPoint(x, y + height, z);
-  const centerTop = isoPoint(x + width / 2, y + height / 2, z);
 
   if (object.kind === 'CORRIDOR' || object.kind === 'AREA' || object.kind === 'ZONE') {
     const zoneFill = object.kind === 'CORRIDOR' ? '#eef5fa' : '#e6f0f8';
@@ -255,11 +212,6 @@ function renderDepotObject(
           strokeWidth="0.7"
           strokeDasharray={object.kind === 'CORRIDOR' ? '4 4' : undefined}
         />
-        {object.warehouseLocationId && renderLocationTag(
-          isoPoint(x + width / 2, y + height / 2, 2),
-          location,
-          object.label
-        )}
       </g>
     );
   }
@@ -286,7 +238,6 @@ function renderDepotObject(
           const p2 = isoPoint(x + width * ratio, y + height, z + 0.5);
           return <line key={index} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#a06932" strokeWidth="0.7" />;
         })}
-        {object.warehouseLocationId && renderLocationTag(centerTop, location, object.label, 'Palete')}
       </g>
     );
   }
@@ -329,8 +280,6 @@ function renderDepotObject(
           const p4 = isoPoint(x, y + height, shelfZ);
           const frontLeft = isoPoint(x, y + height, shelfZ - 1.4);
           const frontRight = isoPoint(x + width, y + height, shelfZ - 1.4);
-          const linked = subpositions[index] || null;
-
           return (
             <g key={'level-' + index}>
               <polygon
@@ -349,21 +298,6 @@ function renderDepotObject(
                 strokeWidth="3"
                 strokeLinecap="round"
               />
-              {linked && (
-                <text
-                  x={(frontLeft.x + frontRight.x) / 2}
-                  y={(frontLeft.y + frontRight.y) / 2 - 3}
-                  textAnchor="middle"
-                  fontSize="4.7"
-                  fontWeight="900"
-                  fill="#234b67"
-                  paintOrder="stroke"
-                  stroke="#ffffff"
-                  strokeWidth="1.8"
-                >
-                  {linked.code}
-                </text>
-              )}
             </g>
           );
         })}
@@ -378,12 +312,6 @@ function renderDepotObject(
           );
         })}
 
-        {object.warehouseLocationId && renderLocationTag(
-          centerTop,
-          location,
-          object.label,
-          subpositions.length ? subpositions.length + ' posições' : 'Estante'
-        )}
       </g>
     );
   }
@@ -398,7 +326,6 @@ function renderDepotObject(
         <polygon points={polygonPoints([at, bt, ct, dt])} fill="#edf2f4" stroke="#82939d" strokeWidth="0.9" />
         <line x1={splitBottom.x} y1={splitBottom.y} x2={splitTop.x} y2={splitTop.y} stroke="#71838c" strokeWidth="1.3" />
         <line x1={dt.x + 3} y1={dt.y + 5} x2={d.x + 3} y2={d.y - 4} stroke="#ffffff" strokeWidth="1.4" opacity="0.55" />
-        {object.warehouseLocationId && renderLocationTag(centerTop, location, object.label, 'Geladeira')}
       </g>
     );
   }
@@ -421,7 +348,6 @@ function renderDepotObject(
           stroke="#73a9bf"
           strokeWidth="0.7"
         />
-        {object.warehouseLocationId && renderLocationTag(centerTop, location, object.label, 'Refrigeração')}
       </g>
     );
   }
@@ -452,7 +378,6 @@ function renderDepotObject(
           stroke="#667d8b"
           strokeWidth="0.85"
         />
-        {object.warehouseLocationId && renderLocationTag(centerTop, location, object.label, 'Bancada')}
       </g>
     );
   }
@@ -462,19 +387,16 @@ function renderDepotObject(
       <polygon points={polygonPoints([d, c, ct, dt])} fill="#dce6ec" stroke="#7e94a4" strokeWidth="0.9" />
       <polygon points={polygonPoints([b, c, ct, bt])} fill="#b7c7d1" stroke="#718899" strokeWidth="0.85" />
       <polygon points={polygonPoints([at, bt, ct, dt])} fill="#f4f7f9" stroke="#8fa3b1" strokeWidth="0.9" />
-      {object.warehouseLocationId && renderLocationTag(centerTop, location, object.label)}
     </g>
   );
 }
 
 function DepotWorld({
   placement,
-  locationById,
   subpositionsByParent,
   onOpen,
 }: {
   placement: DepotPlacement;
-  locationById: Map<string, WarehouseLocation>;
   subpositionsByParent: Map<string, WarehouseLocation[]>;
   onOpen: (depotId: string) => void;
 }) {
@@ -483,12 +405,6 @@ function DepotWorld({
   const floorB = isoPoint(placement.x + placement.width + 9, placement.y - 9, 0);
   const floorC = isoPoint(placement.x + placement.width + 9, placement.y + placement.height + 9, 0);
   const floorD = isoPoint(placement.x - 9, placement.y + placement.height + 9, 0);
-  const labelPoint = isoPoint(
-    placement.x + placement.width * 0.5,
-    placement.y + placement.height + 17,
-    0
-  );
-
   const open = () => onOpen(depot.id);
 
   return (
@@ -557,7 +473,7 @@ function DepotWorld({
               const rightDepth = (right.x + right.y) * placement.scale + right.layer * 0.001;
               return leftDepth - rightDepth;
             })
-            .map((object) => renderDepotObject(object, placement, locationById, subpositionsByParent))
+            .map((object) => renderDepotObject(object, placement, subpositionsByParent))
         : (
           <g opacity="0.58">
             <polygon
@@ -570,13 +486,36 @@ function DepotWorld({
           </g>
         )}
 
-      <g className={styles.depotLabel} transform={'translate(' + labelPoint.x + ' ' + (labelPoint.y + 17) + ')'}>
-        <text textAnchor="middle" className={styles.depotCode}>{depot.code}</text>
-        <text y="15" textAnchor="middle" className={styles.depotName}>{depot.name}</text>
-        {!layout && (
-          <text y="29" textAnchor="middle" className={styles.depotStatus}>sem croqui ativo</text>
-        )}
-      </g>
+    </g>
+  );
+}
+
+function DepotWorldLabel({ placement }: { placement: DepotPlacement }) {
+  const { depot, layout } = placement;
+  const labelPoint = isoPoint(
+    placement.x + placement.width * 0.5,
+    placement.y + placement.height + 17,
+    0
+  );
+
+  return (
+    <g
+      className={styles.depotLabel}
+      transform={'translate(' + labelPoint.x + ' ' + (labelPoint.y + 17) + ')'}
+    >
+      <rect
+        x="-68"
+        y="-13"
+        width="136"
+        height={layout ? 34 : 46}
+        rx="8"
+        className={styles.textBackdrop}
+      />
+      <text textAnchor="middle" className={styles.depotCode}>{depot.code}</text>
+      <text y="15" textAnchor="middle" className={styles.depotName}>{depot.name}</text>
+      {!layout && (
+        <text y="28" textAnchor="middle" className={styles.depotStatus}>sem croqui ativo</text>
+      )}
     </g>
   );
 }
@@ -604,7 +543,6 @@ function PalletWorld({
   const ct = isoPoint(x + palletWidth, y + palletDepth, palletHeight);
   const dt = isoPoint(x, y + palletDepth, palletHeight);
   const boxCount = group ? Math.min(group.itemCount, 12) : 0;
-  const labelPoint = isoPoint(x + palletWidth / 2, y + palletDepth + 8, 0);
 
   return (
     <g
@@ -670,16 +608,40 @@ function PalletWorld({
         );
       })}
 
-      <g transform={'translate(' + labelPoint.x + ' ' + (labelPoint.y + 11) + ')'}>
-        <text textAnchor="middle" className={styles.palletLabel}>
-          {group ? group.invoiceId : 'P' + String(index + 1).padStart(2, '0')}
+    </g>
+  );
+}
+
+function PalletWorldLabel({
+  x,
+  y,
+  group,
+  index,
+}: {
+  x: number;
+  y: number;
+  group: PendingInvoiceGroup | null;
+  index: number;
+}) {
+  const labelPoint = isoPoint(x + 24, y + 42, 0);
+  const text = group ? group.invoiceId : 'P' + String(index + 1).padStart(2, '0');
+
+  return (
+    <g transform={'translate(' + labelPoint.x + ' ' + (labelPoint.y + 11) + ')'}>
+      <rect
+        x="-34"
+        y="-10"
+        width="68"
+        height={group ? 25 : 15}
+        rx="6"
+        className={styles.textBackdropSoft}
+      />
+      <text textAnchor="middle" className={styles.palletLabel}>{text}</text>
+      {group && (
+        <text y="11" textAnchor="middle" className={styles.palletDetail}>
+          {group.itemCount} item(ns)
         </text>
-        {group && (
-          <text y="12" textAnchor="middle" className={styles.palletDetail}>
-            {group.itemCount} item(ns)
-          </text>
-        )}
-      </g>
+      )}
     </g>
   );
 }
@@ -752,11 +714,6 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
       .map((item) => item.location)
       .filter((location) => location.status === 'active'),
     [data.locations]
-  );
-
-  const locationById = useMemo(
-    () => new Map(activeLocations.map((location) => [location.id, location])),
-    [activeLocations]
   );
 
   const subpositionsByParent = useMemo(() => {
@@ -932,7 +889,6 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
             <DepotWorld
               key={placement.depot.id}
               placement={placement}
-              locationById={locationById}
               subpositionsByParent={subpositionsByParent}
               onOpen={openDepot}
             />
@@ -948,17 +904,6 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
             strokeWidth="1"
             strokeDasharray="7 8"
           />
-
-          <g transform={'translate(' + isoPoint(PALLET_YARD_X + PALLET_YARD_WIDTH / 2, PALLET_YARD_Y - 39, 0).x + ' ' + isoPoint(PALLET_YARD_X + PALLET_YARD_WIDTH / 2, PALLET_YARD_Y - 39, 0).y + ')'}>
-            <text textAnchor="middle" className={styles.yardTitle}>RECEBIMENTO · AGUARDANDO ALOCAÇÃO</text>
-            <text y="15" textAnchor="middle" className={styles.yardSubtitle}>
-              {data.pendingAvailable
-                ? pendingItems > 0
-                  ? pendingItems + ' item(ns) · ' + pendingGroups.length + ' NF(s)'
-                  : 'sem pendências · paletes livres'
-                : 'leitura temporariamente indisponível'}
-            </text>
-          </g>
 
           {palletGroups.map((group, index) => {
             const columns = 2;
@@ -977,8 +922,45 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
             );
           })}
 
+        </g>
+
+        <g data-visual-role="text-overlay" pointerEvents="none">
+          {placements.map((placement) => (
+            <DepotWorldLabel key={'label-' + placement.depot.id} placement={placement} />
+          ))}
+
+          {palletGroups.map((group, index) => {
+            const columns = 2;
+            const col = index % columns;
+            const row = Math.floor(index / columns);
+            const px = PALLET_YARD_X + 18 + col * 94;
+            const py = PALLET_YARD_Y + 40 + row * 92;
+            return (
+              <PalletWorldLabel
+                key={'label-' + (group?.key || 'empty-' + index)}
+                x={px}
+                y={py}
+                group={group}
+                index={index}
+              />
+            );
+          })}
+
+          <g transform={'translate(' + isoPoint(PALLET_YARD_X + PALLET_YARD_WIDTH / 2, PALLET_YARD_Y - 39, 0).x + ' ' + isoPoint(PALLET_YARD_X + PALLET_YARD_WIDTH / 2, PALLET_YARD_Y - 39, 0).y + ')'}>
+            <rect x="-128" y="-15" width="256" height="35" rx="9" className={styles.yardTextBackdrop} />
+            <text textAnchor="middle" className={styles.yardTitle}>RECEBIMENTO · AGUARDANDO ALOCAÇÃO</text>
+            <text y="15" textAnchor="middle" className={styles.yardSubtitle}>
+              {data.pendingAvailable
+                ? pendingItems > 0
+                  ? pendingItems + ' item(ns) · ' + pendingGroups.length + ' NF(s)'
+                  : 'sem pendências · paletes livres'
+                : 'leitura temporariamente indisponível'}
+            </text>
+          </g>
+
           {pendingGroups.length > MAX_VISIBLE_PENDING_NFS && (
             <g transform={'translate(' + isoPoint(PALLET_YARD_X + PALLET_YARD_WIDTH / 2, PALLET_YARD_Y + PALLET_YARD_HEIGHT - 4, 0).x + ' ' + isoPoint(PALLET_YARD_X + PALLET_YARD_WIDTH / 2, PALLET_YARD_Y + PALLET_YARD_HEIGHT - 4, 0).y + ')'}>
+              <rect x="-76" y="-9" width="152" height="17" rx="6" className={styles.textBackdropSoft} />
               <text textAnchor="middle" className={styles.morePending}>
                 +{pendingGroups.length - MAX_VISIBLE_PENDING_NFS} NF(s) além da área visível
               </text>
