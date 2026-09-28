@@ -1,13 +1,7 @@
 'use client';
 
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Boxes,
-  PackageOpen,
-  Sparkles,
-  Warehouse,
-} from 'lucide-react';
 
 import type { WarehouseDepotLayout, WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
 import {
@@ -42,6 +36,18 @@ interface PendingInvoiceGroup {
   itemNames: string[];
 }
 
+interface DepotPlacement {
+  depot: WarehouseDepot;
+  layout: WarehouseDepotLayout | null;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  scale: number;
+}
+
+type IsoPoint = { x: number; y: number };
+
 const INITIAL_DATA: LandingData = {
   loading: true,
   error: null,
@@ -51,178 +57,106 @@ const INITIAL_DATA: LandingData = {
   pendingAvailable: true,
 };
 
-const VIEW_WIDTH = 520;
-const VIEW_HEIGHT = 300;
-const ORIGIN_X = 260;
-const ORIGIN_Y = 62;
-const FLOOR_HALF_W = 202;
-const FLOOR_HALF_H = 102;
-const PALLET_SLOTS = 6;
+const SVG_WIDTH = 1600;
+const SVG_HEIGHT = 900;
+const WORLD_WIDTH = 1000;
+const WORLD_HEIGHT = 620;
+const ISO_ORIGIN_X = 790;
+const ISO_ORIGIN_Y = 94;
+const ISO_HALF_WIDTH = 720;
+const ISO_HALF_HEIGHT = 320;
+const DEPOT_WORLD_WIDTH = 690;
+const PALLET_YARD_X = 750;
+const PALLET_YARD_Y = 92;
+const PALLET_YARD_WIDTH = 205;
+const PALLET_YARD_HEIGHT = 435;
+const MAX_VISIBLE_PENDING_NFS = 8;
+const MIN_PALLET_SLOTS = 5;
 
-type IsoPoint = { x: number; y: number };
-
-function isoPoint(
-  x: number,
-  y: number,
-  z: number,
-  logicalWidth: number,
-  logicalHeight: number
-): IsoPoint {
-  const nx = x / Math.max(1, logicalWidth);
-  const ny = y / Math.max(1, logicalHeight);
+function isoPoint(x: number, y: number, z = 0): IsoPoint {
+  const nx = x / WORLD_WIDTH;
+  const ny = y / WORLD_HEIGHT;
   return {
-    x: ORIGIN_X + (nx - ny) * FLOOR_HALF_W,
-    y: ORIGIN_Y + (nx + ny) * FLOOR_HALF_H - z,
+    x: ISO_ORIGIN_X + (nx - ny) * ISO_HALF_WIDTH,
+    y: ISO_ORIGIN_Y + (nx + ny) * ISO_HALF_HEIGHT - z,
   };
 }
 
-function points(list: IsoPoint[]): string {
-  return list.map((point) => point.x.toFixed(1) + ',' + point.y.toFixed(1)).join(' ');
+function polygonPoints(points: IsoPoint[]): string {
+  return points.map((point) => point.x.toFixed(1) + ',' + point.y.toFixed(1)).join(' ');
 }
 
-function objectHeight(kind: WarehouseDepotLayoutObject['kind']): number {
-  if (kind === 'SHELF') return 72;
-  if (kind === 'REFRIGERATOR') return 78;
-  if (kind === 'FREEZER' || kind === 'CHAMBER') return 48;
-  if (kind === 'PALLET') return 10;
-  if (kind === 'BENCH' || kind === 'CABINET') return 38;
-  if (kind === 'OTHER') return 30;
-  return 24;
+function objectHeight(kind: WarehouseDepotLayoutObject['kind'], scale: number): number {
+  const base = kind === 'SHELF'
+    ? 90
+    : kind === 'REFRIGERATOR'
+      ? 92
+      : kind === 'FREEZER' || kind === 'CHAMBER'
+        ? 54
+        : kind === 'PALLET'
+          ? 12
+          : kind === 'BENCH' || kind === 'CABINET'
+            ? 44
+            : kind === 'OTHER'
+              ? 40
+              : 28;
+  return Math.max(7, base * Math.min(1.05, Math.max(0.48, scale)));
 }
 
-function palette(kind: WarehouseDepotLayoutObject['kind']): {
+function objectPalette(kind: WarehouseDepotLayoutObject['kind']): {
   top: string;
   front: string;
   side: string;
   stroke: string;
+  accent?: string;
 } {
   if (kind === 'PALLET') {
-    return { top: '#b68148', front: '#80552f', side: '#684524', stroke: '#d4a76e' };
+    return {
+      top: '#b9864d',
+      front: '#79502d',
+      side: '#5c3a21',
+      stroke: '#d7ad79',
+    };
   }
   if (kind === 'FREEZER' || kind === 'CHAMBER') {
-    return { top: '#dceaf4', front: '#8caec1', side: '#65889d', stroke: '#d9f1ff' };
+    return {
+      top: '#e3eef4',
+      front: '#91aebc',
+      side: '#698696',
+      stroke: '#dcf4ff',
+    };
   }
   if (kind === 'REFRIGERATOR') {
-    return { top: '#edf2f4', front: '#9aaab3', side: '#6f818c', stroke: '#f8fbfc' };
+    return {
+      top: '#edf2f4',
+      front: '#a3b1b8',
+      side: '#71828b',
+      stroke: '#f8fbfc',
+    };
   }
   if (kind === 'BENCH' || kind === 'CABINET') {
-    return { top: '#dce4e8', front: '#8799a3', side: '#647783', stroke: '#eef5f7' };
+    return {
+      top: '#dce5e9',
+      front: '#889aa3',
+      side: '#647681',
+      stroke: '#eef5f7',
+    };
   }
   if (kind === 'OTHER') {
-    return { top: '#6076a5', front: '#35476e', side: '#273654', stroke: '#90a8df' };
+    return {
+      top: '#5d72a0',
+      front: '#35466a',
+      side: '#273550',
+      stroke: '#92a8dc',
+    };
   }
-  return { top: '#1a5d8f', front: '#0f3e68', side: '#092e50', stroke: '#5ca7e1' };
-}
-
-function DepotMiniature({
-  depot,
-  layout,
-}: {
-  depot: WarehouseDepot;
-  layout: WarehouseDepotLayout | null;
-}) {
-  const logicalWidth = layout?.logicalWidth || 100;
-  const logicalHeight = layout?.logicalHeight || 70;
-  const floor = [
-    isoPoint(0, 0, 0, logicalWidth, logicalHeight),
-    isoPoint(logicalWidth, 0, 0, logicalWidth, logicalHeight),
-    isoPoint(logicalWidth, logicalHeight, 0, logicalWidth, logicalHeight),
-    isoPoint(0, logicalHeight, 0, logicalWidth, logicalHeight),
-  ];
-
-  const visualObjects = (layout?.objects || [])
-    .filter((object) => object.kind !== 'WALL' && object.kind !== 'CORRIDOR')
-    .slice()
-    .sort((left, right) => (left.x + left.y + left.layer * 0.001) - (right.x + right.y + right.layer * 0.001));
-
-  return (
-    <svg
-      viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
-      className={styles.depotSvg}
-      role="img"
-      aria-label={`Croqui 3D do depósito ${depot.name}`}
-    >
-      <defs>
-        <linearGradient id={`landing-floor-${depot.id}`} x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stopColor="#0d1d37" stopOpacity="0.95" />
-          <stop offset="100%" stopColor="#07101f" stopOpacity="0.92" />
-        </linearGradient>
-        <filter id={`landing-shadow-${depot.id}`} x="-30%" y="-30%" width="160%" height="180%">
-          <feDropShadow dx="0" dy="9" stdDeviation="7" floodColor="#00081b" floodOpacity="0.46" />
-        </filter>
-      </defs>
-
-      <polygon
-        points={points(floor)}
-        fill={`url(#landing-floor-${depot.id})`}
-        stroke="#5d7ab8"
-        strokeOpacity="0.58"
-        strokeWidth="1.5"
-      />
-
-      {Array.from({ length: 7 }, (_, index) => {
-        const ratio = (index + 1) / 8;
-        const a = isoPoint(logicalWidth * ratio, 0, 0, logicalWidth, logicalHeight);
-        const b = isoPoint(logicalWidth * ratio, logicalHeight, 0, logicalWidth, logicalHeight);
-        const c = isoPoint(0, logicalHeight * ratio, 0, logicalWidth, logicalHeight);
-        const d = isoPoint(logicalWidth, logicalHeight * ratio, 0, logicalWidth, logicalHeight);
-        return (
-          <g key={index} stroke="#7392cf" strokeOpacity="0.15" strokeWidth="0.7">
-            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
-            <line x1={c.x} y1={c.y} x2={d.x} y2={d.y} />
-          </g>
-        );
-      })}
-
-      {visualObjects.map((object) => {
-        const z = objectHeight(object.kind);
-        const a = isoPoint(object.x, object.y, 0, logicalWidth, logicalHeight);
-        const b = isoPoint(object.x + object.width, object.y, 0, logicalWidth, logicalHeight);
-        const c = isoPoint(object.x + object.width, object.y + object.height, 0, logicalWidth, logicalHeight);
-        const d = isoPoint(object.x, object.y + object.height, 0, logicalWidth, logicalHeight);
-        const at = isoPoint(object.x, object.y, z, logicalWidth, logicalHeight);
-        const bt = isoPoint(object.x + object.width, object.y, z, logicalWidth, logicalHeight);
-        const ct = isoPoint(object.x + object.width, object.y + object.height, z, logicalWidth, logicalHeight);
-        const dt = isoPoint(object.x, object.y + object.height, z, logicalWidth, logicalHeight);
-        const colors = palette(object.kind);
-
-        return (
-          <g key={object.id} filter={`url(#landing-shadow-${depot.id})`}>
-            <polygon points={points([d, c, ct, dt])} fill={colors.front} stroke={colors.stroke} strokeWidth="1" />
-            <polygon points={points([b, c, ct, bt])} fill={colors.side} stroke={colors.stroke} strokeWidth="1" />
-            <polygon points={points([at, bt, ct, dt])} fill={colors.top} stroke={colors.stroke} strokeWidth="1.05" />
-            {object.kind === 'SHELF' && [0.28, 0.52, 0.76].map((ratio) => {
-              const l = isoPoint(object.x, object.y + object.height, z * ratio, logicalWidth, logicalHeight);
-              const r = isoPoint(object.x + object.width, object.y + object.height, z * ratio, logicalWidth, logicalHeight);
-              return (
-                <line
-                  key={ratio}
-                  x1={l.x}
-                  y1={l.y}
-                  x2={r.x}
-                  y2={r.y}
-                  stroke="#f4a52c"
-                  strokeWidth="2.4"
-                  strokeLinecap="round"
-                />
-              );
-            })}
-          </g>
-        );
-      })}
-
-      {!layout && (
-        <g>
-          <text x="260" y="154" textAnchor="middle" fill="#8ea7d7" fontSize="13" fontWeight="800">
-            Croqui ainda não publicado
-          </text>
-          <text x="260" y="175" textAnchor="middle" fill="#63769d" fontSize="10">
-            O depósito permanece acessível em Meus Depósitos
-          </text>
-        </g>
-      )}
-    </svg>
-  );
+  return {
+    top: '#175b8d',
+    front: '#0e3f69',
+    side: '#082d4f',
+    stroke: '#61a9df',
+    accent: '#ed8d21',
+  };
 }
 
 function buildPendingGroups(rows: WarehouseInvoiceIntakeQueueRow[]): PendingInvoiceGroup[] {
@@ -231,17 +165,17 @@ function buildPendingGroups(rows: WarehouseInvoiceIntakeQueueRow[]): PendingInvo
       (row.status === 'PENDING' || row.status === 'PARTIALLY_PROCESSED')
       && row.pendingQuantity > 0.000001
   );
-  const groups = new Map<string, PendingInvoiceGroup>();
+  const grouped = new Map<string, PendingInvoiceGroup>();
 
   for (const row of actionable) {
     const key = row.invoiceRecordKey || row.invoiceId || row.key;
-    const current = groups.get(key);
+    const current = grouped.get(key);
     if (current) {
       current.itemCount += 1;
       current.itemNames.push(row.itemName);
       continue;
     }
-    groups.set(key, {
+    grouped.set(key, {
       key,
       invoiceId: row.invoiceId || 'NF sem número',
       supplier: row.supplier || 'Fornecedor não informado',
@@ -250,74 +184,308 @@ function buildPendingGroups(rows: WarehouseInvoiceIntakeQueueRow[]): PendingInvo
     });
   }
 
-  return Array.from(groups.values())
-    .sort((left, right) => right.itemCount - left.itemCount || left.invoiceId.localeCompare(right.invoiceId, 'pt-BR'));
+  return Array.from(grouped.values()).sort(
+    (left, right) =>
+      right.itemCount - left.itemCount
+      || left.invoiceId.localeCompare(right.invoiceId, 'pt-BR', { numeric: true })
+  );
 }
 
-function PalletVisual({
+function derivePlacements(
+  depots: WarehouseDepot[],
+  layoutByDepot: Map<string, WarehouseDepotLayout>
+): DepotPlacement[] {
+  if (!depots.length) return [];
+
+  const columns = depots.length <= 2
+    ? depots.length
+    : depots.length <= 4
+      ? 2
+      : 3;
+  const rows = Math.max(1, Math.ceil(depots.length / columns));
+  const gapX = columns === 1 ? 0 : 26;
+  const gapY = rows === 1 ? 0 : 30;
+  const availableWidth = DEPOT_WORLD_WIDTH - 76;
+  const availableHeight = 470;
+  const cellWidth = (availableWidth - gapX * Math.max(0, columns - 1)) / columns;
+  const cellHeight = (availableHeight - gapY * Math.max(0, rows - 1)) / rows;
+
+  return depots.map((depot, index) => {
+    const layout = layoutByDepot.get(depot.id) || null;
+    const col = index % columns;
+    const row = Math.floor(index / columns);
+    const logicalWidth = layout?.logicalWidth || 100;
+    const logicalHeight = layout?.logicalHeight || 70;
+    const targetWidth = cellWidth * 0.84;
+    const targetHeight = cellHeight * 0.68;
+    const scale = Math.min(targetWidth / logicalWidth, targetHeight / logicalHeight);
+    const width = logicalWidth * scale;
+    const height = logicalHeight * scale;
+    const x = 48 + col * (cellWidth + gapX) + (cellWidth - width) / 2;
+    const y = 76 + row * (cellHeight + gapY) + (cellHeight - height) / 2;
+
+    return { depot, layout, x, y, width, height, scale };
+  });
+}
+
+function renderDepotObject(
+  object: WarehouseDepotLayoutObject,
+  placement: DepotPlacement
+) {
+  const localScale = placement.scale;
+  const x = placement.x + object.x * localScale;
+  const y = placement.y + object.y * localScale;
+  const width = Math.max(2.6, object.width * localScale);
+  const height = Math.max(2.6, object.height * localScale);
+  const z = objectHeight(object.kind, localScale);
+  const a = isoPoint(x, y, 0);
+  const b = isoPoint(x + width, y, 0);
+  const c = isoPoint(x + width, y + height, 0);
+  const d = isoPoint(x, y + height, 0);
+  const at = isoPoint(x, y, z);
+  const bt = isoPoint(x + width, y, z);
+  const ct = isoPoint(x + width, y + height, z);
+  const dt = isoPoint(x, y + height, z);
+  const colors = objectPalette(object.kind);
+
+  if (object.kind === 'WALL') {
+    return (
+      <g key={object.id} opacity="0.58">
+        <polygon
+          points={polygonPoints([d, c, ct, dt])}
+          fill="#22365e"
+          stroke="#6684c1"
+          strokeOpacity="0.48"
+          strokeWidth="0.9"
+        />
+      </g>
+    );
+  }
+
+  if (object.kind === 'CORRIDOR') {
+    return (
+      <polygon
+        key={object.id}
+        points={polygonPoints([a, b, c, d])}
+        fill="#5b78bc"
+        fillOpacity="0.055"
+        stroke="#7594d7"
+        strokeOpacity="0.13"
+        strokeWidth="0.75"
+        strokeDasharray="4 5"
+      />
+    );
+  }
+
+  return (
+    <g key={object.id} filter="url(#worldObjectShadow)">
+      <polygon points={polygonPoints([d, c, ct, dt])} fill={colors.front} stroke={colors.stroke} strokeWidth="0.85" />
+      <polygon points={polygonPoints([b, c, ct, bt])} fill={colors.side} stroke={colors.stroke} strokeWidth="0.85" />
+      <polygon points={polygonPoints([at, bt, ct, dt])} fill={colors.top} stroke={colors.stroke} strokeWidth="0.95" />
+
+      {object.kind === 'SHELF' && [0.28, 0.52, 0.76].map((ratio) => {
+        const left = isoPoint(x, y + height, z * ratio);
+        const right = isoPoint(x + width, y + height, z * ratio);
+        return (
+          <line
+            key={ratio}
+            x1={left.x}
+            y1={left.y}
+            x2={right.x}
+            y2={right.y}
+            stroke={colors.accent}
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            opacity="0.92"
+          />
+        );
+      })}
+    </g>
+  );
+}
+
+function DepotWorld({
+  placement,
+  onOpen,
+}: {
+  placement: DepotPlacement;
+  onOpen: (depotId: string) => void;
+}) {
+  const { depot, layout } = placement;
+  const floorA = isoPoint(placement.x - 9, placement.y - 9, 0);
+  const floorB = isoPoint(placement.x + placement.width + 9, placement.y - 9, 0);
+  const floorC = isoPoint(placement.x + placement.width + 9, placement.y + placement.height + 9, 0);
+  const floorD = isoPoint(placement.x - 9, placement.y + placement.height + 9, 0);
+  const labelPoint = isoPoint(
+    placement.x + placement.width * 0.5,
+    placement.y + placement.height + 17,
+    0
+  );
+
+  const open = () => onOpen(depot.id);
+
+  return (
+    <g
+      className={styles.depotGroup}
+      role="button"
+      tabIndex={0}
+      aria-label={'Abrir ' + depot.name + ' em Meus Depósitos'}
+      data-testid={'warehouse-landing-depot-' + depot.id}
+      onClick={open}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          open();
+        }
+      }}
+    >
+      <polygon
+        className={styles.depotAura}
+        points={polygonPoints([floorA, floorB, floorC, floorD])}
+        fill="#335ba6"
+        fillOpacity="0.055"
+        stroke="#6f97e1"
+        strokeOpacity="0.22"
+        strokeWidth="1.05"
+      />
+
+      {layout
+        ? layout.objects
+            .slice()
+            .sort((left, right) => {
+              const leftDepth = (left.x + left.y) * placement.scale + left.layer * 0.001;
+              const rightDepth = (right.x + right.y) * placement.scale + right.layer * 0.001;
+              return leftDepth - rightDepth;
+            })
+            .map((object) => renderDepotObject(object, placement))
+        : (
+          <g opacity="0.58">
+            <polygon
+              points={polygonPoints([floorA, floorB, floorC, floorD])}
+              fill="#0a1530"
+              stroke="#6583bd"
+              strokeOpacity="0.32"
+              strokeDasharray="6 7"
+            />
+          </g>
+        )}
+
+      <g className={styles.depotLabel} transform={'translate(' + labelPoint.x + ' ' + (labelPoint.y + 17) + ')'}>
+        <text textAnchor="middle" className={styles.depotCode}>{depot.code}</text>
+        <text y="15" textAnchor="middle" className={styles.depotName}>{depot.name}</text>
+        {!layout && (
+          <text y="29" textAnchor="middle" className={styles.depotStatus}>sem croqui ativo</text>
+        )}
+      </g>
+    </g>
+  );
+}
+
+function PalletWorld({
+  x,
+  y,
   group,
   index,
 }: {
+  x: number;
+  y: number;
   group: PendingInvoiceGroup | null;
   index: number;
 }) {
-  const boxCount = group ? Math.min(9, group.itemCount) : 0;
-  const hiddenItems = group ? Math.max(0, group.itemCount - boxCount) : 0;
+  const palletWidth = 48;
+  const palletDepth = 34;
+  const palletHeight = 7;
+  const a = isoPoint(x, y, 0);
+  const b = isoPoint(x + palletWidth, y, 0);
+  const c = isoPoint(x + palletWidth, y + palletDepth, 0);
+  const d = isoPoint(x, y + palletDepth, 0);
+  const at = isoPoint(x, y, palletHeight);
+  const bt = isoPoint(x + palletWidth, y, palletHeight);
+  const ct = isoPoint(x + palletWidth, y + palletDepth, palletHeight);
+  const dt = isoPoint(x, y + palletDepth, palletHeight);
+  const boxCount = group ? Math.min(group.itemCount, 12) : 0;
+  const labelPoint = isoPoint(x + palletWidth / 2, y + palletDepth + 8, 0);
 
   return (
-    <div
-      className={styles.palletSlot}
+    <g
+      className={group ? styles.pendingPallet : styles.emptyPallet}
       data-pending={group ? 'true' : 'false'}
-      title={group ? group.itemNames.join(' · ') : 'Palete disponível'}
     >
-      <div className={styles.palletVisual} aria-hidden="true">
-        <div className={styles.palletShadow} />
-        <div className={styles.palletDeck}>
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-        </div>
-        <div className={styles.palletFeet}>
-          <span />
-          <span />
-          <span />
-        </div>
-        <div className={styles.boxStack}>
-          {Array.from({ length: boxCount }, (_, boxIndex) => (
-            <span
-              key={boxIndex}
-              className={styles.pendingBox}
-              style={{
-                left: 18 + (boxIndex % 3) * 29 + '%',
-                bottom: 23 + Math.floor(boxIndex / 3) * 20 + 'px',
-                zIndex: boxIndex + 2,
-              }}
-            />
-          ))}
-        </div>
-      </div>
+      <ellipse
+        cx={(d.x + c.x) / 2}
+        cy={(d.y + c.y) / 2 + 10}
+        rx="37"
+        ry="10"
+        fill="#000817"
+        opacity="0.23"
+        filter="url(#worldSoftBlur)"
+      />
 
-      <div className={styles.palletMeta}>
-        <span className={styles.palletIndex}>P{String(index + 1).padStart(2, '0')}</span>
-        {group ? (
-          <>
-            <strong>{group.invoiceId}</strong>
-            <span>{group.itemCount} item(ns) pendente(s){hiddenItems ? ` · +${hiddenItems} na pilha` : ''}</span>
-          </>
-        ) : (
-          <>
-            <strong>Palete livre</strong>
-            <span>Sem item pendente</span>
-          </>
+      <polygon points={polygonPoints([d, c, ct, dt])} fill="#704724" stroke="#a6733e" strokeWidth="0.85" />
+      <polygon points={polygonPoints([b, c, ct, bt])} fill="#59361c" stroke="#986335" strokeWidth="0.85" />
+      <polygon points={polygonPoints([at, bt, ct, dt])} fill="#a97239" stroke="#d5a36b" strokeWidth="1" />
+
+      {[0.18, 0.38, 0.58, 0.78].map((ratio) => {
+        const p1 = isoPoint(x + palletWidth * ratio, y, palletHeight + 0.7);
+        const p2 = isoPoint(x + palletWidth * ratio, y + palletDepth, palletHeight + 0.7);
+        return (
+          <line
+            key={ratio}
+            x1={p1.x}
+            y1={p1.y}
+            x2={p2.x}
+            y2={p2.y}
+            stroke="#6f431f"
+            strokeWidth="1.3"
+            opacity="0.9"
+          />
+        );
+      })}
+
+      {Array.from({ length: boxCount }, (_, boxIndex) => {
+        const col = boxIndex % 3;
+        const row = Math.floor(boxIndex / 3);
+        const layer = Math.floor(row / 2);
+        const localRow = row % 2;
+        const bx = x + 8 + col * 15 + localRow * 3;
+        const by = y + 8 + localRow * 13;
+        const bz = palletHeight + 16 + layer * 18;
+        const boxWidth = 14;
+        const boxDepth = 11;
+        const boxHeight = 14;
+        const ba = isoPoint(bx, by, bz);
+        const bb = isoPoint(bx + boxWidth, by, bz);
+        const bc = isoPoint(bx + boxWidth, by + boxDepth, bz);
+        const bd = isoPoint(bx, by + boxDepth, bz);
+        const bat = isoPoint(bx, by, bz + boxHeight);
+        const bbt = isoPoint(bx + boxWidth, by, bz + boxHeight);
+        const bct = isoPoint(bx + boxWidth, by + boxDepth, bz + boxHeight);
+        const bdt = isoPoint(bx, by + boxDepth, bz + boxHeight);
+        return (
+          <g key={boxIndex} filter="url(#worldObjectShadow)">
+            <polygon points={polygonPoints([bd, bc, bct, bdt])} fill="#bf7834" stroke="#e1ad6b" strokeWidth="0.65" />
+            <polygon points={polygonPoints([bb, bc, bct, bbt])} fill="#925528" stroke="#c98745" strokeWidth="0.65" />
+            <polygon points={polygonPoints([bat, bbt, bct, bdt])} fill="#dda05a" stroke="#efc183" strokeWidth="0.7" />
+          </g>
+        );
+      })}
+
+      <g transform={'translate(' + labelPoint.x + ' ' + (labelPoint.y + 11) + ')'}>
+        <text textAnchor="middle" className={styles.palletLabel}>
+          {group ? group.invoiceId : 'P' + String(index + 1).padStart(2, '0')}
+        </text>
+        {group && (
+          <text y="12" textAnchor="middle" className={styles.palletDetail}>
+            {group.itemCount} item(ns)
+          </text>
         )}
-      </div>
-    </div>
+      </g>
+    </g>
   );
 }
 
 export function WarehouseLandingOperational({ workspaceId }: { workspaceId: string }) {
+  const router = useRouter();
   const [data, setData] = useState<LandingData>(INITIAL_DATA);
 
   const load = useCallback(async () => {
@@ -341,7 +509,9 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
       setData((current) => ({
         ...current,
         loading: false,
-        error: error instanceof Error ? error.message : 'Não foi possível montar a visão geral dos depósitos.',
+        error: error instanceof Error
+          ? error.message
+          : 'Não foi possível montar o ambiente visual dos depósitos.',
       }));
     }
   }, [workspaceId]);
@@ -351,7 +521,12 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
   }, [load]);
 
   const activeDepots = useMemo(
-    () => data.depots.filter((item) => item.depot.status === 'active'),
+    () => data.depots
+      .map((item) => item.depot)
+      .filter((depot) => depot.status === 'active')
+      .sort((left, right) =>
+        (left.code + left.name).localeCompare(right.code + right.name, 'pt-BR', { numeric: true })
+      ),
     [data.depots]
   );
 
@@ -365,6 +540,11 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
     return map;
   }, [data.layouts]);
 
+  const placements = useMemo(
+    () => derivePlacements(activeDepots, activeLayoutByDepot),
+    [activeDepots, activeLayoutByDepot]
+  );
+
   const pendingGroups = useMemo(
     () => buildPendingGroups(data.pendingRows),
     [data.pendingRows]
@@ -375,19 +555,40 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
     [pendingGroups]
   );
 
-  const visiblePalletGroups = useMemo(
-    () => Array.from({ length: PALLET_SLOTS }, (_, index) => pendingGroups[index] || null),
-    [pendingGroups]
+  const visiblePendingGroups = pendingGroups.slice(0, MAX_VISIBLE_PENDING_NFS);
+  const palletSlotCount = Math.max(
+    MIN_PALLET_SLOTS,
+    Math.min(MAX_VISIBLE_PENDING_NFS, visiblePendingGroups.length)
   );
+  const palletGroups = Array.from(
+    { length: palletSlotCount },
+    (_, index) => visiblePendingGroups[index] || null
+  );
+
+  const worldFloor = [
+    isoPoint(0, 0, 0),
+    isoPoint(WORLD_WIDTH, 0, 0),
+    isoPoint(WORLD_WIDTH, WORLD_HEIGHT, 0),
+    isoPoint(0, WORLD_HEIGHT, 0),
+  ];
+
+  const yardFloor = [
+    isoPoint(PALLET_YARD_X - 15, PALLET_YARD_Y - 22, 1),
+    isoPoint(PALLET_YARD_X + PALLET_YARD_WIDTH + 15, PALLET_YARD_Y - 22, 1),
+    isoPoint(PALLET_YARD_X + PALLET_YARD_WIDTH + 15, PALLET_YARD_Y + PALLET_YARD_HEIGHT + 18, 1),
+    isoPoint(PALLET_YARD_X - 15, PALLET_YARD_Y + PALLET_YARD_HEIGHT + 18, 1),
+  ];
+
+  const openDepot = (depotId: string) => {
+    router.push('/adm-deposito/meus-depositos?deposito=' + encodeURIComponent(depotId));
+  };
 
   if (data.loading && !data.depots.length) {
     return (
       <section className={styles.scene} data-testid="warehouse-landing-operational">
-        <div className={styles.ambientGlow} aria-hidden="true" />
-        <div className={styles.perspectiveGrid} aria-hidden="true" />
         <div className={styles.loading}>
-          <Warehouse className="h-8 w-8 text-blue-200/40" />
-          <span>Montando visão geral dos depósitos</span>
+          <span className={styles.loadingMark} />
+          <strong>Montando ambiente logístico</strong>
         </div>
       </section>
     );
@@ -401,124 +602,168 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
     >
       <div className={styles.ambientGlow} aria-hidden="true" />
       <div className={styles.texture} aria-hidden="true" />
-      <div className={styles.perspectiveGrid} aria-hidden="true" />
 
-      <header className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>
-            <Sparkles className="h-3.5 w-3.5" />
-            EMPROVEX · ADM DEPÓSITO
-          </p>
-          <h1 className={styles.title}>Visão geral dos depósitos.</h1>
-          <p className={styles.subtitle}>
-            Todos os depósitos da unidade em uma única cena. Selecione um deles para abrir sua
-            Visão 3D completa em Meus Depósitos.
-          </p>
-        </div>
-
-        <div className={styles.summary}>
-          <div>
-            <span>Depósitos</span>
-            <strong>{activeDepots.length}</strong>
-          </div>
-          <div>
-            <span>NFs pendentes</span>
-            <strong>{data.pendingAvailable ? pendingGroups.length : '—'}</strong>
-          </div>
-          <div>
-            <span>Itens aguardando alocação</span>
-            <strong>{data.pendingAvailable ? pendingItems : '—'}</strong>
-          </div>
-        </div>
-      </header>
-
-      {data.error && (
-        <div className={styles.error}>{data.error}</div>
-      )}
-
-      <div className={styles.stage}>
-        <div className={styles.depotField}>
-          <div className={styles.sectionHeading}>
-            <div>
-              <span className={styles.sectionEyebrow}>Mapa estrutural</span>
-              <h2>Depósitos cadastrados</h2>
-            </div>
-            <span className={styles.sectionHint}>Clique no depósito para abrir</span>
-          </div>
-
-          {activeDepots.length ? (
-            <div className={styles.depotGrid}>
-              {activeDepots.map(({ depot }) => {
-                const layout = activeLayoutByDepot.get(depot.id) || null;
-                return (
-                  <Link
-                    key={depot.id}
-                    href={`/adm-deposito/meus-depositos?deposito=${encodeURIComponent(depot.id)}`}
-                    className={styles.depotCard}
-                    data-testid={'warehouse-landing-depot-' + depot.id}
-                  >
-                    <div className={styles.depotChrome}>
-                      <span>{depot.code}</span>
-                      <span>{layout ? 'Visão 3D ativa' : 'Sem croqui ativo'}</span>
-                    </div>
-                    <DepotMiniature depot={depot} layout={layout} />
-                    <div className={styles.depotCaption}>
-                      <div>
-                        <strong>{depot.name}</strong>
-                        <span>{layout ? layout.name : 'Estrutura disponível para configuração'}</span>
-                      </div>
-                      <span className={styles.openMark}>↗</span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          ) : (
-            <div className={styles.emptyDepots}>
-              <Warehouse className="h-9 w-9" />
-              <strong>Nenhum depósito ativo cadastrado</strong>
-              <span>Quando houver depósitos ativos, eles serão projetados lado a lado nesta cena.</span>
-            </div>
-          )}
-        </div>
-
-        <aside className={styles.pendingYard} aria-label="Pendências de alocação">
-          <div className={styles.pendingHeader}>
-            <div>
-              <span className={styles.sectionEyebrow}>Área de recebimento</span>
-              <h2>Paletes aguardando alocação</h2>
-            </div>
-            {pendingGroups.length > PALLET_SLOTS && (
-              <span className={styles.overflowBadge}>+{pendingGroups.length - PALLET_SLOTS} NFs</span>
-            )}
-          </div>
-
-          <div className={styles.pendingIntro}>
-            <PackageOpen className="h-4 w-4" />
-            {data.pendingAvailable
-              ? pendingItems > 0
-                ? `${pendingItems} item(ns) de ${pendingGroups.length} NF(s) aguardam posição física.`
-                : 'Nenhum item aguarda alocação. Os paletes permanecem livres.'
-              : 'A leitura das pendências está temporariamente indisponível.'}
-          </div>
-
-          <div className={styles.palletGrid}>
-            {visiblePalletGroups.map((group, index) => (
-              <PalletVisual key={group?.key || 'empty-' + index} group={group} index={index} />
-            ))}
-          </div>
-
-          <div className={styles.pendingLegend}>
-            <span><i className={styles.legendBox} /> Caixa = item pendente</span>
-            <span><i className={styles.legendPallet} /> Palete = NF em espera</span>
-          </div>
-        </aside>
+      <div className={styles.sceneTitle}>
+        <span>EMPROVEX · ADM DEPÓSITO</span>
+        <strong>Ambiente logístico</strong>
+        <small>
+          {activeDepots.length} depósito(s)
+          {' · '}
+          {data.pendingAvailable ? pendingGroups.length + ' NF(s) aguardando alocação' : 'pendências indisponíveis'}
+        </small>
       </div>
 
-      <footer className={styles.footer}>
-        <span><Boxes className="h-3.5 w-3.5" /> Leitura consultiva, sem operações nesta tela.</span>
-        <span>Geometria derivada dos croquis oficiais do ADM Depósito.</span>
-      </footer>
+      {data.error && <div className={styles.error}>{data.error}</div>}
+
+      <svg
+        viewBox={'0 0 ' + SVG_WIDTH + ' ' + SVG_HEIGHT}
+        className={styles.world}
+        preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label="Mundo digital 3D dos depósitos e área de recebimento"
+      >
+        <defs>
+          <linearGradient id="worldFloor" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#0b1932" />
+            <stop offset="50%" stopColor="#071225" />
+            <stop offset="100%" stopColor="#040a16" />
+          </linearGradient>
+          <linearGradient id="yardFloor" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#10213f" stopOpacity="0.68" />
+            <stop offset="100%" stopColor="#071225" stopOpacity="0.42" />
+          </linearGradient>
+          <radialGradient id="worldHalo">
+            <stop offset="0%" stopColor="#4a79e8" stopOpacity="0.13" />
+            <stop offset="100%" stopColor="#4a79e8" stopOpacity="0" />
+          </radialGradient>
+          <filter id="worldObjectShadow" x="-40%" y="-40%" width="180%" height="210%">
+            <feDropShadow dx="0" dy="8" stdDeviation="5.5" floodColor="#000713" floodOpacity="0.45" />
+          </filter>
+          <filter id="worldSoftBlur" x="-60%" y="-120%" width="220%" height="340%">
+            <feGaussianBlur stdDeviation="5" />
+          </filter>
+        </defs>
+
+        <ellipse cx="820" cy="480" rx="690" ry="330" fill="url(#worldHalo)" />
+
+        <polygon
+          points={polygonPoints(worldFloor)}
+          fill="url(#worldFloor)"
+          stroke="#5674b1"
+          strokeOpacity="0.32"
+          strokeWidth="1.35"
+          data-visual-role="world-floor"
+        />
+
+        <g data-visual-role="world-grid">
+          {Array.from({ length: 18 }, (_, index) => {
+            const ratio = index / 17;
+            const x = WORLD_WIDTH * ratio;
+            const a = isoPoint(x, 0, 0.6);
+            const b = isoPoint(x, WORLD_HEIGHT, 0.6);
+            return (
+              <line
+                key={'grid-x-' + index}
+                x1={a.x}
+                y1={a.y}
+                x2={b.x}
+                y2={b.y}
+                stroke="#6485cf"
+                strokeOpacity={index % 3 === 0 ? '0.13' : '0.065'}
+                strokeWidth={index % 3 === 0 ? '0.85' : '0.55'}
+              />
+            );
+          })}
+          {Array.from({ length: 14 }, (_, index) => {
+            const ratio = index / 13;
+            const y = WORLD_HEIGHT * ratio;
+            const a = isoPoint(0, y, 0.6);
+            const b = isoPoint(WORLD_WIDTH, y, 0.6);
+            return (
+              <line
+                key={'grid-y-' + index}
+                x1={a.x}
+                y1={a.y}
+                x2={b.x}
+                y2={b.y}
+                stroke="#6485cf"
+                strokeOpacity={index % 3 === 0 ? '0.13' : '0.065'}
+                strokeWidth={index % 3 === 0 ? '0.85' : '0.55'}
+              />
+            );
+          })}
+        </g>
+
+        <g data-visual-role="depots-world">
+          {placements.map((placement) => (
+            <DepotWorld
+              key={placement.depot.id}
+              placement={placement}
+              onOpen={openDepot}
+            />
+          ))}
+        </g>
+
+        <g data-visual-role="receiving-yard">
+          <polygon
+            points={polygonPoints(yardFloor)}
+            fill="url(#yardFloor)"
+            stroke="#7793c9"
+            strokeOpacity="0.22"
+            strokeWidth="1"
+            strokeDasharray="7 8"
+          />
+
+          <g transform={'translate(' + isoPoint(PALLET_YARD_X + PALLET_YARD_WIDTH / 2, PALLET_YARD_Y - 39, 0).x + ' ' + isoPoint(PALLET_YARD_X + PALLET_YARD_WIDTH / 2, PALLET_YARD_Y - 39, 0).y + ')'}>
+            <text textAnchor="middle" className={styles.yardTitle}>RECEBIMENTO · AGUARDANDO ALOCAÇÃO</text>
+            <text y="15" textAnchor="middle" className={styles.yardSubtitle}>
+              {data.pendingAvailable
+                ? pendingItems > 0
+                  ? pendingItems + ' item(ns) · ' + pendingGroups.length + ' NF(s)'
+                  : 'sem pendências · paletes livres'
+                : 'leitura temporariamente indisponível'}
+            </text>
+          </g>
+
+          {palletGroups.map((group, index) => {
+            const columns = 2;
+            const col = index % columns;
+            const row = Math.floor(index / columns);
+            const px = PALLET_YARD_X + 18 + col * 94;
+            const py = PALLET_YARD_Y + 40 + row * 92;
+            return (
+              <PalletWorld
+                key={group?.key || 'empty-' + index}
+                x={px}
+                y={py}
+                group={group}
+                index={index}
+              />
+            );
+          })}
+
+          {pendingGroups.length > MAX_VISIBLE_PENDING_NFS && (
+            <g transform={'translate(' + isoPoint(PALLET_YARD_X + PALLET_YARD_WIDTH / 2, PALLET_YARD_Y + PALLET_YARD_HEIGHT - 4, 0).x + ' ' + isoPoint(PALLET_YARD_X + PALLET_YARD_WIDTH / 2, PALLET_YARD_Y + PALLET_YARD_HEIGHT - 4, 0).y + ')'}>
+              <text textAnchor="middle" className={styles.morePending}>
+                +{pendingGroups.length - MAX_VISIBLE_PENDING_NFS} NF(s) além da área visível
+              </text>
+            </g>
+          )}
+        </g>
+
+        {!activeDepots.length && (
+          <g transform="translate(770 430)">
+            <text textAnchor="middle" className={styles.emptyTitle}>NENHUM DEPÓSITO ATIVO</text>
+            <text y="21" textAnchor="middle" className={styles.emptySubtitle}>
+              Os croquis aparecerão aqui quando houver depósitos ativos.
+            </text>
+          </g>
+        )}
+
+        <g className={styles.sceneHint} transform="translate(116 822)">
+          <text>Clique diretamente em um depósito para entrar em Meus Depósitos</text>
+        </g>
+      </svg>
     </section>
   );
 }
