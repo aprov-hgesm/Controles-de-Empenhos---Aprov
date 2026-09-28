@@ -661,13 +661,23 @@ requireText(
 );
 requireText(
   warehouseLanding,
-  "import { WAREHOUSE_BOX_VISUAL } from '../visualStyle';",
-  'Início deixou de usar a paleta oficial compartilhada das caixas.'
+  'WAREHOUSE_BOX_VISUAL, WAREHOUSE_PALLET_VISUAL',
+  'Início deixou de importar as paletas oficiais compartilhadas de caixas e paletes.'
+);
+requireText(
+  warehouseLanding,
+  'fill={WAREHOUSE_BOX_VISUAL.frontFill}',
+  'Início deixou de aplicar a paleta oficial compartilhada às caixas.'
 );
 requireText(
   isometricPreview,
-  "import { WAREHOUSE_BOX_VISUAL } from '../visualStyle';",
-  'Renderer 3D deixou de usar a paleta oficial compartilhada das caixas.'
+  'WAREHOUSE_BOX_VISUAL, WAREHOUSE_PALLET_VISUAL',
+  'Renderer 3D deixou de importar as paletas oficiais compartilhadas de caixas e paletes.'
+);
+requireText(
+  isometricPreview,
+  'fill={WAREHOUSE_BOX_VISUAL.frontFill}',
+  'Renderer 3D deixou de aplicar a paleta oficial compartilhada às caixas.'
 );
 requireText(
   isometricPreview,
@@ -833,8 +843,23 @@ requireText(
 );
 requireText(
   warehouseLanding,
-  'data-visual-role="allocated-stock-box"',
-  'Início deixou de projetar visualmente os itens alocados nos depósitos.'
+  "visualRole = 'allocated-stock-box'",
+  'Renderer de caixas da Início perdeu o papel visual padrão do estoque alocado.'
+);
+requireText(
+  warehouseLanding,
+  'data-visual-role={visualRole}',
+  'Início deixou de propagar o papel visual das caixas para o SVG.'
+);
+requireText(
+  warehouseLanding,
+  "'allocated-pallet-'",
+  'Início deixou de projetar caixas de estoque sobre paletes internos ocupados.'
+);
+requireText(
+  warehouseLanding,
+  "'allocated-shelf-'",
+  'Início deixou de projetar caixas de estoque sobre estantes ocupadas.'
 );
 requireText(
   warehouseLanding,
