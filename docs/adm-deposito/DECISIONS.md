@@ -2223,6 +2223,8 @@ Data: 2026-09-28.
 
 Data: 2026-09-28.
 
+> **Superada:** a D-109 foi supersedida pela D-110 para remover a camada server-only exclusiva da devolução e reutilizar o motor transacional já existente do ADM Depósito.
+
 - **Cancelar / devolver saída** deixa de ser uma mutação direta do navegador no Firestore.
 - A interface mantém o mesmo fluxo operacional, mas envia a solicitação autenticada para `POST /api/adm-deposito/outbound-return`.
 - A API valida obrigatoriamente a sessão Firebase da conta fundadora por `verifyWarehouseFounderRequest`, aplica proteção de burst e nunca aceita identidade de operador fornecida pelo cliente.
@@ -2234,3 +2236,20 @@ Data: 2026-09-28.
 - Firestore Rules **não reconhecem nem autorizam `OUTBOUND_RETURN` client-side**. Tentativas de falsificar devolução diretamente pelo navegador devem ser negadas.
 - A decisão elimina a dependência do limite de 1000 expressões das Rules para esta mutação complexa e restaura o hot path de saída comum ao desenho anterior já validado.
 - Não foi adicionada dependência `firebase-admin`: o servidor reutiliza o padrão administrativo existente do EMPROVEX, autenticando a service account e usando a API REST oficial do Firestore com privilégio de servidor.
+
+## D-110 — Cancelamento de saída reutiliza Entrada Avulsa auditável + TRANSFER
+
+Data: 2026-09-28.
+
+- O comando visível continua sendo **Cancelar / devolver**, sem expor detalhes técnicos ao operador.
+- A devolução deixa de depender de API exclusiva, service account, JWT administrativo ou `FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON`.
+- O núcleo quantitativo reutiliza o contrato já consolidado de entrada positiva: movimento `MANUAL_ENTRY` com procedência fixa **Devolução de saída** e `reference = consumptionId`.
+- Movimento de entrada, saldo agregado, saldo `UNASSIGNED` e incremento de `returnedQuantity` são confirmados na mesma transação Firestore.
+- As Rules aceitam a atualização de devolução somente quando existe, na mesma transação, um novo `MANUAL_ENTRY` do mesmo material, mesma UG, mesmo operador, com delta exatamente igual ao acréscimo de `returnedQuantity`.
+- A quantidade devolvida continua limitada ao remanescente da saída original; a saída nunca é apagada.
+- Após o núcleo quantitativo, `transferWarehouseStock` reposiciona a quantidade da devolução de `UNASSIGNED` para a posição física original usando o motor oficial `TRANSFER`.
+- Se o reposicionamento falhar, o saldo já devolvido permanece íntegro e a interface informa que o item ficou temporariamente sem localização para correção no Controle de Itens.
+- Quando havia validade técnica na saída original, ela é recomposta depois por enriquecimento idempotente `MANUAL_ENRICHMENT`, sem virar autoridade de saldo.
+- O formato especial client-side `OUTBOUND_RETURN` deixa de ser necessário para novas devoluções e permanece bloqueado pelas Rules.
+- A arquitetura reduz a complexidade específica da devolução e reutiliza componentes já validados do ADM Depósito, preservando idempotência, histórico, rastreabilidade e segregação por workspace/UG.
+
