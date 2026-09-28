@@ -57,6 +57,14 @@ const warehouseHome = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseHomeOperational.tsx'),
   'utf8'
 );
+const warehouseHomeStyles = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseHomeOperational.module.css'),
+  'utf8'
+);
+const warehouseModuleShell = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseModuleShell.tsx'),
+  'utf8'
+);
 const isometricPreview = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseIsometricPreview.tsx'),
   'utf8'
@@ -382,6 +390,16 @@ for (const sourcePath of [
 
 requireText(
   sectionContent,
+  "if (section === 'overview')",
+  'Início deve permanecer como superfície operacional real.'
+);
+requireText(
+  sectionContent,
+  '<WarehouseHomeOperational workspaceId={workspaceId} />',
+  'Início voltou a ser substituído por placeholder em vez do localizador visual.'
+);
+requireText(
+  sectionContent,
   "if (section === 'depots')",
   'Meus Depósitos deve permanecer operacional.'
 );
@@ -552,6 +570,43 @@ requireText(
   'item.balance.quantity > 0',
   'Início voltou a projetar no depósito posições com saldo zero.'
 );
+requireText(
+  warehouseHome,
+  '<WarehouseIsometricPreview',
+  'Início deixou de reutilizar o renderer 3D oficial do ADM Depósito.'
+);
+requireText(
+  warehouseHome,
+  'embedded',
+  'Renderer 3D do Início deixou de usar o modo embutido dedicado.'
+);
+requireText(
+  warehouseHome,
+  'Validade / FEFO',
+  'Início perdeu a leitura consultiva de validade/FEFO.'
+);
+requireText(
+  warehouseHomeStyles,
+  'linear-gradient(145deg, #030714 0%, #07101f 46%, #02040b 100%)',
+  'Início perdeu a identidade visual imersiva alinhada à Home do EMPROVEX.'
+);
+requireText(
+  warehouseModuleShell,
+  '<AppBackground immersive={isHome} />',
+  'Shell do ADM deixou de ativar o fundo imersivo exclusivamente no Início.'
+);
+for (const forbiddenToken of [
+  'Lotes e validade',
+  'Lote {lot.code}',
+  'warehouse-lot-create-code',
+  'transferWarehouseStock(',
+  'finalizeWarehouseMaterialWithdrawal(',
+  'saveWarehouseMaterial(',
+]) {
+  if (warehouseHome.includes(forbiddenToken)) {
+    fail('Início voltou a duplicar manutenção/operação ou expor lote: ' + forbiddenToken);
+  }
+}
 requireText(
   isometricPreview,
   'if (balance.quantity <= 0) continue;',
@@ -994,7 +1049,8 @@ if (findings.length) {
 }
 
 console.log('ADM Depósito modular guard: PASS');
-console.log('- Meus Depósitos, Alocação de Material, Saída de Material e Controle de Itens operacionais');
+console.log('- Início premium, Meus Depósitos, Alocação de Material, Saída de Material e Controle de Itens operacionais');
+console.log('- Início reutiliza a Visão 3D oficial, sem lote visível nem ações operacionais duplicadas');
 console.log('- rules em ' + (rulesBytes / 1024).toFixed(2) + ' KiB (orçamento interno: 150 KiB)');
 console.log('- NF/Pregão podem ser armazenados, consumidos imediatamente ou removidos logicamente da fila');
 console.log('- ficha institucional PDF de alocação física disponível por NF e por Pregão');
