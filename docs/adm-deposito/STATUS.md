@@ -3507,3 +3507,17 @@ Deploy confirmado no projeto `gen-lang-client-0982077967`, database `emprovex-wa
 - Firestore principal do EMPROVEX não foi incluído no deploy.
 
 Próximo passo: smoke test funcional da subaba **Alocação de Material → Entrada avulsa** com material real de teste, confirmando cadastro, ledger `MANUAL_ENTRY`, posicionamento físico por `TRANSFER`, validade/barcode opcionais e reflexo em Estoque/Relatórios.
+
+
+### Pesquisa de materiais — somente saldo físico positivo — 2026-09-28
+
+Correção aplicada após validação operacional:
+- Início não oferece mais materiais zerados na pesquisa;
+- a pesquisa do Início considera somente materiais com `locationBalance.quantity > 0` no depósito selecionado;
+- a Prévia 3D de Meus Depósitos usa a mesma semântica: somente materiais com saldo físico positivo no depósito atual;
+- `UNASSIGNED` não transforma material em opção da pesquisa 3D, pois não representa presença física em um depósito;
+- consultas do Início/Prévia foram ajustadas para `listWarehousePositiveLocationBalances`; o saldo agregado do Início usa `listWarehousePositiveBalances`;
+- o renderer compartilhado `WarehouseIsometricPreview` também filtra a lista de materiais pelos IDs presentes em saldos físicos positivos, protegendo qualquer superfície que o reutilize;
+- nenhum movimento, saldo ou Firestore Rule foi alterado; trata-se de correção de leitura/projeção e redução de reads inúteis de saldos zerados.
+
+Validação local pendente: typecheck, locator/layout e guard modular.
