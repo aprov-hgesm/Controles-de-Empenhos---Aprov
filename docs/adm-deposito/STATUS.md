@@ -3307,3 +3307,18 @@ O componente comum continua sendo reutilizado, mas recebe a origem fixa:
 
 Nenhuma Rule, coleção ou contrato de persistência foi alterado nesta separação.
 O guard modular agora falha se as duas origens voltarem a ser apresentadas como uma única subaba.
+
+
+### Estoque — filtros por depósito ativo, localização-pai e validade — 2026-09-27
+
+Ajuste aplicado na subaba **Controle de Itens → Estoque**:
+- filtro de depósito restringido a depósitos ativos;
+- depósitos inativos/excluídos removidos da seleção;
+- filtro de localização restringido a localizações ativas de primeiro nível (`kind = LOCAL`);
+- subposições removidas da lista de opções;
+- seleção de um local-pai continua encontrando estoque armazenado em suas subposições;
+- localizações de depósitos inativos não são oferecidas;
+- filtro por estado de validade foi substituído por **data de validade exata**;
+- validade considera somente lotes ativos e com saldo positivo.
+
+Nenhuma Firestore Rule ou contrato de persistência foi alterado nesta correção. O guard modular foi reforçado para impedir regressão desses filtros.
