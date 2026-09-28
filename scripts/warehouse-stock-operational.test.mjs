@@ -342,3 +342,36 @@ test('empate de validade mantém ordenação estável por descrição', () => {
 
   assert.deepEqual(rows.map((item) => item.material.description), ['Arroz', 'Óleo']);
 });
+
+
+test('filtro de validade preserva os estados operacionais do lote', () => {
+  assert.equal(stockView.matchesWarehouseExpiryState(['NEAR_EXPIRY'], ''), true);
+  assert.equal(
+    stockView.matchesWarehouseExpiryState(['NEAR_EXPIRY'], 'NEAR_EXPIRY'),
+    true
+  );
+  assert.equal(
+    stockView.matchesWarehouseExpiryState(['EXPIRED'], 'NEAR_EXPIRY'),
+    false
+  );
+  assert.equal(stockView.matchesWarehouseExpiryState(['EXPIRED'], 'EXPIRED'), true);
+  assert.equal(stockView.matchesWarehouseExpiryState(['VALID'], 'VALID'), true);
+  assert.equal(
+    stockView.matchesWarehouseExpiryState(['NO_EXPIRY'], 'NO_EXPIRY'),
+    true
+  );
+});
+
+test('filtro de validade considera qualquer lote atual que corresponda ao estado', () => {
+  assert.equal(
+    stockView.matchesWarehouseExpiryState(
+      ['VALID', 'NEAR_EXPIRY'],
+      'NEAR_EXPIRY'
+    ),
+    true
+  );
+  assert.equal(
+    stockView.matchesWarehouseExpiryState(['VALID', 'NO_EXPIRY'], 'EXPIRED'),
+    false
+  );
+});
