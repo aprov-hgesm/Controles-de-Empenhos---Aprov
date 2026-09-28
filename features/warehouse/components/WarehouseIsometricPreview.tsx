@@ -913,10 +913,22 @@ export function WarehouseIsometricPreview({
     return map;
   }, [locations]);
 
+  const availableMaterialIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const balance of balances) {
+      if (balance.quantity <= 0 || balance.position.kind === 'UNASSIGNED') continue;
+      ids.add(balance.materialId);
+    }
+    return ids;
+  }, [balances]);
+
   const materialMatches = useMemo(() => {
+    const availableMaterials = materials.filter((material) =>
+      availableMaterialIds.has(material.id)
+    );
     const normalized = queryText.trim().toLocaleLowerCase('pt-BR');
-    if (!normalized) return materials.slice(0, 8);
-    return materials
+    if (!normalized) return availableMaterials.slice(0, 8);
+    return availableMaterials
       .filter((material) =>
         [material.id, material.description, ...(material.aliases || [])]
           .join(' ')
@@ -924,7 +936,7 @@ export function WarehouseIsometricPreview({
           .includes(normalized)
       )
       .slice(0, 8);
-  }, [materials, queryText]);
+  }, [availableMaterialIds, materials, queryText]);
 
   const occupancyByLocal = useMemo(() => {
     const map = new Map<string, number>();
