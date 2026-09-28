@@ -191,7 +191,7 @@ export function WarehouseItemControlSummary({
           <p className="mt-2 max-w-4xl text-xs leading-5 text-slate-600">
             Consulta consolidada do estoque já incorporado ao ADM Depósito. Esta superfície
             não cadastra NF, não aloca material e não executa saída: ela acompanha saldo,
-            posição física, lotes, movimentações, inventários e relatórios derivados.
+            posição física, validade, movimentações, inventários e relatórios derivados.
           </p>
         </div>
         <button
@@ -228,9 +228,9 @@ export function WarehouseItemControlSummary({
         />
         <MetricButton
           icon={TriangleAlert}
-          label="Lotes vencidos"
+          label="Validades vencidas"
           value={state.loading ? '…' : metrics.expiredLots}
-          detail="Lotes ativos com quantidade positiva e validade vencida."
+          detail="Quantidades rastreadas com validade vencida."
           onClick={() => onOpenTab('stock')}
         />
         <MetricButton
