@@ -2193,7 +2193,7 @@ Data: 2026-09-28.
 - Uma saída já efetivada nunca é apagada para representar cancelamento.
 - O operador pode devolver **parte ou toda a quantidade ainda retirada** por meio de **Saída de Material → Relatórios de Saída**.
 - A devolução gera movimento próprio `OUTBOUND_RETURN` com delta positivo no ledger e referência estruturada à saída original.
-- A quantidade devolvida retorna à **mesma posição física usada na saída original**; se havia referência técnica de validade associada à retirada, sua quantidade também é recomposta.
+- A quantidade devolvida retorna à **mesma posição física usada na saída original**; se havia referência técnica de validade associada à retirada, a validade é recomposta por enriquecimento técnico idempotente separado do saldo, conforme D-108.
 - A soma das devoluções nunca pode superar a quantidade originalmente retirada.
 - O registro `warehouse_consumption_record_v1` preserva a quantidade original e acumula `returnedQuantity`; os relatórios exibem quantidade líquida sem destruir histórico.
 - Devolução parcial mantém a saída ativa pelo remanescente; devolução integral apresenta a saída como **Cancelada / devolvida**.
