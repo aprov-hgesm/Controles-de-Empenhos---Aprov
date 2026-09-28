@@ -856,7 +856,10 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       </div>
 
       {tab === 'reports' ? (
-        <WarehouseConsumptionReports workspaceId={workspaceId} />
+        <WarehouseConsumptionReports
+          workspaceId={workspaceId}
+          fixedOrigin="STOCK_OUTBOUND"
+        />
       ) : (
         <>
           <section className="overflow-hidden rounded-2xl border border-blue-100/80 bg-white/80 shadow-sm backdrop-blur-md">
