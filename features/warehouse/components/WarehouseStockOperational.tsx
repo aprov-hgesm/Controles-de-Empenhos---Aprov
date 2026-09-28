@@ -56,6 +56,10 @@ import {
   listWarehouseMovementsForMaterial,
   type WarehouseMovementListItem,
 } from '../../../lib/warehouse/ledgerRepository';
+import {
+  compareWarehouseStockAvailability,
+  hasWarehouseAvailableStock,
+} from '../../../lib/warehouse/stockView';
 
 interface WarehouseStockState {
   loading: boolean;
@@ -74,6 +78,7 @@ interface MaterialSummary {
   balance: WarehouseBalance;
   locationBalances: WarehouseLocationBalance[];
   lots: WarehouseLot[];
+  availableLots: WarehouseLot[];
   barcodes: string[];
   unassigned: number;
   distributed: number;
@@ -273,6 +278,7 @@ export function WarehouseStockOperational({
 
   const summaries = useMemo<MaterialSummary[]>(() => {
     return state.balances
+      .filter((balance) => hasWarehouseAvailableStock(balance.quantity))
       .map((balance) => {
         const material = materialById.get(balance.materialId);
         if (!material) return null;
@@ -292,6 +298,9 @@ export function WarehouseStockOperational({
         }
         const lots = (lotsByMaterial.get(balance.materialId) || [])
           .map((item) => item.lot);
+        const availableLots = lots.filter(
+          (lot) => lot.status === 'active' && lot.quantity > 0
+        );
         const barcodes = (barcodesByMaterial.get(balance.materialId) || [])
           .map((item) => item.association.barcode);
         const locationLabels = Array.from(
@@ -308,10 +317,10 @@ export function WarehouseStockOperational({
             ...(unassigned > 0 ? ['Sem localização'] : []),
           ])
         );
-        const fefo = selectWarehouseFefoLot(lots);
+        const fefo = selectWarehouseFefoLot(availableLots);
         const nearestExpiry =
-          lots
-            .filter((lot) => lot.status === 'active' && lot.quantity > 0 && lot.expiresOn)
+          availableLots
+            .filter((lot) => lot.expiresOn)
             .map((lot) => lot.expiresOn as string)
             .sort()[0] || null;
         return {
@@ -319,6 +328,7 @@ export function WarehouseStockOperational({
           balance,
           locationBalances,
           lots,
+          availableLots,
           barcodes,
           unassigned,
           distributed: Math.max(0, balance.quantity - unassigned),
@@ -374,7 +384,7 @@ export function WarehouseStockOperational({
         return false;
       }
       if (expiryFilter) {
-        const states = summary.lots.map((lot) => warehouseLotExpiryState(lot));
+        const states = summary.availableLots.map((lot) => warehouseLotExpiryState(lot));
         if (expiryFilter === 'expired' && !states.includes('EXPIRED')) return false;
         if (expiryFilter === 'near' && !states.includes('NEAR_EXPIRY')) return false;
         if (expiryFilter === 'valid' && !states.includes('VALID')) return false;
@@ -403,7 +413,7 @@ export function WarehouseStockOperational({
         ].join(' ')
       );
       return haystack.includes(q);
-    });
+    }).sort(compareWarehouseStockAvailability);
   }, [depotFilter, expiryFilter, locationFilter, queryText, summaries]);
 
   const selected = summaries.find(
@@ -538,16 +548,16 @@ export function WarehouseStockOperational({
     <div className="space-y-5" data-testid="warehouse-stock-operational">
       <div className="grid gap-3 md:grid-cols-3">
         <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-[#00288e]/70">Saldo oficial</p>
-          <p className="mt-2 text-xs leading-5 text-slate-600">warehouse_balance_v1 continua sendo a autoridade do saldo agregado.</p>
+          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-[#00288e]/70">Saldo disponível</p>
+          <p className="mt-2 text-xs leading-5 text-slate-600">Somente materiais com saldo oficial maior que zero são exibidos nesta visão.</p>
         </div>
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
           <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-700">Enriquecimento</p>
           <p className="mt-2 text-xs leading-5 text-slate-600">{WAREHOUSE_LOT_SCHEMA_VERSION} adiciona lote, validade, origem e posição sem gerar movimento.</p>
         </div>
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-amber-700">FEFO</p>
-          <p className="mt-2 text-xs leading-5 text-slate-600">Recomendação operacional apenas. A retirada permanece uma ação posterior e auditável.</p>
+          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-amber-700">Prioridade por validade</p>
+          <p className="mt-2 text-xs leading-5 text-slate-600">A lista coloca primeiro o material com a menor validade ativa; itens sem validade ficam ao final.</p>
         </div>
       </div>
 
@@ -624,6 +634,14 @@ export function WarehouseStockOperational({
         <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500 shadow-sm">Nenhum material corresponde aos filtros informados.</div>
       ) : (
         <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3 px-1">
+            <p className="text-[10px] font-bold text-slate-500">
+              {filtered.length} material(is) com saldo disponível
+            </p>
+            <p className="text-[10px] font-bold text-[#00288e]">
+              Ordem: menor validade primeiro
+            </p>
+          </div>
           {filtered.map((summary) => (
             <button
               type="button"
@@ -671,7 +689,7 @@ export function WarehouseStockOperational({
                 </div>
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Lotes</p>
-                  <p className="mt-1 text-sm font-bold text-slate-700">{summary.lots.length}</p>
+                  <p className="mt-1 text-sm font-bold text-slate-700">{summary.availableLots.length}</p>
                   <p className="text-[9px] text-slate-600">próxima {dateLabel(summary.nearestExpiry)}</p>
                 </div>
                 <div className="min-w-0">
