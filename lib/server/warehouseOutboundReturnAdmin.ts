@@ -140,6 +140,12 @@ function normalizeText(value: unknown, maxLength: number): string {
     : '';
 }
 
+function normalizeUnboundedText(value: unknown): string {
+  return typeof value === 'string'
+    ? value.trim().replace(/\s+/g, ' ')
+    : '';
+}
+
 function parseServiceAccountCredentials(): ServiceAccountCredentials {
   const raw = process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON?.trim();
   if (!raw) {
@@ -835,6 +841,28 @@ async function enrichReturnedLot(
 function normalizeAdminError(error: unknown): WarehouseOutboundReturnFailure {
   if (error instanceof WarehouseOutboundReturnFailure) return error;
   const message = error instanceof Error ? error.message : '';
+
+  if (message === 'WAREHOUSE_OUTBOUND_RETURN_EXCEEDS_REMAINING') {
+    return new WarehouseOutboundReturnFailure(
+      'A quantidade informada supera o saldo ainda retirado desta saída.',
+      'CONFLICT',
+      409
+    );
+  }
+
+  if (
+    message.startsWith('WAREHOUSE_OUTBOUND_RETURN_')
+    || message.startsWith('WAREHOUSE_INVALID_OUTBOUND_RETURN')
+    || message.startsWith('WAREHOUSE_LOCATION_')
+    || message.startsWith('WAREHOUSE_BALANCE_')
+  ) {
+    return new WarehouseOutboundReturnFailure(
+      'A saída ou o estoque mudou e a devolução não pôde ser confirmada. Atualize o registro e tente novamente.',
+      'CONFLICT',
+      409
+    );
+  }
+
   if (
     message.includes('PERMISSION_DENIED')
     || message.includes('SERVICE_DISABLED')
@@ -857,9 +885,9 @@ export async function returnWarehouseStockOutboundAdmin(
   input: WarehouseOutboundReturnAdminInput
 ): Promise<WarehouseOutboundReturnAdminResult> {
   const actorUid = normalizeText(input.actorUid, 180);
-  const consumptionId = normalizeText(input.consumptionId, 80).toLowerCase();
-  const reason = normalizeText(input.reason, 180);
-  const operationId = normalizeText(input.operationId, 96);
+  const consumptionId = normalizeUnboundedText(input.consumptionId).toLowerCase();
+  const reason = normalizeUnboundedText(input.reason);
+  const operationId = normalizeUnboundedText(input.operationId);
   const quantity = normalizeWarehouseQuantity(input.quantity);
 
   if (
@@ -867,6 +895,7 @@ export async function returnWarehouseStockOutboundAdmin(
     || !/^cons_[a-f0-9]{64}$/.test(consumptionId)
     || !/^[A-Za-z0-9_-]{8,96}$/.test(operationId)
     || !reason
+    || reason.length > 180
     || quantity === null
     || quantity <= 0
   ) {
