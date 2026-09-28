@@ -173,7 +173,7 @@ test('FEFO ignora lote vencido, sem saldo, sem validade e inativo', () => {
   assert.equal(lot.warehouseLotExpiryState(depleted, today), 'DEPLETED');
 });
 
-test('lote próximo ao vencimento recebe estado operacional próprio', () => {
+test('validade próxima ao vencimento recebe estado operacional próprio', () => {
   const result = lot.validateWarehouseLot(sampleLot({ expiresOn: '2026-10-10' }));
   assert.equal(result.ok, true);
   assert.equal(
@@ -182,7 +182,7 @@ test('lote próximo ao vencimento recebe estado operacional próprio', () => {
   );
 });
 
-test('estoque legado sem lote permanece operável e vira pendência não bloqueante', () => {
+test('estoque sem validade permanece operável e vira pendência não bloqueante', () => {
   const pendencies = lot.buildWarehouseLogisticsPendencies({
     materialId,
     totalQuantity: 10,
@@ -190,12 +190,13 @@ test('estoque legado sem lote permanece operável e vira pendência não bloquea
     lots: [],
     today: new Date('2026-09-23T12:00:00Z'),
   });
-  assert.ok(pendencies.some((item) => item.code === 'LOT_INFORMATION_MISSING'));
+  assert.ok(pendencies.some((item) => item.code === 'LOT_EXPIRY_MISSING'));
+  assert.ok(!pendencies.some((item) => item.code === 'LOT_INFORMATION_MISSING'));
   assert.ok(pendencies.some((item) => item.code === 'UNASSIGNED_STOCK'));
   assert.ok(pendencies.every((item) => item.severity !== 'critical'));
 });
 
-test('lote sem validade vira pendência mas não é corrompido nem bloqueado', () => {
+test('referência técnica sem validade vira pendência mas não bloqueia o estoque', () => {
   const undated = lot.validateWarehouseLot(sampleLot({ expiresOn: null, quantity: 2 })).data;
   const pendencies = lot.buildWarehouseLogisticsPendencies({
     materialId,
@@ -206,7 +207,7 @@ test('lote sem validade vira pendência mas não é corrompido nem bloqueado', (
   assert.ok(pendencies.some((item) => item.code === 'LOT_EXPIRY_MISSING'));
 });
 
-test('lote vencido é separado da recomendação e sinalizado criticamente', () => {
+test('validade vencida é separada da recomendação e sinalizada criticamente', () => {
   const expired = lot.validateWarehouseLot(sampleLot({
     expiresOn: '2026-08-30',
     quantity: 2,
