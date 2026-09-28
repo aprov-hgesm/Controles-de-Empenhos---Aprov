@@ -5,6 +5,7 @@ import { WarehouseDepotsOperational } from './WarehouseDepotsOperational';
 import { WarehouseItemRegistrationOperational } from './WarehouseItemRegistrationOperational';
 import { WarehouseMaterialWithdrawal } from './WarehouseMaterialWithdrawal';
 import { WarehouseItemControlOperational } from './WarehouseItemControlOperational';
+import { WarehouseHomeOperational } from './WarehouseHomeOperational';
 
 function WarehouseModularR1Notice({ section }: { section: WarehouseSectionId }) {
   const labels: Record<WarehouseSectionId, string> = {
@@ -43,6 +44,10 @@ export function WarehouseSectionContent({
   section: WarehouseSectionId;
   workspaceId: string;
 }) {
+  if (section === 'overview') {
+    return <WarehouseHomeOperational workspaceId={workspaceId} />;
+  }
+
   if (section === 'depots') {
     return <WarehouseDepotsOperational workspaceId={workspaceId} />;
   }
