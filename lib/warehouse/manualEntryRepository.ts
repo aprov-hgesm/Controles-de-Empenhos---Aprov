@@ -39,6 +39,11 @@ export interface RegisterWarehouseManualEntryInput {
   provenance: string;
   reference?: string | null;
   position: WarehouseStockPosition;
+  /**
+   * Uso interno: permite registrar a entrada diretamente em UNASSIGNED.
+   * A interface normal de Entrada Avulsa não habilita esta opção.
+   */
+  allowUnassignedPosition?: boolean;
   expiresOn?: string | null;
   barcode?: string | null;
 }
@@ -46,7 +51,7 @@ export interface RegisterWarehouseManualEntryInput {
 export interface RegisterWarehouseManualEntryResult {
   material: WarehouseMaterial;
   entry: ApplyWarehouseMovementResult;
-  transfer: TransferWarehouseStockResult;
+  transfer: TransferWarehouseStockResult | null;
   validity: WarehouseLot | null;
   barcodeLinked: boolean;
   warnings: string[];
@@ -184,7 +189,10 @@ export async function registerWarehouseManualEntry(
   }
 
   const position = validateWarehouseStockPosition(input.position);
-  if (!position || position.kind === 'UNASSIGNED') {
+  if (
+    !position
+    || (position.kind === 'UNASSIGNED' && !input.allowUnassignedPosition)
+  ) {
     throw new Error('WAREHOUSE_MANUAL_ENTRY_POSITION_REQUIRED');
   }
 
@@ -209,14 +217,16 @@ export async function registerWarehouseManualEntry(
     },
   });
 
-  const transfer = await transferWarehouseStock(scope.workspaceId, {
-    materialId: material.id,
-    quantity,
-    from: { kind: 'UNASSIGNED' },
-    to: position,
-    idempotencyKey: ['manual-entry', operationId, 'position'].join(':'),
-    note: 'Posicionamento da entrada avulsa',
-  });
+  const transfer = position.kind === 'UNASSIGNED'
+    ? null
+    : await transferWarehouseStock(scope.workspaceId, {
+        materialId: material.id,
+        quantity,
+        from: { kind: 'UNASSIGNED' },
+        to: position,
+        idempotencyKey: ['manual-entry', operationId, 'position'].join(':'),
+        note: 'Posicionamento da entrada avulsa',
+      });
 
   const warnings: string[] = [];
   let validity: WarehouseLot | null = null;
