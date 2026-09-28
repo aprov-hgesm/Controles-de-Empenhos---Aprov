@@ -939,6 +939,303 @@ export async function finalizeWarehouseMaterialWithdrawal(
   }
 }
 
+export async function returnWarehouseStockOutbound(
+  workspaceId: string,
+  input: ReturnWarehouseStockOutboundInput
+): Promise<ReturnWarehouseStockOutboundResult> {
+  const scope = currentScope(workspaceId);
+  const consumptionId = input.consumptionId.trim().toLowerCase();
+  if (!/^cons_[a-f0-9]{64}$/.test(consumptionId)) {
+    throw new Error('WAREHOUSE_OUTBOUND_RETURN_INVALID_CONSUMPTION');
+  }
+  const quantity = normalizeWarehouseQuantity(input.quantity);
+  if (quantity === null || quantity <= 0) {
+    throw new Error('WAREHOUSE_OUTBOUND_RETURN_INVALID_QUANTITY');
+  }
+  const reason = input.reason.trim().replace(/\s+/g, ' ');
+  if (!reason || reason.length > 180) {
+    throw new Error('WAREHOUSE_OUTBOUND_RETURN_REASON_REQUIRED');
+  }
+  const operationId = normalizeOperationId(input.operationId);
+  const movementId = await createWarehouseMovementId(
+    scope.workspaceId,
+    ('outbound-return:' + consumptionId + ':' + operationId).slice(0, 240)
+  );
+
+  const consumptionPath = warehouseDocumentPath(scope.workspaceId, 'consumptions', consumptionId);
+  const movementPath = warehouseDocumentPath(scope.workspaceId, 'movements', movementId);
+
+  try {
+    return await runTransaction(db, async (transaction) => {
+      const consumptionRef = doc(db, consumptionPath);
+      const movementRef = doc(db, movementPath);
+      const [consumptionSnapshot, replaySnapshot] = await Promise.all([
+        transaction.get(consumptionRef),
+        transaction.get(movementRef),
+      ]);
+      if (!consumptionSnapshot.exists()) {
+        throw new Error('WAREHOUSE_OUTBOUND_RETURN_CONSUMPTION_NOT_FOUND');
+      }
+
+      const consumption = parseConsumption(
+        scope.workspaceId,
+        consumptionSnapshot.id,
+        consumptionSnapshot.data() as Record<string, unknown>
+      );
+      if (
+        consumption.origin !== 'STOCK_OUTBOUND'
+        || !consumption.materialId
+        || !consumption.movementId
+        || consumption.legacy
+      ) {
+        throw new Error('WAREHOUSE_OUTBOUND_RETURN_NOT_SUPPORTED');
+      }
+
+      const originalMovementRef = doc(
+        db,
+        warehouseDocumentPath(scope.workspaceId, 'movements', consumption.movementId)
+      );
+      const materialRef = doc(
+        db,
+        warehouseDocumentPath(scope.workspaceId, 'materials', consumption.materialId)
+      );
+      const balanceRef = doc(
+        db,
+        warehouseDocumentPath(scope.workspaceId, 'balances', consumption.materialId)
+      );
+
+      const [
+        originalMovementSnapshot,
+        materialSnapshot,
+        balanceSnapshot,
+      ] = await Promise.all([
+        transaction.get(originalMovementRef),
+        transaction.get(materialRef),
+        transaction.get(balanceRef),
+      ]);
+
+      if (!originalMovementSnapshot.exists()) {
+        throw new Error('WAREHOUSE_OUTBOUND_RETURN_ORIGINAL_MOVEMENT_NOT_FOUND');
+      }
+      if (!materialSnapshot.exists() || !balanceSnapshot.exists()) {
+        throw new Error('WAREHOUSE_OUTBOUND_RETURN_STOCK_NOT_FOUND');
+      }
+
+      const originalMovement = parseMovement(
+        scope.workspaceId,
+        originalMovementSnapshot.id,
+        originalMovementSnapshot.data() as Record<string, unknown>
+      );
+      const originalSource = originalMovement.source;
+      if (
+        originalMovement.type !== 'OUTBOUND'
+        || originalMovement.materialId !== consumption.materialId
+        || originalSource?.kind !== 'EXPRESS_OUTBOUND'
+      ) {
+        throw new Error('WAREHOUSE_OUTBOUND_RETURN_ORIGINAL_INVALID');
+      }
+
+      const material = parseMaterial(
+        scope.workspaceId,
+        materialSnapshot.id,
+        materialSnapshot.data() as Record<string, unknown>
+      );
+      const currentBalance = parseBalance(
+        scope.workspaceId,
+        material.id,
+        balanceSnapshot.data() as Record<string, unknown>
+      );
+      if (material.status !== 'active' || material.ug !== scope.ug || currentBalance.ug !== scope.ug) {
+        throw new Error('WAREHOUSE_OUTBOUND_RETURN_SCOPE_MISMATCH');
+      }
+
+      const locationBalanceRef = doc(
+        db,
+        warehouseDocumentPath(
+          scope.workspaceId,
+          'locationBalances',
+          originalSource.locationBalanceId
+        )
+      );
+      const lotRef = originalSource.lotId
+        ? doc(
+            db,
+            warehouseDocumentPath(scope.workspaceId, 'lots', originalSource.lotId)
+          )
+        : null;
+      const [locationSnapshot, lotSnapshot] = await Promise.all([
+        transaction.get(locationBalanceRef),
+        lotRef ? transaction.get(lotRef) : Promise.resolve(null),
+      ]);
+      if (!locationSnapshot.exists()) {
+        throw new Error('WAREHOUSE_OUTBOUND_RETURN_LOCATION_NOT_FOUND');
+      }
+
+      const currentLocation = parseLocationBalance(
+        scope.workspaceId,
+        locationSnapshot.id,
+        locationSnapshot.data() as Record<string, unknown>
+      );
+      if (
+        currentLocation.materialId !== material.id
+        || JSON.stringify(currentLocation.position) !== JSON.stringify(originalSource.position)
+      ) {
+        throw new Error('WAREHOUSE_OUTBOUND_RETURN_LOCATION_MISMATCH');
+      }
+
+      const currentReturned = consumption.returnedQuantity;
+      const remaining = normalizeWarehouseQuantity(consumption.quantity - currentReturned);
+      if (remaining === null || quantity > remaining + EPSILON) {
+        throw new Error('WAREHOUSE_OUTBOUND_RETURN_EXCEEDS_REMAINING');
+      }
+
+      const source = {
+        kind: 'OUTBOUND_RETURN' as const,
+        actorUid: scope.uid,
+        consumptionId,
+        originalMovementId: originalMovement.id,
+        quantity,
+        position: originalSource.position,
+        locationBalanceId: originalSource.locationBalanceId,
+        lotId: originalSource.lotId,
+        reason,
+      };
+      const candidateResult = validateWarehouseMovement(
+        {
+          schemaVersion: WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
+          id: movementId,
+          workspaceId: scope.workspaceId,
+          ug: scope.ug,
+          materialId: material.id,
+          type: 'OUTBOUND_RETURN',
+          quantityDelta: quantity,
+          idempotencyKeyHash: movementId.slice('mov_'.length),
+          reversesMovementId: null,
+          note: 'Devolução/cancelamento de saída · ' + consumptionId,
+          source,
+        },
+        {
+          expectedWorkspaceId: scope.workspaceId,
+          expectedUg: scope.ug,
+          expectedMaterialId: material.id,
+        }
+      );
+      if (!candidateResult.ok) {
+        throw new Error(
+          'WAREHOUSE_INVALID_OUTBOUND_RETURN: '
+          + candidateResult.issues.map((item) => item.message).join('; ')
+        );
+      }
+      const candidate = candidateResult.data;
+
+      if (replaySnapshot.exists()) {
+        const existingMovement = parseMovement(
+          scope.workspaceId,
+          replaySnapshot.id,
+          replaySnapshot.data() as Record<string, unknown>
+        );
+        if (!warehouseMovementMatchesReplay(existingMovement, candidate)) {
+          throw new Error('WAREHOUSE_IDEMPOTENCY_CONFLICT');
+        }
+        return {
+          movement: existingMovement,
+          consumption,
+          balance: currentBalance,
+          locationBalance: currentLocation,
+          lot: lotSnapshot?.exists()
+            ? parseLot(
+                scope.workspaceId,
+                lotSnapshot.id,
+                lotSnapshot.data() as Record<string, unknown>
+              )
+            : null,
+        };
+      }
+
+      const nextBalance = applyWarehouseMovementToBalance(candidate, currentBalance);
+      const nextLocation = applyWarehouseLocationDelta(currentLocation, {
+        id: currentLocation.id,
+        workspaceId: scope.workspaceId,
+        ug: scope.ug,
+        materialId: material.id,
+        position: originalSource.position,
+        quantityDelta: quantity,
+        movementId,
+      });
+
+      let nextLot: WarehouseLot | null = null;
+      if (originalSource.lotId) {
+        if (!lotSnapshot?.exists() || !lotRef) {
+          throw new Error('WAREHOUSE_OUTBOUND_RETURN_LOT_NOT_FOUND');
+        }
+        const lot = parseLot(
+          scope.workspaceId,
+          lotSnapshot.id,
+          lotSnapshot.data() as Record<string, unknown>
+        );
+        if (
+          lot.materialId !== material.id
+          || lot.status !== 'active'
+          || JSON.stringify(lot.position) !== JSON.stringify(originalSource.position)
+        ) {
+          throw new Error('WAREHOUSE_OUTBOUND_RETURN_LOT_MISMATCH');
+        }
+        const nextLotQuantity = normalizeWarehouseQuantity(lot.quantity + quantity);
+        if (nextLotQuantity === null) throw new Error('WAREHOUSE_OUTBOUND_RETURN_LOT_OVERFLOW');
+        transaction.update(lotRef, {
+          quantity: nextLotQuantity,
+          updatedBy: scope.uid,
+          updatedAt: serverTimestamp(),
+        });
+        nextLot = { ...lot, quantity: nextLotQuantity, updatedBy: scope.uid };
+      }
+
+      const nextReturned = normalizeWarehouseQuantity(currentReturned + quantity);
+      if (nextReturned === null) throw new Error('WAREHOUSE_OUTBOUND_RETURN_OVERFLOW');
+
+      transaction.set(movementRef, {
+        ...candidate,
+        createdAt: serverTimestamp(),
+      });
+      transaction.set(balanceRef, {
+        ...nextBalance,
+        updatedAt: serverTimestamp(),
+      });
+      transaction.set(locationBalanceRef, {
+        ...nextLocation,
+        updatedAt: serverTimestamp(),
+      });
+      transaction.update(consumptionRef, {
+        returnedQuantity: nextReturned,
+        lastReturnMovementId: movementId,
+        lastReturnAt: serverTimestamp(),
+        lastReturnBy: scope.uid,
+        lastReturnReason: reason,
+        updatedAt: serverTimestamp(),
+      });
+
+      return {
+        movement: candidate,
+        consumption: {
+          ...consumption,
+          returnedQuantity: nextReturned,
+          lastReturnMovementId: movementId,
+          lastReturnAt: new Date().toISOString(),
+          lastReturnBy: scope.uid,
+          lastReturnReason: reason,
+          updatedAt: new Date().toISOString(),
+        },
+        balance: nextBalance,
+        locationBalance: nextLocation,
+        lot: nextLot,
+      };
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, movementPath);
+    throw error;
+  }
+}
+
 async function applyWarehouseImmediateConsumptionLightweight(
   scope: { workspaceId: string; ug: string; uid: string },
   input: ApplyWarehouseImmediateConsumptionInput,
