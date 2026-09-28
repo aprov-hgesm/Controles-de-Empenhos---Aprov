@@ -1607,22 +1607,24 @@ service cloud.firestore {
         && after.lastMovementId == movementId;
     }
 
-    function warehouseOutboundReturnLotMatchesAfter(workspaceId, movement) {
+    function warehouseOutboundReturnSelectedLotMatchesAfter(workspaceId, movement) {
       let p = /databases/$(database)/documents/warehouse/$(workspaceId)/lots/$(movement.source.lotId);
       let before = get(p).data;
       let after = getAfter(p).data;
+      return exists(p)
+        && existsAfter(p)
+        && before.materialId == movement.materialId
+        && before.ug == movement.ug
+        && before.position == movement.source.position
+        && before.status == 'active'
+        && after.quantity == before.quantity + movement.source.quantity
+        && after.updatedBy == request.auth.uid
+        && after.updatedAt == request.time;
+    }
+
+    function warehouseOutboundReturnLotMatchesAfter(workspaceId, movement) {
       return movement.source.lotId == null
-        || (
-          exists(p)
-          && existsAfter(p)
-          && before.materialId == movement.materialId
-          && before.ug == movement.ug
-          && before.position == movement.source.position
-          && before.status == 'active'
-          && after.quantity == before.quantity + movement.source.quantity
-          && after.updatedBy == request.auth.uid
-          && after.updatedAt == request.time
-        );
+        || warehouseOutboundReturnSelectedLotMatchesAfter(workspaceId, movement);
     }
 
     function validWarehouseOutboundReturnMovementCreate(workspaceId, movementId) {
