@@ -1569,13 +1569,13 @@ service cloud.firestore {
     function warehouseOutboundReturnConsumptionAllows(workspaceId, movement) {
       let p = /databases/$(database)/documents/warehouse/$(workspaceId)/consumptions/$(movement.source.consumptionId);
       let consumption = get(p).data;
+      let returnedBefore = warehouseConsumptionReturnedQuantity(consumption);
       return consumption is map
         && consumption.origin == 'STOCK_OUTBOUND'
         && consumption.materialId == movement.materialId
         && consumption.movementId == movement.source.originalMovementId
-        && warehouseConsumptionReturnedQuantity(consumption) >= 0
-        && warehouseConsumptionReturnedQuantity(consumption)
-          + movement.source.quantity <= consumption.quantity;
+        && returnedBefore >= 0
+        && returnedBefore + movement.source.quantity <= consumption.quantity;
     }
 
     function warehouseOutboundReturnCompanionsMatchAfter(workspaceId, movementId, movement) {
