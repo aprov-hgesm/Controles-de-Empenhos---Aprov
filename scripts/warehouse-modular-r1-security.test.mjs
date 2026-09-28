@@ -1205,6 +1205,250 @@ async function main() {
     )
   );
 
+  const stockConsumptionId = 'cons_' + 'd'.repeat(64);
+  const stockLineId = 'wline_' + 'e'.repeat(32);
+  const outboundReturnMovementId = 'mov_' + 'f'.repeat(64);
+
+  await allowed('fundador projeta saída finalizada no registro auditável', () =>
+    setDoc(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', stockConsumptionId),
+      {
+        schemaVersion: 'warehouse_consumption_record_v1',
+        id: stockConsumptionId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        origin: 'STOCK_OUTBOUND',
+        materialId,
+        materialDescription: 'Material ADM-R1',
+        unitLabel: 'UN',
+        quantity: 1,
+        requestedQuantity: 1,
+        presentationLabel: 'UN',
+        destinationId,
+        destinationName: 'Cozinha ADM-R1',
+        withdrawnBy: 'Militar ADM-R1',
+        operatorUid: founder.user.uid,
+        movementId: outboundMovementId,
+        withdrawalId,
+        lineId: stockLineId,
+        intakeId: null,
+        invoiceRecordKey: null,
+        barcode: null,
+        lotCode: 'PEND-R1',
+        positionLabel: 'Subposição ADM-R1 B',
+        siscofisStatus: 'PENDING',
+        occurredAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        siscofisUpdatedBy: null,
+        siscofisUpdatedAt: null,
+        returnedQuantity: 0,
+        lastReturnMovementId: null,
+        lastReturnAt: null,
+        lastReturnBy: null,
+        lastReturnReason: null,
+      }
+    )
+  );
+
+  await allowed('fundador devolve saída ao estoque sem apagar histórico', () =>
+    runTransaction(founder.db, async (transaction) => {
+      const movementRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'movements', outboundReturnMovementId
+      );
+      const balanceRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId
+      );
+      const locationBalanceRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', secondTargetBalanceId
+      );
+      const lotRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'lots', secondAllocationLotId
+      );
+      const consumptionRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', stockConsumptionId
+      );
+
+      transaction.set(movementRef, {
+        schemaVersion: 'warehouse_movement_v1',
+        id: outboundReturnMovementId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        type: 'OUTBOUND_RETURN',
+        quantityDelta: 1,
+        idempotencyKeyHash: 'f'.repeat(64),
+        reversesMovementId: null,
+        note: 'Devolução/cancelamento de saída de teste',
+        source: {
+          kind: 'OUTBOUND_RETURN',
+          actorUid: founder.user.uid,
+          consumptionId: stockConsumptionId,
+          originalMovementId: outboundMovementId,
+          quantity: 1,
+          position: {
+            kind: 'SUBPOSITION',
+            depotId,
+            locationId,
+            subpositionId: subpositionBId,
+          },
+          locationBalanceId: secondTargetBalanceId,
+          lotId: secondAllocationLotId,
+          reason: 'Saída cancelada e material devolvido',
+        },
+        createdAt: serverTimestamp(),
+      });
+
+      transaction.set(balanceRef, {
+        schemaVersion: 'warehouse_balance_v1',
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        quantity: 8,
+        revision: 4,
+        lastMovementId: outboundReturnMovementId,
+        updatedAt: serverTimestamp(),
+      });
+
+      transaction.set(locationBalanceRef, {
+        schemaVersion: 'warehouse_location_balance_v1',
+        id: secondTargetBalanceId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        position: {
+          kind: 'SUBPOSITION',
+          depotId,
+          locationId,
+          subpositionId: subpositionBId,
+        },
+        quantity: 3,
+        revision: 4,
+        lastMovementId: outboundReturnMovementId,
+        updatedAt: serverTimestamp(),
+      });
+
+      transaction.update(lotRef, {
+        quantity: 1,
+        updatedBy: founder.user.uid,
+        updatedAt: serverTimestamp(),
+      });
+
+      transaction.update(consumptionRef, {
+        returnedQuantity: 1,
+        lastReturnMovementId: outboundReturnMovementId,
+        lastReturnAt: serverTimestamp(),
+        lastReturnBy: founder.user.uid,
+        lastReturnReason: 'Saída cancelada e material devolvido',
+        updatedAt: serverTimestamp(),
+      });
+    })
+  );
+
+  await allowed('devolução recompõe saldo e mantém o registro da saída', async () => {
+    const [aggregateSnapshot, locationSnapshot, lotSnapshot, consumptionSnapshot] =
+      await Promise.all([
+        getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId)),
+        getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', secondTargetBalanceId)),
+        getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'lots', secondAllocationLotId)),
+        getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', stockConsumptionId)),
+      ]);
+    assert.equal(aggregateSnapshot.data()?.quantity, 8);
+    assert.equal(locationSnapshot.data()?.quantity, 3);
+    assert.equal(lotSnapshot.data()?.quantity, 1);
+    assert.equal(consumptionSnapshot.data()?.quantity, 1);
+    assert.equal(consumptionSnapshot.data()?.returnedQuantity, 1);
+  });
+
+  const invalidReturnMovementId = 'mov_' + '0'.repeat(64);
+  await denied('devolução não pode ultrapassar a quantidade originalmente retirada', () =>
+    runTransaction(founder.db, async (transaction) => {
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'movements', invalidReturnMovementId),
+        {
+          schemaVersion: 'warehouse_movement_v1',
+          id: invalidReturnMovementId,
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId,
+          type: 'OUTBOUND_RETURN',
+          quantityDelta: 1,
+          idempotencyKeyHash: '0'.repeat(64),
+          reversesMovementId: null,
+          note: 'Tentativa de devolução excedente',
+          source: {
+            kind: 'OUTBOUND_RETURN',
+            actorUid: founder.user.uid,
+            consumptionId: stockConsumptionId,
+            originalMovementId: outboundMovementId,
+            quantity: 1,
+            position: {
+              kind: 'SUBPOSITION',
+              depotId,
+              locationId,
+              subpositionId: subpositionBId,
+            },
+            locationBalanceId: secondTargetBalanceId,
+            lotId: secondAllocationLotId,
+            reason: 'Tentativa excedente',
+          },
+          createdAt: serverTimestamp(),
+        }
+      );
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId),
+        {
+          schemaVersion: 'warehouse_balance_v1',
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId,
+          quantity: 9,
+          revision: 5,
+          lastMovementId: invalidReturnMovementId,
+          updatedAt: serverTimestamp(),
+        }
+      );
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', secondTargetBalanceId),
+        {
+          schemaVersion: 'warehouse_location_balance_v1',
+          id: secondTargetBalanceId,
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId,
+          position: {
+            kind: 'SUBPOSITION',
+            depotId,
+            locationId,
+            subpositionId: subpositionBId,
+          },
+          quantity: 4,
+          revision: 5,
+          lastMovementId: invalidReturnMovementId,
+          updatedAt: serverTimestamp(),
+        }
+      );
+      transaction.update(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'lots', secondAllocationLotId),
+        {
+          quantity: 2,
+          updatedBy: founder.user.uid,
+          updatedAt: serverTimestamp(),
+        }
+      );
+      transaction.update(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', stockConsumptionId),
+        {
+          returnedQuantity: 2,
+          lastReturnMovementId: invalidReturnMovementId,
+          lastReturnAt: serverTimestamp(),
+          lastReturnBy: founder.user.uid,
+          lastReturnReason: 'Tentativa excedente',
+          updatedAt: serverTimestamp(),
+        }
+      );
+    })
+  );
+
   await allowed('fundador remove NF apenas da fila do ADM', () =>
     setDoc(
       doc(
