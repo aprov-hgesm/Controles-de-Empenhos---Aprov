@@ -1570,6 +1570,38 @@ async function main() {
   );
 
   const outboundReturnMovementId = 'mov_' + 'abcdef1234567890'.repeat(4);
+  const outboundReturnOperationId = 'returnop_abcdef123456';
+  const outboundReturnSummaryRef = doc(
+    founder.db,
+    'warehouse',
+    WORKSPACE_ID,
+    'outboundReturns',
+    returnConsumptionId
+  );
+
+  await allowed('marcador leve reserva a devolução sem alterar a saída original', () =>
+    setDoc(outboundReturnSummaryRef, {
+      schemaVersion: 'warehouse_outbound_return_v1',
+      id: returnConsumptionId,
+      workspaceId: WORKSPACE_ID,
+      ug: UG,
+      consumptionId: returnConsumptionId,
+      materialId: manualMaterialId,
+      originalQuantity: 2,
+      returnedQuantity: 0,
+      pendingOperationId: outboundReturnOperationId,
+      pendingQuantity: 1,
+      pendingReason: 'Material devolvido',
+      pendingBy: founder.user.uid,
+      lastReturnOperationId: null,
+      lastReturnMovementId: null,
+      lastReturnAt: null,
+      lastReturnBy: null,
+      lastReturnReason: null,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  );
 
   await allowed('cancelamento parcial gera MANUAL_ENTRY auditável no estoque', () =>
     runTransaction(founder.db, async (transaction) => {
@@ -1626,42 +1658,56 @@ async function main() {
     })
   );
 
-  await allowed('marcação leve registra a devolução sem apagar a saída original', () =>
-    updateDoc(
-      doc(founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', returnConsumptionId),
-      {
-        returnedQuantity: 1,
-        lastReturnMovementId: outboundReturnMovementId,
-        lastReturnAt: serverTimestamp(),
-        lastReturnBy: founder.user.uid,
-        lastReturnReason: 'Material devolvido',
-        updatedAt: serverTimestamp(),
-      }
-    )
+  await allowed('marcador leve finaliza a devolução sem atualizar consumptions', () =>
+    updateDoc(outboundReturnSummaryRef, {
+      returnedQuantity: 1,
+      pendingOperationId: null,
+      pendingQuantity: null,
+      pendingReason: null,
+      pendingBy: null,
+      lastReturnOperationId: outboundReturnOperationId,
+      lastReturnMovementId: outboundReturnMovementId,
+      lastReturnAt: serverTimestamp(),
+      lastReturnBy: founder.user.uid,
+      lastReturnReason: 'Material devolvido',
+      updatedAt: serverTimestamp(),
+    })
   );
 
-  await allowed('devolução parcial preserva saída original e saldo líquido', async () => {
-    const [balanceSnapshot, locationSnapshot, consumptionSnapshot] = await Promise.all([
-      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', manualMaterialId)),
-      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', manualLocationBalanceId)),
-      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', returnConsumptionId)),
-    ]);
+  await allowed('devolução parcial preserva saída original e usa marcador separado', async () => {
+    const [balanceSnapshot, locationSnapshot, consumptionSnapshot, returnSnapshot] =
+      await Promise.all([
+        getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', manualMaterialId)),
+        getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', manualLocationBalanceId)),
+        getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', returnConsumptionId)),
+        getDoc(outboundReturnSummaryRef),
+      ]);
     assert.equal(balanceSnapshot.data()?.quantity, 3);
     assert.equal(locationSnapshot.data()?.quantity, 3);
     assert.equal(consumptionSnapshot.data()?.quantity, 2);
-    assert.equal(consumptionSnapshot.data()?.returnedQuantity, 1);
-    assert.equal(consumptionSnapshot.data()?.lastReturnMovementId, outboundReturnMovementId);
+    assert.equal(consumptionSnapshot.data()?.returnedQuantity, 0);
+    assert.equal(returnSnapshot.data()?.returnedQuantity, 1);
+    assert.equal(returnSnapshot.data()?.lastReturnMovementId, outboundReturnMovementId);
   });
 
-  await denied('devolução acima do saldo ainda retirado permanece bloqueada', () =>
+  await denied('marcador de devolução bloqueia quantidade acima da saída original', () =>
+    updateDoc(outboundReturnSummaryRef, {
+      returnedQuantity: 3,
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await denied('usuário não fundador não altera marcador de devolução', () =>
     updateDoc(
-      doc(founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', returnConsumptionId),
+      doc(
+        outsider.db,
+        'warehouse',
+        WORKSPACE_ID,
+        'outboundReturns',
+        returnConsumptionId
+      ),
       {
-        returnedQuantity: 3,
-        lastReturnMovementId: 'mov_' + 'deadbeefcafefeed'.repeat(4),
-        lastReturnAt: serverTimestamp(),
-        lastReturnBy: founder.user.uid,
-        lastReturnReason: 'Tentativa acima do remanescente',
+        lastReturnReason: 'Tentativa externa',
         updatedAt: serverTimestamp(),
       }
     )
@@ -1837,7 +1883,7 @@ async function main() {
   console.log('- edição de barcode preserva o código anterior inativo e cria o substituto ativo');
   console.log('- inventário conta sem alterar estoque e só INVENTORY_ADJUSTMENT confirmado modifica ledger/saldos');
   console.log('- TRANSFER não regrava o saldo agregado quando a quantidade total não muda');
-  console.log('- devolução reutiliza MANUAL_ENTRY auditável, limita o remanescente e preserva a saída original');
+  console.log('- devolução reutiliza MANUAL_ENTRY auditável e marcador leve separado, preservando a saída original');
   console.log('- operações com estoque continuam obrigadas a respeitar ledger e invariantes');
 }
 
