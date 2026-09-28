@@ -95,14 +95,24 @@ test('repository reutiliza o motor oficial de Entrada Avulsa', () => {
 });
 
 test('repository limita a devolução ao saldo ainda retirado', () => {
-  assert.match(
-    repositorySource,
-    /consumption\.quantity - consumption\.returnedQuantity/
-  );
+  assert.match(repositorySource, /consumption\.quantity - baseReturned/);
   assert.match(repositorySource, /quantity > remaining \+ EPSILON/);
   assert.match(
     repositorySource,
-    /latest\.quantity - latest\.returnedQuantity/
+    /current\.returnedQuantity \+ quantity/
+  );
+  assert.match(
+    repositorySource,
+    /nextReturned > current\.originalQuantity \+ EPSILON/
+  );
+});
+
+test('status de devolução usa marcador separado e não atualiza consumptions', () => {
+  assert.match(repositorySource, /'outboundReturns'/);
+  assert.match(repositorySource, /warehouse_outbound_return_v1/);
+  assert.equal(
+    /transaction\.update\(consumptionRef,[\s\S]*returnedQuantity/.test(repositorySource),
+    false
   );
 });
 
