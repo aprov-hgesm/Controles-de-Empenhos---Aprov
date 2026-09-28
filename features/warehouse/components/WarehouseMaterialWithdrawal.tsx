@@ -851,7 +851,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
           className={tab === 'reports'
             ? 'rounded-xl bg-[#00288e] px-4 py-2 text-xs font-black text-white shadow-sm'
             : 'rounded-xl px-4 py-2 text-xs font-bold text-slate-500 hover:bg-blue-50 hover:text-[#00288e]'}>
-          Relatórios
+          Relatórios de Saída
         </button>
       </div>
 
