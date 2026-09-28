@@ -1306,6 +1306,130 @@ async function main() {
     })
   );
 
+  const manualMaterialId = 'mat_' + 'abcdef0123456789'.repeat(2);
+  const manualMovementId = 'mov_' + '1234567890abcdef'.repeat(4);
+  const manualLocationBalanceId = 'locbal_' + 'fedcba0987654321'.repeat(4);
+
+  await allowed('fundador cria material para entrada avulsa auditável', () =>
+    setDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'materials', manualMaterialId), {
+      schemaVersion: 'warehouse_material_v1',
+      id: manualMaterialId,
+      workspaceId: WORKSPACE_ID,
+      ug: UG,
+      description: 'Material de procedência diversa',
+      aliases: [],
+      unit: { code: 'unit', label: null },
+      status: 'active',
+      conversions: [],
+    })
+  );
+
+  await allowed('fundador registra MANUAL_ENTRY com procedência estruturada', () =>
+    runTransaction(founder.db, async (transaction) => {
+      const movementRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'movements', manualMovementId
+      );
+      const balanceRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'balances', manualMaterialId
+      );
+      const locationBalanceRef = doc(
+        founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', manualLocationBalanceId
+      );
+
+      transaction.set(movementRef, {
+        schemaVersion: 'warehouse_movement_v1',
+        id: manualMovementId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId: manualMaterialId,
+        type: 'MANUAL_ENTRY',
+        quantityDelta: 4,
+        idempotencyKeyHash: '1234567890abcdef'.repeat(4),
+        reversesMovementId: null,
+        note: 'Entrada avulsa · doação',
+        source: {
+          kind: 'MANUAL_ENTRY',
+          actorUid: founder.user.uid,
+          provenance: 'Doação',
+          reference: 'TERMO 01/2026',
+        },
+        createdAt: serverTimestamp(),
+      });
+      transaction.set(balanceRef, {
+        schemaVersion: 'warehouse_balance_v1',
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId: manualMaterialId,
+        quantity: 4,
+        revision: 1,
+        lastMovementId: manualMovementId,
+        updatedAt: serverTimestamp(),
+      });
+      transaction.set(locationBalanceRef, {
+        schemaVersion: 'warehouse_location_balance_v1',
+        id: manualLocationBalanceId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId: manualMaterialId,
+        position: { kind: 'UNASSIGNED' },
+        quantity: 4,
+        revision: 1,
+        lastMovementId: manualMovementId,
+        updatedAt: serverTimestamp(),
+      });
+    })
+  );
+
+  const invalidManualMovementId = 'mov_' + '0f1e2d3c4b5a6978'.repeat(4);
+  await denied('MANUAL_ENTRY sem procedência estruturada permanece bloqueado', () =>
+    runTransaction(founder.db, async (transaction) => {
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'movements', invalidManualMovementId),
+        {
+          schemaVersion: 'warehouse_movement_v1',
+          id: invalidManualMovementId,
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId: manualMaterialId,
+          type: 'MANUAL_ENTRY',
+          quantityDelta: 1,
+          idempotencyKeyHash: '0f1e2d3c4b5a6978'.repeat(4),
+          reversesMovementId: null,
+          note: 'Entrada avulsa inválida',
+          createdAt: serverTimestamp(),
+        }
+      );
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', manualMaterialId),
+        {
+          schemaVersion: 'warehouse_balance_v1',
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId: manualMaterialId,
+          quantity: 5,
+          revision: 2,
+          lastMovementId: invalidManualMovementId,
+          updatedAt: serverTimestamp(),
+        }
+      );
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', manualLocationBalanceId),
+        {
+          schemaVersion: 'warehouse_location_balance_v1',
+          id: manualLocationBalanceId,
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId: manualMaterialId,
+          position: { kind: 'UNASSIGNED' },
+          quantity: 5,
+          revision: 2,
+          lastMovementId: invalidManualMovementId,
+          updatedAt: serverTimestamp(),
+        }
+      );
+    })
+  );
+
   for (const domain of [
     ['materials', materialId],
     ['depots', depotId],
