@@ -49,6 +49,10 @@ const outboundRepository = readFileSync(
   resolve(root, 'lib/warehouse/outboundRepository.ts'),
   'utf8'
 );
+const withdrawalRepository = readFileSync(
+  resolve(root, 'lib/warehouse/withdrawalRepository.ts'),
+  'utf8'
+);
 const ledgerRepository = readFileSync(
   resolve(root, 'lib/warehouse/ledgerRepository.ts'),
   'utf8'
@@ -153,6 +157,14 @@ if ((rules.match(/function validWarehouseWithdrawalBase\(/g) || []).length > 1) 
   findings.push('Rules de withdrawals foram duplicadas acidentalmente.');
 }
 
+if ((rules.match(/function warehouseMovementCreateAllowed\(/g) || []).length !== 1) {
+  findings.push('Rules devem conter exatamente um warehouseMovementCreateAllowed.');
+}
+
+if ((rules.match(/function validWarehouseConsumptionBase\(/g) || []).length !== 1) {
+  findings.push('Rules devem conter exatamente um validWarehouseConsumptionBase.');
+}
+
 if ((rules.match(/match \/withdrawals\/\{withdrawalId\}/g) || []).length > 1) {
   findings.push('Bloco match de withdrawals foi duplicado acidentalmente.');
 }
@@ -250,6 +262,9 @@ for (const helper of [
   'function validWarehouseItemIntakeV2Update(workspaceId, intakeId)',
   'function warehouseImmediateConsumptionIntakeMatchesAfter(workspaceId)',
   'function validWarehouseConsumptionCreate(workspaceId, consumptionId)',
+  'function warehouseMovementIsOutboundReturn(movement)',
+  'function validWarehouseOutboundReturnMovementCreate(workspaceId, movementId)',
+  'function validWarehouseConsumptionReturnUpdate(workspaceId, consumptionId)',
 ]) {
   requireText(rules, helper, 'Helper obrigatório da ADM-R1 ausente: ' + helper);
 }
@@ -650,6 +665,62 @@ requireText(
   "balance.quantity <= 0 || balance.position.kind === 'UNASSIGNED'",
   'Prévia 3D voltou a considerar material sem presença física como disponível para pesquisa.'
 );
+requireText(
+  consumptionReports,
+  "fixedOrigin === 'STOCK_OUTBOUND' ? 'monthly' : 'daily'",
+  'Relatórios de Saída deixaram de abrir com recorte mensal útil.'
+);
+requireText(
+  consumptionReports,
+  "if (fixedOrigin === 'STOCK_OUTBOUND')",
+  'Relatórios de Saída deixaram de carregar automaticamente.'
+);
+requireText(
+  consumptionReports,
+  'returnWarehouseStockOutbound',
+  'Relatórios de Saída perderam a ação de cancelamento/devolução.'
+);
+requireText(
+  consumptionReports,
+  'Cancelar / devolver',
+  'Interface de Saída perdeu o comando visível de cancelamento/devolução.'
+);
+requireText(
+  withdrawalRepository,
+  'export async function returnWarehouseStockOutbound(',
+  'Repository perdeu a devolução auditável de saída.'
+);
+requireText(
+  withdrawalRepository,
+  "type: 'OUTBOUND_RETURN'",
+  'Devolução deixou de gerar movimento próprio no ledger.'
+);
+requireText(
+  withdrawalRepository,
+  'quantity > remaining + EPSILON',
+  'Devolução deixou de bloquear quantidade superior ao saldo ainda retirado.'
+);
+requireText(
+  withdrawalRepository,
+  'quantityDelta: quantity',
+  'Devolução deixou de retornar quantidade positiva ao estoque.'
+);
+requireText(
+  rules,
+  "'OUTBOUND_RETURN'",
+  'Rules deixaram de reconhecer a devolução de saída.'
+);
+requireText(
+  rules,
+  "source.kind == 'OUTBOUND_RETURN'",
+  'Rules perderam o vínculo estruturado da devolução.'
+);
+requireText(
+  rules,
+  'returnedBefore + movement.source.quantity <= before.quantity',
+  'Rules deixaram de limitar devoluções ao total originalmente retirado.'
+);
+
 requireText(
   outboundDocuments,
   'FICHA DE SAÍDA DE MATERIAL',
@@ -1142,6 +1213,7 @@ console.log('- ficha PDF otimizada para toner P&B, com grayscale neutro e conten
 console.log('- Saída de Material gera PDF duplo: retirada física + ficha auxiliar SISCOFIS com controle/código');
 console.log('- Saída de Material e seus Relatórios seguem o tema claro oficial D-076/VISUAL_IDENTITY');
 console.log('- Saída de Material reduz ledger/posição/lote e saldo zero deixa de ser projetado no croqui');
+console.log('- Relatórios de Saída carregam o mês automaticamente e permitem devolução parcial/total auditável ao estoque');
 console.log('- Controle de Itens consolidado em Resumo, Estoque, Movimentações, Inventário e Relatórios');
 console.log('- Relatórios separados em Saída e Consumo Imediato, sem mistura de origens');
 console.log('- Estoque exibe somente saldo positivo e prioriza a menor validade ativa');
