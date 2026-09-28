@@ -777,6 +777,34 @@ requireText(
   'summary.availableLots.map((lot) => warehouseLotExpiryState(lot))',
   'Filtro de validade voltou a considerar lotes sem saldo/inativos como estoque atual.'
 );
+requireText(
+  stockOperational,
+  "state.depots.filter(({ depot }) => depot.status === 'active')",
+  'Filtro de depósito voltou a exibir depósitos inativos/excluídos.'
+);
+requireText(
+  stockOperational,
+  "location.status === 'active'",
+  'Filtro de localização voltou a considerar localizações inativas.'
+);
+requireText(
+  stockOperational,
+  "location.kind === 'LOCAL'",
+  'Filtro de localização voltou a listar subposições.'
+);
+requireText(
+  stockOperational,
+  "lot.expiresOn === expiryDateFilter",
+  'Estoque perdeu o filtro por data exata de validade.'
+);
+requireText(
+  stockOperational,
+  'type="date"',
+  'Filtro de validade deixou de usar seletor de data.'
+);
+if (stockOperational.includes("item.position.subpositionId === locationFilter")) {
+  fail('Filtro de localização voltou a aceitar subposição como opção selecionável.');
+}
 
 requireText(
   intakeStateRepository,
@@ -833,6 +861,7 @@ console.log('- Saída de Material reduz ledger/posição/lote e saldo zero deixa
 console.log('- Controle de Itens consolidado em Resumo, Estoque, Movimentações, Inventário e Relatórios');
 console.log('- Relatórios separados em Saída e Consumo Imediato, sem mistura de origens');
 console.log('- Estoque exibe somente saldo positivo e prioriza a menor validade ativa');
+console.log('- filtros do Estoque exibem apenas depósitos ativos, locais-pai e data de validade');
 console.log('- Inventário opera no database dedicado com contagem isolada e ajuste confirmado');
 console.log('- SISCOFIS no Controle é somente leitura; migração permanece em Alocação de Material');
 console.log('- Inventário em Relatórios é somente leitura; contagem/ajuste permanece na subaba Inventário');
