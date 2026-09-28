@@ -118,7 +118,6 @@ export function planWarehouseOutboundReturn(
     input.locationBalance,
     {
       expectedWorkspaceId: input.workspaceId,
-      expectedUg: input.ug,
       expectedMaterialId: material.id,
     }
   );
