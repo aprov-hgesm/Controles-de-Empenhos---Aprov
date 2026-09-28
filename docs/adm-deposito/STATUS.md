@@ -3398,3 +3398,9 @@ Validação pendente no PowerShell:
 - `npm.cmd run test:adm-deposito-stock-operational`;
 - `npm.cmd run test:adm-deposito-barcode-outbound`;
 - `npm.cmd run verify:adm-deposito-modular-r1`.
+
+
+Complemento de compatibilidade:
+- item legado sem referência técnica de validade agora pode receber uma data diretamente na edição do item;
+- o sistema cria a referência interna automaticamente com código técnico oculto, usando a quantidade e a posição física já existentes;
+- o operador continua vendo somente Descritivo, Validade e Código de Barras como dados editáveis.
