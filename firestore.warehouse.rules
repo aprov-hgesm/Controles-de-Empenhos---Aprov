@@ -2950,73 +2950,11 @@ service cloud.firestore {
           && request.resource.data.schemaVersion == 'warehouse_outbound_return_v1'
           && request.resource.data.id == consumptionId
           && request.resource.data.consumptionId == consumptionId
-          && consumptionId.matches('^cons_[a-f0-9]{64}
-      // Fila ADM — marcador lógico founder-only; não é fonte canônica nem quantitativa.
-      // Validação de payload permanece no repository; Rules preservam a fronteira
-      // de identidade/workspace e proíbem exclusão física do marcador.
-      match /queueExclusions/{exclusionId} {
-        allow read, create, update: if canAccessWarehouseModule(workspaceId);
-        allow delete: if false;
-      }
-
-      // FASE 11.5 — fila de entrada/alocação de itens recebidos por NF.
-      match /intakes/{intakeId} {
-        allow read: if canAccessWarehouseModule(workspaceId);
-        allow create: if canAccessWarehouseModule(workspaceId)
-          && (
-            validWarehouseItemIntakeCreate(workspaceId, intakeId)
-            || validWarehouseItemIntakeV2Create(workspaceId, intakeId)
-          );
-        allow update: if canAccessWarehouseModule(workspaceId)
-          && (
-            validWarehouseItemIntakeUpdate(workspaceId, intakeId)
-            || validWarehouseItemIntakeV2Update(workspaceId, intakeId)
-          );
-        allow delete: if false;
-      }
-
-      // FASE 11 / DEP-23.1 — alertas logísticos pertencem exclusivamente ao ADM.
-
-      // FASE 10 / DEP-20..20.3 — inventário founder-only e auditável.
-    }
-  }
-}
-)
+          && consumptionId.matches('^cons_[a-f0-9]{64}$')
           && request.resource.data.workspaceId == workspaceId
           && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
           && request.resource.data.materialId is string
-          && request.resource.data.materialId.matches('^mat_[a-f0-9]{32}
-      // Fila ADM — marcador lógico founder-only; não é fonte canônica nem quantitativa.
-      // Validação de payload permanece no repository; Rules preservam a fronteira
-      // de identidade/workspace e proíbem exclusão física do marcador.
-      match /queueExclusions/{exclusionId} {
-        allow read, create, update: if canAccessWarehouseModule(workspaceId);
-        allow delete: if false;
-      }
-
-      // FASE 11.5 — fila de entrada/alocação de itens recebidos por NF.
-      match /intakes/{intakeId} {
-        allow read: if canAccessWarehouseModule(workspaceId);
-        allow create: if canAccessWarehouseModule(workspaceId)
-          && (
-            validWarehouseItemIntakeCreate(workspaceId, intakeId)
-            || validWarehouseItemIntakeV2Create(workspaceId, intakeId)
-          );
-        allow update: if canAccessWarehouseModule(workspaceId)
-          && (
-            validWarehouseItemIntakeUpdate(workspaceId, intakeId)
-            || validWarehouseItemIntakeV2Update(workspaceId, intakeId)
-          );
-        allow delete: if false;
-      }
-
-      // FASE 11 / DEP-23.1 — alertas logísticos pertencem exclusivamente ao ADM.
-
-      // FASE 10 / DEP-20..20.3 — inventário founder-only e auditável.
-    }
-  }
-}
-)
+          && request.resource.data.materialId.matches('^mat_[a-f0-9]{32}$')
           && request.resource.data.originalQuantity is number
           && request.resource.data.originalQuantity > 0
           && request.resource.data.returnedQuantity is number
@@ -3040,7 +2978,6 @@ service cloud.firestore {
           && request.resource.data.updatedAt == request.time;
 
         allow update: if canAccessWarehouseModule(workspaceId)
-          && request.resource.data is map
           && request.resource.data.schemaVersion == resource.data.schemaVersion
           && request.resource.data.id == resource.data.id
           && request.resource.data.workspaceId == resource.data.workspaceId
@@ -3049,12 +2986,14 @@ service cloud.firestore {
           && request.resource.data.materialId == resource.data.materialId
           && request.resource.data.originalQuantity == resource.data.originalQuantity
           && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.updatedAt == request.time
           && request.resource.data.returnedQuantity is number
           && request.resource.data.returnedQuantity >= resource.data.returnedQuantity
           && request.resource.data.returnedQuantity <= resource.data.originalQuantity
           && (
             (
-              request.resource.data.pendingOperationId is string
+              request.resource.data.returnedQuantity == resource.data.returnedQuantity
+              && request.resource.data.pendingOperationId is string
               && request.resource.data.pendingQuantity is number
               && request.resource.data.pendingQuantity > 0
               && request.resource.data.returnedQuantity
@@ -3064,59 +3003,31 @@ service cloud.firestore {
               && request.resource.data.pendingReason.size() > 0
               && request.resource.data.pendingReason.size() <= 180
               && request.resource.data.pendingBy == request.auth.uid
+              && request.resource.data.lastReturnOperationId == resource.data.lastReturnOperationId
+              && request.resource.data.lastReturnMovementId == resource.data.lastReturnMovementId
+              && request.resource.data.lastReturnAt == resource.data.lastReturnAt
+              && request.resource.data.lastReturnBy == resource.data.lastReturnBy
+              && request.resource.data.lastReturnReason == resource.data.lastReturnReason
             )
             || (
-              request.resource.data.pendingOperationId == null
+              resource.data.pendingOperationId is string
+              && resource.data.pendingQuantity is number
+              && resource.data.pendingQuantity > 0
+              && resource.data.pendingBy == request.auth.uid
+              && request.resource.data.pendingOperationId == null
               && request.resource.data.pendingQuantity == null
               && request.resource.data.pendingReason == null
               && request.resource.data.pendingBy == null
-            )
-          )
-          && (
-            request.resource.data.lastReturnOperationId == null
-            || (
-              request.resource.data.lastReturnOperationId is string
+              && request.resource.data.returnedQuantity
+                == resource.data.returnedQuantity + resource.data.pendingQuantity
+              && request.resource.data.lastReturnOperationId == resource.data.pendingOperationId
               && request.resource.data.lastReturnMovementId is string
-              && request.resource.data.lastReturnMovementId.matches('^mov_[a-f0-9]{64}
-      // Fila ADM — marcador lógico founder-only; não é fonte canônica nem quantitativa.
-      // Validação de payload permanece no repository; Rules preservam a fronteira
-      // de identidade/workspace e proíbem exclusão física do marcador.
-      match /queueExclusions/{exclusionId} {
-        allow read, create, update: if canAccessWarehouseModule(workspaceId);
-        allow delete: if false;
-      }
-
-      // FASE 11.5 — fila de entrada/alocação de itens recebidos por NF.
-      match /intakes/{intakeId} {
-        allow read: if canAccessWarehouseModule(workspaceId);
-        allow create: if canAccessWarehouseModule(workspaceId)
-          && (
-            validWarehouseItemIntakeCreate(workspaceId, intakeId)
-            || validWarehouseItemIntakeV2Create(workspaceId, intakeId)
-          );
-        allow update: if canAccessWarehouseModule(workspaceId)
-          && (
-            validWarehouseItemIntakeUpdate(workspaceId, intakeId)
-            || validWarehouseItemIntakeV2Update(workspaceId, intakeId)
-          );
-        allow delete: if false;
-      }
-
-      // FASE 11 / DEP-23.1 — alertas logísticos pertencem exclusivamente ao ADM.
-
-      // FASE 10 / DEP-20..20.3 — inventário founder-only e auditável.
-    }
-  }
-}
-)
+              && request.resource.data.lastReturnMovementId.matches('^mov_[a-f0-9]{64}$')
               && request.resource.data.lastReturnAt == request.time
               && request.resource.data.lastReturnBy == request.auth.uid
-              && request.resource.data.lastReturnReason is string
-              && request.resource.data.lastReturnReason.size() > 0
-              && request.resource.data.lastReturnReason.size() <= 180
+              && request.resource.data.lastReturnReason == resource.data.pendingReason
             )
-          )
-          && request.resource.data.updatedAt == request.time;
+          );
 
         allow delete: if false;
       }
