@@ -98,7 +98,7 @@ export function WarehouseItemControlOperational({ workspaceId }: { workspaceId: 
               ADM Depósito · ciclo do item armazenado
             </p>
             <h2 className="mt-2 text-xl font-black text-slate-900">
-              Controle de Itens
+              Controle de Materiais
             </h2>
             <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-600">
               Acompanhe o material depois da entrada e da alocação física. Esta área concentra
@@ -119,7 +119,7 @@ export function WarehouseItemControlOperational({ workspaceId }: { workspaceId: 
 
       <nav
         className="flex gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100 p-1"
-        aria-label="Seções de Controle de Itens"
+        aria-label="Seções de Controle de Materiais"
       >
         {CONTROL_TABS.map((item) => {
           const Icon = item.icon;
