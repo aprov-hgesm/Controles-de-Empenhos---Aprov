@@ -580,6 +580,21 @@ requireText(
 );
 requireText(
   warehouseHome,
+  'listWarehousePositiveLocationBalances(workspaceId, 500)',
+  'Início voltou a ler locationBalances zerados sem necessidade.'
+);
+requireText(
+  warehouseHome,
+  'listWarehousePositiveBalances(workspaceId, 250)',
+  'Início voltou a consultar saldo agregado sem restringir saldo positivo.'
+);
+requireText(
+  warehouseHome,
+  'depotMaterialIds.has(material.id)',
+  'Pesquisa do Início voltou a oferecer material sem saldo físico no depósito selecionado.'
+);
+requireText(
+  warehouseHome,
   '<WarehouseIsometricPreview',
   'Início deixou de reutilizar o renderer 3D oficial do ADM Depósito.'
 );
@@ -624,6 +639,16 @@ requireText(
   isometricPreview,
   'balance.materialId !== selectedMaterialId || balance.quantity <= 0',
   'Prévia 3D voltou a destacar material sem saldo positivo.'
+);
+requireText(
+  isometricPreview,
+  'availableMaterialIds.has(material.id)',
+  'Pesquisa da Prévia 3D voltou a oferecer materiais sem saldo físico positivo.'
+);
+requireText(
+  isometricPreview,
+  "balance.quantity <= 0 || balance.position.kind === 'UNASSIGNED'",
+  'Prévia 3D voltou a considerar material sem presença física como disponível para pesquisa.'
 );
 requireText(
   outboundDocuments,
