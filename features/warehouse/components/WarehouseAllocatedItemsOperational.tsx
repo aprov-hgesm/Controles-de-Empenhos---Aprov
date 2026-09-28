@@ -37,11 +37,7 @@ import {
   listWarehouseLocationBalances,
   listWarehouseLocations,
 } from '../../../lib/warehouse/locationRepository';
-import {
-  isWarehousePendingLotCode,
-  warehouseLotDisplayCode,
-  type WarehouseLot,
-} from '../../../lib/warehouse/lot';
+import type { WarehouseLot } from '../../../lib/warehouse/lot';
 import {
   listWarehouseLots,
   updateWarehouseLot,
@@ -174,10 +170,9 @@ function EditStoredItemModal({
 }) {
   const [description, setDescription] = useState(row.material.description);
   const [newBarcode, setNewBarcode] = useState('');
-  const [lotDrafts, setLotDrafts] = useState(
+  const [validityDrafts, setValidityDrafts] = useState(
     row.lots.map((lot) => ({
       id: lot.id,
-      code: isWarehousePendingLotCode(lot.code) ? '' : lot.code,
       expiresOn: lot.expiresOn || '',
       original: lot,
     }))
@@ -214,17 +209,10 @@ function EditStoredItemModal({
         });
       }
 
-      for (const draft of lotDrafts) {
-        const code = draft.code.trim() || draft.original.code;
+      for (const draft of validityDrafts) {
         const expiresOn = draft.expiresOn || null;
-        if (
-          code !== draft.original.code
-          || expiresOn !== draft.original.expiresOn
-        ) {
-          await updateWarehouseLot(workspaceId, draft.id, {
-            code,
-            expiresOn,
-          });
+        if (expiresOn !== draft.original.expiresOn) {
+          await updateWarehouseLot(workspaceId, draft.id, { expiresOn });
         }
       }
 
@@ -301,49 +289,34 @@ function EditStoredItemModal({
 
           <div className="space-y-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Lote e validade</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Validade</p>
               <p className="mt-1 text-[10px] leading-5 text-slate-400">
-                Lote é opcional. Validade ausente mantém a pendência vermelha do item.
+                A validade é o único dado temporal editável do item. Quando ausente, o item permanece com pendência vermelha.
               </p>
             </div>
 
-            {lotDrafts.length === 0 ? (
+            {validityDrafts.length === 0 ? (
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
-                Este saldo não possui registro de rastreabilidade editável. Novas alocações por NF já criam essa referência automaticamente.
+                Este saldo ainda não possui referência técnica de validade editável.
               </div>
             ) : (
-              lotDrafts.map((draft, index) => (
-                <div key={draft.id} className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-2">
-                  <label>
-                    <span className="text-[9px] font-black uppercase text-slate-500">Lote {lotDrafts.length > 1 ? index + 1 : ''}</span>
-                    <input
-                      value={draft.code}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setLotDrafts((current) =>
-                          current.map((item) => item.id === draft.id ? { ...item, code: value } : item)
-                        );
-                      }}
-                      placeholder="Não informado"
-                      maxLength={80}
-                      className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-800"
-                    />
-                  </label>
-                  <label>
-                    <span className="text-[9px] font-black uppercase text-rose-600">Data de validade</span>
-                    <input
-                      type="date"
-                      value={draft.expiresOn}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setLotDrafts((current) =>
-                          current.map((item) => item.id === draft.id ? { ...item, expiresOn: value } : item)
-                        );
-                      }}
-                      className="mt-1 h-10 w-full rounded-lg border border-rose-200 bg-white px-3 text-xs font-bold text-slate-800"
-                    />
-                  </label>
-                </div>
+              validityDrafts.map((draft, index) => (
+                <label key={draft.id} className="block rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <span className="text-[9px] font-black uppercase text-rose-600">
+                    Data de validade {validityDrafts.length > 1 ? index + 1 : ''}
+                  </span>
+                  <input
+                    type="date"
+                    value={draft.expiresOn}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setValidityDrafts((current) =>
+                        current.map((item) => item.id === draft.id ? { ...item, expiresOn: value } : item)
+                      );
+                    }}
+                    className="mt-1 h-10 w-full rounded-lg border border-rose-200 bg-white px-3 text-xs font-bold text-slate-800"
+                  />
+                </label>
               ))
             )}
           </div>
@@ -433,11 +406,11 @@ function StoredItemDetailsModal({
                     <p><span className="font-black text-slate-700">Fornecedor:</span> {origin.supplier}</p>
                     <p><span className="font-black text-slate-700">Data da NF:</span> {dateLabel(origin.issueDate)}</p>
                     <p><span className="font-black text-slate-700">Pregão:</span> {origin.pregao || 'Não informado'}</p>
-                    <p><span className="font-black text-slate-700">Lote:</span> {
+                    <p><span className="font-black text-slate-700">Validade:</span> {
                       row.lots
                         .filter((lot) => lot.origin.invoiceId === origin.invoiceId)
-                        .map((lot) => warehouseLotDisplayCode(lot.code))
-                        .join(' · ') || 'Não informado'
+                        .map((lot) => dateLabel(lot.expiresOn))
+                        .join(' · ') || 'Não informada'
                     }</p>
                   </div>
                 </div>
@@ -602,7 +575,7 @@ export function WarehouseAllocatedItemsOperational({
         row.location.name,
         row.subposition?.name || '',
         ...row.barcodes.map((item) => item.barcode),
-        ...row.lots.map((lot) => warehouseLotDisplayCode(lot.code)),
+        ...row.lots.map((lot) => lot.expiresOn || ''),
         ...origins.flatMap((origin) => [
           origin.invoiceId,
           origin.empenhoId,
@@ -625,10 +598,6 @@ export function WarehouseAllocatedItemsOperational({
       unitLabel(row.material),
       row.nearestExpiry ? dateLabel(row.nearestExpiry) : 'Não informada',
       row.barcodes.map((item) => item.barcode).join(' | '),
-      row.lots
-        .filter((lot) => !isWarehousePendingLotCode(lot.code))
-        .map((lot) => lot.code)
-        .join(' | '),
       origins.map((origin) => origin.invoiceId).join(' | '),
       origins.map((origin) => origin.empenhoId).join(' | '),
       origins.map((origin) => origin.supplier).join(' | '),
@@ -651,7 +620,6 @@ export function WarehouseAllocatedItemsOperational({
         'Unidade',
         'Validade',
         'Código de barras',
-        'Lote',
         'Nota Fiscal',
         'Nota de Empenho',
         'Fornecedor',
@@ -820,7 +788,7 @@ export function WarehouseAllocatedItemsOperational({
             <input
               value={queryText}
               onChange={(event) => setQueryText(event.target.value)}
-              placeholder="Pesquisar descrição, lote, código, NF, fornecedor ou pregão…"
+              placeholder="Pesquisar descrição, validade, código, NF, fornecedor ou pregão…"
               className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-700 outline-none focus:border-blue-300 sm:max-w-xl"
             />
             <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
@@ -853,7 +821,6 @@ export function WarehouseAllocatedItemsOperational({
                   <div className="mt-3 space-y-1 text-[10px] text-slate-500">
                     <p><span className="font-black text-slate-600">Subposição:</span> {row.subposition?.name || '—'}</p>
                     <p><span className="font-black text-slate-600">Validade:</span> {dateLabel(row.nearestExpiry)}</p>
-                    <p><span className="font-black text-slate-600">Lote:</span> {row.lots.map((lot) => warehouseLotDisplayCode(lot.code)).filter((value) => value !== 'Não informado').join(' · ') || 'Não informado'}</p>
                   </div>
                   <div className="mt-4 flex gap-2 border-t border-slate-200/70 pt-3">
                     <button type="button" onClick={() => setEditRow(row)} className="inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-[10px] font-black text-slate-600">
