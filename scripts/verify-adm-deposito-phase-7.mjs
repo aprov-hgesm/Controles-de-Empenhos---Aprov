@@ -78,7 +78,8 @@ for (const marker of [
 }
 
 requireText(control, 'WarehouseStockOperational', 'Controle de Itens não expõe Estoque.');
-requireText(control, "{ id: 'stock', label: 'Estoque'", 'Subaba Estoque ausente no Controle de Itens.');
+requireText(control, "id: 'stock',", 'Subaba Estoque perdeu seu identificador no Controle de Itens.');
+requireText(control, "label: 'Estoque',", 'Subaba Estoque perdeu seu rótulo no Controle de Itens.');
 requireText(navigation, "id: 'control'", 'Navegação Controle de Itens ausente.');
 requireText(navigation, "label: 'Controle de Itens'", 'Rótulo Controle de Itens ausente.');
 
