@@ -2630,29 +2630,6 @@ service cloud.firestore {
         && request.resource.data.occurredAt == resource.data.occurredAt;
     }
 
-    function warehouseConsumptionReturnMovementMatches(workspaceId, consumptionId) {
-      let movementId = request.resource.data.lastReturnMovementId;
-      let movementPath = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId);
-      let movement = getAfter(movementPath).data;
-      return movementId is string
-        && movementId.matches('^mov_[a-f0-9]{64}$')
-        && !exists(movementPath)
-        && existsAfter(movementPath)
-        && movement.schemaVersion == 'warehouse_movement_v1'
-        && movement.id == movementId
-        && movement.workspaceId == workspaceId
-        && movement.ug == resource.data.ug
-        && movement.materialId == resource.data.materialId
-        && movement.type == 'MANUAL_ENTRY'
-        && movement.quantityDelta
-          == request.resource.data.returnedQuantity - resource.data.returnedQuantity
-        && movement.source is map
-        && movement.source.kind == 'MANUAL_ENTRY'
-        && movement.source.actorUid == request.auth.uid
-        && movement.source.provenance == 'Devolução de saída'
-        && movement.source.reference == consumptionId;
-    }
-
     function validWarehouseConsumptionSiscofisUpdate(workspaceId, consumptionId) {
       return validWarehouseConsumptionBase(workspaceId, consumptionId)
         && warehouseConsumptionIdentityUnchanged()
@@ -2686,8 +2663,7 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'returnedQuantity', 'lastReturnMovementId', 'lastReturnAt',
           'lastReturnBy', 'lastReturnReason', 'updatedAt'
-        ])
-        && warehouseConsumptionReturnMovementMatches(workspaceId, consumptionId);
+        ]);
     }
 
     function validWarehouseConsumptionUpdate(workspaceId, consumptionId) {
