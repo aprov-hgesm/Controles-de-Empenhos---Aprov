@@ -2276,3 +2276,6 @@ Data: 2026-09-28.
 - A área lateral de recebimento representa NFs e itens pendentes de alocação com paletes e caixas: cada palete ocupado corresponde a uma NF em espera e cada caixa representa um item pendente; quando não há pendências os paletes ficam visualmente vazios.
 - A fila visual considera somente linhas `PENDING` ou `PARTIALLY_PROCESSED` com `pendingQuantity > 0`; não cria estado paralelo nem infere pendências inexistentes.
 - A aba Início é estritamente consultiva e estética. Ações continuam nas abas especializadas.
+- A composição visual do Início deve ser uma **cena isométrica única e contínua**, nunca um dashboard de cards: todos os depósitos compartilham o mesmo piso/mundo digital.
+- A área de recebimento e seus paletes fazem parte do mesmo SVG/croqui global dos depósitos, sem painel lateral separado.
+- Rótulos e contadores podem existir de forma discreta sobre a cena, mas não devem introduzir janelas, campos, cartões ou superfícies operacionais independentes.
