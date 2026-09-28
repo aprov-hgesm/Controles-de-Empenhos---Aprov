@@ -1294,6 +1294,27 @@ service cloud.firestore {
             )
           )
           || (
+            warehouseMovementIsOutboundReturn(movement)
+            && request.resource.data is map
+            && request.resource.data.schemaVersion == 'warehouse_location_balance_v1'
+            && request.resource.data.id == locationBalanceId
+            && request.resource.data.workspaceId == workspaceId
+            && request.resource.data.ug == movement.ug
+            && request.resource.data.materialId == movement.materialId
+            && request.resource.data.position == movement.source.position
+            && request.resource.data.quantity is number
+            && request.resource.data.quantity >= 0
+            && request.resource.data.revision == resource.data.revision + 1
+            && request.resource.data.lastMovementId == movement.id
+            && request.resource.data.updatedAt == request.time
+            && request.resource.data.quantity == resource.data.quantity + movement.source.quantity
+            && warehousePositionActive(
+              workspaceId,
+              request.resource.data.position,
+              request.resource.data.ug
+            )
+          )
+          || (
             warehouseMovementIsInventoryAdjustment(movement)
             && validWarehouseInventoryLocationBalanceUpdate(
               workspaceId,
@@ -1308,6 +1329,7 @@ service cloud.firestore {
           )
           || (
             !warehouseMovementIsExpressOutbound(movement)
+            && !warehouseMovementIsOutboundReturn(movement)
             && !warehouseMovementIsInventoryAdjustment(movement)
             && validWarehouseLocationBalanceDocument(workspaceId, locationBalanceId)
             && warehousePositionActive(
