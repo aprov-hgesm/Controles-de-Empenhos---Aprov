@@ -393,7 +393,10 @@ export function WarehouseConsumptionReports({
         + numberLabel(quantity)
         + ' '
         + record.unitLabel
-        + ' retornou ao estoque na posição original.'
+        + ' retornou ao estoque.'
+        + (result.warnings.length
+          ? ''
+          : ' O material foi reposicionado na posição original.')
         + (record.siscofisStatus === 'POSTED'
           ? ' A saída já estava marcada como lançada no SISCOFIS; faça também a correção administrativa correspondente.'
           : '')
