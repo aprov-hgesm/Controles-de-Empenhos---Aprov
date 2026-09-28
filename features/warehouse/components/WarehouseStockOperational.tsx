@@ -1323,9 +1323,11 @@ export function WarehouseStockOperational({
                               ? 'NF ' + invoiceSource.invoiceId + ' · ' + invoiceSource.supplier
                               : movement.source?.kind === 'MANUAL_ENTRY'
                                 ? 'Entrada avulsa · ' + movement.source.provenance
-                                : movement.source?.kind === 'LOCATION_TRANSFER'
-                                  ? 'Transferência interna'
-                                  : movement.note || 'Movimento auditável'}
+                                : movement.source?.kind === 'OUTBOUND_RETURN'
+                                  ? 'Devolução de saída'
+                                  : movement.source?.kind === 'LOCATION_TRANSFER'
+                                    ? 'Transferência interna'
+                                    : movement.note || 'Movimento auditável'}
                           </p>
                         </div>
                       );
