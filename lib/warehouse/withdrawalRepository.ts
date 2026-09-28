@@ -145,7 +145,7 @@ interface WarehouseOutboundReturnSummary {
   originalQuantity: number;
   returnedQuantity: number;
   pendingOperationId: string | null;
-  pendingQuantity: number;
+  pendingQuantity: number | null;
   pendingReason: string | null;
   pendingBy: string | null;
   lastReturnOperationId: string | null;
