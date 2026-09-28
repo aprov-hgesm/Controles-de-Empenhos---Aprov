@@ -3404,3 +3404,19 @@ Complemento de compatibilidade:
 - item legado sem referência técnica de validade agora pode receber uma data diretamente na edição do item;
 - o sistema cria a referência interna automaticamente com código técnico oculto, usando a quantidade e a posição física já existentes;
 - o operador continua vendo somente Descritivo, Validade e Código de Barras como dados editáveis.
+
+
+### Simplificação sem lote visível — validação parcial e ajuste do guard legado — 2026-09-28
+
+Validação local recebida no commit `09c37ff`:
+- `npm.cmd run typecheck` — PASS;
+- `npm.cmd run test:adm-deposito-stock-operational` — PASS, 20/20;
+- `npm.cmd run test:adm-deposito-barcode-outbound` — PASS, 10/10;
+- `npm.cmd run verify:adm-deposito-modular-r1` — PASS.
+
+O único erro foi no guard legado `verify:adm-deposito-phase-7`: ele procurava a definição da subaba Estoque em uma única linha (`{ id: 'stock', label: 'Estoque'`), enquanto a estrutura atual usa objeto multilinha. A funcionalidade estava presente e o guard modular confirmou isso.
+
+Correção aplicada:
+- guard da FASE 7 agora valida `id: 'stock'` e `label: 'Estoque'` separadamente;
+- referências visíveis residuais a lote foram removidas da descrição do Controle de Itens, do Resumo e da navegação;
+- permanecem internos apenas os contratos técnicos necessários à compatibilidade de validade/FEFO/baixa.
