@@ -106,24 +106,50 @@ function visualBoxes(quantity: number): number {
   return 4;
 }
 
-function stockBox(
+function warehouseBox(
   key: string,
-  point: IsoPoint,
-  scale = 0.5
+  x: number,
+  y: number,
+  z: number,
+  width = 14,
+  depth = 11,
+  height = 14,
+  visualRole = 'allocated-stock-box'
 ) {
+  const a = isoPoint(x, y, z);
+  const b = isoPoint(x + width, y, z);
+  const c = isoPoint(x + width, y + depth, z);
+  const d = isoPoint(x, y + depth, z);
+  const at = isoPoint(x, y, z + height);
+  const bt = isoPoint(x + width, y, z + height);
+  const ct = isoPoint(x + width, y + depth, z + height);
+  const dt = isoPoint(x, y + depth, z + height);
+
   return (
     <g
       key={key}
-      transform={'translate(' + point.x + ' ' + point.y + ') scale(' + scale + ')'}
-      data-visual-role="allocated-stock-box"
+      filter="url(#worldObjectShadow)"
+      data-visual-role={visualRole}
       aria-hidden="true"
     >
-      <ellipse cx="0" cy="22" rx="18" ry="6" fill="#0f172a" opacity="0.12" />
-      <polygon points="-16,0 0,-9 16,0 0,9" fill="#e7b26b" stroke="#a96c31" strokeWidth="1.1" />
-      <polygon points="-16,0 0,9 0,28 -16,19" fill="#c8813b" stroke="#965525" strokeWidth="1.1" />
-      <polygon points="16,0 0,9 0,28 16,19" fill="#b56d31" stroke="#87491f" strokeWidth="1.1" />
-      <line x1="0" y1="-9" x2="0" y2="9" stroke="#f8dcad" strokeWidth="1.2" />
-      <rect x="-5" y="8" width="10" height="4" rx="1" fill="#fff4d8" opacity="0.95" />
+      <polygon
+        points={polygonPoints([d, c, ct, dt])}
+        fill="#bf7834"
+        stroke="#e1ad6b"
+        strokeWidth="0.65"
+      />
+      <polygon
+        points={polygonPoints([b, c, ct, bt])}
+        fill="#925528"
+        stroke="#c98745"
+        strokeWidth="0.65"
+      />
+      <polygon
+        points={polygonPoints([at, bt, ct, dt])}
+        fill="#dda05a"
+        stroke="#efc183"
+        strokeWidth="0.7"
+      />
     </g>
   );
 }
@@ -235,7 +261,6 @@ function renderDepotObject(
     ? (occupancyByLocal.get(linkedPositionId) || occupancyBySubposition.get(linkedPositionId) || 0)
     : 0;
   const generalBoxCount = visualBoxes(occupiedQuantity);
-  const centerTop = isoPoint(x + width / 2, y + height / 2, z + 2);
   const a = isoPoint(x, y, 0);
   const b = isoPoint(x + width, y, 0);
   const c = isoPoint(x + width, y + height, 0);
@@ -285,14 +310,14 @@ function renderDepotObject(
           return <line key={index} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#a06932" strokeWidth="0.7" />;
         })}
         {generalBoxCount > 0 && Array.from({ length: generalBoxCount }, (_, index) =>
-          stockBox(
+          warehouseBox(
             'allocated-pallet-' + object.id + '-' + index,
-            isoPoint(
-              x + width * (0.32 + (index % 2) * 0.36),
-              y + height * (0.42 + Math.floor(index / 2) * 0.12),
-              z + 14 + Math.floor(index / 2) * 12
-            ),
-            0.43
+            x + width * (0.22 + (index % 2) * 0.34),
+            y + height * (0.25 + Math.floor(index / 2) * 0.11),
+            z + 3 + Math.floor(index / 2) * 10,
+            11,
+            9,
+            11
           )
         )}
       </g>
@@ -361,14 +386,14 @@ function renderDepotObject(
                 strokeLinecap="round"
               />
               {levelBoxCount > 0 && Array.from({ length: levelBoxCount }, (_, boxIndex) =>
-                stockBox(
+                warehouseBox(
                   'allocated-shelf-' + object.id + '-' + index + '-' + boxIndex,
-                  isoPoint(
-                    x + width * (0.28 + (boxIndex % 2) * 0.38),
-                    y + height * 0.56,
-                    shelfZ + 8 + Math.floor(boxIndex / 2) * 10
-                  ),
-                  0.34
+                  x + width * (0.22 + (boxIndex % 2) * 0.36),
+                  y + height * 0.38,
+                  shelfZ + 1 + Math.floor(boxIndex / 2) * 8,
+                  9,
+                  7,
+                  9
                 )
               )}
             </g>
@@ -378,14 +403,14 @@ function renderDepotObject(
         {subpositions.length === 0 && generalBoxCount > 0 && Array.from({ length: generalBoxCount }, (_, index) => {
           const level = index % levels;
           const shelfZ = z * ((level + 1) / (levels + 0.34));
-          return stockBox(
+          return warehouseBox(
             'allocated-shelf-general-' + object.id + '-' + index,
-            isoPoint(
-              x + width * (0.3 + (index % 2) * 0.36),
-              y + height * 0.56,
-              shelfZ + 8
-            ),
-            0.34
+            x + width * (0.24 + (index % 2) * 0.34),
+            y + height * 0.38,
+            shelfZ + 1,
+            9,
+            7,
+            9
           );
         })}
 
@@ -414,13 +439,14 @@ function renderDepotObject(
         <line x1={splitBottom.x} y1={splitBottom.y} x2={splitTop.x} y2={splitTop.y} stroke="#71838c" strokeWidth="1.3" />
         <line x1={dt.x + 3} y1={dt.y + 5} x2={d.x + 3} y2={d.y - 4} stroke="#ffffff" strokeWidth="1.4" opacity="0.55" />
         {generalBoxCount > 0 && Array.from({ length: Math.min(3, generalBoxCount) }, (_, index) =>
-          stockBox(
+          warehouseBox(
             'allocated-fridge-' + object.id + '-' + index,
-            {
-              x: centerTop.x + (index - 1) * 14,
-              y: centerTop.y + 31 + (index % 2) * 10,
-            },
-            0.3
+            x + width * (0.26 + index * 0.18),
+            y + height * 0.74,
+            z * (0.24 + (index % 2) * 0.18),
+            8,
+            6,
+            8
           )
         )}
       </g>
@@ -446,13 +472,14 @@ function renderDepotObject(
           strokeWidth="0.7"
         />
         {generalBoxCount > 0 && Array.from({ length: Math.min(2, generalBoxCount) }, (_, index) =>
-          stockBox(
+          warehouseBox(
             'allocated-freezer-' + object.id + '-' + index,
-            {
-              x: centerTop.x + (index ? 13 : -13),
-              y: centerTop.y + 13,
-            },
-            0.3
+            x + width * (index ? 0.56 : 0.28),
+            y + height * 0.42,
+            z + 2,
+            8,
+            6,
+            8
           )
         )}
       </g>
@@ -485,10 +512,14 @@ function renderDepotObject(
           stroke="#667d8b"
           strokeWidth="0.85"
         />
-        {generalBoxCount > 0 && stockBox(
+        {generalBoxCount > 0 && warehouseBox(
           'allocated-bench-' + object.id,
-          { x: centerTop.x, y: centerTop.y - 2 },
-          0.36
+          x + width * 0.42,
+          y + height * 0.38,
+          z + 1,
+          10,
+          8,
+          10
         )}
       </g>
     );
@@ -500,10 +531,14 @@ function renderDepotObject(
       <polygon points={polygonPoints([b, c, ct, bt])} fill="#b7c7d1" stroke="#718899" strokeWidth="0.85" />
       <polygon points={polygonPoints([at, bt, ct, dt])} fill="#f4f7f9" stroke="#8fa3b1" strokeWidth="0.9" />
       {generalBoxCount > 0 && Array.from({ length: Math.min(2, generalBoxCount) }, (_, index) =>
-        stockBox(
+        warehouseBox(
           'allocated-generic-' + object.id + '-' + index,
-          { x: centerTop.x + (index ? 12 : -12), y: centerTop.y + 4 },
-          0.32
+          x + width * (index ? 0.56 : 0.28),
+          y + height * 0.4,
+          z + 1,
+          9,
+          7,
+          9
         )
       )}
     </g>
@@ -715,23 +750,15 @@ function PalletWorld({
         const bx = x + 8 + col * 15 + localRow * 3;
         const by = y + 8 + localRow * 13;
         const bz = palletHeight + 16 + layer * 18;
-        const boxWidth = 14;
-        const boxDepth = 11;
-        const boxHeight = 14;
-        const ba = isoPoint(bx, by, bz);
-        const bb = isoPoint(bx + boxWidth, by, bz);
-        const bc = isoPoint(bx + boxWidth, by + boxDepth, bz);
-        const bd = isoPoint(bx, by + boxDepth, bz);
-        const bat = isoPoint(bx, by, bz + boxHeight);
-        const bbt = isoPoint(bx + boxWidth, by, bz + boxHeight);
-        const bct = isoPoint(bx + boxWidth, by + boxDepth, bz + boxHeight);
-        const bdt = isoPoint(bx, by + boxDepth, bz + boxHeight);
-        return (
-          <g key={boxIndex} filter="url(#worldObjectShadow)">
-            <polygon points={polygonPoints([bd, bc, bct, bdt])} fill="#bf7834" stroke="#e1ad6b" strokeWidth="0.65" />
-            <polygon points={polygonPoints([bb, bc, bct, bbt])} fill="#925528" stroke="#c98745" strokeWidth="0.65" />
-            <polygon points={polygonPoints([bat, bbt, bct, bdt])} fill="#dda05a" stroke="#efc183" strokeWidth="0.7" />
-          </g>
+        return warehouseBox(
+          'receiving-' + (group?.key || 'empty') + '-' + boxIndex,
+          bx,
+          by,
+          bz,
+          14,
+          11,
+          14,
+          'receiving-stock-box'
         );
       })}
 
