@@ -637,10 +637,10 @@ export function WarehouseConsumptionReports({
         </div>
 
         <div className="mt-4 overflow-x-auto">
-          <table className="min-w-[1380px] w-full text-left text-xs">
+          <table className="min-w-[1120px] w-full text-left text-xs">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/70 text-[9px] uppercase tracking-wide text-slate-500">
-                {['Data/hora','Origem','Material','Quantidade','Destino','Retirante','Saída / Intake','Movimento','Situação','SISCOFIS'].map((label) =>
+                {['Data/hora','Origem','Material','Quantidade','Destino','Retirante','Situação','SISCOFIS'].map((label) =>
                   <th key={label} className="px-2 py-2">{label}</th>
                 )}
               </tr>
@@ -666,8 +666,6 @@ export function WarehouseConsumptionReports({
                   </td>
                   <td className="px-2 py-3">{record.destinationName}</td>
                   <td className="px-2 py-3">{record.withdrawnBy}</td>
-                  <td className="px-2 py-3 font-mono text-[9px]">{record.withdrawalId || record.intakeId || 'legado'}</td>
-                  <td className="px-2 py-3 font-mono text-[9px]">{record.movementId || '—'}</td>
                   <td className="px-2 py-3 align-top">
                     {record.origin !== 'STOCK_OUTBOUND' ? (
                       <span className="text-[9px] text-slate-400">—</span>
