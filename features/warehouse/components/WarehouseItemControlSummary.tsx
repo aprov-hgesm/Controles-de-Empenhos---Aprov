@@ -55,6 +55,7 @@ function movementLabel(item: WarehouseMovementListItem): string {
   if (source?.kind === 'MANUAL_ENTRY') return 'Entrada avulsa · ' + source.provenance;
   if (source?.kind === 'LOCATION_TRANSFER') return 'Transferência entre posições';
   if (source?.kind === 'EXPRESS_OUTBOUND') return 'Saída de material';
+  if (source?.kind === 'OUTBOUND_RETURN') return 'Devolução de saída';
   if (source?.kind === 'PHYSICAL_INVENTORY') return 'Ajuste de inventário';
   return item.movement.type;
 }
