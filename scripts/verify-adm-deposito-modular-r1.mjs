@@ -705,7 +705,6 @@ for (const palletVisualToken of [
   "frontFill: '#9b642f'",
   "sideFill: '#7c4a22'",
   "runnerFill: '#70431f'",
-  "blockFill: '#65411f'",
 ]) {
   requireText(
     warehouseVisualStyle,
@@ -733,8 +732,21 @@ requireText(
   'data-visual-role="warehouse-pallet"',
   'Renderer 3D compartilhado perdeu o palete visual padronizado.'
 );
-if (isometricPreview.includes("'Palete',\n          subpositions.length")) {
-  fail('Palete da Visão 3D voltou a exibir o callout legado flutuante.');
+requireText(
+  isometricPreview,
+  "'Palete',",
+  'Palete da Visão 3D perdeu o balão de identificação do local.'
+);
+requireText(
+  isometricPreview,
+  "subpositions.length ? subpositions.length + ' subposições' : 'Local aberto'",
+  'Balão do palete perdeu o detalhamento de identificação do local.'
+);
+if (isometricPreview.includes('runnerRatios.flatMap((rx) => [0.17, 0.5, 0.83]')) {
+  fail('Palete da Visão 3D voltou a desenhar os blocos/pés antigos fora da estrutura.');
+}
+if (warehouseLanding.includes("key={'pallet-block-' + index}")) {
+  fail('Palete da Início voltou a desenhar os blocos/pés antigos fora da estrutura.');
 }
 requireText(
   isometricPreview,
