@@ -11,9 +11,9 @@ import {
 } from '../warehouse/location';
 import {
   createWarehouseMovementId,
+  normalizeWarehouseQuantity,
   validateWarehouseBalance,
   validateWarehouseMovement,
-  warehouseMovementMatchesReplay,
   type WarehouseBalance,
   type WarehouseMovement,
 } from '../warehouse/movement';
@@ -658,7 +658,6 @@ function parseLocationBalance(
     },
     {
       expectedWorkspaceId: HGESM_WORKSPACE_ID,
-      expectedUg: HGESM_UG,
       expectedMaterialId: materialId,
     }
   );
@@ -861,14 +860,15 @@ export async function returnWarehouseStockOutboundAdmin(
   const consumptionId = normalizeText(input.consumptionId, 80).toLowerCase();
   const reason = normalizeText(input.reason, 180);
   const operationId = normalizeText(input.operationId, 96);
+  const quantity = normalizeWarehouseQuantity(input.quantity);
 
   if (
     !actorUid
     || !/^cons_[a-f0-9]{64}$/.test(consumptionId)
     || !/^[A-Za-z0-9_-]{8,96}$/.test(operationId)
     || !reason
-    || !Number.isFinite(input.quantity)
-    || input.quantity <= 0
+    || quantity === null
+    || quantity <= 0
   ) {
     throw new WarehouseOutboundReturnFailure(
       'A solicitação de devolução é inválida.',
@@ -899,6 +899,10 @@ export async function returnWarehouseStockOutboundAdmin(
       'Saída não encontrada.'
     );
     const consumption = parseConsumption(consumptionDocument, consumptionId);
+    const replayDocument = firstRead.get(firestoreDocumentName(replayPath));
+    const replayMovement = replayDocument?.fields
+      ? parseMovement(replayDocument)
+      : null;
 
     if (
       consumption.origin !== 'STOCK_OUTBOUND'
@@ -911,6 +915,29 @@ export async function returnWarehouseStockOutboundAdmin(
         'CONFLICT',
         409
       );
+    }
+
+    if (replayMovement) {
+      const source = replayMovement.source;
+      if (
+        replayMovement.id !== movementId
+        || replayMovement.workspaceId !== HGESM_WORKSPACE_ID
+        || replayMovement.ug !== HGESM_UG
+        || replayMovement.materialId !== consumption.materialId
+        || replayMovement.type !== 'OUTBOUND_RETURN'
+        || source?.kind !== 'OUTBOUND_RETURN'
+        || source.actorUid !== actorUid
+        || source.consumptionId !== consumptionId
+        || source.originalMovementId !== consumption.movementId
+        || source.quantity !== quantity
+        || source.reason !== reason
+      ) {
+        throw new WarehouseOutboundReturnFailure(
+          'A mesma operação já foi usada com outros dados.',
+          'CONFLICT',
+          409
+        );
+      }
     }
 
     const originalMovementPath = `warehouse/${HGESM_WORKSPACE_ID}/movements/${consumption.movementId}`;
@@ -953,36 +980,13 @@ export async function returnWarehouseStockOutboundAdmin(
       consumption.materialId
     );
 
-    const plan = planWarehouseOutboundReturn({
-      workspaceId: HGESM_WORKSPACE_ID,
-      ug: HGESM_UG,
-      actorUid,
-      movementId,
-      quantity: input.quantity,
-      reason,
-      consumption,
-      originalMovement,
-      material,
-      balance,
-      locationBalance,
-    });
-
-    const replayDocument = firstRead.get(firestoreDocumentName(replayPath));
-    if (replayDocument?.fields) {
-      const existingMovement = parseMovement(replayDocument);
-      if (!warehouseMovementMatchesReplay(existingMovement, plan.movement)) {
-        throw new WarehouseOutboundReturnFailure(
-          'A mesma operação já foi usada com outros dados.',
-          'CONFLICT',
-          409
-        );
-      }
+    if (replayMovement) {
       await rollbackTransaction(accessToken, transaction);
 
       const warnings: string[] = [];
       let lot: WarehouseLot | null = null;
       try {
-        lot = await enrichReturnedLot(accessToken, actorUid, existingMovement);
+        lot = await enrichReturnedLot(accessToken, actorUid, replayMovement);
       } catch {
         warnings.push(
           'O saldo já estava devolvido, mas a validade técnica precisa ser revisada no Controle de Itens.'
@@ -990,7 +994,7 @@ export async function returnWarehouseStockOutboundAdmin(
       }
 
       return {
-        movement: existingMovement,
+        movement: replayMovement,
         consumption,
         balance,
         locationBalance,
@@ -998,6 +1002,20 @@ export async function returnWarehouseStockOutboundAdmin(
         warnings,
       };
     }
+
+    const plan = planWarehouseOutboundReturn({
+      workspaceId: HGESM_WORKSPACE_ID,
+      ug: HGESM_UG,
+      actorUid,
+      movementId,
+      quantity,
+      reason,
+      consumption,
+      originalMovement,
+      material,
+      balance,
+      locationBalance,
+    });
 
     const now = new Date();
     const nextConsumption: WarehouseConsumptionRecord = {
