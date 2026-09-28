@@ -3365,3 +3365,12 @@ Correção aplicada após inspeção visual de material parcialmente alocado:
 - subposições continuam opcionais para estruturas que precisem de granularidade adicional.
 
 A correção não altera ledger, balances, locationBalances, lotes ou Firestore Rules. Foram adicionados testes direcionados e proteção no guard modular.
+
+Validação local concluída no commit `f1cd91b`:
+- `npm.cmd run typecheck` — PASS;
+- `npm.cmd run test:adm-deposito-stock-operational` — PASS, 20/20 testes;
+- `npm.cmd run verify:adm-deposito-modular-r1` — PASS;
+- confirmado por teste que `LOCATION` sem subposição conta como localizado;
+- confirmado por teste que `SUBPOSITION` conta como localizado;
+- confirmado por teste que `UNASSIGNED` não entra na lista de localizações físicas;
+- Rules permaneceram inalteradas, sem necessidade de deploy no database `emprovex-warehouse`.
