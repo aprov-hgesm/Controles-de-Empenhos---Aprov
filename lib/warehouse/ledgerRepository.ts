@@ -243,6 +243,37 @@ export async function listWarehouseBalances(
   }
 }
 
+
+export async function listWarehousePositiveBalances(
+  workspaceId: string,
+  maxResults = 250
+): Promise<WarehouseBalance[]> {
+  const normalizedWorkspaceId = normalizeRequiredWorkspace(workspaceId);
+  const path = warehouseDocumentPath(normalizedWorkspaceId, 'balances', '__probe__')
+    .replace('/__probe__', '');
+
+  try {
+    const snapshot = await getDocs(
+      query(
+        collection(db, path),
+        where('quantity', '>', 0),
+        limit(Math.max(1, Math.min(maxResults, 500)))
+      )
+    );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
+    return snapshot.docs.map((item) =>
+      parseBalance(
+        normalizedWorkspaceId,
+        item.id,
+        item.data() as Record<string, unknown>
+      )
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return [];
+  }
+}
+
 export async function listWarehouseMovements(
   workspaceId: string,
   maxResults = 100
