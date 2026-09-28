@@ -13,7 +13,7 @@ function WarehouseModularR1Notice({ section }: { section: WarehouseSectionId }) 
     registration: 'Alocação de Material',
     outbound: 'Saída de Material',
     depots: 'Meus Depósitos',
-    control: 'Controle de Itens',
+    control: 'Controle de Materiais',
   };
 
   return (
