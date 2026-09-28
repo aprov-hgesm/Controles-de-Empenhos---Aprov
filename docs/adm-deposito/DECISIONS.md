@@ -2166,3 +2166,21 @@ Data: 2026-09-27.
 - A retirada física apresenta **Validade / FEFO**, nunca código de lote.
 - PDFs operacionais exibem validade e código de barras, não lote.
 - A mudança não exige migração destrutiva, alteração de Firestore Rules ou reescrita de movimentos históricos.
+
+
+## D-106 — Início do ADM Depósito é uma superfície imersiva premium de localização
+
+Data: 2026-09-28.
+
+- O **Início** do ADM Depósito deixa de usar o tratamento de dashboard operacional claro e passa a ser uma exceção visual imersiva, no mesmo nível de acabamento da Home principal do EMPROVEX.
+- A exceção é restrita ao Início. **Alocação de Material, Saída de Material, Meus Depósitos, Controle de Itens, Inventário e Relatórios permanecem no tema claro operacional** definido pela D-076.
+- A função do Início continua consultiva: responder **onde está o material**, quanto existe no depósito selecionado e qual validade possui prioridade.
+- O Início não cadastra, edita, transfere, retira, inventaria ou altera material. Essas responsabilidades permanecem nas abas especializadas.
+- O renderer oficial reutilizado é a **Visão 3D** derivada de `warehouse_depot_layout_v1`, sem segunda fonte visual de verdade.
+- O renderer continua leve em React/SVG, sem engine 3D pesada ou WebGL obrigatório.
+- A pesquisa é feita sobre o conjunto bounded já carregado; não há leitura Firestore por tecla, hover, polling ou animação.
+- A leitura de validade continua usando internamente `warehouse_lot_v1`, mas **nenhum código/número de lote pode ser exibido ao operador**, conforme D-105.
+- A ficha lateral do Início mostra somente informações necessárias à localização: descritivo, saldo total, quantidade no depósito, posições físicas e validade/FEFO.
+- A identidade visual utiliza azul profundo, luz radial, grade espacial discreta, vidro translúcido e moldura técnica inspirados na Home principal, sem parallax contínuo, partículas pesadas ou efeitos que prejudiquem máquinas de menor capacidade.
+- Quando não houver croqui ativo, o Início oferece somente um acesso discreto a **Meus Depósitos → Croquis** para configuração estrutural.
+- Esta decisão substitui apenas o tratamento visual claro anteriormente descrito para o Início em D-056; a responsabilidade funcional de central visual de localização permanece preservada.
