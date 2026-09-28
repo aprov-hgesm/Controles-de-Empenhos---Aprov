@@ -67,11 +67,14 @@ export function WarehouseModuleShell({
 
   return (
     <div
-      className="min-h-screen bg-gradient-to-br from-[#f0f4f8] via-[#e8ecf3] to-[#f4f6fa] text-[#0b1c30] antialiased relative overflow-x-hidden selection:bg-blue-500 selection:text-white"
+      className={`min-h-screen antialiased relative overflow-x-hidden selection:bg-blue-500 selection:text-white ${isHome
+        ? 'bg-[#02040b] text-white'
+        : 'bg-gradient-to-br from-[#f0f4f8] via-[#e8ecf3] to-[#f4f6fa] text-[#0b1c30]'
+      }`}
       data-testid="warehouse-module-shell"
       data-warehouse-section={section}
     >
-      <AppBackground />
+      <AppBackground immersive={isHome} />
 
       <AppHeader
         customLogo={customLogo}
@@ -143,7 +146,7 @@ export function WarehouseModuleShell({
             </section>
           )}
 
-          <footer className="px-2 pb-2 pt-5 text-center text-[11px] font-medium leading-5 text-slate-400">
+          <footer className={`px-2 pb-2 pt-5 text-center text-[11px] font-medium leading-5 ${isHome ? 'text-slate-600' : 'text-slate-400'}`}>
             EMPROVEX · ADM Depósito · ambiente operacional integrado
           </footer>
         </main>
