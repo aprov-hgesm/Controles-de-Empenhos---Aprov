@@ -130,6 +130,12 @@ function numberLabel(value: number): string {
   return value.toLocaleString('pt-BR', { maximumFractionDigits: 6 });
 }
 
+function dateLabel(value: string | null): string {
+  if (!value) return 'não informada';
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  return match ? match[3] + '/' + match[2] + '/' + match[1] : value;
+}
+
 function unitLabel(unit: WarehouseMaterialUnit): string {
   return unit.label || unit.code;
 }
@@ -151,7 +157,7 @@ function errorMessage(error: unknown): string {
   const mappings: Array<[string, string]> = [
     ['WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK', 'O saldo oficial mudou e não comporta uma das linhas. A retirada permaneceu não finalizada e pode ser retomada.'],
     ['WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK', 'A posição física perdeu saldo antes da finalização. A retirada não foi marcada como concluída.'],
-    ['WAREHOUSE_OUTBOUND_LOT_INSUFFICIENT_ATTRIBUTION', 'O lote selecionado já não possui quantidade suficiente.'],
+    ['WAREHOUSE_OUTBOUND_LOT_INSUFFICIENT_ATTRIBUTION', 'A validade selecionada já não possui quantidade suficiente vinculada.'],
     ['WAREHOUSE_BARCODE_CHANGED', 'A associação do código de barras mudou desde a leitura. Refaça a operação com os dados atuais.'],
     ['WAREHOUSE_DESTINATION_INACTIVE', 'O destino selecionado está inativo. Selecione um destino ativo.'],
     ['WAREHOUSE_WITHDRAWAL_LINE_LIMIT', 'A retirada excede o limite operacional de linhas. Finalize esta operação e inicie outra.'],
@@ -285,7 +291,7 @@ async function resolveOutboundDocumentLines(
       unitLabel: line.unitLabel,
       presentationLabel: line.presentationLabel,
       positionLabel: line.positionLabel,
-      lotCode: line.lotCode,
+      expiresOn: lot?.expiresOn || null,
       barcode: line.barcode,
       invoiceId:
         source?.invoiceId
@@ -467,7 +473,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     setMessageKind('info');
     setMessage(
       suggested
-        ? 'Material reconhecido. O lote FEFO foi pré-selecionado como recomendação; ENTER/TAB confirma a linha no carrinho, sem baixar estoque.'
+        ? 'Material reconhecido. A validade FEFO foi pré-selecionada como recomendação; ENTER/TAB confirma a linha no carrinho, sem baixar estoque.'
         : 'Material reconhecido. Informe a quantidade e pressione ENTER ou TAB.'
     );
     setTimeout(() => quantityRef.current?.focus(), 0);
@@ -581,7 +587,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       && currentReservedLot(selectedLot.id) + baseQuantity > selectedLot.quantity + 0.000001
     ) {
       setMessageKind('error');
-      setMessage('As linhas do carrinho excedem a quantidade disponível no lote.');
+      setMessage('As linhas do carrinho excedem a quantidade vinculada à validade selecionada.');
       return;
     }
 
@@ -653,7 +659,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       }
     }
     for (const group of lotGroups.values()) {
-      if (group.total > group.available + 0.000001) issues.push('Carrinho excede o lote ' + group.code + '.');
+      if (group.total > group.available + 0.000001) issues.push('Carrinho excede a quantidade vinculada à validade selecionada.');
     }
     return issues;
   }, [cart, state.lots]);
@@ -820,11 +826,16 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
   const lotAlertForLine = (line: CartLine): string | null => {
     if (!line.lotId) return null;
     const lot = state.lots.find((item) => item.lot.id === line.lotId)?.lot;
-    if (!lot) return 'Lote não encontrado na leitura atual';
+    if (!lot) return 'Validade não encontrada na leitura atual';
     const expiry = warehouseLotExpiryState(lot);
-    if (expiry === 'EXPIRED') return 'Lote vencido';
-    if (expiry === 'NEAR_EXPIRY') return 'Lote próximo do vencimento';
+    if (expiry === 'EXPIRED') return 'Validade vencida';
+    if (expiry === 'NEAR_EXPIRY') return 'Validade próxima do vencimento';
     return null;
+  };
+
+  const lotExpiryForLine = (line: CartLine): string | null => {
+    if (!line.lotId) return null;
+    return state.lots.find((item) => item.lot.id === line.lotId)?.lot.expiresOn || null;
   };
 
   if (state.loading) {
@@ -979,13 +990,13 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                         </select>
                       </label>
                       <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                        Lote / FEFO
+                        Validade / FEFO
                         <select value={selectedLotId} onChange={(event) => setSelectedLotId(event.target.value)}
                           className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-[#00288e]">
-                          <option value="">Sem lote explícito</option>
+                          <option value="">Sem validade vinculada</option>
                           {lotOptions.map((lot) => (
                             <option key={lot.id} value={lot.id}>
-                              {lot.code} · {numberLabel(lot.quantity)}{lot.expiresOn ? ' · ' + lot.expiresOn : ''}
+                              {dateLabel(lot.expiresOn)} · {numberLabel(lot.quantity)}
                             </option>
                           ))}
                         </select>
@@ -994,7 +1005,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
 
                     {fefo && selectedLotId === fefo.id && (
                       <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] text-amber-800">
-                        FEFO recomendado: {fefo.code} · validade {fefo.expiresOn || 'não informada'}. A baixa só ocorrerá na finalização.
+                        FEFO recomendado: validade {dateLabel(fefo.expiresOn)}. A baixa só ocorrerá na finalização.
                       </p>
                     )}
 
@@ -1144,12 +1155,12 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                             <div>
                               <p className="text-sm font-black text-slate-900">{line.materialDescription}</p>
                               <p className="mt-1 text-[10px] text-slate-500">
-                                {line.presentationLabel}{line.barcode ? ' · barcode ' + line.barcode : ''}{line.lotCode ? ' · lote ' + line.lotCode : ''}
+                                {line.presentationLabel}{line.barcode ? ' · barcode ' + line.barcode : ''}{line.lotId ? ' · validade ' + dateLabel(lotExpiryForLine(line)) : ''}
                               </p>
                               {lotAlertForLine(line) && (
                                 <p className={
                                   'mt-1 text-[9px] font-black uppercase tracking-wide '
-                                  + (lotAlertForLine(line) === 'Lote vencido'
+                                  + (lotAlertForLine(line) === 'Validade vencida'
                                     ? 'text-rose-700'
                                     : 'text-amber-700')
                                 }>
