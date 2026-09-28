@@ -2283,3 +2283,5 @@ Data: 2026-09-28.
 - O Início pode carregar `locations` de forma bounded para rotular locais e subposições dentro dos croquis; continua proibido carregar materiais, saldos, lotes ou executar mutações nessa tela.
 - Estantes/racks devem preservar a identidade visual oficial (estrutura azul-escura, vigas laranja e níveis claros), enquanto geladeiras, freezers e bancadas usam acabamento claro/metálico compatível com o renderer oficial.
 - A área de recebimento/paletes deve permanecer visualmente secundária aos depósitos, ainda que continue refletindo as pendências reais.
+- Para evitar poluição visual, a **Início não exibe etiquetas individuais dos locais nem códigos de subposição sobre as estruturas**; esses detalhes permanecem disponíveis em Meus Depósitos.
+- Textos essenciais da cena (nome dos depósitos, identificação dos paletes e cabeçalho de recebimento) devem ser renderizados em **camada final de overlay**, acima da geometria SVG, com fundo/contorno de contraste quando necessário.
