@@ -2201,3 +2201,17 @@ Data: 2026-09-28.
 - Se a saída já estiver marcada como lançada no SISCOFIS, a devolução física continua permitida, mas a interface alerta para a correção administrativa correspondente.
 - **Relatórios de Saída** passam a carregar automaticamente o mês corrente ao abrir; o operador ainda pode escolher Diário, Semanal, Quinzenal, Mensal ou período personalizado.
 - Nenhuma segunda fonte de saldo é criada: aggregate balance, location balance e validade técnica continuam derivados do ledger e dos contratos oficiais.
+
+
+## D-108 — Devolução separa núcleo de saldo de enriquecimento de validade
+
+Data: 2026-09-28.
+
+- `OUTBOUND_RETURN` possui um **núcleo transacional autoritativo** com exatamente quatro documentos: movimento, saldo agregado, saldo da posição física e registro operacional da saída.
+- Esses quatro documentos permanecem atômicos. O movimento exige, via `getAfter()`, que balance, locationBalance e consumption apontem para o mesmo `movementId`; cada coleção valida o próprio delta.
+- `warehouse_lot_v1` continua sendo **enriquecimento logístico de validade/FEFO, não autoridade de saldo**. Por isso ele deixa de participar da transação autoritativa da devolução.
+- Quando a saída original possuía referência técnica de validade, a devolução cria depois um lote técnico de retorno **determinístico e idempotente**, com a mesma validade/posição e origem `MANUAL_ENRICHMENT` vinculada ao `OUTBOUND_RETURN`.
+- Falha nesse enriquecimento não desfaz nem duplica o retorno de saldo; a interface informa que a validade deve ser revisada no Controle de Itens.
+- A separação é necessária para respeitar os limites de avaliação das Firestore Rules sem reduzir a atomicidade do saldo.
+- O caminho antigo de atualização do lote dentro do mesmo batch foi removido porque acrescentava uma quinta escrita e fazia o conjunto de Rules ultrapassar o orçamento de expressões.
+- O hot path histórico de `OUTBOUND` deve permanecer com a mesma ordem/complexidade anterior: o validador específico de devolução não pode ser avaliado antes do validador de saída comum, e `validWarehouseLotUpdate` não recebe branch extra de devolução.
