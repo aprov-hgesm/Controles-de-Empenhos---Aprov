@@ -53,6 +53,10 @@ const withdrawalRepository = readFileSync(
   resolve(root, 'lib/warehouse/withdrawalRepository.ts'),
   'utf8'
 );
+const outboundReturnSecurityTest = readFileSync(
+  resolve(root, 'scripts/warehouse-modular-r1-security.test.mjs'),
+  'utf8'
+);
 const ledgerRepository = readFileSync(
   resolve(root, 'lib/warehouse/ledgerRepository.ts'),
   'utf8'
@@ -262,8 +266,6 @@ for (const helper of [
   'function validWarehouseItemIntakeV2Update(workspaceId, intakeId)',
   'function warehouseImmediateConsumptionIntakeMatchesAfter(workspaceId)',
   'function validWarehouseConsumptionCreate(workspaceId, consumptionId)',
-  'function warehouseMovementIsOutboundReturn(movement)',
-  'function validWarehouseOutboundReturnMovementCreate(workspaceId, movementId)',
   'function validWarehouseConsumptionReturnUpdate(workspaceId, consumptionId)',
 ]) {
   requireText(rules, helper, 'Helper obrigatório da ADM-R1 ausente: ' + helper);
@@ -693,56 +695,72 @@ requireText(
 requireText(
   withdrawalRepository,
   'export async function returnWarehouseStockOutbound(',
-  'Repository perdeu a devolução auditável de saída.'
+  'Repository perdeu a fachada de devolução auditável de saída.'
 );
 requireText(
   withdrawalRepository,
-  "type: 'OUTBOUND_RETURN'",
-  'Devolução deixou de gerar movimento próprio no ledger.'
+  "type: 'MANUAL_ENTRY'",
+  'Devolução deixou de reutilizar o movimento oficial MANUAL_ENTRY.'
 );
 requireText(
   withdrawalRepository,
-  'quantity > remaining + EPSILON',
-  'Devolução deixou de bloquear quantidade superior ao saldo ainda retirado.'
+  "provenance: 'Devolução de saída'",
+  'Entrada de devolução perdeu a procedência auditável.'
 );
 requireText(
   withdrawalRepository,
-  'quantityDelta: quantity',
-  'Devolução deixou de retornar quantidade positiva ao estoque.'
-);
-requireText(
-  rules,
-  "'OUTBOUND_RETURN'",
-  'Rules deixaram de reconhecer a devolução de saída.'
-);
-requireText(
-  rules,
-  "source.kind == 'OUTBOUND_RETURN'",
-  'Rules perderam o vínculo estruturado da devolução.'
-);
-requireText(
-  rules,
-  'returnedBefore + movement.source.quantity <= consumption.quantity',
-  'Rules deixaram de limitar devoluções ao total originalmente retirado.'
-);
-requireText(
-  rules,
-  'warehouseOutboundReturnCompanionsMatchAfter',
-  'OUTBOUND_RETURN deixou de exigir saldo, posição e consumo na mesma transação atômica.'
+  'reference: consumptionId',
+  'Entrada de devolução perdeu o vínculo com a saída original.'
 );
 requireText(
   withdrawalRepository,
-  'ensureWarehouseOutboundReturnLotEnrichment',
-  'Devolução perdeu a recomposição idempotente da validade fora do núcleo de saldo.'
+  'transferWarehouseStock(scope.workspaceId, {',
+  'Devolução deixou de reutilizar TRANSFER para retornar à posição original.'
 );
 requireText(
   withdrawalRepository,
-  'createWarehouseOutboundReturnLotId',
-  'Enriquecimento da devolução perdeu identidade determinística.'
+  'ensureWarehouseReturnedValidity(',
+  'Devolução perdeu o enriquecimento técnico de validade.'
 );
-if (withdrawalRepository.includes('transaction.update(lotRef')) {
-  fail('Devolução voltou a incluir lote no núcleo transacional e pode estourar o orçamento das Rules.');
+if (withdrawalRepository.includes('/api/adm-deposito/outbound-return')) {
+  fail('Devolução voltou a depender de API server-only desnecessária.');
 }
+if (withdrawalRepository.includes("type: 'OUTBOUND_RETURN'")) {
+  fail('Repository voltou a criar movimento especial OUTBOUND_RETURN em vez de reutilizar MANUAL_ENTRY.');
+}
+requireText(
+  rules,
+  'function validWarehouseConsumptionReturnUpdate(workspaceId, consumptionId)',
+  'Rules perderam a validação específica da marcação de devolução.'
+);
+requireText(
+  rules,
+  "movement.type == 'MANUAL_ENTRY'",
+  'Rules deixaram de vincular a devolução ao movimento MANUAL_ENTRY.'
+);
+requireText(
+  rules,
+  "movement.source.provenance == 'Devolução de saída'",
+  'Rules perderam a procedência auditável da devolução.'
+);
+if (rules.includes("source.kind == 'OUTBOUND_RETURN'")) {
+  fail('Rules voltaram a introduzir caminho especial OUTBOUND_RETURN.');
+}
+requireText(
+  outboundReturnSecurityTest,
+  'movimento especial legado OUTBOUND_RETURN permanece bloqueado; devolução usa entrada auditável',
+  'Teste de segurança deixou de bloquear o formato antigo OUTBOUND_RETURN.'
+);
+requireText(
+  outboundReturnSecurityTest,
+  "provenance: 'Devolução de saída'",
+  'Teste de segurança deixou de provar a devolução via MANUAL_ENTRY auditável.'
+);
+requireText(
+  outboundReturnSecurityTest,
+  'devolução acima do saldo ainda retirado permanece bloqueada',
+  'Teste de segurança deixou de provar o limite do remanescente.'
+);
 
 requireText(
   outboundDocuments,
@@ -1241,7 +1259,7 @@ console.log('- ficha PDF otimizada para toner P&B, com grayscale neutro e conten
 console.log('- Saída de Material gera PDF duplo: retirada física + ficha auxiliar SISCOFIS com controle/código');
 console.log('- Saída de Material e seus Relatórios seguem o tema claro oficial D-076/VISUAL_IDENTITY');
 console.log('- Saída de Material reduz ledger/posição/lote e saldo zero deixa de ser projetado no croqui');
-console.log('- Registro de Saídas carrega o mês uma vez e permite devolução parcial/total auditável ao estoque');
+console.log('- Registro de Saídas carrega o mês uma vez; devolução parcial/total reutiliza MANUAL_ENTRY + TRANSFER auditáveis');
 console.log('- Controle de Itens consolidado em Resumo, Estoque, Movimentações, Inventário e Relatórios');
 console.log('- Relatórios separados em Saída e Consumo Imediato, sem mistura de origens');
 console.log('- Estoque exibe somente saldo positivo e prioriza a menor validade ativa');
