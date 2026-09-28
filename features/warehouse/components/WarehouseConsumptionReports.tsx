@@ -107,7 +107,13 @@ function csvCell(value: string | number): string {
   return '"' + String(value ?? '').replace(/"/g, '""') + '"';
 }
 
-export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: string }) {
+export function WarehouseConsumptionReports({
+  workspaceId,
+  fixedOrigin,
+}: {
+  workspaceId: string;
+  fixedOrigin?: WarehouseConsumptionOrigin;
+}) {
   const initial = presetRange('daily');
   const [preset, setPreset] = useState<PeriodPreset>('daily');
   const [startDate, setStartDate] = useState(initial.start);
@@ -116,7 +122,8 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
   const [loading, setLoading] = useState(false);
   const [truncated, setTruncated] = useState(false);
   const [legacyCoverageLimited, setLegacyCoverageLimited] = useState(false);
-  const [originFilter, setOriginFilter] = useState<OriginFilter>('ALL');
+  const [originFilter, setOriginFilter] = useState<OriginFilter>(fixedOrigin || 'ALL');
+  const effectiveOriginFilter: OriginFilter = fixedOrigin || originFilter;
   const [destinationFilter, setDestinationFilter] = useState('ALL');
   const [withdrawnFilter, setWithdrawnFilter] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -138,15 +145,26 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
         startAt: dateAtStart(startDate),
         endAt: dateAtEnd(endDate),
         maxResults: 250,
-        includeLegacy: true,
+        includeLegacy: fixedOrigin !== 'IMMEDIATE_CONSUMPTION',
       });
-      setRecords(result.records);
+      const scopedRecords = fixedOrigin
+        ? result.records.filter((record) => record.origin === fixedOrigin)
+        : result.records;
+      setRecords(scopedRecords);
       setTruncated(result.truncated);
-      setLegacyCoverageLimited(result.legacyCoverageLimited);
+      setLegacyCoverageLimited(
+        fixedOrigin === 'IMMEDIATE_CONSUMPTION'
+          ? false
+          : result.legacyCoverageLimited
+      );
       setMessage(
-        result.records.length
-          ? 'Relatório atualizado com ' + result.records.length + ' registro(s).'
-          : 'Nenhum consumo encontrado no período selecionado.'
+        scopedRecords.length
+          ? 'Relatório atualizado com ' + scopedRecords.length + ' registro(s).'
+          : fixedOrigin === 'STOCK_OUTBOUND'
+            ? 'Nenhuma saída encontrada no período selecionado.'
+            : fixedOrigin === 'IMMEDIATE_CONSUMPTION'
+              ? 'Nenhum consumo imediato encontrado no período selecionado.'
+              : 'Nenhum consumo encontrado no período selecionado.'
       );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Não foi possível gerar o relatório.');
@@ -165,12 +183,12 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
   const filtered = useMemo(() => {
     const withdrawn = withdrawnFilter.trim().toLocaleLowerCase('pt-BR');
     return records.filter((record) => {
-      if (originFilter !== 'ALL' && record.origin !== originFilter) return false;
+      if (effectiveOriginFilter !== 'ALL' && record.origin !== effectiveOriginFilter) return false;
       if (destinationFilter !== 'ALL' && record.destinationName !== destinationFilter) return false;
       if (withdrawn && !record.withdrawnBy.toLocaleLowerCase('pt-BR').includes(withdrawn)) return false;
       return true;
     });
-  }, [destinationFilter, originFilter, records, withdrawnFilter]);
+  }, [destinationFilter, effectiveOriginFilter, records, withdrawnFilter]);
 
   const materialGroups = useMemo(() => {
     const groups = new Map<string, { description: string; unit: string; quantity: number; rows: number }>();
@@ -229,9 +247,13 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
 
   const copyReport = async () => {
     const lines = [
-      'EMPROVEX · ADM Depósito · Relatório para fundamentação SISCOFIS',
+      fixedOrigin === 'STOCK_OUTBOUND'
+        ? 'EMPROVEX · ADM Depósito · Relatórios de Saída'
+        : fixedOrigin === 'IMMEDIATE_CONSUMPTION'
+          ? 'EMPROVEX · ADM Depósito · Relatórios de Consumo Imediato'
+          : 'EMPROVEX · ADM Depósito · Relatório para fundamentação SISCOFIS',
       'Período: ' + startDate + ' a ' + endDate,
-      'Origem: ' + (originFilter === 'ALL' ? 'Todas' : originLabel(originFilter)),
+      'Origem: ' + (effectiveOriginFilter === 'ALL' ? 'Todas' : originLabel(effectiveOriginFilter)),
       '',
       'CONSOLIDADO POR MATERIAL',
       ...materialGroups.map((item) =>
@@ -283,7 +305,13 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = 'emprovex-consumo-' + startDate + '-a-' + endDate + '.csv';
+    anchor.download = (
+      fixedOrigin === 'STOCK_OUTBOUND'
+        ? 'emprovex-saidas-'
+        : fixedOrigin === 'IMMEDIATE_CONSUMPTION'
+          ? 'emprovex-consumo-imediato-'
+          : 'emprovex-consumo-'
+    ) + startDate + '-a-' + endDate + '.csv';
     anchor.click();
     URL.revokeObjectURL(url);
   };
@@ -309,17 +337,34 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
   };
 
   return (
-    <div className="space-y-5" data-testid="warehouse-consumption-reports">
+    <div
+      className="space-y-5"
+      data-testid="warehouse-consumption-reports"
+      data-origin={fixedOrigin || 'ALL'}
+    >
       <section className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur-md sm:p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#00288e]/70">
-              consumo operacional · base SISCOFIS
+              {fixedOrigin === 'STOCK_OUTBOUND'
+                ? 'saída de material · base SISCOFIS'
+                : fixedOrigin === 'IMMEDIATE_CONSUMPTION'
+                  ? 'consumo imediato · base SISCOFIS'
+                  : 'consumo operacional · base SISCOFIS'}
             </p>
-            <h3 className="mt-1 text-lg font-black text-slate-900">Relatórios de Saída e Consumo</h3>
+            <h3 className="mt-1 text-lg font-black text-slate-900">
+              {fixedOrigin === 'STOCK_OUTBOUND'
+                ? 'Relatórios de Saída'
+                : fixedOrigin === 'IMMEDIATE_CONSUMPTION'
+                  ? 'Relatórios de Consumo Imediato'
+                  : 'Relatórios de Saída e Consumo'}
+            </h3>
             <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-600">
-              Consolidação auditável sem substituir o ledger. Saídas de estoque e consumos
-              imediatos podem ser separados ou analisados juntos.
+              {fixedOrigin === 'STOCK_OUTBOUND'
+                ? 'Somente retiradas efetivamente baixadas do estoque. Consolidação auditável por material, destino, retirante e período.'
+                : fixedOrigin === 'IMMEDIATE_CONSUMPTION'
+                  ? 'Somente materiais classificados como consumo imediato no recebimento, sem misturar com retiradas posteriores do estoque.'
+                  : 'Consolidação auditável sem substituir o ledger. Saídas de estoque e consumos imediatos podem ser separados ou analisados juntos.'}
             </p>
           </div>
           <button type="button" onClick={() => void generate()} disabled={loading}
@@ -357,15 +402,17 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
             <input type="date" value={endDate} onChange={(event) => { setPreset('custom'); setEndDate(event.target.value); }}
               className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-[#00288e]" />
           </label>
-          <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-            Origem
-            <select value={originFilter} onChange={(event) => setOriginFilter(event.target.value as OriginFilter)}
-              className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-[#00288e]">
-              <option value="ALL">Todos</option>
-              <option value="STOCK_OUTBOUND">Saída de estoque</option>
-              <option value="IMMEDIATE_CONSUMPTION">Consumo imediato</option>
-            </select>
-          </label>
+          {!fixedOrigin && (
+            <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+              Origem
+              <select value={originFilter} onChange={(event) => setOriginFilter(event.target.value as OriginFilter)}
+                className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-[#00288e]">
+                <option value="ALL">Todos</option>
+                <option value="STOCK_OUTBOUND">Saída de estoque</option>
+                <option value="IMMEDIATE_CONSUMPTION">Consumo imediato</option>
+              </select>
+            </label>
+          )}
           <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
             Destino
             <select value={destinationFilter} onChange={(event) => setDestinationFilter(event.target.value)}
@@ -396,12 +443,20 @@ export function WarehouseConsumptionReports({ workspaceId }: { workspaceId: stri
       )}
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {[
-          ['Registros', filtered.length],
-          ['Materiais', materialGroups.length],
-          ['Saídas de estoque', filtered.filter((item) => item.origin === 'STOCK_OUTBOUND').length],
-          ['Consumo imediato', filtered.filter((item) => item.origin === 'IMMEDIATE_CONSUMPTION').length],
-        ].map(([label, value]) => (
+        {(fixedOrigin
+          ? [
+              ['Registros', filtered.length],
+              ['Materiais', materialGroups.length],
+              ['Destinos', destinationGroups.length],
+              ['Retirantes/recebedores', withdrawnGroups.length],
+            ]
+          : [
+              ['Registros', filtered.length],
+              ['Materiais', materialGroups.length],
+              ['Saídas de estoque', filtered.filter((item) => item.origin === 'STOCK_OUTBOUND').length],
+              ['Consumo imediato', filtered.filter((item) => item.origin === 'IMMEDIATE_CONSUMPTION').length],
+            ]
+        ).map(([label, value]) => (
           <div key={String(label)} className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur-md">
             <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-500">{label}</p>
             <p className="mt-2 text-2xl font-black text-slate-900">{value}</p>
