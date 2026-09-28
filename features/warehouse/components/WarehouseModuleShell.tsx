@@ -31,7 +31,7 @@ export function WarehouseModuleShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { customLogo } = usePlatformBranding();
   const activeSection = getWarehouseSection(section);
-  const isHome = section === 'overview';
+  const isImmersive = section === 'home' || section === 'overview';
   const currentUser = auth.currentUser;
   const userDisplayName =
     currentUser?.displayName
@@ -67,14 +67,14 @@ export function WarehouseModuleShell({
 
   return (
     <div
-      className={`min-h-screen antialiased relative overflow-x-hidden selection:bg-blue-500 selection:text-white ${isHome
+      className={`min-h-screen antialiased relative overflow-x-hidden selection:bg-blue-500 selection:text-white ${isImmersive
         ? 'bg-[#02040b] text-white'
         : 'bg-gradient-to-br from-[#f0f4f8] via-[#e8ecf3] to-[#f4f6fa] text-[#0b1c30]'
       }`}
       data-testid="warehouse-module-shell"
       data-warehouse-section={section}
     >
-      <AppBackground immersive={isHome} />
+      <AppBackground immersive={isImmersive} />
 
       <AppHeader
         customLogo={customLogo}
@@ -94,12 +94,12 @@ export function WarehouseModuleShell({
         />
 
         <main
-          className={`flex-1 w-full overflow-x-hidden pb-24 md:pb-12 mx-auto ${isHome
+          className={`flex-1 w-full overflow-x-hidden pb-24 md:pb-12 mx-auto ${isImmersive
             ? 'lg:pl-5 pt-4 px-3 max-w-[1600px]'
             : 'lg:pl-6 pt-6 px-4 max-w-7xl'
           }`}
         >
-          {isHome ? (
+          {isImmersive ? (
             <section
               data-testid="warehouse-surface"
               className="warehouse-emprovex-content min-w-0"
@@ -146,7 +146,7 @@ export function WarehouseModuleShell({
             </section>
           )}
 
-          <footer className={`px-2 pb-2 pt-5 text-center text-[11px] font-medium leading-5 ${isHome ? 'text-slate-600' : 'text-slate-400'}`}>
+          <footer className={`px-2 pb-2 pt-5 text-center text-[11px] font-medium leading-5 ${isImmersive ? 'text-slate-600' : 'text-slate-400'}`}>
             EMPROVEX · ADM Depósito · ambiente operacional integrado
           </footer>
         </main>
