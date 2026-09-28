@@ -2136,3 +2136,18 @@ Data: 2026-09-27.
 - Localizações pertencentes a depósitos inativos também não aparecem.
 - O filtro de validade passa a ser uma **data exata** (`YYYY-MM-DD` via input `date`) e considera somente lotes ativos com quantidade positiva.
 - A ordenação padrão por menor validade permanece independente desse filtro.
+
+
+## D-104 — Ficha do item centraliza manutenção logística
+
+Data: 2026-09-27.
+
+- Controle de Itens → Estoque é a superfície canônica para manutenção do material já armazenado.
+- A ficha reúne localidade física, lote, validade e código de barras.
+- Alterar localidade reutiliza `transferWarehouseStock` e gera `TRANSFER` com delta agregado zero.
+- A realocação nesta interface é integral por posição.
+- Lotes ativos vinculados à origem acompanham a nova posição na mesma transação.
+- Lote e validade reutilizam `createWarehouseLot` e `updateWarehouseLot`.
+- Barcode novo reutiliza `saveWarehouseBarcodeAssociation`.
+- Edição do valor do barcode preserva rastreabilidade: o código antigo fica inativo e o novo passa a ser o vínculo ativo.
+- Saída de Material continua sendo a única superfície que reduz estoque.
