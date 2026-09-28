@@ -2207,6 +2207,8 @@ Data: 2026-09-28.
 
 Data: 2026-09-28.
 
+> **Superada:** a D-108 foi supersedida pela D-109 após a validação revelar que o núcleo client-side ainda ultrapassava o limite de 1000 expressões das Firestore Rules.
+
 - `OUTBOUND_RETURN` possui um **núcleo transacional autoritativo** com exatamente quatro documentos: movimento, saldo agregado, saldo da posição física e registro operacional da saída.
 - Esses quatro documentos permanecem atômicos. O movimento exige, via `getAfter()`, que balance, locationBalance e consumption apontem para o mesmo `movementId`; cada coleção valida o próprio delta.
 - `warehouse_lot_v1` continua sendo **enriquecimento logístico de validade/FEFO, não autoridade de saldo**. Por isso ele deixa de participar da transação autoritativa da devolução.
@@ -2215,3 +2217,20 @@ Data: 2026-09-28.
 - A separação é necessária para respeitar os limites de avaliação das Firestore Rules sem reduzir a atomicidade do saldo.
 - O caminho antigo de atualização do lote dentro do mesmo batch foi removido porque acrescentava uma quinta escrita e fazia o conjunto de Rules ultrapassar o orçamento de expressões.
 - O hot path histórico de `OUTBOUND` deve permanecer com a mesma ordem/complexidade anterior: o validador específico de devolução não pode ser avaliado antes do validador de saída comum, e `validWarehouseLotUpdate` não recebe branch extra de devolução.
+
+
+## D-109 — Devolução é mutação server-side privilegiada
+
+Data: 2026-09-28.
+
+- **Cancelar / devolver saída** deixa de ser uma mutação direta do navegador no Firestore.
+- A interface mantém o mesmo fluxo operacional, mas envia a solicitação autenticada para `POST /api/adm-deposito/outbound-return`.
+- A API valida obrigatoriamente a sessão Firebase da conta fundadora por `verifyWarehouseFounderRequest`, aplica proteção de burst e nunca aceita identidade de operador fornecida pelo cliente.
+- O serviço `lib/server/warehouseOutboundReturnAdmin.ts` usa a credencial server-only já prevista em `FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON` e acessa explicitamente o database dedicado `emprovex-warehouse`.
+- O núcleo autoritativo continua sendo uma única transação: cria `OUTBOUND_RETURN`, recompõe `balances`, recompõe `locationBalances` e acumula `returnedQuantity` no registro da saída.
+- A quantidade devolvida é limitada pelo planner puro `lib/warehouse/outboundReturn.ts`; nunca pode superar o remanescente da saída original.
+- A operação possui identidade determinística por `operationId`; replay da mesma operação é tratado de forma idempotente e conflito de payload é recusado.
+- `warehouse_lot_v1` permanece enriquecimento técnico: validade é recomposta depois, de forma determinística/idempotente, sem participar da autoridade do saldo.
+- Firestore Rules **não reconhecem nem autorizam `OUTBOUND_RETURN` client-side**. Tentativas de falsificar devolução diretamente pelo navegador devem ser negadas.
+- A decisão elimina a dependência do limite de 1000 expressões das Rules para esta mutação complexa e restaura o hot path de saída comum ao desenho anterior já validado.
+- Não foi adicionada dependência `firebase-admin`: o servidor reutiliza o padrão administrativo existente do EMPROVEX, autenticando a service account e usando a API REST oficial do Firestore com privilégio de servidor.
