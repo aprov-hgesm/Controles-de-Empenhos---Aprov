@@ -2184,3 +2184,20 @@ Data: 2026-09-28.
 - A identidade visual utiliza azul profundo, luz radial, grade espacial discreta, vidro translúcido e moldura técnica inspirados na Home principal, sem parallax contínuo, partículas pesadas ou efeitos que prejudiquem máquinas de menor capacidade.
 - Quando não houver croqui ativo, o Início oferece somente um acesso discreto a **Meus Depósitos → Croquis** para configuração estrutural.
 - Esta decisão substitui apenas o tratamento visual claro anteriormente descrito para o Início em D-056; a responsabilidade funcional de central visual de localização permanece preservada.
+
+
+## D-107 — Saída cancelada é devolução auditável, nunca exclusão
+
+Data: 2026-09-28.
+
+- Uma saída já efetivada nunca é apagada para representar cancelamento.
+- O operador pode devolver **parte ou toda a quantidade ainda retirada** por meio de **Saída de Material → Relatórios de Saída**.
+- A devolução gera movimento próprio `OUTBOUND_RETURN` com delta positivo no ledger e referência estruturada à saída original.
+- A quantidade devolvida retorna à **mesma posição física usada na saída original**; se havia referência técnica de validade associada à retirada, sua quantidade também é recomposta.
+- A soma das devoluções nunca pode superar a quantidade originalmente retirada.
+- O registro `warehouse_consumption_record_v1` preserva a quantidade original e acumula `returnedQuantity`; os relatórios exibem quantidade líquida sem destruir histórico.
+- Devolução parcial mantém a saída ativa pelo remanescente; devolução integral apresenta a saída como **Cancelada / devolvida**.
+- Registros legados projetados apenas a partir do ledger permanecem somente leitura, pois não possuem o registro operacional necessário para cancelamento seguro.
+- Se a saída já estiver marcada como lançada no SISCOFIS, a devolução física continua permitida, mas a interface alerta para a correção administrativa correspondente.
+- **Relatórios de Saída** passam a carregar automaticamente o mês corrente ao abrir; o operador ainda pode escolher Diário, Semanal, Quinzenal, Mensal ou período personalizado.
+- Nenhuma segunda fonte de saldo é criada: aggregate balance, location balance e validade técnica continuam derivados do ledger e dos contratos oficiais.
