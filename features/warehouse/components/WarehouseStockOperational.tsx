@@ -712,7 +712,7 @@ export function WarehouseStockOperational({
       setRelocateLocationId('');
       setRelocateSubpositionId('');
       setMessage(
-        'Localidade atualizada. O saldo inteiro da posição e os lotes ativos vinculados foram realocados.'
+        'Localidade atualizada. O saldo inteiro da posição e as referências de validade vinculadas foram realocados.'
       );
       await refresh();
     } catch (error) {
