@@ -52,6 +52,7 @@ const INITIAL_STATE: SummaryState = {
 function movementLabel(item: WarehouseMovementListItem): string {
   const source = item.movement.source;
   if (source?.kind === 'INVOICE') return 'Entrada por NF ' + source.invoiceId;
+  if (source?.kind === 'MANUAL_ENTRY') return 'Entrada avulsa · ' + source.provenance;
   if (source?.kind === 'LOCATION_TRANSFER') return 'Transferência entre posições';
   if (source?.kind === 'EXPRESS_OUTBOUND') return 'Saída de material';
   if (source?.kind === 'PHYSICAL_INVENTORY') return 'Ajuste de inventário';
