@@ -6,9 +6,11 @@ import { WarehouseItemRegistrationOperational } from './WarehouseItemRegistratio
 import { WarehouseMaterialWithdrawal } from './WarehouseMaterialWithdrawal';
 import { WarehouseItemControlOperational } from './WarehouseItemControlOperational';
 import { WarehouseHomeOperational } from './WarehouseHomeOperational';
+import { WarehouseLandingOperational } from './WarehouseLandingOperational';
 
 function WarehouseModularR1Notice({ section }: { section: WarehouseSectionId }) {
   const labels: Record<WarehouseSectionId, string> = {
+    home: 'Início',
     overview: 'Meus Depósitos',
     registration: 'Alocação de Material',
     outbound: 'Saída de Material',
@@ -44,6 +46,10 @@ export function WarehouseSectionContent({
   section: WarehouseSectionId;
   workspaceId: string;
 }) {
+  if (section === 'home') {
+    return <WarehouseLandingOperational workspaceId={workspaceId} />;
+  }
+
   if (section === 'overview') {
     return <WarehouseHomeOperational workspaceId={workspaceId} />;
   }
