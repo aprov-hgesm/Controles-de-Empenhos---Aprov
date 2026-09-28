@@ -302,8 +302,9 @@ test('Início consome somente layout ativo e mantém croqui como consulta do est
 
   assert.match(home, /getActiveWarehouseDepotLayout/);
   assert.doesNotMatch(home, /listWarehouseDepotLayouts/);
-  assert.match(home, /listWarehouseLocationBalances/);
-  assert.match(home, /listWarehouseBalances/);
+  assert.match(home, /listWarehousePositiveLocationBalances/);
+  assert.match(home, /listWarehousePositiveBalances/);
+  assert.match(home, /depotMaterialIds\.has\(material\.id\)/);
   assert.match(home, /selectWarehouseFefoLot/);
   assert.match(home, /fora da visão atual/);
   assert.match(home, /prioridade FEFO/);
@@ -312,6 +313,14 @@ test('Início consome somente layout ativo e mantém croqui como consulta do est
   assert.match(home, /embedded/);
   assert.doesNotMatch(home, /saveWarehouseDepotLayoutVersion/);
   assert.doesNotMatch(home, /warehouse_visual_balance|warehouse_map_balance|warehouse_stock_map/);
+
+  const preview = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseIsometricPreview.tsx'),
+    'utf8'
+  );
+  assert.match(preview, /availableMaterialIds/);
+  assert.match(preview, /balance\.quantity <= 0 \|\| balance\.position\.kind === 'UNASSIGNED'/);
+  assert.match(preview, /availableMaterialIds\.has\(material\.id\)/);
 });
 
 
