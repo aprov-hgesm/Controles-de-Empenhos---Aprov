@@ -52,6 +52,7 @@ import {
 import { WarehouseSiscofisOperational } from './WarehouseSiscofisOperational';
 import { WarehouseImmediateConsumptionPanel } from './WarehouseImmediateConsumptionPanel';
 import { WarehouseAllocatedItemsOperational } from './WarehouseAllocatedItemsOperational';
+import { WarehouseManualEntryOperational } from './WarehouseManualEntryOperational';
 import {
   applyWarehouseImmediateConsumption,
   createWarehouseDestination,
@@ -70,7 +71,7 @@ import {
   type WarehouseAllocationSheetInput,
 } from '../pdf/WarehouseAllocationSheet';
 
-type RegistrationTab = 'invoices' | 'stored' | 'siscofis' | 'immediate';
+type RegistrationTab = 'invoices' | 'manual' | 'stored' | 'siscofis' | 'immediate';
 
 function formatDate(value: string | null): string {
   if (!value) return '—';
@@ -2673,8 +2674,10 @@ export function WarehouseItemRegistrationOperational({
   const searchParams = useSearchParams();
   const requested = searchParams.get('aba');
   const requestedTab: RegistrationTab =
-    requested === 'itens-armazenados'
-      ? 'stored'
+    requested === 'entrada-avulsa'
+      ? 'manual'
+      : requested === 'itens-armazenados'
+        ? 'stored'
       : requested === 'siscofis'
         ? 'siscofis'
         : requested === 'consumo-imediato'
@@ -2699,6 +2702,17 @@ export function WarehouseItemRegistrationOperational({
           }
         >
           Notas Fiscais pendentes
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('manual')}
+          className={
+            tab === 'manual'
+              ? 'rounded-xl bg-white px-4 py-2 text-xs font-black text-[#00288e] shadow-sm'
+              : 'rounded-xl px-4 py-2 text-xs font-bold text-slate-500'
+          }
+        >
+          Entrada avulsa
         </button>
         <button
           type="button"
@@ -2736,6 +2750,7 @@ export function WarehouseItemRegistrationOperational({
       </div>
 
       {tab === 'invoices' && <InvoiceRegistrationQueue workspaceId={workspaceId} />}
+      {tab === 'manual' && <WarehouseManualEntryOperational workspaceId={workspaceId} />}
       {tab === 'stored' && <WarehouseAllocatedItemsOperational workspaceId={workspaceId} />}
       {tab === 'siscofis' && <WarehouseSiscofisOperational workspaceId={workspaceId} />}
       {tab === 'immediate' && <ImmediateConsumptionReport workspaceId={workspaceId} />}
