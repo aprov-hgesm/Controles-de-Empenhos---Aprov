@@ -47,7 +47,7 @@ export const WAREHOUSE_SECTIONS: readonly WarehouseSectionDefinition[] = [
     label: 'Controle de Itens',
     href: '/adm-deposito/controle-de-itens',
     eyebrow: 'Estoque e rastreabilidade',
-    description: 'Consulta permanente de estoque, posições físicas, lotes, validade, movimentações, inventários e relatórios.'
+    description: 'Consulta permanente de estoque, posições físicas, validade, movimentações, inventários e relatórios.'
   },
 ] as const;
 
