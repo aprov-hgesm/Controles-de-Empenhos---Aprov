@@ -42,10 +42,10 @@ import {
 } from '../../../lib/warehouse/locationRepository';
 import {
   buildWarehouseLogisticsPendencies,
+  createWarehousePendingLotCode,
   selectWarehouseFefoLot,
   warehouseLotExpiryState,
   warehouseLotOriginLabel,
-  WAREHOUSE_LOT_SCHEMA_VERSION,
   type WarehouseLot,
   type WarehouseLotOrigin,
 } from '../../../lib/warehouse/lot';
@@ -138,16 +138,16 @@ function lotStateClass(lot: WarehouseLot): string {
 function logisticsMessage(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
   if (raw.includes('WAREHOUSE_LOT_QUANTITY_EXCEEDS_LOCATION')) {
-    return 'A quantidade do lote excede o saldo da posição selecionada.';
+    return 'A quantidade vinculada à validade excede o saldo da posição selecionada.';
   }
   if (raw.includes('WAREHOUSE_LOT_QUANTITY_EXCEEDS_BALANCE')) {
-    return 'A quantidade do lote excede o saldo oficial do material.';
+    return 'A quantidade vinculada à validade excede o saldo oficial do material.';
   }
   if (raw.includes('WAREHOUSE_LOT_POSITION_WITHOUT_STOCK')) {
     return 'A posição selecionada não possui saldo desse material.';
   }
   if (raw.includes('WAREHOUSE_INVALID_LOT')) {
-    return 'Os dados do lote não passaram pela validação do contrato logístico.';
+    return 'Os dados de validade não passaram pela validação do contrato logístico.';
   }
   return raw;
 }
@@ -188,7 +188,6 @@ export function WarehouseStockOperational({
   const [working, setWorking] = useState(false);
 
   const [editingLotId, setEditingLotId] = useState('');
-  const [lotCode, setLotCode] = useState('');
   const [lotExpiry, setLotExpiry] = useState('');
   const [lotQuantity, setLotQuantity] = useState('');
   const [lotPositionKey, setLotPositionKey] = useState('UNASSIGNED');
@@ -455,7 +454,6 @@ export function WarehouseStockOperational({
           ...summary.locationLabels,
           ...summary.lots.flatMap((lot) => [
             lot.id,
-            lot.code,
             lot.expiresOn || '',
           ]),
           ...origins,
@@ -494,7 +492,6 @@ export function WarehouseStockOperational({
 
   const resetLotForm = () => {
     setEditingLotId('');
-    setLotCode('');
     setLotExpiry('');
     setLotQuantity('');
     setLotPositionKey('UNASSIGNED');
@@ -514,7 +511,6 @@ export function WarehouseStockOperational({
 
   const editLot = (lot: WarehouseLot) => {
     setEditingLotId(lot.id);
-    setLotCode(lot.code);
     setLotExpiry(lot.expiresOn || '');
     setLotQuantity(String(lot.quantity));
     setLotPositionKey(warehouseStockPositionKey(lot.position));
@@ -552,8 +548,8 @@ export function WarehouseStockOperational({
   const saveLot = async () => {
     if (!selected) return;
     const quantity = Number(lotQuantity.replace(',', '.'));
-    if (!lotCode.trim() || !Number.isFinite(quantity) || quantity < 0) {
-      setMessage('Informe código do lote e quantidade válida.');
+    if (!Number.isFinite(quantity) || quantity < 0) {
+      setMessage('Informe uma quantidade válida para a referência de validade.');
       return;
     }
 
@@ -563,23 +559,22 @@ export function WarehouseStockOperational({
       const position = positionFromKey(lotPositionKey, positions);
       if (editingLotId) {
         await updateWarehouseLot(workspaceId, editingLotId, {
-          code: lotCode,
           expiresOn: lotExpiry || null,
           quantity,
           position,
           origin: buildOrigin(),
         });
-        setMessage('Lote atualizado sem alterar o saldo oficial.');
+        setMessage('Validade atualizada sem alterar o saldo oficial.');
       } else {
         await createWarehouseLot(workspaceId, {
           materialId: selected.material.id,
-          code: lotCode,
+          code: createWarehousePendingLotCode(crypto.randomUUID()),
           expiresOn: lotExpiry || null,
           quantity,
           position,
           origin: buildOrigin(),
         });
-        setMessage('Lote registrado como enriquecimento logístico do estoque existente.');
+        setMessage('Validade registrada como informação logística do estoque existente.');
       }
       resetLotForm();
       await refresh();
@@ -736,7 +731,7 @@ export function WarehouseStockOperational({
         </div>
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
           <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-700">Enriquecimento</p>
-          <p className="mt-2 text-xs leading-5 text-slate-600">{WAREHOUSE_LOT_SCHEMA_VERSION} adiciona lote, validade, origem e posição sem gerar movimento.</p>
+          <p className="mt-2 text-xs leading-5 text-slate-600">A validade complementa o item sem gerar movimento ou alterar o saldo oficial.</p>
         </div>
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
           <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-amber-700">Prioridade por validade</p>
@@ -755,7 +750,7 @@ export function WarehouseStockOperational({
             onChange={(event) => setQueryText(event.target.value)}
             data-testid="warehouse-stock-search"
             aria-label="Pesquisar estoque"
-            placeholder="Material, ID, lote, validade, NF, fornecedor ou localização"
+            placeholder="Material, ID, validade, código de barras, NF, fornecedor ou localização"
             className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-[#00288e] focus:ring-2 focus:ring-blue-100"
           />
           <select
@@ -812,7 +807,7 @@ export function WarehouseStockOperational({
       </div>
 
       {state.loading ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500 shadow-sm">Consultando estoque, distribuição física e lotes…</div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500 shadow-sm">Consultando estoque, distribuição física e validades…</div>
       ) : state.error ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">{state.error}</div>
       ) : filtered.length === 0 ? (
@@ -873,14 +868,14 @@ export function WarehouseStockOperational({
                   <p className="text-[9px] text-slate-600">{numberLabel(summary.unassigned)} sem localização</p>
                 </div>
                 <div>
-                  <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Lotes</p>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Validades</p>
                   <p className="mt-1 text-sm font-bold text-slate-700">{summary.availableLots.length}</p>
                   <p className="text-[9px] text-slate-600">próxima {dateLabel(summary.nearestExpiry)}</p>
                 </div>
                 <div className="min-w-0">
                   <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">FEFO / pendências</p>
                   <p className="mt-1 truncate text-xs font-bold text-[#00288e]">
-                    {summary.fefo ? summary.fefo.code + ' · ' + dateLabel(summary.fefo.expiresOn) : 'sem recomendação FEFO'}
+                    {summary.fefo ? 'validade ' + dateLabel(summary.fefo.expiresOn) : 'sem recomendação FEFO'}
                   </p>
                   <p className="mt-1 text-[9px] text-slate-600">{summary.pendencies.length} pendência(s) logística(s)</p>
                 </div>
@@ -928,12 +923,12 @@ export function WarehouseStockOperational({
               <p className="mt-1 text-[10px] text-slate-600">{numberLabel(selected.unassigned)} sem localização</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-              <p className="text-[9px] uppercase tracking-[0.12em] text-slate-600">Lotes rastreados</p>
+              <p className="text-[9px] uppercase tracking-[0.12em] text-slate-600">Validades rastreadas</p>
               <p className="mt-2 text-2xl font-black text-slate-900">{selected.lots.length}</p>
             </div>
             <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4" data-testid="warehouse-fefo-recommendation">
               <p className="text-[9px] uppercase tracking-[0.12em] text-[#00288e]/70">Recomendação FEFO</p>
-              <p className="mt-2 text-sm font-black text-[#00288e]">{selected.fefo?.code || 'Sem lote elegível'}</p>
+              <p className="mt-2 text-sm font-black text-[#00288e]">{selected.fefo ? dateLabel(selected.fefo.expiresOn) : 'Sem validade elegível'}</p>
               <p className="mt-1 text-[10px] text-slate-500">{selected.fefo ? 'validade ' + dateLabel(selected.fefo.expiresOn) : 'nenhuma saída é executada automaticamente'}</p>
             </div>
           </div>
@@ -984,7 +979,7 @@ export function WarehouseStockOperational({
                   </div>
                   <p className="mt-2 text-[10px] leading-5 text-slate-600">
                     Move integralmente o saldo da posição selecionada. O movimento é registrado
-                    como TRANSFER e os lotes ativos daquela posição acompanham a nova localidade.
+                    como TRANSFER e as referências de validade ativas daquela posição acompanham a nova localidade.
                   </p>
 
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -1101,10 +1096,10 @@ export function WarehouseStockOperational({
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" data-testid="warehouse-lot-list">
                 <div className="flex items-center gap-2">
                   <Boxes className="h-4 w-4 text-[#00288e]" aria-hidden="true" />
-                  <p className="text-xs font-black text-slate-800">Lotes e validade</p>
+                  <p className="text-xs font-black text-slate-800">Validade</p>
                 </div>
                 {selected.lots.length === 0 ? (
-                  <p className="mt-3 text-xs leading-5 text-slate-500">Nenhum lote foi enriquecido. Isso não bloqueia o saldo legado.</p>
+                  <p className="mt-3 text-xs leading-5 text-slate-500">Nenhuma validade foi informada. Isso não bloqueia o saldo existente.</p>
                 ) : (
                   <div className="mt-3 space-y-2">
                     {selected.lots
@@ -1115,10 +1110,10 @@ export function WarehouseStockOperational({
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                               <div className="flex flex-wrap items-center gap-2">
-                                <p className="text-xs font-black text-slate-800">{lot.code}</p>
+                                <p className="text-xs font-black text-slate-800">Validade {dateLabel(lot.expiresOn)}</p>
                                 <span className={'rounded-full border px-2 py-0.5 text-[9px] font-bold ' + lotStateClass(lot)}>{lotStateLabel(lot)}</span>
                               </div>
-                              <p className="mt-1 text-[10px] text-slate-500">validade {dateLabel(lot.expiresOn)} · qtd. {numberLabel(lot.quantity)}</p>
+                              <p className="mt-1 text-[10px] text-slate-500">qtd. vinculada {numberLabel(lot.quantity)}</p>
                               <p className="mt-1 text-[10px] text-slate-600">{buildWarehousePositionLabel(lot.position, state.depots, state.locations)} · {warehouseLotOriginLabel(lot.origin)}</p>
                             </div>
                             <button type="button" onClick={() => editLot(lot)} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-slate-600 hover:border-blue-200 hover:text-[#00288e]">Editar</button>
@@ -1231,26 +1226,18 @@ export function WarehouseStockOperational({
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-emerald-700" aria-hidden="true" />
-                  <p className="text-xs font-black text-emerald-800">{editingLotId ? 'Editar enriquecimento do lote' : 'Enriquecer com lote'}</p>
+                  <p className="text-xs font-black text-emerald-800">{editingLotId ? 'Editar validade' : 'Registrar validade'}</p>
                 </div>
-                <p className="mt-2 text-[10px] leading-5 text-slate-500">Esta ação não gera entrada, saída ou transferência de estoque. Ela apenas associa informação logística ao saldo já existente.</p>
+                <p className="mt-2 text-[10px] leading-5 text-slate-500">Esta ação não gera entrada, saída ou transferência de estoque. Ela apenas associa validade ao saldo já existente.</p>
 
                 <div className="mt-4 grid gap-3">
-                  <input
-                    value={lotCode}
-                    onChange={(event) => setLotCode(event.target.value)}
-                    data-testid="warehouse-lot-create-code"
-                    aria-label="Código do lote"
-                    placeholder="Código do lote"
-                    className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-[#00288e]"
-                  />
                   <div className="grid gap-3 sm:grid-cols-2">
                     <input
                       type="date"
                       value={lotExpiry}
                       onChange={(event) => setLotExpiry(event.target.value)}
                       data-testid="warehouse-lot-create-expiry"
-                      aria-label="Validade do lote"
+                      aria-label="Validade"
                       className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e]"
                     />
                     <input
@@ -1258,7 +1245,7 @@ export function WarehouseStockOperational({
                       value={lotQuantity}
                       onChange={(event) => setLotQuantity(event.target.value)}
                       data-testid="warehouse-lot-create-quantity"
-                      aria-label="Quantidade rastreada no lote"
+                      aria-label="Quantidade vinculada à validade"
                       placeholder="Quantidade"
                       className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-[#00288e]"
                     />
@@ -1267,7 +1254,7 @@ export function WarehouseStockOperational({
                     value={lotPositionKey}
                     onChange={(event) => setLotPositionKey(event.target.value)}
                     data-testid="warehouse-lot-create-position"
-                    aria-label="Posição do lote"
+                    aria-label="Posição da validade"
                     className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e]"
                   >
                     {Array.from(positions.entries()).map(([key, position]) => (
@@ -1279,7 +1266,7 @@ export function WarehouseStockOperational({
                   <select
                     value={lotOriginMovementId}
                     onChange={(event) => setLotOriginMovementId(event.target.value)}
-                    aria-label="Origem documental do lote"
+                    aria-label="Origem documental da validade"
                     className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e]"
                   >
                     <option value="">Origem manual / legado</option>
@@ -1301,7 +1288,7 @@ export function WarehouseStockOperational({
                       className="inline-flex h-9 items-center gap-2 rounded-xl bg-emerald-500/85 px-4 text-xs font-black text-white transition hover:bg-emerald-400 disabled:opacity-40"
                     >
                       {working ? <RefreshCw className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Boxes className="h-3.5 w-3.5" aria-hidden="true" />}
-                      {editingLotId ? 'Salvar lote' : 'Registrar lote'}
+                      {editingLotId ? 'Salvar validade' : 'Registrar validade'}
                     </button>
                     {editingLotId && (
                       <button type="button" onClick={resetLotForm} className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600">Cancelar edição</button>
@@ -1356,8 +1343,8 @@ export function WarehouseStockOperational({
       )}
 
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[10px] leading-5 text-slate-500 shadow-sm">
-        <div className="flex items-center gap-2 text-slate-500"><CalendarClock className="h-3.5 w-3.5" aria-hidden="true" /><span>Consultas bounded: 250 materiais/saldos, 500 posições/lotes e histórico por material somente quando a ficha é aberta.</span></div>
-        <div className="mt-1 flex items-center gap-2 text-slate-500"><PackageSearch className="h-3.5 w-3.5" aria-hidden="true" /><span>Código de barras e lotes enriquecem a consulta. A retirada física e a baixa de estoque são executadas exclusivamente na aba Saída de Material.</span></div>
+        <div className="flex items-center gap-2 text-slate-500"><CalendarClock className="h-3.5 w-3.5" aria-hidden="true" /><span>Consultas bounded: 250 materiais/saldos, 500 posições/referências de validade e histórico por material somente quando a ficha é aberta.</span></div>
+        <div className="mt-1 flex items-center gap-2 text-slate-500"><PackageSearch className="h-3.5 w-3.5" aria-hidden="true" /><span>Descritivo, validade e código de barras compõem os dados visíveis do item. A retirada física e a baixa de estoque são executadas exclusivamente na aba Saída de Material.</span></div>
       </div>
     </div>
   );
