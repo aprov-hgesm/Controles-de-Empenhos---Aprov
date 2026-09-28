@@ -707,6 +707,171 @@ async function main() {
     assert.equal(lotSnapshot.data()?.quantity, 0);
   });
 
+  const relocationMovementId = 'mov_' + '5'.repeat(64);
+
+  await allowed('Controle de Itens realoca posição completa e lote sem alterar saldo agregado', async () => {
+    const batch = writeBatch(founder.db);
+
+    batch.set(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'movements', relocationMovementId),
+      {
+        schemaVersion: 'warehouse_movement_v1',
+        id: relocationMovementId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        type: 'TRANSFER',
+        quantityDelta: 0,
+        idempotencyKeyHash: '5'.repeat(64),
+        reversesMovementId: null,
+        note: 'Realocação pela ficha do material em Controle de Itens',
+        source: {
+          kind: 'LOCATION_TRANSFER',
+          actorUid: founder.user.uid,
+          quantity: 2,
+          from: {
+            kind: 'SUBPOSITION',
+            depotId,
+            locationId,
+            subpositionId: subpositionAId,
+          },
+          to: {
+            kind: 'SUBPOSITION',
+            depotId,
+            locationId,
+            subpositionId: subpositionBId,
+          },
+          fromBalanceId: targetBalanceId,
+          toBalanceId: secondTargetBalanceId,
+        },
+        createdAt: serverTimestamp(),
+      }
+    );
+
+    batch.set(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', targetBalanceId),
+      {
+        schemaVersion: 'warehouse_location_balance_v1',
+        id: targetBalanceId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        position: {
+          kind: 'SUBPOSITION',
+          depotId,
+          locationId,
+          subpositionId: subpositionAId,
+        },
+        quantity: 0,
+        revision: 2,
+        lastMovementId: relocationMovementId,
+        updatedAt: serverTimestamp(),
+      }
+    );
+
+    batch.set(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', secondTargetBalanceId),
+      {
+        schemaVersion: 'warehouse_location_balance_v1',
+        id: secondTargetBalanceId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        position: {
+          kind: 'SUBPOSITION',
+          depotId,
+          locationId,
+          subpositionId: subpositionBId,
+        },
+        quantity: 2,
+        revision: 3,
+        lastMovementId: relocationMovementId,
+        updatedAt: serverTimestamp(),
+      }
+    );
+
+    batch.update(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'lots', intakeAllocationLotId),
+      {
+        position: {
+          kind: 'SUBPOSITION',
+          depotId,
+          locationId,
+          subpositionId: subpositionBId,
+        },
+        updatedBy: founder.user.uid,
+        updatedAt: serverTimestamp(),
+      }
+    );
+
+    await batch.commit();
+  });
+
+  await allowed('realocação preserva saldo agregado e move projeção física e lote', async () => {
+    const [aggregateSnapshot, fromSnapshot, toSnapshot, lotSnapshot] = await Promise.all([
+      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId)),
+      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', targetBalanceId)),
+      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', secondTargetBalanceId)),
+      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'lots', intakeAllocationLotId)),
+    ]);
+    assert.equal(aggregateSnapshot.data()?.quantity, 7);
+    assert.equal(fromSnapshot.data()?.quantity, 0);
+    assert.equal(toSnapshot.data()?.quantity, 2);
+    assert.equal(lotSnapshot.data()?.position?.subpositionId, subpositionBId);
+  });
+
+  const oldBarcodeId = 'bar_' + '1'.repeat(64);
+  const replacementBarcodeId = 'bar_' + '2'.repeat(64);
+
+  await allowed('fundador associa código de barras ao material', () =>
+    setDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'barcodes', oldBarcodeId), {
+      schemaVersion: 'warehouse_barcode_v1',
+      id: oldBarcodeId,
+      workspaceId: WORKSPACE_ID,
+      ug: UG,
+      materialId,
+      barcode: '789000000001',
+      presentation: { code: 'unit', label: null },
+      factorToBaseUnit: 1,
+      status: 'active',
+      createdBy: founder.user.uid,
+      updatedBy: founder.user.uid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await allowed('edição de barcode preserva o anterior inativo e cria o substituto', async () => {
+    const batch = writeBatch(founder.db);
+    batch.set(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'barcodes', replacementBarcodeId),
+      {
+        schemaVersion: 'warehouse_barcode_v1',
+        id: replacementBarcodeId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        materialId,
+        barcode: '789000000002',
+        presentation: { code: 'unit', label: null },
+        factorToBaseUnit: 1,
+        status: 'active',
+        createdBy: founder.user.uid,
+        updatedBy: founder.user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }
+    );
+    batch.update(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'barcodes', oldBarcodeId),
+      {
+        status: 'inactive',
+        updatedBy: founder.user.uid,
+        updatedAt: serverTimestamp(),
+      }
+    );
+    await batch.commit();
+  });
+
   const inventoryId = 'inv_' + 'a'.repeat(32);
   const inventoryItemId = 'invit_' + 'b'.repeat(64);
   const inventoryMovementId = 'mov_' + 'e'.repeat(64);
@@ -1257,6 +1422,8 @@ async function main() {
   console.log('- alocação completa TRANSFER + posições + lote + intake é coberta pelo teste positivo');
   console.log('- duas alocações sequenciais em subposições distintas levam o intake parcial a PROCESSED');
   console.log('- retirada total OUTBOUND reduz saldo agregado, zera a posição física e zera o lote correspondente');
+  console.log('- ficha do item realoca posição e lote por TRANSFER sem alterar saldo agregado');
+  console.log('- edição de barcode preserva o código anterior inativo e cria o substituto ativo');
   console.log('- inventário conta sem alterar estoque e só INVENTORY_ADJUSTMENT confirmado modifica ledger/saldos');
   console.log('- TRANSFER não regrava o saldo agregado quando a quantidade total não muda');
   console.log('- operações com estoque continuam obrigadas a respeitar ledger e invariantes');
