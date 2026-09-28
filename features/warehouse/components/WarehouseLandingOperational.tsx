@@ -165,14 +165,6 @@ function warehousePallet(
   visualRole = 'warehouse-pallet'
 ) {
   const deckBaseZ = Math.max(2, height * 0.55);
-  const a = isoPoint(x, y, deckBaseZ);
-  const b = isoPoint(x + width, y, deckBaseZ);
-  const c = isoPoint(x + width, y + depth, deckBaseZ);
-  const d = isoPoint(x, y + depth, deckBaseZ);
-  const at = isoPoint(x, y, height);
-  const bt = isoPoint(x + width, y, height);
-  const ct = isoPoint(x + width, y + depth, height);
-  const dt = isoPoint(x, y + depth, height);
   const center = isoPoint(x + width / 2, y + depth / 2, 0);
   const blockWidth = Math.max(2.8, width * 0.11);
   const blockDepth = Math.max(2.4, depth * 0.16);
@@ -250,54 +242,54 @@ function warehousePallet(
         );
       })}
 
-      <polygon
-        points={polygonPoints([d, c, ct, dt])}
-        fill={WAREHOUSE_PALLET_VISUAL.frontFill}
-        stroke={WAREHOUSE_PALLET_VISUAL.frontStroke}
-        strokeWidth="0.85"
-      />
-      <polygon
-        points={polygonPoints([b, c, ct, bt])}
-        fill={WAREHOUSE_PALLET_VISUAL.sideFill}
-        stroke={WAREHOUSE_PALLET_VISUAL.sideStroke}
-        strokeWidth="0.85"
-      />
-      <polygon
-        points={polygonPoints([at, bt, ct, dt])}
-        fill={WAREHOUSE_PALLET_VISUAL.topMid}
-        stroke={WAREHOUSE_PALLET_VISUAL.frontStroke}
-        strokeWidth="0.9"
-      />
-
       {Array.from({ length: 7 }, (_, index) => {
-        const ratio = (index + 0.5) / 7;
-        const p1 = isoPoint(x + width * ratio, y, height + 0.55);
-        const p2 = isoPoint(x + width * ratio, y + depth, height + 0.55);
+        const cellWidth = width / 7;
+        const gap = Math.max(0.9, cellWidth * 0.18);
+        const slatX = x + index * cellWidth + gap / 2;
+        const slatWidth = Math.max(1.6, cellWidth - gap);
+        const slatBottomZ = Math.max(deckBaseZ, height - Math.max(1.6, height * 0.22));
+        const sa = isoPoint(slatX, y, height);
+        const sb = isoPoint(slatX + slatWidth, y, height);
+        const sc = isoPoint(slatX + slatWidth, y + depth, height);
+        const sd = isoPoint(slatX, y + depth, height);
+        const sdb = isoPoint(slatX, y + depth, slatBottomZ);
+        const scb = isoPoint(slatX + slatWidth, y + depth, slatBottomZ);
+        const sbb = isoPoint(slatX + slatWidth, y, slatBottomZ);
+
         return (
-          <line
-            key={'pallet-slat-' + index}
-            x1={p1.x}
-            y1={p1.y}
-            x2={p2.x}
-            y2={p2.y}
-            stroke={index % 2 === 0
-              ? WAREHOUSE_PALLET_VISUAL.slatDark
-              : WAREHOUSE_PALLET_VISUAL.slatLight}
-            strokeWidth="0.9"
-            opacity="0.96"
-          />
+          <g key={'pallet-slat-' + index}>
+            <polygon
+              points={polygonPoints([sa, sb, sc, sd])}
+              fill={index % 2 === 0
+                ? WAREHOUSE_PALLET_VISUAL.topLight
+                : WAREHOUSE_PALLET_VISUAL.topMid}
+              stroke={WAREHOUSE_PALLET_VISUAL.frontStroke}
+              strokeWidth="0.7"
+            />
+            <polygon
+              points={polygonPoints([sd, sc, scb, sdb])}
+              fill={WAREHOUSE_PALLET_VISUAL.frontFill}
+              stroke={WAREHOUSE_PALLET_VISUAL.frontStroke}
+              strokeWidth="0.6"
+            />
+            <polygon
+              points={polygonPoints([sb, sc, scb, sbb])}
+              fill={WAREHOUSE_PALLET_VISUAL.sideFill}
+              stroke={WAREHOUSE_PALLET_VISUAL.sideStroke}
+              strokeWidth="0.55"
+            />
+            <line
+              x1={sa.x}
+              y1={sa.y}
+              x2={sb.x}
+              y2={sb.y}
+              stroke={WAREHOUSE_PALLET_VISUAL.highlight}
+              strokeWidth="0.6"
+              opacity="0.75"
+            />
+          </g>
         );
       })}
-
-      <line
-        x1={at.x}
-        y1={at.y}
-        x2={bt.x}
-        y2={bt.y}
-        stroke={WAREHOUSE_PALLET_VISUAL.highlight}
-        strokeWidth="0.85"
-        opacity="0.72"
-      />
     </g>
   );
 }
