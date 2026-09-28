@@ -84,7 +84,7 @@
 .sceneTitle > strong {
   display: block;
   margin-top: 6px;
-  font-size: clamp(1.6rem, 2.5vw, 2.7rem);
+  font-size: clamp(1.35rem, 2vw, 2.15rem);
   line-height: .95;
   letter-spacing: -.045em;
   font-weight: 950;
@@ -135,13 +135,17 @@
 
 .depotGroup:hover .depotAura,
 .depotGroup:focus-visible .depotAura {
-  fill-opacity: .13;
-  stroke-opacity: .72;
-  filter: drop-shadow(0 0 10px rgba(93, 145, 255, .34));
+  fill-opacity: 1;
+  stroke-opacity: 1;
+  filter: drop-shadow(0 0 13px rgba(127, 174, 255, .34));
 }
 
 .depotGroup:focus-visible {
   outline: none;
+}
+
+.depotFloorGrid {
+  opacity: .82;
 }
 
 .depotGroup:hover .depotLabel,
@@ -184,7 +188,7 @@
 }
 
 .yardTitle {
-  fill: rgba(197, 211, 240, .84);
+  fill: rgba(174, 193, 229, .64);
   font-size: 8.5px;
   font-weight: 950;
   letter-spacing: .14em;
@@ -194,7 +198,7 @@
 }
 
 .yardSubtitle {
-  fill: rgba(137, 159, 201, .6);
+  fill: rgba(120, 143, 186, .48);
   font-size: 7px;
   font-weight: 750;
   paint-order: stroke;
@@ -203,15 +207,15 @@
 }
 
 .pendingPallet {
-  opacity: 1;
+  opacity: .78;
 }
 
 .emptyPallet {
-  opacity: .6;
+  opacity: .38;
 }
 
 .palletLabel {
-  fill: rgba(218, 225, 238, .82);
+  fill: rgba(192, 204, 226, .68);
   font-size: 7.4px;
   font-weight: 900;
   paint-order: stroke;
@@ -220,7 +224,7 @@
 }
 
 .palletDetail {
-  fill: rgba(151, 170, 207, .56);
+  fill: rgba(132, 151, 188, .44);
   font-size: 6.3px;
   font-weight: 700;
   paint-order: stroke;
