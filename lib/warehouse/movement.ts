@@ -20,6 +20,7 @@ export const WAREHOUSE_MAX_ABSOLUTE_QUANTITY = 1_000_000_000;
 
 export const WAREHOUSE_MOVEMENT_TYPES = [
   'INITIAL_BALANCE',
+  'MANUAL_ENTRY',
   'INVOICE_ENTRY',
   'OUTBOUND',
   'TRANSFER',
@@ -43,6 +44,13 @@ export interface WarehouseInvoiceMovementSource {
   supplier: string;
   supplierCnpj: string | null;
   actorUid: string;
+}
+
+export interface WarehouseManualEntryMovementSource {
+  kind: 'MANUAL_ENTRY';
+  actorUid: string;
+  provenance: string;
+  reference: string | null;
 }
 
 export interface WarehouseLocationTransferMovementSource {
@@ -86,6 +94,7 @@ export interface WarehousePhysicalInventoryMovementSource {
 
 export type WarehouseMovementSource =
   | WarehouseInvoiceMovementSource
+  | WarehouseManualEntryMovementSource
   | WarehouseLocationTransferMovementSource
   | WarehouseExpressOutboundMovementSource
   | WarehousePhysicalInventoryMovementSource;
@@ -161,6 +170,12 @@ const INVOICE_MOVEMENT_SOURCE_FIELDS = new Set([
   'supplier',
   'supplierCnpj',
   'actorUid',
+]);
+const MANUAL_ENTRY_MOVEMENT_SOURCE_FIELDS = new Set([
+  'kind',
+  'actorUid',
+  'provenance',
+  'reference',
 ]);
 const TRANSFER_MOVEMENT_SOURCE_FIELDS = new Set([
   'kind',
@@ -280,6 +295,32 @@ function normalizeWarehouseMovementSource(input: unknown): WarehouseMovementSour
       supplier,
       supplierCnpj,
       actorUid,
+    };
+  }
+
+  if (input.kind === 'MANUAL_ENTRY') {
+    if (!hasOnlyFields(input, MANUAL_ENTRY_MOVEMENT_SOURCE_FIELDS)) return null;
+    const actorUid = typeof input.actorUid === 'string' ? normalizeText(input.actorUid) : '';
+    const provenance = typeof input.provenance === 'string' ? normalizeText(input.provenance) : '';
+    const reference = input.reference === null || input.reference === undefined
+      ? null
+      : typeof input.reference === 'string'
+        ? normalizeText(input.reference)
+        : '';
+
+    if (
+      !actorUid || actorUid.length > 160
+      || !provenance || provenance.length > 180
+      || (reference !== null && (!reference || reference.length > 160))
+    ) {
+      return null;
+    }
+
+    return {
+      kind: 'MANUAL_ENTRY',
+      actorUid,
+      provenance,
+      reference,
     };
   }
 
@@ -502,7 +543,7 @@ export function warehouseMovementDeltaMatchesType(
   type: WarehouseMovementType,
   quantityDelta: number
 ): boolean {
-  if (type === 'INITIAL_BALANCE' || type === 'INVOICE_ENTRY') {
+  if (type === 'INITIAL_BALANCE' || type === 'MANUAL_ENTRY' || type === 'INVOICE_ENTRY') {
     return quantityDelta > 0;
   }
   if (type === 'OUTBOUND') {
@@ -760,7 +801,25 @@ export function validateWarehouseMovement(
       )
     );
   }
-  if (source?.kind === 'LOCATION_TRANSFER' && type !== 'TRANSFER') {
+  if (source?.kind === 'MANUAL_ENTRY' && type !== 'MANUAL_ENTRY') {
+    issues.push(
+      issue(
+        'invalid_source_type',
+        '$.source',
+        'Origem MANUAL_ENTRY só pode acompanhar entrada avulsa.'
+      )
+    );
+  }
+  if (type === 'MANUAL_ENTRY' && source?.kind !== 'MANUAL_ENTRY') {
+    issues.push(
+      issue(
+        'manual_entry_source_required',
+        '$.source',
+        'MANUAL_ENTRY exige procedência diversa auditável.'
+      )
+    );
+  }
+    if (source?.kind === 'LOCATION_TRANSFER' && type !== 'TRANSFER') {
     issues.push(
       issue(
         'invalid_source_type',
