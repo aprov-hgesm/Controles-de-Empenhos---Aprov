@@ -132,8 +132,6 @@ export function WarehouseConsumptionReports({
   const [endDate, setEndDate] = useState(initial.end);
   const [records, setRecords] = useState<WarehouseConsumptionRecord[]>([]);
   const [loading, setLoading] = useState(false);
-  const [truncated, setTruncated] = useState(false);
-  const [legacyCoverageLimited, setLegacyCoverageLimited] = useState(false);
   const [originFilter, setOriginFilter] = useState<OriginFilter>(fixedOrigin || 'ALL');
   const effectiveOriginFilter: OriginFilter = fixedOrigin || originFilter;
   const [destinationFilter, setDestinationFilter] = useState('ALL');
@@ -168,12 +166,6 @@ export function WarehouseConsumptionReports({
         ? result.records.filter((record) => record.origin === fixedOrigin)
         : result.records;
       setRecords(scopedRecords);
-      setTruncated(result.truncated);
-      setLegacyCoverageLimited(
-        fixedOrigin === 'IMMEDIATE_CONSUMPTION'
-          ? false
-          : result.legacyCoverageLimited
-      );
       setMessage(
         scopedRecords.length
           ? 'Relatório atualizado com ' + scopedRecords.length + ' registro(s).'
@@ -532,12 +524,6 @@ export function WarehouseConsumptionReports({
       </section>
 
       {message && <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-semibold text-[#00288e]">{message}</div>}
-
-      {(truncated || legacyCoverageLimited) && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-800">
-          A consulta atingiu um limite bounded. Refine o período para cobertura integral; registros fora da janela não são inferidos.
-        </div>
-      )}
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {(fixedOrigin
