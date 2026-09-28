@@ -16,7 +16,7 @@ export interface WarehouseOutboundDocumentLine {
   unitLabel: string;
   presentationLabel: string;
   positionLabel: string;
-  lotCode: string | null;
+  expiresOn: string | null;
   barcode: string | null;
   invoiceId: string | null;
   empenhoId: string | null;
@@ -241,7 +241,7 @@ function drawPickingInstructions(doc: JsPDF, y: number): number {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.4);
   doc.text(
-    'Localize cada material exatamente na posição indicada, confira quantidade/lote e entregue ao destino informado.',
+    'Localize cada material exatamente na posição indicada, confira quantidade/validade e entregue ao destino informado.',
     MARGIN_X + 3,
     y + 8
   );
@@ -315,13 +315,15 @@ function drawPickingRow(
   const widths = [10, 61, 20, 67, 28];
   const materialFit = fitTextLines(doc, item.materialDescription, widths[1] - 4, 3, 7.1, 5.8);
   const positionFit = fitTextLines(doc, item.positionLabel, widths[3] - 4, 3, 7.0, 5.7);
-  const lotText = [
-    item.lotCode ? 'Lote ' + item.lotCode : 'Sem lote',
+  const traceText = [
+    'Val. ' + (item.expiresOn
+      ? item.expiresOn.split('-').reverse().join('/')
+      : 'não informada'),
     item.barcode ? 'Cod. ' + item.barcode : '',
   ].filter(Boolean).join(' · ');
-  const lotFit = fitTextLines(doc, lotText, widths[4] - 4, 3, 6.5, 5.3);
+  const traceFit = fitTextLines(doc, traceText, widths[4] - 4, 3, 6.5, 5.3);
 
-  const maxLines = Math.max(materialFit.lines.length, positionFit.lines.length, lotFit.lines.length);
+  const maxLines = Math.max(materialFit.lines.length, positionFit.lines.length, traceFit.lines.length);
   const rowHeight = Math.max(13, 5 + (maxLines * 3.4));
 
   doc.setDrawColor(55);
@@ -356,8 +358,8 @@ function drawPickingRow(
   doc.text(positionFit.lines, x + 2, y + 4.5);
 
   x += widths[3];
-  doc.setFontSize(lotFit.fontSize);
-  doc.text(lotFit.lines, x + 2, y + 4.5);
+  doc.setFontSize(traceFit.fontSize);
+  doc.text(traceFit.lines, x + 2, y + 4.5);
 
   return y + rowHeight;
 }
