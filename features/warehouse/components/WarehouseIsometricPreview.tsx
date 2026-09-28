@@ -1130,7 +1130,7 @@ export function WarehouseIsometricPreview({
 
       <div className={
         embedded
-          ? 'relative min-h-[620px] overflow-hidden bg-[radial-gradient(circle_at_50%_0%,#ffffff_0%,#eef5fa_52%,#dce8f2_100%)]'
+          ? 'relative min-h-[650px] overflow-hidden bg-[radial-gradient(circle_at_50%_8%,#fbfdff_0%,#eaf2f8_48%,#cfdeea_100%)]'
           : 'relative min-h-[660px] overflow-hidden bg-[radial-gradient(circle_at_50%_0%,#ffffff_0%,#eef5fa_52%,#dce8f2_100%)]'
       }>
         {visibleObjects.length === 0 ? (
@@ -1142,7 +1142,11 @@ export function WarehouseIsometricPreview({
           </div>
         ) : (
           <svg
-            viewBox={'0 0 ' + VIEW_WIDTH + ' ' + VIEW_HEIGHT}
+            viewBox={
+              embedded
+                ? '55 35 ' + (VIEW_WIDTH - 110) + ' ' + (VIEW_HEIGHT - 95)
+                : '0 0 ' + VIEW_WIDTH + ' ' + VIEW_HEIGHT
+            }
             className={
               'absolute inset-0 h-full w-full origin-center transition-[opacity,transform,filter] duration-200 ease-out '
               + (viewTransitioning
