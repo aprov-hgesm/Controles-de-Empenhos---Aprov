@@ -705,6 +705,21 @@ requireText(
   'border border-slate-200 bg-white',
   'Relatórios da Saída perderam o tema claro operacional.'
 );
+requireText(
+  stockOperational,
+  '.filter((balance) => hasWarehouseAvailableStock(balance.quantity))',
+  'Estoque voltou a exibir materiais sem saldo disponível.'
+);
+requireText(
+  stockOperational,
+  '.sort(compareWarehouseStockAvailability)',
+  'Estoque perdeu a prioridade de ordenação pela menor validade.'
+);
+requireText(
+  stockOperational,
+  'summary.availableLots.map((lot) => warehouseLotExpiryState(lot))',
+  'Filtro de validade voltou a considerar lotes sem saldo/inativos como estoque atual.'
+);
 
 requireText(
   intakeStateRepository,
@@ -759,6 +774,7 @@ console.log('- Saída de Material gera PDF duplo: retirada física + ficha auxil
 console.log('- Saída de Material e seus Relatórios seguem o tema claro oficial D-076/VISUAL_IDENTITY');
 console.log('- Saída de Material reduz ledger/posição/lote e saldo zero deixa de ser projetado no croqui');
 console.log('- Controle de Itens consolidado em Resumo, Estoque, Movimentações, Inventário e Relatórios');
+console.log('- Estoque exibe somente saldo positivo e prioriza a menor validade ativa');
 console.log('- Inventário opera no database dedicado com contagem isolada e ajuste confirmado');
 console.log('- SISCOFIS no Controle é somente leitura; migração permanece em Alocação de Material');
 console.log('- Inventário em Relatórios é somente leitura; contagem/ajuste permanece na subaba Inventário');
