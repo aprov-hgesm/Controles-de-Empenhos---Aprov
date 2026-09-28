@@ -733,6 +733,11 @@ requireText(
 );
 requireText(
   warehouseLanding,
+  'const a = isoPoint(x, y, 0);',
+  'Início perdeu o vértice isométrico de origem usado por piso e estruturas.'
+);
+requireText(
+  warehouseLanding,
   'loadWarehouseInvoiceIntakeQueue(workspaceId)',
   'Início deixou de refletir as pendências reais de alocação.'
 );
