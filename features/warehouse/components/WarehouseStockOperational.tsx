@@ -1321,9 +1321,11 @@ export function WarehouseStockOperational({
                           <p className="mt-1 text-[10px] text-slate-500">
                             {invoiceSource
                               ? 'NF ' + invoiceSource.invoiceId + ' · ' + invoiceSource.supplier
-                              : movement.source?.kind === 'LOCATION_TRANSFER'
-                                ? 'Transferência interna'
-                                : movement.note || 'Movimento auditável'}
+                              : movement.source?.kind === 'MANUAL_ENTRY'
+                                ? 'Entrada avulsa · ' + movement.source.provenance
+                                : movement.source?.kind === 'LOCATION_TRANSFER'
+                                  ? 'Transferência interna'
+                                  : movement.note || 'Movimento auditável'}
                           </p>
                         </div>
                       );
