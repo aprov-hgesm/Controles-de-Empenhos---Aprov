@@ -138,7 +138,16 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
       });
 
       const activeDepots = depots.filter((item) => item.depot.status === 'active');
+      const requestedDepotId = typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('deposito')?.trim().toLowerCase() || ''
+        : '';
       setSelectedDepotId((current) => {
+        if (
+          requestedDepotId
+          && activeDepots.some((item) => item.depot.id === requestedDepotId)
+        ) {
+          return requestedDepotId;
+        }
         if (current && activeDepots.some((item) => item.depot.id === current)) return current;
         return activeDepots[0]?.depot.id || '';
       });
@@ -405,7 +414,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
     <section
       className={styles.scene}
       data-testid="warehouse-home-operational"
-      aria-label="Início ADM Depósito"
+      aria-label="Meus Depósitos ADM Depósito"
     >
       <div className={styles.glow} aria-hidden="true" />
       <div className={styles.texture} aria-hidden="true" />
@@ -634,11 +643,11 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
                     <Warehouse className="mx-auto h-10 w-10 text-blue-200/30" />
                     <h3 className={styles.noLayoutTitle}>Visão 3D ainda não configurada</h3>
                     <p className={styles.noLayoutText}>
-                      O depósito continua operando normalmente. Configure o croqui em Meus Depósitos
+                      O depósito continua operando normalmente. Configure o croqui em Controle de Depósitos
                       para transformar esta área no localizador visual do estoque.
                     </p>
                     <Link
-                      href="/adm-deposito/meus-depositos?aba=croquis"
+                      href="/adm-deposito/controle-de-depositos?aba=croquis"
                       className={styles.configureLink}
                     >
                       <LocateFixed className="h-4 w-4" />
@@ -660,10 +669,10 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
                 : 'Selecione um material para acender sua localização na Visão 3D'}
             </div>
             <Link
-              href="/adm-deposito/meus-depositos?aba=croquis"
+              href="/adm-deposito/controle-de-depositos?aba=croquis"
               className={styles.editLink}
             >
-              Editar estrutura em Meus Depósitos
+              Editar estrutura em Controle de Depósitos
             </Link>
           </div>
         </div>
