@@ -722,9 +722,27 @@ requireText(
 );
 requireText(
   rules,
-  'returnedBefore + movement.source.quantity <= before.quantity',
+  'returnedBefore + movement.source.quantity <= consumption.quantity',
   'Rules deixaram de limitar devoluções ao total originalmente retirado.'
 );
+requireText(
+  rules,
+  'warehouseOutboundReturnCompanionsMatchAfter',
+  'OUTBOUND_RETURN deixou de exigir saldo, posição e consumo na mesma transação atômica.'
+);
+requireText(
+  withdrawalRepository,
+  'ensureWarehouseOutboundReturnLotEnrichment',
+  'Devolução perdeu a recomposição idempotente da validade fora do núcleo de saldo.'
+);
+requireText(
+  withdrawalRepository,
+  'createWarehouseOutboundReturnLotId',
+  'Enriquecimento da devolução perdeu identidade determinística.'
+);
+if (withdrawalRepository.includes('transaction.update(lotRef')) {
+  fail('Devolução voltou a incluir lote no núcleo transacional e pode estourar o orçamento das Rules.');
+}
 
 requireText(
   outboundDocuments,
