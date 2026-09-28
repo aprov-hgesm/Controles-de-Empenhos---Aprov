@@ -2603,8 +2603,9 @@ service cloud.firestore {
 
 
 
-    function warehouseConsumptionIdentityUnchanged() {
-      return request.resource.data.schemaVersion == resource.data.schemaVersion
+    function validWarehouseConsumptionUpdate(workspaceId, consumptionId) {
+      return validWarehouseConsumptionBase(workspaceId, consumptionId)
+        && request.resource.data.schemaVersion == resource.data.schemaVersion
         && request.resource.data.id == resource.data.id
         && request.resource.data.workspaceId == resource.data.workspaceId
         && request.resource.data.ug == resource.data.ug
@@ -2627,12 +2628,7 @@ service cloud.firestore {
         && request.resource.data.barcode == resource.data.barcode
         && request.resource.data.lotCode == resource.data.lotCode
         && request.resource.data.positionLabel == resource.data.positionLabel
-        && request.resource.data.occurredAt == resource.data.occurredAt;
-    }
-
-    function validWarehouseConsumptionSiscofisUpdate(workspaceId, consumptionId) {
-      return validWarehouseConsumptionBase(workspaceId, consumptionId)
-        && warehouseConsumptionIdentityUnchanged()
+        && request.resource.data.occurredAt == resource.data.occurredAt
         && warehouseSiscofisStatusTransitionAllowed()
         && request.resource.data.updatedAt == request.time
         && request.resource.data.siscofisUpdatedBy == request.auth.uid
@@ -2640,35 +2636,6 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'siscofisStatus', 'updatedAt', 'siscofisUpdatedBy', 'siscofisUpdatedAt'
         ]);
-    }
-
-    function validWarehouseConsumptionReturnUpdate(workspaceId, consumptionId) {
-      return validWarehouseConsumptionBase(workspaceId, consumptionId)
-        && warehouseConsumptionIdentityUnchanged()
-        && resource.data.origin == 'STOCK_OUTBOUND'
-        && request.resource.data.siscofisStatus == resource.data.siscofisStatus
-        && request.resource.data.siscofisUpdatedBy == resource.data.siscofisUpdatedBy
-        && request.resource.data.siscofisUpdatedAt == resource.data.siscofisUpdatedAt
-        && request.resource.data.returnedQuantity is number
-        && request.resource.data.returnedQuantity > resource.data.returnedQuantity
-        && request.resource.data.returnedQuantity <= resource.data.quantity
-        && request.resource.data.lastReturnMovementId is string
-        && request.resource.data.lastReturnMovementId.matches('^mov_[a-f0-9]{64}$')
-        && request.resource.data.lastReturnAt == request.time
-        && request.resource.data.lastReturnBy == request.auth.uid
-        && request.resource.data.lastReturnReason is string
-        && request.resource.data.lastReturnReason.size() > 0
-        && request.resource.data.lastReturnReason.size() <= 180
-        && request.resource.data.updatedAt == request.time
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'returnedQuantity', 'lastReturnMovementId', 'lastReturnAt',
-          'lastReturnBy', 'lastReturnReason', 'updatedAt'
-        ]);
-    }
-
-    function validWarehouseConsumptionUpdate(workspaceId, consumptionId) {
-      return validWarehouseConsumptionSiscofisUpdate(workspaceId, consumptionId)
-        || validWarehouseConsumptionReturnUpdate(workspaceId, consumptionId);
     }
 
     function warehouseItemIntakeV2StatusMatchesQuantities() {
@@ -2969,6 +2936,14 @@ service cloud.firestore {
           && validWarehouseConsumptionCreate(workspaceId, consumptionId);
         allow update: if canAccessWarehouseModule(workspaceId)
           && validWarehouseConsumptionUpdate(workspaceId, consumptionId);
+        allow delete: if false;
+      }
+
+      // Devolução/cancelamento: marcador leve e founder-only.
+      // O estoque é recomposto pelo motor oficial MANUAL_ENTRY + TRANSFER;
+      // este documento guarda somente estado/auditoria da devolução.
+      match /outboundReturns/{consumptionId} {
+        allow read, create, update: if canAccessWarehouseModule(workspaceId);
         allow delete: if false;
       }
 
