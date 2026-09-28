@@ -799,6 +799,29 @@ service cloud.firestore {
         )
         || (
           source is map
+          && source.kind == 'MANUAL_ENTRY'
+          && type == 'MANUAL_ENTRY'
+          && source.keys().hasOnly([
+            'kind', 'actorUid', 'provenance', 'reference'
+          ])
+          && source.keys().hasAll([
+            'kind', 'actorUid', 'provenance', 'reference'
+          ])
+          && source.actorUid == request.auth.uid
+          && source.provenance is string
+          && source.provenance.size() > 0
+          && source.provenance.size() <= 180
+          && (
+            source.reference == null
+            || (
+              source.reference is string
+              && source.reference.size() > 0
+              && source.reference.size() <= 160
+            )
+          )
+        )
+        || (
+          source is map
           && source.kind == 'LOCATION_TRANSFER'
           && type == 'TRANSFER'
           && source.keys().hasOnly([
@@ -982,7 +1005,7 @@ service cloud.firestore {
         && quantityDelta >= -1000000000
         && quantityDelta <= 1000000000
         && (
-          (type in ['INITIAL_BALANCE', 'INVOICE_ENTRY'] && quantityDelta > 0)
+          (type in ['INITIAL_BALANCE', 'MANUAL_ENTRY', 'INVOICE_ENTRY'] && quantityDelta > 0)
           || (type == 'OUTBOUND' && quantityDelta < 0)
           || (type == 'TRANSFER' && quantityDelta == 0)
           || (
@@ -1509,7 +1532,7 @@ service cloud.firestore {
         && request.resource.data.materialId is string
         && request.resource.data.materialId.matches('^mat_[a-f0-9]{32}$')
         && request.resource.data.type in [
-          'INITIAL_BALANCE', 'INVOICE_ENTRY', 'OUTBOUND', 'TRANSFER',
+          'INITIAL_BALANCE', 'MANUAL_ENTRY', 'INVOICE_ENTRY', 'OUTBOUND', 'TRANSFER',
           'INVOICE_CORRECTION', 'REVERSAL'
         ]
         && validWarehouseMovementDelta(
