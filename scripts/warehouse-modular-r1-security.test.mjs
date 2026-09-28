@@ -1380,6 +1380,273 @@ async function main() {
     })
   );
 
+  const returnOutboundMovementId = 'mov_' + '2468ace013579bdf'.repeat(4);
+  const returnConsumptionId = 'cons_' + '13579bdf2468ace0'.repeat(4);
+  const returnLineId = 'wline_' + '13579bdf2468ace0'.repeat(2);
+
+  await allowed('fundador registra saída vinculada antes da devolução', () =>
+    runTransaction(founder.db, async (transaction) => {
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'movements', returnOutboundMovementId),
+        {
+          schemaVersion: 'warehouse_movement_v1',
+          id: returnOutboundMovementId,
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId: manualMaterialId,
+          type: 'OUTBOUND',
+          quantityDelta: -2,
+          idempotencyKeyHash: '2468ace013579bdf'.repeat(4),
+          reversesMovementId: null,
+          note: 'Saída para teste de devolução parcial',
+          source: {
+            kind: 'EXPRESS_OUTBOUND',
+            interface: 'MANUAL_SEARCH',
+            actorUid: founder.user.uid,
+            requestedQuantity: 2,
+            quantity: 2,
+            presentation: { code: 'unit', label: null },
+            factorToBaseUnit: 1,
+            barcodeId: null,
+            barcode: null,
+            position: { kind: 'UNASSIGNED' },
+            locationBalanceId: manualLocationBalanceId,
+            lotId: null,
+            lotCode: null,
+          },
+          createdAt: serverTimestamp(),
+        }
+      );
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', manualMaterialId),
+        {
+          schemaVersion: 'warehouse_balance_v1',
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId: manualMaterialId,
+          quantity: 2,
+          revision: 2,
+          lastMovementId: returnOutboundMovementId,
+          updatedAt: serverTimestamp(),
+        }
+      );
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', manualLocationBalanceId),
+        {
+          schemaVersion: 'warehouse_location_balance_v1',
+          id: manualLocationBalanceId,
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId: manualMaterialId,
+          position: { kind: 'UNASSIGNED' },
+          quantity: 2,
+          revision: 2,
+          lastMovementId: returnOutboundMovementId,
+          updatedAt: serverTimestamp(),
+        }
+      );
+    })
+  );
+
+  await allowed('fundador registra projeção auditável da saída para relatório', () =>
+    setDoc(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', returnConsumptionId),
+      {
+        schemaVersion: 'warehouse_consumption_record_v1',
+        id: returnConsumptionId,
+        workspaceId: WORKSPACE_ID,
+        ug: UG,
+        origin: 'STOCK_OUTBOUND',
+        materialId: manualMaterialId,
+        materialDescription: 'Material de procedência diversa',
+        unitLabel: 'UN',
+        quantity: 2,
+        requestedQuantity: 2,
+        presentationLabel: 'UN',
+        destinationId,
+        destinationName: 'Cozinha ADM-R1',
+        withdrawnBy: 'Militar ADM-R1',
+        operatorUid: founder.user.uid,
+        movementId: returnOutboundMovementId,
+        withdrawalId,
+        lineId: returnLineId,
+        intakeId: null,
+        invoiceRecordKey: null,
+        barcode: null,
+        lotCode: null,
+        positionLabel: 'Sem localização',
+        siscofisStatus: 'PENDING',
+        occurredAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        siscofisUpdatedBy: null,
+        siscofisUpdatedAt: null,
+        returnedQuantity: 0,
+        lastReturnMovementId: null,
+        lastReturnAt: null,
+        lastReturnBy: null,
+        lastReturnReason: null,
+      }
+    )
+  );
+
+  const outboundReturnMovementId = 'mov_' + 'abcdef1234567890'.repeat(4);
+
+  await allowed('cancelamento parcial devolve exatamente a quantidade informada ao estoque', () =>
+    runTransaction(founder.db, async (transaction) => {
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'movements', outboundReturnMovementId),
+        {
+          schemaVersion: 'warehouse_movement_v1',
+          id: outboundReturnMovementId,
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId: manualMaterialId,
+          type: 'OUTBOUND_RETURN',
+          quantityDelta: 1,
+          idempotencyKeyHash: 'abcdef1234567890'.repeat(4),
+          reversesMovementId: null,
+          note: 'Devolução parcial da saída',
+          source: {
+            kind: 'OUTBOUND_RETURN',
+            actorUid: founder.user.uid,
+            consumptionId: returnConsumptionId,
+            originalMovementId: returnOutboundMovementId,
+            quantity: 1,
+            position: { kind: 'UNASSIGNED' },
+            locationBalanceId: manualLocationBalanceId,
+            lotId: null,
+            reason: 'Material devolvido',
+          },
+          createdAt: serverTimestamp(),
+        }
+      );
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', manualMaterialId),
+        {
+          schemaVersion: 'warehouse_balance_v1',
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId: manualMaterialId,
+          quantity: 3,
+          revision: 3,
+          lastMovementId: outboundReturnMovementId,
+          updatedAt: serverTimestamp(),
+        }
+      );
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', manualLocationBalanceId),
+        {
+          schemaVersion: 'warehouse_location_balance_v1',
+          id: manualLocationBalanceId,
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId: manualMaterialId,
+          position: { kind: 'UNASSIGNED' },
+          quantity: 3,
+          revision: 3,
+          lastMovementId: outboundReturnMovementId,
+          updatedAt: serverTimestamp(),
+        }
+      );
+      transaction.update(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', returnConsumptionId),
+        {
+          returnedQuantity: 1,
+          lastReturnMovementId: outboundReturnMovementId,
+          lastReturnAt: serverTimestamp(),
+          lastReturnBy: founder.user.uid,
+          lastReturnReason: 'Material devolvido',
+          updatedAt: serverTimestamp(),
+        }
+      );
+    })
+  );
+
+  await allowed('devolução parcial preserva saída original e saldo líquido', async () => {
+    const [balanceSnapshot, locationSnapshot, consumptionSnapshot] = await Promise.all([
+      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', manualMaterialId)),
+      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', manualLocationBalanceId)),
+      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', returnConsumptionId)),
+    ]);
+    assert.equal(balanceSnapshot.data()?.quantity, 3);
+    assert.equal(locationSnapshot.data()?.quantity, 3);
+    assert.equal(consumptionSnapshot.data()?.quantity, 2);
+    assert.equal(consumptionSnapshot.data()?.returnedQuantity, 1);
+    assert.equal(consumptionSnapshot.data()?.lastReturnMovementId, outboundReturnMovementId);
+  });
+
+  const excessiveReturnMovementId = 'mov_' + 'deadbeefcafefeed'.repeat(4);
+  await denied('devolução acima do saldo ainda retirado permanece bloqueada', () =>
+    runTransaction(founder.db, async (transaction) => {
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'movements', excessiveReturnMovementId),
+        {
+          schemaVersion: 'warehouse_movement_v1',
+          id: excessiveReturnMovementId,
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId: manualMaterialId,
+          type: 'OUTBOUND_RETURN',
+          quantityDelta: 2,
+          idempotencyKeyHash: 'deadbeefcafefeed'.repeat(4),
+          reversesMovementId: null,
+          note: 'Devolução inválida acima do remanescente',
+          source: {
+            kind: 'OUTBOUND_RETURN',
+            actorUid: founder.user.uid,
+            consumptionId: returnConsumptionId,
+            originalMovementId: returnOutboundMovementId,
+            quantity: 2,
+            position: { kind: 'UNASSIGNED' },
+            locationBalanceId: manualLocationBalanceId,
+            lotId: null,
+            reason: 'Tentativa acima do remanescente',
+          },
+          createdAt: serverTimestamp(),
+        }
+      );
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', manualMaterialId),
+        {
+          schemaVersion: 'warehouse_balance_v1',
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId: manualMaterialId,
+          quantity: 5,
+          revision: 4,
+          lastMovementId: excessiveReturnMovementId,
+          updatedAt: serverTimestamp(),
+        }
+      );
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', manualLocationBalanceId),
+        {
+          schemaVersion: 'warehouse_location_balance_v1',
+          id: manualLocationBalanceId,
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId: manualMaterialId,
+          position: { kind: 'UNASSIGNED' },
+          quantity: 5,
+          revision: 4,
+          lastMovementId: excessiveReturnMovementId,
+          updatedAt: serverTimestamp(),
+        }
+      );
+      transaction.update(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', returnConsumptionId),
+        {
+          returnedQuantity: 3,
+          lastReturnMovementId: excessiveReturnMovementId,
+          lastReturnAt: serverTimestamp(),
+          lastReturnBy: founder.user.uid,
+          lastReturnReason: 'Tentativa acima do remanescente',
+          updatedAt: serverTimestamp(),
+        }
+      );
+    })
+  );
+
   const invalidManualMovementId = 'mov_' + '0f1e2d3c4b5a6978'.repeat(4);
   await denied('MANUAL_ENTRY sem procedência estruturada permanece bloqueado', () =>
     runTransaction(founder.db, async (transaction) => {
