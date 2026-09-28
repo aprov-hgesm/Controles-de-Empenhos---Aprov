@@ -12,6 +12,21 @@ export function hasWarehouseAvailableStock(quantity: number): boolean {
   return Number.isFinite(quantity) && quantity > 0;
 }
 
+export interface WarehouseStockLocationBalanceLike {
+  quantity: number;
+  position: {
+    kind: string;
+  };
+}
+
+export function isWarehouseLocatedBalance(
+  balance: WarehouseStockLocationBalanceLike
+): boolean {
+  return Number.isFinite(balance.quantity)
+    && balance.quantity > 0
+    && balance.position.kind !== 'UNASSIGNED';
+}
+
 export type WarehouseStockExpiryFilter =
   | ''
   | 'EXPIRED'
