@@ -3374,3 +3374,27 @@ Validação local concluída no commit `f1cd91b`:
 - confirmado por teste que `SUBPOSITION` conta como localizado;
 - confirmado por teste que `UNASSIGNED` não entra na lista de localizações físicas;
 - Rules permaneceram inalteradas, sem necessidade de deploy no database `emprovex-warehouse`.
+
+
+### Simplificação do cadastro do item — lote removido da experiência do operador — 2026-09-27
+
+Decisão aplicada:
+- dados visíveis/editáveis do item: **Descritivo, Validade e Código de Barras**;
+- campo de lote removido da alocação inicial;
+- código de lote removido da edição de itens armazenados;
+- código de lote removido da ficha de Estoque, pesquisa e cartões;
+- Saída de Material passou a apresentar **Validade / FEFO**;
+- PDF de retirada passou a apresentar validade e código de barras;
+- pesquisas e CSV de itens deixaram de expor lote.
+
+Compatibilidade:
+- `warehouse_lot_v1` permanece interno para sustentar validade/FEFO, quantidade vinculada, posição, origem e baixa;
+- códigos técnicos passam a ser gerados automaticamente e ocultados;
+- nenhum dado histórico foi apagado;
+- ledger, saldos, locationBalances e Firestore Rules permanecem inalterados.
+
+Validação pendente no PowerShell:
+- `npm.cmd run typecheck`;
+- `npm.cmd run test:adm-deposito-stock-operational`;
+- `npm.cmd run test:adm-deposito-barcode-outbound`;
+- `npm.cmd run verify:adm-deposito-modular-r1`.
