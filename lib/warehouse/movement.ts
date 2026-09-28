@@ -23,6 +23,7 @@ export const WAREHOUSE_MOVEMENT_TYPES = [
   'MANUAL_ENTRY',
   'INVOICE_ENTRY',
   'OUTBOUND',
+  'OUTBOUND_RETURN',
   'TRANSFER',
   'INVENTORY_ADJUSTMENT',
   'INVOICE_CORRECTION',
@@ -79,6 +80,18 @@ export interface WarehouseExpressOutboundMovementSource {
   lotCode: string | null;
 }
 
+export interface WarehouseOutboundReturnMovementSource {
+  kind: 'OUTBOUND_RETURN';
+  actorUid: string;
+  consumptionId: string;
+  originalMovementId: string;
+  quantity: number;
+  position: WarehouseStockPosition;
+  locationBalanceId: string;
+  lotId: string | null;
+  reason: string;
+}
+
 export interface WarehousePhysicalInventoryMovementSource {
   kind: 'PHYSICAL_INVENTORY';
   actorUid: string;
@@ -97,6 +110,7 @@ export type WarehouseMovementSource =
   | WarehouseManualEntryMovementSource
   | WarehouseLocationTransferMovementSource
   | WarehouseExpressOutboundMovementSource
+  | WarehouseOutboundReturnMovementSource
   | WarehousePhysicalInventoryMovementSource;
 
 export interface WarehouseMovement {
@@ -200,6 +214,17 @@ const EXPRESS_OUTBOUND_MOVEMENT_SOURCE_FIELDS = new Set([
   'locationBalanceId',
   'lotId',
   'lotCode',
+]);
+const OUTBOUND_RETURN_MOVEMENT_SOURCE_FIELDS = new Set([
+  'kind',
+  'actorUid',
+  'consumptionId',
+  'originalMovementId',
+  'quantity',
+  'position',
+  'locationBalanceId',
+  'lotId',
+  'reason',
 ]);
 const PHYSICAL_INVENTORY_MOVEMENT_SOURCE_FIELDS = new Set([
   'kind',
@@ -450,6 +475,53 @@ function normalizeWarehouseMovementSource(input: unknown): WarehouseMovementSour
     };
   }
 
+  if (input.kind === 'OUTBOUND_RETURN') {
+    if (!hasOnlyFields(input, OUTBOUND_RETURN_MOVEMENT_SOURCE_FIELDS)) return null;
+    const actorUid = typeof input.actorUid === 'string' ? normalizeText(input.actorUid) : '';
+    const consumptionId = typeof input.consumptionId === 'string'
+      ? input.consumptionId.trim().toLowerCase()
+      : '';
+    const originalMovementId = typeof input.originalMovementId === 'string'
+      ? input.originalMovementId.trim().toLowerCase()
+      : '';
+    const quantity = normalizeWarehouseQuantity(input.quantity);
+    const position = validateWarehouseStockPosition(input.position);
+    const locationBalanceId = typeof input.locationBalanceId === 'string'
+      ? input.locationBalanceId.trim().toLowerCase()
+      : '';
+    const lotId = input.lotId === null
+      ? null
+      : typeof input.lotId === 'string'
+        ? input.lotId.trim().toLowerCase()
+        : '';
+    const reason = typeof input.reason === 'string' ? normalizeText(input.reason) : '';
+
+    if (
+      !actorUid || actorUid.length > 160
+      || !/^cons_[a-f0-9]{64}$/.test(consumptionId)
+      || !MOVEMENT_ID_PATTERN.test(originalMovementId)
+      || quantity === null || quantity <= 0
+      || !position
+      || !isValidWarehouseLocationBalanceId(locationBalanceId)
+      || (lotId !== null && !/^lot_[a-f0-9]{32}$/.test(lotId))
+      || !reason || reason.length > 180
+    ) {
+      return null;
+    }
+
+    return {
+      kind: 'OUTBOUND_RETURN',
+      actorUid,
+      consumptionId,
+      originalMovementId,
+      quantity,
+      position,
+      locationBalanceId,
+      lotId,
+      reason,
+    };
+  }
+
   if (input.kind === 'PHYSICAL_INVENTORY') {
     if (!hasOnlyFields(input, PHYSICAL_INVENTORY_MOVEMENT_SOURCE_FIELDS)) return null;
     const actorUid = typeof input.actorUid === 'string' ? normalizeText(input.actorUid) : '';
@@ -548,6 +620,9 @@ export function warehouseMovementDeltaMatchesType(
   }
   if (type === 'OUTBOUND') {
     return quantityDelta < 0;
+  }
+  if (type === 'OUTBOUND_RETURN') {
+    return quantityDelta > 0;
   }
   if (type === 'TRANSFER') {
     return quantityDelta === 0;
@@ -847,6 +922,37 @@ export function validateWarehouseMovement(
         'outbound_quantity_mismatch',
         '$.source.quantity',
         'Quantidade auditável da saída deve corresponder ao delta do ledger.'
+      )
+    );
+  }
+  if (source?.kind === 'OUTBOUND_RETURN' && type !== 'OUTBOUND_RETURN') {
+    issues.push(
+      issue(
+        'invalid_source_type',
+        '$.source',
+        'Origem OUTBOUND_RETURN só pode acompanhar devolução de saída.'
+      )
+    );
+  }
+  if (
+    source?.kind === 'OUTBOUND_RETURN'
+    && quantityDelta !== null
+    && source.quantity !== quantityDelta
+  ) {
+    issues.push(
+      issue(
+        'return_quantity_mismatch',
+        '$.source.quantity',
+        'Quantidade devolvida deve corresponder ao delta positivo do ledger.'
+      )
+    );
+  }
+  if (type === 'OUTBOUND_RETURN' && source?.kind !== 'OUTBOUND_RETURN') {
+    issues.push(
+      issue(
+        'outbound_return_source_required',
+        '$.source',
+        'OUTBOUND_RETURN exige vínculo auditável com a saída original.'
       )
     );
   }
