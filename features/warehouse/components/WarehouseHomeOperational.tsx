@@ -408,9 +408,8 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
           </p>
           <h1 className={styles.title}>Encontre o material dentro do depósito.</h1>
           <p className={styles.subtitle}>
-            Pesquise um item, selecione o depósito e veja imediatamente sua posição na Visão 3D,
-            com saldo e validade. O Início consulta; as demais abas continuam responsáveis por
-            alocação, saída, manutenção e estrutura física.
+            Pesquise um item e veja imediatamente onde ele está, quanto existe e qual validade
+            deve ter prioridade.
           </p>
         </div>
 
