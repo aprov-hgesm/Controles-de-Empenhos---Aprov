@@ -27,7 +27,7 @@ import {
 import {
   createWarehouseLocation,
   listWarehouseDepots,
-  listWarehouseLocationBalances,
+  listWarehousePositiveLocationBalances,
   listWarehouseLocations,
   updateWarehouseLocation,
   type WarehouseDepotListItem,
@@ -267,7 +267,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
 
     void Promise.all([
       listWarehouseMaterials(workspaceId, 250),
-      listWarehouseLocationBalances(workspaceId, 500),
+      listWarehousePositiveLocationBalances(workspaceId, 500),
     ]).then(([materials, balances]) => {
       if (cancelled) return;
       setPreviewMaterials(materials);
@@ -275,8 +275,9 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
         balances
           .map((item) => item.balance)
           .filter((balance) =>
-            balance.position.kind === 'UNASSIGNED'
-            || balance.position.depotId === selectedDepotId
+            balance.quantity > 0
+            && balance.position.kind !== 'UNASSIGNED'
+            && balance.position.depotId === selectedDepotId
           )
       );
       setPreviewLoaded(true);
