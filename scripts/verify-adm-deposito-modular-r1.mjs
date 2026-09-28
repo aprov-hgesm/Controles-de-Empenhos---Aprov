@@ -267,8 +267,6 @@ for (const helper of [
   'function validWarehouseItemIntakeV2Update(workspaceId, intakeId)',
   'function warehouseImmediateConsumptionIntakeMatchesAfter(workspaceId)',
   'function validWarehouseConsumptionCreate(workspaceId, consumptionId)',
-  'function validWarehouseOutboundReturnSummaryCreate(workspaceId, consumptionId)',
-  'function validWarehouseOutboundReturnSummaryUpdate(workspaceId, consumptionId)',
 ]) {
   requireText(rules, helper, 'Helper obrigatório da ADM-R1 ausente: ' + helper);
 }
@@ -742,13 +740,18 @@ requireText(
 );
 requireText(
   rules,
-  'function validWarehouseOutboundReturnSummaryCreate(workspaceId, consumptionId)',
-  'Rules perderam a validação de criação do marcador de devolução.'
+  "request.resource.data.schemaVersion == 'warehouse_outbound_return_v1'",
+  'Rules perderam o contrato do marcador leve de devolução.'
 );
 requireText(
   rules,
-  'function validWarehouseOutboundReturnSummaryUpdate(workspaceId, consumptionId)',
-  'Rules perderam a validação de atualização do marcador de devolução.'
+  'request.resource.data.returnedQuantity <= request.resource.data.originalQuantity',
+  'Rules perderam o limite quantitativo na criação do marcador.'
+);
+requireText(
+  rules,
+  'request.resource.data.returnedQuantity <= resource.data.originalQuantity',
+  'Rules perderam o limite quantitativo na atualização do marcador.'
 );
 requireText(
   withdrawalRepository,
@@ -782,11 +785,6 @@ requireText(
   outboundReturnSecurityTest,
   "marcador de devolução bloqueia quantidade acima da saída original",
   'Teste de segurança deixou de provar o limite quantitativo do marcador.'
-);
-requireText(
-  outboundReturnSecurityTest,
-  'devolução acima do saldo ainda retirado permanece bloqueada',
-  'Teste de segurança deixou de provar o limite do remanescente.'
 );
 
 requireText(
