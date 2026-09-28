@@ -9,7 +9,7 @@ import type {
   WarehouseLocationBalance,
 } from '../../../lib/warehouse/location';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
-import { WAREHOUSE_BOX_VISUAL } from '../visualStyle';
+import { WAREHOUSE_BOX_VISUAL, WAREHOUSE_PALLET_VISUAL } from '../visualStyle';
 
 type Props = {
   logicalWidth: number;
@@ -358,15 +358,26 @@ function WarehouseStructure({
         data-location-id={object.warehouseLocationId || ''}
         data-occupied={generalBoxCount > 0 ? 'true' : 'false'}
         data-highlighted={highlighted ? 'true' : 'false'}
+        data-visual-role="warehouse-pallet"
         opacity={groupOpacity}
         filter={highlightFilter}
       >
         {contactShadow(object, logicalWidth, logicalHeight, 0.2)}
         {commonHighlight}
 
-        <polygon points={polygonPoints([d, c, ct, dt])} fill="url(#palletSideDark)" stroke="#68431f" strokeWidth="1.4" />
-        <polygon points={polygonPoints([b, c, ct, bt])} fill="url(#palletSide)" stroke="#5f3b1a" strokeWidth="1.4" />
-        <polygon points={polygonPoints([at, bt, ct, dt])} fill="url(#palletWood)" stroke="#855426" strokeWidth="1.6" />
+        <polygon points={polygonPoints([d, c, ct, dt])} fill="url(#palletSideDark)" stroke={WAREHOUSE_PALLET_VISUAL.sideStroke} strokeWidth="1.4" />
+        <polygon points={polygonPoints([b, c, ct, bt])} fill="url(#palletSide)" stroke={WAREHOUSE_PALLET_VISUAL.frontStroke} strokeWidth="1.4" />
+        <polygon points={polygonPoints([at, bt, ct, dt])} fill="url(#palletWood)" stroke={WAREHOUSE_PALLET_VISUAL.frontStroke} strokeWidth="1.6" />
+
+        <line
+          x1={at.x}
+          y1={at.y}
+          x2={bt.x}
+          y2={bt.y}
+          stroke={WAREHOUSE_PALLET_VISUAL.highlight}
+          strokeWidth="1.5"
+          opacity="0.8"
+        />
 
         {Array.from({ length: slatCount }, (_, index) => {
           const ratio = (index + 0.5) / slatCount;
@@ -379,7 +390,7 @@ function WarehouseStructure({
               y1={p1.y}
               x2={p2.x}
               y2={p2.y}
-              stroke={index % 2 === 0 ? '#97622f' : '#aa7438'}
+              stroke={index % 2 === 0 ? WAREHOUSE_PALLET_VISUAL.slatDark : WAREHOUSE_PALLET_VISUAL.slatLight}
               strokeWidth="1.1"
               opacity="0.96"
             />
@@ -396,7 +407,7 @@ function WarehouseStructure({
               y1={p1.y}
               x2={p2.x}
               y2={p2.y}
-              stroke="#6c401c"
+              stroke={WAREHOUSE_PALLET_VISUAL.runnerFill}
               strokeWidth="5.5"
               strokeLinecap="round"
               opacity="0.95"
@@ -420,8 +431,8 @@ function WarehouseStructure({
               width="10"
               height="7"
               rx="1.4"
-              fill="#62401f"
-              stroke="#4b2e16"
+              fill={WAREHOUSE_PALLET_VISUAL.blockFill}
+              stroke={WAREHOUSE_PALLET_VISUAL.blockStroke}
               strokeWidth="0.8"
             />
           );
@@ -1196,17 +1207,17 @@ export function WarehouseIsometricPreview({
                 <stop offset="100%" stopColor="#ccd8e1" />
               </linearGradient>
               <linearGradient id="palletWood" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#e7bd79" />
-                <stop offset="48%" stopColor="#cf9650" />
-                <stop offset="100%" stopColor="#b67738" />
+                <stop offset="0%" stopColor={WAREHOUSE_PALLET_VISUAL.topLight} />
+                <stop offset="48%" stopColor={WAREHOUSE_PALLET_VISUAL.topMid} />
+                <stop offset="100%" stopColor={WAREHOUSE_PALLET_VISUAL.topDark} />
               </linearGradient>
               <linearGradient id="palletSide" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#99602d" />
-                <stop offset="100%" stopColor="#6e421d" />
+                <stop offset="0%" stopColor={WAREHOUSE_PALLET_VISUAL.frontFill} />
+                <stop offset="100%" stopColor={WAREHOUSE_PALLET_VISUAL.sideFill} />
               </linearGradient>
               <linearGradient id="palletSideDark" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#895326" />
-                <stop offset="100%" stopColor="#5a3417" />
+                <stop offset="0%" stopColor={WAREHOUSE_PALLET_VISUAL.sideFill} />
+                <stop offset="100%" stopColor={WAREHOUSE_PALLET_VISUAL.runnerFill} />
               </linearGradient>
               <linearGradient id="freezerFront" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#fbfdff" />
