@@ -25,6 +25,7 @@ import {
   loadWarehouseInvoiceIntakeQueue,
   type WarehouseInvoiceIntakeQueueRow,
 } from '../../../lib/warehouse/intakeStateRepository';
+import { WAREHOUSE_BOX_VISUAL } from '../visualStyle';
 import styles from './WarehouseLandingOperational.module.css';
 
 interface LandingData {
@@ -134,20 +135,20 @@ function warehouseBox(
     >
       <polygon
         points={polygonPoints([d, c, ct, dt])}
-        fill="#bf7834"
-        stroke="#e1ad6b"
+        fill={WAREHOUSE_BOX_VISUAL.frontFill}
+        stroke={WAREHOUSE_BOX_VISUAL.frontStroke}
         strokeWidth="0.65"
       />
       <polygon
         points={polygonPoints([b, c, ct, bt])}
-        fill="#925528"
-        stroke="#c98745"
+        fill={WAREHOUSE_BOX_VISUAL.sideFill}
+        stroke={WAREHOUSE_BOX_VISUAL.sideStroke}
         strokeWidth="0.65"
       />
       <polygon
         points={polygonPoints([at, bt, ct, dt])}
-        fill="#dda05a"
-        stroke="#efc183"
+        fill={WAREHOUSE_BOX_VISUAL.topFill}
+        stroke={WAREHOUSE_BOX_VISUAL.topStroke}
         strokeWidth="0.7"
       />
     </g>
