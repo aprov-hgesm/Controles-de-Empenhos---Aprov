@@ -238,6 +238,15 @@ export function WarehouseStockOperational({
   }, [workspaceId]);
 
   useEffect(() => {
+    setBarcodeDraft('');
+    setEditingBarcodeId('');
+    setRelocateSourceKey('');
+    setRelocateDepotId('');
+    setRelocateLocationId('');
+    setRelocateSubpositionId('');
+  }, [selectedMaterialId]);
+
+  useEffect(() => {
     if (!selectedMaterialId) {
       setMovements([]);
       return;
@@ -965,6 +974,119 @@ export function WarehouseStockOperational({
                     </>
                   )}
                 </div>
+                <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-4" data-testid="warehouse-item-relocation">
+                  <div className="flex items-center gap-2 text-[#00288e]">
+                    <ArrowRightLeft className="h-4 w-4" aria-hidden="true" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.12em]">
+                      Alterar localidade
+                    </p>
+                  </div>
+                  <p className="mt-2 text-[10px] leading-5 text-slate-600">
+                    Move integralmente o saldo da posição selecionada. O movimento é registrado
+                    como TRANSFER e os lotes ativos daquela posição acompanham a nova localidade.
+                  </p>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label className="sm:col-span-2">
+                      <span className="text-[9px] font-black uppercase tracking-[0.1em] text-slate-500">
+                        Localidade atual
+                      </span>
+                      <select
+                        value={relocateSourceKey}
+                        onChange={(event) => setRelocateSourceKey(event.target.value)}
+                        data-testid="warehouse-relocate-source"
+                        className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e]"
+                      >
+                        <option value="">Selecione a posição atual</option>
+                        {relocationSources.map((source) => (
+                          <option key={source.key} value={source.key}>
+                            {source.label} · {numberLabel(source.quantity)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label>
+                      <span className="text-[9px] font-black uppercase tracking-[0.1em] text-slate-500">
+                        Novo depósito
+                      </span>
+                      <select
+                        value={relocateDepotId}
+                        onChange={(event) => {
+                          setRelocateDepotId(event.target.value);
+                          setRelocateLocationId('');
+                          setRelocateSubpositionId('');
+                        }}
+                        data-testid="warehouse-relocate-depot"
+                        className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e]"
+                      >
+                        <option value="">Selecione o depósito</option>
+                        {activeDepots.map(({ depot }) => (
+                          <option key={depot.id} value={depot.id}>
+                            {depot.code} · {depot.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label>
+                      <span className="text-[9px] font-black uppercase tracking-[0.1em] text-slate-500">
+                        Nova localização
+                      </span>
+                      <select
+                        value={relocateLocationId}
+                        onChange={(event) => {
+                          setRelocateLocationId(event.target.value);
+                          setRelocateSubpositionId('');
+                        }}
+                        disabled={!relocateDepotId}
+                        data-testid="warehouse-relocate-location"
+                        className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e] disabled:opacity-50"
+                      >
+                        <option value="">Selecione a localização</option>
+                        {relocationLocations.map(({ location }) => (
+                          <option key={location.id} value={location.id}>
+                            {location.code} · {location.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="sm:col-span-2">
+                      <span className="text-[9px] font-black uppercase tracking-[0.1em] text-slate-500">
+                        Subposição · opcional
+                      </span>
+                      <select
+                        value={relocateSubpositionId}
+                        onChange={(event) => setRelocateSubpositionId(event.target.value)}
+                        disabled={!relocateLocationId}
+                        data-testid="warehouse-relocate-subposition"
+                        className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e] disabled:opacity-50"
+                      >
+                        <option value="">Sem subposição específica</option>
+                        {relocationSubpositions.map(({ location }) => (
+                          <option key={location.id} value={location.id}>
+                            {location.code} · {location.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => void relocateSelectedStock()}
+                    disabled={working || !relocateSourceKey || !relocateDepotId || !relocateLocationId}
+                    data-testid="warehouse-relocate-save"
+                    className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm hover:bg-[#001f6f] disabled:opacity-40"
+                  >
+                    {working
+                      ? <RefreshCw className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                      : <ArrowRightLeft className="h-3.5 w-3.5" aria-hidden="true" />}
+                    Alterar localidade
+                  </button>
+                </div>
+
                 {locateOpen && (
                   <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-3" data-testid="warehouse-location-highlight">
                     <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#00288e]/70">Contrato preparado para a FASE 9</p>
@@ -1027,6 +1149,84 @@ export function WarehouseStockOperational({
             </div>
 
             <div className="space-y-5">
+              <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4" data-testid="warehouse-barcode-editor">
+                <div className="flex items-center gap-2 text-[#00288e]">
+                  <Barcode className="h-4 w-4" aria-hidden="true" />
+                  <p className="text-xs font-black">Códigos de barras</p>
+                </div>
+                <p className="mt-2 text-[10px] leading-5 text-slate-600">
+                  Inclua um novo código ou substitua um código existente. Na edição, o código anterior
+                  é inativado e preservado no histórico para não quebrar rastreabilidade.
+                </p>
+
+                <div className="mt-3 space-y-2">
+                  {selected.barcodeAssociations
+                    .filter((association) => association.status === 'active')
+                    .map((association) => (
+                      <div
+                        key={association.id}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate font-mono text-[10px] font-black text-slate-800">
+                            {association.barcode}
+                          </p>
+                          <p className="mt-1 text-[9px] text-slate-500">
+                            {association.presentation.label || association.presentation.code}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => editBarcode(association)}
+                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-slate-600 hover:border-blue-200 hover:text-[#00288e]"
+                        >
+                          Editar
+                        </button>
+                      </div>
+                    ))}
+                  {selected.barcodeAssociations.filter((association) => association.status === 'active').length === 0 && (
+                    <p className="rounded-xl border border-dashed border-blue-200 bg-white px-3 py-3 text-[10px] text-slate-500">
+                      Nenhum código de barras ativo.
+                    </p>
+                  )}
+                </div>
+
+                <div className="mt-3">
+                  <input
+                    value={barcodeDraft}
+                    onChange={(event) => setBarcodeDraft(event.target.value)}
+                    placeholder={editingBarcodeId ? 'Código de barras atualizado' : 'Adicionar código de barras'}
+                    maxLength={128}
+                    data-testid="warehouse-barcode-draft"
+                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 font-mono text-xs font-bold text-slate-800 outline-none focus:border-[#00288e]"
+                  />
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void saveBarcode()}
+                      disabled={working || !barcodeDraft.trim()}
+                      data-testid="warehouse-barcode-save"
+                      className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white disabled:opacity-40"
+                    >
+                      {working
+                        ? <RefreshCw className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                        : <Barcode className="h-3.5 w-3.5" aria-hidden="true" />}
+                      {editingBarcodeId ? 'Salvar código' : 'Adicionar código'}
+                    </button>
+                    {editingBarcodeId && (
+                      <button
+                        type="button"
+                        onClick={resetBarcodeForm}
+                        disabled={working}
+                        className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600"
+                      >
+                        Cancelar edição
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-emerald-700" aria-hidden="true" />
