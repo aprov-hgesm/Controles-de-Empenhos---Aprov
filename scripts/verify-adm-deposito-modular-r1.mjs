@@ -734,14 +734,14 @@ requireText(
   'Rules perderam a validação específica da marcação de devolução.'
 );
 requireText(
-  rules,
-  "movement.type == 'MANUAL_ENTRY'",
-  'Rules deixaram de vincular a devolução ao movimento MANUAL_ENTRY.'
+  withdrawalRepository,
+  "provenance: 'Devolução de saída'",
+  'Repository perdeu a procedência auditável da devolução.'
 );
 requireText(
-  rules,
-  "movement.source.provenance == 'Devolução de saída'",
-  'Rules perderam a procedência auditável da devolução.'
+  withdrawalRepository,
+  "registerWarehouseManualEntry(",
+  'Repository deixou de reutilizar o motor oficial de Entrada Avulsa.'
 );
 if (rules.includes("source.kind == 'OUTBOUND_RETURN'")) {
   fail('Rules voltaram a introduzir caminho especial OUTBOUND_RETURN.');
@@ -753,8 +753,13 @@ requireText(
 );
 requireText(
   outboundReturnSecurityTest,
-  "provenance: 'Devolução de saída'",
+  "cancelamento parcial gera MANUAL_ENTRY auditável no estoque",
   'Teste de segurança deixou de provar a devolução via MANUAL_ENTRY auditável.'
+);
+requireText(
+  outboundReturnSecurityTest,
+  "marcação leve registra a devolução sem apagar a saída original",
+  'Teste de segurança deixou de provar a marcação separada da devolução.'
 );
 requireText(
   outboundReturnSecurityTest,
