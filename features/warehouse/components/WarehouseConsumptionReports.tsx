@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CheckCircle2,
   Clipboard,
@@ -144,6 +144,7 @@ export function WarehouseConsumptionReports({
   const [returnQuantity, setReturnQuantity] = useState('');
   const [returnReason, setReturnReason] = useState('');
   const [returnOperationId, setReturnOperationId] = useState(() => crypto.randomUUID());
+  const initialOutboundLoadDone = useRef(false);
 
   const applyPreset = (next: PeriodPreset) => {
     setPreset(next);
@@ -190,7 +191,11 @@ export function WarehouseConsumptionReports({
   }, [endDate, fixedOrigin, startDate, workspaceId]);
 
   useEffect(() => {
-    if (fixedOrigin === 'STOCK_OUTBOUND') {
+    if (
+      fixedOrigin === 'STOCK_OUTBOUND'
+      && !initialOutboundLoadDone.current
+    ) {
+      initialOutboundLoadDone.current = true;
       void generate();
     }
   }, [fixedOrigin, generate]);
@@ -270,7 +275,7 @@ export function WarehouseConsumptionReports({
   const copyReport = async () => {
     const lines = [
       fixedOrigin === 'STOCK_OUTBOUND'
-        ? 'EMPROVEX · ADM Depósito · Relatórios de Saída'
+        ? 'EMPROVEX · ADM Depósito · Registro de Saídas'
         : fixedOrigin === 'IMMEDIATE_CONSUMPTION'
           ? 'EMPROVEX · ADM Depósito · Relatórios de Consumo Imediato'
           : 'EMPROVEX · ADM Depósito · Relatório para fundamentação SISCOFIS',
@@ -442,7 +447,7 @@ export function WarehouseConsumptionReports({
             </p>
             <h3 className="mt-1 text-lg font-black text-slate-900">
               {fixedOrigin === 'STOCK_OUTBOUND'
-                ? 'Relatórios de Saída'
+                ? 'Registro de Saídas'
                 : fixedOrigin === 'IMMEDIATE_CONSUMPTION'
                   ? 'Relatórios de Consumo Imediato'
                   : 'Relatórios de Saída e Consumo'}
