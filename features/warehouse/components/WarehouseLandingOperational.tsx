@@ -8,11 +8,17 @@ import {
   listWarehouseDepotLayouts,
   type WarehouseDepotLayoutListItem,
 } from '../../../lib/warehouse/layoutRepository';
-import type { WarehouseDepot, WarehouseLocation } from '../../../lib/warehouse/location';
+import type {
+  WarehouseDepot,
+  WarehouseLocation,
+  WarehouseLocationBalance,
+} from '../../../lib/warehouse/location';
 import {
   listWarehouseDepots,
   listWarehouseLocations,
+  listWarehousePositiveLocationBalances,
   type WarehouseDepotListItem,
+  type WarehouseLocationBalanceListItem,
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
 import {
@@ -27,6 +33,7 @@ interface LandingData {
   depots: WarehouseDepotListItem[];
   layouts: WarehouseDepotLayoutListItem[];
   locations: WarehouseLocationListItem[];
+  locationBalances: WarehouseLocationBalanceListItem[];
   pendingRows: WarehouseInvoiceIntakeQueueRow[];
   pendingAvailable: boolean;
 }
@@ -57,6 +64,7 @@ const INITIAL_DATA: LandingData = {
   depots: [],
   layouts: [],
   locations: [],
+  locationBalances: [],
   pendingRows: [],
   pendingAvailable: true,
 };
@@ -88,6 +96,36 @@ function isoPoint(x: number, y: number, z = 0): IsoPoint {
 
 function polygonPoints(points: IsoPoint[]): string {
   return points.map((point) => point.x.toFixed(1) + ',' + point.y.toFixed(1)).join(' ');
+}
+
+function visualBoxes(quantity: number): number {
+  if (quantity <= 0) return 0;
+  if (quantity < 5) return 1;
+  if (quantity < 20) return 2;
+  if (quantity < 60) return 3;
+  return 4;
+}
+
+function stockBox(
+  key: string,
+  point: IsoPoint,
+  scale = 0.5
+) {
+  return (
+    <g
+      key={key}
+      transform={'translate(' + point.x + ' ' + point.y + ') scale(' + scale + ')'}
+      data-visual-role="allocated-stock-box"
+      aria-hidden="true"
+    >
+      <ellipse cx="0" cy="22" rx="18" ry="6" fill="#0f172a" opacity="0.12" />
+      <polygon points="-16,0 0,-9 16,0 0,9" fill="#e7b26b" stroke="#a96c31" strokeWidth="1.1" />
+      <polygon points="-16,0 0,9 0,28 -16,19" fill="#c8813b" stroke="#965525" strokeWidth="1.1" />
+      <polygon points="16,0 0,9 0,28 16,19" fill="#b56d31" stroke="#87491f" strokeWidth="1.1" />
+      <line x1="0" y1="-9" x2="0" y2="9" stroke="#f8dcad" strokeWidth="1.2" />
+      <rect x="-5" y="8" width="10" height="4" rx="1" fill="#fff4d8" opacity="0.95" />
+    </g>
+  );
 }
 
 function objectHeight(kind: WarehouseDepotLayoutObject['kind'], scale: number, subpositions = 0): number {
@@ -179,7 +217,9 @@ function derivePlacements(
 function renderDepotObject(
   object: WarehouseDepotLayoutObject,
   placement: DepotPlacement,
-  subpositionsByParent: Map<string, WarehouseLocation[]>
+  subpositionsByParent: Map<string, WarehouseLocation[]>,
+  occupancyByLocal: Map<string, number>,
+  occupancyBySubposition: Map<string, number>
 ) {
   const localScale = placement.scale;
   const x = placement.x + object.x * localScale;
@@ -190,6 +230,12 @@ function renderDepotObject(
     ? subpositionsByParent.get(object.warehouseLocationId) || []
     : [];
   const z = objectHeight(object.kind, localScale, subpositions.length);
+  const linkedPositionId = object.warehouseLocationId || '';
+  const occupiedQuantity = linkedPositionId
+    ? (occupancyByLocal.get(linkedPositionId) || occupancyBySubposition.get(linkedPositionId) || 0)
+    : 0;
+  const generalBoxCount = visualBoxes(occupiedQuantity);
+  const centerTop = isoPoint(x + width / 2, y + height / 2, z + 2);
   const a = isoPoint(x, y, 0);
   const b = isoPoint(x + width, y, 0);
   const c = isoPoint(x + width, y + height, 0);
@@ -394,10 +440,14 @@ function renderDepotObject(
 function DepotWorld({
   placement,
   subpositionsByParent,
+  occupancyByLocal,
+  occupancyBySubposition,
   onOpen,
 }: {
   placement: DepotPlacement;
   subpositionsByParent: Map<string, WarehouseLocation[]>;
+  occupancyByLocal: Map<string, number>;
+  occupancyBySubposition: Map<string, number>;
   onOpen: (depotId: string) => void;
 }) {
   const { depot, layout } = placement;
@@ -473,7 +523,13 @@ function DepotWorld({
               const rightDepth = (right.x + right.y) * placement.scale + right.layer * 0.001;
               return leftDepth - rightDepth;
             })
-            .map((object) => renderDepotObject(object, placement, subpositionsByParent))
+            .map((object) => renderDepotObject(
+              object,
+              placement,
+              subpositionsByParent,
+              occupancyByLocal,
+              occupancyBySubposition
+            ))
         : (
           <g opacity="0.58">
             <polygon
@@ -651,10 +707,11 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
   const load = useCallback(async () => {
     setData((current) => ({ ...current, loading: true, error: null }));
     try {
-      const [depots, layouts, locations, queue] = await Promise.all([
+      const [depots, layouts, locations, locationBalances, queue] = await Promise.all([
         listWarehouseDepots(workspaceId, 250),
         listWarehouseDepotLayouts(workspaceId, 150),
         listWarehouseLocations(workspaceId, 500),
+        listWarehousePositiveLocationBalances(workspaceId, 500),
         loadWarehouseInvoiceIntakeQueue(workspaceId).catch(() => null),
       ]);
 
@@ -664,6 +721,7 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
         depots,
         layouts,
         locations,
+        locationBalances,
         pendingRows: queue?.rows || [],
         pendingAvailable: Boolean(queue),
       });
@@ -729,6 +787,39 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
     }
     return map;
   }, [activeLocations]);
+
+  const positiveLocationBalances = useMemo(
+    () => data.locationBalances
+      .map((item) => item.balance)
+      .filter((balance): balance is WarehouseLocationBalance =>
+        balance.quantity > 0 && balance.position.kind !== 'UNASSIGNED'
+      ),
+    [data.locationBalances]
+  );
+
+  const occupancyByLocal = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const balance of positiveLocationBalances) {
+      if (balance.position.kind === 'UNASSIGNED') continue;
+      map.set(
+        balance.position.locationId,
+        (map.get(balance.position.locationId) || 0) + balance.quantity
+      );
+    }
+    return map;
+  }, [positiveLocationBalances]);
+
+  const occupancyBySubposition = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const balance of positiveLocationBalances) {
+      if (balance.position.kind !== 'SUBPOSITION') continue;
+      map.set(
+        balance.position.subpositionId,
+        (map.get(balance.position.subpositionId) || 0) + balance.quantity
+      );
+    }
+    return map;
+  }, [positiveLocationBalances]);
 
   const pendingGroups = useMemo(
     () => buildPendingGroups(data.pendingRows),
@@ -888,6 +979,8 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
               key={placement.depot.id}
               placement={placement}
               subpositionsByParent={subpositionsByParent}
+              occupancyByLocal={occupancyByLocal}
+              occupancyBySubposition={occupancyBySubposition}
               onOpen={openDepot}
             />
           ))}
