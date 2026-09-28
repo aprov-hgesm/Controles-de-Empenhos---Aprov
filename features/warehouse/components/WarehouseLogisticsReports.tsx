@@ -13,11 +13,18 @@ import { WarehouseConsumptionReports } from './WarehouseConsumptionReports';
 import { WarehouseInventoryHistoryReport } from './WarehouseInventoryHistoryReport';
 import { WarehouseSiscofisHistoryReport } from './WarehouseSiscofisHistoryReport';
 
-type ReportTab = 'stock' | 'consumption' | 'ledger' | 'inventory' | 'siscofis';
+type ReportTab =
+  | 'stock'
+  | 'outbound'
+  | 'immediate'
+  | 'ledger'
+  | 'inventory'
+  | 'siscofis';
 
 const REPORT_TABS: Array<{ id: ReportTab; label: string }> = [
   { id: 'stock', label: 'Estoque, locais e validade' },
-  { id: 'consumption', label: 'Consumo e saídas' },
+  { id: 'outbound', label: 'Relatórios de Saída' },
+  { id: 'immediate', label: 'Relatórios de Consumo Imediato' },
   { id: 'ledger', label: 'Movimentações e entradas por NF' },
   { id: 'inventory', label: 'Inventários' },
   { id: 'siscofis', label: 'SISCOFIS' },
@@ -240,7 +247,18 @@ export function WarehouseLogisticsReports({ workspaceId }: { workspaceId: string
       </section>
 
       {tab === 'stock' && <WarehouseStockOperational workspaceId={workspaceId} />}
-      {tab === 'consumption' && <WarehouseConsumptionReports workspaceId={workspaceId} />}
+      {tab === 'outbound' && (
+        <WarehouseConsumptionReports
+          workspaceId={workspaceId}
+          fixedOrigin="STOCK_OUTBOUND"
+        />
+      )}
+      {tab === 'immediate' && (
+        <WarehouseConsumptionReports
+          workspaceId={workspaceId}
+          fixedOrigin="IMMEDIATE_CONSUMPTION"
+        />
+      )}
       {tab === 'ledger' && <LedgerAndInvoiceReport workspaceId={workspaceId} />}
       {tab === 'inventory' && <WarehouseInventoryHistoryReport workspaceId={workspaceId} />}
       {tab === 'siscofis' && <WarehouseSiscofisHistoryReport workspaceId={workspaceId} />}
