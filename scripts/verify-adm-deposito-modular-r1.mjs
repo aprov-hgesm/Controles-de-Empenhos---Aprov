@@ -53,22 +53,6 @@ const withdrawalRepository = readFileSync(
   resolve(root, 'lib/warehouse/withdrawalRepository.ts'),
   'utf8'
 );
-const outboundReturnPlanner = readFileSync(
-  resolve(root, 'lib/warehouse/outboundReturn.ts'),
-  'utf8'
-);
-const outboundReturnAdmin = readFileSync(
-  resolve(root, 'lib/server/warehouseOutboundReturnAdmin.ts'),
-  'utf8'
-);
-const outboundReturnApi = readFileSync(
-  resolve(root, 'app/api/adm-deposito/outbound-return/route.ts'),
-  'utf8'
-);
-const outboundReturnSecurityTest = readFileSync(
-  resolve(root, 'scripts/warehouse-modular-r1-security.test.mjs'),
-  'utf8'
-);
 const ledgerRepository = readFileSync(
   resolve(root, 'lib/warehouse/ledgerRepository.ts'),
   'utf8'
@@ -278,6 +262,9 @@ for (const helper of [
   'function validWarehouseItemIntakeV2Update(workspaceId, intakeId)',
   'function warehouseImmediateConsumptionIntakeMatchesAfter(workspaceId)',
   'function validWarehouseConsumptionCreate(workspaceId, consumptionId)',
+  'function warehouseMovementIsOutboundReturn(movement)',
+  'function validWarehouseOutboundReturnMovementCreate(workspaceId, movementId)',
+  'function validWarehouseConsumptionReturnUpdate(workspaceId, consumptionId)',
 ]) {
   requireText(rules, helper, 'Helper obrigatório da ADM-R1 ausente: ' + helper);
 }
@@ -706,99 +693,56 @@ requireText(
 requireText(
   withdrawalRepository,
   'export async function returnWarehouseStockOutbound(',
-  'Repository perdeu a fachada de devolução auditável de saída.'
+  'Repository perdeu a devolução auditável de saída.'
 );
 requireText(
   withdrawalRepository,
-  "/api/adm-deposito/outbound-return",
-  'Devolução voltou a escrever diretamente no Firestore em vez de usar a API segura.'
-);
-requireText(
-  withdrawalRepository,
-  'await user.getIdToken()',
-  'Devolução client-side deixou de autenticar a chamada server-side com token Firebase.'
-);
-if (withdrawalRepository.includes("type: 'OUTBOUND_RETURN'")) {
-  fail('Repository client-side voltou a montar OUTBOUND_RETURN diretamente.');
-}
-requireText(
-  outboundReturnPlanner,
   "type: 'OUTBOUND_RETURN'",
-  'Planner server-side deixou de gerar movimento próprio OUTBOUND_RETURN.'
+  'Devolução deixou de gerar movimento próprio no ledger.'
 );
 requireText(
-  outboundReturnPlanner,
+  withdrawalRepository,
   'quantity > remaining + EPSILON',
-  'Planner server-side deixou de bloquear devolução acima do total ainda retirado.'
+  'Devolução deixou de bloquear quantidade superior ao saldo ainda retirado.'
 );
 requireText(
-  outboundReturnPlanner,
-  'applyWarehouseMovementToBalance',
-  'Planner server-side deixou de recompor o saldo agregado pelo ledger oficial.'
+  withdrawalRepository,
+  'quantityDelta: quantity',
+  'Devolução deixou de retornar quantidade positiva ao estoque.'
 );
 requireText(
-  outboundReturnPlanner,
-  'applyWarehouseLocationDelta',
-  'Planner server-side deixou de recompor a posição física oficial.'
+  rules,
+  "'OUTBOUND_RETURN'",
+  'Rules deixaram de reconhecer a devolução de saída.'
 );
 requireText(
-  outboundReturnAdmin,
-  "const DATABASE_ID = 'emprovex-warehouse'",
-  'Serviço de devolução deixou de apontar explicitamente para o database dedicado.'
+  rules,
+  "source.kind == 'OUTBOUND_RETURN'",
+  'Rules perderam o vínculo estruturado da devolução.'
 );
 requireText(
-  outboundReturnAdmin,
-  'FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON',
-  'Serviço de devolução perdeu a credencial administrativa server-only.'
+  rules,
+  'returnedBefore + movement.source.quantity <= consumption.quantity',
+  'Rules deixaram de limitar devoluções ao total originalmente retirado.'
 );
 requireText(
-  outboundReturnAdmin,
-  'beginTransaction(accessToken)',
-  'Serviço de devolução perdeu a transação administrativa.'
+  rules,
+  'warehouseOutboundReturnCompanionsMatchAfter',
+  'OUTBOUND_RETURN deixou de exigir saldo, posição e consumo na mesma transação atômica.'
 );
 requireText(
-  outboundReturnAdmin,
-  'planWarehouseOutboundReturn({',
-  'Serviço de devolução deixou de reutilizar o planner validado.'
+  withdrawalRepository,
+  'ensureWarehouseOutboundReturnLotEnrichment',
+  'Devolução perdeu a recomposição idempotente da validade fora do núcleo de saldo.'
 );
 requireText(
-  outboundReturnAdmin,
-  'commitTransaction(accessToken, transaction, writes)',
-  'Serviço de devolução deixou de confirmar o núcleo autoritativo numa única transação.'
+  withdrawalRepository,
+  'createWarehouseOutboundReturnLotId',
+  'Enriquecimento da devolução perdeu identidade determinística.'
 );
-requireText(
-  outboundReturnAdmin,
-  'enrichReturnedLot(',
-  'Serviço de devolução perdeu a recomposição idempotente da validade fora do núcleo de saldo.'
-);
-requireText(
-  outboundReturnApi,
-  'verifyWarehouseFounderRequest(',
-  'API de devolução perdeu o gate server-side founder-only.'
-);
-requireText(
-  outboundReturnApi,
-  "'warehouse-outbound-return'",
-  'API de devolução perdeu o contexto de proteção contra burst.'
-);
-requireText(
-  outboundReturnApi,
-  'returnWarehouseStockOutboundAdmin({',
-  'API de devolução deixou de delegar a mutação ao serviço administrativo.'
-);
-if (rules.includes('OUTBOUND_RETURN')) {
-  fail('Rules voltaram a aceitar OUTBOUND_RETURN client-side; devolução deve ser exclusiva do servidor.');
+if (withdrawalRepository.includes('transaction.update(lotRef')) {
+  fail('Devolução voltou a incluir lote no núcleo transacional e pode estourar o orçamento das Rules.');
 }
-requireText(
-  outboundReturnSecurityTest,
-  'cliente não pode executar OUTBOUND_RETURN diretamente; devolução é server-only',
-  'Teste de segurança deixou de provar que o cliente não consegue falsificar devolução.'
-);
-requireText(
-  outboundReturnSecurityTest,
-  'bloqueio client-side preserva saldo e histórico antes da API server-side',
-  'Teste de segurança deixou de provar ausência de alteração parcial após tentativa client-side.'
-);
 
 requireText(
   outboundDocuments,
@@ -1297,7 +1241,7 @@ console.log('- ficha PDF otimizada para toner P&B, com grayscale neutro e conten
 console.log('- Saída de Material gera PDF duplo: retirada física + ficha auxiliar SISCOFIS com controle/código');
 console.log('- Saída de Material e seus Relatórios seguem o tema claro oficial D-076/VISUAL_IDENTITY');
 console.log('- Saída de Material reduz ledger/posição/lote e saldo zero deixa de ser projetado no croqui');
-console.log('- Registro de Saídas carrega o mês uma vez; devolução parcial/total é founder-only e executada por API server-side');
+console.log('- Registro de Saídas carrega o mês uma vez e permite devolução parcial/total auditável ao estoque');
 console.log('- Controle de Itens consolidado em Resumo, Estoque, Movimentações, Inventário e Relatórios');
 console.log('- Relatórios separados em Saída e Consumo Imediato, sem mistura de origens');
 console.log('- Estoque exibe somente saldo positivo e prioriza a menor validade ativa');
