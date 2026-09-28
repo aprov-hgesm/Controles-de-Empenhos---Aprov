@@ -66,6 +66,7 @@ import {
 import {
   compareWarehouseStockAvailability,
   hasWarehouseAvailableStock,
+  isWarehouseLocatedBalance,
   matchesWarehouseExpiryState,
   type WarehouseStockExpiryFilter,
 } from '../../../lib/warehouse/stockView';
@@ -626,7 +627,7 @@ export function WarehouseStockOperational({
 
   const selectedLocations = selected
     ? selected.locationBalances
-        .filter((item) => item.quantity > 0)
+        .filter((item) => isWarehouseLocatedBalance(item))
         .map((item) => ({
           key: warehouseStockPositionKey(item.position),
           label: buildWarehousePositionLabel(
