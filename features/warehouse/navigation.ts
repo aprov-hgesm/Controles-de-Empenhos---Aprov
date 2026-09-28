@@ -19,7 +19,7 @@ export const WAREHOUSE_SECTIONS: readonly WarehouseSectionDefinition[] = [
     label: 'Início',
     href: '/adm-deposito',
     eyebrow: 'Central visual do depósito',
-    description: 'Croqui do depósito selecionado, consulta de itens e localização visual do material.',
+    description: 'Central visual com Visão 3D do depósito, consulta de materiais, saldo, localização e validade.'
   },
   {
     id: 'registration',
