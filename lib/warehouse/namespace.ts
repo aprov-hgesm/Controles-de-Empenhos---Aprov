@@ -31,6 +31,7 @@ export const WAREHOUSE_DOMAIN_COLLECTIONS = {
   destinations: 'destinations',
   withdrawals: 'withdrawals',
   consumptions: 'consumptions',
+  outboundReturns: 'outboundReturns',
 } as const;
 
 export type WarehouseDomain =
