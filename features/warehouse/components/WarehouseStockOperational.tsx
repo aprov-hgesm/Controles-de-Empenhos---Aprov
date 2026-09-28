@@ -167,7 +167,7 @@ export function WarehouseStockOperational({
   const [queryText, setQueryText] = useState('');
   const [depotFilter, setDepotFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
-  const [expiryFilter, setExpiryFilter] = useState('');
+  const [expiryDateFilter, setExpiryDateFilter] = useState('');
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
   const [movements, setMovements] = useState<WarehouseMovementListItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -276,6 +276,26 @@ export function WarehouseStockOperational({
     return index;
   }, [state.barcodes]);
 
+
+  const activeDepots = useMemo(
+    () => state.depots.filter(({ depot }) => depot.status === 'active'),
+    [state.depots]
+  );
+
+  const activeDepotIds = useMemo(
+    () => new Set(activeDepots.map(({ depot }) => depot.id)),
+    [activeDepots]
+  );
+
+  const activeTopLevelLocations = useMemo(
+    () => state.locations.filter(({ location }) =>
+      location.status === 'active'
+      && location.kind === 'LOCAL'
+      && activeDepotIds.has(location.depotId)
+    ),
+    [activeDepotIds, state.locations]
+  );
+
   const summaries = useMemo<MaterialSummary[]>(() => {
     return state.balances
       .filter((balance) => hasWarehouseAvailableStock(balance.quantity))
@@ -372,23 +392,18 @@ export function WarehouseStockOperational({
       }
       if (
         locationFilter
-        && !locationRows.some((item) => {
-          if (item.position.kind === 'UNASSIGNED') return false;
-          return (
-            item.position.locationId === locationFilter
-            || (item.position.kind === 'SUBPOSITION'
-              && item.position.subpositionId === locationFilter)
-          );
-        })
+        && !locationRows.some((item) =>
+          item.position.kind !== 'UNASSIGNED'
+          && item.position.locationId === locationFilter
+        )
       ) {
         return false;
       }
-      if (expiryFilter) {
-        const states = summary.availableLots.map((lot) => warehouseLotExpiryState(lot));
-        if (expiryFilter === 'expired' && !states.includes('EXPIRED')) return false;
-        if (expiryFilter === 'near' && !states.includes('NEAR_EXPIRY')) return false;
-        if (expiryFilter === 'valid' && !states.includes('VALID')) return false;
-        if (expiryFilter === 'missing' && !states.includes('NO_EXPIRY')) return false;
+      if (
+        expiryDateFilter
+        && !summary.availableLots.some((lot) => lot.expiresOn === expiryDateFilter)
+      ) {
+        return false;
       }
       if (!q) return true;
 
@@ -414,7 +429,7 @@ export function WarehouseStockOperational({
       );
       return haystack.includes(q);
     }).sort(compareWarehouseStockAvailability);
-  }, [depotFilter, expiryFilter, locationFilter, queryText, summaries]);
+  }, [depotFilter, expiryDateFilter, locationFilter, queryText, summaries]);
 
   const selected = summaries.find(
     (item) => item.material.id === selectedMaterialId
@@ -585,7 +600,7 @@ export function WarehouseStockOperational({
             className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e]"
           >
             <option value="">Todos os depósitos</option>
-            {state.depots.map(({ depot }) => (
+            {activeDepots.map(({ depot }) => (
               <option key={depot.id} value={depot.id}>{depot.code} · {depot.name}</option>
             ))}
           </select>
@@ -596,24 +611,24 @@ export function WarehouseStockOperational({
             className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e]"
           >
             <option value="">Todas as localizações</option>
-            {state.locations
+            {activeTopLevelLocations
               .filter(({ location }) => !depotFilter || location.depotId === depotFilter)
               .map(({ location }) => (
                 <option key={location.id} value={location.id}>{location.code} · {location.name}</option>
               ))}
           </select>
-          <select
-            value={expiryFilter}
-            onChange={(event) => setExpiryFilter(event.target.value)}
-            aria-label="Filtrar por validade"
-            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e]"
-          >
-            <option value="">Todas as validades</option>
-            <option value="near">Próximo do vencimento</option>
-            <option value="expired">Vencido</option>
-            <option value="valid">Válido</option>
-            <option value="missing">Sem validade informada</option>
-          </select>
+          <label className="relative">
+            <span className="pointer-events-none absolute -top-2 left-3 bg-white px-1 text-[8px] font-black uppercase tracking-[0.12em] text-slate-500">
+              Validade
+            </span>
+            <input
+              type="date"
+              value={expiryDateFilter}
+              onChange={(event) => setExpiryDateFilter(event.target.value)}
+              aria-label="Filtrar por data de validade"
+              className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none focus:border-[#00288e]"
+            />
+          </label>
           <button
             type="button"
             onClick={() => void refresh()}
