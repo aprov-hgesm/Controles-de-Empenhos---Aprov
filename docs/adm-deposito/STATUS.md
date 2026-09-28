@@ -3532,3 +3532,31 @@ Validação concluída após a correção para exibir somente materiais com sald
 - `npm.cmd run verify:adm-deposito-modular-r1` — PASS;
 - Início e Prévia 3D permanecem protegidos para ignorar saldos físicos zerados;
 - nenhuma Firestore Rule foi alterada nesta correção; não há necessidade de novo deploy de Rules.
+
+
+### Saídas — carregamento automático e devolução auditável — implementação pendente de validação — 2026-09-28
+
+Diagnóstico:
+- a subaba **Saída de Material → Relatórios de Saída** estava conectada à fonte correta `warehouse_consumption_record_v1`, porém abria com lista vazia;
+- o relatório só consultava o Firestore após **Gerar relatório** e iniciava no recorte **Diário**, o que fazia saídas anteriores parecerem ausentes.
+
+Implementação:
+- Relatórios de Saída passam a abrir no período **Mensal** e executar a consulta automaticamente;
+- cada saída operacional não legada expõe **Cancelar / devolver**;
+- o operador informa a quantidade efetivamente retornada e o motivo;
+- novo movimento `OUTBOUND_RETURN` recompõe saldo agregado, posição física original e referência técnica de validade quando aplicável;
+- devoluções podem ser parciais ou integrais e são cumulativas, sem superar a quantidade original;
+- o registro de saída mantém quantidade original e `returnedQuantity`, preservando auditoria;
+- relatórios e CSV usam quantidade líquida e deixam explícito quanto foi devolvido;
+- saída integralmente devolvida permanece histórica como **Cancelada / devolvida**;
+- registros legados permanecem somente leitura;
+- Rules foram reconstruídas a partir do último estado limpo após detecção preventiva de duplicação durante o desenvolvimento; estado reconstruído possui um único bloco de cada helper e aproximadamente **145 KiB**, abaixo do orçamento interno de 150 KiB.
+
+Validação pendente:
+- TypeScript;
+- contrato `OUTBOUND_RETURN`;
+- barcode/outbound;
+- estoque;
+- guard modular;
+- Rules via emulador de segurança;
+- somente após todos os testes locais: deploy exclusivo de `firestore:emprovex-warehouse`.
