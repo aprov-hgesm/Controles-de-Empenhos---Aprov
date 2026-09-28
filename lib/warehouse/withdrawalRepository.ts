@@ -1084,10 +1084,6 @@ export async function returnWarehouseStockOutbound(
       }
 
       const currentReturned = consumption.returnedQuantity;
-      const remaining = normalizeWarehouseQuantity(consumption.quantity - currentReturned);
-      if (remaining === null || quantity > remaining + EPSILON) {
-        throw new Error('WAREHOUSE_OUTBOUND_RETURN_EXCEEDS_REMAINING');
-      }
 
       const source = {
         kind: 'OUTBOUND_RETURN' as const,
@@ -1150,6 +1146,11 @@ export async function returnWarehouseStockOutbound(
               )
             : null,
         };
+      }
+
+      const remaining = normalizeWarehouseQuantity(consumption.quantity - currentReturned);
+      if (remaining === null || quantity > remaining + EPSILON) {
+        throw new Error('WAREHOUSE_OUTBOUND_RETURN_EXCEEDS_REMAINING');
       }
 
       const nextBalance = applyWarehouseMovementToBalance(candidate, currentBalance);
