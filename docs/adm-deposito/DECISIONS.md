@@ -2123,3 +2123,16 @@ Data: 2026-09-27.
 - Relatórios de Saída preservam compatibilidade com movimentos legados `EXPRESS_OUTBOUND` ainda não projetados.
 - Relatórios de Consumo Imediato não consultam a projeção legada de movimentos de saída, evitando leitura sem utilidade para esse relatório.
 - Períodos, destino, retirante/recebedor, consolidação por material, CSV, impressão e acompanhamento SISCOFIS continuam disponíveis em cada relatório.
+
+
+## D-104 — Filtros do Estoque usam apenas estrutura física ativa de primeiro nível
+
+Data: 2026-09-27.
+
+- O filtro **Depósito** da subaba Estoque mostra somente depósitos com `status = active`.
+- Depósitos inativos/excluídos não aparecem como opção de filtro.
+- O filtro **Localização** mostra somente entidades `WarehouseLocation.kind = LOCAL` ativas.
+- Subposições não aparecem como opções selecionáveis; ao filtrar um local-pai, saldos existentes em subposições daquele local continuam sendo encontrados por `position.locationId`.
+- Localizações pertencentes a depósitos inativos também não aparecem.
+- O filtro de validade passa a ser uma **data exata** (`YYYY-MM-DD` via input `date`) e considera somente lotes ativos com quantidade positiva.
+- A ordenação padrão por menor validade permanece independente desse filtro.
