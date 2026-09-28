@@ -52,7 +52,7 @@ import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import { listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
 import type { WarehouseBalance } from '../../../lib/warehouse/movement';
 import {
-  listWarehouseBalances,
+  listWarehousePositiveBalances,
   listWarehouseMovementsForMaterial,
   type WarehouseMovementListItem,
 } from '../../../lib/warehouse/ledgerRepository';
@@ -188,7 +188,7 @@ export function WarehouseStockOperational({
       const [materials, balances, depots, locations, locationBalances, lots, barcodes] =
         await Promise.all([
           listWarehouseMaterials(workspaceId, 250),
-          listWarehouseBalances(workspaceId, 250),
+          listWarehousePositiveBalances(workspaceId, 250),
           listWarehouseDepots(workspaceId, 250),
           listWarehouseLocations(workspaceId, 500),
           listWarehouseLocationBalances(workspaceId, 500),
