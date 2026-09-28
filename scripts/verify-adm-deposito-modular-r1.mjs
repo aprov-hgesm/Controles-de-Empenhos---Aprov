@@ -733,6 +733,9 @@ requireText(
   'data-visual-role="warehouse-pallet"',
   'Renderer 3D compartilhado perdeu o palete visual padronizado.'
 );
+if (isometricPreview.includes("'Palete',\n          subpositions.length")) {
+  fail('Palete da Visão 3D voltou a exibir o callout legado flutuante.');
+}
 requireText(
   isometricPreview,
   'const slatBottomZ = z - 3.2;',
