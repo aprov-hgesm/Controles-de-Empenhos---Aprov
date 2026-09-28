@@ -724,6 +724,26 @@ requireText(
   'Renderer 3D compartilhado perdeu o palete visual padronizado.'
 );
 requireText(
+  isometricPreview,
+  'const slatBottomZ = z - 3.2;',
+  'Palete da Visão 3D voltou a usar superfície contínua em vez de ripas físicas.'
+);
+requireText(
+  isometricPreview,
+  "key={'slat-' + index}",
+  'Palete da Visão 3D perdeu as ripas individuais.'
+);
+requireText(
+  warehouseLanding,
+  "key={'pallet-slat-' + index}",
+  'Palete da Início perdeu as ripas individuais.'
+);
+requireText(
+  warehouseLanding,
+  'const gap = Math.max(0.9, cellWidth * 0.18);',
+  'Palete da Início perdeu os vãos reais entre as ripas.'
+);
+requireText(
   warehouseLanding,
   'WAREHOUSE_PALLET_VISUAL',
   'Início deixou de usar a paleta oficial compartilhada dos paletes.'
