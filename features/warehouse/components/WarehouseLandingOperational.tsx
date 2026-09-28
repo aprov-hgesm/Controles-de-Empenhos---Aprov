@@ -25,7 +25,7 @@ import {
   loadWarehouseInvoiceIntakeQueue,
   type WarehouseInvoiceIntakeQueueRow,
 } from '../../../lib/warehouse/intakeStateRepository';
-import { WAREHOUSE_BOX_VISUAL } from '../visualStyle';
+import { WAREHOUSE_BOX_VISUAL, WAREHOUSE_PALLET_VISUAL } from '../visualStyle';
 import styles from './WarehouseLandingOperational.module.css';
 
 interface LandingData {
@@ -150,6 +150,153 @@ function warehouseBox(
         fill={WAREHOUSE_BOX_VISUAL.topFill}
         stroke={WAREHOUSE_BOX_VISUAL.topStroke}
         strokeWidth="0.7"
+      />
+    </g>
+  );
+}
+
+function warehousePallet(
+  key: string,
+  x: number,
+  y: number,
+  width: number,
+  depth: number,
+  height: number,
+  visualRole = 'warehouse-pallet'
+) {
+  const deckBaseZ = Math.max(2, height * 0.55);
+  const a = isoPoint(x, y, deckBaseZ);
+  const b = isoPoint(x + width, y, deckBaseZ);
+  const c = isoPoint(x + width, y + depth, deckBaseZ);
+  const d = isoPoint(x, y + depth, deckBaseZ);
+  const at = isoPoint(x, y, height);
+  const bt = isoPoint(x + width, y, height);
+  const ct = isoPoint(x + width, y + depth, height);
+  const dt = isoPoint(x, y + depth, height);
+  const center = isoPoint(x + width / 2, y + depth / 2, 0);
+  const blockWidth = Math.max(2.8, width * 0.11);
+  const blockDepth = Math.max(2.4, depth * 0.16);
+  const blockHeight = Math.max(2, deckBaseZ * 0.72);
+
+  return (
+    <g
+      key={key}
+      data-visual-role={visualRole}
+      filter="url(#worldObjectShadow)"
+      aria-hidden="true"
+    >
+      <ellipse
+        cx={center.x}
+        cy={center.y + Math.max(4, depth * 0.12)}
+        rx={Math.max(14, width * 0.68)}
+        ry={Math.max(5, depth * 0.22)}
+        fill="#000817"
+        opacity="0.18"
+        filter="url(#worldSoftBlur)"
+      />
+
+      {[0.12, 0.5, 0.88].flatMap((rx) =>
+        [0.18, 0.5, 0.82].map((ry) => ({ rx, ry }))
+      ).map((block, index) => {
+        const bx = x + width * block.rx - blockWidth / 2;
+        const by = y + depth * block.ry - blockDepth / 2;
+        const ba = isoPoint(bx, by, 0.7);
+        const bb = isoPoint(bx + blockWidth, by, 0.7);
+        const bc = isoPoint(bx + blockWidth, by + blockDepth, 0.7);
+        const bd = isoPoint(bx, by + blockDepth, 0.7);
+        const bat = isoPoint(bx, by, blockHeight);
+        const bbt = isoPoint(bx + blockWidth, by, blockHeight);
+        const bct = isoPoint(bx + blockWidth, by + blockDepth, blockHeight);
+        const bdt = isoPoint(bx, by + blockDepth, blockHeight);
+        return (
+          <g key={'pallet-block-' + index}>
+            <polygon
+              points={polygonPoints([bd, bc, bct, bdt])}
+              fill={WAREHOUSE_PALLET_VISUAL.blockFill}
+              stroke={WAREHOUSE_PALLET_VISUAL.blockStroke}
+              strokeWidth="0.55"
+            />
+            <polygon
+              points={polygonPoints([bb, bc, bct, bbt])}
+              fill={WAREHOUSE_PALLET_VISUAL.sideFill}
+              stroke={WAREHOUSE_PALLET_VISUAL.sideStroke}
+              strokeWidth="0.5"
+            />
+            <polygon
+              points={polygonPoints([bat, bbt, bct, bdt])}
+              fill={WAREHOUSE_PALLET_VISUAL.runnerFill}
+              stroke={WAREHOUSE_PALLET_VISUAL.runnerStroke}
+              strokeWidth="0.5"
+            />
+          </g>
+        );
+      })}
+
+      {[0.14, 0.5, 0.86].map((ratio) => {
+        const p1 = isoPoint(x + width * ratio, y + depth * 0.08, deckBaseZ - 0.4);
+        const p2 = isoPoint(x + width * ratio, y + depth * 0.92, deckBaseZ - 0.4);
+        return (
+          <line
+            key={'pallet-runner-' + ratio}
+            x1={p1.x}
+            y1={p1.y}
+            x2={p2.x}
+            y2={p2.y}
+            stroke={WAREHOUSE_PALLET_VISUAL.runnerFill}
+            strokeWidth={Math.max(2, width * 0.055)}
+            strokeLinecap="round"
+            opacity="0.98"
+          />
+        );
+      })}
+
+      <polygon
+        points={polygonPoints([d, c, ct, dt])}
+        fill={WAREHOUSE_PALLET_VISUAL.frontFill}
+        stroke={WAREHOUSE_PALLET_VISUAL.frontStroke}
+        strokeWidth="0.85"
+      />
+      <polygon
+        points={polygonPoints([b, c, ct, bt])}
+        fill={WAREHOUSE_PALLET_VISUAL.sideFill}
+        stroke={WAREHOUSE_PALLET_VISUAL.sideStroke}
+        strokeWidth="0.85"
+      />
+      <polygon
+        points={polygonPoints([at, bt, ct, dt])}
+        fill={WAREHOUSE_PALLET_VISUAL.topMid}
+        stroke={WAREHOUSE_PALLET_VISUAL.frontStroke}
+        strokeWidth="0.9"
+      />
+
+      {Array.from({ length: 7 }, (_, index) => {
+        const ratio = (index + 0.5) / 7;
+        const p1 = isoPoint(x + width * ratio, y, height + 0.55);
+        const p2 = isoPoint(x + width * ratio, y + depth, height + 0.55);
+        return (
+          <line
+            key={'pallet-slat-' + index}
+            x1={p1.x}
+            y1={p1.y}
+            x2={p2.x}
+            y2={p2.y}
+            stroke={index % 2 === 0
+              ? WAREHOUSE_PALLET_VISUAL.slatDark
+              : WAREHOUSE_PALLET_VISUAL.slatLight}
+            strokeWidth="0.9"
+            opacity="0.96"
+          />
+        );
+      })}
+
+      <line
+        x1={at.x}
+        y1={at.y}
+        x2={bt.x}
+        y2={bt.y}
+        stroke={WAREHOUSE_PALLET_VISUAL.highlight}
+        strokeWidth="0.85"
+        opacity="0.72"
       />
     </g>
   );
@@ -300,16 +447,16 @@ function renderDepotObject(
 
   if (object.kind === 'PALLET') {
     return (
-      <g key={object.id} filter="url(#worldObjectShadow)">
-        <polygon points={polygonPoints([d, c, ct, dt])} fill="#c4813c" stroke="#895426" strokeWidth="0.8" />
-        <polygon points={polygonPoints([b, c, ct, bt])} fill="#ac6930" stroke="#75431e" strokeWidth="0.8" />
-        <polygon points={polygonPoints([at, bt, ct, dt])} fill="#dfaa68" stroke="#93602e" strokeWidth="0.9" />
-        {Array.from({ length: 6 }, (_, index) => {
-          const ratio = (index + 0.5) / 6;
-          const p1 = isoPoint(x + width * ratio, y, z + 0.5);
-          const p2 = isoPoint(x + width * ratio, y + height, z + 0.5);
-          return <line key={index} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#a06932" strokeWidth="0.7" />;
-        })}
+      <g key={object.id}>
+        {warehousePallet(
+          'allocated-pallet-structure-' + object.id,
+          x,
+          y,
+          width,
+          height,
+          z,
+          'allocated-warehouse-pallet'
+        )}
         {generalBoxCount > 0 && Array.from({ length: generalBoxCount }, (_, index) =>
           warehouseBox(
             'allocated-pallet-' + object.id + '-' + index,
@@ -697,14 +844,6 @@ function PalletWorld({
   const palletWidth = 48;
   const palletDepth = 34;
   const palletHeight = 7;
-  const a = isoPoint(x, y, 0);
-  const b = isoPoint(x + palletWidth, y, 0);
-  const c = isoPoint(x + palletWidth, y + palletDepth, 0);
-  const d = isoPoint(x, y + palletDepth, 0);
-  const at = isoPoint(x, y, palletHeight);
-  const bt = isoPoint(x + palletWidth, y, palletHeight);
-  const ct = isoPoint(x + palletWidth, y + palletDepth, palletHeight);
-  const dt = isoPoint(x, y + palletDepth, palletHeight);
   const boxCount = group ? Math.min(group.itemCount, 12) : 0;
 
   return (
@@ -712,36 +851,15 @@ function PalletWorld({
       className={group ? styles.pendingPallet : styles.emptyPallet}
       data-pending={group ? 'true' : 'false'}
     >
-      <ellipse
-        cx={(d.x + c.x) / 2}
-        cy={(d.y + c.y) / 2 + 10}
-        rx="37"
-        ry="10"
-        fill="#000817"
-        opacity="0.23"
-        filter="url(#worldSoftBlur)"
-      />
-
-      <polygon points={polygonPoints([d, c, ct, dt])} fill="#704724" stroke="#a6733e" strokeWidth="0.85" />
-      <polygon points={polygonPoints([b, c, ct, bt])} fill="#59361c" stroke="#986335" strokeWidth="0.85" />
-      <polygon points={polygonPoints([at, bt, ct, dt])} fill="#a97239" stroke="#d5a36b" strokeWidth="1" />
-
-      {[0.18, 0.38, 0.58, 0.78].map((ratio) => {
-        const p1 = isoPoint(x + palletWidth * ratio, y, palletHeight + 0.7);
-        const p2 = isoPoint(x + palletWidth * ratio, y + palletDepth, palletHeight + 0.7);
-        return (
-          <line
-            key={ratio}
-            x1={p1.x}
-            y1={p1.y}
-            x2={p2.x}
-            y2={p2.y}
-            stroke="#6f431f"
-            strokeWidth="1.3"
-            opacity="0.9"
-          />
-        );
-      })}
+      {warehousePallet(
+        'receiving-pallet-' + (group?.key || x + '-' + y),
+        x,
+        y,
+        palletWidth,
+        palletDepth,
+        palletHeight,
+        'receiving-warehouse-pallet'
+      )}
 
       {Array.from({ length: boxCount }, (_, boxIndex) => {
         const col = boxIndex % 3;
@@ -762,7 +880,6 @@ function PalletWorld({
           'receiving-stock-box'
         );
       })}
-
     </g>
   );
 }
