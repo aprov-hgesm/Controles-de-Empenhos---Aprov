@@ -25,7 +25,7 @@ export const WAREHOUSE_SECTIONS: readonly WarehouseSectionDefinition[] = [
   {
     id: 'overview',
     label: 'Meus Depósitos',
-    href: '/adm-deposito/controle-de-depositos',
+    href: '/adm-deposito/meus-depositos',
     eyebrow: 'Central visual do depósito',
     description: 'Central visual com Visão 3D do depósito, consulta de materiais, saldo, localização e validade.'
   },
@@ -46,7 +46,7 @@ export const WAREHOUSE_SECTIONS: readonly WarehouseSectionDefinition[] = [
   {
     id: 'depots',
     label: 'Controle de Depósitos',
-    href: '/adm-deposito/meus-depositos',
+    href: '/adm-deposito/controle-de-depositos',
     eyebrow: 'Estrutura física',
     description: 'Cadastro de depósitos, localizações e croquis com estruturas físicas personalizadas.',
   },
