@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CheckCircle2,
   Clipboard,
@@ -8,10 +8,12 @@ import {
   Filter,
   Printer,
   RefreshCw,
+  RotateCcw,
 } from 'lucide-react';
 
 import {
   listWarehouseConsumptionReport,
+  returnWarehouseStockOutbound,
   setWarehouseConsumptionSiscofisStatus,
 } from '../../../lib/warehouse/withdrawalRepository';
 import type {
@@ -93,10 +95,18 @@ function siscofisLabel(status: WarehouseSiscofisOperationalStatus): string {
   return 'Solicitado/Lançado';
 }
 
+function effectiveQuantity(record: WarehouseConsumptionRecord): number {
+  if (record.origin !== 'STOCK_OUTBOUND') return record.quantity;
+  return Math.max(0, record.quantity - record.returnedQuantity);
+}
+
 function unitTotals(records: WarehouseConsumptionRecord[]): string {
   const totals = new Map<string, number>();
   for (const record of records) {
-    totals.set(record.unitLabel, (totals.get(record.unitLabel) || 0) + record.quantity);
+    totals.set(
+      record.unitLabel,
+      (totals.get(record.unitLabel) || 0) + effectiveQuantity(record)
+    );
   }
   return Array.from(totals.entries())
     .map(([unit, total]) => numberLabel(total) + ' ' + unit)
@@ -114,8 +124,10 @@ export function WarehouseConsumptionReports({
   workspaceId: string;
   fixedOrigin?: WarehouseConsumptionOrigin;
 }) {
-  const initial = presetRange('daily');
-  const [preset, setPreset] = useState<PeriodPreset>('daily');
+  const initialPreset: Exclude<PeriodPreset, 'custom'> =
+    fixedOrigin === 'STOCK_OUTBOUND' ? 'monthly' : 'daily';
+  const initial = presetRange(initialPreset);
+  const [preset, setPreset] = useState<PeriodPreset>(initialPreset);
   const [startDate, setStartDate] = useState(initial.start);
   const [endDate, setEndDate] = useState(initial.end);
   const [records, setRecords] = useState<WarehouseConsumptionRecord[]>([]);
@@ -128,6 +140,10 @@ export function WarehouseConsumptionReports({
   const [withdrawnFilter, setWithdrawnFilter] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [workingId, setWorkingId] = useState<string | null>(null);
+  const [returningRecordId, setReturningRecordId] = useState<string | null>(null);
+  const [returnQuantity, setReturnQuantity] = useState('');
+  const [returnReason, setReturnReason] = useState('');
+  const [returnOperationId, setReturnOperationId] = useState(() => crypto.randomUUID());
 
   const applyPreset = (next: PeriodPreset) => {
     setPreset(next);
@@ -137,7 +153,7 @@ export function WarehouseConsumptionReports({
     setEndDate(range.end);
   };
 
-  const generate = async () => {
+  const generate = useCallback(async () => {
     setLoading(true);
     setMessage(null);
     try {
@@ -171,7 +187,13 @@ export function WarehouseConsumptionReports({
     } finally {
       setLoading(false);
     }
-  };
+  }, [endDate, fixedOrigin, startDate, workspaceId]);
+
+  useEffect(() => {
+    if (fixedOrigin === 'STOCK_OUTBOUND') {
+      void generate();
+    }
+  }, [fixedOrigin, generate]);
 
   const destinations = useMemo(
     () => Array.from(new Set(records.map((record) => record.destinationName))).sort(
@@ -203,7 +225,7 @@ export function WarehouseConsumptionReports({
         quantity: 0,
         rows: 0,
       };
-      current.quantity += record.quantity;
+      current.quantity += effectiveQuantity(record);
       current.rows += 1;
       groups.set(key, current);
     }
@@ -266,7 +288,10 @@ export function WarehouseConsumptionReports({
           dateTimeLabel(record.occurredAt),
           originLabel(record.origin),
           record.materialDescription,
-          numberLabel(record.quantity) + ' ' + record.unitLabel,
+          numberLabel(effectiveQuantity(record)) + ' ' + record.unitLabel
+            + (record.returnedQuantity > 0
+              ? ' líquido (' + numberLabel(record.returnedQuantity) + ' devolvido)'
+              : ''),
           record.destinationName,
           record.withdrawnBy,
           record.withdrawalId || record.intakeId || record.movementId,
@@ -283,14 +308,17 @@ export function WarehouseConsumptionReports({
 
   const exportCsv = () => {
     const header = [
-      'Data/Hora', 'Origem', 'Material', 'Quantidade', 'Unidade', 'Destino',
-      'Retirado/Recebido por', 'Saída/Intake', 'Movimento', 'Barcode', 'Lote', 'SISCOFIS',
+      'Data/Hora', 'Origem', 'Material', 'Quantidade original', 'Devolvido',
+      'Quantidade líquida', 'Unidade', 'Destino', 'Retirado/Recebido por',
+      'Saída/Intake', 'Movimento', 'Barcode', 'Lote', 'SISCOFIS',
     ];
     const body = filtered.map((record) => [
       record.occurredAt || '',
       originLabel(record.origin),
       record.materialDescription,
       record.quantity,
+      record.returnedQuantity,
+      effectiveQuantity(record),
       record.unitLabel,
       record.destinationName,
       record.withdrawnBy,
@@ -314,6 +342,66 @@ export function WarehouseConsumptionReports({
     ) + startDate + '-a-' + endDate + '.csv';
     anchor.click();
     URL.revokeObjectURL(url);
+  };
+
+  const beginReturn = (record: WarehouseConsumptionRecord) => {
+    const remaining = effectiveQuantity(record);
+    setReturningRecordId(record.id);
+    setReturnQuantity(String(remaining));
+    setReturnReason('');
+    setReturnOperationId(crypto.randomUUID());
+    setMessage(null);
+  };
+
+  const cancelReturn = () => {
+    setReturningRecordId(null);
+    setReturnQuantity('');
+    setReturnReason('');
+    setReturnOperationId(crypto.randomUUID());
+  };
+
+  const submitReturn = async (record: WarehouseConsumptionRecord) => {
+    const quantity = Number(returnQuantity.replace(',', '.'));
+    const remaining = effectiveQuantity(record);
+    if (!Number.isFinite(quantity) || quantity <= 0 || quantity > remaining + 0.000001) {
+      setMessage('Informe uma quantidade devolvida maior que zero e limitada ao saldo ainda retirado.');
+      return;
+    }
+    if (!returnReason.trim()) {
+      setMessage('Informe o motivo do cancelamento/devolução.');
+      return;
+    }
+
+    setWorkingId(record.id);
+    setMessage(null);
+    try {
+      await returnWarehouseStockOutbound(workspaceId, {
+        consumptionId: record.id,
+        quantity,
+        reason: returnReason,
+        operationId: returnOperationId,
+      });
+      cancelReturn();
+      await generate();
+      setMessage(
+        'Devolução registrada. '
+        + numberLabel(quantity)
+        + ' '
+        + record.unitLabel
+        + ' retornou ao estoque na posição original.'
+        + (record.siscofisStatus === 'POSTED'
+          ? ' A saída já estava marcada como lançada no SISCOFIS; faça também a correção administrativa correspondente.'
+          : '')
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível devolver o material ao estoque.'
+      );
+    } finally {
+      setWorkingId(null);
+    }
   };
 
   const updateSiscofis = async (
@@ -361,7 +449,7 @@ export function WarehouseConsumptionReports({
             </h3>
             <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-600">
               {fixedOrigin === 'STOCK_OUTBOUND'
-                ? 'Somente retiradas efetivamente baixadas do estoque. Consolidação auditável por material, destino, retirante e período.'
+                ? 'Retiradas efetivamente baixadas do estoque, já carregadas automaticamente no mês atual. Cancelamentos/devoluções preservam o histórico e devolvem apenas a quantidade informada ao estoque.'
                 : fixedOrigin === 'IMMEDIATE_CONSUMPTION'
                   ? 'Somente materiais classificados como consumo imediato no recebimento, sem misturar com retiradas posteriores do estoque.'
                   : 'Consolidação auditável sem substituir o ledger. Saídas de estoque e consumos imediatos podem ser separados ou analisados juntos.'}
@@ -430,7 +518,7 @@ export function WarehouseConsumptionReports({
         </div>
         <p className="mt-3 flex items-center gap-2 text-[10px] text-slate-500">
           <Filter className="h-3.5 w-3.5" />
-          Semanal = segunda a domingo · Quinzenal = 1–15 ou 16–último dia · Mensal = mês-calendário.
+          Semanal = segunda a domingo · Quinzenal = 1–15 ou 16–último dia · Mensal = mês-calendário. Em Saídas, o mês atual abre automaticamente.
         </p>
       </section>
 
@@ -540,10 +628,10 @@ export function WarehouseConsumptionReports({
         </div>
 
         <div className="mt-4 overflow-x-auto">
-          <table className="min-w-[1100px] w-full text-left text-xs">
+          <table className="min-w-[1380px] w-full text-left text-xs">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/70 text-[9px] uppercase tracking-wide text-slate-500">
-                {['Data/hora','Origem','Material','Quantidade','Destino','Retirante','Saída / Intake','Movimento','SISCOFIS'].map((label) =>
+                {['Data/hora','Origem','Material','Quantidade','Destino','Retirante','Saída / Intake','Movimento','Situação','SISCOFIS'].map((label) =>
                   <th key={label} className="px-2 py-2">{label}</th>
                 )}
               </tr>
@@ -557,11 +645,91 @@ export function WarehouseConsumptionReports({
                     <p className="font-bold text-slate-900">{record.materialDescription}</p>
                     <p className="mt-1 font-mono text-[9px] text-slate-600">{record.materialId || 'sem entrada em estoque'}</p>
                   </td>
-                  <td className="px-2 py-3 whitespace-nowrap">{numberLabel(record.quantity)} {record.unitLabel}</td>
+                  <td className="px-2 py-3 whitespace-nowrap">
+                    <p className="font-bold text-slate-800">
+                      {numberLabel(effectiveQuantity(record))} {record.unitLabel}
+                    </p>
+                    {record.returnedQuantity > 0 && (
+                      <p className="mt-1 text-[9px] text-amber-700">
+                        original {numberLabel(record.quantity)} · devolvido {numberLabel(record.returnedQuantity)}
+                      </p>
+                    )}
+                  </td>
                   <td className="px-2 py-3">{record.destinationName}</td>
                   <td className="px-2 py-3">{record.withdrawnBy}</td>
                   <td className="px-2 py-3 font-mono text-[9px]">{record.withdrawalId || record.intakeId || 'legado'}</td>
                   <td className="px-2 py-3 font-mono text-[9px]">{record.movementId || '—'}</td>
+                  <td className="px-2 py-3 align-top">
+                    {record.origin !== 'STOCK_OUTBOUND' ? (
+                      <span className="text-[9px] text-slate-400">—</span>
+                    ) : record.legacy ? (
+                      <span className="rounded-full border border-slate-300 bg-slate-50 px-2 py-1 text-[9px] font-black text-slate-600">Legado</span>
+                    ) : effectiveQuantity(record) <= 0.000001 ? (
+                      <div>
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[9px] font-black text-amber-700">
+                          Cancelada / devolvida
+                        </span>
+                        {record.lastReturnReason && (
+                          <p className="mt-1 max-w-52 text-[9px] leading-4 text-slate-500">{record.lastReturnReason}</p>
+                        )}
+                      </div>
+                    ) : returningRecordId === record.id ? (
+                      <div className="w-64 space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-2">
+                        <p className="text-[9px] font-black uppercase text-amber-800">
+                          Cancelar / devolver ao estoque
+                        </p>
+                        <label className="block text-[9px] font-bold text-slate-600">
+                          Quantidade devolvida
+                          <input
+                            value={returnQuantity}
+                            onChange={(event) => setReturnQuantity(event.target.value)}
+                            className="mt-1 h-8 w-full rounded-lg border border-amber-200 bg-white px-2 text-xs font-bold text-slate-800"
+                          />
+                        </label>
+                        <label className="block text-[9px] font-bold text-slate-600">
+                          Motivo
+                          <input
+                            value={returnReason}
+                            onChange={(event) => setReturnReason(event.target.value)}
+                            maxLength={180}
+                            placeholder="Ex.: saída cancelada, material devolvido"
+                            className="mt-1 h-8 w-full rounded-lg border border-amber-200 bg-white px-2 text-xs text-slate-800"
+                          />
+                        </label>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            disabled={workingId === record.id}
+                            onClick={() => void submitReturn(record)}
+                            className="flex-1 rounded-lg bg-amber-600 px-2 py-1.5 text-[9px] font-black text-white disabled:opacity-50"
+                          >
+                            Confirmar devolução
+                          </button>
+                          <button
+                            type="button"
+                            disabled={workingId === record.id}
+                            onClick={cancelReturn}
+                            className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[9px] font-bold text-slate-600"
+                          >
+                            Fechar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[9px] font-black text-emerald-700">
+                          {record.returnedQuantity > 0 ? 'Devolução parcial' : 'Ativa'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => beginReturn(record)}
+                          className="flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[9px] font-bold text-amber-800"
+                        >
+                          <RotateCcw className="h-3 w-3" /> Cancelar / devolver
+                        </button>
+                      </div>
+                    )}
+                  </td>
                   <td className="px-2 py-3">
                     {record.legacy ? (
                       <span className="rounded-full border border-slate-300 bg-slate-50 px-2 py-1 text-[9px] font-black text-slate-600">Legado</span>
