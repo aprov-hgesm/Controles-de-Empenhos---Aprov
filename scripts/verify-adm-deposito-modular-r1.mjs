@@ -766,6 +766,24 @@ requireText(
   'data-visual-role="receiving-yard"',
   'Início deixou de manter os paletes no mesmo ambiente dos depósitos.'
 );
+requireText(
+  warehouseLanding,
+  'data-visual-role="text-overlay"',
+  'Textos essenciais do Início deixaram de ser renderizados na camada frontal.'
+);
+requireText(
+  warehouseLanding,
+  'className={styles.yardTextBackdrop}',
+  'Título da área de recebimento perdeu o fundo de contraste.'
+);
+for (const forbiddenInternalLabel of [
+  'renderLocationTag',
+  '{linked.code}',
+]) {
+  if (warehouseLanding.includes(forbiddenInternalLabel)) {
+    fail('Início voltou a poluir os depósitos com legenda interna: ' + forbiddenInternalLabel);
+  }
+}
 for (const forbiddenLandingSurface of [
   'depotGrid',
   'depotCard',
