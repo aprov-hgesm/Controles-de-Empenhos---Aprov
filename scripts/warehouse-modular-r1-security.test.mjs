@@ -1207,7 +1207,7 @@ async function main() {
 
   const stockConsumptionId = 'cons_' + 'd'.repeat(64);
   const stockLineId = 'wline_' + 'e'.repeat(32);
-  const outboundReturnMovementId = 'mov_' + 'f'.repeat(64);
+  const physicalOutboundReturnMovementId = 'mov_' + 'f'.repeat(64);
 
   await allowed('fundador projeta saída finalizada no registro auditável', () =>
     setDoc(
@@ -1253,7 +1253,7 @@ async function main() {
   await allowed('fundador devolve saída ao estoque sem apagar histórico', () =>
     runTransaction(founder.db, async (transaction) => {
       const movementRef = doc(
-        founder.db, 'warehouse', WORKSPACE_ID, 'movements', outboundReturnMovementId
+        founder.db, 'warehouse', WORKSPACE_ID, 'movements', physicalOutboundReturnMovementId
       );
       const balanceRef = doc(
         founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId
@@ -1270,7 +1270,7 @@ async function main() {
 
       transaction.set(movementRef, {
         schemaVersion: 'warehouse_movement_v1',
-        id: outboundReturnMovementId,
+        id: physicalOutboundReturnMovementId,
         workspaceId: WORKSPACE_ID,
         ug: UG,
         materialId,
@@ -1305,7 +1305,7 @@ async function main() {
         materialId,
         quantity: 8,
         revision: 4,
-        lastMovementId: outboundReturnMovementId,
+        lastMovementId: physicalOutboundReturnMovementId,
         updatedAt: serverTimestamp(),
       });
 
@@ -1323,7 +1323,7 @@ async function main() {
         },
         quantity: 3,
         revision: 4,
-        lastMovementId: outboundReturnMovementId,
+        lastMovementId: physicalOutboundReturnMovementId,
         updatedAt: serverTimestamp(),
       });
 
@@ -1335,7 +1335,7 @@ async function main() {
 
       transaction.update(consumptionRef, {
         returnedQuantity: 1,
-        lastReturnMovementId: outboundReturnMovementId,
+        lastReturnMovementId: physicalOutboundReturnMovementId,
         lastReturnAt: serverTimestamp(),
         lastReturnBy: founder.user.uid,
         lastReturnReason: 'Saída cancelada e material devolvido',
