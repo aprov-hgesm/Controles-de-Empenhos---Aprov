@@ -2245,8 +2245,11 @@ Data: 2026-09-28.
 - A devolução deixa de depender de API exclusiva, service account, JWT administrativo ou `FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON`.
 - O núcleo quantitativo reutiliza o contrato já consolidado de entrada positiva: movimento `MANUAL_ENTRY` com procedência fixa **Devolução de saída** e `reference = consumptionId`.
 - A recomposição quantitativa reutiliza o fluxo já validado de Entrada Avulsa: `MANUAL_ENTRY` recompõe saldo agregado/`UNASSIGNED` e `TRANSFER` reposiciona quando necessário.
-- A marcação da saída (`returnedQuantity`, motivo e auditoria) ocorre em uma escrita separada, leve e idempotente. Essa separação evita exceder o limite de 1000 expressões das Firestore Rules.
-- As Rules mantêm a marcação founder-only, monotônica e limitada à quantidade original; o aplicativo vincula a marcação ao `MANUAL_ENTRY` determinístico da operação.
+- O documento original em `consumptions` não é alterado pelo cancelamento/devolução. Ele permanece como histórico imutável da saída efetivamente realizada.
+- O estado visual da devolução fica em `outboundReturns/{consumptionId}`, um marcador-resumo leve com quantidade original, quantidade devolvida, operação pendente e última auditoria.
+- O marcador é atualizado separadamente e de forma idempotente. Essa separação evita exceder o limite de 1000 expressões das Firestore Rules.
+- As Rules do marcador são founder-only, monotônicas e limitam `returnedQuantity <= originalQuantity` sem consultar documentos externos.
+- Os relatórios carregam os marcadores correspondentes às saídas exibidas e projetam `returnedQuantity`, motivo e situação **parcial / cancelada-devolvida** sem reescrever a saída original.
 - A quantidade devolvida continua limitada ao remanescente da saída original; a saída nunca é apagada.
 - Após o núcleo quantitativo, `transferWarehouseStock` reposiciona a quantidade da devolução de `UNASSIGNED` para a posição física original usando o motor oficial `TRANSFER`.
 - Se o reposicionamento falhar, o saldo já devolvido permanece íntegro e a interface informa que o item ficou temporariamente sem localização para correção no Controle de Itens.
