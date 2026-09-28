@@ -728,6 +728,19 @@ requireText(
 );
 requireText(
   warehouseLanding,
+  'function warehouseBox(',
+  'Início perdeu o renderer único oficial das caixas.'
+);
+requireText(
+  warehouseLanding,
+  "'receiving-stock-box'",
+  'Área de recebimento deixou de reutilizar o renderer único das caixas.'
+);
+if (warehouseLanding.includes('function stockBox(')) {
+  fail('Início voltou a manter um renderer paralelo para caixas internas.');
+}
+requireText(
+  warehouseLanding,
   'occupancyBySubposition',
   'Início deixou de posicionar ocupação por subposição nas estantes.'
 );
