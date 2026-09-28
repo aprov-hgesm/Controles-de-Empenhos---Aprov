@@ -39,7 +39,7 @@ const CONTROL_TABS: Array<{
     id: 'stock',
     label: 'Estoque',
     icon: Boxes,
-    description: 'Saldos, posições físicas, lotes, validade, FEFO, barcodes e origem documental.',
+    description: 'Saldos, posições físicas, validade, FEFO, códigos de barras e origem documental.',
   },
   {
     id: 'movements',
