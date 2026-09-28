@@ -2151,3 +2151,18 @@ Data: 2026-09-27.
 - Barcode novo reutiliza `saveWarehouseBarcodeAssociation`.
 - Edição do valor do barcode preserva rastreabilidade: o código antigo fica inativo e o novo passa a ser o vínculo ativo.
 - Saída de Material continua sendo a única superfície que reduz estoque.
+
+
+## D-105 — Lote deixa de ser dado visível do item
+
+Data: 2026-09-27.
+
+- O operador não cadastra, edita, pesquisa nem visualiza código/número de lote nas superfícies de itens do ADM Depósito.
+- Os dados visíveis e editáveis do item ficam simplificados para **Descritivo, Validade e Código de Barras**.
+- Localização, quantidade, origem documental e saldo permanecem dados operacionais, não atributos cadastrais do item.
+- A validade continua podendo existir em mais de uma referência técnica quando o mesmo material possuir quantidades com datas diferentes.
+- O contrato interno `warehouse_lot_v1` e seus IDs permanecem temporariamente como infraestrutura técnica de compatibilidade para validade, FEFO, baixa, realocação e histórico.
+- O código técnico desse contrato é gerado automaticamente e nunca deve ser solicitado ou exibido ao operador.
+- A retirada física apresenta **Validade / FEFO**, nunca código de lote.
+- PDFs operacionais exibem validade e código de barras, não lote.
+- A mudança não exige migração destrutiva, alteração de Firestore Rules ou reescrita de movimentos históricos.
