@@ -441,7 +441,7 @@ requireText(
 requireText(
   sectionContent,
   "if (section === 'control')",
-  'Controle de Itens deve estar operacional nesta etapa modular.'
+  'Controle de Materiais deve estar operacional nesta etapa modular.'
 );
 requireText(
   sectionContent,
@@ -813,36 +813,36 @@ requireText(
   'Documentos de saída perderam o código alfanumérico derivado da data/controle.'
 );
 if (itemControl.includes("id: 'outbound'")) {
-  fail('Saída de Material voltou a ficar duplicada dentro de Controle de Itens.');
+  fail('Saída de Material voltou a ficar duplicada dentro de Controle de Materiais.');
 }
 requireText(
   itemControl,
   "id: 'summary'",
-  'Controle de Itens perdeu a subaba Resumo.'
+  'Controle de Materiais perdeu a subaba Resumo.'
 );
 requireText(
   itemControl,
   "id: 'stock'",
-  'Controle de Itens perdeu a subaba Estoque.'
+  'Controle de Materiais perdeu a subaba Estoque.'
 );
 requireText(
   itemControl,
   "id: 'movements'",
-  'Controle de Itens perdeu a subaba Movimentações.'
+  'Controle de Materiais perdeu a subaba Movimentações.'
 );
 requireText(
   itemControl,
   "id: 'inventory'",
-  'Controle de Itens perdeu a subaba Inventário.'
+  'Controle de Materiais perdeu a subaba Inventário.'
 );
 requireText(
   itemControl,
   "id: 'reports'",
-  'Controle de Itens perdeu a subaba Relatórios.'
+  'Controle de Materiais perdeu a subaba Relatórios.'
 );
 for (const redundantTab of ["id: 'outbound'", "id: 'deliveries'", "id: 'alerts'", "id: 'siscofis'", "id: 'settings'"]) {
   if (itemControl.includes(redundantTab)) {
-    fail('Controle de Itens voltou a duplicar superfície externa: ' + redundantTab);
+    fail('Controle de Materiais voltou a duplicar superfície externa: ' + redundantTab);
   }
 }
 requireText(
@@ -861,7 +861,7 @@ requireText(
   'Relatórios do Controle voltaram a usar a superfície operacional de migração SISCOFIS.'
 );
 if (logisticsReports.includes('WarehouseSiscofisOperational')) {
-  fail('Controle de Itens voltou a duplicar a migração SISCOFIS da Alocação de Material.');
+  fail('Controle de Materiais voltou a duplicar a migração SISCOFIS da Alocação de Material.');
 }
 requireText(
   logisticsReports,
@@ -949,11 +949,11 @@ requireText(
 for (const [surfaceName, surfaceSource] of [
   ['Saída de Material', materialWithdrawal],
   ['Relatórios da Saída de Material', consumptionReports],
-  ['Controle de Itens', itemControl],
-  ['Resumo do Controle de Itens', itemControlSummary],
-  ['Estoque do Controle de Itens', stockOperational],
-  ['Inventário do Controle de Itens', inventoryOperational],
-  ['Relatórios do Controle de Itens', logisticsReports],
+  ['Controle de Materiais', itemControl],
+  ['Resumo do Controle de Materiais', itemControlSummary],
+  ['Estoque do Controle de Materiais', stockOperational],
+  ['Inventário do Controle de Materiais', inventoryOperational],
+  ['Relatórios do Controle de Materiais', logisticsReports],
   ['Histórico SISCOFIS do Controle', siscofisHistoryReport],
   ['Histórico de Inventários do Controle', inventoryHistoryReport],
 ]) {
@@ -1274,7 +1274,7 @@ if (findings.length) {
 }
 
 console.log('ADM Depósito modular guard: PASS');
-console.log('- Início premium, Meus Depósitos, Alocação de Material, Saída de Material e Controle de Itens operacionais');
+console.log('- Início premium, Meus Depósitos, Alocação de Material, Saída de Material e Controle de Materiais operacionais');
 console.log('- Início reutiliza a Visão 3D oficial, sem lote visível nem ações operacionais duplicadas');
 console.log('- rules em ' + (rulesBytes / 1024).toFixed(2) + ' KiB (orçamento interno: 150 KiB)');
 console.log('- NF/Pregão podem ser armazenados, consumidos imediatamente ou removidos logicamente da fila');
@@ -1285,7 +1285,7 @@ console.log('- Saída de Material gera PDF duplo: retirada física + ficha auxil
 console.log('- Saída de Material e seus Relatórios seguem o tema claro oficial D-076/VISUAL_IDENTITY');
 console.log('- Saída de Material reduz ledger/posição/lote e saldo zero deixa de ser projetado no croqui');
 console.log('- Registro de Saídas carrega o mês uma vez; devolução reutiliza MANUAL_ENTRY + TRANSFER e marcador leve separado');
-console.log('- Controle de Itens consolidado em Resumo, Estoque, Movimentações, Inventário e Relatórios');
+console.log('- Controle de Materiais consolidado em Resumo, Estoque, Movimentações, Inventário e Relatórios');
 console.log('- Relatórios separados em Saída e Consumo Imediato, sem mistura de origens');
 console.log('- Estoque exibe somente saldo positivo e prioriza a menor validade ativa');
 console.log('- ficha do item separa localização física de saldo UNASSIGNED sem duplicação');
