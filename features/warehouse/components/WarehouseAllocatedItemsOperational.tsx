@@ -37,8 +37,12 @@ import {
   listWarehouseLocationBalances,
   listWarehouseLocations,
 } from '../../../lib/warehouse/locationRepository';
-import type { WarehouseLot } from '../../../lib/warehouse/lot';
 import {
+  createWarehousePendingLotCode,
+  type WarehouseLot,
+} from '../../../lib/warehouse/lot';
+import {
+  createWarehouseLot,
   listWarehouseLots,
   updateWarehouseLot,
 } from '../../../lib/warehouse/lotRepository';
@@ -171,11 +175,17 @@ function EditStoredItemModal({
   const [description, setDescription] = useState(row.material.description);
   const [newBarcode, setNewBarcode] = useState('');
   const [validityDrafts, setValidityDrafts] = useState(
-    row.lots.map((lot) => ({
-      id: lot.id,
-      expiresOn: lot.expiresOn || '',
-      original: lot,
-    }))
+    row.lots.length > 0
+      ? row.lots.map((lot) => ({
+          id: lot.id as string | null,
+          expiresOn: lot.expiresOn || '',
+          original: lot as WarehouseLot | null,
+        }))
+      : [{
+          id: null,
+          expiresOn: '',
+          original: null as WarehouseLot | null,
+        }]
   );
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -211,8 +221,18 @@ function EditStoredItemModal({
 
       for (const draft of validityDrafts) {
         const expiresOn = draft.expiresOn || null;
-        if (expiresOn !== draft.original.expiresOn) {
-          await updateWarehouseLot(workspaceId, draft.id, { expiresOn });
+        if (draft.original && draft.id) {
+          if (expiresOn !== draft.original.expiresOn) {
+            await updateWarehouseLot(workspaceId, draft.id, { expiresOn });
+          }
+        } else if (expiresOn) {
+          await createWarehouseLot(workspaceId, {
+            materialId: row.material.id,
+            code: createWarehousePendingLotCode(crypto.randomUUID()),
+            expiresOn,
+            quantity: row.quantity,
+            position: row.position,
+          });
         }
       }
 
@@ -295,30 +315,24 @@ function EditStoredItemModal({
               </p>
             </div>
 
-            {validityDrafts.length === 0 ? (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
-                Este saldo ainda não possui referência técnica de validade editável.
-              </div>
-            ) : (
-              validityDrafts.map((draft, index) => (
-                <label key={draft.id} className="block rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <span className="text-[9px] font-black uppercase text-rose-600">
-                    Data de validade {validityDrafts.length > 1 ? index + 1 : ''}
-                  </span>
-                  <input
-                    type="date"
-                    value={draft.expiresOn}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      setValidityDrafts((current) =>
-                        current.map((item) => item.id === draft.id ? { ...item, expiresOn: value } : item)
-                      );
-                    }}
-                    className="mt-1 h-10 w-full rounded-lg border border-rose-200 bg-white px-3 text-xs font-bold text-slate-800"
-                  />
-                </label>
-              ))
-            )}
+            {validityDrafts.map((draft, index) => (
+              <label key={draft.id || 'new-validity'} className="block rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <span className="text-[9px] font-black uppercase text-rose-600">
+                  Data de validade {validityDrafts.length > 1 ? index + 1 : ''}
+                </span>
+                <input
+                  type="date"
+                  value={draft.expiresOn}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setValidityDrafts((current) =>
+                      current.map((item) => item.id === draft.id ? { ...item, expiresOn: value } : item)
+                    );
+                  }}
+                  className="mt-1 h-10 w-full rounded-lg border border-rose-200 bg-white px-3 text-xs font-bold text-slate-800"
+                />
+              </label>
+            ))}
           </div>
 
           <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
