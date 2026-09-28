@@ -48,6 +48,7 @@ import {
   type WarehouseMovement,
 } from './movement';
 import { validateWarehouseMaterial, type WarehouseMaterial } from './material';
+import { validateWarehouseLot, type WarehouseLot } from './lot';
 import {
   applyWarehouseExpressOutbound,
 } from './outboundRepository';
@@ -110,6 +111,21 @@ export interface ApplyWarehouseImmediateConsumptionResult {
   intake: WarehouseItemIntakeState;
   movementId: string | null;
   consumptionId: string;
+}
+
+export interface ReturnWarehouseStockOutboundInput {
+  consumptionId: string;
+  quantity: number;
+  reason: string;
+  operationId: string;
+}
+
+export interface ReturnWarehouseStockOutboundResult {
+  movement: WarehouseMovement;
+  consumption: WarehouseConsumptionRecord;
+  balance: WarehouseBalance;
+  locationBalance: WarehouseLocationBalance;
+  lot: WarehouseLot | null;
 }
 
 function currentScope(workspaceId: string): {
@@ -178,6 +194,33 @@ function parseMaterial(
     { expectedWorkspaceId: workspaceId }
   );
   if (!result.ok) throw new Error('WAREHOUSE_INVALID_MATERIAL');
+  return result.data;
+}
+
+function parseLot(
+  workspaceId: string,
+  id: string,
+  data: Record<string, unknown>
+): WarehouseLot {
+  const result = validateWarehouseLot(
+    {
+      schemaVersion: data.schemaVersion,
+      id,
+      workspaceId: data.workspaceId,
+      ug: data.ug,
+      materialId: data.materialId,
+      code: data.code,
+      expiresOn: data.expiresOn ?? null,
+      quantity: data.quantity,
+      position: data.position,
+      origin: data.origin,
+      status: data.status,
+      createdBy: data.createdBy,
+      updatedBy: data.updatedBy,
+    },
+    { expectedWorkspaceId: workspaceId }
+  );
+  if (!result.ok) throw new Error('WAREHOUSE_INVALID_LOT');
   return result.data;
 }
 
@@ -367,6 +410,9 @@ function parseConsumption(
   const requestedQuantity = normalizeWarehouseQuantity(data.requestedQuantity);
   const origin = data.origin;
   const siscofisStatus = data.siscofisStatus;
+  const returnedQuantity = data.returnedQuantity === undefined
+    ? 0
+    : normalizeWarehouseQuantity(data.returnedQuantity);
   if (
     data.schemaVersion !== WAREHOUSE_CONSUMPTION_SCHEMA_VERSION
     || !/^cons_[a-f0-9]{64}$/.test(id)
@@ -427,6 +473,10 @@ function parseConsumption(
       )
     )
     || !['PENDING', 'PREPARED', 'POSTED'].includes(String(siscofisStatus))
+    || returnedQuantity === null
+    || returnedQuantity < 0
+    || (origin === 'STOCK_OUTBOUND' && returnedQuantity > quantity)
+    || (origin === 'IMMEDIATE_CONSUMPTION' && returnedQuantity !== 0)
   ) {
     throw new Error('WAREHOUSE_INVALID_CONSUMPTION_RECORD');
   }
@@ -463,6 +513,14 @@ function parseConsumption(
     siscofisUpdatedBy:
       typeof data.siscofisUpdatedBy === 'string' ? data.siscofisUpdatedBy : null,
     siscofisUpdatedAt: timestampToIso(data.siscofisUpdatedAt),
+    returnedQuantity,
+    lastReturnMovementId:
+      typeof data.lastReturnMovementId === 'string' ? data.lastReturnMovementId : null,
+    lastReturnAt: timestampToIso(data.lastReturnAt),
+    lastReturnBy:
+      typeof data.lastReturnBy === 'string' ? data.lastReturnBy : null,
+    lastReturnReason:
+      typeof data.lastReturnReason === 'string' ? data.lastReturnReason : null,
     legacy: false,
   };
 }
@@ -778,6 +836,11 @@ async function recordStockConsumption(input: {
       updatedAt: serverTimestamp(),
       siscofisUpdatedBy: null,
       siscofisUpdatedAt: null,
+      returnedQuantity: 0,
+      lastReturnMovementId: null,
+      lastReturnAt: null,
+      lastReturnBy: null,
+      lastReturnReason: null,
     });
   });
   return consumptionId;
@@ -1635,6 +1698,11 @@ export async function listWarehouseConsumptionReport(
         updatedAt: timestampToIso(data.createdAt),
         siscofisUpdatedBy: null,
         siscofisUpdatedAt: null,
+        returnedQuantity: 0,
+        lastReturnMovementId: null,
+        lastReturnAt: null,
+        lastReturnBy: null,
+        lastReturnReason: null,
         legacy: true,
       });
     }
