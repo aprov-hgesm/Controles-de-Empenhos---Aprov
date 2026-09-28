@@ -12,7 +12,7 @@ function WarehouseModularR1Notice({ section }: { section: WarehouseSectionId }) 
     overview: 'Início',
     registration: 'Alocação de Material',
     outbound: 'Saída de Material',
-    depots: 'Meus Depósitos',
+    depots: 'Controle de Depósitos',
     control: 'Controle de Materiais',
   };
 
@@ -30,7 +30,7 @@ function WarehouseModularR1Notice({ section }: { section: WarehouseSectionId }) 
       <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-600">
         Esta superfície permanece no código completo do ADM Depósito, mas está
         temporariamente sem operações de estoque enquanto a fundação independente
-        é publicada e validada. Nesta release, use Meus Depósitos para testar
+        é publicada e validada. Nesta release, use Controle de Depósitos para testar
         depósitos, localizações e croquis.
       </p>
     </div>
