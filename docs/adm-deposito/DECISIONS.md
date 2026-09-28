@@ -2244,8 +2244,9 @@ Data: 2026-09-28.
 - O comando visível continua sendo **Cancelar / devolver**, sem expor detalhes técnicos ao operador.
 - A devolução deixa de depender de API exclusiva, service account, JWT administrativo ou `FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON`.
 - O núcleo quantitativo reutiliza o contrato já consolidado de entrada positiva: movimento `MANUAL_ENTRY` com procedência fixa **Devolução de saída** e `reference = consumptionId`.
-- Movimento de entrada, saldo agregado, saldo `UNASSIGNED` e incremento de `returnedQuantity` são confirmados na mesma transação Firestore.
-- As Rules aceitam a atualização de devolução somente quando existe, na mesma transação, um novo `MANUAL_ENTRY` do mesmo material, mesma UG, mesmo operador, com delta exatamente igual ao acréscimo de `returnedQuantity`.
+- A recomposição quantitativa reutiliza o fluxo já validado de Entrada Avulsa: `MANUAL_ENTRY` recompõe saldo agregado/`UNASSIGNED` e `TRANSFER` reposiciona quando necessário.
+- A marcação da saída (`returnedQuantity`, motivo e auditoria) ocorre em uma escrita separada, leve e idempotente. Essa separação evita exceder o limite de 1000 expressões das Firestore Rules.
+- As Rules mantêm a marcação founder-only, monotônica e limitada à quantidade original; o aplicativo vincula a marcação ao `MANUAL_ENTRY` determinístico da operação.
 - A quantidade devolvida continua limitada ao remanescente da saída original; a saída nunca é apagada.
 - Após o núcleo quantitativo, `transferWarehouseStock` reposiciona a quantidade da devolução de `UNASSIGNED` para a posição física original usando o motor oficial `TRANSFER`.
 - Se o reposicionamento falhar, o saldo já devolvido permanece íntegro e a interface informa que o item ficou temporariamente sem localização para correção no Controle de Itens.
