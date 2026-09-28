@@ -2272,7 +2272,7 @@ Data: 2026-09-28.
 - Cada depósito do Início é apenas um acesso visual. O clique abre **Meus Depósitos** com o depósito correspondente pré-selecionado por `?deposito=<depotId>`.
 - A cena mantém identidade imersiva compatível com a Home principal do EMPROVEX: azul profundo, vidro técnico, luz radial e grade em perspectiva alinhada ao desenho isométrico dos croquis.
 - A implementação permanece leve em React/SVG/CSS, sem WebGL, engine 3D, parallax contínuo ou animação pesada.
-- O Início não carrega materiais, lotes, saldos ou locationBalances de todos os depósitos. Para preservar custo e desempenho, carrega apenas depósitos, layouts bounded e a fila necessária para representar pendências.
+- O Início não carrega materiais, lotes nem saldo agregado. Para representar ocupação real sem ampliar desnecessariamente o custo, carrega apenas depósitos, layouts, locations, `locationBalances` positivos de forma bounded e a fila necessária às pendências.
 - A área lateral de recebimento representa NFs e itens pendentes de alocação com paletes e caixas: cada palete ocupado corresponde a uma NF em espera e cada caixa representa um item pendente; quando não há pendências os paletes ficam visualmente vazios.
 - A fila visual considera somente linhas `PENDING` ou `PARTIALLY_PROCESSED` com `pendingQuantity > 0`; não cria estado paralelo nem infere pendências inexistentes.
 - A aba Início é estritamente consultiva e estética. Ações continuam nas abas especializadas.
@@ -2280,8 +2280,9 @@ Data: 2026-09-28.
 - A área de recebimento e seus paletes fazem parte do mesmo SVG/croqui global dos depósitos, sem painel lateral separado.
 - Rótulos e contadores podem existir de forma discreta sobre a cena, mas não devem introduzir janelas, campos, cartões ou superfícies operacionais independentes.
 - O mundo/isometric floor permanece escuro e imersivo, mas cada depósito utiliza **base clara e objetos internos na linguagem visual da Visão 3D oficial**, criando contraste entre ambiente e estrutura logística.
-- O Início pode carregar `locations` de forma bounded para rotular locais e subposições dentro dos croquis; continua proibido carregar materiais, saldos, lotes ou executar mutações nessa tela.
+- O Início pode carregar `locations` e `locationBalances` positivos de forma bounded para posicionar a ocupação física dentro dos croquis; continua proibido carregar catálogo de materiais, lotes, saldo agregado ou executar mutações nessa tela.
 - Estantes/racks devem preservar a identidade visual oficial (estrutura azul-escura, vigas laranja e níveis claros), enquanto geladeiras, freezers e bancadas usam acabamento claro/metálico compatível com o renderer oficial.
 - A área de recebimento/paletes deve permanecer visualmente secundária aos depósitos, ainda que continue refletindo as pendências reais.
 - Para evitar poluição visual, a **Início não exibe etiquetas individuais dos locais nem códigos de subposição sobre as estruturas**; esses detalhes permanecem disponíveis em Meus Depósitos.
 - Textos essenciais da cena (nome dos depósitos, identificação dos paletes e cabeçalho de recebimento) devem ser renderizados em **camada final de overlay**, acima da geometria SVG, com fundo/contorno de contraste quando necessário.
+- A ocupação física do estoque deve ser mostrada por pequenas caixas sobre a estrutura correspondente, reutilizando a mesma lógica visual por faixas da Visão 3D oficial (`<=0`: nenhuma; `<5`: 1; `<20`: 2; `<60`: 3; demais: 4), sem desenhar uma unidade por item e sem exibir legendas permanentes dos materiais.
