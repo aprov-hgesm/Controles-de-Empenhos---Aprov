@@ -170,7 +170,7 @@ function allocationErrorMessage(error: unknown): string {
     return 'O depósito, localização ou subposição deixou de estar disponível. Selecione uma posição ativa.';
   }
   if (code.includes('WAREHOUSE_INTAKE_LOT_CONFLICT')) {
-    return 'Já existe atribuição deste lote nessa posição com dados diferentes. Revise lote e validade.';
+    return 'Já existe um registro de validade nessa posição com dados diferentes. Revise a validade.';
   }
   if (code.includes('WAREHOUSE_BARCODE_MATERIAL_CONFLICT')) {
     return 'Este código de barras já está associado a outro material e não pode ser reutilizado.';
@@ -185,7 +185,7 @@ function allocationErrorMessage(error: unknown): string {
     return 'A tentativa anterior já possui uma operação com dados diferentes. Atualize a fila antes de repetir.';
   }
   if (code.includes('WAREHOUSE_INTAKE_LOT_REQUIRED')) {
-    return 'Informe o lote para concluir a alocação.';
+    return 'Não foi possível criar a referência técnica de validade. Atualize a fila e tente novamente.';
   }
   if (code.includes('WAREHOUSE_INTAKE_INVALID_EXPIRY')) {
     return 'Informe uma validade válida ou marque explicitamente Sem validade.';
@@ -294,7 +294,6 @@ function AllocationPanel({
   const [depotId, setDepotId] = useState(defaultDestination.depotId);
   const [locationId, setLocationId] = useState(defaultDestination.locationId);
   const [subpositionId, setSubpositionId] = useState(defaultDestination.subpositionId);
-  const [lotCode, setLotCode] = useState('');
   const [expiresOn, setExpiresOn] = useState('');
   const [barcode, setBarcode] = useState('');
   const [barcodeRead, setBarcodeRead] = useState(false);
@@ -417,7 +416,7 @@ function AllocationPanel({
         effectiveStatus: row.status,
         quantity: numericQuantity,
         position,
-        lotCode: lotCode.trim(),
+        lotCode: '',
         expiresOn: expiresOn || null,
         barcode: barcode.trim() || null,
         operationId,
@@ -597,20 +596,6 @@ function AllocationPanel({
             </label>
 
             <label className="block">
-              <span className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">
-                Lote · opcional
-              </span>
-              <input
-                type="text"
-                maxLength={80}
-                value={lotCode}
-                onChange={(event) => setLotCode(event.target.value)}
-                placeholder="Ex.: LT-2026-09"
-                className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-800 outline-none focus:border-[#00288e]"
-              />
-            </label>
-
-            <label className="block">
               <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">
                 Validade · opcional
                 <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[8px] text-rose-700">
@@ -674,7 +659,6 @@ function AllocationPanel({
             <div className="mt-2 grid gap-1 text-[10px] leading-5 text-slate-600 sm:grid-cols-2">
               <p><span className="font-black">NF:</span> {row.invoiceId}</p>
               <p><span className="font-black">Posição:</span> {positionLabel || '—'}</p>
-              <p><span className="font-black">Lote:</span> {lotCode.trim() || 'Não informado'}</p>
               <p>
                 <span className="font-black">Validade:</span>{' '}
                 {expiresOn ? formatDate(expiresOn) : 'Não informada · pendência vermelha'}
