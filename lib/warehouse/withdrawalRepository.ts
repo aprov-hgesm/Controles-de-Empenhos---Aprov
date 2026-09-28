@@ -1140,8 +1140,35 @@ export async function returnWarehouseStockOutbound(
       return;
     }
 
-    if (existing?.pendingOperationId) {
-      throw new Error('WAREHOUSE_OUTBOUND_RETURN_OPERATION_PENDING');
+    if (
+      existing?.pendingOperationId
+      && existing.pendingOperationId !== operationId
+    ) {
+      const pendingManualOperationId = (
+        'return_' + existing.pendingOperationId
+      ).slice(0, 96);
+      const pendingMovementId = await createWarehouseMovementId(
+        scope.workspaceId,
+        ['manual-entry', pendingManualOperationId, 'ledger'].join(':')
+      );
+      const pendingMovementSnapshot = await transaction.get(
+        doc(
+          db,
+          warehouseDocumentPath(
+            scope.workspaceId,
+            'movements',
+            pendingMovementId
+          )
+        )
+      );
+
+      if (pendingMovementSnapshot.exists()) {
+        throw new Error(
+          'WAREHOUSE_OUTBOUND_RETURN_OPERATION_PENDING_APPLIED'
+        );
+      }
+      // Reserva antiga sem movimento correspondente: tentativa anterior falhou
+      // antes de alterar o estoque. A nova operação pode assumir a reserva.
     }
 
     const baseReturned = Math.max(
@@ -1215,11 +1242,41 @@ export async function returnWarehouseStockOutbound(
       provenance: 'Devolução de saída',
       reference: consumptionId,
       position: originalSource.position,
+      allowUnassignedPosition: originalSource.position.kind === 'UNASSIGNED',
       expiresOn,
       barcode: null,
     }
   );
   warnings.push(...returnedEntry.warnings);
+
+  let returnedLocationBalance: WarehouseLocationBalance;
+  if (returnedEntry.transfer) {
+    returnedLocationBalance = returnedEntry.transfer.toBalance;
+  } else {
+    const unassignedPosition: WarehouseStockPosition = { kind: 'UNASSIGNED' };
+    const unassignedBalanceId = await createWarehouseLocationBalanceId(
+      scope.workspaceId,
+      consumption.materialId,
+      unassignedPosition
+    );
+    const unassignedBalancePath = warehouseDocumentPath(
+      scope.workspaceId,
+      'locationBalances',
+      unassignedBalanceId
+    );
+    const unassignedSnapshot = await getDoc(doc(db, unassignedBalancePath));
+    if (!unassignedSnapshot.exists()) {
+      throw new Error('WAREHOUSE_OUTBOUND_RETURN_LOCATION_NOT_FOUND');
+    }
+    returnedLocationBalance = parseLocationBalance(
+      scope.workspaceId,
+      unassignedSnapshot.id,
+      unassignedSnapshot.data() as Record<string, unknown>
+    );
+    warnings.push(
+      'A saída original estava sem localização física; o material retornou ao estoque como sem localização.'
+    );
+  }
 
   const finalizedSummary = await runTransaction(
     db,
@@ -1303,7 +1360,7 @@ export async function returnWarehouseStockOutbound(
       lastReturnReason: finalizedSummary.lastReturnReason,
     },
     balance: returnedEntry.entry.balance,
-    locationBalance: returnedEntry.transfer.toBalance,
+    locationBalance: returnedLocationBalance,
     lot: returnedEntry.validity,
     warnings,
   };
