@@ -727,10 +727,36 @@ requireText(
   'Clique em depósito no Início deixou de direcionar para Meus Depósitos.'
 );
 requireText(
-  warehouseLandingStyles,
-  'transform: perspective(610px) rotateX(64deg);',
-  'Início perdeu a grade em perspectiva compatível com os croquis 3D.'
+  warehouseLanding,
+  'data-visual-role="world-floor"',
+  'Início perdeu o piso único do ambiente isométrico.'
 );
+requireText(
+  warehouseLanding,
+  'data-visual-role="world-grid"',
+  'Início perdeu a grade isométrica integrada ao mesmo ambiente.'
+);
+requireText(
+  warehouseLanding,
+  'data-visual-role="depots-world"',
+  'Início deixou de projetar os depósitos no mesmo mundo visual.'
+);
+requireText(
+  warehouseLanding,
+  'data-visual-role="receiving-yard"',
+  'Início deixou de manter os paletes no mesmo ambiente dos depósitos.'
+);
+for (const forbiddenLandingSurface of [
+  'depotGrid',
+  'depotCard',
+  'pendingYard',
+  'summary',
+  'glassCard',
+]) {
+  if (warehouseLanding.includes(forbiddenLandingSurface)) {
+    fail('Início voltou a fragmentar a cena em cards/painéis: ' + forbiddenLandingSurface);
+  }
+}
 for (const forbiddenLandingToken of [
   'listWarehouseMaterials(',
   'listWarehousePositiveBalances(',
