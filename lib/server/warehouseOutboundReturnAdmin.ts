@@ -936,7 +936,9 @@ export async function returnWarehouseStockOutboundAdmin(
     if (
       consumption.origin !== 'STOCK_OUTBOUND'
       || !consumption.materialId
+      || !/^mat_[a-f0-9]{32}$/.test(consumption.materialId)
       || !consumption.movementId
+      || !/^mov_[a-f0-9]{64}$/.test(consumption.movementId)
       || consumption.legacy
     ) {
       throw new WarehouseOutboundReturnFailure(
