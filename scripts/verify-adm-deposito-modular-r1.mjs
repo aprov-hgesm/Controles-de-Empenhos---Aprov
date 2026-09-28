@@ -129,6 +129,7 @@ const navigation = readFileSync(
   resolve(root, 'features/warehouse/navigation.ts'),
   'utf8'
 );
+const normalizedNavigation = navigation.replaceAll('\r\n', '\n');
 const warehouseRootRoute = readFileSync(
   resolve(root, 'app/adm-deposito/page.tsx'),
   'utf8'
@@ -675,20 +676,16 @@ requireText(
   "id: 'home'",
   'Navegação perdeu a nova aba Início.'
 );
-if (
-  !/id: 'overview',[\\s\\S]{0,180}label: 'Meus Depósitos',\\r?\\n\\s+href: '\\/adm-deposito\\/meus-depositos'/.test(
-    navigation
-  )
-) {
-  fail('Meus Depósitos perdeu sua rota dedicada.');
-}
-if (
-  !/id: 'depots',[\\s\\S]{0,180}label: 'Controle de Depósitos',\\r?\\n\\s+href: '\\/adm-deposito\\/controle-de-depositos'/.test(
-    navigation
-  )
-) {
-  fail('Controle de Depósitos perdeu sua rota dedicada.');
-}
+requireText(
+  normalizedNavigation,
+  "id: 'overview',\n    label: 'Meus Depósitos',\n    href: '/adm-deposito/meus-depositos'",
+  'Meus Depósitos perdeu sua rota dedicada.'
+);
+requireText(
+  normalizedNavigation,
+  "id: 'depots',\n    label: 'Controle de Depósitos',\n    href: '/adm-deposito/controle-de-depositos'",
+  'Controle de Depósitos perdeu sua rota dedicada.'
+);
 requireText(
   warehouseRootRoute,
   'section="home"',
