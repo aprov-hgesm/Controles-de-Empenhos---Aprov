@@ -2107,3 +2107,19 @@ Data: 2026-09-27.
 - Lotes inativos ou com quantidade zero não participam do filtro/ordenação de validade atual, embora possam continuar acessíveis no detalhe histórico do material.
 - Lotes vencidos com saldo físico positivo continuam visíveis e naturalmente aparecem no topo pela data menor, com sua sinalização crítica; não se apaga ou oculta estoque físico existente apenas por estar vencido.
 - A recomendação FEFO continua independente e não recomenda lote vencido para retirada.
+
+
+## D-104 — Relatórios de Saída e de Consumo Imediato são superfícies separadas
+
+Data: 2026-09-27.
+
+- A antiga apresentação combinada **Consumo e saídas** deixa de ser a navegação oficial.
+- Em **Controle de Itens → Relatórios**, passam a existir duas superfícies distintas:
+  - **Relatórios de Saída** — origem fixa `STOCK_OUTBOUND`;
+  - **Relatórios de Consumo Imediato** — origem fixa `IMMEDIATE_CONSUMPTION`.
+- O relatório interno da aba principal **Saída de Material** também fica permanentemente restrito a `STOCK_OUTBOUND`.
+- O operador não escolhe manualmente a origem nessas duas superfícies; a separação é estrutural para evitar mistura conceitual.
+- Ambas continuam usando `warehouse_consumption_record_v1`, portanto não é criada nova coleção, novo saldo nem segunda autoridade quantitativa.
+- Relatórios de Saída preservam compatibilidade com movimentos legados `EXPRESS_OUTBOUND` ainda não projetados.
+- Relatórios de Consumo Imediato não consultam a projeção legada de movimentos de saída, evitando leitura sem utilidade para esse relatório.
+- Períodos, destino, retirante/recebedor, consolidação por material, CSV, impressão e acompanhamento SISCOFIS continuam disponíveis em cada relatório.
