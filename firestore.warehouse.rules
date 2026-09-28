@@ -504,8 +504,27 @@ service cloud.firestore {
         );
     }
 
+    function validWarehouseLotReturnQuantityUpdate(workspaceId, lotId) {
+      return resource.data.schemaVersion == 'warehouse_lot_v1'
+        && resource.data.id == lotId
+        && resource.data.workspaceId == workspaceId
+        && resource.data.ug is string
+        && resource.data.materialId is string
+        && resource.data.status == 'active'
+        && request.resource.data.quantity is number
+        && request.resource.data.quantity > resource.data.quantity
+        && request.resource.data.quantity <= 1000000000
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'quantity', 'updatedBy', 'updatedAt'
+        ]);
+    }
+
     function validWarehouseLotUpdate(workspaceId, lotId) {
-      return validWarehouseLotDocument(workspaceId, lotId)
+      return validWarehouseLotReturnQuantityUpdate(workspaceId, lotId)
+        || (
+          validWarehouseLotDocument(workspaceId, lotId)
         && request.resource.data.id == resource.data.id
         && request.resource.data.workspaceId == resource.data.workspaceId
         && request.resource.data.ug == resource.data.ug
@@ -522,6 +541,7 @@ service cloud.firestore {
           request.resource.data.materialId,
           request.resource.data.ug,
           request.resource.data.origin
+        )
         );
     }
 
@@ -1566,60 +1586,16 @@ service cloud.firestore {
         && original.source.lotId == movement.source.lotId;
     }
 
-    function warehouseOutboundReturnConsumptionMatchesAfter(workspaceId, movementId, movement) {
+    function warehouseOutboundReturnConsumptionAllows(workspaceId, movement) {
       let p = /databases/$(database)/documents/warehouse/$(workspaceId)/consumptions/$(movement.source.consumptionId);
-      let before = get(p).data;
-      let after = getAfter(p).data;
-      let returnedBefore = warehouseConsumptionReturnedQuantity(before);
+      let consumption = get(p).data;
+      let returnedBefore = warehouseConsumptionReturnedQuantity(consumption);
       return exists(p)
-        && existsAfter(p)
-        && before.origin == 'STOCK_OUTBOUND'
-        && before.materialId == movement.materialId
-        && before.movementId == movement.source.originalMovementId
+        && consumption.origin == 'STOCK_OUTBOUND'
+        && consumption.materialId == movement.materialId
+        && consumption.movementId == movement.source.originalMovementId
         && returnedBefore >= 0
-        && returnedBefore + movement.source.quantity <= before.quantity
-        && after.returnedQuantity == returnedBefore + movement.source.quantity
-        && after.lastReturnMovementId == movementId
-        && after.lastReturnAt == request.time
-        && after.lastReturnBy == request.auth.uid
-        && after.lastReturnReason == movement.source.reason;
-    }
-
-    function warehouseOutboundReturnLocationMatchesAfter(workspaceId, movementId, movement) {
-      let p = /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(movement.source.locationBalanceId);
-      let before = get(p).data;
-      let after = getAfter(p).data;
-      return exists(p)
-        && existsAfter(p)
-        && before.materialId == movement.materialId
-        && before.ug == movement.ug
-        && before.position == movement.source.position
-        && after.materialId == before.materialId
-        && after.ug == before.ug
-        && after.position == before.position
-        && after.revision == before.revision + 1
-        && after.quantity == before.quantity + movement.source.quantity
-        && after.lastMovementId == movementId;
-    }
-
-    function warehouseOutboundReturnSelectedLotMatchesAfter(workspaceId, movement) {
-      let p = /databases/$(database)/documents/warehouse/$(workspaceId)/lots/$(movement.source.lotId);
-      let before = get(p).data;
-      let after = getAfter(p).data;
-      return exists(p)
-        && existsAfter(p)
-        && before.materialId == movement.materialId
-        && before.ug == movement.ug
-        && before.position == movement.source.position
-        && before.status == 'active'
-        && after.quantity == before.quantity + movement.source.quantity
-        && after.updatedBy == request.auth.uid
-        && after.updatedAt == request.time;
-    }
-
-    function warehouseOutboundReturnLotMatchesAfter(workspaceId, movement) {
-      return movement.source.lotId == null
-        || warehouseOutboundReturnSelectedLotMatchesAfter(workspaceId, movement);
+        && returnedBefore + movement.source.quantity <= consumption.quantity;
     }
 
     function validWarehouseOutboundReturnSource(source, movement) {
@@ -1695,11 +1671,8 @@ service cloud.firestore {
         )
         && validWarehouseOutboundReturnSource(movement.source, movement)
         && movement.createdAt == request.time
-        && warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId)
         && warehouseOutboundReturnOriginalMatches(workspaceId, movement)
-        && warehouseOutboundReturnConsumptionMatchesAfter(workspaceId, movementId, movement)
-        && warehouseOutboundReturnLocationMatchesAfter(workspaceId, movementId, movement)
-        && warehouseOutboundReturnLotMatchesAfter(workspaceId, movement);
+        && warehouseOutboundReturnConsumptionAllows(workspaceId, movement);
     }
 
     function warehouseMovementCreateAllowed(workspaceId, movementId) {
@@ -2890,8 +2863,8 @@ service cloud.firestore {
     }
 
     function validWarehouseConsumptionUpdate(workspaceId, consumptionId) {
-      return validWarehouseConsumptionSiscofisUpdate(workspaceId, consumptionId)
-        || validWarehouseConsumptionReturnUpdate(workspaceId, consumptionId);
+      return validWarehouseConsumptionReturnUpdate(workspaceId, consumptionId)
+        || validWarehouseConsumptionSiscofisUpdate(workspaceId, consumptionId);
     }
 
     function warehouseItemIntakeV2StatusMatchesQuantities() {
