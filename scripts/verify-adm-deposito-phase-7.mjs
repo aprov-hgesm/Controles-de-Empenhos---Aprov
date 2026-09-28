@@ -37,7 +37,7 @@ for (const marker of [
   'warehouseLotExpiryState',
   'selectWarehouseFefoLot',
   'buildWarehouseLogisticsPendencies',
-  'LOT_INFORMATION_MISSING',
+  'LOT_EXPIRY_MISSING',
   'EXPIRED_LOT',
 ]) {
   requireText(lot, marker, 'Domínio de lote/validade/FEFO incompleto: ' + marker);
@@ -109,9 +109,9 @@ for (const marker of [
 for (const marker of [
   'warehouse-stock-operational',
   'warehouse-fefo-recommendation',
-  'LOTE-FEFO-PRIMEIRO',
+  '30/10/2026',
   'warehouse-lot-save',
-  'E2E-FASE7',
+  '2026-10-30',
   'page.reload()',
 ]) {
   requireText(browserE2e, marker, 'Browser E2E da FASE 7 incompleto: ' + marker);
