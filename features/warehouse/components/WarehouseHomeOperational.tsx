@@ -14,10 +14,10 @@ import {
   Warehouse,
 } from 'lucide-react';
 
-import { listWarehouseBalances } from '../../../lib/warehouse/ledgerRepository';
+import { listWarehousePositiveBalances } from '../../../lib/warehouse/ledgerRepository';
 import {
   listWarehouseDepots,
-  listWarehouseLocationBalances,
+  listWarehousePositiveLocationBalances,
   listWarehouseLocations,
   type WarehouseDepotListItem,
   type WarehouseLocationBalanceListItem,
@@ -123,8 +123,8 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
           listWarehouseMaterials(workspaceId, 250),
           listWarehouseDepots(workspaceId, 250),
           listWarehouseLocations(workspaceId, 500),
-          listWarehouseLocationBalances(workspaceId, 500),
-          listWarehouseBalances(workspaceId, 250),
+          listWarehousePositiveLocationBalances(workspaceId, 500),
+          listWarehousePositiveBalances(workspaceId, 250),
         ]);
 
       setData({
@@ -192,9 +192,24 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
     [activeDepots, selectedDepotId]
   );
 
+  const depotPhysicalBalances = useMemo(
+    () => data.locationBalances.filter(
+      (item) => item.balance.quantity > 0 && isPositionInDepot(item, selectedDepotId)
+    ),
+    [data.locationBalances, selectedDepotId]
+  );
+
+  const depotMaterialIds = useMemo(
+    () => new Set(depotPhysicalBalances.map((item) => item.balance.materialId)),
+    [depotPhysicalBalances]
+  );
+
   const selectedMaterial = useMemo(
-    () => data.materials.find((material) => material.id === selectedMaterialId) || null,
-    [data.materials, selectedMaterialId]
+    () =>
+      depotMaterialIds.has(selectedMaterialId)
+        ? data.materials.find((material) => material.id === selectedMaterialId) || null
+        : null,
+    [data.materials, depotMaterialIds, selectedMaterialId]
   );
 
   const materialMatches = useMemo(() => {
@@ -202,6 +217,7 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
     if (!normalized) return [];
 
     return data.materials
+      .filter((material) => depotMaterialIds.has(material.id))
       .filter((material) =>
         [material.description, material.id, ...material.aliases]
           .join(' ')
@@ -209,7 +225,13 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
           .includes(normalized)
       )
       .slice(0, 8);
-  }, [data.materials, query]);
+  }, [data.materials, depotMaterialIds, query]);
+
+  useEffect(() => {
+    if (selectedMaterialId && !depotMaterialIds.has(selectedMaterialId)) {
+      setSelectedMaterialId('');
+    }
+  }, [depotMaterialIds, selectedMaterialId]);
 
   useEffect(() => {
     let active = true;
@@ -235,13 +257,6 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
       active = false;
     };
   }, [selectedDepotId, workspaceId]);
-
-  const depotPhysicalBalances = useMemo(
-    () => data.locationBalances.filter(
-      (item) => item.balance.quantity > 0 && isPositionInDepot(item, selectedDepotId)
-    ),
-    [data.locationBalances, selectedDepotId]
-  );
 
   const depotMaterialBalances = useMemo(
     () => depotPhysicalBalances.filter(
