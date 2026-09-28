@@ -631,6 +631,49 @@ requireText(
   'WarehouseInventoryHistoryReport',
   'Relatórios do Controle voltaram a usar a superfície operacional de Inventário.'
 );
+requireText(
+  logisticsReports,
+  "{ id: 'outbound', label: 'Relatórios de Saída' }",
+  'Relatórios do Controle perderam a separação de Saída.'
+);
+requireText(
+  logisticsReports,
+  "{ id: 'immediate', label: 'Relatórios de Consumo Imediato' }",
+  'Relatórios do Controle perderam a separação de Consumo Imediato.'
+);
+requireText(
+  logisticsReports,
+  'fixedOrigin="STOCK_OUTBOUND"',
+  'Relatórios de Saída deixaram de fixar a origem STOCK_OUTBOUND.'
+);
+requireText(
+  logisticsReports,
+  'fixedOrigin="IMMEDIATE_CONSUMPTION"',
+  'Relatórios de Consumo Imediato deixaram de fixar a origem correta.'
+);
+if (logisticsReports.includes("{ id: 'consumption', label: 'Consumo e saídas' }")) {
+  fail('Relatórios voltaram a misturar Saída e Consumo Imediato na mesma subaba.');
+}
+requireText(
+  materialWithdrawal,
+  'fixedOrigin="STOCK_OUTBOUND"',
+  'Relatórios internos da Saída de Material voltaram a misturar consumo imediato.'
+);
+requireText(
+  consumptionReports,
+  "? 'Relatórios de Saída'",
+  'Componente de relatórios perdeu o título específico de Saída.'
+);
+requireText(
+  consumptionReports,
+  "? 'Relatórios de Consumo Imediato'",
+  'Componente de relatórios perdeu o título específico de Consumo Imediato.'
+);
+requireText(
+  consumptionReports,
+  "includeLegacy: fixedOrigin !== 'IMMEDIATE_CONSUMPTION'",
+  'Relatório de Consumo Imediato voltou a consultar movimentos legados de saída sem necessidade.'
+);
 if (logisticsReports.includes('WarehouseInventoryOperational')) {
   fail('Relatórios voltaram a permitir mutação de inventário fora da subaba Inventário.');
 }
@@ -788,6 +831,7 @@ console.log('- Saída de Material gera PDF duplo: retirada física + ficha auxil
 console.log('- Saída de Material e seus Relatórios seguem o tema claro oficial D-076/VISUAL_IDENTITY');
 console.log('- Saída de Material reduz ledger/posição/lote e saldo zero deixa de ser projetado no croqui');
 console.log('- Controle de Itens consolidado em Resumo, Estoque, Movimentações, Inventário e Relatórios');
+console.log('- Relatórios separados em Saída e Consumo Imediato, sem mistura de origens');
 console.log('- Estoque exibe somente saldo positivo e prioriza a menor validade ativa');
 console.log('- Inventário opera no database dedicado com contagem isolada e ajuste confirmado');
 console.log('- SISCOFIS no Controle é somente leitura; migração permanece em Alocação de Material');
