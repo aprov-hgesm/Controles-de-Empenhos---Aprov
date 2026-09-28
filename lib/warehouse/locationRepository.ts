@@ -6,6 +6,7 @@ import {
   limit,
   query,
   runTransaction,
+  where,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -545,6 +546,34 @@ export async function listWarehouseLocationBalances(
   try {
     const snapshot = await getDocs(query(collection(db, path), limit(Math.max(1, Math.min(maxResults, 500)))));
   recordWarehouseDocumentReads(workspaceId, snapshot.size);
+    return snapshot.docs.map((item) => {
+      const data = item.data() as Record<string, unknown>;
+      return {
+        balance: parseLocationBalance(scope.workspaceId, item.id, data),
+        updatedAt: timestampToIso(data.updatedAt),
+      };
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return [];
+  }
+}
+
+export async function listWarehousePositiveLocationBalances(
+  workspaceId: string,
+  maxResults = 500
+): Promise<WarehouseLocationBalanceListItem[]> {
+  const scope = currentScope(workspaceId);
+  const path = warehouseDomainPath(scope.workspaceId, 'locationBalances');
+  try {
+    const snapshot = await getDocs(
+      query(
+        collection(db, path),
+        where('quantity', '>', 0),
+        limit(Math.max(1, Math.min(maxResults, 500)))
+      )
+    );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs.map((item) => {
       const data = item.data() as Record<string, unknown>;
       return {
