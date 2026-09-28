@@ -845,6 +845,16 @@ requireText(
   'Edição de item perdeu a simplificação para descritivo, validade e código de barras.'
 );
 requireText(
+  allocatedItems,
+  'createWarehousePendingLotCode(crypto.randomUUID())',
+  'Item legado sem referência técnica deixou de permitir cadastro simples de validade.'
+);
+requireText(
+  allocatedItems,
+  'createWarehouseLot(workspaceId, {',
+  'Item legado sem validade deixou de criar a referência técnica interna necessária.'
+);
+requireText(
   materialWithdrawal,
   'Validade / FEFO',
   'Saída de Material voltou a expor lote em vez de validade.'
