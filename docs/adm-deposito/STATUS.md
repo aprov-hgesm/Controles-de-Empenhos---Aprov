@@ -3461,3 +3461,22 @@ Validação local ainda necessária:
 - `npm.cmd run verify:adm-deposito-modular-r1`.
 
 Como houve alteração visual/interativa relevante, após os gates de código deve ser feita inspeção manual no localhost do Início, incluindo pesquisa, troca de depósito, destaque de material e troca de ângulos da Visão 3D.
+
+
+### Início premium — primeira bateria local e saneamento de guards legados — 2026-09-28
+
+Bateria recebida no commit `f65a2f3`:
+- `npm.cmd run typecheck` — PASS;
+- `npm.cmd run test:adm-deposito-depot-locator` — PASS, 8/8;
+- `npm.cmd run test:adm-deposito-stock-operational` — PASS, 20/20;
+- `npm.cmd run verify:adm-deposito-modular-r1` — PASS;
+- `test:adm-deposito-depot-layout` executou 16 testes, com 14 PASS e 2 falsos negativos por expectativas antigas de texto/estrutura;
+- `verify:adm-deposito-phase-9` falhou por ainda exigir `WarehouseDepotViewOperational` diretamente em `WarehouseDepotsOperational`, embora a composição ativa seja `WarehouseLocationsR1Operational` + `WarehouseCroquisR1Operational`.
+
+Saneamento aplicado sem alteração funcional:
+- expectativa visual do editor atualizada de **Prévia 2.5D** para **Prévia 3D**;
+- teste do Início atualizado para a linguagem e estrutura atuais da Home premium (`fora da visão atual`, validade/FEFO, `locationRows` e renderer `WarehouseIsometricPreview`);
+- guard da FASE 9 atualizado para reconhecer as superfícies R1 efetivamente montadas em Meus Depósitos;
+- guard da FASE 9 passou a exigir que o Croquis R1 mantenha editor, renderer 3D, persistência versionada e leitura de saldos físicos.
+
+Nenhuma Firestore Rule ou lógica de saldo foi alterada neste saneamento.
