@@ -672,8 +672,13 @@ requireText(
 );
 requireText(
   consumptionReports,
-  "if (fixedOrigin === 'STOCK_OUTBOUND')",
-  'Relatórios de Saída deixaram de carregar automaticamente.'
+  "fixedOrigin === 'STOCK_OUTBOUND'",
+  'Registro de Saídas deixou de condicionar o carregamento automático à origem STOCK_OUTBOUND.'
+);
+requireText(
+  consumptionReports,
+  'initialOutboundLoadDone.current = true',
+  'Registro de Saídas deixou de executar a carga automática inicial.'
 );
 requireText(
   consumptionReports,
