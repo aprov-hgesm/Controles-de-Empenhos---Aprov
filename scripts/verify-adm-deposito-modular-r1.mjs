@@ -688,6 +688,51 @@ for (const visualToken of [
     'Paleta oficial compartilhada das caixas foi alterada fora da decisão visual consolidada.'
   );
 }
+for (const palletVisualToken of [
+  "topLight: '#e8bf7a'",
+  "topMid: '#cf9650'",
+  "topDark: '#b77939'",
+  "frontFill: '#9b642f'",
+  "sideFill: '#7c4a22'",
+  "runnerFill: '#70431f'",
+  "blockFill: '#65411f'",
+]) {
+  requireText(
+    warehouseVisualStyle,
+    palletVisualToken,
+    'Paleta oficial compartilhada dos paletes foi alterada fora da decisão visual consolidada.'
+  );
+}
+requireText(
+  warehouseLanding,
+  'function warehousePallet(',
+  'Início perdeu o renderer único oficial dos paletes.'
+);
+requireText(
+  warehouseLanding,
+  "'receiving-warehouse-pallet'",
+  'Área de recebimento deixou de reutilizar o renderer oficial dos paletes.'
+);
+requireText(
+  warehouseLanding,
+  "'allocated-warehouse-pallet'",
+  'Estoque interno deixou de reutilizar o renderer oficial dos paletes.'
+);
+requireText(
+  isometricPreview,
+  'data-visual-role="warehouse-pallet"',
+  'Renderer 3D compartilhado perdeu o palete visual padronizado.'
+);
+requireText(
+  warehouseLanding,
+  'WAREHOUSE_PALLET_VISUAL',
+  'Início deixou de usar a paleta oficial compartilhada dos paletes.'
+);
+requireText(
+  isometricPreview,
+  'WAREHOUSE_PALLET_VISUAL',
+  'Visão 3D deixou de usar a paleta oficial compartilhada dos paletes.'
+);
 if (isometricPreview.includes("fill={selected ? '#ffe8a8' : '#e7b26b'}")) {
   fail('Renderer 3D voltou a usar a caixa visual antiga em vez da paleta compartilhada.');
 }
