@@ -832,8 +832,13 @@ requireText(
 );
 requireText(
   consumptionReports,
-  "? 'Relatórios de Saída'",
-  'Componente de relatórios perdeu o título específico de Saída.'
+  "? 'Registro de Saídas'",
+  'Registro de Saídas perdeu o título operacional específico.'
+);
+requireText(
+  consumptionReports,
+  'initialOutboundLoadDone.current',
+  'Registro de Saídas voltou a repetir leituras automáticas a cada alteração de período.'
 );
 requireText(
   consumptionReports,
@@ -1213,7 +1218,7 @@ console.log('- ficha PDF otimizada para toner P&B, com grayscale neutro e conten
 console.log('- Saída de Material gera PDF duplo: retirada física + ficha auxiliar SISCOFIS com controle/código');
 console.log('- Saída de Material e seus Relatórios seguem o tema claro oficial D-076/VISUAL_IDENTITY');
 console.log('- Saída de Material reduz ledger/posição/lote e saldo zero deixa de ser projetado no croqui');
-console.log('- Relatórios de Saída carregam o mês automaticamente e permitem devolução parcial/total auditável ao estoque');
+console.log('- Registro de Saídas carrega o mês uma vez e permite devolução parcial/total auditável ao estoque');
 console.log('- Controle de Itens consolidado em Resumo, Estoque, Movimentações, Inventário e Relatórios');
 console.log('- Relatórios separados em Saída e Consumo Imediato, sem mistura de origens');
 console.log('- Estoque exibe somente saldo positivo e prioriza a menor validade ativa');
