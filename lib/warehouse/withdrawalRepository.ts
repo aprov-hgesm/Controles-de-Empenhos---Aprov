@@ -1026,10 +1026,10 @@ export async function returnWarehouseStockOutbound(
   );
   warnings.push(...returnedEntry.warnings);
 
-  let updatedConsumption: WarehouseConsumptionRecord | null = null;
+  let updatedConsumption: WarehouseConsumptionRecord;
 
   try {
-    await runTransaction(db, async (transaction) => {
+    updatedConsumption = await runTransaction(db, async (transaction) => {
       const consumptionRef = doc(db, consumptionPath);
       const latestSnapshot = await transaction.get(consumptionRef);
       if (!latestSnapshot.exists()) {
@@ -1043,8 +1043,7 @@ export async function returnWarehouseStockOutbound(
       );
 
       if (latest.lastReturnMovementId === returnedEntry.entry.movement.id) {
-        updatedConsumption = latest;
-        return;
+        return latest;
       }
 
       const latestRemaining = normalizeWarehouseQuantity(
@@ -1070,7 +1069,7 @@ export async function returnWarehouseStockOutbound(
         updatedAt: serverTimestamp(),
       });
 
-      updatedConsumption = {
+      return {
         ...latest,
         returnedQuantity: nextReturned,
         lastReturnMovementId: returnedEntry.entry.movement.id,
@@ -1083,10 +1082,6 @@ export async function returnWarehouseStockOutbound(
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, consumptionPath);
     throw error;
-  }
-
-  if (!updatedConsumption) {
-    throw new Error('WAREHOUSE_OUTBOUND_RETURN_UPDATE_FAILED');
   }
 
   return {
