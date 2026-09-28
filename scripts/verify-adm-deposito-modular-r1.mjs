@@ -426,7 +426,7 @@ requireText(
 requireText(
   sectionContent,
   "if (section === 'depots')",
-  'Meus Depósitos deve permanecer operacional.'
+  'Controle de Depósitos deve permanecer operacional.'
 );
 requireText(
   sectionContent,
@@ -1274,7 +1274,7 @@ if (findings.length) {
 }
 
 console.log('ADM Depósito modular guard: PASS');
-console.log('- Início premium, Meus Depósitos, Alocação de Material, Saída de Material e Controle de Materiais operacionais');
+console.log('- Início premium, Controle de Depósitos, Alocação de Material, Saída de Material e Controle de Materiais operacionais');
 console.log('- Início reutiliza a Visão 3D oficial, sem lote visível nem ações operacionais duplicadas');
 console.log('- rules em ' + (rulesBytes / 1024).toFixed(2) + ' KiB (orçamento interno: 150 KiB)');
 console.log('- NF/Pregão podem ser armazenados, consumidos imediatamente ou removidos logicamente da fila');
