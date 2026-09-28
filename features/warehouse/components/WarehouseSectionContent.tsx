@@ -9,7 +9,7 @@ import { WarehouseHomeOperational } from './WarehouseHomeOperational';
 
 function WarehouseModularR1Notice({ section }: { section: WarehouseSectionId }) {
   const labels: Record<WarehouseSectionId, string> = {
-    overview: 'Início',
+    overview: 'Meus Depósitos',
     registration: 'Alocação de Material',
     outbound: 'Saída de Material',
     depots: 'Controle de Depósitos',
