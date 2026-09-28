@@ -148,34 +148,47 @@
   opacity: .82;
 }
 
-.depotGroup:hover .depotLabel,
-.depotGroup:focus-visible .depotLabel {
-  opacity: 1;
+.textBackdrop {
+  fill: rgba(3, 8, 20, .82);
+  stroke: rgba(155, 184, 238, .18);
+  stroke-width: .8px;
 }
 
+.textBackdropSoft {
+  fill: rgba(3, 8, 20, .68);
+  stroke: rgba(139, 166, 216, .13);
+  stroke-width: .7px;
+}
+
+.yardTextBackdrop {
+  fill: rgba(3, 8, 20, .9);
+  stroke: rgba(166, 194, 244, .24);
+  stroke-width: .9px;
+}
+
+
 .depotLabel {
-  opacity: .82;
-  transition: opacity 150ms ease;
+  opacity: .96;
   pointer-events: none;
 }
 
 .depotCode {
-  fill: rgba(171, 199, 255, .92);
+  fill: rgba(190, 213, 255, .98);
   font-size: 9px;
   font-weight: 950;
   letter-spacing: .14em;
   paint-order: stroke;
-  stroke: rgba(2, 7, 18, .84);
-  stroke-width: 3px;
+  stroke: rgba(1, 5, 14, .98);
+  stroke-width: 3.4px;
 }
 
 .depotName {
-  fill: rgba(229, 238, 255, .9);
+  fill: rgba(244, 248, 255, .99);
   font-size: 10px;
-  font-weight: 850;
+  font-weight: 900;
   paint-order: stroke;
-  stroke: rgba(2, 7, 18, .9);
-  stroke-width: 3px;
+  stroke: rgba(1, 5, 14, .99);
+  stroke-width: 3.4px;
 }
 
 .depotStatus {
@@ -188,22 +201,22 @@
 }
 
 .yardTitle {
-  fill: rgba(174, 193, 229, .64);
-  font-size: 8.5px;
+  fill: rgba(239, 245, 255, .99);
+  font-size: 8.8px;
   font-weight: 950;
   letter-spacing: .14em;
   paint-order: stroke;
-  stroke: rgba(2, 7, 18, .88);
-  stroke-width: 3px;
+  stroke: rgba(1, 5, 14, .98);
+  stroke-width: 3.4px;
 }
 
 .yardSubtitle {
-  fill: rgba(120, 143, 186, .48);
+  fill: rgba(193, 208, 237, .92);
   font-size: 7px;
-  font-weight: 750;
+  font-weight: 800;
   paint-order: stroke;
-  stroke: rgba(2, 7, 18, .86);
-  stroke-width: 2.5px;
+  stroke: rgba(1, 5, 14, .98);
+  stroke-width: 3px;
 }
 
 .pendingPallet {
@@ -215,30 +228,30 @@
 }
 
 .palletLabel {
-  fill: rgba(192, 204, 226, .68);
+  fill: rgba(231, 238, 250, .95);
   font-size: 7.4px;
   font-weight: 900;
   paint-order: stroke;
-  stroke: rgba(2, 7, 18, .9);
-  stroke-width: 2.6px;
+  stroke: rgba(1, 5, 14, .98);
+  stroke-width: 2.9px;
 }
 
 .palletDetail {
-  fill: rgba(132, 151, 188, .44);
+  fill: rgba(178, 194, 225, .82);
   font-size: 6.3px;
-  font-weight: 700;
+  font-weight: 750;
   paint-order: stroke;
-  stroke: rgba(2, 7, 18, .88);
-  stroke-width: 2.2px;
+  stroke: rgba(1, 5, 14, .98);
+  stroke-width: 2.6px;
 }
 
 .morePending {
-  fill: rgba(222, 182, 121, .72);
+  fill: rgba(247, 205, 136, .97);
   font-size: 7px;
-  font-weight: 850;
+  font-weight: 900;
   paint-order: stroke;
-  stroke: rgba(2, 7, 18, .88);
-  stroke-width: 2.6px;
+  stroke: rgba(1, 5, 14, .98);
+  stroke-width: 3px;
 }
 
 .emptyTitle {
