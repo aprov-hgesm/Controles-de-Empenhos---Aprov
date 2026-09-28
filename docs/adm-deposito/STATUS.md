@@ -3433,3 +3433,31 @@ Validação concluída no commit `36da7dc`:
 - Descritivo, Validade e Código de Barras são os dados editáveis visíveis do item;
 - referências a lote remanescentes são exclusivamente técnicas/internas para compatibilidade de validade, FEFO, baixa, histórico e segurança;
 - nenhuma Firestore Rule foi alterada e nenhum deploy adicional é necessário.
+
+
+### Início — central visual premium imersiva — 2026-09-28
+
+Implementação executada:
+- `WarehouseSectionContent` passou a abrir o `WarehouseHomeOperational` real em `overview`; o placeholder modular deixou de ocupar a rota Início;
+- o shell do ADM ativa `AppBackground immersive` somente no Início;
+- criado `WarehouseHomeOperational.module.css` com atmosfera inspirada na Home principal: azul profundo, luz radial, textura discreta, grade espacial, vidro translúcido e moldura técnica;
+- nenhuma animação contínua, parallax ou sistema pesado de partículas foi introduzido;
+- o Início reutiliza `WarehouseIsometricPreview` em modo `embedded`, usando o renderer oficial da Prévia/Visão 3D em vez do antigo canvas simplificado;
+- o renderer embutido preserva as vistas Frente, Direita, Trás e Esquerda;
+- pesquisa de material e seleção de depósito ficam na coluna lateral;
+- ficha consultiva mostra saldo total, saldo no depósito, posições físicas e validade/FEFO;
+- validade é agregada visualmente por data para esconder referências técnicas internas;
+- nenhum código/número de lote é exibido;
+- o Início não oferece edição de item, transferência, saída, inventário ou alteração estrutural;
+- configuração do croqui continua exclusivamente em **Meus Depósitos**;
+- guard modular reforçado para proteger ativação real do Início, renderer oficial, modo imersivo e ausência de ações operacionais duplicadas.
+
+Validação local ainda necessária:
+- `npm.cmd run typecheck`;
+- `npm.cmd run test:adm-deposito-depot-layout`;
+- `npm.cmd run test:adm-deposito-depot-locator`;
+- `npm.cmd run test:adm-deposito-stock-operational`;
+- `npm.cmd run verify:adm-deposito-phase-9`;
+- `npm.cmd run verify:adm-deposito-modular-r1`.
+
+Como houve alteração visual/interativa relevante, após os gates de código deve ser feita inspeção manual no localhost do Início, incluindo pesquisa, troca de depósito, destaque de material e troca de ângulos da Visão 3D.
