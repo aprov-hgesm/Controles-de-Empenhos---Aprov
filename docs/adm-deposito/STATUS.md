@@ -3587,3 +3587,30 @@ Validação local pendente após esta reestruturação:
 - `npm.cmd run test:adm-deposito-barcode-outbound`;
 - `npm.cmd run verify:adm-deposito-modular-r1`;
 - `npm.cmd run test:adm-deposito-modular-r1-security`.
+
+
+### Devolução de saída — arquitetura server-side definitiva — 2026-09-28
+
+Após repetidas reproduções do limite de **1000 expressões avaliadas** nas Firestore Rules, a estratégia client-side foi encerrada.
+
+Estado implementado:
+- a UI continua oferecendo **Cancelar / devolver** no Registro de Saídas;
+- `returnWarehouseStockOutbound` agora é apenas uma fachada client-side autenticada e chama `/api/adm-deposito/outbound-return`;
+- nova rota Node.js founder-only com token Firebase e proteção de burst;
+- novo serviço administrativo aponta explicitamente para `emprovex-warehouse` e usa `FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON`;
+- novo planner puro centraliza validação de quantidade, saída original, material, saldo e posição;
+- movimento + saldo agregado + saldo físico + `returnedQuantity` são confirmados numa única transação privilegiada;
+- replay por `operationId` é idempotente;
+- validade/lote é enriquecimento posterior, determinístico e não autoritativo;
+- Rules voltaram ao hot path anterior para OUTBOUND/TRANSFER/INVENTORY e **não aceitam OUTBOUND_RETURN pelo cliente**;
+- teste de segurança agora exige DENY para tentativa client-side de falsificar devolução;
+- ruleset voltou para aproximadamente 134 KiB, com margem confortável abaixo do orçamento interno de 150 KiB.
+
+Validação local necessária antes de qualquer deploy:
+- `npm.cmd run typecheck`;
+- `npm.cmd run test:adm-deposito-outbound-return`;
+- `npm.cmd run test:adm-deposito-barcode-outbound`;
+- `npm.cmd run verify:adm-deposito-modular-r1`;
+- `npm.cmd run test:adm-deposito-modular-r1-security`.
+
+Não publicar Rules nem aplicação antes desses gates.
