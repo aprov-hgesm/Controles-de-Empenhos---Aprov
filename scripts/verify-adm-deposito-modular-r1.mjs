@@ -13,6 +13,10 @@ const itemRegistration = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseItemRegistrationOperational.tsx'),
   'utf8'
 );
+const allocatedItems = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseAllocatedItemsOperational.tsx'),
+  'utf8'
+);
 const intakeStateRepository = readFileSync(
   resolve(root, 'lib/warehouse/intakeStateRepository.ts'),
   'utf8'
@@ -818,13 +822,52 @@ requireText(
 requireText(
   stockOperational,
   'updateWarehouseLot(workspaceId, editingLotId, {',
-  'Detalhe do item perdeu a edição de lote/validade.'
+  'Detalhe do item perdeu a edição de validade.'
 );
 requireText(
   stockOperational,
   'createWarehouseLot(workspaceId, {',
-  'Detalhe do item perdeu a inclusão de lote/validade.'
+  'Detalhe do item perdeu o registro técnico de validade.'
 );
+requireText(
+  itemRegistration,
+  "lotCode: ''",
+  'Alocação deixou de ocultar o código técnico de lote do operador.'
+);
+requireText(
+  stockOperational,
+  'createWarehousePendingLotCode(crypto.randomUUID())',
+  'Registro manual de validade deixou de gerar código técnico interno automaticamente.'
+);
+requireText(
+  allocatedItems,
+  'A validade é o único dado temporal editável do item.',
+  'Edição de item perdeu a simplificação para descritivo, validade e código de barras.'
+);
+requireText(
+  materialWithdrawal,
+  'Validade / FEFO',
+  'Saída de Material voltou a expor lote em vez de validade.'
+);
+requireText(
+  outboundDocuments,
+  'confira quantidade/validade',
+  'Documento de saída voltou a orientar conferência por lote.'
+);
+
+for (const [surfaceName, surfaceSource, forbiddenTokens] of [
+  ['Alocação de item', itemRegistration, ['Lote · opcional', 'setLotCode(', 'value={lotCode}']],
+  ['Itens armazenados', allocatedItems, ['Lote e validade', '>Lote:</span>', 'warehouseLotDisplayCode']],
+  ['Ficha do Estoque', stockOperational, ['Código do lote', 'warehouse-lot-create-code', '>Lotes e validade</p>', '>Lotes rastreados</p>']],
+  ['Saída de Material', materialWithdrawal, ['Lote / FEFO', 'Sem lote explícito', " · lote "]],
+  ['PDF de saída', outboundDocuments, ["'Lote ' +", "'Sem lote'"]],
+]) {
+  for (const forbiddenToken of forbiddenTokens) {
+    if (surfaceSource.includes(forbiddenToken)) {
+      fail(surfaceName + ' voltou a expor o dado de lote ao operador: ' + forbiddenToken);
+    }
+  }
+}
 requireText(
   locationRepository,
   'relocateLotIds?: string[];',
@@ -953,8 +996,8 @@ console.log('- Controle de Itens consolidado em Resumo, Estoque, Movimentações
 console.log('- Relatórios separados em Saída e Consumo Imediato, sem mistura de origens');
 console.log('- Estoque exibe somente saldo positivo e prioriza a menor validade ativa');
 console.log('- ficha do item separa localização física de saldo UNASSIGNED sem duplicação');
-console.log('- ficha do item centraliza realocação, lote, validade e códigos de barras');
-console.log('- realocação usa TRANSFER sem regravar saldo agregado e move lotes ativos na mesma transação');
+console.log('- item expõe somente descritivo, validade e código de barras como dados editáveis');
+console.log('- realocação usa TRANSFER sem regravar saldo agregado e preserva referências técnicas de validade');
 console.log('- edição de barcode preserva o código anterior inativo');
 console.log('- filtros do Estoque exibem apenas depósitos ativos, locais-pai e estados de validade');
 console.log('- Inventário opera no database dedicado com contagem isolada e ajuste confirmado');
