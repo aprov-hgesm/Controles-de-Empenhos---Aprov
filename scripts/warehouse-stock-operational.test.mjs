@@ -301,6 +301,41 @@ test('visão de Estoque exclui qualquer material sem saldo disponível', () => {
   assert.equal(stockView.hasWarehouseAvailableStock(-1), false);
 });
 
+
+test('local direto conta como localizado mesmo sem subposição', () => {
+  assert.equal(
+    stockView.isWarehouseLocatedBalance({
+      quantity: 100,
+      position: { kind: 'LOCATION' },
+    }),
+    true
+  );
+});
+
+test('subposição também conta como localizada e UNASSIGNED não entra na lista física', () => {
+  assert.equal(
+    stockView.isWarehouseLocatedBalance({
+      quantity: 50,
+      position: { kind: 'SUBPOSITION' },
+    }),
+    true
+  );
+  assert.equal(
+    stockView.isWarehouseLocatedBalance({
+      quantity: 340,
+      position: { kind: 'UNASSIGNED' },
+    }),
+    false
+  );
+  assert.equal(
+    stockView.isWarehouseLocatedBalance({
+      quantity: 0,
+      position: { kind: 'LOCATION' },
+    }),
+    false
+  );
+});
+
 test('visão de Estoque ordena primeiro a menor validade e deixa sem validade por último', () => {
   const rows = [
     {
