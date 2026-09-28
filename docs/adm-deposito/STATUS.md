@@ -3560,3 +3560,30 @@ Validação pendente:
 - guard modular;
 - Rules via emulador de segurança;
 - somente após todos os testes locais: deploy exclusivo de `firestore:emprovex-warehouse`.
+
+
+### Devolução de saída — diagnóstico profundo do limite de Rules — 2026-09-28
+
+Diagnóstico confirmado:
+- o erro recorrente não era saldo incorreto, TypeScript ou falha do ledger; era o limite de **1000 expressões avaliadas por request** das Firestore Rules;
+- o ruleset continuava abaixo do limite de tamanho, portanto reduzir KiB isoladamente não resolvia o problema;
+- a primeira implementação de devolução adicionou validações cruzadas repetidas em movement/balance/locationBalance/lot/consumption;
+- uma tentativa posterior adicionou `validWarehouseLotReturnQuantityUpdate` antes do validador normal de lote; em uma saída comum esse branch falhava e depois o validador normal ainda era avaliado, aumentando o custo do hot path histórico e fazendo até `OUTBOUND` ultrapassar o limite;
+- o guard antigo também procurava um literal de implementação já substituído, produzindo falso negativo apesar de a limitação quantitativa continuar presente.
+
+Correção arquitetural aplicada:
+- `validWarehouseLotUpdate` foi restaurado ao caminho anterior da saída comum;
+- `warehouseMovementCreateAllowed` voltou a priorizar TRANSFER/OUTBOUND/INVENTORY antes de OUTBOUND_RETURN, evitando custo novo em operações existentes;
+- `OUTBOUND_RETURN` exige um núcleo atômico de quatro documentos: movement + balance + locationBalance + consumption;
+- movement faz somente a prova mínima de que os três documentos companheiros foram escritos na mesma transação; cada um valida seu próprio delta;
+- lote/validade foi removido do núcleo autoritativo e passa a ser enriquecimento técnico separado, determinístico e idempotente;
+- se o enriquecimento falhar, o saldo continua corretamente devolvido e a interface emite aviso de revisão de validade;
+- teste de segurança foi ajustado para validar separadamente o retorno de saldo e a recomposição de validade;
+- guard modular atualizado para proteger o limite quantitativo, os companheiros atômicos e a ausência de lote dentro da transação principal.
+
+Validação local pendente após esta reestruturação:
+- `npm.cmd run typecheck`;
+- `npm.cmd run test:adm-deposito-outbound-return`;
+- `npm.cmd run test:adm-deposito-barcode-outbound`;
+- `npm.cmd run verify:adm-deposito-modular-r1`;
+- `npm.cmd run test:adm-deposito-modular-r1-security`.
