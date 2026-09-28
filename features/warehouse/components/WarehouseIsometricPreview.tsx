@@ -9,6 +9,7 @@ import type {
   WarehouseLocationBalance,
 } from '../../../lib/warehouse/location';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
+import { WAREHOUSE_BOX_VISUAL } from '../visualStyle';
 
 type Props = {
   logicalWidth: number;
@@ -139,19 +140,31 @@ function boxGroup(
   selected = false
 ) {
   return (
-    <g key={key} transform={'translate(' + x + ' ' + y + ') scale(' + scale + ')'}>
-      <ellipse cx="0" cy="24" rx="20" ry="7" fill="#0f172a" opacity="0.14" />
+    <g
+      key={key}
+      transform={'translate(' + x + ' ' + y + ') scale(' + scale + ')'}
+      data-visual-role="warehouse-stock-box"
+      data-selected={selected ? 'true' : 'false'}
+      opacity={selected ? 1 : 0.98}
+    >
       <polygon
-        points="-18,0 0,-10 18,0 0,10"
-        fill={selected ? '#ffe8a8' : '#e7b26b'}
-        stroke="#a96c31"
-        strokeWidth="1.25"
+        points="-14,0 0,-8 14,0 0,8"
+        fill={WAREHOUSE_BOX_VISUAL.topFill}
+        stroke={WAREHOUSE_BOX_VISUAL.topStroke}
+        strokeWidth="0.7"
       />
-      <polygon points="-18,0 0,10 0,31 -18,21" fill="#c8813b" stroke="#965525" strokeWidth="1.25" />
-      <polygon points="18,0 0,10 0,31 18,21" fill="#b56d31" stroke="#87491f" strokeWidth="1.25" />
-      <line x1="0" y1="-10" x2="0" y2="10" stroke="#f8dcad" strokeWidth="1.5" />
-      <rect x="-5.5" y="8" width="11" height="5" rx="1" fill="#fff4d8" opacity="0.96" />
-      <line x1="-13" y1="17" x2="-4" y2="22" stroke="#a76830" strokeWidth="0.8" opacity="0.7" />
+      <polygon
+        points="-14,0 0,8 0,22 -14,14"
+        fill={WAREHOUSE_BOX_VISUAL.frontFill}
+        stroke={WAREHOUSE_BOX_VISUAL.frontStroke}
+        strokeWidth="0.65"
+      />
+      <polygon
+        points="14,0 0,8 0,22 14,14"
+        fill={WAREHOUSE_BOX_VISUAL.sideFill}
+        stroke={WAREHOUSE_BOX_VISUAL.sideStroke}
+        strokeWidth="0.65"
+      />
     </g>
   );
 }
