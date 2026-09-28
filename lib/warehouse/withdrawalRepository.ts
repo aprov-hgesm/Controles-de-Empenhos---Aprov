@@ -1155,33 +1155,35 @@ export async function returnWarehouseStockOutbound(
       throw new Error('WAREHOUSE_OUTBOUND_RETURN_EXCEEDS_REMAINING');
     }
 
-    const common = {
-      schemaVersion: WAREHOUSE_OUTBOUND_RETURN_SCHEMA_VERSION,
-      id: consumptionId,
-      workspaceId: scope.workspaceId,
-      ug: scope.ug,
-      consumptionId,
-      materialId: consumption.materialId,
-      originalQuantity: consumption.quantity,
-      returnedQuantity: baseReturned,
-      pendingOperationId: operationId,
-      pendingQuantity: quantity,
-      pendingReason: reason,
-      pendingBy: scope.uid,
-      lastReturnOperationId: existing?.lastReturnOperationId || null,
-      lastReturnMovementId: existing?.lastReturnMovementId || null,
-      lastReturnAt: existing?.lastReturnAt || null,
-      lastReturnBy: existing?.lastReturnBy || null,
-      lastReturnReason: existing?.lastReturnReason || null,
-      updatedAt: serverTimestamp(),
-    };
-
     if (existing) {
-      transaction.update(summaryRef, common);
+      transaction.update(summaryRef, {
+        pendingOperationId: operationId,
+        pendingQuantity: quantity,
+        pendingReason: reason,
+        pendingBy: scope.uid,
+        updatedAt: serverTimestamp(),
+      });
     } else {
       transaction.set(summaryRef, {
-        ...common,
+        schemaVersion: WAREHOUSE_OUTBOUND_RETURN_SCHEMA_VERSION,
+        id: consumptionId,
+        workspaceId: scope.workspaceId,
+        ug: scope.ug,
+        consumptionId,
+        materialId: consumption.materialId,
+        originalQuantity: consumption.quantity,
+        returnedQuantity: baseReturned,
+        pendingOperationId: operationId,
+        pendingQuantity: quantity,
+        pendingReason: reason,
+        pendingBy: scope.uid,
+        lastReturnOperationId: null,
+        lastReturnMovementId: null,
+        lastReturnAt: null,
+        lastReturnBy: null,
+        lastReturnReason: null,
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
     }
   });
