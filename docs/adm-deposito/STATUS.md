@@ -3236,3 +3236,21 @@ Próximos gates obrigatórios antes de publicar as novas Rules:
 - `test:adm-deposito-modular-r1-security`.
 
 As novas Rules de inventário **ainda não devem ser consideradas publicadas** até os gates acima passarem e houver deploy explícito somente de `firestore:emprovex-warehouse`.
+
+
+### Deploy das Rules do Controle de Itens / Inventário — 2026-09-27
+
+Deploy concluído com sucesso no database dedicado `emprovex-warehouse`.
+
+Confirmações do Cloud Shell:
+- branch sincronizada no commit `ad1ef45`;
+- Firebase CLI autenticado e direcionado ao projeto `gen-lang-client-0982077967`;
+- ruleset criado: `c6cf2fe4-b308-4812-a910-053859126f1d`;
+- release atualizada em `cloud.firestore/emprovex-warehouse`;
+- API respondeu HTTP 200;
+- `firestore.warehouse.rules` foi liberado em produção;
+- deploy finalizado com `Deploy complete!`.
+
+Com isso, o domínio `inventories` e a configuração completa de **Controle de Itens** passaram a estar habilitados também no banco real dedicado, mantendo founder-only, workspace/UG, invariantes de ledger/saldo e bloqueio de gravações arbitrárias.
+
+Próxima validação operacional: smoke test no localhost das subabas **Resumo, Estoque, Movimentações, Inventário e Relatórios**, sem necessidade de novo deploy Vercel.
