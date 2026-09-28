@@ -2669,64 +2669,6 @@ service cloud.firestore {
         && request.resource.data.positionLabel.size() > 0
         && request.resource.data.positionLabel.size() <= 240
         && request.resource.data.siscofisStatus in ['PENDING', 'PREPARED', 'POSTED']
-        && request.resource.data.occurredAt is timestamp
-        && request.resource.data.updatedAt is timestamp
-        && (
-          request.resource.data.siscofisUpdatedBy == null
-          || (
-            request.resource.data.siscofisUpdatedBy is string
-            && request.resource.data.siscofisUpdatedBy.size() > 0
-            && request.resource.data.siscofisUpdatedBy.size() <= 180
-          )
-        )
-        && (
-          request.resource.data.siscofisUpdatedAt == null
-          || request.resource.data.siscofisUpdatedAt is timestamp
-        )
-        && (
-          !('returnedQuantity' in request.resource.data)
-          || (
-            request.resource.data.origin == 'STOCK_OUTBOUND'
-            && request.resource.data.returnedQuantity is number
-            && request.resource.data.returnedQuantity >= 0
-            && request.resource.data.returnedQuantity <= request.resource.data.quantity
-          )
-          || (
-            request.resource.data.origin == 'IMMEDIATE_CONSUMPTION'
-            && request.resource.data.returnedQuantity == 0
-          )
-        )
-        && (
-          !('lastReturnMovementId' in request.resource.data)
-          || request.resource.data.lastReturnMovementId == null
-          || (
-            request.resource.data.lastReturnMovementId is string
-            && request.resource.data.lastReturnMovementId.matches('^mov_[a-f0-9]{64}$')
-          )
-        )
-        && (
-          !('lastReturnAt' in request.resource.data)
-          || request.resource.data.lastReturnAt == null
-          || request.resource.data.lastReturnAt is timestamp
-        )
-        && (
-          !('lastReturnBy' in request.resource.data)
-          || request.resource.data.lastReturnBy == null
-          || (
-            request.resource.data.lastReturnBy is string
-            && request.resource.data.lastReturnBy.size() > 0
-            && request.resource.data.lastReturnBy.size() <= 180
-          )
-        )
-        && (
-          !('lastReturnReason' in request.resource.data)
-          || request.resource.data.lastReturnReason == null
-          || (
-            request.resource.data.lastReturnReason is string
-            && request.resource.data.lastReturnReason.size() > 0
-            && request.resource.data.lastReturnReason.size() <= 180
-          )
-        )
         && (
           (
             request.resource.data.origin == 'STOCK_OUTBOUND'
@@ -2807,31 +2749,10 @@ service cloud.firestore {
     }
 
     function validWarehouseConsumptionSiscofisUpdate(workspaceId, consumptionId) {
-      return validWarehouseConsumptionBase(workspaceId, consumptionId)
-        && request.resource.data.schemaVersion == resource.data.schemaVersion
-        && request.resource.data.id == resource.data.id
-        && request.resource.data.workspaceId == resource.data.workspaceId
+      return request.resource.data.schemaVersion == 'warehouse_consumption_record_v1'
+        && request.resource.data.id == consumptionId
+        && request.resource.data.workspaceId == workspaceId
         && request.resource.data.ug == resource.data.ug
-        && request.resource.data.origin == resource.data.origin
-        && request.resource.data.materialId == resource.data.materialId
-        && request.resource.data.materialDescription == resource.data.materialDescription
-        && request.resource.data.unitLabel == resource.data.unitLabel
-        && request.resource.data.quantity == resource.data.quantity
-        && request.resource.data.requestedQuantity == resource.data.requestedQuantity
-        && request.resource.data.presentationLabel == resource.data.presentationLabel
-        && request.resource.data.destinationId == resource.data.destinationId
-        && request.resource.data.destinationName == resource.data.destinationName
-        && request.resource.data.withdrawnBy == resource.data.withdrawnBy
-        && request.resource.data.operatorUid == resource.data.operatorUid
-        && request.resource.data.movementId == resource.data.movementId
-        && request.resource.data.withdrawalId == resource.data.withdrawalId
-        && request.resource.data.lineId == resource.data.lineId
-        && request.resource.data.intakeId == resource.data.intakeId
-        && request.resource.data.invoiceRecordKey == resource.data.invoiceRecordKey
-        && request.resource.data.barcode == resource.data.barcode
-        && request.resource.data.lotCode == resource.data.lotCode
-        && request.resource.data.positionLabel == resource.data.positionLabel
-        && request.resource.data.occurredAt == resource.data.occurredAt
         && warehouseSiscofisStatusTransitionAllowed()
         && request.resource.data.updatedAt == request.time
         && request.resource.data.siscofisUpdatedBy == request.auth.uid
@@ -2846,15 +2767,20 @@ service cloud.firestore {
       let p = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId);
       let movement = getAfter(p).data;
       let returnedBefore = warehouseConsumptionReturnedQuantity(resource.data);
-      return validWarehouseConsumptionBase(workspaceId, consumptionId)
+      return resource.data.schemaVersion == 'warehouse_consumption_record_v1'
+        && resource.data.id == consumptionId
+        && resource.data.workspaceId == workspaceId
         && resource.data.origin == 'STOCK_OUTBOUND'
-        && request.resource.data.siscofisStatus == resource.data.siscofisStatus
-        && request.resource.data.siscofisUpdatedBy == resource.data.siscofisUpdatedBy
-        && request.resource.data.siscofisUpdatedAt == resource.data.siscofisUpdatedAt
+        && request.resource.data.returnedQuantity is number
         && request.resource.data.returnedQuantity > returnedBefore
         && request.resource.data.returnedQuantity <= resource.data.quantity
+        && movementId is string
+        && movementId.matches('^mov_[a-f0-9]{64}$')
         && request.resource.data.lastReturnAt == request.time
         && request.resource.data.lastReturnBy == request.auth.uid
+        && request.resource.data.lastReturnReason is string
+        && request.resource.data.lastReturnReason.size() > 0
+        && request.resource.data.lastReturnReason.size() <= 180
         && request.resource.data.updatedAt == request.time
         && existsAfter(p)
         && warehouseMovementIsOutboundReturn(movement)
