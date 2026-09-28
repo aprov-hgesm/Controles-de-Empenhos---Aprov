@@ -284,6 +284,17 @@ function renderDepotObject(
           const p2 = isoPoint(x + width * ratio, y + height, z + 0.5);
           return <line key={index} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#a06932" strokeWidth="0.7" />;
         })}
+        {generalBoxCount > 0 && Array.from({ length: generalBoxCount }, (_, index) =>
+          stockBox(
+            'allocated-pallet-' + object.id + '-' + index,
+            isoPoint(
+              x + width * (0.32 + (index % 2) * 0.36),
+              y + height * (0.42 + Math.floor(index / 2) * 0.12),
+              z + 14 + Math.floor(index / 2) * 12
+            ),
+            0.43
+          )
+        )}
       </g>
     );
   }
@@ -326,6 +337,11 @@ function renderDepotObject(
           const p4 = isoPoint(x, y + height, shelfZ);
           const frontLeft = isoPoint(x, y + height, shelfZ - 1.4);
           const frontRight = isoPoint(x + width, y + height, shelfZ - 1.4);
+          const linkedSubposition = subpositions[index] || null;
+          const levelQuantity = linkedSubposition
+            ? occupancyBySubposition.get(linkedSubposition.id) || 0
+            : 0;
+          const levelBoxCount = visualBoxes(levelQuantity);
           return (
             <g key={'level-' + index}>
               <polygon
@@ -344,7 +360,32 @@ function renderDepotObject(
                 strokeWidth="3"
                 strokeLinecap="round"
               />
+              {levelBoxCount > 0 && Array.from({ length: levelBoxCount }, (_, boxIndex) =>
+                stockBox(
+                  'allocated-shelf-' + object.id + '-' + index + '-' + boxIndex,
+                  isoPoint(
+                    x + width * (0.28 + (boxIndex % 2) * 0.38),
+                    y + height * 0.56,
+                    shelfZ + 8 + Math.floor(boxIndex / 2) * 10
+                  ),
+                  0.34
+                )
+              )}
             </g>
+          );
+        })}
+
+        {subpositions.length === 0 && generalBoxCount > 0 && Array.from({ length: generalBoxCount }, (_, index) => {
+          const level = index % levels;
+          const shelfZ = z * ((level + 1) / (levels + 0.34));
+          return stockBox(
+            'allocated-shelf-general-' + object.id + '-' + index,
+            isoPoint(
+              x + width * (0.3 + (index % 2) * 0.36),
+              y + height * 0.56,
+              shelfZ + 8
+            ),
+            0.34
           );
         })}
 
@@ -372,6 +413,16 @@ function renderDepotObject(
         <polygon points={polygonPoints([at, bt, ct, dt])} fill="#edf2f4" stroke="#82939d" strokeWidth="0.9" />
         <line x1={splitBottom.x} y1={splitBottom.y} x2={splitTop.x} y2={splitTop.y} stroke="#71838c" strokeWidth="1.3" />
         <line x1={dt.x + 3} y1={dt.y + 5} x2={d.x + 3} y2={d.y - 4} stroke="#ffffff" strokeWidth="1.4" opacity="0.55" />
+        {generalBoxCount > 0 && Array.from({ length: Math.min(3, generalBoxCount) }, (_, index) =>
+          stockBox(
+            'allocated-fridge-' + object.id + '-' + index,
+            {
+              x: centerTop.x + (index - 1) * 14,
+              y: centerTop.y + 31 + (index % 2) * 10,
+            },
+            0.3
+          )
+        )}
       </g>
     );
   }
@@ -394,6 +445,16 @@ function renderDepotObject(
           stroke="#73a9bf"
           strokeWidth="0.7"
         />
+        {generalBoxCount > 0 && Array.from({ length: Math.min(2, generalBoxCount) }, (_, index) =>
+          stockBox(
+            'allocated-freezer-' + object.id + '-' + index,
+            {
+              x: centerTop.x + (index ? 13 : -13),
+              y: centerTop.y + 13,
+            },
+            0.3
+          )
+        )}
       </g>
     );
   }
@@ -424,6 +485,11 @@ function renderDepotObject(
           stroke="#667d8b"
           strokeWidth="0.85"
         />
+        {generalBoxCount > 0 && stockBox(
+          'allocated-bench-' + object.id,
+          { x: centerTop.x, y: centerTop.y - 2 },
+          0.36
+        )}
       </g>
     );
   }
@@ -433,6 +499,13 @@ function renderDepotObject(
       <polygon points={polygonPoints([d, c, ct, dt])} fill="#dce6ec" stroke="#7e94a4" strokeWidth="0.9" />
       <polygon points={polygonPoints([b, c, ct, bt])} fill="#b7c7d1" stroke="#718899" strokeWidth="0.85" />
       <polygon points={polygonPoints([at, bt, ct, dt])} fill="#f4f7f9" stroke="#8fa3b1" strokeWidth="0.9" />
+      {generalBoxCount > 0 && Array.from({ length: Math.min(2, generalBoxCount) }, (_, index) =>
+        stockBox(
+          'allocated-generic-' + object.id + '-' + index,
+          { x: centerTop.x + (index ? 12 : -12), y: centerTop.y + 4 },
+          0.32
+        )
+      )}
     </g>
   );
 }
