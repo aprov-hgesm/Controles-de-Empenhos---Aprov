@@ -822,40 +822,6 @@ service cloud.firestore {
         )
         || (
           source is map
-          && source.kind == 'OUTBOUND_RETURN'
-          && type == 'OUTBOUND_RETURN'
-          && source.keys().hasOnly([
-            'kind', 'actorUid', 'consumptionId', 'originalMovementId',
-            'quantity', 'position', 'locationBalanceId', 'lotId', 'reason'
-          ])
-          && source.keys().hasAll([
-            'kind', 'actorUid', 'consumptionId', 'originalMovementId',
-            'quantity', 'position', 'locationBalanceId', 'lotId', 'reason'
-          ])
-          && source.actorUid == request.auth.uid
-          && source.consumptionId is string
-          && source.consumptionId.matches('^cons_[a-f0-9]{64}$')
-          && source.originalMovementId is string
-          && source.originalMovementId.matches('^mov_[a-f0-9]{64}$')
-          && source.quantity is number
-          && source.quantity > 0
-          && source.quantity == request.resource.data.quantityDelta
-          && validWarehouseStockPosition(source.position)
-          && source.locationBalanceId is string
-          && source.locationBalanceId.matches('^locbal_[a-f0-9]{64}$')
-          && (
-            source.lotId == null
-            || (
-              source.lotId is string
-              && source.lotId.matches('^lot_[a-f0-9]{32}$')
-            )
-          )
-          && source.reason is string
-          && source.reason.size() > 0
-          && source.reason.size() <= 180
-        )
-        || (
-          source is map
           && source.kind == 'LOCATION_TRANSFER'
           && type == 'TRANSFER'
           && source.keys().hasOnly([
@@ -1039,7 +1005,7 @@ service cloud.firestore {
         && quantityDelta >= -1000000000
         && quantityDelta <= 1000000000
         && (
-          (type in ['INITIAL_BALANCE', 'MANUAL_ENTRY', 'INVOICE_ENTRY', 'OUTBOUND_RETURN'] && quantityDelta > 0)
+          (type in ['INITIAL_BALANCE', 'MANUAL_ENTRY', 'INVOICE_ENTRY'] && quantityDelta > 0)
           || (type == 'OUTBOUND' && quantityDelta < 0)
           || (type == 'TRANSFER' && quantityDelta == 0)
           || (
@@ -1316,22 +1282,6 @@ service cloud.firestore {
             )
           )
           || (
-            warehouseMovementIsOutboundReturn(movement)
-            && request.resource.data is map
-            && request.resource.data.schemaVersion == 'warehouse_location_balance_v1'
-            && request.resource.data.id == locationBalanceId
-            && request.resource.data.workspaceId == workspaceId
-            && request.resource.data.ug == movement.ug
-            && request.resource.data.materialId == movement.materialId
-            && request.resource.data.position == movement.source.position
-            && request.resource.data.quantity is number
-            && request.resource.data.quantity >= 0
-            && request.resource.data.revision == resource.data.revision + 1
-            && request.resource.data.lastMovementId == movement.id
-            && request.resource.data.updatedAt == request.time
-            && request.resource.data.quantity == resource.data.quantity + movement.source.quantity
-          )
-          || (
             warehouseMovementIsInventoryAdjustment(movement)
             && validWarehouseInventoryLocationBalanceUpdate(
               workspaceId,
@@ -1346,7 +1296,6 @@ service cloud.firestore {
           )
           || (
             !warehouseMovementIsExpressOutbound(movement)
-            && !warehouseMovementIsOutboundReturn(movement)
             && !warehouseMovementIsInventoryAdjustment(movement)
             && validWarehouseLocationBalanceDocument(workspaceId, locationBalanceId)
             && warehousePositionActive(
@@ -1540,143 +1489,12 @@ service cloud.firestore {
           == resource.data.quantity + movement.quantityDelta;
     }
 
-    function warehouseMovementIsOutboundReturn(movement) {
-      return movement is map
-        && movement.type == 'OUTBOUND_RETURN'
-        && movement.source is map
-        && movement.source.kind == 'OUTBOUND_RETURN';
-    }
 
-    function warehouseConsumptionReturnedQuantity(data) {
-      return ('returnedQuantity' in data) ? data.returnedQuantity : 0;
-    }
 
-    function warehouseOutboundReturnOriginalMatches(workspaceId, movement) {
-      let p = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movement.source.originalMovementId);
-      let original = get(p).data;
-      return original is map
-        && original.workspaceId == workspaceId
-        && original.ug == movement.ug
-        && original.materialId == movement.materialId
-        && original.type == 'OUTBOUND'
-        && original.source is map
-        && original.source.kind == 'EXPRESS_OUTBOUND'
-        && original.source.position == movement.source.position
-        && original.source.locationBalanceId == movement.source.locationBalanceId
-        && original.source.lotId == movement.source.lotId;
-    }
 
-    function warehouseOutboundReturnConsumptionAllows(workspaceId, movement) {
-      let p = /databases/$(database)/documents/warehouse/$(workspaceId)/consumptions/$(movement.source.consumptionId);
-      let consumption = get(p).data;
-      let returnedBefore = warehouseConsumptionReturnedQuantity(consumption);
-      return consumption is map
-        && consumption.origin == 'STOCK_OUTBOUND'
-        && consumption.materialId == movement.materialId
-        && consumption.movementId == movement.source.originalMovementId
-        && returnedBefore >= 0
-        && returnedBefore + movement.source.quantity <= consumption.quantity;
-    }
 
-    function warehouseOutboundReturnCompanionsMatchAfter(workspaceId, movementId, movement) {
-      let balance = getAfter(
-        /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(movement.materialId)
-      ).data;
-      let location = getAfter(
-        /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(movement.source.locationBalanceId)
-      ).data;
-      let consumption = getAfter(
-        /databases/$(database)/documents/warehouse/$(workspaceId)/consumptions/$(movement.source.consumptionId)
-      ).data;
-      return balance is map
-        && location is map
-        && consumption is map
-        && balance.lastMovementId == movementId
-        && location.lastMovementId == movementId
-        && consumption.lastReturnMovementId == movementId;
-    }
 
-    function validWarehouseOutboundReturnSource(source, movement) {
-      return source is map
-        && source.keys().hasOnly([
-          'kind', 'actorUid', 'consumptionId', 'originalMovementId',
-          'quantity', 'position', 'locationBalanceId', 'lotId', 'reason'
-        ])
-        && source.keys().hasAll([
-          'kind', 'actorUid', 'consumptionId', 'originalMovementId',
-          'quantity', 'position', 'locationBalanceId', 'lotId', 'reason'
-        ])
-        && source.kind == 'OUTBOUND_RETURN'
-        && source.actorUid == request.auth.uid
-        && source.consumptionId is string
-        && source.consumptionId.matches('^cons_[a-f0-9]{64}$')
-        && source.originalMovementId is string
-        && source.originalMovementId.matches('^mov_[a-f0-9]{64}$')
-        && source.quantity is number
-        && source.quantity > 0
-        && source.quantity <= 1000000000
-        && source.quantity == movement.quantityDelta
-        && validWarehouseStockPosition(source.position)
-        && source.locationBalanceId is string
-        && source.locationBalanceId.matches('^locbal_[a-f0-9]{64}$')
-        && (
-          source.lotId == null
-          || (
-            source.lotId is string
-            && source.lotId.matches('^lot_[a-f0-9]{32}$')
-          )
-        )
-        && source.reason is string
-        && source.reason.size() > 0
-        && source.reason.size() <= 180;
-    }
 
-    function validWarehouseOutboundReturnMovementCreate(workspaceId, movementId) {
-      let movement = request.resource.data;
-      return movement is map
-        && movement.keys().hasOnly([
-          'schemaVersion', 'id', 'workspaceId', 'ug', 'materialId', 'type',
-          'quantityDelta', 'idempotencyKeyHash', 'reversesMovementId',
-          'note', 'source', 'createdAt'
-        ])
-        && movement.keys().hasAll([
-          'schemaVersion', 'id', 'workspaceId', 'ug', 'materialId', 'type',
-          'quantityDelta', 'idempotencyKeyHash', 'reversesMovementId',
-          'note', 'source', 'createdAt'
-        ])
-        && movement.schemaVersion == 'warehouse_movement_v1'
-        && movement.id == movementId
-        && movementId.matches('^mov_[a-f0-9]{64}$')
-        && movement.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, movement.ug)
-        && movement.materialId is string
-        && movement.materialId.matches('^mat_[a-f0-9]{32}$')
-        && movement.type == 'OUTBOUND_RETURN'
-        && movement.quantityDelta is number
-        && movement.quantityDelta > 0
-        && movement.quantityDelta <= 1000000000
-        && movement.idempotencyKeyHash is string
-        && movement.idempotencyKeyHash.matches('^[a-f0-9]{64}$')
-        && movementId == 'mov_' + movement.idempotencyKeyHash
-        && movement.reversesMovementId == null
-        && (
-          movement.note == null
-          || (
-            movement.note is string
-            && movement.note.size() > 0
-            && movement.note.size() <= 240
-          )
-        )
-        && validWarehouseOutboundReturnSource(movement.source, movement)
-        && movement.createdAt == request.time
-        && warehouseOutboundReturnOriginalMatches(workspaceId, movement)
-        && warehouseOutboundReturnConsumptionAllows(workspaceId, movement)
-        && warehouseOutboundReturnCompanionsMatchAfter(
-          workspaceId,
-          movementId,
-          movement
-        );
-    }
 
     function warehouseMovementCreateAllowed(workspaceId, movementId) {
       let movement = request.resource.data;
@@ -1693,12 +1511,7 @@ service cloud.firestore {
           && validWarehouseInventoryMovementCreate(workspaceId, movementId)
         )
         || (
-          movement.type == 'OUTBOUND_RETURN'
-          && validWarehouseOutboundReturnMovementCreate(workspaceId, movementId)
-        )
-        || (
           movement.type != 'TRANSFER'
-          && movement.type != 'OUTBOUND_RETURN'
           && !warehouseMovementIsExpressOutbound(movement)
           && !warehouseMovementIsInventoryAdjustment(movement)
           && validWarehouseMovementDocument(workspaceId, movementId)
@@ -1726,7 +1539,7 @@ service cloud.firestore {
         && request.resource.data.materialId is string
         && request.resource.data.materialId.matches('^mat_[a-f0-9]{32}$')
         && request.resource.data.type in [
-          'INITIAL_BALANCE', 'MANUAL_ENTRY', 'INVOICE_ENTRY', 'OUTBOUND', 'OUTBOUND_RETURN', 'TRANSFER',
+          'INITIAL_BALANCE', 'MANUAL_ENTRY', 'INVOICE_ENTRY', 'OUTBOUND', 'TRANSFER',
           'INVOICE_CORRECTION', 'REVERSAL'
         ]
         && validWarehouseMovementDelta(
@@ -1856,23 +1669,6 @@ service cloud.firestore {
           == resource.data.quantity + movement.quantityDelta;
     }
 
-    function validWarehouseOutboundReturnBalanceUpdate(workspaceId, materialId, movement) {
-      return request.resource.data is map
-        && request.resource.data.schemaVersion == 'warehouse_balance_v1'
-        && request.resource.data.workspaceId == workspaceId
-        && request.resource.data.ug == resource.data.ug
-        && request.resource.data.ug == movement.ug
-        && request.resource.data.materialId == materialId
-        && materialId == resource.data.materialId
-        && materialId == movement.materialId
-        && request.resource.data.quantity is number
-        && request.resource.data.quantity >= 0
-        && request.resource.data.quantity <= 1000000000
-        && request.resource.data.quantity == resource.data.quantity + movement.quantityDelta
-        && request.resource.data.revision == resource.data.revision + 1
-        && request.resource.data.lastMovementId == movement.id
-        && request.resource.data.updatedAt == request.time;
-    }
 
     function warehouseBalanceWriteAllowed(workspaceId, materialId) {
       let movementId = request.resource.data.lastMovementId;
@@ -1893,15 +1689,6 @@ service cloud.firestore {
             )
           )
           || (
-            warehouseMovementIsOutboundReturn(movement)
-            && balanceExists
-            && validWarehouseOutboundReturnBalanceUpdate(
-              workspaceId,
-              materialId,
-              movement
-            )
-          )
-          || (
             warehouseMovementIsInventoryAdjustment(movement)
             && balanceExists
             && validWarehouseInventoryBalanceUpdate(
@@ -1912,7 +1699,6 @@ service cloud.firestore {
           )
           || (
             !warehouseMovementIsExpressOutbound(movement)
-            && !warehouseMovementIsOutboundReturn(movement)
             && !warehouseMovementIsInventoryAdjustment(movement)
             && validWarehouseBalanceDocument(workspaceId, materialId)
             && movement.schemaVersion == 'warehouse_movement_v1'
@@ -2815,11 +2601,61 @@ service cloud.firestore {
         );
     }
 
-    function validWarehouseConsumptionSiscofisUpdate(workspaceId, consumptionId) {
-      return request.resource.data.schemaVersion == 'warehouse_consumption_record_v1'
-        && request.resource.data.id == consumptionId
-        && request.resource.data.workspaceId == workspaceId
+
+
+    function warehouseConsumptionIdentityUnchanged() {
+      return request.resource.data.schemaVersion == resource.data.schemaVersion
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.workspaceId == resource.data.workspaceId
         && request.resource.data.ug == resource.data.ug
+        && request.resource.data.origin == resource.data.origin
+        && request.resource.data.materialId == resource.data.materialId
+        && request.resource.data.materialDescription == resource.data.materialDescription
+        && request.resource.data.unitLabel == resource.data.unitLabel
+        && request.resource.data.quantity == resource.data.quantity
+        && request.resource.data.requestedQuantity == resource.data.requestedQuantity
+        && request.resource.data.presentationLabel == resource.data.presentationLabel
+        && request.resource.data.destinationId == resource.data.destinationId
+        && request.resource.data.destinationName == resource.data.destinationName
+        && request.resource.data.withdrawnBy == resource.data.withdrawnBy
+        && request.resource.data.operatorUid == resource.data.operatorUid
+        && request.resource.data.movementId == resource.data.movementId
+        && request.resource.data.withdrawalId == resource.data.withdrawalId
+        && request.resource.data.lineId == resource.data.lineId
+        && request.resource.data.intakeId == resource.data.intakeId
+        && request.resource.data.invoiceRecordKey == resource.data.invoiceRecordKey
+        && request.resource.data.barcode == resource.data.barcode
+        && request.resource.data.lotCode == resource.data.lotCode
+        && request.resource.data.positionLabel == resource.data.positionLabel
+        && request.resource.data.occurredAt == resource.data.occurredAt;
+    }
+
+    function warehouseConsumptionReturnMovementMatches(workspaceId, consumptionId) {
+      let movementId = request.resource.data.lastReturnMovementId;
+      let movementPath = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId);
+      let movement = getAfter(movementPath).data;
+      return movementId is string
+        && movementId.matches('^mov_[a-f0-9]{64}$')
+        && !exists(movementPath)
+        && existsAfter(movementPath)
+        && movement.schemaVersion == 'warehouse_movement_v1'
+        && movement.id == movementId
+        && movement.workspaceId == workspaceId
+        && movement.ug == resource.data.ug
+        && movement.materialId == resource.data.materialId
+        && movement.type == 'MANUAL_ENTRY'
+        && movement.quantityDelta
+          == request.resource.data.returnedQuantity - resource.data.returnedQuantity
+        && movement.source is map
+        && movement.source.kind == 'MANUAL_ENTRY'
+        && movement.source.actorUid == request.auth.uid
+        && movement.source.provenance == 'Devolução de saída'
+        && movement.source.reference == consumptionId;
+    }
+
+    function validWarehouseConsumptionSiscofisUpdate(workspaceId, consumptionId) {
+      return validWarehouseConsumptionBase(workspaceId, consumptionId)
+        && warehouseConsumptionIdentityUnchanged()
         && warehouseSiscofisStatusTransitionAllowed()
         && request.resource.data.updatedAt == request.time
         && request.resource.data.siscofisUpdatedBy == request.auth.uid
@@ -2830,44 +2666,33 @@ service cloud.firestore {
     }
 
     function validWarehouseConsumptionReturnUpdate(workspaceId, consumptionId) {
-      let movementId = request.resource.data.lastReturnMovementId;
-      let p = /databases/$(database)/documents/warehouse/$(workspaceId)/movements/$(movementId);
-      let movement = getAfter(p).data;
-      let returnedBefore = warehouseConsumptionReturnedQuantity(resource.data);
-      return resource.data.schemaVersion == 'warehouse_consumption_record_v1'
-        && resource.data.id == consumptionId
-        && resource.data.workspaceId == workspaceId
+      return validWarehouseConsumptionBase(workspaceId, consumptionId)
+        && warehouseConsumptionIdentityUnchanged()
         && resource.data.origin == 'STOCK_OUTBOUND'
+        && request.resource.data.siscofisStatus == resource.data.siscofisStatus
+        && request.resource.data.siscofisUpdatedBy == resource.data.siscofisUpdatedBy
+        && request.resource.data.siscofisUpdatedAt == resource.data.siscofisUpdatedAt
         && request.resource.data.returnedQuantity is number
-        && request.resource.data.returnedQuantity > returnedBefore
+        && request.resource.data.returnedQuantity > resource.data.returnedQuantity
         && request.resource.data.returnedQuantity <= resource.data.quantity
-        && movementId is string
-        && movementId.matches('^mov_[a-f0-9]{64}$')
+        && request.resource.data.lastReturnMovementId is string
+        && request.resource.data.lastReturnMovementId.matches('^mov_[a-f0-9]{64}$')
         && request.resource.data.lastReturnAt == request.time
         && request.resource.data.lastReturnBy == request.auth.uid
         && request.resource.data.lastReturnReason is string
         && request.resource.data.lastReturnReason.size() > 0
         && request.resource.data.lastReturnReason.size() <= 180
         && request.resource.data.updatedAt == request.time
-        && existsAfter(p)
-        && warehouseMovementIsOutboundReturn(movement)
-        && movement.id == movementId
-        && movement.workspaceId == workspaceId
-        && movement.ug == resource.data.ug
-        && movement.materialId == resource.data.materialId
-        && movement.source.consumptionId == consumptionId
-        && movement.source.originalMovementId == resource.data.movementId
-        && movement.source.quantity == request.resource.data.returnedQuantity - returnedBefore
-        && movement.source.reason == request.resource.data.lastReturnReason
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'returnedQuantity', 'lastReturnMovementId', 'lastReturnAt',
           'lastReturnBy', 'lastReturnReason', 'updatedAt'
-        ]);
+        ])
+        && warehouseConsumptionReturnMovementMatches(workspaceId, consumptionId);
     }
 
     function validWarehouseConsumptionUpdate(workspaceId, consumptionId) {
-      return validWarehouseConsumptionReturnUpdate(workspaceId, consumptionId)
-        || validWarehouseConsumptionSiscofisUpdate(workspaceId, consumptionId);
+      return validWarehouseConsumptionSiscofisUpdate(workspaceId, consumptionId)
+        || validWarehouseConsumptionReturnUpdate(workspaceId, consumptionId);
     }
 
     function warehouseItemIntakeV2StatusMatchesQuantities() {
