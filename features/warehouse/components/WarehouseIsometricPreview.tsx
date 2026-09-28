@@ -463,15 +463,6 @@ function WarehouseStructure({
           )
         )}
 
-        {renderLabel(
-          centerTop,
-          code,
-          'Palete',
-          subpositions.length ? subpositions.length + ' subposições' : 'Local aberto',
-          highlighted,
-          0,
-          -8
-        )}
       </g>
     );
   }
