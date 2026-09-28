@@ -2279,3 +2279,7 @@ Data: 2026-09-28.
 - A composição visual do Início deve ser uma **cena isométrica única e contínua**, nunca um dashboard de cards: todos os depósitos compartilham o mesmo piso/mundo digital.
 - A área de recebimento e seus paletes fazem parte do mesmo SVG/croqui global dos depósitos, sem painel lateral separado.
 - Rótulos e contadores podem existir de forma discreta sobre a cena, mas não devem introduzir janelas, campos, cartões ou superfícies operacionais independentes.
+- O mundo/isometric floor permanece escuro e imersivo, mas cada depósito utiliza **base clara e objetos internos na linguagem visual da Visão 3D oficial**, criando contraste entre ambiente e estrutura logística.
+- O Início pode carregar `locations` de forma bounded para rotular locais e subposições dentro dos croquis; continua proibido carregar materiais, saldos, lotes ou executar mutações nessa tela.
+- Estantes/racks devem preservar a identidade visual oficial (estrutura azul-escura, vigas laranja e níveis claros), enquanto geladeiras, freezers e bancadas usam acabamento claro/metálico compatível com o renderer oficial.
+- A área de recebimento/paletes deve permanecer visualmente secundária aos depósitos, ainda que continue refletindo as pendências reais.
