@@ -2250,6 +2250,8 @@ Data: 2026-09-28.
 - O marcador é atualizado separadamente e de forma idempotente. Essa separação evita exceder o limite de 1000 expressões das Firestore Rules.
 - As Rules do marcador são founder-only, monotônicas e limitam `returnedQuantity <= originalQuantity` sem consultar documentos externos.
 - Os relatórios carregam os marcadores correspondentes às saídas exibidas e projetam `returnedQuantity`, motivo e situação **parcial / cancelada-devolvida** sem reescrever a saída original.
+- Se a saída original estiver em `UNASSIGNED`, a devolução interna registra o `MANUAL_ENTRY` diretamente em `UNASSIGNED`, sem exigir `TRANSFER`; a Entrada Avulsa comum continua exigindo localização física.
+- Uma reserva `outboundReturns` sem movimento `MANUAL_ENTRY` correspondente é tratada como tentativa interrompida antes de alterar estoque e pode ser assumida pela próxima tentativa. Se o movimento correspondente existir, a reserva não é sobrescrita silenciosamente.
 - A quantidade devolvida continua limitada ao remanescente da saída original; a saída nunca é apagada.
 - Após o núcleo quantitativo, `transferWarehouseStock` reposiciona a quantidade da devolução de `UNASSIGNED` para a posição física original usando o motor oficial `TRANSFER`.
 - Se o reposicionamento falhar, o saldo já devolvido permanece íntegro e a interface informa que o item ficou temporariamente sem localização para correção no Controle de Itens.
