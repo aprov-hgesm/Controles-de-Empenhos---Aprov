@@ -101,6 +101,11 @@ export interface WarehouseConsumptionRecord {
   updatedAt: string | null;
   siscofisUpdatedBy: string | null;
   siscofisUpdatedAt: string | null;
+  returnedQuantity: number;
+  lastReturnMovementId: string | null;
+  lastReturnAt: string | null;
+  lastReturnBy: string | null;
+  lastReturnReason: string | null;
   legacy: boolean;
 }
 
