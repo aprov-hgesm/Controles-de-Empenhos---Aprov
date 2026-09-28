@@ -210,6 +210,7 @@ if (warehouseStart < 0) {
     'settings',
     'destinations',
     'consumptions',
+    'outboundReturns',
     'withdrawals',
     'inventories',
     'intakes',
@@ -266,7 +267,8 @@ for (const helper of [
   'function validWarehouseItemIntakeV2Update(workspaceId, intakeId)',
   'function warehouseImmediateConsumptionIntakeMatchesAfter(workspaceId)',
   'function validWarehouseConsumptionCreate(workspaceId, consumptionId)',
-  'function validWarehouseConsumptionReturnUpdate(workspaceId, consumptionId)',
+  'function validWarehouseOutboundReturnSummaryCreate(workspaceId, consumptionId)',
+  'function validWarehouseOutboundReturnSummaryUpdate(workspaceId, consumptionId)',
 ]) {
   requireText(rules, helper, 'Helper obrigatório da ADM-R1 ausente: ' + helper);
 }
@@ -699,8 +701,8 @@ requireText(
 );
 requireText(
   withdrawalRepository,
-  "type: 'MANUAL_ENTRY'",
-  'Devolução deixou de reutilizar o movimento oficial MANUAL_ENTRY.'
+  "registerWarehouseManualEntry(",
+  'Devolução deixou de reutilizar o motor oficial de Entrada Avulsa.'
 );
 requireText(
   withdrawalRepository,
@@ -714,13 +716,18 @@ requireText(
 );
 requireText(
   withdrawalRepository,
-  'transferWarehouseStock(scope.workspaceId, {',
-  'Devolução deixou de reutilizar TRANSFER para retornar à posição original.'
+  "position: originalSource.position",
+  'Devolução deixou de solicitar reposicionamento na posição original.'
 );
 requireText(
   withdrawalRepository,
-  'ensureWarehouseReturnedValidity(',
-  'Devolução perdeu o enriquecimento técnico de validade.'
+  "expiresOn,",
+  'Devolução perdeu o reaproveitamento da validade original quando disponível.'
+);
+requireText(
+  manualEntryRepository,
+  'transferWarehouseStock(scope.workspaceId, {',
+  'Motor de Entrada Avulsa deixou de reutilizar TRANSFER para posicionamento físico.'
 );
 if (withdrawalRepository.includes('/api/adm-deposito/outbound-return')) {
   fail('Devolução voltou a depender de API server-only desnecessária.');
@@ -730,8 +737,18 @@ if (withdrawalRepository.includes("type: 'OUTBOUND_RETURN'")) {
 }
 requireText(
   rules,
-  'function validWarehouseConsumptionReturnUpdate(workspaceId, consumptionId)',
-  'Rules perderam a validação específica da marcação de devolução.'
+  'match /outboundReturns/{consumptionId}',
+  'Rules perderam a coleção leve de marcação da devolução.'
+);
+requireText(
+  rules,
+  'function validWarehouseOutboundReturnSummaryCreate(workspaceId, consumptionId)',
+  'Rules perderam a validação de criação do marcador de devolução.'
+);
+requireText(
+  rules,
+  'function validWarehouseOutboundReturnSummaryUpdate(workspaceId, consumptionId)',
+  'Rules perderam a validação de atualização do marcador de devolução.'
 );
 requireText(
   withdrawalRepository,
@@ -758,8 +775,13 @@ requireText(
 );
 requireText(
   outboundReturnSecurityTest,
-  "marcação leve registra a devolução sem apagar a saída original",
+  "marcador leve finaliza a devolução sem atualizar consumptions",
   'Teste de segurança deixou de provar a marcação separada da devolução.'
+);
+requireText(
+  outboundReturnSecurityTest,
+  "marcador de devolução bloqueia quantidade acima da saída original",
+  'Teste de segurança deixou de provar o limite quantitativo do marcador.'
 );
 requireText(
   outboundReturnSecurityTest,
@@ -1264,7 +1286,7 @@ console.log('- ficha PDF otimizada para toner P&B, com grayscale neutro e conten
 console.log('- Saída de Material gera PDF duplo: retirada física + ficha auxiliar SISCOFIS com controle/código');
 console.log('- Saída de Material e seus Relatórios seguem o tema claro oficial D-076/VISUAL_IDENTITY');
 console.log('- Saída de Material reduz ledger/posição/lote e saldo zero deixa de ser projetado no croqui');
-console.log('- Registro de Saídas carrega o mês uma vez; devolução parcial/total reutiliza MANUAL_ENTRY + TRANSFER auditáveis');
+console.log('- Registro de Saídas carrega o mês uma vez; devolução reutiliza MANUAL_ENTRY + TRANSFER e marcador leve separado');
 console.log('- Controle de Itens consolidado em Resumo, Estoque, Movimentações, Inventário e Relatórios');
 console.log('- Relatórios separados em Saída e Consumo Imediato, sem mistura de origens');
 console.log('- Estoque exibe somente saldo positivo e prioriza a menor validade ativa');
