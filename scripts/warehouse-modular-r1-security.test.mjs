@@ -1208,7 +1208,6 @@ async function main() {
   const stockConsumptionId = 'cons_' + 'd'.repeat(64);
   const stockLineId = 'wline_' + 'e'.repeat(32);
   const physicalOutboundReturnMovementId = 'mov_' + 'f'.repeat(64);
-  const physicalReturnLotId = 'lot_' + 'f'.repeat(32);
 
   await allowed('fundador projeta saída finalizada no registro auditável', () =>
     setDoc(
@@ -1251,22 +1250,10 @@ async function main() {
     )
   );
 
-  await allowed('fundador devolve saída ao estoque sem apagar histórico', () =>
-    runTransaction(founder.db, async (transaction) => {
-      const movementRef = doc(
-        founder.db, 'warehouse', WORKSPACE_ID, 'movements', physicalOutboundReturnMovementId
-      );
-      const balanceRef = doc(
-        founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId
-      );
-      const locationBalanceRef = doc(
-        founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', secondTargetBalanceId
-      );
-      const consumptionRef = doc(
-        founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', stockConsumptionId
-      );
-
-      transaction.set(movementRef, {
+  await denied('movimento especial legado OUTBOUND_RETURN permanece bloqueado; devolução usa entrada auditável', () =>
+    setDoc(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'movements', physicalOutboundReturnMovementId),
+      {
         schemaVersion: 'warehouse_movement_v1',
         id: physicalOutboundReturnMovementId,
         workspaceId: WORKSPACE_ID,
@@ -1276,7 +1263,7 @@ async function main() {
         quantityDelta: 1,
         idempotencyKeyHash: 'f'.repeat(64),
         reversesMovementId: null,
-        note: 'Devolução/cancelamento de saída de teste',
+        note: 'Formato legado de devolução',
         source: {
           kind: 'OUTBOUND_RETURN',
           actorUid: founder.user.uid,
@@ -1291,193 +1278,11 @@ async function main() {
           },
           locationBalanceId: secondTargetBalanceId,
           lotId: secondAllocationLotId,
-          reason: 'Saída cancelada e material devolvido',
+          reason: 'Formato legado bloqueado',
         },
         createdAt: serverTimestamp(),
-      });
-
-      transaction.set(balanceRef, {
-        schemaVersion: 'warehouse_balance_v1',
-        workspaceId: WORKSPACE_ID,
-        ug: UG,
-        materialId,
-        quantity: 8,
-        revision: 4,
-        lastMovementId: physicalOutboundReturnMovementId,
-        updatedAt: serverTimestamp(),
-      });
-
-      transaction.set(locationBalanceRef, {
-        schemaVersion: 'warehouse_location_balance_v1',
-        id: secondTargetBalanceId,
-        workspaceId: WORKSPACE_ID,
-        ug: UG,
-        materialId,
-        position: {
-          kind: 'SUBPOSITION',
-          depotId,
-          locationId,
-          subpositionId: subpositionBId,
-        },
-        quantity: 3,
-        revision: 4,
-        lastMovementId: physicalOutboundReturnMovementId,
-        updatedAt: serverTimestamp(),
-      });
-
-      transaction.update(consumptionRef, {
-        returnedQuantity: 1,
-        lastReturnMovementId: physicalOutboundReturnMovementId,
-        lastReturnAt: serverTimestamp(),
-        lastReturnBy: founder.user.uid,
-        lastReturnReason: 'Saída cancelada e material devolvido',
-        updatedAt: serverTimestamp(),
-      });
-    })
-  );
-
-  await allowed('devolução recompõe saldo e mantém o registro da saída', async () => {
-    const [aggregateSnapshot, locationSnapshot, originalLotSnapshot, consumptionSnapshot] =
-      await Promise.all([
-        getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId)),
-        getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', secondTargetBalanceId)),
-        getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'lots', secondAllocationLotId)),
-        getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', stockConsumptionId)),
-      ]);
-    assert.equal(aggregateSnapshot.data()?.quantity, 8);
-    assert.equal(locationSnapshot.data()?.quantity, 3);
-    assert.equal(originalLotSnapshot.data()?.quantity, 0);
-    assert.equal(consumptionSnapshot.data()?.quantity, 1);
-    assert.equal(consumptionSnapshot.data()?.returnedQuantity, 1);
-  });
-
-  await allowed('validade devolvida é recomposta em enriquecimento idempotente separado', () =>
-    setDoc(
-      doc(founder.db, 'warehouse', WORKSPACE_ID, 'lots', physicalReturnLotId),
-      {
-        schemaVersion: 'warehouse_lot_v1',
-        id: physicalReturnLotId,
-        workspaceId: WORKSPACE_ID,
-        ug: UG,
-        materialId,
-        code: 'PEND-R1',
-        expiresOn: null,
-        quantity: 1,
-        position: {
-          kind: 'SUBPOSITION',
-          depotId,
-          locationId,
-          subpositionId: subpositionBId,
-        },
-        origin: {
-          kind: 'MANUAL_ENRICHMENT',
-          movementId: physicalOutboundReturnMovementId,
-          invoiceRecordKey: null,
-          invoiceId: null,
-          supplier: null,
-          supplierCnpj: null,
-        },
-        status: 'active',
-        createdBy: founder.user.uid,
-        updatedBy: founder.user.uid,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
       }
     )
-  );
-
-  await allowed('enriquecimento devolvido preserva validade sem alterar o saldo oficial', async () => {
-    const [returnLotSnapshot, aggregateSnapshot, locationSnapshot] = await Promise.all([
-      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'lots', physicalReturnLotId)),
-      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId)),
-      getDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', secondTargetBalanceId)),
-    ]);
-    assert.equal(returnLotSnapshot.data()?.quantity, 1);
-    assert.equal(returnLotSnapshot.data()?.origin?.movementId, physicalOutboundReturnMovementId);
-    assert.equal(aggregateSnapshot.data()?.quantity, 8);
-    assert.equal(locationSnapshot.data()?.quantity, 3);
-  });
-
-  const invalidReturnMovementId = 'mov_' + '0'.repeat(64);
-  await denied('devolução não pode ultrapassar a quantidade originalmente retirada', () =>
-    runTransaction(founder.db, async (transaction) => {
-      transaction.set(
-        doc(founder.db, 'warehouse', WORKSPACE_ID, 'movements', invalidReturnMovementId),
-        {
-          schemaVersion: 'warehouse_movement_v1',
-          id: invalidReturnMovementId,
-          workspaceId: WORKSPACE_ID,
-          ug: UG,
-          materialId,
-          type: 'OUTBOUND_RETURN',
-          quantityDelta: 1,
-          idempotencyKeyHash: '0'.repeat(64),
-          reversesMovementId: null,
-          note: 'Tentativa de devolução excedente',
-          source: {
-            kind: 'OUTBOUND_RETURN',
-            actorUid: founder.user.uid,
-            consumptionId: stockConsumptionId,
-            originalMovementId: outboundMovementId,
-            quantity: 1,
-            position: {
-              kind: 'SUBPOSITION',
-              depotId,
-              locationId,
-              subpositionId: subpositionBId,
-            },
-            locationBalanceId: secondTargetBalanceId,
-            lotId: secondAllocationLotId,
-            reason: 'Tentativa excedente',
-          },
-          createdAt: serverTimestamp(),
-        }
-      );
-      transaction.set(
-        doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', materialId),
-        {
-          schemaVersion: 'warehouse_balance_v1',
-          workspaceId: WORKSPACE_ID,
-          ug: UG,
-          materialId,
-          quantity: 9,
-          revision: 5,
-          lastMovementId: invalidReturnMovementId,
-          updatedAt: serverTimestamp(),
-        }
-      );
-      transaction.set(
-        doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', secondTargetBalanceId),
-        {
-          schemaVersion: 'warehouse_location_balance_v1',
-          id: secondTargetBalanceId,
-          workspaceId: WORKSPACE_ID,
-          ug: UG,
-          materialId,
-          position: {
-            kind: 'SUBPOSITION',
-            depotId,
-            locationId,
-            subpositionId: subpositionBId,
-          },
-          quantity: 4,
-          revision: 5,
-          lastMovementId: invalidReturnMovementId,
-          updatedAt: serverTimestamp(),
-        }
-      );
-      transaction.update(
-        doc(founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', stockConsumptionId),
-        {
-          returnedQuantity: 2,
-          lastReturnMovementId: invalidReturnMovementId,
-          lastReturnAt: serverTimestamp(),
-          lastReturnBy: founder.user.uid,
-          lastReturnReason: 'Tentativa excedente',
-          updatedAt: serverTimestamp(),
-        }
-      );
-    })
   );
 
   await allowed('fundador remove NF apenas da fila do ADM', () =>
@@ -1766,7 +1571,7 @@ async function main() {
 
   const outboundReturnMovementId = 'mov_' + 'abcdef1234567890'.repeat(4);
 
-  await allowed('cancelamento parcial devolve exatamente a quantidade informada ao estoque', () =>
+  await allowed('cancelamento parcial gera MANUAL_ENTRY auditável no estoque', () =>
     runTransaction(founder.db, async (transaction) => {
       transaction.set(
         doc(founder.db, 'warehouse', WORKSPACE_ID, 'movements', outboundReturnMovementId),
@@ -1818,18 +1623,21 @@ async function main() {
           updatedAt: serverTimestamp(),
         }
       );
-      transaction.update(
-        doc(founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', returnConsumptionId),
-        {
-          returnedQuantity: 1,
-          lastReturnMovementId: outboundReturnMovementId,
-          lastReturnAt: serverTimestamp(),
-          lastReturnBy: founder.user.uid,
-          lastReturnReason: 'Material devolvido',
-          updatedAt: serverTimestamp(),
-        }
-      );
     })
+  );
+
+  await allowed('marcação leve registra a devolução sem apagar a saída original', () =>
+    updateDoc(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', returnConsumptionId),
+      {
+        returnedQuantity: 1,
+        lastReturnMovementId: outboundReturnMovementId,
+        lastReturnAt: serverTimestamp(),
+        lastReturnBy: founder.user.uid,
+        lastReturnReason: 'Material devolvido',
+        updatedAt: serverTimestamp(),
+      }
+    )
   );
 
   await allowed('devolução parcial preserva saída original e saldo líquido', async () => {
@@ -1845,71 +1653,18 @@ async function main() {
     assert.equal(consumptionSnapshot.data()?.lastReturnMovementId, outboundReturnMovementId);
   });
 
-  const excessiveReturnMovementId = 'mov_' + 'deadbeefcafefeed'.repeat(4);
   await denied('devolução acima do saldo ainda retirado permanece bloqueada', () =>
-    runTransaction(founder.db, async (transaction) => {
-      transaction.set(
-        doc(founder.db, 'warehouse', WORKSPACE_ID, 'movements', excessiveReturnMovementId),
-        {
-          schemaVersion: 'warehouse_movement_v1',
-          id: excessiveReturnMovementId,
-          workspaceId: WORKSPACE_ID,
-          ug: UG,
-          materialId: manualMaterialId,
-          type: 'MANUAL_ENTRY',
-          quantityDelta: 2,
-          idempotencyKeyHash: 'deadbeefcafefeed'.repeat(4),
-          reversesMovementId: null,
-          note: 'Devolução inválida acima do remanescente',
-          source: {
-            kind: 'MANUAL_ENTRY',
-            actorUid: founder.user.uid,
-            provenance: 'Devolução de saída',
-            reference: returnConsumptionId,
-          },
-          createdAt: serverTimestamp(),
-        }
-      );
-      transaction.set(
-        doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', manualMaterialId),
-        {
-          schemaVersion: 'warehouse_balance_v1',
-          workspaceId: WORKSPACE_ID,
-          ug: UG,
-          materialId: manualMaterialId,
-          quantity: 5,
-          revision: 4,
-          lastMovementId: excessiveReturnMovementId,
-          updatedAt: serverTimestamp(),
-        }
-      );
-      transaction.set(
-        doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', manualLocationBalanceId),
-        {
-          schemaVersion: 'warehouse_location_balance_v1',
-          id: manualLocationBalanceId,
-          workspaceId: WORKSPACE_ID,
-          ug: UG,
-          materialId: manualMaterialId,
-          position: { kind: 'UNASSIGNED' },
-          quantity: 5,
-          revision: 4,
-          lastMovementId: excessiveReturnMovementId,
-          updatedAt: serverTimestamp(),
-        }
-      );
-      transaction.update(
-        doc(founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', returnConsumptionId),
-        {
-          returnedQuantity: 3,
-          lastReturnMovementId: excessiveReturnMovementId,
-          lastReturnAt: serverTimestamp(),
-          lastReturnBy: founder.user.uid,
-          lastReturnReason: 'Tentativa acima do remanescente',
-          updatedAt: serverTimestamp(),
-        }
-      );
-    })
+    updateDoc(
+      doc(founder.db, 'warehouse', WORKSPACE_ID, 'consumptions', returnConsumptionId),
+      {
+        returnedQuantity: 3,
+        lastReturnMovementId: 'mov_' + 'deadbeefcafefeed'.repeat(4),
+        lastReturnAt: serverTimestamp(),
+        lastReturnBy: founder.user.uid,
+        lastReturnReason: 'Tentativa acima do remanescente',
+        updatedAt: serverTimestamp(),
+      }
+    )
   );
 
   const invalidManualMovementId = 'mov_' + '0f1e2d3c4b5a6978'.repeat(4);
