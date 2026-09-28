@@ -3521,3 +3521,14 @@ Correção aplicada após validação operacional:
 - nenhum movimento, saldo ou Firestore Rule foi alterado; trata-se de correção de leitura/projeção e redução de reads inúteis de saldos zerados.
 
 Validação local pendente: typecheck, locator/layout e guard modular.
+
+
+### Pesquisa Home/Prévia 3D — validação local concluída — 2026-09-28
+
+Validação concluída após a correção para exibir somente materiais com saldo físico positivo:
+- `npm.cmd run typecheck` — PASS;
+- `npm.cmd run test:adm-deposito-depot-locator` — PASS, 8/8;
+- `npm.cmd run test:adm-deposito-depot-layout` — PASS, 16/16;
+- `npm.cmd run verify:adm-deposito-modular-r1` — PASS;
+- Início e Prévia 3D permanecem protegidos para ignorar saldos físicos zerados;
+- nenhuma Firestore Rule foi alterada nesta correção; não há necessidade de novo deploy de Rules.
