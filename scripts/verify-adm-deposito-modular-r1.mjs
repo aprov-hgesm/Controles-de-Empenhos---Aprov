@@ -41,6 +41,14 @@ const ledgerRepository = readFileSync(
   resolve(root, 'lib/warehouse/ledgerRepository.ts'),
   'utf8'
 );
+const locationRepository = readFileSync(
+  resolve(root, 'lib/warehouse/locationRepository.ts'),
+  'utf8'
+);
+const barcodeRepository = readFileSync(
+  resolve(root, 'lib/warehouse/barcodeRepository.ts'),
+  'utf8'
+);
 const warehouseHome = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseHomeOperational.tsx'),
   'utf8'
@@ -779,6 +787,59 @@ requireText(
 );
 requireText(
   stockOperational,
+  'transferWarehouseStock(workspaceId, {',
+  'Detalhe do item perdeu a alteração auditável de localidade.'
+);
+requireText(
+  stockOperational,
+  'relocateLotIds,',
+  'Realocação do item deixou de transportar os lotes ativos da posição.'
+);
+requireText(
+  stockOperational,
+  'saveWarehouseBarcodeAssociation(workspaceId, {',
+  'Detalhe do item perdeu a inclusão de código de barras.'
+);
+requireText(
+  stockOperational,
+  'replaceWarehouseBarcodeAssociation(',
+  'Detalhe do item perdeu a edição auditável de código de barras.'
+);
+requireText(
+  stockOperational,
+  'updateWarehouseLot(workspaceId, editingLotId, {',
+  'Detalhe do item perdeu a edição de lote/validade.'
+);
+requireText(
+  stockOperational,
+  'createWarehouseLot(workspaceId, {',
+  'Detalhe do item perdeu a inclusão de lote/validade.'
+);
+requireText(
+  locationRepository,
+  'relocateLotIds?: string[];',
+  'Contrato de transferência perdeu a realocação opcional de lotes.'
+);
+requireText(
+  locationRepository,
+  'transaction.update(relocateLotRefs[index], {',
+  'Realocação física deixou de atualizar lote na mesma transação.'
+);
+if (locationRepository.includes('transaction.set(balanceRef, { ...nextBalance')) {
+  fail('Realocação voltou a regravar o saldo agregado apesar de TRANSFER quantityDelta=0.');
+}
+requireText(
+  barcodeRepository,
+  'export async function replaceWarehouseBarcodeAssociation(',
+  'Repository de barcode perdeu a substituição auditável.'
+);
+requireText(
+  barcodeRepository,
+  "status: 'inactive'",
+  'Edição de barcode deixou de preservar o código anterior como inativo.'
+);
+requireText(
+  stockOperational,
   "state.depots.filter(({ depot }) => depot.status === 'active')",
   'Filtro de depósito voltou a exibir depósitos inativos/excluídos.'
 );
@@ -881,6 +942,9 @@ console.log('- Saída de Material reduz ledger/posição/lote e saldo zero deixa
 console.log('- Controle de Itens consolidado em Resumo, Estoque, Movimentações, Inventário e Relatórios');
 console.log('- Relatórios separados em Saída e Consumo Imediato, sem mistura de origens');
 console.log('- Estoque exibe somente saldo positivo e prioriza a menor validade ativa');
+console.log('- ficha do item centraliza realocação, lote, validade e códigos de barras');
+console.log('- realocação usa TRANSFER sem regravar saldo agregado e move lotes ativos na mesma transação');
+console.log('- edição de barcode preserva o código anterior inativo');
 console.log('- filtros do Estoque exibem apenas depósitos ativos, locais-pai e estados de validade');
 console.log('- Inventário opera no database dedicado com contagem isolada e ajuste confirmado');
 console.log('- SISCOFIS no Controle é somente leitura; migração permanece em Alocação de Material');
