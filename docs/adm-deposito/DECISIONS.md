@@ -2311,3 +2311,24 @@ Data: 2026-09-28.
 - Linhas filtradas pelo sistema geram aviso de revisão; se nenhuma linha elegível restar, a importação fica bloqueada.
 - O contrato externo continua simples e versionado (`emprovex_siscofis_inventory_v1`) com apenas quatro campos por item: `numeroItem`, `descricao`, `quantidade` e `valorUnitario`.
 - Itens elegíveis repetidos não são consolidados durante a extração; lotes/linhas independentes do relatório permanecem independentes até a etapa canônica já existente.
+
+
+## D-113 — PDF SISCOFIS direto é opção local adicional de migração
+
+Data: 2026-09-28.
+
+- A Migração SISCOFIS passa a oferecer **três formas de entrada**, sem substituir nenhuma das existentes:
+  1. **PDF SISCOFIS direto — sem IA**;
+  2. **JSON gerado por IA externa ou preparado manualmente**;
+  3. **inclusão manual de item**.
+- As três entradas convergem obrigatoriamente para o mesmo contrato `emprovex_siscofis_inventory_v1`, o mesmo adaptador, a mesma prévia e a mesma confirmação do Marco Zero/snapshot. Não existe ledger paralelo para o PDF.
+- O leitor direto foi calibrado para o **Mapa de Existência - Material de Consumo textual do SISCOFIS**, inclusive o formato real gerado por Rave/Nevrona observado em 2026-09-28.
+- O processamento do PDF ocorre **inteiramente no navegador**. O arquivo não é enviado ao Firestore, à IA, a serviço de OCR ou a endpoint externo apenas para extração.
+- O extrator local reconhece estruturalmente as colunas `Nr Ficha`, `Nome do Material`, `Qtde Exist`, `Qtde Disp` e `Vlr Unit`; `Qtde Exist` continua sendo a quantidade do Marco Zero.
+- Depois da leitura do PDF, o JSON gerado passa novamente pelo classificador oficial da D-112: somente conta `07`, exclusão de hortifruti/granjeiros e preservação de produtos processados.
+- Linhas com `Qtde Exist = 0` não são levadas à prévia de saldo inicial.
+- A data de emissão do relatório é aproveitada como data-base quando reconhecida deterministicamente; caso contrário, permanece disponível a data informada pelo operador.
+- A origem auditável é preservada como `PDF SISCOFIS — <nome do arquivo>`, inclusive após correção/revalidação.
+- O extrator é carregado sob demanda somente quando o usuário seleciona um PDF, reduzindo impacto no bundle operacional normal.
+- O leitor **não tenta adivinhar** formatos incompatíveis. PDFs escaneados, criptografados, comprimidos de forma não suportada ou com estrutura SISCOFIS distinta são recusados com mensagem clara, permanecendo disponível o fluxo JSON/IA.
+- Não foi adicionada biblioteca externa nova para esta função; a leitura utiliza o contrato textual/posicional do PDF SISCOFIS observado, mantendo baixo peso e baixa dependência.
