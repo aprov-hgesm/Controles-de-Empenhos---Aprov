@@ -10,7 +10,8 @@ export type AdminSecurityOperation =
   | 'sector-password-reset'
   | 'firebase-global-usage'
   | 'usage-alert-policy'
-  | 'firebase-auth-backup';
+  | 'firebase-auth-backup'
+  | 'session-credential';
 
 export type AdminMutationOperation =
   | 'sector-provision'

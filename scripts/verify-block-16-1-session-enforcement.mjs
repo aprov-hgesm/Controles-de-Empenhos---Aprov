@@ -49,8 +49,18 @@ for (const marker of [
 
 requireText(
   access,
-  'await acquireWorkspaceSessionLease(user, context);',
-  'Resolução externa deixou de exigir lease antes de liberar o workspace.'
+  'rememberResolvedWorkspaceContext(user.uid, context);',
+  'Resolução externa deixou de produzir contexto validado para o bootstrap de sessão.'
+);
+requireText(
+  lease,
+  'acquireBoundWorkspaceSessionLease',
+  'Runtime deixou de materializar o lease vinculado à credencial server-side.'
+);
+requireText(
+  operational,
+  'ensureWorkspaceSessionCredential',
+  'Sessão externa deixou de obter lease/credencial antes de liberar dados operacionais.'
 );
 requireText(
   access,
@@ -90,11 +100,11 @@ for (const marker of [
 }
 
 for (const marker of [
-  'Setor externo ocupa o primeiro slot de sessão',
-  'Setor externo ocupa o segundo slot de sessão',
+  'Sessão vinculada consulta o próprio primeiro slot',
+  'Segunda sessão vinculada ocupa o segundo slot',
   'Terceiro slot não existe no contrato de capacidade',
   'Sessão diferente não sobrescreve slot ainda ativo',
-  'Slot expirado pode ser retomado por uma nova sessão',
+  'Slot expirado pode ser retomado por uma nova sessão vinculada',
   'Conta fundadora não consome slot no workspace fundador',
 ]) {
   requireText(security, marker, `Suíte Firestore perdeu cenário 16.1: ${marker}`);

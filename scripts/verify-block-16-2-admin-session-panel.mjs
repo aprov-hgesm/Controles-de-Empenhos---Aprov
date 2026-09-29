@@ -26,6 +26,8 @@ const security = read('scripts/firestore-multitenancy-security.test.mjs');
 const docs = read('docs/BLOCK_16_2_ADMIN_SESSION_PANEL.md');
 const pkg = read('package.json');
 const workflow = read('.github/workflows/application-ci.yml');
+const sessionCredentialServer = read('lib/server/firebaseSessionCredential.ts');
+const sessionCredentialClient = read('lib/platformSessionCredential.ts');
 
 for (const marker of [
   "SESSION_REVOCATION_VERSION = 'emprovex_session_revocation_v1'",
@@ -68,8 +70,8 @@ for (const marker of [
 
 requireText(
   access,
-  'error instanceof PlatformSessionLeaseError',
-  'platformAccess não preserva diagnóstico de revogação.'
+  "signInProvider !== SECTOR_AUTH_PROVIDER && signInProvider !== 'custom'",
+  'platformAccess deixou de reconhecer o provider operacional custom.'
 );
 
 for (const marker of [
@@ -90,6 +92,54 @@ for (const marker of [
 ]) requireText(audit, marker, `Auditoria não conhece sessão: ${marker}`);
 
 for (const marker of [
+  "SESSION_AUTHORIZATION_VERSION = 'emprovex_session_auth_v1'",
+]) requireText(capacity, marker, `Contrato de autorização por sessão ausente: ${marker}`);
+
+for (const marker of [
+  'verifyFirebaseSectorRequest',
+  'resolveBootstrapIdentity',
+  'emprovexAccountEmail',
+  'emprovexSessionId',
+  'emprovexSessionSlotId',
+  'emprovexBrowserInstanceId',
+  'emprovexWorkspaceId',
+  'emprovexUg',
+  'createSessionCustomToken',
+  'FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON',
+  'randomUUID',
+  'SESSION_CAPACITY_EXCEEDED',
+]) requireText(sessionCredentialServer, marker, `Emissão server-side perdeu requisito: ${marker}`);
+
+for (const marker of [
+  'ensureWorkspaceSessionCredential',
+  'signInWithCustomToken',
+  'acquireBoundWorkspaceSessionLease',
+  'rememberBoundWorkspaceSessionIdentity',
+  "result.signInProvider === 'custom'",
+]) requireText(sessionCredentialClient, marker, `Upgrade silencioso perdeu requisito: ${marker}`);
+
+for (const marker of [
+  'ensureWorkspaceSessionCredential',
+  'effectiveUser',
+  'releaseWorkspaceSessionLease',
+]) requireText(operational, marker, `Fluxo operacional perdeu hardening: ${marker}`);
+
+for (const marker of [
+  'function requireBoundSessionAuthorization()',
+  'return true;',
+  '5e1778657bc8d52ed21244b7f1fdfea6d61816cc',
+  'function activeSessionSlotMatchesCredential',
+  'function sessionCredentialMatchesAccount',
+  'function canManageWorkspaceSession',
+  'function canInspectWorkspaceSessionCapacity',
+  'function requestLeaseMatchesSessionCredential',
+  'function resourceLeaseMatchesSessionCredential',
+  "request.auth.token.get('emprovexAccountEmail', '')",
+  "request.auth.token.get('emprovexSessionId', '')",
+  'data.expiresAt > request.time',
+]) requireText(rules, marker, `Rules perderam autorização vinculada à sessão: ${marker}`);
+
+for (const marker of [
   'match /{path=**}/sessionSlots/{slotId}',
   'function validSessionRevocationCreate',
   'function validAdminSessionSlotDelete',
@@ -102,6 +152,22 @@ for (const marker of [
 ]) requireText(rules, marker, `Rules perderam proteção 16.2: ${marker}`);
 
 for (const marker of [
+  'Token password válido sem sessão operacional não lê dados do workspace',
+  'Token password válido sem sessão operacional não grava dados do workspace',
+  'Token password não cria slot após o cutover seguro',
+  'Token password não renova slot ativo após o cutover seguro',
+  'Token password não libera slot de outra sessão lógica',
+  'Sessão revogada perde leitura direta mesmo com ID token Firebase ainda válido',
+  'Sessão revogada perde gravação direta sem depender de signOut da UI',
+  'Outra sessão legítima do mesmo UID continua autorizada',
+  'Sessão expirada não acessa dados operacionais diretamente',
+  'SessionId falsificado não se beneficia do slot legítimo do mesmo UID',
+  'BrowserInstanceId falsificado não substitui a sessão legítima',
+  'Refresh do ID token preserva a autorização da sessão legítima',
+  'Múltiplas abas da mesma sessão lógica compartilham a autorização',
+]) requireText(security, marker, `Emulator perdeu cenário de hardening: ${marker}`);
+
+for (const marker of [
   'Administrador lista slots de sessão de toda a plataforma',
   'Administrador revoga e libera uma sessão na mesma transação',
   'Setor lê tombstone conhecido dentro do próprio workspace',
@@ -109,6 +175,16 @@ for (const marker of [
   'Outro workspace não lê revogação de sessão do Setor A',
   'Setor operacional não cria tombstone de revogação',
 ]) requireText(security, marker, `Emulator perdeu cenário 16.2: ${marker}`);
+
+for (const marker of [
+  'Hardening 2026-09-22 — autorização vinculada à sessão',
+  'emprovex_session_auth_v1',
+  'signInWithCustomToken()',
+  'requireBoundSessionAuthorization()',
+  'FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON',
+  'Rollout compatível',
+  'Rollback',
+]) requireText(docs, marker, `Documentação do hardening perdeu requisito: ${marker}`);
 
 for (const marker of [
   'um único listener de collection group',
