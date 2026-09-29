@@ -19,6 +19,8 @@ const pdfExtractor = read('lib/warehouse/siscofisPdf.ts');
 const service = read('lib/warehouse/siscofisService.ts');
 const movement = read('lib/warehouse/movement.ts');
 const siscofisUi = read('features/warehouse/components/WarehouseSiscofisOperational.tsx');
+const pendingAllocation = read('lib/warehouse/pendingPhysicalAllocationRepository.ts');
+const pendingAllocationUi = read('features/warehouse/components/WarehouseSiscofisPendingAllocation.tsx');
 const registration = read('features/warehouse/components/WarehouseItemRegistrationOperational.tsx');
 const control = read('features/warehouse/components/WarehouseItemControlOperational.tsx');
 const navigation = read('features/warehouse/navigation.ts');
@@ -110,6 +112,47 @@ requireText(
   "'PDF SISCOFIS — ' + file.name",
   'Importação direta de PDF perdeu a procedência do arquivo no snapshot.'
 );
+
+requireText(
+  registration,
+  'WarehouseSiscofisPendingAllocation',
+  'Alocação de Material deixou de exibir pendências físicas do Marco Zero SISCOFIS.'
+);
+requireText(
+  registration,
+  'Materiais pendentes',
+  'Aba principal de pendências voltou a representar somente Notas Fiscais.'
+);
+for (const marker of [
+  'listWarehouseSiscofisSnapshots(workspaceId, 25)',
+  "snapshot.kind === 'MARCO_ZERO'",
+  "snapshot.status === 'CONFIRMED'",
+  "balance.position.kind !== 'UNASSIGNED'",
+  'listWarehousePositiveLocationBalances(workspaceId, 500)',
+  'transferWarehouseStock(workspaceId, {',
+  "from: { kind: 'UNASSIGNED' }",
+]) {
+  requireText(
+    pendingAllocation,
+    marker,
+    'Fila física SISCOFIS perdeu contrato operacional: ' + marker
+  );
+}
+if (pendingAllocation.includes('applyWarehouseMovement(')) {
+  findings.push('Alocação física SISCOFIS voltou a criar saldo em vez de apenas transferir localização.');
+}
+for (const marker of [
+  'data-testid="warehouse-siscofis-pending-allocation"',
+  'Materiais importados ainda sem localização física',
+  'Confirmar alocação',
+  'allocateWarehousePendingPhysicalStock(workspaceId, {',
+]) {
+  requireText(
+    pendingAllocationUi,
+    marker,
+    'Superfície de pendências físicas SISCOFIS incompleta: ' + marker
+  );
+}
 
 requireText(registration, 'WarehouseSiscofisOperational', 'Cadastro de Itens deixou de expor Migração SISCOFIS.');
 requireText(registration, "requested === 'siscofis'", 'Redirect legado para SISCOFIS deixou de ser aceito.');
