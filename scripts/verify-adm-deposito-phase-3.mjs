@@ -22,8 +22,10 @@ const pkg = JSON.parse(read('package.json'));
 
 const primaryRoutes = [
   ['app/adm-deposito/page.tsx', 'home'],
-  ['app/adm-deposito/cadastro-de-itens/page.tsx', 'registration'],
   ['app/adm-deposito/meus-depositos/page.tsx', 'overview'],
+  ['app/adm-deposito/cadastro-de-itens/page.tsx', 'registration'],
+  ['app/adm-deposito/saida-de-material/page.tsx', 'outbound'],
+  ['app/adm-deposito/controle-de-depositos/page.tsx', 'depots'],
   ['app/adm-deposito/controle-de-itens/page.tsx', 'control'],
 ];
 
@@ -50,7 +52,7 @@ for (const [path, target] of legacyRoutes) {
   requireText(route, `redirect('${target}')`, `Rota legada aponta para destino incorreto: ${path}`);
 }
 
-for (const marker of ['Início', 'Cadastro de Itens', 'Meus Depósitos', 'Controle de Itens']) {
+for (const marker of ['Início', 'Meus Depósitos', 'Alocação de Material', 'Saída de Material', 'Controle de Depósitos', 'Controle de Materiais']) {
   requireText(navigation, marker, `Superfície principal ausente na navegação atual: ${marker}`);
 }
 
@@ -67,10 +69,10 @@ for (const marker of [
   'WarehouseSiscofisOperational',
   'InvoiceRegistrationQueue',
 ]) {
-  requireText(registration, marker, `Cadastro de Itens perdeu capacidade oficial: ${marker}`);
+  requireText(registration, marker, `Alocação de Material perdeu capacidade oficial: ${marker}`);
 }
-for (const marker of ['WarehouseLocationsOperational', 'WarehouseDepotViewOperational']) {
-  requireText(depots, marker, `Meus Depósitos perdeu capacidade oficial: ${marker}`);
+for (const marker of ['WarehouseLocationsR1Operational', 'WarehouseCroquisR1Operational']) {
+  requireText(depots, marker, `Controle de Depósitos perdeu capacidade oficial: ${marker}`);
 }
 for (const marker of [
   'WarehouseStockOperational',
@@ -80,7 +82,7 @@ for (const marker of [
   'WarehouseLogisticsAlerts',
   'WarehouseLogisticsSettings',
 ]) {
-  requireText(control, marker, `Controle de Itens perdeu capacidade oficial: ${marker}`);
+  requireText(control, marker, `Controle de Materiais perdeu capacidade oficial: ${marker}`);
 }
 
 for (const marker of [
@@ -114,7 +116,7 @@ if (findings.length) {
   process.exitCode = 2;
 } else {
   console.log('ADM DEPÓSITO FASE 3: READY');
-  console.log('Navegação atual: quatro superfícies principais protegidas');
+  console.log('Navegação atual: seis superfícies principais protegidas');
   console.log('Compatibilidade: rotas legadas redirecionam para as novas superfícies');
   console.log('Contratos: namespace oficial de material, ledger e saldo preservado');
   console.log('Segurança: gate multi-tenant compartilhado permanece obrigatório');

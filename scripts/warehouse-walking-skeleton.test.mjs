@@ -7,9 +7,11 @@ const root = process.cwd();
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
 const primaryRoutes = {
-  overview: ['app/adm-deposito/page.tsx', 'overview'],
+  home: ['app/adm-deposito/page.tsx', 'home'],
+  overview: ['app/adm-deposito/meus-depositos/page.tsx', 'overview'],
   registration: ['app/adm-deposito/cadastro-de-itens/page.tsx', 'registration'],
-  depots: ['app/adm-deposito/meus-depositos/page.tsx', 'depots'],
+  outbound: ['app/adm-deposito/saida-de-material/page.tsx', 'outbound'],
+  depots: ['app/adm-deposito/controle-de-depositos/page.tsx', 'depots'],
   control: ['app/adm-deposito/controle-de-itens/page.tsx', 'control'],
 };
 
@@ -24,7 +26,7 @@ const legacyRoutes = {
   settings: ['app/adm-deposito/configuracoes/page.tsx', '/adm-deposito/controle-de-itens?aba=settings'],
 };
 
-test('walking skeleton possui as quatro superfícies principais protegidas e redirects legados', () => {
+test('walking skeleton possui as seis superfícies atuais protegidas e redirects legados', () => {
   for (const [id, [path, section]] of Object.entries(primaryRoutes)) {
     const source = read(path);
     assert.match(source, /WarehouseProtectedSurface/);
@@ -38,24 +40,33 @@ test('walking skeleton possui as quatro superfícies principais protegidas e red
   }
 });
 
-test('navegação interna expõe a arquitetura consolidada oficial', () => {
+test('navegação interna expõe a arquitetura modular atual', () => {
   const navigation = read('features/warehouse/navigation.ts');
-  for (const label of ['Início', 'Cadastro de Itens', 'Meus Depósitos', 'Controle de Itens']) {
+  for (const label of [
+    'Início',
+    'Meus Depósitos',
+    'Alocação de Material',
+    'Saída de Material',
+    'Controle de Depósitos',
+    'Controle de Materiais',
+  ]) {
     assert.ok(navigation.includes(`label: '${label}'`), `Navegação ausente: ${label}`);
   }
 
   const section = read('features/warehouse/components/WarehouseSectionContent.tsx');
   for (const component of [
+    'WarehouseLandingOperational',
     'WarehouseHomeOperational',
     'WarehouseItemRegistrationOperational',
+    'WarehouseMaterialWithdrawal',
     'WarehouseDepotsOperational',
     'WarehouseItemControlOperational',
   ]) {
-    assert.ok(section.includes(component), `Superfície consolidada ausente: ${component}`);
+    assert.ok(section.includes(component), `Superfície modular ausente: ${component}`);
   }
 });
 
-test('layout compartilhado preserva gate founder-only em todas as rotas principais', () => {
+test('layout compartilhado preserva gate multi-tenant em todas as rotas principais', () => {
   const gate = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
   assert.ok(gate.includes('resolveAuthenticatedWorkspaceContext(currentUser)'));
   assert.ok(gate.includes('canAccessWarehouseModule(context)'));
@@ -97,14 +108,15 @@ test('walking skeleton preserva contratos canônicos sem persistência paralela 
   }
 });
 
-test('capacidades consolidadas estão ligadas às superfícies atuais sem segunda navegação', () => {
+test('capacidades consolidadas estão ligadas às superfícies atuais', () => {
   const registration = read('features/warehouse/components/WarehouseItemRegistrationOperational.tsx');
   const depots = read('features/warehouse/components/WarehouseDepotsOperational.tsx');
   const control = read('features/warehouse/components/WarehouseItemControlOperational.tsx');
 
   assert.ok(registration.includes('WarehouseSiscofisOperational'));
-  assert.ok(depots.includes('WarehouseLocationsOperational'));
-  assert.ok(depots.includes('WarehouseDepotViewOperational'));
+  assert.ok(registration.includes('InvoiceRegistrationQueue'));
+  assert.ok(depots.includes('WarehouseLocationsR1Operational'));
+  assert.ok(depots.includes('WarehouseCroquisR1Operational'));
 
   for (const component of [
     'WarehouseStockOperational',
@@ -115,7 +127,7 @@ test('capacidades consolidadas estão ligadas às superfícies atuais sem segund
     'WarehouseLogisticsAlerts',
     'WarehouseLogisticsSettings',
   ]) {
-    assert.ok(control.includes(component), `Controle de Itens perdeu ${component}`);
+    assert.ok(control.includes(component), `Controle de Materiais perdeu ${component}`);
   }
 });
 
