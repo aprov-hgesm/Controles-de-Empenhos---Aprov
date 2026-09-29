@@ -1109,7 +1109,7 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
       });
       const loadedOverrides = visualSettings?.overrides || {};
       setSavedVisualOverrides(loadedOverrides);
-      setVisualOverrides((current) => editMode ? current : loadedOverrides);
+      setVisualOverrides(loadedOverrides);
     } catch (error) {
       setData((current) => ({
         ...current,
@@ -1402,13 +1402,13 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
     <section
       className={styles.scene}
       data-testid="warehouse-landing-operational"
-      aria-label="Início ADM Depósito"
+      aria-label="Início Central de Depósitos"
     >
       <div className={styles.ambientGlow} aria-hidden="true" />
       <div className={styles.texture} aria-hidden="true" />
 
       <div className={styles.sceneTitle}>
-        <span>EMPROVEX · ADM DEPÓSITO</span>
+        <span>EMPROVEX · CENTRAL DE DEPÓSITOS</span>
         <strong>Ambiente logístico</strong>
         <small>
           {activeDepots.length} depósito(s)
