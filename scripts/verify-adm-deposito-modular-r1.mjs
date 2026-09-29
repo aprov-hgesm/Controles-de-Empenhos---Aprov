@@ -129,6 +129,10 @@ const siscofisHistoryReport = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseSiscofisHistoryReport.tsx'),
   'utf8'
 );
+const siscofisContract = readFileSync(
+  resolve(root, 'lib/warehouse/siscofis.ts'),
+  'utf8'
+);
 const inventoryHistoryReport = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseInventoryHistoryReport.tsx'),
   'utf8'
@@ -1371,6 +1375,51 @@ requireText(
   siscofisHistoryReport,
   'listWarehouseSiscofisSnapshots(workspaceId, 24)',
   'Relatório SISCOFIS perdeu a consulta somente leitura bounded.'
+);
+requireText(
+  siscofisContract,
+  "if (!input.numeroItem.trim().startsWith('07')) return 'NON_ACCOUNT_07';",
+  'Migração SISCOFIS deixou de restringir o Marco Zero à conta de consumo 07.'
+);
+requireText(
+  siscofisContract,
+  "if (/\\bin natura\\b/.test(description)) return 'FRESH_HORTIFRUTI';",
+  'Migração SISCOFIS deixou de excluir hortifruti explicitamente in natura.'
+);
+requireText(
+  siscofisContract,
+  'SISCOFIS_FRESH_HORTIFRUTI_NAMES',
+  'Migração SISCOFIS perdeu a classificação determinística de hortifruti fresco.'
+);
+requireText(
+  siscofisContract,
+  'SISCOFIS_PROCESSED_HORTIFRUTI_MARKERS',
+  'Migração SISCOFIS perdeu a proteção contra falso positivo em produtos processados.'
+);
+requireText(
+  siscofisContract,
+  "'siscofis_non_account_07_filtered'",
+  'Migração SISCOFIS deixou de sinalizar linhas fora da conta 07.'
+);
+requireText(
+  siscofisContract,
+  "'siscofis_fresh_hortifruti_filtered'",
+  'Migração SISCOFIS deixou de sinalizar hortifruti/granjeiros filtrados.'
+);
+requireText(
+  siscofisContract,
+  '3. quantidade — origem obrigatória: "Qtde Exist";',
+  'Prompt SISCOFIS deixou de usar Qtde Exist como quantidade física do Marco Zero.'
+);
+requireText(
+  siscofisContract,
+  '- NÃO use "Qtde Disp";',
+  'Prompt SISCOFIS voltou a permitir Qtde Disp no lugar de Qtde Exist.'
+);
+requireText(
+  siscofisContract,
+  'FILTRO OBRIGATÓRIO — NÃO MIGRAR HORTIFRUTI/GRANJEIROS:',
+  'Prompt SISCOFIS perdeu a exclusão explícita de hortifruti/granjeiros.'
 );
 requireText(
   rules,
