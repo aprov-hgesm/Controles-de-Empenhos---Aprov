@@ -778,6 +778,62 @@ requireText(
   'WAREHOUSE_PALLET_VISUAL',
   'Visão 3D deixou de usar a paleta oficial compartilhada dos paletes.'
 );
+requireText(
+  warehouseLanding,
+  'WAREHOUSE_RACK_VISUAL',
+  'Início deixou de usar a identidade visual compartilhada das estantes.'
+);
+requireText(
+  isometricPreview,
+  'WAREHOUSE_RACK_VISUAL',
+  'Visão 3D deixou de usar a identidade visual compartilhada das estantes.'
+);
+requireText(
+  warehouseLanding,
+  'function warehouseRackBeam(',
+  'Início perdeu as travessas volumétricas das estantes.'
+);
+requireText(
+  isometricPreview,
+  'function rackBeamPrism(',
+  'Visão 3D perdeu as travessas volumétricas das estantes.'
+);
+for (const rackRole of [
+  "'rack-front-beam'",
+  "'rack-rear-beam'",
+  "'rack-side-beam'",
+]) {
+  requireText(
+    warehouseLanding,
+    rackRole,
+    'Início perdeu uma das orientações estruturais das travessas da estante.'
+  );
+  requireText(
+    isometricPreview,
+    rackRole,
+    'Visão 3D perdeu uma das orientações estruturais das travessas da estante.'
+  );
+}
+if (warehouseLanding.includes('stroke="#f47f13"')) {
+  fail('Início voltou a usar linha laranja simples em vez de travessa volumétrica na estante.');
+}
+if (isometricPreview.includes('stroke={beam}')) {
+  fail('Visão 3D voltou a usar linha laranja simples em vez de travessa volumétrica na estante.');
+}
+for (const rackVisualToken of [
+  "postDark: '#0e3556'",
+  "beamFront: '#f47f13'",
+  "beamTop: '#ff9b36'",
+  "beamSide: '#c85e08'",
+  "rearBeamFront: '#d96b0d'",
+  "deckTop: '#f4f7f9'",
+]) {
+  requireText(
+    warehouseVisualStyle,
+    rackVisualToken,
+    'Identidade visual oficial das estantes foi alterada fora da decisão consolidada.'
+  );
+}
 if (isometricPreview.includes("fill={selected ? '#ffe8a8' : '#e7b26b'}")) {
   fail('Renderer 3D voltou a usar a caixa visual antiga em vez da paleta compartilhada.');
 }
