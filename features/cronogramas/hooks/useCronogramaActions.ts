@@ -311,7 +311,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     doc.text('2. DISTRIBUIÇÃO DAS REMESSAS DE ENTREGA', margin, yPos);
     yPos += 3;
      // Build headers dynamically
-    const headers: string[] = ['Item / Descrição', 'Und', 'Emp.', 'Rec.', 'Saldo Disp.'];
+    const headers: string[] = ['Item compra / Descrição', 'Und', 'Emp.', 'Rec.', 'Saldo Disp.'];
     cronogramaColunas.forEach((col) => {
       headers.push(`${col.titulo}\n${formatDateOnly(col.dataPrevista)}`);
     });
@@ -320,9 +320,11 @@ export function useCronogramaActions(context:CronogramaActionsContext){
       const saldoDisponivel = Math.max(0, it.quantity - it.received);
       const totalProg = cronogramaColunas.reduce((sum, col) => sum + (Number(cronogramaDistribuicao[it.id]?.[col.id]) || 0), 0);
       const valorTotalProg = totalProg * it.unitPrice;
-       const numeroItemEmpenho = String(it.empenhoItemNumber || it.id || '').trim();
+       const legacyItemCompraId = /^\d+$/.test(String(it.id || '').trim()) ? String(it.id).trim() : '';
+       const rawItemCompraNumber = String(it.itemCompraNumber || legacyItemCompraId).trim();
+       const itemCompraNumber = /^\d+$/.test(rawItemCompraNumber) ? rawItemCompraNumber.padStart(5, '0') : rawItemCompraNumber;
        const row: string[] = [
-        `${numeroItemEmpenho ? `Item nº ${numeroItemEmpenho}\n` : ''}${it.name}`,
+        `${itemCompraNumber ? `Item compra: ${itemCompraNumber}\n` : ''}${it.name}`,
         it.unit,
         String(it.quantity),
         String(it.received),
