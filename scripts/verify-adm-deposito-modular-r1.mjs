@@ -141,6 +141,14 @@ const siscofisOperational = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseSiscofisOperational.tsx'),
   'utf8'
 );
+const pendingPhysicalAllocationRepository = readFileSync(
+  resolve(root, 'lib/warehouse/pendingPhysicalAllocationRepository.ts'),
+  'utf8'
+);
+const siscofisPendingAllocation = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseSiscofisPendingAllocation.tsx'),
+  'utf8'
+);
 const inventoryHistoryReport = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseInventoryHistoryReport.tsx'),
   'utf8'
@@ -1498,6 +1506,44 @@ requireText(
   siscofisOperational,
   "'PDF SISCOFIS — ' + file.name",
   'PDF direto perdeu o rótulo auditável de origem do arquivo.'
+);
+requireText(
+  itemRegistration,
+  'WarehouseSiscofisPendingAllocation',
+  'Alocação de Material perdeu a fila de pendências do Marco Zero SISCOFIS.'
+);
+requireText(
+  itemRegistration,
+  'Materiais pendentes',
+  'Alocação de Material voltou a limitar a aba principal às Notas Fiscais.'
+);
+for (const pendingMarker of [
+  'listWarehouseSiscofisSnapshots(workspaceId, 25)',
+  "snapshot.kind === 'MARCO_ZERO'",
+  "snapshot.status === 'CONFIRMED'",
+  "balance.position.kind !== 'UNASSIGNED'",
+  'listWarehousePositiveLocationBalances(workspaceId, 500)',
+  'transferWarehouseStock(workspaceId, {',
+  "from: { kind: 'UNASSIGNED' }",
+]) {
+  requireText(
+    pendingPhysicalAllocationRepository,
+    pendingMarker,
+    'Pendência física SISCOFIS perdeu contrato: ' + pendingMarker
+  );
+}
+if (pendingPhysicalAllocationRepository.includes('applyWarehouseMovement(')) {
+  fail('Pendência SISCOFIS passou a duplicar saldo em vez de usar TRANSFER.');
+}
+requireText(
+  siscofisPendingAllocation,
+  'data-testid="warehouse-siscofis-pending-allocation"',
+  'Pendência física SISCOFIS perdeu a superfície operacional.'
+);
+requireText(
+  siscofisPendingAllocation,
+  'allocateWarehousePendingPhysicalStock(workspaceId, {',
+  'Pendência física SISCOFIS deixou de usar o motor dedicado de transferência.'
 );
 requireText(
   rules,
