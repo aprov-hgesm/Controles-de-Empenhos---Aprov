@@ -726,6 +726,34 @@ export function parseEmprovexSiscofisInventoryJson(raw: string): EmprovexSiscofi
   return { ok: true, data: { schemaVersion: EMPROVEX_SISCOFIS_INVENTORY_SCHEMA_VERSION, items }, issues };
 }
 
+export function emprovexSiscofisSourceIndexFromRowId(rowId: string): number | null {
+  const match = /^siscofis-(\d+)$/.exec(rowId.trim());
+  if (!match) return null;
+  const oneBased = Number(match[1]);
+  if (!Number.isSafeInteger(oneBased) || oneBased < 1) return null;
+  return oneBased - 1;
+}
+
+export function remapEmprovexSiscofisRowIdAfterExclusions(
+  rowId: string,
+  excludedRowIds: readonly string[]
+): string | null {
+  const sourceIndex = emprovexSiscofisSourceIndexFromRowId(rowId);
+  if (sourceIndex === null) return null;
+
+  const excludedIndexes = Array.from(
+    new Set(
+      excludedRowIds
+        .map((candidate) => emprovexSiscofisSourceIndexFromRowId(candidate))
+        .filter((candidate): candidate is number => candidate !== null)
+    )
+  ).sort((left, right) => left - right);
+
+  if (excludedIndexes.includes(sourceIndex)) return null;
+  const shift = excludedIndexes.filter((candidate) => candidate < sourceIndex).length;
+  return 'siscofis-' + String(sourceIndex - shift + 1).padStart(4, '0');
+}
+
 export function adaptEmprovexSiscofisInventory(input: {
   inventory: EmprovexSiscofisInventory;
   ug: string;
