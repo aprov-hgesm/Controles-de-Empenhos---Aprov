@@ -126,7 +126,7 @@ test('adapter preserva ficha e usa fallback canônico explícito quando unidade 
 test('ambiguidade canônica exige override explícito', async () => {
   const parsed = siscofis.parseEmprovexSiscofisInventoryJson(JSON.stringify({
     schemaVersion: 'emprovex_siscofis_inventory_v1',
-    items: [{ numeroItem: '2416P', descricao: 'CAFETEIRA', quantidade: 1, valorUnitario: 804 }],
+    items: [{ numeroItem: '07.2416P', descricao: 'CAFETEIRA', quantidade: 1, valorUnitario: 804 }],
   }));
   assert.equal(parsed.ok, true);
   const one = material({ id: 'mat_' + 'b'.repeat(32), description: 'CAFETEIRA' });
