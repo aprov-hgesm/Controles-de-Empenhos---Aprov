@@ -129,6 +129,116 @@ function lookupText(value: string): string {
     .toLocaleLowerCase('pt-BR');
 }
 
+export type EmprovexSiscofisSourceExclusionReason =
+  | 'NON_ACCOUNT_07'
+  | 'FRESH_HORTIFRUTI';
+
+const SISCOFIS_FRESH_HORTIFRUTI_NAMES = new Set([
+  'abacaxi',
+  'abobora',
+  'abobrinha',
+  'agriao',
+  'aipim',
+  'alface',
+  'alho',
+  'banana',
+  'batata',
+  'batata doce',
+  'berinjela',
+  'beterraba',
+  'brocolis',
+  'cebola',
+  'cebolinha',
+  'cenoura',
+  'chuchu',
+  'coentro',
+  'couve',
+  'couve flor',
+  'ervilha',
+  'espinafre',
+  'goiaba',
+  'inhame',
+  'laranja',
+  'limao',
+  'maca',
+  'mamao',
+  'mandioca',
+  'mandioquinha',
+  'manga',
+  'maracuja',
+  'melancia',
+  'melao',
+  'milho verde',
+  'moranga',
+  'morango',
+  'nabo',
+  'pepino',
+  'pera',
+  'pessego',
+  'pimentao',
+  'rabanete',
+  'repolho',
+  'rucula',
+  'salsa',
+  'tangerina',
+  'tomate',
+  'uva',
+  'vagem',
+]);
+
+const SISCOFIS_PROCESSED_HORTIFRUTI_MARKERS = [
+  'em conserva',
+  'conserva',
+  'desidratad',
+  'granulad',
+  'em po',
+  'seca',
+  'seco',
+  'palha',
+  'pre frit',
+  'frita',
+  'congelad',
+  'polpa',
+  'farinha',
+  'doce',
+  'molho',
+  'suco',
+  'geleia',
+  'compota',
+  'enlatad',
+  'pasteurizad',
+];
+
+function normalizeSiscofisMaterialBase(description: string): string {
+  return lookupText(description)
+    .split('/')[0]
+    .trim()
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ');
+}
+
+export function classifyEmprovexSiscofisSourceItem(input: {
+  numeroItem: string;
+  descricao: string;
+}): EmprovexSiscofisSourceExclusionReason | null {
+  if (!input.numeroItem.trim().startsWith('07')) return 'NON_ACCOUNT_07';
+
+  const description = lookupText(input.descricao);
+  if (/\bgranjeir/.test(description) || /^ovos?\b/.test(normalizeSiscofisMaterialBase(input.descricao))) {
+    return 'FRESH_HORTIFRUTI';
+  }
+
+  if (/\bin natura\b/.test(description)) return 'FRESH_HORTIFRUTI';
+
+  const base = normalizeSiscofisMaterialBase(input.descricao);
+  if (!SISCOFIS_FRESH_HORTIFRUTI_NAMES.has(base)) return null;
+
+  const isProcessed = SISCOFIS_PROCESSED_HORTIFRUTI_MARKERS.some((marker) =>
+    description.includes(marker)
+  );
+  return isProcessed ? null : 'FRESH_HORTIFRUTI';
+}
+
 function pushIssue(
   issues: WarehouseSiscofisIssue[],
   severity: WarehouseSiscofisIssue['severity'],
@@ -630,18 +740,66 @@ export function adaptEmprovexSiscofisInventory(input: {
     const key = lookupText(material.description);
     byDescription.set(key, [...(byDescription.get(key) || []), material]);
   }
-  const rows: WarehouseSiscofisImportRow[] = input.inventory.items.map((item, index) => {
-    const rowId = 'siscofis-' + String(index + 1).padStart(4, '0');
+
+  const eligibleItems: Array<{ item: EmprovexSiscofisInventoryItem; sourceIndex: number }> = [];
+  const excludedByAccount: EmprovexSiscofisInventoryItem[] = [];
+  const excludedHortifruti: EmprovexSiscofisInventoryItem[] = [];
+
+  input.inventory.items.forEach((item, sourceIndex) => {
+    const exclusion = classifyEmprovexSiscofisSourceItem(item);
+    if (exclusion === 'NON_ACCOUNT_07') {
+      excludedByAccount.push(item);
+      return;
+    }
+    if (exclusion === 'FRESH_HORTIFRUTI') {
+      excludedHortifruti.push(item);
+      return;
+    }
+    eligibleItems.push({ item, sourceIndex });
+  });
+
+  if (excludedByAccount.length > 0) {
+    pushIssue(
+      issues,
+      'warning',
+      'siscofis_non_account_07_filtered',
+      '$.items',
+      excludedByAccount.length
+        + ' linha(s) ignorada(s) porque o Nº Ficha não pertence à conta de consumo 07.'
+    );
+  }
+  if (excludedHortifruti.length > 0) {
+    pushIssue(
+      issues,
+      'warning',
+      'siscofis_fresh_hortifruti_filtered',
+      '$.items',
+      excludedHortifruti.length
+        + ' linha(s) de hortifruti/granjeiro foram ignoradas na migração inicial.'
+    );
+  }
+  if (eligibleItems.length === 0) {
+    pushIssue(
+      issues,
+      'error',
+      'siscofis_no_eligible_rows',
+      '$.items',
+      'Nenhuma linha elegível restou após aplicar conta 07 e exclusão de hortifruti/granjeiros.'
+    );
+  }
+
+  const rows: WarehouseSiscofisImportRow[] = eligibleItems.map(({ item, sourceIndex }) => {
+    const rowId = 'siscofis-' + String(sourceIndex + 1).padStart(4, '0');
     const matches = (byDescription.get(lookupText(item.descricao)) || []).filter((material) => material.status === 'active');
     const overrideId = input.materialOverrides?.[rowId]?.trim().toLowerCase() || '';
     const override = overrideId
       ? input.materials.find((material) => material.id === overrideId && material.status === 'active') || null
       : null;
-    if (overrideId && !override) pushIssue(issues, 'error', 'invalid_material_override', '$.items[' + index + ']', 'O vínculo canônico escolhido não está disponível neste workspace.');
+    if (overrideId && !override) pushIssue(issues, 'error', 'invalid_material_override', '$.items[' + sourceIndex + ']', 'O vínculo canônico escolhido não está disponível neste workspace.');
     const requiresCanonicalResolution = !override && matches.length > 1;
     const matched = override || (matches.length === 1 ? matches[0] : null);
-    if (requiresCanonicalResolution) pushIssue(issues, 'error', 'ambiguous_material_match', '$.items[' + index + ']', 'Mais de um material canônico possui a mesma descrição. Selecione explicitamente o vínculo na prévia.');
-    if (!matched && !requiresCanonicalResolution) pushIssue(issues, 'warning', 'unit_fallback_applied', '$.items[' + index + ']', 'Material novo/não resolvido: apresentação marcada explicitamente como não informada, reutilizando o fallback canônico do fluxo de NF.');
+    if (requiresCanonicalResolution) pushIssue(issues, 'error', 'ambiguous_material_match', '$.items[' + sourceIndex + ']', 'Mais de um material canônico possui a mesma descrição. Selecione explicitamente o vínculo na prévia.');
+    if (!matched && !requiresCanonicalResolution) pushIssue(issues, 'warning', 'unit_fallback_applied', '$.items[' + sourceIndex + ']', 'Material novo/não resolvido: apresentação marcada explicitamente como não informada, reutilizando o fallback canônico do fluxo de NF.');
     return {
       rowId,
       materialId: matched?.id || null,
@@ -654,6 +812,7 @@ export function adaptEmprovexSiscofisInventory(input: {
       requiresCanonicalResolution,
     };
   });
+
   return {
     importData: {
       schemaVersion: WAREHOUSE_SISCOFIS_IMPORT_SCHEMA_VERSION,
@@ -670,21 +829,61 @@ export function buildWarehouseSiscofisPrompt(): string {
   return [
     'PROMPT OFICIAL EMPROVEX — EXTRAÇÃO SISCOFIS',
     '',
-    'Você receberá um PDF de inventário ou relatório de materiais emitido pelo SISCOFIS.',
-    'Sua tarefa é extrair TODOS os itens materiais do documento e retornar SOMENTE JSON válido compatível com o EMPROVEX.',
+    'Você receberá um PDF de inventário ou Mapa de Existência - Material de Consumo emitido pelo SISCOFIS.',
+    'Sua tarefa é extrair SOMENTE os itens elegíveis para o Marco Zero do ADM Depósito e retornar SOMENTE JSON válido compatível com o EMPROVEX.',
+    '',
+    'FILTRO OBRIGATÓRIO — CONTA DE CONSUMO:',
+    '- considere somente linhas cujo "Nr Ficha" comece exatamente por "07";',
+    '- qualquer Nr Ficha que não comece por "07" deve ser ignorado;',
+    '- preserve o Nr Ficha completo no JSON, inclusive ponto, letras, zeros, prefixos e sufixos.',
+    '',
+    'FILTRO OBRIGATÓRIO — NÃO MIGRAR HORTIFRUTI/GRANJEIROS:',
+    '- ignore frutas, legumes, verduras, hortaliças, raízes/tubérculos e granjeiros destinados ao controle de hortifruti;',
+    '- ignore todo item claramente identificado como "In natura";',
+    '- ignore também hortifruti fresco mesmo quando a expressão "In natura" não estiver escrita, por exemplo pimentão verde/vermelho e cebola roxa;',
+    '- ignore ovos e itens identificados como granjeiros;',
+    '- NÃO confunda produto processado com hortifruti fresco.',
+    '',
+    'EXEMPLOS QUE DEVEM SER IGNORADOS:',
+    '- BETERRABA / Tipo: In natura;',
+    '- MELÃO / Tipo: In natura;',
+    '- MANDIOCA / Tipo: In natura;',
+    '- ABACAXI / Tipo: In natura;',
+    '- PIMENTÃO / Tipo: Verde, Vermelho ou In natura;',
+    '- TOMATE / Tipo: In natura;',
+    '- BERINJELA / Tipo: In natura;',
+    '- CEBOLA / Tipo: Rôxa;',
+    '- BANANA / Tipo: In natura;',
+    '- MORANGA / Tipo: In natura;',
+    '- OVOS e demais granjeiros.',
+    '',
+    'EXEMPLOS PROCESSADOS QUE DEVEM CONTINUAR SENDO EXTRAÍDOS:',
+    '- FARINHA DE MANDIOCA;',
+    '- ERVILHA / Tipo: Seca;',
+    '- MILHO VERDE / Tipo: Em conserva;',
+    '- POLPA DE FRUTA;',
+    '- BATATA FRITA / PRÉ FRITA CONGELADA/RESFRIADA;',
+    '- BATATA / Tipo: Palha;',
+    '- ALHO / Tipo: Granulado;',
+    '- DOCE EM CALDA, molhos, sucos, geleias, conservas e produtos desidratados.',
     '',
     'Extraia SOMENTE:',
-    '1. numeroItem — Origem: "Nr Ficha"',
-    '2. descricao — Origem: "ESPECIFICAÇÃO"',
-    '3. quantidade — Origem: "QTDE"',
-    '4. valorUnitario — Origem: "VALOR UNITÁRIO"',
+    '1. numeroItem — origem: "Nr Ficha";',
+    '2. descricao — origem: "Nome do Material" (ou "ESPECIFICAÇÃO" em modelo legado);',
+    '3. quantidade — origem obrigatória: "Qtde Exist";',
+    '4. valorUnitario — origem: "Vlr Unit" / "VALOR UNITÁRIO".',
+    '',
+    'ATENÇÃO À QUANTIDADE:',
+    '- use "Qtde Exist", pois representa a quantidade fisicamente existente no depósito;',
+    '- NÃO use "Qtde Disp";',
+    '- uma linha pode possuir Qtde Exist positiva e Qtde Disp igual a zero; ainda assim use Qtde Exist.',
     '',
     'A estrutura obrigatória é:',
     '{',
     '  "schemaVersion": "emprovex_siscofis_inventory_v1",',
     '  "items": [',
     '    {',
-    '      "numeroItem": "CODIGO",',
+    '      "numeroItem": "07.0000C",',
     '      "descricao": "DESCRIÇÃO",',
     '      "quantidade": 1,',
     '      "valorUnitario": 10.50',
@@ -700,17 +899,16 @@ export function buildWarehouseSiscofisPrompt(): string {
     '- use exatamente o Nr Ficha;',
     '- preserve pontos, letras, zeros à esquerda, prefixos e sufixos;',
     '- retorne sempre como string.',
-    'Exemplos: "3393P", "0173P", "21.1000C", "10.9156C", "2314".',
     '',
     'REGRAS PARA descricao:',
-    '- transcreva fielmente a ESPECIFICAÇÃO;',
+    '- transcreva fielmente o Nome do Material/ESPECIFICAÇÃO;',
     '- reúna descrições quebradas entre linhas na ordem correta;',
-    '- não resuma, não reescreva, não melhore a redação, não corrija ortografia, não substitua palavras, não altere letras e não invente especificações;',
+    '- não resuma, não reescreva, não melhore a redação, não corrija ortografia, não substitua palavras e não invente especificações;',
     '- somente una trechos separados por quebra de linha e remova espaços duplicados produzidos pela formatação do PDF.',
     'A fidelidade ao documento tem prioridade sobre correções linguísticas.',
     '',
     'REGRAS PARA quantidade:',
-    '- retornar como número JSON, nunca como string.',
+    '- retornar Qtde Exist como número JSON, nunca como string.',
     'Correto: "quantidade": 120',
     'Incorreto: "quantidade": "120"',
     '',
@@ -718,19 +916,15 @@ export function buildWarehouseSiscofisPrompt(): string {
     'Converter notação monetária brasileira para número JSON.',
     '810,00 → 810.00; 246,03 → 246.03; 1.944,00 → 1944.00; 15.231,67 → 15231.67; 73.330,00 → 73330.00.',
     'Nunca usar aspas.',
-    'Correto: "valorUnitario": 1944.00',
-    'Incorreto: "valorUnitario": "1.944,00"',
-    'Incorreto: "valorUnitario": "1944.00"',
     '',
     'NÃO CONSOLIDAR ITENS.',
-    'Mesmo que duas linhas tenham o mesmo Nr Ficha e a mesma descrição, mantenha-as como objetos independentes.',
-    'Não some quantidades, não calcule média, não elimine linhas e não agrupe registros.',
+    'Mesmo que duas linhas elegíveis tenham o mesmo Nr Ficha e a mesma descrição, mantenha-as como objetos independentes.',
+    'Não some quantidades, não calcule média, não elimine duplicidades legítimas e não agrupe registros.',
     '',
-    'IGNORE NR ORD, conta contábil, unidade de medida, valor total, situação, SUB TOTAL, TOTAL, TOTAL GERAL, UG, exercício, dependência, responsáveis, datas, cabeçalhos e rodapés.',
-    'Use NR ORD somente internamente, se existir, para conferir se percorreu todos os itens. Nunca inclua NR ORD no JSON.',
+    'IGNORE Documento/NF, Qtde Disp, Grupo Mat, Projeto, Gestor Material, validade, Cod Mat/Proposta, atributos de patrimônio, lote, Ano-Lote, categoria de munição/combustível, subtotais, totais, UG, cabeçalhos e rodapés.',
     '',
     'Percorra TODAS as páginas. Não forneça amostra. Não trunque. Não escreva "continua". Não use "etc.". Nunca invente informações.',
-    'Se um dos quatro campos realmente não puder ser identificado, utilize null em vez de adivinhar.',
+    'Se um dos quatro campos de uma linha elegível realmente não puder ser identificado, utilize null em vez de adivinhar.',
     '',
     'RESPOSTA:',
     '- somente JSON;',
@@ -740,10 +934,14 @@ export function buildWarehouseSiscofisPrompt(): string {
     'A primeira caractere deve ser { e a última caractere deve ser }.',
     '',
     'Antes de responder, confira internamente:',
-    '- todas as páginas e todos os itens foram processados;',
+    '- todas as páginas foram processadas;',
+    '- só existem Nr Ficha iniciados por 07;',
+    '- nenhum hortifruti fresco/in natura ou granjeiro foi incluído;',
+    '- produtos processados de origem vegetal não foram excluídos apenas pelo nome do ingrediente;',
+    '- quantidade veio de Qtde Exist e nunca de Qtde Disp;',
     '- Nr Ficha está preservado como string;',
     '- descrições multilinha foram reconstruídas sem correção ou reescrita;',
-    '- itens repetidos continuam separados;',
+    '- itens repetidos elegíveis continuam separados;',
     '- quantidade e valorUnitario são números;',
     '- separadores de milhar foram removidos e vírgula decimal virou ponto;',
     '- subtotal/total não virou item;',
