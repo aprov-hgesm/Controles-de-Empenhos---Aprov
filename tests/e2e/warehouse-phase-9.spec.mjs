@@ -22,7 +22,7 @@ test.describe.serial('Central de Depósitos — Croqui R1', () => {
     await page.getByRole('button', { name: 'Salvar versão', exact: true }).click();
 
     await expect(
-      page.getByText(/Croqui salvo com sucesso. Versão d+ ativa./)
+      page.getByText(/Croqui salvo com sucesso\. Versão \d+ ativa\./)
     ).toBeVisible({ timeout: 20_000 });
 
     await page.getByRole('button', { name: 'Prévia 3D', exact: true }).first().click();
