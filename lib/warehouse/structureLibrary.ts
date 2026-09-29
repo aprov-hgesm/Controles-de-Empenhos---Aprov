@@ -90,7 +90,7 @@ export const WAREHOUSE_STRUCTURE_LIBRARY: readonly WarehouseStructureDefinition[
   },
   {
     id: 'refrigerator',
-    name: 'Geladeira',
+    name: 'Geladeira industrial',
     description: 'Equipamento refrigerado representado sem criar estoque próprio.',
     kind: 'REFRIGERATOR',
     category: 'cold-chain',
@@ -150,7 +150,7 @@ export const WAREHOUSE_STRUCTURE_LIBRARY: readonly WarehouseStructureDefinition[
   },
   {
     id: 'bench',
-    name: 'Bancada',
+    name: 'Mesa / bancada',
     description: 'Bancada de apoio, separação ou manipulação.',
     kind: 'BENCH',
     category: 'handling',

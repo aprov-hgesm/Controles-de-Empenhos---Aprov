@@ -84,9 +84,9 @@ const STRUCTURE_LABELS: Record<WarehouseDepotLayoutObjectKind, string> = {
   CABINET: 'Armário',
   CHAMBER: 'Câmara',
   FREEZER: 'Freezer',
-  REFRIGERATOR: 'Geladeira',
+  REFRIGERATOR: 'Geladeira industrial',
   PALLET: 'Palete',
-  BENCH: 'Bancada',
+  BENCH: 'Mesa / bancada',
   ZONE: 'Zona',
   OTHER: 'Outra estrutura',
 };
