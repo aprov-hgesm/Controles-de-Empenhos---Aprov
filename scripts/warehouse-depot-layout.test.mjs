@@ -358,3 +358,40 @@ test('gate 9.7 mantém editor sem acesso direto a saldo, ledger, lotes, NF ou Co
   assert.doesNotMatch(editor, /firebase\/firestore|runTransaction|setDoc|updateDoc|writeBatch/);
   assert.match(operational, /Nenhum saldo ou movimento de estoque foi alterado/);
 });
+
+
+test('croqui aceita dimensões reais maiores e preserva ajuste proporcional no editor', () => {
+  const result = source.validateWarehouseDepotLayout(
+    layout({ logicalWidth: 12000, logicalHeight: 2400, objects: [] })
+  );
+  assert.equal(result.ok, true);
+
+  const editor = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotLayoutEditor.tsx'),
+    'utf8'
+  );
+  const operational = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotViewOperational.tsx'),
+    'utf8'
+  );
+  assert.match(editor, /fitScale/);
+  assert.match(editor, /effectiveScale/);
+  assert.match(editor, /proporção \{logicalWidth\}×\{logicalHeight\} preservada/);
+  assert.match(operational, /MAX_LAYOUT_DIMENSION = 50000/);
+  assert.match(operational, /Aplicar medidas e preservar proporções/);
+  assert.match(operational, /warehouse-layout-edit-dimensions/);
+  assert.match(operational, /warehouse-structure-select/);
+});
+
+test('cadastro de locais oferece tipos físicos e subposições automáticas para estantes', () => {
+  const locations = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseLocationsR1Operational.tsx'),
+    'utf8'
+  );
+  for (const label of ['Estante', 'Palete', 'Freezer', 'Geladeira industrial', 'Mesa / bancada']) {
+    assert.match(locations, new RegExp(label.replace('/', '\\/')));
+  }
+  assert.match(locations, /Subposições da estante/);
+  assert.match(locations, /locationPreset === 'SHELF'/);
+  assert.match(locations, /parentLocationId: created\.id/);
+});

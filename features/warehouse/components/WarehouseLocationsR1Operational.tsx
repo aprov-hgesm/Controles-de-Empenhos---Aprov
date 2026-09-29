@@ -43,6 +43,16 @@ type State = {
 };
 
 type CreatePanel = 'depot' | 'location' | 'subposition' | 'editDepot' | 'editLocation' | 'editSubposition' | null;
+type LocationPreset = 'SHELF' | 'PALLET' | 'FREEZER' | 'REFRIGERATOR' | 'BENCH' | 'OTHER';
+
+const LOCATION_PRESETS: ReadonlyArray<{ id: LocationPreset; label: string; suggestedName: string; codePrefix: string; allowsSubpositions: boolean }> = [
+  { id: 'SHELF', label: 'Estante', suggestedName: 'Estante', codePrefix: 'EST', allowsSubpositions: true },
+  { id: 'PALLET', label: 'Palete', suggestedName: 'Palete', codePrefix: 'PAL', allowsSubpositions: false },
+  { id: 'FREEZER', label: 'Freezer', suggestedName: 'Freezer', codePrefix: 'FRZ', allowsSubpositions: false },
+  { id: 'REFRIGERATOR', label: 'Geladeira industrial', suggestedName: 'Geladeira industrial', codePrefix: 'GEL', allowsSubpositions: false },
+  { id: 'BENCH', label: 'Mesa / bancada', suggestedName: 'Mesa / bancada', codePrefix: 'MES', allowsSubpositions: false },
+  { id: 'OTHER', label: 'Outro local', suggestedName: '', codePrefix: 'LOC', allowsSubpositions: false },
+];
 
 function messageFromError(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
@@ -118,6 +128,8 @@ export function WarehouseLocationsR1Operational({
   const [locationCode, setLocationCode] = useState('');
   const [locationName, setLocationName] = useState('');
   const [locationDescription, setLocationDescription] = useState('');
+  const [locationPreset, setLocationPreset] = useState<LocationPreset>('SHELF');
+  const [shelfSubpositionCount, setShelfSubpositionCount] = useState(0);
 
   const refresh = async () => {
     setState((current) => ({ ...current, loading: true }));
@@ -222,8 +234,10 @@ export function WarehouseLocationsR1Operational({
     }
 
     setLocationCode('');
-    setLocationName('');
+    setLocationName(panel === 'location' ? 'Estante' : '');
     setLocationDescription('');
+    setLocationPreset('SHELF');
+    setShelfSubpositionCount(0);
     if (panel === 'depot') {
       setDepotCode('');
       setDepotName('');
@@ -284,12 +298,35 @@ export function WarehouseLocationsR1Operational({
         name: locationName,
         description: locationDescription || null,
       });
+
+      if (kind === 'LOCAL' && locationPreset === 'SHELF' && shelfSubpositionCount > 0) {
+        const normalizedBaseCode = locationCode.trim().toUpperCase();
+        for (let index = 1; index <= shelfSubpositionCount; index += 1) {
+          const sequence = String(index).padStart(2, '0');
+          await createWarehouseLocation(workspaceId, {
+            kind: 'SUBPOSITION',
+            depotId: selectedDepotId,
+            parentLocationId: created.id,
+            code: normalizedBaseCode + '-' + sequence,
+            name: 'Subposição ' + sequence,
+            description: 'Criada automaticamente para ' + (locationName.trim() || normalizedBaseCode),
+          });
+        }
+      }
+
       setLocationCode('');
       setLocationName('');
       setLocationDescription('');
+      setShelfSubpositionCount(0);
       setCreatePanel(null);
       if (kind === 'LOCAL') setSelectedLocationId(created.id);
-      setMessage(kind === 'LOCAL' ? 'Local criado com sucesso.' : 'Subposição criada com sucesso.');
+      setMessage(
+        kind === 'LOCAL'
+          ? shelfSubpositionCount > 0 && locationPreset === 'SHELF'
+            ? 'Estante criada com ' + shelfSubpositionCount + ' subposição(ões).'
+            : 'Local criado com sucesso.'
+          : 'Subposição criada com sucesso.'
+      );
       await refresh();
     } catch (error) {
       setMessage(messageFromError(error));
@@ -640,6 +677,27 @@ export function WarehouseLocationsR1Operational({
                 <p className="text-[9px] font-bold uppercase tracking-wide text-gray-400">Depósito</p>
                 <p className="mt-0.5 text-xs font-black text-[#00288e]">{selectedDepot?.code} · {selectedDepot?.name}</p>
               </div>
+              {createPanel === 'location' && (
+                <select
+                  value={locationPreset}
+                  onChange={(event) => {
+                    const next = event.target.value as LocationPreset;
+                    setLocationPreset(next);
+                    const preset = LOCATION_PRESETS.find((item) => item.id === next);
+                    if (preset) {
+                      setLocationName(preset.suggestedName);
+                      if (!locationCode.trim()) setLocationCode(preset.codePrefix + '-01');
+                    }
+                    if (next !== 'SHELF') setShelfSubpositionCount(0);
+                  }}
+                  className={fieldClass}
+                  aria-label="Tipo do local"
+                >
+                  {LOCATION_PRESETS.map((preset) => (
+                    <option key={preset.id} value={preset.id}>{preset.label}</option>
+                  ))}
+                </select>
+              )}
               {(createPanel === 'subposition' || createPanel === 'editSubposition') && (
                 <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-3 py-2">
                   <p className="text-[9px] font-bold uppercase tracking-wide text-gray-400">Local pai</p>
@@ -649,6 +707,20 @@ export function WarehouseLocationsR1Operational({
               <input value={locationCode} onChange={(event) => setLocationCode(event.target.value)} placeholder={createPanel === 'location' ? 'Código · EST-01' : 'Código · PRAT-01'} className={fieldClass} required />
               <input value={locationName} onChange={(event) => setLocationName(event.target.value)} placeholder={createPanel === 'location' ? 'Nome do local' : 'Nome da subposição'} className={fieldClass} required />
               <input value={locationDescription} onChange={(event) => setLocationDescription(event.target.value)} placeholder="Descrição opcional" className={fieldClass} />
+              {createPanel === 'location' && locationPreset === 'SHELF' && (
+                <label className="grid gap-1">
+                  <span className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Subposições da estante</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="30"
+                    value={shelfSubpositionCount}
+                    onChange={(event) => setShelfSubpositionCount(Math.max(0, Math.min(30, Number(event.target.value) || 0)))}
+                    className={fieldClass}
+                  />
+                  <span className="text-[9px] leading-4 text-gray-400">Cria automaticamente EST-XX-01, EST-XX-02… como posições filhas. Use 0 se preferir cadastrar depois.</span>
+                </label>
+              )}
               <button type="submit" disabled={working} className="h-11 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm transition hover:bg-blue-800 disabled:opacity-40">
                 {createPanel === 'editLocation' || createPanel === 'editSubposition'
                   ? 'Salvar alterações'

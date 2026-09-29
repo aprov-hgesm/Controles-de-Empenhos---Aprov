@@ -73,6 +73,7 @@ interface WarehouseViewData {
 
 const DEFAULT_WIDTH = 1000;
 const DEFAULT_HEIGHT = 620;
+const MAX_LAYOUT_DIMENSION = 50000;
 
 const STRUCTURE_LABELS: Record<WarehouseDepotLayoutObjectKind, string> = {
   WALL: 'Limite / parede',
@@ -294,6 +295,9 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
   const [draftDepotId, setDraftDepotId] = useState<string>('');
   const [draftWidth, setDraftWidth] = useState(DEFAULT_WIDTH);
   const [draftHeight, setDraftHeight] = useState(DEFAULT_HEIGHT);
+  const [pendingWidth, setPendingWidth] = useState(String(DEFAULT_WIDTH));
+  const [pendingHeight, setPendingHeight] = useState(String(DEFAULT_HEIGHT));
+  const [selectedStructureId, setSelectedStructureId] = useState(WAREHOUSE_STRUCTURE_LIBRARY[0]?.id || '');
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
   const [queryText, setQueryText] = useState('');
   const [selectedMaterialId, setSelectedMaterialId] = useState<string>('');
@@ -516,12 +520,16 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
       setDraftDepotId(selectedActiveLayout.depotId || '');
       setDraftWidth(selectedActiveLayout.logicalWidth);
       setDraftHeight(selectedActiveLayout.logicalHeight);
+      setPendingWidth(String(selectedActiveLayout.logicalWidth));
+      setPendingHeight(String(selectedActiveLayout.logicalHeight));
     } else {
       setDraftObjects([]);
       setDraftName('Croqui principal');
       setDraftDepotId(selectedDepotId);
       setDraftWidth(DEFAULT_WIDTH);
       setDraftHeight(DEFAULT_HEIGHT);
+      setPendingWidth(String(DEFAULT_WIDTH));
+      setPendingHeight(String(DEFAULT_HEIGHT));
     }
     setSelectedObjectId(null);
   }, [mode, selectedActiveLayout, selectedDepotId]);
@@ -616,14 +624,80 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
     }));
   };
 
+
+  const applyLayoutDimensions = () => {
+    const nextWidth = Number(pendingWidth);
+    const nextHeight = Number(pendingHeight);
+    if (
+      !Number.isFinite(nextWidth)
+      || !Number.isFinite(nextHeight)
+      || nextWidth < 240
+      || nextHeight < 240
+      || nextWidth > MAX_LAYOUT_DIMENSION
+      || nextHeight > MAX_LAYOUT_DIMENSION
+    ) {
+      setMessage('Informe medidas entre 240 e 50.000, usando a mesma unidade para largura e profundidade.');
+      return;
+    }
+
+    const widthRatio = nextWidth / Math.max(1, draftWidth);
+    const heightRatio = nextHeight / Math.max(1, draftHeight);
+    const previous = cloneDraftObjects(draftObjects);
+    checkpointDraft(previous);
+    setDraftObjects(previous.map((object) => {
+      const x = Math.min(
+        Math.round(object.x * widthRatio * 100) / 100,
+        Math.max(0, nextWidth - 12)
+      );
+      const y = Math.min(
+        Math.round(object.y * heightRatio * 100) / 100,
+        Math.max(0, nextHeight - 12)
+      );
+      const width = Math.min(
+        Math.max(12, Math.round(object.width * widthRatio * 100) / 100),
+        Math.max(12, nextWidth - x)
+      );
+      const height = Math.min(
+        Math.max(12, Math.round(object.height * heightRatio * 100) / 100),
+        Math.max(12, nextHeight - y)
+      );
+      return { ...object, x, y, width, height };
+    }));
+    setDraftWidth(nextWidth);
+    setDraftHeight(nextHeight);
+    setSelectedObjectId(null);
+    setMessage('Medidas aplicadas ao croqui. As estruturas foram reposicionadas proporcionalmente; salve para criar uma nova versão.');
+  };
+
+  const addSelectedStructure = () => {
+    const definition = WAREHOUSE_STRUCTURE_LIBRARY.find((item) => item.id === selectedStructureId);
+    if (!definition) return;
+    const object = createWarehouseDepotLayoutObject({
+      kind: definition.kind,
+      label: definition.name,
+      x: Math.min(40 + draftObjects.length * 12, Math.max(0, draftWidth - definition.defaultWidth)),
+      y: Math.min(40 + draftObjects.length * 12, Math.max(0, draftHeight - definition.defaultHeight)),
+      width: Math.min(definition.defaultWidth, draftWidth),
+      height: Math.min(definition.defaultHeight, draftHeight),
+      rotation: definition.defaultRotation,
+      visualVariant: definition.visualVariant,
+    });
+    commitDraftObjects((items) => [...items, object]);
+    setSelectedObjectId(object.id);
+  };
+
   const changeMode = (nextMode: Mode) => {
     if (nextMode === mode) return;
     if (nextMode === 'edit') {
       setDraftObjects(selectedActiveLayout?.objects || []);
       setDraftName(selectedActiveLayout?.name || 'Croqui principal');
       setDraftDepotId(selectedDepotId);
-      setDraftWidth(selectedActiveLayout?.logicalWidth || DEFAULT_WIDTH);
-      setDraftHeight(selectedActiveLayout?.logicalHeight || DEFAULT_HEIGHT);
+      const nextWidth = selectedActiveLayout?.logicalWidth || DEFAULT_WIDTH;
+      const nextHeight = selectedActiveLayout?.logicalHeight || DEFAULT_HEIGHT;
+      setDraftWidth(nextWidth);
+      setDraftHeight(nextHeight);
+      setPendingWidth(String(nextWidth));
+      setPendingHeight(String(nextHeight));
       setSelectedObjectId(null);
       resetDraftHistory();
       setMode('edit');
@@ -893,6 +967,18 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
             <p className="mt-1 font-mono text-[10px] text-slate-600">
               {selectedActiveLayout ? 'versão ' + selectedActiveLayout.version + ' · ' + selectedActiveLayout.id : 'primeira versão pendente'}
             </p>
+            {selectedActiveLayout && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2 py-1 font-mono text-[9px] text-slate-500">
+                  {selectedActiveLayout.logicalWidth} × {selectedActiveLayout.logicalHeight}
+                </span>
+                {mode === 'view' && (
+                  <button type="button" data-testid="warehouse-layout-edit-dimensions" onClick={() => changeMode('edit')} className="rounded-lg border border-blue-300/10 px-2 py-1 text-[9px] font-black text-blue-200">
+                    Editar dimensões
+                  </button>
+                )}
+              </div>
+            )}
             <p className="mt-3 text-xs leading-5 text-slate-500">
               {selectedDepotHistory.length} versão(ões) deste depósito preservada(s). Alterar geometria nunca movimenta estoque.
             </p>
@@ -919,6 +1005,8 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                           setDraftDepotId(item.layout.depotId || '');
                           setDraftWidth(item.layout.logicalWidth);
                           setDraftHeight(item.layout.logicalHeight);
+                          setPendingWidth(String(item.layout.logicalWidth));
+                          setPendingHeight(String(item.layout.logicalHeight));
                           setSelectedObjectId(null);
                           resetDraftHistory();
                           setMessage('Versão ' + item.layout.version + ' carregada como base. Salve para criar uma nova versão ativa.');
@@ -956,58 +1044,53 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                 <span className="mt-1 block text-[9px] normal-case tracking-normal text-slate-600">Troque o depósito pelo seletor superior antes de entrar na edição.</span>
               </label>
 
-              <div className="grid grid-cols-2 gap-2">
-                <label className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
-                  Largura
-                  <input type="number" min="240" max="5000" value={draftWidth} onChange={(e) => setDraftWidth(Number(e.target.value))} className="mt-1 h-9 w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 text-xs text-slate-200" />
-                </label>
-                <label className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
-                  Altura
-                  <input type="number" min="240" max="5000" value={draftHeight} onChange={(e) => setDraftHeight(Number(e.target.value))} className="mt-1 h-9 w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 text-xs text-slate-200" />
-                </label>
+              <div className="space-y-2 rounded-xl border border-white/[0.07] bg-black/10 p-3" data-testid="warehouse-layout-dimensions">
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                    Largura do depósito
+                    <input type="number" min="240" max={MAX_LAYOUT_DIMENSION} value={pendingWidth} onChange={(e) => setPendingWidth(e.target.value)} className="mt-1 h-9 w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 text-xs text-slate-200" />
+                  </label>
+                  <label className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                    Profundidade do depósito
+                    <input type="number" min="240" max={MAX_LAYOUT_DIMENSION} value={pendingHeight} onChange={(e) => setPendingHeight(e.target.value)} className="mt-1 h-9 w-full rounded-lg border border-white/[0.08] bg-black/20 px-3 text-xs text-slate-200" />
+                  </label>
+                </div>
+                <p className="text-[9px] leading-4 text-slate-600">
+                  Use a mesma unidade nos dois campos (ex.: 12000 × 2400). O editor ajusta a visualização à tela sem deformar a proporção.
+                </p>
+                <button type="button" onClick={applyLayoutDimensions} className="w-full rounded-lg border border-blue-300/15 bg-blue-400/[0.06] px-3 py-2 text-[10px] font-black text-blue-100">
+                  Aplicar medidas e preservar proporções
+                </button>
               </div>
 
               <div className="space-y-2" data-testid="warehouse-structure-library">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Biblioteca de estruturas</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Adicionar estrutura</p>
                   <p className="mt-1 text-[10px] leading-5 text-slate-600">
-                    Os tamanhos são proporções iniciais do croqui, não medidas arquitetônicas.
+                    Selecione o elemento físico e inclua-o no croqui. O tamanho inicial pode ser ajustado depois.
                   </p>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {WAREHOUSE_STRUCTURE_LIBRARY.map((definition: WarehouseStructureDefinition) => (
-                    <button
-                      key={definition.id}
-                      type="button"
-                      data-testid={'warehouse-structure-' + definition.id}
-                      onClick={() => {
-                        const object = createWarehouseDepotLayoutObject({
-                          kind: definition.kind,
-                          label: definition.name,
-                          x: 40 + draftObjects.length * 12,
-                          y: 40 + draftObjects.length * 12,
-                          width: definition.defaultWidth,
-                          height: definition.defaultHeight,
-                          rotation: definition.defaultRotation,
-                          visualVariant: definition.visualVariant,
-                        });
-                        commitDraftObjects((items) => [...items, object]);
-                        setSelectedObjectId(object.id);
-                      }}
-                      className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3 text-left transition hover:bg-white/[0.05]"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-black text-slate-200">{definition.name}</span>
-                        <Plus className="h-3.5 w-3.5 text-blue-200/70" aria-hidden="true" />
-                      </div>
-                      <p className="mt-1 line-clamp-2 text-[9px] leading-4 text-slate-600">{definition.description}</p>
-                      <div className="mt-2 flex flex-wrap gap-1.5 text-[8px] font-bold uppercase tracking-[0.08em] text-slate-600">
-                        <span>{definition.defaultWidth}×{definition.defaultHeight}</span>
-                        {definition.acceptsLevels && <span>· níveis</span>}
-                        {definition.acceptsSubpositions && <span>· subposições</span>}
-                      </div>
-                    </button>
-                  ))}
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                  <select
+                    data-testid="warehouse-structure-select"
+                    value={selectedStructureId}
+                    onChange={(event) => setSelectedStructureId(event.target.value)}
+                    className="h-10 w-full rounded-lg border border-white/[0.08] bg-[#08101f] px-3 text-xs font-bold text-slate-200"
+                  >
+                    {WAREHOUSE_STRUCTURE_LIBRARY.map((definition: WarehouseStructureDefinition) => (
+                      <option key={definition.id} value={definition.id}>
+                        {definition.name} · {definition.defaultWidth}×{definition.defaultHeight}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    data-testid="warehouse-structure-add"
+                    onClick={addSelectedStructure}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-blue-300/15 bg-blue-400/[0.07] px-4 text-[10px] font-black text-blue-100"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Adicionar
+                  </button>
                 </div>
               </div>
 
@@ -1085,8 +1168,12 @@ export function WarehouseDepotViewOperational({ workspaceId }: { workspaceId: st
                   setDraftObjects(selectedActiveLayout?.objects || []);
                   setDraftName(selectedActiveLayout?.name || 'Croqui principal');
                   setDraftDepotId(selectedDepotId);
-                  setDraftWidth(selectedActiveLayout?.logicalWidth || DEFAULT_WIDTH);
-                  setDraftHeight(selectedActiveLayout?.logicalHeight || DEFAULT_HEIGHT);
+                  const resetWidth = selectedActiveLayout?.logicalWidth || DEFAULT_WIDTH;
+                  const resetHeight = selectedActiveLayout?.logicalHeight || DEFAULT_HEIGHT;
+                  setDraftWidth(resetWidth);
+                  setDraftHeight(resetHeight);
+                  setPendingWidth(String(resetWidth));
+                  setPendingHeight(String(resetHeight));
                   setSelectedObjectId(null);
                   setMessage(null);
                   resetDraftHistory();
