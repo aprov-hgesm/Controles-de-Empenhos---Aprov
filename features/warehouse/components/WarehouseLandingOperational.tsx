@@ -25,7 +25,11 @@ import {
   loadWarehouseInvoiceIntakeQueue,
   type WarehouseInvoiceIntakeQueueRow,
 } from '../../../lib/warehouse/intakeStateRepository';
-import { WAREHOUSE_BOX_VISUAL, WAREHOUSE_PALLET_VISUAL } from '../visualStyle';
+import {
+  WAREHOUSE_BOX_VISUAL,
+  WAREHOUSE_PALLET_VISUAL,
+  WAREHOUSE_RACK_VISUAL,
+} from '../visualStyle';
 import styles from './WarehouseLandingOperational.module.css';
 
 interface LandingData {
@@ -254,6 +258,68 @@ function warehousePallet(
   );
 }
 
+function warehouseRackBeam({
+  key,
+  x,
+  y,
+  width,
+  depth,
+  z,
+  height,
+  rear = false,
+  side = false,
+}: {
+  key: string;
+  x: number;
+  y: number;
+  width: number;
+  depth: number;
+  z: number;
+  height: number;
+  rear?: boolean;
+  side?: boolean;
+}) {
+  const a = isoPoint(x, y, z);
+  const b = isoPoint(x + width, y, z);
+  const c = isoPoint(x + width, y + depth, z);
+  const d = isoPoint(x, y + depth, z);
+  const at = isoPoint(x, y, z + height);
+  const bt = isoPoint(x + width, y, z + height);
+  const ct = isoPoint(x + width, y + depth, z + height);
+  const dt = isoPoint(x, y + depth, z + height);
+  const frontFill = rear
+    ? WAREHOUSE_RACK_VISUAL.rearBeamFront
+    : side
+      ? WAREHOUSE_RACK_VISUAL.beamSide
+      : WAREHOUSE_RACK_VISUAL.beamFront;
+  const topFill = rear
+    ? WAREHOUSE_RACK_VISUAL.rearBeamTop
+    : WAREHOUSE_RACK_VISUAL.beamTop;
+
+  return (
+    <g key={key} data-visual-role={side ? 'rack-side-beam' : rear ? 'rack-rear-beam' : 'rack-front-beam'}>
+      <polygon
+        points={polygonPoints([d, c, ct, dt])}
+        fill={frontFill}
+        stroke={WAREHOUSE_RACK_VISUAL.beamStroke}
+        strokeWidth="0.65"
+      />
+      <polygon
+        points={polygonPoints([b, c, ct, bt])}
+        fill={WAREHOUSE_RACK_VISUAL.beamSide}
+        stroke={WAREHOUSE_RACK_VISUAL.beamStroke}
+        strokeWidth="0.6"
+      />
+      <polygon
+        points={polygonPoints([at, bt, ct, dt])}
+        fill={topFill}
+        stroke={WAREHOUSE_RACK_VISUAL.beamStroke}
+        strokeWidth="0.65"
+      />
+    </g>
+  );
+}
+
 function objectHeight(kind: WarehouseDepotLayoutObject['kind'], scale: number, subpositions = 0): number {
   const base = kind === 'SHELF' || kind === 'RACK'
     ? 112 + Math.min(7, subpositions) * 4
@@ -426,6 +492,9 @@ function renderDepotObject(
 
   if (object.kind === 'SHELF' || object.kind === 'RACK') {
     const levels = Math.max(2, Math.min(6, subpositions.length || 4));
+    const beamDepth = Math.max(1.1, Math.min(height * 0.1, 4.2));
+    const sideBeamWidth = Math.max(1.1, Math.min(width * 0.045, 3.8));
+    const beamHeight = Math.max(2.2, Math.min(4.2, z * 0.04));
     const frontBottomLeft = d;
     const frontBottomRight = c;
     const frontTopLeft = dt;
@@ -446,7 +515,7 @@ function renderDepotObject(
               y1={base.y}
               x2={top.x}
               y2={top.y}
-              stroke="#123f66"
+              stroke={WAREHOUSE_RACK_VISUAL.postMain}
               strokeWidth="3.4"
               strokeLinecap="round"
             />
@@ -460,8 +529,6 @@ function renderDepotObject(
           const p2 = isoPoint(x + width, y, shelfZ);
           const p3 = isoPoint(x + width, y + height, shelfZ);
           const p4 = isoPoint(x, y + height, shelfZ);
-          const frontLeft = isoPoint(x, y + height, shelfZ - 1.4);
-          const frontRight = isoPoint(x + width, y + height, shelfZ - 1.4);
           const linkedSubposition = subpositions[index] || null;
           const levelQuantity = linkedSubposition
             ? occupancyBySubposition.get(linkedSubposition.id) || 0
@@ -471,20 +538,41 @@ function renderDepotObject(
             <g key={'level-' + index}>
               <polygon
                 points={polygonPoints([p1, p2, p3, p4])}
-                fill="#edf2f5"
-                stroke="#aab9c5"
+                fill={WAREHOUSE_RACK_VISUAL.deckTop}
+                stroke={WAREHOUSE_RACK_VISUAL.deckStroke}
                 strokeWidth="0.55"
                 opacity="0.98"
               />
-              <line
-                x1={frontLeft.x}
-                y1={frontLeft.y}
-                x2={frontRight.x}
-                y2={frontRight.y}
-                stroke="#f47f13"
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
+              {warehouseRackBeam({
+                key: 'rear-beam-' + object.id + '-' + index,
+                x,
+                y,
+                width,
+                depth: beamDepth,
+                z: shelfZ - beamHeight,
+                height: beamHeight,
+                rear: true,
+              })}
+              {warehouseRackBeam({
+                key: 'left-side-beam-' + object.id + '-' + index,
+                x,
+                y,
+                width: sideBeamWidth,
+                depth: height,
+                z: shelfZ - beamHeight,
+                height: beamHeight * 0.82,
+                side: true,
+              })}
+              {warehouseRackBeam({
+                key: 'right-side-beam-' + object.id + '-' + index,
+                x: x + width - sideBeamWidth,
+                y,
+                width: sideBeamWidth,
+                depth: height,
+                z: shelfZ - beamHeight,
+                height: beamHeight * 0.82,
+                side: true,
+              })}
               {levelBoxCount > 0 && Array.from({ length: levelBoxCount }, (_, boxIndex) =>
                 warehouseBox(
                   'allocated-shelf-' + object.id + '-' + index + '-' + boxIndex,
@@ -496,6 +584,15 @@ function renderDepotObject(
                   9
                 )
               )}
+              {warehouseRackBeam({
+                key: 'front-beam-' + object.id + '-' + index,
+                x,
+                y: y + height - beamDepth,
+                width,
+                depth: beamDepth,
+                z: shelfZ - beamHeight,
+                height: beamHeight,
+              })}
             </g>
           );
         })}
@@ -518,8 +615,8 @@ function renderDepotObject(
           const top = [frontTopLeft, frontTopRight][index];
           return (
             <g key={'front-post-' + index}>
-              <line x1={base.x} y1={base.y} x2={top.x} y2={top.y} stroke="#0e3556" strokeWidth="4.2" strokeLinecap="round" />
-              <line x1={base.x + 1.1} y1={base.y} x2={top.x + 1.1} y2={top.y} stroke="#7196b0" strokeWidth="0.8" opacity="0.75" />
+              <line x1={base.x} y1={base.y} x2={top.x} y2={top.y} stroke={WAREHOUSE_RACK_VISUAL.postDark} strokeWidth="4.2" strokeLinecap="round" />
+              <line x1={base.x + 1.1} y1={base.y} x2={top.x + 1.1} y2={top.y} stroke={WAREHOUSE_RACK_VISUAL.postHighlight} strokeWidth="0.8" opacity="0.75" />
             </g>
           );
         })}
