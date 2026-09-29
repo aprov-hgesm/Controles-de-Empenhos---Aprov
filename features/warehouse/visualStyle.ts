@@ -30,7 +30,7 @@ export const WAREHOUSE_RACK_VISUAL = {
   beamFront: '#f47f13',
   beamTop: '#ff9b36',
   beamSide: '#c85e08',
-  beamStroke: '#a94705',
+  beamStroke: '#bf6215',
   rearBeamFront: '#d96b0d',
   rearBeamTop: '#f18a28',
   deckTop: '#f4f7f9',
