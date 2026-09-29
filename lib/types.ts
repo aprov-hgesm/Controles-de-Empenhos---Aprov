@@ -73,6 +73,18 @@ export interface Empenho {
   notaEmpenhoPdfVersions?: EmpenhoPdfDocument[];
 }
 
+export interface SupplierContact {
+  id: string;
+  legalName: string;
+  cnpj: string;
+  email: string;
+  phone: string;
+  whatsapp: string;
+  createdAt: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
 export interface InvoiceItem {
   itemId: string;
   quantity: number;

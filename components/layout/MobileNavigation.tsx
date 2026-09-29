@@ -3,7 +3,7 @@
 import React from 'react';
 import { CalendarDays, FileSpreadsheet, FileText, Layers, TrendingUp } from 'lucide-react';
 
-type ActiveTab = 'inicio' | 'painel' | 'empenhos' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas' | 'avisos';
+type ActiveTab = 'inicio' | 'painel' | 'empenhos' | 'fornecedores' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas' | 'avisos';
 
 interface MobileNavigationProps {
   activeTab: ActiveTab;

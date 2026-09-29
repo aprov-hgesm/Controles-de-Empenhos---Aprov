@@ -4525,6 +4525,62 @@ service cloud.firestore {
         && validEmpenhoLifecycleDelete(workspaceId, id);
     }
 
+    match /workspaces/{workspaceId}/suppliers/{id} {
+      allow read: if canAccessWorkspace(workspaceId);
+      allow create: if canAccessWorkspace(workspaceId)
+        && request.resource.data.keys().hasAll([
+          'id', 'legalName', 'cnpj', 'email', 'phone', 'whatsapp',
+          'createdAt', 'updatedAt', 'updatedBy'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'id', 'legalName', 'cnpj', 'email', 'phone', 'whatsapp',
+          'createdAt', 'updatedAt', 'updatedBy'
+        ])
+        && request.resource.data.id == id
+        && id == 'supplier_' + request.resource.data.cnpj
+        && request.resource.data.legalName is string
+        && request.resource.data.legalName.size() > 0
+        && request.resource.data.legalName.size() <= 180
+        && request.resource.data.cnpj is string
+        && request.resource.data.cnpj.size() == 14
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() <= 40
+        && request.resource.data.whatsapp is string
+        && request.resource.data.whatsapp.size() <= 40
+        && request.resource.data.createdAt is string
+        && request.resource.data.createdAt.size() > 0
+        && request.resource.data.updatedAt is string
+        && request.resource.data.updatedAt.size() > 0
+        && request.resource.data.updatedBy == request.auth.uid;
+      allow update: if canAccessWorkspace(workspaceId)
+        && request.resource.data.keys().hasAll([
+          'id', 'legalName', 'cnpj', 'email', 'phone', 'whatsapp',
+          'createdAt', 'updatedAt', 'updatedBy'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'id', 'legalName', 'cnpj', 'email', 'phone', 'whatsapp',
+          'createdAt', 'updatedAt', 'updatedBy'
+        ])
+        && request.resource.data.id == id
+        && request.resource.data.cnpj == resource.data.cnpj
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.legalName is string
+        && request.resource.data.legalName.size() > 0
+        && request.resource.data.legalName.size() <= 180
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() <= 40
+        && request.resource.data.whatsapp is string
+        && request.resource.data.whatsapp.size() <= 40
+        && request.resource.data.updatedAt is string
+        && request.resource.data.updatedAt.size() > 0
+        && request.resource.data.updatedBy == request.auth.uid;
+      allow delete: if false;
+    }
+
     match /workspaces/{workspaceId}/alerts/{id} {
       allow read, delete: if canAccessWorkspace(workspaceId);
       allow create, update: if canAccessWorkspace(workspaceId)
