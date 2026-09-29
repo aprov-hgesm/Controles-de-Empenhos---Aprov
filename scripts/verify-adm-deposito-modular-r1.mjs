@@ -1433,21 +1433,6 @@ requireText(
   'Migração SISCOFIS deixou de sinalizar hortifruti/granjeiros filtrados.'
 );
 requireText(
-  siscofisContract,
-  '3. quantidade — origem obrigatória: "Qtde Exist";',
-  'Prompt SISCOFIS deixou de usar Qtde Exist como quantidade física do Marco Zero.'
-);
-requireText(
-  siscofisContract,
-  '- NÃO use "Qtde Disp";',
-  'Prompt SISCOFIS voltou a permitir Qtde Disp no lugar de Qtde Exist.'
-);
-requireText(
-  siscofisContract,
-  'FILTRO OBRIGATÓRIO — NÃO MIGRAR HORTIFRUTI/GRANJEIROS:',
-  'Prompt SISCOFIS perdeu a exclusão explícita de hortifruti/granjeiros.'
-);
-requireText(
   siscofisPdfExtractor,
   'extractEmprovexSiscofisInventoryFromPdfBytes',
   'Migração SISCOFIS perdeu o extrator local determinístico de PDF.'
@@ -1463,6 +1448,7 @@ for (const pdfColumn of [
   "byText('Qtde Exist')",
   "byText('Qtde Disp')",
   "byText('Vlr Unit')",
+  "byText('Validade')",
 ]) {
   requireText(
     siscofisPdfExtractor,
@@ -1499,13 +1485,13 @@ requireText(
 );
 requireText(
   siscofisOperational,
-  'prepareEmprovexSiscofisInventoryImport(',
-  'PDF direto deixou de convergir para a prévia oficial SISCOFIS.'
+  'prepareEmprovexSiscofisInventoryData(',
+  'Mapa de Existência deixou de convergir diretamente para a prévia oficial SISCOFIS.'
 );
 requireText(
   siscofisOperational,
-  "'PDF SISCOFIS — ' + file.name",
-  'PDF direto perdeu o rótulo auditável de origem do arquivo.'
+  "'Mapa de Existência SISCOFIS — ' + file.name",
+  'Mapa de Existência perdeu o rótulo auditável de origem do arquivo.'
 );
 requireText(
   itemRegistration,
@@ -1596,6 +1582,57 @@ requireText(
 );
 requireText(
   siscofisOperational,
+  'Upload do Mapa de Existência',
+  'Migração SISCOFIS perdeu o fluxo exclusivo por Mapa de Existência.'
+);
+requireText(
+  siscofisOperational,
+  'data-testid="warehouse-siscofis-revalidate"',
+  'Marco Zero perdeu a revalidação após correções/exclusões.'
+);
+requireText(
+  siscofisOperational,
+  '<th className="p-3">Validade</th>',
+  'Prévia do Marco Zero perdeu a coluna Validade.'
+);
+requireText(
+  siscofisOperational,
+  "editPreviewItem(row.rowId, 'validade'",
+  'Prévia do Marco Zero perdeu a correção manual da validade.'
+);
+for (const removedSurface of [
+  'Prompt para IA externa',
+  'data-testid="warehouse-siscofis-json"',
+  'Migração manual de item',
+  'Copiar prompt',
+]) {
+  if (siscofisOperational.includes(removedSurface)) {
+    fail('Migração SISCOFIS voltou a expor fluxo removido: ' + removedSurface);
+  }
+}
+requireText(
+  siscofisContract,
+  'expiresOn: item.validade',
+  'Contrato SISCOFIS deixou de transportar a validade extraída.'
+);
+requireText(
+  siscofisContract,
+  'expiresOn: row.expiresOn ?? null',
+  'Prévia SISCOFIS deixou de preservar a validade por linha.'
+);
+requireText(
+  siscofisPdfExtractor,
+  'validade: expiry',
+  'Extrator SISCOFIS deixou de devolver a validade do Mapa de Existência.'
+);
+requireText(
+  siscofisPdfExtractor,
+  'parseBrazilianDate',
+  'Extrator SISCOFIS perdeu a normalização DD/MM/AAAA da validade.'
+);
+
+requireText(
+  siscofisOperational,
   'data-testid="warehouse-siscofis-validation-summary"',
   'Migração SISCOFIS perdeu o resumo compacto da validação.'
 );
@@ -1626,8 +1663,8 @@ requireText(
 );
 requireText(
   siscofisOperational,
-  'filterSiscofisDraftRows(rawJson, exclusions)',
-  'Exclusão manual deixou de convergir para o draft revalidado.'
+  'filterSiscofisDraftRows(draftInventory, exclusions)',
+  'Exclusão manual deixou de convergir para o Mapa de Existência revalidado.'
 );
 requireText(
   siscofisOperational,
