@@ -17,6 +17,7 @@ type PdfColumns = {
   quantity: number;
   available: number;
   unitValue: number;
+  expiry: number;
 };
 
 export interface EmprovexSiscofisPdfExtraction {
@@ -172,7 +173,7 @@ function extractStream(objectBody: string): string | null {
   const dictionary = objectBody.slice(0, marker);
   if (/\/Filter\b/.test(dictionary)) {
     throw new Error(
-      'PDF SISCOFIS comprimido não suportado pelo leitor local. Use a opção JSON/IA para este arquivo.'
+      'Este Mapa de Existência usa uma compressão de PDF não suportada pelo leitor local.'
     );
   }
 
@@ -196,6 +197,7 @@ function findColumns(items: PdfTextItem[]): PdfColumns | null {
   const quantity = byText('Qtde Exist');
   const available = byText('Qtde Disp');
   const unitValue = byText('Vlr Unit');
+  const expiry = byText('Validade');
 
   if (
     ficha === null
@@ -203,11 +205,12 @@ function findColumns(items: PdfTextItem[]): PdfColumns | null {
     || quantity === null
     || available === null
     || unitValue === null
+    || expiry === null
   ) {
     return null;
   }
 
-  return { ficha, description, quantity, available, unitValue };
+  return { ficha, description, quantity, available, unitValue, expiry };
 }
 
 function near(value: number, target: number, tolerance = 5): boolean {
@@ -224,6 +227,24 @@ function parseBrazilianNumber(value: string): number | null {
   if (!/^-?(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d+)?$/.test(text)) return null;
   const parsed = Number(text.replace(/\./g, '').replace(',', '.'));
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseBrazilianDate(value: string): string | null {
+  const text = normalizeText(value);
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text);
+  if (!match) return null;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  const candidate = new Date(Date.UTC(year, month - 1, day));
+  if (
+    candidate.getUTCFullYear() !== year
+    || candidate.getUTCMonth() !== month - 1
+    || candidate.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return match[3] + '-' + match[2] + '-' + match[1];
 }
 
 function isDescriptionStatus(value: string): boolean {
@@ -306,6 +327,11 @@ function extractPageRows(
       .map((item) => parseBrazilianNumber(item.text))
       .find((value): value is number => value !== null) ?? null;
 
+    const expiry = record
+      .filter((item) => near(item.x, columns.expiry))
+      .map((item) => parseBrazilianDate(item.text))
+      .find((value): value is string => value !== null) ?? null;
+
     if (quantity === 0) {
       zeroQuantityRows += 1;
       return;
@@ -321,6 +347,7 @@ function extractPageRows(
       descricao: description,
       quantidade: quantity,
       valorUnitario: Math.round(unitValue * 100) / 100,
+      validade: expiry,
     });
   });
 
@@ -398,7 +425,7 @@ export function extractEmprovexSiscofisInventoryFromPdfBytes(
 
   if (pagesWithColumns === 0 || detectedRows === 0) {
     throw new Error(
-      'As colunas do Mapa de Existência não puderam ser reconhecidas. Use a opção JSON/IA para este PDF.'
+      'As colunas do Mapa de Existência não puderam ser reconhecidas neste PDF.'
     );
   }
 
