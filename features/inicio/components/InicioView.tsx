@@ -159,10 +159,10 @@ export function InicioView({
 
       {!snapshot && (
         <div className={styles.snapshotNotice} role="status">
-          <strong>Mapa econômico ainda não consolidado</strong>
+          <strong>Seu painel está pronto para começar</strong>
           <span>
-            O Início não abrirá coleções brutas. O snapshot será criado automaticamente
-            quando Empenhos ou Notas Fiscais estiverem em uso.
+            À medida que o setor cadastrar empenhos e notas fiscais, os indicadores
+            serão exibidos aqui automaticamente.
           </span>
         </div>
       )}
