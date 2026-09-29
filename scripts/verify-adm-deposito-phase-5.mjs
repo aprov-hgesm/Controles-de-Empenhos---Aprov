@@ -88,6 +88,27 @@ requireText(
 );
 requireText(
   siscofisUi,
+  'data-testid="warehouse-siscofis-validation-summary"',
+  'Migração SISCOFIS perdeu o resumo compacto da validação.'
+);
+requireText(
+  siscofisUi,
+  'data-testid="warehouse-siscofis-validation-toggle"',
+  'Migração SISCOFIS perdeu o controle de expansão dos avisos.'
+);
+requireText(
+  siscofisUi,
+  "warningGroups.slice(0, 4)",
+  'Migração SISCOFIS voltou a expandir todos os avisos por padrão.'
+);
+requireText(
+  siscofisUi,
+  "validationErrors.map((issue, index) =>",
+  'Migração SISCOFIS deixou de manter erros bloqueantes imediatamente visíveis.'
+);
+
+requireText(
+  siscofisUi,
   'bg-[#00288e]',
   'Migração SISCOFIS perdeu o azul institucional nas ações primárias.'
 );
