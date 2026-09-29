@@ -430,6 +430,12 @@ function derivePlacements(
   });
 }
 
+function maxVisualScaleForPlacement(placement: DepotPlacement): number {
+  const widthLimit = (DEPOT_WORLD_WIDTH - 72) / Math.max(placement.width, 1);
+  const heightLimit = (WORLD_HEIGHT - 150) / Math.max(placement.height, 1);
+  return Math.max(0.55, Math.min(1.65, widthLimit, heightLimit));
+}
+
 function applyVisualOverrides(
   placements: DepotPlacement[],
   overrides: WarehouseLandingVisualOverrides
@@ -438,18 +444,48 @@ function applyVisualOverrides(
     const visual = overrides[placement.depot.id];
     if (!visual) return placement;
 
-    const width = placement.width * visual.scale;
-    const height = placement.height * visual.scale;
+    const visualScale = Math.min(
+      visual.scale,
+      maxVisualScaleForPlacement(placement)
+    );
+    const width = placement.width * visualScale;
+    const height = placement.height * visualScale;
+    const desiredX =
+      placement.x + visual.offsetX + (placement.width - width) / 2;
+    const desiredY =
+      placement.y + visual.offsetY + (placement.height - height) / 2;
+    const minX = 34;
+    const minY = 72;
+    const maxX = Math.max(minX, DEPOT_WORLD_WIDTH - width - 34);
+    const maxY = Math.max(minY, WORLD_HEIGHT - height - 58);
+
     return {
       ...placement,
-      x: placement.x + visual.offsetX + (placement.width - width) / 2,
-      y: placement.y + visual.offsetY + (placement.height - height) / 2,
+      x: Math.min(maxX, Math.max(minX, desiredX)),
+      y: Math.min(maxY, Math.max(minY, desiredY)),
       width,
       height,
-      scale: placement.scale * visual.scale,
+      scale: placement.scale * visualScale,
       rotation: visual.rotation,
     };
   });
+}
+
+function rotatePointAround(
+  point: IsoPoint,
+  center: IsoPoint,
+  degrees: number
+): IsoPoint {
+  if (!degrees) return point;
+  const radians = degrees * Math.PI / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const dx = point.x - center.x;
+  const dy = point.y - center.y;
+  return {
+    x: center.x + dx * cos - dy * sin,
+    y: center.y + dx * sin + dy * cos,
+  };
 }
 
 function svgPointerPoint(
@@ -954,10 +990,20 @@ function DepotWorld({
 
 function DepotWorldLabel({ placement }: { placement: DepotPlacement }) {
   const { depot, layout } = placement;
-  const labelPoint = isoPoint(
+  const center = isoPoint(
+    placement.x + placement.width / 2,
+    placement.y + placement.height / 2,
+    0
+  );
+  const rawLabelPoint = isoPoint(
     placement.x + placement.width * 0.5,
     placement.y + placement.height + 17,
     0
+  );
+  const labelPoint = rotatePointAround(
+    rawLabelPoint,
+    center,
+    placement.rotation
   );
 
   return (
@@ -1145,12 +1191,14 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
     return map;
   }, [data.layouts]);
 
+  const basePlacements = useMemo(
+    () => derivePlacements(activeDepots, activeLayoutByDepot),
+    [activeDepots, activeLayoutByDepot]
+  );
+
   const placements = useMemo(
-    () => applyVisualOverrides(
-      derivePlacements(activeDepots, activeLayoutByDepot),
-      visualOverrides
-    ),
-    [activeDepots, activeLayoutByDepot, visualOverrides]
+    () => applyVisualOverrides(basePlacements, visualOverrides),
+    [basePlacements, visualOverrides]
   );
 
   const activeLocations = useMemo(
@@ -1229,11 +1277,6 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
     (_, index) => visiblePendingGroups[index] || null
   );
 
-  const selectedVisualDepot = useMemo(
-    () => activeDepots.find((depot) => depot.id === selectedVisualDepotId) || null,
-    [activeDepots, selectedVisualDepotId]
-  );
-
   const updateVisual = useCallback((
     depotId: string,
     next: Partial<WarehouseLandingVisualOverrides[string]>
@@ -1245,12 +1288,25 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
         scale: 1,
         rotation: 0,
       };
+      const basePlacement = basePlacements.find(
+        (placement) => placement.depot.id === depotId
+      );
+      const requestedScale =
+        typeof next.scale === 'number' ? next.scale : base.scale;
+      const safeScale = basePlacement
+        ? Math.min(requestedScale, maxVisualScaleForPlacement(basePlacement))
+        : requestedScale;
+
       return normalizeWarehouseLandingVisualOverrides({
         ...current,
-        [depotId]: { ...base, ...next },
+        [depotId]: {
+          ...base,
+          ...next,
+          scale: safeScale,
+        },
       });
     });
-  }, []);
+  }, [basePlacements]);
 
   const beginVisualEdit = () => {
     setVisualOverrides(savedVisualOverrides);
