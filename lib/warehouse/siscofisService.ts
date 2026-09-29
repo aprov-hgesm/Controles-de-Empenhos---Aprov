@@ -27,11 +27,11 @@ import {
   WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION,
   aggregateMarcoZeroRows,
   buildWarehouseSiscofisPreview,
-  buildWarehouseSiscofisPrompt,
   adaptEmprovexSiscofisInventory,
   parseEmprovexSiscofisInventoryJson,
   createMaterialFromSiscofisRow,
   parseWarehouseSiscofisJson,
+  type EmprovexSiscofisInventory,
   type WarehouseSiscofisIssue,
   type WarehouseSiscofisPreview,
   type WarehouseSiscofisPreviewRow,
@@ -62,7 +62,6 @@ export interface WarehouseSiscofisSnapshot {
 }
 
 export interface WarehouseSiscofisContext {
-  prompt: string;
   hasMarcoZero: boolean;
   cutoffAt: string | null;
   snapshots: WarehouseSiscofisSnapshot[];
@@ -259,13 +258,46 @@ export async function loadWarehouseSiscofisContext(
   }
 
   return {
-    prompt: buildWarehouseSiscofisPrompt(),
     hasMarcoZero: marcoZero?.status === 'CONFIRMED',
     cutoffAt: settings?.cutoffAt || marcoZero?.cutoffAt || null,
     snapshots,
   };
 }
 
+
+export async function prepareEmprovexSiscofisInventoryData(
+  workspaceId: string,
+  inventory: EmprovexSiscofisInventory,
+  referenceDate: string,
+  sourceLabel = 'Mapa de Existência SISCOFIS',
+  materialOverrides: Record<string, string> = {},
+  priorIssues: WarehouseSiscofisIssue[] = []
+): Promise<WarehouseSiscofisPreview> {
+  const scope = assertCurrentScope(workspaceId);
+  const [materials, balances, settings, marcoZero] = await Promise.all([
+    listWarehouseMaterials(workspaceId, 500),
+    listWarehouseBalances(workspaceId, 500),
+    getInvoiceSettings(workspaceId),
+    getMarcoZero(workspaceId),
+  ]);
+  const adapted = adaptEmprovexSiscofisInventory({
+    inventory,
+    ug: scope.ug,
+    referenceDate,
+    sourceLabel,
+    materials,
+    materialOverrides,
+  });
+  return buildWarehouseSiscofisPreview({
+    workspaceId,
+    importData: adapted.importData,
+    materials,
+    balances,
+    hasMarcoZero: Boolean(marcoZero),
+    cutoffAt: settings?.cutoffAt || marcoZero?.cutoffAt || null,
+    priorIssues: [...priorIssues, ...adapted.issues],
+  });
+}
 
 export async function prepareEmprovexSiscofisInventoryImport(
   workspaceId: string,
@@ -274,29 +306,20 @@ export async function prepareEmprovexSiscofisInventoryImport(
   sourceLabel = 'Inventário SISCOFIS — Migração inicial',
   materialOverrides: Record<string, string> = {}
 ): Promise<WarehouseSiscofisPreview> {
-  const scope = assertCurrentScope(workspaceId);
   const external = parseEmprovexSiscofisInventoryJson(rawJson);
   if (!external.ok || !external.data) {
     const error = new Error('WAREHOUSE_SISCOFIS_VALIDATION_FAILED');
     (error as Error & { issues?: WarehouseSiscofisIssue[] }).issues = external.issues;
     throw error;
   }
-  const [materials, balances, settings, marcoZero] = await Promise.all([
-    listWarehouseMaterials(workspaceId, 500),
-    listWarehouseBalances(workspaceId, 500),
-    getInvoiceSettings(workspaceId),
-    getMarcoZero(workspaceId),
-  ]);
-  const adapted = adaptEmprovexSiscofisInventory({ inventory: external.data, ug: scope.ug, referenceDate, sourceLabel, materials, materialOverrides });
-  return buildWarehouseSiscofisPreview({
+  return prepareEmprovexSiscofisInventoryData(
     workspaceId,
-    importData: adapted.importData,
-    materials,
-    balances,
-    hasMarcoZero: Boolean(marcoZero),
-    cutoffAt: settings?.cutoffAt || marcoZero?.cutoffAt || null,
-    priorIssues: [...external.issues, ...adapted.issues],
-  });
+    external.data,
+    referenceDate,
+    sourceLabel,
+    materialOverrides,
+    external.issues
+  );
 }
 
 export async function prepareWarehouseSiscofisImport(
