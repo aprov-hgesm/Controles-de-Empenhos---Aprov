@@ -834,6 +834,26 @@ for (const rackVisualToken of [
     'Identidade visual oficial das estantes foi alterada fora da decisão consolidada.'
   );
 }
+requireText(
+  isometricPreview,
+  'const beamDepth = clamp(object.height * 0.065, 2.6, 7.2);',
+  'Travessas da Visão 3D voltaram a ficar espessas demais.'
+);
+requireText(
+  isometricPreview,
+  'const beamHeight = 3.35;',
+  'Altura visual das travessas da Visão 3D saiu do perfil fino consolidado.'
+);
+requireText(
+  warehouseLanding,
+  'const beamDepth = Math.max(0.8, Math.min(height * 0.065, 2.8));',
+  'Travessas da Início voltaram a ficar espessas demais.'
+);
+requireText(
+  warehouseLanding,
+  'const beamHeight = Math.max(1.55, Math.min(2.8, z * 0.027));',
+  'Altura visual das travessas da Início saiu do perfil fino consolidado.'
+);
 if (isometricPreview.includes("fill={selected ? '#ffe8a8' : '#e7b26b'}")) {
   fail('Renderer 3D voltou a usar a caixa visual antiga em vez da paleta compartilhada.');
 }
