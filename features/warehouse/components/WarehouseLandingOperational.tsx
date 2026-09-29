@@ -1,7 +1,24 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Check,
+  Move,
+  RotateCcw,
+  RotateCw,
+  Settings2,
+  Undo2,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 
 import type { WarehouseDepotLayout, WarehouseDepotLayoutObject } from '../../../lib/warehouse/layout';
 import {
@@ -25,6 +42,12 @@ import {
   loadWarehouseInvoiceIntakeQueue,
   type WarehouseInvoiceIntakeQueueRow,
 } from '../../../lib/warehouse/intakeStateRepository';
+import {
+  getWarehouseLandingVisualLayout,
+  normalizeWarehouseLandingVisualOverrides,
+  saveWarehouseLandingVisualLayout,
+  type WarehouseLandingVisualOverrides,
+} from '../../../lib/warehouse/landingVisualLayoutRepository';
 import {
   WAREHOUSE_BOX_VISUAL,
   WAREHOUSE_PALLET_VISUAL,
@@ -59,6 +82,7 @@ interface DepotPlacement {
   width: number;
   height: number;
   scale: number;
+  rotation: number;
 }
 
 type IsoPoint = { x: number; y: number };
@@ -402,8 +426,53 @@ function derivePlacements(
     const x = 48 + col * (cellWidth + gapX) + (cellWidth - width) / 2;
     const y = 76 + row * (cellHeight + gapY) + (cellHeight - height) / 2;
 
-    return { depot, layout, x, y, width, height, scale };
+    return { depot, layout, x, y, width, height, scale, rotation: 0 };
   });
+}
+
+function applyVisualOverrides(
+  placements: DepotPlacement[],
+  overrides: WarehouseLandingVisualOverrides
+): DepotPlacement[] {
+  return placements.map((placement) => {
+    const visual = overrides[placement.depot.id];
+    if (!visual) return placement;
+
+    const width = placement.width * visual.scale;
+    const height = placement.height * visual.scale;
+    return {
+      ...placement,
+      x: placement.x + visual.offsetX + (placement.width - width) / 2,
+      y: placement.y + visual.offsetY + (placement.height - height) / 2,
+      width,
+      height,
+      scale: placement.scale * visual.scale,
+      rotation: visual.rotation,
+    };
+  });
+}
+
+function svgPointerPoint(
+  svg: SVGSVGElement,
+  clientX: number,
+  clientY: number
+): IsoPoint | null {
+  const matrix = svg.getScreenCTM();
+  if (!matrix) return null;
+  const point = svg.createSVGPoint();
+  point.x = clientX;
+  point.y = clientY;
+  const transformed = point.matrixTransform(matrix.inverse());
+  return { x: transformed.x, y: transformed.y };
+}
+
+function svgDeltaToWorld(deltaX: number, deltaY: number): IsoPoint {
+  const projectedX = deltaX / ISO_HALF_WIDTH;
+  const projectedY = deltaY / ISO_HALF_HEIGHT;
+  return {
+    x: WORLD_WIDTH * (projectedX + projectedY) / 2,
+    y: WORLD_HEIGHT * (projectedY - projectedX) / 2,
+  };
 }
 
 function renderDepotObject(
@@ -748,32 +817,64 @@ function DepotWorld({
   occupancyByLocal,
   occupancyBySubposition,
   onOpen,
+  editMode,
+  selected,
+  onSelect,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
 }: {
   placement: DepotPlacement;
   subpositionsByParent: Map<string, WarehouseLocation[]>;
   occupancyByLocal: Map<string, number>;
   occupancyBySubposition: Map<string, number>;
   onOpen: (depotId: string) => void;
+  editMode: boolean;
+  selected: boolean;
+  onSelect: (depotId: string) => void;
+  onPointerDown: (event: ReactPointerEvent<SVGGElement>, depotId: string) => void;
+  onPointerMove: (event: ReactPointerEvent<SVGGElement>, depotId: string) => void;
+  onPointerUp: (event: ReactPointerEvent<SVGGElement>, depotId: string) => void;
 }) {
   const { depot, layout } = placement;
   const floorA = isoPoint(placement.x - 9, placement.y - 9, 0);
   const floorB = isoPoint(placement.x + placement.width + 9, placement.y - 9, 0);
   const floorC = isoPoint(placement.x + placement.width + 9, placement.y + placement.height + 9, 0);
   const floorD = isoPoint(placement.x - 9, placement.y + placement.height + 9, 0);
+  const center = isoPoint(
+    placement.x + placement.width / 2,
+    placement.y + placement.height / 2,
+    0
+  );
+  const rotationTransform = placement.rotation
+    ? 'rotate(' + placement.rotation + ' ' + center.x + ' ' + center.y + ')'
+    : undefined;
   const open = () => onOpen(depot.id);
 
   return (
     <g
-      className={styles.depotGroup}
+      className={[
+        styles.depotGroup,
+        editMode ? styles.depotEditable : '',
+        selected ? styles.depotSelected : '',
+      ].filter(Boolean).join(' ')}
       role="button"
       tabIndex={0}
-      aria-label={'Abrir ' + depot.name + ' em Meus Depósitos'}
+      transform={rotationTransform}
+      aria-label={editMode
+        ? 'Selecionar e mover ' + depot.name
+        : 'Abrir ' + depot.name + ' em Meus Depósitos'}
       data-testid={'warehouse-landing-depot-' + depot.id}
-      onClick={open}
+      onClick={() => editMode ? onSelect(depot.id) : open()}
+      onPointerDown={(event) => editMode && onPointerDown(event, depot.id)}
+      onPointerMove={(event) => editMode && onPointerMove(event, depot.id)}
+      onPointerUp={(event) => editMode && onPointerUp(event, depot.id)}
+      onPointerCancel={(event) => editMode && onPointerUp(event, depot.id)}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
-          open();
+          if (editMode) onSelect(depot.id);
+          else open();
         }
       }}
     >
@@ -970,16 +1071,30 @@ function PalletWorldLabel({
 export function WarehouseLandingOperational({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
   const [data, setData] = useState<LandingData>(INITIAL_DATA);
+  const [visualOverrides, setVisualOverrides] = useState<WarehouseLandingVisualOverrides>({});
+  const [savedVisualOverrides, setSavedVisualOverrides] = useState<WarehouseLandingVisualOverrides>({});
+  const [editMode, setEditMode] = useState(false);
+  const [selectedVisualDepotId, setSelectedVisualDepotId] = useState('');
+  const [savingVisual, setSavingVisual] = useState(false);
+  const [visualMessage, setVisualMessage] = useState('');
+  const dragRef = useRef<{
+    depotId: string;
+    pointerId: number;
+    startPoint: IsoPoint;
+    startOffsetX: number;
+    startOffsetY: number;
+  } | null>(null);
 
   const load = useCallback(async () => {
     setData((current) => ({ ...current, loading: true, error: null }));
     try {
-      const [depots, layouts, locations, locationBalances, queue] = await Promise.all([
+      const [depots, layouts, locations, locationBalances, queue, visualSettings] = await Promise.all([
         listWarehouseDepots(workspaceId, 250),
         listWarehouseDepotLayouts(workspaceId, 150),
         listWarehouseLocations(workspaceId, 500),
         listWarehousePositiveLocationBalances(workspaceId, 500),
         loadWarehouseInvoiceIntakeQueue(workspaceId).catch(() => null),
+        getWarehouseLandingVisualLayout(workspaceId).catch(() => null),
       ]);
 
       setData({
@@ -992,6 +1107,9 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
         pendingRows: queue?.rows || [],
         pendingAvailable: Boolean(queue),
       });
+      const loadedOverrides = visualSettings?.overrides || {};
+      setSavedVisualOverrides(loadedOverrides);
+      setVisualOverrides((current) => editMode ? current : loadedOverrides);
     } catch (error) {
       setData((current) => ({
         ...current,
@@ -1028,8 +1146,11 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
   }, [data.layouts]);
 
   const placements = useMemo(
-    () => derivePlacements(activeDepots, activeLayoutByDepot),
-    [activeDepots, activeLayoutByDepot]
+    () => applyVisualOverrides(
+      derivePlacements(activeDepots, activeLayoutByDepot),
+      visualOverrides
+    ),
+    [activeDepots, activeLayoutByDepot, visualOverrides]
   );
 
   const activeLocations = useMemo(
@@ -1108,6 +1229,146 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
     (_, index) => visiblePendingGroups[index] || null
   );
 
+  const selectedVisualDepot = useMemo(
+    () => activeDepots.find((depot) => depot.id === selectedVisualDepotId) || null,
+    [activeDepots, selectedVisualDepotId]
+  );
+
+  const updateVisual = useCallback((
+    depotId: string,
+    next: Partial<WarehouseLandingVisualOverrides[string]>
+  ) => {
+    setVisualOverrides((current) => {
+      const base = current[depotId] || {
+        offsetX: 0,
+        offsetY: 0,
+        scale: 1,
+        rotation: 0,
+      };
+      return normalizeWarehouseLandingVisualOverrides({
+        ...current,
+        [depotId]: { ...base, ...next },
+      });
+    });
+  }, []);
+
+  const beginVisualEdit = () => {
+    setVisualOverrides(savedVisualOverrides);
+    setSelectedVisualDepotId((current) =>
+      current && activeDepots.some((depot) => depot.id === current)
+        ? current
+        : activeDepots[0]?.id || ''
+    );
+    setVisualMessage('');
+    setEditMode(true);
+  };
+
+  const cancelVisualEdit = () => {
+    setVisualOverrides(savedVisualOverrides);
+    setVisualMessage('');
+    setEditMode(false);
+    dragRef.current = null;
+  };
+
+  const saveVisualEdit = async () => {
+    setSavingVisual(true);
+    setVisualMessage('');
+    try {
+      const saved = await saveWarehouseLandingVisualLayout(workspaceId, visualOverrides);
+      setSavedVisualOverrides(saved.overrides);
+      setVisualOverrides(saved.overrides);
+      setVisualMessage('Disposição visual salva.');
+      setEditMode(false);
+    } catch (error) {
+      setVisualMessage(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível salvar a disposição visual.'
+      );
+    } finally {
+      setSavingVisual(false);
+    }
+  };
+
+  const resetSelectedVisual = () => {
+    if (!selectedVisualDepotId) return;
+    setVisualOverrides((current) => {
+      const next = { ...current };
+      delete next[selectedVisualDepotId];
+      return next;
+    });
+  };
+
+  const handleDepotPointerDown = (
+    event: ReactPointerEvent<SVGGElement>,
+    depotId: string
+  ) => {
+    const svg = event.currentTarget.ownerSVGElement;
+    if (!svg) return;
+    const point = svgPointerPoint(svg, event.clientX, event.clientY);
+    if (!point) return;
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setSelectedVisualDepotId(depotId);
+    const current = visualOverrides[depotId] || {
+      offsetX: 0,
+      offsetY: 0,
+      scale: 1,
+      rotation: 0,
+    };
+    dragRef.current = {
+      depotId,
+      pointerId: event.pointerId,
+      startPoint: point,
+      startOffsetX: current.offsetX,
+      startOffsetY: current.offsetY,
+    };
+  };
+
+  const handleDepotPointerMove = (
+    event: ReactPointerEvent<SVGGElement>,
+    depotId: string
+  ) => {
+    const drag = dragRef.current;
+    if (!drag || drag.depotId !== depotId || drag.pointerId !== event.pointerId) return;
+
+    const svg = event.currentTarget.ownerSVGElement;
+    if (!svg) return;
+    const point = svgPointerPoint(svg, event.clientX, event.clientY);
+    if (!point) return;
+
+    const delta = svgDeltaToWorld(
+      point.x - drag.startPoint.x,
+      point.y - drag.startPoint.y
+    );
+    updateVisual(depotId, {
+      offsetX: drag.startOffsetX + delta.x,
+      offsetY: drag.startOffsetY + delta.y,
+    });
+  };
+
+  const handleDepotPointerUp = (
+    event: ReactPointerEvent<SVGGElement>,
+    depotId: string
+  ) => {
+    const drag = dragRef.current;
+    if (!drag || drag.depotId !== depotId || drag.pointerId !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    dragRef.current = null;
+  };
+
+  const selectedTransform = selectedVisualDepotId
+    ? visualOverrides[selectedVisualDepotId] || {
+        offsetX: 0,
+        offsetY: 0,
+        scale: 1,
+        rotation: 0,
+      }
+    : null;
+
   const worldFloor = [
     isoPoint(0, 0, 0),
     isoPoint(WORLD_WIDTH, 0, 0),
@@ -1155,6 +1416,115 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
           {data.pendingAvailable ? pendingGroups.length + ' NF(s) aguardando alocação' : 'pendências indisponíveis'}
         </small>
       </div>
+
+      <div className={styles.layoutActions}>
+        {!editMode ? (
+          <button
+            type="button"
+            className={styles.layoutEditButton}
+            onClick={beginVisualEdit}
+            disabled={!activeDepots.length}
+            data-testid="warehouse-landing-edit-layout"
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+            Editar disposição
+          </button>
+        ) : (
+          <div className={styles.layoutEditor} data-testid="warehouse-landing-layout-editor">
+            <div className={styles.layoutEditorHead}>
+              <span>
+                <Move className="h-3.5 w-3.5" />
+                Arraste os depósitos no plano
+              </span>
+              <select
+                value={selectedVisualDepotId}
+                onChange={(event) => setSelectedVisualDepotId(event.target.value)}
+                className={styles.layoutSelect}
+                aria-label="Depósito selecionado para personalização"
+              >
+                {activeDepots.map((depot) => (
+                  <option key={depot.id} value={depot.id}>
+                    {depot.code} · {depot.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.layoutControlRow}>
+              <button
+                type="button"
+                onClick={() => selectedTransform && updateVisual(selectedVisualDepotId, {
+                  rotation: selectedTransform.rotation - 15,
+                })}
+                title="Girar 15° à esquerda"
+                aria-label="Girar depósito à esquerda"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => selectedTransform && updateVisual(selectedVisualDepotId, {
+                  rotation: selectedTransform.rotation + 15,
+                })}
+                title="Girar 15° à direita"
+                aria-label="Girar depósito à direita"
+              >
+                <RotateCw className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => selectedTransform && updateVisual(selectedVisualDepotId, {
+                  scale: selectedTransform.scale - 0.1,
+                })}
+                title="Diminuir"
+                aria-label="Diminuir depósito"
+              >
+                <ZoomOut className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => selectedTransform && updateVisual(selectedVisualDepotId, {
+                  scale: selectedTransform.scale + 0.1,
+                })}
+                title="Aumentar"
+                aria-label="Aumentar depósito"
+              >
+                <ZoomIn className="h-3.5 w-3.5" />
+              </button>
+              <span className={styles.layoutScale}>
+                {selectedTransform ? Math.round(selectedTransform.scale * 100) : 100}%
+              </span>
+              <button
+                type="button"
+                onClick={resetSelectedVisual}
+                title="Restaurar este depósito"
+                aria-label="Restaurar posição do depósito"
+              >
+                <Undo2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            <div className={styles.layoutEditorFooter}>
+              <button type="button" onClick={cancelVisualEdit} className={styles.layoutCancel}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void saveVisualEdit()}
+                disabled={savingVisual}
+                className={styles.layoutSave}
+              >
+                <Check className="h-3.5 w-3.5" />
+                {savingVisual ? 'Salvando…' : 'Salvar disposição'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {visualMessage && (
+        <div className={styles.layoutMessage} role="status">{visualMessage}</div>
+      )}
 
       {data.error && <div className={styles.error}>{data.error}</div>}
 
@@ -1249,6 +1619,12 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
               occupancyByLocal={occupancyByLocal}
               occupancyBySubposition={occupancyBySubposition}
               onOpen={openDepot}
+              editMode={editMode}
+              selected={selectedVisualDepotId === placement.depot.id}
+              onSelect={setSelectedVisualDepotId}
+              onPointerDown={handleDepotPointerDown}
+              onPointerMove={handleDepotPointerMove}
+              onPointerUp={handleDepotPointerUp}
             />
           ))}
         </g>
@@ -1335,7 +1711,11 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
         )}
 
         <g className={styles.sceneHint} transform="translate(116 822)">
-          <text>Clique diretamente em um depósito para entrar em Meus Depósitos</text>
+          <text>
+            {editMode
+              ? 'Modo de edição visual · arraste os depósitos e ajuste rotação/tamanho no painel'
+              : 'Clique diretamente em um depósito para entrar em Meus Depósitos'}
+          </text>
         </g>
       </svg>
     </section>
