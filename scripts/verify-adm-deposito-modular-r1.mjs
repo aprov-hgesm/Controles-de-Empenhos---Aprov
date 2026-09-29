@@ -1558,6 +1558,8 @@ requireText(
 
 
 for (const [surfaceName, surfaceSource] of [
+  ['Migração SISCOFIS', siscofisOperational],
+  ['Pendências SISCOFIS', siscofisPendingAllocation],
   ['Saída de Material', materialWithdrawal],
   ['Relatórios da Saída de Material', consumptionReports],
   ['Controle de Materiais', itemControl],
@@ -1570,6 +1572,8 @@ for (const [surfaceName, surfaceSource] of [
 ]) {
   for (const forbiddenToken of [
     'bg-[#071020]',
+    'bg-[#01050d]',
+    'bg-black/10',
     'bg-black/20',
     'bg-black/25',
     'bg-black/15',
@@ -1584,6 +1588,22 @@ for (const [surfaceName, surfaceSource] of [
     }
   }
 }
+
+requireText(
+  siscofisOperational,
+  'data-visual-theme="operational-light"',
+  'Migração SISCOFIS deixou de seguir D-076/VISUAL_IDENTITY.'
+);
+requireText(
+  siscofisOperational,
+  "bg-[#00288e]",
+  'Migração SISCOFIS perdeu o azul institucional nas ações primárias.'
+);
+requireText(
+  siscofisOperational,
+  'border border-slate-200 bg-white',
+  'Migração SISCOFIS perdeu formulários claros de alto contraste.'
+);
 
 requireText(
   materialWithdrawal,
