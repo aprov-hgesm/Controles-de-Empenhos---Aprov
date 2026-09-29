@@ -395,3 +395,15 @@ test('cadastro de locais oferece tipos físicos e subposições automáticas par
   assert.match(locations, /locationPreset === 'SHELF'/);
   assert.match(locations, /parentLocationId: created\.id/);
 });
+
+
+test('prévia 3D mantém a proporção física do depósito em vez de normalizar para quadrado', () => {
+  const preview = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseIsometricPreview.tsx'),
+    'utf8'
+  );
+  assert.match(preview, /const scaleBase = Math\.max\(1, logicalWidth, logicalHeight\)/);
+  assert.match(preview, /const nx = x \/ scaleBase/);
+  assert.match(preview, /const ny = y \/ scaleBase/);
+  assert.doesNotMatch(preview, /const nx = x \/ Math\.max\(1, logicalWidth\)/);
+});
