@@ -221,13 +221,13 @@ function rackBeamPrism({
         points={polygonPoints([d, c, ct, dt])}
         fill={frontFill}
         stroke={WAREHOUSE_RACK_VISUAL.beamStroke}
-        strokeWidth="0.85"
+        strokeWidth="0.55"
       />
       <polygon
         points={polygonPoints([b, c, ct, bt])}
         fill={WAREHOUSE_RACK_VISUAL.beamSide}
         stroke={WAREHOUSE_RACK_VISUAL.beamStroke}
-        strokeWidth="0.8"
+        strokeWidth="0.5"
       />
       <polygon
         points={polygonPoints([at, bt, ct, dt])}
@@ -525,9 +525,9 @@ function WarehouseStructure({
 
   if (kind === 'SHELF') {
     const levels = clamp(subpositions.length || 4, 2, 6);
-    const beamDepth = clamp(object.height * 0.1, 4, 12);
-    const sideBeamWidth = clamp(object.width * 0.035, 3, 8);
-    const beamHeight = 5.2;
+    const beamDepth = clamp(object.height * 0.065, 2.6, 7.2);
+    const sideBeamWidth = clamp(object.width * 0.022, 1.8, 4.6);
+    const beamHeight = 3.35;
 
     const frontBottomLeft = d;
     const frontBottomRight = c;
