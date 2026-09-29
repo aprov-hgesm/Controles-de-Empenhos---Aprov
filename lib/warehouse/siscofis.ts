@@ -35,6 +35,7 @@ export interface WarehouseSiscofisImportRow {
   quantity: number;
   unitValue: number | null;
   totalValue: number | null;
+  expiresOn?: string | null;
   sourceItemNumber?: string | null;
   requiresCanonicalResolution?: boolean;
 }
@@ -72,6 +73,7 @@ export interface WarehouseSiscofisPreviewRow {
   state: WarehouseSiscofisReconciliationState;
   createsMaterial: boolean;
   issue: string | null;
+  expiresOn?: string | null;
   sourceItemNumber?: string | null;
 }
 
@@ -108,6 +110,7 @@ const ROW_FIELDS = new Set([
   'quantity',
   'unitValue',
   'totalValue',
+  'expiresOn',
 ]);
 
 function isPlainObject(value: unknown): value is UnknownObject {
@@ -507,6 +510,19 @@ export function parseWarehouseSiscofisJson(
         );
       }
 
+      const expiresOn = candidate.expiresOn === null || candidate.expiresOn === undefined
+        ? null
+        : parseReferenceDate(candidate.expiresOn);
+      if (candidate.expiresOn !== null && candidate.expiresOn !== undefined && !expiresOn) {
+        pushIssue(
+          issues,
+          'error',
+          'invalid_expiry',
+          path + '.expiresOn',
+          'expiresOn deve usar uma data real no formato YYYY-MM-DD ou ser nulo.'
+        );
+      }
+
       if (
         quantity !== null
         && quantity >= 0
@@ -544,6 +560,7 @@ export function parseWarehouseSiscofisJson(
           quantity,
           unitValue,
           totalValue,
+          expiresOn,
         });
       }
     });
@@ -583,6 +600,7 @@ export async function hashWarehouseSiscofisImport(
       quantity: row.quantity,
       unitValue: row.unitValue,
       totalValue: row.totalValue,
+      expiresOn: row.expiresOn ?? null,
       sourceItemNumber: row.sourceItemNumber ?? null,
       requiresCanonicalResolution: row.requiresCanonicalResolution ?? false,
     })),
@@ -648,6 +666,7 @@ export interface EmprovexSiscofisInventoryItem {
   descricao: string;
   quantidade: number;
   valorUnitario: number;
+  validade: string | null;
 }
 
 export interface EmprovexSiscofisInventory {
@@ -662,7 +681,7 @@ export interface EmprovexSiscofisInventoryValidationResult {
 }
 
 const EXTERNAL_ROOT_FIELDS = new Set(['schemaVersion', 'items']);
-const EXTERNAL_ITEM_FIELDS = new Set(['numeroItem', 'descricao', 'quantidade', 'valorUnitario']);
+const EXTERNAL_ITEM_FIELDS = new Set(['numeroItem', 'descricao', 'quantidade', 'valorUnitario', 'validade']);
 
 function parseLegacyBrazilianMoney(value: string): number | null {
   const text = value.trim();
@@ -711,15 +730,21 @@ export function parseEmprovexSiscofisInventoryJson(raw: string): EmprovexSiscofi
         pushIssue(issues, 'warning', 'legacy_brazilian_money', path + '.valorUnitario', 'Valor monetário legado foi normalizado deterministicamente.');
       }
     }
+    const validade = candidate.validade === null || candidate.validade === undefined
+      ? null
+      : parseReferenceDate(candidate.validade);
+    if (candidate.validade !== null && candidate.validade !== undefined && !validade) {
+      pushIssue(issues, 'error', 'invalid_external_expiry', path + '.validade', 'Validade deve usar YYYY-MM-DD ou ser nula.');
+    }
     if (!numeroItem || numeroItem.length > 80 || /[\u0000-\u001f\u007f]/.test(numeroItem)) pushIssue(issues, 'error', 'invalid_numero_item', path + '.numeroItem', 'Nº Ficha deve ser texto não vazio de até 80 caracteres.');
     if (!descricao || descricao.length > 240) pushIssue(issues, 'error', 'invalid_external_description', path + '.descricao', 'Descrição deve possuir entre 1 e 240 caracteres.');
     if (quantidade === null || quantidade <= 0) pushIssue(issues, 'error', 'invalid_external_quantity', path + '.quantidade', 'Quantidade deve ser número finito maior que zero.');
     if (valorUnitario === undefined || valorUnitario === null) pushIssue(issues, 'error', 'invalid_external_unit_value', path + '.valorUnitario', 'Valor unitário deve ser número não negativo com até 2 casas.');
     if (numeroItem && descricao && quantidade !== null && quantidade > 0 && valorUnitario !== undefined && valorUnitario !== null) {
-      const signature = JSON.stringify([numeroItem, descricao, quantidade, valorUnitario]);
+      const signature = JSON.stringify([numeroItem, descricao, quantidade, valorUnitario, validade]);
       if (exactRows.has(signature)) pushIssue(issues, 'warning', 'duplicate_source_row', path, 'Linha exatamente repetida preservada para revisão humana.');
       exactRows.add(signature);
-      items.push({ numeroItem, descricao, quantidade, valorUnitario });
+      items.push({ numeroItem, descricao, quantidade, valorUnitario, validade });
     }
   });
   if (issues.some((issue) => issue.severity === 'error')) return { ok: false, data: null, issues };
@@ -836,6 +861,7 @@ export function adaptEmprovexSiscofisInventory(input: {
       quantity: item.quantidade,
       unitValue: item.valorUnitario,
       totalValue: Math.round(item.quantidade * item.valorUnitario * 100) / 100,
+      expiresOn: item.validade,
       sourceItemNumber: item.numeroItem,
       requiresCanonicalResolution,
     };
@@ -1096,6 +1122,7 @@ export async function buildWarehouseSiscofisPreview(input: {
       state,
       createsMaterial,
       issue: rowIssue,
+      expiresOn: row.expiresOn ?? null,
       sourceItemNumber: row.sourceItemNumber ?? null,
     });
   }
