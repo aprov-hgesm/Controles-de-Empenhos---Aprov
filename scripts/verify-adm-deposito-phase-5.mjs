@@ -15,6 +15,7 @@ function requireText(content, marker, message) {
 }
 
 const domain = read('lib/warehouse/siscofis.ts');
+const pdfExtractor = read('lib/warehouse/siscofisPdf.ts');
 const service = read('lib/warehouse/siscofisService.ts');
 const movement = read('lib/warehouse/movement.ts');
 const siscofisUi = read('features/warehouse/components/WarehouseSiscofisOperational.tsx');
@@ -65,6 +66,9 @@ for (const marker of [
 
 for (const marker of [
   'data-testid="warehouse-siscofis-operational"',
+  'data-testid="warehouse-siscofis-pdf-direct"',
+  'data-testid="warehouse-siscofis-pdf-input"',
+  'PDF SISCOFIS direto · sem IA',
   'data-testid="warehouse-siscofis-json"',
   'data-testid="warehouse-siscofis-validate"',
   'data-testid="warehouse-siscofis-preview"',
@@ -73,6 +77,34 @@ for (const marker of [
 ]) {
   requireText(siscofisUi, marker, 'Jornada operacional SISCOFIS incompleta: ' + marker);
 }
+
+for (const marker of [
+  'extractEmprovexSiscofisInventoryFromPdfBytes',
+  "new TextDecoder('windows-1252')",
+  "byText('Nr Ficha')",
+  "byText('Nome do Material')",
+  "byText('Qtde Exist')",
+  "byText('Qtde Disp')",
+  "byText('Vlr Unit')",
+  'Mapa de Existência - Material de Consumo',
+]) {
+  requireText(pdfExtractor, marker, 'Extrator local de PDF SISCOFIS incompleto: ' + marker);
+}
+
+if (pdfExtractor.includes('fetch(') || pdfExtractor.includes('https://') || pdfExtractor.includes('http://')) {
+  findings.push('Extrator local de PDF SISCOFIS passou a depender de rede externa.');
+}
+
+requireText(
+  siscofisUi,
+  "await import('../../../lib/warehouse/siscofisPdf')",
+  'Jornada SISCOFIS deixou de carregar o extrator PDF somente sob demanda.'
+);
+requireText(
+  siscofisUi,
+  "'PDF SISCOFIS — ' + file.name",
+  'Importação direta de PDF perdeu a procedência do arquivo no snapshot.'
+);
 
 requireText(registration, 'WarehouseSiscofisOperational', 'Cadastro de Itens deixou de expor Migração SISCOFIS.');
 requireText(registration, "requested === 'siscofis'", 'Redirect legado para SISCOFIS deixou de ser aceito.');
