@@ -80,10 +80,10 @@ for (const marker of [
   'Sem localização',
 ]) requireText(locationsUi, marker, 'Jornada UI da FASE 6 incompleta: ' + marker);
 
-requireText(navigation, "id: 'depots'", 'Navegação Meus Depósitos ausente.');
-requireText(navigation, "label: 'Meus Depósitos'", 'Rótulo Meus Depósitos ausente.');
-requireText(depotsUi, 'WarehouseLocationsOperational', 'Meus Depósitos não expõe Localizações.');
-requireText(depotsUi, "requested === 'croquis'", 'Meus Depósitos perdeu seleção de subaba estrutural/croqui.');
+requireText(navigation, "id: 'depots'", 'Navegação Controle de Depósitos ausente.');
+requireText(navigation, "label: 'Controle de Depósitos'", 'Rótulo Controle de Depósitos ausente.');
+requireText(depotsUi, 'WarehouseLocationsR1Operational', 'Controle de Depósitos não expõe Localizações R1.');
+requireText(depotsUi, "requested === 'croquis'", 'Controle de Depósitos perdeu seleção de subaba estrutural/croqui.');
 
 for (const marker of [
   'function validWarehouseDepotCreate',
@@ -141,5 +141,5 @@ console.log('FASE 6 — Depósitos / Localizações / Transferências: OK');
 console.log('- depósitos, locais e subposições possuem identidade lógica estável');
 console.log('- saldo físico é projeção derivada do ledger, com Sem localização para legado');
 console.log('- TRANSFER mantém saldo agregado e atualiza origem/destino atomicamente');
-console.log('- idempotência, founder-only e isolamento workspace/UG permanecem protegidos');
+console.log('- idempotência e isolamento multi-tenant por workspace/UG permanecem protegidos');
 console.log('- UI operacional e gates permanentes da FASE 6 estão presentes');
