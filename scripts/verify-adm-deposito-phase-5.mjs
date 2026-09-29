@@ -23,6 +23,8 @@ const pendingAllocation = read('lib/warehouse/pendingPhysicalAllocationRepositor
 const pendingAllocationUi = read('features/warehouse/components/WarehouseSiscofisPendingAllocation.tsx');
 const registration = read('features/warehouse/components/WarehouseItemRegistrationOperational.tsx');
 const control = read('features/warehouse/components/WarehouseItemControlOperational.tsx');
+const logisticsReports = read('features/warehouse/components/WarehouseLogisticsReports.tsx');
+const siscofisHistoryReport = read('features/warehouse/components/WarehouseSiscofisHistoryReport.tsx');
 const navigation = read('features/warehouse/navigation.ts');
 const rules = read('firestore.rules');
 const securityTests = read('scripts/firestore-multitenancy-security.test.mjs');
@@ -156,7 +158,34 @@ for (const marker of [
 
 requireText(registration, 'WarehouseSiscofisOperational', 'Cadastro de Itens deixou de expor Migração SISCOFIS.');
 requireText(registration, "requested === 'siscofis'", 'Redirect legado para SISCOFIS deixou de ser aceito.');
-requireText(control, 'WarehouseSiscofisHistoryReport', 'Controle de Materiais deixou de expor o histórico SISCOFIS somente leitura.');
+requireText(
+  control,
+  'WarehouseLogisticsReports',
+  'Controle de Materiais deixou de expor a área de Relatórios.'
+);
+requireText(
+  logisticsReports,
+  'WarehouseSiscofisHistoryReport',
+  'Relatórios do Controle de Materiais deixaram de expor o histórico SISCOFIS.'
+);
+requireText(
+  logisticsReports,
+  "{ id: 'siscofis', label: 'SISCOFIS' }",
+  'Relatórios do Controle de Materiais perderam a subaba SISCOFIS.'
+);
+requireText(
+  siscofisHistoryReport,
+  'Consulta somente leitura dos Marcos Zero e snapshots já confirmados.',
+  'Histórico SISCOFIS deixou de ser explicitamente somente leitura.'
+);
+requireText(
+  siscofisHistoryReport,
+  'listWarehouseSiscofisSnapshots(workspaceId, 24)',
+  'Histórico SISCOFIS perdeu a consulta bounded de snapshots.'
+);
+if (logisticsReports.includes('WarehouseSiscofisOperational')) {
+  findings.push('Controle de Materiais voltou a duplicar a superfície operacional de migração SISCOFIS.');
+}
 requireText(navigation, 'Alocação de Material', 'Arquitetura atual perdeu a superfície Alocação de Material.');
 
 for (const marker of [
@@ -204,5 +233,5 @@ console.log('FASE 5 — SISCOFIS / Marco Zero / Conciliação: OK');
 console.log('- contratos versionados, validação estrita e prompt para IA externa presentes');
 console.log('- Marco Zero usa INITIAL_BALANCE no ledger oficial e replay idempotente');
 console.log('- snapshots posteriores conciliam sem gerar movimentação automática');
-console.log('- jornada atual está integrada à arquitetura Cadastro de Itens / Controle de Itens');
+console.log('- migração permanece em Alocação de Material; histórico SISCOFIS fica somente leitura em Controle de Materiais → Relatórios');
 console.log('- Rules e suíte multitenant preservam founder-only e imutabilidade');
