@@ -2305,32 +2305,28 @@ Data: 2026-09-28.
 - Hortifruti/granjeiros são excluídos da migração: frutas, legumes, verduras, hortaliças, raízes/tubérculos in natura e ovos/granjeiros.
 - A exclusão não depende apenas da expressão `In natura`: itens claramente frescos, como pimentão verde/vermelho e cebola roxa, também são filtrados.
 - Produtos processados de origem vegetal permanecem elegíveis, inclusive farinha de mandioca, ervilha seca, milho verde em conserva, polpa de fruta, batata palha, batata pré-frita, alho granulado, doces, molhos, conservas, sucos, geleias e desidratados.
-- O filtro é aplicado em **duas camadas**:
-  1. o prompt oficial orienta a IA externa a retornar apenas linhas elegíveis;
-  2. o EMPROVEX reclassifica deterministicamente o JSON recebido antes de gerar a prévia.
+- O filtro operacional é aplicado deterministicamente pelo próprio EMPROVEX após a leitura local do Mapa de Existência; não depende de IA nem de JSON fornecido pelo operador.
 - Linhas filtradas pelo sistema geram aviso de revisão; se nenhuma linha elegível restar, a importação fica bloqueada.
-- O contrato externo continua simples e versionado (`emprovex_siscofis_inventory_v1`) com apenas quatro campos por item: `numeroItem`, `descricao`, `quantidade` e `valorUnitario`.
-- Itens elegíveis repetidos não são consolidados durante a extração; lotes/linhas independentes do relatório permanecem independentes até a etapa canônica já existente.
+- O contrato interno de extração `emprovex_siscofis_inventory_v1` preserva `numeroItem`, `descricao`, `quantidade`, `valorUnitario` e `validade` (nula quando ausente no relatório).
+- Itens elegíveis repetidos não são consolidados durante a extração; linhas independentes do relatório, inclusive com validades diferentes, permanecem independentes na prévia.
 
 
-## D-113 — PDF SISCOFIS direto é opção local adicional de migração
+## D-113 — [SUPERSEDIDA pela D-118] PDF SISCOFIS direto como opção de migração
 
 Data: 2026-09-28.
 
-- A Migração SISCOFIS passa a oferecer **três formas de entrada**, sem substituir nenhuma das existentes:
-  1. **PDF SISCOFIS direto — sem IA**;
-  2. **JSON gerado por IA externa ou preparado manualmente**;
-  3. **inclusão manual de item**.
-- As três entradas convergem obrigatoriamente para o mesmo contrato `emprovex_siscofis_inventory_v1`, o mesmo adaptador, a mesma prévia e a mesma confirmação do Marco Zero/snapshot. Não existe ledger paralelo para o PDF.
+- Esta decisão registra o estágio intermediário em que o PDF direto coexistia com JSON/IA e inclusão manual.
+- A **D-118** substitui o comportamento operacional desta decisão: a Migração SISCOFIS passa a aceitar exclusivamente o upload do Mapa de Existência em PDF.
+- O contrato e o ledger criados nesta fase continuam reaproveitados pela arquitetura definitiva da D-118.
 - O leitor direto foi calibrado para o **Mapa de Existência - Material de Consumo textual do SISCOFIS**, inclusive o formato real gerado por Rave/Nevrona observado em 2026-09-28.
 - O processamento do PDF ocorre **inteiramente no navegador**. O arquivo não é enviado ao Firestore, à IA, a serviço de OCR ou a endpoint externo apenas para extração.
 - O extrator local reconhece estruturalmente as colunas `Nr Ficha`, `Nome do Material`, `Qtde Exist`, `Qtde Disp` e `Vlr Unit`; `Qtde Exist` continua sendo a quantidade do Marco Zero.
-- Depois da leitura do PDF, o JSON gerado passa novamente pelo classificador oficial da D-112: somente conta `07`, exclusão de hortifruti/granjeiros e preservação de produtos processados.
+- Depois da leitura do PDF, o objeto interno extraído passa pelo classificador oficial da D-112: somente conta `07`, exclusão de hortifruti/granjeiros e preservação de produtos processados.
 - Linhas com `Qtde Exist = 0` não são levadas à prévia de saldo inicial.
 - A data de emissão do relatório é aproveitada como data-base quando reconhecida deterministicamente; caso contrário, permanece disponível a data informada pelo operador.
-- A origem auditável é preservada como `PDF SISCOFIS — <nome do arquivo>`, inclusive após correção/revalidação.
+- A origem auditável é preservada pelo nome do Mapa de Existência, inclusive após correção/revalidação.
 - O extrator é carregado sob demanda somente quando o usuário seleciona um PDF, reduzindo impacto no bundle operacional normal.
-- O leitor **não tenta adivinhar** formatos incompatíveis. PDFs escaneados, criptografados, comprimidos de forma não suportada ou com estrutura SISCOFIS distinta são recusados com mensagem clara, permanecendo disponível o fluxo JSON/IA.
+- O leitor **não tenta adivinhar** formatos incompatíveis. PDFs escaneados, criptografados, comprimidos de forma não suportada ou com estrutura SISCOFIS distinta são recusados com mensagem clara.
 - Não foi adicionada biblioteca externa nova para esta função; a leitura utiliza o contrato textual/posicional do PDF SISCOFIS observado, mantendo baixo peso e baixa dependência.
 
 
@@ -2370,7 +2366,7 @@ Data: 2026-09-28.
   - textos principais `slate-800/900` e auxiliares `slate-500/600`;
   - inputs, selects e textareas brancos ou `slate-50`, nunca quase pretos;
   - feedbacks semânticos `emerald`, `amber` e `rose` apenas para sucesso, atenção e erro.
-- PDF direto, entrada manual, prompt para IA, JSON, validação, prévia e histórico devem parecer partes de uma única superfície EMPROVEX, e não submódulos com temas próprios.
+- Upload do Mapa de Existência, validação e prévia devem parecer partes de uma única superfície EMPROVEX, e não submódulos com temas próprios.
 - A ação primária usa o azul institucional; cores ciano/violeta/verde podem existir somente como acentos semânticos secundários.
 - A prévia de importação mantém tabela clara, campos editáveis claros e alto contraste.
 - O histórico SISCOFIS permanece somente leitura e usa o mesmo padrão claro de Relatórios/Controle de Materiais.
@@ -2402,8 +2398,27 @@ Data: 2026-09-28.
 - A linha desaparece imediatamente da relação visual e fica marcada como exclusão pendente.
 - Antes da revalidação o operador pode usar **Desfazer exclusões**.
 - Qualquer exclusão deixa a prévia em estado alterado e mantém **Confirmar Marco Zero** bloqueado.
-- A exclusão só é consolidada quando o operador executa **Revalidar alterações**; nesse momento o JSON do draft é reconstruído sem as linhas excluídas.
+- A exclusão só é consolidada quando o operador executa **Revalidar alterações**; nesse momento o draft interno derivado do Mapa de Existência é reconstruído sem as linhas excluídas.
 - A identificação da linha usa o `rowId` estável derivado do índice original do SISCOFIS, e não o índice visual após filtros.
 - Após retirar linhas intermediárias, vínculos canônicos e marcações de edição das linhas remanescentes são remapeados para os novos `rowId`s antes de gerar a nova prévia.
 - Esta proteção é especialmente importante porque filtros automáticos de conta `07` e hortifruti podem retirar linhas antes da prévia, tornando inseguro usar apenas posição visual.
 - Nenhuma leitura/gravação de estoque é feita pelo clique em **Não importar**. As leituras normais de validação só ocorrem quando o operador decide revalidar a relação.
+
+
+## D-118 — Migração SISCOFIS usa somente Mapa de Existência e preserva validade
+
+Data: 2026-09-28.
+
+- A entrada operacional da **Migração SISCOFIS** passa a ser exclusivamente o **upload do Mapa de Existência - Material de Consumo em PDF**.
+- As superfícies de **prompt para IA**, **importação/edição de JSON** e **inclusão manual de item dentro da Migração SISCOFIS** deixam de existir na interface.
+- O PDF é processado localmente no navegador, sem envio para IA, OCR ou serviço externo.
+- O fluxo operacional passa a ser: **Selecionar Mapa de Existência → leitura local → filtros determinísticos → validação compacta → prévia do Marco Zero → confirmação**.
+- O extrator reconhece obrigatoriamente as colunas `Nr Ficha`, `Nome do Material`, `Qtde Exist`, `Qtde Disp`, `Vlr Unit` e `Validade`.
+- A coluna **Validade** é normalizada de `DD/MM/AAAA` para `YYYY-MM-DD`; quando ausente na linha, permanece nula e não é inventada.
+- A validade é preservada **por linha** no contrato interno, na prévia do Marco Zero e no snapshot SISCOFIS confirmado.
+- O mesmo material pode aparecer em múltiplas linhas com validades distintas; essas linhas não são consolidadas na prévia apenas por possuírem a mesma ficha/descrição.
+- A prévia exibe uma coluna **Validade** editável. Alterar a data marca a prévia como modificada e exige **Revalidar alterações** antes da confirmação.
+- A ação **Não importar** continua disponível exclusivamente no Marco Zero e passa a operar diretamente sobre o draft interno extraído do Mapa de Existência.
+- A interface continua permitindo correções na prévia (ficha, descrição, quantidade, validade, valor e vínculo canônico), mas não expõe ao operador o JSON interno.
+- O contrato `emprovex_siscofis_inventory_v1` permanece como detalhe interno de implementação e compatibilidade; não constitui mais uma forma de entrada para o usuário.
+- Nesta decisão, a validade fica preservada no **Marco Zero/snapshot por linha**. A criação ou realocação automática de registros `warehouse_lot_v1` a partir dessas validades não é inferida nem executada silenciosamente; eventual integração com lotes deve ser tratada explicitamente para manter idempotência e rastreabilidade.
