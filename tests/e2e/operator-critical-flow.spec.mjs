@@ -133,44 +133,13 @@ test.describe.serial('EMPROVEX browser E2E with Firebase Emulator', () => {
     });
   });
 
-  test('usuário externo não vê nem acessa a rota ADM Depósito', async ({ page }) => {
-    // Este cenário visita várias rotas protegidas em sequência. Em máquinas locais,
-    // o Next.js dev pode compilar cada rota a frio na primeira execução; preserve
-    // os timeouts das asserções e amplie apenas o orçamento total deste cenário.
-    test.setTimeout(90_000);
-
+  test('usuário externo autenticado vê a Central de Depósitos', async ({ page }) => {
     await page.goto('/');
     await loginSector(page, OPERATOR_A);
 
-    await expect(page.getByTestId('nav-adm-deposito')).toHaveCount(0);
-
-    await page.goto('/adm-deposito');
-    await expect(page).toHaveURL(/\/$/, { timeout: 20_000 });
-    await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
-      timeout: 20_000,
-    });
-    await expect(page.getByTestId('nav-adm-deposito')).toHaveCount(0);
-
-    await page.goto('/adm-deposito/estoque');
-    await expect(page).toHaveURL(/\/$/, { timeout: 20_000 });
-    await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
-      timeout: 20_000,
-    });
-    await expect(page.getByTestId('nav-adm-deposito')).toHaveCount(0);
-
-    await page.goto('/adm-deposito/visao-do-deposito');
-    await expect(page).toHaveURL(/\/$/, { timeout: 20_000 });
-    await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
-      timeout: 20_000,
-    });
-    await expect(page.getByTestId('nav-adm-deposito')).toHaveCount(0);
-
-    await page.goto('/adm-deposito/saida-expressa');
-    await expect(page).toHaveURL(/\/$/, { timeout: 20_000 });
-    await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
-      timeout: 20_000,
-    });
-    await expect(page.getByTestId('warehouse-express-outbound')).toHaveCount(0);
+    const warehouseEntry = page.getByTestId('nav-adm-deposito');
+    await expect(warehouseEntry).toHaveCount(1);
+    await expect(warehouseEntry).toContainText('Central de Depósitos');
   });
 
   test('segundo workspace não enxerga a NS nem o fornecedor do primeiro', async ({ page }) => {

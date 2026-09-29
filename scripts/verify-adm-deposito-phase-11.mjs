@@ -14,9 +14,12 @@ const dashboard = read('features/warehouse/components/WarehouseLogisticsDashboar
 const alertsUi = read('features/warehouse/components/WarehouseLogisticsAlerts.tsx');
 const settings = read('features/warehouse/components/WarehouseLogisticsSettings.tsx');
 const control = read('features/warehouse/components/WarehouseItemControlOperational.tsx');
+const summary = read('features/warehouse/components/WarehouseItemControlSummary.tsx');
+const reports = read('features/warehouse/components/WarehouseLogisticsReports.tsx');
 const navigation = read('features/warehouse/navigation.ts');
 const namespace = read('lib/warehouse/namespace.ts');
-const rules = read('firestore.rules');
+const rules = read('firestore.warehouse.rules');
+const coreRules = read('firestore.rules');
 const decisions = read('docs/adm-deposito/DECISIONS.md');
 
 assert.match(logistics, /CronogramaEmpenho/);
@@ -44,24 +47,31 @@ assert.doesNotMatch(deliveries, /Confirmar entrega|Registrar entrega|Receber mat
 assert.match(dashboard, /namespace warehouse/);
 assert.match(alertsUi, /não alteram a Central de Avisos operacional/);
 assert.match(settings, /namespace\s*warehouse/);
-assert.match(control, /WarehouseLogisticsDashboard/);
-assert.match(control, /WarehouseDeliveriesOperational/);
-assert.match(control, /WarehouseLogisticsAlerts/);
-assert.match(control, /WarehouseLogisticsSettings/);
-assert.match(control, /label: 'Resumo logístico'/);
-assert.match(control, /label: 'Entregas'/);
-assert.match(control, /label: 'Alertas'/);
-assert.match(navigation, /label: 'Controle de Itens'/);
+assert.match(control, /WarehouseItemControlSummary/);
+assert.match(control, /WarehouseLogisticsReports/);
+assert.match(control, /label: 'Resumo'/);
+assert.match(control, /label: 'Relatórios'/);
+assert.match(summary, /Movimentações recentes/);
+assert.match(summary, /Consultas e relatórios/);
+assert.match(reports, /Relatórios de Saída/);
+assert.match(reports, /Relatórios de Consumo Imediato/);
+assert.match(reports, /Movimentações e entradas/);
+assert.match(reports, /Inventários/);
+assert.match(reports, /SISCOFIS/);
+assert.match(navigation, /label: 'Controle de Materiais'/);
 
 assert.match(rules, /validWarehouseLogisticsSettings/);
-assert.match(rules, /validWarehouseLogisticsAlertCreate/);
-assert.match(rules, /match \/alerts\/\{alertId\}/);
+assert.doesNotMatch(
+  rules,
+  /match \/alerts\/\{alertId\}/,
+  'Alertas logísticos legados não devem reabrir persistência no warehouse enquanto não forem superfície ativa.'
+);
 
 const operationalMarker = '// Workspace-scoped operational data.';
-const operationalStart = rules.indexOf(operationalMarker);
+const operationalStart = coreRules.indexOf(operationalMarker);
 assert.ok(operationalStart >= 0);
 assert.doesNotMatch(
-  rules.slice(operationalStart),
+  coreRules.slice(operationalStart),
   /warehouse_logistics|logalert-|canAccessWarehouseModule/
 );
 
@@ -71,5 +81,5 @@ assert.match(decisions, /namespace `warehouse`/);
 console.log('ADM Depósito FASE 11 protected guard: PASS');
 console.log('- Cronogramas/Empenhos/NFs somente leitura');
 console.log('- correlação logística derivada do ledger');
-console.log('- alertas e configurações persistidos somente em warehouse/*');
+console.log('- configurações permanecem no warehouse; alertas legados ficam fail-closed enquanto não forem superfície ativa');
 console.log('- nenhuma mutação operacional comandada pelo ADM');

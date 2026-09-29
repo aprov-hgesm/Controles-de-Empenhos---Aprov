@@ -95,7 +95,7 @@ assert.match(croquisR1, /listWarehousePositiveLocationBalances/);
 assert.match(locationsR1, /warehouse-locations-r1-operational/);
 assert.match(depots, /requested === 'croquis'/);
 assert.match(navigation, /id: 'depots'/);
-assert.match(navigation, /label: 'Meus Depósitos'/);
+assert.match(navigation, /label: 'Controle de Depósitos'/);
 
 assert.match(rules, /warehouse_depot_layout_v1/);
 assert.match(rules, /match \/layouts\/\{layoutId\}/);
@@ -103,12 +103,12 @@ assert.match(rules, /validWarehouseDepotLayoutCreate/);
 assert.match(rules, /validWarehouseDepotLayoutArchive/);
 assert.match(security, /fundador cria croqui versionado/);
 assert.match(security, /usuário não fundador não lê a R1/);
-assert.match(e2e, /warehouse-layout-material-search/);
-assert.match(e2e, /warehouse-layout-save/);
-assert.match(e2e, /ALTERAÇÃO NÃO SALVA/);
-assert.match(e2e, /name: 'Cancelar'/);
-assert.match(e2e, /warehouse-croqui-editor-toolbar/);
-assert.match(e2e, /warehouse-croqui-editor-viewport/);
+assert.match(e2e, /warehouse-r1-croquis/);
+assert.match(e2e, /Nome do croqui/);
+assert.match(e2e, /Salvar versão/);
+assert.match(e2e, /Prévia 3D/);
+assert.match(e2e, /warehouse-r1-edit-dimensions/);
+assert.match(e2e, /warehouse-r1-dimension-editor/);
 assert.match(e2e, /setViewportSize\(\{ width: 1100, height: 900 \}\)/);
 
 assert.match(phaseDoc, /warehouse_depot_layout_v1/);

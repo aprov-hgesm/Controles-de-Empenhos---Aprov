@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 
 import { EmprovexAuthLoading } from '../../../components/auth/EmprovexAuthLoading';
 import { auth } from '../../../lib/firebase';
@@ -12,6 +12,38 @@ import type { WarehouseSectionId } from '../navigation';
 import { WarehouseModuleShell } from './WarehouseModuleShell';
 
 type GateState = 'checking' | 'allowed' | 'denied';
+
+interface WarehouseStatusPayload {
+  workspaceId?: string;
+  ug?: string;
+  claimsUpdated?: boolean;
+}
+
+async function requestWarehouseStatus(
+  currentUser: User,
+  forceTokenRefresh = false
+): Promise<{ ok: boolean; status: WarehouseStatusPayload }> {
+  const idToken = await currentUser.getIdToken(forceTokenRefresh);
+  const response = await fetch('/api/adm-deposito/status', {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+    cache: 'no-store',
+  });
+
+  let status: WarehouseStatusPayload = {};
+  try {
+    status = await response.json() as WarehouseStatusPayload;
+  } catch {
+    status = {};
+  }
+
+  return {
+    ok: response.ok,
+    status,
+  };
+}
 
 export function WarehouseProtectedSurface({ section }: { section: WarehouseSectionId }) {
   const [gateState, setGateState] = useState<GateState>('checking');
@@ -37,16 +69,23 @@ export function WarehouseProtectedSurface({ section }: { section: WarehouseSecti
           return;
         }
 
-        const idToken = await currentUser.getIdToken();
-        const response = await fetch('/api/adm-deposito/status', {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-          cache: 'no-store',
-        });
+        let authorization = await requestWarehouseStatus(currentUser);
 
-        if (!response.ok) {
+        if (
+          authorization.ok
+          && authorization.status.claimsUpdated
+        ) {
+          authorization = await requestWarehouseStatus(currentUser, true);
+        }
+
+        if (
+          !authorization.ok
+          || authorization.status.workspaceId !== context.workspaceId
+          || (
+            context.ug
+            && authorization.status.ug !== context.ug
+          )
+        ) {
           setGateState('denied');
           window.location.replace('/');
           return;

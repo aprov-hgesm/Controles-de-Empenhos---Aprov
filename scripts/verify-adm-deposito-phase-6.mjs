@@ -20,9 +20,9 @@ const ledger = read('lib/warehouse/ledgerRepository.ts');
 const movement = read('lib/warehouse/movement.ts');
 const namespace = read('lib/warehouse/namespace.ts');
 const depotsUi = read('features/warehouse/components/WarehouseDepotsOperational.tsx');
-const locationsUi = read('features/warehouse/components/WarehouseLocationsOperational.tsx');
+const locationsUi = read('features/warehouse/components/WarehouseLocationsR1Operational.tsx');
 const navigation = read('features/warehouse/navigation.ts');
-const rules = read('firestore.rules');
+const rules = read('firestore.warehouse.rules');
 const securityTests = read('scripts/firestore-multitenancy-security.test.mjs');
 const packageJson = read('package.json');
 const ci = read('.github/workflows/application-ci.yml');
@@ -72,18 +72,19 @@ for (const marker of [
 ]) requireText(ledger, marker, 'Integração do ledger com Sem localização ausente: ' + marker);
 
 for (const marker of [
-  'warehouse-locations-operational',
-  'warehouse-depot-create',
-  'warehouse-location-create',
-  'warehouse-transfer-start',
-  'warehouse-transfer-confirm',
-  'Sem localização',
-]) requireText(locationsUi, marker, 'Jornada UI da FASE 6 incompleta: ' + marker);
+  'warehouse-locations-r1-operational',
+  'Novo depósito',
+  'Novo local',
+  'Nova subposição',
+  'Criar depósito',
+  'Criar local',
+  'Criar subposição',
+]) requireText(locationsUi, marker, 'Jornada UI atual da estrutura física incompleta: ' + marker);
 
-requireText(navigation, "id: 'depots'", 'Navegação Meus Depósitos ausente.');
-requireText(navigation, "label: 'Meus Depósitos'", 'Rótulo Meus Depósitos ausente.');
-requireText(depotsUi, 'WarehouseLocationsOperational', 'Meus Depósitos não expõe Localizações.');
-requireText(depotsUi, "requested === 'croquis'", 'Meus Depósitos perdeu seleção de subaba estrutural/croqui.');
+requireText(navigation, "id: 'depots'", 'Navegação Controle de Depósitos ausente.');
+requireText(navigation, "label: 'Controle de Depósitos'", 'Rótulo Controle de Depósitos ausente.');
+requireText(depotsUi, 'WarehouseLocationsR1Operational', 'Controle de Depósitos não expõe Localizações R1.');
+requireText(depotsUi, "requested === 'croquis'", 'Controle de Depósitos perdeu seleção de subaba estrutural/croqui.');
 
 for (const marker of [
   'function validWarehouseDepotCreate',
@@ -103,10 +104,11 @@ for (const marker of [
 ]) requireText(securityTests, marker, 'Cobertura de segurança da FASE 6 ausente: ' + marker);
 
 for (const marker of [
-  'warehouse-locations-operational',
-  'warehouse-transfer-confirm',
-  'fundador cria local, transfere estoque e confirma a distribuição física',
-]) requireText(browserE2e, marker, 'Browser E2E específico da FASE 6 incompleto: ' + marker);
+  'warehouse-locations-r1-operational',
+  'Local criado com sucesso.',
+  'warehouse-r1-croquis',
+  'fundador cria local na superfície atual e preserva após reload',
+]) requireText(browserE2e, marker, 'Browser E2E atual da estrutura física incompleto: ' + marker);
 
 for (const marker of [
   'warehouse_location_balance_v1',
@@ -141,5 +143,5 @@ console.log('FASE 6 — Depósitos / Localizações / Transferências: OK');
 console.log('- depósitos, locais e subposições possuem identidade lógica estável');
 console.log('- saldo físico é projeção derivada do ledger, com Sem localização para legado');
 console.log('- TRANSFER mantém saldo agregado e atualiza origem/destino atomicamente');
-console.log('- idempotência, founder-only e isolamento workspace/UG permanecem protegidos');
+console.log('- idempotência e isolamento multi-tenant por workspace/UG permanecem protegidos');
 console.log('- UI operacional e gates permanentes da FASE 6 estão presentes');

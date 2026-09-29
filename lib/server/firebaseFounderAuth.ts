@@ -100,9 +100,17 @@ function verifiedSignInProvider(payload: JWTPayload): string {
   return typeof provider === 'string' ? provider : '';
 }
 
-export async function verifyFounderFirebaseRequest(
+export interface VerifiedFirebaseRequest {
+  uid: string;
+  email: string;
+  signInProvider: string;
+  idToken: string;
+  claims: JWTPayload;
+}
+
+export async function verifyFirebaseRequest(
   authorization: string | null
-): Promise<{ uid: string; email: string }> {
+): Promise<VerifiedFirebaseRequest> {
   const token = readBearerToken(authorization);
 
   let payload: JWTPayload;
@@ -123,13 +131,7 @@ export async function verifyFounderFirebaseRequest(
   }
 
   const email = verifiedEmail(payload);
-  if (email !== HGESM_SECTOR_EMAIL) {
-    throw new FounderAuthError('Acesso reservado à conta fundadora.', 403);
-  }
-
-  if (verifiedSignInProvider(payload) !== FOUNDER_AUTH_PROVIDER) {
-    throw new FounderAuthError('A conta fundadora exige autenticação Google.', 403);
-  }
+  const signInProvider = verifiedSignInProvider(payload);
 
   if (!payload.sub) {
     throw new FounderAuthError('Token Firebase sem identidade de usuário.', 401);
@@ -138,5 +140,27 @@ export async function verifyFounderFirebaseRequest(
   return {
     uid: payload.sub,
     email,
+    signInProvider,
+    idToken: token,
+    claims: payload,
+  };
+}
+
+export async function verifyFounderFirebaseRequest(
+  authorization: string | null
+): Promise<{ uid: string; email: string }> {
+  const verified = await verifyFirebaseRequest(authorization);
+
+  if (verified.email !== HGESM_SECTOR_EMAIL) {
+    throw new FounderAuthError('Acesso reservado à conta fundadora.', 403);
+  }
+
+  if (verified.signInProvider !== FOUNDER_AUTH_PROVIDER) {
+    throw new FounderAuthError('A conta fundadora exige autenticação Google.', 403);
+  }
+
+  return {
+    uid: verified.uid,
+    email: verified.email,
   };
 }

@@ -9,7 +9,7 @@ const findings = [];
 const material = read('lib/warehouse/material.ts');
 const repository = read('lib/warehouse/materialRepository.ts');
 const namespace = read('lib/warehouse/namespace.ts');
-const rules = read('firestore.rules');
+const rules = read('firestore.warehouse.rules');
 const securitySuite = read('scripts/firestore-multitenancy-security.test.mjs');
 const contractTests = read('scripts/warehouse-material-contract.test.mjs');
 const phase0Guard = read('scripts/verify-adm-deposito-phase-0.mjs');
@@ -68,13 +68,11 @@ for (const marker of [
 }
 
 const warehouseRuleStart = rules.indexOf('match /warehouse/{workspaceId}');
-const operationalRuleStart = rules.indexOf('// Workspace-scoped operational data.', warehouseRuleStart);
-if (warehouseRuleStart < 0 || operationalRuleStart < 0) {
-  findings.push('Não foi possível isolar o bloco warehouse nas Rules.');
+if (warehouseRuleStart < 0) {
+  findings.push('Namespace warehouse não encontrado nas Rules dedicadas.');
 } else {
-  const warehouseRules = rules.slice(warehouseRuleStart, operationalRuleStart);
   forbidText(
-    warehouseRules,
+    rules.slice(warehouseRuleStart),
     'canAccessWorkspace(workspaceId)',
     'FASE 1 reintroduziu fallback de workspace no namespace warehouse.'
   );

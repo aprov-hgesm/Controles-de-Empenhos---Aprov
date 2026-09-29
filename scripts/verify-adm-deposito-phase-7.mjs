@@ -21,7 +21,7 @@ const namespace = read('lib/warehouse/namespace.ts');
 const stock = read('features/warehouse/components/WarehouseStockOperational.tsx');
 const control = read('features/warehouse/components/WarehouseItemControlOperational.tsx');
 const navigation = read('features/warehouse/navigation.ts');
-const rules = read('firestore.rules');
+const rules = read('firestore.warehouse.rules');
 const securityTests = read('scripts/firestore-multitenancy-security.test.mjs');
 const browserE2e = read('tests/e2e/warehouse-phase-7.spec.mjs');
 const externalE2e = read('tests/e2e/operator-critical-flow.spec.mjs');
@@ -77,11 +77,11 @@ for (const marker of [
   requireText(stock, marker, 'Superfície Estoque FASE 7 incompleta: ' + marker);
 }
 
-requireText(control, 'WarehouseStockOperational', 'Controle de Itens não expõe Estoque.');
-requireText(control, "id: 'stock',", 'Subaba Estoque perdeu seu identificador no Controle de Itens.');
-requireText(control, "label: 'Estoque',", 'Subaba Estoque perdeu seu rótulo no Controle de Itens.');
-requireText(navigation, "id: 'control'", 'Navegação Controle de Itens ausente.');
-requireText(navigation, "label: 'Controle de Itens'", 'Rótulo Controle de Itens ausente.');
+requireText(control, 'WarehouseStockOperational', 'Controle de Materiais não expõe Estoque.');
+requireText(control, "id: 'stock',", 'Subaba Estoque perdeu seu identificador no Controle de Materiais.');
+requireText(control, "label: 'Estoque',", 'Subaba Estoque perdeu seu rótulo no Controle de Materiais.');
+requireText(navigation, "id: 'control'", 'Navegação Controle de Materiais ausente.');
+requireText(navigation, "label: 'Controle de Materiais'", 'Rótulo Controle de Materiais ausente.');
 
 for (const marker of [
   'function validWarehouseLotOrigin',
@@ -119,10 +119,10 @@ for (const marker of [
 }
 
 for (const marker of [
-  "await page.goto('/adm-deposito/estoque');",
-  "await expect(page).toHaveURL(/\\/$/",
+  "page.getByTestId('nav-adm-deposito')",
+  "Central de Depósitos",
 ]) {
-  requireText(externalE2e, marker, 'Browser E2E não preserva bloqueio externo: ' + marker);
+  requireText(externalE2e, marker, 'Browser E2E não cobre acesso externo seguro à Central: ' + marker);
 }
 
 for (const marker of [
@@ -167,5 +167,5 @@ console.log('FASE 7 — Estoque Operável / Lotes / Validade / FEFO: OK');
 console.log('- warehouse_lot_v1 enriquece estoque sem criar saldo concorrente');
 console.log('- validade, vencidos, pendências e FEFO possuem contratos explícitos');
 console.log('- Estoque oferece busca, filtros, ficha, localização e histórico bounded');
-console.log('- Rules preservam founder-only, workspace/UG e integridade material/origem');
-console.log('- Browser E2E cobre jornada operacional e o bloqueio externo permanece permanente');
+console.log('- Rules preservam isolamento por workspace/UG e integridade material/origem');
+console.log('- Browser E2E confirma visibilidade externa; autorização profunda permanece protegida por workspace/UG');

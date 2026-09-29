@@ -234,7 +234,7 @@ export function AppSidebar({
                 className="emprovex-sidebar-nav-item"
               >
                 <Boxes className="w-5 h-5" aria-hidden="true" />
-                <span>ADM Depósito</span>
+                <span>Central de Depósitos</span>
               </button>
             )}
           </nav>

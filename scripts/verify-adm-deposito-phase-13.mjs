@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 const root = process.cwd();
 const findings = [];
 
-const rules = read('firestore.rules');
+const rules = read('firestore.warehouse.rules');
 const featureFlag = read('lib/platformModuleAccess.ts');
 const protectedSurface = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
 const itemControl = read('features/warehouse/components/WarehouseItemControlOperational.tsx');
@@ -21,13 +21,15 @@ const telemetry = read('lib/warehouse/telemetry.ts');
 const namespace = read('lib/warehouse/namespace.ts');
 const coreGuard = read('scripts/verify-emprovex-core-protection.mjs');
 const securitySuite = read('scripts/firestore-multitenancy-security.test.mjs');
+const externalSecurity = read('scripts/warehouse-external-access-security.test.mjs');
+const sectionContent = read('features/warehouse/components/WarehouseSectionContent.tsx');
 const pkg = JSON.parse(read('package.json'));
 
 for (const marker of [
-  'context.workspaceId === HGESM_WORKSPACE_ID',
   "context.status === 'sector'",
-  "context.resolutionSource === 'legacy-hgesm-bootstrap'",
-]) requireText(featureFlag, marker, `Gate founder-only ausente: ${marker}`);
+  'context.canLoadOperationalData',
+  'Boolean(context.workspaceId)',
+]) requireText(featureFlag, marker, `Gate multi-tenant ausente: ${marker}`);
 
 for (const marker of [
   'resolveAuthenticatedWorkspaceContext(currentUser)',
@@ -57,19 +59,30 @@ const balancesBlock = sliceBetween(
 requireText(balancesBlock, 'warehouseBalanceWriteAllowed', 'Saldo agregado perdeu proteção derivada por movimento.');
 
 for (const scenario of [
-  'Setor externo não lê namespace ADM Depósito do fundador',
-  'Setor externo não grava namespace ADM Depósito nem no próprio workspace',
   'Material canônico não pode ser apagado fisicamente',
   'Ledger da FASE 2 é append-only',
   'Saldo da FASE 2 não aceita alteração sem novo movimento',
-]) requireText(securitySuite, scenario, `Cenário multi-tenant/hardening ausente: ${scenario}`);
+]) requireText(securitySuite, scenario, `Cenário de hardening ausente: ${scenario}`);
+
+for (const scenario of [
+  'setor B não lê workspace A',
+  'setor A não grava em workspace B',
+  'setor A não grava UG diferente da claim assinada',
+  'sessão password sem claims não acessa warehouse',
+]) requireText(externalSecurity, scenario, `Cenário multi-tenant externo ausente: ${scenario}`);
 
 for (const marker of [
+  "tab === 'summary' &&",
   "tab === 'stock' &&",
-  "tab === 'outbound' &&",
+  "tab === 'movements' &&",
   "tab === 'inventory' &&",
   "tab === 'reports' &&",
-]) requireText(itemControl, marker, `Controle de Itens deixou de montar somente a subaba ativa: ${marker}`);
+]) requireText(itemControl, marker, `Controle de Materiais deixou de montar somente a subaba ativa: ${marker}`);
+
+for (const marker of [
+  "section === 'outbound'",
+  'WarehouseMaterialWithdrawal',
+]) requireText(sectionContent, marker, `Saída de Material deixou de ser uma superfície independente: ${marker}`);
 
 for (const marker of [
   'locationBalancesByMaterial',
@@ -161,7 +174,7 @@ if (findings.length) {
   process.exitCode = 2;
 } else {
   console.log('ADM DEPÓSITO MÓDULO 13: READY');
-  console.log('Segurança: founder-only, multi-tenant e históricos protegidos.');
+  console.log('Segurança: acesso por setor, workspace/UG e históricos protegidos.');
   console.log('Firestore: consultas bounded, sem listener global e sem índice preventivo.');
   console.log('Performance: subabas sob demanda, joins indexados e inventário sem releitura duplicada de materiais.');
   console.log('Telemetria: estimativa existente reutilizada de forma best-effort e bufferizada.');

@@ -72,7 +72,7 @@ test.describe.serial('ADM Depósito FASE 10 — Inventário Físico', () => {
     });
   });
 
-  test('usuário externo continua bloqueado da superfície de inventário', async ({ page }) => {
+  test('usuário externo autorizado acessa o inventário do próprio workspace', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('sector-login-email').fill(EXTERNAL_EMAIL);
     await page.getByTestId('sector-login-password').fill(EXTERNAL_PASSWORD);
@@ -81,9 +81,13 @@ test.describe.serial('ADM Depósito FASE 10 — Inventário Físico', () => {
     await expect(
       page.getByRole('navigation', { name: 'Navegação principal' })
     ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('nav-adm-deposito')).toContainText(
+      'Central de Depósitos'
+    );
 
     await page.goto('/adm-deposito/inventario');
-    await expect(page).toHaveURL(/\/$/, { timeout: 20_000 });
-    await expect(page.getByTestId('warehouse-inventory-operational')).toHaveCount(0);
+    await expect(page.getByTestId('warehouse-inventory-operational')).toBeVisible({
+      timeout: 20_000,
+    });
   });
 });

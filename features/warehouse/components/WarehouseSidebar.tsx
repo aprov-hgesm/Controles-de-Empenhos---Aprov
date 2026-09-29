@@ -69,7 +69,7 @@ export function WarehouseSidebar({
             <p className="font-mono text-[8px] font-bold uppercase tracking-[0.22em] text-slate-500">
               EMPROVEX
             </p>
-            <p className="mt-0.5 text-[11px] font-bold text-slate-200">ADM Depósito</p>
+            <p className="mt-0.5 text-[11px] font-bold text-slate-200">Central de Depósitos</p>
           </div>
           <button
             type="button"
@@ -107,9 +107,9 @@ export function WarehouseSidebar({
             </div>
           </section>
 
-          <nav className="emprovex-sidebar-nav px-3" aria-label="Navegação do ADM Depósito">
+          <nav className="emprovex-sidebar-nav px-3" aria-label="Navegação da Central de Depósitos">
             <div className="emprovex-sidebar-nav__label px-4 pb-2 font-mono text-[9px] font-bold uppercase tracking-[0.22em]">
-              ADM Depósito
+              Central de Depósitos
             </div>
 
             <Link
@@ -158,7 +158,7 @@ export function WarehouseSidebar({
               <div>
                 <p className="text-[11px] font-bold text-slate-100">Operacional</p>
                 <p className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.16em] text-slate-500">
-                  ADM Depósito
+                  Central de Depósitos
                 </p>
               </div>
             </div>
@@ -178,7 +178,7 @@ export function WarehouseSidebar({
           <div className="emprovex-sidebar-system__meta">
             <span>EMPROVEX</span>
             <span aria-hidden="true">•</span>
-            <span>ADM Depósito</span>
+            <span>Central de Depósitos</span>
             <span aria-hidden="true">•</span>
             <span>2026</span>
           </div>

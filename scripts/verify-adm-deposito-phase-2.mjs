@@ -9,7 +9,7 @@ const findings = [];
 const movement = read('lib/warehouse/movement.ts');
 const repository = read('lib/warehouse/ledgerRepository.ts');
 const namespace = read('lib/warehouse/namespace.ts');
-const rules = read('firestore.rules');
+const rules = read('firestore.warehouse.rules');
 const securitySuite = read('scripts/firestore-multitenancy-security.test.mjs');
 const contractTests = read('scripts/warehouse-ledger-contract.test.mjs');
 const phase0Guard = read('scripts/verify-adm-deposito-phase-0.mjs');
@@ -21,8 +21,10 @@ for (const marker of [
   "WAREHOUSE_MOVEMENT_SCHEMA_VERSION = 'warehouse_movement_v1'",
   "WAREHOUSE_BALANCE_SCHEMA_VERSION = 'warehouse_balance_v1'",
   "'INITIAL_BALANCE'",
+  "'MANUAL_ENTRY'",
   "'INVOICE_ENTRY'",
   "'OUTBOUND'",
+  "'OUTBOUND_RETURN'",
   "'TRANSFER'",
   "'INVENTORY_ADJUSTMENT'",
   "'INVOICE_CORRECTION'",
@@ -62,7 +64,7 @@ for (const marker of [
   'function warehouseMovementHasMatchingBalanceAfter(workspaceId, movementId)',
   'function validWarehouseBalanceDocument(workspaceId, materialId)',
   "request.resource.data.schemaVersion == 'warehouse_balance_v1'",
-  'function warehouseBalanceWriteBackedByNewMovement(workspaceId, materialId)',
+  'function warehouseBalanceWriteAllowed(workspaceId, materialId)',
   'match /movements/{movementId}',
   'allow update, delete: if false;',
   'match /balances/{materialId}',
@@ -71,13 +73,11 @@ for (const marker of [
 }
 
 const warehouseRuleStart = rules.indexOf('match /warehouse/{workspaceId}');
-const operationalRuleStart = rules.indexOf('// Workspace-scoped operational data.', warehouseRuleStart);
-if (warehouseRuleStart < 0 || operationalRuleStart < 0) {
-  findings.push('Não foi possível isolar o bloco warehouse nas Rules.');
+if (warehouseRuleStart < 0) {
+  findings.push('Namespace warehouse não encontrado nas Rules dedicadas.');
 } else {
-  const warehouseRules = rules.slice(warehouseRuleStart, operationalRuleStart);
   forbidText(
-    warehouseRules,
+    rules.slice(warehouseRuleStart),
     'canAccessWorkspace(workspaceId)',
     'FASE 2 reintroduziu fallback de workspace no namespace warehouse.'
   );
@@ -101,7 +101,7 @@ for (const scenario of [
 }
 
 for (const marker of [
-  'suporta os sete tipos iniciais do ledger da FASE 2',
+  'suporta os nove tipos atuais do ledger',
   'gera ID determinístico por workspace e chave de idempotência',
   'saldo materializado é derivado do ledger e incrementa revisão',
   'replay idempotente exige payload canônico idêntico',
@@ -142,10 +142,10 @@ if (findings.length) {
   process.exitCode = 2;
 } else {
   console.log('ADM DEPÓSITO FASE 2: READY');
-  console.log('DEP-2: ledger append-only com os sete tipos iniciais');
+  console.log('DEP-2: ledger append-only com os nove tipos operacionais atuais');
   console.log('DEP-2.1: saldo materializado atualizado atomicamente com o ledger');
   console.log('DEP-2.2: ID determinístico e replay idempotente sem duplicação');
-  console.log('Segurança: gate fundador preservado e saldo não pode divergir do ledger');
+  console.log('Segurança: gate multi-tenant preservado e saldo não pode divergir do ledger');
   console.log('Escopo: NF→estoque e demais funcionalidades da FASE 3 não iniciadas');
 }
 
