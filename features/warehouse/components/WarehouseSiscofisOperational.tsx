@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 
 import {
-  EMPROVEX_SISCOFIS_INVENTORY_SCHEMA_VERSION,
   classifyEmprovexSiscofisSourceItem,
   emprovexSiscofisSourceIndexFromRowId,
   remapEmprovexSiscofisRowIdAfterExclusions,
@@ -385,8 +384,8 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
               </p>
             </div>
             <p className="mt-2 text-xs leading-5 text-slate-600">
-              Leitura determinística no próprio navegador, sem IA e sem importação manual por JSON.
-              A quantidade vem de Qtde Exist e a validade é capturada diretamente da coluna Validade.
+              O EMPROVEX lê o Mapa de Existência diretamente no navegador. A quantidade vem de
+              Qtde Exist e a validade é capturada da coluna Validade antes da geração da prévia.
             </p>
           </div>
 
@@ -749,10 +748,6 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-[10px] leading-4 text-slate-500">
-        Contrato interno: <span className="font-mono">{EMPROVEX_SISCOFIS_INVENTORY_SCHEMA_VERSION}</span>.
-        A migração operacional aceita somente o Mapa de Existência em PDF.
-      </div>
     </div>
   );
 }
