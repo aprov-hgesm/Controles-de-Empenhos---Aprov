@@ -437,3 +437,17 @@ test('exclusão de Local confirma e inativa automaticamente suas Subposições',
   assert.match(locations, /await updateWarehouseLocation\(workspaceId, editingLocation\.id, \{ status: 'inactive' \}\)/);
   assert.doesNotMatch(locations, /Remova as Subposições antes de excluir o Local/);
 });
+
+
+test('código de depósito inativo pode ser reutilizado e reativação continua protegida', () => {
+  const repository = readFileSync(
+    resolve(root, 'lib/warehouse/locationRepository.ts'),
+    'utf8'
+  );
+
+  assert.match(repository, /item\.depot\.status === 'active'/);
+  assert.match(repository, /item\.depot\.code === normalized/);
+  assert.match(repository, /nextStatus === 'active'/);
+  assert.match(repository, /current\.status !== 'active'/);
+  assert.match(repository, /assertDepotCodeAvailable\(scope\.workspaceId, nextCode, depotId\)/);
+});
