@@ -187,6 +187,27 @@ test('PDF direto reutiliza o classificador oficial de conta 07 e hortifruti', ()
   assert.deepEqual(classifications, [null, 'FRESH_HORTIFRUTI', 'NON_ACCOUNT_07']);
 });
 
+test('rowId SISCOFIS resolve índice original e remapeia após exclusões da prévia', () => {
+  assert.equal(siscofis.emprovexSiscofisSourceIndexFromRowId('siscofis-0001'), 0);
+  assert.equal(siscofis.emprovexSiscofisSourceIndexFromRowId('siscofis-0010'), 9);
+  assert.equal(siscofis.emprovexSiscofisSourceIndexFromRowId('invalido'), null);
+
+  assert.equal(
+    siscofis.remapEmprovexSiscofisRowIdAfterExclusions(
+      'siscofis-0005',
+      ['siscofis-0002', 'siscofis-0004']
+    ),
+    'siscofis-0003'
+  );
+  assert.equal(
+    siscofis.remapEmprovexSiscofisRowIdAfterExclusions(
+      'siscofis-0004',
+      ['siscofis-0002', 'siscofis-0004']
+    ),
+    null
+  );
+});
+
 test('aceita contrato externo simplificado e preserva Nr Ficha repetido', () => {
   const parsed = siscofis.parseEmprovexSiscofisInventoryJson(externalJson);
   assert.equal(parsed.ok, true);
