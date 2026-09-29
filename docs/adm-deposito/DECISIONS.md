@@ -2389,3 +2389,21 @@ Data: 2026-09-28.
 - A compactação é exclusivamente visual: nenhum issue é descartado, reclassificado ou removido do contrato de validação.
 - A prévia continua mostrando a contagem total de erros e avisos, e `canConfirm` permanece governado pelas regras de domínio já existentes.
 - O objetivo é reduzir poluição visual mantendo auditabilidade e acesso integral ao diagnóstico quando necessário.
+
+
+## D-117 — Marco Zero permite retirar manualmente itens da relação antes da confirmação
+
+Data: 2026-09-28.
+
+- A **Prévia do Marco Zero SISCOFIS** passa a oferecer, por linha, a ação **Não importar**.
+- A finalidade é permitir ao operador retirar da migração itens que reconheça como já representados por NF/entrada existente no EMPROVEX, evitando duplicidade no saldo inicial.
+- A ação é exclusiva do `MARCO_ZERO`; snapshots posteriores de conciliação não oferecem exclusão manual de linha.
+- **Não importar** remove somente a linha do rascunho da migração. Não exclui material, NF, saldo, movimento, intake ou qualquer registro já existente.
+- A linha desaparece imediatamente da relação visual e fica marcada como exclusão pendente.
+- Antes da revalidação o operador pode usar **Desfazer exclusões**.
+- Qualquer exclusão deixa a prévia em estado alterado e mantém **Confirmar Marco Zero** bloqueado.
+- A exclusão só é consolidada quando o operador executa **Revalidar alterações**; nesse momento o JSON do draft é reconstruído sem as linhas excluídas.
+- A identificação da linha usa o `rowId` estável derivado do índice original do SISCOFIS, e não o índice visual após filtros.
+- Após retirar linhas intermediárias, vínculos canônicos e marcações de edição das linhas remanescentes são remapeados para os novos `rowId`s antes de gerar a nova prévia.
+- Esta proteção é especialmente importante porque filtros automáticos de conta `07` e hortifruti podem retirar linhas antes da prévia, tornando inseguro usar apenas posição visual.
+- Nenhuma leitura/gravação de estoque é feita pelo clique em **Não importar**. As leituras normais de validação só ocorrem quando o operador decide revalidar a relação.
