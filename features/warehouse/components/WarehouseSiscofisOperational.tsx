@@ -10,12 +10,15 @@ import {
   HardDrive,
   RefreshCw,
   ShieldCheck,
+  Trash2,
 } from 'lucide-react';
 
 import {
   EMPROVEX_SISCOFIS_INVENTORY_SCHEMA_VERSION,
   WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION,
   classifyEmprovexSiscofisSourceItem,
+  emprovexSiscofisSourceIndexFromRowId,
+  remapEmprovexSiscofisRowIdAfterExclusions,
   type WarehouseSiscofisIssue,
   type WarehouseSiscofisPreview,
 } from '../../../lib/warehouse/siscofis';
@@ -57,6 +60,44 @@ type SiscofisPdfSummary = {
 
 const DEFAULT_SISCOFIS_SOURCE_LABEL = 'Inventário SISCOFIS — Migração inicial';
 
+function filterSiscofisDraftRows(rawJson: string, excludedRowIds: readonly string[]): string {
+  if (excludedRowIds.length === 0) return rawJson;
+  const excludedIndexes = new Set(
+    excludedRowIds
+      .map((rowId) => emprovexSiscofisSourceIndexFromRowId(rowId))
+      .filter((index): index is number => index !== null)
+  );
+  const parsed = JSON.parse(rawJson) as {
+    schemaVersion?: string;
+    items?: unknown[];
+    [key: string]: unknown;
+  };
+  if (!parsed || !Array.isArray(parsed.items)) {
+    throw new Error('WAREHOUSE_SISCOFIS_DRAFT_INVALID');
+  }
+  return JSON.stringify(
+    {
+      ...parsed,
+      items: parsed.items.filter((_, index) => !excludedIndexes.has(index)),
+    },
+    null,
+    2
+  );
+}
+
+function remapSiscofisRowRecord<T>(
+  record: Record<string, T>,
+  excludedRowIds: readonly string[]
+): Record<string, T> {
+  if (excludedRowIds.length === 0) return record;
+  const next: Record<string, T> = {};
+  for (const [rowId, value] of Object.entries(record)) {
+    const remapped = remapEmprovexSiscofisRowIdAfterExclusions(rowId, excludedRowIds);
+    if (remapped) next[remapped] = value;
+  }
+  return next;
+}
+
 export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: string }) {
   const [context, setContext] = useState<WarehouseSiscofisContext | null>(null);
   const [rawJson, setRawJson] = useState('');
@@ -71,6 +112,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
   const [pdfSummary, setPdfSummary] = useState<SiscofisPdfSummary | null>(null);
   const [draftSourceLabel, setDraftSourceLabel] = useState(DEFAULT_SISCOFIS_SOURCE_LABEL);
   const [showValidationDetails, setShowValidationDetails] = useState(false);
+  const [excludedPreviewRowIds, setExcludedPreviewRowIds] = useState<string[]>([]);
   const [manualNumeroItem, setManualNumeroItem] = useState('');
   const [manualDescription, setManualDescription] = useState('');
   const [manualQuantity, setManualQuantity] = useState('');
@@ -100,6 +142,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
     setPreview(null);
     setIssues([]);
     setShowValidationDetails(false);
+    setExcludedPreviewRowIds([]);
     setPreviewDirty(false);
     setMaterialOverrides({});
     setEditedRows({});
@@ -178,20 +221,40 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
     setIssues([]);
     setShowValidationDetails(false);
     try {
+      const exclusions = [...excludedPreviewRowIds];
+      const nextRawJson = filterSiscofisDraftRows(rawJson, exclusions);
+      const nextOverrides = remapSiscofisRowRecord(materialOverrides, exclusions);
+      const nextEditedRows = remapSiscofisRowRecord(editedRows, exclusions);
       const nextPreview = await prepareEmprovexSiscofisInventoryImport(
         workspaceId,
-        rawJson,
+        nextRawJson,
         manualReferenceDate,
         draftSourceLabel,
-        materialOverrides
+        nextOverrides
       );
+      setRawJson(nextRawJson);
+      setMaterialOverrides(nextOverrides);
+      setEditedRows(nextEditedRows);
+      setExcludedPreviewRowIds([]);
       setPreview(nextPreview);
       setPreviewDirty(false);
       setIssues(nextPreview.issues);
+      if (exclusions.length > 0) {
+        setMessage(
+          exclusions.length
+            + ' item(ns) retirado(s) da relação do Marco Zero. A prévia foi revalidada.'
+        );
+      }
     } catch (error) {
       const candidate = error as Error & { issues?: WarehouseSiscofisIssue[] };
       setIssues(candidate.issues || []);
-      setMessage(candidate.issues?.length ? 'O JSON possui pendências que impedem a confirmação.' : candidate.message);
+      setMessage(
+        candidate.issues?.length
+          ? 'O JSON possui pendências que impedem a confirmação.'
+          : candidate.message === 'WAREHOUSE_SISCOFIS_DRAFT_INVALID'
+            ? 'O rascunho SISCOFIS não possui uma relação de itens válida.'
+            : candidate.message
+      );
     } finally {
       setWorking(false);
     }
@@ -217,6 +280,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
       setDraftSourceLabel(DEFAULT_SISCOFIS_SOURCE_LABEL);
       setIssues([]);
       setShowValidationDetails(false);
+      setExcludedPreviewRowIds([]);
       await refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Falha ao confirmar a importação.');
@@ -254,23 +318,25 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
       items: [...currentItems, { numeroItem: manualNumeroItem.trim(), descricao: manualDescription.trim(), quantidade: quantity, valorUnitario: unitValue }],
     }, null, 2));
     setManualNumeroItem(''); setManualDescription(''); setManualQuantity(''); setManualUnitValue('');
-    setPreview(null); setPreviewDirty(false); setIssues([]);
+    setPreview(null); setPreviewDirty(false); setIssues([]); setExcludedPreviewRowIds([]);
     setMessage('Linha adicionada ao mesmo draft oficial. Revise e valide antes de confirmar.');
   };
 
   const editPreviewItem = (
-    index: number,
+    rowId: string,
     field: 'numeroItem' | 'descricao' | 'quantidade' | 'valorUnitario',
     value: string
   ) => {
     try {
+      const sourceIndex = emprovexSiscofisSourceIndexFromRowId(rowId);
+      if (sourceIndex === null) return;
       const parsed = JSON.parse(rawJson) as {
         schemaVersion?: string;
         items?: Array<Record<string, unknown>>;
       };
-      if (!parsed || !Array.isArray(parsed.items) || !parsed.items[index]) return;
+      if (!parsed || !Array.isArray(parsed.items) || !parsed.items[sourceIndex]) return;
       const nextItems = parsed.items.map((item, itemIndex) => {
-        if (itemIndex !== index) return item;
+        if (itemIndex !== sourceIndex) return item;
         const nextValue = field === 'quantidade' || field === 'valorUnitario'
           ? Number(value.replace(',', '.'))
           : value;
@@ -278,12 +344,28 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
       });
       setRawJson(JSON.stringify({ ...parsed, items: nextItems }, null, 2));
       setPreviewDirty(true);
-      const editedRowId = preview?.rows[index]?.rowId;
-      if (editedRowId) setEditedRows((current) => ({ ...current, [editedRowId]: true }));
+      setEditedRows((current) => ({ ...current, [rowId]: true }));
       setMessage('Prévia alterada manualmente. Revalide antes de confirmar.');
     } catch {
       setMessage('Não foi possível aplicar a edição à origem JSON. Revise o conteúdo colado.');
     }
+  };
+
+  const excludePreviewRow = (rowId: string) => {
+    if (preview?.kind !== 'MARCO_ZERO') return;
+    setExcludedPreviewRowIds((current) =>
+      current.includes(rowId) ? current : [...current, rowId]
+    );
+    setPreviewDirty(true);
+    setMessage(
+      'Item retirado visualmente da relação. Revalide para consolidar a exclusão antes de confirmar o Marco Zero.'
+    );
+  };
+
+  const undoPreviewExclusions = () => {
+    setExcludedPreviewRowIds([]);
+    setPreviewDirty(true);
+    setMessage('Exclusões desfeitas. Revalide a prévia antes de confirmar.');
   };
 
   const clearDraft = () => {
@@ -296,6 +378,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
     setEditedRows({});
     setIssues([]);
     setShowValidationDetails(false);
+    setExcludedPreviewRowIds([]);
     setMessage('Rascunho limpo.');
   };
 
@@ -311,6 +394,11 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
     setMessage('Vínculo canônico alterado. Revalide antes de confirmar.');
   };
 
+
+  const excludedPreviewRowIdSet = new Set(excludedPreviewRowIds);
+  const visiblePreviewRows = preview
+    ? preview.rows.filter((row) => !excludedPreviewRowIdSet.has(row.rowId))
+    : [];
 
   const validationErrors = issues.filter((issue) => issue.severity === 'error');
   const validationWarnings = issues.filter((issue) => issue.severity === 'warning');
@@ -470,7 +558,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
 
       <div className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm backdrop-blur-md">
         <div className="flex items-center gap-2 text-[#00288e]"><FileJson2 className="h-4 w-4 text-[#00288e]" /><p className="text-xs font-black uppercase tracking-[0.12em]">JSON / linha manual preparada</p></div>
-        <textarea value={rawJson} onChange={(event) => { setRawJson(event.target.value); if (preview) setPreviewDirty(true); }} data-testid="warehouse-siscofis-json" placeholder={'{\n  "schemaVersion": "emprovex_siscofis_inventory_v1",\n  "items": [...]\n}'} className="mt-4 h-56 w-full resize-y rounded-xl border border-slate-200 bg-slate-50 p-4 font-mono text-xs leading-5 text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#00288e]" />
+        <textarea value={rawJson} onChange={(event) => { setRawJson(event.target.value); setExcludedPreviewRowIds([]); if (preview) setPreviewDirty(true); }} data-testid="warehouse-siscofis-json" placeholder={'{\n  "schemaVersion": "emprovex_siscofis_inventory_v1",\n  "items": [...]\n}'} className="mt-4 h-56 w-full resize-y rounded-xl border border-slate-200 bg-slate-50 p-4 font-mono text-xs leading-5 text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#00288e]" />
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button type="button" onClick={validateImport} disabled={working || !rawJson.trim()} data-testid="warehouse-siscofis-validate" className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm transition hover:bg-[#001f70] disabled:opacity-40">
             {working ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} {previewDirty ? 'Revalidar alterações' : 'Validar e gerar prévia'}
@@ -585,9 +673,24 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="font-mono text-[10px] font-black uppercase tracking-[0.16em] text-[#00288e]/70">Prévia · {preview.kind === 'MARCO_ZERO' ? 'Marco Zero' : 'Snapshot'}</p>
-              <p className="mt-2 text-sm font-black text-slate-900">{preview.summary.totalRows} linha(s) · {preview.summary.createsMaterials} novo(s) · {preview.summary.unresolvedRows} sem vínculo · {preview.summary.divergentRows} divergente(s)</p>
+              <p className="mt-2 text-sm font-black text-slate-900">{visiblePreviewRows.length} linha(s) na relação · {preview.summary.createsMaterials} novo(s) · {preview.summary.unresolvedRows} sem vínculo · {preview.summary.divergentRows} divergente(s)</p>
               <p className="mt-1 text-[10px] text-slate-500">{issues.filter((item) => item.severity === 'error').length} erro(s) · {issues.filter((item) => item.severity === 'warning').length} aviso(s) · valor total {preview.import.rows.reduce((sum, row) => sum + (row.totalValue || 0), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} · {Object.keys(editedRows).length} corrigida(s) · data-base {preview.import.referenceDate}</p>
-              {previewDirty && <p className="mt-2 text-[10px] font-bold text-amber-700">Há correções manuais ainda não revalidadas. A confirmação permanece bloqueada.</p>}
+              {previewDirty && <p className="mt-2 text-[10px] font-bold text-amber-700">Há alterações ainda não revalidadas. A confirmação permanece bloqueada.</p>}
+              {excludedPreviewRowIds.length > 0 && (
+                <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+                  <span className="text-[10px] font-black text-amber-800">
+                    {excludedPreviewRowIds.length} item(ns) marcado(s) para não importar.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={undoPreviewExclusions}
+                    className="rounded-lg border border-amber-300 bg-white px-2.5 py-1 text-[10px] font-black text-amber-800 hover:bg-amber-50"
+                    data-testid="warehouse-siscofis-preview-undo-exclusions"
+                  >
+                    Desfazer exclusões
+                  </button>
+                </div>
+              )}
             </div>
             <button type="button" onClick={confirmImport} disabled={working || !preview.canConfirm || previewDirty} className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm transition hover:bg-[#001f70] disabled:opacity-40">
               <ShieldCheck className="h-3.5 w-3.5" /> {preview.kind === 'MARCO_ZERO' ? 'Confirmar Marco Zero' : 'Salvar snapshot'}
@@ -595,13 +698,13 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
           </div>
           <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
             <table className="min-w-[760px] w-full text-left text-xs">
-              <thead className="bg-slate-50 text-[9px] uppercase tracking-[0.12em] text-slate-500"><tr><th className="p-3">Nº Ficha</th><th className="p-3">Material</th><th className="p-3">Qtd.</th><th className="p-3">Valor unit.</th><th className="p-3">Total</th><th className="p-3">Vínculo</th><th className="p-3">Estado</th></tr></thead>
+              <thead className="bg-slate-50 text-[9px] uppercase tracking-[0.12em] text-slate-500"><tr><th className="p-3">Nº Ficha</th><th className="p-3">Material</th><th className="p-3">Qtd.</th><th className="p-3">Valor unit.</th><th className="p-3">Total</th><th className="p-3">Vínculo</th><th className="p-3">Estado</th>{preview.kind === 'MARCO_ZERO' && <th className="p-3 text-right">Ação</th>}</tr></thead>
               <tbody className="divide-y divide-slate-100">
-                {preview.rows.map((row, index) => { const source = preview.import.rows.find((item) => item.rowId === row.rowId); return <tr key={preview.sourceHash + row.rowId}>
-                  <td className="p-2"><input defaultValue={row.sourceItemNumber || ''} onChange={(event) => editPreviewItem(index, 'numeroItem', event.target.value)} className="h-9 w-28 rounded-lg border border-slate-200 bg-white px-2 font-mono text-xs text-slate-800 outline-none focus:border-[#00288e]" /></td>
-                  <td className="p-2"><input defaultValue={row.description} onChange={(event) => editPreviewItem(index, 'descricao', event.target.value)} className="h-9 min-w-[280px] w-full rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-800 outline-none focus:border-[#00288e]" /></td>
-                  <td className="p-2"><input defaultValue={String(row.siscofisQuantity)} onChange={(event) => editPreviewItem(index, 'quantidade', event.target.value)} inputMode="decimal" className="h-9 w-24 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-800 outline-none focus:border-[#00288e]" /></td>
-                  <td className="p-2"><input defaultValue={String(source?.unitValue ?? 0)} onChange={(event) => editPreviewItem(index, 'valorUnitario', event.target.value)} inputMode="decimal" className="h-9 w-28 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-800" /></td>
+                {visiblePreviewRows.map((row) => { const source = preview.import.rows.find((item) => item.rowId === row.rowId); return <tr key={preview.sourceHash + row.rowId}>
+                  <td className="p-2"><input defaultValue={row.sourceItemNumber || ''} onChange={(event) => editPreviewItem(row.rowId, 'numeroItem', event.target.value)} className="h-9 w-28 rounded-lg border border-slate-200 bg-white px-2 font-mono text-xs text-slate-800 outline-none focus:border-[#00288e]" /></td>
+                  <td className="p-2"><input defaultValue={row.description} onChange={(event) => editPreviewItem(row.rowId, 'descricao', event.target.value)} className="h-9 min-w-[280px] w-full rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-800 outline-none focus:border-[#00288e]" /></td>
+                  <td className="p-2"><input defaultValue={String(row.siscofisQuantity)} onChange={(event) => editPreviewItem(row.rowId, 'quantidade', event.target.value)} inputMode="decimal" className="h-9 w-24 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-800 outline-none focus:border-[#00288e]" /></td>
+                  <td className="p-2"><input defaultValue={String(source?.unitValue ?? 0)} onChange={(event) => editPreviewItem(row.rowId, 'valorUnitario', event.target.value)} inputMode="decimal" className="h-9 w-28 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-800" /></td>
                   <td className="p-3 text-slate-600">{source?.totalValue?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00"}</td>
                   <td className="p-2">
                     {row.createsMaterial ? (
@@ -622,6 +725,20 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
                     )}
                   </td>
                   <td className="p-3 text-slate-600">{row.state}{editedRows[row.rowId] ? ' · corrigida' : ''}{previewDirty ? ' · revalidar' : ''}</td>
+                  {preview.kind === 'MARCO_ZERO' && (
+                    <td className="p-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() => excludePreviewRow(row.rowId)}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-2.5 text-[10px] font-black text-rose-700 transition hover:bg-rose-50"
+                        title="Retira apenas desta relação de migração; não exclui material, NF ou estoque."
+                        data-testid="warehouse-siscofis-preview-exclude"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Não importar
+                      </button>
+                    </td>
+                  )}
                 </tr>; })}
               </tbody>
             </table>
