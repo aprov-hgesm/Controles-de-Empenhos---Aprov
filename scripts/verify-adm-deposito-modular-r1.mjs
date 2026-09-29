@@ -1609,6 +1609,37 @@ requireText(
   "warningGroups.slice(0, 4)",
   'Migração SISCOFIS voltou a listar todos os avisos por padrão.'
 );
+requireText(
+  siscofisOperational,
+  'data-testid="warehouse-siscofis-preview-exclude"',
+  'Marco Zero SISCOFIS perdeu a ação de não importar item da relação.'
+);
+requireText(
+  siscofisOperational,
+  'data-testid="warehouse-siscofis-preview-undo-exclusions"',
+  'Marco Zero SISCOFIS perdeu a reversão das exclusões pendentes.'
+);
+requireText(
+  siscofisOperational,
+  "preview.kind === 'MARCO_ZERO'",
+  'Ação de exclusão manual SISCOFIS deixou de ficar restrita ao Marco Zero.'
+);
+requireText(
+  siscofisOperational,
+  'filterSiscofisDraftRows(rawJson, exclusions)',
+  'Exclusão manual deixou de convergir para o draft revalidado.'
+);
+requireText(
+  siscofisOperational,
+  'remapSiscofisRowRecord(materialOverrides, exclusions)',
+  'Exclusão manual deixou de preservar vínculos canônicos das linhas remanescentes.'
+);
+requireText(
+  siscofisContract,
+  'remapEmprovexSiscofisRowIdAfterExclusions',
+  'Contrato SISCOFIS perdeu remapeamento estável após exclusões.'
+);
+
 
 requireText(
   siscofisOperational,
