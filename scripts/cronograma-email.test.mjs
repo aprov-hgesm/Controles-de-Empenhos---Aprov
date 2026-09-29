@@ -33,10 +33,19 @@ test('token do Gmail permanece efêmero e autorização é separada do Firebase'
 
 test('destinatário prioriza cadastro local e usa pré-cadastro global por CNPJ como fallback', () => {
   const localReturn = supplier.indexOf("source: 'local'");
-  const globalLookup = supplier.indexOf('getGlobalSupplierDirectory');
+  const globalLookup = supplier.indexOf(
+    'const directory = await getGlobalSupplierDirectory(userId)',
+    localReturn
+  );
+
   assert.ok(localReturn > 0);
-  assert.ok(globalLookup > localReturn);
+  assert.ok(
+    globalLookup > localReturn,
+    'A leitura global deve ocorrer somente depois do retorno possível do e-mail local.'
+  );
   assert.match(supplier, /normalizeSupplierCnpj\(empenho\.supplierCnpj\)/);
+  assert.match(supplier, /if \(localEmail\) \{/);
+  assert.match(supplier, /if \(!cnpj\) return null;/);
   assert.match(supplier, /source: 'global'/);
 });
 
