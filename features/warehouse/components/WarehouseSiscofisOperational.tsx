@@ -6,6 +6,8 @@ import {
   CheckCircle2,
   Clipboard,
   FileJson2,
+  FileUp,
+  HardDrive,
   RefreshCw,
   ShieldCheck,
 } from 'lucide-react';
@@ -13,6 +15,7 @@ import {
 import {
   EMPROVEX_SISCOFIS_INVENTORY_SCHEMA_VERSION,
   WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION,
+  classifyEmprovexSiscofisSourceItem,
   type WarehouseSiscofisIssue,
   type WarehouseSiscofisPreview,
 } from '../../../lib/warehouse/siscofis';
@@ -41,6 +44,17 @@ function WarehouseDataState({ children }: { children: string }) {
   );
 }
 
+type SiscofisPdfSummary = {
+  fileName: string;
+  pageCount: number;
+  detectedRows: number;
+  zeroQuantityRows: number;
+  invalidRows: number;
+  eligibleRows: number;
+  filteredOtherAccounts: number;
+  filteredHortifruti: number;
+};
+
 export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: string }) {
   const [context, setContext] = useState<WarehouseSiscofisContext | null>(null);
   const [rawJson, setRawJson] = useState('');
@@ -52,6 +66,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
   const [previewDirty, setPreviewDirty] = useState(false);
   const [materialOverrides, setMaterialOverrides] = useState<Record<string, string>>({});
   const [editedRows, setEditedRows] = useState<Record<string, boolean>>({});
+  const [pdfSummary, setPdfSummary] = useState<SiscofisPdfSummary | null>(null);
   const [manualNumeroItem, setManualNumeroItem] = useState('');
   const [manualDescription, setManualDescription] = useState('');
   const [manualQuantity, setManualQuantity] = useState('');
@@ -74,6 +89,80 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
   useEffect(() => {
     void refresh();
   }, [workspaceId]);
+
+  const importSiscofisPdf = async (file: File) => {
+    setWorking(true);
+    setMessage(null);
+    setPreview(null);
+    setIssues([]);
+    setPreviewDirty(false);
+    setMaterialOverrides({});
+    setEditedRows({});
+
+    try {
+      if (!file.name.toLocaleLowerCase('pt-BR').endsWith('.pdf')) {
+        throw new Error('Selecione um arquivo PDF emitido pelo SISCOFIS.');
+      }
+      if (file.size > 15 * 1024 * 1024) {
+        throw new Error('O PDF SISCOFIS deve possuir no máximo 15 MB.');
+      }
+
+      const { extractEmprovexSiscofisInventoryFromPdfBytes } = await import(
+        '../../../lib/warehouse/siscofisPdf'
+      );
+      const extraction = extractEmprovexSiscofisInventoryFromPdfBytes(await file.arrayBuffer());
+      const nextRawJson = JSON.stringify(extraction.inventory, null, 2);
+      const referenceDate = extraction.referenceDate || manualReferenceDate;
+
+      let filteredOtherAccounts = 0;
+      let filteredHortifruti = 0;
+      for (const item of extraction.inventory.items) {
+        const exclusion = classifyEmprovexSiscofisSourceItem(item);
+        if (exclusion === 'NON_ACCOUNT_07') filteredOtherAccounts += 1;
+        if (exclusion === 'FRESH_HORTIFRUTI') filteredHortifruti += 1;
+      }
+      const eligibleRows =
+        extraction.inventory.items.length - filteredOtherAccounts - filteredHortifruti;
+
+      setRawJson(nextRawJson);
+      if (extraction.referenceDate) setManualReferenceDate(extraction.referenceDate);
+      setPdfSummary({
+        fileName: file.name,
+        pageCount: extraction.pageCount,
+        detectedRows: extraction.detectedRows,
+        zeroQuantityRows: extraction.zeroQuantityRows,
+        invalidRows: extraction.invalidRows,
+        eligibleRows,
+        filteredOtherAccounts,
+        filteredHortifruti,
+      });
+
+      const nextPreview = await prepareEmprovexSiscofisInventoryImport(
+        workspaceId,
+        nextRawJson,
+        referenceDate,
+        'PDF SISCOFIS — ' + file.name,
+        {}
+      );
+      setPreview(nextPreview);
+      setIssues(nextPreview.issues);
+      setMessage(
+        eligibleRows
+          + ' linha(s) elegível(is) preparadas localmente a partir do PDF. Revise a prévia antes de confirmar.'
+      );
+    } catch (error) {
+      const candidate = error as Error & { issues?: WarehouseSiscofisIssue[] };
+      setPdfSummary(null);
+      setIssues(candidate.issues || []);
+      setMessage(
+        candidate.issues?.length
+          ? 'O PDF foi lido, mas a prévia possui pendências que impedem a confirmação.'
+          : candidate.message || 'Não foi possível ler o PDF SISCOFIS localmente.'
+      );
+    } finally {
+      setWorking(false);
+    }
+  };
 
   const validateImport = async () => {
     setWorking(true);
@@ -110,6 +199,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
       setMaterialOverrides({});
       setEditedRows({});
       setRawJson('');
+      setPdfSummary(null);
       setIssues([]);
       await refresh();
     } catch (error) {
@@ -182,6 +272,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
 
   const clearDraft = () => {
     setRawJson('');
+    setPdfSummary(null);
     setPreview(null);
     setPreviewDirty(false);
     setMaterialOverrides({});
@@ -212,6 +303,79 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
       <div className="grid gap-3 md:grid-cols-2">
         <ContractCard title="Contrato de importação" code={EMPROVEX_SISCOFIS_INVENTORY_SCHEMA_VERSION} description="Migração manual e JSON usam o mesmo contrato versionado e passam pela mesma validação." />
         <ContractCard title="Snapshot auditável" code={WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION} description="Marco Zero e conciliações ficam no namespace logístico. Snapshots posteriores não alteram saldo automaticamente." />
+      </div>
+
+      <div
+        className="rounded-2xl border border-cyan-300/15 bg-cyan-400/[0.035] p-5"
+        data-testid="warehouse-siscofis-pdf-direct"
+      >
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="flex items-center gap-2 text-cyan-100">
+              <HardDrive className="h-4 w-4" />
+              <p className="text-xs font-black uppercase tracking-[0.12em]">
+                PDF SISCOFIS direto · sem IA
+              </p>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-slate-400">
+              Leitura determinística no próprio navegador. O PDF não é enviado para IA nem para serviço
+              externo. O EMPROVEX lê o Mapa de Existência, usa Qtde Exist, restringe a conta 07 e aplica
+              novamente o filtro de hortifruti/granjeiros antes da prévia.
+            </p>
+            <p className="mt-2 text-[10px] leading-4 text-slate-600">
+              Compatível com o Mapa de Existência - Material de Consumo textual do SISCOFIS. PDFs
+              escaneados, protegidos ou com estrutura diferente permanecem disponíveis pelo fluxo
+              JSON/IA abaixo.
+            </p>
+          </div>
+
+          <label className={[
+            'inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-4 text-xs font-black transition',
+            working
+              ? 'pointer-events-none border-white/[0.06] bg-white/[0.02] text-slate-600'
+              : 'border-cyan-300/20 bg-cyan-400/[0.10] text-cyan-100 hover:bg-cyan-400/[0.16]',
+          ].join(' ')}>
+            <FileUp className="h-4 w-4" />
+            {working ? 'Processando…' : 'Selecionar PDF SISCOFIS'}
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              className="sr-only"
+              data-testid="warehouse-siscofis-pdf-input"
+              disabled={working}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.currentTarget.value = '';
+                if (file) void importSiscofisPdf(file);
+              }}
+            />
+          </label>
+        </div>
+
+        {pdfSummary && (
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-xl border border-white/[0.06] bg-black/10 px-3 py-2">
+              <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">Arquivo</p>
+              <p className="mt-1 truncate text-xs font-bold text-slate-300">{pdfSummary.fileName}</p>
+              <p className="mt-1 text-[10px] text-slate-600">{pdfSummary.pageCount} página(s) · {pdfSummary.detectedRows} linha(s) detectada(s)</p>
+            </div>
+            <div className="rounded-xl border border-emerald-300/10 bg-emerald-400/[0.025] px-3 py-2">
+              <p className="text-[9px] font-black uppercase tracking-[0.12em] text-emerald-300/70">Elegíveis</p>
+              <p className="mt-1 text-lg font-black text-emerald-200">{pdfSummary.eligibleRows}</p>
+              <p className="text-[10px] text-slate-600">seguem para a prévia oficial</p>
+            </div>
+            <div className="rounded-xl border border-amber-300/10 bg-amber-400/[0.025] px-3 py-2">
+              <p className="text-[9px] font-black uppercase tracking-[0.12em] text-amber-300/70">Filtrados</p>
+              <p className="mt-1 text-xs font-bold text-slate-300">{pdfSummary.filteredOtherAccounts} outra(s) conta(s)</p>
+              <p className="mt-1 text-xs font-bold text-slate-300">{pdfSummary.filteredHortifruti} hortifruti/granjeiro(s)</p>
+            </div>
+            <div className="rounded-xl border border-white/[0.06] bg-black/10 px-3 py-2">
+              <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">Leitura física</p>
+              <p className="mt-1 text-xs font-bold text-slate-300">{pdfSummary.zeroQuantityRows} saldo zero ignorado(s)</p>
+              <p className="mt-1 text-xs font-bold text-slate-300">{pdfSummary.invalidRows} linha(s) incompleta(s)</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="rounded-2xl border border-emerald-300/10 bg-emerald-400/[0.025] p-5">
