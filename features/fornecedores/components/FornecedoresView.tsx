@@ -25,12 +25,16 @@ import {
   type SetStateAction,
 } from 'react';
 
-import type { Empenho, SupplierContact } from '../../../lib/types';
+import type { Empenho, SupplierContact, SupplierDirectoryEntry } from '../../../lib/types';
 import {
   getEmpenhos,
   getSupplierContacts,
   saveSupplierContact,
 } from '../../../lib/firebaseSync';
+import {
+  ensureGlobalSupplierDirectorySeed,
+  getGlobalSupplierDirectory,
+} from '../../../lib/supplierDirectory';
 import {
   formatSupplierCnpj,
   isValidSupplierCnpj,
@@ -54,6 +58,8 @@ interface SupplierAggregate {
   email: string;
   phone: string;
   whatsapp: string;
+  globalEmail: string;
+  emailSource: 'local' | 'global' | 'none';
   contact: SupplierContact | null;
   activeEmpenhos: Empenho[];
 }
@@ -103,6 +109,7 @@ export function FornecedoresView({
   showToast,
 }: FornecedoresViewProps) {
   const [contacts, setContacts] = useState<SupplierContact[]>([]);
+  const [directory, setDirectory] = useState<SupplierDirectoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
@@ -116,11 +123,17 @@ export function FornecedoresView({
     if (!user) return;
     setLoading(true);
     try {
-      const [savedContacts, freshEmpenhos] = await Promise.all([
+      const [savedContacts, freshEmpenhos, loadedDirectory] = await Promise.all([
         getSupplierContacts(user.uid),
         getEmpenhos(user.uid),
+        getGlobalSupplierDirectory(user.uid),
       ]);
+      const globalDirectory = await ensureGlobalSupplierDirectorySeed(
+        user.uid,
+        loadedDirectory
+      );
       setContacts(savedContacts);
+      setDirectory(globalDirectory);
       setEmpenhos(
         freshEmpenhos.map((emp) => ({
           ...emp,
@@ -142,16 +155,22 @@ export function FornecedoresView({
   const suppliers = useMemo<SupplierAggregate[]>(() => {
     const aggregateMap = new Map<string, SupplierAggregate>();
     const contactKeyByName = new Map<string, string>();
+    const directoryByCnpj = new Map(
+      directory.map((entry) => [entry.cnpj, entry.email])
+    );
 
     contacts.forEach((contact) => {
       const key = 'cnpj:' + contact.cnpj;
+      const globalEmail = directoryByCnpj.get(contact.cnpj) || '';
       aggregateMap.set(key, {
         key,
         legalName: contact.legalName,
         cnpj: contact.cnpj,
-        email: contact.email,
+        email: contact.email || globalEmail,
         phone: contact.phone,
         whatsapp: contact.whatsapp,
+        globalEmail,
+        emailSource: contact.email ? 'local' : globalEmail ? 'global' : 'none',
         contact,
         activeEmpenhos: [],
       });
@@ -174,13 +193,16 @@ export function FornecedoresView({
         return;
       }
 
+      const globalEmail = cnpj ? directoryByCnpj.get(cnpj) || '' : '';
       aggregateMap.set(key, {
         key,
         legalName,
         cnpj,
-        email: '',
+        email: globalEmail,
         phone: '',
         whatsapp: '',
+        globalEmail,
+        emailSource: globalEmail ? 'global' : 'none',
         contact: null,
         activeEmpenhos: [emp],
       });
@@ -192,7 +214,7 @@ export function FornecedoresView({
       if (activeDiff !== 0) return activeDiff;
       return a.legalName.localeCompare(b.legalName, 'pt-BR');
     });
-  }, [contacts, empenhos]);
+  }, [contacts, directory, empenhos]);
 
   const filteredSuppliers = useMemo(() => {
     const query = search.trim().toUpperCase();
@@ -510,6 +532,11 @@ export function FornecedoresView({
                           Contato incompleto
                         </span>
                       )}
+                      {supplier.emailSource === 'global' && (
+                        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-blue-700">
+                          E-mail pré-cadastrado
+                        </span>
+                      )}
                     </div>
                     <h2 className="mt-3 break-words text-lg font-black leading-snug text-slate-900">
                       {supplier.legalName}
@@ -599,7 +626,12 @@ export function FornecedoresView({
 
                 {(supplier.email || supplier.phone || supplier.whatsapp) && (
                   <div className="mt-3 space-y-1 text-[11px] font-medium text-slate-500">
-                    {supplier.email && <p className="truncate">E-mail: {supplier.email}</p>}
+                    {supplier.email && (
+                      <p className="truncate">
+                        E-mail: {supplier.email}
+                        {supplier.emailSource === 'global' ? ' · pré-cadastro global' : ''}
+                      </p>
+                    )}
                     {supplier.phone && <p>Telefone: {supplier.phone}</p>}
                     {supplier.whatsapp && <p>WhatsApp: {supplier.whatsapp}</p>}
                   </div>

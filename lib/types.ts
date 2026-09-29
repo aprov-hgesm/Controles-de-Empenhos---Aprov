@@ -73,6 +73,11 @@ export interface Empenho {
   notaEmpenhoPdfVersions?: EmpenhoPdfDocument[];
 }
 
+export interface SupplierDirectoryEntry {
+  cnpj: string;
+  email: string;
+}
+
 export interface SupplierContact {
   id: string;
   legalName: string;

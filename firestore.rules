@@ -154,6 +154,28 @@ service cloud.firestore {
         && operationalIdentityMatchesAccount(workspaceId, account);
     }
 
+    function canReadGlobalSupplierDirectory() {
+      return isHgesmFounder()
+        || (
+          isVerifiedUser()
+          && isPasswordSectorSession()
+          && exists(
+            /databases/$(database)/documents/platformAccounts/$(request.auth.token.email)
+          )
+          && get(
+            /databases/$(database)/documents/platformAccounts/$(request.auth.token.email)
+          ).data.accountType == 'sector'
+          && get(
+            /databases/$(database)/documents/platformAccounts/$(request.auth.token.email)
+          ).data.status == 'active'
+          && boundIdentityMatchesAccount(
+            get(
+              /databases/$(database)/documents/platformAccounts/$(request.auth.token.email)
+            ).data
+          )
+        );
+    }
+
     function isValidSessionSlotId(slotId) {
       return slotId in ['slot-1', 'slot-2'];
     }
@@ -1820,6 +1842,20 @@ service cloud.firestore {
         && request.resource.data.trigger in ['automatic', 'manual']
         && request.resource.data.lastError is string
         && request.resource.data.updatedBy == request.auth.uid;
+    }
+
+    // Pré-cadastro global de fornecedores: todas as UGs operacionais podem ler
+    // a referência compartilhada, mas somente a identidade fundadora pode mantê-la.
+    // Alterações feitas por uma UG continuam em /workspaces/{workspaceId}/suppliers.
+    match /supplierDirectory/{documentId} {
+      allow get: if documentId == 'defaults'
+        && canReadGlobalSupplierDirectory();
+      allow list: if false;
+      allow create, update: if documentId == 'defaults'
+        && isHgesmFounder()
+        && request.resource.data.keys().hasOnly(['entries'])
+        && request.resource.data.entries is map;
+      allow delete: if false;
     }
 
     // Diretório administrativo da plataforma. O administrador pode listar e
