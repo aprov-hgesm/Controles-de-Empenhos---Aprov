@@ -716,7 +716,7 @@ export function parseEmprovexSiscofisInventoryJson(raw: string): EmprovexSiscofi
   input.items.forEach((candidate, index) => {
     const path = '$.items[' + index + ']';
     if (!isPlainObject(candidate) || !hasOnlyFields(candidate, EXTERNAL_ITEM_FIELDS)) {
-      pushIssue(issues, 'error', 'invalid_external_item_shape', path, 'Cada item deve conter somente numeroItem, descricao, quantidade e valorUnitario.');
+      pushIssue(issues, 'error', 'invalid_external_item_shape', path, 'Cada item deve conter somente numeroItem, descricao, quantidade, valorUnitario e validade.');
       return;
     }
     const numeroItem = typeof candidate.numeroItem === 'string' ? candidate.numeroItem.trim() : '';
