@@ -93,8 +93,9 @@ function currentScopeForWorkspace(workspaceId: string) {
     throw new Error('WAREHOUSE_LANDING_VISUAL_WORKSPACE_MISMATCH');
   }
   if (!scope.ug) throw new Error('WAREHOUSE_LANDING_VISUAL_UG_REQUIRED');
+  const ug = scope.ug;
 
-  return { currentUser, scope, workspaceId: normalized };
+  return { currentUser, scope, workspaceId: normalized, ug };
 }
 
 export async function getWarehouseLandingVisualLayout(
@@ -148,7 +149,7 @@ export async function saveWarehouseLandingVisualLayout(
   workspaceId: string,
   overrides: WarehouseLandingVisualOverrides
 ): Promise<WarehouseLandingVisualSettings> {
-  const { currentUser, scope, workspaceId: normalized } =
+  const { currentUser, ug, workspaceId: normalized } =
     currentScopeForWorkspace(workspaceId);
 
   const canonical = normalizeWarehouseLandingVisualOverrides(overrides);
@@ -163,7 +164,7 @@ export async function saveWarehouseLandingVisualLayout(
     await setDoc(doc(db, path), {
       schemaVersion: WAREHOUSE_LANDING_VISUAL_SCHEMA_VERSION,
       workspaceId: normalized,
-      ug: scope.ug,
+      ug,
       arrangementJson,
       updatedBy: currentUser.uid,
       updatedAt: serverTimestamp(),
@@ -173,7 +174,7 @@ export async function saveWarehouseLandingVisualLayout(
     return {
       schemaVersion: WAREHOUSE_LANDING_VISUAL_SCHEMA_VERSION,
       workspaceId: normalized,
-      ug: scope.ug,
+      ug,
       overrides: canonical,
       updatedBy: currentUser.uid,
       updatedAt: new Date().toISOString(),
