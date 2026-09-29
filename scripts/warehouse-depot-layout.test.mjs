@@ -407,3 +407,18 @@ test('prévia 3D mantém a proporção física do depósito em vez de normalizar
   assert.match(preview, /const ny = y \/ scaleBase/);
   assert.doesNotMatch(preview, /const nx = x \/ Math\.max\(1, logicalWidth\)/);
 });
+
+
+test('croqui R1 ativo aceita contêiner longo, edita dimensões e usa leitura positiva de saldos', () => {
+  const croquis = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseCroquisR1Operational.tsx'),
+    'utf8'
+  );
+
+  assert.match(croquis, /WAREHOUSE_LAYOUT_MAX_DIMENSION/);
+  assert.doesNotMatch(croquis, /Math\.min\(5000/);
+  assert.match(croquis, /warehouse-r1-edit-dimensions/);
+  assert.match(croquis, /warehouse-r1-dimension-editor/);
+  assert.match(croquis, /Aplicar e preservar proporções/);
+  assert.match(croquis, /listWarehousePositiveLocationBalances/);
+});
