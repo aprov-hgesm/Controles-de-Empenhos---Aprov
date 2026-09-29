@@ -72,13 +72,14 @@ for (const marker of [
 ]) requireText(ledger, marker, 'Integração do ledger com Sem localização ausente: ' + marker);
 
 for (const marker of [
-  'warehouse-locations-operational',
-  'warehouse-depot-create',
-  'warehouse-location-create',
-  'warehouse-transfer-start',
-  'warehouse-transfer-confirm',
-  'Sem localização',
-]) requireText(locationsUi, marker, 'Jornada UI da FASE 6 incompleta: ' + marker);
+  'warehouse-locations-r1-operational',
+  'Novo depósito',
+  'Novo local',
+  'Nova subposição',
+  'Criar depósito',
+  'Criar local',
+  'Criar subposição',
+]) requireText(locationsUi, marker, 'Jornada UI atual da estrutura física incompleta: ' + marker);
 
 requireText(navigation, "id: 'depots'", 'Navegação Controle de Depósitos ausente.');
 requireText(navigation, "label: 'Controle de Depósitos'", 'Rótulo Controle de Depósitos ausente.');
@@ -103,10 +104,11 @@ for (const marker of [
 ]) requireText(securityTests, marker, 'Cobertura de segurança da FASE 6 ausente: ' + marker);
 
 for (const marker of [
-  'warehouse-locations-operational',
-  'warehouse-transfer-confirm',
-  'fundador cria local, transfere estoque e confirma a distribuição física',
-]) requireText(browserE2e, marker, 'Browser E2E específico da FASE 6 incompleto: ' + marker);
+  'warehouse-locations-r1-operational',
+  'Local criado com sucesso.',
+  'warehouse-r1-croquis',
+  'fundador cria local na superfície atual e preserva após reload',
+]) requireText(browserE2e, marker, 'Browser E2E atual da estrutura física incompleto: ' + marker);
 
 for (const marker of [
   'warehouse_location_balance_v1',

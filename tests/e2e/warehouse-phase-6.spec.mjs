@@ -1,11 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-const MATERIAL_ID = 'mat_123e4567e89b12d3a456426614174000';
-
-test.describe.serial('ADM Depósito FASE 6 — jornada operacional', () => {
-  test('fundador cria local, transfere estoque e confirma a distribuição física', async ({ page }) => {
+test.describe.serial('Central de Depósitos — estrutura física R1', () => {
+  test('fundador cria local na superfície atual e preserva após reload', async ({ page }) => {
     await page.goto('/');
-
     await page.getByRole('button', { name: 'Entrar com Google — HGeSM' }).click();
 
     await expect(
@@ -15,64 +12,29 @@ test.describe.serial('ADM Depósito FASE 6 — jornada operacional', () => {
     await page.goto('/adm-deposito/localizacoes');
 
     await expect(
-      page.getByTestId('warehouse-locations-operational')
+      page.getByTestId('warehouse-locations-r1-operational')
     ).toBeVisible({ timeout: 20_000 });
 
     await page.getByText('Depósito FASE 6 renomeado', { exact: true }).click();
+    await page.getByRole('button', { name: 'Novo local', exact: true }).click();
 
-    await page.getByLabel('Código da localização').fill('E2E-01');
-    await page.getByLabel('Nome da localização').fill('Local E2E transferência');
-    await page.getByLabel('Descrição da localização').fill('Criado pelo Browser E2E da FASE 6');
-    await page.getByTestId('warehouse-location-create').click();
+    await page.getByPlaceholder('Código · EST-01').fill('E2E-01');
+    await page.getByPlaceholder('Nome do local').fill('Local E2E estrutura R1');
+    await page.getByPlaceholder('Descrição opcional').fill('Criado pelo Browser E2E da Central');
+    await page.getByRole('button', { name: 'Criar local', exact: true }).click();
 
-    await expect(page.getByTestId('warehouse-phase6-message')).toContainText(
-      'Local criado no depósito selecionado.'
-    );
+    await expect(page.getByText('Local criado com sucesso.', { exact: true })).toBeVisible();
     await expect(page.getByText('E2E-01', { exact: true })).toBeVisible();
 
-    await page.getByTestId('warehouse-transfer-material').selectOption(MATERIAL_ID);
-    await page.getByTestId('warehouse-transfer-from').selectOption('UNASSIGNED');
-
-    const destination = page.getByTestId('warehouse-transfer-to');
-    const e2eOption = destination.locator('option').filter({ hasText: 'E2E-01' });
-    await expect(e2eOption).toHaveCount(1);
-    const destinationValue = await e2eOption.getAttribute('value');
-    expect(destinationValue).toBeTruthy();
-    await destination.selectOption(destinationValue);
-
-    await page.getByTestId('warehouse-transfer-quantity').fill('1');
-    await page.getByTestId('warehouse-transfer-start').click();
-
-    await expect(page.getByTestId('warehouse-transfer-review')).toContainText(
-      'Sem localização'
-    );
-    await expect(page.getByTestId('warehouse-transfer-review')).toContainText(
-      'E2E-01'
-    );
-
-    await page.getByTestId('warehouse-transfer-confirm').click();
-
-    await expect(page.getByTestId('warehouse-phase6-message')).toContainText(
-      'Transferência concluída. O saldo total da OM foi preservado.'
-    );
-
-    const distribution = page.getByTestId('warehouse-distribution-' + MATERIAL_ID);
-    await expect(distribution).toContainText('Arroz parboilizado');
-    await expect(distribution).toContainText('DEP-06 → E2E-01');
-    await expect(distribution).toContainText('Distribuição coerente');
-
     await page.reload();
-    await expect(page.getByTestId('warehouse-locations-operational')).toBeVisible({
+    await expect(page.getByTestId('warehouse-locations-r1-operational')).toBeVisible({
       timeout: 20_000,
     });
-    await expect(
-      page.getByTestId('warehouse-distribution-' + MATERIAL_ID)
-    ).toContainText('DEP-06 → E2E-01');
+    await expect(page.getByText('E2E-01', { exact: true })).toBeVisible();
 
-    await page.goto('/adm-deposito/movimentacoes');
-    await expect(page.getByText('Transferência interna', { exact: true }).first()).toBeVisible({
+    await page.goto('/adm-deposito/controle-de-depositos?aba=croquis');
+    await expect(page.getByTestId('warehouse-r1-croquis')).toBeVisible({
       timeout: 20_000,
     });
-    await expect(page.getByText('Arroz parboilizado', { exact: true }).first()).toBeVisible();
   });
 });

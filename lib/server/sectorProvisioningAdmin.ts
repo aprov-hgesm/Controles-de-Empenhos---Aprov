@@ -413,9 +413,15 @@ function warehouseClaimsAuthEmulatorBaseUrl(): string | null {
   if (process.env.EMPROVEX_E2E_SERVER_AUTH !== '1') return null;
 
   const host = process.env.FIREBASE_AUTH_EMULATOR_HOST?.trim() || '';
-  if (host !== '127.0.0.1:9099' && host !== 'localhost:9099') return null;
+  const projectId = process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID?.trim() || '';
+  if (
+    (host !== '127.0.0.1:9099' && host !== 'localhost:9099')
+    || !projectId.startsWith('demo-')
+  ) {
+    return null;
+  }
 
-  return `http://${host}/identitytoolkit.googleapis.com/v1/projects/${encodeURIComponent(PROJECT_ID)}`;
+  return `http://${host}/identitytoolkit.googleapis.com/v1/projects/${encodeURIComponent(projectId)}`;
 }
 
 async function ensureSectorWarehouseClaimsInAuthEmulator(
