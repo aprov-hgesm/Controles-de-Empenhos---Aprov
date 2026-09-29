@@ -13,6 +13,7 @@ import {
   doc,
   getDoc,
   getFirestore,
+  serverTimestamp,
   setDoc,
 } from 'firebase/firestore';
 
@@ -207,6 +208,88 @@ async function main() {
   const own = await getDoc(refA);
   assert.equal(own.exists(), true);
   console.log('  [PASS] ALLOW — setor A lê o próprio workspace');
+
+  const visualRefA = doc(
+    a.db,
+    'warehouse',
+    'workspace-a',
+    'settings',
+    'landing-visual-layout'
+  );
+  await setDoc(visualRefA, {
+    schemaVersion: 'warehouse_landing_visual_layout_v1',
+    workspaceId: 'workspace-a',
+    ug: '160500',
+    arrangementJson: JSON.stringify({
+      ['dep_' + 'd'.repeat(32)]: {
+        offsetX: 42,
+        offsetY: -18,
+        scale: 1.15,
+        rotation: 15,
+      },
+    }),
+    updatedBy: a.user.uid,
+    updatedAt: serverTimestamp(),
+  });
+  console.log('  [PASS] ALLOW — setor A salva a disposição visual do próprio workspace');
+
+  const ownVisual = await getDoc(visualRefA);
+  assert.equal(ownVisual.exists(), true);
+  console.log('  [PASS] ALLOW — setor A lê a própria disposição visual');
+
+  await expectDenied('setor B não lê a disposição visual do workspace A', () =>
+    getDoc(
+      doc(
+        b.db,
+        'warehouse',
+        'workspace-a',
+        'settings',
+        'landing-visual-layout'
+      )
+    )
+  );
+
+  await expectDenied('setor A não salva disposição visual em workspace B', () =>
+    setDoc(
+      doc(
+        a.db,
+        'warehouse',
+        'workspace-b',
+        'settings',
+        'landing-visual-layout'
+      ),
+      {
+        schemaVersion: 'warehouse_landing_visual_layout_v1',
+        workspaceId: 'workspace-b',
+        ug: '160501',
+        arrangementJson: '{}',
+        updatedBy: a.user.uid,
+        updatedAt: serverTimestamp(),
+      }
+    )
+  );
+
+  await expectDenied('setor A não salva disposição visual com UG diferente', () =>
+    setDoc(visualRefA, {
+      schemaVersion: 'warehouse_landing_visual_layout_v1',
+      workspaceId: 'workspace-a',
+      ug: '160501',
+      arrangementJson: '{}',
+      updatedBy: a.user.uid,
+      updatedAt: serverTimestamp(),
+    })
+  );
+
+  await expectDenied('disposição visual acima do limite de payload é rejeitada', () =>
+    setDoc(visualRefA, {
+      schemaVersion: 'warehouse_landing_visual_layout_v1',
+      workspaceId: 'workspace-a',
+      ug: '160500',
+      arrangementJson: 'x'.repeat(24001),
+      updatedBy: a.user.uid,
+      updatedAt: serverTimestamp(),
+    })
+  );
 
   await expectDenied('setor B não lê workspace A', () =>
     getDoc(doc(b.db, 'warehouse', 'workspace-a', 'materials', idA))
