@@ -100,6 +100,167 @@
   color: rgba(135, 158, 202, .62);
 }
 
+.layoutActions {
+  position: absolute;
+  top: 22px;
+  right: 24px;
+  z-index: 8;
+  display: flex;
+  justify-content: flex-end;
+  max-width: min(460px, calc(100% - 48px));
+}
+
+.layoutEditButton {
+  display: inline-flex;
+  height: 34px;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(144, 174, 234, 0.18);
+  border-radius: 11px;
+  background: rgba(6, 14, 31, 0.64);
+  padding: 0 12px;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .04em;
+  color: rgba(201, 218, 250, .78);
+  box-shadow: 0 12px 30px rgba(0, 4, 16, .22);
+  backdrop-filter: blur(14px);
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+}
+
+.layoutEditButton:hover:not(:disabled) {
+  border-color: rgba(132, 172, 255, 0.42);
+  background: rgba(11, 25, 52, 0.82);
+  color: rgba(239, 246, 255, .96);
+}
+
+.layoutEditButton:disabled {
+  cursor: not-allowed;
+  opacity: .38;
+}
+
+.layoutEditor {
+  width: min(450px, calc(100vw - 72px));
+  border: 1px solid rgba(128, 164, 235, .22);
+  border-radius: 15px;
+  background: rgba(4, 10, 24, .88);
+  padding: 11px;
+  box-shadow: 0 20px 54px rgba(0, 3, 14, .38);
+  backdrop-filter: blur(18px);
+}
+
+.layoutEditorHead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.layoutEditorHead > span {
+  display: inline-flex;
+  min-width: 150px;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  font-weight: 850;
+  color: rgba(198, 217, 250, .74);
+}
+
+.layoutSelect {
+  min-width: 0;
+  flex: 1;
+  height: 31px;
+  border: 1px solid rgba(142, 169, 220, .18);
+  border-radius: 9px;
+  background: rgba(10, 21, 43, .84);
+  padding: 0 9px;
+  color: rgba(239, 245, 255, .94);
+  font-size: 9px;
+  font-weight: 750;
+  outline: none;
+}
+
+.layoutControlRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.layoutControlRow > button {
+  display: inline-grid;
+  width: 31px;
+  height: 31px;
+  place-items: center;
+  border: 1px solid rgba(142, 169, 220, .16);
+  border-radius: 9px;
+  background: rgba(15, 30, 58, .6);
+  color: rgba(210, 225, 252, .84);
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.layoutControlRow > button:hover {
+  border-color: rgba(121, 165, 255, .42);
+  background: rgba(28, 51, 91, .78);
+  color: #fff;
+}
+
+.layoutScale {
+  min-width: 44px;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 850;
+  color: rgba(154, 184, 240, .76);
+}
+
+.layoutEditorFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(128, 154, 207, .11);
+}
+
+.layoutCancel,
+.layoutSave {
+  height: 31px;
+  border-radius: 9px;
+  padding: 0 10px;
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.layoutCancel {
+  border: 1px solid rgba(145, 166, 207, .16);
+  background: rgba(12, 23, 43, .62);
+  color: rgba(188, 205, 237, .72);
+}
+
+.layoutSave {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(95, 153, 255, .34);
+  background: rgba(43, 103, 225, .8);
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(24, 77, 187, .22);
+}
+
+.layoutSave:disabled {
+  opacity: .5;
+}
+
+.layoutMessage {
+  position: absolute;
+  right: 28px;
+  top: 63px;
+  z-index: 7;
+  max-width: 340px;
+  font-size: 9px;
+  font-weight: 800;
+  color: rgba(174, 205, 255, .82);
+}
+
 .error {
   position: absolute;
   left: 28px;
@@ -124,6 +285,21 @@
 .depotGroup {
   cursor: pointer;
   outline: none;
+}
+
+.depotEditable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.depotEditable:active {
+  cursor: grabbing;
+}
+
+.depotSelected .depotAura {
+  stroke: rgba(121, 166, 255, .96);
+  stroke-width: 2px;
+  filter: drop-shadow(0 0 14px rgba(98, 151, 255, .38));
 }
 
 .depotAura {
@@ -318,6 +494,17 @@
   }
 }
 
+@media (max-width: 980px) {
+  .layoutActions {
+    top: 18px;
+    right: 18px;
+  }
+
+  .layoutEditor {
+    width: min(410px, calc(100vw - 52px));
+  }
+}
+
 @media (max-width: 680px) {
   .scene {
     border-radius: 1.15rem;
@@ -342,6 +529,29 @@
   .sceneTitle > small {
     max-width: 250px;
     line-height: 1.5;
+  }
+
+  .layoutActions {
+    top: 74px;
+    right: 14px;
+    max-width: calc(100% - 28px);
+  }
+
+  .layoutEditor {
+    width: calc(100vw - 52px);
+  }
+
+  .layoutEditorHead {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .layoutEditorHead > span {
+    min-width: 0;
+  }
+
+  .layoutControlRow {
+    flex-wrap: wrap;
   }
 
   .sceneHint {

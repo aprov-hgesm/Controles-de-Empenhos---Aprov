@@ -924,6 +924,28 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
     }
 
+    function validWarehouseLandingVisualSettings(workspaceId, settingId) {
+      return settingId == 'landing-visual-layout'
+        && request.resource.data is map
+        && request.resource.data.keys().hasOnly([
+          'schemaVersion', 'workspaceId', 'ug', 'arrangementJson',
+          'updatedBy', 'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'schemaVersion', 'workspaceId', 'ug', 'arrangementJson',
+          'updatedBy', 'updatedAt'
+        ])
+        && request.resource.data.schemaVersion == 'warehouse_landing_visual_layout_v1'
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.ug is string
+        && request.resource.data.ug.matches('^[0-9]{6}$')
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
+        && request.resource.data.arrangementJson is string
+        && request.resource.data.arrangementJson.size() <= 24000
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+    }
+
     function validWarehouseSiscofisSnapshotBase(workspaceId, snapshotId) {
       return request.resource.data is map
         && request.resource.data.keys().hasOnly([
@@ -2929,9 +2951,13 @@ service cloud.firestore {
           && (
             validWarehouseInvoiceIntegrationSettings(workspaceId, settingId)
             || validWarehouseLogisticsSettings(workspaceId, settingId)
+            || validWarehouseLandingVisualSettings(workspaceId, settingId)
           );
         allow update: if canAccessWarehouseModule(workspaceId)
-          && validWarehouseLogisticsSettings(workspaceId, settingId);
+          && (
+            validWarehouseLogisticsSettings(workspaceId, settingId)
+            || validWarehouseLandingVisualSettings(workspaceId, settingId)
+          );
         allow delete: if false;
       }
 
