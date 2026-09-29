@@ -105,18 +105,21 @@ function syntheticSiscofisPdf() {
     pdfText(640.04, 395.232, 'Qtde Exist'),
     pdfText(701.96, 395.232, 'Qtde Disp'),
     pdfText(771.08, 395.232, 'Vlr Unit'),
+    pdfText(840.00, 408.192, 'Validade'),
 
     pdfText(30.2, 367.032, '07.0031C'),
     pdfText(159.8, 367.032, 'ERVILHA / Tipo: Seca;'),
     pdfText(640.04, 347.592, '68'),
     pdfText(701.96, 347.592, '68'),
     pdfText(771.08, 347.592, '4,99'),
+    pdfText(840.00, 367.032, '30/01/2027'),
 
     pdfText(30.2, 332.472, '07.1345C'),
     pdfText(159.8, 332.472, 'BETERRABA / Tipo: In natura;'),
     pdfText(640.04, 313.032, '10'),
     pdfText(701.96, 313.032, '0'),
     pdfText(771.08, 313.032, '2,74'),
+    pdfText(840.00, 332.472, '31/12/2026'),
 
     pdfText(30.2, 297.912, '21.1000C'),
     pdfText(159.8, 297.912, 'CANECA DE VIDRO'),
@@ -172,9 +175,12 @@ test('extrator local lê PDF SISCOFIS textual sem IA e usa Qtde Exist', () => {
     descricao: 'ERVILHA / Tipo: Seca;',
     quantidade: 68,
     valorUnitario: 4.99,
+    validade: '2027-01-30',
   });
   assert.equal(extracted.inventory.items[1].quantidade, 10);
   assert.equal(extracted.inventory.items[1].valorUnitario, 2.74);
+  assert.equal(extracted.inventory.items[1].validade, '2026-12-31');
+  assert.equal(extracted.inventory.items[2].validade, null);
 });
 
 test('PDF direto reutiliza o classificador oficial de conta 07 e hortifruti', () => {
@@ -363,19 +369,35 @@ test('recusa campos inesperados, UG divergente e rowId duplicado', () => {
   assert.equal(parsed.issues.some((item) => item.code === 'duplicate_row_id'), true);
 });
 
-test('prompt oficial usa quatro campos e aplica conta 07, Qtde Exist e exclusão de hortifruti', () => {
-  const prompt = siscofis.buildWarehouseSiscofisPrompt();
-  assert.match(prompt, /emprovex_siscofis_inventory_v1/);
-  assert.match(prompt, /numeroItem/);
-  assert.match(prompt, /valorUnitario/);
-  assert.match(prompt, /comece exatamente por "07"/);
-  assert.match(prompt, /Qtde Exist/);
-  assert.match(prompt, /NÃO use "Qtde Disp"/);
-  assert.match(prompt, /HORTIFRUTI\/GRANJEIROS/);
-  assert.match(prompt, /MILHO VERDE \/ Tipo: Em conserva/);
-  assert.match(prompt, /NÃO CONSOLIDAR ITENS/);
-  assert.doesNotMatch(prompt, /materialId/);
-  assert.doesNotMatch(prompt, /workspaceId/);
+test('adapter preserva validade do mapa até a prévia do Marco Zero', async () => {
+  const inventory = {
+    schemaVersion: 'emprovex_siscofis_inventory_v1',
+    items: [{
+      numeroItem: '07.0031C',
+      descricao: 'ERVILHA / Tipo: Seca;',
+      quantidade: 68,
+      valorUnitario: 4.99,
+      validade: '2027-01-30',
+    }],
+  };
+  const adapted = siscofis.adaptEmprovexSiscofisInventory({
+    inventory,
+    ug: '160416',
+    referenceDate: '2026-09-28',
+    materials: [],
+  });
+  assert.equal(adapted.importData.rows[0].expiresOn, '2027-01-30');
+
+  const preview = await siscofis.buildWarehouseSiscofisPreview({
+    workspaceId: 'hgesm-aprov',
+    importData: adapted.importData,
+    materials: [],
+    balances: [],
+    hasMarcoZero: false,
+    cutoffAt: null,
+    priorIssues: adapted.issues,
+  });
+  assert.equal(preview.rows[0].expiresOn, '2027-01-30');
 });
 
 test('Marco Zero usa identidade canônica e cria material somente quando materialId é nulo', async () => {
