@@ -24,13 +24,13 @@ test.describe.serial('Central de Depósitos — estrutura física R1', () => {
     await page.getByRole('button', { name: 'Criar local', exact: true }).click();
 
     await expect(page.getByText('Local criado com sucesso.', { exact: true })).toBeVisible();
-    await expect(page.getByText('E2E-01', { exact: true })).toBeVisible();
+    await expect(page.getByText('E2E-01', { exact: true }).first()).toBeVisible();
 
     await page.reload();
     await expect(page.getByTestId('warehouse-locations-r1-operational')).toBeVisible({
       timeout: 20_000,
     });
-    await expect(page.getByText('E2E-01', { exact: true })).toBeVisible();
+    await expect(page.getByText('E2E-01', { exact: true }).first()).toBeVisible();
 
     await page.goto('/adm-deposito/controle-de-depositos?aba=croquis');
     await expect(page.getByTestId('warehouse-r1-croquis')).toBeVisible({

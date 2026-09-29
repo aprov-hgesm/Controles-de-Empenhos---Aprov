@@ -14,7 +14,7 @@ test.describe.serial('Central de Depósitos — Croqui R1', () => {
     });
 
     await expect(page.getByRole('button', { name: 'Edição 2D', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Prévia 3D', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Prévia 3D', exact: true }).first()).toBeVisible();
 
     const nameInput = page.getByLabel('Nome do croqui');
     await expect(nameInput).toBeVisible();
@@ -25,7 +25,7 @@ test.describe.serial('Central de Depósitos — Croqui R1', () => {
       page.getByText(/Croqui salvo com sucesso. Versão d+ ativa./)
     ).toBeVisible({ timeout: 20_000 });
 
-    await page.getByRole('button', { name: 'Prévia 3D', exact: true }).click();
+    await page.getByRole('button', { name: 'Prévia 3D', exact: true }).first().click();
     await expect(page.getByTestId('warehouse-r1-croquis')).toBeVisible();
 
     await page.reload();
