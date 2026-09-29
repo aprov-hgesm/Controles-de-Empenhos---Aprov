@@ -13,8 +13,8 @@ test.describe.serial('Central de Depósitos — Croqui R1', () => {
       timeout: 20_000,
     });
 
-    await expect(page.getByText('Edição 2D', { exact: true })).toBeVisible();
-    await expect(page.getByText('Prévia 3D', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Edição 2D', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Prévia 3D', exact: true })).toBeVisible();
 
     const nameInput = page.getByLabel('Nome do croqui');
     await expect(nameInput).toBeVisible();

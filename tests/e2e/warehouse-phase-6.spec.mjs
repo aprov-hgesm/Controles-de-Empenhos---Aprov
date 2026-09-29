@@ -15,7 +15,7 @@ test.describe.serial('Central de Depósitos — estrutura física R1', () => {
       page.getByTestId('warehouse-locations-r1-operational')
     ).toBeVisible({ timeout: 20_000 });
 
-    await page.getByText('Depósito FASE 6 renomeado', { exact: true }).click();
+    await page.getByText('Depósito FASE 6 renomeado', { exact: true }).first().click();
     await page.getByRole('button', { name: 'Novo local', exact: true }).click();
 
     await page.getByPlaceholder('Código · EST-01').fill('E2E-01');
