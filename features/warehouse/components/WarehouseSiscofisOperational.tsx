@@ -70,6 +70,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
   const [editedRows, setEditedRows] = useState<Record<string, boolean>>({});
   const [pdfSummary, setPdfSummary] = useState<SiscofisPdfSummary | null>(null);
   const [draftSourceLabel, setDraftSourceLabel] = useState(DEFAULT_SISCOFIS_SOURCE_LABEL);
+  const [showValidationDetails, setShowValidationDetails] = useState(false);
   const [manualNumeroItem, setManualNumeroItem] = useState('');
   const [manualDescription, setManualDescription] = useState('');
   const [manualQuantity, setManualQuantity] = useState('');
@@ -98,6 +99,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
     setMessage(null);
     setPreview(null);
     setIssues([]);
+    setShowValidationDetails(false);
     setPreviewDirty(false);
     setMaterialOverrides({});
     setEditedRows({});
@@ -174,6 +176,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
     setMessage(null);
     setPreview(null);
     setIssues([]);
+    setShowValidationDetails(false);
     try {
       const nextPreview = await prepareEmprovexSiscofisInventoryImport(
         workspaceId,
@@ -213,6 +216,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
       setPdfSummary(null);
       setDraftSourceLabel(DEFAULT_SISCOFIS_SOURCE_LABEL);
       setIssues([]);
+      setShowValidationDetails(false);
       await refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Falha ao confirmar a importação.');
@@ -291,6 +295,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
     setMaterialOverrides({});
     setEditedRows({});
     setIssues([]);
+    setShowValidationDetails(false);
     setMessage('Rascunho limpo.');
   };
 
@@ -306,6 +311,28 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
     setMessage('Vínculo canônico alterado. Revalide antes de confirmar.');
   };
 
+
+  const validationErrors = issues.filter((issue) => issue.severity === 'error');
+  const validationWarnings = issues.filter((issue) => issue.severity === 'warning');
+  const warningGroups = Array.from(
+    validationWarnings.reduce((groups, issue) => {
+      const key = issue.code + '::' + issue.message;
+      const current = groups.get(key);
+      if (current) {
+        current.count += 1;
+        current.paths.push(issue.path);
+      } else {
+        groups.set(key, {
+          code: issue.code,
+          message: issue.message,
+          count: 1,
+          paths: [issue.path],
+        });
+      }
+      return groups;
+    }, new Map<string, { code: string; message: string; count: number; paths: string[] }>())
+      .values()
+  );
 
   if (loading && !context) {
     return <div className="mt-6"><WarehouseDataState>Carregando estado do SISCOFIS e do Marco Zero…</WarehouseDataState></div>;
@@ -454,16 +481,102 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
       </div>
 
       {issues.length > 0 && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
-          <div className="flex items-center gap-2 text-amber-800"><AlertTriangle className="h-4 w-4" /><p className="text-xs font-black uppercase tracking-[0.12em]">Validação</p></div>
-          <div className="mt-3 space-y-2">
-            {issues.map((issue, index) => (
-              <div key={issue.code + issue.path + index} className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs text-slate-600">
-                <span className={issue.severity === 'error' ? 'font-bold text-rose-700' : 'font-bold text-amber-800'}>{issue.severity === 'error' ? 'Erro' : 'Aviso'}</span>
-                {' · '}{issue.path}{' · '}{issue.message}
+        <div
+          className={[
+            'rounded-2xl border p-5',
+            validationErrors.length > 0
+              ? 'border-rose-200 bg-rose-50'
+              : 'border-amber-200 bg-amber-50',
+          ].join(' ')}
+          data-testid="warehouse-siscofis-validation-summary"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className={[
+                'flex items-center gap-2',
+                validationErrors.length > 0 ? 'text-rose-800' : 'text-amber-800',
+              ].join(' ')}>
+                <AlertTriangle className="h-4 w-4" />
+                <p className="text-xs font-black uppercase tracking-[0.12em]">Validação</p>
               </div>
-            ))}
+              <p className="mt-1 text-xs leading-5 text-slate-600">
+                {validationErrors.length > 0
+                  ? validationErrors.length + ' erro(s) bloqueiam a confirmação.'
+                  : 'Nenhum erro bloqueante.'}
+                {validationWarnings.length > 0
+                  ? ' ' + validationWarnings.length + ' aviso(s) foram agrupados para reduzir poluição visual.'
+                  : ''}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {validationErrors.length > 0 && (
+                <span className="rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-[10px] font-black text-rose-700">
+                  {validationErrors.length} erro(s)
+                </span>
+              )}
+              {validationWarnings.length > 0 && (
+                <span className="rounded-lg border border-amber-200 bg-white px-2.5 py-1 text-[10px] font-black text-amber-800">
+                  {validationWarnings.length} aviso(s)
+                </span>
+              )}
+            </div>
           </div>
+
+          {validationErrors.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {validationErrors.map((issue, index) => (
+                <div
+                  key={issue.code + issue.path + index}
+                  className="rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs text-slate-700"
+                >
+                  <span className="font-black text-rose-700">Erro</span>
+                  {' · '}{issue.path}{' · '}{issue.message}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {warningGroups.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {!showValidationDetails && warningGroups.slice(0, 4).map((group) => (
+                <div
+                  key={group.code + group.message}
+                  className="flex flex-col gap-1 rounded-xl border border-amber-200/80 bg-white px-3 py-2 text-xs text-slate-700 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <span>
+                    <span className="font-black text-amber-800">Aviso</span>
+                    {' · '}{group.message}
+                  </span>
+                  <span className="shrink-0 text-[10px] font-black text-amber-700">
+                    {group.count} ocorrência(s)
+                  </span>
+                </div>
+              ))}
+
+              {showValidationDetails && validationWarnings.map((issue, index) => (
+                <div
+                  key={issue.code + issue.path + index}
+                  className="rounded-xl border border-amber-200/80 bg-white px-3 py-2 text-xs text-slate-700"
+                >
+                  <span className="font-black text-amber-800">Aviso</span>
+                  {' · '}{issue.path}{' · '}{issue.message}
+                </div>
+              ))}
+
+              {(validationWarnings.length > 1 || warningGroups.length > 4) && (
+                <button
+                  type="button"
+                  onClick={() => setShowValidationDetails((current) => !current)}
+                  className="mt-1 inline-flex h-8 items-center rounded-lg border border-amber-300 bg-white px-3 text-[10px] font-black text-amber-800 transition hover:bg-amber-50"
+                  data-testid="warehouse-siscofis-validation-toggle"
+                >
+                  {showValidationDetails
+                    ? 'Recolher detalhes'
+                    : 'Ver detalhes dos ' + validationWarnings.length + ' avisos'}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
