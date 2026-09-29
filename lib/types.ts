@@ -178,6 +178,15 @@ export interface CronogramaEntregaColuna {
   observacao?: string;
 }
 
+export interface CronogramaEmailEnvio {
+  enviadoEm: string;
+  remetente: string;
+  destinatario: string;
+  assunto: string;
+  messageId: string;
+  fonteEmailFornecedor: 'local' | 'global';
+}
+
 export interface CronogramaEmpenho {
   id: string; // Usually matches the empenhoId
   empenhoId: string;
@@ -193,4 +202,5 @@ export interface CronogramaEmpenho {
       [colunaId: string]: number;
     };
   };
+  ultimoEnvioEmail?: CronogramaEmailEnvio;
 }
