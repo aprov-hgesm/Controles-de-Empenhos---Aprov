@@ -18,8 +18,6 @@ export const WAREHOUSE_LANDING_VISUAL_SCHEMA_VERSION =
 export interface WarehouseLandingVisualTransform {
   offsetX: number;
   offsetY: number;
-  scale: number;
-  rotation: number;
 }
 
 export type WarehouseLandingVisualOverrides =
@@ -60,8 +58,6 @@ export function normalizeWarehouseLandingVisualOverrides(
     output[depotId] = {
       offsetX: clamp(finite(candidate.offsetX, 0), -500, 500),
       offsetY: clamp(finite(candidate.offsetY, 0), -380, 380),
-      scale: clamp(finite(candidate.scale, 1), 0.55, 1.65),
-      rotation: clamp(finite(candidate.rotation, 0), -180, 180),
     };
   }
 
