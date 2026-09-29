@@ -46,6 +46,7 @@ function run(command, args, env = process.env) {
 }
 
 await run(process.execPath, ['scripts/firestore-multitenancy-security.test.mjs']);
+await run(process.execPath, ['scripts/warehouse-e2e-fixture.mjs']);
 
 const server = spawn(
   process.execPath,

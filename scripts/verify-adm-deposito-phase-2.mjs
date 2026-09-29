@@ -21,8 +21,10 @@ for (const marker of [
   "WAREHOUSE_MOVEMENT_SCHEMA_VERSION = 'warehouse_movement_v1'",
   "WAREHOUSE_BALANCE_SCHEMA_VERSION = 'warehouse_balance_v1'",
   "'INITIAL_BALANCE'",
+  "'MANUAL_ENTRY'",
   "'INVOICE_ENTRY'",
   "'OUTBOUND'",
+  "'OUTBOUND_RETURN'",
   "'TRANSFER'",
   "'INVENTORY_ADJUSTMENT'",
   "'INVOICE_CORRECTION'",
@@ -99,7 +101,7 @@ for (const scenario of [
 }
 
 for (const marker of [
-  'suporta os sete tipos iniciais do ledger da FASE 2',
+  'suporta os nove tipos atuais do ledger',
   'gera ID determinístico por workspace e chave de idempotência',
   'saldo materializado é derivado do ledger e incrementa revisão',
   'replay idempotente exige payload canônico idêntico',
@@ -140,10 +142,10 @@ if (findings.length) {
   process.exitCode = 2;
 } else {
   console.log('ADM DEPÓSITO FASE 2: READY');
-  console.log('DEP-2: ledger append-only com os sete tipos iniciais');
+  console.log('DEP-2: ledger append-only com os nove tipos operacionais atuais');
   console.log('DEP-2.1: saldo materializado atualizado atomicamente com o ledger');
   console.log('DEP-2.2: ID determinístico e replay idempotente sem duplicação');
-  console.log('Segurança: gate fundador preservado e saldo não pode divergir do ledger');
+  console.log('Segurança: gate multi-tenant preservado e saldo não pode divergir do ledger');
   console.log('Escopo: NF→estoque e demais funcionalidades da FASE 3 não iniciadas');
 }
 

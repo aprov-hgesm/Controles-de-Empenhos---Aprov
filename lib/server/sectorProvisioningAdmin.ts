@@ -409,11 +409,90 @@ async function updateAuthUserWarehouseClaims(
   );
 }
 
+function warehouseClaimsAuthEmulatorBaseUrl(): string | null {
+  if (process.env.EMPROVEX_E2E_SERVER_AUTH !== '1') return null;
+
+  const host = process.env.FIREBASE_AUTH_EMULATOR_HOST?.trim() || '';
+  if (host !== '127.0.0.1:9099' && host !== 'localhost:9099') return null;
+
+  return `http://${host}/identitytoolkit.googleapis.com/v1/projects/${encodeURIComponent(PROJECT_ID)}`;
+}
+
+async function ensureSectorWarehouseClaimsInAuthEmulator(
+  uid: string,
+  workspaceId: string,
+  ug: string,
+  baseUrl: string
+): Promise<void> {
+  const headers = {
+    authorization: 'Bearer owner',
+    'content-type': 'application/json',
+  };
+
+  const lookupResponse = await fetch(
+    `${baseUrl}/accounts:lookup?key=${encodeURIComponent(API_KEY)}`,
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ localId: [uid] }),
+      cache: 'no-store',
+    }
+  );
+  const lookup = await readJson<{ users?: IdentityToolkitUser[] } & GoogleApiErrorPayload>(
+    lookupResponse
+  );
+  const user = lookup.users?.[0];
+
+  if (!lookupResponse.ok || !user?.localId || user.localId !== uid) {
+    throw new SectorProvisioningFailure(
+      'Usuário Firebase do setor não foi localizado para autorizar a Central de Depósitos.',
+      'FORBIDDEN',
+      403
+    );
+  }
+
+  const updateResponse = await fetch(
+    `${baseUrl}/accounts:update?key=${encodeURIComponent(API_KEY)}`,
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        localId: uid,
+        customAttributes: buildSectorWarehouseCustomAttributes(
+          workspaceId,
+          ug,
+          user.customAttributes
+        ),
+      }),
+      cache: 'no-store',
+    }
+  );
+
+  if (!updateResponse.ok) {
+    throw new SectorProvisioningFailure(
+      'Não foi possível atualizar a autorização da Central de Depósitos no Auth Emulator.',
+      'UPSTREAM_ERROR',
+      503
+    );
+  }
+}
+
 export async function ensureSectorWarehouseClaims(
   uid: string,
   workspaceId: string,
   ug: string
 ): Promise<void> {
+  const emulatorBaseUrl = warehouseClaimsAuthEmulatorBaseUrl();
+  if (emulatorBaseUrl) {
+    await ensureSectorWarehouseClaimsInAuthEmulator(
+      uid,
+      workspaceId,
+      ug,
+      emulatorBaseUrl
+    );
+    return;
+  }
+
   const accessToken = await getGoogleAccessToken();
   const payload = await identityToolkitAdminRequest<{ users?: IdentityToolkitUser[] }>(
     `projects/${encodeURIComponent(PROJECT_ID)}/accounts:lookup`,

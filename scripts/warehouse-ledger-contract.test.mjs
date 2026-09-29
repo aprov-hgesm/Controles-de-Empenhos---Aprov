@@ -63,11 +63,13 @@ async function sample(overrides = {}) {
   };
 }
 
-test('suporta os sete tipos iniciais do ledger da FASE 2', () => {
+test('suporta os nove tipos atuais do ledger', () => {
   assert.deepEqual(movement.WAREHOUSE_MOVEMENT_TYPES, [
     'INITIAL_BALANCE',
+    'MANUAL_ENTRY',
     'INVOICE_ENTRY',
     'OUTBOUND',
+    'OUTBOUND_RETURN',
     'TRANSFER',
     'INVENTORY_ADJUSTMENT',
     'INVOICE_CORRECTION',

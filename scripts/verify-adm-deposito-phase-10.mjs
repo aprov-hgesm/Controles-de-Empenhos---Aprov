@@ -14,6 +14,7 @@ const control = read('features/warehouse/components/WarehouseItemControlOperatio
 const navigation = read('features/warehouse/navigation.ts');
 const rules = read('firestore.warehouse.rules');
 const security = read('scripts/firestore-multitenancy-security.test.mjs');
+const externalSecurity = read('scripts/warehouse-external-access-security.test.mjs');
 const e2e = read('tests/e2e/warehouse-phase-10.spec.mjs');
 const phaseDoc = read('docs/adm-deposito/PHASE_10_PHYSICAL_INVENTORY.md');
 const roadmap = read('docs/adm-deposito/ROADMAP.md');
@@ -65,9 +66,10 @@ assert.match(rules, /warehouseInventoryMovementLinksItem/);
 assert.doesNotMatch(rules, /match \/inventories\/\{document=\*\*\}[\s\S]{0,120}allow read, write/);
 
 assert.match(security, /FASE 10 — Inventário Físico/);
-assert.match(security, /Setor externo não lê inventário da FASE 10/);
+assert.match(externalSecurity, /setor B não lê workspace A/);
 assert.match(e2e, /warehouse-inventory-operational/);
 assert.match(e2e, /warehouse-inventory-confirm/);
+assert.match(e2e, /usuário externo autorizado acessa o inventário do próprio workspace/);
 
 assert.match(phaseDoc, /warehouse_inventory_v1/);
 assert.match(phaseDoc, /INVENTORY_ADJUSTMENT/);
