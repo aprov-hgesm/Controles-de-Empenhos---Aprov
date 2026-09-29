@@ -12,6 +12,7 @@ const expected = {
   inicio: [],
   painel: ['empenhos'],
   empenhos: ['empenhos', 'alerts', 'invoices'],
+  fornecedores: [],
   itens: ['empenhos'],
   nova_nf: ['empenhos', 'alerts', 'invoices', 'comissoes'],
   relatorios: ['empenhos', 'comissoes'],

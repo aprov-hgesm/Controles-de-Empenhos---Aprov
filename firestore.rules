@@ -164,14 +164,11 @@ service cloud.firestore {
           )
           && get(
             /databases/$(database)/documents/platformAccounts/$(request.auth.token.email)
-          ).data.accountType == 'sector'
-          && get(
-            /databases/$(database)/documents/platformAccounts/$(request.auth.token.email)
-          ).data.status == 'active'
-          && boundIdentityMatchesAccount(
+          ).data.workspaceId is string
+          && canAccessWorkspace(
             get(
               /databases/$(database)/documents/platformAccounts/$(request.auth.token.email)
-            ).data
+            ).data.workspaceId
           )
         );
     }
