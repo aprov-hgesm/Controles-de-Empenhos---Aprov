@@ -28,17 +28,17 @@ import {
 
 function ContractCard({ title, code, description }: { title: string; code: string; description: string }) {
   return (
-    <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-4 sm:p-5">
-      <p className="text-xs font-bold text-slate-300">{title}</p>
-      <code className="mt-3 block w-fit rounded-lg bg-black/25 px-2 py-1 text-xs text-blue-200">{code}</code>
-      <p className="mt-3 text-xs leading-5 text-slate-500">{description}</p>
+    <div className="rounded-2xl border border-blue-100/80 bg-white/80 p-4 shadow-sm backdrop-blur-md sm:p-5">
+      <p className="text-xs font-black text-slate-900">{title}</p>
+      <code className="mt-3 block w-fit rounded-lg border border-blue-100 bg-blue-50 px-2 py-1 text-xs font-bold text-[#00288e]">{code}</code>
+      <p className="mt-3 text-xs leading-5 text-slate-600">{description}</p>
     </div>
   );
 }
 
 function WarehouseDataState({ children }: { children: string }) {
   return (
-    <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-5 text-sm leading-6 text-slate-400">
+    <div className="rounded-2xl border border-blue-100 bg-white/80 p-5 text-sm leading-6 text-slate-600 shadow-sm backdrop-blur-md">
       {children}
     </div>
   );
@@ -312,25 +312,49 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
   }
 
   return (
-    <div className="mt-6 space-y-5" data-testid="warehouse-siscofis-operational">
+    <div className="mt-6 space-y-5 text-slate-800" data-testid="warehouse-siscofis-operational" data-visual-theme="operational-light">
+      <section className="rounded-2xl border border-blue-100/80 bg-white/80 p-5 shadow-sm backdrop-blur-md">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="font-mono text-[10px] font-black uppercase tracking-[0.18em] text-[#00288e]/65">
+              ADM Depósito · integração de inventário
+            </p>
+            <h2 className="mt-2 text-xl font-black text-[#00288e]">Migração SISCOFIS</h2>
+            <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-600">
+              Importe o inventário inicial, revise os itens elegíveis e confirme o Marco Zero com
+              rastreabilidade. PDF direto, JSON e inclusão manual convergem para a mesma validação.
+            </p>
+          </div>
+          <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 lg:max-w-sm">
+            <div className="flex items-center gap-2 text-[#00288e]">
+              <ShieldCheck className="h-4 w-4" />
+              <p className="text-[10px] font-black uppercase tracking-[0.12em]">Processo auditável</p>
+            </div>
+            <p className="mt-1 text-[11px] leading-4 text-slate-600">
+              Nenhuma prévia altera estoque. O saldo só é registrado após confirmação explícita.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <div className="grid gap-3 md:grid-cols-2">
         <ContractCard title="Contrato de importação" code={EMPROVEX_SISCOFIS_INVENTORY_SCHEMA_VERSION} description="PDF direto, migração manual e JSON usam o mesmo contrato versionado e passam pela mesma validação." />
         <ContractCard title="Snapshot auditável" code={WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION} description="Marco Zero e conciliações ficam no namespace logístico. Snapshots posteriores não alteram saldo automaticamente." />
       </div>
 
       <div
-        className="rounded-2xl border border-cyan-300/15 bg-cyan-400/[0.035] p-5"
+        className="rounded-2xl border border-blue-100/80 bg-white/80 p-5 shadow-sm backdrop-blur-md"
         data-testid="warehouse-siscofis-pdf-direct"
       >
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-3xl">
-            <div className="flex items-center gap-2 text-cyan-100">
+            <div className="flex items-center gap-2 text-[#00288e]">
               <HardDrive className="h-4 w-4" />
               <p className="text-xs font-black uppercase tracking-[0.12em]">
                 PDF SISCOFIS direto · sem IA
               </p>
             </div>
-            <p className="mt-2 text-xs leading-5 text-slate-400">
+            <p className="mt-2 text-xs leading-5 text-slate-600">
               Leitura determinística no próprio navegador. O PDF não é enviado para IA nem para serviço
               externo. O EMPROVEX lê o Mapa de Existência, usa Qtde Exist, restringe a conta 07 e aplica
               novamente o filtro de hortifruti/granjeiros antes da prévia.
@@ -345,8 +369,8 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
           <label className={[
             'inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-4 text-xs font-black transition',
             working
-              ? 'pointer-events-none border-white/[0.06] bg-white/[0.02] text-slate-600'
-              : 'border-cyan-300/20 bg-cyan-400/[0.10] text-cyan-100 hover:bg-cyan-400/[0.16]',
+              ? 'pointer-events-none border-slate-200 bg-slate-100 text-slate-600'
+              : 'border-[#00288e] bg-[#00288e] text-white shadow-sm hover:bg-[#001f70]',
           ].join(' ')}>
             <FileUp className="h-4 w-4" />
             {working ? 'Processando…' : 'Selecionar PDF SISCOFIS'}
@@ -367,75 +391,75 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
 
         {pdfSummary && (
           <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl border border-white/[0.06] bg-black/10 px-3 py-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2">
               <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">Arquivo</p>
-              <p className="mt-1 truncate text-xs font-bold text-slate-300">{pdfSummary.fileName}</p>
+              <p className="mt-1 truncate text-xs font-bold text-slate-800">{pdfSummary.fileName}</p>
               <p className="mt-1 text-[10px] text-slate-600">{pdfSummary.pageCount} página(s) · {pdfSummary.detectedRows} linha(s) detectada(s)</p>
             </div>
-            <div className="rounded-xl border border-emerald-300/10 bg-emerald-400/[0.025] px-3 py-2">
-              <p className="text-[9px] font-black uppercase tracking-[0.12em] text-emerald-300/70">Elegíveis</p>
-              <p className="mt-1 text-lg font-black text-emerald-200">{pdfSummary.eligibleRows}</p>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+              <p className="text-[9px] font-black uppercase tracking-[0.12em] text-emerald-700">Elegíveis</p>
+              <p className="mt-1 text-lg font-black text-emerald-800">{pdfSummary.eligibleRows}</p>
               <p className="text-[10px] text-slate-600">seguem para a prévia oficial</p>
             </div>
-            <div className="rounded-xl border border-amber-300/10 bg-amber-400/[0.025] px-3 py-2">
-              <p className="text-[9px] font-black uppercase tracking-[0.12em] text-amber-300/70">Filtrados</p>
-              <p className="mt-1 text-xs font-bold text-slate-300">{pdfSummary.filteredOtherAccounts} outra(s) conta(s)</p>
-              <p className="mt-1 text-xs font-bold text-slate-300">{pdfSummary.filteredHortifruti} hortifruti/granjeiro(s)</p>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+              <p className="text-[9px] font-black uppercase tracking-[0.12em] text-amber-700">Filtrados</p>
+              <p className="mt-1 text-xs font-bold text-slate-800">{pdfSummary.filteredOtherAccounts} outra(s) conta(s)</p>
+              <p className="mt-1 text-xs font-bold text-slate-800">{pdfSummary.filteredHortifruti} hortifruti/granjeiro(s)</p>
             </div>
-            <div className="rounded-xl border border-white/[0.06] bg-black/10 px-3 py-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2">
               <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">Leitura física</p>
-              <p className="mt-1 text-xs font-bold text-slate-300">{pdfSummary.zeroQuantityRows} saldo zero ignorado(s)</p>
-              <p className="mt-1 text-xs font-bold text-slate-300">{pdfSummary.invalidRows} linha(s) incompleta(s)</p>
+              <p className="mt-1 text-xs font-bold text-slate-800">{pdfSummary.zeroQuantityRows} saldo zero ignorado(s)</p>
+              <p className="mt-1 text-xs font-bold text-slate-800">{pdfSummary.invalidRows} linha(s) incompleta(s)</p>
             </div>
           </div>
         )}
       </div>
 
-      <div className="rounded-2xl border border-emerald-300/10 bg-emerald-400/[0.025] p-5">
-        <p className="text-xs font-black uppercase tracking-[0.12em] text-emerald-200">Migração manual de item</p>
+      <div className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm backdrop-blur-md">
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-emerald-800">Migração manual de item</p>
         <p className="mt-2 text-xs leading-5 text-slate-500">Para inventários pequenos ou correções de digitação. A linha manual é convertida para o mesmo JSON auditável antes da confirmação.</p>
         <div className="mt-4 grid gap-3 lg:grid-cols-[0.7fr_minmax(0,1.7fr)_0.7fr_0.8fr_0.8fr_auto]">
-          <input value={manualNumeroItem} onChange={(e) => setManualNumeroItem(e.target.value)} placeholder="Nº Ficha" className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-200" />
-          <input value={manualDescription} onChange={(e) => setManualDescription(e.target.value)} placeholder="Descrição" className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-200" />
-          <input value={manualQuantity} onChange={(e) => setManualQuantity(e.target.value)} inputMode="decimal" placeholder="Quantidade" className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-200" />
-          <input value={manualUnitValue} onChange={(e) => setManualUnitValue(e.target.value)} inputMode="decimal" placeholder="Valor unitário" className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-200" />
-          <input type="date" value={manualReferenceDate} onChange={(e) => { setManualReferenceDate(e.target.value); if (preview) setPreviewDirty(true); }} className="h-10 rounded-xl border border-white/[0.08] bg-[#01050d] px-3 text-xs text-slate-300" />
-          <button type="button" onClick={prepareManualRow} className="h-10 rounded-xl border border-emerald-300/15 bg-emerald-400/[0.08] px-4 text-xs font-black text-emerald-100">Adicionar</button>
+          <input value={manualNumeroItem} onChange={(e) => setManualNumeroItem(e.target.value)} placeholder="Nº Ficha" className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none placeholder:text-slate-600 focus:border-[#00288e]" />
+          <input value={manualDescription} onChange={(e) => setManualDescription(e.target.value)} placeholder="Descrição" className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none placeholder:text-slate-600 focus:border-[#00288e]" />
+          <input value={manualQuantity} onChange={(e) => setManualQuantity(e.target.value)} inputMode="decimal" placeholder="Quantidade" className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none placeholder:text-slate-600 focus:border-[#00288e]" />
+          <input value={manualUnitValue} onChange={(e) => setManualUnitValue(e.target.value)} inputMode="decimal" placeholder="Valor unitário" className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none placeholder:text-slate-600 focus:border-[#00288e]" />
+          <input type="date" value={manualReferenceDate} onChange={(e) => { setManualReferenceDate(e.target.value); if (preview) setPreviewDirty(true); }} className="h-10 rounded-xl border border-slate-200 bg-[#01050d] px-3 text-xs text-slate-800" />
+          <button type="button" onClick={prepareManualRow} className="h-10 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm transition hover:bg-[#001f70]">Adicionar</button>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-blue-300/10 bg-blue-400/[0.035] p-5">
+      <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <div className="flex items-center gap-2 text-blue-200"><FileJson2 className="h-4 w-4" /><p className="text-xs font-black uppercase tracking-[0.12em]">Prompt para IA externa</p></div>
-            <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-400">Use o prompt com o relatório SISCOFIS. A IA devolve apenas JSON; o EMPROVEX valida antes de qualquer confirmação.</p>
+            <div className="flex items-center gap-2 text-[#00288e]"><FileJson2 className="h-4 w-4" /><p className="text-xs font-black uppercase tracking-[0.12em]">Prompt para IA externa</p></div>
+            <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-600">Use o prompt com o relatório SISCOFIS. A IA devolve apenas JSON; o EMPROVEX valida antes de qualquer confirmação.</p>
           </div>
-          <button type="button" onClick={copyPrompt} disabled={!context?.prompt} className="inline-flex h-9 items-center gap-2 rounded-xl border border-blue-300/15 bg-blue-400/[0.08] px-3 text-xs font-bold text-blue-100 disabled:opacity-40">
+          <button type="button" onClick={copyPrompt} disabled={!context?.prompt} className="inline-flex h-9 items-center gap-2 rounded-xl border border-blue-200 bg-white px-3 text-xs font-black text-[#00288e] shadow-sm transition hover:bg-blue-50 disabled:opacity-40">
             <Clipboard className="h-3.5 w-3.5" /> Copiar prompt
           </button>
         </div>
-        <textarea readOnly value={context?.prompt || ''} className="mt-4 h-36 w-full resize-y rounded-xl border border-white/[0.07] bg-black/25 p-3 font-mono text-[10px] leading-5 text-slate-400" />
+        <textarea readOnly value={context?.prompt || ''} className="mt-4 h-36 w-full resize-y rounded-xl border border-slate-200 bg-white p-3 font-mono text-[10px] leading-5 text-slate-700 outline-none focus:border-[#00288e]" />
       </div>
 
-      <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-5">
-        <div className="flex items-center gap-2 text-slate-200"><FileJson2 className="h-4 w-4 text-blue-200" /><p className="text-xs font-black uppercase tracking-[0.12em]">JSON / linha manual preparada</p></div>
-        <textarea value={rawJson} onChange={(event) => { setRawJson(event.target.value); if (preview) setPreviewDirty(true); }} data-testid="warehouse-siscofis-json" placeholder={'{\n  "schemaVersion": "emprovex_siscofis_inventory_v1",\n  "items": [...]\n}'} className="mt-4 h-56 w-full resize-y rounded-xl border border-white/[0.08] bg-[#01050d] p-4 font-mono text-xs leading-5 text-slate-300" />
+      <div className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm backdrop-blur-md">
+        <div className="flex items-center gap-2 text-[#00288e]"><FileJson2 className="h-4 w-4 text-[#00288e]" /><p className="text-xs font-black uppercase tracking-[0.12em]">JSON / linha manual preparada</p></div>
+        <textarea value={rawJson} onChange={(event) => { setRawJson(event.target.value); if (preview) setPreviewDirty(true); }} data-testid="warehouse-siscofis-json" placeholder={'{\n  "schemaVersion": "emprovex_siscofis_inventory_v1",\n  "items": [...]\n}'} className="mt-4 h-56 w-full resize-y rounded-xl border border-slate-200 bg-[#01050d] p-4 font-mono text-xs leading-5 text-slate-800" />
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button type="button" onClick={validateImport} disabled={working || !rawJson.trim()} data-testid="warehouse-siscofis-validate" className="inline-flex h-9 items-center gap-2 rounded-xl bg-blue-500/90 px-4 text-xs font-black text-white disabled:opacity-40">
+          <button type="button" onClick={validateImport} disabled={working || !rawJson.trim()} data-testid="warehouse-siscofis-validate" className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm transition hover:bg-[#001f70] disabled:opacity-40">
             {working ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} {previewDirty ? 'Revalidar alterações' : 'Validar e gerar prévia'}
           </button>
-          <button type="button" onClick={clearDraft} disabled={working || !rawJson.trim()} className="inline-flex h-9 items-center rounded-xl border border-white/[0.08] px-3 text-xs font-bold text-slate-400 disabled:opacity-40">Limpar</button>
+          <button type="button" onClick={clearDraft} disabled={working || !rawJson.trim()} className="inline-flex h-9 items-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40">Limpar</button>
           <span className="text-[10px] text-slate-600">Modo: {context?.hasMarcoZero ? 'snapshot de conciliação' : 'Marco Zero inicial'}</span>
         </div>
       </div>
 
       {issues.length > 0 && (
-        <div className="rounded-2xl border border-amber-300/10 bg-amber-400/[0.035] p-5">
-          <div className="flex items-center gap-2 text-amber-200"><AlertTriangle className="h-4 w-4" /><p className="text-xs font-black uppercase tracking-[0.12em]">Validação</p></div>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+          <div className="flex items-center gap-2 text-amber-800"><AlertTriangle className="h-4 w-4" /><p className="text-xs font-black uppercase tracking-[0.12em]">Validação</p></div>
           <div className="mt-3 space-y-2">
             {issues.map((issue, index) => (
-              <div key={issue.code + issue.path + index} className="rounded-xl border border-white/[0.06] bg-black/10 px-3 py-2 text-xs text-slate-400">
-                <span className={issue.severity === 'error' ? 'font-bold text-rose-300' : 'font-bold text-amber-200'}>{issue.severity === 'error' ? 'Erro' : 'Aviso'}</span>
+              <div key={issue.code + issue.path + index} className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs text-slate-600">
+                <span className={issue.severity === 'error' ? 'font-bold text-rose-700' : 'font-bold text-amber-800'}>{issue.severity === 'error' ? 'Erro' : 'Aviso'}</span>
                 {' · '}{issue.path}{' · '}{issue.message}
               </div>
             ))}
@@ -444,36 +468,36 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
       )}
 
       {preview && (
-        <div className="rounded-2xl border border-emerald-300/10 bg-emerald-400/[0.025] p-5" data-testid="warehouse-siscofis-preview">
+        <div className="rounded-2xl border border-blue-100 bg-white/85 p-5 shadow-sm backdrop-blur-md" data-testid="warehouse-siscofis-preview">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="font-mono text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300/75">Prévia · {preview.kind === 'MARCO_ZERO' ? 'Marco Zero' : 'Snapshot'}</p>
-              <p className="mt-2 text-sm font-bold text-slate-200">{preview.summary.totalRows} linha(s) · {preview.summary.createsMaterials} novo(s) · {preview.summary.unresolvedRows} sem vínculo · {preview.summary.divergentRows} divergente(s)</p>
+              <p className="font-mono text-[10px] font-black uppercase tracking-[0.16em] text-[#00288e]/70">Prévia · {preview.kind === 'MARCO_ZERO' ? 'Marco Zero' : 'Snapshot'}</p>
+              <p className="mt-2 text-sm font-black text-slate-900">{preview.summary.totalRows} linha(s) · {preview.summary.createsMaterials} novo(s) · {preview.summary.unresolvedRows} sem vínculo · {preview.summary.divergentRows} divergente(s)</p>
               <p className="mt-1 text-[10px] text-slate-500">{issues.filter((item) => item.severity === 'error').length} erro(s) · {issues.filter((item) => item.severity === 'warning').length} aviso(s) · valor total {preview.import.rows.reduce((sum, row) => sum + (row.totalValue || 0), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} · {Object.keys(editedRows).length} corrigida(s) · data-base {preview.import.referenceDate}</p>
-              {previewDirty && <p className="mt-2 text-[10px] font-bold text-amber-300">Há correções manuais ainda não revalidadas. A confirmação permanece bloqueada.</p>}
+              {previewDirty && <p className="mt-2 text-[10px] font-bold text-amber-700">Há correções manuais ainda não revalidadas. A confirmação permanece bloqueada.</p>}
             </div>
-            <button type="button" onClick={confirmImport} disabled={working || !preview.canConfirm || previewDirty} className="inline-flex h-9 items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-400/[0.11] px-4 text-xs font-black text-emerald-100 disabled:opacity-40">
+            <button type="button" onClick={confirmImport} disabled={working || !preview.canConfirm || previewDirty} className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white shadow-sm transition hover:bg-[#001f70] disabled:opacity-40">
               <ShieldCheck className="h-3.5 w-3.5" /> {preview.kind === 'MARCO_ZERO' ? 'Confirmar Marco Zero' : 'Salvar snapshot'}
             </button>
           </div>
-          <div className="mt-4 overflow-x-auto rounded-xl border border-white/[0.06]">
+          <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
             <table className="min-w-[760px] w-full text-left text-xs">
-              <thead className="bg-white/[0.025] text-[9px] uppercase tracking-[0.12em] text-slate-600"><tr><th className="p-3">Nº Ficha</th><th className="p-3">Material</th><th className="p-3">Qtd.</th><th className="p-3">Valor unit.</th><th className="p-3">Total</th><th className="p-3">Vínculo</th><th className="p-3">Estado</th></tr></thead>
-              <tbody className="divide-y divide-white/[0.05]">
+              <thead className="bg-slate-50 text-[9px] uppercase tracking-[0.12em] text-slate-500"><tr><th className="p-3">Nº Ficha</th><th className="p-3">Material</th><th className="p-3">Qtd.</th><th className="p-3">Valor unit.</th><th className="p-3">Total</th><th className="p-3">Vínculo</th><th className="p-3">Estado</th></tr></thead>
+              <tbody className="divide-y divide-slate-100">
                 {preview.rows.map((row, index) => { const source = preview.import.rows.find((item) => item.rowId === row.rowId); return <tr key={preview.sourceHash + row.rowId}>
-                  <td className="p-2"><input defaultValue={row.sourceItemNumber || ''} onChange={(event) => editPreviewItem(index, 'numeroItem', event.target.value)} className="h-9 w-28 rounded-lg border border-white/[0.08] bg-black/20 px-2 font-mono text-xs text-slate-200" /></td>
-                  <td className="p-2"><input defaultValue={row.description} onChange={(event) => editPreviewItem(index, 'descricao', event.target.value)} className="h-9 min-w-[280px] w-full rounded-lg border border-white/[0.08] bg-black/20 px-2 text-xs font-bold text-slate-200" /></td>
-                  <td className="p-2"><input defaultValue={String(row.siscofisQuantity)} onChange={(event) => editPreviewItem(index, 'quantidade', event.target.value)} inputMode="decimal" className="h-9 w-24 rounded-lg border border-white/[0.08] bg-black/20 px-2 text-xs text-slate-200" /></td>
-                  <td className="p-2"><input defaultValue={String(source?.unitValue ?? 0)} onChange={(event) => editPreviewItem(index, 'valorUnitario', event.target.value)} inputMode="decimal" className="h-9 w-28 rounded-lg border border-white/[0.08] bg-black/20 px-2 text-xs text-slate-200" /></td>
-                  <td className="p-3 text-slate-400">{source?.totalValue?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00"}</td>
+                  <td className="p-2"><input defaultValue={row.sourceItemNumber || ''} onChange={(event) => editPreviewItem(index, 'numeroItem', event.target.value)} className="h-9 w-28 rounded-lg border border-slate-200 bg-white px-2 font-mono text-xs text-slate-800 outline-none focus:border-[#00288e]" /></td>
+                  <td className="p-2"><input defaultValue={row.description} onChange={(event) => editPreviewItem(index, 'descricao', event.target.value)} className="h-9 min-w-[280px] w-full rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-800 outline-none focus:border-[#00288e]" /></td>
+                  <td className="p-2"><input defaultValue={String(row.siscofisQuantity)} onChange={(event) => editPreviewItem(index, 'quantidade', event.target.value)} inputMode="decimal" className="h-9 w-24 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-800 outline-none focus:border-[#00288e]" /></td>
+                  <td className="p-2"><input defaultValue={String(source?.unitValue ?? 0)} onChange={(event) => editPreviewItem(index, 'valorUnitario', event.target.value)} inputMode="decimal" className="h-9 w-28 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-800" /></td>
+                  <td className="p-3 text-slate-600">{source?.totalValue?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00"}</td>
                   <td className="p-2">
                     {row.createsMaterial ? (
-                      <span className="text-[10px] font-bold text-blue-200">Novo material</span>
+                      <span className="text-[10px] font-bold text-[#00288e]">Novo material</span>
                     ) : (
                       <select
                         value={materialOverrides[row.rowId] || (preview.materialOptions.some((option) => option.id === row.materialId) ? row.materialId || '' : '')}
                         onChange={(event) => selectCanonicalMaterial(row.rowId, event.target.value)}
-                        className="h-9 max-w-[260px] rounded-lg border border-white/[0.08] bg-black/20 px-2 text-[10px] text-slate-200"
+                        className="h-9 max-w-[260px] rounded-lg border border-slate-200 bg-white px-2 text-[10px] text-slate-800 outline-none focus:border-[#00288e]"
                       >
                         <option value="">{row.materialId ? 'Vínculo automático' : 'Selecione o material'}</option>
                         {preview.materialOptions.map((option) => (
@@ -484,7 +508,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
                       </select>
                     )}
                   </td>
-                  <td className="p-3 text-slate-400">{row.state}{editedRows[row.rowId] ? ' · corrigida' : ''}{previewDirty ? ' · revalidar' : ''}</td>
+                  <td className="p-3 text-slate-600">{row.state}{editedRows[row.rowId] ? ' · corrigida' : ''}{previewDirty ? ' · revalidar' : ''}</td>
                 </tr>; })}
               </tbody>
             </table>
@@ -492,11 +516,11 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
         </div>
       )}
 
-      {message && <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3 text-xs text-slate-300">{message}</div>}
+      {message && <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-800">{message}</div>}
 
-      <div className="rounded-2xl border border-white/[0.07] bg-black/10 p-5">
-        <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black text-slate-300">Histórico SISCOFIS</p><p className="mt-1 text-[10px] text-slate-600">Leitura sob demanda · até 12 registros</p></div><button type="button" onClick={() => void refresh()} disabled={loading} className="rounded-lg border border-white/[0.07] p-2 text-slate-400"><RefreshCw className={loading ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} /></button></div>
-        {!context?.snapshots.length ? <p className="mt-4 text-xs text-slate-500">Nenhum Marco Zero confirmado.</p> : <div className="mt-4 space-y-2">{context.snapshots.map((snapshot) => <div key={snapshot.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-3"><p className="text-xs font-bold text-slate-300">{snapshot.kind === 'MARCO_ZERO' ? 'Marco Zero' : 'Snapshot'} · {snapshot.referenceDate}</p><p className="mt-1 text-[10px] text-slate-600">{snapshot.sourceLabel} · {snapshot.status}</p></div>)}</div>}
+      <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+        <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black text-slate-800">Histórico SISCOFIS</p><p className="mt-1 text-[10px] text-slate-600">Leitura sob demanda · até 12 registros</p></div><button type="button" onClick={() => void refresh()} disabled={loading} className="rounded-lg border border-slate-200 p-2 text-slate-600"><RefreshCw className={loading ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} /></button></div>
+        {!context?.snapshots.length ? <p className="mt-4 text-xs text-slate-500">Nenhum Marco Zero confirmado.</p> : <div className="mt-4 space-y-2">{context.snapshots.map((snapshot) => <div key={snapshot.id} className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3"><p className="text-xs font-bold text-slate-800">{snapshot.kind === 'MARCO_ZERO' ? 'Marco Zero' : 'Snapshot'} · {snapshot.referenceDate}</p><p className="mt-1 text-[10px] text-slate-600">{snapshot.sourceLabel} · {snapshot.status}</p></div>)}</div>}
       </div>
     </div>
   );
