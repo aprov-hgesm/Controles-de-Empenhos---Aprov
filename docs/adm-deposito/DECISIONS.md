@@ -2355,3 +2355,23 @@ Data: 2026-09-28.
 - Estrutura de depósitos/localizações é carregada sob demanda apenas quando o operador abre a ação de alocação, reduzindo leituras desnecessárias.
 - A fila identifica visualmente a origem **Marco Zero SISCOFIS** e preserva os números de ficha disponíveis no snapshot para facilitar conferência.
 - A arquitetura evita atribuir origem artificial a estoque fungível: a fila representa a necessidade física real de localização do material originalmente presente no Marco Zero.
+
+
+## D-115 — Migração SISCOFIS segue integralmente o tema operacional claro
+
+Data: 2026-09-28.
+
+- **Migração SISCOFIS** é uma superfície operacional de importação, revisão, formulário e tabela; portanto segue integralmente a D-076 e `docs/adm-deposito/VISUAL_IDENTITY.md`.
+- A aba não pode adotar identidade escura/imersiva. Essa exceção permanece restrita ao **Início** do ADM Depósito.
+- A hierarquia visual oficial da Migração SISCOFIS usa:
+  - superfícies `bg-white/80` ou equivalentes claras/translúcidas;
+  - fundo informativo `blue-50` e bordas `blue-100`/`slate-200`;
+  - azul institucional `#00288e` em títulos, ícones de contexto, botões primários e foco;
+  - textos principais `slate-800/900` e auxiliares `slate-500/600`;
+  - inputs, selects e textareas brancos ou `slate-50`, nunca quase pretos;
+  - feedbacks semânticos `emerald`, `amber` e `rose` apenas para sucesso, atenção e erro.
+- PDF direto, entrada manual, prompt para IA, JSON, validação, prévia e histórico devem parecer partes de uma única superfície EMPROVEX, e não submódulos com temas próprios.
+- A ação primária usa o azul institucional; cores ciano/violeta/verde podem existir somente como acentos semânticos secundários.
+- A prévia de importação mantém tabela clara, campos editáveis claros e alto contraste.
+- O histórico SISCOFIS permanece somente leitura e usa o mesmo padrão claro de Relatórios/Controle de Materiais.
+- Guards da Fase 5 e da ADM-R1 passam a bloquear tokens de dark mode operacional na Migração SISCOFIS.
