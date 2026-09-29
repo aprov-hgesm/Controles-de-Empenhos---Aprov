@@ -2375,3 +2375,17 @@ Data: 2026-09-28.
 - A prévia de importação mantém tabela clara, campos editáveis claros e alto contraste.
 - O histórico SISCOFIS permanece somente leitura e usa o mesmo padrão claro de Relatórios/Controle de Materiais.
 - Guards da Fase 5 e da ADM-R1 passam a bloquear tokens de dark mode operacional na Migração SISCOFIS.
+
+
+## D-116 — Validação SISCOFIS é compacta e progressiva
+
+Data: 2026-09-28.
+
+- A área **Validação** da Migração SISCOFIS não deve expandir todos os avisos linha a linha por padrão.
+- Erros com severidade `error`, por bloquearem a confirmação, permanecem imediatamente visíveis e destacados.
+- Avisos com severidade `warning` são agrupados por `code + message`, exibindo a quantidade de ocorrências em vez de repetir a mesma mensagem dezenas de vezes.
+- A visão padrão mostra no máximo quatro grupos de aviso.
+- O detalhamento linha a linha permanece disponível sob demanda por **Ver detalhes**, com opção de recolher novamente.
+- A compactação é exclusivamente visual: nenhum issue é descartado, reclassificado ou removido do contrato de validação.
+- A prévia continua mostrando a contagem total de erros e avisos, e `canConfirm` permanece governado pelas regras de domínio já existentes.
+- O objetivo é reduzir poluição visual mantendo auditabilidade e acesso integral ao diagnóstico quando necessário.
