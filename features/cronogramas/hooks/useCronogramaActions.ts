@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type React from 'react';
 import type { User } from 'firebase/auth';
 import type { CronogramaEmpenho, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
@@ -7,6 +8,10 @@ import { saveCronograma } from '../../../lib/firebaseSync';
 import { loadJsPdfWithAutoTable } from '../../../lib/pdfToolkit';
 import { resolveInstitutionalDocumentIdentity } from '../../../lib/institutionalDocumentProfile';
 import type { WorkspaceInstitutionalProfile } from '../../../lib/platformIdentity';
+import { resolveSupplierEmailForEmpenho } from '../../../lib/supplierEmailResolver';
+import { authorizeWorkspaceGmail, sendWorkspaceGmailMessage } from '../../../lib/googleWorkspaceMail';
+import { loadWorkspaceDriveSettings } from '../../../lib/workspaceDriveSettings';
+import { isOperationalSectorContext, type ResolvedWorkspaceContext } from '../../../lib/workspaceContext';
 
 type Distribution=Record<string,Record<string,number>>;
 interface CronogramaActionsContext {
@@ -29,13 +34,15 @@ interface CronogramaActionsContext {
   showToast:(message:string,type?:any)=>void;
   formatDateOnly:(dateStr?:string)=>string;
   institutionalProfile?: WorkspaceInstitutionalProfile | null;
+  workspaceContext: ResolvedWorkspaceContext;
 }
 
 /** Ações e geração de PDF dos cronogramas de entrega. */
 export function useCronogramaActions(context:CronogramaActionsContext){
-  const { user, empenhos, cronogramas, setCronogramas, selectedCronogramaEmpenhoId, setSelectedCronogramaEmpenhoId, cronogramaColunas, setCronogramaColunas, cronogramaDistribuicao, setCronogramaDistribuicao, cronogramaLocalEntrega, setCronogramaLocalEntrega, cronogramaHorarioEntrega, setCronogramaHorarioEntrega, cronogramaObservacoes, setCronogramaObservacoes, cronogramaResponsavelNome, setCronogramaResponsavelNome, cronogramaResponsavelCargo, setCronogramaResponsavelCargo, setIsSavingCronograma, showToast, formatDateOnly, institutionalProfile }=context;
+  const { user, empenhos, cronogramas, setCronogramas, selectedCronogramaEmpenhoId, setSelectedCronogramaEmpenhoId, cronogramaColunas, setCronogramaColunas, cronogramaDistribuicao, setCronogramaDistribuicao, cronogramaLocalEntrega, setCronogramaLocalEntrega, cronogramaHorarioEntrega, setCronogramaHorarioEntrega, cronogramaObservacoes, setCronogramaObservacoes, cronogramaResponsavelNome, setCronogramaResponsavelNome, cronogramaResponsavelCargo, setCronogramaResponsavelCargo, setIsSavingCronograma, showToast, formatDateOnly, institutionalProfile, workspaceContext }=context;
   const institutionalIdentity = resolveInstitutionalDocumentIdentity(institutionalProfile);
   const { organizationName, sectionName, documentHeaderLines, defaultDeliveryLocation, defaultResponsibleRole } = institutionalIdentity;
+  const [isSendingCronogramaEmail, setIsSendingCronogramaEmail] = useState(false);
 
   // Helper date calculator for schedule simulation
   const getFutureDate = (daysAhead: number): string => {
@@ -163,24 +170,31 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     setCronogramaColunas(cronogramaColunas.filter(c => c.id !== colId));
   };
 
+  const buildCronogramaObject = (
+    emp: Empenho,
+    previous?: CronogramaEmpenho | null
+  ): CronogramaEmpenho => ({
+    id: `crono_${emp.id}`,
+    empenhoId: emp.id,
+    dataCriacao: previous?.dataCriacao || new Date().toISOString(),
+    localEntrega: cronogramaLocalEntrega,
+    horarioEntrega: cronogramaHorarioEntrega,
+    observacoes: cronogramaObservacoes,
+    responsavelNome: cronogramaResponsavelNome,
+    responsavelCargo: cronogramaResponsavelCargo,
+    colunasEntregas: cronogramaColunas,
+    distribuicao: cronogramaDistribuicao,
+    ...(previous?.ultimoEnvioEmail ? { ultimoEnvioEmail: previous.ultimoEnvioEmail } : {}),
+  });
+
   const handleSaveCronograma = async () => {
     if (!selectedCronogramaEmpenhoId) return;
     const emp = empenhos.find(e => e.id === selectedCronogramaEmpenhoId);
     if (!emp) return;
      setIsSavingCronograma(true);
     try {
-      const cronogramaObj: CronogramaEmpenho = {
-        id: `crono_${emp.id}`,
-        empenhoId: emp.id,
-        dataCriacao: new Date().toISOString(),
-        localEntrega: cronogramaLocalEntrega,
-        horarioEntrega: cronogramaHorarioEntrega,
-        observacoes: cronogramaObservacoes,
-        responsavelNome: cronogramaResponsavelNome,
-        responsavelCargo: cronogramaResponsavelCargo,
-        colunasEntregas: cronogramaColunas,
-        distribuicao: cronogramaDistribuicao
-      };
+      const previous = cronogramas.find((item) => item.empenhoId === emp.id) || null;
+      const cronogramaObj = buildCronogramaObject(emp, previous);
        setCronogramas(prev => {
         const filtered = prev.filter(c => c.empenhoId !== emp.id);
         return [...filtered, cronogramaObj];
@@ -198,7 +212,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
   };
 
   // PDF Generator for Cronograma
-  const handleGenerateCronogramaPDF = async (emp: Empenho, action: 'download' | 'print' = 'download') => {
+  const handleGenerateCronogramaPDF = async (emp: Empenho, action: 'download' | 'print' | 'blob' = 'download') => {
     const { jsPDF, autoTable } = await loadJsPdfWithAutoTable();
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -311,7 +325,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     doc.text('2. DISTRIBUIÇÃO DAS REMESSAS DE ENTREGA', margin, yPos);
     yPos += 3;
      // Build headers dynamically
-    const headers: string[] = ['Item / Descrição', 'Und', 'Emp.', 'Rec.', 'Saldo Disp.'];
+    const headers: string[] = ['Item compra / Descrição', 'Und', 'Emp.', 'Rec.', 'Saldo Disp.'];
     cronogramaColunas.forEach((col) => {
       headers.push(`${col.titulo}\n${formatDateOnly(col.dataPrevista)}`);
     });
@@ -320,8 +334,11 @@ export function useCronogramaActions(context:CronogramaActionsContext){
       const saldoDisponivel = Math.max(0, it.quantity - it.received);
       const totalProg = cronogramaColunas.reduce((sum, col) => sum + (Number(cronogramaDistribuicao[it.id]?.[col.id]) || 0), 0);
       const valorTotalProg = totalProg * it.unitPrice;
+       const legacyItemCompraId = /^\d+$/.test(String(it.id || '').trim()) ? String(it.id).trim() : '';
+       const rawItemCompraNumber = String(it.itemCompraNumber || legacyItemCompraId).trim();
+       const itemCompraNumber = /^\d+$/.test(rawItemCompraNumber) ? rawItemCompraNumber.padStart(5, '0') : rawItemCompraNumber;
        const row: string[] = [
-        `${it.name}`,
+        `${itemCompraNumber ? `Item compra: ${itemCompraNumber}\n` : ''}${it.name}`,
         it.unit,
         String(it.quantity),
         String(it.received),
@@ -468,21 +485,157 @@ export function useCronogramaActions(context:CronogramaActionsContext){
       const pWidth = doc.getTextWidth(pText);
       doc.text(pText, pageWidth - margin - pWidth, doc.internal.pageSize.getHeight() - 6);
     }
-     if (action === 'download') {
-      const filename = `Cronograma_Entrega_NE_${emp.id.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+     const filename = `Cronograma_Entrega_NE_${emp.id.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+    if (action === 'blob') {
+      return {
+        blob: doc.output('blob'),
+        filename,
+      };
+    }
+    if (action === 'download') {
       doc.save(filename);
       showToast(`Download do Cronograma PDF concluído: ${filename}`, 'success');
+      return null;
+    }
+
+    const blobUrl = doc.output('bloburl');
+    const win = window.open(blobUrl, '_blank');
+    if (win) {
+      win.focus();
+      showToast('Cronograma em PDF aberto para impressão.', 'success');
     } else {
-      const blobUrl = doc.output('bloburl');
-      const win = window.open(blobUrl, '_blank');
-      if (win) {
-        win.focus();
-        showToast('Cronograma em PDF aberto para impressão.', 'success');
-      } else {
-        const filename = `Cronograma_Entrega_NE_${emp.id.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-        doc.save(filename);
-        showToast('Pop-up bloqueado pelo navegador. O cronograma foi baixado diretamente.', 'info');
+      doc.save(filename);
+      showToast('Pop-up bloqueado pelo navegador. O cronograma foi baixado diretamente.', 'info');
+    }
+    return null;
+  };
+
+  const handleSendCronogramaEmail = async (emp: Empenho) => {
+    if (!user) {
+      showToast('Usuário não autenticado para enviar o cronograma.', 'error');
+      return;
+    }
+    if (!isOperationalSectorContext(workspaceContext)) {
+      showToast('Não existe um workspace operacional ativo para este envio.', 'error');
+      return;
+    }
+
+    setIsSendingCronogramaEmail(true);
+    try {
+      const [supplierEmail, driveSettings] = await Promise.all([
+        resolveSupplierEmailForEmpenho(user.uid, emp),
+        loadWorkspaceDriveSettings(workspaceContext),
+      ]);
+
+      if (!supplierEmail) {
+        throw new Error(
+          'Este fornecedor não possui e-mail cadastrado nem pré-cadastrado para o CNPJ do empenho.'
+        );
       }
+      if (!driveSettings?.accountEmail) {
+        throw new Error(
+          'O Google Drive deste setor ainda não está configurado. Configure a Conta Google antes de enviar cronogramas.'
+        );
+      }
+
+      const subject = `Cronograma de Entrega - NE ${emp.id}`;
+      const sourceLabel = supplierEmail.source === 'local'
+        ? 'cadastro do setor'
+        : 'pré-cadastro global';
+
+      const confirmed = window.confirm(
+        'Enviar o cronograma por e-mail?\n\n'
+        + 'De: ' + driveSettings.accountEmail + '\n'
+        + 'Para: ' + supplierEmail.email + '\n'
+        + 'Fonte do destinatário: ' + sourceLabel + '\n'
+        + 'Assunto: ' + subject + '\n\n'
+        + 'O PDF oficial será anexado e a mensagem ficará registrada em Enviados da Conta Google.'
+      );
+      if (!confirmed) return;
+
+      // A autorização é iniciada imediatamente após a confirmação do usuário,
+      // antes de gerar o PDF, para preservar o gesto necessário ao popup OAuth.
+      await authorizeWorkspaceGmail(
+        workspaceContext.workspaceId,
+        driveSettings.accountEmail
+      );
+
+      const previous = cronogramas.find((item) => item.empenhoId === emp.id) || null;
+      const cronogramaBeforeSend = buildCronogramaObject(emp, previous);
+      await saveCronograma(user.uid, cronogramaBeforeSend);
+
+      const pdf = await handleGenerateCronogramaPDF(emp, 'blob');
+      if (!pdf) throw new Error('Não foi possível gerar o PDF do cronograma para anexar ao e-mail.');
+
+      const bodyLines = [
+        'Prezados,',
+        '',
+        'Encaminhamos, em anexo, o Cronograma de Entrega referente à Nota de Empenho ' + emp.id + '.',
+        'Solicitamos a ciência e a observância das datas, quantidades e condições de entrega previstas no documento.',
+        '',
+        'Fornecedor: ' + emp.supplier,
+        'Local de entrega: ' + (cronogramaLocalEntrega || defaultDeliveryLocation),
+        '',
+        'Atenciosamente,',
+        cronogramaResponsavelNome || user.displayName || 'Setor de Aprovisionamento',
+        cronogramaResponsavelCargo || defaultResponsibleRole,
+        organizationName,
+        '',
+        'Mensagem enviada pelo EMPROVEX.',
+      ];
+
+      const sent = await sendWorkspaceGmailMessage({
+        workspaceId: workspaceContext.workspaceId,
+        expectedSenderEmail: driveSettings.accountEmail,
+        to: supplierEmail.email,
+        subject,
+        bodyText: bodyLines.join('\n'),
+        attachment: pdf.blob,
+        attachmentName: pdf.filename,
+      });
+
+      const sentAt = new Date().toISOString();
+      const cronogramaAfterSend: CronogramaEmpenho = {
+        ...cronogramaBeforeSend,
+        ultimoEnvioEmail: {
+          enviadoEm: sentAt,
+          remetente: sent.senderEmail,
+          destinatario: supplierEmail.email,
+          assunto: subject,
+          messageId: sent.messageId,
+          fonteEmailFornecedor: supplierEmail.source,
+        },
+      };
+
+      let auditPersisted = true;
+      try {
+        await saveCronograma(user.uid, cronogramaAfterSend);
+      } catch (auditError) {
+        auditPersisted = false;
+        console.error('Cronograma enviado, mas o registro de auditoria falhou:', auditError);
+      }
+
+      setCronogramas((previousItems) => [
+        ...previousItems.filter((item) => item.empenhoId !== emp.id),
+        cronogramaAfterSend,
+      ]);
+
+      showToast(
+        auditPersisted
+          ? `Cronograma enviado para ${supplierEmail.email} pela conta ${sent.senderEmail}.`
+          : `Cronograma enviado para ${supplierEmail.email}, mas o registro do último envio não pôde ser salvo. Não reenvie sem conferir a pasta Enviados.`,
+        auditPersisted ? 'success' : 'info'
+      );
+    } catch (error) {
+      console.error('Erro ao enviar cronograma por e-mail:', error);
+      showToast(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível enviar o cronograma por e-mail.',
+        'error'
+      );
+    } finally {
+      setIsSendingCronogramaEmail(false);
     }
   };
 
@@ -494,6 +647,8 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     handleAddRemessa,
     handleRemoveRemessa,
     handleSaveCronograma,
-    handleGenerateCronogramaPDF
+    handleGenerateCronogramaPDF,
+    handleSendCronogramaEmail,
+    isSendingCronogramaEmail
   };
 }

@@ -123,6 +123,7 @@ export function WarehouseDepotLayoutEditor({
   onRemoveObject?: (object: WarehouseDepotLayoutObject) => void;
 }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const interactionRef = useRef<null | {
     type: 'move' | 'resize' | 'rotate' | 'pan';
     objectId?: string;
@@ -152,6 +153,30 @@ export function WarehouseDepotLayoutEditor({
     setPan({ x: 0, y: 0 });
     onSelectedObjectIdChange(null);
   }, [scopeKey, onSelectedObjectIdChange]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    const updateSize = () => {
+      const rect = viewport.getBoundingClientRect();
+      setViewportSize({ width: rect.width, height: rect.height });
+    };
+
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, []);
+
+  const fitScale = useMemo(() => {
+    if (viewportSize.width <= 0 || viewportSize.height <= 0) return 1;
+    const horizontal = Math.max(0.01, (viewportSize.width - 48) / Math.max(1, logicalWidth));
+    const vertical = Math.max(0.01, (viewportSize.height - 48) / Math.max(1, logicalHeight));
+    return Math.min(horizontal, vertical);
+  }, [logicalHeight, logicalWidth, viewportSize.height, viewportSize.width]);
+
+  const effectiveScale = fitScale * zoom;
 
   const selected = useMemo(
     () => objects.find((item) => item.id === selectedObjectId) || null,
@@ -326,7 +351,7 @@ export function WarehouseDepotLayoutEditor({
         </div>
         <div className="flex flex-wrap items-center gap-1">
           <button type="button" aria-label="Diminuir zoom" onClick={() => setZoom((value) => clamp(value - 0.1, ZOOM_MIN, ZOOM_MAX))} className={`rounded-lg p-2 ${lightTheme ? 'text-slate-500 hover:bg-slate-100' : 'text-slate-400 hover:bg-white/[0.05]'}`}><ZoomOut className="h-3.5 w-3.5" /></button>
-          <span className="min-w-11 text-center text-[10px] font-bold text-slate-500">{Math.round(zoom * 100)}%</span>
+          <span className="min-w-16 text-center text-[10px] font-bold text-slate-500">{Math.round(zoom * 100)}% · ajuste</span>
           <button type="button" aria-label="Aumentar zoom" onClick={() => setZoom((value) => clamp(value + 0.1, ZOOM_MIN, ZOOM_MAX))} className={`rounded-lg p-2 ${lightTheme ? 'text-slate-500 hover:bg-slate-100' : 'text-slate-400 hover:bg-white/[0.05]'}`}><ZoomIn className="h-3.5 w-3.5" /></button>
           <span className="mx-1 h-5 w-px bg-white/[0.07]" />
           <button type="button" onClick={() => setView('top')} aria-pressed={view === 'top'} className={`rounded-lg border px-2.5 py-2 text-[10px] font-bold transition ${view === 'top' ? 'border-[#00288e] bg-[#00288e] text-white shadow-sm' : lightTheme ? 'border-slate-200 bg-white text-slate-600 hover:bg-blue-50' : 'border-white/[0.07] text-slate-300 hover:bg-white/[0.05]'}`}>Vista superior</button>
@@ -365,10 +390,8 @@ export function WarehouseDepotLayoutEditor({
           }
           if (!interaction.objectId || !interaction.startObject || !interaction.rectWidth || !interaction.rectHeight) return;
           const start = interaction.startObject;
-          const scaleX = logicalWidth / interaction.rectWidth / zoom;
-          const scaleY = logicalHeight / interaction.rectHeight / zoom;
-          const dx = (event.clientX - interaction.startClientX) * scaleX;
-          const dy = (event.clientY - interaction.startClientY) * scaleY;
+          const dx = (event.clientX - interaction.startClientX) / Math.max(0.001, effectiveScale);
+          const dy = (event.clientY - interaction.startClientY) / Math.max(0.001, effectiveScale);
           if (interaction.type === 'move') {
             patchObject(interaction.objectId, {
               x: clamp(snap(start.x + dx, snapEnabled), 0, Math.max(0, logicalWidth - start.width)),
@@ -394,7 +417,7 @@ export function WarehouseDepotLayoutEditor({
           style={{
             width: logicalWidth,
             height: logicalHeight,
-            transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px)) scale(${zoom})`,
+            transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px)) scale(${effectiveScale})`,
             backgroundImage: showGrid
               ? lightTheme
                 ? 'linear-gradient(rgba(148,163,184,0.20) 1px, transparent 1px),linear-gradient(90deg,rgba(148,163,184,0.20) 1px, transparent 1px)'
@@ -462,7 +485,7 @@ export function WarehouseDepotLayoutEditor({
 
       <div className={`flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2 ${lightTheme ? 'border-slate-200 bg-slate-50' : 'border-white/[0.07] bg-white/[0.02]'}`}>
         <p className={`text-[9px] ${lightTheme ? 'text-slate-500' : 'text-slate-600'}`}>
-          Edição local · grade {showGrid ? 'visível' : 'oculta'} · snap {snapEnabled ? 'ativo' : 'livre'} · nenhum movimento grava no Firestore
+          Edição local · proporção {logicalWidth}×{logicalHeight} preservada · grade {showGrid ? 'visível' : 'oculta'} · snap {snapEnabled ? 'ativo' : 'livre'} · nenhum movimento grava no Firestore
         </p>
         <div className="flex items-center gap-1">
           <button type="button" disabled={!selected} onClick={duplicateSelected} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[9px] font-bold text-slate-400 hover:bg-white/[0.05] disabled:opacity-30"><Copy className="h-3 w-3" /> Duplicar</button>

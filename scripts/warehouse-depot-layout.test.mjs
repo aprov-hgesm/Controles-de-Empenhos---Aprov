@@ -160,11 +160,11 @@ test('biblioteca física cobre os tipos obrigatórios sem novo schema de layout'
     'Rack',
     'Armário',
     'Freezer',
-    'Geladeira',
+    'Geladeira industrial',
     'Câmara',
     'Palete',
     'Área de Paletes',
-    'Bancada',
+    'Mesa / bancada',
     'Corredor',
     'Área Livre',
     'Outra estrutura',
@@ -357,4 +357,97 @@ test('gate 9.7 mantém editor sem acesso direto a saldo, ledger, lotes, NF ou Co
 
   assert.doesNotMatch(editor, /firebase\/firestore|runTransaction|setDoc|updateDoc|writeBatch/);
   assert.match(operational, /Nenhum saldo ou movimento de estoque foi alterado/);
+});
+
+
+test('croqui aceita dimensões reais maiores e preserva ajuste proporcional no editor', () => {
+  const result = source.validateWarehouseDepotLayout(
+    layout({ logicalWidth: 12000, logicalHeight: 2400, objects: [] })
+  );
+  assert.equal(result.ok, true);
+
+  const editor = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotLayoutEditor.tsx'),
+    'utf8'
+  );
+  const operational = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseDepotViewOperational.tsx'),
+    'utf8'
+  );
+  assert.match(editor, /fitScale/);
+  assert.match(editor, /effectiveScale/);
+  assert.match(editor, /proporção \{logicalWidth\}×\{logicalHeight\} preservada/);
+  assert.match(operational, /MAX_LAYOUT_DIMENSION = 50000/);
+  assert.match(operational, /Aplicar medidas e preservar proporções/);
+  assert.match(operational, /warehouse-layout-edit-dimensions/);
+  assert.match(operational, /warehouse-structure-select/);
+});
+
+test('cadastro de locais oferece tipos físicos e subposições automáticas para estantes', () => {
+  const locations = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseLocationsR1Operational.tsx'),
+    'utf8'
+  );
+  for (const label of ['Estante', 'Palete', 'Freezer', 'Geladeira industrial', 'Mesa / bancada']) {
+    assert.match(locations, new RegExp(label.replace('/', '\\/')));
+  }
+  assert.match(locations, /Subposições da estante/);
+  assert.match(locations, /locationPreset === 'SHELF'/);
+  assert.match(locations, /parentLocationId: created\.id/);
+});
+
+
+test('prévia 3D mantém a proporção física do depósito em vez de normalizar para quadrado', () => {
+  const preview = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseIsometricPreview.tsx'),
+    'utf8'
+  );
+  assert.match(preview, /const scaleBase = Math\.max\(1, logicalWidth, logicalHeight\)/);
+  assert.match(preview, /const nx = x \/ scaleBase/);
+  assert.match(preview, /const ny = y \/ scaleBase/);
+  assert.doesNotMatch(preview, /const nx = x \/ Math\.max\(1, logicalWidth\)/);
+});
+
+
+test('croqui R1 ativo aceita contêiner longo, edita dimensões e usa leitura positiva de saldos', () => {
+  const croquis = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseCroquisR1Operational.tsx'),
+    'utf8'
+  );
+
+  assert.match(croquis, /WAREHOUSE_LAYOUT_MAX_DIMENSION/);
+  assert.doesNotMatch(croquis, /Math\.min\(5000/);
+  assert.match(croquis, /warehouse-r1-edit-dimensions/);
+  assert.match(croquis, /warehouse-r1-dimension-editor/);
+  assert.match(croquis, /Aplicar e preservar proporções/);
+  assert.match(croquis, /listWarehousePositiveLocationBalances/);
+});
+
+
+test('exclusão de Local confirma e inativa automaticamente suas Subposições', () => {
+  const locations = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseLocationsR1Operational.tsx'),
+    'utf8'
+  );
+
+  assert.match(locations, /Também serão excluídas da operação/);
+  assert.match(locations, /Subposição\(ões\) vinculada\(s\) a este Local/);
+  assert.match(locations, /for \(const child of activeSubpositions\)/);
+  assert.match(locations, /updateWarehouseLocation\(workspaceId, child\.location\.id, \{ status: 'inactive' \}\)/);
+  assert.match(locations, /await updateWarehouseLocation\(workspaceId, editingLocation\.id, \{ status: 'inactive' \}\)/);
+  assert.doesNotMatch(locations, /Remova as Subposições antes de excluir o Local/);
+});
+
+
+test('código de depósito inativo pode ser reutilizado e reativação continua protegida', () => {
+  const repository = readFileSync(
+    resolve(root, 'lib/warehouse/locationRepository.ts'),
+    'utf8'
+  );
+
+  assert.match(repository, /item\.depot\.status === 'active'/);
+  assert.match(repository, /item\.depot\.code === normalized/);
+  assert.match(repository, /nextStatus === 'active'/);
+  assert.match(repository, /current\.status !== 'active'/);
+  assert.match(repository, /assertDepotCodeAvailable\(scope\.workspaceId, nextCode, depotId\)/);
 });

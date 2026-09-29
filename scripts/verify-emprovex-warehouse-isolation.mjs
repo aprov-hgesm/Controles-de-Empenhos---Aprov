@@ -11,6 +11,8 @@ const sync = read('lib/firebaseSync.ts');
 const nfHook = read('features/notas-fiscais/hooks/useNotasFiscaisActions.ts');
 const nfView = read('features/notas-fiscais/components/NotasFiscaisView.tsx');
 const rules = read('firestore.rules');
+const warehouseRules = read('firestore.warehouse.rules');
+const firebaseConfig = JSON.parse(read('firebase.json'));
 
 for (const forbidden of [
   "from './warehouse/",
@@ -64,7 +66,41 @@ assert.notEqual(empenhoRulesStart, -1, 'Rules de empenhos não encontradas.');
 const empenhoRules = rules.slice(empenhoRulesStart, empenhoRulesStart + 900);
 assert.equal(/warehouse|ADM Depósito/i.test(empenhoRules), false);
 
+
+assert.equal(
+  rules.includes('match /warehouse/{workspaceId}'),
+  false,
+  'Rules do EMPROVEX principal não podem conter o namespace warehouse após a migração.'
+);
+assert.match(
+  warehouseRules,
+  /match \/warehouse\/\{workspaceId\} \{/,
+  'firestore.warehouse.rules precisa manter o namespace warehouse.'
+);
+
+const firestoreTargets = Array.isArray(firebaseConfig.firestore)
+  ? firebaseConfig.firestore
+  : [];
+const coreTarget = firestoreTargets.find(
+  (item) =>
+    item.database === 'ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1'
+);
+const warehouseTarget = firestoreTargets.find(
+  (item) => item.database === 'emprovex-warehouse'
+);
+assert.equal(
+  coreTarget?.rules,
+  'firestore.rules',
+  'Database principal precisa continuar vinculado a firestore.rules.'
+);
+assert.equal(
+  warehouseTarget?.rules,
+  'firestore.warehouse.rules',
+  'Database ADM Depósito precisa continuar vinculado a firestore.warehouse.rules.'
+);
+
 console.log('EMPROVEX / ADM Depósito isolation guard: PASS');
 console.log('- NF create/edit/delete independente do namespace warehouse');
 console.log('- UI de NF sem efeitos ou estado logístico obrigatório');
 console.log('- Rules operacionais de invoices/empenhos sem dependência do ADM Depósito');
+console.log('- namespace /warehouse ausente do ruleset principal e preservado no database dedicado');

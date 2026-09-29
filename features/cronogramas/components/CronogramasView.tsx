@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ArrowLeft, CalendarDays, CalendarRange, CheckCircle2, Download, Eye, FileSpreadsheet, Filter, Info, Loader2, Package, Plus, Printer, Save, Search, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowLeft, CalendarDays, CalendarRange, CheckCircle2, Download, Eye, FileSpreadsheet, Filter, Info, Loader2, Mail, Package, Plus, Printer, Save, Search, Sparkles, Trash2, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { CronogramaEmpenho, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
 import type { EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
@@ -28,10 +28,12 @@ interface CronogramasViewContext {
   formatDateOnly: any;
   handleAddRemessa: (...args: any[]) => any;
   handleGenerateCronogramaPDF: (...args: any[]) => any;
+  handleSendCronogramaEmail: (...args: any[]) => any;
   handleRemoveRemessa: (...args: any[]) => any;
   handleSaveCronograma: (...args: any[]) => any;
   handleSelectEmpenhoForCronograma: (...args: any[]) => any;
   isSavingCronograma: boolean;
+  isSendingCronogramaEmail: boolean;
   selectedCronogramaEmpenhoId: string | null;
   setCronogramaColunas: React.Dispatch<React.SetStateAction<CronogramaEntregaColuna[]>>;
   setCronogramaDistribuicao: React.Dispatch<React.SetStateAction<{ [itemId: string]: { [colunaId: string]: number } }>>;
@@ -57,7 +59,7 @@ interface CronogramasViewProps {
 }
 /** Tela de Cronogramas extraída sem alterar regras de negócio, persistência ou comportamento. */
 export function CronogramasView({ context }: CronogramasViewProps) {
-  const { applyAllToFirstRemessa, applyCronogramaPreset, clearCronogramaDistribuicao, cronogramaColunas, cronogramaDistribuicao, cronogramaHorarioEntrega, cronogramaLocalEntrega, cronogramaObservacoes, cronogramaResponsavelCargo, cronogramaResponsavelNome, cronogramas, cronogramasClassFilter, cronogramasPregaoFilter, cronogramasSearch, cronogramasStatusFilter, cronogramasYearFilter, empenhoClasses, empenhos, formatDateOnly, handleAddRemessa, handleGenerateCronogramaPDF, handleRemoveRemessa, handleSaveCronograma, handleSelectEmpenhoForCronograma, isSavingCronograma, selectedCronogramaEmpenhoId, setCronogramaColunas, setCronogramaDistribuicao, setCronogramaHorarioEntrega, setCronogramaLocalEntrega, setCronogramaObservacoes, setCronogramaResponsavelCargo, setCronogramaResponsavelNome, setCronogramasClassFilter, setCronogramasPregaoFilter, setCronogramasSearch, setCronogramasStatusFilter, setCronogramasYearFilter, setSelectedCronogramaEmpenhoId, setShowCronogramaPreviewModal, showCronogramaPreviewModal, uniqueEmpenhoYears, uniquePregaos } = context;
+  const { applyAllToFirstRemessa, applyCronogramaPreset, clearCronogramaDistribuicao, cronogramaColunas, cronogramaDistribuicao, cronogramaHorarioEntrega, cronogramaLocalEntrega, cronogramaObservacoes, cronogramaResponsavelCargo, cronogramaResponsavelNome, cronogramas, cronogramasClassFilter, cronogramasPregaoFilter, cronogramasSearch, cronogramasStatusFilter, cronogramasYearFilter, empenhoClasses, empenhos, formatDateOnly, handleAddRemessa, handleGenerateCronogramaPDF, handleSendCronogramaEmail, handleRemoveRemessa, handleSaveCronograma, handleSelectEmpenhoForCronograma, isSavingCronograma, isSendingCronogramaEmail, selectedCronogramaEmpenhoId, setCronogramaColunas, setCronogramaDistribuicao, setCronogramaHorarioEntrega, setCronogramaLocalEntrega, setCronogramaObservacoes, setCronogramaResponsavelCargo, setCronogramaResponsavelNome, setCronogramasClassFilter, setCronogramasPregaoFilter, setCronogramasSearch, setCronogramasStatusFilter, setCronogramasYearFilter, setSelectedCronogramaEmpenhoId, setShowCronogramaPreviewModal, showCronogramaPreviewModal, uniqueEmpenhoYears, uniquePregaos } = context;
   return (
             <div id="view-cronogramas" className="w-full max-w-7xl mx-auto space-y-6 pb-24">
               
@@ -371,6 +373,7 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                 (() => {
                   const targetEmp = empenhos.find(e => e.id === selectedCronogramaEmpenhoId);
                   if (!targetEmp) return null;
+                  const savedCronograma = cronogramas.find(c => c.empenhoId === targetEmp.id) || null;
 
                   const totalCommitted = targetEmp.items.reduce((s, it) => s + (it.quantity * it.unitPrice), 0);
                   const totalReceived = targetEmp.items.reduce((s, it) => s + (it.received * it.unitPrice), 0);
@@ -417,6 +420,20 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                             <Download className="w-4 h-4 text-purple-600" /> Baixar PDF
                           </button>
                           <button
+                            onClick={() => void handleSendCronogramaEmail(targetEmp)}
+                            disabled={isSendingCronogramaEmail}
+                            aria-busy={isSendingCronogramaEmail}
+                            className="px-3.5 py-2 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer active:scale-95 disabled:cursor-wait disabled:opacity-60"
+                            title="Enviar o PDF do cronograma pelo Gmail configurado para o setor"
+                          >
+                            {isSendingCronogramaEmail ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Mail className="w-4 h-4" />
+                            )}
+                            {isSendingCronogramaEmail ? 'Enviando...' : 'Enviar por e-mail'}
+                          </button>
+                          <button
                             onClick={handleSaveCronograma}
                             disabled={isSavingCronograma}
                             aria-busy={isSavingCronograma}
@@ -434,6 +451,18 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                           </button>
                         </div>
                       </div>
+
+                      {savedCronograma?.ultimoEnvioEmail && (
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-[11px] font-semibold text-emerald-900 shadow-sm">
+                          <span className="inline-flex items-center gap-1.5 font-black">
+                            <Mail className="h-3.5 w-3.5" />
+                            Último envio
+                          </span>
+                          <span>{new Date(savedCronograma.ultimoEnvioEmail.enviadoEm).toLocaleString('pt-BR')}</span>
+                          <span>De: {savedCronograma.ultimoEnvioEmail.remetente}</span>
+                          <span>Para: {savedCronograma.ultimoEnvioEmail.destinatario}</span>
+                        </div>
+                      )}
 
                       {/* Header Card with Empenho Details & Simulation Notice */}
                       <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-white/40 p-6 shadow-sm space-y-5">

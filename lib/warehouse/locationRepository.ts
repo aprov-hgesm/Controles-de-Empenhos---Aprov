@@ -285,7 +285,11 @@ async function assertDepotCodeAvailable(workspaceId: string, code: string, ignor
   const normalized = normalizeWarehouseLogicalCode(code);
   if (!normalized) throw new Error('WAREHOUSE_INVALID_LOGICAL_CODE');
   const depots = await listWarehouseDepots(workspaceId, 250);
-  if (depots.some((item) => item.depot.code === normalized && item.depot.id !== ignoreDepotId)) {
+  if (depots.some((item) =>
+    item.depot.status === 'active'
+    && item.depot.code === normalized
+    && item.depot.id !== ignoreDepotId
+  )) {
     throw new Error('WAREHOUSE_DEPOT_CODE_ALREADY_EXISTS');
   }
 }
@@ -384,17 +388,24 @@ export async function updateWarehouseDepot(
   const snapshot = await getDoc(doc(db, path));
   if (!snapshot.exists()) throw new Error('WAREHOUSE_DEPOT_NOT_FOUND');
   const current = parseDepot(scope.workspaceId, depotId, snapshot.data() as Record<string, unknown>);
-  if (input.code !== undefined && input.code !== current.code) {
-    await assertDepotCodeAvailable(scope.workspaceId, input.code, depotId);
+  const nextCode = input.code ?? current.code;
+  const nextStatus = input.status ?? current.status;
+
+  if (
+    nextStatus === 'active'
+    && (nextCode !== current.code || current.status !== 'active')
+  ) {
+    await assertDepotCodeAvailable(scope.workspaceId, nextCode, depotId);
   }
+
   const candidate = validateWarehouseDepot({
     ...current,
-    code: input.code ?? current.code,
+    code: nextCode,
     name: input.name ?? current.name,
     description: input.description === undefined ? current.description : input.description,
     visualType: input.visualType ?? current.visualType,
     sizeProfile: input.sizeProfile ?? current.sizeProfile,
-    status: input.status ?? current.status,
+    status: nextStatus,
     updatedBy: scope.uid,
   }, { expectedWorkspaceId: scope.workspaceId, expectedUg: scope.ug });
   if (!candidate.ok) throw new Error('WAREHOUSE_INVALID_DEPOT_UPDATE');

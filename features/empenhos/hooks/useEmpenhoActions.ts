@@ -11,7 +11,7 @@ import { commitEmpenhoSupplierCnpjMigration } from '../../../lib/nsIntegrityServ
 import { isValidNsNumber, normalizeNsNumber } from '../../../lib/nsIntegrity';
 import { loadJsPdf } from '../../../lib/pdfToolkit';
 
-type ActiveTab = 'inicio' | 'painel' | 'empenhos' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas' | 'avisos';
+type ActiveTab = 'inicio' | 'painel' | 'empenhos' | 'fornecedores' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas' | 'avisos';
 type NewEmpenhoForm = { id: string; supplier: string; supplierCnpj: string; description: string; pregao: string; date: string; classification: string };
 type NewItemForm = { id: string; name: string; unit: string; quantity: string; unitPrice: string };
 type ToastType = 'success' | 'error' | 'info';
@@ -448,6 +448,9 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
         const rawCode = item.codigo_item || item.num_item || item.id || `0000${idx + 1}`;
         return {
           id: String(rawCode).padStart(5, '0'),
+          itemCompraNumber: item.codigo_item != null
+            ? (/^\d+$/.test(String(item.codigo_item).trim()) ? String(item.codigo_item).trim().padStart(5, '0') : String(item.codigo_item).trim())
+            : undefined,
           name: item.descricao || item.name || `Item ${idx + 1}`,
           unit: item.unidade || item.unit || 'un',
           quantity: itemQty,
@@ -549,6 +552,9 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
         const itemId = `ITEM-${Math.floor(Math.random() * 10000)}`;
         const newItem: Item = {
           id: itemId,
+          itemCompraNumber: newItemForm.id.trim()
+            ? (/^\d+$/.test(newItemForm.id.trim()) ? newItemForm.id.trim().padStart(5, '0') : newItemForm.id.trim())
+            : undefined,
           name: newItemForm.name,
           unit: newItemForm.unit,
           quantity: qty,

@@ -7,7 +7,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './firebase';
 import { getInvoiceRecordKey } from './invoiceIdentity';
-import { Empenho, Alert, Invoice, Comissao, CronogramaEmpenho } from './types';
+import { Empenho, Alert, Invoice, Comissao, CronogramaEmpenho, SupplierContact } from './types';
 import {
   commitAllInvoicesDeletionLifecycle,
   commitInvoiceDeletionLifecycle,
@@ -73,6 +73,37 @@ export async function createEmpenho(userId: string, empenho: Empenho): Promise<E
 
 export async function saveEmpenho(userId: string, empenho: Empenho): Promise<Empenho> {
   return commitEmpenhoUpdate(userId, empenho);
+}
+
+export async function getSupplierContacts(userId: string): Promise<SupplierContact[]> {
+  const scope = getCurrentOperationalScope(userId);
+  const path = getOperationalCollectionPath(scope, 'suppliers');
+  try {
+    const snapshot = await getDocs(operationalCollectionRef(scope, 'suppliers'));
+    recordWorkspaceDocumentReads(scope, snapshot.size);
+    return snapshot.docs.map((item) => ({
+      ...(item.data() as SupplierContact),
+      id: item.id,
+    }));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    throw error;
+  }
+}
+
+export async function saveSupplierContact(
+  userId: string,
+  supplier: SupplierContact
+): Promise<void> {
+  const scope = getCurrentOperationalScope(userId);
+  const path = getOperationalDocumentPath(scope, 'suppliers', supplier.id);
+  try {
+    await setDoc(operationalDocRef(scope, 'suppliers', supplier.id), supplier);
+    recordWorkspaceDocumentWrites(scope);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+    throw error;
+  }
 }
 
 export async function removeEmpenho(

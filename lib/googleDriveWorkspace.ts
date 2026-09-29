@@ -183,7 +183,7 @@ function getGoogleOAuth2Api(): GoogleOAuth2Api {
 const DEFAULT_GOOGLE_OAUTH_CLIENT_ID =
   '943599311487-u07f8gm4t2opgacr3albafmop8uj4h7u.apps.googleusercontent.com';
 
-function getGoogleOAuthClientId(): string {
+export function getGoogleOAuthClientId(): string {
   const configuredClientId = process.env.NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID?.trim();
   return configuredClientId || DEFAULT_GOOGLE_OAUTH_CLIENT_ID;
 }

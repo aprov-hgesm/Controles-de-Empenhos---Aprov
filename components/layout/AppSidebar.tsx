@@ -4,6 +4,7 @@ import {
   Activity,
   BellRing,
   Boxes,
+  Building2,
   CalendarDays,
   FileSpreadsheet,
   FileText,
@@ -23,6 +24,7 @@ export type AppTab =
   | 'inicio'
   | 'painel'
   | 'empenhos'
+  | 'fornecedores'
   | 'itens'
   | 'nova_nf'
   | 'relatorios'
@@ -150,6 +152,17 @@ export function AppSidebar({
             >
               <FileSpreadsheet className="w-5 h-5" aria-hidden="true" />
               <span>Empenhos</span>
+            </button>
+
+            <button
+              data-testid="nav-fornecedores"
+              onClick={() => onNavigate('fornecedores')}
+              className="emprovex-sidebar-nav-item"
+              data-active={activeTab === 'fornecedores' ? 'true' : 'false'}
+              aria-current={activeTab === 'fornecedores' ? 'page' : undefined}
+            >
+              <Building2 className="w-5 h-5" aria-hidden="true" />
+              <span>Fornecedores</span>
             </button>
 
             <button

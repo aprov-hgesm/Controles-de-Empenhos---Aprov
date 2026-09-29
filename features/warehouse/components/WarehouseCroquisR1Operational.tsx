@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import {
+  WAREHOUSE_LAYOUT_MAX_DIMENSION,
   createWarehouseDepotLayoutObject,
   type WarehouseDepotLayout,
   type WarehouseDepotLayoutObject,
@@ -151,7 +152,7 @@ function kindLabel(kind: CanonicalWarehouseVisualKind): string {
     PALLET: 'Palete',
     FREEZER: 'Freezer',
     REFRIGERATOR: 'Geladeira industrial',
-    BENCH: 'Mesa',
+    BENCH: 'Mesa / bancada',
   };
   return labels[kind];
 }
@@ -179,6 +180,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
 
   const [setupLengthCm, setSetupLengthCm] = useState(DEFAULT_ROOM_LENGTH_CM);
   const [setupWidthCm, setSetupWidthCm] = useState(DEFAULT_ROOM_WIDTH_CM);
+  const [editingDimensions, setEditingDimensions] = useState(false);
   const [doorWidths, setDoorWidths] = useState<number[]>([90]);
   const [setupReady, setSetupReady] = useState(false);
   const [localDrafts, setLocalDrafts] = useState<Record<string, LocalDraft>>({});
@@ -246,6 +248,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
       setSetupLengthCm(layout?.logicalWidth || DEFAULT_ROOM_LENGTH_CM);
       setSetupWidthCm(layout?.logicalHeight || DEFAULT_ROOM_WIDTH_CM);
       setSetupReady(Boolean(layout));
+      setEditingDimensions(false);
       setSelectedObjectId(null);
       setDraftHistory({ past: [], future: [] });
       setPendingDuplicatedLocals({});
@@ -439,8 +442,8 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
   }, [draftObjects]);
 
   function generateInitialCroqui() {
-    const length = Math.max(MIN_ROOM_CM, Math.min(5000, Math.round(setupLengthCm || DEFAULT_ROOM_LENGTH_CM)));
-    const width = Math.max(MIN_ROOM_CM, Math.min(5000, Math.round(setupWidthCm || DEFAULT_ROOM_WIDTH_CM)));
+    const length = Math.max(MIN_ROOM_CM, Math.min(WAREHOUSE_LAYOUT_MAX_DIMENSION, Math.round(setupLengthCm || DEFAULT_ROOM_LENGTH_CM)));
+    const width = Math.max(MIN_ROOM_CM, Math.min(WAREHOUSE_LAYOUT_MAX_DIMENSION, Math.round(setupWidthCm || DEFAULT_ROOM_WIDTH_CM)));
     const doors = doorWidths.map((door, index) => {
       const doorWidth = clampDimension(door, length - 20);
       const slot = length / (doorWidths.length + 1);
@@ -466,7 +469,68 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
     setSelectedObjectId(null);
     setDraftHistory({ past: [], future: [] });
     setSetupReady(true);
+    setEditingDimensions(false);
     setMessage('Croqui inicial criado em escala proporcional. Posicione as portas e depois insira os Locais cadastrados.');
+  }
+
+  function applyRoomDimensions() {
+    const length = Math.max(
+      MIN_ROOM_CM,
+      Math.min(WAREHOUSE_LAYOUT_MAX_DIMENSION, Math.round(setupLengthCm || draftWidth))
+    );
+    const width = Math.max(
+      MIN_ROOM_CM,
+      Math.min(WAREHOUSE_LAYOUT_MAX_DIMENSION, Math.round(setupWidthCm || draftHeight))
+    );
+
+    if (length === draftWidth && width === draftHeight) {
+      setEditingDimensions(false);
+      setMessage('As medidas informadas já correspondem ao croqui atual.');
+      return;
+    }
+
+    const widthRatio = length / Math.max(1, draftWidth);
+    const heightRatio = width / Math.max(1, draftHeight);
+    const previous = cloneObjects(draftObjects);
+    checkpoint(previous);
+
+    setDraftObjects(previous.map((object) => {
+      const x = Math.min(
+        Math.round(object.x * widthRatio * 100) / 100,
+        Math.max(0, length - 12)
+      );
+      const y = Math.min(
+        Math.round(object.y * heightRatio * 100) / 100,
+        Math.max(0, width - 12)
+      );
+      const objectWidth = Math.min(
+        Math.max(12, Math.round(object.width * widthRatio * 100) / 100),
+        Math.max(12, length - x)
+      );
+      const objectHeight = Math.min(
+        Math.max(12, Math.round(object.height * heightRatio * 100) / 100),
+        Math.max(12, width - y)
+      );
+      return {
+        ...object,
+        x,
+        y,
+        width: objectWidth,
+        height: objectHeight,
+      };
+    }));
+
+    setDraftWidth(length);
+    setDraftHeight(width);
+    setSetupLengthCm(length);
+    setSetupWidthCm(width);
+    setSelectedObjectId(null);
+    setPreviewLoaded(false);
+    setEditingDimensions(false);
+    setMessage(
+      'Dimensões atualizadas para ' + length + ' × ' + width
+      + '. Os elementos foram reposicionados proporcionalmente. Salve uma nova versão para persistir.'
+    );
   }
 
   function addLocalToCroqui(item: WarehouseLocationListItem) {
@@ -805,7 +869,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                 <input
                   type="number"
                   min={MIN_ROOM_CM}
-                  max={5000}
+                  max={WAREHOUSE_LAYOUT_MAX_DIMENSION}
                   value={setupLengthCm}
                   onChange={(event) => setSetupLengthCm(Number(event.target.value))}
                   className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800"
@@ -816,7 +880,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                 <input
                   type="number"
                   min={MIN_ROOM_CM}
-                  max={5000}
+                  max={WAREHOUSE_LAYOUT_MAX_DIMENSION}
                   value={setupWidthCm}
                   onChange={(event) => setSetupWidthCm(Number(event.target.value))}
                   className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800"
@@ -896,6 +960,19 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                 <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold text-slate-600">
                   {draftWidth} × {draftHeight} cm
                 </span>
+                <button
+                  type="button"
+                  data-testid="warehouse-r1-edit-dimensions"
+                  onClick={() => {
+                    setSetupLengthCm(draftWidth);
+                    setSetupWidthCm(draftHeight);
+                    setEditingDimensions((current) => !current);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-black text-[#00288e] hover:bg-blue-100"
+                >
+                  <Ruler className="h-3.5 w-3.5" />
+                  Editar dimensões
+                </button>
                 <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold text-slate-600">
                   {depotLocals.length} Locais cadastrados
                 </span>
@@ -923,6 +1000,63 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
               </div>
             </div>
           </div>
+
+          {editingDimensions && (
+            <div
+              className="rounded-2xl border border-blue-200 bg-blue-50/60 p-4 shadow-sm"
+              data-testid="warehouse-r1-dimension-editor"
+            >
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+                <label className="flex-1">
+                  <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">
+                    Comprimento (cm)
+                  </span>
+                  <input
+                    type="number"
+                    min={MIN_ROOM_CM}
+                    max={WAREHOUSE_LAYOUT_MAX_DIMENSION}
+                    value={setupLengthCm}
+                    onChange={(event) => setSetupLengthCm(Number(event.target.value))}
+                    className="h-10 w-full rounded-xl border border-blue-200 bg-white px-3 text-sm font-bold text-slate-800"
+                  />
+                </label>
+                <label className="flex-1">
+                  <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">
+                    Largura (cm)
+                  </span>
+                  <input
+                    type="number"
+                    min={MIN_ROOM_CM}
+                    max={WAREHOUSE_LAYOUT_MAX_DIMENSION}
+                    value={setupWidthCm}
+                    onChange={(event) => setSetupWidthCm(Number(event.target.value))}
+                    className="h-10 w-full rounded-xl border border-blue-200 bg-white px-3 text-sm font-bold text-slate-800"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={applyRoomDimensions}
+                  className="h-10 rounded-xl bg-[#00288e] px-4 text-xs font-black text-white hover:bg-blue-800"
+                >
+                  Aplicar e preservar proporções
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSetupLengthCm(draftWidth);
+                    setSetupWidthCm(draftHeight);
+                    setEditingDimensions(false);
+                  }}
+                  className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black text-slate-600 hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+              </div>
+              <p className="mt-2 text-[10px] leading-5 text-slate-500">
+                A alteração redimensiona e reposiciona os elementos proporcionalmente. O estoque e os vínculos logísticos não são alterados.
+              </p>
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
             <button
@@ -980,7 +1114,7 @@ export function WarehouseCroquisR1Operational({ workspaceId }: { workspaceId: st
                   <h3 className="text-sm font-black text-slate-900">Locais do depósito</h3>
                 </div>
                 <p className="mt-1 text-[11px] leading-4 text-slate-500">
-                  Somente os Locais já cadastrados podem ser inseridos. O tipo visual é padronizado em cinco modelos: Estante, Palete, Freezer, Geladeira industrial e Mesa.
+                  Somente os Locais já cadastrados podem ser inseridos. O tipo visual é padronizado em cinco modelos: Estante, Palete, Freezer, Geladeira industrial e Mesa / bancada.
                 </p>
 
                 <div className="mt-3 max-h-[640px] space-y-3 overflow-y-auto pr-1">

@@ -4,7 +4,7 @@ import { LegalSection, PublicLegalLayout } from '../../components/legal/PublicLe
 
 export const metadata: Metadata = {
   title: 'Política de Privacidade | EMPROVEX',
-  description: 'Política de Privacidade do EMPROVEX, incluindo o tratamento de dados e a integração opcional com Google Drive.',
+  description: 'Política de Privacidade do EMPROVEX, incluindo o tratamento de dados e integrações opcionais com Google Drive e Gmail.',
 };
 
 export default function PrivacyPage() {
@@ -35,7 +35,7 @@ export default function PrivacyPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="3. Google Drive e dados do Google">
+      <LegalSection title="3. Google Drive, Gmail e dados do Google">
         <p>
           A conexão com o Google Drive é opcional e ocorre somente quando um usuário autorizado escolhe conectar a
           Conta Google correspondente ao workspace. O EMPROVEX solicita o escopo
@@ -47,6 +47,13 @@ export default function PrivacyPage() {
           próprio aplicativo criar ou aos quais o usuário conceder acesso. O token de acesso retornado pelo Google é
           tratado como autorização temporária e não é persistido em Firestore, banco de dados ou armazenamento local do
           navegador pelo fluxo atual de conexão do Drive.
+        </p>
+        <p>
+          Quando o usuário escolhe enviar um cronograma de entrega por e-mail, o EMPROVEX pode solicitar separadamente
+          o escopo <strong>gmail.send</strong>, exclusivamente para enviar a mensagem e o PDF do cronograma em nome da
+          Conta Google configurada para o workspace. O EMPROVEX não solicita acesso de leitura à caixa de entrada para
+          essa funcionalidade. A autorização do Gmail também é temporária e permanece somente em memória durante a
+          sessão, sem persistência do token em Firestore ou armazenamento local do navegador.
         </p>
         <p>
           O EMPROVEX usa os dados obtidos das APIs do Google somente para fornecer as funcionalidades descritas nesta
@@ -66,7 +73,7 @@ export default function PrivacyPage() {
       <LegalSection title="5. Compartilhamento e fornecedores de infraestrutura">
         <p>
           O EMPROVEX utiliza serviços técnicos necessários à operação da plataforma, incluindo Firebase/Google Cloud e
-          Vercel. Quando a integração opcional com Google Drive é utilizada, o Google também processa dados conforme os
+          Vercel. Quando as integrações opcionais com Google Drive ou Gmail são utilizadas, o Google também processa dados conforme os
           termos e políticas aplicáveis à Conta Google do usuário.
         </p>
         <p>
@@ -98,7 +105,7 @@ export default function PrivacyPage() {
 
       <LegalSection title="8. Revogação do acesso ao Google">
         <p>
-          O usuário pode deixar de conectar o Google Drive ao EMPROVEX e também pode revogar a autorização concedida ao
+          O usuário pode deixar de conectar o Google Drive ao EMPROVEX, deixar de autorizar o envio pelo Gmail e também pode revogar a autorização concedida ao
           aplicativo nas configurações de segurança da própria Conta Google. A revogação impede novos acessos usando a
           autorização revogada, sem necessariamente excluir arquivos que já estejam armazenados no Drive.
         </p>

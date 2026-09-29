@@ -15,6 +15,7 @@ import {
 
 export type OperationalCollectionName =
   | 'empenhos'
+  | 'suppliers'
   | 'alerts'
   | 'invoices'
   | 'comissoes'

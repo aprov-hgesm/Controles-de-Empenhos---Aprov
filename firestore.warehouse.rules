@@ -1750,10 +1750,10 @@ service cloud.firestore {
         )
         && request.resource.data.logicalWidth is number
         && request.resource.data.logicalWidth >= 240
-        && request.resource.data.logicalWidth <= 5000
+        && request.resource.data.logicalWidth <= 50000
         && request.resource.data.logicalHeight is number
         && request.resource.data.logicalHeight >= 240
-        && request.resource.data.logicalHeight <= 5000
+        && request.resource.data.logicalHeight <= 50000
         && request.resource.data.objects is list
         && request.resource.data.objects.size() <= 160
         && request.resource.data.version is int

@@ -5,6 +5,8 @@ export interface Item {
   quantity: number; // total quantity committed (empenhada)
   unitPrice: number;
   received: number; // total quantity already received (liquidado/recebido)
+  /** Código exibido como "Item compra" na Nota de Empenho (ex.: 00004), distinto da sequência do item. */
+  itemCompraNumber?: string;
   /** Vínculo estável com o material canônico do ADM Depósito, quando já resolvido. */
   warehouseMaterialId?: string;
 }
@@ -69,6 +71,23 @@ export interface Empenho {
   updatedBy?: string;
   notaEmpenhoPdf?: EmpenhoPdfDocument;
   notaEmpenhoPdfVersions?: EmpenhoPdfDocument[];
+}
+
+export interface SupplierDirectoryEntry {
+  cnpj: string;
+  email: string;
+}
+
+export interface SupplierContact {
+  id: string;
+  legalName: string;
+  cnpj: string;
+  email: string;
+  phone: string;
+  whatsapp: string;
+  createdAt: string;
+  updatedAt: string;
+  updatedBy: string;
 }
 
 export interface InvoiceItem {
@@ -159,6 +178,15 @@ export interface CronogramaEntregaColuna {
   observacao?: string;
 }
 
+export interface CronogramaEmailEnvio {
+  enviadoEm: string;
+  remetente: string;
+  destinatario: string;
+  assunto: string;
+  messageId: string;
+  fonteEmailFornecedor: 'local' | 'global';
+}
+
 export interface CronogramaEmpenho {
   id: string; // Usually matches the empenhoId
   empenhoId: string;
@@ -174,4 +202,5 @@ export interface CronogramaEmpenho {
       [colunaId: string]: number;
     };
   };
+  ultimoEnvioEmail?: CronogramaEmailEnvio;
 }

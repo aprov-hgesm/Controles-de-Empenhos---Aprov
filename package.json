@@ -183,7 +183,8 @@
     "warehouse:db:copy": "node scripts/migrate-warehouse-database.mjs copy",
     "warehouse:db:verify": "node scripts/migrate-warehouse-database.mjs verify",
     "test:adm-deposito-manual-entry": "node --test scripts/warehouse-manual-entry.test.mjs",
-    "test:adm-deposito-outbound-return": "node --test scripts/warehouse-outbound-return.test.mjs"
+    "test:adm-deposito-outbound-return": "node --test scripts/warehouse-outbound-return.test.mjs",
+    "test:cronograma-email": "node --test scripts/cronograma-email.test.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

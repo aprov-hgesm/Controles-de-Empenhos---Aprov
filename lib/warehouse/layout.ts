@@ -74,7 +74,8 @@ export interface WarehouseDepotLayoutValidationIssue {
 const LAYOUT_ID_PATTERN = /^lay_[a-f0-9]{32}$/;
 const OBJECT_ID_PATTERN = /^obj_[a-f0-9]{32}$/;
 const MIN_DIMENSION = 240;
-const MAX_DIMENSION = 5000;
+export const WAREHOUSE_LAYOUT_MAX_DIMENSION = 50000;
+const MAX_DIMENSION = WAREHOUSE_LAYOUT_MAX_DIMENSION;
 const MAX_OBJECTS = 160;
 
 function randomHex32(): string {

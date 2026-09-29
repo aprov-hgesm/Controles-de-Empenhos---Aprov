@@ -58,8 +58,12 @@ function isoPoint(
   logicalWidth: number,
   logicalHeight: number
 ): IsoPoint {
-  const nx = x / Math.max(1, logicalWidth);
-  const ny = y / Math.max(1, logicalHeight);
+  // Usa a mesma escala para os dois eixos. Normalizar X pela largura e Y pela
+  // profundidade faria qualquer depósito ocupar sempre um "quadrado" isométrico,
+  // independentemente da proporção física (ex.: 12000×2400).
+  const scaleBase = Math.max(1, logicalWidth, logicalHeight);
+  const nx = x / scaleBase;
+  const ny = y / scaleBase;
   return {
     x: ORIGIN_X + (nx - ny) * FLOOR_HALF_W,
     y: ORIGIN_Y + (nx + ny) * FLOOR_HALF_H - z,

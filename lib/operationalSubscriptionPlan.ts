@@ -2,6 +2,7 @@ export type OperationalActiveTab =
   | 'inicio'
   | 'painel'
   | 'empenhos'
+  | 'fornecedores'
   | 'itens'
   | 'nova_nf'
   | 'relatorios'
@@ -43,6 +44,13 @@ const PLAN_BY_TAB: Record<OperationalActiveTab, OperationalSubscriptionPlan> = {
     empenhos: true,
     alerts: true,
     invoices: true,
+    comissoes: false,
+    cronogramas: false,
+  },
+  fornecedores: {
+    empenhos: false,
+    alerts: false,
+    invoices: false,
     comissoes: false,
     cronogramas: false,
   },

@@ -58,7 +58,7 @@ export default function TermsPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="6. Google Drive">
+      <LegalSection title="6. Google Drive e Gmail">
         <p>
           O usuário pode optar por conectar o Google Drive para armazenamento e recuperação de documentos utilizados
           pelo EMPROVEX. Essa conexão depende de autorização específica da Conta Google e utiliza permissões limitadas
@@ -67,6 +67,12 @@ export default function TermsPage() {
         <p>
           A disponibilidade, autenticação e operação do Google Drive também estão sujeitas aos termos e políticas do
           Google. O usuário pode revogar a autorização concedida ao EMPROVEX nas configurações da Conta Google.
+        </p>
+        <p>
+          Quando a funcionalidade de envio de cronogramas por e-mail for utilizada, o usuário autoriza de forma
+          específica o EMPROVEX a enviar a mensagem e o documento pela Gmail API em nome da Conta Google do workspace.
+          O envio depende da disponibilidade do Gmail, das políticas da Conta Google e dos mecanismos de entrega do
+          provedor destinatário.
         </p>
       </LegalSection>
 
