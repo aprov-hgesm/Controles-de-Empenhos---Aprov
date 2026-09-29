@@ -607,15 +607,24 @@ export function useCronogramaActions(context:CronogramaActionsContext){
         },
       };
 
-      await saveCronograma(user.uid, cronogramaAfterSend);
+      let auditPersisted = true;
+      try {
+        await saveCronograma(user.uid, cronogramaAfterSend);
+      } catch (auditError) {
+        auditPersisted = false;
+        console.error('Cronograma enviado, mas o registro de auditoria falhou:', auditError);
+      }
+
       setCronogramas((previousItems) => [
         ...previousItems.filter((item) => item.empenhoId !== emp.id),
         cronogramaAfterSend,
       ]);
 
       showToast(
-        `Cronograma enviado para ${supplierEmail.email} pela conta ${sent.senderEmail}.`,
-        'success'
+        auditPersisted
+          ? `Cronograma enviado para ${supplierEmail.email} pela conta ${sent.senderEmail}.`
+          : `Cronograma enviado para ${supplierEmail.email}, mas o registro do último envio não pôde ser salvo. Não reenvie sem conferir a pasta Enviados.`,
+        auditPersisted ? 'success' : 'info'
       );
     } catch (error) {
       console.error('Erro ao enviar cronograma por e-mail:', error);
