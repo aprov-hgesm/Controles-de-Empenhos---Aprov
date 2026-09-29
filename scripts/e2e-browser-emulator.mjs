@@ -4,22 +4,24 @@ import { spawn } from 'node:child_process';
 
 const root = process.cwd();
 const appBase = 'http://127.0.0.1:3100';
+const warehouseEmulatorBase = 'http://127.0.0.1:8081';
 const playwrightCli = 'node_modules/@playwright/test/cli.js';
+const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 
-async function waitForApp(url, timeoutMs = 60_000) {
+async function waitForEndpoint(url, timeoutMs = 60_000) {
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < timeoutMs) {
     try {
-      const response = await fetch(url);
-      if (response.ok) return;
+      await fetch(url);
+      return;
     } catch {
-      // Next.js ainda iniciando.
+      // Serviço ainda iniciando.
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
-  throw new Error(`Next.js E2E não respondeu em ${url}.`);
+  throw new Error(`Serviço E2E não respondeu em ${url}.`);
 }
 
 function run(command, args, env = process.env) {
@@ -45,34 +47,96 @@ function run(command, args, env = process.env) {
   });
 }
 
-await run(process.execPath, ['scripts/firestore-multitenancy-security.test.mjs']);
-await run(process.execPath, ['scripts/warehouse-e2e-fixture.mjs']);
+async function stopChild(child) {
+  if (!child || child.killed) return;
 
-const server = spawn(
-  process.execPath,
-  ['node_modules/next/dist/bin/next', 'dev', '--hostname', '127.0.0.1', '--port', '3100'],
+  child.kill('SIGTERM');
+  await new Promise((resolve) => {
+    const fallback = setTimeout(() => {
+      if (!child.killed) child.kill('SIGKILL');
+      resolve();
+    }, 4000);
+    child.once('exit', () => {
+      clearTimeout(fallback);
+      resolve();
+    });
+  });
+}
+
+// Seed do EMPROVEX principal no Firestore padrão (8080).
+await run(process.execPath, ['scripts/firestore-multitenancy-security.test.mjs']);
+
+// A versão atual do Firestore Emulator não suporta Rules de múltiplos bancos
+// no mesmo processo. A Central usa uma segunda instância dedicada em 8081.
+const warehouseEnv = { ...process.env };
+delete warehouseEnv.FIRESTORE_EMULATOR_HOST;
+
+const warehouseEmulator = spawn(
+  npxCommand,
+  [
+    '--yes',
+    'firebase-tools',
+    'emulators:start',
+    '--config',
+    'firebase.warehouse-e2e-test.json',
+    '--project',
+    'demo-emprovex-security',
+    '--only',
+    'firestore',
+  ],
   {
     cwd: root,
-    env: {
-      ...process.env,
-      NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1',
-      NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: 'demo-emprovex-security',
-      EMPROVEX_E2E_SERVER_AUTH: '1',
-      NEXT_TELEMETRY_DISABLED: '1',
-      // O Playwright cria traces/resultados dentro do workspace durante a execução.
-      // Sem isso, o watcher do Next dev interpreta esses arquivos como mudanças e
-      // recompila a aplicação repetidamente, podendo interromper navegações/reloads.
-      DISABLE_HMR: 'true',
-    },
+    env: warehouseEnv,
     stdio: ['ignore', 'pipe', 'pipe'],
   }
 );
 
-server.stdout.on('data', (chunk) => process.stdout.write(`[next] ${chunk}`));
-server.stderr.on('data', (chunk) => process.stderr.write(`[next] ${chunk}`));
+warehouseEmulator.stdout.on(
+  'data',
+  (chunk) => process.stdout.write(`[warehouse-emulator] ${chunk}`)
+);
+warehouseEmulator.stderr.on(
+  'data',
+  (chunk) => process.stderr.write(`[warehouse-emulator] ${chunk}`)
+);
+
+let server = null;
 
 try {
-  await waitForApp(appBase);
+  await waitForEndpoint(warehouseEmulatorBase);
+
+  await run(
+    process.execPath,
+    ['scripts/warehouse-e2e-fixture.mjs'],
+    {
+      ...process.env,
+      EMPROVEX_E2E_WAREHOUSE_FIRESTORE_PORT: '8081',
+    }
+  );
+
+  server = spawn(
+    process.execPath,
+    ['node_modules/next/dist/bin/next', 'dev', '--hostname', '127.0.0.1', '--port', '3100'],
+    {
+      cwd: root,
+      env: {
+        ...process.env,
+        FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080',
+        NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS: '1',
+        NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID: 'demo-emprovex-security',
+        NEXT_PUBLIC_EMPROVEX_E2E_WAREHOUSE_FIRESTORE_PORT: '8081',
+        EMPROVEX_E2E_SERVER_AUTH: '1',
+        NEXT_TELEMETRY_DISABLED: '1',
+        DISABLE_HMR: 'true',
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }
+  );
+
+  server.stdout.on('data', (chunk) => process.stdout.write(`[next] ${chunk}`));
+  server.stderr.on('data', (chunk) => process.stderr.write(`[next] ${chunk}`));
+
+  await waitForEndpoint(appBase);
   process.stdout.write('Next.js E2E: READY\n');
 
   await run(
@@ -84,17 +148,6 @@ try {
     }
   );
 } finally {
-  if (!server.killed) {
-    server.kill('SIGTERM');
-    await new Promise((resolve) => {
-      const fallback = setTimeout(() => {
-        if (!server.killed) server.kill('SIGKILL');
-        resolve();
-      }, 3000);
-      server.once('exit', () => {
-        clearTimeout(fallback);
-        resolve();
-      });
-    });
-  }
+  await stopChild(server);
+  await stopChild(warehouseEmulator);
 }

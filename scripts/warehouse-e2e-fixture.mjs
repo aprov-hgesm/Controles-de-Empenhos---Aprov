@@ -2,8 +2,10 @@
 
 const PROJECT_ID = 'demo-emprovex-security';
 const DATABASE_ID = 'emprovex-warehouse';
+const WAREHOUSE_FIRESTORE_PORT =
+  process.env.EMPROVEX_E2E_WAREHOUSE_FIRESTORE_PORT || '8081';
 const FIRESTORE_BASE =
-  `http://127.0.0.1:8080/v1/projects/${PROJECT_ID}/databases/${DATABASE_ID}/documents`;
+  `http://127.0.0.1:${WAREHOUSE_FIRESTORE_PORT}/v1/projects/${PROJECT_ID}/databases/${DATABASE_ID}/documents`;
 
 const WORKSPACE_ID = 'hgesm-aprov';
 const UG = '160416';

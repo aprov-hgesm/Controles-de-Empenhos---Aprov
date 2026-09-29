@@ -6,6 +6,9 @@ import firebaseConfig from '../firebase-applet-config.json';
 
 const useE2eEmulators = process.env.NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1';
 const e2eProjectId = process.env.NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID?.trim();
+const e2eWarehouseFirestorePort = Number(
+  process.env.NEXT_PUBLIC_EMPROVEX_E2E_WAREHOUSE_FIRESTORE_PORT || '8080'
+);
 const effectiveFirebaseConfig = useE2eEmulators && e2eProjectId
   ? {
       ...firebaseConfig,
@@ -51,7 +54,7 @@ export const auth = getAuth();
 if (useE2eEmulators) {
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
-  connectFirestoreEmulator(warehouseDb, '127.0.0.1', 8080);
+  connectFirestoreEmulator(warehouseDb, '127.0.0.1', e2eWarehouseFirestorePort);
 }
 
 export const googleProvider = new GoogleAuthProvider();
