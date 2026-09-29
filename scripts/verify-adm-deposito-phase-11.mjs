@@ -14,6 +14,8 @@ const dashboard = read('features/warehouse/components/WarehouseLogisticsDashboar
 const alertsUi = read('features/warehouse/components/WarehouseLogisticsAlerts.tsx');
 const settings = read('features/warehouse/components/WarehouseLogisticsSettings.tsx');
 const control = read('features/warehouse/components/WarehouseItemControlOperational.tsx');
+const summary = read('features/warehouse/components/WarehouseItemControlSummary.tsx');
+const reports = read('features/warehouse/components/WarehouseLogisticsReports.tsx');
 const navigation = read('features/warehouse/navigation.ts');
 const namespace = read('lib/warehouse/namespace.ts');
 const rules = read('firestore.warehouse.rules');
@@ -45,14 +47,18 @@ assert.doesNotMatch(deliveries, /Confirmar entrega|Registrar entrega|Receber mat
 assert.match(dashboard, /namespace warehouse/);
 assert.match(alertsUi, /não alteram a Central de Avisos operacional/);
 assert.match(settings, /namespace\s*warehouse/);
-assert.match(control, /WarehouseLogisticsDashboard/);
-assert.match(control, /WarehouseDeliveriesOperational/);
-assert.match(control, /WarehouseLogisticsAlerts/);
-assert.match(control, /WarehouseLogisticsSettings/);
-assert.match(control, /label: 'Resumo logístico'/);
-assert.match(control, /label: 'Entregas'/);
-assert.match(control, /label: 'Alertas'/);
-assert.match(navigation, /label: 'Controle de Itens'/);
+assert.match(control, /WarehouseItemControlSummary/);
+assert.match(control, /WarehouseLogisticsReports/);
+assert.match(control, /label: 'Resumo'/);
+assert.match(control, /label: 'Relatórios'/);
+assert.match(summary, /Movimentações recentes/);
+assert.match(summary, /Consultas e relatórios/);
+assert.match(reports, /Relatórios de Saída/);
+assert.match(reports, /Relatórios de Consumo Imediato/);
+assert.match(reports, /Movimentações e entradas/);
+assert.match(reports, /Inventários/);
+assert.match(reports, /SISCOFIS/);
+assert.match(navigation, /label: 'Controle de Materiais'/);
 
 assert.match(rules, /validWarehouseLogisticsSettings/);
 assert.match(rules, /validWarehouseLogisticsAlertCreate/);

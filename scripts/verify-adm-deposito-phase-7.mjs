@@ -77,11 +77,11 @@ for (const marker of [
   requireText(stock, marker, 'Superfície Estoque FASE 7 incompleta: ' + marker);
 }
 
-requireText(control, 'WarehouseStockOperational', 'Controle de Itens não expõe Estoque.');
-requireText(control, "id: 'stock',", 'Subaba Estoque perdeu seu identificador no Controle de Itens.');
-requireText(control, "label: 'Estoque',", 'Subaba Estoque perdeu seu rótulo no Controle de Itens.');
-requireText(navigation, "id: 'control'", 'Navegação Controle de Itens ausente.');
-requireText(navigation, "label: 'Controle de Itens'", 'Rótulo Controle de Itens ausente.');
+requireText(control, 'WarehouseStockOperational', 'Controle de Materiais não expõe Estoque.');
+requireText(control, "id: 'stock',", 'Subaba Estoque perdeu seu identificador no Controle de Materiais.');
+requireText(control, "label: 'Estoque',", 'Subaba Estoque perdeu seu rótulo no Controle de Materiais.');
+requireText(navigation, "id: 'control'", 'Navegação Controle de Materiais ausente.');
+requireText(navigation, "label: 'Controle de Materiais'", 'Rótulo Controle de Materiais ausente.');
 
 for (const marker of [
   'function validWarehouseLotOrigin',

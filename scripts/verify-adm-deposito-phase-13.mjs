@@ -21,6 +21,8 @@ const telemetry = read('lib/warehouse/telemetry.ts');
 const namespace = read('lib/warehouse/namespace.ts');
 const coreGuard = read('scripts/verify-emprovex-core-protection.mjs');
 const securitySuite = read('scripts/firestore-multitenancy-security.test.mjs');
+const externalSecurity = read('scripts/warehouse-external-access-security.test.mjs');
+const sectionContent = read('features/warehouse/components/WarehouseSectionContent.tsx');
 const pkg = JSON.parse(read('package.json'));
 
 for (const marker of [
@@ -57,19 +59,30 @@ const balancesBlock = sliceBetween(
 requireText(balancesBlock, 'warehouseBalanceWriteAllowed', 'Saldo agregado perdeu proteção derivada por movimento.');
 
 for (const scenario of [
-  'Setor externo não lê namespace ADM Depósito do fundador',
-  'Setor externo não grava namespace ADM Depósito nem no próprio workspace',
   'Material canônico não pode ser apagado fisicamente',
   'Ledger da FASE 2 é append-only',
   'Saldo da FASE 2 não aceita alteração sem novo movimento',
-]) requireText(securitySuite, scenario, `Cenário multi-tenant/hardening ausente: ${scenario}`);
+]) requireText(securitySuite, scenario, `Cenário de hardening ausente: ${scenario}`);
+
+for (const scenario of [
+  'setor B não lê workspace A',
+  'setor A não grava em workspace B',
+  'setor A não grava UG diferente da claim assinada',
+  'sessão password sem claims não acessa warehouse',
+]) requireText(externalSecurity, scenario, `Cenário multi-tenant externo ausente: ${scenario}`);
 
 for (const marker of [
+  "tab === 'summary' &&",
   "tab === 'stock' &&",
-  "tab === 'outbound' &&",
+  "tab === 'movements' &&",
   "tab === 'inventory' &&",
   "tab === 'reports' &&",
-]) requireText(itemControl, marker, `Controle de Itens deixou de montar somente a subaba ativa: ${marker}`);
+]) requireText(itemControl, marker, `Controle de Materiais deixou de montar somente a subaba ativa: ${marker}`);
+
+for (const marker of [
+  "section === 'outbound'",
+  'WarehouseMaterialWithdrawal',
+]) requireText(sectionContent, marker, `Saída de Material deixou de ser uma superfície independente: ${marker}`);
 
 for (const marker of [
   'locationBalancesByMaterial',
