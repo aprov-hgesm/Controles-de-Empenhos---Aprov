@@ -133,6 +133,14 @@ const siscofisContract = readFileSync(
   resolve(root, 'lib/warehouse/siscofis.ts'),
   'utf8'
 );
+const siscofisPdfExtractor = readFileSync(
+  resolve(root, 'lib/warehouse/siscofisPdf.ts'),
+  'utf8'
+);
+const siscofisOperational = readFileSync(
+  resolve(root, 'features/warehouse/components/WarehouseSiscofisOperational.tsx'),
+  'utf8'
+);
 const inventoryHistoryReport = readFileSync(
   resolve(root, 'features/warehouse/components/WarehouseInventoryHistoryReport.tsx'),
   'utf8'
@@ -1430,6 +1438,61 @@ requireText(
   siscofisContract,
   'FILTRO OBRIGATÓRIO — NÃO MIGRAR HORTIFRUTI/GRANJEIROS:',
   'Prompt SISCOFIS perdeu a exclusão explícita de hortifruti/granjeiros.'
+);
+requireText(
+  siscofisPdfExtractor,
+  'extractEmprovexSiscofisInventoryFromPdfBytes',
+  'Migração SISCOFIS perdeu o extrator local determinístico de PDF.'
+);
+requireText(
+  siscofisPdfExtractor,
+  "new TextDecoder('windows-1252')",
+  'Extrator PDF deixou de preservar a codificação textual do relatório SISCOFIS.'
+);
+for (const pdfColumn of [
+  "byText('Nr Ficha')",
+  "byText('Nome do Material')",
+  "byText('Qtde Exist')",
+  "byText('Qtde Disp')",
+  "byText('Vlr Unit')",
+]) {
+  requireText(
+    siscofisPdfExtractor,
+    pdfColumn,
+    'Extrator PDF SISCOFIS perdeu coluna estrutural: ' + pdfColumn
+  );
+}
+if (
+  siscofisPdfExtractor.includes('fetch(')
+  || siscofisPdfExtractor.includes('https://')
+  || siscofisPdfExtractor.includes('http://')
+) {
+  fail('Extrator local do PDF SISCOFIS passou a depender de rede externa.');
+}
+requireText(
+  siscofisOperational,
+  'data-testid="warehouse-siscofis-pdf-direct"',
+  'Migração SISCOFIS perdeu a opção visual de PDF direto.'
+);
+requireText(
+  siscofisOperational,
+  'data-testid="warehouse-siscofis-pdf-input"',
+  'Migração SISCOFIS perdeu o seletor de PDF direto.'
+);
+requireText(
+  siscofisOperational,
+  "await import('../../../lib/warehouse/siscofisPdf')",
+  'Extrator PDF deixou de ser carregado sob demanda.'
+);
+requireText(
+  siscofisOperational,
+  'prepareEmprovexSiscofisInventoryImport(',
+  'PDF direto deixou de convergir para a prévia oficial SISCOFIS.'
+);
+requireText(
+  siscofisOperational,
+  "'PDF SISCOFIS — ' + file.name",
+  'PDF direto perdeu o rótulo auditável de origem do arquivo.'
 );
 requireText(
   rules,
