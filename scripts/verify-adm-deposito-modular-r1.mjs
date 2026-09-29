@@ -665,8 +665,13 @@ requireText(
 );
 requireText(
   warehouseLanding,
-  'WAREHOUSE_BOX_VISUAL, WAREHOUSE_PALLET_VISUAL',
-  'Início deixou de importar as paletas oficiais compartilhadas de caixas e paletes.'
+  'WAREHOUSE_BOX_VISUAL',
+  'Início deixou de importar a paleta oficial compartilhada das caixas.'
+);
+requireText(
+  warehouseLanding,
+  'WAREHOUSE_PALLET_VISUAL',
+  'Início deixou de importar a paleta oficial compartilhada dos paletes.'
 );
 requireText(
   warehouseLanding,
@@ -675,8 +680,13 @@ requireText(
 );
 requireText(
   isometricPreview,
-  'WAREHOUSE_BOX_VISUAL, WAREHOUSE_PALLET_VISUAL',
-  'Renderer 3D deixou de importar as paletas oficiais compartilhadas de caixas e paletes.'
+  'WAREHOUSE_BOX_VISUAL',
+  'Renderer 3D deixou de importar a paleta oficial compartilhada das caixas.'
+);
+requireText(
+  isometricPreview,
+  'WAREHOUSE_PALLET_VISUAL',
+  'Renderer 3D deixou de importar a paleta oficial compartilhada dos paletes.'
 );
 requireText(
   isometricPreview,
