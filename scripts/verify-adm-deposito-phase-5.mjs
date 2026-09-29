@@ -106,6 +106,37 @@ requireText(
   "validationErrors.map((issue, index) =>",
   'Migração SISCOFIS deixou de manter erros bloqueantes imediatamente visíveis.'
 );
+requireText(
+  siscofisUi,
+  'data-testid="warehouse-siscofis-preview-exclude"',
+  'Prévia do Marco Zero perdeu a ação manual de não importar item.'
+);
+requireText(
+  siscofisUi,
+  'data-testid="warehouse-siscofis-preview-undo-exclusions"',
+  'Prévia do Marco Zero perdeu a reversão das exclusões antes da revalidação.'
+);
+requireText(
+  siscofisUi,
+  "preview.kind === 'MARCO_ZERO'",
+  'Ação de não importar deixou de ficar restrita ao Marco Zero.'
+);
+requireText(
+  siscofisUi,
+  'filterSiscofisDraftRows(rawJson, exclusions)',
+  'Exclusão da prévia deixou de remover a linha do rascunho antes da revalidação.'
+);
+requireText(
+  siscofisUi,
+  'emprovexSiscofisSourceIndexFromRowId(rowId)',
+  'Edição/exclusão SISCOFIS voltou a depender do índice visual filtrado.'
+);
+requireText(
+  domain,
+  'remapEmprovexSiscofisRowIdAfterExclusions',
+  'Domínio SISCOFIS perdeu o remapeamento seguro de rowId após exclusões.'
+);
+
 
 requireText(
   siscofisUi,
