@@ -81,6 +81,38 @@ for (const marker of [
 ]) {
   requireText(siscofisUi, marker, 'Jornada operacional SISCOFIS incompleta: ' + marker);
 }
+requireText(
+  siscofisUi,
+  'data-visual-theme="operational-light"',
+  'Migração SISCOFIS deixou de declarar o tema operacional claro obrigatório.'
+);
+requireText(
+  siscofisUi,
+  'bg-[#00288e]',
+  'Migração SISCOFIS perdeu o azul institucional nas ações primárias.'
+);
+requireText(
+  siscofisUi,
+  'border border-slate-200 bg-white',
+  'Migração SISCOFIS perdeu formulários claros de alto contraste.'
+);
+for (const forbiddenVisualToken of [
+  'bg-[#01050d]',
+  'bg-black/',
+  'border-white/[',
+  'text-cyan-',
+  'text-blue-200',
+  'text-slate-200',
+  'text-slate-300',
+]) {
+  if (siscofisUi.includes(forbiddenVisualToken)) {
+    findings.push(
+      'Migração SISCOFIS voltou a introduzir dark mode operacional: '
+      + forbiddenVisualToken
+    );
+  }
+}
+
 
 for (const marker of [
   'extractEmprovexSiscofisInventoryFromPdfBytes',
