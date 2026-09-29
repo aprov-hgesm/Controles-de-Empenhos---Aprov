@@ -4,12 +4,8 @@ import { useRouter } from 'next/navigation';
 import {
   Check,
   Move,
-  RotateCcw,
-  RotateCw,
   Settings2,
   Undo2,
-  ZoomIn,
-  ZoomOut,
 } from 'lucide-react';
 import {
   useCallback,
@@ -82,7 +78,6 @@ interface DepotPlacement {
   width: number;
   height: number;
   scale: number;
-  rotation: number;
 }
 
 type IsoPoint = { x: number; y: number };
@@ -426,14 +421,8 @@ function derivePlacements(
     const x = 48 + col * (cellWidth + gapX) + (cellWidth - width) / 2;
     const y = 76 + row * (cellHeight + gapY) + (cellHeight - height) / 2;
 
-    return { depot, layout, x, y, width, height, scale, rotation: 0 };
+    return { depot, layout, x, y, width, height, scale };
   });
-}
-
-function maxVisualScaleForPlacement(placement: DepotPlacement): number {
-  const widthLimit = (DEPOT_WORLD_WIDTH - 72) / Math.max(placement.width, 1);
-  const heightLimit = (WORLD_HEIGHT - 150) / Math.max(placement.height, 1);
-  return Math.max(0.55, Math.min(1.65, widthLimit, heightLimit));
 }
 
 function applyVisualOverrides(
@@ -444,48 +433,17 @@ function applyVisualOverrides(
     const visual = overrides[placement.depot.id];
     if (!visual) return placement;
 
-    const visualScale = Math.min(
-      visual.scale,
-      maxVisualScaleForPlacement(placement)
-    );
-    const width = placement.width * visualScale;
-    const height = placement.height * visualScale;
-    const desiredX =
-      placement.x + visual.offsetX + (placement.width - width) / 2;
-    const desiredY =
-      placement.y + visual.offsetY + (placement.height - height) / 2;
     const minX = 34;
     const minY = 72;
-    const maxX = Math.max(minX, DEPOT_WORLD_WIDTH - width - 34);
-    const maxY = Math.max(minY, WORLD_HEIGHT - height - 58);
+    const maxX = Math.max(minX, DEPOT_WORLD_WIDTH - placement.width - 34);
+    const maxY = Math.max(minY, WORLD_HEIGHT - placement.height - 58);
 
     return {
       ...placement,
-      x: Math.min(maxX, Math.max(minX, desiredX)),
-      y: Math.min(maxY, Math.max(minY, desiredY)),
-      width,
-      height,
-      scale: placement.scale * visualScale,
-      rotation: visual.rotation,
+      x: Math.min(maxX, Math.max(minX, placement.x + visual.offsetX)),
+      y: Math.min(maxY, Math.max(minY, placement.y + visual.offsetY)),
     };
   });
-}
-
-function rotatePointAround(
-  point: IsoPoint,
-  center: IsoPoint,
-  degrees: number
-): IsoPoint {
-  if (!degrees) return point;
-  const radians = degrees * Math.PI / 180;
-  const cos = Math.cos(radians);
-  const sin = Math.sin(radians);
-  const dx = point.x - center.x;
-  const dy = point.y - center.y;
-  return {
-    x: center.x + dx * cos - dy * sin,
-    y: center.y + dx * sin + dy * cos,
-  };
 }
 
 function svgPointerPoint(
@@ -877,14 +835,6 @@ function DepotWorld({
   const floorB = isoPoint(placement.x + placement.width + 9, placement.y - 9, 0);
   const floorC = isoPoint(placement.x + placement.width + 9, placement.y + placement.height + 9, 0);
   const floorD = isoPoint(placement.x - 9, placement.y + placement.height + 9, 0);
-  const center = isoPoint(
-    placement.x + placement.width / 2,
-    placement.y + placement.height / 2,
-    0
-  );
-  const rotationTransform = placement.rotation
-    ? 'rotate(' + placement.rotation + ' ' + center.x + ' ' + center.y + ')'
-    : undefined;
   const open = () => onOpen(depot.id);
 
   return (
@@ -896,7 +846,6 @@ function DepotWorld({
       ].filter(Boolean).join(' ')}
       role="button"
       tabIndex={0}
-      transform={rotationTransform}
       aria-label={editMode
         ? 'Selecionar e mover ' + depot.name
         : 'Abrir ' + depot.name + ' em Meus Depósitos'}
@@ -990,20 +939,10 @@ function DepotWorld({
 
 function DepotWorldLabel({ placement }: { placement: DepotPlacement }) {
   const { depot, layout } = placement;
-  const center = isoPoint(
-    placement.x + placement.width / 2,
-    placement.y + placement.height / 2,
-    0
-  );
-  const rawLabelPoint = isoPoint(
+  const labelPoint = isoPoint(
     placement.x + placement.width * 0.5,
     placement.y + placement.height + 17,
     0
-  );
-  const labelPoint = rotatePointAround(
-    rawLabelPoint,
-    center,
-    placement.rotation
   );
 
   return (
@@ -1285,28 +1224,17 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
       const base = current[depotId] || {
         offsetX: 0,
         offsetY: 0,
-        scale: 1,
-        rotation: 0,
       };
-      const basePlacement = basePlacements.find(
-        (placement) => placement.depot.id === depotId
-      );
-      const requestedScale =
-        typeof next.scale === 'number' ? next.scale : base.scale;
-      const safeScale = basePlacement
-        ? Math.min(requestedScale, maxVisualScaleForPlacement(basePlacement))
-        : requestedScale;
 
       return normalizeWarehouseLandingVisualOverrides({
         ...current,
         [depotId]: {
           ...base,
           ...next,
-          scale: safeScale,
         },
       });
     });
-  }, [basePlacements]);
+  }, []);
 
   const beginVisualEdit = () => {
     setVisualOverrides(savedVisualOverrides);
@@ -1370,8 +1298,6 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
     const current = visualOverrides[depotId] || {
       offsetX: 0,
       offsetY: 0,
-      scale: 1,
-      rotation: 0,
     };
     dragRef.current = {
       depotId,
@@ -1415,15 +1341,6 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
     }
     dragRef.current = null;
   };
-
-  const selectedTransform = selectedVisualDepotId
-    ? visualOverrides[selectedVisualDepotId] || {
-        offsetX: 0,
-        offsetY: 0,
-        scale: 1,
-        rotation: 0,
-      }
-    : null;
 
   const worldFloor = [
     isoPoint(0, 0, 0),
@@ -1509,54 +1426,12 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
             <div className={styles.layoutControlRow}>
               <button
                 type="button"
-                onClick={() => selectedTransform && updateVisual(selectedVisualDepotId, {
-                  rotation: selectedTransform.rotation - 15,
-                })}
-                title="Girar 15° à esquerda"
-                aria-label="Girar depósito à esquerda"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => selectedTransform && updateVisual(selectedVisualDepotId, {
-                  rotation: selectedTransform.rotation + 15,
-                })}
-                title="Girar 15° à direita"
-                aria-label="Girar depósito à direita"
-              >
-                <RotateCw className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => selectedTransform && updateVisual(selectedVisualDepotId, {
-                  scale: selectedTransform.scale - 0.1,
-                })}
-                title="Diminuir"
-                aria-label="Diminuir depósito"
-              >
-                <ZoomOut className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => selectedTransform && updateVisual(selectedVisualDepotId, {
-                  scale: selectedTransform.scale + 0.1,
-                })}
-                title="Aumentar"
-                aria-label="Aumentar depósito"
-              >
-                <ZoomIn className="h-3.5 w-3.5" />
-              </button>
-              <span className={styles.layoutScale}>
-                {selectedTransform ? Math.round(selectedTransform.scale * 100) : 100}%
-              </span>
-              <button
-                type="button"
                 onClick={resetSelectedVisual}
                 title="Restaurar este depósito"
                 aria-label="Restaurar posição do depósito"
               >
                 <Undo2 className="h-3.5 w-3.5" />
+                Restaurar posição
               </button>
             </div>
 
@@ -1769,7 +1644,7 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
         <g className={styles.sceneHint} transform="translate(116 822)">
           <text>
             {editMode
-              ? 'Modo de edição visual · arraste os depósitos e ajuste rotação/tamanho no painel'
+              ? 'Modo de edição visual · arraste os depósitos para organizar o plano'
               : 'Clique diretamente em um depósito para entrar em Meus Depósitos'}
           </text>
         </g>
