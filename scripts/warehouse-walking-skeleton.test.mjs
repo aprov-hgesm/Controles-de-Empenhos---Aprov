@@ -18,12 +18,13 @@ const primaryRoutes = {
 const legacyRoutes = {
   stock: ['app/adm-deposito/estoque/page.tsx', '/adm-deposito/controle-de-itens?aba=stock'],
   movements: ['app/adm-deposito/movimentacoes/page.tsx', '/adm-deposito/controle-de-itens?aba=movements'],
-  locations: ['app/adm-deposito/localizacoes/page.tsx', '/adm-deposito/meus-depositos?aba=estrutura'],
-  warehouseView: ['app/adm-deposito/visao-do-deposito/page.tsx', '/adm-deposito/meus-depositos?aba=croquis'],
+  locations: ['app/adm-deposito/localizacoes/page.tsx', '/adm-deposito/controle-de-depositos?aba=estrutura'],
+  warehouseView: ['app/adm-deposito/visao-do-deposito/page.tsx', '/adm-deposito/controle-de-depositos?aba=croquis'],
   inventory: ['app/adm-deposito/inventario/page.tsx', '/adm-deposito/controle-de-itens?aba=inventory'],
   siscofis: ['app/adm-deposito/siscofis-conciliacao/page.tsx', '/adm-deposito/cadastro-de-itens?aba=siscofis'],
   deliveries: ['app/adm-deposito/entregas/page.tsx', '/adm-deposito/controle-de-itens?aba=deliveries'],
   settings: ['app/adm-deposito/configuracoes/page.tsx', '/adm-deposito/controle-de-itens?aba=settings'],
+  expressOutbound: ['app/adm-deposito/saida-expressa/page.tsx', '/adm-deposito/saida-de-material'],
 };
 
 test('walking skeleton possui as seis superfícies atuais protegidas e redirects legados', () => {

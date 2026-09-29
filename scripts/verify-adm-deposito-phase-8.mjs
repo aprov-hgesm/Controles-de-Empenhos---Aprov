@@ -65,12 +65,11 @@ assert.match(withdrawalUi, /scannerRef\.current\?\.focus\(\)/);
 assert.match(stock, /listWarehouseBarcodes/);
 assert.match(stock, /warehouse-material-barcodes/);
 assert.match(stock, /\.\.\.summary\.barcodes/);
-assert.match(navigation, /id: 'control'/);
-assert.match(control, /WarehouseExpressOutbound/);
-assert.match(control, /id: 'outbound'/);
-assert.match(control, /label: 'Saída de Material'/);
-assert.match(route, /redirect\('\/adm-deposito\/controle-de-itens\?aba=outbound'\)/);
-assert.match(sectionContent, /WarehouseItemControlOperational/);
+assert.match(navigation, /id: 'outbound'/);
+assert.match(navigation, /label: 'Saída de Material'/);
+assert.match(route, /redirect\('\/adm-deposito\/saida-de-material'\)/);
+assert.match(sectionContent, /section === 'outbound'/);
+assert.match(sectionContent, /WarehouseMaterialWithdrawal/);
 assert.match(protectedSurface, /canAccessWarehouseModule/);
 
 assert.match(rules, /validWarehouseBarcodeDocument/);

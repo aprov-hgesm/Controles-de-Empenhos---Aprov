@@ -38,8 +38,8 @@ for (const [path, section] of primaryRoutes) {
 const legacyRoutes = [
   ['app/adm-deposito/estoque/page.tsx', "/adm-deposito/controle-de-itens?aba=stock"],
   ['app/adm-deposito/movimentacoes/page.tsx', "/adm-deposito/controle-de-itens?aba=movements"],
-  ['app/adm-deposito/localizacoes/page.tsx', "/adm-deposito/meus-depositos?aba=estrutura"],
-  ['app/adm-deposito/visao-do-deposito/page.tsx', "/adm-deposito/meus-depositos?aba=croquis"],
+  ['app/adm-deposito/localizacoes/page.tsx', "/adm-deposito/controle-de-depositos?aba=estrutura"],
+  ['app/adm-deposito/visao-do-deposito/page.tsx', "/adm-deposito/controle-de-depositos?aba=croquis"],
   ['app/adm-deposito/inventario/page.tsx', "/adm-deposito/controle-de-itens?aba=inventory"],
   ['app/adm-deposito/siscofis-conciliacao/page.tsx', "/adm-deposito/cadastro-de-itens?aba=siscofis"],
   ['app/adm-deposito/entregas/page.tsx', "/adm-deposito/controle-de-itens?aba=deliveries"],
