@@ -15,6 +15,7 @@ const SURFACE_LABELS: Record<OperationalActiveTab, string> = {
   inicio: 'INÍCIO',
   painel: 'PAINEL',
   empenhos: 'EMPENHOS',
+  fornecedores: 'FORNECEDORES',
   itens: 'ITENS',
   nova_nf: 'NOTAS FISCAIS',
   relatorios: 'RELATÓRIOS',
