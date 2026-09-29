@@ -55,6 +55,8 @@ type SiscofisPdfSummary = {
   filteredHortifruti: number;
 };
 
+const DEFAULT_SISCOFIS_SOURCE_LABEL = 'Inventário SISCOFIS — Migração inicial';
+
 export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: string }) {
   const [context, setContext] = useState<WarehouseSiscofisContext | null>(null);
   const [rawJson, setRawJson] = useState('');
@@ -67,6 +69,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
   const [materialOverrides, setMaterialOverrides] = useState<Record<string, string>>({});
   const [editedRows, setEditedRows] = useState<Record<string, boolean>>({});
   const [pdfSummary, setPdfSummary] = useState<SiscofisPdfSummary | null>(null);
+  const [draftSourceLabel, setDraftSourceLabel] = useState(DEFAULT_SISCOFIS_SOURCE_LABEL);
   const [manualNumeroItem, setManualNumeroItem] = useState('');
   const [manualDescription, setManualDescription] = useState('');
   const [manualQuantity, setManualQuantity] = useState('');
@@ -113,6 +116,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
       const extraction = extractEmprovexSiscofisInventoryFromPdfBytes(await file.arrayBuffer());
       const nextRawJson = JSON.stringify(extraction.inventory, null, 2);
       const referenceDate = extraction.referenceDate || manualReferenceDate;
+      const sourceLabel = 'PDF SISCOFIS — ' + file.name;
 
       let filteredOtherAccounts = 0;
       let filteredHortifruti = 0;
@@ -125,6 +129,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
         extraction.inventory.items.length - filteredOtherAccounts - filteredHortifruti;
 
       setRawJson(nextRawJson);
+      setDraftSourceLabel(sourceLabel);
       if (extraction.referenceDate) setManualReferenceDate(extraction.referenceDate);
       setPdfSummary({
         fileName: file.name,
@@ -141,7 +146,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
         workspaceId,
         nextRawJson,
         referenceDate,
-        'PDF SISCOFIS — ' + file.name,
+        sourceLabel,
         {}
       );
       setPreview(nextPreview);
@@ -170,7 +175,13 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
     setPreview(null);
     setIssues([]);
     try {
-      const nextPreview = await prepareEmprovexSiscofisInventoryImport(workspaceId, rawJson, manualReferenceDate, 'Inventário SISCOFIS — Migração inicial', materialOverrides);
+      const nextPreview = await prepareEmprovexSiscofisInventoryImport(
+        workspaceId,
+        rawJson,
+        manualReferenceDate,
+        draftSourceLabel,
+        materialOverrides
+      );
       setPreview(nextPreview);
       setPreviewDirty(false);
       setIssues(nextPreview.issues);
@@ -200,6 +211,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
       setEditedRows({});
       setRawJson('');
       setPdfSummary(null);
+      setDraftSourceLabel(DEFAULT_SISCOFIS_SOURCE_LABEL);
       setIssues([]);
       await refresh();
     } catch (error) {
@@ -273,6 +285,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
   const clearDraft = () => {
     setRawJson('');
     setPdfSummary(null);
+    setDraftSourceLabel(DEFAULT_SISCOFIS_SOURCE_LABEL);
     setPreview(null);
     setPreviewDirty(false);
     setMaterialOverrides({});
@@ -301,7 +314,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
   return (
     <div className="mt-6 space-y-5" data-testid="warehouse-siscofis-operational">
       <div className="grid gap-3 md:grid-cols-2">
-        <ContractCard title="Contrato de importação" code={EMPROVEX_SISCOFIS_INVENTORY_SCHEMA_VERSION} description="Migração manual e JSON usam o mesmo contrato versionado e passam pela mesma validação." />
+        <ContractCard title="Contrato de importação" code={EMPROVEX_SISCOFIS_INVENTORY_SCHEMA_VERSION} description="PDF direto, migração manual e JSON usam o mesmo contrato versionado e passam pela mesma validação." />
         <ContractCard title="Snapshot auditável" code={WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION} description="Marco Zero e conciliações ficam no namespace logístico. Snapshots posteriores não alteram saldo automaticamente." />
       </div>
 
