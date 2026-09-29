@@ -21,3 +21,19 @@ export const WAREHOUSE_PALLET_VISUAL = {
   runnerStroke: '#4d2d15',
   highlight: '#f5d39d',
 } as const;
+
+export const WAREHOUSE_RACK_VISUAL = {
+  postDark: '#0e3556',
+  postMain: '#123f66',
+  postHighlight: '#6f98b5',
+  frameStroke: '#315f7f',
+  beamFront: '#f47f13',
+  beamTop: '#ff9b36',
+  beamSide: '#c85e08',
+  beamStroke: '#a94705',
+  rearBeamFront: '#d96b0d',
+  rearBeamTop: '#f18a28',
+  deckTop: '#edf2f5',
+  deckStroke: '#a8b8c5',
+  deckLine: '#c5d1da',
+} as const;
