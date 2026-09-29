@@ -320,8 +320,9 @@ export function useCronogramaActions(context:CronogramaActionsContext){
       const saldoDisponivel = Math.max(0, it.quantity - it.received);
       const totalProg = cronogramaColunas.reduce((sum, col) => sum + (Number(cronogramaDistribuicao[it.id]?.[col.id]) || 0), 0);
       const valorTotalProg = totalProg * it.unitPrice;
+       const numeroItemEmpenho = String(it.empenhoItemNumber || it.id || '').trim();
        const row: string[] = [
-        `${it.name}`,
+        `${numeroItemEmpenho ? `Item nº ${numeroItemEmpenho}\n` : ''}${it.name}`,
         it.unit,
         String(it.quantity),
         String(it.received),

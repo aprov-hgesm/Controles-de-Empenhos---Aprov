@@ -448,6 +448,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
         const rawCode = item.codigo_item || item.num_item || item.id || `0000${idx + 1}`;
         return {
           id: String(rawCode).padStart(5, '0'),
+          empenhoItemNumber: item.num_item != null ? String(item.num_item).trim() : undefined,
           name: item.descricao || item.name || `Item ${idx + 1}`,
           unit: item.unidade || item.unit || 'un',
           quantity: itemQty,
@@ -549,6 +550,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
         const itemId = `ITEM-${Math.floor(Math.random() * 10000)}`;
         const newItem: Item = {
           id: itemId,
+          empenhoItemNumber: newItemForm.id.trim() || undefined,
           name: newItemForm.name,
           unit: newItemForm.unit,
           quantity: qty,
