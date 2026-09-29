@@ -16,6 +16,7 @@ execFileSync(
   [
     resolve(root, 'node_modules/typescript/bin/tsc'),
     resolve(root, 'lib/warehouse/siscofis.ts'),
+    resolve(root, 'lib/warehouse/siscofisPdf.ts'),
     resolve(root, 'lib/warehouse/invoiceIntegration.ts'),
     resolve(root, 'lib/warehouse/material.ts'),
     resolve(root, 'lib/warehouse/movement.ts'),
@@ -38,6 +39,7 @@ execFileSync(
 
 const require = createRequire(import.meta.url);
 const siscofis = require(resolve(outDir, 'warehouse/siscofis.js'));
+const siscofisPdf = require(resolve(outDir, 'warehouse/siscofisPdf.js'));
 
 test.after(() => {
   rmSync(outDir, { recursive: true, force: true });
@@ -84,6 +86,106 @@ function material(overrides = {}) {
     ...overrides,
   };
 }
+
+function pdfText(x, y, value) {
+  return [
+    'BT',
+    '/F1 0008 Tf',
+    x.toFixed(4) + ' ' + y.toFixed(4) + ' Td',
+    '( ' + value + ' ) Tj',
+    'ET',
+  ].join('\r\n');
+}
+
+function syntheticSiscofisPdf() {
+  const stream = [
+    pdfText(300, 550, 'MAPA DE EXISTENCIA - MATERIAL DE CONSUMO'),
+    pdfText(30.2, 408.192, 'Nr Ficha'),
+    pdfText(159.8, 408.192, 'Nome do Material'),
+    pdfText(640.04, 395.232, 'Qtde Exist'),
+    pdfText(701.96, 395.232, 'Qtde Disp'),
+    pdfText(771.08, 395.232, 'Vlr Unit'),
+
+    pdfText(30.2, 367.032, '07.0031C'),
+    pdfText(159.8, 367.032, 'ERVILHA / Tipo: Seca;'),
+    pdfText(640.04, 347.592, '68'),
+    pdfText(701.96, 347.592, '68'),
+    pdfText(771.08, 347.592, '4,99'),
+
+    pdfText(30.2, 332.472, '07.1345C'),
+    pdfText(159.8, 332.472, 'BETERRABA / Tipo: In natura;'),
+    pdfText(640.04, 313.032, '10'),
+    pdfText(701.96, 313.032, '0'),
+    pdfText(771.08, 313.032, '2,74'),
+
+    pdfText(30.2, 297.912, '21.1000C'),
+    pdfText(159.8, 297.912, 'CANECA DE VIDRO'),
+    pdfText(640.04, 278.472, '2'),
+    pdfText(701.96, 278.472, '2'),
+    pdfText(771.08, 278.472, '15,25'),
+
+    pdfText(30.2, 263.352, '07.9998C'),
+    pdfText(159.8, 263.352, 'ITEM SEM ESTOQUE'),
+    pdfText(640.04, 243.912, '0'),
+    pdfText(701.96, 243.912, '0'),
+    pdfText(771.08, 243.912, '1,00'),
+
+    pdfText(500, 40, 'Data de emissao : segunda-feira, 28 de setembro de 2026'),
+  ].join('\r\n');
+
+  const pdf = [
+    '%PDF-1.3',
+    '1 0 obj',
+    '<< /Type /Catalog /Pages 3 0 R >>',
+    'endobj',
+    '3 0 obj',
+    '<< /Type /Pages /Count 1 /Kids [ 4 0 R ] >>',
+    'endobj',
+    '4 0 obj',
+    '<< /Type /Page /Parent 3 0 R /Contents 5 0 R >>',
+    'endobj',
+    '5 0 obj',
+    '<< /Length ' + Buffer.byteLength(stream, 'latin1') + ' >>',
+    'stream',
+    stream,
+    'endstream',
+    'endobj',
+    '%%EOF',
+  ].join('\r\n');
+
+  return new Uint8Array(Buffer.from(pdf, 'latin1'));
+}
+
+test('extrator local lê PDF SISCOFIS textual sem IA e usa Qtde Exist', () => {
+  const extracted = siscofisPdf.extractEmprovexSiscofisInventoryFromPdfBytes(
+    syntheticSiscofisPdf()
+  );
+
+  assert.equal(extracted.pageCount, 1);
+  assert.equal(extracted.detectedRows, 4);
+  assert.equal(extracted.zeroQuantityRows, 1);
+  assert.equal(extracted.invalidRows, 0);
+  assert.equal(extracted.referenceDate, '2026-09-28');
+  assert.equal(extracted.inventory.items.length, 3);
+  assert.deepEqual(extracted.inventory.items[0], {
+    numeroItem: '07.0031C',
+    descricao: 'ERVILHA / Tipo: Seca;',
+    quantidade: 68,
+    valorUnitario: 4.99,
+  });
+  assert.equal(extracted.inventory.items[1].quantidade, 10);
+  assert.equal(extracted.inventory.items[1].valorUnitario, 2.74);
+});
+
+test('PDF direto reutiliza o classificador oficial de conta 07 e hortifruti', () => {
+  const extracted = siscofisPdf.extractEmprovexSiscofisInventoryFromPdfBytes(
+    syntheticSiscofisPdf()
+  );
+  const classifications = extracted.inventory.items.map((item) =>
+    siscofis.classifyEmprovexSiscofisSourceItem(item)
+  );
+  assert.deepEqual(classifications, [null, 'FRESH_HORTIFRUTI', 'NON_ACCOUNT_07']);
+});
 
 test('aceita contrato externo simplificado e preserva Nr Ficha repetido', () => {
   const parsed = siscofis.parseEmprovexSiscofisInventoryJson(externalJson);
