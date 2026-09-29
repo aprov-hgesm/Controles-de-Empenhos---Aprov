@@ -36,7 +36,6 @@ for (const marker of [
   "WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION_V1 = 'warehouse_siscofis_snapshot_v1'",
   "WAREHOUSE_SISCOFIS_SNAPSHOT_SCHEMA_VERSION = 'warehouse_siscofis_snapshot_v2'",
   'parseWarehouseSiscofisJson',
-  'buildWarehouseSiscofisPrompt',
   'buildWarehouseSiscofisPreview',
   'hashWarehouseSiscofisImport',
   'deriveSiscofisMarcoZeroMaterialId',
@@ -47,6 +46,7 @@ for (const marker of [
 
 for (const marker of [
   'loadWarehouseSiscofisContext',
+  'prepareEmprovexSiscofisInventoryData',
   'prepareWarehouseSiscofisImport',
   'confirmWarehouseSiscofisImport',
   "type: 'INITIAL_BALANCE'",
@@ -72,14 +72,25 @@ for (const marker of [
   'data-testid="warehouse-siscofis-operational"',
   'data-testid="warehouse-siscofis-pdf-direct"',
   'data-testid="warehouse-siscofis-pdf-input"',
-  'PDF SISCOFIS direto · sem IA',
-  'data-testid="warehouse-siscofis-json"',
-  'data-testid="warehouse-siscofis-validate"',
+  'Upload do Mapa de Existência',
+  'Selecionar Mapa de Existência',
   'data-testid="warehouse-siscofis-preview"',
+  'data-testid="warehouse-siscofis-revalidate"',
   'confirmWarehouseSiscofisImport',
-  'Nenhuma alteração automática foi feita no estoque',
+  'prepareEmprovexSiscofisInventoryData',
+  '<th className="p-3">Validade</th>',
 ]) {
   requireText(siscofisUi, marker, 'Jornada operacional SISCOFIS incompleta: ' + marker);
+}
+for (const removedSurface of [
+  'Prompt para IA externa',
+  'data-testid="warehouse-siscofis-json"',
+  'Migração manual de item',
+  'Copiar prompt',
+]) {
+  if (siscofisUi.includes(removedSurface)) {
+    findings.push('Migração SISCOFIS voltou a expor fluxo removido: ' + removedSurface);
+  }
 }
 requireText(
   siscofisUi,
@@ -123,8 +134,8 @@ requireText(
 );
 requireText(
   siscofisUi,
-  'filterSiscofisDraftRows(rawJson, exclusions)',
-  'Exclusão da prévia deixou de remover a linha do rascunho antes da revalidação.'
+  'filterSiscofisDraftRows(draftInventory, exclusions)',
+  'Exclusão da prévia deixou de remover a linha do Mapa de Existência antes da revalidação.'
 );
 requireText(
   siscofisUi,
@@ -174,6 +185,8 @@ for (const marker of [
   "byText('Qtde Exist')",
   "byText('Qtde Disp')",
   "byText('Vlr Unit')",
+  "byText('Validade')",
+  'parseBrazilianDate',
   'Mapa de Existência - Material de Consumo',
 ]) {
   requireText(pdfExtractor, marker, 'Extrator local de PDF SISCOFIS incompleto: ' + marker);
@@ -195,8 +208,23 @@ requireText(
 );
 requireText(
   siscofisUi,
-  "'PDF SISCOFIS — ' + file.name",
-  'Importação direta de PDF perdeu a procedência do arquivo no snapshot.'
+  "'Mapa de Existência SISCOFIS — ' + file.name",
+  'Upload do Mapa de Existência perdeu a procedência do arquivo no snapshot.'
+);
+requireText(
+  domain,
+  'expiresOn: item.validade',
+  'Validade extraída do Mapa de Existência deixou de chegar ao contrato do Marco Zero.'
+);
+requireText(
+  domain,
+  'expiresOn: row.expiresOn ?? null',
+  'Prévia do Marco Zero deixou de preservar a validade por linha.'
+);
+requireText(
+  pdfExtractor,
+  'validade: expiry',
+  'Extrator do Mapa de Existência deixou de devolver a validade.'
 );
 
 requireText(
@@ -314,7 +342,7 @@ if (findings.length) {
 }
 
 console.log('FASE 5 — SISCOFIS / Marco Zero / Conciliação: OK');
-console.log('- contratos versionados, validação estrita e prompt para IA externa presentes');
+console.log('- upload do Mapa de Existência é a única entrada operacional; validade é preservada por linha');
 console.log('- Marco Zero usa INITIAL_BALANCE no ledger oficial e replay idempotente');
 console.log('- snapshots posteriores conciliam sem gerar movimentação automática');
 console.log('- migração permanece em Alocação de Material; histórico SISCOFIS fica somente leitura em Controle de Materiais → Relatórios');
