@@ -1481,8 +1481,13 @@ requireText(
 );
 requireText(
   siscofisOperational,
-  "await import('../../../lib/warehouse/siscofisPdf')",
+  "const { extractEmprovexSiscofisInventoryFromPdfBytes } = await import(",
   'Extrator PDF deixou de ser carregado sob demanda.'
+);
+requireText(
+  siscofisOperational,
+  "'../../../lib/warehouse/siscofisPdf'",
+  'Migração SISCOFIS perdeu o módulo local do extrator PDF.'
 );
 requireText(
   siscofisOperational,
