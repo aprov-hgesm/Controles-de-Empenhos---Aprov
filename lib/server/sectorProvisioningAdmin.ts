@@ -69,6 +69,7 @@ interface IdentityToolkitUser {
   emailVerified?: boolean;
   disabled?: boolean;
   providerUserInfo?: Array<{ providerId?: string }>;
+  customAttributes?: string;
 }
 
 interface FounderSession {
@@ -165,7 +166,7 @@ function parseServiceAccountCredentials(): ServiceAccountCredentials {
   };
 }
 
-async function getGoogleAccessToken(): Promise<string> {
+export async function getGoogleAccessToken(): Promise<string> {
   const now = Date.now();
   if (accessTokenCache && accessTokenCache.expiresAt - 60_000 > now) {
     return accessTokenCache.token;
@@ -350,6 +351,88 @@ async function createAuthUser(
   );
 }
 
+function parseIdentityCustomAttributes(raw?: string): Record<string, unknown> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function buildSectorWarehouseCustomAttributes(
+  workspaceIdInput: string,
+  ugInput: string,
+  existingRaw?: string
+): string {
+  const workspaceId = normalizeWorkspaceId(workspaceIdInput);
+  const ug = normalizeUnitUg(ugInput);
+
+  if (!isValidWorkspaceId(workspaceId) || !isValidUnitUg(ug)) {
+    throw new SectorProvisioningFailure(
+      'Workspace/UG inválidos para autorização da Central de Depósitos.',
+      'INVALID_INPUT',
+      400
+    );
+  }
+
+  return JSON.stringify({
+    ...parseIdentityCustomAttributes(existingRaw),
+    emprovexWarehouse: true,
+    emprovexWarehouseVersion: 'v1',
+    emprovexRole: 'sector',
+    emprovexWorkspaceId: workspaceId,
+    emprovexUg: ug,
+  });
+}
+
+async function updateAuthUserWarehouseClaims(
+  accessToken: string,
+  user: IdentityToolkitUser,
+  workspaceId: string,
+  ug: string
+): Promise<void> {
+  await identityToolkitAdminRequest<IdentityToolkitUser>(
+    `projects/${encodeURIComponent(PROJECT_ID)}/accounts:update`,
+    accessToken,
+    {
+      localId: user.localId,
+      customAttributes: buildSectorWarehouseCustomAttributes(
+        workspaceId,
+        ug,
+        user.customAttributes
+      ),
+    }
+  );
+}
+
+export async function ensureSectorWarehouseClaims(
+  uid: string,
+  workspaceId: string,
+  ug: string
+): Promise<void> {
+  const accessToken = await getGoogleAccessToken();
+  const payload = await identityToolkitAdminRequest<{ users?: IdentityToolkitUser[] }>(
+    `projects/${encodeURIComponent(PROJECT_ID)}/accounts:lookup`,
+    accessToken,
+    { localId: [uid] }
+  );
+  const user = payload.users?.[0];
+
+  if (!user?.localId || user.localId !== uid) {
+    throw new SectorProvisioningFailure(
+      'Usuário Firebase do setor não foi localizado para autorizar a Central de Depósitos.',
+      'FORBIDDEN',
+      403
+    );
+  }
+
+  await updateAuthUserWarehouseClaims(accessToken, user, workspaceId, ug);
+}
+
 async function updateExistingAuthUserForPassword(
   accessToken: string,
   user: IdentityToolkitUser,
@@ -363,6 +446,11 @@ async function updateExistingAuthUserForPassword(
       password: input.initialPassword,
       emailVerified: true,
       disableUser: false,
+      customAttributes: buildSectorWarehouseCustomAttributes(
+        input.workspaceId,
+        input.ug,
+        user.customAttributes
+      ),
     }
   );
 }
@@ -1317,6 +1405,15 @@ export async function provisionSectorWorkspaceWithAuth(
       input.grantTrial
     );
     directoryCreated = true;
+
+    if (!authUserReused && authUser) {
+      await updateAuthUserWarehouseClaims(
+        accessToken,
+        authUser,
+        workspaceId,
+        ug
+      );
+    }
 
     lockState = {
       ...lockState,

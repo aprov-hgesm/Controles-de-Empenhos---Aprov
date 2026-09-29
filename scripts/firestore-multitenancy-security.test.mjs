@@ -40,6 +40,7 @@ const FIRESTORE_BASE = `http://127.0.0.1:8080/v1/projects/${PROJECT_ID}/database
 
 const results = [];
 const apps = [];
+const RUN_LEGACY_SINGLE_DATABASE_WAREHOUSE_TESTS = false;
 
 function now() {
   return new Date().toISOString();
@@ -556,18 +557,22 @@ async function main() {
     assert.equal(snapshot.data()?.warehouseIntegration, undefined);
   });
 
-  await allowed('Cadastro de NF não cria configuração warehouse implicitamente', async () => {
-    const snapshot = await getDoc(
-      doc(
-        admin.db,
-        'warehouse',
-        'hgesm-aprov',
-        'settings',
-        'invoice-integration'
-      )
-    );
-    assert.equal(snapshot.exists(), false);
-  });
+  if (RUN_LEGACY_SINGLE_DATABASE_WAREHOUSE_TESTS) {
+    // Cobertura histórica pré-migração. A Central usa hoje o banco nomeado
+    // emprovex-warehouse e possui suíte dedicada de regras.
+    await allowed('Cadastro de NF não cria configuração warehouse implicitamente', async () => {
+      const snapshot = await getDoc(
+        doc(
+          admin.db,
+          'warehouse',
+          'hgesm-aprov',
+          'settings',
+          'invoice-integration'
+        )
+      );
+      assert.equal(snapshot.exists(), false);
+    });
+  }
 
   const billingAccountSeed = (workspaceId, email, ug) => ({
     version: 'emprovex_billing_v1',
@@ -682,1763 +687,1562 @@ async function main() {
     'O teste do fundador precisa manter o mesmo UID entre providers.'
   );
 
-  console.log('\nFASE 0 — isolamento do ADM Depósito');
-
-  const phaseZeroDepotId = 'dep_' + '0'.repeat(32);
-  const founderWarehouseProbe = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'depots',
-    phaseZeroDepotId
-  );
-
-  await allowed('Fundador grava no namespace ADM Depósito', () =>
-    setDoc(founderWarehouseProbe, {
-      schemaVersion: 'warehouse_depot_v1',
-      id: phaseZeroDepotId,
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      code: 'DEP-00',
-      name: 'Depósito de prova da fundação',
-      description: null,
-      status: 'active',
-      createdBy: admin.user.uid,
-      updatedBy: admin.user.uid,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
-  );
-  await allowed('Fundador lê o namespace ADM Depósito', () =>
-    getDoc(founderWarehouseProbe)
-  );
-  await allowed('Fundador lista domínio do namespace ADM Depósito', () =>
-    getDocs(collection(admin.db, 'warehouse', 'hgesm-aprov', 'depots'))
-  );
-  await denied('Setor externo não lê namespace ADM Depósito do fundador', () =>
-    getDoc(
-      doc(
-        sessionA.db,
-        'warehouse',
-        'hgesm-aprov',
-        'depots',
-        phaseZeroDepotId
-      )
-    )
-  );
-  await denied('Setor externo não grava namespace ADM Depósito nem no próprio workspace', () =>
-    setDoc(
-      doc(
-        sessionA.db,
-        'warehouse',
-        'workspace-a',
-        'depots',
-        'external-probe'
-      ),
-      { marker: 'forbidden' }
-    )
-  );
-  await denied('Sessão fundadora por senha não acessa ADM Depósito', () =>
-    getDoc(
-      doc(
-        founderPassword.db,
-        'warehouse',
-        'hgesm-aprov',
-        'depots',
-        phaseZeroDepotId
-      )
-    )
-  );
-  await denied('Fundador não usa o namespace ADM Depósito de workspace externo', () =>
-    getDoc(
-      doc(
-        admin.db,
-        'warehouse',
-        'workspace-a',
-        'depots',
-        'external-probe'
-      )
-    )
-  );
-
-  console.log('\nFASE 1 — fundação canônica do material');
-
-  const canonicalMaterialId = 'mat_123e4567e89b12d3a456426614174000';
-  const canonicalMaterial = {
-    schemaVersion: 'warehouse_material_v1',
-    id: canonicalMaterialId,
-    workspaceId: 'hgesm-aprov',
-    ug: '160416',
-    description: 'Arroz parboilizado',
-    aliases: ['Arroz beneficiado'],
-    unit: { code: 'kg', label: null },
-    status: 'active',
-    conversions: [
-      {
-        presentation: { code: 'g', label: null },
-        factorToBaseUnit: 0.001,
-      },
-      {
-        presentation: { code: 'box', label: 'Caixa 30 kg' },
-        factorToBaseUnit: 30,
-      },
-    ],
-  };
-
-  const founderMaterialProbe = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'materials',
-    canonicalMaterialId
-  );
-
-  await allowed('Fundador grava material canônico da FASE 1', () =>
-    setDoc(founderMaterialProbe, canonicalMaterial)
-  );
-  await allowed('Fundador lê material canônico da FASE 1', () =>
-    getDoc(founderMaterialProbe)
-  );
-  await allowed('Fundador lista materiais da FASE 1', () =>
-    getDocs(collection(admin.db, 'warehouse', 'hgesm-aprov', 'materials'))
-  );
-
-  await denied('Material canônico não pode ser apagado fisicamente', () =>
-    deleteDoc(founderMaterialProbe)
-  );
-
-  await denied('Material não pode declarar workspace diferente do caminho', () =>
-    setDoc(founderMaterialProbe, {
-      ...canonicalMaterial,
-      workspaceId: 'workspace-a',
-    })
-  );
-
-  await denied('Setor externo não lê material do fundador', () =>
-    getDoc(
-      doc(
-        sessionA.db,
-        'warehouse',
-        'hgesm-aprov',
-        'materials',
-        canonicalMaterialId
-      )
-    )
-  );
-
-  const externalMaterialId = 'mat_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-  await denied('Setor externo não grava material nem no próprio workspace', () =>
-    setDoc(
-      doc(
-        sessionA.db,
-        'warehouse',
-        'workspace-a',
-        'materials',
-        externalMaterialId
-      ),
-      {
-        ...canonicalMaterial,
-        id: externalMaterialId,
-        workspaceId: 'workspace-a',
-        ug: '123456',
-      }
-    )
-  );
-
-  await denied('Sessão fundadora por senha não lê materiais da FASE 1', () =>
-    getDoc(
-      doc(
-        founderPassword.db,
-        'warehouse',
-        'hgesm-aprov',
-        'materials',
-        canonicalMaterialId
-      )
-    )
-  );
-
-  await denied('Fundador não grava material em workspace externo', () =>
-    setDoc(
-      doc(
-        admin.db,
-        'warehouse',
-        'workspace-a',
-        'materials',
-        externalMaterialId
-      ),
-      {
-        ...canonicalMaterial,
-        id: externalMaterialId,
-        workspaceId: 'workspace-a',
-        ug: '123456',
-      }
-    )
-  );
-
-
-  console.log('\nFASE 2 — ledger, saldo agregado e idempotência');
-
-  const phase2Movement1Id = 'mov_' + '1'.repeat(64);
-  const phase2Movement2Id = 'mov_' + '2'.repeat(64);
-  const phase2Movement3Id = 'mov_' + '3'.repeat(64);
-  const founderMovement1 = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'movements',
-    phase2Movement1Id
-  );
-  const founderMovement2 = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'movements',
-    phase2Movement2Id
-  );
-  const founderBalance = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'balances',
-    canonicalMaterialId
-  );
-
-  await allowed('Fundador cria movimento e saldo atômicos da FASE 2', async () => {
-    const batch = writeBatch(admin.db);
-    batch.set(founderMovement1, {
-      schemaVersion: 'warehouse_movement_v1',
-      id: phase2Movement1Id,
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: canonicalMaterialId,
-      type: 'INITIAL_BALANCE',
-      quantityDelta: 10,
-      idempotencyKeyHash: '1'.repeat(64),
-      reversesMovementId: null,
-      note: null,
-      createdAt: serverTimestamp(),
-    });
-    batch.set(founderBalance, {
-      schemaVersion: 'warehouse_balance_v1',
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: canonicalMaterialId,
-      quantity: 10,
-      revision: 1,
-      lastMovementId: phase2Movement1Id,
-      updatedAt: serverTimestamp(),
-    });
-    return batch.commit();
-  });
-
-  await allowed('Fundador lê ledger da FASE 2', () => getDoc(founderMovement1));
-  await allowed('Fundador lê saldo materializado da FASE 2', () => getDoc(founderBalance));
-
-  await allowed('Fundador aplica segundo movimento e atualiza saldo da FASE 2', async () => {
-    const batch = writeBatch(admin.db);
-    batch.set(founderMovement2, {
-      schemaVersion: 'warehouse_movement_v1',
-      id: phase2Movement2Id,
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: canonicalMaterialId,
-      type: 'OUTBOUND',
-      quantityDelta: -2,
-      idempotencyKeyHash: '2'.repeat(64),
-      reversesMovementId: null,
-      note: 'Saída de teste',
-      createdAt: serverTimestamp(),
-    });
-    batch.set(founderBalance, {
-      schemaVersion: 'warehouse_balance_v1',
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: canonicalMaterialId,
-      quantity: 8,
-      revision: 2,
-      lastMovementId: phase2Movement2Id,
-      updatedAt: serverTimestamp(),
-    });
-    return batch.commit();
-  });
-
-  await denied('Ledger da FASE 2 é append-only', () =>
-    updateDoc(founderMovement1, { note: 'Tentativa de sobrescrita' })
-  );
-
-  await denied('Saldo da FASE 2 não aceita alteração sem novo movimento', () =>
-    updateDoc(founderBalance, {
-      quantity: 999,
-      revision: 3,
-      updatedAt: serverTimestamp(),
-    })
-  );
-
-  await denied('Movimento da FASE 2 não existe sem atualização de saldo correspondente', () =>
-    setDoc(
-      doc(
-        admin.db,
-        'warehouse',
-        'hgesm-aprov',
-        'movements',
-        phase2Movement3Id
-      ),
-      {
-        schemaVersion: 'warehouse_movement_v1',
-        id: phase2Movement3Id,
-        workspaceId: 'hgesm-aprov',
-        ug: '160416',
-        materialId: canonicalMaterialId,
-        type: 'INVENTORY_ADJUSTMENT',
-        quantityDelta: 1,
-        idempotencyKeyHash: '3'.repeat(64),
-        reversesMovementId: null,
-        note: null,
-        createdAt: serverTimestamp(),
-      }
-    )
-  );
-
-  await denied('Setor externo não lê ledger da FASE 2', () =>
-    getDoc(
-      doc(
-        sessionA.db,
-        'warehouse',
-        'hgesm-aprov',
-        'movements',
-        phase2Movement1Id
-      )
-    )
-  );
-
-  await denied('Setor externo não lê saldo da FASE 2', () =>
-    getDoc(
-      doc(
-        sessionA.db,
-        'warehouse',
-        'hgesm-aprov',
-        'balances',
-        canonicalMaterialId
-      )
-    )
-  );
-
-  await denied('Sessão fundadora por senha não lê ledger da FASE 2', () =>
-    getDoc(
-      doc(
-        founderPassword.db,
-        'warehouse',
-        'hgesm-aprov',
-        'movements',
-        phase2Movement1Id
-      )
-    )
-  );
-
-  console.log('\nFASE 4 — NF → estoque, cutoff e rastreabilidade');
-
-  const phase4MaterialId = 'mat_' + '4'.repeat(32);
-  const phase4Movement1Id = 'mov_' + '4'.repeat(64);
-  const phase4Movement2Id = 'mov_' + '5'.repeat(64);
-  const phase4InvalidMovementId = 'mov_' + '6'.repeat(64);
-  const phase4Settings = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'settings',
-    'invoice-integration'
-  );
-  const phase4Material = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'materials',
-    phase4MaterialId
-  );
-  const phase4Balance = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'balances',
-    phase4MaterialId
-  );
-  const phase4Movement1 = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'movements',
-    phase4Movement1Id
-  );
-
-  await allowed('Fundador ativa cutoff e cria material + entrada + saldo na mesma operação', async () => {
-    const batch = writeBatch(admin.db);
-    batch.set(phase4Settings, {
-      schemaVersion: 'warehouse_invoice_settings_v1',
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      cutoffAt: '2026-09-23T15:00:00.000Z',
-      activatedBy: admin.user.uid,
-    });
-    batch.set(phase4Material, {
-      schemaVersion: 'warehouse_material_v1',
-      id: phase4MaterialId,
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      description: 'Material criado pela NF',
-      aliases: [],
-      unit: { code: 'unit', label: null },
-      status: 'active',
-      conversions: [],
-    });
-    batch.set(phase4Movement1, {
-      schemaVersion: 'warehouse_movement_v1',
-      id: phase4Movement1Id,
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: phase4MaterialId,
-      type: 'INVOICE_ENTRY',
-      quantityDelta: 4,
-      idempotencyKeyHash: '4'.repeat(64),
-      reversesMovementId: null,
-      note: 'NF 12345 · Empenho 2026NE001',
-      source: {
-        kind: 'INVOICE',
-        action: 'ENTRY',
-        invoiceRecordKey: '12345678000199__12345',
-        invoiceId: '12345',
-        empenhoId: '2026NE001',
-        itemIds: ['00001'],
-        supplier: 'Fornecedor Teste',
-        supplierCnpj: '12345678000199',
-        actorUid: admin.user.uid,
-      },
-      createdAt: serverTimestamp(),
-    });
-    batch.set(phase4Balance, {
-      schemaVersion: 'warehouse_balance_v1',
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: phase4MaterialId,
-      quantity: 4,
-      revision: 1,
-      lastMovementId: phase4Movement1Id,
-      updatedAt: serverTimestamp(),
-    });
-    return batch.commit();
-  });
-
-  await allowed('Fundador lê movimento de NF da FASE 4', () => getDoc(phase4Movement1));
-  await allowed('Fundador lê cutoff imutável da FASE 4', () => getDoc(phase4Settings));
-
-  await allowed('Correção de NF gera novo movimento e nova revisão do mesmo saldo', async () => {
-    const batch = writeBatch(admin.db);
-    batch.set(
-      doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase4Movement2Id),
-      {
-        schemaVersion: 'warehouse_movement_v1',
-        id: phase4Movement2Id,
-        workspaceId: 'hgesm-aprov',
-        ug: '160416',
-        materialId: phase4MaterialId,
-        type: 'INVOICE_CORRECTION',
-        quantityDelta: 2,
-        idempotencyKeyHash: '5'.repeat(64),
-        reversesMovementId: null,
-        note: 'NF 12345 · correção',
-        source: {
-          kind: 'INVOICE',
-          action: 'CORRECTION',
-          invoiceRecordKey: '12345678000199__12345',
-          invoiceId: '12345',
-          empenhoId: '2026NE001',
-          itemIds: ['00001'],
-          supplier: 'Fornecedor Teste',
-          supplierCnpj: '12345678000199',
-          actorUid: admin.user.uid,
-        },
-        createdAt: serverTimestamp(),
-      }
+  if (RUN_LEGACY_SINGLE_DATABASE_WAREHOUSE_TESTS) {
+    // Fases 0–10 preservadas como fixture histórica. A execução efetiva das Rules
+    // do módulo ocorre no database emprovex-warehouse.
+    console.log('\nFASE 0 — isolamento do ADM Depósito');
+  
+    const phaseZeroDepotId = 'dep_' + '0'.repeat(32);
+    const founderWarehouseProbe = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'depots',
+      phaseZeroDepotId
     );
-    batch.set(phase4Balance, {
-      schemaVersion: 'warehouse_balance_v1',
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: phase4MaterialId,
-      quantity: 6,
-      revision: 2,
-      lastMovementId: phase4Movement2Id,
-      updatedAt: serverTimestamp(),
-    });
-    return batch.commit();
-  });
-
-  await denied('Origem de NF não pode falsificar o operador', async () => {
-    const batch = writeBatch(admin.db);
-    batch.set(
-      doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase4InvalidMovementId),
-      {
-        schemaVersion: 'warehouse_movement_v1',
-        id: phase4InvalidMovementId,
-        workspaceId: 'hgesm-aprov',
-        ug: '160416',
-        materialId: phase4MaterialId,
-        type: 'INVOICE_CORRECTION',
-        quantityDelta: 1,
-        idempotencyKeyHash: '6'.repeat(64),
-        reversesMovementId: null,
-        note: 'tentativa inválida',
-        source: {
-          kind: 'INVOICE',
-          action: 'CORRECTION',
-          invoiceRecordKey: '12345678000199__12345',
-          invoiceId: '12345',
-          empenhoId: '2026NE001',
-          itemIds: ['00001'],
-          supplier: 'Fornecedor Teste',
-          supplierCnpj: '12345678000199',
-          actorUid: 'uid-falsificado',
-        },
-        createdAt: serverTimestamp(),
-      }
-    );
-    batch.set(phase4Balance, {
-      schemaVersion: 'warehouse_balance_v1',
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: phase4MaterialId,
-      quantity: 7,
-      revision: 3,
-      lastMovementId: phase4InvalidMovementId,
-      updatedAt: serverTimestamp(),
-    });
-    return batch.commit();
-  });
-
-  await denied('Cutoff da FASE 4 não pode ser reescrito após ativação', () =>
-    updateDoc(phase4Settings, { cutoffAt: '2020-01-01T00:00:00.000Z' })
-  );
-  await denied('Setor externo não lê cutoff do ADM Depósito', () =>
-    getDoc(
-      doc(
-        sessionA.db,
-        'warehouse',
-        'hgesm-aprov',
-        'settings',
-        'invoice-integration'
-      )
-    )
-  );
-  await denied('Setor externo não lê movimento de NF do fundador', () =>
-    getDoc(
-      doc(
-        sessionA.db,
-        'warehouse',
-        'hgesm-aprov',
-        'movements',
-        phase4Movement1Id
-      )
-    )
-  );
-
-  console.log('\nFASE 6 — Depósitos / Localizações / Transferências');
-
-  const phase6DepotId = 'dep_' + '6'.repeat(32);
-  const phase6LocationId = 'loc_' + '6'.repeat(32);
-  const phase6SubpositionId = 'sub_' + '6'.repeat(32);
-  const phase6DepotRef = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'depots',
-    phase6DepotId
-  );
-  const phase6LocationRef = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'locations',
-    phase6LocationId
-  );
-  const phase6SubpositionRef = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'locations',
-    phase6SubpositionId
-  );
-
-  await allowed('Fundador cria depósito da FASE 6', () =>
-    setDoc(phase6DepotRef, {
-      schemaVersion: 'warehouse_depot_v1',
-      id: phase6DepotId,
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      code: 'DEP-06',
-      name: 'Depósito FASE 6',
-      description: 'Estrutura física operacional',
-      status: 'active',
-      createdBy: admin.user.uid,
-      updatedBy: admin.user.uid,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
-  );
-
-  await allowed('Fundador cria local dentro do depósito da FASE 6', () =>
-    setDoc(phase6LocationRef, {
-      schemaVersion: 'warehouse_location_v1',
-      id: phase6LocationId,
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      depotId: phase6DepotId,
-      kind: 'LOCAL',
-      parentLocationId: null,
-      code: 'LOC-06',
-      name: 'Local FASE 6',
-      description: null,
-      status: 'active',
-      createdBy: admin.user.uid,
-      updatedBy: admin.user.uid,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
-  );
-
-  await allowed('Fundador cria subposição opcional da FASE 6', () =>
-    setDoc(phase6SubpositionRef, {
-      schemaVersion: 'warehouse_location_v1',
-      id: phase6SubpositionId,
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      depotId: phase6DepotId,
-      kind: 'SUBPOSITION',
-      parentLocationId: phase6LocationId,
-      code: 'SUB-06',
-      name: 'Subposição FASE 6',
-      description: null,
-      status: 'active',
-      createdBy: admin.user.uid,
-      updatedBy: admin.user.uid,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
-  );
-
-  await allowed('Fundador edita nome sem alterar identidade lógica do depósito', () =>
-    updateDoc(phase6DepotRef, {
-      name: 'Depósito FASE 6 renomeado',
-      updatedBy: admin.user.uid,
-      updatedAt: serverTimestamp(),
-    })
-  );
-
-  await denied('Depósito da FASE 6 não aceita UG adulterada', () =>
-    setDoc(
-      doc(admin.db, 'warehouse', 'hgesm-aprov', 'depots', 'dep_' + 'a'.repeat(32)),
-      {
+  
+    await allowed('Fundador grava no namespace ADM Depósito', () =>
+      setDoc(founderWarehouseProbe, {
         schemaVersion: 'warehouse_depot_v1',
-        id: 'dep_' + 'a'.repeat(32),
+        id: phaseZeroDepotId,
         workspaceId: 'hgesm-aprov',
-        ug: '999999',
-        code: 'DEP-X',
-        name: 'Depósito adulterado',
+        ug: '160416',
+        code: 'DEP-00',
+        name: 'Depósito de prova da fundação',
         description: null,
         status: 'active',
         createdBy: admin.user.uid,
         updatedBy: admin.user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      }
-    )
-  );
-
-  await denied('Setor externo continua sem acesso às localizações da FASE 6', () =>
-    getDoc(
-      doc(
-        sessionA.db,
-        'warehouse',
-        'hgesm-aprov',
-        'locations',
-        phase6LocationId
-      )
-    )
-  );
-
-  await denied('Depósito da FASE 6 não pode ser excluído fisicamente', () =>
-    deleteDoc(phase6DepotRef)
-  );
-  await denied('Localização da FASE 6 não pode ser excluída fisicamente', () =>
-    deleteDoc(phase6LocationRef)
-  );
-
-  const phase6TransferMovementId = 'mov_' + '7'.repeat(64);
-  const phase6FromBalanceId = 'locbal_1f4db6d13593019e244c182002ecfbbb2764d28ce246c65fa31daa5bcb60c43f';
-  const phase6ToBalanceId = 'locbal_44d9ac45e4e3ccec26b4bd88bb4d76964dbeb04f4716483f486329c99e96d722';
-  const phase6FromBalanceRef = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'locationBalances',
-    phase6FromBalanceId
-  );
-  const phase6ToBalanceRef = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'locationBalances',
-    phase6ToBalanceId
-  );
-
-  await allowed('Transferência interna mantém saldo total e altera distribuição física', async () => {
-    const batch = writeBatch(admin.db);
-    batch.set(
-      doc(
-        admin.db,
-        'warehouse',
-        'hgesm-aprov',
-        'movements',
-        phase6TransferMovementId
-      ),
-      {
-        schemaVersion: 'warehouse_movement_v1',
-        id: phase6TransferMovementId,
-        workspaceId: 'hgesm-aprov',
-        ug: '160416',
-        materialId: canonicalMaterialId,
-        type: 'TRANSFER',
-        quantityDelta: 0,
-        idempotencyKeyHash: '7'.repeat(64),
-        reversesMovementId: null,
-        note: 'Transferência operacional FASE 6',
-        source: {
-          kind: 'LOCATION_TRANSFER',
-          actorUid: admin.user.uid,
-          quantity: 3,
-          from: { kind: 'UNASSIGNED' },
-          to: {
-            kind: 'LOCATION',
-            depotId: phase6DepotId,
-            locationId: phase6LocationId,
-            subpositionId: null,
-          },
-          fromBalanceId: phase6FromBalanceId,
-          toBalanceId: phase6ToBalanceId,
-        },
-        createdAt: serverTimestamp(),
-      }
+      })
     );
-    batch.set(founderBalance, {
-      schemaVersion: 'warehouse_balance_v1',
+    await allowed('Fundador lê o namespace ADM Depósito', () =>
+      getDoc(founderWarehouseProbe)
+    );
+    await allowed('Fundador lista domínio do namespace ADM Depósito', () =>
+      getDocs(collection(admin.db, 'warehouse', 'hgesm-aprov', 'depots'))
+    );
+    await denied('Setor externo não lê namespace ADM Depósito do fundador', () =>
+      getDoc(
+        doc(
+          sessionA.db,
+          'warehouse',
+          'hgesm-aprov',
+          'depots',
+          phaseZeroDepotId
+        )
+      )
+    );
+    await denied('Setor externo não grava namespace ADM Depósito nem no próprio workspace', () =>
+      setDoc(
+        doc(
+          sessionA.db,
+          'warehouse',
+          'workspace-a',
+          'depots',
+          'external-probe'
+        ),
+        { marker: 'forbidden' }
+      )
+    );
+    await denied('Sessão fundadora por senha não acessa ADM Depósito', () =>
+      getDoc(
+        doc(
+          founderPassword.db,
+          'warehouse',
+          'hgesm-aprov',
+          'depots',
+          phaseZeroDepotId
+        )
+      )
+    );
+    await denied('Fundador não usa o namespace ADM Depósito de workspace externo', () =>
+      getDoc(
+        doc(
+          admin.db,
+          'warehouse',
+          'workspace-a',
+          'depots',
+          'external-probe'
+        )
+      )
+    );
+  
+    console.log('\nFASE 1 — fundação canônica do material');
+  
+    const canonicalMaterialId = 'mat_123e4567e89b12d3a456426614174000';
+    const canonicalMaterial = {
+      schemaVersion: 'warehouse_material_v1',
+      id: canonicalMaterialId,
       workspaceId: 'hgesm-aprov',
       ug: '160416',
-      materialId: canonicalMaterialId,
-      quantity: 8,
-      revision: 3,
-      lastMovementId: phase6TransferMovementId,
-      updatedAt: serverTimestamp(),
-    });
-    batch.set(phase6FromBalanceRef, {
-      schemaVersion: 'warehouse_location_balance_v1',
-      id: phase6FromBalanceId,
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: canonicalMaterialId,
-      position: { kind: 'UNASSIGNED' },
-      quantity: 5,
-      revision: 1,
-      lastMovementId: phase6TransferMovementId,
-      updatedAt: serverTimestamp(),
-    });
-    batch.set(phase6ToBalanceRef, {
-      schemaVersion: 'warehouse_location_balance_v1',
-      id: phase6ToBalanceId,
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: canonicalMaterialId,
-      position: {
-        kind: 'LOCATION',
-        depotId: phase6DepotId,
-        locationId: phase6LocationId,
-        subpositionId: null,
-      },
-      quantity: 3,
-      revision: 1,
-      lastMovementId: phase6TransferMovementId,
-      updatedAt: serverTimestamp(),
-    });
-    return batch.commit();
-  });
-
-  const phase6AggregateAfter = await getDoc(founderBalance);
-  const phase6OriginAfter = await getDoc(phase6FromBalanceRef);
-  const phase6DestinationAfter = await getDoc(phase6ToBalanceRef);
-  assert.equal(phase6AggregateAfter.data().quantity, 8);
-  assert.equal(phase6OriginAfter.data().quantity, 5);
-  assert.equal(phase6DestinationAfter.data().quantity, 3);
-
-  await denied('Projeção física não aceita gravação avulsa sem movimento novo', () =>
-    updateDoc(phase6ToBalanceRef, {
-      quantity: 99,
-      revision: 2,
-      updatedAt: serverTimestamp(),
-    })
-  );
-
-  await allowed('Fundador inativa local sem apagá-lo', () =>
-    updateDoc(phase6LocationRef, {
-      status: 'inactive',
-      updatedBy: admin.user.uid,
-      updatedAt: serverTimestamp(),
-    })
-  );
-
-  const phase6InactiveTransferId = 'mov_' + '9'.repeat(64);
-  await denied('Local inativo não pode receber transferência', async () => {
-    const batch = writeBatch(admin.db);
-    batch.set(
-      doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase6InactiveTransferId),
-      {
+      description: 'Arroz parboilizado',
+      aliases: ['Arroz beneficiado'],
+      unit: { code: 'kg', label: null },
+      status: 'active',
+      conversions: [
+        {
+          presentation: { code: 'g', label: null },
+          factorToBaseUnit: 0.001,
+        },
+        {
+          presentation: { code: 'box', label: 'Caixa 30 kg' },
+          factorToBaseUnit: 30,
+        },
+      ],
+    };
+  
+    const founderMaterialProbe = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'materials',
+      canonicalMaterialId
+    );
+  
+    await allowed('Fundador grava material canônico da FASE 1', () =>
+      setDoc(founderMaterialProbe, canonicalMaterial)
+    );
+    await allowed('Fundador lê material canônico da FASE 1', () =>
+      getDoc(founderMaterialProbe)
+    );
+    await allowed('Fundador lista materiais da FASE 1', () =>
+      getDocs(collection(admin.db, 'warehouse', 'hgesm-aprov', 'materials'))
+    );
+  
+    await denied('Material canônico não pode ser apagado fisicamente', () =>
+      deleteDoc(founderMaterialProbe)
+    );
+  
+    await denied('Material não pode declarar workspace diferente do caminho', () =>
+      setDoc(founderMaterialProbe, {
+        ...canonicalMaterial,
+        workspaceId: 'workspace-a',
+      })
+    );
+  
+    await denied('Setor externo não lê material do fundador', () =>
+      getDoc(
+        doc(
+          sessionA.db,
+          'warehouse',
+          'hgesm-aprov',
+          'materials',
+          canonicalMaterialId
+        )
+      )
+    );
+  
+    const externalMaterialId = 'mat_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    await denied('Setor externo não grava material nem no próprio workspace', () =>
+      setDoc(
+        doc(
+          sessionA.db,
+          'warehouse',
+          'workspace-a',
+          'materials',
+          externalMaterialId
+        ),
+        {
+          ...canonicalMaterial,
+          id: externalMaterialId,
+          workspaceId: 'workspace-a',
+          ug: '123456',
+        }
+      )
+    );
+  
+    await denied('Sessão fundadora por senha não lê materiais da FASE 1', () =>
+      getDoc(
+        doc(
+          founderPassword.db,
+          'warehouse',
+          'hgesm-aprov',
+          'materials',
+          canonicalMaterialId
+        )
+      )
+    );
+  
+    await denied('Fundador não grava material em workspace externo', () =>
+      setDoc(
+        doc(
+          admin.db,
+          'warehouse',
+          'workspace-a',
+          'materials',
+          externalMaterialId
+        ),
+        {
+          ...canonicalMaterial,
+          id: externalMaterialId,
+          workspaceId: 'workspace-a',
+          ug: '123456',
+        }
+      )
+    );
+  
+  
+    console.log('\nFASE 2 — ledger, saldo agregado e idempotência');
+  
+    const phase2Movement1Id = 'mov_' + '1'.repeat(64);
+    const phase2Movement2Id = 'mov_' + '2'.repeat(64);
+    const phase2Movement3Id = 'mov_' + '3'.repeat(64);
+    const founderMovement1 = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'movements',
+      phase2Movement1Id
+    );
+    const founderMovement2 = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'movements',
+      phase2Movement2Id
+    );
+    const founderBalance = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'balances',
+      canonicalMaterialId
+    );
+  
+    await allowed('Fundador cria movimento e saldo atômicos da FASE 2', async () => {
+      const batch = writeBatch(admin.db);
+      batch.set(founderMovement1, {
         schemaVersion: 'warehouse_movement_v1',
-        id: phase6InactiveTransferId,
+        id: phase2Movement1Id,
         workspaceId: 'hgesm-aprov',
         ug: '160416',
         materialId: canonicalMaterialId,
-        type: 'TRANSFER',
-        quantityDelta: 0,
-        idempotencyKeyHash: '9'.repeat(64),
+        type: 'INITIAL_BALANCE',
+        quantityDelta: 10,
+        idempotencyKeyHash: '1'.repeat(64),
         reversesMovementId: null,
         note: null,
-        source: {
-          kind: 'LOCATION_TRANSFER',
-          actorUid: admin.user.uid,
-          quantity: 1,
-          from: { kind: 'UNASSIGNED' },
-          to: {
-            kind: 'LOCATION',
-            depotId: phase6DepotId,
-            locationId: phase6LocationId,
-            subpositionId: null,
-          },
-          fromBalanceId: phase6FromBalanceId,
-          toBalanceId: phase6ToBalanceId,
-        },
         createdAt: serverTimestamp(),
-      }
+      });
+      batch.set(founderBalance, {
+        schemaVersion: 'warehouse_balance_v1',
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        quantity: 10,
+        revision: 1,
+        lastMovementId: phase2Movement1Id,
+        updatedAt: serverTimestamp(),
+      });
+      return batch.commit();
+    });
+  
+    await allowed('Fundador lê ledger da FASE 2', () => getDoc(founderMovement1));
+    await allowed('Fundador lê saldo materializado da FASE 2', () => getDoc(founderBalance));
+  
+    await allowed('Fundador aplica segundo movimento e atualiza saldo da FASE 2', async () => {
+      const batch = writeBatch(admin.db);
+      batch.set(founderMovement2, {
+        schemaVersion: 'warehouse_movement_v1',
+        id: phase2Movement2Id,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        type: 'OUTBOUND',
+        quantityDelta: -2,
+        idempotencyKeyHash: '2'.repeat(64),
+        reversesMovementId: null,
+        note: 'Saída de teste',
+        createdAt: serverTimestamp(),
+      });
+      batch.set(founderBalance, {
+        schemaVersion: 'warehouse_balance_v1',
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        quantity: 8,
+        revision: 2,
+        lastMovementId: phase2Movement2Id,
+        updatedAt: serverTimestamp(),
+      });
+      return batch.commit();
+    });
+  
+    await denied('Ledger da FASE 2 é append-only', () =>
+      updateDoc(founderMovement1, { note: 'Tentativa de sobrescrita' })
     );
-    batch.set(founderBalance, {
-      schemaVersion: 'warehouse_balance_v1',
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: canonicalMaterialId,
-      quantity: 8,
-      revision: 4,
-      lastMovementId: phase6InactiveTransferId,
-      updatedAt: serverTimestamp(),
-    });
-    batch.set(phase6FromBalanceRef, {
-      schemaVersion: 'warehouse_location_balance_v1',
-      id: phase6FromBalanceId,
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: canonicalMaterialId,
-      position: { kind: 'UNASSIGNED' },
-      quantity: 4,
-      revision: 2,
-      lastMovementId: phase6InactiveTransferId,
-      updatedAt: serverTimestamp(),
-    });
-    batch.set(phase6ToBalanceRef, {
-      schemaVersion: 'warehouse_location_balance_v1',
-      id: phase6ToBalanceId,
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: canonicalMaterialId,
-      position: {
-        kind: 'LOCATION',
-        depotId: phase6DepotId,
-        locationId: phase6LocationId,
-        subpositionId: null,
-      },
-      quantity: 4,
-      revision: 2,
-      lastMovementId: phase6InactiveTransferId,
-      updatedAt: serverTimestamp(),
-    });
-    return batch.commit();
-  });
-
-  await allowed('Fundador reativa local para uso posterior', () =>
-    updateDoc(phase6LocationRef, {
-      status: 'active',
-      updatedBy: admin.user.uid,
-      updatedAt: serverTimestamp(),
-    })
-  );
-
-  console.log('\nFASE 7 — Estoque Operável / Lotes / Validade / FEFO');
-
-  const phase7InvoiceLotId = 'lot_' + '7'.repeat(32);
-  const phase7InvoiceLotRef = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'lots',
-    phase7InvoiceLotId
-  );
-  const phase7InvoiceOrigin = {
-    kind: 'INVOICE',
-    movementId: phase4Movement1Id,
-    invoiceRecordKey: '12345678000199__12345',
-    invoiceId: '12345',
-    supplier: 'Fornecedor Teste',
-    supplierCnpj: '12345678000199',
-  };
-
-  await allowed('Fundador cria lote FASE 7 vinculado a material e origem de NF', () =>
-    setDoc(phase7InvoiceLotRef, {
-      schemaVersion: 'warehouse_lot_v1',
-      id: phase7InvoiceLotId,
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: phase4MaterialId,
-      code: 'NF-12345-L1',
-      expiresOn: '2027-01-15',
-      quantity: 4,
-      position: { kind: 'UNASSIGNED' },
-      origin: phase7InvoiceOrigin,
-      status: 'active',
-      createdBy: admin.user.uid,
-      updatedBy: admin.user.uid,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
-  );
-
-  await denied('Lote FASE 7 rejeita validade fora do contrato', () =>
-    setDoc(
-      doc(admin.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + '8'.repeat(32)),
-      {
-        schemaVersion: 'warehouse_lot_v1',
-        id: 'lot_' + '8'.repeat(32),
-        workspaceId: 'hgesm-aprov',
-        ug: '160416',
-        materialId: phase4MaterialId,
-        code: 'INVALID-DATE',
-        expiresOn: '15/01/2027',
-        quantity: 1,
-        position: { kind: 'UNASSIGNED' },
-        origin: phase7InvoiceOrigin,
-        status: 'active',
-        createdBy: admin.user.uid,
-        updatedBy: admin.user.uid,
-        createdAt: serverTimestamp(),
+  
+    await denied('Saldo da FASE 2 não aceita alteração sem novo movimento', () =>
+      updateDoc(founderBalance, {
+        quantity: 999,
+        revision: 3,
         updatedAt: serverTimestamp(),
-      }
-    )
-  );
-
-  await denied('Lote FASE 7 não pode trocar material canônico após criação', () =>
-    updateDoc(phase7InvoiceLotRef, {
-      materialId: canonicalMaterialId,
-      updatedBy: admin.user.uid,
-      updatedAt: serverTimestamp(),
-    })
-  );
-
-  await denied('Lote FASE 7 não aceita origem de NF pertencente a outro material', () =>
-    setDoc(
-      doc(admin.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + '9'.repeat(32)),
-      {
-        schemaVersion: 'warehouse_lot_v1',
-        id: 'lot_' + '9'.repeat(32),
-        workspaceId: 'hgesm-aprov',
-        ug: '160416',
-        materialId: canonicalMaterialId,
-        code: 'ORIGIN-MISMATCH',
-        expiresOn: '2027-03-01',
-        quantity: 1,
-        position: { kind: 'UNASSIGNED' },
-        origin: phase7InvoiceOrigin,
-        status: 'active',
-        createdBy: admin.user.uid,
-        updatedBy: admin.user.uid,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }
-    )
-  );
-
-  await denied('Lote FASE 7 não aceita UG adulterada', () =>
-    setDoc(
-      doc(admin.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + 'a'.repeat(32)),
-      {
-        schemaVersion: 'warehouse_lot_v1',
-        id: 'lot_' + 'a'.repeat(32),
-        workspaceId: 'hgesm-aprov',
-        ug: '999999',
-        materialId: canonicalMaterialId,
-        code: 'UG-INVALID',
-        expiresOn: null,
-        quantity: 1,
-        position: { kind: 'UNASSIGNED' },
-        origin: {
-          kind: 'MANUAL_ENRICHMENT',
-          movementId: null,
-          invoiceRecordKey: null,
-          invoiceId: null,
-          supplier: null,
-          supplierCnpj: null,
-        },
-        status: 'active',
-        createdBy: admin.user.uid,
-        updatedBy: admin.user.uid,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }
-    )
-  );
-
-  await denied('Setor externo continua sem acesso aos lotes da FASE 7', () =>
-    getDoc(
-      doc(
-        sessionA.db,
-        'warehouse',
-        'hgesm-aprov',
-        'lots',
-        phase7InvoiceLotId
+      })
+    );
+  
+    await denied('Movimento da FASE 2 não existe sem atualização de saldo correspondente', () =>
+      setDoc(
+        doc(
+          admin.db,
+          'warehouse',
+          'hgesm-aprov',
+          'movements',
+          phase2Movement3Id
+        ),
+        {
+          schemaVersion: 'warehouse_movement_v1',
+          id: phase2Movement3Id,
+          workspaceId: 'hgesm-aprov',
+          ug: '160416',
+          materialId: canonicalMaterialId,
+          type: 'INVENTORY_ADJUSTMENT',
+          quantityDelta: 1,
+          idempotencyKeyHash: '3'.repeat(64),
+          reversesMovementId: null,
+          note: null,
+          createdAt: serverTimestamp(),
+        }
       )
-    )
-  );
-
-  await denied('Setor externo não cria lote nem no namespace fundador', () =>
-    setDoc(
-      doc(sessionA.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + 'b'.repeat(32)),
-      {
-        schemaVersion: 'warehouse_lot_v1',
-        id: 'lot_' + 'b'.repeat(32),
+    );
+  
+    await denied('Setor externo não lê ledger da FASE 2', () =>
+      getDoc(
+        doc(
+          sessionA.db,
+          'warehouse',
+          'hgesm-aprov',
+          'movements',
+          phase2Movement1Id
+        )
+      )
+    );
+  
+    await denied('Setor externo não lê saldo da FASE 2', () =>
+      getDoc(
+        doc(
+          sessionA.db,
+          'warehouse',
+          'hgesm-aprov',
+          'balances',
+          canonicalMaterialId
+        )
+      )
+    );
+  
+    await denied('Sessão fundadora por senha não lê ledger da FASE 2', () =>
+      getDoc(
+        doc(
+          founderPassword.db,
+          'warehouse',
+          'hgesm-aprov',
+          'movements',
+          phase2Movement1Id
+        )
+      )
+    );
+  
+    console.log('\nFASE 4 — NF → estoque, cutoff e rastreabilidade');
+  
+    const phase4MaterialId = 'mat_' + '4'.repeat(32);
+    const phase4Movement1Id = 'mov_' + '4'.repeat(64);
+    const phase4Movement2Id = 'mov_' + '5'.repeat(64);
+    const phase4InvalidMovementId = 'mov_' + '6'.repeat(64);
+    const phase4Settings = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'settings',
+      'invoice-integration'
+    );
+    const phase4Material = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'materials',
+      phase4MaterialId
+    );
+    const phase4Balance = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'balances',
+      phase4MaterialId
+    );
+    const phase4Movement1 = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'movements',
+      phase4Movement1Id
+    );
+  
+    await allowed('Fundador ativa cutoff e cria material + entrada + saldo na mesma operação', async () => {
+      const batch = writeBatch(admin.db);
+      batch.set(phase4Settings, {
+        schemaVersion: 'warehouse_invoice_settings_v1',
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        cutoffAt: '2026-09-23T15:00:00.000Z',
+        activatedBy: admin.user.uid,
+      });
+      batch.set(phase4Material, {
+        schemaVersion: 'warehouse_material_v1',
+        id: phase4MaterialId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        description: 'Material criado pela NF',
+        aliases: [],
+        unit: { code: 'unit', label: null },
+        status: 'active',
+        conversions: [],
+      });
+      batch.set(phase4Movement1, {
+        schemaVersion: 'warehouse_movement_v1',
+        id: phase4Movement1Id,
         workspaceId: 'hgesm-aprov',
         ug: '160416',
         materialId: phase4MaterialId,
-        code: 'EXTERNAL',
-        expiresOn: null,
-        quantity: 1,
-        position: { kind: 'UNASSIGNED' },
-        origin: {
-          kind: 'MANUAL_ENRICHMENT',
-          movementId: null,
-          invoiceRecordKey: null,
-          invoiceId: null,
-          supplier: null,
-          supplierCnpj: null,
+        type: 'INVOICE_ENTRY',
+        quantityDelta: 4,
+        idempotencyKeyHash: '4'.repeat(64),
+        reversesMovementId: null,
+        note: 'NF 12345 · Empenho 2026NE001',
+        source: {
+          kind: 'INVOICE',
+          action: 'ENTRY',
+          invoiceRecordKey: '12345678000199__12345',
+          invoiceId: '12345',
+          empenhoId: '2026NE001',
+          itemIds: ['00001'],
+          supplier: 'Fornecedor Teste',
+          supplierCnpj: '12345678000199',
+          actorUid: admin.user.uid,
         },
-        status: 'active',
-        createdBy: sessionA.user.uid,
-        updatedBy: sessionA.user.uid,
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }
-    )
-  );
-
-  await denied('Lote FASE 7 não pode ser excluído e perder histórico logístico', () =>
-    deleteDoc(phase7InvoiceLotRef)
-  );
-
-  const phase7ManualOrigin = {
-    kind: 'MANUAL_ENRICHMENT',
-    movementId: null,
-    invoiceRecordKey: null,
-    invoiceId: null,
-    supplier: null,
-    supplierCnpj: null,
-  };
-  await allowed('Fundador cria lotes FEFO sem alterar saldo oficial', async () => {
-    const batch = writeBatch(admin.db);
-    batch.set(
-      doc(admin.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + 'c'.repeat(32)),
-      {
-        schemaVersion: 'warehouse_lot_v1',
-        id: 'lot_' + 'c'.repeat(32),
+      });
+      batch.set(phase4Balance, {
+        schemaVersion: 'warehouse_balance_v1',
         workspaceId: 'hgesm-aprov',
         ug: '160416',
-        materialId: canonicalMaterialId,
-        code: 'LOTE-FEFO-PRIMEIRO',
-        expiresOn: '2026-11-10',
-        quantity: 2,
-        position: { kind: 'UNASSIGNED' },
-        origin: phase7ManualOrigin,
+        materialId: phase4MaterialId,
+        quantity: 4,
+        revision: 1,
+        lastMovementId: phase4Movement1Id,
+        updatedAt: serverTimestamp(),
+      });
+      return batch.commit();
+    });
+  
+    await allowed('Fundador lê movimento de NF da FASE 4', () => getDoc(phase4Movement1));
+    await allowed('Fundador lê cutoff imutável da FASE 4', () => getDoc(phase4Settings));
+  
+    await allowed('Correção de NF gera novo movimento e nova revisão do mesmo saldo', async () => {
+      const batch = writeBatch(admin.db);
+      batch.set(
+        doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase4Movement2Id),
+        {
+          schemaVersion: 'warehouse_movement_v1',
+          id: phase4Movement2Id,
+          workspaceId: 'hgesm-aprov',
+          ug: '160416',
+          materialId: phase4MaterialId,
+          type: 'INVOICE_CORRECTION',
+          quantityDelta: 2,
+          idempotencyKeyHash: '5'.repeat(64),
+          reversesMovementId: null,
+          note: 'NF 12345 · correção',
+          source: {
+            kind: 'INVOICE',
+            action: 'CORRECTION',
+            invoiceRecordKey: '12345678000199__12345',
+            invoiceId: '12345',
+            empenhoId: '2026NE001',
+            itemIds: ['00001'],
+            supplier: 'Fornecedor Teste',
+            supplierCnpj: '12345678000199',
+            actorUid: admin.user.uid,
+          },
+          createdAt: serverTimestamp(),
+        }
+      );
+      batch.set(phase4Balance, {
+        schemaVersion: 'warehouse_balance_v1',
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: phase4MaterialId,
+        quantity: 6,
+        revision: 2,
+        lastMovementId: phase4Movement2Id,
+        updatedAt: serverTimestamp(),
+      });
+      return batch.commit();
+    });
+  
+    await denied('Origem de NF não pode falsificar o operador', async () => {
+      const batch = writeBatch(admin.db);
+      batch.set(
+        doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase4InvalidMovementId),
+        {
+          schemaVersion: 'warehouse_movement_v1',
+          id: phase4InvalidMovementId,
+          workspaceId: 'hgesm-aprov',
+          ug: '160416',
+          materialId: phase4MaterialId,
+          type: 'INVOICE_CORRECTION',
+          quantityDelta: 1,
+          idempotencyKeyHash: '6'.repeat(64),
+          reversesMovementId: null,
+          note: 'tentativa inválida',
+          source: {
+            kind: 'INVOICE',
+            action: 'CORRECTION',
+            invoiceRecordKey: '12345678000199__12345',
+            invoiceId: '12345',
+            empenhoId: '2026NE001',
+            itemIds: ['00001'],
+            supplier: 'Fornecedor Teste',
+            supplierCnpj: '12345678000199',
+            actorUid: 'uid-falsificado',
+          },
+          createdAt: serverTimestamp(),
+        }
+      );
+      batch.set(phase4Balance, {
+        schemaVersion: 'warehouse_balance_v1',
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: phase4MaterialId,
+        quantity: 7,
+        revision: 3,
+        lastMovementId: phase4InvalidMovementId,
+        updatedAt: serverTimestamp(),
+      });
+      return batch.commit();
+    });
+  
+    await denied('Cutoff da FASE 4 não pode ser reescrito após ativação', () =>
+      updateDoc(phase4Settings, { cutoffAt: '2020-01-01T00:00:00.000Z' })
+    );
+    await denied('Setor externo não lê cutoff do ADM Depósito', () =>
+      getDoc(
+        doc(
+          sessionA.db,
+          'warehouse',
+          'hgesm-aprov',
+          'settings',
+          'invoice-integration'
+        )
+      )
+    );
+    await denied('Setor externo não lê movimento de NF do fundador', () =>
+      getDoc(
+        doc(
+          sessionA.db,
+          'warehouse',
+          'hgesm-aprov',
+          'movements',
+          phase4Movement1Id
+        )
+      )
+    );
+  
+    console.log('\nFASE 6 — Depósitos / Localizações / Transferências');
+  
+    const phase6DepotId = 'dep_' + '6'.repeat(32);
+    const phase6LocationId = 'loc_' + '6'.repeat(32);
+    const phase6SubpositionId = 'sub_' + '6'.repeat(32);
+    const phase6DepotRef = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'depots',
+      phase6DepotId
+    );
+    const phase6LocationRef = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'locations',
+      phase6LocationId
+    );
+    const phase6SubpositionRef = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'locations',
+      phase6SubpositionId
+    );
+  
+    await allowed('Fundador cria depósito da FASE 6', () =>
+      setDoc(phase6DepotRef, {
+        schemaVersion: 'warehouse_depot_v1',
+        id: phase6DepotId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        code: 'DEP-06',
+        name: 'Depósito FASE 6',
+        description: 'Estrutura física operacional',
         status: 'active',
         createdBy: admin.user.uid,
         updatedBy: admin.user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      }
+      })
     );
-    batch.set(
-      doc(admin.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + 'd'.repeat(32)),
-      {
-        schemaVersion: 'warehouse_lot_v1',
-        id: 'lot_' + 'd'.repeat(32),
+  
+    await allowed('Fundador cria local dentro do depósito da FASE 6', () =>
+      setDoc(phase6LocationRef, {
+        schemaVersion: 'warehouse_location_v1',
+        id: phase6LocationId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        depotId: phase6DepotId,
+        kind: 'LOCAL',
+        parentLocationId: null,
+        code: 'LOC-06',
+        name: 'Local FASE 6',
+        description: null,
+        status: 'active',
+        createdBy: admin.user.uid,
+        updatedBy: admin.user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+    );
+  
+    await allowed('Fundador cria subposição opcional da FASE 6', () =>
+      setDoc(phase6SubpositionRef, {
+        schemaVersion: 'warehouse_location_v1',
+        id: phase6SubpositionId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        depotId: phase6DepotId,
+        kind: 'SUBPOSITION',
+        parentLocationId: phase6LocationId,
+        code: 'SUB-06',
+        name: 'Subposição FASE 6',
+        description: null,
+        status: 'active',
+        createdBy: admin.user.uid,
+        updatedBy: admin.user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+    );
+  
+    await allowed('Fundador edita nome sem alterar identidade lógica do depósito', () =>
+      updateDoc(phase6DepotRef, {
+        name: 'Depósito FASE 6 renomeado',
+        updatedBy: admin.user.uid,
+        updatedAt: serverTimestamp(),
+      })
+    );
+  
+    await denied('Depósito da FASE 6 não aceita UG adulterada', () =>
+      setDoc(
+        doc(admin.db, 'warehouse', 'hgesm-aprov', 'depots', 'dep_' + 'a'.repeat(32)),
+        {
+          schemaVersion: 'warehouse_depot_v1',
+          id: 'dep_' + 'a'.repeat(32),
+          workspaceId: 'hgesm-aprov',
+          ug: '999999',
+          code: 'DEP-X',
+          name: 'Depósito adulterado',
+          description: null,
+          status: 'active',
+          createdBy: admin.user.uid,
+          updatedBy: admin.user.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }
+      )
+    );
+  
+    await denied('Setor externo continua sem acesso às localizações da FASE 6', () =>
+      getDoc(
+        doc(
+          sessionA.db,
+          'warehouse',
+          'hgesm-aprov',
+          'locations',
+          phase6LocationId
+        )
+      )
+    );
+  
+    await denied('Depósito da FASE 6 não pode ser excluído fisicamente', () =>
+      deleteDoc(phase6DepotRef)
+    );
+    await denied('Localização da FASE 6 não pode ser excluída fisicamente', () =>
+      deleteDoc(phase6LocationRef)
+    );
+  
+    const phase6TransferMovementId = 'mov_' + '7'.repeat(64);
+    const phase6FromBalanceId = 'locbal_1f4db6d13593019e244c182002ecfbbb2764d28ce246c65fa31daa5bcb60c43f';
+    const phase6ToBalanceId = 'locbal_44d9ac45e4e3ccec26b4bd88bb4d76964dbeb04f4716483f486329c99e96d722';
+    const phase6FromBalanceRef = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'locationBalances',
+      phase6FromBalanceId
+    );
+    const phase6ToBalanceRef = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'locationBalances',
+      phase6ToBalanceId
+    );
+  
+    await allowed('Transferência interna mantém saldo total e altera distribuição física', async () => {
+      const batch = writeBatch(admin.db);
+      batch.set(
+        doc(
+          admin.db,
+          'warehouse',
+          'hgesm-aprov',
+          'movements',
+          phase6TransferMovementId
+        ),
+        {
+          schemaVersion: 'warehouse_movement_v1',
+          id: phase6TransferMovementId,
+          workspaceId: 'hgesm-aprov',
+          ug: '160416',
+          materialId: canonicalMaterialId,
+          type: 'TRANSFER',
+          quantityDelta: 0,
+          idempotencyKeyHash: '7'.repeat(64),
+          reversesMovementId: null,
+          note: 'Transferência operacional FASE 6',
+          source: {
+            kind: 'LOCATION_TRANSFER',
+            actorUid: admin.user.uid,
+            quantity: 3,
+            from: { kind: 'UNASSIGNED' },
+            to: {
+              kind: 'LOCATION',
+              depotId: phase6DepotId,
+              locationId: phase6LocationId,
+              subpositionId: null,
+            },
+            fromBalanceId: phase6FromBalanceId,
+            toBalanceId: phase6ToBalanceId,
+          },
+          createdAt: serverTimestamp(),
+        }
+      );
+      batch.set(founderBalance, {
+        schemaVersion: 'warehouse_balance_v1',
         workspaceId: 'hgesm-aprov',
         ug: '160416',
         materialId: canonicalMaterialId,
-        code: 'LOTE-FEFO-DEPOIS',
-        expiresOn: '2026-12-15',
-        quantity: 2,
+        quantity: 8,
+        revision: 3,
+        lastMovementId: phase6TransferMovementId,
+        updatedAt: serverTimestamp(),
+      });
+      batch.set(phase6FromBalanceRef, {
+        schemaVersion: 'warehouse_location_balance_v1',
+        id: phase6FromBalanceId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        position: { kind: 'UNASSIGNED' },
+        quantity: 5,
+        revision: 1,
+        lastMovementId: phase6TransferMovementId,
+        updatedAt: serverTimestamp(),
+      });
+      batch.set(phase6ToBalanceRef, {
+        schemaVersion: 'warehouse_location_balance_v1',
+        id: phase6ToBalanceId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
         position: {
           kind: 'LOCATION',
           depotId: phase6DepotId,
           locationId: phase6LocationId,
           subpositionId: null,
         },
-        origin: phase7ManualOrigin,
+        quantity: 3,
+        revision: 1,
+        lastMovementId: phase6TransferMovementId,
+        updatedAt: serverTimestamp(),
+      });
+      return batch.commit();
+    });
+  
+    const phase6AggregateAfter = await getDoc(founderBalance);
+    const phase6OriginAfter = await getDoc(phase6FromBalanceRef);
+    const phase6DestinationAfter = await getDoc(phase6ToBalanceRef);
+    assert.equal(phase6AggregateAfter.data().quantity, 8);
+    assert.equal(phase6OriginAfter.data().quantity, 5);
+    assert.equal(phase6DestinationAfter.data().quantity, 3);
+  
+    await denied('Projeção física não aceita gravação avulsa sem movimento novo', () =>
+      updateDoc(phase6ToBalanceRef, {
+        quantity: 99,
+        revision: 2,
+        updatedAt: serverTimestamp(),
+      })
+    );
+  
+    await allowed('Fundador inativa local sem apagá-lo', () =>
+      updateDoc(phase6LocationRef, {
+        status: 'inactive',
+        updatedBy: admin.user.uid,
+        updatedAt: serverTimestamp(),
+      })
+    );
+  
+    const phase6InactiveTransferId = 'mov_' + '9'.repeat(64);
+    await denied('Local inativo não pode receber transferência', async () => {
+      const batch = writeBatch(admin.db);
+      batch.set(
+        doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase6InactiveTransferId),
+        {
+          schemaVersion: 'warehouse_movement_v1',
+          id: phase6InactiveTransferId,
+          workspaceId: 'hgesm-aprov',
+          ug: '160416',
+          materialId: canonicalMaterialId,
+          type: 'TRANSFER',
+          quantityDelta: 0,
+          idempotencyKeyHash: '9'.repeat(64),
+          reversesMovementId: null,
+          note: null,
+          source: {
+            kind: 'LOCATION_TRANSFER',
+            actorUid: admin.user.uid,
+            quantity: 1,
+            from: { kind: 'UNASSIGNED' },
+            to: {
+              kind: 'LOCATION',
+              depotId: phase6DepotId,
+              locationId: phase6LocationId,
+              subpositionId: null,
+            },
+            fromBalanceId: phase6FromBalanceId,
+            toBalanceId: phase6ToBalanceId,
+          },
+          createdAt: serverTimestamp(),
+        }
+      );
+      batch.set(founderBalance, {
+        schemaVersion: 'warehouse_balance_v1',
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        quantity: 8,
+        revision: 4,
+        lastMovementId: phase6InactiveTransferId,
+        updatedAt: serverTimestamp(),
+      });
+      batch.set(phase6FromBalanceRef, {
+        schemaVersion: 'warehouse_location_balance_v1',
+        id: phase6FromBalanceId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        position: { kind: 'UNASSIGNED' },
+        quantity: 4,
+        revision: 2,
+        lastMovementId: phase6InactiveTransferId,
+        updatedAt: serverTimestamp(),
+      });
+      batch.set(phase6ToBalanceRef, {
+        schemaVersion: 'warehouse_location_balance_v1',
+        id: phase6ToBalanceId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        position: {
+          kind: 'LOCATION',
+          depotId: phase6DepotId,
+          locationId: phase6LocationId,
+          subpositionId: null,
+        },
+        quantity: 4,
+        revision: 2,
+        lastMovementId: phase6InactiveTransferId,
+        updatedAt: serverTimestamp(),
+      });
+      return batch.commit();
+    });
+  
+    await allowed('Fundador reativa local para uso posterior', () =>
+      updateDoc(phase6LocationRef, {
+        status: 'active',
+        updatedBy: admin.user.uid,
+        updatedAt: serverTimestamp(),
+      })
+    );
+  
+    console.log('\nFASE 7 — Estoque Operável / Lotes / Validade / FEFO');
+  
+    const phase7InvoiceLotId = 'lot_' + '7'.repeat(32);
+    const phase7InvoiceLotRef = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'lots',
+      phase7InvoiceLotId
+    );
+    const phase7InvoiceOrigin = {
+      kind: 'INVOICE',
+      movementId: phase4Movement1Id,
+      invoiceRecordKey: '12345678000199__12345',
+      invoiceId: '12345',
+      supplier: 'Fornecedor Teste',
+      supplierCnpj: '12345678000199',
+    };
+  
+    await allowed('Fundador cria lote FASE 7 vinculado a material e origem de NF', () =>
+      setDoc(phase7InvoiceLotRef, {
+        schemaVersion: 'warehouse_lot_v1',
+        id: phase7InvoiceLotId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: phase4MaterialId,
+        code: 'NF-12345-L1',
+        expiresOn: '2027-01-15',
+        quantity: 4,
+        position: { kind: 'UNASSIGNED' },
+        origin: phase7InvoiceOrigin,
         status: 'active',
         createdBy: admin.user.uid,
         updatedBy: admin.user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      }
+      })
     );
-    return batch.commit();
-  });
-
-  const phase7BalanceAfter = await getDoc(founderBalance);
-  assert.equal(
-    phase7BalanceAfter.data().quantity,
-    8,
-    'Enriquecimento de lotes jamais altera warehouse_balance_v1'
-  );
-
-
-  console.log('\nFASE 8 — Código de barras / Scanner / Saída Expressa');
-
-  const phase8BarcodeId = 'bar_' + '8'.repeat(64);
-  const phase8BarcodeRef = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'barcodes',
-    phase8BarcodeId
-  );
-  const phase8Barcode = {
-    schemaVersion: 'warehouse_barcode_v1',
-    id: phase8BarcodeId,
-    workspaceId: 'hgesm-aprov',
-    ug: '160416',
-    materialId: canonicalMaterialId,
-    barcode: '7891234567808',
-    presentation: { code: 'kg', label: null },
-    factorToBaseUnit: 1,
-    status: 'active',
-    createdBy: admin.user.uid,
-    updatedBy: admin.user.uid,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  };
-
-  await allowed('Fundador associa barcode FASE 8 ao material canônico', () =>
-    setDoc(phase8BarcodeRef, phase8Barcode)
-  );
-  await allowed('Fundador lê barcode FASE 8', () => getDoc(phase8BarcodeRef));
-
-  await denied('Barcode FASE 8 rejeita UG adulterada', () =>
-    setDoc(
-      doc(admin.db, 'warehouse', 'hgesm-aprov', 'barcodes', 'bar_' + 'a'.repeat(64)),
-      {
-        ...phase8Barcode,
-        id: 'bar_' + 'a'.repeat(64),
-        barcode: '7891234567809',
-        ug: '999999',
-      }
-    )
-  );
-
-  await denied('Barcode FASE 8 não pode trocar material após associação', () =>
-    updateDoc(phase8BarcodeRef, {
-      materialId: phase4MaterialId,
-      updatedBy: admin.user.uid,
-      updatedAt: serverTimestamp(),
-    })
-  );
-
-  await denied('Setor externo não lê códigos de barras da FASE 8', () =>
-    getDoc(
-      doc(
-        sessionA.db,
-        'warehouse',
-        'hgesm-aprov',
-        'barcodes',
-        phase8BarcodeId
+  
+    await denied('Lote FASE 7 rejeita validade fora do contrato', () =>
+      setDoc(
+        doc(admin.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + '8'.repeat(32)),
+        {
+          schemaVersion: 'warehouse_lot_v1',
+          id: 'lot_' + '8'.repeat(32),
+          workspaceId: 'hgesm-aprov',
+          ug: '160416',
+          materialId: phase4MaterialId,
+          code: 'INVALID-DATE',
+          expiresOn: '15/01/2027',
+          quantity: 1,
+          position: { kind: 'UNASSIGNED' },
+          origin: phase7InvoiceOrigin,
+          status: 'active',
+          createdBy: admin.user.uid,
+          updatedBy: admin.user.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }
       )
-    )
-  );
-
-  await denied('Setor externo não cria barcode nem no namespace fundador', () =>
-    setDoc(
-      doc(sessionA.db, 'warehouse', 'hgesm-aprov', 'barcodes', 'bar_' + 'b'.repeat(64)),
-      {
-        ...phase8Barcode,
-        id: 'bar_' + 'b'.repeat(64),
-        barcode: '7891234567810',
-        createdBy: sessionA.user.uid,
-        updatedBy: sessionA.user.uid,
-      }
-    )
-  );
-
-  const phase8MovementId = 'mov_' + 'e'.repeat(64);
-  await allowed('Saída expressa FASE 8 baixa ledger, saldo e posição na mesma operação', async () => {
-    const batch = writeBatch(admin.db);
-    batch.set(
-      doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase8MovementId),
-      {
-        schemaVersion: 'warehouse_movement_v1',
-        id: phase8MovementId,
-        workspaceId: 'hgesm-aprov',
-        ug: '160416',
+    );
+  
+    await denied('Lote FASE 7 não pode trocar material canônico após criação', () =>
+      updateDoc(phase7InvoiceLotRef, {
         materialId: canonicalMaterialId,
-        type: 'OUTBOUND',
-        quantityDelta: -1,
-        idempotencyKeyHash: 'e'.repeat(64),
-        reversesMovementId: null,
-        note: 'Saída expressa security test',
-        source: {
-          kind: 'EXPRESS_OUTBOUND',
-          interface: 'BARCODE_SCANNER',
-          actorUid: admin.user.uid,
-          requestedQuantity: 1,
+        updatedBy: admin.user.uid,
+        updatedAt: serverTimestamp(),
+      })
+    );
+  
+    await denied('Lote FASE 7 não aceita origem de NF pertencente a outro material', () =>
+      setDoc(
+        doc(admin.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + '9'.repeat(32)),
+        {
+          schemaVersion: 'warehouse_lot_v1',
+          id: 'lot_' + '9'.repeat(32),
+          workspaceId: 'hgesm-aprov',
+          ug: '160416',
+          materialId: canonicalMaterialId,
+          code: 'ORIGIN-MISMATCH',
+          expiresOn: '2027-03-01',
           quantity: 1,
-          presentation: { code: 'kg', label: null },
-          factorToBaseUnit: 1,
-          barcodeId: phase8BarcodeId,
-          barcode: '7891234567808',
           position: { kind: 'UNASSIGNED' },
-          locationBalanceId: phase6FromBalanceId,
-          lotId: null,
-          lotCode: null,
-        },
-        createdAt: serverTimestamp(),
-      }
+          origin: phase7InvoiceOrigin,
+          status: 'active',
+          createdBy: admin.user.uid,
+          updatedBy: admin.user.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }
+      )
     );
-    batch.set(founderBalance, {
-      schemaVersion: 'warehouse_balance_v1',
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: canonicalMaterialId,
-      quantity: 7,
-      revision: 4,
-      lastMovementId: phase8MovementId,
-      updatedAt: serverTimestamp(),
-    });
-    batch.set(phase6FromBalanceRef, {
-      schemaVersion: 'warehouse_location_balance_v1',
-      id: phase6FromBalanceId,
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: canonicalMaterialId,
-      position: { kind: 'UNASSIGNED' },
-      quantity: 4,
-      revision: 2,
-      lastMovementId: phase8MovementId,
-      updatedAt: serverTimestamp(),
-    });
-    return batch.commit();
-  });
-
-  const phase8BalanceAfter = await getDoc(founderBalance);
-  const phase8PositionAfter = await getDoc(phase6FromBalanceRef);
-  assert.equal(phase8BalanceAfter.data().quantity, 7);
-  assert.equal(phase8PositionAfter.data().quantity, 4);
-
-  const phase8MissingPositionId = 'mov_' + 'd'.repeat(64);
-  await denied('Saída expressa FASE 8 exige baixa física atômica correspondente', async () => {
-    const batch = writeBatch(admin.db);
-    batch.set(
-      doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase8MissingPositionId),
-      {
-        schemaVersion: 'warehouse_movement_v1',
-        id: phase8MissingPositionId,
-        workspaceId: 'hgesm-aprov',
-        ug: '160416',
-        materialId: canonicalMaterialId,
-        type: 'OUTBOUND',
-        quantityDelta: -1,
-        idempotencyKeyHash: 'd'.repeat(64),
-        reversesMovementId: null,
-        note: null,
-        source: {
-          kind: 'EXPRESS_OUTBOUND',
-          interface: 'BARCODE_SCANNER',
-          actorUid: admin.user.uid,
-          requestedQuantity: 1,
+  
+    await denied('Lote FASE 7 não aceita UG adulterada', () =>
+      setDoc(
+        doc(admin.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + 'a'.repeat(32)),
+        {
+          schemaVersion: 'warehouse_lot_v1',
+          id: 'lot_' + 'a'.repeat(32),
+          workspaceId: 'hgesm-aprov',
+          ug: '999999',
+          materialId: canonicalMaterialId,
+          code: 'UG-INVALID',
+          expiresOn: null,
           quantity: 1,
-          presentation: { code: 'kg', label: null },
-          factorToBaseUnit: 1,
-          barcodeId: phase8BarcodeId,
-          barcode: '7891234567808',
           position: { kind: 'UNASSIGNED' },
-          locationBalanceId: phase6FromBalanceId,
-          lotId: null,
-          lotCode: null,
-        },
-        createdAt: serverTimestamp(),
-      }
+          origin: {
+            kind: 'MANUAL_ENRICHMENT',
+            movementId: null,
+            invoiceRecordKey: null,
+            invoiceId: null,
+            supplier: null,
+            supplierCnpj: null,
+          },
+          status: 'active',
+          createdBy: admin.user.uid,
+          updatedBy: admin.user.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }
+      )
     );
-    batch.set(founderBalance, {
-      schemaVersion: 'warehouse_balance_v1',
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: canonicalMaterialId,
-      quantity: 6,
-      revision: 5,
-      lastMovementId: phase8MissingPositionId,
-      updatedAt: serverTimestamp(),
-    });
-    return batch.commit();
-  });
-
-  const phase8NegativeId = 'mov_' + 'c'.repeat(64);
-  await denied('Saída expressa FASE 8 não pode produzir saldo negativo', async () => {
-    const batch = writeBatch(admin.db);
-    batch.set(
-      doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase8NegativeId),
-      {
-        schemaVersion: 'warehouse_movement_v1',
-        id: phase8NegativeId,
-        workspaceId: 'hgesm-aprov',
-        ug: '160416',
-        materialId: canonicalMaterialId,
-        type: 'OUTBOUND',
-        quantityDelta: -8,
-        idempotencyKeyHash: 'c'.repeat(64),
-        reversesMovementId: null,
-        note: null,
-        source: {
-          kind: 'EXPRESS_OUTBOUND',
-          interface: 'BARCODE_SCANNER',
-          actorUid: admin.user.uid,
-          requestedQuantity: 8,
-          quantity: 8,
-          presentation: { code: 'kg', label: null },
-          factorToBaseUnit: 1,
-          barcodeId: phase8BarcodeId,
-          barcode: '7891234567808',
+  
+    await denied('Setor externo continua sem acesso aos lotes da FASE 7', () =>
+      getDoc(
+        doc(
+          sessionA.db,
+          'warehouse',
+          'hgesm-aprov',
+          'lots',
+          phase7InvoiceLotId
+        )
+      )
+    );
+  
+    await denied('Setor externo não cria lote nem no namespace fundador', () =>
+      setDoc(
+        doc(sessionA.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + 'b'.repeat(32)),
+        {
+          schemaVersion: 'warehouse_lot_v1',
+          id: 'lot_' + 'b'.repeat(32),
+          workspaceId: 'hgesm-aprov',
+          ug: '160416',
+          materialId: phase4MaterialId,
+          code: 'EXTERNAL',
+          expiresOn: null,
+          quantity: 1,
           position: { kind: 'UNASSIGNED' },
-          locationBalanceId: phase6FromBalanceId,
-          lotId: null,
-          lotCode: null,
-        },
-        createdAt: serverTimestamp(),
-      }
+          origin: {
+            kind: 'MANUAL_ENRICHMENT',
+            movementId: null,
+            invoiceRecordKey: null,
+            invoiceId: null,
+            supplier: null,
+            supplierCnpj: null,
+          },
+          status: 'active',
+          createdBy: sessionA.user.uid,
+          updatedBy: sessionA.user.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }
+      )
     );
-    batch.set(founderBalance, {
-      schemaVersion: 'warehouse_balance_v1',
+  
+    await denied('Lote FASE 7 não pode ser excluído e perder histórico logístico', () =>
+      deleteDoc(phase7InvoiceLotRef)
+    );
+  
+    const phase7ManualOrigin = {
+      kind: 'MANUAL_ENRICHMENT',
+      movementId: null,
+      invoiceRecordKey: null,
+      invoiceId: null,
+      supplier: null,
+      supplierCnpj: null,
+    };
+    await allowed('Fundador cria lotes FEFO sem alterar saldo oficial', async () => {
+      const batch = writeBatch(admin.db);
+      batch.set(
+        doc(admin.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + 'c'.repeat(32)),
+        {
+          schemaVersion: 'warehouse_lot_v1',
+          id: 'lot_' + 'c'.repeat(32),
+          workspaceId: 'hgesm-aprov',
+          ug: '160416',
+          materialId: canonicalMaterialId,
+          code: 'LOTE-FEFO-PRIMEIRO',
+          expiresOn: '2026-11-10',
+          quantity: 2,
+          position: { kind: 'UNASSIGNED' },
+          origin: phase7ManualOrigin,
+          status: 'active',
+          createdBy: admin.user.uid,
+          updatedBy: admin.user.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }
+      );
+      batch.set(
+        doc(admin.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + 'd'.repeat(32)),
+        {
+          schemaVersion: 'warehouse_lot_v1',
+          id: 'lot_' + 'd'.repeat(32),
+          workspaceId: 'hgesm-aprov',
+          ug: '160416',
+          materialId: canonicalMaterialId,
+          code: 'LOTE-FEFO-DEPOIS',
+          expiresOn: '2026-12-15',
+          quantity: 2,
+          position: {
+            kind: 'LOCATION',
+            depotId: phase6DepotId,
+            locationId: phase6LocationId,
+            subpositionId: null,
+          },
+          origin: phase7ManualOrigin,
+          status: 'active',
+          createdBy: admin.user.uid,
+          updatedBy: admin.user.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }
+      );
+      return batch.commit();
+    });
+  
+    const phase7BalanceAfter = await getDoc(founderBalance);
+    assert.equal(
+      phase7BalanceAfter.data().quantity,
+      8,
+      'Enriquecimento de lotes jamais altera warehouse_balance_v1'
+    );
+  
+  
+    console.log('\nFASE 8 — Código de barras / Scanner / Saída Expressa');
+  
+    const phase8BarcodeId = 'bar_' + '8'.repeat(64);
+    const phase8BarcodeRef = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'barcodes',
+      phase8BarcodeId
+    );
+    const phase8Barcode = {
+      schemaVersion: 'warehouse_barcode_v1',
+      id: phase8BarcodeId,
       workspaceId: 'hgesm-aprov',
       ug: '160416',
       materialId: canonicalMaterialId,
-      quantity: -1,
-      revision: 5,
-      lastMovementId: phase8NegativeId,
-      updatedAt: serverTimestamp(),
-    });
-    batch.set(phase6FromBalanceRef, {
-      schemaVersion: 'warehouse_location_balance_v1',
-      id: phase6FromBalanceId,
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: canonicalMaterialId,
-      position: { kind: 'UNASSIGNED' },
-      quantity: -4,
-      revision: 3,
-      lastMovementId: phase8NegativeId,
-      updatedAt: serverTimestamp(),
-    });
-    return batch.commit();
-  });
-
-  await denied('Barcode FASE 8 não pode ser excluído fisicamente', () =>
-    deleteDoc(phase8BarcodeRef)
-  );
-
-
-  console.log('\nFASE 9 — Visão do Depósito / Editor / Persistência');
-
-  const phase9LayoutV1Id = 'lay_' + '1'.repeat(32);
-  const phase9LayoutV2Id = 'lay_' + '2'.repeat(32);
-  const phase9Object = {
-    id: 'obj_' + '9'.repeat(32),
-    kind: 'SHELF',
-    label: 'Estante FASE 9',
-    x: 32,
-    y: 40,
-    width: 180,
-    height: 80,
-    rotation: 0,
-    layer: 1,
-    elevation: 1,
-    visualVariant: 'solid',
-    warehouseLocationId: phase6LocationId,
-  };
-  const phase9LayoutV1Ref = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'layouts',
-    phase9LayoutV1Id
-  );
-  const phase9LayoutV2Ref = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'layouts',
-    phase9LayoutV2Id
-  );
-  const phase9LayoutBase = {
-    schemaVersion: 'warehouse_depot_layout_v1',
-    workspaceId: 'hgesm-aprov',
-    ug: '160416',
-    name: 'Croqui principal FASE 9',
-    depotId: phase6DepotId,
-    logicalWidth: 1000,
-    logicalHeight: 620,
-    objects: [phase9Object],
-    createdBy: admin.user.uid,
-    updatedBy: admin.user.uid,
-  };
-
-  await allowed('Fundador cria layout ativo FASE 9 sem tocar no estoque', () =>
-    setDoc(phase9LayoutV1Ref, {
-      ...phase9LayoutBase,
-      id: phase9LayoutV1Id,
-      version: 1,
+      barcode: '7891234567808',
+      presentation: { code: 'kg', label: null },
+      factorToBaseUnit: 1,
       status: 'active',
-      previousVersionId: null,
+      createdBy: admin.user.uid,
+      updatedBy: admin.user.uid,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    })
-  );
-
-  await allowed('Fundador lê layout FASE 9', () => getDoc(phase9LayoutV1Ref));
-
-  await denied('Layout FASE 9 rejeita UG adulterada', () =>
-    setDoc(
-      doc(admin.db, 'warehouse', 'hgesm-aprov', 'layouts', 'lay_' + '3'.repeat(32)),
-      {
+    };
+  
+    await allowed('Fundador associa barcode FASE 8 ao material canônico', () =>
+      setDoc(phase8BarcodeRef, phase8Barcode)
+    );
+    await allowed('Fundador lê barcode FASE 8', () => getDoc(phase8BarcodeRef));
+  
+    await denied('Barcode FASE 8 rejeita UG adulterada', () =>
+      setDoc(
+        doc(admin.db, 'warehouse', 'hgesm-aprov', 'barcodes', 'bar_' + 'a'.repeat(64)),
+        {
+          ...phase8Barcode,
+          id: 'bar_' + 'a'.repeat(64),
+          barcode: '7891234567809',
+          ug: '999999',
+        }
+      )
+    );
+  
+    await denied('Barcode FASE 8 não pode trocar material após associação', () =>
+      updateDoc(phase8BarcodeRef, {
+        materialId: phase4MaterialId,
+        updatedBy: admin.user.uid,
+        updatedAt: serverTimestamp(),
+      })
+    );
+  
+    await denied('Setor externo não lê códigos de barras da FASE 8', () =>
+      getDoc(
+        doc(
+          sessionA.db,
+          'warehouse',
+          'hgesm-aprov',
+          'barcodes',
+          phase8BarcodeId
+        )
+      )
+    );
+  
+    await denied('Setor externo não cria barcode nem no namespace fundador', () =>
+      setDoc(
+        doc(sessionA.db, 'warehouse', 'hgesm-aprov', 'barcodes', 'bar_' + 'b'.repeat(64)),
+        {
+          ...phase8Barcode,
+          id: 'bar_' + 'b'.repeat(64),
+          barcode: '7891234567810',
+          createdBy: sessionA.user.uid,
+          updatedBy: sessionA.user.uid,
+        }
+      )
+    );
+  
+    const phase8MovementId = 'mov_' + 'e'.repeat(64);
+    await allowed('Saída expressa FASE 8 baixa ledger, saldo e posição na mesma operação', async () => {
+      const batch = writeBatch(admin.db);
+      batch.set(
+        doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase8MovementId),
+        {
+          schemaVersion: 'warehouse_movement_v1',
+          id: phase8MovementId,
+          workspaceId: 'hgesm-aprov',
+          ug: '160416',
+          materialId: canonicalMaterialId,
+          type: 'OUTBOUND',
+          quantityDelta: -1,
+          idempotencyKeyHash: 'e'.repeat(64),
+          reversesMovementId: null,
+          note: 'Saída expressa security test',
+          source: {
+            kind: 'EXPRESS_OUTBOUND',
+            interface: 'BARCODE_SCANNER',
+            actorUid: admin.user.uid,
+            requestedQuantity: 1,
+            quantity: 1,
+            presentation: { code: 'kg', label: null },
+            factorToBaseUnit: 1,
+            barcodeId: phase8BarcodeId,
+            barcode: '7891234567808',
+            position: { kind: 'UNASSIGNED' },
+            locationBalanceId: phase6FromBalanceId,
+            lotId: null,
+            lotCode: null,
+          },
+          createdAt: serverTimestamp(),
+        }
+      );
+      batch.set(founderBalance, {
+        schemaVersion: 'warehouse_balance_v1',
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        quantity: 7,
+        revision: 4,
+        lastMovementId: phase8MovementId,
+        updatedAt: serverTimestamp(),
+      });
+      batch.set(phase6FromBalanceRef, {
+        schemaVersion: 'warehouse_location_balance_v1',
+        id: phase6FromBalanceId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        position: { kind: 'UNASSIGNED' },
+        quantity: 4,
+        revision: 2,
+        lastMovementId: phase8MovementId,
+        updatedAt: serverTimestamp(),
+      });
+      return batch.commit();
+    });
+  
+    const phase8BalanceAfter = await getDoc(founderBalance);
+    const phase8PositionAfter = await getDoc(phase6FromBalanceRef);
+    assert.equal(phase8BalanceAfter.data().quantity, 7);
+    assert.equal(phase8PositionAfter.data().quantity, 4);
+  
+    const phase8MissingPositionId = 'mov_' + 'd'.repeat(64);
+    await denied('Saída expressa FASE 8 exige baixa física atômica correspondente', async () => {
+      const batch = writeBatch(admin.db);
+      batch.set(
+        doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase8MissingPositionId),
+        {
+          schemaVersion: 'warehouse_movement_v1',
+          id: phase8MissingPositionId,
+          workspaceId: 'hgesm-aprov',
+          ug: '160416',
+          materialId: canonicalMaterialId,
+          type: 'OUTBOUND',
+          quantityDelta: -1,
+          idempotencyKeyHash: 'd'.repeat(64),
+          reversesMovementId: null,
+          note: null,
+          source: {
+            kind: 'EXPRESS_OUTBOUND',
+            interface: 'BARCODE_SCANNER',
+            actorUid: admin.user.uid,
+            requestedQuantity: 1,
+            quantity: 1,
+            presentation: { code: 'kg', label: null },
+            factorToBaseUnit: 1,
+            barcodeId: phase8BarcodeId,
+            barcode: '7891234567808',
+            position: { kind: 'UNASSIGNED' },
+            locationBalanceId: phase6FromBalanceId,
+            lotId: null,
+            lotCode: null,
+          },
+          createdAt: serverTimestamp(),
+        }
+      );
+      batch.set(founderBalance, {
+        schemaVersion: 'warehouse_balance_v1',
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        quantity: 6,
+        revision: 5,
+        lastMovementId: phase8MissingPositionId,
+        updatedAt: serverTimestamp(),
+      });
+      return batch.commit();
+    });
+  
+    const phase8NegativeId = 'mov_' + 'c'.repeat(64);
+    await denied('Saída expressa FASE 8 não pode produzir saldo negativo', async () => {
+      const batch = writeBatch(admin.db);
+      batch.set(
+        doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase8NegativeId),
+        {
+          schemaVersion: 'warehouse_movement_v1',
+          id: phase8NegativeId,
+          workspaceId: 'hgesm-aprov',
+          ug: '160416',
+          materialId: canonicalMaterialId,
+          type: 'OUTBOUND',
+          quantityDelta: -8,
+          idempotencyKeyHash: 'c'.repeat(64),
+          reversesMovementId: null,
+          note: null,
+          source: {
+            kind: 'EXPRESS_OUTBOUND',
+            interface: 'BARCODE_SCANNER',
+            actorUid: admin.user.uid,
+            requestedQuantity: 8,
+            quantity: 8,
+            presentation: { code: 'kg', label: null },
+            factorToBaseUnit: 1,
+            barcodeId: phase8BarcodeId,
+            barcode: '7891234567808',
+            position: { kind: 'UNASSIGNED' },
+            locationBalanceId: phase6FromBalanceId,
+            lotId: null,
+            lotCode: null,
+          },
+          createdAt: serverTimestamp(),
+        }
+      );
+      batch.set(founderBalance, {
+        schemaVersion: 'warehouse_balance_v1',
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        quantity: -1,
+        revision: 5,
+        lastMovementId: phase8NegativeId,
+        updatedAt: serverTimestamp(),
+      });
+      batch.set(phase6FromBalanceRef, {
+        schemaVersion: 'warehouse_location_balance_v1',
+        id: phase6FromBalanceId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        position: { kind: 'UNASSIGNED' },
+        quantity: -4,
+        revision: 3,
+        lastMovementId: phase8NegativeId,
+        updatedAt: serverTimestamp(),
+      });
+      return batch.commit();
+    });
+  
+    await denied('Barcode FASE 8 não pode ser excluído fisicamente', () =>
+      deleteDoc(phase8BarcodeRef)
+    );
+  
+  
+    console.log('\nFASE 9 — Visão do Depósito / Editor / Persistência');
+  
+    const phase9LayoutV1Id = 'lay_' + '1'.repeat(32);
+    const phase9LayoutV2Id = 'lay_' + '2'.repeat(32);
+    const phase9Object = {
+      id: 'obj_' + '9'.repeat(32),
+      kind: 'SHELF',
+      label: 'Estante FASE 9',
+      x: 32,
+      y: 40,
+      width: 180,
+      height: 80,
+      rotation: 0,
+      layer: 1,
+      elevation: 1,
+      visualVariant: 'solid',
+      warehouseLocationId: phase6LocationId,
+    };
+    const phase9LayoutV1Ref = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'layouts',
+      phase9LayoutV1Id
+    );
+    const phase9LayoutV2Ref = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'layouts',
+      phase9LayoutV2Id
+    );
+    const phase9LayoutBase = {
+      schemaVersion: 'warehouse_depot_layout_v1',
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      name: 'Croqui principal FASE 9',
+      depotId: phase6DepotId,
+      logicalWidth: 1000,
+      logicalHeight: 620,
+      objects: [phase9Object],
+      createdBy: admin.user.uid,
+      updatedBy: admin.user.uid,
+    };
+  
+    await allowed('Fundador cria layout ativo FASE 9 sem tocar no estoque', () =>
+      setDoc(phase9LayoutV1Ref, {
         ...phase9LayoutBase,
-        id: 'lay_' + '3'.repeat(32),
-        ug: '999999',
+        id: phase9LayoutV1Id,
         version: 1,
         status: 'active',
         previousVersionId: null,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      }
-    )
-  );
-
-  await allowed('FASE 9 arquiva versão anterior e ativa nova versão atomicamente', async () => {
-    const batch = writeBatch(admin.db);
-    batch.update(phase9LayoutV1Ref, {
-      status: 'archived',
-      updatedBy: admin.user.uid,
-      updatedAt: serverTimestamp(),
-    });
-    batch.set(phase9LayoutV2Ref, {
-      ...phase9LayoutBase,
-      id: phase9LayoutV2Id,
-      name: 'Croqui principal FASE 9 v2',
-      objects: [{ ...phase9Object, x: 96 }],
-      version: 2,
-      status: 'active',
-      previousVersionId: phase9LayoutV1Id,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-    return batch.commit();
-  });
-
-  await denied('Layout arquivado não pode ter geometria reescrita', () =>
-    updateDoc(phase9LayoutV1Ref, {
-      objects: [{ ...phase9Object, x: 999 }],
-      updatedBy: admin.user.uid,
-      updatedAt: serverTimestamp(),
-    })
-  );
-
-  await denied('Setor externo não lê layout da FASE 9', () =>
-    getDoc(
-      doc(
-        sessionA.db,
-        'warehouse',
-        'hgesm-aprov',
-        'layouts',
-        phase9LayoutV2Id
+      })
+    );
+  
+    await allowed('Fundador lê layout FASE 9', () => getDoc(phase9LayoutV1Ref));
+  
+    await denied('Layout FASE 9 rejeita UG adulterada', () =>
+      setDoc(
+        doc(admin.db, 'warehouse', 'hgesm-aprov', 'layouts', 'lay_' + '3'.repeat(32)),
+        {
+          ...phase9LayoutBase,
+          id: 'lay_' + '3'.repeat(32),
+          ug: '999999',
+          version: 1,
+          status: 'active',
+          previousVersionId: null,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }
       )
-    )
-  );
-
-  await denied('Setor externo não cria layout nem no próprio workspace', () =>
-    setDoc(
-      doc(sessionA.db, 'warehouse', 'workspace-a', 'layouts', 'lay_' + '4'.repeat(32)),
-      {
+    );
+  
+    await allowed('FASE 9 arquiva versão anterior e ativa nova versão atomicamente', async () => {
+      const batch = writeBatch(admin.db);
+      batch.update(phase9LayoutV1Ref, {
+        status: 'archived',
+        updatedBy: admin.user.uid,
+        updatedAt: serverTimestamp(),
+      });
+      batch.set(phase9LayoutV2Ref, {
         ...phase9LayoutBase,
-        id: 'lay_' + '4'.repeat(32),
-        workspaceId: 'workspace-a',
-        version: 1,
+        id: phase9LayoutV2Id,
+        name: 'Croqui principal FASE 9 v2',
+        objects: [{ ...phase9Object, x: 96 }],
+        version: 2,
         status: 'active',
-        previousVersionId: null,
-        createdBy: sessionA.user.uid,
-        updatedBy: sessionA.user.uid,
+        previousVersionId: phase9LayoutV1Id,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      }
-    )
-  );
-
-  await denied('Layout FASE 9 não pode ser excluído fisicamente', () =>
-    deleteDoc(phase9LayoutV2Ref)
-  );
-
-  console.log('\nFASE 10 — Inventário Físico');
-
-  const phase10InventoryId = 'inv_' + 'a'.repeat(32);
-  const phase10ItemId = 'invit_' + 'b'.repeat(64);
-  const phase10MovementId = 'mov_' + 'd'.repeat(64);
-  const phase10InventoryRef = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'inventories',
-    phase10InventoryId
-  );
-  const phase10ItemRef = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'inventories',
-    phase10InventoryId,
-    'items',
-    phase10ItemId
-  );
-
-  const phase10BalanceBefore = await getDoc(founderBalance);
-  const phase10LocationBefore = await getDoc(phase6FromBalanceRef);
-  assert.equal(phase10BalanceBefore.exists(), true);
-  assert.equal(phase10LocationBefore.exists(), true);
-  const phase10Aggregate = phase10BalanceBefore.data();
-  const phase10Physical = phase10LocationBefore.data();
-  const phase10Counted = phase10Physical.quantity + 1;
-
-  await allowed('Fundador abre sessão de inventário FASE 10', () =>
-    setDoc(phase10InventoryRef, {
-      schemaVersion: 'warehouse_inventory_v1',
-      id: phase10InventoryId,
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      scope: { kind: 'TOTAL' },
-      status: 'OPENING',
-      itemCount: 1,
-      openedBy: admin.user.uid,
-      reviewedBy: null,
-      confirmationStartedBy: null,
-      confirmedBy: null,
-      cancelledBy: null,
-      reviewSummary: null,
-      staleItemId: null,
-      referenceCapturedAt: serverTimestamp(),
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      reviewedAt: null,
-      confirmationStartedAt: null,
-      confirmedAt: null,
-      cancelledAt: null,
-    })
-  );
-
-  await allowed('Fundador cria item separado do estoque oficial', () =>
-    setDoc(phase10ItemRef, {
-      schemaVersion: 'warehouse_inventory_item_v1',
-      id: phase10ItemId,
-      inventoryId: phase10InventoryId,
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: canonicalMaterialId,
-      position: { kind: 'UNASSIGNED' },
-      locationBalanceId: phase6FromBalanceId,
-      expectedQuantity: phase10Physical.quantity,
-      expectedBalanceRevision: phase10Aggregate.revision,
-      expectedBalanceLastMovementId: phase10Aggregate.lastMovementId,
-      expectedLocationRevision: phase10Physical.revision,
-      expectedLocationLastMovementId: phase10Physical.lastMovementId,
-      countedQuantity: null,
-      difference: null,
-      status: 'PENDING',
-      countedBy: null,
-      countedAt: null,
-      adjustmentMovementId: null,
-      adjustedBy: null,
-      adjustedAt: null,
-    })
-  );
-
-  await allowed('Sessão FASE 10 entra em contagem', () =>
-    updateDoc(phase10InventoryRef, {
-      status: 'COUNTING',
-      updatedAt: serverTimestamp(),
-    })
-  );
-
-  await allowed('Salvar contagem não altera saldo oficial', () =>
-    updateDoc(phase10ItemRef, {
-      countedQuantity: phase10Counted,
-      difference: 1,
-      status: 'DIVERGENT',
-      countedBy: admin.user.uid,
-      countedAt: serverTimestamp(),
-      adjustmentMovementId: null,
-      adjustedBy: null,
-      adjustedAt: null,
-    })
-  );
-  const phase10BalanceAfterCount = await getDoc(founderBalance);
-  const phase10LocationAfterCount = await getDoc(phase6FromBalanceRef);
-  assert.equal(phase10BalanceAfterCount.data().quantity, phase10Aggregate.quantity);
-  assert.equal(phase10LocationAfterCount.data().quantity, phase10Physical.quantity);
-
-  await denied('Contagem isolada não pode escrever saldo diretamente', () =>
-    updateDoc(founderBalance, {
-      quantity: phase10Aggregate.quantity + 1,
-      updatedAt: serverTimestamp(),
-    })
-  );
-
-  await allowed('Fundador fecha contagem para revisão', () =>
-    updateDoc(phase10InventoryRef, {
-      status: 'REVIEW',
-      reviewedBy: admin.user.uid,
-      reviewSummary: {
-        totalItems: 1,
-        countedItems: 1,
-        matchedItems: 0,
-        divergentItems: 1,
-        adjustedItems: 0,
-        positiveDifference: 1,
-        negativeDifference: 0,
-      },
-      reviewedAt: serverTimestamp(),
-      staleItemId: null,
-      updatedAt: serverTimestamp(),
-    })
-  );
-
-  await allowed('Fundador inicia confirmação explícita', () =>
-    updateDoc(phase10InventoryRef, {
-      status: 'CONFIRMING',
-      confirmationStartedBy: admin.user.uid,
-      confirmationStartedAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
-  );
-
-  await allowed('INVENTORY_ADJUSTMENT atualiza ledger e projeções atomicamente', async () => {
-    const batch = writeBatch(admin.db);
-    batch.set(
-      doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase10MovementId),
-      {
-        schemaVersion: 'warehouse_movement_v1',
-        id: phase10MovementId,
-        workspaceId: 'hgesm-aprov',
-        ug: '160416',
-        materialId: canonicalMaterialId,
-        type: 'INVENTORY_ADJUSTMENT',
-        quantityDelta: 1,
-        idempotencyKeyHash: 'd'.repeat(64),
-        reversesMovementId: null,
-        note: 'Ajuste confirmado no inventário físico ' + phase10InventoryId,
-        source: {
-          kind: 'PHYSICAL_INVENTORY',
-          actorUid: admin.user.uid,
-          inventoryId: phase10InventoryId,
-          inventoryItemId: phase10ItemId,
-          expectedQuantity: phase10Physical.quantity,
-          countedQuantity: phase10Counted,
-          position: { kind: 'UNASSIGNED' },
-          locationBalanceId: phase6FromBalanceId,
-          expectedLocationRevision: phase10Physical.revision,
-          expectedLocationLastMovementId: phase10Physical.lastMovementId,
-        },
-        createdAt: serverTimestamp(),
-      }
+      });
+      return batch.commit();
+    });
+  
+    await denied('Layout arquivado não pode ter geometria reescrita', () =>
+      updateDoc(phase9LayoutV1Ref, {
+        objects: [{ ...phase9Object, x: 999 }],
+        updatedBy: admin.user.uid,
+        updatedAt: serverTimestamp(),
+      })
     );
-    batch.set(founderBalance, {
-      schemaVersion: 'warehouse_balance_v1',
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: canonicalMaterialId,
-      quantity: phase10Aggregate.quantity + 1,
-      revision: phase10Aggregate.revision + 1,
-      lastMovementId: phase10MovementId,
-      updatedAt: serverTimestamp(),
-    });
-    batch.set(phase6FromBalanceRef, {
-      schemaVersion: 'warehouse_location_balance_v1',
-      id: phase6FromBalanceId,
-      workspaceId: 'hgesm-aprov',
-      ug: '160416',
-      materialId: canonicalMaterialId,
-      position: { kind: 'UNASSIGNED' },
-      quantity: phase10Physical.quantity + 1,
-      revision: phase10Physical.revision + 1,
-      lastMovementId: phase10MovementId,
-      updatedAt: serverTimestamp(),
-    });
-    batch.update(phase10ItemRef, {
-      status: 'ADJUSTED',
-      adjustmentMovementId: phase10MovementId,
-      adjustedBy: admin.user.uid,
-      adjustedAt: serverTimestamp(),
-    });
-    return batch.commit();
-  });
-
-  await allowed('Fundador finaliza sessão FASE 10', () =>
-    updateDoc(phase10InventoryRef, {
-      status: 'CONFIRMED',
-      confirmedBy: admin.user.uid,
-      confirmedAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      staleItemId: null,
-    })
-  );
-
-  await denied('Sessão finalizada FASE 10 não pode ser reescrita', () =>
-    updateDoc(phase10InventoryRef, {
-      status: 'COUNTING',
-      updatedAt: serverTimestamp(),
-    })
-  );
-  await denied('Histórico FASE 10 não pode ser excluído', () =>
-    deleteDoc(phase10InventoryRef)
-  );
-  await denied('Setor externo não lê inventário da FASE 10', () =>
-    getDoc(
-      doc(
-        sessionA.db,
-        'warehouse',
-        'hgesm-aprov',
-        'inventories',
-        phase10InventoryId
+  
+    await denied('Setor externo não lê layout da FASE 9', () =>
+      getDoc(
+        doc(
+          sessionA.db,
+          'warehouse',
+          'hgesm-aprov',
+          'layouts',
+          phase9LayoutV2Id
+        )
       )
-    )
-  );
-  await denied('Inventário FASE 10 rejeita UG adulterada', () =>
-    setDoc(
-      doc(admin.db, 'warehouse', 'hgesm-aprov', 'inventories', 'inv_' + 'e'.repeat(32)),
-      {
+    );
+  
+    await denied('Setor externo não cria layout nem no próprio workspace', () =>
+      setDoc(
+        doc(sessionA.db, 'warehouse', 'workspace-a', 'layouts', 'lay_' + '4'.repeat(32)),
+        {
+          ...phase9LayoutBase,
+          id: 'lay_' + '4'.repeat(32),
+          workspaceId: 'workspace-a',
+          version: 1,
+          status: 'active',
+          previousVersionId: null,
+          createdBy: sessionA.user.uid,
+          updatedBy: sessionA.user.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }
+      )
+    );
+  
+    await denied('Layout FASE 9 não pode ser excluído fisicamente', () =>
+      deleteDoc(phase9LayoutV2Ref)
+    );
+  
+    console.log('\nFASE 10 — Inventário Físico');
+  
+    const phase10InventoryId = 'inv_' + 'a'.repeat(32);
+    const phase10ItemId = 'invit_' + 'b'.repeat(64);
+    const phase10MovementId = 'mov_' + 'd'.repeat(64);
+    const phase10InventoryRef = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'inventories',
+      phase10InventoryId
+    );
+    const phase10ItemRef = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'inventories',
+      phase10InventoryId,
+      'items',
+      phase10ItemId
+    );
+  
+    const phase10BalanceBefore = await getDoc(founderBalance);
+    const phase10LocationBefore = await getDoc(phase6FromBalanceRef);
+    assert.equal(phase10BalanceBefore.exists(), true);
+    assert.equal(phase10LocationBefore.exists(), true);
+    const phase10Aggregate = phase10BalanceBefore.data();
+    const phase10Physical = phase10LocationBefore.data();
+    const phase10Counted = phase10Physical.quantity + 1;
+  
+    await allowed('Fundador abre sessão de inventário FASE 10', () =>
+      setDoc(phase10InventoryRef, {
         schemaVersion: 'warehouse_inventory_v1',
-        id: 'inv_' + 'e'.repeat(32),
+        id: phase10InventoryId,
         workspaceId: 'hgesm-aprov',
-        ug: '999999',
+        ug: '160416',
         scope: { kind: 'TOTAL' },
         status: 'OPENING',
         itemCount: 1,
@@ -2456,35 +2260,242 @@ async function main() {
         confirmationStartedAt: null,
         confirmedAt: null,
         cancelledAt: null,
-      }
-    )
-  );
-
-  console.log('Isolamento A ↔ B');
-  await allowed('Setor A lê o próprio empenho', () =>
-    getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))
-  );
-  await allowed('Setor B lê o próprio empenho', () =>
-    getDoc(doc(sessionB.db, 'workspaces', 'workspace-b', 'empenhos', 'sample'))
-  );
-  await denied('Setor A não lê empenho do Setor B', () =>
-    getDoc(doc(sessionA.db, 'workspaces', 'workspace-b', 'empenhos', 'sample'))
-  );
-  await denied('Setor B não lê empenho do Setor A', () =>
-    getDoc(doc(sessionB.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))
-  );
-  await allowed('Setor A grava no próprio workspace', () =>
-    setDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'alerts', 'self-write'), {
-      workspaceId: 'workspace-a',
-      marker: 'allowed',
-    })
-  );
-  await denied('Setor A não grava no workspace B', () =>
-    setDoc(doc(sessionA.db, 'workspaces', 'workspace-b', 'alerts', 'cross-write'), {
-      workspaceId: 'workspace-b',
-      marker: 'forbidden',
-    })
-  );
+      })
+    );
+  
+    await allowed('Fundador cria item separado do estoque oficial', () =>
+      setDoc(phase10ItemRef, {
+        schemaVersion: 'warehouse_inventory_item_v1',
+        id: phase10ItemId,
+        inventoryId: phase10InventoryId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        position: { kind: 'UNASSIGNED' },
+        locationBalanceId: phase6FromBalanceId,
+        expectedQuantity: phase10Physical.quantity,
+        expectedBalanceRevision: phase10Aggregate.revision,
+        expectedBalanceLastMovementId: phase10Aggregate.lastMovementId,
+        expectedLocationRevision: phase10Physical.revision,
+        expectedLocationLastMovementId: phase10Physical.lastMovementId,
+        countedQuantity: null,
+        difference: null,
+        status: 'PENDING',
+        countedBy: null,
+        countedAt: null,
+        adjustmentMovementId: null,
+        adjustedBy: null,
+        adjustedAt: null,
+      })
+    );
+  
+    await allowed('Sessão FASE 10 entra em contagem', () =>
+      updateDoc(phase10InventoryRef, {
+        status: 'COUNTING',
+        updatedAt: serverTimestamp(),
+      })
+    );
+  
+    await allowed('Salvar contagem não altera saldo oficial', () =>
+      updateDoc(phase10ItemRef, {
+        countedQuantity: phase10Counted,
+        difference: 1,
+        status: 'DIVERGENT',
+        countedBy: admin.user.uid,
+        countedAt: serverTimestamp(),
+        adjustmentMovementId: null,
+        adjustedBy: null,
+        adjustedAt: null,
+      })
+    );
+    const phase10BalanceAfterCount = await getDoc(founderBalance);
+    const phase10LocationAfterCount = await getDoc(phase6FromBalanceRef);
+    assert.equal(phase10BalanceAfterCount.data().quantity, phase10Aggregate.quantity);
+    assert.equal(phase10LocationAfterCount.data().quantity, phase10Physical.quantity);
+  
+    await denied('Contagem isolada não pode escrever saldo diretamente', () =>
+      updateDoc(founderBalance, {
+        quantity: phase10Aggregate.quantity + 1,
+        updatedAt: serverTimestamp(),
+      })
+    );
+  
+    await allowed('Fundador fecha contagem para revisão', () =>
+      updateDoc(phase10InventoryRef, {
+        status: 'REVIEW',
+        reviewedBy: admin.user.uid,
+        reviewSummary: {
+          totalItems: 1,
+          countedItems: 1,
+          matchedItems: 0,
+          divergentItems: 1,
+          adjustedItems: 0,
+          positiveDifference: 1,
+          negativeDifference: 0,
+        },
+        reviewedAt: serverTimestamp(),
+        staleItemId: null,
+        updatedAt: serverTimestamp(),
+      })
+    );
+  
+    await allowed('Fundador inicia confirmação explícita', () =>
+      updateDoc(phase10InventoryRef, {
+        status: 'CONFIRMING',
+        confirmationStartedBy: admin.user.uid,
+        confirmationStartedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+    );
+  
+    await allowed('INVENTORY_ADJUSTMENT atualiza ledger e projeções atomicamente', async () => {
+      const batch = writeBatch(admin.db);
+      batch.set(
+        doc(admin.db, 'warehouse', 'hgesm-aprov', 'movements', phase10MovementId),
+        {
+          schemaVersion: 'warehouse_movement_v1',
+          id: phase10MovementId,
+          workspaceId: 'hgesm-aprov',
+          ug: '160416',
+          materialId: canonicalMaterialId,
+          type: 'INVENTORY_ADJUSTMENT',
+          quantityDelta: 1,
+          idempotencyKeyHash: 'd'.repeat(64),
+          reversesMovementId: null,
+          note: 'Ajuste confirmado no inventário físico ' + phase10InventoryId,
+          source: {
+            kind: 'PHYSICAL_INVENTORY',
+            actorUid: admin.user.uid,
+            inventoryId: phase10InventoryId,
+            inventoryItemId: phase10ItemId,
+            expectedQuantity: phase10Physical.quantity,
+            countedQuantity: phase10Counted,
+            position: { kind: 'UNASSIGNED' },
+            locationBalanceId: phase6FromBalanceId,
+            expectedLocationRevision: phase10Physical.revision,
+            expectedLocationLastMovementId: phase10Physical.lastMovementId,
+          },
+          createdAt: serverTimestamp(),
+        }
+      );
+      batch.set(founderBalance, {
+        schemaVersion: 'warehouse_balance_v1',
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        quantity: phase10Aggregate.quantity + 1,
+        revision: phase10Aggregate.revision + 1,
+        lastMovementId: phase10MovementId,
+        updatedAt: serverTimestamp(),
+      });
+      batch.set(phase6FromBalanceRef, {
+        schemaVersion: 'warehouse_location_balance_v1',
+        id: phase6FromBalanceId,
+        workspaceId: 'hgesm-aprov',
+        ug: '160416',
+        materialId: canonicalMaterialId,
+        position: { kind: 'UNASSIGNED' },
+        quantity: phase10Physical.quantity + 1,
+        revision: phase10Physical.revision + 1,
+        lastMovementId: phase10MovementId,
+        updatedAt: serverTimestamp(),
+      });
+      batch.update(phase10ItemRef, {
+        status: 'ADJUSTED',
+        adjustmentMovementId: phase10MovementId,
+        adjustedBy: admin.user.uid,
+        adjustedAt: serverTimestamp(),
+      });
+      return batch.commit();
+    });
+  
+    await allowed('Fundador finaliza sessão FASE 10', () =>
+      updateDoc(phase10InventoryRef, {
+        status: 'CONFIRMED',
+        confirmedBy: admin.user.uid,
+        confirmedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        staleItemId: null,
+      })
+    );
+  
+    await denied('Sessão finalizada FASE 10 não pode ser reescrita', () =>
+      updateDoc(phase10InventoryRef, {
+        status: 'COUNTING',
+        updatedAt: serverTimestamp(),
+      })
+    );
+    await denied('Histórico FASE 10 não pode ser excluído', () =>
+      deleteDoc(phase10InventoryRef)
+    );
+    await denied('Setor externo não lê inventário da FASE 10', () =>
+      getDoc(
+        doc(
+          sessionA.db,
+          'warehouse',
+          'hgesm-aprov',
+          'inventories',
+          phase10InventoryId
+        )
+      )
+    );
+    await denied('Inventário FASE 10 rejeita UG adulterada', () =>
+      setDoc(
+        doc(admin.db, 'warehouse', 'hgesm-aprov', 'inventories', 'inv_' + 'e'.repeat(32)),
+        {
+          schemaVersion: 'warehouse_inventory_v1',
+          id: 'inv_' + 'e'.repeat(32),
+          workspaceId: 'hgesm-aprov',
+          ug: '999999',
+          scope: { kind: 'TOTAL' },
+          status: 'OPENING',
+          itemCount: 1,
+          openedBy: admin.user.uid,
+          reviewedBy: null,
+          confirmationStartedBy: null,
+          confirmedBy: null,
+          cancelledBy: null,
+          reviewSummary: null,
+          staleItemId: null,
+          referenceCapturedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          reviewedAt: null,
+          confirmationStartedAt: null,
+          confirmedAt: null,
+          cancelledAt: null,
+        }
+      )
+    );
+  
+    console.log('Isolamento A ↔ B');
+    await allowed('Setor A lê o próprio empenho', () =>
+      getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))
+    );
+    await allowed('Setor B lê o próprio empenho', () =>
+      getDoc(doc(sessionB.db, 'workspaces', 'workspace-b', 'empenhos', 'sample'))
+    );
+    await denied('Setor A não lê empenho do Setor B', () =>
+      getDoc(doc(sessionA.db, 'workspaces', 'workspace-b', 'empenhos', 'sample'))
+    );
+    await denied('Setor B não lê empenho do Setor A', () =>
+      getDoc(doc(sessionB.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))
+    );
+    await allowed('Setor A grava no próprio workspace', () =>
+      setDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'alerts', 'self-write'), {
+        workspaceId: 'workspace-a',
+        marker: 'allowed',
+      })
+    );
+    await denied('Setor A não grava no workspace B', () =>
+      setDoc(doc(sessionA.db, 'workspaces', 'workspace-b', 'alerts', 'cross-write'), {
+        workspaceId: 'workspace-b',
+        marker: 'forbidden',
+      })
+    );
+  
+  
+  }
 
   console.log('\nBloco 16.1 — limite de sessões simultâneas por UG');
 
@@ -4809,118 +4820,123 @@ async function main() {
     deleteDoc(driveRefA)
   );
 
-  console.log('\nFASE 5 — SISCOFIS / Marco Zero / Conciliação');
-
-  const siscofisMarcoZeroRef = doc(
-    admin.db,
-    'warehouse',
-    'hgesm-aprov',
-    'siscofisSnapshots',
-    'marco-zero'
-  );
-  const siscofisBaseRow = {
-    rowId: 'linha-001',
-    materialId: canonicalMaterialId,
-    description: 'Arroz parboilizado',
-    unit: { code: 'kg', label: null },
-    siscofisQuantity: 12,
-    emprovexQuantity: 12,
-    projectedQuantity: 12,
-    difference: 0,
-    state: 'MATCHED',
-    createsMaterial: false,
-    issue: null,
-  };
-  const siscofisSummary = {
-    totalRows: 1,
-    matchedRows: 1,
-    unresolvedRows: 0,
-    divergentRows: 0,
-    createsMaterials: 0,
-  };
-  const siscofisApplying = {
-    schemaVersion: 'warehouse_siscofis_snapshot_v1',
-    id: 'marco-zero',
-    workspaceId: 'hgesm-aprov',
-    ug: '160416',
-    kind: 'MARCO_ZERO',
-    status: 'APPLYING',
-    sourceHash: 'd'.repeat(64),
-    importSchemaVersion: 'warehouse_siscofis_import_v1',
-    sourceLabel: 'Posição SISCOFIS 22/09/2026',
-    referenceDate: '2026-09-22',
-    cutoffAt: '2026-09-23T12:00:00.000Z',
-    actorUid: admin.user.uid,
-    rows: [siscofisBaseRow],
-    summary: siscofisSummary,
-    movementIds: [],
-    createdAt: serverTimestamp(),
-    confirmedAt: null,
-  };
-
-  await allowed('Fundador cria Marco Zero SISCOFIS em estado APPLYING', () =>
-    setDoc(siscofisMarcoZeroRef, siscofisApplying)
-  );
-  await allowed('Fundador conclui Marco Zero sem alterar identidade da importação', () =>
-    updateDoc(siscofisMarcoZeroRef, {
-      status: 'CONFIRMED',
-      movementIds: ['mov_' + 'e'.repeat(64)],
-      confirmedAt: serverTimestamp(),
-    })
-  );
-  await denied('Marco Zero confirmado não pode voltar a ser alterado', () =>
-    updateDoc(siscofisMarcoZeroRef, {
+  if (RUN_LEGACY_SINGLE_DATABASE_WAREHOUSE_TESTS) {
+    // SISCOFIS warehouse também migrou para o database dedicado.
+    console.log('\nFASE 5 — SISCOFIS / Marco Zero / Conciliação');
+  
+    const siscofisMarcoZeroRef = doc(
+      admin.db,
+      'warehouse',
+      'hgesm-aprov',
+      'siscofisSnapshots',
+      'marco-zero'
+    );
+    const siscofisBaseRow = {
+      rowId: 'linha-001',
+      materialId: canonicalMaterialId,
+      description: 'Arroz parboilizado',
+      unit: { code: 'kg', label: null },
+      siscofisQuantity: 12,
+      emprovexQuantity: 12,
+      projectedQuantity: 12,
+      difference: 0,
+      state: 'MATCHED',
+      createsMaterial: false,
+      issue: null,
+    };
+    const siscofisSummary = {
+      totalRows: 1,
+      matchedRows: 1,
+      unresolvedRows: 0,
+      divergentRows: 0,
+      createsMaterials: 0,
+    };
+    const siscofisApplying = {
+      schemaVersion: 'warehouse_siscofis_snapshot_v1',
+      id: 'marco-zero',
+      workspaceId: 'hgesm-aprov',
+      ug: '160416',
+      kind: 'MARCO_ZERO',
       status: 'APPLYING',
+      sourceHash: 'd'.repeat(64),
+      importSchemaVersion: 'warehouse_siscofis_import_v1',
+      sourceLabel: 'Posição SISCOFIS 22/09/2026',
+      referenceDate: '2026-09-22',
+      cutoffAt: '2026-09-23T12:00:00.000Z',
+      actorUid: admin.user.uid,
+      rows: [siscofisBaseRow],
+      summary: siscofisSummary,
+      movementIds: [],
+      createdAt: serverTimestamp(),
       confirmedAt: null,
-    })
-  );
-  await denied('Snapshot SISCOFIS não pode ser excluído', () =>
-    deleteDoc(siscofisMarcoZeroRef)
-  );
-  await denied('Setor externo não cria snapshot SISCOFIS nem no próprio workspace', () =>
-    setDoc(
-      doc(
-        sessionA.db,
-        'warehouse',
-        'workspace-a',
-        'siscofisSnapshots',
-        'snapshot_' + 'a'.repeat(32)
-      ),
-      {
-        ...siscofisApplying,
-        id: 'snapshot_' + 'a'.repeat(32),
-        workspaceId: 'workspace-a',
-        ug: '123456',
-        kind: 'SNAPSHOT',
+    };
+  
+    await allowed('Fundador cria Marco Zero SISCOFIS em estado APPLYING', () =>
+      setDoc(siscofisMarcoZeroRef, siscofisApplying)
+    );
+    await allowed('Fundador conclui Marco Zero sem alterar identidade da importação', () =>
+      updateDoc(siscofisMarcoZeroRef, {
         status: 'CONFIRMED',
-        actorUid: sessionA.user.uid,
-        movementIds: [],
-        createdAt: serverTimestamp(),
+        movementIds: ['mov_' + 'e'.repeat(64)],
         confirmedAt: serverTimestamp(),
-      }
-    )
-  );
-  await denied('Snapshot SISCOFIS rejeita campo fora do contrato', () =>
-    setDoc(
-      doc(
-        admin.db,
-        'warehouse',
-        'hgesm-aprov',
-        'siscofisSnapshots',
-        'snapshot_' + 'b'.repeat(32)
-      ),
-      {
-        ...siscofisApplying,
-        id: 'snapshot_' + 'b'.repeat(32),
-        kind: 'SNAPSHOT',
-        status: 'CONFIRMED',
-        movementIds: [],
-        unexpectedField: true,
-        createdAt: serverTimestamp(),
-        confirmedAt: serverTimestamp(),
-      }
-    )
-  );
+      })
+    );
+    await denied('Marco Zero confirmado não pode voltar a ser alterado', () =>
+      updateDoc(siscofisMarcoZeroRef, {
+        status: 'APPLYING',
+        confirmedAt: null,
+      })
+    );
+    await denied('Snapshot SISCOFIS não pode ser excluído', () =>
+      deleteDoc(siscofisMarcoZeroRef)
+    );
+    await denied('Setor externo não cria snapshot SISCOFIS nem no próprio workspace', () =>
+      setDoc(
+        doc(
+          sessionA.db,
+          'warehouse',
+          'workspace-a',
+          'siscofisSnapshots',
+          'snapshot_' + 'a'.repeat(32)
+        ),
+        {
+          ...siscofisApplying,
+          id: 'snapshot_' + 'a'.repeat(32),
+          workspaceId: 'workspace-a',
+          ug: '123456',
+          kind: 'SNAPSHOT',
+          status: 'CONFIRMED',
+          actorUid: sessionA.user.uid,
+          movementIds: [],
+          createdAt: serverTimestamp(),
+          confirmedAt: serverTimestamp(),
+        }
+      )
+    );
+    await denied('Snapshot SISCOFIS rejeita campo fora do contrato', () =>
+      setDoc(
+        doc(
+          admin.db,
+          'warehouse',
+          'hgesm-aprov',
+          'siscofisSnapshots',
+          'snapshot_' + 'b'.repeat(32)
+        ),
+        {
+          ...siscofisApplying,
+          id: 'snapshot_' + 'b'.repeat(32),
+          kind: 'SNAPSHOT',
+          status: 'CONFIRMED',
+          movementIds: [],
+          unexpectedField: true,
+          createdAt: serverTimestamp(),
+          confirmedAt: serverTimestamp(),
+        }
+      )
+    );
+  
+  
+  }
 
   console.log('\nCiclo de vida administrativo');
   await denied('Admin não pode suspender somente o workspace', () =>

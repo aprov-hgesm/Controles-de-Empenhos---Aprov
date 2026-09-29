@@ -21,9 +21,9 @@ const ci = read('.github/workflows/application-ci.yml');
 const pkg = JSON.parse(read('package.json'));
 
 const primaryRoutes = [
-  ['app/adm-deposito/page.tsx', 'overview'],
+  ['app/adm-deposito/page.tsx', 'home'],
   ['app/adm-deposito/cadastro-de-itens/page.tsx', 'registration'],
-  ['app/adm-deposito/meus-depositos/page.tsx', 'depots'],
+  ['app/adm-deposito/meus-depositos/page.tsx', 'overview'],
   ['app/adm-deposito/controle-de-itens/page.tsx', 'control'],
 ];
 
@@ -60,7 +60,7 @@ for (const marker of [
   "fetch('/api/adm-deposito/status'",
   "window.location.replace('/')",
 ]) {
-  requireText(gate, marker, `Gate founder-only não preservado no layout: ${marker}`);
+  requireText(gate, marker, `Gate multi-tenant não preservado no layout: ${marker}`);
 }
 
 for (const marker of [
@@ -94,7 +94,8 @@ for (const marker of [
 requireText(phase0, 'ADM DEPÓSITO FASE 0: READY', 'Gate permanente da FASE 0 foi removido.');
 requireText(phase1, 'ADM DEPÓSITO FASE 1: READY', 'Gate permanente da FASE 1 foi removido.');
 requireText(phase2, 'ADM DEPÓSITO FASE 2: READY', 'Gate permanente da FASE 2 foi removido.');
-requireText(e2e, "await page.goto('/adm-deposito/estoque');", 'Browser E2E não cobre bloqueio de rota interna para usuário externo.');
+requireText(e2e, "page.getByTestId('nav-adm-deposito')", 'Browser E2E não cobre a entrada da Central de Depósitos para setor externo.');
+requireText(e2e, "Central de Depósitos", 'Browser E2E não confirma o novo rótulo da Central de Depósitos.');
 
 requireText(pkg.scripts?.['test:adm-deposito-walking-skeleton'] || '', 'warehouse-walking-skeleton.test.mjs', 'package.json não registra testes estruturais da FASE 3.');
 requireText(pkg.scripts?.['verify:adm-deposito-phase-3'] || '', 'verify-adm-deposito-phase-3.mjs', 'package.json não registra gate da FASE 3.');
@@ -116,7 +117,7 @@ if (findings.length) {
   console.log('Navegação atual: quatro superfícies principais protegidas');
   console.log('Compatibilidade: rotas legadas redirecionam para as novas superfícies');
   console.log('Contratos: namespace oficial de material, ledger e saldo preservado');
-  console.log('Segurança: gate founder-only compartilhado permanece obrigatório');
+  console.log('Segurança: gate multi-tenant compartilhado permanece obrigatório');
 }
 
 function requireText(source, expected, message) {

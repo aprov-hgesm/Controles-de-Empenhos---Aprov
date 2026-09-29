@@ -122,6 +122,9 @@ jobs:
       - name: ADM Depósito Phase 0 isolation guard
         run: npm run verify:adm-deposito-phase-0
 
+      - name: Central de Depósitos external workspace security
+        run: npm run test:central-depositos-external-security
+
       - name: ADM Depósito Phase 1 material contract tests
         run: npm run test:adm-deposito-material
 

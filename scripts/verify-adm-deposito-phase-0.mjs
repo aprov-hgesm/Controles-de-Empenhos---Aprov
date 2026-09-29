@@ -1,207 +1,20 @@
 #!/usr/bin/env node
-
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = process.cwd();
 const findings = [];
+const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
-const featureFlag = read('lib/warehouse/featureFlag.ts');
-const platformModuleAccess = read('lib/platformModuleAccess.ts');
-const namespace = read('lib/warehouse/namespace.ts');
+const moduleAccess = read('lib/platformModuleAccess.ts');
 const serverAccess = read('lib/server/warehouseAccess.ts');
 const route = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
 const api = read('app/api/adm-deposito/status/route.ts');
 const sidebar = read('components/layout/AppSidebar.tsx');
-const home = read('app/page.tsx');
-const rules = read('firestore.rules');
-const securitySuite = read('scripts/firestore-multitenancy-security.test.mjs');
-const browserE2e = read('tests/e2e/operator-critical-flow.spec.mjs');
+const warehouseSidebar = read('features/warehouse/components/WarehouseSidebar.tsx');
+const rules = read('firestore.warehouse.rules');
 const ci = read('.github/workflows/application-ci.yml');
 const pkg = JSON.parse(read('package.json'));
-
-requireText(
-  featureFlag,
-  "from '../platformModuleAccess'",
-  'ADM Depósito não reutiliza a política neutra de acesso da plataforma.'
-);
-requireText(
-  platformModuleAccess,
-  'export const warehouseModuleEnabled = true;',
-  'Feature flag warehouseModuleEnabled não está explicitamente habilitada.'
-);
-requireText(
-  platformModuleAccess,
-  'context.workspaceId === HGESM_WORKSPACE_ID',
-  'Feature flag não está vinculada ao workspace fundador.'
-);
-requireText(
-  platformModuleAccess,
-  "context.status === 'sector'",
-  'Feature flag não exige perfil operacional do fundador.'
-);
-requireText(
-  platformModuleAccess,
-  "context.resolutionSource === 'legacy-hgesm-bootstrap'",
-  'Feature flag não exige a resolução fundadora consolidada.'
-);
-
-for (const marker of [
-  "WAREHOUSE_NAMESPACE_ROOT = 'warehouse'",
-  "materials: 'materials'",
-  "depots: 'depots'",
-  "locations: 'locations'",
-  "movements: 'movements'",
-  "lots: 'lots'",
-  "inventories: 'inventories'",
-  "siscofisSnapshots: 'siscofisSnapshots'",
-]) {
-  requireText(namespace, marker, `Namespace logístico incompleto: ${marker}`);
-}
-
-requireText(
-  serverAccess,
-  'verifyFounderFirebaseRequest(authorization)',
-  'Gate server-side do ADM Depósito não reutiliza a autenticação forte da conta fundadora.'
-);
-requireText(
-  api,
-  'verifyWarehouseFounderRequest',
-  'API do ADM Depósito não usa o gate server-side dedicado.'
-);
-requireText(
-  route,
-  'resolveAuthenticatedWorkspaceContext(currentUser)',
-  'Rota ADM Depósito não valida o contexto autenticado.'
-);
-requireText(
-  route,
-  'canAccessWarehouseModule(context)',
-  'Rota ADM Depósito não aplica a feature flag fundadora.'
-);
-requireText(
-  route,
-  "fetch('/api/adm-deposito/status'",
-  'Rota ADM Depósito não confirma autorização no servidor antes de renderizar.'
-);
-requireText(
-  route,
-  "window.location.replace('/')",
-  'Rota ADM Depósito não fecha acesso direto não autorizado.'
-);
-
-requireText(
-  sidebar,
-  'warehouseModuleEnabled && onOpenWarehouse',
-  'Sidebar não condiciona a navegação do ADM Depósito à feature flag.'
-);
-requireText(
-  sidebar,
-  'data-testid="nav-adm-deposito"',
-  'Entrada controlada do ADM Depósito não está identificada para regressão.'
-);
-requireText(
-  home,
-  'warehouseModuleEnabled={canAccessWarehouseModule(workspaceContext)}',
-  'Home não calcula a visibilidade do módulo a partir do contexto autorizado.'
-);
-requireText(
-  home,
-  "window.location.assign('/adm-deposito')",
-  'Navegação fundadora não aponta para a rota isolada do módulo.'
-);
-
-requireText(
-  rules,
-  'function warehouseModuleEnabled()',
-  'Firestore Rules não possuem flag própria do ADM Depósito.'
-);
-requireText(
-  rules,
-  'function canAccessWarehouseModule(workspaceId)',
-  'Firestore Rules não possuem gate dedicado do ADM Depósito.'
-);
-requireText(
-  rules,
-  "workspaceId == 'hgesm-aprov'",
-  'Firestore Rules não restringem o namespace ao workspace fundador.'
-);
-requireText(
-  rules,
-  'match /warehouse/{workspaceId}',
-  'Namespace warehouse não possui match dedicado nas Firestore Rules.'
-);
-requireText(
-  rules,
-  'allow read, write: if canAccessWarehouseModule(workspaceId);',
-  'Namespace warehouse não está protegido pelo gate fundador.'
-);
-
-const warehouseRuleStart = rules.indexOf('match /warehouse/{workspaceId}');
-const operationalRuleStart = rules.indexOf('// Workspace-scoped operational data.', warehouseRuleStart);
-if (warehouseRuleStart < 0 || operationalRuleStart < 0) {
-  findings.push('Não foi possível isolar o bloco de Rules do namespace warehouse.');
-} else {
-  const warehouseRules = rules.slice(warehouseRuleStart, operationalRuleStart);
-  forbidText(
-    warehouseRules,
-    'canAccessWorkspace(workspaceId)',
-    'Namespace warehouse não pode herdar autorização operacional de setores externos.'
-  );
-}
-
-for (const scenario of [
-  'Fundador grava no namespace ADM Depósito',
-  'Fundador lê o namespace ADM Depósito',
-  'Setor externo não lê namespace ADM Depósito do fundador',
-  'Setor externo não grava namespace ADM Depósito nem no próprio workspace',
-  'Sessão fundadora por senha não acessa ADM Depósito',
-  'Fundador não usa o namespace ADM Depósito de workspace externo',
-]) {
-  requireText(
-    securitySuite,
-    scenario,
-    `Cenário de segurança da FASE 0 ausente: ${scenario}`
-  );
-}
-
-requireText(
-  browserE2e,
-  'usuário externo não vê nem acessa a rota ADM Depósito',
-  'Browser E2E não cobre invisibilidade e bloqueio de URL direta para usuário externo.'
-);
-
-requireText(
-  pkg.scripts?.['verify:adm-deposito-phase-0'] || '',
-  'verify-adm-deposito-phase-0.mjs',
-  'package.json não registra o gate da FASE 0.'
-);
-requireText(
-  ci,
-  'npm run verify:adm-deposito-phase-0',
-  'Application CI não executa o gate da FASE 0.'
-);
-requireText(
-  ci,
-  'npm run test:security:multitenant',
-  'Application CI deixou de executar a regressão multi-tenant.'
-);
-
-if (findings.length) {
-  console.error('ADM DEPÓSITO FASE 0: BLOQUEADO\n');
-  for (const finding of findings) console.error(`  [BLOCK] ${finding}`);
-  process.exitCode = 2;
-} else {
-  console.log('ADM DEPÓSITO FASE 0: READY');
-  console.log('DEP-0: feature flag fundadora + sidebar + rota + API protegidas');
-  console.log('DEP-0.1: namespace warehouse independente e reservado');
-  console.log('Firestore: usuário externo sem fallback de acesso');
-  console.log('Regressão: suíte multi-tenant preservada no CI');
-}
-
-function read(path) {
-  return readFileSync(resolve(root, path), 'utf8');
-}
 
 function requireText(source, expected, message) {
   if (!source.includes(expected)) findings.push(message);
@@ -209,4 +22,85 @@ function requireText(source, expected, message) {
 
 function forbidText(source, forbidden, message) {
   if (source.includes(forbidden)) findings.push(message);
+}
+
+for (const marker of [
+  'export const warehouseModuleEnabled = true;',
+  "context.status === 'sector'",
+  'context.canLoadOperationalData',
+  'Boolean(context.workspaceId)',
+]) {
+  requireText(moduleAccess, marker, 'Gate neutro da Central incompleto: ' + marker);
+}
+forbidText(
+  moduleAccess,
+  'legacy-hgesm-bootstrap',
+  'Gate da Central voltou a restringir a interface ao bootstrap fundador.'
+);
+
+for (const marker of [
+  'verifyFirebaseRequest',
+  'SECTOR_AUTH_PROVIDER',
+  'platformAccounts/',
+  'workspaces/',
+  'ensureSectorWarehouseClaims',
+  'currentClaimsMatchWorkspace',
+  'firebaseUid',
+]) {
+  requireText(serverAccess, marker, 'Gate server-side multi-tenant incompleto: ' + marker);
+}
+
+for (const marker of [
+  'resolveAuthenticatedWorkspaceContext(currentUser)',
+  'canAccessWarehouseModule(context)',
+  'requestWarehouseStatus(currentUser)',
+  'requestWarehouseStatus(currentUser, true)',
+  'authorization.status.workspaceId !== context.workspaceId',
+]) {
+  requireText(route, marker, 'Superfície protegida da Central incompleta: ' + marker);
+}
+
+for (const marker of [
+  'verifyWarehouseRequest',
+  'workspaceId: access.workspaceId',
+  'ug: access.ug',
+  'claimsUpdated: access.claimsUpdated',
+]) {
+  requireText(api, marker, 'API de autorização da Central incompleta: ' + marker);
+}
+
+for (const marker of [
+  'function isExternalWarehouseSectorSession(workspaceId)',
+  'emprovexWarehouse',
+  'emprovexWarehouseVersion',
+  'emprovexWorkspaceId',
+  'emprovexUg',
+  'function warehouseUgMatchesAccess(workspaceId, ug)',
+  'canAccessWarehouseModule(workspaceId)',
+  'isHgesmFounder()',
+]) {
+  requireText(rules, marker, 'Rules da Central não preservam isolamento esperado: ' + marker);
+}
+
+requireText(sidebar, 'Central de Depósitos', 'Menu principal não usa o nome Central de Depósitos.');
+requireText(warehouseSidebar, 'Central de Depósitos', 'Menu interno não usa o nome Central de Depósitos.');
+requireText(sidebar, 'warehouseModuleEnabled && onOpenWarehouse', 'Entrada da Central não está condicionada ao gate.');
+requireText(
+  pkg.scripts?.['verify:adm-deposito-phase-0'] || '',
+  'verify-adm-deposito-phase-0.mjs',
+  'package.json não registra o gate de acesso da Central.'
+);
+requireText(ci, 'npm run verify:adm-deposito-phase-0', 'Application CI não executa o gate de acesso da Central.');
+
+if (findings.length) {
+  console.error('CENTRAL DE DEPÓSITOS — ACESSO EXTERNO: BLOQUEADO\n');
+  for (const finding of findings) console.error('  [BLOCK] ' + finding);
+  process.exitCode = 2;
+} else {
+  console.log('CENTRAL DE DEPÓSITOS — ACESSO EXTERNO: READY');
+  console.log('ADM DEPÓSITO FASE 0: READY');
+  console.log('- interface: todos os setores autenticados e validados podem visualizar a Central');
+  console.log('- servidor: conta, UID, workspace e UG são revalidados antes de materializar claims');
+  console.log('- Firestore: claims assinadas isolam cada workspace/UG no banco emprovex-warehouse');
+  console.log('- fundador: acesso Google ao workspace HGeSM preservado');
 }

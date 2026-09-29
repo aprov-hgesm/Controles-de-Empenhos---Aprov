@@ -21,7 +21,7 @@ const navigation = read('features/warehouse/navigation.ts');
 const sectionContent = read('features/warehouse/components/WarehouseSectionContent.tsx');
 const protectedSurface = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
 const route = read('app/adm-deposito/saida-expressa/page.tsx');
-const rules = read('firestore.rules');
+const rules = read('firestore.warehouse.rules');
 const security = read('scripts/firestore-multitenancy-security.test.mjs');
 const e2e = read('tests/e2e/warehouse-phase-8.spec.mjs');
 const externalE2e = read('tests/e2e/operator-critical-flow.spec.mjs');
@@ -107,7 +107,8 @@ assert.match(e2e, /warehouse-outbound-cart-line/);
 assert.match(e2e, /page\.reload\(\)/);
 assert.match(e2e, /UNKNOWN_BARCODE/);
 assert.match(e2e, /warehouse-movements-operational/);
-assert.match(externalE2e, /\/adm-deposito\/saida-expressa/);
+assert.match(externalE2e, /nav-adm-deposito/);
+assert.match(externalE2e, /Central de Depósitos/);
 
 assert.match(decisions, /D-042 — Barcode é identificador auxiliar/);
 assert.match(decisions, /D-043 — Saída expressa é OUTBOUND atômico/);

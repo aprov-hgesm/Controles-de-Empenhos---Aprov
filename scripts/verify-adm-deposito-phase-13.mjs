@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 const root = process.cwd();
 const findings = [];
 
-const rules = read('firestore.rules');
+const rules = read('firestore.warehouse.rules');
 const featureFlag = read('lib/platformModuleAccess.ts');
 const protectedSurface = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
 const itemControl = read('features/warehouse/components/WarehouseItemControlOperational.tsx');
@@ -24,10 +24,10 @@ const securitySuite = read('scripts/firestore-multitenancy-security.test.mjs');
 const pkg = JSON.parse(read('package.json'));
 
 for (const marker of [
-  'context.workspaceId === HGESM_WORKSPACE_ID',
   "context.status === 'sector'",
-  "context.resolutionSource === 'legacy-hgesm-bootstrap'",
-]) requireText(featureFlag, marker, `Gate founder-only ausente: ${marker}`);
+  'context.canLoadOperationalData',
+  'Boolean(context.workspaceId)',
+]) requireText(featureFlag, marker, `Gate multi-tenant ausente: ${marker}`);
 
 for (const marker of [
   'resolveAuthenticatedWorkspaceContext(currentUser)',
@@ -161,7 +161,7 @@ if (findings.length) {
   process.exitCode = 2;
 } else {
   console.log('ADM DEPÓSITO MÓDULO 13: READY');
-  console.log('Segurança: founder-only, multi-tenant e históricos protegidos.');
+  console.log('Segurança: acesso por setor, workspace/UG e históricos protegidos.');
   console.log('Firestore: consultas bounded, sem listener global e sem índice preventivo.');
   console.log('Performance: subabas sob demanda, joins indexados e inventário sem releitura duplicada de materiais.');
   console.log('Telemetria: estimativa existente reutilizada de forma best-effort e bufferizada.');

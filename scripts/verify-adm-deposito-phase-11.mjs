@@ -16,7 +16,8 @@ const settings = read('features/warehouse/components/WarehouseLogisticsSettings.
 const control = read('features/warehouse/components/WarehouseItemControlOperational.tsx');
 const navigation = read('features/warehouse/navigation.ts');
 const namespace = read('lib/warehouse/namespace.ts');
-const rules = read('firestore.rules');
+const rules = read('firestore.warehouse.rules');
+const coreRules = read('firestore.rules');
 const decisions = read('docs/adm-deposito/DECISIONS.md');
 
 assert.match(logistics, /CronogramaEmpenho/);
@@ -58,10 +59,10 @@ assert.match(rules, /validWarehouseLogisticsAlertCreate/);
 assert.match(rules, /match \/alerts\/\{alertId\}/);
 
 const operationalMarker = '// Workspace-scoped operational data.';
-const operationalStart = rules.indexOf(operationalMarker);
+const operationalStart = coreRules.indexOf(operationalMarker);
 assert.ok(operationalStart >= 0);
 assert.doesNotMatch(
-  rules.slice(operationalStart),
+  coreRules.slice(operationalStart),
   /warehouse_logistics|logalert-|canAccessWarehouseModule/
 );
 

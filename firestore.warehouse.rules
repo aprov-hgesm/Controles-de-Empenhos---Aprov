@@ -35,10 +35,21 @@ service cloud.firestore {
       return true;
     }
 
+    function isExternalWarehouseSectorSession(workspaceId) {
+      return hasSignInProvider('password')
+        && request.auth.token.emprovexWarehouse == true
+        && request.auth.token.emprovexWarehouseVersion == 'v1'
+        && request.auth.token.emprovexRole == 'sector'
+        && request.auth.token.emprovexWorkspaceId == workspaceId
+        && isValidUnitUg(request.auth.token.emprovexUg);
+    }
+
     function canAccessWarehouseModule(workspaceId) {
       return warehouseModuleEnabled()
-        && workspaceId == 'hgesm-aprov'
-        && isHgesmFounder();
+        && (
+          (workspaceId == 'hgesm-aprov' && isHgesmFounder())
+          || isExternalWarehouseSectorSession(workspaceId)
+        );
     }
 
     function validWarehouseMaterialUnit(unit) {
@@ -81,6 +92,7 @@ service cloud.firestore {
         && request.resource.data.workspaceId == workspaceId
         && request.resource.data.ug is string
         && request.resource.data.ug.matches('^[0-9]{6}$')
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && request.resource.data.description is string
         && request.resource.data.description.size() > 0
         && request.resource.data.description.size() <= 240
@@ -92,10 +104,19 @@ service cloud.firestore {
         && request.resource.data.conversions.size() <= 32;
     }
 
-    function warehouseUgMatchesPilot(workspaceId, ug) {
-      return workspaceId == 'hgesm-aprov'
-        && ug == '160416'
-        && isValidUnitUg(ug);
+    function warehouseUgMatchesAccess(workspaceId, ug) {
+      return isValidUnitUg(ug)
+        && (
+          (
+            workspaceId == 'hgesm-aprov'
+            && ug == '160416'
+            && isHgesmFounder()
+          )
+          || (
+            isExternalWarehouseSectorSession(workspaceId)
+            && request.auth.token.emprovexUg == ug
+          )
+        );
     }
 
     function validWarehouseLogicalCode(value) {
@@ -126,7 +147,7 @@ service cloud.firestore {
         && request.resource.data.id == depotId
         && depotId.matches('^dep_[a-f0-9]{32}$')
         && request.resource.data.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && validWarehouseLogicalCode(request.resource.data.code)
         && request.resource.data.name is string
         && request.resource.data.name.size() >= 2
@@ -191,7 +212,7 @@ service cloud.firestore {
         && request.resource.data.schemaVersion == 'warehouse_location_v1'
         && request.resource.data.id == locationId
         && request.resource.data.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && request.resource.data.depotId is string
         && request.resource.data.depotId.matches('^dep_[a-f0-9]{32}$')
         && request.resource.data.kind in ['LOCAL', 'SUBPOSITION']
@@ -454,7 +475,7 @@ service cloud.firestore {
         && request.resource.data.id == lotId
         && lotId.matches('^lot_[a-f0-9]{32}$')
         && request.resource.data.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && request.resource.data.materialId is string
         && request.resource.data.materialId.matches('^mat_[a-f0-9]{32}$')
         && request.resource.data.code is string
@@ -541,7 +562,7 @@ service cloud.firestore {
         && request.resource.data.id == barcodeId
         && barcodeId.matches('^bar_[a-f0-9]{64}$')
         && request.resource.data.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && request.resource.data.materialId is string
         && request.resource.data.materialId.matches('^mat_[a-f0-9]{32}$')
         && request.resource.data.barcode is string
@@ -728,7 +749,7 @@ service cloud.firestore {
         && movement.id == movementId
         && movementId.matches('^mov_[a-f0-9]{64}$')
         && movement.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, movement.ug)
+        && warehouseUgMatchesAccess(workspaceId, movement.ug)
         && movement.materialId is string
         && movement.materialId.matches('^mat_[a-f0-9]{32}$')
         && movement.type == 'TRANSFER'
@@ -868,6 +889,7 @@ service cloud.firestore {
         && request.resource.data.workspaceId == workspaceId
         && request.resource.data.ug is string
         && request.resource.data.ug.matches('^[0-9]{6}$')
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && request.resource.data.cutoffAt is string
         && request.resource.data.cutoffAt.size() >= 20
         && request.resource.data.cutoffAt.size() <= 40
@@ -889,6 +911,7 @@ service cloud.firestore {
         && request.resource.data.workspaceId == workspaceId
         && request.resource.data.ug is string
         && request.resource.data.ug.matches('^[0-9]{6}$')
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && (
           request.resource.data.lowStockThreshold == null
           || (
@@ -920,6 +943,7 @@ service cloud.firestore {
         && request.resource.data.workspaceId == workspaceId
         && request.resource.data.ug is string
         && request.resource.data.ug.matches('^[0-9]{6}$')
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && request.resource.data.kind in ['MARCO_ZERO', 'SNAPSHOT']
         && request.resource.data.status in ['APPLYING', 'CONFIRMED']
         && request.resource.data.sourceHash is string
@@ -1069,7 +1093,7 @@ service cloud.firestore {
         && request.resource.data.id == locationBalanceId
         && locationBalanceId.matches('^locbal_[a-f0-9]{64}$')
         && request.resource.data.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && request.resource.data.materialId is string
         && request.resource.data.materialId.matches('^mat_[a-f0-9]{32}$')
         && validWarehouseStockPosition(request.resource.data.position)
@@ -1339,7 +1363,7 @@ service cloud.firestore {
         && movement.id == movementId
         && movementId.matches('^mov_[a-f0-9]{64}$')
         && movement.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, movement.ug)
+        && warehouseUgMatchesAccess(workspaceId, movement.ug)
         && movement.materialId is string
         && movement.materialId.matches('^mat_[a-f0-9]{32}$')
         && movement.type == 'OUTBOUND'
@@ -1432,7 +1456,7 @@ service cloud.firestore {
         && movement.id == movementId
         && movementId.matches('^mov_[a-f0-9]{64}$')
         && movement.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, movement.ug)
+        && warehouseUgMatchesAccess(workspaceId, movement.ug)
         && movement.materialId is string
         && movement.materialId.matches('^mat_[a-f0-9]{32}$')
         && movement.type == 'INVENTORY_ADJUSTMENT'
@@ -1535,7 +1559,7 @@ service cloud.firestore {
         && request.resource.data.id == movementId
         && movementId.matches('^mov_[a-f0-9]{64}$')
         && request.resource.data.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && request.resource.data.materialId is string
         && request.resource.data.materialId.matches('^mat_[a-f0-9]{32}$')
         && request.resource.data.type in [
@@ -1610,6 +1634,7 @@ service cloud.firestore {
         && request.resource.data.workspaceId == workspaceId
         && request.resource.data.ug is string
         && request.resource.data.ug.matches('^[0-9]{6}$')
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && request.resource.data.materialId == materialId
         && materialId.matches('^mat_[a-f0-9]{32}$')
         && request.resource.data.quantity is number
@@ -1737,7 +1762,7 @@ service cloud.firestore {
         && request.resource.data.id == layoutId
         && layoutId.matches('^lay_[a-f0-9]{32}$')
         && request.resource.data.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 120
@@ -1866,7 +1891,7 @@ service cloud.firestore {
         && request.resource.data.id == intakeId
         && intakeId.matches('^intake_[a-f0-9]{64}$')
         && request.resource.data.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && request.resource.data.invoiceRecordKey is string
         && request.resource.data.invoiceRecordKey.size() > 0
         && request.resource.data.invoiceRecordKey.size() <= 180
@@ -2019,7 +2044,7 @@ service cloud.firestore {
         && request.resource.data.id == destinationId
         && destinationId.matches('^dest_[a-f0-9]{32}$')
         && request.resource.data.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 120
@@ -2084,7 +2109,7 @@ service cloud.firestore {
         && request.resource.data.id == inventoryId
         && inventoryId.matches('^inv_[a-f0-9]{32}$')
         && request.resource.data.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && request.resource.data.scope is map
         && request.resource.data.scope.kind in ['TOTAL','DEPOT','LOCATION','SUBPOSITION']
         && request.resource.data.status == 'OPENING'
@@ -2186,7 +2211,7 @@ service cloud.firestore {
         && itemId.matches('^invit_[a-f0-9]{64}$')
         && request.resource.data.inventoryId == inventoryId
         && request.resource.data.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && request.resource.data.materialId is string
         && request.resource.data.materialId.matches('^mat_[a-f0-9]{32}$')
         && validWarehouseStockPosition(request.resource.data.position)
@@ -2288,7 +2313,7 @@ service cloud.firestore {
         && request.resource.data.id == withdrawalId
         && withdrawalId.matches('^wd_[a-f0-9]{32}$')
         && request.resource.data.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && request.resource.data.destinationId is string
         && request.resource.data.destinationId.matches('^dest_[a-f0-9]{32}$')
         && request.resource.data.destinationName is string
@@ -2411,7 +2436,7 @@ service cloud.firestore {
         && request.resource.data.id == consumptionId
         && consumptionId.matches('^cons_[a-f0-9]{64}$')
         && request.resource.data.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && request.resource.data.origin in ['STOCK_OUTBOUND', 'IMMEDIATE_CONSUMPTION']
         && (
           (
@@ -2677,7 +2702,7 @@ service cloud.firestore {
         && request.resource.data.id == intakeId
         && intakeId.matches('^intake_[a-f0-9]{64}$')
         && request.resource.data.workspaceId == workspaceId
-        && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+        && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
         && request.resource.data.invoiceRecordKey is string
         && request.resource.data.invoiceRecordKey.size() > 0
         && request.resource.data.invoiceRecordKey.size() <= 180
@@ -2952,7 +2977,7 @@ service cloud.firestore {
           && request.resource.data.consumptionId == consumptionId
           && consumptionId.matches('^cons_[a-f0-9]{64}$')
           && request.resource.data.workspaceId == workspaceId
-          && warehouseUgMatchesPilot(workspaceId, request.resource.data.ug)
+          && warehouseUgMatchesAccess(workspaceId, request.resource.data.ug)
           && request.resource.data.materialId is string
           && request.resource.data.materialId.matches('^mat_[a-f0-9]{32}$')
           && request.resource.data.originalQuantity is number

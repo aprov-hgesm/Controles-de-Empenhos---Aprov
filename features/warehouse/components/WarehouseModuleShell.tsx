@@ -118,7 +118,7 @@ export function WarehouseModuleShell({
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="font-mono text-[10px] font-black uppercase tracking-[0.22em] text-[#00288e]/70">
-                      ADM Depósito · {activeSection.eyebrow}
+                      Central de Depósitos · {activeSection.eyebrow}
                     </p>
                     <h1 className="mt-2 text-2xl font-black tracking-tight text-[#0b1c30] sm:text-3xl">
                       {activeSection.label}
@@ -147,7 +147,7 @@ export function WarehouseModuleShell({
           )}
 
           <footer className={`px-2 pb-2 pt-5 text-center text-[11px] font-medium leading-5 ${isImmersive ? 'text-slate-600' : 'text-slate-400'}`}>
-            EMPROVEX · ADM Depósito · ambiente operacional integrado
+            EMPROVEX · Central de Depósitos · ambiente operacional integrado
           </footer>
         </main>
       </div>

@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 
-import { HGESM_WORKSPACE_ID } from '../../../../lib/hgesmWorkspace';
 import { FounderAuthError } from '../../../../lib/server/firebaseFounderAuth';
 import {
-  verifyWarehouseFounderRequest,
+  verifyWarehouseRequest,
   WarehouseAccessError,
 } from '../../../../lib/server/warehouseAccess';
 import {
@@ -23,12 +22,14 @@ import {
 
 export async function GET(request: Request) {
   try {
-    await verifyWarehouseFounderRequest(request.headers.get('authorization'));
+    const access = await verifyWarehouseRequest(request.headers.get('authorization'));
 
     return NextResponse.json({
       enabled: true,
       phase: 2,
-      workspaceId: HGESM_WORKSPACE_ID,
+      workspaceId: access.workspaceId,
+      ug: access.ug,
+      claimsUpdated: access.claimsUpdated,
       namespace: WAREHOUSE_NAMESPACE_ROOT,
       namespaceVersion: WAREHOUSE_NAMESPACE_VERSION,
       domains: Object.values(WAREHOUSE_DOMAIN_COLLECTIONS),
