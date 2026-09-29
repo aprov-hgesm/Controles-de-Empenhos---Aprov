@@ -33,7 +33,9 @@ export const WAREHOUSE_RACK_VISUAL = {
   beamStroke: '#a94705',
   rearBeamFront: '#d96b0d',
   rearBeamTop: '#f18a28',
-  deckTop: '#edf2f5',
+  deckTop: '#f4f7f9',
+  deckMid: '#e8eef3',
+  deckDark: '#cbd7e0',
   deckStroke: '#a8b8c5',
   deckLine: '#c5d1da',
 } as const;
