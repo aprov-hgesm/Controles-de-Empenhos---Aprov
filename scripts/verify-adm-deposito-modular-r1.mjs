@@ -1596,6 +1596,22 @@ requireText(
 );
 requireText(
   siscofisOperational,
+  'data-testid="warehouse-siscofis-validation-summary"',
+  'Migração SISCOFIS perdeu o resumo compacto da validação.'
+);
+requireText(
+  siscofisOperational,
+  'data-testid="warehouse-siscofis-validation-toggle"',
+  'Migração SISCOFIS perdeu a expansão sob demanda dos avisos.'
+);
+requireText(
+  siscofisOperational,
+  "warningGroups.slice(0, 4)",
+  'Migração SISCOFIS voltou a listar todos os avisos por padrão.'
+);
+
+requireText(
+  siscofisOperational,
   "bg-[#00288e]",
   'Migração SISCOFIS perdeu o azul institucional nas ações primárias.'
 );
