@@ -61,8 +61,11 @@ assert.match(reports, /SISCOFIS/);
 assert.match(navigation, /label: 'Controle de Materiais'/);
 
 assert.match(rules, /validWarehouseLogisticsSettings/);
-assert.match(rules, /validWarehouseLogisticsAlertCreate/);
-assert.match(rules, /match \/alerts\/\{alertId\}/);
+assert.doesNotMatch(
+  rules,
+  /match \/alerts\/\{alertId\}/,
+  'Alertas logísticos legados não devem reabrir persistência no warehouse enquanto não forem superfície ativa.'
+);
 
 const operationalMarker = '// Workspace-scoped operational data.';
 const operationalStart = coreRules.indexOf(operationalMarker);
@@ -78,5 +81,5 @@ assert.match(decisions, /namespace `warehouse`/);
 console.log('ADM Depósito FASE 11 protected guard: PASS');
 console.log('- Cronogramas/Empenhos/NFs somente leitura');
 console.log('- correlação logística derivada do ledger');
-console.log('- alertas e configurações persistidos somente em warehouse/*');
+console.log('- configurações permanecem no warehouse; alertas legados ficam fail-closed enquanto não forem superfície ativa');
 console.log('- nenhuma mutação operacional comandada pelo ADM');
