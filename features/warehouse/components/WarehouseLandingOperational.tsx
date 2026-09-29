@@ -302,19 +302,19 @@ function warehouseRackBeam({
         points={polygonPoints([d, c, ct, dt])}
         fill={frontFill}
         stroke={WAREHOUSE_RACK_VISUAL.beamStroke}
-        strokeWidth="0.65"
+        strokeWidth="0.46"
       />
       <polygon
         points={polygonPoints([b, c, ct, bt])}
         fill={WAREHOUSE_RACK_VISUAL.beamSide}
         stroke={WAREHOUSE_RACK_VISUAL.beamStroke}
-        strokeWidth="0.6"
+        strokeWidth="0.42"
       />
       <polygon
         points={polygonPoints([at, bt, ct, dt])}
         fill={topFill}
         stroke={WAREHOUSE_RACK_VISUAL.beamStroke}
-        strokeWidth="0.65"
+        strokeWidth="0.46"
       />
     </g>
   );
@@ -492,9 +492,9 @@ function renderDepotObject(
 
   if (object.kind === 'SHELF' || object.kind === 'RACK') {
     const levels = Math.max(2, Math.min(6, subpositions.length || 4));
-    const beamDepth = Math.max(1.1, Math.min(height * 0.1, 4.2));
-    const sideBeamWidth = Math.max(1.1, Math.min(width * 0.045, 3.8));
-    const beamHeight = Math.max(2.2, Math.min(4.2, z * 0.04));
+    const beamDepth = Math.max(0.8, Math.min(height * 0.065, 2.8));
+    const sideBeamWidth = Math.max(0.8, Math.min(width * 0.028, 2.6));
+    const beamHeight = Math.max(1.55, Math.min(2.8, z * 0.027));
     const frontBottomLeft = d;
     const frontBottomRight = c;
     const frontTopLeft = dt;
