@@ -45,15 +45,13 @@ for (const marker of [
 }
 
 for (const marker of [
+  'WAREHOUSE_LEGACY_CROSS_DATABASE_INTEGRATION_DISABLED',
   'integrateInvoiceReceiptInTransaction',
   'integrateInvoiceDeletionInTransaction',
-  'applyWarehouseMovementToBalance',
-  'createWarehouseMovementId',
-  'serverTimestamp()',
-  'WAREHOUSE_INVOICE_SETTINGS_SCHEMA_VERSION',
   'assertBulkInvoiceDeletionDoesNotBypassWarehouse',
+  'throw new Error(WAREHOUSE_LEGACY_CROSS_DATABASE_INTEGRATION_DISABLED)',
 ]) {
-  requireText(service, marker, 'Serviço transacional histórico da FASE 4 incompleto: ' + marker);
+  requireText(service, marker, 'Compatibilidade segura da FASE 4 incompleta: ' + marker);
 }
 
 for (const forbidden of [
@@ -92,8 +90,9 @@ for (const marker of [
 }
 
 for (const marker of [
-  'warehouse_balance_v1 continua sendo a autoridade do saldo agregado',
+  'Saldo agregado',
   'Consulta sob demanda',
+  'listWarehousePositiveBalances',
 ]) {
   requireText(stock, marker, 'Superfície atual de estoque incompleta: ' + marker);
 }
@@ -127,6 +126,6 @@ if (findings.length) {
 
 console.log('FASE 4 — isolamento EMPROVEX/ADM Depósito: OK');
 console.log('- lifecycle de NF do EMPROVEX não depende do namespace warehouse');
-console.log('- domínio histórico de integração permanece isolado dentro do ADM Depósito');
+console.log('- integração atômica cross-database permanece explicitamente desativada');
 console.log('- superfícies atuais expõem saldo oficial e ledger sem reintroduzir acoplamento');
-console.log('- namespace warehouse continua founder-only e separado');
+console.log('- namespace warehouse continua separado e isolado por workspace/UG');
