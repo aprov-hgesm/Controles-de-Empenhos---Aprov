@@ -50,6 +50,7 @@ import {
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
 import { WarehouseSiscofisOperational } from './WarehouseSiscofisOperational';
+import { WarehouseSiscofisPendingAllocation } from './WarehouseSiscofisPendingAllocation';
 import { WarehouseImmediateConsumptionPanel } from './WarehouseImmediateConsumptionPanel';
 import { WarehouseAllocatedItemsOperational } from './WarehouseAllocatedItemsOperational';
 import { WarehouseManualEntryOperational } from './WarehouseManualEntryOperational';
@@ -2701,7 +2702,7 @@ export function WarehouseItemRegistrationOperational({
               : 'rounded-xl px-4 py-2 text-xs font-bold text-slate-500'
           }
         >
-          Notas Fiscais pendentes
+          Materiais pendentes
         </button>
         <button
           type="button"
@@ -2749,7 +2750,12 @@ export function WarehouseItemRegistrationOperational({
         </button>
       </div>
 
-      {tab === 'invoices' && <InvoiceRegistrationQueue workspaceId={workspaceId} />}
+      {tab === 'invoices' && (
+        <div className="space-y-5">
+          <WarehouseSiscofisPendingAllocation workspaceId={workspaceId} />
+          <InvoiceRegistrationQueue workspaceId={workspaceId} />
+        </div>
+      )}
       {tab === 'manual' && <WarehouseManualEntryOperational workspaceId={workspaceId} />}
       {tab === 'stored' && <WarehouseAllocatedItemsOperational workspaceId={workspaceId} />}
       {tab === 'siscofis' && <WarehouseSiscofisOperational workspaceId={workspaceId} />}
