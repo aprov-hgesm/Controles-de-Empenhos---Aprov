@@ -440,31 +440,60 @@ export function WarehouseLocationsR1Operational({
   async function archiveSelectedLocation() {
     if (!editingLocation) return;
 
-    if (editingLocation.kind === 'LOCAL') {
-      const children = state.locations.filter(
-        (item) =>
-          item.location.kind === 'SUBPOSITION'
-          && item.location.parentLocationId === editingLocation.id
-          && item.location.status === 'active'
-      );
-      if (children.length > 0) {
-        setMessage('Este Local ainda possui Subposições. Remova as Subposições antes de excluir o Local.');
-        return;
-      }
-    }
-
     const label = editingLocation.kind === 'LOCAL' ? 'Local' : 'Subposição';
-    if (!window.confirm('Excluir ' + label.toLowerCase() + ' da operação? O registro histórico será preservado como inativo.')) return;
+    const activeSubpositions = editingLocation.kind === 'LOCAL'
+      ? state.locations.filter(
+          (item) =>
+            item.location.kind === 'SUBPOSITION'
+            && item.location.parentLocationId === editingLocation.id
+            && item.location.status === 'active'
+        )
+      : [];
+
+    const childSummary = activeSubpositions.length > 0
+      ? ' Também serão excluídas da operação '
+        + activeSubpositions.length
+        + ' Subposição(ões) vinculada(s) a este Local.'
+      : '';
+
+    if (!window.confirm(
+      'Excluir este ' + label.toLowerCase() + ' da operação?'
+      + childSummary
+      + ' Os registros históricos serão preservados como inativos.'
+    )) return;
 
     setWorking(true);
+    setMessage(null);
     try {
+      // Mantém o mesmo comportamento hierárquico da exclusão de depósito:
+      // primeiro inativa as Subposições e só depois o Local pai.
+      for (const child of activeSubpositions) {
+        await updateWarehouseLocation(workspaceId, child.location.id, { status: 'inactive' });
+      }
+
       await updateWarehouseLocation(workspaceId, editingLocation.id, { status: 'inactive' });
       setCreatePanel(null);
       setSelectedLocationId('');
-      setMessage(label + ' excluído(a) da operação e preservado(a) no histórico.');
+      setEditingLocationId('');
+
+      if (editingLocation.kind === 'LOCAL') {
+        setMessage(
+          activeSubpositions.length > 0
+            ? 'Local e ' + activeSubpositions.length
+              + ' Subposição(ões) vinculada(s) foram excluídos da operação e preservados no histórico.'
+            : 'Local excluído da operação e preservado no histórico.'
+        );
+      } else {
+        setMessage('Subposição excluída da operação e preservada no histórico.');
+      }
+
       await refresh();
     } catch (error) {
-      setMessage(messageFromError(error));
+      setMessage(
+        'A exclusão foi interrompida. Atualize a tela para conferir a estrutura já processada. '
+        + messageFromError(error)
+      );
+      await refresh();
     } finally {
       setWorking(false);
     }

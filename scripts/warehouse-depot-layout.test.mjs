@@ -422,3 +422,18 @@ test('croqui R1 ativo aceita contêiner longo, edita dimensões e usa leitura po
   assert.match(croquis, /Aplicar e preservar proporções/);
   assert.match(croquis, /listWarehousePositiveLocationBalances/);
 });
+
+
+test('exclusão de Local confirma e inativa automaticamente suas Subposições', () => {
+  const locations = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseLocationsR1Operational.tsx'),
+    'utf8'
+  );
+
+  assert.match(locations, /Também serão excluídas da operação/);
+  assert.match(locations, /Subposição\(ões\) vinculada\(s\) a este Local/);
+  assert.match(locations, /for \(const child of activeSubpositions\)/);
+  assert.match(locations, /updateWarehouseLocation\(workspaceId, child\.location\.id, \{ status: 'inactive' \}\)/);
+  assert.match(locations, /await updateWarehouseLocation\(workspaceId, editingLocation\.id, \{ status: 'inactive' \}\)/);
+  assert.doesNotMatch(locations, /Remova as Subposições antes de excluir o Local/);
+});
