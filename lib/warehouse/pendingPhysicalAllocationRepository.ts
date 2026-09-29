@@ -1,4 +1,5 @@
 import type { WarehouseMaterialUnit } from './material';
+import type { WarehouseSiscofisPreviewRow } from './siscofis';
 import {
   listWarehousePositiveLocationBalances,
   transferWarehouseStock,
@@ -32,33 +33,38 @@ export interface AllocateWarehousePendingPhysicalStockInput {
 export async function listWarehousePendingPhysicalAllocations(
   workspaceId: string
 ): Promise<WarehousePendingPhysicalAllocationRow[]> {
-  const [materials, locationBalances, snapshots] = await Promise.all([
-    listWarehouseMaterials(workspaceId, 500),
-    listWarehousePositiveLocationBalances(workspaceId, 500),
-    listWarehouseSiscofisSnapshots(workspaceId, 25),
-  ]);
-
-  const materialById = new Map(
-    materials
-      .filter((material) => material.status === 'active')
-      .map((material) => [material.id, material])
-  );
-
+  const snapshots = await listWarehouseSiscofisSnapshots(workspaceId, 25);
   const marcoZero = snapshots.find(
     (snapshot) =>
       snapshot.kind === 'MARCO_ZERO'
       && snapshot.status === 'CONFIRMED'
   ) || null;
 
-  const marcoRowsByMaterial = new Map<string, typeof marcoZero.rows>();
-  if (marcoZero) {
-    for (const row of marcoZero.rows) {
-      if (!row.materialId) continue;
-      const existing = marcoRowsByMaterial.get(row.materialId) || [];
-      existing.push(row);
-      marcoRowsByMaterial.set(row.materialId, existing);
-    }
+  if (!marcoZero) return [];
+
+  const marcoRowsByMaterial = new Map<string, WarehouseSiscofisPreviewRow[]>();
+  for (const row of marcoZero.rows) {
+    if (!row.materialId) continue;
+    const existing = marcoRowsByMaterial.get(row.materialId) || [];
+    existing.push(row);
+    marcoRowsByMaterial.set(row.materialId, existing);
   }
+  if (marcoRowsByMaterial.size === 0) return [];
+
+  const [materials, locationBalances] = await Promise.all([
+    listWarehouseMaterials(workspaceId, 500),
+    listWarehousePositiveLocationBalances(workspaceId, 500),
+  ]);
+
+  const materialById = new Map(
+    materials
+      .filter(
+        (material) =>
+          material.status === 'active'
+          && marcoRowsByMaterial.has(material.id)
+      )
+      .map((material) => [material.id, material])
+  );
 
   const rows: WarehousePendingPhysicalAllocationRow[] = [];
 
@@ -67,6 +73,7 @@ export async function listWarehousePendingPhysicalAllocations(
     if (
       balance.position.kind !== 'UNASSIGNED'
       || balance.quantity <= 0
+      || !marcoRowsByMaterial.has(balance.materialId)
     ) {
       continue;
     }
@@ -80,9 +87,7 @@ export async function listWarehousePendingPhysicalAllocations(
       description: material.description,
       unit: material.unit,
       pendingQuantity: balance.quantity,
-      origin: marcoRows.length > 0
-        ? 'SISCOFIS_MARCO_ZERO'
-        : 'UNASSIGNED_STOCK',
+      origin: 'SISCOFIS_MARCO_ZERO',
       sourceItemNumbers: Array.from(
         new Set(
           marcoRows
@@ -90,18 +95,13 @@ export async function listWarehousePendingPhysicalAllocations(
             .filter(Boolean)
         )
       ).sort((left, right) => left.localeCompare(right, 'pt-BR')),
-      referenceDate: marcoRows.length > 0
-        ? marcoZero?.referenceDate || null
-        : null,
+      referenceDate: marcoZero.referenceDate,
     });
   }
 
-  return rows.sort((left, right) => {
-    if (left.origin !== right.origin) {
-      return left.origin === 'SISCOFIS_MARCO_ZERO' ? -1 : 1;
-    }
-    return left.description.localeCompare(right.description, 'pt-BR');
-  });
+  return rows.sort((left, right) =>
+    left.description.localeCompare(right.description, 'pt-BR')
+  );
 }
 
 export async function allocateWarehousePendingPhysicalStock(
