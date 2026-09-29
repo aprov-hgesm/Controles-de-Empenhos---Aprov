@@ -119,16 +119,18 @@ test('capacidades consolidadas estão ligadas às superfícies atuais', () => {
   assert.ok(depots.includes('WarehouseCroquisR1Operational'));
 
   for (const component of [
+    'WarehouseItemControlSummary',
     'WarehouseStockOperational',
-    'WarehouseExpressOutbound',
     'WarehouseMovementsOperational',
     'WarehouseInventoryOperational',
-    'WarehouseDeliveriesOperational',
-    'WarehouseLogisticsAlerts',
-    'WarehouseLogisticsSettings',
+    'WarehouseLogisticsReports',
   ]) {
     assert.ok(control.includes(component), `Controle de Materiais perdeu ${component}`);
   }
+
+  const section = read('features/warehouse/components/WarehouseSectionContent.tsx');
+  assert.ok(section.includes('WarehouseMaterialWithdrawal'));
+  assert.ok(section.includes("section === 'outbound'"));
 });
 
 test('shell reutiliza o chrome responsivo oficial do EMPROVEX', () => {

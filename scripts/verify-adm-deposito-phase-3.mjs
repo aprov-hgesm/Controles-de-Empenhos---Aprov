@@ -75,12 +75,11 @@ for (const marker of ['WarehouseLocationsR1Operational', 'WarehouseCroquisR1Oper
   requireText(depots, marker, `Controle de Depósitos perdeu capacidade oficial: ${marker}`);
 }
 for (const marker of [
+  'WarehouseItemControlSummary',
   'WarehouseStockOperational',
   'WarehouseMovementsOperational',
   'WarehouseInventoryOperational',
-  'WarehouseDeliveriesOperational',
-  'WarehouseLogisticsAlerts',
-  'WarehouseLogisticsSettings',
+  'WarehouseLogisticsReports',
 ]) {
   requireText(control, marker, `Controle de Materiais perdeu capacidade oficial: ${marker}`);
 }
