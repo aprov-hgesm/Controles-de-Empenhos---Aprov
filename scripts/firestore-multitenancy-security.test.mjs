@@ -691,7 +691,7 @@ async function main() {
     // Fases 0–10 preservadas como fixture histórica. A execução efetiva das Rules
     // do módulo ocorre no database emprovex-warehouse.
     console.log('\nFASE 0 — isolamento do ADM Depósito');
-  
+
     const phaseZeroDepotId = 'dep_' + '0'.repeat(32);
     const founderWarehouseProbe = doc(
       admin.db,
@@ -700,7 +700,7 @@ async function main() {
       'depots',
       phaseZeroDepotId
     );
-  
+
     await allowed('Fundador grava no namespace ADM Depósito', () =>
       setDoc(founderWarehouseProbe, {
         schemaVersion: 'warehouse_depot_v1',
@@ -768,9 +768,9 @@ async function main() {
         )
       )
     );
-  
+
     console.log('\nFASE 1 — fundação canônica do material');
-  
+
     const canonicalMaterialId = 'mat_123e4567e89b12d3a456426614174000';
     const canonicalMaterial = {
       schemaVersion: 'warehouse_material_v1',
@@ -792,7 +792,7 @@ async function main() {
         },
       ],
     };
-  
+
     const founderMaterialProbe = doc(
       admin.db,
       'warehouse',
@@ -800,7 +800,7 @@ async function main() {
       'materials',
       canonicalMaterialId
     );
-  
+
     await allowed('Fundador grava material canônico da FASE 1', () =>
       setDoc(founderMaterialProbe, canonicalMaterial)
     );
@@ -810,18 +810,18 @@ async function main() {
     await allowed('Fundador lista materiais da FASE 1', () =>
       getDocs(collection(admin.db, 'warehouse', 'hgesm-aprov', 'materials'))
     );
-  
+
     await denied('Material canônico não pode ser apagado fisicamente', () =>
       deleteDoc(founderMaterialProbe)
     );
-  
+
     await denied('Material não pode declarar workspace diferente do caminho', () =>
       setDoc(founderMaterialProbe, {
         ...canonicalMaterial,
         workspaceId: 'workspace-a',
       })
     );
-  
+
     await denied('Setor externo não lê material do fundador', () =>
       getDoc(
         doc(
@@ -833,7 +833,7 @@ async function main() {
         )
       )
     );
-  
+
     const externalMaterialId = 'mat_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     await denied('Setor externo não grava material nem no próprio workspace', () =>
       setDoc(
@@ -852,7 +852,7 @@ async function main() {
         }
       )
     );
-  
+
     await denied('Sessão fundadora por senha não lê materiais da FASE 1', () =>
       getDoc(
         doc(
@@ -864,7 +864,7 @@ async function main() {
         )
       )
     );
-  
+
     await denied('Fundador não grava material em workspace externo', () =>
       setDoc(
         doc(
@@ -882,10 +882,10 @@ async function main() {
         }
       )
     );
-  
-  
+
+
     console.log('\nFASE 2 — ledger, saldo agregado e idempotência');
-  
+
     const phase2Movement1Id = 'mov_' + '1'.repeat(64);
     const phase2Movement2Id = 'mov_' + '2'.repeat(64);
     const phase2Movement3Id = 'mov_' + '3'.repeat(64);
@@ -910,7 +910,7 @@ async function main() {
       'balances',
       canonicalMaterialId
     );
-  
+
     await allowed('Fundador cria movimento e saldo atômicos da FASE 2', async () => {
       const batch = writeBatch(admin.db);
       batch.set(founderMovement1, {
@@ -938,10 +938,10 @@ async function main() {
       });
       return batch.commit();
     });
-  
+
     await allowed('Fundador lê ledger da FASE 2', () => getDoc(founderMovement1));
     await allowed('Fundador lê saldo materializado da FASE 2', () => getDoc(founderBalance));
-  
+
     await allowed('Fundador aplica segundo movimento e atualiza saldo da FASE 2', async () => {
       const batch = writeBatch(admin.db);
       batch.set(founderMovement2, {
@@ -969,11 +969,11 @@ async function main() {
       });
       return batch.commit();
     });
-  
+
     await denied('Ledger da FASE 2 é append-only', () =>
       updateDoc(founderMovement1, { note: 'Tentativa de sobrescrita' })
     );
-  
+
     await denied('Saldo da FASE 2 não aceita alteração sem novo movimento', () =>
       updateDoc(founderBalance, {
         quantity: 999,
@@ -981,7 +981,7 @@ async function main() {
         updatedAt: serverTimestamp(),
       })
     );
-  
+
     await denied('Movimento da FASE 2 não existe sem atualização de saldo correspondente', () =>
       setDoc(
         doc(
@@ -1006,7 +1006,7 @@ async function main() {
         }
       )
     );
-  
+
     await denied('Setor externo não lê ledger da FASE 2', () =>
       getDoc(
         doc(
@@ -1018,7 +1018,7 @@ async function main() {
         )
       )
     );
-  
+
     await denied('Setor externo não lê saldo da FASE 2', () =>
       getDoc(
         doc(
@@ -1030,7 +1030,7 @@ async function main() {
         )
       )
     );
-  
+
     await denied('Sessão fundadora por senha não lê ledger da FASE 2', () =>
       getDoc(
         doc(
@@ -1042,9 +1042,9 @@ async function main() {
         )
       )
     );
-  
+
     console.log('\nFASE 4 — NF → estoque, cutoff e rastreabilidade');
-  
+
     const phase4MaterialId = 'mat_' + '4'.repeat(32);
     const phase4Movement1Id = 'mov_' + '4'.repeat(64);
     const phase4Movement2Id = 'mov_' + '5'.repeat(64);
@@ -1077,7 +1077,7 @@ async function main() {
       'movements',
       phase4Movement1Id
     );
-  
+
     await allowed('Fundador ativa cutoff e cria material + entrada + saldo na mesma operação', async () => {
       const batch = writeBatch(admin.db);
       batch.set(phase4Settings, {
@@ -1134,10 +1134,10 @@ async function main() {
       });
       return batch.commit();
     });
-  
+
     await allowed('Fundador lê movimento de NF da FASE 4', () => getDoc(phase4Movement1));
     await allowed('Fundador lê cutoff imutável da FASE 4', () => getDoc(phase4Settings));
-  
+
     await allowed('Correção de NF gera novo movimento e nova revisão do mesmo saldo', async () => {
       const batch = writeBatch(admin.db);
       batch.set(
@@ -1179,7 +1179,7 @@ async function main() {
       });
       return batch.commit();
     });
-  
+
     await denied('Origem de NF não pode falsificar o operador', async () => {
       const batch = writeBatch(admin.db);
       batch.set(
@@ -1221,7 +1221,7 @@ async function main() {
       });
       return batch.commit();
     });
-  
+
     await denied('Cutoff da FASE 4 não pode ser reescrito após ativação', () =>
       updateDoc(phase4Settings, { cutoffAt: '2020-01-01T00:00:00.000Z' })
     );
@@ -1247,9 +1247,9 @@ async function main() {
         )
       )
     );
-  
+
     console.log('\nFASE 6 — Depósitos / Localizações / Transferências');
-  
+
     const phase6DepotId = 'dep_' + '6'.repeat(32);
     const phase6LocationId = 'loc_' + '6'.repeat(32);
     const phase6SubpositionId = 'sub_' + '6'.repeat(32);
@@ -1274,7 +1274,7 @@ async function main() {
       'locations',
       phase6SubpositionId
     );
-  
+
     await allowed('Fundador cria depósito da FASE 6', () =>
       setDoc(phase6DepotRef, {
         schemaVersion: 'warehouse_depot_v1',
@@ -1291,7 +1291,7 @@ async function main() {
         updatedAt: serverTimestamp(),
       })
     );
-  
+
     await allowed('Fundador cria local dentro do depósito da FASE 6', () =>
       setDoc(phase6LocationRef, {
         schemaVersion: 'warehouse_location_v1',
@@ -1311,7 +1311,7 @@ async function main() {
         updatedAt: serverTimestamp(),
       })
     );
-  
+
     await allowed('Fundador cria subposição opcional da FASE 6', () =>
       setDoc(phase6SubpositionRef, {
         schemaVersion: 'warehouse_location_v1',
@@ -1331,7 +1331,7 @@ async function main() {
         updatedAt: serverTimestamp(),
       })
     );
-  
+
     await allowed('Fundador edita nome sem alterar identidade lógica do depósito', () =>
       updateDoc(phase6DepotRef, {
         name: 'Depósito FASE 6 renomeado',
@@ -1339,7 +1339,7 @@ async function main() {
         updatedAt: serverTimestamp(),
       })
     );
-  
+
     await denied('Depósito da FASE 6 não aceita UG adulterada', () =>
       setDoc(
         doc(admin.db, 'warehouse', 'hgesm-aprov', 'depots', 'dep_' + 'a'.repeat(32)),
@@ -1359,7 +1359,7 @@ async function main() {
         }
       )
     );
-  
+
     await denied('Setor externo continua sem acesso às localizações da FASE 6', () =>
       getDoc(
         doc(
@@ -1371,14 +1371,14 @@ async function main() {
         )
       )
     );
-  
+
     await denied('Depósito da FASE 6 não pode ser excluído fisicamente', () =>
       deleteDoc(phase6DepotRef)
     );
     await denied('Localização da FASE 6 não pode ser excluída fisicamente', () =>
       deleteDoc(phase6LocationRef)
     );
-  
+
     const phase6TransferMovementId = 'mov_' + '7'.repeat(64);
     const phase6FromBalanceId = 'locbal_1f4db6d13593019e244c182002ecfbbb2764d28ce246c65fa31daa5bcb60c43f';
     const phase6ToBalanceId = 'locbal_44d9ac45e4e3ccec26b4bd88bb4d76964dbeb04f4716483f486329c99e96d722';
@@ -1396,7 +1396,7 @@ async function main() {
       'locationBalances',
       phase6ToBalanceId
     );
-  
+
     await allowed('Transferência interna mantém saldo total e altera distribuição física', async () => {
       const batch = writeBatch(admin.db);
       batch.set(
@@ -1476,14 +1476,14 @@ async function main() {
       });
       return batch.commit();
     });
-  
+
     const phase6AggregateAfter = await getDoc(founderBalance);
     const phase6OriginAfter = await getDoc(phase6FromBalanceRef);
     const phase6DestinationAfter = await getDoc(phase6ToBalanceRef);
     assert.equal(phase6AggregateAfter.data().quantity, 8);
     assert.equal(phase6OriginAfter.data().quantity, 5);
     assert.equal(phase6DestinationAfter.data().quantity, 3);
-  
+
     await denied('Projeção física não aceita gravação avulsa sem movimento novo', () =>
       updateDoc(phase6ToBalanceRef, {
         quantity: 99,
@@ -1491,7 +1491,7 @@ async function main() {
         updatedAt: serverTimestamp(),
       })
     );
-  
+
     await allowed('Fundador inativa local sem apagá-lo', () =>
       updateDoc(phase6LocationRef, {
         status: 'inactive',
@@ -1499,7 +1499,7 @@ async function main() {
         updatedAt: serverTimestamp(),
       })
     );
-  
+
     const phase6InactiveTransferId = 'mov_' + '9'.repeat(64);
     await denied('Local inativo não pode receber transferência', async () => {
       const batch = writeBatch(admin.db);
@@ -1574,7 +1574,7 @@ async function main() {
       });
       return batch.commit();
     });
-  
+
     await allowed('Fundador reativa local para uso posterior', () =>
       updateDoc(phase6LocationRef, {
         status: 'active',
@@ -1582,9 +1582,9 @@ async function main() {
         updatedAt: serverTimestamp(),
       })
     );
-  
+
     console.log('\nFASE 7 — Estoque Operável / Lotes / Validade / FEFO');
-  
+
     const phase7InvoiceLotId = 'lot_' + '7'.repeat(32);
     const phase7InvoiceLotRef = doc(
       admin.db,
@@ -1601,7 +1601,7 @@ async function main() {
       supplier: 'Fornecedor Teste',
       supplierCnpj: '12345678000199',
     };
-  
+
     await allowed('Fundador cria lote FASE 7 vinculado a material e origem de NF', () =>
       setDoc(phase7InvoiceLotRef, {
         schemaVersion: 'warehouse_lot_v1',
@@ -1621,7 +1621,7 @@ async function main() {
         updatedAt: serverTimestamp(),
       })
     );
-  
+
     await denied('Lote FASE 7 rejeita validade fora do contrato', () =>
       setDoc(
         doc(admin.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + '8'.repeat(32)),
@@ -1644,7 +1644,7 @@ async function main() {
         }
       )
     );
-  
+
     await denied('Lote FASE 7 não pode trocar material canônico após criação', () =>
       updateDoc(phase7InvoiceLotRef, {
         materialId: canonicalMaterialId,
@@ -1652,7 +1652,7 @@ async function main() {
         updatedAt: serverTimestamp(),
       })
     );
-  
+
     await denied('Lote FASE 7 não aceita origem de NF pertencente a outro material', () =>
       setDoc(
         doc(admin.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + '9'.repeat(32)),
@@ -1675,7 +1675,7 @@ async function main() {
         }
       )
     );
-  
+
     await denied('Lote FASE 7 não aceita UG adulterada', () =>
       setDoc(
         doc(admin.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + 'a'.repeat(32)),
@@ -1705,7 +1705,7 @@ async function main() {
         }
       )
     );
-  
+
     await denied('Setor externo continua sem acesso aos lotes da FASE 7', () =>
       getDoc(
         doc(
@@ -1717,7 +1717,7 @@ async function main() {
         )
       )
     );
-  
+
     await denied('Setor externo não cria lote nem no namespace fundador', () =>
       setDoc(
         doc(sessionA.db, 'warehouse', 'hgesm-aprov', 'lots', 'lot_' + 'b'.repeat(32)),
@@ -1747,11 +1747,11 @@ async function main() {
         }
       )
     );
-  
+
     await denied('Lote FASE 7 não pode ser excluído e perder histórico logístico', () =>
       deleteDoc(phase7InvoiceLotRef)
     );
-  
+
     const phase7ManualOrigin = {
       kind: 'MANUAL_ENRICHMENT',
       movementId: null,
@@ -1809,17 +1809,17 @@ async function main() {
       );
       return batch.commit();
     });
-  
+
     const phase7BalanceAfter = await getDoc(founderBalance);
     assert.equal(
       phase7BalanceAfter.data().quantity,
       8,
       'Enriquecimento de lotes jamais altera warehouse_balance_v1'
     );
-  
-  
+
+
     console.log('\nFASE 8 — Código de barras / Scanner / Saída Expressa');
-  
+
     const phase8BarcodeId = 'bar_' + '8'.repeat(64);
     const phase8BarcodeRef = doc(
       admin.db,
@@ -1843,12 +1843,12 @@ async function main() {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
-  
+
     await allowed('Fundador associa barcode FASE 8 ao material canônico', () =>
       setDoc(phase8BarcodeRef, phase8Barcode)
     );
     await allowed('Fundador lê barcode FASE 8', () => getDoc(phase8BarcodeRef));
-  
+
     await denied('Barcode FASE 8 rejeita UG adulterada', () =>
       setDoc(
         doc(admin.db, 'warehouse', 'hgesm-aprov', 'barcodes', 'bar_' + 'a'.repeat(64)),
@@ -1860,7 +1860,7 @@ async function main() {
         }
       )
     );
-  
+
     await denied('Barcode FASE 8 não pode trocar material após associação', () =>
       updateDoc(phase8BarcodeRef, {
         materialId: phase4MaterialId,
@@ -1868,7 +1868,7 @@ async function main() {
         updatedAt: serverTimestamp(),
       })
     );
-  
+
     await denied('Setor externo não lê códigos de barras da FASE 8', () =>
       getDoc(
         doc(
@@ -1880,7 +1880,7 @@ async function main() {
         )
       )
     );
-  
+
     await denied('Setor externo não cria barcode nem no namespace fundador', () =>
       setDoc(
         doc(sessionA.db, 'warehouse', 'hgesm-aprov', 'barcodes', 'bar_' + 'b'.repeat(64)),
@@ -1893,7 +1893,7 @@ async function main() {
         }
       )
     );
-  
+
     const phase8MovementId = 'mov_' + 'e'.repeat(64);
     await allowed('Saída expressa FASE 8 baixa ledger, saldo e posição na mesma operação', async () => {
       const batch = writeBatch(admin.db);
@@ -1952,12 +1952,12 @@ async function main() {
       });
       return batch.commit();
     });
-  
+
     const phase8BalanceAfter = await getDoc(founderBalance);
     const phase8PositionAfter = await getDoc(phase6FromBalanceRef);
     assert.equal(phase8BalanceAfter.data().quantity, 7);
     assert.equal(phase8PositionAfter.data().quantity, 4);
-  
+
     const phase8MissingPositionId = 'mov_' + 'd'.repeat(64);
     await denied('Saída expressa FASE 8 exige baixa física atômica correspondente', async () => {
       const batch = writeBatch(admin.db);
@@ -2004,7 +2004,7 @@ async function main() {
       });
       return batch.commit();
     });
-  
+
     const phase8NegativeId = 'mov_' + 'c'.repeat(64);
     await denied('Saída expressa FASE 8 não pode produzir saldo negativo', async () => {
       const batch = writeBatch(admin.db);
@@ -2063,14 +2063,14 @@ async function main() {
       });
       return batch.commit();
     });
-  
+
     await denied('Barcode FASE 8 não pode ser excluído fisicamente', () =>
       deleteDoc(phase8BarcodeRef)
     );
-  
-  
+
+
     console.log('\nFASE 9 — Visão do Depósito / Editor / Persistência');
-  
+
     const phase9LayoutV1Id = 'lay_' + '1'.repeat(32);
     const phase9LayoutV2Id = 'lay_' + '2'.repeat(32);
     const phase9Object = {
@@ -2113,7 +2113,7 @@ async function main() {
       createdBy: admin.user.uid,
       updatedBy: admin.user.uid,
     };
-  
+
     await allowed('Fundador cria layout ativo FASE 9 sem tocar no estoque', () =>
       setDoc(phase9LayoutV1Ref, {
         ...phase9LayoutBase,
@@ -2125,9 +2125,9 @@ async function main() {
         updatedAt: serverTimestamp(),
       })
     );
-  
+
     await allowed('Fundador lê layout FASE 9', () => getDoc(phase9LayoutV1Ref));
-  
+
     await denied('Layout FASE 9 rejeita UG adulterada', () =>
       setDoc(
         doc(admin.db, 'warehouse', 'hgesm-aprov', 'layouts', 'lay_' + '3'.repeat(32)),
@@ -2143,7 +2143,7 @@ async function main() {
         }
       )
     );
-  
+
     await allowed('FASE 9 arquiva versão anterior e ativa nova versão atomicamente', async () => {
       const batch = writeBatch(admin.db);
       batch.update(phase9LayoutV1Ref, {
@@ -2164,7 +2164,7 @@ async function main() {
       });
       return batch.commit();
     });
-  
+
     await denied('Layout arquivado não pode ter geometria reescrita', () =>
       updateDoc(phase9LayoutV1Ref, {
         objects: [{ ...phase9Object, x: 999 }],
@@ -2172,7 +2172,7 @@ async function main() {
         updatedAt: serverTimestamp(),
       })
     );
-  
+
     await denied('Setor externo não lê layout da FASE 9', () =>
       getDoc(
         doc(
@@ -2184,7 +2184,7 @@ async function main() {
         )
       )
     );
-  
+
     await denied('Setor externo não cria layout nem no próprio workspace', () =>
       setDoc(
         doc(sessionA.db, 'warehouse', 'workspace-a', 'layouts', 'lay_' + '4'.repeat(32)),
@@ -2202,13 +2202,13 @@ async function main() {
         }
       )
     );
-  
+
     await denied('Layout FASE 9 não pode ser excluído fisicamente', () =>
       deleteDoc(phase9LayoutV2Ref)
     );
-  
+
     console.log('\nFASE 10 — Inventário Físico');
-  
+
     const phase10InventoryId = 'inv_' + 'a'.repeat(32);
     const phase10ItemId = 'invit_' + 'b'.repeat(64);
     const phase10MovementId = 'mov_' + 'd'.repeat(64);
@@ -2228,7 +2228,7 @@ async function main() {
       'items',
       phase10ItemId
     );
-  
+
     const phase10BalanceBefore = await getDoc(founderBalance);
     const phase10LocationBefore = await getDoc(phase6FromBalanceRef);
     assert.equal(phase10BalanceBefore.exists(), true);
@@ -2236,7 +2236,7 @@ async function main() {
     const phase10Aggregate = phase10BalanceBefore.data();
     const phase10Physical = phase10LocationBefore.data();
     const phase10Counted = phase10Physical.quantity + 1;
-  
+
     await allowed('Fundador abre sessão de inventário FASE 10', () =>
       setDoc(phase10InventoryRef, {
         schemaVersion: 'warehouse_inventory_v1',
@@ -2262,7 +2262,7 @@ async function main() {
         cancelledAt: null,
       })
     );
-  
+
     await allowed('Fundador cria item separado do estoque oficial', () =>
       setDoc(phase10ItemRef, {
         schemaVersion: 'warehouse_inventory_item_v1',
@@ -2288,14 +2288,14 @@ async function main() {
         adjustedAt: null,
       })
     );
-  
+
     await allowed('Sessão FASE 10 entra em contagem', () =>
       updateDoc(phase10InventoryRef, {
         status: 'COUNTING',
         updatedAt: serverTimestamp(),
       })
     );
-  
+
     await allowed('Salvar contagem não altera saldo oficial', () =>
       updateDoc(phase10ItemRef, {
         countedQuantity: phase10Counted,
@@ -2312,14 +2312,14 @@ async function main() {
     const phase10LocationAfterCount = await getDoc(phase6FromBalanceRef);
     assert.equal(phase10BalanceAfterCount.data().quantity, phase10Aggregate.quantity);
     assert.equal(phase10LocationAfterCount.data().quantity, phase10Physical.quantity);
-  
+
     await denied('Contagem isolada não pode escrever saldo diretamente', () =>
       updateDoc(founderBalance, {
         quantity: phase10Aggregate.quantity + 1,
         updatedAt: serverTimestamp(),
       })
     );
-  
+
     await allowed('Fundador fecha contagem para revisão', () =>
       updateDoc(phase10InventoryRef, {
         status: 'REVIEW',
@@ -2338,7 +2338,7 @@ async function main() {
         updatedAt: serverTimestamp(),
       })
     );
-  
+
     await allowed('Fundador inicia confirmação explícita', () =>
       updateDoc(phase10InventoryRef, {
         status: 'CONFIRMING',
@@ -2347,7 +2347,7 @@ async function main() {
         updatedAt: serverTimestamp(),
       })
     );
-  
+
     await allowed('INVENTORY_ADJUSTMENT atualiza ledger e projeções atomicamente', async () => {
       const batch = writeBatch(admin.db);
       batch.set(
@@ -2408,7 +2408,7 @@ async function main() {
       });
       return batch.commit();
     });
-  
+
     await allowed('Fundador finaliza sessão FASE 10', () =>
       updateDoc(phase10InventoryRef, {
         status: 'CONFIRMED',
@@ -2418,7 +2418,7 @@ async function main() {
         staleItemId: null,
       })
     );
-  
+
     await denied('Sessão finalizada FASE 10 não pode ser reescrita', () =>
       updateDoc(phase10InventoryRef, {
         status: 'COUNTING',
@@ -2467,7 +2467,7 @@ async function main() {
         }
       )
     );
-  
+
     console.log('Isolamento A ↔ B');
     await allowed('Setor A lê o próprio empenho', () =>
       getDoc(doc(sessionA.db, 'workspaces', 'workspace-a', 'empenhos', 'sample'))
@@ -2493,8 +2493,8 @@ async function main() {
         marker: 'forbidden',
       })
     );
-  
-  
+
+
   }
 
   console.log('\nBloco 16.1 — limite de sessões simultâneas por UG');
@@ -4823,7 +4823,7 @@ async function main() {
   if (RUN_LEGACY_SINGLE_DATABASE_WAREHOUSE_TESTS) {
     // SISCOFIS warehouse também migrou para o database dedicado.
     console.log('\nFASE 5 — SISCOFIS / Marco Zero / Conciliação');
-  
+
     const siscofisMarcoZeroRef = doc(
       admin.db,
       'warehouse',
@@ -4870,7 +4870,7 @@ async function main() {
       createdAt: serverTimestamp(),
       confirmedAt: null,
     };
-  
+
     await allowed('Fundador cria Marco Zero SISCOFIS em estado APPLYING', () =>
       setDoc(siscofisMarcoZeroRef, siscofisApplying)
     );
@@ -4934,8 +4934,8 @@ async function main() {
         }
       )
     );
-  
-  
+
+
   }
 
   console.log('\nCiclo de vida administrativo');
