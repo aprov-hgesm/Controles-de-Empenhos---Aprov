@@ -9,7 +9,11 @@ import type {
   WarehouseLocationBalance,
 } from '../../../lib/warehouse/location';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
-import { WAREHOUSE_BOX_VISUAL, WAREHOUSE_PALLET_VISUAL } from '../visualStyle';
+import {
+  WAREHOUSE_BOX_VISUAL,
+  WAREHOUSE_PALLET_VISUAL,
+  WAREHOUSE_RACK_VISUAL,
+} from '../visualStyle';
 
 type Props = {
   logicalWidth: number;
@@ -164,6 +168,72 @@ function boxGroup(
         fill={WAREHOUSE_BOX_VISUAL.sideFill}
         stroke={WAREHOUSE_BOX_VISUAL.sideStroke}
         strokeWidth="0.65"
+      />
+    </g>
+  );
+}
+
+function rackBeamPrism({
+  key,
+  x,
+  y,
+  width,
+  depth,
+  z,
+  height,
+  logicalWidth,
+  logicalHeight,
+  rear = false,
+  side = false,
+}: {
+  key: string;
+  x: number;
+  y: number;
+  width: number;
+  depth: number;
+  z: number;
+  height: number;
+  logicalWidth: number;
+  logicalHeight: number;
+  rear?: boolean;
+  side?: boolean;
+}) {
+  const a = isoPoint(x, y, z, logicalWidth, logicalHeight);
+  const b = isoPoint(x + width, y, z, logicalWidth, logicalHeight);
+  const c = isoPoint(x + width, y + depth, z, logicalWidth, logicalHeight);
+  const d = isoPoint(x, y + depth, z, logicalWidth, logicalHeight);
+  const at = isoPoint(x, y, z + height, logicalWidth, logicalHeight);
+  const bt = isoPoint(x + width, y, z + height, logicalWidth, logicalHeight);
+  const ct = isoPoint(x + width, y + depth, z + height, logicalWidth, logicalHeight);
+  const dt = isoPoint(x, y + depth, z + height, logicalWidth, logicalHeight);
+  const frontFill = rear
+    ? WAREHOUSE_RACK_VISUAL.rearBeamFront
+    : side
+      ? WAREHOUSE_RACK_VISUAL.beamSide
+      : WAREHOUSE_RACK_VISUAL.beamFront;
+  const topFill = rear
+    ? WAREHOUSE_RACK_VISUAL.rearBeamTop
+    : WAREHOUSE_RACK_VISUAL.beamTop;
+
+  return (
+    <g key={key} data-visual-role={side ? 'rack-side-beam' : rear ? 'rack-rear-beam' : 'rack-front-beam'}>
+      <polygon
+        points={polygonPoints([d, c, ct, dt])}
+        fill={frontFill}
+        stroke={WAREHOUSE_RACK_VISUAL.beamStroke}
+        strokeWidth="0.85"
+      />
+      <polygon
+        points={polygonPoints([b, c, ct, bt])}
+        fill={WAREHOUSE_RACK_VISUAL.beamSide}
+        stroke={WAREHOUSE_RACK_VISUAL.beamStroke}
+        strokeWidth="0.8"
+      />
+      <polygon
+        points={polygonPoints([at, bt, ct, dt])}
+        fill={topFill}
+        stroke={WAREHOUSE_RACK_VISUAL.beamStroke}
+        strokeWidth="0.85"
       />
     </g>
   );
@@ -455,8 +525,9 @@ function WarehouseStructure({
 
   if (kind === 'SHELF') {
     const levels = clamp(subpositions.length || 4, 2, 6);
-    const rackStroke = '#123f66';
-    const beam = '#f47f13';
+    const beamDepth = clamp(object.height * 0.1, 4, 12);
+    const sideBeamWidth = clamp(object.width * 0.035, 3, 8);
+    const beamHeight = 5.2;
 
     const frontBottomLeft = d;
     const frontBottomRight = c;
@@ -483,13 +554,13 @@ function WarehouseStructure({
           const top = [backTopLeft, backTopRight][index];
           return (
             <g key={'back-upright-' + index}>
-              <line x1={base.x} y1={base.y} x2={top.x} y2={top.y} stroke="#0e3556" strokeWidth="6.6" />
-              <line x1={base.x + 1.6} y1={base.y} x2={top.x + 1.6} y2={top.y} stroke="#4f7895" strokeWidth="1.3" opacity="0.88" />
+              <line x1={base.x} y1={base.y} x2={top.x} y2={top.y} stroke={WAREHOUSE_RACK_VISUAL.postDark} strokeWidth="6.6" />
+              <line x1={base.x + 1.6} y1={base.y} x2={top.x + 1.6} y2={top.y} stroke={WAREHOUSE_RACK_VISUAL.postHighlight} strokeWidth="1.3" opacity="0.88" />
               {Array.from({ length: 8 }, (_, holeIndex) => {
                 const t = (holeIndex + 1) / 9;
                 const hx = base.x + (top.x - base.x) * t;
                 const hy = base.y + (top.y - base.y) * t;
-                return <circle key={holeIndex} cx={hx} cy={hy} r="1.05" fill="#8ab0c9" opacity="0.72" />;
+                return <circle key={holeIndex} cx={hx} cy={hy} r="1.05" fill={WAREHOUSE_RACK_VISUAL.postHighlight} opacity="0.72" />;
               })}
             </g>
           );
@@ -497,8 +568,8 @@ function WarehouseStructure({
 
         {[backBottomLeft, backBottomRight].map((base, index) => (
           <g key={'back-foot-' + index}>
-            <rect x={base.x - 6} y={base.y - 2} width="12" height="6" rx="1.8" fill="#f5ba25" stroke="#b97910" strokeWidth="1" opacity="0.72" />
-            <rect x={base.x - 3} y={base.y - 12} width="6" height="10" rx="1.5" fill="#f2b31d" stroke="#c07d11" strokeWidth="0.8" opacity="0.62" />
+            <rect x={base.x - 6} y={base.y - 2} width="12" height="6" rx="1.8" fill={WAREHOUSE_RACK_VISUAL.postMain} stroke={WAREHOUSE_RACK_VISUAL.postDark} strokeWidth="1" opacity="0.72" />
+            <rect x={base.x - 3} y={base.y - 12} width="6" height="10" rx="1.5" fill={WAREHOUSE_RACK_VISUAL.postMain} stroke={WAREHOUSE_RACK_VISUAL.postDark} strokeWidth="0.8" opacity="0.62" />
           </g>
         ))}
 
@@ -507,10 +578,10 @@ function WarehouseStructure({
           [frontBottomRight, backBottomRight, backTopRight, frontTopRight],
         ].map((frame, side) => (
           <g key={'side-frame-' + side}>
-            <line x1={frame[0].x} y1={frame[0].y} x2={frame[2].x} y2={frame[2].y} stroke="#426b89" strokeWidth="2" opacity="0.9" />
-            <line x1={frame[1].x} y1={frame[1].y} x2={frame[3].x} y2={frame[3].y} stroke="#426b89" strokeWidth="2" opacity="0.9" />
-            <line x1={frame[0].x} y1={frame[0].y} x2={frame[1].x} y2={frame[1].y} stroke="#254f70" strokeWidth="2.2" />
-            <line x1={frame[2].x} y1={frame[2].y} x2={frame[3].x} y2={frame[3].y} stroke="#254f70" strokeWidth="2.2" />
+            <line x1={frame[0].x} y1={frame[0].y} x2={frame[2].x} y2={frame[2].y} stroke={WAREHOUSE_RACK_VISUAL.postHighlight} strokeWidth="2" opacity="0.9" />
+            <line x1={frame[1].x} y1={frame[1].y} x2={frame[3].x} y2={frame[3].y} stroke={WAREHOUSE_RACK_VISUAL.postHighlight} strokeWidth="2" opacity="0.9" />
+            <line x1={frame[0].x} y1={frame[0].y} x2={frame[1].x} y2={frame[1].y} stroke={WAREHOUSE_RACK_VISUAL.frameStroke} strokeWidth="2.2" />
+            <line x1={frame[2].x} y1={frame[2].y} x2={frame[3].x} y2={frame[3].y} stroke={WAREHOUSE_RACK_VISUAL.frameStroke} strokeWidth="2.2" />
           </g>
         ))}
 
@@ -521,11 +592,6 @@ function WarehouseStructure({
           const p2 = isoPoint(object.x + object.width, object.y, shelfZ, logicalWidth, logicalHeight);
           const p3 = isoPoint(object.x + object.width, object.y + object.height, shelfZ, logicalWidth, logicalHeight);
           const p4 = isoPoint(object.x, object.y + object.height, shelfZ, logicalWidth, logicalHeight);
-
-          const frontBeamLeft = isoPoint(object.x, object.y + object.height, shelfZ - 2.5, logicalWidth, logicalHeight);
-          const frontBeamRight = isoPoint(object.x + object.width, object.y + object.height, shelfZ - 2.5, logicalWidth, logicalHeight);
-          const rearBeamLeft = isoPoint(object.x, object.y, shelfZ - 2.5, logicalWidth, logicalHeight);
-          const rearBeamRight = isoPoint(object.x + object.width, object.y, shelfZ - 2.5, logicalWidth, logicalHeight);
 
           const linkedSubposition = subpositions[index] || null;
           const levelQuantity = linkedSubposition ? occupiedSubpositions.get(linkedSubposition.id) || 0 : 0;
@@ -548,7 +614,7 @@ function WarehouseStructure({
               <polygon
                 points={polygonPoints([p1, p2, p3, p4])}
                 fill="url(#rackDeck)"
-                stroke="#9fb2c3"
+                stroke={WAREHOUSE_RACK_VISUAL.deckStroke}
                 strokeWidth="0.8"
                 opacity="0.96"
               />
@@ -576,15 +642,49 @@ function WarehouseStructure({
                     y1={dl.y}
                     x2={dr.x}
                     y2={dr.y}
-                    stroke="#c4d0da"
+                    stroke={WAREHOUSE_RACK_VISUAL.deckLine}
                     strokeWidth="0.7"
                     opacity="0.82"
                   />
                 );
               })}
 
-              <line x1={frontBeamLeft.x} y1={frontBeamLeft.y} x2={frontBeamRight.x} y2={frontBeamRight.y} stroke={beam} strokeWidth="6.3" strokeLinecap="round" />
-              <line x1={rearBeamLeft.x} y1={rearBeamLeft.y} x2={rearBeamRight.x} y2={rearBeamRight.y} stroke="#d86c0e" strokeWidth="4.5" strokeLinecap="round" opacity="0.92" />
+              {rackBeamPrism({
+                key: 'rear-beam-' + index,
+                x: object.x,
+                y: object.y,
+                width: object.width,
+                depth: beamDepth,
+                z: shelfZ - beamHeight,
+                height: beamHeight,
+                logicalWidth,
+                logicalHeight,
+                rear: true,
+              })}
+              {rackBeamPrism({
+                key: 'left-side-beam-' + index,
+                x: object.x,
+                y: object.y,
+                width: sideBeamWidth,
+                depth: object.height,
+                z: shelfZ - beamHeight,
+                height: beamHeight * 0.82,
+                logicalWidth,
+                logicalHeight,
+                side: true,
+              })}
+              {rackBeamPrism({
+                key: 'right-side-beam-' + index,
+                x: object.x + object.width - sideBeamWidth,
+                y: object.y,
+                width: sideBeamWidth,
+                depth: object.height,
+                z: shelfZ - beamHeight,
+                height: beamHeight * 0.82,
+                logicalWidth,
+                logicalHeight,
+                side: true,
+              })}
 
               {levelQuantity > 0 && Array.from({ length: Math.min(2, visualBoxes(levelQuantity)) }, (_, boxIndex) => {
                 const boxPoint = isoPoint(
@@ -602,6 +702,17 @@ function WarehouseStructure({
                   levelHighlighted || highlighted
                 );
               })}
+              {rackBeamPrism({
+                key: 'front-beam-' + index,
+                x: object.x,
+                y: object.y + object.height - beamDepth,
+                width: object.width,
+                depth: beamDepth,
+                z: shelfZ - beamHeight,
+                height: beamHeight,
+                logicalWidth,
+                logicalHeight,
+              })}
             </g>
           );
         })}
@@ -611,13 +722,13 @@ function WarehouseStructure({
           const top = [frontTopLeft, frontTopRight][index];
           return (
             <g key={'front-upright-' + index}>
-              <line x1={base.x} y1={base.y} x2={top.x} y2={top.y} stroke="#0e3556" strokeWidth="6.6" />
-              <line x1={base.x + 1.6} y1={base.y} x2={top.x + 1.6} y2={top.y} stroke="#4f7895" strokeWidth="1.3" opacity="0.9" />
+              <line x1={base.x} y1={base.y} x2={top.x} y2={top.y} stroke={WAREHOUSE_RACK_VISUAL.postDark} strokeWidth="6.6" />
+              <line x1={base.x + 1.6} y1={base.y} x2={top.x + 1.6} y2={top.y} stroke={WAREHOUSE_RACK_VISUAL.postHighlight} strokeWidth="1.3" opacity="0.9" />
               {Array.from({ length: 8 }, (_, holeIndex) => {
                 const t = (holeIndex + 1) / 9;
                 const hx = base.x + (top.x - base.x) * t;
                 const hy = base.y + (top.y - base.y) * t;
-                return <circle key={holeIndex} cx={hx} cy={hy} r="1.05" fill="#8ab0c9" opacity="0.78" />;
+                return <circle key={holeIndex} cx={hx} cy={hy} r="1.05" fill={WAREHOUSE_RACK_VISUAL.postHighlight} opacity="0.78" />;
               })}
             </g>
           );
@@ -625,8 +736,8 @@ function WarehouseStructure({
 
         {[frontBottomLeft, frontBottomRight].map((base, index) => (
           <g key={'front-foot-' + index}>
-            <rect x={base.x - 6} y={base.y - 2} width="12" height="6" rx="1.8" fill="#f5ba25" stroke="#b97910" strokeWidth="1" />
-            <rect x={base.x - 3} y={base.y - 12} width="6" height="10" rx="1.5" fill="#f2b31d" stroke="#c07d11" strokeWidth="0.8" opacity="0.98" />
+            <rect x={base.x - 6} y={base.y - 2} width="12" height="6" rx="1.8" fill={WAREHOUSE_RACK_VISUAL.postMain} stroke={WAREHOUSE_RACK_VISUAL.postDark} strokeWidth="1" />
+            <rect x={base.x - 3} y={base.y - 12} width="6" height="10" rx="1.5" fill={WAREHOUSE_RACK_VISUAL.postMain} stroke={WAREHOUSE_RACK_VISUAL.postDark} strokeWidth="0.8" opacity="0.98" />
           </g>
         ))}
 
@@ -1194,9 +1305,9 @@ export function WarehouseIsometricPreview({
                 <stop offset="100%" stopColor="#dbe6ef" />
               </linearGradient>
               <linearGradient id="rackDeck" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#ffffff" />
-                <stop offset="52%" stopColor="#edf2f6" />
-                <stop offset="100%" stopColor="#ccd8e1" />
+                <stop offset="0%" stopColor={WAREHOUSE_RACK_VISUAL.deckTop} />
+                <stop offset="52%" stopColor={WAREHOUSE_RACK_VISUAL.deckMid} />
+                <stop offset="100%" stopColor={WAREHOUSE_RACK_VISUAL.deckDark} />
               </linearGradient>
               <linearGradient id="palletWood" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor={WAREHOUSE_PALLET_VISUAL.topLight} />
