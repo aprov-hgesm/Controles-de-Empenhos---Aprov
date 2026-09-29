@@ -47,9 +47,9 @@ const materialId = 'mat_' + 'a'.repeat(32);
 const externalJson = JSON.stringify({
   schemaVersion: 'emprovex_siscofis_inventory_v1',
   items: [
-    { numeroItem: '0173P', descricao: 'ARROZ TIPO 1', quantidade: 2, valorUnitario: 10.5 },
+    { numeroItem: '07.0173P', descricao: 'ARROZ TIPO 1', quantidade: 2, valorUnitario: 10.5 },
     { numeroItem: '21.1000C', descricao: 'CAFÉ', quantidade: 1, valorUnitario: 15.25 },
-    { numeroItem: '0173P', descricao: 'ARROZ TIPO 1', quantidade: 3, valorUnitario: 11.0 },
+    { numeroItem: '07.0173P', descricao: 'ARROZ TIPO 1', quantidade: 3, valorUnitario: 11.0 },
   ],
 });
 const validJson = JSON.stringify({
@@ -89,7 +89,7 @@ test('aceita contrato externo simplificado e preserva Nr Ficha repetido', () => 
   const parsed = siscofis.parseEmprovexSiscofisInventoryJson(externalJson);
   assert.equal(parsed.ok, true);
   assert.equal(parsed.data.schemaVersion, 'emprovex_siscofis_inventory_v1');
-  assert.equal(parsed.data.items[0].numeroItem, '0173P');
+  assert.equal(parsed.data.items[0].numeroItem, '07.0173P');
   assert.equal(parsed.data.items[1].numeroItem, '21.1000C');
   assert.equal(parsed.data.items.length, 3);
 });
@@ -114,7 +114,7 @@ test('adapter preserva ficha e usa fallback canônico explícito quando unidade 
     referenceDate: '2026-09-24',
     materials: [],
   });
-  assert.equal(adapted.importData.rows[0].sourceItemNumber, '0173P');
+  assert.equal(adapted.importData.rows[0].sourceItemNumber, '07.0173P');
   assert.deepEqual(adapted.importData.rows[0].unit, {
     code: 'other',
     label: 'Apresentação não informada',
@@ -161,6 +161,60 @@ test('ambiguidade canônica exige override explícito', async () => {
   assert.equal(resolved.importData.rows[0].materialId, one.id);
 });
 
+test('adapter mantém somente conta 07 e exclui hortifruti/granjeiros sem remover processados', () => {
+  const parsed = siscofis.parseEmprovexSiscofisInventoryJson(JSON.stringify({
+    schemaVersion: 'emprovex_siscofis_inventory_v1',
+    items: [
+      { numeroItem: '07.1345C', descricao: 'BETERRABA / Tipo: In natura;', quantidade: 10, valorUnitario: 2.74 },
+      { numeroItem: '07.1369C', descricao: 'PIMENTÃO / Tipo: Verde;', quantidade: 5, valorUnitario: 6.04 },
+      { numeroItem: '07.2532', descricao: 'CEBOLA / Tipo: Rôxa;', quantidade: 10, valorUnitario: 4.50 },
+      { numeroItem: '07.9888C', descricao: 'ALHO / Tipo: Granulado;', quantidade: 41, valorUnitario: 11.90 },
+      { numeroItem: '07.0031C', descricao: 'ERVILHA / Tipo: Seca;', quantidade: 68, valorUnitario: 4.99 },
+      { numeroItem: '07.0046C', descricao: 'MILHO VERDE / Tipo: Em conserva;', quantidade: 98, valorUnitario: 21.90 },
+      { numeroItem: '07.2302C', descricao: 'POLPA DE FRUTA / Sabor: Morango;', quantidade: 236, valorUnitario: 2.70 },
+      { numeroItem: '21.1000C', descricao: 'CAFÉ', quantidade: 1, valorUnitario: 15.25 },
+    ],
+  }));
+  assert.equal(parsed.ok, true);
+
+  const adapted = siscofis.adaptEmprovexSiscofisInventory({
+    inventory: parsed.data,
+    ug: '160416',
+    referenceDate: '2026-09-28',
+    materials: [],
+  });
+
+  assert.deepEqual(
+    adapted.importData.rows.map((row) => row.sourceItemNumber),
+    ['07.9888C', '07.0031C', '07.0046C', '07.2302C']
+  );
+  assert.equal(adapted.issues.some((issue) => issue.code === 'siscofis_non_account_07_filtered'), true);
+  assert.equal(adapted.issues.some((issue) => issue.code === 'siscofis_fresh_hortifruti_filtered'), true);
+});
+
+test('classificador exclui in natura e granjeiro, mas não confunde ingrediente processado', () => {
+  assert.equal(
+    siscofis.classifyEmprovexSiscofisSourceItem({ numeroItem: '07.4373C', descricao: 'BANANA / Tipo: In natura;' }),
+    'FRESH_HORTIFRUTI'
+  );
+  assert.equal(
+    siscofis.classifyEmprovexSiscofisSourceItem({ numeroItem: '07.9999C', descricao: 'OVOS / Tipo: Branco;' }),
+    'FRESH_HORTIFRUTI'
+  );
+  assert.equal(
+    siscofis.classifyEmprovexSiscofisSourceItem({ numeroItem: '21.4141C', descricao: 'CANECA DE VIDRO' }),
+    'NON_ACCOUNT_07'
+  );
+  assert.equal(
+    siscofis.classifyEmprovexSiscofisSourceItem({ numeroItem: '07.0033C', descricao: 'FARINHA DE MANDIOCA / Tipo: Mandioca Seca Branca Fina;' }),
+    null
+  );
+  assert.equal(
+    siscofis.classifyEmprovexSiscofisSourceItem({ numeroItem: '07.4702C', descricao: 'BATATA / Tipo: Palha;' }),
+    null
+  );
+});
+
 test('aceita contrato JSON versionado e estrito', () => {
   const parsed = siscofis.parseWarehouseSiscofisJson(validJson, '160416');
   assert.equal(parsed.ok, true);
@@ -186,11 +240,16 @@ test('recusa campos inesperados, UG divergente e rowId duplicado', () => {
   assert.equal(parsed.issues.some((item) => item.code === 'duplicate_row_id'), true);
 });
 
-test('prompt oficial usa somente quatro campos e mantém IA como extratora', () => {
+test('prompt oficial usa quatro campos e aplica conta 07, Qtde Exist e exclusão de hortifruti', () => {
   const prompt = siscofis.buildWarehouseSiscofisPrompt();
   assert.match(prompt, /emprovex_siscofis_inventory_v1/);
   assert.match(prompt, /numeroItem/);
   assert.match(prompt, /valorUnitario/);
+  assert.match(prompt, /comece exatamente por "07"/);
+  assert.match(prompt, /Qtde Exist/);
+  assert.match(prompt, /NÃO use "Qtde Disp"/);
+  assert.match(prompt, /HORTIFRUTI\/GRANJEIROS/);
+  assert.match(prompt, /MILHO VERDE \/ Tipo: Em conserva/);
   assert.match(prompt, /NÃO CONSOLIDAR ITENS/);
   assert.doesNotMatch(prompt, /materialId/);
   assert.doesNotMatch(prompt, /workspaceId/);
