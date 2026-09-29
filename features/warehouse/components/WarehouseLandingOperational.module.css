@@ -187,14 +187,17 @@
 }
 
 .layoutControlRow > button {
-  display: inline-grid;
-  width: 31px;
+  display: inline-flex;
   height: 31px;
-  place-items: center;
+  align-items: center;
+  gap: 6px;
   border: 1px solid rgba(142, 169, 220, .16);
   border-radius: 9px;
   background: rgba(15, 30, 58, .6);
+  padding: 0 10px;
   color: rgba(210, 225, 252, .84);
+  font-size: 9px;
+  font-weight: 800;
   transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 
@@ -204,13 +207,6 @@
   color: #fff;
 }
 
-.layoutScale {
-  min-width: 44px;
-  text-align: center;
-  font-size: 9px;
-  font-weight: 850;
-  color: rgba(154, 184, 240, .76);
-}
 
 .layoutEditorFooter {
   display: flex;
