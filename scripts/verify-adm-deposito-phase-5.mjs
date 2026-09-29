@@ -97,8 +97,13 @@ if (pdfExtractor.includes('fetch(') || pdfExtractor.includes('https://') || pdfE
 
 requireText(
   siscofisUi,
-  "await import('../../../lib/warehouse/siscofisPdf')",
+  "const { extractEmprovexSiscofisInventoryFromPdfBytes } = await import(",
   'Jornada SISCOFIS deixou de carregar o extrator PDF somente sob demanda.'
+);
+requireText(
+  siscofisUi,
+  "'../../../lib/warehouse/siscofisPdf'",
+  'Jornada SISCOFIS perdeu o módulo local do extrator PDF.'
 );
 requireText(
   siscofisUi,
@@ -108,8 +113,8 @@ requireText(
 
 requireText(registration, 'WarehouseSiscofisOperational', 'Cadastro de Itens deixou de expor Migração SISCOFIS.');
 requireText(registration, "requested === 'siscofis'", 'Redirect legado para SISCOFIS deixou de ser aceito.');
-requireText(control, 'WarehouseSiscofisOperational', 'Controle de Itens deixou de expor consulta SISCOFIS.');
-requireText(navigation, 'Cadastro de Itens', 'Arquitetura atual perdeu a superfície Cadastro de Itens.');
+requireText(control, 'WarehouseSiscofisHistoryReport', 'Controle de Materiais deixou de expor o histórico SISCOFIS somente leitura.');
+requireText(navigation, 'Alocação de Material', 'Arquitetura atual perdeu a superfície Alocação de Material.');
 
 for (const marker of [
   'function validWarehouseSiscofisSnapshotBase',
