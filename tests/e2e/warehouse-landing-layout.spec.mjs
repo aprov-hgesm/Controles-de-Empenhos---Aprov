@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe.serial('Central de Depósitos — disposição visual do Início', () => {
-  test('fundador personaliza, cancela, salva, recarrega e restaura a disposição', async ({ page }) => {
+  test('fundador move, cancela, salva, recarrega e restaura a disposição', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Entrar com Google — HGeSM' }).click();
 
@@ -19,19 +19,14 @@ test.describe.serial('Central de Depósitos — disposição visual do Início',
 
     const floor = depot.locator('polygon').first();
     const initialPoints = await floor.getAttribute('points');
-    const initialTransform = await depot.getAttribute('transform');
 
     await page.getByTestId('warehouse-landing-edit-layout').click();
     await expect(page.getByTestId('warehouse-landing-layout-editor')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Girar depósito à direita' }).click();
-    await expect(depot).toHaveAttribute('transform', /rotate\(15 /);
+    await expect(page.getByRole('button', { name: 'Girar depósito à direita' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Aumentar depósito' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Diminuir depósito' })).toHaveCount(0);
 
-    await page.getByRole('button', { name: 'Aumentar depósito' }).click();
-    const zoomedPoints = await floor.getAttribute('points');
-    expect(zoomedPoints).not.toBe(initialPoints);
-
-    const beforeDragPoints = await floor.getAttribute('points');
     const box = await depot.boundingBox();
     expect(box).toBeTruthy();
     if (!box) throw new Error('Depósito sem área visual para arraste.');
@@ -45,17 +40,14 @@ test.describe.serial('Central de Depósitos — disposição visual do Início',
     );
     await page.mouse.up();
 
-    const afterDragPoints = await floor.getAttribute('points');
-    expect(afterDragPoints).not.toBe(beforeDragPoints);
+    const movedPoints = await floor.getAttribute('points');
+    expect(movedPoints).not.toBe(initialPoints);
 
     await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
     await expect(page.getByTestId('warehouse-landing-layout-editor')).toHaveCount(0);
-    expect(await depot.getAttribute('transform')).toBe(initialTransform);
     expect(await floor.getAttribute('points')).toBe(initialPoints);
 
     await page.getByTestId('warehouse-landing-edit-layout').click();
-    await page.getByRole('button', { name: 'Girar depósito à direita' }).click();
-    await page.getByRole('button', { name: 'Aumentar depósito' }).click();
 
     const saveBox = await depot.boundingBox();
     expect(saveBox).toBeTruthy();
@@ -88,7 +80,6 @@ test.describe.serial('Central de Depósitos — disposição visual do Início',
 
     const persistedDepot = page.locator('[data-testid^="warehouse-landing-depot-"]').first();
     const persistedFloor = persistedDepot.locator('polygon').first();
-    await expect(persistedDepot).toHaveAttribute('transform', /rotate\(15 /);
     expect(await persistedFloor.getAttribute('points')).toBe(savedPoints);
 
     await page.getByTestId('warehouse-landing-edit-layout').click();
@@ -105,7 +96,6 @@ test.describe.serial('Central de Depósitos — disposição visual do Início',
 
     const restoredDepot = page.locator('[data-testid^="warehouse-landing-depot-"]').first();
     const restoredFloor = restoredDepot.locator('polygon').first();
-    expect(await restoredDepot.getAttribute('transform')).toBe(initialTransform);
     expect(await restoredFloor.getAttribute('points')).toBe(initialPoints);
   });
 });
