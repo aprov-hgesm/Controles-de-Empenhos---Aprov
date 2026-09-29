@@ -2292,3 +2292,22 @@ Data: 2026-09-28.
 - O **palete oficial do ADM Depósito também é único nas representações 3D**: Início, área de recebimento, estoque interno, Meus Depósitos e prévia 3D do Controle de Depósitos usam a mesma paleta de madeira e a mesma linguagem estrutural (ripas superiores, três longarinas, destaque de borda e sombra), variando apenas escala e projeção. Blocos/pés soltos não devem ser desenhados, pois causam artefatos de camada na projeção isométrica.
 - As ripas superiores do palete devem ser **geometrias separadas com vãos reais**, não linhas desenhadas sobre uma placa contínua; isso vale especialmente para Meus Depósitos e a prévia 3D, onde o palete deve ser visualmente reconhecível como estrutura de madeira.
 - O balão de identificação do local deve ser preservado nos paletes de Meus Depósitos/prévia 3D, pois faz parte da localização operacional; apenas os blocos/pés visuais dissonantes são removidos.
+
+
+## D-112 — Migração SISCOFIS alimentar usa conta 07 e exclui hortifruti/granjeiros
+
+Data: 2026-09-28.
+
+- O modelo real de referência é o **Mapa de Existência - Material de Consumo** do SISCOFIS.
+- Para o Marco Zero do ADM Depósito, somente linhas cujo **Nr Ficha começa por `07`** são elegíveis. O Nr Ficha completo continua preservado como identificador de origem.
+- Linhas de outras contas de consumo são ignoradas mesmo quando o Grupo Mat aparece como gêneros alimentícios.
+- A quantidade do Marco Zero vem de **Qtde Exist**, pois representa a quantidade fisicamente existente. **Qtde Disp não é usada como saldo inicial** e pode estar zerada mesmo quando existe material físico.
+- Hortifruti/granjeiros são excluídos da migração: frutas, legumes, verduras, hortaliças, raízes/tubérculos in natura e ovos/granjeiros.
+- A exclusão não depende apenas da expressão `In natura`: itens claramente frescos, como pimentão verde/vermelho e cebola roxa, também são filtrados.
+- Produtos processados de origem vegetal permanecem elegíveis, inclusive farinha de mandioca, ervilha seca, milho verde em conserva, polpa de fruta, batata palha, batata pré-frita, alho granulado, doces, molhos, conservas, sucos, geleias e desidratados.
+- O filtro é aplicado em **duas camadas**:
+  1. o prompt oficial orienta a IA externa a retornar apenas linhas elegíveis;
+  2. o EMPROVEX reclassifica deterministicamente o JSON recebido antes de gerar a prévia.
+- Linhas filtradas pelo sistema geram aviso de revisão; se nenhuma linha elegível restar, a importação fica bloqueada.
+- O contrato externo continua simples e versionado (`emprovex_siscofis_inventory_v1`) com apenas quatro campos por item: `numeroItem`, `descricao`, `quantidade` e `valorUnitario`.
+- Itens elegíveis repetidos não são consolidados durante a extração; lotes/linhas independentes do relatório permanecem independentes até a etapa canônica já existente.
