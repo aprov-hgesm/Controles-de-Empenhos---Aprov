@@ -416,7 +416,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm backdrop-blur-md">
-        <p className="text-xs font-black uppercase tracking-[0.12em] text-emerald-800">Migração manual de item</p>
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-[#00288e]">Migração manual de item</p>
         <p className="mt-2 text-xs leading-5 text-slate-500">Para inventários pequenos ou correções de digitação. A linha manual é convertida para o mesmo JSON auditável antes da confirmação.</p>
         <div className="mt-4 grid gap-3 lg:grid-cols-[0.7fr_minmax(0,1.7fr)_0.7fr_0.8fr_0.8fr_auto]">
           <input value={manualNumeroItem} onChange={(e) => setManualNumeroItem(e.target.value)} placeholder="Nº Ficha" className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#00288e]" />
@@ -516,7 +516,7 @@ export function WarehouseSiscofisOperational({ workspaceId }: { workspaceId: str
         </div>
       )}
 
-      {message && <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-800">{message}</div>}
+      {message && <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-semibold text-slate-700">{message}</div>}
 
       <div className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm backdrop-blur-md">
         <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black text-slate-900">Histórico SISCOFIS</p><p className="mt-1 text-[10px] text-slate-500">Leitura sob demanda · até 12 registros</p></div><button type="button" onClick={() => void refresh()} disabled={loading} className="rounded-lg border border-slate-200 bg-white p-2 text-[#00288e] transition hover:bg-blue-50"><RefreshCw className={loading ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} /></button></div>
