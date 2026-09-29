@@ -2332,3 +2332,26 @@ Data: 2026-09-28.
 - O extrator é carregado sob demanda somente quando o usuário seleciona um PDF, reduzindo impacto no bundle operacional normal.
 - O leitor **não tenta adivinhar** formatos incompatíveis. PDFs escaneados, criptografados, comprimidos de forma não suportada ou com estrutura SISCOFIS distinta são recusados com mensagem clara, permanecendo disponível o fluxo JSON/IA.
 - Não foi adicionada biblioteca externa nova para esta função; a leitura utiliza o contrato textual/posicional do PDF SISCOFIS observado, mantendo baixo peso e baixa dependência.
+
+
+## D-114 — Marco Zero SISCOFIS alimenta pendências de alocação física
+
+Data: 2026-09-28.
+
+- Após a confirmação do **Marco Zero SISCOFIS**, os saldos são criados pelo movimento oficial `INITIAL_BALANCE` e permanecem inicialmente na posição `UNASSIGNED` (`Sem localização`).
+- A aba principal de Alocação de Material passa a se chamar **Materiais pendentes** e reúne, sem fundir os motores internos:
+  1. materiais do Marco Zero SISCOFIS ainda sem localização física;
+  2. pendências logísticas provenientes de Notas Fiscais.
+- A fila SISCOFIS não cria NF fictícia, intake fictício, novo saldo ou cópia de estoque.
+- Um material aparece na fila SISCOFIS somente quando:
+  - existe snapshot `MARCO_ZERO` confirmado;
+  - o material pertence às linhas desse Marco Zero;
+  - existe saldo positivo real em `locationBalances` com posição `UNASSIGNED`.
+- A quantidade exibida é sempre o **saldo atual sem localização**, não um contador paralelo persistido.
+- A alocação SISCOFIS reutiliza exclusivamente o motor oficial `transferWarehouseStock()`, com origem `UNASSIGNED` e destino em depósito/local/subposição.
+- O movimento gerado é `TRANSFER` com `quantityDelta = 0`; portanto, o saldo agregado do material não aumenta nem diminui durante a localização física.
+- Alocação parcial é permitida. O item permanece na fila pela quantidade residual em `UNASSIGNED`.
+- Quando o saldo `UNASSIGNED` chega a zero, o item desaparece automaticamente da fila, sem update adicional de estado.
+- Estrutura de depósitos/localizações é carregada sob demanda apenas quando o operador abre a ação de alocação, reduzindo leituras desnecessárias.
+- A fila identifica visualmente a origem **Marco Zero SISCOFIS** e preserva os números de ficha disponíveis no snapshot para facilitar conferência.
+- A arquitetura evita atribuir origem artificial a estoque fungível: a fila representa a necessidade física real de localização do material originalmente presente no Marco Zero.
