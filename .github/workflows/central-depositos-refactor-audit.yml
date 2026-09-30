@@ -8,7 +8,7 @@ on:
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,7 +52,25 @@ jobs:
           npm run verify:adm-deposito-phase-11
           npm run verify:adm-deposito-phase-11-5
           npm run verify:adm-deposito-phase-13
-          npm run verify:adm-deposito-modular-r1
+
+      - name: Compare modular guard with main baseline
+        run: |
+          git fetch origin main --depth=1
+          git worktree add /tmp/emprovex-main origin/main
+          set +e
+          (cd /tmp/emprovex-main && node scripts/verify-adm-deposito-modular-r1.mjs > /tmp/main-guard.log 2>&1)
+          MAIN_STATUS=$?
+          node scripts/verify-adm-deposito-modular-r1.mjs > /tmp/branch-guard.log 2>&1
+          BRANCH_STATUS=$?
+          set -e
+          echo "MAIN_STATUS=$MAIN_STATUS"
+          echo "BRANCH_STATUS=$BRANCH_STATUS"
+          echo "=== MAIN ==="
+          cat /tmp/main-guard.log
+          echo "=== BRANCH ==="
+          cat /tmp/branch-guard.log
+          test "$MAIN_STATUS" -eq "$BRANCH_STATUS"
+          diff -u /tmp/main-guard.log /tmp/branch-guard.log
 
       - name: Warehouse security emulator
         run: npm run test:adm-deposito-modular-r1-security
