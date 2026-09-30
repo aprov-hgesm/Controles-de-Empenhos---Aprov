@@ -185,6 +185,16 @@ test('converte apresentações para a unidade canônica sem criar saldo ou movim
   );
 });
 
+test('normaliza apenas referências canônicas de material', () => {
+  assert.equal(
+    material.normalizeWarehouseMaterialId(' MAT_123E4567E89B12D3A456426614174000 '),
+    deterministicId
+  );
+  assert.equal(material.normalizeWarehouseMaterialId('item-00001'), null);
+  assert.equal(material.normalizeWarehouseMaterialId(''), null);
+  assert.equal(material.normalizeWarehouseMaterialId(null), null);
+});
+
 test('gera ID interno estável a partir de UUID válido', () => {
   assert.equal(
     material.createWarehouseMaterialId(
