@@ -69,7 +69,7 @@ interface EmpenhosViewContext {
     empenhoId: string,
     itemId: string,
     input: { itemCompraNumber: string; name: string }
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   handleUpdateEmpenhoPregao: (empenhoId: string, pregao: string) => Promise<void>;
   handleUpdateEmpenhoSupplierCnpj: (empenhoId: string, cnpj: string) => Promise<void>;
   handleGenerateEmpenhoReportPDF: (...args: any[]) => any;
@@ -229,11 +229,11 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
     if (savingItemDetails) return;
     setSavingItemDetails(true);
     try {
-      await handleUpdateEmpenhoItemDetails(empenhoId, itemId, {
+      const saved = await handleUpdateEmpenhoItemDetails(empenhoId, itemId, {
         itemCompraNumber: itemNumberDraft,
         name: itemNameDraft,
       });
-      cancelItemEdit();
+      if (saved) cancelItemEdit();
     } finally {
       setSavingItemDetails(false);
     }
