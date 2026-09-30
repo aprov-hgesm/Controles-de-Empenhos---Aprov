@@ -64,6 +64,10 @@ import {
   type WarehouseMovementListItem,
 } from '../../../lib/warehouse/ledgerRepository';
 import {
+  formatWarehouseNumber,
+  normalizeWarehouseSearch,
+} from './warehousePresentation';
+import {
   compareWarehouseStockAvailability,
   hasWarehouseAvailableStock,
   isWarehouseLocatedBalance,
@@ -97,18 +101,6 @@ interface MaterialSummary {
   fefo: WarehouseLot | null;
   pendencies: ReturnType<typeof buildWarehouseLogisticsPendencies>;
   nearestExpiry: string | null;
-}
-
-function normalizeSearch(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('pt-BR')
-    .trim();
-}
-
-function numberLabel(value: number): string {
-  return value.toLocaleString('pt-BR', { maximumFractionDigits: 6 });
 }
 
 function dateLabel(value: string | null): string {
@@ -406,7 +398,7 @@ export function WarehouseStockOperational({
   ]);
 
   const filtered = useMemo(() => {
-    const q = normalizeSearch(queryText);
+    const q = normalizeWarehouseSearch(queryText);
     return summaries.filter((summary) => {
       const locationRows = summary.locationBalances.filter(
         (item) => item.quantity > 0
@@ -445,7 +437,7 @@ export function WarehouseStockOperational({
         lot.origin.supplier || '',
         lot.origin.supplierCnpj || '',
       ]);
-      const haystack = normalizeSearch(
+      const haystack = normalizeWarehouseSearch(
         [
           summary.material.id,
           summary.material.description,
@@ -844,7 +836,7 @@ export function WarehouseStockOperational({
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Saldo total</p>
                   <p className="mt-1 text-base font-black text-emerald-700">
-                    {numberLabel(summary.balance.quantity)}{' '}
+                    {formatWarehouseNumber(summary.balance.quantity)}{' '}
                     <span className="text-[10px] font-bold text-emerald-600">
                       {summary.material.unit.label || summary.material.unit.code}
                     </span>
@@ -852,8 +844,8 @@ export function WarehouseStockOperational({
                 </div>
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Distribuído</p>
-                  <p className="mt-1 text-sm font-bold text-slate-700">{numberLabel(summary.distributed)}</p>
-                  <p className="text-[9px] text-slate-600">{numberLabel(summary.unassigned)} pendente de alocação física</p>
+                  <p className="mt-1 text-sm font-bold text-slate-700">{formatWarehouseNumber(summary.distributed)}</p>
+                  <p className="text-[9px] text-slate-600">{formatWarehouseNumber(summary.unassigned)} pendente de alocação física</p>
                 </div>
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Validades</p>
@@ -903,12 +895,12 @@ export function WarehouseStockOperational({
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
               <p className="text-[9px] uppercase tracking-[0.12em] text-slate-600">Saldo agregado</p>
-              <p className="mt-2 text-2xl font-black text-emerald-700">{numberLabel(selected.balance.quantity)}</p>
+              <p className="mt-2 text-2xl font-black text-emerald-700">{formatWarehouseNumber(selected.balance.quantity)}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
               <p className="text-[9px] uppercase tracking-[0.12em] text-slate-600">Distribuição física</p>
-              <p className="mt-2 text-sm font-black text-slate-800">{numberLabel(selected.distributed)} localizado</p>
-              <p className="mt-1 text-[10px] text-slate-600">{numberLabel(selected.unassigned)} pendente de alocação física</p>
+              <p className="mt-2 text-sm font-black text-slate-800">{formatWarehouseNumber(selected.distributed)} localizado</p>
+              <p className="mt-1 text-[10px] text-slate-600">{formatWarehouseNumber(selected.unassigned)} pendente de alocação física</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
               <p className="text-[9px] uppercase tracking-[0.12em] text-slate-600">Validades rastreadas</p>
@@ -946,13 +938,13 @@ export function WarehouseStockOperational({
                       {selectedLocations.map((item) => (
                         <div key={item.key} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
                           <span className="text-xs font-bold text-slate-700">{item.label}</span>
-                          <span className="text-xs text-slate-500">{numberLabel(item.quantity)}</span>
+                          <span className="text-xs text-slate-500">{formatWarehouseNumber(item.quantity)}</span>
                         </div>
                       ))}
                       {selected.unassigned > 0 && (
                         <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
                           <span className="text-xs font-bold text-amber-800">Pendente de alocação física</span>
-                          <span className="text-xs text-amber-700">{numberLabel(selected.unassigned)}</span>
+                          <span className="text-xs text-amber-700">{formatWarehouseNumber(selected.unassigned)}</span>
                         </div>
                       )}
                     </>
@@ -984,7 +976,7 @@ export function WarehouseStockOperational({
                         <option value="">Selecione a posição atual</option>
                         {relocationSources.map((source) => (
                           <option key={source.key} value={source.key}>
-                            {source.label} · {numberLabel(source.quantity)}
+                            {source.label} · {formatWarehouseNumber(source.quantity)}
                           </option>
                         ))}
                       </select>
@@ -1101,7 +1093,7 @@ export function WarehouseStockOperational({
                                 <p className="text-xs font-black text-slate-800">Validade {dateLabel(lot.expiresOn)}</p>
                                 <span className={'rounded-full border px-2 py-0.5 text-[9px] font-bold ' + lotStateClass(lot)}>{lotStateLabel(lot)}</span>
                               </div>
-                              <p className="mt-1 text-[10px] text-slate-500">qtd. vinculada {numberLabel(lot.quantity)}</p>
+                              <p className="mt-1 text-[10px] text-slate-500">qtd. vinculada {formatWarehouseNumber(lot.quantity)}</p>
                               <p className="mt-1 text-[10px] text-slate-600">{buildWarehousePositionLabel(lot.position, state.depots, state.locations)} · {warehouseLotOriginLabel(lot.origin)}</p>
                             </div>
                             <button type="button" onClick={() => editLot(lot)} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-slate-600 hover:border-blue-200 hover:text-[#00288e]">Editar</button>
