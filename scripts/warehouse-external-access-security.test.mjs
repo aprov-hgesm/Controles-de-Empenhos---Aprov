@@ -13,6 +13,7 @@ import {
   doc,
   getDoc,
   getFirestore,
+  runTransaction,
   serverTimestamp,
   setDoc,
 } from 'firebase/firestore';
@@ -208,6 +209,104 @@ async function main() {
   const own = await getDoc(refA);
   assert.equal(own.exists(), true);
   console.log('  [PASS] ALLOW — setor A lê o próprio workspace');
+
+  const destinationId = 'dest_' + 'd'.repeat(32);
+  const destinationRef = doc(
+    a.db,
+    'warehouse',
+    'workspace-a',
+    'destinations',
+    destinationId
+  );
+  await setDoc(destinationRef, {
+    schemaVersion: 'warehouse_destination_v1',
+    id: destinationId,
+    workspaceId: 'workspace-a',
+    ug: '160500',
+    name: 'Cozinha externa',
+    status: 'active',
+    createdBy: a.user.uid,
+    updatedBy: a.user.uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  console.log('  [PASS] ALLOW — setor A cria destino operacional no próprio workspace');
+
+  const intakeId = 'intake_' + 'e'.repeat(64);
+  const consumptionId = 'cons_' + 'f'.repeat(64);
+  await runTransaction(a.db, async (transaction) => {
+    const intakeRef = doc(a.db, 'warehouse', 'workspace-a', 'intakes', intakeId);
+    const consumptionRef = doc(
+      a.db,
+      'warehouse',
+      'workspace-a',
+      'consumptions',
+      consumptionId
+    );
+
+    transaction.set(intakeRef, {
+      schemaVersion: 'warehouse_item_intake_v2',
+      id: intakeId,
+      workspaceId: 'workspace-a',
+      ug: '160500',
+      invoiceRecordKey: 'nf-external-immediate',
+      invoiceId: '2914',
+      empenhoId: '2026NE000001',
+      itemId: 'ITEM-EXT-001',
+      materialId: null,
+      description: 'Fruta, tipo tangerina poncan, apresentação natural',
+      unitLabel: 'KG',
+      supplier: 'Fornecedor externo de teste',
+      receivedQuantity: 10,
+      allocatedQuantity: 0,
+      immediateConsumptionQuantity: 10,
+      pendingQuantity: 0,
+      status: 'PROCESSED',
+      createdBy: a.user.uid,
+      updatedBy: a.user.uid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+
+    transaction.set(consumptionRef, {
+      schemaVersion: 'warehouse_consumption_record_v1',
+      id: consumptionId,
+      workspaceId: 'workspace-a',
+      ug: '160500',
+      origin: 'IMMEDIATE_CONSUMPTION',
+      materialId: null,
+      materialDescription: 'Fruta, tipo tangerina poncan, apresentação natural',
+      unitLabel: 'KG',
+      quantity: 10,
+      requestedQuantity: 10,
+      presentationLabel: 'KG',
+      destinationId,
+      destinationName: 'Cozinha externa',
+      withdrawnBy: 'Militar externo de teste',
+      operatorUid: a.user.uid,
+      movementId: null,
+      withdrawalId: null,
+      lineId: null,
+      intakeId,
+      invoiceRecordKey: 'nf-external-immediate',
+      barcode: null,
+      lotCode: null,
+      positionLabel: 'Consumo imediato · sem entrada em estoque',
+      siscofisStatus: 'PENDING',
+      occurredAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      siscofisUpdatedBy: null,
+      siscofisUpdatedAt: null,
+    });
+  });
+  console.log('  [PASS] ALLOW — setor A registra consumo imediato no próprio workspace/UG');
+
+  const externalConsumption = await getDoc(
+    doc(a.db, 'warehouse', 'workspace-a', 'consumptions', consumptionId)
+  );
+  assert.equal(externalConsumption.exists(), true);
+  assert.equal(externalConsumption.data()?.origin, 'IMMEDIATE_CONSUMPTION');
+  console.log('  [PASS] ALLOW — setor A lê o consumo imediato recém-gravado');
 
   const visualRefA = doc(
     a.db,
