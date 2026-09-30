@@ -53,7 +53,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
   const handleEmpenhoDocumentUploaded = async (
     empenhoId: string,
     document: EmpenhoPdfDocument
-  ): Promise<void> => {
+  ): Promise<boolean> => {
     if (!user) throw new Error('Sua sessão expirou. Entre novamente para anexar o documento.');
      const currentEmpenho = empenhos.find((emp) => emp.id === empenhoId);
     if (!currentEmpenho) throw new Error('Empenho não encontrado para vincular o documento.');
@@ -604,19 +604,19 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     const currentEmpenho = empenhos.find((emp) => emp.id === empenhoId);
     if (!currentEmpenho) {
       showToast('Empenho não encontrado para alteração do item.', 'error');
-      return;
+      return false;
     }
 
     const currentItem = currentEmpenho.items.find((item) => item.id === itemId);
     if (!currentItem) {
       showToast('Item não encontrado no empenho.', 'error');
-      return;
+      return false;
     }
 
     const name = input.name.trim();
     if (!name) {
       showToast('A descrição do item não pode ficar vazia.', 'error');
-      throw new Error('EMPENHO_ITEM_DESCRIPTION_REQUIRED');
+      return false;
     }
 
     const rawNumber = input.itemCompraNumber.trim();
@@ -637,7 +637,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
 
     if (!user) {
       showToast('Sua sessão expirou. Entre novamente para alterar o item.', 'error');
-      throw new Error('EMPENHO_ITEM_AUTH_REQUIRED');
+      return false;
     }
 
     try {
@@ -646,13 +646,14 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
         emp.id === empenhoId ? committedEmpenho : emp
       )));
       showToast('NR item e descrição atualizados com sucesso.', 'success');
+      return true;
     } catch (error) {
       console.error('Erro ao atualizar identificação do item do empenho:', error);
       showToast(
         error instanceof Error ? error.message : 'Não foi possível atualizar o item do empenho.',
         'error'
       );
-      throw error;
+      return false;
     }
   };
 
