@@ -686,7 +686,7 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                               <FileSpreadsheet className="w-4 h-4 text-[#00288e]" /> 2. Tabela de Quantidades por Item e Remessa de Entrega
                             </h4>
                             <p className="text-xs text-gray-500 mt-0.5">
-                              Preencha ou ajuste manualmente as quantidades a serem entregues pela empresa em cada remessa.
+                              Ajuste NR item, descrição e quantidades antes de gerar o cronograma. As alterações de NR item e descrição feitas aqui valem somente para este cronograma.
                             </p>
                           </div>
                         </div>
