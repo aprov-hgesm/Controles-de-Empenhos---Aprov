@@ -48,7 +48,7 @@ import {
   type WarehouseBalance,
   type WarehouseMovement,
 } from './movement';
-import { validateWarehouseMaterial, type WarehouseMaterial } from './material';
+import { normalizeWarehouseMaterialId, validateWarehouseMaterial, type WarehouseMaterial } from './material';
 import type { WarehouseLot } from './lot';
 import { getWarehouseLot } from './lotRepository';
 import {
@@ -1537,7 +1537,7 @@ async function applyWarehouseImmediateConsumptionLightweight(
         workspaceId: scope.workspaceId,
         ug: scope.ug,
         origin: 'IMMEDIATE_CONSUMPTION',
-        materialId: input.materialId?.trim().toLowerCase() || null,
+        materialId: normalizeWarehouseMaterialId(input.materialId),
         materialDescription: input.description.trim(),
         unitLabel: input.unitLabel.trim(),
         quantity,
