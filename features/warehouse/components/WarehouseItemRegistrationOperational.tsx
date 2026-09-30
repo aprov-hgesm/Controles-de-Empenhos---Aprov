@@ -76,192 +76,30 @@ import {
   formatWarehouseQuantity,
 } from './warehousePresentation';
 import {
+  normalizeWarehouseQueueSearch,
+  warehouseAllocationErrorMessage,
+  warehouseImmediateConsumptionErrorMessage,
+  warehouseIntakeReconciliationMessage,
+  warehouseIntakeStatusClass,
+  warehouseIntakeStatusLabel,
+} from './warehouseIntakePresentation';
+import {
+  clearWarehouseAllocationOperationId,
+  clearWarehouseBulkOperationId,
+  getOrCreateWarehouseAllocationOperationId,
+  getOrCreateWarehouseBulkOperationId,
+  readWarehouseInvoiceDefaultDestination,
+  saveWarehouseInvoiceDefaultDestination,
+  type WarehouseIntakeBulkMode,
+  type WarehouseInvoiceDefaultDestination,
+} from './warehouseIntakeSession';
+import {
   downloadWarehouseAllocationSheet,
   printWarehouseAllocationSheet,
   type WarehouseAllocationSheetInput,
 } from '../pdf/WarehouseAllocationSheet';
 
 type RegistrationTab = 'invoices' | 'manual' | 'stored' | 'siscofis' | 'immediate';
-
-function intakeStatusLabel(status: WarehouseItemIntakeEffectiveStatus): string {
-  switch (status) {
-    case 'PENDING':
-      return 'Pendente';
-    case 'PARTIALLY_PROCESSED':
-      return 'Parcialmente tratado';
-    case 'PROCESSED':
-      return 'Tratado';
-    case 'RECONCILIATION_REQUIRED':
-      return 'Reconciliação necessária';
-  }
-}
-
-function intakeStatusClass(status: WarehouseItemIntakeEffectiveStatus): string {
-  switch (status) {
-    case 'PENDING':
-      return 'bg-amber-100 text-amber-700';
-    case 'PARTIALLY_PROCESSED':
-      return 'bg-blue-100 text-blue-700';
-    case 'PROCESSED':
-      return 'bg-emerald-100 text-emerald-700';
-    case 'RECONCILIATION_REQUIRED':
-      return 'bg-rose-100 text-rose-700';
-  }
-}
-
-function reconciliationMessage(row: WarehouseInvoiceIntakeQueueRow): string | null {
-  switch (row.reconciliationReason) {
-    case 'CANONICAL_QUANTITY_CHANGED':
-      return 'A quantidade atual da NF diverge do estado logístico preservado. Nenhuma correção foi aplicada automaticamente.';
-    case 'CANONICAL_SOURCE_MISSING':
-      return 'A NF ou o item não está mais presente na fonte canônica consultada. O histórico warehouse foi preservado sem compensação automática.';
-    case 'LEGACY_INVOICE_PROJECTION':
-      return 'Existe projeção logística legada para este item, mas não há estado de tratamento compatível com o novo motor. Revisão será necessária antes de nova movimentação.';
-    default:
-      return null;
-  }
-}
-
-
-function immediateConsumptionErrorMessage(error: unknown): string {
-  const raw = error instanceof Error ? error.message : String(error || '');
-  const mappings: Array<[string, string]> = [
-    ['WAREHOUSE_ITEM_INTAKE_CONCURRENT_MODIFICATION', 'A pendência foi alterada em outra tela. Atualize a fila antes de repetir.'],
-    ['WAREHOUSE_IMMEDIATE_CONSUMPTION_EXCEEDS_PENDING', 'A quantidade supera o pendente atual.'],
-    ['WAREHOUSE_IMMEDIATE_CONSUMPTION_STOCK_MISMATCH', 'A projeção logística não comporta esta parcela. O item precisa ser reconciliado.'],
-    ['WAREHOUSE_ITEM_INTAKE_RECONCILIATION_REQUIRED', 'O item exige reconciliação antes do consumo imediato.'],
-    ['WAREHOUSE_DESTINATION_INACTIVE', 'O destino selecionado está inativo.'],
-    ['WAREHOUSE_WITHDRAWN_BY_REQUIRED', 'Informe quem recebeu/retirou o material.'],
-    ['WAREHOUSE_IDEMPOTENCY_CONFLICT', 'A tentativa anterior possui conteúdo diferente. Atualize a fila antes de continuar.'],
-    ['WAREHOUSE_CONSUMPTION_IDEMPOTENCY_CONFLICT', 'A tentativa anterior de consumo possui conteúdo diferente. Atualize a fila antes de continuar.'],
-  ];
-  for (const [code, message] of mappings) {
-    if (raw.includes(code)) return message;
-  }
-  return raw || 'Não foi possível confirmar o consumo imediato.';
-}
-
-function allocationErrorMessage(error: unknown): string {
-  const code = error instanceof Error ? error.message : String(error || '');
-  if (code.includes('WAREHOUSE_ITEM_INTAKE_CONCURRENT_MODIFICATION')) {
-    return 'A pendência foi alterada em outra tela. A operação não foi executada; atualize a fila antes de continuar.';
-  }
-  if (
-    code.includes('WAREHOUSE_ITEM_INTAKE_RECONCILIATION_REQUIRED')
-    || code.includes('WAREHOUSE_ITEM_INTAKE_LEGACY_COMPLETED')
-  ) {
-    return 'O item exige reconciliação antes de uma nova alocação. Nenhum saldo foi movimentado.';
-  }
-  if (code.includes('WAREHOUSE_INTAKE_ALLOCATION_EXCEEDS_PENDING')) {
-    return 'A quantidade informada supera a quantidade pendente atual.';
-  }
-  if (code.includes('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK')) {
-    return 'A quantidade disponível em Sem localização não é suficiente. O item precisa ser reconciliado.';
-  }
-  if (
-    code.includes('WAREHOUSE_POSITION_INACTIVE')
-    || code.includes('WAREHOUSE_SUBPOSITION_INACTIVE')
-    || code.includes('WAREHOUSE_POSITION_NOT_FOUND')
-  ) {
-    return 'O depósito, localização ou subposição deixou de estar disponível. Selecione uma posição ativa.';
-  }
-  if (code.includes('WAREHOUSE_INTAKE_LOT_CONFLICT')) {
-    return 'Já existe um registro de validade nessa posição com dados diferentes. Revise a validade.';
-  }
-  if (code.includes('WAREHOUSE_BARCODE_MATERIAL_CONFLICT')) {
-    return 'Este código de barras já está associado a outro material e não pode ser reutilizado.';
-  }
-  if (
-    code.includes('WAREHOUSE_BARCODE_PRESENTATION_CONFLICT')
-    || code.includes('WAREHOUSE_BARCODE_INACTIVE')
-  ) {
-    return 'O código de barras existente não é compatível com esta apresentação ou está inativo.';
-  }
-  if (code.includes('WAREHOUSE_IDEMPOTENCY_CONFLICT')) {
-    return 'A tentativa anterior já possui uma operação com dados diferentes. Atualize a fila antes de repetir.';
-  }
-  if (code.includes('WAREHOUSE_INTAKE_LOT_REQUIRED')) {
-    return 'Não foi possível criar a referência técnica de validade. Atualize a fila e tente novamente.';
-  }
-  if (code.includes('WAREHOUSE_INTAKE_INVALID_EXPIRY')) {
-    return 'Informe uma validade válida ou marque explicitamente Sem validade.';
-  }
-  return error instanceof Error
-    ? error.message
-    : 'Não foi possível confirmar a alocação.';
-}
-
-function allocationOperationStorageKey(
-  workspaceId: string,
-  intakeId: string
-): string {
-  return ['emprovex', 'warehouse', 'intake-allocation', workspaceId, intakeId].join(':');
-}
-
-function getOrCreateAllocationOperationId(
-  workspaceId: string,
-  intakeId: string
-): string {
-  const key = allocationOperationStorageKey(workspaceId, intakeId);
-  const existing = window.sessionStorage.getItem(key);
-  if (existing) return existing;
-  const created = window.crypto.randomUUID();
-  window.sessionStorage.setItem(key, created);
-  return created;
-}
-
-function clearAllocationOperationId(
-  workspaceId: string,
-  intakeId: string
-): void {
-  window.sessionStorage.removeItem(
-    allocationOperationStorageKey(workspaceId, intakeId)
-  );
-}
-
-interface InvoiceDefaultDestination {
-  depotId: string;
-  locationId: string;
-  subpositionId: string;
-}
-
-function invoiceDestinationStorageKey(
-  workspaceId: string,
-  invoiceRecordKey: string
-): string {
-  return ['emprovex', 'warehouse', 'invoice-destination', workspaceId, invoiceRecordKey].join(':');
-}
-
-function readInvoiceDefaultDestination(
-  workspaceId: string,
-  invoiceRecordKey: string
-): InvoiceDefaultDestination {
-  try {
-    const raw = window.sessionStorage.getItem(
-      invoiceDestinationStorageKey(workspaceId, invoiceRecordKey)
-    );
-    if (!raw) return { depotId: '', locationId: '', subpositionId: '' };
-    const parsed = JSON.parse(raw) as Partial<InvoiceDefaultDestination>;
-    return {
-      depotId: typeof parsed.depotId === 'string' ? parsed.depotId : '',
-      locationId: typeof parsed.locationId === 'string' ? parsed.locationId : '',
-      subpositionId: typeof parsed.subpositionId === 'string' ? parsed.subpositionId : '',
-    };
-  } catch {
-    return { depotId: '', locationId: '', subpositionId: '' };
-  }
-}
-
-function saveInvoiceDefaultDestination(
-  workspaceId: string,
-  invoiceRecordKey: string,
-  destination: InvoiceDefaultDestination
-): void {
-  window.sessionStorage.setItem(
-    invoiceDestinationStorageKey(workspaceId, invoiceRecordKey),
-    JSON.stringify(destination)
-  );
-}
 
 function AllocationPanel({
   workspaceId,
@@ -282,7 +120,7 @@ function AllocationPanel({
   const [loadingStructure, setLoadingStructure] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const defaultDestination = readInvoiceDefaultDestination(
+  const defaultDestination = readWarehouseInvoiceDefaultDestination(
     workspaceId,
     row.invoiceRecordKey
   );
@@ -297,7 +135,7 @@ function AllocationPanel({
 
   useEffect(() => {
     let active = true;
-    setOperationId(getOrCreateAllocationOperationId(workspaceId, row.stateId));
+    setOperationId(getOrCreateWarehouseAllocationOperationId(workspaceId, row.stateId));
     setLoadingStructure(true);
     setError(null);
     Promise.all([
@@ -417,15 +255,15 @@ function AllocationPanel({
         barcode: barcode.trim() || null,
         operationId,
       });
-      saveInvoiceDefaultDestination(workspaceId, row.invoiceRecordKey, {
+      saveWarehouseInvoiceDefaultDestination(workspaceId, row.invoiceRecordKey, {
         depotId,
         locationId,
         subpositionId,
       });
-      clearAllocationOperationId(workspaceId, row.stateId);
+      clearWarehouseAllocationOperationId(workspaceId, row.stateId);
       await onSuccess(result, numericQuantity);
     } catch (allocationError) {
-      setError(allocationErrorMessage(allocationError));
+      setError(warehouseAllocationErrorMessage(allocationError));
     } finally {
       setWorking(false);
     }
@@ -707,7 +545,7 @@ type InvoiceQueueStatusFilter =
   | 'processed'
   | 'reconciliation';
 
-type PregaoBulkMode = 'storage' | 'immediate' | 'remove';
+type PregaoBulkMode = WarehouseIntakeBulkMode;
 
 interface WarehouseInvoiceQueueGroup {
   key: string;
@@ -725,14 +563,6 @@ interface WarehouseInvoiceQueueGroup {
   reconciliationItems: number;
 }
 
-function normalizeQueueSearch(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('pt-BR')
-    .trim();
-}
-
 function invoiceGroupStatus(
   group: WarehouseInvoiceQueueGroup
 ): WarehouseItemIntakeEffectiveStatus {
@@ -745,59 +575,6 @@ function invoiceGroupStatus(
   }
   return 'PENDING';
 }
-
-function bulkOperationStorageKey(
-  workspaceId: string,
-  subjectKey: string,
-  mode: PregaoBulkMode,
-  intakeId: string
-): string {
-  return [
-    'emprovex',
-    'warehouse',
-    'intake-bulk',
-    workspaceId,
-    subjectKey,
-    mode,
-    intakeId,
-  ].join(':');
-}
-
-function getOrCreateBulkOperationId(
-  workspaceId: string,
-  subjectKey: string,
-  mode: PregaoBulkMode,
-  intakeId: string
-): string {
-  const key = bulkOperationStorageKey(
-    workspaceId,
-    subjectKey,
-    mode,
-    intakeId
-  );
-  const existing = window.sessionStorage.getItem(key);
-  if (existing) return existing;
-  const created = window.crypto.randomUUID();
-  window.sessionStorage.setItem(key, created);
-  return created;
-}
-
-function clearBulkOperationId(
-  workspaceId: string,
-  subjectKey: string,
-  mode: PregaoBulkMode,
-  intakeId: string
-): void {
-  window.sessionStorage.removeItem(
-    bulkOperationStorageKey(
-      workspaceId,
-      subjectKey,
-      mode,
-      intakeId
-    )
-  );
-}
-
 
 export function IntakeBulkActionPanel({
   workspaceId,
@@ -919,7 +696,7 @@ export function IntakeBulkActionPanel({
       })
       .catch((loadError) => {
         if (!active) return;
-        setError(immediateConsumptionErrorMessage(loadError));
+        setError(warehouseImmediateConsumptionErrorMessage(loadError));
       })
       .finally(() => {
         if (active) setLoadingDestinations(false);
@@ -953,7 +730,7 @@ export function IntakeBulkActionPanel({
       setDestinationId(destination.id);
       setNewDestinationName('');
     } catch (createError) {
-      setError(immediateConsumptionErrorMessage(createError));
+      setError(warehouseImmediateConsumptionErrorMessage(createError));
     } finally {
       setWorking(false);
     }
@@ -1099,7 +876,7 @@ export function IntakeBulkActionPanel({
 
     for (let index = 0; index < operationRows.length; index += 1) {
       const row = operationRows[index];
-      const operationId = getOrCreateBulkOperationId(
+      const operationId = getOrCreateWarehouseBulkOperationId(
         workspaceId,
         subjectKey,
         mode,
@@ -1131,7 +908,7 @@ export function IntakeBulkActionPanel({
             barcode: null,
             operationId,
           });
-          saveInvoiceDefaultDestination(
+          saveWarehouseInvoiceDefaultDestination(
             workspaceId,
             row.invoiceRecordKey,
             {
@@ -1162,7 +939,7 @@ export function IntakeBulkActionPanel({
             operationId,
           });
         }
-        clearBulkOperationId(
+        clearWarehouseBulkOperationId(
           workspaceId,
           subjectKey,
           mode,
@@ -1173,8 +950,8 @@ export function IntakeBulkActionPanel({
         failed.push({
           row,
           message: mode === 'immediate'
-            ? immediateConsumptionErrorMessage(bulkError)
-            : allocationErrorMessage(bulkError),
+            ? warehouseImmediateConsumptionErrorMessage(bulkError)
+            : warehouseAllocationErrorMessage(bulkError),
         });
       } finally {
         setProgress({
@@ -1744,7 +1521,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
   );
 
   const filteredGroups = useMemo(() => {
-    const query = normalizeQueueSearch(search);
+    const query = normalizeWarehouseQueueSearch(search);
 
     return invoiceGroups.filter((group) => {
       if (
@@ -1777,7 +1554,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
       }
 
       if (!query) return true;
-      return normalizeQueueSearch([
+      return normalizeWarehouseQueueSearch([
         group.invoiceId,
         group.supplier,
         group.empenhoId,
@@ -2234,10 +2011,10 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
                           <span
                             className={
                               'rounded-full px-2 py-1 text-[9px] font-black uppercase '
-                              + intakeStatusClass(status)
+                              + warehouseIntakeStatusClass(status)
                             }
                           >
-                            {intakeStatusLabel(status)}
+                            {warehouseIntakeStatusLabel(status)}
                           </span>
                           {group.pregao && (
                             <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-[9px] font-black text-[#00288e]">
@@ -2363,7 +2140,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
                     <div className="border-t border-slate-200 bg-white p-4">
                       <div className="space-y-3">
                         {group.rows.map((row) => {
-                          const reconciliation = reconciliationMessage(row);
+                          const reconciliation = warehouseIntakeReconciliationMessage(row);
                           const canContinue =
                             row.status === 'PENDING'
                             || row.status === 'PARTIALLY_PROCESSED';
@@ -2379,10 +2156,10 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
                                     <span
                                       className={
                                         'rounded-full px-2 py-1 text-[8px] font-black uppercase '
-                                        + intakeStatusClass(row.status)
+                                        + warehouseIntakeStatusClass(row.status)
                                       }
                                     >
-                                      {intakeStatusLabel(row.status)}
+                                      {warehouseIntakeStatusLabel(row.status)}
                                     </span>
                                     {!row.persisted && row.status === 'PENDING' && (
                                       <span className="text-[8px] font-bold text-slate-400">
