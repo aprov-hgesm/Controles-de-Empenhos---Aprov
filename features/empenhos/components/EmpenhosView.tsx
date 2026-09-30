@@ -65,6 +65,11 @@ interface EmpenhosViewContext {
   handleDownloadTermoRecebimento: (...args: any[]) => any;
   handleEmpenhoDocumentUploaded: (empenhoId: string, document: EmpenhoPdfDocument) => Promise<void>;
   handleUpdateEmpenhoClassification: (empenhoId: string, classification: string) => Promise<void>;
+  handleUpdateEmpenhoItemDetails: (
+    empenhoId: string,
+    itemId: string,
+    input: { itemCompraNumber: string; name: string }
+  ) => Promise<void>;
   handleUpdateEmpenhoPregao: (empenhoId: string, pregao: string) => Promise<void>;
   handleUpdateEmpenhoSupplierCnpj: (empenhoId: string, cnpj: string) => Promise<void>;
   handleGenerateEmpenhoReportPDF: (...args: any[]) => any;
@@ -117,7 +122,7 @@ interface EmpenhosViewProps { context: EmpenhosViewContext; }
 /** Tela de cadastro e detalhe de empenhos extraída sem alterar comportamento. */
 export function EmpenhosView({ context }: EmpenhosViewProps) {
   const shouldReduceMotion = useReducedMotion();
-  const { alerts, addEmpenhoClass, copiedPrompt, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCopyPrompt, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadPromptPdf, handleDownloadPromptTxt, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoPregao, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessJson, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, jsonInput, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setJsonInput, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user } = context;
+  const { alerts, addEmpenhoClass, copiedPrompt, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCopyPrompt, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadPromptPdf, handleDownloadPromptTxt, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoItemDetails, handleUpdateEmpenhoPregao, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessJson, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, jsonInput, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setJsonInput, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user } = context;
   const [editingPregaoEmpenhoId, setEditingPregaoEmpenhoId] = React.useState<string | null>(null);
   const [pregaoDraft, setPregaoDraft] = React.useState('');
   const [savingPregao, setSavingPregao] = React.useState(false);
@@ -127,6 +132,10 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
   const [isCreatingEmpenho, setIsCreatingEmpenho] = React.useState(false);
   const [isSavingReview, setIsSavingReview] = React.useState(false);
   const [isSavingItem, setIsSavingItem] = React.useState(false);
+  const [editingItemId, setEditingItemId] = React.useState<string | null>(null);
+  const [itemNumberDraft, setItemNumberDraft] = React.useState('');
+  const [itemNameDraft, setItemNameDraft] = React.useState('');
+  const [savingItemDetails, setSavingItemDetails] = React.useState(false);
   const [empenhosSubTab, setEmpenhosSubTab] = React.useState<'overview' | 'register' | 'classes'>('overview');
   const [newClassCode, setNewClassCode] = React.useState('');
   const [newClassDescription, setNewClassDescription] = React.useState('');
@@ -198,6 +207,35 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
       await handleAddItemToEmpenho();
     } finally {
       setIsSavingItem(false);
+    }
+  };
+
+  const beginItemEdit = (item: Empenho['items'][number]) => {
+    const legacyNumber = /^\d+$/.test(String(item.id || '').trim())
+      ? String(item.id).trim().padStart(5, '0')
+      : '';
+    setEditingItemId(item.id);
+    setItemNumberDraft(item.itemCompraNumber || legacyNumber);
+    setItemNameDraft(item.name);
+  };
+
+  const cancelItemEdit = () => {
+    setEditingItemId(null);
+    setItemNumberDraft('');
+    setItemNameDraft('');
+  };
+
+  const saveItemEdit = async (empenhoId: string, itemId: string) => {
+    if (savingItemDetails) return;
+    setSavingItemDetails(true);
+    try {
+      await handleUpdateEmpenhoItemDetails(empenhoId, itemId, {
+        itemCompraNumber: itemNumberDraft,
+        name: itemNameDraft,
+      });
+      cancelItemEdit();
+    } finally {
+      setSavingItemDetails(false);
     }
   };
 
@@ -1226,7 +1264,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                           <table className="w-full text-left border-collapse text-xs">
                             <thead>
                               <tr className="bg-gray-50/80 border-b border-gray-200/80 text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
-                                <th className="p-3.5 pl-5">Item / Cód.</th>
+                                <th className="p-3.5 pl-5">NR item</th>
                                 <th className="p-3.5">Descrição do Material</th>
                                 <th className="p-3.5 text-center">Und</th>
                                 <th className="p-3.5 text-right">Qtd Empenhada</th>
@@ -1249,13 +1287,36 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
 
                                 return (
                                   <tr key={item.id || idx} className="hover:bg-blue-50/30 transition-colors">
-                                    <td className="p-3.5 pl-5">
-                                      <span className="font-bold text-[#00288e] bg-blue-50 px-2 py-0.5 rounded text-[11px]">
-                                        {item.id || `#${idx + 1}`}
-                                      </span>
+                                    <td className="p-3.5 pl-5 align-top">
+                                      {editingItemId === item.id ? (
+                                        <input
+                                          type="text"
+                                          value={itemNumberDraft}
+                                          onChange={(event) => setItemNumberDraft(event.target.value)}
+                                          aria-label={`NR item do empenho ${targetEmp.id}`}
+                                          className="h-9 w-24 rounded-lg border border-blue-200 bg-white px-2 text-center text-[11px] font-extrabold text-[#00288e] outline-none focus:border-[#00288e] focus:ring-2 focus:ring-[#00288e]/10"
+                                        />
+                                      ) : (
+                                        <span className="font-bold text-[#00288e] bg-blue-50 px-2 py-0.5 rounded text-[11px]">
+                                          {item.itemCompraNumber
+                                            || (/^\d+$/.test(String(item.id || '').trim())
+                                              ? String(item.id).trim().padStart(5, '0')
+                                              : '—')}
+                                        </span>
+                                      )}
                                     </td>
-                                    <td className="p-3.5 font-bold text-[#0b1c30]">
-                                      {item.name}
+                                    <td className="p-3.5 font-bold text-[#0b1c30] align-top">
+                                      {editingItemId === item.id ? (
+                                        <textarea
+                                          value={itemNameDraft}
+                                          onChange={(event) => setItemNameDraft(event.target.value)}
+                                          aria-label={`Descrição do item ${item.itemCompraNumber || idx + 1}`}
+                                          rows={2}
+                                          className="min-h-[52px] min-w-[260px] w-full resize-y rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-bold text-[#0b1c30] outline-none focus:border-[#00288e] focus:ring-2 focus:ring-[#00288e]/10"
+                                        />
+                                      ) : (
+                                        item.name
+                                      )}
                                     </td>
                                     <td className="p-3.5 text-center">
                                       <span className="px-2 py-0.5 bg-gray-100 text-gray-700 font-bold rounded text-[10px] uppercase">
@@ -1297,18 +1358,58 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                         </div>
                                       </div>
                                     </td>
-                                    <td className="p-3.5 pr-5 text-center">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setEditingEmpenhoId(targetEmp.id);
-                                          handleDeleteItemFromEmpenho(item.id);
-                                        }}
-                                        className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
-                                        title="Excluir item do empenho"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
+                                    <td className="p-3.5 pr-5 text-center align-top">
+                                      <div className="flex items-center justify-center gap-1">
+                                        {editingItemId === item.id ? (
+                                          <>
+                                            <button
+                                              type="button"
+                                              onClick={() => void saveItemEdit(targetEmp.id, item.id)}
+                                              disabled={savingItemDetails}
+                                              className="p-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                                              title="Salvar NR item e descrição"
+                                              aria-label="Salvar alterações do item"
+                                            >
+                                              {savingItemDetails
+                                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                : <Save className="w-3.5 h-3.5" />}
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={cancelItemEdit}
+                                              disabled={savingItemDetails}
+                                              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                                              title="Cancelar edição"
+                                              aria-label="Cancelar edição do item"
+                                            >
+                                              <X className="w-3.5 h-3.5" />
+                                            </button>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <button
+                                              type="button"
+                                              onClick={() => beginItemEdit(item)}
+                                              className="p-1.5 text-gray-400 hover:text-[#00288e] hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                                              title="Editar NR item e descrição"
+                                              aria-label="Editar NR item e descrição"
+                                            >
+                                              <Edit className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setEditingEmpenhoId(targetEmp.id);
+                                                handleDeleteItemFromEmpenho(item.id);
+                                              }}
+                                              className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                                              title="Excluir item do empenho"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>
                                     </td>
                                   </tr>
                                 );
