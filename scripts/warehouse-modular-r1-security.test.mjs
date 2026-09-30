@@ -1389,6 +1389,9 @@ async function main() {
   const manualMaterialId = 'mat_' + 'abcdef0123456789'.repeat(2);
   const manualMovementId = 'mov_' + '1234567890abcdef'.repeat(4);
   const manualLocationBalanceId = 'locbal_' + 'fedcba0987654321'.repeat(4);
+  const manualPositioningMovementId = 'mov_' + '1122334455667788'.repeat(4);
+  const manualPhysicalLocationBalanceId = 'locbal_' + '8877665544332211'.repeat(4);
+  const deniedUnassignedOutboundMovementId = 'mov_' + 'a1b2c3d4e5f60718'.repeat(4);
 
   await allowed('fundador cria material para entrada avulsa auditável', () =>
     setDoc(doc(founder.db, 'warehouse', WORKSPACE_ID, 'materials', manualMaterialId), {
@@ -1460,6 +1463,140 @@ async function main() {
     })
   );
 
+  await denied('Saída de Material não consome saldo técnico pendente de alocação', () =>
+    runTransaction(founder.db, async (transaction) => {
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'movements', deniedUnassignedOutboundMovementId),
+        {
+          schemaVersion: 'warehouse_movement_v1',
+          id: deniedUnassignedOutboundMovementId,
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId: manualMaterialId,
+          type: 'OUTBOUND',
+          quantityDelta: -2,
+          idempotencyKeyHash: 'a1b2c3d4e5f60718'.repeat(4),
+          reversesMovementId: null,
+          note: 'Tentativa de saída sem alocação física',
+          source: {
+            kind: 'EXPRESS_OUTBOUND',
+            interface: 'MANUAL_SEARCH',
+            actorUid: founder.user.uid,
+            requestedQuantity: 2,
+            quantity: 2,
+            presentation: { code: 'unit', label: null },
+            factorToBaseUnit: 1,
+            barcodeId: null,
+            barcode: null,
+            position: { kind: 'UNASSIGNED' },
+            locationBalanceId: manualLocationBalanceId,
+            lotId: null,
+            lotCode: null,
+          },
+          createdAt: serverTimestamp(),
+        }
+      );
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'balances', manualMaterialId),
+        {
+          schemaVersion: 'warehouse_balance_v1',
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId: manualMaterialId,
+          quantity: 2,
+          revision: 2,
+          lastMovementId: deniedUnassignedOutboundMovementId,
+          updatedAt: serverTimestamp(),
+        }
+      );
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', manualLocationBalanceId),
+        {
+          schemaVersion: 'warehouse_location_balance_v1',
+          id: manualLocationBalanceId,
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId: manualMaterialId,
+          position: { kind: 'UNASSIGNED' },
+          quantity: 2,
+          revision: 2,
+          lastMovementId: deniedUnassignedOutboundMovementId,
+          updatedAt: serverTimestamp(),
+        }
+      );
+    })
+  );
+
+  await allowed('entrada avulsa é posicionada fisicamente antes de ficar disponível para saída', () =>
+    runTransaction(founder.db, async (transaction) => {
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'movements', manualPositioningMovementId),
+        {
+          schemaVersion: 'warehouse_movement_v1',
+          id: manualPositioningMovementId,
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId: manualMaterialId,
+          type: 'TRANSFER',
+          quantityDelta: 0,
+          idempotencyKeyHash: '1122334455667788'.repeat(4),
+          reversesMovementId: null,
+          note: 'Posicionamento físico da entrada avulsa',
+          source: {
+            kind: 'LOCATION_TRANSFER',
+            actorUid: founder.user.uid,
+            quantity: 4,
+            from: { kind: 'UNASSIGNED' },
+            to: {
+              kind: 'SUBPOSITION',
+              depotId,
+              locationId,
+              subpositionId: subpositionAId,
+            },
+            fromBalanceId: manualLocationBalanceId,
+            toBalanceId: manualPhysicalLocationBalanceId,
+          },
+          createdAt: serverTimestamp(),
+        }
+      );
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', manualLocationBalanceId),
+        {
+          schemaVersion: 'warehouse_location_balance_v1',
+          id: manualLocationBalanceId,
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId: manualMaterialId,
+          position: { kind: 'UNASSIGNED' },
+          quantity: 0,
+          revision: 2,
+          lastMovementId: manualPositioningMovementId,
+          updatedAt: serverTimestamp(),
+        }
+      );
+      transaction.set(
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', manualPhysicalLocationBalanceId),
+        {
+          schemaVersion: 'warehouse_location_balance_v1',
+          id: manualPhysicalLocationBalanceId,
+          workspaceId: WORKSPACE_ID,
+          ug: UG,
+          materialId: manualMaterialId,
+          position: {
+            kind: 'SUBPOSITION',
+            depotId,
+            locationId,
+            subpositionId: subpositionAId,
+          },
+          quantity: 4,
+          revision: 1,
+          lastMovementId: manualPositioningMovementId,
+          updatedAt: serverTimestamp(),
+        }
+      );
+    })
+  );
+
   const returnOutboundMovementId = 'mov_' + '2468ace013579bdf'.repeat(4);
   const returnConsumptionId = 'cons_' + '13579bdf2468ace0'.repeat(4);
   const returnLineId = 'wline_' + '13579bdf2468ace0'.repeat(2);
@@ -1489,8 +1626,13 @@ async function main() {
             factorToBaseUnit: 1,
             barcodeId: null,
             barcode: null,
-            position: { kind: 'UNASSIGNED' },
-            locationBalanceId: manualLocationBalanceId,
+            position: {
+              kind: 'SUBPOSITION',
+              depotId,
+              locationId,
+              subpositionId: subpositionAId,
+            },
+            locationBalanceId: manualPhysicalLocationBalanceId,
             lotId: null,
             lotCode: null,
           },
@@ -1511,14 +1653,19 @@ async function main() {
         }
       );
       transaction.set(
-        doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', manualLocationBalanceId),
+        doc(founder.db, 'warehouse', WORKSPACE_ID, 'locationBalances', manualPhysicalLocationBalanceId),
         {
           schemaVersion: 'warehouse_location_balance_v1',
-          id: manualLocationBalanceId,
+          id: manualPhysicalLocationBalanceId,
           workspaceId: WORKSPACE_ID,
           ug: UG,
           materialId: manualMaterialId,
-          position: { kind: 'UNASSIGNED' },
+          position: {
+            kind: 'SUBPOSITION',
+            depotId,
+            locationId,
+            subpositionId: subpositionAId,
+          },
           quantity: 2,
           revision: 2,
           lastMovementId: returnOutboundMovementId,
@@ -1554,7 +1701,7 @@ async function main() {
         invoiceRecordKey: null,
         barcode: null,
         lotCode: null,
-        positionLabel: 'Sem localização',
+        positionLabel: 'Subposição ADM-R1 A',
         siscofisStatus: 'PENDING',
         occurredAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -1649,7 +1796,7 @@ async function main() {
           ug: UG,
           materialId: manualMaterialId,
           position: { kind: 'UNASSIGNED' },
-          quantity: 3,
+          quantity: 1,
           revision: 3,
           lastMovementId: outboundReturnMovementId,
           updatedAt: serverTimestamp(),
@@ -1683,7 +1830,7 @@ async function main() {
         getDoc(outboundReturnSummaryRef),
       ]);
     assert.equal(balanceSnapshot.data()?.quantity, 3);
-    assert.equal(locationSnapshot.data()?.quantity, 3);
+    assert.equal(locationSnapshot.data()?.quantity, 1);
     assert.equal(consumptionSnapshot.data()?.quantity, 2);
     assert.equal(consumptionSnapshot.data()?.returnedQuantity, 0);
     assert.equal(returnSnapshot.data()?.returnedQuantity, 1);
@@ -1879,6 +2026,7 @@ async function main() {
   console.log('- alocação completa TRANSFER + posições + lote + intake é coberta pelo teste positivo');
   console.log('- duas alocações sequenciais em subposições distintas levam o intake parcial a PROCESSED');
   console.log('- retirada total OUTBOUND reduz saldo agregado, zera a posição física e zera o lote correspondente');
+  console.log('- Saída de Material rejeita saldo técnico UNASSIGNED e exige posição física');
   console.log('- ficha do item realoca posição e lote por TRANSFER sem alterar saldo agregado');
   console.log('- edição de barcode preserva o código anterior inativo e cria o substituto ativo');
   console.log('- inventário conta sem alterar estoque e só INVENTORY_ADJUSTMENT confirmado modifica ledger/saldos');

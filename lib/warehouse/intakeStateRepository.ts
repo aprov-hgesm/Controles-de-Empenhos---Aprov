@@ -160,7 +160,7 @@ async function listOperationalBounded<T>(
 
   try {
     const snapshot = await getDocs(
-      query(operationalCollectionRef(scope, collectionName), limit(maxResults))
+      operationalCollectionRef(scope, collectionName)
     );
     recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return {
@@ -171,7 +171,7 @@ async function listOperationalBounded<T>(
         }
         return { ...data, id: data.id || entry.id } as T;
       }),
-      truncated: snapshot.size >= maxResults,
+      truncated: false,
     };
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
@@ -232,9 +232,7 @@ async function listPersistedIntakes(
   const path = warehouseDomainPath(scope.workspaceId, 'intakes');
 
   try {
-    const snapshot = await getDocs(
-      query(collection(db, path), limit(WAREHOUSE_INTAKE_QUEUE_STATES_LIMIT))
-    );
+    const snapshot = await getDocs(collection(db, path));
     recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return {
       items: snapshot.docs.flatMap((entry) => {
@@ -245,7 +243,7 @@ async function listPersistedIntakes(
         );
         return parsed ? [parsed] : [];
       }),
-      truncated: snapshot.size >= WAREHOUSE_INTAKE_QUEUE_STATES_LIMIT,
+      truncated: false,
     };
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
@@ -633,7 +631,8 @@ export async function loadWarehouseInvoiceIntakeQueue(
     rows: [...resolvedCanonicalRows, ...orphanRows],
     cutoffAt,
     truncated,
-    reconciliationCoverageLimited: invoicesResult.truncated,
+    reconciliationCoverageLimited:
+      movementRecords.length >= WAREHOUSE_INTAKE_QUEUE_LEGACY_MOVEMENTS_LIMIT,
     pregaoCoverageLimited:
       invoicesResult.truncated || empenhosResult.truncated,
   };

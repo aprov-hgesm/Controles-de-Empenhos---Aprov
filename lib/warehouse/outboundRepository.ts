@@ -216,6 +216,9 @@ export async function applyWarehouseExpressOutbound(
   const scope = currentScope(workspaceId);
   const position = validateWarehouseStockPosition(input.position);
   if (!position) throw new Error('WAREHOUSE_OUTBOUND_INVALID_POSITION');
+  if (position.kind === 'UNASSIGNED') {
+    throw new Error('WAREHOUSE_OUTBOUND_REQUIRES_PHYSICAL_POSITION');
+  }
 
   const movementId = await createWarehouseMovementId(
     scope.workspaceId,
@@ -382,12 +385,10 @@ export async function applyWarehouseExpressOutbound(
         lot,
       });
 
-      const initialLocationQuantity =
-        position.kind === 'UNASSIGNED' && !currentLocationBalance
-          ? currentBalance.quantity
-          : 0;
-      const availableAtPosition =
-        currentLocationBalance?.quantity ?? initialLocationQuantity;
+      if (!currentLocationBalance) {
+        throw new Error('WAREHOUSE_OUTBOUND_LOCATION_BALANCE_REQUIRED');
+      }
+      const availableAtPosition = currentLocationBalance.quantity;
       if (availableAtPosition + 0.000001 < plan.baseQuantity) {
         throw new Error('WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK');
       }
@@ -456,7 +457,6 @@ export async function applyWarehouseExpressOutbound(
           position,
           quantityDelta: -plan.baseQuantity,
           movementId,
-          initialQuantity: initialLocationQuantity,
         }
       );
 

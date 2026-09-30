@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ClipboardCheck, FileSpreadsheet, History, PackageSearch, RefreshCw, ShieldCheck } from 'lucide-react';
 
 import { listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
-import { listWarehouseMovements, type WarehouseMovementListItem } from '../../../lib/warehouse/ledgerRepository';
+import { listWarehouseMovementsInPeriod, type WarehouseMovementListItem } from '../../../lib/warehouse/ledgerRepository';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import type { WarehouseMovementType } from '../../../lib/warehouse/movement';
 import { WAREHOUSE_MOVEMENT_TYPES } from '../../../lib/warehouse/movement';
@@ -66,21 +66,23 @@ function LedgerAndInvoiceReport({ workspaceId }: { workspaceId: string }) {
     setLoading(true);
     setMessage(null);
     try {
+      const startAt = new Date(startDate + 'T00:00:00');
+      const endAt = new Date(endDate + 'T23:59:59.999');
       const [nextMaterials, nextMovements] = await Promise.all([
         listWarehouseMaterials(workspaceId, 250),
-        listWarehouseMovements(workspaceId, 250),
+        listWarehouseMovementsInPeriod(workspaceId, startAt, endAt, 500),
       ]);
       setMaterials(nextMaterials);
       setMovements(nextMovements);
-      if (nextMovements.length >= 250) {
-        setMessage('A consulta atingiu o limite bounded de 250 movimentos. Refine o período/filtros para análise operacional.');
+      if (nextMovements.length >= 500) {
+        setMessage('O período selecionado atingiu o limite de 500 movimentos. Reduza o intervalo para uma consulta completa.');
       }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Não foi possível carregar o relatório.');
     } finally {
       setLoading(false);
     }
-  }, [workspaceId]);
+  }, [endDate, startDate, workspaceId]);
 
   useEffect(() => {
     void refresh();
@@ -149,7 +151,7 @@ function LedgerAndInvoiceReport({ workspaceId }: { workspaceId: string }) {
               <p className="text-xs font-black uppercase tracking-[0.12em]">Movimentações e entradas por NF</p>
             </div>
             <p className="mt-2 text-xs leading-5 text-slate-500">
-              Leitura bounded do ledger oficial. Entradas por NF e entradas avulsas permanecem auditáveis pela origem estruturada, sem criar fonte paralela de saldo.
+              Consulta do ledger oficial pelo período selecionado. Entradas por NF e entradas avulsas permanecem auditáveis pela origem estruturada, sem criar fonte paralela de saldo.
             </p>
           </div>
           <div className="flex gap-2">

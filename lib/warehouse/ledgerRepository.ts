@@ -316,13 +316,13 @@ export async function listWarehouseMovementsForMaterial(
   const normalizedWorkspaceId = normalizeRequiredWorkspace(workspaceId);
   const path = warehouseDocumentPath(normalizedWorkspaceId, 'movements', '__probe__')
     .replace('/__probe__', '');
+  const bounded = Math.max(1, Math.min(maxResults, 100));
 
   try {
     const snapshot = await getDocs(
       query(
         collection(db, path),
-        where('materialId', '==', materialId),
-        limit(Math.max(1, Math.min(maxResults, 100)))
+        where('materialId', '==', materialId)
       )
     );
     recordWarehouseDocumentReads(workspaceId, snapshot.size);
@@ -338,7 +338,54 @@ export async function listWarehouseMovementsForMaterial(
               : null,
         };
       })
-      .sort((left, right) => (right.createdAt || '').localeCompare(left.createdAt || ''));
+      .sort((left, right) => (right.createdAt || '').localeCompare(left.createdAt || ''))
+      .slice(0, bounded);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return [];
+  }
+}
+
+export async function listWarehouseMovementsInPeriod(
+  workspaceId: string,
+  startAt: Date,
+  endAt: Date,
+  maxResults = 500
+): Promise<WarehouseMovementListItem[]> {
+  const normalizedWorkspaceId = normalizeRequiredWorkspace(workspaceId);
+  if (
+    !Number.isFinite(startAt.getTime())
+    || !Number.isFinite(endAt.getTime())
+    || endAt.getTime() < startAt.getTime()
+  ) {
+    throw new Error('WAREHOUSE_MOVEMENT_INVALID_PERIOD');
+  }
+  const path = warehouseDocumentPath(normalizedWorkspaceId, 'movements', '__probe__')
+    .replace('/__probe__', '');
+  const bounded = Math.max(1, Math.min(maxResults, 500));
+
+  try {
+    const snapshot = await getDocs(
+      query(
+        collection(db, path),
+        where('createdAt', '>=', startAt),
+        where('createdAt', '<=', endAt),
+        orderBy('createdAt', 'desc'),
+        limit(bounded)
+      )
+    );
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
+    return snapshot.docs.map((item) => {
+      const data = item.data() as Record<string, unknown>;
+      const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
+      return {
+        movement: parseMovement(normalizedWorkspaceId, item.id, data),
+        createdAt:
+          rawCreatedAt && typeof rawCreatedAt.toDate === 'function'
+            ? rawCreatedAt.toDate().toISOString()
+            : null,
+      };
+    });
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
     return [];

@@ -28,7 +28,6 @@ import {
   type WarehouseBarcodeListItem,
 } from '../../../lib/warehouse/barcodeRepository';
 import {
-  deriveUnassignedQuantity,
   warehouseStockPositionKey,
   type WarehouseStockPosition,
 } from '../../../lib/warehouse/location';
@@ -126,6 +125,28 @@ function draftStorageKey(workspaceId: string): string {
   return 'emprovex:warehouse:material-withdrawal:v1:' + workspaceId;
 }
 
+function recoveryStorageKey(workspaceId: string): string {
+  return 'emprovex:warehouse:material-withdrawal:recovery:v1:' + workspaceId;
+}
+
+function parsePersistedDraft(raw: string | null): PersistedDraft | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as PersistedDraft;
+    if (
+      !parsed
+      || typeof parsed.withdrawalId !== 'string'
+      || !Array.isArray(parsed.cart)
+      || typeof parsed.destinationId !== 'string'
+      || typeof parsed.withdrawnBy !== 'string'
+      || typeof parsed.retryRequired !== 'boolean'
+    ) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 function numberLabel(value: number): string {
   return value.toLocaleString('pt-BR', { maximumFractionDigits: 6 });
 }
@@ -157,6 +178,8 @@ function errorMessage(error: unknown): string {
   const mappings: Array<[string, string]> = [
     ['WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK', 'O saldo oficial mudou e não comporta uma das linhas. A retirada permaneceu não finalizada e pode ser retomada.'],
     ['WAREHOUSE_OUTBOUND_LOCATION_INSUFFICIENT_STOCK', 'A posição física perdeu saldo antes da finalização. A retirada não foi marcada como concluída.'],
+    ['WAREHOUSE_OUTBOUND_REQUIRES_PHYSICAL_POSITION', 'A saída só pode utilizar material já alocado fisicamente em um depósito.'],
+    ['WAREHOUSE_OUTBOUND_LOCATION_BALANCE_REQUIRED', 'A posição física selecionada não possui saldo operacional disponível.'],
     ['WAREHOUSE_OUTBOUND_LOT_INSUFFICIENT_ATTRIBUTION', 'A validade selecionada já não possui quantidade suficiente vinculada.'],
     ['WAREHOUSE_BARCODE_CHANGED', 'A associação do código de barras mudou desde a leitura. Refaça a operação com os dados atuais.'],
     ['WAREHOUSE_DESTINATION_INACTIVE', 'O destino selecionado está inativo. Selecione um destino ativo.'],
@@ -197,57 +220,51 @@ function positionOptionsFor(
   balance: WarehouseBalance | null,
   state: CheckoutState
 ): PositionOption[] {
-  if (!balance) return [];
-  const rows: PositionOption[] = state.locationBalances
-    .filter((item) => item.balance.materialId === material.id && item.balance.quantity > 0)
+  if (!balance || balance.quantity <= 0) return [];
+  return state.locationBalances
+    .filter((item) =>
+      item.balance.materialId === material.id
+      && item.balance.quantity > 0
+      && item.balance.position.kind !== 'UNASSIGNED'
+    )
     .map((item) => ({
       key: warehouseStockPositionKey(item.balance.position),
       position: item.balance.position,
       quantity: item.balance.quantity,
       label: buildWarehousePositionLabel(item.balance.position, state.depots, state.locations),
     }));
-
-  if (!rows.some((row) => row.position.kind === 'UNASSIGNED')) {
-    const physical = state.locationBalances
-      .filter((item) => item.balance.materialId === material.id && item.balance.position.kind !== 'UNASSIGNED')
-      .map((item) => item.balance);
-    let unassigned = 0;
-    try {
-      unassigned = deriveUnassignedQuantity(balance.quantity, physical);
-    } catch {
-      unassigned = 0;
-    }
-    if (unassigned > 0) {
-      rows.push({
-        key: 'UNASSIGNED',
-        position: { kind: 'UNASSIGNED' },
-        quantity: unassigned,
-        label: 'Sem localização',
-      });
-    }
-  }
-  return rows;
 }
 
 function readDraft(workspaceId: string): PersistedDraft | null {
   if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.sessionStorage.getItem(draftStorageKey(workspaceId));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as PersistedDraft;
-    if (
-      !parsed
-      || typeof parsed.withdrawalId !== 'string'
-      || !Array.isArray(parsed.cart)
-      || typeof parsed.destinationId !== 'string'
-      || typeof parsed.withdrawnBy !== 'string'
-    ) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
+  const sessionDraft = parsePersistedDraft(
+    window.sessionStorage.getItem(draftStorageKey(workspaceId))
+  );
+  if (sessionDraft) return sessionDraft;
+
+  const recoveryDraft = parsePersistedDraft(
+    window.localStorage.getItem(recoveryStorageKey(workspaceId))
+  );
+  return recoveryDraft
+    ? { ...recoveryDraft, retryRequired: true }
+    : null;
 }
 
+function persistWithdrawalRecovery(
+  workspaceId: string,
+  draft: PersistedDraft
+): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(
+    recoveryStorageKey(workspaceId),
+    JSON.stringify({ ...draft, retryRequired: true })
+  );
+}
+
+function clearWithdrawalRecovery(workspaceId: string): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(recoveryStorageKey(workspaceId));
+}
 
 async function resolveOutboundDocumentLines(
   workspaceId: string,
@@ -329,7 +346,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
   const [destinationId, setDestinationId] = useState(initialDraft?.destinationId || '');
   const [withdrawnBy, setWithdrawnBy] = useState(initialDraft?.withdrawnBy || '');
   const [retryRequired, setRetryRequired] = useState(initialDraft?.retryRequired || false);
-  const [reviewing, setReviewing] = useState(false);
+  const [reviewing, setReviewing] = useState(Boolean(initialDraft?.retryRequired));
   const [working, setWorking] = useState(false);
   const [scannerCode, setScannerCode] = useState('');
   const [unknownBarcode, setUnknownBarcode] = useState('');
@@ -424,10 +441,12 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     const q = normalizeSearch(materialSearch);
     return state.materials.filter((material) => {
       if (material.status !== 'active') return false;
+      const balance = state.balances.find((item) => item.materialId === material.id) || null;
+      if (positionOptionsFor(material, balance, state).length === 0) return false;
       if (!q) return true;
       return normalizeSearch([material.id, material.description, ...material.aliases].join(' ')).includes(q);
     });
-  }, [materialSearch, state.materials]);
+  }, [materialSearch, state]);
 
   const activeDestinations = state.destinations.filter((item) => item.destination.status === 'active');
 
@@ -456,6 +475,19 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     const suggested = selectWarehouseFefoLot(lots);
     const suggestedPositionKey = suggested ? warehouseStockPositionKey(suggested.position) : '';
     const position = positions.find((item) => item.key === suggestedPositionKey) || positions[0] || null;
+
+    if (!position) {
+      setSelectedMaterialId('');
+      setSelectedBarcodeId('');
+      setSelectedPresentationKey('');
+      setRequestedQuantity('');
+      setPositionKey('');
+      setSelectedLotId('');
+      setUnknownBarcode('');
+      setMessageKind('info');
+      setMessage('Este material ainda não possui saldo alocado fisicamente. Conclua a alocação antes de registrar uma saída.');
+      return;
+    }
 
     setSelectedMaterialId(material.id);
     setSelectedBarcodeId(barcode?.id || '');
@@ -719,7 +751,10 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     setRetryRequired(false);
     setReviewing(false);
     setWithdrawalId(createWarehouseWithdrawalId());
-    if (typeof window !== 'undefined') window.sessionStorage.removeItem(draftStorageKey(workspaceId));
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.removeItem(draftStorageKey(workspaceId));
+      clearWithdrawalRecovery(workspaceId);
+    }
   };
 
   const finalize = async () => {
@@ -736,6 +771,13 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       activeDestinations.find((item) => item.destination.id === destinationId)?.destination.name
       || 'Destino não identificado';
 
+    persistWithdrawalRecovery(workspaceId, {
+      withdrawalId,
+      cart: cartSnapshot,
+      destinationId,
+      withdrawnBy,
+      retryRequired: true,
+    });
     setWorking(true);
     setMessage(null);
 

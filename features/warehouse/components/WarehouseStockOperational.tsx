@@ -364,7 +364,7 @@ export function WarehouseStockOperational({
                   state.locations
                 )
               ),
-            ...(unassigned > 0 ? ['Sem localização'] : []),
+            ...(unassigned > 0 ? ['Pendente de alocação física'] : []),
           ])
         );
         const fefo = selectWarehouseFefoLot(availableLots);
@@ -635,19 +635,7 @@ export function WarehouseStockOperational({
         }))
     : [];
 
-  const relocationSources = selected
-    ? [
-        ...selectedLocations,
-        ...(selected.unassigned > 0
-          ? [{
-              key: 'UNASSIGNED',
-              label: 'Sem localização',
-              quantity: selected.unassigned,
-              position: { kind: 'UNASSIGNED' } as WarehouseStockPosition,
-            }]
-          : []),
-      ]
-    : [];
+  const relocationSources = selected ? selectedLocations : [];
 
   const relocationLocations = activeTopLevelLocations.filter(
     ({ location }) => location.depotId === relocateDepotId
@@ -865,7 +853,7 @@ export function WarehouseStockOperational({
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Distribuído</p>
                   <p className="mt-1 text-sm font-bold text-slate-700">{numberLabel(summary.distributed)}</p>
-                  <p className="text-[9px] text-slate-600">{numberLabel(summary.unassigned)} sem localização</p>
+                  <p className="text-[9px] text-slate-600">{numberLabel(summary.unassigned)} pendente de alocação física</p>
                 </div>
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Validades</p>
@@ -920,7 +908,7 @@ export function WarehouseStockOperational({
             <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
               <p className="text-[9px] uppercase tracking-[0.12em] text-slate-600">Distribuição física</p>
               <p className="mt-2 text-sm font-black text-slate-800">{numberLabel(selected.distributed)} localizado</p>
-              <p className="mt-1 text-[10px] text-slate-600">{numberLabel(selected.unassigned)} sem localização</p>
+              <p className="mt-1 text-[10px] text-slate-600">{numberLabel(selected.unassigned)} pendente de alocação física</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
               <p className="text-[9px] uppercase tracking-[0.12em] text-slate-600">Validades rastreadas</p>
@@ -963,7 +951,7 @@ export function WarehouseStockOperational({
                       ))}
                       {selected.unassigned > 0 && (
                         <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
-                          <span className="text-xs font-bold text-amber-800">Sem localização</span>
+                          <span className="text-xs font-bold text-amber-800">Pendente de alocação física</span>
                           <span className="text-xs text-amber-700">{numberLabel(selected.unassigned)}</span>
                         </div>
                       )}

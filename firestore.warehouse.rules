@@ -689,6 +689,7 @@ service cloud.firestore {
         && source.factorToBaseUnit <= 1000000000
         && validWarehouseMaterialUnit(source.presentation)
         && validWarehouseStockPosition(source.position)
+        && source.position.kind != 'UNASSIGNED'
         && source.locationBalanceId is string
         && source.locationBalanceId.matches('^locbal_[a-f0-9]{64}$')
         && (
@@ -1205,43 +1206,20 @@ service cloud.firestore {
         );
     }
 
-    function warehouseNewUnassignedBalanceMatchesExpressOutbound(workspaceId, movement) {
-      let balancePath = /databases/$(database)/documents/warehouse/$(workspaceId)/balances/$(movement.materialId);
-      let aggregateBalance = get(balancePath).data;
-      return movement.source.position.kind == 'UNASSIGNED'
-        && request.resource.data.revision == 1
-        && exists(balancePath)
-        && aggregateBalance.quantity >= movement.source.quantity
-        && request.resource.data.quantity
-          == aggregateBalance.quantity - movement.source.quantity;
-    }
-
     function warehouseLocationBalanceMatchesExpressOutbound(workspaceId, locationBalanceId, movement) {
       let source = movement.source;
-      let locationPath = /databases/$(database)/documents/warehouse/$(workspaceId)/locationBalances/$(locationBalanceId);
-      let locationExists = exists(locationPath);
-      return source.locationBalanceId == locationBalanceId
+      return resource.data is map
+        && source.locationBalanceId == locationBalanceId
+        && source.position.kind != 'UNASSIGNED'
         && source.quantity == -movement.quantityDelta
         && request.resource.data.materialId == movement.materialId
         && request.resource.data.workspaceId == workspaceId
         && request.resource.data.ug == movement.ug
         && request.resource.data.position == source.position
-        && (
-          (
-            locationExists
-            && request.resource.data.revision == resource.data.revision + 1
-            && resource.data.quantity >= source.quantity
-            && request.resource.data.quantity
-              == resource.data.quantity - source.quantity
-          )
-          || (
-            !locationExists
-            && warehouseNewUnassignedBalanceMatchesExpressOutbound(
-              workspaceId,
-              movement
-            )
-          )
-        );
+        && request.resource.data.revision == resource.data.revision + 1
+        && resource.data.quantity >= source.quantity
+        && request.resource.data.quantity
+          == resource.data.quantity - source.quantity;
     }
 
     function warehouseLocationBalanceMatchesNonTransfer(workspaceId, locationBalanceId, movement) {
@@ -1297,7 +1275,7 @@ service cloud.firestore {
         && request.resource.data.ug == movement.ug
         && request.resource.data.materialId == movement.materialId
         && request.resource.data.position == movement.source.position
-        && validWarehouseStockPosition(request.resource.data.position)
+        && movement.source.position.kind != 'UNASSIGNED'
         && request.resource.data.quantity is number
         && request.resource.data.quantity >= 0
         && request.resource.data.quantity <= 1000000000
@@ -1321,11 +1299,6 @@ service cloud.firestore {
               workspaceId,
               locationBalanceId,
               movement
-            )
-            && warehousePositionActive(
-              workspaceId,
-              request.resource.data.position,
-              request.resource.data.ug
             )
             && warehouseLocationBalanceMatchesExpressOutbound(
               workspaceId,
