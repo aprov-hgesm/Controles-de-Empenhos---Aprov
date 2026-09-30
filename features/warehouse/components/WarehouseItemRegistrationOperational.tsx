@@ -90,7 +90,6 @@ import {
   getOrCreateWarehouseBulkOperationId,
   readWarehouseInvoiceDefaultDestination,
   saveWarehouseInvoiceDefaultDestination,
-  type WarehouseIntakeBulkMode,
   type WarehouseInvoiceDefaultDestination,
 } from './warehouseIntakeSession';
 import {
@@ -545,7 +544,7 @@ type InvoiceQueueStatusFilter =
   | 'processed'
   | 'reconciliation';
 
-type PregaoBulkMode = WarehouseIntakeBulkMode;
+type PregaoBulkMode = 'storage' | 'immediate' | 'remove';
 
 interface WarehouseInvoiceQueueGroup {
   key: string;
