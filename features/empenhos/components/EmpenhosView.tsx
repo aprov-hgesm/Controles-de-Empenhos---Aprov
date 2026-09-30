@@ -2157,10 +2157,6 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                             </div>
                           )}
 
-                          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-[11px] leading-5 text-slate-600">
-                            <strong className="text-slate-800">Durante o período de testes:</strong> esta opção é adicional.
-                            Cadastro Manual e Importar via JSON continuam disponíveis sem alteração.
-                          </div>
                         </div>
                       )}
 
