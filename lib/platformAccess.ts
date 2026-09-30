@@ -4,6 +4,7 @@ import type { User } from 'firebase/auth';
 import { doc, runTransaction } from 'firebase/firestore';
 
 import { db } from './firebase';
+import { getTrustedServerNowMs } from './serverClock';
 import { HGESM_SECTOR_EMAIL } from './hgesmWorkspace';
 import {
   FOUNDER_AUTH_PROVIDER,
@@ -89,7 +90,7 @@ async function resolveAndBindExternalIdentity(
   normalizedEmail: string,
   signInProvider: PlatformAuthProvider
 ): Promise<ResolvedExternalIdentity | null> {
-  const now = new Date().toISOString();
+  const now = new Date(await getTrustedServerNowMs()).toISOString();
   const accountRef = doc(db, PLATFORM_ACCOUNTS_COLLECTION, normalizedEmail);
 
   return runTransaction(db, async (transaction) => {

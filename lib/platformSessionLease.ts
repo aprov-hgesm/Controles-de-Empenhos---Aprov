@@ -12,6 +12,10 @@ import {
 
 import { db } from './firebase';
 import {
+  getCachedTrustedServerNowMs,
+  getTrustedServerNowMs,
+} from './serverClock';
+import {
   DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT,
   SESSION_HEARTBEAT_INTERVAL_MS,
   SESSION_LEASE_DURATION_MS,
@@ -32,7 +36,8 @@ import type { SectorWorkspaceContext } from './workspaceContext';
 const BROWSER_INSTANCE_KEY = 'emprovex:browser-instance:v1';
 const SESSION_ID_KEY_PREFIX = 'emprovex:workspace-session:v1';
 const ACTIVE_LEASE_KEY_PREFIX = 'emprovex:workspace-lease:v1';
-const LAST_RENEWED_KEY_PREFIX = 'emprovex:workspace-lease-renewed:v1';
+const LEGACY_LAST_RENEWED_KEY_PREFIX = 'emprovex:workspace-lease-renewed:v1';
+const LAST_RENEWED_KEY_PREFIX = 'emprovex:workspace-lease-renewed:v2';
 
 export const SESSION_CAPACITY_EXCEEDED_MESSAGE =
   'Limite de acessos simultâneos atingido. Este setor já possui 2 sessões ativas no EMPROVEX. Encerre uma das sessões existentes para continuar.';
@@ -187,7 +192,7 @@ function rememberLocalLease(record: LocalLeaseRecord): void {
   );
 }
 
-function markLeaseRenewed(workspaceId: string, uid: string, at = Date.now()): void {
+function markLeaseRenewed(workspaceId: string, uid: string, at: number): void {
   browserStorage()?.setItem(
     scopedKey(LAST_RENEWED_KEY_PREFIX, workspaceId, uid),
     String(at)
@@ -197,7 +202,7 @@ function markLeaseRenewed(workspaceId: string, uid: string, at = Date.now()): vo
 export function shouldRenewWorkspaceSessionLease(
   workspaceId: string,
   uid: string,
-  at = Date.now()
+  at: number
 ): boolean {
   const raw = browserStorage()?.getItem(
     scopedKey(LAST_RENEWED_KEY_PREFIX, workspaceId, uid)
@@ -216,6 +221,7 @@ export function clearLocalWorkspaceSessionLease(
   storage?.removeItem(scopedKey(ACTIVE_LEASE_KEY_PREFIX, workspaceId, uid));
   storage?.removeItem(scopedKey(SESSION_ID_KEY_PREFIX, workspaceId, uid));
   storage?.removeItem(scopedKey(LAST_RENEWED_KEY_PREFIX, workspaceId, uid));
+  storage?.removeItem(scopedKey(LEGACY_LAST_RENEWED_KEY_PREFIX, workspaceId, uid));
 }
 export function clearAllLocalWorkspaceSessionState(): void {
   const storage = browserStorage();
@@ -230,6 +236,7 @@ export function clearAllLocalWorkspaceSessionState(): void {
         key.startsWith(ACTIVE_LEASE_KEY_PREFIX)
         || key.startsWith(SESSION_ID_KEY_PREFIX)
         || key.startsWith(LAST_RENEWED_KEY_PREFIX)
+        || key.startsWith(LEGACY_LAST_RENEWED_KEY_PREFIX)
       )
     ) {
       keys.push(key);
@@ -339,6 +346,8 @@ export async function acquireWorkspaceSessionLease(
     sessionId
   );
 
+  const initialTrustedNowMs = await getTrustedServerNowMs();
+
   const result = await runTransaction(db, async (transaction) => {
     const [revocationSnapshot, ...snapshots] = await Promise.all([
       transaction.get(revocationRef),
@@ -355,9 +364,11 @@ export async function acquireWorkspaceSessionLease(
       );
     }
 
-    // Firestore pode repetir o callback de uma transação após contenção. Calcular
-    // o relógio por tentativa evita decidir takeover/expiração com tempo obsoleto.
-    const attemptNowMs = Date.now();
+    // A decisão temporal usa o relógio sincronizado com o servidor EMPROVEX.
+    // O valor é extrapolado por relógio monotônico, portanto diferenças no
+    // relógio do Windows não afetam expiração, takeover ou duração do lease.
+    const attemptNowMs =
+      getCachedTrustedServerNowMs() ?? initialTrustedNowMs;
 
     const candidates = snapshots.map((snapshot, index) => ({
       slotId: slotRefs[index].slotId,
@@ -569,7 +580,7 @@ async function renewKnownWorkspaceSessionLease(
 ): Promise<WorkspaceSessionLeaseRenewal> {
   const ug = validateExternalSessionContext(user, context);
   const accountEmail = normalizePlatformEmail(user.email || '');
-  const renewedAtMs = Date.now();
+  const renewedAtMs = await getTrustedServerNowMs();
   const expiresAt = Timestamp.fromMillis(renewedAtMs + SESSION_LEASE_DURATION_MS);
   const ref = doc(
     db,
@@ -632,17 +643,26 @@ export async function renewWorkspaceSessionLeaseIfDue(
     return null;
   }
 
-  // Fast path: praticamente todos os ticks param aqui. O timestamp vive em
-  // localStorage e é compartilhado pelas abas do mesmo navegador.
-  if (!shouldRenewWorkspaceSessionLease(context.workspaceId, user.uid)) {
+  // O marcador vive em localStorage, mas a comparação temporal usa a hora
+  // sincronizada com o servidor, nunca o relógio de parede do computador.
+  const trustedNowMs = await getTrustedServerNowMs();
+  if (!shouldRenewWorkspaceSessionLease(
+    context.workspaceId,
+    user.uid,
+    trustedNowMs
+  )) {
     return null;
   }
 
   const renewIfStillDue = async () => {
     // Segunda leitura dentro do mutex: duas abas podem observar "due" ao mesmo
-    // tempo, mas somente a primeira deve efetivamente renovar. Quando a segunda
-    // entra, ela já encontra o marcador atualizado e retorna sem write.
-    if (!shouldRenewWorkspaceSessionLease(context.workspaceId, user.uid)) {
+    // tempo, mas somente a primeira deve efetivamente renovar.
+    const currentTrustedNowMs = await getTrustedServerNowMs();
+    if (!shouldRenewWorkspaceSessionLease(
+      context.workspaceId,
+      user.uid,
+      currentTrustedNowMs
+    )) {
       return null;
     }
 

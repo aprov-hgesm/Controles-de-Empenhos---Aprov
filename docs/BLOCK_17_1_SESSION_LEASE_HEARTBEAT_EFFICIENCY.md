@@ -163,3 +163,21 @@ O Bloco 17.1 só pode ser mesclado se:
 - takeover, logout e revogação continuarem cobertos;
 - suíte multi-tenant, Browser E2E, build e TypeScript permanecerem verdes;
 - nenhum deploy Vercel for executado.
+
+
+## Relógio confiável do servidor
+
+O controle de sessão não depende mais do horário configurado no computador do operador.
+A aplicação sincroniza um relógio de referência com uma rota do próprio EMPROVEX e
+extrapola esse instante com relógio monotônico do navegador.
+
+Assim, diferenças de alguns minutos no Windows institucional não alteram:
+
+- a decisão de slot expirado;
+- o cálculo de `expiresAt`;
+- a decisão de heartbeat vencido;
+- os horários de primeiro/último login usados pelo fluxo de acesso.
+
+As Firestore Rules continuam comparando `expiresAt` com `request.time`, preservando
+o limite de 2 sessões e a janela de lease 30/15. O que muda é somente a fonte temporal
+usada pelo cliente: servidor EMPROVEX em vez do relógio local do PC.

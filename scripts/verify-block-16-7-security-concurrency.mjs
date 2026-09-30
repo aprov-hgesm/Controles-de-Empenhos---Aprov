@@ -29,7 +29,21 @@ requireText(founderAuth, 'A conta fundadora exige autenticação Google.', 'Falh
 requireText(lease, 'if (revocationSnapshot.exists())', 'Aquisição deve rejeitar qualquer tombstone existente.');
 forbidText(lease, 'stillRevoked', 'Tombstone não pode voltar a autorizar o mesmo sessionId por expiração.');
 forbidText(lease, 'activeRevocation', 'Listener não pode ignorar tombstone existente por expiração.');
-requireText(lease, 'const attemptNowMs = Date.now();', 'Retry transacional deve recalcular o relógio.');
+requireText(
+  lease,
+  'getCachedTrustedServerNowMs() ?? initialTrustedNowMs',
+  'Retry transacional deve recalcular o relógio confiável do servidor.'
+);
+requireText(
+  lease,
+  "from './serverClock'",
+  'Controle de sessão deve usar a fonte temporal do servidor EMPROVEX.'
+);
+forbidText(
+  lease,
+  'const attemptNowMs = Date.now();',
+  'Aquisição não pode voltar a depender do relógio local do computador.'
+);
 requireText(lease, 'renewedAtMs: attemptNowMs', 'Resultado do lease deve conservar o relógio da tentativa vencedora.');
 
 for (const needle of [

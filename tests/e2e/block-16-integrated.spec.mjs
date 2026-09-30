@@ -211,7 +211,7 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
     expect(initialExpiry - initialLastSeen).toBeLessThanOrEqual(30 * 60 * 1000 + 15_000);
 
     await page.evaluate(({ workspaceId, uid }) => {
-      const key = `emprovex:workspace-lease-renewed:v1:${workspaceId}:${uid}`;
+      const key = `emprovex:workspace-lease-renewed:v2:${workspaceId}:${uid}`;
       localStorage.setItem(key, String(Date.now() - (16 * 60 * 1000)));
       window.dispatchEvent(new Event('online'));
     }, { workspaceId: WORKSPACE_ID, uid: session.uid });
@@ -251,6 +251,46 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
     expect(buffered.ug).toBe(UG);
     expect(buffered.estimatedDocumentReads).toBeGreaterThan(0);
     expect(buffered.estimatedDocumentWrites).toBeGreaterThan(0);
+
+    await logoutIfAuthenticated(page);
+  });
+
+  test('relógio local atrasado não impede o acesso operacional', async ({ page }) => {
+    await page.addInitScript(() => {
+      const realDateNow = Date.now.bind(Date);
+      Date.now = () => realDateNow() - (6 * 60 * 1000);
+    });
+
+    await page.goto('/');
+    await loginSector(page);
+
+    const [session] = await workspaceSessions();
+    expect(session).toBeTruthy();
+    expect(session.workspaceId).toBe(WORKSPACE_ID);
+    expect(session.ug).toBe(UG);
+
+    const expiry = Date.parse(session.expiresAt);
+    expect(expiry).toBeGreaterThan(Date.now() + (25 * 60 * 1000));
+
+    await logoutIfAuthenticated(page);
+  });
+
+  test('relógio local adiantado não impede o acesso operacional', async ({ page }) => {
+    await page.addInitScript(() => {
+      const realDateNow = Date.now.bind(Date);
+      Date.now = () => realDateNow() + (6 * 60 * 1000);
+    });
+
+    await page.goto('/');
+    await loginSector(page);
+
+    const [session] = await workspaceSessions();
+    expect(session).toBeTruthy();
+    expect(session.workspaceId).toBe(WORKSPACE_ID);
+    expect(session.ug).toBe(UG);
+
+    const expiry = Date.parse(session.expiresAt);
+    expect(expiry).toBeGreaterThan(Date.now() + (19 * 60 * 1000));
 
     await logoutIfAuthenticated(page);
   });

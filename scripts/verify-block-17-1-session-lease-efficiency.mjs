@@ -90,6 +90,15 @@ requireText(
   'Browser E2E não cobre a nova janela 30/15.'
 );
 requireText(browser, 'Date.now() - (16 * 60 * 1000)', 'Browser E2E não força renovação após o novo intervalo.');
+requireText(browser, 'relógio local atrasado não impede o acesso operacional', 'Browser E2E não cobre relógio institucional atrasado.');
+requireText(browser, 'relógio local adiantado não impede o acesso operacional', 'Browser E2E não cobre relógio institucional adiantado.');
+requireText(lease, "from './serverClock'", 'Lease voltou a depender do relógio local em vez do relógio sincronizado.');
+requireText(lease, 'getTrustedServerNowMs()', 'Lease não consulta a hora confiável do servidor.');
+forbidText(
+  renewal,
+  'const renewedAtMs = Date.now()',
+  'Renovação não pode calcular expiresAt com Date.now() do computador.'
+);
 
 if (
   baseline.sessionLease.leaseDurationMs !== 600000

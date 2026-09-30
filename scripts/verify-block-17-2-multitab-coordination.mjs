@@ -65,11 +65,12 @@ forbidText(
 );
 
 for (const marker of [
-  'shouldRenewWorkspaceSessionLease(context.workspaceId, user.uid)',
+  'shouldRenewWorkspaceSessionLease(',
   'const renewIfStillDue = async () =>',
   'navigator.locks.request(',
   'emprovex-session-renew:',
   'return renewIfStillDue();',
+  'getTrustedServerNowMs()',
 ]) {
   requireText(lease, marker, `Heartbeat curto perdeu requisito: ${marker}`);
 }
