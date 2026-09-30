@@ -53,7 +53,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
   const handleEmpenhoDocumentUploaded = async (
     empenhoId: string,
     document: EmpenhoPdfDocument
-  ): Promise<boolean> => {
+  ): Promise<void> => {
     if (!user) throw new Error('Sua sessão expirou. Entre novamente para anexar o documento.');
      const currentEmpenho = empenhos.find((emp) => emp.id === empenhoId);
     if (!currentEmpenho) throw new Error('Empenho não encontrado para vincular o documento.');
@@ -600,7 +600,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     empenhoId: string,
     itemId: string,
     input: { itemCompraNumber: string; name: string }
-  ): Promise<void> => {
+  ): Promise<boolean> => {
     const currentEmpenho = empenhos.find((emp) => emp.id === empenhoId);
     if (!currentEmpenho) {
       showToast('Empenho não encontrado para alteração do item.', 'error');
