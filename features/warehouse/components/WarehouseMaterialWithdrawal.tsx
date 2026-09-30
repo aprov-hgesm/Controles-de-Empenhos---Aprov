@@ -82,6 +82,14 @@ import {
   formatWarehouseNumber,
   normalizeWarehouseSearch,
 } from './warehousePresentation';
+import {
+  clearWarehouseWithdrawalDraft,
+  clearWarehouseWithdrawalRecovery,
+  persistWarehouseWithdrawalDraft,
+  persistWarehouseWithdrawalRecovery,
+  readWarehouseWithdrawalDraft,
+  type WarehouseWithdrawalPersistedDraft,
+} from './warehouseWithdrawalDraft';
 
 type SurfaceTab = 'checkout' | 'reports';
 
@@ -118,39 +126,7 @@ interface PositionOption {
   label: string;
 }
 
-interface PersistedDraft {
-  withdrawalId: string;
-  cart: CartLine[];
-  destinationId: string;
-  withdrawnBy: string;
-  retryRequired: boolean;
-}
-
-function draftStorageKey(workspaceId: string): string {
-  return 'emprovex:warehouse:material-withdrawal:v1:' + workspaceId;
-}
-
-function recoveryStorageKey(workspaceId: string): string {
-  return 'emprovex:warehouse:material-withdrawal:recovery:v1:' + workspaceId;
-}
-
-function parsePersistedDraft(raw: string | null): PersistedDraft | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as PersistedDraft;
-    if (
-      !parsed
-      || typeof parsed.withdrawalId !== 'string'
-      || !Array.isArray(parsed.cart)
-      || typeof parsed.destinationId !== 'string'
-      || typeof parsed.withdrawnBy !== 'string'
-      || typeof parsed.retryRequired !== 'boolean'
-    ) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
+type PersistedDraft = WarehouseWithdrawalPersistedDraft<CartLine>;
 
 function unitLabel(unit: WarehouseMaterialUnit): string {
   return unit.label || unit.code;
@@ -222,37 +198,6 @@ function positionOptionsFor(
     }));
 }
 
-function readDraft(workspaceId: string): PersistedDraft | null {
-  if (typeof window === 'undefined') return null;
-  const sessionDraft = parsePersistedDraft(
-    window.sessionStorage.getItem(draftStorageKey(workspaceId))
-  );
-  if (sessionDraft) return sessionDraft;
-
-  const recoveryDraft = parsePersistedDraft(
-    window.localStorage.getItem(recoveryStorageKey(workspaceId))
-  );
-  return recoveryDraft
-    ? { ...recoveryDraft, retryRequired: true }
-    : null;
-}
-
-function persistWithdrawalRecovery(
-  workspaceId: string,
-  draft: PersistedDraft
-): void {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(
-    recoveryStorageKey(workspaceId),
-    JSON.stringify({ ...draft, retryRequired: true })
-  );
-}
-
-function clearWithdrawalRecovery(workspaceId: string): void {
-  if (typeof window === 'undefined') return;
-  window.localStorage.removeItem(recoveryStorageKey(workspaceId));
-}
-
 async function resolveOutboundDocumentLines(
   workspaceId: string,
   cart: CartLine[],
@@ -311,7 +256,7 @@ async function resolveOutboundDocumentLines(
 export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: string }) {
   const scannerRef = useRef<HTMLInputElement>(null);
   const quantityRef = useRef<HTMLInputElement>(null);
-  const initialDraft = useMemo(() => readDraft(workspaceId), [workspaceId]);
+  const initialDraft = useMemo(() => readWarehouseWithdrawalDraft<CartLine>(workspaceId), [workspaceId]);
 
   const [tab, setTab] = useState<SurfaceTab>('checkout');
   const [state, setState] = useState<CheckoutState>({
@@ -354,7 +299,6 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     useState<WarehouseOutboundDocumentsInput | null>(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
     const draft: PersistedDraft = {
       withdrawalId,
       cart,
@@ -362,7 +306,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       withdrawnBy,
       retryRequired,
     };
-    window.sessionStorage.setItem(draftStorageKey(workspaceId), JSON.stringify(draft));
+    persistWarehouseWithdrawalDraft(workspaceId, draft);
   }, [cart, destinationId, retryRequired, withdrawalId, withdrawnBy, workspaceId]);
 
   const refresh = useCallback(async () => {
@@ -738,10 +682,8 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     setRetryRequired(false);
     setReviewing(false);
     setWithdrawalId(createWarehouseWithdrawalId());
-    if (typeof window !== 'undefined') {
-      window.sessionStorage.removeItem(draftStorageKey(workspaceId));
-      clearWithdrawalRecovery(workspaceId);
-    }
+    clearWarehouseWithdrawalDraft(workspaceId);
+    clearWarehouseWithdrawalRecovery(workspaceId);
   };
 
   const finalize = async () => {
@@ -758,7 +700,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       activeDestinations.find((item) => item.destination.id === destinationId)?.destination.name
       || 'Destino não identificado';
 
-    persistWithdrawalRecovery(workspaceId, {
+    persistWarehouseWithdrawalRecovery(workspaceId, {
       withdrawalId,
       cart: cartSnapshot,
       destinationId,
