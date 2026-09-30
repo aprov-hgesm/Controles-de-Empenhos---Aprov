@@ -392,7 +392,22 @@
 }
 
 .pendingPallet {
-  opacity: .78;
+  opacity: .84;
+  cursor: pointer;
+  outline: none;
+  transition:
+    opacity 150ms ease,
+    filter 150ms ease;
+}
+
+.pendingPallet:hover,
+.pendingPallet:focus-visible {
+  opacity: 1;
+  filter: drop-shadow(0 0 13px rgba(112, 164, 255, .42));
+}
+
+.pendingPallet:focus-visible {
+  outline: none;
 }
 
 .emptyPallet {
@@ -415,6 +430,46 @@
   paint-order: stroke;
   stroke: rgba(1, 5, 14, .98);
   stroke-width: 2.6px;
+}
+
+.palletTooltip {
+  filter: drop-shadow(0 12px 24px rgba(0, 4, 14, .48));
+}
+
+.palletTooltipBackdrop {
+  fill: rgba(4, 11, 27, .96);
+  stroke: rgba(123, 166, 249, .48);
+  stroke-width: 1px;
+}
+
+.palletTooltipTitle {
+  fill: rgba(245, 249, 255, .99);
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.palletTooltipMeta {
+  fill: rgba(180, 203, 244, .92);
+  font-size: 8.2px;
+  font-weight: 800;
+}
+
+.palletTooltipHint {
+  fill: rgba(122, 168, 255, .98);
+  font-size: 7.4px;
+  font-weight: 900;
+}
+
+.palletTooltipItem {
+  fill: rgba(223, 233, 249, .94);
+  font-size: 7.4px;
+  font-weight: 760;
+}
+
+.palletTooltipMore {
+  fill: rgba(247, 205, 136, .96);
+  font-size: 7px;
+  font-weight: 850;
 }
 
 .morePending {

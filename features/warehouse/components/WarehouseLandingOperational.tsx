@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import {
   Check,
@@ -51,6 +52,12 @@ import {
 } from '../visualStyle';
 import styles from './WarehouseLandingOperational.module.css';
 
+const LazyIntakeBulkActionPanel = dynamic(
+  () => import('./WarehouseItemRegistrationOperational')
+    .then((module) => module.IntakeBulkActionPanel),
+  { ssr: false }
+);
+
 interface LandingData {
   loading: boolean;
   error: string | null;
@@ -68,6 +75,7 @@ interface PendingInvoiceGroup {
   supplier: string;
   itemCount: number;
   itemNames: string[];
+  rows: WarehouseInvoiceIntakeQueueRow[];
 }
 
 interface DepotPlacement {
@@ -370,6 +378,7 @@ function buildPendingGroups(rows: WarehouseInvoiceIntakeQueueRow[]): PendingInvo
     if (current) {
       current.itemCount += 1;
       current.itemNames.push(row.itemName);
+      current.rows.push(row);
       continue;
     }
     grouped.set(key, {
@@ -378,6 +387,7 @@ function buildPendingGroups(rows: WarehouseInvoiceIntakeQueueRow[]): PendingInvo
       supplier: row.supplier || 'Fornecedor não informado',
       itemCount: 1,
       itemNames: [row.itemName],
+      rows: [row],
     });
   }
 
@@ -971,10 +981,14 @@ function PalletWorld({
   x,
   y,
   group,
+  onActivate,
+  onHover,
 }: {
   x: number;
   y: number;
   group: PendingInvoiceGroup | null;
+  onActivate?: (group: PendingInvoiceGroup) => void;
+  onHover?: (group: PendingInvoiceGroup | null) => void;
 }) {
   const palletWidth = 48;
   const palletDepth = 34;
@@ -985,7 +999,37 @@ function PalletWorld({
     <g
       className={group ? styles.pendingPallet : styles.emptyPallet}
       data-pending={group ? 'true' : 'false'}
+      data-testid={group ? 'warehouse-pending-invoice-pallet' : undefined}
+      role={group ? 'button' : undefined}
+      tabIndex={group ? 0 : undefined}
+      aria-label={group
+        ? 'NF ' + group.invoiceId + ', ' + group.itemCount + ' item(ns) pendente(s). Abrir alocação.'
+        : undefined}
+      onMouseEnter={() => group && onHover?.(group)}
+      onMouseLeave={() => group && onHover?.(null)}
+      onFocus={() => group && onHover?.(group)}
+      onBlur={() => group && onHover?.(null)}
+      onClick={() => group && onActivate?.(group)}
+      onKeyDown={(event) => {
+        if (!group || (event.key !== 'Enter' && event.key !== ' ')) return;
+        event.preventDefault();
+        onActivate?.(group);
+      }}
     >
+      {group && (
+        <polygon
+          points={polygonPoints([
+            isoPoint(x - 8, y - 8, 0),
+            isoPoint(x + palletWidth + 8, y - 8, 0),
+            isoPoint(x + palletWidth + 8, y + palletDepth + 8, 0),
+            isoPoint(x - 8, y + palletDepth + 8, 0),
+          ])}
+          fill="transparent"
+          stroke="transparent"
+          pointerEvents="all"
+          aria-hidden="true"
+        />
+      )}
       {warehousePallet(
         'receiving-pallet-' + (group?.key || x + '-' + y),
         x,
@@ -1015,6 +1059,73 @@ function PalletWorld({
           'receiving-stock-box'
         );
       })}
+    </g>
+  );
+}
+
+function PendingPalletTooltip({
+  x,
+  y,
+  group,
+}: {
+  x: number;
+  y: number;
+  group: PendingInvoiceGroup;
+}) {
+  const anchor = isoPoint(x + 53, y + 5, 68);
+  const previewRows = group.rows.slice(0, 3);
+  const tooltipWidth = 250;
+  const tooltipHeight = 68 + previewRows.length * 17 + (group.rows.length > 3 ? 16 : 0);
+  const tooltipX = Math.min(SVG_WIDTH - tooltipWidth - 18, anchor.x + 14);
+  const tooltipY = Math.max(20, anchor.y - 18);
+
+  return (
+    <g
+      className={styles.palletTooltip}
+      transform={'translate(' + tooltipX + ' ' + tooltipY + ')'}
+      pointerEvents="none"
+      aria-hidden="true"
+    >
+      <rect
+        x="0"
+        y="0"
+        width={tooltipWidth}
+        height={tooltipHeight}
+        rx="12"
+        className={styles.palletTooltipBackdrop}
+      />
+      <text x="14" y="19" className={styles.palletTooltipTitle}>
+        NF {group.invoiceId}
+      </text>
+      <text x="14" y="35" className={styles.palletTooltipMeta}>
+        {group.supplier.slice(0, 42)}
+      </text>
+      <text x="14" y="51" className={styles.palletTooltipHint}>
+        {group.itemCount} item(ns) pendente(s) · clique para alocar
+      </text>
+      {previewRows.map((row, index) => (
+        <text
+          key={row.key}
+          x="14"
+          y={70 + index * 17}
+          className={styles.palletTooltipItem}
+        >
+          {row.itemName.slice(0, 34)}
+          {' · '}
+          {row.pendingQuantity.toLocaleString('pt-BR', { maximumFractionDigits: 3 })}
+          {' '}
+          {row.unitLabel}
+        </text>
+      ))}
+      {group.rows.length > 3 && (
+        <text
+          x="14"
+          y={70 + previewRows.length * 17}
+          className={styles.palletTooltipMore}
+        >
+          +{group.rows.length - 3} item(ns)
+        </text>
+      )}
     </g>
   );
 }
@@ -1062,6 +1173,8 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
   const [selectedVisualDepotId, setSelectedVisualDepotId] = useState('');
   const [savingVisual, setSavingVisual] = useState(false);
   const [visualMessage, setVisualMessage] = useState('');
+  const [hoveredPendingKey, setHoveredPendingKey] = useState<string | null>(null);
+  const [selectedPendingKey, setSelectedPendingKey] = useState<string | null>(null);
   const dragRef = useRef<{
     depotId: string;
     pointerId: number;
@@ -1214,6 +1327,13 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
   const palletGroups = Array.from(
     { length: palletSlotCount },
     (_, index) => visiblePendingGroups[index] || null
+  );
+
+  const selectedPendingGroup = useMemo(
+    () => selectedPendingKey
+      ? pendingGroups.find((group) => group.key === selectedPendingKey) || null
+      : null,
+    [pendingGroups, selectedPendingKey]
   );
 
   const updateVisual = useCallback((
@@ -1577,12 +1697,28 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
             const px = PALLET_YARD_X + 18 + col * 94;
             const py = PALLET_YARD_Y + 40 + row * 92;
             return (
-              <PalletWorld
-                key={group?.key || 'empty-' + index}
-                x={px}
-                y={py}
-                group={group}
-              />
+              <g key={group?.key || 'empty-' + index}>
+                <PalletWorld
+                  x={px}
+                  y={py}
+                  group={group}
+                  onHover={(pendingGroup) =>
+                    setHoveredPendingKey(pendingGroup?.key || null)
+                  }
+                  onActivate={(pendingGroup) => {
+                    if (editMode) return;
+                    setHoveredPendingKey(null);
+                    setSelectedPendingKey(pendingGroup.key);
+                  }}
+                />
+                {group && hoveredPendingKey === group.key && !editMode && (
+                  <PendingPalletTooltip
+                    x={px}
+                    y={py}
+                    group={group}
+                  />
+                )}
+              </g>
             );
           })}
 
@@ -1645,10 +1781,25 @@ export function WarehouseLandingOperational({ workspaceId }: { workspaceId: stri
           <text>
             {editMode
               ? 'Modo de edição visual · arraste os depósitos para organizar o plano'
-              : 'Clique diretamente em um depósito para entrar em Meus Depósitos'}
+              : 'Clique em um depósito para entrar · passe sobre um palete de NF e clique para alocar'}
           </text>
         </g>
       </svg>
+
+      {selectedPendingGroup && (
+        <LazyIntakeBulkActionPanel
+          workspaceId={workspaceId}
+          subjectKind="invoice"
+          subjectKey={selectedPendingGroup.key}
+          subjectLabel={'NF ' + selectedPendingGroup.invoiceId}
+          rows={selectedPendingGroup.rows}
+          coverageLimited={false}
+          onClose={() => setSelectedPendingKey(null)}
+          onComplete={async () => {
+            await load();
+          }}
+        />
+      )}
     </section>
   );
 }

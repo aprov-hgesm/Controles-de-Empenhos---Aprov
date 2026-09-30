@@ -810,7 +810,7 @@ function clearBulkOperationId(
 }
 
 
-function IntakeBulkActionPanel({
+export function IntakeBulkActionPanel({
   workspaceId,
   subjectKind,
   subjectKey,
