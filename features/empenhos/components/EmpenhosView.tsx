@@ -65,6 +65,7 @@ interface EmpenhosViewContext {
   handleDownloadTermoRecebimento: (...args: any[]) => any;
   handleEmpenhoDocumentUploaded: (empenhoId: string, document: EmpenhoPdfDocument) => Promise<void>;
   handleUpdateEmpenhoClassification: (empenhoId: string, classification: string) => Promise<void>;
+  handleUpdateEmpenhoItemDetails: (empenhoId: string, itemId: string, updates: { itemCompraNumber: string; name: string }) => Promise<void>;
   handleUpdateEmpenhoPregao: (empenhoId: string, pregao: string) => Promise<void>;
   handleUpdateEmpenhoSupplierCnpj: (empenhoId: string, cnpj: string) => Promise<void>;
   handleGenerateEmpenhoReportPDF: (...args: any[]) => any;
@@ -117,7 +118,7 @@ interface EmpenhosViewProps { context: EmpenhosViewContext; }
 /** Tela de cadastro e detalhe de empenhos extraída sem alterar comportamento. */
 export function EmpenhosView({ context }: EmpenhosViewProps) {
   const shouldReduceMotion = useReducedMotion();
-  const { alerts, addEmpenhoClass, copiedPrompt, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCopyPrompt, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadPromptPdf, handleDownloadPromptTxt, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoPregao, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessJson, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, jsonInput, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setJsonInput, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user } = context;
+  const { alerts, addEmpenhoClass, copiedPrompt, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCopyPrompt, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadPromptPdf, handleDownloadPromptTxt, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoItemDetails, handleUpdateEmpenhoPregao, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessJson, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, jsonInput, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setJsonInput, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user } = context;
   const [editingPregaoEmpenhoId, setEditingPregaoEmpenhoId] = React.useState<string | null>(null);
   const [pregaoDraft, setPregaoDraft] = React.useState('');
   const [savingPregao, setSavingPregao] = React.useState(false);
@@ -134,6 +135,14 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
   const [classDescriptionDrafts, setClassDescriptionDrafts] = React.useState<Record<string, string>>({});
   const [classTrRequirementDrafts, setClassTrRequirementDrafts] = React.useState<Record<string, boolean>>({});
   const [savingClassificationEmpenhoId, setSavingClassificationEmpenhoId] = React.useState<string | null>(null);
+  const [editingItemId, setEditingItemId] = React.useState<string | null>(null);
+  const [itemDetailsDraft, setItemDetailsDraft] = React.useState({ itemCompraNumber: '', name: '' });
+  const [savingItemDetails, setSavingItemDetails] = React.useState(false);
+
+  React.useEffect(() => {
+    setEditingItemId(null);
+    setItemDetailsDraft({ itemCompraNumber: '', name: '' });
+  }, [selectedEmpenhoDetailId]);
 
   React.useEffect(() => {
     if (!showNewEmpenhoModal && empenhosSubTab === 'register') {
@@ -1226,7 +1235,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                           <table className="w-full text-left border-collapse text-xs">
                             <thead>
                               <tr className="bg-gray-50/80 border-b border-gray-200/80 text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
-                                <th className="p-3.5 pl-5">Item / Cód.</th>
+                                <th className="p-3.5 pl-5">NR Item</th>
                                 <th className="p-3.5">Descrição do Material</th>
                                 <th className="p-3.5 text-center">Und</th>
                                 <th className="p-3.5 text-right">Qtd Empenhada</th>
@@ -1249,13 +1258,32 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
 
                                 return (
                                   <tr key={item.id || idx} className="hover:bg-blue-50/30 transition-colors">
-                                    <td className="p-3.5 pl-5">
-                                      <span className="font-bold text-[#00288e] bg-blue-50 px-2 py-0.5 rounded text-[11px]">
-                                        {item.id || `#${idx + 1}`}
-                                      </span>
+                                    <td className="p-3.5 pl-5 min-w-[125px]">
+                                      {editingItemId === item.id ? (
+                                        <input
+                                          value={itemDetailsDraft.itemCompraNumber}
+                                          onChange={(event) => setItemDetailsDraft((current) => ({ ...current, itemCompraNumber: event.target.value }))}
+                                          placeholder="Ex.: 00004"
+                                          className="h-9 w-28 rounded-lg border border-blue-200 bg-white px-2.5 text-[11px] font-extrabold text-[#00288e] outline-none focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e]"
+                                          aria-label={`NR item de ${item.name}`}
+                                        />
+                                      ) : (
+                                        <span className="font-bold text-[#00288e] bg-blue-50 px-2 py-0.5 rounded text-[11px]">
+                                          {item.itemCompraNumber || (/^\d+$/.test(item.id) ? item.id.padStart(5, '0') : '—')}
+                                        </span>
+                                      )}
                                     </td>
-                                    <td className="p-3.5 font-bold text-[#0b1c30]">
-                                      {item.name}
+                                    <td className="p-3.5 font-bold text-[#0b1c30] min-w-[260px]">
+                                      {editingItemId === item.id ? (
+                                        <input
+                                          value={itemDetailsDraft.name}
+                                          onChange={(event) => setItemDetailsDraft((current) => ({ ...current, name: event.target.value }))}
+                                          className="h-9 w-full min-w-[240px] rounded-lg border border-blue-200 bg-white px-3 text-xs font-bold text-[#0b1c30] outline-none focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e]"
+                                          aria-label={`Descritivo do item ${item.itemCompraNumber || item.id}`}
+                                        />
+                                      ) : (
+                                        item.name
+                                      )}
                                     </td>
                                     <td className="p-3.5 text-center">
                                       <span className="px-2 py-0.5 bg-gray-100 text-gray-700 font-bold rounded text-[10px] uppercase">
@@ -1298,17 +1326,68 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                       </div>
                                     </td>
                                     <td className="p-3.5 pr-5 text-center">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setEditingEmpenhoId(targetEmp.id);
-                                          handleDeleteItemFromEmpenho(item.id);
-                                        }}
-                                        className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
-                                        title="Excluir item do empenho"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
+                                      {editingItemId === item.id ? (
+                                        <div className="flex items-center justify-center gap-1">
+                                          <button
+                                            type="button"
+                                            disabled={savingItemDetails}
+                                            onClick={async () => {
+                                              if (savingItemDetails) return;
+                                              setSavingItemDetails(true);
+                                              try {
+                                                await handleUpdateEmpenhoItemDetails(targetEmp.id, item.id, itemDetailsDraft);
+                                                setEditingItemId(null);
+                                              } catch (error) {
+                                                console.error('Erro ao salvar edição do item:', error);
+                                              } finally {
+                                                setSavingItemDetails(false);
+                                              }
+                                            }}
+                                            className="inline-flex items-center gap-1 rounded-lg bg-[#00288e] px-2.5 py-1.5 text-[10px] font-extrabold text-white transition hover:bg-[#1e40af] disabled:opacity-60"
+                                            title="Salvar NR item e descritivo"
+                                          >
+                                            {savingItemDetails ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                                            Salvar
+                                          </button>
+                                          <button
+                                            type="button"
+                                            disabled={savingItemDetails}
+                                            onClick={() => setEditingItemId(null)}
+                                            className="p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all"
+                                            title="Cancelar edição"
+                                          >
+                                            <X className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center justify-center gap-1">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setEditingItemId(item.id);
+                                              setItemDetailsDraft({
+                                                itemCompraNumber: item.itemCompraNumber || (/^\d+$/.test(item.id) ? item.id.padStart(5, '0') : ''),
+                                                name: item.name,
+                                              });
+                                            }}
+                                            className="p-1.5 text-gray-400 hover:text-[#00288e] hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
+                                            title="Editar NR item e descritivo"
+                                          >
+                                            <Edit className="w-3.5 h-3.5" />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setEditingEmpenhoId(targetEmp.id);
+                                              handleDeleteItemFromEmpenho(item.id);
+                                            }}
+                                            className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                                            title="Excluir item do empenho"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      )}
                                     </td>
                                   </tr>
                                 );

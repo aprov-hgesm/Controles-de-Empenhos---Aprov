@@ -97,6 +97,72 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     }
   };
 
+  const handleUpdateEmpenhoItemDetails = async (
+    empenhoId: string,
+    itemId: string,
+    updates: { itemCompraNumber: string; name: string }
+  ): Promise<void> => {
+    const currentEmpenho = empenhos.find((emp) => emp.id === empenhoId);
+    const currentItem = currentEmpenho?.items.find((item) => item.id === itemId);
+
+    if (!currentEmpenho || !currentItem) {
+      const error = new Error('Item do empenho não encontrado para edição.');
+      showToast(error.message, 'error');
+      throw error;
+    }
+
+    const normalizedName = updates.name.trim();
+    if (!normalizedName) {
+      const error = new Error('O descritivo do item não pode ficar vazio.');
+      showToast(error.message, 'error');
+      throw error;
+    }
+
+    const rawItemCompraNumber = updates.itemCompraNumber.trim();
+    const normalizedItemCompraNumber = rawItemCompraNumber
+      ? (/^\d+$/.test(rawItemCompraNumber)
+          ? rawItemCompraNumber.padStart(5, '0')
+          : rawItemCompraNumber)
+      : undefined;
+
+    if (!user) {
+      const error = new Error('Sua sessão expirou. Entre novamente para editar o item.');
+      showToast(error.message, 'error');
+      throw error;
+    }
+
+    const updatedEmpenho: Empenho = {
+      ...currentEmpenho,
+      items: currentEmpenho.items.map((item) => (
+        item.id === itemId
+          ? {
+              ...item,
+              name: normalizedName,
+              itemCompraNumber: normalizedItemCompraNumber,
+            }
+          : item
+      )),
+    };
+
+    try {
+      const committedEmpenho = await saveEmpenho(user.uid, updatedEmpenho);
+      setEmpenhos((current) => current.map((emp) => (
+        emp.id === empenhoId ? committedEmpenho : emp
+      )));
+      showToast(
+        `Item ${normalizedItemCompraNumber || itemId} do empenho ${empenhoId} atualizado.`,
+        'success'
+      );
+    } catch (error) {
+      console.error('Erro ao atualizar item do empenho:', error);
+      showToast(
+        error instanceof Error ? error.message : 'Não foi possível atualizar o item do empenho.',
+        'error'
+      );
+      throw error;
+    }
+  };
+
   const handleUpdateEmpenhoSupplierCnpj = async (empenhoId: string, cnpjInput: string): Promise<void> => {
     const currentEmpenho = empenhos.find((emp) => emp.id === empenhoId);
     if (!currentEmpenho) {
@@ -714,6 +780,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     handleUpdateEmpenhoPregao,
     handleUpdateEmpenhoSupplierCnpj,
     handleUpdateEmpenhoClassification,
+    handleUpdateEmpenhoItemDetails,
     handleCreateEmpenho,
     handleDownloadPromptTxt,
     handleDownloadPromptPdf,

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ArrowLeft, CalendarDays, CalendarRange, CheckCircle2, Download, Eye, FileSpreadsheet, Filter, Info, Loader2, Mail, Package, Plus, Printer, Save, Search, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowLeft, CalendarDays, CalendarRange, CheckCircle2, Download, Edit, Eye, FileSpreadsheet, Filter, Info, Loader2, Mail, Package, Plus, Printer, Save, Search, Sparkles, Trash2, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { CronogramaEmpenho, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
 import type { EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
@@ -32,6 +32,7 @@ interface CronogramasViewContext {
   handleRemoveRemessa: (...args: any[]) => any;
   handleSaveCronograma: (...args: any[]) => any;
   handleSelectEmpenhoForCronograma: (...args: any[]) => any;
+  handleUpdateEmpenhoItemDetails: (empenhoId: string, itemId: string, updates: { itemCompraNumber: string; name: string }) => Promise<void>;
   isSavingCronograma: boolean;
   isSendingCronogramaEmail: boolean;
   selectedCronogramaEmpenhoId: string | null;
@@ -59,7 +60,16 @@ interface CronogramasViewProps {
 }
 /** Tela de Cronogramas extraída sem alterar regras de negócio, persistência ou comportamento. */
 export function CronogramasView({ context }: CronogramasViewProps) {
-  const { applyAllToFirstRemessa, applyCronogramaPreset, clearCronogramaDistribuicao, cronogramaColunas, cronogramaDistribuicao, cronogramaHorarioEntrega, cronogramaLocalEntrega, cronogramaObservacoes, cronogramaResponsavelCargo, cronogramaResponsavelNome, cronogramas, cronogramasClassFilter, cronogramasPregaoFilter, cronogramasSearch, cronogramasStatusFilter, cronogramasYearFilter, empenhoClasses, empenhos, formatDateOnly, handleAddRemessa, handleGenerateCronogramaPDF, handleSendCronogramaEmail, handleRemoveRemessa, handleSaveCronograma, handleSelectEmpenhoForCronograma, isSavingCronograma, isSendingCronogramaEmail, selectedCronogramaEmpenhoId, setCronogramaColunas, setCronogramaDistribuicao, setCronogramaHorarioEntrega, setCronogramaLocalEntrega, setCronogramaObservacoes, setCronogramaResponsavelCargo, setCronogramaResponsavelNome, setCronogramasClassFilter, setCronogramasPregaoFilter, setCronogramasSearch, setCronogramasStatusFilter, setCronogramasYearFilter, setSelectedCronogramaEmpenhoId, setShowCronogramaPreviewModal, showCronogramaPreviewModal, uniqueEmpenhoYears, uniquePregaos } = context;
+  const { applyAllToFirstRemessa, applyCronogramaPreset, clearCronogramaDistribuicao, cronogramaColunas, cronogramaDistribuicao, cronogramaHorarioEntrega, cronogramaLocalEntrega, cronogramaObservacoes, cronogramaResponsavelCargo, cronogramaResponsavelNome, cronogramas, cronogramasClassFilter, cronogramasPregaoFilter, cronogramasSearch, cronogramasStatusFilter, cronogramasYearFilter, empenhoClasses, empenhos, formatDateOnly, handleAddRemessa, handleGenerateCronogramaPDF, handleSendCronogramaEmail, handleRemoveRemessa, handleSaveCronograma, handleSelectEmpenhoForCronograma, handleUpdateEmpenhoItemDetails, isSavingCronograma, isSendingCronogramaEmail, selectedCronogramaEmpenhoId, setCronogramaColunas, setCronogramaDistribuicao, setCronogramaHorarioEntrega, setCronogramaLocalEntrega, setCronogramaObservacoes, setCronogramaResponsavelCargo, setCronogramaResponsavelNome, setCronogramasClassFilter, setCronogramasPregaoFilter, setCronogramasSearch, setCronogramasStatusFilter, setCronogramasYearFilter, setSelectedCronogramaEmpenhoId, setShowCronogramaPreviewModal, showCronogramaPreviewModal, uniqueEmpenhoYears, uniquePregaos } = context;
+  const [editingItemId, setEditingItemId] = React.useState<string | null>(null);
+  const [itemDetailsDraft, setItemDetailsDraft] = React.useState({ itemCompraNumber: '', name: '' });
+  const [savingItemDetails, setSavingItemDetails] = React.useState(false);
+
+  React.useEffect(() => {
+    setEditingItemId(null);
+    setItemDetailsDraft({ itemCompraNumber: '', name: '' });
+  }, [selectedCronogramaEmpenhoId]);
+
   return (
             <div id="view-cronogramas" className="w-full max-w-7xl mx-auto space-y-6 pb-24">
               
@@ -727,12 +737,81 @@ export function CronogramasView({ context }: CronogramasViewProps) {
 
                                 return (
                                   <tr key={it.id} className="hover:bg-blue-50/20 transition-colors">
-                                    {/* Description */}
-                                    <td className="py-3.5 px-4 font-semibold text-gray-900">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-extrabold text-gray-400">#{it.id}</span>
-                                        <span className="text-xs font-bold text-gray-800">{it.name}</span>
-                                      </div>
+                                    {/* Description + manual correction before generating the schedule */}
+                                    <td className="py-3.5 px-4 font-semibold text-gray-900 min-w-[280px]">
+                                      {editingItemId === it.id ? (
+                                        <div className="space-y-2">
+                                          <div className="flex flex-col gap-2 sm:flex-row">
+                                            <input
+                                              value={itemDetailsDraft.itemCompraNumber}
+                                              onChange={(event) => setItemDetailsDraft((current) => ({ ...current, itemCompraNumber: event.target.value }))}
+                                              placeholder="NR item"
+                                              className="h-8 w-24 rounded-lg border border-blue-200 bg-white px-2 text-[10px] font-extrabold text-[#00288e] outline-none focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e]"
+                                              aria-label={`NR item de ${it.name}`}
+                                            />
+                                            <input
+                                              value={itemDetailsDraft.name}
+                                              onChange={(event) => setItemDetailsDraft((current) => ({ ...current, name: event.target.value }))}
+                                              className="h-8 min-w-[180px] flex-1 rounded-lg border border-blue-200 bg-white px-2.5 text-[11px] font-bold text-gray-800 outline-none focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e]"
+                                              aria-label="Descritivo do item no cronograma"
+                                            />
+                                          </div>
+                                          <div className="flex items-center gap-1.5">
+                                            <button
+                                              type="button"
+                                              disabled={savingItemDetails}
+                                              onClick={async () => {
+                                                if (savingItemDetails) return;
+                                                setSavingItemDetails(true);
+                                                try {
+                                                  await handleUpdateEmpenhoItemDetails(targetEmp.id, it.id, itemDetailsDraft);
+                                                  setEditingItemId(null);
+                                                } catch (error) {
+                                                  console.error('Erro ao salvar correção do item no cronograma:', error);
+                                                } finally {
+                                                  setSavingItemDetails(false);
+                                                }
+                                              }}
+                                              className="inline-flex h-7 items-center gap-1 rounded-lg bg-[#00288e] px-2.5 text-[9px] font-extrabold text-white transition hover:bg-[#1e40af] disabled:opacity-60"
+                                            >
+                                              {savingItemDetails ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                                              Salvar correção
+                                            </button>
+                                            <button
+                                              type="button"
+                                              disabled={savingItemDetails}
+                                              onClick={() => setEditingItemId(null)}
+                                              className="inline-flex h-7 items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 text-[9px] font-bold text-gray-600 hover:bg-gray-50"
+                                            >
+                                              <X className="h-3 w-3" />
+                                              Cancelar
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-start justify-between gap-2">
+                                          <div className="flex items-start gap-2">
+                                            <span className="mt-0.5 shrink-0 rounded bg-blue-50 px-1.5 py-0.5 text-[9px] font-extrabold text-[#00288e]">
+                                              {it.itemCompraNumber || (/^\d+$/.test(it.id) ? it.id.padStart(5, '0') : 'NR —')}
+                                            </span>
+                                            <span className="text-xs font-bold text-gray-800">{it.name}</span>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setEditingItemId(it.id);
+                                              setItemDetailsDraft({
+                                                itemCompraNumber: it.itemCompraNumber || (/^\d+$/.test(it.id) ? it.id.padStart(5, '0') : ''),
+                                                name: it.name,
+                                              });
+                                            }}
+                                            className="shrink-0 rounded-lg p-1 text-gray-400 transition hover:bg-blue-50 hover:text-[#00288e]"
+                                            title="Editar NR item e descritivo antes de gerar o cronograma"
+                                          >
+                                            <Edit className="h-3.5 w-3.5" />
+                                          </button>
+                                        </div>
+                                      )}
                                     </td>
 
                                     {/* Unit */}
