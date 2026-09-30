@@ -596,6 +596,64 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     });
   };
 
+  const handleUpdateEmpenhoItemDetails = async (
+    empenhoId: string,
+    itemId: string,
+    input: { itemCompraNumber: string; name: string }
+  ): Promise<void> => {
+    const currentEmpenho = empenhos.find((emp) => emp.id === empenhoId);
+    if (!currentEmpenho) {
+      showToast('Empenho não encontrado para alteração do item.', 'error');
+      return;
+    }
+
+    const currentItem = currentEmpenho.items.find((item) => item.id === itemId);
+    if (!currentItem) {
+      showToast('Item não encontrado no empenho.', 'error');
+      return;
+    }
+
+    const name = input.name.trim();
+    if (!name) {
+      showToast('A descrição do item não pode ficar vazia.', 'error');
+      throw new Error('EMPENHO_ITEM_DESCRIPTION_REQUIRED');
+    }
+
+    const rawNumber = input.itemCompraNumber.trim();
+    const itemCompraNumber = rawNumber
+      ? (/^\d+$/.test(rawNumber) ? rawNumber.padStart(5, '0') : rawNumber.slice(0, 40))
+      : undefined;
+
+    const updatedEmpenho: Empenho = {
+      ...currentEmpenho,
+      items: currentEmpenho.items.map((item) => (
+        item.id === itemId
+          ? { ...item, itemCompraNumber, name }
+          : item
+      )),
+    };
+
+    if (!user) {
+      showToast('Sua sessão expirou. Entre novamente para alterar o item.', 'error');
+      throw new Error('EMPENHO_ITEM_AUTH_REQUIRED');
+    }
+
+    try {
+      const committedEmpenho = await saveEmpenho(user.uid, updatedEmpenho);
+      setEmpenhos((current) => current.map((emp) => (
+        emp.id === empenhoId ? committedEmpenho : emp
+      )));
+      showToast('NR item e descrição atualizados com sucesso.', 'success');
+    } catch (error) {
+      console.error('Erro ao atualizar identificação do item do empenho:', error);
+      showToast(
+        error instanceof Error ? error.message : 'Não foi possível atualizar o item do empenho.',
+        'error'
+      );
+      throw error;
+    }
+  };
+
   // Delete item from editing commitment
   const handleDeleteItemFromEmpenho = async (itemId: string) => {
     let updatedTargetEmp: Empenho | null = null;
@@ -721,6 +779,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     handleProcessJson,
     handleSaveReviewEmpenho,
     handleAddItemToEmpenho,
+    handleUpdateEmpenhoItemDetails,
     handleDeleteItemFromEmpenho,
     handleFinishEmpenhoRegistry,
     handleDeleteSpecificEmpenho,
