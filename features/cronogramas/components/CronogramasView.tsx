@@ -695,7 +695,7 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                           <table className="w-full text-left border-collapse">
                             <thead>
                               <tr className="bg-gray-50/80 border-b border-gray-200 text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
-                                <th className="py-3 px-4 min-w-[200px]">Item / Descrição</th>
+                                <th className="py-3 px-4 min-w-[200px]">NR item / Descrição</th>
                                 <th className="py-3 px-2 text-center w-14">Und</th>
                                 <th className="py-3 px-2 text-center w-20">Empenhado</th>
                                 <th className="py-3 px-2 text-center w-20">Já Recebido</th>
@@ -737,6 +737,13 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                                           it,
                                           cronogramaItemOverrides
                                         );
+                                        const rawOverride = cronogramaItemOverrides[it.id];
+                                        const itemNumberValue = rawOverride && 'itemCompraNumber' in rawOverride
+                                          ? rawOverride.itemCompraNumber ?? ''
+                                          : itemDisplay.itemCompraNumber;
+                                        const itemNameValue = rawOverride && 'name' in rawOverride
+                                          ? rawOverride.name ?? ''
+                                          : itemDisplay.name;
                                         return (
                                           <div className="grid min-w-[280px] grid-cols-[88px_minmax(180px,1fr)] gap-2">
                                             <div>
@@ -745,7 +752,7 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                                               </label>
                                               <input
                                                 type="text"
-                                                value={itemDisplay.itemCompraNumber}
+                                                value={itemNumberValue}
                                                 onChange={(event) => {
                                                   const value = event.target.value;
                                                   setCronogramaItemOverrides((current) => ({
@@ -753,7 +760,7 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                                                     [it.id]: {
                                                       ...(current[it.id] || {}),
                                                       itemCompraNumber: value,
-                                                      name: current[it.id]?.name ?? itemDisplay.name,
+                                                      name: current[it.id]?.name ?? itemNameValue,
                                                     },
                                                   }));
                                                 }}
@@ -767,14 +774,14 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                                               </label>
                                               <input
                                                 type="text"
-                                                value={itemDisplay.name}
+                                                value={itemNameValue}
                                                 onChange={(event) => {
                                                   const value = event.target.value;
                                                   setCronogramaItemOverrides((current) => ({
                                                     ...current,
                                                     [it.id]: {
                                                       ...(current[it.id] || {}),
-                                                      itemCompraNumber: current[it.id]?.itemCompraNumber ?? itemDisplay.itemCompraNumber,
+                                                      itemCompraNumber: current[it.id]?.itemCompraNumber ?? itemNumberValue,
                                                       name: value,
                                                     },
                                                   }));
