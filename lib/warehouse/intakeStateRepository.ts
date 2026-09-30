@@ -179,6 +179,45 @@ async function listOperationalBounded<T>(
   }
 }
 
+async function listOperationalByIds<T extends { id?: string }>(
+  workspaceId: string,
+  collectionName: 'empenhos',
+  ids: string[]
+): Promise<T[]> {
+  const { scope } = currentScopeForWorkspace(workspaceId);
+  const uniqueIds = Array.from(new Set(ids.map((id) => id.trim()).filter(Boolean)));
+  if (uniqueIds.length === 0) return [];
+
+  const chunks: string[][] = [];
+  for (let index = 0; index < uniqueIds.length; index += 30) {
+    chunks.push(uniqueIds.slice(index, index + 30));
+  }
+
+  const snapshots = await Promise.all(
+    chunks.map((chunk) =>
+      getDocs(
+        query(
+          operationalCollectionRef(scope, collectionName),
+          where(documentId(), 'in', chunk)
+        )
+      )
+    )
+  );
+  recordWarehouseDocumentReads(
+    workspaceId,
+    snapshots.reduce((sum, snapshot) => sum + snapshot.size, 0)
+  );
+  return snapshots.flatMap((snapshot) =>
+    snapshot.docs.map((entry) => {
+      const data = entry.data() as T;
+      return {
+        ...data,
+        id: data.id || entry.id,
+      };
+    })
+  );
+}
+
 function parsePersistedIntake(
   workspaceId: string,
   id: string,
@@ -344,17 +383,11 @@ export async function loadWarehouseInvoiceIntakeQueue(
   currentScopeForWorkspace(workspaceId);
 
   const [
-    empenhosResult,
     invoicesResult,
     persistedResult,
     movementRecords,
     cutoffAt,
   ] = await Promise.all([
-    listOperationalBounded<Empenho>(
-      workspaceId,
-      'empenhos',
-      WAREHOUSE_INTAKE_QUEUE_EMPENHOS_LIMIT
-    ),
     listOperationalBounded<Invoice>(
       workspaceId,
       'invoices',
@@ -368,8 +401,13 @@ export async function loadWarehouseInvoiceIntakeQueue(
     getWarehouseInvoiceIntakeCutoff(workspaceId),
   ]);
 
+  const empenhos = await listOperationalByIds<Empenho>(
+    workspaceId,
+    'empenhos',
+    invoicesResult.items.map((invoice) => invoice.empenhoId)
+  );
   const empenhoById = new Map(
-    empenhosResult.items.map((empenho) => [empenho.id, empenho])
+    empenhos.map((empenho) => [empenho.id, empenho])
   );
   const persistedByKey = new Map(
     persistedResult.items.map((record) => [persistedKey(record), record])
@@ -622,8 +660,7 @@ export async function loadWarehouseInvoiceIntakeQueue(
   }
 
   const truncated =
-    empenhosResult.truncated
-    || invoicesResult.truncated
+    invoicesResult.truncated
     || persistedResult.truncated
     || movementRecords.length >= WAREHOUSE_INTAKE_QUEUE_LEGACY_MOVEMENTS_LIMIT;
 
@@ -633,8 +670,7 @@ export async function loadWarehouseInvoiceIntakeQueue(
     truncated,
     reconciliationCoverageLimited:
       movementRecords.length >= WAREHOUSE_INTAKE_QUEUE_LEGACY_MOVEMENTS_LIMIT,
-    pregaoCoverageLimited:
-      invoicesResult.truncated || empenhosResult.truncated,
+    pregaoCoverageLimited: invoicesResult.truncated,
   };
 }
 

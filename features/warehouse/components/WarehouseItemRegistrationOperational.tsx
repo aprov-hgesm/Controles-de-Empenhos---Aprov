@@ -31,17 +31,23 @@ import {
   listWarehouseItemIntakes,
   markWarehouseImmediateConsumptionPosted,
 } from '../../../lib/warehouse/intakeRepository';
-import type { WarehouseItemIntakeEffectiveStatus } from '../../../lib/warehouse/intakeState';
+import type {
+  WarehouseItemIntakeEffectiveStatus,
+  WarehouseItemIntakeState,
+} from '../../../lib/warehouse/intakeState';
 import {
   loadWarehouseInvoiceIntakeQueue,
   refreshWarehouseInvoiceIntakeQueueRows,
   type WarehouseInvoiceIntakeQueueContext,
   type WarehouseInvoiceIntakeQueueRow,
 } from '../../../lib/warehouse/intakeStateRepository';
-import {
-  allocateWarehousePendingItem,
-  type AllocateWarehousePendingItemResult,
+import type {
+  AllocateWarehousePendingItemResult,
 } from '../../../lib/warehouse/intakeAllocationRepository';
+import {
+  allocateWarehousePendingItemFast,
+  applyWarehouseImmediateConsumptionFast,
+} from '../../../lib/warehouse/intakeActionClient';
 import type { WarehouseStockPosition } from '../../../lib/warehouse/location';
 import {
   listWarehouseDepots,
@@ -55,7 +61,6 @@ import { WarehouseImmediateConsumptionPanel } from './WarehouseImmediateConsumpt
 import { WarehouseAllocatedItemsOperational } from './WarehouseAllocatedItemsOperational';
 import { WarehouseManualEntryOperational } from './WarehouseManualEntryOperational';
 import {
-  applyWarehouseImmediateConsumption,
   createWarehouseDestination,
   listWarehouseDestinations,
   type ApplyWarehouseImmediateConsumptionResult,
@@ -402,7 +407,7 @@ function AllocationPanel({
 
     setWorking(true);
     try {
-      const result = await allocateWarehousePendingItem(workspaceId, {
+      const result = await allocateWarehousePendingItemFast(workspaceId, {
         intakeId: row.stateId,
         invoiceRecordKey: row.invoiceRecordKey,
         invoiceId: row.invoiceId,
@@ -1115,7 +1120,7 @@ function IntakeBulkActionPanel({
       try {
         if (mode === 'storage') {
           if (!position) throw new Error('WAREHOUSE_POSITION_NOT_FOUND');
-          await allocateWarehousePendingItem(workspaceId, {
+          await allocateWarehousePendingItemFast(workspaceId, {
             intakeId: row.stateId,
             invoiceRecordKey: row.invoiceRecordKey,
             invoiceId: row.invoiceId,
@@ -1147,7 +1152,7 @@ function IntakeBulkActionPanel({
             }
           );
         } else {
-          await applyWarehouseImmediateConsumption(workspaceId, {
+          await applyWarehouseImmediateConsumptionFast(workspaceId, {
             intakeId: row.stateId,
             invoiceRecordKey: row.invoiceRecordKey,
             invoiceId: row.invoiceId,
@@ -1313,8 +1318,8 @@ function IntakeBulkActionPanel({
               </div>
               <p className="mt-2 text-[10px] leading-5 text-slate-500">
                 {subjectKind === 'pregao'
-                  ? 'Retira as NFs pendentes deste Pregão da fila do ADM Depósito.'
-                  : 'Retira esta NF da fila do ADM Depósito.'}
+                  ? 'Retira as NFs pendentes deste Pregão da fila da Central de Depósitos.'
+                  : 'Retira esta NF da fila da Central de Depósitos.'}
                 {' '}Não apaga a NF original e não cria consumo ou movimentação de estoque.
               </p>
             </button>
@@ -1489,9 +1494,9 @@ function IntakeBulkActionPanel({
             <span>
               {mode === 'remove' ? (
                 subjectKind === 'pregao' ? (
-                  <>Confirmo a remoção de <strong>{invoiceCount} NF(s) pendente(s)</strong> do {subjectLabel} apenas da fila do ADM Depósito.</>
+                  <>Confirmo a remoção de <strong>{invoiceCount} NF(s) pendente(s)</strong> do {subjectLabel} apenas da fila da Central de Depósitos.</>
                 ) : (
-                  <>Confirmo a remoção da <strong>{subjectLabel}</strong> apenas da fila do ADM Depósito.</>
+                  <>Confirmo a remoção da <strong>{subjectLabel}</strong> apenas da fila da Central de Depósitos.</>
                 )
               ) : mode === 'immediate' ? (
                 <>
@@ -1664,6 +1669,31 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
   }, [refresh]);
 
   const rows = context?.rows || [];
+
+  const applyLocalIntakeState = useCallback((intake: WarehouseItemIntakeState) => {
+    setContext((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        rows: current.rows.map((row) =>
+          row.stateId === intake.id
+            ? {
+                ...row,
+                materialId: intake.materialId,
+                allocatedQuantity: intake.allocatedQuantity,
+                immediateConsumptionQuantity: intake.immediateConsumptionQuantity,
+                pendingQuantity: intake.pendingQuantity,
+                status: intake.status,
+                persisted: true,
+                source: 'STATE_V2',
+                reconciliationReason: null,
+              }
+            : row
+        ),
+      };
+    });
+  }, []);
+
 
   const invoiceGroups = useMemo<WarehouseInvoiceQueueGroup[]>(() => {
     const grouped = new Map<string, WarehouseInvoiceIntakeQueueRow[]>();
@@ -1902,7 +1932,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
     quantity: number
   ) => {
     setAllocationRow(null);
-    await refresh();
+    applyLocalIntakeState(result.intake);
     setMessage(
       'Alocação confirmada: '
       + formatQuantity(quantity, result.intake.unitLabel)
@@ -1917,7 +1947,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
     quantity: number
   ) => {
     setImmediateRow(null);
-    await refresh();
+    applyLocalIntakeState(result.intake);
     setMessage(
       'Consumo imediato confirmado: '
       + formatQuantity(quantity, result.intake.unitLabel)
@@ -1940,7 +1970,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
     if (mode === 'remove') {
       setMessage(
         subjectLabel
-        + ' removido(a) da fila do ADM Depósito. A NF original permanece intacta.'
+        + ' removido(a) da fila da Central de Depósitos. A NF original permanece intacta.'
       );
       return;
     }
@@ -2009,7 +2039,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
             <div className="flex items-center gap-2 text-[#00288e]">
               <ClipboardList className="h-4 w-4" />
               <p className="text-xs font-black uppercase tracking-[0.12em]">
-                Notas Fiscais do ADM Depósito
+                Notas Fiscais da Central de Depósitos
               </p>
             </div>
             <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-500">
