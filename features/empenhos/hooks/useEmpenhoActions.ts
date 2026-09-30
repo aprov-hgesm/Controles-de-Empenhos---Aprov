@@ -626,11 +626,13 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
 
     const updatedEmpenho: Empenho = {
       ...currentEmpenho,
-      items: currentEmpenho.items.map((item) => (
-        item.id === itemId
-          ? { ...item, itemCompraNumber, name }
-          : item
-      )),
+      items: currentEmpenho.items.map((item) => {
+        if (item.id !== itemId) return item;
+        const updatedItem: Item = { ...item, name };
+        if (itemCompraNumber) updatedItem.itemCompraNumber = itemCompraNumber;
+        else delete updatedItem.itemCompraNumber;
+        return updatedItem;
+      }),
     };
 
     if (!user) {
