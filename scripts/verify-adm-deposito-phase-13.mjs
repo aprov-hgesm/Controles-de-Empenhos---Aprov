@@ -125,7 +125,11 @@ for (const forbidden of [
   'deleteDoc(',
   'runTransaction(',
 ]) forbidText(reports, forbidden, `Relatórios Logísticos ganharam caminho de escrita: ${forbidden}`);
-requireText(reports, 'listWarehouseMovements(workspaceId, 250)', 'Relatório de movimentos perdeu limite bounded de 250.');
+requireText(
+  reports,
+  'listWarehouseMovementsInPeriod(workspaceId, startAt, endAt, 500)',
+  'Relatório de movimentos perdeu a consulta bounded pelo período selecionado.'
+);
 
 for (const marker of [
   "from '../workspaceUsageTelemetry'",
