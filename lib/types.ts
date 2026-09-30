@@ -178,6 +178,13 @@ export interface CronogramaEntregaColuna {
   observacao?: string;
 }
 
+export interface CronogramaItemOverride {
+  itemCompraNumber?: string;
+  name?: string;
+}
+
+export type CronogramaItemOverrides = Record<string, CronogramaItemOverride>;
+
 export interface CronogramaEmailEnvio {
   enviadoEm: string;
   remetente: string;
@@ -202,5 +209,7 @@ export interface CronogramaEmpenho {
       [colunaId: string]: number;
     };
   };
+  /** Ajustes exclusivamente documentais do cronograma, sem alterar o ID interno dos itens. */
+  itemOverrides?: CronogramaItemOverrides;
   ultimoEnvioEmail?: CronogramaEmailEnvio;
 }

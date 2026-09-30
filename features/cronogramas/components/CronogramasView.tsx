@@ -3,8 +3,9 @@
 import React from 'react';
 import { ArrowLeft, CalendarDays, CalendarRange, CheckCircle2, Download, Eye, FileSpreadsheet, Filter, Info, Loader2, Mail, Package, Plus, Printer, Save, Search, Sparkles, Trash2, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import type { CronogramaEmpenho, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
+import type { CronogramaEmpenho, CronogramaEntregaColuna, CronogramaItemOverrides, Empenho } from '../../../lib/types';
 import type { EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
+import { resolveCronogramaItemDisplay } from '../domain/cronogramaItemOverrides';
 
 interface CronogramasViewContext {
   applyAllToFirstRemessa: any;
@@ -12,6 +13,7 @@ interface CronogramasViewContext {
   clearCronogramaDistribuicao: any;
   cronogramaColunas: CronogramaEntregaColuna[];
   cronogramaDistribuicao: { [itemId: string]: { [colunaId: string]: number } };
+  cronogramaItemOverrides: CronogramaItemOverrides;
   cronogramaHorarioEntrega: string;
   cronogramaLocalEntrega: string;
   cronogramaObservacoes: string;
@@ -37,6 +39,7 @@ interface CronogramasViewContext {
   selectedCronogramaEmpenhoId: string | null;
   setCronogramaColunas: React.Dispatch<React.SetStateAction<CronogramaEntregaColuna[]>>;
   setCronogramaDistribuicao: React.Dispatch<React.SetStateAction<{ [itemId: string]: { [colunaId: string]: number } }>>;
+  setCronogramaItemOverrides: React.Dispatch<React.SetStateAction<CronogramaItemOverrides>>;
   setCronogramaHorarioEntrega: (...args: any[]) => any;
   setCronogramaLocalEntrega: (...args: any[]) => any;
   setCronogramaObservacoes: (...args: any[]) => any;
@@ -59,7 +62,7 @@ interface CronogramasViewProps {
 }
 /** Tela de Cronogramas extraída sem alterar regras de negócio, persistência ou comportamento. */
 export function CronogramasView({ context }: CronogramasViewProps) {
-  const { applyAllToFirstRemessa, applyCronogramaPreset, clearCronogramaDistribuicao, cronogramaColunas, cronogramaDistribuicao, cronogramaHorarioEntrega, cronogramaLocalEntrega, cronogramaObservacoes, cronogramaResponsavelCargo, cronogramaResponsavelNome, cronogramas, cronogramasClassFilter, cronogramasPregaoFilter, cronogramasSearch, cronogramasStatusFilter, cronogramasYearFilter, empenhoClasses, empenhos, formatDateOnly, handleAddRemessa, handleGenerateCronogramaPDF, handleSendCronogramaEmail, handleRemoveRemessa, handleSaveCronograma, handleSelectEmpenhoForCronograma, isSavingCronograma, isSendingCronogramaEmail, selectedCronogramaEmpenhoId, setCronogramaColunas, setCronogramaDistribuicao, setCronogramaHorarioEntrega, setCronogramaLocalEntrega, setCronogramaObservacoes, setCronogramaResponsavelCargo, setCronogramaResponsavelNome, setCronogramasClassFilter, setCronogramasPregaoFilter, setCronogramasSearch, setCronogramasStatusFilter, setCronogramasYearFilter, setSelectedCronogramaEmpenhoId, setShowCronogramaPreviewModal, showCronogramaPreviewModal, uniqueEmpenhoYears, uniquePregaos } = context;
+  const { applyAllToFirstRemessa, applyCronogramaPreset, clearCronogramaDistribuicao, cronogramaColunas, cronogramaDistribuicao, cronogramaItemOverrides, cronogramaHorarioEntrega, cronogramaLocalEntrega, cronogramaObservacoes, cronogramaResponsavelCargo, cronogramaResponsavelNome, cronogramas, cronogramasClassFilter, cronogramasPregaoFilter, cronogramasSearch, cronogramasStatusFilter, cronogramasYearFilter, empenhoClasses, empenhos, formatDateOnly, handleAddRemessa, handleGenerateCronogramaPDF, handleSendCronogramaEmail, handleRemoveRemessa, handleSaveCronograma, handleSelectEmpenhoForCronograma, isSavingCronograma, isSendingCronogramaEmail, selectedCronogramaEmpenhoId, setCronogramaColunas, setCronogramaDistribuicao, setCronogramaItemOverrides, setCronogramaHorarioEntrega, setCronogramaLocalEntrega, setCronogramaObservacoes, setCronogramaResponsavelCargo, setCronogramaResponsavelNome, setCronogramasClassFilter, setCronogramasPregaoFilter, setCronogramasSearch, setCronogramasStatusFilter, setCronogramasYearFilter, setSelectedCronogramaEmpenhoId, setShowCronogramaPreviewModal, showCronogramaPreviewModal, uniqueEmpenhoYears, uniquePregaos } = context;
   return (
             <div id="view-cronogramas" className="w-full max-w-7xl mx-auto space-y-6 pb-24">
               
@@ -683,7 +686,7 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                               <FileSpreadsheet className="w-4 h-4 text-[#00288e]" /> 2. Tabela de Quantidades por Item e Remessa de Entrega
                             </h4>
                             <p className="text-xs text-gray-500 mt-0.5">
-                              Preencha ou ajuste manualmente as quantidades a serem entregues pela empresa em cada remessa.
+                              Ajuste NR item, descrição e quantidades antes de gerar o cronograma. As alterações de NR item e descrição feitas aqui valem somente para este cronograma.
                             </p>
                           </div>
                         </div>
@@ -692,7 +695,7 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                           <table className="w-full text-left border-collapse">
                             <thead>
                               <tr className="bg-gray-50/80 border-b border-gray-200 text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
-                                <th className="py-3 px-4 min-w-[200px]">Item / Descrição</th>
+                                <th className="py-3 px-4 min-w-[200px]">NR item / Descrição</th>
                                 <th className="py-3 px-2 text-center w-14">Und</th>
                                 <th className="py-3 px-2 text-center w-20">Empenhado</th>
                                 <th className="py-3 px-2 text-center w-20">Já Recebido</th>
@@ -727,12 +730,69 @@ export function CronogramasView({ context }: CronogramasViewProps) {
 
                                 return (
                                   <tr key={it.id} className="hover:bg-blue-50/20 transition-colors">
-                                    {/* Description */}
+                                    {/* Identificação documental do item */}
                                     <td className="py-3.5 px-4 font-semibold text-gray-900">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-extrabold text-gray-400">#{it.id}</span>
-                                        <span className="text-xs font-bold text-gray-800">{it.name}</span>
-                                      </div>
+                                      {(() => {
+                                        const itemDisplay = resolveCronogramaItemDisplay(
+                                          it,
+                                          cronogramaItemOverrides
+                                        );
+                                        const rawOverride = cronogramaItemOverrides[it.id];
+                                        const itemNumberValue = rawOverride && 'itemCompraNumber' in rawOverride
+                                          ? rawOverride.itemCompraNumber ?? ''
+                                          : itemDisplay.itemCompraNumber;
+                                        const itemNameValue = rawOverride && 'name' in rawOverride
+                                          ? rawOverride.name ?? ''
+                                          : itemDisplay.name;
+                                        return (
+                                          <div className="grid min-w-[280px] grid-cols-[88px_minmax(180px,1fr)] gap-2">
+                                            <div>
+                                              <label className="mb-1 block text-[9px] font-extrabold uppercase tracking-wide text-gray-400">
+                                                NR item
+                                              </label>
+                                              <input
+                                                type="text"
+                                                value={itemNumberValue}
+                                                onChange={(event) => {
+                                                  const value = event.target.value;
+                                                  setCronogramaItemOverrides((current) => ({
+                                                    ...current,
+                                                    [it.id]: {
+                                                      ...(current[it.id] || {}),
+                                                      itemCompraNumber: value,
+                                                      name: current[it.id]?.name ?? itemNameValue,
+                                                    },
+                                                  }));
+                                                }}
+                                                aria-label={`NR item do cronograma ${it.id}`}
+                                                className="h-9 w-full rounded-lg border border-gray-200 bg-white px-2 text-center text-[11px] font-extrabold text-[#00288e] outline-none focus:border-[#00288e] focus:ring-2 focus:ring-[#00288e]/10"
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="mb-1 block text-[9px] font-extrabold uppercase tracking-wide text-gray-400">
+                                                Descrição
+                                              </label>
+                                              <input
+                                                type="text"
+                                                value={itemNameValue}
+                                                onChange={(event) => {
+                                                  const value = event.target.value;
+                                                  setCronogramaItemOverrides((current) => ({
+                                                    ...current,
+                                                    [it.id]: {
+                                                      ...(current[it.id] || {}),
+                                                      itemCompraNumber: current[it.id]?.itemCompraNumber ?? itemNumberValue,
+                                                      name: value,
+                                                    },
+                                                  }));
+                                                }}
+                                                aria-label={`Descrição do item do cronograma ${it.id}`}
+                                                className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-xs font-bold text-gray-800 outline-none focus:border-[#00288e] focus:ring-2 focus:ring-[#00288e]/10"
+                                              />
+                                            </div>
+                                          </div>
+                                        );
+                                      })()}
                                     </td>
 
                                     {/* Unit */}
@@ -1012,7 +1072,24 @@ export function CronogramasView({ context }: CronogramasViewProps) {
                                           const prog = cronogramaColunas.reduce((s, col) => s + (Number(cronogramaDistribuicao[it.id]?.[col.id]) || 0), 0);
                                           return (
                                             <tr key={it.id} className="hover:bg-gray-50">
-                                              <td className="p-2 font-medium">{it.name}</td>
+                                              <td className="p-2 font-medium">
+                                                {(() => {
+                                                  const itemDisplay = resolveCronogramaItemDisplay(
+                                                    it,
+                                                    cronogramaItemOverrides
+                                                  );
+                                                  return (
+                                                    <div>
+                                                      {itemDisplay.itemCompraNumber && (
+                                                        <span className="mr-1 font-extrabold text-[#00288e]">
+                                                          {itemDisplay.itemCompraNumber}
+                                                        </span>
+                                                      )}
+                                                      <span>{itemDisplay.name}</span>
+                                                    </div>
+                                                  );
+                                                })()}
+                                              </td>
                                               <td className="p-2 text-center text-gray-500 uppercase">{it.unit}</td>
                                               <td className="p-2 text-center font-bold text-emerald-700">{saldo}</td>
                                               {cronogramaColunas.map(col => (

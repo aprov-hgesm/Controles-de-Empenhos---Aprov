@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { CronogramaEntregaColuna, Invoice } from '../lib/types';
+import type { CronogramaEntregaColuna, CronogramaItemOverrides, Invoice } from '../lib/types';
 
 /**
  * Centraliza apenas estado efêmero de interface das telas operacionais.
@@ -110,6 +110,7 @@ export function useOperationalViewState() {
   // Active Cronograma Draft states
   const [cronogramaColunas, setCronogramaColunas] = useState<CronogramaEntregaColuna[]>([]);
   const [cronogramaDistribuicao, setCronogramaDistribuicao] = useState<{ [itemId: string]: { [colunaId: string]: number } }>({});
+  const [cronogramaItemOverrides, setCronogramaItemOverrides] = useState<CronogramaItemOverrides>({});
   const [cronogramaLocalEntrega, setCronogramaLocalEntrega] = useState('Almoxarifado Geral / Seção de Aprovisionamento - HGeSM');
   const [cronogramaHorarioEntrega, setCronogramaHorarioEntrega] = useState('Segunda a Quinta: 08:00 às 11:30 e 13:30 às 16:30 | Sexta: 08:00 às 11:30');
   const [cronogramaObservacoes, setCronogramaObservacoes] = useState(
@@ -142,6 +143,7 @@ export function useOperationalViewState() {
     newItemForm, setNewItemForm, selectedCronogramaEmpenhoId, setSelectedCronogramaEmpenhoId, cronogramasSearch, setCronogramasSearch,
     cronogramasPregaoFilter, setCronogramasPregaoFilter, cronogramasYearFilter, setCronogramasYearFilter, cronogramasClassFilter, setCronogramasClassFilter,
     cronogramasStatusFilter, setCronogramasStatusFilter, cronogramaColunas, setCronogramaColunas, cronogramaDistribuicao, setCronogramaDistribuicao,
+    cronogramaItemOverrides, setCronogramaItemOverrides,
     cronogramaLocalEntrega, setCronogramaLocalEntrega, cronogramaHorarioEntrega, setCronogramaHorarioEntrega, cronogramaObservacoes, setCronogramaObservacoes,
     cronogramaResponsavelNome, setCronogramaResponsavelNome, cronogramaResponsavelCargo, setCronogramaResponsavelCargo, showCronogramaPreviewModal, setShowCronogramaPreviewModal,
     isSavingCronograma, setIsSavingCronograma,

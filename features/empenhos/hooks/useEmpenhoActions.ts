@@ -596,6 +596,67 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     });
   };
 
+  const handleUpdateEmpenhoItemDetails = async (
+    empenhoId: string,
+    itemId: string,
+    input: { itemCompraNumber: string; name: string }
+  ): Promise<boolean> => {
+    const currentEmpenho = empenhos.find((emp) => emp.id === empenhoId);
+    if (!currentEmpenho) {
+      showToast('Empenho não encontrado para alteração do item.', 'error');
+      return false;
+    }
+
+    const currentItem = currentEmpenho.items.find((item) => item.id === itemId);
+    if (!currentItem) {
+      showToast('Item não encontrado no empenho.', 'error');
+      return false;
+    }
+
+    const name = input.name.trim();
+    if (!name) {
+      showToast('A descrição do item não pode ficar vazia.', 'error');
+      return false;
+    }
+
+    const rawNumber = input.itemCompraNumber.trim();
+    const itemCompraNumber = rawNumber
+      ? (/^\d+$/.test(rawNumber) ? rawNumber.padStart(5, '0') : rawNumber.slice(0, 40))
+      : undefined;
+
+    const updatedEmpenho: Empenho = {
+      ...currentEmpenho,
+      items: currentEmpenho.items.map((item) => {
+        if (item.id !== itemId) return item;
+        const updatedItem: Item = { ...item, name };
+        if (itemCompraNumber) updatedItem.itemCompraNumber = itemCompraNumber;
+        else delete updatedItem.itemCompraNumber;
+        return updatedItem;
+      }),
+    };
+
+    if (!user) {
+      showToast('Sua sessão expirou. Entre novamente para alterar o item.', 'error');
+      return false;
+    }
+
+    try {
+      const committedEmpenho = await saveEmpenho(user.uid, updatedEmpenho);
+      setEmpenhos((current) => current.map((emp) => (
+        emp.id === empenhoId ? committedEmpenho : emp
+      )));
+      showToast('NR item e descrição atualizados com sucesso.', 'success');
+      return true;
+    } catch (error) {
+      console.error('Erro ao atualizar identificação do item do empenho:', error);
+      showToast(
+        error instanceof Error ? error.message : 'Não foi possível atualizar o item do empenho.',
+        'error'
+      );
+      return false;
+    }
+  };
+
   // Delete item from editing commitment
   const handleDeleteItemFromEmpenho = async (itemId: string) => {
     let updatedTargetEmp: Empenho | null = null;
@@ -721,6 +782,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     handleProcessJson,
     handleSaveReviewEmpenho,
     handleAddItemToEmpenho,
+    handleUpdateEmpenhoItemDetails,
     handleDeleteItemFromEmpenho,
     handleFinishEmpenhoRegistry,
     handleDeleteSpecificEmpenho,

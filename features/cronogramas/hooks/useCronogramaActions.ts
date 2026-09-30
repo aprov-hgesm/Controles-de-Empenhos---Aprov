@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type React from 'react';
 import type { User } from 'firebase/auth';
-import type { CronogramaEmpenho, CronogramaEntregaColuna, Empenho } from '../../../lib/types';
+import type { CronogramaEmpenho, CronogramaEntregaColuna, CronogramaItemOverrides, Empenho } from '../../../lib/types';
 import { saveCronograma } from '../../../lib/firebaseSync';
 import { loadJsPdfWithAutoTable } from '../../../lib/pdfToolkit';
 import { resolveInstitutionalDocumentIdentity } from '../../../lib/institutionalDocumentProfile';
@@ -12,6 +12,11 @@ import { resolveSupplierEmailForEmpenho } from '../../../lib/supplierEmailResolv
 import { authorizeWorkspaceGmail, sendWorkspaceGmailMessage } from '../../../lib/googleWorkspaceMail';
 import { loadWorkspaceDriveSettings } from '../../../lib/workspaceDriveSettings';
 import { isOperationalSectorContext, type ResolvedWorkspaceContext } from '../../../lib/workspaceContext';
+import {
+  buildCronogramaItemOverrides,
+  resolveCronogramaItemDisplay,
+  validateCronogramaItemOverrides,
+} from '../domain/cronogramaItemOverrides';
 
 type Distribution=Record<string,Record<string,number>>;
 interface CronogramaActionsContext {
@@ -25,6 +30,8 @@ interface CronogramaActionsContext {
   setCronogramaColunas: React.Dispatch<React.SetStateAction<CronogramaEntregaColuna[]>>;
   cronogramaDistribuicao: Distribution;
   setCronogramaDistribuicao: React.Dispatch<React.SetStateAction<Distribution>>;
+  cronogramaItemOverrides: CronogramaItemOverrides;
+  setCronogramaItemOverrides: React.Dispatch<React.SetStateAction<CronogramaItemOverrides>>;
   cronogramaLocalEntrega:string; setCronogramaLocalEntrega:React.Dispatch<React.SetStateAction<string>>;
   cronogramaHorarioEntrega:string; setCronogramaHorarioEntrega:React.Dispatch<React.SetStateAction<string>>;
   cronogramaObservacoes:string; setCronogramaObservacoes:React.Dispatch<React.SetStateAction<string>>;
@@ -39,7 +46,7 @@ interface CronogramaActionsContext {
 
 /** Ações e geração de PDF dos cronogramas de entrega. */
 export function useCronogramaActions(context:CronogramaActionsContext){
-  const { user, empenhos, cronogramas, setCronogramas, selectedCronogramaEmpenhoId, setSelectedCronogramaEmpenhoId, cronogramaColunas, setCronogramaColunas, cronogramaDistribuicao, setCronogramaDistribuicao, cronogramaLocalEntrega, setCronogramaLocalEntrega, cronogramaHorarioEntrega, setCronogramaHorarioEntrega, cronogramaObservacoes, setCronogramaObservacoes, cronogramaResponsavelNome, setCronogramaResponsavelNome, cronogramaResponsavelCargo, setCronogramaResponsavelCargo, setIsSavingCronograma, showToast, formatDateOnly, institutionalProfile, workspaceContext }=context;
+  const { user, empenhos, cronogramas, setCronogramas, selectedCronogramaEmpenhoId, setSelectedCronogramaEmpenhoId, cronogramaColunas, setCronogramaColunas, cronogramaDistribuicao, setCronogramaDistribuicao, cronogramaItemOverrides, setCronogramaItemOverrides, cronogramaLocalEntrega, setCronogramaLocalEntrega, cronogramaHorarioEntrega, setCronogramaHorarioEntrega, cronogramaObservacoes, setCronogramaObservacoes, cronogramaResponsavelNome, setCronogramaResponsavelNome, cronogramaResponsavelCargo, setCronogramaResponsavelCargo, setIsSavingCronograma, showToast, formatDateOnly, institutionalProfile, workspaceContext }=context;
   const institutionalIdentity = resolveInstitutionalDocumentIdentity(institutionalProfile);
   const { organizationName, sectionName, documentHeaderLines, defaultDeliveryLocation, defaultResponsibleRole } = institutionalIdentity;
   const [isSendingCronogramaEmail, setIsSendingCronogramaEmail] = useState(false);
@@ -57,6 +64,9 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     const emp = empenhos.find(e => e.id === empId);
     if (!emp) return;
      const saved = cronogramas.find(c => c.empenhoId === empId);
+    setCronogramaItemOverrides(
+      buildCronogramaItemOverrides(emp.items, saved?.itemOverrides)
+    );
     if (saved && saved.colunasEntregas && saved.colunasEntregas.length > 0) {
       setCronogramaColunas(saved.colunasEntregas);
       setCronogramaDistribuicao(saved.distribuicao || {});
@@ -184,6 +194,7 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     responsavelCargo: cronogramaResponsavelCargo,
     colunasEntregas: cronogramaColunas,
     distribuicao: cronogramaDistribuicao,
+    itemOverrides: buildCronogramaItemOverrides(emp.items, cronogramaItemOverrides),
     ...(previous?.ultimoEnvioEmail ? { ultimoEnvioEmail: previous.ultimoEnvioEmail } : {}),
   });
 
@@ -191,6 +202,14 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     if (!selectedCronogramaEmpenhoId) return;
     const emp = empenhos.find(e => e.id === selectedCronogramaEmpenhoId);
     if (!emp) return;
+    const itemValidationError = validateCronogramaItemOverrides(
+      emp.items,
+      cronogramaItemOverrides
+    );
+    if (itemValidationError) {
+      showToast(itemValidationError, 'error');
+      return;
+    }
      setIsSavingCronograma(true);
     try {
       const previous = cronogramas.find((item) => item.empenhoId === emp.id) || null;
@@ -213,6 +232,15 @@ export function useCronogramaActions(context:CronogramaActionsContext){
 
   // PDF Generator for Cronograma
   const handleGenerateCronogramaPDF = async (emp: Empenho, action: 'download' | 'print' | 'blob' = 'download') => {
+    const itemValidationError = validateCronogramaItemOverrides(
+      emp.items,
+      cronogramaItemOverrides
+    );
+    if (itemValidationError) {
+      showToast(itemValidationError, 'error');
+      return null;
+    }
+
     const { jsPDF, autoTable } = await loadJsPdfWithAutoTable();
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -334,11 +362,12 @@ export function useCronogramaActions(context:CronogramaActionsContext){
       const saldoDisponivel = Math.max(0, it.quantity - it.received);
       const totalProg = cronogramaColunas.reduce((sum, col) => sum + (Number(cronogramaDistribuicao[it.id]?.[col.id]) || 0), 0);
       const valorTotalProg = totalProg * it.unitPrice;
-       const legacyItemCompraId = /^\d+$/.test(String(it.id || '').trim()) ? String(it.id).trim() : '';
-       const rawItemCompraNumber = String(it.itemCompraNumber || legacyItemCompraId).trim();
-       const itemCompraNumber = /^\d+$/.test(rawItemCompraNumber) ? rawItemCompraNumber.padStart(5, '0') : rawItemCompraNumber;
+       const itemDisplay = resolveCronogramaItemDisplay(
+         it,
+         cronogramaItemOverrides
+       );
        const row: string[] = [
-        `${itemCompraNumber ? `Item compra: ${itemCompraNumber}\n` : ''}${it.name}`,
+        `${itemDisplay.itemCompraNumber ? `Item compra: ${itemDisplay.itemCompraNumber}\n` : ''}${itemDisplay.name}`,
         it.unit,
         String(it.quantity),
         String(it.received),
@@ -520,6 +549,15 @@ export function useCronogramaActions(context:CronogramaActionsContext){
       return;
     }
 
+    const itemValidationError = validateCronogramaItemOverrides(
+      emp.items,
+      cronogramaItemOverrides
+    );
+    if (itemValidationError) {
+      showToast(itemValidationError, 'error');
+      return;
+    }
+
     setIsSendingCronogramaEmail(true);
     try {
       const [supplierEmail, driveSettings] = await Promise.all([
@@ -649,6 +687,8 @@ export function useCronogramaActions(context:CronogramaActionsContext){
     handleSaveCronograma,
     handleGenerateCronogramaPDF,
     handleSendCronogramaEmail,
+    cronogramaItemOverrides,
+    setCronogramaItemOverrides,
     isSendingCronogramaEmail
   };
 }
