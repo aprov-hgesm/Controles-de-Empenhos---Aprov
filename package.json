@@ -76,6 +76,7 @@
     "verify:brand-identity-foundation": "node scripts/verify-brand-identity-foundation.mjs",
     "verify:brand-notifications": "node scripts/verify-brand-notifications.mjs",
     "verify:empenhos-subtabs": "node scripts/verify-empenhos-subtabs.mjs",
+    "verify:empenho-pdf-direct-import": "node scripts/verify-empenho-pdf-direct-import.mjs",
     "verify:brand-admin": "node scripts/verify-brand-admin.mjs",
     "verify:admin-information-architecture": "node scripts/verify-admin-information-architecture.mjs",
     "verify:admin-usage-intelligence": "node scripts/verify-admin-usage-intelligence.mjs",

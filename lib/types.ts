@@ -55,6 +55,11 @@ export interface InvoicePdfDocument {
   storage?: DocumentStorageRef;
 }
 
+export type EmpenhoContractingModality =
+  | 'PREGAO'
+  | 'DISPENSA_ELETRONICA'
+  | 'OUTRA';
+
 export interface Empenho {
   id: string;
   supplier: string;
@@ -64,7 +69,15 @@ export interface Empenho {
   status: 'Ativo' | 'Encerrado' | 'Sem Movimentação' | 'Urgente';
   items: Item[];
   lastNFDaysAgo?: number;
-  pregao?: string; // Pregão vinculado ao empenho
+  pregao?: string; // Compatibilidade: número do Pregão quando modalidade = PREGAO
+  /** Modalidade de contratação identificada na Nota de Empenho. */
+  modalidadeContratacao?: EmpenhoContractingModality;
+  /** Número do Pregão, Dispensa Eletrônica ou outra contratação. */
+  numeroContratacao?: string;
+  /** Nota de Crédito que disponibilizou o recurso para o empenho, ex.: 2026NC412370. */
+  notaCredito?: string;
+  /** Contrato associado, quando indicado na Nota de Empenho. */
+  contrato?: string;
   classification?: string;
   revision?: number; // Revisão otimista do documento; legado sem campo equivale à revisão 0
   updatedAt?: string;

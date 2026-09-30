@@ -2,7 +2,7 @@
 
 import React from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { AlertCircle, AlertTriangle, ArrowLeft, Braces, Calendar, CalendarDays, Check, CheckCircle2, ChevronRight, Copy, Edit, Eye, FileDown, FileText, Loader2, Package, Plus, Printer, Save, Search, Settings2, Trash2, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArrowLeft, Braces, Calendar, CalendarDays, Check, CheckCircle2, ChevronRight, Copy, Edit, Eye, FileDown, FileText, FileUp, Loader2, Package, Plus, Printer, Save, Search, Settings2, Trash2, X } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActions';
 import type { Alert, Empenho, Invoice, EmpenhoPdfDocument } from '../../../lib/types';
@@ -67,8 +67,10 @@ interface EmpenhosViewContext {
   handleUpdateEmpenhoClassification: (empenhoId: string, classification: string) => Promise<void>;
   handleUpdateEmpenhoItemDetails: (empenhoId: string, itemId: string, updates: { itemCompraNumber: string; name: string }) => Promise<void>;
   handleUpdateEmpenhoPregao: (empenhoId: string, pregao: string) => Promise<void>;
+  handleUpdateEmpenhoNotaCredito: (empenhoId: string, notaCredito: string) => Promise<void>;
   handleUpdateEmpenhoSupplierCnpj: (empenhoId: string, cnpj: string) => Promise<void>;
   handleGenerateEmpenhoReportPDF: (...args: any[]) => any;
+  handleProcessEmpenhoPdf: (file: File) => Promise<void>;
   handleProcessJson: (...args: any[]) => any;
   handleSaveReviewEmpenho: (...args: any[]) => any;
   handleSelectEmpenhoForCronograma: (...args: any[]) => any;
@@ -76,7 +78,7 @@ interface EmpenhosViewContext {
   jsonError: string | null;
   jsonInput: string;
   newEmpenhoForm: NewEmpenhoForm;
-  newEmpenhoMode: 'manual' | 'json';
+  newEmpenhoMode: 'manual' | 'pdf' | 'json';
   newItemForm: NewItemForm;
   reviewEmpenho: any;
   savingClassConfig: boolean;
@@ -93,7 +95,7 @@ interface EmpenhosViewContext {
   setJsonError: Setter<string | null>;
   setJsonInput: Setter<string>;
   setNewEmpenhoForm: Setter<NewEmpenhoForm>;
-  setNewEmpenhoMode: Setter<'manual' | 'json'>;
+  setNewEmpenhoMode: Setter<'manual' | 'pdf' | 'json'>;
   setNewItemForm: Setter<NewItemForm>;
   setNfSubTab: Setter<any>;
   setReviewEmpenho: Setter<any>;
@@ -118,10 +120,14 @@ interface EmpenhosViewProps { context: EmpenhosViewContext; }
 /** Tela de cadastro e detalhe de empenhos extraída sem alterar comportamento. */
 export function EmpenhosView({ context }: EmpenhosViewProps) {
   const shouldReduceMotion = useReducedMotion();
-  const { alerts, addEmpenhoClass, copiedPrompt, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCopyPrompt, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadPromptPdf, handleDownloadPromptTxt, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoItemDetails, handleUpdateEmpenhoPregao, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessJson, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, jsonInput, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setJsonInput, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user } = context;
+  const { alerts, addEmpenhoClass, copiedPrompt, empenhoClasses, empenhos, empenhosClassFilter, empenhosFilter, empenhosPregaoFilter, empenhosSearch, empenhosYearFilter, formatDateOnly, handleAddItemToEmpenho, handleCopyPrompt, handleCreateEmpenho, handleDeleteItemFromEmpenho, handleDownloadPromptPdf, handleDownloadPromptTxt, handleDownloadTermoRecebimento, handleEmpenhoDocumentUploaded, handleUpdateEmpenhoClassification, handleUpdateEmpenhoItemDetails, handleUpdateEmpenhoPregao, handleUpdateEmpenhoNotaCredito, handleUpdateEmpenhoSupplierCnpj, handleGenerateEmpenhoReportPDF, handleProcessEmpenhoPdf, handleProcessJson, handleSaveReviewEmpenho, handleSelectEmpenhoForCronograma, invoices, jsonError, jsonInput, newEmpenhoForm, newEmpenhoMode, newItemForm, reviewEmpenho, savingClassConfig, selectedEmpenhoDetailId, setActiveTab, setEditingEmpenhoId, setEditingInvoice, setEmpenhosClassFilter, setEmpenhosFilter, setEmpenhosPregaoFilter, setEmpenhosSearch, setEmpenhosYearFilter, setEmpenhoToDelete, setJsonError, setJsonInput, setNewEmpenhoForm, setNewEmpenhoMode, setNewItemForm, setNfSubTab, setReviewEmpenho, setSelectedEmpenhoDetailId, setSelectedNFCommitmentId, setSelectedReportInvoice, setShowAddItemFormInDetail, setShowConfirmSaveModal, setShowNewEmpenhoModal, showAddItemFormInDetail, showConfirmSaveModal, showNewEmpenhoModal, showToast, uniqueEmpenhoYears, uniquePregaos, updateEmpenhoClass, user } = context;
   const [editingPregaoEmpenhoId, setEditingPregaoEmpenhoId] = React.useState<string | null>(null);
   const [pregaoDraft, setPregaoDraft] = React.useState('');
   const [savingPregao, setSavingPregao] = React.useState(false);
+  const [editingNotaCreditoEmpenhoId, setEditingNotaCreditoEmpenhoId] = React.useState<string | null>(null);
+  const [notaCreditoDraft, setNotaCreditoDraft] = React.useState('');
+  const [savingNotaCredito, setSavingNotaCredito] = React.useState(false);
+  const [isParsingEmpenhoPdf, setIsParsingEmpenhoPdf] = React.useState(false);
   const [editingCnpjEmpenhoId, setEditingCnpjEmpenhoId] = React.useState<string | null>(null);
   const [cnpjDraft, setCnpjDraft] = React.useState('');
   const [savingCnpj, setSavingCnpj] = React.useState(false);
@@ -485,11 +491,15 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                       {getEmpenhoDisplayClassification(emp)}
                                     </span>
                                   )}
-                                  {emp.pregao && (
+                                  {emp.modalidadeContratacao === 'DISPENSA_ELETRONICA' && emp.numeroContratacao ? (
+                                    <span className="px-2 py-0.5 bg-violet-50 text-violet-700 border border-violet-100 rounded-md text-[10px] font-semibold">
+                                      Dispensa: {emp.numeroContratacao}
+                                    </span>
+                                  ) : emp.pregao && emp.pregao !== 'Sem Pregão' ? (
                                     <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-md text-[10px] font-semibold">
                                       Pregão: {emp.pregao}
                                     </span>
-                                  )}
+                                  ) : null}
                                 </div>
                                 
                                 <div className="flex items-center gap-1.5">
@@ -845,6 +855,85 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                     className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-emerald-200 bg-white text-emerald-800 text-xs font-bold hover:bg-emerald-100"
                                   >
                                     <Edit className="w-3.5 h-3.5" /> Alterar Pregão
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50/50 px-3 py-2.5 max-w-xl">
+                              {editingNotaCreditoEmpenhoId === targetEmp.id ? (
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                  <div className="flex-1">
+                                    <label className="mb-1 block text-[10px] font-extrabold uppercase tracking-wider text-violet-700">
+                                      Nota de Crédito vinculada ao empenho
+                                    </label>
+                                    <input
+                                      value={notaCreditoDraft}
+                                      onChange={(event) => setNotaCreditoDraft(event.target.value.toUpperCase())}
+                                      placeholder="Ex.: 2026NC412370"
+                                      className="h-9 w-full rounded-lg border border-violet-200 bg-white px-3 text-xs font-bold text-gray-800 outline-none focus:ring-1 focus:ring-violet-500"
+                                    />
+                                  </div>
+                                  <div className="flex gap-2 sm:pt-4">
+                                    <button
+                                      type="button"
+                                      disabled={savingNotaCredito}
+                                      aria-busy={savingNotaCredito}
+                                      onClick={async () => {
+                                        if (savingNotaCredito) return;
+                                        setSavingNotaCredito(true);
+                                        try {
+                                          await handleUpdateEmpenhoNotaCredito(targetEmp.id, notaCreditoDraft);
+                                          setEditingNotaCreditoEmpenhoId(null);
+                                        } finally {
+                                          setSavingNotaCredito(false);
+                                        }
+                                      }}
+                                      className="h-9 rounded-lg bg-violet-700 px-3 text-xs font-bold text-white hover:bg-violet-800 disabled:opacity-60"
+                                    >
+                                      {savingNotaCredito && <Loader2 className="mr-1.5 inline h-3.5 w-3.5 animate-spin" />}
+                                      {savingNotaCredito ? 'Salvando…' : 'Salvar NC'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingNotaCreditoEmpenhoId(null)}
+                                      className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-xs font-bold text-gray-600 hover:bg-gray-50"
+                                    >
+                                      Cancelar
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-between gap-3">
+                                  <div>
+                                    <span className="block text-[10px] font-extrabold uppercase tracking-wider text-violet-700">
+                                      Nota de Crédito (NC)
+                                    </span>
+                                    <span className="text-xs font-bold text-gray-800">
+                                      {targetEmp.notaCredito || 'Não informada'}
+                                    </span>
+                                    {targetEmp.modalidadeContratacao && (
+                                      <span className="mt-0.5 block text-[10px] font-semibold text-gray-500">
+                                        {targetEmp.modalidadeContratacao === 'PREGAO'
+                                          ? 'Pregão'
+                                          : targetEmp.modalidadeContratacao === 'DISPENSA_ELETRONICA'
+                                            ? 'Dispensa Eletrônica'
+                                            : 'Outra contratação'}
+                                        {targetEmp.numeroContratacao ? ' · ' + targetEmp.numeroContratacao : ''}
+                                        {targetEmp.contrato ? ' · Contrato ' + targetEmp.contrato : ''}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setNotaCreditoDraft(targetEmp.notaCredito || '');
+                                      setEditingNotaCreditoEmpenhoId(targetEmp.id);
+                                    }}
+                                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 text-xs font-bold text-violet-800 hover:bg-violet-100"
+                                  >
+                                    <Edit className="h-3.5 w-3.5" />
+                                    {targetEmp.notaCredito ? 'Editar NC' : 'Informar NC'}
                                   </button>
                                 </div>
                               )}
@@ -1820,7 +1909,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         <p className="mt-1 max-w-3xl text-xs leading-relaxed text-blue-100/75">
                           {reviewEmpenho
                             ? 'Revise e edite os dados extraídos antes de confirmar o salvamento.'
-                            : 'Escolha o cadastro manual ou a importação estruturada via JSON.'}
+                            : 'Escolha o cadastro manual, o upload direto da Nota de Empenho em PDF ou a importação via JSON.'}
                         </p>
                       </div>
                     </div>
@@ -1855,6 +1944,20 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                             }`}
                           >
                             Cadastro Manual
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewEmpenhoMode('pdf');
+                              setJsonError(null);
+                            }}
+                            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                              newEmpenhoMode === 'pdf'
+                                ? 'bg-[#00288e] text-white shadow-sm'
+                                : 'bg-transparent text-gray-500 hover:bg-gray-100'
+                            }`}
+                          >
+                            <FileUp className="w-3.5 h-3.5" /> Importar PDF da NE
                           </button>
                           <button
                             type="button"
@@ -1991,7 +2094,77 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         </form>
                       )}
 
-                      {/* MODE 2: JSON IMPORT INPUT */}
+                      {/* MODE 2: DIRECT SIAFI PDF IMPORT */}
+                      {newEmpenhoMode === 'pdf' && !reviewEmpenho && (
+                        <div className="mx-auto max-w-4xl p-5 sm:p-6 space-y-4">
+                          <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-5">
+                            <div className="flex items-start gap-3">
+                              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#00288e] text-white shadow-sm">
+                                <FileUp className="h-5 w-5" aria-hidden="true" />
+                              </div>
+                              <div>
+                                <h4 className="text-sm font-extrabold text-[#00288e]">
+                                  Leitura direta da Nota de Empenho
+                                </h4>
+                                <p className="mt-1 text-xs font-medium leading-5 text-slate-600">
+                                  Selecione a Nota de Empenho do SIAFI em PDF. O EMPROVEX lê o documento sem IA externa,
+                                  identifica fornecedor, itens, NC e contratação e abre uma prévia editável antes do cadastro.
+                                </p>
+                              </div>
+                            </div>
+
+                            <label className={`mt-5 flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-5 py-6 text-center transition ${
+                              isParsingEmpenhoPdf
+                                ? 'pointer-events-none border-slate-200 bg-slate-50 text-slate-400'
+                                : 'border-blue-200 bg-white/80 text-[#00288e] hover:border-[#00288e]/50 hover:bg-blue-50/60'
+                            }`}>
+                              {isParsingEmpenhoPdf ? (
+                                <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
+                              ) : (
+                                <FileText className="h-6 w-6" aria-hidden="true" />
+                              )}
+                              <span className="mt-2 text-xs font-extrabold">
+                                {isParsingEmpenhoPdf ? 'Lendo Nota de Empenho…' : 'Selecionar PDF da Nota de Empenho'}
+                              </span>
+                              <span className="mt-1 text-[10px] font-semibold text-slate-400">
+                                SIAFI · Impressão Completa · até 12 MB
+                              </span>
+                              <input
+                                type="file"
+                                accept="application/pdf,.pdf"
+                                className="sr-only"
+                                data-testid="empenho-pdf-direct-input"
+                                disabled={isParsingEmpenhoPdf}
+                                onChange={async (event) => {
+                                  const file = event.target.files?.[0];
+                                  event.currentTarget.value = '';
+                                  if (!file || isParsingEmpenhoPdf) return;
+                                  setIsParsingEmpenhoPdf(true);
+                                  try {
+                                    await handleProcessEmpenhoPdf(file);
+                                  } finally {
+                                    setIsParsingEmpenhoPdf(false);
+                                  }
+                                }}
+                              />
+                            </label>
+                          </div>
+
+                          {jsonError && (
+                            <div className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-700">
+                              <AlertCircle className="h-4.5 w-4.5 shrink-0 text-rose-500" />
+                              <span>{jsonError}</span>
+                            </div>
+                          )}
+
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-[11px] leading-5 text-slate-600">
+                            <strong className="text-slate-800">Durante o período de testes:</strong> esta opção é adicional.
+                            Cadastro Manual e Importar via JSON continuam disponíveis sem alteração.
+                          </div>
+                        </div>
+                      )}
+
+                      {/* MODE 3: JSON IMPORT INPUT */}
                       {newEmpenhoMode === 'json' && !reviewEmpenho && (
                         <div className="p-5 space-y-4">
                           {/* PROMPT DOWNLOAD & INSTRUCTIONS CARD */}
@@ -2177,16 +2350,102 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                               />
                             </div>
                             <div>
-                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Pregão Relacionado</label>
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Modalidade</label>
+                              <select
+                                value={reviewEmpenho.modalidadeContratacao || (reviewEmpenho.pregao ? 'PREGAO' : 'OUTRA')}
+                                onChange={(e) => {
+                                  const modalidadeContratacao = e.target.value;
+                                  setReviewEmpenho({
+                                    ...reviewEmpenho,
+                                    modalidadeContratacao,
+                                    pregao: modalidadeContratacao === 'PREGAO'
+                                      ? (reviewEmpenho.numeroContratacao || reviewEmpenho.pregao || '')
+                                      : '',
+                                  });
+                                }}
+                                className="w-full px-3 py-1.5 border border-gray-200 rounded-xl bg-white text-xs font-bold text-[#0b1c30] focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none"
+                              >
+                                <option value="PREGAO">Pregão</option>
+                                <option value="DISPENSA_ELETRONICA">Dispensa Eletrônica</option>
+                                <option value="OUTRA">Outra</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Nº da Contratação</label>
                               <input
                                 type="text"
-                                value={reviewEmpenho.pregao}
-                                onChange={(e) => setReviewEmpenho({ ...reviewEmpenho, pregao: e.target.value })}
+                                value={reviewEmpenho.numeroContratacao || reviewEmpenho.pregao || ''}
+                                onChange={(e) => {
+                                  const numeroContratacao = e.target.value;
+                                  setReviewEmpenho({
+                                    ...reviewEmpenho,
+                                    numeroContratacao,
+                                    pregao: reviewEmpenho.modalidadeContratacao === 'PREGAO'
+                                      ? numeroContratacao
+                                      : reviewEmpenho.pregao,
+                                  });
+                                }}
                                 className="w-full px-3 py-1.5 border border-gray-200 rounded-xl bg-white text-xs font-bold text-[#0b1c30] focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none"
-                                placeholder="Ex: 12/2025"
+                                placeholder="Ex.: 90049/2025 ou 00136/2026"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Nota de Crédito (NC)</label>
+                              <input
+                                type="text"
+                                value={reviewEmpenho.notaCredito || ''}
+                                onChange={(e) => setReviewEmpenho({ ...reviewEmpenho, notaCredito: e.target.value.toUpperCase() })}
+                                className="w-full px-3 py-1.5 border border-gray-200 rounded-xl bg-white text-xs font-bold text-[#0b1c30] focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none"
+                                placeholder="Ex.: 2026NC412370"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Contrato (opcional)</label>
+                              <input
+                                type="text"
+                                value={reviewEmpenho.contrato || ''}
+                                onChange={(e) => setReviewEmpenho({ ...reviewEmpenho, contrato: e.target.value })}
+                                className="w-full px-3 py-1.5 border border-gray-200 rounded-xl bg-white text-xs font-bold text-[#0b1c30] focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none"
+                                placeholder="Ex.: 09/2025"
                               />
                             </div>
                           </div>
+
+                          {reviewEmpenho.importSource === 'pdf' && (
+                            <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#00288e]">
+                                    Leitura direta do PDF
+                                  </p>
+                                  <p className="mt-1 text-xs font-semibold text-slate-700">
+                                    {reviewEmpenho.importMetadata?.fileName || 'Nota de Empenho'}
+                                  </p>
+                                </div>
+                                <div className="text-right text-[10px] font-semibold text-slate-500">
+                                  <p>{reviewEmpenho.importMetadata?.pageCountDetected || '—'} pág. detectada(s)</p>
+                                  <p>{reviewEmpenho.items.length} item(ns) extraído(s)</p>
+                                  {reviewEmpenho.importMetadata?.duplicatedRowsIgnored > 0 && (
+                                    <p>{reviewEmpenho.importMetadata.duplicatedRowsIgnored} repetição(ões) de quebra de página ignorada(s)</p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {Array.isArray(reviewEmpenho.importWarnings) && reviewEmpenho.importWarnings.length > 0 && (
+                                <div className="mt-3 space-y-1.5">
+                                  {reviewEmpenho.importWarnings.map((warning: string, index: number) => (
+                                    <div
+                                      key={index}
+                                      className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] font-semibold text-amber-800"
+                                    >
+                                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                      <span>{warning}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
 
                           {/* Alert for Divergence */}
                           {reviewEmpenho && typeof reviewEmpenho.valorTotalDeclarado === 'number' && reviewEmpenho.valorTotalDeclarado > 0 && (

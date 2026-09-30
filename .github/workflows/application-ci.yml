@@ -482,6 +482,9 @@ jobs:
       - name: EMPROVEX empenhos subtabs guard
         run: npm run verify:empenhos-subtabs
 
+      - name: Empenho direct PDF import guard
+        run: npm run verify:empenho-pdf-direct-import
+
       - name: EMPROVEX brand admin guard
         run: npm run verify:brand-admin
 

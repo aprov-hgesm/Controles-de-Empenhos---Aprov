@@ -24,7 +24,7 @@ export function useOperationalViewState() {
   const [empenhosYearFilter, setEmpenhosYearFilter] = useState('Todos');
   const [empenhosClassFilter, setEmpenhosClassFilter] = useState('Todos');
   const [showNewEmpenhoModal, setShowNewEmpenhoModal] = useState(false);
-  const [newEmpenhoMode, setNewEmpenhoMode] = useState<'manual' | 'json'>('manual');
+  const [newEmpenhoMode, setNewEmpenhoMode] = useState<'manual' | 'pdf' | 'json'>('manual');
   const [jsonInput, setJsonInput] = useState('');
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);

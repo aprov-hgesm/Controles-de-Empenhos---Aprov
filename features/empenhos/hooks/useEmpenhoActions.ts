@@ -2,7 +2,14 @@
 
 import type React from 'react';
 import type { User } from 'firebase/auth';
-import type { Alert, Empenho, EmpenhoPdfDocument, Invoice, Item } from '../../../lib/types';
+import type {
+  Alert,
+  Empenho,
+  EmpenhoContractingModality,
+  EmpenhoPdfDocument,
+  Invoice,
+  Item,
+} from '../../../lib/types';
 import { createEmpenho, saveAlert, saveEmpenho, removeEmpenho } from '../../../lib/firebaseSync';
 import { PROMPT_EXTRACAO_EMPENHO } from '../domain/empenhoHelpers';
 import { normalizeEmpenhoClassCode } from '../../../lib/empenhoClasses';
@@ -91,6 +98,52 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       console.error('Erro ao atualizar Pregão do empenho:', error);
       showToast(
         error instanceof Error ? error.message : 'Não foi possível atualizar o Pregão do empenho.',
+        'error'
+      );
+      throw error;
+    }
+  };
+
+  const handleUpdateEmpenhoNotaCredito = async (
+    empenhoId: string,
+    notaCreditoInput: string
+  ): Promise<void> => {
+    const currentEmpenho = empenhos.find((emp) => emp.id === empenhoId);
+    if (!currentEmpenho) {
+      showToast('Empenho não encontrado para alteração da Nota de Crédito.', 'error');
+      return;
+    }
+
+    const notaCredito = notaCreditoInput.trim().toUpperCase();
+    if (notaCredito && !/^\d{4}NC[A-Z0-9]{5,}$/.test(notaCredito)) {
+      const error = new Error('Informe a Nota de Crédito no formato AAAANC000000, por exemplo 2026NC412370.');
+      showToast(error.message, 'error');
+      throw error;
+    }
+
+    const { notaCredito: _previousNotaCredito, ...withoutNotaCredito } = currentEmpenho;
+    const updatedEmpenho: Empenho = notaCredito
+      ? { ...currentEmpenho, notaCredito }
+      : withoutNotaCredito;
+
+    try {
+      if (!user) throw new Error('Sua sessão expirou. Entre novamente para alterar o empenho.');
+      const committedEmpenho = await saveEmpenho(user.uid, updatedEmpenho);
+      setEmpenhos((current) => current.map((emp) => (
+        emp.id === empenhoId ? committedEmpenho : emp
+      )));
+      showToast(
+        notaCredito
+          ? `Nota de Crédito do empenho ${empenhoId} atualizada para ${notaCredito}.`
+          : `Nota de Crédito do empenho ${empenhoId} removida.`,
+        'success'
+      );
+    } catch (error) {
+      console.error('Erro ao atualizar Nota de Crédito do empenho:', error);
+      showToast(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível atualizar a Nota de Crédito do empenho.',
         'error'
       );
       throw error;
@@ -380,6 +433,10 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       status: 'Ativo',
       items: [],
       pregao: newEmpenhoForm.pregao || 'Sem Pregão',
+      modalidadeContratacao: newEmpenhoForm.pregao ? 'PREGAO' : 'OUTRA',
+      ...(newEmpenhoForm.pregao
+        ? { numeroContratacao: newEmpenhoForm.pregao }
+        : {}),
       classification: normalizeEmpenhoClassCode(newEmpenhoForm.classification) || 'QR',
     };
     if (!user) {
@@ -469,6 +526,131 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     setTimeout(() => setCopiedPrompt(false), 3000);
   };
 
+  const handleProcessEmpenhoPdf = async (file: File): Promise<void> => {
+    if (!user) {
+      showToast('Sua sessão expirou. Entre novamente antes de importar a Nota de Empenho.', 'error');
+      return;
+    }
+    if (
+      file.type !== 'application/pdf'
+      && !file.name.toLocaleLowerCase('pt-BR').endsWith('.pdf')
+    ) {
+      setJsonError('Selecione um arquivo PDF de Nota de Empenho.');
+      return;
+    }
+    if (file.size <= 0 || file.size > 12 * 1024 * 1024) {
+      setJsonError('O PDF da Nota de Empenho deve ter até 12 MB.');
+      return;
+    }
+
+    setJsonError(null);
+    try {
+      const token = await user.getIdToken();
+      const formData = new FormData();
+      formData.set('file', file);
+
+      const response = await fetch('/api/empenhos/parse-ne', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      const payload = await response.json().catch(() => ({})) as {
+        result?: {
+          id: string;
+          supplier: string;
+          supplierCnpj: string;
+          description: string;
+          date: string;
+          valorTotal: number;
+          notaCredito: string | null;
+          modalidadeContratacao: EmpenhoContractingModality;
+          numeroContratacao: string | null;
+          pregao: string;
+          contrato: string | null;
+          classification: string;
+          tipoObjeto: 'MATERIAL' | 'SERVICO' | 'OUTRO';
+          naturezaDespesa: string | null;
+          processo: string;
+          ug: string | null;
+          pageCountDetected: number;
+          itemRowsDetected: number;
+          duplicatedRowsIgnored: number;
+          warnings: string[];
+          items: Array<{
+            id: string;
+            itemCompraNumber: string;
+            sequence: string;
+            name: string;
+            unit: string;
+            quantity: number;
+            unitPrice: number;
+            declaredTotal: number;
+            received: number;
+          }>;
+        };
+        error?: string;
+      };
+
+      if (!response.ok || !payload.result) {
+        throw new Error(payload.error || 'Não foi possível interpretar a Nota de Empenho.');
+      }
+
+      const result = payload.result;
+      setReviewEmpenho({
+        id: result.id.toUpperCase(),
+        supplier: result.supplier,
+        cnpj: result.supplierCnpj,
+        description: result.description,
+        date: result.date,
+        status: 'Ativo',
+        items: result.items.map((item) => ({
+          id: item.id,
+          itemCompraNumber: item.itemCompraNumber,
+          name: item.name,
+          unit: item.unit,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          received: 0,
+          declaredTotal: item.declaredTotal,
+          sequence: item.sequence,
+        })),
+        pregao: result.pregao,
+        modalidadeContratacao: result.modalidadeContratacao,
+        numeroContratacao: result.numeroContratacao || '',
+        notaCredito: result.notaCredito || '',
+        contrato: result.contrato || '',
+        classification: normalizeEmpenhoClassCode(result.classification) || 'QR',
+        valorTotalDeclarado: result.valorTotal,
+        importSource: 'pdf',
+        importWarnings: result.warnings,
+        importMetadata: {
+          tipoObjeto: result.tipoObjeto,
+          naturezaDespesa: result.naturezaDespesa,
+          processo: result.processo,
+          ug: result.ug,
+          pageCountDetected: result.pageCountDetected,
+          itemRowsDetected: result.itemRowsDetected,
+          duplicatedRowsIgnored: result.duplicatedRowsIgnored,
+          fileName: file.name,
+        },
+      });
+      setJsonError(null);
+      showToast(
+        `NE ${result.id} lida diretamente do PDF. Revise os dados antes de salvar.`,
+        'success'
+      );
+    } catch (error) {
+      console.error('Erro ao ler Nota de Empenho diretamente do PDF:', error);
+      setJsonError(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível interpretar a Nota de Empenho.'
+      );
+    }
+  };
+
   // Process imported JSON data
   const handleProcessJson = () => {
     try {
@@ -533,8 +715,20 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
         status: 'Ativo',
         items: mappedReviewItems,
         pregao: data.pregao_relacionado || data.pregao || '',
+        modalidadeContratacao: (data.pregao_relacionado || data.pregao)
+          ? 'PREGAO'
+          : 'OUTRA',
+        numeroContratacao: data.numero_contratacao
+          || data.numeroContratacao
+          || data.pregao_relacionado
+          || data.pregao
+          || '',
+        notaCredito: String(data.nota_credito || data.notaCredito || '').trim().toUpperCase(),
+        contrato: String(data.contrato || '').trim(),
         classification: normalizeEmpenhoClassCode(String(data.classificacao || 'QR')) || 'QR',
         valorTotalDeclarado: parseFloat(data.valor_total || data.valorTotal) || null,
+        importSource: 'json',
+        importWarnings: [],
       };
        setReviewEmpenho(parsedEmpenho);
       setJsonError(null);
@@ -555,6 +749,11 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       showToast('O CNPJ extraído/revisado precisa ter formato oficial e dígitos verificadores corretos.', 'error');
       return;
     }
+    const normalizedNotaCredito = String(reviewEmpenho.notaCredito || '').trim().toUpperCase();
+    if (normalizedNotaCredito && !/^\d{4}NC[A-Z0-9]{5,}$/.test(normalizedNotaCredito)) {
+      showToast('Revise a Nota de Crédito. Use o formato AAAANC000000, por exemplo 2026NC412370.', 'error');
+      return;
+    }
     if (empenhos.some(emp => emp.id.toUpperCase() === reviewEmpenho.id.toUpperCase())) {
       showToast('Já existe uma Nota de Empenho com este número.', 'error');
       return;
@@ -566,8 +765,42 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
       description: reviewEmpenho.description,
       date: reviewEmpenho.date,
       status: 'Ativo',
-      items: reviewEmpenho.items,
-      pregao: reviewEmpenho.pregao || 'Sem Pregão',
+      items: reviewEmpenho.items.map((item: Item) => ({
+        id: item.id,
+        name: item.name,
+        unit: item.unit,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        received: item.received || 0,
+        ...(item.itemCompraNumber ? { itemCompraNumber: item.itemCompraNumber } : {}),
+      })),
+      pregao: reviewEmpenho.modalidadeContratacao === 'PREGAO'
+        ? (String(reviewEmpenho.numeroContratacao || reviewEmpenho.pregao || '').trim() || 'Sem Pregão')
+        : 'Sem Pregão',
+      modalidadeContratacao: (
+        ['PREGAO', 'DISPENSA_ELETRONICA', 'OUTRA'].includes(
+          String(reviewEmpenho.modalidadeContratacao || '')
+        )
+          ? reviewEmpenho.modalidadeContratacao
+          : (reviewEmpenho.pregao ? 'PREGAO' : 'OUTRA')
+      ) as EmpenhoContractingModality,
+      ...(String(
+        reviewEmpenho.numeroContratacao
+        || reviewEmpenho.pregao
+        || ''
+      ).trim()
+        ? {
+            numeroContratacao: String(
+              reviewEmpenho.numeroContratacao
+              || reviewEmpenho.pregao
+              || ''
+            ).trim(),
+          }
+        : {}),
+      ...(normalizedNotaCredito ? { notaCredito: normalizedNotaCredito } : {}),
+      ...(String(reviewEmpenho.contrato || '').trim()
+        ? { contrato: String(reviewEmpenho.contrato).trim() }
+        : {}),
       classification: normalizeEmpenhoClassCode(String(reviewEmpenho.classification || 'QR')) || 'QR',
     };
     if (!user) {
@@ -778,6 +1011,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
   return {
     handleEmpenhoDocumentUploaded,
     handleUpdateEmpenhoPregao,
+    handleUpdateEmpenhoNotaCredito,
     handleUpdateEmpenhoSupplierCnpj,
     handleUpdateEmpenhoClassification,
     handleUpdateEmpenhoItemDetails,
@@ -785,6 +1019,7 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     handleDownloadPromptTxt,
     handleDownloadPromptPdf,
     handleCopyPrompt,
+    handleProcessEmpenhoPdf,
     handleProcessJson,
     handleSaveReviewEmpenho,
     handleAddItemToEmpenho,
