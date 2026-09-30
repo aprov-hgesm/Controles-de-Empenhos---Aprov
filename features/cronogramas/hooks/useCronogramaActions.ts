@@ -549,6 +549,15 @@ export function useCronogramaActions(context:CronogramaActionsContext){
       return;
     }
 
+    const itemValidationError = validateCronogramaItemOverrides(
+      emp.items,
+      cronogramaItemOverrides
+    );
+    if (itemValidationError) {
+      showToast(itemValidationError, 'error');
+      return;
+    }
+
     setIsSendingCronogramaEmail(true);
     try {
       const [supplierEmail, driveSettings] = await Promise.all([
