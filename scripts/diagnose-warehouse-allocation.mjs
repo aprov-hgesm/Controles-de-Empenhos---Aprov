@@ -19,11 +19,12 @@ function arg(name) {
 
 const movementId = arg('--movement');
 const invoiceId = arg('--invoice');
+const findTerm = arg('--find');
 
-if (!movementId && !invoiceId) {
+if (!movementId && !invoiceId && !findTerm) {
   console.error(
     'Uso: node scripts/diagnose-warehouse-allocation.mjs '
-    + '--movement mov_<sha256> [--invoice <numero>]'
+    + '[--movement mov_<sha256>] [--invoice <numero>] [--find <trecho>]'
   );
   process.exit(2);
 }
@@ -134,6 +135,27 @@ async function getDocument(domain, id) {
   );
 }
 
+async function runCollectionQuery(collectionId, maxResults = 500) {
+  const url =
+    databaseBase()
+    + '/warehouse/'
+    + encodeURIComponent(WORKSPACE_ID)
+    + ':runQuery';
+
+  const rows = await requestJson(url, {
+    method: 'POST',
+    body: JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId }],
+        limit: Math.max(1, Math.min(maxResults, 500)),
+      },
+    }),
+  });
+
+  return (Array.isArray(rows) ? rows : [])
+    .flatMap((row) => row?.document ? [decodeDocument(row.document)] : []);
+}
+
 async function runQuery(collectionId, fieldPath, stringValue) {
   const url =
     databaseBase()
@@ -234,6 +256,8 @@ if (movementId) {
 
 let invoiceMovements = [];
 let intakes = [];
+let foundMovements = [];
+let foundIntakes = [];
 if (invoiceId) {
   [invoiceMovements, intakes] = await Promise.all([
     runQuery('movements', 'source.invoiceId', invoiceId),
@@ -251,11 +275,36 @@ if (invoiceId) {
   console.log('');
 }
 
+if (findTerm) {
+  const needle = findTerm.toLocaleLowerCase('pt-BR');
+  const [allMovements, allIntakes] = await Promise.all([
+    runCollectionQuery('movements'),
+    runCollectionQuery('intakes'),
+  ]);
+  const matches = (value) => JSON.stringify(value)
+    .toLocaleLowerCase('pt-BR')
+    .includes(needle);
+  foundMovements = allMovements.filter(matches);
+  foundIntakes = allIntakes.filter(matches);
+
+  console.log('=== BUSCA AMPLA POR ' + findTerm + ' ===');
+  console.log('Movimentos examinados:', allMovements.length);
+  console.log('Intakes examinados:', allIntakes.length);
+  console.log('Movimentos compatíveis:');
+  console.log(JSON.stringify(foundMovements.map(compactMovement), null, 2));
+  console.log('');
+  console.log('Intakes compatíveis:');
+  console.log(JSON.stringify(foundIntakes.map(compactIntake), null, 2));
+  console.log('');
+}
+
 const materialIds = new Set(
   [
     exactMovement?.materialId,
     ...invoiceMovements.map((movement) => movement.materialId),
     ...intakes.map((intake) => intake.materialId),
+    ...foundMovements.map((movement) => movement.materialId),
+    ...foundIntakes.map((intake) => intake.materialId),
   ].filter((value) => typeof value === 'string' && value)
 );
 
