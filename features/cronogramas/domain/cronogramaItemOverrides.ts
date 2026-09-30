@@ -33,7 +33,7 @@ export function buildCronogramaItemOverrides(
         prior && 'name' in prior
           ? prior.name ?? ''
           : item.name
-      ),
+      ).trim(),
     };
   }
   return result;
