@@ -38,6 +38,7 @@ import {
 } from './intakeState';
 import { listWarehouseMovements } from './ledgerRepository';
 import { createWarehouseMovementId } from './movement';
+import { normalizeWarehouseMaterialId } from './material';
 import {
   listWarehouseQueueExcludedInvoiceKeys,
 } from './intakeQueueExclusionRepository';
@@ -274,9 +275,9 @@ function materialFrom(
       : null;
 
   return (
-    empenhoMaterialId?.trim().toLowerCase()
-    || invoiceMaterialId?.trim().toLowerCase()
-    || persistedMaterialId
+    normalizeWarehouseMaterialId(empenhoMaterialId)
+    || normalizeWarehouseMaterialId(invoiceMaterialId)
+    || normalizeWarehouseMaterialId(persistedMaterialId)
     || null
   );
 }
