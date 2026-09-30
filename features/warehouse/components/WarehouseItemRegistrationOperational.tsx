@@ -72,27 +72,16 @@ import {
 import { auth } from '../../../lib/firebase';
 import { getCurrentOperationalScope } from '../../../lib/operationalPaths';
 import {
+  formatWarehouseDate,
+  formatWarehouseQuantity,
+} from './warehousePresentation';
+import {
   downloadWarehouseAllocationSheet,
   printWarehouseAllocationSheet,
   type WarehouseAllocationSheetInput,
 } from '../pdf/WarehouseAllocationSheet';
 
 type RegistrationTab = 'invoices' | 'manual' | 'stored' | 'siscofis' | 'immediate';
-
-function formatDate(value: string | null): string {
-  if (!value) return '—';
-  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (dateOnly) {
-    return dateOnly[3] + '/' + dateOnly[2] + '/' + dateOnly[1];
-  }
-  const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? value : new Date(parsed).toLocaleDateString('pt-BR');
-}
-
-function formatQuantity(value: number, unitLabel: string): string {
-  return value.toLocaleString('pt-BR', { maximumFractionDigits: 6 })
-    + (unitLabel ? ' ' + unitLabel : '');
-}
 
 function intakeStatusLabel(status: WarehouseItemIntakeEffectiveStatus): string {
   switch (status) {
@@ -498,7 +487,7 @@ function AllocationPanel({
                   {label}
                 </p>
                 <p className="mt-1 text-sm font-black text-slate-800">
-                  {formatQuantity(Number(value), row.unitLabel)}
+                  {formatWarehouseQuantity(Number(value), row.unitLabel)}
                 </p>
               </div>
             ))}
@@ -532,7 +521,7 @@ function AllocationPanel({
                 className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-800 outline-none focus:border-[#00288e]"
               />
               <span className="mt-1 block text-[9px] text-slate-400">
-                Máximo: {formatQuantity(row.pendingQuantity, row.unitLabel)}
+                Máximo: {formatWarehouseQuantity(row.pendingQuantity, row.unitLabel)}
               </span>
             </label>
 
@@ -661,14 +650,14 @@ function AllocationPanel({
               </p>
             </div>
             <p className="mt-3 text-sm font-black text-slate-900">
-              Alocar {validQuantity ? formatQuantity(numericQuantity, row.unitLabel) : '—'} de {row.itemName}
+              Alocar {validQuantity ? formatWarehouseQuantity(numericQuantity, row.unitLabel) : '—'} de {row.itemName}
             </p>
             <div className="mt-2 grid gap-1 text-[10px] leading-5 text-slate-600 sm:grid-cols-2">
               <p><span className="font-black">NF:</span> {row.invoiceId}</p>
               <p><span className="font-black">Posição:</span> {positionLabel || '—'}</p>
               <p>
                 <span className="font-black">Validade:</span>{' '}
-                {expiresOn ? formatDate(expiresOn) : 'Não informada · pendência vermelha'}
+                {expiresOn ? formatWarehouseDate(expiresOn) : 'Não informada · pendência vermelha'}
               </p>
               <p className="sm:col-span-2">
                 <span className="font-black">Barcode:</span>{' '}
@@ -1935,9 +1924,9 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
     applyLocalIntakeState(result.intake);
     setMessage(
       'Alocação confirmada: '
-      + formatQuantity(quantity, result.intake.unitLabel)
+      + formatWarehouseQuantity(quantity, result.intake.unitLabel)
       + '. Novo pendente: '
-      + formatQuantity(result.intake.pendingQuantity, result.intake.unitLabel)
+      + formatWarehouseQuantity(result.intake.pendingQuantity, result.intake.unitLabel)
       + '.'
     );
   };
@@ -1950,9 +1939,9 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
     applyLocalIntakeState(result.intake);
     setMessage(
       'Consumo imediato confirmado: '
-      + formatQuantity(quantity, result.intake.unitLabel)
+      + formatWarehouseQuantity(quantity, result.intake.unitLabel)
       + '. Novo pendente: '
-      + formatQuantity(result.intake.pendingQuantity, result.intake.unitLabel)
+      + formatWarehouseQuantity(result.intake.pendingQuantity, result.intake.unitLabel)
       + '. O registro já integra o relatório operacional SISCOFIS.'
     );
   };
@@ -2256,7 +2245,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
                             </span>
                           )}
                           <span className="text-[10px] font-bold text-slate-400">
-                            {formatDate(group.issueDate)}
+                            {formatWarehouseDate(group.issueDate)}
                           </span>
                         </div>
 
@@ -2407,19 +2396,19 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
                                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[9px] text-slate-500">
                                     <span>
                                       Recebido:{' '}
-                                      <strong>{formatQuantity(row.receivedQuantity, row.unitLabel)}</strong>
+                                      <strong>{formatWarehouseQuantity(row.receivedQuantity, row.unitLabel)}</strong>
                                     </span>
                                     <span>
                                       Alocado:{' '}
-                                      <strong>{formatQuantity(row.allocatedQuantity, row.unitLabel)}</strong>
+                                      <strong>{formatWarehouseQuantity(row.allocatedQuantity, row.unitLabel)}</strong>
                                     </span>
                                     <span>
                                       Consumo imediato:{' '}
-                                      <strong>{formatQuantity(row.immediateConsumptionQuantity, row.unitLabel)}</strong>
+                                      <strong>{formatWarehouseQuantity(row.immediateConsumptionQuantity, row.unitLabel)}</strong>
                                     </span>
                                     <span className="text-amber-700">
                                       Pendente:{' '}
-                                      <strong>{formatQuantity(row.pendingQuantity, row.unitLabel)}</strong>
+                                      <strong>{formatWarehouseQuantity(row.pendingQuantity, row.unitLabel)}</strong>
                                     </span>
                                   </div>
                                 </div>
