@@ -133,6 +133,12 @@ export function isValidWarehouseMaterialId(value: unknown): value is string {
   return typeof value === 'string' && MATERIAL_ID_PATTERN.test(value);
 }
 
+export function normalizeWarehouseMaterialId(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return MATERIAL_ID_PATTERN.test(normalized) ? normalized : null;
+}
+
 export function normalizeWarehouseMaterialUnit(
   input: unknown
 ): WarehouseMaterialUnit | null {
