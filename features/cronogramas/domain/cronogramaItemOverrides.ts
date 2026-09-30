@@ -21,21 +21,34 @@ export function buildCronogramaItemOverrides(
   saved?: CronogramaItemOverrides | null
 ): CronogramaItemOverrides {
   const result: CronogramaItemOverrides = {};
+
   for (const item of items) {
     const prior = saved?.[item.id];
-    result[item.id] = {
-      itemCompraNumber: normalizeCronogramaItemNumber(
-        prior && 'itemCompraNumber' in prior
-          ? prior.itemCompraNumber
-          : getDefaultCronogramaItemNumber(item)
-      ),
-      name: String(
-        prior && 'name' in prior
-          ? prior.name ?? ''
-          : item.name
-      ).trim(),
-    };
+    if (!prior) continue;
+
+    const defaultNumber = getDefaultCronogramaItemNumber(item);
+    const defaultName = String(item.name || '').trim();
+    const next: CronogramaItemOverrides[string] = {};
+
+    if ('itemCompraNumber' in prior) {
+      const normalizedNumber = normalizeCronogramaItemNumber(prior.itemCompraNumber);
+      if (normalizedNumber !== defaultNumber) {
+        next.itemCompraNumber = normalizedNumber;
+      }
+    }
+
+    if ('name' in prior) {
+      const normalizedName = String(prior.name ?? '').trim();
+      if (normalizedName && normalizedName !== defaultName) {
+        next.name = normalizedName;
+      }
+    }
+
+    if (Object.keys(next).length > 0) {
+      result[item.id] = next;
+    }
   }
+
   return result;
 }
 
