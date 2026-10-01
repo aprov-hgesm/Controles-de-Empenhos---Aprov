@@ -1440,7 +1440,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
 
   useEffect(() => {
     void refresh('operational');
-  }, [contextMode, refresh]);
+  }, [refresh]);
 
   useEffect(() => {
     const expectedMode =
