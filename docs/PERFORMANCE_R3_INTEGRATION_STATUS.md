@@ -41,7 +41,8 @@ A/B/C/D/E/F/G/H/X estão **INTEGRADAS** e a PERF-I está **APROVADA**.
 Sequência atual:
 1. **PERF-J — LIVRE / PRÓXIMA**: executar certificação final consolidada sobre a integradora atual;
 2. produzir relatório antes/depois + pendências conhecidas;
-3. qualquer merge em `main` ou publicação depende de conclusão da PERF-J e autorização explícita do usuário.
+3. qualquer merge em `main` ou publicação depende de conclusão da PERF-J e autorização explícita do usuário;
+4. após release R3 efetivamente publicada em `main`/Vercel, encerrar esta rodada e abrir o programa **EMPROVEX SaaS R1** conforme o macroplanejamento do Memorial Oficial e o handoff do Coordenador.
 
 PERF-X foi encerrada após:
 - worker certificada no HEAD `8aac69a92120ff97f0d4ab84e46a470b5c632843`;
