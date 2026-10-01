@@ -1,7 +1,9 @@
 # Performance R3 — Comercialização
 
 Data de abertura: **2026-10-01**  
-Branch: `feat/performance-r3-commercializacao`  
+Branch integradora: `feat/performance-r3-commercializacao`  
+Modelo de execução: **frentes paralelas + integração controlada**  
+Protocolo: `docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md`  
 Baseline: `main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`
 
 ## Objetivo
@@ -146,18 +148,31 @@ Entregas:
 - adicionar budget de bundle/arquitetura estável ao CI sem criar falso bloqueio frequente;
 - documentar ganhos e limites.
 
-## Ordem de implementação
+## Arquitetura de execução
 
-Prioridade comercial:
-1. R3.0;
-2. R3.1;
-3. R3.2;
-4. R3.3;
-5. R3.5;
-6. R3.6;
-7. R3.4/R3.7;
-8. R3.8 somente se necessário;
-9. R3.9.
+As numerações R3.0–R3.9 descrevem capacidades técnicas, **não obrigam uma execução sequencial por um único chat**.
+
+Mapeamento oficial para desenvolvimento paralelo:
+
+| Frente | Capacidade principal | Onda |
+| --- | --- | --- |
+| PERF-A | R3.1 — bundle do EMPROVEX | 1 — paralela |
+| PERF-B | R3.2 — bundle da Central | 1 — paralela |
+| PERF-C | R3.5 — Saída sob demanda | 1 — paralela |
+| PERF-D | R3.6 — Intake/recebimento | 1 — paralela |
+| PERF-E | R3.7 — CPU/renderização | 1 — paralela |
+| PERF-H | R3.0/R3.9 — métricas/budget | 1 — paralela/contínua |
+| PERF-F | R3.4 — cache em memória | 2 — após C/D |
+| PERF-G | R3.3 — shell/layout persistente | 2 — após B |
+| PERF-X | R3.8 — dados quentes/histórico | opcional |
+| PERF-I | integração das frentes | fechamento |
+| PERF-J | certificação e comparação final | fechamento |
+
+Cada frente deve usar branch própria e entregar handoff ao chat coordenador. Nenhuma branch trabalhadora faz merge diretamente em `main`.
+
+A branch `feat/performance-r3-commercializacao` é a branch de integração e documentação do programa.
+
+Detalhes completos de propriedade, dependências, conflitos, templates de handoff e papel do coordenador: `docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md`.
 
 ## Restrições
 
