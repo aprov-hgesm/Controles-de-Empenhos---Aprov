@@ -52,10 +52,10 @@ export function SectorFirstAccessChecklist({
       setSectorReviewed(stored.sectorReviewed === true);
       setNavigationReviewed(stored.navigationReviewed === true);
       setCompleted(isCompleted);
-      setOpen(!isCompleted);
+      setOpen(false);
     } catch {
       setCompleted(false);
-      setOpen(true);
+      setOpen(false);
     }
   }, [userUid]);
 
@@ -108,6 +108,7 @@ export function SectorFirstAccessChecklist({
       >
         <ListChecks className="h-4 w-4" />
         Primeiros passos
+        <span className="sr-only"> — checklist opcional de primeiro acesso</span>
       </button>
     );
   }
