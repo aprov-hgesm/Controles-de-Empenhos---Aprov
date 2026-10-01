@@ -358,6 +358,38 @@ async function loadWarehouseLocationsFromFirestore(
     .sort((a, b) => a.location.code.localeCompare(b.location.code, 'pt-BR'));
 }
 
+async function loadWarehouseDepotFromFirestore(
+  workspaceId: string,
+  depotId: string
+): Promise<WarehouseDepotListItem | null> {
+  const path = warehouseDocumentPath(workspaceId, 'depots', depotId);
+  const snapshot = await getDoc(doc(db, path));
+  recordWarehouseDocumentReads(workspaceId, 1);
+  if (!snapshot.exists()) return null;
+  const data = snapshot.data() as Record<string, unknown>;
+  return {
+    depot: parseDepot(workspaceId, snapshot.id, data),
+    createdAt: timestampToIso(data.createdAt),
+    updatedAt: timestampToIso(data.updatedAt),
+  };
+}
+
+async function loadWarehouseLocationFromFirestore(
+  workspaceId: string,
+  locationId: string
+): Promise<WarehouseLocationListItem | null> {
+  const path = warehouseDocumentPath(workspaceId, 'locations', locationId);
+  const snapshot = await getDoc(doc(db, path));
+  recordWarehouseDocumentReads(workspaceId, 1);
+  if (!snapshot.exists()) return null;
+  const data = snapshot.data() as Record<string, unknown>;
+  return {
+    location: parseLocation(workspaceId, snapshot.id, data),
+    createdAt: timestampToIso(data.createdAt),
+    updatedAt: timestampToIso(data.updatedAt),
+  };
+}
+
 async function assertDepotCodeAvailable(workspaceId: string, code: string, ignoreDepotId?: string): Promise<void> {
   const normalized = normalizeWarehouseLogicalCode(code);
   if (!normalized) throw new Error('WAREHOUSE_INVALID_LOGICAL_CODE');
@@ -673,15 +705,7 @@ export async function getWarehouseDepot(
   if (!isValidWarehouseDepotId(depotId)) return null;
   const path = warehouseDocumentPath(scope.workspaceId, 'depots', depotId);
   try {
-    const snapshot = await getDoc(doc(db, path));
-    recordWarehouseDocumentReads(workspaceId, 1);
-    if (!snapshot.exists()) return null;
-    const data = snapshot.data() as Record<string, unknown>;
-    return {
-      depot: parseDepot(scope.workspaceId, snapshot.id, data),
-      createdAt: timestampToIso(data.createdAt),
-      updatedAt: timestampToIso(data.updatedAt),
-    };
+    return await loadWarehouseDepotFromFirestore(scope.workspaceId, depotId);
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, path);
     return null;
@@ -699,7 +723,7 @@ export async function getWarehouseDepotCached(
     return await depotItemReadCache.read(
       scope.workspaceId,
       'item:' + depotId,
-      () => getWarehouseDepot(scope.workspaceId, depotId)
+      () => loadWarehouseDepotFromFirestore(scope.workspaceId, depotId)
     );
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, path);
@@ -718,15 +742,7 @@ export async function getWarehouseLocation(
   ) return null;
   const path = warehouseDocumentPath(scope.workspaceId, 'locations', locationId);
   try {
-    const snapshot = await getDoc(doc(db, path));
-    recordWarehouseDocumentReads(workspaceId, 1);
-    if (!snapshot.exists()) return null;
-    const data = snapshot.data() as Record<string, unknown>;
-    return {
-      location: parseLocation(scope.workspaceId, snapshot.id, data),
-      createdAt: timestampToIso(data.createdAt),
-      updatedAt: timestampToIso(data.updatedAt),
-    };
+    return await loadWarehouseLocationFromFirestore(scope.workspaceId, locationId);
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, path);
     return null;
@@ -747,7 +763,7 @@ export async function getWarehouseLocationCached(
     return await locationItemReadCache.read(
       scope.workspaceId,
       'item:' + locationId,
-      () => getWarehouseLocation(scope.workspaceId, locationId)
+      () => loadWarehouseLocationFromFirestore(scope.workspaceId, locationId)
     );
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, path);
