@@ -99,6 +99,16 @@ Documentos obrigatórios da rodada:
 Objetivo:
 > tornar o EMPROVEX perceptivelmente mais rápido e leve para comercialização sem reduzir qualidade visual, animações, transições ou identidade premium.
 
+### Princípio prioritário de experiência do usuário
+
+A **experiência do usuário é a prioridade principal do EMPROVEX**. Performance, redução de bundle, redução de leituras, menor uso de CPU e economia de Firestore são meios para melhorar a operação; não são objetivos que possam justificar piora perceptível da experiência.
+
+Regra de aceitação da R3:
+
+> **nenhum ganho de performance é considerado aprovado se introduzir perda de dados digitados, informação visual enganosa, clique sem resposta perceptível, carregamento sem feedback adequado, estado de tela inesperado, necessidade nova de refresh manual, quebra de foco/teclado/scanner, navegação menos previsível ou dificuldade operacional nova.**
+
+Quando houver conflito entre um ganho marginal de performance e uma experiência mais clara, previsível e segura para o operador, a experiência do usuário prevalece. Uma regressão relevante de UX pode bloquear PERF-I/PERF-J mesmo com TypeScript, build, CI, métricas e budgets verdes.
+
 Baseline de build observado em 2026-10-01:
 - `/`: **460 kB First Load JS**;
 - `/adm-deposito`: **579 kB First Load JS**;
@@ -143,7 +153,7 @@ Mantém escopo próprio, mas começa somente após a dependência indicada:
 
 ### Fechamento
 
-- **PERF-I — Integração Controlada**;
+- **PERF-I — Integração Controlada + Validação de UX e Regressões Perceptíveis**;
 - **PERF-J — Certificação Final**.
 
 ### Chat coordenador
@@ -193,6 +203,27 @@ A PERF-F permanece **LIVRE** e é a próxima frente ainda não integrada. Deve a
 A PERF-X continua **opcional/bloqueada**: só deve ser aberta se as medições após PERF-F demonstrarem necessidade objetiva de separar dados quentes de histórico.
 
 PERF-I permanece bloqueada até o fechamento das frentes necessárias da segunda onda; PERF-J vem depois para certificação final. Não houve merge em `main` nem deploy consolidado de produção da R3.
+
+### PERF-I — validação obrigatória de experiência do usuário
+
+Além de build, métricas, budgets, reads e segurança, a PERF-I deve validar explicitamente a experiência real do operador após a combinação das frentes. O objetivo não é apenas provar que o sistema ficou mais leve, mas confirmar que ficou **mais rápido sem ficar menos previsível, claro ou seguro de usar**.
+
+Checklist mínimo obrigatório:
+
+1. **Primeiro acesso vs. acesso subsequente:** validar superfícies carregadas sob demanda e confirmar que o primeiro acesso não aparenta travamento, clique ignorado ou tela vazia; quando houver espera perceptível, deve existir feedback visual compreensível.
+2. **Persistência de estado:** sair e voltar de telas relevantes verificando filtros, ordenação, seleção, paginação, scroll e abas; o que deve persistir ou resetar precisa se comportar de maneira intuitiva e consistente.
+3. **Proteção de formulários:** testar formulários parcialmente preenchidos — especialmente Alocação e Saída de Material — para impedir perda inesperada de dados durante navegação permitida.
+4. **Shell persistente da Central:** confirmar que mudanças de rota não duplicam componentes, não exibem conteúdo antigo, não causam piscadas excessivas e mantêm corretamente header/sidebar/URL.
+5. **Saída de Material e barcode:** validar foco automático, leituras consecutivas, ENTER, retorno de foco, carrinho e primeira busca de material ainda não carregado.
+6. **PERF-F/cache curto:** validar primeira leitura, reutilização dentro do TTL, expiração, invalidação após mutação local e comportamento diante de alteração feita por outra sessão/aba; o cache nunca pode substituir revalidação autoritativa em operação crítica.
+7. **Erros tardios do lazy/on-demand:** falhas de rede, permissão ou dado ausente devem produzir mensagem clara quando a função for utilizada, sem aparência de botão inoperante.
+8. **Listas otimizadas pela PERF-E:** filtros, busca, ordenação, totais, contagens e informação exibida devem permanecer semanticamente equivalentes ao comportamento anterior.
+9. **Máquina e conexão mais fracas:** executar ao menos a jornada principal em ambiente representativo de hardware/conectividade modestos para observar loading, CPU, responsividade, foco e transições.
+10. **Jornada integrada completa:** validar EMPROVEX → Central → Meus Depósitos → Alocação → Saída → retorno à Central, além de uma jornada representativa no EMPROVEX principal.
+11. **Usuário externo autorizado:** repetir fluxos principais compatíveis com seu perfil e confirmar que performance não alterou acesso, mensagens ou ergonomia.
+12. **Critério de bloqueio UX:** perda de dados digitados, informação enganosa, estado inesperado, necessidade nova de refresh manual, quebra operacional de teclado/scanner ou dificuldade perceptível criada pela R3 bloqueiam a aprovação até correção ou decisão explícita do usuário.
+
+Browser E2E continua sob demanda. A validação acima pode combinar testes automatizados, browser dirigido e operação manual assistida conforme o risco de cada fluxo.
 
 A branch integradora, e não as branches trabalhadoras antigas, passa a ser a referência para compatibilidade cruzada entre frentes.
 
@@ -257,6 +288,7 @@ Exemplo vigente: a PERF-A pode atualizar guards que ainda procuram código movid
 - crescimento histórico das coleções operacionais continua exigindo disciplina de consultas seletivas; PERF-D resolveu o principal caminho amplo do intake, mas futuras superfícies não devem reintroduzir scans globais;
 - PERF-F deve cachear somente dados estáveis remanescentes e nunca mascarar query inadequada;
 - o layout persistente da PERF-G precisa de validação visual/manual de navegação, back/forward, refresh direto e acesso externo durante PERF-I/PERF-J;
+- a PERF-I deve tratar experiência do usuário como critério de aceitação: primeira abertura lazy, feedback de loading, persistência/reset de estado, proteção de formulários, foco de barcode/teclado, cache curto, mensagens de erro e jornada em hardware/conectividade modestos devem ser verificados antes da certificação;
 - os budgets da PERF-H ainda são deliberadamente não bloqueantes no Application CI; adoção como gate permanente depende da certificação final;
 - segurança e dependências continuam como linha separada de hardening;
 - falha crítica real de segurança sempre interrompe a ordem normal de prioridades;
