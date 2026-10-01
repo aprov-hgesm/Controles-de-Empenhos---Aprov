@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "baselineId": "performance-r3-opening-2026-10-01",
+  "capturedAt": "2026-10-01",
+  "source": {
+    "kind": "observed-next-production-build",
+    "branch": "main",
+    "commit": "22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f",
+    "note": "Opening baseline recorded by the Performance R3 coordinator before worker integrations."
+  },
+  "bundle": {
+    "sharedFirstLoadJsKb": 103,
+    "routes": {
+      "/": { "firstLoadJsKb": 460 },
+      "/adm-deposito": { "firstLoadJsKb": 579 },
+      "/admin": { "firstLoadJsKb": 326 }
+    },
+    "centralRouteFamilyObservedFirstLoadJsKb": 579
+  },
+  "runtime": {
+    "webVitals": {
+      "lcpMs": null,
+      "inpMs": null,
+      "cls": null,
+      "status": "not-captured-at-opening-baseline"
+    },
+    "operationalReadyMs": null,
+    "documentScenarioCounts": null,
+    "status": "observation-schema-created; populate only from stable local measurements or worker handoffs"
+  }
+}
