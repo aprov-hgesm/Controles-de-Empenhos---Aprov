@@ -382,7 +382,7 @@ Quando um guard falhar por efeito combinado entre frentes, o trabalhador deve:
 Exemplo vigente: a PERF-A pode atualizar guards que ainda procuram código movido de `app/page.tsx` para `OperationalWorkspace`. Porém, uma falha de guard provocada por reorganização interna de `NotasFiscaisView.tsx` já integrada pela PERF-E não deve ser corrigida pela PERF-A alterando Notas Fiscais; essa reconciliação pertence ao coordenador.
 
 
-## 7.1. Retomada canônica para novos chats — estado pós-PERF-X / pré-PERF-I
+## 7.1. Retomada canônica para novos chats — estado pós-PERF-I / pré-PERF-J
 
 Este bloco é o ponto de partida obrigatório para novos chats da Performance R3 enquanto a rodada não chegar à `main`.
 
@@ -475,8 +475,210 @@ Antes de editar:
 - ler Memorial, Handoff, Integration Status, Execução Paralela, Testing Policy e Development CI Workflow;
 - A–H/X são contratos integrados;
 - não fazer merge em `main`, deploy de produção ou promoção Vercel sem autorização;
-- Browser E2E permanece sob demanda; validação dirigida/manual de UX da PERF-I é obrigatória;
+- Browser E2E permanece sob demanda; a validação dirigida/manual obrigatória da PERF-I já foi concluída;
 - `docs/PERFORMANCE_R3_PERF_X_HOT_HISTORY.md` registra a implementação da worker e pode conter texto anterior às correções semânticas do Coordenador; em caso de divergência sobre filtro inicial/contagem legada, prevalecem este Memorial, `PERFORMANCE_R3_INTEGRATION_STATUS.md` e o código integrado a partir de `2b72d43...`.
+
+## 7.2. Planejamento oficial pós-PERF-J — EMPROVEX SaaS R1
+
+Este planejamento **só começa depois** de:
+1. PERF-J concluída e aprovada;
+2. autorização explícita do usuário;
+3. merge consolidado da Performance R3 em `main`;
+4. publicação consolidada na Vercel;
+5. aplicação das Rules/Indexes/migrações indispensáveis à release, quando houver;
+6. smoke test curto de produção e registro do HEAD/tag efetivamente publicado.
+
+A publicação da R3 encerra a rodada **Performance R3**. A etapa seguinte deixa de ser uma rodada de otimização e passa a ser um novo programa de produto/comercialização, provisoriamente chamado **EMPROVEX SaaS R1**.
+
+### Sequência lógica obrigatória do produto
+
+> **Release R3 publicada → cobrança/trial → onboarding → segurança/legal → operação/backup/monitoramento → piloto comercial → SaaS aberto**
+
+Essa sequência expressa os **gates de maturidade do produto**, mas não obriga desenvolvimento monolítico ou estritamente serial. Depois de congelados os contratos comuns do SaaS, frentes independentes devem ser executadas em paralelo sempre que isso reduzir tempo sem gerar conflito semântico.
+
+### Princípio de simplicidade comercial inicial
+
+A primeira versão comercial deve evitar construir uma plataforma financeira complexa antes de validar vendas reais.
+
+Preferência atual:
+- **Mercado Pago** como meio inicial;
+- cobrança por **link de pagamento e/ou Pix**;
+- confirmação e conciliação inicialmente simples/assistidas pelo administrador quando necessário;
+- trial controlado pelo próprio EMPROVEX;
+- estados mínimos de ciclo de vida, por exemplo: `TRIAL`, `ATIVO`, `PENDENTE/ATRASO`, `SUSPENSO`, `ENCERRADO`;
+- suspensão/reativação devem ser explícitas, auditáveis e reversíveis;
+- webhook, assinatura recorrente automática, split, checkout próprio e motor financeiro completo **não são pré-requisitos da primeira comercialização**; só entram depois se o uso real justificar.
+
+A cobrança nunca deve ser acoplada de modo a apagar dados ou corromper o workspace. Bloqueio por situação comercial deve ser uma camada de autorização/estado, preservando os dados institucionais conforme a política vigente.
+
+### Macroblocos do SaaS R1
+
+#### SAAS-A — Fundação e contratos comuns
+
+Antes dos workers paralelos, o Chat Coordenador deve congelar:
+- conceito de cliente/assinante;
+- relação entre cliente, workspace, UG e usuários;
+- estados de trial/cobrança/acesso;
+- quem pode ativar, suspender, reativar e encerrar;
+- datas e eventos auditáveis;
+- regras de retenção e preservação de dados;
+- fronteira entre painel administrativo interno e experiência do cliente;
+- quais dados pertencem ao núcleo EMPROVEX e quais pertencem apenas à camada comercial.
+
+Nenhuma frente posterior pode inventar seu próprio modelo de cliente ou status comercial.
+
+#### SAAS-B — Cobrança e trial simplificados
+
+Objetivo:
+- permitir vender sem criar um billing engine complexo.
+
+Escopo inicial desejado:
+- trial;
+- data de início/fim;
+- ativação manual/assistida;
+- geração/registro de link de pagamento ou Pix Mercado Pago;
+- registro de pagamento confirmado;
+- status comercial;
+- aviso de proximidade de vencimento/atraso quando pertinente;
+- suspensão e reativação controladas;
+- histórico mínimo/auditoria administrativa;
+- possibilidade de conciliação manual enquanto a base comercial for pequena.
+
+Automação com API/webhook do Mercado Pago é **evolução posterior opcional**, não condição para abrir o SaaS, salvo se o Coordenador demonstrar que simplifica mais do que a solução assistida.
+
+#### SAAS-C — Onboarding e ciclo de vida do cliente
+
+Deve cobrir:
+- criação/provisionamento de workspace/UG;
+- criação ou convite do primeiro usuário;
+- primeiro acesso;
+- definição/troca/reset de senha quando aplicável;
+- associação correta a workspace/UG;
+- início e término do trial;
+- ativação após contratação;
+- suspensão/reativação;
+- encerramento;
+- orientação inicial curta e compreensível;
+- tratamento claro de erro de acesso, workspace inválido ou situação comercial bloqueada.
+
+O onboarding inicial pode continuar **assistido pelo administrador**. Self-service completo não é requisito para os primeiros clientes.
+
+#### SAAS-D — Segurança e legal
+
+Deve fechar, sem transformar a rodada em burocracia excessiva:
+- revisão final de autenticação/autorização multi-tenant;
+- revisão de endpoints e ações administrativas;
+- proteção de segredos/tokens;
+- auditoria das dependências e vulnerabilidades relevantes;
+- Política de Privacidade e Termos vigentes;
+- versionamento/registro de aceite quando necessário;
+- política de cancelamento/encerramento;
+- retenção, exportação e exclusão de dados conforme regra definida;
+- preparação para solicitações relacionadas a dados pessoais;
+- revisão LGPD/jurídica quando necessária, sem o sistema se autoatribuir “conformidade legal” sem validação adequada.
+
+Segurança crítica continua tendo precedência sobre a ordem normal das fases.
+
+#### SAAS-E — Operação, backup e monitoramento
+
+Deve transformar o sistema publicado em uma operação sustentável:
+- backup automatizado ou rotina formalizada;
+- **teste real de restauração**, não apenas existência de backup;
+- registro de RPO/RTO práticos para a escala inicial;
+- monitoramento de erros relevantes;
+- alertas de quota/custo Firebase;
+- visibilidade de reads/writes/listeners e tendências;
+- monitoramento de disponibilidade e falhas de deploy;
+- rotina de incidente e recuperação;
+- canal/processo simples de suporte;
+- procedimento para acesso, cobrança, indisponibilidade e recuperação;
+- acompanhamento de custo por cliente/workspace quando tecnicamente viável sem criar telemetria excessiva.
+
+Não migrar Firebase/Vercel/Next.js por antecipação. Migração de infraestrutura só deve ser aberta com evidência de custo, limite, disponibilidade ou operação que justifique a mudança.
+
+#### SAAS-P — Piloto comercial controlado
+
+Antes da abertura ampla:
+- iniciar com pequeno grupo de clientes reais assistidos;
+- observar onboarding, dúvidas, falhas, comportamento de cobrança e suporte;
+- medir consumo real de Firestore/Vercel;
+- confirmar que nenhum workspace acessa dados de outro;
+- acompanhar performance em hardware/conectividade modestos;
+- registrar bugs e atritos operacionais;
+- executar uma **certificação de capacidade/custo voltada à meta inicial de até 100 usuários**, distinguindo usuários cadastrados, ativos e simultâneos;
+- corrigir somente problemas necessários à comercialização, evitando expansão descontrolada de escopo.
+
+O piloto deve produzir critérios objetivos de “pronto para abrir”, e não apenas uma impressão subjetiva.
+
+#### SAAS-J — Certificação comercial final
+
+Antes do SaaS aberto:
+- confirmar cobrança/trial;
+- onboarding;
+- segurança/isolamento;
+- legal/documentos;
+- backup e restauração;
+- monitoramento/alertas;
+- suporte/incidente;
+- custo/capacidade;
+- regressão funcional do EMPROVEX;
+- pendências conhecidas e aceitáveis;
+- documentação do operador/admin;
+- decisão explícita do usuário para abertura comercial.
+
+#### SaaS aberto
+
+Somente depois da certificação:
+- habilitar entrada comercial de forma controlada;
+- acompanhar os primeiros ciclos de cobrança;
+- preservar rollback e capacidade de suspensão segura;
+- manter monitoramento de custo, erros e crescimento;
+- criar novas automações somente quando a operação real demonstrar necessidade.
+
+### Modelo obrigatório de execução do SaaS R1
+
+O próximo Chat Coordenador **não deve executar este macroplano como uma sequência monolítica em um único chat**.
+
+Depois da publicação da R3, ele deve primeiro elaborar e versionar um plano detalhado usando o mesmo padrão aprovado na Performance R3:
+
+> **baseline + contratos comuns → frentes independentes → ondas paralelas → handoffs → integração semântica controlada → validação integrada → certificação final**
+
+Diretrizes obrigatórias:
+- criar uma branch integradora exclusiva do programa SaaS R1, separada de `main`;
+- criar um quadro vivo de frentes/status/dependências;
+- cada worker recebe branch e escopo exclusivos;
+- cada worker deve ler o memorial e os contratos comuns antes de editar;
+- nenhum worker faz merge direto em `main`;
+- nenhum worker invade outra frente para “resolver” conflito;
+- sobreposições são devolvidas ao Coordenador;
+- o Coordenador recebe handoffs, revisa diffs, testes, segurança, UX e métricas;
+- conflitos são resolvidos semanticamente na integradora;
+- validações combinadas ocorrem após cada onda relevante;
+- Browser E2E permanece sob demanda conforme risco;
+- release/deploy de produção continua sob autorização explícita do usuário.
+
+Arquivos recomendados para o novo programa, a serem criados pelo próximo Coordenador quando a R3 estiver publicada:
+- `docs/SAAS_R1_PLANO_MESTRE.md`;
+- `docs/SAAS_R1_EXECUCAO_PARALELA.md`;
+- `docs/SAAS_R1_INTEGRATION_STATUS.md`;
+- `docs/SAAS_R1_COORDENADOR_HANDOFF.md`.
+
+O Chat Coordenador deve **detalhar** nesses documentos:
+- frentes e nomes;
+- dependências;
+- ondas paralelas;
+- arquivos/áreas de propriedade;
+- contratos compartilhados;
+- critérios de aceite;
+- testes/gates por frente;
+- métricas;
+- riscos;
+- estratégia de integração;
+- plano de rollback;
+- ordem de certificação;
+- definição objetiva de “SaaS aberto”.
+
+Até esse detalhamento ser aprovado, este bloco do Memorial é a fonte canônica do **macroplanejamento pós-R3**.
 
 ## 8. Riscos/pendências que não devem ser esquecidos
 
