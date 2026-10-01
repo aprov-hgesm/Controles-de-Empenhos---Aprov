@@ -56,6 +56,27 @@ jobs:
             exit 1
           fi
 
+      - name: PERF-A targeted gates
+        shell: bash
+        run: |
+          npm run verify:emprovex-core-protection
+          npm run verify:block-14-scalability
+          npm run verify:block-19-9-surface-transitions
+          npm run verify:empenho-pdf-direct-import
+          npm run verify:invoice-mirror-document
+          npm run verify:sag-ns-idempotent-import
+          npm run verify:tr-workspace-documents
+          npm run verify:sped-nup-reporting
+
+      - name: PERF-A production build
+        run: npm run build
+
+      - name: PERF-A final TypeScript
+        run: npm run typecheck
+
+      - name: PERF-A diff hygiene
+        run: git diff --check 076a233cf250c95882e78498e89dd2a44d034f74...3193b84117c6c4936ba774ee41c0d8df11b4e3fe
+
       - name: EMPROVEX core operational protection
         run: npm run verify:emprovex-core-protection
 
