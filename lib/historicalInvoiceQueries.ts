@@ -3,6 +3,7 @@
 import {
   documentId,
   getCountFromServer,
+  getDoc,
   getDocs,
   limit,
   orderBy,
@@ -22,8 +23,13 @@ import { normalizeSupplierCnpj } from './invoiceIdentity';
 import {
   getCurrentOperationalScope,
   operationalCollectionRef,
+  operationalSettingsDocRef,
 } from './operationalPaths';
 import { recordWorkspaceDocumentReads } from './workspaceUsageTelemetry';
+import {
+  INVOICE_HOT_HISTORY_MARKER_ID,
+  isInvoiceHotHistoryMarker,
+} from './invoiceHotHistory';
 
 export const HISTORICAL_QUERY_PAGE_SIZE = 250;
 export const HISTORICAL_QUERY_MAX_PAGES = 40;
@@ -38,7 +44,8 @@ export interface HistoricalInvoiceQueryResult {
 
 export interface InvoiceCollectionSummaryCounts {
   total: number;
-  completed: number;
+  completed: number | null;
+  hotHistoryReady: boolean;
 }
 
 function mapInvoice(snapshotDoc: QueryDocumentSnapshot<DocumentData>): Invoice {
@@ -172,16 +179,39 @@ export async function loadInvoiceCountsForEmpenhos(
 export async function loadInvoiceCollectionSummaryCounts(): Promise<InvoiceCollectionSummaryCounts> {
   const scope = getCurrentOperationalScope();
   const collectionRef = operationalCollectionRef(scope, 'invoices');
-  const [totalSnapshot, completedSnapshot] = await Promise.all([
-    getCountFromServer(collectionRef),
-    getCountFromServer(
-      query(collectionRef, where('localizacaoAtual', '==', 'TESOURARIA'))
-    ),
-  ]);
+
+  let hotHistoryReady = false;
+  try {
+    const markerSnapshot = await getDoc(
+      operationalSettingsDocRef(scope, INVOICE_HOT_HISTORY_MARKER_ID)
+    );
+    recordWorkspaceDocumentReads(scope, markerSnapshot.exists() ? 1 : 0);
+    hotHistoryReady = markerSnapshot.exists()
+      && isInvoiceHotHistoryMarker(markerSnapshot.data(), scope.workspaceId);
+  } catch (error) {
+    console.warn(
+      'PERF-X: não foi possível validar o marcador para as contagens; usando compatibilidade legada.',
+      error
+    );
+  }
+
+  const totalSnapshot = await getCountFromServer(collectionRef);
+  if (!hotHistoryReady) {
+    return {
+      total: totalSnapshot.data().count,
+      completed: null,
+      hotHistoryReady: false,
+    };
+  }
+
+  const completedSnapshot = await getCountFromServer(
+    query(collectionRef, where('localizacaoAtual', '==', 'TESOURARIA'))
+  );
 
   return {
     total: totalSnapshot.data().count,
     completed: completedSnapshot.data().count,
+    hotHistoryReady: true,
   };
 }
 

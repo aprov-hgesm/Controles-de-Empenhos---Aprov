@@ -61,7 +61,7 @@ interface NotasFiscaisViewContext {
   nfSearch: any;
   nfSortOrder: 'recentes' | 'antigas';
   nfSubTab: 'acompanhar' | 'cadastrar' | 'comissao';
-  nfTramitacaoFilter: 'Todos' | 'FaltaComissao' | 'FaltaTesouraria' | 'Concluidas';
+  nfTramitacaoFilter: 'EmTramitacao' | 'Todos' | 'FaltaComissao' | 'FaltaTesouraria' | 'Concluidas';
   selectedNFCommitmentId: any;
   setActiveTab: (...args: any[]) => any;
   setComissaoAux1Nome: (...args: any[]) => any;
@@ -124,7 +124,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [historyTruncated, setHistoryTruncated] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
-  const [summaryCounts, setSummaryCounts] = useState<{ total: number; completed: number } | null>(null);
+  const [summaryCounts, setSummaryCounts] = useState<{ total: number; completed: number | null; hotHistoryReady: boolean } | null>(null);
 
   const loadCompleteHistory = React.useCallback(async () => {
     if (historyLoaded || historyLoading) return;
@@ -214,8 +214,11 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
 
   const totalInvoiceCount = summaryCounts?.total
     ?? (historyLoaded && !historyTruncated ? invoices.length : null);
-  const completedInvoiceCount = summaryCounts?.completed
-    ?? (historyLoaded && !historyTruncated ? invoiceDerived.concluidas : null);
+  const completedInvoiceCount = summaryCounts
+    ? (summaryCounts.hotHistoryReady
+        ? summaryCounts.completed
+        : invoiceDerived.concluidas)
+    : (historyLoaded && !historyTruncated ? invoiceDerived.concluidas : null);
   const availableNfMonths = React.useMemo(
     () => Array.from(new Set(
       invoices
@@ -255,7 +258,9 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
         );
 
         let matchesTramitacao = true;
-        if (nfTramitacaoFilter === 'FaltaComissao') {
+        if (nfTramitacaoFilter === 'EmTramitacao') {
+          matchesTramitacao = currentLocation !== 'TESOURARIA';
+        } else if (nfTramitacaoFilter === 'FaltaComissao') {
           matchesTramitacao = requiresTR && currentLocation === 'APROVISIONAMENTO';
         } else if (nfTramitacaoFilter === 'FaltaTesouraria') {
           matchesTramitacao = requiresTR
@@ -456,6 +461,24 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mr-1 hidden sm:inline">Tramitação:</span>
                         
+                        <button
+                          type="button"
+                          onClick={() => setNfTramitacaoFilter('EmTramitacao')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                            nfTramitacaoFilter === 'EmTramitacao'
+                              ? 'bg-[#00288e] text-white shadow-sm'
+                              : 'bg-blue-50 hover:bg-blue-100 text-[#00288e] border border-blue-200/60'
+                          }`}
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>Em tramitação</span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                            nfTramitacaoFilter === 'EmTramitacao' ? 'bg-white/20 text-white' : 'bg-blue-100 text-[#00288e]'
+                          }`}>
+                            {invoiceDerived.faltaComissao + invoiceDerived.faltaTesouraria}
+                          </span>
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => setNfTramitacaoFilter('Todos')}
