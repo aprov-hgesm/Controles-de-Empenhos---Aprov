@@ -10,6 +10,8 @@ Conversas, prompts e memória informal não substituem estes documentos.
 
 - `../EMPROVEX_MEMORIAL_OFICIAL.md` — estado canônico do produto inteiro e prioridade vigente.
 - `../PERFORMANCE_R3_COMERCIALIZACAO.md` — plano atual de performance para comercialização.
+- `../PERFORMANCE_R3_EXECUCAO_PARALELA.md` — protocolo de trabalho paralelo e do chat coordenador.
+- `../PERFORMANCE_R3_INTEGRATION_STATUS.md` — quadro vivo das frentes R3.
 - `../TESTING_POLICY.md` — política vigente de testes e Browser E2E sob demanda.
 - `ROADMAP.md` — plano oficial, ordem de capacidades, gates e mapeamento dos blocos DEP/EXT.
 - `DECISIONS.md` — decisões arquiteturais e funcionais congeladas.
