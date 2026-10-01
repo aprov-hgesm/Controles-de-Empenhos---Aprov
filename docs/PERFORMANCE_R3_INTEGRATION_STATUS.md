@@ -28,7 +28,7 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 | PERF-E | `perf-r3-e-render-cpu` | INTEGRADA | baseline `076a233` | `149f7c3` | CPU/renderização integrada em `9d5ff58`; gates locais verdes |
 | PERF-H | `perf-r3-h-metrics-budget` | INTEGRADA | baseline `076a233` | `fb5f452` | Métricas/budget integradas em `a686410`; CI bloqueante ainda não ativado |
 | PERF-F | `perf-r3-f-memory-cache` | LIVRE | PERF-C + PERF-D integradas | — | Segunda onda liberada; cache curto apenas sobre leituras estáveis remanescentes |
-| PERF-G | `perf-r3-g-central-shell` | LIVRE | PERF-B integrada | — | Segunda onda liberada; preservar fronteiras dinâmicas da PERF-B |
+| PERF-G | `perf-r3-g-central-shell` | INTEGRADA | PERF-B integrada | `de870d1` | Shell persistente integrado em `238b813`; Central 300 → 106 kB; CI combinado/Core/Recovery verdes |
 | PERF-X | `perf-r3-x-hot-vs-history` | BLOQUEADA | medições A–G | — | Opcional |
 | PERF-I | branch integradora | BLOQUEADA | frentes aprovadas | — | Integração final |
 | PERF-J | branch integradora | BLOQUEADA | PERF-I concluída | — | Certificação |
@@ -371,6 +371,55 @@ Conflitos resolvidos:
 
 Dependência:
 - PERF-F agora está **LIVRE**.
+
+Decisão: **INTEGRADA**.
+
+
+### PERF-G — Shell/Layout persistente da Central
+
+Branch: `perf-r3-g-central-shell`  
+HEAD revisado: `de870d1cb81f5d0eab2faba2fcabed354f35953b`  
+Commit de integração semântica: `238b813795be05ad7142973f1566b8fead9d055d`.
+
+Arquitetura integrada:
+- `app/adm-deposito/layout.tsx` passou a hospedar o boundary persistente da Central;
+- auth/workspace/status continuam fail-closed no `WarehouseProtectedLayout`;
+- sessão/lease de usuário externo permanece monitorada enquanto o layout está montado;
+- `WarehouseModuleShell` persiste entre as rotas principais;
+- cada página entrega somente `WarehouseRouteContent`;
+- `WarehouseSectionContent` continua abaixo do boundary e preserva os `dynamic()` da PERF-B;
+- a PERF-D permanece integralmente dentro do chunk de `WarehouseItemRegistrationOperational`.
+
+Conflito resolvido semanticamente:
+- `package.json`: preservados scripts/testes da PERF-D, scripts `perf:r3:*` da PERF-H e adicionado `verify:performance-r3-central-shell`;
+- nenhum outro arquivo da PERF-G havia sido alterado pela integradora desde sua base.
+
+Build combinado após A/B/C/D/E/G/H:
+- `/`: **333 kB** First Load JS;
+- seis rotas principais da Central: **106 kB** cada;
+- shared global: **104 kB**;
+- `/admin`: **327 kB**;
+- `/admin/backups`: **244 kB**.
+
+Impacto da PERF-G sobre as rotas principais da Central:
+- **300 kB → 106 kB**;
+- redução adicional aproximada: **194 kB / 64,7%**;
+- referência pré-R3: aproximadamente **579 kB**.
+
+Validação:
+- Application CI isolado da PERF-G: **PASS**;
+- Application CI combinado no PR técnico #206: **PASS**;
+- Production Build: **PASS**;
+- Final TypeScript: **PASS**;
+- Diff Hygiene: **PASS**;
+- Blocks 16–21: **PASS**;
+- Core Protection combinado: **PASS**;
+- Recovery Guardrails combinado: **PASS**;
+- segurança externa, walking skeleton e fases da Central afetadas: **PASS**.
+
+Observação:
+- Preview Vercel da branch trabalhadora não foi produzido por limite diário da conta, não por falha de build;
+- validação browser/manual da navegação persistente continua indicada para PERF-I/PERF-J quando houver ambiente disponível.
 
 Decisão: **INTEGRADA**.
 
