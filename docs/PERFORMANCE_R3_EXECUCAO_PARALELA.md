@@ -629,6 +629,30 @@ Para PERF-A, em particular:
 - a PERF-A não deve alterar internals de Empenhos, Notas Fiscais, Consulta de Itens, Central, Intake ou Saída apenas porque um guard cruzado ficou vermelho;
 - incompatibilidades com PERF-B/C/E/H já integradas pertencem ao Chat Coordenador/PERF-I.
 
+
+### 13.2 Fechamento de frente antiga após avanço da integradora — caso PERF-D
+
+Quando uma frente de primeira onda permanece sobre sua base original enquanto a integradora avança, o trabalhador **não deve rebasing/merging apenas para obter um PR mergeable** se sua solução ainda pode ser validada de forma isolada.
+
+Para a PERF-D:
+- base congelada válida: `076a233cf250c95882e78498e89dd2a44d034f74`;
+- HEAD de realinhamento conhecido: `a514728`;
+- PR de validação isolada: base técnica congelada correspondente à base original;
+- PR contra a integradora atual serve apenas como referência de divergência e não deve orientar correções de conflito pelo trabalhador.
+
+Conflitos conhecidos que pertencem ao coordenador:
+1. `WarehouseItemRegistrationOperational.tsx`: combinar intake seletivo da PERF-D com os `dynamic import()` da PERF-B;
+2. `package.json`: preservar simultaneamente scripts da PERF-H e testes/scripts da PERF-D.
+
+Arquivos centrais da PERF-D que continuam sob sua responsabilidade:
+- `lib/warehouse/intakeQueueIndexRepository.ts`;
+- `lib/warehouse/intakeStateRepository.ts`;
+- `firestore.warehouse.rules` no escopo estritamente necessário ao índice/fila;
+- `lib/warehouse/namespace.ts` no escopo do novo namespace;
+- testes de segurança/performance diretamente ligados ao intake.
+
+Critério de encerramento do trabalhador: gates próprios concluídos na base congelada, métricas registradas e handoff entregue. Depois disso, parar sem tentar resolver a integração cruzada.
+
 ## 14. Ordem recomendada de integração
 
 A ordem exata é responsabilidade do coordenador, mas o padrão recomendado é:
