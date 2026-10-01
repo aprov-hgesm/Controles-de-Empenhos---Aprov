@@ -21,14 +21,14 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 
 | Frente | Branch prevista | Estado | Dependência | HEAD trabalhador | Observação |
 | --- | --- | --- | --- | --- | --- |
-| PERF-A | `perf-r3-a-core-bundle` | LIVRE | baseline comum | — | Bundle EMPROVEX |
-| PERF-B | `perf-r3-b-central-bundle` | LIVRE | baseline comum | — | Bundle Central |
-| PERF-C | `perf-r3-c-outbound-demand-loading` | LIVRE | baseline comum | — | Saída sob demanda |
-| PERF-D | `perf-r3-d-intake-queue` | LIVRE | baseline comum | — | Intake seletivo |
-| PERF-E | `perf-r3-e-render-cpu` | LIVRE | baseline comum | — | CPU/renderização |
-| PERF-H | `perf-r3-h-metrics-budget` | LIVRE | baseline comum | — | Métricas/budget |
+| PERF-A | `perf-r3-a-core-bundle` | EM ANDAMENTO | baseline comum | `640377a` | Bundle EMPROVEX; CI exige ajuste legítimo de guard SAG |
+| PERF-B | `perf-r3-b-central-bundle` | INTEGRADA | baseline comum | `7b7aee1` | Bundle Central; -48,2% nas rotas principais |
+| PERF-C | `perf-r3-c-outbound-demand-loading` | EM ANDAMENTO | baseline comum | `c263ce3` | Saída sob demanda; aguardando fechamento dos gates |
+| PERF-D | `perf-r3-d-intake-queue` | EM ANDAMENTO | baseline comum | — | Intake seletivo |
+| PERF-E | `perf-r3-e-render-cpu` | EM ANDAMENTO | baseline comum | — | CPU/renderização |
+| PERF-H | `perf-r3-h-metrics-budget` | EM ANDAMENTO | baseline comum | — | Métricas/budget |
 | PERF-F | `perf-r3-f-memory-cache` | BLOQUEADA | C/D estabilizados | — | Segunda onda |
-| PERF-G | `perf-r3-g-central-shell` | BLOQUEADA | B integrada/contrato congelado | — | Segunda onda |
+| PERF-G | `perf-r3-g-central-shell` | LIVRE | PERF-B integrada | — | Segunda onda liberada; preservar fronteiras dinâmicas da PERF-B |
 | PERF-X | `perf-r3-x-hot-vs-history` | BLOQUEADA | medições A–G | — | Opcional |
 | PERF-I | branch integradora | BLOQUEADA | frentes aprovadas | — | Integração final |
 | PERF-J | branch integradora | BLOQUEADA | PERF-I concluída | — | Certificação |
@@ -60,6 +60,40 @@ Conflitos resolvidos:
 Pendências:
 Decisão: INTEGRADA
 ```
+
+
+
+### PERF-B — Bundle da Central de Depósitos
+
+Branch: `perf-r3-b-central-bundle`  
+HEAD revisado: `7b7aee100f21b6a67f8cb8f94cfdfb3508bc0d57`  
+Integração: fast-forward da branch integradora para `7b7aee1`.
+
+Métrica antes:
+- rotas principais da Central: **579 kB First Load JS**.
+
+Métrica depois:
+- rotas principais da Central: **300 kB First Load JS**;
+- redução: **279 kB / aproximadamente 48,2%**;
+- shared global: 103 kB → 104 kB.
+
+Testes/gates:
+- Application CI: **PASS**;
+- EMPROVEX Core Protection: **PASS**;
+- Production build: **PASS**;
+- TypeScript final: **PASS**;
+- Diff hygiene: **PASS**;
+- Vercel Preview: **Ready**;
+- Browser E2E: não executado, conforme política sob demanda e natureza estrutural da mudança.
+
+Conflitos resolvidos:
+- nenhum; a branch era filha direta da integradora, 1 commit à frente e 0 atrás.
+
+Pendências:
+- nenhuma da PERF-B;
+- PERF-G deve preservar `WarehouseSectionContent` como fronteira de carregamento dinâmico e não reintroduzir imports estáticos das grandes superfícies.
+
+Decisão: **INTEGRADA**.
 
 ## Regra
 
