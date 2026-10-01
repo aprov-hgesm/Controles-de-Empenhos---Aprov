@@ -24,7 +24,7 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 | PERF-A | `perf-r3-a-core-bundle` | EM ANDAMENTO | baseline `076a233`; pausa coordenada para realinhamento | `5b92235` | Lazy root avançado; Core PASS/TS 0; não perseguir guards cruzados de PERF-E/B/C/H |
 | PERF-B | `perf-r3-b-central-bundle` | INTEGRADA | baseline comum | `7b7aee1` | Bundle Central; -48,2% nas rotas principais |
 | PERF-C | `perf-r3-c-outbound-demand-loading` | INTEGRADA | baseline `076a233` | `c263ce3` | Saída sob demanda integrada em `e33e260`; abertura fresca 0 reads específicos da superfície |
-| PERF-D | `perf-r3-d-intake-queue` | EM ANDAMENTO | baseline congelado `076a233`; pausa coordenada | `a514728` | Validar isoladamente; Core/Recovery PASS; não reconciliar PERF-B/PERF-H no worker |
+| PERF-D | `perf-r3-d-intake-queue` | EM ANDAMENTO | baseline congelado `076a233`; pausa coordenada | `a514728` | CI isolado chegou ao Diff Hygiene; único erro: trailing whitespace em 3 linhas de doc; não reconciliar PERF-B/PERF-H |
 | PERF-E | `perf-r3-e-render-cpu` | INTEGRADA | baseline `076a233` | `149f7c3` | CPU/renderização integrada em `9d5ff58`; gates locais verdes |
 | PERF-H | `perf-r3-h-metrics-budget` | INTEGRADA | baseline `076a233` | `fb5f452` | Métricas/budget integradas em `a686410`; CI bloqueante ainda não ativado |
 | PERF-F | `perf-r3-f-memory-cache` | BLOQUEADA | PERF-C integrada; aguarda PERF-D | — | Metade da dependência satisfeita; iniciar somente após D estabilizar leituras restantes |
@@ -43,7 +43,7 @@ Estado conhecido:
 - base original: `076a233cf250c95882e78498e89dd2a44d034f74`;
 - Core Protection no HEAD atual: **PASS**;
 - Recovery Guardrails no HEAD atual: **PASS**;
-- Application CI isolado contra a base congelada: em execução no momento do realinhamento.
+- Application CI isolado contra a base congelada: executado; os gates anteriores chegaram verdes e a única falha final foi `Diff hygiene` por trailing whitespace nas linhas 3–5 de `docs/PERFORMANCE_R3_PERF_D_INTAKE_QUEUE.md`.
 
 Sobreposições já classificadas como responsabilidade do coordenador:
 - `WarehouseItemRegistrationOperational.tsx` também contém code splitting da PERF-B integrada;
@@ -52,7 +52,7 @@ Sobreposições já classificadas como responsabilidade do coordenador:
 Regra de retomada:
 - terminar somente a validação isolada da solução PERF-D;
 - não fazer rebase/merge da integradora;
-- não tentar tornar o PR contra a integradora mergeable;
+- o PR técnico contra a integradora foi fechado pelo coordenador; não reabri-lo nem tentar torná-lo mergeable;
 - não remover ou reproduzir alterações de PERF-B/PERF-H;
 - entregar handoff completo e parar.
 
