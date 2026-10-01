@@ -1,13 +1,13 @@
 # SAAS-DL — Legal, Privacidade e Aceite Versionado — Handoff
 
-Data: 2026-10-01  
-Status da worker: **PRONTA PARA INTEGRAÇÃO**  
-Branch: `saas-r1-dl-legal-acceptance`  
-Branch integradora: `feat/saas-r1-commercializacao`  
-Base comum confirmada: `32872d3fc6a781ff129eb4e41ae9b0d45658024a`  
-HEAD funcional certificado: `4806adfb35d4bad29f32695ae6a9de327fe1f40d`  
-PR de validação/handoff: **#214 — draft**  
-Integração de outras workers: **nenhuma**  
+Data: 2026-10-01
+Status da worker: **PRONTA PARA INTEGRAÇÃO**
+Branch: `saas-r1-dl-legal-acceptance`
+Branch integradora: `feat/saas-r1-commercializacao`
+Base comum confirmada: `32872d3fc6a781ff129eb4e41ae9b0d45658024a`
+HEAD funcional certificado: `4806adfb35d4bad29f32695ae6a9de327fe1f40d`
+PR de validação/handoff: **#214 — draft**
+Integração de outras workers: **nenhuma**
 Deploy de produção: **não executado**
 
 > Este documento registra implementação técnica e pesquisa de produto. Não constitui parecer jurídico e não declara o EMPROVEX juridicamente certificado ou “100% conforme” qualquer regime legal.
@@ -58,7 +58,7 @@ O ID determinístico muda com `legalBundleVersion`, portanto uma nova versão pr
 
 Banco: **Firestore principal do EMPROVEX**.
 
-Nenhum terceiro banco foi criado.  
+Nenhum terceiro banco foi criado.
 `emprovex-warehouse` não foi utilizado.
 
 Caminho:
@@ -250,28 +250,28 @@ A política não afirma que toda base legal é consentimento e não afirma “10
 
 Consulta realizada em 2026-10-01. Foram utilizadas apenas fontes oficiais/primárias para confirmar requisitos atuais relevantes.
 
-1. Presidência da República — Lei nº 13.709/2018 (LGPD):  
+1. Presidência da República — Lei nº 13.709/2018 (LGPD):
    https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm
 
-2. ANPD — Direitos dos Titulares:  
+2. ANPD — Direitos dos Titulares:
    https://www.gov.br/anpd/pt-br/assuntos/titular-de-dados/direito-dos-titulares
 
-3. ANPD — Resolução CD/ANPD nº 2/2022, agentes de tratamento de pequeno porte:  
+3. ANPD — Resolução CD/ANPD nº 2/2022, agentes de tratamento de pequeno porte:
    https://www.gov.br/anpd/pt-br/acesso-a-informacao/institucional/atos-normativos/regulamentacoes_anpd/resolucao-cd-anpd-no-2-de-27-de-janeiro-de-2022
 
-4. Google for Developers — Google Workspace User Data and Developer Policy:  
+4. Google for Developers — Google Workspace User Data and Developer Policy:
    https://developers.google.com/workspace/workspace-api-user-data-developer-policy
 
-5. Firebase — Privacy and Security in Firebase:  
+5. Firebase — Privacy and Security in Firebase:
    https://firebase.google.com/support/privacy/
 
-6. Vercel — Privacy Notice:  
+6. Vercel — Privacy Notice:
    https://vercel.com/legal/privacy-notice
 
-7. Mercado Pago — Centro/Declaração de Privacidade:  
+7. Mercado Pago — Centro/Declaração de Privacidade:
    https://www.mercadopago.com.br/privacidade
 
-8. Mercado Pago Developers — soluções com e sem integração, incluindo link de pagamento:  
+8. Mercado Pago Developers — soluções com e sem integração, incluindo link de pagamento:
    https://www.mercadopago.com.br/developers/pt/docs/getting-started
 
 ### Consequências técnicas adotadas a partir da consulta
