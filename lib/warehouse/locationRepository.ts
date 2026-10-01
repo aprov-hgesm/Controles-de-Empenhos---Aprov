@@ -548,15 +548,69 @@ export async function updateWarehouseLocation(
   });
 }
 
+export async function getWarehouseDepot(
+  workspaceId: string,
+  depotId: string
+): Promise<WarehouseDepotListItem | null> {
+  const scope = currentScope(workspaceId);
+  if (!isValidWarehouseDepotId(depotId)) return null;
+  const path = warehouseDocumentPath(scope.workspaceId, 'depots', depotId);
+  try {
+    const snapshot = await getDoc(doc(db, path));
+    recordWarehouseDocumentReads(workspaceId, 1);
+    if (!snapshot.exists()) return null;
+    const data = snapshot.data() as Record<string, unknown>;
+    return {
+      depot: parseDepot(scope.workspaceId, snapshot.id, data),
+      createdAt: timestampToIso(data.createdAt),
+      updatedAt: timestampToIso(data.updatedAt),
+    };
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, path);
+    return null;
+  }
+}
+
+export async function getWarehouseLocation(
+  workspaceId: string,
+  locationId: string
+): Promise<WarehouseLocationListItem | null> {
+  const scope = currentScope(workspaceId);
+  if (
+    !isValidWarehouseLocationId(locationId)
+    && !isValidWarehouseSubpositionId(locationId)
+  ) return null;
+  const path = warehouseDocumentPath(scope.workspaceId, 'locations', locationId);
+  try {
+    const snapshot = await getDoc(doc(db, path));
+    recordWarehouseDocumentReads(workspaceId, 1);
+    if (!snapshot.exists()) return null;
+    const data = snapshot.data() as Record<string, unknown>;
+    return {
+      location: parseLocation(scope.workspaceId, snapshot.id, data),
+      createdAt: timestampToIso(data.createdAt),
+      updatedAt: timestampToIso(data.updatedAt),
+    };
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, path);
+    return null;
+  }
+}
+
 export async function listWarehouseLocationBalances(
   workspaceId: string,
-  maxResults = 500
+  maxResults = 500,
+  materialId?: string
 ): Promise<WarehouseLocationBalanceListItem[]> {
   const scope = currentScope(workspaceId);
   const path = warehouseDomainPath(scope.workspaceId, 'locationBalances');
   try {
-    const snapshot = await getDocs(query(collection(db, path), limit(Math.max(1, Math.min(maxResults, 500)))));
-  recordWarehouseDocumentReads(workspaceId, snapshot.size);
+    const base = collection(db, path);
+    const bounded = Math.max(1, Math.min(maxResults, 500));
+    const snapshot = materialId
+      ? await getDocs(query(base, where('materialId', '==', materialId), limit(bounded)))
+      : await getDocs(query(base, limit(bounded)));
+    recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs.map((item) => {
       const data = item.data() as Record<string, unknown>;
       return {
