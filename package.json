@@ -200,7 +200,9 @@
     "perf:r3:runtime:sanitize": "node scripts/performance-r3-runtime-observation.mjs",
     "test:performance-r3-metrics": "node --test scripts/performance-r3-metrics.test.mjs",
     "verify:performance-r3-metrics": "node scripts/verify-performance-r3-metrics.mjs",
-    "verify:performance-r3-central-shell": "node scripts/verify-performance-r3-central-shell.mjs"
+    "verify:performance-r3-central-shell": "node scripts/verify-performance-r3-central-shell.mjs",
+    "verify:saas-r1-legal-acceptance": "node scripts/verify-saas-r1-legal-acceptance.mjs",
+    "test:saas-r1-legal-acceptance": "npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-legal --only auth,firestore \"node scripts/legal-acceptance-security.test.mjs\""
   },
   "dependencies": {
     "clsx": "^2.1.1",
