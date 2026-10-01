@@ -133,3 +133,11 @@ test('custo steady-state depende das pendências, não do histórico acumulado',
     tenThousandHistoricalInvoices
   );
 });
+
+test('limites operacionais e watermark permanecem explícitos e reproduzíveis', () => {
+  assert.match(indexRepository, /DISCOVERY_PAGE_SIZE = 200/);
+  assert.match(indexRepository, /ACTIVE_PAGE_SIZE = 250/);
+  assert.match(indexRepository, /ACTIVE_MAX_PAGES = 20/);
+  assert.match(indexRepository, /WATERMARK_OVERLAP_MS = 5 \* 60 \* 1000/);
+  assert.match(indexRepository, /truncated:/);
+});
