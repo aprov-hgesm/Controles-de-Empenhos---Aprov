@@ -9,3 +9,4 @@ coverage/
 .vercel/
 emprovex-snapshots/
 .local-snapshots/
+.performance-r3/

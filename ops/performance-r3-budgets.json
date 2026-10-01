@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "policyId": "performance-r3-budget-v1",
+  "principle": "Prefer coarse, low-false-positive guards; missing or noisy runtime data does not block.",
+  "bundle": {
+    "routeRegression": {
+      "warning": { "percent": 10, "absoluteKb": 25 },
+      "block": { "percent": 40, "absoluteKb": 150 }
+    },
+    "sharedRegression": {
+      "warning": { "percent": 15, "absoluteKb": 20 },
+      "block": { "percent": 50, "absoluteKb": 75 }
+    },
+    "missingMetric": "warning"
+  },
+  "runtime": {
+    "webVitals": {
+      "classification": "warning-only",
+      "warningAbove": { "lcpMs": 2500, "inpMs": 200, "cls": 0.1 },
+      "blocking": false
+    },
+    "operationalReady": {
+      "classification": "informational-until-stable-baseline",
+      "blocking": false
+    },
+    "documentsEstimated": {
+      "classification": "informational-until-scenario-baseline",
+      "blocking": false
+    }
+  },
+  "ci": {
+    "wiredIntoApplicationCi": false,
+    "reason": "Parser and thresholds start as an explicit coordinator gate; CI adoption waits for evidence of low false-positive rate across R3 integrations."
+  }
+}
