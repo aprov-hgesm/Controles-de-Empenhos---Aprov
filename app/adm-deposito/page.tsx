@@ -1,5 +1,5 @@
-import { WarehouseProtectedSurface } from '../../features/warehouse/components/WarehouseProtectedSurface';
+import { WarehouseRouteContent } from '../../features/warehouse/components/WarehouseRouteContent';
 
 export default function WarehouseOverviewPage() {
-  return <WarehouseProtectedSurface section="home" />;
+  return <WarehouseRouteContent section="home" />;
 }

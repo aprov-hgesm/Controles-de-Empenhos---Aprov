@@ -7,6 +7,7 @@ const root = process.cwd();
 const findings = [];
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
+const layout = read('app/adm-deposito/layout.tsx');
 const gate = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
 const navigation = read('features/warehouse/navigation.ts');
 const registration = read('features/warehouse/components/WarehouseItemRegistrationOperational.tsx');
@@ -29,10 +30,19 @@ const primaryRoutes = [
   ['app/adm-deposito/controle-de-itens/page.tsx', 'control'],
 ];
 
+requireText(
+  layout,
+  'WarehouseProtectedLayout',
+  'Layout compartilhado da Central deixou de montar o gate multi-tenant.'
+);
+
 for (const [path, section] of primaryRoutes) {
   const route = read(path);
-  requireText(route, 'WarehouseProtectedSurface', `Rota principal sem gate compartilhado: ${path}`);
+  requireText(route, 'WarehouseRouteContent', `Rota principal sem conteúdo modular: ${path}`);
   requireText(route, `section="${section}"`, `Rota principal aponta para seção incorreta: ${path}`);
+  if (route.includes('WarehouseProtectedSurface')) {
+    findings.push(`Rota principal voltou a montar gate por página: ${path}`);
+  }
 }
 
 const legacyRoutes = [
