@@ -6,6 +6,10 @@ export function stripAnsi(value) {
   return String(value ?? '').replace(ANSI_RE, '');
 }
 
+export function stripCiLogPrefix(value) {
+  return String(value ?? '').replace(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d+Z\\s+/, '');
+}
+
 export function sizeToKb(value) {
   const match = String(value ?? '').trim().match(/^([0-9]+(?:\.[0-9]+)?)\s*(B|kB|MB)$/i);
   if (!match) return null;
@@ -25,7 +29,7 @@ export function parseNextBuildOutput(raw) {
   let inSharedChunkBlock = false;
 
   for (const original of lines) {
-    const line = original.trimEnd();
+    const line = stripCiLogPrefix(original).trimEnd();
     const sharedMatch = line.match(/First Load JS shared by all\s+([0-9.]+\s*(?:B|kB|MB))/i);
     if (sharedMatch) {
       sharedFirstLoadJsKb = sizeToKb(sharedMatch[1]);
