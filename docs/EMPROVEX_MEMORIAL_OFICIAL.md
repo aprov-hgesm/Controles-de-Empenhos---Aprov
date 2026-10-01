@@ -1,19 +1,24 @@
 # EMPROVEX — Memorial Oficial do Repositório
 
-Última atualização: **2026-10-01**  
-Baseline de produção consultada: `main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`
+Última atualização: **2026-10-01 — pós-certificação da PERF-X**  
+Baseline de produção consultada: `main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`  
+Branch candidata da Performance R3: `feat/performance-r3-commercializacao`  
+HEAD funcional certificado da R3: `2b72d43ac2a387682fb1c0089d36bef2177d0f17`  
+Estado documental imediatamente anterior a esta consolidação: `b7d3422eb5a5bb34a198714f16e8f8a7ef19603b`
 
-Este documento é a **porta de entrada canônica para continuidade do EMPROVEX como produto**. Ele resume o estado vigente e aponta para os documentos históricos/especializados. O histórico detalhado não deve ser apagado; quando houver divergência, a implementação real em `main` prevalece.
+Este documento é a **porta de entrada canônica para continuidade do EMPROVEX como produto**. Ele resume o estado vigente e aponta para os documentos históricos/especializados. O histórico detalhado não deve ser apagado. Para comportamento já publicado, `main` prevalece; para a rodada Performance R3 ainda não publicada, prevalecem a branch integradora atual e os registros canônicos de integração deste memorial.
 
 ## 1. Fontes da verdade
 
 Ordem de consulta para um novo trabalho:
 
-1. `main` — estado efetivo do código em produção;
-2. este memorial — estado consolidado e prioridades atuais;
-3. documentação especializada do domínio alterado;
-4. decisões arquiteturais registradas;
-5. histórico de fases/branches/PRs apenas como contexto.
+1. `main` — estado efetivo do código atualmente em produção;
+2. `feat/performance-r3-commercializacao` — estado candidato vigente da Performance R3 enquanto a rodada não chegar à `main`;
+3. este memorial — síntese canônica de estado, contratos, prioridades e sequência de trabalho;
+4. `docs/PERFORMANCE_R3_INTEGRATION_STATUS.md` e `docs/PERFORMANCE_R3_COORDENADOR_HANDOFF.md` — quadro operacional e handoff da R3;
+5. documentação especializada do domínio alterado;
+6. decisões arquiteturais registradas;
+7. histórico de fases/branches/PRs apenas como contexto.
 
 Para a Central de Depósitos:
 - `docs/adm-deposito/README.md`;
@@ -29,7 +34,7 @@ Política de testes:
 
 O EMPROVEX é uma aplicação Next.js 15 com Firebase Auth/Firestore, Vercel e integrações Google utilizadas pelos fluxos institucionais.
 
-Estado operacional consolidado:
+Estado operacional consolidado em produção e estado candidato vigente:
 - núcleo de Empenhos, Itens, Notas Fiscais, Comissão/Tesouraria, Cronogramas/Entregas, Avisos e Relatórios em produção;
 - cadastro de empenho por PDF SIAFI disponível, preservando também as demais formas de cadastro existentes;
 - edição segura de número/descritivo de item no detalhamento do empenho e antes da geração do cronograma;
@@ -37,7 +42,8 @@ Estado operacional consolidado:
 - histórico de invoices em Relatórios consultado sob demanda/paginado;
 - controle de sessão externo baseado em workspace/UG e lease;
 - telemetria estimada de consumo por workspace + métricas globais separadas;
-- Central de Depósitos integrada ao EMPROVEX e disponível para contextos de setor autenticados/autorizados, com isolamento por workspace/UG.
+- Central de Depósitos integrada ao EMPROVEX e disponível para contextos de setor autenticados/autorizados, com isolamento por workspace/UG;
+- Performance R3 está integralmente combinada até PERF-X na branch integradora, mas **ainda não foi mergeada em `main` nem promovida como release consolidado**; PERF-I é a próxima fase liberada.
 
 ## 3. Central de Depósitos — estado vigente
 
@@ -148,9 +154,9 @@ Podem ser executadas simultaneamente em chats e branches diferentes:
 
 Mantém escopo próprio, mas começa somente após a dependência indicada:
 
-- **PERF-F — Cache curto em memória**, após C/D estabilizarem as leituras realmente necessárias;
-- **PERF-G — Shell/Layout persistente da Central**, após B congelar a fronteira de carregamento;
-- **PERF-X — Dados quentes vs histórico**, opcional e somente se medições justificarem.
+- **PERF-F — Cache curto em memória**, após C/D estabilizarem as leituras realmente necessárias — **INTEGRADA**;
+- **PERF-G — Shell/Layout persistente da Central**, após B congelar a fronteira de carregamento — **INTEGRADA**;
+- **PERF-X — Dados quentes vs histórico**, originalmente opcional e condicionada a evidência; a auditoria comprovou gargalo em `invoices`, a frente foi executada, corrigida semanticamente e está **INTEGRADA E CERTIFICADA**.
 
 ### Fechamento
 
@@ -178,32 +184,76 @@ A independência das frentes é uma **regra arquitetural da rodada**: um chat n�
 
 ### Estado consolidado da Performance R3 em 2026-10-01
 
-Situação incorporada à branch integradora:
-- **PERF-A — Bundle do EMPROVEX principal:** INTEGRADA; a rota `/` reduziu de 460 kB para 333 kB de First Load JS (-27,61%), preservando shell/Home/auth e movendo as grandes superfícies operacionais para boundaries lazy;
-- **PERF-B — Bundle da Central:** INTEGRADA; rotas principais da Central reduziram de 579 kB para 300 kB de First Load JS (~48,2%);
-- **PERF-C — Saída sob demanda:** INTEGRADA; abertura fresca da superfície deixou de antecipar as 8 consultas específicas e o teto bounded de até 3.000 documentos;
-- **PERF-E — CPU e Renderização:** INTEGRADA; grandes reduções estruturais de varreduras em Empenhos, Notas Fiscais e Consulta de Itens;
-- **PERF-H — Métricas e Budget:** INTEGRADA; baseline, parser, comparação e budgets estão disponíveis, ainda sem transformar budgets experimentais em gate automático do Application CI.
+Estado canônico da branch `feat/performance-r3-commercializacao`:
 
-Build combinado após PERF-A/B/C/D/E/F/G/H:
-- `/`: **333 kB** First Load JS;
+- **PERF-A — Bundle do EMPROVEX principal: INTEGRADA.** Worker `3193b84`; integração `15eadb0`. A rota `/` caiu de **460 kB para 333 kB** de First Load JS (-27,61%), preservando shell/Home/auth e movendo grandes superfícies para boundaries lazy.
+- **PERF-B — Bundle da Central: INTEGRADA.** Worker `7b7aee1`. As rotas principais da Central caíram de **579 kB para ~300 kB** na etapa B, preservando os boundaries `dynamic()`.
+- **PERF-C — Saída de Material sob demanda: INTEGRADA.** Worker `c263ce3`; integração `e33e260`. A abertura fresca deixou de antecipar as 8 consultas específicas e o teto bounded de até 3.000 documentos; barcode/material/saldo/posições/lotes/destinos são resolvidos apenas quando necessários.
+- **PERF-D — Intake seletivo: INTEGRADA.** Worker `022fae7`; integração `2e77af1`. O caminho normal `A tratar` usa `intakeQueueIndex`, watermark e candidatos ativos; histórico/reconciliação ficam sob demanda. Cenários sintéticos registraram reduções aproximadas de **97,26% a 99,69%** no steady-state de massas históricas grandes.
+- **PERF-E — CPU e Renderização: INTEGRADA.** Worker `149f7c3`; integração `9d5ff58`. Benchmarks estruturais da frente: Empenhos **1.732.500 → 11.250** varreduras, NFs **3.388.500 → 5.250**, Itens **54.072 → 9.072**, preservando filtros, ordenação, totais e informação exibida.
+- **PERF-F — Cache curto em memória: INTEGRADA.** Worker `570661b`; integração `14aaa2e`. TTL 30 s, isolamento por workspace + variante, deduplicação in-flight e invalidação pós-mutação para depósitos/localizações/destinos; operações críticas permanecem uncached/autoritativas. Cenário sintético estrutural: **8 → 2** carregamentos dentro do TTL (75% no recorte).
+- **PERF-G — Shell/Layout persistente da Central: INTEGRADA.** Worker `de870d1`; integração `238b813`. Auth/workspace/session/header/sidebar permanecem montados entre subrotas; os boundaries lazy da PERF-B foram preservados. As seis rotas principais da Central chegaram a **106 kB** First Load JS.
+- **PERF-H — Métricas e Budget: INTEGRADA.** Worker `fb5f452`; integração `a686410`. Baseline, parser, comparação, sanitização e budgets estão versionados; budgets continuam deliberadamente fora do Application CI automático até a certificação final.
+- **PERF-X — Dados quentes vs. histórico de invoices: INTEGRADA E CERTIFICADA.** Worker `8aac69a`; integração do PR #208 em `2aca0dce`; correções semânticas coordenadas em `2b72d43`; validação final no PR técnico #209 com **Application CI #868 verde**.
+
+Build combinado de referência antes da coleta final da PERF-I:
+- `/`: **333 kB First Load JS**;
 - seis rotas principais da Central: **106 kB**;
 - `/admin`: **327 kB**;
 - `/admin/backups`: **244 kB**;
 - shared global: **104 kB**.
 
-A incompatibilidade cruzada encontrada no guard de classes de empenho foi resolvida pelo coordenador alterando apenas a expectativa estrutural do guard para a derivação memoizada já vigente em Notas Fiscais; nenhuma regra funcional foi alterada.
+Esses números são referência certificada das integrações anteriores. A PERF-I deve repetir `perf:r3:collect`, `perf:r3:compare` e `perf:r3:budget` no estado combinado atual; não assumir automaticamente que a última coleta continua idêntica.
 
-- **PERF-D — Intake seletivo:** INTEGRADA; o caminho normal `A tratar` passou a usar índice derivado mínimo + NFs novas desde watermark + candidatos ativos, enquanto histórico/reconciliação ficam sob demanda. Cenários sintéticos registraram ~97,26% a ~99,69% de redução de documentos no steady-state para massas históricas grandes, preservando ausência de intake como PENDING e demais contratos.
-- **PERF-G — Shell persistente da Central:** INTEGRADA; `app/adm-deposito/layout.tsx` mantém auth/workspace/session/header/sidebar no boundary compartilhado e troca somente a superfície ativa. Os boundaries `dynamic()` da PERF-B foram preservados e as seis rotas principais da Central reduziram de ~300 kB para **106 kB** de First Load JS, com shared em 104 kB.
+#### PERF-X — arquitetura final integrada
 
-A PERF-G foi integrada semanticamente no commit `238b813795be05ad7142973f1566b8fead9d055d`, preservando simultaneamente shell/layout persistente, boundaries lazy da PERF-B, intake seletivo da PERF-D e scripts de métricas da PERF-H. O Application CI combinado, Core Protection, Recovery Guardrails, Production Build, TypeScript, Diff Hygiene e gates finais 16–21 ficaram verdes.
+A auditoria comprovou que `invoices` ainda era observada integralmente em realtime nas superfícies de Empenhos/Nova NF. A implementação final adotou separação semântica por estado operacional, **sem corte temporal**:
 
-A PERF-F está **INTEGRADA** no commit `14aaa2e747fffaf2427ea63f4cd52395545d9a22` após revisão do HEAD trabalhador `570661ba498edd37ba4c8f0240044d4ee6613bed`. O cache é exclusivamente em memória, usa TTL de 30 segundos, segregação por workspace + variante, deduplicação in-flight e invalidação pós-mutação. Depósitos, localizações/subposições e destinos são os únicos recursos estruturais incluídos; configuração logística ficou de fora. Validações críticas continuam uncached/autoritativas. No cenário sintético controlado Início → Alocação → SISCOFIS → Meus Depósitos, os carregamentos estruturais repetidos passaram de 8 para 2 dentro do TTL, equivalendo a 75% de redução no recorte. O Application CI #860 validou o merge virtual da PERF-F com os commits atuais de UX da integradora.
+- após backfill certificado/marker READY, realtime = `localizacaoAtual IN [APROVISIONAMENTO, COMISSAO]`;
+- NFs em `TESOURARIA` saem do listener operacional e permanecem acessíveis no histórico sob demanda;
+- antes do READY, o runtime mantém o listener integral legado para não esconder documentos antigos sem `localizacaoAtual`;
+- fallback legado resolve `tesourariaDate → TESOURARIA`, `comissaoDate → COMISSAO`, ausência dos campos → `APROVISIONAMENTO`;
+- backfill é explícito, idempotente, com precondição de `updateTime`, sem apagar/renomear documentos e **sem alterar Firestore Rules**;
+- Empenhos usa contagens agregadas e carrega histórico completo por `empenhoId` somente no detalhe/relatório quando necessário;
+- Nova NF abre em **Em tramitação**, união de todas as NFs ainda operacionais, sem carregar o histórico concluído;
+- `Todas` e `Concluídas / Tesouraria` carregam histórico sob demanda;
+- a contagem de concluídas só usa a agregação `localizacaoAtual=TESOURARIA` depois do READY; antes disso deriva do conjunto legado integral já carregado;
+- transição operacional → histórica é revalidada por `recordKey`, preservando conclusão em memória e distinguindo exclusão;
+- NF histórica reaberta para estado operacional volta automaticamente ao realtime;
+- cadastro/edição, identidade, migração de CNPJ, exclusão global, relatórios e numeração de TR possuem consultas históricas/limitadas próprias quando exigem visão integral;
+- histórico continua reutilizando `lib/historicalInvoiceQueries.ts`; não foi criada fonte paralela de verdade.
 
-A PERF-X continua **opcional/bloqueada**: só deve ser aberta se as medições após PERF-F demonstrarem necessidade objetiva de separar dados quentes de histórico.
+Métrica sintética reproduzível da PERF-X, com 20 NFs operacionais:
+- 100 documentos totais → 20 realtime (**-80%**);
+- 1.000 → 20 (**-98%**);
+- 10.000 → 20 (**-99,8%**);
+- histórico carregado antes de solicitação explícita: **0**.
 
-PERF-I permanece bloqueada até o fechamento das frentes necessárias da segunda onda; PERF-J vem depois para certificação final. Não houve merge em `main` nem deploy consolidado de produção da R3.
+Esses percentuais são **sintéticos**, não consumo real de produção.
+
+Certificação final da PERF-X:
+- worker/merge virtual: Application CI #867 **PASS**;
+- integração PR #208: `2aca0dce1d511d0cc8df329614fac93f4e917144`;
+- revisão semântica encontrou dois bloqueios não cobertos pelo CI: filtro inicial que ocultava Comissão e contagem de concluídas incompatível com legado pré-READY;
+- correção do Coordenador: `2b72d43ac2a387682fb1c0089d36bef2177d0f17`;
+- PR técnico #209 validou exatamente `2aca0dce... → 2b72d43...`;
+- Application CI #868: **SUCCESS**;
+- Core Protection #155: **SUCCESS**;
+- Production Build: **PASS**;
+- Final TypeScript: **PASS**;
+- Diff Hygiene: **PASS**;
+- Block 17.4 e 17.5: **PASS**;
+- segurança multi-tenant e acesso externo da Central: **PASS**;
+- release gates 16–21: **PASS**;
+- PR #209 foi fechado sem merge após cumprir sua função de validação.
+
+#### Estado das fases de fechamento
+
+- **PERF-I — LIVRE / PRÓXIMA FASE.** Integração final, métricas combinadas e validação obrigatória de UX.
+- **PERF-J — BLOQUEADA.** Só inicia depois da aprovação formal da PERF-I.
+- **`main` / produção — BLOQUEADAS.** Merge/release somente depois da PERF-J e de autorização explícita do usuário.
+
+Não houve merge consolidado da Performance R3 em `main` nem promoção de produção durante esse fechamento.
 
 ### PERF-I — validação obrigatória de experiência do usuário
 
@@ -222,7 +272,8 @@ Checklist mínimo obrigatório:
 9. **Máquina e conexão mais fracas:** executar ao menos a jornada principal em ambiente representativo de hardware/conectividade modestos para observar loading, CPU, responsividade, foco e transições.
 10. **Jornada integrada completa:** validar EMPROVEX → Central → Meus Depósitos → Alocação → Saída → retorno à Central, além de uma jornada representativa no EMPROVEX principal.
 11. **Usuário externo autorizado:** repetir fluxos principais compatíveis com seu perfil e confirmar que performance não alterou acesso, mensagens ou ergonomia.
-12. **Critério de bloqueio UX:** perda de dados digitados, informação enganosa, estado inesperado, necessidade nova de refresh manual, quebra operacional de teclado/scanner ou dificuldade perceptível criada pela R3 bloqueiam a aprovação até correção ou decisão explícita do usuário.
+12. **PERF-X / NFs:** validar abertura em **Em tramitação**, alternância para `Todas`/`Concluídas`, loader/erro do histórico, detalhe completo por empenho, transição operacional → histórica, reabertura de NF, comportamento pré-READY e pós-READY e ausência de contagens enganosas.
+13. **Critério de bloqueio UX:** perda de dados digitados, informação enganosa, estado inesperado, necessidade nova de refresh manual, quebra operacional de teclado/scanner ou dificuldade perceptível criada pela R3 bloqueiam a aprovação até correção ou decisão explícita do usuário.
 
 Browser E2E continua sob demanda. A validação acima pode combinar testes automatizados, browser dirigido e operação manual assistida conforme o risco de cada fluxo.
 
@@ -264,7 +315,7 @@ Resultado consolidado:
 - scripts/testes da PERF-D adicionados;
 - CI combinado, Core Protection e Recovery Guardrails verdes.
 
-A dependência da PERF-F está satisfeita; PERF-F pode iniciar a partir da branch integradora atual.
+A dependência da PERF-F foi satisfeita e a PERF-F já foi concluída e integrada em `14aaa2e747fffaf2427ea63f4cd52395545d9a22`.
 
 ### Regra de guards em trabalho paralelo
 
@@ -285,7 +336,7 @@ Quando um guard falhar por efeito combinado entre frentes, o trabalhador deve:
 Exemplo vigente: a PERF-A pode atualizar guards que ainda procuram código movido de `app/page.tsx` para `OperationalWorkspace`. Porém, uma falha de guard provocada por reorganização interna de `NotasFiscaisView.tsx` já integrada pela PERF-E não deve ser corrigida pela PERF-A alterando Notas Fiscais; essa reconciliação pertence ao coordenador.
 
 
-## 7.1. Retomada canônica para novos chats — estado pós-PERF-X
+## 7.1. Retomada canônica para novos chats — estado pós-PERF-X / pré-PERF-I
 
 Este bloco é o ponto de partida obrigatório para novos chats da Performance R3 enquanto a rodada não chegar à `main`.
 
@@ -384,13 +435,16 @@ Antes de editar:
 - ler Memorial, Handoff, Integration Status, Execução Paralela, Testing Policy e Development CI Workflow;
 - A–H/X são contratos integrados;
 - não fazer merge em `main`, deploy de produção ou promoção Vercel sem autorização;
-- Browser E2E permanece sob demanda; validação dirigida/manual de UX da PERF-I é obrigatória.
+- Browser E2E permanece sob demanda; validação dirigida/manual de UX da PERF-I é obrigatória;
+- `docs/PERFORMANCE_R3_PERF_X_HOT_HISTORY.md` registra a implementação da worker e pode conter texto anterior às correções semânticas do Coordenador; em caso de divergência sobre filtro inicial/contagem legada, prevalecem este Memorial, `PERFORMANCE_R3_INTEGRATION_STATUS.md` e o código integrado a partir de `2b72d43...`.
 
 ## 8. Riscos/pendências que não devem ser esquecidos
 
-- crescimento histórico das coleções operacionais continua exigindo disciplina de consultas seletivas; PERF-D resolveu o principal caminho amplo do intake, mas futuras superfícies não devem reintroduzir scans globais;
+- crescimento histórico das coleções operacionais continua exigindo disciplina de consultas seletivas; PERF-D resolveu o intake e PERF-X resolveu o histórico de `invoices` no caminho operacional normal, mas `empenhos`, `alerts`, `comissoes`, `cronogramas` e movimentos/ledger não devem ser migrados automaticamente sem nova evidência;
 - PERF-F está integrada: o cache deve permanecer restrito a dados estruturais estáveis e nunca ser ampliado para mascarar query inadequada; o risco residual aceito é stale visual de até 30 s entre sessões, sempre com validações operacionais críticas consultando a fonte oficial;
 - o layout persistente da PERF-G precisa de validação visual/manual de navegação, back/forward, refresh direto e acesso externo durante PERF-I/PERF-J;
+- a redução seletiva da PERF-X só entra em vigor por workspace depois do backfill/marker READY; antes disso, o fallback integral é deliberado e deve ser validado na PERF-I;
+- `docs/PERFORMANCE_R3_PERF_X_HOT_HISTORY.md` descreve a worker pré-correção coordenadora; o contrato final de UX/legado está neste Memorial e no Integration Status;
 - a PERF-I deve tratar experiência do usuário como critério de aceitação: primeira abertura lazy, feedback de loading, persistência/reset de estado, proteção de formulários, foco de barcode/teclado, cache curto, mensagens de erro e jornada em hardware/conectividade modestos devem ser verificados antes da certificação;
 - os budgets da PERF-H ainda são deliberadamente não bloqueantes no Application CI; adoção como gate permanente depende da certificação final;
 - segurança e dependências continuam como linha separada de hardening;
@@ -404,4 +458,5 @@ Ao concluir uma rodada relevante:
 - atualizar STATUS/DECISIONS/ROADMAP do domínio afetado;
 - registrar baseline e resultado mensurável quando houver performance/custo;
 - nunca apagar decisões antigas: marcar como superadas quando necessário;
+- para Performance R3, manter este Memorial, `PERFORMANCE_R3_INTEGRATION_STATUS.md` e `PERFORMANCE_R3_COORDENADOR_HANDOFF.md` coerentes entre si;
 - nunca tratar conversa isolada como fonte oficial superior ao repositório.
