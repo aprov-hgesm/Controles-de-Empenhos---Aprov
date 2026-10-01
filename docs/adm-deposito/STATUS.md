@@ -16,7 +16,11 @@ Baseline de produção: `main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`
 - Browser E2E: **SOB DEMANDA**, não bloqueante por padrão, conforme `docs/TESTING_POLICY.md`;
 - política visual: preservação integral da identidade premium e das animações aprovadas;
 - prioridade atual: **Performance R3 — Comercialização**;
-- branch de trabalho: `feat/performance-r3-commercializacao`.
+- modelo de execução: **frentes paralelas + integração controlada**;
+- existe um **chat Coordenador / Integrador / Avaliador** responsável pela branch integradora, revisão de handoffs, conflitos e certificação;
+- chats trabalhadores usam branches próprias e não fazem merge diretamente em `main`;
+- quadro vivo: `docs/PERFORMANCE_R3_INTEGRATION_STATUS.md`;
+- branch integradora: `feat/performance-r3-commercializacao`.
 
 ## Melhorias consolidadas após o fechamento histórico
 
