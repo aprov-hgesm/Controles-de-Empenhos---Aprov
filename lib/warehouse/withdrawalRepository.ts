@@ -14,6 +14,10 @@ import {
 } from 'firebase/firestore';
 
 import { recordWarehouseDocumentReads } from './telemetry';
+import {
+  WAREHOUSE_SHORT_MEMORY_CACHE_TTL_MS,
+  createWorkspaceMemoryReadCache,
+} from './memoryReadCache';
 
 import { auth, warehouseDb as db, handleFirestoreError, OperationType } from '../firebase';
 import { getCurrentOperationalScope } from '../operationalPaths';
@@ -81,6 +85,14 @@ import {
 } from './withdrawal';
 
 const EPSILON = 0.000001;
+
+const destinationListReadCache = createWorkspaceMemoryReadCache<WarehouseDestinationListItem[]>({
+  ttlMs: WAREHOUSE_SHORT_MEMORY_CACHE_TTL_MS,
+});
+
+function invalidateWarehouseDestinationReadCache(workspaceId: string): void {
+  destinationListReadCache.invalidate(workspaceId);
+}
 
 export interface CreateWarehouseDestinationInput {
   name: string;
@@ -627,6 +639,29 @@ async function listWarehouseOutboundReturnSummaries(
   return result;
 }
 
+async function loadWarehouseDestinationsFromFirestore(
+  workspaceId: string,
+  maxResults: number
+): Promise<WarehouseDestinationListItem[]> {
+  const path = warehouseDomainPath(workspaceId, 'destinations');
+  const snapshot = await getDocs(
+    query(collection(db, path), limit(Math.max(1, Math.min(maxResults, 250))))
+  );
+  recordWarehouseDocumentReads(workspaceId, snapshot.size);
+  return snapshot.docs
+    .map((entry) => {
+      const data = entry.data() as Record<string, unknown>;
+      return {
+        destination: parseDestination(workspaceId, entry.id, data),
+        createdAt: timestampToIso(data.createdAt),
+        updatedAt: timestampToIso(data.updatedAt),
+      };
+    })
+    .sort((left, right) =>
+      left.destination.name.localeCompare(right.destination.name, 'pt-BR')
+    );
+}
+
 async function requireActiveDestination(
   workspaceId: string,
   destinationId: string
@@ -654,23 +689,14 @@ export async function listWarehouseDestinations(
 ): Promise<WarehouseDestinationListItem[]> {
   const scope = currentScope(workspaceId);
   const path = warehouseDomainPath(scope.workspaceId, 'destinations');
+  const bounded = Math.max(1, Math.min(maxResults, 250));
   try {
-    const snapshot = await getDocs(
-      query(collection(db, path), limit(Math.max(1, Math.min(maxResults, 250))))
+    const cached = await destinationListReadCache.read(
+      scope.workspaceId,
+      'list:' + bounded,
+      () => loadWarehouseDestinationsFromFirestore(scope.workspaceId, bounded)
     );
-    recordWarehouseDocumentReads(workspaceId, snapshot.size);
-    return snapshot.docs
-      .map((entry) => {
-        const data = entry.data() as Record<string, unknown>;
-        return {
-          destination: parseDestination(scope.workspaceId, entry.id, data),
-          createdAt: timestampToIso(data.createdAt),
-          updatedAt: timestampToIso(data.updatedAt),
-        };
-      })
-      .sort((left, right) =>
-        left.destination.name.localeCompare(right.destination.name, 'pt-BR')
-      );
+    return cached.slice();
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
     return [];
@@ -707,6 +733,7 @@ export async function createWarehouseDestination(
         updatedAt: serverTimestamp(),
       });
     });
+    invalidateWarehouseDestinationReadCache(scope.workspaceId);
     return candidate;
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path);
@@ -731,6 +758,7 @@ export async function setWarehouseDestinationStatus(
       updatedBy: scope.uid,
       updatedAt: serverTimestamp(),
     });
+    invalidateWarehouseDestinationReadCache(scope.workspaceId);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
     throw error;
