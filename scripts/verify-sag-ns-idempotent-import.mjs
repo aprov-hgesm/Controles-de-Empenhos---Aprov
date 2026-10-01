@@ -17,6 +17,7 @@ const view = [
 ].join('\n');
 const reportsView = read('features/relatorios/components/RelatoriosView.tsx');
 const page = read('app/page.tsx');
+const operationalWorkspace = read('features/operational/components/OperationalWorkspace.tsx');
 const pkg = read('package.json');
 const workflow = read('.github/workflows/application-ci.yml');
 
@@ -57,8 +58,9 @@ forbidText(view, 'updateDoc(', 'A interface SAG não deve chamar updateDoc diret
 forbidText(view, 'addDoc(', 'A interface SAG não deve chamar addDoc diretamente.');
 
 requireText(reportsView, 'onApplySagNsImport={context.handleApplySagNsImport}', 'Relatórios não repassam a ação SAG.');
-requireText(page, 'useSagNsImportActions', 'Página principal não inicializa o hook de importação SAG.');
-requireText(page, 'handleApplySagNsImport', 'Página principal não injeta a ação SAG no contexto.');
+requireText(page, "import('../features/operational/components/OperationalWorkspace')", 'Página principal não conecta o host operacional sob demanda.');
+requireText(operationalWorkspace, 'useSagNsImportActions', 'Host operacional não inicializa o hook de importação SAG.');
+requireText(operationalWorkspace, 'handleApplySagNsImport', 'Host operacional não injeta a ação SAG no contexto de Relatórios.');
 
 requireText(pkg, '"test:sag-ns-persistence"', 'Testes de persistência SAG não estão registrados.');
 requireText(pkg, '"verify:sag-ns-idempotent-import"', 'Guard do Bloco 11 não está registrado.');
