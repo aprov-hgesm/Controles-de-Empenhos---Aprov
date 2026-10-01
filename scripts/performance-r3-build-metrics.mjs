@@ -51,11 +51,16 @@ if (inputPath) {
   const report = writeReport(rawLog, null, 'saved-build-log');
   if (!Object.keys(report.bundle.routes).length) process.exitCode = 2;
 } else {
-  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  const child = spawn(npmCommand, ['run', 'build'], {
-    env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' },
-    stdio: ['inherit', 'pipe', 'pipe'],
-  });
+  const env = { ...process.env, NEXT_TELEMETRY_DISABLED: '1' };
+  const child = process.platform === 'win32'
+    ? spawn(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', 'npm.cmd run build'], {
+        env,
+        stdio: ['inherit', 'pipe', 'pipe'],
+      })
+    : spawn('npm', ['run', 'build'], {
+        env,
+        stdio: ['inherit', 'pipe', 'pipe'],
+      });
   let rawLog = '';
   child.stdout.on('data', (chunk) => { rawLog += chunk; process.stdout.write(chunk); });
   child.stderr.on('data', (chunk) => { rawLog += chunk; process.stderr.write(chunk); });
