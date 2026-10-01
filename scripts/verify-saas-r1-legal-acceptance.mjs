@@ -47,7 +47,7 @@ assertContains(terms, 'Plano Completo', 'Termos comerciais');
 assertContains(terms, '30 dias', 'Trial');
 assertContains(terms, 'Mercado Pago', 'Cobrança externa');
 assertContains(terms, 'Pix', 'Pix');
-assertContains(terms, 'não significa exclusão automática', 'Cancelamento separado de exclusão');
+assertContains(terms, 'Cancelamento comercial e exclusão de dados são procedimentos diferentes.', 'Cancelamento separado de exclusão');
 assertContains(terms, 'não há promessa de', 'Disponibilidade sem garantia absoluta');
 assertContains(terms, 'version={CURRENT_LEGAL_BUNDLE.termsVersion}', 'Versão pública dos Termos');
 
