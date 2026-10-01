@@ -11,8 +11,8 @@ Baseline: `main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`
 - PERF-A/B/C/D/E/F/G/H/X: **INTEGRADAS**;
 - PERF-X: **INTEGRADA E CERTIFICADA**;
 - PERF-I — integração controlada + UX: **APROVADA E ENCERRADA**;
-- PERF-J — certificação final: **LIBERADA / PRÓXIMA FASE**;
-- HEAD funcional certificado antes das atualizações documentais: `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`;
+- PERF-J — certificação final: **APROVADA**;
+- HEAD certificado pela PERF-J: `c08c6efa9931bf1df95aee86db51de1b8edb1912`;
 - `main`/produção: **sem merge/release consolidado da R3**.
 
 Resultado de bundle certificado pela PERF-I:
@@ -22,7 +22,40 @@ Resultado de bundle certificado pela PERF-I:
 - shared: **103 → 104 kB** (+0,97%);
 - budget final: **within configured budgets**.
 
-A próxima ação do programa é **PERF-J**, sem adição de funcionalidade nova. Merge em `main` ou release continuam dependentes da certificação final e de autorização explícita do usuário.
+A próxima ação do programa é **aguardar autorização explícita do usuário para o release da R3**. A certificação final já foi concluída; nenhum merge em `main` ou deploy de produção foi executado.
+
+## Fechamento PERF-J — 2026-10-01
+
+Status: **APROVADA**.
+
+HEAD certificado:
+`c08c6efa9931bf1df95aee86db51de1b8edb1912`.
+
+Evidência:
+- Application CI #871: **SUCCESS**;
+- Core Protection #158 e Recovery #559: **SUCCESS**;
+- Production Build, TypeScript final, Diff Hygiene e gates 16–21: **PASS**;
+- `perf:r3:collect`, `compare` e `budget`: **PASS**;
+- métricas/parser/sanitização: **3/3 PASS**;
+- segurança multi-tenant/Firestore, acesso externo, listeners/histórico, consumo, resiliência e backup: **PASS**.
+
+Bundle final certificado:
+- `/`: **460 → 336 kB (-26,96%)**;
+- Central: **579 → 106 kB (-81,69%)**;
+- `/admin`: **326 → 327 kB (+0,31%)**;
+- shared: **103 → 104 kB (+0,97%)**;
+- budget: **within configured budgets**.
+
+A diferença de 1 kB no root em relação à coleta de 335 kB da PERF-I é uma variação observada no build final e permanece amplamente dentro do budget.
+
+Durante a certificação:
+- trailing whitespace foi corrigido sem alteração funcional;
+- uma falha transitória de `next/font` foi confirmada como ambiental porque o mesmo SHA passou no rerun;
+- o PR técnico #210 foi fechado sem merge;
+- Vercel permaneceu limitado por `build-rate-limit`;
+- nenhum release de produção foi executado.
+
+Próximo gate: **decisão explícita do usuário sobre merge/release**.
 
 ## Objetivo
 

@@ -31,29 +31,64 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 | PERF-G | `perf-r3-g-central-shell` | INTEGRADA | PERF-B integrada | `de870d1` | Shell persistente integrado em `238b813`; Central 300 → 106 kB; CI combinado/Core/Recovery verdes |
 | PERF-X | `perf-r3-x-hot-vs-history` | INTEGRADA | A/B/C/D/E/F/G/H integradas | `8aac69a` | Worker integrada em `2aca0dce`; correção coordenadora UX/legado em `2b72d43`; CI #868 final verde |
 | PERF-I | branch integradora | APROVADA | PERF-X integrada e certificada | — | Integração + métricas + UX concluídas até `6ebbf45b` |
-| PERF-J | branch integradora | LIVRE | PERF-I aprovada | — | Próxima fase: certificação final |
+| PERF-J | branch integradora | APROVADA | PERF-I aprovada | `c08c6efa` | Certificação final concluída; aguardando autorização de release |
 
 
 ## Próxima ação coordenada
 
-A/B/C/D/E/F/G/H/X estão **INTEGRADAS** e a PERF-I está **APROVADA**.
+A/B/C/D/E/F/G/H/X estão **INTEGRADAS**, a PERF-I está **APROVADA** e a **PERF-J está APROVADA**.
 
 Sequência atual:
-1. **PERF-J — LIVRE / PRÓXIMA**: executar certificação final consolidada sobre a integradora atual;
-2. produzir relatório antes/depois + pendências conhecidas;
-3. qualquer merge em `main` ou publicação depende de conclusão da PERF-J e autorização explícita do usuário;
-4. após release R3 efetivamente publicada em `main`/Vercel, encerrar esta rodada e abrir o programa **EMPROVEX SaaS R1** conforme o macroplanejamento do Memorial Oficial e o handoff do Coordenador.
+1. aguardar autorização explícita do usuário para release;
+2. quando autorizada, integrar a R3 em `main` sem adicionar feature nova;
+3. realizar um único deploy consolidado de produção quando possível;
+4. executar smoke curto de produção e registrar HEAD/tag efetivamente publicado;
+5. somente depois encerrar formalmente a rodada e abrir o programa **EMPROVEX SaaS R1**.
 
-PERF-X foi encerrada após:
-- worker certificada no HEAD `8aac69a92120ff97f0d4ab84e46a470b5c632843`;
-- PR #208 integrado em `2aca0dce1d511d0cc8df329614fac93f4e917144`;
-- duas correções semânticas do Coordenador em `2b72d43ac2a387682fb1c0089d36bef2177d0f17`;
-- PR técnico #209 validando exatamente o delta `2aca0dce... → 2b72d43...`;
-- Application CI #868: **SUCCESS**;
-- Core Protection #155: **SUCCESS**;
-- Production Build, TypeScript final, Diff Hygiene e release gates 16–21: **SUCCESS**.
+Nenhum merge em `main`, deploy de produção, promoção Vercel ou deploy de Firestore Rules/Indexes foi executado durante a PERF-J.
 
-Qualquer novo chat deve confirmar o HEAD real de `feat/performance-r3-commercializacao` antes de agir.
+## Fechamento do Coordenador — PERF-J
+
+Status final: **APROVADA**.
+
+HEAD certificado:
+`c08c6efa9931bf1df95aee86db51de1b8edb1912`.
+
+Baseline:
+`main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`.
+
+Gates finais:
+- Application CI #871: **SUCCESS**;
+- Core Protection #158: **SUCCESS**;
+- Recovery guardrails #559: **SUCCESS**;
+- Production Build: **PASS**;
+- Final TypeScript: **PASS**;
+- Diff Hygiene: **PASS**;
+- Final Release Gates 16–21: **PASS**;
+- segurança multi-tenant/Firestore e acesso externo: **PASS**;
+- Block 17.4 operational listeners: **PASS**;
+- Block 17.5 historical scalability: **PASS**;
+- Block 17.8 consumption regression: **PASS**;
+- resiliência e backup: **PASS**;
+- `perf:r3:collect`, `compare`, `budget`: **PASS**;
+- métricas/parser/sanitização: **3/3 PASS**.
+
+Métricas PERF-J:
+- `/`: **460 → 336 kB (-26,96%)**;
+- Central: **579 → 106 kB (-81,69%)**;
+- `/admin`: **326 → 327 kB (+0,31%)**;
+- `/admin/backups`: **245 kB**;
+- shared: **103 → 104 kB (+0,97%)**;
+- budget: **within configured budgets**.
+
+Ocorrências:
+- CI #869 revelou trailing whitespace; corrigido sem mudança funcional em `c08c6efa...`;
+- primeira tentativa do CI #871 falhou em `next/font`; o mesmo SHA passou no rerun, com `app/layout.tsx` byte-identical, portanto classificado como problema transitório de ambiente/serviço externo;
+- status Vercel limitado por `build-rate-limit`, sem impacto na certificação do código e sem deploy de produção.
+
+PR técnico #210: fechado sem merge.
+
+Decisão: **PERF-J APROVADA; candidata tecnicamente pronta para decisão de release do usuário.**
 
 ## Fechamento do Coordenador — PERF-I
 
@@ -642,8 +677,8 @@ Estado consolidado após PERF-I:
 - A/B/C/D/E/F/G/H/X: **INTEGRADAS**;
 - PERF-X: **INTEGRADA E CERTIFICADA**;
 - PERF-I: **APROVADA E ENCERRADA**;
-- PERF-J: **LIBERADA / PRÓXIMA FASE**;
-- HEAD funcional certificado antes das atualizações documentais: `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`;
+- PERF-J: **APROVADA**;
+- HEAD certificado pela PERF-J: `c08c6efa9931bf1df95aee86db51de1b8edb1912`;
 - sem merge consolidado em `main`;
 - sem deploy consolidado de produção da R3.
 

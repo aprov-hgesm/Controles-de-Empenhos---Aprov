@@ -47,23 +47,23 @@ Documentos obrigatórios:
 | PERF-H | **INTEGRADA** | `fb5f452` | `a686410` | métricas/budgets reproduzíveis |
 | PERF-X | **INTEGRADA E CERTIFICADA** | `8aac69a` | `2aca0dce` + correção `2b72d43` | hot/history certificado; CI #868 verde |
 | PERF-I | **APROVADA E ENCERRADA** | — | branch integradora até `6ebbf45b` | integração + métricas + UX + segurança concluídas |
-| PERF-J | **LIVRE / PRÓXIMA** | — | branch integradora | certificação final consolidada |
+| PERF-J | **APROVADA** | — | `c08c6efa` | certificação final concluída; aguardando autorização de release |
 
 
 ## 2.1. Ponto de retomada para os próximos chats
 
 Estado canônico da rodada:
 - branch integradora: `feat/performance-r3-commercializacao`;
-- HEAD funcional certificado antes desta atualização documental: `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`;
+- HEAD certificado pela PERF-J: `c08c6efa9931bf1df95aee86db51de1b8edb1912`;
 - `main`: `22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`;
 - A/B/C/D/E/F/G/H/X: **INTEGRADAS**; PERF-X também **CERTIFICADA**;
 - PERF-I: **APROVADA E ENCERRADA**;
-- PERF-J: **LIVRE / PRÓXIMA FASE**;
+- PERF-J: **APROVADA**;
 - nenhuma integração R3 em `main`;
 - nenhum deploy consolidado R3 em produção.
 
 Ordem obrigatória daqui em diante:
-`PERF-J (certificação final) → autorização explícita do usuário → main/release`.
+`autorização explícita do usuário → main/release consolidado → smoke de produção → abertura do EMPROVEX SaaS R1`.
 
 Regra de retomada:
 - novos trabalhos devem partir da integradora **atual**, nunca dos baselines históricos;
@@ -387,24 +387,42 @@ A PERF-I está **APROVADA**. Não houve merge em `main` nem deploy de produção
 
 ## 8. PERF-J — Certificação Final
 
-Status: **LIBERADA / PRÓXIMA FASE**.
+Status: **APROVADA em 2026-10-01**.
 
-Deve validar:
-- TypeScript;
-- production build;
-- domínio/contratos;
-- Core Protection;
-- segurança multi-tenant/Firestore;
-- Diff Hygiene;
-- Blocks finais;
-- bundle por rota;
-- métricas/budget;
-- experiência visual/manual afetada;
-- preservar a aprovação dos critérios de UX já obtida na PERF-I; repetir manualmente apenas o que a certificação final ou alguma regressão objetiva exigir;
-- ausência de regressão de reads;
-- documentação final.
+HEAD certificado:
+`c08c6efa9931bf1df95aee86db51de1b8edb1912`.
 
-Browser E2E continua **sob demanda**, não gate permanente.
+Baseline:
+`main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`.
+
+Certificação:
+- Application CI #871: **SUCCESS** no mesmo SHA após repetição de uma falha transitória de `next/font`;
+- Core Protection #158: **SUCCESS**;
+- Recovery guardrails #559: **SUCCESS**;
+- Production Build, Final TypeScript e Diff Hygiene: **PASS**;
+- Final Release Gates 16–21: **PASS**;
+- segurança multi-tenant/Firestore, acesso externo da Central, listeners/histórico/consumo, resiliência e backup: **PASS**;
+- `perf:r3:collect`, `compare`, `budget`: **PASS**;
+- métricas/parser/sanitização: **3/3 PASS**.
+
+Métricas finais PERF-J:
+- `/`: **336 kB** — baseline 460 kB, **-26,96%**;
+- Central: **106 kB** — baseline 579 kB, **-81,69%**;
+- `/admin`: **327 kB** — baseline 326 kB, **+0,31%**;
+- `/admin/backups`: **245 kB**;
+- shared: **104 kB** — baseline 103 kB, **+0,97%**;
+- budget: **within configured budgets**.
+
+Correções/ocorrências da PERF-J:
+1. trailing whitespace detectado no CI #869 → correção mínima em `c08c6efa...`;
+2. primeira tentativa do CI #871 falhou em `next/font`; `app/layout.tsx` estava idêntico e o rerun no mesmo SHA passou, portanto a falha foi classificada como transitória/ambiental;
+3. Vercel preview/status sofreu `build-rate-limit`; nenhum deploy de produção foi executado.
+
+PR técnico #210: fechado **sem merge** após cumprir a função de certificação.
+
+A validação manual da PERF-I permanece válida e não foi repetida, pois não houve mudança funcional após sua aprovação. Browser E2E permaneceu sob demanda.
+
+Próximo passo: somente com autorização explícita do usuário, levar o HEAD certificado para `main`, publicar uma única release consolidada, executar smoke de produção e registrar o HEAD/tag publicado. O SaaS R1 continua proibido antes disso.
 
 ## 9. Método de integração que funcionou
 
@@ -470,19 +488,16 @@ Isso **não foi falha de build**.
 
 Não gastar deploys apenas para validação intermediária quando CI/local forem suficientes.
 
-## 13. Primeiras ações do novo Coordenador
+## 13. Estado para retomada após a PERF-J
 
-Ao assumir:
+Ao assumir após este fechamento:
 
-1. ler os documentos obrigatórios;
-2. conferir o HEAD real de `main` e `feat/performance-r3-commercializacao`;
-3. conferir `docs/PERFORMANCE_R3_INTEGRATION_STATUS.md`;
-4. confirmar A/B/C/D/E/F/G/H/X como integradas e PERF-X certificada;
-5. confirmar PERF-I como **APROVADA E ENCERRADA** no estado funcional até `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`;
-6. não reabrir A–X/PERF-I sem regressão objetiva;
-7. conduzir exclusivamente a **PERF-J — Certificação Final**;
-8. não fazer merge em `main`, deploy ou promoção Vercel sem autorização explícita do usuário;
-9. depois da PERF-J e da publicação autorizada da R3 em `main`/Vercel, abrir o programa **EMPROVEX SaaS R1** conforme o macroplanejamento do Memorial Oficial, sem continuar usando a R3 como branch de desenvolvimento comercial.
+1. confirmar que a integradora continua no HEAD certificado ou em commits exclusivamente documentais posteriores;
+2. confirmar que a `main` ainda não recebeu a R3;
+3. não reabrir PERF-A–X/PERF-I/PERF-J sem regressão objetiva;
+4. não publicar nada sem autorização explícita do usuário;
+5. quando autorizado, executar merge/release consolidado, smoke curto e registrar o HEAD/tag de produção;
+6. somente depois abrir o EMPROVEX SaaS R1 em branch integradora própria.
 
 ## 14. Missão do próximo Coordenador após a PERF-J e publicação da R3
 

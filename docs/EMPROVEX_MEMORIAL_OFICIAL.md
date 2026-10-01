@@ -1,10 +1,10 @@
 # EMPROVEX — Memorial Oficial do Repositório
 
-Última atualização: **2026-10-01 — PERF-I aprovada / PERF-J liberada**
+Última atualização: **2026-10-01 — PERF-J aprovada / candidata final de release**
 Baseline de produção consultada: `main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`
 Branch candidata da Performance R3: `feat/performance-r3-commercializacao`
-HEAD funcional certificado da R3 antes desta atualização documental: `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`
-Estado de fechamento: **PERF-I APROVADA; PERF-J LIBERADA; sem merge consolidado em `main` e sem deploy consolidado da R3 em produção**
+HEAD certificado da Performance R3 pela PERF-J: `c08c6efa9931bf1df95aee86db51de1b8edb1912`
+Estado de fechamento: **PERF-J APROVADA; candidata final pronta para decisão de release; sem merge consolidado em `main` e sem deploy consolidado da R3 em produção**
 
 Este documento é a **porta de entrada canônica para continuidade do EMPROVEX como produto**. Ele resume o estado vigente e aponta para os documentos históricos/especializados. O histórico detalhado não deve ser apagado. Para comportamento já publicado, `main` prevalece; para a rodada Performance R3 ainda não publicada, prevalecem a branch integradora atual e os registros canônicos de integração deste memorial.
 
@@ -43,7 +43,7 @@ Estado operacional consolidado em produção e estado candidato vigente:
 - controle de sessão externo baseado em workspace/UG e lease;
 - telemetria estimada de consumo por workspace + métricas globais separadas;
 - Central de Depósitos integrada ao EMPROVEX e disponível para contextos de setor autenticados/autorizados, com isolamento por workspace/UG;
-- Performance R3 está integralmente combinada na branch integradora; a **PERF-I foi APROVADA** após validação técnica e manual, e a **PERF-J está LIBERADA** para certificação final. A rodada **ainda não foi mergeada em `main` nem promovida como release consolidado**.
+- Performance R3 está integralmente combinada na branch integradora; a **PERF-I foi APROVADA** após validação técnica e manual, e a **PERF-J foi APROVADA** após certificação final consolidada. A rodada **ainda não foi mergeada em `main` nem promovida como release consolidado**.
 
 ## 3. Central de Depósitos — estado vigente
 
@@ -252,7 +252,7 @@ Certificação final da PERF-X:
 #### Estado das fases de fechamento
 
 - **PERF-I — APROVADA E ENCERRADA.** Integração, métricas combinadas, budgets e validação obrigatória de UX concluídas.
-- **PERF-J — LIBERADA / PRÓXIMA FASE.** Certificação final consolidada, relatório antes/depois e pendências conhecidas.
+- **PERF-J — APROVADA.** Certificação final consolidada concluída no HEAD `c08c6efa9931bf1df95aee86db51de1b8edb1912`; candidata pronta para decisão de merge/release.
 - **`main` / produção — BLOQUEADAS.** Merge/release somente depois da PERF-J e de autorização explícita do usuário.
 
 Não houve merge consolidado da Performance R3 em `main` nem promoção de produção durante a PERF-I.
@@ -390,10 +390,10 @@ Este bloco é o ponto de partida obrigatório para novos chats da Performance R3
 
 - produção/`main`: `22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`;
 - branch integradora: `feat/performance-r3-commercializacao`;
-- HEAD funcional certificado antes desta atualização documental: `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`;
+- HEAD certificado pela PERF-J: `c08c6efa9931bf1df95aee86db51de1b8edb1912`;
 - **A/B/C/D/E/F/G/H/X estão integradas**; PERF-X também certificada;
 - PERF-I está **APROVADA E ENCERRADA**;
-- PERF-J está **LIBERADA / PRÓXIMA FASE**;
+- PERF-J está **APROVADA**;
 - não houve merge consolidado da R3 em `main`;
 - não houve release consolidado da R3 em produção.
 
@@ -457,15 +457,21 @@ Critérios bloqueantes incluem perda de dados digitados, informação enganosa/s
 
 ### Próxima sequência obrigatória
 
-1. **PERF-J — CERTIFICAÇÃO FINAL / LIBERADA.**
-   - partir da integradora atual;
-   - certificar código, métricas, reads, segurança, UX e documentação;
-   - produzir relatório consolidado antes/depois e pendências conhecidas;
-   - não adicionar feature nova.
+1. **Autorização explícita do usuário para release da R3.**
+   - a PERF-J já está aprovada;
+   - não há autorização implícita para publicar;
+   - preservar o HEAD certificado até a decisão de release.
 
 2. **`main` / produção.**
-   - somente após PERF-J concluída e autorização explícita do usuário;
-   - evitar deploys intermediários desnecessários.
+   - somente após autorização explícita;
+   - fazer um único merge/release consolidado quando possível;
+   - confirmar o HEAD efetivamente publicado;
+   - executar smoke test curto de produção;
+   - aplicar Rules/Indexes/migrações apenas se forem indispensáveis à release e após conferência específica.
+
+3. **EMPROVEX SaaS R1.**
+   - só abrir depois da R3 efetivamente publicada e do smoke de produção;
+   - seguir o planejamento da seção 7.2.
 
 ### Regra para qualquer novo chat
 
@@ -477,6 +483,48 @@ Antes de editar:
 - não fazer merge em `main`, deploy de produção ou promoção Vercel sem autorização;
 - Browser E2E permanece sob demanda; a validação dirigida/manual obrigatória da PERF-I já foi concluída;
 - `docs/PERFORMANCE_R3_PERF_X_HOT_HISTORY.md` registra a implementação da worker e pode conter texto anterior às correções semânticas do Coordenador; em caso de divergência sobre filtro inicial/contagem legada, prevalecem este Memorial, `PERFORMANCE_R3_INTEGRATION_STATUS.md` e o código integrado a partir de `2b72d43...`.
+
+### Certificação PERF-J concluída — 2026-10-01
+
+Status: **PERF-J — APROVADA**.
+
+HEAD certificado:
+`c08c6efa9931bf1df95aee86db51de1b8edb1912`
+
+Baseline original:
+`main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`
+
+Evidência final:
+- PR técnico #210 foi usado somente para certificação e fechado **sem merge**;
+- Application CI #871: **SUCCESS** após repetição dos jobs falhos no mesmo SHA;
+- EMPROVEX Core Protection #158: **SUCCESS**;
+- Recovery guardrails #559: **SUCCESS**;
+- Production Build: **PASS**;
+- Final TypeScript: **PASS**;
+- Diff Hygiene: **PASS**;
+- gates finais 16, 17, 18, 19, 20 e 21: **PASS**;
+- segurança multi-tenant, Firestore, acesso externo da Central, Block 17.4, Block 17.5, Block 17.8, resiliência e backup: **PASS**;
+- métricas/parser/sanitização: **3/3 PASS**;
+- `perf:r3:collect`, `perf:r3:compare` e `perf:r3:budget`: **PASS**.
+
+Métricas finais reproduzidas a partir do build bem-sucedido do HEAD certificado:
+- `/`: **460 → 336 kB** = **-26,96%**;
+- Central principal: **579 → 106 kB** = **-81,69%**;
+- `/admin`: **326 → 327 kB** = **+0,31%**;
+- shared: **103 → 104 kB** = **+0,97%**;
+- `/admin/backups`: **245 kB**;
+- budget: **within configured budgets**.
+
+A coleta da PERF-J mostrou `/` em 336 kB, 1 kB acima dos 335 kB registrados na PERF-I. Não há regressão de budget nem mudança funcional associada; o valor final desta certificação é 336 kB e substitui 335 kB apenas para o relatório da PERF-J.
+
+Ocorrências tratadas:
+1. Application CI #869 encontrou somente trailing whitespace no diff. A correção mínima foi integrada em `c08c6efa...`, sem alteração funcional.
+2. A primeira tentativa do Application CI #871 falhou no loader de `next/font` durante o build. `app/layout.tsx` permaneceu byte-identical entre o HEAD anterior e `c08c6efa...`; a repetição no mesmo SHA passou integralmente, classificando a ocorrência como falha transitória de ambiente/serviço externo, não regressão do produto.
+3. O status Vercel do candidato permaneceu afetado pelo limite `build-rate-limit`; nenhum deploy de produção foi executado.
+
+A validação manual da PERF-I não foi repetida porque, depois do HEAD funcional já aprovado, a PERF-J alterou apenas documentação e higiene de whitespace, sem mudança de comportamento. Browser E2E continuou sob demanda.
+
+Riscos residuais permanecem os já documentados: cache estrutural cross-session pode ficar visualmente stale por até 30 s sem ser autoridade operacional; PERF-X depende do marcador READY para ativar o recorte seletivo; budgets ainda são gate explícito do Coordenador e não bloqueio automático do Application CI; benchmarks manuais de CPU/memória continuam indicativos, não laboratoriais.
 
 ## 7.2. Planejamento oficial pós-PERF-J — EMPROVEX SaaS R1
 
