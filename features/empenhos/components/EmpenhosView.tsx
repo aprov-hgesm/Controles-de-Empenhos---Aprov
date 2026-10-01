@@ -565,7 +565,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         const progressPercentage = metrics?.progressPercentage ?? 0;
                         const itemsComSaldo = metrics?.itemsComSaldo ?? 0;
                         const liveEmpInvoices = liveInvoicesByEmpenhoId.get(emp.id) ?? [];
-                        const invoiceCount = invoiceCountsByEmpenhoId.get(emp.id) ?? liveEmpInvoices.length;
+                        const invoiceCount = invoiceCountsByEmpenhoId.get(emp.id);
 
                         return (
                           <div 
@@ -698,7 +698,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                             {/* Card Footer Info & Quick Action Button */}
                             <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
                               <span className="text-[10px] font-semibold text-gray-400">
-                                {emp.items.length} {emp.items.length === 1 ? 'item' : 'itens'} • {invoiceCount} {invoiceCount === 1 ? 'NF' : 'NFs'}
+                                {emp.items.length} {emp.items.length === 1 ? 'item' : 'itens'} • {invoiceCount === undefined ? 'NFs: …' : `${invoiceCount} ${invoiceCount === 1 ? 'NF' : 'NFs'}`}
                               </span>
                               <button
                                 type="button"
@@ -758,7 +758,8 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                   const percentExecuted = targetMetrics?.progressPercentage ?? 0;
                   const itemsComSaldo = targetMetrics?.itemsComSaldo ?? 0;
                   const targetInvoices = selectedEmpenhoInvoices;
-                  const targetInvoiceCount = invoiceCountsByEmpenhoId.get(targetEmp.id) ?? targetInvoices.length;
+                  const targetInvoiceCount = invoiceCountsByEmpenhoId.get(targetEmp.id)
+                    ?? (selectedEmpenhoHistoryLoading ? null : targetInvoices.length);
                   const totalInvoicesValue = targetInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
                   const requiresCommission = classRequiresTermoRecebimento(
                     targetEmp.classification,
@@ -1265,7 +1266,9 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                             </h4>
                           </div>
                           <p className="text-[11px] font-semibold text-emerald-700 mt-3 pt-2 border-t border-emerald-50">
-                            {targetInvoiceCount} {targetInvoiceCount === 1 ? 'nota fiscal conciliada' : 'notas fiscais conciliadas'}
+                            {targetInvoiceCount === null
+                              ? 'Histórico de NFs carregando…'
+                              : `${targetInvoiceCount} ${targetInvoiceCount === 1 ? 'nota fiscal conciliada' : 'notas fiscais conciliadas'}`}
                           </p>
                         </div>
 
@@ -1640,7 +1643,9 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                               <p className="text-xs text-gray-500 font-medium">
                                 {selectedEmpenhoHistoryLoading
                                   ? 'Carregando histórico completo de Notas Fiscais…'
-                                  : `Total de ${targetInvoiceCount} ${targetInvoiceCount === 1 ? 'nota fiscal vinculada' : 'notas fiscais vinculadas'} a este empenho`}
+                                  : targetInvoiceCount === null
+                                    ? 'Contagem de NFs sendo consolidada…'
+                                    : `Total de ${targetInvoiceCount} ${targetInvoiceCount === 1 ? 'nota fiscal vinculada' : 'notas fiscais vinculadas'} a este empenho`}
                               </p>
                             </div>
                           </div>
@@ -1848,7 +1853,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                               <tfoot>
                                 <tr className="bg-gray-50 font-black text-xs text-[#0b1c30] border-t border-gray-200">
                                   <td colSpan={7} className="p-3.5 pl-5 uppercase tracking-wider text-gray-500 text-[10px]">
-                                    Total de Notas Fiscais Lançadas ({targetInvoiceCount})
+                                    Total de Notas Fiscais Lançadas ({targetInvoiceCount ?? targetInvoices.length})
                                   </td>
                                   <td className="p-3.5 text-right font-black text-emerald-600">
                                     R$ {totalInvoicesValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
