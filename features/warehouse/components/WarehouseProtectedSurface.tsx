@@ -79,8 +79,8 @@ export function WarehouseProtectedLayout({
       window.location.replace('/');
     };
 
-    const unsubscribe = onAuthStateChanged(auth, async (authenticatedUser) => {
-      if (!authenticatedUser) {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (!currentUser) {
         denyAccess();
         return;
       }
@@ -88,7 +88,7 @@ export function WarehouseProtectedLayout({
       setGateState('checking');
 
       try {
-        const context = await resolveAuthenticatedWorkspaceContext(authenticatedUser);
+        const context = await resolveAuthenticatedWorkspaceContext(currentUser);
         if (!active) return;
 
         if (!canAccessWarehouseModule(context) || context.status !== 'sector') {
@@ -96,10 +96,10 @@ export function WarehouseProtectedLayout({
           return;
         }
 
-        let authorization = await requestWarehouseStatus(authenticatedUser);
+        let authorization = await requestWarehouseStatus(currentUser);
 
         if (authorization.ok && authorization.status.claimsUpdated) {
-          authorization = await requestWarehouseStatus(authenticatedUser, true);
+          authorization = await requestWarehouseStatus(currentUser, true);
         }
 
         if (
@@ -114,7 +114,7 @@ export function WarehouseProtectedLayout({
           return;
         }
 
-        setCurrentUser(authenticatedUser);
+        setCurrentUser(currentUser);
         setWorkspaceContext(context);
         setGateState('allowed');
       } catch {
