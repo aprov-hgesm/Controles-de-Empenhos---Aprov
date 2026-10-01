@@ -24,7 +24,7 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 | PERF-A | `perf-r3-a-core-bundle` | EM ANDAMENTO | baseline `076a233`; pausa coordenada para realinhamento | `5b92235` | Lazy root avançado; Core PASS/TS 0; não perseguir guards cruzados de PERF-E/B/C/H |
 | PERF-B | `perf-r3-b-central-bundle` | INTEGRADA | baseline comum | `7b7aee1` | Bundle Central; -48,2% nas rotas principais |
 | PERF-C | `perf-r3-c-outbound-demand-loading` | INTEGRADA | baseline `076a233` | `c263ce3` | Saída sob demanda integrada em `e33e260`; abertura fresca 0 reads específicos da superfície |
-| PERF-D | `perf-r3-d-intake-queue` | EM ANDAMENTO | baseline `076a233` | `5a1edb2` | Intake seletivo avançado; último TS conhecido foi corrigido por tipagem explícita de snapshots; aguarda novo CI |
+| PERF-D | `perf-r3-d-intake-queue` | EM ANDAMENTO | baseline congelado `076a233`; pausa coordenada | `a514728` | Validar isoladamente; Core/Recovery PASS; não reconciliar PERF-B/PERF-H no worker |
 | PERF-E | `perf-r3-e-render-cpu` | INTEGRADA | baseline `076a233` | `149f7c3` | CPU/renderização integrada em `9d5ff58`; gates locais verdes |
 | PERF-H | `perf-r3-h-metrics-budget` | INTEGRADA | baseline `076a233` | `fb5f452` | Métricas/budget integradas em `a686410`; CI bloqueante ainda não ativado |
 | PERF-F | `perf-r3-f-memory-cache` | BLOQUEADA | PERF-C integrada; aguarda PERF-D | — | Metade da dependência satisfeita; iniciar somente após D estabilizar leituras restantes |
@@ -32,6 +32,31 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 | PERF-X | `perf-r3-x-hot-vs-history` | BLOQUEADA | medições A–G | — | Opcional |
 | PERF-I | branch integradora | BLOQUEADA | frentes aprovadas | — | Integração final |
 | PERF-J | branch integradora | BLOQUEADA | PERF-I concluída | — | Certificação |
+
+## Coordenação especial — PERF-D
+
+Em 2026-10-01 a PERF-D foi colocada em **pausa coordenada de realinhamento**, mantendo estado `EM ANDAMENTO`, para impedir que a frente absorva conflitos de integração após o avanço da branch integradora.
+
+Estado conhecido:
+- branch: `perf-r3-d-intake-queue`;
+- HEAD: `a514728f07884cc881372a2d3b37684fc8103fb1`;
+- base original: `076a233cf250c95882e78498e89dd2a44d034f74`;
+- Core Protection no HEAD atual: **PASS**;
+- Recovery Guardrails no HEAD atual: **PASS**;
+- Application CI isolado contra a base congelada: em execução no momento do realinhamento.
+
+Sobreposições já classificadas como responsabilidade do coordenador:
+- `WarehouseItemRegistrationOperational.tsx` também contém code splitting da PERF-B integrada;
+- `package.json` também contém scripts de métricas da PERF-H integrada.
+
+Regra de retomada:
+- terminar somente a validação isolada da solução PERF-D;
+- não fazer rebase/merge da integradora;
+- não tentar tornar o PR contra a integradora mergeable;
+- não remover ou reproduzir alterações de PERF-B/PERF-H;
+- entregar handoff completo e parar.
+
+Na integração, o coordenador preservará semanticamente PERF-B + PERF-D no componente compartilhado e PERF-H + PERF-D no `package.json`.
 
 ## Coordenação especial — PERF-A
 
