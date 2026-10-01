@@ -101,7 +101,7 @@ export function CreateSectorModal({ open, creating, onClose, onCreate }: CreateS
             </div>
             <h2 id="create-sector-title" className="mt-2 text-xl font-extrabold text-white">Cadastrar novo setor</h2>
             <p id="create-sector-description" className="mt-1 text-xs leading-relaxed text-slate-400">
-              O setor será provisionado com identidade Firebase própria. O Gmail informado será o e-mail de acesso e, posteriormente, deverá ser o mesmo usado na conexão do Google Drive.
+              O setor será provisionado com identidade Firebase própria. O e-mail informado será a credencial operacional. A conexão com o Google Drive é opcional e pode ser feita depois, sem bloquear o núcleo do sistema.
             </p>
           </div>
           <button
@@ -263,7 +263,7 @@ export function CreateSectorModal({ open, creating, onClose, onCreate }: CreateS
           </div>
 
           <div className="rounded-2xl border border-blue-400/15 bg-blue-500/[0.06] px-4 py-3 text-xs leading-relaxed text-blue-100">
-            O usuário Firebase, o workspace e a conta operacional serão provisionados de forma coordenada no servidor. A UG será vinculada à identidade da Organização Militar e reutilizada automaticamente nos fluxos operacionais. A senha não é gravada no Firestore. O Google Drive permanece desconectado até a etapa específica de onboarding.
+            O usuário Firebase, o workspace e a conta operacional serão provisionados de forma coordenada no servidor. A UG será vinculada à identidade da Organização Militar e reutilizada automaticamente nos fluxos operacionais. A senha não é gravada no Firestore. Entregue a credencial inicial ao operador por um canal seguro; depois disso, ele poderá redefinir ou alterar a própria senha sem intervenção administrativa.
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-1">
