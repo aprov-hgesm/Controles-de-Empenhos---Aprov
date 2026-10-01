@@ -2188,9 +2188,10 @@ service cloud.firestore {
     // SaaS R1 — aceite legal versionado. O runtime consulta somente o documento
     // determinístico da versão vigente; histórico não precisa ser listado pelo tenant.
     match /workspaces/{workspaceId}/legalAcceptances/{acceptanceId} {
+      // O GET precisa funcionar também antes de o documento existir, para que o
+      // primeiro uso consiga distinguir "aceite ausente" de erro de autorização.
       allow get: if canAccessWorkspace(workspaceId)
-        && resource.data.uid == request.auth.uid
-        && resource.data.email == request.auth.token.email;
+        && acceptanceId == request.auth.uid + '__saas-r1-2026-10-01';
       allow list: if false;
       allow create: if validLegalAcceptanceCreate(workspaceId, acceptanceId);
       allow update, delete: if false;
