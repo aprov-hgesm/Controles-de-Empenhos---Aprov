@@ -68,7 +68,7 @@ export default function PrivacyPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="5. Google Drive, Gmail e dados das APIs do Google">
+      <LegalSection title="5. Google Drive, Gmail e dados do Google">
         <p>
           A conexão com o Google Drive é opcional e ocorre somente quando um usuário autorizado escolhe conectar a
           Conta Google correspondente ao workspace. O EMPROVEX solicita o escopo
