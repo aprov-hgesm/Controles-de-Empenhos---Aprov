@@ -90,8 +90,9 @@ Validação manual assistida é parte legítima do processo para ergonomia, flux
 Branch oficial da rodada:  
 `feat/performance-r3-commercializacao`
 
-Documento detalhado:
-`docs/PERFORMANCE_R3_COMERCIALIZACAO.md`
+Documentos obrigatórios da rodada:
+- `docs/PERFORMANCE_R3_COMERCIALIZACAO.md` — objetivos técnicos e frentes;
+- `docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md` — arquitetura oficial de branches, chats, coordenação, handoff e integração.
 
 Objetivo:
 > tornar o EMPROVEX perceptivelmente mais rápido e leve para comercialização sem reduzir qualidade visual, animações, transições ou identidade premium.
@@ -111,19 +112,55 @@ Direção arquitetural:
 - medir antes/depois;
 - impedir regressão futura por orçamento de performance.
 
-## 6. Sequência oficial imediata
+## 6. Modelo oficial de execução — frentes paralelas + integração controlada
 
-1. **Performance R3 — baseline mensurável**;
-2. code splitting/lazy loading do núcleo operacional;
-3. code splitting/lazy loading da Central;
-4. navegação/layout persistente da Central;
-5. cache curto em memória para dados estáveis;
-6. Saída de Material orientada à operação atual (barcode/lote/posição sob demanda);
-7. fila de recebimento sem scans integrais do histórico;
-8. otimizações de CPU/renderização de listas;
-9. telemetria de performance + orçamento no CI;
-10. estabilização manual em uso real;
-11. hardening transversal de segurança antes de expansão comercial ampla, sem adiar vulnerabilidade crítica confirmada.
+A Performance R3 **não deve ser executada como uma fila monolítica de fases dependentes**.
+
+Modelo oficial:
+
+> **baseline/contratos comuns → primeira onda de frentes independentes → segunda onda dependente → integração controlada → certificação final**
+
+### Primeira onda paralela
+
+Podem ser executadas simultaneamente em chats e branches diferentes:
+
+- **PERF-A — Bundle do EMPROVEX principal**;
+- **PERF-B — Bundle da Central de Depósitos**;
+- **PERF-C — Saída de Material sob demanda**;
+- **PERF-D — Fila leve de Recebimento/Intake**;
+- **PERF-E — CPU e Renderização**;
+- **PERF-H — Métricas e Budget**.
+
+### Segunda onda
+
+Mantém escopo próprio, mas começa somente após a dependência indicada:
+
+- **PERF-F — Cache curto em memória**, após C/D estabilizarem as leituras realmente necessárias;
+- **PERF-G — Shell/Layout persistente da Central**, após B congelar a fronteira de carregamento;
+- **PERF-X — Dados quentes vs histórico**, opcional e somente se medições justificarem.
+
+### Fechamento
+
+- **PERF-I — Integração Controlada**;
+- **PERF-J — Certificação Final**.
+
+### Chat coordenador
+
+Durante toda a R3 deve existir um **chat Coordenador / Integrador / Avaliador**. Ele:
+- mantém a visão global;
+- trabalha sobre a branch integradora;
+- distribui/fronteiriza escopos;
+- recebe handoffs dos chats trabalhadores;
+- revisa diffs, métricas, testes e contratos;
+- decide se cada frente está apta a integrar;
+- resolve conflitos semanticamente;
+- conduz PERF-I e PERF-J;
+- não compete implementando em paralelo o mesmo escopo dos trabalhadores;
+- não autoriza merge/deploy de produção sem a decisão explícita do usuário.
+
+A especificação completa está em `docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md`.
+
+A independência das frentes é uma **regra arquitetural da rodada**: um chat não deve aproveitar sua frente para refatorar outra área. Dependências são registradas no handoff e resolvidas pelo coordenador.
 
 ## 7. Restrições da Performance R3
 
