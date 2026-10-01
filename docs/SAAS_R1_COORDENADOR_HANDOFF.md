@@ -54,7 +54,7 @@ Reusar:
 
 ## 4. Contrato comercial
 
-- R$ 50/mês.
+- **R$ 70/mês — Plano Completo**.
 - 30 dias de trial.
 - 5º dia útil.
 - 10 dias de tolerância.
@@ -63,7 +63,14 @@ Reusar:
 - suspensão manual;
 - reativação manual;
 - sem exclusão de dados por falta de pagamento;
-- founder exempt.
+- founder exempt;
+- VIP externo também usa `exempt`, sem cobrança e com acesso completo;
+
+### Regra de produto
+
+Existe **um único plano comercial** na R1: Plano Completo. Não criar tier de recursos, versão limitada ou módulo adicional pago.
+
+A SAAS-B deve migrar o baseline técnico atual de R$ 50 para R$ 70 e adicionar a operação administrativa de VIP/isento, preservando histórico.
 
 ## 5. Estratégia de pagamento
 
@@ -93,6 +100,15 @@ Depois de B+C:
 - dados permanecem intactos.
 
 Esse desenho reduz acoplamento e reaproveita o fail-closed existente.
+
+## 6.1 Banco de dados
+
+Não criar terceiro banco Firestore para o SaaS R1.
+
+- billing/identidade/legal/lifecycle ficam no banco principal;
+- Central permanece em `emprovex-warehouse`;
+- cada banco mantém suas próprias Rules;
+- novo banco só com nova decisão arquitetural baseada em necessidade real, nunca apenas para “organizar Rules”.
 
 ## 7. Onda 1
 
@@ -132,6 +148,9 @@ Eles podem trabalhar simultaneamente.
 - Aceite legal não é “consentimento LGPD” genérico.
 - cancelado não significa deletado.
 - billing não deve virar nova dependência cara das Rules.
+- VIP não pode ter menos funcionalidades que cliente pagante.
+- estado `exempt` é a semântica interna do VIP; não criar estado concorrente `vip`.
+- não criar banco separado apenas para as Rules do SaaS.
 - nenhum worker publica produção.
 - Browser E2E é sob demanda.
 - experiência do operador continua prioritária.
