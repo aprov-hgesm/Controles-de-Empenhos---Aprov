@@ -12,6 +12,7 @@ Ele deve ser lido junto com:
 - `docs/TESTING_POLICY.md`;
 - `docs/DEVELOPMENT_CI_WORKFLOW.md`;
 - `docs/PERFORMANCE_R3_INTEGRATION_STATUS.md` — quadro vivo mantido pelo coordenador;
+- `docs/PERFORMANCE_R3_COORDENADOR_HANDOFF.md` — memória operacional de troca de coordenador; deve ser lida na retomada antes de qualquer nova integração.
 - documentação específica da Central quando a frente tocar `adm-deposito`.
 
 ---
@@ -95,6 +96,27 @@ O usuário continua sendo a autoridade final para:
 - decisões arquiteturais que alterem contratos congelados.
 
 ---
+
+### 2.4 Troca de Chat Coordenador
+
+Quando uma conversa coordenadora ficar extensa ou for substituída, a continuidade deve ocorrer pelo repositório, não pela memória informal da conversa.
+
+Antes da troca, o coordenador atual deve:
+- atualizar `docs/EMPROVEX_MEMORIAL_OFICIAL.md` em caso de marco estrutural;
+- atualizar `docs/PERFORMANCE_R3_INTEGRATION_STATUS.md`;
+- atualizar `docs/PERFORMANCE_R3_COORDENADOR_HANDOFF.md`;
+- registrar frentes integradas, livres, bloqueadas e próximos passos;
+- registrar conflitos semânticos já resolvidos e pendências que não devem ser reabertas sem evidência.
+
+O novo coordenador deve:
+1. ler o Memorial Oficial;
+2. ler o protocolo da R3;
+3. ler o quadro vivo;
+4. ler o Handoff do Coordenador;
+5. conferir HEADs reais no GitHub;
+6. tratar o repositório como fonte de verdade superior ao histórico de conversa.
+
+A troca de chat **não cria nova rodada** e não autoriza reabrir frentes já integradas sem regressão objetiva.
 
 ## 3. Topologia oficial de branches
 
