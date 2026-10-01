@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { Loader2, Menu, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
+import { BadgeCheck, CircleAlert, Loader2, Menu, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { auth } from '../../lib/firebase';
@@ -41,6 +41,15 @@ export function AppHeader({
   const trialDaysRemaining = billingAccount?.status === 'trial'
     ? calculateTrialDaysRemaining(billingAccount)
     : null;
+  const needsRegularization = Boolean(
+    billingAccount
+    && (
+      billingAccount.status === 'pending'
+      || billingAccount.status === 'suspended'
+      || billingAccount.status === 'canceled'
+      || (billingAccount.status === 'trial' && trialExpired)
+    )
+  );
   const resolvedDriveControl = driveControl ?? (
     <WorkspaceDriveControl
       user={currentUser}
@@ -106,8 +115,8 @@ export function AppHeader({
             className="emprovex-header-control border-violet-300/15 bg-violet-400/[0.07] text-violet-100"
             title={
               trialExpired
-                ? 'Período de teste encerrado. O acesso permanece liberado durante a fase de testes.'
-                : `Período de teste: ${trialDaysRemaining ?? 0} dia(s) restante(s). Acesso completo.`
+                ? 'Período de teste encerrado. Consulte as opções de regularização.'
+                : `Período de teste: ${trialDaysRemaining ?? 0} dia(s) restante(s). Plano Completo.`
             }
           >
             <Sparkles className="emprovex-header-control__icon h-4 w-4" aria-hidden="true" />
@@ -117,6 +126,41 @@ export function AppHeader({
                 : `Período de Teste · ${trialDaysRemaining ?? 0}d`}
             </span>
           </div>
+        )}
+
+        {billingAccount?.status === 'active' && (
+          <div
+            data-testid="billing-active-badge"
+            className="emprovex-header-control border-emerald-300/15 bg-emerald-400/[0.07] text-emerald-100"
+            title="Plano Completo EMPROVEX regular."
+          >
+            <BadgeCheck className="emprovex-header-control__icon h-4 w-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Plano ativo</span>
+          </div>
+        )}
+
+        {billingAccount?.status === 'exempt' && (
+          <div
+            data-testid="billing-exempt-badge"
+            className="emprovex-header-control border-blue-300/15 bg-blue-400/[0.07] text-blue-100"
+            title="Plano Completo EMPROVEX sem cobrança enquanto a isenção estiver ativa."
+          >
+            <Sparkles className="emprovex-header-control__icon h-4 w-4" aria-hidden="true" />
+            <span className="hidden sm:inline">VIP / Isento</span>
+          </div>
+        )}
+
+        {needsRegularization && (
+          <button
+            type="button"
+            data-testid="billing-regularization-link"
+            onClick={() => router.push('/regularizacao')}
+            className="emprovex-header-control border-amber-300/15 bg-amber-400/[0.07] text-amber-100"
+            title="Ver instruções para regularizar a assinatura."
+          >
+            <CircleAlert className="emprovex-header-control__icon h-4 w-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Regularizar assinatura</span>
+          </button>
         )}
 
         {canSwitchProfile && (
