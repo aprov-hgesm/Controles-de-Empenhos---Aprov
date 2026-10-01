@@ -355,7 +355,7 @@ export async function grantBillingTrial(
     const updated: BillingAccount = {
       ...current,
       status: 'trial',
-      monthlyPriceCents: current.monthlyPriceCents || DEFAULT_PLATFORM_BILLING_CONFIG.monthlyPriceCents,
+      monthlyPriceCents: EMPROVEX_FULL_PLAN_PRICE_CENTS,
       trialGranted: true,
       trialStartedAt: trial.trialStartedAt,
       trialEndsAt: trial.trialEndsAt,
@@ -480,6 +480,8 @@ export async function setBillingCommercialStatus(
     const updated: BillingAccount = {
       ...current,
       status,
+      monthlyPriceCents: EMPROVEX_FULL_PLAN_PRICE_CENTS,
+      paymentRequired: false,
       updatedAt: now,
       updatedBy: actor,
     };
@@ -529,6 +531,11 @@ export async function setBillingCycleStatus(
     const persistedAccount = accountSnapshot.exists()
       ? accountSnapshot.data() as BillingAccount
       : account;
+
+    if (persistedAccount.status === 'exempt') {
+      throw new Error('Conta isenta não possui competência de pagamento.');
+    }
+
     const base = cycleSnapshot.exists()
       ? cycleSnapshot.data() as BillingCycle
       : buildBillingCycle(persistedAccount, referenceMonth, config, actor);
@@ -544,7 +551,11 @@ export async function setBillingCycleStatus(
     const updated = transition.cycle;
     const targetAccountStatus = confirmed ? 'active' : 'pending';
     const accountChanged = workspace.id !== HGESM_WORKSPACE_ID
-      && persistedAccount.status !== targetAccountStatus;
+      && (
+        persistedAccount.status !== targetAccountStatus
+        || persistedAccount.monthlyPriceCents !== EMPROVEX_FULL_PLAN_PRICE_CENTS
+        || persistedAccount.paymentRequired !== false
+      );
 
     if (!transition.changed && !accountChanged) {
       return base;
@@ -558,6 +569,8 @@ export async function setBillingCycleStatus(
       transaction.set(accountDocument, {
         ...persistedAccount,
         status: targetAccountStatus,
+        monthlyPriceCents: EMPROVEX_FULL_PLAN_PRICE_CENTS,
+        paymentRequired: false,
         updatedAt: now,
         updatedBy: actor,
       } satisfies BillingAccount);

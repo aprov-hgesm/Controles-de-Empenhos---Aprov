@@ -676,8 +676,7 @@ service cloud.firestore {
         && request.resource.data.billingMode == 'observe'
         && request.resource.data.requirePayment == false
         && request.resource.data.automaticSuspension == false
-        && request.resource.data.monthlyPriceCents is int
-        && request.resource.data.monthlyPriceCents >= 0
+        && request.resource.data.monthlyPriceCents == 7000
         && request.resource.data.currency == 'BRL'
         && request.resource.data.defaultTrialDays is int
         && request.resource.data.defaultTrialDays >= 1
@@ -755,7 +754,26 @@ service cloud.firestore {
           'exempt'
         ]
         && request.resource.data.monthlyPriceCents is int
-        && request.resource.data.monthlyPriceCents >= 0
+        && (
+          (
+            workspaceId == 'hgesm-aprov'
+            && request.resource.data.status == 'exempt'
+            && request.resource.data.monthlyPriceCents == 0
+          )
+          || (
+            workspaceId != 'hgesm-aprov'
+            && (
+              (
+                request.resource.data.status == 'exempt'
+                && request.resource.data.monthlyPriceCents == 0
+              )
+              || (
+                request.resource.data.status != 'exempt'
+                && request.resource.data.monthlyPriceCents == 7000
+              )
+            )
+          )
+        )
         && request.resource.data.currency == 'BRL'
         && request.resource.data.trialGranted is bool
         && request.resource.data.trialStartedAt is string

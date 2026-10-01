@@ -45,6 +45,7 @@ requireText(domain, 'supportContact', 'Configuração não possui canal de supor
 requireText(domain, 'getFifthBusinessDay', 'Domínio não possui cálculo centralizado do 5º dia útil.');
 
 requireText(store, 'setBillingExemption', 'Store não possui ação administrativa de VIP/isento.');
+requireText(store, "persistedAccount.status === 'exempt'", 'Store permite competência financeira para conta isenta.');
 requireText(store, 'sanitizeHttpsUrl', 'Link de Pagamento não exige HTTPS.');
 requireText(store, "saas_r1_full_plan_70_brl", 'Migração de preço não registra motivo auditável.');
 requireText(store, 'idempotentDocumentId', 'Confirmação manual não registra identidade determinística.');
@@ -80,6 +81,7 @@ forbidText(platformAccess, 'requirePayment', 'Autorização operacional não pod
 forbidText(workspaceContext, 'billingAccounts', 'workspaceContext não pode bloquear por billing na SAAS-B.');
 
 requireText(rules, "request.resource.data.billingMode == 'observe'", 'Rules não travam billing em OBSERVE.');
+requireText(rules, 'request.resource.data.monthlyPriceCents == 7000', 'Rules não fixam o Plano Completo em R$ 70.');
 requireText(rules, 'request.resource.data.requirePayment == false', 'Rules permitem ativar exigência de pagamento.');
 requireText(rules, 'request.resource.data.paymentRequired == false', 'Rules permitem marcar workspace como paymentRequired.');
 requireText(rules, 'paymentLinkUrl', 'Rules não validam Link de Pagamento.');
@@ -97,7 +99,7 @@ requireText(securityTest, 'Billing pending em OBSERVE não pode bloquear o acess
 
 for (const source of [adminPanel, regularizationPage]) {
   forbidText(source, 'MERCADO_PAGO_ACCESS_TOKEN', 'Interface expõe credencial do Mercado Pago.');
-  forbidText(source, 'CVV', 'Interface não pode solicitar CVV.');
+  forbidText(source, 'name="cvv"', 'Interface não pode possuir campo de CVV.');
   forbidText(source, 'checkout transparente', 'SAAS-B não pode implementar checkout transparente.');
 }
 

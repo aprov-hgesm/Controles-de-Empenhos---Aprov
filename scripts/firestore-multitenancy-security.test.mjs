@@ -668,6 +668,13 @@ async function main() {
       updatedBy: founderEmail,
     })
   );
+  await denied('Configuração comercial não aceita retorno ao preço de R$ 50', () =>
+    updateDoc(doc(admin.db, 'platformBillingConfig', 'main'), {
+      monthlyPriceCents: 5000,
+      updatedAt: '2026-10-01T01:30:00.000Z',
+      updatedBy: founderEmail,
+    })
+  );
 
   await allowed('Setor consulta somente o próprio status de trial', () =>
     getDoc(doc(sessionA.db, 'billingAccounts', 'workspace-a'))
@@ -681,6 +688,21 @@ async function main() {
   await denied('Setor não altera o próprio trial', () =>
     updateDoc(doc(sessionA.db, 'billingAccounts', 'workspace-a'), {
       trialEndsAt: '2099-12-31T00:00:00.000Z',
+    })
+  );
+  await denied('VIP não pode manter mensalidade diferente de zero', () =>
+    updateDoc(doc(admin.db, 'billingAccounts', 'workspace-a'), {
+      status: 'exempt',
+      monthlyPriceCents: 7000,
+      updatedAt: '2026-10-01T01:45:00.000Z',
+      updatedBy: founderEmail,
+    })
+  );
+  await denied('Cliente não isento não pode voltar ao preço legado de R$ 50', () =>
+    updateDoc(doc(admin.db, 'billingAccounts', 'workspace-a'), {
+      monthlyPriceCents: 5000,
+      updatedAt: '2026-10-01T01:50:00.000Z',
+      updatedBy: founderEmail,
     })
   );
   await allowed('Administrador concede VIP usando exempt e valor zero', () =>
