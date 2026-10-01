@@ -30,18 +30,18 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 | PERF-F | `perf-r3-f-memory-cache` | INTEGRADA | PERF-C + PERF-D integradas | `570661b` | Cache curto em memória integrado em `14aaa2e`; TTL 30 s; workspace isolado; CI combinado verde |
 | PERF-G | `perf-r3-g-central-shell` | INTEGRADA | PERF-B integrada | `de870d1` | Shell persistente integrado em `238b813`; Central 300 → 106 kB; CI combinado/Core/Recovery verdes |
 | PERF-X | `perf-r3-x-hot-vs-history` | INTEGRADA | A/B/C/D/E/F/G/H integradas | `8aac69a` | Worker integrada em `2aca0dce`; correção coordenadora UX/legado em `2b72d43`; CI #868 final verde |
-| PERF-I | branch integradora | LIVRE | PERF-X integrada e certificada | — | Próxima fase: integração final + validação obrigatória de UX |
-| PERF-J | branch integradora | BLOQUEADA | PERF-I concluída | — | Certificação |
+| PERF-I | branch integradora | APROVADA | PERF-X integrada e certificada | — | Integração + métricas + UX concluídas até `6ebbf45b` |
+| PERF-J | branch integradora | LIVRE | PERF-I aprovada | — | Próxima fase: certificação final |
 
 
 ## Próxima ação coordenada
 
-A/B/C/D/E/F/G/H/X estão **INTEGRADAS**.
+A/B/C/D/E/F/G/H/X estão **INTEGRADAS** e a PERF-I está **APROVADA**.
 
 Sequência atual:
-1. **PERF-I — LIVRE**: executar integração final, métricas, segurança e checklist obrigatório de UX sobre a integradora atual;
-2. **PERF-J — BLOQUEADA** até PERF-I ser formalmente aprovada;
-3. depois da PERF-J, qualquer merge em `main` ou publicação depende de autorização explícita do usuário.
+1. **PERF-J — LIVRE / PRÓXIMA**: executar certificação final consolidada sobre a integradora atual;
+2. produzir relatório antes/depois + pendências conhecidas;
+3. qualquer merge em `main` ou publicação depende de conclusão da PERF-J e autorização explícita do usuário.
 
 PERF-X foi encerrada após:
 - worker certificada no HEAD `8aac69a92120ff97f0d4ab84e46a470b5c632843`;
@@ -53,6 +53,61 @@ PERF-X foi encerrada após:
 - Production Build, TypeScript final, Diff Hygiene e release gates 16–21: **SUCCESS**.
 
 Qualquer novo chat deve confirmar o HEAD real de `feat/performance-r3-commercializacao` antes de agir.
+
+## Fechamento do Coordenador — PERF-I
+
+Status final: **APROVADA E ENCERRADA**.
+
+Estado funcional certificado antes das atualizações documentais:
+`6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`.
+
+### Métricas finais
+
+- `/`: **460 → 335 kB** (**-27,17%**);
+- Central principal: **579 → 106 kB** (**-81,69%**);
+- `/admin`: **326 → 327 kB** (**+0,31%**);
+- shared: **103 → 104 kB** (**+0,97%**);
+- `perf:r3:budget`: **within configured budgets**.
+
+### Gates finais
+
+- TypeScript: **PASS**;
+- production build: **PASS**;
+- `perf:r3:collect`: **PASS**;
+- `perf:r3:compare`: **PASS**;
+- `perf:r3:budget`: **PASS**;
+- métricas/parser/sanitização: **3/3 PASS**;
+- PERF-F cache: **11/11 PASS**;
+- PERF-D intake: **7/7 PASS**;
+- PERF-G shell: **PASS**;
+- PERF-X hot/history: **PASS**;
+- Diff Hygiene local: **PASS**;
+- worktree: limpo.
+
+### Correções encontradas durante PERF-I
+
+- fixtures E2E de empenho fundador/externo foram tornadas operacionalmente válidas;
+- coletor PERF-H ganhou portabilidade Windows em `2c2da4ded5ffd38e243d8e03cac6f104bcf93c4a`;
+- parser de log timestampado do GitHub Actions corrigido em `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`.
+
+### Validação manual
+
+PASS para:
+- lazy first/subsequent access;
+- Empenhos/Recebimentos/Central;
+- navegação, URL, back/forward, refresh;
+- shell persistente;
+- estado de formulários;
+- barcode/ENTER/TAB/foco;
+- cache/invalidação;
+- usuário externo e isolamento;
+- jornada integrada;
+- rede artificialmente lenta sem crash/tela branca;
+- ausência de erros tardios/permission-denied no ambiente correto com Rules da branch.
+
+Benchmark manual indicativo mostrou redução forte do trabalho contínuo em repouso na Home da R3. Como publicada e candidata local standalone/emulada não são ambientes idênticos, esses números são evidência complementar, não benchmark laboratorial.
+
+Decisão: **PERF-I APROVADA. PERF-J LIBERADA.**
 
 ## Fechamento do Coordenador — PERF-X
 
@@ -354,10 +409,13 @@ Revisão do coordenador:
 - sem sobreposição com PERF-B/C/E;
 - nenhum `.ts/.tsx` alterado.
 
-Pendência planejada:
-- executar `perf:r3:collect`, `perf:r3:compare` e `perf:r3:budget` sobre o estado combinado durante PERF-I/PERF-J.
+Fechamento na PERF-I:
+- `perf:r3:collect`, `perf:r3:compare` e `perf:r3:budget`: **PASS**;
+- collector Windows corrigido em `2c2da4de`;
+- parser de logs CI timestampados corrigido em `6ebbf45b`;
+- teste de métricas/parser/sanitização: **3/3 PASS**.
 
-Decisão: **INTEGRADA**.
+Decisão: **INTEGRADA E VALIDADA NO ESTADO COMBINADO**.
 
 
 
@@ -567,7 +625,7 @@ Build combinado após A/B/C/D/E/F/G/H:
 Risco residual conhecido:
 - mudança feita por outra sessão/navegador pode permanecer visualmente stale por até 30 segundos;
 - operações críticas não usam esse cache como autoridade;
-- PERF-I deve validar esse comportamento como parte do checklist obrigatório de UX.
+- a PERF-I validou invalidação local pós-mutação sem F5; o risco cross-session limitado ao TTL permanece deliberado e não autoritativo.
 
 Conflitos:
 - nenhum conflito de código com os dois commits que avançaram a integradora durante a execução da PERF-F; eles alteravam apenas Memorial Oficial e Handoff do Coordenador.
@@ -576,21 +634,19 @@ Decisão: **INTEGRADA**.
 
 ## Handoff do Coordenador — 2026-10-01
 
-A coordenação desta conversa foi consolidada para troca de chat.
-
 Fonte de retomada:
 - `docs/PERFORMANCE_R3_COORDENADOR_HANDOFF.md`.
 
-Estado consolidado no momento do handoff:
-- A/B/C/D/E/F/G/H: **INTEGRADAS**;
-- PERF-F: **INTEGRADA** em `14aaa2e`;
-- PERF-X: **BLOQUEADA / OPCIONAL**;
-- PERF-I: **BLOQUEADA** até decisão objetiva sobre PERF-X;
-- PERF-J: **BLOQUEADA** até PERF-I;
+Estado consolidado após PERF-I:
+- A/B/C/D/E/F/G/H/X: **INTEGRADAS**;
+- PERF-X: **INTEGRADA E CERTIFICADA**;
+- PERF-I: **APROVADA E ENCERRADA**;
+- PERF-J: **LIBERADA / PRÓXIMA FASE**;
+- HEAD funcional certificado antes das atualizações documentais: `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`;
 - sem merge consolidado em `main`;
 - sem deploy consolidado de produção da R3.
 
-O novo coordenador deve conferir HEADs reais antes de agir e não deve reconstruir estado a partir de chats antigos quando a documentação oficial já registrar a decisão.
+O novo coordenador deve conferir HEADs reais, partir da integradora atual e não reconstruir estado a partir de chats antigos quando a documentação oficial já registrar a decisão.
 
 ## Regra
 
