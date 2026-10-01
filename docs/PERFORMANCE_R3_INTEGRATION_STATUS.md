@@ -23,11 +23,11 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 | --- | --- | --- | --- | --- | --- |
 | PERF-A | `perf-r3-a-core-bundle` | EM ANDAMENTO | baseline comum | `640377a` | Bundle EMPROVEX; CI exige ajuste legítimo de guard SAG |
 | PERF-B | `perf-r3-b-central-bundle` | INTEGRADA | baseline comum | `7b7aee1` | Bundle Central; -48,2% nas rotas principais |
-| PERF-C | `perf-r3-c-outbound-demand-loading` | EM ANDAMENTO | baseline comum | `c263ce3` | Saída sob demanda; aguardando fechamento dos gates |
+| PERF-C | `perf-r3-c-outbound-demand-loading` | INTEGRADA | baseline `076a233` | `c263ce3` | Saída sob demanda integrada em `e33e260`; abertura fresca 0 reads específicos da superfície |
 | PERF-D | `perf-r3-d-intake-queue` | EM ANDAMENTO | baseline comum | — | Intake seletivo |
 | PERF-E | `perf-r3-e-render-cpu` | INTEGRADA | baseline `076a233` | `149f7c3` | CPU/renderização integrada em `9d5ff58`; gates locais verdes |
 | PERF-H | `perf-r3-h-metrics-budget` | EM ANDAMENTO | baseline comum | — | Métricas/budget |
-| PERF-F | `perf-r3-f-memory-cache` | BLOQUEADA | C/D estabilizados | — | Segunda onda |
+| PERF-F | `perf-r3-f-memory-cache` | BLOQUEADA | PERF-C integrada; aguarda PERF-D | — | Metade da dependência satisfeita; iniciar somente após D estabilizar leituras restantes |
 | PERF-G | `perf-r3-g-central-shell` | LIVRE | PERF-B integrada | — | Segunda onda liberada; preservar fronteiras dinâmicas da PERF-B |
 | PERF-X | `perf-r3-x-hot-vs-history` | BLOQUEADA | medições A–G | — | Opcional |
 | PERF-I | branch integradora | BLOQUEADA | frentes aprovadas | — | Integração final |
@@ -129,6 +129,59 @@ Conflitos resolvidos:
 
 Pendências:
 - validar novamente build/métricas no estado combinado durante PERF-I/PERF-J.
+
+Decisão: **INTEGRADA**.
+
+
+
+### PERF-C — Saída de Material sob demanda
+
+Branch: `perf-r3-c-outbound-demand-loading`  
+HEAD revisado: `c263ce36407304867d3e92d9f0af6929d61b715c`  
+Commit de integração: `e33e260fdd9dbc7f01b8c60b3d59aa0c7cf1c865`.
+
+Arquitetura antes:
+- 8 consultas iniciais;
+- teto bounded de até **3.000 documentos** preparados antes do primeiro barcode.
+
+Arquitetura depois:
+- abertura fresca da `WarehouseMaterialWithdrawal`: **0 consultas Firestore específicas da Saída**;
+- barcode por `getWarehouseBarcodeByCode()`;
+- material e saldo consultados diretamente;
+- location balances e lotes filtrados pelo material corrente;
+- depósitos/localizações/subposições apenas das posições realmente usadas;
+- destinos e catálogo manual somente sob demanda;
+- cache local limitado a 12 barcodes recentes.
+
+Contratos preservados:
+- ledger append-only;
+- `warehouse_movement_v1`;
+- idempotência de saída;
+- saldo não negativo;
+- revalidação transacional;
+- FEFO;
+- lotes e posições;
+- isolamento workspace/UG;
+- fluxo barcode → quantidade → ENTER/TAB → próximo barcode.
+
+Testes/gates:
+- EMPROVEX Core Protection: **PASS**;
+- Application CI: **PASS**;
+- segurança multi-tenant e externa da Central: **PASS**;
+- Phase 6 localizações/transferências: **PASS**;
+- Phase 7 estoque/lotes/FEFO: **PASS**;
+- Phase 8 barcode/outbound + guard de demand loading: **PASS**;
+- Production build: **PASS**;
+- Final TypeScript: **PASS**;
+- Diff hygiene: **PASS**.
+
+Conflitos:
+- nenhum conflito de arquivo com PERF-B/PERF-E;
+- os três arquivos da PERF-C estavam idênticos à base original na integradora antes da integração.
+
+Dependência:
+- PERF-C satisfaz sua parte da pré-condição da PERF-F;
+- PERF-F continua bloqueada até a PERF-D estabilizar as leituras de intake/estruturas compartilhadas.
 
 Decisão: **INTEGRADA**.
 
