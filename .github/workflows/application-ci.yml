@@ -86,6 +86,9 @@ jobs:
       - name: Sector password reset guard
         run: npm run verify:sector-password-reset
 
+      - name: SaaS R1 onboarding and credentials guard
+        run: npm run verify:saas-r1-onboarding
+
       - name: Empenho class configuration guard
         run: npm run verify:empenho-class-config
 
