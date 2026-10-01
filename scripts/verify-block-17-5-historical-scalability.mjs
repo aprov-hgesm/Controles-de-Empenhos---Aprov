@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs';
+import './performance-r3-hot-history.test.mjs';
 const q=readFileSync('lib/historicalInvoiceQueries.ts','utf8');
 const hot=readFileSync('lib/invoiceHotHistory.ts','utf8');
 const nfView=readFileSync('features/notas-fiscais/components/NotasFiscaisView.tsx','utf8');
