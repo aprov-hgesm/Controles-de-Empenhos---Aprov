@@ -38,7 +38,7 @@ O Bloco 22 já implementa:
 - Firestore Rules dedicadas;
 - modo `observe` com `requirePayment=false` e suspensão automática desativada.
 
-Conclusão: **não criar outro billing engine**.
+Conclusão: **não criar outro billing engine**. O valor de R$ 50,00 é o baseline técnico atual da `main`, não o preço comercial definitivo da R1. A SAAS-B deverá migrar o preço padrão para **R$ 70,00**, preservando competências históricas já materializadas.
 
 ### 2.2 Provisionamento e identidade já existentes
 
@@ -138,7 +138,7 @@ Estados:
 - `pending` — requer atenção/regularização;
 - `suspended` — suspensão comercial explícita;
 - `canceled` — encerramento comercial;
-- `exempt` — fundador/isento.
+- `exempt` — fundador ou workspace **VIP/isento**, sem cobrança.
 
 Nenhuma frente poderá criar estados concorrentes com nomes diferentes.
 
@@ -152,14 +152,37 @@ Contrato:
 - fim do trial não dispara suspensão automática;
 - após o fim, o painel deve colocar o workspace em atenção e o fundador decide ativação, pendência ou suspensão.
 
-### 4.4 Preço, vencimento e tolerância
+### 4.4 Plano único, preço, vencimento e tolerância
 
-Baseline R1:
-- R$ 50,00/mês;
+Contrato comercial da R1:
+- **Plano Completo EMPROVEX: R$ 70,00/mês por workspace**;
+- o plano dá acesso integral às funcionalidades disponibilizadas no EMPROVEX para aquele tenant;
+- não existirão planos Bronze/Prata/Pro, módulos pagos à parte, limites artificiais de funcionalidade ou feature flags comerciais por preço;
 - vencimento administrativo: 5º dia útil;
 - tolerância: 10 dias corridos;
 - feriados adicionais permanecem configuráveis;
-- mudança de preço futura deve preservar histórico das competências anteriores.
+- a migração técnica do baseline atual de R$ 50,00 para R$ 70,00 pertence à SAAS-B;
+- competências históricas já materializadas mantêm o valor registrado na época; a alteração não reescreve histórico.
+
+O acesso comercial é binário: workspace habilitado recebe o sistema completo; workspace suspenso/cancelado perde acesso operacional conforme o lifecycle, sem perda de dados.
+
+### 4.4.1 VIP / isenção comercial
+
+A R1 terá a opção administrativa **VIP**, destinada a clientes/workspaces aos quais o fundador queira conceder uso sem cobrança.
+
+Para evitar um segundo modelo comercial:
+- VIP reutiliza internamente o estado canônico `exempt`;
+- a interface pode exibir **VIP** ou **VIP / Isento** para um workspace externo;
+- o fundador continua `exempt`, mas pode ser apresentado como **Fundador / Isento**;
+- workspace VIP recebe o **mesmo Plano Completo**, sem redução de funcionalidades;
+- preço efetivo do workspace VIP = R$ 0,00 enquanto a isenção estiver ativa;
+- VIP não entra em cobrança, atraso ou suspensão por inadimplência;
+- concessão e remoção de VIP são ações exclusivamente administrativas, explícitas e auditadas;
+- VIP não tem expiração automática na R1;
+- remover VIP devolve o workspace ao contrato comercial vigente de R$ 70,00, sem alterar dados operacionais;
+- histórico de trial, pagamentos e auditoria anterior é preservado.
+
+Não criar um novo status `vip`: `exempt` continua sendo a semântica de domínio, e “VIP” é a apresentação comercial da isenção para clientes externos.
 
 ### 4.5 Pagamento
 
@@ -277,6 +300,24 @@ Proposta de caminho:
 O runtime consulta apenas o ID esperado para a versão vigente. Não é necessário varrer histórico.
 
 Novo aceite só é exigido quando a versão legal configurada mudar.
+
+## 7.1 Decisão de arquitetura de dados — não criar terceiro Firestore para o SaaS
+
+A R1 **não criará um novo banco Firestore apenas para billing, onboarding, legal ou novas Security Rules**.
+
+Motivos:
+- as Rules são aplicadas e implantadas separadamente para cada banco Firestore;
+- um novo banco exigiria novo target de Rules, inicialização de SDK, backup, monitoramento, testes e operação próprios;
+- `workspaces`, `platformAccounts`, billing e auditoria possuem forte relação transacional e de autorização no banco principal;
+- o enforcement comercial planejado reutiliza `workspaces.status` e `platformAccounts.status`; separar o estado comercial em outro banco não eliminaria a necessidade de sincronizar o estado de acesso no banco principal;
+- a R1 não armazena dados financeiros sensíveis que justifiquem isolamento físico dedicado.
+
+Arquitetura mantida:
+1. **banco operacional principal** — identidade, workspace, billing, legal e núcleo EMPROVEX;
+2. **`emprovex-warehouse`** — Central de Depósitos, já isolada por domínio logístico;
+3. **nenhum terceiro banco SaaS na R1**.
+
+Um novo banco só deve ser reavaliado futuramente se existir um domínio realmente independente que ganhe em isolamento, regionalização, escala ou blast radius. “Ter Rules novas” por si só não é motivo suficiente.
 
 ## 8. Segurança R1
 
@@ -453,6 +494,7 @@ Abertura comercial continua exigindo decisão explícita do usuário.
 Não entram sem nova decisão:
 - múltiplos usuários/roles por workspace;
 - self-service de contratação;
+- tiers comerciais ou módulos pagos separadamente;
 - checkout embutido;
 - API/webhook Mercado Pago;
 - suspensão automática;
