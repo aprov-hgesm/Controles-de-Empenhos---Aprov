@@ -174,7 +174,7 @@ Situação já incorporada à branch integradora:
 
 Frentes ainda abertas:
 - **PERF-A — Bundle do EMPROVEX principal:** implementação principal de lazy loading avançada, porém em pausa coordenada para separar falhas próprias de falhas de guards causadas pela combinação com frentes já integradas;
-- **PERF-D — Intake seletivo:** implementação avançada e em pausa coordenada de realinhamento no HEAD `a514728`; Core Protection e Recovery Guardrails estão verdes, e o Application CI isolado contra a base congelada está em execução. A frente não deve tentar reconciliar por conta própria as mudanças concorrentes de PERF-B/PERF-H.
+- **PERF-D — Intake seletivo:** implementação avançada e em pausa coordenada de realinhamento no HEAD `a514728`; Core Protection e Recovery Guardrails estão verdes. O Application CI isolado percorreu os gates e falhou apenas no Diff Hygiene por três espaços finais em `docs/PERFORMANCE_R3_PERF_D_INTAKE_QUEUE.md` (linhas 3–5), correção local/trivial da própria frente. A frente não deve reconciliar por conta própria as mudanças concorrentes de PERF-B/PERF-H.
 
 A branch integradora, e não as branches trabalhadoras antigas, passa a ser a referência para compatibilidade cruzada entre frentes.
 
