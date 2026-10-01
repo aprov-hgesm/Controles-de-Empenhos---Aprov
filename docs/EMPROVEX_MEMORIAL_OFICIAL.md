@@ -65,7 +65,8 @@ Capacidades consolidadas:
 - acesso externo multi-tenant já liberado;
 - disposição visual dos depósitos personalizável por movimento, sem rotação/escala no fluxo atual;
 - fluxo de recebimento simplificado/interativo;
-- refatoração estrutural concluída em 2026-10-01 sem mudança de contratos operacionais.
+- refatoração estrutural concluída em 2026-10-01 sem mudança de contratos operacionais;
+- cache curto em memória para depósitos, localizações/subposições e destinos, com TTL de 30 s, isolamento por workspace e validações críticas permanecendo autoritativas.
 
 ## 4. Política de testes vigente
 
@@ -184,7 +185,7 @@ Situação incorporada à branch integradora:
 - **PERF-E — CPU e Renderização:** INTEGRADA; grandes reduções estruturais de varreduras em Empenhos, Notas Fiscais e Consulta de Itens;
 - **PERF-H — Métricas e Budget:** INTEGRADA; baseline, parser, comparação e budgets estão disponíveis, ainda sem transformar budgets experimentais em gate automático do Application CI.
 
-Build combinado após PERF-A/B/C/D/E/G/H:
+Build combinado após PERF-A/B/C/D/E/F/G/H:
 - `/`: **333 kB** First Load JS;
 - seis rotas principais da Central: **106 kB**;
 - `/admin`: **327 kB**;
@@ -198,7 +199,7 @@ A incompatibilidade cruzada encontrada no guard de classes de empenho foi resolv
 
 A PERF-G foi integrada semanticamente no commit `238b813795be05ad7142973f1566b8fead9d055d`, preservando simultaneamente shell/layout persistente, boundaries lazy da PERF-B, intake seletivo da PERF-D e scripts de métricas da PERF-H. O Application CI combinado, Core Protection, Recovery Guardrails, Production Build, TypeScript, Diff Hygiene e gates finais 16–21 ficaram verdes.
 
-A PERF-F permanece **LIVRE** e é a próxima frente ainda não integrada. Deve atuar somente sobre leituras estáveis remanescentes após PERF-C/PERF-D, com cache curto em memória, segregado por workspace e com TTL/invalidação explícita.
+A PERF-F está **INTEGRADA** no commit `14aaa2e747fffaf2427ea63f4cd52395545d9a22` após revisão do HEAD trabalhador `570661ba498edd37ba4c8f0240044d4ee6613bed`. O cache é exclusivamente em memória, usa TTL de 30 segundos, segregação por workspace + variante, deduplicação in-flight e invalidação pós-mutação. Depósitos, localizações/subposições e destinos são os únicos recursos estruturais incluídos; configuração logística ficou de fora. Validações críticas continuam uncached/autoritativas. No cenário sintético controlado Início → Alocação → SISCOFIS → Meus Depósitos, os carregamentos estruturais repetidos passaram de 8 para 2 dentro do TTL, equivalendo a 75% de redução no recorte. O Application CI #860 validou o merge virtual da PERF-F com os commits atuais de UX da integradora.
 
 A PERF-X continua **opcional/bloqueada**: só deve ser aberta se as medições após PERF-F demonstrarem necessidade objetiva de separar dados quentes de histórico.
 
@@ -286,7 +287,7 @@ Exemplo vigente: a PERF-A pode atualizar guards que ainda procuram código movid
 ## 8. Riscos/pendências que não devem ser esquecidos
 
 - crescimento histórico das coleções operacionais continua exigindo disciplina de consultas seletivas; PERF-D resolveu o principal caminho amplo do intake, mas futuras superfícies não devem reintroduzir scans globais;
-- PERF-F deve cachear somente dados estáveis remanescentes e nunca mascarar query inadequada;
+- PERF-F está integrada: o cache deve permanecer restrito a dados estruturais estáveis e nunca ser ampliado para mascarar query inadequada; o risco residual aceito é stale visual de até 30 s entre sessões, sempre com validações operacionais críticas consultando a fonte oficial;
 - o layout persistente da PERF-G precisa de validação visual/manual de navegação, back/forward, refresh direto e acesso externo durante PERF-I/PERF-J;
 - a PERF-I deve tratar experiência do usuário como critério de aceitação: primeira abertura lazy, feedback de loading, persistência/reset de estado, proteção de formulários, foco de barcode/teclado, cache curto, mensagens de erro e jornada em hardware/conectividade modestos devem ser verificados antes da certificação;
 - os budgets da PERF-H ainda são deliberadamente não bloqueantes no Application CI; adoção como gate permanente depende da certificação final;

@@ -27,10 +27,10 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 | PERF-D | `perf-r3-d-intake-queue` | INTEGRADA | baseline `076a233` | `022fae7` | Intake seletivo integrado semanticamente em `2e77af1`; CI combinado/Core/Recovery verdes |
 | PERF-E | `perf-r3-e-render-cpu` | INTEGRADA | baseline `076a233` | `149f7c3` | CPU/renderização integrada em `9d5ff58`; gates locais verdes |
 | PERF-H | `perf-r3-h-metrics-budget` | INTEGRADA | baseline `076a233` | `fb5f452` | Métricas/budget integradas em `a686410`; CI bloqueante ainda não ativado |
-| PERF-F | `perf-r3-f-memory-cache` | LIVRE | PERF-C + PERF-D integradas | — | Segunda onda liberada; cache curto apenas sobre leituras estáveis remanescentes |
+| PERF-F | `perf-r3-f-memory-cache` | INTEGRADA | PERF-C + PERF-D integradas | `570661b` | Cache curto em memória integrado em `14aaa2e`; TTL 30 s; workspace isolado; CI combinado verde |
 | PERF-G | `perf-r3-g-central-shell` | INTEGRADA | PERF-B integrada | `de870d1` | Shell persistente integrado em `238b813`; Central 300 → 106 kB; CI combinado/Core/Recovery verdes |
 | PERF-X | `perf-r3-x-hot-vs-history` | BLOQUEADA | medições A–G | — | Opcional |
-| PERF-I | branch integradora | BLOQUEADA | frentes aprovadas | — | Integração final |
+| PERF-I | branch integradora | BLOQUEADA | decisão objetiva sobre PERF-X | — | Integração final + validação obrigatória de UX |
 | PERF-J | branch integradora | BLOQUEADA | PERF-I concluída | — | Certificação |
 
 ## Coordenação concluída — PERF-D
@@ -50,7 +50,7 @@ Gates combinados:
 - Recovery Guardrails: **PASS**;
 - Blocks 16, 17, 18, 19, 20 e 21: **PASS**.
 
-PERF-F está liberada para iniciar.
+PERF-F foi concluída e integrada posteriormente em `14aaa2e747fffaf2427ea63f4cd52395545d9a22`.
 
 ## Coordenação especial — PERF-A — encerrada
 
@@ -370,7 +370,7 @@ Conflitos resolvidos:
 - PERF-H + PERF-D em `package.json`.
 
 Dependência:
-- PERF-F agora está **LIVRE**.
+- PERF-F foi posteriormente concluída e **INTEGRADA**.
 
 Decisão: **INTEGRADA**.
 
@@ -423,6 +423,77 @@ Observação:
 
 Decisão: **INTEGRADA**.
 
+
+### PERF-F — Cache curto em memória
+
+Branch: `perf-r3-f-memory-cache`  
+Base original do worker: `79f54e2fd4109b8c56cc2f8c0deb1234af1238f5`  
+HEAD revisado: `570661ba498edd37ba4c8f0240044d4ee6613bed`  
+PR de validação: **#207**  
+Commit de integração: `14aaa2e747fffaf2427ea63f4cd52395545d9a22`.
+
+Escopo integrado:
+- cache exclusivamente em memória para depósitos, localizações/subposições e destinos;
+- leituras individuais de depósito/localização cacheadas apenas para apresentação da Saída;
+- TTL explícito de **30 segundos**;
+- chave por `workspaceId + variante`;
+- deduplicação de requests simultâneos;
+- geração interna para impedir repovoamento stale após invalidação;
+- configuração logística deliberadamente não cacheada;
+- nenhum uso de `localStorage`, `sessionStorage`, IndexedDB, listener ou coleção nova.
+
+Autoridade preservada:
+- `assertDepotCodeAvailable()` usa leitura Firestore uncached;
+- `assertLocationCodeAvailable()` usa leitura Firestore uncached;
+- `requireActiveDestination()` continua com `getDoc()` autoritativo;
+- APIs históricas sem sufixo `Cached` continuam uncached;
+- auth, workspace/UG, sessão, lease, ledger, saldos, lotes, intake, NF, empenhos, cronogramas e demais dados operacionais críticos permanecem fora do cache.
+
+Invalidação:
+- criação/edição de depósito invalida depósitos;
+- criação/edição de localização invalida localizações;
+- criação/alteração de status de destino invalida destinos;
+- invalidação ocorre apenas depois da escrita bem-sucedida;
+- resposta antiga já em voo não pode repovoar o cache depois da mutação.
+
+Métrica sintética controlada:
+- jornada Início → Alocação → SISCOFIS → Meus Depósitos;
+- antes: **8 carregamentos estruturais** / fórmula `4 × (D + L)`;
+- depois, dentro do TTL: **2 carregamentos** / fórmula `D + L`;
+- conjunto sintético do teste: 64 → 16 document-equivalents;
+- redução do recorte: **75%**;
+- números explicitamente sintéticos, não apresentados como contagem de produção.
+
+Validação:
+- teste específico PERF-F: **11/11 PASS** no harness do worker;
+- PR #207 foi aberto contra a integradora já em `481948f`;
+- merge virtual validado: `3ea9eb6378de23a849ed84b331cac39de4a1ddd7`;
+- o log do Application CI #860 confirma checkout de `refs/pull/207/merge`, portanto o CI foi executado sobre **PERF-F + os commits de UX da integradora**;
+- Application CI #860: **PASS**;
+- Production Build: **PASS**;
+- Final TypeScript: **PASS**;
+- Diff Hygiene: **PASS**;
+- Core Protection: **PASS**;
+- Recovery Guardrails: **PASS**;
+- segurança multi-tenant/externa e fases afetadas da Central: **PASS**.
+
+Build combinado após A/B/C/D/E/F/G/H:
+- `/`: **333 kB**;
+- rotas principais da Central: **106 kB**;
+- `/admin`: **327 kB**;
+- `/admin/backups`: **244 kB**;
+- shared: **104 kB**.
+
+Risco residual conhecido:
+- mudança feita por outra sessão/navegador pode permanecer visualmente stale por até 30 segundos;
+- operações críticas não usam esse cache como autoridade;
+- PERF-I deve validar esse comportamento como parte do checklist obrigatório de UX.
+
+Conflitos:
+- nenhum conflito de código com os dois commits que avançaram a integradora durante a execução da PERF-F; eles alteravam apenas Memorial Oficial e Handoff do Coordenador.
+
+Decisão: **INTEGRADA**.
+
 ## Handoff do Coordenador — 2026-10-01
 
 A coordenação desta conversa foi consolidada para troca de chat.
@@ -431,10 +502,10 @@ Fonte de retomada:
 - `docs/PERFORMANCE_R3_COORDENADOR_HANDOFF.md`.
 
 Estado consolidado no momento do handoff:
-- A/B/C/D/E/G/H: **INTEGRADAS**;
-- PERF-F: **LIVRE**;
+- A/B/C/D/E/F/G/H: **INTEGRADAS**;
+- PERF-F: **INTEGRADA** em `14aaa2e`;
 - PERF-X: **BLOQUEADA / OPCIONAL**;
-- PERF-I: **BLOQUEADA** até fechamento das frentes necessárias;
+- PERF-I: **BLOQUEADA** até decisão objetiva sobre PERF-X;
 - PERF-J: **BLOQUEADA** até PERF-I;
 - sem merge consolidado em `main`;
 - sem deploy consolidado de produção da R3.

@@ -42,16 +42,16 @@ Documentos obrigatórios:
 | PERF-C | **INTEGRADA** | `c263ce3` | `e33e260` | Saída abre sem as consultas específicas antecipadas |
 | PERF-D | **INTEGRADA** | `022fae7` | `2e77af1` | intake seletivo + histórico sob demanda |
 | PERF-E | **INTEGRADA** | `149f7c3` | `9d5ff58` | grande redução de CPU/varreduras |
-| PERF-F | **LIVRE** | — | — | próxima frente ainda não integrada |
+| PERF-F | **INTEGRADA** | `570661b` | `14aaa2e` | cache curto 30 s; isolamento por workspace; 8 → 2 loads no cenário sintético |
 | PERF-G | **INTEGRADA** | `de870d1` | `238b813` | shell persistente; Central 300 → 106 kB |
 | PERF-H | **INTEGRADA** | `fb5f452` | `a686410` | métricas/budgets reproduzíveis |
 | PERF-X | **BLOQUEADA / OPCIONAL** | — | — | só abrir se medições justificarem hot vs history |
-| PERF-I | **BLOQUEADA** | — | branch integradora | integração final após frentes necessárias |
+| PERF-I | **BLOQUEADA** | — | branch integradora | aguarda decisão objetiva sobre PERF-X; depois integração + UX |
 | PERF-J | **BLOQUEADA** | — | branch integradora | certificação após PERF-I |
 
-## 3. Build combinado certificado até PERF-G
+## 3. Build combinado certificado após PERF-F
 
-Último build combinado validado após A/B/C/D/E/G/H:
+Último build combinado validado após A/B/C/D/E/F/G/H:
 
 - `/`: **333 kB First Load JS**;
 - `/adm-deposito`: **106 kB**;
@@ -144,6 +144,61 @@ Preservar:
 - ordenação;
 - informação exibida.
 
+
+### PERF-F — Cache curto em memória
+
+Integração:
+- branch trabalhadora: `perf-r3-f-memory-cache`;
+- base do worker: `79f54e2fd4109b8c56cc2f8c0deb1234af1238f5`;
+- HEAD revisado: `570661ba498edd37ba4c8f0240044d4ee6613bed`;
+- PR #207;
+- integração: `14aaa2e747fffaf2427ea63f4cd52395545d9a22`.
+
+Contrato:
+- somente memória;
+- TTL: **30 s**;
+- chave: workspace + variante/ID;
+- in-flight dedupe;
+- rejeições não são cacheadas;
+- geração interna bloqueia repovoamento stale após invalidação;
+- escrita bem-sucedida invalida depósitos/localizações/destinos conforme o domínio;
+- nenhuma persistência local de cache.
+
+Recursos incluídos:
+- listagem de depósitos;
+- listagem de localizações/subposições;
+- leitura individual de depósito/localização somente para apresentação;
+- listagem de destinos.
+
+Excluídos deliberadamente:
+- configuração logística;
+- saldos, ledger, movimentos, lotes, intake, NF, empenhos, cronogramas, inventário, consumos, outbounds, histórico, barcode operacional, auth/autorização.
+
+Autoridade:
+- unicidade de código de depósito/localização continua Firestore uncached;
+- destino ativo continua `getDoc()` autoritativo;
+- APIs históricas sem sufixo `Cached` continuam uncached.
+
+Métrica sintética:
+- Início → Alocação → SISCOFIS → Meus Depósitos;
+- 8 → 2 carregamentos estruturais dentro do TTL;
+- 64 → 16 document-equivalents no conjunto sintético D=4/L=12;
+- **75%** de redução no recorte, sem alegar contagem de produção.
+
+Validação combinada:
+- teste específico do cache: **11/11 PASS**;
+- PR base: `481948fc1fe079fcd27c4e92585d8b8faf5d6ba3`;
+- merge virtual: `3ea9eb6378de23a849ed84b331cac39de4a1ddd7`;
+- Application CI #860 fez checkout explícito desse merge virtual e terminou **PASS**;
+- Core Protection e Recovery Guardrails: **PASS**;
+- build/TypeScript/Diff Hygiene e segurança afetada: **PASS**;
+- bundle permaneceu estável: root 333 kB, Central 106 kB, admin 327 kB, shared 104 kB.
+
+Risco residual:
+- outra sessão pode deixar estrutura visual stale por até 30 s;
+- isso não deve alterar decisão operacional crítica;
+- comportamento entra obrigatoriamente no checklist de UX da PERF-I.
+
 ### PERF-G — Shell persistente da Central
 
 Arquitetura:
@@ -197,39 +252,21 @@ Budgets v1:
 
 Esses budgets **ainda não estão ligados automaticamente ao Application CI**.
 
-## 5. PERF-F — próxima frente
+## 5. PERF-F — concluída
 
-Status: **LIVRE**.
+Status: **INTEGRADA**.
 
-Dependências satisfeitas:
-- PERF-C integrada;
-- PERF-D integrada.
+A PERF-F foi encerrada no commit de integração `14aaa2e747fffaf2427ea63f4cd52395545d9a22`. A documentação especializada está em `docs/PERFORMANCE_R3_MEMORY_CACHE.md`.
 
-Objetivo:
-- cache curto **somente em memória** para leituras estáveis remanescentes;
-- segregação obrigatória por workspace;
-- TTL/invalidação explícita;
-- mutação bem-sucedida deve invalidar/atualizar cache;
-- nenhum dado operacional sensível em `localStorage`.
-
-Candidatos originais:
-- depósitos;
-- localizações;
-- destinos;
-- configurações estáveis.
-
-Regra crítica:
-> PERF-F não pode usar cache para esconder consulta ampla ou incorreta. Primeiro confirmar quais reads estáveis realmente sobraram após C/D/G.
-
-PERF-F deve nascer da **branch integradora atual**, não dos baselines antigos da primeira onda.
+Não ampliar o cache automaticamente. Qualquer novo recurso candidato deve provar que é estrutural/estável e que não participa de decisão autoritativa. A separação entre APIs históricas uncached e APIs explícitas `Cached` é contrato a preservar.
 
 ## 6. PERF-X
 
-Não iniciar automaticamente.
+**Próxima decisão do Coordenador. Não iniciar automaticamente.**
 
-Só abrir se, depois de PERF-F e das medições combinadas, houver evidência de que listeners/dados históricos continuam sendo gargalo relevante.
+Com PERF-F integrada, revisar as medições combinadas e os reads/listeners históricos ainda existentes. Só abrir PERF-X se houver evidência objetiva de gargalo relevante de dados quentes vs. histórico.
 
-Sem evidência: marcar como **DISPENSADA**.
+Sem evidência suficiente: marcar PERF-X como **DISPENSADA** e liberar PERF-I.
 
 ## 7. PERF-I — Integração Controlada + Validação de UX
 
@@ -453,10 +490,10 @@ Ao assumir:
    - `perf-r3-f-memory-cache`, se já existir;
 3. conferir `docs/PERFORMANCE_R3_INTEGRATION_STATUS.md`;
 4. confirmar que A/B/C/D/E/G/H seguem integradas;
-5. confirmar se PERF-F ainda está LIVRE ou já foi iniciada;
-6. não reabrir A/D/G sem regressão objetiva;
-7. preparar/acompanhar PERF-F;
-8. depois avaliar PERF-X e conduzir PERF-I/PERF-J.
+5. confirmar que PERF-F segue integrada em `14aaa2e`;
+6. não reabrir A/D/F/G sem regressão objetiva;
+7. avaliar objetivamente se PERF-X é necessária ou deve ser DISPENSADA;
+8. após essa decisão, conduzir PERF-I/PERF-J com a validação obrigatória de UX.
 
 ## 14. Regra para atualização deste documento
 
