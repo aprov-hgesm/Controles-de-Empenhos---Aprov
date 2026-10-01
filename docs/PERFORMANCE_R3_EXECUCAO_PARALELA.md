@@ -6,8 +6,11 @@ Branch integradora: `feat/performance-r3-commercializacao`
 
 Este documento define **como vários chats podem desenvolver melhorias de performance em paralelo sem prejuízo ao EMPROVEX**.
 
+Ele é a aplicação especializada, para a Performance R3, do modus operandi oficial definido em `docs/DEVELOPMENT_MODUS_OPERANDI.md`. As regras gerais desse documento permanecem válidas; este arquivo acrescenta nomes de frentes, branches, métricas e dependências específicas da R3.
+
 Ele deve ser lido junto com:
 - `docs/EMPROVEX_MEMORIAL_OFICIAL.md`;
+- `docs/DEVELOPMENT_MODUS_OPERANDI.md`;
 - `docs/PERFORMANCE_R3_COMERCIALIZACAO.md`;
 - `docs/TESTING_POLICY.md`;
 - `docs/DEVELOPMENT_CI_WORKFLOW.md`;

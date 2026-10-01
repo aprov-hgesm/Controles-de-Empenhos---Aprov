@@ -26,6 +26,9 @@ Para a Central de Depósitos:
 - `docs/adm-deposito/DECISIONS.md`;
 - `docs/adm-deposito/ROADMAP.md`.
 
+Modus operandi de desenvolvimento:
+- `docs/DEVELOPMENT_MODUS_OPERANDI.md` — norma oficial para decomposição, desenvolvimento paralelo, integração, validação, certificação e release.
+
 Política de testes:
 - `docs/TESTING_POLICY.md`;
 - `docs/DEVELOPMENT_CI_WORKFLOW.md`.
@@ -131,11 +134,36 @@ Direção arquitetural:
 - medir antes/depois;
 - impedir regressão futura por orçamento de performance.
 
-## 6. Modelo oficial de execução — frentes paralelas + integração controlada
+## 6. Modus operandi oficial de desenvolvimento — paralelo, coordenado e certificado
 
-A Performance R3 **não deve ser executada como uma fila monolítica de fases dependentes**.
+O método comprovado na Performance R3 passa a ser o **padrão oficial de engenharia do EMPROVEX para ciclos de média/alta complexidade**.
+
+Norma geral:
+
+`docs/DEVELOPMENT_MODUS_OPERANDI.md`
 
 Modelo oficial:
+
+> **baseline e contratos comuns → decomposição e mapa de dependências → workers independentes em ondas paralelas → handoffs → integração semântica controlada → validação integrada técnica e de UX → certificação final → autorização de release**
+
+A Performance R3 foi a primeira aplicação completa desse modelo e permanece documentada em `docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md`.
+
+Regras estruturais permanentes:
+- usar paralelismo apenas quando houver independência real;
+- cada worker possui fronteira, branch, base SHA, contratos, métrica, gates e handoff próprios;
+- workers não integram diretamente em `main` e não absorvem silenciosamente escopo de outras frentes;
+- o Coordenador mantém a visão global, integra semanticamente e resolve conflitos cruzados;
+- CI isolado do worker não substitui CI combinado quando houver divergência/risco de integração;
+- toda rodada grande deve possuir fase de validação integrada, incluindo UX;
+- certificação final deve ser logicamente separada da implementação;
+- produção/release não ocorre automaticamente por merge ou certificação;
+- tarefas pequenas podem usar fluxo simplificado, preservando baseline, testes, contratos e documentação proporcional.
+
+### Aplicação histórica — Performance R3
+
+A Performance R3 **não foi executada como uma fila monolítica de fases dependentes**.
+
+Aplicação específica:
 
 > **baseline/contratos comuns → primeira onda de frentes independentes → segunda onda dependente → integração controlada → certificação final**
 
@@ -177,9 +205,9 @@ Durante toda a R3 deve existir um **chat Coordenador / Integrador / Avaliador**.
 - não compete implementando em paralelo o mesmo escopo dos trabalhadores;
 - não autoriza merge/deploy de produção sem a decisão explícita do usuário.
 
-A especificação completa está em `docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md`.
+A especificação geral e permanente está em `docs/DEVELOPMENT_MODUS_OPERANDI.md`. A aplicação específica da Performance R3 está em `docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md`.
 
-A independência das frentes é uma **regra arquitetural da rodada**: um chat não deve aproveitar sua frente para refatorar outra área. Dependências são registradas no handoff e resolvidas pelo coordenador.
+A independência das frentes é uma **regra arquitetural do método**: um chat não deve aproveitar sua frente para refatorar outra área. Dependências são registradas no handoff e resolvidas pelo Coordenador.
 
 
 ### Estado consolidado da Performance R3 em 2026-10-01
@@ -742,6 +770,9 @@ Até esse detalhamento ser aprovado, este bloco do Memorial é a fonte canônica
 - documentação antiga pode descrever estados históricos como founder-only ou E2E obrigatório; essas afirmações não representam mais a política vigente quando conflitarem com este memorial e a `main`.
 
 ## 9. Regra de atualização
+
+O `docs/DEVELOPMENT_MODUS_OPERANDI.md` é norma permanente do repositório. Mudanças no método de desenvolvimento devem ser atualizadas nele e refletidas neste Memorial quando alterarem papéis, fluxo de integração, certificação ou release.
+
 
 Ao concluir uma rodada relevante:
 - atualizar este memorial;
