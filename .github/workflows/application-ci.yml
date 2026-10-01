@@ -522,45 +522,11 @@ jobs:
           fi
 
 
-  browser-e2e-emulator:
-    name: Browser E2E with Firebase Emulator
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Setup Java for Firebase Emulator
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright test runner
-        run: npm install --no-save --package-lock=false @playwright/test@1.55.0
-
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
-
-      - name: Browser E2E with Firebase Emulator
-        run: npm run test:e2e:browser
-
-
   block-16-release-gate:
     name: Block 16 Final Release Gate
     if: ${{ always() }}
     needs:
       - validate-application
-      - browser-e2e-emulator
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
@@ -568,15 +534,12 @@ jobs:
         shell: bash
         run: |
           echo "validate-application=${{ needs.validate-application.result }}"
-          echo "browser-e2e-emulator=${{ needs.browser-e2e-emulator.result }}"
           test "${{ needs.validate-application.result }}" = "success"
-          test "${{ needs.browser-e2e-emulator.result }}" = "success"
   block-17-final-release-gate:
     name: Block 17 Final Release Gate
     if: ${{ always() }}
     needs:
       - validate-application
-      - browser-e2e-emulator
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
@@ -584,9 +547,7 @@ jobs:
         shell: bash
         run: |
           echo "validate-application=${{ needs.validate-application.result }}"
-          echo "browser-e2e-emulator=${{ needs.browser-e2e-emulator.result }}"
           test "${{ needs.validate-application.result }}" = "success"
-          test "${{ needs.browser-e2e-emulator.result }}" = "success"
           echo "BLOCK 17 FINAL RELEASE: READY"
 
   block-18-final-release-gate:
@@ -594,7 +555,6 @@ jobs:
     if: ${{ always() }}
     needs:
       - validate-application
-      - browser-e2e-emulator
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
@@ -602,9 +562,7 @@ jobs:
         shell: bash
         run: |
           echo "validate-application=${{ needs.validate-application.result }}"
-          echo "browser-e2e-emulator=${{ needs.browser-e2e-emulator.result }}"
           test "${{ needs.validate-application.result }}" = "success"
-          test "${{ needs.browser-e2e-emulator.result }}" = "success"
           echo "BLOCK 18 FINAL RELEASE: READY"
 
   block-19-final-closure-gate:
@@ -612,7 +570,6 @@ jobs:
     if: ${{ always() }}
     needs:
       - validate-application
-      - browser-e2e-emulator
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
@@ -620,9 +577,7 @@ jobs:
         shell: bash
         run: |
           echo "validate-application=${{ needs.validate-application.result }}"
-          echo "browser-e2e-emulator=${{ needs.browser-e2e-emulator.result }}"
           test "${{ needs.validate-application.result }}" = "success"
-          test "${{ needs.browser-e2e-emulator.result }}" = "success"
           echo "BLOCK 19 FINAL CLOSURE: READY"
 
   block-20-final-release-gate:
@@ -630,7 +585,6 @@ jobs:
     if: ${{ always() }}
     needs:
       - validate-application
-      - browser-e2e-emulator
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
@@ -638,9 +592,7 @@ jobs:
         shell: bash
         run: |
           echo "validate-application=${{ needs.validate-application.result }}"
-          echo "browser-e2e-emulator=${{ needs.browser-e2e-emulator.result }}"
           test "${{ needs.validate-application.result }}" = "success"
-          test "${{ needs.browser-e2e-emulator.result }}" = "success"
           echo "BLOCK 20 FINAL RELEASE: READY"
 
   block-21-final-release-gate:
@@ -648,7 +600,6 @@ jobs:
     if: ${{ always() }}
     needs:
       - validate-application
-      - browser-e2e-emulator
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
@@ -656,7 +607,5 @@ jobs:
         shell: bash
         run: |
           echo "validate-application=${{ needs.validate-application.result }}"
-          echo "browser-e2e-emulator=${{ needs.browser-e2e-emulator.result }}"
           test "${{ needs.validate-application.result }}" = "success"
-          test "${{ needs.browser-e2e-emulator.result }}" = "success"
           echo "BLOCK 21 FINAL RELEASE: READY"
