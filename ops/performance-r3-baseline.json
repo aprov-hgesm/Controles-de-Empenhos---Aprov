@@ -3,17 +3,27 @@
   "baselineId": "performance-r3-opening-2026-10-01",
   "capturedAt": "2026-10-01",
   "source": {
-    "kind": "observed-next-production-build",
+    "kind": "successful-application-ci-next-build",
     "branch": "main",
     "commit": "22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f",
-    "note": "Opening baseline recorded by the Performance R3 coordinator before worker integrations."
+    "note": "Bundle baseline verified in a successful Application CI run for the exact opening main commit.",
+    "workflow": "Application CI",
+    "workflowRunId": 36798818765,
+    "jobId": 110168320503,
+    "verifiedBuildAt": "2026-10-01T01:02:19Z"
   },
   "bundle": {
     "sharedFirstLoadJsKb": 103,
     "routes": {
-      "/": { "firstLoadJsKb": 460 },
-      "/adm-deposito": { "firstLoadJsKb": 579 },
-      "/admin": { "firstLoadJsKb": 326 }
+      "/": {
+        "firstLoadJsKb": 460
+      },
+      "/adm-deposito": {
+        "firstLoadJsKb": 579
+      },
+      "/admin": {
+        "firstLoadJsKb": 326
+      }
     },
     "centralRouteFamilyObservedFirstLoadJsKb": 579
   },
