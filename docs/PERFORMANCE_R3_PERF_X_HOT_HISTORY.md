@@ -132,10 +132,12 @@ Operações que realmente precisam conhecer o histórico completo o consultam ex
 - cadastro/edição de NF — validação de identidade;
 - exclusão de todas as NFs;
 - alteração de CNPJ de empenho com migração de NFs;
-- reserva da numeração de Termo de Recebimento;
 - geração de relatório de empenho quando chamado sem fonte histórica já carregada.
 
 Se a consulta histórica atingir o teto de segurança, a mutação abrangente é bloqueada em vez de operar sobre um subconjunto silenciosamente.
+
+A numeração de Termo de Recebimento é uma exceção: ela não carrega documentos históricos completos. O maior `termoNumero` é obtido com `orderBy('termoNumero', 'desc') + limit(1)`.
+
 
 Ações sobre uma NF já carregada continuam usando `recordKey` e a persistência canônica existente.
 
