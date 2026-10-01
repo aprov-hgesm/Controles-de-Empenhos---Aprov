@@ -7,6 +7,7 @@ interface PublicLegalLayoutProps {
   title: string;
   description: string;
   updatedAt: string;
+  version?: string;
   children: ReactNode;
 }
 
@@ -15,6 +16,7 @@ export function PublicLegalLayout({
   title,
   description,
   updatedAt,
+  version,
   children,
 }: PublicLegalLayoutProps) {
   return (
@@ -40,7 +42,10 @@ export function PublicLegalLayout({
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00288e]">{eyebrow}</p>
           <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{title}</h1>
           <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">{description}</p>
-          <p className="mt-4 text-xs font-semibold text-slate-400">Última atualização: {updatedAt}</p>
+          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-slate-400">
+            <span>Última atualização: {updatedAt}</span>
+            {version ? <span>Versão: {version}</span> : null}
+          </div>
 
           <div className="mt-8 space-y-8 text-sm leading-7 text-slate-700">
             {children}
