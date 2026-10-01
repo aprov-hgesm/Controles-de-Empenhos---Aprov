@@ -20,7 +20,7 @@ Branch: `perf-r3-g-central-shell`
 app/adm-deposito/layout.tsx
   -> WarehouseProtectedLayout
        -> auth/workspace/status + session control fail-closed
-       -> WarehouseWorkspaceContext
+       -> WarehouseWorkspaceProvider (contexto mínimo, sem shell/superfícies)
        -> WarehouseModuleShell (persistente)
             -> header/sidebar/moldura
             -> children da rota
@@ -29,7 +29,7 @@ app/adm-deposito/layout.tsx
                            -> dynamic() da superfície ativa
 ```
 
-O shell não importa `WarehouseSectionContent` nem qualquer superfície operacional pesada. O conteúdo continua pertencendo às páginas/segmentos filhos.
+O shell não importa `WarehouseSectionContent` nem qualquer superfície operacional pesada. O contexto compartilhado vive em `WarehouseModuleContext.tsx`, isolado do gate e do shell, para que os chunks filhos não criem dependência estática de volta para o boundary persistente. O conteúdo continua pertencendo às páginas/segmentos filhos.
 
 ## Segurança
 

@@ -2,7 +2,7 @@
 
 import type { WarehouseSectionId } from '../navigation';
 import { WarehouseSectionContent } from './WarehouseSectionContent';
-import { useWarehouseWorkspaceContext } from './WarehouseProtectedSurface';
+import { useWarehouseWorkspaceContext } from './WarehouseModuleContext';
 
 export function WarehouseRouteContent({
   section,

@@ -19,7 +19,7 @@ assert.match(protectedLayout, /onAuthStateChanged/);
 assert.match(protectedLayout, /requestWarehouseStatus/);
 assert.match(protectedLayout, /startWorkspaceSessionControl/);
 assert.match(protectedLayout, /clearResolvedWorkspaceContext/);
-assert.match(protectedLayout, /WarehouseWorkspaceContext\.Provider/);
+assert.match(protectedLayout, /WarehouseWorkspaceProvider/);
 assert.match(protectedLayout, /<WarehouseModuleShell workspaceContext=\{workspaceContext\}>/);
 
 const shell = read('features/warehouse/components/WarehouseModuleShell.tsx');
@@ -52,9 +52,16 @@ for (const forbidden of [
   );
 }
 
+const moduleContext = read('features/warehouse/components/WarehouseModuleContext.tsx');
+assert.match(moduleContext, /createContext/);
+assert.match(moduleContext, /useWarehouseWorkspaceContext/);
+assert.equal(moduleContext.includes('WarehouseModuleShell'), false);
+assert.equal(moduleContext.includes('WarehouseSectionContent'), false);
+
 const routeContent = read('features/warehouse/components/WarehouseRouteContent.tsx');
 assert.match(routeContent, /WarehouseSectionContent/);
-assert.match(routeContent, /useWarehouseWorkspaceContext/);
+assert.match(routeContent, /WarehouseModuleContext/);
+assert.equal(routeContent.includes('WarehouseProtectedSurface'), false);
 
 const primaryRoutes = new Map([
   ['app/adm-deposito/page.tsx', 'home'],

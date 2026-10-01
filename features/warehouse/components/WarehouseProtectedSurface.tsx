@@ -1,8 +1,6 @@
 'use client';
 
 import {
-  createContext,
-  useContext,
   useEffect,
   useState,
   type ReactNode,
@@ -20,6 +18,7 @@ import {
   clearResolvedWorkspaceContext,
   type SectorWorkspaceContext,
 } from '../../../lib/workspaceContext';
+import { WarehouseWorkspaceProvider } from './WarehouseModuleContext';
 import { WarehouseModuleShell } from './WarehouseModuleShell';
 
 type GateState = 'checking' | 'allowed' | 'denied';
@@ -30,8 +29,6 @@ interface WarehouseStatusPayload {
   claimsUpdated?: boolean;
 }
 
-const WarehouseWorkspaceContext =
-  createContext<SectorWorkspaceContext | null>(null);
 
 async function requestWarehouseStatus(
   currentUser: User,
@@ -57,14 +54,6 @@ async function requestWarehouseStatus(
     ok: response.ok,
     status,
   };
-}
-
-export function useWarehouseWorkspaceContext(): SectorWorkspaceContext {
-  const context = useContext(WarehouseWorkspaceContext);
-  if (!context) {
-    throw new Error('WAREHOUSE_WORKSPACE_CONTEXT_UNAVAILABLE');
-  }
-  return context;
 }
 
 export function WarehouseProtectedLayout({
@@ -213,10 +202,10 @@ export function WarehouseProtectedLayout({
   }
 
   return (
-    <WarehouseWorkspaceContext.Provider value={workspaceContext}>
+    <WarehouseWorkspaceProvider value={workspaceContext}>
       <WarehouseModuleShell workspaceContext={workspaceContext}>
         {children}
       </WarehouseModuleShell>
-    </WarehouseWorkspaceContext.Provider>
+    </WarehouseWorkspaceProvider>
   );
 }
