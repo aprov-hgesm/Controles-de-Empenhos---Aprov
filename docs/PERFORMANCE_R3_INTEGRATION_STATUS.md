@@ -1,7 +1,7 @@
 # Performance R3 — Quadro de Integração
 
-Última atualização: **2026-10-01**  
-Responsável por atualização: **Chat Coordenador / Integrador / Avaliador**  
+Última atualização: **2026-10-01**
+Responsável por atualização: **Chat Coordenador / Integrador / Avaliador**
 Branch integradora: `feat/performance-r3-commercializacao`
 
 Este é o quadro operacional vivo da Performance R3. Ele não substitui o memorial; registra **quem está fazendo o quê e o que já pode ser integrado**.
@@ -243,8 +243,8 @@ Decisão: INTEGRADA
 
 ### PERF-B — Bundle da Central de Depósitos
 
-Branch: `perf-r3-b-central-bundle`  
-HEAD revisado: `7b7aee100f21b6a67f8cb8f94cfdfb3508bc0d57`  
+Branch: `perf-r3-b-central-bundle`
+HEAD revisado: `7b7aee100f21b6a67f8cb8f94cfdfb3508bc0d57`
 Integração: fast-forward da branch integradora para `7b7aee1`.
 
 Métrica antes:
@@ -277,8 +277,8 @@ Decisão: **INTEGRADA**.
 
 ### PERF-E — CPU e Renderização
 
-Branch: `perf-r3-e-render-cpu`  
-HEAD revisado: `149f7c3945eae7cb046175499abe5bf6868eb9bb`  
+Branch: `perf-r3-e-render-cpu`
+HEAD revisado: `149f7c3945eae7cb046175499abe5bf6868eb9bb`
 Commit de integração: `9d5ff5834da61477a1f454a452eb32b19414d23e`.
 
 Medição:
@@ -312,8 +312,8 @@ Decisão: **INTEGRADA**.
 
 ### PERF-C — Saída de Material sob demanda
 
-Branch: `perf-r3-c-outbound-demand-loading`  
-HEAD revisado: `c263ce36407304867d3e92d9f0af6929d61b715c`  
+Branch: `perf-r3-c-outbound-demand-loading`
+HEAD revisado: `c263ce36407304867d3e92d9f0af6929d61b715c`
 Commit de integração: `e33e260fdd9dbc7f01b8c60b3d59aa0c7cf1c865`.
 
 Arquitetura antes:
@@ -365,8 +365,8 @@ Decisão: **INTEGRADA**.
 
 ### PERF-H — Métricas e Budget
 
-Branch: `perf-r3-h-metrics-budget`  
-HEAD revisado: `fb5f45296e28bafcad5489860e143b434c1ebf77`  
+Branch: `perf-r3-h-metrics-budget`
+HEAD revisado: `fb5f45296e28bafcad5489860e143b434c1ebf77`
 Commit de integração: `a6864106c779382f5919a5f1a1dcea812bd896a5`.
 
 Entregas:
@@ -422,8 +422,8 @@ Decisão: **INTEGRADA E VALIDADA NO ESTADO COMBINADO**.
 
 ### PERF-A — Bundle do EMPROVEX principal
 
-Branch: `perf-r3-a-core-bundle`  
-HEAD revisado: `3193b84117c6c4936ba774ee41c0d8df11b4e3fe`  
+Branch: `perf-r3-a-core-bundle`
+HEAD revisado: `3193b84117c6c4936ba774ee41c0d8df11b4e3fe`
 Commit de integração: `15eadb0f35f7420c88e6cefdf7cddba84db4cde2`.
 
 Métrica:
@@ -465,8 +465,8 @@ Decisão: **INTEGRADA**.
 
 ### PERF-D — Fila leve de Recebimento / Intake
 
-Branch: `perf-r3-d-intake-queue`  
-HEAD revisado: `022fae7a48def20f9279ad6223ce42cd4f539b8c`  
+Branch: `perf-r3-d-intake-queue`
+HEAD revisado: `022fae7a48def20f9279ad6223ce42cd4f539b8c`
 Commit certificado de integração: `2e77af1706a599152dff8ec43a197d68056d5ae2`.
 
 Arquitetura:
@@ -516,8 +516,8 @@ Decisão: **INTEGRADA**.
 
 ### PERF-G — Shell/Layout persistente da Central
 
-Branch: `perf-r3-g-central-shell`  
-HEAD revisado: `de870d1cb81f5d0eab2faba2fcabed354f35953b`  
+Branch: `perf-r3-g-central-shell`
+HEAD revisado: `de870d1cb81f5d0eab2faba2fcabed354f35953b`
 Commit de integração semântica: `238b813795be05ad7142973f1566b8fead9d055d`.
 
 Arquitetura integrada:
@@ -565,10 +565,10 @@ Decisão: **INTEGRADA**.
 
 ### PERF-F — Cache curto em memória
 
-Branch: `perf-r3-f-memory-cache`  
-Base original do worker: `79f54e2fd4109b8c56cc2f8c0deb1234af1238f5`  
-HEAD revisado: `570661ba498edd37ba4c8f0240044d4ee6613bed`  
-PR de validação: **#207**  
+Branch: `perf-r3-f-memory-cache`
+Base original do worker: `79f54e2fd4109b8c56cc2f8c0deb1234af1238f5`
+HEAD revisado: `570661ba498edd37ba4c8f0240044d4ee6613bed`
+PR de validação: **#207**
 Commit de integração: `14aaa2e747fffaf2427ea63f4cd52395545d9a22`.
 
 Escopo integrado:
