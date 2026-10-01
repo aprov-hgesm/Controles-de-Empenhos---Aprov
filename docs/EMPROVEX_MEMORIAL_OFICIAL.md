@@ -174,7 +174,7 @@ Situação já incorporada à branch integradora:
 
 Frentes ainda abertas:
 - **PERF-A — Bundle do EMPROVEX principal:** implementação principal de lazy loading avançada, porém em pausa coordenada para separar falhas próprias de falhas de guards causadas pela combinação com frentes já integradas;
-- **PERF-D — Intake seletivo:** implementação avançada; a última falha conhecida de TypeScript foi localizada na tipagem de snapshots paginados e recebeu correção na branch trabalhadora, aguardando nova validação.
+- **PERF-D — Intake seletivo:** implementação avançada e em pausa coordenada de realinhamento no HEAD `a514728`; Core Protection e Recovery Guardrails estão verdes, e o Application CI isolado contra a base congelada está em execução. A frente não deve tentar reconciliar por conta própria as mudanças concorrentes de PERF-B/PERF-H.
 
 A branch integradora, e não as branches trabalhadoras antigas, passa a ser a referência para compatibilidade cruzada entre frentes.
 
@@ -191,6 +191,30 @@ Não fazem parte da rodada, salvo necessidade técnica comprovada:
 
 Toda mudança de performance deve ser reversível, medida e compatível com os guards existentes.
 
+
+
+### Realinhamento específico da PERF-D
+
+A PERF-D trabalha sobre a base original `076a233cf250c95882e78498e89dd2a44d034f74` e deve terminar sua validação **isoladamente**, sem rebase/merge da branch integradora.
+
+Sobreposições já identificadas pelo coordenador:
+- `WarehouseItemRegistrationOperational.tsx` também foi alterado pela PERF-B já integrada para preservar code splitting/lazy loading das subtelas;
+- `package.json` também foi alterado pela PERF-H já integrada para adicionar os scripts `perf:r3:*`.
+
+Essas sobreposições não invalidam a PERF-D. Elas são conflitos de integração e pertencem ao Chat Coordenador/PERF-I. Na integração, devem coexistir:
+- o intake seletivo da PERF-D;
+- os imports dinâmicos da PERF-B;
+- os scripts de métricas da PERF-H;
+- os testes/scripts específicos da PERF-D.
+
+A PERF-D não deve:
+- tentar tornar o PR contra a integradora atual mergeable;
+- rebasear ou incorporar B/C/E/H;
+- remover imports dinâmicos introduzidos pela PERF-B;
+- remover scripts `perf:r3:*` introduzidos pela PERF-H;
+- ampliar escopo para cache compartilhado da PERF-F.
+
+O fluxo correto é: **validar na base congelada → documentar métricas/gates → entregar handoff → parar → coordenador integra semanticamente**.
 
 ### Regra de guards em trabalho paralelo
 
