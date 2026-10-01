@@ -42,6 +42,11 @@ import { normalizeWarehouseMaterialId } from './material';
 import {
   listWarehouseQueueExcludedInvoiceKeys,
 } from './intakeQueueExclusionRepository';
+import {
+  deactivateWarehouseIntakeQueueCandidates,
+  listWarehouseActiveIntakeQueueCandidates,
+  syncWarehouseIntakeQueueIndex,
+} from './intakeQueueIndexRepository';
 import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
 
 export const WAREHOUSE_INTAKE_QUEUE_EMPENHOS_LIMIT = 250;
@@ -159,19 +164,23 @@ async function listOperationalBounded<T>(
   const path = getOperationalCollectionPath(scope, collectionName);
 
   try {
+    const bounded = Math.max(1, maxResults);
     const snapshot = await getDocs(
-      operationalCollectionRef(scope, collectionName)
+      query(
+        operationalCollectionRef(scope, collectionName),
+        limit(bounded + 1)
+      )
     );
     recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return {
-      items: snapshot.docs.map((entry) => {
+      items: snapshot.docs.slice(0, bounded).map((entry) => {
         const data = entry.data() as T & { id?: string; recordKey?: string };
         if (collectionName === 'invoices') {
           return { ...data, recordKey: data.recordKey || entry.id } as T;
         }
         return { ...data, id: data.id || entry.id } as T;
       }),
-      truncated: false,
+      truncated: snapshot.size > bounded,
     };
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
@@ -179,9 +188,9 @@ async function listOperationalBounded<T>(
   }
 }
 
-async function listOperationalByIds<T extends { id?: string }>(
+async function listOperationalByIds<T extends { id?: string; recordKey?: string }>(
   workspaceId: string,
-  collectionName: 'empenhos',
+  collectionName: 'empenhos' | 'invoices',
   ids: string[]
 ): Promise<T[]> {
   const { scope } = currentScopeForWorkspace(workspaceId);
@@ -210,6 +219,12 @@ async function listOperationalByIds<T extends { id?: string }>(
   return snapshots.flatMap((snapshot) =>
     snapshot.docs.map((entry) => {
       const data = entry.data() as T;
+      if (collectionName === 'invoices') {
+        return {
+          ...data,
+          recordKey: data.recordKey || entry.id,
+        };
+      }
       return {
         ...data,
         id: data.id || entry.id,
@@ -271,10 +286,13 @@ async function listPersistedIntakes(
   const path = warehouseDomainPath(scope.workspaceId, 'intakes');
 
   try {
-    const snapshot = await getDocs(collection(db, path));
+    const bounded = WAREHOUSE_INTAKE_QUEUE_STATES_LIMIT;
+    const snapshot = await getDocs(
+      query(collection(db, path), limit(bounded + 1))
+    );
     recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return {
-      items: snapshot.docs.flatMap((entry) => {
+      items: snapshot.docs.slice(0, bounded).flatMap((entry) => {
         const parsed = parsePersistedIntake(
           scope.workspaceId,
           entry.id,
@@ -282,7 +300,7 @@ async function listPersistedIntakes(
         );
         return parsed ? [parsed] : [];
       }),
-      truncated: false,
+      truncated: snapshot.size > bounded,
     };
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
@@ -377,7 +395,7 @@ function quantitiesFromPersisted(
   };
 }
 
-export async function loadWarehouseInvoiceIntakeQueue(
+export async function loadWarehouseInvoiceIntakeHistory(
   workspaceId: string
 ): Promise<WarehouseInvoiceIntakeQueueContext> {
   currentScopeForWorkspace(workspaceId);
