@@ -94,6 +94,7 @@ Documentos obrigatórios da rodada:
 - `docs/PERFORMANCE_R3_COMERCIALIZACAO.md` — objetivos técnicos e frentes;
 - `docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md` — arquitetura oficial de branches, chats, coordenação, handoff e integração;
 - `docs/PERFORMANCE_R3_INTEGRATION_STATUS.md` — quadro vivo de frentes, propriedade, HEADs, dependências e situação de integração, mantido apenas pelo chat coordenador.
+- `docs/PERFORMANCE_R3_COORDENADOR_HANDOFF.md` — memória operacional compacta para troca de Chat Coordenador, contendo estado corrente, integrações, conflitos resolvidos, próximos passos e protocolo de retomada.
 
 Objetivo:
 > tornar o EMPROVEX perceptivelmente mais rápido e leve para comercialização sem reduzir qualidade visual, animações, transições ou identidade premium.
@@ -164,16 +165,14 @@ A especificação completa está em `docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md`.
 A independência das frentes é uma **regra arquitetural da rodada**: um chat não deve aproveitar sua frente para refatorar outra área. Dependências são registradas no handoff e resolvidas pelo coordenador.
 
 
-### Estado consolidado da primeira onda em 2026-10-01
+### Estado consolidado da Performance R3 em 2026-10-01
 
-Situação já incorporada à branch integradora:
+Situação incorporada à branch integradora:
+- **PERF-A — Bundle do EMPROVEX principal:** INTEGRADA; a rota `/` reduziu de 460 kB para 333 kB de First Load JS (-27,61%), preservando shell/Home/auth e movendo as grandes superfícies operacionais para boundaries lazy;
 - **PERF-B — Bundle da Central:** INTEGRADA; rotas principais da Central reduziram de 579 kB para 300 kB de First Load JS (~48,2%);
 - **PERF-C — Saída sob demanda:** INTEGRADA; abertura fresca da superfície deixou de antecipar as 8 consultas específicas e o teto bounded de até 3.000 documentos;
 - **PERF-E — CPU e Renderização:** INTEGRADA; grandes reduções estruturais de varreduras em Empenhos, Notas Fiscais e Consulta de Itens;
 - **PERF-H — Métricas e Budget:** INTEGRADA; baseline, parser, comparação e budgets estão disponíveis, ainda sem transformar budgets experimentais em gate automático do Application CI.
-
-Frentes ainda abertas:
-- **PERF-A — Bundle do EMPROVEX principal:** INTEGRADA; a rota `/` reduziu de 460 kB para 333 kB de First Load JS (-27,61%), preservando shell/Home/auth e movendo as grandes superfícies operacionais para boundaries lazy;
 
 Build combinado após PERF-A/B/C/D/E/G/H:
 - `/`: **333 kB** First Load JS;
@@ -189,7 +188,11 @@ A incompatibilidade cruzada encontrada no guard de classes de empenho foi resolv
 
 A PERF-G foi integrada semanticamente no commit `238b813795be05ad7142973f1566b8fead9d055d`, preservando simultaneamente shell/layout persistente, boundaries lazy da PERF-B, intake seletivo da PERF-D e scripts de métricas da PERF-H. O Application CI combinado, Core Protection, Recovery Guardrails, Production Build, TypeScript, Diff Hygiene e gates finais 16–21 ficaram verdes.
 
-A PERF-F permanece **LIVRE** e é a próxima frente dependente ainda não integrada. A PERF-X continua opcional/bloqueada até as medições A–G/F justificarem separação adicional entre dados quentes e históricos.
+A PERF-F permanece **LIVRE** e é a próxima frente ainda não integrada. Deve atuar somente sobre leituras estáveis remanescentes após PERF-C/PERF-D, com cache curto em memória, segregado por workspace e com TTL/invalidação explícita.
+
+A PERF-X continua **opcional/bloqueada**: só deve ser aberta se as medições após PERF-F demonstrarem necessidade objetiva de separar dados quentes de histórico.
+
+PERF-I permanece bloqueada até o fechamento das frentes necessárias da segunda onda; PERF-J vem depois para certificação final. Não houve merge em `main` nem deploy consolidado de produção da R3.
 
 A branch integradora, e não as branches trabalhadoras antigas, passa a ser a referência para compatibilidade cruzada entre frentes.
 
@@ -251,8 +254,10 @@ Exemplo vigente: a PERF-A pode atualizar guards que ainda procuram código movid
 
 ## 8. Riscos/pendências que não devem ser esquecidos
 
-- crescimento histórico das coleções operacionais exige consultas progressivamente mais seletivas;
-- a fila logística ainda possui pontos de leitura ampla que devem ser eliminados na R3;
+- crescimento histórico das coleções operacionais continua exigindo disciplina de consultas seletivas; PERF-D resolveu o principal caminho amplo do intake, mas futuras superfícies não devem reintroduzir scans globais;
+- PERF-F deve cachear somente dados estáveis remanescentes e nunca mascarar query inadequada;
+- o layout persistente da PERF-G precisa de validação visual/manual de navegação, back/forward, refresh direto e acesso externo durante PERF-I/PERF-J;
+- os budgets da PERF-H ainda são deliberadamente não bloqueantes no Application CI; adoção como gate permanente depende da certificação final;
 - segurança e dependências continuam como linha separada de hardening;
 - falha crítica real de segurança sempre interrompe a ordem normal de prioridades;
 - documentação antiga pode descrever estados históricos como founder-only ou E2E obrigatório; essas afirmações não representam mais a política vigente quando conflitarem com este memorial e a `main`.
