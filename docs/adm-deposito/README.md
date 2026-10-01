@@ -196,7 +196,7 @@ Resultados permanentes:
 
 Documento técnico: `PHASE_13_HARDENING.md`.
 
-**Estado oficial:** Módulo 13 CONCLUÍDO. Módulo 14 NÃO INICIADO.
+**Estado histórico naquele fechamento:** Módulo 13 CONCLUÍDO; Módulo 14 ainda não iniciado naquele momento. **Situação superada**: o ciclo até Módulo 14 foi posteriormente concluído; consultar o topo deste documento, `STATUS.md` e `docs/EMPROVEX_MEMORIAL_OFICIAL.md` para o estado vigente.
 
 
 ## Referência visual obrigatória
