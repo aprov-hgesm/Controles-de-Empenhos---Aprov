@@ -77,6 +77,19 @@ import {
   type WarehouseOutboundDocumentsInput,
 } from '../pdf/WarehouseOutboundDocuments';
 import { WarehouseConsumptionReports } from './WarehouseConsumptionReports';
+import {
+  formatWarehouseDateOnly,
+  formatWarehouseNumber,
+  normalizeWarehouseSearch,
+} from './warehousePresentation';
+import {
+  clearWarehouseWithdrawalDraft,
+  clearWarehouseWithdrawalRecovery,
+  persistWarehouseWithdrawalDraft,
+  persistWarehouseWithdrawalRecovery,
+  readWarehouseWithdrawalDraft,
+  type WarehouseWithdrawalPersistedDraft,
+} from './warehouseWithdrawalDraft';
 
 type SurfaceTab = 'checkout' | 'reports';
 
@@ -113,60 +126,10 @@ interface PositionOption {
   label: string;
 }
 
-interface PersistedDraft {
-  withdrawalId: string;
-  cart: CartLine[];
-  destinationId: string;
-  withdrawnBy: string;
-  retryRequired: boolean;
-}
-
-function draftStorageKey(workspaceId: string): string {
-  return 'emprovex:warehouse:material-withdrawal:v1:' + workspaceId;
-}
-
-function recoveryStorageKey(workspaceId: string): string {
-  return 'emprovex:warehouse:material-withdrawal:recovery:v1:' + workspaceId;
-}
-
-function parsePersistedDraft(raw: string | null): PersistedDraft | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as PersistedDraft;
-    if (
-      !parsed
-      || typeof parsed.withdrawalId !== 'string'
-      || !Array.isArray(parsed.cart)
-      || typeof parsed.destinationId !== 'string'
-      || typeof parsed.withdrawnBy !== 'string'
-      || typeof parsed.retryRequired !== 'boolean'
-    ) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function numberLabel(value: number): string {
-  return value.toLocaleString('pt-BR', { maximumFractionDigits: 6 });
-}
-
-function dateLabel(value: string | null): string {
-  if (!value) return 'não informada';
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  return match ? match[3] + '/' + match[2] + '/' + match[1] : value;
-}
+type PersistedDraft = WarehouseWithdrawalPersistedDraft<CartLine>;
 
 function unitLabel(unit: WarehouseMaterialUnit): string {
   return unit.label || unit.code;
-}
-
-function normalizeSearch(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('pt-BR')
-    .trim();
 }
 
 function normalizedQuantity(value: number): number {
@@ -208,7 +171,7 @@ function presentationOptions(material: WarehouseMaterial): PresentationOption[] 
       label:
         unitLabel(conversion.presentation)
         + ' · 1 = '
-        + numberLabel(conversion.factorToBaseUnit)
+        + formatWarehouseNumber(conversion.factorToBaseUnit)
         + ' '
         + unitLabel(material.unit),
     })),
@@ -233,37 +196,6 @@ function positionOptionsFor(
       quantity: item.balance.quantity,
       label: buildWarehousePositionLabel(item.balance.position, state.depots, state.locations),
     }));
-}
-
-function readDraft(workspaceId: string): PersistedDraft | null {
-  if (typeof window === 'undefined') return null;
-  const sessionDraft = parsePersistedDraft(
-    window.sessionStorage.getItem(draftStorageKey(workspaceId))
-  );
-  if (sessionDraft) return sessionDraft;
-
-  const recoveryDraft = parsePersistedDraft(
-    window.localStorage.getItem(recoveryStorageKey(workspaceId))
-  );
-  return recoveryDraft
-    ? { ...recoveryDraft, retryRequired: true }
-    : null;
-}
-
-function persistWithdrawalRecovery(
-  workspaceId: string,
-  draft: PersistedDraft
-): void {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(
-    recoveryStorageKey(workspaceId),
-    JSON.stringify({ ...draft, retryRequired: true })
-  );
-}
-
-function clearWithdrawalRecovery(workspaceId: string): void {
-  if (typeof window === 'undefined') return;
-  window.localStorage.removeItem(recoveryStorageKey(workspaceId));
 }
 
 async function resolveOutboundDocumentLines(
@@ -324,7 +256,7 @@ async function resolveOutboundDocumentLines(
 export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: string }) {
   const scannerRef = useRef<HTMLInputElement>(null);
   const quantityRef = useRef<HTMLInputElement>(null);
-  const initialDraft = useMemo(() => readDraft(workspaceId), [workspaceId]);
+  const initialDraft = useMemo(() => readWarehouseWithdrawalDraft<CartLine>(workspaceId), [workspaceId]);
 
   const [tab, setTab] = useState<SurfaceTab>('checkout');
   const [state, setState] = useState<CheckoutState>({
@@ -367,7 +299,6 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     useState<WarehouseOutboundDocumentsInput | null>(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
     const draft: PersistedDraft = {
       withdrawalId,
       cart,
@@ -375,7 +306,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       withdrawnBy,
       retryRequired,
     };
-    window.sessionStorage.setItem(draftStorageKey(workspaceId), JSON.stringify(draft));
+    persistWarehouseWithdrawalDraft(workspaceId, draft);
   }, [cart, destinationId, retryRequired, withdrawalId, withdrawnBy, workspaceId]);
 
   const refresh = useCallback(async () => {
@@ -438,13 +369,13 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
   const associationPresentations = associationMaterial ? presentationOptions(associationMaterial) : [];
 
   const filteredMaterials = useMemo(() => {
-    const q = normalizeSearch(materialSearch);
+    const q = normalizeWarehouseSearch(materialSearch);
     return state.materials.filter((material) => {
       if (material.status !== 'active') return false;
       const balance = state.balances.find((item) => item.materialId === material.id) || null;
       if (positionOptionsFor(material, balance, state).length === 0) return false;
       if (!q) return true;
-      return normalizeSearch([material.id, material.description, ...material.aliases].join(' ')).includes(q);
+      return normalizeWarehouseSearch([material.id, material.description, ...material.aliases].join(' ')).includes(q);
     });
   }, [materialSearch, state]);
 
@@ -609,7 +540,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       setMessageKind('error');
       setMessage(
         'As linhas do carrinho excedem o saldo exibido nesta posição. Disponível para novas linhas: '
-          + numberLabel(Math.max(0, selectedPosition.quantity - reserved))
+          + formatWarehouseNumber(Math.max(0, selectedPosition.quantity - reserved))
           + ' ' + unitLabel(selectedMaterial.unit) + '.'
       );
       return;
@@ -687,7 +618,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     }
     for (const group of positionGroups.values()) {
       if (group.total > group.available + 0.000001) {
-        issues.push('Carrinho excede saldo de uma posição: ' + numberLabel(group.total) + ' > ' + numberLabel(group.available) + ' ' + group.unit + '.');
+        issues.push('Carrinho excede saldo de uma posição: ' + formatWarehouseNumber(group.total) + ' > ' + formatWarehouseNumber(group.available) + ' ' + group.unit + '.');
       }
     }
     for (const group of lotGroups.values()) {
@@ -751,10 +682,8 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     setRetryRequired(false);
     setReviewing(false);
     setWithdrawalId(createWarehouseWithdrawalId());
-    if (typeof window !== 'undefined') {
-      window.sessionStorage.removeItem(draftStorageKey(workspaceId));
-      clearWithdrawalRecovery(workspaceId);
-    }
+    clearWarehouseWithdrawalDraft(workspaceId);
+    clearWarehouseWithdrawalRecovery(workspaceId);
   };
 
   const finalize = async () => {
@@ -771,7 +700,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       activeDestinations.find((item) => item.destination.id === destinationId)?.destination.name
       || 'Destino não identificado';
 
-    persistWithdrawalRecovery(workspaceId, {
+    persistWarehouseWithdrawalRecovery(workspaceId, {
       withdrawalId,
       cart: cartSnapshot,
       destinationId,
@@ -986,14 +915,14 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                       <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-right">
                         <p className="text-[8px] uppercase tracking-wide text-slate-500">saldo oficial</p>
                         <p className="text-sm font-black text-emerald-700">
-                          {numberLabel(selectedBalance.quantity)} {unitLabel(selectedMaterial.unit)}
+                          {formatWarehouseNumber(selectedBalance.quantity)} {unitLabel(selectedMaterial.unit)}
                         </p>
                       </div>
                     </div>
 
                     {selectedBarcode && (
                       <p className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[10px] text-[#00288e]">
-                        Barcode {selectedBarcode.barcode} · fator {numberLabel(selectedBarcode.factorToBaseUnit)}
+                        Barcode {selectedBarcode.barcode} · fator {formatWarehouseNumber(selectedBarcode.factorToBaseUnit)}
                       </p>
                     )}
 
@@ -1027,7 +956,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                         <select value={positionKey} onChange={(event) => { setPositionKey(event.target.value); setSelectedLotId(''); }}
                           className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-[#00288e]">
                           {positionOptions.map((option) => (
-                            <option key={option.key} value={option.key}>{option.label} · {numberLabel(option.quantity)}</option>
+                            <option key={option.key} value={option.key}>{option.label} · {formatWarehouseNumber(option.quantity)}</option>
                           ))}
                         </select>
                       </label>
@@ -1038,7 +967,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                           <option value="">Sem validade vinculada</option>
                           {lotOptions.map((lot) => (
                             <option key={lot.id} value={lot.id}>
-                              {dateLabel(lot.expiresOn)} · {numberLabel(lot.quantity)}
+                              {formatWarehouseDateOnly(lot.expiresOn)} · {formatWarehouseNumber(lot.quantity)}
                             </option>
                           ))}
                         </select>
@@ -1047,7 +976,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
 
                     {fefo && selectedLotId === fefo.id && (
                       <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] text-amber-800">
-                        FEFO recomendado: validade {dateLabel(fefo.expiresOn)}. A baixa só ocorrerá na finalização.
+                        FEFO recomendado: validade {formatWarehouseDateOnly(fefo.expiresOn)}. A baixa só ocorrerá na finalização.
                       </p>
                     )}
 
@@ -1197,7 +1126,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                             <div>
                               <p className="text-sm font-black text-slate-900">{line.materialDescription}</p>
                               <p className="mt-1 text-[10px] text-slate-500">
-                                {line.presentationLabel}{line.barcode ? ' · barcode ' + line.barcode : ''}{line.lotId ? ' · validade ' + dateLabel(lotExpiryForLine(line)) : ''}
+                                {line.presentationLabel}{line.barcode ? ' · barcode ' + line.barcode : ''}{line.lotId ? ' · validade ' + formatWarehouseDateOnly(lotExpiryForLine(line)) : ''}
                               </p>
                               {lotAlertForLine(line) && (
                                 <p className={
@@ -1233,11 +1162,11 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                             </label>
                             <div className="rounded-lg border border-slate-200 bg-white px-2 py-2">
                               <p className="text-[8px] uppercase tracking-wide text-slate-600">Unidade-base</p>
-                              <p className="mt-1 text-xs font-black text-slate-900">{numberLabel(line.baseQuantity)} {line.unitLabel}</p>
+                              <p className="mt-1 text-xs font-black text-slate-900">{formatWarehouseNumber(line.baseQuantity)} {line.unitLabel}</p>
                             </div>
                             <div className="rounded-lg border border-slate-200 bg-white px-2 py-2">
                               <p className="text-[8px] uppercase tracking-wide text-slate-600">Saldo da posição</p>
-                              <p className="mt-1 text-xs font-black text-emerald-700">{numberLabel(line.availableAtPosition)} {line.unitLabel}</p>
+                              <p className="mt-1 text-xs font-black text-emerald-700">{formatWarehouseNumber(line.availableAtPosition)} {line.unitLabel}</p>
                             </div>
                           </div>
                         </div>
@@ -1341,7 +1270,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                   </p>
                   <div className="mt-2 max-h-24 overflow-y-auto text-[9px] leading-5 text-slate-500">
                     {cart.slice(0, 12).map((line) => (
-                      <p key={line.lineId}>{line.materialDescription} · {numberLabel(line.baseQuantity)} {line.unitLabel}</p>
+                      <p key={line.lineId}>{line.materialDescription} · {formatWarehouseNumber(line.baseQuantity)} {line.unitLabel}</p>
                     ))}
                   </div>
                   <button type="button" onClick={() => void finalize()} disabled={working}

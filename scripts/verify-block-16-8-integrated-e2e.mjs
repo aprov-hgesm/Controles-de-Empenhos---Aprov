@@ -20,6 +20,7 @@ const security = read('scripts/firestore-multitenancy-security.test.mjs');
 const domain = read('scripts/block-16-integrated-domain.test.mjs');
 const packageJson = read('package.json');
 const workflow = read('.github/workflows/application-ci.yml');
+const e2eWorkflow = read('.github/workflows/browser-e2e-on-demand.yml');
 const sessionsPanel = read('components/admin/AdminSessionsPanel.tsx');
 const adminSessions = read('lib/platformAdminSessions.ts');
 const usageHook = read('hooks/usePlatformAdminUsage.ts');
@@ -147,11 +148,15 @@ for (const ciStep of [
   'Production build',
   'Final TypeScript validation',
   'Diff hygiene',
-  'Browser E2E with Firebase Emulator',
   'Block 16 Final Release Gate',
 ]) {
   requireText(workflow, ciStep, `Application CI perdeu gate integrado: ${ciStep}`);
 }
+
+requireText(e2eWorkflow, 'workflow_dispatch:', 'Browser E2E sob demanda perdeu acionamento manual.');
+requireText(e2eWorkflow, 'Browser E2E with Firebase Emulator', 'Workflow sob demanda perdeu o Browser E2E.');
+requireText(e2eWorkflow, 'npm run test:e2e:browser', 'Workflow sob demanda deixou de executar o Browser E2E.');
+forbidText(workflow, 'browser-e2e-emulator:', 'Browser E2E voltou a bloquear o CI automático.');
 
 for (const driveInvariant of [
   "provider: 'google-drive'",

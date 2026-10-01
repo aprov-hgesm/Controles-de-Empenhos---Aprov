@@ -23,7 +23,8 @@ const sidebar = read('components/layout/AppSidebar.tsx');
 const selector = read('features/relatorios/components/RelatorioEmpenhoSelector.tsx');
 const docs = read('docs/BLOCK_9_BROWSER_E2E.md');
 const pkg = read('package.json');
-const workflow = read('.github/workflows/application-ci.yml');
+const applicationWorkflow = read('.github/workflows/application-ci.yml');
+const workflow = read('.github/workflows/browser-e2e-on-demand.yml');
 
 requireText(firebase, "NEXT_PUBLIC_EMPROVEX_E2E_EMULATORS === '1'", 'Frontend não possui chave opt-in de Emulator.');
 requireText(firebase, 'NEXT_PUBLIC_EMPROVEX_E2E_PROJECT_ID', 'Frontend não isola o projectId E2E.');
@@ -63,10 +64,12 @@ requireText(selector, 'data-testid={`report-empenho-${empenho.id}`}', 'Seletor d
 
 requireText(pkg, '"test:e2e:browser"', 'package.json não registra Browser E2E.');
 requireText(pkg, '"verify:block-9-e2e"', 'package.json não registra guard do Bloco 9.');
-requireText(workflow, 'Browser E2E with Firebase Emulator', 'CI não possui job Browser E2E.');
-requireText(workflow, '@playwright/test@1.55.0', 'CI não fixa versão do Playwright.');
-requireText(workflow, 'playwright install --with-deps chromium', 'CI não instala Chromium para E2E.');
-requireText(workflow, 'npm run test:e2e:browser', 'CI não executa Browser E2E.');
+requireText(workflow, 'workflow_dispatch:', 'Browser E2E sob demanda perdeu acionamento manual.');
+requireText(workflow, 'Browser E2E with Firebase Emulator', 'Workflow sob demanda não possui job Browser E2E.');
+requireText(workflow, '@playwright/test@1.55.0', 'Workflow sob demanda não fixa versão do Playwright.');
+requireText(workflow, 'playwright install --with-deps chromium', 'Workflow sob demanda não instala Chromium para E2E.');
+requireText(workflow, 'npm run test:e2e:browser', 'Workflow sob demanda não executa Browser E2E.');
+forbidText(applicationWorkflow, 'browser-e2e-emulator:', 'Browser E2E voltou a bloquear o CI automático.');
 requireText(docs, 'Next.js local', 'Documentação não descreve aplicação real.');
 requireText(docs, 'persistência após reload', 'Documentação não descreve prova de persistência.');
 requireText(docs, 'não usa dados de produção', 'Documentação não declara isolamento de produção.');
