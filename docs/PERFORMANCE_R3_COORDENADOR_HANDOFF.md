@@ -45,7 +45,7 @@ Documentos obrigatórios:
 | PERF-F | **INTEGRADA** | `570661b` | `14aaa2e` | cache curto 30 s; isolamento por workspace; 8 → 2 loads no cenário sintético |
 | PERF-G | **INTEGRADA** | `de870d1` | `238b813` | shell persistente; Central 300 → 106 kB |
 | PERF-H | **INTEGRADA** | `fb5f452` | `a686410` | métricas/budgets reproduzíveis |
-| PERF-X | **EM ANDAMENTO** | `f4d9b848` | auditoria aprovada | necessária: separar `invoices` realtime operacional do histórico |
+| PERF-X | **DEVOLVIDA** | `8aac69a` | CI #867 verde; correção semântica pendente | arquitetura aprovada; 2 bloqueios UX/legado antes da integração |
 | PERF-I | **BLOQUEADA** | — | branch integradora | aguarda decisão objetiva sobre PERF-X; depois integração + UX |
 | PERF-J | **BLOQUEADA** | — | branch integradora | certificação após PERF-I |
 
@@ -323,6 +323,18 @@ Arquivos prováveis da implementação:
 - guards/testes de listeners e escalabilidade.
 
 A implementação deve definir e testar explicitamente o contrato de informação de Empenhos/Nova NF antes de trocar a fonte dos dados, evitando transformar o array global `invoices` em subconjunto sem adaptar consumidores que precisam de histórico completo.
+
+
+
+#### Revisão semântica pós-CI #867
+
+A implementação PERF-X em `8aac69a92120ff97f0d4ab84e46a470b5c632843` passou integralmente nos gates automáticos e no merge virtual contra a integradora atual, mas **não foi integrada**.
+
+O Coordenador encontrou dois bloqueios que os guards não cobrem:
+- filtro inicial `FaltaTesouraria` exclui da abertura as NFs `APROVISIONAMENTO` que aguardam Comissão em classes com TR;
+- contagem agregada de concluídas baseada apenas em `localizacaoAtual=TESOURARIA` pode subcontar legado enquanto o marcador de backfill ainda não está READY.
+
+A worker deve corrigir apenas esses pontos, preservar a arquitetura existente e adicionar cobertura reproduzível. PERF-I continua bloqueada.
 
 
 ## 7. PERF-I — Integração Controlada + Validação de UX

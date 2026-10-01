@@ -29,7 +29,7 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 | PERF-H | `perf-r3-h-metrics-budget` | INTEGRADA | baseline `076a233` | `fb5f452` | Métricas/budget integradas em `a686410`; CI bloqueante ainda não ativado |
 | PERF-F | `perf-r3-f-memory-cache` | INTEGRADA | PERF-C + PERF-D integradas | `570661b` | Cache curto em memória integrado em `14aaa2e`; TTL 30 s; workspace isolado; CI combinado verde |
 | PERF-G | `perf-r3-g-central-shell` | INTEGRADA | PERF-B integrada | `de870d1` | Shell persistente integrado em `238b813`; Central 300 → 106 kB; CI combinado/Core/Recovery verdes |
-| PERF-X | `perf-r3-x-hot-vs-history` | EM ANDAMENTO | A/B/C/D/E/F/G/H integradas | `f4d9b848` | Auditoria aprovada: listener global de `invoices` é gargalo estrutural; implementação mínima autorizada |
+| PERF-X | `perf-r3-x-hot-vs-history` | DEVOLVIDA | A/B/C/D/E/F/G/H integradas | `8aac69a` | CI #867 verde; revisão semântica encontrou 2 bloqueios de UX/legado antes da integração |
 | PERF-I | branch integradora | BLOQUEADA | PERF-X implementada, revisada e integrada | — | Integração final + validação obrigatória de UX |
 | PERF-J | branch integradora | BLOQUEADA | PERF-I concluída | — | Certificação |
 
@@ -76,6 +76,35 @@ Escopo autorizado:
 A branch `perf-r3-x-hot-vs-history` foi criada da integradora em `f4d9b848...` e pode continuar dessa base. Se a integradora avançar apenas por esta documentação de coordenação, **não fazer merge/rebase apenas para acompanhar docs**; a integração semântica ficará com o Coordenador.
 
 PERF-I permanece **BLOQUEADA** até a PERF-X ser implementada, revisada e integrada.
+
+
+
+## Revisão do Coordenador — PERF-X HEAD `8aac69a`
+
+O handoff final da worker foi revisado após Application CI #867 verde no merge virtual `bbe1606e1896c92870bf30a3046a7255733427fb` contra a integradora `ffb47866930a0f1c40217cd273c72049521c88ea`.
+
+Situação técnica:
+- TypeScript: PASS;
+- Production Build: PASS;
+- Core Protection: PASS;
+- Recovery: PASS;
+- segurança: PASS;
+- Block 17.4/17.5: PASS;
+- Diff Hygiene: PASS;
+- release gates: PASS;
+- integração ainda **não autorizada** por dois bloqueios semânticos de UX/compatibilidade.
+
+Bloqueios encontrados:
+1. `useOperationalViewState.ts` mudou o filtro inicial de NF de `Todos` para `FaltaTesouraria`. Pela lógica de `NotasFiscaisView`, classes que exigem TR e ainda estão em `APROVISIONAMENTO` ficam no filtro `FaltaComissao`, portanto deixam de aparecer na abertura inicial. A otimização não pode ocultar uma categoria operacional pendente.
+2. `loadInvoiceCollectionSummaryCounts()` calcula concluídas com `where('localizacaoAtual','==','TESOURARIA')`. Antes do backfill PERF-X estar `READY`, NFs legadas podem não possuir `localizacaoAtual`; nesse estado o runtime mantém listener completo por segurança, mas a contagem agregada pode subcontar concluídas e exibir informação enganosa.
+
+Decisão:
+- **PERF-X DEVOLVIDA PARA CORREÇÃO PONTUAL**;
+- preservar a arquitetura hot/history já implementada;
+- corrigir somente os dois contratos acima;
+- adicionar/ajustar testes que reproduzam ambos os casos;
+- reexecutar CI combinado;
+- PERF-I permanece BLOQUEADA.
 
 
 ## Coordenação concluída — PERF-D
