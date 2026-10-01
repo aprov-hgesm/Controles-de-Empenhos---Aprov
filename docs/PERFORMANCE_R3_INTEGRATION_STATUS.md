@@ -166,7 +166,7 @@ PR técnico #209 validou exatamente `2aca0dce... → 2b72d43...`:
 
 PR #209 foi fechado sem merge após cumprir sua função de validação.
 
-Decisão: **PERF-X INTEGRADA. PERF-I LIBERADA.**
+Decisão naquele marco: **PERF-X INTEGRADA e PERF-I LIBERADA**. Estado atual posterior: **PERF-I APROVADA; PERF-J LIBERADA**.
 
 ## Coordenação concluída — PERF-D
 
