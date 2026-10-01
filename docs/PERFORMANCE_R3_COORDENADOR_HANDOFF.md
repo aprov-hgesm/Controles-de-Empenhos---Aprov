@@ -326,7 +326,7 @@ Riscos/itens deliberadamente fora do escopo:
 - `empenhos`, `alerts`, `comissoes` e `cronogramas` não foram migrados para hot/history;
 - movimentos/ledger da Central permanecem fora deste recorte;
 - redução seletiva só entra em vigor depois do backfill READY;
-- PERF-I deve validar visualmente fallback legado, estado READY, transições operacional→histórico e histórico sob demanda.
+- PERF-I encerrou o contrato PERF-X combinando guards/testes automatizados de fallback/READY/hot-history com jornada manual integrada; reabrir somente diante de regressão objetiva.
 
 **PERF-I foi APROVADA E ENCERRADA. PERF-J está LIBERADA.**
 
