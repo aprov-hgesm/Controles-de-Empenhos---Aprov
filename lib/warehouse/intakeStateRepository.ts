@@ -12,6 +12,7 @@ import {
   where,
   type DocumentData,
   type QueryDocumentSnapshot,
+  type QuerySnapshot,
 } from 'firebase/firestore';
 
 import { recordWarehouseDocumentReads } from './telemetry';
@@ -172,7 +173,7 @@ async function listOperationalBounded<T>(
 
   try {
     for (let page = 0; page < WAREHOUSE_INTAKE_HISTORY_MAX_PAGES; page += 1) {
-      const snapshot = await getDocs(
+      const snapshot: QuerySnapshot<DocumentData> = await getDocs(
         query(
           operationalCollectionRef(scope, collectionName),
           orderBy(documentId(), 'asc'),
@@ -306,7 +307,7 @@ async function listPersistedIntakes(
 
   try {
     for (let page = 0; page < WAREHOUSE_INTAKE_HISTORY_MAX_PAGES; page += 1) {
-      const snapshot = await getDocs(
+      const snapshot: QuerySnapshot<DocumentData> = await getDocs(
         query(
           collection(db, path),
           orderBy(documentId(), 'asc'),
