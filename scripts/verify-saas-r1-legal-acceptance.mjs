@@ -63,6 +63,7 @@ assertContains(privacy, 'não significa que todo tratamento de dados pessoais de
 
 assertContains(rules, 'function validLegalAcceptanceCreate', 'Rules do aceite');
 assertContains(rules, "match /workspaces/{workspaceId}/legalAcceptances/{acceptanceId}", 'Caminho do aceite');
+assertContains(rules, "acceptanceId == request.auth.uid + '__saas-r1-2026-10-01'", 'GET restrito ao aceite vigente do próprio UID');
 assertContains(rules, 'allow list: if false;', 'Sem listagem tenant');
 assertContains(rules, 'allow update, delete: if false;', 'Imutabilidade do aceite');
 assertContains(rules, "acceptedAt == request.time", 'Timestamp autoritativo');
