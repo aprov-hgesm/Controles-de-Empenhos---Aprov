@@ -64,7 +64,7 @@ export function useOperationalViewState() {
   const [nfSubTab, setNfSubTab] = useState<'acompanhar' | 'cadastrar' | 'comissao'>('acompanhar');
   const [nfMonthFilter, setNfMonthFilter] = useState('Todos');
   const [nfEmpenhoFilter, setNfEmpenhoFilter] = useState('Todos');
-  const [nfTramitacaoFilter, setNfTramitacaoFilter] = useState<'Todos' | 'FaltaComissao' | 'FaltaTesouraria' | 'Concluidas'>('Todos');
+  const [nfTramitacaoFilter, setNfTramitacaoFilter] = useState<'Todos' | 'FaltaComissao' | 'FaltaTesouraria' | 'Concluidas'>('FaltaTesouraria');
   const [nfSortOrder, setNfSortOrder] = useState<'recentes' | 'antigas'>('recentes');
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
 

@@ -7,6 +7,9 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { EmpenhoDocumentActions } from '../../../components/EmpenhoDocumentActions';
 import type { Alert, Empenho, Invoice, EmpenhoPdfDocument } from '../../../lib/types';
 import { formatSupplierCnpj } from '../../../lib/invoiceIdentity';
+import { loadInvoiceCountsForEmpenhos } from '../../../lib/historicalInvoiceQueries';
+import { mergeInvoiceCollections } from '../../../lib/invoiceHotHistory';
+import { useHistoricalInvoices } from '../../relatorios/hooks/useHistoricalInvoices';
 import {
   classRequiresTermoRecebimento,
   type EmpenhoClassDefinition,
@@ -144,6 +147,43 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
   const [editingItemId, setEditingItemId] = React.useState<string | null>(null);
   const [itemDetailsDraft, setItemDetailsDraft] = React.useState({ itemCompraNumber: '', name: '' });
   const [savingItemDetails, setSavingItemDetails] = React.useState(false);
+  const [invoiceCountsByEmpenhoId, setInvoiceCountsByEmpenhoId] = React.useState<Map<string, number>>(
+    () => new Map()
+  );
+
+  const {
+    invoices: selectedEmpenhoHistory,
+    loading: selectedEmpenhoHistoryLoading,
+    truncated: selectedEmpenhoHistoryTruncated,
+    error: selectedEmpenhoHistoryError,
+  } = useHistoricalInvoices({
+    mode: 'empenho',
+    keyValue: selectedEmpenhoDetailId || '',
+    enabled: Boolean(selectedEmpenhoDetailId),
+  });
+
+  React.useEffect(() => {
+    let active = true;
+    if (empenhos.length === 0) {
+      setInvoiceCountsByEmpenhoId(new Map());
+      return () => {
+        active = false;
+      };
+    }
+
+    void loadInvoiceCountsForEmpenhos(empenhos.map((empenho) => empenho.id))
+      .then((counts) => {
+        if (active) setInvoiceCountsByEmpenhoId(counts);
+      })
+      .catch((error) => {
+        console.warn('PERF-X: não foi possível carregar as contagens agregadas de NFs.', error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [empenhos]);
+
 
   React.useEffect(() => {
     setEditingItemId(null);
@@ -288,7 +328,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
     return metrics;
   }, [empenhos]);
 
-  const invoicesByEmpenhoId = React.useMemo(() => {
+  const liveInvoicesByEmpenhoId = React.useMemo(() => {
     const index = new Map<string, Invoice[]>();
 
     for (const invoice of invoices) {
@@ -299,6 +339,12 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
 
     return index;
   }, [invoices]);
+
+  const selectedEmpenhoInvoices = React.useMemo(() => {
+    if (!selectedEmpenhoDetailId) return [];
+    const live = liveInvoicesByEmpenhoId.get(selectedEmpenhoDetailId) || [];
+    return mergeInvoiceCollections(live, selectedEmpenhoHistory);
+  }, [liveInvoicesByEmpenhoId, selectedEmpenhoDetailId, selectedEmpenhoHistory]);
 
   const filteredEmpenhos = React.useMemo(() => {
     const normalizedSearch = deferredEmpenhosSearch.toLowerCase();
@@ -518,7 +564,8 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         const saldoDisponivel = metrics?.saldoDisponivel ?? 0;
                         const progressPercentage = metrics?.progressPercentage ?? 0;
                         const itemsComSaldo = metrics?.itemsComSaldo ?? 0;
-                        const empInvoices = invoicesByEmpenhoId.get(emp.id) ?? [];
+                        const liveEmpInvoices = liveInvoicesByEmpenhoId.get(emp.id) ?? [];
+                        const invoiceCount = invoiceCountsByEmpenhoId.get(emp.id);
 
                         return (
                           <div 
@@ -651,7 +698,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                             {/* Card Footer Info & Quick Action Button */}
                             <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
                               <span className="text-[10px] font-semibold text-gray-400">
-                                {emp.items.length} {emp.items.length === 1 ? 'item' : 'itens'} • {empInvoices.length} {empInvoices.length === 1 ? 'NF' : 'NFs'}
+                                {emp.items.length} {emp.items.length === 1 ? 'item' : 'itens'} • {invoiceCount === undefined ? 'NFs: …' : `${invoiceCount} ${invoiceCount === 1 ? 'NF' : 'NFs'}`}
                               </span>
                               <button
                                 type="button"
@@ -710,7 +757,9 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                   const saldoDisponivel = targetMetrics?.saldoDisponivel ?? 0;
                   const percentExecuted = targetMetrics?.progressPercentage ?? 0;
                   const itemsComSaldo = targetMetrics?.itemsComSaldo ?? 0;
-                  const targetInvoices = invoicesByEmpenhoId.get(targetEmp.id) ?? [];
+                  const targetInvoices = selectedEmpenhoInvoices;
+                  const targetInvoiceCount = invoiceCountsByEmpenhoId.get(targetEmp.id)
+                    ?? (selectedEmpenhoHistoryLoading ? null : targetInvoices.length);
                   const totalInvoicesValue = targetInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
                   const requiresCommission = classRequiresTermoRecebimento(
                     targetEmp.classification,
@@ -1217,7 +1266,9 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                             </h4>
                           </div>
                           <p className="text-[11px] font-semibold text-emerald-700 mt-3 pt-2 border-t border-emerald-50">
-                            {targetInvoices.length} {targetInvoices.length === 1 ? 'nota fiscal conciliada' : 'notas fiscais conciliadas'}
+                            {targetInvoiceCount === null
+                              ? 'Histórico de NFs carregando…'
+                              : `${targetInvoiceCount} ${targetInvoiceCount === 1 ? 'nota fiscal conciliada' : 'notas fiscais conciliadas'}`}
                           </p>
                         </div>
 
@@ -1590,7 +1641,11 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                 Notas Fiscais Cadastradas para este Empenho
                               </h4>
                               <p className="text-xs text-gray-500 font-medium">
-                                Total de {targetInvoices.length} {targetInvoices.length === 1 ? 'nota fiscal vinculada' : 'notas fiscais vinculadas'} a este empenho
+                                {selectedEmpenhoHistoryLoading
+                                  ? 'Carregando histórico completo de Notas Fiscais…'
+                                  : targetInvoiceCount === null
+                                    ? 'Contagem de NFs sendo consolidada…'
+                                    : `Total de ${targetInvoiceCount} ${targetInvoiceCount === 1 ? 'nota fiscal vinculada' : 'notas fiscais vinculadas'} a este empenho`}
                               </p>
                             </div>
                           </div>
@@ -1611,7 +1666,20 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                         </div>
 
                         {/* Invoices List or Empty State */}
-                        {targetInvoices.length === 0 ? (
+                        {selectedEmpenhoHistoryLoading ? (
+                          <div className="p-8 text-center bg-gray-50/50">
+                            <Loader2 className="w-8 h-8 text-[#00288e] mx-auto mb-2 animate-spin" />
+                            <p className="text-xs font-bold text-gray-500">Carregando todas as Notas Fiscais vinculadas…</p>
+                          </div>
+                        ) : selectedEmpenhoHistoryError ? (
+                          <div className="p-8 text-center bg-rose-50/50">
+                            <AlertTriangle className="w-8 h-8 text-rose-500 mx-auto mb-2" />
+                            <p className="text-xs font-bold text-rose-700">
+                              Não foi possível carregar o histórico completo deste empenho.
+                            </p>
+                            <p className="mt-1 text-[11px] font-medium text-rose-600">{selectedEmpenhoHistoryError}</p>
+                          </div>
+                        ) : targetInvoices.length === 0 ? (
                           <div className="p-8 text-center bg-gray-50/50">
                             <FileText className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                             <p className="text-xs font-bold text-gray-500">Nenhuma Nota Fiscal cadastrada para este empenho até o momento.</p>
@@ -1627,7 +1695,13 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                             </button>
                           </div>
                         ) : (
-                          <div className="overflow-x-auto">
+                          <div className="space-y-2">
+                            {selectedEmpenhoHistoryTruncated && (
+                              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-[11px] font-semibold text-amber-800">
+                                O histórico atingiu o limite de segurança da consulta. Revise os filtros antes de operações em lote.
+                              </div>
+                            )}
+                            <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse text-xs">
                               <thead>
                                 <tr className="bg-gray-50/80 border-b border-gray-200/80 text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">
@@ -1779,7 +1853,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                               <tfoot>
                                 <tr className="bg-gray-50 font-black text-xs text-[#0b1c30] border-t border-gray-200">
                                   <td colSpan={7} className="p-3.5 pl-5 uppercase tracking-wider text-gray-500 text-[10px]">
-                                    Total de Notas Fiscais Lançadas ({targetInvoices.length})
+                                    Total de Notas Fiscais Lançadas ({targetInvoiceCount ?? targetInvoices.length})
                                   </td>
                                   <td className="p-3.5 text-right font-black text-emerald-600">
                                     R$ {totalInvoicesValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -1788,6 +1862,7 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                                 </tr>
                               </tfoot>
                             </table>
+                            </div>
                           </div>
                         )}
                       </div>

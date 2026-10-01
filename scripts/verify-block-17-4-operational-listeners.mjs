@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs';
+import './verify-performance-r3-hot-history.mjs';
 const plan=readFileSync('lib/operationalSubscriptionPlan.ts','utf8');
+const realtime=readFileSync('hooks/useOperationalRealtimeCollections.ts','utf8');
 const classes=readFileSync('hooks/useEmpenhoClasses.ts','utf8');
 const drive=readFileSync('lib/workspaceDriveSettings.ts','utf8');
 const driveHook=readFileSync('hooks/useWorkspaceDriveStorage.ts','utf8');
 const failures=[];
 if (!plan.includes("inicio: {\n    empenhos: false")) failures.push('Home voltou a abrir coleções brutas.');
+if (!realtime.includes('useRealtimeInvoiceSubscription')) failures.push('PERF-X perdeu subscription dedicada de invoices.');
+if (!realtime.includes("where('localizacaoAtual', 'in', [...INVOICE_OPERATIONAL_LOCATIONS])")) failures.push('PERF-X voltou a observar invoices históricas sem recorte operacional.');
+if (!realtime.includes('isInvoiceHotHistoryReady')) failures.push('PERF-X perdeu fallback seguro para legado sem backfill.');
 if (!classes.includes('enabled = true') || !classes.includes('if (!enabled)')) failures.push('Listener de classes não está condicionado à superfície.');
 if (drive.includes('onSnapshot(') || drive.includes('subscribeWorkspaceDriveSettings')) failures.push('Drive settings voltou a listener permanente.');
 if (!drive.includes('loadWorkspaceDriveSettings') || !driveHook.includes('loadWorkspaceDriveSettings')) failures.push('Leitura one-shot do Drive ausente.');

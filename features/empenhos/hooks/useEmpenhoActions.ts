@@ -17,6 +17,8 @@ import { getInvoiceRecordKey, isValidSupplierCnpj, normalizeSupplierCnpj } from 
 import { commitEmpenhoSupplierCnpjMigration } from '../../../lib/nsIntegrityService';
 import { isValidNsNumber, normalizeNsNumber } from '../../../lib/nsIntegrity';
 import { loadJsPdf } from '../../../lib/pdfToolkit';
+import { loadInvoicesForEmpenho } from '../../../lib/historicalInvoiceQueries';
+import { mergeInvoiceCollections } from '../../../lib/invoiceHotHistory';
 
 type ActiveTab = 'inicio' | 'painel' | 'empenhos' | 'fornecedores' | 'itens' | 'nova_nf' | 'relatorios' | 'itens_empenho' | 'cronogramas' | 'avisos';
 type NewEmpenhoForm = { id: string; supplier: string; supplierCnpj: string; description: string; pregao: string; date: string; classification: string };
@@ -235,7 +237,27 @@ export function useEmpenhoActions(context: EmpenhoActionsContext) {
     }
 
     const currentCnpj = normalizeSupplierCnpj(currentEmpenho.supplierCnpj);
-    const linkedInvoices = invoices.filter((invoice) => invoice.empenhoId === empenhoId);
+    let linkedInvoices = invoices.filter((invoice) => invoice.empenhoId === empenhoId);
+
+    try {
+      const historical = await loadInvoicesForEmpenho(empenhoId);
+      if (historical.truncated) {
+        showToast(
+          'O histórico de Notas Fiscais deste empenho atingiu o limite de segurança. A alteração de CNPJ foi bloqueada para evitar migração parcial.',
+          'error'
+        );
+        return;
+      }
+      linkedInvoices = mergeInvoiceCollections(linkedInvoices, historical.invoices)
+        .filter((invoice) => invoice.empenhoId === empenhoId);
+    } catch (error) {
+      console.error('Erro ao carregar histórico de NFs antes da migração de CNPJ:', error);
+      showToast(
+        'Não foi possível validar todas as Notas Fiscais vinculadas. O CNPJ não foi alterado.',
+        'error'
+      );
+      return;
+    }
 
     if (!normalizedCnpj && linkedInvoices.length > 0) {
       showToast(
