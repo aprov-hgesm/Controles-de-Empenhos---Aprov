@@ -192,6 +192,47 @@ A branch `feat/performance-r3-commercializacao` é a branch de integração e do
 
 Detalhes completos de propriedade, dependências, conflitos, templates de handoff e papel do coordenador: `docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md`.
 
+## Transição pós-PERF-J para EMPROVEX SaaS R1
+
+Depois da PERF-J, a Performance R3 só é considerada encerrada quando houver:
+- autorização explícita do usuário;
+- merge consolidado em `main`;
+- deploy consolidado na Vercel;
+- smoke test de produção;
+- registro do HEAD/tag efetivamente publicado.
+
+A partir daí, o desenvolvimento comercial passa para um novo programa e **não deve continuar acumulado nesta branch/rodada**.
+
+Sequência lógica definida:
+
+> **Release R3 publicada → cobrança/trial → onboarding → segurança/legal → operação/backup/monitoramento → piloto comercial → SaaS aberto**
+
+Orientação de produto para cobrança:
+- começar simples;
+- preferência por Mercado Pago;
+- link de pagamento e/ou Pix;
+- trial controlado pelo EMPROVEX;
+- conciliação/ativação manual ou assistida inicialmente;
+- API/webhook/recorrência automática apenas se a operação real justificar.
+
+Orientação de execução:
+- criar uma nova branch integradora do SaaS R1;
+- congelar primeiro contratos comuns de cliente/workspace/UG/status comercial;
+- dividir cobrança, onboarding, segurança/legal e operação/monitoramento em workers independentes quando possível;
+- executar ondas paralelas com handoff obrigatório;
+- integrar semanticamente na branch integradora;
+- executar validação integrada antes do piloto;
+- usar o piloto para validar operação/custo/capacidade, inclusive meta inicial de até 100 usuários;
+- realizar certificação comercial antes de abrir amplamente.
+
+O detalhamento completo desse novo programa deverá ser produzido pelo próximo Chat Coordenador nos documentos:
+- `docs/SAAS_R1_PLANO_MESTRE.md`;
+- `docs/SAAS_R1_EXECUCAO_PARALELA.md`;
+- `docs/SAAS_R1_INTEGRATION_STATUS.md`;
+- `docs/SAAS_R1_COORDENADOR_HANDOFF.md`.
+
+Até esses documentos existirem, prevalece o macroplanejamento registrado no `docs/EMPROVEX_MEMORIAL_OFICIAL.md`.
+
 ## Restrições
 
 - visual aprovado é preservado;
