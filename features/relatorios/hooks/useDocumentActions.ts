@@ -11,6 +11,8 @@ import { fetchInvoicePdfBlob } from '../../../lib/invoiceDocuments';
 import { loadJsPdfWithAutoTable } from '../../../lib/pdfToolkit';
 import { resolveInstitutionalDocumentIdentity } from '../../../lib/institutionalDocumentProfile';
 import type { WorkspaceInstitutionalProfile } from '../../../lib/platformIdentity';
+import { loadAllInvoicesHistory, loadInvoicesForEmpenho } from '../../../lib/historicalInvoiceQueries';
+import { mergeInvoiceCollections } from '../../../lib/invoiceHotHistory';
 import {
   filterInvoicesByReportingPeriod,
   formatReportingPeriodLabel,
@@ -73,7 +75,27 @@ export function useDocumentActions(context:DocumentActionsContext){
 
     let updatedInvoiceWithTR: Invoice = inv;
     if (user) {
-      const maxTermoNumero = invoices.reduce(
+      let completeInvoices: Invoice[];
+      try {
+        const historical = await loadAllInvoicesHistory();
+        if (historical.truncated) {
+          showToast(
+            'O histórico de NFs atingiu o limite de segurança. A numeração do Termo não foi reservada para evitar colisão.',
+            'error'
+          );
+          return;
+        }
+        completeInvoices = mergeInvoiceCollections(invoices, historical.invoices);
+      } catch (error) {
+        console.error('Erro ao validar histórico antes da numeração do Termo:', error);
+        showToast(
+          'Não foi possível validar a numeração histórica dos Termos de Recebimento.',
+          'error'
+        );
+        return;
+      }
+
+      const maxTermoNumero = completeInvoices.reduce(
         (max, invoice) => invoice.termoNumero && invoice.termoNumero > max ? invoice.termoNumero : max,
         0
       );
@@ -580,7 +602,7 @@ export function useDocumentActions(context:DocumentActionsContext){
     emp: Empenho,
     action: 'download' | 'print' = 'download',
     reportingPeriod: ReportingPeriod = {},
-    invoiceSource: Invoice[] = invoices
+    invoiceSource?: Invoice[]
   ) => {
     if (!emp) {
       showToast('Nenhum empenho selecionado para exportação.', 'error');
@@ -591,9 +613,34 @@ export function useDocumentActions(context:DocumentActionsContext){
       return;
     }
 
+    let effectiveInvoiceSource = invoiceSource;
+    if (!effectiveInvoiceSource) {
+      try {
+        const historical = await loadInvoicesForEmpenho(emp.id);
+        if (historical.truncated) {
+          showToast(
+            'O histórico deste empenho atingiu o limite de segurança. O relatório não foi gerado para evitar totais incompletos.',
+            'error'
+          );
+          return;
+        }
+        effectiveInvoiceSource = mergeInvoiceCollections(
+          invoices.filter((invoice) => invoice.empenhoId === emp.id),
+          historical.invoices
+        );
+      } catch (error) {
+        console.error('Erro ao carregar histórico para o relatório do empenho:', error);
+        showToast(
+          'Não foi possível carregar todas as NFs do empenho para gerar o relatório.',
+          'error'
+        );
+        return;
+      }
+    }
+
     const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
     const empRequiresTR = classRequiresTermoRecebimento(emp.classification, empenhoClasses);
-    const allPdfInvoices = invoiceSource.filter((inv) => inv.empenhoId === emp.id);
+    const allPdfInvoices = effectiveInvoiceSource.filter((inv) => inv.empenhoId === emp.id);
     const pdfInvoices = filterInvoicesByReportingPeriod(allPdfInvoices, reportingPeriod);
     const pdfPeriodReceivedNfe = pdfInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
     const pdfAccumulatedReceivedNfe = allPdfInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
