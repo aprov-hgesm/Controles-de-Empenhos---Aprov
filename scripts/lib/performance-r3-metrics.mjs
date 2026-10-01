@@ -7,7 +7,7 @@ export function stripAnsi(value) {
 }
 
 export function stripCiLogPrefix(value) {
-  return String(value ?? '').replace(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d+Z\\s+/, '');
+  return String(value ?? '').replace(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+/, '');
 }
 
 export function sizeToKb(value) {
