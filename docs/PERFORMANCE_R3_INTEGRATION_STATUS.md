@@ -25,7 +25,7 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 | PERF-B | `perf-r3-b-central-bundle` | INTEGRADA | baseline comum | `7b7aee1` | Bundle Central; -48,2% nas rotas principais |
 | PERF-C | `perf-r3-c-outbound-demand-loading` | EM ANDAMENTO | baseline comum | `c263ce3` | Saída sob demanda; aguardando fechamento dos gates |
 | PERF-D | `perf-r3-d-intake-queue` | EM ANDAMENTO | baseline comum | — | Intake seletivo |
-| PERF-E | `perf-r3-e-render-cpu` | EM REVISÃO | baseline `076a233`; hoje 1 ahead / 2 behind da integradora | `149f7c3` | CPU/renderização; benchmark + guard próprios PASS; TypeScript/build/Core pendentes |
+| PERF-E | `perf-r3-e-render-cpu` | INTEGRADA | baseline `076a233` | `149f7c3` | CPU/renderização integrada em `9d5ff58`; gates locais verdes |
 | PERF-H | `perf-r3-h-metrics-budget` | EM ANDAMENTO | baseline comum | — | Métricas/budget |
 | PERF-F | `perf-r3-f-memory-cache` | BLOQUEADA | C/D estabilizados | — | Segunda onda |
 | PERF-G | `perf-r3-g-central-shell` | LIVRE | PERF-B integrada | — | Segunda onda liberada; preservar fronteiras dinâmicas da PERF-B |
@@ -45,35 +45,6 @@ Antes de uma frente mudar de `LIVRE` para `EM ANDAMENTO`, o coordenador deve reg
 - métrica de sucesso.
 
 ## Revisões em andamento
-
-### PERF-E — CPU e Renderização
-
-Branch: `perf-r3-e-render-cpu`  
-HEAD: `149f7c3945eae7cb046175499abe5bf6868eb9bb`  
-Base original: `076a233cf250c95882e78498e89dd2a44d034f74`
-
-Estado do coordenador: **EM REVISÃO — NÃO INTEGRAR AINDA**.
-
-Evidências recebidas:
-- benchmark determinístico: PASS;
-- equivalência por checksum: PASS;
-- guard estrutural PERF-E: PASS;
-- escopo restrito a Empenhos, Notas Fiscais e Consulta de Itens;
-- nenhuma mudança de Firestore, estética ou regra de negócio intencional.
-
-Relação atual com a integradora:
-- 1 commit à frente;
-- 2 commits atrás, porque a integradora já recebeu PERF-B e o registro de integração;
-- arquivos da PERF-E não sobrepõem os arquivos alterados pela PERF-B.
-
-Gates ainda obrigatórios antes de aprovação:
-- TypeScript;
-- production build;
-- `verify:empenhos-subtabs`;
-- `verify:invoice-ns-lifecycle`;
-- `verify:emprovex-core-protection`.
-
-Decisão provisória: **aguardar gates; não integrar**.
 
 ## Registro de integração
 
@@ -123,6 +94,41 @@ Conflitos resolvidos:
 Pendências:
 - nenhuma da PERF-B;
 - PERF-G deve preservar `WarehouseSectionContent` como fronteira de carregamento dinâmico e não reintroduzir imports estáticos das grandes superfícies.
+
+Decisão: **INTEGRADA**.
+
+
+
+### PERF-E — CPU e Renderização
+
+Branch: `perf-r3-e-render-cpu`  
+HEAD revisado: `149f7c3945eae7cb046175499abe5bf6868eb9bb`  
+Commit de integração: `9d5ff5834da61477a1f454a452eb32b19414d23e`.
+
+Medição:
+- Empenhos: **1.732.500 → 11.250 varreduras (-99,35%)**;
+- Notas Fiscais: **3.388.500 → 5.250 varreduras (-99,85%)**;
+- Consulta de Itens/digitação: **54.072 → 9.072 varreduras (-83,22%)**.
+
+Validação executada pelo usuário no clone completo:
+- guard PERF-E: **PASS**;
+- benchmark/checksum: **PASS**;
+- `npm run typecheck`: **PASS**;
+- `npm run build`: **PASS**;
+- `verify:empenhos-subtabs`: **PASS**;
+- `verify:invoice-ns-lifecycle`: **PASS**;
+- `verify:emprovex-core-protection`: **PASS**.
+
+Observação de build isolado da PERF-E:
+- `/`: 461 kB;
+- rotas da Central ainda apareciam com 579 kB porque a branch PERF-E partiu do baseline anterior à integração da PERF-B; a integração combinada preserva a PERF-B na branch R3.
+
+Conflitos resolvidos:
+- nenhum conflito de arquivo com a PERF-B;
+- integração feita por merge técnico com árvore combinada, preservando ambos os históricos.
+
+Pendências:
+- validar novamente build/métricas no estado combinado durante PERF-I/PERF-J.
 
 Decisão: **INTEGRADA**.
 
