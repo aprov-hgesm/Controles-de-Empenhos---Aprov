@@ -183,7 +183,7 @@ Build combinado após PERF-A + PERF-B/C/E/H:
 
 A incompatibilidade cruzada encontrada no guard de classes de empenho foi resolvida pelo coordenador alterando apenas a expectativa estrutural do guard para a derivação memoizada já vigente em Notas Fiscais; nenhuma regra funcional foi alterada.
 
-- **PERF-D — Intake seletivo:** implementação avançada e em pausa coordenada de realinhamento no HEAD `a514728`; Core Protection e Recovery Guardrails estão verdes. O Application CI isolado percorreu os gates e falhou apenas no Diff Hygiene por três espaços finais em `docs/PERFORMANCE_R3_PERF_D_INTAKE_QUEUE.md` (linhas 3–5), correção local/trivial da própria frente. A frente não deve reconciliar por conta própria as mudanças concorrentes de PERF-B/PERF-H.
+- **PERF-D — Intake seletivo:** INTEGRADA; o caminho normal `A tratar` passou a usar índice derivado mínimo + NFs novas desde watermark + candidatos ativos, enquanto histórico/reconciliação ficam sob demanda. Cenários sintéticos registraram ~97,26% a ~99,69% de redução de documentos no steady-state para massas históricas grandes, preservando ausência de intake como PENDING e demais contratos.
 
 A branch integradora, e não as branches trabalhadoras antigas, passa a ser a referência para compatibilidade cruzada entre frentes.
 
@@ -204,26 +204,26 @@ Toda mudança de performance deve ser reversível, medida e compatível com os g
 
 ### Realinhamento específico da PERF-D
 
-A PERF-D trabalha sobre a base original `076a233cf250c95882e78498e89dd2a44d034f74` e deve terminar sua validação **isoladamente**, sem rebase/merge da branch integradora.
+A PERF-D foi concluída isoladamente sobre a base original `076a233cf250c95882e78498e89dd2a44d034f74` e posteriormente integrada semanticamente pelo coordenador no commit `2e77af1706a599152dff8ec43a197d68056d5ae2`.
 
 Sobreposições já identificadas pelo coordenador:
 - `WarehouseItemRegistrationOperational.tsx` também foi alterado pela PERF-B já integrada para preservar code splitting/lazy loading das subtelas;
 - `package.json` também foi alterado pela PERF-H já integrada para adicionar os scripts `perf:r3:*`.
 
-Essas sobreposições não invalidam a PERF-D. Elas são conflitos de integração e pertencem ao Chat Coordenador/PERF-I. Na integração, devem coexistir:
+Essas sobreposições foram resolvidas pelo Chat Coordenador na integração certificada. Passaram a coexistir:
 - o intake seletivo da PERF-D;
 - os imports dinâmicos da PERF-B;
 - os scripts de métricas da PERF-H;
 - os testes/scripts específicos da PERF-D.
 
-A PERF-D não deve:
-- tentar tornar o PR contra a integradora atual mergeable;
-- rebasear ou incorporar B/C/E/H;
-- remover imports dinâmicos introduzidos pela PERF-B;
-- remover scripts `perf:r3:*` introduzidos pela PERF-H;
-- ampliar escopo para cache compartilhado da PERF-F.
+Resultado consolidado:
+- intake seletivo da PERF-D preservado;
+- `dynamic import()` da PERF-B preservado em `WarehouseItemRegistrationOperational.tsx`;
+- scripts `perf:r3:*` da PERF-H preservados no `package.json`;
+- scripts/testes da PERF-D adicionados;
+- CI combinado, Core Protection e Recovery Guardrails verdes.
 
-O fluxo correto é: **validar na base congelada → documentar métricas/gates → entregar handoff → parar → coordenador integra semanticamente**.
+A dependência da PERF-F está satisfeita; PERF-F pode iniciar a partir da branch integradora atual.
 
 ### Regra de guards em trabalho paralelo
 
