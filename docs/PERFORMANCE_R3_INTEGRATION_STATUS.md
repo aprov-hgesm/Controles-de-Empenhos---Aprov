@@ -29,83 +29,89 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 | PERF-H | `perf-r3-h-metrics-budget` | INTEGRADA | baseline `076a233` | `fb5f452` | Métricas/budget integradas em `a686410`; CI bloqueante ainda não ativado |
 | PERF-F | `perf-r3-f-memory-cache` | INTEGRADA | PERF-C + PERF-D integradas | `570661b` | Cache curto em memória integrado em `14aaa2e`; TTL 30 s; workspace isolado; CI combinado verde |
 | PERF-G | `perf-r3-g-central-shell` | INTEGRADA | PERF-B integrada | `de870d1` | Shell persistente integrado em `238b813`; Central 300 → 106 kB; CI combinado/Core/Recovery verdes |
-| PERF-X | `perf-r3-x-hot-vs-history` | DEVOLVIDA | A/B/C/D/E/F/G/H integradas | `8aac69a` | CI #867 verde; revisão semântica encontrou 2 bloqueios de UX/legado antes da integração |
-| PERF-I | branch integradora | BLOQUEADA | PERF-X implementada, revisada e integrada | — | Integração final + validação obrigatória de UX |
+| PERF-X | `perf-r3-x-hot-vs-history` | INTEGRADA | A/B/C/D/E/F/G/H integradas | `8aac69a` | Worker integrada em `2aca0dce`; correção coordenadora UX/legado em `2b72d43`; CI #868 final verde |
+| PERF-I | branch integradora | LIVRE | PERF-X integrada e certificada | — | Próxima fase: integração final + validação obrigatória de UX |
 | PERF-J | branch integradora | BLOQUEADA | PERF-I concluída | — | Certificação |
 
 
 ## Próxima ação coordenada
 
-Com A/B/C/D/E/F/G/H integradas, **não há outra frente de implementação obrigatória aberta antes da decisão sobre PERF-X**.
+A/B/C/D/E/F/G/H/X estão **INTEGRADAS**.
 
-Sequência:
-1. auditoria objetiva da PERF-X: **CONCLUÍDA**;
-2. decisão do Coordenador: **PERF-X NECESSÁRIA**;
-3. implementar somente o recorte comprovado, começando por `invoices`, e integrar após revisão;
-4. liberar PERF-I apenas depois da integração formal da PERF-X;
-5. PERF-I deve combinar certificação técnica com o checklist obrigatório de UX;
-6. PERF-J certifica o candidato final;
-7. `main` e produção continuam proibidas sem autorização explícita do usuário.
+Sequência atual:
+1. **PERF-I — LIVRE**: executar integração final, métricas, segurança e checklist obrigatório de UX sobre a integradora atual;
+2. **PERF-J — BLOQUEADA** até PERF-I ser formalmente aprovada;
+3. depois da PERF-J, qualquer merge em `main` ou publicação depende de autorização explícita do usuário.
 
-Qualquer novo chat deve confirmar o HEAD real de `feat/performance-r3-commercializacao` antes de criar branch ou analisar métricas.
+PERF-X foi encerrada após:
+- worker certificada no HEAD `8aac69a92120ff97f0d4ab84e46a470b5c632843`;
+- PR #208 integrado em `2aca0dce1d511d0cc8df329614fac93f4e917144`;
+- duas correções semânticas do Coordenador em `2b72d43ac2a387682fb1c0089d36bef2177d0f17`;
+- PR técnico #209 validando exatamente o delta `2aca0dce... → 2b72d43...`;
+- Application CI #868: **SUCCESS**;
+- Core Protection #155: **SUCCESS**;
+- Production Build, TypeScript final, Diff Hygiene e release gates 16–21: **SUCCESS**.
 
+Qualquer novo chat deve confirmar o HEAD real de `feat/performance-r3-commercializacao` antes de agir.
 
+## Fechamento do Coordenador — PERF-X
 
-## Decisão do Coordenador — PERF-X
+Status final: **INTEGRADA E CERTIFICADA**.
 
-Auditoria recebida em 2026-10-01 e revisada contra o HEAD integrado `f4d9b848735d6ea58e7057ff5f7616bd535f643e`.
+### Worker
 
-Conclusão: **PERF-X NECESSÁRIA — IMPLEMENTAÇÃO AUTORIZADA**.
+- branch: `perf-r3-x-hot-vs-history`;
+- base funcional: `f4d9b848735d6ea58e7057ff5f7616bd535f643e`;
+- HEAD certificado: `8aac69a92120ff97f0d4ab84e46a470b5c632843`;
+- PR #208;
+- integração: `2aca0dce1d511d0cc8df329614fac93f4e917144`.
 
-Evidência confirmada:
-- `useOperationalRealtimeCollections.ts` cria `onSnapshot(operationalCollectionRef(...))` sem filtro, limite ou paginação;
-- o primeiro snapshot é contabilizado por `snapshot.size`;
-- o plano de subscriptions ativa `invoices` nas superfícies normais **Empenhos** e **Nova NF**;
-- portanto o snapshot inicial de `invoices` é proporcional ao total histórico da coleção e pode ser recriado ao sair/voltar da superfície;
-- `historicalInvoiceQueries.ts` já demonstra o padrão correto para histórico: filtro server-side + paginação sob demanda.
+### Arquitetura integrada
 
-Escopo autorizado:
-- corrigir primeiro e prioritariamente **`invoices`**;
-- separar conjunto operacional realtime de acesso histórico sob demanda;
-- preservar integralmente NFs antigas ainda operacionais;
-- preservar detalhes completos por empenho, contagens, totais, pendências, filtros, concluídas e edição;
-- não usar corte temporal arbitrário;
-- não reabrir A/B/C/D/E/F/G/H;
-- não alterar ledger, intakeQueueIndex, cache PERF-F, shell PERF-G, Rules, auth, sessão/lease ou visual sem nova decisão do Coordenador.
+- `invoices` foi separada entre conjunto operacional realtime e histórico sob demanda;
+- após backfill certificado, o listener realtime observa somente NFs em `APROVISIONAMENTO` ou `COMISSAO`;
+- `TESOURARIA` permanece histórica e consultável sob demanda;
+- antes do marcador READY, o runtime mantém o listener completo legado;
+- backfill é explícito, idempotente e não altera Rules;
+- Empenhos carrega histórico por empenho sob demanda e usa agregação para contagens;
+- Nova NF mantém histórico completo em `Todas`/`Concluídas` sob demanda;
+- operações críticas que exigem visão completa consultam histórico antes de prosseguir.
 
-A branch `perf-r3-x-hot-vs-history` foi criada da integradora em `f4d9b848...` e pode continuar dessa base. Se a integradora avançar apenas por esta documentação de coordenação, **não fazer merge/rebase apenas para acompanhar docs**; a integração semântica ficará com o Coordenador.
+Métrica sintética da worker, com 20 NFs operacionais:
+- 100 → 20 realtime: -80%;
+- 1.000 → 20: -98%;
+- 10.000 → 20: -99,8%;
+- histórico pré-solicitação: 0 documentos.
+Esses números são sintéticos, não produção.
 
-PERF-I permanece **BLOQUEADA** até a PERF-X ser implementada, revisada e integrada.
+### Correções de integração do Coordenador
 
+A revisão pós-CI #867 identificou dois problemas semânticos que os gates iniciais não cobriam:
+1. filtro inicial `FaltaTesouraria` ocultava NFs aguardando Comissão;
+2. contagem agregada de concluídas podia subcontar registros legados antes do backfill READY.
 
+Correção em `2b72d43ac2a387682fb1c0089d36bef2177d0f17`:
+- filtro inicial passou a ser **Em tramitação**, união das NFs operacionais pendentes sem forçar histórico;
+- contagem de concluídas só usa `localizacaoAtual=TESOURARIA` depois do marcador READY; antes disso, deriva do conjunto legado completo já carregado;
+- guard/teste PERF-X foi atualizado para proteger esses contratos.
 
-## Revisão do Coordenador — PERF-X HEAD `8aac69a`
+### Certificação final
 
-O handoff final da worker foi revisado após Application CI #867 verde no merge virtual `bbe1606e1896c92870bf30a3046a7255733427fb` contra a integradora `ffb47866930a0f1c40217cd273c72049521c88ea`.
+PR técnico #209 validou exatamente `2aca0dce... → 2b72d43...`:
+- Application CI #868: **PASS**;
+- Core Protection #155: **PASS**;
+- Production Build: **PASS**;
+- Final TypeScript: **PASS**;
+- Diff Hygiene: **PASS**;
+- Block 17.4 operational listeners: **PASS**;
+- Block 17.5 historical scalability: **PASS**;
+- segurança multi-tenant e Central externa: **PASS**;
+- release gates 16, 17, 18, 19, 20 e 21: **PASS**;
+- Vercel preview/status: **SUCCESS**.
 
-Situação técnica:
-- TypeScript: PASS;
-- Production Build: PASS;
-- Core Protection: PASS;
-- Recovery: PASS;
-- segurança: PASS;
-- Block 17.4/17.5: PASS;
-- Diff Hygiene: PASS;
-- release gates: PASS;
-- integração ainda **não autorizada** por dois bloqueios semânticos de UX/compatibilidade.
+PR #209 foi fechado sem merge após cumprir sua função de validação.
 
-Bloqueios encontrados:
-1. `useOperationalViewState.ts` mudou o filtro inicial de NF de `Todos` para `FaltaTesouraria`. Pela lógica de `NotasFiscaisView`, classes que exigem TR e ainda estão em `APROVISIONAMENTO` ficam no filtro `FaltaComissao`, portanto deixam de aparecer na abertura inicial. A otimização não pode ocultar uma categoria operacional pendente.
-2. `loadInvoiceCollectionSummaryCounts()` calcula concluídas com `where('localizacaoAtual','==','TESOURARIA')`. Antes do backfill PERF-X estar `READY`, NFs legadas podem não possuir `localizacaoAtual`; nesse estado o runtime mantém listener completo por segurança, mas a contagem agregada pode subcontar concluídas e exibir informação enganosa.
-
-Decisão:
-- **PERF-X DEVOLVIDA PARA CORREÇÃO PONTUAL**;
-- preservar a arquitetura hot/history já implementada;
-- corrigir somente os dois contratos acima;
-- adicionar/ajustar testes que reproduzam ambos os casos;
-- reexecutar CI combinado;
-- PERF-I permanece BLOQUEADA.
-
+Decisão: **PERF-X INTEGRADA. PERF-I LIBERADA.**
 
 ## Coordenação concluída — PERF-D
 

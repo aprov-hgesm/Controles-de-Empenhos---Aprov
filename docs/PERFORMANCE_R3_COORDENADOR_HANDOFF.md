@@ -56,15 +56,14 @@ Estado canônico da rodada:
 - branch integradora: `feat/performance-r3-commercializacao`;
 - HEAD antes desta atualização documental: `8247b358d7ba118cd6be3cc9f10cee0b079b657b`;
 - `main`: `22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`;
-- A/B/C/D/E/F/G/H: **INTEGRADAS**;
-- PERF-X: **NECESSÁRIA / implementação autorizada**, após auditoria objetiva;
-- PERF-I: bloqueada até PERF-X ser implementada, revisada e integrada;
+- A/B/C/D/E/F/G/H/X: **INTEGRADAS**;
+- PERF-I: **LIVRE**;
 - PERF-J: bloqueada até PERF-I;
 - nenhuma integração R3 em `main`;
 - nenhum deploy consolidado R3 em produção.
 
 Ordem obrigatória daqui em diante:
-`PERF-X (implementar recorte autorizado de invoices) → revisão/integração pelo Coordenador → PERF-I (integração + UX) → PERF-J (certificação) → autorização explícita do usuário → main/release`.
+`PERF-I (integração + UX) → PERF-J (certificação) → autorização explícita do usuário → main/release`.
 
 Regra de retomada:
 - novos trabalhos devem partir da integradora **atual**, nunca dos baselines históricos;
@@ -285,57 +284,43 @@ A PERF-F foi encerrada no commit de integração `14aaa2e747fffaf2427ea63f4cd523
 
 Não ampliar o cache automaticamente. Qualquer novo recurso candidato deve provar que é estrutural/estável e que não participa de decisão autoritativa. A separação entre APIs históricas uncached e APIs explícitas `Cached` é contrato a preservar.
 
-## 6. PERF-X
+## 6. PERF-X — concluída
 
-**Próxima decisão do Coordenador. Não iniciar automaticamente.**
+Status: **INTEGRADA E CERTIFICADA**.
 
-Com PERF-F integrada, revisar as medições combinadas e os reads/listeners históricos ainda existentes. Só abrir PERF-X se houver evidência objetiva de gargalo relevante de dados quentes vs. histórico.
+Referências:
+- worker: `perf-r3-x-hot-vs-history@8aac69a92120ff97f0d4ab84e46a470b5c632843`;
+- integração PR #208: `2aca0dce1d511d0cc8df329614fac93f4e917144`;
+- correção semântica do Coordenador: `2b72d43ac2a387682fb1c0089d36bef2177d0f17`;
+- validação final: PR técnico #209, fechado sem merge;
+- Application CI #868: **PASS**;
+- Core Protection #155: **PASS**;
+- build, TypeScript final, Diff Hygiene e gates 16–21: **PASS**.
 
-Sem evidência suficiente: marcar PERF-X como **DISPENSADA** e liberar PERF-I.
+Contrato:
+- `invoices` realtime somente operacional após backfill READY;
+- histórico completo sob demanda;
+- fallback integral antes do READY;
+- backfill idempotente/seguro, sem Rules;
+- Empenhos: contagens agregadas + detalhe histórico por empenho;
+- Nova NF: abre em **Em tramitação**; `Todas`/`Concluídas` sob demanda;
+- compatibilidade legada preservada nas contagens antes do READY;
+- operações críticas consultam histórico quando precisam visão integral.
 
+Métrica sintética worker, com 20 operacionais:
+- 100 → 20;
+- 1.000 → 20;
+- 10.000 → 20;
+- histórico antes da solicitação: 0.
+Não confundir com consumo real de produção.
 
-### PERF-X — auditoria aprovada / implementação autorizada
+Riscos/itens deliberadamente fora do escopo:
+- `empenhos`, `alerts`, `comissoes` e `cronogramas` não foram migrados para hot/history;
+- movimentos/ledger da Central permanecem fora deste recorte;
+- redução seletiva só entra em vigor depois do backfill READY;
+- PERF-I deve validar visualmente fallback legado, estado READY, transições operacional→histórico e histórico sob demanda.
 
-A auditoria comprovou um gargalo estrutural remanescente na camada operacional principal:
-
-- listener realtime de coleções completas em `useOperationalRealtimeCollections.ts`;
-- `invoices` é ativada em **Empenhos** e **Nova NF**;
-- não há `where`, `limit` nem paginação no listener;
-- o custo inicial cresce com todo o histórico de NFs do workspace;
-- sair e voltar pode recriar o snapshot inicial.
-
-Decisão do Coordenador:
-- **PERF-X é necessária**;
-- a primeira implementação deve ser limitada a `invoices`;
-- não aplicar corte por idade/ano como substituto de estado operacional;
-- histórico completo deve continuar disponível sob demanda;
-- NF antiga ainda em tramitação jamais pode desaparecer;
-- não expandir a frente para `empenhos`, `alerts`, `comissoes` ou `cronogramas` sem evidência própria e nova decisão;
-- PERF-I permanece bloqueada.
-
-Arquivos prováveis da implementação:
-- `hooks/useOperationalRealtimeCollections.ts`;
-- `lib/operationalSubscriptionPlan.ts`;
-- `features/operational/components/OperationalWorkspace.tsx`;
-- `features/empenhos/components/EmpenhosView.tsx`;
-- `features/notas-fiscais/components/NotasFiscaisView.tsx`;
-- `lib/historicalInvoiceQueries.ts`;
-- guards/testes de listeners e escalabilidade.
-
-A implementação deve definir e testar explicitamente o contrato de informação de Empenhos/Nova NF antes de trocar a fonte dos dados, evitando transformar o array global `invoices` em subconjunto sem adaptar consumidores que precisam de histórico completo.
-
-
-
-#### Revisão semântica pós-CI #867
-
-A implementação PERF-X em `8aac69a92120ff97f0d4ab84e46a470b5c632843` passou integralmente nos gates automáticos e no merge virtual contra a integradora atual, mas **não foi integrada**.
-
-O Coordenador encontrou dois bloqueios que os guards não cobrem:
-- filtro inicial `FaltaTesouraria` exclui da abertura as NFs `APROVISIONAMENTO` que aguardam Comissão em classes com TR;
-- contagem agregada de concluídas baseada apenas em `localizacaoAtual=TESOURARIA` pode subcontar legado enquanto o marcador de backfill ainda não está READY.
-
-A worker deve corrigir apenas esses pontos, preservar a arquitetura existente e adicionar cobertura reproduzível. PERF-I continua bloqueada.
-
+**PERF-I está LIBERADA.**
 
 ## 7. PERF-I — Integração Controlada + Validação de UX
 
@@ -561,8 +546,8 @@ Ao assumir:
 4. confirmar que A/B/C/D/E/G/H seguem integradas;
 5. confirmar que PERF-F segue integrada em `14aaa2e`;
 6. não reabrir A/D/F/G sem regressão objetiva;
-7. avaliar objetivamente se PERF-X é necessária ou deve ser DISPENSADA;
-8. após essa decisão, conduzir PERF-I/PERF-J com a validação obrigatória de UX.
+7. confirmar PERF-X integrada em `2aca0dce` + correção `2b72d43`, com CI #868 verde;
+8. conduzir PERF-I e, depois, PERF-J com a validação obrigatória de UX.
 
 ## 14. Regra para atualização deste documento
 
