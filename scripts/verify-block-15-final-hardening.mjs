@@ -25,6 +25,7 @@ const e2e = read('tests/e2e/operator-critical-flow.spec.mjs');
 const security = read('scripts/firestore-multitenancy-security.test.mjs');
 const pkg = read('package.json');
 const workflow = read('.github/workflows/application-ci.yml');
+const e2eWorkflow = read('.github/workflows/browser-e2e-on-demand.yml');
 const docs = read('docs/BLOCK_15_FINAL_HARDENING.md');
 
 for (const expected of [
@@ -104,7 +105,6 @@ for (const step of [
   'Block 13 empenho concurrency guard',
   'Block 14 operational scalability guard',
   'Block 15 final hardening guard',
-  'Browser E2E with Firebase Emulator',
   'Production build',
   'Final TypeScript validation',
 ]) {
@@ -118,7 +118,10 @@ requireText(workflow, 'concurrency:', 'Application CI perdeu controle de concorr
 requireText(workflow, 'cancel-in-progress: true', 'Application CI deixou de cancelar execução obsoleta da mesma referência.');
 requireRegex(workflow, /block-(?:15|16)-release-gate:/, 'Application CI perdeu o gate consolidado de release.');
 requireText(workflow, 'needs.validate-application.result', 'Gate final não verifica validate-application.');
-requireText(workflow, 'needs.browser-e2e-emulator.result', 'Gate final não verifica Browser E2E.');
+requireText(e2eWorkflow, 'workflow_dispatch:', 'Browser E2E sob demanda perdeu acionamento manual.');
+requireText(e2eWorkflow, 'Browser E2E with Firebase Emulator', 'Workflow sob demanda perdeu Browser E2E.');
+requireText(e2eWorkflow, 'npm run test:e2e:browser', 'Workflow sob demanda deixou de executar Browser E2E.');
+forbidText(workflow, 'browser-e2e-emulator:', 'Browser E2E voltou a bloquear o CI automático.');
 forbidText(workflow, 'continue-on-error: true', 'CI contém continue-on-error em etapa de validação.');
 
 for (const expected of [
@@ -145,6 +148,6 @@ if (findings.length) {
   console.log('Google Drive por tenant: PROTEGIDO');
   console.log('Legado raiz: SOMENTE LEITURA');
   console.log('Subscriptions realtime: VIEW-AWARE');
-  console.log('Browser E2E + Emulator: PRESERVADOS');
+  console.log('Browser E2E + Emulator: PRESERVADOS SOB DEMANDA');
   console.log('CI em PR + main + release gate: ENCADEADA');
 }
