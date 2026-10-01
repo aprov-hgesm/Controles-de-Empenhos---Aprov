@@ -5,9 +5,17 @@ on:
     paths:
       - ".github/workflows/recovery-guardrails.yml"
       - "docs/RECUPERACAO_FIRESTORE.md"
+      - "docs/BACKUP_RECOVERY.md"
+      - "docs/SAAS_R1_OPERACAO_RECUPERACAO.md"
+      - "docs/SAAS_R1_UPTIME_MONITORING.md"
+      - "docs/SAAS_R1_E_HANDOFF.md"
+      - "app/api/health/route.ts"
       - "ops/firestore-recovery.json"
+      - "ops/backup-recovery-baseline.json"
       - "scripts/firestore-recovery.mjs"
       - "scripts/firestore-recovery.test.mjs"
+      - "scripts/health-endpoint.test.mjs"
+      - "scripts/verify-saas-r1-ops-recovery.mjs"
       - "package.json"
   workflow_dispatch:
 
@@ -32,3 +40,12 @@ jobs:
 
       - name: Render read-only recovery plan
         run: npm run recovery:plan
+
+      - name: Backup architecture guard
+        run: npm run verify:backup-recovery
+
+      - name: Health endpoint safety tests
+        run: npm run test:health
+
+      - name: SaaS R1 operation and recovery guard
+        run: npm run verify:saas-r1-ops-recovery

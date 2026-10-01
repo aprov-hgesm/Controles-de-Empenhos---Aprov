@@ -200,7 +200,9 @@
     "perf:r3:runtime:sanitize": "node scripts/performance-r3-runtime-observation.mjs",
     "test:performance-r3-metrics": "node --test scripts/performance-r3-metrics.test.mjs",
     "verify:performance-r3-metrics": "node scripts/verify-performance-r3-metrics.mjs",
-    "verify:performance-r3-central-shell": "node scripts/verify-performance-r3-central-shell.mjs"
+    "verify:performance-r3-central-shell": "node scripts/verify-performance-r3-central-shell.mjs",
+    "test:health": "node --test scripts/health-endpoint.test.mjs",
+    "verify:saas-r1-ops-recovery": "node scripts/verify-saas-r1-ops-recovery.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

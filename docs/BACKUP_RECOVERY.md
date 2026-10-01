@@ -284,3 +284,50 @@ Ao criar uma nova coleção operacional que precise sobreviver a desastre, o map
 - restauração global de identidade continua sendo procedimento administrativo controlado, não um botão automático destrutivo.
 
 Essas limitações são intencionais para manter a primeira versão comercial simples e segura para até 50 usuários.
+
+---
+
+## SAAS R1 — auditoria de cobertura e segunda camada nativa
+
+A comercialização R1 passa a tratar backup em **duas camadas complementares**.
+
+### Camada lógica por workspace — preservada
+
+O contrato v1 acima permanece inalterado e continua cobrindo apenas o núcleo operacional do banco principal:
+
+- `empenhos`;
+- `invoices`;
+- `comissoes`;
+- `cronogramas`;
+- `alerts`;
+- settings restauráveis documentados.
+
+Ele não foi ampliado automaticamente para a Central de Depósitos.
+
+### Central de Depósitos
+
+A árvore logística está no database dedicado `emprovex-warehouse`, sob `warehouse/{workspaceId}/...`.
+
+O backup lógico atual **não cobre** materiais, depósitos, localizações, movimentos, balances, locationBalances, settings logísticos, lotes, barcodes, layouts, inventários, snapshots SISCOFIS, alertas logísticos, intakes, fila, destinos, withdrawals, consumptions ou devoluções do database dedicado.
+
+Na R1, esses dados são protegidos primariamente pelo **backup nativo diário do Firestore** do `emprovex-warehouse`.
+
+Não foi adicionada exportação lógica massiva da Central porque isso aumentaria leituras, volume no Drive e complexidade de restauração de domínios relacionados sem benefício proporcional.
+
+### Camada nativa
+
+A política em `ops/firestore-recovery.json` inclui exatamente os dois bancos existentes:
+
+1. banco operacional principal;
+2. `emprovex-warehouse`.
+
+Retenção inicial: 14 semanas, com backup diário, PITR e proteção contra exclusão.
+
+O tooling exige confirmação explícita para mudanças de configuração e bloqueia restore de teste sobre qualquer banco de produção.
+
+Runbooks:
+
+- `docs/RECUPERACAO_FIRESTORE.md`;
+- `docs/SAAS_R1_OPERACAO_RECUPERACAO.md`;
+- `docs/SAAS_R1_UPTIME_MONITORING.md`.
+
