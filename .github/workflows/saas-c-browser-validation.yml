@@ -44,5 +44,11 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Browser E2E with Firebase Emulator
-        run: npm run test:e2e:browser
+      - name: SAAS-C directed browser smoke
+        shell: bash
+        run: |
+          npx --yes firebase-tools emulators:exec \
+            --config firebase.security-test.json \
+            --project demo-emprovex-security \
+            --only auth,firestore \
+            'node scripts/e2e-browser-emulator.mjs operator-critical-flow.spec.mjs --grep "login -> relatório|usuário externo autenticado vê a Central de Depósitos|segundo workspace não enxerga"'
