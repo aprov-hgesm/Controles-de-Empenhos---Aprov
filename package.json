@@ -186,7 +186,13 @@
     "test:adm-deposito-manual-entry": "node --test scripts/warehouse-manual-entry.test.mjs",
     "test:adm-deposito-outbound-return": "node --test scripts/warehouse-outbound-return.test.mjs",
     "test:cronograma-email": "node --test scripts/cronograma-email.test.mjs",
-    "test:central-depositos-external-security": "npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore \"node scripts/warehouse-external-access-security.test.mjs\""
+    "test:central-depositos-external-security": "npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore \"node scripts/warehouse-external-access-security.test.mjs\"",
+    "perf:r3:collect": "node scripts/performance-r3-build-metrics.mjs",
+    "perf:r3:budget": "node scripts/performance-r3-budget-check.mjs",
+    "perf:r3:compare": "node scripts/performance-r3-compare.mjs",
+    "perf:r3:runtime:sanitize": "node scripts/performance-r3-runtime-observation.mjs",
+    "test:performance-r3-metrics": "node --test scripts/performance-r3-metrics.test.mjs",
+    "verify:performance-r3-metrics": "node scripts/verify-performance-r3-metrics.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
