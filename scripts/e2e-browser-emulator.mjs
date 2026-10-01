@@ -47,7 +47,7 @@ function run(command, args, env = process.env) {
   });
 }
 
-async async function stopChild(child) {
+async function stopChild(child) {
   if (!child || child.exitCode !== null || child.signalCode !== null) return;
 
   child.kill('SIGTERM');
