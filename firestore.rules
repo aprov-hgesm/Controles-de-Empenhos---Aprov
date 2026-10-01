@@ -644,6 +644,8 @@ service cloud.firestore {
           'pixKey',
           'pixKeyType',
           'pixRecipientName',
+          'paymentLinkUrl',
+          'supportContact',
           'holidayDates',
           'createdAt',
           'updatedAt',
@@ -663,6 +665,8 @@ service cloud.firestore {
           'pixKey',
           'pixKeyType',
           'pixRecipientName',
+          'paymentLinkUrl',
+          'supportContact',
           'holidayDates',
           'createdAt',
           'updatedAt',
@@ -686,6 +690,14 @@ service cloud.firestore {
         && request.resource.data.pixKey is string
         && request.resource.data.pixKeyType in ['', 'cpf', 'cnpj', 'email', 'phone', 'random']
         && request.resource.data.pixRecipientName is string
+        && request.resource.data.paymentLinkUrl is string
+        && request.resource.data.paymentLinkUrl.size() <= 2048
+        && (
+          request.resource.data.paymentLinkUrl == ''
+          || request.resource.data.paymentLinkUrl.matches('^https://.+')
+        )
+        && request.resource.data.supportContact is string
+        && request.resource.data.supportContact.size() <= 240
         && request.resource.data.holidayDates is list
         && request.resource.data.holidayDates.size() <= 128
         && request.resource.data.createdAt is string
