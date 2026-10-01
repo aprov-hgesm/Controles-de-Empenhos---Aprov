@@ -14,6 +14,8 @@ import { AlertTriangle, ArrowUpDown, Calendar, Check, CheckCircle2, Clock, Edit,
 import { motion } from 'motion/react';
 import type { Comissao, Empenho, Invoice } from '../../../lib/types';
 import { classRequiresTermoRecebimento, type EmpenhoClassDefinition } from '../../../lib/empenhoClasses';
+import { loadAllInvoicesHistory, loadInvoiceCollectionSummaryCounts } from '../../../lib/historicalInvoiceQueries';
+import { mergeInvoiceCollections } from '../../../lib/invoiceHotHistory';
 
 interface NotasFiscaisViewContext {
   comissaoAux1Nome: any;
@@ -50,6 +52,7 @@ interface NotasFiscaisViewContext {
   handleSaveComissao: (...args: any[]) => any;
   handleSaveInvoice: (...args: any[]) => any;
   invoices: Invoice[];
+  setInvoices: React.Dispatch<React.SetStateAction<Invoice[]>>;
   nfDate: any;
   nfEmpenhoFilter: any;
   nfMonthFilter: any;
@@ -109,7 +112,7 @@ const getInvoiceSortTimestamp = (invoice: Invoice): number => {
 };
 /** Tela de Notas Fiscais extraída sem alterar regras de negócio ou persistência. */
 export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
-  const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhoClasses, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleInvoiceMirrorDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleSaveSpedNup, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
+  const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhoClasses, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleInvoiceMirrorDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleSaveSpedNup, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, setInvoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
   const nfPdfInputRef = useRef<HTMLInputElement>(null);
   const [nfPdfFile, setNfPdfFile] = useState<File | null>(null);
   const [isSavingInvoice, setIsSavingInvoice] = useState(false);
@@ -117,6 +120,56 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
   const [processingInvoiceId, setProcessingInvoiceId] = useState<string | null>(null);
   const [consolidatingInvoiceId, setConsolidatingInvoiceId] = useState<string | null>(null);
   const [spedNupDrafts, setSpedNupDrafts] = useState<Record<string, string>>({});
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [historyTruncated, setHistoryTruncated] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [summaryCounts, setSummaryCounts] = useState<{ total: number; completed: number } | null>(null);
+
+  const loadCompleteHistory = React.useCallback(async () => {
+    if (historyLoaded || historyLoading) return;
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const result = await loadAllInvoicesHistory();
+      setInvoices((current) => mergeInvoiceCollections(current, result.invoices));
+      setHistoryLoaded(true);
+      setHistoryTruncated(result.truncated);
+    } catch (error) {
+      setHistoryError(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível carregar o histórico completo de Notas Fiscais.'
+      );
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [historyLoaded, historyLoading, setInvoices]);
+
+  React.useEffect(() => {
+    if (nfSubTab !== 'acompanhar') return;
+    let active = true;
+    void loadInvoiceCollectionSummaryCounts()
+      .then((counts) => {
+        if (active) setSummaryCounts(counts);
+      })
+      .catch((error) => {
+        console.warn('PERF-X: não foi possível carregar os totais agregados de NFs.', error);
+      });
+    return () => {
+      active = false;
+    };
+  }, [nfSubTab]);
+
+  React.useEffect(() => {
+    if (
+      nfSubTab === 'acompanhar'
+      && (nfTramitacaoFilter === 'Todos' || nfTramitacaoFilter === 'Concluidas')
+    ) {
+      void loadCompleteHistory();
+    }
+  }, [loadCompleteHistory, nfSubTab, nfTramitacaoFilter]);
+
 
   const deferredNfSearch = React.useDeferredValue(nfSearch);
 
@@ -158,6 +211,23 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
 
     return { byKey, faltaComissao, faltaTesouraria, concluidas };
   }, [empenhoClasses, empenhosById, invoices]);
+
+  const totalInvoiceCount = historyLoaded
+    ? invoices.length
+    : Math.max(invoices.length, summaryCounts?.total ?? 0);
+  const completedInvoiceCount = historyLoaded
+    ? invoiceDerived.concluidas
+    : Math.max(invoiceDerived.concluidas, summaryCounts?.completed ?? 0);
+  const availableNfMonths = React.useMemo(
+    () => Array.from(new Set(
+      invoices
+        .map((invoice) => invoice.issueDate?.slice(0, 7) || '')
+        .filter(Boolean)
+    )).sort((left, right) => right.localeCompare(left)),
+    [invoices]
+  );
+  const historyRequired =
+    nfTramitacaoFilter === 'Todos' || nfTramitacaoFilter === 'Concluidas';
 
   const nfEmpenhoOptions = React.useMemo(
     () => Array.from(new Set(
@@ -352,7 +422,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                             className="w-full sm:w-auto h-11 px-3.5 rounded-xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-bold text-xs sm:text-sm text-[#0b1c30] shadow-sm min-w-[150px]"
                           >
                             <option value="Todos">Todos os Meses</option>
-                            {uniqueNfMonths.map(monthStr => {
+                            {availableNfMonths.map(monthStr => {
                               const [year, month] = monthStr.split('-');
                               const monthNames = [
                                 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -369,7 +439,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                           </select>
                         </div>
 
-                        {invoices.length > 0 && (
+                        {totalInvoiceCount > 0 && (
                           <button
                             onClick={handleDeleteAllInvoices}
                             className="h-11 px-3.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-sm whitespace-nowrap"
@@ -401,7 +471,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                           <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
                             nfTramitacaoFilter === 'Todos' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
                           }`}>
-                            {invoices.length}
+                            {totalInvoiceCount}
                           </span>
                         </button>
 
@@ -455,7 +525,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                           <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                             nfTramitacaoFilter === 'Concluidas' ? 'bg-white/30 text-white' : 'bg-emerald-200 text-emerald-900'
                           }`}>
-                            {invoiceDerived.concluidas}
+                            {completedInvoiceCount}
                           </span>
                         </button>
                       </div>
@@ -478,9 +548,45 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                     </div>
                   </div>
 
+                  {historyLoaded && historyTruncated && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
+                      O histórico atingiu o limite de segurança da consulta. Operações em lote permanecem protegidas.
+                    </div>
+                  )}
+
                   {/* List of Invoices */}
                   <div className="space-y-4">
                     {(() => {
+                      if (historyRequired && historyLoading && !historyLoaded) {
+                        return (
+                          <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm text-center">
+                            <Loader2 className="w-9 h-9 text-[#00288e] mx-auto mb-2 animate-spin" />
+                            <p className="text-sm font-semibold text-gray-500">
+                              Carregando histórico completo de Notas Fiscais…
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      if (historyRequired && historyError && !historyLoaded) {
+                        return (
+                          <div className="bg-rose-50 p-8 rounded-2xl border border-rose-200 shadow-sm text-center">
+                            <AlertTriangle className="w-9 h-9 text-rose-500 mx-auto mb-2" />
+                            <p className="text-sm font-bold text-rose-700">
+                              Não foi possível carregar o histórico solicitado.
+                            </p>
+                            <p className="mt-1 text-xs font-medium text-rose-600">{historyError}</p>
+                            <button
+                              type="button"
+                              onClick={() => void loadCompleteHistory()}
+                              className="mt-3 px-4 py-2 rounded-xl bg-white border border-rose-200 text-xs font-bold text-rose-700 hover:bg-rose-100 transition-all"
+                            >
+                              Tentar novamente
+                            </button>
+                          </div>
+                        );
+                      }
+
                       if (filteredInvoices.length === 0) {
                         return (
                           <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm text-center">
