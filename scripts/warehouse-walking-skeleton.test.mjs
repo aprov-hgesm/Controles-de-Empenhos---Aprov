@@ -27,10 +27,14 @@ const legacyRoutes = {
   expressOutbound: ['app/adm-deposito/saida-expressa/page.tsx', '/adm-deposito/saida-de-material'],
 };
 
-test('walking skeleton possui as seis superfícies atuais protegidas e redirects legados', () => {
+test('walking skeleton possui layout protegido, seis superfícies atuais e redirects legados', () => {
+  const layout = read('app/adm-deposito/layout.tsx');
+  assert.match(layout, /WarehouseProtectedLayout/);
+
   for (const [id, [path, section]] of Object.entries(primaryRoutes)) {
     const source = read(path);
-    assert.match(source, /WarehouseProtectedSurface/);
+    assert.match(source, /WarehouseRouteContent/);
+    assert.equal(source.includes('WarehouseProtectedSurface'), false);
     assert.ok(source.includes(`section="${section}"`), `${id} deve apontar para ${section}`);
   }
 
