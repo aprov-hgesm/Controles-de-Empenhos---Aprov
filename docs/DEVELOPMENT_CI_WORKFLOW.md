@@ -213,7 +213,7 @@ Esta regra não autoriza acumular uma falha conhecida:
 - teste direcionado que demonstra regressão real deve ser corrigido antes de seguir;
 - o que é diferido é a **repetição da regressão pesada completa**, não a correção de defeitos conhecidos.
 
-Para o ADM Depósito, a FASE 13 continua sendo o gate formal de validação integrada e fechamento do piloto fundador.
+Para a Central de Depósitos, o ciclo founder-only já foi encerrado. A validação atual segue gates proporcionais ao impacto, Core Protection e a política de Browser E2E sob demanda registrada em `docs/TESTING_POLICY.md`.
 
 ## 11. Estado de implementação desta política
 
@@ -231,7 +231,7 @@ Regra permanente:
 - `workflow_dispatch` continua disponível para execução manual quando houver motivo objetivo;
 - o workflow `Recovery guardrails` mantém seu próprio filtro de paths e só roda quando seus arquivos de recuperação forem afetados.
 
-Objetivo: permitir que o fechamento documental posterior a uma fase já validada seja registrado sem repetir TypeScript, Firebase Emulator e Browser E2E sem evidência técnica nova.
+Objetivo: permitir que o fechamento documental posterior a uma fase já validada seja registrado sem repetir TypeScript, Firebase Emulator ou outras suítes pesadas sem evidência técnica nova. Browser E2E segue a política sob demanda.
 
 ### 11.2 Próximas otimizações
 
