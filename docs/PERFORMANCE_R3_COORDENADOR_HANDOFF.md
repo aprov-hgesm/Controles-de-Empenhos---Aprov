@@ -20,6 +20,8 @@ O Chat Coordenador / Integrador / Avaliador:
 - atualiza `docs/PERFORMANCE_R3_INTEGRATION_STATUS.md`;
 - atualiza o Memorial Oficial em marcos estruturais;
 - conduz PERF-I e PERF-J;
+- trata **experiência do usuário como prioridade principal do EMPROVEX e critério de aceitação da R3**;
+- bloqueia a certificação quando um ganho técnico introduzir perda de dados digitados, estado inesperado, feedback insuficiente, dificuldade operacional nova ou regressão perceptível de ergonomia;
 - não faz merge em `main` nem deploy de produção sem autorização explícita do usuário.
 
 Documentos obrigatórios:
@@ -229,7 +231,7 @@ Só abrir se, depois de PERF-F e das medições combinadas, houver evidência de
 
 Sem evidência: marcar como **DISPENSADA**.
 
-## 7. PERF-I — Integração Controlada
+## 7. PERF-I — Integração Controlada + Validação de UX
 
 Quando as frentes necessárias estiverem fechadas:
 
@@ -241,9 +243,121 @@ Quando as frentes necessárias estiverem fechadas:
 6. rever reads/consultas críticas;
 7. executar regressão de segurança/Core;
 8. resolver qualquer conflito restante;
-9. fazer validação manual/browser da PERF-G;
-10. decidir se PERF-X é necessária;
-11. preparar estado candidato à certificação.
+9. decidir se PERF-X é necessária com base em evidência;
+10. executar a validação integrada de experiência do usuário;
+11. preparar estado candidato à certificação somente se performance **e** UX estiverem aprovadas.
+
+### 7.1. Princípio de decisão
+
+A experiência do usuário é a prioridade principal do EMPROVEX.
+
+> **Nenhum ganho de performance é aprovado se tornar a operação menos clara, previsível, segura ou confortável para o usuário.**
+
+CI verde, bundle menor, menos reads ou menor CPU não anulam uma regressão relevante de UX. Quando houver conflito entre ganho marginal de performance e ergonomia/previsibilidade, a experiência do usuário prevalece.
+
+### 7.2. Checklist obrigatório de UX da PERF-I
+
+A validação deve cobrir, no mínimo:
+
+1. **Primeiro acesso vs. acesso subsequente**
+   - abrir superfícies lazy/on-demand pela primeira vez;
+   - repetir o acesso;
+   - confirmar ausência de clique aparentemente ignorado, tela vazia ou espera sem feedback;
+   - loaders/skeletons devem ser compreensíveis quando a espera for perceptível.
+
+2. **Persistência e reset de estado**
+   - filtros;
+   - ordenação;
+   - seleção;
+   - paginação;
+   - scroll;
+   - abas/subabas;
+   - confirmar que persistência ou reset seguem comportamento intuitivo, sem esconder dados do usuário.
+
+3. **Proteção de formulários**
+   - preencher parcialmente Alocação de Material;
+   - preencher parcialmente Saída de Material;
+   - navegar conforme permitido e retornar;
+   - verificar que não existe perda inesperada de dados digitados ou seleção operacional.
+
+4. **Shell persistente da Central**
+   - entrada direta em `/adm-deposito`;
+   - Início → Meus Depósitos;
+   - Alocação de Material;
+   - Saída de Material;
+   - URL correta;
+   - header/sidebar persistentes;
+   - back;
+   - forward;
+   - refresh direto em subrota;
+   - ausência de componente duplicado, conteúdo antigo ou piscada excessiva.
+
+5. **Barcode, teclado e foco**
+   - foco automático;
+   - leituras consecutivas;
+   - ENTER;
+   - retorno do foco ao barcode;
+   - criação/edição do carrinho;
+   - primeira busca de material ainda não carregado;
+   - scanner/teclado não podem ficar menos previsíveis por lazy loading ou remontagem.
+
+6. **PERF-F — cache curto**
+   - primeira leitura;
+   - segunda leitura dentro do TTL;
+   - expiração;
+   - invalidação/atualização após mutação local bem-sucedida;
+   - alteração feita por outra sessão/aba;
+   - nenhuma operação crítica pode confiar no cache como autoridade quando exigir revalidação oficial.
+
+7. **Erros tardios de carregamento sob demanda**
+   - rede;
+   - permissão;
+   - dado ausente/inconsistente;
+   - a falha deve gerar mensagem clara quando a função for usada, sem aparência de botão quebrado ou clique sem efeito.
+
+8. **Listas otimizadas pela PERF-E**
+   - filtros;
+   - busca;
+   - ordenação;
+   - totais;
+   - contagens;
+   - informação exibida;
+   - comparar semanticamente com o comportamento esperado anterior.
+
+9. **Máquina e conexão mais fracas**
+   - executar pelo menos a jornada principal em hardware/conectividade modestos;
+   - observar loading, CPU, responsividade, foco, transições e sensação de travamento;
+   - não aprovar apenas com base em máquina de desenvolvimento rápida.
+
+10. **Jornada integrada completa**
+    - EMPROVEX → Central;
+    - Central → Meus Depósitos;
+    - Meus Depósitos → Alocação;
+    - Alocação → Saída;
+    - retorno à Central;
+    - executar também uma jornada representativa no EMPROVEX principal.
+
+11. **Usuário externo autorizado**
+    - repetir os principais fluxos permitidos;
+    - conferir acesso, mensagens, navegação e ergonomia;
+    - confirmar que otimizações não alteraram isolamento nem experiência esperada.
+
+### 7.3. Critérios de bloqueio por UX
+
+A PERF-I deve bloquear o candidato até correção ou decisão explícita do usuário quando detectar:
+
+- perda de dados digitados;
+- informação visual enganosa ou aparentemente desatualizada sem tratamento adequado;
+- clique sem resposta perceptível;
+- carregamento sem feedback quando houver espera relevante;
+- filtro/estado persistido de forma confusa;
+- reset inesperado de estado necessário;
+- necessidade nova de refresh manual para continuar;
+- quebra de foco, ENTER, teclado ou scanner;
+- regressão perceptível de navegação, ergonomia ou previsibilidade;
+- comportamento significativamente pior em hardware/conectividade modestos.
+
+Browser E2E permanece **sob demanda**. A PERF-I pode combinar testes automatizados, browser dirigido e validação manual assistida conforme o risco de cada fluxo.
 
 ## 8. PERF-J — Certificação Final
 
@@ -258,6 +372,7 @@ Deve validar:
 - bundle por rota;
 - métricas/budget;
 - experiência visual/manual afetada;
+- aprovação dos critérios de UX da PERF-I, incluindo primeiro acesso lazy, estado, formulários, barcode/teclado, cache, erros e jornada em ambiente modesto;
 - ausência de regressão de reads;
 - documentação final.
 
@@ -302,7 +417,10 @@ Browser E2E:
 - não tornar gate permanente sem decisão explícita.
 
 Validação manual:
-- legítima e recomendada para interação, teclado/scanner, layout, navegação e ergonomia.
+- é parte obrigatória da PERF-I nos fluxos definidos na seção 7;
+- deve cobrir interação, teclado/scanner, layout, navegação, formulários, estado, feedback de loading/erro e ergonomia;
+- deve incluir ao menos uma jornada em ambiente representativo de hardware/conectividade modestos;
+- regressão perceptível de UX pode bloquear a R3 mesmo com gates automáticos verdes.
 
 ## 11. Produção / main
 
