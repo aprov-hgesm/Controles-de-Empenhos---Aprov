@@ -1,9 +1,9 @@
 # Performance R3 — Memorial / Handoff do Chat Coordenador
 
-Data: **2026-10-01**  
-Programa: **Performance R3 — Comercialização**  
-Repositório: `aprov-hgesm/Controles-de-Empenhos---Aprov`  
-Branch integradora: `feat/performance-r3-commercializacao`  
+Data: **2026-10-01**
+Programa: **Performance R3 — Comercialização**
+Repositório: `aprov-hgesm/Controles-de-Empenhos---Aprov`
+Branch integradora: `feat/performance-r3-commercializacao`
 Baseline original da rodada: `main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`
 
 > Este documento existe para permitir a troca de Chat Coordenador sem depender do histórico de conversa. O novo coordenador deve sempre conferir o HEAD real da branch integradora antes de agir.
