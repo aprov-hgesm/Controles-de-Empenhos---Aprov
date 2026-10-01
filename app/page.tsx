@@ -235,7 +235,7 @@ export default function Home() {
           {!activeOperationalDataReady && <OperationalSurfaceLoading />}
 
           {activeOperationalDataReady && activeTab === 'inicio' && (
-            <OperationalSurfaceTransition surfaceKey={activeTab}>
+            <OperationalSurfaceTransition key="inicio-surface" surfaceKey={activeTab}>
               <InicioView
                 snapshot={inicioSnapshot}
                 userDisplayName={user?.displayName || 'Operador EMPROVEX'}
@@ -249,6 +249,7 @@ export default function Home() {
 
           {(activeTab !== 'inicio' || hasOpenedOperationalSurface) && (
             <Suspense
+              key="operational-workspace"
               fallback={activeOperationalDataReady ? <OperationalSurfaceLoading /> : null}
             >
               <OperationalWorkspace
