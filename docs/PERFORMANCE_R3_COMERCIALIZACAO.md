@@ -6,6 +6,24 @@ Modelo de execução: **frentes paralelas + integração controlada**
 Protocolo: `docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md`  
 Baseline: `main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`
 
+## Estado atual da rodada — 2026-10-01
+
+- PERF-A/B/C/D/E/F/G/H/X: **INTEGRADAS**;
+- PERF-X: **INTEGRADA E CERTIFICADA**;
+- PERF-I — integração controlada + UX: **APROVADA E ENCERRADA**;
+- PERF-J — certificação final: **LIBERADA / PRÓXIMA FASE**;
+- HEAD funcional certificado antes das atualizações documentais: `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`;
+- `main`/produção: **sem merge/release consolidado da R3**.
+
+Resultado de bundle certificado pela PERF-I:
+- `/`: **460 → 335 kB** (-27,17%);
+- Central: **579 → 106 kB** (-81,69%);
+- `/admin`: **326 → 327 kB** (+0,31%);
+- shared: **103 → 104 kB** (+0,97%);
+- budget final: **within configured budgets**.
+
+A próxima ação do programa é **PERF-J**, sem adição de funcionalidade nova. Merge em `main` ou release continuam dependentes da certificação final e de autorização explícita do usuário.
+
 ## Objetivo
 
 Reduzir tempo de carregamento, quantidade de JavaScript inicial, leituras desnecessárias, custo de renderização e latência operacional do EMPROVEX **sem degradar estética, animações, transições, identidade visual ou ergonomia aprovada**.
@@ -164,9 +182,9 @@ Mapeamento oficial para desenvolvimento paralelo:
 | PERF-H | R3.0/R3.9 — métricas/budget | 1 — paralela/contínua |
 | PERF-F | R3.4 — cache em memória | 2 — após C/D |
 | PERF-G | R3.3 — shell/layout persistente | 2 — após B |
-| PERF-X | R3.8 — dados quentes/histórico | opcional |
-| PERF-I | integração das frentes | fechamento |
-| PERF-J | certificação e comparação final | fechamento |
+| PERF-X | R3.8 — dados quentes/histórico | executada, integrada e certificada |
+| PERF-I | integração das frentes + UX | aprovada/encerrada |
+| PERF-J | certificação e comparação final | próxima fase liberada |
 
 Cada frente deve usar branch própria e entregar handoff ao chat coordenador. Nenhuma branch trabalhadora faz merge diretamente em `main`.
 
