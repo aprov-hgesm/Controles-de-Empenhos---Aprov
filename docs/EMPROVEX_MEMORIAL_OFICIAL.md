@@ -1,10 +1,10 @@
 # EMPROVEX — Memorial Oficial do Repositório
 
-Última atualização: **2026-10-01 — pós-certificação da PERF-X**  
+Última atualização: **2026-10-01 — PERF-I aprovada / PERF-J liberada**  
 Baseline de produção consultada: `main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`  
 Branch candidata da Performance R3: `feat/performance-r3-commercializacao`  
-HEAD funcional certificado da R3: `2b72d43ac2a387682fb1c0089d36bef2177d0f17`  
-Estado documental imediatamente anterior a esta consolidação: `b7d3422eb5a5bb34a198714f16e8f8a7ef19603b`
+HEAD funcional certificado da R3 antes desta atualização documental: `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`  
+Estado de fechamento: **PERF-I APROVADA; PERF-J LIBERADA; sem merge consolidado em `main` e sem deploy consolidado da R3 em produção**
 
 Este documento é a **porta de entrada canônica para continuidade do EMPROVEX como produto**. Ele resume o estado vigente e aponta para os documentos históricos/especializados. O histórico detalhado não deve ser apagado. Para comportamento já publicado, `main` prevalece; para a rodada Performance R3 ainda não publicada, prevalecem a branch integradora atual e os registros canônicos de integração deste memorial.
 
@@ -43,7 +43,7 @@ Estado operacional consolidado em produção e estado candidato vigente:
 - controle de sessão externo baseado em workspace/UG e lease;
 - telemetria estimada de consumo por workspace + métricas globais separadas;
 - Central de Depósitos integrada ao EMPROVEX e disponível para contextos de setor autenticados/autorizados, com isolamento por workspace/UG;
-- Performance R3 está integralmente combinada até PERF-X na branch integradora, mas **ainda não foi mergeada em `main` nem promovida como release consolidado**; PERF-I é a próxima fase liberada.
+- Performance R3 está integralmente combinada na branch integradora; a **PERF-I foi APROVADA** após validação técnica e manual, e a **PERF-J está LIBERADA** para certificação final. A rodada **ainda não foi mergeada em `main` nem promovida como release consolidado**.
 
 ## 3. Central de Depósitos — estado vigente
 
@@ -195,15 +195,17 @@ Estado canônico da branch `feat/performance-r3-commercializacao`:
 - **PERF-G — Shell/Layout persistente da Central: INTEGRADA.** Worker `de870d1`; integração `238b813`. Auth/workspace/session/header/sidebar permanecem montados entre subrotas; os boundaries lazy da PERF-B foram preservados. As seis rotas principais da Central chegaram a **106 kB** First Load JS.
 - **PERF-H — Métricas e Budget: INTEGRADA.** Worker `fb5f452`; integração `a686410`. Baseline, parser, comparação, sanitização e budgets estão versionados; budgets continuam deliberadamente fora do Application CI automático até a certificação final.
 - **PERF-X — Dados quentes vs. histórico de invoices: INTEGRADA E CERTIFICADA.** Worker `8aac69a`; integração do PR #208 em `2aca0dce`; correções semânticas coordenadas em `2b72d43`; validação final no PR técnico #209 com **Application CI #868 verde**.
+- **PERF-I — Integração Controlada + UX: APROVADA.** Validação final concluída sobre a integradora até `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`.
 
-Build combinado de referência antes da coleta final da PERF-I:
-- `/`: **333 kB First Load JS**;
-- seis rotas principais da Central: **106 kB**;
-- `/admin`: **327 kB**;
-- `/admin/backups`: **244 kB**;
-- shared global: **104 kB**.
+Build combinado final coletado durante a PERF-I:
+- `/`: **335 kB First Load JS** (**460 → 335 kB / -27,17%**);
+- seis rotas principais da Central: **106 kB** (**579 → 106 kB / -81,69%**);
+- `/admin`: **327 kB** (**326 → 327 kB / +0,31%**);
+- `/admin/backups`: **245 kB**;
+- shared global: **104 kB** (**103 → 104 kB / +0,97%**);
+- `perf:r3:budget`: **within configured budgets**.
 
-Esses números são referência certificada das integrações anteriores. A PERF-I deve repetir `perf:r3:collect`, `perf:r3:compare` e `perf:r3:budget` no estado combinado atual; não assumir automaticamente que a última coleta continua idêntica.
+Esta coleta final substitui as referências intermediárias anteriores para a decisão de certificação.
 
 #### PERF-X — arquitetura final integrada
 
@@ -249,11 +251,11 @@ Certificação final da PERF-X:
 
 #### Estado das fases de fechamento
 
-- **PERF-I — LIVRE / PRÓXIMA FASE.** Integração final, métricas combinadas e validação obrigatória de UX.
-- **PERF-J — BLOQUEADA.** Só inicia depois da aprovação formal da PERF-I.
+- **PERF-I — APROVADA E ENCERRADA.** Integração, métricas combinadas, budgets e validação obrigatória de UX concluídas.
+- **PERF-J — LIBERADA / PRÓXIMA FASE.** Certificação final consolidada, relatório antes/depois e pendências conhecidas.
 - **`main` / produção — BLOQUEADAS.** Merge/release somente depois da PERF-J e de autorização explícita do usuário.
 
-Não houve merge consolidado da Performance R3 em `main` nem promoção de produção durante esse fechamento.
+Não houve merge consolidado da Performance R3 em `main` nem promoção de produção durante a PERF-I.
 
 ### PERF-I — validação obrigatória de experiência do usuário
 
@@ -278,6 +280,50 @@ Checklist mínimo obrigatório:
 Browser E2E continua sob demanda. A validação acima pode combinar testes automatizados, browser dirigido e operação manual assistida conforme o risco de cada fluxo.
 
 A branch integradora, e não as branches trabalhadoras antigas, passa a ser a referência para compatibilidade cruzada entre frentes.
+
+#### PERF-I — resultado final executado em 2026-10-01
+
+Status: **APROVADA E ENCERRADA**.
+
+Validação técnica:
+- TypeScript: **PASS**;
+- production build: **PASS**;
+- `perf:r3:collect`: **PASS** no Windows;
+- `perf:r3:compare`: **PASS**;
+- `perf:r3:budget`: **PASS / within configured budgets**;
+- métricas/parser/sanitização: **3/3 PASS**;
+- PERF-F cache: **11/11 PASS**;
+- PERF-D intake: **7/7 PASS**;
+- PERF-G shell persistente: **PASS**;
+- PERF-X hot/history: **PASS**;
+- `git diff --check`: limpo;
+- `git status --short`: limpo.
+
+Achados/correções produzidos pela PERF-I:
+1. fixture E2E de empenho incompleta causava `emp.items is not iterable` e `Cannot read properties of undefined (reading 'reduce')`; as fixtures fundador/externos foram tornadas operacionalmente válidas sem alterar regra de negócio;
+2. o coletor PERF-H falhava no Windows com `spawn EINVAL`; correção em `2c2da4ded5ffd38e243d8e03cac6f104bcf93c4a` passou a usar `cmd.exe/ComSpec`;
+3. o parser de logs timestampados do GitHub Actions tinha regex escapada incorretamente; correção em `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`, com o teste real Next 15 + timestamp passando.
+
+Validação manual assistida:
+- primeiro/segundo acesso às superfícies lazy;
+- Empenhos, Recebimentos/NF e Central sem erros;
+- back/forward, URL, refresh direto e shell persistente;
+- reset de formulário da Alocação e persistência deliberada do rascunho da Saída;
+- barcode desconhecido → associação → quantidade → ENTER/TAB → retorno de foco;
+- invalidação do cache após mutação sem F5;
+- usuário externo autorizado com isolamento por workspace e sem vazamento do depósito HGeSM;
+- jornada integrada EMPROVEX → Empenhos/NF → Central → Alocação → Saída → retorno;
+- ausência de erros tardios/permission-denied no ambiente correto com Rules da branch;
+- throttling de rede artificial: carregamento muito lento, porém concluído sem crash/tela branca; retorno a `No throttling` restaurou carregamento rápido.
+
+Benchmark manual indicativo no mesmo computador/Edge:
+- Home publicada parada: leitura de CPU do Edge tipicamente **70–100**, picos em repouso até **129**, pico geral observado **162,1**;
+- Home R3 standalone parada: tipicamente **30–40**, pico **41,6**;
+- memória observada da aba: publicada chegou a aproximadamente **724.116 K (~707 MB)**; R3 Home aproximadamente **170.776 K (~167 MB)**;
+- Empenhos R3: **26–40** em repouso, pico **55** ao detalhar, ~**174.624 K**;
+- Central R3: pico transitório **143** na troca EMPROVEX → Central; Meus Depósitos pico **84** e estabilização aproximada **26–60**, ~**215.672 K** na captura.
+
+Essas leituras são **evidência manual indicativa, não benchmark laboratorial nem medição de produção**, porque publicada e R3 local standalone/emulada não são ambientes absolutamente idênticos. O dado relevante para a decisão foi a redução consistente do trabalho contínuo em repouso e a natureza transitória dos picos de navegação.
 
 ## 7. Restrições da Performance R3
 
@@ -344,10 +390,10 @@ Este bloco é o ponto de partida obrigatório para novos chats da Performance R3
 
 - produção/`main`: `22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`;
 - branch integradora: `feat/performance-r3-commercializacao`;
-- HEAD funcional certificado antes desta atualização documental: `2b72d43ac2a387682fb1c0089d36bef2177d0f17`;
-- **A/B/C/D/E/F/G/H/X estão integradas**;
-- PERF-I está **LIVRE**;
-- PERF-J continua bloqueada até PERF-I;
+- HEAD funcional certificado antes desta atualização documental: `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`;
+- **A/B/C/D/E/F/G/H/X estão integradas**; PERF-X também certificada;
+- PERF-I está **APROVADA E ENCERRADA**;
+- PERF-J está **LIBERADA / PRÓXIMA FASE**;
 - não houve merge consolidado da R3 em `main`;
 - não houve release consolidado da R3 em produção.
 
@@ -393,16 +439,15 @@ Certificação final:
 - PR técnico #209 certificou exatamente esse delta;
 - Application CI #868, Core Protection #155, build, TypeScript, Diff Hygiene, segurança e release gates 16–21: **PASS**.
 
-### Resultado técnico combinado conhecido
+### Resultado técnico combinado certificado pela PERF-I
 
-Referência de bundle mais recente já documentada antes do fechamento PERF-X:
-- `/`: **333 kB First Load JS** contra baseline 460 kB;
-- seis rotas principais da Central: **106 kB** contra baseline original 579 kB;
-- `/admin`: **327 kB**;
-- `/admin/backups`: **244 kB**;
-- shared: **104 kB**.
-
-PERF-I deve repetir as métricas no estado combinado atual; os números acima são referência, não substituem a coleta final.
+Coleta final:
+- `/`: **335 kB First Load JS** contra baseline 460 kB (**-27,17%**);
+- seis rotas principais da Central: **106 kB** contra baseline original 579 kB (**-81,69%**);
+- `/admin`: **327 kB** contra baseline 326 kB (**+0,31%**);
+- `/admin/backups`: **245 kB**;
+- shared: **104 kB** contra baseline 103 kB (**+0,97%**);
+- budget final: **within configured budgets**.
 
 ### Prioridade absoluta: experiência do usuário
 
@@ -412,19 +457,14 @@ Critérios bloqueantes incluem perda de dados digitados, informação enganosa/s
 
 ### Próxima sequência obrigatória
 
-1. **PERF-I — LIBERADA.**
-   - confirmar HEAD real da integradora;
-   - rodar métricas/build/security;
-   - validar integralmente o checklist de UX;
-   - testar também os contratos PERF-X antes/depois do READY quando aplicável;
-   - não criar feature nova.
+1. **PERF-J — CERTIFICAÇÃO FINAL / LIBERADA.**
+   - partir da integradora atual;
+   - certificar código, métricas, reads, segurança, UX e documentação;
+   - produzir relatório consolidado antes/depois e pendências conhecidas;
+   - não adicionar feature nova.
 
-2. **PERF-J — Certificação Final.**
-   - somente após PERF-I aprovada;
-   - certificar código, métricas, reads, segurança, UX e documentação.
-
-3. **`main` / produção.**
-   - somente após PERF-J e autorização explícita do usuário;
+2. **`main` / produção.**
+   - somente após PERF-J concluída e autorização explícita do usuário;
    - evitar deploys intermediários desnecessários.
 
 ### Regra para qualquer novo chat
@@ -442,10 +482,10 @@ Antes de editar:
 
 - crescimento histórico das coleções operacionais continua exigindo disciplina de consultas seletivas; PERF-D resolveu o intake e PERF-X resolveu o histórico de `invoices` no caminho operacional normal, mas `empenhos`, `alerts`, `comissoes`, `cronogramas` e movimentos/ledger não devem ser migrados automaticamente sem nova evidência;
 - PERF-F está integrada: o cache deve permanecer restrito a dados estruturais estáveis e nunca ser ampliado para mascarar query inadequada; o risco residual aceito é stale visual de até 30 s entre sessões, sempre com validações operacionais críticas consultando a fonte oficial;
-- o layout persistente da PERF-G precisa de validação visual/manual de navegação, back/forward, refresh direto e acesso externo durante PERF-I/PERF-J;
-- a redução seletiva da PERF-X só entra em vigor por workspace depois do backfill/marker READY; antes disso, o fallback integral é deliberado e deve ser validado na PERF-I;
+- o layout persistente da PERF-G foi validado manualmente em navegação, back/forward, refresh direto e acesso externo durante a PERF-I;
+- a redução seletiva da PERF-X só entra em vigor por workspace depois do backfill/marker READY; antes disso, o fallback integral permanece deliberado e deve continuar protegido pela certificação;
 - `docs/PERFORMANCE_R3_PERF_X_HOT_HISTORY.md` descreve a worker pré-correção coordenadora; o contrato final de UX/legado está neste Memorial e no Integration Status;
-- a PERF-I deve tratar experiência do usuário como critério de aceitação: primeira abertura lazy, feedback de loading, persistência/reset de estado, proteção de formulários, foco de barcode/teclado, cache curto, mensagens de erro e jornada em hardware/conectividade modestos devem ser verificados antes da certificação;
+- a PERF-I concluiu a validação de primeira abertura lazy, feedback, persistência/reset de estado, formulários, foco de barcode/teclado, cache curto, mensagens de erro, usuário externo e jornada em hardware/conectividade modestos;
 - os budgets da PERF-H ainda são deliberadamente não bloqueantes no Application CI; adoção como gate permanente depende da certificação final;
 - segurança e dependências continuam como linha separada de hardening;
 - falha crítica real de segurança sempre interrompe a ordem normal de prioridades;
