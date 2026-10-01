@@ -248,13 +248,13 @@ Certificação final da PERF-X:
 - release gates 16–21: **PASS**;
 - PR #209 foi fechado sem merge após cumprir sua função de validação.
 
-#### Estado das fases de fechamento
+#### Estado histórico das fases de fechamento — ENCERRADO
 
 - **PERF-I — APROVADA E ENCERRADA.** Integração, métricas combinadas, budgets e validação obrigatória de UX concluídas.
-- **PERF-J — APROVADA.** Certificação final consolidada concluída no HEAD `c08c6efa9931bf1df95aee86db51de1b8edb1912`; candidata pronta para decisão de merge/release.
-- **`main` / produção — BLOQUEADAS.** Merge/release somente depois da PERF-J e de autorização explícita do usuário.
+- **PERF-J — APROVADA E ENCERRADA.** Certificação final consolidada concluída no HEAD `c08c6efa9931bf1df95aee86db51de1b8edb1912`.
+- **`main` / produção — PUBLICADAS posteriormente.** A autorização foi concedida e a release R3 chegou a `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`.
 
-Não houve merge consolidado da Performance R3 em `main` nem promoção de produção durante a PERF-I.
+Durante a PERF-I ainda não houve merge/deploy por desenho do processo; esse bloqueio histórico foi encerrado depois da PERF-J e não representa o estado atual.
 
 ### PERF-I — checklist de experiência do usuário executado
 
@@ -454,23 +454,16 @@ Coleta final:
 
 Critérios bloqueantes incluem perda de dados digitados, informação enganosa/stale sem tratamento, clique sem resposta, espera sem feedback, estado confuso, refresh manual novo, quebra de foco/ENTER/scanner, navegação menos previsível ou piora relevante em hardware/conectividade modestos.
 
-### Próxima sequência obrigatória
+### Sequência de fechamento da R3 — CONCLUÍDA
 
-1. **Autorização explícita do usuário para release da R3.**
-   - a PERF-J já está aprovada;
-   - não há autorização implícita para publicar;
-   - preservar o HEAD certificado até a decisão de release.
-
-2. **`main` / produção.**
-   - somente após autorização explícita;
-   - fazer um único merge/release consolidado quando possível;
-   - confirmar o HEAD efetivamente publicado;
-   - executar smoke test curto de produção;
-   - aplicar Rules/Indexes/migrações apenas se forem indispensáveis à release e após conferência específica.
-
-3. **EMPROVEX SaaS R1.**
-   - só abrir depois da R3 efetivamente publicada e do smoke de produção;
-   - seguir o planejamento da seção 7.2.
+A sequência prevista pela PERF-I/PERF-J foi integralmente cumprida:
+1. o usuário autorizou explicitamente a publicação;
+2. a R3 foi integrada em `main` pelo PR #212;
+3. o release final ficou em `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`;
+4. a Vercel publicou esse release com sucesso;
+5. as Rules indispensáveis de `emprovex-warehouse` foram publicadas via Firebase CLI;
+6. o ciclo Performance R3 foi encerrado;
+7. o ciclo ativo passou a ser o **EMPROVEX SaaS R1**, detalhado na seção 7.2.
 
 ### Regra para qualquer novo chat
 
@@ -519,7 +512,7 @@ A coleta da PERF-J mostrou `/` em 336 kB, 1 kB acima dos 335 kB registrados na P
 Ocorrências tratadas:
 1. Application CI #869 encontrou somente trailing whitespace no diff. A correção mínima foi integrada em `c08c6efa...`, sem alteração funcional.
 2. A primeira tentativa do Application CI #871 falhou no loader de `next/font` durante o build. `app/layout.tsx` permaneceu byte-identical entre o HEAD anterior e `c08c6efa...`; a repetição no mesmo SHA passou integralmente, classificando a ocorrência como falha transitória de ambiente/serviço externo, não regressão do produto.
-3. O status Vercel do candidato permaneceu afetado pelo limite `build-rate-limit`; nenhum deploy de produção foi executado.
+3. Durante a certificação técnica, o status Vercel do candidato foi afetado pelo limite `build-rate-limit`; naquele momento nenhum deploy de produção foi executado. Posteriormente, a release autorizada `e90f92aca...` foi publicada com sucesso.
 
 A validação manual da PERF-I não foi repetida porque, depois do HEAD funcional já aprovado, a PERF-J alterou apenas documentação e higiene de whitespace, sem mudança de comportamento. Browser E2E continuou sob demanda.
 
