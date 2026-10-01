@@ -62,6 +62,7 @@ const routeContent = read('features/warehouse/components/WarehouseRouteContent.t
 assert.match(routeContent, /WarehouseSectionContent/);
 assert.match(routeContent, /WarehouseModuleContext/);
 assert.equal(routeContent.includes('WarehouseProtectedSurface'), false);
+assert.equal(routeContent.includes('WarehouseModuleShell'), false);
 
 const primaryRoutes = new Map([
   ['app/adm-deposito/page.tsx', 'home'],
