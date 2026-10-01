@@ -265,6 +265,12 @@ async function main() {
     acceptanceId
   );
 
+  const missingAcceptance = await allowed(
+    'primeiro uso consulta o documento vigente ainda inexistente',
+    () => getDoc(acceptanceRefA)
+  );
+  assert.equal(missingAcceptance.exists(), false);
+
   await allowed('usuário aceita a versão atual no próprio workspace', () =>
     setDoc(acceptanceRefA, acceptanceData(identityA))
   );
