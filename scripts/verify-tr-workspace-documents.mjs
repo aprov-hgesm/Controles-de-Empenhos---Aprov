@@ -11,6 +11,7 @@ const firebaseSync = read('lib/firebaseSync.ts');
 const documentActions = read('features/relatorios/hooks/useDocumentActions.ts');
 const cronogramaActions = read('features/cronogramas/hooks/useCronogramaActions.ts');
 const page = read('app/page.tsx');
+const operationalWorkspace = read('features/operational/components/OperationalWorkspace.tsx');
 const identity = read('lib/institutionalDocumentProfile.ts');
 
 const counterWrite = firebaseSync.slice(
@@ -38,8 +39,12 @@ assert(documentActions.includes('material do ${organizationName}'), 'TR deve usa
 assert(cronogramaActions.includes('defaultDeliveryLocation'), 'Cronograma deve usar local de entrega do workspace.');
 assert(cronogramaActions.includes('defaultResponsibleRole'), 'Cronograma deve usar cargo padrão do workspace.');
 
-const profileWiringCount = (page.match(/institutionalProfile: workspaceContext\.status === 'sector'/g) || []).length;
-assert(profileWiringCount >= 2, 'Página operacional deve repassar perfil institucional aos geradores de documentos.');
+assert(
+  page.includes("import('../features/operational/components/OperationalWorkspace')"),
+  'Página operacional deve conectar o host operacional sob demanda.'
+);
+const profileWiringCount = (operationalWorkspace.match(/institutionalProfile: workspaceContext\.status === 'sector'/g) || []).length;
+assert(profileWiringCount >= 2, 'Host operacional deve repassar perfil institucional aos geradores de documentos.');
 
 assert(identity.includes("'Organização Militar'"), 'Fallback documental deve ser institucionalmente neutro.');
 assert(!identity.includes('HGeSM'), 'Helper de identidade não pode herdar o tenant fundador.');

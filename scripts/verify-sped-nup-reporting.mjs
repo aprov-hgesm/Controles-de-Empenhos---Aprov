@@ -14,6 +14,7 @@ const invoicesView = read('features/notas-fiscais/components/NotasFiscaisView.ts
 const reportView = read('features/relatorios/components/RelatorioPorEmpenhoView.tsx');
 const documents = read('features/relatorios/hooks/useDocumentActions.ts');
 const app = read('app/page.tsx');
+const operationalWorkspace = read('features/operational/components/OperationalWorkspace.tsx');
 
 requireText(types, 'spedNup?: string', 'Invoice não possui campo opcional spedNup.');
 requireText(nup, 'SPED_NUP_CANONICAL_PATTERN', 'Normalização do NUP não possui padrão canônico.');
@@ -42,7 +43,8 @@ requireText(documents, 'formattedNup', 'PDF do relatório não prepara o NUP.');
 requireText(documents, "'NUP SPED'", 'PDF do relatório não possui coluna de NUP.');
 requireText(documents, 'inv.spedNup', 'PDF do relatório não lê o NUP da NF.');
 
-requireText(app, 'handleSaveSpedNup', 'A ação de salvar NUP não foi conectada à tela.');
+requireText(app, "import('../features/operational/components/OperationalWorkspace')", 'O shell principal não conecta o host operacional sob demanda.');
+requireText(operationalWorkspace, 'handleSaveSpedNup', 'A ação de salvar NUP não foi conectada à tela.');
 
 if (findings.length) {
   console.error('SPED NUP REPORTING: FAIL');

@@ -22,6 +22,7 @@ const actions = read('features/empenhos/hooks/useEmpenhoActions.ts');
 const state = read('hooks/useOperationalViewState.ts');
 const types = read('lib/types.ts');
 const page = read('app/page.tsx');
+const operationalWorkspace = read('features/operational/components/OperationalWorkspace.tsx');
 
 for (const marker of [
   "parseEmpenhoPdfBytes",
@@ -82,8 +83,9 @@ for (const marker of [
   requireText(types, marker, `Modelo do empenho perdeu requisito: ${marker}`);
 }
 
-requireText(page, 'handleProcessEmpenhoPdf', 'Orquestrador não expõe importação direta por PDF.');
-requireText(page, 'handleUpdateEmpenhoNotaCredito', 'Orquestrador não expõe edição manual da NC.');
+requireText(page, "import('../features/operational/components/OperationalWorkspace')", 'Página principal não conecta o host operacional sob demanda.');
+requireText(operationalWorkspace, 'handleProcessEmpenhoPdf', 'Host operacional não expõe importação direta por PDF.');
+requireText(operationalWorkspace, 'handleUpdateEmpenhoNotaCredito', 'Host operacional não expõe edição manual da NC.');
 
 if (findings.length > 0) {
   console.error('EMPENHO PDF DIRECT IMPORT: FAIL');

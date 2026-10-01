@@ -17,6 +17,7 @@ const plan = read('lib/operationalSubscriptionPlan.ts');
 const realtime = read('hooks/useOperationalRealtimeCollections.ts');
 const dataHook = read('hooks/useOperationalData.ts');
 const page = read('app/page.tsx');
+const surfaceLoading = read('components/layout/OperationalSurfaceLoading.tsx');
 const pdfToolkit = read('lib/pdfToolkit.ts');
 const empenhoActions = read('features/empenhos/hooks/useEmpenhoActions.ts');
 const cronogramaActions = read('features/cronogramas/hooks/useCronogramaActions.ts');
@@ -59,7 +60,8 @@ requireText(dataHook, 'useCallback(', 'Cálculo por classe não está memoizado.
 
 requireText(page, 'useOperationalData(activeTab)', 'Página não informa a aba ativa ao plano realtime.');
 requireText(page, 'data-active-realtime-collections={activeRealtimeCollectionCount}', 'Shell não expõe contagem realtime para E2E.');
-requireText(page, 'operational-section-loading', 'Página não bloqueia interação antes da sincronização requerida.');
+requireText(page, '<OperationalSurfaceLoading', 'Página não bloqueia interação antes da sincronização requerida.');
+requireText(surfaceLoading, 'operational-section-loading', 'Loading operacional perdeu o marcador usado pela validação de prontidão.');
 forbidText(page, 'invoices.length + 11', 'Mock antigo de invoices voltou ao page.tsx.');
 forbidText(page, '+ 42000', 'Mock antigo de valor liquidado voltou ao page.tsx.');
 
