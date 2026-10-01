@@ -9,6 +9,8 @@ import { isValidNsUg, normalizeNsNumber, normalizeNsUg } from '../../../lib/nsIn
 import { isValidOptionalSpedNup, normalizeSpedNup } from '../../../lib/spedNup';
 import { commitNsIntegrityMutations } from '../../../lib/nsIntegrityService';
 import { getCurrentOperationalScope } from '../../../lib/operationalPaths';
+import { loadAllInvoicesHistory } from '../../../lib/historicalInvoiceQueries';
+import { mergeInvoiceCollections } from '../../../lib/invoiceHotHistory';
 import {
   buildInvoiceRecordKey,
   findInvoiceIdentityConflict,
@@ -44,6 +46,29 @@ interface NotasActionsContext {
 /** Ações de Notas Fiscais e Comissão, com dependências operacionais injetadas. */
 export function useNotasFiscaisActions(context: NotasActionsContext) {
   const { user, empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices, comissoes, setComissoes, showToast, selectedNFCommitmentId, setSelectedNFCommitmentId, nfNumber, setNfNumber, nfDate, setNfDate, nfQuantities, setNfQuantities, nfSubTab, setNfSubTab, editingInvoice, setEditingInvoice, setEditingNSId, setTempNSValue, comissaoMes, comissaoBoletimNum, setComissaoBoletimNum, comissaoBoletimDate, setComissaoBoletimDate, comissaoPresPosto, comissaoPresNome, setComissaoPresNome, comissaoAux1Posto, comissaoAux1Nome, setComissaoAux1Nome, comissaoAux2Posto, comissaoAux2Nome, setComissaoAux2Nome, comissaoAux3Posto, comissaoAux3Nome, setComissaoAux3Nome } = context;
+
+  const loadCompleteInvoiceSource = async (
+    purpose: string
+  ): Promise<Invoice[] | null> => {
+    try {
+      const historical = await loadAllInvoicesHistory();
+      if (historical.truncated) {
+        showToast(
+          `O histórico de Notas Fiscais atingiu o limite de segurança. ${purpose} foi bloqueada para evitar uma operação parcial.`,
+          'error'
+        );
+        return null;
+      }
+      return mergeInvoiceCollections(invoices, historical.invoices);
+    } catch (error) {
+      console.error(`Erro ao carregar histórico de NFs para ${purpose}:`, error);
+      showToast(
+        `Não foi possível validar o histórico completo de Notas Fiscais. ${purpose} não foi executada.`,
+        'error'
+      );
+      return null;
+    }
+  };
 
   // Save or Edit registered Invoice ("Salvar Recebimento")
   const handleSaveInvoice = async (invoicePdfFile?: File | null): Promise<boolean> => {
@@ -85,8 +110,10 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
       return false;
     }
     const previousRecordKey = editingInvoice ? getInvoiceRecordKey(editingInvoice) : undefined;
+    const invoiceSource = await loadCompleteInvoiceSource('O cadastro da Nota Fiscal');
+    if (!invoiceSource) return false;
     const identityConflict = findInvoiceIdentityConflict(
-      invoices,
+      invoiceSource,
       supplierCnpj,
       cleanNfNum,
       previousRecordKey
@@ -207,12 +234,12 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     let updatedInvoices: Invoice[];
     if (editingInvoice) {
       if (previousRecordKey !== nextRecordKey) {
-        updatedInvoices = [invoiceToSave, ...invoices.filter(inv => getInvoiceRecordKey(inv) !== previousRecordKey)];
+        updatedInvoices = [invoiceToSave, ...invoiceSource.filter(inv => getInvoiceRecordKey(inv) !== previousRecordKey)];
       } else {
-        updatedInvoices = invoices.map(inv => getInvoiceRecordKey(inv) === previousRecordKey ? invoiceToSave : inv);
+        updatedInvoices = invoiceSource.map(inv => getInvoiceRecordKey(inv) === previousRecordKey ? invoiceToSave : inv);
       }
     } else {
-      updatedInvoices = [invoiceToSave, ...invoices];
+      updatedInvoices = [invoiceToSave, ...invoiceSource];
     }
      const updatedAlerts = [newAlert, ...alerts];
     const oldEmpenhoAdjusted = editingInvoice && editingInvoice.empenhoId !== selectedNFCommitmentId
@@ -474,7 +501,9 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
   };
 
   const handleDeleteAllInvoices = async () => {
-    if (invoices.length === 0) {
+    const invoiceSource = await loadCompleteInvoiceSource('A exclusão de todas as Notas Fiscais');
+    if (!invoiceSource) return;
+    if (invoiceSource.length === 0) {
       showToast('Não há Notas Fiscais para apagar.', 'info');
       return;
     }
@@ -483,7 +512,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
     }
      // Revert received quantities for all invoices we are deleting
     let updatedEmpenhos = [...empenhos];
-    for (const invoice of invoices) {
+    for (const invoice of invoiceSource) {
       updatedEmpenhos = updatedEmpenhos.map(emp => {
         if (emp.id === invoice.empenhoId) {
           const updatedItems = emp.items.map(item => {
@@ -509,7 +538,7 @@ export function useNotasFiscaisActions(context: NotasActionsContext) {
         const result = await commitAllInvoicesDeletion(
           user.uid,
           updatedEmpenhos,
-          invoices.map(getInvoiceRecordKey)
+          invoiceSource.map(getInvoiceRecordKey)
         );
         const committedById = new Map(
           result.updatedEmpenhos.map((empenho) => [empenho.id, empenho] as const)
