@@ -175,15 +175,21 @@ Situação já incorporada à branch integradora:
 Frentes ainda abertas:
 - **PERF-A — Bundle do EMPROVEX principal:** INTEGRADA; a rota `/` reduziu de 460 kB para 333 kB de First Load JS (-27,61%), preservando shell/Home/auth e movendo as grandes superfícies operacionais para boundaries lazy;
 
-Build combinado após PERF-A + PERF-B/C/E/H:
+Build combinado após PERF-A/B/C/D/E/G/H:
 - `/`: **333 kB** First Load JS;
-- principais rotas da Central: **300 kB**;
+- seis rotas principais da Central: **106 kB**;
 - `/admin`: **327 kB**;
+- `/admin/backups`: **244 kB**;
 - shared global: **104 kB**.
 
 A incompatibilidade cruzada encontrada no guard de classes de empenho foi resolvida pelo coordenador alterando apenas a expectativa estrutural do guard para a derivação memoizada já vigente em Notas Fiscais; nenhuma regra funcional foi alterada.
 
 - **PERF-D — Intake seletivo:** INTEGRADA; o caminho normal `A tratar` passou a usar índice derivado mínimo + NFs novas desde watermark + candidatos ativos, enquanto histórico/reconciliação ficam sob demanda. Cenários sintéticos registraram ~97,26% a ~99,69% de redução de documentos no steady-state para massas históricas grandes, preservando ausência de intake como PENDING e demais contratos.
+- **PERF-G — Shell persistente da Central:** INTEGRADA; `app/adm-deposito/layout.tsx` mantém auth/workspace/session/header/sidebar no boundary compartilhado e troca somente a superfície ativa. Os boundaries `dynamic()` da PERF-B foram preservados e as seis rotas principais da Central reduziram de ~300 kB para **106 kB** de First Load JS, com shared em 104 kB.
+
+A PERF-G foi integrada semanticamente no commit `238b813795be05ad7142973f1566b8fead9d055d`, preservando simultaneamente shell/layout persistente, boundaries lazy da PERF-B, intake seletivo da PERF-D e scripts de métricas da PERF-H. O Application CI combinado, Core Protection, Recovery Guardrails, Production Build, TypeScript, Diff Hygiene e gates finais 16–21 ficaram verdes.
+
+A PERF-F permanece **LIVRE** e é a próxima frente dependente ainda não integrada. A PERF-X continua opcional/bloqueada até as medições A–G/F justificarem separação adicional entre dados quentes e históricos.
 
 A branch integradora, e não as branches trabalhadoras antigas, passa a ser a referência para compatibilidade cruzada entre frentes.
 
