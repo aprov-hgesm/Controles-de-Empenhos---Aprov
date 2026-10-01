@@ -36,6 +36,7 @@ import type {
   WarehouseItemIntakeState,
 } from '../../../lib/warehouse/intakeState';
 import {
+  loadWarehouseInvoiceIntakeHistory,
   loadWarehouseInvoiceIntakeQueue,
   refreshWarehouseInvoiceIntakeQueueRows,
   type WarehouseInvoiceIntakeQueueContext,
@@ -1395,6 +1396,8 @@ export function IntakeBulkActionPanel({
 function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
   const [context, setContext] =
     useState<WarehouseInvoiceIntakeQueueContext | null>(null);
+  const [contextMode, setContextMode] =
+    useState<'operational' | 'history'>('operational');
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [allocationRow, setAllocationRow] =
@@ -1413,11 +1416,17 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
   const [allocationSheetWorking, setAllocationSheetWorking] =
     useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (
+    mode: 'operational' | 'history' = 'operational'
+  ) => {
     setLoading(true);
     setMessage(null);
     try {
-      setContext(await loadWarehouseInvoiceIntakeQueue(workspaceId));
+      const nextContext = mode === 'history'
+        ? await loadWarehouseInvoiceIntakeHistory(workspaceId)
+        : await loadWarehouseInvoiceIntakeQueue(workspaceId);
+      setContext(nextContext);
+      setContextMode(mode);
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -1430,8 +1439,16 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
   }, [workspaceId]);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void refresh('operational');
+  }, [contextMode, refresh]);
+
+  useEffect(() => {
+    const expectedMode =
+      statusFilter === 'actionable' ? 'operational' : 'history';
+    if (!loading && contextMode !== expectedMode) {
+      void refresh(expectedMode);
+    }
+  }, [contextMode, loading, refresh, statusFilter]);
 
   const rows = context?.rows || [];
 
@@ -1731,7 +1748,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
       message: string;
     }>
   ) => {
-    await refresh();
+    await refresh(contextMode);
     if (mode === 'remove') {
       setMessage(
         subjectLabel
@@ -1820,7 +1837,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
           </div>
           <button
             type="button"
-            onClick={() => void refresh()}
+            onClick={() => void refresh(contextMode)}
             disabled={loading}
             className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 px-3 text-xs font-black text-slate-600 disabled:opacity-50"
           >
