@@ -423,6 +423,24 @@ Observação:
 
 Decisão: **INTEGRADA**.
 
+## Handoff do Coordenador — 2026-10-01
+
+A coordenação desta conversa foi consolidada para troca de chat.
+
+Fonte de retomada:
+- `docs/PERFORMANCE_R3_COORDENADOR_HANDOFF.md`.
+
+Estado consolidado no momento do handoff:
+- A/B/C/D/E/G/H: **INTEGRADAS**;
+- PERF-F: **LIVRE**;
+- PERF-X: **BLOQUEADA / OPCIONAL**;
+- PERF-I: **BLOQUEADA** até fechamento das frentes necessárias;
+- PERF-J: **BLOQUEADA** até PERF-I;
+- sem merge consolidado em `main`;
+- sem deploy consolidado de produção da R3.
+
+O novo coordenador deve conferir HEADs reais antes de agir e não deve reconstruir estado a partir de chats antigos quando a documentação oficial já registrar a decisão.
+
 ## Regra
 
 Chats trabalhadores **não atualizam este quadro para se autoaprovar**. Eles entregam o handoff; o chat coordenador atualiza o estado após revisão.
