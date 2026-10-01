@@ -32,7 +32,7 @@ Estado global: **SAAS-A CONGELADA / ONDA 1 LIBERADA / IMPLEMENTAÇÃO AINDA NÃO
 ## 3. Contratos congelados
 
 Não alterar em worker:
-- R$ 50/mês;
+- **R$ 70/mês — Plano Completo**;
 - 30 dias de trial;
 - 5º dia útil;
 - 10 dias de tolerância;
@@ -41,9 +41,11 @@ Não alterar em worker:
 - suspensão manual;
 - nenhum delete por inadimplência;
 - founder exempt;
+- VIP externo = `exempt`, sem cobrança e com acesso completo;
 - sem public signup;
 - sem auto-suspensão;
 - sem webhook/API de pagamento;
+- sem tiers ou módulos pagos separadamente;
 - 1 workspace ↔ 1 UG ↔ 1 conta externa primária;
 - aceite legal versionado;
 - backup nativo dos dois bancos antes da abertura.
@@ -51,18 +53,22 @@ Não alterar em worker:
 ## 4. Achados de baseline que orientam a execução
 
 1. `billingAccounts` já é fonte de verdade comercial; não criar coleção concorrente.
-2. `platformAccess` não lê billing e isso é desejável para custo/isolamento.
-3. Rules operacionais já exigem workspace e conta ativos; enforcement deve reutilizar esse contrato.
-4. Provisionamento já cria billing junto do tenant.
-5. Backups lógicos atuais dependem de sessão/Drive e não substituem backup nativo do banco inteiro.
-6. Central de Depósitos usa banco Firestore separado e precisa entrar explicitamente na estratégia de desastre.
-7. Legal atual é pré-comercial e precisa versão/aceite.
-8. Cloud Monitoring já existe; uptime deve reutilizá-lo.
+2. O código atual ainda possui baseline de R$ 50,00; SAAS-B deve migrar o default para R$ 70,00.
+3. `exempt` será reutilizado para VIP externo, evitando novo status de domínio.
+4. `platformAccess` não lê billing e isso é desejável para custo/isolamento.
+5. Rules operacionais já exigem workspace e conta ativos; enforcement deve reutilizar esse contrato.
+6. Provisionamento já cria billing junto do tenant.
+7. Backups lógicos atuais dependem de sessão/Drive e não substituem backup nativo do banco inteiro.
+8. Central de Depósitos usa banco Firestore separado e precisa entrar explicitamente na estratégia de desastre.
+9. Legal atual é pré-comercial e precisa versão/aceite.
+10. Cloud Monitoring já existe; uptime deve reutilizá-lo.
 
 ## 5. Infraestrutura e migrações
 
 Neste momento:
-- nova base de dados: **não**;
+- novo banco Firestore para SaaS/billing/legal: **NÃO** — manter no banco principal;
+- `emprovex-warehouse` permanece como banco separado da Central;
+- nova base de dados adicional: somente com nova decisão arquitetural baseada em necessidade objetiva;
 - troca de Firebase: **não**;
 - troca de Vercel: **não**;
 - novo provedor de autenticação: **não**;
