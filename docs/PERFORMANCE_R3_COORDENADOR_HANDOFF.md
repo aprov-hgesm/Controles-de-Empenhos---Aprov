@@ -45,39 +45,40 @@ Documentos obrigatórios:
 | PERF-F | **INTEGRADA** | `570661b` | `14aaa2e` | cache curto 30 s; isolamento por workspace; 8 → 2 loads no cenário sintético |
 | PERF-G | **INTEGRADA** | `de870d1` | `238b813` | shell persistente; Central 300 → 106 kB |
 | PERF-H | **INTEGRADA** | `fb5f452` | `a686410` | métricas/budgets reproduzíveis |
-| PERF-X | **DEVOLVIDA** | `8aac69a` | CI #867 verde; correção semântica pendente | arquitetura aprovada; 2 bloqueios UX/legado antes da integração |
-| PERF-I | **BLOQUEADA** | — | branch integradora | aguarda decisão objetiva sobre PERF-X; depois integração + UX |
-| PERF-J | **BLOQUEADA** | — | branch integradora | certificação após PERF-I |
+| PERF-X | **INTEGRADA E CERTIFICADA** | `8aac69a` | `2aca0dce` + correção `2b72d43` | hot/history certificado; CI #868 verde |
+| PERF-I | **APROVADA E ENCERRADA** | — | branch integradora até `6ebbf45b` | integração + métricas + UX + segurança concluídas |
+| PERF-J | **LIVRE / PRÓXIMA** | — | branch integradora | certificação final consolidada |
 
 
 ## 2.1. Ponto de retomada para os próximos chats
 
 Estado canônico da rodada:
 - branch integradora: `feat/performance-r3-commercializacao`;
-- HEAD antes desta atualização documental: `8247b358d7ba118cd6be3cc9f10cee0b079b657b`;
+- HEAD funcional certificado antes desta atualização documental: `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`;
 - `main`: `22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`;
-- A/B/C/D/E/F/G/H/X: **INTEGRADAS**;
-- PERF-I: **LIVRE**;
-- PERF-J: bloqueada até PERF-I;
+- A/B/C/D/E/F/G/H/X: **INTEGRADAS**; PERF-X também **CERTIFICADA**;
+- PERF-I: **APROVADA E ENCERRADA**;
+- PERF-J: **LIVRE / PRÓXIMA FASE**;
 - nenhuma integração R3 em `main`;
 - nenhum deploy consolidado R3 em produção.
 
 Ordem obrigatória daqui em diante:
-`PERF-I (integração + UX) → PERF-J (certificação) → autorização explícita do usuário → main/release`.
+`PERF-J (certificação final) → autorização explícita do usuário → main/release`.
 
 Regra de retomada:
 - novos trabalhos devem partir da integradora **atual**, nunca dos baselines históricos;
 - A–H são contratos integrados e só podem ser tocadas por regressão objetiva;
 - UX é critério bloqueante, não item cosmético;
-- Browser E2E permanece sob demanda; validação manual/dirigida das jornadas de UX da PERF-I é obrigatória;
+- Browser E2E permanece sob demanda; a validação manual/dirigida obrigatória da PERF-I já foi concluída;
+- não reabrir PERF-I nem A–X sem regressão objetiva;
 - evitar deploys Vercel intermediários quando CI/local forem suficientes.
 
 
-## 3. Build combinado certificado após PERF-F
+## 3. Build combinado certificado pela PERF-I
 
-Último build combinado validado após A/B/C/D/E/F/G/H:
+Coleta final executada com `perf:r3:collect` no estado integrado:
 
-- `/`: **333 kB First Load JS**;
+- `/`: **335 kB First Load JS**;
 - `/adm-deposito`: **106 kB**;
 - `/adm-deposito/meus-depositos`: **106 kB**;
 - `/adm-deposito/cadastro-de-itens`: **106 kB**;
@@ -85,14 +86,15 @@ Regra de retomada:
 - `/adm-deposito/controle-de-depositos`: **106 kB**;
 - `/adm-deposito/controle-de-itens`: **106 kB**;
 - `/admin`: **327 kB**;
-- `/admin/backups`: **244 kB**;
+- `/admin/backups`: **245 kB**;
 - shared: **104 kB**.
 
-Comparações:
-- root: **460 → 333 kB** = -127 kB / **-27,61%**;
-- Central: **579 → 300 → 106 kB**;
-- Central vs baseline original: -473 kB / aproximadamente **-81,7%**;
-- shared: 103 → 104 kB, praticamente estável.
+Comparações finais:
+- root: **460 → 335 kB** = **-27,17%**;
+- Central: **579 → 106 kB** = **-81,69%**;
+- `/admin`: **326 → 327 kB** = **+0,31%**;
+- shared: **103 → 104 kB** = **+0,97%**;
+- `perf:r3:budget`: **within configured budgets**.
 
 ## 4. O que cada frente já resolveu
 
@@ -276,6 +278,12 @@ Budgets v1:
 
 Esses budgets **ainda não estão ligados automaticamente ao Application CI**.
 
+Fechamento PERF-H durante PERF-I:
+- `perf:r3:collect`, `compare` e `budget`: **PASS**;
+- correção Windows em `2c2da4ded5ffd38e243d8e03cac6f104bcf93c4a`: coletor usa `cmd.exe/ComSpec` em vez de `spawn('npm.cmd')`;
+- correção do parser CI em `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`: timestamp GitHub Actions removido corretamente;
+- testes de métricas/parser/sanitização: **3/3 PASS**.
+
 ## 5. PERF-F — concluída
 
 Status: **INTEGRADA**.
@@ -320,137 +328,66 @@ Riscos/itens deliberadamente fora do escopo:
 - redução seletiva só entra em vigor depois do backfill READY;
 - PERF-I deve validar visualmente fallback legado, estado READY, transições operacional→histórico e histórico sob demanda.
 
-**PERF-I está LIBERADA.**
+**PERF-I foi APROVADA E ENCERRADA. PERF-J está LIBERADA.**
 
 ## 7. PERF-I — Integração Controlada + Validação de UX
 
-Quando as frentes necessárias estiverem fechadas:
+Status final: **APROVADA E ENCERRADA em 2026-10-01**.
 
-1. confirmar quadro oficial;
-2. rodar build combinado;
-3. executar `perf:r3:collect`;
-4. executar `perf:r3:compare`;
-5. executar `perf:r3:budget`;
-6. rever reads/consultas críticas;
-7. executar regressão de segurança/Core;
-8. resolver qualquer conflito restante;
-9. decidir se PERF-X é necessária com base em evidência;
-10. executar a validação integrada de experiência do usuário;
-11. preparar estado candidato à certificação somente se performance **e** UX estiverem aprovadas.
+### 7.1. Gates e métricas finais
 
-### 7.1. Princípio de decisão
+- TypeScript: **PASS**;
+- production build: **PASS**;
+- `perf:r3:collect`: **PASS**;
+- `perf:r3:compare`: **PASS**;
+- `perf:r3:budget`: **PASS**;
+- parser/budget/sanitização: **3/3 PASS**;
+- PERF-F cache: **11/11 PASS**;
+- PERF-D intake: **7/7 PASS**;
+- PERF-G shell persistente: **PASS**;
+- PERF-X hot/history: **PASS**;
+- `git diff --check`: limpo;
+- `git status --short`: limpo.
 
-A experiência do usuário é a prioridade principal do EMPROVEX.
+### 7.2. Correções descobertas pela integração
 
-> **Nenhum ganho de performance é aprovado se tornar a operação menos clara, previsível, segura ou confortável para o usuário.**
+1. **Fixture E2E de empenhos:** registros técnicos incompletos sem `items` quebravam Empenhos/Home no ambiente de validação. As fixtures fundador e externas foram tornadas operacionalmente válidas sem mudar regra de negócio.
+2. **Coletor PERF-H no Windows:** `spawn('npm.cmd')` gerava `EINVAL`; correção em `2c2da4ded5ffd38e243d8e03cac6f104bcf93c4a`.
+3. **Parser de logs CI:** regex de timestamp GitHub Actions estava escapada incorretamente; correção em `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`.
 
-CI verde, bundle menor, menos reads ou menor CPU não anulam uma regressão relevante de UX. Quando houver conflito entre ganho marginal de performance e ergonomia/previsibilidade, a experiência do usuário prevalece.
+### 7.3. Validação manual concluída
 
-### 7.2. Checklist obrigatório de UX da PERF-I
+Foi validado, sem regressão bloqueante:
+- primeiro acesso e acesso subsequente às superfícies lazy;
+- Empenhos, Recebimentos/NF e Central;
+- back/forward, URL, refresh direto, header/sidebar e shell persistente;
+- reset de formulário da Alocação;
+- persistência deliberada do rascunho da Saída entre navegação/F5;
+- barcode desconhecido → associação → quantidade → ENTER/TAB → retorno de foco;
+- cache PERF-F após mutação, sem necessidade de F5;
+- usuário externo autorizado e isolamento de workspace;
+- jornada EMPROVEX → Central → Meus Depósitos → Alocação → Saída → retorno;
+- erros tardios/permissão no ambiente correto com Rules da branch;
+- throttling artificial de rede, sem crash/tela branca e com recuperação normal ao voltar a `No throttling`.
 
-A validação deve cobrir, no mínimo:
+### 7.4. Benchmark manual indicativo
 
-1. **Primeiro acesso vs. acesso subsequente**
-   - abrir superfícies lazy/on-demand pela primeira vez;
-   - repetir o acesso;
-   - confirmar ausência de clique aparentemente ignorado, tela vazia ou espera sem feedback;
-   - loaders/skeletons devem ser compreensíveis quando a espera for perceptível.
+No mesmo computador/Edge:
+- publicada/Home parada: CPU Edge tipicamente **70–100**, picos em repouso até **129**, pico geral observado **162,1**;
+- R3 standalone/Home parada: **30–40**, pico **41,6**;
+- memória da aba: publicada chegou a ~**724.116 K (~707 MB)**; R3 Home ~**170.776 K (~167 MB)**;
+- Empenhos R3: **26–40**, pico **55** ao detalhar, ~**174.624 K**;
+- Central R3: pico transitório **143** na troca; Meus Depósitos pico **84**, estabilizando aproximadamente **26–60**, ~**215.672 K**.
 
-2. **Persistência e reset de estado**
-   - filtros;
-   - ordenação;
-   - seleção;
-   - paginação;
-   - scroll;
-   - abas/subabas;
-   - confirmar que persistência ou reset seguem comportamento intuitivo, sem esconder dados do usuário.
+Esses números são **indicativos e não laboratoriais**, porque publicada e R3 local standalone/emulada não são ambientes idênticos. Servem como evidência complementar de que a R3 reduziu trabalho contínuo em repouso e que os maiores picos observados na candidata foram transitórios.
 
-3. **Proteção de formulários**
-   - preencher parcialmente Alocação de Material;
-   - preencher parcialmente Saída de Material;
-   - navegar conforme permitido e retornar;
-   - verificar que não existe perda inesperada de dados digitados ou seleção operacional.
+### 7.5. Decisão
 
-4. **Shell persistente da Central**
-   - entrada direta em `/adm-deposito`;
-   - Início → Meus Depósitos;
-   - Alocação de Material;
-   - Saída de Material;
-   - URL correta;
-   - header/sidebar persistentes;
-   - back;
-   - forward;
-   - refresh direto em subrota;
-   - ausência de componente duplicado, conteúdo antigo ou piscada excessiva.
-
-5. **Barcode, teclado e foco**
-   - foco automático;
-   - leituras consecutivas;
-   - ENTER;
-   - retorno do foco ao barcode;
-   - criação/edição do carrinho;
-   - primeira busca de material ainda não carregado;
-   - scanner/teclado não podem ficar menos previsíveis por lazy loading ou remontagem.
-
-6. **PERF-F — cache curto**
-   - primeira leitura;
-   - segunda leitura dentro do TTL;
-   - expiração;
-   - invalidação/atualização após mutação local bem-sucedida;
-   - alteração feita por outra sessão/aba;
-   - nenhuma operação crítica pode confiar no cache como autoridade quando exigir revalidação oficial.
-
-7. **Erros tardios de carregamento sob demanda**
-   - rede;
-   - permissão;
-   - dado ausente/inconsistente;
-   - a falha deve gerar mensagem clara quando a função for usada, sem aparência de botão quebrado ou clique sem efeito.
-
-8. **Listas otimizadas pela PERF-E**
-   - filtros;
-   - busca;
-   - ordenação;
-   - totais;
-   - contagens;
-   - informação exibida;
-   - comparar semanticamente com o comportamento esperado anterior.
-
-9. **Máquina e conexão mais fracas**
-   - executar pelo menos a jornada principal em hardware/conectividade modestos;
-   - observar loading, CPU, responsividade, foco, transições e sensação de travamento;
-   - não aprovar apenas com base em máquina de desenvolvimento rápida.
-
-10. **Jornada integrada completa**
-    - EMPROVEX → Central;
-    - Central → Meus Depósitos;
-    - Meus Depósitos → Alocação;
-    - Alocação → Saída;
-    - retorno à Central;
-    - executar também uma jornada representativa no EMPROVEX principal.
-
-11. **Usuário externo autorizado**
-    - repetir os principais fluxos permitidos;
-    - conferir acesso, mensagens, navegação e ergonomia;
-    - confirmar que otimizações não alteraram isolamento nem experiência esperada.
-
-### 7.3. Critérios de bloqueio por UX
-
-A PERF-I deve bloquear o candidato até correção ou decisão explícita do usuário quando detectar:
-
-- perda de dados digitados;
-- informação visual enganosa ou aparentemente desatualizada sem tratamento adequado;
-- clique sem resposta perceptível;
-- carregamento sem feedback quando houver espera relevante;
-- filtro/estado persistido de forma confusa;
-- reset inesperado de estado necessário;
-- necessidade nova de refresh manual para continuar;
-- quebra de foco, ENTER, teclado ou scanner;
-- regressão perceptível de navegação, ergonomia ou previsibilidade;
-- comportamento significativamente pior em hardware/conectividade modestos.
-
-Browser E2E permanece **sob demanda**. A PERF-I pode combinar testes automatizados, browser dirigido e validação manual assistida conforme o risco de cada fluxo.
+A PERF-I está **APROVADA**. Não houve merge em `main` nem deploy de produção. A próxima fase é exclusivamente **PERF-J — Certificação Final**.
 
 ## 8. PERF-J — Certificação Final
+
+Status: **LIBERADA / PRÓXIMA FASE**.
 
 Deve validar:
 - TypeScript;
@@ -463,7 +400,7 @@ Deve validar:
 - bundle por rota;
 - métricas/budget;
 - experiência visual/manual afetada;
-- aprovação dos critérios de UX da PERF-I, incluindo primeiro acesso lazy, estado, formulários, barcode/teclado, cache, erros e jornada em ambiente modesto;
+- preservar a aprovação dos critérios de UX já obtida na PERF-I; repetir manualmente apenas o que a certificação final ou alguma regressão objetiva exigir;
 - ausência de regressão de reads;
 - documentação final.
 
@@ -515,7 +452,7 @@ Validação manual:
 
 ## 11. Produção / main
 
-Até este handoff:
+Até este handoff, já após a aprovação da PERF-I:
 - **não houve merge consolidado da Performance R3 em `main`**;
 - **não houve deploy consolidado da R3 em produção**;
 - o usuário deseja concentrar publicação para evitar limites de deploy da Vercel;
@@ -538,16 +475,13 @@ Não gastar deploys apenas para validação intermediária quando CI/local forem
 Ao assumir:
 
 1. ler os documentos obrigatórios;
-2. executar/fazer consulta do HEAD real de:
-   - `main`;
-   - `feat/performance-r3-commercializacao`;
-   - `perf-r3-f-memory-cache`, se já existir;
+2. conferir o HEAD real de `main` e `feat/performance-r3-commercializacao`;
 3. conferir `docs/PERFORMANCE_R3_INTEGRATION_STATUS.md`;
-4. confirmar que A/B/C/D/E/G/H seguem integradas;
-5. confirmar que PERF-F segue integrada em `14aaa2e`;
-6. não reabrir A/D/F/G sem regressão objetiva;
-7. confirmar PERF-X integrada em `2aca0dce` + correção `2b72d43`, com CI #868 verde;
-8. conduzir PERF-I e, depois, PERF-J com a validação obrigatória de UX.
+4. confirmar A/B/C/D/E/F/G/H/X como integradas e PERF-X certificada;
+5. confirmar PERF-I como **APROVADA E ENCERRADA** no estado funcional até `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`;
+6. não reabrir A–X/PERF-I sem regressão objetiva;
+7. conduzir exclusivamente a **PERF-J — Certificação Final**;
+8. não fazer merge em `main`, deploy ou promoção Vercel sem autorização explícita do usuário.
 
 ## 14. Regra para atualização deste documento
 
