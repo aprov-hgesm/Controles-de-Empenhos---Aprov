@@ -21,10 +21,10 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 
 | Frente | Branch prevista | Estado | Dependência | HEAD trabalhador | Observação |
 | --- | --- | --- | --- | --- | --- |
-| PERF-A | `perf-r3-a-core-bundle` | EM ANDAMENTO | baseline comum | `640377a` | Bundle EMPROVEX; CI exige ajuste legítimo de guard SAG |
+| PERF-A | `perf-r3-a-core-bundle` | EM ANDAMENTO | baseline `076a233`; pausa coordenada para realinhamento | `5b92235` | Lazy root avançado; Core PASS/TS 0; não perseguir guards cruzados de PERF-E/B/C/H |
 | PERF-B | `perf-r3-b-central-bundle` | INTEGRADA | baseline comum | `7b7aee1` | Bundle Central; -48,2% nas rotas principais |
 | PERF-C | `perf-r3-c-outbound-demand-loading` | INTEGRADA | baseline `076a233` | `c263ce3` | Saída sob demanda integrada em `e33e260`; abertura fresca 0 reads específicos da superfície |
-| PERF-D | `perf-r3-d-intake-queue` | EM ANDAMENTO | baseline comum | — | Intake seletivo |
+| PERF-D | `perf-r3-d-intake-queue` | EM ANDAMENTO | baseline `076a233` | `5a1edb2` | Intake seletivo avançado; último TS conhecido foi corrigido por tipagem explícita de snapshots; aguarda novo CI |
 | PERF-E | `perf-r3-e-render-cpu` | INTEGRADA | baseline `076a233` | `149f7c3` | CPU/renderização integrada em `9d5ff58`; gates locais verdes |
 | PERF-H | `perf-r3-h-metrics-budget` | INTEGRADA | baseline `076a233` | `fb5f452` | Métricas/budget integradas em `a686410`; CI bloqueante ainda não ativado |
 | PERF-F | `perf-r3-f-memory-cache` | BLOQUEADA | PERF-C integrada; aguarda PERF-D | — | Metade da dependência satisfeita; iniciar somente após D estabilizar leituras restantes |
@@ -32,6 +32,22 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 | PERF-X | `perf-r3-x-hot-vs-history` | BLOQUEADA | medições A–G | — | Opcional |
 | PERF-I | branch integradora | BLOQUEADA | frentes aprovadas | — | Integração final |
 | PERF-J | branch integradora | BLOQUEADA | PERF-I concluída | — | Certificação |
+
+## Coordenação especial — PERF-A
+
+Em 2026-10-01 a PERF-A foi colocada em **pausa coordenada de realinhamento**, mantendo estado `EM ANDAMENTO`, porque o code splitting do root passou a expor falhas de guards de naturezas diferentes.
+
+Regra aplicada:
+- corrigir na PERF-A apenas regressões próprias e guards diretamente desatualizados pela mudança `app/page.tsx → OperationalWorkspace`;
+- não alterar internals de outra frente para obter CI verde;
+- falhas provocadas pela combinação com PERF-B/C/E/H já integradas são responsabilidade do coordenador/PERF-I;
+- o HEAD `5b92235` não está aprovado nem integrado; será retomado com prompt específico e handoff novo.
+
+Evidência atual:
+- EMPROVEX Core Protection no HEAD atual: **PASS**;
+- TypeScript no último Application CI: **0 erros**;
+- falha atual do Application CI: guard de configuração de classes de empenho, cuja expressão textual esperada não corresponde à forma reorganizada de Notas Fiscais já afetada por PERF-E;
+- não autorizar a PERF-A a modificar Notas Fiscais para resolver essa incompatibilidade cruzada.
 
 ## Registro de propriedade
 
