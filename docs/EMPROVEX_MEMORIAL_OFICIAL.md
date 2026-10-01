@@ -163,6 +163,21 @@ A especificação completa está em `docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md`.
 
 A independência das frentes é uma **regra arquitetural da rodada**: um chat não deve aproveitar sua frente para refatorar outra área. Dependências são registradas no handoff e resolvidas pelo coordenador.
 
+
+### Estado consolidado da primeira onda em 2026-10-01
+
+Situação já incorporada à branch integradora:
+- **PERF-B — Bundle da Central:** INTEGRADA; rotas principais da Central reduziram de 579 kB para 300 kB de First Load JS (~48,2%);
+- **PERF-C — Saída sob demanda:** INTEGRADA; abertura fresca da superfície deixou de antecipar as 8 consultas específicas e o teto bounded de até 3.000 documentos;
+- **PERF-E — CPU e Renderização:** INTEGRADA; grandes reduções estruturais de varreduras em Empenhos, Notas Fiscais e Consulta de Itens;
+- **PERF-H — Métricas e Budget:** INTEGRADA; baseline, parser, comparação e budgets estão disponíveis, ainda sem transformar budgets experimentais em gate automático do Application CI.
+
+Frentes ainda abertas:
+- **PERF-A — Bundle do EMPROVEX principal:** implementação principal de lazy loading avançada, porém em pausa coordenada para separar falhas próprias de falhas de guards causadas pela combinação com frentes já integradas;
+- **PERF-D — Intake seletivo:** implementação avançada; a última falha conhecida de TypeScript foi localizada na tipagem de snapshots paginados e recebeu correção na branch trabalhadora, aguardando nova validação.
+
+A branch integradora, e não as branches trabalhadoras antigas, passa a ser a referência para compatibilidade cruzada entre frentes.
+
 ## 7. Restrições da Performance R3
 
 Não fazem parte da rodada, salvo necessidade técnica comprovada:
@@ -175,6 +190,25 @@ Não fazem parte da rodada, salvo necessidade técnica comprovada:
 - misturar migração de infraestrutura com otimização de frontend.
 
 Toda mudança de performance deve ser reversível, medida e compatível com os guards existentes.
+
+
+### Regra de guards em trabalho paralelo
+
+Guards estruturais são contratos de regressão, mas muitos deles também codificam **onde** a implementação existia no momento em que foram criados. Durante uma refatoração estrutural como code splitting/lazy loading, é permitido ao chat trabalhador adaptar um guard **somente quando a falha decorre diretamente da sua própria mudança de localização/composição**, sem reduzir a proteção semântica existente.
+
+É proibido ao trabalhador:
+- alterar lógica funcional de outra frente apenas para satisfazer um guard textual;
+- editar uma view de outro domínio quando a falha apareceu porque outra PERF já integrada reorganizou aquela implementação;
+- enfraquecer um guard para obter CI verde;
+- assumir responsabilidade por regressão cruzada criada pela combinação de branches independentes.
+
+Quando um guard falhar por efeito combinado entre frentes, o trabalhador deve:
+1. registrar a falha e a evidência;
+2. confirmar que seu próprio contrato continua preservado;
+3. **parar naquele ponto** sem invadir o escopo alheio;
+4. entregar ao Chat Coordenador, que resolve a compatibilidade na branch integradora/PERF-I.
+
+Exemplo vigente: a PERF-A pode atualizar guards que ainda procuram código movido de `app/page.tsx` para `OperationalWorkspace`. Porém, uma falha de guard provocada por reorganização interna de `NotasFiscaisView.tsx` já integrada pela PERF-E não deve ser corrigida pela PERF-A alterando Notas Fiscais; essa reconciliação pertence ao coordenador.
 
 ## 8. Riscos/pendências que não devem ser esquecidos
 
