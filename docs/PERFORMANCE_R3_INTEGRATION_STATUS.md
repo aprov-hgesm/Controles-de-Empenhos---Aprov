@@ -30,7 +30,7 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 | PERF-F | `perf-r3-f-memory-cache` | INTEGRADA | PERF-C + PERF-D integradas | `570661b` | Cache curto em memória integrado em `14aaa2e`; TTL 30 s; workspace isolado; CI combinado verde |
 | PERF-G | `perf-r3-g-central-shell` | INTEGRADA | PERF-B integrada | `de870d1` | Shell persistente integrado em `238b813`; Central 300 → 106 kB; CI combinado/Core/Recovery verdes |
 | PERF-X | `perf-r3-x-hot-vs-history` | EM ANDAMENTO | A/B/C/D/E/F/G/H integradas | `f4d9b848` | Auditoria aprovada: listener global de `invoices` é gargalo estrutural; implementação mínima autorizada |
-| PERF-I | branch integradora | BLOQUEADA | decisão objetiva sobre PERF-X | — | Integração final + validação obrigatória de UX |
+| PERF-I | branch integradora | BLOQUEADA | PERF-X implementada, revisada e integrada | — | Integração final + validação obrigatória de UX |
 | PERF-J | branch integradora | BLOQUEADA | PERF-I concluída | — | Certificação |
 
 
