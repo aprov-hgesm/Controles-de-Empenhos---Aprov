@@ -1,0 +1,69 @@
+name: SAAS-DL Legal Validation
+
+on:
+  pull_request:
+    paths:
+      - "app/privacy/page.tsx"
+      - "app/terms/page.tsx"
+      - "components/legal/**"
+      - "hooks/useLegalAcceptance.ts"
+      - "lib/legalAcceptance.ts"
+      - "lib/legalVersions.ts"
+      - "firestore.rules"
+      - "scripts/legal-acceptance-security.test.mjs"
+      - "scripts/verify-saas-r1-legal-acceptance.mjs"
+      - "package.json"
+      - ".github/workflows/saas-dl-legal.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-legal:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Java for Firebase Emulator
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: Public OAuth and legal pages
+        run: npm run verify:public-oauth-legal-pages
+
+      - name: Versioned legal acceptance guard
+        run: npm run verify:saas-r1-legal-acceptance
+
+      - name: Legal acceptance Firestore Rules tests
+        run: npm run test:saas-r1-legal-acceptance
+
+      - name: EMPROVEX Core Protection
+        run: npm run verify:emprovex-core-protection
+
+      - name: Production build
+        run: npm run build
+
+      - name: Diff hygiene
+        shell: bash
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          git diff --check "origin/${{ github.base_ref }}...HEAD"
