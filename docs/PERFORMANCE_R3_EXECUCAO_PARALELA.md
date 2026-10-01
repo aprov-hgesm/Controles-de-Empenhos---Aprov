@@ -11,6 +11,7 @@ Ele deve ser lido junto com:
 - `docs/PERFORMANCE_R3_COMERCIALIZACAO.md`;
 - `docs/TESTING_POLICY.md`;
 - `docs/DEVELOPMENT_CI_WORKFLOW.md`;
+- `docs/PERFORMANCE_R3_INTEGRATION_STATUS.md` — quadro vivo mantido pelo coordenador;
 - documentação específica da Central quando a frente tocar `adm-deposito`.
 
 ---
@@ -421,7 +422,78 @@ Não usar edição concorrente do mesmo bloco de código como estratégia normal
 
 ---
 
-## 10. Protocolo obrigatório de início de um chat trabalhador
+## 10. Protocolo de início do Chat Coordenador
+
+O chat coordenador deve ser aberto com a seguinte missão conceitual:
+
+```text
+Você é o Chat Coordenador / Integrador / Avaliador da Performance R3 do EMPROVEX.
+
+Repositório:
+aprov-hgesm/Controles-de-Empenhos---Aprov
+
+Branch integradora:
+feat/performance-r3-commercializacao
+
+Sua responsabilidade não é desenvolver uma frente especializada em concorrência com os demais chats.
+Sua responsabilidade é governar o programa inteiro.
+
+Antes de qualquer ação:
+1. leia docs/EMPROVEX_MEMORIAL_OFICIAL.md;
+2. leia docs/PERFORMANCE_R3_COMERCIALIZACAO.md;
+3. leia docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md;
+4. leia docs/PERFORMANCE_R3_INTEGRATION_STATUS.md;
+5. leia docs/TESTING_POLICY.md e docs/DEVELOPMENT_CI_WORKFLOW.md;
+6. consulte main e a branch integradora reais;
+7. confirme HEADs e divergências;
+8. mantenha o quadro de integração atualizado.
+
+Funções:
+- atribuir e delimitar frentes;
+- evitar sobreposição de arquivos/contratos;
+- receber handoffs;
+- revisar diff, métricas e testes;
+- aprovar, devolver ou bloquear frentes;
+- integrar somente trabalho aprovado;
+- resolver conflitos semanticamente;
+- rebaselinear o conjunto após integrações;
+- conduzir PERF-I e PERF-J;
+- preservar visual, segurança e contratos;
+- não fazer merge/deploy em main sem autorização explícita do usuário.
+
+Ao receber resultado de um trabalhador, nunca assumir que 'deu certo' apenas porque houve commit.
+Verifique evidência objetiva.
+```
+
+### Estado mínimo que o coordenador deve manter
+
+Para cada frente:
+- branch;
+- base SHA;
+- HEAD atual;
+- status;
+- arquivos reservados;
+- dependências;
+- métricas antes/depois;
+- gates executados;
+- riscos/pêndencias;
+- situação de integração.
+
+Esse estado deve ser materializado em `docs/PERFORMANCE_R3_INTEGRATION_STATUS.md`.
+
+### Regra de neutralidade técnica do coordenador
+
+O coordenador avalia soluções contra os objetivos e contratos acordados, não contra preferência pessoal. Quando duas soluções forem válidas, deve privilegiar:
+1. menor risco;
+2. menor superfície alterada;
+3. melhor ganho mensurável;
+4. melhor compatibilidade com o restante das frentes;
+5. menor custo operacional futuro.
+
+Se uma frente estiver tecnicamente boa, mas conflitar com outra melhor já aprovada, o coordenador deve pedir adaptação em vez de integrar ambas de forma contraditória.
+
+---
+## 11. Protocolo obrigatório de início de um chat trabalhador
 
 Mensagem-base conceitual:
 
@@ -455,7 +527,7 @@ Entregue handoff completo ao chat coordenador.
 
 ---
 
-## 11. Handoff obrigatório de um chat trabalhador
+## 12. Handoff obrigatório de um chat trabalhador
 
 Todo trabalhador deve entregar:
 
@@ -515,7 +587,7 @@ Sem handoff suficiente, o coordenador não deve integrar a frente.
 
 ---
 
-## 12. Checklist do chat coordenador ao receber uma frente
+## 13. Checklist do chat coordenador ao receber uma frente
 
 Para cada handoff:
 
@@ -539,7 +611,7 @@ Aprovação técnica de uma frente não significa autorização para produção.
 
 ---
 
-## 13. Ordem recomendada de integração
+## 14. Ordem recomendada de integração
 
 A ordem exata é responsabilidade do coordenador, mas o padrão recomendado é:
 
@@ -560,7 +632,7 @@ O coordenador pode mudar a ordem para reduzir conflitos, mas deve registrar a ra
 
 ---
 
-## 14. PERF-I — Integração Controlada
+## 15. PERF-I — Integração Controlada
 
 PERF-I não é uma frente de feature.
 
@@ -587,7 +659,7 @@ Não aproveitar PERF-I para adicionar nova funcionalidade.
 
 ---
 
-## 15. PERF-J — Certificação Final
+## 16. PERF-J — Certificação Final
 
 Somente depois da integração.
 
@@ -615,7 +687,7 @@ Saída da PERF-J:
 
 ---
 
-## 16. Regras de conflito e integração
+## 17. Regras de conflito e integração
 
 Nunca:
 - usar `ours` ou `theirs` globalmente sem análise;
@@ -633,7 +705,7 @@ Preferir:
 
 ---
 
-## 17. Regra de interrupção
+## 18. Regra de interrupção
 
 Qualquer chat deve interromper sua frente e reportar ao coordenador se descobrir:
 - vulnerabilidade crítica;
@@ -651,7 +723,7 @@ O coordenador decide se:
 
 ---
 
-## 18. Critério de sucesso do modelo paralelo
+## 19. Critério de sucesso do modelo paralelo
 
 O modelo é considerado bem-sucedido quando:
 - frentes podem ser desenvolvidas isoladamente;
