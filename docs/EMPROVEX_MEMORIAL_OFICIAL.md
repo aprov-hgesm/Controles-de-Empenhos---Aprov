@@ -284,6 +284,106 @@ Quando um guard falhar por efeito combinado entre frentes, o trabalhador deve:
 
 Exemplo vigente: a PERF-A pode atualizar guards que ainda procuram código movido de `app/page.tsx` para `OperationalWorkspace`. Porém, uma falha de guard provocada por reorganização interna de `NotasFiscaisView.tsx` já integrada pela PERF-E não deve ser corrigida pela PERF-A alterando Notas Fiscais; essa reconciliação pertence ao coordenador.
 
+
+## 7.1. Retomada canônica para novos chats — estado pós-PERF-F
+
+Este bloco é o ponto de partida obrigatório para novos chats da Performance R3 enquanto a rodada não chegar à `main`.
+
+### Referências atuais
+
+- produção/`main`: `22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`;
+- branch integradora: `feat/performance-r3-commercializacao`;
+- HEAD integrado antes desta atualização documental: `8247b358d7ba118cd6be3cc9f10cee0b079b657b`;
+- **A/B/C/D/E/F/G/H estão integradas**;
+- não houve merge consolidado da R3 em `main`;
+- não houve deploy consolidado de produção da R3.
+
+### Integrações que novos chats devem tratar como base, não como trabalho aberto
+
+- PERF-A: worker `3193b84` → integração `15eadb0`;
+- PERF-B: worker `7b7aee1` → incorporada à integradora;
+- PERF-C: worker `c263ce3` → integração `e33e260`;
+- PERF-D: worker `022fae7` → integração `2e77af1`;
+- PERF-E: worker `149f7c3` → integração `9d5ff58`;
+- PERF-F: worker `570661b` → integração `14aaa2e`;
+- PERF-G: worker `de870d1` → integração `238b813`;
+- PERF-H: worker `fb5f452` → integração `a686410`.
+
+Essas frentes **não devem ser reabertas nem reimplementadas** sem regressão objetiva encontrada em PERF-I/PERF-J.
+
+### Resultado técnico combinado já certificado
+
+Build combinado após A/B/C/D/E/F/G/H:
+- `/`: **333 kB First Load JS** contra baseline de 460 kB;
+- seis rotas principais da Central: **106 kB** contra baseline original de 579 kB;
+- `/admin`: **327 kB**;
+- `/admin/backups`: **244 kB**;
+- shared: **104 kB**.
+
+Outros ganhos relevantes já incorporados:
+- Saída de Material abre sem as antigas consultas específicas antecipadas da PERF-C;
+- intake normal usa caminho seletivo/indexado da PERF-D, com histórico/reconciliação sob demanda;
+- grandes listas usam as reduções de recomputação da PERF-E;
+- shell da Central permanece montado entre rotas conforme PERF-G;
+- PERF-F reutiliza depósitos/localizações/destinos por até 30 s em memória, com isolamento por workspace e validações críticas uncached;
+- métricas/budgets reproduzíveis da PERF-H continuam disponíveis e ainda não são gate automático do Application CI.
+
+O Application CI #860 validou o merge virtual da PERF-F **já combinado** com os commits de UX da integradora. Core Protection e Recovery Guardrails também ficaram verdes.
+
+### Prioridade absoluta: experiência do usuário
+
+Para toda continuação desta rodada:
+
+> **performance só é aprovada quando melhora ou preserva a experiência real do operador.**
+
+Nenhum chat deve aceitar bundle menor, menos reads ou menos CPU como justificativa para:
+- perda de dados digitados;
+- clique sem resposta perceptível;
+- carregamento sem feedback adequado;
+- tela aparentemente desatualizada sem tratamento;
+- filtro/estado persistido ou resetado de maneira confusa;
+- necessidade nova de refresh manual;
+- quebra de foco, ENTER, teclado ou scanner;
+- navegação menos previsível;
+- piora perceptível em hardware/conectividade modestos.
+
+Esses pontos são critérios de bloqueio da PERF-I/PERF-J.
+
+### Próxima sequência obrigatória
+
+1. **PERF-X — decisão baseada em evidência.**
+   - Não iniciar uma refatoração automaticamente.
+   - Primeiro medir/auditar listeners, consultas e crescimento histórico remanescentes.
+   - Se não houver gargalo objetivo relevante de dados quentes vs. histórico: marcar **DISPENSADA**.
+   - Se houver: delimitar uma solução mínima, mensurável e independente antes de alterar código.
+
+2. **PERF-I — Integração Controlada + Validação de UX.**
+   - Só iniciar depois da decisão formal sobre PERF-X.
+   - Não é fase de feature.
+   - Reexecutar métricas/build/security e validar as jornadas reais definidas no handoff do Coordenador.
+   - Qualquer correção deve ser apenas conflito, glue code ou regressão combinada comprovada.
+
+3. **PERF-J — Certificação Final.**
+   - Só iniciar após PERF-I aprovada.
+   - Certificar código, métricas, reads, segurança, UX e documentação.
+   - Preparar candidato de release; **não** publicar automaticamente.
+
+4. **`main` / produção.**
+   - merge/release somente com autorização explícita do usuário;
+   - concentrar deploys, evitando previews/deploys intermediários desnecessários.
+
+### Regra para qualquer novo chat trabalhador
+
+Antes de editar:
+- conferir o HEAD real da integradora;
+- criar sua branch a partir da **integradora atual**, salvo instrução expressa do Coordenador;
+- nunca partir dos baselines antigos `076a233` ou `79f54e2` para trabalho novo;
+- ler este Memorial, `PERFORMANCE_R3_COORDENADOR_HANDOFF.md`, `PERFORMANCE_R3_INTEGRATION_STATUS.md`, `PERFORMANCE_R3_EXECUCAO_PARALELA.md`, `TESTING_POLICY.md` e `DEVELOPMENT_CI_WORKFLOW.md`;
+- declarar fronteira/arquivos antes de editar;
+- não fazer merge em `main`, deploy de produção ou promoção Vercel;
+- entregar handoff objetivo ao Coordenador.
+
+
 ## 8. Riscos/pendências que não devem ser esquecidos
 
 - crescimento histórico das coleções operacionais continua exigindo disciplina de consultas seletivas; PERF-D resolveu o principal caminho amplo do intake, mas futuras superfícies não devem reintroduzir scans globais;

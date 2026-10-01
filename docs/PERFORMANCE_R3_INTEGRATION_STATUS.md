@@ -33,6 +33,23 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 | PERF-I | branch integradora | BLOQUEADA | decisão objetiva sobre PERF-X | — | Integração final + validação obrigatória de UX |
 | PERF-J | branch integradora | BLOQUEADA | PERF-I concluída | — | Certificação |
 
+
+## Próxima ação coordenada
+
+Com A/B/C/D/E/F/G/H integradas, **não há outra frente de implementação obrigatória aberta antes da decisão sobre PERF-X**.
+
+Sequência:
+1. executar uma auditoria objetiva de PERF-X sobre a integradora atual;
+2. se não houver evidência material de gargalo hot-vs-history, registrar PERF-X como **DISPENSADA**;
+3. se houver evidência, delimitar/implementar somente o recorte comprovado e integrar após revisão;
+4. liberar PERF-I apenas após a decisão formal sobre PERF-X;
+5. PERF-I deve combinar certificação técnica com o checklist obrigatório de UX;
+6. PERF-J certifica o candidato final;
+7. `main` e produção continuam proibidas sem autorização explícita do usuário.
+
+Qualquer novo chat deve confirmar o HEAD real de `feat/performance-r3-commercializacao` antes de criar branch ou analisar métricas.
+
+
 ## Coordenação concluída — PERF-D
 
 PERF-D integrada semanticamente em `2e77af1706a599152dff8ec43a197d68056d5ae2` após validação combinada no PR técnico #205.

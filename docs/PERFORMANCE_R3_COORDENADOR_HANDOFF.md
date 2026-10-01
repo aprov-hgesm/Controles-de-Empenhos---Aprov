@@ -49,6 +49,31 @@ Documentos obrigatórios:
 | PERF-I | **BLOQUEADA** | — | branch integradora | aguarda decisão objetiva sobre PERF-X; depois integração + UX |
 | PERF-J | **BLOQUEADA** | — | branch integradora | certificação após PERF-I |
 
+
+## 2.1. Ponto de retomada para os próximos chats
+
+Estado canônico da rodada:
+- branch integradora: `feat/performance-r3-commercializacao`;
+- HEAD antes desta atualização documental: `8247b358d7ba118cd6be3cc9f10cee0b079b657b`;
+- `main`: `22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`;
+- A/B/C/D/E/F/G/H: **INTEGRADAS**;
+- PERF-X: **próxima decisão**, mas continua opcional e deve começar por auditoria/evidência;
+- PERF-I: bloqueada até a decisão sobre PERF-X;
+- PERF-J: bloqueada até PERF-I;
+- nenhuma integração R3 em `main`;
+- nenhum deploy consolidado R3 em produção.
+
+Ordem obrigatória daqui em diante:
+`PERF-X (auditar/decidir) → PERF-I (integração + UX) → PERF-J (certificação) → autorização explícita do usuário → main/release`.
+
+Regra de retomada:
+- novos trabalhos devem partir da integradora **atual**, nunca dos baselines históricos;
+- A–H são contratos integrados e só podem ser tocadas por regressão objetiva;
+- UX é critério bloqueante, não item cosmético;
+- Browser E2E permanece sob demanda; validação manual/dirigida das jornadas de UX da PERF-I é obrigatória;
+- evitar deploys Vercel intermediários quando CI/local forem suficientes.
+
+
 ## 3. Build combinado certificado após PERF-F
 
 Último build combinado validado após A/B/C/D/E/F/G/H:
