@@ -1,9 +1,9 @@
 # EMPROVEX — Memorial Oficial do Repositório
 
-Última atualização: **2026-10-01 — PERF-I aprovada / PERF-J liberada**  
-Baseline de produção consultada: `main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`  
-Branch candidata da Performance R3: `feat/performance-r3-commercializacao`  
-HEAD funcional certificado da R3 antes desta atualização documental: `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`  
+Última atualização: **2026-10-01 — PERF-I aprovada / PERF-J liberada**
+Baseline de produção consultada: `main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`
+Branch candidata da Performance R3: `feat/performance-r3-commercializacao`
+HEAD funcional certificado da R3 antes desta atualização documental: `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`
 Estado de fechamento: **PERF-I APROVADA; PERF-J LIBERADA; sem merge consolidado em `main` e sem deploy consolidado da R3 em produção**
 
 Este documento é a **porta de entrada canônica para continuidade do EMPROVEX como produto**. Ele resume o estado vigente e aponta para os documentos históricos/especializados. O histórico detalhado não deve ser apagado. Para comportamento já publicado, `main` prevalece; para a rodada Performance R3 ainda não publicada, prevalecem a branch integradora atual e os registros canônicos de integração deste memorial.
@@ -47,7 +47,7 @@ Estado operacional consolidado em produção e estado candidato vigente:
 
 ## 3. Central de Depósitos — estado vigente
 
-Nome de produto vigente: **Central de Depósitos**.  
+Nome de produto vigente: **Central de Depósitos**.
 O caminho técnico `adm-deposito` e a documentação histórica são preservados por compatibilidade.
 
 Superfícies principais:
@@ -94,7 +94,7 @@ Validação manual assistida é parte legítima do processo para ergonomia, flux
 
 ## 5. Performance e comercialização — prioridade atual
 
-Branch oficial da rodada:  
+Branch oficial da rodada:
 `feat/performance-r3-commercializacao`
 
 Documentos obrigatórios da rodada:
