@@ -24,39 +24,33 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 | PERF-A | `perf-r3-a-core-bundle` | INTEGRADA | baseline `076a233` | `3193b84` | Bundle root integrado em `15eadb0`; `/` 460 → 333 kB (-27,61%); CI combinado verde |
 | PERF-B | `perf-r3-b-central-bundle` | INTEGRADA | baseline comum | `7b7aee1` | Bundle Central; -48,2% nas rotas principais |
 | PERF-C | `perf-r3-c-outbound-demand-loading` | INTEGRADA | baseline `076a233` | `c263ce3` | Saída sob demanda integrada em `e33e260`; abertura fresca 0 reads específicos da superfície |
-| PERF-D | `perf-r3-d-intake-queue` | EM ANDAMENTO | baseline congelado `076a233`; pausa coordenada | `a514728` | CI isolado chegou ao Diff Hygiene; único erro: trailing whitespace em 3 linhas de doc; não reconciliar PERF-B/PERF-H |
+| PERF-D | `perf-r3-d-intake-queue` | INTEGRADA | baseline `076a233` | `022fae7` | Intake seletivo integrado semanticamente em `2e77af1`; CI combinado/Core/Recovery verdes |
 | PERF-E | `perf-r3-e-render-cpu` | INTEGRADA | baseline `076a233` | `149f7c3` | CPU/renderização integrada em `9d5ff58`; gates locais verdes |
 | PERF-H | `perf-r3-h-metrics-budget` | INTEGRADA | baseline `076a233` | `fb5f452` | Métricas/budget integradas em `a686410`; CI bloqueante ainda não ativado |
-| PERF-F | `perf-r3-f-memory-cache` | BLOQUEADA | PERF-C integrada; aguarda PERF-D | — | Metade da dependência satisfeita; iniciar somente após D estabilizar leituras restantes |
+| PERF-F | `perf-r3-f-memory-cache` | LIVRE | PERF-C + PERF-D integradas | — | Segunda onda liberada; cache curto apenas sobre leituras estáveis remanescentes |
 | PERF-G | `perf-r3-g-central-shell` | LIVRE | PERF-B integrada | — | Segunda onda liberada; preservar fronteiras dinâmicas da PERF-B |
 | PERF-X | `perf-r3-x-hot-vs-history` | BLOQUEADA | medições A–G | — | Opcional |
 | PERF-I | branch integradora | BLOQUEADA | frentes aprovadas | — | Integração final |
 | PERF-J | branch integradora | BLOQUEADA | PERF-I concluída | — | Certificação |
 
-## Coordenação especial — PERF-D
+## Coordenação concluída — PERF-D
 
-Em 2026-10-01 a PERF-D foi colocada em **pausa coordenada de realinhamento**, mantendo estado `EM ANDAMENTO`, para impedir que a frente absorva conflitos de integração após o avanço da branch integradora.
+PERF-D integrada semanticamente em `2e77af1706a599152dff8ec43a197d68056d5ae2` após validação combinada no PR técnico #205.
 
-Estado conhecido:
-- branch: `perf-r3-d-intake-queue`;
-- HEAD: `a514728f07884cc881372a2d3b37684fc8103fb1`;
-- base original: `076a233cf250c95882e78498e89dd2a44d034f74`;
-- Core Protection no HEAD atual: **PASS**;
-- Recovery Guardrails no HEAD atual: **PASS**;
-- Application CI isolado contra a base congelada: executado; os gates anteriores chegaram verdes e a única falha final foi `Diff hygiene` por trailing whitespace nas linhas 3–5 de `docs/PERFORMANCE_R3_PERF_D_INTAKE_QUEUE.md`.
+Resoluções de conflito:
+- `WarehouseItemRegistrationOperational.tsx`: preservados simultaneamente intake seletivo/histórico sob demanda da PERF-D e `dynamic import()` da PERF-B;
+- `package.json`: preservados simultaneamente scripts/testes da PERF-D e scripts `perf:r3:*` da PERF-H.
 
-Sobreposições já classificadas como responsabilidade do coordenador:
-- `WarehouseItemRegistrationOperational.tsx` também contém code splitting da PERF-B integrada;
-- `package.json` também contém scripts de métricas da PERF-H integrada.
+Gates combinados:
+- Application CI: **PASS**;
+- Production build: **PASS**;
+- Final TypeScript: **PASS**;
+- Diff Hygiene: **PASS**;
+- EMPROVEX Core Protection: **PASS**;
+- Recovery Guardrails: **PASS**;
+- Blocks 16, 17, 18, 19, 20 e 21: **PASS**.
 
-Regra de retomada:
-- terminar somente a validação isolada da solução PERF-D;
-- não fazer rebase/merge da integradora;
-- o PR técnico contra a integradora foi fechado pelo coordenador; não reabri-lo nem tentar torná-lo mergeable;
-- não remover ou reproduzir alterações de PERF-B/PERF-H;
-- entregar handoff completo e parar.
-
-Na integração, o coordenador preservará semanticamente PERF-B + PERF-D no componente compartilhado e PERF-H + PERF-D no `package.json`.
+PERF-F está liberada para iniciar.
 
 ## Coordenação especial — PERF-A — encerrada
 
@@ -327,6 +321,58 @@ Conflitos:
 
 Decisão: **INTEGRADA**.
 
+
+
+
+### PERF-D — Fila leve de Recebimento / Intake
+
+Branch: `perf-r3-d-intake-queue`  
+HEAD revisado: `022fae7a48def20f9279ad6223ce42cd4f539b8c`  
+Commit certificado de integração: `2e77af1706a599152dff8ec43a197d68056d5ae2`.
+
+Arquitetura:
+- caminho normal `A tratar` usa índice derivado mínimo `intakeQueueIndex`;
+- novas NFs são descobertas desde watermark com sobreposição de 5 minutos;
+- candidatos ativos são paginados;
+- NFs/intakes/empenhos são buscados apenas pelos IDs candidatos;
+- histórico, tratadas e reconciliação são carregados sob demanda;
+- bootstrap histórico permanece possível uma única vez para preservar o contrato “sem intake = PENDING”.
+
+Métricas sintéticas registradas:
+- cenário A: ~2.151 → ~59 docs (**~97,26%**);
+- cenário B: ~18.751 → ~59 docs (**~99,69%**);
+- cenário C: ~18.751 → ~500 docs (**~97,33%**).
+
+Limites principais:
+- candidatos: 250/página × 20 páginas = até 5.000;
+- discovery/bootstrap: 200 NFs/página;
+- consultas por ID: lotes de até 30 IDs;
+- movimentos legados: até 51 por NF candidata;
+- histórico NFs: 300 × 40 páginas;
+- histórico intakes: 500 × 40 páginas.
+
+Segurança:
+- Rules do `intakeQueueIndex` preservam workspace/UG e fail-closed;
+- delete físico negado;
+- índice derivado não é autoridade de NF, intake, ledger ou saldo;
+- testes multi-tenant/Firestore: **PASS**.
+
+Validação:
+- CI isolado da PERF-D: **PASS**;
+- CI combinado da integração semântica: **PASS**;
+- Core Protection combinado: **PASS**;
+- Recovery Guardrails combinado: **PASS**;
+- Production build, TypeScript e Diff Hygiene: **PASS**;
+- Blocks 16–21 finais: **PASS**.
+
+Conflitos resolvidos:
+- PERF-B + PERF-D em `WarehouseItemRegistrationOperational.tsx`;
+- PERF-H + PERF-D em `package.json`.
+
+Dependência:
+- PERF-F agora está **LIVRE**.
+
+Decisão: **INTEGRADA**.
 
 ## Regra
 
