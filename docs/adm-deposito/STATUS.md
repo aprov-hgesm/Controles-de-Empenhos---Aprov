@@ -1,3 +1,58 @@
+# Central de Depósitos — Estado Atual
+
+Atualização canônica: **2026-10-01**  
+Baseline de produção: `main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`
+
+> As seções posteriores preservam o histórico de fases e podem descrever estados antigos. Em caso de divergência, esta seção, o memorial consolidado e a `main` prevalecem.
+
+## Situação vigente
+
+- nome de produto: **Central de Depósitos**; caminhos técnicos `adm-deposito` preservados por compatibilidade;
+- acesso founder-only: **SUPERADO**;
+- acesso externo multi-tenant: **LIBERADO** para contexto operacional de setor autenticado/validado, com isolamento por workspace/UG;
+- ciclo histórico até Módulo 14: **CONCLUÍDO**;
+- refatoração estrutural da Central: **CONCLUÍDA E PUBLICADA** em 2026-10-01 pelo squash `22d9fe5`;
+- Vercel/produção após a refatoração: validada com build, TypeScript, Core Protection e gates finais verdes;
+- Browser E2E: **SOB DEMANDA**, não bloqueante por padrão, conforme `docs/TESTING_POLICY.md`;
+- política visual: preservação integral da identidade premium e das animações aprovadas;
+- prioridade atual: **Performance R3 — Comercialização**;
+- branch de trabalho: `feat/performance-r3-commercializacao`.
+
+## Melhorias consolidadas após o fechamento histórico
+
+- Central liberada para usuários externos em 2026-09-29;
+- disposição visual dos depósitos no Início personalizável por movimento; rotação/escala foram posteriormente removidas do fluxo atual;
+- edição do Nº item/descritivo do empenho disponível também no Cronograma antes da geração;
+- fluxo da Central simplificado e recebimento tornado interativo em 2026-09-30;
+- hardening de fluxos críticos e Rules realizado em 2026-09-30;
+- cadastro direto de empenho por PDF SIAFI integrado em 2026-09-30;
+- componentes da Central refatorados em 2026-10-01 sem alteração dos contratos operacionais.
+
+## Baseline de performance para a rodada atual
+
+Build de produção observado em 2026-10-01:
+- `/`: **460 kB First Load JS**;
+- `/adm-deposito`: **579 kB First Load JS**;
+- várias rotas pesadas da Central: **579 kB**;
+- `/admin`: **326 kB**;
+- shared JS: **103 kB**.
+
+Principais oportunidades identificadas:
+- code splitting das grandes abas do EMPROVEX;
+- code splitting das superfícies/subabas da Central;
+- layout/shell persistente para evitar remontagens e reloads desnecessários;
+- barcode/lotes/posições sob demanda na Saída de Material;
+- fila de intake sem scans integrais crescentes;
+- cache curto em memória de dados estáveis;
+- índices em memória e busca diferida em listas extensas;
+- orçamento de performance e medição antes/depois.
+
+Plano detalhado: `docs/PERFORMANCE_R3_COMERCIALIZACAO.md`.
+
+---
+
+# Histórico preservado
+
 ## Atualização modular — Croqui R1 reativado
 
 - A aba **Meus Depósitos → Croquis** voltou a ser operacional na branch modular.
@@ -16,7 +71,7 @@
 - Implementação não altera Firestore Rules nem reativa domínios avançados.
 - Validação específica: `npm run test:adm-deposito-labels-r1`.
 
-# ADM Depósito — Estado Atual
+# Histórico — Estado registrado em 2026-09-24
 
 Este arquivo registra o estado real de continuidade do projeto e deve ser tratado como memória operacional oficial do módulo.
 
