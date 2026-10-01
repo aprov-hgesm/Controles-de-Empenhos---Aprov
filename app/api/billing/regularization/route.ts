@@ -7,12 +7,13 @@ import { getGoogleAccessToken } from '../../../../lib/server/sectorProvisioningA
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-type FirestoreValue =
-  | { stringValue?: string }
-  | { integerValue?: string }
-  | { booleanValue?: boolean }
-  | { arrayValue?: { values?: FirestoreValue[] } }
-  | { mapValue?: { fields?: Record<string, FirestoreValue> } };
+interface FirestoreValue {
+  stringValue?: string;
+  integerValue?: string;
+  booleanValue?: boolean;
+  arrayValue?: { values?: FirestoreValue[] };
+  mapValue?: { fields?: Record<string, FirestoreValue> };
+}
 
 interface FirestoreDocumentPayload {
   fields?: Record<string, FirestoreValue>;
