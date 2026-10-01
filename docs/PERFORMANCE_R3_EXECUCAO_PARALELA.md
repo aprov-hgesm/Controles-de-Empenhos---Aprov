@@ -611,6 +611,24 @@ Aprovação técnica de uma frente não significa autorização para produção.
 
 ---
 
+
+### 13.1 Falhas de guard durante refatorações estruturais
+
+A existência de um CI vermelho não transfere automaticamente ao chat trabalhador a propriedade de todos os arquivos envolvidos na falha.
+
+Classificação obrigatória:
+
+1. **Falha própria da frente** — a mudança do trabalhador realmente removeu/quebrou o contrato. O trabalhador corrige código ou guard dentro do seu escopo.
+2. **Guard estrutural desatualizado pela própria frente** — o contrato permanece, mas o guard procura o código na localização antiga. O trabalhador pode atualizar o guard para reconhecer a nova estrutura, preservando ou fortalecendo a semântica verificada.
+3. **Falha cruzada de integração** — o guard falha porque outra frente já integrada alterou a implementação observada. O trabalhador não deve modificar a área da outra frente. Deve reportar ao coordenador e parar de perseguir esse vermelho.
+4. **Falha preexistente/externa ao escopo** — registrar evidência e não corrigir sem atribuição explícita.
+
+Para PERF-A, em particular:
+- são próprios os ajustes necessários para a transição `app/page.tsx → OperationalWorkspace` e para os imports dinâmicos do root;
+- guards que ainda inspecionam literalmente `app/page.tsx` podem ser adaptados se a proteção semântica permanecer intacta;
+- a PERF-A não deve alterar internals de Empenhos, Notas Fiscais, Consulta de Itens, Central, Intake ou Saída apenas porque um guard cruzado ficou vermelho;
+- incompatibilidades com PERF-B/C/E/H já integradas pertencem ao Chat Coordenador/PERF-I.
+
 ## 14. Ordem recomendada de integração
 
 A ordem exata é responsabilidade do coordenador, mas o padrão recomendado é:
