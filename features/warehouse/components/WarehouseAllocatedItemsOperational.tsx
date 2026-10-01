@@ -33,9 +33,9 @@ import {
   type WarehouseStockPosition,
 } from '../../../lib/warehouse/location';
 import {
-  listWarehouseDepots,
+  listWarehouseDepotsCached,
   listWarehouseLocationBalances,
-  listWarehouseLocations,
+  listWarehouseLocationsCached,
 } from '../../../lib/warehouse/locationRepository';
 import {
   createWarehousePendingLotCode,
@@ -473,8 +473,8 @@ export function WarehouseAllocatedItemsOperational({
         intakeContext,
       ] = await Promise.all([
         listWarehouseMaterials(workspaceId, 500),
-        listWarehouseDepots(workspaceId, 250),
-        listWarehouseLocations(workspaceId, 500),
+        listWarehouseDepotsCached(workspaceId, 250),
+        listWarehouseLocationsCached(workspaceId, 500),
         listWarehouseLocationBalances(workspaceId, 500),
         listWarehouseLots(workspaceId, 500),
         listWarehouseBarcodes(workspaceId, 500),

@@ -52,8 +52,8 @@ import {
 } from '../../../lib/warehouse/intakeActionClient';
 import type { WarehouseStockPosition } from '../../../lib/warehouse/location';
 import {
-  listWarehouseDepots,
-  listWarehouseLocations,
+  listWarehouseDepotsCached,
+  listWarehouseLocationsCached,
   type WarehouseDepotListItem,
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
@@ -74,7 +74,7 @@ const WarehouseManualEntryOperational = dynamic(
 );
 import {
   createWarehouseDestination,
-  listWarehouseDestinations,
+  listWarehouseDestinationsCached,
   type ApplyWarehouseImmediateConsumptionResult,
 } from '../../../lib/warehouse/withdrawalRepository';
 import type { WarehouseDestinationListItem } from '../../../lib/warehouse/withdrawal';
@@ -150,8 +150,8 @@ function AllocationPanel({
     setLoadingStructure(true);
     setError(null);
     Promise.all([
-      listWarehouseDepots(workspaceId, 250),
-      listWarehouseLocations(workspaceId, 500),
+      listWarehouseDepotsCached(workspaceId, 250),
+      listWarehouseLocationsCached(workspaceId, 500),
     ])
       .then(([depotItems, locationItems]) => {
         if (!active) return;
@@ -665,8 +665,8 @@ export function IntakeBulkActionPanel({
     let active = true;
     setLoadingStructure(true);
     Promise.all([
-      listWarehouseDepots(workspaceId, 250),
-      listWarehouseLocations(workspaceId, 500),
+      listWarehouseDepotsCached(workspaceId, 250),
+      listWarehouseLocationsCached(workspaceId, 500),
     ])
       .then(([depotItems, locationItems]) => {
         if (!active) return;
@@ -698,7 +698,7 @@ export function IntakeBulkActionPanel({
     if (mode !== 'immediate' || destinations.length > 0) return;
     let active = true;
     setLoadingDestinations(true);
-    listWarehouseDestinations(workspaceId, 250)
+    listWarehouseDestinationsCached(workspaceId, 250)
       .then((items) => {
         if (!active) return;
         setDestinations(items);

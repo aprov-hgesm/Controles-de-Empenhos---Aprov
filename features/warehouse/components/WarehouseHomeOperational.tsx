@@ -16,9 +16,9 @@ import {
 
 import { listWarehousePositiveBalances } from '../../../lib/warehouse/ledgerRepository';
 import {
-  listWarehouseDepots,
+  listWarehouseDepotsCached,
   listWarehousePositiveLocationBalances,
-  listWarehouseLocations,
+  listWarehouseLocationsCached,
   type WarehouseDepotListItem,
   type WarehouseLocationBalanceListItem,
   type WarehouseLocationListItem,
@@ -121,8 +121,8 @@ export function WarehouseHomeOperational({ workspaceId }: { workspaceId: string 
       const [materials, depots, locations, locationBalances, balances] =
         await Promise.all([
           listWarehouseMaterials(workspaceId, 250),
-          listWarehouseDepots(workspaceId, 250),
-          listWarehouseLocations(workspaceId, 500),
+          listWarehouseDepotsCached(workspaceId, 250),
+          listWarehouseLocationsCached(workspaceId, 500),
           listWarehousePositiveLocationBalances(workspaceId, 500),
           listWarehousePositiveBalances(workspaceId, 250),
         ]);

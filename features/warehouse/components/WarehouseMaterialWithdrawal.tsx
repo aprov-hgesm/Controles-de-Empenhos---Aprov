@@ -33,8 +33,8 @@ import {
 } from '../../../lib/warehouse/location';
 import {
   buildWarehousePositionLabel,
-  getWarehouseDepot,
-  getWarehouseLocation,
+  getWarehouseDepotCached,
+  getWarehouseLocationCached,
   listWarehouseLocationBalances,
   type WarehouseDepotListItem,
   type WarehouseLocationBalanceListItem,
@@ -64,7 +64,7 @@ import { auth } from '../../../lib/firebase';
 import {
   createWarehouseDestination,
   finalizeWarehouseMaterialWithdrawal,
-  listWarehouseDestinations,
+  listWarehouseDestinationsCached,
   setWarehouseDestinationStatus,
 } from '../../../lib/warehouse/withdrawalRepository';
 import {
@@ -375,7 +375,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     if (destinationsLoadedRef.current || destinationsLoadingRef.current) return;
     destinationsLoadingRef.current = true;
     try {
-      const destinations = await listWarehouseDestinations(workspaceId, 250);
+      const destinations = await listWarehouseDestinationsCached(workspaceId, 250);
       destinationsLoadedRef.current = true;
       setState((current) => ({
         ...current,
@@ -407,7 +407,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
           )
         );
         const [destinations, lots] = await Promise.all([
-          listWarehouseDestinations(workspaceId, 250),
+          listWarehouseDestinationsCached(workspaceId, 250),
           Promise.all(lotIds.map((lotId) => getWarehouseLot(workspaceId, lotId))),
         ]);
         if (cancelled) return;
@@ -507,8 +507,8 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     }
 
     const [depotItems, locationItems] = await Promise.all([
-      Promise.all(Array.from(depotIds).map((depotId) => getWarehouseDepot(workspaceId, depotId))),
-      Promise.all(Array.from(locationIds).map((locationId) => getWarehouseLocation(workspaceId, locationId))),
+      Promise.all(Array.from(depotIds).map((depotId) => getWarehouseDepotCached(workspaceId, depotId))),
+      Promise.all(Array.from(locationIds).map((locationId) => getWarehouseLocationCached(workspaceId, locationId))),
     ]);
     const depots = depotItems.filter(
       (item): item is WarehouseDepotListItem => Boolean(item)
