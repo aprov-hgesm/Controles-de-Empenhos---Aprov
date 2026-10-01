@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "scenarioSet": "performance-r3-core-scenarios-v1",
+  "privacy": {
+    "mode": "aggregate-only",
+    "allowedRuntimeFields": [
+      "scenarioId",
+      "sampleCount",
+      "operationalReadyMs",
+      "lcpMs",
+      "inpMs",
+      "cls",
+      "documentsEstimated"
+    ],
+    "forbiddenExamples": [
+      "invoice content or number",
+      "supplier data",
+      "CNPJ/CPF",
+      "operator name/email/UID",
+      "workspace/UG identifiers",
+      "barcodes or operational codes"
+    ],
+    "productionWrites": "none"
+  },
+  "scenarios": [
+    {
+      "id": "core-home",
+      "route": "/",
+      "purpose": "opening operational EMPROVEX surface",
+      "bundle": true,
+      "runtime": "local-observation"
+    },
+    {
+      "id": "warehouse-home",
+      "route": "/adm-deposito",
+      "purpose": "opening Central de Depósitos",
+      "bundle": true,
+      "runtime": "local-observation"
+    },
+    {
+      "id": "warehouse-outbound",
+      "route": "Central de Depósitos / Saída de Material",
+      "purpose": "barcode-to-current-material operational path",
+      "bundle": false,
+      "runtime": "local-observation-and-worker-handoff"
+    },
+    {
+      "id": "warehouse-intake",
+      "route": "Central de Depósitos / fila de recebimento",
+      "purpose": "pending intake queue opening",
+      "bundle": false,
+      "runtime": "local-observation-and-worker-handoff"
+    },
+    {
+      "id": "admin",
+      "route": "/admin",
+      "purpose": "administrative surface control route",
+      "bundle": true,
+      "runtime": "local-observation"
+    }
+  ]
+}
