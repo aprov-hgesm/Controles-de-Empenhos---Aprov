@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import {
   Barcode,
@@ -55,11 +56,21 @@ import {
   type WarehouseDepotListItem,
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
-import { WarehouseSiscofisOperational } from './WarehouseSiscofisOperational';
-import { WarehouseSiscofisPendingAllocation } from './WarehouseSiscofisPendingAllocation';
-import { WarehouseImmediateConsumptionPanel } from './WarehouseImmediateConsumptionPanel';
-import { WarehouseAllocatedItemsOperational } from './WarehouseAllocatedItemsOperational';
-import { WarehouseManualEntryOperational } from './WarehouseManualEntryOperational';
+const WarehouseSiscofisOperational = dynamic(
+  () => import('./WarehouseSiscofisOperational').then((module) => module.WarehouseSiscofisOperational)
+);
+const WarehouseSiscofisPendingAllocation = dynamic(
+  () => import('./WarehouseSiscofisPendingAllocation').then((module) => module.WarehouseSiscofisPendingAllocation)
+);
+const WarehouseImmediateConsumptionPanel = dynamic(
+  () => import('./WarehouseImmediateConsumptionPanel').then((module) => module.WarehouseImmediateConsumptionPanel)
+);
+const WarehouseAllocatedItemsOperational = dynamic(
+  () => import('./WarehouseAllocatedItemsOperational').then((module) => module.WarehouseAllocatedItemsOperational)
+);
+const WarehouseManualEntryOperational = dynamic(
+  () => import('./WarehouseManualEntryOperational').then((module) => module.WarehouseManualEntryOperational)
+);
 import {
   createWarehouseDestination,
   listWarehouseDestinations,

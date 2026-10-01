@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { ClipboardCheck, FileSpreadsheet, History, PackageSearch, RefreshCw, ShieldCheck } from 'lucide-react';
 
 import { listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
@@ -8,10 +9,18 @@ import { listWarehouseMovementsInPeriod, type WarehouseMovementListItem } from '
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import type { WarehouseMovementType } from '../../../lib/warehouse/movement';
 import { WAREHOUSE_MOVEMENT_TYPES } from '../../../lib/warehouse/movement';
-import { WarehouseStockOperational } from './WarehouseStockOperational';
-import { WarehouseConsumptionReports } from './WarehouseConsumptionReports';
-import { WarehouseInventoryHistoryReport } from './WarehouseInventoryHistoryReport';
-import { WarehouseSiscofisHistoryReport } from './WarehouseSiscofisHistoryReport';
+const WarehouseStockOperational = dynamic(
+  () => import('./WarehouseStockOperational').then((module) => module.WarehouseStockOperational)
+);
+const WarehouseConsumptionReports = dynamic(
+  () => import('./WarehouseConsumptionReports').then((module) => module.WarehouseConsumptionReports)
+);
+const WarehouseInventoryHistoryReport = dynamic(
+  () => import('./WarehouseInventoryHistoryReport').then((module) => module.WarehouseInventoryHistoryReport)
+);
+const WarehouseSiscofisHistoryReport = dynamic(
+  () => import('./WarehouseSiscofisHistoryReport').then((module) => module.WarehouseSiscofisHistoryReport)
+);
 
 type ReportTab =
   | 'stock'
