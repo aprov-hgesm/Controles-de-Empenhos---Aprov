@@ -351,11 +351,12 @@ Esses pontos são critérios de bloqueio da PERF-I/PERF-J.
 
 ### Próxima sequência obrigatória
 
-1. **PERF-X — decisão baseada em evidência.**
-   - Não iniciar uma refatoração automaticamente.
-   - Primeiro medir/auditar listeners, consultas e crescimento histórico remanescentes.
-   - Se não houver gargalo objetivo relevante de dados quentes vs. histórico: marcar **DISPENSADA**.
-   - Se houver: delimitar uma solução mínima, mensurável e independente antes de alterar código.
+1. **PERF-X — NECESSÁRIA / implementação autorizada.**
+   - A auditoria comprovou listener realtime sem filtro/limite de `invoices` nas superfícies Empenhos e Nova NF.
+   - O primeiro recorte autorizado é somente `invoices`.
+   - Separar conjunto operacional realtime de histórico sob demanda, sem corte temporal arbitrário.
+   - Preservar NF antiga ainda operacional, detalhes completos, contagens, totais, pendências, filtros, concluídas e edição.
+   - Não ampliar para outras coleções sem evidência e nova decisão do Coordenador.
 
 2. **PERF-I — Integração Controlada + Validação de UX.**
    - Só iniciar depois da decisão formal sobre PERF-X.

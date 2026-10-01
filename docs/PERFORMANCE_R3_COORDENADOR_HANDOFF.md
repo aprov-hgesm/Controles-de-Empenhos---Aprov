@@ -45,7 +45,7 @@ Documentos obrigatórios:
 | PERF-F | **INTEGRADA** | `570661b` | `14aaa2e` | cache curto 30 s; isolamento por workspace; 8 → 2 loads no cenário sintético |
 | PERF-G | **INTEGRADA** | `de870d1` | `238b813` | shell persistente; Central 300 → 106 kB |
 | PERF-H | **INTEGRADA** | `fb5f452` | `a686410` | métricas/budgets reproduzíveis |
-| PERF-X | **BLOQUEADA / OPCIONAL** | — | — | só abrir se medições justificarem hot vs history |
+| PERF-X | **EM ANDAMENTO** | `f4d9b848` | auditoria aprovada | necessária: separar `invoices` realtime operacional do histórico |
 | PERF-I | **BLOQUEADA** | — | branch integradora | aguarda decisão objetiva sobre PERF-X; depois integração + UX |
 | PERF-J | **BLOQUEADA** | — | branch integradora | certificação após PERF-I |
 
@@ -57,14 +57,14 @@ Estado canônico da rodada:
 - HEAD antes desta atualização documental: `8247b358d7ba118cd6be3cc9f10cee0b079b657b`;
 - `main`: `22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`;
 - A/B/C/D/E/F/G/H: **INTEGRADAS**;
-- PERF-X: **próxima decisão**, mas continua opcional e deve começar por auditoria/evidência;
-- PERF-I: bloqueada até a decisão sobre PERF-X;
+- PERF-X: **NECESSÁRIA / implementação autorizada**, após auditoria objetiva;
+- PERF-I: bloqueada até PERF-X ser implementada, revisada e integrada;
 - PERF-J: bloqueada até PERF-I;
 - nenhuma integração R3 em `main`;
 - nenhum deploy consolidado R3 em produção.
 
 Ordem obrigatória daqui em diante:
-`PERF-X (auditar/decidir) → PERF-I (integração + UX) → PERF-J (certificação) → autorização explícita do usuário → main/release`.
+`PERF-X (implementar recorte autorizado de invoices) → revisão/integração pelo Coordenador → PERF-I (integração + UX) → PERF-J (certificação) → autorização explícita do usuário → main/release`.
 
 Regra de retomada:
 - novos trabalhos devem partir da integradora **atual**, nunca dos baselines históricos;
@@ -292,6 +292,38 @@ Não ampliar o cache automaticamente. Qualquer novo recurso candidato deve prova
 Com PERF-F integrada, revisar as medições combinadas e os reads/listeners históricos ainda existentes. Só abrir PERF-X se houver evidência objetiva de gargalo relevante de dados quentes vs. histórico.
 
 Sem evidência suficiente: marcar PERF-X como **DISPENSADA** e liberar PERF-I.
+
+
+### PERF-X — auditoria aprovada / implementação autorizada
+
+A auditoria comprovou um gargalo estrutural remanescente na camada operacional principal:
+
+- listener realtime de coleções completas em `useOperationalRealtimeCollections.ts`;
+- `invoices` é ativada em **Empenhos** e **Nova NF**;
+- não há `where`, `limit` nem paginação no listener;
+- o custo inicial cresce com todo o histórico de NFs do workspace;
+- sair e voltar pode recriar o snapshot inicial.
+
+Decisão do Coordenador:
+- **PERF-X é necessária**;
+- a primeira implementação deve ser limitada a `invoices`;
+- não aplicar corte por idade/ano como substituto de estado operacional;
+- histórico completo deve continuar disponível sob demanda;
+- NF antiga ainda em tramitação jamais pode desaparecer;
+- não expandir a frente para `empenhos`, `alerts`, `comissoes` ou `cronogramas` sem evidência própria e nova decisão;
+- PERF-I permanece bloqueada.
+
+Arquivos prováveis da implementação:
+- `hooks/useOperationalRealtimeCollections.ts`;
+- `lib/operationalSubscriptionPlan.ts`;
+- `features/operational/components/OperationalWorkspace.tsx`;
+- `features/empenhos/components/EmpenhosView.tsx`;
+- `features/notas-fiscais/components/NotasFiscaisView.tsx`;
+- `lib/historicalInvoiceQueries.ts`;
+- guards/testes de listeners e escalabilidade.
+
+A implementação deve definir e testar explicitamente o contrato de informação de Empenhos/Nova NF antes de trocar a fonte dos dados, evitando transformar o array global `invoices` em subconjunto sem adaptar consumidores que precisam de histórico completo.
+
 
 ## 7. PERF-I — Integração Controlada + Validação de UX
 

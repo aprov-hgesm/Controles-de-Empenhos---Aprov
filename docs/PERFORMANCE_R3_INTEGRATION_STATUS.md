@@ -29,7 +29,7 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 | PERF-H | `perf-r3-h-metrics-budget` | INTEGRADA | baseline `076a233` | `fb5f452` | Métricas/budget integradas em `a686410`; CI bloqueante ainda não ativado |
 | PERF-F | `perf-r3-f-memory-cache` | INTEGRADA | PERF-C + PERF-D integradas | `570661b` | Cache curto em memória integrado em `14aaa2e`; TTL 30 s; workspace isolado; CI combinado verde |
 | PERF-G | `perf-r3-g-central-shell` | INTEGRADA | PERF-B integrada | `de870d1` | Shell persistente integrado em `238b813`; Central 300 → 106 kB; CI combinado/Core/Recovery verdes |
-| PERF-X | `perf-r3-x-hot-vs-history` | BLOQUEADA | medições A–G | — | Opcional |
+| PERF-X | `perf-r3-x-hot-vs-history` | EM ANDAMENTO | A/B/C/D/E/F/G/H integradas | `f4d9b848` | Auditoria aprovada: listener global de `invoices` é gargalo estrutural; implementação mínima autorizada |
 | PERF-I | branch integradora | BLOQUEADA | decisão objetiva sobre PERF-X | — | Integração final + validação obrigatória de UX |
 | PERF-J | branch integradora | BLOQUEADA | PERF-I concluída | — | Certificação |
 
@@ -39,15 +39,43 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 Com A/B/C/D/E/F/G/H integradas, **não há outra frente de implementação obrigatória aberta antes da decisão sobre PERF-X**.
 
 Sequência:
-1. executar uma auditoria objetiva de PERF-X sobre a integradora atual;
-2. se não houver evidência material de gargalo hot-vs-history, registrar PERF-X como **DISPENSADA**;
-3. se houver evidência, delimitar/implementar somente o recorte comprovado e integrar após revisão;
-4. liberar PERF-I apenas após a decisão formal sobre PERF-X;
+1. auditoria objetiva da PERF-X: **CONCLUÍDA**;
+2. decisão do Coordenador: **PERF-X NECESSÁRIA**;
+3. implementar somente o recorte comprovado, começando por `invoices`, e integrar após revisão;
+4. liberar PERF-I apenas depois da integração formal da PERF-X;
 5. PERF-I deve combinar certificação técnica com o checklist obrigatório de UX;
 6. PERF-J certifica o candidato final;
 7. `main` e produção continuam proibidas sem autorização explícita do usuário.
 
 Qualquer novo chat deve confirmar o HEAD real de `feat/performance-r3-commercializacao` antes de criar branch ou analisar métricas.
+
+
+
+## Decisão do Coordenador — PERF-X
+
+Auditoria recebida em 2026-10-01 e revisada contra o HEAD integrado `f4d9b848735d6ea58e7057ff5f7616bd535f643e`.
+
+Conclusão: **PERF-X NECESSÁRIA — IMPLEMENTAÇÃO AUTORIZADA**.
+
+Evidência confirmada:
+- `useOperationalRealtimeCollections.ts` cria `onSnapshot(operationalCollectionRef(...))` sem filtro, limite ou paginação;
+- o primeiro snapshot é contabilizado por `snapshot.size`;
+- o plano de subscriptions ativa `invoices` nas superfícies normais **Empenhos** e **Nova NF**;
+- portanto o snapshot inicial de `invoices` é proporcional ao total histórico da coleção e pode ser recriado ao sair/voltar da superfície;
+- `historicalInvoiceQueries.ts` já demonstra o padrão correto para histórico: filtro server-side + paginação sob demanda.
+
+Escopo autorizado:
+- corrigir primeiro e prioritariamente **`invoices`**;
+- separar conjunto operacional realtime de acesso histórico sob demanda;
+- preservar integralmente NFs antigas ainda operacionais;
+- preservar detalhes completos por empenho, contagens, totais, pendências, filtros, concluídas e edição;
+- não usar corte temporal arbitrário;
+- não reabrir A/B/C/D/E/F/G/H;
+- não alterar ledger, intakeQueueIndex, cache PERF-F, shell PERF-G, Rules, auth, sessão/lease ou visual sem nova decisão do Coordenador.
+
+A branch `perf-r3-x-hot-vs-history` foi criada da integradora em `f4d9b848...` e pode continuar dessa base. Se a integradora avançar apenas por esta documentação de coordenação, **não fazer merge/rebase apenas para acompanhar docs**; a integração semântica ficará com o Coordenador.
+
+PERF-I permanece **BLOQUEADA** até a PERF-X ser implementada, revisada e integrada.
 
 
 ## Coordenação concluída — PERF-D
