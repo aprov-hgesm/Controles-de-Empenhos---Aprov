@@ -3,7 +3,7 @@
 Última atualização: **2026-10-01**
 Produção: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Integrador: `feat/saas-r1-commercializacao`
-Estado global: **SAAS-A CONGELADA / ONDA 1 LIBERADA / IMPLEMENTAÇÃO AINDA NÃO INICIADA**
+Estado global: **SAAS-A CONGELADA / ONDA 1 INICIADA EM 2026-10-01 / B + C + DL + E ATIVADAS EM PARALELO**
 
 ## 1. Baseline
 
@@ -20,10 +20,10 @@ Estado global: **SAAS-A CONGELADA / ONDA 1 LIBERADA / IMPLEMENTAÇÃO AINDA NÃO
 | Frente | Branch | Dependência | Estado | Integração |
 | --- | --- | --- | --- | --- |
 | SAAS-A Fundação/contratos | integradora | R3 | **CONGELADA** | documentação canônica |
-| SAAS-B Billing/pagamento | `saas-r1-b-billing-payment` | A | **LIBERADA** | não iniciada |
-| SAAS-C Onboarding | `saas-r1-c-onboarding` | A | **LIBERADA** | não iniciada |
-| SAAS-DL Legal/aceite | `saas-r1-dl-legal-acceptance` | A | **LIBERADA** | não iniciada |
-| SAAS-E Operação/recovery | `saas-r1-e-ops-recovery` | A | **LIBERADA** | não iniciada |
+| SAAS-B Billing/pagamento | `saas-r1-b-billing-payment` | A | **ATIVADA** | worker em execução / aguardando handoff |
+| SAAS-C Onboarding | `saas-r1-c-onboarding` | A | **ATIVADA** | worker em execução / aguardando handoff |
+| SAAS-DL Legal/aceite | `saas-r1-dl-legal-acceptance` | A | **ATIVADA** | worker em execução / aguardando handoff |
+| SAAS-E Operação/recovery | `saas-r1-e-ops-recovery` | A | **ATIVADA** | worker em execução / aguardando handoff |
 | SAAS-DS Segurança/enforcement | `saas-r1-ds-security-enforcement` | B + C | **BLOQUEADA POR DEPENDÊNCIA** | não iniciada |
 | SAAS-I Integração | integradora | B+C+DL+E+DS | **AGUARDANDO** | — |
 | SAAS-P Piloto | integradora | I | **AGUARDANDO** | — |
@@ -77,15 +77,19 @@ Neste momento:
 - Indexes novos: somente mediante query real;
 - variáveis de ambiente novas: somente públicas/operacionais estritamente necessárias.
 
-## 6. Próxima ação do Coordenador
+## 6. Ação atual do Coordenador
 
-Criar as quatro branches da Onda 1 a partir do HEAD desta integradora e emitir prompts independentes para:
-- SAAS-B;
-- SAAS-C;
-- SAAS-DL;
-- SAAS-E.
+A Onda 1 foi autorizada pelo usuário em 2026-10-01.
 
-SAAS-DS não deve receber missão de implementação antes de B e C estarem semanticamente integradas.
+O Coordenador deve:
+- manter B, C, DL e E paralelas e independentes;
+- receber e validar cada handoff;
+- atualizar este quadro a cada worker concluída;
+- integrar somente após revisão semântica;
+- impedir que uma worker resolva conflitos alterando domínio de outra;
+- manter SAAS-DS bloqueada até B e C estarem semanticamente integradas.
+
+Próximo gate: receber os primeiros handoffs da Onda 1.
 
 ## 7. Registro de integrações
 

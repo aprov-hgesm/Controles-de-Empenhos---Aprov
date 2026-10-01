@@ -60,7 +60,9 @@ Alterar qualquer item exige decisão do Coordenador e atualização dos quatro d
 
 ## 4. Onda 1 — frentes paralelas independentes
 
-Depois de SAAS-A, iniciar simultaneamente quatro workers.
+**Status: INICIADA em 2026-10-01 por autorização explícita do usuário.**
+
+SAAS-B, SAAS-C, SAAS-DL e SAAS-E devem ser executadas simultaneamente em branches exclusivas, todas partindo da mesma base de ativação da integradora.
 
 ### SAAS-B — Billing, trial e regularização
 

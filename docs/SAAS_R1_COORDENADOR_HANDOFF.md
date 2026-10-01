@@ -24,8 +24,9 @@ Ler, nesta ordem:
 - Rules da Central foram publicadas.
 - SaaS R1 possui branch integradora própria.
 - SAAS-A foi concluída como freeze documental.
-- Onda 1 está liberada.
-- Nenhum código funcional do SaaS R1 foi implementado após o freeze.
+- Onda 1 foi **INICIADA em 2026-10-01 por autorização explícita do usuário**.
+- SAAS-B, SAAS-C, SAAS-DL e SAAS-E estão autorizadas para execução paralela em branches exclusivas.
+- SAAS-DS continua bloqueada até integração semântica de B+C.
 
 ## 3. Decisão central
 
@@ -110,9 +111,9 @@ Não criar terceiro banco Firestore para o SaaS R1.
 - cada banco mantém suas próprias Rules;
 - novo banco só com nova decisão arquitetural baseada em necessidade real, nunca apenas para “organizar Rules”.
 
-## 7. Onda 1
+## 7. Onda 1 — INICIADA
 
-Abrir quatro workers independentes:
+Quatro workers independentes estão autorizados:
 
 ### B
 Billing/regularização.
@@ -126,7 +127,7 @@ Termos/Privacidade/aceite versionado.
 ### E
 Backup nativo dos dois Firestores, restore, health/uptime e runbook.
 
-Eles podem trabalhar simultaneamente.
+Eles devem trabalhar simultaneamente quando possível, sem editar domínio alheio. Cada worker encerra com handoff completo; o Coordenador valida e integra.
 
 ## 8. Depois da Onda 1
 

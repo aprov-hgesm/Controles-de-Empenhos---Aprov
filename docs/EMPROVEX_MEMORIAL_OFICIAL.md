@@ -1,9 +1,9 @@
 # EMPROVEX — Memorial Oficial do Repositório
 
-Última atualização: **2026-10-01 — Performance R3 publicada / SaaS R1 detalhado**
+Última atualização: **2026-10-01 — SaaS R1 Onda 1 iniciada**
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Branch integradora do SaaS R1: `feat/saas-r1-commercializacao`
-Estado: **Performance R3 PUBLICADA E ENCERRADA; SaaS R1 com contratos comuns congelados e Onda 1 liberada**
+Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A congelada; Onda 1 do SaaS R1 AUTORIZADA E INICIADA com SAAS-B, SAAS-C, SAAS-DL e SAAS-E em execução paralela coordenada**
 
 Este documento é a **porta de entrada canônica para continuidade do EMPROVEX como produto**. Ele resume o estado vigente e aponta para os documentos históricos/especializados. O histórico detalhado não deve ser apagado. Para comportamento publicado, `main` prevalece. Para o ciclo SaaS R1 em desenvolvimento, prevalecem `feat/saas-r1-commercializacao`, este memorial e os quatro documentos canônicos `SAAS_R1_*`.
 
@@ -604,11 +604,18 @@ A fase SAAS-DS, depois de billing/onboarding integrados, sincronizará suspensã
 
 **SAAS-A — Fundação/contratos: CONGELADA.**
 
-**Onda 1 paralela: LIBERADA**
-- SAAS-B — Billing/regularização;
-- SAAS-C — Onboarding;
-- SAAS-DL — Legal/aceite;
-- SAAS-E — Operação/backup/uptime.
+**Onda 1 paralela: INICIADA em 2026-10-01**
+- autorização explícita do usuário registrada;
+- quatro workers devem partir da mesma base da integradora;
+- cada worker tem branch e escopo exclusivos;
+- nenhum worker publica `main`, Vercel ou Rules em produção;
+- o Chat Coordenador permanece responsável por handoffs, conflitos, integração semântica e atualização deste memorial.
+
+Frentes ativadas:
+- **SAAS-B — Billing/regularização:** ATIVADA;
+- **SAAS-C — Onboarding:** ATIVADA;
+- **SAAS-DL — Legal/aceite:** ATIVADA;
+- **SAAS-E — Operação/backup/uptime:** ATIVADA.
 
 **Onda 2**
 - SAAS-DS — Segurança/enforcement, depois de B+C.
@@ -679,3 +686,25 @@ Ao concluir uma rodada relevante:
 - nunca apagar decisões antigas: marcar como superadas quando necessário;
 - para Performance R3, manter este Memorial, `PERFORMANCE_R3_INTEGRATION_STATUS.md` e `PERFORMANCE_R3_COORDENADOR_HANDOFF.md` coerentes entre si;
 - nunca tratar conversa isolada como fonte oficial superior ao repositório.
+
+
+## 9. Início oficial da Onda 1 do SaaS R1 — 2026-10-01
+
+O usuário autorizou o início imediato do desenvolvimento paralelo coordenado.
+
+Chats trabalhadores autorizados:
+- SAAS-B — Billing, Plano Completo, VIP e regularização;
+- SAAS-C — Onboarding e credenciais;
+- SAAS-DL — Legal, Privacidade e aceite versionado;
+- SAAS-E — Operação, backup, uptime e recuperação.
+
+Regras de largada:
+- todos partem da mesma revisão da branch `feat/saas-r1-commercializacao` que registra esta ativação;
+- cada chat trabalha somente na própria branch;
+- cada chat deve ler os cinco documentos canônicos antes de alterar código;
+- nenhuma frente pode redefinir preço, trial, VIP, arquitetura de banco ou estados compartilhados;
+- SAAS-DS permanece bloqueada até B e C estarem integradas;
+- SAAS-I, SAAS-P e SAAS-J permanecem pendentes;
+- handoff completo é obrigatório para integração;
+- somente o Coordenador integra;
+- nenhuma publicação em produção ocorre sem autorização explícita posterior do usuário.
