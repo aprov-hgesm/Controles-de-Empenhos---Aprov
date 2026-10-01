@@ -93,6 +93,20 @@ interface NotasFiscaisViewContext {
 interface NotasFiscaisViewProps {
   context: NotasFiscaisViewContext;
 }
+
+const getInvoiceLocation = (invoice: Invoice): NonNullable<Invoice['localizacaoAtual']> =>
+  invoice.localizacaoAtual || (invoice.tesourariaDate ? 'TESOURARIA' : invoice.comissaoDate ? 'COMISSAO' : 'APROVISIONAMENTO');
+
+const getInvoiceSortTimestamp = (invoice: Invoice): number => {
+  const raw = invoice.registeredAt || invoice.issueDate;
+  if (!raw) return 0;
+  if (raw.includes('/') && raw.split('/').length === 3) {
+    const parts = raw.split('/');
+    return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).getTime() || 0;
+  }
+  const timestamp = new Date(raw).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+};
 /** Tela de Notas Fiscais extraída sem alterar regras de negócio ou persistência. */
 export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
   const { comissaoAux1Nome, comissaoAux1Posto, comissaoAux2Nome, comissaoAux2Posto, comissaoAux3Nome, comissaoAux3Posto, comissaoBoletimDate, comissaoBoletimNum, comissaoMes, comissaoPresNome, comissaoPresPosto, comissoes, editingInvoice, empenhoClasses, empenhos, formatDateOnly, formatDateTime, handleDeleteAllComissoes, handleDeleteAllInvoices, handleDeleteInvoice, handleDownloadTermoRecebimento, handleTermoRecebimentoAction, handleDownloadLiquidacaoConsolidada, handleEditInvoice, handleEmpenhoDocumentUploaded, handleInvoiceDocumentUploaded, handleInvoiceMirrorDocumentUploaded, handleMarkComissao, handleMarkTesouraria, handleSaveSpedNup, handleUpdateInvoiceLocation, handleSaveComissao, handleSaveInvoice, invoices, nfDate, nfEmpenhoFilter, nfMonthFilter, nfNumber, nfQuantities, nfSearch, nfSortOrder, nfSubTab, nfTramitacaoFilter, selectedNFCommitmentId, setActiveTab, setComissaoAux1Nome, setComissaoAux1Posto, setComissaoAux2Nome, setComissaoAux2Posto, setComissaoAux3Nome, setComissaoAux3Posto, setComissaoBoletimDate, setComissaoBoletimNum, setComissaoMes, setComissaoPresNome, setComissaoPresPosto, setComissoes, setEditingEmpenhoId, setEditingInvoice, setNfDate, setNfEmpenhoFilter, setNfMonthFilter, setNfNumber, setNfQuantities, setNfSearch, setNfSortOrder, setNfSubTab, setNfTramitacaoFilter, setSelectedNFCommitmentId, showToast, uniqueNfMonths, user } = context;
@@ -103,14 +117,111 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
   const [processingInvoiceId, setProcessingInvoiceId] = useState<string | null>(null);
   const [consolidatingInvoiceId, setConsolidatingInvoiceId] = useState<string | null>(null);
   const [spedNupDrafts, setSpedNupDrafts] = useState<Record<string, string>>({});
-  const getInvoiceLocation = (invoice: Invoice): NonNullable<Invoice['localizacaoAtual']> =>
-    invoice.localizacaoAtual || (invoice.tesourariaDate ? 'TESOURARIA' : invoice.comissaoDate ? 'COMISSAO' : 'APROVISIONAMENTO');
 
-  const invoiceRequiresTR = (invoice: Invoice): boolean => {
-    const empenho = empenhos.find((item) => item.id === invoice.empenhoId);
-    return classRequiresTermoRecebimento(empenho?.classification, empenhoClasses);
-  };
+  const deferredNfSearch = React.useDeferredValue(nfSearch);
 
+  const empenhosById = React.useMemo(
+    () => new Map(empenhos.map((emp) => [emp.id, emp] as const)),
+    [empenhos]
+  );
+
+  const invoiceDerived = React.useMemo(() => {
+    const byKey = new Map<string, {
+      currentLocation: NonNullable<Invoice['localizacaoAtual']>;
+      requiresTR: boolean;
+      timestamp: number;
+    }>();
+    let faltaComissao = 0;
+    let faltaTesouraria = 0;
+    let concluidas = 0;
+
+    for (const invoice of invoices) {
+      const targetEmpenho = empenhosById.get(invoice.empenhoId);
+      const requiresTR = classRequiresTermoRecebimento(
+        targetEmpenho?.classification,
+        empenhoClasses
+      );
+      const currentLocation = getInvoiceLocation(invoice);
+
+      byKey.set(getInvoiceRecordKey(invoice), {
+        currentLocation,
+        requiresTR,
+        timestamp: getInvoiceSortTimestamp(invoice),
+      });
+
+      if (requiresTR && currentLocation === 'APROVISIONAMENTO') faltaComissao += 1;
+      if (requiresTR ? currentLocation === 'COMISSAO' : currentLocation !== 'TESOURARIA') {
+        faltaTesouraria += 1;
+      }
+      if (currentLocation === 'TESOURARIA') concluidas += 1;
+    }
+
+    return { byKey, faltaComissao, faltaTesouraria, concluidas };
+  }, [empenhoClasses, empenhosById, invoices]);
+
+  const nfEmpenhoOptions = React.useMemo(
+    () => Array.from(new Set(
+      [...empenhos.map((emp) => emp.id), ...invoices.map((invoice) => invoice.empenhoId)].filter(Boolean)
+    )),
+    [empenhos, invoices]
+  );
+
+  const filteredInvoices = React.useMemo(() => {
+    const term = deferredNfSearch.toLowerCase();
+
+    return invoices
+      .filter((invoice) => {
+        const matchesSearch =
+          invoice.id.toLowerCase().includes(term)
+          || invoice.supplier.toLowerCase().includes(term)
+          || invoice.empenhoId.toLowerCase().includes(term);
+        const matchesMonth = nfMonthFilter === 'Todos'
+          || (invoice.issueDate && invoice.issueDate.startsWith(nfMonthFilter));
+        const matchesEmpenho = nfEmpenhoFilter === 'Todos'
+          || invoice.empenhoId === nfEmpenhoFilter;
+        const meta = invoiceDerived.byKey.get(getInvoiceRecordKey(invoice));
+        const currentLocation = meta?.currentLocation ?? getInvoiceLocation(invoice);
+        const requiresTR = meta?.requiresTR ?? classRequiresTermoRecebimento(
+          empenhosById.get(invoice.empenhoId)?.classification,
+          empenhoClasses
+        );
+
+        let matchesTramitacao = true;
+        if (nfTramitacaoFilter === 'FaltaComissao') {
+          matchesTramitacao = requiresTR && currentLocation === 'APROVISIONAMENTO';
+        } else if (nfTramitacaoFilter === 'FaltaTesouraria') {
+          matchesTramitacao = requiresTR
+            ? currentLocation === 'COMISSAO'
+            : currentLocation !== 'TESOURARIA';
+        } else if (nfTramitacaoFilter === 'Concluidas') {
+          matchesTramitacao = currentLocation === 'TESOURARIA';
+        }
+
+        return matchesSearch && matchesMonth && matchesEmpenho && matchesTramitacao;
+      })
+      .sort((a, b) => {
+        const timeA = invoiceDerived.byKey.get(getInvoiceRecordKey(a))?.timestamp
+          ?? getInvoiceSortTimestamp(a);
+        const timeB = invoiceDerived.byKey.get(getInvoiceRecordKey(b))?.timestamp
+          ?? getInvoiceSortTimestamp(b);
+        if (timeA !== timeB) {
+          return nfSortOrder === 'recentes' ? timeB - timeA : timeA - timeB;
+        }
+        return nfSortOrder === 'recentes'
+          ? b.id.localeCompare(a.id, undefined, { numeric: true })
+          : a.id.localeCompare(b.id, undefined, { numeric: true });
+      });
+  }, [
+    deferredNfSearch,
+    empenhoClasses,
+    empenhosById,
+    invoiceDerived,
+    invoices,
+    nfEmpenhoFilter,
+    nfMonthFilter,
+    nfSortOrder,
+    nfTramitacaoFilter,
+  ]);
   const runInvoiceTransition = async (invoiceId: string, action: () => Promise<unknown> | unknown) => {
     if (processingInvoiceId !== null) return;
     setProcessingInvoiceId(invoiceId);
@@ -225,7 +336,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                             className="w-full sm:w-auto h-11 px-3.5 rounded-xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#00288e] focus:ring-1 focus:ring-[#00288e] outline-none font-bold text-xs sm:text-sm text-[#0b1c30] shadow-sm min-w-[150px]"
                           >
                             <option value="Todos">Todos os Empenhos</option>
-                            {Array.from(new Set([...empenhos.map(e => e.id), ...invoices.map(i => i.empenhoId)].filter(Boolean))).map(empId => (
+                            {nfEmpenhoOptions.map(empId => (
                               <option key={empId} value={empId}>
                                 NE {empId}
                               </option>
@@ -308,7 +419,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                           <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                             nfTramitacaoFilter === 'FaltaComissao' ? 'bg-white/30 text-white' : 'bg-amber-200 text-amber-900'
                           }`}>
-                            {invoices.filter((invoice) => invoiceRequiresTR(invoice) && getInvoiceLocation(invoice) === 'APROVISIONAMENTO').length}
+                            {invoiceDerived.faltaComissao}
                           </span>
                         </button>
 
@@ -326,12 +437,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                           <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                             nfTramitacaoFilter === 'FaltaTesouraria' ? 'bg-white/30 text-white' : 'bg-indigo-200 text-indigo-900'
                           }`}>
-                            {invoices.filter((invoice) => {
-                              const location = getInvoiceLocation(invoice);
-                              return invoiceRequiresTR(invoice)
-                                ? location === 'COMISSAO'
-                                : location !== 'TESOURARIA';
-                            }).length}
+                            {invoiceDerived.faltaTesouraria}
                           </span>
                         </button>
 
@@ -349,7 +455,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                           <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                             nfTramitacaoFilter === 'Concluidas' ? 'bg-white/30 text-white' : 'bg-emerald-200 text-emerald-900'
                           }`}>
-                            {invoices.filter(i => getInvoiceLocation(i) === 'TESOURARIA').length}
+                            {invoiceDerived.concluidas}
                           </span>
                         </button>
                       </div>
@@ -375,55 +481,6 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                   {/* List of Invoices */}
                   <div className="space-y-4">
                     {(() => {
-                      const filteredInvoices = invoices.filter(inv => {
-                        const term = nfSearch.toLowerCase();
-                        const matchesSearch = (
-                          inv.id.toLowerCase().includes(term) ||
-                          inv.supplier.toLowerCase().includes(term) ||
-                          inv.empenhoId.toLowerCase().includes(term)
-                        );
-
-                        const matchesMonth = nfMonthFilter === 'Todos' || 
-                          (inv.issueDate && inv.issueDate.startsWith(nfMonthFilter));
-
-                        const matchesEmpenho = nfEmpenhoFilter === 'Todos' || inv.empenhoId === nfEmpenhoFilter;
-
-                        let matchesTramitacao = true;
-                        const currentLocation = getInvoiceLocation(inv);
-                        const requiresTR = invoiceRequiresTR(inv);
-                        if (nfTramitacaoFilter === 'FaltaComissao') {
-                          matchesTramitacao = requiresTR && currentLocation === 'APROVISIONAMENTO';
-                        } else if (nfTramitacaoFilter === 'FaltaTesouraria') {
-                          matchesTramitacao = requiresTR
-                            ? currentLocation === 'COMISSAO'
-                            : currentLocation !== 'TESOURARIA';
-                        } else if (nfTramitacaoFilter === 'Concluidas') {
-                          matchesTramitacao = currentLocation === 'TESOURARIA';
-                        }
-
-                        return matchesSearch && matchesMonth && matchesEmpenho && matchesTramitacao;
-                      }).sort((a, b) => {
-                        const getTimestamp = (inv: Invoice): number => {
-                          const raw = inv.registeredAt || inv.issueDate;
-                          if (!raw) return 0;
-                          if (raw.includes('/') && raw.split('/').length === 3) {
-                            const parts = raw.split('/');
-                            return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).getTime() || 0;
-                          }
-                          const t = new Date(raw).getTime();
-                          return isNaN(t) ? 0 : t;
-                        };
-
-                        const timeA = getTimestamp(a);
-                        const timeB = getTimestamp(b);
-                        if (timeA !== timeB) {
-                          return nfSortOrder === 'recentes' ? timeB - timeA : timeA - timeB;
-                        }
-                        return nfSortOrder === 'recentes' 
-                          ? b.id.localeCompare(a.id, undefined, { numeric: true }) 
-                          : a.id.localeCompare(b.id, undefined, { numeric: true });
-                      });
-
                       if (filteredInvoices.length === 0) {
                         return (
                           <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm text-center">
@@ -440,12 +497,13 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                       }
 
                       return filteredInvoices.map((inv) => {
-                        const targetEmpenho = empenhos.find((emp) => emp.id === inv.empenhoId);
-                        const requiresTR = classRequiresTermoRecebimento(
+                        const targetEmpenho = empenhosById.get(inv.empenhoId);
+                        const invoiceMeta = invoiceDerived.byKey.get(getInvoiceRecordKey(inv));
+                        const requiresTR = invoiceMeta?.requiresTR ?? classRequiresTermoRecebimento(
                           targetEmpenho?.classification,
                           empenhoClasses
                         );
-                        const currentLocation = getInvoiceLocation(inv);
+                        const currentLocation = invoiceMeta?.currentLocation ?? getInvoiceLocation(inv);
 
                         return (
                         <div key={getInvoiceRecordKey(inv)} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4 hover:border-blue-100 transition-all">
@@ -733,7 +791,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">Itens Conciliados</p>
                             <div className="space-y-1.5">
                               {inv.items.map((it, idx) => {
-                                const targetEmp = empenhos.find(e => e.id === inv.empenhoId);
+                                const targetEmp = empenhosById.get(inv.empenhoId);
                                 const targetItem = targetEmp?.items.find(i => i.id === it.itemId);
                                 return (
                                   <div key={idx} className="flex justify-between text-xs text-gray-600 font-semibold">
@@ -899,7 +957,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
 
                     {/* Grid checklist of items */}
                     {(() => {
-                      const targetEmpenho = empenhos.find(e => e.id === selectedNFCommitmentId);
+                      const targetEmpenho = empenhosById.get(selectedNFCommitmentId);
                       if (!targetEmpenho || targetEmpenho.items.length === 0) {
                         return (
                           <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm text-center">

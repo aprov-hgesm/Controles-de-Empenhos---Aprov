@@ -250,6 +250,98 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
     }
   };
 
+
+  const deferredEmpenhosSearch = React.useDeferredValue(empenhosSearch);
+
+  const empenhoMetricsById = React.useMemo(() => {
+    const metrics = new Map<string, {
+      totalCommitted: number;
+      totalReceived: number;
+      saldoDisponivel: number;
+      progressPercentage: number;
+      itemsComSaldo: number;
+    }>();
+
+    for (const emp of empenhos) {
+      let totalCommitted = 0;
+      let totalReceived = 0;
+      let itemsComSaldo = 0;
+
+      for (const item of emp.items) {
+        totalCommitted += item.quantity * item.unitPrice;
+        totalReceived += item.received * item.unitPrice;
+        if ((item.quantity - item.received) > 0) itemsComSaldo += 1;
+      }
+
+      const saldoDisponivel = Math.max(0, totalCommitted - totalReceived);
+      metrics.set(emp.id, {
+        totalCommitted,
+        totalReceived,
+        saldoDisponivel,
+        progressPercentage: totalCommitted > 0
+          ? Math.min(100, Math.round((totalReceived / totalCommitted) * 100))
+          : 0,
+        itemsComSaldo,
+      });
+    }
+
+    return metrics;
+  }, [empenhos]);
+
+  const invoicesByEmpenhoId = React.useMemo(() => {
+    const index = new Map<string, Invoice[]>();
+
+    for (const invoice of invoices) {
+      const current = index.get(invoice.empenhoId);
+      if (current) current.push(invoice);
+      else index.set(invoice.empenhoId, [invoice]);
+    }
+
+    return index;
+  }, [invoices]);
+
+  const filteredEmpenhos = React.useMemo(() => {
+    const normalizedSearch = deferredEmpenhosSearch.toLowerCase();
+
+    return empenhos
+      .filter((emp) => {
+        const metrics = empenhoMetricsById.get(emp.id);
+        const totalCommitted = metrics?.totalCommitted ?? 0;
+        const saldo = metrics?.saldoDisponivel ?? 0;
+        const matchesSearch =
+          emp.id.toLowerCase().includes(normalizedSearch)
+          || emp.supplier.toLowerCase().includes(normalizedSearch)
+          || emp.description.toLowerCase().includes(normalizedSearch);
+
+        let matchesFilter = true;
+        if (empenhosFilter === 'Com Saldo') {
+          matchesFilter = saldo > 0;
+        } else if (empenhosFilter === 'Ativos') {
+          matchesFilter = emp.status === 'Ativo';
+        } else if (empenhosFilter === 'Encerrados') {
+          matchesFilter = emp.status === 'Encerrado' || (totalCommitted > 0 && saldo <= 0);
+        }
+
+        const matchesPregao = empenhosPregaoFilter === 'Todos' || emp.pregao === empenhosPregaoFilter;
+        const empYear = getEmpenhoExerciseYear(emp);
+        const matchesYear = empenhosYearFilter === 'Todos'
+          || String(empYear || '') === empenhosYearFilter;
+        const matchesClass = empenhosClassFilter === 'Todos'
+          || getEmpenhoBaseClassification(emp) === empenhosClassFilter;
+
+        return matchesSearch && matchesFilter && matchesPregao && matchesYear && matchesClass;
+      })
+      .sort((a, b) => compareEmpenhosByRpnpPriority(a, b));
+  }, [
+    deferredEmpenhosSearch,
+    empenhoMetricsById,
+    empenhos,
+    empenhosClassFilter,
+    empenhosFilter,
+    empenhosPregaoFilter,
+    empenhosYearFilter,
+  ]);
+
   return (
             <div className="space-y-6">
               
@@ -419,42 +511,14 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
 
                   {/* Grid of Commitments with Cronogramas-style visual cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {empenhos
-                      .filter(emp => {
-                        const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-                        const totalReceived = emp.items.reduce((sum, item) => sum + item.received * item.unitPrice, 0);
-                        const saldo = Math.max(0, totalCommitted - totalReceived);
-
-                        const matchesSearch = emp.id.toLowerCase().includes(empenhosSearch.toLowerCase()) || 
-                                              emp.supplier.toLowerCase().includes(empenhosSearch.toLowerCase()) ||
-                                              emp.description.toLowerCase().includes(empenhosSearch.toLowerCase());
-                        
-                        let matchesFilter = true;
-                        if (empenhosFilter === 'Com Saldo') {
-                          matchesFilter = saldo > 0;
-                        } else if (empenhosFilter === 'Ativos') {
-                          matchesFilter = emp.status === 'Ativo';
-                        } else if (empenhosFilter === 'Encerrados') {
-                          matchesFilter = emp.status === 'Encerrado' || (totalCommitted > 0 && saldo <= 0);
-                        }
-
-                        const matchesPregao = empenhosPregaoFilter === 'Todos' || emp.pregao === empenhosPregaoFilter;
-                        
-                        const empYear = getEmpenhoExerciseYear(emp);
-                        const matchesYear = empenhosYearFilter === 'Todos'
-                          || String(empYear || '') === empenhosYearFilter;
-                        const matchesClass = empenhosClassFilter === 'Todos' || getEmpenhoBaseClassification(emp) === empenhosClassFilter;
-
-                        return matchesSearch && matchesFilter && matchesPregao && matchesYear && matchesClass;
-                      })
-                      .sort((a, b) => compareEmpenhosByRpnpPriority(a, b))
-                      .map((emp) => {
-                        const totalCommitted = emp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-                        const totalReceived = emp.items.reduce((sum, item) => sum + item.received * item.unitPrice, 0);
-                        const saldoDisponivel = Math.max(0, totalCommitted - totalReceived);
-                        const progressPercentage = totalCommitted > 0 ? Math.min(100, Math.round((totalReceived / totalCommitted) * 100)) : 0;
-                        const itemsComSaldo = emp.items.filter(i => (i.quantity - i.received) > 0).length;
-                        const empInvoices = invoices.filter(inv => inv.empenhoId === emp.id);
+                    {filteredEmpenhos.map((emp) => {
+                        const metrics = empenhoMetricsById.get(emp.id);
+                        const totalCommitted = metrics?.totalCommitted ?? 0;
+                        const totalReceived = metrics?.totalReceived ?? 0;
+                        const saldoDisponivel = metrics?.saldoDisponivel ?? 0;
+                        const progressPercentage = metrics?.progressPercentage ?? 0;
+                        const itemsComSaldo = metrics?.itemsComSaldo ?? 0;
+                        const empInvoices = invoicesByEmpenhoId.get(emp.id) ?? [];
 
                         return (
                           <div 
@@ -640,12 +704,13 @@ export function EmpenhosView({ context }: EmpenhosViewProps) {
                     );
                   }
 
-                  const totalCommitted = targetEmp.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-                  const totalReceived = targetEmp.items.reduce((sum, item) => sum + item.received * item.unitPrice, 0);
-                  const saldoDisponivel = Math.max(0, totalCommitted - totalReceived);
-                  const percentExecuted = totalCommitted > 0 ? Math.min(100, Math.round((totalReceived / totalCommitted) * 100)) : 0;
-                  const itemsComSaldo = targetEmp.items.filter(i => (i.quantity - i.received) > 0).length;
-                  const targetInvoices = invoices.filter(inv => inv.empenhoId === targetEmp.id);
+                  const targetMetrics = empenhoMetricsById.get(targetEmp.id);
+                  const totalCommitted = targetMetrics?.totalCommitted ?? 0;
+                  const totalReceived = targetMetrics?.totalReceived ?? 0;
+                  const saldoDisponivel = targetMetrics?.saldoDisponivel ?? 0;
+                  const percentExecuted = targetMetrics?.progressPercentage ?? 0;
+                  const itemsComSaldo = targetMetrics?.itemsComSaldo ?? 0;
+                  const targetInvoices = invoicesByEmpenhoId.get(targetEmp.id) ?? [];
                   const totalInvoicesValue = targetInvoices.reduce((sum, inv) => sum + inv.totalValue, 0);
                   const requiresCommission = classRequiresTermoRecebimento(
                     targetEmp.classification,

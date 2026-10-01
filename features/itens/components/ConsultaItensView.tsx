@@ -23,105 +23,132 @@ interface ConsultaItensViewContext {
 interface ConsultaItensViewProps {
   context: ConsultaItensViewContext;
 }
+
+type ItemAssociation = {
+  empenhoId: string;
+  supplier: string;
+  pregao?: string;
+  itemId: string;
+  quantity: number;
+  received: number;
+  balance: number;
+  unitPrice: number;
+  balanceValue: number;
+};
+
+type ConsolidatedItem = {
+  key: string;
+  name: string;
+  unit: string;
+  totalQuantity: number;
+  totalReceived: number;
+  totalBalance: number;
+  totalCommittedValue: number;
+  totalReceivedValue: number;
+  totalBalanceValue: number;
+  associations: ItemAssociation[];
+};
+
+const normalizeConsultaItemName = (value: string) =>
+  value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('pt-BR');
 /** Consulta consolidada de itens extraída sem alterar regras de negócio, dados ou persistência. */
 export function ConsultaItensView({ context }: ConsultaItensViewProps) {
   const { empenhos, expandedConsultaItem, handleEmpenhoDocumentUploaded, itensSaldoFilter, itensSearch, setActiveTab, setExpandedConsultaItem, setItensSaldoFilter, setItensSearch, setSelectedEmpenhoDetailId, showToast, user } = context;
-  return (() => {
-            type ItemAssociation = {
-              empenhoId: string;
-              supplier: string;
-              pregao?: string;
-              itemId: string;
-              quantity: number;
-              received: number;
-              balance: number;
-              unitPrice: number;
-              balanceValue: number;
-            };
+  const deferredItensSearch = React.useDeferredValue(itensSearch);
 
-            type ConsolidatedItem = {
-              key: string;
-              name: string;
-              unit: string;
-              totalQuantity: number;
-              totalReceived: number;
-              totalBalance: number;
-              totalCommittedValue: number;
-              totalReceivedValue: number;
-              totalBalanceValue: number;
-              associations: ItemAssociation[];
-            };
+  const empenhosById = React.useMemo(
+    () => new Map(empenhos.map((emp) => [emp.id, emp] as const)),
+    [empenhos]
+  );
 
-            const normalizeItemName = (value: string) => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('pt-BR');
-            const consolidatedMap = new Map<string, ConsolidatedItem>();
+  const consolidatedItems = React.useMemo<ConsolidatedItem[]>(() => {
+    const consolidatedMap = new Map<string, ConsolidatedItem>();
 
-            empenhos.forEach((emp) => {
-              emp.items.forEach((item) => {
-                const balance = Math.max(0, item.quantity - item.received);
-                const key = `${normalizeItemName(item.name)}::${item.unit.trim().toLocaleLowerCase('pt-BR')}`;
-                const association: ItemAssociation = {
-                  empenhoId: emp.id,
-                  supplier: emp.supplier,
-                  pregao: emp.pregao,
-                  itemId: item.id,
-                  quantity: item.quantity,
-                  received: item.received,
-                  balance,
-                  unitPrice: item.unitPrice,
-                  balanceValue: balance * item.unitPrice,
-                };
-                const existing = consolidatedMap.get(key);
+    for (const emp of empenhos) {
+      for (const item of emp.items) {
+        const balance = Math.max(0, item.quantity - item.received);
+        const key = `${normalizeConsultaItemName(item.name)}::${item.unit.trim().toLocaleLowerCase('pt-BR')}`;
+        const association: ItemAssociation = {
+          empenhoId: emp.id,
+          supplier: emp.supplier,
+          pregao: emp.pregao,
+          itemId: item.id,
+          quantity: item.quantity,
+          received: item.received,
+          balance,
+          unitPrice: item.unitPrice,
+          balanceValue: balance * item.unitPrice,
+        };
+        const existing = consolidatedMap.get(key);
 
-                if (existing) {
-                  existing.totalQuantity += item.quantity;
-                  existing.totalReceived += item.received;
-                  existing.totalBalance += balance;
-                  existing.totalCommittedValue += item.quantity * item.unitPrice;
-                  existing.totalReceivedValue += item.received * item.unitPrice;
-                  existing.totalBalanceValue += balance * item.unitPrice;
-                  existing.associations.push(association);
-                  return;
-                }
+        if (existing) {
+          existing.totalQuantity += item.quantity;
+          existing.totalReceived += item.received;
+          existing.totalBalance += balance;
+          existing.totalCommittedValue += item.quantity * item.unitPrice;
+          existing.totalReceivedValue += item.received * item.unitPrice;
+          existing.totalBalanceValue += balance * item.unitPrice;
+          existing.associations.push(association);
+          continue;
+        }
 
-                consolidatedMap.set(key, {
-                  key,
-                  name: item.name,
-                  unit: item.unit,
-                  totalQuantity: item.quantity,
-                  totalReceived: item.received,
-                  totalBalance: balance,
-                  totalCommittedValue: item.quantity * item.unitPrice,
-                  totalReceivedValue: item.received * item.unitPrice,
-                  totalBalanceValue: balance * item.unitPrice,
-                  associations: [association],
-                });
-              });
-            });
+        consolidatedMap.set(key, {
+          key,
+          name: item.name,
+          unit: item.unit,
+          totalQuantity: item.quantity,
+          totalReceived: item.received,
+          totalBalance: balance,
+          totalCommittedValue: item.quantity * item.unitPrice,
+          totalReceivedValue: item.received * item.unitPrice,
+          totalBalanceValue: balance * item.unitPrice,
+          associations: [association],
+        });
+      }
+    }
 
-            const consolidatedItems = Array.from(consolidatedMap.values()).sort((a, b) =>
-              a.name.localeCompare(b.name, 'pt-BR')
-            );
-            const normalizedSearch = itensSearch.trim().toLocaleLowerCase('pt-BR');
-            const filteredItems = consolidatedItems.filter((item) => {
-              const matchesBalance = itensSaldoFilter === 'Todos'
-                || (itensSaldoFilter === 'Com saldo' && item.totalBalance > 0)
-                || (itensSaldoFilter === 'Sem saldo' && item.totalBalance === 0);
-              const matchesSearch = !normalizedSearch
-                || item.name.toLocaleLowerCase('pt-BR').includes(normalizedSearch)
-                || item.unit.toLocaleLowerCase('pt-BR').includes(normalizedSearch)
-                || item.associations.some((association) =>
-                  association.empenhoId.toLocaleLowerCase('pt-BR').includes(normalizedSearch)
-                  || association.supplier.toLocaleLowerCase('pt-BR').includes(normalizedSearch)
-                  || association.pregao?.toLocaleLowerCase('pt-BR').includes(normalizedSearch)
-                );
+    return Array.from(consolidatedMap.values()).sort((a, b) =>
+      a.name.localeCompare(b.name, 'pt-BR')
+    );
+  }, [empenhos]);
 
-              return matchesBalance && matchesSearch;
-            });
-            const itemsWithBalance = consolidatedItems.filter((item) => item.totalBalance > 0).length;
-            const itemsWithoutBalance = consolidatedItems.length - itemsWithBalance;
-            const totalBalanceValue = consolidatedItems.reduce((sum, item) => sum + item.totalBalanceValue, 0);
+  const { itemsWithBalance, itemsWithoutBalance, totalBalanceValue } = React.useMemo(() => {
+    let withBalance = 0;
+    let balanceValue = 0;
 
-            return (
+    for (const item of consolidatedItems) {
+      if (item.totalBalance > 0) withBalance += 1;
+      balanceValue += item.totalBalanceValue;
+    }
+
+    return {
+      itemsWithBalance: withBalance,
+      itemsWithoutBalance: consolidatedItems.length - withBalance,
+      totalBalanceValue: balanceValue,
+    };
+  }, [consolidatedItems]);
+
+  const filteredItems = React.useMemo(() => {
+    const normalizedSearch = deferredItensSearch.trim().toLocaleLowerCase('pt-BR');
+
+    return consolidatedItems.filter((item) => {
+      const matchesBalance = itensSaldoFilter === 'Todos'
+        || (itensSaldoFilter === 'Com saldo' && item.totalBalance > 0)
+        || (itensSaldoFilter === 'Sem saldo' && item.totalBalance === 0);
+      const matchesSearch = !normalizedSearch
+        || item.name.toLocaleLowerCase('pt-BR').includes(normalizedSearch)
+        || item.unit.toLocaleLowerCase('pt-BR').includes(normalizedSearch)
+        || item.associations.some((association) =>
+          association.empenhoId.toLocaleLowerCase('pt-BR').includes(normalizedSearch)
+          || association.supplier.toLocaleLowerCase('pt-BR').includes(normalizedSearch)
+          || association.pregao?.toLocaleLowerCase('pt-BR').includes(normalizedSearch)
+        );
+
+      return matchesBalance && matchesSearch;
+    });
+  }, [consolidatedItems, deferredItensSearch, itensSaldoFilter]);
+
+  return (
               <div id="view-itens" className="w-full max-w-7xl mx-auto space-y-6 pb-24">
                 <div className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-white/30 shadow-sm">
                   <div className="flex items-center gap-3">
@@ -353,7 +380,7 @@ export function ConsultaItensView({ context }: ConsultaItensViewProps) {
                                                   <td className="p-3">
                                                     <div className="flex justify-center">
                                                       <EmpenhoDocumentActions
-                                                        empenho={empenhos.find((emp) => emp.id === association.empenhoId)}
+                                                        empenho={empenhosById.get(association.empenhoId)}
                                                         user={user}
                                                         variant="compact"
                                                         onDocumentUploaded={handleEmpenhoDocumentUploaded}
@@ -379,6 +406,5 @@ export function ConsultaItensView({ context }: ConsultaItensViewProps) {
                   )}
                 </section>
               </div>
-            );
-          })();
+  );
 }
