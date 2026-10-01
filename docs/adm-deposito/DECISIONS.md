@@ -2456,3 +2456,25 @@ Data: 2026-10-01.
 - Não fazem parte desta rodada: migração de Firebase/Vercel/Next.js, reescrita de ledger, remoção de animações ou redução de validações de segurança.
 - Toda otimização deve ser medida antes/depois e preservar contratos operacionais e isolamento multi-tenant.
 - Plano detalhado: `docs/PERFORMANCE_R3_COMERCIALIZACAO.md`.
+
+
+## D-122 — Performance R3 usa frentes paralelas com coordenação central
+
+Data: 2026-10-01.
+
+- A Performance R3 não será executada como uma sequência monolítica por um único chat.
+- O modelo oficial é: **baseline/contratos comuns → frentes independentes em paralelo → integração controlada → certificação final**.
+- A branch `feat/performance-r3-commercializacao` é a branch integradora do programa; chats trabalhadores usam branches próprias e não fazem merge direto em `main`.
+- Primeira onda paralela: PERF-A (bundle EMPROVEX), PERF-B (bundle Central), PERF-C (Saída sob demanda), PERF-D (Intake), PERF-E (CPU/renderização) e PERF-H (métricas/budget).
+- PERF-F (cache) depende da estabilização de C/D; PERF-G (shell/layout) depende da fronteira de carregamento definida por B; PERF-X é opcional e só existe se as medições justificarem.
+- PERF-I é dedicada exclusivamente à integração das frentes aprovadas; PERF-J é dedicada à certificação final.
+- Deve existir um **Chat Coordenador / Integrador / Avaliador** responsável pela visão global, branch integradora, revisão de handoffs, propriedade de arquivos, conflitos, regressões cruzadas, rebaseline e fechamento.
+- O coordenador não deve competir com trabalhadores implementando silenciosamente o mesmo escopo; correções próprias ficam limitadas a integração, compatibilidade e regressões cruzadas.
+- Cada trabalhador deve respeitar fronteira própria, preservar contratos globais, medir antes/depois e entregar handoff formal.
+- Dependências descobertas fora do escopo devem ser registradas ao coordenador, não implementadas silenciosamente.
+- O quadro oficial de estado é `docs/PERFORMANCE_R3_INTEGRATION_STATUS.md` e somente o coordenador altera o status de uma frente após revisão.
+- Conflitos devem ser resolvidos semanticamente; é proibido usar estratégia global de `ours/theirs` sem análise.
+- Nenhuma frente pode reduzir segurança, quebrar ledger/idempotência, mudar regra de negócio ou degradar estética/animações para obter performance.
+- Especificação completa: `docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md`.
+
+Esta decisão prevalece sobre qualquer interpretação anterior de R3.0–R3.9 como ordem obrigatoriamente sequencial.
