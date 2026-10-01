@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { Loader2, Menu, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
+import { KeyRound, Loader2, Menu, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { auth } from '../../lib/firebase';
@@ -20,6 +20,7 @@ interface AppHeaderProps {
   driveControl?: ReactNode;
   workspaceContext: ResolvedWorkspaceContext;
   onOpenSidebar: () => void;
+  onOpenAccount?: () => void;
 }
 
 export function AppHeader({
@@ -29,6 +30,7 @@ export function AppHeader({
   driveControl,
   workspaceContext,
   onOpenSidebar,
+  onOpenAccount,
 }: AppHeaderProps) {
   const router = useRouter();
   const currentUser = auth.currentUser;
@@ -117,6 +119,19 @@ export function AppHeader({
                 : `Período de Teste · ${trialDaysRemaining ?? 0}d`}
             </span>
           </div>
+        )}
+
+        {onOpenAccount && (
+          <button
+            type="button"
+            onClick={onOpenAccount}
+            className="emprovex-header-control"
+            title="Minha conta e senha de acesso"
+            aria-label="Abrir minha conta"
+          >
+            <KeyRound className="emprovex-header-control__icon h-4 w-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Minha conta</span>
+          </button>
         )}
 
         {canSwitchProfile && (
