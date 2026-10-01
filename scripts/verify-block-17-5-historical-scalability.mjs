@@ -9,7 +9,7 @@ const report=readFileSync('features/relatorios/components/RelatorioPorEmpenhoVie
 const supplier=readFileSync('features/relatorios/components/RelatorioPorFornecedorView.tsx','utf8');
 const sag=readFileSync('features/relatorios/components/SagImportView.tsx','utf8');
 const failures=[];
-for (const marker of ["where('empenhoId', '==', normalized)","where('supplierCnpj', '==', normalized)",'limit(HISTORICAL_QUERY_PAGE_SIZE)','startAfter(cursor)','loadAllInvoicesHistory','loadInvoicesByRecordKeys','getCountFromServer']) {
+for (const marker of ["where('empenhoId', '==', normalized)","where('supplierCnpj', '==', normalized)",'limit(HISTORICAL_QUERY_PAGE_SIZE)','startAfter(cursor)','loadAllInvoicesHistory','loadInvoicesByRecordKeys','getCountFromServer','loadHighestTermoNumero',"orderBy('termoNumero', 'desc')"]) {
   if (!q.includes(marker)) failures.push('Consulta histórica perdeu marcador: '+marker);
 }
 const reportBlock=plan.match(/relatorios:\s*\{[\s\S]*?\n\s*\},/)?.[0] || '';
