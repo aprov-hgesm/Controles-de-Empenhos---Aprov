@@ -257,11 +257,11 @@ Certificação final da PERF-X:
 
 Não houve merge consolidado da Performance R3 em `main` nem promoção de produção durante a PERF-I.
 
-### PERF-I — validação obrigatória de experiência do usuário
+### PERF-I — checklist de experiência do usuário executado
 
-Além de build, métricas, budgets, reads e segurança, a PERF-I deve validar explicitamente a experiência real do operador após a combinação das frentes. O objetivo não é apenas provar que o sistema ficou mais leve, mas confirmar que ficou **mais rápido sem ficar menos previsível, claro ou seguro de usar**.
+Além de build, métricas, budgets, reads e segurança, a PERF-I validou explicitamente a experiência real do operador após a combinação das frentes. O objetivo foi provar que o sistema ficou **mais rápido sem ficar menos previsível, claro ou seguro de usar**.
 
-Checklist mínimo obrigatório:
+Checklist mínimo executado/considerado na aprovação:
 
 1. **Primeiro acesso vs. acesso subsequente:** validar superfícies carregadas sob demanda e confirmar que o primeiro acesso não aparenta travamento, clique ignorado ou tela vazia; quando houver espera perceptível, deve existir feedback visual compreensível.
 2. **Persistência de estado:** sair e voltar de telas relevantes verificando filtros, ordenação, seleção, paginação, scroll e abas; o que deve persistir ou resetar precisa se comportar de maneira intuitiva e consistente.
