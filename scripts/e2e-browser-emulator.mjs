@@ -47,15 +47,24 @@ function run(command, args, env = process.env) {
   });
 }
 
-async function stopChild(child) {
-  if (!child || child.killed) return;
+async async function stopChild(child) {
+  if (!child || child.exitCode !== null || child.signalCode !== null) return;
 
   child.kill('SIGTERM');
+
+  const exitedGracefully = await new Promise((resolve) => {
+    const fallback = setTimeout(() => resolve(false), 4000);
+    child.once('exit', () => {
+      clearTimeout(fallback);
+      resolve(true);
+    });
+  });
+
+  if (exitedGracefully || child.exitCode !== null || child.signalCode !== null) return;
+
+  child.kill('SIGKILL');
   await new Promise((resolve) => {
-    const fallback = setTimeout(() => {
-      if (!child.killed) child.kill('SIGKILL');
-      resolve();
-    }, 4000);
+    const fallback = setTimeout(resolve, 2000);
     child.once('exit', () => {
       clearTimeout(fallback);
       resolve();
