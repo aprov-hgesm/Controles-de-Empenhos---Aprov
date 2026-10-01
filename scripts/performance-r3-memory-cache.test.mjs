@@ -195,6 +195,42 @@ test('repositories mantêm validações autoritativas fora do cache', () => {
   assert.doesNotMatch(destinationGuard, /destinationListReadCache/);
 });
 
+test('APIs autoritativas permanecem uncached e APIs Cached são explícitas', () => {
+  const locationSource = readFileSync(
+    resolve(ROOT, 'lib/warehouse/locationRepository.ts'),
+    'utf8'
+  );
+  const withdrawalSource = readFileSync(
+    resolve(ROOT, 'lib/warehouse/withdrawalRepository.ts'),
+    'utf8'
+  );
+
+  const depotAuthoritative = sourceSection(
+    locationSource,
+    'export async function listWarehouseDepots(',
+    'export async function listWarehouseDepotsCached('
+  );
+  assert.doesNotMatch(depotAuthoritative, /depotListReadCache/);
+
+  const locationAuthoritative = sourceSection(
+    locationSource,
+    'export async function listWarehouseLocations(',
+    'export async function listWarehouseLocationsCached('
+  );
+  assert.doesNotMatch(locationAuthoritative, /locationListReadCache/);
+
+  const destinationAuthoritative = sourceSection(
+    withdrawalSource,
+    'export async function listWarehouseDestinations(',
+    'export async function listWarehouseDestinationsCached('
+  );
+  assert.doesNotMatch(destinationAuthoritative, /destinationListReadCache/);
+
+  assert.match(locationSource, /export async function getWarehouseDepotCached/);
+  assert.match(locationSource, /export async function getWarehouseLocationCached/);
+  assert.match(withdrawalSource, /export async function listWarehouseDestinationsCached/);
+});
+
 test('mutações estruturais invalidam cache somente após escrita bem-sucedida', () => {
   const locationSource = readFileSync(
     resolve(ROOT, 'lib/warehouse/locationRepository.ts'),

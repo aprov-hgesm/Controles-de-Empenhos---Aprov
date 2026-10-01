@@ -29,6 +29,8 @@ A configuração logística foi avaliada e deliberadamente não foi incluída. E
 
 O cache desaparece naturalmente em reload ou nova sessão JavaScript.
 
+As funções históricas listWarehouseDepots(), listWarehouseLocations(), getWarehouseDepot(), getWarehouseLocation() e listWarehouseDestinations() permanecem uncached. Somente APIs com sufixo Cached são destinadas às superfícies de apresentação autorizadas. Assim, repositories de domínio que reutilizam as funções históricas — por exemplo, a validação de referências antes de salvar um croqui — não passam a depender de estado stale.
+
 ## Autoridade e invalidação
 
 Unicidade de código de depósito e de localização usa loaders Firestore **uncached**. Uma falha de leitura autoritativa aborta a validação em vez de aceitar a ausência de conflito a partir de cache.

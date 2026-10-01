@@ -691,6 +691,21 @@ export async function listWarehouseDestinations(
   const path = warehouseDomainPath(scope.workspaceId, 'destinations');
   const bounded = Math.max(1, Math.min(maxResults, 250));
   try {
+    return await loadWarehouseDestinationsFromFirestore(scope.workspaceId, bounded);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return [];
+  }
+}
+
+export async function listWarehouseDestinationsCached(
+  workspaceId: string,
+  maxResults = 250
+): Promise<WarehouseDestinationListItem[]> {
+  const scope = currentScope(workspaceId);
+  const path = warehouseDomainPath(scope.workspaceId, 'destinations');
+  const bounded = Math.max(1, Math.min(maxResults, 250));
+  try {
     const cached = await destinationListReadCache.read(
       scope.workspaceId,
       'list:' + bounded,
