@@ -481,16 +481,138 @@ Ao assumir:
 5. confirmar PERF-I como **APROVADA E ENCERRADA** no estado funcional até `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`;
 6. não reabrir A–X/PERF-I sem regressão objetiva;
 7. conduzir exclusivamente a **PERF-J — Certificação Final**;
-8. não fazer merge em `main`, deploy ou promoção Vercel sem autorização explícita do usuário.
+8. não fazer merge em `main`, deploy ou promoção Vercel sem autorização explícita do usuário;
+9. depois da PERF-J e da publicação autorizada da R3 em `main`/Vercel, abrir o programa **EMPROVEX SaaS R1** conforme o macroplanejamento do Memorial Oficial, sem continuar usando a R3 como branch de desenvolvimento comercial.
 
-## 14. Regra para atualização deste documento
+## 14. Missão do próximo Coordenador após a PERF-J e publicação da R3
+
+Esta missão **não deve começar antes** da PERF-J concluída e da autorização do usuário para publicar.
+
+Após merge consolidado em `main`, deploy Vercel e smoke test de produção:
+
+1. registrar o HEAD/tag efetivamente publicado;
+2. encerrar formalmente a Performance R3;
+3. abrir um novo programa de desenvolvimento chamado provisoriamente **EMPROVEX SaaS R1**;
+4. criar uma branch integradora própria para o SaaS R1, separada de `main`;
+5. não desenvolver o SaaS diretamente na `main`;
+6. transformar o macroplano abaixo em documentação detalhada antes de distribuir trabalho.
+
+Sequência lógica definida pelo usuário:
+
+> **Release R3 → cobrança/trial → onboarding → segurança/legal → operação/backup/monitoramento → piloto comercial → SaaS aberto**
+
+### Diretriz de cobrança inicial
+
+A cobrança inicial deve ser **deliberadamente simples**:
+- preferência por **Mercado Pago**;
+- link de pagamento e/ou Pix;
+- trial controlado no EMPROVEX;
+- conciliação/ativação manual ou assistida é aceitável na primeira versão;
+- não construir assinatura recorrente complexa, checkout próprio, motor financeiro amplo ou integração excessiva antes de provar necessidade;
+- API/webhook Mercado Pago só entra quando houver ganho operacional claro.
+
+O objetivo é vender com segurança e baixa fricção, não transformar o EMPROVEX em um sistema financeiro.
+
+### Método obrigatório de planejamento
+
+O próximo Coordenador deve reutilizar o padrão que funcionou na Performance R3:
+
+> **contratos comuns → workers independentes → ondas paralelas → handoffs → integração controlada → validação integrada → certificação**
+
+Ele deve criar, no mínimo:
+- `docs/SAAS_R1_PLANO_MESTRE.md`;
+- `docs/SAAS_R1_EXECUCAO_PARALELA.md`;
+- `docs/SAAS_R1_INTEGRATION_STATUS.md`;
+- `docs/SAAS_R1_COORDENADOR_HANDOFF.md`.
+
+O plano detalhado deve definir:
+- frentes independentes;
+- dependências reais;
+- quais frentes podem rodar simultaneamente;
+- branch de cada worker;
+- base SHA de cada worker;
+- propriedade preferencial de arquivos/domínios;
+- contratos compartilhados;
+- critérios de aceite;
+- gates técnicos;
+- validações manuais;
+- segurança/isolamento;
+- métricas de custo/performance;
+- handoff obrigatório;
+- integração semântica;
+- plano de rollback;
+- certificação final.
+
+### Estrutura sugerida de ondas
+
+A sequência de maturidade do produto continua sendo a definida pelo usuário, mas a implementação deve aproveitar paralelismo seguro.
+
+**Fundação comum**
+- modelo cliente/workspace/UG/usuário;
+- estados de trial/cobrança/acesso;
+- regras de ativação/suspensão/reativação/encerramento;
+- auditoria;
+- fronteira entre domínio operacional e domínio comercial.
+
+**Onda paralela 1**
+- cobrança/trial simplificados;
+- onboarding;
+- segurança/legal;
+- operação/backup/monitoramento.
+
+Essas frentes podem caminhar em chats diferentes **depois** que a fundação comum estiver congelada, desde que o Coordenador evite que cada uma crie um modelo diferente de cliente/status.
+
+**Integração SaaS**
+- combinar ciclo comercial + acesso + onboarding + observabilidade;
+- validar que suspensão comercial não apaga/corrompe dados;
+- confirmar fail-closed sem prejudicar recuperação/reativação;
+- executar regressão do núcleo EMPROVEX.
+
+**Piloto comercial**
+- poucos clientes reais assistidos;
+- suporte próximo;
+- consumo/custos reais;
+- problemas reais de onboarding/cobrança;
+- capacidade/custo orientada à meta inicial de até **100 usuários**, distinguindo cadastrados, ativos e simultâneos.
+
+**Certificação comercial**
+- cobrança/trial;
+- onboarding;
+- segurança/isolamento;
+- documentação legal vigente;
+- backup + restauração;
+- monitoramento/alertas;
+- suporte/incidente;
+- custo/capacidade;
+- pendências conhecidas;
+- decisão explícita do usuário.
+
+**SaaS aberto**
+- somente depois da certificação e autorização do usuário.
+
+### Restrições para o SaaS R1
+
+- não migrar Firebase/Vercel/Next.js por antecipação;
+- não criar arquitetura de microsserviços/Kubernetes apenas por expectativa de escala;
+- não automatizar cobrança além do necessário para a primeira operação comercial;
+- não misturar novas features grandes do domínio operacional com o fechamento comercial;
+- não reduzir isolamento multi-tenant ou segurança para facilitar onboarding;
+- não apagar dados por atraso de pagamento;
+- não transformar Browser E2E em gate permanente sem necessidade;
+- não permitir que workers façam merge/deploy direto em produção.
+
+O Memorial Oficial, após atualizado com a publicação da R3, será a fonte superior desse novo programa até que os quatro documentos SaaS R1 sejam criados e aprovados.
+
+## 15. Regra para atualização deste documento
 
 Atualizar este handoff quando:
 - uma frente for integrada/devolvida/dispensada;
 - surgir conflito importante;
 - mudar a ordem das dependências;
 - houver nova métrica combinada;
-- iniciar PERF-I/PERF-J;
+- iniciar/concluir PERF-J;
+- a R3 for publicada em `main`/Vercel;
+- o programa SaaS R1 for formalmente aberto;
 - ocorrer troca de Chat Coordenador.
 
 Não transformar este documento em diário de commits. Ele deve continuar compacto e suficiente para retomada.
