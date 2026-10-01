@@ -1,7 +1,7 @@
 # Performance R3 — Execução Paralela e Coordenação
 
-Data da decisão: **2026-10-01**  
-Programa: **Performance R3 — Comercialização**  
+Data da decisão: **2026-10-01**
+Programa: **Performance R3 — Comercialização**
 Branch integradora: `feat/performance-r3-commercializacao`
 
 Este documento define **como vários chats podem desenvolver melhorias de performance em paralelo sem prejuízo ao EMPROVEX**.

@@ -1,9 +1,9 @@
 # Performance R3 — Comercialização
 
-Data de abertura: **2026-10-01**  
-Branch integradora: `feat/performance-r3-commercializacao`  
-Modelo de execução: **frentes paralelas + integração controlada**  
-Protocolo: `docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md`  
+Data de abertura: **2026-10-01**
+Branch integradora: `feat/performance-r3-commercializacao`
+Modelo de execução: **frentes paralelas + integração controlada**
+Protocolo: `docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md`
 Baseline: `main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`
 
 ## Estado atual da rodada — 2026-10-01

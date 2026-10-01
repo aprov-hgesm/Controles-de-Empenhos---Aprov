@@ -1,6 +1,6 @@
 # Central de Depósitos — Estado Atual
 
-Atualização canônica: **2026-10-01**  
+Atualização canônica: **2026-10-01**
 Baseline de produção: `main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`
 
 > As seções posteriores preservam o histórico de fases e podem descrever estados antigos. Em caso de divergência, esta seção, o memorial consolidado e a `main` prevalecem.

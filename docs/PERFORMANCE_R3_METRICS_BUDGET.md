@@ -1,8 +1,8 @@
 # Performance R3 — Métricas e Budget
 
-Frente: **PERF-H**  
-Branch de trabalho: `perf-r3-h-metrics-budget`  
-Base: `feat/performance-r3-commercializacao@076a233cf250c95882e78498e89dd2a44d034f74`  
+Frente: **PERF-H**
+Branch de trabalho: `perf-r3-h-metrics-budget`
+Base: `feat/performance-r3-commercializacao@076a233cf250c95882e78498e89dd2a44d034f74`
 Baseline de abertura: `main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`
 
 ## Objetivo

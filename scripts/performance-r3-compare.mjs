@@ -19,7 +19,7 @@ writeFileSync(jsonOut,`${JSON.stringify(result,null,2)}\n`);
 const rows=bundle.routes.map((row)=>`| \`${row.route}\` | ${row.baselineFirstLoadJsKb} | ${row.currentFirstLoadJsKb ?? '—'} | ${row.deltaKb ?? '—'} | ${row.deltaPercent == null ? '—' : `${row.deltaPercent}%`} |`).join('\n');
 const md=`# Performance R3 — comparação
 
-Baseline: \`${baseline.baselineId}\`  
+Baseline: \`${baseline.baselineId}\`
 Candidate: \`${candidate.gitCommit??'unknown'}\`
 
 | Route | Baseline kB | Candidate kB | Δ kB | Δ % |

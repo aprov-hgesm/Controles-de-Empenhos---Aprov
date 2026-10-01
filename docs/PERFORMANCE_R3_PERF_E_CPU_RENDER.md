@@ -1,7 +1,7 @@
 # PERF-E — CPU e Renderização
 
-Data: **2026-10-01**  
-Branch: `perf-r3-e-render-cpu`  
+Data: **2026-10-01**
+Branch: `perf-r3-e-render-cpu`
 Base: `feat/performance-r3-commercializacao@076a233cf250c95882e78498e89dd2a44d034f74`
 
 ## Escopo
