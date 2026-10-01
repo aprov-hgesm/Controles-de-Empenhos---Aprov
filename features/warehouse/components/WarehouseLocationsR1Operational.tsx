@@ -24,8 +24,8 @@ import { WarehouseStructureImportR1 } from './WarehouseStructureImportR1';
 import {
   createWarehouseDepot,
   createWarehouseLocation,
-  listWarehouseDepots,
-  listWarehouseLocations,
+  listWarehouseDepotsCached,
+  listWarehouseLocationsCached,
   updateWarehouseDepot,
   updateWarehouseLocation,
   type WarehouseDepotListItem,
@@ -135,8 +135,8 @@ export function WarehouseLocationsR1Operational({
     setState((current) => ({ ...current, loading: true }));
     try {
       const [depots, locations] = await Promise.all([
-        listWarehouseDepots(workspaceId, 250),
-        listWarehouseLocations(workspaceId, 500),
+        listWarehouseDepotsCached(workspaceId, 250),
+        listWarehouseLocationsCached(workspaceId, 500),
       ]);
       setState({ loading: false, depots, locations });
       setSelectedDepotId((current) =>

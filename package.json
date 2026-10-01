@@ -188,6 +188,7 @@
     "test:cronograma-email": "node --test scripts/cronograma-email.test.mjs",
     "test:central-depositos-external-security": "npx --yes firebase-tools emulators:exec --config firebase.warehouse-security-test.json --project demo-emprovex-security --only auth,firestore \"node scripts/warehouse-external-access-security.test.mjs\"",
     "test:performance-r3-intake": "node --test scripts/warehouse-intake-queue-performance.test.mjs",
+    "test:performance-r3-memory-cache": "node --test scripts/performance-r3-memory-cache.test.mjs",
     "perf:r3:collect": "node scripts/performance-r3-build-metrics.mjs",
     "perf:r3:budget": "node scripts/performance-r3-budget-check.mjs",
     "perf:r3:compare": "node scripts/performance-r3-compare.mjs",
