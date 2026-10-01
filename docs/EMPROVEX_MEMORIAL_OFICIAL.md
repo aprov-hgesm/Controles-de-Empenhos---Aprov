@@ -537,7 +537,7 @@ Fontes canônicas:
 
 A auditoria confirmou que já existem:
 - billing Bloco 22 em modo OBSERVE;
-- R$ 50/mês, trial 30 dias, 5º dia útil e tolerância 10 dias;
+- billing Bloco 22 possui baseline técnico atual de R$ 50/mês; o contrato comercial do SaaS R1 foi atualizado para **R$ 70/mês no Plano Completo**, com trial 30 dias, 5º dia útil e tolerância 10 dias;
 - painel de assinaturas e confirmação manual;
 - provisionamento de workspace/UG/Auth;
 - auditoria;
@@ -566,6 +566,10 @@ Plano de assinatura recorrente sem integração fica como evolução R1.1 se o p
 
 ### Contratos comerciais congelados
 
+- **Plano Completo EMPROVEX: R$ 70,00/mês por workspace**, sem tiers e sem módulos pagos à parte;
+- workspace regular, trial válido e VIP recebem acesso integral ao sistema conforme suas permissões operacionais;
+- VIP externo é isenção comercial: usa internamente `exempt`, custa R$ 0 e mantém o mesmo acesso funcional;
+- concessão/remoção de VIP é exclusivamente administrativa e auditada;
 - 1 workspace = 1 UG na R1;
 - 1 conta operacional primária por workspace;
 - fonte comercial = `billingAccounts/{workspaceId}`;
@@ -576,6 +580,14 @@ Plano de assinatura recorrente sem integração fica como evolução R1.1 se o p
 - founder decide suspensão/reativação;
 - suspension/cancelamento nunca apagam dados;
 - status comercial e status de acesso permanecem conceitos separados.
+
+### Arquitetura de banco para o SaaS R1
+
+**Não será criado um terceiro banco Firestore apenas para as novas Rules do SaaS.**
+
+O banco principal continuará concentrando identidade, workspace, billing, legal e lifecycle. A Central de Depósitos continua isolada em `emprovex-warehouse`.
+
+As Rules são implantadas por banco e um banco adicional traria novo target, SDK, backup, monitoramento e sincronização sem benefício proporcional nesta fase. Novo banco só será reavaliado diante de um domínio realmente independente ou necessidade objetiva de isolamento/escala/regionalização.
 
 ### Enforcement
 
