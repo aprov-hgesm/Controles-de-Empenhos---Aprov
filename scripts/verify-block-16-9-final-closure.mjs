@@ -16,6 +16,7 @@ function forbidText(content, needle, message) {
 
 const packageJson = read('package.json');
 const workflow = read('.github/workflows/application-ci.yml');
+const e2eWorkflow = read('.github/workflows/browser-e2e-on-demand.yml');
 const rules = read('firestore.rules');
 const closure = read('docs/BLOCK_16_9_FINAL_AUDIT_CLOSURE.md');
 
@@ -80,7 +81,6 @@ for (const ciStep of [
   'Production build',
   'Final TypeScript validation',
   'Diff hygiene',
-  'Browser E2E with Firebase Emulator',
   'Block 16 Final Release Gate',
 ]) {
   requireText(workflow, ciStep, `Application CI perdeu gate de fechamento: ${ciStep}`);
@@ -90,10 +90,14 @@ for (const releaseInvariant of [
   'block-16-release-gate:',
   'needs:',
   '- validate-application',
-  '- browser-e2e-emulator',
 ]) {
   requireText(workflow, releaseInvariant, `Release gate final incompleto: ${releaseInvariant}`);
 }
+
+requireText(e2eWorkflow, 'workflow_dispatch:', 'Browser E2E sob demanda perdeu acionamento manual.');
+requireText(e2eWorkflow, 'Browser E2E with Firebase Emulator', 'Workflow sob demanda perdeu Browser E2E.');
+requireText(e2eWorkflow, 'npm run test:e2e:browser', 'Workflow sob demanda deixou de executar Browser E2E.');
+forbidText(workflow, 'browser-e2e-emulator:', 'Browser E2E voltou a bloquear o CI automático.');
 
 forbidText(
   workflow,
