@@ -328,7 +328,7 @@ Riscos/itens deliberadamente fora do escopo:
 - redução seletiva só entra em vigor depois do backfill READY;
 - PERF-I encerrou o contrato PERF-X combinando guards/testes automatizados de fallback/READY/hot-history com jornada manual integrada; reabrir somente diante de regressão objetiva.
 
-**PERF-I foi APROVADA E ENCERRADA. PERF-J está LIBERADA.**
+**PERF-I foi APROVADA E ENCERRADA. PERF-J está APROVADA.**
 
 ## 7. PERF-I — Integração Controlada + Validação de UX
 

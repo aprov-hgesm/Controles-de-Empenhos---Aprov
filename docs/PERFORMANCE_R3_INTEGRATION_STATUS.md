@@ -143,7 +143,7 @@ PASS para:
 
 Benchmark manual indicativo mostrou redução forte do trabalho contínuo em repouso na Home da R3. Como publicada e candidata local standalone/emulada não são ambientes idênticos, esses números são evidência complementar, não benchmark laboratorial.
 
-Decisão: **PERF-I APROVADA. PERF-J LIBERADA.**
+Decisão histórica da PERF-I: **APROVADA**. Estado atual: **PERF-J APROVADA**.
 
 ## Fechamento do Coordenador — PERF-X
 
@@ -202,7 +202,7 @@ PR técnico #209 validou exatamente `2aca0dce... → 2b72d43...`:
 
 PR #209 foi fechado sem merge após cumprir sua função de validação.
 
-Decisão naquele marco: **PERF-X INTEGRADA e PERF-I LIBERADA**. Estado atual posterior: **PERF-I APROVADA; PERF-J LIBERADA**.
+Decisão naquele marco: **PERF-X INTEGRADA e PERF-I LIBERADA**. Estado atual posterior: **PERF-I APROVADA; PERF-J APROVADA**.
 
 ## Coordenação concluída — PERF-D
 

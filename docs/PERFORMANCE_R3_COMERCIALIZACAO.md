@@ -217,7 +217,7 @@ Mapeamento oficial para desenvolvimento paralelo:
 | PERF-G | R3.3 — shell/layout persistente | 2 — após B |
 | PERF-X | R3.8 — dados quentes/histórico | executada, integrada e certificada |
 | PERF-I | integração das frentes + UX | aprovada/encerrada |
-| PERF-J | certificação e comparação final | próxima fase liberada |
+| PERF-J | certificação e comparação final | aprovada |
 
 Cada frente deve usar branch própria e entregar handoff ao chat coordenador. Nenhuma branch trabalhadora faz merge diretamente em `main`.
 
