@@ -1,6 +1,8 @@
 # Sequência pós-ADM — estabilização, melhorias e hardening de segurança
 
-Data da decisão: 2026-09-25.
+Data da decisão original: 2026-09-25.
+
+> **Revisão 2026-10-01:** a Etapa A foi concluída, a Central de Depósitos já foi liberada para setores externos autenticados/validados e a Etapa B está em andamento por meio da **Performance R3 — Comercialização**. A Etapa C de hardening transversal permanece planejada, sem impedir correção imediata de vulnerabilidade crítica confirmada.
 
 ## Contexto
 
@@ -71,13 +73,13 @@ Achados preventivos sem evidência de exploração permanecem no backlog da Etap
 
 ## Relação com o Módulo 14
 
-O Módulo 14 continua sendo a campanha final de validação e fechamento do ciclo atual do ADM Depósito.
+O Módulo 14 foi concluído como campanha histórica de validação e fechamento do ciclo inicial da Central de Depósitos.
 
-Ele não é substituído por este plano.
+O plano atual sucede esse fechamento; não reabre o Módulo 14.
 
 A sequência passa a ser:
 
-`concluir ADM / Módulo 14 → estabilização e melhorias ADM → hardening de segurança de dados da plataforma`
+`Central concluída/liberada → Performance R3 e estabilização comercial → hardening transversal de segurança → expansão comercial ampla`
 
 O Módulo 14 mantém:
 - PowerShell como ambiente principal da campanha local;
@@ -98,14 +100,14 @@ A Etapa B pode adicionar uma segunda rodada de testes e refinamento com base no 
 
 O sucesso técnico do ADM não autoriza expansão ampla automaticamente.
 
-Durante as Etapas A e B:
-- manter expansão externa conservadora;
+Durante a Etapa B:
+- manter a expansão externa já habilitada de forma conservadora;
 - usar o baixo número de usuários externos como oportunidade para estabilização controlada;
 - qualquer aumento significativo da base deve considerar o estado da Etapa C de segurança.
 
 ## Estado
 
-- Etapa A: **EM ANDAMENTO**;
-- Etapa B: **PLANEJADA**;
-- Etapa C: **PLANEJADA**;
+- Etapa A: **CONCLUÍDA**;
+- Etapa B: **EM ANDAMENTO — Performance R3 / estabilização comercial**;
+- Etapa C: **PLANEJADA — hardening transversal antes de expansão comercial ampla**;
 - segurança crítica: **sempre bloqueante quando confirmada**.

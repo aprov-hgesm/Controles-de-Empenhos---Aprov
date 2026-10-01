@@ -27,6 +27,7 @@ export const WAREHOUSE_DOMAIN_COLLECTIONS = {
   siscofisSnapshots: 'siscofisSnapshots',
   alerts: 'alerts',
   intakes: 'intakes',
+  intakeQueueIndex: 'intakeQueueIndex',
   queueExclusions: 'queueExclusions',
   destinations: 'destinations',
   withdrawals: 'withdrawals',

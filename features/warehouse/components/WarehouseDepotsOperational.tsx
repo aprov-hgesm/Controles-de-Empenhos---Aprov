@@ -1,11 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { Map, MapPin } from 'lucide-react';
 
-import { WarehouseCroquisR1Operational } from './WarehouseCroquisR1Operational';
-import { WarehouseLocationsR1Operational } from './WarehouseLocationsR1Operational';
+const WarehouseCroquisR1Operational = dynamic(
+  () => import('./WarehouseCroquisR1Operational').then((module) => module.WarehouseCroquisR1Operational)
+);
+const WarehouseLocationsR1Operational = dynamic(
+  () => import('./WarehouseLocationsR1Operational').then((module) => module.WarehouseLocationsR1Operational)
+);
 
 type DepotTab = 'structure' | 'layout';
 

@@ -4,10 +4,15 @@ import {
   documentId,
   getDocs,
   limit,
+  orderBy,
   query,
   runTransaction,
   serverTimestamp,
+  startAfter,
   where,
+  type DocumentData,
+  type QueryDocumentSnapshot,
+  type QuerySnapshot,
 } from 'firebase/firestore';
 
 import { recordWarehouseDocumentReads } from './telemetry';
@@ -36,18 +41,23 @@ import {
   type WarehouseItemIntakeReconciliationReason,
   type WarehouseItemIntakeState,
 } from './intakeState';
-import { listWarehouseMovements } from './ledgerRepository';
 import { createWarehouseMovementId } from './movement';
 import { normalizeWarehouseMaterialId } from './material';
 import {
   listWarehouseQueueExcludedInvoiceKeys,
 } from './intakeQueueExclusionRepository';
+import {
+  deactivateWarehouseIntakeQueueCandidates,
+  listWarehouseActiveIntakeQueueCandidates,
+  syncWarehouseIntakeQueueIndex,
+} from './intakeQueueIndexRepository';
 import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
 
 export const WAREHOUSE_INTAKE_QUEUE_EMPENHOS_LIMIT = 250;
 export const WAREHOUSE_INTAKE_QUEUE_INVOICES_LIMIT = 300;
 export const WAREHOUSE_INTAKE_QUEUE_STATES_LIMIT = 500;
 export const WAREHOUSE_INTAKE_QUEUE_LEGACY_MOVEMENTS_LIMIT = 250;
+const WAREHOUSE_INTAKE_HISTORY_MAX_PAGES = 40;
 
 interface BoundedResult<T> {
   items: T[];
@@ -157,31 +167,48 @@ async function listOperationalBounded<T>(
 ): Promise<BoundedResult<T>> {
   const { scope } = currentScopeForWorkspace(workspaceId);
   const path = getOperationalCollectionPath(scope, collectionName);
+  const pageSize = Math.max(1, maxResults);
+  const items: T[] = [];
+  let cursor: QueryDocumentSnapshot<DocumentData> | null = null;
 
   try {
-    const snapshot = await getDocs(
-      operationalCollectionRef(scope, collectionName)
-    );
-    recordWarehouseDocumentReads(workspaceId, snapshot.size);
-    return {
-      items: snapshot.docs.map((entry) => {
-        const data = entry.data() as T & { id?: string; recordKey?: string };
-        if (collectionName === 'invoices') {
-          return { ...data, recordKey: data.recordKey || entry.id } as T;
-        }
-        return { ...data, id: data.id || entry.id } as T;
-      }),
-      truncated: false,
-    };
+    for (let page = 0; page < WAREHOUSE_INTAKE_HISTORY_MAX_PAGES; page += 1) {
+      const snapshot: QuerySnapshot<DocumentData> = await getDocs(
+        query(
+          operationalCollectionRef(scope, collectionName),
+          orderBy(documentId(), 'asc'),
+          ...(cursor ? [startAfter(cursor)] : []),
+          limit(pageSize)
+        )
+      );
+      recordWarehouseDocumentReads(workspaceId, snapshot.size);
+      items.push(
+        ...snapshot.docs.map((entry) => {
+          const data = entry.data() as T & { id?: string; recordKey?: string };
+          if (collectionName === 'invoices') {
+            return { ...data, recordKey: data.recordKey || entry.id } as T;
+          }
+          return { ...data, id: data.id || entry.id } as T;
+        })
+      );
+
+      if (snapshot.size < pageSize) {
+        return { items, truncated: false };
+      }
+      cursor = snapshot.docs.at(-1) || null;
+      if (!cursor) return { items, truncated: false };
+    }
+
+    return { items, truncated: true };
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
     throw error;
   }
 }
 
-async function listOperationalByIds<T extends { id?: string }>(
+async function listOperationalByIds<T extends { id?: string; recordKey?: string }>(
   workspaceId: string,
-  collectionName: 'empenhos',
+  collectionName: 'empenhos' | 'invoices',
   ids: string[]
 ): Promise<T[]> {
   const { scope } = currentScopeForWorkspace(workspaceId);
@@ -210,6 +237,12 @@ async function listOperationalByIds<T extends { id?: string }>(
   return snapshots.flatMap((snapshot) =>
     snapshot.docs.map((entry) => {
       const data = entry.data() as T;
+      if (collectionName === 'invoices') {
+        return {
+          ...data,
+          recordKey: data.recordKey || entry.id,
+        };
+      }
       return {
         ...data,
         id: data.id || entry.id,
@@ -269,25 +302,235 @@ async function listPersistedIntakes(
 ): Promise<BoundedResult<PersistedIntake>> {
   const scope = currentScopeForWorkspace(workspaceId);
   const path = warehouseDomainPath(scope.workspaceId, 'intakes');
+  const items: PersistedIntake[] = [];
+  let cursor: QueryDocumentSnapshot<DocumentData> | null = null;
 
   try {
-    const snapshot = await getDocs(collection(db, path));
-    recordWarehouseDocumentReads(workspaceId, snapshot.size);
-    return {
-      items: snapshot.docs.flatMap((entry) => {
+    for (let page = 0; page < WAREHOUSE_INTAKE_HISTORY_MAX_PAGES; page += 1) {
+      const snapshot: QuerySnapshot<DocumentData> = await getDocs(
+        query(
+          collection(db, path),
+          orderBy(documentId(), 'asc'),
+          ...(cursor ? [startAfter(cursor)] : []),
+          limit(WAREHOUSE_INTAKE_QUEUE_STATES_LIMIT)
+        )
+      );
+      recordWarehouseDocumentReads(workspaceId, snapshot.size);
+      for (const entry of snapshot.docs) {
         const parsed = parsePersistedIntake(
           scope.workspaceId,
           entry.id,
           entry.data() as Record<string, unknown>
         );
-        return parsed ? [parsed] : [];
-      }),
-      truncated: false,
-    };
+        if (parsed) items.push(parsed);
+      }
+
+      if (snapshot.size < WAREHOUSE_INTAKE_QUEUE_STATES_LIMIT) {
+        return { items, truncated: false };
+      }
+      cursor = snapshot.docs.at(-1) || null;
+      if (!cursor) return { items, truncated: false };
+    }
+
+    return { items, truncated: true };
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
     throw error;
   }
+}
+
+async function listPersistedIntakesByIds(
+  workspaceId: string,
+  stateIds: string[]
+): Promise<Map<string, PersistedIntake>> {
+  const scope = currentScopeForWorkspace(workspaceId);
+  const uniqueIds = Array.from(new Set(stateIds.map((id) => id.trim()).filter(Boolean)));
+  const path = warehouseDomainPath(scope.workspaceId, 'intakes');
+  const records = new Map<string, PersistedIntake>();
+  if (uniqueIds.length === 0) return records;
+
+  try {
+    for (let index = 0; index < uniqueIds.length; index += 30) {
+      const ids = uniqueIds.slice(index, index + 30);
+      const snapshot = await getDocs(
+        query(
+          collection(db, path),
+          where(documentId(), 'in', ids)
+        )
+      );
+      recordWarehouseDocumentReads(workspaceId, snapshot.size);
+      for (const entry of snapshot.docs) {
+        const parsed = parsePersistedIntake(
+          scope.workspaceId,
+          entry.id,
+          entry.data() as Record<string, unknown>
+        );
+        if (parsed) records.set(entry.id, parsed);
+      }
+    }
+    return records;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    throw error;
+  }
+}
+
+interface WarehouseCandidateInvoiceMovementEvidence {
+  id: string;
+  invoiceRecordKey: string;
+  itemIds: string[];
+}
+
+interface WarehouseCandidateMovementEvidenceResult {
+  byInvoiceRecordKey: Map<string, WarehouseCandidateInvoiceMovementEvidence[]>;
+  coverageLimitedInvoiceKeys: Set<string>;
+}
+
+async function listCandidateInvoiceMovementEvidence(
+  workspaceId: string,
+  invoiceRecordKeys: string[]
+): Promise<WarehouseCandidateMovementEvidenceResult> {
+  const scope = currentScopeForWorkspace(workspaceId);
+  const uniqueKeys = Array.from(
+    new Set(invoiceRecordKeys.map((key) => key.trim()).filter(Boolean))
+  );
+  const byInvoiceRecordKey =
+    new Map<string, WarehouseCandidateInvoiceMovementEvidence[]>();
+  const coverageLimitedInvoiceKeys = new Set<string>();
+  if (uniqueKeys.length === 0) {
+    return { byInvoiceRecordKey, coverageLimitedInvoiceKeys };
+  }
+
+  const path = warehouseDomainPath(scope.workspaceId, 'movements');
+  const perInvoiceLimit = 51;
+
+  try {
+    for (let index = 0; index < uniqueKeys.length; index += 10) {
+      const keys = uniqueKeys.slice(index, index + 10);
+      const snapshots = await Promise.all(
+        keys.map(async (invoiceRecordKey) => ({
+          invoiceRecordKey,
+          snapshot: await getDocs(
+            query(
+              collection(db, path),
+              where('source.invoiceRecordKey', '==', invoiceRecordKey),
+              limit(perInvoiceLimit)
+            )
+          ),
+        }))
+      );
+
+      for (const { invoiceRecordKey, snapshot } of snapshots) {
+        recordWarehouseDocumentReads(workspaceId, snapshot.size);
+        if (snapshot.size >= perInvoiceLimit) {
+          coverageLimitedInvoiceKeys.add(invoiceRecordKey);
+        }
+
+        for (const entry of snapshot.docs) {
+          const data = entry.data() as Record<string, unknown>;
+          const source =
+            data.source && typeof data.source === 'object' && !Array.isArray(data.source)
+              ? data.source as Record<string, unknown>
+              : null;
+          if (
+            !source
+            || source.kind !== 'INVOICE'
+            || source.invoiceRecordKey !== invoiceRecordKey
+            || !Array.isArray(source.itemIds)
+          ) {
+            continue;
+          }
+
+          const itemIds = source.itemIds.filter(
+            (itemId): itemId is string => typeof itemId === 'string'
+          );
+          const current = byInvoiceRecordKey.get(invoiceRecordKey) || [];
+          current.push({
+            id: entry.id,
+            invoiceRecordKey,
+            itemIds,
+          });
+          byInvoiceRecordKey.set(invoiceRecordKey, current);
+        }
+      }
+    }
+
+    return { byInvoiceRecordKey, coverageLimitedInvoiceKeys };
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    throw error;
+  }
+}
+
+function orphanRowFromPersisted(
+  persisted: PersistedIntake
+): WarehouseInvoiceIntakeQueueRow {
+  if (persisted.kind === 'V2') {
+    return {
+      key: itemKey(persisted.state.invoiceRecordKey, persisted.state.itemId),
+      stateId: persisted.state.id,
+      invoiceRecordKey: persisted.state.invoiceRecordKey,
+      invoiceId: persisted.state.invoiceId,
+      issueDate: null,
+      registeredAt: null,
+      supplier: persisted.state.supplier,
+      empenhoId: persisted.state.empenhoId,
+      pregao: null,
+      itemId: persisted.state.itemId,
+      itemName: persisted.state.description,
+      unitLabel: persisted.state.unitLabel,
+      materialId: persisted.state.materialId,
+      receivedQuantity: persisted.state.receivedQuantity,
+      allocatedQuantity: persisted.state.allocatedQuantity,
+      immediateConsumptionQuantity:
+        persisted.state.immediateConsumptionQuantity,
+      pendingQuantity: persisted.state.pendingQuantity,
+      status: 'RECONCILIATION_REQUIRED',
+      persisted: true,
+      source: 'STATE_V2',
+      reconciliationReason: 'CANONICAL_SOURCE_MISSING',
+      canonicalPresent: false,
+    };
+  }
+
+  const allocatedQuantity =
+    persisted.intake.mode === 'ALLOCATED' ? persisted.intake.quantity : 0;
+  const immediateConsumptionQuantity =
+    persisted.intake.mode === 'IMMEDIATE_CONSUMPTION'
+      ? persisted.intake.quantity
+      : 0;
+
+  return {
+    key: itemKey(persisted.intake.invoiceRecordKey, persisted.intake.itemId),
+    stateId: persisted.intake.id,
+    invoiceRecordKey: persisted.intake.invoiceRecordKey,
+    invoiceId: persisted.intake.invoiceId,
+    issueDate: null,
+    registeredAt: null,
+    supplier: 'Fornecedor indisponível na fonte canônica',
+    empenhoId: persisted.intake.empenhoId,
+    pregao: null,
+    itemId: persisted.intake.itemId,
+    itemName: persisted.intake.description,
+    unitLabel: persisted.intake.unitLabel,
+    materialId: persisted.intake.materialId,
+    receivedQuantity: persisted.intake.quantity,
+    allocatedQuantity,
+    immediateConsumptionQuantity,
+    pendingQuantity: Math.max(
+      0,
+      calculateWarehouseItemIntakePendingQuantity(
+        persisted.intake.quantity,
+        allocatedQuantity,
+        immediateConsumptionQuantity
+      )
+    ),
+    status: 'RECONCILIATION_REQUIRED',
+    persisted: true,
+    source: 'LEGACY_INTAKE_V1',
+    reconciliationReason: 'CANONICAL_SOURCE_MISSING',
+    canonicalPresent: false,
+  };
 }
 
 function persistedKey(record: PersistedIntake): string {
@@ -382,10 +625,246 @@ export async function loadWarehouseInvoiceIntakeQueue(
 ): Promise<WarehouseInvoiceIntakeQueueContext> {
   currentScopeForWorkspace(workspaceId);
 
+  const cutoffAt = await getWarehouseInvoiceIntakeCutoff(workspaceId);
+  const discovery = await syncWarehouseIntakeQueueIndex(
+    workspaceId,
+    cutoffAt
+  );
+  const candidatesResult =
+    await listWarehouseActiveIntakeQueueCandidates(workspaceId);
+
+  const invoices = await listOperationalByIds<Invoice>(
+    workspaceId,
+    'invoices',
+    candidatesResult.items.map((candidate) => candidate.invoiceRecordKey)
+  );
+  const invoiceByRecordKey = new Map(
+    invoices.map((invoice) => [recordKey(invoice), invoice])
+  );
+
+  const persistedByStateId = await listPersistedIntakesByIds(
+    workspaceId,
+    candidatesResult.items.map((candidate) => candidate.id)
+  );
+
+  const excludedInvoiceKeys = await listWarehouseQueueExcludedInvoiceKeys(
+    workspaceId,
+    candidatesResult.items.map((candidate) => candidate.invoiceRecordKey)
+  );
+
+  const eligibleInvoices = invoices.filter((invoice) => {
+    if (!cutoffAt) return true;
+    const registered = Date.parse(invoice.registeredAt || '');
+    return Number.isFinite(registered)
+      && registered >= Date.parse(cutoffAt);
+  });
+  const eligibleInvoiceKeys = new Set(
+    eligibleInvoices.map((invoice) => recordKey(invoice))
+  );
+
+  const virtualInvoiceKeys = candidatesResult.items
+    .filter((candidate) =>
+      !persistedByStateId.has(candidate.id)
+      && eligibleInvoiceKeys.has(candidate.invoiceRecordKey)
+      && !excludedInvoiceKeys.has(candidate.invoiceRecordKey)
+    )
+    .map((candidate) => candidate.invoiceRecordKey);
+
+  const movementEvidence = await listCandidateInvoiceMovementEvidence(
+    workspaceId,
+    virtualInvoiceKeys
+  );
+
+  const empenhos = await listOperationalByIds<Empenho>(
+    workspaceId,
+    'empenhos',
+    eligibleInvoices.map((invoice) => invoice.empenhoId)
+  );
+  const empenhoById = new Map(
+    empenhos.map((empenho) => [empenho.id, empenho])
+  );
+
+  const rows: WarehouseInvoiceIntakeQueueRow[] = [];
+  const deactivateStateIds: string[] = [];
+
+  for (const candidate of candidatesResult.items) {
+    if (
+      excludedInvoiceKeys.has(candidate.invoiceRecordKey)
+      || !eligibleInvoiceKeys.has(candidate.invoiceRecordKey)
+    ) {
+      deactivateStateIds.push(candidate.id);
+      continue;
+    }
+
+    const persisted = persistedByStateId.get(candidate.id);
+    const invoice = invoiceByRecordKey.get(candidate.invoiceRecordKey);
+    if (!invoice) {
+      if (persisted) {
+        rows.push(orphanRowFromPersisted(persisted));
+      } else {
+        deactivateStateIds.push(candidate.id);
+      }
+      continue;
+    }
+
+    const invoiceItem = invoice.items.find(
+      (item) => item.itemId === candidate.itemId
+    );
+    if (!invoiceItem) {
+      if (persisted) {
+        rows.push(orphanRowFromPersisted(persisted));
+      } else {
+        deactivateStateIds.push(candidate.id);
+      }
+      continue;
+    }
+
+    const empenho = empenhoById.get(invoice.empenhoId) || null;
+    const empenhoItem =
+      empenho?.items.find((item) => item.id === invoiceItem.itemId) || null;
+    const quantities = quantitiesFromPersisted(
+      invoiceItem.quantity,
+      persisted
+    );
+    const canonicalChanged =
+      quantities.storedReceivedQuantity !== null
+      && Math.abs(
+        quantities.storedReceivedQuantity - invoiceItem.quantity
+      ) > 0.000001;
+
+    const expectedV2EntryMovementId = persisted
+      ? null
+      : await createWarehouseMovementId(
+          workspaceId,
+          [
+            'adm-intake-v2',
+            candidate.id,
+            'invoice-entry',
+          ].join(':').slice(0, 240)
+        );
+    const invoiceMovements =
+      movementEvidence.byInvoiceRecordKey.get(candidate.invoiceRecordKey) || [];
+    const legacyProjection =
+      !persisted
+      && (
+        movementEvidence.coverageLimitedInvoiceKeys.has(
+          candidate.invoiceRecordKey
+        )
+        || invoiceMovements.some(
+          (movement) =>
+            movement.id !== expectedV2EntryMovementId
+            && movement.itemIds.includes(candidate.itemId)
+        )
+      );
+
+    const reconciliationReason: WarehouseItemIntakeReconciliationReason | null =
+      canonicalChanged
+        ? 'CANONICAL_QUANTITY_CHANGED'
+        : legacyProjection
+          ? 'LEGACY_INVOICE_PROJECTION'
+          : null;
+    const baseStatus = deriveWarehouseItemIntakeStatus(
+      invoiceItem.quantity,
+      quantities.allocatedQuantity,
+      quantities.immediateConsumptionQuantity
+    );
+
+    if (baseStatus === 'PROCESSED' && !reconciliationReason) {
+      deactivateStateIds.push(candidate.id);
+      continue;
+    }
+
+    rows.push({
+      key: itemKey(candidate.invoiceRecordKey, candidate.itemId),
+      stateId: candidate.id,
+      invoiceRecordKey: candidate.invoiceRecordKey,
+      invoiceId: invoice.id,
+      issueDate: invoice.issueDate || null,
+      registeredAt: invoice.registeredAt || null,
+      supplier:
+        invoice.supplier
+        || empenho?.supplier
+        || 'Fornecedor não informado',
+      empenhoId: invoice.empenhoId,
+      pregao: empenho?.pregao || null,
+      itemId: candidate.itemId,
+      itemName:
+        empenhoItem?.name
+        || (persisted?.kind === 'V2'
+          ? persisted.state.description
+          : persisted?.kind === 'V1'
+            ? persisted.intake.description
+            : 'Item ' + candidate.itemId),
+      unitLabel:
+        empenhoItem?.unit
+        || (persisted?.kind === 'V2'
+          ? persisted.state.unitLabel
+          : persisted?.kind === 'V1'
+            ? persisted.intake.unitLabel
+            : ''),
+      materialId: materialFrom(
+        invoiceItem.warehouseMaterialId,
+        empenhoItem?.warehouseMaterialId,
+        persisted
+      ),
+      receivedQuantity: invoiceItem.quantity,
+      allocatedQuantity: quantities.allocatedQuantity,
+      immediateConsumptionQuantity:
+        quantities.immediateConsumptionQuantity,
+      pendingQuantity: quantities.pendingQuantity,
+      status: reconciliationReason
+        ? 'RECONCILIATION_REQUIRED'
+        : baseStatus,
+      persisted: Boolean(persisted),
+      source: persisted?.kind === 'V2'
+        ? 'STATE_V2'
+        : persisted?.kind === 'V1'
+          ? 'LEGACY_INTAKE_V1'
+          : legacyProjection
+            ? 'LEGACY_INVOICE_PROJECTION'
+            : 'VIRTUAL_PENDING',
+      reconciliationReason,
+      canonicalPresent: true,
+    });
+  }
+
+  if (deactivateStateIds.length > 0) {
+    await deactivateWarehouseIntakeQueueCandidates(
+      workspaceId,
+      deactivateStateIds
+    );
+  }
+
+  rows.sort((left, right) =>
+    (right.registeredAt || right.issueDate || '').localeCompare(
+      left.registeredAt || left.issueDate || ''
+    )
+  );
+
+  const movementCoverageLimited =
+    movementEvidence.coverageLimitedInvoiceKeys.size > 0;
+
+  return {
+    rows,
+    cutoffAt,
+    truncated:
+      candidatesResult.truncated
+      || !discovery.discoveryComplete
+      || movementCoverageLimited,
+    reconciliationCoverageLimited: movementCoverageLimited,
+    pregaoCoverageLimited:
+      candidatesResult.truncated || !discovery.discoveryComplete,
+  };
+}
+
+export async function loadWarehouseInvoiceIntakeHistory(
+  workspaceId: string
+): Promise<WarehouseInvoiceIntakeQueueContext> {
+  currentScopeForWorkspace(workspaceId);
+
   const [
     invoicesResult,
     persistedResult,
-    movementRecords,
     cutoffAt,
   ] = await Promise.all([
     listOperationalBounded<Invoice>(
@@ -394,10 +873,6 @@ export async function loadWarehouseInvoiceIntakeQueue(
       WAREHOUSE_INTAKE_QUEUE_INVOICES_LIMIT
     ),
     listPersistedIntakes(workspaceId),
-    listWarehouseMovements(
-      workspaceId,
-      WAREHOUSE_INTAKE_QUEUE_LEGACY_MOVEMENTS_LIMIT
-    ),
     getWarehouseInvoiceIntakeCutoff(workspaceId),
   ]);
 
@@ -412,18 +887,6 @@ export async function loadWarehouseInvoiceIntakeQueue(
   const persistedByKey = new Map(
     persistedResult.items.map((record) => [persistedKey(record), record])
   );
-
-  const invoiceMovementsByKey = new Map<string, typeof movementRecords>();
-  for (const record of movementRecords) {
-    const source = record.movement.source;
-    if (source?.kind !== 'INVOICE') continue;
-    for (const sourceItemId of source.itemIds) {
-      const key = itemKey(source.invoiceRecordKey, sourceItemId);
-      const existing = invoiceMovementsByKey.get(key) || [];
-      existing.push(record);
-      invoiceMovementsByKey.set(key, existing);
-    }
-  }
 
   const allCanonicalKeys = new Set<string>();
   for (const invoice of invoicesResult.items) {
@@ -454,6 +917,20 @@ export async function loadWarehouseInvoiceIntakeQueue(
         left.registeredAt || left.issueDate || ''
       )
     );
+
+  const historyVirtualInvoiceKeys = eligibleInvoices
+    .filter((invoice) => {
+      const invoiceKey = recordKey(invoice);
+      return invoice.items.some(
+        (invoiceItem) =>
+          !persistedByKey.has(itemKey(invoiceKey, invoiceItem.itemId))
+      );
+    })
+    .map((invoice) => recordKey(invoice));
+  const movementEvidence = await listCandidateInvoiceMovementEvidence(
+    workspaceId,
+    historyVirtualInvoiceKeys
+  );
 
   const canonicalRows = await Promise.all(
     eligibleInvoices.flatMap((invoice) => {
@@ -492,11 +969,17 @@ export async function loadWarehouseInvoiceIntakeQueue(
               'invoice-entry',
             ].join(':').slice(0, 240)
           );
-        const invoiceMovements = invoiceMovementsByKey.get(key) || [];
+        const invoiceMovements =
+          movementEvidence.byInvoiceRecordKey.get(invoiceKey) || [];
         const legacyProjection =
           !persisted
-          && invoiceMovements.some(
-            (record) => record.movement.id !== expectedV2EntryMovementId
+          && (
+            movementEvidence.coverageLimitedInvoiceKeys.has(invoiceKey)
+            || invoiceMovements.some(
+              (movement) =>
+                movement.id !== expectedV2EntryMovementId
+                && movement.itemIds.includes(invoiceItem.itemId)
+            )
           );
         const reconciliationReason: WarehouseItemIntakeReconciliationReason | null =
           canonicalChanged
@@ -659,17 +1142,18 @@ export async function loadWarehouseInvoiceIntakeQueue(
     }
   }
 
+  const movementCoverageLimited =
+    movementEvidence.coverageLimitedInvoiceKeys.size > 0;
   const truncated =
     invoicesResult.truncated
     || persistedResult.truncated
-    || movementRecords.length >= WAREHOUSE_INTAKE_QUEUE_LEGACY_MOVEMENTS_LIMIT;
+    || movementCoverageLimited;
 
   return {
     rows: [...resolvedCanonicalRows, ...orphanRows],
     cutoffAt,
     truncated,
-    reconciliationCoverageLimited:
-      movementRecords.length >= WAREHOUSE_INTAKE_QUEUE_LEGACY_MOVEMENTS_LIMIT,
+    reconciliationCoverageLimited: movementCoverageLimited,
     pregaoCoverageLimited: invoicesResult.truncated,
   };
 }

@@ -13,6 +13,7 @@ const view = read('features/notas-fiscais/components/NotasFiscaisView.tsx');
 const component = read('components/InvoiceMirrorDocumentActions.tsx');
 const documents = read('features/relatorios/hooks/useDocumentActions.ts');
 const page = read('app/page.tsx');
+const operationalWorkspace = read('features/operational/components/OperationalWorkspace.tsx');
 
 for (const expected of [
   'espelhoNotaFiscalPdf?: InvoicePdfDocument',
@@ -72,8 +73,13 @@ requireText(
 
 requireText(
   page,
+  "import('../features/operational/components/OperationalWorkspace')",
+  'A composição principal não conecta o host operacional sob demanda.'
+);
+requireText(
+  operationalWorkspace,
   'handleInvoiceMirrorDocumentUploaded',
-  'A composição principal não repassa o handler do Espelho da Nota Fiscal.'
+  'O host operacional não repassa o handler do Espelho da Nota Fiscal.'
 );
 
 if (findings.length) {

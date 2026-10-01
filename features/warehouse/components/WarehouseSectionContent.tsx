@@ -1,12 +1,27 @@
 'use client';
 
+import dynamic from 'next/dynamic';
+
 import type { WarehouseSectionId } from '../navigation';
-import { WarehouseDepotsOperational } from './WarehouseDepotsOperational';
-import { WarehouseItemRegistrationOperational } from './WarehouseItemRegistrationOperational';
-import { WarehouseMaterialWithdrawal } from './WarehouseMaterialWithdrawal';
-import { WarehouseItemControlOperational } from './WarehouseItemControlOperational';
-import { WarehouseHomeOperational } from './WarehouseHomeOperational';
-import { WarehouseLandingOperational } from './WarehouseLandingOperational';
+
+const WarehouseDepotsOperational = dynamic(
+  () => import('./WarehouseDepotsOperational').then((module) => module.WarehouseDepotsOperational)
+);
+const WarehouseItemRegistrationOperational = dynamic(
+  () => import('./WarehouseItemRegistrationOperational').then((module) => module.WarehouseItemRegistrationOperational)
+);
+const WarehouseMaterialWithdrawal = dynamic(
+  () => import('./WarehouseMaterialWithdrawal').then((module) => module.WarehouseMaterialWithdrawal)
+);
+const WarehouseItemControlOperational = dynamic(
+  () => import('./WarehouseItemControlOperational').then((module) => module.WarehouseItemControlOperational)
+);
+const WarehouseHomeOperational = dynamic(
+  () => import('./WarehouseHomeOperational').then((module) => module.WarehouseHomeOperational)
+);
+const WarehouseLandingOperational = dynamic(
+  () => import('./WarehouseLandingOperational').then((module) => module.WarehouseLandingOperational)
+);
 
 function WarehouseModularR1Notice({ section }: { section: WarehouseSectionId }) {
   const labels: Record<WarehouseSectionId, string> = {

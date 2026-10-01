@@ -1,14 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { onAuthStateChanged, type User } from 'firebase/auth';
+import {
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
+import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 
 import { EmprovexAuthLoading } from '../../../components/auth/EmprovexAuthLoading';
 import { auth } from '../../../lib/firebase';
 import { resolveAuthenticatedWorkspaceContext } from '../../../lib/platformAccess';
+import { startWorkspaceSessionControl } from '../../../lib/platformSessionControl';
+import { clearLocalWorkspaceSessionLease } from '../../../lib/platformSessionLease';
+import { resetActiveProfileMode } from '../../../lib/profileMode';
 import { canAccessWarehouseModule } from '../../../lib/warehouse/featureFlag';
-import type { SectorWorkspaceContext } from '../../../lib/workspaceContext';
-import type { WarehouseSectionId } from '../navigation';
+import {
+  clearResolvedWorkspaceContext,
+  type SectorWorkspaceContext,
+} from '../../../lib/workspaceContext';
+import { WarehouseWorkspaceProvider } from './WarehouseModuleContext';
 import { WarehouseModuleShell } from './WarehouseModuleShell';
 
 type GateState = 'checking' | 'allowed' | 'denied';
@@ -18,6 +28,7 @@ interface WarehouseStatusPayload {
   ug?: string;
   claimsUpdated?: boolean;
 }
+
 
 async function requestWarehouseStatus(
   currentUser: User,
@@ -45,36 +56,49 @@ async function requestWarehouseStatus(
   };
 }
 
-export function WarehouseProtectedSurface({ section }: { section: WarehouseSectionId }) {
+export function WarehouseProtectedLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const [gateState, setGateState] = useState<GateState>('checking');
-  const [workspaceContext, setWorkspaceContext] = useState<SectorWorkspaceContext | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [workspaceContext, setWorkspaceContext] =
+    useState<SectorWorkspaceContext | null>(null);
 
   useEffect(() => {
     let active = true;
 
+    const denyAccess = () => {
+      if (!active) return;
+      setGateState('denied');
+      setCurrentUser(null);
+      setWorkspaceContext(null);
+      clearResolvedWorkspaceContext();
+      resetActiveProfileMode();
+      window.location.replace('/');
+    };
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
-        if (active) setGateState('denied');
-        window.location.replace('/');
+        denyAccess();
         return;
       }
+
+      setGateState('checking');
 
       try {
         const context = await resolveAuthenticatedWorkspaceContext(currentUser);
         if (!active) return;
 
         if (!canAccessWarehouseModule(context) || context.status !== 'sector') {
-          setGateState('denied');
-          window.location.replace('/');
+          denyAccess();
           return;
         }
 
         let authorization = await requestWarehouseStatus(currentUser);
 
-        if (
-          authorization.ok
-          && authorization.status.claimsUpdated
-        ) {
+        if (authorization.ok && authorization.status.claimsUpdated) {
           authorization = await requestWarehouseStatus(currentUser, true);
         }
 
@@ -86,17 +110,15 @@ export function WarehouseProtectedSurface({ section }: { section: WarehouseSecti
             && authorization.status.ug !== context.ug
           )
         ) {
-          setGateState('denied');
-          window.location.replace('/');
+          denyAccess();
           return;
         }
 
+        setCurrentUser(currentUser);
         setWorkspaceContext(context);
         setGateState('allowed');
       } catch {
-        if (!active) return;
-        setGateState('denied');
-        window.location.replace('/');
+        denyAccess();
       }
     });
 
@@ -106,9 +128,84 @@ export function WarehouseProtectedSurface({ section }: { section: WarehouseSecti
     };
   }, []);
 
+  const sessionIdentityKey = (
+    currentUser
+    && workspaceContext
+    && workspaceContext.resolutionSource === 'platform-directory'
+  )
+    ? [
+        currentUser.uid,
+        workspaceContext.workspaceId,
+        workspaceContext.email,
+        workspaceContext.ug || '',
+      ].join('|')
+    : null;
+
+  useEffect(() => {
+    if (
+      !sessionIdentityKey
+      || !currentUser
+      || !workspaceContext
+      || workspaceContext.resolutionSource !== 'platform-directory'
+    ) {
+      return;
+    }
+
+    let active = true;
+
+    const invalidateSession = () => {
+      if (!active) return;
+      active = false;
+
+      clearLocalWorkspaceSessionLease(
+        workspaceContext.workspaceId,
+        currentUser.uid
+      );
+      clearResolvedWorkspaceContext();
+      resetActiveProfileMode();
+
+      setGateState('denied');
+      setCurrentUser(null);
+      setWorkspaceContext(null);
+
+      void signOut(auth).finally(() => {
+        window.location.replace('/');
+      });
+    };
+
+    const sessionControl = startWorkspaceSessionControl(
+      currentUser,
+      workspaceContext,
+      {
+        onSessionInvalid: () => invalidateSession(),
+        onTransientError: (error) => {
+          console.warn(
+            'Falha transitória no controle da sessão da Central de Depósitos.',
+            error
+          );
+        },
+      }
+    );
+
+    return () => {
+      active = false;
+      sessionControl.stop();
+    };
+  }, [sessionIdentityKey, currentUser, workspaceContext]);
+
   if (gateState !== 'allowed' || !workspaceContext) {
-    return <EmprovexAuthLoading hasAuthenticatedIdentity={gateState === 'checking'} />;
+    return (
+      <EmprovexAuthLoading
+        hasAuthenticatedIdentity={gateState === 'checking'}
+      />
+    );
   }
 
-  return <WarehouseModuleShell section={section} workspaceContext={workspaceContext} />;
+  return (
+    <WarehouseWorkspaceProvider value={workspaceContext}>
+      <WarehouseModuleShell workspaceContext={workspaceContext}>
+        {children}
+      </WarehouseModuleShell>
+    </WarehouseWorkspaceProvider>
+  );
 }

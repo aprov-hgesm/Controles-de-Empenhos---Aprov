@@ -1,11 +1,18 @@
-# ADM Depósito — Memória Oficial do Projeto
+# Central de Depósitos — Memória Oficial do Módulo
 
-Esta pasta é a **fonte oficial de continuidade** do desenvolvimento do módulo ADM Depósito / Área Logística do EMPROVEX.
+> Caminho/documentação legada: `adm-deposito`. Nome de produto vigente: **Central de Depósitos**.
+
+Esta pasta preserva a **memória oficial especializada** do módulo logístico do EMPROVEX. Para o estado consolidado do produto inteiro, começar por `docs/EMPROVEX_MEMORIAL_OFICIAL.md`.
 
 Conversas, prompts e memória informal não substituem estes documentos.
 
 ## Documentos oficiais
 
+- `../EMPROVEX_MEMORIAL_OFICIAL.md` — estado canônico do produto inteiro e prioridade vigente.
+- `../PERFORMANCE_R3_COMERCIALIZACAO.md` — plano atual de performance para comercialização.
+- `../PERFORMANCE_R3_EXECUCAO_PARALELA.md` — protocolo de trabalho paralelo e do chat coordenador.
+- `../PERFORMANCE_R3_INTEGRATION_STATUS.md` — quadro vivo das frentes R3.
+- `../TESTING_POLICY.md` — política vigente de testes e Browser E2E sob demanda.
 - `ROADMAP.md` — plano oficial, ordem de capacidades, gates e mapeamento dos blocos DEP/EXT.
 - `DECISIONS.md` — decisões arquiteturais e funcionais congeladas.
 - `STATUS.md` — estado real, baseline, fase concluída e próxima capacidade.
@@ -14,9 +21,11 @@ Conversas, prompts e memória informal não substituem estes documentos.
 
 ## Estratégia de desenvolvimento vigente
 
-Desde o fechamento da FASE 2, o módulo segue:
+A sequência histórica de construção foi:
 
-**Fundação concluída → Walking Skeleton → fatias verticais completas → integração progressiva → hardening → expansão externa.**
+**Fundação → Walking Skeleton → fatias verticais → integração → hardening → expansão externa.**
+
+Em 2026-10-01 essa sequência está concluída como ciclo de implantação. A prioridade vigente é **estabilização/performance para comercialização (Performance R3)**, sem regressão funcional ou visual.
 
 O objetivo é evitar o padrão de criar muitas telas parcialmente funcionais e deixar integrações essenciais para o final.
 
@@ -73,14 +82,16 @@ Em divergências:
 - `STATUS.md` prevalece para continuidade;
 - GitHub/`main` prevalece para o estado efetivo do código.
 
-## Escopo do piloto
+## Estado atual de acesso
 
-O módulo permanece disponível somente para a conta fundadora até o fechamento da FASE 13 e autorização explícita para a FASE 14.
+A restrição founder-only foi superada em 2026-09-29. A **Central de Depósitos está disponível para qualquer contexto operacional de setor autenticado e validado**, conforme `lib/platformModuleAccess.ts`, preservando isolamento por workspace/UG e as regras de autorização do namespace logístico.
+
+A expansão comercial ampla continua condicionada à estabilização, performance e hardening previstos no memorial oficial.
 
 
 ## Consolidação SISCOFIS no Módulo 5
 
-A arquitetura 11.5 mantém o motor histórico de Marco Zero/Conciliação, mas a entrada operacional foi simplificada. O contrato externo oficial é `emprovex_siscofis_inventory_v1`, com somente Nº Ficha, descrição, quantidade e valor unitário. Entrada manual e JSON de IA externa convergem antes da validação. A IA não recebe UG, catálogo, materialId, unidade nem estruturas internas. O Nº Ficha é dado auditável de origem e nunca identidade canônica. O ledger continua sendo a única autoridade quantitativa; `INITIAL_BALANCE` materializa também a posição `UNASSIGNED` pelo repository oficial. Novos snapshots usam v2, com leitura retrocompatível de v1. Ver D-066 e `PHASE_5_SISCOFIS.md`.
+A arquitetura preserva o motor histórico de Marco Zero/Conciliação, porém a entrada operacional vigente foi simplificada novamente em 2026-09-28: **somente upload do Mapa de Existência - Material de Consumo em PDF**, processado localmente e de forma determinística. Prompt para IA, JSON exposto ao operador e inclusão manual dentro da Migração SISCOFIS foram retirados da interface. A validade é preservada por linha. O Nº Ficha permanece dado auditável de origem, nunca identidade canônica; o ledger continua sendo a autoridade quantitativa. Ver D-118 e `PHASE_5_SISCOFIS.md`.
 
 
 ## Consolidação dos Módulos 6 e 7
@@ -187,7 +198,7 @@ Resultados permanentes:
 
 Documento técnico: `PHASE_13_HARDENING.md`.
 
-**Estado oficial:** Módulo 13 CONCLUÍDO. Módulo 14 NÃO INICIADO.
+**Estado histórico naquele fechamento:** Módulo 13 CONCLUÍDO; Módulo 14 ainda não iniciado naquele momento. **Situação superada**: o ciclo até Módulo 14 foi posteriormente concluído; consultar o topo deste documento, `STATUS.md` e `docs/EMPROVEX_MEMORIAL_OFICIAL.md` para o estado vigente.
 
 
 ## Referência visual obrigatória

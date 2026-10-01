@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import {
   Boxes,
@@ -10,14 +11,23 @@ import {
   History,
 } from 'lucide-react';
 
-import { WarehouseStockOperational } from './WarehouseStockOperational';
-import { WarehouseMovementsOperational } from './WarehouseMovementsOperational';
-import { WarehouseInventoryOperational } from './WarehouseInventoryOperational';
-import { WarehouseLogisticsReports } from './WarehouseLogisticsReports';
-import {
-  WarehouseItemControlSummary,
-  type WarehouseItemControlCoreTab,
-} from './WarehouseItemControlSummary';
+import type { WarehouseItemControlCoreTab } from './WarehouseItemControlSummary';
+
+const WarehouseItemControlSummary = dynamic(
+  () => import('./WarehouseItemControlSummary').then((module) => module.WarehouseItemControlSummary)
+);
+const WarehouseStockOperational = dynamic(
+  () => import('./WarehouseStockOperational').then((module) => module.WarehouseStockOperational)
+);
+const WarehouseMovementsOperational = dynamic(
+  () => import('./WarehouseMovementsOperational').then((module) => module.WarehouseMovementsOperational)
+);
+const WarehouseInventoryOperational = dynamic(
+  () => import('./WarehouseInventoryOperational').then((module) => module.WarehouseInventoryOperational)
+);
+const WarehouseLogisticsReports = dynamic(
+  () => import('./WarehouseLogisticsReports').then((module) => module.WarehouseLogisticsReports)
+);
 
 type ControlTab =
   | 'summary'

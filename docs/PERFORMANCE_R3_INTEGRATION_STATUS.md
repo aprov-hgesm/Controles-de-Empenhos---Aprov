@@ -1,0 +1,689 @@
+# Performance R3 — Quadro de Integração
+
+Última atualização: **2026-10-01**
+Responsável por atualização: **Chat Coordenador / Integrador / Avaliador**
+Branch integradora: `feat/performance-r3-commercializacao`
+
+Este é o quadro operacional vivo da Performance R3. Ele não substitui o memorial; registra **quem está fazendo o quê e o que já pode ser integrado**.
+
+## Estados permitidos
+
+- `LIVRE` — ainda não atribuída/iniciada;
+- `EM ANDAMENTO` — branch/chat ativo;
+- `EM REVISÃO` — handoff entregue ao coordenador;
+- `DEVOLVIDA` — requer correção pelo trabalhador;
+- `BLOQUEADA` — depende de decisão/dependência;
+- `APROVADA` — apta para integração;
+- `INTEGRADA` — incorporada à branch integradora;
+- `DISPENSADA` — medição demonstrou que a frente não é necessária.
+
+## Quadro atual
+
+| Frente | Branch prevista | Estado | Dependência | HEAD trabalhador | Observação |
+| --- | --- | --- | --- | --- | --- |
+| PERF-A | `perf-r3-a-core-bundle` | INTEGRADA | baseline `076a233` | `3193b84` | Bundle root integrado em `15eadb0`; `/` 460 → 333 kB (-27,61%); CI combinado verde |
+| PERF-B | `perf-r3-b-central-bundle` | INTEGRADA | baseline comum | `7b7aee1` | Bundle Central; -48,2% nas rotas principais |
+| PERF-C | `perf-r3-c-outbound-demand-loading` | INTEGRADA | baseline `076a233` | `c263ce3` | Saída sob demanda integrada em `e33e260`; abertura fresca 0 reads específicos da superfície |
+| PERF-D | `perf-r3-d-intake-queue` | INTEGRADA | baseline `076a233` | `022fae7` | Intake seletivo integrado semanticamente em `2e77af1`; CI combinado/Core/Recovery verdes |
+| PERF-E | `perf-r3-e-render-cpu` | INTEGRADA | baseline `076a233` | `149f7c3` | CPU/renderização integrada em `9d5ff58`; gates locais verdes |
+| PERF-H | `perf-r3-h-metrics-budget` | INTEGRADA | baseline `076a233` | `fb5f452` | Métricas/budget integradas em `a686410`; CI bloqueante ainda não ativado |
+| PERF-F | `perf-r3-f-memory-cache` | INTEGRADA | PERF-C + PERF-D integradas | `570661b` | Cache curto em memória integrado em `14aaa2e`; TTL 30 s; workspace isolado; CI combinado verde |
+| PERF-G | `perf-r3-g-central-shell` | INTEGRADA | PERF-B integrada | `de870d1` | Shell persistente integrado em `238b813`; Central 300 → 106 kB; CI combinado/Core/Recovery verdes |
+| PERF-X | `perf-r3-x-hot-vs-history` | INTEGRADA | A/B/C/D/E/F/G/H integradas | `8aac69a` | Worker integrada em `2aca0dce`; correção coordenadora UX/legado em `2b72d43`; CI #868 final verde |
+| PERF-I | branch integradora | APROVADA | PERF-X integrada e certificada | — | Integração + métricas + UX concluídas até `6ebbf45b` |
+| PERF-J | branch integradora | APROVADA | PERF-I aprovada | `c08c6efa` | Certificação final concluída; aguardando autorização de release |
+
+
+## Próxima ação coordenada
+
+A/B/C/D/E/F/G/H/X estão **INTEGRADAS**, a PERF-I está **APROVADA** e a **PERF-J está APROVADA**.
+
+Sequência atual:
+1. aguardar autorização explícita do usuário para release;
+2. quando autorizada, integrar a R3 em `main` sem adicionar feature nova;
+3. realizar um único deploy consolidado de produção quando possível;
+4. executar smoke curto de produção e registrar HEAD/tag efetivamente publicado;
+5. somente depois encerrar formalmente a rodada e abrir o programa **EMPROVEX SaaS R1**.
+
+Nenhum merge em `main`, deploy de produção, promoção Vercel ou deploy de Firestore Rules/Indexes foi executado durante a PERF-J.
+
+## Fechamento do Coordenador — PERF-J
+
+Status final: **APROVADA**.
+
+HEAD certificado:
+`c08c6efa9931bf1df95aee86db51de1b8edb1912`.
+
+Baseline:
+`main@22d9fe5f86e2cfbb247eb21bae28e4b2c6cb2a2f`.
+
+Gates finais:
+- Application CI #871: **SUCCESS**;
+- Core Protection #158: **SUCCESS**;
+- Recovery guardrails #559: **SUCCESS**;
+- Production Build: **PASS**;
+- Final TypeScript: **PASS**;
+- Diff Hygiene: **PASS**;
+- Final Release Gates 16–21: **PASS**;
+- segurança multi-tenant/Firestore e acesso externo: **PASS**;
+- Block 17.4 operational listeners: **PASS**;
+- Block 17.5 historical scalability: **PASS**;
+- Block 17.8 consumption regression: **PASS**;
+- resiliência e backup: **PASS**;
+- `perf:r3:collect`, `compare`, `budget`: **PASS**;
+- métricas/parser/sanitização: **3/3 PASS**.
+
+Métricas PERF-J:
+- `/`: **460 → 336 kB (-26,96%)**;
+- Central: **579 → 106 kB (-81,69%)**;
+- `/admin`: **326 → 327 kB (+0,31%)**;
+- `/admin/backups`: **245 kB**;
+- shared: **103 → 104 kB (+0,97%)**;
+- budget: **within configured budgets**.
+
+Ocorrências:
+- CI #869 revelou trailing whitespace; corrigido sem mudança funcional em `c08c6efa...`;
+- primeira tentativa do CI #871 falhou em `next/font`; o mesmo SHA passou no rerun, com `app/layout.tsx` byte-identical, portanto classificado como problema transitório de ambiente/serviço externo;
+- status Vercel limitado por `build-rate-limit`, sem impacto na certificação do código e sem deploy de produção.
+
+PR técnico #210: fechado sem merge.
+
+Decisão: **PERF-J APROVADA; candidata tecnicamente pronta para decisão de release do usuário.**
+
+## Fechamento do Coordenador — PERF-I
+
+Status final: **APROVADA E ENCERRADA**.
+
+Estado funcional certificado antes das atualizações documentais:
+`6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`.
+
+### Métricas finais
+
+- `/`: **460 → 335 kB** (**-27,17%**);
+- Central principal: **579 → 106 kB** (**-81,69%**);
+- `/admin`: **326 → 327 kB** (**+0,31%**);
+- shared: **103 → 104 kB** (**+0,97%**);
+- `perf:r3:budget`: **within configured budgets**.
+
+### Gates finais
+
+- TypeScript: **PASS**;
+- production build: **PASS**;
+- `perf:r3:collect`: **PASS**;
+- `perf:r3:compare`: **PASS**;
+- `perf:r3:budget`: **PASS**;
+- métricas/parser/sanitização: **3/3 PASS**;
+- PERF-F cache: **11/11 PASS**;
+- PERF-D intake: **7/7 PASS**;
+- PERF-G shell: **PASS**;
+- PERF-X hot/history: **PASS**;
+- Diff Hygiene local: **PASS**;
+- worktree: limpo.
+
+### Correções encontradas durante PERF-I
+
+- fixtures E2E de empenho fundador/externo foram tornadas operacionalmente válidas;
+- coletor PERF-H ganhou portabilidade Windows em `2c2da4ded5ffd38e243d8e03cac6f104bcf93c4a`;
+- parser de log timestampado do GitHub Actions corrigido em `6ebbf45b80748bdd17dbdf5a29c4a0dd7fd1dbeb`.
+
+### Validação manual
+
+PASS para:
+- lazy first/subsequent access;
+- Empenhos/Recebimentos/Central;
+- navegação, URL, back/forward, refresh;
+- shell persistente;
+- estado de formulários;
+- barcode/ENTER/TAB/foco;
+- cache/invalidação;
+- usuário externo e isolamento;
+- jornada integrada;
+- rede artificialmente lenta sem crash/tela branca;
+- ausência de erros tardios/permission-denied no ambiente correto com Rules da branch.
+
+Benchmark manual indicativo mostrou redução forte do trabalho contínuo em repouso na Home da R3. Como publicada e candidata local standalone/emulada não são ambientes idênticos, esses números são evidência complementar, não benchmark laboratorial.
+
+Decisão histórica da PERF-I: **APROVADA**. Estado atual: **PERF-J APROVADA**.
+
+## Fechamento do Coordenador — PERF-X
+
+Status final: **INTEGRADA E CERTIFICADA**.
+
+### Worker
+
+- branch: `perf-r3-x-hot-vs-history`;
+- base funcional: `f4d9b848735d6ea58e7057ff5f7616bd535f643e`;
+- HEAD certificado: `8aac69a92120ff97f0d4ab84e46a470b5c632843`;
+- PR #208;
+- integração: `2aca0dce1d511d0cc8df329614fac93f4e917144`.
+
+### Arquitetura integrada
+
+- `invoices` foi separada entre conjunto operacional realtime e histórico sob demanda;
+- após backfill certificado, o listener realtime observa somente NFs em `APROVISIONAMENTO` ou `COMISSAO`;
+- `TESOURARIA` permanece histórica e consultável sob demanda;
+- antes do marcador READY, o runtime mantém o listener completo legado;
+- backfill é explícito, idempotente e não altera Rules;
+- Empenhos carrega histórico por empenho sob demanda e usa agregação para contagens;
+- Nova NF mantém histórico completo em `Todas`/`Concluídas` sob demanda;
+- operações críticas que exigem visão completa consultam histórico antes de prosseguir.
+
+Métrica sintética da worker, com 20 NFs operacionais:
+- 100 → 20 realtime: -80%;
+- 1.000 → 20: -98%;
+- 10.000 → 20: -99,8%;
+- histórico pré-solicitação: 0 documentos.
+Esses números são sintéticos, não produção.
+
+### Correções de integração do Coordenador
+
+A revisão pós-CI #867 identificou dois problemas semânticos que os gates iniciais não cobriam:
+1. filtro inicial `FaltaTesouraria` ocultava NFs aguardando Comissão;
+2. contagem agregada de concluídas podia subcontar registros legados antes do backfill READY.
+
+Correção em `2b72d43ac2a387682fb1c0089d36bef2177d0f17`:
+- filtro inicial passou a ser **Em tramitação**, união das NFs operacionais pendentes sem forçar histórico;
+- contagem de concluídas só usa `localizacaoAtual=TESOURARIA` depois do marcador READY; antes disso, deriva do conjunto legado completo já carregado;
+- guard/teste PERF-X foi atualizado para proteger esses contratos.
+
+### Certificação final
+
+PR técnico #209 validou exatamente `2aca0dce... → 2b72d43...`:
+- Application CI #868: **PASS**;
+- Core Protection #155: **PASS**;
+- Production Build: **PASS**;
+- Final TypeScript: **PASS**;
+- Diff Hygiene: **PASS**;
+- Block 17.4 operational listeners: **PASS**;
+- Block 17.5 historical scalability: **PASS**;
+- segurança multi-tenant e Central externa: **PASS**;
+- release gates 16, 17, 18, 19, 20 e 21: **PASS**;
+- Vercel preview/status: **SUCCESS**.
+
+PR #209 foi fechado sem merge após cumprir sua função de validação.
+
+Decisão naquele marco: **PERF-X INTEGRADA e PERF-I LIBERADA**. Estado atual posterior: **PERF-I APROVADA; PERF-J APROVADA**.
+
+## Coordenação concluída — PERF-D
+
+PERF-D integrada semanticamente em `2e77af1706a599152dff8ec43a197d68056d5ae2` após validação combinada no PR técnico #205.
+
+Resoluções de conflito:
+- `WarehouseItemRegistrationOperational.tsx`: preservados simultaneamente intake seletivo/histórico sob demanda da PERF-D e `dynamic import()` da PERF-B;
+- `package.json`: preservados simultaneamente scripts/testes da PERF-D e scripts `perf:r3:*` da PERF-H.
+
+Gates combinados:
+- Application CI: **PASS**;
+- Production build: **PASS**;
+- Final TypeScript: **PASS**;
+- Diff Hygiene: **PASS**;
+- EMPROVEX Core Protection: **PASS**;
+- Recovery Guardrails: **PASS**;
+- Blocks 16, 17, 18, 19, 20 e 21: **PASS**.
+
+PERF-F foi concluída e integrada posteriormente em `14aaa2e747fffaf2427ea63f4cd52395545d9a22`.
+
+## Coordenação especial — PERF-A — encerrada
+
+A pausa coordenada da PERF-A foi encerrada após handoff final no HEAD `3193b84117c6c4936ba774ee41c0d8df11b4e3fe`.
+
+Resultado:
+- ganho isolado confirmado: `/` **460 → 333 kB** de First Load JS (-127 kB / -27,61%);
+- shared isolado: **103 kB**;
+- Application CI isolado contra a base congelada: **PASS**;
+- incompatibilidade cruzada de `verify:empenho-class-config` foi resolvida pelo coordenador atualizando apenas o guard para a derivação memoizada já válida da PERF-E;
+- novo Application CI contra a integradora atual: **PASS** integral;
+- Production build, TypeScript, Diff Hygiene e gates 16–21: **PASS**;
+- integração técnica: `15eadb0f35f7420c88e6cefdf7cddba84db4cde2`.
+
+Build combinado após reconciliação:
+- `/`: **333 kB**;
+- rotas principais da Central: **300 kB**;
+- `/admin`: **327 kB**;
+- shared: **104 kB**.
+
+Decisão: **INTEGRADA**.
+
+## Registro de propriedade
+
+Antes de uma frente mudar de `LIVRE` para `EM ANDAMENTO`, o coordenador deve registrar:
+- chat/frente atribuída;
+- branch;
+- base SHA;
+- arquivos de propriedade preferencial;
+- arquivos compartilhados previstos;
+- dependências;
+- métrica de sucesso.
+
+## Revisões em andamento
+
+## Registro de integração
+
+Para cada frente integrada, acrescentar uma entrada:
+
+```text
+PERF-X
+Branch:
+HEAD revisado:
+Commit/merge de integração:
+Métrica antes:
+Métrica depois:
+Testes:
+Conflitos resolvidos:
+Pendências:
+Decisão: INTEGRADA
+```
+
+
+
+### PERF-B — Bundle da Central de Depósitos
+
+Branch: `perf-r3-b-central-bundle`
+HEAD revisado: `7b7aee100f21b6a67f8cb8f94cfdfb3508bc0d57`
+Integração: fast-forward da branch integradora para `7b7aee1`.
+
+Métrica antes:
+- rotas principais da Central: **579 kB First Load JS**.
+
+Métrica depois:
+- rotas principais da Central: **300 kB First Load JS**;
+- redução: **279 kB / aproximadamente 48,2%**;
+- shared global: 103 kB → 104 kB.
+
+Testes/gates:
+- Application CI: **PASS**;
+- EMPROVEX Core Protection: **PASS**;
+- Production build: **PASS**;
+- TypeScript final: **PASS**;
+- Diff hygiene: **PASS**;
+- Vercel Preview: **Ready**;
+- Browser E2E: não executado, conforme política sob demanda e natureza estrutural da mudança.
+
+Conflitos resolvidos:
+- nenhum; a branch era filha direta da integradora, 1 commit à frente e 0 atrás.
+
+Pendências:
+- nenhuma da PERF-B;
+- PERF-G deve preservar `WarehouseSectionContent` como fronteira de carregamento dinâmico e não reintroduzir imports estáticos das grandes superfícies.
+
+Decisão: **INTEGRADA**.
+
+
+
+### PERF-E — CPU e Renderização
+
+Branch: `perf-r3-e-render-cpu`
+HEAD revisado: `149f7c3945eae7cb046175499abe5bf6868eb9bb`
+Commit de integração: `9d5ff5834da61477a1f454a452eb32b19414d23e`.
+
+Medição:
+- Empenhos: **1.732.500 → 11.250 varreduras (-99,35%)**;
+- Notas Fiscais: **3.388.500 → 5.250 varreduras (-99,85%)**;
+- Consulta de Itens/digitação: **54.072 → 9.072 varreduras (-83,22%)**.
+
+Validação executada pelo usuário no clone completo:
+- guard PERF-E: **PASS**;
+- benchmark/checksum: **PASS**;
+- `npm run typecheck`: **PASS**;
+- `npm run build`: **PASS**;
+- `verify:empenhos-subtabs`: **PASS**;
+- `verify:invoice-ns-lifecycle`: **PASS**;
+- `verify:emprovex-core-protection`: **PASS**.
+
+Observação de build isolado da PERF-E:
+- `/`: 461 kB;
+- rotas da Central ainda apareciam com 579 kB porque a branch PERF-E partiu do baseline anterior à integração da PERF-B; a integração combinada preserva a PERF-B na branch R3.
+
+Conflitos resolvidos:
+- nenhum conflito de arquivo com a PERF-B;
+- integração feita por merge técnico com árvore combinada, preservando ambos os históricos.
+
+Pendências:
+- validar novamente build/métricas no estado combinado durante PERF-I/PERF-J.
+
+Decisão: **INTEGRADA**.
+
+
+
+### PERF-C — Saída de Material sob demanda
+
+Branch: `perf-r3-c-outbound-demand-loading`
+HEAD revisado: `c263ce36407304867d3e92d9f0af6929d61b715c`
+Commit de integração: `e33e260fdd9dbc7f01b8c60b3d59aa0c7cf1c865`.
+
+Arquitetura antes:
+- 8 consultas iniciais;
+- teto bounded de até **3.000 documentos** preparados antes do primeiro barcode.
+
+Arquitetura depois:
+- abertura fresca da `WarehouseMaterialWithdrawal`: **0 consultas Firestore específicas da Saída**;
+- barcode por `getWarehouseBarcodeByCode()`;
+- material e saldo consultados diretamente;
+- location balances e lotes filtrados pelo material corrente;
+- depósitos/localizações/subposições apenas das posições realmente usadas;
+- destinos e catálogo manual somente sob demanda;
+- cache local limitado a 12 barcodes recentes.
+
+Contratos preservados:
+- ledger append-only;
+- `warehouse_movement_v1`;
+- idempotência de saída;
+- saldo não negativo;
+- revalidação transacional;
+- FEFO;
+- lotes e posições;
+- isolamento workspace/UG;
+- fluxo barcode → quantidade → ENTER/TAB → próximo barcode.
+
+Testes/gates:
+- EMPROVEX Core Protection: **PASS**;
+- Application CI: **PASS**;
+- segurança multi-tenant e externa da Central: **PASS**;
+- Phase 6 localizações/transferências: **PASS**;
+- Phase 7 estoque/lotes/FEFO: **PASS**;
+- Phase 8 barcode/outbound + guard de demand loading: **PASS**;
+- Production build: **PASS**;
+- Final TypeScript: **PASS**;
+- Diff hygiene: **PASS**.
+
+Conflitos:
+- nenhum conflito de arquivo com PERF-B/PERF-E;
+- os três arquivos da PERF-C estavam idênticos à base original na integradora antes da integração.
+
+Dependência:
+- PERF-C satisfaz sua parte da pré-condição da PERF-F;
+- PERF-F continua bloqueada até a PERF-D estabilizar as leituras de intake/estruturas compartilhadas.
+
+Decisão: **INTEGRADA**.
+
+
+
+### PERF-H — Métricas e Budget
+
+Branch: `perf-r3-h-metrics-budget`
+HEAD revisado: `fb5f45296e28bafcad5489860e143b434c1ebf77`
+Commit de integração: `a6864106c779382f5919a5f1a1dcea812bd896a5`.
+
+Entregas:
+- baseline versionado em `ops/performance-r3-baseline.json`;
+- budgets em `ops/performance-r3-budgets.json`;
+- cenários em `ops/performance-r3-scenarios.json`;
+- parser do build Next.js;
+- comparação baseline × candidato;
+- budget checker;
+- sanitização de observações runtime;
+- relatório JSON/Markdown;
+- scripts npm `perf:r3:*`;
+- guard próprio e testes.
+
+Baseline oficial:
+- `/`: 460 kB;
+- `/adm-deposito`: 579 kB;
+- `/admin`: 326 kB;
+- shared: 103 kB;
+- fonte: Application CI bem-sucedido da `main@22d9fe5f...`.
+
+Política:
+- runtime/Web Vitals permanecem informativos/warning;
+- thresholds bloqueantes existem apenas no checker explícito;
+- **não foram ligados ao Application CI**;
+- nenhum Firestore read/listener/write adicional;
+- `.performance-r3/` é local e ignorado pelo Git.
+
+Validação recebida:
+- parser/budget/sanitização: **3/3 PASS**;
+- formato real Next 15: **PASS**;
+- log GitHub Actions timestampado: **PASS**;
+- baseline real: **PASS**;
+- comparação JSON/Markdown: **PASS**;
+- guard PERF-H: **READY**;
+- syntax check dos novos `.mjs`: **PASS**.
+
+Revisão do coordenador:
+- `package.json` e `.gitignore` estavam inalterados na integradora desde a base da PERF-H;
+- Application CI não foi modificado;
+- sem sobreposição com PERF-B/C/E;
+- nenhum `.ts/.tsx` alterado.
+
+Fechamento na PERF-I:
+- `perf:r3:collect`, `perf:r3:compare` e `perf:r3:budget`: **PASS**;
+- collector Windows corrigido em `2c2da4de`;
+- parser de logs CI timestampados corrigido em `6ebbf45b`;
+- teste de métricas/parser/sanitização: **3/3 PASS**.
+
+Decisão: **INTEGRADA E VALIDADA NO ESTADO COMBINADO**.
+
+
+
+### PERF-A — Bundle do EMPROVEX principal
+
+Branch: `perf-r3-a-core-bundle`
+HEAD revisado: `3193b84117c6c4936ba774ee41c0d8df11b4e3fe`
+Commit de integração: `15eadb0f35f7420c88e6cefdf7cddba84db4cde2`.
+
+Métrica:
+- `/`: **460 kB → 333 kB** First Load JS;
+- redução: **127 kB / 27,61%**;
+- shared isolado: **103 kB**.
+
+Arquitetura:
+- `app/page.tsx` deixou de importar antecipadamente as grandes superfícies operacionais;
+- `OperationalWorkspace` passou a ser host lazy;
+- grandes views usam boundaries dinâmicos próprios;
+- shell/Home/auth permanecem no caminho inicial;
+- estado efêmero continua fora do boundary lazy para preservar continuidade de UI.
+
+Validação:
+- Application CI isolado: **PASS**;
+- Core Protection: **PASS**;
+- TypeScript: **PASS**;
+- production build: **PASS**;
+- guards estruturais próprios: **PASS**;
+- incompatibilidade cruzada com o guard de classes foi resolvida apenas no guard, preservando a lógica memoizada da PERF-E;
+- novo Application CI combinado contra a integradora: **PASS**;
+- Diff Hygiene e gates 16–21: **PASS**.
+
+Build combinado:
+- `/`: 333 kB;
+- Central principal: 300 kB;
+- `/admin`: 327 kB;
+- shared: 104 kB.
+
+Conflitos:
+- nenhum dos 10 arquivos da PERF-A havia sido alterado por B/C/E/H;
+- conflito era semântico em guard textual, resolvido pelo coordenador.
+
+Decisão: **INTEGRADA**.
+
+
+
+
+### PERF-D — Fila leve de Recebimento / Intake
+
+Branch: `perf-r3-d-intake-queue`
+HEAD revisado: `022fae7a48def20f9279ad6223ce42cd4f539b8c`
+Commit certificado de integração: `2e77af1706a599152dff8ec43a197d68056d5ae2`.
+
+Arquitetura:
+- caminho normal `A tratar` usa índice derivado mínimo `intakeQueueIndex`;
+- novas NFs são descobertas desde watermark com sobreposição de 5 minutos;
+- candidatos ativos são paginados;
+- NFs/intakes/empenhos são buscados apenas pelos IDs candidatos;
+- histórico, tratadas e reconciliação são carregados sob demanda;
+- bootstrap histórico permanece possível uma única vez para preservar o contrato “sem intake = PENDING”.
+
+Métricas sintéticas registradas:
+- cenário A: ~2.151 → ~59 docs (**~97,26%**);
+- cenário B: ~18.751 → ~59 docs (**~99,69%**);
+- cenário C: ~18.751 → ~500 docs (**~97,33%**).
+
+Limites principais:
+- candidatos: 250/página × 20 páginas = até 5.000;
+- discovery/bootstrap: 200 NFs/página;
+- consultas por ID: lotes de até 30 IDs;
+- movimentos legados: até 51 por NF candidata;
+- histórico NFs: 300 × 40 páginas;
+- histórico intakes: 500 × 40 páginas.
+
+Segurança:
+- Rules do `intakeQueueIndex` preservam workspace/UG e fail-closed;
+- delete físico negado;
+- índice derivado não é autoridade de NF, intake, ledger ou saldo;
+- testes multi-tenant/Firestore: **PASS**.
+
+Validação:
+- CI isolado da PERF-D: **PASS**;
+- CI combinado da integração semântica: **PASS**;
+- Core Protection combinado: **PASS**;
+- Recovery Guardrails combinado: **PASS**;
+- Production build, TypeScript e Diff Hygiene: **PASS**;
+- Blocks 16–21 finais: **PASS**.
+
+Conflitos resolvidos:
+- PERF-B + PERF-D em `WarehouseItemRegistrationOperational.tsx`;
+- PERF-H + PERF-D em `package.json`.
+
+Dependência:
+- PERF-F foi posteriormente concluída e **INTEGRADA**.
+
+Decisão: **INTEGRADA**.
+
+
+### PERF-G — Shell/Layout persistente da Central
+
+Branch: `perf-r3-g-central-shell`
+HEAD revisado: `de870d1cb81f5d0eab2faba2fcabed354f35953b`
+Commit de integração semântica: `238b813795be05ad7142973f1566b8fead9d055d`.
+
+Arquitetura integrada:
+- `app/adm-deposito/layout.tsx` passou a hospedar o boundary persistente da Central;
+- auth/workspace/status continuam fail-closed no `WarehouseProtectedLayout`;
+- sessão/lease de usuário externo permanece monitorada enquanto o layout está montado;
+- `WarehouseModuleShell` persiste entre as rotas principais;
+- cada página entrega somente `WarehouseRouteContent`;
+- `WarehouseSectionContent` continua abaixo do boundary e preserva os `dynamic()` da PERF-B;
+- a PERF-D permanece integralmente dentro do chunk de `WarehouseItemRegistrationOperational`.
+
+Conflito resolvido semanticamente:
+- `package.json`: preservados scripts/testes da PERF-D, scripts `perf:r3:*` da PERF-H e adicionado `verify:performance-r3-central-shell`;
+- nenhum outro arquivo da PERF-G havia sido alterado pela integradora desde sua base.
+
+Build combinado após A/B/C/D/E/G/H:
+- `/`: **333 kB** First Load JS;
+- seis rotas principais da Central: **106 kB** cada;
+- shared global: **104 kB**;
+- `/admin`: **327 kB**;
+- `/admin/backups`: **244 kB**.
+
+Impacto da PERF-G sobre as rotas principais da Central:
+- **300 kB → 106 kB**;
+- redução adicional aproximada: **194 kB / 64,7%**;
+- referência pré-R3: aproximadamente **579 kB**.
+
+Validação:
+- Application CI isolado da PERF-G: **PASS**;
+- Application CI combinado no PR técnico #206: **PASS**;
+- Production Build: **PASS**;
+- Final TypeScript: **PASS**;
+- Diff Hygiene: **PASS**;
+- Blocks 16–21: **PASS**;
+- Core Protection combinado: **PASS**;
+- Recovery Guardrails combinado: **PASS**;
+- segurança externa, walking skeleton e fases da Central afetadas: **PASS**.
+
+Observação:
+- Preview Vercel da branch trabalhadora não foi produzido por limite diário da conta, não por falha de build;
+- validação browser/manual da navegação persistente continua indicada para PERF-I/PERF-J quando houver ambiente disponível.
+
+Decisão: **INTEGRADA**.
+
+
+### PERF-F — Cache curto em memória
+
+Branch: `perf-r3-f-memory-cache`
+Base original do worker: `79f54e2fd4109b8c56cc2f8c0deb1234af1238f5`
+HEAD revisado: `570661ba498edd37ba4c8f0240044d4ee6613bed`
+PR de validação: **#207**
+Commit de integração: `14aaa2e747fffaf2427ea63f4cd52395545d9a22`.
+
+Escopo integrado:
+- cache exclusivamente em memória para depósitos, localizações/subposições e destinos;
+- leituras individuais de depósito/localização cacheadas apenas para apresentação da Saída;
+- TTL explícito de **30 segundos**;
+- chave por `workspaceId + variante`;
+- deduplicação de requests simultâneos;
+- geração interna para impedir repovoamento stale após invalidação;
+- configuração logística deliberadamente não cacheada;
+- nenhum uso de `localStorage`, `sessionStorage`, IndexedDB, listener ou coleção nova.
+
+Autoridade preservada:
+- `assertDepotCodeAvailable()` usa leitura Firestore uncached;
+- `assertLocationCodeAvailable()` usa leitura Firestore uncached;
+- `requireActiveDestination()` continua com `getDoc()` autoritativo;
+- APIs históricas sem sufixo `Cached` continuam uncached;
+- auth, workspace/UG, sessão, lease, ledger, saldos, lotes, intake, NF, empenhos, cronogramas e demais dados operacionais críticos permanecem fora do cache.
+
+Invalidação:
+- criação/edição de depósito invalida depósitos;
+- criação/edição de localização invalida localizações;
+- criação/alteração de status de destino invalida destinos;
+- invalidação ocorre apenas depois da escrita bem-sucedida;
+- resposta antiga já em voo não pode repovoar o cache depois da mutação.
+
+Métrica sintética controlada:
+- jornada Início → Alocação → SISCOFIS → Meus Depósitos;
+- antes: **8 carregamentos estruturais** / fórmula `4 × (D + L)`;
+- depois, dentro do TTL: **2 carregamentos** / fórmula `D + L`;
+- conjunto sintético do teste: 64 → 16 document-equivalents;
+- redução do recorte: **75%**;
+- números explicitamente sintéticos, não apresentados como contagem de produção.
+
+Validação:
+- teste específico PERF-F: **11/11 PASS** no harness do worker;
+- PR #207 foi aberto contra a integradora já em `481948f`;
+- merge virtual validado: `3ea9eb6378de23a849ed84b331cac39de4a1ddd7`;
+- o log do Application CI #860 confirma checkout de `refs/pull/207/merge`, portanto o CI foi executado sobre **PERF-F + os commits de UX da integradora**;
+- Application CI #860: **PASS**;
+- Production Build: **PASS**;
+- Final TypeScript: **PASS**;
+- Diff Hygiene: **PASS**;
+- Core Protection: **PASS**;
+- Recovery Guardrails: **PASS**;
+- segurança multi-tenant/externa e fases afetadas da Central: **PASS**.
+
+Build combinado após A/B/C/D/E/F/G/H:
+- `/`: **333 kB**;
+- rotas principais da Central: **106 kB**;
+- `/admin`: **327 kB**;
+- `/admin/backups`: **244 kB**;
+- shared: **104 kB**.
+
+Risco residual conhecido:
+- mudança feita por outra sessão/navegador pode permanecer visualmente stale por até 30 segundos;
+- operações críticas não usam esse cache como autoridade;
+- a PERF-I validou invalidação local pós-mutação sem F5; o risco cross-session limitado ao TTL permanece deliberado e não autoritativo.
+
+Conflitos:
+- nenhum conflito de código com os dois commits que avançaram a integradora durante a execução da PERF-F; eles alteravam apenas Memorial Oficial e Handoff do Coordenador.
+
+Decisão: **INTEGRADA**.
+
+## Handoff do Coordenador — 2026-10-01
+
+Fonte de retomada:
+- `docs/PERFORMANCE_R3_COORDENADOR_HANDOFF.md`.
+
+Estado consolidado após PERF-I:
+- A/B/C/D/E/F/G/H/X: **INTEGRADAS**;
+- PERF-X: **INTEGRADA E CERTIFICADA**;
+- PERF-I: **APROVADA E ENCERRADA**;
+- PERF-J: **APROVADA**;
+- HEAD certificado pela PERF-J: `c08c6efa9931bf1df95aee86db51de1b8edb1912`;
+- sem merge consolidado em `main`;
+- sem deploy consolidado de produção da R3.
+
+O novo coordenador deve conferir HEADs reais, partir da integradora atual e não reconstruir estado a partir de chats antigos quando a documentação oficial já registrar a decisão.
+
+## Regra
+
+Chats trabalhadores **não atualizam este quadro para se autoaprovar**. Eles entregam o handoff; o chat coordenador atualiza o estado após revisão.

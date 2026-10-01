@@ -875,6 +875,44 @@ service cloud.firestore {
         );
     }
 
+    function validWarehouseIntakeQueueIndexEntry(workspaceId, entryId) {
+      let data = request.resource.data;
+      return data is map
+        && data.workspaceId == workspaceId
+        && data.ug is string
+        && data.ug.matches('^[0-9]{6}$')
+        && warehouseUgMatchesAccess(workspaceId, data.ug)
+        && data.updatedBy == request.auth.uid
+        && data.updatedAt == request.time
+        && (
+          (
+            entryId == 'state'
+            && data.schemaVersion == 'warehouse_intake_queue_index_v1'
+            && data.bootstrapComplete == true
+            && (data.cutoffAt == null || data.cutoffAt is string)
+            && (
+              data.watermarkRegisteredAt == null
+              || data.watermarkRegisteredAt is string
+            )
+          )
+          || (
+            entryId.matches('^intake_[a-f0-9]{64}$')
+            && data.schemaVersion == 'warehouse_intake_queue_candidate_v1'
+            && data.id == entryId
+            && data.invoiceRecordKey is string
+            && data.invoiceId is string
+            && data.empenhoId is string
+            && data.itemId is string
+            && (data.registeredAt == null || data.registeredAt is string)
+            && data.active is bool
+            && (
+              data.deactivatedAt == null
+              || data.deactivatedAt == request.time
+            )
+          )
+        );
+    }
+
     function validWarehouseInvoiceIntegrationSettings(workspaceId, settingId) {
       return settingId == 'invoice-integration'
         && request.resource.data is map
@@ -3203,6 +3241,15 @@ service cloud.firestore {
             )
           );
 
+        allow delete: if false;
+      }
+
+      // Performance R3 / PERF-D — índice derivado e não autoritativo da fila.
+      // Serve apenas para descobrir identidades operacionais ainda candidatas.
+      match /intakeQueueIndex/{entryId} {
+        allow read: if canAccessWarehouseModule(workspaceId);
+        allow create, update: if canAccessWarehouseModule(workspaceId)
+          && validWarehouseIntakeQueueIndexEntry(workspaceId, entryId);
         allow delete: if false;
       }
 

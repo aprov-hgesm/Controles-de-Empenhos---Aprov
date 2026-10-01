@@ -14,13 +14,14 @@ const forbidText = (source, forbidden, message) => {
 };
 
 const page = read('app/page.tsx');
+const operationalWorkspace = read('features/operational/components/OperationalWorkspace.tsx');
 const transition = read('components/layout/OperationalSurfaceTransition.tsx');
 const transitionCss = read('components/layout/OperationalSurfaceTransition.module.css');
 const plan = read('lib/operationalSubscriptionPlan.ts');
 const docs = read('docs/block-19-home-experience.md');
 
 requireText(page, "import { OperationalSurfaceTransition }", 'App não importa a transição operacional.');
-requireText(page, '<OperationalSurfaceTransition surfaceKey={activeTab}>', 'Conteúdo operacional não está envolvido pela transição.');
+requireText(operationalWorkspace, '<OperationalSurfaceTransition surfaceKey={activeTab}>', 'Conteúdo operacional não está envolvido pela transição.');
 requireText(transition, 'key={surfaceKey}', 'Transição não é reativada por mudança de superfície.');
 requireText(transition, 'useReducedMotion', 'Transição não respeita preferência de movimento.');
 requireText(transition, 'duration: 0.34', 'Duração curta da transição não está preservada.');

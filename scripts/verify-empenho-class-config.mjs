@@ -47,7 +47,7 @@ requireText(documentActions, 'if (termo)', 'Liquidação consolidada não trata 
 requireText(documentActions, "sem TR (classe", 'Liquidação sem TR não possui confirmação específica.');
 requireText(notasFiscais, 'Termo de Recebimento dispensado', 'Tela de NFs não informa dispensa de TR.');
 requireText(notasFiscais, "!requiresTR && currentLocation === 'APROVISIONAMENTO'", 'Classe sem TR não pode seguir direto à Tesouraria.');
-requireText(notasFiscais, 'invoiceRequiresTR(invoice) && getInvoiceLocation(invoice)', 'Filtro de Comissão não exclui classes dispensadas.');
+requireText(notasFiscais, "matchesTramitacao = requiresTR && currentLocation === 'APROVISIONAMENTO';", 'Filtro de Comissão não exclui classes dispensadas.');
 requireText(relatorios, 'TR dispensado para esta classe', 'Relatórios ainda oferecem TR para classe dispensada.');
 requireText(relatorios, "'Dispensada'", 'Relatórios não identificam Comissão dispensada.');
 

@@ -4,7 +4,7 @@ Este documento registra decisões que devem ser tratadas como **congeladas** at�
 
 Última consolidação inicial: 2026-09-22.
 
-## D-001 — Piloto exclusivo da conta fundadora
+## D-001 — Piloto exclusivo da conta fundadora — SUPERADA POR D-119
 
 Toda a primeira implementação do módulo logístico será habilitada somente para a conta fundadora.
 
@@ -2422,3 +2422,59 @@ Data: 2026-09-28.
 - A interface continua permitindo correções na prévia (ficha, descrição, quantidade, validade, valor e vínculo canônico), mas não expõe ao operador o JSON interno.
 - O contrato `emprovex_siscofis_inventory_v1` permanece como detalhe interno de implementação e compatibilidade; não constitui mais uma forma de entrada para o usuário.
 - Nesta decisão, a validade fica preservada no **Marco Zero/snapshot por linha**. A criação ou realocação automática de registros `warehouse_lot_v1` a partir dessas validades não é inferida nem executada silenciosamente; eventual integração com lotes deve ser tratada explicitamente para manter idempotência e rastreabilidade.
+
+
+## D-119 — Central de Depósitos disponível para setores autenticados
+
+Data: 2026-09-29. Consolidada no memorial em 2026-10-01.
+
+- A restrição founder-only da D-001 cumpriu sua finalidade de piloto e está **formalmente superada**.
+- O nome de produto vigente é **Central de Depósitos**; caminhos técnicos `adm-deposito` permanecem por compatibilidade.
+- `warehouseModuleEnabled` permanece habilitado e `canAccessWarehouseModule` autoriza qualquer contexto operacional com `status === 'sector'`, `canLoadOperationalData` e `workspaceId` válido.
+- A liberação não cria acesso cross-tenant: namespace, autorização e contexto continuam isolados por workspace/UG.
+- Ampliação comercial não autoriza reduzir segurança, idempotência, ledger ou validações operacionais.
+
+## D-120 — Browser E2E é ferramenta sob demanda, não gate permanente
+
+Data: 2026-10-01.
+
+- Browser E2E completo deixa de ser requisito permanente para todo merge/deploy.
+- Gates automáticos obrigatórios continuam cobrindo TypeScript, build, testes de domínio/contratos, guards estruturais/segurança, Firestore/isolamento quando aplicável, Core Protection e diff hygiene.
+- E2E permanece disponível em workflow separado por `workflow_dispatch` e deve ser usado quando a mudança tiver risco real de integração/interação em navegador.
+- Validação manual assistida é aceita para ergonomia, scanner/teclado, disposição visual e sensação operacional.
+- Falha de infraestrutura/timeout após testes aprovados não deve ser confundida com regressão funcional.
+- Esta decisão prevalece sobre decisões históricas que tratavam Browser E2E como gate obrigatório de fechamento do piloto.
+
+## D-121 — Performance R3 preserva integralmente a experiência visual
+
+Data: 2026-10-01.
+
+- A próxima rodada oficial é **Performance R3 — Comercialização**, na branch `feat/performance-r3-commercializacao`.
+- Objetivo: reduzir bundle inicial, leituras desnecessárias, remontagens, recomputação e latência sem degradar estética, animações, transições ou identidade visual aprovada.
+- Princípio arquitetural: **não carregar, consultar, calcular ou preparar antecipadamente o que ainda não é necessário para a ação atual do operador**.
+- Prioridades: code splitting do núcleo e da Central; shell/layout persistente; Saída por barcode/lote/posição sob demanda; fila de intake seletiva; cache curto em memória; otimização de listas; métricas e budgets.
+- Não fazem parte desta rodada: migração de Firebase/Vercel/Next.js, reescrita de ledger, remoção de animações ou redução de validações de segurança.
+- Toda otimização deve ser medida antes/depois e preservar contratos operacionais e isolamento multi-tenant.
+- Plano detalhado: `docs/PERFORMANCE_R3_COMERCIALIZACAO.md`.
+
+
+## D-122 — Performance R3 usa frentes paralelas com coordenação central
+
+Data: 2026-10-01.
+
+- A Performance R3 não será executada como uma sequência monolítica por um único chat.
+- O modelo oficial é: **baseline/contratos comuns → frentes independentes em paralelo → integração controlada → certificação final**.
+- A branch `feat/performance-r3-commercializacao` é a branch integradora do programa; chats trabalhadores usam branches próprias e não fazem merge direto em `main`.
+- Primeira onda paralela: PERF-A (bundle EMPROVEX), PERF-B (bundle Central), PERF-C (Saída sob demanda), PERF-D (Intake), PERF-E (CPU/renderização) e PERF-H (métricas/budget).
+- PERF-F (cache) depende da estabilização de C/D; PERF-G (shell/layout) depende da fronteira de carregamento definida por B; PERF-X é opcional e só existe se as medições justificarem.
+- PERF-I é dedicada exclusivamente à integração das frentes aprovadas; PERF-J é dedicada à certificação final.
+- Deve existir um **Chat Coordenador / Integrador / Avaliador** responsável pela visão global, branch integradora, revisão de handoffs, propriedade de arquivos, conflitos, regressões cruzadas, rebaseline e fechamento.
+- O coordenador não deve competir com trabalhadores implementando silenciosamente o mesmo escopo; correções próprias ficam limitadas a integração, compatibilidade e regressões cruzadas.
+- Cada trabalhador deve respeitar fronteira própria, preservar contratos globais, medir antes/depois e entregar handoff formal.
+- Dependências descobertas fora do escopo devem ser registradas ao coordenador, não implementadas silenciosamente.
+- O quadro oficial de estado é `docs/PERFORMANCE_R3_INTEGRATION_STATUS.md` e somente o coordenador altera o status de uma frente após revisão.
+- Conflitos devem ser resolvidos semanticamente; é proibido usar estratégia global de `ours/theirs` sem análise.
+- Nenhuma frente pode reduzir segurança, quebrar ledger/idempotência, mudar regra de negócio ou degradar estética/animações para obter performance.
+- Especificação completa: `docs/PERFORMANCE_R3_EXECUCAO_PARALELA.md`.
+
+Esta decisão prevalece sobre qualquer interpretação anterior de R3.0–R3.9 como ordem obrigatoriamente sequencial.

@@ -10,7 +10,10 @@ import {
 } from 'react';
 import type { User } from 'firebase/auth';
 import {
+  getDoc,
   onSnapshot,
+  query,
+  where,
   type DocumentData,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore';
@@ -27,6 +30,7 @@ import {
   getOperationalCollectionPath,
   operationalCollectionRef,
   operationalScopeFromContext,
+  operationalSettingsDocRef,
 } from '../lib/operationalPaths';
 import {
   buildOperationalSubscriptionPlan,
@@ -41,6 +45,15 @@ import {
 } from '../lib/workspaceContext';
 import { normalizeSupplier } from '../features/empenhos/domain/empenhoHelpers';
 import {
+  INVOICE_HOT_HISTORY_MARKER_ID,
+  INVOICE_OPERATIONAL_LOCATIONS,
+  isInvoiceHotHistoryMarker,
+  isInvoiceOperationalRealtime,
+  mergeInvoiceCollections,
+} from '../lib/invoiceHotHistory';
+import { loadInvoicesByRecordKeys } from '../lib/historicalInvoiceQueries';
+import {
+  recordWorkspaceDocumentReads,
   recordWorkspaceRealtimeSnapshot,
   trackWorkspaceRealtimeListener,
 } from '../lib/workspaceUsageTelemetry';
@@ -65,6 +78,8 @@ const EMPTY_READINESS: CollectionReadiness = {
   comissoes: false,
   cronogramas: false,
 };
+
+const HOT_HISTORY_READY_WORKSPACES = new Set<string>();
 
 function mapEmpenho(snapshotDoc: QueryDocumentSnapshot<DocumentData>): Empenho {
   const data = snapshotDoc.data() as Empenho;
@@ -160,13 +175,155 @@ function useRealtimeCollectionSubscription<T>({
   ]);
 }
 
+async function isInvoiceHotHistoryReady(
+  workspaceContext: ResolvedWorkspaceContext
+): Promise<boolean> {
+  if (!isOperationalSectorContext(workspaceContext)) return false;
+  if (HOT_HISTORY_READY_WORKSPACES.has(workspaceContext.workspaceId)) return true;
+
+  const scope = operationalScopeFromContext(workspaceContext);
+  const markerRef = operationalSettingsDocRef(scope, INVOICE_HOT_HISTORY_MARKER_ID);
+
+  try {
+    const snapshot = await getDoc(markerRef);
+    recordWorkspaceDocumentReads(scope, snapshot.exists() ? 1 : 0);
+    if (!snapshot.exists()) return false;
+    if (!isInvoiceHotHistoryMarker(snapshot.data(), scope.workspaceId)) return false;
+    HOT_HISTORY_READY_WORKSPACES.add(scope.workspaceId);
+    return true;
+  } catch (error) {
+    console.warn(
+      'PERF-X: não foi possível validar o backfill de NFs; mantendo listener compatível completo.',
+      error
+    );
+    return false;
+  }
+}
+
+function useRealtimeInvoiceSubscription({
+  enabled,
+  user,
+  workspaceContext,
+  setInvoices,
+  setCollectionReady,
+}: {
+  enabled: boolean;
+  user: User | null;
+  workspaceContext: ResolvedWorkspaceContext;
+  setInvoices: Dispatch<SetStateAction<Invoice[]>>;
+  setCollectionReady: (collectionName: RealtimeOperationalCollection, ready: boolean) => void;
+}) {
+  useEffect(() => {
+    setCollectionReady('invoices', false);
+
+    if (!enabled || !user || !isOperationalSectorContext(workspaceContext)) {
+      return;
+    }
+
+    const scope = operationalScopeFromContext(workspaceContext);
+    const collectionPath = getOperationalCollectionPath(scope, 'invoices');
+    let cancelled = false;
+    let unsubscribe: (() => void) | null = null;
+    let stopTrackingListener: (() => void) | null = null;
+    let previousOperationalKeys = new Set<string>();
+
+    void (async () => {
+      const hotHistoryReady = await isInvoiceHotHistoryReady(workspaceContext);
+      if (cancelled) return;
+
+      const collectionRef = operationalCollectionRef(scope, 'invoices');
+      const realtimeRef = hotHistoryReady
+        ? query(
+            collectionRef,
+            where('localizacaoAtual', 'in', [...INVOICE_OPERATIONAL_LOCATIONS])
+          )
+        : collectionRef;
+
+      let firstSnapshot = true;
+      stopTrackingListener = trackWorkspaceRealtimeListener(scope);
+      unsubscribe = onSnapshot(
+        realtimeRef,
+        (snapshot) => {
+          recordWorkspaceRealtimeSnapshot(
+            scope,
+            firstSnapshot ? snapshot.size : snapshot.docChanges().length
+          );
+          firstSnapshot = false;
+
+          const nextInvoices = snapshot.docs.map(mapInvoice);
+
+          if (!hotHistoryReady) {
+            previousOperationalKeys = new Set(
+              nextInvoices.map((invoice) => invoice.recordKey || invoice.id)
+            );
+            setInvoices(nextInvoices);
+            setCollectionReady('invoices', true);
+            return;
+          }
+
+          const nextOperationalKeys = new Set(
+            nextInvoices.map((invoice) => invoice.recordKey || invoice.id)
+          );
+          const removedKeys = [...previousOperationalKeys].filter(
+            (key) => !nextOperationalKeys.has(key)
+          );
+
+          setInvoices((current) => {
+            const historical = current.filter(
+              (invoice) => !isInvoiceOperationalRealtime(invoice)
+            );
+            return mergeInvoiceCollections(nextInvoices, historical);
+          });
+          previousOperationalKeys = nextOperationalKeys;
+          setCollectionReady('invoices', true);
+
+          if (removedKeys.length > 0) {
+            void loadInvoicesByRecordKeys(removedKeys)
+              .then((refreshed) => {
+                if (cancelled) return;
+                const completed = refreshed.filter(
+                  (invoice) => !isInvoiceOperationalRealtime(invoice)
+                );
+                if (completed.length === 0) return;
+                setInvoices((current) => mergeInvoiceCollections(completed, current));
+              })
+              .catch((error) => {
+                console.warn(
+                  'PERF-X: não foi possível revalidar NF que saiu do conjunto operacional.',
+                  error
+                );
+              });
+          }
+        },
+        (error) => {
+          handleFirestoreError(error, OperationType.LIST, collectionPath);
+          setCollectionReady('invoices', true);
+        }
+      );
+    })();
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+      stopTrackingListener?.();
+    };
+  }, [
+    enabled,
+    setCollectionReady,
+    setInvoices,
+    user,
+    workspaceContext,
+  ]);
+}
+
 /**
  * Bloco 14 — mantém somente as coleções necessárias à aba atual em realtime.
  *
- * Empenhos permanece ativo somente nas superfícies de trabalho que realmente
- * dependem dele. O Início usa um snapshot agregado de documento único e, por isso,
- * não abre nenhuma coleção operacional bruta. As coleções preservam o último
- * snapshot em memória quando são desinscritas.
+ * PERF-X mantém invoices em realtime apenas enquanto permanecem operacionais,
+ * depois que o backfill legado estiver certificado. Até lá, o hook cai
+ * deliberadamente no listener completo anterior para preservar compatibilidade.
+ * Histórico já solicitado pelo usuário pode permanecer em memória, mas não fica
+ * conectado ao listener operacional.
  */
 export function useOperationalRealtimeCollections({
   user,
@@ -223,13 +380,11 @@ export function useOperationalRealtimeCollections({
     setCollectionReady,
   });
 
-  useRealtimeCollectionSubscription({
-    collectionName: 'invoices',
+  useRealtimeInvoiceSubscription({
     enabled: plan.invoices,
     user,
     workspaceContext,
-    setData: setInvoices,
-    mapDocument: mapInvoice,
+    setInvoices,
     setCollectionReady,
   });
 

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { signOut } from 'firebase/auth';
+import { usePathname } from 'next/navigation';
 
 import { AppBackground } from '../../../components/layout/AppBackground';
 import { AppHeader } from '../../../components/layout/AppHeader';
@@ -17,20 +18,21 @@ import {
 } from '../../../lib/platformSessionLease';
 import { flushWorkspaceUsageTelemetry } from '../../../lib/workspaceUsageTelemetry';
 import { usePlatformBranding } from '../../../hooks/usePlatformBranding';
-import { getWarehouseSection, type WarehouseSectionId } from '../navigation';
-import { WarehouseSectionContent } from './WarehouseSectionContent';
+import { getWarehouseSectionForPathname } from '../navigation';
 import { WarehouseSidebar } from './WarehouseSidebar';
 
 export function WarehouseModuleShell({
-  section,
+  children,
   workspaceContext,
 }: {
-  section: WarehouseSectionId;
+  children: ReactNode;
   workspaceContext: SectorWorkspaceContext;
 }) {
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { customLogo } = usePlatformBranding();
-  const activeSection = getWarehouseSection(section);
+  const activeSection = getWarehouseSectionForPathname(pathname);
+  const section = activeSection.id;
   const isImmersive = section === 'home' || section === 'overview';
   const currentUser = auth.currentUser;
   const userDisplayName =
@@ -104,10 +106,7 @@ export function WarehouseModuleShell({
               data-testid="warehouse-surface"
               className="warehouse-emprovex-content min-w-0"
             >
-              <WarehouseSectionContent
-                section={section}
-                workspaceId={workspaceContext.workspaceId}
-              />
+              {children}
             </section>
           ) : (
             <section
@@ -138,10 +137,7 @@ export function WarehouseModuleShell({
               </div>
 
               <div className="warehouse-emprovex-content min-w-0">
-                <WarehouseSectionContent
-                  section={section}
-                  workspaceId={workspaceContext.workspaceId}
-                />
+                {children}
               </div>
             </section>
           )}

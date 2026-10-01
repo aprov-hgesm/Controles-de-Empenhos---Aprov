@@ -12,8 +12,8 @@ import {
 
 import type { WarehouseStockPosition } from '../../../lib/warehouse/location';
 import {
-  listWarehouseDepots,
-  listWarehouseLocations,
+  listWarehouseDepotsCached,
+  listWarehouseLocationsCached,
   type WarehouseDepotListItem,
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
@@ -399,8 +399,8 @@ export function WarehouseSiscofisPendingAllocation({
     setLoadingStructure(true);
     try {
       const [nextDepots, nextLocations] = await Promise.all([
-        listWarehouseDepots(workspaceId, 250),
-        listWarehouseLocations(workspaceId, 500),
+        listWarehouseDepotsCached(workspaceId, 250),
+        listWarehouseLocationsCached(workspaceId, 500),
       ]);
       setDepots(nextDepots);
       setLocations(nextLocations);

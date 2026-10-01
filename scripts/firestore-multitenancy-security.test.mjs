@@ -284,6 +284,17 @@ async function seedWorkspace(
     id: 'sample',
     ownerWorkspaceId: id,
     marker: `seed-${id}`,
+    supplier: 'Fornecedor E2E',
+    supplierCnpj: '11222333000181',
+    description: 'Empenho técnico da fixture E2E',
+    date: '2026-09-24',
+    status: 'Ativo',
+    classification: 'QR',
+    items: [],
+    revision: 1,
+    updatedAt: '2026-09-24T12:00:00.000Z',
+    updatedBy: uid || 'warehouse-e2e-fixture',
+    userId: uid || 'warehouse-e2e-fixture',
   });
 }
 
@@ -439,6 +450,17 @@ async function main() {
   await ownerSet('workspaces/hgesm-aprov/empenhos/sample', {
     id: 'sample',
     ownerWorkspaceId: 'hgesm-aprov',
+    supplier: 'Fornecedor E2E',
+    supplierCnpj: '11222333000181',
+    description: 'Empenho técnico da fixture E2E',
+    date: '2026-09-24',
+    status: 'Ativo',
+    classification: 'QR',
+    items: [],
+    revision: 1,
+    updatedAt: '2026-09-24T12:00:00.000Z',
+    updatedBy: admin.user.uid,
+    userId: admin.user.uid,
   });
 
   console.log('\nEMPROVEX — cadastro de NF independente do ADM Depósito');

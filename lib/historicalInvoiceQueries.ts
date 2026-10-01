@@ -1,16 +1,20 @@
 'use client';
 
 import {
+  documentId,
+  getCountFromServer,
+  getDoc,
   getDocs,
   limit,
+  orderBy,
   query,
   startAfter,
   where,
+  type DocumentData,
   type Query,
   type QueryConstraint,
   type QueryDocumentSnapshot,
   type QuerySnapshot,
-  type DocumentData,
 } from 'firebase/firestore';
 
 import type { Invoice } from './types';
@@ -19,17 +23,29 @@ import { normalizeSupplierCnpj } from './invoiceIdentity';
 import {
   getCurrentOperationalScope,
   operationalCollectionRef,
+  operationalSettingsDocRef,
 } from './operationalPaths';
 import { recordWorkspaceDocumentReads } from './workspaceUsageTelemetry';
+import {
+  INVOICE_HOT_HISTORY_MARKER_ID,
+  isInvoiceHotHistoryMarker,
+} from './invoiceHotHistory';
 
 export const HISTORICAL_QUERY_PAGE_SIZE = 250;
 export const HISTORICAL_QUERY_MAX_PAGES = 40;
+const INVOICE_COUNT_CONCURRENCY = 8;
 
 export interface HistoricalInvoiceQueryResult {
   invoices: Invoice[];
   pages: number;
   documentReads: number;
   truncated: boolean;
+}
+
+export interface InvoiceCollectionSummaryCounts {
+  total: number;
+  completed: number | null;
+  hotHistoryReady: boolean;
 }
 
 function mapInvoice(snapshotDoc: QueryDocumentSnapshot<DocumentData>): Invoice {
@@ -86,6 +102,10 @@ async function loadHistoricalInvoiceSlice(
   return { invoices, pages, documentReads, truncated };
 }
 
+export async function loadAllInvoicesHistory(): Promise<HistoricalInvoiceQueryResult> {
+  return loadHistoricalInvoiceSlice([]);
+}
+
 export async function loadInvoicesForEmpenho(
   empenhoId: string
 ): Promise<HistoricalInvoiceQueryResult> {
@@ -110,4 +130,102 @@ export async function loadInvoicesForSupplier(
   return loadHistoricalInvoiceSlice([
     where('supplierCnpj', '==', normalized),
   ]);
+}
+
+export async function loadInvoicesByRecordKeys(
+  recordKeys: string[]
+): Promise<Invoice[]> {
+  const scope = getCurrentOperationalScope();
+  const collectionRef = operationalCollectionRef(scope, 'invoices');
+  const uniqueKeys = Array.from(new Set(recordKeys.map((key) => key.trim()).filter(Boolean)));
+  const invoices: Invoice[] = [];
+
+  for (let index = 0; index < uniqueKeys.length; index += 30) {
+    const keys = uniqueKeys.slice(index, index + 30);
+    const snapshot = await getDocs(
+      query(collectionRef, where(documentId(), 'in', keys))
+    );
+    recordWorkspaceDocumentReads(scope, snapshot.size);
+    invoices.push(...snapshot.docs.map(mapInvoice));
+  }
+
+  return invoices;
+}
+
+export async function loadInvoiceCountsForEmpenhos(
+  empenhoIds: string[]
+): Promise<Map<string, number>> {
+  const scope = getCurrentOperationalScope();
+  const collectionRef = operationalCollectionRef(scope, 'invoices');
+  const uniqueIds = Array.from(new Set(empenhoIds.map((id) => id.trim()).filter(Boolean)));
+  const counts = new Map<string, number>();
+
+  for (let index = 0; index < uniqueIds.length; index += INVOICE_COUNT_CONCURRENCY) {
+    const chunk = uniqueIds.slice(index, index + INVOICE_COUNT_CONCURRENCY);
+    const results = await Promise.all(
+      chunk.map(async (empenhoId) => {
+        const snapshot = await getCountFromServer(
+          query(collectionRef, where('empenhoId', '==', empenhoId))
+        );
+        return [empenhoId, snapshot.data().count] as const;
+      })
+    );
+    for (const [empenhoId, count] of results) counts.set(empenhoId, count);
+  }
+
+  return counts;
+}
+
+export async function loadInvoiceCollectionSummaryCounts(): Promise<InvoiceCollectionSummaryCounts> {
+  const scope = getCurrentOperationalScope();
+  const collectionRef = operationalCollectionRef(scope, 'invoices');
+
+  let hotHistoryReady = false;
+  try {
+    const markerSnapshot = await getDoc(
+      operationalSettingsDocRef(scope, INVOICE_HOT_HISTORY_MARKER_ID)
+    );
+    recordWorkspaceDocumentReads(scope, markerSnapshot.exists() ? 1 : 0);
+    hotHistoryReady = markerSnapshot.exists()
+      && isInvoiceHotHistoryMarker(markerSnapshot.data(), scope.workspaceId);
+  } catch (error) {
+    console.warn(
+      'PERF-X: não foi possível validar o marcador para as contagens; usando compatibilidade legada.',
+      error
+    );
+  }
+
+  const totalSnapshot = await getCountFromServer(collectionRef);
+  if (!hotHistoryReady) {
+    return {
+      total: totalSnapshot.data().count,
+      completed: null,
+      hotHistoryReady: false,
+    };
+  }
+
+  const completedSnapshot = await getCountFromServer(
+    query(collectionRef, where('localizacaoAtual', '==', 'TESOURARIA'))
+  );
+
+  return {
+    total: totalSnapshot.data().count,
+    completed: completedSnapshot.data().count,
+    hotHistoryReady: true,
+  };
+}
+
+export async function loadHighestTermoNumero(): Promise<number> {
+  const scope = getCurrentOperationalScope();
+  const snapshot = await getDocs(
+    query(
+      operationalCollectionRef(scope, 'invoices'),
+      orderBy('termoNumero', 'desc'),
+      limit(1)
+    )
+  );
+  recordWorkspaceDocumentReads(scope, snapshot.size);
+  if (snapshot.empty) return 0;
+  const value = snapshot.docs[0].data()?.termoNumero;
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }

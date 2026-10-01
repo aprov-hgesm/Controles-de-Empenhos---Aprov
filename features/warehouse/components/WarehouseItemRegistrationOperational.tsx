@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import {
   Barcode,
@@ -36,6 +37,7 @@ import type {
   WarehouseItemIntakeState,
 } from '../../../lib/warehouse/intakeState';
 import {
+  loadWarehouseInvoiceIntakeHistory,
   loadWarehouseInvoiceIntakeQueue,
   refreshWarehouseInvoiceIntakeQueueRows,
   type WarehouseInvoiceIntakeQueueContext,
@@ -50,19 +52,29 @@ import {
 } from '../../../lib/warehouse/intakeActionClient';
 import type { WarehouseStockPosition } from '../../../lib/warehouse/location';
 import {
-  listWarehouseDepots,
-  listWarehouseLocations,
+  listWarehouseDepotsCached,
+  listWarehouseLocationsCached,
   type WarehouseDepotListItem,
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
-import { WarehouseSiscofisOperational } from './WarehouseSiscofisOperational';
-import { WarehouseSiscofisPendingAllocation } from './WarehouseSiscofisPendingAllocation';
-import { WarehouseImmediateConsumptionPanel } from './WarehouseImmediateConsumptionPanel';
-import { WarehouseAllocatedItemsOperational } from './WarehouseAllocatedItemsOperational';
-import { WarehouseManualEntryOperational } from './WarehouseManualEntryOperational';
+const WarehouseSiscofisOperational = dynamic(
+  () => import('./WarehouseSiscofisOperational').then((module) => module.WarehouseSiscofisOperational)
+);
+const WarehouseSiscofisPendingAllocation = dynamic(
+  () => import('./WarehouseSiscofisPendingAllocation').then((module) => module.WarehouseSiscofisPendingAllocation)
+);
+const WarehouseImmediateConsumptionPanel = dynamic(
+  () => import('./WarehouseImmediateConsumptionPanel').then((module) => module.WarehouseImmediateConsumptionPanel)
+);
+const WarehouseAllocatedItemsOperational = dynamic(
+  () => import('./WarehouseAllocatedItemsOperational').then((module) => module.WarehouseAllocatedItemsOperational)
+);
+const WarehouseManualEntryOperational = dynamic(
+  () => import('./WarehouseManualEntryOperational').then((module) => module.WarehouseManualEntryOperational)
+);
 import {
   createWarehouseDestination,
-  listWarehouseDestinations,
+  listWarehouseDestinationsCached,
   type ApplyWarehouseImmediateConsumptionResult,
 } from '../../../lib/warehouse/withdrawalRepository';
 import type { WarehouseDestinationListItem } from '../../../lib/warehouse/withdrawal';
@@ -138,8 +150,8 @@ function AllocationPanel({
     setLoadingStructure(true);
     setError(null);
     Promise.all([
-      listWarehouseDepots(workspaceId, 250),
-      listWarehouseLocations(workspaceId, 500),
+      listWarehouseDepotsCached(workspaceId, 250),
+      listWarehouseLocationsCached(workspaceId, 500),
     ])
       .then(([depotItems, locationItems]) => {
         if (!active) return;
@@ -653,8 +665,8 @@ export function IntakeBulkActionPanel({
     let active = true;
     setLoadingStructure(true);
     Promise.all([
-      listWarehouseDepots(workspaceId, 250),
-      listWarehouseLocations(workspaceId, 500),
+      listWarehouseDepotsCached(workspaceId, 250),
+      listWarehouseLocationsCached(workspaceId, 500),
     ])
       .then(([depotItems, locationItems]) => {
         if (!active) return;
@@ -686,7 +698,7 @@ export function IntakeBulkActionPanel({
     if (mode !== 'immediate' || destinations.length > 0) return;
     let active = true;
     setLoadingDestinations(true);
-    listWarehouseDestinations(workspaceId, 250)
+    listWarehouseDestinationsCached(workspaceId, 250)
       .then((items) => {
         if (!active) return;
         setDestinations(items);
@@ -1395,6 +1407,8 @@ export function IntakeBulkActionPanel({
 function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
   const [context, setContext] =
     useState<WarehouseInvoiceIntakeQueueContext | null>(null);
+  const [contextMode, setContextMode] =
+    useState<'operational' | 'history'>('operational');
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [allocationRow, setAllocationRow] =
@@ -1413,11 +1427,17 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
   const [allocationSheetWorking, setAllocationSheetWorking] =
     useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (
+    mode: 'operational' | 'history' = 'operational'
+  ) => {
     setLoading(true);
     setMessage(null);
     try {
-      setContext(await loadWarehouseInvoiceIntakeQueue(workspaceId));
+      const nextContext = mode === 'history'
+        ? await loadWarehouseInvoiceIntakeHistory(workspaceId)
+        : await loadWarehouseInvoiceIntakeQueue(workspaceId);
+      setContext(nextContext);
+      setContextMode(mode);
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -1430,8 +1450,16 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
   }, [workspaceId]);
 
   useEffect(() => {
-    void refresh();
+    void refresh('operational');
   }, [refresh]);
+
+  useEffect(() => {
+    const expectedMode =
+      statusFilter === 'actionable' ? 'operational' : 'history';
+    if (!loading && contextMode !== expectedMode) {
+      void refresh(expectedMode);
+    }
+  }, [contextMode, loading, refresh, statusFilter]);
 
   const rows = context?.rows || [];
 
@@ -1731,7 +1759,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
       message: string;
     }>
   ) => {
-    await refresh();
+    await refresh(contextMode);
     if (mode === 'remove') {
       setMessage(
         subjectLabel
@@ -1820,7 +1848,7 @@ function InvoiceRegistrationQueue({ workspaceId }: { workspaceId: string }) {
           </div>
           <button
             type="button"
-            onClick={() => void refresh()}
+            onClick={() => void refresh(contextMode)}
             disabled={loading}
             className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 px-3 text-xs font-black text-slate-600 disabled:opacity-50"
           >

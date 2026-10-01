@@ -1,6 +1,37 @@
-# ADM Depósito — Roadmap Oficial de Implementação
+# Central de Depósitos — Roadmap Atual
 
-Este é o passo a passo oficial do módulo ADM Depósito / Área Logística do EMPROVEX.
+Atualização: **2026-10-01**
+
+> O roadmap histórico abaixo permanece preservado. As referências a piloto founder-only e expansão externa futura descrevem etapas já superadas. O estado vigente é: Central disponível para setores autenticados/validados e prioridade em **Performance R3 — Comercialização**.
+
+## Ciclo atual — Performance R3
+
+Documento detalhado: `docs/PERFORMANCE_R3_COMERCIALIZACAO.md`.
+
+Sequência oficial:
+1. **R3.0 — baseline/guardrails de performance**;
+2. **R3.1 — code splitting do EMPROVEX principal**;
+3. **R3.2 — code splitting da Central de Depósitos**;
+4. **R3.3 — shell/layout persistente e navegação sem reload desnecessário**;
+5. **R3.5 — Saída de Material orientada à operação atual**;
+6. **R3.6 — fila leve de recebimento**;
+7. **R3.4/R3.7 — cache curto em memória + otimização de CPU/renderização**;
+8. **R3.8 — dados quentes vs histórico, somente se as medições justificarem**;
+9. **R3.9 — medição final e orçamento de performance**.
+
+Regra de produto: **não remover ou degradar animações, transições, acabamento premium ou identidade visual para obter performance**. O ganho deve vir de carregamento sob demanda, consultas mais seletivas, cache seguro e redução de recomputação.
+
+Gate de encerramento R3:
+- comparação objetiva de bundle/tempo/reads antes e depois;
+- TypeScript e build verdes;
+- testes/guards afetados verdes;
+- Core Protection verde;
+- validação manual das superfícies alteradas;
+- Browser E2E somente quando o risco funcional justificar, conforme política vigente.
+
+---
+
+# Histórico — Roadmap V2 do ADM Depósito
 
 ## Estratégia vigente — Roadmap V2
 

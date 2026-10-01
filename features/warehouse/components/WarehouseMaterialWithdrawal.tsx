@@ -19,11 +19,11 @@ import {
 } from 'lucide-react';
 
 import {
-  findWarehouseBarcodeAssociation,
+  normalizeWarehouseBarcode,
   type WarehouseBarcodeAssociation,
 } from '../../../lib/warehouse/barcode';
 import {
-  listWarehouseBarcodes,
+  getWarehouseBarcodeByCode,
   saveWarehouseBarcodeAssociation,
   type WarehouseBarcodeListItem,
 } from '../../../lib/warehouse/barcodeRepository';
@@ -33,15 +33,16 @@ import {
 } from '../../../lib/warehouse/location';
 import {
   buildWarehousePositionLabel,
-  listWarehouseDepots,
+  getWarehouseDepotCached,
+  getWarehouseLocationCached,
   listWarehouseLocationBalances,
-  listWarehouseLocations,
   type WarehouseDepotListItem,
   type WarehouseLocationBalanceListItem,
   type WarehouseLocationListItem,
 } from '../../../lib/warehouse/locationRepository';
 import { selectWarehouseFefoLot, warehouseLotExpiryState } from '../../../lib/warehouse/lot';
 import {
+  getWarehouseLot,
   listWarehouseLots,
   type WarehouseLotListItem,
 } from '../../../lib/warehouse/lotRepository';
@@ -50,17 +51,20 @@ import {
   type WarehouseMaterial,
   type WarehouseMaterialUnit,
 } from '../../../lib/warehouse/material';
-import { listWarehouseMaterials } from '../../../lib/warehouse/materialRepository';
+import {
+  getWarehouseMaterial,
+  listWarehouseMaterials,
+} from '../../../lib/warehouse/materialRepository';
 import type { WarehouseBalance } from '../../../lib/warehouse/movement';
 import {
+  getWarehouseBalance,
   getWarehouseMovement,
-  listWarehouseBalances,
 } from '../../../lib/warehouse/ledgerRepository';
 import { auth } from '../../../lib/firebase';
 import {
   createWarehouseDestination,
   finalizeWarehouseMaterialWithdrawal,
-  listWarehouseDestinations,
+  listWarehouseDestinationsCached,
   setWarehouseDestinationStatus,
 } from '../../../lib/warehouse/withdrawalRepository';
 import {
@@ -92,6 +96,8 @@ import {
 } from './warehouseWithdrawalDraft';
 
 type SurfaceTab = 'checkout' | 'reports';
+
+const OUTBOUND_BARCODE_CACHE_MAX = 12;
 
 interface CheckoutState {
   loading: boolean;
@@ -256,11 +262,16 @@ async function resolveOutboundDocumentLines(
 export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: string }) {
   const scannerRef = useRef<HTMLInputElement>(null);
   const quantityRef = useRef<HTMLInputElement>(null);
+  const barcodeCacheRef = useRef(new Map<string, WarehouseBarcodeAssociation | null>());
+  const materialCatalogLoadingRef = useRef(false);
+  const materialCatalogLoadedRef = useRef(false);
+  const destinationsLoadingRef = useRef(false);
+  const destinationsLoadedRef = useRef(false);
   const initialDraft = useMemo(() => readWarehouseWithdrawalDraft<CartLine>(workspaceId), [workspaceId]);
 
   const [tab, setTab] = useState<SurfaceTab>('checkout');
   const [state, setState] = useState<CheckoutState>({
-    loading: true,
+    loading: Boolean(initialDraft?.cart.length),
     error: null,
     materials: [],
     balances: [],
@@ -309,38 +320,122 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     persistWarehouseWithdrawalDraft(workspaceId, draft);
   }, [cart, destinationId, retryRequired, withdrawalId, withdrawnBy, workspaceId]);
 
-  const refresh = useCallback(async () => {
-    setState((current) => ({ ...current, loading: true, error: null }));
+  const rememberBarcode = useCallback((
+    rawBarcode: string,
+    association: WarehouseBarcodeAssociation | null
+  ) => {
+    const normalized = normalizeWarehouseBarcode(rawBarcode);
+    if (!normalized) return;
+    const cache = barcodeCacheRef.current;
+    if (cache.has(normalized)) cache.delete(normalized);
+    cache.set(normalized, association);
+    while (cache.size > OUTBOUND_BARCODE_CACHE_MAX) {
+      const oldestKey = cache.keys().next().value as string | undefined;
+      if (!oldestKey) break;
+      cache.delete(oldestKey);
+    }
+    if (!association) return;
+    setState((current) => ({
+      ...current,
+      barcodes: [
+        { association, createdAt: null, updatedAt: null },
+        ...current.barcodes.filter((item) => item.association.id !== association.id),
+      ].slice(0, OUTBOUND_BARCODE_CACHE_MAX),
+    }));
+  }, []);
+
+  const ensureMaterialCatalog = useCallback(async () => {
+    if (materialCatalogLoadedRef.current || materialCatalogLoadingRef.current) return;
+    materialCatalogLoadingRef.current = true;
     try {
-      const [materials, balances, barcodes, depots, locations, locationBalances, lots, destinations] =
-        await Promise.all([
-          listWarehouseMaterials(workspaceId, 250),
-          listWarehouseBalances(workspaceId, 250),
-          listWarehouseBarcodes(workspaceId, 500),
-          listWarehouseDepots(workspaceId, 250),
-          listWarehouseLocations(workspaceId, 500),
-          listWarehouseLocationBalances(workspaceId, 500),
-          listWarehouseLots(workspaceId, 500),
-          listWarehouseDestinations(workspaceId, 250),
-        ]);
-      setState({
-        loading: false,
-        error: null,
-        materials,
-        balances,
-        barcodes,
-        depots,
-        locations,
-        locationBalances,
-        lots,
-        destinations,
+      const materials = await listWarehouseMaterials(workspaceId, 250);
+      materialCatalogLoadedRef.current = true;
+      setState((current) => {
+        const materialById = new Map(materials.map((material) => [material.id, material]));
+        for (const material of current.materials) {
+          if (!materialById.has(material.id)) materialById.set(material.id, material);
+        }
+        return {
+          ...current,
+          materials: Array.from(materialById.values()),
+          error: null,
+        };
       });
     } catch (error) {
-      setState((current) => ({ ...current, loading: false, error: errorMessage(error) }));
+      setState((current) => ({
+        ...current,
+        error: errorMessage(error),
+      }));
+    } finally {
+      materialCatalogLoadingRef.current = false;
     }
   }, [workspaceId]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  const loadDestinations = useCallback(async () => {
+    if (destinationsLoadedRef.current || destinationsLoadingRef.current) return;
+    destinationsLoadingRef.current = true;
+    try {
+      const destinations = await listWarehouseDestinationsCached(workspaceId, 250);
+      destinationsLoadedRef.current = true;
+      setState((current) => ({
+        ...current,
+        destinations,
+        error: null,
+      }));
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        error: errorMessage(error),
+      }));
+    } finally {
+      destinationsLoadingRef.current = false;
+    }
+  }, [workspaceId]);
+
+  useEffect(() => {
+    const persistedLines = initialDraft?.cart || [];
+    if (persistedLines.length === 0) return;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const lotIds = Array.from(
+          new Set(
+            persistedLines
+              .map((line) => line.lotId)
+              .filter((value): value is string => Boolean(value))
+          )
+        );
+        const [destinations, lots] = await Promise.all([
+          listWarehouseDestinationsCached(workspaceId, 250),
+          Promise.all(lotIds.map((lotId) => getWarehouseLot(workspaceId, lotId))),
+        ]);
+        if (cancelled) return;
+        destinationsLoadedRef.current = true;
+        setState((current) => ({
+          ...current,
+          loading: false,
+          error: null,
+          destinations,
+          lots: lots
+            .filter((lot): lot is NonNullable<typeof lot> => Boolean(lot))
+            .map((lot) => ({ lot, createdAt: null, updatedAt: null })),
+        }));
+      } catch (error) {
+        if (cancelled) return;
+        setState((current) => ({
+          ...current,
+          loading: false,
+          error: errorMessage(error),
+        }));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialDraft, workspaceId]);
+
   useEffect(() => {
     if (!state.loading && tab === 'checkout') scannerRef.current?.focus();
   }, [state.loading, tab]);
@@ -372,12 +467,10 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     const q = normalizeWarehouseSearch(materialSearch);
     return state.materials.filter((material) => {
       if (material.status !== 'active') return false;
-      const balance = state.balances.find((item) => item.materialId === material.id) || null;
-      if (positionOptionsFor(material, balance, state).length === 0) return false;
       if (!q) return true;
       return normalizeWarehouseSearch([material.id, material.description, ...material.aliases].join(' ')).includes(q);
     });
-  }, [materialSearch, state]);
+  }, [materialSearch, state.materials]);
 
   const activeDestinations = state.destinations.filter((item) => item.destination.status === 'active');
 
@@ -393,21 +486,77 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     setTimeout(() => scannerRef.current?.focus(), 0);
   };
 
-  const selectMaterial = (material: WarehouseMaterial, barcode: WarehouseBarcodeAssociation | null) => {
-    const balance = state.balances.find((item) => item.materialId === material.id) || null;
-    const positions = positionOptionsFor(material, balance, state);
-    const lots = state.lots
+  const selectMaterial = async (
+    material: WarehouseMaterial,
+    barcode: WarehouseBarcodeAssociation | null
+  ) => {
+    const [balance, locationBalances, lots] = await Promise.all([
+      getWarehouseBalance(workspaceId, material.id),
+      listWarehouseLocationBalances(workspaceId, 500, material.id),
+      listWarehouseLots(workspaceId, 500, material.id),
+    ]);
+
+    const depotIds = new Set<string>();
+    const locationIds = new Set<string>();
+    for (const item of locationBalances) {
+      const position = item.balance.position;
+      if (item.balance.quantity <= 0 || position.kind === 'UNASSIGNED') continue;
+      depotIds.add(position.depotId);
+      locationIds.add(position.locationId);
+      if (position.kind === 'SUBPOSITION') locationIds.add(position.subpositionId);
+    }
+
+    const [depotItems, locationItems] = await Promise.all([
+      Promise.all(Array.from(depotIds).map((depotId) => getWarehouseDepotCached(workspaceId, depotId))),
+      Promise.all(Array.from(locationIds).map((locationId) => getWarehouseLocationCached(workspaceId, locationId))),
+    ]);
+    const depots = depotItems.filter(
+      (item): item is WarehouseDepotListItem => Boolean(item)
+    );
+    const locations = locationItems.filter(
+      (item): item is WarehouseLocationListItem => Boolean(item)
+    );
+
+    const selectionState: CheckoutState = {
+      ...state,
+      loading: false,
+      error: null,
+      materials: [material],
+      balances: balance ? [balance] : [],
+      depots,
+      locations,
+      locationBalances,
+      lots,
+    };
+    const positions = positionOptionsFor(material, balance, selectionState);
+    const materialLots = lots
       .filter((item) =>
-        item.lot.materialId === material.id
-        && item.lot.status === 'active'
+        item.lot.status === 'active'
         && item.lot.quantity > 0
       )
       .map((item) => item.lot);
-    const suggested = selectWarehouseFefoLot(lots);
+    const suggested = selectWarehouseFefoLot(materialLots);
     const suggestedPositionKey = suggested ? warehouseStockPositionKey(suggested.position) : '';
     const position = positions.find((item) => item.key === suggestedPositionKey) || positions[0] || null;
 
-    if (!position) {
+    setState((current) => {
+      const materialById = new Map(current.materials.map((item) => [item.id, item]));
+      materialById.set(material.id, material);
+      const lotsById = new Map(current.lots.map((item) => [item.lot.id, item]));
+      for (const item of lots) lotsById.set(item.lot.id, item);
+      return {
+        ...current,
+        error: null,
+        materials: Array.from(materialById.values()),
+        balances: balance ? [balance] : [],
+        depots,
+        locations,
+        locationBalances,
+        lots: Array.from(lotsById.values()),
+      };
+    });
+
+    if (!balance || !position) {
       setSelectedMaterialId('');
       setSelectedBarcodeId('');
       setSelectedPresentationKey('');
@@ -426,9 +575,9 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       barcode ? warehouseMaterialUnitKey(barcode.presentation) : warehouseMaterialUnitKey(material.unit)
     );
     setRequestedQuantity('');
-    setPositionKey(position?.key || '');
+    setPositionKey(position.key);
     setSelectedLotId(
-      suggested && position && warehouseStockPositionKey(suggested.position) === position.key
+      suggested && warehouseStockPositionKey(suggested.position) === position.key
         ? suggested.id
         : ''
     );
@@ -442,37 +591,58 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     setTimeout(() => quantityRef.current?.focus(), 0);
   };
 
-  const handleScan = () => {
+  const handleScan = async () => {
     const raw = scannerCode.trim();
     if (!raw || working || retryRequired) return;
-    const association = findWarehouseBarcodeAssociation(
-      state.barcodes.map((item) => item.association),
-      raw,
-      { activeOnly: false }
-    );
+    const normalized = normalizeWarehouseBarcode(raw);
+    if (!normalized) {
+      setMessageKind('error');
+      setMessage('Código de barras inválido.');
+      return;
+    }
+
+    setWorking(true);
     setScannerCode('');
-    if (!association) {
-      setUnknownBarcode(raw);
-      setAssociationMaterialId('');
-      setAssociationPresentationKey('');
-      setSelectedMaterialId('');
-      setSelectedBarcodeId('');
-      setMessageKind('info');
-      setMessage('Código não cadastrado. Nenhum material será criado automaticamente; associe o código a um material canônico existente ou use a pesquisa manual.');
-      return;
-    }
-    if (association.status !== 'active') {
+    try {
+      const cache = barcodeCacheRef.current;
+      let association: WarehouseBarcodeAssociation | null;
+      if (cache.has(normalized)) {
+        association = cache.get(normalized) || null;
+      } else {
+        association = await getWarehouseBarcodeByCode(workspaceId, normalized);
+        rememberBarcode(normalized, association);
+      }
+
+      if (!association) {
+        setUnknownBarcode(normalized);
+        setAssociationMaterialId('');
+        setAssociationPresentationKey('');
+        setSelectedMaterialId('');
+        setSelectedBarcodeId('');
+        setMessageKind('info');
+        setMessage('Código não cadastrado. Nenhum material será criado automaticamente; associe o código a um material canônico existente ou use a pesquisa manual.');
+        void ensureMaterialCatalog();
+        return;
+      }
+      if (association.status !== 'active') {
+        setMessageKind('error');
+        setMessage('Este código de barras está inativo.');
+        return;
+      }
+
+      const material = await getWarehouseMaterial(workspaceId, association.materialId);
+      if (!material || material.status !== 'active') {
+        setMessageKind('error');
+        setMessage('O código aponta para material ausente ou inativo.');
+        return;
+      }
+      await selectMaterial(material, association);
+    } catch (error) {
       setMessageKind('error');
-      setMessage('Este código de barras está inativo.');
-      return;
+      setMessage(errorMessage(error));
+    } finally {
+      setWorking(false);
     }
-    const material = state.materials.find((item) => item.id === association.materialId);
-    if (!material || material.status !== 'active') {
-      setMessageKind('error');
-      setMessage('O código aponta para material ausente ou inativo.');
-      return;
-    }
-    selectMaterial(material, association);
   };
 
   const associateUnknownBarcode = async () => {
@@ -486,14 +656,8 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
         materialId: associationMaterial.id,
         presentation: option.unit,
       });
-      setState((current) => ({
-        ...current,
-        barcodes: [
-          ...current.barcodes.filter((item) => item.association.id !== association.id),
-          { association, createdAt: null, updatedAt: null },
-        ],
-      }));
-      selectMaterial(associationMaterial, association);
+      rememberBarcode(unknownBarcode, association);
+      await selectMaterial(associationMaterial, association);
       setMessageKind('success');
       setMessage('Código associado ao material canônico. Informe a quantidade.');
     } catch (error) {
@@ -574,6 +738,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       availableBalance: selectedBalance.quantity,
     };
     setCart((current) => [...current, line]);
+    void loadDestinations();
     setReviewing(false);
     setMessageKind('success');
     setMessage(selectedMaterial.description + ' adicionado ao carrinho. Nenhuma baixa foi realizada ainda.');
@@ -684,6 +849,14 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
     setWithdrawalId(createWarehouseWithdrawalId());
     clearWarehouseWithdrawalDraft(workspaceId);
     clearWarehouseWithdrawalRecovery(workspaceId);
+    setState((current) => ({
+      ...current,
+      balances: [],
+      depots: [],
+      locations: [],
+      locationBalances: [],
+      lots: [],
+    }));
   };
 
   const finalize = async () => {
@@ -778,7 +951,6 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
       );
 
       resetAfterSuccess();
-      await refresh();
       setTimeout(() => scannerRef.current?.focus(), 0);
     } catch (error) {
       setRetryRequired(true);
@@ -788,7 +960,6 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
         errorMessage(error)
         + ' O carrinho foi bloqueado para preservar a identidade e permitir retry seguro.'
       );
-      await refresh();
     } finally {
       setWorking(false);
     }
@@ -862,7 +1033,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                   </div>
                 </div>
 
-                <form className="mt-5 flex gap-2" onSubmit={(event) => { event.preventDefault(); handleScan(); }}>
+                <form className="mt-5 flex gap-2" onSubmit={(event) => { event.preventDefault(); void handleScan(); }}>
                   <input ref={scannerRef} data-testid="warehouse-scanner-input" value={scannerCode}
                     onChange={(event) => setScannerCode(event.target.value)} disabled={retryRequired}
                     autoComplete="off" placeholder="Leia ou digite o código de barras"
@@ -879,14 +1050,29 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                     <p className="text-xs font-black text-slate-900">Pesquisa manual</p>
                   </div>
                   <div className="mt-3 grid gap-2 md:grid-cols-2">
-                    <input value={materialSearch} onChange={(event) => setMaterialSearch(event.target.value)}
+                    <input value={materialSearch}
+                      onFocus={() => void ensureMaterialCatalog()}
+                      onChange={(event) => {
+                        setMaterialSearch(event.target.value);
+                        if (event.target.value.trim()) void ensureMaterialCatalog();
+                      }}
                       disabled={retryRequired} placeholder="Descrição, alias ou ID"
                       className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#00288e] disabled:opacity-40" />
                     <select value={selectedMaterialId} disabled={retryRequired}
                       onChange={(event) => {
                         const material = state.materials.find((item) => item.id === event.target.value);
-                        if (material) selectMaterial(material, null);
-                        else clearCurrentLine();
+                        if (!material) {
+                          clearCurrentLine();
+                          return;
+                        }
+                        if (working) return;
+                        setWorking(true);
+                        void selectMaterial(material, null)
+                          .catch((error) => {
+                            setMessageKind('error');
+                            setMessage(errorMessage(error));
+                          })
+                          .finally(() => setWorking(false));
                       }}
                       className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-[#00288e] disabled:opacity-40">
                       <option value="">Selecione um material…</option>
@@ -1190,6 +1376,7 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
               <label className="mt-4 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
                 Destino obrigatório
                 <select value={destinationId} disabled={retryRequired}
+                  onFocus={() => void loadDestinations()}
                   onChange={(event) => { setDestinationId(event.target.value); setReviewing(false); }}
                   className="mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-[#00288e] disabled:opacity-50">
                   <option value="">Selecione…</option>
@@ -1198,7 +1385,9 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
               </label>
 
               <div className="mt-2 flex gap-2">
-                <input value={newDestinationName} onChange={(event) => setNewDestinationName(event.target.value)}
+                <input value={newDestinationName}
+                  onFocus={() => void loadDestinations()}
+                  onChange={(event) => setNewDestinationName(event.target.value)}
                   disabled={retryRequired} placeholder="Novo destino"
                   className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#00288e] disabled:opacity-40" />
                 <button type="button" onClick={() => void createDestination()}
@@ -1206,7 +1395,10 @@ export function WarehouseMaterialWithdrawal({ workspaceId }: { workspaceId: stri
                   className="rounded-xl border border-slate-200 bg-white px-3 text-[#00288e] disabled:opacity-40" aria-label="Cadastrar destino">
                   <Plus className="h-4 w-4" />
                 </button>
-                <button type="button" onClick={() => setManageDestinations((value) => !value)}
+                <button type="button" onClick={() => {
+                    void loadDestinations();
+                    setManageDestinations((value) => !value);
+                  }}
                   className="rounded-xl border border-slate-200 bg-white px-3 text-slate-600 hover:text-[#00288e]" aria-label="Gerenciar destinos">
                   <Settings2 className="h-4 w-4" />
                 </button>
