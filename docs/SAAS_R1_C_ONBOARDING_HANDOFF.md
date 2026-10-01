@@ -1,9 +1,9 @@
 # SAAS-C — Onboarding Assistido e Credenciais — Handoff da Worker
 
-Data: 2026-10-01  
-Branch: `saas-r1-c-onboarding`  
-Base imutável: `32872d3fc6a781ff129eb4e41ae9b0d45658024a`  
-Integradora de destino: `feat/saas-r1-commercializacao`  
+Data: 2026-10-01
+Branch: `saas-r1-c-onboarding`
+Base imutável: `32872d3fc6a781ff129eb4e41ae9b0d45658024a`
+Integradora de destino: `feat/saas-r1-commercializacao`
 Estado deste documento: **CANDIDATA AOS GATES FINAIS**
 
 ## 1. Escopo executado
@@ -133,10 +133,10 @@ Firebase Auth:
 - nenhuma nova credencial administrativa;
 - nenhum novo provider.
 
-Firestore Rules: **sem alteração**.  
-Indexes: **sem alteração**.  
-Variáveis de ambiente: **sem alteração**.  
-Banco: **sem novo banco, coleção ou documento**.  
+Firestore Rules: **sem alteração**.
+Indexes: **sem alteração**.
+Variáveis de ambiente: **sem alteração**.
+Banco: **sem novo banco, coleção ou documento**.
 `lib/platformAccess.ts`: **sem alteração**.
 
 ## 10. Dependências para outras frentes
