@@ -1,8 +1,8 @@
 # PERF-D — Fila leve de Recebimento / Intake
 
-Data: 2026-10-01  
-Branch trabalhadora: `perf-r3-d-intake-queue`  
-Base congelada da frente: `076a233cf250c95882e78498e89dd2a44d034f74`  
+Data: 2026-10-01
+Branch trabalhadora: `perf-r3-d-intake-queue`
+Base congelada da frente: `076a233cf250c95882e78498e89dd2a44d034f74`
 Branch integradora: `feat/performance-r3-commercializacao`
 
 > Este documento registra exclusivamente a frente PERF-D. Ele não altera o quadro de integração, que permanece sob responsabilidade do Chat Coordenador / Integrador / Avaliador.
