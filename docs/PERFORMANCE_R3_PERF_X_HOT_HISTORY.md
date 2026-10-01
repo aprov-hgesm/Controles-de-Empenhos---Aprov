@@ -1,7 +1,7 @@
 # Performance R3 — PERF-X — Dados quentes vs. histórico de invoices
 
-Data: **2026-10-01**  
-Branch trabalhadora: `perf-r3-x-hot-vs-history`  
+Data: **2026-10-01**
+Branch trabalhadora: `perf-r3-x-hot-vs-history`
 Base funcional: `feat/performance-r3-commercializacao@f4d9b848735d6ea58e7057ff5f7616bd535f643e`
 
 ## Objetivo
