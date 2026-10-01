@@ -192,7 +192,8 @@
     "perf:r3:compare": "node scripts/performance-r3-compare.mjs",
     "perf:r3:runtime:sanitize": "node scripts/performance-r3-runtime-observation.mjs",
     "test:performance-r3-metrics": "node --test scripts/performance-r3-metrics.test.mjs",
-    "verify:performance-r3-metrics": "node scripts/verify-performance-r3-metrics.mjs"
+    "verify:performance-r3-metrics": "node scripts/verify-performance-r3-metrics.mjs",
+    "verify:performance-r3-central-shell": "node scripts/verify-performance-r3-central-shell.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

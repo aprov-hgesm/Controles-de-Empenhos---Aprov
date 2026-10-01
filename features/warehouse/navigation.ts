@@ -64,3 +64,17 @@ export function getWarehouseSection(sectionId: WarehouseSectionId): WarehouseSec
   if (!section) throw new Error('WAREHOUSE_SECTION_NOT_FOUND');
   return section;
 }
+
+export function getWarehouseSectionForPathname(
+  pathname: string
+): WarehouseSectionDefinition {
+  const normalizedPathname =
+    pathname.length > 1 && pathname.endsWith('/')
+      ? pathname.slice(0, -1)
+      : pathname;
+
+  return (
+    WAREHOUSE_SECTIONS.find((candidate) => candidate.href === normalizedPathname)
+    || getWarehouseSection('home')
+  );
+}

@@ -1,5 +1,5 @@
-import { WarehouseProtectedSurface } from '../../../features/warehouse/components/WarehouseProtectedSurface';
+import { WarehouseRouteContent } from '../../../features/warehouse/components/WarehouseRouteContent';
 
 export default function WarehouseRegistrationPage() {
-  return <WarehouseProtectedSurface section="registration" />;
+  return <WarehouseRouteContent section="registration" />;
 }
