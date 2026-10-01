@@ -11,7 +11,7 @@ import { fetchInvoicePdfBlob } from '../../../lib/invoiceDocuments';
 import { loadJsPdfWithAutoTable } from '../../../lib/pdfToolkit';
 import { resolveInstitutionalDocumentIdentity } from '../../../lib/institutionalDocumentProfile';
 import type { WorkspaceInstitutionalProfile } from '../../../lib/platformIdentity';
-import { loadAllInvoicesHistory, loadInvoicesForEmpenho } from '../../../lib/historicalInvoiceQueries';
+import { loadHighestTermoNumero, loadInvoicesForEmpenho } from '../../../lib/historicalInvoiceQueries';
 import { mergeInvoiceCollections } from '../../../lib/invoiceHotHistory';
 import {
   filterInvoicesByReportingPeriod,
@@ -75,19 +75,11 @@ export function useDocumentActions(context:DocumentActionsContext){
 
     let updatedInvoiceWithTR: Invoice = inv;
     if (user) {
-      let completeInvoices: Invoice[];
+      let maxTermoNumero = 0;
       try {
-        const historical = await loadAllInvoicesHistory();
-        if (historical.truncated) {
-          showToast(
-            'O histórico de NFs atingiu o limite de segurança. A numeração do Termo não foi reservada para evitar colisão.',
-            'error'
-          );
-          return;
-        }
-        completeInvoices = mergeInvoiceCollections(invoices, historical.invoices);
+        maxTermoNumero = await loadHighestTermoNumero();
       } catch (error) {
-        console.error('Erro ao validar histórico antes da numeração do Termo:', error);
+        console.error('Erro ao validar numeração histórica antes do Termo:', error);
         showToast(
           'Não foi possível validar a numeração histórica dos Termos de Recebimento.',
           'error'
@@ -95,10 +87,6 @@ export function useDocumentActions(context:DocumentActionsContext){
         return;
       }
 
-      const maxTermoNumero = completeInvoices.reduce(
-        (max, invoice) => invoice.termoNumero && invoice.termoNumero > max ? invoice.termoNumero : max,
-        0
-      );
       updatedInvoiceWithTR = await ensureTermoRecebimentoAssignment(
         user.uid,
         getInvoiceRecordKey(inv),
