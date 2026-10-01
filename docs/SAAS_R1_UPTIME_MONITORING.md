@@ -6,14 +6,14 @@
 
 Endpoint:
 
-\`https://emprovex.com.br/api/health\`
+`https://emprovex.com.br/api/health`
 
 Contrato:
 
 - GET público;
 - HTTP 200 quando o runtime está respondendo;
-- JSON pequeno com \`status=ok\` e timestamp;
-- \`Cache-Control: no-store\`;
+- JSON pequeno com `status=ok` e timestamp;
+- `Cache-Control: no-store`;
 - nenhuma leitura Firestore;
 - nenhum dado operacional;
 - nenhum secret/env;
@@ -27,7 +27,7 @@ O projeto já usa Google Cloud Monitoring. A R1 não adiciona fornecedor de upti
 
 Comando atual documentado pelo Google Cloud CLI:
 
-\`\`\`bash
+```bash
 gcloud monitoring uptime create "EMPROVEX HTTPS" \
   --project=gen-lang-client-0982077967 \
   --resource-type=uptime-url \
@@ -42,9 +42,9 @@ gcloud monitoring uptime create "EMPROVEX HTTPS" \
   --matcher-type=contains-string \
   --period=5 \
   --timeout=10
-\`\`\`
+```
 
-O padrão sem \`--regions\` usa os checkers disponíveis globalmente e evita configuração regional desnecessária.
+O padrão sem `--regions` usa os checkers disponíveis globalmente e evita configuração regional desnecessária.
 
 Este comando **não foi executado por esta branch**.
 
@@ -64,7 +64,7 @@ O Google recomenda associar alerting policy e notification channel ao uptime che
 
 ## 4. SSL
 
-O check usa HTTPS e \`--validate-ssl=true\`.
+O check usa HTTPS e `--validate-ssl=true`.
 
 O Cloud Monitoring também expõe métrica de tempo restante do certificado; a R1 pode adicionar alerta de expiração futuramente se necessário, sem criar outro fornecedor.
 
@@ -83,7 +83,7 @@ Não criar listener Firestore novo para uptime.
 
 ### Limitação conhecida
 
-O painel interno de métricas globais existente filtra o database operacional configurado em \`firebase-applet-config.json\`. O database \`emprovex-warehouse\` deve ter custo/uso acompanhado também pelo Console/Billing do Google Cloud enquanto não houver uma agregação multi-database explicitamente certificada.
+O painel interno de métricas globais existente filtra o database operacional configurado em `firebase-applet-config.json`. O database `emprovex-warehouse` deve ter custo/uso acompanhado também pelo Console/Billing do Google Cloud enquanto não houver uma agregação multi-database explicitamente certificada.
 
 Isso é preferível na R1 a criar uma terceira telemetria paralela.
 

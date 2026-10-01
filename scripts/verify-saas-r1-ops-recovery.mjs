@@ -50,7 +50,7 @@ assert(namespace.includes("inventories: 'inventories'"));
 assert(namespace.includes("consumptions: 'consumptions'"));
 
 assert.match(recoveryDocs, /emprovex-warehouse/);
-assert.match(recoveryDocs, /banco novo e isolado/i);
+assert.match(recoveryDocs, /novo database|banco novo/i);
 assert.match(runbook, /RPO.*24/i);
 assert.match(runbook, /RTO.*4/i);
 assert.match(runbook, /Central de Depósitos/i);

@@ -20,11 +20,11 @@ Preservada.
 
 Cobre no banco principal:
 
-- \`empenhos\`;
-- \`invoices\`;
-- \`comissoes\`;
-- \`cronogramas\`;
-- \`alerts\`;
+- `empenhos`;
+- `invoices`;
+- `comissoes`;
+- `cronogramas`;
+- `alerts`;
 - settings restauráveis de TR/classes.
 
 Características:
@@ -32,7 +32,7 @@ Características:
 - Google Drive do workspace;
 - checksum SHA-256;
 - retenção de até 30 arquivos;
-- restauração \`missing-only\`;
+- restauração `missing-only`;
 - não inclui bytes de PDF;
 - depende de sessão e Drive conectado.
 
@@ -41,13 +41,13 @@ Características:
 Política preparada para os dois bancos:
 
 - operacional principal;
-- \`emprovex-warehouse\`.
+- `emprovex-warehouse`.
 
-O estado externo precisa ser confirmado com \`npm run recovery:verify\`.
+O estado externo precisa ser confirmado com `npm run recovery:verify`.
 
 ## 3. Auditoria da Central de Depósitos
 
-O backup lógico histórico foi criado antes do database dedicado da Central e **não exporta a árvore \`warehouse/*\` do banco \`emprovex-warehouse\`**.
+O backup lógico histórico foi criado antes do database dedicado da Central e **não exporta a árvore `warehouse/*` do banco `emprovex-warehouse`**.
 
 Na R1, os dados logísticos abaixo dependem do backup nativo para recuperação global:
 
@@ -71,19 +71,19 @@ Na R1, os dados logísticos abaixo dependem do backup nativo para recuperação 
 
 Decisão R1: **não** duplicar automaticamente esses domínios no Google Drive. Isso aumentaria leituras, volume, custo e complexidade de restauração de dados fortemente relacionados.
 
-Candidatos a uma exportação lógica futura, somente se houver necessidade comprovada: \`materials\`, \`depots\`, \`locations\`, \`layouts\` e \`settings\`, por serem dados mais humanos/configuracionais. Ledger, saldos, intakes, inventários e consumo permanecem preferencialmente na recuperação nativa por consistência.
+Candidatos a uma exportação lógica futura, somente se houver necessidade comprovada: `materials`, `depots`, `locations`, `layouts` e `settings`, por serem dados mais humanos/configuracionais. Ledger, saldos, intakes, inventários e consumo permanecem preferencialmente na recuperação nativa por consistência.
 
 ## 4. Health endpoint
 
 Endpoint público:
 
-\`GET /api/health\`
+`GET /api/health`
 
 Resposta intencionalmente mínima:
 
-\`\`\`json
+```json
 {"status":"ok","timestamp":"2026-10-01T22:00:00.000Z"}
-\`\`\`
+```
 
 Não consulta Firestore, não acessa workspace, não lê secrets e não expõe versão/commit.
 
@@ -93,7 +93,7 @@ Não consulta Firestore, não acessa workspace, não lê secrets e não expõe v
 
 Verificar:
 
-1. \`https://emprovex.com.br/api/health\`;
+1. `https://emprovex.com.br/api/health`;
 2. Vercel — último deployment e status;
 3. Cloud Monitoring — uptime e alertas;
 4. status público da Vercel/Google Cloud se houver evidência de incidente amplo.
@@ -135,12 +135,12 @@ Se o serviço Google estiver indisponível, evitar migração ou restore precipi
 
 ### 5.4 Rules incorretas
 
-Sintoma típico: \`Missing or insufficient permissions\`.
+Sintoma típico: `Missing or insufficient permissions`.
 
 Verificar:
 
 - qual database foi atingido;
-- ruleset esperado no \`firebase.json\`;
+- ruleset esperado no `firebase.json`;
 - diff do ruleset;
 - último deploy de Rules.
 
@@ -169,10 +169,10 @@ Primeiro separar:
 
 - erro de UI/deploy;
 - erro de permissão/Rules;
-- problema no database \`emprovex-warehouse\`;
+- problema no database `emprovex-warehouse`;
 - inconsistência de domínio.
 
-Não escrever manualmente em \`balances\`, \`locationBalances\` ou \`movements\` para “corrigir” saldo.
+Não escrever manualmente em `balances`, `locationBalances` ou `movements` para “corrigir” saldo.
 
 Se houver perda real de dados, seguir restore nativo em banco isolado antes de qualquer medida destrutiva.
 
@@ -181,9 +181,9 @@ Se houver perda real de dados, seguir restore nativo em banco isolado antes de q
 1. interromper a ação causadora;
 2. registrar banco, workspace, horário e escopo;
 3. preservar evidências/logs;
-4. para perda isolada do banco principal, avaliar primeiro backup lógico \`missing-only\`;
-5. para perda global ou Central, localizar backup nativo \`READY\`;
-6. gerar \`restore-plan\`;
+4. para perda isolada do banco principal, avaliar primeiro backup lógico `missing-only`;
+5. para perda global ou Central, localizar backup nativo `READY`;
+6. gerar `restore-plan`;
 7. restaurar para banco novo;
 8. validar amostras;
 9. decidir recuperação final somente após comparação.
@@ -212,7 +212,7 @@ Rollback de código não desfaz escrita de dados já realizada. Se houve corrup�
 
 Nunca restaurar teste diretamente em um dos bancos de produção.
 
-Usar \`docs/RECUPERACAO_FIRESTORE.md\`.
+Usar `docs/RECUPERACAO_FIRESTORE.md`.
 
 Após restore nativo, revisar Rules, IAM e TTL antes de permitir acesso.
 
@@ -252,7 +252,7 @@ Canal simples controlado pelo fundador é suficiente na R1. Evitar dados sensív
 
 Exigir evidência de:
 
-- um backup \`READY\` em cada banco;
+- um backup `READY` em cada banco;
 - um restore real concluído em database isolado;
 - health público respondendo em produção;
 - uptime HTTPS ativo;

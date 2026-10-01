@@ -8,16 +8,16 @@ Este runbook cobre exclusivamente a camada nativa do Firestore. O backup lógico
 
 Projeto Google Cloud:
 
-\`gen-lang-client-0982077967\`
+`gen-lang-client-0982077967`
 
 Bancos congelados para a R1:
 
-1. \`ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1\` — banco operacional principal.
-2. \`emprovex-warehouse\` — Central de Depósitos.
+1. `ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1` — banco operacional principal.
+2. `emprovex-warehouse` — Central de Depósitos.
 
 Não criar terceiro banco para backup.
 
-A política versionada está em \`ops/firestore-recovery.json\`.
+A política versionada está em `ops/firestore-recovery.json`.
 
 ## 2. Política inicial
 
@@ -38,17 +38,17 @@ Os comandos de leitura podem selecionar os dois bancos.
 
 Os comandos que alteram configuração exigem sempre:
 
-- \`--project\` exato;
-- um único \`--database\` explícito;
-- \`--confirm\` com o resource name completo.
+- `--project` exato;
+- um único `--database` explícito;
+- `--confirm` com o resource name completo.
 
-\`--database=all\` é bloqueado no modo de escrita.
+`--database=all` é bloqueado no modo de escrita.
 
 ## 4. Plano somente leitura
 
-\`\`\`bash
+```bash
 npm run recovery:plan
-\`\`\`
+```
 
 O comando apenas imprime o plano para os dois bancos.
 
@@ -56,61 +56,61 @@ O comando apenas imprime o plano para os dois bancos.
 
 No Cloud Shell:
 
-\`\`\`bash
+```bash
 npm run recovery:status
 npm run recovery:verify
-\`\`\`
+```
 
-\`verify\` somente fica verde quando **cada banco** tiver:
+`verify` somente fica verde quando **cada banco** tiver:
 
 - PITR habilitado;
 - proteção contra exclusão habilitada;
 - exatamente um agendamento diário com retenção esperada;
-- pelo menos um backup no estado \`READY\`.
+- pelo menos um backup no estado `READY`.
 
-A localização é obtida do próprio \`gcloud firestore databases describe\`; não é presumida pelo script.
+A localização é obtida do próprio `gcloud firestore databases describe`; não é presumida pelo script.
 
 ## 6. Aplicar configuração — passo manual externo
 
 ### Banco operacional principal
 
-\`\`\`bash
+```bash
 node scripts/firestore-recovery.mjs apply \
   --project=gen-lang-client-0982077967 \
   --database=ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1 \
   --confirm=projects/gen-lang-client-0982077967/databases/ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1
-\`\`\`
+```
 
 ### Banco logístico
 
-\`\`\`bash
+```bash
 node scripts/firestore-recovery.mjs apply \
   --project=gen-lang-client-0982077967 \
   --database=emprovex-warehouse \
   --confirm=projects/gen-lang-client-0982077967/databases/emprovex-warehouse
-\`\`\`
+```
 
-Esses comandos **não foram executados por esta branch**. Só considerar a camada nativa ativa depois de evidência do Cloud Shell/Console e de pelo menos um backup \`READY\` por banco.
+Esses comandos **não foram executados por esta branch**. Só considerar a camada nativa ativa depois de evidência do Cloud Shell/Console e de pelo menos um backup `READY` por banco.
 
 ## 7. Listar backups
 
 Primeiro descubra a localização real:
 
-\`\`\`bash
+```bash
 gcloud firestore databases describe \
   --project=gen-lang-client-0982077967 \
   --database=emprovex-warehouse \
   --format="value(locationId)"
-\`\`\`
+```
 
 Depois:
 
-\`\`\`bash
+```bash
 gcloud firestore backups list \
   --project=gen-lang-client-0982077967 \
   --location=LOCALIZACAO_REAL \
   --format="table(name,database,state,snapshotTime,expireTime)"
-\`\`\`
+```
 
 Repita a checagem para o banco principal quando necessário.
 
@@ -120,18 +120,18 @@ O Firestore restaura backup nativo em um **novo database**. Nunca use um dos doi
 
 Exemplo de plano seguro:
 
-\`\`\`bash
+```bash
 node scripts/firestore-recovery.mjs restore-plan \
   --database=emprovex-warehouse \
   --backup=projects/gen-lang-client-0982077967/locations/LOCALIZACAO/backups/BACKUP_ID \
   --target=emprovex-restore-2026-10-01
-\`\`\`
+```
 
-O comando acima só imprime o restore e verificações posteriores. Para executar de verdade, copie o comando \`gcloud firestore databases restore\` resultante no Cloud Shell.
+O comando acima só imprime o restore e verificações posteriores. Para executar de verdade, copie o comando `gcloud firestore databases restore` resultante no Cloud Shell.
 
 Depois da operação:
 
-\`\`\`bash
+```bash
 gcloud firestore operations list \
   --project=gen-lang-client-0982077967 \
   --database=emprovex-restore-2026-10-01
@@ -139,7 +139,7 @@ gcloud firestore operations list \
 gcloud firestore databases describe \
   --project=gen-lang-client-0982077967 \
   --database=emprovex-restore-2026-10-01
-\`\`\`
+```
 
 Valide amostras de dados no Firestore Studio/Console e registre:
 
@@ -154,28 +154,28 @@ Valide amostras de dados no Firestore Studio/Console e registre:
 
 ### Banco principal — amostras mínimas
 
-- \`workspaces\`;
-- \`platformAccounts\`;
-- um workspace com \`empenhos\`;
-- \`invoices\`;
-- \`comissoes\`;
-- \`cronogramas\`;
-- \`alerts\`.
+- `workspaces`;
+- `platformAccounts`;
+- um workspace com `empenhos`;
+- `invoices`;
+- `comissoes`;
+- `cronogramas`;
+- `alerts`.
 
 ### Banco logístico — amostras mínimas
 
-Em \`warehouse/{workspaceId}\`:
+Em `warehouse/{workspaceId}`:
 
-- \`materials\`;
-- \`depots\`;
-- \`locations\`;
-- \`movements\`;
-- \`balances\`;
-- \`locationBalances\`;
-- \`layouts\`;
-- \`intakes\`;
-- \`inventories\`;
-- \`consumptions\`.
+- `materials`;
+- `depots`;
+- `locations`;
+- `movements`;
+- `balances`;
+- `locationBalances`;
+- `layouts`;
+- `intakes`;
+- `inventories`;
+- `consumptions`.
 
 ## 9. O que o backup nativo contém e o que exige reaplicação
 
