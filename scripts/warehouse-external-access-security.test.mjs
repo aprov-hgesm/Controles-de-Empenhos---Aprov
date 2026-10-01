@@ -210,6 +210,90 @@ async function main() {
   assert.equal(own.exists(), true);
   console.log('  [PASS] ALLOW — setor A lê o próprio workspace');
 
+  const intakeQueueStateRef = doc(
+    a.db,
+    'warehouse',
+    'workspace-a',
+    'intakeQueueIndex',
+    'state'
+  );
+  await setDoc(intakeQueueStateRef, {
+    schemaVersion: 'warehouse_intake_queue_index_v1',
+    workspaceId: 'workspace-a',
+    ug: '160500',
+    cutoffAt: '2026-09-23T00:00:00.000Z',
+    bootstrapComplete: true,
+    watermarkRegisteredAt: '2026-09-30T00:00:00.000Z',
+    updatedBy: a.user.uid,
+    updatedAt: serverTimestamp(),
+  });
+  console.log('  [PASS] ALLOW — setor A mantém o estado derivado da fila no próprio workspace');
+
+  const queueCandidateId = 'intake_' + 'c'.repeat(64);
+  const queueCandidateRef = doc(
+    a.db,
+    'warehouse',
+    'workspace-a',
+    'intakeQueueIndex',
+    queueCandidateId
+  );
+  await setDoc(queueCandidateRef, {
+    schemaVersion: 'warehouse_intake_queue_candidate_v1',
+    id: queueCandidateId,
+    workspaceId: 'workspace-a',
+    ug: '160500',
+    invoiceRecordKey: 'nf-fila-leve-001',
+    invoiceId: '3001',
+    empenhoId: '2026NE000777',
+    itemId: 'ITEM-FILA-001',
+    registeredAt: '2026-09-30T00:00:00.000Z',
+    active: true,
+    deactivatedAt: null,
+    updatedBy: a.user.uid,
+    updatedAt: serverTimestamp(),
+  });
+  assert.equal((await getDoc(queueCandidateRef)).exists(), true);
+  console.log('  [PASS] ALLOW — setor A grava e lê candidato derivado da própria fila');
+
+  await expectDenied('setor B não lê índice da fila do workspace A', () =>
+    getDoc(
+      doc(
+        b.db,
+        'warehouse',
+        'workspace-a',
+        'intakeQueueIndex',
+        queueCandidateId
+      )
+    )
+  );
+
+  await expectDenied('setor A não grava candidato da fila com UG divergente', () =>
+    setDoc(
+      doc(
+        a.db,
+        'warehouse',
+        'workspace-a',
+        'intakeQueueIndex',
+        'intake_' + 'd'.repeat(64)
+      ),
+      {
+        schemaVersion: 'warehouse_intake_queue_candidate_v1',
+        id: 'intake_' + 'd'.repeat(64),
+        workspaceId: 'workspace-a',
+        ug: '160501',
+        invoiceRecordKey: 'nf-fila-leve-cross-ug',
+        invoiceId: '3002',
+        empenhoId: '2026NE000778',
+        itemId: 'ITEM-FILA-002',
+        registeredAt: '2026-09-30T00:00:00.000Z',
+        active: true,
+        deactivatedAt: null,
+        updatedBy: a.user.uid,
+        updatedAt: serverTimestamp(),
+      }
+    )
+  );
+
   const destinationId = 'dest_' + 'd'.repeat(32);
   const destinationRef = doc(
     a.db,
