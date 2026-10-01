@@ -5,6 +5,7 @@ import {
   getCountFromServer,
   getDocs,
   limit,
+  orderBy,
   query,
   startAfter,
   where,
@@ -182,4 +183,19 @@ export async function loadInvoiceCollectionSummaryCounts(): Promise<InvoiceColle
     total: totalSnapshot.data().count,
     completed: completedSnapshot.data().count,
   };
+}
+
+export async function loadHighestTermoNumero(): Promise<number> {
+  const scope = getCurrentOperationalScope();
+  const snapshot = await getDocs(
+    query(
+      operationalCollectionRef(scope, 'invoices'),
+      orderBy('termoNumero', 'desc'),
+      limit(1)
+    )
+  );
+  recordWorkspaceDocumentReads(scope, snapshot.size);
+  if (snapshot.empty) return 0;
+  const value = snapshot.docs[0].data()?.termoNumero;
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
