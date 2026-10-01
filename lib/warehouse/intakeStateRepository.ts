@@ -371,54 +371,59 @@ async function listCandidateInvoiceMovementEvidence(
   }
 
   const path = warehouseDomainPath(scope.workspaceId, 'movements');
+  const perInvoiceLimit = 51;
 
   try {
-    for (let index = 0; index < uniqueKeys.length; index += 30) {
-      const keys = uniqueKeys.slice(index, index + 30);
-      const snapshot = await getDocs(
-        query(
-          collection(db, path),
-          where('source.invoiceRecordKey', 'in', keys)
-        )
+    for (let index = 0; index < uniqueKeys.length; index += 10) {
+      const keys = uniqueKeys.slice(index, index + 10);
+      const snapshots = await Promise.all(
+        keys.map(async (invoiceRecordKey) => ({
+          invoiceRecordKey,
+          snapshot: await getDocs(
+            query(
+              collection(db, path),
+              where('source.invoiceRecordKey', '==', invoiceRecordKey),
+              limit(perInvoiceLimit)
+            )
+          ),
+        }))
       );
-      recordWarehouseDocumentReads(workspaceId, snapshot.size);
 
-      const counts = new Map<string, number>();
-      for (const entry of snapshot.docs) {
-        const data = entry.data() as Record<string, unknown>;
-        const source =
-          data.source && typeof data.source === 'object' && !Array.isArray(data.source)
-            ? data.source as Record<string, unknown>
-            : null;
-        if (
-          !source
-          || source.kind !== 'INVOICE'
-          || typeof source.invoiceRecordKey !== 'string'
-          || !Array.isArray(source.itemIds)
-        ) {
-          continue;
+      for (const { invoiceRecordKey, snapshot } of snapshots) {
+        recordWarehouseDocumentReads(workspaceId, snapshot.size);
+        if (snapshot.size >= perInvoiceLimit) {
+          coverageLimitedInvoiceKeys.add(invoiceRecordKey);
         }
 
-        const invoiceRecordKey = source.invoiceRecordKey;
-        const itemIds = source.itemIds.filter(
-          (itemId): itemId is string => typeof itemId === 'string'
-        );
-        const current = byInvoiceRecordKey.get(invoiceRecordKey) || [];
-        current.push({
-          id: entry.id,
-          invoiceRecordKey,
-          itemIds,
-        });
-        byInvoiceRecordKey.set(invoiceRecordKey, current);
-        counts.set(invoiceRecordKey, (counts.get(invoiceRecordKey) || 0) + 1);
-      }
+        for (const entry of snapshot.docs) {
+          const data = entry.data() as Record<string, unknown>;
+          const source =
+            data.source && typeof data.source === 'object' && !Array.isArray(data.source)
+              ? data.source as Record<string, unknown>
+              : null;
+          if (
+            !source
+            || source.kind !== 'INVOICE'
+            || source.invoiceRecordKey !== invoiceRecordKey
+            || !Array.isArray(source.itemIds)
+          ) {
+            continue;
+          }
 
-      for (const [invoiceRecordKey, count] of counts) {
-        if (count >= WAREHOUSE_INTAKE_QUEUE_LEGACY_MOVEMENTS_LIMIT) {
-          coverageLimitedInvoiceKeys.add(invoiceRecordKey);
+          const itemIds = source.itemIds.filter(
+            (itemId): itemId is string => typeof itemId === 'string'
+          );
+          const current = byInvoiceRecordKey.get(invoiceRecordKey) || [];
+          current.push({
+            id: entry.id,
+            invoiceRecordKey,
+            itemIds,
+          });
+          byInvoiceRecordKey.set(invoiceRecordKey, current);
         }
       }
     }
+
     return { byInvoiceRecordKey, coverageLimitedInvoiceKeys };
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
