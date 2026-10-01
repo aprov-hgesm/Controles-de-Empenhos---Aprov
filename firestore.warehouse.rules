@@ -878,70 +878,37 @@ service cloud.firestore {
     function validWarehouseIntakeQueueIndexEntry(workspaceId, entryId) {
       let data = request.resource.data;
       return data is map
+        && data.workspaceId == workspaceId
+        && data.ug is string
+        && data.ug.matches('^[0-9]{6}$')
+        && warehouseUgMatchesAccess(workspaceId, data.ug)
+        && data.updatedBy == request.auth.uid
+        && data.updatedAt == request.time
         && (
           (
             entryId == 'state'
-            && data.keys().hasOnly([
-              'schemaVersion', 'workspaceId', 'ug', 'cutoffAt',
-              'bootstrapComplete', 'watermarkRegisteredAt',
-              'updatedBy', 'updatedAt'
-            ])
-            && data.keys().hasAll([
-              'schemaVersion', 'workspaceId', 'ug', 'cutoffAt',
-              'bootstrapComplete', 'watermarkRegisteredAt',
-              'updatedBy', 'updatedAt'
-            ])
             && data.schemaVersion == 'warehouse_intake_queue_index_v1'
-            && data.workspaceId == workspaceId
-            && data.ug is string
-            && data.ug.matches('^[0-9]{6}$')
-            && warehouseUgMatchesAccess(workspaceId, data.ug)
-            && (data.cutoffAt == null || data.cutoffAt is string)
             && data.bootstrapComplete == true
-            && (data.watermarkRegisteredAt == null || data.watermarkRegisteredAt is string)
-            && data.updatedBy == request.auth.uid
-            && data.updatedAt == request.time
+            && (data.cutoffAt == null || data.cutoffAt is string)
+            && (
+              data.watermarkRegisteredAt == null
+              || data.watermarkRegisteredAt is string
+            )
           )
           || (
             entryId.matches('^intake_[a-f0-9]{64}$')
-            && data.keys().hasOnly([
-              'schemaVersion', 'id', 'workspaceId', 'ug',
-              'invoiceRecordKey', 'invoiceId', 'empenhoId', 'itemId',
-              'registeredAt', 'active', 'deactivatedAt',
-              'updatedBy', 'updatedAt'
-            ])
-            && data.keys().hasAll([
-              'schemaVersion', 'id', 'workspaceId', 'ug',
-              'invoiceRecordKey', 'invoiceId', 'empenhoId', 'itemId',
-              'registeredAt', 'active', 'deactivatedAt',
-              'updatedBy', 'updatedAt'
-            ])
             && data.schemaVersion == 'warehouse_intake_queue_candidate_v1'
             && data.id == entryId
-            && data.workspaceId == workspaceId
-            && data.ug is string
-            && data.ug.matches('^[0-9]{6}$')
-            && warehouseUgMatchesAccess(workspaceId, data.ug)
             && data.invoiceRecordKey is string
-            && data.invoiceRecordKey.size() > 0
-            && data.invoiceRecordKey.size() <= 180
             && data.invoiceId is string
-            && data.invoiceId.size() > 0
-            && data.invoiceId.size() <= 120
             && data.empenhoId is string
-            && data.empenhoId.size() > 0
-            && data.empenhoId.size() <= 120
             && data.itemId is string
-            && data.itemId.size() > 0
-            && data.itemId.size() <= 120
             && (data.registeredAt == null || data.registeredAt is string)
             && data.active is bool
             && (
               data.deactivatedAt == null
               || data.deactivatedAt == request.time
             )
-            && data.updatedBy == request.auth.uid
-            && data.updatedAt == request.time
           )
         );
     }
