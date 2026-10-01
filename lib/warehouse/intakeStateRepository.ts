@@ -4,10 +4,14 @@ import {
   documentId,
   getDocs,
   limit,
+  orderBy,
   query,
   runTransaction,
   serverTimestamp,
+  startAfter,
   where,
+  type DocumentData,
+  type QueryDocumentSnapshot,
 } from 'firebase/firestore';
 
 import { recordWarehouseDocumentReads } from './telemetry';
@@ -53,6 +57,7 @@ export const WAREHOUSE_INTAKE_QUEUE_EMPENHOS_LIMIT = 250;
 export const WAREHOUSE_INTAKE_QUEUE_INVOICES_LIMIT = 300;
 export const WAREHOUSE_INTAKE_QUEUE_STATES_LIMIT = 500;
 export const WAREHOUSE_INTAKE_QUEUE_LEGACY_MOVEMENTS_LIMIT = 250;
+const WAREHOUSE_INTAKE_HISTORY_MAX_PAGES = 40;
 
 interface BoundedResult<T> {
   items: T[];
@@ -162,26 +167,39 @@ async function listOperationalBounded<T>(
 ): Promise<BoundedResult<T>> {
   const { scope } = currentScopeForWorkspace(workspaceId);
   const path = getOperationalCollectionPath(scope, collectionName);
+  const pageSize = Math.max(1, maxResults);
+  const items: T[] = [];
+  let cursor: QueryDocumentSnapshot<DocumentData> | null = null;
 
   try {
-    const bounded = Math.max(1, maxResults);
-    const snapshot = await getDocs(
-      query(
-        operationalCollectionRef(scope, collectionName),
-        limit(bounded + 1)
-      )
-    );
-    recordWarehouseDocumentReads(workspaceId, snapshot.size);
-    return {
-      items: snapshot.docs.slice(0, bounded).map((entry) => {
-        const data = entry.data() as T & { id?: string; recordKey?: string };
-        if (collectionName === 'invoices') {
-          return { ...data, recordKey: data.recordKey || entry.id } as T;
-        }
-        return { ...data, id: data.id || entry.id } as T;
-      }),
-      truncated: snapshot.size > bounded,
-    };
+    for (let page = 0; page < WAREHOUSE_INTAKE_HISTORY_MAX_PAGES; page += 1) {
+      const snapshot = await getDocs(
+        query(
+          operationalCollectionRef(scope, collectionName),
+          orderBy(documentId(), 'asc'),
+          ...(cursor ? [startAfter(cursor)] : []),
+          limit(pageSize)
+        )
+      );
+      recordWarehouseDocumentReads(workspaceId, snapshot.size);
+      items.push(
+        ...snapshot.docs.map((entry) => {
+          const data = entry.data() as T & { id?: string; recordKey?: string };
+          if (collectionName === 'invoices') {
+            return { ...data, recordKey: data.recordKey || entry.id } as T;
+          }
+          return { ...data, id: data.id || entry.id } as T;
+        })
+      );
+
+      if (snapshot.size < pageSize) {
+        return { items, truncated: false };
+      }
+      cursor = snapshot.docs.at(-1) || null;
+      if (!cursor) return { items, truncated: false };
+    }
+
+    return { items, truncated: true };
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
     throw error;
@@ -284,24 +302,37 @@ async function listPersistedIntakes(
 ): Promise<BoundedResult<PersistedIntake>> {
   const scope = currentScopeForWorkspace(workspaceId);
   const path = warehouseDomainPath(scope.workspaceId, 'intakes');
+  const items: PersistedIntake[] = [];
+  let cursor: QueryDocumentSnapshot<DocumentData> | null = null;
 
   try {
-    const bounded = WAREHOUSE_INTAKE_QUEUE_STATES_LIMIT;
-    const snapshot = await getDocs(
-      query(collection(db, path), limit(bounded + 1))
-    );
-    recordWarehouseDocumentReads(workspaceId, snapshot.size);
-    return {
-      items: snapshot.docs.slice(0, bounded).flatMap((entry) => {
+    for (let page = 0; page < WAREHOUSE_INTAKE_HISTORY_MAX_PAGES; page += 1) {
+      const snapshot = await getDocs(
+        query(
+          collection(db, path),
+          orderBy(documentId(), 'asc'),
+          ...(cursor ? [startAfter(cursor)] : []),
+          limit(WAREHOUSE_INTAKE_QUEUE_STATES_LIMIT)
+        )
+      );
+      recordWarehouseDocumentReads(workspaceId, snapshot.size);
+      for (const entry of snapshot.docs) {
         const parsed = parsePersistedIntake(
           scope.workspaceId,
           entry.id,
           entry.data() as Record<string, unknown>
         );
-        return parsed ? [parsed] : [];
-      }),
-      truncated: snapshot.size > bounded,
-    };
+        if (parsed) items.push(parsed);
+      }
+
+      if (snapshot.size < WAREHOUSE_INTAKE_QUEUE_STATES_LIMIT) {
+        return { items, truncated: false };
+      }
+      cursor = snapshot.docs.at(-1) || null;
+      if (!cursor) return { items, truncated: false };
+    }
+
+    return { items, truncated: true };
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
     throw error;
