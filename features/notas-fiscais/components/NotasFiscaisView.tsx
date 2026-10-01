@@ -212,12 +212,10 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
     return { byKey, faltaComissao, faltaTesouraria, concluidas };
   }, [empenhoClasses, empenhosById, invoices]);
 
-  const totalInvoiceCount = historyLoaded
-    ? invoices.length
-    : Math.max(invoices.length, summaryCounts?.total ?? 0);
-  const completedInvoiceCount = historyLoaded
-    ? invoiceDerived.concluidas
-    : Math.max(invoiceDerived.concluidas, summaryCounts?.completed ?? 0);
+  const totalInvoiceCount = summaryCounts?.total
+    ?? (historyLoaded && !historyTruncated ? invoices.length : null);
+  const completedInvoiceCount = summaryCounts?.completed
+    ?? (historyLoaded && !historyTruncated ? invoiceDerived.concluidas : null);
   const availableNfMonths = React.useMemo(
     () => Array.from(new Set(
       invoices
@@ -439,7 +437,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                           </select>
                         </div>
 
-                        {totalInvoiceCount > 0 && (
+                        {(totalInvoiceCount ?? invoices.length) > 0 && (
                           <button
                             onClick={handleDeleteAllInvoices}
                             className="h-11 px-3.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-sm whitespace-nowrap"
@@ -471,7 +469,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                           <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
                             nfTramitacaoFilter === 'Todos' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
                           }`}>
-                            {totalInvoiceCount}
+                            {totalInvoiceCount ?? '…'}
                           </span>
                         </button>
 
@@ -525,7 +523,7 @@ export function NotasFiscaisView({ context }: NotasFiscaisViewProps) {
                           <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                             nfTramitacaoFilter === 'Concluidas' ? 'bg-white/30 text-white' : 'bg-emerald-200 text-emerald-900'
                           }`}>
-                            {completedInvoiceCount}
+                            {completedInvoiceCount ?? '…'}
                           </span>
                         </button>
                       </div>
