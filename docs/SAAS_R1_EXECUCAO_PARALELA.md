@@ -42,13 +42,14 @@ Contratos congelados:
 - billing canônico é o Bloco 22;
 - estados comerciais existentes são preservados;
 - trial 30 dias;
-- R$ 50/mês;
+- **R$ 70/mês no Plano Completo**;
 - 5º dia útil;
 - 10 dias de tolerância;
 - pagamento externo/manual;
 - suspensão manual;
 - inadimplência nunca apaga dados;
 - fundador isento;
+- VIP externo = estado interno `exempt`, preço R$ 0 e acesso completo;
 - no public signup;
 - no Mercado Pago API/webhook;
 - no redesign multi-seat;
@@ -82,17 +83,26 @@ Não deve editar:
 - páginas legais, exceto links de navegação neutros.
 
 Entregas:
-1. configurar link público de regularização sem credenciais;
-2. exposição segura das instruções comerciais;
-3. UX externa de trial/pendência;
-4. referência administrativa opcional do pagamento;
-5. confirmação idempotente de competência;
-6. histórico/auditoria preservados;
-7. manter billing sem enforcement até SAAS-DS.
+1. migrar o preço padrão de R$ 50,00 para **R$ 70,00**, sem reescrever competências históricas;
+2. consolidar **Plano Completo** como único plano, sem limitação comercial por módulo;
+3. implementar marcação administrativa **VIP / Isento** reutilizando `exempt`;
+4. VIP externo deve operar com R$ 0, sem cobrança/atraso, mantendo acesso completo;
+5. permitir remover VIP e retornar ao preço comercial vigente de R$ 70,00;
+6. configurar link público de regularização sem credenciais;
+7. exposição segura das instruções comerciais;
+8. UX externa de trial/pendência;
+9. referência administrativa opcional do pagamento;
+10. confirmação idempotente de competência;
+11. histórico/auditoria preservados;
+12. manter billing sem enforcement até SAAS-DS.
 
 Aceite:
 - nenhum segredo de pagamento no cliente;
 - founder exempt;
+- VIP externo usa `exempt`, R$ 0 e acesso completo;
+- nenhuma feature é bloqueada por tier/plano;
+- preço novo padrão = 7000 centavos;
+- competências históricas não são reprecificadas;
 - trial existente preservado;
 - pagamento confirmado não duplica competência;
 - status não deleta dados;
@@ -228,6 +238,7 @@ Propriedade:
 
 Missão:
 - transformar `suspended/canceled` em bloqueio real somente por ação administrativa;
+- garantir que `exempt`/VIP permaneça operacionalmente equivalente a cliente regular ativo, sem cobrança;
 - sincronizar `workspaces.status` e `platformAccounts.status`;
 - preservar billing como fonte comercial e status de acesso como enforcement;
 - revogar sessões;
@@ -327,6 +338,14 @@ Browser E2E continua sob demanda conforme risco.
 | SAAS-I | B + C + DL + E + DS | — |
 | SAAS-P | SAAS-I aprovada | — |
 | SAAS-J | piloto + correções | — |
+
+## 9.1 Regra de banco de dados
+
+Workers **não devem criar um terceiro banco Firestore para o SaaS R1**.
+
+Billing, onboarding, aceite legal, identidade e lifecycle permanecem no banco principal. A Central de Depósitos continua no `emprovex-warehouse`.
+
+Se um worker acreditar que novo banco é necessário, deve interromper e devolver a decisão ao Coordenador com evidência de isolamento/escala/regionalização. Novas Rules não justificam banco novo por si só.
 
 ## 10. Regras de branch
 
