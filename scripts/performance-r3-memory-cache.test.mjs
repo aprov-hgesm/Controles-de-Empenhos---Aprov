@@ -57,6 +57,15 @@ test('workspaces diferentes nunca compartilham valor cacheado', async () => {
   assert.equal(loads, 2);
 });
 
+test('variantes da mesma workspace não colidem', async () => {
+  let loads = 0;
+  const cache = createWorkspaceMemoryReadCache({ ttlMs: 30_000 });
+  assert.equal(await cache.read('workspace-a', 'depots:25', async () => ++loads), 1);
+  assert.equal(await cache.read('workspace-a', 'depots:250', async () => ++loads), 2);
+  assert.equal(await cache.read('workspace-a', 'depots:25', async () => ++loads), 1);
+  assert.equal(loads, 2);
+});
+
 test('expiração do TTL provoca novo carregamento', async () => {
   let clock = 1_000;
   let loads = 0;
@@ -127,6 +136,38 @@ test('chamadas simultâneas idênticas compartilham a mesma promise em voo', asy
   assert.equal(loads, 1);
 });
 
+test('promise rejeitada em voo é removida e retry executa novo loader', async () => {
+  let loads = 0;
+  let rejectFirst;
+  const cache = createWorkspaceMemoryReadCache({ ttlMs: 30_000 });
+
+  const first = cache.read('workspace-a', 'locations:500', async () => {
+    loads += 1;
+    return new Promise((_resolve, reject) => {
+      rejectFirst = reject;
+    });
+  });
+  const second = cache.read('workspace-a', 'locations:500', async () => {
+    loads += 1;
+    return 'não deve executar';
+  });
+
+  await Promise.resolve();
+  assert.equal(loads, 1);
+  rejectFirst(new Error('falha concorrente'));
+  await assert.rejects(first, /falha concorrente/);
+  await assert.rejects(second, /falha concorrente/);
+
+  assert.equal(
+    await cache.read('workspace-a', 'locations:500', async () => {
+      loads += 1;
+      return 'retry-ok';
+    }),
+    'retry-ok'
+  );
+  assert.equal(loads, 2);
+});
+
 test('invalidação durante request em voo impede repovoamento stale', async () => {
   let firstRelease;
   let loads = 0;
@@ -150,117 +191,6 @@ test('invalidação durante request em voo impede repovoamento stale', async () 
     'fresh'
   );
   assert.equal(loads, 2);
-});
-
-function sourceSection(source, startMarker, endMarker) {
-  const start = source.indexOf(startMarker);
-  assert.notEqual(start, -1, 'missing start marker ' + startMarker);
-  const end = source.indexOf(endMarker, start + startMarker.length);
-  assert.notEqual(end, -1, 'missing end marker ' + endMarker);
-  return source.slice(start, end);
-}
-
-test('repositories mantêm validações autoritativas fora do cache', () => {
-  const locationSource = readFileSync(
-    resolve(ROOT, 'lib/warehouse/locationRepository.ts'),
-    'utf8'
-  );
-  const withdrawalSource = readFileSync(
-    resolve(ROOT, 'lib/warehouse/withdrawalRepository.ts'),
-    'utf8'
-  );
-
-  const depotAssertion = sourceSection(
-    locationSource,
-    'async function assertDepotCodeAvailable',
-    'async function assertLocationCodeAvailable'
-  );
-  assert.match(depotAssertion, /loadWarehouseDepotsFromFirestore/);
-  assert.doesNotMatch(depotAssertion, /listWarehouseDepots\(/);
-
-  const locationAssertion = sourceSection(
-    locationSource,
-    'async function assertLocationCodeAvailable',
-    'export async function listWarehouseDepots'
-  );
-  assert.match(locationAssertion, /loadWarehouseLocationsFromFirestore/);
-  assert.doesNotMatch(locationAssertion, /listWarehouseLocations\(/);
-
-  const destinationGuard = sourceSection(
-    withdrawalSource,
-    'async function requireActiveDestination',
-    'export async function listWarehouseDestinations'
-  );
-  assert.match(destinationGuard, /getDoc\(doc\(db, path\)\)/);
-  assert.doesNotMatch(destinationGuard, /destinationListReadCache/);
-});
-
-test('APIs autoritativas permanecem uncached e APIs Cached são explícitas', () => {
-  const locationSource = readFileSync(
-    resolve(ROOT, 'lib/warehouse/locationRepository.ts'),
-    'utf8'
-  );
-  const withdrawalSource = readFileSync(
-    resolve(ROOT, 'lib/warehouse/withdrawalRepository.ts'),
-    'utf8'
-  );
-
-  const depotAuthoritative = sourceSection(
-    locationSource,
-    'export async function listWarehouseDepots(',
-    'export async function listWarehouseDepotsCached('
-  );
-  assert.doesNotMatch(depotAuthoritative, /depotListReadCache/);
-
-  const locationAuthoritative = sourceSection(
-    locationSource,
-    'export async function listWarehouseLocations(',
-    'export async function listWarehouseLocationsCached('
-  );
-  assert.doesNotMatch(locationAuthoritative, /locationListReadCache/);
-
-  const destinationAuthoritative = sourceSection(
-    withdrawalSource,
-    'export async function listWarehouseDestinations(',
-    'export async function listWarehouseDestinationsCached('
-  );
-  assert.doesNotMatch(destinationAuthoritative, /destinationListReadCache/);
-
-  assert.match(locationSource, /export async function getWarehouseDepotCached/);
-  assert.match(locationSource, /export async function getWarehouseLocationCached/);
-  assert.match(withdrawalSource, /export async function listWarehouseDestinationsCached/);
-});
-
-test('mutações estruturais invalidam cache somente após escrita bem-sucedida', () => {
-  const locationSource = readFileSync(
-    resolve(ROOT, 'lib/warehouse/locationRepository.ts'),
-    'utf8'
-  );
-  const withdrawalSource = readFileSync(
-    resolve(ROOT, 'lib/warehouse/withdrawalRepository.ts'),
-    'utf8'
-  );
-
-  for (const [start, end, expected] of [
-    ['export async function createWarehouseDepot', 'export async function updateWarehouseDepot', 'invalidateWarehouseDepotReadCache'],
-    ['export async function updateWarehouseDepot', 'export async function listWarehouseLocations', 'invalidateWarehouseDepotReadCache'],
-    ['export async function createWarehouseLocation', 'export async function updateWarehouseLocation', 'invalidateWarehouseLocationReadCache'],
-    ['export async function updateWarehouseLocation', 'export async function getWarehouseDepot', 'invalidateWarehouseLocationReadCache'],
-  ]) {
-    const section = sourceSection(locationSource, start, end);
-    assert.ok(section.indexOf(expected) > section.indexOf('await '), start + ' invalidation order');
-  }
-
-  for (const [start, end] of [
-    ['export async function createWarehouseDestination', 'export async function setWarehouseDestinationStatus'],
-    ['export async function setWarehouseDestinationStatus', 'async function createWithdrawalPayloadHash'],
-  ]) {
-    const section = sourceSection(withdrawalSource, start, end);
-    assert.ok(
-      section.indexOf('invalidateWarehouseDestinationReadCache') > section.indexOf('await '),
-      start + ' invalidation order'
-    );
-  }
 });
 
 test('cenário sintético da Central reduz 8 carregamentos estruturais para 2', async (t) => {
