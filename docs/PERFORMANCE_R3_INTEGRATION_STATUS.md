@@ -21,7 +21,7 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 
 | Frente | Branch prevista | Estado | Dependência | HEAD trabalhador | Observação |
 | --- | --- | --- | --- | --- | --- |
-| PERF-A | `perf-r3-a-core-bundle` | EM ANDAMENTO | baseline `076a233`; pausa coordenada para realinhamento | `5b92235` | Lazy root avançado; Core PASS/TS 0; não perseguir guards cruzados de PERF-E/B/C/H |
+| PERF-A | `perf-r3-a-core-bundle` | INTEGRADA | baseline `076a233` | `3193b84` | Bundle root integrado em `15eadb0`; `/` 460 → 333 kB (-27,61%); CI combinado verde |
 | PERF-B | `perf-r3-b-central-bundle` | INTEGRADA | baseline comum | `7b7aee1` | Bundle Central; -48,2% nas rotas principais |
 | PERF-C | `perf-r3-c-outbound-demand-loading` | INTEGRADA | baseline `076a233` | `c263ce3` | Saída sob demanda integrada em `e33e260`; abertura fresca 0 reads específicos da superfície |
 | PERF-D | `perf-r3-d-intake-queue` | EM ANDAMENTO | baseline congelado `076a233`; pausa coordenada | `a514728` | CI isolado chegou ao Diff Hygiene; único erro: trailing whitespace em 3 linhas de doc; não reconciliar PERF-B/PERF-H |
@@ -58,21 +58,26 @@ Regra de retomada:
 
 Na integração, o coordenador preservará semanticamente PERF-B + PERF-D no componente compartilhado e PERF-H + PERF-D no `package.json`.
 
-## Coordenação especial — PERF-A
+## Coordenação especial — PERF-A — encerrada
 
-Em 2026-10-01 a PERF-A foi colocada em **pausa coordenada de realinhamento**, mantendo estado `EM ANDAMENTO`, porque o code splitting do root passou a expor falhas de guards de naturezas diferentes.
+A pausa coordenada da PERF-A foi encerrada após handoff final no HEAD `3193b84117c6c4936ba774ee41c0d8df11b4e3fe`.
 
-Regra aplicada:
-- corrigir na PERF-A apenas regressões próprias e guards diretamente desatualizados pela mudança `app/page.tsx → OperationalWorkspace`;
-- não alterar internals de outra frente para obter CI verde;
-- falhas provocadas pela combinação com PERF-B/C/E/H já integradas são responsabilidade do coordenador/PERF-I;
-- o HEAD `5b92235` não está aprovado nem integrado; será retomado com prompt específico e handoff novo.
+Resultado:
+- ganho isolado confirmado: `/` **460 → 333 kB** de First Load JS (-127 kB / -27,61%);
+- shared isolado: **103 kB**;
+- Application CI isolado contra a base congelada: **PASS**;
+- incompatibilidade cruzada de `verify:empenho-class-config` foi resolvida pelo coordenador atualizando apenas o guard para a derivação memoizada já válida da PERF-E;
+- novo Application CI contra a integradora atual: **PASS** integral;
+- Production build, TypeScript, Diff Hygiene e gates 16–21: **PASS**;
+- integração técnica: `15eadb0f35f7420c88e6cefdf7cddba84db4cde2`.
 
-Evidência atual:
-- EMPROVEX Core Protection no HEAD atual: **PASS**;
-- TypeScript no último Application CI: **0 erros**;
-- falha atual do Application CI: guard de configuração de classes de empenho, cuja expressão textual esperada não corresponde à forma reorganizada de Notas Fiscais já afetada por PERF-E;
-- não autorizar a PERF-A a modificar Notas Fiscais para resolver essa incompatibilidade cruzada.
+Build combinado após reconciliação:
+- `/`: **333 kB**;
+- rotas principais da Central: **300 kB**;
+- `/admin`: **327 kB**;
+- shared: **104 kB**.
+
+Decisão: **INTEGRADA**.
 
 ## Registro de propriedade
 
@@ -279,6 +284,49 @@ Pendência planejada:
 - executar `perf:r3:collect`, `perf:r3:compare` e `perf:r3:budget` sobre o estado combinado durante PERF-I/PERF-J.
 
 Decisão: **INTEGRADA**.
+
+
+
+### PERF-A — Bundle do EMPROVEX principal
+
+Branch: `perf-r3-a-core-bundle`  
+HEAD revisado: `3193b84117c6c4936ba774ee41c0d8df11b4e3fe`  
+Commit de integração: `15eadb0f35f7420c88e6cefdf7cddba84db4cde2`.
+
+Métrica:
+- `/`: **460 kB → 333 kB** First Load JS;
+- redução: **127 kB / 27,61%**;
+- shared isolado: **103 kB**.
+
+Arquitetura:
+- `app/page.tsx` deixou de importar antecipadamente as grandes superfícies operacionais;
+- `OperationalWorkspace` passou a ser host lazy;
+- grandes views usam boundaries dinâmicos próprios;
+- shell/Home/auth permanecem no caminho inicial;
+- estado efêmero continua fora do boundary lazy para preservar continuidade de UI.
+
+Validação:
+- Application CI isolado: **PASS**;
+- Core Protection: **PASS**;
+- TypeScript: **PASS**;
+- production build: **PASS**;
+- guards estruturais próprios: **PASS**;
+- incompatibilidade cruzada com o guard de classes foi resolvida apenas no guard, preservando a lógica memoizada da PERF-E;
+- novo Application CI combinado contra a integradora: **PASS**;
+- Diff Hygiene e gates 16–21: **PASS**.
+
+Build combinado:
+- `/`: 333 kB;
+- Central principal: 300 kB;
+- `/admin`: 327 kB;
+- shared: 104 kB.
+
+Conflitos:
+- nenhum dos 10 arquivos da PERF-A havia sido alterado por B/C/E/H;
+- conflito era semântico em guard textual, resolvido pelo coordenador.
+
+Decisão: **INTEGRADA**.
+
 
 ## Regra
 
