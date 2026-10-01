@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs';
+import './verify-performance-r3-hot-history.mjs';
 const plan=readFileSync('lib/operationalSubscriptionPlan.ts','utf8');
 const realtime=readFileSync('hooks/useOperationalRealtimeCollections.ts','utf8');
 const classes=readFileSync('hooks/useEmpenhoClasses.ts','utf8');
