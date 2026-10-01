@@ -26,7 +26,7 @@ Este é o quadro operacional vivo da Performance R3. Ele não substitui o memori
 | PERF-C | `perf-r3-c-outbound-demand-loading` | INTEGRADA | baseline `076a233` | `c263ce3` | Saída sob demanda integrada em `e33e260`; abertura fresca 0 reads específicos da superfície |
 | PERF-D | `perf-r3-d-intake-queue` | EM ANDAMENTO | baseline comum | — | Intake seletivo |
 | PERF-E | `perf-r3-e-render-cpu` | INTEGRADA | baseline `076a233` | `149f7c3` | CPU/renderização integrada em `9d5ff58`; gates locais verdes |
-| PERF-H | `perf-r3-h-metrics-budget` | EM ANDAMENTO | baseline comum | — | Métricas/budget |
+| PERF-H | `perf-r3-h-metrics-budget` | INTEGRADA | baseline `076a233` | `fb5f452` | Métricas/budget integradas em `a686410`; CI bloqueante ainda não ativado |
 | PERF-F | `perf-r3-f-memory-cache` | BLOQUEADA | PERF-C integrada; aguarda PERF-D | — | Metade da dependência satisfeita; iniciar somente após D estabilizar leituras restantes |
 | PERF-G | `perf-r3-g-central-shell` | LIVRE | PERF-B integrada | — | Segunda onda liberada; preservar fronteiras dinâmicas da PERF-B |
 | PERF-X | `perf-r3-x-hot-vs-history` | BLOQUEADA | medições A–G | — | Opcional |
@@ -182,6 +182,60 @@ Conflitos:
 Dependência:
 - PERF-C satisfaz sua parte da pré-condição da PERF-F;
 - PERF-F continua bloqueada até a PERF-D estabilizar as leituras de intake/estruturas compartilhadas.
+
+Decisão: **INTEGRADA**.
+
+
+
+### PERF-H — Métricas e Budget
+
+Branch: `perf-r3-h-metrics-budget`  
+HEAD revisado: `fb5f45296e28bafcad5489860e143b434c1ebf77`  
+Commit de integração: `a6864106c779382f5919a5f1a1dcea812bd896a5`.
+
+Entregas:
+- baseline versionado em `ops/performance-r3-baseline.json`;
+- budgets em `ops/performance-r3-budgets.json`;
+- cenários em `ops/performance-r3-scenarios.json`;
+- parser do build Next.js;
+- comparação baseline × candidato;
+- budget checker;
+- sanitização de observações runtime;
+- relatório JSON/Markdown;
+- scripts npm `perf:r3:*`;
+- guard próprio e testes.
+
+Baseline oficial:
+- `/`: 460 kB;
+- `/adm-deposito`: 579 kB;
+- `/admin`: 326 kB;
+- shared: 103 kB;
+- fonte: Application CI bem-sucedido da `main@22d9fe5f...`.
+
+Política:
+- runtime/Web Vitals permanecem informativos/warning;
+- thresholds bloqueantes existem apenas no checker explícito;
+- **não foram ligados ao Application CI**;
+- nenhum Firestore read/listener/write adicional;
+- `.performance-r3/` é local e ignorado pelo Git.
+
+Validação recebida:
+- parser/budget/sanitização: **3/3 PASS**;
+- formato real Next 15: **PASS**;
+- log GitHub Actions timestampado: **PASS**;
+- baseline real: **PASS**;
+- comparação JSON/Markdown: **PASS**;
+- guard PERF-H: **READY**;
+- syntax check dos novos `.mjs`: **PASS**.
+
+Revisão do coordenador:
+- `package.json` e `.gitignore` estavam inalterados na integradora desde a base da PERF-H;
+- Application CI não foi modificado;
+- sem sobreposição com PERF-B/C/E;
+- nenhum `.ts/.tsx` alterado.
+
+Pendência planejada:
+- executar `perf:r3:collect`, `perf:r3:compare` e `perf:r3:budget` sobre o estado combinado durante PERF-I/PERF-J.
 
 Decisão: **INTEGRADA**.
 
