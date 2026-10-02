@@ -330,3 +330,13 @@ Próximos passos seguros:
 3. preparar/validar os controles externos de recovery antes da certificação final;
 4. preservar a exigência de um workspace novo não-VIP para provar cobrança no piloto.
 
+Dry-run da coorte VIP legado concluído com sucesso:
+
+- `aprovisionamento-2-b-fv`: selecionado;
+- `aprovisionamento-3-gac-ap`: selecionado;
+- `aprovisionamento-teste`: selecionado;
+- 0 não resolvidos;
+- nenhuma escrita executada.
+
+P2 está pronta para `apply` produtivo, que depende de autorização explícita.
+
