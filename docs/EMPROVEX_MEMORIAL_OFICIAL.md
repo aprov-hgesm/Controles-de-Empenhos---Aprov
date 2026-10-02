@@ -1,9 +1,9 @@
 # EMPROVEX — Memorial Oficial do Repositório
 
-Última atualização: **2026-10-02 — SAAS-I integrada e aprovada / SAAS-P liberada / Central Móvel R1 ativa em desenvolvimento coordenado**
+Última atualização: **2026-10-02 — SAAS-P iniciada após auditoria P0 / Central Móvel R1 em desenvolvimento coordenado**
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Branch integradora do SaaS R1: `feat/saas-r1-commercializacao`
-Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A, SAAS-B, SAAS-C, SAAS-DL, SAAS-E, SAAS-DS e SAAS-I INTEGRADAS; candidato SaaS R1 combinado certificado no repositório; SAAS-P LIBERADA para piloto controlado**
+Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A, SAAS-B, SAAS-C, SAAS-DL, SAAS-E, SAAS-DS e SAAS-I INTEGRADAS; candidato SaaS R1 combinado certificado no repositório; SAAS-P INICIADA para preparação e piloto controlado**
 
 Este documento é a **porta de entrada canônica para continuidade do EMPROVEX como produto**. Ele resume o estado vigente e aponta para os documentos históricos/especializados. O histórico detalhado não deve ser apagado. Para comportamento publicado, `main` prevalece. Para o ciclo SaaS R1 em desenvolvimento, prevalecem `feat/saas-r1-commercializacao`, este memorial e os quatro documentos canônicos `SAAS_R1_*`.
 
@@ -1929,3 +1929,20 @@ A sincronização entre os programas deve ser verificada:
 A existência do desenvolvimento paralelo **não é, por si só, motivo para bloquear SaaS-P nem MOBILE-A/B ou ondas futuras**. O bloqueio só deve ocorrer quando existir conflito técnico ou contratual concreto que possa causar regressão, perda de segurança, duplicação de fonte de verdade ou comportamento diferente entre desktop e mobile.
 
 Ao gerar novos prompts de worker/coordenador SaaS, incluir sempre a instrução: **“verifique o estado da Central Móvel R1 e preserve/reconcilie os contratos compartilhados antes de alterar domínio transversal.”**
+
+### Atualização operacional — SAAS-P iniciada em 2026-10-02
+
+A etapa **SAAS-P — Piloto Comercial Controlado** foi aberta após auditoria P0.
+
+Documento vivo específico:
+- `docs/SAAS_R1_P_PILOTO_CONTROLADO.md`.
+
+O snapshot de abertura confirmou:
+- `feat/saas-r1-commercializacao@f8fc2b60...`;
+- `main@e90f92ac...`;
+- PR #219 mergeado;
+- gates técnicos SAAS-I verdes;
+- pendências externas de backup/restore/uptime ainda abertas;
+- MOBILE-A e MOBILE-B em execução por PRs draft, sem integração funcional ainda na integradora Mobile.
+
+A SAAS-P pode avançar em preparação, inventário e auditoria. Piloto real completo depende de participantes reais e de autorização explícita para as mudanças produtivas indispensáveis.
