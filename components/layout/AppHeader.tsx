@@ -12,6 +12,7 @@ import { AppShellLogo } from './chrome/AppShellLogo';
 import { AppShellSignature } from './chrome/AppShellSignature';
 import { useWorkspaceBillingAccount } from '../../hooks/useWorkspaceBillingAccount';
 import { calculateTrialDaysRemaining, isTrialExpired } from '../../lib/billing';
+import { HGESM_WORKSPACE_ID } from '../../lib/hgesmWorkspace';
 
 interface AppHeaderProps {
   customLogo: string | null;
@@ -35,6 +36,8 @@ export function AppHeader({
   const currentEmail = currentUser?.email || null;
   const canSwitchProfile = hasDualProfileAccess(currentEmail);
   const { account: billingAccount } = useWorkspaceBillingAccount(workspaceContext);
+  const isFounderWorkspace = workspaceContext.status === 'sector'
+    && workspaceContext.workspaceId === HGESM_WORKSPACE_ID;
   const trialExpired = billingAccount?.status === 'trial'
     ? isTrialExpired(billingAccount)
     : false;
@@ -143,10 +146,15 @@ export function AppHeader({
           <div
             data-testid="billing-exempt-badge"
             className="emprovex-header-control border-blue-300/15 bg-blue-400/[0.07] text-blue-100"
-            title="Plano Completo EMPROVEX sem cobrança enquanto a isenção estiver ativa."
+            title={isFounderWorkspace
+              ? 'Conta fundadora do EMPROVEX, isenta de cobrança.'
+              : 'Plano Completo EMPROVEX sem cobrança enquanto a isenção VIP estiver ativa.'
+            }
           >
             <Sparkles className="emprovex-header-control__icon h-4 w-4" aria-hidden="true" />
-            <span className="hidden sm:inline">VIP / Isento</span>
+            <span className="hidden sm:inline">
+              {isFounderWorkspace ? 'Fundador / Isento' : 'VIP / Isento'}
+            </span>
           </div>
         )}
 

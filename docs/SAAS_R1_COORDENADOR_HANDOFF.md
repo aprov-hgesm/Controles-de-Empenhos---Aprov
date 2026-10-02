@@ -25,7 +25,8 @@ Ler, nesta ordem:
 - SaaS R1 possui branch integradora própria.
 - SAAS-A foi concluída como freeze documental.
 - Onda 1 foi **INICIADA em 2026-10-01 por autorização explícita do usuário**.
-- SAAS-B, SAAS-C, SAAS-DL e SAAS-E estão autorizadas para execução paralela em branches exclusivas.
+- **SAAS-B foi concluída, certificada e integrada** na branch coordenadora via PR #216 / squash `f91cda645...`.
+- SAAS-C, SAAS-DL e SAAS-E continuam em execução paralela em branches exclusivas.
 - SAAS-DS continua bloqueada até integração semântica de B+C.
 
 ## 3. Decisão central
@@ -71,7 +72,7 @@ Reusar:
 
 Existe **um único plano comercial** na R1: Plano Completo. Não criar tier de recursos, versão limitada ou módulo adicional pago.
 
-A SAAS-B deve migrar o baseline técnico atual de R$ 50 para R$ 70 e adicionar a operação administrativa de VIP/isento, preservando histórico.
+A SAAS-B já migrou o baseline técnico de R$ 50 para R$ 70, implementou VIP/isento e preservou competências históricas. Esse contrato agora está integrado e deve ser tratado como dependência fixa pelas próximas frentes.
 
 ## 5. Estratégia de pagamento
 
@@ -115,8 +116,8 @@ Não criar terceiro banco Firestore para o SaaS R1.
 
 Quatro workers independentes estão autorizados:
 
-### B
-Billing/regularização.
+### B — INTEGRADA
+Billing/regularização concluída em `7e288e79...` e integrada via PR #216 / `f91cda645...`.
 
 ### C
 Onboarding/reset de senha.
@@ -131,9 +132,9 @@ Eles devem trabalhar simultaneamente quando possível, sem editar domínio alhei
 
 ## 8. Depois da Onda 1
 
-1. revisar handoffs;
-2. integrar frentes isoladas;
-3. integrar B e C semanticamente;
+1. receber os handoffs restantes de C, DL e E;
+2. integrar frentes isoladas após revisão;
+3. integrar C semanticamente sobre a coordenadora que já contém B;
 4. atualizar Integration Status;
 5. abrir SAAS-DS;
 6. executar segurança/enforcement;
@@ -179,3 +180,31 @@ O Coordenador só encerra o ciclo após:
 - decisão explícita do usuário sobre abertura comercial.
 
 Até lá, `main` e produção não são destino automático das workers.
+
+
+## 12. Integração SAAS-B
+
+A SAAS-B foi validada pelo Coordenador e integrada.
+
+Evidências:
+- worker HEAD `7e288e79e1514f91c9f0099392302ec7efd5cefe`;
+- PR #216;
+- squash `f91cda64582cc148bac340086be56163d366dd35`;
+- Application CI #886, Core Protection #173 e Recovery #573: SUCCESS;
+- billing tests 6/6;
+- Firestore multi-tenant security: SUCCESS.
+
+Contratos agora canônicos no código da integradora:
+- preço 7000 centavos;
+- Plano Completo único;
+- VIP = `exempt`;
+- founder = `exempt`;
+- histórico financeiro não reprecificado;
+- regularização externa por Link/Pix;
+- `/regularizacao` pública;
+- sem webhook/API;
+- sem enforcement antes da SAAS-DS.
+
+A falha do preview Vercel foi somente `build-rate-limit` e não representa falha da implementação.
+
+Ajuste semântico do Coordenador: no cabeçalho, founder deve aparecer como `Fundador / Isento`; `VIP / Isento` fica reservado ao cliente externo isento.

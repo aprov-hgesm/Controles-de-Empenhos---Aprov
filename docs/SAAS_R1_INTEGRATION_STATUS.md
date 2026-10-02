@@ -3,7 +3,7 @@
 Última atualização: **2026-10-01**
 Produção: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Integrador: `feat/saas-r1-commercializacao`
-Estado global: **SAAS-A CONGELADA / ONDA 1 INICIADA EM 2026-10-01 / B + C + DL + E ATIVADAS EM PARALELO**
+Estado global: **SAAS-A CONGELADA / SAAS-B INTEGRADA / SAAS-C + SAAS-DL + SAAS-E EM EXECUÇÃO / SAAS-DS AGUARDA B+C**
 
 ## 1. Baseline
 
@@ -20,7 +20,7 @@ Estado global: **SAAS-A CONGELADA / ONDA 1 INICIADA EM 2026-10-01 / B + C + DL +
 | Frente | Branch | Dependência | Estado | Integração |
 | --- | --- | --- | --- | --- |
 | SAAS-A Fundação/contratos | integradora | R3 | **CONGELADA** | documentação canônica |
-| SAAS-B Billing/pagamento | `saas-r1-b-billing-payment` | A | **ATIVADA** | worker em execução / aguardando handoff |
+| SAAS-B Billing/pagamento | `saas-r1-b-billing-payment` | A | **CONCLUÍDA** | **INTEGRADA — PR #216 / `f91cda645...`** |
 | SAAS-C Onboarding | `saas-r1-c-onboarding` | A | **ATIVADA** | worker em execução / aguardando handoff |
 | SAAS-DL Legal/aceite | `saas-r1-dl-legal-acceptance` | A | **ATIVADA** | worker em execução / aguardando handoff |
 | SAAS-E Operação/recovery | `saas-r1-e-ops-recovery` | A | **ATIVADA** | worker em execução / aguardando handoff |
@@ -53,8 +53,8 @@ Não alterar em worker:
 ## 4. Achados de baseline que orientam a execução
 
 1. `billingAccounts` já é fonte de verdade comercial; não criar coleção concorrente.
-2. O código atual ainda possui baseline de R$ 50,00; SAAS-B deve migrar o default para R$ 70,00.
-3. `exempt` será reutilizado para VIP externo, evitando novo status de domínio.
+2. SAAS-B já migrou o default para R$ 70,00 e preservou competências históricas materializadas.
+3. `exempt` já é o contrato integrado para VIP externo e fundador, evitando novo status de domínio.
 4. `platformAccess` não lê billing e isso é desejável para custo/isolamento.
 5. Rules operacionais já exigem workspace e conta ativos; enforcement deve reutilizar esse contrato.
 6. Provisionamento já cria billing junto do tenant.
@@ -89,17 +89,31 @@ O Coordenador deve:
 - impedir que uma worker resolva conflitos alterando domínio de outra;
 - manter SAAS-DS bloqueada até B e C estarem semanticamente integradas.
 
-Próximo gate: receber os primeiros handoffs da Onda 1.
+SAAS-B já foi recebida, auditada e integrada.
+
+Próximo gate:
+- receber SAAS-C, SAAS-DL e SAAS-E;
+- SAAS-DS só poderá ser liberada depois da integração semântica da SAAS-C sobre a base que já contém SAAS-B.
 
 ## 7. Registro de integrações
 
-Ainda vazio. O Coordenador deve acrescentar para cada merge:
-- worker HEAD;
-- PR/commit de integração;
-- conflitos resolvidos;
-- testes;
-- riscos residuais;
-- novo HEAD da integradora.
+### SAAS-B — integrada em 2026-10-01
+
+- worker: `saas-r1-b-billing-payment`;
+- base: `32872d3fc6a781ff129eb4e41ae9b0d45658024a`;
+- worker HEAD: `7e288e79e1514f91c9f0099392302ec7efd5cefe`;
+- PR: #216;
+- integração squash: `f91cda64582cc148bac340086be56163d366dd35`;
+- Application CI #886: SUCCESS;
+- Core Protection #173: SUCCESS;
+- Recovery #573: SUCCESS;
+- build/typecheck/diff hygiene: PASS;
+- segurança multi-tenant: PASS;
+- Vercel preview: falha externa `build-rate-limit`, não bloqueante para integração;
+- enforcement: deliberadamente não ativado;
+- ajuste do Coordenador: rótulo do fundador diferenciado de VIP no cabeçalho.
+
+A integração não foi promovida para `main` nem para produção.
 
 ## 8. Estado de produção
 

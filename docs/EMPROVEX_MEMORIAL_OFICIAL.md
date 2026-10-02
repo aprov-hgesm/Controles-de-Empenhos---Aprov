@@ -3,7 +3,7 @@
 Última atualização: **2026-10-01 — SaaS R1 Onda 1 iniciada**
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Branch integradora do SaaS R1: `feat/saas-r1-commercializacao`
-Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A congelada; Onda 1 do SaaS R1 AUTORIZADA E INICIADA com SAAS-B, SAAS-C, SAAS-DL e SAAS-E em execução paralela coordenada**
+Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A congelada; SAAS-B INTEGRADA; SAAS-C, SAAS-DL e SAAS-E seguem em execução paralela; SAAS-DS ainda bloqueada até B+C**
 
 Este documento é a **porta de entrada canônica para continuidade do EMPROVEX como produto**. Ele resume o estado vigente e aponta para os documentos históricos/especializados. O histórico detalhado não deve ser apagado. Para comportamento publicado, `main` prevalece. Para o ciclo SaaS R1 em desenvolvimento, prevalecem `feat/saas-r1-commercializacao`, este memorial e os quatro documentos canônicos `SAAS_R1_*`.
 
@@ -612,7 +612,7 @@ A fase SAAS-DS, depois de billing/onboarding integrados, sincronizará suspensã
 - o Chat Coordenador permanece responsável por handoffs, conflitos, integração semântica e atualização deste memorial.
 
 Frentes ativadas:
-- **SAAS-B — Billing/regularização:** ATIVADA;
+- **SAAS-B — Billing/regularização:** **INTEGRADA** na branch coordenadora via PR #216; Plano Completo R$ 70, VIP/Isento, regularização pública e confirmação manual certificados;
 - **SAAS-C — Onboarding:** ATIVADA;
 - **SAAS-DL — Legal/aceite:** ATIVADA;
 - **SAAS-E — Operação/backup/uptime:** ATIVADA.
@@ -693,7 +693,7 @@ Ao concluir uma rodada relevante:
 O usuário autorizou o início imediato do desenvolvimento paralelo coordenado.
 
 Chats trabalhadores autorizados:
-- SAAS-B — Billing, Plano Completo, VIP e regularização;
+- SAAS-B — Billing, Plano Completo, VIP e regularização — **CONCLUÍDA E INTEGRADA**;
 - SAAS-C — Onboarding e credenciais;
 - SAAS-DL — Legal, Privacidade e aceite versionado;
 - SAAS-E — Operação, backup, uptime e recuperação.
@@ -708,3 +708,37 @@ Regras de largada:
 - handoff completo é obrigatório para integração;
 - somente o Coordenador integra;
 - nenhuma publicação em produção ocorre sem autorização explícita posterior do usuário.
+
+
+### Registro de integração SAAS-B — 2026-10-01
+
+Worker:
+- branch: `saas-r1-b-billing-payment`;
+- base: `32872d3fc6a781ff129eb4e41ae9b0d45658024a`;
+- HEAD certificado: `7e288e79e1514f91c9f0099392302ec7efd5cefe`;
+- PR #216;
+- integração squash na coordenadora: `f91cda64582cc148bac340086be56163d366dd35`.
+
+Certificação da worker:
+- Application CI #886: **SUCCESS**;
+- EMPROVEX Core Protection #173: **SUCCESS**;
+- Recovery guardrails #573: **SUCCESS**;
+- Production Build: **PASS**;
+- TypeScript: **PASS**;
+- Diff Hygiene: **PASS**;
+- Firestore multi-tenant security: **PASS**;
+- testes SAAS-B: **6/6 PASS**.
+
+Resultado funcional integrado:
+- Plano Completo = R$ 70/mês;
+- VIP externo = `exempt` / R$ 0 / acesso completo;
+- fundador = `exempt` / R$ 0;
+- competências antigas preservam valor histórico;
+- Link de Pagamento/Pix continuam externos ao EMPROVEX;
+- rota pública `/regularizacao`;
+- confirmação administrativa idempotente;
+- billing permanece `observe`, sem enforcement operacional.
+
+O status Vercel do PR falhou apenas por `build-rate-limit`; isso não foi classificado como regressão de código e não houve deploy de produção.
+
+Na revisão do Coordenador, o único ajuste pós-merge foi de apresentação: o cabeçalho operacional passou a distinguir `Fundador / Isento` de `VIP / Isento`. O domínio comercial não foi alterado.
