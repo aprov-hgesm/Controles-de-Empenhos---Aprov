@@ -340,3 +340,69 @@ SAAS-P somente pode ser marcada **CONCLUÍDA** quando houver:
 - pendências explicitamente aceitas ou resolvidas.
 
 Somente então liberar **SAAS-J — Certificação Final**.
+
+## 14. Evidência operacional P2/P3 — 2026-10-02
+
+### 14.1 P2 — inventário VIP legado e allowlist congelada
+
+Execução real em Windows/PowerShell, autenticada no projeto `gen-lang-client-0982077967`:
+
+- `npm run saas:r1:legacy-vip -- status`: **PASS**;
+- candidatos automáticos: **3**;
+- não resolvidos automaticamente: **0**;
+- fundador excluído: `hgesm-aprov`.
+
+Allowlist VIP legado aprovada humanamente e congelada para a próxima etapa:
+
+- `aprovisionamento-2-b-fv`;
+- `aprovisionamento-3-gac-ap`;
+- `aprovisionamento-teste`.
+
+Decisão explícita sobre `aprovisionamento-teste`:
+
+- permanece **VIP legado permanente**;
+- continuará sendo o perfil real de teste funcional de um usuário externo;
+- um futuro perfil de teste **não-VIP** poderá ser criado posteriormente para validar trial, cobrança, pagamento, suspensão e regularização;
+- esse novo perfil não-VIP **não será criado agora** e não altera a coorte legada congelada.
+
+`apply` da migração VIP **NÃO EXECUTADO**. Próximo passo seguro de P2: `dry-run` com a allowlist acima.
+
+### 14.2 P3 — estado real de recovery
+
+Execução real:
+
+- `npm run recovery:status`: **executado com sucesso**;
+- certificação global: **ready = false**.
+
+Banco operacional principal:
+
+- PITR: **false**;
+- delete protection: **false**;
+- agenda diária de backup: **false**;
+- backup READY: **false**;
+- backups concluídos: **0**.
+
+Banco `emprovex-warehouse`:
+
+- PITR: **false**;
+- delete protection: **true**;
+- agenda diária de backup: **false**;
+- backup READY: **false**;
+- backups concluídos: **0**.
+
+Nenhum controle produtivo foi alterado nesta auditoria.
+
+### 14.3 Correção PILOT-OPS — Windows gcloud
+
+Foi corrigida a incompatibilidade do launcher `gcloud.cmd` com os scripts Node no Windows:
+
+- worker: `saas-p-fix-ops-windows-gcloud`;
+- PR: **#222**;
+- CI, Core Protection, Recovery e Legal: **SUCCESS**;
+- Browser: **skipped por escopo**;
+- validação Windows: **PASS**;
+- squash integrado em `feat/saas-r1-commercializacao`: `ea2d389f726ae989ae88f7fc7359c690b23dfb13`;
+- impacto MOBILE-R1: **nenhum delta funcional**.
+
+O Vercel associado ao PR permaneceu limitado por build-rate-limit, sem evidência de regressão funcional dessa correção.
+
