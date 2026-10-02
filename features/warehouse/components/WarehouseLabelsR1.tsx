@@ -10,6 +10,7 @@ import {
 
 import {
   buildWarehouseLabelsForScope,
+  warehouseLabelKindLabel,
   WAREHOUSE_LABEL_PRESETS,
   type WarehouseLabelSheetPreset,
 } from '../../../lib/warehouse/labels';
@@ -113,7 +114,7 @@ export function WarehouseLabelsR1({
   const pages = labels.length === 0
     ? 0
     : Math.ceil(labels.length / selectedPreset.perPage);
-
+  const previewLabel = labels[0] ?? null;
 
   function buildPdf() {
     if (!selectedDepot) {
@@ -298,21 +299,39 @@ export function WarehouseLabelsR1({
                     <p className="text-[8px] font-medium text-gray-600">ADM DEPÓSITO</p>
                   </div>
                   <span className="rounded border border-black px-2 py-0.5 text-[8px] font-black text-black">
-                    LOCAL
+                    {previewLabel ? warehouseLabelKindLabel(previewLabel.kind) : 'LOCAL'}
                   </span>
                 </div>
-                <p className="mt-5 font-mono text-2xl font-black tracking-tight text-black">EST-01</p>
-                <p className="mt-1 text-sm font-black text-black">Estante 01</p>
-                <p className="mt-3 text-[9px] text-gray-700">
-                  {includeHierarchy ? 'Gêneros Secos › Estante 01' : ' '}
+                <p className="mt-5 font-mono text-2xl font-black tracking-tight text-black">
+                  {previewLabel?.code ?? 'EST-01'}
                 </p>
-                <div className="mt-4 border-t border-gray-400 pt-2 text-[8px] text-gray-600">
-                  {includeUg ? 'UG 160416 · ' : ''}hgesm-aprov
+                <p className="mt-1 text-sm font-black text-black">
+                  {previewLabel?.name ?? 'Estante 01'}
+                </p>
+                <p className="mt-3 min-h-4 text-[9px] text-gray-700">
+                  {includeHierarchy && previewLabel
+                    ? previewLabel.hierarchy.join(' › ')
+                    : ' '}
+                </p>
+                <div className="mt-3 rounded border border-gray-400 px-2 py-1.5 text-center">
+                  <p className="text-[7px] font-black uppercase tracking-[0.14em] text-gray-500">
+                    Código físico · Code 128 no PDF
+                  </p>
+                  <p className="mt-1 break-all font-mono text-[7px] font-bold tracking-tight text-black">
+                    {previewLabel?.physicalBarcode ?? 'EPX1…'}
+                  </p>
+                </div>
+                <div className="mt-3 border-t border-gray-400 pt-2 text-[8px] text-gray-600">
+                  {previewLabel && previewLabel.kind !== 'DEPOT'
+                    ? 'DEP ' + previewLabel.depotCode + ' · '
+                    : ''}
+                  {includeUg && previewLabel ? 'UG ' + previewLabel.ug + ' · ' : ''}
+                  {previewLabel?.workspaceId ?? 'workspace'}
                 </div>
               </div>
 
               <p className="mt-3 text-[10px] leading-4 text-gray-400">
-                A amostra representa a linguagem visual. O PDF final adapta tipografia e margens conforme o tamanho escolhido.
+                A amostra mostra também a identidade física estável. O PDF final renderiza o código em Code 128 e adapta tipografia, barras e margens ao tamanho escolhido.
               </p>
             </section>
 
