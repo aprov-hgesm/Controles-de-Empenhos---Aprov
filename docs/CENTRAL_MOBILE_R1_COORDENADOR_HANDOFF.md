@@ -21,8 +21,11 @@ Governar a Central Móvel R1 pelo método oficial de execução paralela, sem du
 
 ## 3. Baseline congelado
 
-Branch criada de:
+Branch integradora criada de:
 `saas-r1-i-integration@78d3e9afeeb4176a8d6423cdd8e65d32435ba0a9`
+
+Freeze documental usado como base idêntica de MOBILE-A e MOBILE-B:
+`feat/central-mobile-r1@53e28b81874ee1b7ce0bd484cc7a97537aa99473`
 
 O baseline tinha:
 - Application CI #908 verde;
@@ -61,7 +64,7 @@ Obrigatório:
 
 **LIBERADA após o freeze MOBILE-0.**
 
-Criar/usar apenas:
+Branches já criadas na mesma base `53e28b818...`:
 - MOBILE-A — `mobile-r1-a-platform-scanner`;
 - MOBILE-B — `mobile-r1-b-location-labels`.
 
