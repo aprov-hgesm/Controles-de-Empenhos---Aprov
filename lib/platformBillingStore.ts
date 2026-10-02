@@ -444,7 +444,10 @@ export async function setBillingExemption(
       },
       metadata: {
         commercialExemption: exempt,
-        presentation: exempt ? 'VIP / Isento' : 'Plano Completo',
+        exemptionSource: updated.exemptionSource || null,
+        presentation: updated.exemptionSource === 'legacy_vip'
+          ? 'VIP legado / Isento'
+          : exempt ? 'VIP / Isento' : 'Plano Completo',
         enforcementActive: false,
       },
     });
