@@ -33,7 +33,9 @@ requireText(access, 'ACCOUNT_NOT_FOUND', 'Diagnóstico não identifica ausência
 requireText(access, 'UID_MISMATCH', 'Diagnóstico não identifica divergência de UID.');
 requireText(access, 'WORKSPACE_NOT_FOUND', 'Diagnóstico não identifica ausência do workspace.');
 requireText(access, 'WORKSPACE_EMAIL_MISMATCH', 'Diagnóstico não identifica divergência de e-mail do workspace.');
-requireText(operationalData, 'Falha de autorização do workspace [', 'Tela de login não expõe o código seguro de diagnóstico.');
+requireText(operationalData, 'describeSectorAuthorizationFailure', 'Login não traduz falhas internas de identidade para mensagens humanas.');
+requireText(operationalData, 'SectorAccessExperienceError', 'Login não preserva a separação entre diagnóstico interno e mensagem ao usuário.');
+forbidText(operationalData, 'Falha de autorização do workspace [', 'Login voltou a expor código técnico de autorização ao usuário.');
 requireText(
   operationalData,
   'const [workspaceContext, setWorkspaceContext] = useState<ResolvedWorkspaceContext>',

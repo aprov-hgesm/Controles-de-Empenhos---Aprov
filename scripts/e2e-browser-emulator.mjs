@@ -7,6 +7,7 @@ const appBase = 'http://127.0.0.1:3100';
 const warehouseEmulatorBase = 'http://127.0.0.1:8081';
 const playwrightCli = 'node_modules/@playwright/test/cli.js';
 const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+const supportsProcessGroups = process.platform !== 'win32';
 
 async function waitForEndpoint(url, timeoutMs = 60_000) {
   const startedAt = Date.now();
@@ -47,10 +48,25 @@ function run(command, args, env = process.env) {
   });
 }
 
-async async function stopChild(child) {
+function signalChildTree(child, signal) {
   if (!child || child.exitCode !== null || child.signalCode !== null) return;
 
-  child.kill('SIGTERM');
+  if (supportsProcessGroups && child.pid) {
+    try {
+      process.kill(-child.pid, signal);
+      return;
+    } catch {
+      // Fallback para o processo direto se o grupo já tiver sido desmontado.
+    }
+  }
+
+  child.kill(signal);
+}
+
+async function stopChild(child) {
+  if (!child || child.exitCode !== null || child.signalCode !== null) return;
+
+  signalChildTree(child, 'SIGTERM');
 
   const exitedGracefully = await new Promise((resolve) => {
     const fallback = setTimeout(() => resolve(false), 4000);
@@ -62,7 +78,7 @@ async async function stopChild(child) {
 
   if (exitedGracefully || child.exitCode !== null || child.signalCode !== null) return;
 
-  child.kill('SIGKILL');
+  signalChildTree(child, 'SIGKILL');
   await new Promise((resolve) => {
     const fallback = setTimeout(resolve, 2000);
     child.once('exit', () => {
@@ -96,6 +112,7 @@ const warehouseEmulator = spawn(
   {
     cwd: root,
     env: warehouseEnv,
+    detached: supportsProcessGroups,
     stdio: ['ignore', 'pipe', 'pipe'],
   }
 );
@@ -128,6 +145,7 @@ try {
     ['node_modules/next/dist/bin/next', 'dev', '--hostname', '127.0.0.1', '--port', '3100'],
     {
       cwd: root,
+      detached: supportsProcessGroups,
       env: {
         ...process.env,
         FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080',

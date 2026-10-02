@@ -16,6 +16,8 @@ import { MobileNavigation } from '../components/layout/MobileNavigation';
 import { EmprovexLogin } from '../components/auth/EmprovexLogin';
 import { EmprovexAuthLoading } from '../components/auth/EmprovexAuthLoading';
 import { LoginSuccessTransition } from '../components/auth/LoginSuccessTransition';
+import { SectorCredentialModal } from '../components/auth/SectorCredentialModal';
+import { SectorFirstAccessChecklist } from '../components/auth/SectorFirstAccessChecklist';
 import type { OperationalActiveTab } from '../lib/operationalSubscriptionPlan';
 import { countPendingNotices } from '../features/avisos/domain/noticeLifecycle';
 import { canAccessWarehouseModule } from '../lib/platformModuleAccess';
@@ -31,6 +33,8 @@ export default function Home() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [showLoginSuccessTransition, setShowLoginSuccessTransition] = useState(false);
+  const [credentialModalOpen, setCredentialModalOpen] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -56,10 +60,33 @@ export default function Home() {
     activeOperationalDataReady, activeRealtimeCollectionCount, inicioSnapshot,
     empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices,
     comissoes, setComissoes, cronogramas, setCronogramas,
-    signInUser, signInSectorUser, signOutUser,
+    signInUser, signInSectorUser, requestSectorPasswordReset,
+    changeSectorPassword, signOutUser,
     uniquePregaos, uniqueEmpenhoYears, uniqueNfMonths,
     formatDateTime, formatDateOnly
   } = operationalData;
+
+  const isExternalSectorUser = (
+    workspaceContext.status === 'sector'
+    && workspaceContext.resolutionSource === 'platform-directory'
+  );
+
+  const handleChangeSectorPassword = async (
+    currentPassword: string,
+    newPassword: string
+  ) => {
+    if (changingPassword) return;
+
+    setChangingPassword(true);
+    try {
+      await changeSectorPassword(currentPassword, newPassword);
+      showToast('Senha alterada com sucesso.', 'success');
+    } catch (error) {
+      throw error;
+    } finally {
+      setChangingPassword(false);
+    }
+  };
 
   const { customLogo } = usePlatformBranding();
 
@@ -164,6 +191,7 @@ export default function Home() {
         toast={toast}
         onCloseToast={() => setToast(null)}
         onSectorLogin={handleSectorLogin}
+        onRequestPasswordReset={requestSectorPasswordReset}
         onFounderLogin={handleFounderLogin}
       />
     );
@@ -187,12 +215,35 @@ export default function Home() {
 
       <ToastNotification toast={toast} onClose={() => setToast(null)} />
 
+      {isExternalSectorUser && user && workspaceContext.status === 'sector' && (
+        <>
+          <SectorCredentialModal
+            open={credentialModalOpen}
+            email={user.email || workspaceContext.email}
+            saving={changingPassword}
+            onClose={() => setCredentialModalOpen(false)}
+            onChangePassword={handleChangeSectorPassword}
+          />
+          <SectorFirstAccessChecklist
+            userUid={user.uid}
+            workspaceName={workspaceContext.workspaceName}
+            ug={workspaceContext.ug}
+            onOpenCredentials={() => setCredentialModalOpen(true)}
+          />
+        </>
+      )}
+
       <AppHeader
         customLogo={customLogo}
         syncing={syncing || !activeOperationalDataReady}
         userDisplayName={user?.displayName || 'Aprovisionamento HGeSM'}
         workspaceContext={workspaceContext}
         onOpenSidebar={() => setSidebarOpen(true)}
+        onOpenAccount={
+          isExternalSectorUser
+            ? () => setCredentialModalOpen(true)
+            : undefined
+        }
       />
 
       {/* Main Framework Wrapper */}
