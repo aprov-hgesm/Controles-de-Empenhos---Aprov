@@ -3,7 +3,7 @@
 Última atualização: **2026-10-02**
 Produção: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Integrador: `feat/saas-r1-commercializacao`
-Estado global: **SAAS-A + B + C + DL + E + DS + I INTEGRADAS / CANDIDATO R1 COMBINADO CERTIFICADO / SAAS-P LIBERADA**
+Estado global: **SAAS-A + B + C + DL + E + DS + I INTEGRADAS / CANDIDATO R1 COMBINADO CERTIFICADO / SAAS-P EM EXECUÇÃO**
 
 ## 1. Baseline
 
@@ -26,7 +26,7 @@ Estado global: **SAAS-A + B + C + DL + E + DS + I INTEGRADAS / CANDIDATO R1 COMB
 | SAAS-E Operação/recovery | `saas-r1-e-ops-recovery` | A | **CONCLUÍDA** | **INTEGRADA — PR #215 / `82f2e643...`** |
 | SAAS-DS Segurança/enforcement | `saas-r1-ds-security-enforcement` | B + C | **CONCLUÍDA** | **INTEGRADA — PR #218 / `726436ac...`** |
 | SAAS-I Integração | `saas-r1-i-integration` → integradora | B+C+DL+E+DS | **CONCLUÍDA** | **INTEGRADA — PR #219 / `25dda487...`** |
-| SAAS-P Piloto | integradora | I | **LIBERADA** | próxima etapa coordenada; sem publicação automática |
+| SAAS-P Piloto | integradora | I | **EM EXECUÇÃO** | P2/P3 em andamento; sem publicação automática |
 | SAAS-J Certificação | integradora | P | **AGUARDANDO** | — |
 
 ## 3. Contratos congelados
