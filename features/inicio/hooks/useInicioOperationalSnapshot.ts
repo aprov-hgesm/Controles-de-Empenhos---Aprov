@@ -29,6 +29,7 @@ import {
 } from '../domain/homeOperationalSnapshot';
 
 interface UseInicioOperationalSnapshotInput {
+  enabled: boolean;
   user: User | null;
   workspaceContext: ResolvedWorkspaceContext;
   activeTab: OperationalActiveTab;
@@ -55,6 +56,7 @@ function shouldPublishSnapshot(activeTab: OperationalActiveTab): boolean {
 }
 
 export function useInicioOperationalSnapshot({
+  enabled,
   user,
   workspaceContext,
   activeTab,
@@ -75,7 +77,7 @@ export function useInicioOperationalSnapshot({
   });
 
   useEffect(() => {
-    if (!isOperationalSectorContext(workspaceContext)) {
+    if (!enabled || !isOperationalSectorContext(workspaceContext)) {
       knownRemoteRef.current = {
         workspaceId: null,
         loaded: false,
@@ -97,11 +99,12 @@ export function useInicioOperationalSnapshot({
       setSnapshot(null);
       setSnapshotReady(false);
     }
-  }, [workspaceContext]);
+  }, [enabled, workspaceContext]);
 
   useEffect(() => {
     if (
-      activeTab !== 'inicio'
+      !enabled
+      || activeTab !== 'inicio'
       || !user
       || !isOperationalSectorContext(workspaceContext)
     ) {
@@ -154,11 +157,12 @@ export function useInicioOperationalSnapshot({
       unsubscribe();
       stopTrackingListener();
     };
-  }, [activeTab, user, workspaceContext]);
+  }, [activeTab, enabled, user, workspaceContext]);
 
   useEffect(() => {
     if (
-      !user
+      !enabled
+      || !user
       || !isOperationalSectorContext(workspaceContext)
       || !shouldPublishSnapshot(activeTab)
       || !empenhosReady
@@ -258,6 +262,7 @@ export function useInicioOperationalSnapshot({
     return () => window.clearTimeout(timer);
   }, [
     activeTab,
+    enabled,
     alerts,
     alertsReady,
     empenhos,
