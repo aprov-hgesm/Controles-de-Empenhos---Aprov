@@ -820,7 +820,17 @@ service cloud.firestore {
         && request.resource.data.ug == resource.data.ug
         && request.resource.data.authorizedEmail == resource.data.authorizedEmail
         && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.createdBy == resource.data.createdBy;
+        && request.resource.data.createdBy == resource.data.createdBy
+        && (
+          !('exemptionSource' in resource.data)
+          || resource.data.exemptionSource != 'legacy_vip'
+          || (
+            request.resource.data.status == 'exempt'
+            && request.resource.data.monthlyPriceCents == 0
+            && request.resource.data.exemptionSource == 'legacy_vip'
+            && request.resource.data.legacyVipCutoff == resource.data.legacyVipCutoff
+          )
+        );
     }
 
     function validBillingCycle(cycleId) {
