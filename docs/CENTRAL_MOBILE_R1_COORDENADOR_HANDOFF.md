@@ -59,9 +59,11 @@ Obrigatório:
 
 ## 6. Primeira onda
 
-Liberar apenas:
-- MOBILE-A;
-- MOBILE-B.
+**LIBERADA após o freeze MOBILE-0.**
+
+Criar/usar apenas:
+- MOBILE-A — `mobile-r1-a-platform-scanner`;
+- MOBILE-B — `mobile-r1-b-location-labels`.
 
 Não criar workers C–H antecipadamente se isso induzir desenvolvimento antes dos contratos compartilhados estarem integrados.
 
@@ -79,7 +81,7 @@ Não mexer em scanner/ledger/movimentos.
 
 ## 9. Próximo gate
 
-Integração 1:
+Receber e aprovar os handoffs independentes de MOBILE-A e MOBILE-B. Depois executar a Integração 1:
 scanner → tipo → resolver → posição.
 
 Sem estoque.
