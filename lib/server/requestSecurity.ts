@@ -8,6 +8,7 @@ export type AdminSecurityOperation =
   | 'sector-provision'
   | 'sector-delete'
   | 'sector-password-reset'
+  | 'sector-lifecycle'
   | 'firebase-global-usage'
   | 'usage-alert-policy'
   | 'firebase-auth-backup'
@@ -16,7 +17,8 @@ export type AdminSecurityOperation =
 export type AdminMutationOperation =
   | 'sector-provision'
   | 'sector-delete'
-  | 'sector-password-reset';
+  | 'sector-password-reset'
+  | 'sector-lifecycle';
 
 export class ApiSecurityError extends Error {
   constructor(
@@ -191,6 +193,7 @@ const killSwitchEnvByOperation: Record<AdminMutationOperation, string> = {
   'sector-provision': 'EMPROVEX_DISABLE_SECTOR_PROVISIONING',
   'sector-delete': 'EMPROVEX_DISABLE_SECTOR_DELETION',
   'sector-password-reset': 'EMPROVEX_DISABLE_SECTOR_PASSWORD_RESET',
+  'sector-lifecycle': 'EMPROVEX_DISABLE_SECTOR_LIFECYCLE',
 };
 
 export function assertAdminMutationEnabled(
