@@ -22,9 +22,7 @@ if (!databasePolicy) {
 
 const command = process.argv[2] || 'plan';
 const flags = parseFlags(process.argv.slice(3));
-const apiBase =
-  `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(recoveryPolicy.projectId)}` +
-  `/databases/${encodeURIComponent(databasePolicy.id)}`;
+const apiBase = 'https://firestore.googleapis.com';
 let accessToken = '';
 
 main().catch((error) => {
