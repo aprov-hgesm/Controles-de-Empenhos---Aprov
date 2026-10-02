@@ -59,6 +59,7 @@ import {
 } from '../lib/workspaceUsageTelemetry';
 
 interface OperationalRealtimeCollectionsInput {
+  enabled: boolean;
   user: User | null;
   workspaceContext: ResolvedWorkspaceContext;
   activeTab: OperationalActiveTab;
@@ -326,6 +327,7 @@ function useRealtimeInvoiceSubscription({
  * conectado ao listener operacional.
  */
 export function useOperationalRealtimeCollections({
+  enabled,
   user,
   workspaceContext,
   activeTab,
@@ -355,14 +357,14 @@ export function useOperationalRealtimeCollections({
   );
 
   useEffect(() => {
-    if (!user || !isOperationalSectorContext(workspaceContext)) {
+    if (!enabled || !user || !isOperationalSectorContext(workspaceContext)) {
       setReadiness(EMPTY_READINESS);
     }
-  }, [user, workspaceContext]);
+  }, [enabled, user, workspaceContext]);
 
   useRealtimeCollectionSubscription({
     collectionName: 'empenhos',
-    enabled: plan.empenhos,
+    enabled: enabled && plan.empenhos,
     user,
     workspaceContext,
     setData: setEmpenhos,
@@ -372,7 +374,7 @@ export function useOperationalRealtimeCollections({
 
   useRealtimeCollectionSubscription({
     collectionName: 'alerts',
-    enabled: plan.alerts,
+    enabled: enabled && plan.alerts,
     user,
     workspaceContext,
     setData: setAlerts,
@@ -381,7 +383,7 @@ export function useOperationalRealtimeCollections({
   });
 
   useRealtimeInvoiceSubscription({
-    enabled: plan.invoices,
+    enabled: enabled && plan.invoices,
     user,
     workspaceContext,
     setInvoices,
@@ -390,7 +392,7 @@ export function useOperationalRealtimeCollections({
 
   useRealtimeCollectionSubscription({
     collectionName: 'comissoes',
-    enabled: plan.comissoes,
+    enabled: enabled && plan.comissoes,
     user,
     workspaceContext,
     setData: setComissoes,
@@ -400,7 +402,7 @@ export function useOperationalRealtimeCollections({
 
   useRealtimeCollectionSubscription({
     collectionName: 'cronogramas',
-    enabled: plan.cronogramas,
+    enabled: enabled && plan.cronogramas,
     user,
     workspaceContext,
     setData: setCronogramas,
@@ -409,14 +411,16 @@ export function useOperationalRealtimeCollections({
   });
 
   const activeOperationalDataReady = useMemo(() => {
-    if (!user || !isOperationalSectorContext(workspaceContext)) return false;
+    if (!enabled || !user || !isOperationalSectorContext(workspaceContext)) return false;
     return getRequiredRealtimeCollections(activeTab)
       .every((collectionName) => readiness[collectionName]);
-  }, [activeTab, readiness, user, workspaceContext]);
+  }, [activeTab, enabled, readiness, user, workspaceContext]);
 
   return {
     activeOperationalDataReady,
-    activeRealtimeCollectionCount: countRealtimeOperationalCollections(activeTab),
+    activeRealtimeCollectionCount: enabled
+      ? countRealtimeOperationalCollections(activeTab)
+      : 0,
     readiness,
   };
 }
