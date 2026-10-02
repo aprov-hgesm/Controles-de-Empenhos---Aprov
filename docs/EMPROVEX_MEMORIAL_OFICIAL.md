@@ -975,3 +975,31 @@ A coorte deve ser identificada e migrada na **SAAS-I** por operação única, id
 Workspaces criados **após 2026-10-02** entram no Plano Completo de R$ 70,00/mês por padrão, salvo concessão manual posterior de VIP/`exempt`.
 
 Nenhuma remoção automática da condição VIP legado será permitida. Eventual alteração futura exige ação administrativa explícita e auditada do fundador.
+
+### Registro de execução SAAS-I — 2026-10-02
+
+A SAAS-I foi implementada em branch técnica `saas-r1-i-integration`, criada exatamente de `feat/saas-r1-commercializacao@71ed87932f17b8acd9fab9c30006970b59079c42`, com PR técnico **#219** apontando somente para a integradora.
+
+Contratos incorporados:
+- `LegalAcceptanceGate` ligado ao shell após Auth + platform account + workspace + UG;
+- subscriptions operacionais e snapshot do Início não iniciam antes do aceite vigente;
+- acesso direto à Central também exige aceite, depois da autorização básica;
+- login, reset de senha, `/terms`, `/privacy` e `/regularizacao` permanecem fora do gate;
+- billing continua separado de lifecycle/enforcement;
+- coorte VIP legado usa `status=exempt`, R$ 0,00 e metadata mínima `exemptionSource=legacy_vip`;
+- isenção VIP legado não pode ser removida pelo fluxo administrativo normal e passa a ser protegida também pelas Rules;
+- migração VIP legado é explícita, idempotente, auditável e exige allowlist para execução;
+- nenhum workspace com timestamp posterior a 2026-10-02 pode entrar; timestamp não confiável não autoriza inclusão automática;
+- nenhuma competência histórica é reprecificada;
+- nenhum terceiro banco foi criado.
+
+Rules no candidato:
+- principal: **92,11 KiB**;
+- Central: **152,38 KiB**.
+
+A quantidade real da coorte não é inferida do código: deve ser obtida por leitura autenticada/dry-run do Firestore e congelada antes da execução real.
+
+Handoff detalhado: `docs/SAAS_R1_I_INTEGRATION_HANDOFF.md`.
+
+Estado neste registro: **candidato em validação no PR #219; não publicado em main, Vercel, Rules ou migração de produção**.
+
