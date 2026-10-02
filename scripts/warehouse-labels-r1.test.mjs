@@ -336,10 +336,10 @@ test('resolver recusa entidade inativa, escopo/UG divergentes e hierarquia invá
       ['loc_' + 'f'.repeat(32)]: { ...local, id: 'loc_' + 'f'.repeat(32), depotId: 'dep_' + 'e'.repeat(32) },
     },
   }));
-  assert.deepEqual(invalidHierarchy, { ok: false, error: 'ENTITY_NOT_FOUND' });
+  assert.deepEqual(invalidHierarchy, { ok: false, error: 'HIERARCHY_INVALID' });
 });
 
-test('resolver recusa kind divergente e round-trip encode → resolve preserva identidade', async () => {
+test('resolver recusa entidade divergente e round-trip encode → resolve preserva identidade', async () => {
   const child = subposition(1);
   const forgedKindCode = locationBarcode.encodeWarehouseLocationBarcode({
     kind: 'LOCAL',
