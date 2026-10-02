@@ -395,3 +395,33 @@ A SAAS-I foi integrada via PR #219.
 A próxima etapa é SAAS-P, que deve provar o produto em piloto controlado e registrar evidência real de onboarding, trial, pagamento de workspace não legado, suspensão/reativação, UX do aceite e custos. VIP legado pode participar do piloto funcional, mas não comprova cobrança.
 
 As ações externas da SAAS-E permanecem pendentes para SAAS-J.
+
+
+## 18. Coordenação obrigatória com a Central Móvel R1
+
+A Central Móvel R1 está em desenvolvimento paralelo na branch `feat/central-mobile-r1`.
+
+O Coordenador SaaS deve considerar esse programa um **upstream/downstream paralelo relevante** sempre que trabalhar em:
+- Auth e identidade;
+- workspace/UG;
+- sessão/lease;
+- legal gate;
+- lifecycle/status;
+- `warehouseAccess`;
+- Rules compartilhadas;
+- shell/roteamento;
+- contratos comuns da Central.
+
+Antes de SAAS-P gerar correção técnica transversal, antes de integrar qualquer correção desse tipo e antes de iniciar SAAS-J:
+1. ler o Integration Status e o Handoff da MOBILE-R1;
+2. comparar os arquivos compartilhados entre as duas integradoras;
+3. registrar **Impacto MOBILE-R1** no handoff da correção;
+4. reconciliar semanticamente o delta necessário;
+5. não fazer merge/rebase bruto entre as integradoras;
+6. garantir que o ajuste não faça desktop e mobile obedecerem contratos diferentes.
+
+A Central Móvel foi fundada sobre a SAAS-I certificada `78d3e9afe...`; a SAAS-I entrou na integradora SaaS por squash `25dda487...`. Portanto, divergência de ancestralidade Git é esperada e não deve ser tratada automaticamente como divergência funcional.
+
+O desenvolvimento paralelo não bloqueia SAAS-P por padrão. Só criar bloqueio quando houver conflito concreto de segurança, autorização, fonte de verdade, schema/Rules ou comportamento compartilhado.
+
+Todo novo prompt emitido pelo Coordenador SaaS para uma frente transversal deve conter a orientação de consultar e preservar a MOBILE-R1.
