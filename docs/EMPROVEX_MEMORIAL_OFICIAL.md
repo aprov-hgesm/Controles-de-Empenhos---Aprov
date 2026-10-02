@@ -3,7 +3,7 @@
 Última atualização: **2026-10-01 — SaaS R1 Onda 1 iniciada**
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Branch integradora do SaaS R1: `feat/saas-r1-commercializacao`
-Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A congelada; SAAS-B INTEGRADA; SAAS-C, SAAS-DL e SAAS-E seguem em execução paralela; SAAS-DS ainda bloqueada até B+C**
+Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A congelada; SAAS-B e SAAS-E INTEGRADAS; SAAS-C e SAAS-DL seguem em execução paralela; SAAS-DS ainda bloqueada até B+C**
 
 Este documento é a **porta de entrada canônica para continuidade do EMPROVEX como produto**. Ele resume o estado vigente e aponta para os documentos históricos/especializados. O histórico detalhado não deve ser apagado. Para comportamento publicado, `main` prevalece. Para o ciclo SaaS R1 em desenvolvimento, prevalecem `feat/saas-r1-commercializacao`, este memorial e os quatro documentos canônicos `SAAS_R1_*`.
 
@@ -615,7 +615,7 @@ Frentes ativadas:
 - **SAAS-B — Billing/regularização:** **INTEGRADA** na branch coordenadora via PR #216; Plano Completo R$ 70, VIP/Isento, regularização pública e confirmação manual certificados;
 - **SAAS-C — Onboarding:** ATIVADA;
 - **SAAS-DL — Legal/aceite:** ATIVADA;
-- **SAAS-E — Operação/backup/uptime:** ATIVADA.
+- **SAAS-E — Operação/backup/uptime:** **INTEGRADA** via PR #215; health/recovery/runbooks certificados no repositório, com configuração externa de backup/restore/uptime ainda pendente.
 
 **Onda 2**
 - SAAS-DS — Segurança/enforcement, depois de B+C.
@@ -696,7 +696,7 @@ Chats trabalhadores autorizados:
 - SAAS-B — Billing, Plano Completo, VIP e regularização — **CONCLUÍDA E INTEGRADA**;
 - SAAS-C — Onboarding e credenciais;
 - SAAS-DL — Legal, Privacidade e aceite versionado;
-- SAAS-E — Operação, backup, uptime e recuperação.
+- SAAS-E — Operação, backup, uptime e recuperação — **CONCLUÍDA E INTEGRADA no repositório; configuração externa permanece pendente antes da abertura comercial**.
 
 Regras de largada:
 - todos partem da mesma revisão da branch `feat/saas-r1-commercializacao` que registra esta ativação;
@@ -742,3 +742,46 @@ Resultado funcional integrado:
 O status Vercel do PR falhou apenas por `build-rate-limit`; isso não foi classificado como regressão de código e não houve deploy de produção.
 
 Na revisão do Coordenador, o único ajuste pós-merge foi de apresentação: o cabeçalho operacional passou a distinguir `Fundador / Isento` de `VIP / Isento`. O domínio comercial não foi alterado.
+
+
+### Registro de integração SAAS-E — 2026-10-01
+
+Worker:
+- branch: `saas-r1-e-ops-recovery`;
+- base: `32872d3fc6a781ff129eb4e41ae9b0d45658024a`;
+- HEAD funcional certificado: `e650191a52656347b45c2769f1d93be9d21b2eac`;
+- handoff documental inicial: `d7eb0075f7db35e9e826bd7b2e8dc4a83d4ff897`;
+- correção exclusiva de Diff Hygiene feita pelo Coordenador: `8fb8e3ff3cd61bbc090a6a180528758930fdbd0f`;
+- PR #215;
+- integração squash na coordenadora: `82f2e6432b979634cae8023a773e31efa8f0cd65`.
+
+Certificação final:
+- Application CI #896: **SUCCESS**;
+- EMPROVEX Core Protection #183: **SUCCESS**;
+- Recovery guardrails #583: **SUCCESS**;
+- Production Build: **PASS**;
+- TypeScript: **PASS**;
+- Diff Hygiene: **PASS**;
+- guards de backup/recovery e disaster test em emulador: **PASS**.
+
+Resultado integrado:
+- endpoint público `GET /api/health` sem Firestore/segredos;
+- política de backup nativo preparada para o banco principal e `emprovex-warehouse`;
+- backup diário com retenção inicial de 14 semanas;
+- PITR + delete protection contemplados no tooling;
+- restore sempre planejado para database novo/isolado;
+- backup lógico existente preservado;
+- Central de Depósitos reconhecida como dependente de backup nativo para recuperação global;
+- runbook de incidente, recuperação e suporte;
+- runbook de uptime HTTPS/SSL no Cloud Monitoring;
+- nenhum terceiro banco criado.
+
+Pendências externas obrigatórias antes do SaaS aberto:
+- ativar/verificar PITR e delete protection nos dois bancos;
+- criar/verificar backup diário nos dois bancos;
+- obter pelo menos um backup `READY` por banco;
+- executar restore real em database isolado;
+- publicar e validar `/api/health` na release consolidada;
+- criar uptime check, alert policy e notification channel no Cloud Monitoring.
+
+SAAS-E está **integrada no código**, mas essas pendências externas continuam gates de SAAS-J/abertura comercial.

@@ -26,7 +26,8 @@ Ler, nesta ordem:
 - SAAS-A foi concluída como freeze documental.
 - Onda 1 foi **INICIADA em 2026-10-01 por autorização explícita do usuário**.
 - **SAAS-B foi concluída, certificada e integrada** na branch coordenadora via PR #216 / squash `f91cda645...`.
-- SAAS-C, SAAS-DL e SAAS-E continuam em execução paralela em branches exclusivas.
+- **SAAS-E foi concluída, certificada e integrada** via PR #215 / squash `82f2e643...`; configuração externa de backup/restore/uptime continua pendente.
+- SAAS-C e SAAS-DL continuam em execução paralela em branches exclusivas.
 - SAAS-DS continua bloqueada até integração semântica de B+C.
 
 ## 3. Decisão central
@@ -125,15 +126,15 @@ Onboarding/reset de senha.
 ### DL
 Termos/Privacidade/aceite versionado.
 
-### E
-Backup nativo dos dois Firestores, restore, health/uptime e runbook.
+### E — INTEGRADA
+Backup/recovery/health/runbook concluídos no repositório e integrados via PR #215 / `82f2e643...`. Backup READY, restore real e uptime/alerta reais continuam pendentes de configuração externa.
 
 Eles devem trabalhar simultaneamente quando possível, sem editar domínio alheio. Cada worker encerra com handoff completo; o Coordenador valida e integra.
 
 ## 8. Depois da Onda 1
 
-1. receber os handoffs restantes de C, DL e E;
-2. integrar frentes isoladas após revisão;
+1. receber os handoffs restantes de C e DL;
+2. integrar C e DL após revisão;
 3. integrar C semanticamente sobre a coordenadora que já contém B;
 4. atualizar Integration Status;
 5. abrir SAAS-DS;
@@ -208,3 +209,35 @@ Contratos agora canônicos no código da integradora:
 A falha do preview Vercel foi somente `build-rate-limit` e não representa falha da implementação.
 
 Ajuste semântico do Coordenador: no cabeçalho, founder deve aparecer como `Fundador / Isento`; `VIP / Isento` fica reservado ao cliente externo isento.
+
+
+## 13. Integração SAAS-E
+
+A SAAS-E foi validada pelo Coordenador e integrada.
+
+Evidências:
+- worker funcional `e650191a52656347b45c2769f1d93be9d21b2eac`;
+- handoff `d7eb0075f7db35e9e826bd7b2e8dc4a83d4ff897`;
+- correção de trailing whitespace `8fb8e3ff3cd61bbc090a6a180528758930fdbd0f`;
+- PR #215;
+- squash `82f2e6432b979634cae8023a773e31efa8f0cd65`;
+- Application CI #896, Core Protection #183 e Recovery #583: SUCCESS.
+
+Contratos agora canônicos no repositório:
+- `/api/health` público e sem leitura operacional;
+- backup nativo planejado para os dois bancos congelados;
+- retenção 14 semanas;
+- PITR/delete protection no tooling;
+- restore bloqueado para bancos de produção e direcionado a banco isolado;
+- backup lógico preservado;
+- nenhum terceiro banco;
+- Cloud Monitoring como uptime oficial da R1.
+
+Pendências externas não podem ser marcadas como concluídas sem evidência:
+1. aplicar/verificar proteções e schedule nos dois bancos;
+2. confirmar um backup READY por banco;
+3. executar restore real em banco isolado;
+4. publicar health em produção na release autorizada;
+5. criar/testar uptime check, alerta e canal de notificação.
+
+Essas pendências não bloqueiam a integração do código da SAAS-E, mas bloqueiam a certificação operacional final e a abertura do SaaS.

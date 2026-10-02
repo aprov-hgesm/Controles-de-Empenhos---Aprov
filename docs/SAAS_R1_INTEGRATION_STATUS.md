@@ -3,7 +3,7 @@
 Última atualização: **2026-10-01**
 Produção: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Integrador: `feat/saas-r1-commercializacao`
-Estado global: **SAAS-A CONGELADA / SAAS-B INTEGRADA / SAAS-C + SAAS-DL + SAAS-E EM EXECUÇÃO / SAAS-DS AGUARDA B+C**
+Estado global: **SAAS-A CONGELADA / SAAS-B + SAAS-E INTEGRADAS / SAAS-C + SAAS-DL EM EXECUÇÃO / SAAS-DS AGUARDA B+C**
 
 ## 1. Baseline
 
@@ -23,7 +23,7 @@ Estado global: **SAAS-A CONGELADA / SAAS-B INTEGRADA / SAAS-C + SAAS-DL + SAAS-E
 | SAAS-B Billing/pagamento | `saas-r1-b-billing-payment` | A | **CONCLUÍDA** | **INTEGRADA — PR #216 / `f91cda645...`** |
 | SAAS-C Onboarding | `saas-r1-c-onboarding` | A | **ATIVADA** | worker em execução / aguardando handoff |
 | SAAS-DL Legal/aceite | `saas-r1-dl-legal-acceptance` | A | **ATIVADA** | worker em execução / aguardando handoff |
-| SAAS-E Operação/recovery | `saas-r1-e-ops-recovery` | A | **ATIVADA** | worker em execução / aguardando handoff |
+| SAAS-E Operação/recovery | `saas-r1-e-ops-recovery` | A | **CONCLUÍDA** | **INTEGRADA — PR #215 / `82f2e643...`** |
 | SAAS-DS Segurança/enforcement | `saas-r1-ds-security-enforcement` | B + C | **BLOQUEADA POR DEPENDÊNCIA** | não iniciada |
 | SAAS-I Integração | integradora | B+C+DL+E+DS | **AGUARDANDO** | — |
 | SAAS-P Piloto | integradora | I | **AGUARDANDO** | — |
@@ -58,10 +58,10 @@ Não alterar em worker:
 4. `platformAccess` não lê billing e isso é desejável para custo/isolamento.
 5. Rules operacionais já exigem workspace e conta ativos; enforcement deve reutilizar esse contrato.
 6. Provisionamento já cria billing junto do tenant.
-7. Backups lógicos atuais dependem de sessão/Drive e não substituem backup nativo do banco inteiro.
-8. Central de Depósitos usa banco Firestore separado e precisa entrar explicitamente na estratégia de desastre.
+7. SAAS-E integrou o tooling de backup nativo para os dois bancos; a ativação externa e a prova de restore real ainda são pendências.
+8. O backup lógico atual continua não cobrindo `emprovex-warehouse`; a Central depende do backup nativo para recuperação global.
 9. Legal atual é pré-comercial e precisa versão/aceite.
-10. Cloud Monitoring já existe; uptime deve reutilizá-lo.
+10. O health/uptime foi preparado; o uptime check real no Cloud Monitoring ainda precisa ser criado e validado.
 
 ## 5. Infraestrutura e migrações
 
@@ -89,11 +89,13 @@ O Coordenador deve:
 - impedir que uma worker resolva conflitos alterando domínio de outra;
 - manter SAAS-DS bloqueada até B e C estarem semanticamente integradas.
 
-SAAS-B já foi recebida, auditada e integrada.
+SAAS-B e SAAS-E já foram recebidas, auditadas e integradas.
 
 Próximo gate:
-- receber SAAS-C, SAAS-DL e SAAS-E;
-- SAAS-DS só poderá ser liberada depois da integração semântica da SAAS-C sobre a base que já contém SAAS-B.
+- receber SAAS-C e SAAS-DL;
+- integrar SAAS-C semanticamente sobre a base que já contém SAAS-B;
+- liberar SAAS-DS somente depois de B+C integradas;
+- manter as configurações externas da SAAS-E como gates obrigatórios de operação/certificação, sem confundi-las com merge de código.
 
 ## 7. Registro de integrações
 
@@ -112,6 +114,24 @@ Próximo gate:
 - Vercel preview: falha externa `build-rate-limit`, não bloqueante para integração;
 - enforcement: deliberadamente não ativado;
 - ajuste do Coordenador: rótulo do fundador diferenciado de VIP no cabeçalho.
+
+A integração não foi promovida para `main` nem para produção.
+
+### SAAS-E — integrada em 2026-10-01
+
+- worker: `saas-r1-e-ops-recovery`;
+- base: `32872d3fc6a781ff129eb4e41ae9b0d45658024a`;
+- HEAD funcional: `e650191a52656347b45c2769f1d93be9d21b2eac`;
+- HEAD final após correção de whitespace: `8fb8e3ff3cd61bbc090a6a180528758930fdbd0f`;
+- PR: #215;
+- integração squash: `82f2e6432b979634cae8023a773e31efa8f0cd65`;
+- Application CI #896: SUCCESS;
+- Core Protection #183: SUCCESS;
+- Recovery #583: SUCCESS;
+- build/typecheck/diff hygiene: PASS;
+- health endpoint: integrado;
+- backup/recovery tooling para os dois bancos: integrado;
+- restore real/backup READY/uptime real: **PENDENTES DE CONFIGURAÇÃO EXTERNA**.
 
 A integração não foi promovida para `main` nem para produção.
 
