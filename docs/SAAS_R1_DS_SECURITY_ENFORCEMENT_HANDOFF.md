@@ -437,9 +437,9 @@ npm run verify:saas-r1-onboarding
 npm run verify:saas-r1-legal-acceptance
 npm run verify:saas-r1-ops-recovery
 npm run test:central-depositos-external-security
-npm run test:multitenancy-security
+npm run test:security:multitenant
 npm run build
-npx tsc --noEmit
+npm run typecheck
 git diff --check 73c22a441249cd87b6d6e1dfeb69bcb005d663e9...HEAD
 ```
 
