@@ -377,4 +377,3 @@ Próximo passo do Coordenador após CI:
 4. não promover `main` sem autorização explícita.
 
 Handoff integral: `docs/SAAS_R1_I_INTEGRATION_HANDOFF.md`.
-
