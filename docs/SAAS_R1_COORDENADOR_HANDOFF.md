@@ -428,7 +428,7 @@ Todo novo prompt emitido pelo Coordenador SaaS para uma frente transversal deve 
 
 ## 19. SAAS-P — handoff de abertura
 
-A SAAS-P está **EM PREPARAÇÃO**.
+A SAAS-P está **EM EXECUÇÃO**.
 
 Documento operacional:
 - `docs/SAAS_R1_P_PILOTO_CONTROLADO.md`.
