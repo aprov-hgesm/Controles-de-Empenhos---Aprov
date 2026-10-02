@@ -297,3 +297,36 @@ Pendências imediatas da SAAS-P:
 6. preenchimento da matriz J01–J24.
 
 Nenhuma ação produtiva foi autorizada por esta abertura.
+
+## 19. SAAS-P — P2/P3 e PILOT-OPS — 2026-10-02
+
+P2 avançou com inventário autenticado real:
+
+- 3 candidatos VIP legado;
+- 0 não resolvidos;
+- founder `hgesm-aprov` excluído;
+- allowlist humanamente congelada: `aprovisionamento-2-b-fv`, `aprovisionamento-3-gac-ap`, `aprovisionamento-teste`;
+- `aprovisionamento-teste` foi confirmado como VIP legado permanente e perfil real de teste funcional externo;
+- futuro perfil não-VIP para trial/cobrança fica adiado para etapa posterior do piloto;
+- `apply` produtivo **não executado**.
+
+P3 confirmou estado externo ainda não certificado:
+
+- banco principal: sem PITR, sem delete protection, sem agenda diária, sem backup READY;
+- `emprovex-warehouse`: delete protection ativa; sem PITR, sem agenda diária e sem backup READY;
+- nenhum backup concluído/READY foi encontrado nos dois bancos.
+
+Correção operacional Windows:
+
+- PR #222 — `saas-p-fix-ops-windows-gcloud`;
+- Application CI, Core Protection, Recovery e Legal: SUCCESS;
+- integração squash: `ea2d389f726ae989ae88f7fc7359c690b23dfb13`;
+- nenhum delta em Rules, schema, billing, lifecycle, Auth ou Mobile.
+
+Próximos passos seguros:
+
+1. executar `dry-run` da allowlist VIP congelada;
+2. manter `apply` bloqueado até autorização explícita;
+3. preparar/validar os controles externos de recovery antes da certificação final;
+4. preservar a exigência de um workspace novo não-VIP para provar cobrança no piloto.
+
