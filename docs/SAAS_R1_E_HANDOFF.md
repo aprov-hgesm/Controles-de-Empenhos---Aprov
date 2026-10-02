@@ -1,6 +1,6 @@
 # SAAS-E — Handoff — Operação, Backup, Uptime e Recuperação
 
-Data: **2026-10-01**  
+Data: **2026-10-01**
 Frente: **SAAS-E — Operação, Backup, Uptime, Monitoramento e Recuperação do EMPROVEX SaaS R1**
 
 ## 1. Identificação
