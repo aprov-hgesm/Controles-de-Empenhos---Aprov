@@ -423,3 +423,31 @@ Resultado:
 
 O `apply` permanece **BLOQUEADO** até autorização explícita do fundador.
 
+### 14.5 P2 — aplicação produtiva e verificação final da coorte VIP legado
+
+Execução autorizada em 2026-10-02 sobre a allowlist congelada:
+
+- `aprovisionamento-2-b-fv`;
+- `aprovisionamento-3-gac-ap`;
+- `aprovisionamento-teste`.
+
+Resultado do `apply`:
+
+- `APPLIED aprovisionamento-2-b-fv: exempt / R$ 0,00 / legacy_vip`;
+- `APPLIED aprovisionamento-3-gac-ap: exempt / R$ 0,00 / legacy_vip`;
+- `APPLIED aprovisionamento-teste: exempt / R$ 0,00 / legacy_vip`.
+
+Resultado do `verify`:
+
+- `READY aprovisionamento-2-b-fv`;
+- `READY aprovisionamento-3-gac-ap`;
+- `READY aprovisionamento-teste`.
+
+Conclusão P2:
+
+- coorte VIP legado materializada com sucesso;
+- 3/3 workspaces verificados;
+- founder continua fora da coorte;
+- P2 **CONCLUÍDA**;
+- qualquer reexecução futura deve respeitar o comportamento idempotente já implementado.
+
