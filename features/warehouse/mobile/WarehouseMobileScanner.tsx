@@ -116,6 +116,7 @@ export function WarehouseMobileScanner({
     'A câmera só será ativada quando você solicitar.'
   );
   const [manualValue, setManualValue] = useState('');
+  const [cameraRunning, setCameraRunning] = useState(false);
   const [lastEvent, setLastEvent] = useState<WarehouseMobileScanEvent | null>(null);
 
   useEffect(() => {
@@ -189,12 +190,13 @@ export function WarehouseMobileScanner({
     stopRef.current?.();
     stopRef.current = null;
     cooldownGuardRef.current.reset();
+    setCameraRunning(false);
     setStatus('idle');
     setMessage('Câmera encerrada. Você pode ativá-la novamente quando precisar.');
   }, []);
 
   const startCamera = useCallback(async () => {
-    if (status === 'loading' || stopRef.current) return;
+    if (status === 'loading' || cameraRunning) return;
 
     if (
       typeof navigator === 'undefined'
@@ -227,16 +229,18 @@ export function WarehouseMobileScanner({
       }
 
       stopRef.current = () => session.stop();
+      setCameraRunning(true);
       setStatus('ready');
       setMessage('Câmera pronta. Aponte para o código.');
     } catch (error) {
       stopRef.current?.();
       stopRef.current = null;
       if (!mountedRef.current) return;
+      setCameraRunning(false);
       setStatus('error');
       setMessage(describeCameraError(error));
     }
-  }, [processCandidate, status]);
+  }, [cameraRunning, processCandidate, status]);
 
   const submitManual = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -246,7 +250,7 @@ export function WarehouseMobileScanner({
     void processCandidate(value, 'MANUAL');
   };
 
-  const cameraActive = status === 'ready' || status === 'success';
+  const cameraActive = cameraRunning;
 
   return (
     <section
@@ -335,7 +339,7 @@ export function WarehouseMobileScanner({
           <button
             type="button"
             onClick={() => void startCamera()}
-            disabled={status === 'loading' || Boolean(stopRef.current)}
+            disabled={status === 'loading' || cameraRunning}
             className="min-h-12 rounded-2xl bg-[#00288e] px-4 py-3 text-sm font-black text-white shadow-sm disabled:opacity-50"
             data-testid="warehouse-mobile-camera-start"
           >
@@ -344,7 +348,7 @@ export function WarehouseMobileScanner({
           <button
             type="button"
             onClick={stopCamera}
-            disabled={!stopRef.current}
+            disabled={!cameraRunning}
             className="min-h-12 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 disabled:opacity-45"
             data-testid="warehouse-mobile-camera-stop"
           >
