@@ -1002,4 +1002,3 @@ A quantidade real da coorte não é inferida do código: deve ser obtida por lei
 Handoff detalhado: `docs/SAAS_R1_I_INTEGRATION_HANDOFF.md`.
 
 Estado neste registro: **candidato em validação no PR #219; não publicado em main, Vercel, Rules ou migração de produção**.
-
