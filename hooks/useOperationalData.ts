@@ -107,7 +107,7 @@ function describeSectorAuthorizationFailure(code: string): string {
  */
 export function useOperationalData(
   activeTab: OperationalActiveTab,
-  operationalAccessEnabled = true
+  acceptedLegalIdentityKey: string | null = null
 ) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -122,6 +122,22 @@ export function useOperationalData(
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [comissoes, setComissoes] = useState<Comissao[]>([]);
   const [cronogramas, setCronogramas] = useState<CronogramaEmpenho[]>([]);
+
+  const legalIdentityKey = (
+    user
+    && isOperationalSectorContext(workspaceContext)
+  )
+    ? [
+        user.uid,
+        normalizePlatformEmail(user.email || workspaceContext.email),
+        workspaceContext.workspaceId,
+        workspaceContext.ug || '',
+      ].join('|')
+    : null;
+  const operationalAccessEnabled = Boolean(
+    legalIdentityKey
+    && acceptedLegalIdentityKey === legalIdentityKey
+  );
 
   const {
     activeOperationalDataReady: operationalCollectionsReady,
@@ -679,6 +695,7 @@ export function useOperationalData(
 
   return {
     user, loadingAuth, syncing, workspaceContext,
+    legalIdentityKey,
     activeOperationalDataReady, activeRealtimeCollectionCount,
     inicioSnapshot,
     empenhos, setEmpenhos,
