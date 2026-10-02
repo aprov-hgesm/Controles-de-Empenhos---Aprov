@@ -99,7 +99,7 @@ const DIGIT_TO_KIND: Record<string, WarehouseLocationBarcodeEntityKind | undefin
   '3': 'SUBPOSITION',
 };
 
-const MAX_128_BIT_VALUE = (1n << 128n) - 1n;
+const MAX_128_BIT_VALUE = (BigInt(1) << BigInt(128)) - BigInt(1);
 const LOCATION_CODE_PATTERN = /^EPX1[123][0-9]{39}$/;
 
 const CODE128_PATTERNS = [
@@ -158,7 +158,7 @@ function technicalIdFromDecimal(
 ): string | null {
   try {
     const numeric = BigInt(decimal);
-    if (numeric < 0n || numeric > MAX_128_BIT_VALUE) return null;
+    if (numeric < BigInt(0) || numeric > MAX_128_BIT_VALUE) return null;
     const hex = numeric.toString(16).padStart(32, '0');
     const id = entityIdPrefix(kind) + hex;
     return entityIdMatchesKind(kind, id) ? id : null;
