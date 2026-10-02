@@ -1978,3 +1978,17 @@ A exigência comercial permanece: o piloto precisa de pelo menos um workspace no
 
 Dry-run da allowlist VIP legado foi concluído com sucesso em 2026-10-02, selecionando exatamente os 3 workspaces congelados e sem qualquer escrita. O `apply` permanece pendente de autorização explícita.
 
+### SAAS-P — coorte VIP legado materializada — 2026-10-02
+
+A migração produtiva da coorte VIP legado foi executada após autorização explícita e validada pelo comando de verificação.
+
+Workspaces:
+
+- `aprovisionamento-2-b-fv`;
+- `aprovisionamento-3-gac-ap`;
+- `aprovisionamento-teste`.
+
+Os 3 retornaram `READY` após a aplicação. A P2 da SAAS-P está concluída.
+
+A coorte passa a permanecer permanentemente isenta segundo o contrato já definido: `exempt`, R$ 0, `legacy_vip`, sem cobrança financeira automática.
+
