@@ -89,6 +89,9 @@ jobs:
       - name: SaaS R1 onboarding and credentials guard
         run: npm run verify:saas-r1-onboarding
 
+      - name: SAAS R1 security enforcement guard
+        run: npm run verify:saas-r1-security-enforcement
+
       - name: Empenho class configuration guard
         run: npm run verify:empenho-class-config
 
