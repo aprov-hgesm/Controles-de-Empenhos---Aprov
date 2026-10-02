@@ -31,7 +31,7 @@ Ler, nesta ordem:
 - **SAAS-C foi concluída, certificada e integrada semanticamente** em `cf320ce3...`; PRs #213/#217 foram fechados sem merge automático.
 - **A Onda 1 está concluída.**
 - **SAAS-DS foi concluída, certificada e integrada** via PR #218 / squash `726436ac...`.
-- **SAAS-I está LIBERADA** para integração controlada da R1.
+- **SAAS-I está INTEGRADA E APROVADA** para integração controlada da R1.
 
 ## 3. Decisão central
 
@@ -139,7 +139,7 @@ Eles devem trabalhar simultaneamente quando possível, sem editar domínio alhei
 A Onda 1 foi concluída.
 
 Sequência vigente:
-1. executar SAAS-I diretamente na integradora consolidada;
+1. executar SAAS-P sobre o candidato consolidado da integradora;
 2. conectar o `LegalAcceptanceGate` ao shell sem bloquear superfícies públicas/recuperação;
 3. validar a jornada combinada e a coordenação das Rules da Central;
 4. executar piloto SAAS-P;
@@ -377,3 +377,21 @@ Próximo passo do Coordenador após CI:
 4. não promover `main` sem autorização explícita.
 
 Handoff integral: `docs/SAAS_R1_I_INTEGRATION_HANDOFF.md`.
+
+
+## 17. Fechamento SAAS-I
+
+A SAAS-I foi integrada via PR #219.
+
+- HEAD worker final: `78d3e9afeeb4176a8d6423cdd8e65d32435ba0a9`;
+- squash na integradora: `25dda4876fedabb498ad30139262b11943412273`;
+- Application CI #908: SUCCESS;
+- Core #195: SUCCESS;
+- Recovery #595: SUCCESS;
+- Legal #20: SUCCESS;
+- Browser SAAS-C: skipped por escopo;
+- main/produção/Rules/migração VIP: não executados.
+
+A próxima etapa é SAAS-P, que deve provar o produto em piloto controlado e registrar evidência real de onboarding, trial, pagamento de workspace não legado, suspensão/reativação, UX do aceite e custos. VIP legado pode participar do piloto funcional, mas não comprova cobrança.
+
+As ações externas da SAAS-E permanecem pendentes para SAAS-J.

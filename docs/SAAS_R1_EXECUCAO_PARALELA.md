@@ -268,7 +268,7 @@ Aceite:
 
 ## 6. SAAS-I — Integração Controlada
 
-**Status: LIBERADA / PRÓXIMA ETAPA.**
+**Status: CONCLUÍDA, CERTIFICADA E INTEGRADA em 2026-10-02 — PR #219 / `25dda487...`.**
 
 Não é uma feature.
 
@@ -294,6 +294,8 @@ Checklist:
 SAAS-I pode criar glue code mínimo. Não deve adicionar feature nova.
 
 ## 7. SAAS-P — Piloto
+
+**Status: LIBERADA / PRÓXIMA ETAPA.**
 
 Piloto não é worker de implementação amplo.
 

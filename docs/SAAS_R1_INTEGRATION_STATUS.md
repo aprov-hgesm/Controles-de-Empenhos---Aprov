@@ -1,9 +1,9 @@
 # EMPROVEX SaaS R1 — Integration Status
 
-Última atualização: **2026-10-01**
+Última atualização: **2026-10-02**
 Produção: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Integrador: `feat/saas-r1-commercializacao`
-Estado global: **SAAS-A + B + C + DL + E + DS INTEGRADAS / ENFORCEMENT CONCLUÍDO / SAAS-I LIBERADA**
+Estado global: **SAAS-A + B + C + DL + E + DS + I INTEGRADAS / CANDIDATO R1 COMBINADO CERTIFICADO / SAAS-P LIBERADA**
 
 ## 1. Baseline
 
@@ -25,8 +25,8 @@ Estado global: **SAAS-A + B + C + DL + E + DS INTEGRADAS / ENFORCEMENT CONCLUÍD
 | SAAS-DL Legal/aceite | `saas-r1-dl-legal-acceptance` | A | **CONCLUÍDA** | **INTEGRADA SEMANTICAMENTE — `733885c1...`; PR #214 fechado sem merge** |
 | SAAS-E Operação/recovery | `saas-r1-e-ops-recovery` | A | **CONCLUÍDA** | **INTEGRADA — PR #215 / `82f2e643...`** |
 | SAAS-DS Segurança/enforcement | `saas-r1-ds-security-enforcement` | B + C | **CONCLUÍDA** | **INTEGRADA — PR #218 / `726436ac...`** |
-| SAAS-I Integração | integradora | B+C+DL+E+DS | **LIBERADA** | próxima etapa coordenada |
-| SAAS-P Piloto | integradora | I | **AGUARDANDO** | — |
+| SAAS-I Integração | `saas-r1-i-integration` → integradora | B+C+DL+E+DS | **CONCLUÍDA** | **INTEGRADA — PR #219 / `25dda487...`** |
+| SAAS-P Piloto | integradora | I | **LIBERADA** | próxima etapa coordenada; sem publicação automática |
 | SAAS-J Certificação | integradora | P | **AGUARDANDO** | — |
 
 ## 3. Contratos congelados
@@ -223,3 +223,35 @@ A branch integradora pode receber documentação e código de workers, mas promo
 A quantidade de candidatos VIP legado permanece dependente de inventário autenticado do Firestore. `apply` exige allowlist explícita e não será executado pela SAAS-I.
 
 Handoff: `docs/SAAS_R1_I_INTEGRATION_HANDOFF.md`.
+
+
+## 16. Integração SAAS-I
+
+A SAAS-I foi auditada pelo Coordenador e integrada.
+
+Evidências:
+- base `71ed87932f17b8acd9fab9c30006970b59079c42`;
+- HEAD final `78d3e9afeeb4176a8d6423cdd8e65d32435ba0a9`;
+- PR #219 clean/mergeable;
+- squash `25dda4876fedabb498ad30139262b11943412273`;
+- Application CI #908, Core Protection #195, Recovery #595 e Legal #20: SUCCESS;
+- build, TypeScript, Diff Hygiene, multi-tenant, Central external security e gates 16–21: PASS.
+
+Contratos combinados agora canônicos:
+- legal gate integrado sem bloquear páginas públicas/reset/regularização;
+- subscriptions operacionais aguardam aceite vigente;
+- billing continua desacoplado do lifecycle;
+- VIP legado possui metadata e proteção imutável;
+- migração VIP é allowlist-only, idempotente e auditável;
+- nenhum billing histórico é reprecificado;
+- Central continua com `warehouseAccess`;
+- nenhum terceiro banco.
+
+Não executado:
+- main;
+- deploy Vercel produção;
+- deploy de Rules;
+- migração VIP produtiva;
+- configuração externa SAAS-E.
+
+Próxima etapa: **SAAS-P — Piloto controlado**.

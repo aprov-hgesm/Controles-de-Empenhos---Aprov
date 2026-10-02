@@ -1,9 +1,9 @@
 # EMPROVEX — Memorial Oficial do Repositório
 
-Última atualização: **2026-10-02 — VIP legado congelado / SAAS-I liberada / Central Móvel R1 planejada**
+Última atualização: **2026-10-02 — SAAS-I integrada e aprovada / SAAS-P liberada / Central Móvel R1 planejada**
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Branch integradora do SaaS R1: `feat/saas-r1-commercializacao`
-Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A, SAAS-B, SAAS-C, SAAS-DL, SAAS-E e SAAS-DS INTEGRADAS; enforcement transversal concluído no código; SAAS-I LIBERADA para integração controlada e validação combinada**
+Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A, SAAS-B, SAAS-C, SAAS-DL, SAAS-E, SAAS-DS e SAAS-I INTEGRADAS; candidato SaaS R1 combinado certificado no repositório; SAAS-P LIBERADA para piloto controlado**
 
 Este documento é a **porta de entrada canônica para continuidade do EMPROVEX como produto**. Ele resume o estado vigente e aponta para os documentos históricos/especializados. O histórico detalhado não deve ser apagado. Para comportamento publicado, `main` prevalece. Para o ciclo SaaS R1 em desenvolvimento, prevalecem `feat/saas-r1-commercializacao`, este memorial e os quatro documentos canônicos `SAAS_R1_*`.
 
@@ -626,8 +626,8 @@ Frentes ativadas:
 - **SAAS-DS — Segurança/enforcement:** **INTEGRADA** via PR #218 / squash `726436ac...`; suspensão/reativação server-side, revogação de sessões e enforcement da Central incorporados, sem publicação de Rules em produção.
 
 **Fechamento**
-- **SAAS-I — integração controlada: LIBERADA / PRÓXIMA ETAPA**;
-- SAAS-P — piloto;
+- **SAAS-I — integração controlada: APROVADA E INTEGRADA via PR #219 / squash `25dda487...`**;
+- **SAAS-P — piloto: LIBERADA / PRÓXIMA ETAPA**;
 - SAAS-J — certificação comercial;
 - SaaS aberto somente com decisão explícita do usuário.
 
@@ -1810,3 +1810,58 @@ A quantidade real da coorte não é inferida do código: deve ser obtida por lei
 Handoff detalhado: `docs/SAAS_R1_I_INTEGRATION_HANDOFF.md`.
 
 Estado neste registro: **candidato em validação no PR #219; não publicado em main, Vercel, Rules ou migração de produção**.
+
+
+### Registro de integração SAAS-I — 2026-10-02
+
+Etapa técnica:
+- branch: `saas-r1-i-integration`;
+- base: `71ed87932f17b8acd9fab9c30006970b59079c42`;
+- HEAD final certificado: `78d3e9afeeb4176a8d6423cdd8e65d32435ba0a9`;
+- PR #219;
+- integração squash na coordenadora: `25dda4876fedabb498ad30139262b11943412273`.
+
+Certificação final:
+- Application CI #908: **SUCCESS**;
+- EMPROVEX Core Protection #195: **SUCCESS**;
+- Recovery guardrails #595: **SUCCESS**;
+- SAAS-DL Legal Validation #20: **SUCCESS**;
+- SAAS-C Browser Validation: **SKIPPED por escopo**, não falha;
+- Production Build: **PASS**;
+- Final TypeScript: **PASS**;
+- Diff Hygiene: **PASS**;
+- Firestore multi-tenant security: **PASS**;
+- Central de Depósitos external workspace security: **PASS**;
+- release gates 16–21: **PASS**.
+
+Integração combinada aprovada:
+- `LegalAcceptanceGate` conectado somente depois de Auth + workspace/account + UG/autorização básica;
+- listeners e snapshot operacional ficam bloqueados até aceite vigente;
+- `/terms`, `/privacy`, login/reset e `/regularizacao` permanecem fora do gate;
+- acesso direto à Central também exige aceite legal depois da autorização básica;
+- billing continua separado do enforcement;
+- suspensão/reativação e revogação de sessão continuam conforme SAAS-DS;
+- VIP manual e VIP legado continuam `exempt`, sem novo status `vip`.
+
+VIP legado:
+- metadata mínima canônica: `exemptionSource = legacy_vip` + `legacyVipCutoff = 2026-10-02`;
+- Rules impedem remoção administrativa da isenção legada;
+- migração implementada em `scripts/saas-r1-legacy-vip.mjs`;
+- exige allowlist explícita, dry-run, confirmação literal e auditoria;
+- billing + auditoria são gravados atomicamente por workspace;
+- `billingCycles` não são varridos/reprecificados;
+- migração **NÃO EXECUTADA EM PRODUÇÃO**;
+- quantidade real da coorte deve ser obtida por leitura autenticada e congelada antes do apply.
+
+Rules candidatas:
+- principal: ~92,11 KiB;
+- Central: ~152,38 KiB;
+- nenhuma Rule nova foi publicada nesta etapa.
+
+Produção:
+- `main` continua em `e90f92acae1514ee5cbc6ce95fed354bc1454330`;
+- nenhum deploy Vercel produção;
+- nenhuma migração VIP produtiva;
+- nenhum deploy de Rules.
+
+Com a integração e certificação da SAAS-I, a **SAAS-P está formalmente liberada** para piloto controlado. As pendências externas de PITR, delete protection, backup READY, restore real e uptime/alertas continuam gates obrigatórios para a certificação SAAS-J.

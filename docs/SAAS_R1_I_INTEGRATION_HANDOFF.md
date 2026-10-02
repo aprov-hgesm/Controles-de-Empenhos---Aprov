@@ -368,6 +368,38 @@ Manter tag/SHA pré-release. Em falha de Rules:
 
 ## 12. Status de fechamento
 
-Este documento deve ser atualizado com os resultados finais do PR #219 antes da declaração final da SAAS-I.
+HEAD final certificado:
+`78d3e9afeeb4176a8d6423cdd8e65d32435ba0a9`
 
-**NÃO PUBLICADO.**
+Resultados finais:
+- Application CI #908: **SUCCESS**;
+- EMPROVEX Core Protection #195: **SUCCESS**;
+- Recovery guardrails #595: **SUCCESS**;
+- SAAS-DL Legal Validation #20: **SUCCESS**;
+- SAAS-C Browser Validation: **SKIPPED POR ESCOPO**, não falha;
+- Production Build: **PASS**;
+- Final TypeScript: **PASS**;
+- Diff Hygiene: **PASS**;
+- multi-tenant Firestore security: **PASS**;
+- Central de Depósitos external workspace security: **PASS**;
+- release gates 16–21: **PASS**.
+
+Integração coordenadora:
+- PR #219: aprovado e integrado;
+- squash: `25dda4876fedabb498ad30139262b11943412273`.
+
+**IMPLEMENTADO E VALIDADO.**
+
+**NÃO PUBLICADO EM PRODUÇÃO:**
+- nenhum merge em `main`;
+- nenhum deploy Vercel produção;
+- nenhuma publicação de Rules;
+- nenhuma migração VIP legado em produção.
+
+**EXIGE CONFIGURAÇÃO EXTERNA:**
+- PITR/delete protection;
+- backup READY;
+- restore real;
+- uptime/alerta/canal.
+
+# SAAS-I — APROVADA E PRONTA PARA PILOTO
