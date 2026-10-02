@@ -489,3 +489,14 @@ PR #222 foi certificado e integrado por squash em `ea2d389f726ae989ae88f7fc7359c
 
 A correção apenas torna a invocação do Google Cloud CLI compatível com Windows/PowerShell. Não há impacto funcional MOBILE-R1.
 
+### Dry-run VIP legado
+
+Dry-run da allowlist congelada executado e aprovado em 2026-10-02:
+
+- 3/3 workspaces selecionados;
+- 0 não resolvidos;
+- founder excluído;
+- nenhuma escrita executada.
+
+A próxima ação de P2 é produtiva (`apply`) e permanece bloqueada até autorização explícita.
+
