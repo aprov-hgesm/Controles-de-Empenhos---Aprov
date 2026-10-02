@@ -670,11 +670,11 @@ Workers nunca fazem merge em `main`, deploy Vercel, deploy de Rules ou promoçã
 
 A branch integradora só chega à produção após SAAS-J e autorização explícita do usuário.
 
-## 8. Programa planejado — Central Móvel R1
+## 8. Programa ativo — Central Móvel R1
 
 ### 8.1 Estado e objetivo
 
-A **Central Móvel R1** é o próximo programa funcional planejado para a Central de Depósitos. O programa está **APROVADO COMO PLANEJAMENTO, MAS AINDA NÃO INICIADO**: não existe autorização implícita para criar branches, alterar código, integrar em `main` ou publicar produção apenas porque esta seção existe.
+A **Central Móvel R1** é o programa funcional ativo para evolução móvel da Central de Depósitos. O **MOBILE-0 foi iniciado e congelado em 2026-10-02** sobre a branch integradora `feat/central-mobile-r1`. A primeira onda autorizada é exclusivamente **MOBILE-A + MOBILE-B**. As frentes MOBILE-C a MOBILE-H permanecem bloqueadas pelos gates de integração definidos nesta seção. A ativação do programa não autoriza merge em `main`, deploy de produção, publicação de Rules ou migrações produtivas.
 
 Nome de produto provisório:
 **EMPROVEX — Central Móvel R1**
@@ -682,8 +682,11 @@ Nome de produto provisório:
 Código interno da rodada:
 `MOBILE-R1`
 
-Branch integradora recomendada, a ser criada somente pelo Coordenador quando o baseline for formalmente congelado:
+Branch integradora oficial criada e governada pelo Coordenador:
 `feat/central-mobile-r1`
+
+Baseline técnico congelado do MOBILE-0:
+`saas-r1-i-integration@78d3e9afeeb4176a8d6423cdd8e65d32435ba0a9`
 
 Objetivo:
 > permitir que o mesmo usuário autenticado do EMPROVEX execute, pelo navegador do celular e no próprio ponto físico da operação, alocação de recebimentos, transferências, consultas, inventário, saídas e conferências por leitura de códigos de barras de produtos e posições, reutilizando integralmente as autoridades de dados já existentes da Central de Depósitos.
@@ -1463,18 +1466,9 @@ Cada worker:
 - não integra outra frente;
 - não publica produção.
 
-### 8.27 Próximo passo autorizado de planejamento
+### 8.27 Estado após execução do MOBILE-0
 
-Antes de qualquer implementação funcional da Central Móvel R1, o próximo Chat Coordenador deve:
-1. conferir o HEAD real da base escolhida;
-2. criar a branch integradora da rodada;
-3. criar os quatro documentos `CENTRAL_MOBILE_R1_*`;
-4. transformar esta macroarquitetura em contratos técnicos e critérios de aceite detalhados;
-5. registrar o quadro vivo;
-6. criar/liberar somente MOBILE-A e MOBILE-B como primeira onda;
-7. manter MOBILE-C a MOBILE-H bloqueadas até a Integração 1 congelar os contratos compartilhados.
-
-Esta seção é o **contexto mestre da Central Móvel R1** até que os documentos especializados sejam criados. Em caso de divergência futura, prevalecem: código integrado + este Memorial + documentos canônicos da rodada, conforme o estágio vigente.
+O MOBILE-0 foi executado pelo Coordenador em 2026-10-02: baseline técnico definido, branch integradora criada e os quatro documentos `CENTRAL_MOBILE_R1_*` materializados. O próximo passo autorizado é criar/liberar **somente MOBILE-A e MOBILE-B** a partir do freeze documental da integradora. MOBILE-C a MOBILE-H permanecem bloqueadas até os respectivos gates. Em caso de divergência futura, prevalecem: código integrado + este Memorial + documentos canônicos da rodada, conforme o estágio vigente.
 
 ## 9. Riscos/pendências que não devem ser esquecidos
 
