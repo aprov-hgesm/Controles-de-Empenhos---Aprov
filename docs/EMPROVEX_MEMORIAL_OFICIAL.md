@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial do Repositório
 
-Última atualização: **2026-10-02 — SAAS-DS integrada / SAAS-I liberada**
+Última atualização: **2026-10-02 — VIP legado congelado / SAAS-I liberada**
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Branch integradora do SaaS R1: `feat/saas-r1-commercializacao`
 Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A, SAAS-B, SAAS-C, SAAS-DL, SAAS-E e SAAS-DS INTEGRADAS; enforcement transversal concluído no código; SAAS-I LIBERADA para integração controlada e validação combinada**
@@ -569,7 +569,11 @@ Plano de assinatura recorrente sem integração fica como evolução R1.1 se o p
 - **Plano Completo EMPROVEX: R$ 70,00/mês por workspace**, sem tiers e sem módulos pagos à parte;
 - workspace regular, trial válido e VIP recebem acesso integral ao sistema conforme suas permissões operacionais;
 - VIP externo é isenção comercial: usa internamente `exempt`, custa R$ 0 e mantém o mesmo acesso funcional;
-- concessão/remoção de VIP é exclusivamente administrativa e auditada;
+- **coorte VIP legado congelada em 2026-10-02:** todo workspace externo que já estava cadastrado no EMPROVEX nessa data deverá ser migrado para `exempt`, com R$ 0, sem trial/cobrança/inadimplência e com Plano Completo;
+- a coorte VIP legado não será convertida automaticamente em pagante no futuro; qualquer retirada dessa isenção exige decisão administrativa explícita do fundador e auditoria;
+- VIP legado recebe as mesmas funcionalidades presentes e futuras do Plano Completo, sem limitação comercial por módulo; continuam valendo apenas as restrições normais de segurança, tenant, UG e autorização operacional;
+- novos workspaces cadastrados após o corte de 2026-10-02 seguem o contrato comercial vigente de **R$ 70,00/mês**, salvo concessão manual de VIP/`exempt`;
+- concessão/remoção de VIP fora da coorte legada é exclusivamente administrativa e auditada;
 - 1 workspace = 1 UG na R1;
 - 1 conta operacional primária por workspace;
 - fonte comercial = `billingAccounts/{workspaceId}`;
@@ -648,7 +652,8 @@ O software não declarará conformidade jurídica absoluta nem presumirá enquad
 
 Piloto inicial recomendado:
 - 3 a 5 workspaces externos;
-- pelo menos um pagamento real;
+- a coorte VIP legado pode participar do piloto funcional, mas **não serve como evidência de cobrança**, pois permanece isenta;
+- pelo menos um pagamento real deve ser validado com workspace **não pertencente à coorte VIP legado**;
 - trial → ativação;
 - suspensão → reativação controlada;
 - restauração testada;
@@ -935,6 +940,9 @@ Rules:
 
 Pendências transferidas para SAAS-I:
 - integração/validação combinada B+C+DL+E+DS;
+- executar uma **migração única, idempotente e auditável da coorte VIP legado**, identificando todos os workspaces externos já existentes no corte de 2026-10-02 e materializando `billingAccounts.status = exempt` sem reprecificar histórico;
+- a migração VIP legado deve preservar workspace, UG, UID, dados operacionais, histórico de billing e competências já materializadas; não deve criar novo trial, nova conta ou novo tenant;
+- validar que nenhum workspace da coorte legada aparece como devedor, pendente ou sujeito a suspensão financeira e que todos mantêm Plano Completo;
 - conectar o `LegalAcceptanceGate` ao shell depois de Auth/workspace/UG resolvidos;
 - validar que aceite não bloqueia reset de senha, Termos/Privacidade ou `/regularizacao`;
 - preparar publicação coordenada da aplicação + Rules da Central;
@@ -942,3 +950,28 @@ Pendências transferidas para SAAS-I:
 - manter pendências externas da SAAS-E como gates para SAAS-J.
 
 Com a SAAS-DS integrada, a **SAAS-I está formalmente liberada**.
+
+
+### Decisão comercial — coorte VIP legado — 2026-10-02
+
+Fica congelada como contrato oficial do EMPROVEX SaaS R1 a seguinte regra:
+
+> **Todos os workspaces externos já cadastrados no EMPROVEX em 2 de outubro de 2026 são clientes VIP legados e não serão cobrados pelo uso do sistema.**
+
+Implementação canônica:
+- estado interno de billing: `exempt`;
+- preço efetivo: R$ 0,00;
+- Plano Completo;
+- sem trial obrigatório;
+- sem vencimento, inadimplência ou suspensão por falta de pagamento;
+- sem limitação comercial de funcionalidades;
+- mesma evolução funcional do Plano Completo dos clientes pagantes;
+- segurança, isolamento multi-tenant, UG, lifecycle e demais controles operacionais continuam normalmente aplicáveis.
+
+A isenção é vinculada ao **workspace**, que é a unidade comercial vigente da R1. Ela não transforma o usuário em administrador, não ignora Rules e não cria bypass de segurança.
+
+A coorte deve ser identificada e migrada na **SAAS-I** por operação única, idempotente e auditável. O processo deve registrar quais workspaces foram incluídos no corte, preservar histórico e impedir cobrança acidental.
+
+Workspaces criados **após 2026-10-02** entram no Plano Completo de R$ 70,00/mês por padrão, salvo concessão manual posterior de VIP/`exempt`.
+
+Nenhuma remoção automática da condição VIP legado será permitida. Eventual alteração futura exige ação administrativa explícita e auditada do fundador.
