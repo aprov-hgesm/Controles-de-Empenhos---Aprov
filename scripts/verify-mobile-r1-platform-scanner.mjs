@@ -20,6 +20,18 @@ for (const path of [
   assert.equal(existsSync(resolve(root, path)), true, 'Arquivo MOBILE-A ausente: ' + path);
 }
 
+const nextConfig = read('next.config.ts');
+assert.match(nextConfig, /reactStrictMode:\s*true/);
+assert.match(
+  nextConfig,
+  /camera=\(self\),\s*microphone=\(\),\s*geolocation=\(\)/
+);
+assert.equal(
+  /camera=\(\)/.test(nextConfig),
+  false,
+  'Permissions-Policy voltou a bloquear a câmera da própria origem.'
+);
+
 const protectedSurface = read('features/warehouse/components/WarehouseProtectedSurface.tsx');
 assert.match(protectedSurface, /export function WarehouseAccessBoundary/);
 assert.match(protectedSurface, /onAuthStateChanged/);
@@ -39,6 +51,35 @@ assert.match(scanner, /navigator\.mediaDevices/);
 assert.match(scanner, /playsInline/);
 assert.match(scanner, /MANUAL/);
 assert.match(scanner, /stopRef\.current\?\.\(\)/);
+
+const lifecycleEffectStart = scanner.indexOf('useEffect(() => {');
+const mountedSetup = scanner.indexOf('mountedRef.current = true;', lifecycleEffectStart);
+const mountedCleanup = scanner.indexOf('mountedRef.current = false;', mountedSetup);
+const teardownStop = scanner.indexOf('stopRef.current?.();', mountedCleanup);
+const teardownNull = scanner.indexOf('stopRef.current = null;', teardownStop);
+const lifecycleEffectEnd = scanner.indexOf('}, []);', teardownNull);
+
+assert.ok(lifecycleEffectStart >= 0, 'Effect de lifecycle do scanner ausente.');
+assert.ok(
+  mountedSetup > lifecycleEffectStart,
+  'Strict Mode exige restaurar mountedRef.current = true no setup.'
+);
+assert.ok(
+  mountedCleanup > mountedSetup,
+  'Cleanup deve marcar mountedRef.current = false depois do setup.'
+);
+assert.ok(
+  teardownStop > mountedCleanup,
+  'Cleanup deve continuar encerrando a câmera.'
+);
+assert.ok(
+  teardownNull > teardownStop,
+  'Cleanup deve continuar anulando stopRef após encerrar a câmera.'
+);
+assert.ok(
+  lifecycleEffectEnd > teardownNull,
+  'Setup/cleanup do lifecycle deve permanecer no mesmo effect sem dependências.'
+);
 
 const decoder = read('features/warehouse/mobile/scannerDecoder.ts');
 assert.match(decoder, /@zxing\/browser/);
@@ -93,3 +134,5 @@ console.log('- shell móvel é independente do shell desktop');
 console.log('- decoder ZXing fica atrás de import() e só carrega ao ativar câmera');
 console.log('- scanner não importa repositories mutáveis de estoque');
 console.log('- fallback manual e teardown explícito permanecem presentes');
+console.log('- Permissions-Policy permite camera same-origin e mantém microphone/geolocation bloqueados');
+console.log('- lifecycle mountedRef é resiliente ao setup→cleanup→setup do React Strict Mode');

@@ -120,6 +120,8 @@ export function WarehouseMobileScanner({
   const [lastEvent, setLastEvent] = useState<WarehouseMobileScanEvent | null>(null);
 
   useEffect(() => {
+    mountedRef.current = true;
+
     return () => {
       mountedRef.current = false;
       stopRef.current?.();
