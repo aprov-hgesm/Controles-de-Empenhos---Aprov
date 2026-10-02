@@ -457,3 +457,35 @@ Ações bloqueadas por autorização humana:
 - suspensão/billing de cliente real.
 
 Qualquer correção transversal da SAAS-P deve conter **Impacto MOBILE-R1** e ser comparada com o estado vivo da integradora Mobile.
+
+## 20. SAAS-P — estado após inventário VIP e auditoria recovery
+
+Em 2026-10-02, P2/P3 produziram evidência real.
+
+### VIP legado
+
+Allowlist aprovada:
+
+- `aprovisionamento-2-b-fv`;
+- `aprovisionamento-3-gac-ap`;
+- `aprovisionamento-teste`.
+
+`aprovisionamento-teste` permanece VIP legado e será usado como perfil funcional externo real. Um perfil de teste não-VIP para trial/cobrança será criado somente depois, quando necessário ao piloto comercial.
+
+Nenhum `apply` foi executado. Próxima operação permitida sem autorização produtiva: `dry-run` da allowlist congelada.
+
+### Recovery
+
+Estado observado:
+
+- principal: PITR OFF, delete protection OFF, daily backup ausente, 0 backup READY;
+- warehouse: PITR OFF, delete protection ON, daily backup ausente, 0 backup READY.
+
+A plataforma continua tecnicamente preparada no repositório, mas a infraestrutura externa segue **PENDING** para certificação.
+
+### PILOT-OPS Windows
+
+PR #222 foi certificado e integrado por squash em `ea2d389f726ae989ae88f7fc7359c690b23dfb13`.
+
+A correção apenas torna a invocação do Google Cloud CLI compatível com Windows/PowerShell. Não há impacto funcional MOBILE-R1.
+
