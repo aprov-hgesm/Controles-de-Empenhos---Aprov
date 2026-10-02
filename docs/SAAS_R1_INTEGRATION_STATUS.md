@@ -340,3 +340,23 @@ Dry-run da coorte VIP legado concluído com sucesso:
 
 P2 está pronta para `apply` produtivo, que depende de autorização explícita.
 
+### SAAS-P — P2 concluída
+
+Migração produtiva VIP legado executada e verificada em 2026-10-02:
+
+- `aprovisionamento-2-b-fv`: APPLIED / READY;
+- `aprovisionamento-3-gac-ap`: APPLIED / READY;
+- `aprovisionamento-teste`: APPLIED / READY.
+
+Estado final da coorte:
+
+- `status = exempt`;
+- `monthlyPriceCents = 0`;
+- `paymentRequired = false`;
+- `exemptionSource = legacy_vip`;
+- `legacyVipCutoff = 2026-10-02`.
+
+P2: **CONCLUÍDA**.
+
+Próximo eixo ativo da SAAS-P: P3 — controles externos de recovery/backup/uptime.
+
