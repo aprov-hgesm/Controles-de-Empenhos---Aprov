@@ -28,8 +28,9 @@ Ler, nesta ordem:
 - **SAAS-B foi concluída, certificada e integrada** na branch coordenadora via PR #216 / squash `f91cda645...`.
 - **SAAS-E foi concluída, certificada e integrada** via PR #215 / squash `82f2e643...`; configuração externa de backup/restore/uptime continua pendente.
 - **SAAS-DL foi concluída, certificada e integrada semanticamente** em `733885c1...`; PR #214 foi fechado sem merge automático por conflito esperado com B/E já integradas.
-- SAAS-C continua em execução na branch exclusiva.
-- SAAS-DS continua bloqueada até integração semântica de B+C.
+- **SAAS-C foi concluída, certificada e integrada semanticamente** em `cf320ce3...`; PRs #213/#217 foram fechados sem merge automático.
+- **A Onda 1 está concluída.**
+- **SAAS-DS está LIBERADA**, pois B+C já estão integradas.
 
 ## 3. Decisão central
 
@@ -121,8 +122,8 @@ Quatro workers independentes estão autorizados:
 ### B — INTEGRADA
 Billing/regularização concluída em `7e288e79...` e integrada via PR #216 / `f91cda645...`.
 
-### C
-Onboarding/reset de senha.
+### C — INTEGRADA
+Onboarding/reset/troca de senha/checklist concluídos e integrados semanticamente em `cf320ce3...`. Browser E2E registrou 3/3 asserts PASS; o status cancelado foi teardown pós-teste e permanece documentado como tal.
 
 ### DL — INTEGRADA
 Termos/Privacidade/aceite versionado integrados semanticamente em `733885c1...`. O `LegalAcceptanceGate` permanece isolado até a integração com SAAS-C/SAAS-I.
@@ -134,15 +135,15 @@ Eles devem trabalhar simultaneamente quando possível, sem editar domínio alhei
 
 ## 8. Depois da Onda 1
 
-1. receber o handoff restante de C;
-2. integrar C após revisão semântica sobre a coordenadora que já contém B/DL/E;
-3. depois de B+C integradas, liberar SAAS-DS;
-4. atualizar Integration Status;
-5. abrir SAAS-DS;
-6. executar segurança/enforcement;
-7. executar SAAS-I;
-8. pilotar;
-9. certificar SAAS-J.
+A Onda 1 foi concluída.
+
+Sequência vigente:
+1. criar/ativar SAAS-DS a partir da integradora atual;
+2. executar segurança/enforcement;
+3. executar SAAS-I, incluindo glue do aceite legal com o shell já estabilizado;
+4. executar piloto SAAS-P;
+5. certificar SAAS-J;
+6. somente então decidir publicação/abertura comercial.
 
 ## 9. Pontos que não podem ser perdidos
 
@@ -275,3 +276,40 @@ Pendência deliberada:
 - não bloquear `/terms`, `/privacy`, recuperação de credenciais ou superfície pública de regularização;
 - publicar as Rules legais somente na release autorizada;
 - manter revisão jurídica humana como gate de abertura comercial quando aplicável.
+
+
+## 15. Integração SAAS-C
+
+A SAAS-C foi validada e integrada semanticamente pelo Coordenador.
+
+Evidências:
+- worker funcional `524432969c0bc07acdbce9539830e703a8374226`;
+- teardown E2E `8c7fc09912b7b01208fda9f5c0b3be848641e0c4`;
+- handoff final `8bd5f38ce31073bd01b43e05fb46c103a9fe696d`;
+- PR #213 original fechado sem merge;
+- PR técnico #217 fechado sem merge;
+- integração coordenadora `cf320ce33f8bb9e667cf0eb59fcf456214109ed3`;
+- Application CI #894, Core Protection #181 e Recovery #581: SUCCESS.
+
+Browser:
+- os três cenários dirigidos passaram;
+- Playwright: `3 passed (30.9s)`;
+- o job foi cancelado somente no teardown por subprocessos remanescentes;
+- o runner foi corrigido para sinalizar grupos de processos no Linux;
+- não alegar um novo workflow verde pós-correção, pois o conector não disparou Actions para o commit técnico.
+
+Contratos agora canônicos:
+- onboarding assistido;
+- reset self-service Firebase com resposta neutra;
+- troca da própria senha com reautenticação;
+- founder Google-only;
+- externo password-only;
+- mensagens humanas de autorização;
+- Minha conta;
+- checklist local e não bloqueante;
+- Drive opcional;
+- sem Rules/Indexes/env/banco novo.
+
+Com B+C integradas, a SAAS-DS está liberada.
+
+A SAAS-I deverá posteriormente compor `LegalAcceptanceGate` com o shell, sem bloquear reset de credenciais, Termos/Privacidade ou regularização pública.

@@ -1,9 +1,9 @@
 # EMPROVEX — Memorial Oficial do Repositório
 
-Última atualização: **2026-10-01 — SaaS R1 Onda 1 iniciada**
+Última atualização: **2026-10-01 — SaaS R1 Onda 1 concluída / SAAS-DS liberada**
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Branch integradora do SaaS R1: `feat/saas-r1-commercializacao`
-Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A congelada; SAAS-B, SAAS-DL e SAAS-E INTEGRADAS; SAAS-C segue em execução; SAAS-DS ainda bloqueada até B+C**
+Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A congelada; SAAS-B, SAAS-C, SAAS-DL e SAAS-E INTEGRADAS; Onda 1 CONCLUÍDA; SAAS-DS LIBERADA para Segurança/Enforcement**
 
 Este documento é a **porta de entrada canônica para continuidade do EMPROVEX como produto**. Ele resume o estado vigente e aponta para os documentos históricos/especializados. O histórico detalhado não deve ser apagado. Para comportamento publicado, `main` prevalece. Para o ciclo SaaS R1 em desenvolvimento, prevalecem `feat/saas-r1-commercializacao`, este memorial e os quatro documentos canônicos `SAAS_R1_*`.
 
@@ -613,12 +613,12 @@ A fase SAAS-DS, depois de billing/onboarding integrados, sincronizará suspensã
 
 Frentes ativadas:
 - **SAAS-B — Billing/regularização:** **INTEGRADA** na branch coordenadora via PR #216; Plano Completo R$ 70, VIP/Isento, regularização pública e confirmação manual certificados;
-- **SAAS-C — Onboarding:** ATIVADA;
+- **SAAS-C — Onboarding:** **INTEGRADA semanticamente** na branch coordenadora em `cf320ce3...`; reset self-service, troca de senha, mensagens humanas, Minha conta e checklist curto incorporados;
 - **SAAS-DL — Legal/aceite:** **INTEGRADA semanticamente** na branch coordenadora; Termos/Privacidade R1, versões legais, aceite tenant-scoped e Rules create-only incorporados; glue do `LegalAcceptanceGate` permanece deliberadamente para depois da SAAS-C/SAAS-I;
 - **SAAS-E — Operação/backup/uptime:** **INTEGRADA** via PR #215; health/recovery/runbooks certificados no repositório, com configuração externa de backup/restore/uptime ainda pendente.
 
-**Onda 2**
-- SAAS-DS — Segurança/enforcement, depois de B+C.
+**Onda 2 — LIBERADA**
+- **SAAS-DS — Segurança/enforcement:** dependência B+C satisfeita; deve partir da integradora após o fechamento documental da Onda 1.
 
 **Fechamento**
 - SAAS-I — integração controlada;
@@ -640,7 +640,7 @@ Antes do SaaS aberto:
 
 ### Legal
 
-Termos/Privacidade serão revisados para ambiente pago e Mercado Pago. O aceite será versionado e auditável.
+Termos/Privacidade comerciais e o domínio de aceite versionado já estão integrados. O `LegalAcceptanceGate` continua deliberadamente sem glue no shell até a integração controlada SAAS-I.
 
 O software não declarará conformidade jurídica absoluta nem presumirá enquadramento como agente de pequeno porte. Validação legal/contábil externa permanece um gate antes da abertura pública quando aplicável.
 
@@ -694,7 +694,7 @@ O usuário autorizou o início imediato do desenvolvimento paralelo coordenado.
 
 Chats trabalhadores autorizados:
 - SAAS-B — Billing, Plano Completo, VIP e regularização — **CONCLUÍDA E INTEGRADA**;
-- SAAS-C — Onboarding e credenciais;
+- SAAS-C — Onboarding e credenciais — **CONCLUÍDA E INTEGRADA SEMANTICAMENTE**;
 - SAAS-DL — Legal, Privacidade e aceite versionado — **CONCLUÍDA E INTEGRADA SEMANTICAMENTE**;
 - SAAS-E — Operação, backup, uptime e recuperação — **CONCLUÍDA E INTEGRADA no repositório; configuração externa permanece pendente antes da abertura comercial**.
 
@@ -834,3 +834,54 @@ Pendência deliberada:
 - as novas Rules legais ainda não foram publicadas em produção.
 
 A SAAS-DL está integrada no código, mas revisão jurídica humana qualificada continua recomendada antes da abertura comercial ampla.
+
+
+### Registro de integração SAAS-C — 2026-10-01
+
+Worker:
+- branch: `saas-r1-c-onboarding`;
+- base original: `32872d3fc6a781ff129eb4e41ae9b0d45658024a`;
+- HEAD funcional submetido aos gates: `524432969c0bc07acdbce9539830e703a8374226`;
+- correção de teardown E2E: `8c7fc09912b7b01208fda9f5c0b3be848641e0c4`;
+- HEAD final documental: `8bd5f38ce31073bd01b43e05fb46c103a9fe696d`;
+- PR original #213 fechado sem merge;
+- PR técnico #217 fechado sem merge;
+- integração semântica do Coordenador: `cf320ce33f8bb9e667cf0eb59fcf456214109ed3`.
+
+Certificação:
+- Application CI #894: **SUCCESS**;
+- EMPROVEX Core Protection #181: **SUCCESS**;
+- Recovery guardrails #581: **SUCCESS**;
+- Production Build: **PASS**;
+- TypeScript: **PASS**;
+- Diff Hygiene: **PASS**;
+- release gates 16–21: **PASS**;
+- segurança multi-tenant/Firebase Emulator: **PASS**.
+
+Browser E2E dirigido:
+- run #3 / id `36939984021`, attempt 2;
+- login → relatório → NS por UG → reload: **PASS**;
+- usuário externo vê Central de Depósitos: **PASS**;
+- isolamento do segundo workspace: **PASS**;
+- Playwright registrou **3 passed (30.9s)**.
+
+O workflow terminou posteriormente como `cancelled` porque subprocessos do runner E2E permaneceram vivos no teardown até o timeout de 18 minutos. Não houve assert funcional falho após o `3 passed`. O patch `8c7fc099...` endureceu o encerramento da árvore de processos no Linux; a estratégia de process-group shutdown foi reproduzida isoladamente pelo Coordenador. O conector usado na coordenação não disparou novo GitHub Actions para esse commit, portanto **não existe run verde pós-teardown e isso não deve ser alegado**.
+
+Resultado funcional integrado:
+- onboarding continua assistido, sem signup público;
+- reset de senha externo via Firebase Auth com resposta neutra;
+- fundador continua Google-only;
+- externo continua password-only;
+- troca de senha exige reautenticação e provider correto;
+- nenhuma senha/token é persistida no Firestore;
+- mensagens técnicas de autorização ficam fora da UX;
+- `Minha conta` disponível ao setor externo;
+- checklist de primeiro acesso inicia fechado, é local ao navegador e não bloqueante;
+- Drive continua opcional;
+- nenhuma Rule/Index/env/banco novo;
+- enforcement comercial continua reservado à SAAS-DS.
+
+Com B+C integradas, a dependência da **SAAS-DS está satisfeita**.
+
+Pendência transversal:
+- conectar o `LegalAcceptanceGate` depois que Auth/workspace/UG estiverem resolvidos, na SAAS-I, preservando reset de senha e superfícies públicas.

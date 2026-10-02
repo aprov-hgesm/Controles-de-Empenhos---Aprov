@@ -60,9 +60,9 @@ Alterar qualquer item exige decisão do Coordenador e atualização dos quatro d
 
 ## 4. Onda 1 — frentes paralelas independentes
 
-**Status: INICIADA em 2026-10-01 por autorização explícita do usuário.**
+**Status: CONCLUÍDA em 2026-10-01. SAAS-B, SAAS-C, SAAS-DL e SAAS-E foram integradas na branch coordenadora.**
 
-SAAS-B, SAAS-C, SAAS-DL e SAAS-E devem ser executadas simultaneamente em branches exclusivas, todas partindo da mesma base de ativação da integradora.
+As quatro workers partiram da mesma base comum e foram reconciliadas semanticamente pelo Coordenador. Os contratos abaixo permanecem como registro da execução.
 
 ### SAAS-B — Billing, trial e regularização
 
@@ -221,14 +221,14 @@ Aceite:
 
 ## 5. Onda 2 — SAAS-DS Segurança e Enforcement
 
-Começa **depois de SAAS-B e SAAS-C integrados**.
+Dependência **SATISFEITA**: SAAS-B e SAAS-C estão integradas. A frente está **LIBERADA**.
 
 Branch:
 `saas-r1-ds-security-enforcement`
 
-Motivo de ser posterior:
+Motivo de ter sido posterior:
 - é a única frente que precisa conhecer simultaneamente billing, provisionamento, identidade e sessão;
-- executar cedo aumentaria conflitos e criaria contrato duplicado.
+- iniciar somente agora evita contratos duplicados e permite trabalhar sobre B+C já consolidadas.
 
 Propriedade:
 - `lib/platformAccess.ts`;
