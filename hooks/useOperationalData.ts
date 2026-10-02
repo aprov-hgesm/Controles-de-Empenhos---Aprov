@@ -105,7 +105,10 @@ function describeSectorAuthorizationFailure(code: string): string {
  * plataforma e associada ao workspace autorizado. Contas desconhecidas,
  * desativadas ou com workspace inválido são encerradas em fail-closed.
  */
-export function useOperationalData(activeTab: OperationalActiveTab) {
+export function useOperationalData(
+  activeTab: OperationalActiveTab,
+  acceptedLegalIdentityKey: string | null = null
+) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const explicitSignInRef = useRef(false);
@@ -120,11 +123,28 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
   const [comissoes, setComissoes] = useState<Comissao[]>([]);
   const [cronogramas, setCronogramas] = useState<CronogramaEmpenho[]>([]);
 
+  const legalIdentityKey = (
+    user
+    && isOperationalSectorContext(workspaceContext)
+  )
+    ? [
+        user.uid,
+        normalizePlatformEmail(user.email || workspaceContext.email),
+        workspaceContext.workspaceId,
+        workspaceContext.ug || '',
+      ].join('|')
+    : null;
+  const operationalAccessEnabled = Boolean(
+    legalIdentityKey
+    && acceptedLegalIdentityKey === legalIdentityKey
+  );
+
   const {
     activeOperationalDataReady: operationalCollectionsReady,
     activeRealtimeCollectionCount: operationalCollectionCount,
     readiness,
   } = useOperationalRealtimeCollections({
+    enabled: operationalAccessEnabled,
     user,
     workspaceContext,
     activeTab,
@@ -139,6 +159,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     snapshot: inicioSnapshot,
     snapshotReady: inicioSnapshotReady,
   } = useInicioOperationalSnapshot({
+    enabled: operationalAccessEnabled,
     user,
     workspaceContext,
     activeTab,
@@ -159,6 +180,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     operationalCollectionCount
     + (
       activeTab === 'inicio'
+      && operationalAccessEnabled
       && user
       && isOperationalSectorContext(workspaceContext)
         ? 1
@@ -673,6 +695,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
 
   return {
     user, loadingAuth, syncing, workspaceContext,
+    legalIdentityKey,
     activeOperationalDataReady, activeRealtimeCollectionCount,
     inicioSnapshot,
     empenhos, setEmpenhos,

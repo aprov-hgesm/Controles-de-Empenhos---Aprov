@@ -8,6 +8,7 @@ import {
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 
 import { EmprovexAuthLoading } from '../../../components/auth/EmprovexAuthLoading';
+import { LegalAcceptanceGate } from '../../../components/legal/LegalAcceptanceGate';
 import { auth } from '../../../lib/firebase';
 import { resolveAuthenticatedWorkspaceContext } from '../../../lib/platformAccess';
 import { startWorkspaceSessionControl } from '../../../lib/platformSessionControl';
@@ -201,11 +202,24 @@ export function WarehouseProtectedLayout({
     );
   }
 
+  if (!currentUser) {
+    return <EmprovexAuthLoading hasAuthenticatedIdentity />;
+  }
+
   return (
-    <WarehouseWorkspaceProvider value={workspaceContext}>
-      <WarehouseModuleShell workspaceContext={workspaceContext}>
-        {children}
-      </WarehouseModuleShell>
-    </WarehouseWorkspaceProvider>
+    <LegalAcceptanceGate
+      identity={{
+        workspaceId: workspaceContext.workspaceId,
+        uid: currentUser.uid,
+        email: currentUser.email || workspaceContext.email,
+        ug: workspaceContext.ug,
+      }}
+    >
+      <WarehouseWorkspaceProvider value={workspaceContext}>
+        <WarehouseModuleShell workspaceContext={workspaceContext}>
+          {children}
+        </WarehouseModuleShell>
+      </WarehouseWorkspaceProvider>
+    </LegalAcceptanceGate>
   );
 }

@@ -457,3 +457,21 @@ Worker interrompe e devolve ao Coordenador se descobrir:
 9. SAAS-J.
 
 O Coordenador pode alterar essa ordem para reduzir conflitos, documentando a razão.
+
+## 16. Registro SAAS-I — 2026-10-02
+
+A etapa integradora SAAS-I foi executada em branch técnica `saas-r1-i-integration`, base exata `71ed87932f17b8acd9fab9c30006970b59079c42`, PR **#219** para a integradora.
+
+Escopo de integração:
+- B+C+DL+E+DS sem reincorporar workers;
+- glue mínimo do LegalAcceptanceGate;
+- bloqueio de listeners pré-aceite;
+- Central direta sob o mesmo contrato jurídico;
+- VIP legado materializado como `exempt` com metadata mínima protegida;
+- migração explícita/idempotente/auditável;
+- guard combinado `verify:saas-r1-integration`;
+- plano de release/rollback.
+
+A SAAS-I não é nova worker de domínio e não altera a regra do método paralelo: integra contratos já concluídos e corrige apenas incompatibilidades transversais.
+
+Produção permanece intocada. SAAS-P só é liberada após o fechamento verde do PR #219.

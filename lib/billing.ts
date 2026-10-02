@@ -12,6 +12,7 @@ export type BillingAccountStatus =
   | 'suspended'
   | 'canceled'
   | 'exempt';
+export type BillingExemptionSource = 'founder' | 'manual' | 'legacy_vip';
 export type BillingCycleStatus = 'open' | 'pending' | 'paid' | 'waived';
 export type BillingPaymentMethod = 'pix_manual';
 export type BillingPixKeyType = 'cpf' | 'cnpj' | 'email' | 'phone' | 'random' | '';
@@ -50,6 +51,8 @@ export interface BillingAccount {
   trialStartedAt: string;
   trialEndsAt: string;
   paymentRequired: boolean;
+  exemptionSource?: BillingExemptionSource;
+  legacyVipCutoff?: string;
   createdAt: string;
   updatedAt: string;
   createdBy: string;
@@ -263,6 +266,7 @@ export function buildInitialBillingAccount(
     trialStartedAt: grantTrial && !isFounder ? now : '',
     trialEndsAt,
     paymentRequired: false,
+    ...(isFounder ? { exemptionSource: 'founder' as const } : {}),
     createdAt: now,
     updatedAt: now,
     createdBy,
@@ -307,9 +311,13 @@ export function migrateBillingAccountToSaasR1(
   const monthlyPriceCents = status === 'exempt'
     ? 0
     : EMPROVEX_FULL_PLAN_PRICE_CENTS;
+  const exemptionSource = isFounder
+    ? 'founder' as const
+    : account.exemptionSource;
   const changed = account.status !== status
     || account.monthlyPriceCents !== monthlyPriceCents
-    || account.paymentRequired !== false;
+    || account.paymentRequired !== false
+    || account.exemptionSource !== exemptionSource;
 
   if (!changed) return null;
 
@@ -318,6 +326,7 @@ export function migrateBillingAccountToSaasR1(
     status,
     monthlyPriceCents,
     paymentRequired: false,
+    ...(exemptionSource ? { exemptionSource } : {}),
     updatedAt: now,
     updatedBy: actorEmail,
   };
@@ -327,12 +336,38 @@ export function buildBillingExemptionUpdate(
   account: BillingAccount,
   exempt: boolean,
   actorEmail: string,
-  now: string = new Date().toISOString()
+  now: string = new Date().toISOString(),
+  exemptionSource: BillingExemptionSource = 'manual'
 ): BillingAccount {
+  if (!exempt && account.exemptionSource === 'legacy_vip') {
+    throw new Error('A isenção da coorte VIP legado é permanente e não pode ser removida.');
+  }
+
+  if (exempt) {
+    return {
+      ...account,
+      status: 'exempt',
+      monthlyPriceCents: 0,
+      paymentRequired: false,
+      exemptionSource,
+      ...(exemptionSource === 'legacy_vip'
+        ? { legacyVipCutoff: '2026-10-02' }
+        : {}),
+      updatedAt: now,
+      updatedBy: actorEmail,
+    };
+  }
+
+  const {
+    exemptionSource: _previousExemptionSource,
+    legacyVipCutoff: _previousLegacyVipCutoff,
+    ...rest
+  } = account;
+
   return {
-    ...account,
-    status: exempt ? 'exempt' : 'active',
-    monthlyPriceCents: exempt ? 0 : EMPROVEX_FULL_PLAN_PRICE_CENTS,
+    ...rest,
+    status: 'active',
+    monthlyPriceCents: EMPROVEX_FULL_PLAN_PRICE_CENTS,
     paymentRequired: false,
     updatedAt: now,
     updatedBy: actorEmail,

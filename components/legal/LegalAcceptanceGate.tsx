@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ExternalLink, LoaderCircle, ShieldCheck } from 'lucide-react';
 
 import { useLegalAcceptance } from '../../hooks/useLegalAcceptance';
@@ -10,14 +10,20 @@ import { CURRENT_LEGAL_BUNDLE } from '../../lib/legalVersions';
 interface LegalAcceptanceGateProps {
   identity: LegalAcceptanceIdentity;
   children: ReactNode;
+  onAccepted?: () => void;
 }
 
 export function LegalAcceptanceGate({
   identity,
   children,
+  onAccepted,
 }: LegalAcceptanceGateProps) {
   const { status, error, accepted, accept, refresh } = useLegalAcceptance(identity);
   const [confirmed, setConfirmed] = useState(false);
+
+  useEffect(() => {
+    if (accepted) onAccepted?.();
+  }, [accepted, onAccepted]);
 
   if (accepted) {
     return <>{children}</>;

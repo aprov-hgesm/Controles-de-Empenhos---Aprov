@@ -203,3 +203,23 @@ Nenhuma alteração do SaaS R1 está em `main`.
 Nenhum deploy de produção do SaaS R1 está autorizado implicitamente.
 
 A branch integradora pode receber documentação e código de workers, mas promoção para produção depende de SAAS-J e autorização explícita do usuário.
+
+### SAAS-I — candidata em validação em 2026-10-02
+
+- branch técnica: `saas-r1-i-integration`;
+- base exata: `71ed87932f17b8acd9fab9c30006970b59079c42`;
+- PR técnico: **#219**, draft, base `feat/saas-r1-commercializacao`;
+- HEAD funcional pré-documentação: `f840af0bffbd24dbe56c4de9f3a05334e68a2b7f`;
+- LegalAcceptanceGate: conectado ao shell principal e à Central;
+- listeners operacionais: bloqueados até aceite vigente;
+- páginas públicas/reset: preservados fora do gate;
+- billing x enforcement: desacoplamento preservado;
+- VIP legado: metadata/proteção + migração segura implementadas;
+- guard `verify:saas-r1-integration`: incorporado ao Application CI;
+- Rules principal: ~92,11 KiB;
+- Rules Central: ~152,38 KiB;
+- produção/main/Rules/migração: **NÃO ALTERADAS**.
+
+A quantidade de candidatos VIP legado permanece dependente de inventário autenticado do Firestore. `apply` exige allowlist explícita e não será executado pela SAAS-I.
+
+Handoff: `docs/SAAS_R1_I_INTEGRATION_HANDOFF.md`.

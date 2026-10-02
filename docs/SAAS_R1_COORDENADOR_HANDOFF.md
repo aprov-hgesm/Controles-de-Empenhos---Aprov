@@ -349,3 +349,31 @@ SAAS-I deve agora:
 3. preparar a sequência coordenada app + Rules da Central;
 4. validar UX de suspensão/reativação e regularização;
 5. manter as pendências externas de backup/restore/uptime para certificação operacional.
+
+## 17. SAAS-I — integração controlada
+
+Em 2026-10-02 foi aberta a branch técnica `saas-r1-i-integration` a partir exata da integradora `71ed87932f17b8acd9fab9c30006970b59079c42`.
+
+PR técnico: **#219**, apontando para `feat/saas-r1-commercializacao`, sem destino em `main`.
+
+A SAAS-I:
+- conectou o aceite legal no ponto posterior à resolução Auth/workspace/UG;
+- impediu subscriptions operacionais antes do aceite;
+- cobriu acesso direto à Central;
+- preservou reset de senha e rotas públicas;
+- manteve billing fora do enforcement;
+- implementou contrato técnico da coorte VIP legado com isenção permanente;
+- criou migração dry-run/apply/verify com allowlist explícita, corte 2026-10-02, auditoria determinística e idempotência;
+- criou guard combinado no Application CI;
+- mediu Rules em ~92,11 KiB (principal) e ~152,38 KiB (Central);
+- preparou ordem de release Rules → migração VIP → aplicação, baseada nas dependências reais do gate legal e no fallback de `warehouseAccess`.
+
+Nada foi publicado.
+
+Próximo passo do Coordenador após CI:
+1. integrar PR #219 somente na integradora se os gates estiverem verdes;
+2. executar SAAS-P;
+3. manter backup/restore/uptime reais como bloqueios de SAAS-J;
+4. não promover `main` sem autorização explícita.
+
+Handoff integral: `docs/SAAS_R1_I_INTEGRATION_HANDOFF.md`.

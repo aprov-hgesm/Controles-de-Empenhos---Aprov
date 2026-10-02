@@ -470,8 +470,11 @@ export function AdminBillingPanel({
             const busy = Boolean(mutatingKey?.includes(workspace.id));
             const isFounder = workspace.id === HGESM_WORKSPACE_ID;
             const isVip = !isFounder && account.status === 'exempt';
+            const isLegacyVip = isVip && account.exemptionSource === 'legacy_vip';
             const statusLabel = account.status === 'exempt'
-              ? isFounder ? 'Fundador / Isento' : 'VIP / Isento'
+              ? isFounder
+                ? 'Fundador / Isento'
+                : isLegacyVip ? 'VIP legado / Isento' : 'VIP / Isento'
               : STATUS_LABEL[account.status];
 
             return (
@@ -527,13 +530,19 @@ export function AdminBillingPanel({
                   {!isFounder && (
                     <div className="flex flex-wrap gap-2 xl:max-w-[620px] xl:justify-end">
                       {isVip ? (
-                        <ActionButton
-                          icon={<PlayCircle className="h-3.5 w-3.5" />}
-                          label="Remover VIP"
-                          busy={mutatingKey === `exempt:${workspace.id}`}
-                          disabled={busy}
-                          onClick={() => void onSetExemption(workspace, false)}
-                        />
+                        isLegacyVip ? (
+                          <span className="inline-flex items-center rounded-xl border border-blue-300/15 bg-blue-400/[0.07] px-3 py-2 text-[10px] font-extrabold text-blue-100">
+                            Isenção legado protegida
+                          </span>
+                        ) : (
+                          <ActionButton
+                            icon={<PlayCircle className="h-3.5 w-3.5" />}
+                            label="Remover VIP"
+                            busy={mutatingKey === `exempt:${workspace.id}`}
+                            disabled={busy}
+                            onClick={() => void onSetExemption(workspace, false)}
+                          />
+                        )
                       ) : (
                         <>
                           <ActionButton
@@ -611,7 +620,13 @@ export function AdminBillingPanel({
                   )}
                   <span>Plano: Plano Completo</span>
                   <span>Valor vigente: {money(account.monthlyPriceCents)}</span>
-                  {isVip && <span className="text-blue-200/80">VIP sem cobrança enquanto a isenção estiver ativa.</span>}
+                  {isLegacyVip ? (
+                    <span className="text-blue-200/80">
+                      VIP legado: isenção permanente vinculada ao workspace, sem cobrança.
+                    </span>
+                  ) : isVip ? (
+                    <span className="text-blue-200/80">VIP sem cobrança enquanto a isenção estiver ativa.</span>
+                  ) : null}
                   <span className="text-blue-300/70">Billing não suspende o acesso automaticamente; suspensão operacional é uma ação administrativa separada.</span>
                 </div>
 

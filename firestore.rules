@@ -736,6 +736,8 @@ service cloud.firestore {
           'trialStartedAt',
           'trialEndsAt',
           'paymentRequired',
+          'exemptionSource',
+          'legacyVipCutoff',
           'createdAt',
           'updatedAt',
           'createdBy',
@@ -779,6 +781,33 @@ service cloud.firestore {
         && request.resource.data.trialStartedAt is string
         && request.resource.data.trialEndsAt is string
         && request.resource.data.paymentRequired == false
+        && (
+          !('exemptionSource' in request.resource.data)
+          || (
+            request.resource.data.exemptionSource == 'founder'
+            && workspaceId == 'hgesm-aprov'
+            && request.resource.data.status == 'exempt'
+          )
+          || (
+            request.resource.data.exemptionSource == 'manual'
+            && workspaceId != 'hgesm-aprov'
+            && request.resource.data.status == 'exempt'
+          )
+          || (
+            request.resource.data.exemptionSource == 'legacy_vip'
+            && workspaceId != 'hgesm-aprov'
+            && request.resource.data.status == 'exempt'
+            && request.resource.data.legacyVipCutoff == '2026-10-02'
+          )
+        )
+        && (
+          !('legacyVipCutoff' in request.resource.data)
+          || (
+            request.resource.data.legacyVipCutoff is string
+            && request.resource.data.legacyVipCutoff == '2026-10-02'
+            && request.resource.data.exemptionSource == 'legacy_vip'
+          )
+        )
         && request.resource.data.createdAt is string
         && request.resource.data.updatedAt is string
         && request.resource.data.createdBy is string
@@ -791,7 +820,17 @@ service cloud.firestore {
         && request.resource.data.ug == resource.data.ug
         && request.resource.data.authorizedEmail == resource.data.authorizedEmail
         && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.createdBy == resource.data.createdBy;
+        && request.resource.data.createdBy == resource.data.createdBy
+        && (
+          !('exemptionSource' in resource.data)
+          || resource.data.exemptionSource != 'legacy_vip'
+          || (
+            request.resource.data.status == 'exempt'
+            && request.resource.data.monthlyPriceCents == 0
+            && request.resource.data.exemptionSource == 'legacy_vip'
+            && request.resource.data.legacyVipCutoff == resource.data.legacyVipCutoff
+          )
+        );
     }
 
     function validBillingCycle(cycleId) {
