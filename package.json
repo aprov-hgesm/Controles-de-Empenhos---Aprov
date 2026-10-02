@@ -12,6 +12,7 @@
     "recovery:status": "node scripts/firestore-recovery.mjs status",
     "recovery:verify": "node scripts/firestore-recovery.mjs verify",
     "test:recovery": "node --test scripts/firestore-recovery.test.mjs",
+    "test:gcloud-command": "node --test scripts/gcloud-command.test.mjs",
     "snapshot:hgesm:plan": "node scripts/firestore-local-snapshot.mjs plan",
     "snapshot:hgesm:create": "node scripts/firestore-local-snapshot.mjs create",
     "snapshot:hgesm:verify": "node scripts/firestore-local-snapshot.mjs verify",

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isMissingGcloud, spawnGcloudSync } from './lib/gcloud-command.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const recoveryPolicy = JSON.parse(
@@ -105,15 +105,15 @@ function printPlan() {
 }
 
 function ensureGcloud() {
-  const check = spawnSync('gcloud', ['--version'], { encoding: 'utf8' });
-  if (check.error?.code === 'ENOENT') {
+  const check = spawnGcloudSync(['--version']);
+  if (isMissingGcloud(check)) {
     throw new Error('Google Cloud CLI não encontrado. Execute status/apply/verify no Cloud Shell autorizado.');
   }
   if (check.status !== 0) throw new Error('Não foi possível executar o gcloud.');
 }
 
 function getAccessToken() {
-  const result = spawnSync('gcloud', ['auth', 'print-access-token'], { encoding: 'utf8' });
+  const result = spawnGcloudSync(['auth', 'print-access-token']);
   if (result.status !== 0) {
     throw new Error(`Não foi possível obter token do gcloud: ${result.stderr.trim() || result.stdout.trim()}`);
   }

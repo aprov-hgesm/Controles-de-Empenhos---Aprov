@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMissingGcloud, spawnGcloudSync } from "./lib/gcloud-command.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const policy = JSON.parse(
@@ -92,8 +92,8 @@ function expectedResource(databasePolicy) {
 }
 
 function ensureGcloud() {
-  const check = spawnSync("gcloud", ["--version"], { encoding: "utf8" });
-  if (check.error?.code === "ENOENT") {
+  const check = spawnGcloudSync(["--version"]);
+  if (isMissingGcloud(check)) {
     throw new Error(
       "Google Cloud CLI não encontrado. Use o Cloud Shell ou instale o gcloud.",
     );
@@ -102,7 +102,7 @@ function ensureGcloud() {
 }
 
 function runGcloud(args) {
-  const result = spawnSync("gcloud", args, { encoding: "utf8" });
+  const result = spawnGcloudSync(args);
   if (result.status !== 0) {
     const detail = result.stderr.trim() || result.stdout.trim();
     throw new Error("gcloud falhou: " + (detail || args.join(" ")));
