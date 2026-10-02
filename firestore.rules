@@ -1773,6 +1773,45 @@ service cloud.firestore {
         && auditUgMatchesWorkspace(workspaceId, request.resource.data.ug);
     }
 
+    function validLegalAcceptanceCreate(workspaceId, acceptanceId) {
+      let workspace = workspaceData(workspaceId);
+      return canAccessWorkspace(workspaceId)
+        && request.resource.data.keys().hasAll([
+          'schemaVersion',
+          'workspaceId',
+          'ug',
+          'uid',
+          'email',
+          'legalBundleVersion',
+          'termsVersion',
+          'privacyVersion',
+          'acceptedAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'schemaVersion',
+          'workspaceId',
+          'ug',
+          'uid',
+          'email',
+          'legalBundleVersion',
+          'termsVersion',
+          'privacyVersion',
+          'acceptedAt'
+        ])
+        && request.resource.data.schemaVersion == 'emprovex_legal_acceptance_v1'
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.email == workspace.authorizedEmail
+        && auditUgMatchesWorkspace(workspaceId, request.resource.data.ug)
+        && request.resource.data.legalBundleVersion == 'saas-r1-2026-10-01'
+        && request.resource.data.termsVersion == 'terms-2026-10-01-r1'
+        && request.resource.data.privacyVersion == 'privacy-2026-10-01-r1'
+        && acceptanceId == request.auth.uid + '__saas-r1-2026-10-01'
+        && request.resource.data.acceptedAt is timestamp
+        && request.resource.data.acceptedAt == request.time;
+    }
+
     function validPlatformAuditEvent(eventId) {
       return isPlatformAdmin()
         && validAuditEventShape(
@@ -2173,6 +2212,18 @@ service cloud.firestore {
       allow read: if canAccessWorkspace(workspaceId);
       allow create: if canAccessWorkspace(workspaceId)
         && validWorkspaceAuditEvent(eventId, workspaceId);
+      allow update, delete: if false;
+    }
+
+    // SaaS R1 — aceite legal versionado. O runtime consulta somente o documento
+    // determinístico da versão vigente; histórico não precisa ser listado pelo tenant.
+    match /workspaces/{workspaceId}/legalAcceptances/{acceptanceId} {
+      // O GET precisa funcionar também antes de o documento existir, para que o
+      // primeiro uso consiga distinguir "aceite ausente" de erro de autorização.
+      allow get: if canAccessWorkspace(workspaceId)
+        && acceptanceId == request.auth.uid + '__saas-r1-2026-10-01';
+      allow list: if false;
+      allow create: if validLegalAcceptanceCreate(workspaceId, acceptanceId);
       allow update, delete: if false;
     }
 
