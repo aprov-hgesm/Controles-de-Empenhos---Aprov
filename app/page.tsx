@@ -18,6 +18,7 @@ import { EmprovexAuthLoading } from '../components/auth/EmprovexAuthLoading';
 import { LoginSuccessTransition } from '../components/auth/LoginSuccessTransition';
 import { SectorCredentialModal } from '../components/auth/SectorCredentialModal';
 import { SectorFirstAccessChecklist } from '../components/auth/SectorFirstAccessChecklist';
+import { LegalAcceptanceGate } from '../components/legal/LegalAcceptanceGate';
 import type { OperationalActiveTab } from '../lib/operationalSubscriptionPlan';
 import { countPendingNotices } from '../features/avisos/domain/noticeLifecycle';
 import { canAccessWarehouseModule } from '../lib/platformModuleAccess';
@@ -35,6 +36,7 @@ export default function Home() {
   const [showLoginSuccessTransition, setShowLoginSuccessTransition] = useState(false);
   const [credentialModalOpen, setCredentialModalOpen] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [acceptedLegalIdentityKey, setAcceptedLegalIdentityKey] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -54,9 +56,9 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasOpenedOperationalSurface, setHasOpenedOperationalSurface] = useState(false);
 
-  const operationalData = useOperationalData(activeTab);
+  const operationalData = useOperationalData(activeTab, acceptedLegalIdentityKey);
   const {
-    user, loadingAuth, syncing, workspaceContext,
+    user, loadingAuth, syncing, workspaceContext, legalIdentityKey,
     activeOperationalDataReady, activeRealtimeCollectionCount, inicioSnapshot,
     empenhos, setEmpenhos, alerts, setAlerts, invoices, setInvoices,
     comissoes, setComissoes, cronogramas, setCronogramas,
@@ -70,6 +72,12 @@ export default function Home() {
     workspaceContext.status === 'sector'
     && workspaceContext.resolutionSource === 'platform-directory'
   );
+
+  const handleLegalAccepted = useCallback(() => {
+    if (legalIdentityKey) {
+      setAcceptedLegalIdentityKey(legalIdentityKey);
+    }
+  }, [legalIdentityKey]);
 
   const handleChangeSectorPassword = async (
     currentPassword: string,
@@ -197,7 +205,7 @@ export default function Home() {
     );
   }
 
-  return (
+  const operationalSurface = (
     <div
       className={`min-h-screen ${activeTab === 'inicio' ? 'bg-[#02040b] text-white' : 'bg-gradient-to-br from-[#f0f4f8] via-[#e8ecf3] to-[#f4f6fa] text-[#0b1c30]'} flex flex-col antialiased relative overflow-x-hidden selection:bg-blue-500 selection:text-white ${showLoginSuccessTransition ? 'emprovex-app-login-entry' : ''}`}
       data-login-entry={showLoginSuccessTransition ? 'true' : 'false'}
@@ -328,4 +336,26 @@ export default function Home() {
 
     </div>
   );
+
+  if (
+    workspaceContext.status === 'sector'
+    && user
+    && legalIdentityKey
+  ) {
+    return (
+      <LegalAcceptanceGate
+        identity={{
+          workspaceId: workspaceContext.workspaceId,
+          uid: user.uid,
+          email: user.email || workspaceContext.email,
+          ug: workspaceContext.ug,
+        }}
+        onAccepted={handleLegalAccepted}
+      >
+        {operationalSurface}
+      </LegalAcceptanceGate>
+    );
+  }
+
+  return operationalSurface;
 }
