@@ -140,3 +140,30 @@ Ao receber novo handoff A:
 3. confirmar Strict Mode resiliente;
 4. revalidar gates;
 5. somente então reclassificar/integrar.
+
+
+## 14. Integração MOBILE-B — concluída
+
+Em 2026-10-02 o Coordenador aprovou e integrou a MOBILE-B.
+
+Evidências:
+- worker HEAD `948978e9e326ff6468643d44540a2a5337dff425`;
+- PR #220;
+- squash `5edb19812b1121fdf867dc63c787bb2439ae68d5`;
+- CI/Core/Recovery/Legal: verdes.
+
+Contratos agora presentes na integradora:
+- namespace físico `EPX1`;
+- Code 128 nas etiquetas;
+- resolver autoritativo de depósito/local/subposição;
+- LOCAL/SUBPOSITION → `WarehouseStockPosition`;
+- DEPOT não fabrica posição;
+- nenhuma persistência paralela.
+
+Pendência deliberada:
+- leitura física real dos presets COMPACT/MEDIUM/LARGE com câmera móvel, a ser tratada na Integração 1.
+
+Estado da primeira onda:
+- MOBILE-B: **INTEGRADA**;
+- MOBILE-A: **DEVOLVIDA PARA CORREÇÃO MÍNIMA**;
+- Integração 1: **BLOQUEADA aguardando MOBILE-A**.
