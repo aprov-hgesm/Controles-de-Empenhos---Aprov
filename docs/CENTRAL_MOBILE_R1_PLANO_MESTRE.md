@@ -6,9 +6,9 @@ Branch integradora: `feat/central-mobile-r1`
 Baseline técnico congelado: `saas-r1-i-integration@78d3e9afeeb4176a8d6423cdd8e65d32435ba0a9`
 Produção no momento do freeze: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
-> Este documento define **o que** a Central Móvel R1 deve entregar.  
-> O protocolo de desenvolvimento paralelo está em `docs/CENTRAL_MOBILE_R1_EXECUCAO_PARALELA.md`.  
-> O estado corrente das frentes está em `docs/CENTRAL_MOBILE_R1_INTEGRATION_STATUS.md`.  
+> Este documento define **o que** a Central Móvel R1 deve entregar.
+> O protocolo de desenvolvimento paralelo está em `docs/CENTRAL_MOBILE_R1_EXECUCAO_PARALELA.md`.
+> O estado corrente das frentes está em `docs/CENTRAL_MOBILE_R1_INTEGRATION_STATUS.md`.
 > A troca de Coordenador deve usar `docs/CENTRAL_MOBILE_R1_COORDENADOR_HANDOFF.md`.
 
 ---
