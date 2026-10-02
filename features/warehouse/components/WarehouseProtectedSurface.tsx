@@ -30,7 +30,6 @@ interface WarehouseStatusPayload {
   claimsUpdated?: boolean;
 }
 
-
 async function requestWarehouseStatus(
   currentUser: User,
   forceTokenRefresh = false
@@ -57,10 +56,10 @@ async function requestWarehouseStatus(
   };
 }
 
-export function WarehouseProtectedLayout({
+export function WarehouseAccessBoundary({
   children,
 }: {
-  children: ReactNode;
+  children: (workspaceContext: SectorWorkspaceContext) => ReactNode;
 }) {
   const [gateState, setGateState] = useState<GateState>('checking');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -216,10 +215,24 @@ export function WarehouseProtectedLayout({
       }}
     >
       <WarehouseWorkspaceProvider value={workspaceContext}>
+        {children(workspaceContext)}
+      </WarehouseWorkspaceProvider>
+    </LegalAcceptanceGate>
+  );
+}
+
+export function WarehouseProtectedLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return (
+    <WarehouseAccessBoundary>
+      {(workspaceContext) => (
         <WarehouseModuleShell workspaceContext={workspaceContext}>
           {children}
         </WarehouseModuleShell>
-      </WarehouseWorkspaceProvider>
-    </LegalAcceptanceGate>
+      )}
+    </WarehouseAccessBoundary>
   );
 }
