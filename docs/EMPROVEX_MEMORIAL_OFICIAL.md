@@ -674,7 +674,7 @@ A branch integradora só chega à produção após SAAS-J e autorização explí
 
 ### 8.1 Estado e objetivo
 
-A **Central Móvel R1** é o programa funcional ativo para evolução móvel da Central de Depósitos. O **MOBILE-0 foi iniciado e congelado em 2026-10-02** sobre a branch integradora `feat/central-mobile-r1`. A primeira onda autorizada é exclusivamente **MOBILE-A + MOBILE-B**. As frentes MOBILE-C a MOBILE-H permanecem bloqueadas pelos gates de integração definidos nesta seção. A ativação do programa não autoriza merge em `main`, deploy de produção, publicação de Rules ou migrações produtivas.
+A **Central Móvel R1** é o programa funcional ativo para evolução móvel da Central de Depósitos. O **MOBILE-0 foi iniciado e congelado em 2026-10-02** sobre a branch integradora `feat/central-mobile-r1`. A primeira onda autorizada é exclusivamente **MOBILE-A + MOBILE-B**. Em 2026-10-02, **MOBILE-B foi aprovada e integrada** na branch coordenadora via PR #220 / squash `5edb19812b1121fdf867dc63c787bb2439ae68d5`; MOBILE-A permanece em correção mínima antes da Integração 1. As frentes MOBILE-C a MOBILE-H permanecem bloqueadas pelos gates de integração definidos nesta seção. A ativação do programa não autoriza merge em `main`, deploy de produção, publicação de Rules ou migrações produtivas.
 
 Nome de produto provisório:
 **EMPROVEX — Central Móvel R1**
