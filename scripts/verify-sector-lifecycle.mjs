@@ -22,7 +22,8 @@ requireText(store, "workspaceId === HGESM_WORKSPACE_ID", 'Workspace fundador nã
 requireText(store, "currentAccount.status !== currentWorkspace.status", 'Cliente não detecta inconsistência prévia de status.');
 
 requireText(adminHook, 'updateSectorWorkspaceProfile', 'Hook administrativo não expõe edição.');
-requireText(adminHook, 'setSectorWorkspaceStatus', 'Hook administrativo não expõe suspensão/reativação.');
+requireText(adminHook, "fetch('/api/admin/sector-lifecycle'", 'Hook administrativo não expõe suspensão/reativação server-side.');
+requireText(adminHook, 'adminUser.getIdToken()', 'Hook administrativo não autentica a mutação de lifecycle no servidor.');
 requireText(adminView, 'Suspender setor', 'Painel não oferece suspensão.');
 requireText(adminView, 'Reativar setor', 'Painel não oferece reativação.');
 requireText(adminView, 'Editar cadastro', 'Painel não oferece edição institucional.');
@@ -61,7 +62,7 @@ if (findings.length) {
   console.log('Bloco 19 — ciclo de vida administrativo dos setores\n');
   console.log('Edição institucional: habilitada');
   console.log('Workspace ID / e-mail / UID / UG vinculada: protegidos');
-  console.log('Suspensão e reativação: transação única');
+  console.log('Suspensão e reativação: endpoint server-side + autorização atômica');
   console.log('Status workspace/conta: coerente');
   console.log('Sessão suspensa: encerramento imediato');
   console.log('Workspace fundador: protegido');
