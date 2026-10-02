@@ -30,7 +30,8 @@ Ler, nesta ordem:
 - **SAAS-DL foi concluída, certificada e integrada semanticamente** em `733885c1...`; PR #214 foi fechado sem merge automático por conflito esperado com B/E já integradas.
 - **SAAS-C foi concluída, certificada e integrada semanticamente** em `cf320ce3...`; PRs #213/#217 foram fechados sem merge automático.
 - **A Onda 1 está concluída.**
-- **SAAS-DS está LIBERADA**, pois B+C já estão integradas.
+- **SAAS-DS foi concluída, certificada e integrada** via PR #218 / squash `726436ac...`.
+- **SAAS-I está LIBERADA** para integração controlada da R1.
 
 ## 3. Decisão central
 
@@ -138,11 +139,11 @@ Eles devem trabalhar simultaneamente quando possível, sem editar domínio alhei
 A Onda 1 foi concluída.
 
 Sequência vigente:
-1. criar/ativar SAAS-DS a partir da integradora atual;
-2. executar segurança/enforcement;
-3. executar SAAS-I, incluindo glue do aceite legal com o shell já estabilizado;
+1. executar SAAS-I diretamente na integradora consolidada;
+2. conectar o `LegalAcceptanceGate` ao shell sem bloquear superfícies públicas/recuperação;
+3. validar a jornada combinada e a coordenação das Rules da Central;
 4. executar piloto SAAS-P;
-5. certificar SAAS-J;
+5. certificar SAAS-J, incluindo backup/restore/uptime reais;
 6. somente então decidir publicação/abertura comercial.
 
 ## 9. Pontos que não podem ser perdidos
@@ -313,3 +314,38 @@ Contratos agora canônicos:
 Com B+C integradas, a SAAS-DS está liberada.
 
 A SAAS-I deverá posteriormente compor `LegalAcceptanceGate` com o shell, sem bloquear reset de credenciais, Termos/Privacidade ou regularização pública.
+
+
+## 16. Integração SAAS-DS
+
+A SAAS-DS foi validada e integrada pelo Coordenador.
+
+Evidências:
+- branch `saas-r1-ds-security-enforcement`;
+- base `73c22a441249cd87b6d6e1dfeb69bcb005d663e9`;
+- HEAD funcional `476efffaf60e5276e6d68ac9c2a425848b9fff66`;
+- HEAD final `073b96886d54b33e7e188265eb1e53672fbd9b1c`;
+- PR #218 clean/ready for review;
+- squash `726436ac9db13eb5e0195cc33ac432005f3f113a`;
+- Application CI #901, Core Protection #188, Recovery #588 e SAAS-DL Legal #13: SUCCESS.
+
+Contratos agora canônicos:
+- billing continua separado da autorização;
+- suspensão é ação administrativa explícita;
+- endpoint founder-only;
+- workspace/account mudam juntos no banco principal;
+- sessões são revogadas e leases conhecidos removidos;
+- Central respeita `warehouseAccess`;
+- compensação entre bancos sinaliza `RECOVERY_REQUIRED` quando necessário;
+- founder protegido;
+- VIP/`exempt` não sofre suspensão automática;
+- nenhuma deleção de dados;
+- nenhum terceiro banco;
+- nenhuma publicação de Rules nesta etapa.
+
+SAAS-I deve agora:
+1. integrar o `LegalAcceptanceGate` ao shell;
+2. validar B+C+DL+E+DS como um único produto;
+3. preparar a sequência coordenada app + Rules da Central;
+4. validar UX de suspensão/reativação e regularização;
+5. manter as pendências externas de backup/restore/uptime para certificação operacional.

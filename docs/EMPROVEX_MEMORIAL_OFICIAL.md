@@ -1,9 +1,9 @@
 # EMPROVEX — Memorial Oficial do Repositório
 
-Última atualização: **2026-10-01 — SaaS R1 Onda 1 concluída / SAAS-DS liberada**
+Última atualização: **2026-10-02 — SAAS-DS integrada / SAAS-I liberada**
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Branch integradora do SaaS R1: `feat/saas-r1-commercializacao`
-Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A congelada; SAAS-B, SAAS-C, SAAS-DL e SAAS-E INTEGRADAS; Onda 1 CONCLUÍDA; SAAS-DS LIBERADA para Segurança/Enforcement**
+Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A, SAAS-B, SAAS-C, SAAS-DL, SAAS-E e SAAS-DS INTEGRADAS; enforcement transversal concluído no código; SAAS-I LIBERADA para integração controlada e validação combinada**
 
 Este documento é a **porta de entrada canônica para continuidade do EMPROVEX como produto**. Ele resume o estado vigente e aponta para os documentos históricos/especializados. O histórico detalhado não deve ser apagado. Para comportamento publicado, `main` prevalece. Para o ciclo SaaS R1 em desenvolvimento, prevalecem `feat/saas-r1-commercializacao`, este memorial e os quatro documentos canônicos `SAAS_R1_*`.
 
@@ -617,11 +617,11 @@ Frentes ativadas:
 - **SAAS-DL — Legal/aceite:** **INTEGRADA semanticamente** na branch coordenadora; Termos/Privacidade R1, versões legais, aceite tenant-scoped e Rules create-only incorporados; glue do `LegalAcceptanceGate` permanece deliberadamente para depois da SAAS-C/SAAS-I;
 - **SAAS-E — Operação/backup/uptime:** **INTEGRADA** via PR #215; health/recovery/runbooks certificados no repositório, com configuração externa de backup/restore/uptime ainda pendente.
 
-**Onda 2 — LIBERADA**
-- **SAAS-DS — Segurança/enforcement:** dependência B+C satisfeita; deve partir da integradora após o fechamento documental da Onda 1.
+**Onda 2 — CONCLUÍDA**
+- **SAAS-DS — Segurança/enforcement:** **INTEGRADA** via PR #218 / squash `726436ac...`; suspensão/reativação server-side, revogação de sessões e enforcement da Central incorporados, sem publicação de Rules em produção.
 
 **Fechamento**
-- SAAS-I — integração controlada;
+- **SAAS-I — integração controlada: LIBERADA / PRÓXIMA ETAPA**;
 - SAAS-P — piloto;
 - SAAS-J — certificação comercial;
 - SaaS aberto somente com decisão explícita do usuário.
@@ -885,3 +885,60 @@ Com B+C integradas, a dependência da **SAAS-DS está satisfeita**.
 
 Pendência transversal:
 - conectar o `LegalAcceptanceGate` depois que Auth/workspace/UG estiverem resolvidos, na SAAS-I, preservando reset de senha e superfícies públicas.
+
+
+### Registro de integração SAAS-DS — 2026-10-02
+
+Worker:
+- branch: `saas-r1-ds-security-enforcement`;
+- base: `73c22a441249cd87b6d6e1dfeb69bcb005d663e9`;
+- HEAD funcional certificado: `476efffaf60e5276e6d68ac9c2a425848b9fff66`;
+- HEAD final/handoff: `073b96886d54b33e7e188265eb1e53672fbd9b1c`;
+- PR #218;
+- integração squash na coordenadora: `726436ac9db13eb5e0195cc33ac432005f3f113a`.
+
+Certificação final do HEAD:
+- Application CI #901: **SUCCESS**;
+- EMPROVEX Core Protection #188: **SUCCESS**;
+- Recovery guardrails #588: **SUCCESS**;
+- SAAS-DL Legal Validation #13: **SUCCESS**;
+- Production Build: **PASS**;
+- TypeScript final: **PASS**;
+- Diff Hygiene: **PASS**;
+- multi-tenant Firestore Emulator: **PASS**;
+- Central de Depósitos external workspace security: **PASS**.
+
+Arquitetura integrada:
+- billing permanece verdade comercial e não foi acoplado às Rules operacionais;
+- `workspaces.status` + `platformAccounts.status` continuam sendo a verdade de autorização;
+- suspensão é exclusivamente administrativa e explícita;
+- endpoint founder-only: `POST /api/admin/sector-lifecycle`;
+- suspensão materializa `disabled`, revoga sessões e remove leases ativos;
+- reativação retorna a `active` sem recriar tenant, Auth, trial, billing ou dados;
+- operações usam precondições `updateTime` e compensação entre os dois bancos;
+- auditoria `sector.status_change` preservada;
+- founder continua protegido;
+- VIP/`exempt` não é transformado em estado de autorização nem suspenso automaticamente.
+
+Central de Depósitos:
+- novo espelho mínimo server-only: `emprovex-warehouse/warehouseAccess/{workspaceId}`;
+- schema `warehouse_workspace_access_v1`;
+- Rules logísticas passam a negar acesso quando o lifecycle materializado está `disabled`;
+- billing não foi copiado;
+- ausência do documento mantém compatibilidade com tenants anteriores até a primeira ação lifecycle;
+- nenhum terceiro banco foi criado.
+
+Rules:
+- banco principal: nenhuma mudança funcional da SAAS-DS; tamanho certificado ~90,64 KiB;
+- Central: ~152,38 KiB; delta ~853 bytes;
+- nenhuma Rule foi publicada por esta worker.
+
+Pendências transferidas para SAAS-I:
+- integração/validação combinada B+C+DL+E+DS;
+- conectar o `LegalAcceptanceGate` ao shell depois de Auth/workspace/UG resolvidos;
+- validar que aceite não bloqueia reset de senha, Termos/Privacidade ou `/regularizacao`;
+- preparar publicação coordenada da aplicação + Rules da Central;
+- decidir se haverá atalho administrativo adicional entre billing e suspensão manual, sem automação;
+- manter pendências externas da SAAS-E como gates para SAAS-J.
+
+Com a SAAS-DS integrada, a **SAAS-I está formalmente liberada**.

@@ -221,7 +221,9 @@ Aceite:
 
 ## 5. Onda 2 — SAAS-DS Segurança e Enforcement
 
-Dependência **SATISFEITA**: SAAS-B e SAAS-C estão integradas. A frente está **LIBERADA**.
+**Status: CONCLUÍDA E INTEGRADA em 2026-10-02.**
+
+PR #218 foi integrado por squash em `726436ac...`. A etapa de enforcement transversal está encerrada no código; publicação de Rules permanece para a release coordenada.
 
 Branch:
 `saas-r1-ds-security-enforcement`
@@ -265,6 +267,8 @@ Aceite:
 - operação é auditada e recuperável.
 
 ## 6. SAAS-I — Integração Controlada
+
+**Status: LIBERADA / PRÓXIMA ETAPA.**
 
 Não é uma feature.
 

@@ -3,7 +3,7 @@
 Última atualização: **2026-10-01**
 Produção: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Integrador: `feat/saas-r1-commercializacao`
-Estado global: **SAAS-A CONGELADA / SAAS-B + SAAS-C + SAAS-DL + SAAS-E INTEGRADAS / ONDA 1 CONCLUÍDA / SAAS-DS LIBERADA**
+Estado global: **SAAS-A + B + C + DL + E + DS INTEGRADAS / ENFORCEMENT CONCLUÍDO / SAAS-I LIBERADA**
 
 ## 1. Baseline
 
@@ -24,8 +24,8 @@ Estado global: **SAAS-A CONGELADA / SAAS-B + SAAS-C + SAAS-DL + SAAS-E INTEGRADA
 | SAAS-C Onboarding | `saas-r1-c-onboarding` | A | **CONCLUÍDA** | **INTEGRADA SEMANTICAMENTE — `cf320ce3...`; PRs #213/#217 fechados sem merge** |
 | SAAS-DL Legal/aceite | `saas-r1-dl-legal-acceptance` | A | **CONCLUÍDA** | **INTEGRADA SEMANTICAMENTE — `733885c1...`; PR #214 fechado sem merge** |
 | SAAS-E Operação/recovery | `saas-r1-e-ops-recovery` | A | **CONCLUÍDA** | **INTEGRADA — PR #215 / `82f2e643...`** |
-| SAAS-DS Segurança/enforcement | `saas-r1-ds-security-enforcement` | B + C | **LIBERADA** | próxima frente; branch deve partir do fechamento atual da integradora |
-| SAAS-I Integração | integradora | B+C+DL+E+DS | **AGUARDANDO** | — |
+| SAAS-DS Segurança/enforcement | `saas-r1-ds-security-enforcement` | B + C | **CONCLUÍDA** | **INTEGRADA — PR #218 / `726436ac...`** |
+| SAAS-I Integração | integradora | B+C+DL+E+DS | **LIBERADA** | próxima etapa coordenada |
 | SAAS-P Piloto | integradora | I | **AGUARDANDO** | — |
 | SAAS-J Certificação | integradora | P | **AGUARDANDO** | — |
 
@@ -92,9 +92,11 @@ O Coordenador deve:
 SAAS-B, SAAS-C, SAAS-DL e SAAS-E já foram recebidas, auditadas e integradas. A Onda 1 está concluída.
 
 Próximo gate:
-- criar/ativar SAAS-DS a partir do HEAD atual da integradora;
-- implementar suspensão/reativação server-side e revogação de sessões sem adicionar billing a cada Rule;
-- depois da SAAS-DS, executar SAAS-I;
+- executar SAAS-I diretamente sobre a integradora consolidada;
+- conectar o gate legal ao shell no ponto correto;
+- validar jornada combinada B+C+DL+E+DS;
+- preparar release coordenada da aplicação com Rules da Central, sem publicar ainda;
+- manter backup/restore/uptime reais como pendências de certificação antes de SAAS-J;
 - manter as configurações externas da SAAS-E como gates obrigatórios de operação/certificação, sem confundi-las com merge de código.
 
 ## 7. Registro de integrações
@@ -173,6 +175,26 @@ A integração não foi promovida para `main` nem para produção.
 - enforcement: não implementado.
 
 A integração não foi promovida para `main` nem para produção.
+
+### SAAS-DS — integrada em 2026-10-02
+
+- worker: `saas-r1-ds-security-enforcement`;
+- base: `73c22a441249cd87b6d6e1dfeb69bcb005d663e9`;
+- HEAD funcional: `476efffaf60e5276e6d68ac9c2a425848b9fff66`;
+- HEAD final: `073b96886d54b33e7e188265eb1e53672fbd9b1c`;
+- PR #218;
+- squash: `726436ac9db13eb5e0195cc33ac432005f3f113a`;
+- Application CI #901: SUCCESS;
+- Core Protection #188: SUCCESS;
+- Recovery #588: SUCCESS;
+- SAAS-DL Legal #13: SUCCESS;
+- Firestore multi-tenant + Central external security: PASS;
+- endpoint lifecycle founder-only: integrado;
+- revogação de sessões: integrada;
+- `warehouseAccess`: integrado;
+- billing continua desacoplado;
+- Rules da Central: **NÃO PUBLICADAS**;
+- produção: **NÃO ALTERADA**.
 
 ## 8. Estado de produção
 
