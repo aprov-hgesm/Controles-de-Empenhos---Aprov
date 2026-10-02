@@ -4,7 +4,7 @@ Data: 2026-10-01
 Branch: `saas-r1-c-onboarding`
 Base imutável: `32872d3fc6a781ff129eb4e41ae9b0d45658024a`
 Integradora de destino: `feat/saas-r1-commercializacao`
-Estado deste documento: **CANDIDATA AOS GATES FINAIS**
+Estado deste documento: **HANDOFF FINAL CERTIFICADO — PRONTA PARA INTEGRAÇÃO**
 
 ## 1. Escopo executado
 
@@ -122,8 +122,10 @@ Gates:
 
 - `scripts/verify-external-sector-login.mjs`;
 - `scripts/verify-saas-r1-onboarding.mjs` — novo;
+- `scripts/e2e-browser-emulator.mjs` — teardown endurecido para encerrar árvore de processos no Linux;
 - `package.json`;
-- `.github/workflows/application-ci.yml`.
+- `.github/workflows/application-ci.yml`;
+- `.github/workflows/saas-c-browser-validation.yml` — novo.
 
 ## 9. Auth / Rules / env / banco
 
@@ -174,27 +176,58 @@ Resolver por composição, não por `ours/theirs` global.
 - a troca de senha pode exigir nova autenticação conforme política do Firebase; a UX já orienta sair/entrar quando necessário;
 - integração com o aceite legal ainda pertence à SAAS-DL/Coordenador.
 
-## 12. Validação
+## 12. Validação final
 
-Guard específico:
+HEAD funcional submetido aos gates globais:
 
-`npm run verify:saas-r1-onboarding`
+`524432969c0bc07acdbce9539830e703a8374226`
 
-Também devem permanecer verdes no candidato:
+Resultados:
+- Application CI #894: **SUCCESS**;
+- EMPROVEX Core Protection #181: **SUCCESS**;
+- Recovery guardrails #581: **SUCCESS**;
+- TypeScript: **PASS**;
+- Production Build: **PASS**;
+- Diff Hygiene: **PASS**;
+- release gates 16–21: **PASS**;
+- segurança multi-tenant/Firebase Emulator: **PASS**.
 
-- `npm run verify:external-sector-login`;
-- `npm run verify:sector-auth-provisioning`;
-- `npm run verify:sector-password-reset`;
-- `npm run verify:hybrid-auth-model`;
-- `npm run verify:firestore-provider-enforcement`;
-- `npm run verify:emprovex-core-protection`;
-- TypeScript;
-- production build;
-- diff hygiene;
-- segurança multi-tenant/Firebase Emulator quando acionada pelo pipeline;
-- Browser smoke/E2E dirigido para autenticação, conforme workflow sob demanda.
+### Browser E2E dirigido
 
-O resultado final dos gates será registrado no fechamento desta worker.
+Workflow:
+- `SAAS-C Browser Validation`;
+- run #3 / run id `36939984021`;
+- reexecução: attempt 2.
+
+Asserções executadas:
+1. login de setor → relatório → NS automática por UG → persistência após reload: **PASS**;
+2. usuário externo autenticado vê a Central de Depósitos: **PASS**;
+3. segundo workspace não enxerga NS/fornecedor do primeiro: **PASS**.
+
+Resultado Playwright registrado no log:
+
+`3 passed (30.9s)`
+
+O job acabou classificado pelo GitHub como `cancelled` **depois** das três asserções passarem, porque o runner manteve subprocessos de emulator/Java vivos durante o teardown até atingir o timeout do job. Não houve falha de teste funcional após o `3 passed`.
+
+Correção do runner:
+- commit `8c7fc09912b7b01208fda9f5c0b3be848641e0c4`;
+- processos Next/Firebase auxiliares passaram a ser iniciados em grupos próprios no Linux;
+- teardown envia sinal para a árvore de processos, preservando fallback direto e compatibilidade Windows;
+- o Coordenador reproduziu isoladamente a estratégia de process-group shutdown e confirmou encerramento por `SIGTERM`.
+
+O conector GitHub utilizado pelo Coordenador não disparou novo Actions para commits/PRs técnicos criados por ele, portanto não existe um novo run verde pós-teardown. Essa limitação de automação está registrada explicitamente e não é tratada como se o workflow tivesse passado.
+
+Para a decisão de integração:
+- as **asserções Browser E2E da funcionalidade estão aprovadas**;
+- o cancelamento residual ocorreu exclusivamente após o término dos testes;
+- o patch posterior altera somente infraestrutura de teardown do E2E, não o runtime do EMPROVEX.
+
+PR original:
+- #213 — fechado sem merge para permitir validação técnica controlada.
+
+PR técnico:
+- #217 — criado para o HEAD do teardown, sem autorização de merge em produção.
 
 ## 13. Proibições respeitadas
 
@@ -209,3 +242,29 @@ A SAAS-C não:
 - fez merge em `main`;
 - fez deploy de produção;
 - publicou Rules.
+
+
+## 14. Estado final da worker
+
+Base original:
+`32872d3fc6a781ff129eb4e41ae9b0d45658024a`
+
+HEAD funcional validado pela Application CI:
+`524432969c0bc07acdbce9539830e703a8374226`
+
+HEAD com correção de teardown do Browser E2E:
+`8c7fc09912b7b01208fda9f5c0b3be848641e0c4`
+
+Este documento é um fechamento posterior e não altera o escopo funcional.
+
+Critério final:
+- onboarding/credenciais: **APROVADOS**;
+- Browser E2E — asserções: **3/3 PASS**;
+- status cancelado do workflow: **teardown pós-teste, não regressão funcional**;
+- nenhuma Rule, Index, env ou banco novo;
+- nenhum merge em `main`;
+- nenhum deploy de produção;
+- enforcement continua reservado à SAAS-DS;
+- glue de aceite legal continua reservado ao Coordenador/SAAS-I.
+
+# SAAS-C — PRONTA PARA INTEGRAÇÃO
