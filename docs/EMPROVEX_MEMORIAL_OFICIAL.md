@@ -627,7 +627,7 @@ Frentes ativadas:
 
 **Fechamento**
 - **SAAS-I — integração controlada: APROVADA E INTEGRADA via PR #219 / squash `25dda487...`**;
-- **SAAS-P — piloto: LIBERADA / PRÓXIMA ETAPA**;
+- **SAAS-P — piloto: EM EXECUÇÃO**;
 - SAAS-J — certificação comercial;
 - SaaS aberto somente com decisão explícita do usuário.
 
