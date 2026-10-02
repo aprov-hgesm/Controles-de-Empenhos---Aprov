@@ -1976,3 +1976,5 @@ Também foi integrada a correção PILOT-OPS de compatibilidade do `gcloud` com 
 
 A exigência comercial permanece: o piloto precisa de pelo menos um workspace novo **não-VIP** para provar trial, pagamento e regularização; a coorte VIP legado não comprova cobrança.
 
+Dry-run da allowlist VIP legado foi concluído com sucesso em 2026-10-02, selecionando exatamente os 3 workspaces congelados e sem qualquer escrita. O `apply` permanece pendente de autorização explícita.
+
