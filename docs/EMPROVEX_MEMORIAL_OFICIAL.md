@@ -1946,3 +1946,33 @@ O snapshot de abertura confirmou:
 - MOBILE-A e MOBILE-B em execução por PRs draft, sem integração funcional ainda na integradora Mobile.
 
 A SAAS-P pode avançar em preparação, inventário e auditoria. Piloto real completo depende de participantes reais e de autorização explícita para as mudanças produtivas indispensáveis.
+
+### Atualização operacional — SAAS-P P2/P3 — 2026-10-02
+
+A auditoria autenticada da coorte VIP legado foi executada com sucesso.
+
+Coorte/allowlist congelada após revisão humana:
+
+- `aprovisionamento-2-b-fv`;
+- `aprovisionamento-3-gac-ap`;
+- `aprovisionamento-teste`.
+
+Decisão permanente para `aprovisionamento-teste`: ele permanece VIP legado e serve como perfil real de teste funcional de usuário externo. Um eventual perfil de teste não-VIP será criado futuramente apenas para validar trial/cobrança e não altera esta coorte.
+
+A migração VIP produtiva ainda **não foi aplicada**. A próxima etapa de P2 é somente `dry-run` com allowlist explícita.
+
+A auditoria de recovery confirmou:
+
+- banco principal sem PITR, delete protection, agenda diária e backup READY;
+- `emprovex-warehouse` com delete protection já ativa, porém sem PITR, agenda diária e backup READY;
+- zero backups READY nos dois bancos no momento da auditoria.
+
+Também foi integrada a correção PILOT-OPS de compatibilidade do `gcloud` com Windows/PowerShell:
+
+- PR #222;
+- squash `ea2d389f726ae989ae88f7fc7359c690b23dfb13`;
+- Application CI/Core Protection/Recovery/Legal verdes;
+- sem alteração em Rules, schema, Auth, billing, lifecycle ou contratos Mobile.
+
+A exigência comercial permanece: o piloto precisa de pelo menos um workspace novo **não-VIP** para provar trial, pagamento e regularização; a coorte VIP legado não comprova cobrança.
+
