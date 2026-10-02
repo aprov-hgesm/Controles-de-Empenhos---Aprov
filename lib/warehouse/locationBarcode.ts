@@ -289,12 +289,12 @@ export async function resolveWarehousePhysicalIdentityCode(
   if (!context) return { ok: false, error: 'INVALID_CONTEXT' };
 
   const decoded = decodeWarehouseLocationBarcode(input.code);
-  if (!decoded.ok) return decoded;
+  if (decoded.ok === false) return decoded;
 
   const identity = decoded.value;
   if (identity.kind === 'DEPOT') {
     const depotResult = await resolveDepot(identity.entityId, context, source);
-    if (!depotResult.ok) return depotResult;
+    if (depotResult.ok === false) return depotResult;
     return {
       ok: true,
       value: {
@@ -314,10 +314,10 @@ export async function resolveWarehousePhysicalIdentityCode(
     context,
     source
   );
-  if (!locationResult.ok) return locationResult;
+  if (locationResult.ok === false) return locationResult;
 
   const depotResult = await resolveDepot(locationResult.location.depotId, context, source);
-  if (!depotResult.ok) return depotResult;
+  if (depotResult.ok === false) return depotResult;
 
   if (identity.kind === 'LOCAL') {
     if (locationResult.location.parentLocationId !== null) {
@@ -346,7 +346,7 @@ export async function resolveWarehousePhysicalIdentityCode(
   }
 
   const parentResult = await resolveLocationEntity(parentId, 'LOCAL', context, source);
-  if (!parentResult.ok) return parentResult;
+  if (parentResult.ok === false) return parentResult;
   if (
     parentResult.location.depotId !== depotResult.depot.id
     || locationResult.location.depotId !== depotResult.depot.id
@@ -380,7 +380,7 @@ export async function resolveWarehouseStockPositionCode(
   source: WarehouseLocationBarcodeResolverSource
 ): Promise<WarehouseStockPositionResolveResult> {
   const resolved = await resolveWarehousePhysicalIdentityCode(input, source);
-  if (!resolved.ok) return resolved;
+  if (resolved.ok === false) return resolved;
   if (!resolved.value.position) {
     return { ok: false, error: 'DEPOT_NOT_STOCK_POSITION' };
   }
