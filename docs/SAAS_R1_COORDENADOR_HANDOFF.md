@@ -500,3 +500,15 @@ Dry-run da allowlist congelada executado e aprovado em 2026-10-02:
 
 A próxima ação de P2 é produtiva (`apply`) e permanece bloqueada até autorização explícita.
 
+### P2 finalizada — VIP legado aplicado
+
+Em 2026-10-02, após autorização explícita, a migração VIP legado foi aplicada nos 3 workspaces congelados e verificada imediatamente.
+
+Resultado:
+
+- `aprovisionamento-2-b-fv`: READY;
+- `aprovisionamento-3-gac-ap`: READY;
+- `aprovisionamento-teste`: READY.
+
+P2 está **CONCLUÍDA**. Não há pendência adicional de materialização da coorte VIP legado.
+
