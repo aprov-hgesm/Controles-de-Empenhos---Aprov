@@ -29,7 +29,7 @@ Dependência:
 | Frente | Branch | Dependência | Estado | Integração |
 | --- | --- | --- | --- | --- |
 | MOBILE-0 Baseline/contratos | integradora | candidato SAAS-I verde | **CONGELADA** | contratos/documentação canônicos |
-| MOBILE-A Plataforma/Scanner | `mobile-r1-a-platform-scanner` | 0 | **LIBERADA / BRANCH CRIADA** | base `53e28b818...`; aguardando worker |
+| MOBILE-A Plataforma/Scanner | `mobile-r1-a-platform-scanner` | 0 | **DEVOLVIDA — CORREÇÃO MÍNIMA** | PR #221; câmera bloqueada por Permissions-Policy + lifecycle Strict Mode |
 | MOBILE-B Etiquetas/Resolver | `mobile-r1-b-location-labels` | 0 | **LIBERADA / BRANCH CRIADA** | base `53e28b818...`; aguardando worker |
 | MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **BLOQUEADA** | — |
 | MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **BLOQUEADA** | — |
@@ -124,3 +124,37 @@ MOBILE-B:
 Nenhuma alteração MOBILE-R1 está em `main`.
 Nenhum deploy está autorizado.
 Nenhuma Rule será publicada por um worker.
+
+
+## 9. Revisões do Coordenador
+
+### Revisão MOBILE-A — 2026-10-02
+
+Handoff recebido:
+- branch: `mobile-r1-a-platform-scanner`;
+- base: `53e28b81874ee1b7ce0bd484cc7a97537aa99473`;
+- HEAD final revisado: `6abc35c60e5b0674f0e034b6da1476936345e41f`;
+- HEAD de código certificado informado: `86aa9962f82f1d37ff4d19d4c33c859bf0d777cb`;
+- PR #221: draft, mergeable, não integrado.
+
+Evidências positivas:
+- escopo preservado;
+- final = código certificado + handoff documental;
+- Application CI #914: SUCCESS;
+- Core Protection #201: SUCCESS;
+- Recovery #600: SUCCESS;
+- SAAS-DL Legal Validation #25: SUCCESS;
+- build/typecheck/diff hygiene verdes;
+- decoder lazy e fora do caminho desktop.
+
+Classificação coordenadora:
+**DEVOLVIDA PARA CORREÇÃO MÍNIMA**.
+
+Bloqueios:
+1. `next.config.ts` aplica `Permissions-Policy: camera=()`, incompatível com a missão de câmera da rota móvel;
+2. `WarehouseMobileScanner` não restaura `mountedRef.current=true` no setup do effect, embora `reactStrictMode=true`, tornando o lifecycle vulnerável ao ciclo extra de effects em desenvolvimento.
+
+Integração do PR #221:
+**NÃO AUTORIZADA neste HEAD**.
+
+Correção foi delimitada no comentário coordenador do PR #221. MOBILE-B permanece independente e não é bloqueada por esta devolução.
