@@ -41,6 +41,11 @@ assert.doesNotMatch(platformAccess, /billingAccounts/);
 assert.doesNotMatch(lifecycle, /billingAccounts/);
 assert.match(rules, /legacyVipCutoff/);
 assert.match(rules, /exemptionSource/);
+assert.match(
+  rules,
+  /resource\.data\.exemptionSource != 'legacy_vip'/,
+  'Rules devem impedir remoção da isenção VIP legado'
+);
 assert.match(migration, /requireExplicit: true/);
 assert.match(migration, /billingCycles não são lidos, reprecificados ou apagados/);
 assert.match(migration, /workspace fundador não pode entrar/i);
