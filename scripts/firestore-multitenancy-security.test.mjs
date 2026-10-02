@@ -633,6 +633,49 @@ async function main() {
 
   console.log('\nBilling em modo de observação');
 
+  const billingConfigSeed = {
+    version: 'emprovex_billing_v1',
+    billingMode: 'observe',
+    requirePayment: false,
+    automaticSuspension: false,
+    monthlyPriceCents: 7000,
+    currency: 'BRL',
+    defaultTrialDays: 30,
+    dueBusinessDay: 5,
+    gracePeriodDays: 10,
+    paymentMethod: 'pix_manual',
+    pixKey: 'financeiro@example.com',
+    pixKeyType: 'email',
+    pixRecipientName: 'EMPROVEX',
+    paymentLinkUrl: 'https://www.mercadopago.com.br/link-seguro',
+    supportContact: 'suporte@example.com',
+    holidayDates: [],
+    createdAt: '2026-10-01T00:00:00.000Z',
+    updatedAt: '2026-10-01T00:00:00.000Z',
+    updatedBy: founderEmail,
+  };
+
+  await allowed('Administrador configura regularização pública sem segredo', () =>
+    setDoc(doc(admin.db, 'platformBillingConfig', 'main'), billingConfigSeed)
+  );
+  await denied('Setor não lê a configuração administrativa completa de cobrança', () =>
+    getDoc(doc(sessionA.db, 'platformBillingConfig', 'main'))
+  );
+  await denied('Link público de pagamento exige HTTPS', () =>
+    updateDoc(doc(admin.db, 'platformBillingConfig', 'main'), {
+      paymentLinkUrl: 'http://pagamento-inseguro.example.com',
+      updatedAt: '2026-10-01T01:00:00.000Z',
+      updatedBy: founderEmail,
+    })
+  );
+  await denied('Configuração comercial não aceita retorno ao preço de R$ 50', () =>
+    updateDoc(doc(admin.db, 'platformBillingConfig', 'main'), {
+      monthlyPriceCents: 5000,
+      updatedAt: '2026-10-01T01:30:00.000Z',
+      updatedBy: founderEmail,
+    })
+  );
+
   await allowed('Setor consulta somente o próprio status de trial', () =>
     getDoc(doc(sessionA.db, 'billingAccounts', 'workspace-a'))
   );
@@ -647,6 +690,68 @@ async function main() {
       trialEndsAt: '2099-12-31T00:00:00.000Z',
     })
   );
+  await denied('VIP não pode manter mensalidade diferente de zero', () =>
+    updateDoc(doc(admin.db, 'billingAccounts', 'workspace-a'), {
+      status: 'exempt',
+      monthlyPriceCents: 7000,
+      updatedAt: '2026-10-01T01:45:00.000Z',
+      updatedBy: founderEmail,
+    })
+  );
+  await denied('Cliente não isento não pode voltar ao preço legado de R$ 50', () =>
+    updateDoc(doc(admin.db, 'billingAccounts', 'workspace-a'), {
+      monthlyPriceCents: 5000,
+      updatedAt: '2026-10-01T01:50:00.000Z',
+      updatedBy: founderEmail,
+    })
+  );
+  await allowed('Administrador concede VIP usando exempt e valor zero', () =>
+    updateDoc(doc(admin.db, 'billingAccounts', 'workspace-a'), {
+      status: 'exempt',
+      monthlyPriceCents: 0,
+      updatedAt: '2026-10-01T02:00:00.000Z',
+      updatedBy: founderEmail,
+    })
+  );
+  const vipAccount = await getDoc(doc(sessionA.db, 'billingAccounts', 'workspace-a'));
+  assert.equal(vipAccount.data()?.status, 'exempt');
+  assert.equal(vipAccount.data()?.monthlyPriceCents, 0);
+  await allowed('Administrador remove VIP e restaura Plano Completo de R$ 70', () =>
+    updateDoc(doc(admin.db, 'billingAccounts', 'workspace-a'), {
+      status: 'active',
+      monthlyPriceCents: 7000,
+      updatedAt: '2026-10-01T03:00:00.000Z',
+      updatedBy: founderEmail,
+    })
+  );
+
+  const historicalCycleId = 'workspace-a__2026-09';
+  await allowed('Administrador preserva competência histórica materializada', () =>
+    setDoc(doc(admin.db, 'billingCycles', historicalCycleId), {
+      version: 'emprovex_billing_v1',
+      id: historicalCycleId,
+      workspaceId: 'workspace-a',
+      ug: '160416',
+      referenceMonth: '2026-09',
+      amountCents: 5000,
+      dueDate: '2026-09-08',
+      status: 'paid',
+      confirmedAt: '2026-09-08T12:00:00.000Z',
+      confirmedBy: founderEmail,
+      note: 'Histórico anterior à R1',
+      createdAt: '2026-09-01T00:00:00.000Z',
+      updatedAt: '2026-09-08T12:00:00.000Z',
+      updatedBy: founderEmail,
+    })
+  );
+  await denied('Competência histórica materializada não pode ser reprecificada', () =>
+    updateDoc(doc(admin.db, 'billingCycles', historicalCycleId), {
+      amountCents: 7000,
+      updatedAt: '2026-10-01T04:00:00.000Z',
+      updatedBy: founderEmail,
+    })
+  );
+
   await allowed('Administrador lista assinaturas comerciais', () =>
     getDocs(collection(admin.db, 'billingAccounts'))
   );

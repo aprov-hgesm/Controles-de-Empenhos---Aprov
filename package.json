@@ -144,7 +144,7 @@
     "verify:tr-workspace-documents": "node scripts/verify-tr-workspace-documents.mjs",
     "verify:inicio-background-texture": "node scripts/verify-inicio-background-texture.mjs",
     "verify:inicio-slow-planet-orbits": "node scripts/verify-inicio-slow-planet-orbits.mjs",
-    "verify:block-22-billing": "node scripts/verify-block-22-billing.mjs",
+    "verify:block-22-billing": "node scripts/verify-block-22-billing.mjs && node --test scripts/saas-r1-billing.test.mjs",
     "verify:ug-telemetry-v2": "node scripts/verify-ug-telemetry-v2.mjs",
     "verify:admin-sidebar-google-usage": "node scripts/verify-admin-sidebar-google-usage.mjs",
     "verify:sped-nup-reporting": "node scripts/verify-sped-nup-reporting.mjs",

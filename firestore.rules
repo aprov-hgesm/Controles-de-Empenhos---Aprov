@@ -644,6 +644,8 @@ service cloud.firestore {
           'pixKey',
           'pixKeyType',
           'pixRecipientName',
+          'paymentLinkUrl',
+          'supportContact',
           'holidayDates',
           'createdAt',
           'updatedAt',
@@ -663,6 +665,8 @@ service cloud.firestore {
           'pixKey',
           'pixKeyType',
           'pixRecipientName',
+          'paymentLinkUrl',
+          'supportContact',
           'holidayDates',
           'createdAt',
           'updatedAt',
@@ -672,8 +676,7 @@ service cloud.firestore {
         && request.resource.data.billingMode == 'observe'
         && request.resource.data.requirePayment == false
         && request.resource.data.automaticSuspension == false
-        && request.resource.data.monthlyPriceCents is int
-        && request.resource.data.monthlyPriceCents >= 0
+        && request.resource.data.monthlyPriceCents == 7000
         && request.resource.data.currency == 'BRL'
         && request.resource.data.defaultTrialDays is int
         && request.resource.data.defaultTrialDays >= 1
@@ -686,6 +689,14 @@ service cloud.firestore {
         && request.resource.data.pixKey is string
         && request.resource.data.pixKeyType in ['', 'cpf', 'cnpj', 'email', 'phone', 'random']
         && request.resource.data.pixRecipientName is string
+        && request.resource.data.paymentLinkUrl is string
+        && request.resource.data.paymentLinkUrl.size() <= 2048
+        && (
+          request.resource.data.paymentLinkUrl == ''
+          || request.resource.data.paymentLinkUrl.matches('^https://.+')
+        )
+        && request.resource.data.supportContact is string
+        && request.resource.data.supportContact.size() <= 240
         && request.resource.data.holidayDates is list
         && request.resource.data.holidayDates.size() <= 128
         && request.resource.data.createdAt is string
@@ -743,7 +754,26 @@ service cloud.firestore {
           'exempt'
         ]
         && request.resource.data.monthlyPriceCents is int
-        && request.resource.data.monthlyPriceCents >= 0
+        && (
+          (
+            workspaceId == 'hgesm-aprov'
+            && request.resource.data.status == 'exempt'
+            && request.resource.data.monthlyPriceCents == 0
+          )
+          || (
+            workspaceId != 'hgesm-aprov'
+            && (
+              (
+                request.resource.data.status == 'exempt'
+                && request.resource.data.monthlyPriceCents == 0
+              )
+              || (
+                request.resource.data.status != 'exempt'
+                && request.resource.data.monthlyPriceCents == 7000
+              )
+            )
+          )
+        )
         && request.resource.data.currency == 'BRL'
         && request.resource.data.trialGranted is bool
         && request.resource.data.trialStartedAt is string
