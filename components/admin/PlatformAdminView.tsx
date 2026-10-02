@@ -930,8 +930,8 @@ export function PlatformAdminView({
                 </h2>
                 <p id="status-sector-description" className="mt-2 text-sm leading-relaxed text-slate-400">
                   {statusCandidate.status === 'active'
-                    ? `O acesso operacional de ${statusCandidate.name} será bloqueado imediatamente, sem apagar dados ou histórico.`
-                    : `O acesso operacional de ${statusCandidate.name} será liberado novamente para a conta autorizada.`}
+                    ? `O acesso operacional de ${statusCandidate.name} será bloqueado imediatamente, as sessões ativas serão revogadas e nenhum dado será apagado.`
+                    : `O acesso operacional de ${statusCandidate.name} será liberado novamente. Sessões revogadas não voltam a ser válidas e um novo login pode ser necessário.`}
                 </p>
               </div>
             </div>
