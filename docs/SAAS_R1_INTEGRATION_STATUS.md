@@ -92,11 +92,11 @@ O Coordenador deve:
 SAAS-B, SAAS-C, SAAS-DL e SAAS-E já foram recebidas, auditadas e integradas. A Onda 1 está concluída.
 
 Próximo gate:
-- executar SAAS-I diretamente sobre a integradora consolidada;
-- conectar o gate legal ao shell no ponto correto;
-- validar jornada combinada B+C+DL+E+DS;
-- preparar release coordenada da aplicação com Rules da Central, sem publicar ainda;
+- executar **SAAS-P — Piloto controlado** sobre a integradora já consolidada;
+- registrar evidência real de onboarding, trial, pagamento de workspace não legado, suspensão/reativação e aceite;
 - manter backup/restore/uptime reais como pendências de certificação antes de SAAS-J;
+- tratar correções do piloto em branches curtas e escopo próprio;
+- antes de qualquer correção transversal em Auth/legal/lifecycle/sessão/Rules/Central, sincronizar semanticamente com a integradora MOBILE-R1;
 - manter as configurações externas da SAAS-E como gates obrigatórios de operação/certificação, sem confundi-las com merge de código.
 
 ## 7. Registro de integrações
@@ -255,3 +255,18 @@ Não executado:
 - configuração externa SAAS-E.
 
 Próxima etapa: **SAAS-P — Piloto controlado**.
+
+
+## 17. Desenvolvimento paralelo — MOBILE-R1
+
+Programa paralelo ativo:
+- integradora Mobile: `feat/central-mobile-r1`;
+- baseline funcional original: SAAS-I certificada `78d3e9afeeb4176a8d6423cdd8e65d32435ba0a9`;
+- a história Git pode divergir da integradora SaaS por causa do squash da SAAS-I e dos commits documentais posteriores.
+
+Regra do Coordenador:
+- comparar semanticamente, não por ancestralidade apenas;
+- consultar `CENTRAL_MOBILE_R1_INTEGRATION_STATUS.md` e `CENTRAL_MOBILE_R1_COORDENADOR_HANDOFF.md` antes de qualquer mudança SaaS transversal;
+- exigir seção **Impacto MOBILE-R1** em correções que toquem Auth, workspace/UG, sessão/lease, legal gate, lifecycle, `warehouseAccess`, Rules, shell ou contratos comuns da Central;
+- não bloquear SAAS-P por existência do Mobile; bloquear somente conflito concreto;
+- reconciliar obrigatoriamente os dois programas antes de SAAS-J.
