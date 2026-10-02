@@ -406,3 +406,20 @@ Foi corrigida a incompatibilidade do launcher `gcloud.cmd` com os scripts Node n
 
 O Vercel associado ao PR permaneceu limitado por build-rate-limit, sem evidência de regressão funcional dessa correção.
 
+### 14.4 P2 — dry-run da allowlist congelada
+
+Execução real em 2026-10-02:
+
+`npm run saas:r1:legacy-vip -- dry-run --workspaces=aprovisionamento-2-b-fv,aprovisionamento-3-gac-ap,aprovisionamento-teste`
+
+Resultado:
+
+- candidatos automáticos: **3**;
+- não resolvidos: **0**;
+- founder `hgesm-aprov`: excluído;
+- seleção DRY-RUN: **3/3 workspaces**;
+- nenhuma escrita executada;
+- coorte validada para eventual `apply` produtivo.
+
+O `apply` permanece **BLOQUEADO** até autorização explícita do fundador.
+
