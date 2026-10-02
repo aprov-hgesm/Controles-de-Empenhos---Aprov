@@ -425,3 +425,35 @@ A Central Móvel foi fundada sobre a SAAS-I certificada `78d3e9afe...`; a SAAS-I
 O desenvolvimento paralelo não bloqueia SAAS-P por padrão. Só criar bloqueio quando houver conflito concreto de segurança, autorização, fonte de verdade, schema/Rules ou comportamento compartilhado.
 
 Todo novo prompt emitido pelo Coordenador SaaS para uma frente transversal deve conter a orientação de consultar e preservar a MOBILE-R1.
+
+## 19. SAAS-P — handoff de abertura
+
+A SAAS-P está **EM PREPARAÇÃO**.
+
+Documento operacional:
+- `docs/SAAS_R1_P_PILOTO_CONTROLADO.md`.
+
+P0 confirmou:
+- integradora SaaS e `main`;
+- PR #219 mergeado;
+- gates finais SAAS-I verdes conforme política;
+- pendências externas SAAS-E continuam reais;
+- Mobile A/B já estão em execução por PRs #221/#220, mas ainda não foram integradas na integradora Mobile;
+- a integradora Mobile não contém delta funcional pós-SAAS-I no snapshot.
+
+Próximas ações coordenadas, sem produção:
+1. P2 — `status`/inventário VIP legado;
+2. P3 — auditoria externa de recovery/backup/uptime;
+3. selecionar participantes;
+4. registrar baseline de custos;
+5. preparar janela controlada do piloto.
+
+Ações bloqueadas por autorização humana:
+- `apply` VIP legado;
+- publicação de Rules;
+- deploy/promoção em produção;
+- mudanças externas de backup/PITR/delete protection;
+- restore real;
+- suspensão/billing de cliente real.
+
+Qualquer correção transversal da SAAS-P deve conter **Impacto MOBILE-R1** e ser comparada com o estado vivo da integradora Mobile.
