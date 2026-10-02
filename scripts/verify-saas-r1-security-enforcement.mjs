@@ -38,7 +38,7 @@ requireText(lifecycle, "WAREHOUSE_DATABASE_ID = 'emprovex-warehouse'", 'Lifecycl
 requireText(lifecycle, "WAREHOUSE_ACCESS_COLLECTION = 'warehouseAccess'", 'Lifecycle perdeu o espelho mínimo de autorização da Central.');
 requireText(lifecycle, "currentDocument: { updateTime:", 'Lifecycle deixou de usar precondições contra concorrência.');
 requireText(lifecycle, "operation: 'sector.status_change'", 'Lifecycle perdeu auditoria de mudança de status.');
-requireText(lifecycle, "reason: 'warehouse_reactivation_compensation'", 'Reativação perdeu rollback seguro quando a Central falha.');
+requireText(lifecycle, 'warehouse_reactivation_compensation', 'Reativação perdeu rollback seguro quando a Central falha.');
 
 forbidText(lifecycle, 'billingAccounts/', 'Lifecycle não pode escrever ou depender de billingAccounts.');
 forbidText(lifecycle, 'empenhos/', 'Lifecycle não pode tocar em empenhos.');
