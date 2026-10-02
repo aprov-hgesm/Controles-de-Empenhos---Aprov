@@ -105,7 +105,10 @@ function describeSectorAuthorizationFailure(code: string): string {
  * plataforma e associada ao workspace autorizado. Contas desconhecidas,
  * desativadas ou com workspace inválido são encerradas em fail-closed.
  */
-export function useOperationalData(activeTab: OperationalActiveTab) {
+export function useOperationalData(
+  activeTab: OperationalActiveTab,
+  operationalAccessEnabled = true
+) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const explicitSignInRef = useRef(false);
@@ -125,6 +128,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     activeRealtimeCollectionCount: operationalCollectionCount,
     readiness,
   } = useOperationalRealtimeCollections({
+    enabled: operationalAccessEnabled,
     user,
     workspaceContext,
     activeTab,
@@ -139,6 +143,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     snapshot: inicioSnapshot,
     snapshotReady: inicioSnapshotReady,
   } = useInicioOperationalSnapshot({
+    enabled: operationalAccessEnabled,
     user,
     workspaceContext,
     activeTab,
@@ -159,6 +164,7 @@ export function useOperationalData(activeTab: OperationalActiveTab) {
     operationalCollectionCount
     + (
       activeTab === 'inicio'
+      && operationalAccessEnabled
       && user
       && isOperationalSectorContext(workspaceContext)
         ? 1
