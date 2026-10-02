@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial do Repositório
 
-Última atualização: **2026-10-02 — VIP legado congelado / SAAS-I liberada**
+Última atualização: **2026-10-02 — VIP legado congelado / SAAS-I liberada / Central Móvel R1 planejada**
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Branch integradora do SaaS R1: `feat/saas-r1-commercializacao`
 Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A, SAAS-B, SAAS-C, SAAS-DL, SAAS-E e SAAS-DS INTEGRADAS; enforcement transversal concluído no código; SAAS-I LIBERADA para integração controlada e validação combinada**
@@ -18,6 +18,7 @@ Ordem de consulta para um novo trabalho:
 5. documentação especializada do domínio alterado;
 6. decisões arquiteturais registradas;
 7. histórico de fases/branches/PRs apenas como contexto.
+8. enquanto a **Central Móvel R1** permanecer apenas planejada, este Memorial é sua fonte canônica de macroarquitetura; os documentos `CENTRAL_MOBILE_R1_*` passam a prevalecer operacionalmente após serem criados e aprovados pelo Chat Coordenador da rodada.
 
 Para a Central de Depósitos:
 - `docs/adm-deposito/README.md`;
@@ -669,7 +670,814 @@ Workers nunca fazem merge em `main`, deploy Vercel, deploy de Rules ou promoçã
 
 A branch integradora só chega à produção após SAAS-J e autorização explícita do usuário.
 
-## 8. Riscos/pendências que não devem ser esquecidos
+## 8. Programa planejado — Central Móvel R1
+
+### 8.1 Estado e objetivo
+
+A **Central Móvel R1** é o próximo programa funcional planejado para a Central de Depósitos. O programa está **APROVADO COMO PLANEJAMENTO, MAS AINDA NÃO INICIADO**: não existe autorização implícita para criar branches, alterar código, integrar em `main` ou publicar produção apenas porque esta seção existe.
+
+Nome de produto provisório:
+**EMPROVEX — Central Móvel R1**
+
+Código interno da rodada:
+`MOBILE-R1`
+
+Branch integradora recomendada, a ser criada somente pelo Coordenador quando o baseline for formalmente congelado:
+`feat/central-mobile-r1`
+
+Objetivo:
+> permitir que o mesmo usuário autenticado do EMPROVEX execute, pelo navegador do celular e no próprio ponto físico da operação, alocação de recebimentos, transferências, consultas, inventário, saídas e conferências por leitura de códigos de barras de produtos e posições, reutilizando integralmente as autoridades de dados já existentes da Central de Depósitos.
+
+A Central Móvel **não é um segundo sistema**, não cria um segundo usuário e não cria outra fonte de verdade. Ela é uma nova superfície operacional sobre os mesmos contratos do EMPROVEX.
+
+### 8.2 Princípio de produto
+
+No desktop, a Central de Depósitos permanece responsável pelas superfícies completas de administração, cadastro, supervisão, relatórios, configuração, croqui, controle de materiais e demais operações já existentes.
+
+No celular, o mesmo usuário autenticado recebe uma experiência própria, simplificada e orientada à operação física, com foco em:
+- câmera;
+- leitura de códigos;
+- botões grandes;
+- etapas sequenciais claras;
+- confirmação explícita;
+- feedback sonoro/visual/tátil quando suportado;
+- mínimo de navegação administrativa;
+- carregamento somente do que for necessário para a tarefa corrente.
+
+A experiência móvel não deve aparecer como uma nova conta ou novo módulo de autorização. Ela deve reutilizar autenticação, workspace, UG, sessão, isolamento e permissões vigentes.
+
+Detecção de dispositivo não é mecanismo de segurança. A rota móvel pode ficar ausente da navegação desktop e exibir aviso de interface móvel quando acessada por computador, mas toda autorização continua sendo validada por identidade, workspace, UG e regras do domínio.
+
+### 8.3 Modus operandi obrigatório
+
+A Central Móvel R1 deve seguir o modelo oficial de desenvolvimento paralelo do EMPROVEX:
+
+> **baseline + contratos comuns → frentes independentes → ondas paralelas → handoffs → integração semântica controlada → validação integrada → certificação final**
+
+A rodada não deve ser executada como uma fila monolítica em um único chat.
+
+Regras obrigatórias:
+- existir um **Chat Coordenador / Integrador / Avaliador** permanente;
+- existir uma **branch integradora exclusiva** da MOBILE-R1, separada de `main`;
+- cada worker possuir branch e escopo exclusivos;
+- cada worker declarar arquivos/áreas que pretende alterar antes de editar;
+- nenhum worker fazer merge direto em `main`;
+- nenhum worker fazer deploy de produção;
+- nenhum worker integrar outra frente por conta própria;
+- nenhum worker invadir outra frente para resolver conflito;
+- sobreposições de arquivos/contratos voltam para o Coordenador;
+- o Coordenador recebe handoffs e classifica cada frente;
+- conflitos são resolvidos semanticamente na integradora, nunca por escolha mecânica global de `ours/theirs`;
+- integração não pode ser usada para adicionar features novas;
+- certificação ocorre somente sobre o conjunto integrado;
+- merge/release final exige decisão explícita do usuário.
+
+Status possíveis de uma frente ao ser recebida pelo Coordenador:
+- `APROVADA`;
+- `APROVADA COM PENDÊNCIA`;
+- `DEVOLVIDA`;
+- `BLOQUEADA`.
+
+### 8.4 Documentos canônicos da rodada
+
+Antes da liberação dos primeiros workers, o Chat Coordenador deve criar e versionar:
+
+- `docs/CENTRAL_MOBILE_R1_PLANO_MESTRE.md`;
+- `docs/CENTRAL_MOBILE_R1_EXECUCAO_PARALELA.md`;
+- `docs/CENTRAL_MOBILE_R1_INTEGRATION_STATUS.md`;
+- `docs/CENTRAL_MOBILE_R1_COORDENADOR_HANDOFF.md`.
+
+O Coordenador deve manter esses quatro documentos coerentes com este Memorial.
+
+`CENTRAL_MOBILE_R1_INTEGRATION_STATUS.md` deve ser o quadro vivo da rodada e deve registrar, por frente:
+- branch;
+- base SHA;
+- HEAD;
+- status;
+- proprietário;
+- arquivos reservados;
+- dependências;
+- contratos reutilizados;
+- testes/gates;
+- métricas;
+- riscos;
+- situação de integração.
+
+Somente o Coordenador mantém o estado global da rodada.
+
+As decisões permanentes que alterarem a arquitetura da Central devem também ser consolidadas em `docs/adm-deposito/DECISIONS.md`.
+
+### 8.5 MOBILE-0 — baseline e contratos comuns
+
+Antes de abrir qualquer worker, o Coordenador executa a etapa **MOBILE-0**.
+
+MOBILE-0 não é uma feature. É a fundação e o congelamento de contratos.
+
+O Coordenador deve:
+1. consultar `main`, a branch integradora vigente do programa anterior e o estado real de produção;
+2. escolher e registrar o baseline exato da MOBILE-R1;
+3. preservar o baseline original durante toda a rodada;
+4. conferir a documentação atual da Central;
+5. mapear arquivos potencialmente compartilhados;
+6. congelar interfaces comuns antes da primeira onda;
+7. definir métricas iniciais de performance e leituras;
+8. registrar riscos conhecidos;
+9. somente depois criar/liberar as branches trabalhadoras.
+
+Contratos mínimos a congelar:
+
+| Domínio | Autoridade/decisão |
+| --- | --- |
+| usuário | mesmo usuário EMPROVEX |
+| autenticação | Firebase Auth vigente |
+| workspace/UG | mesmos contratos multi-tenant |
+| sessão | mesma política de sessão/lease |
+| material | material canônico existente |
+| saldo agregado | `warehouse_balance_v1` |
+| distribuição física | `warehouse_location_balance_v1` |
+| movimentações | ledger append-only vigente |
+| barcode de produto | `warehouse_barcode_v1` |
+| lote/validade | contratos vigentes |
+| posição | `WarehouseStockPosition` |
+| transferência | `TRANSFER` vigente |
+| saída | `OUTBOUND` vigente |
+| inventário | contratos `warehouse_inventory_v1` e `warehouse_inventory_item_v1` |
+| NF/intake | contratos atuais de intake |
+| segurança | workspace/UG + fail-closed |
+| scanner | infraestrutura compartilhada |
+| câmera | captura local; não armazenar vídeo |
+| desktop | não carregar scanner/câmera sem necessidade |
+| mobile | superfície operacional própria |
+| escrita offline | fora da R1 |
+| fonte de verdade | nunca duplicada |
+
+Nenhuma frente posterior pode inventar seu próprio saldo, catálogo, modelo de posição, fluxo de inventário, transferência ou mecanismo de autorização.
+
+### 8.6 Regra online-first
+
+A MOBILE-R1 deve ser **online-first**.
+
+Não implementar na R1:
+- fila persistente de movimentações offline;
+- confirmação tardia automática de transferência;
+- saída armazenada localmente para sincronização posterior;
+- inventário que gere ajuste sem revalidação online.
+
+Motivo: operações físicas são sensíveis a concorrência e saldo. Uma operação preparada offline pode ficar obsoleta antes de ser sincronizada.
+
+Quando houver perda de conexão:
+- não considerar operação crítica confirmada sem resposta autoritativa;
+- preservar rascunho local apenas quando seguro;
+- recuperar a conexão;
+- revalidar estado;
+- exigir confirmação coerente;
+- manter idempotência.
+
+Offline completo pode ser avaliado em rodada futura separada.
+
+### 8.7 Contrato compartilhado do scanner
+
+Deve existir uma infraestrutura única de scanner móvel, reutilizada pelas demais frentes.
+
+Conceito:
+`WarehouseMobileScanner`
+
+Tipos de leitura:
+- `PRODUCT`;
+- `LOCATION`;
+- `UNKNOWN`.
+
+Estados de expectativa:
+- `EXPECT_PRODUCT`;
+- `EXPECT_LOCATION`;
+- `EXPECT_SOURCE_LOCATION`;
+- `EXPECT_DESTINATION_LOCATION`.
+
+Fluxo conceitual:
+**câmera → decoder → normalização → identificação → resolver → evento validado**
+
+O scanner:
+- não altera saldo;
+- não cria movimento;
+- não confirma operação de negócio;
+- não substitui validação de backend;
+- deve prevenir double scan;
+- deve permitir entrada manual como fallback;
+- deve desmontar câmera corretamente ao sair da superfície;
+- deve ser carregado sob demanda, evitando regressão no bundle desktop.
+
+Não depender exclusivamente de uma API experimental de navegador se isso comprometer compatibilidade Android/iPhone. A implementação deve possuir estratégia de fallback validada pelo Coordenador.
+
+### 8.8 Contrato compartilhado das etiquetas físicas
+
+Código de produto e código de posição são identidades diferentes.
+
+As etiquetas físicas devem evoluir a infraestrutura existente de:
+- depósito;
+- local;
+- subposição;
+- PDF de etiquetas.
+
+Cada etiqueta deve continuar legível por humanos e também conter identificador escaneável.
+
+O identificador de posição deve resolver de forma inequívoca:
+- workspace/escopo validado;
+- UG;
+- `depotId`;
+- `locationId`;
+- `subpositionId`, quando existir.
+
+O barcode não deve depender do nome visível da posição.
+
+Renomear uma prateleira/local não deve alterar sua identidade técnica.
+
+A etiqueta é identificador, **não autorização**. Toda operação continua revalidando usuário, workspace, UG, status ativo e relação correta da estrutura física.
+
+### 8.9 Topologia oficial da MOBILE-R1
+
+A topologia planejada é:
+
+```text
+                    MOBILE-0
+             BASELINE + CONTRATOS
+                       |
+              +--------+--------+
+              |                 |
+          MOBILE-A          MOBILE-B
+      Plataforma/Scanner  Etiquetas/Resolver
+              |                 |
+              +--------+--------+
+                       |
+                  INTEGRAÇÃO 1
+                       |
+          +------------+------------+
+          |            |            |
+      MOBILE-C     MOBILE-D      MOBILE-E
+      Alocação    Transfer.      Consulta
+          |            |            |
+          +------------+------------+
+                       |
+                  INTEGRAÇÃO 2
+                       |
+          +------------+------------+
+          |            |            |
+      MOBILE-F     MOBILE-G      MOBILE-H
+      Inventário     Saída       Conferência
+          |            |            |
+          +------------+------------+
+                       |
+                   MOBILE-I
+           INTEGRAÇÃO CONTROLADA
+                       |
+                   MOBILE-J
+             CERTIFICAÇÃO FINAL
+                       |
+                decisão do usuário
+                       |
+                merge/release
+```
+
+Desenvolvimento paralelo e ordem de integração são conceitos diferentes. O Coordenador pode alterar a ordem de integração quando isso reduzir conflito, desde que registre a justificativa.
+
+### 8.10 Primeira onda — fundação técnica
+
+#### MOBILE-A — Plataforma Móvel e Scanner
+
+Branch recomendada:
+`mobile-r1-a-platform-scanner`
+
+Responsabilidade:
+- rota/shell móvel;
+- experiência responsiva exclusiva;
+- acesso à câmera;
+- preferência pela câmera traseira quando possível;
+- decoder;
+- lazy loading;
+- feedback de leitura;
+- prevenção de leituras duplicadas;
+- tratamento de permissão negada;
+- fallback manual;
+- feedback sonoro/tátil quando suportado;
+- gerenciamento dos estados `EXPECT_*`;
+- desmontagem correta da câmera;
+- não contaminar bundle desktop com dependência pesada do scanner.
+
+Não deve:
+- alterar ledger;
+- alterar intake;
+- implementar alocação;
+- movimentar estoque;
+- criar inventário;
+- alterar regra de transferência/saída;
+- assumir propriedade das etiquetas.
+
+#### MOBILE-B — Identidade Física, Etiquetas e Resolver
+
+Branch recomendada:
+`mobile-r1-b-location-labels`
+
+Responsabilidade:
+- formato do identificador escaneável de posição;
+- evolução das etiquetas;
+- barcode no PDF;
+- suporte a depósito/local/subposição;
+- resolver código → posição;
+- validação de posição ativa;
+- contrato de erros;
+- compatibilidade com renomeação;
+- proteção contra colisão;
+- testes de identidade.
+
+Não deve:
+- criar fluxo de câmera;
+- movimentar saldo;
+- implementar transferência;
+- implementar inventário;
+- criar UI operacional completa.
+
+### 8.11 Integração 1
+
+Após handoff e aprovação de MOBILE-A e MOBILE-B, o Coordenador integra ambas e valida:
+
+**câmera/leitura → decoder → identificação → resolver → `WarehouseStockPosition`**
+
+Essa integração **não deve movimentar estoque**.
+
+Somente depois de essa fundação ser aprovada os contratos compartilhados são considerados congelados para a segunda onda.
+
+### 8.12 Segunda onda — operações independentes
+
+Depois de A+B integradas/congeladas, podem avançar em paralelo:
+
+- **MOBILE-C — Alocação Móvel**;
+- **MOBILE-D — Transferência Móvel**;
+- **MOBILE-E — Consulta Física**.
+
+#### MOBILE-C — Alocação Móvel
+
+Branch recomendada:
+`mobile-r1-c-intake-allocation`
+
+Reutiliza o intake atual, NF pendente, item pendente, material, barcode, lote/validade, `WarehouseStockPosition` e operação oficial de alocação.
+
+Fluxo:
+**NF → item → quantidade → scan produto → associação/cadastro de barcode quando necessário → validade/lote → scan posição → revalidação → confirmação → ALLOCATE**
+
+Requisitos:
+- permitir alocação parcial;
+- um mesmo item pode ser dividido em várias posições;
+- código desconhecido pode ser associado ao material selecionado apenas pelos contratos oficiais;
+- conflito de barcode com outro material é bloqueante;
+- validade pertence ao lote/enriquecimento logístico, não à identidade global do material;
+- backend revalida pendência e posição antes do commit;
+- resultado deve refletir automaticamente no depósito virtual/desktop.
+
+Exemplo:
+10 unidades de café podem ser alocadas como 5 na Prateleira 1 e 5 na Prateleira 4 sem criar saldo paralelo.
+
+#### MOBILE-D — Transferência Móvel
+
+Branch recomendada:
+`mobile-r1-d-transfer`
+
+Fluxo:
+**scan origem → scan produto → quantidade → scan destino → revalidar origem/destino/saldo → confirmar → TRANSFER**
+
+Invariantes:
+- transferência não altera saldo agregado;
+- origem e destino devem ser posições válidas e ativas;
+- quantidade deve existir na origem;
+- operação permanece idempotente;
+- não substituir `TRANSFER` por OUTBOUND + entrada artificial.
+
+#### MOBILE-E — Consulta Física
+
+Branch recomendada:
+`mobile-r1-e-physical-query`
+
+Capacidade predominantemente read-only.
+
+Fluxo:
+**scan posição → resolver → carregar distribuição física → materiais → lotes/validade → visualização**
+
+Pode mostrar:
+- materiais registrados na posição;
+- quantidades;
+- lote;
+- validade;
+- origem quando disponível;
+- outras posições do material;
+- histórico curto/bounded quando apropriado.
+
+Por ser leitura, é a candidata preferencial para primeira integração da segunda onda.
+
+### 8.13 Integração 2
+
+Após aprovação de C/D/E, o Coordenador deve executar regressão cruzada.
+
+Jornada mínima:
+1. alocar material em uma posição;
+2. consultar a posição;
+3. transferir parte para outra posição;
+4. consultar origem e destino;
+5. confirmar que o saldo agregado não mudou na transferência;
+6. confirmar que a distribuição física mudou corretamente;
+7. verificar reflexo no desktop.
+
+Nenhum worker isolado é responsável por certificar essa jornada combinada.
+
+### 8.14 Terceira onda — operações avançadas
+
+Depois da integração 2, podem avançar em paralelo:
+
+- **MOBILE-F — Inventário Móvel**;
+- **MOBILE-G — Saída Móvel**;
+- **MOBILE-H — Conferência Física/Digital**.
+
+#### MOBILE-F — Inventário Móvel
+
+Branch recomendada:
+`mobile-r1-f-inventory`
+
+Reutiliza `warehouse_inventory_v1` e `warehouse_inventory_item_v1`.
+
+Fluxo:
+**abrir/selecionar inventário → scan posição → mostrar esperado → scan/selecionar material → informar contagem → salvar contado → revisar → confirmação humana → INVENTORY_ADJUSTMENT quando necessário**
+
+Invariantes:
+- salvar contagem não altera estoque;
+- diferença = contado - esperado;
+- ajuste somente após revisão/confirmação;
+- concorrência/revisão de posição continuam protegidas;
+- item obsoleto deve seguir a política de `STALE/RECONCILIATION_REQUIRED` vigente;
+- nenhuma segunda autoridade quantitativa.
+
+Evolução permitida dentro da R1: contagem orientada por leitura de produto dentro de uma posição, desde que continue alimentando o inventário oficial e não crie mecanismo paralelo.
+
+#### MOBILE-G — Saída Móvel
+
+Branch recomendada:
+`mobile-r1-g-outbound`
+
+Reutiliza `OUTBOUND`, saldos, posições, lotes e FEFO existentes.
+
+Fluxo:
+**destino/retirado por → scan produto → quantidade → mostrar posições → recomendar FEFO → operador chega à posição → scan posição → confirmar lote quando aplicável → revalidar saldo → OUTBOUND**
+
+A interface pode orientar fisicamente:
+- posição recomendada;
+- lote;
+- validade;
+- FEFO.
+
+Mas FEFO continua seguindo a regra oficial já existente e não autoriza baixa silenciosa.
+
+#### MOBILE-H — Conferência Física/Digital
+
+Branch recomendada:
+`mobile-r1-h-position-check`
+
+Objetivo:
+responder à pergunta **“este material está registrado nesta posição?”**
+
+Fluxo:
+**scan posição → scan produto → comparar distribuição oficial → indicar correto/incorreto**
+
+Se incorreto:
+- mostrar posição registrada;
+- oferecer navegação para a Transferência Móvel;
+- **não criar mecanismo próprio de transferência**.
+
+Regra:
+**Conferência detecta; MOBILE-D corrige.**
+
+### 8.15 Integração 3
+
+Após F/G/H:
+- combinar fluxos;
+- conferir que nenhuma frente duplicou scanner/resolver;
+- validar navegação entre conferência e transferência;
+- validar inventário sem mutação prematura;
+- validar saída com posição/lote;
+- executar regressão seletiva das capacidades anteriores.
+
+### 8.16 MOBILE-I — Integração Controlada
+
+MOBILE-I é conduzida pelo Chat Coordenador e **não é frente de feature**.
+
+Objetivos:
+- integrar somente frentes aprovadas;
+- resolver conflitos semânticos;
+- produzir glue code mínimo;
+- remover duplicações;
+- verificar interações cruzadas;
+- proteger contratos comuns;
+- medir impacto combinado;
+- corrigir regressões de integração.
+
+Não usar MOBILE-I para expandir escopo.
+
+Verificações mínimas:
+- login e sessão;
+- workspace/UG;
+- acesso móvel;
+- navegação;
+- câmera e permissões;
+- scanner;
+- troca de estados;
+- barcode de produto;
+- barcode de posição;
+- intake;
+- alocação;
+- transferência;
+- consulta;
+- inventário;
+- saída;
+- conferência;
+- idempotência;
+- concorrência;
+- isolamento;
+- performance;
+- bundle desktop;
+- bundle mobile;
+- reflexo desktop ↔ mobile.
+
+Jornada integrada obrigatória:
+1. login no celular;
+2. selecionar NF pendente;
+3. alocar 5 unidades de um item em uma posição;
+4. alocar as restantes em outra;
+5. consultar a primeira posição;
+6. transferir parte para uma terceira;
+7. consultar as três posições;
+8. executar conferência material × posição;
+9. realizar uma contagem de inventário sem alterar saldo prematuramente;
+10. executar uma saída;
+11. consultar distribuição final;
+12. abrir a Central no desktop;
+13. confirmar que o estado é o mesmo.
+
+### 8.17 MOBILE-J — Certificação Final
+
+Somente depois da MOBILE-I.
+
+Gates técnicos obrigatórios:
+- instalação reproduzível quando aplicável;
+- TypeScript;
+- build de produção;
+- diff hygiene;
+- EMPROVEX Core Protection;
+- testes de domínio/contratos;
+- guards estruturais;
+- Firestore/segurança/isolamento aplicáveis;
+- idempotência;
+- concorrência;
+- contratos barcode/location;
+- regressão das operações de estoque afetadas.
+
+Métricas mínimas:
+- First Load JS do desktop antes/depois;
+- First Load JS da rota móvel;
+- peso do decoder/scanner;
+- confirmação de lazy loading;
+- tempo aproximado para ativar câmera;
+- tempo leitura → identificação;
+- tempo confirmação → persistência;
+- estimativa de reads/writes por jornada;
+- ausência de listener desnecessário.
+
+Compatibilidade mínima:
+- Android + Chrome;
+- iPhone + Safari quando disponível para validação;
+- desktop sem carregar scanner quando não usado;
+- câmera concedida;
+- câmera negada;
+- câmera indisponível;
+- entrada manual;
+- conexão degradada;
+- reload/navegação quando relevante.
+
+Browser E2E continua **sob demanda conforme risco**, seguindo `docs/TESTING_POLICY.md`; não volta a ser gate permanente.
+
+### 8.18 Validação manual obrigatória da experiência física
+
+A MOBILE-R1 possui risco operacional que não pode ser certificado apenas por testes automatizados.
+
+Validação manual com celular real deve fazer parte formal da certificação, especialmente para:
+- ergonomia com uma mão;
+- tamanho dos botões;
+- legibilidade;
+- enquadramento;
+- velocidade de leitura;
+- double scan;
+- comportamento com mais de um barcode visível;
+- foco;
+- feedback visual;
+- som;
+- vibração;
+- iluminação real do depósito;
+- sequência de passos;
+- clareza entre “ler material” e “ler local”;
+- perda/retorno de conexão;
+- uso durante deslocamento entre posições.
+
+Sempre que possível, o teste manual deve receber uma build já protegida por typecheck, build, testes de domínio, guards e segurança.
+
+### 8.19 Regra de propriedade de arquivos
+
+Antes de editar, cada worker registra:
+- arquivos que pretende alterar;
+- arquivos apenas consultados;
+- contratos reutilizados;
+- dependências esperadas.
+
+Se duas frentes precisarem editar o mesmo arquivo estrutural:
+1. o Coordenador define proprietário;
+2. a outra frente cria adapter/helper próprio quando seguro;
+3. se a separação não for segura, aquele ponto deixa de ser paralelo.
+
+Exemplo de regra planejada:
+- MOBILE-A deve ser proprietária do shell/scanner compartilhado;
+- C/D/E/F/G/H devem preferir componentes operacionais próprios;
+- nenhuma frente operacional deve reescrever o shell apenas por conveniência.
+
+### 8.20 Handoff obrigatório
+
+Todo worker deve entregar:
+
+```text
+MOBILE-[X] — HANDOFF
+
+Branch:
+HEAD:
+Base utilizada:
+
+Status:
+- APTO PARA REVISÃO / PARCIAL / BLOQUEADO
+
+Objetivo executado:
+
+Arquivos alterados:
+
+Arquivos apenas consultados:
+
+Contratos reutilizados:
+
+Contratos novos:
+
+Mudanças funcionais intencionais:
+
+Testes executados:
+- comando -> resultado
+
+Gates não executados:
+- motivo
+
+Métricas:
+
+Riscos:
+
+Dependências:
+
+Conflitos esperados:
+
+Documentação atualizada:
+
+Não realizado:
+- merge main
+- deploy produção
+- trabalho de outra frente
+```
+
+Sem handoff suficiente, o Coordenador não integra a frente.
+
+### 8.21 Regra de interrupção
+
+Qualquer worker deve interromper a própria frente e devolver o problema ao Coordenador se descobrir:
+- vulnerabilidade crítica;
+- risco de perda/corrupção de dados;
+- quebra de isolamento multi-tenant;
+- possibilidade de duplicação de saldo;
+- necessidade de alterar ledger canônico;
+- quebra de idempotência;
+- barcode ambíguo sem solução dentro do contrato congelado;
+- necessidade real de alterar contrato compartilhado;
+- dependência circular;
+- conflito estrutural com outra frente;
+- necessidade de implementar sincronização offline para concluir seu escopo;
+- baseline incorreto que invalide testes/métricas.
+
+O worker não deve ampliar a própria missão silenciosamente.
+
+### 8.22 Escopo explicitamente fora da R1
+
+Não pertencem à Central Móvel R1:
+- aplicativo nativo Android;
+- aplicativo nativo iOS;
+- Play Store/App Store;
+- operação integral offline;
+- sincronização tardia de movimentos offline;
+- RFID;
+- NFC;
+- reconhecimento visual por IA;
+- OCR automático de validade;
+- parsing GS1 avançado como requisito obrigatório;
+- rastreamento Bluetooth;
+- mapa indoor;
+- rastreamento da localização física do operador;
+- movimentação automática baseada apenas em leitura sem confirmação;
+- armazenamento de fotos ou vídeos das operações.
+
+Esses itens exigem rodada futura própria se o uso real justificar.
+
+### 8.23 Critério objetivo de sucesso
+
+A Central Móvel R1 estará **funcionalmente concluída** quando:
+
+> um usuário autenticado puder executar pelo navegador de um celular alocação, transferência, consulta física, inventário, saída e conferência utilizando leitura de códigos de produto e posição, sobre as mesmas autoridades de dados, segurança, ledger, estoque, lotes e localizações da Central de Depósitos, sem fonte paralela de verdade e com reflexo coerente na versão desktop.
+
+A rodada estará **tecnicamente certificada** somente quando coexistirem:
+- workers aprovados;
+- integrações semânticas concluídas;
+- MOBILE-I encerrada;
+- gates técnicos verdes;
+- segurança/isolamento preservados;
+- métricas registradas;
+- teste real de câmera;
+- validação operacional do usuário;
+- MOBILE-J aprovada;
+- decisão explícita do usuário sobre release.
+
+### 8.24 Ordem recomendada de integração
+
+A ordem de desenvolvimento não obriga a mesma ordem de merge.
+
+Recomendação inicial:
+1. MOBILE-A;
+2. MOBILE-B;
+3. Integração 1;
+4. MOBILE-E;
+5. MOBILE-C;
+6. MOBILE-D;
+7. Integração 2;
+8. MOBILE-F/MOBILE-G/MOBILE-H em ordem decidida pelo Coordenador conforme conflitos reais;
+9. Integração 3;
+10. MOBILE-I;
+11. MOBILE-J.
+
+A justificativa para integrar MOBILE-E primeiro na segunda onda é seu caráter predominantemente read-only, útil para validar scanner + resolver com menor risco antes de operações mutáveis.
+
+### 8.25 Papel do Chat Coordenador
+
+O Chat Coordenador da MOBILE-R1:
+- consulta HEADs reais antes de qualquer atribuição;
+- mantém a branch integradora;
+- congela MOBILE-0;
+- cria/atualiza os quatro documentos canônicos;
+- reserva propriedades de arquivos;
+- emite prompts dos workers;
+- recebe handoffs;
+- revisa diff, testes, segurança, UX e métricas;
+- classifica frentes;
+- integra somente trabalho aprovado;
+- resolve conflitos semanticamente;
+- executa regressão após ondas;
+- conduz MOBILE-I;
+- conduz MOBILE-J;
+- prepara o release consolidado;
+- não faz merge/deploy em produção sem autorização do usuário.
+
+O Coordenador não deve competir com os workers implementando silenciosamente o mesmo escopo.
+
+### 8.26 Papel dos Chats Trabalhadores
+
+Cada worker:
+- lê este Memorial e os documentos `CENTRAL_MOBILE_R1_*`;
+- confirma branch/base/HEAD antes de editar;
+- executa apenas uma frente;
+- preserva contratos globais;
+- respeita propriedade de arquivos;
+- executa testes proporcionais ao risco;
+- registra métricas quando aplicável;
+- entrega handoff;
+- não integra outra frente;
+- não publica produção.
+
+### 8.27 Próximo passo autorizado de planejamento
+
+Antes de qualquer implementação funcional da Central Móvel R1, o próximo Chat Coordenador deve:
+1. conferir o HEAD real da base escolhida;
+2. criar a branch integradora da rodada;
+3. criar os quatro documentos `CENTRAL_MOBILE_R1_*`;
+4. transformar esta macroarquitetura em contratos técnicos e critérios de aceite detalhados;
+5. registrar o quadro vivo;
+6. criar/liberar somente MOBILE-A e MOBILE-B como primeira onda;
+7. manter MOBILE-C a MOBILE-H bloqueadas até a Integração 1 congelar os contratos compartilhados.
+
+Esta seção é o **contexto mestre da Central Móvel R1** até que os documentos especializados sejam criados. Em caso de divergência futura, prevalecem: código integrado + este Memorial + documentos canônicos da rodada, conforme o estágio vigente.
+
+
+## 9. Riscos/pendências que não devem ser esquecidos
 
 - crescimento histórico das coleções operacionais continua exigindo disciplina de consultas seletivas; PERF-D resolveu o intake e PERF-X resolveu o histórico de `invoices` no caminho operacional normal, mas `empenhos`, `alerts`, `comissoes`, `cronogramas` e movimentos/ledger não devem ser migrados automaticamente sem nova evidência;
 - PERF-F está integrada: o cache deve permanecer restrito a dados estruturais estáveis e nunca ser ampliado para mascarar query inadequada; o risco residual aceito é stale visual de até 30 s entre sessões, sempre com validações operacionais críticas consultando a fonte oficial;
