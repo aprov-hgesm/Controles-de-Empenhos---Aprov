@@ -114,3 +114,29 @@ Antes de encerrar uma conversa Coordenadora:
 - registrar novos HEADs;
 - registrar bloqueios;
 - registrar próxima ação exata.
+
+
+## 13. Revisão MOBILE-A — devolução controlada
+
+Em 2026-10-02 o Coordenador revisou o PR #221 / HEAD `6abc35c60e5b0674f0e034b6da1476936345e41f`.
+
+Estado:
+**DEVOLVIDA PARA CORREÇÃO MÍNIMA; NÃO INTEGRAR AINDA.**
+
+Dois bloqueios:
+- Permissions-Policy global `camera=()` impede a própria câmera da Central Móvel;
+- lifecycle de `mountedRef` não é resiliente ao Strict Mode habilitado no projeto.
+
+A trabalhadora recebeu autorização estreita para corrigir:
+- header de câmera em `next.config.ts`;
+- lifecycle do scanner;
+- testes/guards correspondentes.
+
+MOBILE-B segue independente.
+
+Ao receber novo handoff A:
+1. confirmar que o diff adicional ficou restrito;
+2. confirmar header efetivo de `/central-mobile`;
+3. confirmar Strict Mode resiliente;
+4. revalidar gates;
+5. somente então reclassificar/integrar.
