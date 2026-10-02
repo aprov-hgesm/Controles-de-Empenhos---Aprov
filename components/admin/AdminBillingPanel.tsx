@@ -612,7 +612,7 @@ export function AdminBillingPanel({
                   <span>Plano: Plano Completo</span>
                   <span>Valor vigente: {money(account.monthlyPriceCents)}</span>
                   {isVip && <span className="text-blue-200/80">VIP sem cobrança enquanto a isenção estiver ativa.</span>}
-                  <span className="text-blue-300/70">Acesso operacional não é afetado nesta fase.</span>
+                  <span className="text-blue-300/70">Billing não suspende o acesso automaticamente; suspensão operacional é uma ação administrativa separada.</span>
                 </div>
 
 
