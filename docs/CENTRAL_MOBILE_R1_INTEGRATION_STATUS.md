@@ -3,7 +3,8 @@
 Última atualização: **2026-10-02**
 Integrador: `feat/central-mobile-r1`
 Produção de referência: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
-Baseline MOBILE-0: `78d3e9afeeb4176a8d6423cdd8e65d32435ba0a9`
+Baseline upstream MOBILE-0: `78d3e9afeeb4176a8d6423cdd8e65d32435ba0a9`
+Freeze documental / base comum da Onda 1: `53e28b81874ee1b7ce0bd484cc7a97537aa99473`
 
 Estado global: **MOBILE-0 CONGELADA / ONDA 1 LIBERADA — SOMENTE MOBILE-A + MOBILE-B**
 
@@ -28,8 +29,8 @@ Dependência:
 | Frente | Branch | Dependência | Estado | Integração |
 | --- | --- | --- | --- | --- |
 | MOBILE-0 Baseline/contratos | integradora | candidato SAAS-I verde | **CONGELADA** | contratos/documentação canônicos |
-| MOBILE-A Plataforma/Scanner | `mobile-r1-a-platform-scanner` | 0 | **LIBERADA PARA EXECUÇÃO** | aguardando worker |
-| MOBILE-B Etiquetas/Resolver | `mobile-r1-b-location-labels` | 0 | **LIBERADA PARA EXECUÇÃO** | aguardando worker |
+| MOBILE-A Plataforma/Scanner | `mobile-r1-a-platform-scanner` | 0 | **LIBERADA / BRANCH CRIADA** | base `53e28b818...`; aguardando worker |
+| MOBILE-B Etiquetas/Resolver | `mobile-r1-b-location-labels` | 0 | **LIBERADA / BRANCH CRIADA** | base `53e28b818...`; aguardando worker |
 | MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **BLOQUEADA** | — |
 | MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **BLOQUEADA** | — |
 | MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **BLOQUEADA** | — |
