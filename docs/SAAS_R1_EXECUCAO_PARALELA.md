@@ -475,4 +475,3 @@ Escopo de integração:
 A SAAS-I não é nova worker de domínio e não altera a regra do método paralelo: integra contratos já concluídos e corrige apenas incompatibilidades transversais.
 
 Produção permanece intocada. SAAS-P só é liberada após o fechamento verde do PR #219.
-
