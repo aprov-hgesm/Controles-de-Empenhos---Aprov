@@ -30,7 +30,7 @@ Dependência:
 | --- | --- | --- | --- | --- |
 | MOBILE-0 Baseline/contratos | integradora | candidato SAAS-I verde | **CONGELADA** | contratos/documentação canônicos |
 | MOBILE-A Plataforma/Scanner | `mobile-r1-a-platform-scanner` | 0 | **DEVOLVIDA — CORREÇÃO MÍNIMA** | PR #221; câmera bloqueada por Permissions-Policy + lifecycle Strict Mode |
-| MOBILE-B Etiquetas/Resolver | `mobile-r1-b-location-labels` | 0 | **LIBERADA / BRANCH CRIADA** | base `53e28b818...`; aguardando worker |
+| MOBILE-B Etiquetas/Resolver | `mobile-r1-b-location-labels` | 0 | **APROVADA E INTEGRADA** | PR #220 / squash `5edb19812...` |
 | MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **BLOQUEADA** | — |
 | MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **BLOQUEADA** | — |
 | MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **BLOQUEADA** | — |
@@ -158,3 +158,27 @@ Integração do PR #221:
 **NÃO AUTORIZADA neste HEAD**.
 
 Correção foi delimitada no comentário coordenador do PR #221. MOBILE-B permanece independente e não é bloqueada por esta devolução.
+
+
+### Integração MOBILE-B — 2026-10-02
+
+- branch: `mobile-r1-b-location-labels`;
+- base: `53e28b81874ee1b7ce0bd484cc7a97537aa99473`;
+- worker HEAD: `948978e9e326ff6468643d44540a2a5337dff425`;
+- PR #220;
+- classificação: **APROVADA**;
+- integração squash: `5edb19812b1121fdf867dc63c787bb2439ae68d5`;
+- Application CI #913: SUCCESS;
+- Core Protection #200: SUCCESS;
+- Recovery #599: SUCCESS;
+- SAAS-DL Legal Validation #24: SUCCESS;
+- build/typecheck/diff hygiene/gates 16–21: PASS;
+- nova persistência/coleção/banco: nenhum;
+- Rules/ledger/saldo: inalterados;
+- identidade física: namespace `EPX1`;
+- simbologia: Code 128;
+- LOCAL/SUBPOSITION: resolvem para `WarehouseStockPosition`;
+- DEPOT: identidade física válida, mas não posição de estoque;
+- validação física de impressão/leitura: pendente para Integração 1.
+
+A integração da MOBILE-B **não libera MOBILE-C/D/E isoladamente**. A Integração 1 continua bloqueada até a MOBILE-A ser corrigida e aprovada.
