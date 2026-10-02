@@ -223,4 +223,3 @@ A branch integradora pode receber documentação e código de workers, mas promo
 A quantidade de candidatos VIP legado permanece dependente de inventário autenticado do Firestore. `apply` exige allowlist explícita e não será executado pela SAAS-I.
 
 Handoff: `docs/SAAS_R1_I_INTEGRATION_HANDOFF.md`.
-
