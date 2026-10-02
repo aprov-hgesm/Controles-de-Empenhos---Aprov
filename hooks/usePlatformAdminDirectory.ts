@@ -5,7 +5,6 @@ import type { User } from 'firebase/auth';
 
 import {
   ensureFoundingPlatformMetadata,
-  setSectorWorkspaceStatus,
   subscribePlatformAdminDirectory,
   updateSectorWorkspaceProfile,
   type CreateSectorWorkspaceInput,
@@ -154,12 +153,48 @@ export function usePlatformAdminDirectory(adminUser: User | null) {
     workspaceId: string,
     status: SectorLifecycleStatus
   ) => {
-    if (!adminEmail) throw new Error('Sessão administrativa inválida.');
+    if (!adminUser || !adminEmail) {
+      throw new Error('Sessão administrativa inválida.');
+    }
 
     setChangingStatusWorkspaceId(workspaceId);
     setError(null);
     try {
-      return await setSectorWorkspaceStatus(workspaceId, status, adminEmail);
+      const idToken = await adminUser.getIdToken();
+      const response = await fetch('/api/admin/sector-lifecycle', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${idToken}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ workspaceId, status }),
+      });
+
+      const payload = await response.json() as {
+        ok?: boolean;
+        result?: {
+          workspaceId: string;
+          email: string;
+          ug: string;
+          previousStatus: SectorLifecycleStatus;
+          status: SectorLifecycleStatus;
+          revokedSessions: number;
+          warehouseAccessStatus: SectorLifecycleStatus;
+        };
+        error?: string;
+        recoveryRequired?: boolean;
+      };
+
+      if (!response.ok || !payload.ok || !payload.result) {
+        if (payload.recoveryRequired) {
+          throw new Error(
+            'A alteração de acesso ficou parcialmente aplicada e exige recuperação administrativa antes de nova tentativa.'
+          );
+        }
+        throw new Error(payload.error || 'Não foi possível alterar o acesso operacional do setor.');
+      }
+
+      return payload.result;
     } catch (statusError) {
       const message = describeDirectoryError(statusError);
       setError(message);
@@ -167,7 +202,7 @@ export function usePlatformAdminDirectory(adminUser: User | null) {
     } finally {
       setChangingStatusWorkspaceId(null);
     }
-  }, [adminEmail]);
+  }, [adminEmail, adminUser]);
 
   const deleteSector = useCallback(async (
     workspaceId: string,
