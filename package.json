@@ -205,7 +205,8 @@
     "verify:saas-r1-ops-recovery": "node scripts/verify-saas-r1-ops-recovery.mjs",
     "verify:saas-r1-legal-acceptance": "node scripts/verify-saas-r1-legal-acceptance.mjs",
     "test:saas-r1-legal-acceptance": "npx --yes firebase-tools emulators:exec --config firebase.security-test.json --project demo-emprovex-legal --only auth,firestore \"node scripts/legal-acceptance-security.test.mjs\"",
-    "verify:saas-r1-onboarding": "node scripts/verify-saas-r1-onboarding.mjs"
+    "verify:saas-r1-onboarding": "node scripts/verify-saas-r1-onboarding.mjs",
+    "verify:saas-r1-security-enforcement": "node scripts/verify-saas-r1-security-enforcement.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
