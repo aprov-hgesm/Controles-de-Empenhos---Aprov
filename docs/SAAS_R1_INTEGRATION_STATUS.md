@@ -270,3 +270,30 @@ Regra do Coordenador:
 - exigir seção **Impacto MOBILE-R1** em correções que toquem Auth, workspace/UG, sessão/lease, legal gate, lifecycle, `warehouseAccess`, Rules, shell ou contratos comuns da Central;
 - não bloquear SAAS-P por existência do Mobile; bloquear somente conflito concreto;
 - reconciliar obrigatoriamente os dois programas antes de SAAS-J.
+
+## 18. SAAS-P — abertura e auditoria P0
+
+A SAAS-P foi formalmente iniciada em 2026-10-02.
+
+Snapshot auditado:
+- integradora SaaS no início da SAAS-P: `f8fc2b60ef67f882c3f2c36099b372f16792ee11`;
+- `main`: `e90f92acae1514ee5cbc6ce95fed354bc1454330`;
+- PR #219: **MERGED**;
+- SAAS-I: Application CI, Core Protection, Recovery e Legal Validation **SUCCESS**; Browser SAAS-C **skipped por escopo**;
+- plano/matriz operacional criado em `docs/SAAS_R1_P_PILOTO_CONTROLADO.md`.
+
+MOBILE-R1 no snapshot:
+- integradora `feat/central-mobile-r1@2d3d82d0...`;
+- apenas deltas documentais integrados após o baseline SAAS-I;
+- MOBILE-A PR #221 e MOBILE-B PR #220 já abertos em draft e ainda não integrados;
+- portanto, não há conflito funcional integrado SaaS ↔ Mobile neste momento.
+
+Pendências imediatas da SAAS-P:
+1. inventário autenticado da coorte VIP legado;
+2. seleção de 3–5 participantes reais;
+3. baseline de custos;
+4. auditoria/ativação externa de backup, PITR, delete protection e uptime;
+5. definição de janela controlada de publicação para o piloto real;
+6. preenchimento da matriz J01–J24.
+
+Nenhuma ação produtiva foi autorizada por esta abertura.
