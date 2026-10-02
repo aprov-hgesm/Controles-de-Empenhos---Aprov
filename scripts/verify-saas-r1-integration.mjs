@@ -48,6 +48,11 @@ assert.match(
 );
 assert.match(migration, /requireExplicit: true/);
 assert.match(migration, /billingCycles não são lidos, reprecificados ou apagados/);
+assert.doesNotMatch(
+  migration,
+  /listDocuments\(['"]billingCycles['"]\)/,
+  'Migração VIP legado não pode varrer ou reprecificar competências históricas'
+);
 assert.match(migration, /workspace fundador não pode entrar/i);
 
 const billingSource = read('lib/billing.ts');
