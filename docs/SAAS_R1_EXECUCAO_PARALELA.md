@@ -355,6 +355,23 @@ Billing, onboarding, aceite legal, identidade e lifecycle permanecem no banco pr
 
 Se um worker acreditar que novo banco é necessário, deve interromper e devolver a decisão ao Coordenador com evidência de isolamento/escala/regionalização. Novas Rules não justificam banco novo por si só.
 
+## 9.2 Programa paralelo — sincronização obrigatória com MOBILE-R1
+
+A Central Móvel R1 evolui em paralelo na integradora `feat/central-mobile-r1`.
+
+O paralelismo é permitido e desejado, mas **nenhuma frente SaaS pode presumir que a branch Mobile está congelada**. Antes de atribuir worker ou integrar mudança que toque Auth, workspace/UG, sessão/lease, legal gate, lifecycle, `warehouseAccess`, Rules, shell/roteamento ou contratos compartilhados da Central, o Coordenador deve:
+
+1. ler `docs/CENTRAL_MOBILE_R1_INTEGRATION_STATUS.md` e `docs/CENTRAL_MOBILE_R1_COORDENADOR_HANDOFF.md`;
+2. comparar semanticamente a integradora SaaS com `feat/central-mobile-r1` nos arquivos afetados;
+3. registrar no prompt/handoff a seção **Impacto MOBILE-R1**;
+4. impedir merge/rebase cego entre as integradoras;
+5. encaminhar ao Coordenador Mobile qualquer delta transversal necessário;
+6. repetir o gate compartilhado aplicável antes da integração.
+
+Mudanças exclusivamente comerciais do SaaS — billing, preço, trial, VIP e regularização — não devem invadir scanner/etiquetas/fluxos móveis. Mudanças exclusivamente móveis não devem reimplementar billing/legal/lifecycle.
+
+A reconciliação bidirecional é gate obrigatório antes de SAAS-J e também deve ser respeitada antes de MOBILE-I/MOBILE-J.
+
 ## 10. Regras de branch
 
 - Integrador: `feat/saas-r1-commercializacao`.
