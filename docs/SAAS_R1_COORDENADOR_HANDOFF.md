@@ -27,7 +27,8 @@ Ler, nesta ordem:
 - Onda 1 foi **INICIADA em 2026-10-01 por autorização explícita do usuário**.
 - **SAAS-B foi concluída, certificada e integrada** na branch coordenadora via PR #216 / squash `f91cda645...`.
 - **SAAS-E foi concluída, certificada e integrada** via PR #215 / squash `82f2e643...`; configuração externa de backup/restore/uptime continua pendente.
-- SAAS-C e SAAS-DL continuam em execução paralela em branches exclusivas.
+- **SAAS-DL foi concluída, certificada e integrada semanticamente** em `733885c1...`; PR #214 foi fechado sem merge automático por conflito esperado com B/E já integradas.
+- SAAS-C continua em execução na branch exclusiva.
 - SAAS-DS continua bloqueada até integração semântica de B+C.
 
 ## 3. Decisão central
@@ -123,8 +124,8 @@ Billing/regularização concluída em `7e288e79...` e integrada via PR #216 / `f
 ### C
 Onboarding/reset de senha.
 
-### DL
-Termos/Privacidade/aceite versionado.
+### DL — INTEGRADA
+Termos/Privacidade/aceite versionado integrados semanticamente em `733885c1...`. O `LegalAcceptanceGate` permanece isolado até a integração com SAAS-C/SAAS-I.
 
 ### E — INTEGRADA
 Backup/recovery/health/runbook concluídos no repositório e integrados via PR #215 / `82f2e643...`. Backup READY, restore real e uptime/alerta reais continuam pendentes de configuração externa.
@@ -133,9 +134,9 @@ Eles devem trabalhar simultaneamente quando possível, sem editar domínio alhei
 
 ## 8. Depois da Onda 1
 
-1. receber os handoffs restantes de C e DL;
-2. integrar C e DL após revisão;
-3. integrar C semanticamente sobre a coordenadora que já contém B;
+1. receber o handoff restante de C;
+2. integrar C após revisão semântica sobre a coordenadora que já contém B/DL/E;
+3. depois de B+C integradas, liberar SAAS-DS;
 4. atualizar Integration Status;
 5. abrir SAAS-DS;
 6. executar segurança/enforcement;
@@ -241,3 +242,36 @@ Pendências externas não podem ser marcadas como concluídas sem evidência:
 5. criar/testar uptime check, alerta e canal de notificação.
 
 Essas pendências não bloqueiam a integração do código da SAAS-E, mas bloqueiam a certificação operacional final e a abertura do SaaS.
+
+
+## 14. Integração SAAS-DL
+
+A SAAS-DL foi validada e integrada semanticamente pelo Coordenador.
+
+Evidências:
+- worker funcional `4806adfb35d4bad29f32695ae6a9de327fe1f40d`;
+- HEAD final/handoff `b460d1a41ca63c9e14b0c7004bbedfe4954fb633`;
+- PR #214 fechado sem merge automático;
+- integração coordenadora `733885c1729d43623058b2dcfe4bea82f4eacabe`;
+- Application CI #892, SAAS-DL Legal #8, Core Protection #179 e Recovery #579: SUCCESS.
+
+Motivo da integração semântica:
+- o PR foi criado da base comum anterior a B/E;
+- `package.json` e `firestore.rules` já haviam avançado na integradora;
+- o Coordenador preservou integralmente os contratos de billing/recovery e aplicou somente os deltas legais certificados.
+
+Contratos agora canônicos:
+- Termos e Privacidade SaaS R1 versionados;
+- pacote `saas-r1-2026-10-01`;
+- aceite em `workspaces/{workspaceId}/legalAcceptances/{uid}__{legalBundleVersion}`;
+- create-only, sem update/delete/list pelo tenant;
+- timestamp autoritativo por `request.time`;
+- isolamento por workspace/UID/e-mail/UG;
+- VIP não recebe exceção jurídica;
+- nenhum terceiro banco.
+
+Pendência deliberada:
+- conectar `LegalAcceptanceGate` apenas após Auth/workspace/UG resolvidos;
+- não bloquear `/terms`, `/privacy`, recuperação de credenciais ou superfície pública de regularização;
+- publicar as Rules legais somente na release autorizada;
+- manter revisão jurídica humana como gate de abertura comercial quando aplicável.

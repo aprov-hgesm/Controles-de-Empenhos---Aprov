@@ -3,7 +3,7 @@
 Última atualização: **2026-10-01**
 Produção: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Integrador: `feat/saas-r1-commercializacao`
-Estado global: **SAAS-A CONGELADA / SAAS-B + SAAS-E INTEGRADAS / SAAS-C + SAAS-DL EM EXECUÇÃO / SAAS-DS AGUARDA B+C**
+Estado global: **SAAS-A CONGELADA / SAAS-B + SAAS-DL + SAAS-E INTEGRADAS / SAAS-C EM EXECUÇÃO / SAAS-DS AGUARDA B+C**
 
 ## 1. Baseline
 
@@ -22,7 +22,7 @@ Estado global: **SAAS-A CONGELADA / SAAS-B + SAAS-E INTEGRADAS / SAAS-C + SAAS-D
 | SAAS-A Fundação/contratos | integradora | R3 | **CONGELADA** | documentação canônica |
 | SAAS-B Billing/pagamento | `saas-r1-b-billing-payment` | A | **CONCLUÍDA** | **INTEGRADA — PR #216 / `f91cda645...`** |
 | SAAS-C Onboarding | `saas-r1-c-onboarding` | A | **ATIVADA** | worker em execução / aguardando handoff |
-| SAAS-DL Legal/aceite | `saas-r1-dl-legal-acceptance` | A | **ATIVADA** | worker em execução / aguardando handoff |
+| SAAS-DL Legal/aceite | `saas-r1-dl-legal-acceptance` | A | **CONCLUÍDA** | **INTEGRADA SEMANTICAMENTE — `733885c1...`; PR #214 fechado sem merge** |
 | SAAS-E Operação/recovery | `saas-r1-e-ops-recovery` | A | **CONCLUÍDA** | **INTEGRADA — PR #215 / `82f2e643...`** |
 | SAAS-DS Segurança/enforcement | `saas-r1-ds-security-enforcement` | B + C | **BLOQUEADA POR DEPENDÊNCIA** | não iniciada |
 | SAAS-I Integração | integradora | B+C+DL+E+DS | **AGUARDANDO** | — |
@@ -60,7 +60,7 @@ Não alterar em worker:
 6. Provisionamento já cria billing junto do tenant.
 7. SAAS-E integrou o tooling de backup nativo para os dois bancos; a ativação externa e a prova de restore real ainda são pendências.
 8. O backup lógico atual continua não cobrindo `emprovex-warehouse`; a Central depende do backup nativo para recuperação global.
-9. Legal atual é pré-comercial e precisa versão/aceite.
+9. SAAS-DL integrou Termos/Privacidade comerciais e aceite legal versionado; falta apenas conectar o `LegalAcceptanceGate` ao shell depois da SAAS-C.
 10. O health/uptime foi preparado; o uptime check real no Cloud Monitoring ainda precisa ser criado e validado.
 
 ## 5. Infraestrutura e migrações
@@ -89,11 +89,11 @@ O Coordenador deve:
 - impedir que uma worker resolva conflitos alterando domínio de outra;
 - manter SAAS-DS bloqueada até B e C estarem semanticamente integradas.
 
-SAAS-B e SAAS-E já foram recebidas, auditadas e integradas.
+SAAS-B, SAAS-DL e SAAS-E já foram recebidas, auditadas e integradas.
 
 Próximo gate:
-- receber SAAS-C e SAAS-DL;
-- integrar SAAS-C semanticamente sobre a base que já contém SAAS-B;
+- receber SAAS-C;
+- integrar SAAS-C semanticamente sobre a base que já contém SAAS-B/DL/E;
 - liberar SAAS-DS somente depois de B+C integradas;
 - manter as configurações externas da SAAS-E como gates obrigatórios de operação/certificação, sem confundi-las com merge de código.
 
@@ -132,6 +132,24 @@ A integração não foi promovida para `main` nem para produção.
 - health endpoint: integrado;
 - backup/recovery tooling para os dois bancos: integrado;
 - restore real/backup READY/uptime real: **PENDENTES DE CONFIGURAÇÃO EXTERNA**.
+
+A integração não foi promovida para `main` nem para produção.
+
+### SAAS-DL — integrada semanticamente em 2026-10-01
+
+- worker: `saas-r1-dl-legal-acceptance`;
+- base: `32872d3fc6a781ff129eb4e41ae9b0d45658024a`;
+- HEAD funcional: `4806adfb35d4bad29f32695ae6a9de327fe1f40d`;
+- HEAD final: `b460d1a41ca63c9e14b0c7004bbedfe4954fb633`;
+- PR #214 fechado sem merge automático devido a conflitos esperados com B/E já integradas;
+- integração semântica do Coordenador: `733885c1729d43623058b2dcfe4bea82f4eacabe`;
+- Application CI #892: SUCCESS;
+- SAAS-DL Legal #8: SUCCESS;
+- Core Protection #179: SUCCESS;
+- Recovery #579: SUCCESS;
+- Rules do aceite + package scripts reconciliados preservando B/E;
+- `LegalAcceptanceGate`: **AINDA NÃO CONECTADO AO SHELL**;
+- deploy de Rules legais: **NÃO EXECUTADO**.
 
 A integração não foi promovida para `main` nem para produção.
 

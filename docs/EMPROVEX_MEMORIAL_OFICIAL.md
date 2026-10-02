@@ -3,7 +3,7 @@
 Última atualização: **2026-10-01 — SaaS R1 Onda 1 iniciada**
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Branch integradora do SaaS R1: `feat/saas-r1-commercializacao`
-Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A congelada; SAAS-B e SAAS-E INTEGRADAS; SAAS-C e SAAS-DL seguem em execução paralela; SAAS-DS ainda bloqueada até B+C**
+Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A congelada; SAAS-B, SAAS-DL e SAAS-E INTEGRADAS; SAAS-C segue em execução; SAAS-DS ainda bloqueada até B+C**
 
 Este documento é a **porta de entrada canônica para continuidade do EMPROVEX como produto**. Ele resume o estado vigente e aponta para os documentos históricos/especializados. O histórico detalhado não deve ser apagado. Para comportamento publicado, `main` prevalece. Para o ciclo SaaS R1 em desenvolvimento, prevalecem `feat/saas-r1-commercializacao`, este memorial e os quatro documentos canônicos `SAAS_R1_*`.
 
@@ -614,7 +614,7 @@ A fase SAAS-DS, depois de billing/onboarding integrados, sincronizará suspensã
 Frentes ativadas:
 - **SAAS-B — Billing/regularização:** **INTEGRADA** na branch coordenadora via PR #216; Plano Completo R$ 70, VIP/Isento, regularização pública e confirmação manual certificados;
 - **SAAS-C — Onboarding:** ATIVADA;
-- **SAAS-DL — Legal/aceite:** ATIVADA;
+- **SAAS-DL — Legal/aceite:** **INTEGRADA semanticamente** na branch coordenadora; Termos/Privacidade R1, versões legais, aceite tenant-scoped e Rules create-only incorporados; glue do `LegalAcceptanceGate` permanece deliberadamente para depois da SAAS-C/SAAS-I;
 - **SAAS-E — Operação/backup/uptime:** **INTEGRADA** via PR #215; health/recovery/runbooks certificados no repositório, com configuração externa de backup/restore/uptime ainda pendente.
 
 **Onda 2**
@@ -695,7 +695,7 @@ O usuário autorizou o início imediato do desenvolvimento paralelo coordenado.
 Chats trabalhadores autorizados:
 - SAAS-B — Billing, Plano Completo, VIP e regularização — **CONCLUÍDA E INTEGRADA**;
 - SAAS-C — Onboarding e credenciais;
-- SAAS-DL — Legal, Privacidade e aceite versionado;
+- SAAS-DL — Legal, Privacidade e aceite versionado — **CONCLUÍDA E INTEGRADA SEMANTICAMENTE**;
 - SAAS-E — Operação, backup, uptime e recuperação — **CONCLUÍDA E INTEGRADA no repositório; configuração externa permanece pendente antes da abertura comercial**.
 
 Regras de largada:
@@ -785,3 +785,52 @@ Pendências externas obrigatórias antes do SaaS aberto:
 - criar uptime check, alert policy e notification channel no Cloud Monitoring.
 
 SAAS-E está **integrada no código**, mas essas pendências externas continuam gates de SAAS-J/abertura comercial.
+
+
+### Registro de integração SAAS-DL — 2026-10-01
+
+Worker:
+- branch: `saas-r1-dl-legal-acceptance`;
+- base: `32872d3fc6a781ff129eb4e41ae9b0d45658024a`;
+- HEAD funcional certificado: `4806adfb35d4bad29f32695ae6a9de327fe1f40d`;
+- HEAD final/handoff: `b460d1a41ca63c9e14b0c7004bbedfe4954fb633`;
+- PR #214;
+- PR fechado sem merge automático porque a integradora já havia avançado com SAAS-B/SAAS-E;
+- integração semântica feita pelo Coordenador em `733885c1729d43623058b2dcfe4bea82f4eacabe`.
+
+Certificação da worker:
+- Application CI #892: **SUCCESS**;
+- SAAS-DL Legal Validation #8: **SUCCESS**;
+- EMPROVEX Core Protection #179: **SUCCESS**;
+- Recovery guardrails #579: **SUCCESS**;
+- Production Build: **PASS**;
+- TypeScript: **PASS**;
+- Diff Hygiene: **PASS**;
+- Firestore Emulator/cross-tenant: **PASS**.
+
+Integração semântica:
+- preservou os testes de billing da SAAS-B em `verify:block-22-billing`;
+- preservou os comandos de health/recovery da SAAS-E;
+- adicionou apenas os dois scripts legais da SAAS-DL ao `package.json`;
+- preservou as Rules de billing e acrescentou somente `validLegalAcceptanceCreate` + `legalAcceptances`;
+- não criou terceiro banco;
+- não ativou enforcement;
+- não publicou Rules em produção.
+
+Contrato legal integrado:
+- `legalBundleVersion = saas-r1-2026-10-01`;
+- `termsVersion = terms-2026-10-01-r1`;
+- `privacyVersion = privacy-2026-10-01-r1`;
+- caminho `workspaces/{workspaceId}/legalAcceptances/{uid}__{legalBundleVersion}`;
+- aceite create-only, sem update/delete/list pelo tenant;
+- UID/e-mail/UG/workspace validados;
+- `acceptedAt == request.time`;
+- VIP/isento segue o mesmo contrato legal de cliente pagante.
+
+Pendência deliberada:
+- `LegalAcceptanceGate` **ainda não está conectado ao shell/login**;
+- o glue deve ocorrer somente depois de Auth + workspace + UG estarem resolvidos pela SAAS-C;
+- integração final do gate pertence ao Coordenador/SAAS-I, sem bloquear reset de senha nem rotas públicas;
+- as novas Rules legais ainda não foram publicadas em produção.
+
+A SAAS-DL está integrada no código, mas revisão jurídica humana qualificada continua recomendada antes da abertura comercial ampla.
