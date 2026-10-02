@@ -3326,11 +3326,5 @@ service cloud.firestore {
 
       // FASE 10 / DEP-20..20.3 — inventário founder-only e auditável.
     }
-    match /warehouseAccess/{workspaceId} {
-      // Estado materializado exclusivamente pelo backend SAAS-DS.
-      // Billing não participa das Rules da Central e clientes nunca alteram este documento.
-      allow read, write: if false;
-    }
-
   }
 }
