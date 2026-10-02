@@ -5,7 +5,7 @@ Integrador: `feat/central-mobile-r1`
 Produção de referência: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Baseline MOBILE-0: `78d3e9afeeb4176a8d6423cdd8e65d32435ba0a9`
 
-Estado global: **MOBILE-0 EM FECHAMENTO DOCUMENTAL / ONDA 1 PREPARADA**
+Estado global: **MOBILE-0 CONGELADA / ONDA 1 LIBERADA — SOMENTE MOBILE-A + MOBILE-B**
 
 ## 1. Baseline
 
@@ -27,9 +27,9 @@ Dependência:
 
 | Frente | Branch | Dependência | Estado | Integração |
 | --- | --- | --- | --- | --- |
-| MOBILE-0 Baseline/contratos | integradora | candidato SAAS-I verde | **EM FECHAMENTO** | documentação |
-| MOBILE-A Plataforma/Scanner | `mobile-r1-a-platform-scanner` | 0 | **A LIBERAR APÓS FREEZE DOC** | — |
-| MOBILE-B Etiquetas/Resolver | `mobile-r1-b-location-labels` | 0 | **A LIBERAR APÓS FREEZE DOC** | — |
+| MOBILE-0 Baseline/contratos | integradora | candidato SAAS-I verde | **CONGELADA** | contratos/documentação canônicos |
+| MOBILE-A Plataforma/Scanner | `mobile-r1-a-platform-scanner` | 0 | **LIBERADA PARA EXECUÇÃO** | aguardando worker |
+| MOBILE-B Etiquetas/Resolver | `mobile-r1-b-location-labels` | 0 | **LIBERADA PARA EXECUÇÃO** | aguardando worker |
 | MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **BLOQUEADA** | — |
 | MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **BLOQUEADA** | — |
 | MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **BLOQUEADA** | — |
@@ -111,12 +111,12 @@ MOBILE-B:
 
 ## 7. Próxima ação do Coordenador
 
-1. concluir docs MOBILE-0;
-2. sincronizar Memorial na integradora MOBILE-R1;
-3. criar branches A e B no mesmo HEAD;
-4. marcar MOBILE-0 CONGELADA;
-5. liberar A+B;
-6. emitir prompts especializados.
+1. criar as branches MOBILE-A e MOBILE-B no mesmo HEAD congelado;
+2. registrar o SHA comum de ativação;
+3. emitir prompts especializados para os dois workers;
+4. receber handoffs independentes;
+5. manter C–H bloqueadas;
+6. conduzir a Integração 1 somente após A+B aprovadas.
 
 ## 8. Produção
 
