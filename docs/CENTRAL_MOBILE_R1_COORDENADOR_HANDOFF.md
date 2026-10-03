@@ -544,3 +544,33 @@ Coordenação:
 - ordem de integração definida por semântica/conflitos, não cronologia;
 - nenhuma nova frente antes de Integração 3;
 - ao final, emitir checkpoint pós-Integração 3 ao Program Control.
+
+
+## 27. Revisão MOBILE-F — aprovada e congelada
+
+MOBILE-F:
+- branch `mobile-r1-f-inventory`;
+- HEAD `42954adab43694816262720581abad2bc0761d4c`;
+- PR #239;
+- base Onda 3 `c971d5356c343a0819bf96ec016de73dd96a435d`;
+- classificação: **APROVADA / CONGELADA**.
+
+Auditoria confirmou:
+- save count sem saldo/ledger;
+- REVIEW + confirmação humana antes de ajuste;
+- INVENTORY_ADJUSTMENT exclusivamente canônico;
+- STALE e RECONCILIATION_REQUIRED preservados;
+- nenhuma alteração de inventoryRepository;
+- nenhum CT-01/Rules/Auth/sessão/legal;
+- 0 listener novo;
+- sem novo delta transversal.
+
+Gates:
+- App CI #935 SUCCESS;
+- Core #222 SUCCESS;
+- Recovery #615 SUCCESS;
+- Legal #39 SUCCESS;
+- build/typecheck/diff hygiene SUCCESS.
+
+A branch deve permanecer congelada no HEAD aprovado.
+Não integrar antes de receber e revisar G/H.
