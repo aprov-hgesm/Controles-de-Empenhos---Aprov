@@ -371,3 +371,24 @@ Ele deve:
 - manter workers produtivos quando não há conflito;
 - impedir WIP acima da capacidade de revisão;
 - transformar contexto disperso em estado global pequeno e confiável.
+
+## 19. Governança viva em branches congeladas
+
+Branches congeladas não devem ser atualizadas apenas para receber novas regras documentais.
+
+Quando Program Control/Memorial avançarem depois do freeze:
+- preservar o HEAD da worker;
+- transmitir no prompt o delta normativo relevante;
+- permitir consulta somente leitura à cópia canônica da integradora;
+- nunca usar atualização documental como justificativa para rebase/merge automático.
+
+Consulta recomendada:
+
+```powershell
+git fetch origin
+git show origin/feat/saas-r1-commercializacao:docs/EMPROVEX_MEMORIAL_OFICIAL.md
+git show origin/feat/saas-r1-commercializacao:docs/EMPROVEX_PROGRAM_CONTROL.md
+```
+
+O Coordenador de Programa é responsável por garantir que o worker conheça regras globais publicadas após sua base congelada.
+
