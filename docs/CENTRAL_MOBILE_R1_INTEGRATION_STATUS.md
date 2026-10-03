@@ -8,7 +8,7 @@ Freeze documental / base comum da Onda 1: `53e28b81874ee1b7ce0bd484cc7a97537aa99
 Freeze documental / base comum da Onda 2 após reconciliação SaaS: `6852963c7aa9a1c83133239f0b929715fd316530`
 Freeze documental / base comum da Onda 3 após Integração 2 + reconciliação SaaS: `c971d5356c343a0819bf96ec016de73dd96a435d`
 
-Estado global: **ONDAS 1–3 INTEGRADAS / INTEGRAÇÃO 3 CERTIFICADA / MOBILE-I ATIVADA / MOBILE-J BLOQUEADA**
+Estado global: **ONDAS 1–3 INTEGRADAS / INTEGRAÇÃO 3 CERTIFICADA / MOBILE-I INTEGRADA E APROVADA / AGUARDANDO PROGRAM CONTROL PARA MOBILE-J**
 
 ## 1. Baseline
 
@@ -39,7 +39,7 @@ Dependência:
 | MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **INTEGRADA / CERTIFICADA** | worker #239; HEAD `42954ada...`; Integração 3 PR #243 / squash `f11b7bf2...` |
 | MOBILE-G Saída | `mobile-r1-g-outbound` | Int.2 | **INTEGRADA / CERTIFICADA** | worker #242; HEAD `0b513edf...`; Legal #41 resolvido por Legal #42 verde |
 | MOBILE-H Conferência | `mobile-r1-h-position-check` | Int.2 | **INTEGRADA / CERTIFICADA** | worker #241; HEAD `f30f4dcb...`; Integração 3 PR #243 / squash `f11b7bf2...` |
-| MOBILE-I Integração controlada | `mobile-r1-i-integration` | A–H | **ATIVADA** | base `816c1c07...`; integração/UX/regressão final |
+| MOBILE-I Integração controlada | `mobile-r1-i-integration` | A–H | **INTEGRADA / APROVADA** | PR #245 / worker `ea5ad100...` / squash `3a5689e0...`; aguarda Program Control |
 | MOBILE-J Certificação | integradora | I | **BLOQUEADA** | — |
 
 ## 3. Contratos congelados
@@ -921,3 +921,79 @@ Proibições:
 - sem produção.
 
 MOBILE-J só pode ser avaliada após handoff/checkpoint pós-MOBILE-I ao Program Control.
+
+
+### MOBILE-I integrada e aprovada — 2026-10-03
+
+Worker:
+- branch `mobile-r1-i-integration`;
+- base congelada `816c1c07cf251ce3705098a3a65b9d84e2fc8614`;
+- HEAD auditado `ea5ad10054e2aea608e270a970fde723cde41d93`;
+- PR #245;
+- estado final do PR: MERGED;
+- squash na integradora `3a5689e0e613adfb7dbf48ef8d44085ec6c951b3`.
+
+Delta funcional:
+- corrigida regressão de UX na Home;
+- card `Consultar localização` passa a navegar para `#consulta-localizacao`;
+- reutiliza a MOBILE-E já existente;
+- nenhuma rota/domain/schema/API nova.
+
+Tooling:
+- novo `verify:mobile-r1-integration-final`;
+- novo step `Central Móvel R1 MOBILE-I integrated product guard`;
+- nenhum gate anterior removido.
+
+Gates no HEAD auditado:
+- Application CI #945 SUCCESS;
+- Core Protection #232 SUCCESS;
+- Recovery #623 SUCCESS;
+- Legal #47 SUCCESS;
+- Production Build SUCCESS;
+- Final TypeScript SUCCESS;
+- Diff Hygiene SUCCESS;
+- multi-tenant security SUCCESS;
+- Central external workspace security SUCCESS;
+- Integration 1/2/3 SUCCESS;
+- F/G/H SUCCESS;
+- MOBILE-I integrated product guard SUCCESS.
+
+Observação pós-merge:
+- não houve workflow automático no squash `3a5689e0e613adfb7dbf48ef8d44085ec6c951b3`;
+- os cinco commits posteriores à base da worker eram exclusivamente documentação Mobile;
+- PR era mergeable;
+- o squash aplicou somente os 4 arquivos auditados;
+- certificação técnica permanece vinculada ao HEAD exato `ea5ad10054e2aea608e270a970fde723cde41d93`.
+
+Performance:
+- /central-mobile 257 kB;
+- /alocar 275 kB;
+- /transferir 261 kB;
+- /inventario 271 kB;
+- /saida 265 kB;
+- /conferir 260 kB;
+- Shared First Load 104 kB;
+- nenhuma regressão vs Integração 3.
+
+Reconciliação SaaS:
+- HEAD vivo auditado `750d4c69cd3f233938631bcdd22db7e397ddc50e`;
+- contratos críticos permanecem compatíveis;
+- nenhum novo delta funcional;
+- HARDEN-A1: Security PASS / validação visual pendente;
+- HARDEN-B: parcial / backup READY + restore isolado pendentes;
+- CT-01 preservada para futuro RC;
+- package/CI permanecem tooling aditivo compatível.
+
+Pendências físicas:
+- câmera Android/iPhone;
+- header HTTP efetivo do candidato publicado;
+- som/vibração;
+- Code128 impresso;
+- COMPACT/MEDIUM/LARGE;
+- jornada física ponta a ponta.
+
+Produção:
+**NÃO ALTERADA**.
+
+MOBILE-J:
+**BLOQUEADA até decisão do Program Control sobre o checkpoint pós-MOBILE-I**.
