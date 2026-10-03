@@ -17,6 +17,7 @@ execFileSync(
   [
     resolve(root, 'node_modules/typescript/bin/tsc'),
     resolve(root, 'lib/warehouse/mobileIntakeAllocation.ts'),
+    resolve(root, 'lib/warehouse/intakeState.ts'),
     '--outDir',
     outDir,
     '--rootDir',
@@ -36,6 +37,7 @@ execFileSync(
 const require = createRequire(import.meta.url);
 const mobile = require(resolve(outDir, 'warehouse/mobileIntakeAllocation.js'));
 const locationBarcode = require(resolve(outDir, 'warehouse/locationBarcode.js'));
+const intakeState = require(resolve(outDir, 'warehouse/intakeState.js'));
 
 test.after(() => {
   rmSync(outDir, { recursive: true, force: true });
@@ -85,6 +87,25 @@ test('quantidade aceita parcial e total, mas recusa zero, negativa e excesso', (
   assert.equal(
     mobile.normalizeWarehouseMobileAllocationQuantity(10.01, 10),
     null
+  );
+});
+
+test('estado do intake preserva parcialidade e encerra apenas quando pendência zera', () => {
+  assert.equal(
+    intakeState.calculateWarehouseItemIntakePendingQuantity(10, 5, 0),
+    5
+  );
+  assert.equal(
+    intakeState.deriveWarehouseItemIntakeStatus(10, 5, 0),
+    'PARTIALLY_PROCESSED'
+  );
+  assert.equal(
+    intakeState.deriveWarehouseItemIntakeStatus(10, 10, 0),
+    'PROCESSED'
+  );
+  assert.equal(
+    intakeState.deriveWarehouseItemIntakeStatus(10, 0, 0),
+    'PENDING'
   );
 });
 
