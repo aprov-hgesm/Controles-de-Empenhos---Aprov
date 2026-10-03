@@ -513,3 +513,34 @@ Semáforo recomendado:
 Produção:
 - `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`;
 - não alterada.
+
+
+## 26. Program Control libera Onda 3
+
+Decisão global recebida:
+- HARDEN-D PASS técnico;
+- aceita pelo Coordenador SaaS;
+- aceita pelo Program Control;
+- MOBILE-R1 reclassificada para VERDE;
+- F/G/H liberadas em paralelo.
+
+Freeze mantido:
+`c971d5356c343a0819bf96ec016de73dd96a435d`.
+
+Branches ativadas sem movimento:
+- `mobile-r1-f-inventory`;
+- `mobile-r1-g-outbound`;
+- `mobile-r1-h-position-check`.
+
+CT-01:
+- `next.config.ts`/Permissions-Policy;
+- futuro RC deve usar `camera=(self), microphone=(), geolocation=()`;
+- não corrigir na Onda 3;
+- não abrir worker Mobile para CT-01.
+
+Coordenação:
+- receber handoffs F/G/H;
+- revisar cada worker individualmente;
+- ordem de integração definida por semântica/conflitos, não cronologia;
+- nenhuma nova frente antes de Integração 3;
+- ao final, emitir checkpoint pós-Integração 3 ao Program Control.
