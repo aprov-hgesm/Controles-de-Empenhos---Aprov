@@ -326,3 +326,27 @@ Commits de integração:
 
 Não usar `npm audit fix --force` e não executar downgrade oportunista do Firebase.
 
+## HARDEN-A1 — jsPDF security fix
+
+Autorizada pelo Program Control após HARDEN-A parcial.
+
+Base viva congelada:
+`9a294bc543ec7150b9144ed96e767a161864d72f`
+
+Branch:
+`saas-harden-a-jspdf-security`
+
+Target:
+- `jspdf@4.2.1`;
+- `jspdf-autotable@5.0.8`.
+
+PASS esperado:
+- CRITICAL jsPDF eliminado;
+- PDFs existentes funcionalmente preservados;
+- audit atualizado;
+- build/TypeScript/CI/Core/Diff verdes;
+- regressão específica dos fluxos PDF documentada;
+- nenhuma alteração Firebase na mesma frente.
+
+HARDEN-A2 permanece bloqueada até esse gate fechar.
+
