@@ -310,3 +310,35 @@ Evidências:
 
 Próxima integração da ordem preferencial:
 **MOBILE-C**, já aprovada no HEAD `6828273ee4c957fa92e42922363d2e1dcf296d89`.
+
+
+## 20. Integração semântica MOBILE-C — concluída após MOBILE-E
+
+A MOBILE-C havia sido aprovada no HEAD `6828273ee4c957fa92e42922363d2e1dcf296d89` / PR #229.
+
+Após o merge da MOBILE-E, o PR worker apresentou conflito mecânico apenas em package/CI compartilhados.
+
+O Coordenador:
+1. criou `mobile-r1-integration-2-c` a partir da integradora já com E;
+2. aplicou o código funcional aprovado da C sem alterar a worker;
+3. preservou scripts/gates da E;
+4. adicionou scripts/gates da C;
+5. abriu PR técnico #232;
+6. certificou E+C juntas;
+7. integrou por squash `1c523fe2dccbd7248fd3f845d9169261da7edc65`;
+8. encerrou PR #229 sem merge direto.
+
+Gates combinados:
+- Application CI #931 SUCCESS;
+- Core #218 SUCCESS;
+- Recovery #613 SUCCESS;
+- Legal #37 SUCCESS;
+- E tests/guard SUCCESS;
+- C tests/guard SUCCESS;
+- build/typecheck/diff hygiene SUCCESS;
+- release gates 16–21 SUCCESS.
+
+Próxima frente da ordem E → C → D:
+**MOBILE-D**.
+
+Integração 2 somente pode ser declarada encerrada após MOBILE-D revisada, integrada e certificada junto ao estado corrente.
