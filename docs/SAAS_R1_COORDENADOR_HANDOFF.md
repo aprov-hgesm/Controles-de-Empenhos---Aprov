@@ -655,3 +655,18 @@ PILOT-D: matriz/método de evidência aceitos.
 
 A onda de workers está encerrada no escopo de desenvolvimento/documentação. As próximas pendências são majoritariamente humanas, comerciais e operacionais reais.
 
+### Participante P-01 confirmado
+
+P-01 = `aprovisionamento-3-gac-ap`.
+
+Trata-se de usuário externo real, ativo e necessário às operações do setor. Portanto:
+
+- preservar acesso contínuo;
+- não usar para J15–J20;
+- não revogar sessão;
+- não forçar reset/troca de senha;
+- não recriar aceite;
+- não manipular billing/status/permissões para gerar evidência;
+- validar apenas fluxos não disruptivos e uso normal.
+
+Cenários de risco devem ser executados em `aprovisionamento-teste`, P-03 ou outro ambiente controlado.
