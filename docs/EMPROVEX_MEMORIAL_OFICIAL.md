@@ -2155,3 +2155,19 @@ Todos partiram da base comum congelada `4d87370e5ee7f2697ab4901e0c045a9ab4910fe9
 
 O Chat Coordenador continua como autoridade de integração, conflito, correções transversais, sincronização com MOBILE-R1 e fechamento da SAAS-P.
 
+### SAAS-P — PILOT-A recebida como PARCIAL
+
+O Coordenador revisou e integrou o handoff documental da PILOT-A via PR #226 / squash `8459a59aefc0f846d9c7e2f5ee78888c4fa2abd5`.
+
+Estado aceito:
+- J08 VIP legado/R$0: PASS;
+- J21 isolamento cross-workspace: PASS por evidência automatizada específica;
+- J02/J03/J04/J05/J06/J07/J16: preparados, ainda sem evidência humana suficiente para PASS;
+- J15/J17/J18/J19/J20: bloqueados até autorização de cenário seguro;
+- participantes humanos P-01/P-02 ainda não confirmados;
+- nenhum defeito novo PILOT-*;
+- nenhuma correção funcional;
+- Impacto MOBILE-R1: nenhum delta funcional.
+
+A PILOT-A permanece **PARCIAL**, aguardando coleta de evidências humanas.
+
