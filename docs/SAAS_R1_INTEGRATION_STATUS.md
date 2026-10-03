@@ -410,7 +410,7 @@ Branches criadas:
 
 As quatro branches nasceram do mesmo baseline acima. Não devem fazer merge/rebase entre si nem incorporar a integradora sem instrução do Coordenador. O Coordenador pode avançar documentalmente após o freeze; isso não altera a base congelada dos workers.
 
-### SAAS-P — workers ativados
+### SAAS-P — workers ativados (checkpoint histórico)
 
 Em 2026-10-02, os quatro chats trabalhadores da onda paralela foram efetivamente ativados a partir da base congelada `4d87370e5ee7f2697ab4901e0c045a9ab4910fe9`.
 
@@ -500,7 +500,7 @@ Foram aceitos:
 - checklist objetivo para SAAS-J;
 - regra de não gerar leitura nova apenas para medir consumo.
 
-Pendências materiais permanecem: participantes reais, P-03 pago, custos numéricos, PILOT-C, backup READY/restore e health/uptime/alertas reais.
+Pendências materiais correntes: jornadas reais não disruptivas de P-01/P-02, seleção e pagamento real de P-03, T0/T1/T2 numéricos, backup READY/restore e health/uptime/alertas reais. PILOT-C já foi recebida pelo Coordenador.
 
 ### PILOT-C recebida pelo Coordenador
 
