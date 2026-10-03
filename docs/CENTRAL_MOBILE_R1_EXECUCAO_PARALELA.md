@@ -311,11 +311,22 @@ Ordem determinada por conflitos reais.
 
 ## 15. MOBILE-I
 
+Branch:
+`mobile-r1-i-integration`.
+
+Base congelada da MOBILE-I:
+`816c1c07cf251ce3705098a3a65b9d84e2fc8614`.
+
+Status:
+**ATIVADA PELO PROGRAM CONTROL**.
+
 Somente integração/glue/regressão.
 
 Não adicionar feature.
 
 Obrigatório revalidar upstream SaaS antes do fechamento.
+
+MOBILE-J continua bloqueada até checkpoint pós-MOBILE-I.
 
 ## 16. MOBILE-J
 
