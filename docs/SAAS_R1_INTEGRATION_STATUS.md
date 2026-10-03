@@ -360,3 +360,19 @@ P2: **CONCLUÍDA**.
 
 Próximo eixo ativo da SAAS-P: P3 — controles externos de recovery/backup/uptime.
 
+### SAAS-P — P3 controles nativos aplicados
+
+Após autorização explícita, ambos os bancos ficaram com:
+
+- PITR ativo;
+- delete protection ativa;
+- backup diário configurado;
+- retenção de 14 semanas.
+
+Estado atual:
+- banco principal: `backupReady=false`, 0 backups concluídos;
+- `emprovex-warehouse`: `backupReady=false`, 0 backups concluídos;
+- certificação global de recovery ainda `ready=false`.
+
+Próxima evidência obrigatória: aguardar pelo menos um backup READY em cada banco e executar `npm run recovery:verify`. Depois, validar restore real em banco isolado.
+
