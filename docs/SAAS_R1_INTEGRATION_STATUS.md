@@ -94,7 +94,7 @@ SAAS-B, SAAS-C, SAAS-DL e SAAS-E já foram recebidas, auditadas e integradas. A 
 Próximo gate:
 - executar **SAAS-P — Piloto controlado** sobre a integradora já consolidada;
 - registrar evidência real de onboarding, trial, pagamento de workspace não legado, suspensão/reativação e aceite;
-- manter backup/restore/uptime reais como pendências de certificação antes de SAAS-J;
+- concluir backup READY/recovery:verify/restore real como hardening antes do piloto; health/uptime devem ser fechados na publicação controlada do RC antes de iniciar participantes;
 - tratar correções do piloto em branches curtas e escopo próprio;
 - antes de qualquer correção transversal em Auth/legal/lifecycle/sessão/Rules/Central, sincronizar semanticamente com a integradora MOBILE-R1;
 - manter as configurações externas da SAAS-E como gates obrigatórios de operação/certificação, sem confundi-las com merge de código.
@@ -202,7 +202,7 @@ Nenhuma alteração do SaaS R1 está em `main`.
 
 Nenhum deploy de produção do SaaS R1 está autorizado implicitamente.
 
-A branch integradora pode receber documentação e código de workers, mas promoção para produção depende de SAAS-J e autorização explícita do usuário.
+A branch integradora pode receber documentação e código de workers. **Release final/abertura comercial** depende de SAAS-J e autorização explícita. Um Release Candidate pode ser publicado antes apenas para piloto controlado, com autorização explícita, ambiente/escopo definido e rollback.
 
 ### SAAS-I — candidata em validação em 2026-10-02
 
