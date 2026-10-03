@@ -14,7 +14,7 @@ import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/loc
 import { classifyWarehouseMobileLocationScan } from '../../../lib/warehouse/mobileLocationScan';
 import {
   loadWarehouseMobilePhysicalPositionContents,
-  type WarehouseMobilePhysicalQueryResult,
+  type WarehouseMobilePhysicalQueryResult as WarehouseMobilePhysicalQueryData,
 } from '../../../lib/warehouse/mobilePhysicalQuery';
 import type { WarehouseMobileScanEvent } from '../../../lib/warehouse/mobileScanner';
 import { WarehouseMobilePhysicalQueryResult } from './WarehouseMobilePhysicalQueryResult';
@@ -33,7 +33,7 @@ type ResolutionState =
       status: 'resolved';
       code: string;
       resolved: ResolvedPosition;
-      contents: WarehouseMobilePhysicalQueryResult;
+      contents: WarehouseMobilePhysicalQueryData;
     }
   | { status: 'error'; code: string; message: string };
 
@@ -103,6 +103,7 @@ export function WarehouseMobileLocationFoundationCheck() {
       return;
     }
 
+    const ug = workspace.ug;
     setResolution({ status: 'resolving', code: event.value });
 
     void (async () => {
@@ -110,7 +111,7 @@ export function WarehouseMobileLocationFoundationCheck() {
         const result = await resolveWarehouseStockPositionBarcode({
           code: event.value,
           workspaceId: workspace.workspaceId,
-          ug: workspace.ug,
+          ug,
         });
 
         if (requestId !== requestIdRef.current) return;
@@ -133,7 +134,7 @@ export function WarehouseMobileLocationFoundationCheck() {
         try {
           const contents = await loadWarehouseMobilePhysicalPositionContents({
             workspaceId: workspace.workspaceId,
-            ug: workspace.ug,
+            ug,
             position: result.value.position,
           });
 
