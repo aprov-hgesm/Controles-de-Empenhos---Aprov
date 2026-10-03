@@ -393,7 +393,7 @@ Essa evidência estrutural/histórica não foi convertida em PASS de J02/J03/J04
 
 ## 13. Gates desta branch
 
-- `git diff --check`: deve ser validado sobre o diff documental exato antes do fechamento final;
+- `git diff --check`: execução literal indisponível neste ambiente de worker por ausência de checkout local autenticado; o conteúdo exato do arquivo foi auditado automaticamente e ficou com **0 linhas com trailing whitespace**. Reprodução coordenadora: `git diff --check 4d87370e5ee7f2697ab4901e0c045a9ab4910fe9...HEAD`;
 - TypeScript: **NÃO APLICÁVEL** ao diff documental-only;
 - Production Build: **NÃO APLICÁVEL** ao diff documental-only;
 - Application CI: pela política oficial, diff exclusivamente em `docs/**` **não deve disparar** o Application CI;
@@ -402,7 +402,7 @@ Essa evidência estrutural/histórica não foi convertida em PASS de J02/J03/J04
 
 ## 14. PR
 
-PR: **draft para `feat/saas-r1-commercializacao`; número a ser registrado na entrega final da worker.**
+PR: **#226 — draft para `feat/saas-r1-commercializacao`.**
 
 Não fazer merge pela própria worker.
 
