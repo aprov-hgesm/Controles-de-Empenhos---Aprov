@@ -7,7 +7,7 @@ Baseline upstream MOBILE-0: `78d3e9afeeb4176a8d6423cdd8e65d32435ba0a9`
 Freeze documental / base comum da Onda 1: `53e28b81874ee1b7ce0bd484cc7a97537aa99473`
 Freeze documental / base comum da Onda 2 após reconciliação SaaS: `6852963c7aa9a1c83133239f0b929715fd316530`
 
-Estado global: **ONDA 1 INTEGRADA / INTEGRAÇÃO 1 APROVADA / ONDA 2 LIBERADA — MOBILE-C + MOBILE-D + MOBILE-E**
+Estado global: **ONDAS 1–2 INTEGRADAS / INTEGRAÇÃO 2 CERTIFICADA / ONDA 3 LIBERADA — MOBILE-F + MOBILE-G + MOBILE-H**
 
 ## 1. Baseline
 
@@ -33,11 +33,11 @@ Dependência:
 | MOBILE-A Plataforma/Scanner | `mobile-r1-a-platform-scanner` | 0 | **APROVADA COM PENDÊNCIA RUNTIME / INTEGRADA** | PR #221 / squash `19fc6be4...` |
 | MOBILE-B Etiquetas/Resolver | `mobile-r1-b-location-labels` | 0 | **APROVADA E INTEGRADA** | PR #220 / squash `5edb19812...` |
 | MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **APROVADA E INTEGRADA SEMANTICAMENTE** | worker PR #229; integração PR #232 / squash `1c523fe2...` |
-| MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **DEVOLVIDA — CORREÇÃO DE INTEGRIDADE** | PR #231; fail-closed de lotes + limite 24 + namespace produto |
+| MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **APROVADA E INTEGRADA SEMANTICAMENTE** | worker PR #231; integração PR #234 / squash `fc87bf8f...` |
 | MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **APROVADA E INTEGRADA** | PR #230 / squash `e768ee5f...` |
-| MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **BLOQUEADA** | — |
-| MOBILE-G Saída | `mobile-r1-g-outbound` | Int.2 | **BLOQUEADA** | — |
-| MOBILE-H Conferência | `mobile-r1-h-position-check` | Int.2 | **BLOQUEADA** | — |
+| MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **LIBERADA PARA ONDA 3** | freeze comum a registrar |
+| MOBILE-G Saída | `mobile-r1-g-outbound` | Int.2 | **LIBERADA PARA ONDA 3** | freeze comum a registrar |
+| MOBILE-H Conferência | `mobile-r1-h-position-check` | Int.2 | **LIBERADA PARA ONDA 3** | freeze comum a registrar |
 | MOBILE-I Integração controlada | integradora | A–H | **BLOQUEADA** | — |
 | MOBILE-J Certificação | integradora | I | **BLOQUEADA** | — |
 
@@ -113,12 +113,12 @@ MOBILE-B:
 
 ## 7. Próxima ação do Coordenador
 
-1. congelar o HEAD comum da Onda 2;
-2. criar MOBILE-C, MOBILE-D e MOBILE-E na mesma base;
-3. emitir prompts especializados;
-4. receber handoffs independentes;
-5. integrar preferencialmente E → C → D, salvo conflito real;
-6. manter MOBILE-F/G/H bloqueadas até a Integração 2.
+1. registrar o encerramento da Integração 2;
+2. congelar o HEAD comum da Onda 3;
+3. criar MOBILE-F, MOBILE-G e MOBILE-H na mesma base;
+4. emitir prompts especializados;
+5. receber handoffs independentes;
+6. manter MOBILE-I/J bloqueadas até a Integração 3.
 
 ## 8. Produção
 
@@ -430,3 +430,90 @@ Bloqueios:
 3. token EPX1 malformado/reservado não pode ser promovido a PRODUCT.
 
 Integração 2 permanece aberta. E+C continuam integradas e verdes; D deve voltar com novo HEAD sem rebase/merge.
+
+
+### Integração MOBILE-D e Integração 2 — 2026-10-03
+
+MOBILE-D corrigida:
+- worker: `mobile-r1-d-transfer`;
+- base: `6852963c7aa9a1c83133239f0b929715fd316530`;
+- HEAD final: `4549b280b483d935373604a8c2b2a54a140684f0`;
+- PR worker #231, fechado sem merge direto;
+- Application CI #932: SUCCESS;
+- Core Protection #219: SUCCESS.
+
+Correções confirmadas:
+- leitura crítica de lotes fail-closed;
+- MAX 500 + FETCH_LIMIT 501 para saturação;
+- erro de leitura não vira lista vazia;
+- limite de 24 lotes pré-validado;
+- 25 lotes bloqueiam antes do TRANSFER;
+- EPX1 malformado/reservado permanece UNKNOWN;
+- TRANSFER canônico, quantityDelta=0 e replay idempotente preservados.
+
+Integração semântica da D:
+- branch técnica: `mobile-r1-integration-2-d`;
+- PR #234;
+- HEAD certificado: `2469e08b90251a52431b83e6db07841f849dc69c`;
+- squash: `fc87bf8f9e67bc4abea6332a09059cfcfd6260fe`;
+- classificador da D passou a delegar ao helper canônico da MOBILE-C;
+- Home preservou alocação + transferência + consulta física.
+
+Certificação final da Integração 2:
+- branch: `mobile-r1-integration-2-certification`;
+- PR #235;
+- HEAD certificado: `12df2f1ab6524e80322866ad8a5af59eeb51d49d`;
+- squash: `d8148f01b877adad1e7880fc0b7fc6d4b3d60249`;
+- Application CI #934: SUCCESS;
+- Core Protection #221: SUCCESS;
+- Recovery #614: SUCCESS;
+- SAAS-DL Legal #38: SUCCESS;
+- Integration 2 domain tests: SUCCESS;
+- Integration 2 guard: SUCCESS;
+- Phase 6/7/8: SUCCESS;
+- MOBILE-E tests/guard: SUCCESS;
+- MOBILE-C tests/guard: SUCCESS;
+- Production Build: SUCCESS;
+- Final TypeScript: SUCCESS;
+- Diff Hygiene: SUCCESS;
+- Release Gates 16–21: SUCCESS.
+
+Jornada certificada:
+`alocar → consultar A → transferir A→B → consultar A/B → preservar total físico`.
+
+Build certificado:
+- `/central-mobile`: 5.49 kB / 257 kB First Load;
+- `/central-mobile/alocar`: 20.9 kB / 275 kB;
+- `/central-mobile/transferir`: 6.93 kB / 261 kB;
+- Shared First Load: 104 kB.
+
+Classificação:
+**INTEGRAÇÃO 2 APROVADA E CERTIFICADA**.
+
+### Reconciliação SaaS R1 ↔ MOBILE-R1 antes da Onda 3
+
+Estado SaaS observado:
+- `feat/saas-r1-commercializacao@4848643be85b30532f7f093c4ddb0e729facfad3`;
+- hardening pré-piloto ativo;
+- piloto real adiado até RC;
+- SAAS-J aguardando.
+
+Contratos idênticos entre integradoras:
+- LegalAcceptanceGate;
+- workspaceContext;
+- platformAccess;
+- platformSessionControl;
+- warehouse feature flag;
+- firestore.rules;
+- firestore.warehouse.rules;
+- app/layout.tsx.
+
+Divergências esperadas:
+- Mobile mantém `WarehouseAccessBoundary` e guards/scanner/Integrações 1–2;
+- SaaS mantém tooling de recovery/hardening;
+- package/CI diferem apenas pelos gates próprios de cada programa.
+
+Resultado:
+**PASS — SEM BLOQUEIO TRANSVERSAL PARA MOBILE-F/G/H**.
+
+A Onda 3 pode ser congelada e ativada. MOBILE-I/J permanecem bloqueadas.
