@@ -96,7 +96,8 @@ Esses dois são elegíveis porque pertencem à coorte VIP legado confirmada e n�
 
 **Nenhum participante humano foi confirmado por esta worker.**
 
-P-01: **NÃO CONFIRMADO**.  
+P-01: **NÃO CONFIRMADO**.
+
 P-02: **NÃO CONFIRMADO**.
 
 A associação final entre operador humano e workspace depende de decisão/evidência coordenadora. A worker não inventou nomes, e-mails ou identidades.
