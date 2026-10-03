@@ -451,3 +451,28 @@ Conclusão P2:
 - P2 **CONCLUÍDA**;
 - qualquer reexecução futura deve respeitar o comportamento idempotente já implementado.
 
+### 14.6 P3 — controles produtivos de recovery aplicados
+
+Em 2026-10-02, após autorização explícita, os controles nativos de recovery foram aplicados separadamente nos dois bancos.
+
+Banco operacional principal:
+- PITR: **true**;
+- delete protection: **true**;
+- agenda diária de backup: **true**;
+- retenção: **14 semanas**;
+- backup READY: **false**;
+- backups concluídos: **0**.
+
+Banco `emprovex-warehouse`:
+- PITR: **true**;
+- delete protection: **true**;
+- agenda diária de backup: **true**;
+- retenção: **14 semanas**;
+- backup READY: **false**;
+- backups concluídos: **0**.
+
+Conclusão desta subetapa:
+- configuração produtiva de proteção e agendamento: **CONCLUÍDA**;
+- certificação final de recovery: **PENDENTE** somente de pelo menos um backup READY por banco e do restore real isolado;
+- não repetir `apply` enquanto o estado permanecer coerente.
+
