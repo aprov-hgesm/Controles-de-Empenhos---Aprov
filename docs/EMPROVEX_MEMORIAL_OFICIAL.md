@@ -1521,7 +1521,7 @@ Cada worker:
 
 ### 8.27 Estado corrente da execução
 
-O MOBILE-0 foi executado pelo Coordenador em 2026-10-02. MOBILE-A e MOBILE-B foram concluídas e integradas, e a Integração 1 foi aprovada com gates verdes. A Onda 2 está liberada exclusivamente para **MOBILE-C — Alocação**, **MOBILE-D — Transferência** e **MOBILE-E — Consulta Física**, que devem nascer do mesmo freeze da integradora. MOBILE-F/G/H permanecem bloqueadas até a Integração 2. Pendências físicas de câmera/header/Code 128 continuam registradas e obrigatórias para a certificação final. Em caso de divergência futura, prevalecem: código integrado + este Memorial + documentos canônicos da rodada, conforme o estágio vigente.
+O MOBILE-0 foi executado pelo Coordenador em 2026-10-02. MOBILE-A e MOBILE-B foram concluídas e integradas, e a Integração 1 foi aprovada com gates verdes. Antes da Onda 2, o Coordenador aplicou o gate novo de reconciliação SaaS R1 ↔ MOBILE-R1 e confirmou equivalência dos contratos compartilhados críticos, sem bloqueio funcional. A Onda 2 está liberada exclusivamente para **MOBILE-C — Alocação**, **MOBILE-D — Transferência** e **MOBILE-E — Consulta Física**, todas congeladas na base comum `6852963c7aa9a1c83133239f0b929715fd316530`. MOBILE-F/G/H permanecem bloqueadas até a Integração 2. Pendências físicas de câmera/header/Code 128 continuam registradas e obrigatórias para a certificação final. Em caso de divergência futura, prevalecem: código integrado + este Memorial + documentos canônicos da rodada, conforme o estágio vigente.
 
 ## 9. Riscos/pendências que não devem ser esquecidos
 
