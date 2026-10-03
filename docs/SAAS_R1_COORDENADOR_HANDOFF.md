@@ -629,3 +629,29 @@ A diferença em relação ao fechamento original da D decorre apenas do recebime
 
 SAAS-J continua bloqueada por evidência real incompleta.
 
+### PILOT-C — recebida / PARCIAL EXTERNO
+
+Worker HEAD: `5e1a1541630e9b7b8d1ff4bb33dc3a5c2dd48322`
+PR #225: fechado sem merge após divergência da integradora.
+
+Integração semântica:
+- handoff: `227a27ac5a9e626db73d61b67ec6829d708c61c7`;
+- matriz J23/J24: `5163520aecc50a21d67c4e374ded6cd55069ba03`.
+
+Estado:
+- J23 PREPARADO / depende de publicação health + Monitoring;
+- J24 EM EXECUÇÃO / depende de backup READY + restore isolado;
+- nenhum apply repetido;
+- nenhum restore;
+- nenhum deploy;
+- nenhum impacto MOBILE-R1.
+
+### Fechamento da onda paralela SAAS-P
+
+PILOT-A: recebida / PARCIAL.
+PILOT-B: preparação concluída / evidência real pendente.
+PILOT-C: PARCIAL / bloqueado externamente.
+PILOT-D: matriz/método de evidência aceitos.
+
+A onda de workers está encerrada no escopo de desenvolvimento/documentação. As próximas pendências são majoritariamente humanas, comerciais e operacionais reais.
+
