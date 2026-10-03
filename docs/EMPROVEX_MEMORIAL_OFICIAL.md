@@ -2171,3 +2171,26 @@ Estado aceito:
 
 A PILOT-A permanece **PARCIAL**, aguardando coleta de evidências humanas.
 
+### SAAS-P — PILOT-B recebida como preparação concluída
+
+O Coordenador revisou a PILOT-B e integrou semanticamente seu handoff no commit `ecc74f14968ca1d45f8b17eb292b68cc057171e9`. O PR #227 foi fechado sem merge porque a integradora avançou após o freeze dos workers.
+
+Estado aceito:
+- P-03: ainda não selecionado;
+- J01/J10/J11/J18: preparados;
+- J12: depende de pagamento real;
+- J13/J14: dependem do pagamento real e confirmação administrativa;
+- J15–J20: dependem de suspensão/reativação real autorizada;
+- contrato comercial preservado: R$70/mês, trial 30 dias, vencimento administrativo no 5º dia útil, tolerância 10 dias, cobrança externa e sem suspensão automática;
+- nenhum defeito PILOT-*;
+- nenhuma alteração funcional;
+- Impacto MOBILE-R1: nenhum delta funcional.
+
+Snapshot Mobile corrigido na revisão:
+- MOBILE-A e MOBILE-B integradas;
+- Integração 1 certificada;
+- MOBILE-C/D/E liberadas;
+- freeze vigente da Onda 2: `6852963c7aa9a1c83133239f0b929715fd316530`.
+
+A PILOT-B permanece aguardando **participante real não-VIP** e janela produtiva autorizada para evidência comercial.
+
