@@ -3310,3 +3310,62 @@ Essa leitura:
 
 Nos prompts de waves já congeladas, o Coordenador deve indicar explicitamente qual documentação é **base-local** e qual deve ser consultada como **governança canônica viva**.
 
+### PROGRAM CONTROL — HARDEN-D LIBERADA APÓS CHECKPOINT MOBILE PÓS-INTEGRAÇÃO 2
+
+Decisão oficial recebida e auditada.
+
+Checkpoint Mobile estável:
+- integradora: `feat/central-mobile-r1`;
+- HEAD: `7b745fa0b7979e643b83b7de94dd96a0290930ab`;
+- último estado operacional certificado informado pelo Program Control: `d8148f01b877adad1e7880fc0b7fc6d4b3d60249`;
+- MOBILE-C, MOBILE-D e MOBILE-E: **CONCLUÍDAS E INTEGRADAS**;
+- handoffs Mobile pendentes: **NENHUM**;
+- MOBILE-F/G/H: **NÃO INICIADAS / BLOQUEADAS** até handoff HARDEN-D e nova decisão global.
+
+HARDEN-D:
+- branch: `saas-harden-d-mobile-reconciliation`;
+- base congelada obrigatória: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`;
+- verificação: branch permanece **IDÊNTICA** à base;
+- estado: **LIBERADA PARA ATIVAÇÃO**;
+- não recriar;
+- não rebasear;
+- não mover para a integradora;
+- não incorporar HARDEN-A/B/C;
+- documentação pós-freeze somente em leitura.
+
+Alvos de reconciliação:
+- Mobile: `feat/central-mobile-r1@7b745fa0b7979e643b83b7de94dd96a0290930ab`;
+- SaaS vivo para contexto: `feat/saas-r1-commercializacao@4848643be85b30532f7f093c4ddb0e729facfad3`.
+
+Delta transversal obrigatório:
+- arquivo: `next.config.ts`;
+- Mobile: `camera=(self), microphone=(), geolocation=()`;
+- SaaS: `camera=(), microphone=(), geolocation=()`.
+
+Contrato esperado:
+- preservar **câmera same-origin** necessária à Central Móvel;
+- manter **microfone bloqueado**;
+- manter **geolocalização bloqueada**;
+- classificar semanticamente o delta antes de qualquer correção;
+- HARDEN-D permanece **auditiva por padrão**.
+
+Matriz obrigatória HARDEN-D:
+- `SEM DELTA`;
+- `DELTA COMPATÍVEL`;
+- `CONFLITO`;
+- `REQUER COORDENADOR GERAL`.
+
+Se detectar conflito funcional em Auth, workspace/UG, sessão, legal, lifecycle, `warehouseAccess`, Rules, shell, schema ou qualquer contrato compartilhado:
+- não corrigir silenciosamente na HARDEN-D;
+- registrar evidência;
+- devolver ao Coordenador SaaS/Program Control.
+
+Esta decisão não autoriza:
+- merge em `main`;
+- deploy;
+- publicação de Rules;
+- restore;
+- ação produtiva.
+
+Após handoff, o Coordenador SaaS audita HEAD/PR/matriz e envia pacote consolidado ao Coordenador Geral.
+
