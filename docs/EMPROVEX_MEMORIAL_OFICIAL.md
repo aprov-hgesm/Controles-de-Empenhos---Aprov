@@ -2262,3 +2262,23 @@ Resumo:
 
 A próxima fase não exige abrir novas frentes de desenvolvimento por padrão. O foco passa a ser coleta de evidência real, participante P-03, custos T0/T1/T2, backup READY/restore, health/uptime e posterior reconciliação final SaaS ↔ Mobile antes da SAAS-J.
 
+### SAAS-P — P-01 confirmado como usuário operacional crítico
+
+P-01 foi formalmente definido como `aprovisionamento-3-gac-ap`.
+
+Características registradas:
+- usuário externo real;
+- VIP legado;
+- uso ativo do EMPROVEX;
+- dependência operacional do setor;
+- **acesso contínuo é requisito do piloto**.
+
+Regra de segurança operacional:
+- P-01 não deve ser usado para testes de suspensão, revogação de sessão, bloqueio, alteração artificial de lifecycle ou qualquer cenário que possa interromper o acesso;
+- reset/troca de senha só pode ocorrer por necessidade real do próprio usuário, não para gerar evidência;
+- aceite legal não deve ser apagado/recriado;
+- billing/status/UID/workspace/UG/permissões não devem ser manipulados para fabricar cenário;
+- a coleta de evidência em P-01 deve ser preferencialmente observacional e sobre uso normal;
+- cenários destrutivos/disruptivos devem usar `aprovisionamento-teste`, P-03 ou outro ambiente controlado autorizado.
+
+Essa restrição prevalece sobre qualquer roteiro genérico anterior que pudesse sugerir usar P-01 em J15–J20.
