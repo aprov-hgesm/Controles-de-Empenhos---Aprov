@@ -3283,3 +3283,30 @@ Deve:
 - transformar contexto disperso em estado pequeno e confiável;
 - conduzir a coerência do Memorial;
 - impedir que “programa localmente PASS” seja confundido com “EMPROVEX globalmente pronto”.
+
+### 18.20 Documentação canônica versus branches congeladas
+
+Uma branch worker pode ter sido congelada antes de uma atualização documental global posterior.
+
+Regra:
+- **não rebasear, mergear ou mover a branch worker apenas para obter documentação nova**;
+- a base congelada continua imutável;
+- o prompt do worker deve fornecer as regras globais novas relevantes;
+- quando necessário, o worker consulta a versão viva do Memorial/Program Control diretamente na integradora sem incorporá-la à branch.
+
+Exemplo de consulta somente leitura:
+
+```powershell
+git fetch origin
+git show origin/feat/saas-r1-commercializacao:docs/EMPROVEX_MEMORIAL_OFICIAL.md
+git show origin/feat/saas-r1-commercializacao:docs/EMPROVEX_PROGRAM_CONTROL.md
+```
+
+Essa leitura:
+- não altera o HEAD da worker;
+- não faz merge;
+- não faz rebase;
+- permite obedecer governança publicada após o freeze.
+
+Nos prompts de waves já congeladas, o Coordenador deve indicar explicitamente qual documentação é **base-local** e qual deve ser consultada como **governança canônica viva**.
+
