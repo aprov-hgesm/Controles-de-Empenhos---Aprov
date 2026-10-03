@@ -21,7 +21,8 @@ O MOBILE-0 congelou arquitetura, contratos e fronteiras. Estado corrente:
 - MOBILE-A/B integradas e Integração 1 certificada;
 - MOBILE-C/D/E integradas e Integração 2 certificada;
 - MOBILE-F/G/H **liberadas na Onda 3** a partir do freeze comum `c971d5356c343a0819bf96ec016de73dd96a435d`;
-- MOBILE-I/J continuam etapas do Coordenador e permanecem bloqueadas até a Integração 3.
+- MOBILE-I foi **liberada pelo Program Control** na branch `mobile-r1-i-integration`, congelada em `816c1c07cf251ce3705098a3a65b9d84e2fc8614`;
+- MOBILE-J continua bloqueada até o checkpoint pós-MOBILE-I.
 
 A ativação desta branch **não autoriza**:
 - merge em `main`;
