@@ -34,7 +34,7 @@ Dependência:
 | MOBILE-B Etiquetas/Resolver | `mobile-r1-b-location-labels` | 0 | **APROVADA E INTEGRADA** | PR #220 / squash `5edb19812...` |
 | MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **APROVADA / AGUARDANDO INTEGRAÇÃO** | PR #229; HEAD `6828273e...`; integrar após MOBILE-E |
 | MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **LIBERADA / BRANCH CRIADA** | base `6852963c7...`; aguardando worker |
-| MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **LIBERADA / BRANCH CRIADA** | base `6852963c7...`; aguardando worker |
+| MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **APROVADA E INTEGRADA** | PR #230 / squash `e768ee5f...` |
 | MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **BLOQUEADA** | — |
 | MOBILE-G Saída | `mobile-r1-g-outbound` | Int.2 | **BLOQUEADA** | — |
 | MOBILE-H Conferência | `mobile-r1-h-position-check` | Int.2 | **BLOQUEADA** | — |
@@ -322,3 +322,35 @@ Impacto SAAS-R1:
 
 Decisão de integração:
 **AGUARDAR MOBILE-E**, preservando a ordem preferencial E → C → D definida no Plano Mestre.
+
+
+### Integração MOBILE-E — 2026-10-02
+
+- branch: `mobile-r1-e-physical-query`;
+- base: `6852963c7aa9a1c83133239f0b929715fd316530`;
+- worker HEAD: `fff6fa3ca7588cec4ecf0c3c76d141dda357c626`;
+- PR #230;
+- classificação: **APROVADA**;
+- integração squash: `e768ee5f554dc3016951bd7cebc54c69feba3bd3`;
+- Application CI #930: SUCCESS;
+- Core Protection #217: SUCCESS;
+- Recovery #612: SUCCESS;
+- SAAS-DL Legal #36: SUCCESS;
+- Production Build / Final TypeScript / Diff Hygiene: SUCCESS.
+
+Contratos:
+- consulta física estritamente read-only;
+- EPX1/resolver/posição reutilizados;
+- reads bounded por posição;
+- 0 listeners permanentes;
+- sem escrita em estoque/saldo/ledger/lote;
+- fail-closed em overflow ou inconsistência;
+- sem impacto funcional no SaaS R1.
+
+Performance:
+- /central-mobile: ~249 kB → ~252 kB First Load;
+- delta aproximado: +3 kB;
+- desktop/shared sem regressão observada.
+
+Ordem da Onda 2:
+**E integrada → C próxima → D depois.**
