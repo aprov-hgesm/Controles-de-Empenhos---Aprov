@@ -2229,3 +2229,36 @@ O baseline oficial de observabilidade do piloto passa a usar:
 
 A checklist SAAS-J está **preparada**, porém a SAAS-J permanece **não liberada** até completar evidências humanas/comerciais, custos reais, recovery/restore, uptime e reconciliação final SaaS ↔ Mobile.
 
+### SAAS-P — PILOT-C recebida e onda A/B/C/D encerrada no escopo das workers
+
+A PILOT-C foi revisada e integrada semanticamente.
+
+Worker:
+- branch `saas-p-c-recovery-uptime`;
+- HEAD `5e1a1541630e9b7b8d1ff4bb33dc3a5c2dd48322`;
+- PR #225.
+
+Integrações coordenadoras:
+- `227a27ac5a9e626db73d61b67ec6829d708c61c7` — handoff;
+- `5163520aecc50a21d67c4e374ded6cd55069ba03` — matriz J23/J24.
+
+Estado aceito:
+- PITR, delete protection e backup diário/14 semanas: ativos nos dois bancos;
+- último estado conhecido: nenhum backup READY;
+- restore isolado: pendente;
+- PR #223 health: preparado, gates verdes, sem merge/deploy;
+- J23: PREPARADO;
+- J24: EM EXECUÇÃO;
+- nenhum bug PILOT-OPS novo;
+- Impacto MOBILE-R1: nenhum delta funcional.
+
+Com o recebimento da PILOT-C, a onda paralela SAAS-P A/B/C/D fica **ENCERRADA NO ESCOPO DAS WORKERS**.
+
+Resumo:
+- PILOT-A: parcial, faltando evidência humana;
+- PILOT-B: preparação concluída, faltando P-03/pagamento/jornadas reais;
+- PILOT-C: parcial por dependências externas;
+- PILOT-D: matriz, observabilidade e checklist SAAS-J preparados.
+
+A próxima fase não exige abrir novas frentes de desenvolvimento por padrão. O foco passa a ser coleta de evidência real, participante P-03, custos T0/T1/T2, backup READY/restore, health/uptime e posterior reconciliação final SaaS ↔ Mobile antes da SAAS-J.
+
