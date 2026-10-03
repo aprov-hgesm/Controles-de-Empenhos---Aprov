@@ -707,3 +707,12 @@ Próxima execução coordenada:
 
 Não usar P-01/P-02 para testes disruptivos.
 
+### Estratégia temporária — `aprovisionamento-teste`
+
+P-01/P-02 podem permanecer sem observação humana até os operadores estarem disponíveis.
+
+Enquanto isso:
+- executar validação funcional/controlada no `aprovisionamento-teste`;
+- usar o mesmo workspace para J15–J20;
+- não interpretar isso como substituição de evidência humana P-01/P-02;
+- não usar esse workspace para comprovar P-03/trial/pagamento.
