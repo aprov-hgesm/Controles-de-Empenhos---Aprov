@@ -116,6 +116,21 @@ Preservar:
 
 Nenhum worker pode mudar significado desses contratos sem decisão coordenada.
 
+## 5.1 Sincronização com o programa SaaS R1
+
+A MOBILE-R1 e o SaaS R1 são programas paralelos com contratos parcialmente compartilhados.
+
+Antes de abrir/integrar/certificar frente Mobile que toque Auth, workspace/UG, sessão/lease, legal gate, lifecycle, `warehouseAccess`, Rules, shell, contratos comuns da Central, helpers compartilhados ou package/CI comum:
+
+1. consultar `feat/saas-r1-commercializacao`;
+2. consultar `SAAS_R1_INTEGRATION_STATUS.md` e `SAAS_R1_COORDENADOR_HANDOFF.md`;
+3. comparar semanticamente os arquivos afetados;
+4. registrar se existe delta real;
+5. bloquear somente se houver conflito concreto;
+6. registrar **Impacto SAAS-R1** no handoff do worker quando aplicável.
+
+Nunca sincronizar por merge/rebase cego entre integradoras.
+
 ## 6. Propriedade inicial de arquivos/áreas
 
 ### MOBILE-A
