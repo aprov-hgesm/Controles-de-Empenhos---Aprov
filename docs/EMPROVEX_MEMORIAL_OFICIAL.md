@@ -2519,3 +2519,277 @@ Documento detalhado da fase:
 `docs/SAAS_R1_PRE_PILOTO_HARDENING.md`.
 
 O T0 já coletado não é descartado: ele é o **baseline oficial pré-release** para comparação com T1/T2 durante/depois do piloto final.
+
+### ONDA HARDEN A/B/C/D — PLANO OPERACIONAL DETALHADO ANTES DA ATIVAÇÃO
+
+Esta seção é **normativa** para a próxima onda e complementa a seção de reorganização da reta final.
+
+A onda ainda não representa piloto. Seu objetivo é entregar um **Release Candidate SaaS R1 tecnicamente fechado**.
+
+#### Topologia
+
+Máximo:
+- 1 Chat Coordenador;
+- até 4 workers em paralelo.
+
+Branches planejadas:
+- HARDEN-A: `saas-harden-a-security-dependencies`;
+- HARDEN-B: `saas-harden-b-recovery-restore`;
+- HARDEN-C: `saas-harden-c-release-health-rules`;
+- HARDEN-D: `saas-harden-d-mobile-reconciliation`.
+
+Todas as branches devem nascer do **mesmo HEAD congelado** da `feat/saas-r1-commercializacao`, imediatamente antes da ativação. Nenhum worker pode recriar a branch, rebasing/merging da integradora ou incorporar outra worker.
+
+Snapshot Mobile de preparação desta onda:
+- `feat/central-mobile-r1@22fb276a502e3475d579c3b1874e4c0353fc2e35`.
+
+Esse HEAD Mobile é apenas fotografia de preparação. HARDEN-D deve reconsultar a integradora Mobile viva ao iniciar e antes do handoff.
+
+#### Regras comuns obrigatórias
+
+Todo HARDEN deve:
+1. confirmar branch e HEAD antes de editar;
+2. permanecer no escopo exclusivo;
+3. não fazer merge em `main`;
+4. não publicar Vercel;
+5. não publicar Rules;
+6. não executar restore real sem autorização explícita;
+7. não criar P-03;
+8. não executar J01–J20 como piloto final;
+9. não alterar P-01/P-02;
+10. não usar `npm audit fix --force`;
+11. parar e reportar colisão transversal;
+12. entregar handoff auditável.
+
+Mudanças compartilhadas devem conter seção **Impacto MOBILE-R1**.
+
+#### Matriz de ownership da onda
+
+- `package.json`, lockfile e correções de dependências: **HARDEN-A**.
+- recovery scripts/tests e estado externo backup/restore: **HARDEN-B**.
+- `/api/health`, health tests, pacote Rules, release, Vercel e rollback: **HARDEN-C**.
+- comparação SaaS↔Mobile e matriz de compatibilidade: **HARDEN-D**.
+- Memorial, Integration Status global, integração entre workers e freeze do RC: **Coordenador**.
+
+HARDEN-D é **auditivo por padrão**. Se encontrar incompatibilidade em Auth, workspace/UG, sessão/lease, legal, billing/lifecycle, Rules, shell, Central, schema ou source of truth, não deve corrigir o runtime dentro da própria branch. Deve devolver o conflito ao Coordenador, que abre uma branch curta `saas-harden-fix-<dominio>-<slug>`.
+
+#### HARDEN-A — Segurança, Dependências, CI e Regressão
+
+Missão:
+- auditar os 22 advisories observados durante `npm ci`;
+- identificar pacote, versão, cadeia transitiva, severidade, runtime/dev e exposição real;
+- diferenciar advisory de vulnerabilidade alcançável;
+- aplicar somente a correção mínima necessária e compatível;
+- certificar regressão após qualquer alteração.
+
+Obrigatório:
+- `npm audit` ou inspeção equivalente sem `--force`;
+- relatório antes/depois;
+- TypeScript;
+- production build;
+- `git diff --check`;
+- Application CI equivalente;
+- Core Protection;
+- Recovery guardrails;
+- Legal Validation/guards relevantes;
+- segurança/multitenancy afetada.
+
+Proibições específicas:
+- upgrade major oportunista;
+- refatoração fora do advisory;
+- alterar billing/onboarding/lifecycle para aproveitar a onda;
+- mascarar advisory;
+- declarar segurança apenas porque um comando automático sugeriu fix.
+
+Critério PASS:
+- advisories classificados;
+- vulnerabilidades relevantes corrigidas ou justificadamente aceitas com evidência;
+- nenhum alto/crítico alcançável fica aberto sem decisão explícita;
+- gates pós-correção verdes.
+
+#### HARDEN-B — Backup, Recovery e Restore
+
+Missão:
+fechar recovery real **antes do piloto**.
+
+Estado herdado:
+- PITR ativo nos dois bancos;
+- delete protection ativa;
+- backup diário ativo;
+- retenção 14 semanas;
+- **não repetir `apply`**.
+
+Obrigatório:
+- `recovery:status`;
+- `recovery:verify`;
+- confirmar backup `READY` nos dois bancos;
+- registrar backup resource name, location, snapshot e expiração;
+- selecionar backup real;
+- preparar `restore-plan` para database novo e isolado;
+- validar explicitamente que o target não é produção;
+- preparar checklist de IAM/Rules/TTL e amostragem.
+
+Restore real:
+- somente após autorização explícita;
+- nunca sobre banco produtivo;
+- nunca remover delete protection de produção para facilitar teste.
+
+Critério PASS:
+- ambos com backup READY;
+- verify verde;
+- restore isolado real concluído;
+- dados amostrados;
+- IAM/Rules/TTL conferidos;
+- evidência registrada.
+
+Se depender apenas da autorização de restore, status = **PARCIAL**, não PASS.
+
+#### HARDEN-C — Health, Rules, Release e Rollback
+
+Missão:
+montar o pacote exato de publicação controlada do RC.
+
+Responsabilidades:
+- auditar PR #223/health contra a base congelada;
+- integrar semanticamente health na branch HARDEN-C se continuar válido;
+- confirmar HTTP 200 + `status=ok` + `no-store`;
+- confirmar zero leitura Firestore/segredos;
+- executar health tests;
+- identificar exatamente as Rules candidatas necessárias;
+- comparar Rules produtivas versus candidatas;
+- definir ordem de rollout;
+- definir smoke pós-publicação;
+- definir rollback de aplicação e Rules;
+- listar env/config necessárias;
+- preparar estratégia Vercel considerando `build-rate-limit`;
+- preparar uptime/alert/channel para serem ativados quando o endpoint estiver vivo.
+
+Proibições específicas:
+- merge cego do PR #223;
+- publicação real;
+- promoção para `main`;
+- deploy de Rules;
+- alterar lógica comercial para resolver conflito de release.
+
+Critério PASS:
+- health integrado e testado no candidato;
+- manifest de release completo;
+- Rules candidatas validadas;
+- rollout/rollback reproduzíveis;
+- smoke checklist pronta;
+- nenhuma dependência oculta para publicação.
+
+#### HARDEN-D — Reconciliação SaaS ↔ MOBILE-R1 e Evidências
+
+Missão:
+provar semanticamente que o candidato SaaS e a Mobile vigente continuam compatíveis.
+
+Deve registrar:
+- HEAD SaaS congelado;
+- HEAD Mobile vivo no início;
+- HEAD Mobile vivo no handoff;
+- branches/PRs Mobile relevantes.
+
+Comparação mínima obrigatória:
+- Auth;
+- workspace/UG;
+- sessão/lease/heartbeat;
+- legal gate;
+- billing/lifecycle;
+- `warehouseAccess`;
+- Firestore Rules;
+- schema/source of truth da Central;
+- shell/guards;
+- contratos desktop/mobile;
+- `next.config.ts` e Permissions-Policy quando relevante;
+- APIs/serviços compartilhados.
+
+Cada domínio deve receber uma classificação:
+- `SEM DELTA`;
+- `DELTA COMPATÍVEL`;
+- `CONFLITO`;
+- `REQUER COORDENADOR`.
+
+Critério PASS:
+- todos os domínios compartilhados classificados;
+- nenhum conflito material aberto;
+- impacto Mobile do RC explicitado;
+- evidência suficiente para freeze.
+
+#### Formato obrigatório do handoff HARDEN
+
+Cada worker deve entregar:
+- Frente;
+- Branch;
+- Base congelada;
+- HEAD final;
+- PR draft;
+- Status: PASS / PARCIAL / BLOQUEADO;
+- arquivos alterados;
+- diff resumido;
+- o que foi confirmado;
+- o que foi alterado;
+- o que **não** foi executado;
+- comandos/testes e resultados;
+- incidentes;
+- riscos/pendências;
+- Impacto MOBILE-R1;
+- dependência de autorização externa;
+- recomendação ao Coordenador;
+- critério objetivo para próxima etapa.
+
+Nenhum handoff pode resumir a conclusão apenas como “deu certo”.
+
+#### Critérios de status
+
+**PASS**
+- todo o escopo da frente foi fechado com evidência reproduzível;
+- nenhum blocker da própria frente permanece.
+
+**PARCIAL**
+- parte segura concluída, mas existe evento/ação externa ou autorização explícita ainda pendente.
+
+**BLOQUEADO**
+- existe impedimento concreto que impede conclusão segura; o blocker deve ser identificado nominalmente.
+
+#### Protocolo de integração do Coordenador
+
+O Coordenador:
+1. audita HEAD, PR e diff real;
+2. compara com a integradora viva;
+3. não aceita handoff apenas por texto;
+4. decide merge, integração semântica ou devolução;
+5. resolve sobreposição de arquivos;
+6. reexecuta gates combinados necessários;
+7. atualiza Memorial/Integration Status/Handoff;
+8. reconsulta MOBILE-R1 viva;
+9. somente então decide sobre o freeze do RC.
+
+Ordem lógica preferida:
+- HARDEN-D deve devolver cedo qualquer conflito compartilhado;
+- HARDEN-A integra correções de dependência antes da certificação combinada;
+- HARDEN-B fecha recovery quando o evento externo permitir;
+- HARDEN-C fecha pacote de release depois de considerar deltas de A/D;
+- o Coordenador executa a certificação combinada final.
+
+A ordem cronológica dos handoffs **não substitui análise de dependência**.
+
+#### Gate obrigatório para congelar o Release Candidate
+
+O Coordenador só pode registrar **RC FROZEN** quando coexistirem:
+- HARDEN-A sem blocker relevante;
+- HARDEN-B PASS;
+- HARDEN-C PASS;
+- HARDEN-D PASS;
+- TypeScript/build/Application CI/diff hygiene verdes;
+- Core Protection/Recovery/Legal e segurança aplicável verdes;
+- Rules + rollout + rollback definidos;
+- backup/restore real comprovados;
+- Mobile reconciliada;
+- nenhum incidente pré-piloto bloqueante;
+- HEAD único da integradora registrado.
+
+Depois do freeze, a próxima ação ainda **não é lançamento comercial**. É autorização explícita para disponibilizar o RC em ambiente de piloto controlado, executar smoke e somente então iniciar o piloto real final.
+
+Documento especializado de apoio:
+`docs/SAAS_R1_HARDENING_EXECUCAO_PARALELA.md`.
