@@ -9,7 +9,7 @@ import Link from 'next/link';
 
 import { WarehouseMobileLocationFoundationCheck } from './WarehouseMobileLocationFoundationCheck';
 
-const FUTURE_CAPABILITIES = [
+const MOBILE_CAPABILITIES = [
   {
     label: 'Alocar recebimento',
     description: 'NF → item → produto → posição.',
@@ -26,7 +26,7 @@ const FUTURE_CAPABILITIES = [
     label: 'Consultar localização',
     description: 'Leia a posição e veja o conteúdo físico.',
     Icon: LayoutDashboard,
-    href: null,
+    href: '#consulta-localizacao',
   },
   {
     label: 'Inventário',
@@ -79,7 +79,7 @@ export function WarehouseMobileHome() {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          {FUTURE_CAPABILITIES.map(({ label, description, Icon, href }) => {
+          {MOBILE_CAPABILITIES.map(({ label, description, Icon, href }) => {
             const card = (
               <>
                 <span className="grid h-10 w-10 place-items-center rounded-2xl bg-blue-50 text-[#00288e]">
@@ -120,7 +120,9 @@ export function WarehouseMobileHome() {
         </div>
       </section>
 
-      <WarehouseMobileLocationFoundationCheck />
+      <div id="consulta-localizacao" className="scroll-mt-24">
+        <WarehouseMobileLocationFoundationCheck />
+      </div>
 
       <p className="px-2 text-center text-[11px] font-semibold leading-5 text-slate-500">
         Alocação, transferência, inventário e saída reutilizam contratos oficiais. Consulta física e conferência permanecem read-only.

@@ -236,6 +236,9 @@ jobs:
       - name: Central Móvel R1 Integration 3 guard
         run: npm run verify:mobile-r1-integration-3
 
+      - name: Central Móvel R1 MOBILE-I integrated product guard
+        run: npm run verify:mobile-r1-integration-final
+
       - name: ADM Depósito Phase 9 depot layout domain tests
         run: npm run test:adm-deposito-depot-layout
 
