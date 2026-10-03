@@ -208,8 +208,8 @@ Pendências físicas continuam:
 
 **MOBILE-C + MOBILE-D + MOBILE-E estão liberadas em paralelo.**
 
-Freeze comum da Onda 2:
-`feat/central-mobile-r1@13ca1a50826bdb34b8f63effb0743ac43ecdcddd`
+Freeze comum vigente da Onda 2 após reconciliação SaaS:
+`feat/central-mobile-r1@6852963c7aa9a1c83133239f0b929715fd316530`
 
 Branches já criadas nessa mesma base:
 - `mobile-r1-c-intake-allocation`;
@@ -250,4 +250,4 @@ Resultado:
 
 A SAAS-P está em execução com quatro workers paralelos. Antes de qualquer integração Mobile que toque domínio compartilhado, reconsultar o estado vivo do SaaS.
 
-Como C/D/E ainda não haviam iniciado e estavam idênticas ao freeze anterior, o Coordenador deve emitir novo freeze comum contendo esta orientação antes de ativá-las.
+Como C/D/E ainda não haviam iniciado e estavam idênticas ao freeze anterior, o Coordenador reemitiu as três branches por fast-forward no novo freeze comum `6852963c7aa9a1c83133239f0b929715fd316530`, sem perda de trabalho.
