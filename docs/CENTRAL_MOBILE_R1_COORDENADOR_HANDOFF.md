@@ -251,3 +251,40 @@ Resultado:
 A SAAS-P está em execução com quatro workers paralelos. Antes de qualquer integração Mobile que toque domínio compartilhado, reconsultar o estado vivo do SaaS.
 
 Como C/D/E ainda não haviam iniciado e estavam idênticas ao freeze anterior, o Coordenador reemitiu as três branches por fast-forward no novo freeze comum `6852963c7aa9a1c83133239f0b929715fd316530`, sem perda de trabalho.
+
+
+## 18. Revisão MOBILE-C — aprovada, integração aguardando MOBILE-E
+
+Worker:
+- branch `mobile-r1-c-intake-allocation`;
+- base `6852963c7aa9a1c83133239f0b929715fd316530`;
+- HEAD `6828273ee4c957fa92e42922363d2e1dcf296d89`;
+- PR #229.
+
+Classificação:
+**APROVADA / AGUARDANDO ORDEM DE INTEGRAÇÃO DA ONDA 2**.
+
+Evidências:
+- Application CI #928 SUCCESS;
+- Core Protection #215 SUCCESS;
+- Recovery #611 SUCCESS;
+- Legal #35 SUCCESS;
+- build/typecheck/diff hygiene/gates 16–21 SUCCESS;
+- ALLOCATE oficial preservado;
+- idempotência e concorrência preservadas;
+- barcode desconhecido criado somente de forma atômica no ALLOCATE;
+- nenhuma escrita client-side de saldo/ledger/barcode;
+- impacto SaaS funcional: nenhum.
+
+Performance:
+- home móvel baseline Integração 1 ~249 kB;
+- MOBILE-C ~253 kB;
+- incremento aproximado ~4 kB;
+- rota de alocação ~274 kB First Load.
+
+Decisão:
+- não devolver à worker;
+- não rebasear;
+- congelar o HEAD aprovado;
+- aguardar MOBILE-E;
+- integrar pela ordem preferencial E → C → D.
