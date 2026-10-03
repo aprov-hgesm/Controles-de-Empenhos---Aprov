@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial do Repositório
 
-Última atualização: **2026-10-02 — SAAS-P iniciada após auditoria P0 / Central Móvel R1 em desenvolvimento coordenado**
+Última atualização: **2026-10-02 — SAAS-P em execução; P2 VIP concluída; recovery produtivo configurado; P3 aguardando backups READY/restore; health preparado; Central Móvel R1 em desenvolvimento coordenado**
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Branch integradora do SaaS R1: `feat/saas-r1-commercializacao`
 Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A, SAAS-B, SAAS-C, SAAS-DL, SAAS-E, SAAS-DS e SAAS-I INTEGRADAS; candidato SaaS R1 combinado certificado no repositório; SAAS-P INICIADA para preparação e piloto controlado**
@@ -620,7 +620,7 @@ Frentes ativadas:
 - **SAAS-B — Billing/regularização:** **INTEGRADA** na branch coordenadora via PR #216; Plano Completo R$ 70, VIP/Isento, regularização pública e confirmação manual certificados;
 - **SAAS-C — Onboarding:** **INTEGRADA semanticamente** na branch coordenadora em `cf320ce3...`; reset self-service, troca de senha, mensagens humanas, Minha conta e checklist curto incorporados;
 - **SAAS-DL — Legal/aceite:** **INTEGRADA semanticamente** na branch coordenadora; Termos/Privacidade R1, versões legais, aceite tenant-scoped e Rules create-only incorporados; glue do `LegalAcceptanceGate` permanece deliberadamente para depois da SAAS-C/SAAS-I;
-- **SAAS-E — Operação/backup/uptime:** **INTEGRADA** via PR #215; health/recovery/runbooks certificados no repositório, com configuração externa de backup/restore/uptime ainda pendente.
+- **SAAS-E — Operação/backup/uptime:** **INTEGRADA** via PR #215; PITR, delete protection e backup diário já foram aplicados nos dois bancos em 2026-10-02; permanecem pendentes backup READY, restore real isolado e uptime/alertas externos.
 
 **Onda 2 — CONCLUÍDA**
 - **SAAS-DS — Segurança/enforcement:** **INTEGRADA** via PR #218 / squash `726436ac...`; suspensão/reativação server-side, revogação de sessões e enforcement da Central incorporados, sem publicação de Rules em produção.
@@ -1517,7 +1517,7 @@ Regras de largada:
 - cada chat deve ler os cinco documentos canônicos antes de alterar código;
 - nenhuma frente pode redefinir preço, trial, VIP, arquitetura de banco ou estados compartilhados;
 - SAAS-DS permanece bloqueada até B e C estarem integradas;
-- SAAS-I, SAAS-P e SAAS-J permanecem pendentes;
+- SAAS-I está **CONCLUÍDA E INTEGRADA**; SAAS-P está **EM EXECUÇÃO**; SAAS-J permanece **AGUARDANDO** o fechamento da SAAS-P;
 - handoff completo é obrigatório para integração;
 - somente o Coordenador integra;
 - nenhuma publicação em produção ocorre sem autorização explícita posterior do usuário.
@@ -1590,7 +1590,7 @@ Resultado integrado:
 - nenhum terceiro banco criado.
 
 Pendências externas obrigatórias antes do SaaS aberto:
-- ativar/verificar PITR e delete protection nos dois bancos;
+- **CONCLUÍDO em 2026-10-02:** ativar/verificar PITR e delete protection nos dois bancos;
 - criar/verificar backup diário nos dois bancos;
 - obter pelo menos um backup `READY` por banco;
 - executar restore real em database isolado;
@@ -1942,12 +1942,12 @@ O snapshot de abertura confirmou:
 - `main@e90f92ac...`;
 - PR #219 mergeado;
 - gates técnicos SAAS-I verdes;
-- pendências externas de backup/restore/uptime ainda abertas;
-- MOBILE-A e MOBILE-B em execução por PRs draft, sem integração funcional ainda na integradora Mobile.
+- recovery parcialmente concluído externamente: PITR, delete protection e schedules diários ativos; ainda pendem primeiro backup READY por banco, restore real isolado e uptime/alertas;
+- MOBILE-B já foi aprovada e integrada via PR #220 / squash `5edb19812...`; MOBILE-A permanece no PR #221 em correção/revisão controlada antes da Integração 1.
 
 A SAAS-P pode avançar em preparação, inventário e auditoria. Piloto real completo depende de participantes reais e de autorização explícita para as mudanças produtivas indispensáveis.
 
-### Atualização operacional — SAAS-P P2/P3 — 2026-10-02
+### Atualização operacional — SAAS-P P2/P3 — checkpoint histórico antes do apply — 2026-10-02
 
 A auditoria autenticada da coorte VIP legado foi executada com sucesso.
 
@@ -1959,12 +1959,12 @@ Coorte/allowlist congelada após revisão humana:
 
 Decisão permanente para `aprovisionamento-teste`: ele permanece VIP legado e serve como perfil real de teste funcional de usuário externo. Um eventual perfil de teste não-VIP será criado futuramente apenas para validar trial/cobrança e não altera esta coorte.
 
-A migração VIP produtiva ainda **não foi aplicada**. A próxima etapa de P2 é somente `dry-run` com allowlist explícita.
+Naquele checkpoint, a migração VIP produtiva ainda **não havia sido aplicada**. O estado posterior e definitivo está registrado em **SAAS-P — coorte VIP legado materializada** abaixo.
 
 A auditoria de recovery confirmou:
 
-- banco principal sem PITR, delete protection, agenda diária e backup READY;
-- `emprovex-warehouse` com delete protection já ativa, porém sem PITR, agenda diária e backup READY;
+- naquele checkpoint: banco principal sem PITR, delete protection, agenda diária e backup READY;
+- naquele checkpoint: `emprovex-warehouse` com delete protection já ativa, porém sem PITR, agenda diária e backup READY;
 - zero backups READY nos dois bancos no momento da auditoria.
 
 Também foi integrada a correção PILOT-OPS de compatibilidade do `gcloud` com Windows/PowerShell:
@@ -1976,7 +1976,7 @@ Também foi integrada a correção PILOT-OPS de compatibilidade do `gcloud` com 
 
 A exigência comercial permanece: o piloto precisa de pelo menos um workspace novo **não-VIP** para provar trial, pagamento e regularização; a coorte VIP legado não comprova cobrança.
 
-Dry-run da allowlist VIP legado foi concluído com sucesso em 2026-10-02, selecionando exatamente os 3 workspaces congelados e sem qualquer escrita. O `apply` permanece pendente de autorização explícita.
+Dry-run da allowlist VIP legado foi concluído com sucesso em 2026-10-02, selecionando exatamente os 3 workspaces congelados e sem qualquer escrita. **Naquele momento**, o `apply` permanecia pendente; ele foi posteriormente autorizado, executado e verificado, conforme a seção seguinte.
 
 ### SAAS-P — coorte VIP legado materializada — 2026-10-02
 
@@ -2012,3 +2012,19 @@ A política passa a ser:
 - `main` e produção permanecem protegidas por autorização explícita do fundador;
 - publicação deve ser consolidada em momentos deliberados de release, não a cada branch/PR.
 
+### Conferência de consistência SAAS-P / MOBILE-R1 — 2026-10-02
+
+Auditoria coordenadora após P2/P3 confirmou o estado corrente:
+
+- **SAAS-P:** em execução;
+- **P2 VIP legado:** concluída e verificada 3/3;
+- **P3 recovery:** PITR + delete protection + backup diário de 14 semanas ativos nos dois bancos; aguardando primeiro backup READY em cada banco, `recovery:verify` verde e restore real isolado;
+- **health:** PR #223 (`saas-p-ops-health-endpoint`) preparado diretamente de `main`, draft, mergeable e com Application CI, Core Protection e Recovery guardrails em SUCCESS; não mergeado e não publicado;
+- **Vercel:** preview com `build-rate-limit` é não bloqueante durante desenvolvimento; nenhuma promoção produtiva foi autorizada;
+- **main:** permanece na release Performance R3 `e90f92acae1514ee5cbc6ce95fed354bc1454330`;
+- **MOBILE-B:** PR #220 integrado na integradora Mobile via squash `5edb19812...`;
+- **MOBILE-A:** PR #221 continua aberto/draft e mergeable; HEAD auditado `44c4f013859230b5d490d2049c6b8dbf2cd3baa2`, com Application CI, Core Protection, Recovery e Legal em SUCCESS;
+- **Integração 1 Mobile:** continua dependente da aprovação final da MOBILE-A;
+- **SAAS-J:** ainda não iniciada; exige encerramento do piloto, recovery/uptime comprovados e reconciliação final SaaS ↔ Mobile.
+
+Esta conferência substitui snapshots antigos apenas como **estado corrente**; os registros anteriores permanecem como histórico datado.
