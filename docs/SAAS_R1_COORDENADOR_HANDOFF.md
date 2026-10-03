@@ -886,3 +886,33 @@ Pendências externas/RC:
 
 Nenhuma ação produtiva foi autorizada.
 
+## HARDEN-A — PARCIAL / CORREÇÕES SEGURAS INTEGRADAS
+
+A HARDEN-A foi auditada pelo Coordenador SaaS e aceita como **PARCIAL TECNICAMENTE SAUDÁVEL**.
+
+Referências:
+- worker HEAD: `00d6386d212d6c139eec243d00b61c11a13017b8`;
+- PR: `#240`;
+- base: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`.
+
+Resultado:
+- audit: 22 → 14;
+- lockfile compatível integrado semanticamente;
+- zero major upgrades;
+- zero `--force`;
+- gates verdes;
+- nenhuma regressão detectada.
+
+Integração:
+- lockfile: `040ec20c66a7d9c8e77070d12dd455fe43aef5d7`;
+- documento: `66dc540b7d50a451e96cd16558a9219743543cd7`.
+
+PASS continua bloqueado por:
+- jsPDF CRITICAL direto/runtime;
+- decisão coordenada Firebase/gRPC.
+
+Próximo movimento recomendado:
+abrir correções curtas e controladas, separadas da worker congelada original, e repetir regressão específica + audit/gates.
+
+Impacto MOBILE-R1: **DELTA COMPATÍVEL**.
+
