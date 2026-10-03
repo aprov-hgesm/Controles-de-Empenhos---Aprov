@@ -1,0 +1,312 @@
+# EMPROVEX — Central Móvel R1 — MOBILE-J — Certificação Final
+
+Data de abertura: **2026-10-03**
+Programa: **MOBILE-R1**
+Frente: **MOBILE-J — Certificação Final**
+Branch: `mobile-r1-j-final-certification`
+
+## 1. Estado de entrada
+
+A MOBILE-J foi formalmente liberada pelo Program Control após encerramento da MOBILE-I.
+
+Freeze de origem:
+`feat/central-mobile-r1@2108a21208765e0d4155399667cf571b0fa127ff`
+
+MOBILE-I:
+- worker: `mobile-r1-i-integration@ea5ad10054e2aea608e270a970fde723cde41d93`;
+- PR #245: MERGED;
+- squash: `3a5689e0e613adfb7dbf48ef8d44085ec6c951b3`;
+- estado: **PASS / APROVADA / INTEGRADA / ENCERRADA**.
+
+MOBILE-A → H:
+**PASS / INTEGRADAS**
+
+Integrações 1 → 3:
+**PASS**
+
+Blocker funcional Mobile de entrada:
+**NENHUM**
+
+Produção:
+**NÃO ALTERADA**
+
+## 2. Freeze da MOBILE-J
+
+Antes da criação da branch foi conferido o HEAD vivo de `feat/central-mobile-r1`.
+
+Resultado:
+- HEAD esperado: `2108a21208765e0d4155399667cf571b0fa127ff`;
+- HEAD vivo: `2108a21208765e0d4155399667cf571b0fa127ff`;
+- delta desde o checkpoint: **NENHUM**;
+- branch MOBILE-J preexistente: **NÃO**.
+
+A branch `mobile-r1-j-final-certification` foi criada exatamente desse SHA.
+
+Após o freeze:
+- não rebasear;
+- não incorporar outras branches por conta própria;
+- não fazer fast-forward sem reconciliação;
+- não reabrir desenvolvimento funcional sem regressão concreta.
+
+## 3. Natureza desta frente
+
+MOBILE-J é **certificação**, não feature.
+
+Objetivo:
+> certificar a Central Móvel A–I como um único produto, reunindo evidência automatizada, estrutural, física e de reconciliação SaaS, sem criar domínio, source of truth, saldo, ledger, autorização ou sessão paralelos.
+
+Não pertence ao escopo:
+- redesign;
+- nova wave funcional;
+- app nativo;
+- offline write queue;
+- alteração ampla de Rules;
+- refatoração de domínio;
+- HARDEN-A2;
+- HARDEN-B;
+- release/produção.
+
+## 4. Autoridades documentais consultadas
+
+Consultados:
+- `docs/EMPROVEX_MEMORIAL_OFICIAL.md`;
+- `docs/CENTRAL_MOBILE_R1_PLANO_MESTRE.md`;
+- `docs/CENTRAL_MOBILE_R1_EXECUCAO_PARALELA.md`;
+- `docs/CENTRAL_MOBILE_R1_INTEGRATION_STATUS.md`;
+- `docs/CENTRAL_MOBILE_R1_COORDENADOR_HANDOFF.md`;
+- `docs/CENTRAL_MOBILE_R1_INTEGRATION_1_VALIDATION.md`;
+- `docs/CENTRAL_MOBILE_R1_INTEGRATION_2_VALIDATION.md`;
+- `docs/CENTRAL_MOBILE_R1_INTEGRATION_3_VALIDATION.md`;
+- `docs/CENTRAL_MOBILE_R1_PROGRAM_CONTROL_CHECKPOINT_POST_INTEGRATION_3.md`;
+- `docs/CENTRAL_MOBILE_R1_PROGRAM_CONTROL_CHECKPOINT_POST_MOBILE_I.md`;
+- `docs/CENTRAL_MOBILE_R1_WAVE3_FREEZE.md`;
+- `docs/TESTING_POLICY.md`;
+- `docs/DEVELOPMENT_CI_WORKFLOW.md`.
+
+Observação:
+`docs/EMPROVEX_PROGRAM_CONTROL.md` não existe no freeze atual. A autoridade operacional equivalente está nos checkpoints específicos de Program Control da MOBILE-R1 e na ordem formal de liberação da MOBILE-J.
+
+## 5. Baseline automatizado herdado da MOBILE-I
+
+No HEAD auditado da MOBILE-I `ea5ad10054e2aea608e270a970fde723cde41d93`:
+
+- Application CI #945 — SUCCESS;
+- Core Protection #232 — SUCCESS;
+- Recovery #623 — SUCCESS;
+- Legal Validation #47 — SUCCESS;
+- Production Build — SUCCESS;
+- Final TypeScript — SUCCESS;
+- Diff Hygiene — SUCCESS;
+- multi-tenant security — SUCCESS;
+- external workspace security — SUCCESS;
+- scanner — SUCCESS;
+- Integration 1 — SUCCESS;
+- physical query — SUCCESS;
+- MOBILE-C — SUCCESS;
+- Integration 2 — SUCCESS;
+- MOBILE-F — SUCCESS;
+- MOBILE-G — SUCCESS;
+- MOBILE-H — SUCCESS;
+- Integration 3 — SUCCESS;
+- MOBILE-I integrated product guard — SUCCESS.
+
+O squash e os commits posteriores da integradora não introduziram delta runtime em relação ao código auditado.
+
+## 6. Baseline de performance
+
+Valores certificados pós-Integração 3/MOBILE-I:
+
+| Rota | First Load |
+| --- | ---: |
+| `/central-mobile` | 257 kB |
+| `/central-mobile/alocar` | 275 kB |
+| `/central-mobile/transferir` | 261 kB |
+| `/central-mobile/inventario` | 271 kB |
+| `/central-mobile/saida` | 265 kB |
+| `/central-mobile/conferir` | 260 kB |
+| Shared First Load | 104 kB |
+
+MOBILE-J deve registrar novamente esses valores quando houver HEAD final que justifique novo build/gate.
+
+## 7. Reconciliação SaaS na abertura
+
+Snapshot funcional anteriormente auditado:
+`feat/saas-r1-commercializacao@750d4c69cd3f233938631bcdd22db7e397ddc50e`
+
+HEAD SaaS vivo na abertura da MOBILE-J:
+`b95b5b050a9f08df2df77d699b066ea86e818146`
+
+Comparação:
+- ahead_by: 1;
+- arquivo alterado: somente `docs/EMPROVEX_MEMORIAL_OFICIAL.md`;
+- delta runtime: **NENHUM**;
+- classificação: **SEM NOVO DELTA RUNTIME**.
+
+HARDEN-A2:
+- branch encontrada na abertura: **NENHUMA**;
+- PR HARDEN-A2 aberto encontrado: **NENHUM**;
+- estado: **NÃO INICIADA neste checkpoint**.
+
+A reconciliação final deve ser repetida antes de eventual recomendação de PASS FINAL.
+
+## 8. CT-01
+
+Contrato obrigatório do futuro candidato:
+
+`camera=(self), microphone=(), geolocation=()`
+
+MOBILE-J:
+- preserva o requisito;
+- não altera o contrato global silenciosamente;
+- não assume ownership da composição SaaS/RC;
+- deve validar o header HTTP efetivo no candidato publicado quando ele existir.
+
+## 9. Matriz de validação física
+
+### Android / Chrome
+
+| Cenário | Estado | Evidência |
+| --- | --- | --- |
+| câmera permitida | PENDENTE | aparelho real |
+| câmera negada | PENDENTE | aparelho real |
+| câmera indisponível | PENDENTE | aparelho real |
+| fallback manual | PENDENTE | aparelho real |
+| abrir/fechar câmera | PENDENTE | aparelho real |
+| troca de rota e retorno | PENDENTE | aparelho real |
+| reentrada da câmera | PENDENTE | aparelho real |
+| múltiplas leituras | PENDENTE | aparelho real |
+| double scan | PENDENTE | aparelho real |
+| cooldown | PENDENTE | aparelho real |
+| luz baixa/reflexo | PENDENTE | aparelho real |
+| perda/retorno de internet | PENDENTE | aparelho real |
+
+### iPhone / Safari
+
+Estado inicial:
+**PENDENTE — depende de aparelho real disponível.**
+
+Não inferir PASS a partir do Android.
+
+## 10. Code128 físico
+
+Presets a certificar:
+
+| Preset | Impressão | Leitura | Distância/enquadramento | Resultado |
+| --- | --- | --- | --- | --- |
+| COMPACT | PENDENTE | PENDENTE | PENDENTE | PENDENTE |
+| MEDIUM | PENDENTE | PENDENTE | PENDENTE | PENDENTE |
+| LARGE | PENDENTE | PENDENTE | PENDENTE | PENDENTE |
+
+A visualização digital não substitui etiqueta impressa.
+
+## 11. Feedback físico
+
+Pendências obrigatórias em aparelho real:
+- som de sucesso;
+- som de erro;
+- vibração;
+- feedback visual;
+- leitura duplicada;
+- cooldown;
+- ausência de feedback enganoso em falha de persistência.
+
+Estado:
+**PENDENTE**
+
+## 12. Jornada física ponta a ponta
+
+Jornada a certificar:
+
+```text
+LOGIN
+→ CENTRAL MOBILE
+→ LER MATERIAL / POSIÇÃO
+→ ALLOCATE
+→ CONSULTA FÍSICA
+→ TRANSFER
+→ CONFERÊNCIA
+→ INVENTÁRIO
+→ OUTBOUND
+→ CONSULTA FINAL
+→ CENTRAL DESKTOP
+→ COERÊNCIA DESKTOP ↔ MOBILE
+```
+
+Estado:
+**PENDENTE DE EXECUÇÃO FÍSICA**
+
+Invariantes a observar:
+- mesmo material;
+- mesmo lote;
+- mesma posição;
+- mesmo saldo;
+- mesmo ledger;
+- nenhuma fonte paralela.
+
+## 13. Critérios de domínio a reconfirmar
+
+### ALLOCATE
+- autoridade canônica;
+- pending quantity;
+- lote/validade;
+- posição revalidada;
+- sem write paralelo.
+
+### TRANSFER
+- origem/destino válidos;
+- saldo revalidado;
+- total agregado preservado;
+- idempotência.
+
+### INVENTÁRIO
+- salvar contagem não altera saldo;
+- ajuste somente após confirmação;
+- `INVENTORY_ADJUSTMENT` canônico;
+- stale/revision protegidos.
+
+### OUTBOUND
+- sem saldo negativo;
+- posição/lote/FEFO;
+- idempotência/replay;
+- write oficial único.
+
+### CONFERÊNCIA
+- read-only;
+- divergência não corrige silenciosamente;
+- correção direciona para TRANSFER oficial.
+
+## 14. Estado permitido nesta etapa
+
+Enquanto faltarem evidências físicas e a última reconciliação SaaS, a classificação máxima é:
+
+**PARCIAL TECNICAMENTE SAUDÁVEL / CERTIFICAÇÃO EM EXECUÇÃO / AGUARDANDO EVIDÊNCIA FÍSICA E RECONCILIAÇÃO FINAL SAAS**
+
+PASS FINAL não pode ser inferido a partir do CI.
+
+## 15. Próximas ações
+
+1. manter runtime funcional congelado;
+2. abrir PR draft documental da MOBILE-J;
+3. preservar evidências automatizadas já certificadas;
+4. executar validação física em Android;
+5. executar iPhone/Safari se aparelho estiver disponível;
+6. imprimir e testar Code128 COMPACT/MEDIUM/LARGE;
+7. executar jornada física ponta a ponta;
+8. registrar nova performance caso exista delta que justifique build;
+9. obter HEAD SaaS final;
+10. reconciliar contratos compartilhados;
+11. repetir gates afetados se houver delta;
+12. entregar handoff final ao Program Control.
+
+## 16. Produção
+
+**NÃO ALTERADA**
+
+Esta frente não autoriza:
+- merge em `main`;
+- deploy de produção;
+- Vercel production;
+- Rules produtivas;
+- migração;
+- restore;
+- lançamento Mobile.
