@@ -687,3 +687,23 @@ Workspace oficial preferencial para testes disruptivos:
 - `aprovisionamento-teste`.
 
 Qualquer cenário com risco deve ser deslocado para esse workspace ou P-03 controlado, nunca para P-01/P-02.
+
+### Execução real SAAS-P — pacote preparado
+
+Documentos operacionais:
+- `docs/SAAS_P_EXECUCAO_REAL_PILOTO.md`;
+- `docs/SAAS_P_REGISTRO_EXECUCAO.md`.
+
+Próxima execução coordenada:
+1. criar/usar worktree separado `emprovex-saas-pilot` para não interferir no Mobile;
+2. capturar T0;
+3. observar P-01/P-02 sem interrupção;
+4. usar `aprovisionamento-teste` para J15–J20 somente com autorização específica;
+5. selecionar P-03 real;
+6. fechar recovery quando houver backup READY;
+7. incluir health/uptime na futura janela controlada de publicação;
+8. coletar T1/T2;
+9. reconciliar Mobile e só então avaliar SAAS-J.
+
+Não usar P-01/P-02 para testes disruptivos.
+
