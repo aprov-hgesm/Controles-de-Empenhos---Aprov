@@ -32,7 +32,7 @@ Dependência:
 | MOBILE-0 Baseline/contratos | integradora | candidato SAAS-I verde | **CONGELADA** | contratos/documentação canônicos |
 | MOBILE-A Plataforma/Scanner | `mobile-r1-a-platform-scanner` | 0 | **APROVADA COM PENDÊNCIA RUNTIME / INTEGRADA** | PR #221 / squash `19fc6be4...` |
 | MOBILE-B Etiquetas/Resolver | `mobile-r1-b-location-labels` | 0 | **APROVADA E INTEGRADA** | PR #220 / squash `5edb19812...` |
-| MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **LIBERADA / BRANCH CRIADA** | base `6852963c7...`; aguardando worker |
+| MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **APROVADA / AGUARDANDO INTEGRAÇÃO** | PR #229; HEAD `6828273e...`; integrar após MOBILE-E |
 | MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **LIBERADA / BRANCH CRIADA** | base `6852963c7...`; aguardando worker |
 | MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **LIBERADA / BRANCH CRIADA** | base `6852963c7...`; aguardando worker |
 | MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **BLOQUEADA** | — |
@@ -284,3 +284,41 @@ Regra nova permanente:
 - nunca sincronizar integradoras por merge/rebase bruto.
 
 A base anterior da Onda 2 será substituída por novo freeze documental para que C/D/E recebam estas orientações antes de iniciar.
+
+
+### Revisão MOBILE-C — 2026-10-02
+
+- branch: `mobile-r1-c-intake-allocation`;
+- base: `6852963c7aa9a1c83133239f0b929715fd316530`;
+- HEAD: `6828273ee4c957fa92e42922363d2e1dcf296d89`;
+- PR #229: draft, mergeable, não integrado;
+- classificação: **APROVADA / AGUARDANDO ORDEM DE INTEGRAÇÃO**;
+- Application CI #928: SUCCESS;
+- Core Protection #215: SUCCESS;
+- Recovery #611: SUCCESS;
+- SAAS-DL Legal #35: SUCCESS;
+- build/typecheck/diff hygiene/release gates 16–21: SUCCESS.
+
+Contratos confirmados:
+- ALLOCATE oficial e transacional;
+- snapshot concorrente;
+- idempotência por operationId;
+- barcode desconhecido somente no commit atômico;
+- conflito de material bloqueado;
+- EPX1/resolver oficial;
+- nenhuma escrita client-side de saldo/ledger/barcode;
+- nenhuma fonte de verdade paralela.
+
+Performance:
+- baseline Integração 1 da home móvel: ~249 kB First Load;
+- MOBILE-C: 253 kB;
+- delta aproximado: +4 kB;
+- rota /central-mobile/alocar: 274 kB First Load.
+
+Impacto SAAS-R1:
+- sem impacto funcional;
+- package/CI apenas registram gates da MOBILE-C;
+- nenhuma reconciliação SaaS necessária neste ponto.
+
+Decisão de integração:
+**AGUARDAR MOBILE-E**, preservando a ordem preferencial E → C → D definida no Plano Mestre.
