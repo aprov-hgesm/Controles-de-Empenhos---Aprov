@@ -606,3 +606,26 @@ Estado:
 
 Antes de executar J01, o Coordenador precisa confirmar participante P-03 real e janela produtiva compatível/autorizada.
 
+### PILOT-D — recebida / matriz integrada semanticamente
+
+Worker HEAD: `ae8ae4a810da24a273e0231ba5f31c915720d504`
+PR #228: fechado sem merge por conflito documental com a integradora já avançada.
+
+Integrações:
+- matriz: `7d7e697828ad4bd541344512c9d96acf7bb8158d`;
+- handoff: `4a746a6997a1484901813775f929a3c24105b404`.
+
+A matriz foi validada com **24 jornadas únicas, J01–J24**.
+
+Fotografia corrente:
+- 2 PASS;
+- 13 PREPARADO;
+- 7 BLOQUEADO;
+- 1 EM EXECUÇÃO;
+- 1 N/A;
+- 0 FAIL.
+
+A diferença em relação ao fechamento original da D decorre apenas do recebimento posterior da PILOT-B e da evidência J16 já aceita da PILOT-A. Nenhum PASS novo foi criado por inferência.
+
+SAAS-J continua bloqueada por evidência real incompleta.
+
