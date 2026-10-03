@@ -249,3 +249,28 @@ As quatro branches devem nascer do mesmo HEAD congelado da integradora. A criaç
 
 O Memorial Oficial contém a versão normativa expandida do escopo, ownership, gates, critérios de status, handoff e integração.
 
+## Checkpoint — HARDEN-D concluída
+
+HARDEN-D: **PASS TÉCNICO**
+
+Reconciliação contra:
+- SaaS auditado: `1216f8cf97edec55fd94c98e39f156a6f76cb056`;
+- Mobile estável: `7b745fa0b7979e643b83b7de94dd96a0290930ab`.
+
+Resultado:
+- nenhum conflito funcional material;
+- contratos compartilhados principais preservados;
+- deltas Mobile classificados como compatíveis;
+- uma correção transversal obrigatória antes do RC.
+
+### CT-01
+
+Aplicar no candidato global:
+`Permissions-Policy: camera=(self), microphone=(), geolocation=()`
+
+Não ampliar microfone nem geolocalização.
+
+Validar no header HTTP efetivo do candidato publicado.
+
+A conclusão da HARDEN-D não congela o RC e não substitui HARDEN-A/B/C.
+
