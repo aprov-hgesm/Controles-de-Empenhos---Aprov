@@ -298,6 +298,64 @@ PASS FINAL não pode ser inferido a partir do CI.
 11. repetir gates afetados se houver delta;
 12. entregar handoff final ao Program Control.
 
+## 17. Evidências coletadas pela MOBILE-J na abertura
+
+PR da certificação:
+- **#246** — `MOBILE-J: certificação final da Central Móvel R1`;
+- estado: **OPEN / DRAFT / MERGEABLE**;
+- base: `feat/central-mobile-r1@2108a21208765e0d4155399667cf571b0fa127ff`;
+- primeiro commit MOBILE-J: `bf39df76320941eeda30bc6f9c3857225e9ead61`;
+- diff inicial: **1 arquivo documental / 0 delta runtime**.
+
+Política de CI:
+- o diff MOBILE-J atual está restrito a `docs/**`;
+- `Application CI` não foi disparado, coerente com a política `paths-ignore: docs/**`;
+- nenhum arquivo artificial de runtime/tooling foi modificado apenas para forçar CI;
+- a evidência automatizada continua ancorada no HEAD MOBILE-I certificado porque o código executável é idêntico.
+
+GitHub Actions reconfirmado no HEAD MOBILE-I:
+- Application CI run `37115147825`: **SUCCESS**;
+- Recovery run `37115147839`: **SUCCESS**;
+- EMPROVEX Core Protection run `37115147823`: **SUCCESS**;
+- SAAS-DL Legal Validation run `37115147827`: **SUCCESS**.
+
+CT-01 no código:
+- `next.config.ts` contém exatamente `camera=(self), microphone=(), geolocation=()`;
+- classificação estrutural: **PASS**;
+- validação do header HTTP efetivamente servido: **PENDENTE**.
+
+Scanner no código:
+- decoder permanece lazy via `await import('./scannerDecoder')`;
+- `facingMode: { ideal: 'environment' }`;
+- cooldown padrão: `900 ms`;
+- teardown usa `session.stop()`;
+- `stopCamera()` reseta cooldown;
+- fallback manual usa formulário `onSubmit`;
+- vibração opcional usa `navigator.vibrate(35)`;
+- feedback sonoro usa `AudioContext`;
+- formatos declarados: EAN-13, EAN-8, UPC-A, UPC-E, CODE-128, CODE-39, ITF, QR Code e Data Matrix;
+- dependências preservadas: `@zxing/browser ^0.1.5` e `@zxing/library ^0.21.3`.
+
+Etiquetas no código:
+- presets `COMPACT`, `MEDIUM` e `LARGE` permanecem presentes;
+- etiquetas de DEPOT/LOCAL/SUBPOSITION usam `physicalBarcode`;
+- LOCAL/SUBPOSITION geram identidade física estável;
+- PDF desenha Code128 pelo contrato de `locationBarcode`;
+- evidência física de impressão/leitura continua **PENDENTE**.
+
+Guard final:
+- `verify:mobile-r1-integration-final` continua presente;
+- verifica scanner/resolver, ALLOCATE, TRANSFER, inventário, OUTBOUND, conferência read-only, CT-01 e registro dos gates no Application CI.
+
+Preview Vercel do PR #246:
+- status de commit `Vercel`: **SUCCESS**;
+- o deployment foi criado pelo projeto EMPROVEX;
+- a conexão Vercel disponível ao executor não possui acesso ao time/projeto correspondente, portanto o conteúdo/header do preview não pôde ser consultado diretamente;
+- esta limitação não foi convertida em PASS físico ou PASS de header.
+
+Classificação após evidência automatizada/estrutural:
+**PARCIAL TECNICAMENTE SAUDÁVEL / EVIDÊNCIA AUTOMATIZADA E ESTRUTURAL PRESERVADA / AGUARDANDO CERTIFICAÇÃO FÍSICA E RECONCILIAÇÃO SAAS FINAL**.
+
 ## 16. Produção
 
 **NÃO ALTERADA**
