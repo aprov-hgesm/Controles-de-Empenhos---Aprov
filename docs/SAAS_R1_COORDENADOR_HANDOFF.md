@@ -948,3 +948,31 @@ Firebase/Firestore/gRPC:
 
 Ao concluir, entregar HEAD/PR, diff, audit antes/depois, matriz de PDFs, regressões, impacto Mobile e recomendação.
 
+## HARDEN-A1 — SECURITY PASS / VISUAL PENDENTE
+
+A HARDEN-A1 foi auditada tecnicamente e permanece **PARCIAL** apenas por validação visual/manual pendente.
+
+Referências:
+- branch: `saas-harden-a-jspdf-security`;
+- HEAD: `5ae4984bb9580faf5197737eeeeb0d5cf5aae838`;
+- PR: `#244`;
+- base: `9a294bc543ec7150b9144ed96e767a161864d72f`.
+
+Confirmado:
+- jsPDF 4.2.1;
+- AutoTable 5.0.8;
+- CRITICAL eliminado;
+- regressão técnica PDF 7/7 PASS;
+- lazy loading preservado;
+- gates principais verdes;
+- preview automático READY;
+- produção não alterada.
+
+Próximo gate:
+validação manual dos 5 fluxos PDF representativos.
+
+HARDEN-A2 permanece bloqueada até:
+1. validação visual sem regressão;
+2. aceite do Coordenador SaaS;
+3. integração semântica da A1.
+
