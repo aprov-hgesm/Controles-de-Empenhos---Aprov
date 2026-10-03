@@ -317,16 +317,25 @@ Branch:
 Base congelada da MOBILE-I:
 `816c1c07cf251ce3705098a3a65b9d84e2fc8614`.
 
+HEAD auditado:
+`ea5ad10054e2aea608e270a970fde723cde41d93`.
+
+PR:
+`#245`.
+
+Squash de integração:
+`3a5689e0e613adfb7dbf48ef8d44085ec6c951b3`.
+
 Status:
-**ATIVADA PELO PROGRAM CONTROL**.
+**CONCLUÍDA / APROVADA / INTEGRADA**.
 
-Somente integração/glue/regressão.
+Escopo executado:
+- integração/glue/regressão;
+- correção mínima da navegação da consulta física;
+- guard final A–H;
+- reconciliação SaaS final.
 
-Não adicionar feature.
-
-Obrigatório revalidar upstream SaaS antes do fechamento.
-
-MOBILE-J continua bloqueada até checkpoint pós-MOBILE-I.
+MOBILE-J continua bloqueada até decisão explícita do Program Control sobre o checkpoint pós-MOBILE-I.
 
 ## 16. MOBILE-J
 
