@@ -733,3 +733,43 @@ MOBILE-I não deve:
 Ao concluir:
 - emitir checkpoint pós-MOBILE-I ao Program Control;
 - não liberar MOBILE-J autonomamente.
+
+
+## 33. MOBILE-I integrada / checkpoint ao Program Control
+
+MOBILE-I:
+- worker `mobile-r1-i-integration`;
+- base `816c1c07cf251ce3705098a3a65b9d84e2fc8614`;
+- HEAD auditado `ea5ad10054e2aea608e270a970fde723cde41d93`;
+- PR #245;
+- squash `3a5689e0e613adfb7dbf48ef8d44085ec6c951b3`;
+- classificação: **APROVADA / INTEGRADA**.
+
+Auditoria confirmou:
+- única correção funcional: card de consulta física na Home;
+- MOBILE-E já existia e recebeu apenas navegação interna;
+- guard final A–H aditivo;
+- nenhum novo domínio/schema/API/source of truth;
+- CT-01 não alterada;
+- contratos críticos SaaS↔Mobile continuam compatíveis;
+- package/CI apenas tooling aditivo.
+
+Gates:
+- App CI #945 SUCCESS;
+- Core #232 SUCCESS;
+- Recovery #623 SUCCESS;
+- Legal #47 SUCCESS;
+- build/typecheck/diff hygiene SUCCESS;
+- segurança multi-tenant/external workspace SUCCESS;
+- Integration 1/2/3 + F/G/H + MOBILE-I guard SUCCESS.
+
+SaaS:
+- HEAD `750d4c69cd3f233938631bcdd22db7e397ddc50e`;
+- HARDEN-A1 Security PASS / visual pendente;
+- HARDEN-B parcial / recovery real pendente;
+- nenhum novo delta funcional Mobile.
+
+Próxima ação:
+- enviar checkpoint pós-MOBILE-I ao Program Control;
+- não liberar MOBILE-J autonomamente;
+- preservar pendências físicas e CT-01.
