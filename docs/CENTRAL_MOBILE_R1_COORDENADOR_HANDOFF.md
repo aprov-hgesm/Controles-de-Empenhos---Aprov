@@ -634,3 +634,61 @@ Legal #41:
 - reexecutar na Integração 3.
 
 Com F/G/H agora aprovadas, iniciar comparação de sobreposição e composição semântica da Integração 3.
+
+
+## 30. Integração 3 certificada
+
+F/G/H foram revisadas individualmente e integradas semanticamente.
+
+PR técnico:
+#243 — MOBILE-R1 — Integração 3: F + G + H.
+
+HEAD certificado:
+`e40c80d73cf9c444ec0573503a63af18f141bd11`.
+
+Squash:
+`f11b7bf29f8b3fe9525ff80880f4e0f87cd1c67e`.
+
+Ordem semântica:
+H → F → G.
+
+Workers encerradas sem merge direto:
+- F PR #239;
+- H PR #241;
+- G PR #242.
+
+Gates:
+- App CI #940 SUCCESS;
+- Core #227 SUCCESS;
+- Recovery #618 SUCCESS;
+- Legal #42 SUCCESS;
+- F/G/H + Integration 3 tests/guards SUCCESS;
+- build/typecheck/diff hygiene SUCCESS.
+
+Métricas:
+- Central Mobile 257 kB;
+- inventário 271 kB;
+- saída 265 kB;
+- conferir 260 kB;
+- transferir 261 kB;
+- alocar 275 kB;
+- Shared 104 kB.
+
+## 31. Checkpoint obrigatório ao Program Control
+
+Novo delta funcional SaaS↔Mobile:
+**NENHUM**.
+
+Contratos críticos idênticos:
+Auth/Legal/workspace/UG/sessão/feature flag/Rules/layout/inventoryRepository/outboundRepository.
+
+Deltas conhecidos:
+- CT-01: preexistente, propriedade do RC;
+- WarehouseProtectedSurface: preexistente/aceito HARDEN-D;
+- package + Application CI: **novo delta de tooling aditivo da Onda 3**.
+
+Classificação:
+**NOVA RECONCILIAÇÃO / DECISÃO DO PROGRAM CONTROL OBRIGATÓRIA ANTES DA MOBILE-I**.
+
+Não ativar MOBILE-I/J até retorno do Coordenador Geral.
+Produção permanece não alterada.
