@@ -554,3 +554,22 @@ Estado desta fase:
 
 Nenhuma nova feature foi criada para esta fase.
 
+### T0 técnico — PASS
+
+Execução local em worktree isolado `emprovex-saas-pilot` sobre `f25089b8`.
+
+Guards: **6/6 READY**
+- workspace telemetry;
+- global Cloud Monitoring;
+- consolidated usage;
+- telemetry fidelity;
+- consumption regression;
+- UG telemetry v2.
+
+Conclusão:
+- arquitetura de medição do piloto: **PASS**;
+- nenhum listener administrativo adicional;
+- nenhuma alteração produtiva;
+- J22 permanece PREPARADO até captura de números reais T0/T1/T2 e custo no Google Cloud Billing.
+
+`npm ci` reportou advisories de dependências; nenhuma correção automática foi aplicada nesta fase.
