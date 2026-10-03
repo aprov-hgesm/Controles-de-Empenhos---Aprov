@@ -1,10 +1,10 @@
 export async function loadJsPdf() {
-  const module = await import('jspdf');
-  return module.default;
+  const { jsPDF } = await import('jspdf');
+  return jsPDF;
 }
 
 export async function loadJsPdfWithAutoTable() {
-  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+  const [{ jsPDF }, { autoTable }] = await Promise.all([
     import('jspdf'),
     import('jspdf-autotable'),
   ]);
