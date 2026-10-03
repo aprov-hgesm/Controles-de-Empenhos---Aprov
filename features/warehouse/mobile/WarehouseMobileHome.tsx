@@ -20,7 +20,7 @@ const FUTURE_CAPABILITIES = [
     label: 'Transferir material',
     description: 'Origem → produto → destino.',
     Icon: Warehouse,
-    href: null,
+    href: '/central-mobile/transferir',
   },
   {
     label: 'Consultar localização',
@@ -123,7 +123,7 @@ export function WarehouseMobileHome() {
       <WarehouseMobileLocationFoundationCheck />
 
       <p className="px-2 text-center text-[11px] font-semibold leading-5 text-slate-500">
-        A alocação móvel reutiliza o ALLOCATE oficial. Transferência, consulta operacional completa, inventário, saída e conferência permanecem nas respectivas frentes.
+        Alocação e transferência reutilizam operações oficiais. A consulta física permanece read-only; inventário, saída e conferência continuam reservados às próximas frentes.
       </p>
     </div>
   );
