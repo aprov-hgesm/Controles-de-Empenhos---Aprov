@@ -2303,3 +2303,25 @@ Regra:
 `aprovisionamento-teste` passa a ser o **workspace preferencial para testes disruptivos**, incluindo J15–J20, revogação de sessão, bloqueio e reativação, desde que a operação específica seja autorizada quando necessário.
 
 Essa decisão substitui qualquer orientação genérica anterior que permitisse usar P-01/P-02 em cenários de indisponibilidade.
+
+### SAAS-P — planejamento completo convertido em execução operacional
+
+O planejamento da fase real do piloto foi convertido em dois artefatos canônicos:
+
+- `docs/SAAS_P_EXECUCAO_REAL_PILOTO.md` — runbook completo de T0, participantes, lifecycle, P-03, recovery, health, T1/T2 e gate SAAS-J;
+- `docs/SAAS_P_REGISTRO_EXECUCAO.md` — ficha auditável para registrar evidências reais sem segredos.
+
+A execução passa a seguir estas regras:
+
+- P-01 = `aprovisionamento-3-gac-ap`, protegido e não disruptivo;
+- P-02 = `aprovisionamento-2-b-fv`, protegido e não disruptivo;
+- `aprovisionamento-teste` = ambiente preferencial para J15–J20 e outros testes de indisponibilidade;
+- P-03 = futuro participante real não-VIP;
+- comandos locais do piloto devem usar worktree separado para não interferir com a MOBILE-R1;
+- T0/T1/T2 usam fontes existentes e não criam listeners adicionais;
+- recovery não repete apply;
+- health permanece estacionado até janela de publicação autorizada;
+- SAAS-J continua bloqueada até evidência real suficiente.
+
+O que ainda não pode ser executado automaticamente pelo Coordenador sem ação externa: valores privados T0/T1/T2, uso humano P-01/P-02, seleção/pagamento P-03, suspensão real do workspace de teste, restore real e configuração externa de uptime/alerta.
+
