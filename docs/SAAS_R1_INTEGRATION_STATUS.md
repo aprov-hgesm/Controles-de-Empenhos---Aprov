@@ -712,3 +712,63 @@ MOBILE-F/G/H permanecem bloqueadas pelo Program Control até handoff HARDEN-D e 
 
 Nenhuma ação produtiva foi autorizada.
 
+## HARDEN-D — ACEITAÇÃO COORDENADORA
+
+Status final: **PASS TÉCNICO / ENCERRADA NO PROGRAMA SAAS R1**
+
+Worker:
+- branch: `saas-harden-d-mobile-reconciliation`
+- base congelada: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`
+- HEAD final: `fb7b5006d13cd09b247d6c5d0cd39d6a0b950f02`
+- PR: `#236`
+
+Auditoria do Coordenador SaaS confirmou:
+- PR draft, aberto e mergeable no momento da auditoria;
+- 1 commit;
+- 1 arquivo;
+- apenas `docs/SAAS_R1_HARDEN_D_MOBILE_RECONCILIATION.md`;
+- 439 linhas adicionadas;
+- nenhum runtime alterado;
+- intervalo SaaS `4848643b... → 1216f8cf...` exclusivamente documental;
+- blobs de Legal Gate, Firestore Rules, billing e platformBillingStore idênticos entre os alvos auditados;
+- diferença efetiva confirmada em `next.config.ts` somente no contrato de câmera.
+
+Matriz transversal aceita:
+- Auth — SEM DELTA;
+- Workspace/UG — SEM DELTA;
+- Sessão/Lease/Heartbeat — SEM DELTA;
+- Legal Gate — SEM DELTA;
+- Billing/Lifecycle — SEM DELTA;
+- `warehouseAccess` — SEM DELTA;
+- Firestore Rules — SEM DELTA;
+- Schema da Central — DELTA COMPATÍVEL;
+- Source of Truth — DELTA COMPATÍVEL;
+- Shell/Guards — DELTA COMPATÍVEL;
+- APIs/serviços compartilhados — DELTA COMPATÍVEL;
+- `next.config.ts` — DELTA COMPATÍVEL / CORREÇÃO NECESSÁRIA;
+- Segurança Browser — DELTA COMPATÍVEL;
+- Telemetria — DELTA COMPATÍVEL.
+
+Conflitos funcionais materiais: **NENHUM**.
+
+### CT-01 — obrigatória antes do RC
+
+Contrato global a preservar:
+`camera=(self), microphone=(), geolocation=()`
+
+Ownership:
+**Integração SaaS / composição do Release Candidate**.
+
+A HARDEN-D não deve ser usada para aplicar a correção.
+
+Antes do freeze do RC:
+1. aplicar somente o delta necessário em `next.config.ts`;
+2. preservar microfone e geolocalização bloqueados;
+3. repetir gates afetados;
+4. validar o header HTTP efetivo no candidato publicado.
+
+Integração documental semântica:
+`22459625475cb155596e507663874de9896d001d`
+
+Nenhum merge da branch worker foi realizado.
+
