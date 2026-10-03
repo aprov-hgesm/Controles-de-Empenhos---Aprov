@@ -288,3 +288,25 @@ Decisão:
 - congelar o HEAD aprovado;
 - aguardar MOBILE-E;
 - integrar pela ordem preferencial E → C → D.
+
+
+## 19. Integração MOBILE-E — concluída
+
+MOBILE-E:
+- worker HEAD `fff6fa3ca7588cec4ecf0c3c76d141dda357c626`;
+- PR #230;
+- squash `e768ee5f554dc3016951bd7cebc54c69feba3bd3`;
+- classificação: **APROVADA E INTEGRADA**.
+
+Evidências:
+- Application CI #930 SUCCESS;
+- Core Protection #217 SUCCESS;
+- Recovery #612 SUCCESS;
+- Legal #36 SUCCESS;
+- read-only bounded/on-demand;
+- 0 listeners;
+- nenhum write path;
+- sem impacto SaaS funcional.
+
+Próxima integração da ordem preferencial:
+**MOBILE-C**, já aprovada no HEAD `6828273ee4c957fa92e42922363d2e1dcf296d89`.
