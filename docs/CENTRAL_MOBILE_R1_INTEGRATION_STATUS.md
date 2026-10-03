@@ -33,7 +33,7 @@ Dependência:
 | MOBILE-A Plataforma/Scanner | `mobile-r1-a-platform-scanner` | 0 | **APROVADA COM PENDÊNCIA RUNTIME / INTEGRADA** | PR #221 / squash `19fc6be4...` |
 | MOBILE-B Etiquetas/Resolver | `mobile-r1-b-location-labels` | 0 | **APROVADA E INTEGRADA** | PR #220 / squash `5edb19812...` |
 | MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **APROVADA E INTEGRADA SEMANTICAMENTE** | worker PR #229; integração PR #232 / squash `1c523fe2...` |
-| MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **LIBERADA / BRANCH CRIADA** | base `6852963c7...`; aguardando worker |
+| MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **DEVOLVIDA — CORREÇÃO DE INTEGRIDADE** | PR #231; fail-closed de lotes + limite 24 + namespace produto |
 | MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **APROVADA E INTEGRADA** | PR #230 / squash `e768ee5f...` |
 | MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **BLOQUEADA** | — |
 | MOBILE-G Saída | `mobile-r1-g-outbound` | Int.2 | **BLOQUEADA** | — |
@@ -402,3 +402,31 @@ Estado da Onda 2:
 - MOBILE-C: integrada;
 - MOBILE-D: aguardando handoff/revisão;
 - Integração 2: ainda não encerrada.
+
+
+### Revisão MOBILE-D — 2026-10-02
+
+Handoff:
+- branch `mobile-r1-d-transfer`;
+- base `6852963c7aa9a1c83133239f0b929715fd316530`;
+- HEAD `4d3d75be98786d4470b593759580f50683a8f31b`;
+- PR #231;
+- Application CI #929: SUCCESS;
+- Core Protection #216: SUCCESS.
+
+Classificação:
+**DEVOLVIDA PARA CORREÇÃO MÍNIMA DE INTEGRIDADE**.
+
+Arquitetura principal aprovada:
+- TRANSFER canônico;
+- quantityDelta=0;
+- idempotência/replay;
+- revalidação de posições/material/saldo;
+- nenhuma escrita direta client-side.
+
+Bloqueios:
+1. `listWarehouseLots` legado converte erro de leitura em `[]`; a MOBILE-D não pode interpretar falha como “sem lote” para autorizar parcial;
+2. limite canônico de 24 lotes relocáveis precisa ser validado antes do TRANSFER;
+3. token EPX1 malformado/reservado não pode ser promovido a PRODUCT.
+
+Integração 2 permanece aberta. E+C continuam integradas e verdes; D deve voltar com novo HEAD sem rebase/merge.
