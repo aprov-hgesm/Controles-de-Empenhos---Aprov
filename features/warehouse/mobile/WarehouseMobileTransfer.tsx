@@ -13,17 +13,18 @@ import {
   listWarehouseLocationBalances,
   transferWarehouseStock,
 } from '../../../lib/warehouse/locationRepository';
-import { listWarehouseLots } from '../../../lib/warehouse/lotRepository';
+import { listWarehouseMobileTransferLotsCritical } from '../../../lib/warehouse/mobileTransferLotRepository';
 import type { WarehouseLot } from '../../../lib/warehouse/lot';
 import type { WarehouseMaterial } from '../../../lib/warehouse/material';
 import { getWarehouseMaterial } from '../../../lib/warehouse/materialRepository';
 import { classifyWarehouseMobileLocationScan } from '../../../lib/warehouse/mobileLocationScan';
 import {
+  classifyWarehouseMobileTransferProductScan,
   prepareWarehouseMobileTransfer,
   validateWarehouseMobileTransferQuantity,
   type WarehouseMobileTransferPreparationError,
 } from '../../../lib/warehouse/mobileTransfer';
-import type { WarehouseMobileScanEvent, WarehouseMobileScanKind } from '../../../lib/warehouse/mobileScanner';
+import type { WarehouseMobileScanEvent } from '../../../lib/warehouse/mobileScanner';
 import type { WarehouseStockPositionResolveResult } from '../../../lib/warehouse/locationBarcode';
 import { useWarehouseWorkspaceContext } from '../components/WarehouseModuleContext';
 import { WarehouseMobileScanner } from './WarehouseMobileScanner';
@@ -77,6 +78,7 @@ function preparationError(error: WarehouseMobileTransferPreparationError) {
   if (error === 'INVALID_QUANTITY') return 'Informe quantidade maior que zero, com até seis casas decimais.';
   if (error === 'INVALID_AVAILABLE_STOCK') return 'O saldo físico atual não pôde ser validado.';
   if (error === 'INSUFFICIENT_STOCK') return 'A quantidade é maior que o saldo disponível na origem.';
+  if (error === 'TOO_MANY_ACTIVE_LOTS') return 'Esta posição possui quantidade de lotes acima do limite suportado pela transferência atual. A operação precisa ser tratada por fluxo administrativo.';
   return 'Há lote ativo nessa posição. Para manter lote e validade coerentes, transfira o saldo integral da posição.';
 }
 
@@ -87,11 +89,9 @@ function operationError(error: unknown) {
   if (raw.includes('WAREHOUSE_POSITION_NOT_FOUND') || raw.includes('WAREHOUSE_SUBPOSITION_NOT_FOUND')) return 'Origem ou destino não existe mais.';
   if (raw.includes('WAREHOUSE_TRANSFER_LOT_POSITION_MISMATCH')) return 'O lote mudou de posição antes da confirmação. Refaça a leitura.';
   if (raw.includes('WAREHOUSE_IDEMPOTENCY_CONFLICT')) return 'Conflito de idempotência. Recomece a operação.';
+  if (raw.includes('WAREHOUSE_MOBILE_TRANSFER_LOTS_SATURATED')) return 'Não foi possível provar a leitura completa dos lotes. A transferência foi bloqueada por segurança.';
+  if (raw.includes('WAREHOUSE_MOBILE_TRANSFER_LOTS_READ_FAILED')) return 'Falha ao verificar os lotes atuais. A transferência foi bloqueada por segurança.';
   return 'A transferência não pôde ser confirmada. Revalide os dados e tente novamente.';
-}
-
-function classifyProduct(value: string): WarehouseMobileScanKind {
-  return classifyWarehouseMobileLocationScan(value) === 'LOCATION' ? 'LOCATION' : 'PRODUCT';
 }
 
 export function WarehouseMobileTransfer() {
@@ -128,7 +128,7 @@ export function WarehouseMobileTransfer() {
     const [foundMaterial, balances, lots] = await Promise.all([
       getWarehouseMaterial(workspace.workspaceId, association.materialId),
       listWarehouseLocationBalances(workspace.workspaceId, 500, association.materialId),
-      listWarehouseLots(workspace.workspaceId, 500, association.materialId),
+      listWarehouseMobileTransferLotsCritical(workspace.workspaceId, association.materialId),
     ]);
     if (!foundMaterial || foundMaterial.status !== 'active' || foundMaterial.ug !== workspace.ug) throw new Error('MATERIAL_INACTIVE');
     const sourceBalance = balances.find((item) => item.balance.quantity > 0 && warehouseStockPositionsEqual(item.balance.position, position));
@@ -137,7 +137,7 @@ export function WarehouseMobileTransfer() {
       barcode,
       material: foundMaterial,
       availableQuantity: sourceBalance.balance.quantity,
-      sourceLots: lots.map((item) => item.lot).filter((lot) => lot.status === 'active' && lot.quantity > 0 && warehouseStockPositionsEqual(lot.position, position)),
+      sourceLots: lots.filter((lot) => lot.status === 'active' && lot.quantity > 0 && warehouseStockPositionsEqual(lot.position, position)),
     };
   }, [workspace.ug, workspace.workspaceId]);
 
@@ -162,7 +162,15 @@ export function WarehouseMobileTransfer() {
     }).catch((error) => {
       if (id !== requestRef.current) return;
       const raw = error instanceof Error ? error.message : String(error);
-      setMessage(raw.includes('SOURCE_WITHOUT_MATERIAL') ? 'O material lido não possui saldo físico positivo na origem.' : 'Código comercial não encontrado, inativo ou incompatível com este workspace/UG.');
+      if (raw.includes('WAREHOUSE_MOBILE_TRANSFER_LOTS_SATURATED')) {
+        setMessage('A leitura de lotes atingiu o limite seguro e pode estar incompleta. A transferência foi bloqueada por segurança.');
+      } else if (raw.includes('WAREHOUSE_MOBILE_TRANSFER_LOTS_READ_FAILED')) {
+        setMessage('Não foi possível verificar os lotes atuais do material. A transferência foi bloqueada por segurança.');
+      } else if (raw.includes('SOURCE_WITHOUT_MATERIAL')) {
+        setMessage('O material lido não possui saldo físico positivo na origem.');
+      } else {
+        setMessage('Código comercial não encontrado, inativo ou incompatível com este workspace/UG.');
+      }
     }).finally(() => { if (id === requestRef.current) setWorking(false); });
   }, [loadMaterialAtSource, source]);
 
@@ -236,7 +244,7 @@ export function WarehouseMobileTransfer() {
       {!source && <Step title="1 · LER ORIGEM"><WarehouseMobileScanner expectation="EXPECT_SOURCE_LOCATION" identifyScan={classifyWarehouseMobileLocationScan} onValidatedScan={scanSource} title="LER ORIGEM" /></Step>}
       {source && <Card title="Origem validada" value={positionLabel(source.value)} detail={source.code} />}
 
-      {source && !material && <Step title="2 · LER MATERIAL"><WarehouseMobileScanner expectation="EXPECT_PRODUCT" identifyScan={classifyProduct} onValidatedScan={scanProduct} title="LER MATERIAL" /><Secondary onClick={reset}>Trocar origem</Secondary></Step>}
+      {source && !material && <Step title="2 · LER MATERIAL"><WarehouseMobileScanner expectation="EXPECT_PRODUCT" identifyScan={classifyWarehouseMobileTransferProductScan} onValidatedScan={scanProduct} title="LER MATERIAL" /><Secondary onClick={reset}>Trocar origem</Secondary></Step>}
 
       {material && <Card title="Material" value={material.material.description} detail={`Disponível: ${formatQty(material.availableQuantity)} ${unitLabel(material.material)}${material.sourceLots.length ? ' · com lote ativo (transferência integral)' : ''}`} />}
 
