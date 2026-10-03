@@ -298,3 +298,29 @@ O Coordenador só registra `RC FROZEN` quando:
 - HEAD único da integradora registrado.
 
 Depois disso, e somente depois de autorização explícita, preparar/publicar o RC para smoke e piloto final.
+
+## 12. Program Control — liberação específica da HARDEN-D
+
+A HARDEN-D foi formalmente liberada após estabilização da MOBILE-R1.
+
+Alvos:
+- Mobile: `7b745fa0b7979e643b83b7de94dd96a0290930ab`;
+- SaaS vivo/contexto: `4848643be85b30532f7f093c4ddb0e729facfad3`;
+- base worker: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`.
+
+Delta inicial obrigatório:
+- `next.config.ts`;
+- Mobile permite `camera=(self)`;
+- SaaS atualmente bloqueia `camera=()`;
+- microfone e geolocalização permanecem bloqueados em ambos.
+
+A worker deve:
+1. demonstrar o requisito funcional da câmera same-origin da Central Móvel;
+2. classificar o delta semanticamente;
+3. não editar runtime por padrão;
+4. devolver conflito ao Coordenador se a solução exigir mudança compartilhada;
+5. revisar todos os demais contratos previstos na seção HARDEN-D;
+6. produzir matriz completa.
+
+MOBILE-F/G/H ficam fora da janela até o handoff D.
+
