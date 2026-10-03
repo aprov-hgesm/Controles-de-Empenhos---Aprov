@@ -746,3 +746,19 @@ Foi recebida evidência visual de sessão autenticada com:
 - Central de Depósitos visível no menu.
 
 Esta evidência vale como **smoke funcional controlado**. Não substitui P-01/P-02 e não comprova aceite legal novo.
+
+## Correção operacional — evidência em produção pré-SaaS
+
+A produção atualmente usada pelos operadores ainda não contém a integradora SaaS R1.
+
+Referências:
+- `main=e90f92ac...`;
+- integradora SaaS = `46fba355...`;
+- delta = 117 commits à frente.
+
+Portanto:
+- T0 coletado no site atual = **baseline pré-release válido**;
+- login/shell/Central observados no site atual = **smoke da produção vigente**, não certificação da release SaaS;
+- J01–J20 só podem receber evidência da implementação SaaS quando houver ambiente compatível com o candidato (preview/build local autorizado ou publicação controlada);
+- P-01/P-02 continuam protegidos;
+- não publicar apenas para produzir evidência sem planejamento de release.
