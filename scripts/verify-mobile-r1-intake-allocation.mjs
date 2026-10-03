@@ -33,7 +33,7 @@ for (const required of [
   'expectation="EXPECT_PRODUCT"',
   'expectation="EXPECT_LOCATION"',
   'Associar este código ao material do item',
-  "lotCode: ''",
+  'lotCode: lotCode.trim()',
   'navigator.onLine',
   'operationId',
   'expectedAllocatedQuantity',
