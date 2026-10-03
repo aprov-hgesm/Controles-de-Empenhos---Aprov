@@ -1208,3 +1208,19 @@ Antes do aceite final da A1, validar:
 - Etiquetas.
 
 HARDEN-A2 — Firebase/Firestore/gRPC permanece **BLOQUEADA**.
+
+### HARDEN-A1 — PASS TÉCNICO
+
+A HARDEN-A1 foi encerrada com sucesso após migração de jsPDF para linha segura e regressão técnica dos fluxos PDF.
+
+A decisão de produto/coordenação estabelece que **detalhes visuais finos de PDFs não são requisito fundamental de lançamento** e podem ser ajustados de forma incremental após a entrada oficial em produção, desde que a geração funcional permaneça válida.
+
+Estado:
+- jsPDF CRITICAL: RESOLVIDO;
+- regressão técnica: PASS;
+- visual fino: backlog pós-lançamento;
+- impacto MOBILE-R1: DELTA COMPATÍVEL;
+- produção: não alterada.
+
+Com o fechamento da A1, a HARDEN-A2 — Firebase/Firestore/gRPC pode ser liberada em frente separada e controlada.
+
