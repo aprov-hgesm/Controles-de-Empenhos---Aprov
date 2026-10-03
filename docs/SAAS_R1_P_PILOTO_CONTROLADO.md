@@ -735,3 +735,14 @@ Limites:
 - evidência humana P-01/P-02 continua pendente e poderá ser coletada posteriormente, de forma não disruptiva.
 
 A indisponibilidade temporária dos operadores reais **não bloqueia a continuação dos testes técnicos/funcionais** em `aprovisionamento-teste`.
+
+### Evidência controlada — login/shell em `aprovisionamento-teste`
+
+Foi recebida evidência visual de sessão autenticada com:
+- operador `Aprovisionamento Teste`;
+- acesso autorizado;
+- Home/shell carregados;
+- navegação principal disponível;
+- Central de Depósitos visível no menu.
+
+Esta evidência vale como **smoke funcional controlado**. Não substitui P-01/P-02 e não comprova aceite legal novo.
