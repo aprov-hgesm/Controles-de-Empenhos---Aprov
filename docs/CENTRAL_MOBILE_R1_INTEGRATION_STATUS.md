@@ -6,7 +6,7 @@ Produção de referência: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Baseline upstream MOBILE-0: `78d3e9afeeb4176a8d6423cdd8e65d32435ba0a9`
 Freeze documental / base comum da Onda 1: `53e28b81874ee1b7ce0bd484cc7a97537aa99473`
 
-Estado global: **MOBILE-0 CONGELADA / ONDA 1 LIBERADA — SOMENTE MOBILE-A + MOBILE-B**
+Estado global: **ONDA 1 INTEGRADA / INTEGRAÇÃO 1 APROVADA / ONDA 2 LIBERADA — MOBILE-C + MOBILE-D + MOBILE-E**
 
 ## 1. Baseline
 
@@ -29,11 +29,11 @@ Dependência:
 | Frente | Branch | Dependência | Estado | Integração |
 | --- | --- | --- | --- | --- |
 | MOBILE-0 Baseline/contratos | integradora | candidato SAAS-I verde | **CONGELADA** | contratos/documentação canônicos |
-| MOBILE-A Plataforma/Scanner | `mobile-r1-a-platform-scanner` | 0 | **DEVOLVIDA — CORREÇÃO MÍNIMA** | PR #221; câmera bloqueada por Permissions-Policy + lifecycle Strict Mode |
+| MOBILE-A Plataforma/Scanner | `mobile-r1-a-platform-scanner` | 0 | **APROVADA COM PENDÊNCIA RUNTIME / INTEGRADA** | PR #221 / squash `19fc6be4...` |
 | MOBILE-B Etiquetas/Resolver | `mobile-r1-b-location-labels` | 0 | **APROVADA E INTEGRADA** | PR #220 / squash `5edb19812...` |
-| MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **BLOQUEADA** | — |
-| MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **BLOQUEADA** | — |
-| MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **BLOQUEADA** | — |
+| MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **LIBERADA PARA ONDA 2** | branch a criar no freeze comum |
+| MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **LIBERADA PARA ONDA 2** | branch a criar no freeze comum |
+| MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **LIBERADA PARA ONDA 2** | branch a criar no freeze comum |
 | MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **BLOQUEADA** | — |
 | MOBILE-G Saída | `mobile-r1-g-outbound` | Int.2 | **BLOQUEADA** | — |
 | MOBILE-H Conferência | `mobile-r1-h-position-check` | Int.2 | **BLOQUEADA** | — |
@@ -112,12 +112,12 @@ MOBILE-B:
 
 ## 7. Próxima ação do Coordenador
 
-1. criar as branches MOBILE-A e MOBILE-B no mesmo HEAD congelado;
-2. registrar o SHA comum de ativação;
-3. emitir prompts especializados para os dois workers;
+1. congelar o HEAD comum da Onda 2;
+2. criar MOBILE-C, MOBILE-D e MOBILE-E na mesma base;
+3. emitir prompts especializados;
 4. receber handoffs independentes;
-5. manter C–H bloqueadas;
-6. conduzir a Integração 1 somente após A+B aprovadas.
+5. integrar preferencialmente E → C → D, salvo conflito real;
+6. manter MOBILE-F/G/H bloqueadas até a Integração 2.
 
 ## 8. Produção
 
@@ -182,3 +182,64 @@ Correção foi delimitada no comentário coordenador do PR #221. MOBILE-B perman
 - validação física de impressão/leitura: pendente para Integração 1.
 
 A integração da MOBILE-B **não libera MOBILE-C/D/E isoladamente**. A Integração 1 continua bloqueada até a MOBILE-A ser corrigida e aprovada.
+
+
+### Integração MOBILE-A — 2026-10-02
+
+- branch: `mobile-r1-a-platform-scanner`;
+- base original: `53e28b81874ee1b7ce0bd484cc7a97537aa99473`;
+- worker HEAD final: `44c4f013859230b5d490d2049c6b8dbf2cd3baa2`;
+- PR #221;
+- classificação final: **APROVADA COM PENDÊNCIA DE VALIDAÇÃO RUNTIME**;
+- integração squash: `19fc6be4a1deb5de44ec6999ef42d1cf6ced576c`;
+- Application CI #917: SUCCESS;
+- Core Protection #204: SUCCESS;
+- Recovery #603: SUCCESS;
+- SAAS-DL Legal Validation #28: SUCCESS;
+- Permissions-Policy: `camera=(self), microphone=(), geolocation=()`;
+- Strict Mode lifecycle: corrigido e protegido;
+- bundle: sem regressão observada.
+
+Pendências transferidas:
+- leitura HTTP real do header em ambiente Vercel acessível;
+- câmera física Android/iPhone;
+- feedback físico de som/vibração.
+
+### Integração 1 — APROVADA em 2026-10-02
+
+Gate certificado:
+`scanner → EPX1 → resolver autoritativo → WarehouseStockPosition`.
+
+Integração técnica:
+- MOBILE-A squash `19fc6be4...`;
+- MOBILE-B squash `5edb19812...`;
+- glue read-only na integradora;
+- branch técnica de certificação: `mobile-r1-integration-1-certification`;
+- PR #224;
+- certificação squash: `7c987676e0c089285e8bcd2bf5d34a6f54c717fa`;
+- HEAD certificado do PR: `4b397d61bf4c8505ddf5b3c8fa14e3e8c2e91461`;
+- Application CI #920: SUCCESS;
+- Core Protection #207: SUCCESS;
+- Production Build: SUCCESS;
+- Final TypeScript: SUCCESS;
+- Diff Hygiene: SUCCESS;
+- scanner contract tests: SUCCESS;
+- platform scanner guard: SUCCESS;
+- Integration 1 domain tests: SUCCESS;
+- Integration 1 guard: SUCCESS;
+- Phase 6 locations: SUCCESS;
+- Phase 8 barcode/outbound: SUCCESS.
+
+Correção de integração:
+- o primeiro CI detectou `workspace.ug: string | null`;
+- glue corrigido para falhar fechado quando UG não estiver resolvida;
+- revalidação final verde.
+
+Pendências físicas:
+- confirmar header HTTP efetivo;
+- câmera real;
+- imprimir e ler Code 128 nos presets COMPACT/MEDIUM/LARGE.
+
+Essas pendências permanecem obrigatórias para certificação física/final, mas não bloqueiam o início da Onda 2.
+
+**MOBILE-C, MOBILE-D e MOBILE-E estão liberadas.**
