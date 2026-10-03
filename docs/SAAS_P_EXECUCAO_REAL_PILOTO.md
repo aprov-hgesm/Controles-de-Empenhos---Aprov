@@ -1,10 +1,22 @@
-# SAAS-P — Execução Real do Piloto
+# SAAS-P — Runbook do Piloto Real
 
 Data de consolidação: 2026-10-02
 
 Branch coordenadora: `feat/saas-r1-commercializacao`
 
-Estado: **PACOTE OPERACIONAL PREPARADO / EXECUÇÃO REAL PARCIALMENTE DEPENDENTE DE HUMANO E SERVIÇOS EXTERNOS**
+Estado: **RUNBOOK PREPARADO / NÃO EXECUTAR PILOTO REAL ANTES DO RELEASE CANDIDATE**
+
+
+## 0. Gate de entrada obrigatório
+
+Este runbook somente entra em execução depois que o Coordenador declarar **PRE-PILOTO CONCLUÍDO / RELEASE CANDIDATE CONGELADO** conforme `docs/SAAS_R1_PRE_PILOTO_HARDENING.md`.
+
+Até lá:
+- não iniciar P-03;
+- não executar J15–J20 como evidência final do SaaS R1;
+- não usar produção Performance R3 para certificar funcionalidades do candidato;
+- preservar o T0 já coletado;
+- usar este documento apenas para preparação.
 
 ## 1. Princípios de execução
 
@@ -301,3 +313,15 @@ Ordem recomendada enquanto P-01/P-02 estiverem indisponíveis:
 8. J15–J20, mediante autorização específica para suspensão;
 9. T1/T2;
 10. posteriormente observar P-01/P-02 quando os operadores estiverem disponíveis.
+
+## 15. Encerramento do piloto e transição pós-piloto
+
+Quando a janela real de piloto terminar:
+- congelar evidências T1/T2;
+- congelar lista de incidentes/ajustes;
+- não continuar pilotando indefinidamente enquanto código muda;
+- abrir correções finais coordenadas;
+- repetir somente os testes afetados;
+- entregar o candidato corrigido para SAAS-J.
+
+O piloto não é a certificação final e não é o lançamento completo.
