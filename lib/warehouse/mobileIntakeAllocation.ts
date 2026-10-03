@@ -2,7 +2,10 @@ import {
   normalizeWarehouseBarcode,
   type WarehouseBarcodeAssociation,
 } from './barcode';
-import { isWarehouseLocationBarcode } from './locationBarcode';
+import {
+  isWarehouseLocationBarcode,
+  WAREHOUSE_LOCATION_BARCODE_PREFIX,
+} from './locationBarcode';
 import type { WarehouseMobileScanKind } from './mobileScanner';
 
 const QUANTITY_EPSILON = 0.000001;
@@ -16,8 +19,13 @@ export type WarehouseMobileBarcodeDisposition =
 export function classifyWarehouseMobileProductScan(
   value: string
 ): WarehouseMobileScanKind {
-  if (isWarehouseLocationBarcode(value)) return 'LOCATION';
-  return normalizeWarehouseBarcode(value) ? 'PRODUCT' : 'UNKNOWN';
+  const normalized = normalizeWarehouseBarcode(value);
+  if (!normalized) return 'UNKNOWN';
+  if (isWarehouseLocationBarcode(normalized)) return 'LOCATION';
+  if (normalized.toUpperCase().startsWith(WAREHOUSE_LOCATION_BARCODE_PREFIX)) {
+    return 'UNKNOWN';
+  }
+  return 'PRODUCT';
 }
 
 export function normalizeWarehouseMobileAllocationQuantity(
