@@ -916,3 +916,35 @@ abrir correções curtas e controladas, separadas da worker congelada original, 
 
 Impacto MOBILE-R1: **DELTA COMPATÍVEL**.
 
+## HARDEN-A1 — ATIVAÇÃO AUTORIZADA PELO PROGRAM CONTROL
+
+Frente:
+**Correção Controlada jsPDF + Regressão de PDFs**
+
+Branch:
+`saas-harden-a-jspdf-security`
+
+Base:
+`9a294bc543ec7150b9144ed96e767a161864d72f`
+
+Alvos:
+- `jspdf@4.2.1`;
+- `jspdf-autotable@5.0.8`.
+
+Escopo:
+- upgrade conjunto jsPDF/AutoTable;
+- compatibilidade do `lib/pdfToolkit.ts`;
+- regressão de Cronogramas;
+- Relatórios;
+- documentos da Central de Depósitos;
+- etiquetas;
+- folhas de alocação;
+- documentos de saída;
+- audit pós-correção;
+- gates completos afetados.
+
+Firebase/Firestore/gRPC:
+**fora de escopo e bloqueado até encerramento da A1**.
+
+Ao concluir, entregar HEAD/PR, diff, audit antes/depois, matriz de PDFs, regressões, impacto Mobile e recomendação.
+
