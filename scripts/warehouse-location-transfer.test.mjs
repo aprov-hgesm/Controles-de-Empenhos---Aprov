@@ -18,6 +18,10 @@ execFileSync(
     resolve(root, 'node_modules/typescript/bin/tsc'),
     resolve(root, 'lib/warehouse/location.ts'),
     resolve(root, 'lib/warehouse/lot.ts'),
+    resolve(root, 'lib/warehouse/barcode.ts'),
+    resolve(root, 'lib/warehouse/locationBarcode.ts'),
+    resolve(root, 'lib/warehouse/mobileScanner.ts'),
+    resolve(root, 'lib/warehouse/mobileTransferLots.ts'),
     resolve(root, 'lib/warehouse/mobileTransfer.ts'),
     resolve(root, 'lib/warehouse/movement.ts'),
     resolve(root, 'lib/warehouse/material.ts'),
@@ -39,6 +43,8 @@ execFileSync(
 const require = createRequire(import.meta.url);
 const location = require(resolve(outDir, 'warehouse/location.js'));
 const movement = require(resolve(outDir, 'warehouse/movement.js'));
+const locationBarcode = require(resolve(outDir, 'warehouse/locationBarcode.js'));
+const mobileTransferLots = require(resolve(outDir, 'warehouse/mobileTransferLots.js'));
 const mobileTransfer = require(resolve(outDir, 'warehouse/mobileTransfer.js'));
 
 test.after(() => {
@@ -446,4 +452,115 @@ test('MOBILE-D mantém fronteira fina sobre scanner, resolver e TRANSFER canôni
   assert.match(repository, /warehouseMovementMatchesReplay/);
   assert.match(repository, /type:\s*'TRANSFER'/);
   assert.match(repository, /quantityDelta:\s*0/);
+});
+
+
+test('MOBILE-D leitura crítica de lotes falha fechado quando o loader falha', async () => {
+  await assert.rejects(
+    mobileTransferLots.loadWarehouseMobileTransferCriticalLotsFailClosed(
+      async () => {
+        throw new Error('SIMULATED_FIRESTORE_LOT_QUERY_FAILURE');
+      }
+    ),
+    /SIMULATED_FIRESTORE_LOT_QUERY_FAILURE/
+  );
+});
+
+test('MOBILE-D leitura crítica detecta saturação por MAX + 1 e não assume completude', async () => {
+  const saturatedLots = Array.from(
+    { length: mobileTransferLots.WAREHOUSE_MOBILE_TRANSFER_CRITICAL_LOT_FETCH_LIMIT },
+    (_, index) => ({ id: 'lot_' + index.toString(16).padStart(32, '0') })
+  );
+  const result = await mobileTransferLots.loadWarehouseMobileTransferCriticalLotsFailClosed(
+    async () => saturatedLots
+  );
+
+  assert.deepEqual(result, {
+    status: 'saturated',
+    observedCount: mobileTransferLots.WAREHOUSE_MOBILE_TRANSFER_CRITICAL_LOT_FETCH_LIMIT,
+  });
+
+  const empty = await mobileTransferLots.loadWarehouseMobileTransferCriticalLotsFailClosed(
+    async () => []
+  );
+  assert.deepEqual(empty, { status: 'complete', lots: [] });
+});
+
+test('MOBILE-D aceita 24 lotes ativos e bloqueia 25 antes do TRANSFER', () => {
+  const from = { kind: 'LOCATION', depotId, locationId: localA, subpositionId: null };
+  const to = { kind: 'LOCATION', depotId, locationId: localB, subpositionId: null };
+  const buildLots = (count) => Array.from({ length: count }, (_, index) => ({
+    id: 'lot_' + (index + 1).toString(16).padStart(32, '0'),
+    materialId,
+    status: 'active',
+    quantity: 1,
+    position: from,
+  }));
+
+  const accepted = mobileTransfer.prepareWarehouseMobileTransfer({
+    materialId,
+    from,
+    to,
+    quantity: 24,
+    availableQuantity: 24,
+    lots: buildLots(24),
+  });
+  assert.equal(accepted.ok, true);
+  assert.equal(accepted.relocateLotIds.length, 24);
+
+  const blocked = mobileTransfer.prepareWarehouseMobileTransfer({
+    materialId,
+    from,
+    to,
+    quantity: 25,
+    availableQuantity: 25,
+    lots: buildLots(25),
+  });
+  assert.deepEqual(blocked, {
+    ok: false,
+    error: 'TOO_MANY_ACTIVE_LOTS',
+  });
+});
+
+test('MOBILE-D preserva namespace EPX1 reservado na classificação de produto', () => {
+  const validLocation = locationBarcode.encodeWarehouseLocationBarcode({
+    kind: 'LOCAL',
+    entityId: localA,
+  });
+
+  assert.equal(
+    mobileTransfer.classifyWarehouseMobileTransferProductScan(validLocation),
+    'LOCATION'
+  );
+  assert.equal(
+    mobileTransfer.classifyWarehouseMobileTransferProductScan('EPX1-MALFORMADO'),
+    'UNKNOWN'
+  );
+  assert.equal(
+    mobileTransfer.classifyWarehouseMobileTransferProductScan('7891234567890'),
+    'PRODUCT'
+  );
+  assert.equal(
+    mobileTransfer.classifyWarehouseMobileTransferProductScan('\u0000'),
+    'UNKNOWN'
+  );
+});
+
+test('MOBILE-D usa reader crítico sem retorno vazio silencioso e sem escrita direta', () => {
+  const ui = readFileSync(
+    resolve(root, 'features/warehouse/mobile/WarehouseMobileTransfer.tsx'),
+    'utf8'
+  );
+  const criticalRepository = readFileSync(
+    resolve(root, 'lib/warehouse/mobileTransferLotRepository.ts'),
+    'utf8'
+  );
+
+  assert.match(ui, /listWarehouseMobileTransferLotsCritical/);
+  assert.doesNotMatch(ui, /listWarehouseLots\s*\(/);
+  assert.match(ui, /classifyWarehouseMobileTransferProductScan/);
+  assert.match(criticalRepository, /WAREHOUSE_MOBILE_TRANSFER_CRITICAL_LOT_FETCH_LIMIT/);
+  assert.match(criticalRepository, /WAREHOUSE_MOBILE_TRANSFER_LOTS_SATURATED/);
+  assert.match(criticalRepository, /WAREHOUSE_MOBILE_TRANSFER_LOTS_READ_FAILED/);
+  assert.doesNotMatch(criticalRepository, /return\s+\[\]/);
 });
