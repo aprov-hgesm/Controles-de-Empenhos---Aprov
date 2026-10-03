@@ -216,7 +216,9 @@
     "test:mobile-r1-physical-query": "node --test scripts/mobile-r1-physical-query.test.mjs",
     "verify:mobile-r1-physical-query": "node scripts/verify-mobile-r1-physical-query.mjs",
     "test:mobile-r1-intake-allocation": "node --test scripts/mobile-r1-intake-allocation.test.mjs",
-    "verify:mobile-r1-intake-allocation": "node scripts/verify-mobile-r1-intake-allocation.mjs"
+    "verify:mobile-r1-intake-allocation": "node scripts/verify-mobile-r1-intake-allocation.mjs",
+    "test:mobile-r1-integration-2": "node --test scripts/mobile-r1-integration-2.test.mjs",
+    "verify:mobile-r1-integration-2": "node scripts/verify-mobile-r1-integration-2.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
