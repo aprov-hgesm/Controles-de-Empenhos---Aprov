@@ -157,7 +157,7 @@ Nenhum código, Rules, workflow, dependência ou configuração funcional foi al
 
 Escopo documental-only, conforme política oficial:
 - consistência J01–J24 revisada;
-- trailing whitespace verificado no conteúdo gerado;
+- `git diff --check`: execução literal indisponível no ambiente connector-only, sem checkout local autenticado; verificação equivalente do diff do PR encontrou **0 linhas adicionadas com trailing whitespace**. Reprodução coordenadora: `git diff --check 4d87370e5ee7f2697ab4901e0c045a9ab4910fe9...HEAD`;
 - varredura básica de marcadores de segredo executada;
 - fontes de telemetria/Monitoring/recovery conferidas contra os arquivos vigentes;
 - estado vivo de PRs Mobile e PR #223 reconsultado;
@@ -169,7 +169,7 @@ O Application CI pesado não é exigido para diff apenas em `docs/**`. O diff do
 
 PR #228 — draft para `feat/saas-r1-commercializacao`, sem merge.
 
-A integradora avançou após o freeze. Na observação desta worker, o PR apontava para base `49e7f764...` e o GitHub reportava `mergeable=false`. A branch PILOT-D **não foi rebaseada**; o Coordenador deve integrar semanticamente os commits/documentos necessários, preservando os handoffs já recebidos de outras frentes.
+A integradora avançou após o freeze. Na última observação de fechamento, o PR permanecia aberto/draft, apontava para base `49e7f764...` e o GitHub reportava `mergeable=true`. A branch PILOT-D **não foi rebaseada** nem incorporou commits alheios. Como mergeabilidade é estado vivo, o Coordenador deve reconsultá-la no momento da integração e preservar semanticamente os handoffs já recebidos.
 
 ## Gate SAAS-J
 
