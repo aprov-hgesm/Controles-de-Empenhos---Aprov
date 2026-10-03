@@ -7,7 +7,7 @@ import {
   warehouseLotDisplayCode,
   warehouseLotOriginLabel,
 } from '../../../lib/warehouse/lot';
-import type { WarehouseMobilePhysicalQueryResult } from '../../../lib/warehouse/mobilePhysicalQuery';
+import type { WarehouseMobilePhysicalQueryResult as WarehouseMobilePhysicalQueryData } from '../../../lib/warehouse/mobilePhysicalQuery';
 
 type ResolvedPosition = Extract<
   WarehouseStockPositionResolveResult,
@@ -46,7 +46,7 @@ export function WarehouseMobilePhysicalQueryResult({
   result,
 }: {
   resolved: ResolvedPosition;
-  result: WarehouseMobilePhysicalQueryResult;
+  result: WarehouseMobilePhysicalQueryData;
 }) {
   const local = resolvedLocal(resolved);
   const subposition = resolved.position.kind === 'SUBPOSITION'
