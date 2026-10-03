@@ -218,7 +218,13 @@
     "test:mobile-r1-intake-allocation": "node --test scripts/mobile-r1-intake-allocation.test.mjs",
     "verify:mobile-r1-intake-allocation": "node scripts/verify-mobile-r1-intake-allocation.mjs",
     "test:mobile-r1-integration-2": "node --test scripts/mobile-r1-integration-2.test.mjs",
-    "verify:mobile-r1-integration-2": "node scripts/verify-mobile-r1-integration-2.mjs"
+    "verify:mobile-r1-integration-2": "node scripts/verify-mobile-r1-integration-2.mjs",
+    "test:mobile-r1-inventory": "node --test scripts/mobile-r1-inventory.test.mjs",
+    "verify:mobile-r1-inventory": "node scripts/verify-mobile-r1-inventory.mjs",
+    "test:mobile-r1-outbound": "node --test scripts/mobile-r1-outbound.test.mjs",
+    "verify:mobile-r1-outbound": "node scripts/verify-mobile-r1-outbound.mjs",
+    "test:mobile-r1-position-check": "node --test scripts/mobile-r1-position-check.test.mjs",
+    "verify:mobile-r1-position-check": "node scripts/verify-mobile-r1-position-check.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
