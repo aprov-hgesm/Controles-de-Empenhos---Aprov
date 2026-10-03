@@ -1,6 +1,6 @@
 # EMPROVEX — Central Móvel R1 — Integration Status
 
-Última atualização: **2026-10-02**
+Última atualização: **2026-10-03**
 Integrador: `feat/central-mobile-r1`
 Produção de referência: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Baseline upstream MOBILE-0: `78d3e9afeeb4176a8d6423cdd8e65d32435ba0a9`
