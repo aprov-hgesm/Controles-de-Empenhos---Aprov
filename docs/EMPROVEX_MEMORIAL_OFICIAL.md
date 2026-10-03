@@ -2141,3 +2141,17 @@ Neste registro:
 - topologia **PLANEJADA E APROVADA COMO MÉTODO**;
 - PILOT-A/B/C/D **AINDA NÃO ATIVADOS COMO CHATS TRABALHADORES**;
 - branches exclusivas devem ser criadas/congeladas somente no momento da ativação coordenada.
+
+### SAAS-P — onda paralela PILOT-A/B/C/D ativada
+
+Em 2026-10-02, os quatro chats trabalhadores previstos para a fase de piloto foram efetivamente ativados:
+
+- PILOT-A — Participantes e Jornadas VIP;
+- PILOT-B — Piloto Comercial Não-VIP;
+- PILOT-C — Recovery, Health e Uptime;
+- PILOT-D — Custos, Observabilidade e Matriz de Evidências.
+
+Todos partiram da base comum congelada `4d87370e5ee7f2697ab4901e0c045a9ab4910fe9`.
+
+O Chat Coordenador continua como autoridade de integração, conflito, correções transversais, sincronização com MOBILE-R1 e fechamento da SAAS-P.
+
