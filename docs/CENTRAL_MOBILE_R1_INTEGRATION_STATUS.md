@@ -244,3 +244,43 @@ Pendências físicas:
 Essas pendências permanecem obrigatórias para certificação física/final, mas não bloqueiam o início da Onda 2.
 
 **MOBILE-C, MOBILE-D e MOBILE-E estão liberadas.**
+
+
+## 10. Reconciliação SaaS R1 ↔ MOBILE-R1 antes da Onda 2
+
+Gate executado pelo Coordenador em 2026-10-02 após identificar nova orientação canônica no Memorial da integradora SaaS.
+
+Estado SaaS observado:
+- SAAS-I: integrada via squash `25dda4876fedabb498ad30139262b11943412273`;
+- SAAS-P: **EM EXECUÇÃO**;
+- PILOT-A/B/C/D ativados em paralelo;
+- nenhuma promoção SaaS para `main`/produção.
+
+Arquivos/contratos críticos comparados entre `feat/saas-r1-commercializacao` e `feat/central-mobile-r1`:
+
+**Idênticos semanticamente e por conteúdo:**
+- `components/legal/LegalAcceptanceGate.tsx`;
+- `lib/workspaceContext.ts`;
+- `lib/platformAccess.ts`;
+- `lib/platformSessionControl.ts`;
+- `lib/warehouse/featureFlag.ts`;
+- `firestore.rules`;
+- `firestore.warehouse.rules`;
+- `app/layout.tsx`.
+
+**Divergências esperadas e classificadas:**
+- `features/warehouse/components/WarehouseProtectedSurface.tsx`: MOBILE-R1 adiciona `WarehouseAccessBoundary` para reutilizar o mesmo gate SaaS/Auth/legal com shell móvel; não altera semântica de autorização;
+- `package.json`: SaaS possui tooling `test:gcloud-command`/recovery do piloto; Mobile possui scripts de scanner/Integração 1; sem conflito de runtime;
+- `.github/workflows/application-ci.yml`: Mobile adiciona guards próprios da Central Móvel; divergência intencional de CI.
+
+Classificação:
+**RECONCILIAÇÃO SEMÂNTICA — PASS / SEM BLOQUEIO PARA ONDA 2**.
+
+Não é necessário incorporar tooling operacional SAAS-P na base Mobile para C/D/E.
+
+Regra nova permanente:
+- worker Mobile que tocar domínio compartilhado deve registrar **Impacto SAAS-R1**;
+- Coordenador deve repetir a checagem antes de integrar delta transversal, antes da Integração 2 se houver upstream SaaS novo, antes de MOBILE-I e MOBILE-J;
+- nunca sincronizar integradoras por merge/rebase bruto.
+
+A base anterior da Onda 2 será substituída por novo freeze documental para que C/D/E recebam estas orientações antes de iniciar.
