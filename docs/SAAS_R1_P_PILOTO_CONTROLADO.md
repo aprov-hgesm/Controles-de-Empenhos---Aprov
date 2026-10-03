@@ -4,7 +4,7 @@ Data de abertura: **2026-10-02**
 
 Branch coordenadora: `feat/saas-r1-commercializacao`
 
-Estado: **EM EXECUÇÃO / P2 CONCLUÍDA / PILOT-A e PILOT-B RECEBIDAS / PILOT-D MATRIZ PREPARADA / PILOT-C PENDENTE**
+Estado: **EM EXECUÇÃO REAL / P2 CONCLUÍDA / PILOT-A+B+C+D RECEBIDAS / P-01+P-02 CONFIRMADOS / T0 TÉCNICO PASS / T0 NUMÉRICO PENDENTE / SAAS-J AGUARDANDO**
 
 Este documento é a matriz operacional da SAAS-P. Ele complementa, sem substituir, o Memorial Oficial, o Plano Mestre, o Integration Status e o Handoff do Coordenador.
 
@@ -675,7 +675,7 @@ Para a fase operacional do piloto, adotar no máximo **4 workers simultâneos + 
 ### PILOT-A — Participantes e Jornadas VIP
 
 Escopo:
-- selecionar/formalizar P-01/P-02;
+- P-01/P-02 já formalizados; conduzir apenas jornadas não disruptivas e coletar evidências reais;
 - conduzir jornadas VIP;
 - produzir evidências de login, legal, shell, Central, sessão/permissões e condição isenta;
 - atualizar o Coordenador via handoff.
