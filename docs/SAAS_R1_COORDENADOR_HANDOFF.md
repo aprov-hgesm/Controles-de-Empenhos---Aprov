@@ -1,8 +1,27 @@
 # EMPROVEX SaaS R1 — Handoff do Coordenador
 
-Última atualização: **2026-10-01**
+Última atualização: **2026-10-02**
 Integrador: `feat/saas-r1-commercializacao`
 Baseline: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
+
+
+## 0. Ordem oficial vigente — 2026-10-02
+
+A ordem da reta final foi reorganizada por decisão do fundador:
+
+1. hardening técnico pré-piloto;
+2. reconciliação SaaS↔Mobile;
+3. recovery/restore + segurança/dependências + pacote health/Rules/release;
+4. freeze do Release Candidate;
+5. publicação controlada + smoke técnico;
+6. **piloto real final**;
+7. correções finais pós-piloto;
+8. SAAS-J — certificação final;
+9. lançamento completo mediante autorização explícita.
+
+O piloto real **não está em execução neste momento**. T0 e toda a preparação anterior permanecem válidos.
+
+Documento canônico: `docs/SAAS_R1_PRE_PILOTO_HARDENING.md`.
 
 ## 1. Missão do próximo Coordenador
 
@@ -716,3 +735,21 @@ Enquanto isso:
 - usar o mesmo workspace para J15–J20;
 - não interpretar isso como substituição de evidência humana P-01/P-02;
 - não usar esse workspace para comprovar P-03/trial/pagamento.
+
+### Nova topologia coordenada — hardening pré-piloto
+
+Até 4 workers em paralelo:
+- HARDEN-A — segurança/dependências/CI;
+- HARDEN-B — recovery/backup/restore;
+- HARDEN-C — health/Rules/release/rollback;
+- HARDEN-D — SaaS↔Mobile/evidências.
+
+O Coordenador:
+- congela a base de cada worker;
+- revisa handoffs;
+- integra semanticamente;
+- atualiza Memorial/Status/Handoff;
+- não libera o piloto enquanto qualquer gate pré-piloto material estiver aberto;
+- depois do piloto coordena somente correções finais antes da SAAS-J.
+
+P-01/P-02 permanecem protegidos. `aprovisionamento-teste` será usado no piloto final para cenários disruptivos, não agora como certificação do código pré-SaaS em produção.
