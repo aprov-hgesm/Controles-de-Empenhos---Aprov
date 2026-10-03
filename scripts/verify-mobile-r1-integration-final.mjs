@@ -25,6 +25,10 @@ const requiredPaths = [
   'features/warehouse/mobile/WarehouseMobileInventory.tsx',
   'features/warehouse/mobile/WarehouseMobileOutbound.tsx',
   'features/warehouse/mobile/WarehouseMobilePositionCheck.tsx',
+  'lib/warehouse/mobileScanner.ts',
+  'lib/warehouse/locationBarcode.ts',
+  'lib/warehouse/locationBarcodeResolver.ts',
+  'lib/warehouse/mobileLocationScan.ts',
   'lib/warehouse/inventoryRepository.ts',
   'lib/warehouse/outboundRepository.ts',
 ];
@@ -79,6 +83,8 @@ for (const contract of [
 const operations = new Map([
   ['features/warehouse/mobile/WarehouseMobileLocationFoundationCheck.tsx', [
     'WarehouseMobileScanner',
+    'classifyWarehouseMobileLocationScan',
+    'resolveWarehouseStockPositionBarcode',
     'loadWarehouseMobilePhysicalPositionContents',
   ]],
   ['features/warehouse/mobile/WarehouseMobileIntakeAllocation.tsx', [
@@ -199,7 +205,7 @@ console.log('MOBILE-R1 MOBILE-I INTEGRATED PRODUCT: PASS');
 console.log('- Home expõe A–H, incluindo consulta física já disponível');
 console.log('- navegação Home/Central permanece única e compartilhada');
 console.log('- Auth/workspace/sessão/legal/warehouseAccess continuam no boundary canônico');
-console.log('- scanner continua compartilhado nas jornadas físicas');
+console.log('- scanner e resolver EPX1 permanecem compartilhados nas jornadas físicas');
 console.log('- ALLOCATE/TRANSFER/INVENTORY/OUTBOUND reutilizam autoridades canônicas');
 console.log('- consulta e conferência permanecem read-only');
 console.log('- CT-01 permanece preservada para o futuro Release Candidate');
