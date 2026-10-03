@@ -8,7 +8,7 @@ Freeze documental / base comum da Onda 1: `53e28b81874ee1b7ce0bd484cc7a97537aa99
 Freeze documental / base comum da Onda 2 após reconciliação SaaS: `6852963c7aa9a1c83133239f0b929715fd316530`
 Freeze documental / base comum da Onda 3 após Integração 2 + reconciliação SaaS: `c971d5356c343a0819bf96ec016de73dd96a435d`
 
-Estado global: **ONDAS 1–3 INTEGRADAS / INTEGRAÇÃO 3 CERTIFICADA / MOBILE-I INTEGRADA E APROVADA / AGUARDANDO PROGRAM CONTROL PARA MOBILE-J**
+Estado global: **DESENVOLVIMENTO FUNCIONAL ENCERRADO / MOBILE-I PASS / MOBILE-J EM CERTIFICAÇÃO FINAL**
 
 ## 1. Baseline
 
@@ -997,3 +997,57 @@ Produção:
 
 MOBILE-J:
 **BLOQUEADA até decisão do Program Control sobre o checkpoint pós-MOBILE-I**.
+
+
+### MOBILE-J liberada e iniciada — 2026-10-03
+
+Program Control:
+- checkpoint pós-MOBILE-I aceito;
+- desenvolvimento/integração funcional da Central Móvel R1 encerrado;
+- MOBILE-J liberada para certificação final;
+- PASS FINAL condicionado à evidência física e última reconciliação SaaS.
+
+Branch:
+`mobile-r1-j-final-certification`.
+
+Freeze:
+`2108a21208765e0d4155399667cf571b0fa127ff`.
+
+PR:
+`#246` — OPEN / DRAFT / MERGEABLE.
+
+Estado auditado:
+- branch está 2 commits à frente do freeze;
+- único arquivo alterado: `docs/CENTRAL_MOBILE_R1_FINAL_CERTIFICATION.md`;
+- delta runtime Mobile: NENHUM;
+- classificação: **PARCIAL TECNICAMENTE SAUDÁVEL / CERTIFICAÇÃO EM EXECUÇÃO**.
+
+SaaS vivo na auditoria:
+`feat/saas-r1-commercializacao@f308ff601fe923467b8ccc1489be91b318bc3e8c`.
+
+HARDEN-A1:
+- PASS técnico;
+- encerrada;
+- integrada semanticamente no SaaS;
+- jsPDF CRITICAL resolvido;
+- impacto Mobile compatível.
+
+HARDEN-A2:
+- branch/PR ainda inexistentes;
+- qualquer avanço exige nova reconciliação antes do PASS FINAL.
+
+HARDEN-B:
+- parcial;
+- backup READY / recovery:verify / restore isolado pendentes;
+- sem delta funcional Mobile.
+
+CT-01:
+- Mobile: camera=(self), microphone=(), geolocation=();
+- SaaS: camera=(), microphone=(), geolocation=();
+- continua preexistente e obrigatória para o futuro RC;
+- não corrigir dentro da MOBILE-J.
+
+PASS FINAL da MOBILE-J não pode ser emitido sem:
+- validação física;
+- reconciliação SaaS final;
+- repetição dos gates afetados se houver delta upstream.
