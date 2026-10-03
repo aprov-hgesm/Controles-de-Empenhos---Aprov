@@ -574,3 +574,39 @@ Gates:
 
 A branch deve permanecer congelada no HEAD aprovado.
 Não integrar antes de receber e revisar G/H.
+
+
+## 28. Revisão MOBILE-H — aprovada e congelada
+
+MOBILE-H:
+- branch `mobile-r1-h-position-check`;
+- HEAD `f30f4dcbb1d03d15230fa4414a7d1b95e231253e`;
+- PR #241;
+- base Onda 3 `c971d5356c343a0819bf96ec016de73dd96a435d`;
+- classificação: **APROVADA / CONGELADA**.
+
+Auditoria confirmou:
+- read-only real;
+- MOBILE-E reutilizada como consulta física;
+- alternativas bounded 60+1 e fail-closed;
+- concorrência não vira falso INCORRETO;
+- posições alternativas revalidadas pelo resolver;
+- navegação para MOBILE-D sem mutação;
+- 0 writes / 0 listeners;
+- nenhum CT-01/Rules/Auth/sessão/legal;
+- sem novo delta transversal.
+
+Gates:
+- App CI #937 SUCCESS;
+- Core #224 SUCCESS;
+- Recovery #616 SUCCESS;
+- Legal #40 SUCCESS;
+- build/typecheck/diff hygiene SUCCESS.
+
+Sobreposição já conhecida com F:
+- WarehouseMobileHome.tsx;
+- package.json;
+- application-ci.yml.
+
+Resolver semanticamente apenas na Integração 3.
+Não integrar H antes de receber e revisar G.
