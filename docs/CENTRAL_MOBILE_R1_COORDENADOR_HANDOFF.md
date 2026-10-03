@@ -426,3 +426,26 @@ Consequência:
 - F/G/H podem ser liberadas em uma nova base comum;
 - workers continuam obrigados a declarar Impacto SAAS-R1;
 - MOBILE-I/J seguem bloqueadas.
+
+
+## 24. Freeze e ativação da Onda 3
+
+Freeze comum:
+`c971d5356c343a0819bf96ec016de73dd96a435d`.
+
+Branches:
+- F: `mobile-r1-f-inventory`;
+- G: `mobile-r1-g-outbound`;
+- H: `mobile-r1-h-position-check`.
+
+As três branches foram criadas exatamente na mesma base, após:
+- Integração 2 certificada;
+- reconciliação SaaS↔Mobile PASS.
+
+Próxima ação:
+1. emitir prompts F/G/H;
+2. receber handoffs independentes;
+3. não permitir integração cruzada entre workers;
+4. integrar semanticamente somente após revisão;
+5. executar Integração 3;
+6. liberar MOBILE-I somente se Integração 3 ficar verde.
