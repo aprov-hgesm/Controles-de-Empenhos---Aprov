@@ -2194,3 +2194,38 @@ Snapshot Mobile corrigido na revisão:
 
 A PILOT-B permanece aguardando **participante real não-VIP** e janela produtiva autorizada para evidência comercial.
 
+### SAAS-P — PILOT-D integrada semanticamente
+
+A PILOT-D foi revisada pelo Coordenador e seu método de evidência, baseline de custos e matriz J01–J24 foram aceitos.
+
+Worker:
+- branch `saas-p-d-evidence-observability`;
+- HEAD `ae8ae4a810da24a273e0231ba5f31c915720d504`;
+- PR #228.
+
+Como a integradora avançou após o freeze comum, o PR passou a conflitar documentalmente e foi fechado sem merge. A integração semântica ocorreu nos commits:
+- `7d7e697828ad4bd541344512c9d96acf7bb8158d` — matriz;
+- `4a746a6997a1484901813775f929a3c24105b404` — handoff.
+
+Estado corrente da matriz, já reconciliado com PILOT-A e PILOT-B:
+- PASS: 2;
+- PREPARADO: 13;
+- BLOQUEADO: 7;
+- EM EXECUÇÃO: 1;
+- N/A: 1;
+- FAIL: 0.
+
+PASS atuais:
+- J08 — VIP legado/R$0;
+- J21 — isolamento entre workspaces.
+
+O baseline oficial de observabilidade do piloto passa a usar:
+- Cloud Monitoring para operação real;
+- `emprovex-workspace-estimate` apenas como estimativa por UG;
+- Google Cloud Billing como fonte monetária oficial;
+- acompanhamento separado do `emprovex-warehouse`;
+- T0/T1/T2 para comparação do piloto;
+- nenhum listener novo apenas para medir consumo.
+
+A checklist SAAS-J está **preparada**, porém a SAAS-J permanece **não liberada** até completar evidências humanas/comerciais, custos reais, recovery/restore, uptime e reconciliação final SaaS ↔ Mobile.
+
