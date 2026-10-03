@@ -1,0 +1,86 @@
+name: HARDEN-A Security Dependency Audit
+
+on:
+  push:
+    branches:
+      - saas-harden-a-security-dependencies
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies
+        id: audit
+        shell: bash
+        run: |
+          set +e
+          npm audit --json > /tmp/npm-audit.json
+          code=$?
+          set -e
+          node - <<'NODE'
+          const fs = require('fs');
+          const report = JSON.parse(fs.readFileSync('/tmp/npm-audit.json', 'utf8'));
+          console.log('HARDEN_A_AUDIT_JSON_BEGIN');
+          console.log(JSON.stringify(report, null, 2));
+          console.log('HARDEN_A_AUDIT_JSON_END');
+          const names = Object.keys(report.vulnerabilities || {});
+          fs.writeFileSync('/tmp/npm-audit-packages.txt', names.join('\\n'));
+          console.log('HARDEN_A_AUDIT_SUMMARY=' + JSON.stringify(report.metadata?.vulnerabilities || {}));
+          NODE
+          echo "audit_exit_code=$code" >> "$GITHUB_OUTPUT"
+
+      - name: Explain vulnerable packages
+        shell: bash
+        run: |
+          if [ -s /tmp/npm-audit-packages.txt ]; then
+            while IFS= read -r pkg; do
+              echo "===== npm explain $pkg ====="
+              npm explain "$pkg" || true
+            done < /tmp/npm-audit-packages.txt
+          else
+            echo "No vulnerable packages reported."
+          fi
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: Core protection
+        run: npm run verify:emprovex-core-protection
+
+      - name: Recovery guard
+        run: npm run test:recovery
+
+      - name: SaaS legal validation
+        run: npm run verify:saas-r1-legal-acceptance
+
+      - name: Production build
+        run: npm run build
+
+      - name: Diff hygiene
+        shell: bash
+        run: git diff --check f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11...HEAD
+
+      - name: Audit policy result
+        shell: bash
+        run: |
+          echo "npm audit exit code was ${{ steps.audit.outputs.audit_exit_code }}"
+          echo "HARDEN-A classifies findings by reachability and impact; nonzero npm audit alone is not a CI failure."
