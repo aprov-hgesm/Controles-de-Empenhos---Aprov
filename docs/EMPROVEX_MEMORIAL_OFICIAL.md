@@ -1124,3 +1124,39 @@ A frente deve tratar apenas o upgrade controlado de jsPDF/AutoTable, adaptaçõe
 A correção Firebase/Firestore/gRPC fica classificada como **HARDEN-A2** e permanece **BLOQUEADA** até o encerramento da A1.
 
 Nenhuma ação produtiva foi autorizada.
+
+### HARDEN-A1 — SECURITY PASS / VALIDAÇÃO VISUAL PENDENTE
+
+A HARDEN-A1 concluiu com sucesso a correção técnica do bloqueador jsPDF.
+
+Identidade:
+- branch: `saas-harden-a-jspdf-security`;
+- base: `9a294bc543ec7150b9144ed96e767a161864d72f`;
+- HEAD: `5ae4984bb9580faf5197737eeeeb0d5cf5aae838`;
+- PR: `#244`.
+
+Resultado técnico:
+- jsPDF: 2.5.2 → 4.2.1;
+- jsPDF-AutoTable: 3.8.4 → 5.0.8;
+- DOMPurify transitivo atualizado;
+- audit CRITICAL: 1 → 0;
+- regressão PDF automatizada: 7/7 PASS;
+- Application CI/Core/Recovery/Legal/Build/TypeScript/Diff: PASS;
+- lazy loading preservado;
+- produção não alterada.
+
+Estado oficial:
+**PARCIAL TECNICAMENTE SAUDÁVEL / SECURITY PASS**
+
+Motivo único:
+**validação visual/manual dos PDFs ainda pendente**.
+
+Antes do aceite final da A1, validar:
+- Cronograma;
+- Relatório/Termo;
+- Folha de Alocação;
+- Documento de Saída;
+- Etiquetas.
+
+HARDEN-A2 — Firebase/Firestore/gRPC permanece **BLOQUEADA**.
+
