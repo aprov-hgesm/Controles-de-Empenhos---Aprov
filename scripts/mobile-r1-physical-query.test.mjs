@@ -17,6 +17,7 @@ execFileSync(
   [
     resolve(root, 'node_modules/typescript/bin/tsc'),
     resolve(root, 'lib/warehouse/mobilePhysicalQueryModel.ts'),
+    resolve(root, 'lib/warehouse/locationBarcode.ts'),
     resolve(root, 'lib/warehouse/location.ts'),
     resolve(root, 'lib/warehouse/material.ts'),
     resolve(root, 'lib/warehouse/lot.ts'),
@@ -39,6 +40,7 @@ execFileSync(
 
 const require = createRequire(import.meta.url);
 const model = require(resolve(outDir, 'warehouse/mobilePhysicalQueryModel.js'));
+const locationBarcode = require(resolve(outDir, 'warehouse/locationBarcode.js'));
 
 test.after(() => {
   rmSync(outDir, { recursive: true, force: true });
@@ -131,6 +133,27 @@ test('planeja query por LOCAL e SUBPOSITION sem aceitar UNASSIGNED', () => {
     () => model.warehouseMobilePhysicalQueryPlan({ kind: 'UNASSIGNED' }),
     /POSITION_REQUIRED/
   );
+});
+
+
+test('resolver canônico recusa posição inexistente', async () => {
+  const code = locationBarcode.encodeWarehouseLocationBarcode({
+    kind: 'LOCAL',
+    entityId: locationId,
+  });
+  const resolved = await locationBarcode.resolveWarehouseStockPositionCode(
+    { code, workspaceId, ug },
+    {
+      async getDepot() {
+        return null;
+      },
+      async getLocation() {
+        return null;
+      },
+    }
+  );
+
+  assert.deepEqual(resolved, { ok: false, error: 'ENTITY_NOT_FOUND' });
 });
 
 test('posição vazia produz resultado vazio sem inventar material', () => {
