@@ -8,7 +8,7 @@ Freeze documental / base comum da Onda 1: `53e28b81874ee1b7ce0bd484cc7a97537aa99
 Freeze documental / base comum da Onda 2 após reconciliação SaaS: `6852963c7aa9a1c83133239f0b929715fd316530`
 Freeze documental / base comum da Onda 3 após Integração 2 + reconciliação SaaS: `c971d5356c343a0819bf96ec016de73dd96a435d`
 
-Estado global: **ONDAS 1–2 INTEGRADAS / INTEGRAÇÃO 2 CERTIFICADA / ONDA 3 LIBERADA — MOBILE-F + MOBILE-G + MOBILE-H**
+Estado global: **ONDAS 1–3 INTEGRADAS / INTEGRAÇÃO 3 CERTIFICADA / AGUARDANDO CHECKPOINT DO PROGRAM CONTROL ANTES DA MOBILE-I**
 
 ## 1. Baseline
 
@@ -36,9 +36,9 @@ Dependência:
 | MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **APROVADA E INTEGRADA SEMANTICAMENTE** | worker PR #229; integração PR #232 / squash `1c523fe2...` |
 | MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **APROVADA E INTEGRADA SEMANTICAMENTE** | worker PR #231; integração PR #234 / squash `fc87bf8f...` |
 | MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **APROVADA E INTEGRADA** | PR #230 / squash `e768ee5f...` |
-| MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **APROVADA / CONGELADA** | PR #239; HEAD `42954ada...`; aguarda G/H antes da ordem de integração |
-| MOBILE-G Saída | `mobile-r1-g-outbound` | Int.2 | **APROVADA / CONGELADA** | PR #242; HEAD `0b513edf...`; Legal #41 stale guard; pronta p/ Integração 3 |
-| MOBILE-H Conferência | `mobile-r1-h-position-check` | Int.2 | **APROVADA / CONGELADA** | PR #241; HEAD `f30f4dcb...`; aguarda G antes da ordem de integração |
+| MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **INTEGRADA / CERTIFICADA** | worker #239; HEAD `42954ada...`; Integração 3 PR #243 / squash `f11b7bf2...` |
+| MOBILE-G Saída | `mobile-r1-g-outbound` | Int.2 | **INTEGRADA / CERTIFICADA** | worker #242; HEAD `0b513edf...`; Legal #41 resolvido por Legal #42 verde |
+| MOBILE-H Conferência | `mobile-r1-h-position-check` | Int.2 | **INTEGRADA / CERTIFICADA** | worker #241; HEAD `f30f4dcb...`; Integração 3 PR #243 / squash `f11b7bf2...` |
 | MOBILE-I Integração controlada | integradora | A–H | **BLOQUEADA** | — |
 | MOBILE-J Certificação | integradora | I | **BLOQUEADA** | — |
 
@@ -799,3 +799,89 @@ Performance:
 Impacto transversal:
 **DELTA COMPATÍVEL / TOOLING ADITIVO**.
 Package/CI devem ser conciliados semanticamente no conjunto F/G/H.
+
+
+### Integração 3 certificada — 2026-10-03
+
+Workers aprovadas:
+- MOBILE-F: `42954adab43694816262720581abad2bc0761d4c` / PR #239;
+- MOBILE-G: `0b513edf7324e40d7b0a505edfdaf84270301ccf` / PR #242;
+- MOBILE-H: `f30f4dcbb1d03d15230fa4414a7d1b95e231253e` / PR #241.
+
+Composição técnica:
+- branch `mobile-r1-integration-3`;
+- PR #243;
+- HEAD certificado `e40c80d73cf9c444ec0573503a63af18f141bd11`;
+- squash `f11b7bf29f8b3fe9525ff80880f4e0f87cd1c67e`;
+- ordem semântica H → F → G.
+
+Superfícies conciliadas:
+- `WarehouseMobileHome.tsx`;
+- `package.json`;
+- `.github/workflows/application-ci.yml`.
+
+Gates:
+- Application CI #940 SUCCESS;
+- Core Protection #227 SUCCESS;
+- Recovery #618 SUCCESS;
+- Legal #42 SUCCESS;
+- MOBILE-H tests/guard SUCCESS;
+- MOBILE-F tests/guard SUCCESS;
+- MOBILE-G tests/guard SUCCESS;
+- Integration 3 domain tests/guard SUCCESS;
+- Production Build SUCCESS;
+- Final TypeScript SUCCESS;
+- Diff Hygiene SUCCESS.
+
+Legal #41 da MOBILE-G:
+- classificado como stale guard de shallow fetch;
+- Legal #42 em snapshot estável passou inclusive Diff Hygiene.
+
+Build certificado:
+- /central-mobile: 5.18 kB / 257 kB;
+- /central-mobile/alocar: 20.6 kB / 275 kB;
+- /central-mobile/conferir: 8.81 kB / 260 kB;
+- /central-mobile/inventario: 16.9 kB / 271 kB;
+- /central-mobile/saida: 10.2 kB / 265 kB;
+- /central-mobile/transferir: 6.65 kB / 261 kB;
+- Shared First Load: 104 kB.
+
+Jornada cruzada protegida:
+- inventário reconhece a posição/material canônicos;
+- outbound prepara saída na mesma posição física;
+- conferência lê a projeção oficial resultante;
+- posição correta → CORRETO;
+- posição divergente → INCORRETO + alternativa oficial;
+- F/G/H compartilham PRODUCT/LOCATION/UNKNOWN e source of truth.
+
+### Checkpoint transversal pós-Integração 3
+
+SaaS vivo observado:
+`feat/saas-r1-commercializacao@9a294bc543ec7150b9144ed96e767a161864d72f`.
+
+Sem novo delta funcional:
+- LegalAcceptanceGate idêntico;
+- workspaceContext idêntico;
+- platformAccess idêntico;
+- platformSessionControl idêntico;
+- warehouse feature flag idêntico;
+- firestore.rules idêntico;
+- firestore.warehouse.rules idêntico;
+- app/layout idêntico;
+- inventoryRepository idêntico;
+- outboundRepository idêntico.
+
+Deltas:
+1. CT-01 permanece preexistente:
+   Mobile `camera=(self), microphone=(), geolocation=()`;
+   SaaS `camera=(), microphone=(), geolocation=()`.
+   Propriedade: futuro RC / Program Control.
+2. WarehouseProtectedSurface: extensão Mobile preexistente, já aceita na HARDEN-D.
+3. **NOVO DELTA TRANSVERSAL DE TOOLING**:
+   package.json + Application CI receberam scripts/gates F/G/H/Integration 3;
+   SaaS possui tooling próprio adicional.
+   Classificação: compatível, sem runtime funcional novo;
+   requer decisão/reconciliação do Program Control antes da próxima barreira global.
+
+MOBILE-I permanece **BLOQUEADA** até decisão do Program Control sobre o checkpoint pós-Integração 3.
+Produção não alterada.
