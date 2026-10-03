@@ -218,7 +218,9 @@
     "test:mobile-r1-intake-allocation": "node --test scripts/mobile-r1-intake-allocation.test.mjs",
     "verify:mobile-r1-intake-allocation": "node scripts/verify-mobile-r1-intake-allocation.mjs",
     "test:mobile-r1-integration-2": "node --test scripts/mobile-r1-integration-2.test.mjs",
-    "verify:mobile-r1-integration-2": "node scripts/verify-mobile-r1-integration-2.mjs"
+    "verify:mobile-r1-integration-2": "node scripts/verify-mobile-r1-integration-2.mjs",
+    "test:mobile-r1-inventory": "node --test scripts/mobile-r1-inventory.test.mjs",
+    "verify:mobile-r1-inventory": "node scripts/verify-mobile-r1-inventory.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
