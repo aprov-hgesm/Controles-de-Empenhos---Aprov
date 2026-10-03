@@ -17,11 +17,11 @@ Produção no momento do freeze: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
 A Central Móvel R1 está **ATIVADA PARA DESENVOLVIMENTO COORDENADO**.
 
-O MOBILE-0 congela arquitetura, contratos e fronteiras. Após o freeze documental:
-- MOBILE-A e MOBILE-B podem iniciar em paralelo;
-- MOBILE-C, MOBILE-D e MOBILE-E permanecem bloqueadas até a Integração 1;
-- MOBILE-F, MOBILE-G e MOBILE-H permanecem bloqueadas até a Integração 2;
-- MOBILE-I e MOBILE-J são etapas do Coordenador.
+O MOBILE-0 congelou arquitetura, contratos e fronteiras. Estado corrente:
+- MOBILE-A/B integradas e Integração 1 certificada;
+- MOBILE-C/D/E integradas e Integração 2 certificada;
+- MOBILE-F/G/H **liberadas na Onda 3** a partir do freeze comum `c971d5356c343a0819bf96ec016de73dd96a435d`;
+- MOBILE-I/J continuam etapas do Coordenador e permanecem bloqueadas até a Integração 3.
 
 A ativação desta branch **não autoriza**:
 - merge em `main`;
