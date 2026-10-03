@@ -219,41 +219,174 @@ Nenhum restore deve apontar para banco produtivo.
 
 ## 8. P4 — Matriz viva de evidências
 
-Status possíveis:
-- `NÃO INICIADO`;
-- `PREPARADO`;
-- `EM EXECUÇÃO`;
-- `PASS`;
-- `FAIL`;
-- `BLOQUEADO`;
-- `N/A`.
+### 8.1 Regra de integridade da matriz
 
-| ID | Jornada | Workspace | Condição inicial | Resultado esperado | Observado | Evidência | Status | Correção | Impacto MOBILE-R1 |
-|---|---|---|---|---|---|---|---|---|---|
-| J01 | onboarding novo workspace | — | novo | provisionado corretamente | — | — | NÃO INICIADO | — | avaliar se transversal |
-| J02 | primeiro login | — | credencial válida | acesso controlado | — | — | NÃO INICIADO | — | avaliar |
-| J03 | reset de senha | — | conta existente | reset funcional | — | — | NÃO INICIADO | — | Auth se houver correção |
-| J04 | troca de senha | — | sessão válida | troca funcional | — | — | NÃO INICIADO | — | Auth se houver correção |
-| J05 | aceite legal | — | versão não aceita | gate exige aceite | — | — | NÃO INICIADO | — | Legal/shell se houver correção |
-| J06 | acesso normal EMPROVEX | — | aceite vigente | shell operacional | — | — | NÃO INICIADO | — | shell se houver correção |
-| J07 | acesso à Central | — | permissão válida | Central disponível | — | — | NÃO INICIADO | — | obrigatório se corrigir |
-| J08 | VIP legado | — | legacy_vip | acesso completo/R$0 | — | — | NÃO INICIADO | — | avaliar |
-| J09 | VIP manual | — | exempt/manual | acesso completo/R$0 | — | — | NÃO INICIADO | — | avaliar |
-| J10 | novo workspace com trial | — | novo não isento | trial 30 dias | — | — | NÃO INICIADO | — | avaliar |
-| J11 | estado comercial do trial | — | trial válido/expirado | sem suspensão automática | — | — | NÃO INICIADO | — | avaliar |
-| J12 | pagamento externo | — | cobrança pendente | pagamento real externo | — | — | NÃO INICIADO | — | não Mobile |
-| J13 | confirmação administrativa | — | pagamento realizado | status confirmado | — | — | NÃO INICIADO | — | não Mobile |
-| J14 | regularização | — | atenção comercial | regularizado | — | — | NÃO INICIADO | — | lifecycle se corrigir |
-| J15 | suspensão manual | — | cenário autorizado | conta/workspace suspensos | — | — | NÃO INICIADO | — | lifecycle/Rules |
-| J16 | revogação de sessão | — | sessão ativa | sessão inválida | — | — | NÃO INICIADO | — | sessão/lease |
-| J17 | bloqueio operacional | — | suspenso | áreas protegidas bloqueadas | — | — | NÃO INICIADO | — | obrigatório se corrigir |
-| J18 | páginas públicas durante suspensão | — | suspenso | páginas públicas acessíveis | — | — | NÃO INICIADO | — | shell |
-| J19 | reativação | — | suspenso | acesso restaurado | — | — | NÃO INICIADO | — | lifecycle |
-| J20 | retorno aos dados | — | reativado | tenant/dados preservados | — | — | NÃO INICIADO | — | Central se afetar |
-| J21 | isolamento entre workspaces | — | dois tenants | zero vazamento cross-tenant | — | — | NÃO INICIADO | — | obrigatório |
-| J22 | custos/leituras | — | baseline conhecido | custo registrado | — | — | NÃO INICIADO | — | não necessariamente |
-| J23 | health/uptime | plataforma | release autorizada | health e alerta funcionais | — | — | NÃO INICIADO | — | não Mobile, salvo infra comum |
-| J24 | backup/recuperação | plataforma | backups READY | restore isolado validado | — | — | NÃO INICIADO | — | não Mobile |
+A matriz registra **estado observado**, não expectativa. Evidência técnica pode deixar uma jornada `PREPARADO` ou sustentar pré-requisitos, mas **não transforma automaticamente jornada humana/comercial em `PASS`**.
+
+Status permitidos: `NÃO INICIADO`, `PREPARADO`, `EM EXECUÇÃO`, `PASS`, `FAIL`, `BLOQUEADO`, `N/A`.
+
+Responsabilidade:
+- PILOT-A/B/C produzem seus próprios handoffs e evidências;
+- PILOT-D consolida estrutura, proveniência, custo, incidentes e lacunas;
+- o Coordenador integra semanticamente os resultados;
+- nenhum `PASS` é inferido apenas porque código, CI ou infraestrutura está verde.
+
+### 8.2 Matriz auditável J01–J24 — baseline PILOT-D de 2026-10-02
+
+| ID | Jornada | Owner | Participante/workspace | Condição inicial | Pré-requisitos | Esperado | Observado | Evidência | Data | Status | Correção | Impacto MOBILE-R1 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| J01 | onboarding novo workspace | PILOT-B | P-03 — a selecionar | workspace novo | P-03 real; publicação controlada; provisionamento autorizado | provisionado corretamente | tooling SAAS-C certificado; nenhum onboarding real P-03 observado | SAAS-C integrada; handoff PILOT-B pendente | 2026-10-02 | BLOQUEADO | — | Auth/workspace/UG |
+| J02 | primeiro login | PILOT-A/B | P-01/P-02/P-03 | credencial válida | participante real; app/Rules compatíveis | acesso controlado | login técnico existente; nenhuma execução de piloto anexada | SAAS-I/SAAS-C; evidência humana pendente | 2026-10-02 | BLOQUEADO | — | Auth/sessão/workspace/shell |
+| J03 | reset de senha | PILOT-A/B | externo aplicável | conta existente | conta real e e-mail válido | reset funcional | fluxo certificado; sem execução humana do piloto | SAAS-C integrada | 2026-10-02 | PREPARADO | — | Auth |
+| J04 | troca de senha | PILOT-A/B | externo aplicável | sessão válida | login real; reautenticação | troca funcional | capacidade certificada; sem execução humana | SAAS-C integrada | 2026-10-02 | PREPARADO | — | Auth/sessão |
+| J05 | aceite legal | PILOT-A/B | participante aplicável | versão vigente não aceita | LegalAcceptanceGate + Rules da release | gate exige aceite | SAAS-DL/SAAS-I certificados; produção ainda na Performance R3 | SAAS-DL + SAAS-I; publicação pendente | 2026-10-02 | BLOQUEADO | — | legal gate/shell/Auth |
+| J06 | acesso normal EMPROVEX | PILOT-A/B | participante aplicável | aceite vigente | candidato SaaS publicado coerentemente | shell operacional | produção permanece `main@e90f92a...`; nenhuma jornada SaaS produtiva | `main` confirmado na Performance R3 | 2026-10-02 | BLOQUEADO | — | shell/sessão/workspace |
+| J07 | acesso à Central | PILOT-A/B | participante com permissão | autorização válida | workspace/UG + `warehouseAccess` válidos | Central disponível | contratos certificados; sem execução de piloto anexada | SAAS-DS/SAAS-I + segurança; Mobile separada | 2026-10-02 | PREPARADO | — | Central/Rules/workspace |
+| J08 | VIP legado | PILOT-A | P-01/P-02 a vincular | `legacy_vip` | selecionar participante; login real | acesso completo/R$0 | coorte 3/3 materializada e verificada; jornada humana pendente | P2 apply+verify: 3 READY | 2026-10-02 | PREPARADO | — | Auth/workspace |
+| J09 | VIP manual | PILOT-A | opcional — não selecionado | `exempt/manual` | participante real isento | acesso completo/R$0 | nenhum participante/evidência | — | 2026-10-02 | NÃO INICIADO | — | Auth/workspace |
+| J10 | novo workspace com trial | PILOT-B | P-03 | novo não isento | P-03 real; onboarding; release autorizada | trial 30 dias | contrato técnico pronto; nenhum P-03 real criado | SAAS-B/C/I | 2026-10-02 | BLOQUEADO | — | workspace/Auth |
+| J11 | estado comercial do trial | PILOT-B | P-03 | trial válido/expirado | J10 + estado legítimo | sem suspensão automática | regra implementada; nenhuma observação real | SAAS-B | 2026-10-02 | BLOQUEADO | — | lifecycle |
+| J12 | pagamento externo | PILOT-B | P-03 | cobrança pendente | cliente real; cobrança externa real | pagamento real | nenhum pagamento real do piloto registrado | contrato R$70/mês; evidência humana pendente | 2026-10-02 | BLOQUEADO | — | não Mobile |
+| J13 | confirmação administrativa | PILOT-B | P-03 | pagamento realizado | J12 comprovada; founder/admin | status confirmado | nenhuma confirmação do piloto | SAAS-B | 2026-10-02 | BLOQUEADO | — | não Mobile |
+| J14 | regularização | PILOT-B | P-03 | atenção comercial | J12/J13; superfície pública | regularizado | nenhum caso real do piloto | SAAS-B/DS | 2026-10-02 | BLOQUEADO | — | lifecycle |
+| J15 | suspensão manual | PILOT-B/Coord. | P-03/cenário seguro | workspace ativo/pending | autorização explícita | suspenso sem apagar dados | enforcement certificado; exercício real não observado | SAAS-DS | 2026-10-02 | BLOQUEADO | — | lifecycle/Rules/warehouseAccess |
+| J16 | revogação de sessão | PILOT-B/Coord. | mesmo de J15 | sessão ativa | J15; sessão real | sessão/leases invalidados | capacidade certificada; sem exercício real | SAAS-DS | 2026-10-02 | BLOQUEADO | — | sessão/lease |
+| J17 | bloqueio operacional | PILOT-B | mesmo de J15 | suspenso | J15/J16; app/Rules da release | áreas privadas bloqueadas | não executado | SAAS-DS/I | 2026-10-02 | BLOQUEADO | — | Auth/Rules/Central |
+| J18 | páginas públicas durante suspensão | PILOT-B | mesmo de J15 | suspenso | J15; rotas públicas preservadas | páginas públicas acessíveis | contrato certificado; não observado | SAAS-B/DL/I | 2026-10-02 | BLOQUEADO | — | shell/roteamento |
+| J19 | reativação | PILOT-B/Coord. | mesmo de J15 | suspenso | exercício de suspensão concluído | acesso restaurado | não executado | SAAS-DS | 2026-10-02 | BLOQUEADO | — | lifecycle/workspace |
+| J20 | retorno aos dados | PILOT-B | mesmo de J15 | reativado | J19; dados preservados | tenant/dados intactos | não executado | contrato proíbe deleção; evidência humana pendente | 2026-10-02 | BLOQUEADO | — | Central/contrato de dados |
+| J21 | isolamento entre workspaces | Coord. + A/B | 2+ tenants reais | dois tenants | identidades/workspaces distintos | zero vazamento cross-tenant | suites automatizadas históricas verdes; piloto real pendente | multi-tenant security/Core/Rules | 2026-10-02 | PREPARADO | — | Rules/workspace/Central |
+| J22 | custos/leituras | PILOT-D | plataforma + cada participante | baseline conhecido | T0 + T1/T2 por jornada | custo/consumo registrado | método reproduzível definido; valores reais ainda não capturados | telemetria 16.3–16.6, 17.6/17.8, Monitoring/Billing | 2026-10-02 | PREPARADO | — | warehouse medido separadamente |
+| J23 | health/uptime | PILOT-C | plataforma | release autorizada | deploy health + uptime + alerta + canal | health/alerta funcionais | PR #223 draft/mergeable; endpoint não está em produção | PR #223 + runbook uptime | 2026-10-02 | PREPARADO | — | infra comum |
+| J24 | backup/recuperação | PILOT-C | plataforma | proteções/schedules ativos | backup READY em ambos + restore isolado | restore validado | PITR/delete protection/backup diário 14 semanas ativos; READY/restore ainda pendentes no último estado | P3 + recovery:status/runbook | 2026-10-02 | EM EXECUÇÃO | — | warehouse compartilhado, sem delta funcional |
+
+### 8.3 Auditoria de dependências
+
+- **Exigem participante/humano:** J01–J20. J12 exige pagamento real; J13 confirmação administrativa real; J15 exige autorização explícita para exercício seguro.
+- **Exigem publicação produtiva/coerente do candidato SaaS:** J01, J02, J05, J06, J10–J20 e J23. J07 pode ser preparado em ambiente controlado, mas o `PASS` deve refletir o candidato efetivamente usado.
+- **Dependem diretamente de P-03 não isento:** J10–J20 e, para comprovar onboarding comercial completo, J01–J07 quando executados sobre P-03.
+- **Dependem de backup/restore:** J24 e o gate de SAAS-J. Configuração não equivale a backup `READY`; backup `READY` não equivale a restore comprovado.
+- **Dependem da publicação de health:** J23. PR verde/draft não é evidência de uptime produtivo.
+- **Podem aproveitar evidência técnica sem virar PASS automaticamente:** J03, J04, J07, J08, J21, J23 e J24.
+- **Risco de sincronização Mobile:** J02, J05–J07 e J15–J21 por tocarem Auth, sessão, workspace/UG, legal gate, lifecycle, Rules, shell ou Central.
+
+### 8.4 Baseline reproduzível de custos, leituras e observabilidade
+
+PILOT-D não cria listener novo para medir consumo. O baseline usa fontes já certificadas e leituras administrativas sob demanda.
+
+| Fonte | Natureza | Escopo | Uso no piloto | Limitação |
+|---|---|---|---|---|
+| Cloud Monitoring / `google-cloud-monitoring` | real operacional | banco Firestore configurado no painel global | snapshot T0/T1/T2 de Read Units, realtime Read Units, writes, reads, deletes, conexões/listeners | não é fatura monetária; painel interno não agrega automaticamente os dois bancos |
+| `emprovex-workspace-estimate` | estimativa EMPROVEX | workspace/UG | atualização pontual no painel founder; comparar evolução da própria estimativa | não é cobrança oficial; flush de baixa frequência pode atrasar o último intervalo |
+| Google Cloud Billing | cobrança oficial | projeto/serviços | custo diário/serviço antes, durante e após o piloto | não atribui oficialmente custo monetário por UG |
+| Firestore/Monitoring do `emprovex-warehouse` | real operacional | Central | acompanhar separadamente no Console/Monitoring/Billing | sem agregação multi-database certificada no painel interno |
+| Billing de backup/PITR/restore | cobrança oficial | recovery | registrar armazenamento/restore observados | custo depende do volume real e preços vigentes |
+
+Contratos já certificados para a coleta:
+- telemetria por UG usa buffer local, flush inicial de 60 s e periódico de 15 min;
+- a telemetria por UG não abre listener próprio e não lê previamente o próprio contador;
+- o painel por UG usa GET pontual, sem listener global;
+- a fonte global real é Cloud Monitoring server-side;
+- valores por UG e globais não são tratados como equivalentes;
+- o dia de faturamento Firestore usado pelo código segue `America/Los_Angeles`; o registro manual mantém também a data/hora local;
+- o `emprovex-warehouse` deve ser observado separadamente até existir agregação certificada.
+
+Janela mínima de captura:
+1. **T0 — antes:** timestamp, workspace/UG, fonte, banco, métrica e valor sem abrir superfícies desnecessárias.
+2. **T1 — durante:** início/fim e operações relevantes; não atualizar painel repetidamente apenas para obter granularidade.
+3. **T2 — depois:** capturar pelas mesmas fontes quando o dado já estiver consolidado; se ainda estiver na janela de flush, registrar a limitação em vez de forçar escritas.
+4. Comparar T2 − T0 apenas dentro da mesma fonte/unidade.
+5. Para custo monetário, usar Billing; não converter estimativa por UG em fatura por cliente.
+
+Campos mínimos: timestamp local; billing day; Jxx; workspace/UG; fonte; banco; métrica/unidade; T0; T2; delta; limitação de flush/latência; incidente associado.
+
+Guards de arquitetura que podem ser reexecutados sem criar telemetria nova:
+
+```bash
+npm run verify:block-16-3-workspace-telemetry
+npm run verify:block-16-4-global-monitoring
+npm run verify:block-16-5-consolidated-usage
+npm run verify:block-16-6-usage-alerts
+npm run verify:block-17-6-telemetry-fidelity
+npm run verify:block-17-8-consumption-regression
+```
+
+Esses guards validam a arquitetura; **não substituem os números reais do piloto**.
+
+### 8.5 Modelo mínimo de evidência por execução
+
+Não registrar senha, token, chave, cookie, segredo ou dado pessoal desnecessário.
+
+```text
+ID: Jxx
+Data/hora local:
+Workspace/UG:
+Operador: [quando apropriado; mínimo necessário]
+Owner:
+Estado inicial:
+Pré-requisitos confirmados:
+Passos executados:
+Resultado esperado:
+Resultado observado:
+Evidência técnica: [commit/PR/run/test/log sanitizado]
+Evidência manual: [sim/não + descrição objetiva]
+Consumo relevante: [fonte, banco, T0/T2/delta ou não aplicável]
+Incidente: [ID ou nenhum]
+Impacto MOBILE-R1: [nenhum / domínio compartilhado + detalhe]
+Status final: [NÃO INICIADO|PREPARADO|EM EXECUÇÃO|PASS|FAIL|BLOQUEADO|N/A]
+Correção/reteste:
+```
+
+Regras: uma execução = um registro; não duplicar teste para aumentar evidência; evidência antiga preserva data; `PASS` exige observado compatível com esperado; ausência de evidência permanece ausência; CI verde prova somente o contrato coberto.
+
+### 8.6 Incidentes e lacunas PILOT-D
+
+| ID | Classe | Origem/reprodução | Impacto | Severidade | Bloqueia? | Owner recomendado | Impacto MOBILE-R1 | Estado |
+|---|---|---|---|---|---|---|---|---|
+| INC-D-001 | PILOT-OPS | `gcloud.cmd` incompatível com tooling Node no Windows durante P3 | atrapalhava recovery no Windows | média | não, após correção | PILOT-C/Coordenador | nenhum funcional | RESOLVIDO via PR #222 / squash `ea2d389f...` |
+| INC-D-002 | PILOT-OPS | Vercel `build-rate-limit` em previews | impede preview novo, sem demonstrar regressão de código | baixa | não para PILOT-D | Coordenador/infra | capacidade de preview compartilhada | ABERTO / externo |
+| INC-D-003 | PILOT-OPS | snapshot Mobile inicial ficou desatualizado enquanto MOBILE-R1 avançou | risco de decisão com status antigo/delta compartilhado perdido | média | sim para SAAS-J se não reconciliado | Coordenadores SaaS + Mobile | alto em governança | ABERTO até reconciliação final |
+
+Lacunas, não incidentes: P-03 real ainda sem evidência desta worker; J01–J20 sem handoffs da onda; backup `READY` e restore isolado pendentes no último estado; health/uptime/alert/channel pendentes; baseline numérico T0/T1/T2 ainda não capturado.
+
+### 8.7 Reconciliação com MOBILE-R1 — estado vivo consultado em 2026-10-02
+
+O snapshot conhecido no início desta frente foi superado durante a onda.
+
+- MOBILE-B: PR #220 **MERGED**, squash `5edb19812...`;
+- MOBILE-A: PR #221 **MERGED**, squash `19fc6be4...`, com pendência de validação runtime/física;
+- Integração 1 A+B: PR #224 **MERGED**, squash `7c987676...`, gate scanner → EPX1 → resolver → posição certificado;
+- MOBILE-C/D/E: liberadas para Onda 2;
+- nenhuma alteração MOBILE-R1 chegou à `main`;
+- produção `main` continua exatamente em `e90f92acae1514ee5cbc6ce95fed354bc1454330`.
+
+Deltas compartilhados relevantes observados na integradora Mobile incluem `next.config.ts`, `features/warehouse/components/WarehouseProtectedSurface.tsx`, contratos fail-closed de workspace/UG, metadata de dependências do scanner e novas superfícies/resolver móveis.
+
+PILOT-D **não declara conflito funcional** apenas por esses deltas. Antes de SAAS-J, o Coordenador deve comparar semanticamente as integradoras nos pontos compartilhados.
+
+### 8.8 Checklist objetivo de gate para SAAS-J
+
+A checklist está **preparada**; a liberação de SAAS-J **não é concedida por PILOT-D**.
+
+- [ ] matriz J01–J24 aplicável preenchida com proveniência e data;
+- [ ] no mínimo 3 onboardings reais completos;
+- [ ] pelo menos 1 cliente real pago, novo e não legado;
+- [ ] trial → pagamento → confirmação → regularização comprovados;
+- [ ] suspensão → revogação/bloqueio → reativação → retorno aos dados exercitados com segurança/autorização;
+- [ ] incidentes classificados, com owner e decisão explícita de bloqueio;
+- [ ] correções necessárias integradas e revalidadas;
+- [ ] baseline T0/T1/T2 de custo/leituras registrado;
+- [ ] custo monetário real consultado no Google Cloud Billing, sem atribuição fictícia por UG;
+- [ ] uso/custo do `emprovex-warehouse` observado separadamente;
+- [ ] backup `READY` nos dois bancos;
+- [ ] restore real em banco isolado comprovado;
+- [ ] `/api/health` publicado na release autorizada;
+- [ ] uptime check HTTPS + alert policy + notification channel testados;
+- [ ] isolamento multi-tenant revalidado e sem evidência cross-tenant no piloto;
+- [ ] estado vivo MOBILE-R1 reconsultado e deltas compartilhados reconciliados;
+- [ ] pendências remanescentes resolvidas ou aceitas explicitamente.
+
+**Estado neste baseline PILOT-D:** checklist estruturada; evidências ainda incompletas; **SAAS-J não deve ser declarada liberada por esta worker**.
 
 ## 9. P5 — Correções durante o piloto
 
