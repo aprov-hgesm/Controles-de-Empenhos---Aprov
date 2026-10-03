@@ -599,3 +599,13 @@ Com isso:
 - **T0 inicial: COMPLETO**.
 
 J22 permanece PREPARADO até captura de T1/T2 após as jornadas reais.
+
+### Smoke controlado — `aprovisionamento-teste`
+
+Login/shell observado com sucesso:
+- acesso autorizado;
+- Home operacional;
+- navegação principal carregada;
+- Central de Depósitos disponível no menu.
+
+Classificação: evidência funcional controlada, sem promoção de P-01/P-02 ou J05.
