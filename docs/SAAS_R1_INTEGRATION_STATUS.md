@@ -850,3 +850,44 @@ Antes do freeze do RC:
 
 HARDEN-C PASS não significa RC congelado nem produção autorizada.
 
+## HARDEN-A — CHECKPOINT PARCIAL ACEITO PELO COORDENADOR SAAS
+
+Status: **PARCIAL — CORREÇÕES NÃO-BREAKING INTEGRADAS / MAJOR FIXES PENDENTES**
+
+Worker:
+- branch: `saas-harden-a-security-dependencies`;
+- base congelada: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`;
+- HEAD final: `00d6386d212d6c139eec243d00b61c11a13017b8`;
+- PR: `#240`;
+- delta: `package-lock.json` + `docs/SAAS_R1_HARDEN_A_SECURITY_DEPENDENCIES.md`.
+
+Auditoria do Coordenador SaaS confirmou:
+- baseline reproduzido: 22 vulnerabilidades (1 critical, 17 high, 4 moderate);
+- correção compatível no lockfile: 22 → 14;
+- nenhum `npm audit fix --force`;
+- nenhum major upgrade;
+- `package.json` permaneceu idêntico;
+- lockfile da integradora antes da incorporação era idêntico ao da base congelada, permitindo integração semântica segura;
+- Application CI: SUCCESS;
+- Core Protection: SUCCESS;
+- Production Build: PASS;
+- TypeScript: PASS;
+- Diff Hygiene: PASS;
+- Vercel: falha externa por `build-rate-limit`.
+
+Integração semântica:
+- lockfile seguro: `040ec20c66a7d9c8e77070d12dd455fe43aef5d7`;
+- evidência HARDEN-A: `66dc540b7d50a451e96cd16558a9219743543cd7`.
+
+Pendências que impedem PASS:
+1. `jspdf@2.5.2` CRITICAL, direto/runtime, com correção major coordenada;
+2. `jspdf-autotable` compatível com a linha segura;
+3. cadeia Firebase/Firestore/gRPC exige decisão suportada e testada, sem downgrade/force;
+4. após correções, repetir audit e gates.
+
+Achados dev-only e Next/PostCSS permanecem aceitos com evidência no escopo auditado, salvo mudança de alcançabilidade.
+
+Impacto MOBILE-R1: **DELTA COMPATÍVEL**.
+
+HARDEN-A permanece gate obrigatório antes do freeze do RC.
+
