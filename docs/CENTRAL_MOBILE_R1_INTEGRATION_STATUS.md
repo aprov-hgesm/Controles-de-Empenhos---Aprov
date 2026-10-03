@@ -32,7 +32,7 @@ Dependência:
 | MOBILE-0 Baseline/contratos | integradora | candidato SAAS-I verde | **CONGELADA** | contratos/documentação canônicos |
 | MOBILE-A Plataforma/Scanner | `mobile-r1-a-platform-scanner` | 0 | **APROVADA COM PENDÊNCIA RUNTIME / INTEGRADA** | PR #221 / squash `19fc6be4...` |
 | MOBILE-B Etiquetas/Resolver | `mobile-r1-b-location-labels` | 0 | **APROVADA E INTEGRADA** | PR #220 / squash `5edb19812...` |
-| MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **APROVADA / AGUARDANDO INTEGRAÇÃO** | PR #229; HEAD `6828273e...`; integrar após MOBILE-E |
+| MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **APROVADA E INTEGRADA SEMANTICAMENTE** | worker PR #229; integração PR #232 / squash `1c523fe2...` |
 | MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **LIBERADA / BRANCH CRIADA** | base `6852963c7...`; aguardando worker |
 | MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **APROVADA E INTEGRADA** | PR #230 / squash `e768ee5f...` |
 | MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **BLOQUEADA** | — |
@@ -354,3 +354,51 @@ Performance:
 
 Ordem da Onda 2:
 **E integrada → C próxima → D depois.**
+
+
+### Integração MOBILE-C — 2026-10-02
+
+Worker aprovado:
+- branch: `mobile-r1-c-intake-allocation`;
+- base: `6852963c7aa9a1c83133239f0b929715fd316530`;
+- HEAD: `6828273ee4c957fa92e42922363d2e1dcf296d89`;
+- PR worker #229.
+
+Após a MOBILE-E, o PR #229 passou a ter conflito mecânico esperado em:
+- `package.json`;
+- `.github/workflows/application-ci.yml`.
+
+Integração semântica coordenada:
+- branch técnica: `mobile-r1-integration-2-c`;
+- PR #232;
+- HEAD certificado: `82e9df17c83644acb969a7434e89ea2c6ea686de`;
+- squash: `1c523fe2dccbd7248fd3f845d9169261da7edc65`.
+
+Preservado:
+- código funcional aprovado da MOBILE-C;
+- gates e consulta read-only da MOBILE-E;
+- ALLOCATE oficial;
+- idempotência;
+- revalidação concorrente;
+- nenhuma escrita client-side de saldo/ledger/barcode;
+- scripts/gates de E e C simultaneamente.
+
+Certificação combinada:
+- Application CI #931: SUCCESS;
+- Core Protection #218: SUCCESS;
+- Recovery #613: SUCCESS;
+- SAAS-DL Legal #37: SUCCESS;
+- MOBILE-E domain tests/guard: SUCCESS;
+- MOBILE-C domain tests/guard: SUCCESS;
+- Production Build: SUCCESS;
+- Final TypeScript: SUCCESS;
+- Diff Hygiene: SUCCESS;
+- Release Gates 16–21: SUCCESS.
+
+PR #229 foi encerrado sem merge direto porque seu conteúdo foi incorporado semanticamente pelo PR #232.
+
+Estado da Onda 2:
+- MOBILE-E: integrada;
+- MOBILE-C: integrada;
+- MOBILE-D: aguardando handoff/revisão;
+- Integração 2: ainda não encerrada.
