@@ -422,3 +422,21 @@ Estado:
 
 O Chat Coordenador permanece responsável por revisão de handoffs, conflitos, correções transversais, integração semântica, reconciliação com MOBILE-R1 e gates de SAAS-J.
 
+### PILOT-A recebida pelo Coordenador
+
+PR #226 integrado semanticamente/documentalmente na branch coordenadora via squash `8459a59aefc0f846d9c7e2f5ee78888c4fa2abd5`.
+
+Status da frente: **PARCIAL**.
+
+Evidências aceitas:
+- J08 — VIP legado/R$0: **PASS**;
+- J21 — isolamento entre workspaces: **PASS** por evidência automatizada específica já certificada.
+
+Ainda pendentes de execução humana/credencial real:
+- J02, J03, J04, J05, J06, J07, J16.
+
+Bloqueadas até cenário seguro/autorizado:
+- J15, J17, J18, J19, J20.
+
+Nenhum defeito novo PILOT-* foi reproduzido. Nenhuma correção funcional foi integrada. Impacto MOBILE-R1: nenhum delta funcional.
+
