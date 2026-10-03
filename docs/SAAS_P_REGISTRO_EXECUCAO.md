@@ -152,3 +152,54 @@ Observação de instalação:
 - `npm ci` reportou 22 advisories de dependência (4 moderate, 17 high, 1 critical);
 - nenhum `npm audit fix` ou `--force` foi executado durante o piloto;
 - esses advisories não foram investigados nesta etapa e não são convertidos automaticamente em falha funcional do T0.
+
+## T0 numérico — estimativa por UG capturada — 2026-10-02
+
+Fonte: **emprovex-workspace-estimate**  
+Ação: uma única atualização manual do painel.
+
+Totais atribuídos exibidos:
+- reads atribuídos hoje: **111**;
+- writes atribuídos hoje: **3**.
+
+### P-01 — `aprovisionamento-3-gac-ap`
+- UG exibida: **160409**;
+- reads: **111**;
+- writes: **3**;
+- deletes: **0**;
+- snapshots: **7**;
+- carga pico listeners: **4**;
+- flushes: **2**;
+- última consolidação exibida: **02/10, 13:01**.
+
+### P-02 — `aprovisionamento-2-b-fv`
+- UG exibida: **160106**;
+- reads: **0**;
+- writes: **0**;
+- deletes: **0**;
+- snapshots: **0**;
+- carga pico listeners: **0**;
+- flushes: **0**;
+- última consolidação: **sem consolidação**.
+
+### `aprovisionamento-teste`
+- UG exibida: **000000**;
+- reads: **0**;
+- writes: **0**;
+- deletes: **0**;
+- snapshots: **0**;
+- carga pico listeners: **0**;
+- flushes: **0**;
+- última consolidação: **sem consolidação**.
+
+Interpretação:
+- a estimativa por UG é atribuição interna do EMPROVEX e não faturamento oficial;
+- P-01 possui atividade atribuída no snapshot;
+- P-02 e `aprovisionamento-teste` não possuíam consolidação atribuída no momento;
+- nenhum refresh adicional é necessário para o T0.
+
+Classificação:
+- **T0 global numérico: CAPTURADO**;
+- **T0 por UG: CAPTURADO**;
+- Google Cloud Billing monetário: PENDENTE;
+- J22 permanece PREPARADO até completar T0 monetário e posteriormente T1/T2.
