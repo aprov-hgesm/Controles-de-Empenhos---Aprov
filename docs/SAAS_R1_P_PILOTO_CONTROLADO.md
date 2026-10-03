@@ -476,3 +476,52 @@ Conclusão desta subetapa:
 - certificação final de recovery: **PENDENTE** somente de pelo menos um backup READY por banco e do restore real isolado;
 - não repetir `apply` enquanto o estado permanecer coerente.
 
+## 10.1 Topologia recomendada de chats para a próxima fase
+Para a fase operacional do piloto, adotar no máximo **4 workers simultâneos + 1 Coordenador**:
+
+| Frente | Propriedade | Pode avançar agora | Bloqueios principais |
+|---|---|---|---|
+| PILOT-A | participantes VIP + jornadas funcionais | sim | correção transversal volta ao Coordenador |
+| PILOT-B | P-03 não-VIP + jornada comercial | preparação sim; execução produtiva depende de participante/autorização | não criar cliente fictício |
+| PILOT-C | recovery + health + uptime | sim nas partes não bloqueadas | backup READY / publicação health / ações externas autorizadas |
+| PILOT-D | custos + observabilidade + J01–J24 | sim | não alterar produto para fabricar evidência |
+| Coordenador | integração, conflitos, Memorial, Mobile, gates | sempre ativo | não competir com workers |
+
+### PILOT-A — Participantes e Jornadas VIP
+
+Escopo:
+- selecionar/formalizar P-01/P-02;
+- conduzir jornadas VIP;
+- produzir evidências de login, legal, shell, Central, sessão/permissões e condição isenta;
+- atualizar o Coordenador via handoff.
+
+### PILOT-B — Piloto Comercial Não-VIP
+
+Escopo:
+- preparar P-03;
+- validar onboarding → trial → R$70 → pagamento externo → confirmação → regularização;
+- validar suspensão/reativação apenas em cenário autorizado;
+- preservar tenant e dados.
+
+### PILOT-C — Operação/Recovery/Uptime
+
+Escopo:
+- backups READY;
+- `recovery:verify`;
+- restore isolado;
+- PR #223/health;
+- uptime/alerta/canal quando publicação for autorizada.
+
+### PILOT-D — Custos/Evidências
+
+Escopo:
+- baseline de custos e leituras;
+- consolidação J01–J24;
+- incidentes/dúvidas;
+- completude documental para SAAS-J.
+
+### Regra de colisão
+
+Auth, legal, lifecycle, billing compartilhado, Rules, shell, sessão, workspace/UG, `warehouseAccess` e contratos comuns com MOBILE-R1 **não são áreas de correção paralela livre**. Qualquer necessidade de alteração nessas áreas retorna ao Coordenador, que cria correção curta com proprietário único e reconciliação Mobile.
+
+Estado atual: **topologia planejada; workers ainda não ativados**.
