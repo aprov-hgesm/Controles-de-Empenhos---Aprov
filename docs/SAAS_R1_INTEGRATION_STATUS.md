@@ -772,3 +772,41 @@ Integração documental semântica:
 
 Nenhum merge da branch worker foi realizado.
 
+## HARDEN-B — CHECKPOINT PARCIAL ACEITO PELO COORDENADOR SAAS
+
+Status: **PARCIAL — DEPENDÊNCIA TEMPORAL LEGÍTIMA**
+
+Worker:
+- branch: `saas-harden-b-recovery-restore`;
+- base congelada: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`;
+- HEAD atual: `910cca1ea9f14e4ef080ee649624042f63206d51`;
+- PR: `#237` — OPEN / DRAFT / MERGEABLE;
+- alterações: 2 commits, 1 arquivo, somente documentação.
+
+Auditoria do Coordenador SaaS confirmou:
+- PITR ativo nos dois bancos;
+- delete protection ativa nos dois bancos;
+- schedule diário ativo nos dois bancos;
+- retenção de 14 semanas;
+- tooling `recovery:status` e `recovery:verify` operacional;
+- nenhum backup nativo READY ainda;
+- `completedBackupCount = 0` nos dois bancos;
+- `ready = false` corretamente impede falso PASS.
+
+Classificação:
+**não há falha de configuração identificada**.
+
+Pendência:
+1. aguardar primeiro backup nativo READY de ambos os bancos;
+2. capturar resource name/location/snapshot/expiration;
+3. gerar restore-plan para banco novo e isolado;
+4. solicitar autorização explícita do fundador;
+5. executar restore real somente após autorização;
+6. validar dados/IAM/Rules/TTL/isolamento.
+
+O PR #237 permanece aberto/draft para retomada da própria HARDEN-B. Nenhuma integração semântica intermediária do documento da worker foi feita, para preservar uma única frente contínua até o fechamento definitivo.
+
+Impacto MOBILE-R1: **SEM DELTA**.
+
+HARDEN-B permanece gate obrigatório antes do freeze do RC.
+
