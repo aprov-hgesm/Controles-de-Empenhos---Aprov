@@ -274,3 +274,31 @@ Validar no header HTTP efetivo do candidato publicado.
 
 A conclusão da HARDEN-D não congela o RC e não substitui HARDEN-A/B/C.
 
+## Checkpoint — HARDEN-C concluída
+
+HARDEN-C: **PASS TÉCNICO**
+
+Resultado:
+- health auditado e presente no candidato;
+- PR #223 não deve ser mergeado cegamente;
+- Rules principal/warehouse classificadas e reconciliadas;
+- Release Manifest completo;
+- rollout e rollback preparados;
+- smoke preparado;
+- env/config inventariado sem expor secrets;
+- uptime/alerting preparados para ativação futura;
+- CT-01 registrada como correção obrigatória de composição do RC.
+
+Integração documental semântica:
+`e0e4e13a73aad18850a3bf5b70b64ebf22a3d11b`
+
+Pendências antes do RC:
+- HARDEN-A;
+- HARDEN-B;
+- materialização CT-01;
+- gates do HEAD composto;
+- confirmação de recovery readiness;
+- GO explícito para qualquer publicação.
+
+PASS HARDEN-C não congela o RC.
+
