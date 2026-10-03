@@ -44,12 +44,16 @@ Evidências do baseline:
 - SAAS-DL Legal Validation #20: SUCCESS;
 - preview Vercel do candidato: READY.
 
-A MOBILE-R1 **não assume propriedade da SAAS-I** e não integra o PR #219.
+A MOBILE-R1 **não assume propriedade do SaaS R1**. A SAAS-I foi posteriormente integrada na branch SaaS por squash `25dda4876fedabb498ad30139262b11943412273`, e a **SAAS-P está em execução**.
 
 Gate upstream obrigatório:
-> antes de MOBILE-I, o Coordenador deve comparar a branch MOBILE-R1 com o estado SaaS consolidado e reconciliar apenas deltas upstream necessários, preservando contratos dos dois programas.
+> antes de liberar nova onda Mobile quando houver upstream SaaS relevante, antes de MOBILE-I e antes de MOBILE-J, o Coordenador deve comparar semanticamente `feat/central-mobile-r1` com `feat/saas-r1-commercializacao` nos contratos compartilhados.
 
-Se a SAAS-I ou etapas posteriores do SaaS alterarem shell, autenticação, acesso da Central, sessão, legal gate ou lifecycle, a mudança deve entrar na MOBILE-R1 por integração coordenada; workers móveis não devem “acompanhar” o SaaS editando esses domínios por conta própria.
+Não usar merge/rebase bruto entre as integradoras. História Git diferente é esperada por causa do squash da SAAS-I.
+
+Se o SaaS alterar shell, autenticação, acesso da Central, sessão, legal gate, lifecycle, Rules ou outro contrato compartilhado, a mudança deve ser classificada pelo Coordenador Mobile antes da próxima integração. Workers móveis não devem “acompanhar” o SaaS editando esses domínios por conta própria.
+
+Todo worker Mobile que tocar domínio compartilhado deve incluir no handoff uma seção **Impacto SAAS-R1**.
 
 ---
 
