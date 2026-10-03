@@ -224,3 +224,22 @@ Classificação:
 - **T0 monetário: CAPTURADO**;
 - **T0 inicial: COMPLETO** (técnico + global + por UG + monetário);
 - J22 permanece PREPARADO porque ainda faltam T1/T2 após as jornadas do piloto.
+
+## Evidência funcional controlada — `aprovisionamento-teste` — login/shell
+
+Captura humana recebida em 2026-10-02.
+
+Observado:
+- operador exibido: **Aprovisionamento Teste**;
+- estado visual: **ACESSO AUTORIZADO**;
+- Home carregada;
+- shell/navegação principal disponível;
+- menus visíveis: Início, Painel, Empenhos, Fornecedores, Consulta de Itens, Notas Fiscais, Central de Avisos, Relatórios, Cronogramas e Central de Depósitos;
+- estado inferior: **Operacional / Ambiente seguro**;
+- nenhuma tela de bloqueio legal/regularização interceptando esta sessão no momento.
+
+Classificação:
+- evidência funcional/controlada do workspace de teste: **PASS para login + shell**;
+- não substitui evidência humana de P-01/P-02;
+- não promove J05 (aceite legal) a PASS, pois não houve criação/renovação de aceite;
+- próximo passo: validar acesso à Central de Depósitos.
