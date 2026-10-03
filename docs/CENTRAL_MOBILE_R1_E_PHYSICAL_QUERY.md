@@ -1,7 +1,7 @@
 # EMPROVEX — Central Móvel R1 — MOBILE-E Consulta Física
 
-Data: **2026-10-02**  
-Branch: `mobile-r1-e-physical-query`  
+Data: **2026-10-02**
+Branch: `mobile-r1-e-physical-query`
 Base congelada da Onda 2: `6852963c7aa9a1c83133239f0b929715fd316530`
 
 ## Objetivo
