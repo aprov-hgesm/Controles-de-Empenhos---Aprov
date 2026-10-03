@@ -1006,3 +1006,21 @@ Integração semântica da A1 concluída na integradora por commits:
 
 HARDEN-A1 não bloqueia mais a HARDEN-A2.
 
+## HARDEN-A2 — ATIVADA
+
+Program Control liberou formalmente a frente **HARDEN-A2 — Firebase / Firestore / gRPC**.
+
+Branch exclusiva:
+`saas-harden-a2-firebase-firestore-grpc`
+
+Base congelada:
+`f308ff601fe923467b8ccc1489be91b318bc3e8c`
+
+A branch foi criada exatamente na base viva da integradora e conferida como **identical / ahead 0 / behind 0** no momento da ativação.
+
+Objetivo: classificar e reduzir risco real nos advisories de Firebase/Firestore/gRPC sem `npm audit fix --force`, downgrade automático, override cego ou alteração oportunista de Rules.
+
+A MOBILE-J pode prosseguir em paralelo em pré-certificação. O PASS final Mobile dependerá de reconciliação após HARDEN-A2.
+
+HARDEN-B permanece PARCIAL / espera controlada.
+
