@@ -278,7 +278,9 @@ Nenhum arquivo funcional alterado.
 
 ## 16. PR
 
-PR draft contra `feat/saas-r1-commercializacao`: **será aberto nesta entrega e registrado no retorno final ao Coordenador**.
+PR draft contra `feat/saas-r1-commercializacao`: **#227 — PILOT-B — preparar piloto comercial não-VIP P-03**.
+
+Primeiro commit documental desta worker: `f9e18c411af2a6b47187ac982962a469825ef606`.
 
 Não autoriza merge.
 
