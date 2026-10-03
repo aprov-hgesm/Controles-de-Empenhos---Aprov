@@ -812,3 +812,28 @@ Obrigatório no handoff:
 
 MOBILE-F/G/H permanecem bloqueadas até essa devolutiva.
 
+## HARDEN-D — FECHAMENTO PELO COORDENADOR SAAS
+
+A reconciliação SaaS ↔ MOBILE-C/D/E foi aceita como **PASS TÉCNICO**.
+
+Referências:
+- worker HEAD: `fb7b5006d13cd09b247d6c5d0cd39d6a0b950f02`;
+- PR: `#236`;
+- evidência integrada semanticamente em: `22459625475cb155596e507663874de9896d001d`;
+- alvo Mobile: `7b745fa0b7979e643b83b7de94dd96a0290930ab`.
+
+Não há conflito funcional material aberto no escopo reconciliado.
+
+Pendência obrigatória:
+**CT-01 — Permissions-Policy do futuro RC**
+
+Contrato:
+`camera=(self), microphone=(), geolocation=()`
+
+Owner:
+**Integração SaaS / composição do RC**.
+
+HARDEN-A/B/C permanecem separadas e ainda não são consideradas executadas por este fechamento.
+
+Nenhuma ação produtiva foi autorizada.
+
