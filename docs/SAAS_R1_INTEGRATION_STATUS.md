@@ -609,3 +609,17 @@ Login/shell observado com sucesso:
 - Central de Depósitos disponível no menu.
 
 Classificação: evidência funcional controlada, sem promoção de P-01/P-02 ou J05.
+
+### Correção de ambiente — produção ainda em Performance R3
+
+Conferência viva:
+- `main=e90f92acae1514ee5cbc6ce95fed354bc1454330`;
+- SaaS integradora = `46fba355227e715c553484b2d65b7c52fcf30d39`;
+- SaaS = 117 commits à frente / 0 atrás.
+
+Assim:
+- produção atual não deve ser tratada como release SaaS R1;
+- T0 coletado é baseline pré-release;
+- smoke de `aprovisionamento-teste` é baseline funcional da produção atual;
+- validação real das features SaaS depende de ambiente com código candidato;
+- nenhuma promoção Jxx foi feita com base nesse smoke.
