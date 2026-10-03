@@ -1992,3 +1992,13 @@ Os 3 retornaram `READY` após a aplicação. A P2 da SAAS-P está concluída.
 
 A coorte passa a permanecer permanentemente isenta segundo o contrato já definido: `exempt`, R$ 0, `legacy_vip`, sem cobrança financeira automática.
 
+### SAAS-P — recovery produtivo configurado — 2026-10-02
+
+Após autorização explícita, PITR, delete protection e backup diário com retenção de 14 semanas foram ativados nos dois bancos Firestore da plataforma.
+
+Estado imediatamente após aplicação:
+- principal: proteções e agenda OK, 0 backup READY;
+- `emprovex-warehouse`: proteções e agenda OK, 0 backup READY.
+
+A P3 ainda não está certificada: falta o primeiro backup READY em cada banco, a verificação consolidada e um restore real em banco isolado. Nenhum novo `apply` deve ser repetido apenas por `backupReady=false`.
+
