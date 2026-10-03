@@ -410,3 +410,15 @@ Branches criadas:
 
 As quatro branches nasceram do mesmo baseline acima. Não devem fazer merge/rebase entre si nem incorporar a integradora sem instrução do Coordenador. O Coordenador pode avançar documentalmente após o freeze; isso não altera a base congelada dos workers.
 
+### SAAS-P — workers ativados
+
+Em 2026-10-02, os quatro chats trabalhadores da onda paralela foram efetivamente ativados a partir da base congelada `4d87370e5ee7f2697ab4901e0c045a9ab4910fe9`.
+
+Estado:
+- PILOT-A / `saas-p-a-vip-journeys`: **EM EXECUÇÃO**;
+- PILOT-B / `saas-p-b-commercial-nonvip`: **EM EXECUÇÃO**;
+- PILOT-C / `saas-p-c-recovery-uptime`: **EM EXECUÇÃO**;
+- PILOT-D / `saas-p-d-evidence-observability`: **EM EXECUÇÃO**.
+
+O Chat Coordenador permanece responsável por revisão de handoffs, conflitos, correções transversais, integração semântica, reconciliação com MOBILE-R1 e gates de SAAS-J.
+
