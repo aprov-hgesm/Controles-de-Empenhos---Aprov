@@ -929,3 +929,49 @@ Proibido nesta frente:
 
 A1 permanece gate do hardening pré-RC.
 
+## HARDEN-A1 — CHECKPOINT PARCIAL ACEITO PELO COORDENADOR SAAS
+
+Status: **PARCIAL TECNICAMENTE SAUDÁVEL / SECURITY PASS / VALIDAÇÃO VISUAL PENDENTE**
+
+Worker:
+- branch: `saas-harden-a-jspdf-security`;
+- base congelada: `9a294bc543ec7150b9144ed96e767a161864d72f`;
+- HEAD final: `5ae4984bb9580faf5197737eeeeb0d5cf5aae838`;
+- PR: `#244` — OPEN / DRAFT / MERGEABLE;
+- delta: 5 arquivos, sem Firebase/Firestore/gRPC, Rules, Mobile ou `next.config.ts`.
+
+Auditoria do Coordenador SaaS confirmou:
+- `jspdf` declarado em `^4.2.1`;
+- `jspdf-autotable` declarado em `^5.0.8`;
+- toolkit PDF preserva lazy loading e usa exports nomeados modernos;
+- teste reproduzível `test:harden-a1-pdf` presente;
+- CRITICAL jsPDF eliminado segundo o validation run;
+- Application CI: SUCCESS;
+- Core Protection: SUCCESS;
+- Recovery guardrails: SUCCESS;
+- Legal Validation: SUCCESS;
+- Production Build: PASS;
+- TypeScript: PASS;
+- Diff Hygiene: PASS;
+- Vercel Preview: SUCCESS;
+- produção: NÃO alterada.
+
+Pendência única para fechamento da A1:
+**validação visual/manual dirigida** de:
+1. Cronograma;
+2. Relatório/Termo;
+3. Folha de Alocação;
+4. Documento de Saída;
+5. Etiquetas.
+
+Até essa inspeção:
+- não integrar a A1;
+- não fechar o PR #244;
+- não liberar HARDEN-A2;
+- não declarar HARDEN-A1 PASS final.
+
+HARDEN-A2 — Firebase/Firestore/gRPC:
+**BLOQUEADA** até aceite final e integração da A1.
+
+Impacto MOBILE-R1: **DELTA COMPATÍVEL**.
+
