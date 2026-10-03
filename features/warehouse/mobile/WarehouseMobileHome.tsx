@@ -44,7 +44,7 @@ const FUTURE_CAPABILITIES = [
     label: 'Conferir posição',
     description: 'Compare o físico com o registro oficial.',
     Icon: Warehouse,
-    href: null,
+    href: '/central-mobile/conferir',
   },
 ] as const;
 
@@ -74,7 +74,7 @@ export function WarehouseMobileHome() {
             </h2>
           </div>
           <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-black text-blue-800">
-            Onda 2
+            Onda 3
           </span>
         </div>
 
@@ -123,7 +123,7 @@ export function WarehouseMobileHome() {
       <WarehouseMobileLocationFoundationCheck />
 
       <p className="px-2 text-center text-[11px] font-semibold leading-5 text-slate-500">
-        Alocação e transferência reutilizam operações oficiais. A consulta física permanece read-only; inventário, saída e conferência continuam reservados às próximas frentes.
+        Alocação e transferência reutilizam operações oficiais. Consulta física e conferência permanecem read-only; inventário e saída continuam reservados às próximas frentes.
       </p>
     </div>
   );
