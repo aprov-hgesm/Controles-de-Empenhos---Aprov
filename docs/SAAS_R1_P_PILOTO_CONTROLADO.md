@@ -73,7 +73,7 @@ Não inventar nomes ou workspaces. Preencher somente com participantes reais.
 | Slot | Workspace | Classificação | Objetivo principal | Estado |
 |---|---|---|---|---|
 | P-01 | `aprovisionamento-3-gac-ap` | VIP legado / usuário externo real ativo | acesso/legal/Central em modo não disruptivo | **CONFIRMADO** |
-| P-02 | A definir | VIP legado ou existente | jornada operacional e suporte | NÃO SELECIONADO |
+| P-02 | `aprovisionamento-2-b-fv` | VIP legado / usuário externo real em adoção | jornada operacional não disruptiva | **CONFIRMADO** |
 | P-03 | A definir | novo não isento | trial → pagamento/regularização | NÃO SELECIONADO |
 | P-04 | A definir | opcional | ampliar amostra | NÃO SELECIONADO |
 | P-05 | A definir | opcional | ampliar amostra | NÃO SELECIONADO |
@@ -83,25 +83,44 @@ Classificações permitidas:
 - **VIP manual**: isenção administrativa explícita, `exempt/manual`;
 - **pagante/trial**: novo workspace comercial não isento.
 
-## 3.1 Decisão operacional — P-01 crítico e não disruptivo
+## 3.1 Decisão operacional — P-01/P-02 protegidos e ambiente disruptivo separado
 
-P-01 foi formalmente definido como:
+Participantes reais confirmados:
 
+### P-01
 - workspace: `aprovisionamento-3-gac-ap`;
 - classificação: VIP legado;
 - perfil: **usuário externo real, ativo e necessário às operações do setor**.
 
+### P-02
+- workspace: `aprovisionamento-2-b-fv`;
+- classificação: VIP legado;
+- perfil: **usuário externo real que está iniciando o uso operacional do EMPROVEX**.
+
 Regra obrigatória para todo o restante da SAAS-P:
 
-- P-01 **não pode ficar sem acesso ao setor como consequência de teste**;
-- não usar P-01 para suspensão, revogação de sessão, bloqueio operacional ou qualquer exercício J15–J20;
+- P-01 e P-02 **não podem ficar sem acesso por consequência de teste**;
+- não usar P-01/P-02 para suspensão, revogação de sessão, bloqueio operacional ou qualquer exercício J15–J20;
 - não forçar reset/troca de senha apenas para gerar evidência;
 - não apagar/recriar aceite legal;
 - não alterar billing, status, workspace, UG, UID, Rules ou permissões para fabricar cenário;
-- validações em P-01 devem priorizar observação do uso normal, login já existente, shell, Central, isolamento e condição VIP;
-- qualquer teste com risco de indisponibilidade deve ser deslocado para `aprovisionamento-teste`, P-03 ou outro cenário controlado expressamente autorizado.
+- validações em P-01/P-02 devem priorizar observação do uso normal, shell, Central, isolamento, condição VIP e fluxos naturalmente utilizados pelos operadores;
+- qualquer teste com risco de indisponibilidade deve ser deslocado para `aprovisionamento-teste` ou, quando aplicável, P-03 em cenário controlado e autorizado.
 
-Se surgir qualquer risco real de interrupção, a jornada deve ser interrompida e devolvida ao Coordenador.
+### Ambiente oficial para testes disruptivos
+
+`aprovisionamento-teste` é o workspace oficial preferencial para testes de:
+- suspensão;
+- revogação de sessão;
+- bloqueio operacional;
+- reativação;
+- retorno aos dados;
+- reset/troca de senha quando o objetivo for apenas testar o fluxo;
+- cenários de lifecycle que possam causar indisponibilidade temporária.
+
+Mesmo nesse workspace, qualquer operação produtiva destrutiva ou irreversível continua exigindo autorização aplicável.
+
+Se surgir qualquer risco real de interrupção em P-01/P-02, a jornada deve ser interrompida e devolvida ao Coordenador.
 
 ## 4. P0 — Auditoria de partida
 
@@ -256,7 +275,7 @@ Responsabilidade:
 | ID | Jornada | Owner | Participante/workspace | Condição inicial | Pré-requisitos | Esperado | Observado | Evidência | Data | Status | Correção | Impacto MOBILE-R1 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | J01 | onboarding novo workspace | PILOT-B | P-03 — a selecionar | workspace novo | P-03 real; publicação controlada; provisionamento autorizado | provisionado corretamente | roteiro e rollback auditados pela PILOT-B; participante real ainda não selecionado/executado | handoff PILOT-B integrado semanticamente + SAAS-C | 2026-10-02 | PREPARADO | — | Auth/workspace/UG |
-| J02 | primeiro login | PILOT-A/B | P-01=`aprovisionamento-3-gac-ap`; P-02/P-03 pendentes | credencial válida | participante real; ambiente autorizado e app/Rules compatíveis | acesso controlado | P-01 confirmado como usuário externo real ativo; validação deve ocorrer sem interromper a operação | handoff PILOT-A + decisão coordenadora + SAAS-I/SAAS-C | 2026-10-02 | PREPARADO | — | Auth/sessão/workspace/shell |
+| J02 | primeiro login | PILOT-A/B | P-01=`aprovisionamento-3-gac-ap`; P-02=`aprovisionamento-2-b-fv`; P-03 pendente | credencial válida | participante real; ambiente autorizado e app/Rules compatíveis | acesso controlado | P-01/P-02 confirmados como usuários externos reais; validação deve ocorrer sem interromper a operação | handoff PILOT-A + decisão coordenadora + SAAS-I/SAAS-C | 2026-10-02 | PREPARADO | — | Auth/sessão/workspace/shell |
 | J03 | reset de senha | PILOT-A/B | externo aplicável | conta existente | conta real e e-mail válido | reset funcional | fluxo certificado; **não forçar reset em P-01 operacionalmente crítico**; executar somente se houver necessidade real ou participante de teste apropriado | SAAS-C integrada + decisão coordenadora | 2026-10-02 | PREPARADO | — | Auth |
 | J04 | troca de senha | PILOT-A/B | externo aplicável | sessão válida | login real; reautenticação | troca funcional | capacidade certificada; **não exigir troca de senha de P-01 apenas para gerar evidência** | SAAS-C integrada + decisão coordenadora | 2026-10-02 | PREPARADO | — | Auth/sessão |
 | J05 | aceite legal | PILOT-A/B | participante aplicável | versão vigente não aceita | LegalAcceptanceGate + ambiente autorizado | gate exige aceite | em P-01, observar apenas o estado natural; **não apagar/recriar aceite para fabricar cenário** | handoff PILOT-A + SAAS-DL/SAAS-I + decisão coordenadora | 2026-10-02 | PREPARADO | — | legal gate/shell/Auth |
@@ -269,12 +288,12 @@ Responsabilidade:
 | J12 | pagamento externo | PILOT-B | P-03 | cobrança pendente | cliente real; cobrança externa real | pagamento real | nenhum pagamento real do piloto registrado | contrato R$70/mês; evidência humana pendente | 2026-10-02 | BLOQUEADO | — | não Mobile |
 | J13 | confirmação administrativa | PILOT-B | P-03 | pagamento realizado | J12 comprovada; founder/admin | status confirmado | nenhuma confirmação do piloto | SAAS-B | 2026-10-02 | BLOQUEADO | — | não Mobile |
 | J14 | regularização | PILOT-B | P-03 | atenção comercial | J12/J13; superfície pública | regularizado | nenhum caso real do piloto | SAAS-B/DS | 2026-10-02 | BLOQUEADO | — | lifecycle |
-| J15 | suspensão manual | PILOT-B/Coord. | P-03/cenário seguro; **P-01 proibido** | workspace ativo/pending | autorização explícita | suspenso sem apagar dados | enforcement certificado; P-01 não pode ser suspenso porque é usuário real operacionalmente dependente | SAAS-DS + decisão coordenadora | 2026-10-02 | BLOQUEADO | — | lifecycle/Rules/warehouseAccess |
-| J16 | revogação de sessão | PILOT-A/B/Coord. | cenário seguro autorizado **excluindo P-01** | sessão ativa | sessão real; autorização de cenário | sessão/leases invalidados | contratos certificados; P-01 não pode ser usado porque depende do acesso contínuo para operação real | handoff PILOT-A + PILOT-B + SAAS-DS + decisão coordenadora | 2026-10-02 | PREPARADO | — | sessão/lease |
-| J17 | bloqueio operacional | PILOT-B | mesmo de J15 | suspenso | J15/J16; app/Rules da release | áreas privadas bloqueadas | não executado | SAAS-DS/I | 2026-10-02 | BLOQUEADO | — | Auth/Rules/Central |
+| J15 | suspensão manual | PILOT-B/Coord. | `aprovisionamento-teste` ou P-03/cenário seguro; **P-01/P-02 proibidos** | workspace ativo/pending | autorização explícita | suspenso sem apagar dados | enforcement certificado; P-01/P-02 não podem ser suspensos porque são usuários reais operacionais | SAAS-DS + decisão coordenadora | 2026-10-02 | BLOQUEADO | — | lifecycle/Rules/warehouseAccess |
+| J16 | revogação de sessão | PILOT-A/B/Coord. | preferencialmente `aprovisionamento-teste`; **excluir P-01/P-02** | sessão ativa | sessão real; autorização de cenário | sessão/leases invalidados | contratos certificados; P-01/P-02 não podem ser usados porque dependem do acesso contínuo para operação real | handoff PILOT-A + PILOT-B + SAAS-DS + decisão coordenadora | 2026-10-02 | PREPARADO | — | sessão/lease |
+| J17 | bloqueio operacional | PILOT-B | `aprovisionamento-teste` ou mesmo cenário seguro de J15 | suspenso | J15/J16; app/Rules da release | áreas privadas bloqueadas | não executado; P-01/P-02 excluídos | SAAS-DS/I | 2026-10-02 | BLOQUEADO | — | Auth/Rules/Central |
 | J18 | páginas públicas durante suspensão | PILOT-B | mesmo de J15 | suspenso | J15; rotas públicas preservadas | páginas públicas acessíveis | contrato e roteiro estruturalmente preparados; evidência live durante suspensão ainda pendente | handoff PILOT-B + SAAS-B/DL/I | 2026-10-02 | PREPARADO | — | shell/roteamento |
-| J19 | reativação | PILOT-B/Coord. | mesmo de J15 | suspenso | exercício de suspensão concluído | acesso restaurado | não executado | SAAS-DS | 2026-10-02 | BLOQUEADO | — | lifecycle/workspace |
-| J20 | retorno aos dados | PILOT-B | mesmo de J15 | reativado | J19; dados preservados | tenant/dados intactos | não executado | contrato proíbe deleção; evidência humana pendente | 2026-10-02 | BLOQUEADO | — | Central/contrato de dados |
+| J19 | reativação | PILOT-B/Coord. | `aprovisionamento-teste` ou mesmo cenário seguro de J15 | suspenso | exercício de suspensão concluído | acesso restaurado | não executado; P-01/P-02 excluídos | SAAS-DS | 2026-10-02 | BLOQUEADO | — | lifecycle/workspace |
+| J20 | retorno aos dados | PILOT-B | `aprovisionamento-teste` ou mesmo cenário seguro de J15 | reativado | J19; dados preservados | tenant/dados intactos | não executado; P-01/P-02 excluídos | contrato proíbe deleção; evidência humana pendente | 2026-10-02 | BLOQUEADO | — | Central/contrato de dados |
 | J21 | isolamento entre workspaces | Coord. + A/B | dois tenants nos testes certificados | dois tenants | identidades/workspaces distintos | zero vazamento cross-tenant | evidência automatizada específica aceita: Browser SAAS-C 3/3 + Emulator multi-tenant + Central external security | handoff PILOT-A aceito pelo Coordenador | 2026-10-02 | PASS | — | Rules/workspace/Central; spot-check real ainda desejável |
 | J22 | custos/leituras | PILOT-D | plataforma + cada participante | baseline conhecido | T0 + T1/T2 por jornada | custo/consumo registrado | método reproduzível definido; valores reais ainda não capturados | telemetria 16.3–16.6, 17.6/17.8, Monitoring/Billing | 2026-10-02 | PREPARADO | — | warehouse medido separadamente |
 | J23 | health/uptime | PILOT-C | plataforma | release autorizada | deploy health + uptime + alerta + canal | health/alerta funcionais | PILOT-C confirmou PR #223 draft/mergeable com CI/Core/Recovery verdes; endpoint ainda não está em produção; uptime/alert/channel não criados | handoff PILOT-C + PR #223 + runbook uptime | 2026-10-02 | PREPARADO | — | infra comum |
