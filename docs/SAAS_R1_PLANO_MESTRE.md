@@ -1,9 +1,9 @@
 # EMPROVEX SaaS R1 — Plano Mestre
 
-Última atualização: **2026-10-01**
+Última atualização: **2026-10-02**
 Baseline de produção: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Branch integradora: `feat/saas-r1-commercializacao`
-Estado: **PLANEJAMENTO DETALHADO VALIDADO / CONTRATOS COMUNS CONGELADOS / ONDA 1 LIBERADA**
+Estado: **IMPLEMENTAÇÃO R1 INTEGRADA / HARDENING PRÉ-PILOTO ATIVO / PILOTO REAL ADIADO ATÉ RC / SAAS-J AGUARDANDO**
 
 ## 1. Objetivo
 
@@ -432,11 +432,11 @@ R1 usa um canal simples já controlado pelo fundador, inicialmente e-mail.
 
 Não criar helpdesk/ticketing antes do piloto demonstrar necessidade.
 
-## 11. Piloto comercial
+## 11. Piloto comercial — última prova operacional antes da certificação final
 
 ### 11.1 Objetivo
 
-Validar operação real antes de abertura ampla.
+Validar operação real do **Release Candidate já tecnicamente fechado**, imediatamente antes das correções finais pós-piloto, da SAAS-J e da abertura ampla.
 
 Tamanho inicial recomendado:
 - **3 a 5 workspaces externos assistidos**.
@@ -445,7 +445,7 @@ Não é um limite arquitetural; é um lote de aprendizagem.
 
 ### 11.2 Evidências mínimas
 
-Antes de SAAS-J:
+Após hardening, freeze/publicação controlada do Release Candidate e durante o piloto final, reunir:
 - pelo menos 3 onboardings reais completos;
 - pelo menos 1 cliente efetivamente pago;
 - pelo menos 1 fluxo trial → regularização/ativação;
@@ -469,7 +469,7 @@ Testar cenários reproduzíveis de crescimento e registrar o teto observado. Nã
 
 ## 12. Critérios para SaaS aberto
 
-SAAS-J só pode aprovar abertura quando estiverem comprovados:
+SAAS-J ocorre **depois do piloto e das correções finais**. Só pode aprovar abertura quando estiverem comprovados:
 - billing/trial;
 - pagamento/regularização;
 - suspensão/reativação;
@@ -518,3 +518,22 @@ Pesquisa de decisão, consultada em 2026-10-01:
 - ANPD — Resolução CD/ANPD nº 2/2022 e Guia de Segurança para Agentes de Tratamento de Pequeno Porte.
 
 Estas referências orientam o desenho, mas regras jurídicas, fiscais e comerciais finais devem considerar o enquadramento real do responsável pelo serviço.
+
+## 15. Reordenação oficial da reta final — 2026-10-02
+
+A ordem operacional anterior em que a SAAS-P avançava para piloto enquanto ainda existiam pendências técnicas externas foi substituída.
+
+A sequência vigente é:
+
+1. **Hardening pré-piloto** — concluir segurança/dependências, recovery/restore, health/release, Rules e reconciliação MOBILE-R1;
+2. **Freeze do Release Candidate** — commit, Rules, configuração e rollback congelados;
+3. **Publicação controlada do RC** — sem abertura comercial ampla e somente com autorização explícita;
+4. **Piloto real final** — P-01/P-02 observacionais, `aprovisionamento-teste` para lifecycle disruptivo e P-03 real não-VIP;
+5. **Correções finais pós-piloto** — somente achados reais, sem expansão de escopo;
+6. **SAAS-J — Certificação Final** — certificar o candidato corrigido;
+7. **Lançamento completo** — merge/release final e abertura comercial mediante GO explícito do fundador.
+
+Documento canônico desta reordenação:
+`docs/SAAS_R1_PRE_PILOTO_HARDENING.md`.
+
+O T0 já coletado continua válido como baseline pré-release e não deve ser repetido sem necessidade.
