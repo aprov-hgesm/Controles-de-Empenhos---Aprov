@@ -302,3 +302,27 @@ Pendências antes do RC:
 
 PASS HARDEN-C não congela o RC.
 
+## Checkpoint — HARDEN-A parcial
+
+HARDEN-A: **PARCIAL**
+
+Concluído:
+- baseline 22 confirmado;
+- correção segura de lockfile aplicada;
+- estado reduzido para 14 advisories;
+- Application CI/Core Protection/Build/TypeScript/Diff Hygiene verdes;
+- lockfile seguro incorporado à integradora.
+
+Pendências antes de PASS:
+- correção controlada de jsPDF/jsPDF-AutoTable;
+- decisão suportada para Firebase/Firestore/gRPC;
+- novo `npm audit`;
+- regressão específica de PDFs;
+- repetição dos gates.
+
+Commits de integração:
+- `040ec20c66a7d9c8e77070d12dd455fe43aef5d7`;
+- `66dc540b7d50a451e96cd16558a9219743543cd7`.
+
+Não usar `npm audit fix --force` e não executar downgrade oportunista do Firebase.
+
