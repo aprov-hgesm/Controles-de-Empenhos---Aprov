@@ -10,6 +10,8 @@ Frente: **PILOT-C — Operação, Recovery, Health e Uptime da SAAS-P do EMPROVE
 - **Base congelada:** `4d87370e5ee7f2697ab4901e0c045a9ab4910fe9`
 - **Branch coordenadora:** `feat/saas-r1-commercializacao`
 - **HEAD inicial:** igual à base congelada (0 commits à frente / 0 atrás antes deste handoff)
+- **HEAD documental da entrega:** `0ec466d8cd5918d2d0f070593d1aa08f6443da9c` (commit que criou este handoff; o commit posterior apenas preenche metadados do PR)
+- **PR da frente:** #225 — draft, base `feat/saas-r1-commercializacao`, não mergeado
 - **Status:** **PARCIAL / BLOQUEADO EXTERNAMENTE**
 - **Escopo executado por esta worker:** auditoria documental, auditoria do tooling e do PR #223, consolidação das evidências já obtidas e preparação do procedimento seguro de J23/J24.
 - **Mudanças produtivas realizadas por esta worker:** nenhuma.
@@ -369,13 +371,13 @@ Nenhum teste é marcado como executado por esta worker sem evidência real.
 
 ## PR da frente
 
-Destino obrigatório:
+- **PR #225** — `SAAS-P: fechar handoff PILOT-C recovery e uptime`
+- base: `feat/saas-r1-commercializacao`
+- head: `saas-p-c-recovery-uptime`
+- estado: **draft / aberto / não mergeado**
+- diff da worker: apenas `docs/SAAS_P_C_RECOVERY_UPTIME_HANDOFF.md`
 
-`feat/saas-r1-commercializacao`
-
-Estado esperado: **draft / não mergear**.
-
-O número do PR deve ser preenchido/confirmado após sua criação.
+A integração permanece responsabilidade do Coordenador.
 
 ## Bloqueios
 
