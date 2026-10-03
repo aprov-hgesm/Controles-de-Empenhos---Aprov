@@ -1,21 +1,23 @@
 # EMPROVEX — Memorial Oficial do Repositório
 
-Última atualização: **2026-10-02 — HARDENING PRÉ-PILOTO ativo; T0 pré-release completo; piloto real adiado até Release Candidate; recovery/restore e health/release pendentes; Central Móvel R1 em desenvolvimento coordenado**
+Última atualização: **2026-10-02 — PROGRAM CONTROL instituído; Coordenador Geral definido; HARDENING PRÉ-PILOTO ativo; T0 pré-release completo; piloto real adiado até Release Candidate; Central Móvel R1 em desenvolvimento coordenado**
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Branch integradora do SaaS R1: `feat/saas-r1-commercializacao`
-Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A/B/C/DL/E/DS/I INTEGRADAS; candidato SaaS R1 em HARDENING PRÉ-PILOTO; piloto real NÃO INICIADO; SAAS-J AGUARDANDO**
+Estado: **Performance R3 PUBLICADA E ENCERRADA; arquitetura de COORDENADOR GERAL/PROGRAM CONTROL OFICIAL; SaaS R1 em HARDENING PRÉ-PILOTO; MOBILE-R1 em desenvolvimento paralelo; piloto real NÃO INICIADO; SAAS-J AGUARDANDO**
 
-Este documento é a **porta de entrada canônica para continuidade do EMPROVEX como produto**. Ele resume o estado vigente e aponta para os documentos históricos/especializados. O histórico detalhado não deve ser apagado. Para comportamento publicado, `main` prevalece. Para o ciclo SaaS R1 em desenvolvimento, prevalecem `feat/saas-r1-commercializacao`, este memorial e os quatro documentos canônicos `SAAS_R1_*`.
+Este documento é a **porta de entrada canônica para continuidade do EMPROVEX como produto**. Ele resume o estado vigente, a governança global e aponta para os documentos históricos/especializados. O histórico detalhado não deve ser apagado. Para comportamento publicado, `main` prevalece. Para coordenação global entre programas, prevalecem este Memorial e `docs/EMPROVEX_PROGRAM_CONTROL.md`. Cada programa mantém sua própria integradora e documentação especializada.
 
 ## 1. Fontes da verdade
 
 Ordem de consulta para um novo trabalho:
 
 1. `main` — estado efetivo do código atualmente em produção;
-2. `feat/saas-r1-commercializacao` — estado integrador vigente do programa SaaS R1;
-3. este memorial — síntese canônica de estado, contratos, prioridades e sequência de trabalho;
-4. `docs/SAAS_R1_PLANO_MESTRE.md`, `docs/SAAS_R1_EXECUCAO_PARALELA.md`, `docs/SAAS_R1_INTEGRATION_STATUS.md` e `docs/SAAS_R1_COORDENADOR_HANDOFF.md` — fontes operacionais do SaaS R1;
-5. documentação especializada do domínio alterado;
+2. este Memorial — síntese canônica de estado, governança, contratos, prioridades e sequência global;
+3. `docs/EMPROVEX_PROGRAM_CONTROL.md` — protocolo do Coordenador Geral e integração entre programas;
+4. `feat/saas-r1-commercializacao` — integradora vigente do SaaS R1;
+5. `feat/central-mobile-r1` — integradora vigente da Central Móvel R1;
+6. documentação canônica do programa em que o trabalho ocorre, incluindo Integration Status/Handoff/Plano Mestre quando existentes;
+7. documentação especializada do domínio alterado.
 6. decisões arquiteturais registradas;
 7. histórico de fases/branches/PRs apenas como contexto.
 8. para a **Central Móvel R1**, já ativada em desenvolvimento coordenado, prevalecem operacionalmente a branch `feat/central-mobile-r1` e os documentos `CENTRAL_MOBILE_R1_*`; alterações transversais entre SaaS e Mobile devem seguir a regra de sincronização registrada neste Memorial.
@@ -2828,3 +2830,456 @@ Regra de ativação:
 
 Com esse freeze, o próximo ato permitido é gerar/usar os quatro prompts de ativação HARDEN-A/B/C/D.
 
+## 18. EMPROVEX PROGRAM CONTROL — COORDENADOR GERAL
+
+### 18.1 Instituição e finalidade
+
+A partir de 2026-10-02, o EMPROVEX adota formalmente uma camada de **Program Control**, exercida por um **Coordenador Geral do EMPROVEX** acima dos Coordenadores de Programa.
+
+Motivação:
+- SaaS R1 e MOBILE-R1 evoluem simultaneamente;
+- existem múltiplos workers em bases congeladas distintas;
+- Auth, workspace/UG, sessão, legal, lifecycle, Rules, Central e outros contratos são compartilhados;
+- o volume de documentação e decisões ultrapassou o que um único coordenador especializado deve centralizar;
+- o risco principal deixou de ser apenas implementação local e passou a incluir **integração entre programas, estado desatualizado, WIP excessivo e release incorreto**.
+
+Princípio:
+
+> **O Coordenador Geral controla o sistema de desenvolvimento; os Coordenadores de Programa controlam seus programas; os workers executam tarefas.**
+
+Estado desta camada:
+- arquitetura: **OFICIAL**;
+- regras: **DOCUMENTADAS**;
+- documento operacional: `docs/EMPROVEX_PROGRAM_CONTROL.md`;
+- chat Coordenador Geral: **AINDA NÃO ATIVADO neste checkpoint**.
+
+### 18.2 Hierarquia oficial
+
+```text
+FUNDADOR
+   │
+COORDENADOR GERAL EMPROVEX
+   │
+   ├── COORDENADOR MOBILE-R1
+   │      └── workers MOBILE
+   │
+   └── COORDENADOR SAAS-R1
+          └── workers SAAS / HARDEN
+```
+
+Não criar hierarquia adicional acima do Coordenador Geral.
+
+Hierarquia máxima:
+**Fundador → Coordenador Geral → Coordenadores de Programa → Workers**.
+
+### 18.3 Regra de comunicação
+
+Fluxo normal:
+
+```text
+WORKER
+  ↓ handoff + evidência
+COORDENADOR DO PROGRAMA
+  ↓ auditoria + integração + estado consolidado
+COORDENADOR GERAL
+  ↓ reconciliação global + Memorial + próximo gate
+FUNDADOR
+  ↓ autorizações/decisões quando necessárias
+```
+
+Regras:
+- worker não reporta rotineiramente ao Coordenador Geral;
+- worker não coordena outro worker;
+- Coordenador Geral não executa trabalho de worker;
+- Coordenador Geral não substitui revisão técnica do Coordenador de Programa;
+- detalhes locais permanecem no nível mais baixo capaz de resolvê-los.
+
+### 18.4 Autoridade do Fundador permanece intacta
+
+O Coordenador Geral **não recebe autorização implícita de produção**.
+
+Continuam dependentes de decisão/autorização do fundador quando aplicável:
+- release final;
+- promoção/merge protegido para produção;
+- publicação Vercel produtiva;
+- publicação de Rules produtivas;
+- restore real;
+- ações disruptivas em usuários/workspaces reais;
+- GO/NO-GO de RC/piloto/lançamento;
+- mudanças comerciais fundamentais não delegadas.
+
+O Coordenador Geral organiza evidências e recomenda o próximo gate; a decisão humana final permanece com o fundador.
+
+### 18.5 Responsabilidades exclusivas do Coordenador Geral
+
+#### Estado global
+Manter visão viva e compacta de:
+- `main`/produção;
+- integradora SaaS;
+- integradora Mobile;
+- outros programas futuros;
+- bases congeladas;
+- workers ativos/concluídos;
+- handoffs aguardando revisão;
+- PRs transversais;
+- blockers;
+- incidentes globais;
+- último ponto de reconciliação;
+- próximo gate;
+- estado do Release Candidate;
+- autorização de produção.
+
+#### Controle de WIP e concorrência
+O Coordenador Geral decide se novas frentes podem ser abertas.
+
+Regra:
+
+> **A capacidade de revisão determina o paralelismo; a capacidade de abrir chats não.**
+
+Se os Coordenadores de Programa acumularem handoffs não auditados, conflitos não classificados ou integrações pendentes, novas waves podem ser seguradas mesmo que existam recursos para abrir mais chats.
+
+#### Integração transversal
+O Coordenador Geral arbitra mudanças que cruzem programas.
+
+Zona de contratos compartilhados:
+- Auth;
+- workspace/UG;
+- sessão/lease/heartbeat;
+- legal gate;
+- billing/lifecycle;
+- Firestore Rules;
+- `warehouseAccess`;
+- Central de Depósitos;
+- schemas/source of truth;
+- shell/guards;
+- APIs/serviços comuns;
+- políticas de navegador/configuração com efeito compartilhado;
+- telemetria comum.
+
+#### Release management
+Coordenadores de Programa podem declarar:
+- `PROGRAMA PASS`;
+- `PROGRAMA CERTIFICADO`;
+- `HANDOFF INTEGRÁVEL`.
+
+Somente o Coordenador Geral pode declarar no nível global:
+- `PROGRAMAS RECONCILIADOS`;
+- `EMPROVEX RC CANDIDATO`;
+- `RC FROZEN`;
+- `PRONTO PARA SOLICITAR PUBLICAÇÃO CONTROLADA`;
+- `PRONTO PARA PILOTO`;
+- `PRONTO PARA CERTIFICAÇÃO/RELEASE FINAL`.
+
+Nenhuma dessas declarações equivale por si só a autorização produtiva.
+
+### 18.6 Coordenadores de Programa
+
+Cada programa mantém autonomia local.
+
+Responsabilidades:
+- planejar waves;
+- congelar bases;
+- ativar workers;
+- revisar HEAD/PR/diff real;
+- validar testes/gates;
+- devolver worker quando necessário;
+- integrar local/semanticamente;
+- atualizar documentação especializada;
+- consolidar estado para o Coordenador Geral.
+
+O Coordenador de Programa deve escalar apenas:
+- conflito transversal;
+- decisão de prioridade global;
+- colisão entre programas;
+- risco de release/produção;
+- alteração de contrato compartilhado sem solução local segura.
+
+### 18.7 Workers
+
+Workers continuam sendo unidades de execução.
+
+Devem:
+- trabalhar apenas na branch/base atribuída;
+- permanecer no escopo;
+- registrar testes e evidências;
+- declarar impacto transversal;
+- declarar impacto MOBILE-R1/SaaS quando pertinente;
+- produzir handoff auditável.
+
+Não devem:
+- editar estado global do Memorial por padrão;
+- decidir prioridade entre programas;
+- negociar merges cruzados;
+- publicar produção;
+- redefinir contratos globais silenciosamente.
+
+### 18.8 Pacote consolidado que sobe ao Coordenador Geral
+
+Cada Coordenador de Programa deve fornecer um resumo objetivo contendo:
+- Programa;
+- Integrador + HEAD;
+- Base(s) congelada(s);
+- Workers ativos;
+- Workers concluídos;
+- Handoffs pendentes;
+- PRs relevantes;
+- gates e status;
+- deltas em contratos compartilhados;
+- incidentes;
+- risco atual;
+- próximo gate;
+- produção alterada? SIM/NÃO;
+- autorização externa necessária?;
+- recomendação objetiva.
+
+O Coordenador Geral não deve depender de logs brutos para reconstruir o estado normal de um programa.
+
+### 18.9 Classificação oficial de problemas
+
+#### LOCAL
+Afeta apenas uma worker.
+Responsável: worker.
+
+#### DE PROGRAMA
+Afeta múltiplas frentes do mesmo programa.
+Responsável: Coordenador do Programa.
+
+#### TRANSVERSAL
+Afeta dois ou mais programas ou contrato compartilhado.
+Responsável: Coordenador Geral.
+
+#### RELEASE / PRODUÇÃO
+Afeta `main`, Vercel, Rules produtivas, restore, usuários reais, dados ou lançamento.
+Responsável: Coordenador Geral + fundador quando houver autorização necessária.
+
+Escalonar somente até o nível necessário.
+
+### 18.10 Semáforo global
+
+O Coordenador Geral mantém semáforo por programa/frente:
+
+**VERDE**
+- pode continuar independentemente.
+
+**AMARELO**
+- existe delta compartilhado ou risco conhecido;
+- trabalho local pode continuar até a próxima barreira.
+
+**VERMELHO**
+- continuar naquela unidade produziria risco, retrabalho material ou inconsistência;
+- aguardar resolução.
+
+Aplicar vermelho à menor unidade possível. Não bloquear SaaS ou Mobile inteiros se apenas uma frente precisa aguardar.
+
+### 18.11 Barreiras de sincronização
+
+Não reconciliar continuamente todas as branches.
+
+Barreiras deliberadas:
+1. antes de abrir nova wave relevante;
+2. após um conjunto de handoffs;
+3. antes de frente explicitamente transversal;
+4. antes de freeze de RC;
+5. antes de publicação controlada;
+6. após piloto;
+7. antes de certificação/release final.
+
+Entre barreiras, programas VERDES continuam independentes.
+
+Esse modelo preserva o ganho do desenvolvimento paralelo e reduz merge/rebase/revalidação desnecessários.
+
+### 18.12 Protocolo para contratos compartilhados
+
+Toda alteração compartilhada deve declarar:
+- arquivos afetados;
+- contrato anterior;
+- contrato novo;
+- backward compatibility;
+- impacto no outro programa;
+- migração necessária;
+- risco de fonte de verdade duplicada;
+- necessidade de coordenação.
+
+Classificação:
+- `SEM DELTA`;
+- `DELTA COMPATÍVEL`;
+- `CONFLITO`;
+- `REQUER COORDENADOR GERAL`.
+
+Nenhum conflito compartilhado é resolvido por merge/rebase cego.
+
+### 18.13 Governança do Memorial Oficial
+
+O Memorial Oficial passa a ter **propriedade lógica do Coordenador Geral**.
+
+Isso não significa que apenas um chat possa escrever documentação. Significa que a coerência global e a versão vigente das regras são responsabilidade do Coordenador Geral.
+
+#### Quem altera o quê
+
+**Coordenador Geral**
+- topo/estado vivo;
+- governança;
+- programas ativos;
+- decisões transversais;
+- release/freeze;
+- índice mestre;
+- reconciliações globais.
+
+**Coordenador de Programa**
+- documentação especializada do próprio programa;
+- pode propor/fornecer delta certificado ao Memorial;
+- só altera seção global diretamente quando autorizado pelo protocolo vigente.
+
+**Worker**
+- documentação da própria frente;
+- não altera estado global por padrão.
+
+#### Tipos de conteúdo
+
+O Memorial deve distinguir explicitamente:
+- **ESTADO VIGENTE**;
+- **DECISÃO PERMANENTE**;
+- **CHECKPOINT HISTÓRICO**;
+- **DETALHE DE PROGRAMA**.
+
+Quando uma regra for substituída:
+- preservar histórico relevante;
+- marcar regra antiga como histórica/superada;
+- escrever nova regra inequívoca;
+- atualizar topo/índice quando necessário.
+
+#### Auditoria de coerência obrigatória
+
+Em cada grande barreira, pesquisar contradições como:
+- EM EXECUÇÃO vs ADIADO;
+- PUBLICADO vs NÃO PUBLICADO;
+- PASS vs PENDENTE;
+- branch/HEAD antigo apresentado como vivo;
+- regra histórica descrita como vigente;
+- autorização antiga interpretada fora do escopo.
+
+### 18.14 Memorial V2 — responsabilidade futura do Coordenador Geral
+
+O Memorial atual ultrapassou o papel de simples histórico e funciona como:
+- wiki técnica;
+- ADR;
+- runbook;
+- release book;
+- estado de programa;
+- histórico de decisões.
+
+A futura reorganização estrutural será conduzida pelo Coordenador Geral.
+
+Objetivo:
+- reduzir o Memorial principal;
+- manter estado atual e decisões permanentes fáceis de localizar;
+- mover detalhes extensos para documentos especializados;
+- preservar histórico integral;
+- criar índice mestre confiável;
+- impedir perda de contexto.
+
+Estratégia:
+- não reorganizar estruturalmente durante waves críticas;
+- inventário/projeto pode ocorrer em paralelo;
+- migração real ocorre numa barreira de sincronização;
+- validar links/referências;
+- comparar conteúdo antes/depois;
+- nunca apagar história apenas para reduzir tamanho.
+
+Arquitetura-alvo sugerida:
+
+```text
+docs/
+├── EMPROVEX_MEMORIAL_OFICIAL.md
+├── EMPROVEX_PROGRAM_CONTROL.md
+├── program-control/
+│   ├── EMPROVEX_GLOBAL_STATUS.md
+│   ├── EMPROVEX_SHARED_CONTRACTS.md
+│   ├── EMPROVEX_DECISION_LOG.md
+│   └── EMPROVEX_RELEASE_HISTORY.md
+├── saas/
+├── mobile/
+├── performance/
+└── archive/
+```
+
+A criação/migração dessa estrutura deve ser uma operação documental controlada, não uma movimentação oportunista durante waves.
+
+### 18.15 Registro Global do EMPROVEX
+
+O Coordenador Geral deve manter um painel operacional pequeno, contendo no mínimo:
+- produção + HEAD;
+- SaaS integradora + HEAD;
+- Mobile integradora + HEAD;
+- workers ativos;
+- bases congeladas;
+- semáforos;
+- blockers;
+- conflitos transversais;
+- último sync;
+- próximo sync;
+- próximo gate;
+- estado do RC;
+- autorização de produção.
+
+O Registro Global responde rapidamente:
+> **“Onde está o EMPROVEX agora?”**
+
+O Memorial responde:
+> **“Como o EMPROVEX chegou aqui, quais regras governam o projeto e por quê?”**
+
+### 18.16 Relação com SaaS HARDEN e MOBILE-R1
+
+No checkpoint de instituição do Program Control:
+- MOBILE-R1 possui desenvolvimento paralelo ativo;
+- existem três chats Mobile em curso sob seu Coordenador de Programa;
+- SaaS R1 está em HARDENING PRÉ-PILOTO;
+- branches HARDEN-A/B/C/D estão preparadas em base congelada `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`;
+- HARDEN-D é transversal e deve reconciliar um estado Mobile suficientemente estável, não perseguir continuamente uma integradora em movimento.
+
+O Coordenador Geral decidirá a barreira correta para HARDEN-D e outras reconciliações futuras.
+
+### 18.17 Política de ativação de novas waves
+
+Antes de autorizar nova wave, verificar:
+- existem handoffs sem auditoria?
+- existem conflitos transversais abertos?
+- a capacidade dos Coordenadores suporta mais resultados?
+- a base congelada está correta?
+- o paralelismo reduz tempo real?
+- a frente depende de alvo ainda em movimento?
+- há sobreposição de ownership?
+
+Se a resposta indicar saturação, adiar novas ativações.
+
+### 18.18 Ativação inicial do chat Coordenador Geral
+
+O prompt inicial do Coordenador Geral deve obrigatoriamente instruí-lo a:
+1. ler este Memorial;
+2. ler `docs/EMPROVEX_PROGRAM_CONTROL.md`;
+3. ler os handoffs/estados correntes SaaS e Mobile;
+4. consultar HEADs vivos de `main`, integradora SaaS e integradora Mobile;
+5. montar o primeiro Registro Global;
+6. classificar semáforo de cada programa;
+7. identificar conflitos transversais;
+8. identificar handoffs/revisões pendentes;
+9. estabelecer próxima barreira global;
+10. **não editar código funcional**;
+11. **não assumir workers**;
+12. **não publicar produção**;
+13. manter o Memorial global coerente dali em diante.
+
+### 18.19 Princípio final do Program Control
+
+O Coordenador Geral existe para **reduzir coordenação acidental, não para criar burocracia**.
+
+Deve:
+- receber sínteses;
+- intervir por exceção;
+- bloquear somente o necessário;
+- proteger a autonomia dos programas;
+- preservar paralelismo seguro;
+- limitar WIP pela capacidade de revisão;
+- transformar contexto disperso em estado pequeno e confiável;
+- conduzir a coerência do Memorial;
+- impedir que “programa localmente PASS” seja confundido com “EMPROVEX globalmente pronto”.
