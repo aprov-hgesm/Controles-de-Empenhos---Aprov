@@ -534,3 +534,22 @@ Não repetir `apply` enquanto os controles permanecerem ativos.
 - Vercel: `build-rate-limit` de preview é não bloqueante durante desenvolvimento.
 - Mobile: MOBILE-B integrada pelo PR #220; MOBILE-A segue no PR #221, draft/mergeable, gates principais verdes e aguardando fechamento coordenado.
 - Antes de qualquer SAAS-J: reconsultar o estado vivo da Mobile e reconciliar deltas compartilhados.
+
+## 23. Próxima topologia paralela planejada — SAAS-P
+A próxima fase pode operar com **1 Coordenador + até 4 workers simultâneos**:
+
+- PILOT-A — Participantes/Jornadas VIP;
+- PILOT-B — Piloto comercial não-VIP;
+- PILOT-C — Recovery/Health/Uptime;
+- PILOT-D — Custos/Observabilidade/Evidências.
+
+Os workers ainda não estão ativados neste checkpoint.
+
+Regras para ativação:
+1. branch exclusiva por worker;
+2. escopo sem sobreposição;
+3. nenhum merge/deploy/Rules produtivos pelo worker;
+4. handoff obrigatório;
+5. conflito transversal volta ao Coordenador;
+6. qualquer alteração em domínio compartilhado exige **Impacto MOBILE-R1**;
+7. o Coordenador mantém J01–J24 e decide gates de SAAS-J.
