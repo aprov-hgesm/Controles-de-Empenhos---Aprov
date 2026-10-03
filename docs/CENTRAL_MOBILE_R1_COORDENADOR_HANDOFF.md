@@ -692,3 +692,44 @@ Classificação:
 
 Não ativar MOBILE-I/J até retorno do Coordenador Geral.
 Produção permanece não alterada.
+
+
+## 32. Program Control libera MOBILE-I
+
+Decisão recebida:
+- Integração 3 PASS / aceita;
+- F/G/H integradas e certificadas;
+- package/CI tooling aceito como compatível;
+- MOBILE-R1 VERDE;
+- MOBILE-I formalmente liberada;
+- MOBILE-J continua bloqueada.
+
+Branch criada:
+`mobile-r1-i-integration`.
+
+Base:
+`816c1c07cf251ce3705098a3a65b9d84e2fc8614`.
+
+A branch nasceu exatamente do HEAD autorizado e não deve ser rebaseada após a ativação.
+
+MOBILE-I deve:
+- validar A–H como produto único;
+- revisar navegação/UX combinada;
+- testar regressões cruzadas;
+- medir build/performance;
+- preservar source of truth;
+- revisar package/CI consolidado;
+- consultar SaaS vivo antes do fechamento;
+- registrar HARDEN-A1/jsPDF e HARDEN-B;
+- preservar CT-01.
+
+MOBILE-I não deve:
+- inventar feature;
+- alterar domínio;
+- alterar contratos SaaS;
+- resolver CT-01;
+- publicar produção.
+
+Ao concluir:
+- emitir checkpoint pós-MOBILE-I ao Program Control;
+- não liberar MOBILE-J autonomamente.
