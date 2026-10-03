@@ -350,3 +350,16 @@ PASS esperado:
 
 HARDEN-A2 permanece bloqueada até esse gate fechar.
 
+## HARDEN-A1 — encerrada
+
+Status: **PASS TÉCNICO**
+
+- jsPDF seguro: PASS;
+- AutoTable compatível: PASS;
+- CRITICAL: eliminado;
+- regressão técnica PDF: PASS;
+- gates: verdes;
+- validação visual fina: reclassificada como backlog não bloqueante.
+
+HARDEN-A2 deixa de estar bloqueada pela A1.
+
