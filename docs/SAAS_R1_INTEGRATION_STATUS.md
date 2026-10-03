@@ -573,3 +573,13 @@ Conclusão:
 - J22 permanece PREPARADO até captura de números reais T0/T1/T2 e custo no Google Cloud Billing.
 
 `npm ci` reportou advisories de dependências; nenhuma correção automática foi aplicada nesta fase.
+
+### T0 por UG — CAPTURADO
+
+Snapshot manual único do painel `emprovex-workspace-estimate`:
+
+- P-01 `aprovisionamento-3-gac-ap`: 111 reads, 3 writes, 0 deletes, 7 snapshots, pico listeners 4, 2 flushes;
+- P-02 `aprovisionamento-2-b-fv`: sem consolidação, métricas 0;
+- `aprovisionamento-teste`: sem consolidação, métricas 0.
+
+T0 global e T0 por UG estão capturados. Falta somente a fotografia monetária do Google Cloud Billing para completar o T0 inicial.
