@@ -232,3 +232,20 @@ Workers:
 - fase ativa: **HARDENING PRÉ-PILOTO**;
 - SAAS-J: aguardando piloto + correções finais;
 - lançamento: não autorizado.
+
+## 12. Plano de execução paralelo detalhado
+
+Documento operacional complementar:
+
+`docs/SAAS_R1_HARDENING_EXECUCAO_PARALELA.md`
+
+Branches planejadas:
+- `saas-harden-a-security-dependencies`;
+- `saas-harden-b-recovery-restore`;
+- `saas-harden-c-release-health-rules`;
+- `saas-harden-d-mobile-reconciliation`.
+
+As quatro branches devem nascer do mesmo HEAD congelado da integradora. A criação das branches é preparação da onda e não equivale à ativação dos chats.
+
+O Memorial Oficial contém a versão normativa expandida do escopo, ownership, gates, critérios de status, handoff e integração.
+
