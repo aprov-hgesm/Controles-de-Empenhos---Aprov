@@ -394,3 +394,19 @@ Regras:
 - Vercel Preview `build-rate-limit`: não bloqueante durante desenvolvimento.
 - Mobile: PR #220/MOBILE-B **MERGED**; PR #221/MOBILE-A aberto/draft, mergeable, HEAD `44c4f013...`, gates principais verdes.
 - Antes de SAAS-J: reconciliar novamente a integradora Mobile viva e concluir evidências do piloto/recovery/uptime.
+
+## 21. SAAS-P — ativação da onda paralela do piloto
+
+Base comum congelada para os quatro workers:
+
+`4d87370e5ee7f2697ab4901e0c045a9ab4910fe9`
+
+Branches criadas:
+
+- PILOT-A: `saas-p-a-vip-journeys`;
+- PILOT-B: `saas-p-b-commercial-nonvip`;
+- PILOT-C: `saas-p-c-recovery-uptime`;
+- PILOT-D: `saas-p-d-evidence-observability`.
+
+As quatro branches nasceram do mesmo baseline acima. Não devem fazer merge/rebase entre si nem incorporar a integradora sem instrução do Coordenador. O Coordenador pode avançar documentalmente após o freeze; isso não altera a base congelada dos workers.
+
