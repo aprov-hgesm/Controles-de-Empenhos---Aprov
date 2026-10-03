@@ -2793,3 +2793,38 @@ Depois do freeze, a próxima ação ainda **não é lançamento comercial**. É 
 
 Documento especializado de apoio:
 `docs/SAAS_R1_HARDENING_EXECUCAO_PARALELA.md`.
+
+### ONDA HARDEN — BASE CONGELADA E BRANCHES PRONTAS
+
+A preparação estrutural da onda HARDEN foi concluída.
+
+**Base comum congelada:**
+`f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`
+
+As quatro branches foram criadas exatamente nesse HEAD e verificadas:
+
+- HARDEN-A — `saas-harden-a-security-dependencies@f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`;
+- HARDEN-B — `saas-harden-b-recovery-restore@f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`;
+- HARDEN-C — `saas-harden-c-release-health-rules@f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`;
+- HARDEN-D — `saas-harden-d-mobile-reconciliation@f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`.
+
+Snapshot Mobile no momento do freeze:
+`feat/central-mobile-r1@22fb276a502e3475d579c3b1874e4c0353fc2e35`.
+
+Estado:
+- branches: **CRIADAS**;
+- base comum: **VERIFICADA**;
+- escopos/gates/handoffs: **DOCUMENTADOS**;
+- chats trabalhadores: **AINDA NÃO ATIVADOS**;
+- nenhum PR HARDEN aberto ainda;
+- nenhuma alteração de produção autorizada por este freeze.
+
+Regra de ativação:
+- todo prompt HARDEN deve declarar explicitamente a base `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`;
+- o worker deve confirmar HEAD inicial exatamente igual;
+- se o HEAD inicial divergir, deve parar antes de editar;
+- não atualizar a branch worker para acompanhar novos commits da integradora;
+- deltas posteriores da integradora pertencem ao Coordenador e serão reconciliados no fechamento.
+
+Com esse freeze, o próximo ato permitido é gerar/usar os quatro prompts de ativação HARDEN-A/B/C/D.
+
