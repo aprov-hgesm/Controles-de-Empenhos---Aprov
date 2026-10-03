@@ -569,3 +569,9 @@ Branches já criadas:
 
 Próximo passo do Coordenador: emitir os quatro prompts independentes. Workers não fazem integração cruzada. Qualquer necessidade de alteração transversal retorna ao Coordenador.
 
+### Ativação efetiva da onda PILOT-A/B/C/D
+
+Os quatro workers SAAS-P foram ativados e estão trabalhando em paralelo nas branches congeladas.
+
+Não alterar a base dos workers durante esta onda. O Coordenador deve aguardar/receber os handoffs independentes e não competir implementando o mesmo escopo.
+
