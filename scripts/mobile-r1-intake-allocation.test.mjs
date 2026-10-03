@@ -56,6 +56,10 @@ test('classificador separa barcode comercial de identidade física EPX1', () => 
     'LOCATION'
   );
   assert.equal(
+    mobile.classifyWarehouseMobileProductScan('EPX12INVALIDO'),
+    'UNKNOWN'
+  );
+  assert.equal(
     mobile.classifyWarehouseMobileProductScan('ABC\n123'),
     'UNKNOWN'
   );
