@@ -3441,3 +3441,33 @@ Próximo gate:
 
 HARDEN-B continua obrigatória para o futuro freeze do Release Candidate.
 
+### HARDEN-C — ACEITAÇÃO FORMAL PELO COORDENADOR SAAS
+
+A HARDEN-C foi auditada e aceita como **PASS TÉCNICO**.
+
+Identidade:
+- branch: `saas-harden-c-release-health-rules`;
+- base: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`;
+- HEAD final: `0b2e801a6460c60ecc79885d03e8ce8ffb778369`;
+- PR: `#238`;
+- evidência documental integrada semanticamente em `e0e4e13a73aad18850a3bf5b70b64ebf22a3d11b`.
+
+Auditoria coordenadora confirmou:
+- health presente e equivalente ao PR histórico #223;
+- nenhum merge cego do PR #223 é necessário;
+- Rules principal e warehouse permanecem compatíveis com MOBILE-R1;
+- CT-01 é o delta transversal conhecido de câmera;
+- Release Manifest, rollout, rollback e smoke estão preparados;
+- nenhum runtime foi trazido da branch congelada.
+
+CT-01 permanece obrigatória antes do Release Candidate:
+`camera=(self), microphone=(), geolocation=()`
+
+Estado das frentes no momento deste checkpoint:
+- HARDEN-D: **PASS / ENCERRADA**;
+- HARDEN-C: **PASS / ENCERRADA**;
+- HARDEN-B: **PARCIAL / aguardando backup READY e restore real autorizado**;
+- HARDEN-A: **EM EXECUÇÃO ou aguardando handoff, conforme estado vivo**.
+
+Nenhum freeze de RC ou ação produtiva foi autorizado por este checkpoint.
+
