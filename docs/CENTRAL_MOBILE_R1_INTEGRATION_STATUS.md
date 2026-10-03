@@ -37,7 +37,7 @@ Dependência:
 | MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **APROVADA E INTEGRADA SEMANTICAMENTE** | worker PR #231; integração PR #234 / squash `fc87bf8f...` |
 | MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **APROVADA E INTEGRADA** | PR #230 / squash `e768ee5f...` |
 | MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **APROVADA / CONGELADA** | PR #239; HEAD `42954ada...`; aguarda G/H antes da ordem de integração |
-| MOBILE-G Saída | `mobile-r1-g-outbound` | Int.2 | **ATIVADA — ONDA 3** | base `c971d5356...`; worker autorizado |
+| MOBILE-G Saída | `mobile-r1-g-outbound` | Int.2 | **APROVADA / CONGELADA** | PR #242; HEAD `0b513edf...`; Legal #41 stale guard; pronta p/ Integração 3 |
 | MOBILE-H Conferência | `mobile-r1-h-position-check` | Int.2 | **APROVADA / CONGELADA** | PR #241; HEAD `f30f4dcb...`; aguarda G antes da ordem de integração |
 | MOBILE-I Integração controlada | integradora | A–H | **BLOQUEADA** | — |
 | MOBILE-J Certificação | integradora | I | **BLOQUEADA** | — |
@@ -747,3 +747,55 @@ Integração:
 - F e H permanecem congeladas nos HEADs aprovados;
 - aguardar handoff/revisão de G;
 - definir ordem semântica F/G/H somente depois.
+
+
+### Revisão MOBILE-G — 2026-10-03
+
+Worker:
+- branch `mobile-r1-g-outbound`;
+- base `c971d5356c343a0819bf96ec016de73dd96a435d`;
+- HEAD `0b513edf7324e40d7b0a505edfdaf84270301ccf`;
+- PR #242;
+- estado: draft / mergeable / não mergeado.
+
+Classificação:
+**APROVADA / CONGELADA — PRONTA PARA INTEGRAÇÃO 3**.
+
+Evidências:
+- Application CI #939 SUCCESS;
+- Core #226 SUCCESS;
+- Recovery #617 SUCCESS;
+- MOBILE-G tests/guard SUCCESS;
+- Phase 7/8 SUCCESS;
+- Integration 1/2 SUCCESS;
+- Production Build / Final TypeScript / Application CI Diff Hygiene SUCCESS.
+
+Legal #41:
+- TypeScript SUCCESS;
+- Legal Acceptance SUCCESS;
+- Rules SUCCESS;
+- Core SUCCESS;
+- Production Build SUCCESS;
+- Diff Hygiene FAILURE por fetch raso sem merge-base após avanço da integradora;
+- classificação: **STALE GUARD / CI EXTERNO AO CÓDIGO G**;
+- reexecutar em snapshot estável da Integração 3.
+
+Contratos preservados:
+- OUTBOUND canônico como única mutação;
+- confirmação humana;
+- reader bounded/fail-closed;
+- FEFO oficial;
+- barcode/lote/posição revalidados;
+- replay idempotente;
+- sem saldo negativo;
+- 0 listeners;
+- sem schema/runtime SaaS novo.
+
+Performance:
+- /central-mobile/saida: 10.1 kB / 265 kB;
+- /central-mobile: 257 kB;
+- Shared First Load: 104 kB.
+
+Impacto transversal:
+**DELTA COMPATÍVEL / TOOLING ADITIVO**.
+Package/CI devem ser conciliados semanticamente no conjunto F/G/H.
