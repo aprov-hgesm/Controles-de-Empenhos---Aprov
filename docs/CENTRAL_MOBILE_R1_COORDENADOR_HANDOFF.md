@@ -223,3 +223,31 @@ O Coordenador deve:
 4. manter F/G/H bloqueadas;
 5. preferir integração E → C → D, pois E é read-only;
 6. executar Integração 2 antes de liberar F/G/H.
+
+
+## 17. Gate SaaS R1 ↔ MOBILE-R1 antes da Onda 2
+
+Nova orientação recuperada do Memorial SaaS:
+- os dois programas evoluem em paralelo;
+- nova onda Mobile exige reconciliação semântica quando existir upstream SaaS relevante;
+- worker transversal deve declarar `Impacto SAAS-R1`;
+- nenhuma integradora deve ser mergeada/rebaseada cegamente na outra.
+
+Reconciliação executada:
+- Auth/identidade: equivalentes;
+- workspace/UG: equivalentes;
+- sessão/lease: equivalentes;
+- LegalAcceptanceGate: equivalente;
+- warehouseAccess/feature flag: equivalente;
+- Rules principal/Central: equivalentes;
+- app layout: equivalente;
+- Mobile mantém extensão própria `WarehouseAccessBoundary`;
+- SaaS mantém tooling operacional/recovery próprio;
+- Mobile mantém scanner/CI guards próprios.
+
+Resultado:
+**PASS — nenhum conflito concreto capaz de bloquear MOBILE-C/D/E.**
+
+A SAAS-P está em execução com quatro workers paralelos. Antes de qualquer integração Mobile que toque domínio compartilhado, reconsultar o estado vivo do SaaS.
+
+Como C/D/E ainda não haviam iniciado e estavam idênticas ao freeze anterior, o Coordenador deve emitir novo freeze comum contendo esta orientação antes de ativá-las.
