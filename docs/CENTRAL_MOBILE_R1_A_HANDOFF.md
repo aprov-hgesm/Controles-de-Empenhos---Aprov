@@ -1,200 +1,330 @@
-# MOBILE-A — HANDOFF
+# MOBILE-A — HANDOFF DE CORREÇÃO
 
 ## Identidade
 
 - **Branch:** `mobile-r1-a-platform-scanner`
-- **HEAD de código certificado:** `86aa9962f82f1d37ff4d19d4c33c859bf0d777cb`
-- **Base congelada:** `53e28b81874ee1b7ce0bd484cc7a97537aa99473`
-- **PR:** #221 — draft, mergeable, não mergeado
-- **Status:** **APTO PARA REVISÃO**
+- **HEAD de código corrigido:** `5b02b16e9aea03e368c389200141c09be8dcc8b8`
+- **HEAD anterior devolvido:** `6abc35c60e5b0674f0e034b6da1476936345e41f`
+- **Base original:** `53e28b81874ee1b7ce0bd484cc7a97537aa99473`
+- **PR:** #221 — draft, não mergeado
+- **Status:** **PARCIAL**
 
-## Objetivo executado
+A correção de código solicitada pelo Coordenador foi concluída. A frente não é marcada como `APTO PARA REVISÃO` porque ainda faltam duas evidências externas exigidas pelo prompt corretivo: leitura objetiva do header HTTP efetivo do preview e um run verde do workflow SAAS-DL Legal Validation. O primeiro ficou inacessível pelas ferramentas desta sessão; o segundo falhou somente no próprio passo de Diff Hygiene por `no merge base`, enquanto todos os passos funcionais do workflow passaram.
 
-Foi criada a fundação compartilhada da Central Móvel R1, limitada ao escopo MOBILE-A:
+## Correção 1 — Permissions-Policy
 
-- rota própria `/central-mobile`;
-- shell móvel leve e separado do shell desktop;
-- reaproveitamento do gate canônico de Firebase Auth, workspace/UG, autorização da Central, sessão/lease e aceite legal;
-- contrato de scanner com tipos `PRODUCT`, `LOCATION`, `UNKNOWN`;
-- estados `EXPECT_PRODUCT`, `EXPECT_LOCATION`, `EXPECT_SOURCE_LOCATION`, `EXPECT_DESTINATION_LOCATION`;
-- pipeline de captura com normalização, identificação injetável e evento validado;
-- câmera solicitada somente após ação explícita;
-- preferência por câmera traseira;
-- estados explícitos `idle/loading/ready/success/error`;
-- tratamento de permissão negada e câmera indisponível;
-- teardown explícito do stream ao encerrar/desmontar;
-- cooldown de 900 ms para double scan idêntico;
-- entrada manual usando o mesmo pipeline;
-- feedback visual com som/vibração opcionais e não bloqueantes;
-- decoder ZXing carregado somente por `import('./scannerDecoder')`;
-- nenhuma imagem ou vídeo armazenado;
-- nenhuma escrita em estoque, saldo, ledger ou domínio operacional.
+### Alteração
 
-A resolução completa de barcode de posição continua fora desta frente e pertence à MOBILE-B.
+Em `next.config.ts`:
 
-## Arquivos alterados
+Antes:
 
-Arquivos existentes alterados:
+```text
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+```
 
-- `features/warehouse/components/WarehouseProtectedSurface.tsx`
-- `package.json`
-- `package-lock.json`
+Depois:
 
-Arquivos novos:
+```text
+Permissions-Policy: camera=(self), microphone=(), geolocation=()
+```
 
-- `app/central-mobile/layout.tsx`
-- `app/central-mobile/page.tsx`
-- `features/warehouse/mobile/WarehouseMobileProtectedLayout.tsx`
-- `features/warehouse/mobile/WarehouseMobileShell.tsx`
-- `features/warehouse/mobile/WarehouseMobileHome.tsx`
-- `features/warehouse/mobile/WarehouseMobileScanner.tsx`
-- `features/warehouse/mobile/scannerDecoder.ts`
-- `lib/warehouse/mobileScanner.ts`
-- `scripts/warehouse-mobile-scanner.test.mjs`
-- `scripts/verify-mobile-r1-platform-scanner.mjs`
+A alteração é mínima:
 
-## Arquivos apenas consultados
+- câmera permitida apenas para a própria origem;
+- microfone continua bloqueado;
+- geolocalização continua bloqueada;
+- `X-Frame-Options`, `Referrer-Policy`, `X-Content-Type-Options` e demais headers permanecem inalterados.
 
-Entre os arquivos consultados durante a implementação e auditoria:
+### Header efetivo
 
-- `docs/EMPROVEX_MEMORIAL_OFICIAL.md`
-- `docs/CENTRAL_MOBILE_R1_PLANO_MESTRE.md`
-- `docs/CENTRAL_MOBILE_R1_EXECUCAO_PARALELA.md`
-- `docs/CENTRAL_MOBILE_R1_INTEGRATION_STATUS.md`
-- `docs/TESTING_POLICY.md`
-- `docs/DEVELOPMENT_CI_WORKFLOW.md`
-- `docs/adm-deposito/README.md`
-- `docs/adm-deposito/STATUS.md`
-- `docs/adm-deposito/DECISIONS.md`
-- `app/adm-deposito/layout.tsx`
-- `features/warehouse/components/WarehouseModuleShell.tsx`
-- `features/warehouse/components/WarehouseModuleContext.tsx`
-- `features/warehouse/components/WarehouseRouteContent.tsx`
-- `features/warehouse/components/WarehouseSidebar.tsx`
-- `features/warehouse/navigation.ts`
-- `lib/warehouse/barcode.ts`
-- `scripts/warehouse-barcode-outbound.test.mjs`
-- `scripts/verify-performance-r3-central-shell.mjs`
-- `tsconfig.json`
+**Não observado diretamente nesta sessão.**
 
-## Contratos reutilizados
+Evidências disponíveis:
 
-Preservados/reutilizados sem criar segunda fonte de verdade:
+- o Vercel Preview do HEAD corrigido ficou **Ready / SUCCESS**;
+- URL de preview publicada pelo bot Vercel:
+  `https://controles-de-empenhos-aprov-git-mo-35f854-aprov-hgesms-projects.vercel.app`;
+- Production Build do novo HEAD passou tanto no Application CI quanto no workflow Legal Validation.
 
-- Firebase Auth;
-- workspace/UG;
-- autorização da Central via `/api/adm-deposito/status`;
-- sessão/lease via `startWorkspaceSessionControl`;
-- gate legal via `LegalAcceptanceGate`;
-- contexto da Central via `WarehouseWorkspaceProvider`;
-- contrato canônico `warehouse_barcode_v1` permanece inalterado;
-- contratos de material, ledger, saldo, localização, lote, intake, outbound e inventário permanecem inalterados.
+Tentativas de leitura HTTP real:
 
-## Contratos novos
+1. conector Vercel disponível nesta sessão:
+   - tentativa de acessar deployment `E4gRPqGCnrEvPZtoGvLdKtJXDskQ`;
+   - resposta: **403 Forbidden / Not authorized** para o scope `aprov-hgesms-projects`;
+2. fetch direto do preview pelas ferramentas web:
+   - preview não acessível por essa ferramenta;
+3. `curl` no ambiente de execução:
+   - ambiente sem resolução DNS externa para o host Vercel.
 
-- `WarehouseMobileScanKind = PRODUCT | LOCATION | UNKNOWN`;
-- `WarehouseMobileScannerExpectation = EXPECT_PRODUCT | EXPECT_LOCATION | EXPECT_SOURCE_LOCATION | EXPECT_DESTINATION_LOCATION`;
-- `WarehouseMobileScanSource = CAMERA | MANUAL`;
-- `WarehouseMobileScanEvent`;
-- `WarehouseMobileCooldownGuard`;
-- `WarehouseMobileScanner` com `identifyScan`, `onScanCandidate` e `onValidatedScan`.
+Portanto, não é feita alegação de que o header HTTP real foi lido. A confirmação ainda necessária é:
 
-## Mudanças funcionais intencionais
+```text
+Permissions-Policy: camera=(self), microphone=(), geolocation=()
+```
 
-- Nova superfície protegida `/central-mobile`.
-- Em viewport desktop, a rota móvel exibe aviso para usar celular e link para a Central completa; não foi adicionada à navegação desktop.
-- O scanner inicia a câmera somente após o botão **Ativar câmera**.
-- O decoder é carregado somente nesse momento.
-- Sem resolver injetado, a leitura é classificada como `UNKNOWN` e não é tratada como operação válida.
-- Um erro de identificação não encerra nem mascara uma câmera ainda ativa.
-- Entrada manual segue o mesmo contrato de normalização/identificação.
-- Nenhum scan produz movimento ou alteração de saldo.
+na resposta de `/central-mobile`.
 
-## Testes e gates
+## Correção 2 — React Strict Mode
 
-- Application CI #910 — **SUCCESS**.
-- `npm ci` — **PASS** dentro do Application CI.
-- TypeScript error budget inicial — **PASS**.
-- `npm run verify:emprovex-core-protection` — **PASS** dentro do Application CI.
-- regressão completa da Central e demais guards do Application CI — **PASS**.
-- `npm run build` — **PASS**; Next.js 15.5.24, compilação otimizada em 20,9 s.
-- `npm run typecheck` final — **PASS**.
-- `git diff --check origin/feat/central-mobile-r1...HEAD` — **PASS**.
-- Core Protection #197 — **SUCCESS**.
-- Recovery #596 — **SUCCESS**.
-- Release gates 16, 17, 18, 19, 20 e 21 — **SUCCESS**.
-- Vercel preview associado ao HEAD de código — **SUCCESS**.
-- validação isolada do contrato `mobileScanner.ts` com TypeScript + 6 grupos de asserts — **PASS**.
-- auditoria estrutural do HEAD para lazy boundary, teardown, contratos e ausência do decoder no shell desktop — **29/29 checks PASS**.
+### Alteração
 
-Os scripts permanentes foram adicionados:
+O lifecycle do `WarehouseMobileScanner` passou a marcar explicitamente o componente como montado no setup:
 
-- `npm run test:mobile-r1-scanner`;
-- `npm run verify:mobile-r1-platform-scanner`.
+```ts
+useEffect(() => {
+  mountedRef.current = true;
 
-Eles não foram adicionados ao workflow compartilhado nesta frente para evitar ampliar propriedade de CI; a lógica correspondente foi validada isolada/estruturalmente e o build/typecheck reais passaram.
+  return () => {
+    mountedRef.current = false;
+    stopRef.current?.();
+    stopRef.current = null;
+  };
+}, []);
+```
 
-## Gates não executados
+Isso preserva:
 
-- **Browser E2E on demand:** não executado. A suíte existente não possui cenário da nova rota/scanner e esta frente não alterou o workflow compartilhado.
-- **Câmera física em aparelho real:** não executada. Não há alegação de certificação física de câmera nesta entrega.
-- **Teste tátil/sonoro em aparelho real:** não executado; ambos são feedback opcional e não bloqueante.
+- setup → `mountedRef.current = true`;
+- cleanup → `mountedRef.current = false`;
+- encerramento do stream/câmera;
+- anulação de `stopRef`;
+- ausência de stream duplicado;
+- proteção contra update após unmount.
 
-A validação física em celular real permanece necessária na certificação final da Central Móvel.
+O fluxo fica resiliente ao ciclo de desenvolvimento do React Strict Mode:
+
+```text
+setup → cleanup → setup
+```
+
+## Proteção contra regressão
+
+`scripts/verify-mobile-r1-platform-scanner.mjs` foi ampliado para proteger os dois contratos.
+
+### Permissions-Policy
+
+O verifier exige:
+
+- `reactStrictMode: true`;
+- `camera=(self), microphone=(), geolocation=()`;
+- ausência de `camera=()`.
+
+### Strict Mode lifecycle
+
+O verifier checa semanticamente a ordem:
+
+1. início do effect;
+2. `mountedRef.current = true`;
+3. `mountedRef.current = false`;
+4. `stopRef.current?.()`;
+5. `stopRef.current = null`;
+6. fechamento do mesmo effect sem dependências.
+
+Auditoria equivalente executada diretamente sobre os arquivos reais do HEAD no GitHub:
+
+**44/44 checks PASS**.
+
+## Arquivos alterados nesta correção
+
+- `next.config.ts`;
+- `features/warehouse/mobile/WarehouseMobileScanner.tsx`;
+- `scripts/verify-mobile-r1-platform-scanner.mjs`;
+- `docs/CENTRAL_MOBILE_R1_A_HANDOFF.md` — somente documentação deste handoff.
+
+Não foram alterados:
+
+- MOBILE-B;
+- labels/PDF;
+- resolver de localização;
+- ledger;
+- saldo;
+- intake;
+- outbound;
+- inventory;
+- Rules;
+- billing;
+- lifecycle comercial;
+- legal acceptance;
+- autenticação;
+- modelos canônicos.
+
+## Contratos preservados
+
+Permanecem intactos:
+
+- rota `/central-mobile`;
+- `WarehouseMobileScanner`;
+- `PRODUCT | LOCATION | UNKNOWN`;
+- estados `EXPECT_*`;
+- cooldown de 900 ms;
+- fallback manual;
+- feedback visual;
+- som/vibração opcionais;
+- lazy import do decoder;
+- ZXing;
+- teardown;
+- shell móvel;
+- isolamento do bundle desktop;
+- Auth/workspace/UG/sessão/legal;
+- classificação `UNKNOWN` sem resolver;
+- ausência de escrita em saldo/ledger.
+
+## Testes
+
+### `npm run test:mobile-r1-scanner`
+
+Executado em ambiente isolado com o script e o domínio atuais da branch.
+
+Resultado:
+
+```text
+tests 6
+pass 6
+fail 0
+```
+
+**PASS — 6/6**
+
+### `npm run verify:mobile-r1-platform-scanner`
+
+O checkout completo não pôde ser materializado neste ambiente porque a execução local não possui resolução DNS para `github.com`.
+
+Como evidência alternativa, a mesma lógica do verifier foi executada diretamente contra os arquivos reais do HEAD recuperados pelo conector GitHub.
+
+Resultado:
+
+**44/44 checks PASS**
+
+Não é alegado que o comando npm completo foi executado sobre um checkout integral.
+
+### `npm run typecheck`
+
+Application CI #916 — **PASS**.
+
+O passo **Final TypeScript validation** terminou com sucesso.
+
+### `npm run build`
+
+Application CI #916 — **PASS**.
+
+Next.js 15.5.24:
+
+- compilação otimizada: **26,0 s**;
+- páginas estáticas: **29/29**.
+
+O workflow SAAS-DL Legal Validation #27 também chegou ao Production Build e o build passou.
+
+### `npm run verify:emprovex-core-protection`
+
+- EMPROVEX Core Protection #203 — **SUCCESS**;
+- Application CI #916 — passo de Core Protection **PASS**;
+- Legal Validation #27 — passo de Core Protection **PASS**.
+
+### `git diff --check`
+
+Application CI #916 — **PASS**.
+
+Esse workflow usa checkout com `fetch-depth: 0` e validou corretamente o diff contra a integradora.
+
+## Workflows
+
+- **Application CI #916:** **SUCCESS**
+- **EMPROVEX Core Protection #203:** **SUCCESS**
+- **Recovery #602:** **SUCCESS**
+- **SAAS-DL Legal Validation #27:** **FAILURE — infraestrutura de Diff Hygiene**
+
+Detalhe do Legal Validation #27:
+
+Todos os passos anteriores ao Diff Hygiene passaram:
+
+- instalação;
+- TypeScript;
+- páginas públicas/legal;
+- aceite legal versionado;
+- testes Firestore de aceite;
+- Core Protection;
+- Production Build.
+
+A falha ocorreu apenas em:
+
+```text
+git fetch origin "feat/central-mobile-r1" --depth=1
+git diff --check "origin/feat/central-mobile-r1...HEAD"
+
+fatal: origin/feat/central-mobile-r1...HEAD: no merge base
+```
+
+Durante esse run, a integradora havia sofrido force-update. O workflow Legal usa fetch raso; a worker permanece intencionalmente na base congelada original e não foi rebaseada/mergeada, conforme instrução do Coordenador.
+
+O Application CI #916, que usa `fetch-depth: 0`, encontrou o merge-base e concluiu o **Diff Hygiene com SUCCESS**.
+
+## Gates não executados / não concluídos
+
+- leitura direta do header HTTP efetivo de `/central-mobile`: **não concluída por falta de acesso ao scope Vercel e DNS externo no ambiente**;
+- Browser E2E on demand: **não executado**;
+- câmera física Android/iPhone: **não executada**;
+- feedback tátil/sonoro em aparelho físico: **não executado**;
+- Legal Validation verde: **não obtido** por falha de merge-base no passo de diff, sem falha funcional/legal anterior.
 
 ## Métricas
 
-No Production Build do Application CI #910:
+Application CI #916, novo HEAD:
 
-- `/central-mobile`: **4,72 kB** de Size; **109 kB** First Load JS.
-- `/adm-deposito`: **2,33 kB** de Size; **106 kB** First Load JS.
-- Shared First Load JS: **104 kB**.
-- Geração estática: **29/29 páginas**.
-- Compilação otimizada: **20,9 s**.
-- Diff de código contra a base congelada antes deste documento: **13 arquivos**, **+1104 / -8**.
-- O decoder ZXing não é importado por `WarehouseModuleShell`, `WarehouseSectionContent` ou `app/adm-deposito/layout.tsx`.
-- O decoder fica atrás de import dinâmico acionado pelo operador, portanto não integra o caminho inicial da Central desktop.
+- `/central-mobile`: **4,72 kB** Size / **109 kB** First Load JS;
+- `/adm-deposito`: **2,33 kB** Size / **106 kB** First Load JS;
+- Shared First Load JS: **104 kB**;
+- geração estática: **29/29**;
+- build: **26,0 s**.
 
-## Riscos
+Conclusão:
 
-- Compatibilidade real de câmera e ergonomia ainda precisam ser validadas em aparelhos Android/iOS reais.
-- `getUserMedia` depende de contexto seguro (HTTPS) e permissão do usuário.
-- Som/vibração podem ser bloqueados ou indisponíveis por navegador/dispositivo; o fluxo não depende desses feedbacks.
-- As versões ZXing escolhidas são compatíveis com o Node 20 usado pelo CI, mas devem continuar sob revisão de manutenção nas futuras releases.
-- O classificador padrão é deliberadamente `UNKNOWN`; nenhuma resolução de posição foi antecipada.
+**nenhuma regressão de bundle foi observada em relação ao HEAD anterior certificado.**
 
-## Dependências
+## Estado da branch frente à integradora
 
-- **MOBILE-B:** conectar resolução completa de barcode de posição e identificação `LOCATION`.
-- Frentes MOBILE-C–H podem reutilizar `WarehouseMobileScanner` e seus estados sem alterar o contrato de captura.
-- Coordenador deve revisar e integrar o PR #221 na `feat/central-mobile-r1` quando considerar a frente aceita.
+A integradora avançou durante a correção.
 
-## Conflitos esperados
+Comparação atual:
 
-- `features/warehouse/components/WarehouseProtectedSurface.tsx`: refatoração pequena para expor boundary shell-agnostic; risco de conflito somente se outra frente alterar o mesmo gate.
-- `package.json` e `package-lock.json`: possível conflito mecânico caso outra frente adicione dependências em paralelo.
-- No estado auditado, PR #221 está **mergeable** contra a integradora.
+- worker: **4 commits à frente** da base comum;
+- worker: **11 commits atrás** da integradora;
+- merge-base preservado: `53e28b81874ee1b7ce0bd484cc7a97537aa99473`.
+
+Nenhum rebase ou merge foi feito, conforme instrução explícita do Coordenador.
+
+## Riscos residuais
+
+1. header HTTP real ainda precisa ser observado no preview/ambiente que tenha acesso;
+2. validação física de câmera continua pendente da certificação integrada/final;
+3. Legal Validation precisa de nova execução em condição onde o workflow consiga resolver o merge-base, ou tratamento coordenado da limitação do fetch raso;
+4. a integradora avançou e a integração semântica pertence ao Coordenador.
 
 ## Documentação atualizada
 
-- este arquivo: `docs/CENTRAL_MOBILE_R1_A_HANDOFF.md`.
+- `docs/CENTRAL_MOBILE_R1_A_HANDOFF.md`
 
-O memorial oficial e o status de integração não foram alterados pela trabalhadora; a consolidação canônica permanece responsabilidade do Coordenador.
+O Memorial Oficial e o Integration Status não foram alterados pela worker.
 
 ## Não realizado
 
-- merge em `feat/central-mobile-r1`;
+- merge na integradora;
 - merge em `main`;
 - deploy/promoção de produção;
 - publicação de Rules;
-- alteração de contrato canônico;
-- alteração de ledger, fonte de saldo ou modelo de posição;
-- implementação de barcode de posições;
-- ALLOCATE;
-- TRANSFER;
-- OUTBOUND;
-- inventário;
-- conferência;
-- offline sync;
-- app nativo;
-- escopo de outra frente.
+- rebase;
+- merge da integradora na worker;
+- alteração de MOBILE-B/C–H;
+- alteração de ledger/saldo/intake/outbound/inventory;
+- alteração de contratos canônicos;
+- alegação de câmera física certificada;
+- alegação de header HTTP observado sem evidência.
+
+## Próximo gate do Coordenador
+
+Para promover esta frente de **PARCIAL** para **APTO PARA REVISÃO**, ainda é necessário:
+
+1. observar a resposta HTTP real de `/central-mobile` e confirmar:
+   `Permissions-Policy: camera=(self), microphone=(), geolocation=()`;
+2. decidir/reexecutar o SAAS-DL Legal Validation em condição que não falhe por ausência artificial de merge-base;
+3. revisar o novo HEAD sem integrar automaticamente.
