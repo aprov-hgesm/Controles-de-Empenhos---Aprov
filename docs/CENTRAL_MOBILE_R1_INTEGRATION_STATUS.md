@@ -6,6 +6,7 @@ Produção de referência: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Baseline upstream MOBILE-0: `78d3e9afeeb4176a8d6423cdd8e65d32435ba0a9`
 Freeze documental / base comum da Onda 1: `53e28b81874ee1b7ce0bd484cc7a97537aa99473`
 Freeze documental / base comum da Onda 2 após reconciliação SaaS: `6852963c7aa9a1c83133239f0b929715fd316530`
+Freeze documental / base comum da Onda 3 após Integração 2 + reconciliação SaaS: `c971d5356c343a0819bf96ec016de73dd96a435d`
 
 Estado global: **ONDAS 1–2 INTEGRADAS / INTEGRAÇÃO 2 CERTIFICADA / ONDA 3 LIBERADA — MOBILE-F + MOBILE-G + MOBILE-H**
 
@@ -35,9 +36,9 @@ Dependência:
 | MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **APROVADA E INTEGRADA SEMANTICAMENTE** | worker PR #229; integração PR #232 / squash `1c523fe2...` |
 | MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **APROVADA E INTEGRADA SEMANTICAMENTE** | worker PR #231; integração PR #234 / squash `fc87bf8f...` |
 | MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **APROVADA E INTEGRADA** | PR #230 / squash `e768ee5f...` |
-| MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **LIBERADA PARA ONDA 3** | freeze comum a registrar |
-| MOBILE-G Saída | `mobile-r1-g-outbound` | Int.2 | **LIBERADA PARA ONDA 3** | freeze comum a registrar |
-| MOBILE-H Conferência | `mobile-r1-h-position-check` | Int.2 | **LIBERADA PARA ONDA 3** | freeze comum a registrar |
+| MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **LIBERADA / BRANCH CRIADA** | base `c971d5356...`; aguardando worker |
+| MOBILE-G Saída | `mobile-r1-g-outbound` | Int.2 | **LIBERADA / BRANCH CRIADA** | base `c971d5356...`; aguardando worker |
+| MOBILE-H Conferência | `mobile-r1-h-position-check` | Int.2 | **LIBERADA / BRANCH CRIADA** | base `c971d5356...`; aguardando worker |
 | MOBILE-I Integração controlada | integradora | A–H | **BLOQUEADA** | — |
 | MOBILE-J Certificação | integradora | I | **BLOQUEADA** | — |
 
@@ -517,3 +518,16 @@ Resultado:
 **PASS — SEM BLOQUEIO TRANSVERSAL PARA MOBILE-F/G/H**.
 
 A Onda 3 pode ser congelada e ativada. MOBILE-I/J permanecem bloqueadas.
+
+
+### Freeze da Onda 3 — 2026-10-03
+
+Base comum:
+`c971d5356c343a0819bf96ec016de73dd96a435d`.
+
+Branches criadas exatamente nesse SHA:
+- `mobile-r1-f-inventory`;
+- `mobile-r1-g-outbound`;
+- `mobile-r1-h-position-check`.
+
+MOBILE-I/J permanecem bloqueadas até Integração 3.
