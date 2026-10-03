@@ -208,6 +208,14 @@ Pendências físicas continuam:
 
 **MOBILE-C + MOBILE-D + MOBILE-E estão liberadas em paralelo.**
 
+Freeze comum da Onda 2:
+`feat/central-mobile-r1@13ca1a50826bdb34b8f63effb0743ac43ecdcddd`
+
+Branches já criadas nessa mesma base:
+- `mobile-r1-c-intake-allocation`;
+- `mobile-r1-d-transfer`;
+- `mobile-r1-e-physical-query`.
+
 O Coordenador deve:
 1. congelar nova base comum;
 2. criar as três branches;
