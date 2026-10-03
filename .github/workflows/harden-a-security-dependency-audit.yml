@@ -43,7 +43,7 @@ jobs:
           console.log(JSON.stringify(report, null, 2));
           console.log('HARDEN_A_AUDIT_JSON_END');
           const names = Object.keys(report.vulnerabilities || {});
-          fs.writeFileSync('/tmp/npm-audit-packages.txt', names.join('\n'));
+          fs.writeFileSync('/tmp/npm-audit-packages.txt', names.join('\n') + '\n');
           console.log('HARDEN_A_AUDIT_SUMMARY=' + JSON.stringify(report.metadata?.vulnerabilities || {}));
           NODE
           echo "audit_exit_code=$code" >> "$GITHUB_OUTPUT"
