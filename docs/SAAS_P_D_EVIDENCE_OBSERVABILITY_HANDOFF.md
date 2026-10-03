@@ -6,7 +6,7 @@ Data: **2026-10-02**
 
 - Branch: `saas-p-d-evidence-observability`
 - Base congelada: `4d87370e5ee7f2697ab4901e0c045a9ab4910fe9`
-- HEAD de conteúdo da matriz antes deste handoff: `41cf89d76a470bd910e677fce1c29c2ec49871c7`
+- HEAD de conteúdo da matriz após incorporar a evidência PILOT-A aceita pelo Coordenador: `dfdf5fea475c6cebded791fd51747fec0994aed4`
 - HEAD final da branch: deve ser conferido no PR após este commit documental.
 
 ## Status
@@ -18,23 +18,23 @@ PILOT-D não libera SAAS-J. O gate de SAAS-J permanece materialmente incompleto 
 ## Estado J01–J24
 
 Baseline consolidado nesta frente:
-- `BLOQUEADO`: 15 jornadas — J01, J02, J05, J06, J10–J20;
-- `PREPARADO`: 7 jornadas — J03, J04, J07, J08, J21, J22, J23;
-- `NÃO INICIADO`: 1 jornada — J09;
+- `BLOQUEADO`: 12 jornadas — J01, J10–J20;
+- `PREPARADO`: 8 jornadas — J02–J07, J22, J23;
 - `EM EXECUÇÃO`: 1 jornada — J24;
-- `PASS`: 0 nesta worker;
-- `FAIL`: 0 nesta worker;
-- `N/A`: 0 nesta worker.
+- `PASS`: 2 jornadas — J08 e J21, por evidência aceita pelo Coordenador;
+- `FAIL`: 0;
+- `N/A`: 1 jornada — J09.
 
-Regra aplicada: código/CI/configuração verde sustentam pré-requisito, mas não viram `PASS` de jornada humana/comercial por inferência.
+Regra aplicada: código/CI/configuração verde sustentam pré-requisito, mas não viram `PASS` humano/comercial por inferência. J08 e J21 foram promovidas somente porque o Coordenador já aceitou o escopo específico dessas evidências no handoff PILOT-A.
 
 ## Evidências incorporadas
 
-- P2 VIP legado: 3/3 workspaces materializados e verificados como READY, sem promover J08 a PASS humano.
+- P2/PILOT-A: J08 aceito como PASS restrito à materialização produtiva VIP legado/R$0 (3/3 READY); login/aceite/shell/Central permanecem separados em J02/J05/J06/J07.
 - P3 recovery: PITR, delete protection e backup diário com retenção de 14 semanas ativos nos dois bancos; backup READY e restore isolado continuam pendentes no último estado observado.
 - Produção: `main` confirmada exatamente em `e90f92acae1514ee5cbc6ce95fed354bc1454330` — Performance R3, sem release SaaS/Mobile.
 - Health: PR #223 confirmado draft, mergeable e não mergeado; `/api/health` segue preparado, não comprovado em produção.
 - Observabilidade: arquitetura 16.3–16.6 e 17.6/17.8 revisada; fontes reais e estimadas mantidas separadas.
+- PILOT-A aceito pelo Coordenador via PR #226 / squash `8459a59a...`: J08 PASS e J21 PASS no escopo documentado; demais jornadas humanas continuam pendentes.
 - Mobile vivo: PR #220 MOBILE-B merged; PR #221 MOBILE-A merged; PR #224 Integração 1 merged/certificada; C/D/E liberadas.
 
 ## Evidências pendentes
@@ -96,8 +96,8 @@ Não armazenar senha, token, chave, segredo, cookie ou dado pessoal desnecessár
 
 ## Lacunas
 
-- Nenhum `PASS` novo foi criado por inferência.
-- J09 continua sem participante VIP manual.
+- Nenhum `PASS` foi criado por inferência; J08/J21 vieram de evidência PILOT-A já aceita pelo Coordenador.
+- J09 foi marcado N/A porque não há participante VIP manual no piloto atual.
 - P-03 e pagamentos reais continuam fora da evidência desta worker.
 - Recovery ainda não fecha J24.
 - Health/uptime ainda não fecha J23.
@@ -167,7 +167,9 @@ O Application CI pesado não é exigido para diff apenas em `docs/**`. O diff do
 
 ## PR
 
-PR draft deve apontar exclusivamente para `feat/saas-r1-commercializacao`, sem merge.
+PR #228 — draft para `feat/saas-r1-commercializacao`, sem merge.
+
+A integradora avançou após o freeze. Na observação desta worker, o PR apontava para base `49e7f764...` e o GitHub reportava `mergeable=false`. A branch PILOT-D **não foi rebaseada**; o Coordenador deve integrar semanticamente os commits/documentos necessários, preservando os handoffs já recebidos de outras frentes.
 
 ## Gate SAAS-J
 
@@ -177,7 +179,7 @@ Motivos materiais: faltam evidências humanas/comerciais, baseline numérico de 
 
 ## Próxima ação
 
-1. Coordenador recebe handoffs A/B/C e atualiza somente resultados realmente observados.
+1. Coordenador já recebeu PILOT-A; receber PILOT-B/C e atualizar somente resultados realmente observados.
 2. PILOT-D/Coordenador preenche T0/T1/T2 quando o piloto real começar, sem novos listeners.
 3. PILOT-C fecha J23/J24 com evidência externa real.
 4. Antes de SAAS-J, reconsultar MOBILE-R1 e reconciliar deltas compartilhados.
