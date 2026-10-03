@@ -976,3 +976,17 @@ HARDEN-A2 permanece bloqueada até:
 2. aceite do Coordenador SaaS;
 3. integração semântica da A1.
 
+## HARDEN-A1 — FECHAMENTO
+
+Status: **PASS TÉCNICO / ENCERRADA**
+
+O bloqueador CRITICAL de jsPDF foi removido e a regressão técnica dos PDFs foi aprovada.
+
+A validação visual fina foi reclassificada como **backlog pós-lançamento não bloqueante**. Ela não impede RC, piloto ou lançamento, salvo surgimento posterior de defeito funcional relevante.
+
+A1 foi integrada semanticamente à integradora SaaS sem merge da branch congelada.
+
+Com isso, a condição de bloqueio da HARDEN-A2 foi satisfeita.
+
+**HARDEN-A2 — Firebase/Firestore/gRPC: ELEGÍVEL PARA LIBERAÇÃO/ATIVAÇÃO PELO COORDENADOR SAAS.**
+
