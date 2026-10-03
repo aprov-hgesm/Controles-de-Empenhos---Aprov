@@ -29,6 +29,7 @@ assert.match(component, /resolveWarehouseStockPositionBarcode/);
 assert.match(component, /useWarehouseWorkspaceContext/);
 assert.match(component, /workspace\.workspaceId/);
 assert.match(component, /workspace\.ug/);
+assert.match(component, /if \(!workspace\.ug\)/);
 assert.match(component, /DEPOT_NOT_STOCK_POSITION/);
 assert.match(component, /Nenhum saldo ou movimento é alterado/);
 
