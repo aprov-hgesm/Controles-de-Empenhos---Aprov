@@ -512,3 +512,16 @@ Resultado:
 
 P2 está **CONCLUÍDA**. Não há pendência adicional de materialização da coorte VIP legado.
 
+### P3 — proteção e backup diário aplicados
+
+Os dois bancos agora possuem PITR, delete protection e agenda diária de backup com retenção de 14 semanas.
+
+Ainda pendente:
+1. primeiro backup READY no banco principal;
+2. primeiro backup READY no `emprovex-warehouse`;
+3. `recovery:verify` verde;
+4. restore real em banco isolado;
+5. health/uptime/alertas externos.
+
+Não repetir `apply` enquanto os controles permanecerem ativos.
+
