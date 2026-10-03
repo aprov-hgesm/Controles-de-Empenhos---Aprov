@@ -208,7 +208,9 @@
     "verify:saas-r1-onboarding": "node scripts/verify-saas-r1-onboarding.mjs",
     "verify:saas-r1-security-enforcement": "node scripts/verify-saas-r1-security-enforcement.mjs",
     "verify:saas-r1-integration": "node scripts/verify-saas-r1-integration.mjs",
-    "saas:r1:legacy-vip": "node scripts/saas-r1-legacy-vip.mjs"
+    "saas:r1:legacy-vip": "node scripts/saas-r1-legacy-vip.mjs",
+    "test:mobile-r1-scanner": "node --test scripts/warehouse-mobile-scanner.test.mjs",
+    "verify:mobile-r1-platform-scanner": "node scripts/verify-mobile-r1-platform-scanner.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -223,7 +225,9 @@
     "pdf-lib": "^1.17.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "tailwind-merge": "^2.5.4"
+    "tailwind-merge": "^2.5.4",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0-alpha.0",
