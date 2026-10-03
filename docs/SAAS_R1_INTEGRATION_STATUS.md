@@ -26,7 +26,7 @@ Estado global: **SAAS-A + B + C + DL + E + DS + I INTEGRADAS / CANDIDATO R1 COMB
 | SAAS-E Operação/recovery | `saas-r1-e-ops-recovery` | A | **CONCLUÍDA** | **INTEGRADA — PR #215 / `82f2e643...`** |
 | SAAS-DS Segurança/enforcement | `saas-r1-ds-security-enforcement` | B + C | **CONCLUÍDA** | **INTEGRADA — PR #218 / `726436ac...`** |
 | SAAS-I Integração | `saas-r1-i-integration` → integradora | B+C+DL+E+DS | **CONCLUÍDA** | **INTEGRADA — PR #219 / `25dda487...`** |
-| SAAS-P Piloto | integradora | I | **EM EXECUÇÃO** | P2/P3 em andamento; sem publicação automática |
+| SAAS-P Piloto | integradora | I | **EM EXECUÇÃO** | P2 concluída; P3 recovery configurado e aguardando backup READY/restore/uptime; sem publicação automática |
 | SAAS-J Certificação | integradora | P | **AGUARDANDO** | — |
 
 ## 3. Contratos congelados
@@ -58,7 +58,7 @@ Não alterar em worker:
 4. `platformAccess` não lê billing e isso é desejável para custo/isolamento.
 5. Rules operacionais já exigem workspace e conta ativos; enforcement deve reutilizar esse contrato.
 6. SAAS-C integrou onboarding/credenciais preservando provisionamento, UID/e-mail/workspace/UG e sessões; B+C agora satisfazem a dependência da SAAS-DS.
-7. SAAS-E integrou o tooling de backup nativo para os dois bancos; a ativação externa e a prova de restore real ainda são pendências.
+7. SAAS-E integrou o tooling de backup nativo; em 2026-10-02 PITR, delete protection e schedules diários foram ativados nos dois bancos. Permanecem pendentes backup READY, restore real isolado e certificação de uptime/alertas.
 8. O backup lógico atual continua não cobrindo `emprovex-warehouse`; a Central depende do backup nativo para recuperação global.
 9. SAAS-DL integrou Termos/Privacidade comerciais e aceite legal versionado; falta apenas conectar o `LegalAcceptanceGate` ao shell depois da SAAS-C.
 10. O health/uptime foi preparado; o uptime check real no Cloud Monitoring ainda precisa ser criado e validado.
@@ -133,7 +133,7 @@ A integração não foi promovida para `main` nem para produção.
 - build/typecheck/diff hygiene: PASS;
 - health endpoint: integrado;
 - backup/recovery tooling para os dois bancos: integrado;
-- restore real/backup READY/uptime real: **PENDENTES DE CONFIGURAÇÃO EXTERNA**.
+- restore real/backup READY/uptime real: **PENDENTES**; PITR/delete protection/schedules já estão ativos nos dois bancos.
 
 A integração não foi promovida para `main` nem para produção.
 
@@ -386,3 +386,11 @@ Regras:
 - não promover alterações para `main` nem produção sem autorização explícita;
 - consolidar deploys quando houver uma janela real de publicação, evitando consumo desnecessário de builds durante o desenvolvimento.
 
+## 20. Conferência corrente — SAAS-P / Mobile / Health — 2026-10-02
+
+- P2 VIP legado: **CONCLUÍDA / 3 de 3 READY**.
+- P3: PITR, delete protection e schedules diários ativos; aguardando backup READY, restore isolado e uptime real.
+- PR #223 `saas-p-ops-health-endpoint`: draft, mergeable, Application CI/Core Protection/Recovery **SUCCESS**; sem merge/deploy.
+- Vercel Preview `build-rate-limit`: não bloqueante durante desenvolvimento.
+- Mobile: PR #220/MOBILE-B **MERGED**; PR #221/MOBILE-A aberto/draft, mergeable, HEAD `44c4f013...`, gates principais verdes.
+- Antes de SAAS-J: reconciliar novamente a integradora Mobile viva e concluir evidências do piloto/recovery/uptime.
