@@ -2,9 +2,9 @@
 
 Data: **2026-10-03**
 
-Branch: `saas-harden-a-security-dependencies`  
-Base congelada: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`  
-Integradora-alvo: `feat/saas-r1-commercializacao`  
+Branch: `saas-harden-a-security-dependencies`
+Base congelada: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`
+Integradora-alvo: `feat/saas-r1-commercializacao`
 Status técnico da frente: **PARCIAL — correções não-breaking concluídas; decisões de major upgrade pendentes**
 
 ## 1. Escopo e governança
