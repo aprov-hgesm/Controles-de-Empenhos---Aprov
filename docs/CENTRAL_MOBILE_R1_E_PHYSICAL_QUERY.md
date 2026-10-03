@@ -84,8 +84,10 @@ Depois do resolver:
 - 0 lote;
 - reads aproximados totais: **2–3 + documentos retornados pela query**.
 
-Quando a posição está realmente vazia, a query retorna zero documentos:
-**~2 reads para LOCAL / ~3 reads para SUBPOSITION**.
+Quando a posição está realmente vazia, a telemetria da aplicação registra zero
+documentos retornados pela query, resultando em **~2 reads lógicos para LOCAL /
+~3 para SUBPOSITION**, além de eventual cobrança mínima própria do Firestore
+para query vazia, que não é inferida por esta telemetria.
 
 ### Posição com estoque
 
@@ -98,8 +100,10 @@ Conteúdo:
 
 Teto estrutural fail-closed antes de apresentar resultado parcial:
 
-- LOCAL: aproximadamente **242 documentos de conteúdo + 2 do resolver**;
-- SUBPOSITION: aproximadamente **242 documentos de conteúdo + 3 do resolver**.
+- conteúdo apresentado com sucesso: até **240 documentos** (60 saldos + 60
+  materiais + 120 lotes);
+- LOCAL: até **~242 reads lógicos** incluindo os 2 do resolver;
+- SUBPOSITION: até **~243 reads lógicos** incluindo os 3 do resolver.
 
 O teto é apenas guardrail; a jornada normal deve consumir muito menos.
 
