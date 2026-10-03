@@ -583,3 +583,19 @@ Snapshot manual único do painel `emprovex-workspace-estimate`:
 - `aprovisionamento-teste`: sem consolidação, métricas 0.
 
 T0 global e T0 por UG estão capturados. Falta somente a fotografia monetária do Google Cloud Billing para completar o T0 inicial.
+
+### T0 monetário — CAPTURADO / T0 INICIAL COMPLETO
+
+Google Cloud Billing:
+- custo atual: **R$ 0,16**;
+- previsão mensal: **R$ 2,30**;
+- serviço com custo listado: **App Engine — R$ 0,16**.
+
+Com isso:
+- T0 técnico: PASS;
+- T0 global: capturado;
+- T0 por UG: capturado;
+- T0 monetário: capturado;
+- **T0 inicial: COMPLETO**.
+
+J22 permanece PREPARADO até captura de T1/T2 após as jornadas reais.
