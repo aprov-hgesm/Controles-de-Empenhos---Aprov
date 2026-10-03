@@ -57,7 +57,10 @@ function positionLabel(value: ResolvedPosition) {
   if (value.position.kind === 'LOCATION') {
     return `${value.depot.code} · ${value.location?.code || value.position.locationId}`;
   }
-  return `${value.depot.code} · ${value.parentLocation?.code || value.position.locationId} · ${value.location?.code || value.position.subpositionId}`;
+  if (value.position.kind === 'SUBPOSITION') {
+    return `${value.depot.code} · ${value.parentLocation?.code || value.position.locationId} · ${value.location?.code || value.position.subpositionId}`;
+  }
+  return 'Sem localização';
 }
 
 function locationError(error: string) {
