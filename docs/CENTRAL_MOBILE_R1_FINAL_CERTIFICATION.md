@@ -368,3 +368,99 @@ Esta frente não autoriza:
 - migração;
 - restore;
 - lançamento Mobile.
+
+
+## 18. Checkpoint vivo do Coordenador Mobile — 2026-10-03
+
+A abertura da MOBILE-J foi auditada contra o estado vivo do repositório.
+
+### Branch / PR
+
+- branch: `mobile-r1-j-final-certification`;
+- freeze: `2108a21208765e0d4155399667cf571b0fa127ff`;
+- HEAD corrente na auditoria: `0cdf7de46630c055bd01e58423fd997d907ae3cf`;
+- PR #246: OPEN / DRAFT / MERGEABLE;
+- delta desde o freeze: 2 commits;
+- arquivos alterados: apenas `docs/CENTRAL_MOBILE_R1_FINAL_CERTIFICATION.md`;
+- delta runtime Mobile: **NENHUM**.
+
+### SaaS vivo
+
+HEAD observado:
+`feat/saas-r1-commercializacao@f308ff601fe923467b8ccc1489be91b318bc3e8c`.
+
+O estado mudou em relação ao snapshot de abertura da J.
+
+#### HARDEN-A1
+
+Estado vivo:
+**PASS TÉCNICO / ENCERRADA / INTEGRADA NO SAAS**.
+
+Resultado:
+- jsPDF 4.2.1;
+- jsPDF-AutoTable 5.0.8;
+- CRITICAL jsPDF eliminado;
+- regressão automatizada 7/7 PASS;
+- Application CI/Core/Recovery/Legal/Build/TypeScript/Diff PASS;
+- inspeção visual fina reclassificada como não bloqueante;
+- impacto MOBILE-R1: **DELTA COMPATÍVEL**.
+
+PR #244:
+- CLOSED;
+- não mergeado diretamente;
+- integração semântica já materializada na integradora SaaS.
+
+#### HARDEN-A2
+
+Na auditoria atual:
+- branch encontrada: **NENHUMA**;
+- PR encontrado: **NENHUM**;
+- estado: **AINDA NÃO INICIADA**.
+
+Escopo futuro:
+Firebase / Firestore / gRPC.
+
+Qualquer avanço da A2 exigirá nova reconciliação antes do PASS FINAL da MOBILE-J.
+
+#### HARDEN-B
+
+Permanece:
+**PARCIAL — DEPENDÊNCIA TEMPORAL LEGÍTIMA**.
+
+Pendentes:
+- primeiro backup READY;
+- recovery:verify;
+- restore real isolado com autorização explícita.
+
+Impacto funcional Mobile:
+**SEM DELTA**.
+
+### CT-01
+
+Mobile:
+`camera=(self), microphone=(), geolocation=()`.
+
+SaaS:
+`camera=(), microphone=(), geolocation=()`.
+
+Classificação:
+**PREEXISTENTE / CONHECIDA / OBRIGATÓRIA PARA O FUTURO RC**.
+
+A MOBILE-J não deve corrigir CT-01 por conta própria.
+
+### Classificação corrente
+
+MOBILE-J:
+**PARCIAL TECNICAMENTE SAUDÁVEL / CERTIFICAÇÃO EM EXECUÇÃO**.
+
+Razões:
+- desenvolvimento funcional encerrado;
+- baseline automatizado verde;
+- branch de certificação sem delta runtime;
+- HARDEN-A1 resolvida;
+- HARDEN-B não bloqueia execução física;
+- HARDEN-A2 ainda não começou;
+- evidência física continua pendente;
+- reconciliação SaaS final continua pendente para PASS FINAL.
+
+Não declarar PASS FINAL antes das evidências físicas e da última reconciliação upstream.
