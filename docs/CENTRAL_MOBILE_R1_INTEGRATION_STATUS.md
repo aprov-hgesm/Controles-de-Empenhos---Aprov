@@ -531,3 +531,100 @@ Branches criadas exatamente nesse SHA:
 - `mobile-r1-h-position-check`.
 
 MOBILE-I/J permanecem bloqueadas até Integração 3.
+
+
+## 11. Adaptação ao EMPROVEX Program Control — 2026-10-03
+
+A MOBILE-R1 passa a operar formalmente como **Coordenador de Programa** subordinado ao **EMPROVEX Program Control / Coordenador Geral** apenas para decisões globais/transversais.
+
+Autonomia preservada do Coordenador Mobile:
+- ondas Mobile;
+- freezes;
+- workers Mobile;
+- revisão de HEAD/PR/diff/CI;
+- devoluções;
+- integração semântica local;
+- documentação especializada Mobile;
+- PASS/PARCIAL/BLOQUEADO dentro do programa.
+
+Propriedade documental:
+- documentos `CENTRAL_MOBILE_R1_*`: Coordenador Mobile;
+- estado global do `EMPROVEX_MEMORIAL_OFICIAL.md`: propriedade lógica do Coordenador Geral;
+- o Coordenador Mobile passa a fornecer **delta certificado** em vez de editar por padrão o estado global.
+
+### Auditoria viva na adaptação
+
+Produção:
+- `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`;
+- não alterada pela MOBILE-R1.
+
+Integradora Mobile:
+- `feat/central-mobile-r1@64de6a414d00e0b151a5e07a1f2add7606936165`;
+- HEAD atual é documental;
+- último estado operacional certificado da Integração 2 foi incorporado pelo squash `d8148f01b877adad1e7880fc0b7fc6d4b3d60249`.
+
+Integradora SaaS:
+- `feat/saas-r1-commercializacao@4848643be85b30532f7f093c4ddb0e729facfad3`.
+
+Workers da Onda 2:
+- MOBILE-E: concluída/integrada;
+- MOBILE-C: concluída/integrada semanticamente;
+- MOBILE-D: concluída/corrigida/integrada semanticamente;
+- handoffs pendentes C/D/E: nenhum.
+
+Onda 3:
+- branches F/G/H existem em `c971d5356c343a0819bf96ec016de73dd96a435d`;
+- F/G/H continuam **idênticas ao freeze e ainda não iniciadas**;
+- após adoção do Program Control, a ativação fica aguardando decisão da barreira global, sem recriar ou mover branches.
+
+### Delta transversal identificado
+
+`next.config.ts`:
+- Mobile: `Permissions-Policy: camera=(self), microphone=(), geolocation=()`;
+- SaaS: `Permissions-Policy: camera=(), microphone=(), geolocation=()`;
+- classificação: **DELTA COMPATÍVEL, MAS TRANSVERSAL / REQUER COORDENADOR GERAL**;
+- razão: câmera same-origin é requisito funcional da Central Móvel; `next.config.ts` e Permissions-Policy são contrato global de navegador;
+- nenhuma reconciliação automática será feita pelo Coordenador Mobile.
+
+Outras divergências esperadas:
+- `WarehouseProtectedSurface.tsx`: extensão Mobile `WarehouseAccessBoundary`;
+- package/CI: tooling e gates próprios de cada programa.
+
+Contratos críticos sem delta:
+- Auth;
+- workspace/UG;
+- sessão/lease;
+- LegalAcceptanceGate;
+- warehouse feature flag/access;
+- `firestore.rules`;
+- `firestore.warehouse.rules`.
+
+### HARDEN-D
+
+Branch:
+`saas-harden-d-mobile-reconciliation`.
+
+Base:
+`f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`.
+
+Estado na auditoria:
+- identical à base;
+- não iniciada.
+
+Recomendação do Coordenador Mobile:
+**MOBILE-R1 está suficientemente estável para HARDEN-D: SIM.**
+
+Esta é a barreira preferencial porque:
+- C/D/E já fecharam;
+- Integração 2 está certificada;
+- F/G/H ainda não começaram;
+- existe um delta transversal concreto de Permissions-Policy para reconciliar.
+
+Semáforo recomendado:
+- MOBILE-R1: **AMARELO** — localmente estável, aguardando decisão transversal;
+- MOBILE-C: **VERDE / CONCLUÍDA**;
+- MOBILE-D: **VERDE / CONCLUÍDA**;
+- MOBILE-E: **VERDE / CONCLUÍDA**;
+- F/G/H: **AGUARDAR ATIVAÇÃO** até decisão do Coordenador Geral sobre a barreira HARDEN-D.
+
+Nenhuma autorização de produção é necessária neste momento.
