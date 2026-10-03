@@ -2,7 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { createRequire } from 'node:module';
@@ -17,6 +17,8 @@ execFileSync(
   [
     resolve(root, 'node_modules/typescript/bin/tsc'),
     resolve(root, 'lib/warehouse/location.ts'),
+    resolve(root, 'lib/warehouse/lot.ts'),
+    resolve(root, 'lib/warehouse/mobileTransfer.ts'),
     resolve(root, 'lib/warehouse/movement.ts'),
     resolve(root, 'lib/warehouse/material.ts'),
     resolve(root, 'lib/platformIdentity.ts'),
@@ -37,6 +39,7 @@ execFileSync(
 const require = createRequire(import.meta.url);
 const location = require(resolve(outDir, 'warehouse/location.js'));
 const movement = require(resolve(outDir, 'warehouse/movement.js'));
+const mobileTransfer = require(resolve(outDir, 'warehouse/mobileTransfer.js'));
 
 test.after(() => {
   rmSync(outDir, { recursive: true, force: true });
@@ -312,4 +315,135 @@ test('depósito aceita tipo visual e porte com defaults retrocompatíveis', () =
 
   assert.equal(location.validateWarehouseDepot(sampleDepot({ visualType: 'NAVIO' })).ok, false);
   assert.equal(location.validateWarehouseDepot(sampleDepot({ sizeProfile: 'GIGANTE' })).ok, false);
+});
+
+
+test('MOBILE-D aceita LOCATION e SUBPOSITION nas quatro combinações físicas', () => {
+  const locationA = { kind: 'LOCATION', depotId, locationId: localA, subpositionId: null };
+  const locationB = { kind: 'LOCATION', depotId, locationId: localB, subpositionId: null };
+  const subpositionA = { kind: 'SUBPOSITION', depotId, locationId: localA, subpositionId: subA };
+  const subpositionB = { kind: 'SUBPOSITION', depotId, locationId: localB, subpositionId: 'sub_' + 'e'.repeat(32) };
+
+  for (const [from, to] of [
+    [locationA, locationB],
+    [locationA, subpositionB],
+    [subpositionA, locationB],
+    [subpositionA, subpositionB],
+  ]) {
+    const prepared = mobileTransfer.prepareWarehouseMobileTransfer({
+      materialId,
+      from,
+      to,
+      quantity: 3,
+      availableQuantity: 10,
+      lots: [],
+    });
+    assert.equal(prepared.ok, true);
+    assert.equal(prepared.quantity, 3);
+    assert.deepEqual(prepared.relocateLotIds, []);
+  }
+});
+
+test('MOBILE-D rejeita origem igual, zero e quantidade acima do disponível', () => {
+  const from = { kind: 'LOCATION', depotId, locationId: localA, subpositionId: null };
+  const to = { kind: 'LOCATION', depotId, locationId: localB, subpositionId: null };
+
+  assert.deepEqual(
+    mobileTransfer.prepareWarehouseMobileTransfer({
+      materialId, from, to: from, quantity: 1, availableQuantity: 10, lots: [],
+    }),
+    { ok: false, error: 'SAME_POSITION' }
+  );
+  assert.deepEqual(
+    mobileTransfer.prepareWarehouseMobileTransfer({
+      materialId, from, to, quantity: 0, availableQuantity: 10, lots: [],
+    }),
+    { ok: false, error: 'INVALID_QUANTITY' }
+  );
+  assert.deepEqual(
+    mobileTransfer.prepareWarehouseMobileTransfer({
+      materialId, from, to, quantity: 11, availableQuantity: 10, lots: [],
+    }),
+    { ok: false, error: 'INSUFFICIENT_STOCK' }
+  );
+});
+
+test('MOBILE-D preserva lote: parcial com lote ativo fecha e integral carrega IDs', () => {
+  const from = { kind: 'LOCATION', depotId, locationId: localA, subpositionId: null };
+  const to = { kind: 'SUBPOSITION', depotId, locationId: localB, subpositionId: 'sub_' + 'e'.repeat(32) };
+  const lots = [
+    {
+      id: 'lot_' + '1'.repeat(32),
+      materialId,
+      status: 'active',
+      quantity: 6,
+      position: from,
+    },
+    {
+      id: 'lot_' + '2'.repeat(32),
+      materialId,
+      status: 'active',
+      quantity: 4,
+      position: from,
+    },
+  ];
+
+  const partial = mobileTransfer.prepareWarehouseMobileTransfer({
+    materialId, from, to, quantity: 4, availableQuantity: 10, lots,
+  });
+  assert.deepEqual(partial, {
+    ok: false,
+    error: 'PARTIAL_WITH_ACTIVE_LOTS_UNSUPPORTED',
+  });
+
+  const integral = mobileTransfer.prepareWarehouseMobileTransfer({
+    materialId, from, to, quantity: 10, availableQuantity: 10, lots,
+  });
+  assert.equal(integral.ok, true);
+  assert.deepEqual(integral.relocateLotIds, [
+    'lot_' + '1'.repeat(32),
+    'lot_' + '2'.repeat(32),
+  ]);
+});
+
+test('MOBILE-D revalida concorrência usando o saldo físico mais recente', () => {
+  const source = { kind: 'LOCATION', depotId, locationId: localA, subpositionId: null };
+  const staleReviewQuantity = 3;
+  const freshAvailableQuantity = 2;
+  const result = mobileTransfer.validateWarehouseMobileTransferQuantity({
+    materialId,
+    source,
+    quantity: staleReviewQuantity,
+    availableQuantity: freshAvailableQuantity,
+    lots: [],
+  });
+  assert.deepEqual(result, { ok: false, error: 'INSUFFICIENT_STOCK' });
+});
+
+test('MOBILE-D mantém fronteira fina sobre scanner, resolver e TRANSFER canônico', () => {
+  const ui = readFileSync(
+    resolve(root, 'features/warehouse/mobile/WarehouseMobileTransfer.tsx'),
+    'utf8'
+  );
+  const repository = readFileSync(
+    resolve(root, 'lib/warehouse/locationRepository.ts'),
+    'utf8'
+  );
+
+  assert.match(ui, /EXPECT_SOURCE_LOCATION/);
+  assert.match(ui, /EXPECT_PRODUCT/);
+  assert.match(ui, /EXPECT_DESTINATION_LOCATION/);
+  assert.match(ui, /resolveWarehouseStockPositionBarcode/);
+  assert.match(ui, /createWarehouseTransferIdempotencyKey/);
+  assert.match(ui, /transferWarehouseStock/);
+  assert.match(ui, /CONFIRMAR TRANSFERÊNCIA/);
+  assert.doesNotMatch(ui, /\bsetDoc\s*\(/);
+  assert.doesNotMatch(ui, /\bupdateDoc\s*\(/);
+  assert.doesNotMatch(ui, /\bOUTBOUND\b/);
+
+  assert.match(repository, /runTransaction\(db/);
+  assert.match(repository, /WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK/);
+  assert.match(repository, /warehouseMovementMatchesReplay/);
+  assert.match(repository, /type:\s*'TRANSFER'/);
+  assert.match(repository, /quantityDelta:\s*0/);
 });
