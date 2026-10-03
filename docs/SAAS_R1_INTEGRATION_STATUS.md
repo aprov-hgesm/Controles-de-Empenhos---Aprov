@@ -3,7 +3,7 @@
 Última atualização: **2026-10-02**
 Produção: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Integrador: `feat/saas-r1-commercializacao`
-Estado global: **SAAS-A + B + C + DL + E + DS + I INTEGRADAS / CANDIDATO R1 COMBINADO CERTIFICADO / SAAS-P EM EXECUÇÃO**
+Estado global: **SAAS-A+B+C+DL+E+DS+I INTEGRADAS / HARDENING PRÉ-PILOTO ATIVO / PILOTO REAL ADIADO / SAAS-J AGUARDANDO**
 
 ## 1. Baseline
 
@@ -26,8 +26,8 @@ Estado global: **SAAS-A + B + C + DL + E + DS + I INTEGRADAS / CANDIDATO R1 COMB
 | SAAS-E Operação/recovery | `saas-r1-e-ops-recovery` | A | **CONCLUÍDA** | **INTEGRADA — PR #215 / `82f2e643...`** |
 | SAAS-DS Segurança/enforcement | `saas-r1-ds-security-enforcement` | B + C | **CONCLUÍDA** | **INTEGRADA — PR #218 / `726436ac...`** |
 | SAAS-I Integração | `saas-r1-i-integration` → integradora | B+C+DL+E+DS | **CONCLUÍDA** | **INTEGRADA — PR #219 / `25dda487...`** |
-| SAAS-P Piloto | integradora | I | **EM EXECUÇÃO** | P2 concluída; P3 recovery configurado e aguardando backup READY/restore/uptime; sem publicação automática |
-| SAAS-J Certificação | integradora | P | **AGUARDANDO** | — |
+| SAAS-P Piloto | integradora | Hardening/RC | **ADIADO ATÉ RC** | preparação/T0 preservados; piloto real só após hardening, freeze e publicação controlada |
+| SAAS-J Certificação final pós-piloto | integradora | P + correções pós-piloto | **AGUARDANDO** | só inicia após piloto real e correções finais |
 
 ## 3. Contratos congelados
 
@@ -623,3 +623,26 @@ Assim:
 - smoke de `aprovisionamento-teste` é baseline funcional da produção atual;
 - validação real das features SaaS depende de ambiente com código candidato;
 - nenhuma promoção Jxx foi feita com base nesse smoke.
+
+## 23. Reordenação oficial — hardening antes do piloto
+
+Decisão vigente:
+- o piloto real deixa de ser a fase operacional corrente;
+- o estado corrente é **HARDENING PRÉ-PILOTO**;
+- T0 completo permanece baseline da produção Performance R3;
+- o próximo marco é um Release Candidate congelado e tecnicamente fechado;
+- somente depois ocorre publicação controlada + piloto;
+- depois do piloto vêm correções finais;
+- SAAS-J certifica o candidato corrigido;
+- abertura comercial acontece somente após SAAS-J e GO explícito.
+
+Documento canônico: `docs/SAAS_R1_PRE_PILOTO_HARDENING.md`.
+
+Frentes paralelas previstas:
+- HARDEN-A — segurança/dependências/CI;
+- HARDEN-B — recovery/backup/restore;
+- HARDEN-C — health/Rules/release/rollback;
+- HARDEN-D — reconciliação SaaS↔Mobile/evidências;
+- Coordenador — integração, conflitos, freeze do RC e decisão de liberação do piloto.
+
+Nenhuma dessas frentes possui autorização implícita para main, deploy, Rules produtivas ou restore real.
