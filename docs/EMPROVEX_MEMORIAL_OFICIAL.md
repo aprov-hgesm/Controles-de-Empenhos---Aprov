@@ -674,7 +674,7 @@ A branch integradora só chega à produção após SAAS-J e autorização explí
 
 ### 8.1 Estado e objetivo
 
-A **Central Móvel R1** é o programa funcional ativo para evolução móvel da Central de Depósitos. O **MOBILE-0 foi iniciado e congelado em 2026-10-02** sobre a branch integradora `feat/central-mobile-r1`. A primeira onda autorizada é exclusivamente **MOBILE-A + MOBILE-B**. Em 2026-10-02, **MOBILE-B foi aprovada e integrada** na branch coordenadora via PR #220 / squash `5edb19812b1121fdf867dc63c787bb2439ae68d5`; MOBILE-A permanece em correção mínima antes da Integração 1. As frentes MOBILE-C a MOBILE-H permanecem bloqueadas pelos gates de integração definidos nesta seção. A ativação do programa não autoriza merge em `main`, deploy de produção, publicação de Rules ou migrações produtivas.
+A **Central Móvel R1** é o programa funcional ativo para evolução móvel da Central de Depósitos. O **MOBILE-0 foi iniciado e congelado em 2026-10-02** sobre a branch integradora `feat/central-mobile-r1`. A primeira onda **MOBILE-A + MOBILE-B foi concluída e integrada**: MOBILE-B via PR #220 / squash `5edb19812b1121fdf867dc63c787bb2439ae68d5` e MOBILE-A via PR #221 / squash `19fc6be4a1deb5de44ec6999ef42d1cf6ced576c`. A **Integração 1 foi certificada** pelo PR #224 / squash `7c987676e0c089285e8bcd2bf5d34a6f54c717fa`, com Application CI #920 e Core Protection #207 verdes. O contrato scanner → EPX1 → resolver → `WarehouseStockPosition` está congelado e **MOBILE-C, MOBILE-D e MOBILE-E estão liberadas para a Onda 2**. MOBILE-F/G/H permanecem bloqueadas até a Integração 2. A ativação do programa não autoriza merge em `main`, deploy de produção, publicação de Rules ou migrações produtivas.
 
 Nome de produto provisório:
 **EMPROVEX — Central Móvel R1**
@@ -1466,9 +1466,9 @@ Cada worker:
 - não integra outra frente;
 - não publica produção.
 
-### 8.27 Estado após execução do MOBILE-0
+### 8.27 Estado corrente da execução
 
-O MOBILE-0 foi executado pelo Coordenador em 2026-10-02: baseline técnico definido, branch integradora criada e os quatro documentos `CENTRAL_MOBILE_R1_*` materializados. O próximo passo autorizado é criar/liberar **somente MOBILE-A e MOBILE-B** a partir do freeze documental da integradora. MOBILE-C a MOBILE-H permanecem bloqueadas até os respectivos gates. Em caso de divergência futura, prevalecem: código integrado + este Memorial + documentos canônicos da rodada, conforme o estágio vigente.
+O MOBILE-0 foi executado pelo Coordenador em 2026-10-02. MOBILE-A e MOBILE-B foram concluídas e integradas, e a Integração 1 foi aprovada com gates verdes. A Onda 2 está liberada exclusivamente para **MOBILE-C — Alocação**, **MOBILE-D — Transferência** e **MOBILE-E — Consulta Física**, que devem nascer do mesmo freeze da integradora. MOBILE-F/G/H permanecem bloqueadas até a Integração 2. Pendências físicas de câmera/header/Code 128 continuam registradas e obrigatórias para a certificação final. Em caso de divergência futura, prevalecem: código integrado + este Memorial + documentos canônicos da rodada, conforme o estágio vigente.
 
 ## 9. Riscos/pendências que não devem ser esquecidos
 
