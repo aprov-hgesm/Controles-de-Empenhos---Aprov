@@ -2346,3 +2346,21 @@ Conclusão:
 - J22 continua PREPARADO até existirem T0/T1/T2 reais.
 
 Durante `npm ci` foram reportados advisories de dependências. Nenhum `npm audit fix` ou `--force` foi executado para não introduzir alterações fora do escopo do piloto.
+
+### SAAS-P — T0 por UG capturado
+
+Foi realizada uma única atualização manual do painel de estimativas por UG.
+
+Snapshot:
+- P-01 `aprovisionamento-3-gac-ap`: 111 reads, 3 writes, 0 deletes, 7 snapshots, pico listeners 4, 2 flushes; última consolidação exibida 02/10 13:01;
+- P-02 `aprovisionamento-2-b-fv`: 0 em todas as métricas e sem consolidação no momento;
+- `aprovisionamento-teste`: 0 em todas as métricas e sem consolidação no momento.
+
+A estimativa por UG continua explicitamente separada do faturamento oficial.
+
+Estado T0:
+- técnico: PASS;
+- global numérico: capturado;
+- por UG: capturado;
+- monetário Google Cloud Billing: pendente;
+- J22: PREPARADO até completar T0 monetário e T1/T2.
