@@ -392,7 +392,7 @@ Nada foi publicado.
 Próximo passo do Coordenador após CI:
 1. integrar PR #219 somente na integradora se os gates estiverem verdes;
 2. executar SAAS-P;
-3. manter backup/restore/uptime reais como bloqueios de SAAS-J;
+3. concluir backup READY/restore como hardening antes do piloto e fechar health/uptime na publicação controlada do RC;
 4. não promover `main` sem autorização explícita.
 
 Handoff integral: `docs/SAAS_R1_I_INTEGRATION_HANDOFF.md`.
@@ -447,7 +447,7 @@ Todo novo prompt emitido pelo Coordenador SaaS para uma frente transversal deve 
 
 ## 19. SAAS-P — handoff de abertura
 
-A SAAS-P está **EM EXECUÇÃO**.
+Naquele checkpoint a SAAS-P estava em execução de preparação. **Estado corrente:** HARDENING PRÉ-PILOTO ativo; piloto real adiado até Release Candidate congelado.
 
 Documento operacional:
 - `docs/SAAS_R1_P_PILOTO_CONTROLADO.md`.
