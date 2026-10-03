@@ -784,3 +784,31 @@ Antes de editar, cada worker deve confirmar `git rev-parse HEAD` = `f8d2a53bfadf
 
 Os chats ainda não foram ativados neste checkpoint.
 
+### Program Control — ativação HARDEN-D autorizada
+
+A barreira Mobile foi atingida e aceita.
+
+Alvo Mobile:
+`7b745fa0b7979e643b83b7de94dd96a0290930ab`
+
+Alvo SaaS vivo para contexto:
+`4848643be85b30532f7f093c4ddb0e729facfad3`
+
+Worker:
+`saas-harden-d-mobile-reconciliation`
+
+Base congelada:
+`f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`
+
+Obrigatório no handoff:
+- HEAD;
+- PR draft;
+- matriz de contratos;
+- classificação do delta `Permissions-Policy`;
+- conflitos;
+- riscos;
+- Impacto MOBILE-R1;
+- recomendação ao Coordenador Geral.
+
+MOBILE-F/G/H permanecem bloqueadas até essa devolutiva.
+
