@@ -990,3 +990,14 @@ Com isso, a condição de bloqueio da HARDEN-A2 foi satisfeita.
 
 **HARDEN-A2 — Firebase/Firestore/gRPC: ELEGÍVEL PARA LIBERAÇÃO/ATIVAÇÃO PELO COORDENADOR SAAS.**
 
+## HARDEN-A2 — ATIVAÇÃO
+
+Status: **ATIVA / EM EXECUÇÃO**
+
+- branch: `saas-harden-a2-firebase-firestore-grpc`;
+- base congelada: `f308ff601fe923467b8ccc1489be91b318bc3e8c`;
+- criação confirmada sem delta inicial;
+- sem rebase/merge da integradora durante a execução;
+- começar por auditoria de dependências e alcançabilidade antes de qualquer upgrade;
+- produção, Rules, restore, migração, piloto e freeze RC não autorizados por esta frente.
+
