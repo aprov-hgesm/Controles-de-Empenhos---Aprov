@@ -1,19 +1,40 @@
 'use client';
 
-import { MapPin, ShieldCheck, TriangleAlert } from 'lucide-react';
+import {
+  LoaderCircle,
+  MapPin,
+  ShieldCheck,
+  TriangleAlert,
+} from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 
 import { useWarehouseWorkspaceContext } from '../components/WarehouseModuleContext';
-import { classifyWarehouseMobileLocationScan } from '../../../lib/warehouse/mobileLocationScan';
+import type { WarehouseStockPositionResolveResult } from '../../../lib/warehouse/locationBarcode';
 import { resolveWarehouseStockPositionBarcode } from '../../../lib/warehouse/locationBarcodeResolver';
-import type { WarehouseStockPosition } from '../../../lib/warehouse/location';
+import { classifyWarehouseMobileLocationScan } from '../../../lib/warehouse/mobileLocationScan';
+import {
+  loadWarehouseMobilePhysicalPositionContents,
+  type WarehouseMobilePhysicalQueryResult,
+} from '../../../lib/warehouse/mobilePhysicalQuery';
 import type { WarehouseMobileScanEvent } from '../../../lib/warehouse/mobileScanner';
+import { WarehouseMobilePhysicalQueryResult } from './WarehouseMobilePhysicalQueryResult';
 import { WarehouseMobileScanner } from './WarehouseMobileScanner';
+
+type ResolvedPosition = Extract<
+  WarehouseStockPositionResolveResult,
+  { ok: true }
+>['value'];
 
 type ResolutionState =
   | { status: 'idle' }
   | { status: 'resolving'; code: string }
-  | { status: 'resolved'; code: string; position: WarehouseStockPosition }
+  | { status: 'loading'; code: string; resolved: ResolvedPosition }
+  | {
+      status: 'resolved';
+      code: string;
+      resolved: ResolvedPosition;
+      contents: WarehouseMobilePhysicalQueryResult;
+    }
   | { status: 'error'; code: string; message: string };
 
 function resolutionErrorMessage(error: string): string {
@@ -35,14 +56,33 @@ function resolutionErrorMessage(error: string): string {
   return 'A posição não pôde ser validada. Confira a etiqueta e tente novamente.';
 }
 
-function positionDescription(position: WarehouseStockPosition): string {
-  if (position.kind === 'LOCATION') {
-    return 'Local ' + position.locationId;
+function physicalQueryErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+
+  if (
+    message.includes('WAREHOUSE_MOBILE_PHYSICAL_QUERY_BALANCE_LIMIT')
+    || message.includes('WAREHOUSE_MOBILE_PHYSICAL_QUERY_LOT_LIMIT')
+  ) {
+    return 'A posição possui registros acima do limite seguro desta consulta móvel. Use a Central desktop para revisar o conteúdo completo.';
   }
-  if (position.kind === 'SUBPOSITION') {
-    return 'Subposição ' + position.subpositionId + ' · local ' + position.locationId;
+
+  if (
+    message.includes('WAREHOUSE_MOBILE_PHYSICAL_QUERY_SCOPE_MISMATCH')
+    || message.includes('WORKSPACE_MISMATCH')
+    || message.includes('UG_MISMATCH')
+  ) {
+    return 'A consulta foi bloqueada porque o workspace/UG atual não corresponde aos dados solicitados.';
   }
-  return 'Sem localização';
+
+  if (
+    message.includes('WAREHOUSE_MOBILE_PHYSICAL_QUERY_INVALID_')
+    || message.includes('WAREHOUSE_MOBILE_PHYSICAL_QUERY_MATERIAL_NOT_FOUND')
+    || message.includes('WAREHOUSE_MOBILE_PHYSICAL_QUERY_DUPLICATE_BALANCE')
+  ) {
+    return 'A distribuição física retornou dados inconsistentes e não será apresentada parcialmente. Revise o cadastro pela Central desktop.';
+  }
+
+  return 'Falha ao consultar o conteúdo esperado. Verifique a conexão e o acesso à Central e tente novamente.';
 }
 
 export function WarehouseMobileLocationFoundationCheck() {
@@ -65,48 +105,76 @@ export function WarehouseMobileLocationFoundationCheck() {
 
     setResolution({ status: 'resolving', code: event.value });
 
-    void resolveWarehouseStockPositionBarcode({
-      code: event.value,
-      workspaceId: workspace.workspaceId,
-      ug: workspace.ug,
-    }).then((result) => {
-      if (requestId !== requestIdRef.current) return;
-
-      if (result.ok) {
-        setResolution({
-          status: 'resolved',
+    void (async () => {
+      try {
+        const result = await resolveWarehouseStockPositionBarcode({
           code: event.value,
-          position: result.value.position,
+          workspaceId: workspace.workspaceId,
+          ug: workspace.ug,
         });
-        return;
-      }
 
-      setResolution({
-        status: 'error',
-        code: event.value,
-        message: resolutionErrorMessage(result.error),
-      });
-    }).catch(() => {
-      if (requestId !== requestIdRef.current) return;
-      setResolution({
-        status: 'error',
-        code: event.value,
-        message: 'Falha ao revalidar a posição. Verifique a conexão e tente novamente.',
-      });
-    });
+        if (requestId !== requestIdRef.current) return;
+
+        if (!result.ok) {
+          setResolution({
+            status: 'error',
+            code: event.value,
+            message: resolutionErrorMessage(result.error),
+          });
+          return;
+        }
+
+        setResolution({
+          status: 'loading',
+          code: event.value,
+          resolved: result.value,
+        });
+
+        try {
+          const contents = await loadWarehouseMobilePhysicalPositionContents({
+            workspaceId: workspace.workspaceId,
+            ug: workspace.ug,
+            position: result.value.position,
+          });
+
+          if (requestId !== requestIdRef.current) return;
+
+          setResolution({
+            status: 'resolved',
+            code: event.value,
+            resolved: result.value,
+            contents,
+          });
+        } catch (error) {
+          if (requestId !== requestIdRef.current) return;
+          setResolution({
+            status: 'error',
+            code: event.value,
+            message: physicalQueryErrorMessage(error),
+          });
+        }
+      } catch {
+        if (requestId !== requestIdRef.current) return;
+        setResolution({
+          status: 'error',
+          code: event.value,
+          message: 'Falha ao revalidar a posição. Verifique a conexão e tente novamente.',
+        });
+      }
+    })();
   }, [workspace.workspaceId, workspace.ug]);
 
   return (
     <section className="space-y-3">
       <div className="px-1">
         <p className="font-mono text-[9px] font-black uppercase tracking-[0.18em] text-slate-500">
-          Integração 1
+          MOBILE-E · CONSULTA FÍSICA
         </p>
         <h2 className="mt-1 text-lg font-black text-slate-950">
-          Ler e validar posição
+          O que deveria estar aqui?
         </h2>
         <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
-          Leitura somente para conferência técnica. Nenhum saldo ou movimento é alterado.
+          Leia uma posição para consultar a distribuição física oficial. Nenhum saldo ou movimento é alterado.
         </p>
       </div>
 
@@ -120,35 +188,52 @@ export function WarehouseMobileLocationFoundationCheck() {
           }
         }}
         onValidatedScan={resolveValidatedLocation}
-        title="LER LOCAL"
+        title="LER POSIÇÃO"
       />
 
       {resolution.status === 'resolving' && (
-        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-900">
-          Revalidando posição no cadastro autoritativo…
-        </div>
-      )}
-
-      {resolution.status === 'resolved' && (
         <div
-          className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"
-          data-testid="warehouse-mobile-location-resolved"
+          className="rounded-2xl border border-blue-200 bg-blue-50 p-4"
+          data-testid="warehouse-mobile-location-resolving"
         >
-          <div className="flex items-start gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-700">
-              <ShieldCheck className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-black text-emerald-950">Posição validada</p>
-              <p className="mt-1 break-words text-xs font-semibold leading-5 text-emerald-800">
-                {positionDescription(resolution.position)}
+          <div className="flex items-center gap-3 text-blue-900">
+            <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden="true" />
+            <div>
+              <p className="font-mono text-[9px] font-black uppercase tracking-[0.18em]">
+                VALIDANDO
               </p>
-              <p className="mt-2 break-all font-mono text-[9px] font-bold text-emerald-700/80">
-                {resolution.code}
+              <p className="mt-1 text-sm font-bold">
+                Revalidando posição no cadastro autoritativo…
               </p>
             </div>
           </div>
         </div>
+      )}
+
+      {resolution.status === 'loading' && (
+        <div
+          className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"
+          data-testid="warehouse-mobile-physical-query-loading"
+        >
+          <div className="flex items-center gap-3 text-emerald-900">
+            <ShieldCheck className="h-5 w-5 shrink-0" aria-hidden="true" />
+            <div>
+              <p className="font-mono text-[9px] font-black uppercase tracking-[0.18em]">
+                POSIÇÃO VALIDADA
+              </p>
+              <p className="mt-1 text-sm font-bold">
+                Carregando conteúdo esperado…
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {resolution.status === 'resolved' && (
+        <WarehouseMobilePhysicalQueryResult
+          resolved={resolution.resolved}
+          result={resolution.contents}
+        />
       )}
 
       {resolution.status === 'error' && (
@@ -161,7 +246,7 @@ export function WarehouseMobileLocationFoundationCheck() {
               <TriangleAlert className="h-5 w-5" aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <p className="text-sm font-black text-amber-950">Posição recusada</p>
+              <p className="text-sm font-black text-amber-950">Consulta não concluída</p>
               <p className="mt-1 text-xs font-semibold leading-5 text-amber-800">
                 {resolution.message}
               </p>
