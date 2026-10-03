@@ -167,3 +167,51 @@ Estado da primeira onda:
 - MOBILE-B: **INTEGRADA**;
 - MOBILE-A: **DEVOLVIDA PARA CORREÇÃO MÍNIMA**;
 - Integração 1: **BLOQUEADA aguardando MOBILE-A**.
+
+
+## 15. MOBILE-A integrada e Integração 1 certificada
+
+MOBILE-A:
+- HEAD final `44c4f013859230b5d490d2049c6b8dbf2cd3baa2`;
+- PR #221;
+- squash `19fc6be4a1deb5de44ec6999ef42d1cf6ced576c`;
+- classificação: **APROVADA COM PENDÊNCIA RUNTIME**;
+- CI/Core/Recovery/Legal verdes no HEAD final.
+
+Integração 1:
+- PR técnico #224;
+- HEAD certificado `4b397d61bf4c8505ddf5b3c8fa14e3e8c2e91461`;
+- squash `7c987676e0c089285e8bcd2bf5d34a6f54c717fa`;
+- Application CI #920 SUCCESS;
+- Core Protection #207 SUCCESS;
+- quatro checks MOBILE-R1 SUCCESS;
+- build/typecheck/diff hygiene SUCCESS;
+- nenhum movimento de estoque.
+
+Contrato congelado após Integração 1:
+- scanner compartilhado da MOBILE-A;
+- namespace físico EPX1 da MOBILE-B;
+- EPX1 válido → LOCATION;
+- barcode comercial não é posição;
+- resolver autoritativo;
+- LOCAL/SUBPOSITION → WarehouseStockPosition;
+- DEPOT falha fechado;
+- ausência de UG → fail-closed;
+- nenhuma escrita de saldo/ledger.
+
+Pendências físicas continuam:
+- header HTTP efetivo;
+- câmera real;
+- impressão/leitura Code 128.
+
+## 16. Próxima onda
+
+**MOBILE-C + MOBILE-D + MOBILE-E estão liberadas em paralelo.**
+
+O Coordenador deve:
+1. congelar nova base comum;
+2. criar as três branches;
+3. emitir prompts;
+4. manter F/G/H bloqueadas;
+5. preferir integração E → C → D, pois E é read-only;
+6. executar Integração 2 antes de liberar F/G/H.
