@@ -610,3 +610,27 @@ Sobreposição já conhecida com F:
 
 Resolver semanticamente apenas na Integração 3.
 Não integrar H antes de receber e revisar G.
+
+
+## 29. Revisão MOBILE-G — aprovada e congelada
+
+MOBILE-G:
+- HEAD `0b513edf7324e40d7b0a505edfdaf84270301ccf`;
+- PR #242;
+- classificação: **APROVADA / CONGELADA**.
+
+Auditoria:
+- OUTBOUND canônico único write;
+- FEFO oficial;
+- reader 60+1 / 120+1 fail-closed;
+- posição/barcode/lote revalidados;
+- idempotência/replay preservados;
+- 0 listeners;
+- nenhum CT-01/Rules/Auth/sessão/legal.
+
+Legal #41:
+- único vermelho foi Diff Hygiene sem merge-base por shallow fetch e avanço da integradora;
+- classificado como stale guard de CI;
+- reexecutar na Integração 3.
+
+Com F/G/H agora aprovadas, iniciar comparação de sobreposição e composição semântica da Integração 3.
