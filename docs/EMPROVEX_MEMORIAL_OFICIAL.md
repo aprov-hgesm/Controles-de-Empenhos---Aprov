@@ -1224,3 +1224,17 @@ Estado:
 
 Com o fechamento da A1, a HARDEN-A2 — Firebase/Firestore/gRPC pode ser liberada em frente separada e controlada.
 
+### HARDEN-A2 — Firebase / Firestore / gRPC
+
+Program Control liberou a HARDEN-A2 após o encerramento técnico da A1.
+
+Branch:
+`saas-harden-a2-firebase-firestore-grpc`
+
+Base congelada:
+`f308ff601fe923467b8ccc1489be91b318bc3e8c`
+
+A frente deve primeiro provar alcance real dos advisories e compatibilidade do caminho suportado. O objetivo não é zerar `npm audit` a qualquer custo, e sim reduzir risco real sem quebrar Auth, Firestore, multi-tenant, Central, SaaS ou Mobile.
+
+MOBILE-J pode continuar em paralelo em pré-certificação; HARDEN-B segue aguardando recovery.
+
