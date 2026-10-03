@@ -4,9 +4,9 @@
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
-Integradora SaaS R1: `feat/saas-r1-commercializacao@75202b0ac8bb888484ca3f124dea974daf68a654`
+Integradora SaaS R1: `feat/saas-r1-commercializacao@750d4c69cd3f233938631bcdd22db7e397ddc50e`
 
-Integradora Mobile R1: `feat/central-mobile-r1@816c1c07cf251ce3705098a3a65b9d84e2fc8614`
+Integradora Mobile R1: `feat/central-mobile-r1@2108a21208765e0d4155399667cf571b0fa127ff`
 
 Estado global: **Performance R3 publicada; SaaS R1 em hardening pré-piloto; Mobile R1 em Onda 3; Release Candidate ainda não congelado; piloto real ainda não iniciado; produção não alterada pelas ondas atuais.**
 
@@ -81,7 +81,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | --- | --- | --- |
 | Produção | **Performance R3 publicada** | `main@e90f92acae1514ee5cbc6ce95fed354bc1454330` |
 | SaaS R1 | **HARDENING PRÉ-PILOTO** | A parcial tecnicamente saudável; B parcial; C/D encerradas |
-| Mobile R1 | **INTEGRAÇÃO 3 CERTIFICADA / MOBILE-I LIBERADA** | F/G/H integradas; sem novo delta funcional SaaS↔Mobile |
+| Mobile R1 | **MOBILE-I PASS / MOBILE-J PRÉ-CERTIFICAÇÃO LIBERADA** | PASS final da J condicionado a validação física + reconciliação SaaS final |
 | Release Candidate | **NÃO CONGELADO** | depende de hardening SaaS + checkpoint Mobile |
 | Piloto real SaaS | **NÃO INICIADO** | só após RC controlado |
 | SAAS-J | **AGUARDANDO** | pós-piloto e correções finais |
@@ -670,8 +670,8 @@ Estado atual:
 | MOBILE-G | Saída de material móvel | **VERDE / INTEGRADA / CERTIFICADA** — PR #242 fechado sem merge direto |
 | MOBILE-H | Conferência física/digital | **VERDE / INTEGRADA / CERTIFICADA** — PR #241 fechado sem merge direto |
 | Integração 3 | combinação F/G/H | **VERDE / CERTIFICADA** — PR #243 / squash `f11b7bf2...` |
-| MOBILE-I | integração controlada | **LIBERADA PELO PROGRAM CONTROL** |
-| MOBILE-J | certificação final | **BLOQUEADA ATÉ CHECKPOINT PÓS-I** |
+| MOBILE-I | integração controlada | **PASS / APROVADA / INTEGRADA** |
+| MOBILE-J | certificação final | **PRÉ-CERTIFICAÇÃO LIBERADA / PASS FINAL BLOQUEADO** |
 
 A ordem de integração F/G/H deve ser definida por dependência e sobreposição reais, não por ordem cronológica de conclusão.
 
@@ -707,6 +707,55 @@ Decisão do Program Control:
 **INTEGRAÇÃO 3 ACEITA / MOBILE-I LIBERADA.**
 
 MOBILE-I deve ser criada a partir do HEAD Mobile vivo congelado pelo Coordenador Mobile e atuar somente como integração controlada, UX/regressão e reconciliação final da experiência Mobile. MOBILE-J continua bloqueada.
+
+### 27.2 Checkpoint pós-MOBILE-I — 2026-10-03
+
+Integradora Mobile:
+
+`feat/central-mobile-r1@2108a21208765e0d4155399667cf571b0fa127ff`
+
+Worker MOBILE-I certificado:
+
+`mobile-r1-i-integration@ea5ad10054e2aea608e270a970fde723cde41d93`
+
+PR #245:
+
+**MERGED**
+
+Squash:
+
+`3a5689e0e613adfb7dbf48ef8d44085ec6c951b3`
+
+Resultado:
+
+- MOBILE-I — PASS / APROVADA / INTEGRADA;
+- Application CI #945 — SUCCESS;
+- Core Protection #232 — SUCCESS;
+- Recovery #623 — SUCCESS;
+- Legal #47 — SUCCESS;
+- Production Build — SUCCESS;
+- TypeScript — SUCCESS;
+- Diff Hygiene — SUCCESS;
+- multi-tenant e segurança externa — SUCCESS;
+- Integrações 1–3 e F/G/H — SUCCESS;
+- novo delta funcional SaaS↔Mobile — NENHUM;
+- performance da Integração 3 preservada;
+- CT-01 não alterada;
+- produção não alterada.
+
+Decisão do Program Control:
+
+**MOBILE-J está liberada para PRÉ-CERTIFICAÇÃO**, incluindo gates finais, validação manual/física, métricas e experiência real.
+
+Entretanto, o **PASS FINAL da MOBILE-J permanece bloqueado** até:
+
+1. validação física obrigatória em celular real;
+2. HARDEN-A1 integrada;
+3. HARDEN-A2 Firebase/Firestore/gRPC estabilizada;
+4. reconciliação semântica final SaaS↔Mobile dos contratos compartilhados;
+5. repetição dos gates afetados pelo upstream.
+
+Essa separação permite avançar em paralelo sem certificar a Mobile sobre um upstream SaaS ainda sujeito a mudança em Firebase/Firestore.
 
 ## 28. Pendências físicas Mobile
 
@@ -799,11 +848,12 @@ Ações protegidas continuam dependendo da governança definida, especialmente:
 
 ### Mobile
 
-- executar MOBILE-I sobre a base pós-Integração 3;
+- executar a pré-certificação MOBILE-J;
+- concluir validações físicas reais;
 - manter CT-01 preservada para o futuro RC;
-- reconciliar tooling package/CI de forma aditiva;
-- MOBILE-J permanece bloqueada até o checkpoint pós-MOBILE-I;
-- validações físicas finais continuam obrigatórias.
+- aguardar estabilização HARDEN-A1/A2;
+- executar reconciliação SaaS↔Mobile final antes do PASS da MOBILE-J;
+- repetir gates afetados pelo upstream.
 
 ### Global
 
@@ -1078,13 +1128,11 @@ HARDEN-D: PASS / encerrada
 CT-01: obrigatória antes do RC
 
 MOBILE R1
-integrador: feat/central-mobile-r1@816c1c07cf251ce3705098a3a65b9d84e2fc8614
-F: integrada / certificada
-G: integrada / certificada
-H: integrada / certificada
+integrador: feat/central-mobile-r1@2108a21208765e0d4155399667cf571b0fa127ff
+F/G/H: integradas / certificadas
 Integração 3: certificada
-MOBILE-I: liberada
-MOBILE-J: bloqueada até checkpoint pós-I
+MOBILE-I: PASS / integrada
+MOBILE-J: pré-certificação liberada / PASS final bloqueado por validação física + upstream SaaS final
 
 RELEASE
 RC: não congelado
@@ -1092,10 +1140,11 @@ piloto real: não iniciado
 produção alterada pelas ondas atuais: não
 
 PRÓXIMO GATE GLOBAL
-fechar HARDEN-A
+fechar HARDEN-A1/A2
 + fechar HARDEN-B
-+ concluir MOBILE-I
-+ checkpoint transversal pós-I
++ executar pré-certificação MOBILE-J
++ validação física real
++ reconciliação SaaS↔Mobile final
 + aplicar CT-01
 + gates combinados
 → avaliar RC Candidate / RC Frozen
@@ -1159,4 +1208,3 @@ Antes do aceite final da A1, validar:
 - Etiquetas.
 
 HARDEN-A2 — Firebase/Firestore/gRPC permanece **BLOQUEADA**.
-
