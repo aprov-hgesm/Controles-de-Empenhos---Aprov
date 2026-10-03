@@ -531,3 +531,26 @@ Aceito:
 
 Próxima ação de recovery: uma nova leitura autenticada `recovery:status` + `recovery:verify` quando houver chance razoável de o primeiro backup diário ter concluído.
 
+## 22. SAAS-P — fase de execução real
+
+Pacote operacional versionado:
+
+- `docs/SAAS_P_EXECUCAO_REAL_PILOTO.md`;
+- `docs/SAAS_P_REGISTRO_EXECUCAO.md`.
+
+Participantes confirmados:
+- P-01 = `aprovisionamento-3-gac-ap` — usuário real ativo, protegido;
+- P-02 = `aprovisionamento-2-b-fv` — usuário real em adoção, protegido;
+- `aprovisionamento-teste` — workspace preferencial para testes disruptivos;
+- P-03 — ainda não selecionado.
+
+Estado desta fase:
+- execução não disruptiva P-01/P-02: pronta para coleta real;
+- T0: método/comandos preparados; números privados ainda precisam ser capturados das fontes reais;
+- lifecycle J15–J20: roteiro preparado para `aprovisionamento-teste`, com autorização antes da suspensão;
+- P-03: bloqueado até participante real;
+- J24: aguardando backup READY + restore isolado;
+- J23: aguardando futura janela autorizada de publicação/Monitoring.
+
+Nenhuma nova feature foi criada para esta fase.
+
