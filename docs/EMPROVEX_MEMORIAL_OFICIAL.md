@@ -1070,3 +1070,26 @@ fechar HARDEN-A
 ```
 
 Este bloco deve ser mantido coerente com o Snapshot Global do início do documento.
+
+### HARDEN-A1 — CORREÇÃO CONTROLADA JSPDF
+
+Program Control autorizou a HARDEN-A1 para remover o bloqueador CRITICAL remanescente de jsPDF.
+
+Base:
+`feat/saas-r1-commercializacao@9a294bc543ec7150b9144ed96e767a161864d72f`
+
+Branch:
+`saas-harden-a-jspdf-security`
+
+Alvos:
+- `jspdf@4.2.1`;
+- `jspdf-autotable@5.0.8`.
+
+A branch foi criada exatamente no HEAD acima.
+
+A frente deve tratar apenas o upgrade controlado de jsPDF/AutoTable, adaptações estritamente necessárias e regressão dos PDFs existentes.
+
+A correção Firebase/Firestore/gRPC fica classificada como **HARDEN-A2** e permanece **BLOQUEADA** até o encerramento da A1.
+
+Nenhuma ação produtiva foi autorizada.
+
