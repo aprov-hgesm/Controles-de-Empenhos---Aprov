@@ -22,7 +22,7 @@ O MOBILE-0 congelou arquitetura, contratos e fronteiras. Estado corrente:
 - MOBILE-C/D/E integradas e Integração 2 certificada;
 - MOBILE-F/G/H **liberadas na Onda 3** a partir do freeze comum `c971d5356c343a0819bf96ec016de73dd96a435d`;
 - MOBILE-I foi **concluída, auditada e integrada** via PR #245 / squash `3a5689e0e613adfb7dbf48ef8d44085ec6c951b3`;
-- MOBILE-J continua bloqueada até decisão explícita do Program Control sobre o checkpoint pós-MOBILE-I.
+- MOBILE-J foi **liberada pelo Program Control** e está em certificação final na branch `mobile-r1-j-final-certification`, congelada em `2108a21208765e0d4155399667cf571b0fa127ff`; PASS FINAL depende de validação física e reconciliação SaaS final.
 
 A ativação desta branch **não autoriza**:
 - merge em `main`;
