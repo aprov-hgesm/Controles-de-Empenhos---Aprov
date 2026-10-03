@@ -75,6 +75,9 @@ Onda 3:
 - `mobile-r1-g-outbound`
 - `mobile-r1-h-position-check`
 
+Freeze comum da Onda 3:
+`c971d5356c343a0819bf96ec016de73dd96a435d`
+
 Workers não mergeiam diretamente em `main`.
 
 ## 4. Dependências
