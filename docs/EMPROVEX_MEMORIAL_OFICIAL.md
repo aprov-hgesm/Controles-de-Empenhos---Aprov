@@ -2386,3 +2386,17 @@ Estado do T0:
 - **T0 inicial: COMPLETO**.
 
 J22 continua PREPARADO até T1/T2 após as jornadas reais do piloto.
+
+### SAAS-P — continuidade do piloto sem disponibilidade imediata de P-01/P-02
+
+Foi decidido que a ausência temporária dos operadores reais P-01/P-02 não deve paralisar a SAAS-P.
+
+`aprovisionamento-teste` passa a ser usado para o máximo de validações funcionais/controladas possíveis, inclusive login, shell, Central, sessão, credenciais controladas e lifecycle J15–J20.
+
+Restrições preservadas:
+- P-01/P-02 continuam participantes reais protegidos e sua evidência humana não é substituída;
+- `aprovisionamento-teste` não pode comprovar P-03, trial ou pagamento porque pertence à coorte VIP legado;
+- aceite legal não deve ser artificialmente apagado/recriado apenas para fabricar evidência;
+- resultados do workspace de teste devem ser classificados como evidência funcional/controlada, não como evidência de cliente real.
+
+Assim, o desenvolvimento/piloto pode prosseguir agora sem aguardar disponibilidade dos usuários reais.
