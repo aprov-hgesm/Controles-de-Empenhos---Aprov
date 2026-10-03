@@ -6,7 +6,7 @@ import {
   Warehouse,
 } from 'lucide-react';
 
-import { WarehouseMobileScanner } from './WarehouseMobileScanner';
+import { WarehouseMobileLocationFoundationCheck } from './WarehouseMobileLocationFoundationCheck';
 
 const FUTURE_CAPABILITIES = [
   {
@@ -91,13 +91,10 @@ export function WarehouseMobileHome() {
         </div>
       </section>
 
-      <WarehouseMobileScanner
-        expectation="EXPECT_PRODUCT"
-        title="Scanner de fundação"
-      />
+      <WarehouseMobileLocationFoundationCheck />
 
       <p className="px-2 text-center text-[11px] font-semibold leading-5 text-slate-500">
-        Nesta frente o scanner apenas captura e valida o tipo esperado. Resolver posição, alocar, transferir, inventariar e retirar materiais pertencem às próximas frentes.
+        A Integração 1 valida somente identidade física e posição. Alocar, transferir, inventariar e retirar materiais continuam bloqueados para as próximas ondas.
       </p>
     </div>
   );
