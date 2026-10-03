@@ -668,3 +668,21 @@ Próximo ato coordenador:
 3. registrar a base;
 4. somente depois gerar os quatro prompts de ativação.
 
+### HARDEN — freeze concluído
+
+Base comum:
+`f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`
+
+Branches verificadas no mesmo HEAD:
+- `saas-harden-a-security-dependencies`;
+- `saas-harden-b-recovery-restore`;
+- `saas-harden-c-release-health-rules`;
+- `saas-harden-d-mobile-reconciliation`.
+
+Chats: **não ativados ainda**.
+
+Mobile snapshot no freeze:
+`22fb276a502e3475d579c3b1874e4c0353fc2e35`.
+
+A integradora pode avançar documentalmente após este ponto; as workers continuam congeladas na base acima até handoff.
+
