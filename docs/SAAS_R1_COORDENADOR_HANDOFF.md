@@ -861,3 +861,28 @@ Retomar a worker quando houver backup READY. O restore real continua dependendo 
 
 Impacto MOBILE-R1: **SEM DELTA**.
 
+## HARDEN-C — FECHAMENTO PELO COORDENADOR SAAS
+
+A HARDEN-C foi auditada e aceita como **PASS TÉCNICO**.
+
+Referências:
+- worker HEAD: `0b2e801a6460c60ecc79885d03e8ce8ffb778369`;
+- PR: `#238`;
+- evidência integrada semanticamente em: `e0e4e13a73aad18850a3bf5b70b64ebf22a3d11b`.
+
+Confirmado:
+- health já estava materializado semanticamente antes da base congelada;
+- não deve haver merge cego do PR #223;
+- Rules candidata principal e warehouse reconciliadas sem conflito SaaS↔Mobile;
+- Release Manifest, rollout, rollback, smoke, env/config e monitoramento preparados;
+- CT-01 registrada e ainda não aplicada.
+
+Pendências externas/RC:
+- HARDEN-A;
+- HARDEN-B;
+- aplicação CT-01 no HEAD composto;
+- gates finais;
+- publicação controlada somente após GO.
+
+Nenhuma ação produtiva foi autorizada.
+
