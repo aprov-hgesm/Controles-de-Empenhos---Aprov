@@ -226,7 +226,8 @@
     "test:mobile-r1-position-check": "node --test scripts/mobile-r1-position-check.test.mjs",
     "verify:mobile-r1-position-check": "node scripts/verify-mobile-r1-position-check.mjs",
     "test:mobile-r1-integration-3": "node --test scripts/mobile-r1-integration-3.test.mjs",
-    "verify:mobile-r1-integration-3": "node scripts/verify-mobile-r1-integration-3.mjs"
+    "verify:mobile-r1-integration-3": "node scripts/verify-mobile-r1-integration-3.mjs",
+    "verify:mobile-r1-integration-final": "node scripts/verify-mobile-r1-integration-final.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
