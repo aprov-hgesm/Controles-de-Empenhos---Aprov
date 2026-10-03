@@ -2400,3 +2400,14 @@ Restrições preservadas:
 - resultados do workspace de teste devem ser classificados como evidência funcional/controlada, não como evidência de cliente real.
 
 Assim, o desenvolvimento/piloto pode prosseguir agora sem aguardar disponibilidade dos usuários reais.
+
+### SAAS-P — primeira evidência funcional controlada em `aprovisionamento-teste`
+
+Foi validada visualmente uma sessão autenticada do perfil `Aprovisionamento Teste`:
+- acesso autorizado;
+- Home carregada;
+- shell/navegação disponível;
+- Central de Depósitos exposta no menu;
+- ambiente visualmente operacional.
+
+A evidência é classificada como smoke funcional/controlado e não substitui as futuras evidências humanas de P-01/P-02 nem comprova novo aceite legal.
