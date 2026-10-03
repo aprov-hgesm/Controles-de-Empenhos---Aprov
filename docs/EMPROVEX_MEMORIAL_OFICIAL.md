@@ -2282,3 +2282,24 @@ Regra de segurança operacional:
 - cenários destrutivos/disruptivos devem usar `aprovisionamento-teste`, P-03 ou outro ambiente controlado autorizado.
 
 Essa restrição prevalece sobre qualquer roteiro genérico anterior que pudesse sugerir usar P-01 em J15–J20.
+
+### SAAS-P — P-02 protegido e `aprovisionamento-teste` designado para cenários disruptivos
+
+P-02 foi definido como `aprovisionamento-2-b-fv`.
+
+Características:
+- VIP legado;
+- usuário externo real;
+- está iniciando o uso operacional do EMPROVEX;
+- não deve ser exposto a testes que possam interromper o acesso.
+
+P-01 (`aprovisionamento-3-gac-ap`) e P-02 (`aprovisionamento-2-b-fv`) passam a ser **participantes reais protegidos**.
+
+Regra:
+- não usar P-01/P-02 para suspensão, revogação, bloqueio, lifecycle disruptivo, reset forçado ou manipulação artificial de estado;
+- validar neles apenas fluxos normais e não disruptivos;
+- preservar acesso contínuo.
+
+`aprovisionamento-teste` passa a ser o **workspace preferencial para testes disruptivos**, incluindo J15–J20, revogação de sessão, bloqueio e reativação, desde que a operação específica seja autorizada quando necessário.
+
+Essa decisão substitui qualquer orientação genérica anterior que permitisse usar P-01/P-02 em cenários de indisponibilidade.
