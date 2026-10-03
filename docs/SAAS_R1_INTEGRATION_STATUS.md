@@ -376,3 +376,13 @@ Estado atual:
 
 Próxima evidência obrigatória: aguardar pelo menos um backup READY em cada banco e executar `npm run recovery:verify`. Depois, validar restore real em banco isolado.
 
+### Política temporária de Vercel durante desenvolvimento — 2026-10-02
+
+Decisão operacional: enquanto o EMPROVEX permanecer em desenvolvimento ativo e não houver intenção de publicar mudanças em produção, falhas de Preview da Vercel causadas exclusivamente por `build-rate-limit` não bloqueiam o andamento das branches/PRs.
+
+Regras:
+- não interpretar `build-rate-limit` como regressão funcional;
+- priorizar gates GitHub/CI, testes locais e validações de domínio;
+- não promover alterações para `main` nem produção sem autorização explícita;
+- consolidar deploys quando houver uma janela real de publicação, evitando consumo desnecessário de builds durante o desenvolvimento.
+
