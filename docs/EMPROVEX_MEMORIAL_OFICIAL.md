@@ -2002,3 +2002,13 @@ Estado imediatamente após aplicação:
 
 A P3 ainda não está certificada: falta o primeiro backup READY em cada banco, a verificação consolidada e um restore real em banco isolado. Nenhum novo `apply` deve ser repetido apenas por `backupReady=false`.
 
+### Vercel durante desenvolvimento ativo — decisão de 2026-10-02
+
+Durante a fase atual de desenvolvimento, Preview Deployments da Vercel não são requisito de avanço quando falham exclusivamente por `build-rate-limit`.
+
+A política passa a ser:
+- desenvolvimento continua normalmente com CI/testes/gates do repositório;
+- Vercel Preview pode ser ignorada quando o único bloqueio for limite de builds;
+- `main` e produção permanecem protegidas por autorização explícita do fundador;
+- publicação deve ser consolidada em momentos deliberados de release, não a cada branch/PR.
+
