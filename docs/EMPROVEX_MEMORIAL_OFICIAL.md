@@ -1028,3 +1028,33 @@ fechar HARDEN-A
 ```
 
 Este bloco deve ser mantido coerente com o Snapshot Global do início do documento.
+
+### HARDEN-A — CHECKPOINT PARCIAL DE SEGURANÇA
+
+A HARDEN-A foi auditada pelo Coordenador SaaS como **PARCIAL TECNICAMENTE SAUDÁVEL**.
+
+Identidade:
+- branch: `saas-harden-a-security-dependencies`;
+- base: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`;
+- HEAD final: `00d6386d212d6c139eec243d00b61c11a13017b8`;
+- PR: `#240`.
+
+Resultado:
+- vulnerabilidades de pacote: **22 → 14**;
+- nenhuma alteração em `package.json`;
+- nenhuma major aplicada;
+- nenhum `npm audit fix --force`;
+- lockfile seguro integrado semanticamente no commit `040ec20c66a7d9c8e77070d12dd455fe43aef5d7`;
+- evidência integrada em `66dc540b7d50a451e96cd16558a9219743543cd7`;
+- CI/build/typecheck/core/diff verdes;
+- nenhuma regressão detectada.
+
+Pendência material:
+- `jspdf@2.5.2` permanece CRITICAL e direto/runtime;
+- upgrade conjunto jsPDF/jsPDF-AutoTable deve ocorrer em correção controlada com regressão específica dos PDFs;
+- Firebase/Firestore/gRPC requer decisão coordenada, sem aceitar downgrade/force sugerido pelo audit.
+
+Impacto MOBILE-R1: **DELTA COMPATÍVEL** por lockfile compartilhado.
+
+HARDEN-A não está em PASS e continua bloqueando o freeze do RC até fechamento das pendências acima.
+
