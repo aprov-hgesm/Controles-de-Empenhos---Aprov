@@ -72,6 +72,24 @@ assert.match(helper, /warehouseMobileBarcodeDisposition/);
 assert.match(helper, /createWarehouseMobileAllocationOperationId/);
 assert.match(helper, /WAREHOUSE_ITEM_INTAKE_CONCURRENT_MODIFICATION/);
 
+const allocateRepository = read('lib/warehouse/intakeAllocationRepository.ts');
+for (const contract of [
+  'runTransaction',
+  'WAREHOUSE_ITEM_INTAKE_CONCURRENT_MODIFICATION',
+  'WAREHOUSE_INTAKE_ALLOCATION_EXCEEDS_PENDING',
+  'warehouseMovementMatchesReplay',
+  'WAREHOUSE_IDEMPOTENCY_CONFLICT',
+  'WAREHOUSE_BARCODE_MATERIAL_CONFLICT',
+  'ensureActivePosition',
+  'currentPendingQuantity',
+]) {
+  assert.equal(
+    allocateRepository.includes(contract),
+    true,
+    'Proteção autoritativa ausente no ALLOCATE reutilizado: ' + contract
+  );
+}
+
 const route = read('app/central-mobile/alocar/page.tsx');
 assert.match(route, /WarehouseMobileIntakeAllocation/);
 
