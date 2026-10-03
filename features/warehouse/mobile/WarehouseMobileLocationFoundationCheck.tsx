@@ -53,6 +53,16 @@ export function WarehouseMobileLocationFoundationCheck() {
   const resolveValidatedLocation = useCallback((event: WarehouseMobileScanEvent) => {
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
+
+    if (!workspace.ug) {
+      setResolution({
+        status: 'error',
+        code: event.value,
+        message: 'A UG operacional não está resolvida. Reabra a Central e tente novamente.',
+      });
+      return;
+    }
+
     setResolution({ status: 'resolving', code: event.value });
 
     void resolveWarehouseStockPositionBarcode({
