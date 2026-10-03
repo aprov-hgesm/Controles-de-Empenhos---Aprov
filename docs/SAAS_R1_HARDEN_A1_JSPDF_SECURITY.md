@@ -82,3 +82,46 @@ O PR da frente deve registrar separadamente:
 - `npm run test:harden-a1-pdf`.
 
 A validação visual dos layouts permanece explicitamente manual; CI verde não deve ser convertido em PASS visual por inferência.
+
+
+## Evidência executada — validation harness
+
+Um harness temporário foi conectado ao gate `verify:saas-r1-integration` apenas para executar a validação no GitHub Actions. Depois da coleta de evidências ele foi removido; o script canônico voltou ao comando original.
+
+Application CI run **37114453575 / #942**: SUCCESS.
+
+Resultados da execução:
+- `npm ci`: PASS;
+- smoke/regressão PDF: **7/7 PASS**;
+- jsPDF 4: ArrayBuffer + Blob + assinatura `%PDF-`: PASS;
+- AutoTable 5: API nomeada + paginação multipágina: PASS;
+- lazy loading/boundaries: PASS;
+- etiquetas: Blob PDF A4 não vazio: PASS;
+- Production Build: PASS;
+- TypeScript final: PASS;
+- Diff Hygiene: PASS;
+- Core Protection run **37114453619 / #229**: SUCCESS;
+- Recovery run **37114453579 / #620**: SUCCESS;
+- Legal Validation run **37114453572 / #44**: SUCCESS;
+- Browser Validation: skipped por escopo.
+
+### npm audit
+
+Antes da HARDEN-A1, baseline herdado da HARDEN-A:
+- total: 14;
+- critical: 1;
+- high: 11;
+- moderate: 2.
+
+Depois da HARDEN-A1:
+- total: **12**;
+- critical: **0**;
+- high: **10**;
+- moderate: **1**;
+- low: **1**.
+
+Conclusão de segurança: **o CRITICAL da cadeia jsPDF foi eliminado**. As vulnerabilidades remanescentes pertencem a outras cadeias e não foram forçadas nesta frente.
+
+## Validação visual/manual
+
+Permanece **PENDENTE DE VALIDAÇÃO MANUAL** para fidelidade visual fina dos documentos de Cronograma, Relatórios/Termo, Alocação, Saída e Etiquetas. Isso não invalida os testes estruturais/runtime executados, mas impede afirmar PASS visual sem inspeção humana dirigida.
