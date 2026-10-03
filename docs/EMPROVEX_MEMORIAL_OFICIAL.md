@@ -6,7 +6,7 @@ Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
 Integradora SaaS R1: `feat/saas-r1-commercializacao@75202b0ac8bb888484ca3f124dea974daf68a654`
 
-Integradora Mobile R1: `feat/central-mobile-r1@50ea3103c49b5fa339823a46fe04e7b72dabb123`
+Integradora Mobile R1: `feat/central-mobile-r1@816c1c07cf251ce3705098a3a65b9d84e2fc8614`
 
 Estado global: **Performance R3 publicada; SaaS R1 em hardening pré-piloto; Mobile R1 em Onda 3; Release Candidate ainda não congelado; piloto real ainda não iniciado; produção não alterada pelas ondas atuais.**
 
@@ -81,7 +81,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | --- | --- | --- |
 | Produção | **Performance R3 publicada** | `main@e90f92acae1514ee5cbc6ce95fed354bc1454330` |
 | SaaS R1 | **HARDENING PRÉ-PILOTO** | A parcial tecnicamente saudável; B parcial; C/D encerradas |
-| Mobile R1 | **ONDA 3 EM EXECUÇÃO** | F/G/H; Integração 3 ainda não certificada |
+| Mobile R1 | **INTEGRAÇÃO 3 CERTIFICADA / MOBILE-I LIBERADA** | F/G/H integradas; sem novo delta funcional SaaS↔Mobile |
 | Release Candidate | **NÃO CONGELADO** | depende de hardening SaaS + checkpoint Mobile |
 | Piloto real SaaS | **NÃO INICIADO** | só após RC controlado |
 | SAAS-J | **AGUARDANDO** | pós-piloto e correções finais |
@@ -666,14 +666,47 @@ Estado atual:
 
 | Frente | Escopo | Estado |
 | --- | --- | --- |
-| MOBILE-F | Inventário móvel | **APROVADA / aguardando ordem de integração** — PR #239 |
-| MOBILE-G | Saída de material móvel | **EM EXECUÇÃO / PR #242 aberto** |
-| MOBILE-H | Conferência física/digital | **APROVADA / aguardando ordem de integração** — PR #241 |
-| Integração 3 | combinação F/G/H | **AGUARDANDO handoffs/revisão** |
-| MOBILE-I | integração controlada | **BLOQUEADA** |
-| MOBILE-J | certificação final | **BLOQUEADA** |
+| MOBILE-F | Inventário móvel | **VERDE / INTEGRADA / CERTIFICADA** — PR #239 fechado sem merge direto |
+| MOBILE-G | Saída de material móvel | **VERDE / INTEGRADA / CERTIFICADA** — PR #242 fechado sem merge direto |
+| MOBILE-H | Conferência física/digital | **VERDE / INTEGRADA / CERTIFICADA** — PR #241 fechado sem merge direto |
+| Integração 3 | combinação F/G/H | **VERDE / CERTIFICADA** — PR #243 / squash `f11b7bf2...` |
+| MOBILE-I | integração controlada | **LIBERADA PELO PROGRAM CONTROL** |
+| MOBILE-J | certificação final | **BLOQUEADA ATÉ CHECKPOINT PÓS-I** |
 
 A ordem de integração F/G/H deve ser definida por dependência e sobreposição reais, não por ordem cronológica de conclusão.
+
+### 27.1 Checkpoint pós-Integração 3 — 2026-10-03
+
+Estado operacional certificado:
+
+`f11b7bf29f8b3fe9525ff80880f4e0f87cd1c67e`
+
+HEAD documental Mobile:
+
+`816c1c07cf251ce3705098a3a65b9d84e2fc8614`
+
+Resultado:
+
+- MOBILE-F/G/H integradas semanticamente;
+- Application CI #940 — SUCCESS;
+- Core Protection #227 — SUCCESS;
+- Recovery #618 — SUCCESS;
+- Legal Validation #42 — SUCCESS;
+- Production Build — SUCCESS;
+- TypeScript — SUCCESS;
+- Diff Hygiene — SUCCESS;
+- segurança multi-tenant — SUCCESS;
+- nenhum novo schema;
+- nenhuma nova API SaaS compartilhada;
+- nenhum novo delta funcional SaaS↔Mobile;
+- CT-01 permanece preexistente e pendente para o futuro RC;
+- package/Application CI contém tooling Mobile aditivo e compatível.
+
+Decisão do Program Control:
+
+**INTEGRAÇÃO 3 ACEITA / MOBILE-I LIBERADA.**
+
+MOBILE-I deve ser criada a partir do HEAD Mobile vivo congelado pelo Coordenador Mobile e atuar somente como integração controlada, UX/regressão e reconciliação final da experiência Mobile. MOBILE-J continua bloqueada.
 
 ## 28. Pendências físicas Mobile
 
@@ -766,13 +799,11 @@ Ações protegidas continuam dependendo da governança definida, especialmente:
 
 ### Mobile
 
-- conclusão/revisão de G e H;
-- integração de F/G/H;
-- Integração 3 certificada;
-- reconciliação transversal pós-Onda 3;
-- MOBILE-I;
-- MOBILE-J;
-- validações físicas finais.
+- executar MOBILE-I sobre a base pós-Integração 3;
+- manter CT-01 preservada para o futuro RC;
+- reconciliar tooling package/CI de forma aditiva;
+- MOBILE-J permanece bloqueada até o checkpoint pós-MOBILE-I;
+- validações físicas finais continuam obrigatórias.
 
 ### Global
 
@@ -1047,12 +1078,13 @@ HARDEN-D: PASS / encerrada
 CT-01: obrigatória antes do RC
 
 MOBILE R1
-integrador: feat/central-mobile-r1@50ea3103c49b5fa339823a46fe04e7b72dabb123
-F: aprovada / aguardando integração
-G: em execução
-H: aprovada / aguardando integração
-Integração 3: pendente
-MOBILE-I/J: bloqueadas
+integrador: feat/central-mobile-r1@816c1c07cf251ce3705098a3a65b9d84e2fc8614
+F: integrada / certificada
+G: integrada / certificada
+H: integrada / certificada
+Integração 3: certificada
+MOBILE-I: liberada
+MOBILE-J: bloqueada até checkpoint pós-I
 
 RELEASE
 RC: não congelado
@@ -1062,8 +1094,8 @@ produção alterada pelas ondas atuais: não
 PRÓXIMO GATE GLOBAL
 fechar HARDEN-A
 + fechar HARDEN-B
-+ certificar Integração 3
-+ checkpoint transversal
++ concluir MOBILE-I
++ checkpoint transversal pós-I
 + aplicar CT-01
 + gates combinados
 → avaliar RC Candidate / RC Frozen
@@ -1092,4 +1124,3 @@ A frente deve tratar apenas o upgrade controlado de jsPDF/AutoTable, adaptaçõe
 A correção Firebase/Firestore/gRPC fica classificada como **HARDEN-A2** e permanece **BLOQUEADA** até o encerramento da A1.
 
 Nenhuma ação produtiva foi autorizada.
-
