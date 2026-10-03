@@ -5,6 +5,7 @@ Integrador: `feat/central-mobile-r1`
 Produção de referência: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Baseline upstream MOBILE-0: `78d3e9afeeb4176a8d6423cdd8e65d32435ba0a9`
 Freeze documental / base comum da Onda 1: `53e28b81874ee1b7ce0bd484cc7a97537aa99473`
+Freeze documental / base comum da Onda 2: `13ca1a50826bdb34b8f63effb0743ac43ecdcddd`
 
 Estado global: **ONDA 1 INTEGRADA / INTEGRAÇÃO 1 APROVADA / ONDA 2 LIBERADA — MOBILE-C + MOBILE-D + MOBILE-E**
 
@@ -31,9 +32,9 @@ Dependência:
 | MOBILE-0 Baseline/contratos | integradora | candidato SAAS-I verde | **CONGELADA** | contratos/documentação canônicos |
 | MOBILE-A Plataforma/Scanner | `mobile-r1-a-platform-scanner` | 0 | **APROVADA COM PENDÊNCIA RUNTIME / INTEGRADA** | PR #221 / squash `19fc6be4...` |
 | MOBILE-B Etiquetas/Resolver | `mobile-r1-b-location-labels` | 0 | **APROVADA E INTEGRADA** | PR #220 / squash `5edb19812...` |
-| MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **LIBERADA PARA ONDA 2** | branch a criar no freeze comum |
-| MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **LIBERADA PARA ONDA 2** | branch a criar no freeze comum |
-| MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **LIBERADA PARA ONDA 2** | branch a criar no freeze comum |
+| MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **LIBERADA / BRANCH CRIADA** | base `13ca1a508...`; aguardando worker |
+| MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **LIBERADA / BRANCH CRIADA** | base `13ca1a508...`; aguardando worker |
+| MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **LIBERADA / BRANCH CRIADA** | base `13ca1a508...`; aguardando worker |
 | MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **BLOQUEADA** | — |
 | MOBILE-G Saída | `mobile-r1-g-outbound` | Int.2 | **BLOQUEADA** | — |
 | MOBILE-H Conferência | `mobile-r1-h-position-check` | Int.2 | **BLOQUEADA** | — |
