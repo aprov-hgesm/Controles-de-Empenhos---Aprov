@@ -12,6 +12,21 @@ Base comum congelada da Onda 3: `c971d5356c343a0819bf96ec016de73dd96a435d`
 
 A branch trabalhadora já existe exatamente nessa base. Não recrie, não rebaseie, não faça merge da integradora e não incorpore outras workers.
 
+## Liberação do Program Control
+
+A HARDEN-D SaaS ↔ MOBILE-R1 foi concluída, auditada e aceita. A MOBILE-R1 está **VERDE** e esta worker está formalmente liberada para a Onda 3.
+
+CT-01 permanece registrada para o futuro Release Candidate global:
+
+`Permissions-Policy: camera=(self), microphone=(), geolocation=()`
+
+Nesta worker:
+- NÃO alterar `next.config.ts`;
+- NÃO alterar Permissions-Policy;
+- NÃO criar correção para CT-01;
+- CT-01 não bloqueia esta frente;
+- qualquer novo delta transversal deve ser marcado no handoff e escalado ao Coordenador Mobile / Program Control.
+
 Antes de editar:
 ```powershell
 git fetch origin
