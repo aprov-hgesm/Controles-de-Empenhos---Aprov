@@ -686,3 +686,29 @@ Mobile snapshot no freeze:
 
 A integradora pode avançar documentalmente após este ponto; as workers continuam congeladas na base acima até handoff.
 
+## 25. PROGRAM CONTROL — HARDEN-D LIBERADA
+
+Checkpoint Mobile aceito:
+`feat/central-mobile-r1@7b745fa0b7979e643b83b7de94dd96a0290930ab`
+
+HARDEN-D:
+- `saas-harden-d-mobile-reconciliation`;
+- base `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`;
+- branch confirmada idêntica à base;
+- **LIBERADA PARA ATIVAÇÃO**.
+
+Delta transversal já conhecido:
+`next.config.ts`
+
+Mobile:
+`camera=(self), microphone=(), geolocation=()`
+
+SaaS:
+`camera=(), microphone=(), geolocation=()`
+
+A D deve classificar semanticamente e preservar câmera same-origin sem relaxar microfone/geolocalização.
+
+MOBILE-F/G/H permanecem bloqueadas pelo Program Control até handoff HARDEN-D e nova decisão.
+
+Nenhuma ação produtiva foi autorizada.
+
