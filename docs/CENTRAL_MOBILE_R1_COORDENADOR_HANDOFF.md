@@ -342,3 +342,30 @@ Próxima frente da ordem E → C → D:
 **MOBILE-D**.
 
 Integração 2 somente pode ser declarada encerrada após MOBILE-D revisada, integrada e certificada junto ao estado corrente.
+
+
+## 21. Revisão MOBILE-D — devolvida para correção mínima
+
+Worker HEAD revisado:
+`4d3d75be98786d4470b593759580f50683a8f31b` / PR #231.
+
+Gates worker:
+- Application CI #929 SUCCESS;
+- Core #216 SUCCESS;
+- Phase 6/7 e scanner/Integration 1 verdes.
+
+A implementação não foi integrada porque a leitura de lotes usada para decidir transferência parcial não é fail-closed: o repository legado retorna lista vazia em erro.
+
+Correções delimitadas:
+- leitura crítica de lotes deve propagar falha e detectar saturação;
+- >24 lotes relocáveis deve bloquear antes do TRANSFER;
+- EPX1 reservado/malformado deve permanecer UNKNOWN, não PRODUCT.
+
+Nenhuma mudança no TRANSFER canônico ou Rules está autorizada.
+
+Após novo handoff:
+1. revisar somente o delta corretivo;
+2. integrar semanticamente D sobre E+C;
+3. executar certificação combinada;
+4. se verde, encerrar Integração 2;
+5. só então avaliar liberação de F/G/H.
