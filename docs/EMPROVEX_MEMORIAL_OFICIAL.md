@@ -2364,3 +2364,25 @@ Estado T0:
 - por UG: capturado;
 - monetário Google Cloud Billing: pendente;
 - J22: PREPARADO até completar T0 monetário e T1/T2.
+
+### SAAS-P — T0 monetário capturado / baseline inicial completo
+
+A fotografia oficial do Google Cloud Billing foi capturada em 2026-10-02.
+
+Valores exibidos:
+- custo atual: **R$ 0,16**;
+- economia: **R$ 0,00**;
+- custo total: **R$ 0,16**;
+- previsão mensal: **R$ 2,30**;
+- serviço com custo atual listado: **App Engine — R$ 0,16**.
+
+O resumo da própria tela menciona Cloud Firestore Read Ops no comparativo, porém nenhuma cobrança positiva separada de Firestore aparece na tabela corrente. Não foi inferido custo não exibido.
+
+Estado do T0:
+- técnico: PASS;
+- global: capturado;
+- por UG: capturado;
+- monetário: capturado;
+- **T0 inicial: COMPLETO**.
+
+J22 continua PREPARADO até T1/T2 após as jornadas reais do piloto.
