@@ -26,7 +26,7 @@ Ler, nesta ordem:
 - SAAS-A foi concluída como freeze documental.
 - Onda 1 foi **INICIADA em 2026-10-01 por autorização explícita do usuário**.
 - **SAAS-B foi concluída, certificada e integrada** na branch coordenadora via PR #216 / squash `f91cda645...`.
-- **SAAS-E foi concluída, certificada e integrada** via PR #215 / squash `82f2e643...`; configuração externa de backup/restore/uptime continua pendente.
+- **SAAS-E foi concluída, certificada e integrada** via PR #215 / squash `82f2e643...`; PITR, delete protection e schedules diários já foram ativados nos dois bancos. Permanecem backup READY, restore real isolado e uptime/alertas.
 - **SAAS-DL foi concluída, certificada e integrada semanticamente** em `733885c1...`; PR #214 foi fechado sem merge automático por conflito esperado com B/E já integradas.
 - **SAAS-C foi concluída, certificada e integrada semanticamente** em `cf320ce3...`; PRs #213/#217 foram fechados sem merge automático.
 - **A Onda 1 está concluída.**
@@ -130,7 +130,7 @@ Onboarding/reset/troca de senha/checklist concluídos e integrados semanticament
 Termos/Privacidade/aceite versionado integrados semanticamente em `733885c1...`. O `LegalAcceptanceGate` permanece isolado até a integração com SAAS-C/SAAS-I.
 
 ### E — INTEGRADA
-Backup/recovery/health/runbook concluídos no repositório e integrados via PR #215 / `82f2e643...`. Backup READY, restore real e uptime/alerta reais continuam pendentes de configuração externa.
+Backup/recovery/health/runbook concluídos no repositório e integrados via PR #215 / `82f2e643...`. PITR, delete protection e backup diário já estão ativos nos dois bancos; backup READY, restore real e uptime/alerta reais continuam pendentes.
 
 Eles devem trabalhar simultaneamente quando possível, sem editar domínio alheio. Cada worker encerra com handoff completo; o Coordenador valida e integra.
 
@@ -525,3 +525,12 @@ Ainda pendente:
 
 Não repetir `apply` enquanto os controles permanecerem ativos.
 
+## 22. Estado corrente reconciliado — 2026-10-02
+
+- P2 VIP legado: concluída e verificada.
+- P3: controles nativos aplicados nos dois bancos; não repetir `apply`; aguardar backup READY e depois restore isolado.
+- Health: PR #223 preparado sobre `main`, draft/mergeable, gates técnicos verdes, sem merge/deploy.
+- Produção: `main` continua na Performance R3; nenhuma publicação SaaS R1 ocorreu.
+- Vercel: `build-rate-limit` de preview é não bloqueante durante desenvolvimento.
+- Mobile: MOBILE-B integrada pelo PR #220; MOBILE-A segue no PR #221, draft/mergeable, gates principais verdes e aguardando fechamento coordenado.
+- Antes de qualquer SAAS-J: reconsultar o estado vivo da Mobile e reconciliar deltas compartilhados.
