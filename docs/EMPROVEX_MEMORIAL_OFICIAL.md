@@ -1,9 +1,9 @@
 # EMPROVEX — Memorial Oficial do Repositório
 
-Última atualização: **2026-10-02 — SAAS-I candidata verde / Central Móvel R1 ativada em MOBILE-0**
+Última atualização: **2026-10-02 — SAAS-P em execução / Central Móvel R1 Integração 1 certificada / Onda 2 preparada**
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Branch integradora do SaaS R1: `feat/saas-r1-commercializacao`
-Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A, SAAS-B, SAAS-C, SAAS-DL, SAAS-E e SAAS-DS INTEGRADAS; enforcement transversal concluído no código; SAAS-I LIBERADA para integração controlada e validação combinada**
+Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A, SAAS-B, SAAS-C, SAAS-DL, SAAS-E, SAAS-DS e SAAS-I INTEGRADAS; SAAS-P EM EXECUÇÃO; Central Móvel R1 com MOBILE-A/B integradas, Integração 1 certificada e Onda 2 preparada**
 
 Este documento é a **porta de entrada canônica para continuidade do EMPROVEX como produto**. Ele resume o estado vigente e aponta para os documentos históricos/especializados. O histórico detalhado não deve ser apagado. Para comportamento publicado, `main` prevalece. Para o ciclo SaaS R1 em desenvolvimento, prevalecem `feat/saas-r1-commercializacao`, este memorial e os quatro documentos canônicos `SAAS_R1_*`.
 
@@ -18,7 +18,7 @@ Ordem de consulta para um novo trabalho:
 5. documentação especializada do domínio alterado;
 6. decisões arquiteturais registradas;
 7. histórico de fases/branches/PRs apenas como contexto.
-8. para a **Central Móvel R1**, `docs/CENTRAL_MOBILE_R1_PLANO_MESTRE.md`, `docs/CENTRAL_MOBILE_R1_EXECUCAO_PARALELA.md`, `docs/CENTRAL_MOBILE_R1_INTEGRATION_STATUS.md` e `docs/CENTRAL_MOBILE_R1_COORDENADOR_HANDOFF.md` são as fontes operacionais da rodada, subordinadas a este Memorial e ao código integrado.
+8. para a **Central Móvel R1**, já ativa em desenvolvimento coordenado, prevalecem operacionalmente a branch `feat/central-mobile-r1` e os documentos `CENTRAL_MOBILE_R1_*`; qualquer alteração transversal entre SaaS e Mobile deve seguir a regra permanente de sincronização registrada neste Memorial.
 
 Para a Central de Depósitos:
 - `docs/adm-deposito/README.md`;
@@ -740,6 +740,59 @@ Status possíveis de uma frente ao ser recebida pelo Coordenador:
 - `APROVADA COM PENDÊNCIA`;
 - `DEVOLVIDA`;
 - `BLOQUEADA`.
+
+### 8.3.1 Coordenação obrigatória SaaS R1 ↔ Central Móvel R1 — regra permanente
+
+O **SaaS R1** e a **Central Móvel R1** evoluem em paralelo e não devem bloquear um ao outro por mera divergência de histórico Git.
+
+Branches integradoras:
+- SaaS R1: `feat/saas-r1-commercializacao`;
+- Central Móvel R1: `feat/central-mobile-r1`.
+
+A Central Móvel foi fundada sobre o candidato certificado da SAAS-I `78d3e9afeeb4176a8d6423cdd8e65d32435ba0a9`; a SAAS-I entrou depois na integradora SaaS por squash `25dda4876fedabb498ad30139262b11943412273`. Portanto, ancestralidade diferente não significa automaticamente comportamento diferente.
+
+Antes de abrir, integrar ou certificar uma frente Mobile que toque domínio compartilhado, o Coordenador Mobile deve consultar o estado vivo do SaaS R1 e comparar semanticamente os contratos relevantes. O mesmo dever vale para o Coordenador SaaS em relação ao Mobile.
+
+Domínios de verificação cruzada obrigatória:
+- autenticação e identidade;
+- workspace/UG e isolamento multi-tenant;
+- sessão/lease;
+- lifecycle/status de workspace/conta;
+- `LegalAcceptanceGate` e proteção de rotas;
+- autorização da Central e `warehouseAccess`;
+- Firestore Rules compartilhadas;
+- shell/roteamento;
+- contratos comuns da Central de Depósitos;
+- tipos/helpers compartilhados desktop/mobile;
+- dependências e scripts que afetem build, CI ou bundle comum.
+
+Se uma frente Mobile alterar qualquer domínio compartilhado, seu handoff deve incluir **“Impacto SAAS-R1”** com:
+1. arquivos/contratos afetados;
+2. mudança comportamental versus somente estrutural/documental;
+3. necessidade ou não de reconciliação na integradora SaaS;
+4. gates que precisam ser repetidos;
+5. existência ou não de bloqueio real para SAAS-P/SAAS-J.
+
+Se uma frente SaaS alterar domínio compartilhado, o handoff correspondente deve incluir **“Impacto MOBILE-R1”**.
+
+Regras de não interferência:
+- não fazer merge/rebase automático de uma integradora na outra;
+- não usar `ours/theirs` global;
+- não sobrescrever versão mais nova de um programa com versão antiga do outro;
+- billing/trial/VIP permanecem propriedade do SaaS;
+- scanner/etiquetas/fluxos móveis permanecem propriedade da MOBILE-R1;
+- contrato comum deve manter uma única fonte de verdade;
+- conflito transversal pertence aos Coordenadores e deve ser resolvido semanticamente.
+
+Gates obrigatórios de reconciliação:
+- antes de integrar mudança transversal em qualquer programa;
+- antes de liberar nova onda Mobile quando houver upstream SaaS relevante;
+- antes da SAAS-J;
+- antes da MOBILE-I;
+- antes da MOBILE-J;
+- antes de release conjunto ou promoção para `main`.
+
+A existência de desenvolvimento paralelo, sozinha, **não bloqueia** SAAS-P nem as ondas Mobile. Só existe bloqueio quando há conflito técnico/contratual concreto capaz de causar regressão, quebra de segurança, duplicação de fonte de verdade ou comportamento divergente desktop/mobile.
 
 ### 8.4 Documentos canônicos da rodada
 
