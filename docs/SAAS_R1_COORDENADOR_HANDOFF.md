@@ -589,7 +589,7 @@ Aceito:
 - nenhum defeito novo;
 - nenhum impacto MOBILE-R1.
 
-A frente não está concluída: falta confirmar participantes humanos P-01/P-02 e executar as jornadas reais aplicáveis.
+A frente não está concluída: P-01/P-02 já foram posteriormente confirmados e protegidos; permanecem pendentes as jornadas humanas reais aplicáveis e as evidências não disruptivas.
 
 ### PILOT-B — recebida / PREPARAÇÃO CONCLUÍDA
 
