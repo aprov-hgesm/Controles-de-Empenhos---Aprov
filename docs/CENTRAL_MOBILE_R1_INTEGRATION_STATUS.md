@@ -36,7 +36,7 @@ Dependência:
 | MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **APROVADA E INTEGRADA SEMANTICAMENTE** | worker PR #229; integração PR #232 / squash `1c523fe2...` |
 | MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **APROVADA E INTEGRADA SEMANTICAMENTE** | worker PR #231; integração PR #234 / squash `fc87bf8f...` |
 | MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **APROVADA E INTEGRADA** | PR #230 / squash `e768ee5f...` |
-| MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **ATIVADA — ONDA 3** | base `c971d5356...`; worker autorizado |
+| MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **APROVADA / CONGELADA** | PR #239; HEAD `42954ada...`; aguarda G/H antes da ordem de integração |
 | MOBILE-G Saída | `mobile-r1-g-outbound` | Int.2 | **ATIVADA — ONDA 3** | base `c971d5356...`; worker autorizado |
 | MOBILE-H Conferência | `mobile-r1-h-position-check` | Int.2 | **ATIVADA — ONDA 3** | base `c971d5356...`; worker autorizado |
 | MOBILE-I Integração controlada | integradora | A–H | **BLOQUEADA** | — |
@@ -653,3 +653,49 @@ Onda 3:
 - branches não foram recriadas, movidas, rebaseadas ou fast-forwarded.
 
 MOBILE-I/J permanecem bloqueadas até Integração 3 e decisão do Program Control.
+
+
+### Revisão MOBILE-F — 2026-10-03
+
+Worker:
+- branch `mobile-r1-f-inventory`;
+- base `c971d5356c343a0819bf96ec016de73dd96a435d`;
+- HEAD `42954adab43694816262720581abad2bc0761d4c`;
+- PR #239;
+- estado: draft / mergeable / não mergeado.
+
+Classificação:
+**APROVADA / CONGELADA — AGUARDANDO MOBILE-G E MOBILE-H**.
+
+Evidências:
+- Application CI #935 SUCCESS;
+- Core #222 SUCCESS;
+- Recovery #615 SUCCESS;
+- Legal #39 SUCCESS;
+- MOBILE-F tests/guard SUCCESS;
+- Phase 10 inventory tests/guard SUCCESS;
+- Integration 2 SUCCESS;
+- Production Build / Final TypeScript / Diff Hygiene SUCCESS.
+
+Contratos preservados:
+- inventário canônico;
+- salvar contagem não altera saldo;
+- confirmação humana antes do INVENTORY_ADJUSTMENT;
+- STALE/RECONCILIATION_REQUIRED fail-closed;
+- sem saldo/ledger paralelo;
+- sem schema persistente novo;
+- 0 listeners realtime novos.
+
+Performance:
+- /central-mobile: 5.03 kB / 257 kB;
+- /central-mobile/inventario: 16.7 kB / 271 kB;
+- Shared First Load: 104 kB.
+
+Impacto transversal:
+**SEM NOVO DELTA TRANSVERSAL**.
+Package/CI possuem apenas gates aditivos da MOBILE-F.
+
+Integração:
+- não executar ainda;
+- aguardar handoffs/revisões de G e H;
+- definir ordem semântica somente com as três frentes conhecidas.
