@@ -3369,3 +3369,44 @@ Esta decisão não autoriza:
 
 Após handoff, o Coordenador SaaS audita HEAD/PR/matriz e envia pacote consolidado ao Coordenador Geral.
 
+### HARDEN-D — ACEITAÇÃO FORMAL PELO COORDENADOR SAAS
+
+A HARDEN-D foi auditada e aceita como **PASS TÉCNICO**.
+
+Identidade:
+- branch: `saas-harden-d-mobile-reconciliation`;
+- base: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`;
+- HEAD final: `fb7b5006d13cd09b247d6c5d0cd39d6a0b950f02`;
+- PR: `#236`;
+- evidência documental incorporada semanticamente à integradora no commit `22459625475cb155596e507663874de9896d001d`.
+
+Auditoria coordenadora:
+- somente um documento foi alterado pela worker;
+- nenhum runtime foi incorporado da branch congelada;
+- nenhum conflito funcional material SaaS ↔ MOBILE-C/D/E permaneceu aberto;
+- matriz transversal confirmada;
+- CT-01 confirmada.
+
+**CT-01 — requisito obrigatório antes do Release Candidate**
+
+Contrato global:
+`camera=(self), microphone=(), geolocation=()`
+
+Ownership:
+**Integração SaaS / composição do Release Candidate**.
+
+A correção deve ser aplicada no ponto apropriado de composição do RC, com repetição dos gates afetados e validação do header HTTP efetivo.
+
+HARDEN-D está encerrada e não conta mais como worker produtivo ativo.
+
+HARDEN-A/B/C permanecem frentes independentes ainda não concluídas.
+
+Este checkpoint não autoriza:
+- freeze do RC;
+- merge em `main`;
+- deploy;
+- Rules;
+- restore;
+- piloto;
+- lançamento.
+
