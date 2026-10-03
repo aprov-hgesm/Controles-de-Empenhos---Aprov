@@ -4,9 +4,24 @@ Data de abertura: **2026-10-02**
 
 Branch coordenadora: `feat/saas-r1-commercializacao`
 
-Estado: **EM EXECUÇÃO REAL / P2 CONCLUÍDA / PILOT-A+B+C+D RECEBIDAS / P-01+P-02 CONFIRMADOS / T0 TÉCNICO PASS / T0 NUMÉRICO PENDENTE / SAAS-J AGUARDANDO**
+Estado: **PREPARAÇÃO PRÉ-PILOTO / PILOTO REAL ADIADO ATÉ RELEASE CANDIDATE / T0 PRÉ-RELEASE COMPLETO / SAAS-J AGUARDANDO**
 
 Este documento é a matriz operacional da SAAS-P. Ele complementa, sem substituir, o Memorial Oficial, o Plano Mestre, o Integration Status e o Handoff do Coordenador.
+
+
+## 0. Regra de fase vigente — PILOTO REAL NÃO INICIADO
+
+A partir da reorganização de 2026-10-02, este documento continua sendo a matriz J01–J24 e o runbook do piloto, mas **não autoriza iniciar o piloto real agora**.
+
+Antes do piloto devem ser concluídos os gates de `docs/SAAS_R1_PRE_PILOTO_HARDENING.md`:
+- segurança/dependências;
+- backup READY + recovery:verify + restore isolado;
+- health/release/Rules;
+- reconciliação SaaS↔Mobile;
+- freeze do Release Candidate;
+- publicação controlada e smoke técnico.
+
+O T0 já capturado permanece baseline pré-release.
 
 ## 1. Snapshot auditado de partida
 
@@ -25,12 +40,13 @@ Este documento é a matriz operacional da SAAS-P. Ele complementa, sem substitui
 - SAAS-C Browser Validation: **SKIPPED por escopo**, conforme política oficial;
 - Vercel no HEAD SAAS-I: **SUCCESS**.
 
-Permanece não executado em produção:
+Permanece não executado em produção para o candidato SaaS R1:
 - merge SaaS R1 em `main`;
-- deploy/promote da aplicação SaaS R1 em produção;
+- deploy/promote da aplicação SaaS R1;
 - publicação das Rules novas da R1;
-- migração VIP legado;
-- configuração externa completa de backup/restore/uptime.
+- publicação do health/uptime do candidato.
+
+A migração VIP legado já foi aplicada e validada separadamente. Recovery nativo já possui PITR/delete protection/schedules ativos, mas ainda requer backup READY + restore isolado para certificação.
 
 ### MOBILE-R1
 
@@ -762,3 +778,13 @@ Portanto:
 - J01–J20 só podem receber evidência da implementação SaaS quando houver ambiente compatível com o candidato (preview/build local autorizado ou publicação controlada);
 - P-01/P-02 continuam protegidos;
 - não publicar apenas para produzir evidência sem planejamento de release.
+
+## Reclassificação da SAAS-P após reordenação
+
+- preparação, matriz, T0 e handoffs PILOT-A/B/C/D: **preservados**;
+- evidências capturadas na produção Performance R3: baseline pré-release;
+- piloto real: **ADIADO** até o Release Candidate tecnicamente fechado;
+- J01–J20 não devem ser promovidos por evidência do site pré-SaaS;
+- J22 aguarda T1/T2 do piloto final;
+- J23/J24 devem ser resolvidos como hardening/infra antes ou na publicação controlada do RC, conforme dependência real;
+- após o piloto, qualquer correção entra na janela pós-piloto e depois segue para SAAS-J.
