@@ -449,3 +449,67 @@ Próxima ação:
 4. integrar semanticamente somente após revisão;
 5. executar Integração 3;
 6. liberar MOBILE-I somente se Integração 3 ficar verde.
+
+
+## 25. Adaptação ao EMPROVEX Program Control
+
+Governança vigente:
+`Fundador → Coordenador Geral → Coordenador MOBILE-R1 → workers Mobile`.
+
+O Coordenador MOBILE-R1 permanece autoridade operacional do programa e passa a escalar ao Geral:
+- contratos compartilhados;
+- conflitos SaaS/Desktop;
+- release/produção;
+- Memorial global;
+- `next.config.ts` / Permissions-Policy;
+- Rules, Auth, sessão, workspace/UG, legal/lifecycle quando transversais.
+
+### Checkpoint para o Coordenador Geral
+
+Integradora:
+`feat/central-mobile-r1@64de6a414d00e0b151a5e07a1f2add7606936165`.
+
+Último estado operacional certificado:
+- Integração 2 squash `d8148f01b877adad1e7880fc0b7fc6d4b3d60249`;
+- Application CI #934 SUCCESS;
+- Core #221 SUCCESS;
+- Recovery #614 SUCCESS;
+- Legal #38 SUCCESS.
+
+C/D/E:
+- concluídas;
+- integradas;
+- nenhum handoff pendente.
+
+F/G/H:
+- branches já preparadas no freeze `c971d5356c343a0819bf96ec016de73dd96a435d`;
+- ainda não iniciadas;
+- não mover/recriar.
+
+Delta transversal aberto:
+- `next.config.ts` / Permissions-Policy:
+  - Mobile `camera=(self)`;
+  - SaaS `camera=()`;
+- requer decisão/reconciliação do Coordenador Geral/HARDEN-D;
+- não é para merge/rebase cego.
+
+HARDEN-D:
+- branch `saas-harden-d-mobile-reconciliation`;
+- base `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`;
+- ainda identical à base;
+- Mobile recomenda liberação **agora**, antes de ativar F/G/H.
+
+Política documental a partir deste ponto:
+- atualizar Mobile Plan/Execution/Status/Handoff normalmente;
+- não alterar por padrão o estado global do Memorial;
+- fornecer deltas certificados ao Coordenador Geral;
+- nenhuma reorganização Memorial V2 pelo Coordenador Mobile.
+
+Semáforo recomendado:
+- MOBILE-R1: AMARELO;
+- C/D/E: VERDE / CONCLUÍDAS;
+- F/G/H: não iniciadas / aguardar decisão de barreira global.
+
+Produção:
+- `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`;
+- não alterada.
