@@ -36,9 +36,9 @@ Dependência:
 | MOBILE-C Alocação | `mobile-r1-c-intake-allocation` | A+B+Int.1 | **APROVADA E INTEGRADA SEMANTICAMENTE** | worker PR #229; integração PR #232 / squash `1c523fe2...` |
 | MOBILE-D Transferência | `mobile-r1-d-transfer` | A+B+Int.1 | **APROVADA E INTEGRADA SEMANTICAMENTE** | worker PR #231; integração PR #234 / squash `fc87bf8f...` |
 | MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **APROVADA E INTEGRADA** | PR #230 / squash `e768ee5f...` |
-| MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **LIBERADA / BRANCH CRIADA** | base `c971d5356...`; aguardando worker |
-| MOBILE-G Saída | `mobile-r1-g-outbound` | Int.2 | **LIBERADA / BRANCH CRIADA** | base `c971d5356...`; aguardando worker |
-| MOBILE-H Conferência | `mobile-r1-h-position-check` | Int.2 | **LIBERADA / BRANCH CRIADA** | base `c971d5356...`; aguardando worker |
+| MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **ATIVADA — ONDA 3** | base `c971d5356...`; worker autorizado |
+| MOBILE-G Saída | `mobile-r1-g-outbound` | Int.2 | **ATIVADA — ONDA 3** | base `c971d5356...`; worker autorizado |
+| MOBILE-H Conferência | `mobile-r1-h-position-check` | Int.2 | **ATIVADA — ONDA 3** | base `c971d5356...`; worker autorizado |
 | MOBILE-I Integração controlada | integradora | A–H | **BLOQUEADA** | — |
 | MOBILE-J Certificação | integradora | I | **BLOQUEADA** | — |
 
@@ -628,3 +628,28 @@ Semáforo recomendado:
 - F/G/H: **AGUARDAR ATIVAÇÃO** até decisão do Coordenador Geral sobre a barreira HARDEN-D.
 
 Nenhuma autorização de produção é necessária neste momento.
+
+
+### Liberação formal da Onda 3 pelo Program Control — 2026-10-03
+
+HARDEN-D:
+- concluída;
+- auditada pelo Coordenador SaaS;
+- aceita pelo Program Control;
+- resultado: PASS técnico.
+
+CT-01:
+- `Permissions-Policy`;
+- contrato obrigatório do futuro RC: `camera=(self), microphone=(), geolocation=()`;
+- propriedade: integração SaaS/composição do RC;
+- não é blocker de F/G/H;
+- não alterar `next.config.ts` na Onda 3 por causa da CT-01.
+
+Onda 3:
+- MOBILE-F: ATIVADA;
+- MOBILE-G: ATIVADA;
+- MOBILE-H: ATIVADA;
+- freeze preservado: `c971d5356c343a0819bf96ec016de73dd96a435d`;
+- branches não foram recriadas, movidas, rebaseadas ou fast-forwarded.
+
+MOBILE-I/J permanecem bloqueadas até Integração 3 e decisão do Program Control.
