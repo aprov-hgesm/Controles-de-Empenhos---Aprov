@@ -243,3 +243,19 @@ Classificação:
 - não substitui evidência humana de P-01/P-02;
 - não promove J05 (aceite legal) a PASS, pois não houve criação/renovação de aceite;
 - próximo passo: validar acesso à Central de Depósitos.
+
+## Correção de classificação — produção atual versus candidato SaaS R1
+
+Conferência GitHub em 2026-10-02:
+- `main`: `e90f92acae1514ee5cbc6ce95fed354bc1454330`;
+- `feat/saas-r1-commercializacao`: `46fba355227e715c553484b2d65b7c52fcf30d39`;
+- integradora SaaS: **117 commits à frente / 0 atrás da main**.
+
+Consequência:
+- o site produtivo atualmente utilizado deve ser tratado como **baseline pré-SaaS R1 / Performance R3**, salvo evidência de deploy manual de outra revisão;
+- nenhum deploy do candidato SaaS R1 foi executado nesta rodada;
+- as capturas T0 continuam válidas e passam a ser explicitamente o **baseline pré-release**;
+- o smoke de `aprovisionamento-teste` comprova login/shell da produção atual, **não** o candidato SaaS R1 ainda não publicado;
+- esse smoke não pode promover jornadas SaaS específicas a PASS.
+
+Mudanças externas já aplicadas independentemente da Vercel, como materialização VIP e controles nativos de recovery, permanecem válidas em seus respectivos sistemas.
