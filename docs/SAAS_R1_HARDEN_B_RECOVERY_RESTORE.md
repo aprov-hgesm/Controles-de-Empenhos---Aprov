@@ -85,25 +85,34 @@ O tooling atual:
 
 Nenhum refactor desse suporte foi realizado.
 
-## 5. Tentativa de verificação ao vivo nesta execução
+## 5. Verificação ao vivo executada em 2026-10-03
 
-Os comandos canônicos da frente são:
+A verificação foi executada em PowerShell autenticado no projeto `gen-lang-client-0982077967`, com a conta ativa confirmada e a branch limpa no HEAD documental da HARDEN-B.
+
+Comandos executados:
 
 ```powershell
 npm run recovery:status
 npm run recovery:verify
 ```
 
-A consulta ao Google Cloud **não pôde ser executada neste ambiente de worker**, porque o ambiente disponível não possui `gcloud` instalado/autenticado nem acesso às credenciais do projeto.
+Resultado live:
 
-Resultado correto desta limitação:
+- projeto: `gen-lang-client-0982077967`;
+- ambos os bancos: `us-east1`;
+- PITR: ativo nos dois bancos;
+- delete protection: ativa nos dois bancos;
+- schedule diário: válido nos dois bancos;
+- retenção: `8467200s` = 14 semanas;
+- backups READY: **0 nos dois bancos**;
+- `recovery:status`: `ready=false`;
+- `recovery:verify`: `ready=false`.
 
-- não inferir estado live;
-- não marcar backup como `READY`;
-- não inventar location/resource name/snapshot/expiration;
-- não executar `apply`;
-- não executar restore;
-- manter a frente em **PARCIAL** até evidência externa real.
+A listagem direta de backups em `us-east1` retornou `[]`.
+
+Classificação: **dependência temporal legítima**, não falha de configuração. Os schedules foram criados pouco antes desta verificação e ainda não produziram o primeiro backup nativo READY.
+
+Não foi executado `apply`, não foi forçado backup e não foi iniciado restore.
 
 ## 6. Estado dos bancos
 
@@ -113,14 +122,17 @@ Database:
 
 `ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1`
 
-- PITR: **registrado como ativo no baseline de 2026-10-02; não revalidado live nesta execução**;
-- delete protection: **registrado como ativo no baseline de 2026-10-02; não revalidado live nesta execução**;
-- schedule diário: **registrado como ativo no baseline de 2026-10-02; não revalidado live nesta execução**;
-- backup READY: **NÃO COMPROVADO nesta execução**;
-- resource name: **não disponível sem evidência live**;
-- location: **não disponível sem evidência live**;
-- snapshot time: **não disponível sem evidência live**;
-- expiration time: **não disponível sem evidência live**.
+- PITR: **ATIVO — comprovado live**;
+- delete protection: **ATIVA — comprovada live**;
+- schedule diário: **ATIVO — comprovado live**;
+- schedule resource: `projects/gen-lang-client-0982077967/databases/ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1/backupSchedules/665b144d-7291-4672-bae1-1a0a01375c53`;
+- schedule create time: `2026-10-03T00:01:18.394935Z`;
+- retenção: `8467200s` (14 semanas);
+- backup READY: **NÃO — 0 backups READY**;
+- resource name de backup: **ainda inexistente**;
+- location: `us-east1`;
+- snapshot time: **ainda inexistente**;
+- expiration time: **ainda inexistente**.
 
 ### 6.2 Warehouse
 
@@ -128,27 +140,33 @@ Database:
 
 `emprovex-warehouse`
 
-- PITR: **registrado como ativo no baseline de 2026-10-02; não revalidado live nesta execução**;
-- delete protection: **registrado como ativo no baseline de 2026-10-02; não revalidado live nesta execução**;
-- schedule diário: **registrado como ativo no baseline de 2026-10-02; não revalidado live nesta execução**;
-- backup READY: **NÃO COMPROVADO nesta execução**;
-- resource name: **não disponível sem evidência live**;
-- location: **não disponível sem evidência live**;
-- snapshot time: **não disponível sem evidência live**;
-- expiration time: **não disponível sem evidência live**.
+- PITR: **ATIVO — comprovado live**;
+- delete protection: **ATIVA — comprovada live**;
+- schedule diário: **ATIVO — comprovado live**;
+- schedule resource: `projects/gen-lang-client-0982077967/databases/emprovex-warehouse/backupSchedules/8cf84722-3e98-4f82-a77d-184901063f68`;
+- schedule create time: `2026-10-03T00:02:16.403466Z`;
+- retenção: `8467200s` (14 semanas);
+- backup READY: **NÃO — 0 backups READY**;
+- resource name de backup: **ainda inexistente**;
+- location: `us-east1`;
+- snapshot time: **ainda inexistente**;
+- expiration time: **ainda inexistente**.
 
-## 7. Comandos de verificação externa
+## 7. Resultado dos comandos canônicos
 
-Executar em ambiente autenticado no projeto, preferencialmente Cloud Shell:
+`npm run recovery:status`:
 
-```bash
-npm run recovery:status
-npm run recovery:verify
-```
+- banco operacional: controles prontos, `backupReady=false`, `completedBackupCount=0`;
+- warehouse: controles prontos, `backupReady=false`, `completedBackupCount=0`;
+- resultado global: `ready=false`.
 
-Se `recovery:verify` permanecer não verde, registrar a saída real e classificar a causa sem aplicar alterações automaticamente.
+`npm run recovery:verify`:
 
-A política vigente proíbe repetir `apply` automaticamente.
+- reproduziu o mesmo estado;
+- corretamente não certificou recovery;
+- causa: ausência do primeiro backup nativo READY.
+
+A política vigente proíbe repetir `apply` automaticamente. Não criar polling em loop e não forçar o evento. Existe monitoramento externo já preparado para detectar a disponibilidade dos backups.
 
 ## 8. Evidência necessária quando houver backup READY
 
@@ -272,8 +290,9 @@ CT-01 — Permissions-Policy da câmera — permanece fora do escopo da HARDEN-B
 Motivo:
 
 - baseline e tooling de segurança estão confirmados;
-- proteções foram registradas anteriormente como ativas;
-- faltam evidência live de backup `READY` dos dois bancos;
+- PITR, delete protection e schedules diários estão **comprovados live** nos dois bancos;
+- ambos os schedules têm retenção de 14 semanas e estão em `us-east1`;
+- ainda existem **0 backups READY** nos dois bancos;
 - falta seleção de backup real;
 - falta autorização para restore real;
 - falta restore real isolado;
@@ -283,9 +302,9 @@ Não existe base factual para PASS neste momento.
 
 ## 15. Próximo gate
 
-1. rodar `npm run recovery:status` em ambiente autenticado;
-2. rodar `npm run recovery:verify`;
-3. capturar os backups `READY` reais dos dois bancos;
+1. aguardar o evento legítimo do primeiro backup diário; não forçar e não criar polling em loop;
+2. quando o monitoramento externo indicar disponibilidade, repetir uma leitura com `npm run recovery:status` e `npm run recovery:verify`;
+3. capturar resource name, location, snapshot time e expiration time dos backups `READY` reais dos dois bancos;
 4. selecionar backup fonte;
 5. gerar restore-plan real;
 6. retornar ao Coordenador SaaS para autorização explícita;
