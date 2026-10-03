@@ -591,3 +591,18 @@ Aceito:
 
 A frente não está concluída: falta confirmar participantes humanos P-01/P-02 e executar as jornadas reais aplicáveis.
 
+### PILOT-B — recebida / PREPARAÇÃO CONCLUÍDA
+
+Worker HEAD: `d9ebea5a63aaf5b9571ee9d6a68c10c9d8ca3a28`
+PR #227: fechado sem merge por divergência documental da base.
+Integração semântica do handoff: `ecc74f14968ca1d45f8b17eb292b68cc057171e9`.
+
+Estado:
+- P-03 real ainda não selecionado;
+- pagamento real não iniciado;
+- roteiro comercial completo preparado;
+- nenhum defeito funcional novo;
+- nenhum impacto MOBILE-R1.
+
+Antes de executar J01, o Coordenador precisa confirmar participante P-03 real e janela produtiva compatível/autorizada.
+
