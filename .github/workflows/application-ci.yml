@@ -200,6 +200,12 @@ jobs:
       - name: Central Móvel R1 physical query guard
         run: npm run verify:mobile-r1-physical-query
 
+      - name: Central Móvel R1 MOBILE-C intake allocation domain tests
+        run: npm run test:mobile-r1-intake-allocation
+
+      - name: Central Móvel R1 MOBILE-C intake allocation guard
+        run: npm run verify:mobile-r1-intake-allocation
+
       - name: ADM Depósito Phase 9 depot layout domain tests
         run: npm run test:adm-deposito-depot-layout
 
