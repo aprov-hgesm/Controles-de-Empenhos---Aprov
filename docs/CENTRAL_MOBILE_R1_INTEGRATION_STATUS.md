@@ -38,7 +38,7 @@ Dependência:
 | MOBILE-E Consulta | `mobile-r1-e-physical-query` | A+B+Int.1 | **APROVADA E INTEGRADA** | PR #230 / squash `e768ee5f...` |
 | MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **APROVADA / CONGELADA** | PR #239; HEAD `42954ada...`; aguarda G/H antes da ordem de integração |
 | MOBILE-G Saída | `mobile-r1-g-outbound` | Int.2 | **ATIVADA — ONDA 3** | base `c971d5356...`; worker autorizado |
-| MOBILE-H Conferência | `mobile-r1-h-position-check` | Int.2 | **ATIVADA — ONDA 3** | base `c971d5356...`; worker autorizado |
+| MOBILE-H Conferência | `mobile-r1-h-position-check` | Int.2 | **APROVADA / CONGELADA** | PR #241; HEAD `f30f4dcb...`; aguarda G antes da ordem de integração |
 | MOBILE-I Integração controlada | integradora | A–H | **BLOQUEADA** | — |
 | MOBILE-J Certificação | integradora | I | **BLOQUEADA** | — |
 
@@ -699,3 +699,51 @@ Integração:
 - não executar ainda;
 - aguardar handoffs/revisões de G e H;
 - definir ordem semântica somente com as três frentes conhecidas.
+
+
+### Revisão MOBILE-H — 2026-10-03
+
+Worker:
+- branch `mobile-r1-h-position-check`;
+- base `c971d5356c343a0819bf96ec016de73dd96a435d`;
+- HEAD `f30f4dcbb1d03d15230fa4414a7d1b95e231253e`;
+- PR #241;
+- estado: draft / mergeable / não mergeado.
+
+Classificação:
+**APROVADA / CONGELADA — AGUARDANDO MOBILE-G**.
+
+Evidências:
+- Application CI #937 SUCCESS;
+- Core #224 SUCCESS;
+- Recovery #616 SUCCESS;
+- Legal #40 SUCCESS;
+- MOBILE-H tests/guard SUCCESS;
+- physical query SUCCESS;
+- Phase 6/7/8 SUCCESS;
+- Integration 2 SUCCESS;
+- Production Build / Final TypeScript / Diff Hygiene SUCCESS.
+
+Contratos preservados:
+- jornada read-only posição → material → CORRETO/INCORRETO;
+- MOBILE-E como projeção física oficial;
+- alternativas por materialId bounded 60+1;
+- saturação e concorrência fail-closed;
+- revalidação EPX1 das alternativas;
+- nenhuma mutação, ledger ou operação de estoque;
+- navegação para MOBILE-D sem execução;
+- 0 listeners e nenhuma coleção/índice novo.
+
+Performance:
+- /central-mobile/conferir: 8.81 kB / 260 kB;
+- /central-mobile: 257 kB;
+- Shared First Load: 104 kB.
+
+Impacto transversal:
+**SEM NOVO DELTA TRANSVERSAL**.
+
+Integração:
+- não executar ainda;
+- F e H permanecem congeladas nos HEADs aprovados;
+- aguardar handoff/revisão de G;
+- definir ordem semântica F/G/H somente depois.
