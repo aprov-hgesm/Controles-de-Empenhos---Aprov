@@ -212,7 +212,9 @@
     "test:mobile-r1-scanner": "node --test scripts/warehouse-mobile-scanner.test.mjs",
     "verify:mobile-r1-platform-scanner": "node scripts/verify-mobile-r1-platform-scanner.mjs",
     "test:mobile-r1-integration-1": "node --test scripts/mobile-r1-integration-1.test.mjs",
-    "verify:mobile-r1-integration-1": "node scripts/verify-mobile-r1-integration-1.mjs"
+    "verify:mobile-r1-integration-1": "node scripts/verify-mobile-r1-integration-1.mjs",
+    "test:mobile-r1-physical-query": "node --test scripts/mobile-r1-physical-query.test.mjs",
+    "verify:mobile-r1-physical-query": "node scripts/verify-mobile-r1-physical-query.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
