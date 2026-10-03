@@ -440,3 +440,31 @@ Bloqueadas até cenário seguro/autorizado:
 
 Nenhum defeito novo PILOT-* foi reproduzido. Nenhuma correção funcional foi integrada. Impacto MOBILE-R1: nenhum delta funcional.
 
+### PILOT-B recebida pelo Coordenador
+
+Worker: `saas-p-b-commercial-nonvip`
+HEAD final: `d9ebea5a63aaf5b9571ee9d6a68c10c9d8ca3a28`
+PR: #227
+
+A branch ficou documental-only e divergiu da integradora após outras integrações coordenadas; por isso o PR deixou de ser mergeable. O handoff foi integrado **semanticamente** na branch coordenadora no commit `ecc74f14968ca1d45f8b17eb292b68cc057171e9` e o PR #227 foi fechado sem merge.
+
+Status da frente: **PREPARAÇÃO CONCLUÍDA / EVIDÊNCIA REAL PENDENTE**.
+
+Aceito:
+- contrato comercial R$70 / 30 dias / 5º dia útil / 10 dias;
+- J01/J10/J11/J18 preparados;
+- J12 bloqueado por pagamento real;
+- J13/J14 dependentes de J12;
+- J15–J20 dependentes de cenário real/autorizado;
+- nenhum defeito PILOT-* confirmado;
+- nenhuma mudança funcional;
+- Impacto MOBILE-R1: nenhum delta funcional.
+
+Correção coordenadora de snapshot Mobile:
+- MOBILE-A/B integradas;
+- Integração 1 certificada;
+- MOBILE-C/D/E liberadas;
+- freeze vigente da Onda 2: `6852963c7aa9a1c83133239f0b929715fd316530`.
+
+Próximo gate real da PILOT-B: selecionar participante P-03 real, novo, pós-corte e não isento.
+
