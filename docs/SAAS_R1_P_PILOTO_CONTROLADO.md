@@ -710,3 +710,28 @@ Escopo:
 Auth, legal, lifecycle, billing compartilhado, Rules, shell, sessão, workspace/UG, `warehouseAccess` e contratos comuns com MOBILE-R1 **não são áreas de correção paralela livre**. Qualquer necessidade de alteração nessas áreas retorna ao Coordenador, que cria correção curta com proprietário único e reconciliação Mobile.
 
 Estado atual: **topologia planejada; workers ainda não ativados**.
+
+## 3.2 Estratégia operacional temporária — validação concentrada em `aprovisionamento-teste`
+
+Enquanto P-01/P-02 não estiverem disponíveis para observação humana, a SAAS-P pode avançar com `aprovisionamento-teste` como ambiente funcional controlado.
+
+Pode ser usado agora para:
+- login e acesso normal;
+- shell/Home;
+- Central;
+- reset/troca de senha quando controlados;
+- sessão/lease;
+- permissões;
+- lifecycle J15–J20;
+- páginas públicas durante suspensão;
+- reativação e retorno aos dados;
+- smoke funcional geral.
+
+Limites:
+- não apagar/recriar aceite legal apenas para fabricar J05;
+- não usar `aprovisionamento-teste` como evidência de P-01/P-02 reais;
+- não usar como P-03, pois é VIP legado e não comprova trial/pagamento;
+- não promover J01/J10–J14 comerciais a PASS com esse workspace;
+- evidência humana P-01/P-02 continua pendente e poderá ser coletada posteriormente, de forma não disruptiva.
+
+A indisponibilidade temporária dos operadores reais **não bloqueia a continuação dos testes técnicos/funcionais** em `aprovisionamento-teste`.
