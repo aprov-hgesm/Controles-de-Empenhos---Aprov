@@ -767,3 +767,20 @@ O escopo detalhado, ownership e critérios de PASS/PARCIAL/BLOQUEADO estão norm
 
 Não ativar nenhum worker em base diferente. Não permitir que worker crie a própria branch a partir de uma integradora mais recente.
 
+### Freeze operacional da onda HARDEN
+
+Base única das quatro workers:
+`f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`
+
+Branches já existentes:
+- `saas-harden-a-security-dependencies`;
+- `saas-harden-b-recovery-restore`;
+- `saas-harden-c-release-health-rules`;
+- `saas-harden-d-mobile-reconciliation`.
+
+Não recriar, não rebasear e não atualizar com a integradora.
+
+Antes de editar, cada worker deve confirmar `git rev-parse HEAD` = `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`.
+
+Os chats ainda não foram ativados neste checkpoint.
+
