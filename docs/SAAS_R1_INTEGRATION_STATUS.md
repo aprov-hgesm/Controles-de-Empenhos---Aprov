@@ -646,3 +646,25 @@ Frentes paralelas previstas:
 - Coordenador — integração, conflitos, freeze do RC e decisão de liberação do piloto.
 
 Nenhuma dessas frentes possui autorização implícita para main, deploy, Rules produtivas ou restore real.
+
+## 24. Onda HARDEN — preparada para congelamento/ativação
+
+Topologia aprovada:
+- HARDEN-A — `saas-harden-a-security-dependencies`;
+- HARDEN-B — `saas-harden-b-recovery-restore`;
+- HARDEN-C — `saas-harden-c-release-health-rules`;
+- HARDEN-D — `saas-harden-d-mobile-reconciliation`.
+
+Estado: **PLANO DETALHADO PRONTO / CHATS AINDA NÃO ATIVADOS**.
+
+Documentos:
+- Memorial Oficial — seção normativa detalhada;
+- `docs/SAAS_R1_PRE_PILOTO_HARDENING.md`;
+- `docs/SAAS_R1_HARDENING_EXECUCAO_PARALELA.md`.
+
+Próximo ato coordenador:
+1. congelar um HEAD comum;
+2. criar as quatro branches exatamente nesse HEAD;
+3. registrar a base;
+4. somente depois gerar os quatro prompts de ativação.
+
