@@ -4,11 +4,11 @@
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
-Integradora SaaS R1: `feat/saas-r1-commercializacao@750d4c69cd3f233938631bcdd22db7e397ddc50e`
+Integradora SaaS R1: `feat/saas-r1-commercializacao@eca80c796e8d2916cafd6aa4d7419c8b27b931d5`
 
-Integradora Mobile R1: `feat/central-mobile-r1@2108a21208765e0d4155399667cf571b0fa127ff`
+Integradora Mobile R1: `feat/central-mobile-r1@3f3b53f7a286a1eb9bc9c254a4350ca7595153a4`
 
-Estado global: **Performance R3 publicada; SaaS R1 em hardening pré-piloto; Mobile R1 em Onda 3; Release Candidate ainda não congelado; piloto real ainda não iniciado; produção não alterada pelas ondas atuais.**
+Estado global: **Performance R3 permanece em produção; desenvolvimento funcional SaaS R1/Mobile R1 praticamente encerrado; HARDEN-A2 aguarda aceite formal do risco residual; HARDEN-B permanece parcial; MOBILE-J está em certificação final; RC conjunto SaaS+Mobile ainda não congelado; nenhuma publicação controlada foi autorizada ainda.**
 
 ---
 
@@ -80,9 +80,9 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | Domínio | Estado vigente | Observação |
 | --- | --- | --- |
 | Produção | **Performance R3 publicada** | `main@e90f92acae1514ee5cbc6ce95fed354bc1454330` |
-| SaaS R1 | **HARDENING PRÉ-PILOTO** | A parcial tecnicamente saudável; B parcial; C/D encerradas |
-| Mobile R1 | **MOBILE-I PASS / MOBILE-J PRÉ-CERTIFICAÇÃO LIBERADA** | PASS final da J condicionado a validação física + reconciliação SaaS final |
-| Release Candidate | **NÃO CONGELADO** | depende de hardening SaaS + checkpoint Mobile |
+| SaaS R1 | **HARDENING FINAL** | A1 PASS; A2 recomendada PASS com risco residual; B parcial; C/D PASS |
+| Mobile R1 | **DESENVOLVIMENTO FUNCIONAL ENCERRADO / MOBILE-J EM CERTIFICAÇÃO** | PR #246 documental; testes físicos/ambiente publicado ainda pendentes |
+| Release Candidate | **NÃO CONGELADO** | depende de aceite A2 + composição/reconciliação SaaS↔Mobile + CT-01 + gates exatos do RC |
 | Piloto real SaaS | **NÃO INICIADO** | só após RC controlado |
 | SAAS-J | **AGUARDANDO** | pós-piloto e correções finais |
 | MOBILE-I | **BLOQUEADA** | aguarda Integração 3 + checkpoint transversal |
@@ -830,52 +830,154 @@ Ações protegidas continuam dependendo da governança definida, especialmente:
 - usuários/workspaces reais;
 - GO/NO-GO de RC/release.
 
+
+## 31.1 Publicação controlada para certificação
+
+Decisão vigente do Program Control:
+
+o estágio atual do EMPROVEX **permite preparar e executar testes em ambiente publicado**, desde que a publicação seja tratada como certificação controlada de um Release Candidate e não como desenvolvimento improvisado em `main`.
+
+Fluxo obrigatório:
+
+```text
+fechar HARDEN-A2
+→ compor RC único SaaS + Mobile
+→ reconciliar Rules/package/CI/contratos compartilhados
+→ aplicar CT-01
+→ congelar SHA
+→ executar gates no SHA exato
+→ Preview HTTPS
+→ testes SaaS + Mobile
+→ GO/NO-GO explícito
+→ eventual promoção controlada
+```
+
+### Regra sobre `main`
+
+`main` continua sendo baseline conhecida e recuperável.
+
+Problemas encontrados em Preview ou produção controlada devem ser corrigidos em branch curta/hotfix rastreável, testados e integrados conscientemente.
+
+**Não usar `main` como branch de experimentação ou correção direta.**
+
+### Reversibilidade e risco
+
+Rollback de aplicação Vercel reverte código, mas **não reverte automaticamente**:
+
+- Firestore Rules;
+- Warehouse Rules;
+- documentos gravados;
+- movimentos de estoque;
+- ledger;
+- aceite legal;
+- billing/lifecycle;
+- demais writes persistidos.
+
+Por isso, publicação controlada exige três planos separados:
+
+1. rollback de aplicação;
+2. rollback de Rules;
+3. reconciliação/recuperação de dados quando necessário.
+
+Não executar rollback manual improvisado de estoque/ledger.
+
+### Estratégia de menor risco
+
+Durante certificação publicada:
+
+- usar workspace e materiais de teste;
+- evitar estoque institucional crítico;
+- evitar deletes;
+- evitar migração destrutiva;
+- evitar alterações massivas;
+- registrar IDs das operações de teste;
+- interromper novas escritas diante de dúvida de integridade.
+
+Problemas exclusivamente visuais não implicam rollback automático. Problemas de Auth, Rules, isolamento, saldo, ledger, idempotência ou integridade devem acionar NO-GO/rollback.
+
+
 ---
 
 # PARTE IX — RISCOS E GATES ABERTOS
 
 ## 32. Gates técnicos ainda abertos
 
-### SaaS
+### SaaS — antes do RC
 
-- conclusão/auditoria da HARDEN-A;
-- backup READY em ambos os bancos;
-- `recovery:verify`;
-- restore isolado real;
-- composição do HEAD candidato;
-- materialização de CT-01;
-- gates finais combinados.
+1. **HARDEN-A2 — aceite formal**
+   - PR #247;
+   - HEAD `d647793f256c28eb412950d306d0427549577ee0`;
+   - delta somente documental;
+   - recomendação técnica: **PASS — RISCO RESIDUAL ACEITO TECNICAMENTE**;
+   - nenhuma dependência/runtime/Rules alterados;
+   - falta decisão formal do Coordenador SaaS/Program Control para encerrar a frente.
 
-### Mobile
+2. **HARDEN-B — recovery**
+   - continua PARCIAL;
+   - PITR/delete protection/schedule/retenção já confirmados;
+   - permanecem pendentes backup READY, `recovery:verify` e restore isolado real.
 
-- executar a pré-certificação MOBILE-J;
-- concluir validações físicas reais;
-- manter CT-01 preservada para o futuro RC;
-- aguardar estabilização HARDEN-A1/A2;
-- executar reconciliação SaaS↔Mobile final antes do PASS da MOBILE-J;
-- repetir gates afetados pelo upstream.
+Para **Preview HTTPS sem writes críticos**, HARDEN-B parcial não bloqueia.
 
-### Global
+Para **produção controlada com writes reais**, o caminho mais seguro é exigir backup READY dos dois bancos e `recovery:verify` antes do GO. Se isso ainda não existir, qualquer promoção exige aceitação explícita do risco residual pelo Fundador.
 
-- reconciliação do HEAD candidato SaaS com o estado Mobile pós-Integração 3;
-- RC Candidate;
-- RC Frozen;
-- publicação controlada;
-- piloto real;
-- correções pós-piloto;
-- certificação final.
+### Mobile — antes do PASS final
+
+- desenvolvimento funcional A–I encerrado;
+- MOBILE-J em certificação final no PR #246;
+- executar testes físicos em dispositivo real;
+- validar câmera/fallback/Code128/som/vibração;
+- validar jornada física ponta a ponta;
+- repetir reconciliação contra o RC SaaS final.
+
+Não há nova feature Mobile obrigatória antes da janela de testes.
+
+### RC conjunto — antes de publicar
+
+Obrigatório:
+
+1. encerrar A2 formalmente;
+2. criar branch RC única;
+3. reconciliar semanticamente SaaS + Mobile;
+4. preservar Rules SaaS/Mobile já idênticas entre si;
+5. registrar conteúdo/hash das Rules atualmente produtivas e das Rules do RC;
+6. materializar CT-01: `camera=(self), microphone=(), geolocation=()`;
+7. reconciliar `package.json`, lockfile e Application CI sem perder gates Mobile/SaaS;
+8. rodar todos os gates obrigatórios no SHA exato do RC;
+9. congelar o SHA;
+10. testar primeiro em Preview HTTPS;
+11. somente depois decidir GO/NO-GO de produção controlada.
+
+### Correções encontradas nos testes
+
+Correção deve seguir:
+
+```text
+bug
+→ branch curta/hotfix
+→ teste
+→ integração no RC
+→ gates afetados
+→ novo freeze quando necessário
+```
+
+Não corrigir diretamente em `main`.
 
 ## 33. Riscos que não podem ser esquecidos
 
-- sobrescrever CT-01 e quebrar scanner Mobile;
+- publicar antes do aceite formal da HARDEN-A2;
+- promover código sem RC único/reconciliado;
+- sobrescrever CT-01 e quebrar câmera Mobile;
+- publicar Rules sem cópia/hash e procedimento de rollback;
+- confundir rollback Vercel com rollback de dados;
+- testar operações destrutivas em workspace/estoque institucional;
+- corrigir diretamente em `main`;
 - criar fonte paralela logística;
-- aplicar merge/rebase cego entre integradoras;
-- tratar build-rate-limit como regressão de código;
-- confundir documentação histórica com estado vigente;
+- merge/rebase cego entre integradoras;
 - perder evidência de backup/restore;
-- iniciar piloto antes do RC;
 - considerar CI verde como autorização produtiva;
-- avançar MOBILE-I antes do checkpoint pós-Integração 3.
+- declarar MOBILE-J PASS final antes da reconciliação contra o RC;
+- considerar ajuste visual de PDF como blocker sem defeito funcional real.
 
 ---
 
@@ -965,13 +1067,17 @@ Passaram a ser oficiais:
 - Onda 3 liberada;
 - F/G/H iniciadas.
 
-### 2026-10-03 — Hardening SaaS
+### 2026-10-03 — Hardening final e preparação de certificação publicada
 
-- HARDEN-D: PASS/encerrada;
-- HARDEN-C: PASS/encerrada;
-- HARDEN-B: parcial por dependência temporal;
-- HARDEN-A: parcial tecnicamente saudável / pendências de segurança;
-- CT-01 formalizada para o RC.
+- HARDEN-A1/jsPDF: PASS/encerrada; CRITICAL eliminado; acabamento visual fino movido para backlog não bloqueante;
+- HARDEN-A2/Firebase-Firestore-gRPC: auditoria concluída sem alteração de runtime; recomendação PASS com risco residual tecnicamente aceito; aguarda aceite formal;
+- HARDEN-B: parcial por dependência temporal de backup READY/restore;
+- HARDEN-C/D: PASS/encerradas;
+- MOBILE-I: PASS/integrada;
+- MOBILE-J: certificação final em execução;
+- CT-01 permanece obrigatória no RC;
+- Program Control aprovou a estratégia de RC conjunto + Preview HTTPS + eventual produção controlada com rollback preparado;
+- produção continua na Performance R3.
 
 ---
 
@@ -1117,37 +1223,41 @@ Se um novo Coordenador assumir agora, deve considerar:
 ```text
 PRODUÇÃO
 main@e90f92acae1514ee5cbc6ce95fed354bc1454330
-Performance R3 publicada
+Performance R3
 
 SAAS R1
-integrador: feat/saas-r1-commercializacao@75202b0ac8bb888484ca3f124dea974daf68a654
-HARDEN-A: em execução
-HARDEN-B: parcial / backup READY + restore pendentes
-HARDEN-C: PASS / encerrada
-HARDEN-D: PASS / encerrada
-CT-01: obrigatória antes do RC
+integrador: feat/saas-r1-commercializacao@eca80c796e8d2916cafd6aa4d7419c8b27b931d5
+HARDEN-A1: PASS / encerrada
+HARDEN-A2: auditoria concluída / recomendação PASS com risco residual / aguarda aceite formal
+HARDEN-B: parcial / backup READY + recovery:verify + restore pendentes
+HARDEN-C: PASS
+HARDEN-D: PASS
 
 MOBILE R1
-integrador: feat/central-mobile-r1@2108a21208765e0d4155399667cf571b0fa127ff
-F/G/H: integradas / certificadas
-Integração 3: certificada
+integrador: feat/central-mobile-r1@3f3b53f7a286a1eb9bc9c254a4350ca7595153a4
+desenvolvimento funcional: encerrado
 MOBILE-I: PASS / integrada
-MOBILE-J: pré-certificação liberada / PASS final bloqueado por validação física + upstream SaaS final
+MOBILE-J: certificação final em execução — PR #246
+blocker funcional: nenhum
 
 RELEASE
-RC: não congelado
-piloto real: não iniciado
-produção alterada pelas ondas atuais: não
+RC conjunto SaaS + Mobile: ainda não congelado
+CT-01: obrigatória
+Rules SaaS/Mobile: reconciliadas entre si; diferentes de main
+Preview HTTPS: próximo ambiente recomendado após freeze/gates
+produção controlada: exige GO explícito posterior
+abertura comercial: fora de escopo da janela de certificação
 
-PRÓXIMO GATE GLOBAL
-fechar HARDEN-A1/A2
-+ fechar HARDEN-B
-+ executar pré-certificação MOBILE-J
-+ validação física real
-+ reconciliação SaaS↔Mobile final
-+ aplicar CT-01
-+ gates combinados
-→ avaliar RC Candidate / RC Frozen
+PRÓXIMA SEQUÊNCIA SEGURA
+aceitar/encerrar HARDEN-A2
+→ compor RC único
+→ reconciliar SaaS↔Mobile/package/CI/Rules
+→ aplicar CT-01
+→ preparar rollback
+→ gates no SHA exato
+→ Preview HTTPS
+→ testes físicos + SaaS
+→ decidir GO/NO-GO de produção controlada
 ```
 
 Este bloco deve ser mantido coerente com o Snapshot Global do início do documento.
@@ -1237,4 +1347,3 @@ Base congelada:
 A frente deve primeiro provar alcance real dos advisories e compatibilidade do caminho suportado. O objetivo não é zerar `npm audit` a qualquer custo, e sim reduzir risco real sem quebrar Auth, Firestore, multi-tenant, Central, SaaS ou Mobile.
 
 MOBILE-J pode continuar em paralelo em pré-certificação; HARDEN-B segue aguardando recovery.
-
