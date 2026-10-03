@@ -276,3 +276,28 @@ Somente encerrar quando:
 - pendências remanescentes resolvidas ou aceitas explicitamente.
 
 Só então abrir SAAS-J.
+
+## 14. Modo de execução quando P-01/P-02 não estiverem disponíveis
+
+A ausência momentânea dos operadores reais não interrompe a SAAS-P.
+
+Usar `aprovisionamento-teste` para executar o máximo possível das jornadas funcionais e de lifecycle.
+
+Classificação:
+- resultado no workspace de teste = evidência funcional/controlada;
+- resultado em P-01/P-02 = evidência humana operacional real;
+- resultado em P-03 = evidência comercial real.
+
+Essas três classes não devem ser confundidas.
+
+Ordem recomendada enquanto P-01/P-02 estiverem indisponíveis:
+1. login normal no `aprovisionamento-teste`;
+2. shell/Home;
+3. Central;
+4. sessão;
+5. reset/troca de senha se necessário para testar;
+6. registrar estado atual de aceite legal sem manipular;
+7. snapshot de dados antes do lifecycle;
+8. J15–J20, mediante autorização específica para suspensão;
+9. T1/T2;
+10. posteriormente observar P-01/P-02 quando os operadores estiverem disponíveis.
