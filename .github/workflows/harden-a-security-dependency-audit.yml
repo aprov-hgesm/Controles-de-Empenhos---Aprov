@@ -60,6 +60,28 @@ jobs:
             echo "No vulnerable packages reported."
           fi
 
+      - name: Simulate safe npm audit fix
+        shell: bash
+        run: |
+          cp package-lock.json /tmp/package-lock.before.json
+          set +e
+          npm audit fix --package-lock-only > /tmp/npm-audit-fix.txt 2>&1
+          fix_code=$?
+          npm audit --json > /tmp/npm-audit-after-fix.json
+          after_code=$?
+          set -e
+          echo "HARDEN_A_SAFE_FIX_EXIT_CODE=$fix_code"
+          echo "HARDEN_A_AFTER_FIX_AUDIT_EXIT_CODE=$after_code"
+          echo "HARDEN_A_SAFE_FIX_OUTPUT_BEGIN"
+          cat /tmp/npm-audit-fix.txt
+          echo "HARDEN_A_SAFE_FIX_OUTPUT_END"
+          echo "HARDEN_A_AFTER_FIX_JSON_BEGIN"
+          cat /tmp/npm-audit-after-fix.json
+          echo "HARDEN_A_AFTER_FIX_JSON_END"
+          echo "HARDEN_A_SAFE_FIX_DIFF_BEGIN"
+          git diff -- package-lock.json
+          echo "HARDEN_A_SAFE_FIX_DIFF_END"
+
       - name: TypeScript
         run: npm run typecheck
 
