@@ -553,3 +553,19 @@ Regras para ativação:
 5. conflito transversal volta ao Coordenador;
 6. qualquer alteração em domínio compartilhado exige **Impacto MOBILE-R1**;
 7. o Coordenador mantém J01–J24 e decide gates de SAAS-J.
+
+## 24. Workers SAAS-P ativáveis
+
+Freeze da onda:
+
+`4d87370e5ee7f2697ab4901e0c045a9ab4910fe9`
+
+Branches já criadas:
+
+- `saas-p-a-vip-journeys`;
+- `saas-p-b-commercial-nonvip`;
+- `saas-p-c-recovery-uptime`;
+- `saas-p-d-evidence-observability`.
+
+Próximo passo do Coordenador: emitir os quatro prompts independentes. Workers não fazem integração cruzada. Qualquer necessidade de alteração transversal retorna ao Coordenador.
+
