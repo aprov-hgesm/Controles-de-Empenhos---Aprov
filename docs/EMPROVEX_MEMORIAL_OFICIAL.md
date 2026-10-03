@@ -2411,3 +2411,20 @@ Foi validada visualmente uma sessão autenticada do perfil `Aprovisionamento Tes
 - ambiente visualmente operacional.
 
 A evidência é classificada como smoke funcional/controlado e não substitui as futuras evidências humanas de P-01/P-02 nem comprova novo aceite legal.
+
+### Correção crítica — site produtivo atual não contém o candidato SaaS R1
+
+Em conferência viva de 2026-10-02:
+- `main` = `e90f92acae1514ee5cbc6ce95fed354bc1454330`;
+- `feat/saas-r1-commercializacao` = `46fba355227e715c553484b2d65b7c52fcf30d39`;
+- integradora SaaS = **117 commits à frente e 0 atrás da main**.
+
+Não houve deploy autorizado do candidato SaaS R1 nesta rodada.
+
+Regra de interpretação:
+- o domínio produtivo atualmente acessado pelos usuários representa **produção pré-SaaS / Performance R3** enquanto não houver publicação controlada do candidato;
+- T0 coletado no site atual é o **baseline pré-release correto**;
+- screenshots de login/shell/Central no site atual validam a produção vigente, mas não certificam as features SaaS ainda não publicadas;
+- materialização VIP e controles de recovery já aplicados externamente permanecem válidos porque independem de deploy Vercel;
+- Rules/features SaaS não devem ser presumidas em produção sem publicação explícita;
+- antes de validar J01–J20 como SaaS real é necessário disponibilizar o candidato em ambiente compatível, respeitando a política de deploy e reconciliação com MOBILE-R1.
