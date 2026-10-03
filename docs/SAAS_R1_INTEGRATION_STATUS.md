@@ -502,3 +502,32 @@ Foram aceitos:
 
 Pendências materiais permanecem: participantes reais, P-03 pago, custos numéricos, PILOT-C, backup READY/restore e health/uptime/alertas reais.
 
+### PILOT-C recebida pelo Coordenador
+
+Worker: `saas-p-c-recovery-uptime`
+HEAD final: `5e1a1541630e9b7b8d1ff4bb33dc3a5c2dd48322`
+PR: #225
+
+A branch divergiu da integradora após o freeze comum e o PR deixou de ser mergeable. O handoff foi integrado **semanticamente** sem rebasear a worker.
+
+Commits coordenadores:
+- handoff PILOT-C: `227a27ac5a9e626db73d61b67ec6829d708c61c7`;
+- reconciliação J23/J24 na matriz: `5163520aecc50a21d67c4e374ded6cd55069ba03`.
+
+PR #225: fechado sem merge.
+
+Status da frente: **PARCIAL / BLOQUEADO EXTERNAMENTE**.
+
+Aceito:
+- PITR/delete protection/schedule 14 semanas preservados nos dois bancos;
+- último estado conhecido ainda sem backup READY;
+- nenhum novo apply;
+- restore real não executado;
+- PR #223 health continua draft, mergeable, não publicado e com CI/Core/Recovery verdes;
+- J23 PREPARADO;
+- J24 EM EXECUÇÃO;
+- nenhum bug PILOT-OPS novo;
+- nenhum impacto funcional MOBILE-R1.
+
+Próxima ação de recovery: uma nova leitura autenticada `recovery:status` + `recovery:verify` quando houver chance razoável de o primeiro backup diário ter concluído.
+
