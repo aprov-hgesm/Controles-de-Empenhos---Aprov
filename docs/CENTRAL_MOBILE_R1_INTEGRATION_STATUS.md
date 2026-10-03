@@ -8,7 +8,7 @@ Freeze documental / base comum da Onda 1: `53e28b81874ee1b7ce0bd484cc7a97537aa99
 Freeze documental / base comum da Onda 2 após reconciliação SaaS: `6852963c7aa9a1c83133239f0b929715fd316530`
 Freeze documental / base comum da Onda 3 após Integração 2 + reconciliação SaaS: `c971d5356c343a0819bf96ec016de73dd96a435d`
 
-Estado global: **ONDAS 1–3 INTEGRADAS / INTEGRAÇÃO 3 CERTIFICADA / AGUARDANDO CHECKPOINT DO PROGRAM CONTROL ANTES DA MOBILE-I**
+Estado global: **ONDAS 1–3 INTEGRADAS / INTEGRAÇÃO 3 CERTIFICADA / MOBILE-I ATIVADA / MOBILE-J BLOQUEADA**
 
 ## 1. Baseline
 
@@ -39,7 +39,7 @@ Dependência:
 | MOBILE-F Inventário | `mobile-r1-f-inventory` | Int.2 | **INTEGRADA / CERTIFICADA** | worker #239; HEAD `42954ada...`; Integração 3 PR #243 / squash `f11b7bf2...` |
 | MOBILE-G Saída | `mobile-r1-g-outbound` | Int.2 | **INTEGRADA / CERTIFICADA** | worker #242; HEAD `0b513edf...`; Legal #41 resolvido por Legal #42 verde |
 | MOBILE-H Conferência | `mobile-r1-h-position-check` | Int.2 | **INTEGRADA / CERTIFICADA** | worker #241; HEAD `f30f4dcb...`; Integração 3 PR #243 / squash `f11b7bf2...` |
-| MOBILE-I Integração controlada | integradora | A–H | **BLOQUEADA** | — |
+| MOBILE-I Integração controlada | `mobile-r1-i-integration` | A–H | **ATIVADA** | base `816c1c07...`; integração/UX/regressão final |
 | MOBILE-J Certificação | integradora | I | **BLOQUEADA** | — |
 
 ## 3. Contratos congelados
@@ -885,3 +885,39 @@ Deltas:
 
 MOBILE-I permanece **BLOQUEADA** até decisão do Program Control sobre o checkpoint pós-Integração 3.
 Produção não alterada.
+
+
+### Liberação MOBILE-I pelo Program Control — 2026-10-03
+
+Checkpoint pós-Integração 3:
+- ACEITO pelo Program Control;
+- Integração 3: PASS;
+- MOBILE-R1: VERDE;
+- delta package/CI: ACEITO / COMPATÍVEL / TOOLING ADITIVO;
+- novo delta funcional: NENHUM;
+- CT-01: preexistente / aceita / obrigatória antes do RC;
+- MOBILE-J: continua bloqueada.
+
+Branch MOBILE-I criada:
+`mobile-r1-i-integration`.
+
+Base congelada:
+`816c1c07cf251ce3705098a3a65b9d84e2fc8614`.
+
+Missão:
+- integração controlada;
+- UX;
+- regressão;
+- glue final;
+- validação A–H como um único produto;
+- medição de performance;
+- reconciliação SaaS antes do fechamento.
+
+Proibições:
+- sem feature nova;
+- sem alteração de Auth/billing/lifecycle/legal/warehouseAccess;
+- sem Rules;
+- sem CT-01;
+- sem produção.
+
+MOBILE-J só pode ser avaliada após handoff/checkpoint pós-MOBILE-I ao Program Control.
