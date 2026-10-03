@@ -1,9 +1,9 @@
 # EMPROVEX — Memorial Oficial do Repositório
 
-Última atualização: **2026-10-02 — SAAS-P em execução; P2 VIP concluída; recovery produtivo configurado; P3 aguardando backups READY/restore; health preparado; Central Móvel R1 em desenvolvimento coordenado**
+Última atualização: **2026-10-02 — HARDENING PRÉ-PILOTO ativo; T0 pré-release completo; piloto real adiado até Release Candidate; recovery/restore e health/release pendentes; Central Móvel R1 em desenvolvimento coordenado**
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 Branch integradora do SaaS R1: `feat/saas-r1-commercializacao`
-Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A, SAAS-B, SAAS-C, SAAS-DL, SAAS-E, SAAS-DS e SAAS-I INTEGRADAS; candidato SaaS R1 combinado certificado no repositório; SAAS-P INICIADA para preparação e piloto controlado**
+Estado: **Performance R3 PUBLICADA E ENCERRADA; SAAS-A/B/C/DL/E/DS/I INTEGRADAS; candidato SaaS R1 em HARDENING PRÉ-PILOTO; piloto real NÃO INICIADO; SAAS-J AGUARDANDO**
 
 Este documento é a **porta de entrada canônica para continuidade do EMPROVEX como produto**. Ele resume o estado vigente e aponta para os documentos históricos/especializados. O histórico detalhado não deve ser apagado. Para comportamento publicado, `main` prevalece. Para o ciclo SaaS R1 em desenvolvimento, prevalecem `feat/saas-r1-commercializacao`, este memorial e os quatro documentos canônicos `SAAS_R1_*`.
 
@@ -668,7 +668,7 @@ A meta de capacidade comercial é até 100 usuários registrados, distinguindo c
 
 Workers nunca fazem merge em `main`, deploy Vercel, deploy de Rules ou promoção de produção.
 
-A branch integradora só chega à produção após SAAS-J e autorização explícita do usuário.
+A **release final / abertura comercial** da branch integradora só ocorre após SAAS-J e autorização explícita do usuário. Antes disso, o Release Candidate pode ser disponibilizado em ambiente de piloto controlado — preview/staging ou, se tecnicamente necessário, publicação controlada no ambiente existente — somente com autorização explícita, rollback definido e sem abertura comercial ampla.
 
 ## 8. Programa ativo — Central Móvel R1
 
@@ -1864,7 +1864,7 @@ Produção:
 - nenhuma migração VIP produtiva;
 - nenhum deploy de Rules.
 
-Com a integração e certificação da SAAS-I, a **SAAS-P está formalmente liberada** para piloto controlado. As pendências externas de PITR, delete protection, backup READY, restore real e uptime/alertas continuam gates obrigatórios para a certificação SAAS-J.
+Com a integração e certificação da SAAS-I, a SAAS-P havia sido inicialmente liberada para preparação de piloto. **Essa ordem foi posteriormente substituída pela reorganização oficial de 2026-10-02:** backup READY/restore, segurança, health/release e reconciliação Mobile passam a ser hardening obrigatório antes do piloto real.
 
 
 ### Coordenação obrigatória SaaS R1 ↔ Central Móvel R1 — desenvolvimento paralelo — 2026-10-02
@@ -2016,7 +2016,7 @@ A política passa a ser:
 
 Auditoria coordenadora após P2/P3 confirmou o estado corrente:
 
-- **SAAS-P:** em execução;
+- **SAAS-P naquele checkpoint:** em preparação/execução documental; estado corrente posteriormente reorganizado para HARDENING PRÉ-PILOTO;
 - **P2 VIP legado:** concluída e verificada 3/3;
 - **P3 recovery:** PITR + delete protection + backup diário de 14 semanas ativos nos dois bancos; aguardando primeiro backup READY em cada banco, `recovery:verify` verde e restore real isolado;
 - **health:** PR #223 (`saas-p-ops-health-endpoint`) preparado diretamente de `main`, draft, mergeable e com Application CI, Core Protection e Recovery guardrails em SUCCESS; não mergeado e não publicado;
