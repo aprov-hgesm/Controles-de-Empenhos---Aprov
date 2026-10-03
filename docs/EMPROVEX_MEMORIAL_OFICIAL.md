@@ -627,8 +627,8 @@ Frentes ativadas:
 
 **Fechamento**
 - **SAAS-I — integração controlada: APROVADA E INTEGRADA via PR #219 / squash `25dda487...`**;
-- **SAAS-P — piloto: EM EXECUÇÃO**;
-- SAAS-J — certificação comercial;
+- **SAAS-P — piloto real: ADIADO até Release Candidate congelado**;
+- SAAS-J — certificação final pós-piloto;
 - SaaS aberto somente com decisão explícita do usuário.
 
 ### Operação/backup
@@ -1517,7 +1517,7 @@ Regras de largada:
 - cada chat deve ler os cinco documentos canônicos antes de alterar código;
 - nenhuma frente pode redefinir preço, trial, VIP, arquitetura de banco ou estados compartilhados;
 - SAAS-DS permanece bloqueada até B e C estarem integradas;
-- SAAS-I está **CONCLUÍDA E INTEGRADA**; SAAS-P está **EM EXECUÇÃO**; SAAS-J permanece **AGUARDANDO** o fechamento da SAAS-P;
+- SAAS-I está **CONCLUÍDA E INTEGRADA**; a fase corrente é **HARDENING PRÉ-PILOTO**; o piloto real da SAAS-P foi adiado até o Release Candidate; SAAS-J permanece **AGUARDANDO** o piloto e as correções finais;
 - handoff completo é obrigatório para integração;
 - somente o Coordenador integra;
 - nenhuma publicação em produção ocorre sem autorização explícita posterior do usuário.
@@ -2428,3 +2428,94 @@ Regra de interpretação:
 - materialização VIP e controles de recovery já aplicados externamente permanecem válidos porque independem de deploy Vercel;
 - Rules/features SaaS não devem ser presumidas em produção sem publicação explícita;
 - antes de validar J01–J20 como SaaS real é necessário disponibilizar o candidato em ambiente compatível, respeitando a política de deploy e reconciliação com MOBILE-R1.
+
+### REORGANIZAÇÃO OFICIAL DA RETA FINAL DO SAAS R1 — 2026-10-02
+
+**Esta seção é a orientação corrente e prevalece sobre trechos históricos anteriores que tratavam o piloto real como etapa já em execução.**
+
+Decisão do fundador:
+> O piloto real deve ser a **última grande prova operacional antes da validação/correção de detalhes e da finalização completa do lançamento da nova versão**.
+
+Nova sequência obrigatória:
+
+1. **Hardening pré-piloto**;
+2. **Reconciliação SaaS R1 ↔ MOBILE-R1**;
+3. **Segurança/dependências + recovery/restore + health/Rules/release**;
+4. **Freeze do Release Candidate**;
+5. **Publicação controlada do RC e smoke técnico**;
+6. **Piloto real final**;
+7. **Correções finais pós-piloto**;
+8. **SAAS-J — Certificação Final**;
+9. **Lançamento completo / abertura comercial**, somente com autorização explícita.
+
+#### Estado atual
+
+- produção: Performance R3 em `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`;
+- candidato SaaS R1: integradora `feat/saas-r1-commercializacao`;
+- T0 pré-release: **COMPLETO** e preservado;
+- P-01/P-02: confirmados e protegidos;
+- `aprovisionamento-teste`: reservado para lifecycle disruptivo no **piloto final**;
+- P-03: ainda não selecionado;
+- piloto real: **NÃO INICIADO / ADIADO**;
+- fase vigente: **HARDENING PRÉ-PILOTO**;
+- SAAS-J: aguardando piloto + correções pós-piloto;
+- lançamento final: não autorizado.
+
+#### Gates obrigatórios antes de iniciar o piloto real
+
+- triagem/correção controlada dos advisories de dependências, sem `npm audit fix --force` cego;
+- Application CI/build/typecheck/Core Protection/Recovery/Legal e guards aplicáveis verdes no candidato;
+- backup READY nos dois bancos;
+- `recovery:verify` verde;
+- restore real em database isolado, mediante autorização específica, com validação de dados/IAM/Rules/TTL;
+- health integrado ao candidato;
+- estratégia de uptime/alert/channel pronta e validada quando o RC for publicado;
+- pacote exato de Rules e ordem de rollout/rollback;
+- reconciliação semântica atualizada com a integradora MOBILE-R1;
+- incidentes técnicos pré-piloto bloqueantes resolvidos;
+- commit exato do Release Candidate congelado.
+
+#### Piloto real final
+
+Somente após os gates acima:
+- P-01 `aprovisionamento-3-gac-ap`: observação não disruptiva;
+- P-02 `aprovisionamento-2-b-fv`: observação não disruptiva;
+- `aprovisionamento-teste`: J15–J20 e cenários controlados;
+- P-03: cliente real novo não-VIP para onboarding/trial/pagamento;
+- T1/T2: coletados sobre o RC publicado;
+- nenhum PASS fabricado.
+
+Durante o piloto, não expandir produto. Correções imediatas apenas para segurança, perda de dados ou indisponibilidade crítica. Demais achados são congelados para a etapa seguinte.
+
+#### Pós-piloto e SAAS-J
+
+Ao terminar o piloto:
+1. congelar evidências e lista de achados;
+2. classificar bugs/UX/custo/operação;
+3. corrigir em branches curtas coordenadas;
+4. repetir apenas os gates/jornadas afetados;
+5. congelar o candidato final corrigido;
+6. executar SAAS-J;
+7. somente com SAAS-J aprovada e autorização do fundador, realizar lançamento completo.
+
+#### Desenvolvimento paralelo coordenado permanece oficial
+
+A nova fase continua usando o método oficial de 1 Coordenador + até 4 workers:
+- **HARDEN-A:** segurança, dependências, CI e regressão;
+- **HARDEN-B:** backup READY, recovery e restore isolado;
+- **HARDEN-C:** health, Rules, pacote de release/Vercel e rollback;
+- **HARDEN-D:** reconciliação SaaS↔Mobile, matriz e evidências;
+- **Coordenador:** integração, conflitos, Memorial, freeze do RC e liberação do piloto.
+
+Regras:
+- branches exclusivas e base congelada;
+- sem merge/rebase cruzado;
+- handoff obrigatório;
+- nenhum worker publica main/Vercel/Rules ou executa restore real sem autorização;
+- conflitos em Auth, workspace/UG, sessão, legal, lifecycle, Rules, shell, Central ou schema retornam ao Coordenador;
+- toda mudança compartilhada contém **Impacto MOBILE-R1**.
+
+Documento detalhado da fase:
+`docs/SAAS_R1_PRE_PILOTO_HARDENING.md`.
+
+O T0 já coletado não é descartado: ele é o **baseline oficial pré-release** para comparação com T1/T2 durante/depois do piloto final.
