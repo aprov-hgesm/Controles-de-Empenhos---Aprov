@@ -2028,3 +2028,116 @@ Auditoria coordenadora após P2/P3 confirmou o estado corrente:
 - **SAAS-J:** ainda não iniciada; exige encerramento do piloto, recovery/uptime comprovados e reconciliação final SaaS ↔ Mobile.
 
 Esta conferência substitui snapshots antigos apenas como **estado corrente**; os registros anteriores permanecem como histórico datado.
+
+### SAAS-P — topologia paralela oficial da fase de piloto — 2026-10-02
+A próxima etapa da SAAS-P deve seguir uma topologia controlada de **até 5 chats simultâneos**:
+
+- **1 Chat Coordenador / Integrador / Avaliador**;
+- **PILOT-A — Participantes e Jornadas VIP**;
+- **PILOT-B — Piloto Comercial Não-VIP**;
+- **PILOT-C — Operação, Recovery, Health e Uptime**;
+- **PILOT-D — Custos, Observabilidade e Matriz de Evidências**.
+
+Esse número é um **limite operacional recomendado para esta fase**, não um limite técnico da plataforma. O objetivo é maximizar paralelismo sem criar concorrência em Auth, lifecycle, billing, Rules, shell ou contratos compartilhados da Central.
+
+#### Papel do Coordenador
+
+O Coordenador permanece proprietário de:
+
+- estado global da SAAS-P;
+- definição/ativação de branches;
+- emissão dos prompts;
+- leitura dos handoffs;
+- classificação de falhas;
+- integração semântica;
+- atualização do Memorial, Integration Status e Handoff;
+- autorização de mudanças transversais;
+- reconciliação obrigatória com MOBILE-R1;
+- decisão sobre gates para SAAS-J.
+
+O Coordenador **não deve competir com os workers implementando silenciosamente o mesmo escopo**.
+
+#### PILOT-A — Participantes e Jornadas VIP
+
+Objetivo:
+- formalizar P-01/P-02;
+- executar jornadas funcionais seguras com workspaces VIP legado;
+- validar login, reset/troca de senha quando aplicável, aceite legal, acesso ao EMPROVEX, Central, sessão/permissões, condição VIP/R$0 e evidências;
+- registrar J02–J09 e demais jornadas aplicáveis.
+
+Não é proprietário de:
+- criação do novo pagante;
+- alteração de billing;
+- recovery/uptime;
+- correções transversais improvisadas.
+
+#### PILOT-B — Piloto Comercial Não-VIP
+
+Objetivo:
+- preparar P-03 novo e não isento;
+- validar onboarding, trial de 30 dias, preço de R$70/mês, pagamento externo simples, confirmação administrativa, regularização, suspensão/reativação e preservação do tenant/dados;
+- registrar principalmente J01 e J10–J20.
+
+Enquanto não houver participante real autorizado, este worker pode preparar roteiro, evidência e validações não produtivas, mas **não deve criar cliente fictício em produção apenas para satisfazer gate**.
+
+#### PILOT-C — Operação, Recovery, Health e Uptime
+
+Objetivo:
+- acompanhar backup READY dos dois bancos;
+- executar/verificar `recovery:verify` quando houver backup;
+- preparar e conduzir restore real em banco isolado quando autorizado;
+- manter o PR #223 de `/api/health` preparado;
+- conduzir uptime check, alert policy e notification channel quando houver publicação autorizada;
+- registrar J23/J24.
+
+Não deve repetir `apply` de recovery quando os controles já estiverem ativos.
+
+#### PILOT-D — Custos, Observabilidade e Evidências
+
+Objetivo:
+- manter baseline e registros de leituras/custos;
+- consolidar a matriz J01–J24;
+- registrar incidentes, dúvidas, resultados e evidências;
+- verificar completude documental do piloto;
+- preparar a visão de encerramento para SAAS-J.
+
+Não deve alterar código funcional para “fazer a evidência passar”.
+
+#### Regras de paralelismo
+
+Os quatro workers podem avançar simultaneamente somente enquanto seus escopos permanecerem independentes.
+
+Se qualquer worker detectar necessidade de alterar:
+- Auth;
+- workspace/UG;
+- sessão/lease;
+- legal gate;
+- lifecycle;
+- billing compartilhado;
+- Firestore Rules;
+- shell;
+- `warehouseAccess`;
+- contratos comuns desktop/mobile;
+- schema/fonte de verdade compartilhada;
+
+deve **interromper a expansão daquele ponto e devolver ao Coordenador**.
+
+O Coordenador então decide se:
+1. abre uma branch curta `saas-p-fix-<dominio>-<slug>`;
+2. designa um único proprietário;
+3. exige seção **Impacto MOBILE-R1**;
+4. reconcilia semanticamente antes de integração.
+
+Nenhum worker:
+- faz merge direto em `main`;
+- publica Vercel produção;
+- publica Rules;
+- executa mudança produtiva irreversível sem autorização aplicável;
+- integra outra frente por conta própria.
+
+#### Estado de ativação
+
+Neste registro:
+- topologia **PLANEJADA E APROVADA COMO MÉTODO**;
+- PILOT-A/B/C/D **AINDA NÃO ATIVADOS COMO CHATS TRABALHADORES**;
+- branches exclusivas devem ser criadas/congeladas somente no momento da ativação coordenada.
