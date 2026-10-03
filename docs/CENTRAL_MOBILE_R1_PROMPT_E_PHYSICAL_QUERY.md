@@ -4,6 +4,17 @@ Você é o chat trabalhador responsável **exclusivamente** pela frente:
 
 **MOBILE-E — Consulta Física Móvel da Central Móvel R1 do EMPROVEX**
 
+
+## Coordenação SaaS R1 ↔ MOBILE-R1
+
+A SAAS-P está em execução paralela na `feat/saas-r1-commercializacao`.
+
+Antes de alterar qualquer domínio compartilhado (Auth, workspace/UG, sessão/lease, legal gate, lifecycle, warehouseAccess, Rules, shell, contratos comuns da Central, helpers compartilhados ou package/CI comum):
+- não incorpore mudanças do SaaS por conta própria;
+- compare/consulte o estado canônico quando necessário;
+- se sua frente tocar domínio compartilhado, registre no handoff uma seção **Impacto SAAS-R1** com arquivos afetados, mudança comportamental, necessidade de reconciliação e gates a repetir;
+- qualquer conflito transversal deve ser devolvido ao Coordenador.
+
 ## Repositório
 `aprov-hgesm/Controles-de-Empenhos---Aprov`
 
@@ -11,7 +22,7 @@ Você é o chat trabalhador responsável **exclusivamente** pela frente:
 `feat/central-mobile-r1`
 
 ## Base comum congelada da Onda 2
-`13ca1a50826bdb34b8f63effb0743ac43ecdcddd`
+`6852963c7aa9a1c83133239f0b929715fd316530`
 
 ## Sua branch
 `mobile-r1-e-physical-query`
