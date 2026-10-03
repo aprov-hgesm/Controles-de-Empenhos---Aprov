@@ -2164,7 +2164,7 @@ Estado aceito:
 - J21 isolamento cross-workspace: PASS por evidência automatizada específica;
 - J02/J03/J04/J05/J06/J07/J16: preparados, ainda sem evidência humana suficiente para PASS;
 - J15/J17/J18/J19/J20: bloqueados até autorização de cenário seguro;
-- participantes humanos P-01/P-02 ainda não confirmados;
+- **naquele checkpoint**, participantes humanos P-01/P-02 ainda não estavam confirmados; posteriormente foram formalizados como P-01=`aprovisionamento-3-gac-ap` e P-02=`aprovisionamento-2-b-fv`, ambos protegidos contra testes disruptivos;
 - nenhum defeito novo PILOT-*;
 - nenhuma correção funcional;
 - Impacto MOBILE-R1: nenhum delta funcional.
