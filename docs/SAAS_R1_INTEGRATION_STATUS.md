@@ -468,3 +468,37 @@ Correção coordenadora de snapshot Mobile:
 
 Próximo gate real da PILOT-B: selecionar participante P-03 real, novo, pós-corte e não isento.
 
+### PILOT-D recebida pelo Coordenador
+
+Worker: `saas-p-d-evidence-observability`
+HEAD final: `ae8ae4a810da24a273e0231ba5f31c915720d504`
+PR: #228
+
+O PR passou a apresentar conflito documental porque a integradora avançou após o freeze e o arquivo da matriz também recebeu deltas coordenadores. A integração foi feita **semanticamente**, sem rebasear a worker.
+
+Commits coordenadores:
+- matriz J01–J24: `7d7e697828ad4bd541344512c9d96acf7bb8158d`;
+- handoff PILOT-D: `4a746a6997a1484901813775f929a3c24105b404`.
+
+PR #228: fechado sem merge.
+
+Status da frente: **MATRIZ E MÉTODO DE EVIDÊNCIA ACEITOS / SAAS-J AINDA NÃO LIBERADA**.
+
+Matriz corrente após reconciliação A+B+D:
+- PASS: 2 — J08, J21;
+- PREPARADO: 13 — J01–J07, J10, J11, J16, J18, J22, J23;
+- BLOQUEADO: 7 — J12–J15, J17, J19, J20;
+- EM EXECUÇÃO: 1 — J24;
+- N/A: 1 — J09;
+- FAIL: 0.
+
+Foram aceitos:
+- baseline de custos T0/T1/T2;
+- separação entre Cloud Monitoring, estimativa por UG, Billing oficial e warehouse;
+- modelo mínimo de evidência;
+- catálogo de incidentes PILOT-OPS;
+- checklist objetivo para SAAS-J;
+- regra de não gerar leitura nova apenas para medir consumo.
+
+Pendências materiais permanecem: participantes reais, P-03 pago, custos numéricos, PILOT-C, backup READY/restore e health/uptime/alertas reais.
+
