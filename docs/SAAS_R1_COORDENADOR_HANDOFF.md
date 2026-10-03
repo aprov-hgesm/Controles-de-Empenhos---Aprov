@@ -575,3 +575,19 @@ Os quatro workers SAAS-P foram ativados e estão trabalhando em paralelo nas bra
 
 Não alterar a base dos workers durante esta onda. O Coordenador deve aguardar/receber os handoffs independentes e não competir implementando o mesmo escopo.
 
+### PILOT-A — recebida / PARCIAL
+
+Worker: `saas-p-a-vip-journeys`
+HEAD final: `ae4b676013b03e7ccf7f0e14a014edde86803d6e`
+PR: #226
+Integração do handoff: `8459a59aefc0f846d9c7e2f5ee78888c4fa2abd5`
+
+Aceito:
+- J08 PASS;
+- J21 PASS;
+- roteiro humano completo para J02–J07/J16;
+- nenhum defeito novo;
+- nenhum impacto MOBILE-R1.
+
+A frente não está concluída: falta confirmar participantes humanos P-01/P-02 e executar as jornadas reais aplicáveis.
+
