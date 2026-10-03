@@ -257,7 +257,8 @@ Runs de evidência HARDEN-A:
 - `37096733506` — baseline 22 + TypeScript + Core Protection + Recovery + Legal + Build + Diff Hygiene: SUCCESS;
 - `37096933781` — simulação segura de correção e classificação: SUCCESS;
 - `37097201877` — lockfile corrigido, audit 14, sem novo safe fix, TypeScript/Core/Recovery/Legal/Build/Diff: SUCCESS;
-- `37097424649` — `npm ls` / `npm explain` canônicos para as cadeias e gates: SUCCESS.
+- `37097424649` — `npm ls` / `npm explain` canônicos para as cadeias e gates: SUCCESS;
+- `37097554883` — cobertura final de `postcss`, audit estável em 14 e todos os gates: SUCCESS.
 
 Resultados confirmados após a correção:
 
