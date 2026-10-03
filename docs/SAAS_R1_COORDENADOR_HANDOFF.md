@@ -753,3 +753,17 @@ O Coordenador:
 - depois do piloto coordena somente correções finais antes da SAAS-J.
 
 P-01/P-02 permanecem protegidos. `aprovisionamento-teste` será usado no piloto final para cenários disruptivos, não agora como certificação do código pré-SaaS em produção.
+
+### Preparação final da onda HARDEN
+
+Antes de ativar chats, congelar uma única base para:
+
+- HARDEN-A / `saas-harden-a-security-dependencies`;
+- HARDEN-B / `saas-harden-b-recovery-restore`;
+- HARDEN-C / `saas-harden-c-release-health-rules`;
+- HARDEN-D / `saas-harden-d-mobile-reconciliation`.
+
+O escopo detalhado, ownership e critérios de PASS/PARCIAL/BLOQUEADO estão normatizados no Memorial Oficial e em `docs/SAAS_R1_HARDENING_EXECUCAO_PARALELA.md`.
+
+Não ativar nenhum worker em base diferente. Não permitir que worker crie a própria branch a partir de uma integradora mais recente.
+
