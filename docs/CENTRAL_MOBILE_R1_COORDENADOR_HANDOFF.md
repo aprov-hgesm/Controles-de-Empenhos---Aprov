@@ -369,3 +369,60 @@ Após novo handoff:
 3. executar certificação combinada;
 4. se verde, encerrar Integração 2;
 5. só então avaliar liberação de F/G/H.
+
+
+## 22. MOBILE-D integrada e Integração 2 certificada
+
+MOBILE-D:
+- worker HEAD corrigido `4549b280b483d935373604a8c2b2a54a140684f0`;
+- PR #231;
+- integrada semanticamente pelo PR #234;
+- squash `fc87bf8f9e67bc4abea6332a09059cfcfd6260fe`.
+
+Correções aceitas:
+- lotes fail-closed;
+- saturação MAX+1;
+- limite 24 pré-validado;
+- EPX1 malformado UNKNOWN;
+- TRANSFER canônico preservado.
+
+Integração 2 final:
+- PR #235;
+- HEAD `12df2f1ab6524e80322866ad8a5af59eeb51d49d`;
+- squash `d8148f01b877adad1e7880fc0b7fc6d4b3d60249`;
+- Application CI #934 SUCCESS;
+- Core #221 SUCCESS;
+- Recovery #614 SUCCESS;
+- Legal #38 SUCCESS;
+- jornada C→E→D→E SUCCESS;
+- build/typecheck/diff hygiene SUCCESS;
+- gates 16–21 SUCCESS.
+
+Contrato congelado após Integração 2:
+- ALLOCATE oficial;
+- consulta física read-only;
+- TRANSFER oficial;
+- classificador PRODUCT/LOCATION/UNKNOWN único entre C/D;
+- lote crítico fail-closed;
+- saldo agregado preservado;
+- nenhuma escrita direta de saldo/ledger.
+
+## 23. Gate SaaS R1 ↔ MOBILE-R1 antes da Onda 3
+
+SaaS observado:
+`feat/saas-r1-commercializacao@4848643be85b30532f7f093c4ddb0e729facfad3`.
+
+Resultado da comparação:
+**PASS — sem conflito transversal concreto**.
+
+Auth, workspace/UG, sessão, Legal Gate, warehouseAccess/feature flag, Rules e app layout permanecem equivalentes.
+
+Divergências esperadas:
+- Mobile: WarehouseAccessBoundary + scanner/gates móveis;
+- SaaS: recovery/hardening/tooling próprio;
+- package/CI: diferenças aditivas por programa.
+
+Consequência:
+- F/G/H podem ser liberadas em uma nova base comum;
+- workers continuam obrigados a declarar Impacto SAAS-R1;
+- MOBILE-I/J seguem bloqueadas.
