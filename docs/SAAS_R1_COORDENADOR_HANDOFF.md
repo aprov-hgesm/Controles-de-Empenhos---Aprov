@@ -837,3 +837,27 @@ HARDEN-A/B/C permanecem separadas e ainda não são consideradas executadas por 
 
 Nenhuma ação produtiva foi autorizada.
 
+## HARDEN-B — PARCIAL / AGUARDANDO BACKUP READY
+
+A HARDEN-B foi auditada pelo Coordenador SaaS e aceita como **PARCIAL — dependência temporal legítima**.
+
+Referências:
+- branch: `saas-harden-b-recovery-restore`;
+- HEAD: `910cca1ea9f14e4ef080ee649624042f63206d51`;
+- PR: `#237` OPEN / DRAFT / MERGEABLE;
+- base: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`.
+
+Proteções dos dois Firestore:
+- PITR: PASS;
+- delete protection: PASS;
+- schedule diário: PASS;
+- retenção 14 semanas: PASS;
+- backup READY: PENDENTE;
+- restore real: PENDENTE.
+
+Não repetir `recovery:apply`, não recriar schedules e não criar polling contínuo.
+
+Retomar a worker quando houver backup READY. O restore real continua dependendo de autorização explícita do fundador.
+
+Impacto MOBILE-R1: **SEM DELTA**.
+
