@@ -3410,3 +3410,34 @@ Este checkpoint não autoriza:
 - piloto;
 - lançamento.
 
+### HARDEN-B — CHECKPOINT PARCIAL DE RECOVERY
+
+A HARDEN-B foi auditada pelo Coordenador SaaS no HEAD `910cca1ea9f14e4ef080ee649624042f63206d51`, PR `#237`.
+
+Estado:
+- configuração Cloud: **VALIDADA**;
+- PITR: **PASS nos dois bancos**;
+- delete protection: **PASS nos dois bancos**;
+- schedule diário: **PASS nos dois bancos**;
+- retenção: **14 semanas / PASS**;
+- backup nativo READY: **PENDENTE (0/2 no checkpoint)**;
+- restore real isolado: **PENDENTE**;
+- validação pós-restore: **PENDENTE**;
+- impacto MOBILE-R1: **SEM DELTA**.
+
+Classificação:
+**PARCIAL — DEPENDÊNCIA TEMPORAL LEGÍTIMA**.
+
+O `ready=false` atual não representa defeito técnico: o gate está corretamente impedindo um falso PASS enquanto os schedules recém-criados ainda não produziram o primeiro backup diário nativo.
+
+Próximo gate:
+- não reaplicar configuração;
+- aguardar backup READY;
+- executar uma nova leitura pontual;
+- capturar metadados do backup;
+- preparar restore-plan;
+- solicitar autorização explícita do fundador;
+- somente depois executar restore real isolado e validar dados/IAM/Rules/TTL/isolamento.
+
+HARDEN-B continua obrigatória para o futuro freeze do Release Candidate.
+
