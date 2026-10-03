@@ -975,3 +975,34 @@ HARDEN-A2 — Firebase/Firestore/gRPC:
 
 Impacto MOBILE-R1: **DELTA COMPATÍVEL**.
 
+## HARDEN-A1 — PASS TÉCNICO / ENCERRADA
+
+A HARDEN-A1 foi aceita pelo Coordenador SaaS como **PASS TÉCNICO**.
+
+Referências:
+- branch: `saas-harden-a-jspdf-security`;
+- base: `9a294bc543ec7150b9144ed96e767a161864d72f`;
+- HEAD final: `5ae4984bb9580faf5197737eeeeb0d5cf5aae838`;
+- PR: `#244`.
+
+Resultado:
+- jsPDF: 2.5.2 → 4.2.1;
+- jsPDF-AutoTable: 3.8.4 → 5.0.8;
+- audit CRITICAL: 1 → 0;
+- regressão PDF automatizada: 7/7 PASS;
+- Application CI/Core/Recovery/Legal/Build/TypeScript/Diff: PASS;
+- lazy loading preservado;
+- impacto MOBILE-R1: DELTA COMPATÍVEL;
+- produção: não alterada.
+
+A inspeção visual fina dos PDFs foi reclassificada como **não bloqueante para segurança, RC ou lançamento**. Ajustes de fidelidade visual poderão ser tratados como backlog pós-lançamento, desde que não apareça defeito funcional impeditivo.
+
+Integração semântica da A1 concluída na integradora por commits:
+- `cf1ee28404c38ed74d28d179a1bf6da8063ac854`;
+- `ff7a4e7b20ea182f63abfa2482f26c1181145f6d`;
+- `1c77e147b152d16a27d7a931e375fecb467ade56`;
+- `3af1e3e48a76748faa98a1ab943107e55386c54c`;
+- `db3fcfbdf97e072a8a6f8f423efdbf7ba7af679f`.
+
+HARDEN-A1 não bloqueia mais a HARDEN-A2.
+
