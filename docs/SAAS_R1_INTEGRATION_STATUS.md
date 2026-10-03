@@ -891,3 +891,41 @@ Impacto MOBILE-R1: **DELTA COMPATÍVEL**.
 
 HARDEN-A permanece gate obrigatório antes do freeze do RC.
 
+## HARDEN-A1 — CORREÇÃO CONTROLADA JSPDF
+
+Program Control autorizou formalmente a frente curta:
+
+**HARDEN-A1 — Correção Controlada jsPDF + Regressão de PDFs**
+
+Base congelada:
+`9a294bc543ec7150b9144ed96e767a161864d72f`
+
+Branch:
+`saas-harden-a-jspdf-security`
+
+A branch foi criada exatamente nessa base, sem avanço adicional da integradora.
+
+Alvo mínimo:
+- `jspdf >= 4.2.1`;
+- alvo preferencial: `jspdf@4.2.1`;
+- `jspdf-autotable@5.0.8`.
+
+Objetivo:
+- eliminar o bloqueador CRITICAL direto/runtime de jsPDF;
+- preservar todos os fluxos PDF existentes;
+- repetir audit e regressão específica dos documentos;
+- não tocar Firebase/Firestore/gRPC nesta frente.
+
+HARDEN-A2 — Firebase/Firestore/gRPC:
+**BLOQUEADA até encerramento da HARDEN-A1**.
+
+Proibido nesta frente:
+- `npm audit fix --force`;
+- downgrade automático;
+- atualização oportunista de Firebase;
+- rebase/movimentação da base;
+- merge em main;
+- deploy/Rules/restore/piloto/freeze RC.
+
+A1 permanece gate do hardening pré-RC.
+
