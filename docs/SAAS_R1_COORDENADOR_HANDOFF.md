@@ -670,3 +670,20 @@ Trata-se de usuário externo real, ativo e necessário às operações do setor.
 - validar apenas fluxos não disruptivos e uso normal.
 
 Cenários de risco devem ser executados em `aprovisionamento-teste`, P-03 ou outro ambiente controlado.
+
+### Participante P-02 confirmado e política de testes disruptivos
+
+P-02 = `aprovisionamento-2-b-fv`.
+
+É usuário externo real e está iniciando uso operacional. Deve receber a mesma proteção de disponibilidade de P-01.
+
+Participantes protegidos:
+- P-01 = `aprovisionamento-3-gac-ap`;
+- P-02 = `aprovisionamento-2-b-fv`.
+
+Não usar nenhum dos dois para J15–J20, revogação de sessão, bloqueio ou reset forçado.
+
+Workspace oficial preferencial para testes disruptivos:
+- `aprovisionamento-teste`.
+
+Qualquer cenário com risco deve ser deslocado para esse workspace ou P-03 controlado, nunca para P-01/P-02.
