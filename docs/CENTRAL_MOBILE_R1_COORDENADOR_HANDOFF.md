@@ -773,3 +773,44 @@ Próxima ação:
 - enviar checkpoint pós-MOBILE-I ao Program Control;
 - não liberar MOBILE-J autonomamente;
 - preservar pendências físicas e CT-01.
+
+
+## 34. MOBILE-J em certificação final
+
+Program Control liberou a MOBILE-J após aceitar o checkpoint pós-MOBILE-I.
+
+Branch:
+`mobile-r1-j-final-certification`.
+
+Freeze:
+`2108a21208765e0d4155399667cf571b0fa127ff`.
+
+PR:
+`#246`.
+
+Estado:
+**PARCIAL TECNICAMENTE SAUDÁVEL / CERTIFICAÇÃO EM EXECUÇÃO**.
+
+A branch contém somente a matriz documental de certificação; nenhum runtime Mobile foi alterado.
+
+Objetivos agora:
+- validar fisicamente Android;
+- validar iPhone quando disponível;
+- testar câmera permitida/negada/indisponível;
+- testar fallback manual;
+- testar cooldown/double scan;
+- imprimir e ler Code128 COMPACT/MEDIUM/LARGE;
+- validar som/vibração;
+- executar jornada ponta a ponta;
+- confirmar coerência Desktop ↔ Mobile;
+- registrar performance final;
+- reconciliar SaaS vivo antes de qualquer PASS FINAL.
+
+Upstream:
+- HARDEN-A1 PASS/integrada;
+- HARDEN-A2 ainda não iniciada;
+- HARDEN-B parcial;
+- CT-01 permanece para composição do RC.
+
+Não reabrir desenvolvimento funcional sem regressão concreta.
+Não declarar release.
