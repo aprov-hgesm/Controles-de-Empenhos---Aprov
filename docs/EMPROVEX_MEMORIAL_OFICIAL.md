@@ -2325,3 +2325,24 @@ A execução passa a seguir estas regras:
 
 O que ainda não pode ser executado automaticamente pelo Coordenador sem ação externa: valores privados T0/T1/T2, uso humano P-01/P-02, seleção/pagamento P-03, suspensão real do workspace de teste, restore real e configuração externa de uptime/alerta.
 
+### SAAS-P — T0 técnico certificado
+
+Em 2026-10-02 foi criado e utilizado o worktree isolado `C:\Users\marco\Projetos\emprovex-saas-pilot`, no snapshot `f25089b8`, preservando o desenvolvimento MOBILE-R1 em diretório/branch separados.
+
+Foram executados com sucesso os seis guards do baseline técnico:
+- Bloco 16.3 Workspace Telemetry: READY;
+- Bloco 16.4 Global Cloud Monitoring: READY;
+- Bloco 16.5 Consolidated Usage: READY;
+- Bloco 17.6 Telemetry Fidelity: READY;
+- Bloco 17.8 Consumption/Regression: READY;
+- UG Telemetry v2 Reconciliation: READY.
+
+Conclusão:
+- **T0 técnico = PASS**;
+- arquitetura de telemetria/consumo pronta;
+- nenhum listener administrativo adicional;
+- nenhuma publicação/deploy/Rules;
+- **T0 numérico permanece pendente** de captura real em Monitoring, Painel de Consumo e Google Cloud Billing;
+- J22 continua PREPARADO até existirem T0/T1/T2 reais.
+
+Durante `npm ci` foram reportados advisories de dependências. Nenhum `npm audit fix` ou `--force` foi executado para não introduzir alterações fora do escopo do piloto.
