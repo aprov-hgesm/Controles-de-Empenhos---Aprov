@@ -4,9 +4,9 @@
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
-Integradora SaaS R1: `feat/saas-r1-commercializacao@a98adb3ffad5cbc096655088d4e6b0b4fcc5ba5f`
+Integradora SaaS R1: `feat/saas-r1-commercializacao@75202b0ac8bb888484ca3f124dea974daf68a654`
 
-Integradora Mobile R1: `feat/central-mobile-r1@fdd41c842f49cc2236115858e82ebfd0c07e9c49`
+Integradora Mobile R1: `feat/central-mobile-r1@50ea3103c49b5fa339823a46fe04e7b72dabb123`
 
 Estado global: **Performance R3 publicada; SaaS R1 em hardening pré-piloto; Mobile R1 em Onda 3; Release Candidate ainda não congelado; piloto real ainda não iniciado; produção não alterada pelas ondas atuais.**
 
@@ -61,6 +61,16 @@ Sempre atualizar primeiro:
 
 Quando um estado deixar de ser vigente, ele deve sair do quadro vivo e permanecer na cronologia/documentação histórica.
 
+### Concorrência documental
+
+Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição do Memorial deve:
+
+- reler o HEAD vivo imediatamente antes da gravação;
+- preservar alterações concorrentes;
+- mover novos checkpoints para a seção temática correta;
+- nunca sobrescrever uma atualização de outro Coordenador apenas para restaurar uma versão anterior.
+
+
 ---
 
 # PARTE I — ESTADO VIVO
@@ -70,7 +80,7 @@ Quando um estado deixar de ser vigente, ele deve sair do quadro vivo e permanece
 | Domínio | Estado vigente | Observação |
 | --- | --- | --- |
 | Produção | **Performance R3 publicada** | `main@e90f92acae1514ee5cbc6ce95fed354bc1454330` |
-| SaaS R1 | **HARDENING PRÉ-PILOTO** | A em execução; B parcial; C/D encerradas |
+| SaaS R1 | **HARDENING PRÉ-PILOTO** | A parcial tecnicamente saudável; B parcial; C/D encerradas |
 | Mobile R1 | **ONDA 3 EM EXECUÇÃO** | F/G/H; Integração 3 ainda não certificada |
 | Release Candidate | **NÃO CONGELADO** | depende de hardening SaaS + checkpoint Mobile |
 | Piloto real SaaS | **NÃO INICIADO** | só após RC controlado |
@@ -456,10 +466,42 @@ Base comum das workers:
 
 | Frente | Estado | Evidência/pendência |
 | --- | --- | --- |
-| HARDEN-A — Segurança/Dependências/CI | **EM EXECUÇÃO** | branch avançou para `00d6386d...`; PR #240 aberto/draft |
+| HARDEN-A — Segurança/Dependências/CI | **PARCIAL TECNICAMENTE SAUDÁVEL** | `00d6386d...`; PR #240; 22 → 14 vulnerabilidades; bloqueada por jsPDF crítico + decisão Firebase/Firestore/gRPC |
 | HARDEN-B — Recovery/Restore | **PARCIAL** | `910cca1e...`; aguarda backups READY + restore isolado |
 | HARDEN-C — Health/Rules/Release/Rollback | **PASS / ENCERRADA** | worker `0b2e801a...`; PR #238 fechado sem merge; integração documental `e0e4e13a...` |
 | HARDEN-D — Reconciliação SaaS↔Mobile | **PASS / ENCERRADA** | worker `fb7b5006...`; PR #236 fechado sem merge; integração documental `22459625...` |
+
+
+### 20.1 HARDEN-A — checkpoint parcial de segurança
+
+### HARDEN-A — CHECKPOINT PARCIAL DE SEGURANÇA
+
+A HARDEN-A foi auditada pelo Coordenador SaaS como **PARCIAL TECNICAMENTE SAUDÁVEL**.
+
+Identidade:
+- branch: `saas-harden-a-security-dependencies`;
+- base: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`;
+- HEAD final: `00d6386d212d6c139eec243d00b61c11a13017b8`;
+- PR: `#240`.
+
+Resultado:
+- vulnerabilidades de pacote: **22 → 14**;
+- nenhuma alteração em `package.json`;
+- nenhuma major aplicada;
+- nenhum `npm audit fix --force`;
+- lockfile seguro integrado semanticamente no commit `040ec20c66a7d9c8e77070d12dd455fe43aef5d7`;
+- evidência integrada em `66dc540b7d50a451e96cd16558a9219743543cd7`;
+- CI/build/typecheck/core/diff verdes;
+- nenhuma regressão detectada.
+
+Pendência material:
+- `jspdf@2.5.2` permanece CRITICAL e direto/runtime;
+- upgrade conjunto jsPDF/jsPDF-AutoTable deve ocorrer em correção controlada com regressão específica dos PDFs;
+- Firebase/Firestore/gRPC requer decisão coordenada, sem aceitar downgrade/force sugerido pelo audit.
+
+Impacto MOBILE-R1: **DELTA COMPATÍVEL** por lockfile compartilhado.
+
+HARDEN-A não está em PASS e continua bloqueando o freeze do RC até fechamento das pendências acima.
 
 ## 21. HARDEN-B — recovery
 
@@ -626,7 +668,7 @@ Estado atual:
 | --- | --- | --- |
 | MOBILE-F | Inventário móvel | **APROVADA / aguardando ordem de integração** — PR #239 |
 | MOBILE-G | Saída de material móvel | **EM EXECUÇÃO / PR #242 aberto** |
-| MOBILE-H | Conferência física/digital | **EM EXECUÇÃO / PR #241 aberto** |
+| MOBILE-H | Conferência física/digital | **APROVADA / aguardando ordem de integração** — PR #241 |
 | Integração 3 | combinação F/G/H | **AGUARDANDO handoffs/revisão** |
 | MOBILE-I | integração controlada | **BLOQUEADA** |
 | MOBILE-J | certificação final | **BLOQUEADA** |
@@ -847,7 +889,7 @@ Passaram a ser oficiais:
 - HARDEN-D: PASS/encerrada;
 - HARDEN-C: PASS/encerrada;
 - HARDEN-B: parcial por dependência temporal;
-- HARDEN-A: em execução;
+- HARDEN-A: parcial tecnicamente saudável / pendências de segurança;
 - CT-01 formalizada para o RC.
 
 ---
@@ -997,7 +1039,7 @@ main@e90f92acae1514ee5cbc6ce95fed354bc1454330
 Performance R3 publicada
 
 SAAS R1
-integrador: feat/saas-r1-commercializacao@a98adb3ffad5cbc096655088d4e6b0b4fcc5ba5f
+integrador: feat/saas-r1-commercializacao@75202b0ac8bb888484ca3f124dea974daf68a654
 HARDEN-A: em execução
 HARDEN-B: parcial / backup READY + restore pendentes
 HARDEN-C: PASS / encerrada
@@ -1005,10 +1047,10 @@ HARDEN-D: PASS / encerrada
 CT-01: obrigatória antes do RC
 
 MOBILE R1
-integrador: feat/central-mobile-r1@fdd41c842f49cc2236115858e82ebfd0c07e9c49
+integrador: feat/central-mobile-r1@50ea3103c49b5fa339823a46fe04e7b72dabb123
 F: aprovada / aguardando integração
 G: em execução
-H: em execução
+H: aprovada / aguardando integração
 Integração 3: pendente
 MOBILE-I/J: bloqueadas
 
@@ -1028,33 +1070,3 @@ fechar HARDEN-A
 ```
 
 Este bloco deve ser mantido coerente com o Snapshot Global do início do documento.
-
-### HARDEN-A — CHECKPOINT PARCIAL DE SEGURANÇA
-
-A HARDEN-A foi auditada pelo Coordenador SaaS como **PARCIAL TECNICAMENTE SAUDÁVEL**.
-
-Identidade:
-- branch: `saas-harden-a-security-dependencies`;
-- base: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`;
-- HEAD final: `00d6386d212d6c139eec243d00b61c11a13017b8`;
-- PR: `#240`.
-
-Resultado:
-- vulnerabilidades de pacote: **22 → 14**;
-- nenhuma alteração em `package.json`;
-- nenhuma major aplicada;
-- nenhum `npm audit fix --force`;
-- lockfile seguro integrado semanticamente no commit `040ec20c66a7d9c8e77070d12dd455fe43aef5d7`;
-- evidência integrada em `66dc540b7d50a451e96cd16558a9219743543cd7`;
-- CI/build/typecheck/core/diff verdes;
-- nenhuma regressão detectada.
-
-Pendência material:
-- `jspdf@2.5.2` permanece CRITICAL e direto/runtime;
-- upgrade conjunto jsPDF/jsPDF-AutoTable deve ocorrer em correção controlada com regressão específica dos PDFs;
-- Firebase/Firestore/gRPC requer decisão coordenada, sem aceitar downgrade/force sugerido pelo audit.
-
-Impacto MOBILE-R1: **DELTA COMPATÍVEL** por lockfile compartilhado.
-
-HARDEN-A não está em PASS e continua bloqueando o freeze do RC até fechamento das pendências acima.
-
