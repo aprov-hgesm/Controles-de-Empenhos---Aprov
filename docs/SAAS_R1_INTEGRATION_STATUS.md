@@ -810,3 +810,43 @@ Impacto MOBILE-R1: **SEM DELTA**.
 
 HARDEN-B permanece gate obrigatório antes do freeze do RC.
 
+## HARDEN-C — ACEITAÇÃO COORDENADORA
+
+Status final: **PASS TÉCNICO / ENCERRADA NO PROGRAMA SAAS R1**
+
+Worker:
+- branch: `saas-harden-c-release-health-rules`;
+- base congelada: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`;
+- HEAD final: `0b2e801a6460c60ecc79885d03e8ce8ffb778369`;
+- PR: `#238`;
+- alterações: 1 commit, 1 arquivo, somente documentação.
+
+Auditoria do Coordenador SaaS confirmou:
+- `/api/health` na worker, no PR #223 e na integradora viva possui o mesmo blob `5c1915f925810c532d1eed9e472deb0e632568af`;
+- health responde `status: ok`, timestamp e `Cache-Control: no-store, max-age=0`, sem Firestore/secrets;
+- Rules principal e warehouse têm blobs idênticos entre HARDEN-C e Mobile reconciliado;
+- CT-01 continua sendo o único delta conhecido em `next.config.ts`;
+- avanços da integradora posteriores ao contexto da worker eram apenas documentais;
+- PR #238 deixou de ser mecanicamente mergeable após avanço documental da base, sem impacto funcional na evidência.
+
+Integração documental semântica:
+`e0e4e13a73aad18850a3bf5b70b64ebf22a3d11b`
+
+Não foi feito merge/rebase da branch congelada.
+
+### CT-01 — obrigatória antes do RC
+
+Contrato:
+`camera=(self), microphone=(), geolocation=()`
+
+Ownership:
+**Integração SaaS / composição do Release Candidate**.
+
+Antes do freeze do RC:
+1. materializar CT-01 no HEAD composto;
+2. re-hashar Rules/config;
+3. repetir gates do HEAD final;
+4. validar o header HTTP efetivo no candidato publicado.
+
+HARDEN-C PASS não significa RC congelado nem produção autorizada.
+
