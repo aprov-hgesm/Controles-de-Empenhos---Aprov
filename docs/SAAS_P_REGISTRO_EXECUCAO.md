@@ -111,3 +111,44 @@ Billing day:
 - Reconciliação MOBILE-R1:
 - Matriz J01–J24:
 - Gate SAAS-J:
+
+## Evidência T0 — gate técnico de arquitetura — 2026-10-02
+
+Worktree utilizado:
+- `C:\Users\marco\Projetos\emprovex-saas-pilot`;
+- snapshot: `f25089b8`;
+- estado local: detached HEAD limpo;
+- dependências instaladas via `npm ci`.
+
+Resultado dos guards:
+
+- `verify:block-16-3-workspace-telemetry`: **READY**;
+- `verify:block-16-4-global-monitoring`: **READY**;
+- `verify:block-16-5-consolidated-usage`: **READY**;
+- `verify:block-17-6-telemetry-fidelity`: **READY**;
+- `verify:block-17-8-consumption-regression`: **READY**;
+- `verify:ug-telemetry-v2`: **READY**.
+
+Contratos confirmados:
+- consumo por UG = estimativa EMPROVEX;
+- flush por leitura desativado;
+- consolidação = buffer local + baixa frequência;
+- painel fundador = GET pontual / sem listener global;
+- métrica global real = Google Cloud Monitoring server-side;
+- credenciais sensíveis no cliente = proibidas;
+- estimativa por UG preservada e separada da medição global;
+- nenhum Firestore adicional no painel consolidado;
+- billing day = `America/Los_Angeles`;
+- parcela não atribuída preservada;
+- Read Units por UG = proxy / não faturamento oficial;
+- listeners realtime administrativos adicionais = nenhum.
+
+Classificação:
+- **T0 técnico: PASS**;
+- **T0 numérico: PENDENTE**;
+- J22 permanece **PREPARADO**, pois os valores reais de Monitoring/Billing ainda não foram capturados.
+
+Observação de instalação:
+- `npm ci` reportou 22 advisories de dependência (4 moderate, 17 high, 1 critical);
+- nenhum `npm audit fix` ou `--force` foi executado durante o piloto;
+- esses advisories não foram investigados nesta etapa e não são convertidos automaticamente em falha funcional do T0.
