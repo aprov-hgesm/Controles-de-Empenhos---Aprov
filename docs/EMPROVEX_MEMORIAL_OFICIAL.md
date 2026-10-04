@@ -2284,6 +2284,34 @@ Ruleset ativo — Warehouse:
 
 Primeiro gate externo da RULES-AUDIT-01: **PASS**.
 
+### 2026-10-04 — TTL produtivo autorizado e em criação
+
+Após autorização explícita do Fundador, foram iniciadas exclusivamente as políticas TTL em:
+
+- `sessionSlots.expiresAt`;
+- `sessionRevocations.expiresAt`;
+
+no banco principal:
+
+`ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1`.
+
+Operações retornadas:
+
+- sessionSlots: `AyBjNGNiYzA2Zjk5ZWQtOTU0YS01ZjY0LTQ3OGEtODg4OTM2ZGMkGnNlbmlsZXBpcAkKMxI`;
+- sessionRevocations: `AyBiZjE1ZWYwMTMxMjgtMGU3OC03Yjc0LWQxZjUtZWYxNTNjY2EkGnNlbmlsZXBpcAkKMxI`.
+
+Leitura imediata pós-ativação:
+
+- sessionSlots.expiresAt → `ttlConfig.state = CREATING`;
+- sessionRevocations.expiresAt → `ttlConfig.state = CREATING`.
+
+Conclusão:
+
+- comando de ativação aceito nos dois campos;
+- nenhuma outra configuração produtiva foi alterada;
+- RULES-AUDIT-01 permanece aberta somente até os dois TTLs atingirem `ACTIVE`;
+- nenhuma nova escrita/configuração deve ser feita durante essa espera.
+
 ### 2026-10-04 — Inventário pré-TTL validado
 
 Leitura somente de produção executada antes de qualquer ativação de TTL.
