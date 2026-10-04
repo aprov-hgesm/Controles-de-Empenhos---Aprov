@@ -1010,13 +1010,18 @@ async function deleteSectorDirectory(
   ug?: string
 ): Promise<void> {
   const normalizedUg = normalizeUnitUg(ug);
+
+  // SESSION-CAP-01 — rollback de provisionamento não pode pressupor dois slots.
+  // A limpeza recursiva remove settings, leases dinâmicos e quaisquer outras
+  // subcoleções materializadas antes de excluir o documento do workspace.
+  await deleteFirestoreDocumentTree(
+    accessToken,
+    `workspaces/${workspaceId}`
+  );
+
   await commitFirestoreWrites(accessToken, [
-    { delete: firestoreDocumentName(`workspaces/${workspaceId}/settings/${WORKSPACE_TERM_COUNTER_SETTINGS_ID}`) },
-    { delete: firestoreDocumentName(`workspaces/${workspaceId}/sessionSlots/slot-1`) },
-    { delete: firestoreDocumentName(`workspaces/${workspaceId}/sessionSlots/slot-2`) },
     { delete: firestoreDocumentName(`platformAccounts/${email}`) },
     { delete: firestoreDocumentName(`billingAccounts/${workspaceId}`) },
-    { delete: firestoreDocumentName(`workspaces/${workspaceId}`) },
     ...(isValidUnitUg(normalizedUg)
       ? [{ delete: firestoreDocumentName(`platformUgIndex/${normalizedUg}`) }]
       : []),
