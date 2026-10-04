@@ -16,6 +16,7 @@ execFileSync(
   [
     resolve(root, 'node_modules/typescript/bin/tsc'),
     resolve(root, 'lib/warehouse/labels.ts'),
+    resolve(root, 'lib/warehouse/locationBarcode.ts'),
     resolve(root, 'lib/warehouse/location.ts'),
     resolve(root, 'lib/warehouse/material.ts'),
     resolve(root, 'lib/platformIdentity.ts'),
@@ -38,6 +39,7 @@ execFileSync(
 
 const require = createRequire(import.meta.url);
 const labels = require(resolve(outDir, 'lib/warehouse/labels.js'));
+const locationBarcode = require(resolve(outDir, 'lib/warehouse/locationBarcode.js'));
 const pdf = require(resolve(outDir, 'features/warehouse/pdf/warehouseLabelsPdf.js'));
 
 test.after(() => {
@@ -146,4 +148,250 @@ test('gerador produz PDF A4 não vazio para impressão monocromática', async ()
 
   assert.equal(blob.type, 'application/pdf');
   assert.ok(blob.size > 2000);
+});
+
+
+test('identidade física é estável para depósito, local e subposição e independe de renomeação', () => {
+  const child = subposition(1);
+  const identities = [
+    ['DEPOT', depot.id],
+    ['LOCAL', local.id],
+    ['SUBPOSITION', child.id],
+  ];
+
+  for (const [kind, entityId] of identities) {
+    const code = locationBarcode.encodeWarehouseLocationBarcode({ kind, entityId });
+    const decoded = locationBarcode.decodeWarehouseLocationBarcode(code);
+    assert.equal(decoded.ok, true);
+    assert.equal(decoded.value.kind, kind);
+    assert.equal(decoded.value.entityId, entityId);
+    assert.match(code, /^EPX1[123][0-9]{39}$/);
+  }
+
+  const before = labels.buildLocationLabel(local, depot, [local]).physicalBarcode;
+  const renamed = { ...local, name: 'Estante renomeada', code: 'EST-99' };
+  const after = labels.buildLocationLabel(renamed, depot, [renamed]).physicalBarcode;
+  assert.equal(before, after);
+});
+
+test('namespace de posição rejeita código comercial e payload malformado', () => {
+  assert.deepEqual(
+    locationBarcode.decodeWarehouseLocationBarcode('7891234567890'),
+    { ok: false, error: 'NOT_LOCATION_CODE' }
+  );
+  assert.deepEqual(
+    locationBarcode.decodeWarehouseLocationBarcode('EPX12INVALIDO'),
+    { ok: false, error: 'MALFORMED_LOCATION_CODE' }
+  );
+  assert.equal(locationBarcode.isWarehouseLocationBarcode('7891234567890'), false);
+});
+
+test('IDs distintos não colidem e Code 128 compacta a cauda numérica', () => {
+  const first = locationBarcode.encodeWarehouseLocationBarcode({
+    kind: 'LOCAL',
+    entityId: 'loc_' + '1'.repeat(32),
+  });
+  const second = locationBarcode.encodeWarehouseLocationBarcode({
+    kind: 'LOCAL',
+    entityId: 'loc_' + '2'.repeat(32),
+  });
+  assert.notEqual(first, second);
+
+  const pattern = locationBarcode.buildWarehouseCode128Pattern(first);
+  assert.ok(pattern.bars.length > 20);
+  assert.ok(pattern.totalModules > 250);
+  assert.ok(pattern.codewords.includes(99), 'Code C deve compactar a sequência decimal');
+  assert.equal(pattern.codewords.at(-1), 106);
+});
+
+function resolverSource(overrides = {}) {
+  const child = subposition(1);
+  const depots = new Map([[depot.id, depot]]);
+  const locations = new Map([
+    [local.id, local],
+    [child.id, child],
+  ]);
+  return {
+    async getDepot(id) {
+      return overrides.depot ?? depots.get(id) ?? null;
+    },
+    async getLocation(id) {
+      if (overrides.locations && id in overrides.locations) {
+        return overrides.locations[id];
+      }
+      return locations.get(id) ?? null;
+    },
+  };
+}
+
+test('resolver converte LOCAL e SUBPOSITION em WarehouseStockPosition', async () => {
+  const localCode = locationBarcode.encodeWarehouseLocationBarcode({
+    kind: 'LOCAL',
+    entityId: local.id,
+  });
+  const localResult = await locationBarcode.resolveWarehouseStockPositionCode({
+    code: localCode,
+    workspaceId: depot.workspaceId,
+    ug: depot.ug,
+  }, resolverSource());
+  assert.equal(localResult.ok, true);
+  assert.deepEqual(localResult.value.position, {
+    kind: 'LOCATION',
+    depotId: depot.id,
+    locationId: local.id,
+    subpositionId: null,
+  });
+
+  const child = subposition(1);
+  const childCode = locationBarcode.encodeWarehouseLocationBarcode({
+    kind: 'SUBPOSITION',
+    entityId: child.id,
+  });
+  const childResult = await locationBarcode.resolveWarehouseStockPositionCode({
+    code: childCode,
+    workspaceId: depot.workspaceId,
+    ug: depot.ug,
+  }, resolverSource());
+  assert.equal(childResult.ok, true);
+  assert.deepEqual(childResult.value.position, {
+    kind: 'SUBPOSITION',
+    depotId: depot.id,
+    locationId: local.id,
+    subpositionId: child.id,
+  });
+});
+
+test('depósito resolve identidade física, mas falha fechado como posição de estoque', async () => {
+  const code = locationBarcode.encodeWarehouseLocationBarcode({
+    kind: 'DEPOT',
+    entityId: depot.id,
+  });
+  const identity = await locationBarcode.resolveWarehousePhysicalIdentityCode({
+    code,
+    workspaceId: depot.workspaceId,
+    ug: depot.ug,
+  }, resolverSource());
+  assert.equal(identity.ok, true);
+  assert.equal(identity.value.depot.id, depot.id);
+  assert.equal(identity.value.position, null);
+
+  const position = await locationBarcode.resolveWarehouseStockPositionCode({
+    code,
+    workspaceId: depot.workspaceId,
+    ug: depot.ug,
+  }, resolverSource());
+  assert.deepEqual(position, { ok: false, error: 'DEPOT_NOT_STOCK_POSITION' });
+});
+
+test('resolver recusa entidade inativa, escopo/UG divergentes e hierarquia inválida', async () => {
+  const localCode = locationBarcode.encodeWarehouseLocationBarcode({
+    kind: 'LOCAL',
+    entityId: local.id,
+  });
+  const inactive = await locationBarcode.resolveWarehouseStockPositionCode({
+    code: localCode,
+    workspaceId: depot.workspaceId,
+    ug: depot.ug,
+  }, resolverSource({
+    locations: {
+      [local.id]: { ...local, status: 'inactive' },
+    },
+  }));
+  assert.deepEqual(inactive, { ok: false, error: 'ENTITY_INACTIVE' });
+
+  const otherWorkspace = await locationBarcode.resolveWarehouseStockPositionCode({
+    code: localCode,
+    workspaceId: depot.workspaceId,
+    ug: depot.ug,
+  }, resolverSource({
+    locations: {
+      [local.id]: { ...local, workspaceId: 'workspace-outro' },
+    },
+  }));
+  assert.deepEqual(otherWorkspace, { ok: false, error: 'WORKSPACE_MISMATCH' });
+
+  const otherUg = await locationBarcode.resolveWarehouseStockPositionCode({
+    code: localCode,
+    workspaceId: depot.workspaceId,
+    ug: depot.ug,
+  }, resolverSource({
+    locations: {
+      [local.id]: { ...local, ug: '999999' },
+    },
+  }));
+  assert.deepEqual(otherUg, { ok: false, error: 'UG_MISMATCH' });
+
+  const child = subposition(1);
+  const childCode = locationBarcode.encodeWarehouseLocationBarcode({
+    kind: 'SUBPOSITION',
+    entityId: child.id,
+  });
+  const invalidHierarchy = await locationBarcode.resolveWarehouseStockPositionCode({
+    code: childCode,
+    workspaceId: depot.workspaceId,
+    ug: depot.ug,
+  }, resolverSource({
+    locations: {
+      [child.id]: { ...child, parentLocationId: 'loc_' + 'f'.repeat(32) },
+      ['loc_' + 'f'.repeat(32)]: { ...local, id: 'loc_' + 'f'.repeat(32), depotId: 'dep_' + 'e'.repeat(32) },
+    },
+  }));
+  assert.deepEqual(invalidHierarchy, { ok: false, error: 'HIERARCHY_INVALID' });
+});
+
+test('resolver recusa entidade divergente e round-trip encode → resolve preserva identidade', async () => {
+  const child = subposition(1);
+  const forgedKindCode = locationBarcode.encodeWarehouseLocationBarcode({
+    kind: 'LOCAL',
+    entityId: 'loc_' + 'c'.repeat(32),
+  });
+  const forgedLocal = {
+    ...child,
+    id: 'sub_' + 'c'.repeat(32),
+  };
+  const kindMismatch = await locationBarcode.resolveWarehouseStockPositionCode({
+    code: forgedKindCode,
+    workspaceId: depot.workspaceId,
+    ug: depot.ug,
+  }, {
+    async getDepot(id) {
+      return id === depot.id ? depot : null;
+    },
+    async getLocation() {
+      return forgedLocal;
+    },
+  });
+  assert.equal(kindMismatch.ok, false);
+  assert.equal(kindMismatch.error, 'ENTITY_INVALID');
+
+  const code = locationBarcode.encodeWarehouseLocationBarcode({
+    kind: 'SUBPOSITION',
+    entityId: child.id,
+  });
+  const result = await locationBarcode.resolveWarehouseStockPositionCode({
+    code,
+    workspaceId: depot.workspaceId,
+    ug: depot.ug,
+  }, resolverSource());
+  assert.equal(result.ok, true);
+  assert.equal(result.value.identity.code, code);
+  assert.equal(result.value.identity.entityId, child.id);
+});
+
+test('builder inclui barcode físico em todas as etiquetas e ignora depósito inativo', () => {
+  const child = subposition(1);
+  const items = labels.buildWarehouseLabelsForScope({
+    depot,
+    locations: [local, child],
+    scope: 'DEPOT_FULL',
+  });
+  assert.equal(items.length, 3);
+  assert.ok(items.every((item) => /^EPX1[123][0-9]{39}$/.test(item.physicalBarcode)));
+
+  const inactiveDepot = labels.buildWarehouseLabelsForScope({
+    depot: { ...depot, status: 'inactive' },
+    locations: [local, child],
+    scope: 'DEPOT_FULL',
+  });
+  assert.deepEqual(inactiveDepot, []);
 });

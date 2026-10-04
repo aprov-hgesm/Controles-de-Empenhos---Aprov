@@ -160,7 +160,7 @@
     "verify:adm-deposito-phase-4": "node scripts/verify-adm-deposito-phase-4.mjs",
     "test:adm-deposito-siscofis": "node --test scripts/warehouse-siscofis-contract.test.mjs",
     "verify:adm-deposito-phase-5": "node scripts/verify-adm-deposito-phase-5.mjs",
-    "test:adm-deposito-locations": "node --test scripts/warehouse-location-transfer.test.mjs",
+    "test:adm-deposito-locations": "node --test scripts/warehouse-location-transfer.test.mjs scripts/warehouse-labels-r1.test.mjs",
     "verify:adm-deposito-phase-6": "node scripts/verify-adm-deposito-phase-6.mjs",
     "test:adm-deposito-stock-operational": "node --test scripts/warehouse-stock-operational.test.mjs",
     "verify:adm-deposito-phase-7": "node scripts/verify-adm-deposito-phase-7.mjs",
@@ -213,7 +213,26 @@
     "test:harden-a1-pdf": "node --test scripts/harden-a1-pdf.test.mjs scripts/warehouse-labels-r1.test.mjs",
     "verify:session-cap-ttl-readiness": "node scripts/verify-session-cap-ttl-readiness.mjs",
     "verify:rc-rules-audit": "node scripts/verify-rc-rules-audit.mjs",
-    "verify:rc-rules-audit:full": "node scripts/verify-rc-rules-audit.mjs --full"
+    "verify:rc-rules-audit:full": "node scripts/verify-rc-rules-audit.mjs --full",
+    "test:mobile-r1-scanner": "node --test scripts/warehouse-mobile-scanner.test.mjs",
+    "verify:mobile-r1-platform-scanner": "node scripts/verify-mobile-r1-platform-scanner.mjs",
+    "test:mobile-r1-integration-1": "node --test scripts/mobile-r1-integration-1.test.mjs",
+    "verify:mobile-r1-integration-1": "node scripts/verify-mobile-r1-integration-1.mjs",
+    "test:mobile-r1-physical-query": "node --test scripts/mobile-r1-physical-query.test.mjs",
+    "verify:mobile-r1-physical-query": "node scripts/verify-mobile-r1-physical-query.mjs",
+    "test:mobile-r1-intake-allocation": "node --test scripts/mobile-r1-intake-allocation.test.mjs",
+    "verify:mobile-r1-intake-allocation": "node scripts/verify-mobile-r1-intake-allocation.mjs",
+    "test:mobile-r1-integration-2": "node --test scripts/mobile-r1-integration-2.test.mjs",
+    "verify:mobile-r1-integration-2": "node scripts/verify-mobile-r1-integration-2.mjs",
+    "test:mobile-r1-inventory": "node --test scripts/mobile-r1-inventory.test.mjs",
+    "verify:mobile-r1-inventory": "node scripts/verify-mobile-r1-inventory.mjs",
+    "test:mobile-r1-outbound": "node --test scripts/mobile-r1-outbound.test.mjs",
+    "verify:mobile-r1-outbound": "node scripts/verify-mobile-r1-outbound.mjs",
+    "test:mobile-r1-position-check": "node --test scripts/mobile-r1-position-check.test.mjs",
+    "verify:mobile-r1-position-check": "node scripts/verify-mobile-r1-position-check.mjs",
+    "test:mobile-r1-integration-3": "node --test scripts/mobile-r1-integration-3.test.mjs",
+    "verify:mobile-r1-integration-3": "node scripts/verify-mobile-r1-integration-3.mjs",
+    "verify:mobile-r1-integration-final": "node scripts/verify-mobile-r1-integration-final.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -228,7 +247,9 @@
     "pdf-lib": "^1.17.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "tailwind-merge": "^2.5.4"
+    "tailwind-merge": "^2.5.4",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0-alpha.0",

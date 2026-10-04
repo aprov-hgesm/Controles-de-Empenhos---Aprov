@@ -1,4 +1,5 @@
 import type { WarehouseDepot, WarehouseLocation } from './location';
+import { encodeWarehouseLocationBarcode } from './locationBarcode';
 
 export type WarehouseLabelKind = 'DEPOT' | 'LOCAL' | 'SUBPOSITION';
 export type WarehouseLabelSheetPreset = 'COMPACT' | 'MEDIUM' | 'LARGE';
@@ -15,6 +16,7 @@ export interface WarehouseLabelItem {
   hierarchy: string[];
   workspaceId: string;
   ug: string;
+  physicalBarcode: string;
 }
 
 export interface WarehouseLabelLayoutPreset {
@@ -80,6 +82,7 @@ export function buildDepotLabel(depot: WarehouseDepot): WarehouseLabelItem {
     hierarchy: [depot.name],
     workspaceId: depot.workspaceId,
     ug: depot.ug,
+    physicalBarcode: encodeWarehouseLocationBarcode({ kind: 'DEPOT', entityId: depot.id }),
   };
 }
 
@@ -101,6 +104,7 @@ export function buildLocationLabel(
       hierarchy: [depot.name, location.name],
       workspaceId: location.workspaceId,
       ug: location.ug,
+      physicalBarcode: encodeWarehouseLocationBarcode({ kind: 'LOCAL', entityId: location.id }),
     };
   }
 
@@ -123,6 +127,7 @@ export function buildLocationLabel(
     hierarchy: [depot.name, parent?.name ?? 'Local', location.name],
     workspaceId: location.workspaceId,
     ug: location.ug,
+    physicalBarcode: encodeWarehouseLocationBarcode({ kind: 'SUBPOSITION', entityId: location.id }),
   };
 }
 
@@ -137,6 +142,8 @@ export function buildWarehouseLabelsForScope(input: {
     | 'LOCATION_ONLY'
     | 'LOCATION_SUBPOSITIONS';
 }): WarehouseLabelItem[] {
+  if (input.depot.status !== 'active') return [];
+
   const active = input.locations.filter(
     (location) =>
       location.status === 'active'

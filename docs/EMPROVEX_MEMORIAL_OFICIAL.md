@@ -2736,24 +2736,31 @@ recovery:verify: PENDENTE
 restore isolado real: PENDENTE / protegido
 
 RELEASE
-RC único SaaS+Mobile: PRONTO PARA COMPOSIÇÃO
+RC único SaaS+Mobile: COMPOSTO POR RC-A / APTO PARA RC-B
+RC-A technical SHA: 54e60c2264588d8802a67a4cab3d875d64f6bfc1
+RC-A branch: rc-r1-a-composition
+RC-A PR: #249 DRAFT / NÃO MERGEADO
+fontes congeladas: SaaS 2c1eee759ea8024c296b4c6968ed935b9a59e880 + Mobile 7b7717b6eebabf911310d2b8ac56ed13c9cb9238
+CT-01: MATERIALIZADA — camera=(self), microphone=(), geolocation=()
+Rules principal RC: bc91185f34bcdcb4437a4de1078d1089a09292ba
+Rules Warehouse RC: 6e1f1050005314db4e17cb3136409abbddb0ee91
+Application CI #961: SUCCESS
+Legal Validation #63: SUCCESS
+Core Protection #248: SUCCESS
+Recovery guardrails #639: SUCCESS
+Vercel Preview automático: BLOCKED — build-rate-limit externo
 RC Candidate: AINDA NÃO DECLARADO
 RC Frozen: NÃO
-CT-01: PENDENTE NO RC
-Preview HTTPS: AINDA NÃO PUBLICADO
+Preview HTTPS oficial do RC: AINDA NÃO PUBLICADO
 produção controlada: NÃO AUTORIZADA
 piloto real: NÃO INICIADO
 abertura comercial: NÃO AUTORIZADA
 
 PRÓXIMA SEQUÊNCIA
-criar/fixar branch única do RC
-→ compor SaaS + Mobile semanticamente
-→ aplicar CT-01
-→ reconciliar Rules/package/lockfile/CI/contratos
-→ executar gates no SHA exato
-→ declarar RC CANDIDATE se PASS
-→ RC FROZEN
-→ Preview HTTPS
+RC-B certificar o SHA técnico exato do RC-A
+→ Program Control decidir RC CANDIDATE se RC-B PASS
+→ RC FROZEN somente por decisão competente
+→ Preview HTTPS oficial
 → testes SaaS + MOBILE-J físicos
 → corrigir somente regressões/blockers reais
 → nova reconciliação/freeze se necessário

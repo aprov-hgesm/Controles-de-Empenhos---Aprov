@@ -182,6 +182,63 @@ jobs:
       - name: ADM Depósito Phase 8 permanent guard
         run: npm run verify:adm-deposito-phase-8
 
+      - name: Central Móvel R1 scanner contract tests
+        run: npm run test:mobile-r1-scanner
+
+      - name: Central Móvel R1 platform scanner guard
+        run: npm run verify:mobile-r1-platform-scanner
+
+      - name: Central Móvel R1 Integration 1 domain tests
+        run: npm run test:mobile-r1-integration-1
+
+      - name: Central Móvel R1 Integration 1 guard
+        run: npm run verify:mobile-r1-integration-1
+
+      - name: Central Móvel R1 physical query domain tests
+        run: npm run test:mobile-r1-physical-query
+
+      - name: Central Móvel R1 physical query guard
+        run: npm run verify:mobile-r1-physical-query
+
+      - name: Central Móvel R1 MOBILE-C intake allocation domain tests
+        run: npm run test:mobile-r1-intake-allocation
+
+      - name: Central Móvel R1 MOBILE-C intake allocation guard
+        run: npm run verify:mobile-r1-intake-allocation
+
+      - name: Central Móvel R1 Integration 2 domain tests
+        run: npm run test:mobile-r1-integration-2
+
+      - name: Central Móvel R1 Integration 2 guard
+        run: npm run verify:mobile-r1-integration-2
+
+      - name: Central Móvel R1 MOBILE-H position check domain tests
+        run: npm run test:mobile-r1-position-check
+
+      - name: Central Móvel R1 MOBILE-H position check guard
+        run: npm run verify:mobile-r1-position-check
+
+      - name: Central Móvel R1 MOBILE-F inventory domain tests
+        run: npm run test:mobile-r1-inventory
+
+      - name: Central Móvel R1 MOBILE-F inventory guard
+        run: npm run verify:mobile-r1-inventory
+
+      - name: Central Móvel R1 MOBILE-G outbound domain tests
+        run: npm run test:mobile-r1-outbound
+
+      - name: Central Móvel R1 MOBILE-G outbound guard
+        run: npm run verify:mobile-r1-outbound
+
+      - name: Central Móvel R1 Integration 3 domain tests
+        run: npm run test:mobile-r1-integration-3
+
+      - name: Central Móvel R1 Integration 3 guard
+        run: npm run verify:mobile-r1-integration-3
+
+      - name: Central Móvel R1 MOBILE-I integrated product guard
+        run: npm run verify:mobile-r1-integration-final
+
       - name: ADM Depósito Phase 9 depot layout domain tests
         run: npm run test:adm-deposito-depot-layout
 
