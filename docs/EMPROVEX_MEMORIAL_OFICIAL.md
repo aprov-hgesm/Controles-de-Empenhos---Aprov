@@ -121,6 +121,8 @@ Sequência canônica:
 
 ```text
 SaaS final + Mobile final
+→ SESSION-CAP-01 — remover teto fixo de 2 sessões
+→ regressão de sessão/Rules/telemetria
 → branch única de composição do RC
 → reconciliação semântica dos contratos compartilhados
 → CT-01
@@ -144,6 +146,8 @@ SaaS final + Mobile final
 ### Condições para declarar RC CANDIDATE
 
 Obrigatório:
+
+- SESSION-CAP-01 concluída e reconciliada, salvo decisão explícita do Fundador de adiar a mudança para release posterior;
 
 - nenhum novo conflito SaaS↔Mobile;
 - CT-01 materializada;
@@ -329,6 +333,208 @@ O runtime atualmente integrado define:
 - perda de lease/revogação/mudança de acesso invalida a sessão local.
 
 **Estes números 30/15 são o contrato implementado atual e substituem referências históricas anteriores com valores diferentes.**
+
+### 9.4.1 Mudança autorizada — remoção do teto fixo de duas sessões
+
+Decisão do Fundador em 2026-10-03:
+
+**o limite fixo de 2 sessões simultâneas para usuários externos deve ser removido.**
+
+Motivação operacional:
+
+- a Central Móvel R1 transforma o celular em ferramenta operacional do depósito;
+- uma única equipe pode precisar de vários operadores simultâneos;
+- alocação, conferência, inventário, transferência e saída podem ocorrer em paralelo;
+- limitar o workspace a apenas duas sessões cria gargalo artificial justamente no cenário Mobile;
+- Desktop e múltiplos celulares precisam poder coexistir durante a operação.
+
+### Estado atual versus estado alvo
+
+**Estado atual do runtime:**
+
+- limite externo: 2 sessões;
+- documentos fixos: `sessionSlots/slot-1` e `sessionSlots/slot-2`;
+- lease: 30 minutos;
+- heartbeat: 15 minutos;
+- revogação administrativa: ativa;
+- painel de sessões: ativo;
+- telemetria: ativa.
+
+**Estado alvo autorizado:**
+
+- **sem teto fixo de duas sessões por workspace/UG**;
+- permitir múltiplas sessões externas simultâneas compatíveis com o uso operacional real;
+- manter controle individual de identidade de cada sessão;
+- manter lease, heartbeat, revogação, auditoria e telemetria;
+- manter possibilidade de encerramento remoto de uma sessão específica;
+- manter lifecycle fail-closed;
+- manter proteção cross-workspace;
+- não transformar “sem limite fixo” em “sem controle de sessão”.
+
+### Princípio arquitetural
+
+A mudança deve remover o **limite de capacidade**, não remover a **camada de segurança de sessão**.
+
+Continuam obrigatórios:
+
+- `sessionId`;
+- `browserInstanceId`;
+- UID;
+- e-mail;
+- workspaceId;
+- UG;
+- lease temporal;
+- heartbeat;
+- tombstone de revogação;
+- invalidação por mudança de acesso;
+- painel administrativo de sessões;
+- auditoria `session.terminate`;
+- telemetria de sessões/consumo.
+
+### Implicação técnica conhecida
+
+A implementação atual usa apenas:
+
+- `slot-1`;
+- `slot-2`.
+
+Portanto **não basta alterar `DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT`**.
+
+A frente deverá substituir a reserva física fixa por uma coleção de sessões dinâmicas ou mecanismo equivalente, preservando identidade e revogação.
+
+Direção preferida:
+
+```text
+workspaces/{workspaceId}/sessionSlots/{sessionIdOuIdDinamico}
+```
+
+ou contrato equivalente que:
+
+- aceite N sessões simultâneas;
+- permita identificar cada sessão;
+- permita revogar uma sessão específica;
+- permita listar sessões no painel;
+- permita expiração por lease;
+- impeça overwrite de sessão alheia;
+- preserve isolamento por workspace.
+
+O nome final do documento/coleção pode ser mantido por compatibilidade se isso simplificar a migração, mas o ID não deve continuar restrito a `slot-1`/`slot-2`.
+
+### Momento ideal de execução
+
+Esta alteração deve ser executada:
+
+**ANTES DO RC CANDIDATE / ANTES DO RC FROZEN.**
+
+Motivo:
+
+- a certificação física Mobile deve representar o comportamento real que será lançado;
+- testar o RC com limite 2 e removê-lo depois invalidaria parte da certificação;
+- a mudança toca Auth/sessão/Rules/telemetria e precisa estar estabilizada antes do Preview final.
+
+Sequência recomendada:
+
+```text
+estado atual consolidado
+→ frente transversal SESSION-CAP-01
+→ regressão de Auth/sessão/Rules/telemetria
+→ integração SaaS + Mobile
+→ composição do RC
+→ freeze
+→ Preview HTTPS
+→ testes físicos com múltiplos operadores
+```
+
+Se a composição do RC já tiver começado quando a frente for ativada, a alteração deve entrar **antes do freeze**, com repetição dos gates afetados.
+
+Não aplicar após `RC FROZEN` como melhoria oportunista; nesse caso, somente reabrir o freeze por decisão explícita do Program Control/Fundador.
+
+### Escopo mínimo da futura frente SESSION-CAP-01
+
+Arquivos/contratos provavelmente afetados:
+
+- `lib/platformCapacity.ts`;
+- `lib/platformSessionLease.ts`;
+- `lib/platformSessionControl.ts`;
+- `lib/platformAdminSessions.ts`;
+- `hooks/useOperationalData.ts`;
+- `hooks/usePlatformAdminSessions.ts`;
+- painel administrativo de sessões;
+- provisionamento/exclusão de setor;
+- lifecycle/suspensão;
+- `firestore.rules`;
+- testes multi-tenant;
+- E2E de sessão;
+- guards Block 16.0/16.1/16.2;
+- guards Block 17.1/17.2;
+- telemetria/consumo;
+- documentação de capacidade.
+
+### Regras de segurança da alteração
+
+A remoção do teto não pode:
+
+- permitir sessão de outro workspace;
+- aceitar UG divergente;
+- permitir uma sessão renovar lease de outra;
+- permitir recriar sessão revogada;
+- permitir que cliente altere identidade do lease;
+- remover revogação administrativa;
+- remover expiração temporal;
+- remover painel de sessões;
+- remover auditoria;
+- quebrar suspensão/reativação;
+- criar acesso anônimo ou bypass de Auth.
+
+### Performance e custo
+
+Mais sessões simultâneas podem aumentar:
+
+- listeners;
+- reads;
+- writes de heartbeat;
+- conexões;
+- consumo Firestore;
+- telemetria.
+
+Por isso a frente deve medir:
+
+- custo por sessão;
+- writes de heartbeat;
+- listeners por aba;
+- pico de sessões por workspace;
+- impacto no Cloud Monitoring;
+- comportamento com vários celulares simultâneos.
+
+A ausência de teto fixo não elimina observabilidade de capacidade. O EMPROVEX deve continuar podendo alertar sobre uso anormal ou excessivo.
+
+### Critérios mínimos de aceitação
+
+A futura frente só pode ser considerada PASS se provar:
+
+1. terceiro, quarto e demais logins externos não são bloqueados apenas por capacidade fixa;
+2. cada navegador/celular possui identidade de sessão coerente;
+3. múltiplas abas da mesma sessão continuam sem duplicação indevida de lease;
+4. revogação de uma sessão não derruba sessões diferentes sem intenção;
+5. suspensão do workspace invalida todas as sessões operacionais;
+6. reativação não ressuscita tombstones antigos;
+7. Rules permanecem fail-closed;
+8. cross-workspace continua DENY;
+9. painel admin lista/encerra sessões corretamente;
+10. telemetria registra aumento de sessões;
+11. Android + Desktop + múltiplos celulares podem coexistir;
+12. Application CI/Core/Rules/multi-tenant/build/typecheck/diff hygiene passam;
+13. MOBILE-J repete os testes afetados no RC.
+
+### Classificação
+
+Esta é uma **mudança funcional explicitamente autorizada pelo Fundador**, apesar do freeze geral de novas features.
+
+Ela é tratada como exceção controlada porque remove uma limitação operacional que conflita diretamente com o uso Mobile do depósito.
+
+Até a implementação e certificação terminarem:
+
+**o runtime continua limitado a 2 sessões externas.**
 
 ### 9.5 Lifecycle observado em tempo real
 
@@ -1360,6 +1566,9 @@ Problema exclusivamente visual não exige rollback automático.
 
 ### 32.1 Antes do RC CANDIDATE
 
+- executar SESSION-CAP-01 e remover o teto fixo de 2 sessões externas;
+- validar múltiplos operadores Desktop/Mobile simultâneos;
+- repetir guards de sessão, Rules, lifecycle e telemetria;
 - criar branch única de composição;
 - fixar fontes SaaS e Mobile;
 - incorporar semanticamente deltas;
@@ -1426,6 +1635,9 @@ Preferência: backup READY nos dois bancos + `recovery:verify`.
 - apagar dados por inadimplência/cancelamento;
 - deixar usuário suspenso sem regularização/recuperação acessível;
 - duplicar Auth/sessão/legal na Mobile;
+- confundir a remoção autorizada do teto de sessões com remoção do controle de sessão;
+- manter por engano os IDs fixos `slot-1`/`slot-2` após declarar sessões sem teto;
+- remover revogação/lease/telemetria junto com o limite;
 - usar números históricos de lease/heartbeat em vez do runtime atual 30/15;
 - sobrescrever CT-01;
 - publicar Rules sem rollback;
@@ -1481,6 +1693,17 @@ Desenvolvimento funcional Mobile encerrado.
 - RC conjunto: composição liberada;
 - produção: inalterada.
 
+### 2026-10-03 — Remoção do teto fixo de sessões autorizada
+
+Decisão do Fundador:
+
+- remover o limite fixo de 2 sessões externas por workspace/UG;
+- motivação principal: permitir múltiplos operadores simultâneos na Central Móvel;
+- preservar lease, heartbeat, revogação, painel administrativo, auditoria, lifecycle e telemetria;
+- implementar em frente transversal controlada `SESSION-CAP-01`;
+- executar antes do RC CANDIDATE/RC FROZEN;
+- até a execução, o runtime permanece em 2 sessões externas.
+
 ### 2026-10-03 — Transição para Release Engineering
 
 Por decisão do Fundador:
@@ -1530,9 +1753,11 @@ Por decisão do Fundador:
 - externo password-only;
 - workspace/UG/UID/e-mail precisam ser coerentes;
 - founder isento de capacidade;
-- externos: 2 sessões;
-- lease atual: 30 min;
-- heartbeat atual: 15 min;
+- runtime atual dos externos: 2 sessões, **com remoção do teto fixo já autorizada pelo Fundador**;
+- estado alvo: sessões externas sem limite fixo por workspace, preservando identidade/lease/revogação/auditoria/telemetria;
+- a migração deve ocorrer antes do RC freeze;
+- lease atual permanece 30 min;
+- heartbeat atual permanece 15 min;
 - revogação administrativa encerra sessões conhecidas;
 - fail-closed em inconsistência.
 
@@ -1725,7 +1950,9 @@ IDENTIDADE / SESSÕES
 founder: Google-only / capacidade isenta
 externo: e-mail+senha / e-mail verificado
 workspace↔UG↔conta primária: obrigatório
-sessões externas: 2
+sessões externas ATUAL: 2
+mudança autorizada: REMOVER TETO FIXO antes do RC freeze
+estado alvo: múltiplas sessões externas sem limite fixo, com controle individual
 lease: 30 min
 heartbeat: 15 min
 fail-closed: SIM
@@ -1764,7 +1991,10 @@ piloto real: NÃO INICIADO
 abertura comercial: NÃO AUTORIZADA
 
 PRÓXIMA SEQUÊNCIA
-criar branch RC
+SESSION-CAP-01
+→ remover teto fixo de 2 sessões
+→ validar múltiplos operadores + Rules/telemetria
+→ criar branch RC
 → compor SaaS+Mobile semanticamente
 → aplicar CT-01
 → reconciliar Rules/package/lockfile/CI/contratos
@@ -1787,4 +2017,3 @@ Antes de qualquer decisão futura:
 4. nunca promover estado histórico a estado vigente;
 5. nunca considerar uma pendência “resolvida” sem evidência;
 6. nunca tratar PASS técnico como autorização de produção.
-
