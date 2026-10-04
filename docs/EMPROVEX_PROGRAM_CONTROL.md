@@ -52,7 +52,7 @@ PROGRAM CONTROL + COORDENAÇÃO DO RC
 
 Regras vigentes:
 
-- nenhuma nova wave funcional SaaS/Mobile está autorizada;
+- nenhuma nova wave funcional SaaS/Mobile está autorizada, **exceto SESSION-CAP-01, autorizada explicitamente pelo Fundador para remover o teto fixo de 2 sessões antes do RC freeze**;
 - Coordenadores de Programa não foram descartados; ficam congelados operacionalmente e retornam apenas por necessidade específica;
 - a Coordenação RC compõe o candidato e consolida evidências;
 - Program Control continua sendo a camada que aceita/rejeita o checkpoint global;
@@ -139,6 +139,32 @@ Isso significa:
 - preservar coerência entre estado atual e histórico;
 - manter o topo do Memorial representando sempre o estado vivo
 
+### SESSION-CAP-01 — exceção funcional autorizada
+
+O Fundador autorizou remover o limite fixo de **2 sessões externas simultâneas por workspace/UG**.
+
+Motivação:
+
+- múltiplos operadores precisam utilizar a Central Móvel em paralelo;
+- Desktop e vários celulares devem poder coexistir;
+- o teto atual cria gargalo operacional artificial.
+
+Regra:
+
+- remover apenas o teto fixo;
+- preservar identidade de sessão, lease, heartbeat, revogação, lifecycle, painel administrativo, auditoria e telemetria;
+- não confundir “sem teto fixo” com “sem controle de sessão”.
+
+A implementação atual usa `slot-1`/`slot-2`, portanto a frente exige migração estrutural para sessões dinâmicas ou mecanismo equivalente.
+
+Momento obrigatório:
+
+**antes do RC CANDIDATE / antes do RC FROZEN.**
+
+Enquanto não implementada e certificada, o runtime permanece em 2 sessões externas.
+
+A frente deve repetir gates de Auth/sessão/Rules/lifecycle/telemetria e ser reconciliada com Mobile antes do freeze.
+
 ## 4.6 Fase atual — Release Candidate
 
 O próximo produto global não é uma nova feature: é um **único SHA de RC SaaS R1 + Mobile R1**.
@@ -189,7 +215,9 @@ Snapshot em 2026-10-03:
 A próxima barreira global é:
 
 ```text
-composição do RC
+SESSION-CAP-01 — remover teto fixo de 2 sessões
+→ regressão de sessão/Rules/telemetria
+→ composição do RC
 → reconciliação transversal
 → CT-01
 → gates
