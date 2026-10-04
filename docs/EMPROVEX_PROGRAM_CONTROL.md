@@ -367,3 +367,22 @@ RULES-AUDIT-01 permanece:
 **PARCIAL — PENDENTE APENAS DE TTL PRODUTIVO**
 
 Ativação de TTL é alteração produtiva com efeito automático de exclusão de documentos expirados e exige autorização explícita do Fundador.
+
+## 17. Checkpoint — inventário pré-TTL
+
+Leitura somente de produção:
+
+- sessionSlots: 5 total / 5 expirados / 0 ativos / 0 sem expiresAt;
+- sessionRevocations: 0 total / 0 sem expiresAt.
+
+Avaliação:
+
+**SEGURO PARA ATIVAÇÃO CONTROLADA DE TTL**, condicionado à autorização explícita do Fundador.
+
+Efeito esperado após ativação:
+
+- os 5 leases expirados tornam-se elegíveis à exclusão automática;
+- nenhuma sessão ativa foi identificada no inventário;
+- futuros leases/tombstones passam a ser limpos pelo Firestore com base em `expiresAt`.
+
+A ativação de TTL continua classificada como alteração produtiva e não pode ser executada sem autorização explícita.
