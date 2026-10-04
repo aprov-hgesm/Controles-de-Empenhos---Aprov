@@ -363,3 +363,16 @@ Status: **PASS TÉCNICO**
 
 HARDEN-A2 deixa de estar bloqueada pela A1.
 
+## HARDEN-A2 — encerrada
+
+Status: **PASS — RISCO RESIDUAL ACEITO TECNICAMENTE**
+
+- dependências: sem alteração;
+- runtime: sem alteração;
+- Rules: sem alteração;
+- Mobile: SEM DELTA;
+- risco residual gRPC: documentado e aceito tecnicamente;
+- produção: não alterada.
+
+Não criar nova frente Firebase/gRPC sem nova evidência técnica.
+
