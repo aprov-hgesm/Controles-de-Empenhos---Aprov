@@ -13,7 +13,7 @@ RC_COMPOSITION_HEAD:
 7f449db986da359091c70f6ae27934f0db18a0cb
 
 RC_B_EVIDENCE_HEAD:
-f60c1fea6427b19774672f51e5cf2a6205f143b5
+c5a35b957a55edc7f56150b7b64374ee88b26c2e
 
 PR RC-A:
 #249
@@ -102,6 +102,6 @@ RECOMENDAÇÃO AO PROGRAM CONTROL:
 APTO PARA DECIDIR RC CANDIDATE
 
 Observação sobre RC_B_EVIDENCE_HEAD:
-O valor acima é o commit que contém o relatório técnico completo de certificação. Este próprio arquivo de handoff é um commit documental posterior; por impossibilidade lógica de um commit conter o próprio SHA, o branch HEAD final deve ser lido do PR RC-B/GitHub e não redefine o runtime certificado.
+O valor acima é o commit que contém a versão final do relatório técnico de certificação. Este próprio arquivo de handoff é um commit documental posterior; por impossibilidade lógica de um commit conter o próprio SHA, o branch HEAD final deve ser lido do PR RC-B/GitHub e não redefine o runtime certificado.
 
 RC-B NÃO declara RC CANDIDATE, RC FROZEN, GO de produção, publicação de Rules, Preview oficial, piloto ou abertura comercial.
