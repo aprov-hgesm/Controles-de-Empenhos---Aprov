@@ -7,6 +7,7 @@ import {
   type WarehouseLabelItem,
   type WarehouseLabelSheetPreset,
 } from '../../../lib/warehouse/labels';
+import { buildWarehouseCode128Pattern } from '../../../lib/warehouse/locationBarcode';
 
 export interface WarehouseLabelPdfOptions {
   preset: WarehouseLabelSheetPreset;
@@ -31,6 +32,42 @@ function fitText(
     doc.setFontSize(size);
   }
   return size;
+}
+
+function drawPhysicalBarcode(
+  doc: jsPDF,
+  value: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  textY: number,
+  compact: boolean
+): void {
+  const pattern = buildWarehouseCode128Pattern(value);
+  const moduleWidth = width / pattern.totalModules;
+
+  doc.setFillColor(0, 0, 0);
+  pattern.bars.forEach((bar) => {
+    doc.rect(
+      x + bar.offsetModules * moduleWidth,
+      y,
+      Math.max(moduleWidth * bar.widthModules, 0.08),
+      height,
+      'F'
+    );
+  });
+
+  const textSize = fitText(
+    doc,
+    value,
+    width,
+    compact ? 3.2 : 4,
+    compact ? 2.35 : 2.8,
+    'normal'
+  );
+  doc.setFontSize(textSize);
+  doc.text(value, x + width / 2, textY, { align: 'center' });
 }
 
 function drawLabel(
@@ -79,7 +116,7 @@ function drawLabel(
     align: 'center',
   });
 
-  const codeY = y + (compact ? 13.2 : large ? 20 : 16.2);
+  const codeY = y + (compact ? 11.8 : large ? 18 : 14.5);
   const codeSize = fitText(
     doc,
     item.code,
@@ -91,7 +128,7 @@ function drawLabel(
   doc.setFontSize(codeSize);
   doc.text(item.code, innerX, codeY);
 
-  const nameY = codeY + (compact ? 5 : large ? 8 : 6.5);
+  const nameY = codeY + (compact ? 4.4 : large ? 7.2 : 5.7);
   const nameSize = fitText(
     doc,
     item.name,
@@ -103,7 +140,7 @@ function drawLabel(
   doc.setFontSize(nameSize);
   doc.text(item.name, innerX, nameY);
 
-  let cursorY = nameY + (compact ? 3.6 : large ? 5.8 : 4.5);
+  let cursorY = nameY + (compact ? 3.4 : large ? 5.5 : 4.2);
 
   if (options.includeHierarchy && item.hierarchy.length > 1) {
     doc.setFont('helvetica', 'normal');
@@ -118,16 +155,46 @@ function drawLabel(
   }
 
   const footerY = y + height - (compact ? 3 : 3.8);
+  const separatorY = footerY - (compact ? 2.2 : 2.8);
+  const barcodeTextY = separatorY - (compact ? 1 : 1.2);
+  const barcodeHeight = compact ? 5.2 : large ? 10 : 6.6;
+  const barcodeGap = compact ? 1.8 : large ? 2.6 : 2.1;
+  const barcodeY = barcodeTextY - barcodeGap - barcodeHeight;
+  const barcodeX = x + pad;
+  const barcodeWidth = width - pad * 2;
+
+  drawPhysicalBarcode(
+    doc,
+    item.physicalBarcode,
+    barcodeX,
+    barcodeY,
+    barcodeWidth,
+    barcodeHeight,
+    barcodeTextY,
+    compact
+  );
+
   doc.setDrawColor(165, 165, 165);
   doc.setLineWidth(0.15);
-  doc.line(innerX, footerY - (compact ? 3 : 3.7), x + width - pad, footerY - (compact ? 3 : 3.7));
+  doc.line(innerX, separatorY, x + width - pad, separatorY);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(compact ? 4.2 : 5);
   const footerParts: string[] = [];
+  if (item.kind !== 'DEPOT') footerParts.push('DEP ' + item.depotCode);
   if (options.includeUg) footerParts.push('UG ' + item.ug);
   footerParts.push(item.workspaceId);
-  doc.text(footerParts.join('  ·  '), innerX, footerY);
+  const footerText = footerParts.join('  ·  ');
+  const footerTextWidth = innerWidth * (compact ? 0.66 : 0.7);
+  const footerSize = fitText(
+    doc,
+    footerText,
+    footerTextWidth,
+    compact ? 4.2 : 5,
+    compact ? 3.2 : 3.7,
+    'normal'
+  );
+  doc.setFontSize(footerSize);
+  doc.text(footerText, innerX, footerY);
 
   doc.setFontSize(compact ? 3.8 : 4.6);
   doc.text('Estrutura física', x + width - pad, footerY, { align: 'right' });
