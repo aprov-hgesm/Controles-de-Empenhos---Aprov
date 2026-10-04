@@ -2120,7 +2120,10 @@ service cloud.firestore {
     // com clientes antigos durante rollout/rollback. Não existe teto fixo de
     // sessões no ruleset RC; identidade, tenant, lease e lifecycle seguem fail-closed.
     match /workspaces/{workspaceId}/sessionSlots/{slotId} {
-      allow get, list: if canAccessWorkspace(workspaceId) || isPlatformAdmin();
+      // Clientes externos conhecem apenas o próprio caminho de lease. LIST fica
+      // restrito à administração para evitar enumeração de sessões do setor.
+      allow get: if canAccessWorkspace(workspaceId) || isPlatformAdmin();
+      allow list: if isPlatformAdmin();
       allow create: if validWorkspaceSessionLeaseCreate(workspaceId, slotId);
       allow update: if validWorkspaceSessionLeaseUpdate(workspaceId, slotId);
       allow delete: if validWorkspaceSessionLeaseDelete(workspaceId, slotId)
