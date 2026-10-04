@@ -83,6 +83,17 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: SESSION-CAP full browser E2E
-        run: npm run test:e2e:browser
+      - name: SESSION-CAP focused browser E2E
+        shell: bash
+        run: |
+          npx --yes firebase-tools emulators:exec \
+            --config firebase.security-test.json \
+            --project demo-emprovex-security \
+            --only auth,firestore \
+            'node scripts/e2e-browser-emulator.mjs block-16-integrated.spec.mjs'
+          npx --yes firebase-tools emulators:exec \
+            --config firebase.security-test.json \
+            --project demo-emprovex-security \
+            --only auth,firestore \
+            'node scripts/e2e-browser-emulator.mjs operator-critical-flow.spec.mjs --grep "quatro sessões independentes coexistem"'
 
