@@ -20,8 +20,9 @@ import {
   SESSION_HEARTBEAT_INTERVAL_MS,
   SESSION_LEASE_DURATION_MS,
   SESSION_LEASE_VERSION,
-  SESSION_SLOT_IDS,
   isFounderCapacityExempt,
+  isLegacyWorkspaceSessionSlotId,
+  type SimultaneousSessionLimit,
   type WorkspaceSessionLease,
   type WorkspaceSessionSlotId,
 } from './platformCapacity';
@@ -169,16 +170,28 @@ function getLocalLeaseRecord(
 
   try {
     const parsed = JSON.parse(raw) as Partial<LocalLeaseRecord>;
+    const slotId = typeof parsed.slotId === 'string' ? parsed.slotId.trim() : '';
+    const browserInstanceId = typeof parsed.browserInstanceId === 'string'
+      ? parsed.browserInstanceId.trim()
+      : '';
     if (
       parsed.workspaceId !== workspaceId
       || parsed.uid !== uid
-      || !SESSION_SLOT_IDS.includes(parsed.slotId as WorkspaceSessionSlotId)
+      || !slotId
       || !parsed.sessionId
-      || !parsed.browserInstanceId
+      || !browserInstanceId
+      || (
+        !isLegacyWorkspaceSessionSlotId(slotId)
+        && slotId !== browserInstanceId
+      )
     ) {
       return null;
     }
-    return parsed as LocalLeaseRecord;
+    return {
+      ...parsed,
+      slotId,
+      browserInstanceId,
+    } as LocalLeaseRecord;
   } catch {
     return null;
   }
@@ -334,10 +347,17 @@ export async function acquireWorkspaceSessionLease(
   const browserInstanceId = await getOrCreateBrowserInstanceId();
   const sessionId = await getOrCreateWorkspaceSessionId(context.workspaceId, user.uid);
 
-  const slotRefs = SESSION_SLOT_IDS.map((slotId) => ({
-    slotId,
-    ref: doc(db, 'workspaces', context.workspaceId, 'sessionSlots', slotId),
-  }));
+  // SESSION-CAP-01 — cada instância de navegador possui seu próprio documento.
+  // O browserInstanceId é estável entre logins no mesmo navegador e evita a
+  // acumulação de um novo documento a cada autenticação bem-sucedida.
+  const slotId: WorkspaceSessionSlotId = browserInstanceId;
+  const leaseRef = doc(
+    db,
+    'workspaces',
+    context.workspaceId,
+    'sessionSlots',
+    slotId
+  );
   const revocationRef = doc(
     db,
     'workspaces',
@@ -349,9 +369,9 @@ export async function acquireWorkspaceSessionLease(
   const initialTrustedNowMs = await getTrustedServerNowMs();
 
   const result = await runTransaction(db, async (transaction) => {
-    const [revocationSnapshot, ...snapshots] = await Promise.all([
+    const [revocationSnapshot, leaseSnapshot] = await Promise.all([
       transaction.get(revocationRef),
-      ...slotRefs.map(({ ref }) => transaction.get(ref)),
+      transaction.get(leaseRef),
     ]);
 
     // Tombstones são imutáveis nas Rules. Portanto, a existência do documento
@@ -364,45 +384,12 @@ export async function acquireWorkspaceSessionLease(
       );
     }
 
-    // A decisão temporal usa o relógio sincronizado com o servidor EMPROVEX.
-    // O valor é extrapolado por relógio monotônico, portanto diferenças no
-    // relógio do Windows não afetam expiração, takeover ou duração do lease.
     const attemptNowMs =
       getCachedTrustedServerNowMs() ?? initialTrustedNowMs;
-
-    const candidates = snapshots.map((snapshot, index) => ({
-      slotId: slotRefs[index].slotId,
-      ref: slotRefs[index].ref,
-      snapshot,
-      data: snapshot.exists()
-        ? snapshot.data() as StoredWorkspaceSessionLeaseDocument
-        : null,
-    }));
-
-    const owned = candidates.find(({ data }) => (
-      data
-      && leaseBelongsToLogicalSession(
-        data,
-        user,
-        context,
-        sessionId,
-        browserInstanceId
-      )
-    ));
-
-    const available = owned || candidates.find(({ snapshot, data }) => (
-      !snapshot.exists() || (data ? isExpiredLease(data, attemptNowMs) : true)
-    ));
-
-    if (!available) {
-      throw new PlatformSessionLeaseError(
-        'SESSION_CAPACITY_EXCEEDED',
-        SESSION_CAPACITY_EXCEEDED_MESSAGE
-      );
-    }
-
-    const previous = available.data;
-    const keepStartedAt = Boolean(
+    const previous = leaseSnapshot.exists()
+      ? leaseSnapshot.data() as StoredWorkspaceSessionLeaseDocument
+      : null;
+    const owned = Boolean(
       previous
       && leaseBelongsToLogicalSession(
         previous,
@@ -411,14 +398,28 @@ export async function acquireWorkspaceSessionLease(
         sessionId,
         browserInstanceId
       )
-      && isTimestamp(previous.startedAt)
     );
 
+    // Um documento dinâmico nunca é tomado de outra sessão ainda ativa.
+    // Colisão de browserInstanceId é tratada como perda de lease, não como
+    // "capacidade cheia": não existe mais teto de sessões por workspace/UG.
+    if (previous && !owned && !isExpiredLease(previous, attemptNowMs)) {
+      throw new PlatformSessionLeaseError(
+        'SESSION_LEASE_LOST',
+        'A identidade deste navegador já está vinculada a outra sessão ativa. Faça login novamente.'
+      );
+    }
+
+    const keepStartedAt = Boolean(
+      owned
+      && previous
+      && isTimestamp(previous.startedAt)
+    );
     const expiresAt = Timestamp.fromMillis(attemptNowMs + SESSION_LEASE_DURATION_MS);
 
-    transaction.set(available.ref, {
+    transaction.set(leaseRef, {
       leaseVersion: SESSION_LEASE_VERSION,
-      slotId: available.slotId,
+      slotId,
       sessionId,
       workspaceId: context.workspaceId,
       ug,
@@ -431,7 +432,7 @@ export async function acquireWorkspaceSessionLease(
     });
 
     return {
-      slotId: available.slotId,
+      slotId,
       expiresAt,
       startedAt: keepStartedAt && previous?.startedAt
         ? previous.startedAt
@@ -442,7 +443,7 @@ export async function acquireWorkspaceSessionLease(
 
   recordWorkspaceUsage(
     { workspaceId: context.workspaceId, ug },
-    { documentReads: 3, documentWrites: 1 }
+    { documentReads: 2, documentWrites: 1 }
   );
 
   rememberLocalLease({
@@ -697,6 +698,6 @@ export async function renewWorkspaceSessionLeaseIfDue(
   return renewIfStillDue();
 }
 
-export function getConfiguredExternalSessionLimit(): number {
+export function getConfiguredExternalSessionLimit(): SimultaneousSessionLimit {
   return DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT;
 }
