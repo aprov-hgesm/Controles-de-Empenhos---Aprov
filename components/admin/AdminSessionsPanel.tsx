@@ -250,7 +250,7 @@ export function AdminSessionsPanel({
             </div>
             <h4 className="text-lg font-extrabold text-white">Encerrar sessão remotamente?</h4>
             <p className="mt-2 text-sm leading-relaxed text-slate-400">
-              O acesso desta sessão será revogado e a vaga será liberada. O operador poderá entrar novamente depois, criando uma nova sessão.
+              O acesso desta sessão será revogado e o lease ativo será removido. O operador poderá entrar novamente depois, criando uma nova sessão.
             </p>
             <div className="mt-5 flex justify-end gap-2">
               <button type="button" onClick={() => setCandidate(null)} className="rounded-xl border border-white/[0.08] px-4 py-2.5 text-xs font-bold text-slate-300">

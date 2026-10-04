@@ -148,7 +148,7 @@ if (findings.length) {
 } else {
   console.log('BLOCK 16.1 SESSION ENFORCEMENT: READY');
   console.log('Setores externos: SESSÕES DINÂMICAS SEM TETO FIXO');
-  console.log('Múltiplas abas: 1 VAGA POR NAVEGADOR');
+  console.log('Múltiplas abas: 1 LEASE POR NAVEGADOR');
   console.log('Conta fundadora: ILIMITADA');
   console.log('Identidade de lease: browserInstanceId / TRANSAÇÃO FIRESTORE');
   console.log('Lease atual: 30 MIN / HEARTBEAT: 15 MIN (otimizado no Bloco 17.1)');

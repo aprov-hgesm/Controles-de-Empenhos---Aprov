@@ -38,6 +38,7 @@ O documento conserva `sessionId`, `workspaceId`, `ug`, `uid`, `accountEmail`,
 - lease permanece 30 minutos;
 - heartbeat permanece 15 minutos;
 - fundador continua isento do lease externo;
+- o código diagnóstico legado `SESSION_CAPACITY_EXCEEDED` permanece apenas para compatibilidade de estados/clientes antigos; a aquisição RC não o emite e não existe mensagem funcional de “2 sessões”;
 - tombstone continua bloqueando o mesmo `sessionId` enquanto existir;
 - tenant externo não pode listar `sessionSlots`; administração pode;
 - cross-workspace continua DENY;

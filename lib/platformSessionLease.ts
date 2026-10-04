@@ -40,8 +40,13 @@ const ACTIVE_LEASE_KEY_PREFIX = 'emprovex:workspace-lease:v1';
 const LEGACY_LAST_RENEWED_KEY_PREFIX = 'emprovex:workspace-lease-renewed:v1';
 const LAST_RENEWED_KEY_PREFIX = 'emprovex:workspace-lease-renewed:v2';
 
+/**
+ * Diagnóstico legado preservado apenas para compatibilidade com clientes/estados
+ * anteriores ao SESSION-CAP-01. O runtime RC não impõe teto fixo nem emite este
+ * erro durante a aquisição dinâmica normal.
+ */
 export const SESSION_CAPACITY_EXCEEDED_MESSAGE =
-  'Limite de acessos simultâneos atingido. Este setor já possui 2 sessões ativas no EMPROVEX. Encerre uma das sessões existentes para continuar.';
+  'Não foi possível iniciar esta sessão com o contrato legado de capacidade. Atualize a página e tente novamente.';
 
 export type PlatformSessionLeaseErrorCode =
   | 'SESSION_CAPACITY_EXCEEDED'
@@ -616,7 +621,7 @@ async function renewKnownWorkspaceSessionLease(
     if (code.includes('not-found')) {
       throw new PlatformSessionLeaseError(
         'SESSION_LEASE_LOST',
-        'A vaga desta sessão não está mais ativa. Faça login novamente.'
+        'O lease desta sessão não está mais ativo. Faça login novamente.'
       );
     }
     throw error;
@@ -670,8 +675,8 @@ export async function renewWorkspaceSessionLeaseIfDue(
     const local = getLocalLeaseRecord(context.workspaceId, user.uid);
     if (!local) {
       // Recuperação rara: sem a identidade local do slot não é seguro fazer update
-      // cego. Voltamos à aquisição transacional completa, que verifica tombstone e
-      // os dois slots antes de reconstruir o estado local.
+      // cego. Voltamos à aquisição transacional completa, que verifica o tombstone e
+      // o lease dinâmico antes de reconstruir o estado local.
       return acquireWorkspaceSessionLease(user, context);
     }
 
