@@ -112,7 +112,9 @@ forbidText(
 
 for (const invariant of [
   'isGoogleFounderSession()',
-  "slotId in ['slot-1', 'slot-2']",
+  "function isLegacySessionSlotId(slotId)",
+  "function isValidSessionSlotId(slotId)",
+  "workspaceSessionSlotBindingMatches(slotId, data)",
   'match /workspaces/{workspaceId}/sessionRevocations/{sessionId}',
   'allow update, delete: if false;',
   'match /workspaces/{workspaceId}/usageEstimates/{dayKey}',

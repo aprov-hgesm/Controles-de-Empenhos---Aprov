@@ -98,13 +98,13 @@ requireTrue(
 );
 requireText(
   capacity,
-  "export const SESSION_SLOT_IDS = ['slot-1', 'slot-2'] as const;",
-  'Modelo de dois slots externos foi alterado.'
+  "export const LEGACY_SESSION_SLOT_IDS = ['slot-1', 'slot-2'] as const;",
+  'Compatibilidade transitória dos slots legados foi removida.'
 );
 requireText(
   capacity,
-  'export const DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT = 2;',
-  'Limite externo de duas sessões foi alterado.'
+  'export const DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT: SimultaneousSessionLimit = null;',
+  'SESSION-CAP-01 deixou de representar capacidade externa ilimitada.'
 );
 
 requireText(
@@ -114,13 +114,13 @@ requireText(
 );
 requireText(
   lease,
-  '...slotRefs.map(({ ref }) => transaction.get(ref))',
-  'Aquisição de sessão perdeu a inspeção transacional dos slots.'
+  'transaction.get(leaseRef)',
+  'Aquisição dinâmica perdeu a leitura transacional do próprio lease.'
 );
 requireText(
   lease,
-  '{ documentReads: 3, documentWrites: 1 }',
-  'Telemetria da aquisição deixou de registrar o baseline explícito de 3 reads + 1 write.'
+  '{ documentReads: 2, documentWrites: 1 }',
+  'Telemetria da aquisição dinâmica deve registrar 2 reads + 1 write.'
 );
 
 requireTrue(

@@ -173,8 +173,24 @@ service cloud.firestore {
         );
     }
 
-    function isValidSessionSlotId(slotId) {
+    function isLegacySessionSlotId(slotId) {
       return slotId in ['slot-1', 'slot-2'];
+    }
+
+    function isValidSessionSlotId(slotId) {
+      return slotId is string
+        && (
+          isLegacySessionSlotId(slotId)
+          || (slotId.size() > 8 && slotId.size() <= 128)
+        );
+    }
+
+    function workspaceSessionSlotBindingMatches(slotId, data) {
+      return isLegacySessionSlotId(slotId)
+        || (
+          data.browserInstanceId is string
+          && data.browserInstanceId == slotId
+        );
     }
 
     function validWorkspaceSessionLeaseShape(workspaceId, slotId) {
@@ -182,6 +198,7 @@ service cloud.firestore {
       return canAccessWorkspace(workspaceId)
         && !isHgesmFounder()
         && isValidSessionSlotId(slotId)
+        && workspaceSessionSlotBindingMatches(slotId, request.resource.data)
         && 'ug' in workspace
         && isValidUnitUg(workspace.ug)
         && request.resource.data.keys().hasAll([
@@ -270,6 +287,7 @@ service cloud.firestore {
       return canAccessWorkspace(workspaceId)
         && !isHgesmFounder()
         && isValidSessionSlotId(slotId)
+        && workspaceSessionSlotBindingMatches(slotId, resource.data)
         && resource.data.workspaceId == workspaceId
         && resource.data.slotId == slotId
         && resource.data.uid == request.auth.uid
@@ -408,6 +426,7 @@ service cloud.firestore {
     function validAdminSessionSlotDelete(workspaceId, slotId) {
       return isPlatformAdmin()
         && isValidSessionSlotId(slotId)
+        && workspaceSessionSlotBindingMatches(slotId, resource.data)
         && resource.data.workspaceId == workspaceId
         && resource.data.slotId == slotId
         && existsAfter(
@@ -2096,11 +2115,15 @@ service cloud.firestore {
       allow list: if isPlatformAdmin();
     }
 
-    // Block 16.1 — capacity metadata. These two fixed slots enforce a maximum of
-    // two simultaneous external-sector browser sessions without query/count races.
-    // The founder is exempt and never claims a slot.
+    // SESSION-CAP-01 — leases externos são dinâmicos por browserInstanceId.
+    // slot-1/slot-2 permanecem válidos somente para compatibilidade transitória
+    // com clientes antigos durante rollout/rollback. Não existe teto fixo de
+    // sessões no ruleset RC; identidade, tenant, lease e lifecycle seguem fail-closed.
     match /workspaces/{workspaceId}/sessionSlots/{slotId} {
-      allow get, list: if canAccessWorkspace(workspaceId) || isPlatformAdmin();
+      // Clientes externos conhecem apenas o próprio caminho de lease. LIST fica
+      // restrito à administração para evitar enumeração de sessões do setor.
+      allow get: if canAccessWorkspace(workspaceId) || isPlatformAdmin();
+      allow list: if isPlatformAdmin();
       allow create: if validWorkspaceSessionLeaseCreate(workspaceId, slotId);
       allow update: if validWorkspaceSessionLeaseUpdate(workspaceId, slotId);
       allow delete: if validWorkspaceSessionLeaseDelete(workspaceId, slotId)

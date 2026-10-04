@@ -5,7 +5,7 @@ import { HGESM_WORKSPACE_ID } from '../hgesmWorkspace';
 import {
   SESSION_REVOCATION_TTL_MS,
   SESSION_REVOCATION_VERSION,
-  SESSION_SLOT_IDS,
+  isLegacyWorkspaceSessionSlotId,
 } from '../platformCapacity';
 import {
   isValidUnitUg,
@@ -99,7 +99,7 @@ interface LifecycleDirectoryState {
   workspace: FirestoreDocumentPayload;
   account: FirestoreDocumentPayload;
   slots: Array<{
-    slotId: (typeof SESSION_SLOT_IDS)[number];
+    slotId: string;
     document: FirestoreDocumentPayload;
     sessionId: string;
     uid: string;
@@ -207,6 +207,54 @@ async function readFirestoreDocument(
   }
 
   return payload;
+}
+
+function firestoreDocumentId(document: FirestoreDocumentPayload): string {
+  const name = document.name || '';
+  const segments = name.split('/');
+  return segments[segments.length - 1] || '';
+}
+
+async function listFirestoreCollectionDocuments(
+  accessToken: string,
+  databaseId: string,
+  parentDocumentPath: string,
+  collectionId: string
+): Promise<FirestoreDocumentPayload[]> {
+  const documents: FirestoreDocumentPayload[] = [];
+  let pageToken = '';
+
+  do {
+    const params = new URLSearchParams({ pageSize: '200' });
+    if (pageToken) params.set('pageToken', pageToken);
+
+    const response = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(PROJECT_ID)}/databases/${encodeURIComponent(databaseId)}/documents/${encodeDocumentPath(parentDocumentPath)}/${encodeURIComponent(collectionId)}?${params.toString()}`,
+      {
+        headers: { authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      }
+    );
+
+    const payload = await readJson(response) as {
+      documents?: FirestoreDocumentPayload[];
+      nextPageToken?: string;
+    } & Record<string, unknown>;
+
+    if (response.status === 404) return documents;
+    if (!response.ok) {
+      throw new SectorLifecycleFailure(
+        googleErrorMessage(payload),
+        'UPSTREAM_ERROR',
+        response.status >= 500 ? 503 : 409
+      );
+    }
+
+    documents.push(...(payload.documents || []));
+    pageToken = payload.nextPageToken || '';
+  } while (pageToken);
+
+  return documents;
 }
 
 async function commitFirestoreWrites(
@@ -321,31 +369,31 @@ async function loadLifecycleDirectoryState(
     );
   }
 
-  const slotDocuments = await Promise.all(
-    SESSION_SLOT_IDS.map(async (slotId) => ({
-      slotId,
-      document: await readFirestoreDocument(
-        accessToken,
-        CORE_DATABASE_ID,
-        `workspaces/${workspaceId}/sessionSlots/${slotId}`
-      ),
-    }))
+  const slotDocuments = await listFirestoreCollectionDocuments(
+    accessToken,
+    CORE_DATABASE_ID,
+    workspacePath,
+    'sessionSlots'
   );
 
-  const slots = slotDocuments.flatMap(({ slotId, document }) => {
-    if (!document) return [];
-
+  const slots = slotDocuments.map((document) => {
+    const slotId = firestoreDocumentId(document);
     const sessionId = stringField(document, 'sessionId');
     const uid = stringField(document, 'uid');
+    const browserInstanceId = stringField(document, 'browserInstanceId');
     const slotWorkspaceId = normalizeWorkspaceId(stringField(document, 'workspaceId'));
     const slotUg = normalizeUnitUg(stringField(document, 'ug'));
     const slotEmail = normalizePlatformEmail(stringField(document, 'accountEmail'));
     const storedSlotId = stringField(document, 'slotId');
+    const validBinding = isLegacyWorkspaceSessionSlotId(slotId)
+      || (Boolean(browserInstanceId) && browserInstanceId === slotId);
 
     if (
       !document.updateTime
+      || !slotId
       || !sessionId
       || !uid
+      || !validBinding
       || slotWorkspaceId !== workspaceId
       || slotUg !== ug
       || slotEmail !== email
@@ -358,14 +406,14 @@ async function loadLifecycleDirectoryState(
       );
     }
 
-    return [{
+    return {
       slotId,
       document,
       sessionId,
       uid,
       accountEmail: slotEmail,
       ug: slotUg,
-    }];
+    };
   });
 
   return {
@@ -421,42 +469,25 @@ function auditWrite(input: {
   };
 }
 
-async function commitMainLifecycle(
+const SESSION_REVOCATION_BATCH_SIZE = 180;
+
+async function revokeLifecycleSessions(
   accessToken: string,
   state: LifecycleDirectoryState,
-  status: SectorLifecycleStatus,
-  actor: SectorLifecycleActor,
-  reason: string
-): Promise<{ previousStatus: SectorLifecycleStatus; revokedSessions: number }> {
-  const previousStatus = state.workspaceStatus;
-  const now = new Date().toISOString();
-  const writes: FirestoreWrite[] = [];
-
-  if (previousStatus !== status) {
-    writes.push(
-      {
-        update: {
-          name: documentName(CORE_DATABASE_ID, `workspaces/${state.workspaceId}`),
-          fields: toFirestoreFields({ status, updatedAt: now }),
-        },
-        updateMask: { fieldPaths: ['status', 'updatedAt'] },
-        currentDocument: { updateTime: state.workspace.updateTime },
-      },
-      {
-        update: {
-          name: documentName(CORE_DATABASE_ID, `platformAccounts/${state.email}`),
-          fields: toFirestoreFields({ status, updatedAt: now }),
-        },
-        updateMask: { fieldPaths: ['status', 'updatedAt'] },
-        currentDocument: { updateTime: state.account.updateTime },
-      }
+  actor: SectorLifecycleActor
+): Promise<number> {
+  for (
+    let offset = 0;
+    offset < state.slots.length;
+    offset += SESSION_REVOCATION_BATCH_SIZE
+  ) {
+    const batch = state.slots.slice(
+      offset,
+      offset + SESSION_REVOCATION_BATCH_SIZE
     );
-  }
+    const writes: FirestoreWrite[] = [];
 
-  const revokedSessions = status === 'disabled' ? state.slots.length : 0;
-
-  if (status === 'disabled') {
-    for (const slot of state.slots) {
+    for (const slot of batch) {
       writes.push(
         {
           update: {
@@ -488,6 +519,119 @@ async function commitMainLifecycle(
         }
       );
     }
+
+    await commitFirestoreWrites(accessToken, CORE_DATABASE_ID, writes);
+  }
+
+  return state.slots.length;
+}
+
+async function commitMainLifecycle(
+  accessToken: string,
+  state: LifecycleDirectoryState,
+  status: SectorLifecycleStatus,
+  actor: SectorLifecycleActor,
+  reason: string
+): Promise<{ previousStatus: SectorLifecycleStatus; revokedSessions: number }> {
+  const previousStatus = state.workspaceStatus;
+  const now = new Date().toISOString();
+
+  if (status === 'disabled') {
+    // Fail closed primeiro: o diretório principal deixa de autorizar operações
+    // antes da limpeza potencialmente longa de N leases.
+    if (previousStatus !== status) {
+      await commitFirestoreWrites(accessToken, CORE_DATABASE_ID, [
+        {
+          update: {
+            name: documentName(CORE_DATABASE_ID, `workspaces/${state.workspaceId}`),
+            fields: toFirestoreFields({ status, updatedAt: now }),
+          },
+          updateMask: { fieldPaths: ['status', 'updatedAt'] },
+          currentDocument: { updateTime: state.workspace.updateTime },
+        },
+        {
+          update: {
+            name: documentName(CORE_DATABASE_ID, `platformAccounts/${state.email}`),
+            fields: toFirestoreFields({ status, updatedAt: now }),
+          },
+          updateMask: { fieldPaths: ['status', 'updatedAt'] },
+          currentDocument: { updateTime: state.account.updateTime },
+        },
+      ]);
+    }
+
+    try {
+      const revokedSessions = await revokeLifecycleSessions(
+        accessToken,
+        state,
+        actor
+      );
+
+      if (previousStatus !== status || revokedSessions > 0) {
+        await commitFirestoreWrites(accessToken, CORE_DATABASE_ID, [
+          auditWrite({
+            actor,
+            state,
+            previousStatus,
+            status,
+            revokedSessions,
+            reason,
+          }),
+        ]);
+      }
+
+      return { previousStatus, revokedSessions };
+    } catch (error) {
+      throw new SectorLifecycleFailure(
+        'A suspensão foi aplicada de forma fail-closed, mas a limpeza de sessões exige recuperação administrativa.',
+        'RECOVERY_REQUIRED',
+        500,
+        true
+      );
+    }
+  }
+
+  // Na reativação, qualquer lease residual de uma suspensão incompleta é
+  // revogado enquanto o workspace ainda está bloqueado. Só depois o diretório
+  // volta a active.
+  let revokedSessions = 0;
+  if (state.slots.length > 0) {
+    try {
+      revokedSessions = await revokeLifecycleSessions(
+        accessToken,
+        state,
+        actor
+      );
+    } catch (error) {
+      throw new SectorLifecycleFailure(
+        'Existem sessões residuais que precisam ser limpas antes da reativação.',
+        'RECOVERY_REQUIRED',
+        500,
+        true
+      );
+    }
+  }
+
+  const writes: FirestoreWrite[] = [];
+  if (previousStatus !== status) {
+    writes.push(
+      {
+        update: {
+          name: documentName(CORE_DATABASE_ID, `workspaces/${state.workspaceId}`),
+          fields: toFirestoreFields({ status, updatedAt: now }),
+        },
+        updateMask: { fieldPaths: ['status', 'updatedAt'] },
+        currentDocument: { updateTime: state.workspace.updateTime },
+      },
+      {
+        update: {
+          name: documentName(CORE_DATABASE_ID, `platformAccounts/${state.email}`),
+          fields: toFirestoreFields({ status, updatedAt: now }),
+        },
+        updateMask: { fieldPaths: ['status', 'updatedAt'] },
+        currentDocument: { updateTime: state.account.updateTime },
+      }
+    );
   }
 
   if (previousStatus !== status || revokedSessions > 0) {
@@ -603,6 +747,13 @@ export async function applySectorLifecycleStatus(
         warehouseAccessStatus: 'disabled',
       };
     } catch (error) {
+      if (
+        error instanceof SectorLifecycleFailure
+        && error.recoveryRequired
+      ) {
+        throw error;
+      }
+
       if (initial.workspaceStatus === 'active') {
         try {
           await setWarehouseLifecycle(accessToken, initial, 'active', actor);
@@ -679,7 +830,7 @@ export async function applySectorLifecycleStatus(
     ug: initial.ug,
     previousStatus: main.previousStatus,
     status: 'active',
-    revokedSessions: 0,
+    revokedSessions: main.revokedSessions,
     warehouseAccessStatus: 'active',
   };
 }

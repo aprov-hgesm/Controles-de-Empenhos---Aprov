@@ -1,5 +1,8 @@
 # BLOCO 16.1 — CONTROLE DE SESSÕES SIMULTÂNEAS POR UG
 
+> **Status vigente — SESSION-CAP-01 (2026-10-04):** este documento preserva a baseline histórica do bloco. Referências a teto de 2 sessões, dois slots fixos, lease de 10 min ou heartbeat de 5 min descrevem o estado histórico e **não** o contrato atual. O contrato RC vigente usa lease dinâmico por `browserInstanceId`, sem teto fixo, lease de 30 min, heartbeat de 15 min e mantém `slot-1`/`slot-2` somente para compatibilidade transitória. Ver `docs/SESSION_CAP_01_RULES_AUDIT_01.md`.
+
+
 ## Objetivo
 
 Ativar o primeiro enforcement real da fundação criada no Bloco 16.0.
@@ -90,3 +93,23 @@ O Bloco 16.1 não:
 - altera regras de negócio de empenhos, NFs, NS, CNPJ ou Google Drive.
 
 Esses itens permanecem para os próximos subblocos do Bloco 16.
+
+## SESSION-CAP-01 — contrato vigente pré-RC
+
+O limite histórico de duas sessões lógicas foi removido por decisão funcional do
+Fundador. A partir desta frente, o contrato vigente é:
+
+- setores externos operam **sem teto fixo**;
+- cada navegador recebe um documento dinâmico de lease identificado por `browserInstanceId`;
+- múltiplas abas do mesmo navegador compartilham a mesma identidade lógica;
+- lease: **30 minutos**;
+- heartbeat: **15 minutos**;
+- revogação individual e tombstone continuam obrigatórios;
+- `slot-1` e `slot-2` permanecem somente em **compatibilidade transitória**;
+- o painel administrativo lista sessões dinâmicas sem filtro fixo;
+- suspensão do workspace precisa bloquear autorização primeiro e revogar todas as sessões;
+- terceiro, quarto e demais navegadores legítimos não são bloqueados por capacidade.
+
+O rollout seguro exige Rules RC antes da aplicação RC. Isso permite que a versão
+antiga continue usando os dois slots durante a janela de transição, enquanto a
+aplicação nova depende das Rules que aceitam IDs dinâmicos.

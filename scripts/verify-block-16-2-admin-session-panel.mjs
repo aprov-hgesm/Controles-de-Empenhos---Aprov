@@ -42,6 +42,8 @@ for (const marker of [
 
 for (const marker of [
   "collectionGroup(db, 'sessionSlots')",
+  "const slotId = String(data.slotId || '').trim()",
+  'if (!slotId) return null;',
   'terminatePlatformWorkspaceSession',
   'transaction.set(revocationRef',
   'transaction.delete(slotRef)',
@@ -102,8 +104,8 @@ for (const marker of [
 ]) requireText(rules, marker, `Rules perderam proteção 16.2: ${marker}`);
 
 for (const marker of [
-  'Administrador lista slots de sessão de toda a plataforma',
-  'Administrador revoga e libera uma sessão na mesma transação',
+  'Administrador lista leases de sessão de toda a plataforma',
+  'Administrador revoga e libera uma sessão dinâmica na mesma transação',
   'Setor lê tombstone conhecido dentro do próprio workspace',
   'Setor pode verificar tombstone inexistente antes de adquirir lease',
   'Outro workspace não lê revogação de sessão do Setor A',

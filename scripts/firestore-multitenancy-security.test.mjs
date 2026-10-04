@@ -2624,7 +2624,7 @@ async function main() {
 
   }
 
-  console.log('\nBloco 16.1 — limite de sessões simultâneas por UG');
+  console.log('\nSESSION-CAP-01 — sessões dinâmicas sem teto fixo');
 
   const sessionLeaseExpiry = () => Timestamp.fromMillis(Date.now() + (30 * 60 * 1000));
   const sessionLeasePayload = (slotId, sessionId, browserInstanceId) => ({
@@ -2655,57 +2655,123 @@ async function main() {
     'sessionSlots',
     'slot-2'
   );
+  const dynamicBrowser3 = 'browser-instance-a3';
+  const dynamicBrowser4 = 'browser-instance-a4';
+  const dynamicSession3 = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'sessionSlots',
+    dynamicBrowser3
+  );
+  const dynamicSession4 = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'sessionSlots',
+    dynamicBrowser4
+  );
 
-  await allowed('Setor externo ocupa o primeiro slot de sessão', () =>
+  // Compatibilidade de rollout: clientes antigos continuam podendo usar os dois
+  // documentos fixos enquanto o RC novo passa a usar IDs por browserInstanceId.
+  await allowed('Compatibilidade transitória preserva slot-1 legado', () =>
     setDoc(sessionSlot1, sessionLeasePayload('slot-1', 'session-browser-a1', 'browser-instance-a1'))
   );
-  await allowed('Setor externo ocupa o segundo slot de sessão', () =>
+  await allowed('Compatibilidade transitória preserva slot-2 legado', () =>
     setDoc(sessionSlot2, sessionLeasePayload('slot-2', 'session-browser-a2', 'browser-instance-a2'))
   );
-  await denied('Terceiro slot não existe no contrato de capacidade', () =>
+
+  await allowed('Terceira sessão legítima usa lease dinâmico sem bloqueio de capacidade', () =>
+    setDoc(
+      dynamicSession3,
+      sessionLeasePayload(dynamicBrowser3, 'session-browser-a3', dynamicBrowser3)
+    )
+  );
+  await allowed('Quarta sessão legítima usa lease dinâmico sem bloqueio de capacidade', () =>
+    setDoc(
+      dynamicSession4,
+      sessionLeasePayload(dynamicBrowser4, 'session-browser-a4', dynamicBrowser4)
+    )
+  );
+
+  await denied('Pseudo-slot legado slot-3 não pertence ao contrato de compatibilidade', () =>
     setDoc(
       doc(sessionA.db, 'workspaces', 'workspace-a', 'sessionSlots', 'slot-3'),
-      sessionLeasePayload('slot-3', 'session-browser-a3', 'browser-instance-a3')
+      sessionLeasePayload('slot-3', 'session-browser-slot3', 'browser-instance-slot3')
     )
   );
-  await denied('Sessão diferente não sobrescreve slot ainda ativo', () =>
+  await denied('Lease dinâmico exige documentId igual ao browserInstanceId', () =>
     setDoc(
-      sessionSlot1,
-      sessionLeasePayload('slot-1', 'session-browser-intruso', 'browser-instance-intruso')
+      doc(sessionA.db, 'workspaces', 'workspace-a', 'sessionSlots', 'browser-instance-mismatch'),
+      sessionLeasePayload(
+        'browser-instance-mismatch',
+        'session-browser-mismatch',
+        'browser-instance-other'
+      )
     )
   );
-  await allowed('Mesma sessão renova diretamente o slot conhecido com identidade confirmada', () =>
-    updateDoc(sessionSlot1, {
+  await denied('Sessão diferente não sobrescreve lease dinâmico ainda ativo', () =>
+    setDoc(
+      dynamicSession3,
+      sessionLeasePayload(dynamicBrowser3, 'session-browser-intruso', dynamicBrowser3)
+    )
+  );
+  await allowed('Mesma sessão renova diretamente o lease dinâmico conhecido', () =>
+    updateDoc(dynamicSession3, {
       leaseVersion: 'emprovex_session_v1',
-      slotId: 'slot-1',
-      sessionId: 'session-browser-a1',
+      slotId: dynamicBrowser3,
+      sessionId: 'session-browser-a3',
       workspaceId: 'workspace-a',
       ug: '160416',
       uid: sessionA.user.uid,
       accountEmail: identities.a.email,
-      browserInstanceId: 'browser-instance-a1',
+      browserInstanceId: dynamicBrowser3,
       lastSeenAt: serverTimestamp(),
       expiresAt: sessionLeaseExpiry(),
     })
   );
-  await denied('Outro workspace não lê slots de sessão do Setor A', () =>
-    getDoc(doc(sessionB.db, 'workspaces', 'workspace-a', 'sessionSlots', 'slot-1'))
+
+  await denied('Outro workspace não lê lease dinâmico do Setor A', () =>
+    getDoc(
+      doc(
+        sessionB.db,
+        'workspaces',
+        'workspace-a',
+        'sessionSlots',
+        dynamicBrowser3
+      )
+    )
   );
-  await allowed('Administrador pode observar slots como metadado de capacidade', () =>
-    getDoc(doc(admin.db, 'workspaces', 'workspace-a', 'sessionSlots', 'slot-1'))
+  await denied('Setor externo não enumera a coleção de sessões do próprio workspace', () =>
+    getDocs(collection(sessionA.db, 'workspaces', 'workspace-a', 'sessionSlots'))
   );
-  await denied('Conta fundadora não consome slot no workspace fundador', () =>
+  await allowed('Administrador pode observar sessão dinâmica como metadado operacional', () =>
+    getDoc(
+      doc(
+        admin.db,
+        'workspaces',
+        'workspace-a',
+        'sessionSlots',
+        dynamicBrowser3
+      )
+    )
+  );
+  await allowed('Administrador lista leases de sessão de toda a plataforma', () =>
+    getDocs(collectionGroup(admin.db, 'sessionSlots'))
+  );
+
+  await denied('Conta fundadora não consome lease no workspace fundador', () =>
     setDoc(
-      doc(admin.db, 'workspaces', 'hgesm-aprov', 'sessionSlots', 'slot-1'),
+      doc(admin.db, 'workspaces', 'hgesm-aprov', 'sessionSlots', 'browser-founder'),
       {
         leaseVersion: 'emprovex_session_v1',
-        slotId: 'slot-1',
+        slotId: 'browser-founder',
         sessionId: 'founder-session',
         workspaceId: 'hgesm-aprov',
         ug: '160416',
         uid: admin.user.uid,
         accountEmail: identities.founder.email,
-        browserInstanceId: 'founder-browser',
+        browserInstanceId: 'browser-founder',
         startedAt: serverTimestamp(),
         lastSeenAt: serverTimestamp(),
         expiresAt: sessionLeaseExpiry(),
@@ -2713,56 +2779,68 @@ async function main() {
     )
   );
 
-  await allowed('Logout explícito pode liberar o slot da própria conta', () =>
-    deleteDoc(sessionSlot2)
+  await allowed('Logout explícito libera somente o lease dinâmico conhecido', () =>
+    deleteDoc(dynamicSession4)
   );
 
-  await ownerSet('workspaces/workspace-a/sessionSlots/slot-2', {
+  const reclaimedBrowser = 'browser-instance-reclaimed';
+  const reclaimedSession = doc(
+    sessionA.db,
+    'workspaces',
+    'workspace-a',
+    'sessionSlots',
+    reclaimedBrowser
+  );
+  await ownerSet(`workspaces/workspace-a/sessionSlots/${reclaimedBrowser}`, {
     leaseVersion: 'emprovex_session_v1',
-    slotId: 'slot-2',
+    slotId: reclaimedBrowser,
     sessionId: 'expired-session',
     workspaceId: 'workspace-a',
     ug: '160416',
     uid: sessionA.user.uid,
     accountEmail: identities.a.email,
-    browserInstanceId: 'expired-browser',
+    browserInstanceId: reclaimedBrowser,
     startedAt: new Date(Date.now() - (30 * 60 * 1000)),
     lastSeenAt: new Date(Date.now() - (30 * 60 * 1000)),
     expiresAt: new Date(Date.now() - (20 * 60 * 1000)),
   });
 
-  await allowed('Slot expirado pode ser retomado por uma nova sessão', () =>
+  await allowed('Lease dinâmico expirado pode ser retomado no mesmo navegador', () =>
     setDoc(
-      sessionSlot2,
-      sessionLeasePayload('slot-2', 'session-browser-reclaimed', 'browser-instance-reclaimed')
+      reclaimedSession,
+      sessionLeasePayload(
+        reclaimedBrowser,
+        'session-browser-reclaimed',
+        reclaimedBrowser
+      )
     )
   );
 
-  await denied('Sessão antiga não renova slot retomado por outra identidade lógica', () =>
-    updateDoc(sessionSlot2, {
+  await denied('Sessão antiga não renova lease dinâmico retomado', () =>
+    updateDoc(reclaimedSession, {
       leaseVersion: 'emprovex_session_v1',
-      slotId: 'slot-2',
+      slotId: reclaimedBrowser,
       sessionId: 'expired-session',
       workspaceId: 'workspace-a',
       ug: '160416',
       uid: sessionA.user.uid,
       accountEmail: identities.a.email,
-      browserInstanceId: 'expired-browser',
+      browserInstanceId: reclaimedBrowser,
       lastSeenAt: serverTimestamp(),
       expiresAt: sessionLeaseExpiry(),
     })
   );
 
-  await allowed('Sessão vencedora renova diretamente o slot retomado', () =>
-    updateDoc(sessionSlot2, {
+  await allowed('Sessão vencedora renova diretamente o lease dinâmico retomado', () =>
+    updateDoc(reclaimedSession, {
       leaseVersion: 'emprovex_session_v1',
-      slotId: 'slot-2',
+      slotId: reclaimedBrowser,
       sessionId: 'session-browser-reclaimed',
       workspaceId: 'workspace-a',
       ug: '160416',
       uid: sessionA.user.uid,
       accountEmail: identities.a.email,
-      browserInstanceId: 'browser-instance-reclaimed',
+      browserInstanceId: reclaimedBrowser,
       lastSeenAt: serverTimestamp(),
       expiresAt: sessionLeaseExpiry(),
     })
@@ -2770,11 +2848,7 @@ async function main() {
 
   console.log('\nBloco 16.2 — painel e encerramento remoto de sessões');
 
-  await allowed('Administrador lista slots de sessão de toda a plataforma', () =>
-    getDocs(collectionGroup(admin.db, 'sessionSlots'))
-  );
-
-  const revokedSessionId = 'session-browser-a1';
+  const revokedSessionId = 'session-browser-a3';
   const revocationRefA1 = doc(
     admin.db,
     'workspaces',
@@ -2783,10 +2857,16 @@ async function main() {
     revokedSessionId
   );
 
-  await allowed('Administrador revoga e libera uma sessão na mesma transação', () =>
+  await allowed('Administrador revoga e libera uma sessão dinâmica na mesma transação', () =>
     runTransaction(admin.db, async (transaction) => {
       const snapshot = await transaction.get(
-        doc(admin.db, 'workspaces', 'workspace-a', 'sessionSlots', 'slot-1')
+        doc(
+          admin.db,
+          'workspaces',
+          'workspace-a',
+          'sessionSlots',
+          dynamicBrowser3
+        )
       );
       assert.equal(snapshot.exists(), true);
 
@@ -2797,13 +2877,19 @@ async function main() {
         ug: '160416',
         uid: sessionA.user.uid,
         accountEmail: identities.a.email,
-        slotId: 'slot-1',
+        slotId: dynamicBrowser3,
         createdAt: serverTimestamp(),
         createdBy: identities.founder.email,
         expiresAt: Timestamp.fromMillis(Date.now() + (24 * 60 * 60 * 1000)),
       });
       transaction.delete(
-        doc(admin.db, 'workspaces', 'workspace-a', 'sessionSlots', 'slot-1')
+        doc(
+          admin.db,
+          'workspaces',
+          'workspace-a',
+          'sessionSlots',
+          dynamicBrowser3
+        )
       );
     })
   );
@@ -2828,7 +2914,7 @@ async function main() {
       ug: '160416',
       uid: sessionA.user.uid,
       accountEmail: identities.a.email,
-      slotId: 'slot-1',
+      slotId: dynamicBrowser3,
       createdAt: serverTimestamp(),
       createdBy: identities.founder.email,
       expiresAt: Timestamp.fromMillis(Date.now() + (48 * 60 * 60 * 1000)),
@@ -2875,7 +2961,7 @@ async function main() {
         ug: '160416',
         uid: sessionA.user.uid,
         accountEmail: identities.a.email,
-        slotId: 'slot-1',
+        slotId: reclaimedBrowser,
         createdAt: serverTimestamp(),
         createdBy: identities.a.email,
         expiresAt: Timestamp.fromMillis(Date.now() + (24 * 60 * 60 * 1000)),
