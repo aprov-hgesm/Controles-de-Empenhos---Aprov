@@ -410,3 +410,26 @@ Escopo autorizado:
 **somente habilitar TTL nos dois campos acima e verificar o estado.**
 
 Não inclui publicação de Rules, deploy de aplicação, IAM, restore ou outras mudanças produtivas.
+
+## 19. Checkpoint — TTL produtivo em criação
+
+Autorização do Fundador executada dentro do escopo aprovado.
+
+Estado produtivo:
+
+- `sessionSlots.expiresAt`: `CREATING`;
+- `sessionRevocations.expiresAt`: `CREATING`.
+
+Operações:
+
+- sessionSlots: `AyBjNGNiYzA2Zjk5ZWQtOTU0YS01ZjY0LTQ3OGEtODg4OTM2ZGMkGnNlbmlsZXBpcAkKMxI`;
+- sessionRevocations: `AyBiZjE1ZWYwMTMxMjgtMGU3OC03Yjc0LWQxZjUtZWYxNTNjY2EkGnNlbmlsZXBpcAkKMxI`.
+
+Classificação atual:
+
+- SESSION-CAP-01: **PASS TÉCNICO COMPLETO**;
+- Rules baseline/drift: **PASS / SEM DRIFT**;
+- TTL: **EM IMPLANTAÇÃO**;
+- RULES-AUDIT-01: **PENDENTE APENAS DE TTL = ACTIVE**.
+
+Nenhuma nova alteração produtiva deve ser realizada. Próximo passo: somente leitura/polling do estado TTL.
