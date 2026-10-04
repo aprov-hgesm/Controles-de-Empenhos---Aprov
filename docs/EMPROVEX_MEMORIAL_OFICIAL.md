@@ -1,14 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-03 — consolidação canônica pré-RC**
+Última sincronização global: **2026-10-04 — SESSION-CAP-01 + RULES-AUDIT-01 encerradas / pré-composição do RC**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
-Integradora SaaS R1: `feat/saas-r1-commercializacao` — snapshot técnico pós-HARDEN-A2: `d7709d22f8e7ec9654ffaaa17a59ae06b34426bd` (commits posteriores podem ser apenas documentais)
+Integradora SaaS R1: `feat/saas-r1-commercializacao@54aba792cb9e7bb195e21401fb50a21ed50add19` — SESSION-CAP-01 integrada; commits posteriores podem ser documentais de Program Control
 
 Integradora Mobile R1: `feat/central-mobile-r1@7b7717b6eebabf911310d2b8ac56ed13c9cb9238` — avanço documental, sem novo delta runtime
 
-Estado global: **Performance R3 em produção; desenvolvimento funcional SaaS R1 e Mobile R1 encerrado; HARDEN-A1/A2/C/D em PASS; HARDEN-B parcial por dependência temporal; MOBILE-J em certificação final; composição do RC único SaaS+Mobile liberada, ainda não congelada; Preview HTTPS ainda não publicado; produção não alterada pelas frentes atuais.**
+Estado global: **Performance R3 em produção; desenvolvimento funcional SaaS R1 e Mobile R1 encerrado; SESSION-CAP-01 em PASS técnico completo e integrada na linha SaaS/RC; RULES-AUDIT-01 em PASS — RULES APTAS PARA RC; TTL produtivo de sessionSlots/sessionRevocations ACTIVE; HARDEN-A1/A2/C/D em PASS; HARDEN-B parcial por dependência temporal; MOBILE-J aguarda Preview HTTPS; composição do RC único SaaS+Mobile é a próxima barreira; Preview HTTPS ainda não publicado.**
 
 ---
 
@@ -96,9 +96,11 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | SaaS R1 | **FUNCIONALMENTE CONCLUÍDO / PRONTO PARA RC** | A1/A2/C/D PASS; B parcial/temporal |
 | Mobile R1 | **FUNCIONALMENTE CONCLUÍDO** | A–I integradas; MOBILE-J em certificação final |
 | MOBILE-J | **PARCIAL TECNICAMENTE SAUDÁVEL / CERTIFICAÇÃO EM EXECUÇÃO** | aguarda RC em Preview HTTPS para testes físicos reais |
-| RC conjunto | **COMPOSIÇÃO LIBERADA / NÃO CONGELADO** | próximo trabalho transversal |
+| SESSION-CAP-01 | **PASS TÉCNICO COMPLETO / INTEGRADA** | PR #248 squash-merged; sessões externas dinâmicas sem teto fixo |
+| RULES-AUDIT-01 | **PASS — RULES APTAS PARA RC** | Rules vivas sem drift; TTL dos dois grupos ACTIVE |
+| RC conjunto | **PRONTO PARA COMPOSIÇÃO / NÃO CONGELADO** | SESSION-CAP + RULES-AUDIT encerradas; próximo trabalho transversal |
 | CT-01 | **PENDENTE NO RC** | `camera=(self), microphone=(), geolocation=()` |
-| Rules candidatas | **SaaS↔Mobile reconciliadas** | diferem das Rules hoje presentes em `main`; exigem rollout/rollback preparado |
+| Rules candidatas | **AUDITADAS / APTAS PARA RC** | produção R3 sem drift; principal RC `bc91185...`; Warehouse RC `6e1f105...`; rollout Rules RC → app RC |
 | HARDEN-B | **PARCIAL / ESPERA CONTROLADA** | PITR/delete protection/schedule/retention ativos; backup READY/verify/restore pendentes |
 | Billing R1 | **IMPLEMENTADO EM MODO OBSERVE** | R$ 70; trial; cobrança externa; confirmação manual; sem suspensão automática |
 | Piloto real | **NÃO INICIADO** | vem depois do RC tecnicamente fechado/publicação controlada |
@@ -106,7 +108,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 
 ### Snapshots técnicos relevantes
 
-- SaaS pós-HARDEN-A2: `d7709d22f8e7ec9654ffaaa17a59ae06b34426bd`;
+- SaaS/RC após SESSION-CAP + RULES-AUDIT: `54aba792cb9e7bb195e21401fb50a21ed50add19`;
 - Mobile integradora documental: `7b7717b6eebabf911310d2b8ac56ed13c9cb9238`;
 - MOBILE-J: `mobile-r1-j-final-certification@90d646372aae3e92318a78b90d71f72c5eb6b00e`;
 - HARDEN-B: `saas-harden-b-recovery-restore@910cca1ea9f14e4ef080ee649624042f63206d51`.
@@ -121,9 +123,8 @@ Sequência canônica:
 
 ```text
 SaaS final + Mobile final
-→ SESSION-CAP-01 — remover teto fixo de 2 sessões
-→ regressão de sessão/Rules/telemetria
-→ RULES-AUDIT-01 — baseline + compatibilidade + ALLOW/DENY + rollback
+→ SESSION-CAP-01 — PASS / integrada
+→ RULES-AUDIT-01 — PASS / Rules aptas para RC
 → branch única de composição do RC
 → reconciliação semântica dos contratos compartilhados
 → CT-01
@@ -325,9 +326,9 @@ Após o vínculo, e-mail idêntico não basta: o UID precisa continuar sendo exa
 
 O runtime atualmente integrado define:
 
-- usuário externo: **máximo padrão de 2 sessões simultâneas por workspace**;
+- usuário externo: **sem teto fixo de sessões simultâneas por workspace/UG no candidato integrado**;
 - founder: **isento do limite de capacidade**;
-- slots canônicos: `slot-1` e `slot-2`;
+- documentos de sessão: IDs dinâmicos por `browserInstanceId`; `slot-1` e `slot-2` permanecem apenas como compatibilidade transitória;
 - lease nominal: **30 minutos**;
 - heartbeat/renovação nominal: **15 minutos**;
 - decisão temporal baseada em relógio confiável do servidor, não no relógio local do Windows;
@@ -352,17 +353,19 @@ Motivação operacional:
 
 ### Estado atual versus estado alvo
 
-**Estado atual do runtime:**
+**Estado integrado na linha SaaS/RC:**
 
-- limite externo: 2 sessões;
-- documentos fixos: `sessionSlots/slot-1` e `sessionSlots/slot-2`;
+- limite externo: **sem teto fixo**;
+- documentos: `sessionSlots/{browserInstanceId}`;
+- compatibilidade transitória: `slot-1` e `slot-2`;
 - lease: 30 minutos;
 - heartbeat: 15 minutos;
 - revogação administrativa: ativa;
 - painel de sessões: ativo;
-- telemetria: ativa.
+- telemetria: ativa;
+- TTL `expiresAt`: ACTIVE em `sessionSlots` e `sessionRevocations`.
 
-**Estado alvo autorizado:**
+**Estado alvo autorizado e alcançado:**
 
 - **sem teto fixo de duas sessões por workspace/UG**;
 - permitir múltiplas sessões externas simultâneas compatíveis com o uso operacional real;
@@ -534,9 +537,7 @@ Esta é uma **mudança funcional explicitamente autorizada pelo Fundador**, apes
 
 Ela é tratada como exceção controlada porque remove uma limitação operacional que conflita diretamente com o uso Mobile do depósito.
 
-Até a implementação e certificação terminarem:
-
-**o runtime continua limitado a 2 sessões externas.**
+A implementação e a certificação técnica da SESSION-CAP-01 foram concluídas em PASS; a mudança está integrada na linha SaaS/RC, ainda sem promoção da aplicação RC à produção.
 
 ### 9.5 Lifecycle observado em tempo real
 
@@ -2283,6 +2284,34 @@ Ruleset ativo — Warehouse:
 - drift: **NENHUM**.
 
 Primeiro gate externo da RULES-AUDIT-01: **PASS**.
+
+### 2026-10-04 — RULES-AUDIT-01 encerrada em PASS
+
+Verificação final confirmou:
+
+- `sessionSlots.expiresAt`: `ACTIVE`;
+- `sessionRevocations.expiresAt`: `ACTIVE`.
+
+Com as Rules vivas previamente confirmadas sem drift e o inventário pré-TTL validado, o Program Control declara:
+
+**RULES-AUDIT-01 = PASS — RULES APTAS PARA RC**
+
+SESSION-CAP-01 permanece:
+
+**PASS TÉCNICO COMPLETO**
+
+Integração:
+
+- PR #248 marcado ready;
+- PR #248 squash-merged na integradora SaaS/RC;
+- commit de integração: `54aba792cb9e7bb195e21401fb50a21ed50add19`;
+- `main`: inalterado;
+- aplicação RC: não publicada;
+- Rules RC: não publicadas.
+
+Próxima barreira global:
+
+**composição do RC único SaaS R1 + Mobile R1**, seguida de CT-01, reconciliação package/lockfile/CI e gates no SHA exato.
 
 ### 2026-10-04 — TTL produtivo autorizado e em criação
 
