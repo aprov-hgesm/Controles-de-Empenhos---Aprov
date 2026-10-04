@@ -454,9 +454,9 @@ Se a composição do RC já tiver começado quando a frente for ativada, a alter
 
 Não aplicar após `RC FROZEN` como melhoria oportunista; nesse caso, somente reabrir o freeze por decisão explícita do Program Control/Fundador.
 
-### Escopo mínimo da futura frente SESSION-CAP-01
+### Escopo executado/auditado da SESSION-CAP-01
 
-Arquivos/contratos provavelmente afetados:
+Arquivos/contratos afetados ou auditados:
 
 - `lib/platformCapacity.ts`;
 - `lib/platformSessionLease.ts`;
@@ -513,9 +513,9 @@ Por isso a frente deve medir:
 
 A ausência de teto fixo não elimina observabilidade de capacidade. O EMPROVEX deve continuar podendo alertar sobre uso anormal ou excessivo.
 
-### Critérios mínimos de aceitação
+### Critérios de aceitação utilizados
 
-A futura frente só pode ser considerada PASS se provar:
+A frente foi considerada PASS após provar:
 
 1. terceiro, quarto e demais logins externos não são bloqueados apenas por capacidade fixa;
 2. cada navegador/celular possui identidade de sessão coerente;
@@ -2042,27 +2042,30 @@ Problema exclusivamente visual não exige rollback automático.
 
 ### 32.1 Antes do RC CANDIDATE
 
-- executar SESSION-CAP-01 e remover o teto fixo de 2 sessões externas;
-- validar múltiplos operadores Desktop/Mobile simultâneos;
-- repetir guards de sessão, Rules, lifecycle e telemetria;
-- executar RULES-AUDIT-01 sobre o ruleset pós-SESSION-CAP-01;
-- capturar Rules realmente publicadas e detectar eventual drift;
-- concluir diff estrutural/semântico;
-- concluir matriz ALLOW/DENY;
-- concluir regressão R3 + SaaS + Mobile;
-- concluir compatibilidade de rollout;
-- preparar rollback independente dos dois bancos;
-- obter **PASS — RULES APTAS PARA RC**;
-- criar branch única de composição;
+Já concluído nesta barreira:
+
+- SESSION-CAP-01: **PASS TÉCNICO COMPLETO / INTEGRADA**;
+- RULES-AUDIT-01: **PASS — RULES APTAS PARA RC**;
+- Rules produtivas principal e Warehouse capturadas: **SEM DRIFT**;
+- TTL `sessionSlots.expiresAt` e `sessionRevocations.expiresAt`: **ACTIVE**;
+- compatibilidade de rollout/rollback de Rules documentada;
+- guards de sessão/Rules/lifecycle/telemetria e Browser E2E: PASS.
+
+Ainda obrigatório antes de declarar RC CANDIDATE:
+
+- criar/fixar branch única de composição;
 - fixar fontes SaaS e Mobile;
-- incorporar semanticamente deltas;
+- incorporar semanticamente os deltas;
 - aplicar CT-01;
 - reconciliar Auth/workspace/UG/sessão/Legal/billing/lifecycle;
-- reconciliar Rules;
+- reconciliar Rules principal e Warehouse;
 - reconciliar package/lockfile/Application CI;
 - reconciliar repositories/shell/scanner/Central;
-- registrar hashes;
-- gates combinados verdes.
+- registrar hashes do candidato;
+- executar gates combinados no SHA exato;
+- obter todos os gates obrigatórios verdes.
+
+A validação física com múltiplos operadores Desktop/Mobile pertence à etapa de Preview HTTPS/MOBILE-J após o candidato congelado.
 
 ### 32.2 Antes do RC FROZEN
 
@@ -2650,6 +2653,8 @@ O arquivo:
 PRODUÇÃO
 main@e90f92acae1514ee5cbc6ce95fed354bc1454330
 Performance R3
+aplicação RC: NÃO PUBLICADA
+Rules RC: NÃO PUBLICADAS
 
 GOVERNANÇA
 Program Control + Coordenação do RC: ATIVO
@@ -2658,6 +2663,8 @@ Fundador: autoridade final de produção/GO
 
 SAAS R1
 funcional: ENCERRADO
+integrador com SESSION-CAP: feat/saas-r1-commercializacao
+commit de integração runtime SESSION-CAP/RULES-AUDIT: 54aba792cb9e7bb195e21401fb50a21ed50add19
 HARDEN-A1: PASS
 HARDEN-A2: PASS — risco residual aceito
 HARDEN-B: PARCIAL / temporal
@@ -2682,11 +2689,13 @@ IDENTIDADE / SESSÕES
 founder: Google-only / capacidade isenta
 externo: e-mail+senha / e-mail verificado
 workspace↔UG↔conta primária: obrigatório
-sessões externas PRODUÇÃO ATUAL: 2
-SESSION-CAP-01 candidato: PASS TÉCNICO COMPLETO
-estado alvo implementado na branch: múltiplas sessões externas sem teto fixo, com controle individual
+produção R3 atual: teto histórico de 2 sessões externas
+candidato SaaS/RC: múltiplas sessões externas sem teto fixo, com controle individual
+SESSION-CAP-01: PASS TÉCNICO COMPLETO / INTEGRADA
 lease: 30 min
 heartbeat: 15 min
+TTL sessionSlots.expiresAt: ACTIVE
+TTL sessionRevocations.expiresAt: ACTIVE
 fail-closed: SIM
 
 LEGAL
@@ -2697,6 +2706,7 @@ aceite: versionado por UID/workspace
 erro de verificação: fail-closed
 
 MOBILE R1
+integrador: feat/central-mobile-r1@7b7717b6eebabf911310d2b8ac56ed13c9cb9238
 funcional A–I: ENCERRADO
 MOBILE-J: CERTIFICAÇÃO FINAL EM EXECUÇÃO
 HEAD J: 90d646372aae3e92318a78b90d71f72c5eb6b00e
@@ -2704,14 +2714,16 @@ blocker funcional: NENHUM
 próximo trabalho: RC Preview HTTPS + runbook físico
 
 RULES
-SESSION-CAP branch: rc-session-cap-rules-audit@a97c1a94799cbbc240994d76fefc6f85925bffe1
-PR #248: DRAFT / MERGEABLE / NÃO INTEGRADO
+PR #248: MERGED
+squash SESSION-CAP/RULES-AUDIT: 54aba792cb9e7bb195e21401fb50a21ed50add19
+RULES-AUDIT-01: PASS — RULES APTAS PARA RC
+produção principal viva: 0d990b7de0b2e85ed55fe14ec0d2ce29b3635299
+produção warehouse viva: b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2
+drift produtivo: NENHUM
 principal RC: bc91185f34bcdcb4437a4de1078d1089a09292ba
 warehouse RC: 6e1f1050005314db4e17cb3136409abbddb0ee91
-RULES-AUDIT-01: PRONTA PARA FECHAMENTO EXTERNO / PASS FINAL PENDENTE
-gate 1: rulesets ativos + drift check — PASS / SEM DRIFT
-pendência única: TTL de sessionSlots/sessionRevocations — NÃO CONFIGURADO
-publicação produtiva sem PASS: PROIBIDA
+ordem futura autorizável de rollout: Rules RC → aplicação RC
+publicação produtiva RC: NÃO AUTORIZADA
 rollback Rules: obrigatório e independente do Vercel
 
 RECOVERY
@@ -2724,7 +2736,7 @@ recovery:verify: PENDENTE
 restore isolado real: PENDENTE / protegido
 
 RELEASE
-RC único SaaS+Mobile: COMPOSIÇÃO LIBERADA
+RC único SaaS+Mobile: PRONTO PARA COMPOSIÇÃO
 RC Candidate: AINDA NÃO DECLARADO
 RC Frozen: NÃO
 CT-01: PENDENTE NO RC
@@ -2734,22 +2746,18 @@ piloto real: NÃO INICIADO
 abertura comercial: NÃO AUTORIZADA
 
 PRÓXIMA SEQUÊNCIA
-capturar rulesets realmente ativos dos 2 bancos
-→ comparar drift
-→ confirmar TTL real de sessionSlots/sessionRevocations
-→ fechar RULES-AUDIT-01
-→ integrar semanticamente PR #248
-→ criar/finalizar branch RC
-→ compor SaaS+Mobile semanticamente
+criar/fixar branch única do RC
+→ compor SaaS + Mobile semanticamente
 → aplicar CT-01
 → reconciliar Rules/package/lockfile/CI/contratos
-→ gates no SHA exato
-→ declarar RC CANDIDATE
-→ freeze
+→ executar gates no SHA exato
+→ declarar RC CANDIDATE se PASS
+→ RC FROZEN
 → Preview HTTPS
 → testes SaaS + MOBILE-J físicos
-→ corrigir regressões reais
-→ GO/NO-GO de produção controlada
+→ corrigir somente regressões/blockers reais
+→ nova reconciliação/freeze se necessário
+→ GO/NO-GO explícito para produção controlada
 ```
 
 ## Regra final de continuidade
