@@ -9,6 +9,7 @@ const staticGates = [
   'verify:block-16-0-capacity-foundation',
   'verify:block-16-1-session-enforcement',
   'verify:block-16-2-admin-session-panel',
+  'verify:block-16-3-workspace-telemetry',
   'verify:block-16-7-security-concurrency',
   'test:block-16-8-integrated-domain',
   'verify:block-16-8-integrated-e2e',
