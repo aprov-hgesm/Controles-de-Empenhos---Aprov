@@ -1347,3 +1347,26 @@ Base congelada:
 A frente deve primeiro provar alcance real dos advisories e compatibilidade do caminho suportado. O objetivo não é zerar `npm audit` a qualquer custo, e sim reduzir risco real sem quebrar Auth, Firestore, multi-tenant, Central, SaaS ou Mobile.
 
 MOBILE-J pode continuar em paralelo em pré-certificação; HARDEN-B segue aguardando recovery.
+
+### HARDEN-A2 — PASS / ENCERRADA
+
+A HARDEN-A2 — Firebase / Firestore / gRPC foi encerrada como **PASS — RISCO RESIDUAL ACEITO TECNICAMENTE**.
+
+A cadeia transitiva permanece instalada, mas a auditoria de alcançabilidade concluiu que os advisories avaliados dependem de primitivas de servidor gRPC não utilizadas pelo EMPROVEX. O runtime browser não carrega o transporte Node gRPC; os caminhos Node identificados usam Firestore como cliente.
+
+Nenhuma dependência foi alterada. Não houve delta em Auth, Firestore client, Rules, Central, Mobile ou bundle.
+
+Impacto MOBILE-R1: **SEM DELTA**.
+
+Política:
+- não usar `npm audit fix --force`;
+- não aplicar downgrade automático;
+- não forçar override gRPC fora do contrato suportado;
+- reabrir somente diante de nova evidência técnica, mudança de alcance ou correção upstream suportada.
+
+Com A1 e A2 encerradas, o objetivo SaaS passa a ser **fechar o hardening remanescente e deixar o programa pronto para composição do RC ÚNICO SAAS R1 + MOBILE R1**.
+
+HARDEN-B permanece PARCIAL por dependência temporal de backup/recovery. HARDEN-C/D permanecem PASS.
+
+Até nova autorização, não há permissão para merge em `main`, deploy produtivo, Rules produtivas, restore real, migração, piloto ou freeze RC.
+
