@@ -96,4 +96,3 @@ jobs:
             --project demo-emprovex-security \
             --only auth,firestore \
             'node scripts/e2e-browser-emulator.mjs operator-critical-flow.spec.mjs --grep "quatro sessões independentes coexistem"'
-
