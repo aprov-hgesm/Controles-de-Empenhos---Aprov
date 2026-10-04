@@ -814,3 +814,22 @@ Upstream:
 
 Não reabrir desenvolvimento funcional sem regressão concreta.
 Não declarar release.
+
+
+## 35. Foco exclusivo da MOBILE-J
+
+Program Control determinou:
+- desenvolvimento funcional encerrado;
+- nenhuma nova wave funcional;
+- MOBILE-J exclusiva para certificação;
+- F/G/H/I somente podem ser reabertas por regressão concreta;
+- CT-01 preservada;
+- sem merge/rebase SaaS;
+- certificação física preferencialmente no Preview HTTPS do RC;
+- PASS FINAL condicionado à reconciliação SaaS final.
+
+Roteiro físico:
+`docs/CENTRAL_MOBILE_R1_MOBILE_J_PHYSICAL_TEST_RUNBOOK.md`.
+
+Próximo marco:
+Preview HTTPS do RC → Android/iPhone → câmera/fallback → Code128 → feedback → jornada ponta a ponta → Desktop↔Mobile → reconciliação SaaS final.
