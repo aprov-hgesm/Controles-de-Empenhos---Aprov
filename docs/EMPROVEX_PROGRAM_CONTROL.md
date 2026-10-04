@@ -226,3 +226,41 @@ SESSION-CAP-01 — remover teto fixo de 2 sessões
 → certificação real
 → GO/NO-GO
 ```
+
+## 13. Frente ativa — SESSION-CAP-01 + RULES-AUDIT-01
+
+Estado: **ATIVA**
+
+Branch exclusiva:
+
+`rc-session-cap-rules-audit`
+
+Base congelada:
+
+`c6c164c70a1be3e2e7e4e57b0bbf4866d61a71ce`
+
+Ordem obrigatória:
+
+1. auditar arquitetura de sessão atual;
+2. implementar SESSION-CAP-01;
+3. estabilizar runtime/Rules/testes;
+4. executar RULES-AUDIT-01 sobre o ruleset final;
+5. entregar handoff ao Program Control.
+
+Não autorizado:
+
+- merge/rebase da integradora durante a execução;
+- publicação de Rules produtivas;
+- deploy Vercel produtivo;
+- merge em `main`;
+- restore real;
+- mudança funcional fora do escopo;
+- declarar RC CANDIDATE/FROZEN.
+
+Critério de saída:
+
+- SESSION-CAP-01 tecnicamente estável;
+- RULES-AUDIT-01 com classificação formal;
+- hashes/diff/testes/rollback documentados;
+- impacto SaaS/Mobile reconciliado;
+- PR/handoff prontos para auditoria do Program Control.
