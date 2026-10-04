@@ -74,7 +74,7 @@ requireText(
 );
 
 for (const marker of [
-  '{ documentReads: 3, documentWrites: 1 }',
+  '{ documentReads: 2, documentWrites: 1 }',
   'documentDeletes: deleted ? 1 : 0',
   'recordWorkspaceRealtimeSnapshot(telemetryScope, 1)',
   'trackWorkspaceRealtimeListener',
