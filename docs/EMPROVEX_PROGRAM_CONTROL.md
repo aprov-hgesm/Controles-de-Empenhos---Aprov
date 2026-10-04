@@ -211,7 +211,8 @@ Snapshot em 2026-10-04:
 - certificação RC-B: PASS com risco externo controlado;
 - PROGRAMAS RECONCILIADOS: **DECLARADO**;
 - RC CANDIDATE: **DECLARADO** em `54e60c2264588d8802a67a4cab3d875d64f6bfc1`;
-- RC FROZEN: não;
+- RC-F: **FREEZE READY / ACEITO**;
+- RC FROZEN: **DECLARADO** em `54e60c2264588d8802a67a4cab3d875d64f6bfc1`;
 - Preview HTTPS: ainda não publicado;
 - produção controlada: não autorizada;
 - piloto real: não iniciado;
@@ -226,7 +227,8 @@ SESSION-CAP-01 — PASS / integrada
 → RC-B — certificação PASS com risco externo controlado
 → PROGRAMAS RECONCILIADOS
 → RC CANDIDATE — DECLARADO
-→ RC FROZEN
+→ RC-F — FREEZE READY / ACEITO
+→ RC FROZEN — DECLARADO
 → Preview HTTPS
 → certificação real
 → GO/NO-GO
@@ -538,3 +540,53 @@ Esta decisão não equivale a:
 Próximo gate global:
 
 **RC FROZEN**.
+
+## 22. Decisão Program Control — RC FROZEN
+
+Data: 2026-10-04.
+
+Após auditoria da RC-F e do PR #251, o Program Control aceita a classificação **FREEZE READY** e declara formalmente:
+
+**EMPROVEX RC FROZEN**
+
+Runtime imutável:
+`54e60c2264588d8802a67a4cab3d875d64f6bfc1`
+
+Referências:
+- RC composition: `7f449db986da359091c70f6ae27934f0db18a0cb`;
+- RC-B final documental: `851cbfc1c966847d1b5fc53c47e2708a48336f76`;
+- RC-F final documental: `bef824946715fe96227a9d3c4edf400e7b8f1304`;
+- SaaS source: `2c1eee759ea8024c296b4c6968ed935b9a59e880`;
+- Mobile source: `7b7717b6eebabf911310d2b8ac56ed13c9cb9238`;
+- produção: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`.
+
+Hashes congelados:
+- Rules principal: `bc91185f34bcdcb4437a4de1078d1089a09292ba`;
+- Rules Warehouse: `6e1f1050005314db4e17cb3136409abbddb0ee91`;
+- package-lock: `7c1ecd0dc074b8924c25123955f70e0ba10675dd`;
+- next.config.ts: `a67a5f7855409185b72bdb2c392a6523d870b2e8`.
+
+Evidência aceita:
+- PR #251: OPEN / DRAFT / MERGEABLE / não mergeado;
+- delta RC-F: somente documentação;
+- nenhum delta runtime após RC Candidate;
+- drift da integradora SaaS: somente documental;
+- Application CI #961/#962: SUCCESS;
+- Core #248/#249: SUCCESS;
+- Legal #63/#64: SUCCESS;
+- Recovery #639/#640: SUCCESS;
+- CT-01: PASS;
+- SESSION-CAP: PASS;
+- Mobile A-I: PASS.
+
+Reabertura do freeze somente por blocker real, regressão funcional, falha de segurança, defeito real de certificação, incompatibilidade material ou impedimento de release.
+
+Não justificam reabertura: melhoria visual, refactor, limpeza, feature nova, otimização oportunista ou atualização não essencial.
+
+Pendências posteriores:
+- Preview HTTPS bloqueado por Vercel build-rate-limit;
+- MOBILE-J física pendente;
+- HARDEN-B temporal pendente;
+- produção continua não autorizada.
+
+Próximo gate: **Preview HTTPS do RC congelado e certificação física/integrada**.
