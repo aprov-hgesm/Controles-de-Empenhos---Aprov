@@ -27,8 +27,8 @@ const workflow = read('.github/workflows/application-ci.yml');
 for (const marker of [
   'SESSION_LEASE_DURATION_MS = 30 * 60 * 1000',
   'SESSION_HEARTBEAT_INTERVAL_MS = 15 * 60 * 1000',
-  "SESSION_SLOT_IDS = ['slot-1', 'slot-2']",
-  'DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT = 2',
+  "LEGACY_SESSION_SLOT_IDS = ['slot-1', 'slot-2']",
+  'DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT: SimultaneousSessionLimit = null',
 ]) {
   requireText(capacity, marker, `Contrato de capacidade 17.1 ausente: ${marker}`);
 }
@@ -75,11 +75,11 @@ for (const marker of [
 }
 
 for (const scenario of [
-  'Mesma sessão renova diretamente o slot conhecido com identidade confirmada',
-  'Slot expirado pode ser retomado por uma nova sessão',
-  'Sessão antiga não renova slot retomado por outra identidade lógica',
-  'Sessão vencedora renova diretamente o slot retomado',
-  'Administrador revoga e libera uma sessão na mesma transação',
+  'Mesma sessão renova diretamente o lease dinâmico conhecido',
+  'Lease dinâmico expirado pode ser retomado no mesmo navegador',
+  'Sessão antiga não renova lease dinâmico retomado',
+  'Sessão vencedora renova diretamente o lease dinâmico retomado',
+  'Administrador revoga e libera uma sessão dinâmica na mesma transação',
 ]) {
   requireText(security, scenario, `Emulator perdeu cenário 17.1: ${scenario}`);
 }
@@ -145,9 +145,9 @@ if (findings.length) {
   process.exitCode = 2;
 } else {
   console.log('BLOCK 17.1 SESSION LEASE EFFICIENCY: READY');
-  console.log('Aquisição inicial: 3 READS + 1 WRITE (transacional)');
+  console.log('Aquisição inicial dinâmica: 2 READS + 1 WRITE (transacional)');
   console.log('Renovação normal: 0 READS explícitas + 1 WRITE');
   console.log('Lease / renovação: 30 MIN / 15 MIN');
   console.log('Redução de operações periódicas explícitas: 91,67%');
-  console.log('Limite externo: 2 SESSÕES — PRESERVADO');
+  console.log('Limite externo: SEM TETO FIXO / LEGADO 2-SLOTS TRANSITÓRIO');
 }
