@@ -340,3 +340,30 @@ baseline vivo Rules
 → integração semântica PR #248
 → composição/finalização do RC
 ```
+
+## 16. Checkpoint — baseline produtiva das Rules e TTL
+
+Baseline viva capturada com sucesso:
+
+- principal ativo: ruleset `06094fa5-0b5b-4dc0-a0b5-7ca032864860`;
+- principal fingerprint: `0d990b7de0b2e85ed55fe14ec0d2ce29b3635299`;
+- Warehouse ativo: ruleset `d246184a-350f-40a0-8241-f2b0fa631768`;
+- Warehouse fingerprint: `b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2`;
+- drift produtivo: **NENHUM**.
+
+Gate baseline/drift: **PASS**.
+
+TTL vivo:
+
+- `sessionSlots.expiresAt`: sem `ttlConfig`;
+- `sessionRevocations.expiresAt`: sem `ttlConfig`.
+
+Conclusão:
+
+**TTL NÃO CONFIGURADO**.
+
+RULES-AUDIT-01 permanece:
+
+**PARCIAL — PENDENTE APENAS DE TTL PRODUTIVO**
+
+Ativação de TTL é alteração produtiva com efeito automático de exclusão de documentos expirados e exige autorização explícita do Fundador.
