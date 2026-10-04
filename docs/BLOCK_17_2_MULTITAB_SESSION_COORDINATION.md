@@ -1,5 +1,8 @@
 # Bloco 17.2 — Controle multiaba simplificado
 
+> **Status vigente — SESSION-CAP-01 (2026-10-04):** este documento preserva a baseline histórica do bloco. Referências a teto de 2 sessões, dois slots fixos, lease de 10 min ou heartbeat de 5 min descrevem o estado histórico e **não** o contrato atual. O contrato RC vigente usa lease dinâmico por `browserInstanceId`, sem teto fixo, lease de 30 min, heartbeat de 15 min e mantém `slot-1`/`slot-2` somente para compatibilidade transitória. Ver `docs/SESSION_CAP_01_RULES_AUDIT_01.md`.
+
+
 ## Objetivo
 
 Preservar o compartilhamento de uma única sessão lógica entre abas do mesmo navegador sem introduzir um coordenador persistente de líder/seguidora.

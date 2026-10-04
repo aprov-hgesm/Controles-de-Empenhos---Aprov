@@ -1,5 +1,8 @@
 # BLOCO 16.1 — CONTROLE DE SESSÕES SIMULTÂNEAS POR UG
 
+> **Status vigente — SESSION-CAP-01 (2026-10-04):** este documento preserva a baseline histórica do bloco. Referências a teto de 2 sessões, dois slots fixos, lease de 10 min ou heartbeat de 5 min descrevem o estado histórico e **não** o contrato atual. O contrato RC vigente usa lease dinâmico por `browserInstanceId`, sem teto fixo, lease de 30 min, heartbeat de 15 min e mantém `slot-1`/`slot-2` somente para compatibilidade transitória. Ver `docs/SESSION_CAP_01_RULES_AUDIT_01.md`.
+
+
 ## Objetivo
 
 Ativar o primeiro enforcement real da fundação criada no Bloco 16.0.

@@ -172,5 +172,93 @@ como pendência externa; não inferir que produção é igual a `main`.
 
 ## Gates e classificação
 
-Este documento deve ser atualizado ao final com hashes, execução de CI/Emulator,
-drift, limites das Rules, riscos residuais e classificação SESSION-CAP-01 / RULES-AUDIT-01.
+### Evidência automática no HEAD de código certificado
+
+HEAD de código certificado: `1085ada38c90dd450856cb7767447d4816cb216c`.
+
+- Application CI #952: **SUCCESS**;
+- EMPROVEX Core Protection #239: **SUCCESS**;
+- Recovery guardrails #630: **SUCCESS**;
+- SAAS-DL Legal Validation #54: **SUCCESS**;
+- Production Build: **PASS**;
+- TypeScript final: **PASS**;
+- Diff Hygiene: **PASS**;
+- Block 16 Final Release Gate: **SUCCESS**;
+- Block 17 Final Release Gate: **SUCCESS**;
+- Block 18 Final Release Gate: **SUCCESS**;
+- Block 19 Final Closure Gate: **SUCCESS**;
+- Block 20 Final Release Gate: **SUCCESS**;
+- Block 21 Final Release Gate: **SUCCESS**;
+- Vercel: **FAILURE EXTERNA — build-rate-limit**, sem evidência de regressão funcional deste delta;
+- SAAS-C Browser Validation: **SKIPPED por escopo da branch**, portanto não conta como Browser E2E PASS.
+
+### Emulator / Rules
+
+A suíte `test:security:multitenant` executou Firebase Auth + Firestore Emulator e confirmou:
+
+- ALLOW — compatibilidade transitória `slot-1`;
+- ALLOW — compatibilidade transitória `slot-2`;
+- ALLOW — 3ª sessão dinâmica legítima;
+- ALLOW — 4ª sessão dinâmica legítima;
+- DENY — pseudo-slot legado `slot-3`;
+- DENY — document ID dinâmico diferente de `browserInstanceId`;
+- DENY — sessão diferente sobrescrever lease dinâmico ainda ativo;
+- isolamento multi-tenant e demais cenários da suíte permaneceram verdes.
+
+Os guards registraram ainda:
+
+- sessões externas: **SEM TETO FIXO**;
+- múltiplas abas: **1 LEASE POR NAVEGADOR**;
+- lease / heartbeat: **30 MIN / 15 MIN**;
+- aquisição dinâmica: **2 READS + 1 WRITE**;
+- renovação conhecida: **0 READS explícitas + 1 WRITE**;
+- painel administrativo, revogação 24 h e `session.terminate`: **READY**.
+
+### Reconciliação SaaS ↔ Mobile viva
+
+Na leitura de 2026-10-04, `feat/saas-r1-commercializacao` e
+`feat/central-mobile-r1` apresentaram blobs idênticos nos oito pontos
+compartilhados auditados antes do SESSION-CAP:
+
+- `lib/platformCapacity.ts`;
+- `lib/platformSessionLease.ts`;
+- `lib/platformAdminSessions.ts`;
+- `lib/server/sectorLifecycleAdmin.ts`;
+- `lib/server/sectorProvisioningAdmin.ts`;
+- `components/admin/AdminSessionsPanel.tsx`;
+- `firestore.rules`;
+- `firestore.warehouse.rules`.
+
+Rules compartilhadas continuam em:
+
+- principal pré-SESSION-CAP: `57a1394c921b2ab2c15537fbfc4aaea17515b28a`;
+- Warehouse: `6e1f1050005314db4e17cb3136409abbddb0ee91`.
+
+O RC desta frente altera somente a principal para
+`bc91185f34bcdcb4437a4de1078d1089a09292ba`; Warehouse permanece idêntica.
+
+### Gates externos obrigatórios ainda não satisfeitos
+
+1. **ruleset realmente ativo em produção + drift check** dos dois bancos;
+2. **estado TTL real** de `sessionSlots.expiresAt` e `sessionRevocations.expiresAt`;
+3. **Browser E2E On Demand** com Firebase Emulator no HEAD final, incluindo quatro
+   sessões independentes e multitab compartilhado.
+
+O workflow `Browser E2E On Demand` existe e usa apenas Emulator, porém a conexão
+GitHub disponível ao worker não oferece `workflow_dispatch`; por isso esse teste
+não foi artificialmente marcado como PASS.
+
+Se a leitura viva das Rules revelar drift inexplicado, a classificação obrigatória é:
+
+**STOP PRODUCTION RULES DRIFT — NÃO PUBLICAR.**
+
+### Classificação
+
+**SESSION-CAP-01:** `PASS TÉCNICO DE CÓDIGO + RULES + EMULATOR`, com
+certificação final ainda pendente de Browser E2E e confirmação TTL.
+
+**RULES-AUDIT-01:** `PRONTA PARA FECHAMENTO EXTERNO / AINDA NÃO PASS FINAL`,
+pendente da captura do ruleset produtivo real, drift check e confirmação TTL.
+
+Produção permanece intocada. Nenhuma publicação de Rules, Vercel production,
+merge em `main`, restore ou promoção produtiva foi realizada.
