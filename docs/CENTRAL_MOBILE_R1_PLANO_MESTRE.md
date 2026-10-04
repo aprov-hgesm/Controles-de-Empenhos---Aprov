@@ -717,4 +717,3 @@ Necessário:
 - validação operacional do usuário;
 - MOBILE-J aprovada;
 - autorização explícita para release.
-
