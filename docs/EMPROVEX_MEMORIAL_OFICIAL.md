@@ -2284,6 +2284,32 @@ Ruleset ativo — Warehouse:
 
 Primeiro gate externo da RULES-AUDIT-01: **PASS**.
 
+### 2026-10-04 — Inventário pré-TTL validado
+
+Leitura somente de produção executada antes de qualquer ativação de TTL.
+
+`sessionSlots`:
+
+- total: **5**;
+- sem `expiresAt`: **0**;
+- expirados: **5**;
+- não expirados: **0**.
+
+`sessionRevocations`:
+
+- total: **0**;
+- sem `expiresAt`: **0**;
+- expirados: **0**;
+- não expirados: **0**.
+
+Conclusão operacional:
+
+- não existe sessão ativa que seria atingida imediatamente pela ativação de TTL;
+- os 5 documentos existentes em `sessionSlots` já estão expirados e são resíduos de lease;
+- não existem tombstones de revogação pendentes;
+- ativar TTL nos dois collection groups é tecnicamente coerente com o contrato da SESSION-CAP-01;
+- a ativação continua sendo mudança produtiva de retenção e exige autorização explícita do Fundador.
+
 ### 2026-10-04 — TTL produtivo ausente
 
 Consulta somente leitura de:
