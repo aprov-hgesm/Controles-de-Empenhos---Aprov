@@ -2222,6 +2222,88 @@ Program Control criou a frente transversal única:
 
 A frente deve permanecer sequencial: RULES-AUDIT-01 só pode declarar PASS final depois que SESSION-CAP-01 estabilizar o ruleset estrutural.
 
+### 2026-10-04 — SESSION-CAP-01 concluída tecnicamente
+
+Worker `rc-session-cap-rules-audit` encerrou desenvolvimento técnico em:
+
+`a97c1a94799cbbc240994d76fefc6f85925bffe1`
+
+PR:
+
+**#248 — DRAFT / MERGEABLE / NÃO INTEGRADO**
+
+Resultado aceito pelo Program Control:
+
+- SESSION-CAP-01: **PASS TÉCNICO COMPLETO**;
+- teto fixo de 2 sessões removido no candidato;
+- lease dinâmico por `browserInstanceId`;
+- lease 30 min / heartbeat 15 min / revogação 24 h preservados;
+- `slot-1` e `slot-2` preservados somente para compatibilidade transitória;
+- 3ª e 4ª sessões legítimas: ALLOW;
+- pseudo-slot `slot-3`, ID dinâmico adulterado e takeover de lease ativo: DENY;
+- painel administrativo, lifecycle, provisioning, revogação, auditoria e telemetria reconciliados;
+- suspensão do workspace permanece fail-closed para N sessões;
+- multi-tenant preservado.
+
+Gates confirmados no fechamento:
+
+- Application CI #959 — SUCCESS;
+- Core Protection #246 — SUCCESS;
+- Recovery #637 — SUCCESS;
+- Legal Validation #61 — SUCCESS;
+- Production Build — PASS;
+- TypeScript final — PASS;
+- Diff Hygiene — PASS;
+- Browser E2E #49 / run 37171327188 — SUCCESS no SHA certificado `44372599fe0526313d3650a55c649615a1ff14d4`;
+- Bloco 16.8 — 8/8 PASS;
+- quatro sessões independentes + multitab compartilhado — 1/1 PASS.
+
+Vercel permaneceu vermelho apenas por `build-rate-limit`, sem evidência de regressão funcional.
+
+Produção, `main`, Vercel Production e Rules produtivas permaneceram inalterados.
+
+### 2026-10-04 — RULES-AUDIT-01 em fechamento externo
+
+Classificação:
+
+**PRONTA PARA FECHAMENTO EXTERNO / AINDA NÃO PASS FINAL**
+
+Rules candidatas pós-SESSION-CAP:
+
+- principal RC: `bc91185f34bcdcb4437a4de1078d1089a09292ba`;
+- Warehouse RC: `6e1f1050005314db4e17cb3136409abbddb0ee91`.
+
+Faltam apenas dois gates vivos:
+
+1. capturar em modo somente leitura os rulesets realmente ativos nos dois bancos e comparar drift;
+2. confirmar TTL realmente configurado para:
+   - `sessionSlots.expiresAt`;
+   - `sessionRevocations.expiresAt`.
+
+Se houver drift inexplicado:
+
+**STOP PRODUCTION RULES DRIFT — NÃO PUBLICAR.**
+
+Se baseline vivo e TTL forem coerentes, Program Control poderá fechar RULES-AUDIT-01 e seguir para integração/RC conforme governança.
+
+Ordem de rollout candidata, se mantida após os gates vivos:
+
+```text
+Rules RC
+→ aplicação RC
+```
+
+Compatibilidade comprovada:
+
+- app antiga + Rules RC: compatível via `slot-1`/`slot-2`;
+- app RC + Rules RC: alvo;
+- app RC + Rules antigas: incompatível.
+
+Rollback:
+
+- aplicação pode voltar primeiro mantendo Rules RC;
+- rollback das Rules exige rollback prévio da aplicação.
+
 ### 2026-10-03 — Transição para Release Engineering
 
 Por decisão do Fundador:
@@ -2474,9 +2556,9 @@ IDENTIDADE / SESSÕES
 founder: Google-only / capacidade isenta
 externo: e-mail+senha / e-mail verificado
 workspace↔UG↔conta primária: obrigatório
-sessões externas ATUAL: 2
-mudança autorizada: REMOVER TETO FIXO antes do RC freeze
-estado alvo: múltiplas sessões externas sem limite fixo, com controle individual
+sessões externas PRODUÇÃO ATUAL: 2
+SESSION-CAP-01 candidato: PASS TÉCNICO COMPLETO
+estado alvo implementado na branch: múltiplas sessões externas sem teto fixo, com controle individual
 lease: 30 min
 heartbeat: 15 min
 fail-closed: SIM
@@ -2496,12 +2578,14 @@ blocker funcional: NENHUM
 próximo trabalho: RC Preview HTTPS + runbook físico
 
 RULES
-candidatas SaaS↔Mobile atuais: IDÊNTICAS ENTRE SI
-RULES-AUDIT-01: ATIVADA / OBRIGATÓRIA
-auditoria final: APÓS SESSION-CAP-01, na branch rc-session-cap-rules-audit
+SESSION-CAP branch: rc-session-cap-rules-audit@a97c1a94799cbbc240994d76fefc6f85925bffe1
+PR #248: DRAFT / MERGEABLE / NÃO INTEGRADO
+principal RC: bc91185f34bcdcb4437a4de1078d1089a09292ba
+warehouse RC: 6e1f1050005314db4e17cb3136409abbddb0ee91
+RULES-AUDIT-01: PRONTA PARA FECHAMENTO EXTERNO / PASS FINAL PENDENTE
+pendência 1: capturar rulesets ativos + drift check
+pendência 2: confirmar TTL real de sessionSlots/sessionRevocations
 publicação produtiva sem PASS: PROIBIDA
-baseline principal main: 0d990b7de0b2e85ed55fe14ec0d2ce29b3635299
-baseline warehouse main: b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2
 rollback Rules: obrigatório e independente do Vercel
 
 RECOVERY
@@ -2524,14 +2608,12 @@ piloto real: NÃO INICIADO
 abertura comercial: NÃO AUTORIZADA
 
 PRÓXIMA SEQUÊNCIA
-SESSION-CAP-01
-→ remover teto fixo de 2 sessões
-→ validar múltiplos operadores + Rules/telemetria
-→ RULES-AUDIT-01
-→ capturar Rules ativas + diff semântico + ALLOW/DENY
-→ regressão R3/SaaS/Mobile + compatibilidade de rollout
-→ PASS RULES + rollback preparado
-→ criar branch RC
+capturar rulesets realmente ativos dos 2 bancos
+→ comparar drift
+→ confirmar TTL real de sessionSlots/sessionRevocations
+→ fechar RULES-AUDIT-01
+→ integrar semanticamente PR #248
+→ criar/finalizar branch RC
 → compor SaaS+Mobile semanticamente
 → aplicar CT-01
 → reconciliar Rules/package/lockfile/CI/contratos
