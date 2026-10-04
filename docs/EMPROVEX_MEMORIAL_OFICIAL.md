@@ -2262,6 +2262,49 @@ Vercel permaneceu vermelho apenas por `build-rate-limit`, sem evidência de regr
 
 Produção, `main`, Vercel Production e Rules produtivas permaneceram inalterados.
 
+### 2026-10-04 — Baseline produtiva das Rules confirmada sem drift
+
+Leitura somente de produção concluída nos dois bancos.
+
+Ruleset ativo — banco principal:
+
+- release: `cloud.firestore/ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1`;
+- ruleset ID: `06094fa5-0b5b-4dc0-a0b5-7ca032864860`;
+- fingerprint Git normalizado: `0d990b7de0b2e85ed55fe14ec0d2ce29b3635299`;
+- baseline esperada de `main`: `0d990b7de0b2e85ed55fe14ec0d2ce29b3635299`;
+- drift: **NENHUM**.
+
+Ruleset ativo — Warehouse:
+
+- release: `cloud.firestore/emprovex-warehouse`;
+- ruleset ID: `d246184a-350f-40a0-8241-f2b0fa631768`;
+- fingerprint Git normalizado: `b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2`;
+- baseline esperada de `main`: `b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2`;
+- drift: **NENHUM**.
+
+Primeiro gate externo da RULES-AUDIT-01: **PASS**.
+
+### 2026-10-04 — TTL produtivo ausente
+
+Consulta somente leitura de:
+
+- `sessionSlots.expiresAt`;
+- `sessionRevocations.expiresAt`;
+
+retornou somente `indexConfig`, sem `ttlConfig`.
+
+Conclusão:
+
+**TTL NÃO CONFIGURADO** nos dois collection groups.
+
+Impacto:
+
+- RULES-AUDIT-01 ainda não recebe PASS FINAL;
+- SESSION-CAP-01 continua PASS técnico;
+- ativar TTL é mudança produtiva de retenção e pode excluir documentos já expirados;
+- ativação exige decisão/autorização explícita do Fundador;
+- antes da ativação, Program Control deve preferencialmente inspecionar os documentos existentes e confirmar que `expiresAt` está coerente.
+
 ### 2026-10-04 — RULES-AUDIT-01 em fechamento externo
 
 Classificação:
@@ -2583,8 +2626,8 @@ PR #248: DRAFT / MERGEABLE / NÃO INTEGRADO
 principal RC: bc91185f34bcdcb4437a4de1078d1089a09292ba
 warehouse RC: 6e1f1050005314db4e17cb3136409abbddb0ee91
 RULES-AUDIT-01: PRONTA PARA FECHAMENTO EXTERNO / PASS FINAL PENDENTE
-pendência 1: capturar rulesets ativos + drift check
-pendência 2: confirmar TTL real de sessionSlots/sessionRevocations
+gate 1: rulesets ativos + drift check — PASS / SEM DRIFT
+pendência única: TTL de sessionSlots/sessionRevocations — NÃO CONFIGURADO
 publicação produtiva sem PASS: PROIBIDA
 rollback Rules: obrigatório e independente do Vercel
 
