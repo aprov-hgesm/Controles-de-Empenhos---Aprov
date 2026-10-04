@@ -1,319 +1,439 @@
 # EMPROVEX SaaS R1 — HARDEN-B — Recovery e Restore Isolado
 
-Data: **2026-10-03**
+Data de atualização: **2026-10-04**
 
 Branch worker: `saas-harden-b-recovery-restore`  
-Base congelada: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`  
-Branch integradora: `feat/saas-r1-commercializacao`
+Base congelada original: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`  
+Branch integradora: `feat/saas-r1-commercializacao`  
+PR: **#237 — HARDEN-B: recovery and isolated restore readiness**
 
-## 1. Estado da branch
+## 1. Governança preservada
 
-A branch foi auditada contra a base congelada e permanece **idêntica ao freeze**:
+Esta frente permanece exclusivamente dedicada a **backup, recovery e restore isolado**.
 
-- ahead: 0;
-- behind: 0;
-- commits próprios antes deste documento: 0;
-- merge/rebase/cherry-pick da integradora: **não executado**.
+Restrições vigentes:
 
-A integradora avançou documentalmente após o freeze. Esses avanços foram consultados somente em leitura.
+- não rebasear a branch;
+- não mergear a integradora;
+- não corrigir mergeability por incorporação de commits externos;
+- não alterar `main`;
+- não alterar o RC FROZEN;
+- não publicar Firestore Rules;
+- não executar Vercel Production;
+- não alterar IAM;
+- não apontar a aplicação EMPROVEX para o banco restaurado;
+- não executar writes de aplicação no target restaurado;
+- não excluir automaticamente o banco temporário após a validação.
 
-## 2. Escopo HARDEN-B
+Estado global preservado no início deste fechamento:
 
-Esta frente existe para comprovar recuperabilidade real antes do piloto:
+- produção: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`;
+- integradora SaaS observada pelo Program Control: `feat/saas-r1-commercializacao@965b1beee066aa7e50b32b9f190b62274239f4e0`;
+- RC FROZEN: `54e60c2264588d8802a67a4cab3d875d64f6bfc1`.
 
-1. proteções Firestore;
-2. backup nativo dos dois bancos;
-3. evidência de backup `READY`;
-4. seleção de backup real;
-5. restore em banco novo e isolado;
-6. validação de dados, IAM, Rules, TTL e isolamento;
-7. evidência reproduzível.
-
-## 3. Baseline canônico confirmado no repositório
+## 2. Projeto e bancos protegidos
 
 Projeto Google Cloud:
 
 `gen-lang-client-0982077967`
 
-Bancos protegidos pela política:
+Região:
 
-- `ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1` — operacional principal;
-- `emprovex-warehouse` — logística/Central de Depósitos.
+`us-east1`
 
-Política `ops/firestore-recovery.json`:
+Bancos produtivos protegidos:
 
-- backup diário;
-- retenção: 14 semanas;
-- PITR obrigatório;
-- delete protection obrigatório;
-- RPO interno alvo: 24 h;
-- RTO interno alvo: 4 h.
+1. `ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1`
+2. `emprovex-warehouse`
 
-O estado canônico mais recente consultado na integradora registra que, em 2026-10-02, PITR, delete protection e schedules diários haviam sido ativados nos dois bancos, permanecendo pendentes:
+Controles já comprovados nos dois bancos:
 
-- pelo menos um backup nativo `READY` por banco;
-- restore real isolado;
-- validação pós-restore.
+- PITR ativo;
+- delete protection ativa;
+- backup schedule diário ativo;
+- retenção de 14 semanas;
+- RPO interno de referência: 24 h;
+- RTO interno de referência: 4 h.
 
-Este documento **não promove esse registro histórico a evidência atual** sem nova consulta ao Google Cloud.
+## 3. Tooling de recovery
 
-## 4. Auditoria do tooling
+O tooling v2 foi executado no RC FROZEN:
 
-### 4.1 `scripts/firestore-recovery.mjs`
+`54e60c2264588d8802a67a4cab3d875d64f6bfc1`
 
-O tooling atual:
+Resultado já comprovado em 2026-10-04:
 
-- resolve os dois bancos a partir da política;
-- consulta `locationId` real antes de listar backups;
-- exige banco explícito para escrita;
-- bloqueia `--database=all` em escrita;
-- exige confirmação literal do resource name para `apply`;
-- considera `READY` somente backup nativo cujo `backup.database` corresponde ao banco protegido;
-- exige exatamente um schedule diário com retenção configurada;
-- marca `ready=true` somente quando controles + backup `READY` estão presentes;
-- bloqueia restore-plan para os dois IDs produtivos;
-- imprime apenas plano/comando para destino novo e isolado;
-- não executa restore no modo `restore-plan`.
+### `npm run recovery:status`
 
-### 4.2 Windows / gcloud
+`ready=true`
 
-`scripts/lib/gcloud-command.mjs` preserva o suporte Windows:
+### `npm run recovery:verify`
 
-- usa `gcloud` diretamente fora do Windows;
-- no Windows roteia `gcloud.cmd` por `cmd.exe`;
-- mantém fallback para `cmd.exe` quando `ComSpec` não está disponível.
+`ready=true`
 
-Nenhum refactor desse suporte foi realizado.
+nos dois bancos.
 
-## 5. Verificação ao vivo executada em 2026-10-03
+A antiga dependência temporal “aguardando primeiro backup READY” está encerrada.
 
-A verificação foi executada em PowerShell autenticado no projeto `gen-lang-client-0982077967`, com a conta ativa confirmada e a branch limpa no HEAD documental da HARDEN-B.
+## 4. Backups nativos READY comprovados
 
-Comandos executados:
-
-```powershell
-npm run recovery:status
-npm run recovery:verify
-```
-
-Resultado live:
-
-- projeto: `gen-lang-client-0982077967`;
-- ambos os bancos: `us-east1`;
-- PITR: ativo nos dois bancos;
-- delete protection: ativa nos dois bancos;
-- schedule diário: válido nos dois bancos;
-- retenção: `8467200s` = 14 semanas;
-- backups READY: **0 nos dois bancos**;
-- `recovery:status`: `ready=false`;
-- `recovery:verify`: `ready=false`.
-
-A listagem direta de backups em `us-east1` retornou `[]`.
-
-Classificação: **dependência temporal legítima**, não falha de configuração. Os schedules foram criados pouco antes desta verificação e ainda não produziram o primeiro backup nativo READY.
-
-Não foi executado `apply`, não foi forçado backup e não foi iniciado restore.
-
-## 6. Estado dos bancos
-
-### 6.1 Banco operacional
+### 4.1 Banco principal
 
 Database:
 
 `ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1`
 
-- PITR: **ATIVO — comprovado live**;
-- delete protection: **ATIVA — comprovada live**;
-- schedule diário: **ATIVO — comprovado live**;
-- schedule resource: `projects/gen-lang-client-0982077967/databases/ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1/backupSchedules/665b144d-7291-4672-bae1-1a0a01375c53`;
-- schedule create time: `2026-10-03T00:01:18.394935Z`;
-- retenção: `8467200s` (14 semanas);
-- backup READY: **NÃO — 0 backups READY**;
-- resource name de backup: **ainda inexistente**;
-- location: `us-east1`;
-- snapshot time: **ainda inexistente**;
-- expiration time: **ainda inexistente**.
+Backup:
 
-### 6.2 Warehouse
+`projects/gen-lang-client-0982077967/locations/us-east1/backups/17811fa5-c11c-4e1e-ab9c-bc48b79fe4a9`
+
+Estado:
+
+`READY`
+
+Snapshot:
+
+`2026-10-03T07:45:45.222712Z`
+
+Expiração:
+
+`2027-01-09T07:45:45.222712Z`
+
+### 4.2 Warehouse
 
 Database:
 
 `emprovex-warehouse`
 
-- PITR: **ATIVO — comprovado live**;
-- delete protection: **ATIVA — comprovada live**;
-- schedule diário: **ATIVO — comprovado live**;
-- schedule resource: `projects/gen-lang-client-0982077967/databases/emprovex-warehouse/backupSchedules/8cf84722-3e98-4f82-a77d-184901063f68`;
-- schedule create time: `2026-10-03T00:02:16.403466Z`;
-- retenção: `8467200s` (14 semanas);
-- backup READY: **NÃO — 0 backups READY**;
-- resource name de backup: **ainda inexistente**;
-- location: `us-east1`;
-- snapshot time: **ainda inexistente**;
-- expiration time: **ainda inexistente**.
+Backup:
 
-## 7. Resultado dos comandos canônicos
+`projects/gen-lang-client-0982077967/locations/us-east1/backups/5640c06e-229b-4cab-82a8-e7425dc035a3`
 
-`npm run recovery:status`:
+Estado:
 
-- banco operacional: controles prontos, `backupReady=false`, `completedBackupCount=0`;
-- warehouse: controles prontos, `backupReady=false`, `completedBackupCount=0`;
-- resultado global: `ready=false`.
+`READY`
 
-`npm run recovery:verify`:
+Snapshot:
 
-- reproduziu o mesmo estado;
-- corretamente não certificou recovery;
-- causa: ausência do primeiro backup nativo READY.
+`2026-10-03T17:05:24.058789Z`
 
-A política vigente proíbe repetir `apply` automaticamente. Não criar polling em loop e não forçar o evento. Existe monitoramento externo já preparado para detectar a disponibilidade dos backups.
+Expiração:
 
-## 8. Evidência necessária quando houver backup READY
+`2027-01-09T17:05:24.058789Z`
 
-Para cada banco, registrar obrigatoriamente:
+## 5. Restore real autorizado
 
-- database;
-- backup resource name;
-- state;
-- location;
-- snapshot time;
-- expiration time;
-- retenção;
-- observações.
+O Fundador autorizou explicitamente o restore real do backup do Warehouse para banco novo e isolado.
 
-Nenhum identificador de backup foi inventado neste documento.
+Origem:
 
-## 9. Restore plan
+`emprovex-warehouse`
 
-O restore continua restrito a **BANCO NOVO E ISOLADO**.
+Backup selecionado:
 
-Destino produtivo é bloqueado pelo tooling.
+`5640c06e-229b-4cab-82a8-e7425dc035a3`
 
-Quando existir backup real selecionado, gerar o plano com:
+Target isolado:
 
-```bash
-node scripts/firestore-recovery.mjs restore-plan \
-  --database=<BANCO_ORIGEM> \
-  --backup=<RESOURCE_NAME_REAL_DO_BACKUP_READY> \
-  --target=emprovex-restore-2026-10-03
+`emprovex-restore-warehouse-2026-10-04`
+
+Operação:
+
+`projects/gen-lang-client-0982077967/databases/emprovex-restore-warehouse-2026-10-04/operations/VBGHTglagY-cTVmjSXHn4RAqMXRzYWUtc3UIIgoQHho`
+
+Start time:
+
+`2026-10-04T05:16:14.315849Z`
+
+## 6. Último estado operacional conhecido
+
+Na última evidência entregue ao worker, a operação ainda estava em execução:
+
+- `operationState: PROCESSING`;
+- `completedWork: 30`;
+- `estimatedWork: 100`;
+- `sourceInfo.progress: IN_PROGRESS`;
+- nenhum erro reportado.
+
+Enquanto esse estado permanecer `PROCESSING`:
+
+- não iniciar novo restore;
+- não criar segundo target;
+- não alterar o target;
+- não executar cleanup;
+- não declarar PASS.
+
+## 7. Banco isolado criado
+
+Resource:
+
+`projects/gen-lang-client-0982077967/databases/emprovex-restore-warehouse-2026-10-04`
+
+UID:
+
+`e1e77149-a359-4d9c-8f81-5a094e871154`
+
+Região:
+
+`us-east1`
+
+Estado observado durante o restore:
+
+- `deleteProtectionState: DELETE_PROTECTION_ENABLED`;
+- `pointInTimeRecoveryEnablement: POINT_IN_TIME_RECOVERY_DISABLED`.
+
+O PITR desabilitado no target temporário **não é automaticamente falha do teste**. O objetivo deste target é comprovar recuperabilidade, integridade e isolamento; ele não foi promovido a banco produtivo.
+
+## 8. Comportamento oficial do mecanismo de backup/restore
+
+Segundo a documentação oficial atual do Firestore Native:
+
+- o backup é uma cópia consistente do banco em um ponto no tempo;
+- o backup contém **dados e configurações de índices** daquele momento;
+- o backup **não contém políticas TTL**;
+- o backup **não contém Firebase Security Rules**;
+- o restore grava o backup em **novo banco Firestore**;
+- após o restore, é necessário verificar o IAM do novo banco;
+- Rules devem ser configuradas separadamente quando aplicáveis;
+- TTL precisa ser reaplicado quando aplicável.
+
+Referências oficiais:
+
+- Google Cloud Firestore — Back up and restore data:
+  https://cloud.google.com/firestore/native/docs/backups
+- Google Cloud Firestore — Manage data retention with TTL policies:
+  https://cloud.google.com/firestore/native/docs/ttl
+
+## 9. Gates pós-restore obrigatórios
+
+Somente depois de a operação deixar `PROCESSING` sem `error`, executar os gates abaixo.
+
+### A. Operação
+
+Confirmar:
+
+- operação concluída;
+- ausência de `error`;
+- source database correto;
+- backup correto;
+- target correto;
+- snapshot correto;
+- horário de conclusão.
+
+### B. Banco restaurado
+
+Confirmar por leitura:
+
+- banco existe;
+- tipo Firestore Native;
+- região `us-east1`;
+- `sourceInfo.backup` aponta para o backup Warehouse selecionado;
+- `sourceInfo.progress` concluído;
+- target continua distinto dos bancos produtivos.
+
+### C. Integridade dos dados
+
+O gate deve provar presença de dados reais recuperados da Central de Depósitos.
+
+Verificações devem ser **somente leitura**.
+
+Comparações com produção devem respeitar o snapshot:
+
+`2026-10-03T17:05:24.058789Z`
+
+Não exigir igualdade com alterações realizadas após esse horário.
+
+Amostras/contagens devem cobrir estruturas reais representativas da Central de Depósitos, conforme existirem no snapshot, por exemplo:
+
+- materiais;
+- depósitos;
+- posições/locations;
+- movimentos/ledger;
+- saldos;
+- layouts;
+- intake;
+- inventário;
+- consumo;
+- demais coleções reais relevantes.
+
+### D. Isolamento
+
+Comprovar:
+
+- `emprovex-restore-warehouse-2026-10-04` é distinto de `emprovex-warehouse`;
+- target é distinto do banco principal;
+- nenhuma configuração do EMPROVEX aponta para o target;
+- nenhuma variável produtiva foi alterada;
+- nenhum write de aplicação foi executado no target.
+
+### E. IAM
+
+Inspecionar em modo somente leitura:
+
+- controles IAM aplicáveis ao banco/projeto;
+- ausência de exposição indevida;
+- requisitos necessários para um eventual restore emergencial.
+
+Não alterar IAM nesta frente.
+
+### F. Firebase Security Rules
+
+Registrar explicitamente:
+
+- Rules **não fazem parte do backup**;
+- Rules não devem ser inferidas como restauradas;
+- em um banco novo sem configuração anterior, clientes web/mobile ficam bloqueados por padrão segundo a documentação oficial;
+- a configuração segura de Rules é etapa separada de disaster recovery.
+
+Não publicar Rules nesta frente.
+
+### G. TTL
+
+Registrar explicitamente:
+
+- políticas TTL **não fazem parte do backup**;
+- TTL não é reaplicado automaticamente ao target;
+- a eventual reaplicação deve seguir runbook separado e autorização adequada.
+
+Não habilitar TTL no target apenas para cumprir o teste.
+
+### H. Índices/configurações
+
+O backup inclui configurações de índice do snapshot.
+
+Após a conclusão, listar/inspecionar o estado de índices no target e registrar a evidência. Nenhuma alteração deve ser feita sem necessidade.
+
+## 10. Comandos de verificação pós-restore
+
+PowerShell já utilizado pelo operador:
+
+```powershell
+$Gcloud = "$env:LOCALAPPDATA\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd"
+
+$Operation = "projects/gen-lang-client-0982077967/databases/emprovex-restore-warehouse-2026-10-04/operations/VBGHTglagY-cTVmjSXHn4RAqMXRzYWUtc3UIIgoQHho"
+
+& $Gcloud firestore operations describe "$Operation"
 ```
 
-O comando produzido deverá ter o formato:
+Depois da conclusão:
 
-```bash
-gcloud firestore databases restore   --project=gen-lang-client-0982077967   --source-backup=<RESOURCE_NAME_REAL_DO_BACKUP_READY>   --destination-database=emprovex-restore-2026-10-03
+```powershell
+& $Gcloud firestore databases describe `
+  --project="gen-lang-client-0982077967" `
+  --database="emprovex-restore-warehouse-2026-10-04"
+
+& $Gcloud firestore indexes composite list `
+  --project="gen-lang-client-0982077967" `
+  --database="emprovex-restore-warehouse-2026-10-04"
+
+& $Gcloud firestore indexes fields list `
+  --project="gen-lang-client-0982077967" `
+  --database="emprovex-restore-warehouse-2026-10-04"
 ```
 
-Este documento **não autoriza executar o restore**.
+Qualquer consulta de dados deve ser somente leitura e deve evitar writes acidentais.
 
-## 10. Autorização para restore real
+## 11. Cleanup
 
-Status: **PENDENTE DE AUTORIZAÇÃO EXPLÍCITA DO FUNDADOR**.
+O banco restaurado **não deve ser apagado automaticamente**.
 
-Antes de qualquer execução real, o Coordenador SaaS deve receber:
+Após o fechamento do teste, o handoff deve registrar:
 
-- banco fonte;
-- backup selecionado;
-- resource name;
-- snapshot;
-- destino proposto;
-- comando exato;
-- risco;
-- custo/efeito esperado;
-- cleanup;
-- validações pós-restore.
+- target ainda existente;
+- possível custo enquanto existir;
+- delete protection ativa;
+- cleanup recomendado;
+- necessidade de autorização separada para desativar delete protection e excluir o target.
 
-Até esse gate, a ação deve permanecer somente leitura/planejamento.
+## 12. Impacto em produção e RC
 
-## 11. Validação pós-restore requerida
+Até este checkpoint:
 
-Somente depois de restore real autorizado:
-
-### Dados
-- collections esperadas;
-- documentos esperados;
-- campos críticos;
-- coerência com o snapshot.
-
-### IAM
-- confirmar acesso do banco restaurado;
-- confirmar ausência de exposição indevida.
-
-### Rules
-- verificar estado aplicável;
-- documentar o que precisa ser reproduzido com segurança;
-- não publicar Rules produtivas a partir desta frente.
-
-### TTL
-- verificar políticas TTL relevantes no target.
-
-### Isolamento
-- confirmar banco distinto dos IDs produtivos;
-- confirmar ausência de conexão acidental com produção;
-- confirmar que testes não escrevem nos bancos produtivos.
-
-## 12. Proteções preservadas
-
-Nesta frente não foi executado:
-
-- desativação de delete protection;
-- desativação de PITR;
-- redução de retenção;
-- exclusão de backup;
-- restore sobre produção;
-- alteração de banco produtivo para teste;
-- relaxamento de segurança;
-- publicação de Rules;
-- deploy;
-- merge em main.
+- produção alterada: **NÃO**;
+- RC FROZEN alterado: **NÃO**;
+- Rules produtivas alteradas: **NÃO**;
+- IAM alterado por esta frente: **NÃO**;
+- Vercel Production executado: **NÃO**;
+- banco produtivo sobrescrito: **NÃO**.
 
 ## 13. Impacto MOBILE-R1
 
-Classificação: **SEM DELTA**.
+Classificação:
+
+**SEM DELTA**
 
 Justificativa:
 
-- nenhuma alteração de schema;
+- nenhuma alteração de schema da aplicação;
 - nenhuma alteração de Auth;
 - nenhuma alteração de sessão/lease;
-- nenhuma alteração de Rules;
-- nenhuma alteração de contratos da Central;
+- nenhuma publicação de Rules;
+- nenhuma alteração de contratos Mobile;
 - nenhuma alteração de código Mobile;
 - nenhuma alteração de `next.config.ts`.
 
-CT-01 — Permissions-Policy da câmera — permanece fora do escopo da HARDEN-B.
+## 14. Classificação atual do worker
 
-## 14. Status
-
-**PARCIAL**
+**HARDEN-B — PARCIAL / RESTORE REAL EM ANDAMENTO**
 
 Motivo:
 
-- baseline e tooling de segurança estão confirmados;
-- PITR, delete protection e schedules diários estão **comprovados live** nos dois bancos;
-- ambos os schedules têm retenção de 14 semanas e estão em `us-east1`;
-- ainda existem **0 backups READY** nos dois bancos;
-- falta seleção de backup real;
-- falta autorização para restore real;
-- falta restore real isolado;
-- faltam validações pós-restore.
+- backups READY: comprovados;
+- `recovery:status = ready=true`: comprovado;
+- `recovery:verify = ready=true`: comprovado;
+- autorização explícita do restore: comprovada;
+- restore real isolado: iniciado;
+- target isolado: criado;
+- conclusão da operação: **ainda não comprovada neste checkpoint**;
+- integridade de dados pós-restore: **pendente**;
+- IAM pós-restore: **pendente**;
+- Rules/TTL pós-restore: comportamento documentado, verificação do target pendente;
+- índices/configurações pós-restore: verificação pendente.
 
-Não existe base factual para PASS neste momento.
+Ainda não existe base factual para declarar `PASS TÉCNICO` enquanto a operação estiver `PROCESSING`.
 
-## 15. Próximo gate
+## 15. Gate final esperado
 
-1. aguardar o evento legítimo do primeiro backup diário; não forçar e não criar polling em loop;
-2. quando o monitoramento externo indicar disponibilidade, repetir uma leitura com `npm run recovery:status` e `npm run recovery:verify`;
-3. capturar resource name, location, snapshot time e expiration time dos backups `READY` reais dos dois bancos;
-4. selecionar backup fonte;
-5. gerar restore-plan real;
-6. retornar ao Coordenador SaaS para autorização explícita;
-7. somente após autorização, executar restore em banco isolado;
-8. validar dados, IAM, Rules, TTL e isolamento;
-9. atualizar este documento e o handoff com evidência real.
+Se a operação concluir sem erro e todos os gates pós-restore forem comprovados:
 
-## 16. Conclusão
+**HARDEN-B — PASS TÉCNICO / APTO PARA RATIFICAÇÃO DO PROGRAM CONTROL**
 
-Backup configurado não é prova de recuperabilidade.
+A ratificação formal:
 
-Nesta execução foi preservado o princípio de não transformar ausência de evidência em PASS. A HARDEN-B permanece **PARCIAL** até que a recuperação seja comprovada com backup nativo real, restore isolado autorizado e validação pós-restore reproduzível.
+**HARDEN-B — PASS**
+
+permanece responsabilidade do Program Control após auditoria independente.
+
+## 16. Handoff final — campos obrigatórios
+
+Ao fechar a frente, registrar:
+
+- branch;
+- HEAD inicial;
+- HEAD final;
+- PR #237;
+- estado do PR;
+- backup principal;
+- backup Warehouse;
+- `recovery:status`;
+- `recovery:verify`;
+- restore operation ID;
+- target isolado;
+- horário de início e fim;
+- resultado da operação;
+- evidência de integridade;
+- evidência de isolamento;
+- IAM;
+- Rules;
+- TTL;
+- índices/configurações;
+- produção alterada: SIM/NÃO;
+- RC FROZEN alterado: SIM/NÃO;
+- riscos residuais;
+- cleanup pendente;
+- classificação final;
+- recomendação ao Program Control.
+
+Recomendação esperada, se tudo passar:
+
+**APTO PARA RATIFICAR HARDEN-B — PASS**
