@@ -19,7 +19,7 @@ PR RC-A:
 #249
 
 PR RC-B:
-A ser preenchido pelo número do PR aberto a partir desta branch; o PR é DRAFT e não deve ser mergeado.
+#250 — OPEN / DRAFT / NÃO MERGEADO
 
 SAAS_SOURCE_SHA:
 2c1eee759ea8024c296b4c6968ed935b9a59e880
