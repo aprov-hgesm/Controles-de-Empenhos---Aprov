@@ -1,14 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-04 — SESSION-CAP-01 + RULES-AUDIT-01 encerradas / pré-composição do RC**
+Última sincronização global: **2026-10-04 — PROGRAMAS RECONCILIADOS / EMPROVEX RC CANDIDATE declarado**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
-Integradora SaaS R1: `feat/saas-r1-commercializacao@54aba792cb9e7bb195e21401fb50a21ed50add19` — SESSION-CAP-01 integrada; commits posteriores podem ser documentais de Program Control
+Integradora SaaS R1: `feat/saas-r1-commercializacao` — fonte congelada da composição: `2c1eee759ea8024c296b4c6968ed935b9a59e880`; commits posteriores nesta branch podem ser exclusivamente documentais de Program Control
 
 Integradora Mobile R1: `feat/central-mobile-r1@7b7717b6eebabf911310d2b8ac56ed13c9cb9238` — avanço documental, sem novo delta runtime
 
-Estado global: **Performance R3 em produção; desenvolvimento funcional SaaS R1 e Mobile R1 encerrado; SESSION-CAP-01 em PASS técnico completo e integrada na linha SaaS/RC; RULES-AUDIT-01 em PASS — RULES APTAS PARA RC; TTL produtivo de sessionSlots/sessionRevocations ACTIVE; HARDEN-A1/A2/C/D em PASS; HARDEN-B parcial por dependência temporal; MOBILE-J aguarda Preview HTTPS; composição do RC único SaaS+Mobile é a próxima barreira; Preview HTTPS ainda não publicado.**
+Estado global: **Performance R3 permanece em produção; SaaS R1 + Mobile R1 foram reconciliados semanticamente; SESSION-CAP-01 e RULES-AUDIT-01 estão em PASS; RC-A compôs o candidato; RC-B certificou independentemente com risco externo controlado; PROGRAMAS RECONCILIADOS; EMPROVEX RC CANDIDATE declarado no runtime `54e60c2264588d8802a67a4cab3d875d64f6bfc1`; RC FROZEN ainda não declarado; Preview HTTPS bloqueado externamente por Vercel build-rate-limit; MOBILE-J física e HARDEN-B permanecem pendências posteriores/controladas; produção não foi alterada.**
 
 ---
 
@@ -98,8 +98,10 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | MOBILE-J | **PARCIAL TECNICAMENTE SAUDÁVEL / CERTIFICAÇÃO EM EXECUÇÃO** | aguarda RC em Preview HTTPS para testes físicos reais |
 | SESSION-CAP-01 | **PASS TÉCNICO COMPLETO / INTEGRADA** | PR #248 squash-merged; sessões externas dinâmicas sem teto fixo |
 | RULES-AUDIT-01 | **PASS — RULES APTAS PARA RC** | Rules vivas sem drift; TTL dos dois grupos ACTIVE |
-| RC conjunto | **PRONTO PARA COMPOSIÇÃO / NÃO CONGELADO** | SESSION-CAP + RULES-AUDIT encerradas; próximo trabalho transversal |
-| CT-01 | **PENDENTE NO RC** | `camera=(self), microphone=(), geolocation=()` |
+| RC-A | **APTO PARA RC-B / ENCERRADA** | composição semântica concluída; PR #249 draft/open |
+| RC-B | **PASS COM RISCO EXTERNO CONTROLADO** | certificação independente; PR #250 draft/open; Vercel/HARDEN-B externos |
+| RC conjunto | **RC CANDIDATE / NÃO CONGELADO** | runtime `54e60c2264588d8802a67a4cab3d875d64f6bfc1`; RC-B PASS com risco externo controlado |
+| CT-01 | **PASS NO RC CANDIDATE** | `camera=(self), microphone=(), geolocation=()` |
 | Rules candidatas | **AUDITADAS / APTAS PARA RC** | produção R3 sem drift; principal RC `bc91185...`; Warehouse RC `6e1f105...`; rollout Rules RC → app RC |
 | HARDEN-B | **PARCIAL / ESPERA CONTROLADA** | PITR/delete protection/schedule/retention ativos; backup READY/verify/restore pendentes |
 | Billing R1 | **IMPLEMENTADO EM MODO OBSERVE** | R$ 70; trial; cobrança externa; confirmação manual; sem suspensão automática |
@@ -117,7 +119,7 @@ A produção só muda por autorização explícita e posterior do Fundador.
 
 ## 2. Próxima barreira global
 
-A próxima fase não é nova feature. É **Release Engineering / Certificação**.
+A fase atual é **Release Engineering / Certificação**, já com `RC CANDIDATE` declarado.
 
 Sequência canônica:
 
@@ -125,12 +127,10 @@ Sequência canônica:
 SaaS final + Mobile final
 → SESSION-CAP-01 — PASS / integrada
 → RULES-AUDIT-01 — PASS / Rules aptas para RC
-→ branch única de composição do RC
-→ reconciliação semântica dos contratos compartilhados
-→ CT-01
-→ Rules/package/lockfile/Application CI consolidados
-→ gates no SHA exato
-→ RC CANDIDATE
+→ RC-A composição semântica — PASS
+→ RC-B certificação independente — PASS com risco externo controlado
+→ PROGRAMAS RECONCILIADOS
+→ RC CANDIDATE — DECLARADO
 → RC FROZEN
 → Preview HTTPS
 → testes SaaS + MOBILE-J físicos
@@ -2036,6 +2036,68 @@ Escalar imediatamente se houver:
 
 Problema exclusivamente visual não exige rollback automático.
 
+### 2026-10-04 — PROGRAMAS RECONCILIADOS / EMPROVEX RC CANDIDATE
+
+Program Control auditou a entrega RC-A e a certificação independente RC-B.
+
+Identidade:
+
+- RC branch: `rc-r1-a-composition`;
+- RC runtime SHA: `54e60c2264588d8802a67a4cab3d875d64f6bfc1`;
+- RC composition head documental: `7f449db986da359091c70f6ae27934f0db18a0cb`;
+- RC-B evidence head técnico documental: `c5a35b957a55edc7f56150b7b64374ee88b26c2e`;
+- RC-B head documental final: `851cbfc1c966847d1b5fc53c47e2708a48336f76`;
+- SaaS source: `2c1eee759ea8024c296b4c6968ed935b9a59e880`;
+- Mobile source: `7b7717b6eebabf911310d2b8ac56ed13c9cb9238`;
+- produção: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330` — inalterada.
+
+Hashes do candidato:
+
+- Rules principal: `bc91185f34bcdcb4437a4de1078d1089a09292ba`;
+- Rules Warehouse: `6e1f1050005314db4e17cb3136409abbddb0ee91`;
+- package-lock: `7c1ecd0dc074b8924c25123955f70e0ba10675dd`;
+- next.config.ts: `a67a5f7855409185b72bdb2c392a6523d870b2e8`.
+
+Gates confirmados:
+
+- CT-01: PASS;
+- Application CI: #961/#962 SUCCESS;
+- Core Protection: #248/#249 SUCCESS;
+- Legal Validation: #63/#64 SUCCESS;
+- Recovery guardrails: #639/#640 SUCCESS;
+- build / TypeScript / diff hygiene: PASS;
+- multi-tenant / lifecycle / billing / Legal / Central / warehouseAccess: PASS;
+- SESSION-CAP: PASS;
+- Mobile A–I: PASS;
+- conflitos materiais de composição: NENHUM.
+
+Riscos externos controlados:
+
+1. Vercel Preview: BLOCKED por `build-rate-limit`;
+2. HARDEN-B: pendente do primeiro backup READY, `recovery:verify` e restore isolado;
+3. MOBILE-J: certificação física ainda não executada por depender do Preview HTTPS.
+
+Decisão exclusiva do Program Control:
+
+**PROGRAMAS RECONCILIADOS**
+
+**EMPROVEX RC CANDIDATE**
+
+O candidato oficial é o runtime:
+
+`54e60c2264588d8802a67a4cab3d875d64f6bfc1`
+
+Esta decisão:
+
+- não declara RC FROZEN;
+- não autoriza produção;
+- não autoriza publicação de Rules RC;
+- não autoriza Vercel Production;
+- não declara MOBILE-J PASS;
+- não encerra HARDEN-B.
+
+Próximo gate: **RC FROZEN**.
+
 # PARTE IX — RISCOS E GATES ABERTOS
 
 ## 32. Gates técnicos ainda abertos
@@ -2736,23 +2798,20 @@ recovery:verify: PENDENTE
 restore isolado real: PENDENTE / protegido
 
 RELEASE
-RC único SaaS+Mobile: PRONTO PARA COMPOSIÇÃO
-RC Candidate: AINDA NÃO DECLARADO
+RC único SaaS+Mobile: RC CANDIDATE DECLARADO
+RC Candidate: DECLARADO — 54e60c2264588d8802a67a4cab3d875d64f6bfc1
 RC Frozen: NÃO
-CT-01: PENDENTE NO RC
+CT-01: PASS
 Preview HTTPS: AINDA NÃO PUBLICADO
 produção controlada: NÃO AUTORIZADA
 piloto real: NÃO INICIADO
 abertura comercial: NÃO AUTORIZADA
 
 PRÓXIMA SEQUÊNCIA
-criar/fixar branch única do RC
-→ compor SaaS + Mobile semanticamente
-→ aplicar CT-01
-→ reconciliar Rules/package/lockfile/CI/contratos
-→ executar gates no SHA exato
-→ declarar RC CANDIDATE se PASS
+RC CANDIDATE — DECLARADO
+→ registrar/validar freeze manifest
 → RC FROZEN
+→ Preview HTTPS
 → Preview HTTPS
 → testes SaaS + MOBILE-J físicos
 → corrigir somente regressões/blockers reais
