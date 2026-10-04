@@ -7,10 +7,10 @@ Data: 2026-10-04
 - repositório: `aprov-hgesm/Controles-de-Empenhos---Aprov`;
 - branch worker: `rc-session-cap-rules-audit`;
 - base congelada: `c6c164c70a1be3e2e7e4e57b0bbf4866d61a71ce`;
-- PR: **#248**, aberto e DRAFT;
+- PR: **#248**, MERGED;
 - HEAD de código/Rules certificado: `1085ada38c90dd450856cb7767447d4816cb216c`;
 - HEAD de Browser E2E certificado: `44372599fe0526313d3650a55c649615a1ff14d4`;
-- produção: **NÃO ALTERADA**.
+- produção da aplicação e Rules RC: **NÃO ALTERADA**; TTL autorizado foi ativado nos dois campos previstos.
 
 A integradora SaaS avançou após o freeze apenas com deltas documentais observados
 durante esta worker. Não houve merge/rebase da integradora na branch.
@@ -141,39 +141,44 @@ Compatibilidade:
 Rollback da aplicação pode voltar para app antiga mantendo Rules RC.
 Rollback das Rules exige primeiro rollback da aplicação.
 
-## 8. Gates externos pendentes
+## 8. Gates externos — CONCLUÍDOS
+
+Program Control concluiu os gates vivos fora da worker:
 
 ### A — Rules produtivas reais
 
-Capturar ruleset ativo principal e Warehouse em modo somente leitura.
-
-Se houver drift inexplicado:
-
-**STOP PRODUCTION RULES DRIFT — NÃO PUBLICAR.**
+- principal ativo: ruleset `06094fa5-0b5b-4dc0-a0b5-7ca032864860`;
+- fingerprint vivo: `0d990b7de0b2e85ed55fe14ec0d2ce29b3635299`;
+- Warehouse ativo: ruleset `d246184a-350f-40a0-8241-f2b0fa631768`;
+- fingerprint vivo: `b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2`;
+- drift: **NENHUM**.
 
 ### B — TTL
 
-Confirmar no banco principal:
+Antes da ativação:
 
-- collection group `sessionSlots` / field `expiresAt`;
-- collection group `sessionRevocations` / field `expiresAt`.
+- sessionSlots: 5 / 5 expirados / 0 ativos / 0 sem expiresAt;
+- sessionRevocations: 0.
 
-Não ativar/modificar produção sem autorização explícita.
+Após autorização explícita do Fundador:
 
-Não existe credencial GCP/Firebase disponível nesta worker para consultar esses
-dois estados vivos. A certificação Browser foi concluída e não é mais pendência.
+- `sessionSlots.expiresAt`: **ACTIVE**;
+- `sessionRevocations.expiresAt`: **ACTIVE**.
 
-## 9. Classificação final da worker
+## 9. Classificação final do Program Control
 
 - **SESSION-CAP-01:** **PASS TÉCNICO COMPLETO** — código, Rules, Emulator e Browser E2E.
-- **RULES-AUDIT-01:** pronta para fechamento externo; **NÃO PASS FINAL** enquanto ruleset produtivo/drift e TTL não forem confirmados.
-- **Publicação:** NÃO AUTORIZADA / NÃO EXECUTADA.
-- **PR #248:** manter DRAFT até os dois gates externos.
+- **RULES-AUDIT-01:** **PASS — RULES APTAS PARA RC**.
+- **Rules RC:** ainda não publicadas.
+- **Aplicação RC:** ainda não publicada.
+- **PR #248:** MERGED por squash em `54aba792cb9e7bb195e21401fb50a21ed50add19`.
 
 ## 10. Próxima ação do Coordenador
 
 Não abrir nova feature desta frente.
 
-Fechar somente os dois gates externos acima. Se ambos forem verdes e não houver
-drift inexplicado, congelar o RC e executar a publicação única das Rules na ordem
-documentada, dentro de janela explicitamente autorizada.
+A próxima barreira é compor o **RC único SaaS R1 + Mobile R1**, materializar CT-01,
+reconciliar Rules/package/lockfile/Application CI e executar os gates no SHA exato.
+
+A publicação das Rules RC e da aplicação continua protegida por autorização produtiva
+específica e não foi autorizada por este fechamento.
