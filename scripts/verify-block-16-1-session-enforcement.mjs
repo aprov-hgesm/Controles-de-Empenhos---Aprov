@@ -26,7 +26,8 @@ const requireText = (source, expected, message) => {
 
 for (const marker of [
   "SESSION_LEASE_VERSION = 'emprovex_session_v1'",
-  "SESSION_SLOT_IDS = ['slot-1', 'slot-2']",
+  "LEGACY_SESSION_SLOT_IDS = ['slot-1', 'slot-2']",
+  'export type WorkspaceSessionSlotId = string',
   'SESSION_LEASE_DURATION_MS = 30 * 60 * 1000',
   'SESSION_HEARTBEAT_INTERVAL_MS = 15 * 60 * 1000',
 ]) {
@@ -35,14 +36,15 @@ for (const marker of [
 
 for (const marker of [
   'runTransaction(db, async (transaction)',
-  'SESSION_CAPACITY_EXCEEDED_MESSAGE',
+  'const slotId: WorkspaceSessionSlotId = browserInstanceId',
   'getOrCreateBrowserInstanceId',
   'getOrCreateWorkspaceSessionId',
   'acquireWorkspaceSessionLease',
   'releaseWorkspaceSessionLease',
   'renewWorkspaceSessionLeaseIfDue',
   'isFounderCapacityExempt(user.email)',
-  'SESSION_SLOT_IDS.map',
+  "'sessionSlots',\n    slotId",
+  '{ documentReads: 2, documentWrites: 1 }',
 ]) {
   requireText(lease, marker, `Serviço de lease perdeu requisito: ${marker}`);
 }
@@ -76,8 +78,9 @@ for (const marker of [
 }
 
 for (const marker of [
+  'function isLegacySessionSlotId(slotId)',
   'function isValidSessionSlotId(slotId)',
-  "return slotId in ['slot-1', 'slot-2'];",
+  'workspaceSessionSlotBindingMatches(slotId, request.resource.data)',
   'function validWorkspaceSessionLeaseCreate',
   'function validWorkspaceSessionLeaseUpdate',
   'function validWorkspaceSessionLeaseDelete',
@@ -90,39 +93,41 @@ for (const marker of [
 }
 
 for (const marker of [
-  'Setor externo ocupa o primeiro slot de sessão',
-  'Setor externo ocupa o segundo slot de sessão',
-  'Terceiro slot não existe no contrato de capacidade',
-  'Sessão diferente não sobrescreve slot ainda ativo',
-  'Slot expirado pode ser retomado por uma nova sessão',
-  'Conta fundadora não consome slot no workspace fundador',
+  'Compatibilidade transitória preserva slot-1 legado',
+  'Compatibilidade transitória preserva slot-2 legado',
+  'Terceira sessão legítima usa lease dinâmico sem bloqueio de capacidade',
+  'Quarta sessão legítima usa lease dinâmico sem bloqueio de capacidade',
+  'Lease dinâmico exige documentId igual ao browserInstanceId',
+  'Sessão diferente não sobrescreve lease dinâmico ainda ativo',
+  'Conta fundadora não consome lease no workspace fundador',
 ]) {
   requireText(security, marker, `Suíte Firestore perdeu cenário 16.1: ${marker}`);
 }
 
 for (const marker of [
-  'duas sessões por setor, múltiplas abas compartilham vaga e terceira sessão é barrada',
-  'Limite de acessos simultâneos atingido.',
-  'await logoutIfAuthenticated(pageB);',
+  'quatro sessões independentes coexistem e múltiplas abas compartilham a mesma sessão lógica',
+  "page.getByText('Limite de acessos simultâneos atingido.', { exact: false })",
+  'await logoutIfAuthenticated(pageD);',
 ]) {
   requireText(e2e, marker, `Browser E2E perdeu cenário 16.1: ${marker}`);
 }
 
 for (const marker of [
-  '2 sessões lógicas simultâneas por workspace/UG',
-  'duração do lease: **10 minutos**',
-  'heartbeat nominal: **5 minutos**',
-  'identidade fundadora',
-  'não ocupa slot',
+  'SESSION-CAP-01',
+  'sem teto fixo',
+  '30 minutos',
+  '15 minutos',
+  'compatibilidade transitória',
+  'browserInstanceId',
 ]) {
   requireText(docs, marker, `Documentação 16.1 perdeu requisito: ${marker}`);
 }
 
 for (const marker of [
-  'workspaces/${workspaceId}/sessionSlots/slot-1',
-  'workspaces/${workspaceId}/sessionSlots/slot-2',
+  'deleteFirestoreDocumentTree',
+  'workspaces/${workspaceId}',
 ]) {
-  requireText(provisioning, marker, `Exclusão administrativa não limpa slot: ${marker}`);
+  requireText(provisioning, marker, `Rollback/provisionamento não limpa sessões dinâmicas: ${marker}`);
 }
 
 requireText(
@@ -142,10 +147,10 @@ if (findings.length) {
   process.exitCode = 2;
 } else {
   console.log('BLOCK 16.1 SESSION ENFORCEMENT: READY');
-  console.log('Setores externos: 2 SESSÕES LÓGICAS');
+  console.log('Setores externos: SESSÕES DINÂMICAS SEM TETO FIXO');
   console.log('Múltiplas abas: 1 VAGA POR NAVEGADOR');
   console.log('Conta fundadora: ILIMITADA');
-  console.log('Reserva de vaga: TRANSAÇÃO FIRESTORE');
+  console.log('Identidade de lease: browserInstanceId / TRANSAÇÃO FIRESTORE');
   console.log('Lease atual: 30 MIN / HEARTBEAT: 15 MIN (otimizado no Bloco 17.1)');
-  console.log('Terceira sessão: BLOQUEADA');
+  console.log('Terceira/quarta sessão: PERMITIDAS');
 }
