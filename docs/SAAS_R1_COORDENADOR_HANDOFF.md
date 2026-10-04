@@ -1001,3 +1001,18 @@ Status: **ATIVA / EM EXECUÇÃO**
 - começar por auditoria de dependências e alcançabilidade antes de qualquer upgrade;
 - produção, Rules, restore, migração, piloto e freeze RC não autorizados por esta frente.
 
+## HARDEN-A2 — FECHAMENTO FORMAL
+
+Status: **PASS — RISCO RESIDUAL ACEITO TECNICAMENTE**
+
+A auditoria concluiu que a cadeia transitiva `firebase -> @firebase/firestore -> @grpc/grpc-js` permanece instalada, porém os vetores conhecidos avaliados exigem primitivas de servidor gRPC que não são usadas pelo EMPROVEX.
+
+Nenhuma dependência, runtime, Auth, Firestore client, Rules, Central, Mobile ou bundle foi alterado.
+
+Impacto Mobile: **SEM DELTA**.
+
+Artefato integrado:
+`docs/SAAS_R1_HARDEN_A2_FIREBASE_FIRESTORE_GRPC.md`
+
+A2 encerrada. Não abrir nova wave funcional/dependências. Próximo objetivo do programa: concluir o hardening remanescente e preparar composição do **RC ÚNICO SAAS R1 + MOBILE R1**.
+
