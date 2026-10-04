@@ -1024,3 +1024,45 @@ A MOBILE-J pode prosseguir em paralelo em pré-certificação. O PASS final Mobi
 
 HARDEN-B permanece PARCIAL / espera controlada.
 
+## HARDEN-A2 — PASS / ENCERRADA
+
+A HARDEN-A2 — Firebase / Firestore / gRPC foi revisada pelo Coordenador SaaS e encerrada como:
+
+**PASS — RISCO RESIDUAL ACEITO TECNICAMENTE**
+
+Branch worker:
+`saas-harden-a2-firebase-firestore-grpc`
+
+Base congelada:
+`f308ff601fe923467b8ccc1489be91b318bc3e8c`
+
+HEAD worker:
+`d647793f256c28eb412950d306d0427549577ee0`
+
+PR:
+`#247`
+
+Conclusão:
+- nenhuma dependência alterada;
+- nenhuma mudança runtime;
+- Firebase declarado permanece `^10.12.2`;
+- Firebase resolvido permanece `10.14.1`;
+- `@firebase/firestore` permanece `4.7.3`;
+- `@grpc/grpc-js` permanece `1.9.16`;
+- Firestore mantém pin `@grpc/grpc-js ~1.9.0`;
+- browser não usa o transporte Node gRPC;
+- caminhos Node identificados usam gRPC como cliente Firestore, não servidor;
+- os vetores dos advisories avaliados dependem de primitivas de servidor não usadas pelo EMPROVEX;
+- upgrade Firebase major e override gRPC foram rejeitados por não fornecerem correção suportada do pin sem ampliar risco de regressão;
+- impacto MOBILE-R1: **SEM DELTA**;
+- Rules: **SEM DELTA**;
+- package/lockfile: **SEM DELTA**;
+- produção: **NÃO ALTERADA**.
+
+O risco residual permanece explicitamente registrado e deve ser reaberto se:
+1. o Firestore oficial publicar range suportado que alcance versão corrigida;
+2. o EMPROVEX passar a operar servidor gRPC próprio;
+3. surgir nova evidência de alcançabilidade.
+
+Não abrir nova frente Firebase/gRPC sem nova evidência técnica.
+
