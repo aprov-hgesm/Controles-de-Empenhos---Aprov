@@ -207,8 +207,10 @@ Snapshot em 2026-10-04:
 - SESSION-CAP-01: PASS técnico completo / integrada via PR #248;
 - RULES-AUDIT-01: PASS — RULES APTAS PARA RC;
 - TTL sessionSlots/sessionRevocations: ACTIVE;
-- composição do RC conjunto: próxima barreira;
-- RC CANDIDATE: ainda não declarado;
+- composição RC-A: concluída / semanticamente reconciliada;
+- certificação RC-B: PASS com risco externo controlado;
+- PROGRAMAS RECONCILIADOS: **DECLARADO**;
+- RC CANDIDATE: **DECLARADO** em `54e60c2264588d8802a67a4cab3d875d64f6bfc1`;
 - RC FROZEN: não;
 - Preview HTTPS: ainda não publicado;
 - produção controlada: não autorizada;
@@ -220,11 +222,11 @@ A próxima barreira global é:
 ```text
 SESSION-CAP-01 — PASS / integrada
 → RULES-AUDIT-01 — PASS
-→ composição do RC
-→ reconciliação transversal
-→ CT-01
-→ gates
-→ freeze
+→ RC-A — composição PASS
+→ RC-B — certificação PASS com risco externo controlado
+→ PROGRAMAS RECONCILIADOS
+→ RC CANDIDATE — DECLARADO
+→ RC FROZEN
 → Preview HTTPS
 → certificação real
 → GO/NO-GO
@@ -467,3 +469,72 @@ Integração:
 Próxima barreira:
 
 **composição do RC conjunto SaaS R1 + Mobile R1**.
+
+## 21. Decisão Program Control — PROGRAMAS RECONCILIADOS / RC CANDIDATE
+
+Data: 2026-10-04.
+
+Após auditoria da RC-A e da RC-B, o Coordenador Geral aceita a certificação independente e registra:
+
+**PROGRAMAS RECONCILIADOS**
+
+**EMPROVEX RC CANDIDATE**
+
+Identidade do candidato:
+
+- RC branch: `rc-r1-a-composition`;
+- RC_RUNTIME_SHA: `54e60c2264588d8802a67a4cab3d875d64f6bfc1`;
+- RC_COMPOSITION_HEAD: `7f449db986da359091c70f6ae27934f0db18a0cb`;
+- RC-B HEAD final documental: `851cbfc1c966847d1b5fc53c47e2708a48336f76`;
+- SaaS source: `2c1eee759ea8024c296b4c6968ed935b9a59e880`;
+- Mobile source: `7b7717b6eebabf911310d2b8ac56ed13c9cb9238`;
+- main/produção: `e90f92acae1514ee5cbc6ce95fed354bc1454330` — inalterada.
+
+Hashes:
+
+- Rules principal RC: `bc91185f34bcdcb4437a4de1078d1089a09292ba`;
+- Rules Warehouse RC: `6e1f1050005314db4e17cb3136409abbddb0ee91`;
+- package-lock: `7c1ecd0dc074b8924c25123955f70e0ba10675dd`;
+- next.config.ts: `a67a5f7855409185b72bdb2c392a6523d870b2e8`.
+
+Evidência viva auditada pelo Program Control:
+
+- Application CI #961 no RC_RUNTIME_SHA: SUCCESS;
+- Core Protection #248: SUCCESS;
+- Legal Validation #63: SUCCESS;
+- Recovery guardrails #639: SUCCESS;
+- Application CI #962 no RC_COMPOSITION_HEAD: SUCCESS;
+- Core Protection #249: SUCCESS;
+- Legal Validation #64: SUCCESS;
+- Recovery guardrails #640: SUCCESS;
+- RC-B PR #250: OPEN / DRAFT / MERGEABLE / não mergeado;
+- delta RC-B: exclusivamente dois documentos de certificação.
+
+Classificação aceita:
+
+**PASS COM RISCO EXTERNO CONTROLADO — APTO PARA RC CANDIDATE**
+
+Riscos que permanecem abertos sem invalidar o candidato:
+
+1. Vercel Preview bloqueado por `build-rate-limit`;
+2. HARDEN-B temporalmente pendente;
+3. MOBILE-J física ainda não executada.
+
+Semáforo:
+
+- candidato técnico: **VERDE**;
+- Preview/certificação física: **AMARELO por dependência externa**;
+- produção: **NÃO AUTORIZADA**.
+
+Esta decisão não equivale a:
+
+- RC FROZEN;
+- GO de produção;
+- publicação de Rules;
+- Vercel Production;
+- MOBILE-J PASS;
+- fechamento de HARDEN-B.
+
+Próximo gate global:
+
+**RC FROZEN**.
