@@ -386,3 +386,27 @@ Efeito esperado após ativação:
 - futuros leases/tombstones passam a ser limpos pelo Firestore com base em `expiresAt`.
 
 A ativação de TTL continua classificada como alteração produtiva e não pode ser executada sem autorização explícita.
+
+## 18. Autorização do Fundador — TTL produtivo
+
+Em 2026-10-04, o Fundador autorizou explicitamente a ativação produtiva de TTL exclusivamente em:
+
+- `sessionSlots.expiresAt`;
+- `sessionRevocations.expiresAt`;
+
+no banco principal:
+
+`ai-studio-logsticahospital-3eeee498-faa1-4326-8f4f-95d34b382ec1`.
+
+Pré-condições já confirmadas antes da autorização:
+
+- Rules produtivas principal e Warehouse sem drift;
+- `sessionSlots`: 5 documentos / 5 expirados / 0 ativos / 0 sem expiresAt;
+- `sessionRevocations`: 0 documentos;
+- nenhuma outra alteração produtiva autorizada.
+
+Escopo autorizado:
+
+**somente habilitar TTL nos dois campos acima e verificar o estado.**
+
+Não inclui publicação de Rules, deploy de aplicação, IAM, restore ou outras mudanças produtivas.
