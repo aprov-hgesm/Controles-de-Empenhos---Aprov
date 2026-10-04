@@ -2,7 +2,7 @@
 
 Data de instituição: **2026-10-02**
 
-Estado: **ARQUITETURA OFICIAL ATIVA / COORDENADOR GERAL EM OPERAÇÃO / PROGRAM CONTROL VIGENTE**
+Estado: **ARQUITETURA OFICIAL ATIVA / PROGRAM CONTROL + COORDENAÇÃO DO RC EM OPERAÇÃO / FASE DE RELEASE ENGINEERING**
 
 ## 1. Finalidade
 
@@ -17,14 +17,18 @@ Seu objetivo é preservar:
 - integridade do Memorial Oficial;
 - preparação correta de Release Candidates e releases.
 
-Ele **não é um worker** e **não substitui os Coordenadores de Programa**.
+Ele **não é um worker**.
+
+Durante a fase funcional, ele não substitui os Coordenadores de Programa. Na fase atual de Release Candidate, por decisão do Fundador, o Coordenador Geral também acumula a **Coordenação operacional do RC**, enquanto os Coordenadores SaaS/Mobile permanecem como fontes especializadas de evidência e consulta sob demanda.
 
 ## 2. Hierarquia oficial
+
+### 2.1 Durante desenvolvimento funcional
 
 ```text
 FUNDADOR
    │
-COORDENADOR GERAL EMPROVEX
+COORDENADOR GERAL / PROGRAM CONTROL
    │
    ├── COORDENADOR MOBILE-R1
    │      └── workers MOBILE
@@ -33,13 +37,29 @@ COORDENADOR GERAL EMPROVEX
           └── workers SAAS/HARDEN
 ```
 
-Regra:
-- workers reportam ao Coordenador de Programa;
-- Coordenadores de Programa reportam estado consolidado ao Coordenador Geral;
-- o Coordenador Geral intervém diretamente em worker apenas por exceção coordenada.
+### 2.2 Durante a fase atual de RC
 
-Não criar camada acima do Coordenador Geral. A hierarquia máxima oficial é:
-**Fundador → Coordenador Geral → Coordenadores de Programa → Workers**.
+```text
+FUNDADOR
+   │
+PROGRAM CONTROL + COORDENAÇÃO DO RC
+   │
+   ├── COORDENADOR SAAS-R1 — consulta/evidência
+   ├── COORDENADOR MOBILE-R1 — consulta/evidência
+   ├── HARDEN-B — frente especializada temporal
+   └── MOBILE-J — certificação física especializada
+```
+
+Regras vigentes:
+
+- nenhuma nova wave funcional SaaS/Mobile está autorizada;
+- Coordenadores de Programa não foram descartados; ficam congelados operacionalmente e retornam apenas por necessidade específica;
+- a Coordenação RC compõe o candidato e consolida evidências;
+- Program Control continua sendo a camada que aceita/rejeita o checkpoint global;
+- o Fundador continua autoridade final de produção e lançamento;
+- mesmo quando Coordenação RC e Program Control estão no mesmo chat, PASS exige SHA/diff/gates/evidência e não autoaprovação subjetiva.
+
+Não criar nova camada hierárquica acima do Coordenador Geral.
 
 ## 3. Autoridade do Fundador
 
@@ -117,4 +137,64 @@ O Memorial Oficial passa a ter **propriedade lógica do Coordenador Geral**.
 
 Isso significa:
 - preservar coerência entre estado atual e histórico;
-- manter o topo do Memorial representando sempre o estado vivo;
+- manter o topo do Memorial representando sempre o estado vivo
+
+## 4.6 Fase atual — Release Candidate
+
+O próximo produto global não é uma nova feature: é um **único SHA de RC SaaS R1 + Mobile R1**.
+
+Responsabilidades da Coordenação RC:
+
+- escolher/fixar fontes SaaS e Mobile;
+- compor semanticamente, sem merge cego;
+- materializar CT-01;
+- reconciliar Rules/package/lockfile/Application CI;
+- reconciliar Auth/workspace/UG/sessão/Legal/billing/lifecycle/Central;
+- executar gates no SHA exato;
+- preparar rollback;
+- publicar Preview HTTPS quando o candidato estiver congelado;
+- consolidar testes SaaS e MOBILE-J;
+- produzir checkpoint para decisão Program Control.
+
+A Coordenação RC **não pode**:
+
+- abrir feature nova por conveniência;
+- editar diretamente `main` para “testar”;
+- promover produção sem GO;
+- publicar Rules produtivas sem autorização;
+- executar restore real sem autorização;
+- declarar lançamento amplo.
+
+;
+
+## 12. Estado corrente da governança
+
+Snapshot em 2026-10-03:
+
+- produção: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330` — Performance R3;
+- SaaS funcional: encerrado;
+- HARDEN-A1/A2/C/D: PASS;
+- HARDEN-B: parcial/temporal;
+- Mobile funcional A–I: encerrado;
+- MOBILE-J: certificação final;
+- nova feature SaaS/Mobile: congelada;
+- composição do RC conjunto: liberada;
+- RC CANDIDATE: ainda não declarado;
+- RC FROZEN: não;
+- Preview HTTPS: ainda não publicado;
+- produção controlada: não autorizada;
+- piloto real: não iniciado;
+- lançamento comercial: não autorizado.
+
+A próxima barreira global é:
+
+```text
+composição do RC
+→ reconciliação transversal
+→ CT-01
+→ gates
+→ freeze
+→ Preview HTTPS
+→ certificação real
+→ GO/NO-GO
+```
