@@ -174,12 +174,13 @@ como pendência externa; não inferir que produção é igual a `main`.
 
 ### Evidência automática no HEAD de código certificado
 
-HEAD de código certificado: `1085ada38c90dd450856cb7767447d4816cb216c`.
+HEAD de código/Rules certificado: `1085ada38c90dd450856cb7767447d4816cb216c`.
+HEAD de Browser E2E certificado: `44372599fe0526313d3650a55c649615a1ff14d4`.
 
-- Application CI #952: **SUCCESS**;
-- EMPROVEX Core Protection #239: **SUCCESS**;
-- Recovery guardrails #630: **SUCCESS**;
-- SAAS-DL Legal Validation #54: **SUCCESS**;
+- Application CI #952: **SUCCESS** no HEAD de código/Rules;
+- EMPROVEX Core Protection #245: **SUCCESS** no ciclo de Browser/finalização;
+- Recovery guardrails #636: **SUCCESS** no ciclo de Browser/finalização;
+- SAAS-DL Legal Validation #60: **SUCCESS** no ciclo de Browser/finalização;
 - Production Build: **PASS**;
 - TypeScript final: **PASS**;
 - Diff Hygiene: **PASS**;
@@ -190,7 +191,9 @@ HEAD de código certificado: `1085ada38c90dd450856cb7767447d4816cb216c`.
 - Block 20 Final Release Gate: **SUCCESS**;
 - Block 21 Final Release Gate: **SUCCESS**;
 - Vercel: **FAILURE EXTERNA — build-rate-limit**, sem evidência de regressão funcional deste delta;
-- SAAS-C Browser Validation: **SKIPPED por escopo da branch**, portanto não conta como Browser E2E PASS.
+- SESSION-CAP Browser E2E with Firebase Emulator — workflow run **#49 / 37171327188: SUCCESS**;
+- Bloco 16.8 Browser E2E: **8/8 PASS** em Chromium/Firebase Emulator;
+- cenário `quatro sessões independentes coexistem e múltiplas abas compartilham a mesma sessão lógica`: **1/1 PASS**.
 
 ### Emulator / Rules
 
@@ -237,16 +240,40 @@ Rules compartilhadas continuam em:
 O RC desta frente altera somente a principal para
 `bc91185f34bcdcb4437a4de1078d1089a09292ba`; Warehouse permanece idêntica.
 
+### Browser E2E certificado
+
+Como a conexão GitHub disponível ao worker não oferece `workflow_dispatch`, foi
+adicionado temporariamente um job restrito exclusivamente à branch
+`rc-session-cap-rules-audit`, usando somente Firebase Emulator + Chromium.
+Depois da certificação o job temporário foi removido do workflow.
+
+Run: **SAAS-C Browser Validation #49 / 37171327188 — SUCCESS**.
+
+Evidências:
+
+- Bloco 16.8: **8/8 PASS**;
+- heartbeat 30 min / 15 min: PASS;
+- relógio local atrasado/adiantado: PASS;
+- reaproveitamento de lease dinâmico expirado: PASS;
+- leases concorrentes independentes: PASS;
+- multitab compartilhado: PASS;
+- revogação administrativa em todas as abas: PASS;
+- tombstone + novo login/nova identidade: PASS;
+- quatro sessões independentes + multitab: **1/1 PASS**.
+
+A primeira tentativa Browser completa revelou que os helpers E2E históricos não
+atravessavam o `LegalAcceptanceGate` do SaaS R1. Os helpers foram corrigidos para
+aceitar explicitamente o bundle legal no Emulator; nenhuma regra de produção foi
+relaxada.
+
 ### Gates externos obrigatórios ainda não satisfeitos
 
 1. **ruleset realmente ativo em produção + drift check** dos dois bancos;
-2. **estado TTL real** de `sessionSlots.expiresAt` e `sessionRevocations.expiresAt`;
-3. **Browser E2E On Demand** com Firebase Emulator no HEAD final, incluindo quatro
-   sessões independentes e multitab compartilhado.
+2. **estado TTL real** de `sessionSlots.expiresAt` e `sessionRevocations.expiresAt`.
 
-O workflow `Browser E2E On Demand` existe e usa apenas Emulator, porém a conexão
-GitHub disponível ao worker não oferece `workflow_dispatch`; por isso esse teste
-não foi artificialmente marcado como PASS.
+Não existe credencial GCP/Firebase disponível nas ferramentas desta worker para
+consultar esses dois estados vivos. Nenhuma tentativa de contornar IAM ou reutilizar
+segredos externos foi feita.
 
 Se a leitura viva das Rules revelar drift inexplicado, a classificação obrigatória é:
 
@@ -254,11 +281,12 @@ Se a leitura viva das Rules revelar drift inexplicado, a classificação obrigat
 
 ### Classificação
 
-**SESSION-CAP-01:** `PASS TÉCNICO DE CÓDIGO + RULES + EMULATOR`, com
-certificação final ainda pendente de Browser E2E e confirmação TTL.
+**SESSION-CAP-01:** `PASS TÉCNICO COMPLETO — CÓDIGO + RULES + EMULATOR + BROWSER E2E`.
+O release produtivo continua condicionado à confirmação operacional de TTL e ao
+baseline vivo das Rules.
 
 **RULES-AUDIT-01:** `PRONTA PARA FECHAMENTO EXTERNO / AINDA NÃO PASS FINAL`,
-pendente da captura do ruleset produtivo real, drift check e confirmação TTL.
+pendente somente da captura do ruleset produtivo real, drift check e confirmação TTL.
 
 Produção permanece intocada. Nenhuma publicação de Rules, Vercel production,
 merge em `main`, restore ou promoção produtiva foi realizada.
