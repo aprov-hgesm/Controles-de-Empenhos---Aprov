@@ -168,7 +168,7 @@ export function AdminSessionsPanel({
             (session) => session.workspaceId === workspace.id
           );
           const occupied = workspaceSessions.length;
-          const full = occupied >= DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT;
+          const hasActiveSessions = occupied > 0;
 
           return (
             <div
@@ -188,12 +188,12 @@ export function AdminSessionsPanel({
                 </div>
 
                 <div className={`inline-flex items-center gap-2 self-start rounded-xl border px-3 py-2 text-xs font-extrabold sm:self-auto ${
-                  full
-                    ? 'border-amber-300/20 bg-amber-400/[0.07] text-amber-100'
-                    : 'border-emerald-300/15 bg-emerald-400/[0.06] text-emerald-100'
+                  hasActiveSessions
+                    ? 'border-emerald-300/15 bg-emerald-400/[0.06] text-emerald-100'
+                    : 'border-white/[0.08] bg-white/[0.025] text-slate-300'
                 }`}>
                   <Users className="h-4 w-4" />
-                  {occupied} / {DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT} sessões
+                  {occupied} sessões · sem teto fixo
                 </div>
               </div>
 
