@@ -109,22 +109,38 @@ function revocationPath(sessionId) {
   return `workspaces/${WORKSPACE_ID}/sessionRevocations/${sessionId}`;
 }
 
-async function clearSlots() {
-  await Promise.all([
-    emulatorDelete(slotPath('slot-1')),
-    emulatorDelete(slotPath('slot-2')),
-  ]);
+async function emulatorListCollection(path) {
+  const response = await fetch(documentUrl(path), {
+    headers: { Authorization: EMULATOR_ADMIN_HEADER },
+  });
+  if (response.status === 404) return [];
+  if (!response.ok) {
+    throw new Error(
+      `Firestore LIST falhou em ${path}: ${response.status} ${await response.text()}`
+    );
+  }
+
+  const payload = await response.json();
+  return (payload.documents || []).map((document) => {
+    const slotId = String(document.name || '').split('/').pop() || '';
+    return {
+      slotId,
+      ...decodeFields(document.fields || {}),
+    };
+  });
 }
 
 async function workspaceSessions() {
-  const [slot1, slot2] = await Promise.all([
-    emulatorGet(slotPath('slot-1')),
-    emulatorGet(slotPath('slot-2')),
-  ]);
-  return [
-    slot1 ? { slotId: 'slot-1', ...slot1 } : null,
-    slot2 ? { slotId: 'slot-2', ...slot2 } : null,
-  ].filter(Boolean);
+  return emulatorListCollection(
+    `workspaces/${WORKSPACE_ID}/sessionSlots`
+  );
+}
+
+async function clearSlots() {
+  const sessions = await workspaceSessions();
+  await Promise.all(
+    sessions.map((session) => emulatorDelete(slotPath(session.slotId)))
+  );
 }
 
 async function loginSector(page) {
@@ -295,19 +311,27 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
     await logoutIfAuthenticated(page);
   });
 
-  test('slot expirado pode ser retomado por uma nova identidade de sessão', async ({ page }) => {
-    await emulatorSet(slotPath('slot-1'), leaseSeed({
-      slotId: 'slot-1',
+  test('lease dinâmico expirado é reaproveitado pelo mesmo navegador', async ({ page }) => {
+    const browserInstanceId = 'browser-expired-e2e';
+    await emulatorSet(slotPath(browserInstanceId), leaseSeed({
+      slotId: browserInstanceId,
       sessionId: 'expired-block-16-8',
+      browserInstanceId,
       expiresAt: new Date(Date.now() - 60_000),
     }));
+
+    await page.addInitScript((storedBrowserId) => {
+      localStorage.setItem('emprovex:browser-instance:v1', storedBrowserId);
+    }, browserInstanceId);
 
     await page.goto('/');
     await loginSector(page);
 
-    const reclaimed = await emulatorGet(slotPath('slot-1'));
+    const reclaimed = await emulatorGet(slotPath(browserInstanceId));
     expect(reclaimed).toBeTruthy();
     expect(reclaimed.sessionId).not.toBe('expired-block-16-8');
+    expect(reclaimed.slotId).toBe(browserInstanceId);
+    expect(reclaimed.browserInstanceId).toBe(browserInstanceId);
     expect(reclaimed.workspaceId).toBe(WORKSPACE_ID);
     expect(reclaimed.ug).toBe(UG);
     expect(Date.parse(reclaimed.expiresAt)).toBeGreaterThan(Date.now());
@@ -315,15 +339,7 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
     await logoutIfAuthenticated(page);
   });
 
-  test('duas tentativas concorrentes disputando o último slot produzem exatamente um vencedor', async ({ browser }) => {
-    await emulatorSet(slotPath('slot-1'), leaseSeed({
-      slotId: 'slot-1',
-      sessionId: 'occupied-last-slot-race',
-      uid: 'occupied-last-slot-uid',
-      browserInstanceId: 'occupied-last-slot-browser',
-      expiresAt: new Date(Date.now() + 20 * 60 * 1000),
-    }));
-
+  test('duas tentativas concorrentes criam leases dinâmicos independentes', async ({ browser }) => {
     const contextB = await browser.newContext();
     const contextC = await browser.newContext();
     const pageB = await contextB.newPage();
@@ -336,28 +352,22 @@ test.describe.serial('Bloco 16.8 — E2E integrado de capacidade e revogação',
         pageC.getByTestId('sector-login-submit').click(),
       ]);
 
-      const state = async (page) => {
-        if (await page.getByRole('navigation', { name: 'Navegação principal' }).isVisible().catch(() => false)) {
-          return 'inside';
-        }
-        if (await page.getByText('Limite de acessos simultâneos atingido.', { exact: false }).isVisible().catch(() => false)) {
-          return 'blocked';
-        }
-        return 'pending';
-      };
-
-      await expect.poll(async () => {
-        const states = [await state(pageB), await state(pageC)].sort();
-        return states.join(',');
-      }, {
-        timeout: 20_000,
-        intervals: [200, 400, 800],
-      }).toBe('blocked,inside');
+      await Promise.all([
+        expect(
+          pageB.getByRole('navigation', { name: 'Navegação principal' })
+        ).toBeVisible({ timeout: 20_000 }),
+        expect(
+          pageC.getByRole('navigation', { name: 'Navegação principal' })
+        ).toBeVisible({ timeout: 20_000 }),
+      ]);
 
       const sessions = await workspaceSessions();
       expect(sessions).toHaveLength(2);
       expect(new Set(sessions.map((item) => item.sessionId)).size).toBe(2);
-      expect(sessions.some((item) => item.sessionId === 'occupied-last-slot-race')).toBe(true);
+      expect(new Set(sessions.map((item) => item.slotId)).size).toBe(2);
+      expect(
+        sessions.every((item) => item.slotId === item.browserInstanceId)
+      ).toBe(true);
     } finally {
       await contextC.close();
       await contextB.close();
