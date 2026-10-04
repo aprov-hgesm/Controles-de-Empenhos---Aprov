@@ -7,11 +7,26 @@ const RECORD_KEY = 'nf_11111111000191_1001';
 const NS = '2026NS009999';
 const UG = '160416';
 
+async function acceptLegalIfRequired(page) {
+  const navigation = page.getByRole('navigation', { name: 'Navegação principal' });
+  const legalTitle = page.getByRole('heading', { name: 'Termos e Privacidade' });
+
+  await expect(navigation.or(legalTitle)).toBeVisible({ timeout: 20_000 });
+
+  if (await legalTitle.isVisible().catch(() => false)) {
+    await page.getByRole('checkbox', {
+      name: 'Li e aceito os Termos de Serviço e a Política de Privacidade.',
+    }).check();
+    await page.getByRole('button', { name: 'Aceitar e continuar' }).click();
+  }
+}
+
 async function loginSector(page, email) {
   await page.getByTestId('sector-login-email').fill(email);
   await page.getByTestId('sector-login-password').fill(PASSWORD);
   await page.getByTestId('sector-login-submit').click();
 
+  await acceptLegalIfRequired(page);
   await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible({
     timeout: 20_000,
   });
