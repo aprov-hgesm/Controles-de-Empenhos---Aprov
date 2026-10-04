@@ -123,6 +123,7 @@ Sequência canônica:
 SaaS final + Mobile final
 → SESSION-CAP-01 — remover teto fixo de 2 sessões
 → regressão de sessão/Rules/telemetria
+→ RULES-AUDIT-01 — baseline + compatibilidade + ALLOW/DENY + rollback
 → branch única de composição do RC
 → reconciliação semântica dos contratos compartilhados
 → CT-01
@@ -148,7 +149,8 @@ SaaS final + Mobile final
 Obrigatório:
 
 - SESSION-CAP-01 concluída e reconciliada, salvo decisão explícita do Fundador de adiar a mudança para release posterior;
-
+- RULES-AUDIT-01 concluída em **PASS** sobre o ruleset final pós-SESSION-CAP-01;
+- nenhuma Rule produtiva nova pode ser publicada sem esse PASS;
 - nenhum novo conflito SaaS↔Mobile;
 - CT-01 materializada;
 - Rules candidata principal e warehouse registradas;
@@ -1180,7 +1182,480 @@ Portanto publicação exige:
 4. preparar comando de republicação das Rules anteriores;
 5. não confundir rollback Vercel com rollback de Rules.
 
-### 22.4 Runbook de incidente
+### 22.4 RULES-AUDIT-01 — auditoria integral de compatibilidade das Firestore Rules
+
+Decisão do Fundador em 2026-10-03:
+
+**as Rules do SaaS R1 + Mobile R1 não serão publicadas em produção por tentativa e erro. Antes de qualquer publicação produtiva, o ruleset final do RC deve passar por uma auditoria integral de compatibilidade.**
+
+Classificação:
+
+**GATE TRANSVERSAL OBRIGATÓRIO PRÉ-RC / PRÉ-PUBLICAÇÃO DE RULES**
+
+Owner:
+
+**Program Control + Coordenação do RC**
+
+#### 22.4.1 Objetivo
+
+Garantir, antes da publicação, que as Rules finais:
+
+1. preservem tudo o que já funciona corretamente na Performance R3;
+2. incorporem apenas os novos contratos necessários de SaaS R1, Mobile R1 e SESSION-CAP-01;
+3. não introduzam regressões de autorização;
+4. não abram acesso indevido;
+5. não criem bloqueios sistêmicos de usuários legítimos;
+6. mantenham isolamento multi-tenant;
+7. mantenham a Central de Depósitos funcional;
+8. tenham rollback conhecido e testável;
+9. sejam compatíveis com a ordem real de rollout entre aplicação e Rules;
+10. possam ser publicadas sem depender de correções improvisadas em produção.
+
+#### 22.4.2 Estado atual das Rules antes da SESSION-CAP-01
+
+Banco principal:
+
+- produção / `main`: `firestore.rules@0d990b7de0b2e85ed55fe14ec0d2ce29b3635299`;
+- candidata SaaS: `firestore.rules@57a1394c921b2ab2c15537fbfc4aaea17515b28a`;
+- candidata Mobile: **idêntica à candidata SaaS**;
+- tamanho aproximado produção: **87,49 KiB / 2.380 linhas**;
+- tamanho aproximado candidata: **92,11 KiB / 2.500 linhas**;
+- delta observado: aproximadamente **+124 / -4 linhas**.
+
+Banco `emprovex-warehouse`:
+
+- produção / `main`: `firestore.warehouse.rules@b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2`;
+- candidata SaaS: `firestore.warehouse.rules@6e1f1050005314db4e17cb3136409abbddb0ee91`;
+- candidata Mobile: **idêntica à candidata SaaS**;
+- tamanho aproximado produção: **151,55 KiB / 3.307 linhas**;
+- tamanho aproximado candidata: **152,38 KiB / 3.330 linhas**;
+- delta observado: aproximadamente **+24 / -1 linha**.
+
+Conclusão atual:
+
+**não existe conflito SaaS versus Mobile nas Rules candidatas conhecidas. O conflito a auditar é produção R3 versus ruleset final do novo release.**
+
+Os hashes acima são baseline histórica desta auditoria. O PASS final deve usar os hashes do **ruleset pós-SESSION-CAP-01**, que podem ser diferentes.
+
+#### 22.4.3 Dependência obrigatória da SESSION-CAP-01
+
+A auditoria final só pode congelar PASS **depois** da SESSION-CAP-01.
+
+Motivo:
+
+- o runtime atual usa `sessionSlots/slot-1` e `slot-2`;
+- as Rules atuais validam esse contrato fixo;
+- SESSION-CAP-01 deverá permitir sessões dinâmicas ou mecanismo equivalente;
+- portanto o ruleset final ainda sofrerá alteração estrutural.
+
+Regra:
+
+```text
+SESSION-CAP-01
+→ ruleset final estrutural
+→ RULES-AUDIT-01
+→ PASS RULES
+→ composição/finalização do RC
+```
+
+Uma auditoria executada antes da SESSION-CAP-01 pode servir como **baseline**, mas não substitui a auditoria final.
+
+#### 22.4.4 Princípio de compatibilidade
+
+A auditoria não deve perguntar apenas:
+
+> “o App RC funciona com Rules RC?”
+
+Ela deve responder também:
+
+> “as Rules RC preservam o comportamento legítimo já existente na Performance R3?”
+
+Contrato:
+
+**Rules finais = capacidades legítimas já existentes + novos contratos SaaS/Mobile + nenhum acesso indevido novo.**
+
+Não é aceitável resolver uma necessidade nova apagando silenciosamente uma permissão legítima antiga.
+
+#### 22.4.5 Fase A — captura da baseline realmente publicada
+
+Antes de comparar arquivos do Git:
+
+1. consultar o ruleset efetivamente ativo no banco principal;
+2. consultar o ruleset efetivamente ativo no `emprovex-warehouse`;
+3. registrar Ruleset ID/versão quando disponível;
+4. guardar conteúdo/fingerprint/hash;
+5. comparar com os blobs esperados de `main`;
+6. registrar data/hora da captura;
+7. registrar projeto/database alvo.
+
+Se o ruleset realmente publicado divergir do `main` conhecido:
+
+**STOP / DRIFT DE PRODUÇÃO**
+
+Nenhuma publicação nova deve ocorrer antes de explicar e reconciliar a divergência.
+
+#### 22.4.6 Fase B — diff estrutural e semântico
+
+Não limitar a revisão a contagem de linhas.
+
+Para cada arquivo:
+
+- mapear helpers adicionados/removidos/alterados;
+- mapear cada `match` adicionado/removido/alterado;
+- mapear cada `allow read/get/list/create/update/delete/write`;
+- identificar mudanças de provider;
+- identificar mudanças de UID/e-mail/workspace/UG;
+- identificar mudanças de lifecycle;
+- identificar mudanças de billing/legal;
+- identificar mudanças de sessão;
+- identificar mudanças de `warehouseAccess`;
+- identificar mudanças em validação de shape/tamanho/status;
+- identificar mudança permissiva;
+- identificar mudança restritiva;
+- identificar mudança neutra/estrutural.
+
+Cada delta deve possuir:
+
+- origem;
+- requisito que o justifica;
+- superfície afetada;
+- risco de falso ALLOW;
+- risco de falso DENY;
+- teste correspondente.
+
+#### 22.4.7 Fase C — matriz ALLOW / DENY
+
+Todo domínio modificado deve ter testes positivos e negativos.
+
+Exemplo canônico:
+
+```text
+operação legítima do próprio workspace → ALLOW
+mesma operação em outro workspace → DENY
+sessão sem provider correto → DENY
+sessão sem claim/identidade exigida → DENY
+usuário não autenticado → DENY
+admin onde não existe bypass operacional → DENY
+payload válido → ALLOW
+payload adulterado → DENY
+```
+
+A matriz deve cobrir no mínimo:
+
+**Identidade / multi-tenant**
+- founder Google;
+- externo password;
+- UID correto/incorreto;
+- e-mail verificado;
+- workspace próprio;
+- workspace alheio;
+- UG própria;
+- UG divergente;
+- sessão suspensa/desabilitada.
+
+**Sessões**
+- sessão dinâmica válida;
+- renovação do próprio lease;
+- tentativa de renovar lease de outra sessão;
+- sessão revogada;
+- tombstone;
+- sessão expirada;
+- múltiplas sessões legítimas;
+- suspensão global do workspace;
+- painel administrativo/encerramento remoto.
+
+**Billing**
+- configuração administrativa;
+- preço R$ 70;
+- VIP/`exempt`;
+- VIP legado;
+- competência;
+- usuário externo sem permissão de alteração administrativa.
+
+**Legal**
+- GET do próprio aceite esperado;
+- criação do próprio aceite vigente;
+- versão errada;
+- UID errado;
+- workspace errado;
+- listagem;
+- update;
+- delete.
+
+**Central de Depósitos**
+- founder;
+- setor externo autorizado;
+- setor externo sem claims;
+- setor suspenso;
+- `warehouseAccess active`;
+- `warehouseAccess disabled`;
+- workspace alheio;
+- UG divergente.
+
+**Operações logísticas**
+- materiais;
+- depósitos;
+- posições/subposições;
+- lotes;
+- barcode;
+- intake;
+- allocation;
+- transfer;
+- inventory;
+- outbound;
+- ledger;
+- saldos;
+- configurações/layouts/destinos aplicáveis.
+
+#### 22.4.8 Fase D — regressão do EMPROVEX legado
+
+O ruleset novo deve rodar também contra as suítes de funcionalidades antigas.
+
+Cobertura mínima:
+
+- Empenhos;
+- Itens;
+- Notas Fiscais;
+- Comissão;
+- Liquidação/Tesouraria;
+- Cronogramas;
+- Fornecedores;
+- Alertas;
+- Relatórios/SAG;
+- Auditoria;
+- backup/status quando aplicável;
+- Central Desktop;
+- operações logísticas já certificadas.
+
+Não é necessário criar teste manual novo para cada linha não alterada se já existir suíte automatizada confiável. Porém **todas as suítes relevantes devem ser executadas com o ruleset final**.
+
+#### 22.4.9 Fase E — Emulator e suíte automatizada
+
+Usar Firestore Emulator/Local Emulator Suite quando aplicável.
+
+Suítes já existentes que devem ser reaproveitadas e ampliadas, entre outras:
+
+- `scripts/firestore-multitenancy-security.test.mjs`;
+- `scripts/warehouse-external-access-security.test.mjs`;
+- `scripts/legal-acceptance-security.test.mjs`;
+- `scripts/verify-saas-r1-security-enforcement.mjs`;
+- `scripts/verify-sector-lifecycle.mjs`;
+- `scripts/verify-saas-r1-integration.mjs`;
+- guards Block 16.0/16.1/16.2;
+- guards Block 17.1/17.2;
+- testes da Central de Depósitos;
+- segurança externa da Central.
+
+Criar, quando a frente for executada, um orquestrador único ou comando equivalente:
+
+`npm run verify:rc-rules-audit`
+
+Objetivo:
+
+**um comando deve reproduzir o gate das Rules do RC sem depender de uma sequência manual esquecível.**
+
+#### 22.4.10 Fase F — matriz de compatibilidade de rollout
+
+Avaliar explicitamente:
+
+| Aplicação | Rules | Objetivo |
+| --- | --- | --- |
+| Performance R3 | Rules R3 | baseline conhecida |
+| Performance R3 | Rules RC | provar compatibilidade durante publicação/rollback |
+| App RC | Rules RC | produto final esperado |
+| App RC | Rules R3 | identificar operações novas que exigem Rules novas e definir ordem segura de rollout |
+
+A quarta combinação não precisa ser totalmente funcional; ela deve ser **conhecida**.
+
+Se App RC depender obrigatoriamente de uma permissão inexistente nas Rules R3, documentar:
+
+- qual fluxo falha;
+- tipo de falha;
+- ordem correta de rollout;
+- impacto de rollback;
+- janela aceitável.
+
+Nenhuma ordem de deploy deve ser escolhida por suposição.
+
+#### 22.4.11 Fase G — compatibilidade da migração de sessões
+
+SESSION-CAP-01 merece análise explícita.
+
+Se tecnicamente viável e seguro, preferir uma janela transitória em que as Rules reconheçam:
+
+- slots legados `slot-1`/`slot-2`;
+- IDs dinâmicos novos.
+
+Objetivo:
+
+- permitir rollout/rollback sem quebrar imediatamente clientes/versões anteriores;
+- não obrigar migração destrutiva;
+- manter segurança durante coexistência.
+
+A compatibilidade legada só permanece enquanto necessária.
+
+Não manter código/Rules legados indefinidamente sem motivo.
+
+Se coexistência segura não for possível, documentar claramente:
+
+- por que não;
+- ordem obrigatória de rollout;
+- procedimento de rollback;
+- efeito sobre sessões já abertas.
+
+#### 22.4.12 Fase H — análise de performance e custo das Rules
+
+A auditoria deve verificar também:
+
+- número de `get()`/`exists()` por avaliação;
+- risco de exceder limites de document access calls;
+- impacto de `warehouseLifecycleAllowsAccess`;
+- impacto de sessões dinâmicas;
+- tamanho do ruleset fonte;
+- tamanho compilado quando disponível;
+- tempo do Emulator;
+- crescimento desnecessário de helpers duplicados.
+
+Não resolver segurança aumentando de forma cega o número de leituras das Rules.
+
+#### 22.4.13 Fase I — rollback de Rules
+
+Antes da publicação, manter disponíveis:
+
+**Banco principal**
+- hash/blob da Rule anterior;
+- arquivo exato anterior;
+- comando/procedimento de republicação.
+
+**Warehouse**
+- hash/blob da Rule anterior;
+- arquivo exato anterior;
+- comando/procedimento de republicação.
+
+Rollback de Rules deve ser independente do rollback da aplicação.
+
+Regra:
+
+```text
+rollback Vercel != rollback Rules != rollback dados
+```
+
+Se uma Rule permissiva indevida tiver permitido escrita/leitura inadequada, republicar a Rule anterior **não desfaz dados já gravados**.
+
+Nesse caso:
+
+1. fechar acesso;
+2. identificar janela;
+3. auditar documentos/movimentos;
+4. reconciliar dados;
+5. só depois encerrar incidente.
+
+#### 22.4.14 Fase J — evidência obrigatória
+
+O handoff da RULES-AUDIT-01 deve entregar:
+
+- RULES_MAIN_HASH;
+- RULES_RC_HASH;
+- WAREHOUSE_RULES_MAIN_HASH;
+- WAREHOUSE_RULES_RC_HASH;
+- ruleset IDs ativos quando capturáveis;
+- diff estrutural;
+- diff semântico;
+- matriz ALLOW/DENY;
+- testes executados;
+- contagem PASS/FAIL;
+- regressão do legado;
+- regressão SaaS;
+- regressão Mobile;
+- regressão SESSION-CAP-01;
+- compatibilidade de rollout;
+- tamanho fonte/compilado quando disponível;
+- rollback principal;
+- rollback warehouse;
+- riscos residuais;
+- recomendação final.
+
+Classificações permitidas:
+
+- **PASS — RULES APTAS PARA RC**;
+- **PARCIAL — CORREÇÃO NECESSÁRIA**;
+- **FAIL — BLOQUEAR RC**.
+
+Não existe “PASS por inferência”.
+
+#### 22.4.15 Critérios mínimos de PASS
+
+RULES-AUDIT-01 só pode ser PASS se:
+
+1. Rules ativas atuais forem conhecidas e reconciliadas;
+2. não existir drift produtivo inexplicado;
+3. SESSION-CAP-01 já estiver refletida no ruleset final;
+4. SaaS e Mobile apontarem para o mesmo ruleset final;
+5. ALLOW legítimos críticos passarem;
+6. DENY de segurança críticos passarem;
+7. cross-workspace continuar DENY;
+8. founder continuar funcional;
+9. externos legítimos continuarem funcionais;
+10. Legal Gate funcionar;
+11. billing administrativo funcionar sem virar autorização operacional;
+12. lifecycle/suspensão/reativação funcionar;
+13. Central Desktop funcionar;
+14. Central Mobile funcionar;
+15. sessões dinâmicas funcionarem;
+16. regressão R3 relevante passar;
+17. nenhum acesso permissivo novo inexplicado existir;
+18. nenhum bloqueio sistêmico novo existir;
+19. rollback de ambos os bancos estiver preparado;
+20. ordem de rollout estiver definida;
+21. tamanho/complexidade do ruleset estiver dentro dos limites aplicáveis;
+22. gates automatizados estiverem reproduzíveis.
+
+#### 22.4.16 Regra de publicação
+
+**Nenhuma Firestore Rule produtiva nova do SaaS R1/Mobile R1 poderá ser publicada sem RULES-AUDIT-01 = PASS.**
+
+Exceção:
+
+somente correção emergencial de segurança/incidente real, com autorização explícita do Fundador e Program Control, evidência mínima, rollback pronto e auditoria retrospectiva obrigatória.
+
+CI verde isolado não substitui RULES-AUDIT-01.
+
+PR mergeable não substitui RULES-AUDIT-01.
+
+Preview aprovado não substitui RULES-AUDIT-01.
+
+#### 22.4.17 Relação com o RC
+
+A sequência oficial passa a ser:
+
+```text
+SESSION-CAP-01
+→ ruleset final
+→ RULES-AUDIT-01
+→ PASS RULES
+→ composição/finalização RC
+→ CT-01/package/CI
+→ gates combinados
+→ RC CANDIDATE
+→ RC FROZEN
+→ Preview HTTPS
+```
+
+Se qualquer mudança posterior ao PASS alterar:
+
+- `firestore.rules`;
+- `firestore.warehouse.rules`;
+- Auth/provider;
+- UID/workspace/UG;
+- lifecycle;
+- Legal;
+- billing enforcement;
+- sessão;
+- `warehouseAccess`;
+
+o PASS de Rules deve ser considerado **afetado** e os blocos correspondentes da auditoria precisam ser repetidos antes do freeze.
+
+### 22.5 Runbook de incidente
 
 Sequência mínima:
 
@@ -1569,6 +2044,14 @@ Problema exclusivamente visual não exige rollback automático.
 - executar SESSION-CAP-01 e remover o teto fixo de 2 sessões externas;
 - validar múltiplos operadores Desktop/Mobile simultâneos;
 - repetir guards de sessão, Rules, lifecycle e telemetria;
+- executar RULES-AUDIT-01 sobre o ruleset pós-SESSION-CAP-01;
+- capturar Rules realmente publicadas e detectar eventual drift;
+- concluir diff estrutural/semântico;
+- concluir matriz ALLOW/DENY;
+- concluir regressão R3 + SaaS + Mobile;
+- concluir compatibilidade de rollout;
+- preparar rollback independente dos dois bancos;
+- obter **PASS — RULES APTAS PARA RC**;
 - criar branch única de composição;
 - fixar fontes SaaS e Mobile;
 - incorporar semanticamente deltas;
@@ -1592,6 +2075,8 @@ Problema exclusivamente visual não exige rollback automático.
 
 ### 32.3 Antes de produção controlada
 
+- RULES-AUDIT-01 permanece válida para os hashes exatos do RC;
+- nenhuma alteração de Rules posterior ao PASS ficou sem reauditoria;
 - Preview aprovado;
 - smoke crítico SaaS+Mobile;
 - CT-01 comprovada;
@@ -1640,6 +2125,11 @@ Preferência: backup READY nos dois bancos + `recovery:verify`.
 - remover revogação/lease/telemetria junto com o limite;
 - usar números históricos de lease/heartbeat em vez do runtime atual 30/15;
 - sobrescrever CT-01;
+- publicar Rules sem RULES-AUDIT-01 PASS;
+- presumir que Rules do Git são idênticas às realmente ativas em produção;
+- testar apenas ALLOW e esquecer DENY;
+- validar apenas App RC + Rules RC e ignorar a janela de rollout/rollback;
+- alterar Rules após auditoria sem invalidar/repetir o gate;
 - publicar Rules sem rollback;
 - confundir rollback Vercel com rollback de dados;
 - merge/rebase cego entre SaaS e Mobile;
@@ -1703,6 +2193,20 @@ Decisão do Fundador:
 - implementar em frente transversal controlada `SESSION-CAP-01`;
 - executar antes do RC CANDIDATE/RC FROZEN;
 - até a execução, o runtime permanece em 2 sessões externas.
+
+### 2026-10-03 — Auditoria integral de Rules torna-se gate obrigatório
+
+Decisão do Fundador:
+
+- não publicar as novas Firestore Rules por tentativa e erro;
+- instituir `RULES-AUDIT-01`;
+- auditar banco principal e `emprovex-warehouse`;
+- comparar produção real versus ruleset final;
+- exigir matriz ALLOW/DENY;
+- exigir regressão das funcionalidades antigas e novas;
+- exigir compatibilidade de rollout/rollback;
+- executar auditoria final depois da SESSION-CAP-01;
+- bloquear publicação produtiva de Rules sem PASS formal.
 
 ### 2026-10-03 — Transição para Release Engineering
 
@@ -1779,6 +2283,12 @@ Por decisão do Fundador:
 
 ### Segurança e dependências
 
+- RULES-AUDIT-01 é gate obrigatório antes de publicar Rules do novo release;
+- Rules realmente ativas devem ser capturadas e comparadas ao Git antes de rollout;
+- todo delta de Rule precisa de justificativa + teste ALLOW/DENY;
+- regressão da Performance R3 é obrigatória com o ruleset final;
+- rollback de Rules é separado de rollback Vercel;
+- alteração de Rules após PASS invalida os blocos afetados da auditoria;
 - Rules não são afrouxadas para facilitar teste;
 - CT-01 permite somente câmera same-origin;
 - microfone/geolocalização permanecem bloqueados;
@@ -1971,6 +2481,15 @@ HEAD J: 90d646372aae3e92318a78b90d71f72c5eb6b00e
 blocker funcional: NENHUM
 próximo trabalho: RC Preview HTTPS + runbook físico
 
+RULES
+candidatas SaaS↔Mobile atuais: IDÊNTICAS ENTRE SI
+RULES-AUDIT-01: PLANEJADA / OBRIGATÓRIA
+auditoria final: APÓS SESSION-CAP-01
+publicação produtiva sem PASS: PROIBIDA
+baseline principal main: 0d990b7de0b2e85ed55fe14ec0d2ce29b3635299
+baseline warehouse main: b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2
+rollback Rules: obrigatório e independente do Vercel
+
 RECOVERY
 PITR: ATIVO em ambos
 delete protection: ATIVA
@@ -1994,6 +2513,10 @@ PRÓXIMA SEQUÊNCIA
 SESSION-CAP-01
 → remover teto fixo de 2 sessões
 → validar múltiplos operadores + Rules/telemetria
+→ RULES-AUDIT-01
+→ capturar Rules ativas + diff semântico + ALLOW/DENY
+→ regressão R3/SaaS/Mobile + compatibilidade de rollout
+→ PASS RULES + rollback preparado
 → criar branch RC
 → compor SaaS+Mobile semanticamente
 → aplicar CT-01
