@@ -99,3 +99,20 @@ O 16.0 está concluído quando:
 6. existe contrato de orçamento interno;
 7. o guard do bloco roda na Application CI;
 8. build e TypeScript permanecem verdes.
+
+## SESSION-CAP-01 — atualização pré-RC
+
+Este documento preserva o histórico do Bloco 16.0, mas o contrato de capacidade
+foi supersedido antes do RC conjunto SaaS R1 + Mobile R1.
+
+- setores externos: **sem teto fixo de sessões externas**;
+- fundador: continua ilimitado e isento de lease operacional externo;
+- `DEFAULT_EXTERNAL_SECTOR_SESSION_LIMIT = null`;
+- `slot-1` / `slot-2`: apenas **compatibilidade transitória** para rollout/rollback;
+- o runtime RC usa um lease dinâmico por `browserInstanceId`;
+- lease permanece em **30 minutos**;
+- heartbeat permanece em **15 minutos**;
+- remover o teto não remove Auth, workspace/UG, UID, revogação, lifecycle, auditoria ou fail-closed.
+
+O SESSION-CAP-01 não transforma capacidade ilimitada em autorização ilimitada:
+cada sessão continua individualmente identificada e revogável.
