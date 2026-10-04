@@ -2208,6 +2208,20 @@ Decisão do Fundador:
 - executar auditoria final depois da SESSION-CAP-01;
 - bloquear publicação produtiva de Rules sem PASS formal.
 
+### 2026-10-03 — SESSION-CAP-01 + RULES-AUDIT-01 ativadas
+
+Program Control criou a frente transversal única:
+
+- branch: `rc-session-cap-rules-audit`;
+- base congelada: `c6c164c70a1be3e2e7e4e57b0bbf4866d61a71ce`;
+- fase 1: SESSION-CAP-01 — remover o teto fixo de 2 sessões preservando segurança, revogação, lifecycle, painel, auditoria e telemetria;
+- fase 2: RULES-AUDIT-01 — auditar o ruleset final pós-SESSION-CAP-01 contra a produção/R3, SaaS, Mobile e rollback;
+- integração cruzada/merge/rebase da integradora durante a execução: proibidos;
+- publicação de Rules, deploy produtivo, merge em `main` e restore: não autorizados;
+- handoff final obrigatório ao Program Control.
+
+A frente deve permanecer sequencial: RULES-AUDIT-01 só pode declarar PASS final depois que SESSION-CAP-01 estabilizar o ruleset estrutural.
+
 ### 2026-10-03 — Transição para Release Engineering
 
 Por decisão do Fundador:
@@ -2483,8 +2497,8 @@ próximo trabalho: RC Preview HTTPS + runbook físico
 
 RULES
 candidatas SaaS↔Mobile atuais: IDÊNTICAS ENTRE SI
-RULES-AUDIT-01: PLANEJADA / OBRIGATÓRIA
-auditoria final: APÓS SESSION-CAP-01
+RULES-AUDIT-01: ATIVADA / OBRIGATÓRIA
+auditoria final: APÓS SESSION-CAP-01, na branch rc-session-cap-rules-audit
 publicação produtiva sem PASS: PROIBIDA
 baseline principal main: 0d990b7de0b2e85ed55fe14ec0d2ce29b3635299
 baseline warehouse main: b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2
