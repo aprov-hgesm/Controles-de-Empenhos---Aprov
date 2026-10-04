@@ -195,7 +195,7 @@ A Coordenação RC **não pode**:
 
 ## 12. Estado corrente da governança
 
-Snapshot em 2026-10-03:
+Snapshot em 2026-10-04:
 
 - produção: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330` — Performance R3;
 - SaaS funcional: encerrado;
@@ -204,7 +204,10 @@ Snapshot em 2026-10-03:
 - Mobile funcional A–I: encerrado;
 - MOBILE-J: certificação final;
 - nova feature SaaS/Mobile: congelada;
-- composição do RC conjunto: liberada;
+- SESSION-CAP-01: PASS técnico completo / integrada via PR #248;
+- RULES-AUDIT-01: PASS — RULES APTAS PARA RC;
+- TTL sessionSlots/sessionRevocations: ACTIVE;
+- composição do RC conjunto: próxima barreira;
 - RC CANDIDATE: ainda não declarado;
 - RC FROZEN: não;
 - Preview HTTPS: ainda não publicado;
@@ -215,8 +218,8 @@ Snapshot em 2026-10-03:
 A próxima barreira global é:
 
 ```text
-SESSION-CAP-01 — remover teto fixo de 2 sessões
-→ regressão de sessão/Rules/telemetria
+SESSION-CAP-01 — PASS / integrada
+→ RULES-AUDIT-01 — PASS
 → composição do RC
 → reconciliação transversal
 → CT-01
@@ -229,7 +232,7 @@ SESSION-CAP-01 — remover teto fixo de 2 sessões
 
 ## 13. Frente ativa — SESSION-CAP-01 + RULES-AUDIT-01
 
-Estado: **ATIVA**
+Estado: **ENCERRADA / INTEGRADA**
 
 Branch exclusiva:
 
@@ -271,7 +274,8 @@ Estado aceito pelo Program Control:
 
 - branch worker: `rc-session-cap-rules-audit`;
 - HEAD final: `a97c1a94799cbbc240994d76fefc6f85925bffe1`;
-- PR #248: DRAFT / mergeable / não integrado;
+- PR #248: READY / MERGED;
+- squash de integração: `54aba792cb9e7bb195e21401fb50a21ed50add19`;
 - SESSION-CAP-01: **PASS TÉCNICO COMPLETO**;
 - Application CI #959: SUCCESS;
 - Core Protection #246: SUCCESS;
@@ -296,14 +300,13 @@ Contrato técnico aceito:
 
 Estado:
 
-**PRONTA PARA FECHAMENTO EXTERNO / NÃO PASS FINAL**
+**PASS — RULES APTAS PARA RC**
 
-Pendente exclusivamente:
+Gates externos concluídos:
 
-1. leitura somente de produção para capturar os rulesets ativos dos dois bancos e executar drift check;
-2. confirmação do TTL real em:
-   - `sessionSlots.expiresAt`;
-   - `sessionRevocations.expiresAt`.
+1. Rules produtivas capturadas nos dois bancos — **SEM DRIFT**;
+2. `sessionSlots.expiresAt` — **ACTIVE**;
+3. `sessionRevocations.expiresAt` — **ACTIVE**.
 
 Rules candidatas atuais:
 
@@ -333,12 +336,11 @@ Compatibilidade conhecida:
 Próxima ação global:
 
 ```text
-baseline vivo Rules
-→ drift check
-→ TTL check
-→ fechar RULES-AUDIT-01
-→ integração semântica PR #248
-→ composição/finalização do RC
+compor RC único SaaS R1 + Mobile R1
+→ materializar CT-01
+→ reconciliar Rules/package/lockfile/Application CI
+→ executar gates no SHA exato
+→ declarar RC CANDIDATE se PASS
 ```
 
 ## 16. Checkpoint — baseline produtiva das Rules e TTL
@@ -433,3 +435,35 @@ Classificação atual:
 - RULES-AUDIT-01: **PENDENTE APENAS DE TTL = ACTIVE**.
 
 Nenhuma nova alteração produtiva deve ser realizada. Próximo passo: somente leitura/polling do estado TTL.
+
+## 20. Fechamento — RULES-AUDIT-01 PASS e PR #248 integrado
+
+Evidência final:
+
+- Rules principal viva: `0d990b7de0b2e85ed55fe14ec0d2ce29b3635299` — MATCH baseline R3;
+- Rules Warehouse viva: `b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2` — MATCH baseline R3;
+- drift: **NENHUM**;
+- TTL `sessionSlots.expiresAt`: **ACTIVE**;
+- TTL `sessionRevocations.expiresAt`: **ACTIVE**;
+- inventário pré-TTL: 5 leases expirados / 0 ativos / 0 sem expiresAt;
+- sessionRevocations pré-TTL: 0;
+- ativação TTL: explicitamente autorizada pelo Fundador.
+
+Classificação final:
+
+- **SESSION-CAP-01: PASS TÉCNICO COMPLETO**;
+- **RULES-AUDIT-01: PASS — RULES APTAS PARA RC**.
+
+Integração:
+
+- PR #248: **MERGED**;
+- método: squash;
+- commit: `54aba792cb9e7bb195e21401fb50a21ed50add19`;
+- branch alvo: `feat/saas-r1-commercializacao`;
+- `main`: inalterado;
+- Vercel Production: inalterado;
+- Rules candidatas RC: ainda não publicadas.
+
+Próxima barreira:
+
+**composição do RC conjunto SaaS R1 + Mobile R1**.
