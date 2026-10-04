@@ -264,3 +264,79 @@ Critério de saída:
 - hashes/diff/testes/rollback documentados;
 - impacto SaaS/Mobile reconciliado;
 - PR/handoff prontos para auditoria do Program Control.
+
+## 14. Checkpoint — SESSION-CAP-01 concluída
+
+Estado aceito pelo Program Control:
+
+- branch worker: `rc-session-cap-rules-audit`;
+- HEAD final: `a97c1a94799cbbc240994d76fefc6f85925bffe1`;
+- PR #248: DRAFT / mergeable / não integrado;
+- SESSION-CAP-01: **PASS TÉCNICO COMPLETO**;
+- Application CI #959: SUCCESS;
+- Core Protection #246: SUCCESS;
+- Recovery #637: SUCCESS;
+- Legal Validation #61: SUCCESS;
+- Browser E2E #49 / run 37171327188: SUCCESS;
+- Vercel: falha externa por `build-rate-limit`, sem regressão funcional comprovada;
+- produção: inalterada.
+
+Contrato técnico aceito:
+
+- sessões externas sem teto fixo no candidato;
+- documento dinâmico por `browserInstanceId`;
+- lease 30 min;
+- heartbeat 15 min;
+- revogação 24 h;
+- compatibilidade transitória `slot-1`/`slot-2`;
+- lifecycle fail-closed para N sessões;
+- admin/revogação/auditoria/telemetria preservados.
+
+## 15. Checkpoint — RULES-AUDIT-01
+
+Estado:
+
+**PRONTA PARA FECHAMENTO EXTERNO / NÃO PASS FINAL**
+
+Pendente exclusivamente:
+
+1. leitura somente de produção para capturar os rulesets ativos dos dois bancos e executar drift check;
+2. confirmação do TTL real em:
+   - `sessionSlots.expiresAt`;
+   - `sessionRevocations.expiresAt`.
+
+Rules candidatas atuais:
+
+- principal RC: `bc91185f34bcdcb4437a4de1078d1089a09292ba`;
+- Warehouse RC: `6e1f1050005314db4e17cb3136409abbddb0ee91`.
+
+Regra:
+
+- drift inexplicado → **STOP PRODUCTION RULES DRIFT — NÃO PUBLICAR**;
+- sem baseline vivo/TTL → não declarar PASS por inferência;
+- nenhum deploy produtivo de Rules antes do PASS;
+- nenhum merge de PR #248 antes da decisão do Program Control após esses gates.
+
+Ordem candidata de rollout, condicionada ao fechamento dos gates:
+
+```text
+Rules RC
+→ aplicação RC
+```
+
+Compatibilidade conhecida:
+
+- app antiga + Rules RC: compatível;
+- app RC + Rules RC: alvo;
+- app RC + Rules antigas: incompatível.
+
+Próxima ação global:
+
+```text
+baseline vivo Rules
+→ drift check
+→ TTL check
+→ fechar RULES-AUDIT-01
+→ integração semântica PR #248
+→ composição/finalização do RC
+```
