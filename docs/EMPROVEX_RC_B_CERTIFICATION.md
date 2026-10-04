@@ -195,7 +195,7 @@ A inspeção dos jobs do Application CI #962 confirmou SUCCESS, entre outros, pa
 **Legal Acceptance: PASS**
 **warehouseAccess/Central: PASS**
 
-Observação metodológica: RC-B não teve acesso a um checkout executável do repositório nesta sessão; portanto não fabricou uma execução local de `npm ci/build/typecheck`. Em vez disso, validou independentemente os jobs/steps GitHub associados aos SHAs exatos e a equivalência funcional do HEAD documental. O PR RC-B deverá fornecer uma execução adicional sobre a mesma árvore runtime, exceto documentação.
+Observação metodológica: RC-B não teve acesso a um checkout executável do repositório nesta sessão; portanto não fabricou uma execução local de `npm ci/build/typecheck`. Em vez disso, validou independentemente os jobs/steps GitHub associados aos SHAs exatos e a equivalência funcional do HEAD documental. O PR RC-B é exclusivamente documental e o workflow `Application CI` possui `paths-ignore: docs/**`; portanto a ausência de novo run automático no PR RC-B é esperada e não foi convertida em PASS adicional.
 
 ## 9. Mobile A-I e Mobile-J
 
