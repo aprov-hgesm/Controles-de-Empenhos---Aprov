@@ -1051,3 +1051,24 @@ PASS FINAL da MOBILE-J não pode ser emitido sem:
 - validação física;
 - reconciliação SaaS final;
 - repetição dos gates afetados se houver delta upstream.
+
+
+### Orientação Program Control — foco exclusivo na certificação física
+
+A fase de desenvolvimento funcional da Central Móvel R1 está encerrada.
+
+Diretrizes:
+- não abrir novas features Mobile;
+- não reabrir F/G/H/I sem regressão concreta;
+- concentrar MOBILE-J exclusivamente em certificação;
+- preservar CT-01 `camera=(self), microphone=(), geolocation=()`;
+- não alterar `next.config.ts` global na MOBILE-J;
+- não incorporar SaaS por merge/rebase;
+- realizar reconciliação semântica final somente contra o HEAD SaaS final do RC;
+- PASS FINAL somente após evidência física + reconciliação final.
+
+Runbook físico versionado na MOBILE-J:
+`docs/CENTRAL_MOBILE_R1_MOBILE_J_PHYSICAL_TEST_RUNBOOK.md`.
+
+Próximo marco:
+**MOBILE-J + RC em Preview HTTPS + testes físicos reais + reconciliação SaaS final**.
