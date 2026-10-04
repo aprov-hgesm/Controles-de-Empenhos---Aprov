@@ -14,7 +14,6 @@ import { db } from './firebase';
 import {
   SESSION_REVOCATION_TTL_MS,
   SESSION_REVOCATION_VERSION,
-  SESSION_SLOT_IDS,
   type WorkspaceSessionSlotId,
 } from './platformCapacity';
 import {
@@ -59,8 +58,8 @@ export function subscribePlatformAdminSessions(
       const sessions = snapshot.docs
         .map((item) => {
           const data = item.data() as Record<string, unknown>;
-          const slotId = String(data.slotId || '') as WorkspaceSessionSlotId;
-          if (!SESSION_SLOT_IDS.includes(slotId)) return null;
+          const slotId = String(data.slotId || '').trim() as WorkspaceSessionSlotId;
+          if (!slotId) return null;
 
           return {
             slotId,
