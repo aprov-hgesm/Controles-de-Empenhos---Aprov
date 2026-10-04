@@ -136,6 +136,33 @@ Na reativação, leases residuais são limpos enquanto o workspace ainda está b
 - DENY: tenant criar tombstone;
 - DENY: tombstone existente ser reciclado.
 
+## Fingerprints de repositório
+
+| Rules | `main` / R3 conhecido | pré-SESSION-CAP (`c6c164...`) | RC atual |
+|---|---|---|---|
+| Principal | `0d990b7de0b2e85ed55fe14ec0d2ce29b3635299` | `57a1394c921b2ab2c15537fbfc4aaea17515b28a` | `bc91185f34bcdcb4437a4de1078d1089a09292ba` |
+| Warehouse | `b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2` | `6e1f1050005314db4e17cb3136409abbddb0ee91` | `6e1f1050005314db4e17cb3136409abbddb0ee91` |
+
+Tamanho fonte atual:
+
+- principal RC: 95.273 bytes / 2.524 linhas;
+- Warehouse RC: 156.038 bytes / 3.331 linhas.
+
+Inventário semântico estrutural do principal:
+
+- R3/main: 115 helpers, 20 `match`, 42 formas `allow` únicas;
+- pré-SESSION-CAP: 116 helpers, 20 `match`, 44 formas `allow`;
+- RC atual: 118 helpers, 20 `match`, 44 formas `allow`.
+
+Do pré-SESSION-CAP para o RC não surgiu novo namespace `match`. Foram adicionados
+`isLegacySessionSlotId` e `workspaceSessionSlotBindingMatches`. O `get,list` de
+`sessionSlots` para tenant/admin foi separado em `get` para tenant/admin e `list`
+somente administrativo, tornando a enumeração externa mais restritiva.
+
+No Warehouse não existe delta SESSION-CAP-01: o blob pré-SESSION-CAP e o blob RC
+são idênticos (`6e1f105...`). O delta conhecido em relação a main está ligado ao
+lifecycle SaaS/Mobile já reconciliado antes desta frente.
+
 ## Baseline real de produção
 
 A consulta do ruleset realmente ativo é etapa obrigatória da RULES-AUDIT-01.
