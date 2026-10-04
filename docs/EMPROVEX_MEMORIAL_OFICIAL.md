@@ -1,14 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-03**
+Última sincronização global: **2026-10-03 — consolidação canônica pré-RC**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
-Integradora SaaS R1: `feat/saas-r1-commercializacao@d7709d22f8e7ec9654ffaaa17a59ae06b34426bd`
+Integradora SaaS R1: `feat/saas-r1-commercializacao` — snapshot técnico pós-HARDEN-A2: `d7709d22f8e7ec9654ffaaa17a59ae06b34426bd` (commits posteriores podem ser apenas documentais)
 
-Integradora Mobile R1: `feat/central-mobile-r1@7b7717b6eebabf911310d2b8ac56ed13c9cb9238`
+Integradora Mobile R1: `feat/central-mobile-r1@7b7717b6eebabf911310d2b8ac56ed13c9cb9238` — avanço documental, sem novo delta runtime
 
-Estado global: **Performance R3 permanece em produção; HARDEN-A1/A2/C/D encerradas; HARDEN-B parcial por dependência temporal; desenvolvimento funcional Mobile encerrado; MOBILE-J em certificação final; composição do RC único SaaS+Mobile formalmente liberada; produção ainda não alterada.**
+Estado global: **Performance R3 em produção; desenvolvimento funcional SaaS R1 e Mobile R1 encerrado; HARDEN-A1/A2/C/D em PASS; HARDEN-B parcial por dependência temporal; MOBILE-J em certificação final; composição do RC único SaaS+Mobile liberada, ainda não congelada; Preview HTTPS ainda não publicado; produção não alterada pelas frentes atuais.**
 
 ---
 
@@ -47,6 +47,19 @@ Este arquivo: `docs/EMPROVEX_MEMORIAL_OFICIAL.md`.
 
 Esse arquivo contém **a versão anterior completa do Memorial, preservada integralmente**, incluindo registros de PRs, commits, métricas, fases, incidentes, decisões e checkpoints históricos.
 
+### Regra de precedência canônica
+
+Quando houver divergência aparente entre trechos, aplicar esta precedência:
+
+1. **Snapshot Global + Contratos Permanentes deste Memorial** — estado vigente;
+2. **documentos especializados de Integration Status / Coordenador / runbooks** — evidência operacional detalhada;
+3. **Cronologia e checkpoints históricos** — explicam como o estado foi alcançado, mas não revogam decisão posterior;
+4. **Memorial Histórico Integral / Git history** — arquivo de rastreabilidade, não estado vivo.
+
+Um checkpoint histórico que diga “bloqueado”, “parcial” ou “aguardando” deixa de governar o sistema quando uma seção posterior e vigente registrar explicitamente PASS/encerramento.
+
+Números operacionais devem refletir o **runtime atual**. Se uma especificação antiga divergir do código integrado, o Memorial deve registrar o contrato efetivamente implementado e apontar a divergência como histórica.
+
 ### Regra estrutural a partir desta reorganização
 
 Novos estados não devem ser simplesmente anexados ao fim do Memorial.
@@ -77,104 +90,130 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 
 ## 1. Snapshot Global
 
-| Domínio | Estado vigente | Observação |
+| Domínio | Estado vigente | Contrato/observação |
 | --- | --- | --- |
-| Produção | **Performance R3 publicada** | `main@e90f92acae1514ee5cbc6ce95fed354bc1454330` |
-| SaaS R1 | **PRONTO PARA COMPOSIÇÃO DO RC** | A1/A2/C/D encerradas; B parcial/temporal |
-| Mobile R1 | **DESENVOLVIMENTO FUNCIONAL ENCERRADO / MOBILE-J EM CERTIFICAÇÃO** | sem blocker funcional; avanços recentes apenas documentais |
-| Release Candidate | **COMPOSIÇÃO LIBERADA / AINDA NÃO CONGELADO** | compor SaaS+Mobile, aplicar CT-01, reconciliar Rules/package/CI e rodar gates |
-| Piloto real SaaS | **NÃO INICIADO** | só após RC controlado |
-| SAAS-J | **AGUARDANDO** | pós-piloto e correções finais |
-| MOBILE-I | **BLOQUEADA** | aguarda Integração 3 + checkpoint transversal |
-| MOBILE-J | **BLOQUEADA** | certificação final posterior |
-| Produção alterada pelas ondas atuais | **NÃO** | nenhum merge/deploy produtivo autorizado |
+| Produção | **Performance R3** | `main@e90f92acae1514ee5cbc6ce95fed354bc1454330` |
+| SaaS R1 | **FUNCIONALMENTE CONCLUÍDO / PRONTO PARA RC** | A1/A2/C/D PASS; B parcial/temporal |
+| Mobile R1 | **FUNCIONALMENTE CONCLUÍDO** | A–I integradas; MOBILE-J em certificação final |
+| MOBILE-J | **PARCIAL TECNICAMENTE SAUDÁVEL / CERTIFICAÇÃO EM EXECUÇÃO** | aguarda RC em Preview HTTPS para testes físicos reais |
+| RC conjunto | **COMPOSIÇÃO LIBERADA / NÃO CONGELADO** | próximo trabalho transversal |
+| CT-01 | **PENDENTE NO RC** | `camera=(self), microphone=(), geolocation=()` |
+| Rules candidatas | **SaaS↔Mobile reconciliadas** | diferem das Rules hoje presentes em `main`; exigem rollout/rollback preparado |
+| HARDEN-B | **PARCIAL / ESPERA CONTROLADA** | PITR/delete protection/schedule/retention ativos; backup READY/verify/restore pendentes |
+| Billing R1 | **IMPLEMENTADO EM MODO OBSERVE** | R$ 70; trial; cobrança externa; confirmação manual; sem suspensão automática |
+| Piloto real | **NÃO INICIADO** | vem depois do RC tecnicamente fechado/publicação controlada |
+| Abertura comercial ampla | **NÃO AUTORIZADA** | exige piloto, correções, SAAS-J e GO explícito do Fundador |
+
+### Snapshots técnicos relevantes
+
+- SaaS pós-HARDEN-A2: `d7709d22f8e7ec9654ffaaa17a59ae06b34426bd`;
+- Mobile integradora documental: `7b7717b6eebabf911310d2b8ac56ed13c9cb9238`;
+- MOBILE-J: `mobile-r1-j-final-certification@90d646372aae3e92318a78b90d71f72c5eb6b00e`;
+- HARDEN-B: `saas-harden-b-recovery-restore@910cca1ea9f14e4ef080ee649624042f63206d51`.
+
+A produção só muda por autorização explícita e posterior do Fundador.
 
 ## 2. Próxima barreira global
 
-O próximo ponto de sincronização do EMPROVEX ocorrerá quando existirem simultaneamente:
+A próxima fase não é nova feature. É **Release Engineering / Certificação**.
 
-- HARDEN-A concluída e auditada;
-- HARDEN-B fechada com backup READY, `recovery:verify` e restore isolado validado;
-- HARDEN-C e HARDEN-D permanecendo PASS;
-- Integração 3 Mobile certificada;
-- checkpoint transversal pós-MOBILE-F/G/H;
-- CT-01 materializada no candidato;
-- gates combinados finais executados.
+Sequência canônica:
 
-Somente depois o Program Control poderá avaliar:
+```text
+SaaS final + Mobile final
+→ branch única de composição do RC
+→ reconciliação semântica dos contratos compartilhados
+→ CT-01
+→ Rules/package/lockfile/Application CI consolidados
+→ gates no SHA exato
+→ RC CANDIDATE
+→ RC FROZEN
+→ Preview HTTPS
+→ testes SaaS + MOBILE-J físicos
+→ correções rastreáveis, se houver
+→ nova reconciliação/freeze quando necessário
+→ GO/NO-GO explícito
+→ eventual produção controlada
+→ piloto real
+→ correções pós-piloto
+→ SAAS-J
+→ autorização explícita
+→ abertura comercial ampla
+```
 
-**EMPROVEX RC CANDIDATE → RC FROZEN**
+### Condições para declarar RC CANDIDATE
 
-O freeze do RC não constitui autorização automática de produção.
+Obrigatório:
 
----
+- nenhum novo conflito SaaS↔Mobile;
+- CT-01 materializada;
+- Rules candidata principal e warehouse registradas;
+- rollback de Rules preparado;
+- package/lockfile/CI reconciliados;
+- build/TypeScript/diff hygiene verdes;
+- Core/Legal/Recovery e segurança multi-tenant verdes;
+- contratos de Auth/workspace/UG/sessão/lifecycle/Legal/billing/Central coerentes;
+- source of truth logística única.
+
+### Condições para RC FROZEN
+
+Registrar no mínimo:
+
+- `RC_BRANCH`;
+- `RC_SHA`;
+- `SAAS_SOURCE_SHA`;
+- `MOBILE_SOURCE_SHA`;
+- resultado HARDEN-A2;
+- hashes das Rules de produção e do RC;
+- hash de `next.config.ts`;
+- hash de `package-lock.json`;
+- resultados dos gates.
+
+Após o freeze, só entram correções de blocker, regressão, segurança ou defeito real da certificação. Não entram melhorias oportunistas.
 
 # PARTE II — GOVERNANÇA GLOBAL
 
 ## 3. Hierarquia oficial
 
+### Fase funcional — modelo histórico
+
+Durante o desenvolvimento paralelo:
+
 ```text
-FUNDADOR
-   │
-COORDENADOR GERAL / PROGRAM CONTROL
-   │
-   ├── COORDENADOR SAAS-R1
-   │      └── workers SAAS / HARDEN
-   │
-   └── COORDENADOR MOBILE-R1
-          └── workers MOBILE
+Fundador
+→ Coordenador Geral / Program Control
+   → Coordenador SaaS R1
+   → Coordenador Mobile R1
+      → workers especializados
 ```
 
-### Fundador
+### Fase atual — composição do RC
 
-Permanece autoridade humana para ações protegidas, especialmente:
+Por decisão do Fundador, o **Coordenador Geral também assume a Coordenação operacional do RC**.
 
-- merge/release final quando protegido;
-- promoção/deploy produtivo;
-- publicação de Firestore Rules produtivas;
-- restore real quando exigir autorização;
-- ações disruptivas sobre usuários/workspaces reais;
-- GO/NO-GO de RC/release;
-- mudanças fundamentais de contrato comercial.
+Modelo vigente:
 
-### Coordenador Geral / Program Control
+```text
+FUNDADOR
+   ↓
+PROGRAM CONTROL + COORDENAÇÃO DO RC
+   ├── Coordenador SaaS — consulta/evidência sob demanda
+   ├── Coordenador Mobile — consulta/evidência sob demanda
+   ├── HARDEN-B — frente especializada temporal
+   └── MOBILE-J — frente especializada de certificação física
+```
 
-Responsável por:
+Os Coordenadores SaaS e Mobile não foram apagados: permanecem como fontes especializadas de contexto e evidência. Porém **não existe nova wave funcional autorizada** em nenhum dos dois programas.
 
-- estado global;
-- WIP entre programas;
-- contratos transversais;
-- barreiras de sincronização;
-- reconciliação SaaS ↔ Mobile;
-- composição/freeze de RC;
-- consistência do Memorial;
-- classificação de riscos globais.
+### Separação de autoridade mesmo no mesmo chat
 
-Não atua como worker de rotina.
+O mesmo chat pode executar dois papéis, mas as decisões continuam separadas por evidência:
 
-### Coordenadores de Programa
+- **Coordenação RC**: compõe candidato, reconcilia, executa gates, prepara Preview e consolida evidências;
+- **Program Control**: aceita/rejeita checkpoints, declara RC CANDIDATE/FROZEN, classifica risco e prepara GO/NO-GO;
+- **Fundador**: autoriza ações produtivas protegidas e lançamento.
 
-Mantêm:
-
-- integradora do programa;
-- Integration Status;
-- Handoff;
-- revisão de workers;
-- integração semântica;
-- gates do programa;
-- escalonamento de conflitos transversais.
-
-### Workers
-
-Executam somente o escopo de sua frente.
-
-Não devem:
-
-- absorver outro domínio;
-- resolver conflito transversal silenciosamente;
-- rebasear/mover base congelada sem ordem;
-- publicar produção;
-- modificar contrato global fora do escopo.
+O Coordenador Geral não transforma “continue”, “próximo passo”, CI verde ou PASS técnico em autorização de produção.
 
 ## 4. Classificação oficial de problemas
 
@@ -237,23 +276,92 @@ Capacidades consolidadas incluem:
 
 Performance R3 é a baseline de produção atual.
 
-## 9. Contratos de identidade e multi-tenant
+## 9. Contratos de identidade, sessão e multi-tenant
 
-Contratos globais que não podem ser bifurcados:
+### 9.1 Identidade autenticada
 
-- Firebase Auth como identidade autenticada;
-- workspace como unidade de isolamento;
-- UG vinculada ao contexto operacional;
-- UID/e-mail coerentes com conta;
-- sessão/lease/heartbeat compartilhados;
-- regras de acesso multi-tenant;
-- `warehouseAccess` como autorização da Central;
-- Legal Gate versionado;
-- lifecycle e billing separados semanticamente.
+Fonte: Firebase Auth.
 
-A Mobile não possui autenticação, sessão, lifecycle ou legal gate paralelos.
+Contrato atual:
 
----
+- fundador: login **Google-only**;
+- usuários externos/setores: login **e-mail/senha only**;
+- e-mail verificado é obrigatório;
+- sessão com provider inesperado falha fechada;
+- Mobile e Desktop usam a mesma identidade; não existe Auth Mobile paralelo.
+
+### 9.2 Relação conta ↔ workspace ↔ UG
+
+Na R1:
+
+- 1 cliente operacional externo = 1 workspace;
+- 1 workspace = 1 UG;
+- 1 workspace externo possui 1 conta operacional primária;
+- conta, workspace e sessão precisam concordar em e-mail/UID/workspace/UG;
+- inconsistência de UID, e-mail, UG, status ou provider resulta em **fail-closed**;
+- o usuário não recebe subscriptions operacionais antes da validação do contexto.
+
+### 9.3 UID e primeiro vínculo
+
+Contas novas já podem chegar pré-vinculadas ao UID Firebase pelo provisionamento.
+
+Para registros legados sem UID, o bootstrap histórico de primeiro acesso pode vincular o UID após validar:
+
+- e-mail;
+- provider;
+- conta ativa;
+- workspace ativo;
+- UG coerente.
+
+Após o vínculo, e-mail idêntico não basta: o UID precisa continuar sendo exatamente o mesmo.
+
+### 9.4 Sessões simultâneas — contrato de runtime atual
+
+O runtime atualmente integrado define:
+
+- usuário externo: **máximo padrão de 2 sessões simultâneas por workspace**;
+- founder: **isento do limite de capacidade**;
+- slots canônicos: `slot-1` e `slot-2`;
+- lease nominal: **30 minutos**;
+- heartbeat/renovação nominal: **15 minutos**;
+- decisão temporal baseada em relógio confiável do servidor, não no relógio local do Windows;
+- revogação administrativa cria tombstone e remove slots conhecidos;
+- perda de lease/revogação/mudança de acesso invalida a sessão local.
+
+**Estes números 30/15 são o contrato implementado atual e substituem referências históricas anteriores com valores diferentes.**
+
+### 9.5 Lifecycle observado em tempo real
+
+Sessões externas monitoram:
+
+- `workspaces/{workspaceId}`;
+- `platformAccounts/{email}`;
+- revogação da sessão.
+
+Se workspace/conta deixa de estar `active`, identidade deixa de coincidir ou Rules negam acesso, a sessão é invalidada.
+
+### 9.6 Autoridade da Central
+
+A Central de Depósitos adiciona `warehouseAccess` como autorização específica do banco `emprovex-warehouse`.
+
+Suspensão/reativação coordenada deve preservar coerência entre:
+
+- workspace;
+- platformAccount;
+- warehouseAccess;
+- sessões.
+
+### 9.7 Regra multi-tenant
+
+Nunca criar caminhos alternativos que permitam:
+
+- ler outro workspace;
+- trocar workspaceId/UG por input do cliente;
+- usar barcode como autorização;
+- contornar `warehouseAccess`;
+- confiar apenas em estado visual/client-side.
+
+Auth, workspace/UG, Legal Gate, lifecycle, sessão e Rules são contratos compartilhados por SaaS, Desktop e Mobile.
 
 # PARTE IV — CENTRAL DE DEPÓSITOS
 
@@ -383,638 +491,953 @@ Performance não pode justificar:
 
 ## 16. Objetivo
 
-Transformar o EMPROVEX já operacional em serviço comercial controlado, preservando:
+Transformar o EMPROVEX operacional em serviço comercial controlado, sem reconstruir o núcleo do produto.
 
-- multi-tenant;
-- segurança;
-- continuidade de usuários existentes;
-- recuperação;
-- legal;
-- billing simples;
-- capacidade de piloto antes da abertura ampla.
+Princípios:
 
-## 17. Contratos comerciais congelados
+- vender inicialmente de forma assistida;
+- preservar usuários existentes;
+- não automatizar finanças antes de haver necessidade real;
+- manter billing separado da autorização operacional;
+- preservar multi-tenant, segurança, legal, recovery e auditoria;
+- só abrir comercialmente após RC, piloto, correções e certificação final.
 
-Plano R1:
+## 17. Contrato comercial, pagamento, onboarding, legal e lifecycle
 
-- **Plano Completo — R$ 70/mês**;
-- acesso funcional completo;
-- trial de 30 dias;
-- vencimento no 5º dia útil;
-- tolerância de 10 dias;
-- cobrança externa simples;
-- confirmação administrativa;
-- suspensão manual;
-- sem delete por inadimplência;
-- founder = `exempt`;
-- VIP externo = `exempt`;
-- sem signup público;
-- sem webhook/API de pagamento na R1;
-- sem tiers;
-- 1 workspace ↔ 1 UG ↔ 1 conta externa primária.
+### 17.1 Plano comercial congelado
 
-## 18. VIP legado
+R1 possui um único plano:
 
-Decisão oficial de 2026-10-02:
+**Plano Completo EMPROVEX — R$ 70,00/mês por workspace**
 
-todos os workspaces externos existentes no corte definido foram tratados como **VIP legado**.
+Inclui acesso funcional completo às funcionalidades disponibilizadas para aquele tenant.
+
+Não existem na R1:
+
+- tiers Bronze/Prata/Pro;
+- módulos pagos separadamente;
+- feature flags comerciais por preço;
+- checkout embutido;
+- assinatura criada por API;
+- webhook de pagamento;
+- suspensão automática;
+- signup público de organização.
+
+### 17.2 Trial, vencimento e tolerância
 
 Contrato:
 
-- `billingAccounts.status = exempt`;
-- preço efetivo R$ 0;
-- Plano Completo;
-- sem trial obrigatório;
-- sem inadimplência financeira;
-- sem suspensão por falta de pagamento;
-- segurança/lifecycle normais continuam válidos.
+- trial padrão: **30 dias**;
+- início: provisionamento/concessão administrativa;
+- extensão: somente administrativa e auditada;
+- vencimento: **5º dia útil**;
+- tolerância: **10 dias corridos**;
+- feriados adicionais podem ser configurados;
+- fim do trial não apaga dados;
+- fim do trial não suspende automaticamente;
+- competências históricas preservam o valor já materializado.
 
-Coorte materializada e verificada historicamente:
+### 17.3 Fonte de verdade de billing
+
+Coleções/contratos principais:
+
+- configuração: `platformBillingConfig/main`;
+- conta comercial: `billingAccounts/{workspaceId}`;
+- competências: `billingCycles/{workspaceId}__{referenceMonth}`.
+
+Estados de `BillingAccount`:
+
+- `trial` — teste em andamento;
+- `active` — comercialmente regular;
+- `pending` — atenção/regularização;
+- `suspended` — estado comercial explícito;
+- `canceled` — encerramento comercial;
+- `exempt` — founder ou VIP/isento.
+
+Estados de competência:
+
+- `open`;
+- `pending`;
+- `paid`;
+- `waived`.
+
+Não criar estados comerciais concorrentes.
+
+### 17.4 Modo de cobrança vigente
+
+Configuração canônica R1:
+
+- `billingMode = observe`;
+- `requirePayment = false`;
+- `automaticSuspension = false`;
+- método administrativo: `pix_manual`.
+
+Consequência essencial:
+
+**billing acompanha e audita a situação comercial, mas billing sozinho não autoriza nem bloqueia o uso operacional.**
+
+Marcar `billingAccounts.status = suspended` não substitui a ação de lifecycle que realmente desabilita workspace/conta/Central.
+
+### 17.5 Pagamento e regularização
+
+O EMPROVEX **não processa cartão/Pix internamente**.
+
+Fluxo canônico:
+
+```text
+cliente precisa regularizar
+→ abre /regularizacao
+→ usa Link de Pagamento HTTPS e/ou copia Pix
+→ pagamento ocorre fora do EMPROVEX
+→ Fundador/admin confere o recebimento no provedor/banco
+→ confirma a competência no painel
+→ competência = paid (ou waived quando aplicável)
+→ billing account = active
+→ evento auditado
+```
+
+Configurações administrativas disponíveis:
+
+- `paymentLinkUrl` — URL pública HTTPS;
+- `pixKey`;
+- `pixKeyType` — CPF/CNPJ/e-mail/telefone/chave aleatória;
+- `pixRecipientName`;
+- `supportContact`;
+- `holidayDates`;
+- trial/tolerância dentro dos limites aceitos.
+
+A mensalidade R1 é fixada em R$ 70 pelo domínio; o painel não deve aceitar outro preço como configuração casual.
+
+### 17.6 Provedor de pagamento
+
+O desenho comercial inicial documenta Mercado Pago/Pix como referência operacional.
+
+A implementação, porém, armazena apenas **uma URL pública HTTPS de pagamento**, sem credencial do provedor. Portanto o RC não fica tecnicamente acoplado a um único gateway.
+
+Se outro provedor for adotado:
+
+- deve oferecer URL HTTPS pública apropriada;
+- nenhum token/secret deve ir para o cliente;
+- Termos/Privacidade devem ser revistos se a mudança alterar materialmente terceiros envolvidos;
+- a fonte de verdade da competência continua no EMPROVEX, não no gateway.
+
+API/webhook permanece fora da R1.
+
+### 17.7 Dados financeiros que o EMPROVEX não armazena
+
+Não armazenar:
+
+- número de cartão;
+- CVV;
+- credencial do gateway;
+- Access Token de pagamento no cliente;
+- token de cartão;
+- comprovante financeiro por padrão.
+
+Podem existir apenas metadados administrativos mínimos e auditáveis, como nota/referência textual da confirmação.
+
+### 17.8 Página pública de regularização
+
+Rota:
+
+`/regularizacao`
+
+Deve apresentar:
+
+- Plano Completo;
+- mensalidade;
+- vencimento/tolerância;
+- Link de Pagamento quando configurado;
+- Pix quando configurado;
+- contato de suporte.
+
+A página declara que o pagamento ocorre fora do EMPROVEX e não solicita cartão/CVV.
+
+Regularização, Termos, Privacidade e recuperação de credenciais não devem ficar inutilizáveis justamente quando o usuário está suspenso ou precisa recuperar acesso.
+
+### 17.9 Confirmação/reabertura da competência
+
+A confirmação manual é auditada.
+
+- `paid` ou `waived` → competência confirmada; billing account comercial passa para `active`;
+- reabertura/não confirmação → billing account passa para `pending`.
+
+**Importante:** se o workspace tiver sido operacionalmente desabilitado pelo lifecycle, confirmar pagamento não equivale automaticamente a reativá-lo. A reativação de acesso é uma ação administrativa separada e explícita.
+
+### 17.10 Suspensão operacional e reativação
+
+A suspensão real da R1 é manual e founder-only.
+
+Para suspender:
+
+1. validar ator/admin;
+2. validar coerência workspace/e-mail/UG/conta;
+3. desabilitar `warehouseAccess`;
+4. alterar `workspaces.status` e `platformAccounts.status` para `disabled`;
+5. revogar sessões conhecidas e remover slots;
+6. registrar auditoria;
+7. compensar/rollback parcial se um banco falhar.
+
+Reativação:
+
+1. retorna workspace/conta principal para `active`;
+2. retorna `warehouseAccess` para `active`;
+3. se a segunda etapa falhar, o código tenta compensar para impedir estado incoerente;
+4. falha parcial não é escondida: pode resultar em `RECOVERY_REQUIRED`.
+
+Suspensão/reativação **não altera dados operacionais**.
+
+### 17.11 Cancelamento e exclusão
+
+`canceled` é estado comercial, não comando de delete.
+
+Cancelamento não:
+
+- apaga workspace;
+- apaga documentos;
+- apaga histórico;
+- apaga estoque/ledger;
+- reaproveita UG/e-mail automaticamente.
+
+Retenção, exportação e exclusão são processos separados e sujeitos à política legal/administrativa aplicável.
+
+### 17.12 Onboarding assistido
+
+Não existe auto-cadastro de organização.
+
+Fluxo canônico:
+
+1. Fundador/admin confirma dados mínimos;
+2. cria workspace/UG pelo painel;
+3. informa e-mail operacional primário;
+4. concede trial quando aplicável;
+5. provisionamento cria Auth/diretório/billing;
+6. credencial inicial é enviada por canal seguro;
+7. primeiro acesso valida e-mail/provider/UID/workspace/UG;
+8. usuário aceita pacote legal vigente;
+9. checklist curto de primeiro acesso é exibido;
+10. Google Drive é opcional;
+11. usuário começa a operar.
+
+Conta externa: password-only. Founder: Google-only.
+
+### 17.13 Recuperação e troca de senha
+
+R1 inclui:
+
+- “Esqueci minha senha” usando fluxo nativo do Firebase;
+- resposta neutra para reduzir enumeração de contas;
+- troca da própria senha com reautenticação;
+- mensagens humanas para credencial inválida, conta suspensa, workspace inconsistente e limite de sessão.
+
+### 17.14 Legal Gate versionado
+
+Pacote legal atual:
+
+- `legalBundleVersion = saas-r1-2026-10-01`;
+- `termsVersion = terms-2026-10-01-r1`;
+- `privacyVersion = privacy-2026-10-01-r1`.
+
+Aceite canônico:
+
+`workspaces/{workspaceId}/legalAcceptances/{uid}__{legalBundleVersion}`
+
+Registro contém:
+
+- workspaceId;
+- UG;
+- UID;
+- e-mail;
+- versão do bundle;
+- versão dos Termos;
+- versão da Privacidade;
+- timestamp autoritativo.
+
+O runtime verifica especificamente a versão vigente. Novo aceite só é exigido quando o pacote legal configurado muda.
+
+Falha na verificação é **fail-closed**: nenhum aceite é presumido.
+
+Termos e Privacidade permanecem consultáveis no próprio gate.
+
+Aceite contratual não significa que todo tratamento de dados pessoais dependa de “consentimento LGPD”.
+
+### 17.15 Arquitetura de dados SaaS
+
+Não criar terceiro Firestore apenas para billing/legal/onboarding.
+
+Arquitetura R1:
+
+1. banco principal — identidade, workspace, billing, legal, auditoria e núcleo operacional;
+2. `emprovex-warehouse` — Central de Depósitos;
+3. nenhum terceiro banco SaaS.
+
+Rules são específicas por banco e continuam parte do contrato de release.
+
+## 18. VIP e isenção comercial
+
+### 18.1 Founder
+
+Founder permanece:
+
+- `exempt`;
+- preço efetivo R$ 0;
+- sem trial;
+- sem inadimplência;
+- isento do limite padrão de sessões externas.
+
+### 18.2 VIP manual
+
+VIP externo reutiliza a semântica `exempt`.
+
+Contrato:
+
+- mesmo Plano Completo;
+- R$ 0 enquanto a isenção estiver ativa;
+- nenhuma redução funcional;
+- sem cobrança/atraso/suspensão por inadimplência;
+- concessão/remoção manual, explícita e auditada;
+- histórico preservado.
+
+Não criar status `vip` concorrente.
+
+### 18.3 VIP legado
+
+Coorte histórica materializada:
 
 - `aprovisionamento-2-b-fv`;
 - `aprovisionamento-3-gac-ap`;
 - `aprovisionamento-teste`.
 
-O histórico detalhado da migração permanece no arquivo histórico integral.
+O código atual protege a isenção `legacy_vip` contra remoção pela operação genérica de isenção.
+
+VIP não cria exceção de segurança, sessão, Legal Gate ou isolamento multi-tenant. Isenção é comercial, não autorização privilegiada.
 
 ## 19. Ordem oficial da reta final SaaS
+
+Estado funcional SaaS: **ENCERRADO PARA NOVAS FEATURES**.
 
 Sequência vigente:
 
 ```text
-integração funcional SaaS
-→ hardening pré-piloto
-→ reconciliação SaaS ↔ Mobile
-→ recovery / restore / segurança / release
-→ composição do candidato
+HARDEN-A1/A2/C/D PASS
++ HARDEN-B em acompanhamento temporal
+→ composição do RC único SaaS+Mobile
+→ CT-01 + Rules/package/CI
+→ gates combinados
 → RC FROZEN
-→ publicação controlada
+→ Preview HTTPS
+→ certificação real SaaS+Mobile
+→ eventual produção controlada autorizada
 → piloto real
-→ correções pós-piloto
+→ correções finais
 → SAAS-J
-→ autorização explícita
-→ abertura ampla
+→ GO explícito
+→ abertura comercial ampla
 ```
 
-O piloto real foi deliberadamente movido para depois do RC.
+Nenhuma nova wave funcional SaaS está autorizada sem regressão concreta ou nova decisão de produto.
 
 ## 20. HARDEN — estado vivo
 
-Base comum das workers:
-
-`f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`
-
-| Frente | Estado | Evidência/pendência |
+| Frente | Estado vigente | Decisão |
 | --- | --- | --- |
-| HARDEN-A — Segurança/Dependências/CI | **PARCIAL TECNICAMENTE SAUDÁVEL** | `00d6386d...`; PR #240; 22 → 14 vulnerabilidades; bloqueada por jsPDF crítico + decisão Firebase/Firestore/gRPC |
-| HARDEN-B — Recovery/Restore | **PARCIAL** | `910cca1e...`; aguarda backups READY + restore isolado |
-| HARDEN-C — Health/Rules/Release/Rollback | **PASS / ENCERRADA** | worker `0b2e801a...`; PR #238 fechado sem merge; integração documental `e0e4e13a...` |
-| HARDEN-D — Reconciliação SaaS↔Mobile | **PASS / ENCERRADA** | worker `fb7b5006...`; PR #236 fechado sem merge; integração documental `22459625...` |
+| HARDEN-A1 — jsPDF | **PASS / ENCERRADA** | jsPDF 4.2.1 + AutoTable 5.0.8; CRITICAL removido; 7/7 regressão PDF; acabamento visual fino = backlog não bloqueante |
+| HARDEN-A2 — Firebase/Firestore/gRPC | **PASS — RISCO RESIDUAL ACEITO TECNICAMENTE** | sem alteração de dependência/runtime/Rules; vetores analisados não alcançáveis pelos usos atuais |
+| HARDEN-B — Recovery | **PARCIAL / ESPERA CONTROLADA** | controles ativos; backup READY/verify/restore pendentes |
+| HARDEN-C — Health/Rules/Release | **PASS / ENCERRADA** | health/release/rollback preparados |
+| HARDEN-D — SaaS↔Mobile | **PASS / ENCERRADA** | sem conflito funcional material; CT-01 isolada para o RC |
 
+### A1 — regra pós-fechamento
 
-### 20.1 HARDEN-A — checkpoint parcial de segurança
+A inspeção visual fina de PDF não bloqueia RC/piloto/lançamento.
 
-### HARDEN-A — CHECKPOINT PARCIAL DE SEGURANÇA
+Só reabre gate se surgir defeito funcional real, como:
 
-A HARDEN-A foi auditada pelo Coordenador SaaS como **PARCIAL TECNICAMENTE SAUDÁVEL**.
+- PDF vazio;
+- geração quebrada;
+- conteúdo ausente;
+- ilegibilidade operacional;
+- paginação funcionalmente destruída.
 
-Identidade:
-- branch: `saas-harden-a-security-dependencies`;
-- base: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`;
-- HEAD final: `00d6386d212d6c139eec243d00b61c11a13017b8`;
-- PR: `#240`.
+Margem, espaçamento, alinhamento e refinamento estético ficam em backlog.
 
-Resultado:
-- vulnerabilidades de pacote: **22 → 14**;
-- nenhuma alteração em `package.json`;
-- nenhuma major aplicada;
-- nenhum `npm audit fix --force`;
-- lockfile seguro integrado semanticamente no commit `040ec20c66a7d9c8e77070d12dd455fe43aef5d7`;
-- evidência integrada em `66dc540b7d50a451e96cd16558a9219743543cd7`;
-- CI/build/typecheck/core/diff verdes;
-- nenhuma regressão detectada.
+### A2 — risco residual
 
-Pendência material:
-- `jspdf@2.5.2` permanece CRITICAL e direto/runtime;
-- upgrade conjunto jsPDF/jsPDF-AutoTable deve ocorrer em correção controlada com regressão específica dos PDFs;
-- Firebase/Firestore/gRPC requer decisão coordenada, sem aceitar downgrade/force sugerido pelo audit.
+A cadeia Firebase → Firestore → `@grpc/grpc-js` permanece instalada.
 
-Impacto MOBILE-R1: **DELTA COMPATÍVEL** por lockfile compartilhado.
+Decisão aceita:
 
-HARDEN-A não está em PASS e continua bloqueando o freeze do RC até fechamento das pendências acima.
+- não forçar override fora do range do Firestore;
+- não fazer downgrade/major só para reduzir scanner;
+- uso browser não carrega o transporte Node gRPC;
+- uso Node atual é cliente Firestore, sem servidor gRPC próprio nem primitivas de servidor analisadas;
+- não abrir nova frente Firebase/gRPC sem nova evidência técnica ou correção upstream suportada.
+
+Snapshot técnico da A2:
+
+- Firebase declarado: `^10.12.2`;
+- Firebase resolvido: `10.14.1`;
+- `@firebase/firestore`: `4.7.3`;
+- `@grpc/grpc-js`: `1.9.16`;
+- pin Firestore: `~1.9.0`.
+
+A aceitação de risco não declara a biblioteca intrinsecamente segura; declara o risco específico como não alcançável pelo uso atual e sem correção suportada melhor no momento.
 
 ## 21. HARDEN-B — recovery
 
-Estado confirmado:
+Estado:
 
-- PITR ativo nos dois bancos;
-- delete protection ativa;
-- schedule diário ativo;
-- retenção de 14 semanas;
-- tooling `recovery:status` e `recovery:verify` disponível;
-- ainda falta backup nativo READY de ambos os bancos;
-- restore real isolado ainda não concluído.
+**PARCIAL — dependência temporal legítima**
 
-O restore real deve:
+Proteções confirmadas nos dois bancos:
 
-1. usar banco novo/isolado;
-2. partir de backup READY;
-3. ter plano de restauração;
-4. ser autorizado explicitamente pelo fundador quando chegar o momento;
-5. validar dados, IAM, Rules, TTL e isolamento.
+- PITR: ativo;
+- delete protection: ativa;
+- schedule diário de backup: ativo;
+- retenção: **14 semanas**;
+- tooling `recovery:status` e `recovery:verify` disponível.
 
-## 22. Health / Rules / release
+Pendências:
 
-HARDEN-C confirmou:
+1. primeiro backup nativo `READY` no banco principal;
+2. primeiro backup nativo `READY` no `emprovex-warehouse`;
+3. capturar resource/location/snapshot/expiration;
+4. executar `recovery:verify`;
+5. preparar restore plan isolado;
+6. restore real em banco novo/isolado;
+7. validar dados, IAM, Rules, TTL e isolamento.
 
-- health preparado;
-- pacote de release/rollback auditado;
-- Rules SaaS ↔ Mobile sem conflito material no escopo auditado;
-- nenhum deploy produtivo autorizado por esse PASS.
+Não repetir `recovery:apply` enquanto controles permanecerem ativos.
+
+Restore real continua ação protegida e requer autorização explícita quando chegar o momento.
+
+### Relação HARDEN-B ↔ RC
+
+- composição do RC: **não bloqueada**;
+- Preview HTTPS sem writes críticos: **não bloqueado por B parcial**;
+- produção controlada com writes reais: preferir fortemente `backup READY` nos dois bancos + `recovery:verify`;
+- se houver promoção antes disso, o Fundador deve aceitar explicitamente o risco residual;
+- abertura comercial final exige prova de recuperação adequada, incluindo restore isolado real conforme plano SaaS.
+
+## 22. Health, Rules, observabilidade e release
+
+### 22.1 Health
+
+Contrato:
+
+- `/api/health` público;
+- não expõe dados sensíveis;
+- não depende de leitura operacional do Firestore para responder saúde básica.
+
+### 22.2 Observabilidade
+
+Fontes oficiais R1:
+
+- Vercel — deploy/runtime;
+- GitHub Actions — certificação/gates;
+- Cloud Monitoring — métricas/uptime;
+- telemetria Firebase/Firestore já existente;
+- logs de sessão/Central quando aplicável.
+
+No ambiente publicado, validar:
+
+- domínio/SSL;
+- `/api/health`;
+- erros runtime/HTTP;
+- erros Firestore/permissão;
+- erros de sessão;
+- erros da Central;
+- crashes do scanner;
+- consumo inesperado;
+- uptime check/alerta/canal quando materializados.
+
+Uptime/alerta externo não deve ser declarado PASS sem evidência real do ambiente publicado.
+
+### 22.3 Rules candidatas
+
+SaaS e Mobile possuem Rules candidatas reconciliadas entre si.
+
+Blobs auditados:
+
+- candidata `firestore.rules`: `57a1394c921b2ab2c15537fbfc4aaea17515b28a`;
+- candidata `firestore.warehouse.rules`: `6e1f1050005314db4e17cb3136409abbddb0ee91`;
+- produção atual `firestore.rules`: `0d990b7de0b2e85ed55fe14ec0d2ce29b3635299`;
+- produção atual `firestore.warehouse.rules`: `b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2`.
+
+As candidatas diferem de `main`.
+
+Portanto publicação exige:
+
+1. registrar conteúdo/hash das Rules atuais;
+2. registrar conteúdo/hash das Rules RC;
+3. executar testes multi-tenant/workspace externo/legal/billing/Central;
+4. preparar comando de republicação das Rules anteriores;
+5. não confundir rollback Vercel com rollback de Rules.
+
+### 22.4 Runbook de incidente
+
+Sequência mínima:
+
+1. confirmar domínio/deployment;
+2. verificar health/runtime;
+3. verificar Firestore/Monitoring;
+4. classificar impacto;
+5. interromper writes se houver dúvida de integridade;
+6. corrigir ou rollback;
+7. reconciliar dados antes de qualquer correção manual;
+8. registrar incidente material.
+
+Problema visual isolado não é automaticamente incidente de rollback.
 
 ## 23. CT-01 — contrato transversal obrigatório do RC
 
-Divergência detectada entre SaaS e Mobile:
+Estado atual:
 
-SaaS anterior:
+- SaaS/main: `camera=(), microphone=(), geolocation=()`;
+- Mobile: `camera=(self), microphone=(), geolocation=()`.
 
-`camera=(), microphone=(), geolocation=()`
-
-Mobile:
-
-`camera=(self), microphone=(), geolocation=()`
-
-Contrato global definido para o futuro RC:
+Contrato global do RC:
 
 `camera=(self), microphone=(), geolocation=()`
 
-Razão:
+Interpretação:
 
-- scanner Mobile necessita de câmera same-origin;
-- microfone não é necessário;
-- geolocalização não é necessária;
-- `getUserMedia` continua sujeito a contexto seguro e permissão do navegador.
+- câmera same-origin permitida;
+- microfone continua bloqueado;
+- geolocalização continua bloqueada;
+- `getUserMedia` ainda depende de HTTPS/contexto seguro e permissão do navegador.
 
 Ownership:
 
-**integração SaaS / composição do Release Candidate.**
+**Coordenação do RC.**
 
-Antes do freeze do RC:
+MOBILE-J não altera globalmente `next.config.ts` por conta própria.
 
-- materializar CT-01;
-- repetir gates afetados;
-- validar o header HTTP efetivo do candidato publicado.
+Antes do PASS final:
 
----
+- materializar CT-01 na branch RC;
+- executar gates afetados;
+- publicar Preview HTTPS;
+- validar o header HTTP realmente servido;
+- provar câmera real em dispositivo físico.
 
 # PARTE VII — MOBILE R1
 
-## 24. Objetivo
+## 24. Objetivo e contrato Mobile R1
 
-A Central Móvel R1 leva as operações físicas da Central de Depósitos para uso em celular sem criar uma segunda verdade logística.
+Levar operações físicas da Central de Depósitos ao navegador móvel sem criar segunda fonte da verdade.
 
-Princípios:
+Contrato:
 
 - web mobile;
 - online-first;
-- mesma identidade/workspace/UG;
+- mesma Auth/workspace/UG;
+- mesmo Legal Gate/lifecycle/sessão;
 - scanner compartilhado;
-- leitura física por EPX1;
-- operações canônicas do backend;
+- EPX1 apenas como identidade física;
+- resolver sempre contra entidades canônicas;
+- repositories/ledger/saldo/lote/posição oficiais;
 - fallback manual;
-- sem banco Mobile paralelo.
+- sem banco Mobile paralelo;
+- sem operação offline integral na R1.
 
-## 25. Ondas concluídas
+## 25. Estado funcional consolidado
 
-### Onda 1
+Concluído e integrado:
 
-MOBILE-A — Plataforma/Scanner:
+- MOBILE-A — plataforma/scanner;
+- MOBILE-B — etiquetas/resolver;
+- Integração 1;
+- MOBILE-C — alocação;
+- MOBILE-D — transferência;
+- MOBILE-E — consulta;
+- Integração 2;
+- MOBILE-F — inventário;
+- MOBILE-G — saída;
+- MOBILE-H — conferência;
+- Integração 3;
+- MOBILE-I — integração controlada A–H.
 
-**integrada**, com pendências físicas finais de dispositivo/runtime.
+MOBILE-I:
 
-MOBILE-B — Etiquetas/Resolver:
+- worker certificado: `ea5ad10054e2aea608e270a970fde723cde41d93`;
+- PR #245: merged;
+- squash: `3a5689e0e613adfb7dbf48ef8d44085ec6c951b3`;
+- gates principais: PASS;
+- novo delta funcional SaaS↔Mobile: nenhum.
 
-**integrada**.
+Não reabrir F/G/H/I sem regressão concreta.
 
-Integração 1 certificou:
+## 26. MOBILE-J — certificação final
+
+Branch:
+
+`mobile-r1-j-final-certification@90d646372aae3e92318a78b90d71f72c5eb6b00e`
+
+PR #246:
+
+**OPEN / DRAFT / MERGEABLE**
+
+Classificação:
+
+**PARCIAL TECNICAMENTE SAUDÁVEL / CERTIFICAÇÃO EM EXECUÇÃO**
+
+Escopo permitido:
+
+- certificação;
+- evidência;
+- regressão concreta mínima;
+- nenhuma feature nova.
+
+Próximo marco real:
+
+**RC em Preview HTTPS → testes físicos → reconciliação SaaS final → avaliação de PASS FINAL.**
+
+Runbook especializado:
+
+`mobile-r1-j-final-certification:docs/CENTRAL_MOBILE_R1_MOBILE_J_PHYSICAL_TEST_RUNBOOK.md`
+
+## 27. Certificação física obrigatória
+
+### Android / Chrome
+
+Validar:
+
+- Home Mobile;
+- câmera permitida;
+- câmera negada;
+- câmera indisponível;
+- fallback manual;
+- abrir/fechar câmera;
+- troca/retorno de rota;
+- scan válido;
+- double scan;
+- cooldown;
+- scans consecutivos;
+- luz baixa/reflexo;
+- perda/retorno de rede.
+
+### iPhone / Safari
+
+Executar os mesmos cenários quando houver aparelho disponível.
+
+Se não houver aparelho:
+
+**PENDENTE — APARELHO NÃO DISPONÍVEL**
+
+Não inferir PASS de iPhone a partir de Android.
+
+### Code128 físico
+
+Imprimir e testar:
+
+- COMPACT;
+- MEDIUM;
+- LARGE.
+
+Validar no mínimo:
+
+- LOCAL;
+- SUBPOSITION;
+- material/produto;
+- distância/enquadramento/contraste;
+- repetição;
+- ausência de confusão entre etiquetas próximas.
+
+Geração digital isolada não é certificação física.
+
+### Feedback físico
+
+Validar:
+
+- som de sucesso;
+- som de erro;
+- vibração;
+- feedback visual;
+- ausência de duplo feedback enganoso;
+- erro de persistência sem falso sucesso.
+
+### UX real
+
+Validar:
+
+- uso com uma mão;
+- legibilidade;
+- botões;
+- orientação/scroll;
+- loading/empty states;
+- foco/teclado;
+- Enter quando aplicável;
+- scanner ↔ formulário;
+- recuperação após erro;
+- mensagens de confirmação.
+
+Classificar defeitos:
+
+- BLOQUEANTE;
+- IMPORTANTE;
+- COSMÉTICO;
+- BACKLOG.
+
+Só regressão funcional concreta reabre desenvolvimento.
+
+## 28. Jornada física, invariantes, performance e PASS final
+
+Jornada mínima:
 
 ```text
-scanner
-→ EPX1
-→ resolver
-→ WarehouseStockPosition
+LOGIN
+→ CENTRAL MOBILE
+→ LER MATERIAL/POSIÇÃO
+→ ALLOCATE
+→ CONSULTAR
+→ TRANSFERIR
+→ CONFERIR
+→ INVENTARIAR
+→ OUTBOUND
+→ CONSULTAR ESTADO FINAL
+→ CENTRAL DESKTOP
+→ CONFIRMAR COERÊNCIA
 ```
 
-### Onda 2
-
-MOBILE-C — Alocação:
-
-**integrada semanticamente**.
-
-MOBILE-D — Transferência:
-
-**corrigida e integrada semanticamente**.
-
-MOBILE-E — Consulta Física:
-
-**integrada**.
-
-Integração 2 certificou jornada:
-
-```text
-alocar
-→ consultar posição A
-→ transferir A → B
-→ consultar A/B
-→ preservar total físico
-```
-
-Último estado operacional certificado da Integração 2:
-
-`d8148f01b877adad1e7880fc0b7fc6d4b3d60249`
-
-## 26. Reconciliação SaaS ↔ Mobile
-
-HARDEN-D concluiu que, para C/D/E:
-
-- Auth — sem delta;
-- workspace/UG — sem delta;
-- sessão/lease/heartbeat — sem delta;
-- Legal Gate — sem delta;
-- billing/lifecycle — sem delta;
-- `warehouseAccess` — sem delta;
-- Firestore Rules — sem delta;
-- schema/source of truth — compatíveis;
-- shell/guards — compatíveis;
-- APIs compartilhadas — compatíveis;
-- telemetria — compatível;
-- Permissions-Policy — compatível com CT-01.
-
-Resultado:
-
-**PASS técnico, sem conflito funcional material.**
-
-## 27. Onda 3 — estado vivo
-
-Freeze comum:
-
-`c971d5356c343a0819bf96ec016de73dd96a435d`
-
-Esse freeze já contém a Integração 2 certificada. As branches não devem ser movidas para “acompanhar” documentação posterior.
-
-Estado atual:
-
-| Frente | Escopo | Estado |
-| --- | --- | --- |
-| MOBILE-F | Inventário móvel | **VERDE / INTEGRADA / CERTIFICADA** — PR #239 fechado sem merge direto |
-| MOBILE-G | Saída de material móvel | **VERDE / INTEGRADA / CERTIFICADA** — PR #242 fechado sem merge direto |
-| MOBILE-H | Conferência física/digital | **VERDE / INTEGRADA / CERTIFICADA** — PR #241 fechado sem merge direto |
-| Integração 3 | combinação F/G/H | **VERDE / CERTIFICADA** — PR #243 / squash `f11b7bf2...` |
-| MOBILE-I | integração controlada | **PASS / APROVADA / INTEGRADA** |
-| MOBILE-J | certificação final | **PRÉ-CERTIFICAÇÃO LIBERADA / PASS FINAL BLOQUEADO** |
-
-A ordem de integração F/G/H deve ser definida por dependência e sobreposição reais, não por ordem cronológica de conclusão.
-
-### 27.1 Checkpoint pós-Integração 3 — 2026-10-03
-
-Estado operacional certificado:
-
-`f11b7bf29f8b3fe9525ff80880f4e0f87cd1c67e`
-
-HEAD documental Mobile:
-
-`816c1c07cf251ce3705098a3a65b9d84e2fc8614`
-
-Resultado:
-
-- MOBILE-F/G/H integradas semanticamente;
-- Application CI #940 — SUCCESS;
-- Core Protection #227 — SUCCESS;
-- Recovery #618 — SUCCESS;
-- Legal Validation #42 — SUCCESS;
-- Production Build — SUCCESS;
-- TypeScript — SUCCESS;
-- Diff Hygiene — SUCCESS;
-- segurança multi-tenant — SUCCESS;
-- nenhum novo schema;
-- nenhuma nova API SaaS compartilhada;
-- nenhum novo delta funcional SaaS↔Mobile;
-- CT-01 permanece preexistente e pendente para o futuro RC;
-- package/Application CI contém tooling Mobile aditivo e compatível.
-
-Decisão do Program Control:
-
-**INTEGRAÇÃO 3 ACEITA / MOBILE-I LIBERADA.**
-
-MOBILE-I deve ser criada a partir do HEAD Mobile vivo congelado pelo Coordenador Mobile e atuar somente como integração controlada, UX/regressão e reconciliação final da experiência Mobile. MOBILE-J continua bloqueada.
-
-### 27.2 Checkpoint pós-MOBILE-I — 2026-10-03
-
-Integradora Mobile:
-
-`feat/central-mobile-r1@2108a21208765e0d4155399667cf571b0fa127ff`
-
-Worker MOBILE-I certificado:
-
-`mobile-r1-i-integration@ea5ad10054e2aea608e270a970fde723cde41d93`
-
-PR #245:
-
-**MERGED**
-
-Squash:
-
-`3a5689e0e613adfb7dbf48ef8d44085ec6c951b3`
-
-Resultado:
-
-- MOBILE-I — PASS / APROVADA / INTEGRADA;
-- Application CI #945 — SUCCESS;
-- Core Protection #232 — SUCCESS;
-- Recovery #623 — SUCCESS;
-- Legal #47 — SUCCESS;
-- Production Build — SUCCESS;
-- TypeScript — SUCCESS;
-- Diff Hygiene — SUCCESS;
-- multi-tenant e segurança externa — SUCCESS;
-- Integrações 1–3 e F/G/H — SUCCESS;
-- novo delta funcional SaaS↔Mobile — NENHUM;
-- performance da Integração 3 preservada;
-- CT-01 não alterada;
-- produção não alterada.
-
-Decisão do Program Control:
-
-**MOBILE-J está liberada para PRÉ-CERTIFICAÇÃO**, incluindo gates finais, validação manual/física, métricas e experiência real.
-
-Entretanto, o **PASS FINAL da MOBILE-J permanece bloqueado** até:
-
-1. validação física obrigatória em celular real;
-2. HARDEN-A1 integrada;
-3. HARDEN-A2 Firebase/Firestore/gRPC estabilizada;
-4. reconciliação semântica final SaaS↔Mobile dos contratos compartilhados;
-5. repetição dos gates afetados pelo upstream.
-
-Essa separação permite avançar em paralelo sem certificar a Mobile sobre um upstream SaaS ainda sujeito a mudança em Firebase/Firestore.
-
-### 27.3 HARDEN-A2 — PASS FORMAL E LIBERAÇÃO DO RC
-
-Checkpoint SaaS aceito pelo Program Control em 2026-10-03.
-
-HEAD SaaS:
-
-`feat/saas-r1-commercializacao@d7709d22f8e7ec9654ffaaa17a59ae06b34426bd`
-
-HARDEN-A2 worker:
-
-`saas-harden-a2-firebase-firestore-grpc@d647793f256c28eb412950d306d0427549577ee0`
-
-PR #247:
-
-**CLOSED / NÃO MERGEADO**
-
-Resultado:
-
-**PASS — RISCO RESIDUAL ACEITO TECNICAMENTE**
-
-Evidência confirmada:
-
-- nenhuma dependência alterada;
-- nenhum runtime alterado;
-- nenhuma Rule alterada;
-- nenhum Auth/Firestore client/workspace/sessão alterado;
-- nenhum delta Mobile;
-- nenhum delta de bundle;
-- risco residual gRPC classificado como não alcançável pelos usos atuais do EMPROVEX;
-- não abrir nova frente Firebase/gRPC sem nova evidência técnica.
-
-Blobs congelados para composição:
-
-- `package.json`: `5d84e103f95d21b456f1e3beab991969bedf4369`;
-- `package-lock.json`: `648f128824cc5d2e10d7e4db9444925b0df9fe34`;
-- SaaS `firestore.rules`: `57a1394c921b2ab2c15537fbfc4aaea17515b28a`;
-- SaaS `firestore.warehouse.rules`: `6e1f1050005314db4e17cb3136409abbddb0ee91`;
-- produção `firestore.rules`: `0d990b7de0b2e85ed55fe14ec0d2ce29b3635299`;
-- produção `firestore.warehouse.rules`: `b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2`.
-
-Decisão do Program Control:
-
-**A composição do RC único SaaS R1 + Mobile R1 está formalmente liberada.**
-
-HARDEN-B permanece em acompanhamento temporal e não bloqueia a preparação/Preview HTTPS por si só.
-
-Produção continua inalterada.
-
-## 28. Pendências físicas Mobile
-
-Continuam obrigatórias antes da certificação final:
-
-- câmera real Android;
-- câmera real iPhone;
-- header HTTP efetivo em ambiente publicado;
-- som/vibração físicos;
-- impressão/leitura Code 128 nos formatos previstos.
-
-Essas pendências não invalidam as certificações de domínio já concluídas, mas precisam ser fechadas até MOBILE-J/release.
-
----
+Registrar IDs relevantes: workspace/UG/material/barcode/depósito/posições/lote/movementIds/inventoryId/outboundId.
+
+Invariantes:
+
+- ALLOCATE usa posição/barcode/material canônicos;
+- TRANSFER preserva total agregado e não gera saldo negativo;
+- inventário salvo não altera saldo antes da revisão/confirm;
+- OUTBOUND respeita posição/lote/FEFO/idempotência;
+- conferência é read-only e usa transferência como correção oficial;
+- Desktop e Mobile mostram o mesmo material/saldo/posição/lote/histórico/ledger.
+
+Rede:
+
+- perda antes de operação crítica deve falhar fechada;
+- nenhum falso sucesso;
+- retorno permite retomada/reconciliação segura;
+- idempotência deve impedir duplicação.
+
+Performance de referência pós-Integração 3/MOBILE-I:
+
+- `/central-mobile`: 257 kB;
+- `/central-mobile/alocar`: 275 kB;
+- `/central-mobile/transferir`: 261 kB;
+- `/central-mobile/inventario`: 271 kB;
+- `/central-mobile/saida`: 265 kB;
+- `/central-mobile/conferir`: 260 kB;
+- Shared First Load: 104 kB.
+
+PASS FINAL Mobile exige:
+
+- testes físicos reais;
+- CT-01 observada no Preview;
+- jornada ponta a ponta;
+- coerência Desktop↔Mobile;
+- gates técnicos verdes;
+- reconciliação final contra o HEAD/RC SaaS;
+- nenhum conflito transversal aberto.
+
+O Coordenador Mobile recomenda; Program Control decide a barreira global.
 
 # PARTE VIII — TESTES, CI E RELEASE
 
-## 29. Política de testes
+## 29. Política de testes e evidência
 
 Browser E2E não é gate universal.
 
-Gates prioritários conforme risco:
+Prioridade:
 
 - instalação reproduzível;
 - TypeScript;
 - production build;
 - testes de domínio;
 - guards estruturais;
-- segurança multi-tenant;
+- multi-tenant;
 - Firestore Emulator quando aplicável;
 - Core Protection;
 - Recovery;
 - Legal Validation;
 - diff hygiene;
-- gates específicos de cada rodada.
+- testes específicos do RC.
 
-Browser/E2E deve ser usado quando o risco de interação justificar.
+Validação manual é legítima e obrigatória para câmera/scanner/barcode/UX física.
 
-Validação manual é legítima e obrigatória em fluxos físicos/visuais como:
+**Não inferir PASS sem execução real quando o requisito depende de hardware/navegador/ambiente publicado.**
 
-- scanner;
-- câmera;
-- teclado/foco;
-- barcode;
-- layout;
-- ergonomia operacional.
+## 30. Vercel e Preview HTTPS
 
-## 30. Vercel durante desenvolvimento
+Durante desenvolvimento, `build-rate-limit` isolado não é regressão de código.
 
-Falha Vercel exclusivamente por `build-rate-limit` durante desenvolvimento ativo não caracteriza automaticamente regressão funcional.
+Para RC:
 
-Deve ser registrada como limitação externa e distinguida de falha real de código/build.
+- Preview HTTPS deve apontar para o **mesmo SHA congelado** que poderá ser promovido;
+- não testar um build e reconstruir outro para produção;
+- validar header CT-01 no HTTP efetivo;
+- usar Preview para fechar MOBILE-J e smoke SaaS antes de tocar domínio produtivo.
 
-## 31. Produção e autorizações
+## 31. Produção, main e autorizações
 
-Nenhum worker ou coordenador de programa recebe autorização implícita de produção por:
+`main` é baseline conhecida/recuperável, não branch de experimentação.
 
-- PASS;
-- mergeable;
-- CI verde;
-- “continue”;
-- “próximo passo”;
-- conclusão de uma wave.
-
-Ações protegidas continuam dependendo da governança definida, especialmente:
-
-- `main`;
-- Vercel production/promotion;
-- Firestore Rules produtivas;
-- restore real;
-- migrações produtivas;
-- usuários/workspaces reais;
-- GO/NO-GO de RC/release.
-
-
-## 31.1 Publicação controlada para certificação
-
-Decisão vigente do Program Control:
-
-o estágio atual do EMPROVEX **permite preparar e executar testes em ambiente publicado**, desde que a publicação seja tratada como certificação controlada de um Release Candidate e não como desenvolvimento improvisado em `main`.
-
-Fluxo obrigatório:
+Problema encontrado em teste:
 
 ```text
-fechar HARDEN-A2
-→ compor RC único SaaS + Mobile
-→ reconciliar Rules/package/CI/contratos compartilhados
-→ aplicar CT-01
-→ congelar SHA
-→ executar gates no SHA exato
-→ Preview HTTPS
-→ testes SaaS + Mobile
-→ GO/NO-GO explícito
-→ eventual promoção controlada
+bug
+→ branch curta/hotfix rastreável
+→ teste
+→ integração no RC
+→ gates afetados
+→ novo freeze quando necessário
 ```
 
-### Regra sobre `main`
+Não “corrigir direto na main”.
 
-`main` continua sendo baseline conhecida e recuperável.
+Ações protegidas dependem de autorização explícita do Fundador:
 
-Problemas encontrados em Preview ou produção controlada devem ser corrigidos em branch curta/hotfix rastreável, testados e integrados conscientemente.
+- merge/release final para `main`;
+- Vercel production/promotion;
+- Rules produtivas;
+- restore real quando aplicável;
+- migração destrutiva;
+- ação disruptiva em usuário/workspace real;
+- GO/NO-GO de produção e lançamento.
 
-**Não usar `main` como branch de experimentação ou correção direta.**
+### 31.1 Três planos de rollback
 
-### Reversibilidade e risco
+Rollback de aplicação não é rollback total do sistema.
 
-Rollback de aplicação Vercel reverte código, mas **não reverte automaticamente**:
+Separar:
 
-- Firestore Rules;
-- Warehouse Rules;
-- documentos gravados;
-- movimentos de estoque;
+1. **Aplicação/Vercel** — voltar ao deployment conhecido;
+2. **Rules** — republicar Rules anteriores;
+3. **Dados** — reconciliar movimentos/writes; não existe “desfazer automático” por rollback Vercel.
+
+Rollback de Vercel não apaga:
+
+- movimentos;
 - ledger;
-- aceite legal;
-- billing/lifecycle;
-- demais writes persistidos.
+- billing/legal/lifecycle persistido;
+- documentos criados;
+- alterações de estoque já gravadas.
 
-Por isso, publicação controlada exige três planos separados:
+### 31.2 Estratégia de teste com menor risco
 
-1. rollback de aplicação;
-2. rollback de Rules;
-3. reconciliação/recuperação de dados quando necessário.
+Na certificação publicada:
 
-Não executar rollback manual improvisado de estoque/ledger.
-
-### Estratégia de menor risco
-
-Durante certificação publicada:
-
-- usar workspace e materiais de teste;
+- usar workspace/material controlado;
 - evitar estoque institucional crítico;
 - evitar deletes;
 - evitar migração destrutiva;
-- evitar alterações massivas;
-- registrar IDs das operações de teste;
-- interromper novas escritas diante de dúvida de integridade.
+- registrar IDs das operações;
+- interromper writes diante de dúvida de integridade;
+- auditar ledger/saldos antes de correção manual.
 
-Problemas exclusivamente visuais não implicam rollback automático. Problemas de Auth, Rules, isolamento, saldo, ledger, idempotência ou integridade devem acionar NO-GO/rollback.
+### 31.3 Gatilhos de NO-GO/rollback
 
+Escalar imediatamente se houver:
 
----
+- falha sistêmica de login;
+- founder ou usuário legítimo bloqueado de forma generalizada;
+- cross-workspace;
+- Rules permitindo acesso indevido;
+- Rules negando operação essencial de forma sistêmica;
+- saldo negativo/divergente;
+- ledger duplicado;
+- idempotência quebrada;
+- perda de material/lote/posição;
+- billing/lifecycle incorreto;
+- Legal Gate impedindo uso legítimo de forma sistêmica;
+- scanner indisponível por CT-01;
+- erro runtime grave;
+- regressão grave do Desktop.
+
+Problema exclusivamente visual não exige rollback automático.
 
 # PARTE IX — RISCOS E GATES ABERTOS
 
 ## 32. Gates técnicos ainda abertos
 
-### SaaS
+### 32.1 Antes do RC CANDIDATE
 
-- HARDEN-A1 — PASS / encerrada;
-- HARDEN-A2 — PASS com risco residual aceito tecnicamente / encerrada;
-- HARDEN-C — PASS;
-- HARDEN-D — PASS;
-- HARDEN-B — PARCIAL / espera controlada:
-  - backup READY dos dois bancos;
-  - `recovery:verify`;
-  - evidência dos backups;
-  - restore-plan isolado;
-  - restore real continua dependente de autorização explícita.
+- criar branch única de composição;
+- fixar fontes SaaS e Mobile;
+- incorporar semanticamente deltas;
+- aplicar CT-01;
+- reconciliar Auth/workspace/UG/sessão/Legal/billing/lifecycle;
+- reconciliar Rules;
+- reconciliar package/lockfile/Application CI;
+- reconciliar repositories/shell/scanner/Central;
+- registrar hashes;
+- gates combinados verdes.
 
-Nenhuma nova wave funcional SaaS está autorizada.
+### 32.2 Antes do RC FROZEN
 
-### Mobile
+- nenhum conflito material;
+- SHA único;
+- manifesto de release;
+- rollback de aplicação preparado;
+- rollback de Rules preparado;
+- baseline Performance R3 registrada;
+- nenhuma mudança oportunista aberta.
 
-- desenvolvimento funcional A–I encerrado;
-- MOBILE-J em certificação final;
-- HEAD documental atual Mobile: `7b7717b6eebabf911310d2b8ac56ed13c9cb9238`;
-- MOBILE-J atual: `90d646372aae3e92318a78b90d71f72c5eb6b00e`;
-- avanços recentes são documentais;
-- faltam testes físicos/ambiente publicado e reconciliação contra o RC composto.
+### 32.3 Antes de produção controlada
 
-Nenhuma nova wave funcional Mobile está autorizada.
+- Preview aprovado;
+- smoke crítico SaaS+Mobile;
+- CT-01 comprovada;
+- Rules comprovadas;
+- integridade de dados sem dúvida;
+- rollback pronto;
+- risco HARDEN-B avaliado;
+- autorização explícita do Fundador.
 
-### RC conjunto — próximo trabalho global
+Preferência: backup READY nos dois bancos + `recovery:verify`.
 
-1. criar branch única de composição a partir do HEAD SaaS aceito;
-2. incorporar semanticamente o delta Mobile consolidado;
-3. reconciliar Auth/workspace/UG/sessão/Legal/billing/lifecycle;
-4. preservar Rules candidatas SaaS/Mobile;
-5. aplicar CT-01: `camera=(self), microphone=(), geolocation=()`;
-6. reconciliar package/lockfile/Application CI;
-7. reconciliar contratos compartilhados da Central;
-8. registrar hashes de Rules/next.config/lockfile;
-9. rodar gates combinados no SHA exato;
-10. congelar o RC;
-11. publicar Preview HTTPS;
-12. executar certificação SaaS + Mobile;
-13. somente depois solicitar GO/NO-GO de produção controlada.
+### 32.4 Antes de PASS FINAL Mobile
 
-### HARDEN-B e janela de teste
+- runbook físico executado;
+- Android;
+- iPhone ou pendência explicitamente classificada;
+- Code128;
+- som/vibração;
+- rede;
+- jornada ponta a ponta;
+- Desktop↔Mobile;
+- reconciliação final SaaS.
 
-- Preview HTTPS pode prosseguir mesmo com HARDEN-B parcial;
-- produção controlada com writes reais deve preferencialmente aguardar backup READY + `recovery:verify`;
-- se o Fundador decidir promover antes disso, a aceitação do risco residual deve ser explícita.
+### 32.5 Antes da abertura comercial ampla
+
+- piloto real;
+- cliente pago real;
+- trial→regularização;
+- suspensão→bloqueio→reativação controlada;
+- recovery/restore comprovado;
+- uptime/alerta;
+- custo/capacidade;
+- SAAS-J;
+- pendências classificadas;
+- GO explícito.
 
 ## 33. Riscos que não podem ser esquecidos
 
-- publicar antes do aceite formal da HARDEN-A2;
-- promover código sem RC único/reconciliado;
-- sobrescrever CT-01 e quebrar câmera Mobile;
-- publicar Rules sem cópia/hash e procedimento de rollback;
+- confundir billing comercial com autorização operacional;
+- assumir que “pago” reativa automaticamente lifecycle desabilitado;
+- apagar dados por inadimplência/cancelamento;
+- deixar usuário suspenso sem regularização/recuperação acessível;
+- duplicar Auth/sessão/legal na Mobile;
+- usar números históricos de lease/heartbeat em vez do runtime atual 30/15;
+- sobrescrever CT-01;
+- publicar Rules sem rollback;
 - confundir rollback Vercel com rollback de dados;
-- testar operações destrutivas em workspace/estoque institucional;
-- corrigir diretamente em `main`;
+- merge/rebase cego entre SaaS e Mobile;
 - criar fonte paralela logística;
-- merge/rebase cego entre integradoras;
-- perder evidência de backup/restore;
-- considerar CI verde como autorização produtiva;
-- declarar MOBILE-J PASS final antes da reconciliação contra o RC;
-- considerar ajuste visual de PDF como blocker sem defeito funcional real.
-
----
+- reabrir A1/A2 sem nova evidência;
+- declarar uptime/backup/restore sem evidência real;
+- declarar iPhone PASS por inferência;
+- corrigir diretamente em `main`;
+- tratar acabamento visual de PDF como blocker sem defeito funcional;
+- considerar CI verde como autorização produtiva.
 
 # PARTE X — CRONOLOGIA CANÔNICA
 
@@ -1022,109 +1445,50 @@ Nenhuma nova wave funcional Mobile está autorizada.
 
 ### 2026-09 — Central de Depósitos
 
-Foram consolidados:
-
-- materiais;
-- depósitos/localizações/subposições;
-- intake;
-- saída;
-- consumo imediato;
-- lotes/FEFO;
-- barcode;
-- relatórios;
-- segurança externa;
-- telemetria;
-- fases de operação e hardening.
-
-Detalhamento completo permanece nos documentos `docs/adm-deposito/*` e no Memorial Histórico Integral.
+Consolidados materiais, depósitos/posições, lotes/FEFO, intake, saída, consumo imediato, barcode, ledger, segurança externa e telemetria.
 
 ### 2026-10-01 — Performance R3
 
-PERF-A/B/C/D/E/F/G/H/X foram integradas e reconciliadas.
+Rodada encerrada e publicada.
 
-PERF-I realizou integração/UX.
+Baseline produtiva atual:
 
-PERF-J certificou a rodada.
+`main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
-A R3 foi posteriormente publicada em produção e tornou-se a baseline `main@e90f92...`.
+### 2026-10-01 a 2026-10-02 — SaaS R1 funcional
 
-### 2026-10-01 a 2026-10-02 — SaaS R1
+Integrados billing, onboarding, legal, recovery tooling, lifecycle/security e integração SaaS.
 
-Foram implementadas/integradas:
-
-- SAAS-B — billing;
-- SAAS-C — onboarding;
-- SAAS-DL — legal;
-- SAAS-E — operações/recovery;
-- SAAS-DS — security/enforcement;
-- SAAS-I — integração.
-
-Decisões consolidadas:
-
-- R$ 70/mês;
-- VIP/founder `exempt`;
-- coorte VIP legado;
-- Legal Gate;
-- lifecycle separado de billing;
-- recovery nativo obrigatório;
-- piloto real somente após hardening/RC.
-
-### 2026-10-02 — Piloto reorganizado
-
-O trabalho preparatório SAAS-P produziu baseline T0, evidências, custos, VIP e recovery.
-
-A sequência foi posteriormente reorganizada:
-
-**hardening antes do piloto real.**
-
-Os registros PILOT-A/B/C/D permanecem históricos e não significam que o piloto real comercial tenha iniciado.
+Contrato comercial consolidado em R$ 70 / Plano Completo.
 
 ### 2026-10-02 — Program Control
 
-Foi instituído o Coordenador Geral acima dos Coordenadores SaaS e Mobile.
+Instituída governança global acima dos programas, com barreiras transversais e autoridade global de RC.
 
-Passaram a ser oficiais:
+### 2026-10-02 a 2026-10-03 — Mobile R1 funcional
 
-- WIP global;
-- semáforos;
-- barreiras;
-- reconciliação transversal;
-- propriedade global do Memorial;
-- freeze de RC sob Program Control.
+A–H, Integrações 1–3 e MOBILE-I concluídas/integradas.
 
-### 2026-10-02 a 2026-10-03 — Mobile R1
+Desenvolvimento funcional Mobile encerrado.
 
-- Onda 1 concluída;
-- Integração 1 certificada;
-- Onda 2 concluída;
-- Integração 2 certificada;
-- HARDEN-D reconciliou SaaS↔Mobile;
-- Onda 3 liberada;
-- F/G/H iniciadas.
+### 2026-10-03 — Hardening final
 
-### 2026-10-03 — Hardening final e preparação de certificação publicada
+- HARDEN-A1: PASS;
+- HARDEN-A2: PASS com risco residual aceito;
+- HARDEN-C/D: PASS;
+- HARDEN-B: parcial/temporal;
+- MOBILE-J: certificação final;
+- RC conjunto: composição liberada;
+- produção: inalterada.
 
-- HARDEN-A1/jsPDF: PASS/encerrada; CRITICAL eliminado; acabamento visual fino movido para backlog não bloqueante;
-- HARDEN-A2/Firebase-Firestore-gRPC: auditoria concluída sem alteração de runtime; recomendação PASS com risco residual tecnicamente aceito; aguarda aceite formal;
-- HARDEN-B: parcial por dependência temporal de backup READY/restore;
-- HARDEN-C/D: PASS/encerradas;
-- MOBILE-I: PASS/integrada;
-- MOBILE-J: certificação final em execução;
-- CT-01 permanece obrigatória no RC;
-- Program Control aprovou a estratégia de RC conjunto + Preview HTTPS + eventual produção controlada com rollback preparado;
-- produção continua na Performance R3.
+### 2026-10-03 — Transição para Release Engineering
 
-### 2026-10-03 — HARDEN-A2 encerrada e RC liberado
+Por decisão do Fundador:
 
-- HARDEN-A2 aceita como PASS com risco residual tecnicamente aceito;
-- PR #247 fechado sem merge;
-- evidência incorporada semanticamente ao SaaS;
-- nenhum delta de runtime, dependência, Rules ou Mobile;
-- HARDEN-B permanece parcial/temporal;
-- composição do RC único SaaS + Mobile formalmente liberada;
-- produção continua em Performance R3.
-
----
+- Coordenador Geral assume também Coordenação do RC;
+- Coordenadores SaaS/Mobile entram em modo consulta/evidência;
+- nenhuma nova wave funcional autorizada;
+- próximo produto a ser construído é um único SHA de RC SaaS+Mobile.
 
 # PARTE XI — DECISÕES PERMANENTES
 
@@ -1132,37 +1496,90 @@ Passaram a ser oficiais:
 
 ### Produto
 
-- experiência do usuário prevalece sobre otimização marginal;
-- Central Mobile não cria backend paralelo;
-- uma única fonte de verdade por domínio.
+- experiência operacional prevalece sobre otimização marginal;
+- SaaS e Mobile são interfaces do mesmo produto;
+- Central Mobile não cria backend/fonte de verdade paralelos;
+- uma única autoridade por material/saldo/lote/posição/ledger.
 
-### SaaS
+### Comercial
 
-- plano único completo R$ 70/mês na R1;
-- trial 30 dias;
-- VIP/founder `exempt`;
-- sem signup público;
-- sem webhook de pagamento;
-- suspensão manual;
-- piloto depois do RC.
+- Plano Completo R$ 70/mês por workspace;
+- trial padrão 30 dias;
+- vencimento 5º dia útil;
+- tolerância 10 dias;
+- cobrança externa;
+- confirmação manual;
+- modo observe;
+- sem suspensão automática;
+- sem delete por inadimplência;
+- API/webhook fora da R1;
+- founder/VIP usam `exempt`;
+- VIP não perde funcionalidades.
 
-### Segurança
+### Billing versus lifecycle
 
-- Auth/workspace/UG permanecem compartilhados;
-- Legal Gate versionado;
-- `warehouseAccess` compartilhado;
-- Rules não são afrouxadas para facilitar worker;
-- microfone/geolocalização permanecem bloqueados no contrato CT-01.
+- `billingAccounts` é fonte comercial;
+- `workspaces.status` + `platformAccounts.status` + `warehouseAccess` governam acesso;
+- status comercial sozinho não deve virar autorização;
+- suspensão/reativação real é ação administrativa explícita;
+- pagamento confirmado não reativa automaticamente lifecycle desabilitado.
+
+### Identidade e sessão
+
+- founder Google-only;
+- externo password-only;
+- workspace/UG/UID/e-mail precisam ser coerentes;
+- founder isento de capacidade;
+- externos: 2 sessões;
+- lease atual: 30 min;
+- heartbeat atual: 15 min;
+- revogação administrativa encerra sessões conhecidas;
+- fail-closed em inconsistência.
+
+### Legal
+
+- pacote legal versionado;
+- versão atual `saas-r1-2026-10-01`;
+- aceite por UID + bundle;
+- nenhum aceite é presumido em erro;
+- VIP não possui exceção legal;
+- regularização/Termos/Privacidade/recuperação não devem ser bloqueadas indevidamente.
+
+### Dados
+
+- cancelamento comercial não apaga dados;
+- suspensão não altera estoque/documentos;
+- exportação/retenção/exclusão são processos separados;
+- nenhum rollback improvisado de estoque/ledger.
+
+### Segurança e dependências
+
+- Rules não são afrouxadas para facilitar teste;
+- CT-01 permite somente câmera same-origin;
+- microfone/geolocalização permanecem bloqueados;
+- A2 não reabre sem nova evidência/upstream relevante;
+- não usar `npm audit fix --force` como estratégia.
+
+### PDFs
+
+- jsPDF 4.2.1 / AutoTable 5.0.8;
+- defeito funcional em PDF bloqueia;
+- acabamento visual fino isolado não bloqueia e pode ir para backlog.
+
+### Release
+
+- `main` não é branch de experimentação;
+- Preview testa o SHA que poderá ser promovido;
+- aplicação, Rules e dados possuem rollback/reconciliação distintos;
+- CI verde não autoriza produção;
+- Fundador mantém GO/NO-GO produtivo final.
 
 ### Desenvolvimento
 
-- workers isolados;
-- branches congeladas não são movidas por conveniência;
+- novas features SaaS/Mobile estão congeladas durante a composição/certificação do RC;
+- corrigir apenas regressão concreta;
 - conflitos são resolvidos semanticamente;
-- integração não equivale a produção;
-- validação manual pode ser gate legítimo.
-
----
+- workers/frentes especializadas não integram cruzado por conveniência.
 
 # PARTE XII — ÍNDICE OPERACIONAL
 
@@ -1174,21 +1591,30 @@ Passaram a ser oficiais:
 
 ## 37. SaaS R1
 
+Documentos canônicos:
+
+- `docs/SAAS_R1_PLANO_MESTRE.md`;
+- `docs/SAAS_R1_EXECUCAO_PARALELA.md`;
 - `docs/SAAS_R1_INTEGRATION_STATUS.md`;
 - `docs/SAAS_R1_COORDENADOR_HANDOFF.md`;
 - `docs/SAAS_R1_PRE_PILOTO_HARDENING.md`;
-- `docs/SAAS_R1_HARDENING_EXECUCAO_PARALELA.md`;
-- `docs/SAAS_R1_HARDEN_C_RELEASE_HEALTH_RULES.md`;
-- `docs/SAAS_R1_HARDEN_D_MOBILE_RECONCILIATION.md`;
-- demais handoffs/documentos `SAAS_R1_*`.
+- `docs/SAAS_R1_HARDEN_A2_FIREBASE_FIRESTORE_GRPC.md`;
+- documentação HARDEN-B/recovery.
+
+Para contrato comercial/operacional vigente, este Memorial tem precedência sobre checkpoints históricos antigos.
 
 ## 38. Mobile R1
+
+Documentos canônicos:
 
 - `docs/CENTRAL_MOBILE_R1_PLANO_MESTRE.md`;
 - `docs/CENTRAL_MOBILE_R1_EXECUCAO_PARALELA.md`;
 - `docs/CENTRAL_MOBILE_R1_INTEGRATION_STATUS.md`;
 - `docs/CENTRAL_MOBILE_R1_COORDENADOR_HANDOFF.md`;
-- documentos especializados `CENTRAL_MOBILE_R1_*`.
+- `docs/CENTRAL_MOBILE_R1_FINAL_CERTIFICATION.md` — MOBILE-J;
+- `docs/CENTRAL_MOBILE_R1_MOBILE_J_PHYSICAL_TEST_RUNBOOK.md` — atualmente na branch `mobile-r1-j-final-certification`.
+
+O runbook físico é procedural. Este Memorial registra os critérios canônicos; o runbook registra casos/evidências.
 
 ## 39. Central de Depósitos
 
@@ -1263,153 +1689,102 @@ O arquivo:
 
 # 45. Estado para retomada imediata
 
-Se um novo Coordenador assumir agora, deve considerar:
-
 ```text
 PRODUÇÃO
 main@e90f92acae1514ee5cbc6ce95fed354bc1454330
 Performance R3
 
+GOVERNANÇA
+Program Control + Coordenação do RC: ATIVO
+Coordenadores SaaS/Mobile: consulta/evidência sob demanda
+Fundador: autoridade final de produção/GO
+
 SAAS R1
-integrador: feat/saas-r1-commercializacao@d7709d22f8e7ec9654ffaaa17a59ae06b34426bd
-HARDEN-A1: PASS / encerrada
-HARDEN-A2: PASS / risco residual aceito / encerrada
-HARDEN-B: parcial / backup READY + recovery:verify + restore-plan pendentes
-HARDEN-C/D: PASS
+funcional: ENCERRADO
+HARDEN-A1: PASS
+HARDEN-A2: PASS — risco residual aceito
+HARDEN-B: PARCIAL / temporal
+HARDEN-C: PASS
+HARDEN-D: PASS
+nova feature SaaS: NÃO AUTORIZADA
+
+BILLING R1
+Plano Completo: R$ 70/mês
+trial: 30 dias
+vencimento: 5º dia útil
+tolerância: 10 dias
+modo: observe
+requirePayment: false
+automaticSuspension: false
+pagamento: externo via Link HTTPS/Pix
+confirmação: manual/auditada
+suspensão operacional: manual via lifecycle
+delete por inadimplência: NÃO
+
+IDENTIDADE / SESSÕES
+founder: Google-only / capacidade isenta
+externo: e-mail+senha / e-mail verificado
+workspace↔UG↔conta primária: obrigatório
+sessões externas: 2
+lease: 30 min
+heartbeat: 15 min
+fail-closed: SIM
+
+LEGAL
+bundle: saas-r1-2026-10-01
+terms: terms-2026-10-01-r1
+privacy: privacy-2026-10-01-r1
+aceite: versionado por UID/workspace
+erro de verificação: fail-closed
 
 MOBILE R1
-integrador: feat/central-mobile-r1@7b7717b6eebabf911310d2b8ac56ed13c9cb9238
-desenvolvimento funcional: encerrado
-MOBILE-J: certificação final em execução
-MOBILE-J HEAD: 90d646372aae3e92318a78b90d71f72c5eb6b00e
-blocker funcional: nenhum
+funcional A–I: ENCERRADO
+MOBILE-J: CERTIFICAÇÃO FINAL EM EXECUÇÃO
+HEAD J: 90d646372aae3e92318a78b90d71f72c5eb6b00e
+blocker funcional: NENHUM
+próximo trabalho: RC Preview HTTPS + runbook físico
+
+RECOVERY
+PITR: ATIVO em ambos
+delete protection: ATIVA
+backup diário: ATIVO
+retenção: 14 semanas
+backup READY: PENDENTE
+recovery:verify: PENDENTE
+restore isolado real: PENDENTE / protegido
 
 RELEASE
-RC único SaaS + Mobile: COMPOSIÇÃO LIBERADA / NÃO CONGELADO
-CT-01: obrigatória
-Rules candidatas: reconciliadas SaaS↔Mobile; diferentes de main
-Preview HTTPS: liberável após composição + gates
-produção controlada: ainda exige GO explícito
-abertura comercial: fora de escopo
+RC único SaaS+Mobile: COMPOSIÇÃO LIBERADA
+RC Candidate: AINDA NÃO DECLARADO
+RC Frozen: NÃO
+CT-01: PENDENTE NO RC
+Preview HTTPS: AINDA NÃO PUBLICADO
+produção controlada: NÃO AUTORIZADA
+piloto real: NÃO INICIADO
+abertura comercial: NÃO AUTORIZADA
 
 PRÓXIMA SEQUÊNCIA
 criar branch RC
-→ compor SaaS + Mobile semanticamente
+→ compor SaaS+Mobile semanticamente
 → aplicar CT-01
-→ reconciliar Rules/package/CI/contratos
-→ gates combinados
+→ reconciliar Rules/package/lockfile/CI/contratos
+→ gates no SHA exato
+→ declarar RC CANDIDATE
 → freeze
 → Preview HTTPS
-→ testes SaaS + Mobile
+→ testes SaaS + MOBILE-J físicos
+→ corrigir regressões reais
 → GO/NO-GO de produção controlada
 ```
 
-Este bloco deve ser mantido coerente com o Snapshot Global do início do documento.
+## Regra final de continuidade
 
-### HARDEN-A1 — CORREÇÃO CONTROLADA JSPDF
+Antes de qualquer decisão futura:
 
-Program Control autorizou a HARDEN-A1 para remover o bloqueador CRITICAL remanescente de jsPDF.
+1. ler este bloco;
+2. conferir HEADs vivos;
+3. conferir se o evento é funcional, transversal ou produtivo;
+4. nunca promover estado histórico a estado vigente;
+5. nunca considerar uma pendência “resolvida” sem evidência;
+6. nunca tratar PASS técnico como autorização de produção.
 
-Base:
-`feat/saas-r1-commercializacao@9a294bc543ec7150b9144ed96e767a161864d72f`
-
-Branch:
-`saas-harden-a-jspdf-security`
-
-Alvos:
-- `jspdf@4.2.1`;
-- `jspdf-autotable@5.0.8`.
-
-A branch foi criada exatamente no HEAD acima.
-
-A frente deve tratar apenas o upgrade controlado de jsPDF/AutoTable, adaptações estritamente necessárias e regressão dos PDFs existentes.
-
-A correção Firebase/Firestore/gRPC fica classificada como **HARDEN-A2** e permanece **BLOQUEADA** até o encerramento da A1.
-
-Nenhuma ação produtiva foi autorizada.
-
-### HARDEN-A1 — SECURITY PASS / VALIDAÇÃO VISUAL PENDENTE
-
-A HARDEN-A1 concluiu com sucesso a correção técnica do bloqueador jsPDF.
-
-Identidade:
-- branch: `saas-harden-a-jspdf-security`;
-- base: `9a294bc543ec7150b9144ed96e767a161864d72f`;
-- HEAD: `5ae4984bb9580faf5197737eeeeb0d5cf5aae838`;
-- PR: `#244`.
-
-Resultado técnico:
-- jsPDF: 2.5.2 → 4.2.1;
-- jsPDF-AutoTable: 3.8.4 → 5.0.8;
-- DOMPurify transitivo atualizado;
-- audit CRITICAL: 1 → 0;
-- regressão PDF automatizada: 7/7 PASS;
-- Application CI/Core/Recovery/Legal/Build/TypeScript/Diff: PASS;
-- lazy loading preservado;
-- produção não alterada.
-
-Estado oficial:
-**PARCIAL TECNICAMENTE SAUDÁVEL / SECURITY PASS**
-
-Motivo único:
-**validação visual/manual dos PDFs ainda pendente**.
-
-Antes do aceite final da A1, validar:
-- Cronograma;
-- Relatório/Termo;
-- Folha de Alocação;
-- Documento de Saída;
-- Etiquetas.
-
-HARDEN-A2 — Firebase/Firestore/gRPC permanece **BLOQUEADA**.
-
-### HARDEN-A1 — PASS TÉCNICO
-
-A HARDEN-A1 foi encerrada com sucesso após migração de jsPDF para linha segura e regressão técnica dos fluxos PDF.
-
-A decisão de produto/coordenação estabelece que **detalhes visuais finos de PDFs não são requisito fundamental de lançamento** e podem ser ajustados de forma incremental após a entrada oficial em produção, desde que a geração funcional permaneça válida.
-
-Estado:
-- jsPDF CRITICAL: RESOLVIDO;
-- regressão técnica: PASS;
-- visual fino: backlog pós-lançamento;
-- impacto MOBILE-R1: DELTA COMPATÍVEL;
-- produção: não alterada.
-
-Com o fechamento da A1, a HARDEN-A2 — Firebase/Firestore/gRPC pode ser liberada em frente separada e controlada.
-
-### HARDEN-A2 — Firebase / Firestore / gRPC
-
-Program Control liberou a HARDEN-A2 após o encerramento técnico da A1.
-
-Branch:
-`saas-harden-a2-firebase-firestore-grpc`
-
-Base congelada:
-`f308ff601fe923467b8ccc1489be91b318bc3e8c`
-
-A frente deve primeiro provar alcance real dos advisories e compatibilidade do caminho suportado. O objetivo não é zerar `npm audit` a qualquer custo, e sim reduzir risco real sem quebrar Auth, Firestore, multi-tenant, Central, SaaS ou Mobile.
-
-MOBILE-J pode continuar em paralelo em pré-certificação; HARDEN-B segue aguardando recovery.
-
-### HARDEN-A2 — PASS / ENCERRADA
-
-A HARDEN-A2 — Firebase / Firestore / gRPC foi encerrada como **PASS — RISCO RESIDUAL ACEITO TECNICAMENTE**.
-
-A cadeia transitiva permanece instalada, mas a auditoria de alcançabilidade concluiu que os advisories avaliados dependem de primitivas de servidor gRPC não utilizadas pelo EMPROVEX. O runtime browser não carrega o transporte Node gRPC; os caminhos Node identificados usam Firestore como cliente.
-
-Nenhuma dependência foi alterada. Não houve delta em Auth, Firestore client, Rules, Central, Mobile ou bundle.
-
-Impacto MOBILE-R1: **SEM DELTA**.
-
-Política:
-- não usar `npm audit fix --force`;
-- não aplicar downgrade automático;
-- não forçar override gRPC fora do contrato suportado;
-- reabrir somente diante de nova evidência técnica, mudança de alcance ou correção upstream suportada.
-
-Com A1 e A2 encerradas, o objetivo SaaS passa a ser **fechar o hardening remanescente e deixar o programa pronto para composição do RC ÚNICO SAAS R1 + MOBILE R1**.
-
-HARDEN-B permanece PARCIAL por dependência temporal de backup/recovery. HARDEN-C/D permanecem PASS.
-
-Até nova autorização, não há permissão para merge em `main`, deploy produtivo, Rules produtivas, restore real, migração, piloto ou freeze RC.
