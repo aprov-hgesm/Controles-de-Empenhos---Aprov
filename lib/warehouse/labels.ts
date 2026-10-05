@@ -33,19 +33,21 @@ export interface WarehouseLabelLayoutPreset {
   gapMm: number;
   marginMm: number;
   widthMm?: number;
+  heightMm?: number;
 }
 
 export const WAREHOUSE_LABEL_PRESETS: Record<WarehouseLabelSheetPreset, WarehouseLabelLayoutPreset> = {
   COMPACT: {
     id: 'COMPACT',
     label: 'Compacta',
-    description: '8 por folha · 14 × 3,25 cm · prateleiras e nichos',
+    description: '8 por folha · 14 × 3,5 cm · prateleiras e nichos',
     columns: 1,
     rows: 8,
     perPage: 8,
-    gapMm: 3,
-    marginMm: 8,
+    gapMm: 0.5,
+    marginMm: 6.75,
     widthMm: 140,
+    heightMm: 35,
   },
   MEDIUM: {
     id: 'MEDIUM',
