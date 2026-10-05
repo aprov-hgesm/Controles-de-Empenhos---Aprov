@@ -29,6 +29,7 @@ import {
   type WarehouseMaterial,
   type WarehouseMaterialUnit,
 } from './material';
+import { isWarehouseLocationBarcode } from './locationBarcode';
 import { validateWarehouseMaterial } from './material';
 import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
 import {
@@ -159,6 +160,9 @@ export async function saveWarehouseBarcodeAssociation(
   const barcode = normalizeWarehouseBarcode(input.barcode);
   const presentation = normalizeWarehouseMaterialUnit(input.presentation);
   if (!barcode) throw new Error('WAREHOUSE_INVALID_BARCODE');
+  if (isWarehouseLocationBarcode(barcode)) {
+    throw new Error('WAREHOUSE_BARCODE_RESERVED_LOCATION_NAMESPACE');
+  }
   if (!presentation) throw new Error('WAREHOUSE_BARCODE_INVALID_PRESENTATION');
 
   const id = await createWarehouseBarcodeId(scope.workspaceId, barcode);
@@ -282,6 +286,9 @@ export async function replaceWarehouseBarcodeAssociation(
   }
   const nextBarcode = normalizeWarehouseBarcode(nextBarcodeInput);
   if (!nextBarcode) throw new Error('WAREHOUSE_INVALID_BARCODE');
+  if (isWarehouseLocationBarcode(nextBarcode)) {
+    throw new Error('WAREHOUSE_BARCODE_RESERVED_LOCATION_NAMESPACE');
+  }
 
   const currentPath = warehouseDocumentPath(scope.workspaceId, 'barcodes', barcodeId);
 
