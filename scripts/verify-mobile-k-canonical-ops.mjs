@@ -12,6 +12,7 @@ for (const path of [
   'lib/warehouse/locationRepository.ts',
   'lib/warehouse/mobileTransfer.ts',
   'lib/warehouse/intakeState.ts',
+  'lib/warehouse/intakeRepository.ts',
   'lib/warehouse/intakeAllocationRepository.ts',
   'features/warehouse/mobile/WarehouseMobileTransfer.tsx',
   'features/warehouse/mobile/WarehouseMobileItemQuery.tsx',
@@ -94,6 +95,17 @@ const legacySiscofisUi = read(
 assert.match(legacySiscofisUi, /reconciliação legada/);
 assert.match(legacySiscofisUi, /Revisar reconciliação/);
 assert.doesNotMatch(legacySiscofisUi, /Saldo sem localização/);
+
+const legacyIntakeV1 = read('lib/warehouse/intakeRepository.ts');
+assert.match(
+  legacyIntakeV1,
+  /WAREHOUSE_LEGACY_INTAKE_RECONCILIATION_REQUIRED/
+);
+assert.doesNotMatch(legacyIntakeV1, /transferWarehouseStock\s*\(/);
+assert.doesNotMatch(
+  legacyIntakeV1,
+  /from:\s*\{ kind: 'UNASSIGNED' \}/
+);
 
 const intakeState = read('lib/warehouse/intakeState.ts');
 for (const marker of [
