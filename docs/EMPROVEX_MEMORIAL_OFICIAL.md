@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05 — MOBILE-K congelada em 8e3e9a4 após 5 commits úteis para corrigir contrato de domínio: não existe estado operacional normal 'material sem localização'. Quantidade ainda não tratada é PENDENTE DE ALOCAÇÃO no intake; estoque existente é obrigatoriamente localizado; consumo imediato não cria estoque/localização. UNASSIGNED fica restrito a compatibilidade/legado técnico até reconciliação controlada.**
+Última sincronização global: **2026-10-05 — MOBILE-K retomada com contrato logístico corrigido; Program Control abriu planejamento de uma onda paralela de auditoria sem sobreposição: RULES-COMPAT-01, SAAS-FINAL-AUDIT-01, WAREHOUSE-DATA-AUDIT-01 e RC-READINESS-01. Objetivo: acelerar certificação sem competir com o motor Mobile, preservar compatibilidade antiga das Firestore Rules e preparar o novo RC.**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -113,6 +113,8 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | MOBILE-K — Canonical Ops Engine | **PAUSADA CONTROLADAMENTE / RETOMADA COM CONTRATO CORRIGIDO** | branch `mobile-r1-k-canonical-ops-engine@8e3e9a490e6df8f5cf8d2108d7fb1fe9d0e13189`; 5 commits à frente da base `bd27da91...`; trabalho útil preservado; revisar assumptions de UNASSIGNED antes de continuar |
 | PAL-01 / lotes | **DIVERGÊNCIA REAL DETECTADA** | posição física 440 L com lotes ativos observados somando 540 L; não mascarar nem autocorrigir dados; arquitetura nova deve selecionar/conciliar operação sem criar segunda autoridade |
 | Estado logístico do material | **CONTRATO CANÔNICO CORRIGIDO** | usuário vê apenas: PENDENTE/PARCIALMENTE TRATADO no intake, ESTOQUE LOCALIZADO em LOCAL/SUBPOSIÇÃO, CONSUMIDO/TRATADO; `UNASSIGNED` não é categoria operacional normal de estoque |
+| Onda paralela de auditoria | **PLANEJADA / SEM SOBREPOSIÇÃO COM MOBILE-K** | RULES-COMPAT-01 + SAAS-FINAL-AUDIT-01 + WAREHOUSE-DATA-AUDIT-01 + RC-READINESS-01; workers não alteram o motor de Transferência/Saída da MOBILE-K |
+| Firestore Rules — contrato da onda | **CONGELADAS PARA OS WORKERS** | SaaS/RC/MOBILE-K usam `firestore.rules@bc91185f...` e `firestore.warehouse.rules@6e1f1050...`; qualquer necessidade de alterar Rules deve voltar ao Coordenador antes de edição |
 | HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
 | Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
 | Piloto real | **NÃO INICIADO** | somente após novo RC reconciliado/re-frozen e decisão posterior |
@@ -178,6 +180,98 @@ O próximo gate **não é produção** e também **não é continuar remendando 
 8. não mascarar o caso PAL-01: 440 L físicos vs lotes ativos observados somando 540 L é divergência de dados e precisa permanecer detectável;
 9. rodar regressão Desktop + Mobile e provar que Desktop não foi quebrado;
 10. só então retomar certificação física simplificada.
+
+### Onda paralela de auditoria — execução autorizada sem competição com MOBILE-K
+
+Enquanto a `MOBILE-K — Canonical Ops Engine` evolui em branch própria, o Program Control pode executar quatro frentes independentes. A finalidade é antecipar auditoria, evidência e release engineering sem criar dois owners para o mesmo contrato.
+
+| Frente | Base de trabalho | Ownership | Saída esperada | Proibição principal |
+| --- | --- | --- | --- | --- |
+| RULES-COMPAT-01 | RC estável `bd27da91...` | Firestore Rules, ALLOW/DENY, rollout/rollback e compatibilidade histórica | matriz de compatibilidade + testes/guards + recomendação | não alterar Rules nem relaxar permissão |
+| SAAS-FINAL-AUDIT-01 | integradora SaaS viva | completude SaaS R1: billing, onboarding, legal, lifecycle, sessão, recovery e documentação viva | matriz IMPLEMENTADO/TESTADO/PENDENTE/RISCO | não tocar Central/Mobile nem criar nova feature |
+| WAREHOUSE-DATA-AUDIT-01 | RC estável em leitura, comparando MOBILE-K somente como referência | integridade logística/legado: intake, UNASSIGNED, saldos, lotes, ledger | inventário CANONICAL/LEGACY/RECONCILIATION_REQUIRED/INCONSISTENT | nenhuma escrita/migração/correção de dados |
+| RC-READINESS-01 | RC estável `bd27da91...` | gates, CI, release manifest, rollback, performance e roteiro de certificação | checklist executável do novo RC | não alterar domínio, Rules ou produção |
+
+#### Regras de concorrência
+
+1. **Um worker = um ownership.**
+2. Nenhum dos quatro workers modifica `lib/warehouse/transfer.ts`, `mobileTransfer.ts`, `locationRepository.ts`, Saída/Transferência Mobile ou outro arquivo sob edição da MOBILE-K, salvo leitura/auditoria.
+3. Achado fora do escopo vira handoff ao Coordenador; não é corrigido oportunisticamente.
+4. Integração continua **semântica**, nunca merge/rebase cego entre branches.
+5. Nenhum worker publica app, Rules, restore ou altera `main`.
+6. Nenhum worker executa migração destrutiva ou corrige dados reais.
+7. Correção de blocker só começa após o Coordenador definir owner exclusivo.
+
+#### Guardrail obrigatório de Firestore Rules
+
+Estado de referência da onda:
+
+- arquivo em `main`: `firestore.rules@0d990b7de0b2e85ed55fe14ec0d2ce29b3635299`;
+- arquivo em `main`: `firestore.warehouse.rules@b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2`;
+- Rules RC publicadas e candidatas em SaaS/RC/MOBILE-K:
+  - principal: `bc91185f34bcdcb4437a4de1078d1089a09292ba`;
+  - Warehouse: `6e1f1050005314db4e17cb3136409abbddb0ee91`.
+
+Princípio:
+
+> **Rules são barreira de segurança, não ferramenta para fazer código novo passar.**
+
+Durante esta onda:
+
+- adaptar código/testes ao contrato certificado é preferível a mudar Rules;
+- se um fluxo legítimo exigir alteração de Rules, o worker deve classificar `RULES CHANGE REQUIRED — COORDENADOR REVIEW` e parar a edição desse contrato;
+- qualquer mudança futura de Rules invalida os hashes certificados e exige repetição de RULES-AUDIT-01, matriz ALLOW/DENY, emulator e compatibilidade de rollout/rollback;
+- preservar compatibilidade de `slot-1/slot-2` enquanto a app antiga puder coexistir com Rules RC;
+- preservar ausência histórica de `warehouseAccess` como compatibilidade enquanto houver tenants não materializados, salvo migração autorizada e comprovada;
+- preservar intake v1/v2 enquanto existirem dados/caminhos legados suportados;
+- não remover compatibilidade antiga apenas por limpeza arquitetural.
+
+#### Invariantes de segurança que os quatro workers devem respeitar
+
+- cross-workspace sempre DENY;
+- workspace/UG/UID/e-mail coerentes;
+- founder não ganha bypass operacional genérico em tenant externo;
+- externos permanecem com identidade/autorização exigidas pelo contrato vigente;
+- lifecycle `disabled` fecha acesso;
+- `movements` permanece ledger append-only;
+- `balances` e `locationBalances` não recebem write avulso fora do contrato transacional;
+- `lots` não vira autoridade de saldo;
+- barcode não concede autorização;
+- tenant não enumera sessões de outros usuários;
+- deletes físicos proibidos permanecem proibidos;
+- regras antigas de ALLOW legítimo e DENY de segurança devem ser testadas, não apenas inspecionadas.
+
+#### Princípios de eficiência preservados
+
+- leituras sob demanda;
+- queries bounded/indexadas;
+- realtime apenas para dado quente;
+- histórico sob demanda;
+- zero listener novo por conveniência;
+- cache somente quando segregado por workspace e com invalidação;
+- não reduzir segurança para economizar reads;
+- reutilizar fonte canônica existente em vez de criar projeção paralela;
+- Mobile fino não significa carregar toda a superfície Desktop.
+
+#### Barreira de sincronização
+
+Os quatro handoffs paralelos podem ser recebidos antes da MOBILE-K terminar, mas **nenhum deles declara novo RC**.
+
+A barreira de integração é:
+
+```text
+MOBILE-K concluída
++ RULES-COMPAT-01 concluída
++ SAAS-FINAL-AUDIT-01 concluída
++ WAREHOUSE-DATA-AUDIT-01 concluída
++ RC-READINESS-01 concluída
+→ Coordenador cruza os 5 handoffs
+→ corrige apenas blockers reais com owner exclusivo
+→ compõe novo RC
+→ repete Rules emulator + segurança + CI + performance
+→ Preview + teste físico curto
+→ RE-FREEZE
+```
 
 ### Regra de re-freeze
 
@@ -1042,8 +1136,8 @@ Estado funcional SaaS: **ENCERRADO PARA NOVAS FEATURES**.
 Sequência vigente:
 
 ```text
-HARDEN-A1/A2/C/D PASS
-+ HARDEN-B em acompanhamento temporal
+HARDEN-A1/A2/B/C/D PASS
+→ auditorias paralelas finais + conclusão MOBILE-K
 → composição do RC único SaaS+Mobile
 → CT-01 + Rules/package/CI
 → gates combinados
@@ -1066,7 +1160,7 @@ Nenhuma nova wave funcional SaaS está autorizada sem regressão concreta ou nov
 | --- | --- | --- |
 | HARDEN-A1 — jsPDF | **PASS / ENCERRADA** | jsPDF 4.2.1 + AutoTable 5.0.8; CRITICAL removido; 7/7 regressão PDF; acabamento visual fino = backlog não bloqueante |
 | HARDEN-A2 — Firebase/Firestore/gRPC | **PASS — RISCO RESIDUAL ACEITO TECNICAMENTE** | sem alteração de dependência/runtime/Rules; vetores analisados não alcançáveis pelos usos atuais |
-| HARDEN-B — Recovery | **PARCIAL / ESPERA CONTROLADA** | controles ativos; backup READY/verify/restore pendentes |
+| HARDEN-B — Recovery | **PASS / ENCERRADA** | backup READY nos dois bancos; `recovery:verify` PASS; restore isolado Warehouse PASS; integridade 13/13; target temporário ainda exige cleanup separado |
 | HARDEN-C — Health/Rules/Release | **PASS / ENCERRADA** | health/release/rollback preparados |
 | HARDEN-D — SaaS↔Mobile | **PASS / ENCERRADA** | sem conflito funcional material; CT-01 isolada para o RC |
 
@@ -1108,39 +1202,31 @@ A aceitação de risco não declara a biblioteca intrinsecamente segura; declara
 
 ## 21. HARDEN-B — recovery
 
-Estado:
+Estado vigente:
 
-**PARCIAL — dependência temporal legítima**
+**PASS / ENCERRADA**
 
-Proteções confirmadas nos dois bancos:
+Evidências consolidadas:
 
-- PITR: ativo;
-- delete protection: ativa;
-- schedule diário de backup: ativo;
-- retenção: **14 semanas**;
-- tooling `recovery:status` e `recovery:verify` disponível.
+- backup nativo `READY`: PASS nos dois bancos;
+- `recovery:verify`: PASS;
+- restore real isolado do `emprovex-warehouse`: PASS;
+- validação de integridade: **13/13 coleções**;
+- target temporário: `emprovex-restore-warehouse-2026-10-04`;
+- delete protection do target temporário: **ATIVA**.
 
-Pendências:
+Pendência separada, não bloqueante do RC:
 
-1. primeiro backup nativo `READY` no banco principal;
-2. primeiro backup nativo `READY` no `emprovex-warehouse`;
-3. capturar resource/location/snapshot/expiration;
-4. executar `recovery:verify`;
-5. preparar restore plan isolado;
-6. restore real em banco novo/isolado;
-7. validar dados, IAM, Rules, TTL e isolamento.
+- cleanup do target temporário.
 
-Não repetir `recovery:apply` enquanto controles permanecerem ativos.
-
-Restore real continua ação protegida e requer autorização explícita quando chegar o momento.
+Esse cleanup exige autorização específica porque envolve desligar delete protection e apagar o banco temporário. Não deve ser executado por worker de auditoria/release.
 
 ### Relação HARDEN-B ↔ RC
 
-- composição do RC: **não bloqueada**;
-- Preview HTTPS sem writes críticos: **não bloqueado por B parcial**;
-- produção controlada com writes reais: preferir fortemente `backup READY` nos dois bancos + `recovery:verify`;
-- se houver promoção antes disso, o Fundador deve aceitar explicitamente o risco residual;
-- abertura comercial final exige prova de recuperação adequada, incluindo restore isolado real conforme plano SaaS.
+- recovery não é mais blocker técnico do RC;
+- nenhum worker deve repetir `recovery:apply` ou executar novo restore sem necessidade/autorização;
+- a evidência existente deve ser reutilizada;
+- eventual mudança futura de estratégia de backup/restore reabre o gate correspondente.
 
 ## 22. Health, Rules, observabilidade e release
 
@@ -1176,26 +1262,32 @@ No ambiente publicado, validar:
 
 Uptime/alerta externo não deve ser declarado PASS sem evidência real do ambiente publicado.
 
-### 22.3 Rules candidatas
+### 22.3 Rules vigentes do RC e compatibilidade com `main`
 
-SaaS e Mobile possuem Rules candidatas reconciliadas entre si.
+SaaS, RC e MOBILE-K possuem os mesmos arquivos de Rules do candidato já publicado de forma autorizada.
 
-Blobs auditados:
+Blobs vigentes do RC:
 
-- candidata `firestore.rules`: `57a1394c921b2ab2c15537fbfc4aaea17515b28a`;
-- candidata `firestore.warehouse.rules`: `6e1f1050005314db4e17cb3136409abbddb0ee91`;
-- produção atual `firestore.rules`: `0d990b7de0b2e85ed55fe14ec0d2ce29b3635299`;
-- produção atual `firestore.warehouse.rules`: `b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2`.
+- `firestore.rules`: `bc91185f34bcdcb4437a4de1078d1089a09292ba`;
+- `firestore.warehouse.rules`: `6e1f1050005314db4e17cb3136409abbddb0ee91`.
 
-As candidatas diferem de `main`.
+Arquivos ainda presentes em `main`/baseline R3:
 
-Portanto publicação exige:
+- `firestore.rules@0d990b7de0b2e85ed55fe14ec0d2ce29b3635299`;
+- `firestore.warehouse.rules@b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2`.
 
-1. registrar conteúdo/hash das Rules atuais;
-2. registrar conteúdo/hash das Rules RC;
-3. executar testes multi-tenant/workspace externo/legal/billing/Central;
-4. preparar comando de republicação das Rules anteriores;
-5. não confundir rollback Vercel com rollback de Rules.
+Isso é intencional: o app em produção continua antigo, enquanto as Rules RC já foram publicadas primeiro por compatibilidade de rollout.
+
+Contrato de rollout já certificado:
+
+- app antiga + Rules antigas = baseline histórica;
+- app antiga + Rules RC = **compatível**;
+- app RC + Rules RC = alvo;
+- app RC + Rules antigas = **não compatível** com leases dinâmicos.
+
+Rollback seguro do app pode manter Rules RC. Rollback das Rules para a baseline antiga só pode ocorrer depois do rollback da aplicação.
+
+Nenhuma das quatro frentes paralelas está autorizada a alterar esses arquivos de Rules. Se surgir necessidade real, abrir revisão coordenada e repetir os gates afetados.
 
 ### 22.4 RULES-AUDIT-01 — auditoria integral de compatibilidade das Firestore Rules
 
