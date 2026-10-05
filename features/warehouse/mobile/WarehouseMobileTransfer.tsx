@@ -417,7 +417,7 @@ export function WarehouseMobileTransfer() {
         </Link>
         <h1 className="mt-4 text-2xl font-black">Transferir material</h1>
         <p className="mt-2 text-sm font-semibold text-blue-100">
-          Origem física → material → quantidade → destino físico → confirmar.
+          Movimento interno: origem física → material → quantidade → destino físico → confirmar.
         </p>
       </header>
 
