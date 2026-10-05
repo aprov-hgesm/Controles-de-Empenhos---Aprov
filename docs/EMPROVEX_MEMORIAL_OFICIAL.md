@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05 — MOBILE-K retomada com contrato logístico corrigido; Program Control abriu planejamento de uma onda paralela de auditoria sem sobreposição: RULES-COMPAT-01, SAAS-FINAL-AUDIT-01, WAREHOUSE-DATA-AUDIT-01 e RC-READINESS-01. Objetivo: acelerar certificação sem competir com o motor Mobile, preservar compatibilidade antiga das Firestore Rules e preparar o novo RC.**
+Última sincronização global: **2026-10-05 — MOBILE-K concluída pelo worker em `9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0` e aceita pelo Coordenador como APTO PARA REVISÃO / CANDIDATA À INTEGRAÇÃO. PR #253 permanece OPEN/DRAFT/MERGEABLE, não mergeado; 22 commits à frente / 0 atrás, 26 arquivos; Application CI, Core Protection, Recovery guardrails, Legal Validation e Vercel Preview verdes; Firestore Rules inalteradas. Onda paralela RULES-COMPAT-01, SAAS-FINAL-AUDIT-01, WAREHOUSE-DATA-AUDIT-01 e RC-READINESS-01 segue como barreira antes da composição do novo RC.**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -110,7 +110,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | Central Móvel — operações | **7 FLUXOS DISTINTOS / PREVIEW VERDE** | Alocar Recebimento; Transferir Material; Consultar Localização; Consultar Item; Inventário; Saída de Material; Conferir posição |
 | Consultar Item | **IMPLEMENTADA / READ-ONLY** | barcode do item → saldo agregado → locais/subposições + quantidades + lotes; reutiliza o mesmo read model da Saída |
 | Saída vs Transferência | **SEMÂNTICA SEPARADA / MOTOR A UNIFICAR** | intenção continua distinta na UX, mas regras de saldo/lote/validade/idempotência devem vir de um único motor canônico compartilhado Desktop↔Mobile |
-| MOBILE-K — Canonical Ops Engine | **PAUSADA CONTROLADAMENTE / RETOMADA COM CONTRATO CORRIGIDO** | branch `mobile-r1-k-canonical-ops-engine@8e3e9a490e6df8f5cf8d2108d7fb1fe9d0e13189`; 5 commits à frente da base `bd27da91...`; trabalho útil preservado; revisar assumptions de UNASSIGNED antes de continuar |
+| MOBILE-K — Canonical Ops Engine | **CONCLUÍDA PELO WORKER / APTO PARA REVISÃO** | `mobile-r1-k-canonical-ops-engine@9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0`; PR #253 OPEN/DRAFT/MERGEABLE, não mergeado; 22 commits à frente / 0 atrás; 26 arquivos; gates completos verdes; Rules inalteradas |
 | PAL-01 / lotes | **DIVERGÊNCIA REAL DETECTADA** | posição física 440 L com lotes ativos observados somando 540 L; não mascarar nem autocorrigir dados; arquitetura nova deve selecionar/conciliar operação sem criar segunda autoridade |
 | Estado logístico do material | **CONTRATO CANÔNICO CORRIGIDO** | usuário vê apenas: PENDENTE/PARCIALMENTE TRATADO no intake, ESTOQUE LOCALIZADO em LOCAL/SUBPOSIÇÃO, CONSUMIDO/TRATADO; `UNASSIGNED` não é categoria operacional normal de estoque |
 | Onda paralela de auditoria | **PLANEJADA / SEM SOBREPOSIÇÃO COM MOBILE-K** | RULES-COMPAT-01 + SAAS-FINAL-AUDIT-01 + WAREHOUSE-DATA-AUDIT-01 + RC-READINESS-01; workers não alteram o motor de Transferência/Saída da MOBILE-K |
@@ -168,18 +168,18 @@ RC original 54e60c... — FROZEN histórico
 
 O próximo gate **não é produção** e também **não é continuar remendando avisos da UI móvel um a um**.
 
-É concluir a frente **MOBILE-K — Canonical Ops Engine**:
+A implementação da **MOBILE-K — Canonical Ops Engine** foi concluída pelo worker e está em revisão coordenada. O gate imediato agora é receber e cruzar os quatro handoffs paralelos antes de qualquer integração do PR #253:
 
-1. primeiro revisar o contrato de estado logístico: Transferência/Saída/Inventário/consulta física só operam estoque localizado; intake pendente não é estoque físico e `UNASSIGNED` não é estado operacional normal;
-2. mapear quais operações Desktop já possuem serviços transacionais oficiais e quais wrappers Mobile duplicam regra;
-3. preservar as 7 intenções móveis e as rotas atuais;
-4. tornar Mobile camada fina de scanner/resolução/UX;
-5. fazer Saída móvel reutilizar o caminho canônico de Saída/Withdrawal/OUTBOUND sempre que semanticamente equivalente;
-6. fazer Transferência móvel utilizar um serviço canônico compartilhável para transferência física, sem lógica de lote exclusiva da UI;
-7. centralizar seleção de lote/FEFO, fracionamento quando suportado, validação de saldo, concorrência e idempotência;
-8. não mascarar o caso PAL-01: 440 L físicos vs lotes ativos observados somando 540 L é divergência de dados e precisa permanecer detectável;
-9. rodar regressão Desktop + Mobile e provar que Desktop não foi quebrado;
-10. só então retomar certificação física simplificada.
+1. RULES-COMPAT-01 — confirmar compatibilidade antiga + RC e ALLOW/DENY;
+2. SAAS-FINAL-AUDIT-01 — confirmar completude SaaS R1;
+3. WAREHOUSE-DATA-AUDIT-01 — classificar legado/integridade sem escrever dados;
+4. RC-READINESS-01 — fechar matriz de gates, rollback e re-freeze;
+5. revisar semanticamente o delta MOBILE-K contra esses quatro relatórios;
+6. corrigir apenas blockers reais com owner exclusivo;
+7. integrar semanticamente o resultado na linha RC;
+8. repetir gates afetados no SHA final;
+9. executar teste físico curto das operações críticas;
+10. declarar novo RC SHA e RE-FREEZE somente depois dessas barreiras.
 
 ### Onda paralela de auditoria — execução autorizada sem competição com MOBILE-K
 
@@ -1953,15 +1953,25 @@ Impacto imediato sobre MOBILE-K:
 - Consultar Item deve distinguir **estoque físico localizado** de **pendência de intake**; não somar ambos como um único “saldo disponível”;
 - legado não reconciliado deve aparecer como necessidade de reconciliação, não como terceira categoria de estoque.
 
-Branch worker congelada para retomada:
+Branch worker concluída:
 
-`mobile-r1-k-canonical-ops-engine@8e3e9a490e6df8f5cf8d2108d7fb1fe9d0e13189`
+`mobile-r1-k-canonical-ops-engine@9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0`
 
 Base original preservada:
 
 `bd27da91da92642d5a5fea08f7020c6cea658a62`
 
-Commits úteis preservados: `efafd2b`, `a00b94d`, `a9401add`, `17c2704b`, `8e3e9a4`.
+Estado final do worker:
+
+- 22 commits à frente / 0 atrás;
+- PR #253 OPEN / DRAFT / MERGEABLE / não mergeado;
+- Application CI #1044: SUCCESS;
+- Core Protection #331: SUCCESS;
+- Recovery guardrails #654: SUCCESS;
+- Legal Validation #78: SUCCESS;
+- Vercel Preview: SUCCESS;
+- Firestore Rules: sem delta;
+- produção: inalterada.
 
 A branch foi criada exatamente no HEAD RC `bd27da91...` e agora está congelada em `8e3e9a4`, 5 commits à frente. Retomar **a partir de `8e3e9a4`**, sem reset/rebase e sem incorporar `main`, integradoras antigas ou mudanças externas por merge.
 
