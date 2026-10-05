@@ -174,11 +174,6 @@ export function WarehouseMobileItemQuery() {
       .sort((left, right) => left.label.localeCompare(right.label));
   }, [state]);
 
-  const distributedQuantity = useMemo(
-    () => rows.reduce((total, row) => total + row.balance.quantity, 0),
-    [rows]
-  );
-
   const lotOverages = useMemo(
     () =>
       rows.filter(
