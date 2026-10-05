@@ -173,7 +173,7 @@ test('projeção de leitura ignora metadado legado sem alterar campos canônicos
   assert.equal('legacySource' in projected, false);
 });
 
-test('projeção de material ignora metadado legado na raiz e em unit/conversions', () => {
+test('projeção de material ignora metadado legado e normaliza listas antigas ausentes', () => {
   const coffee = material('1', 'Café');
   const projected = model.warehouseMobileCanonicalMaterialReadInput(
     coffee.id,
@@ -199,6 +199,20 @@ test('projeção de material ignora metadado legado na raiz e em unit/conversion
       factorToBaseUnit: 12,
     },
   ]);
+
+  const oldMaterial = model.warehouseMobileCanonicalMaterialReadInput(
+    coffee.id,
+    {
+      schemaVersion: coffee.schemaVersion,
+      workspaceId: coffee.workspaceId,
+      ug: coffee.ug,
+      description: coffee.description,
+      unit: coffee.unit,
+      status: coffee.status,
+    }
+  );
+  assert.deepEqual(oldMaterial.aliases, []);
+  assert.deepEqual(oldMaterial.conversions, []);
 });
 
 test('projeção de lote ignora metadado legado na raiz e na origem', () => {
