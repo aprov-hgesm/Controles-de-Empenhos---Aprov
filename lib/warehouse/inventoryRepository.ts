@@ -46,6 +46,7 @@ import {
 import { listWarehouseBalances } from './ledgerRepository';
 import { listWarehouseMaterials } from './materialRepository';
 import { validateWarehouseMaterial, type WarehouseMaterial } from './material';
+import { warehouseCanonicalMaterialReadInput } from './readCompatibility';
 import {
   calculateWarehouseInventoryDifference,
   createWarehouseInventoryId,
@@ -237,7 +238,10 @@ function parseBalance(
 }
 
 function parseMaterial(workspaceId: string, id: string, data: Record<string, unknown>): WarehouseMaterial {
-  const result = validateWarehouseMaterial({ ...data, id }, { expectedWorkspaceId: workspaceId });
+  const result = validateWarehouseMaterial(
+    warehouseCanonicalMaterialReadInput(id, data),
+    { expectedWorkspaceId: workspaceId }
+  );
   if (!result.ok) throw new Error('WAREHOUSE_INVALID_MATERIAL');
   return result.data;
 }
