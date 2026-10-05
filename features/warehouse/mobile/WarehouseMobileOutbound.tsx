@@ -491,6 +491,7 @@ export function WarehouseMobileOutbound() {
     }
   }, [
     destination,
+    partyReady,
     pickedBy,
     position,
     preparation,
