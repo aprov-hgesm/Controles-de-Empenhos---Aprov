@@ -8,6 +8,12 @@ import {
 import type { WarehouseLot } from './lot';
 
 export const WAREHOUSE_MOBILE_TRANSFER_MAX_RELOCATE_LOTS = 24;
+const QUANTITY_EPSILON = 0.000001;
+
+export interface WarehouseMobileTransferLotAllocation {
+  lotId: string;
+  quantity: number;
+}
 
 export function classifyWarehouseMobileTransferProductScan(
   value: string
@@ -22,13 +28,15 @@ export type WarehouseMobileTransferPreparationError =
   | 'INVALID_AVAILABLE_STOCK'
   | 'INSUFFICIENT_STOCK'
   | 'TOO_MANY_ACTIVE_LOTS'
-  | 'PARTIAL_WITH_ACTIVE_LOTS_UNSUPPORTED';
+  | 'LOT_ATTRIBUTION_EXCEEDS_STOCK';
 
 export type WarehouseMobileTransferQuantityResult =
   | {
       ok: true;
       quantity: number;
       relocateLotIds: string[];
+      lotAllocations: WarehouseMobileTransferLotAllocation[];
+      unattributedQuantity: number;
     }
   | {
       ok: false;
@@ -40,6 +48,8 @@ export type WarehouseMobileTransferPreparationResult =
       ok: true;
       quantity: number;
       relocateLotIds: string[];
+      lotAllocations: WarehouseMobileTransferLotAllocation[];
+      unattributedQuantity: number;
     }
   | {
       ok: false;
@@ -63,6 +73,19 @@ function activeLotsAtSource(input: {
     && lot.quantity > 0
     && warehouseStockPositionsEqual(lot.position, input.source)
   );
+}
+
+function sortLotsForTransfer(lots: WarehouseLot[]): WarehouseLot[] {
+  return [...lots].sort((left, right) => {
+    const leftExpiry = left.expiresOn || '9999-12-31';
+    const rightExpiry = right.expiresOn || '9999-12-31';
+    const expiryCompare = leftExpiry.localeCompare(rightExpiry);
+    if (expiryCompare !== 0) return expiryCompare;
+
+    const codeCompare = left.code.localeCompare(right.code, 'pt-BR');
+    if (codeCompare !== 0) return codeCompare;
+    return left.id.localeCompare(right.id);
+  });
 }
 
 export function validateWarehouseMobileTransferQuantity(input: {
@@ -95,16 +118,53 @@ export function validateWarehouseMobileTransferQuantity(input: {
     return { ok: false, error: 'TOO_MANY_ACTIVE_LOTS' };
   }
 
-  if (sourceLots.length > 0 && quantity !== availableQuantity) {
-    return { ok: false, error: 'PARTIAL_WITH_ACTIVE_LOTS_UNSUPPORTED' };
+  const lotQuantity = normalizeWarehouseLocationQuantity(
+    sourceLots.reduce((total, lot) => total + lot.quantity, 0)
+  );
+  if (lotQuantity === null) {
+    return { ok: false, error: 'INVALID_AVAILABLE_STOCK' };
+  }
+  if (lotQuantity > availableQuantity + QUANTITY_EPSILON) {
+    return { ok: false, error: 'LOT_ATTRIBUTION_EXCEEDS_STOCK' };
+  }
+
+  // Quantidade física sem atribuição de lote permanece sem inventar
+  // procedência. Somente a parcela que precisa de lote é fracionada.
+  const unattributedAvailable = Math.max(0, availableQuantity - lotQuantity);
+  const unattributedQuantity = Math.min(quantity, unattributedAvailable);
+  let remainingLotQuantity = normalizeWarehouseLocationQuantity(
+    quantity - unattributedQuantity
+  ) ?? 0;
+
+  const lotAllocations: WarehouseMobileTransferLotAllocation[] = [];
+  const relocateLotIds: string[] = [];
+
+  for (const lot of sortLotsForTransfer(sourceLots)) {
+    if (remainingLotQuantity <= QUANTITY_EPSILON) break;
+    const allocation = normalizeWarehouseLocationQuantity(
+      Math.min(lot.quantity, remainingLotQuantity)
+    );
+    if (allocation === null || allocation <= 0) continue;
+
+    lotAllocations.push({ lotId: lot.id, quantity: allocation });
+    if (Math.abs(allocation - lot.quantity) <= QUANTITY_EPSILON) {
+      relocateLotIds.push(lot.id);
+    }
+    remainingLotQuantity = normalizeWarehouseLocationQuantity(
+      remainingLotQuantity - allocation
+    ) ?? 0;
+  }
+
+  if (remainingLotQuantity > QUANTITY_EPSILON) {
+    return { ok: false, error: 'INVALID_AVAILABLE_STOCK' };
   }
 
   return {
     ok: true,
     quantity,
-    relocateLotIds: quantity === availableQuantity
-      ? Array.from(new Set(sourceLots.map((lot) => lot.id)))
-      : [],
+    relocateLotIds,
+    lotAllocations,
+    unattributedQuantity,
   };
 }
 
