@@ -46,12 +46,21 @@ export interface WarehouseMobileOutboundPositionLabel {
   label: string;
 }
 
+export interface WarehouseMobileItemAvailabilityReconciliation {
+  activePhysicalQuantity: number;
+  unassignedQuantity: number;
+  inactivePositionQuantity: number;
+  trackedQuantity: number;
+  differenceQuantity: number;
+}
+
 export interface WarehouseMobileItemAvailability {
   material: WarehouseMaterial;
   balance: WarehouseBalance;
   locationBalances: WarehouseLocationBalance[];
   lots: WarehouseLot[];
   positionLabels: WarehouseMobileOutboundPositionLabel[];
+  reconciliation: WarehouseMobileItemAvailabilityReconciliation;
   metrics: {
     documentsRead: number;
     listeners: 0;
@@ -309,6 +318,10 @@ export async function loadWarehouseMobileItemAvailability(
 
     const activeBalances: WarehouseLocationBalance[] = [];
     const positionLabels: WarehouseMobileOutboundPositionLabel[] = [];
+    const unassignedQuantity = parsedLocationBalances
+      .filter((item) => item.position.kind === 'UNASSIGNED' && item.quantity > 0)
+      .reduce((total, item) => total + item.quantity, 0);
+    let inactivePositionQuantity = 0;
 
     positivePhysical.forEach((item) => {
       if (item.position.kind === 'UNASSIGNED') return;
@@ -323,7 +336,10 @@ export async function loadWarehouseMobileItemAvailability(
       if (local.kind !== 'LOCAL' || local.depotId !== depot.id) {
         throw new Error('WAREHOUSE_MOBILE_OUTBOUND_POSITION_HIERARCHY_INVALID');
       }
-      if (depot.status !== 'active' || local.status !== 'active') return;
+      if (depot.status !== 'active' || local.status !== 'active') {
+        inactivePositionQuantity += item.quantity;
+        return;
+      }
 
       let label = depot.code + ' · ' + local.code;
       if (item.position.kind === 'SUBPOSITION') {
@@ -344,7 +360,10 @@ export async function loadWarehouseMobileItemAvailability(
         ) {
           throw new Error('WAREHOUSE_MOBILE_OUTBOUND_POSITION_HIERARCHY_INVALID');
         }
-        if (sub.status !== 'active') return;
+        if (sub.status !== 'active') {
+          inactivePositionQuantity += item.quantity;
+          return;
+        }
         label += ' · ' + sub.code;
       }
 
@@ -355,12 +374,27 @@ export async function loadWarehouseMobileItemAvailability(
       });
     });
 
+    const activePhysicalQuantity = activeBalances.reduce(
+      (total, item) => total + item.quantity,
+      0
+    );
+    const trackedQuantity =
+      activePhysicalQuantity + unassignedQuantity + inactivePositionQuantity;
+    const differenceQuantity = balance.quantity - trackedQuantity;
+
     return {
       material,
       balance,
       locationBalances: activeBalances,
       lots,
       positionLabels,
+      reconciliation: {
+        activePhysicalQuantity,
+        unassignedQuantity,
+        inactivePositionQuantity,
+        trackedQuantity,
+        differenceQuantity,
+      },
       metrics: {
         documentsRead: initialReads + depotDocuments.reads + locationDocuments.reads,
         listeners: 0,
