@@ -58,12 +58,13 @@ function resolutionErrorMessage(error: string): string {
 
 function physicalQueryErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
+  const diagnostic = message.trim() || 'UNKNOWN_ERROR';
 
   if (
     message.includes('WAREHOUSE_MOBILE_PHYSICAL_QUERY_BALANCE_LIMIT')
     || message.includes('WAREHOUSE_MOBILE_PHYSICAL_QUERY_LOT_LIMIT')
   ) {
-    return 'A posição possui registros acima do limite seguro desta consulta móvel. Use a Central desktop para revisar o conteúdo completo.';
+    return 'A posição possui registros acima do limite seguro desta consulta móvel. Diagnóstico: ' + diagnostic;
   }
 
   if (
@@ -71,7 +72,7 @@ function physicalQueryErrorMessage(error: unknown): string {
     || message.includes('WORKSPACE_MISMATCH')
     || message.includes('UG_MISMATCH')
   ) {
-    return 'A consulta foi bloqueada porque o workspace/UG atual não corresponde aos dados solicitados.';
+    return 'A consulta foi bloqueada porque o workspace/UG atual não corresponde aos dados solicitados. Diagnóstico: ' + diagnostic;
   }
 
   if (
@@ -79,10 +80,10 @@ function physicalQueryErrorMessage(error: unknown): string {
     || message.includes('WAREHOUSE_MOBILE_PHYSICAL_QUERY_MATERIAL_NOT_FOUND')
     || message.includes('WAREHOUSE_MOBILE_PHYSICAL_QUERY_DUPLICATE_BALANCE')
   ) {
-    return 'A distribuição física retornou dados inconsistentes e não será apresentada parcialmente. Revise o cadastro pela Central desktop.';
+    return 'A distribuição física retornou dados inconsistentes. Diagnóstico: ' + diagnostic;
   }
 
-  return 'Falha ao consultar o conteúdo esperado. Verifique a conexão e o acesso à Central e tente novamente.';
+  return 'Falha ao consultar o conteúdo esperado. Diagnóstico: ' + diagnostic;
 }
 
 export function WarehouseMobileLocationFoundationCheck() {
