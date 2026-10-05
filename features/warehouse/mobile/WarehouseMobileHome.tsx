@@ -1,13 +1,12 @@
 import {
   Boxes,
   ClipboardPlus,
-  LayoutDashboard,
+  MapPin,
+  PackageSearch,
   ScanLine,
   Warehouse,
 } from 'lucide-react';
 import Link from 'next/link';
-
-import { WarehouseMobileLocationFoundationCheck } from './WarehouseMobileLocationFoundationCheck';
 
 const MOBILE_CAPABILITIES = [
   {
@@ -24,9 +23,15 @@ const MOBILE_CAPABILITIES = [
   },
   {
     label: 'Consultar localização',
-    description: 'Leia a posição e veja o conteúdo físico.',
-    Icon: LayoutDashboard,
-    href: '#consulta-localizacao',
+    description: 'Leia um local e veja o que existe nele.',
+    Icon: MapPin,
+    href: '/central-mobile/consultar-localizacao',
+  },
+  {
+    label: 'Consultar item',
+    description: 'Leia o item e veja locais e quantidades.',
+    Icon: PackageSearch,
+    href: '/central-mobile/consultar-item',
   },
   {
     label: 'Inventário',
@@ -120,12 +125,8 @@ export function WarehouseMobileHome() {
         </div>
       </section>
 
-      <div id="consulta-localizacao" className="scroll-mt-24">
-        <WarehouseMobileLocationFoundationCheck />
-      </div>
-
       <p className="px-2 text-center text-[11px] font-semibold leading-5 text-slate-500">
-        Alocação, transferência, inventário e saída reutilizam contratos oficiais. Consulta física e conferência permanecem read-only.
+        Cada operação tem uma única responsabilidade. Consultas e conferência são somente leitura; alocação, transferência, inventário e saída só movimentam dados em suas confirmações próprias.
       </p>
     </div>
   );

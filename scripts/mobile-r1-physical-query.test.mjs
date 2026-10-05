@@ -156,6 +156,82 @@ test('resolver canônico recusa posição inexistente', async () => {
   assert.deepEqual(resolved, { ok: false, error: 'ENTITY_NOT_FOUND' });
 });
 
+test('projeção de leitura ignora metadado legado sem alterar campos canônicos', () => {
+  const coffee = material('1', 'Café');
+  const canonical = balance(coffee.id, 8);
+  const projected = model.warehouseMobileCanonicalBalanceReadInput(
+    canonical.id,
+    {
+      ...canonical,
+      legacyTimestamp: '2026-01-01T00:00:00Z',
+      legacySource: 'migration-v0',
+    }
+  );
+
+  assert.deepEqual(projected, canonical);
+  assert.equal('legacyTimestamp' in projected, false);
+  assert.equal('legacySource' in projected, false);
+});
+
+test('projeção de material ignora metadado legado e normaliza listas antigas ausentes', () => {
+  const coffee = material('1', 'Café');
+  const projected = model.warehouseMobileCanonicalMaterialReadInput(
+    coffee.id,
+    {
+      ...coffee,
+      legacySource: 'migration-v0',
+      unit: { ...coffee.unit, legacyLabel: 'UND' },
+      conversions: [
+        {
+          presentation: { code: 'box', label: 'Caixa', legacy: true },
+          factorToBaseUnit: 12,
+          legacyConversion: true,
+        },
+      ],
+    }
+  );
+
+  assert.equal(projected.legacySource, undefined);
+  assert.deepEqual(projected.unit, coffee.unit);
+  assert.deepEqual(projected.conversions, [
+    {
+      presentation: { code: 'box', label: 'Caixa' },
+      factorToBaseUnit: 12,
+    },
+  ]);
+
+  const oldMaterial = model.warehouseMobileCanonicalMaterialReadInput(
+    coffee.id,
+    {
+      schemaVersion: coffee.schemaVersion,
+      workspaceId: coffee.workspaceId,
+      ug: coffee.ug,
+      description: coffee.description,
+      unit: coffee.unit,
+      status: coffee.status,
+    }
+  );
+  assert.deepEqual(oldMaterial.aliases, []);
+  assert.deepEqual(oldMaterial.conversions, []);
+});
+
+test('projeção de lote ignora metadado legado na raiz e na origem', () => {
+  const coffee = material('1', 'Café');
+  const canonical = lot(coffee.id);
+  const projected = model.warehouseMobileCanonicalLotReadInput(
+    canonical.id,
+    {
+      ...canonical,
+      legacyTimestamp: '2026-01-01T00:00:00Z',
+      origin: { ...canonical.origin, legacyOrigin: 'old-import' },
+    }
+  );
+
+  assert.equal(projected.legacyTimestamp, undefined);
+  assert.deepEqual(projected.origin, canonical.origin);
+  assert.deepEqual(projected, canonical);
+});
+
 test('posição vazia produz resultado vazio sem inventar material', () => {
   const rows = model.buildWarehouseMobilePhysicalQueryItems({
     workspaceId,

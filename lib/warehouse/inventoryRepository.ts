@@ -47,6 +47,10 @@ import { listWarehouseBalances } from './ledgerRepository';
 import { listWarehouseMaterials } from './materialRepository';
 import { validateWarehouseMaterial, type WarehouseMaterial } from './material';
 import {
+  warehouseCanonicalLocationBalanceReadInput,
+  warehouseCanonicalMaterialReadInput,
+} from './readCompatibility';
+import {
   calculateWarehouseInventoryDifference,
   createWarehouseInventoryId,
   createWarehouseInventoryItemId,
@@ -237,7 +241,10 @@ function parseBalance(
 }
 
 function parseMaterial(workspaceId: string, id: string, data: Record<string, unknown>): WarehouseMaterial {
-  const result = validateWarehouseMaterial({ ...data, id }, { expectedWorkspaceId: workspaceId });
+  const result = validateWarehouseMaterial(
+    warehouseCanonicalMaterialReadInput(id, data),
+    { expectedWorkspaceId: workspaceId }
+  );
   if (!result.ok) throw new Error('WAREHOUSE_INVALID_MATERIAL');
   return result.data;
 }
@@ -248,17 +255,7 @@ function parseLocationBalance(
   data: Record<string, unknown>
 ): WarehouseLocationBalance {
   const result = validateWarehouseLocationBalance(
-    {
-      schemaVersion: data.schemaVersion,
-      id,
-      workspaceId: data.workspaceId,
-      ug: data.ug,
-      materialId: data.materialId,
-      position: data.position,
-      quantity: data.quantity,
-      revision: data.revision,
-      lastMovementId: data.lastMovementId,
-    },
+    warehouseCanonicalLocationBalanceReadInput(id, data),
     { expectedWorkspaceId: workspaceId }
   );
   if (!result.ok) throw new Error('WAREHOUSE_INVALID_LOCATION_BALANCE');

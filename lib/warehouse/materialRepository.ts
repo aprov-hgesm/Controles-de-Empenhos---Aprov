@@ -12,6 +12,7 @@ import {
   warehouseDomainPath,
   warehouseDocumentPath,
 } from './namespace';
+import { warehouseCanonicalMaterialReadInput } from './readCompatibility';
 
 function validateForWorkspace(
   workspaceId: string,
@@ -44,10 +45,13 @@ export async function listWarehouseMaterials(
     );
     recordWarehouseDocumentReads(workspaceId, snapshot.size);
     return snapshot.docs.map((item) =>
-      validateForWorkspace(workspaceId, {
-        ...item.data(),
-        id: item.id,
-      })
+      validateForWorkspace(
+        workspaceId,
+        warehouseCanonicalMaterialReadInput(
+          item.id,
+          item.data() as Record<string, unknown>
+        )
+      )
     );
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
@@ -65,10 +69,13 @@ export async function getWarehouseMaterial(
     const snapshot = await getDoc(doc(db, path));
     if (!snapshot.exists()) return null;
 
-    return validateForWorkspace(workspaceId, {
-      ...snapshot.data(),
-      id: snapshot.id,
-    });
+    return validateForWorkspace(
+      workspaceId,
+      warehouseCanonicalMaterialReadInput(
+        snapshot.id,
+        snapshot.data() as Record<string, unknown>
+      )
+    );
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, path);
     return null;

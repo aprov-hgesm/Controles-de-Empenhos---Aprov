@@ -43,6 +43,12 @@ import {
   type WarehouseExpressOutboundPlan,
 } from './outbound';
 import { warehouseDocumentPath } from './namespace';
+import {
+  warehouseCanonicalBarcodeReadInput,
+  warehouseCanonicalLocationBalanceReadInput,
+  warehouseCanonicalLotReadInput,
+  warehouseCanonicalMaterialReadInput,
+} from './readCompatibility';
 
 export interface ApplyWarehouseExpressOutboundInput {
   materialId: string;
@@ -77,7 +83,7 @@ function currentScope(workspaceId: string): { workspaceId: string; ug: string; u
 
 function parseMaterial(workspaceId: string, id: string, data: Record<string, unknown>): WarehouseMaterial {
   const result = validateWarehouseMaterial(
-    { ...data, id },
+    warehouseCanonicalMaterialReadInput(id, data),
     { expectedWorkspaceId: workspaceId }
   );
   if (!result.ok) throw new Error('WAREHOUSE_INVALID_MATERIAL');
@@ -111,17 +117,7 @@ function parseLocationBalance(
   data: Record<string, unknown>
 ): WarehouseLocationBalance {
   const result = validateWarehouseLocationBalance(
-    {
-      schemaVersion: data.schemaVersion,
-      id,
-      workspaceId: data.workspaceId,
-      ug: data.ug,
-      materialId: data.materialId,
-      position: data.position,
-      quantity: data.quantity,
-      revision: data.revision,
-      lastMovementId: data.lastMovementId,
-    },
+    warehouseCanonicalLocationBalanceReadInput(id, data),
     { expectedWorkspaceId: workspaceId }
   );
   if (!result.ok) throw new Error('WAREHOUSE_INVALID_LOCATION_BALANCE');
@@ -159,21 +155,7 @@ function parseLot(
   data: Record<string, unknown>
 ): WarehouseLot {
   const result = validateWarehouseLot(
-    {
-      schemaVersion: data.schemaVersion,
-      id,
-      workspaceId: data.workspaceId,
-      ug: data.ug,
-      materialId: data.materialId,
-      code: data.code,
-      expiresOn: data.expiresOn ?? null,
-      quantity: data.quantity,
-      position: data.position,
-      origin: data.origin,
-      status: data.status,
-      createdBy: data.createdBy,
-      updatedBy: data.updatedBy,
-    },
+    warehouseCanonicalLotReadInput(id, data),
     { expectedWorkspaceId: workspaceId }
   );
   if (!result.ok) throw new Error('WAREHOUSE_INVALID_LOT');
@@ -186,19 +168,7 @@ function parseBarcode(
   data: Record<string, unknown>
 ): WarehouseBarcodeAssociation {
   const result = validateWarehouseBarcodeAssociation(
-    {
-      schemaVersion: data.schemaVersion,
-      id,
-      workspaceId: data.workspaceId,
-      ug: data.ug,
-      materialId: data.materialId,
-      barcode: data.barcode,
-      presentation: data.presentation,
-      factorToBaseUnit: data.factorToBaseUnit,
-      status: data.status,
-      createdBy: data.createdBy,
-      updatedBy: data.updatedBy,
-    },
+    warehouseCanonicalBarcodeReadInput(id, data),
     { expectedWorkspaceId: workspaceId }
   );
   if (!result.ok) throw new Error('WAREHOUSE_INVALID_BARCODE');

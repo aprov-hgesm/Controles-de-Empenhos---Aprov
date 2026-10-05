@@ -8,6 +8,7 @@ const root = process.cwd();
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 
 for (const path of [
+  'app/central-mobile/consultar-localizacao/page.tsx',
   'features/warehouse/mobile/WarehouseMobileLocationFoundationCheck.tsx',
   'lib/warehouse/mobileLocationScan.ts',
   'lib/warehouse/locationBarcode.ts',
@@ -58,7 +59,15 @@ assert.match(resolver, /resolveWarehouseStockPositionCode/);
 assert.doesNotMatch(resolver, /Cached/);
 
 const home = read('features/warehouse/mobile/WarehouseMobileHome.tsx');
-assert.match(home, /WarehouseMobileLocationFoundationCheck/);
+assert.match(home, /\/central-mobile\/consultar-localizacao/);
+assert.doesNotMatch(
+  home,
+  /WarehouseMobileLocationFoundationCheck/,
+  'Consulta de Localização deve ser operação própria, não componente embutido na Home'
+);
+
+const route = read('app/central-mobile/consultar-localizacao/page.tsx');
+assert.match(route, /WarehouseMobileLocationFoundationCheck/);
 
 const pkg = JSON.parse(read('package.json'));
 assert.equal(
@@ -71,7 +80,7 @@ assert.equal(
 );
 
 console.log('MOBILE-R1 INTEGRATION 1: PASS');
-console.log('- EPX1 é classificado como LOCATION; barcode comercial não é posição');
+console.log('- códigos físicos válidos são classificados como LOCATION; barcode comercial não é posição');
 console.log('- resolver autoritativo revalida workspace/UG/status/hierarquia');
 console.log('- LOCAL/SUBPOSITION chegam a WarehouseStockPosition');
-console.log('- integração permanece read-only e sem movimentos de estoque');
+console.log('- Consulta de Localização possui rota própria e permanece read-only');

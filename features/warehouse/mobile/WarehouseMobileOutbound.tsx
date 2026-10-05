@@ -245,11 +245,11 @@ export function WarehouseMobileOutbound() {
     return result.value;
   }, [workspace.ug, workspace.workspaceId]);
 
-  const startParty = () => {
+  const confirmWithdrawalParty = () => {
     const normalizedDestination = destination.trim();
     const normalizedPickedBy = pickedBy.trim();
     if (normalizedDestination.length < 2 || normalizedPickedBy.length < 2) {
-      setMessage('Informe destino e retirado por antes de iniciar a leitura.');
+      setMessage('Informe destino da retirada e retirado por antes de confirmar a saída.');
       return;
     }
     setDestination(normalizedDestination);
@@ -257,6 +257,21 @@ export function WarehouseMobileOutbound() {
     setPartyReady(true);
     setMessage(null);
   };
+
+  const resetProduct = useCallback(() => {
+    requestRef.current += 1;
+    setProduct(null);
+    setQuantityText('');
+    setPreparation(null);
+    setPosition(null);
+    setScannedPosition(null);
+    setReview(null);
+    setDestination('');
+    setPickedBy('');
+    setPartyReady(false);
+    setSuccess(null);
+    setMessage(null);
+  }, []);
 
   const scanProduct = useCallback((event: WarehouseMobileScanEvent) => {
     if (!workspace.ug) return;
@@ -344,6 +359,7 @@ export function WarehouseMobileOutbound() {
     setPosition({ option, label: positionLabel(option) });
     setScannedPosition(null);
     setReview(null);
+    setPartyReady(false);
     setMessage(null);
   };
 
@@ -402,7 +418,14 @@ export function WarehouseMobileOutbound() {
   };
 
   const confirm = useCallback(async () => {
-    if (!product || !preparation || !position || !scannedPosition || !review) {
+    if (
+      !product
+      || !preparation
+      || !position
+      || !scannedPosition
+      || !review
+      || !partyReady
+    ) {
       return;
     }
     setWorking(true);
@@ -468,6 +491,7 @@ export function WarehouseMobileOutbound() {
     }
   }, [
     destination,
+    partyReady,
     pickedBy,
     position,
     preparation,
@@ -495,7 +519,7 @@ export function WarehouseMobileOutbound() {
         </Link>
         <h1 className="mt-4 text-2xl font-black">Saída de material</h1>
         <p className="mt-2 text-sm font-semibold text-blue-100">
-          Destino → material → quantidade → posição → lote → confirmação humana.
+          Material → quantidade → origem da retirada → lote → destino da retirada → confirmar baixa.
         </p>
       </header>
 
@@ -511,47 +535,14 @@ export function WarehouseMobileOutbound() {
         </div>
       )}
 
-      {!partyReady && (
-        <Step title="1 · DESTINO / RETIRADO POR">
-          <input
-            value={destination}
-            onChange={(event) => {
-              setDestination(event.target.value);
-              setMessage(null);
-            }}
-            maxLength={72}
-            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold"
-            placeholder="Destino do material"
-            data-testid="warehouse-mobile-outbound-destination"
-          />
-          <input
-            value={pickedBy}
-            onChange={(event) => {
-              setPickedBy(event.target.value);
-              setMessage(null);
-            }}
-            maxLength={72}
-            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold"
-            placeholder="Retirado por"
-            data-testid="warehouse-mobile-outbound-picked-by"
-          />
-          <Primary onClick={startParty}>Continuar para leitura</Primary>
-        </Step>
-      )}
-
-      {partyReady && (
-        <Card title="Retirada" value={destination} detail={'Retirado por: ' + pickedBy} />
-      )}
-
-      {partyReady && !product && (
-        <Step title="2 · LER MATERIAL">
+      {!product && (
+        <Step title="1 · LER MATERIAL">
           <WarehouseMobileScanner
             expectation="EXPECT_PRODUCT"
             identifyScan={classifyWarehouseMobileOutboundProductScan}
             onValidatedScan={scanProduct}
             title="LER MATERIAL"
           />
-          <Secondary onClick={reset}>Alterar destino/retirado por</Secondary>
         </Step>
       )}
 
@@ -577,7 +568,7 @@ export function WarehouseMobileOutbound() {
       )}
 
       {product && !preparation && (
-        <Step title="3 · QUANTIDADE">
+        <Step title="2 · QUANTIDADE">
           <input
             value={quantityText}
             onChange={(event) => {
@@ -589,12 +580,13 @@ export function WarehouseMobileOutbound() {
             placeholder="0"
             data-testid="warehouse-mobile-outbound-quantity"
           />
-          <Primary onClick={acceptQuantity}>Ver posições disponíveis</Primary>
+          <Primary onClick={acceptQuantity}>Ver origens disponíveis</Primary>
+          <Secondary onClick={resetProduct}>Ler outro material</Secondary>
         </Step>
       )}
 
       {product && preparation && !position && (
-        <Step title="4 · POSIÇÕES DISPONÍVEIS">
+        <Step title="3 · ESCOLHER ORIGEM DA RETIRADA">
           <div className="rounded-2xl bg-blue-50 p-3 text-xs font-bold text-blue-900">
             Quantidade: {formatQty(preparation.requestedQuantity)}{' '}
             {unitLabel(
@@ -611,7 +603,7 @@ export function WarehouseMobileOutbound() {
           {preparation.recommendedLot ? (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
               <p className="text-[10px] font-black uppercase text-emerald-700">
-                Posição recomendada por FEFO
+                Origem recomendada por FEFO
               </p>
               <p className="mt-1 text-sm font-black text-emerald-950">
                 {positionLabel(
@@ -626,7 +618,7 @@ export function WarehouseMobileOutbound() {
             </div>
           ) : (
             <div className="rounded-2xl border border-slate-200 bg-white p-4 text-xs font-semibold text-slate-600">
-              Sem recomendação FEFO aplicável para a quantidade. Escolha uma posição com saldo suficiente.
+              Sem recomendação FEFO aplicável para a quantidade. Escolha uma origem com saldo suficiente.
             </div>
           )}
 
@@ -660,19 +652,19 @@ export function WarehouseMobileOutbound() {
 
       {position && (
         <Card
-          title="Posição escolhida"
+          title="Origem da saída"
           value={position.label}
           detail={'Saldo físico: ' + formatQty(position.option.balance.quantity)}
         />
       )}
 
       {position && !scannedPosition && (
-        <Step title="5 · CHEGUE AO LOCAL E LEIA A POSIÇÃO">
+        <Step title="4 · CONFIRMAR ORIGEM FÍSICA">
           <WarehouseMobileScanner
             expectation="EXPECT_LOCATION"
             identifyScan={classifyWarehouseMobileLocationScan}
             onValidatedScan={scanPosition}
-            title="LER POSIÇÃO"
+            title="LER ORIGEM DA SAÍDA"
           />
           <Secondary
             onClick={() => {
@@ -681,21 +673,21 @@ export function WarehouseMobileOutbound() {
               setReview(null);
             }}
           >
-            Trocar posição
+            Escolher outra origem
           </Secondary>
         </Step>
       )}
 
       {scannedPosition && (
         <Card
-          title="Posição escaneada e revalidada"
+          title="Origem confirmada"
           value={resolvedPositionLabel(scannedPosition.value)}
           detail={scannedPosition.code}
         />
       )}
 
       {preparation && scannedPosition && position && !review && (
-        <Step title="6 · LOTE">
+        <Step title="5 · LOTE">
           {selectedLots.length > 0 ? (
             <div className="space-y-2">
               {selectedLots.map((lot) => {
@@ -742,8 +734,47 @@ export function WarehouseMobileOutbound() {
         </Step>
       )}
 
-      {product && preparation && position && scannedPosition && review && !success && (
-        <Step title="7 · REVISAR E CONFIRMAR">
+      {review && !partyReady && !success && (
+        <Step title="6 · DESTINO DA RETIRADA / RETIRADO POR">
+          <p className="rounded-2xl bg-blue-50 p-3 text-xs font-bold leading-5 text-blue-900">
+            Estes dados identificam para onde o material saiu e quem realizou a retirada. Não representam outro local de estoque.
+          </p>
+          <input
+            value={destination}
+            onChange={(event) => {
+              setDestination(event.target.value);
+              setMessage(null);
+            }}
+            maxLength={72}
+            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold"
+            placeholder="Destino da retirada"
+            data-testid="warehouse-mobile-outbound-destination"
+          />
+          <input
+            value={pickedBy}
+            onChange={(event) => {
+              setPickedBy(event.target.value);
+              setMessage(null);
+            }}
+            maxLength={72}
+            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold"
+            placeholder="Retirado por"
+            data-testid="warehouse-mobile-outbound-picked-by"
+          />
+          <Primary onClick={confirmWithdrawalParty}>Continuar para confirmação</Primary>
+        </Step>
+      )}
+
+      {review && partyReady && (
+        <Card
+          title="Destino da retirada"
+          value={destination}
+          detail={'Retirado por: ' + pickedBy}
+        />
+      )}
+
+      {product && preparation && position && scannedPosition && review && partyReady && !success && (
+        <Step title="7 · REVISAR E CONFIRMAR SAÍDA">
           <div
             className="rounded-3xl border border-emerald-200 bg-white p-5"
             data-testid="warehouse-mobile-outbound-review"
@@ -777,7 +808,7 @@ export function WarehouseMobileOutbound() {
                 }
               />
               <Row
-                label="Posição"
+                label="Origem da retirada"
                 value={resolvedPositionLabel(scannedPosition.value)}
               />
               <Row
@@ -812,6 +843,14 @@ export function WarehouseMobileOutbound() {
             >
               {working ? 'REVALIDANDO…' : 'CONFIRMAR SAÍDA'}
             </button>
+            <Secondary
+              onClick={() => {
+                setPartyReady(false);
+                setMessage(null);
+              }}
+            >
+              Alterar destino/retirado por
+            </Secondary>
             <p className="mt-3 text-[10px] font-semibold leading-4 text-slate-500">
               Em falha de conexão após o clique, esta tela preserva a mesma chave de idempotência para replay seguro.
             </p>
@@ -854,7 +893,7 @@ export function WarehouseMobileOutbound() {
 
       <p className="flex items-start gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-[11px] font-semibold text-slate-500">
         <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-        Leitura não movimenta estoque. A baixa ocorre somente em CONFIRMAR SAÍDA pelo OUTBOUND canônico e transacional.
+        Saída reduz o saldo da origem confirmada e nunca transfere material para outra posição física. A baixa ocorre somente em CONFIRMAR SAÍDA pelo OUTBOUND canônico e transacional.
       </p>
     </div>
   );

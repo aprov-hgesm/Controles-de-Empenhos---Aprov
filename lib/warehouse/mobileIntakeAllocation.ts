@@ -4,6 +4,7 @@ import {
 } from './barcode';
 import {
   isWarehouseLocationBarcode,
+  WAREHOUSE_LOCATION_BARCODE_COMPACT_PREFIX,
   WAREHOUSE_LOCATION_BARCODE_PREFIX,
 } from './locationBarcode';
 import type { WarehouseMobileScanKind } from './mobileScanner';
@@ -22,7 +23,10 @@ export function classifyWarehouseMobileProductScan(
   const normalized = normalizeWarehouseBarcode(value);
   if (!normalized) return 'UNKNOWN';
   if (isWarehouseLocationBarcode(normalized)) return 'LOCATION';
-  if (normalized.toUpperCase().startsWith(WAREHOUSE_LOCATION_BARCODE_PREFIX)) {
+  if (
+    normalized.toUpperCase().startsWith(WAREHOUSE_LOCATION_BARCODE_PREFIX)
+    || normalized.toUpperCase().startsWith(WAREHOUSE_LOCATION_BARCODE_COMPACT_PREFIX)
+  ) {
     return 'UNKNOWN';
   }
   return 'PRODUCT';

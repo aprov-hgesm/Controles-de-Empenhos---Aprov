@@ -1,6 +1,8 @@
 import {
   getWarehouseDepot,
+  getWarehouseDepotByCode,
   getWarehouseLocation,
+  getWarehouseLocationByCode,
 } from './locationRepository';
 import {
   resolveWarehousePhysicalIdentityCode,
@@ -16,6 +18,17 @@ function createAuthoritativeSource(workspaceId: string) {
     },
     async getLocation(locationId: string) {
       return (await getWarehouseLocation(workspaceId, locationId))?.location ?? null;
+    },
+    async getDepotByCode(depotCode: string) {
+      return (await getWarehouseDepotByCode(workspaceId, depotCode))?.depot ?? null;
+    },
+    async getLocationByCode(input: {
+      depotId: string;
+      kind: 'LOCAL' | 'SUBPOSITION';
+      parentLocationId: string | null;
+      code: string;
+    }) {
+      return (await getWarehouseLocationByCode(workspaceId, input))?.location ?? null;
     },
   };
 }

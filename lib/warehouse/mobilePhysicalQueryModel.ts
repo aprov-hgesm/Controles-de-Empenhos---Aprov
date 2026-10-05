@@ -2,6 +2,12 @@ import { warehouseStockPositionsEqual, type WarehouseLocationBalance, type Wareh
 import type { WarehouseLot } from './lot';
 import type { WarehouseMaterial } from './material';
 
+export {
+  warehouseCanonicalLocationBalanceReadInput as warehouseMobileCanonicalBalanceReadInput,
+  warehouseCanonicalLotReadInput as warehouseMobileCanonicalLotReadInput,
+  warehouseCanonicalMaterialReadInput as warehouseMobileCanonicalMaterialReadInput,
+} from './readCompatibility';
+
 export interface WarehouseMobilePhysicalQueryPlan {
   field: 'position.locationId' | 'position.subpositionId';
   value: string;
@@ -96,7 +102,9 @@ export function buildWarehouseMobilePhysicalQueryItems(input: {
     }
 
     if (seenMaterials.has(balance.materialId)) {
-      throw new Error('WAREHOUSE_MOBILE_PHYSICAL_QUERY_DUPLICATE_BALANCE');
+      throw new Error(
+        'WAREHOUSE_MOBILE_PHYSICAL_QUERY_DUPLICATE_BALANCE:' + balance.materialId
+      );
     }
     seenMaterials.add(balance.materialId);
 

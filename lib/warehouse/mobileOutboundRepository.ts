@@ -28,6 +28,13 @@ import {
 } from './material';
 import { validateWarehouseBalance, type WarehouseBalance } from './movement';
 import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
+import {
+  warehouseCanonicalDepotReadInput,
+  warehouseCanonicalLocationBalanceReadInput,
+  warehouseCanonicalLocationReadInput,
+  warehouseCanonicalLotReadInput,
+  warehouseCanonicalMaterialReadInput,
+} from './readCompatibility';
 import { recordWarehouseDocumentReads } from './telemetry';
 
 export const WAREHOUSE_MOBILE_OUTBOUND_LOCATION_LIMIT = 60;
@@ -39,12 +46,21 @@ export interface WarehouseMobileOutboundPositionLabel {
   label: string;
 }
 
-export interface WarehouseMobileOutboundAvailability {
+export interface WarehouseMobileItemAvailabilityReconciliation {
+  activePhysicalQuantity: number;
+  unassignedQuantity: number;
+  inactivePositionQuantity: number;
+  trackedQuantity: number;
+  differenceQuantity: number;
+}
+
+export interface WarehouseMobileItemAvailability {
   material: WarehouseMaterial;
   balance: WarehouseBalance;
   locationBalances: WarehouseLocationBalance[];
   lots: WarehouseLot[];
   positionLabels: WarehouseMobileOutboundPositionLabel[];
+  reconciliation: WarehouseMobileItemAvailabilityReconciliation;
   metrics: {
     documentsRead: number;
     listeners: 0;
@@ -95,7 +111,7 @@ function parseMaterial(
   data: Record<string, unknown>
 ): WarehouseMaterial {
   const result = validateWarehouseMaterial(
-    { ...data, id },
+    warehouseCanonicalMaterialReadInput(id, data),
     { expectedWorkspaceId: workspaceId, expectedUg: ug }
   );
   if (!result.ok) throw new Error('WAREHOUSE_MOBILE_OUTBOUND_INVALID_MATERIAL');
@@ -136,7 +152,7 @@ function parseLocationBalance(
   data: Record<string, unknown>
 ): WarehouseLocationBalance {
   const result = validateWarehouseLocationBalance(
-    { ...data, id },
+    warehouseCanonicalLocationBalanceReadInput(id, data),
     { expectedWorkspaceId: workspaceId, expectedMaterialId: materialId }
   );
   if (!result.ok || result.data.ug !== ug) {
@@ -153,7 +169,7 @@ function parseLot(
   data: Record<string, unknown>
 ): WarehouseLot {
   const result = validateWarehouseLot(
-    { ...data, id, expiresOn: data.expiresOn ?? null },
+    warehouseCanonicalLotReadInput(id, data),
     {
       expectedWorkspaceId: workspaceId,
       expectedUg: ug,
@@ -171,7 +187,7 @@ function parseDepot(
   data: Record<string, unknown>
 ): WarehouseDepot {
   const result = validateWarehouseDepot(
-    { ...data, id },
+    warehouseCanonicalDepotReadInput(id, data),
     { expectedWorkspaceId: workspaceId, expectedUg: ug }
   );
   if (!result.ok) throw new Error('WAREHOUSE_MOBILE_OUTBOUND_INVALID_DEPOT');
@@ -185,17 +201,17 @@ function parseLocation(
   data: Record<string, unknown>
 ): WarehouseLocation {
   const result = validateWarehouseLocation(
-    { ...data, id },
+    warehouseCanonicalLocationReadInput(id, data),
     { expectedWorkspaceId: workspaceId, expectedUg: ug }
   );
   if (!result.ok) throw new Error('WAREHOUSE_MOBILE_OUTBOUND_INVALID_LOCATION');
   return result.data;
 }
 
-export async function loadWarehouseMobileOutboundAvailability(
+export async function loadWarehouseMobileItemAvailability(
   workspaceId: string,
   materialId: string
-): Promise<WarehouseMobileOutboundAvailability> {
+): Promise<WarehouseMobileItemAvailability> {
   const scope = currentScope(workspaceId);
   if (!isValidWarehouseMaterialId(materialId)) {
     throw new Error('WAREHOUSE_MOBILE_OUTBOUND_INVALID_MATERIAL_ID');
@@ -302,6 +318,10 @@ export async function loadWarehouseMobileOutboundAvailability(
 
     const activeBalances: WarehouseLocationBalance[] = [];
     const positionLabels: WarehouseMobileOutboundPositionLabel[] = [];
+    const unassignedQuantity = parsedLocationBalances
+      .filter((item) => item.position.kind === 'UNASSIGNED' && item.quantity > 0)
+      .reduce((total, item) => total + item.quantity, 0);
+    let inactivePositionQuantity = 0;
 
     positivePhysical.forEach((item) => {
       if (item.position.kind === 'UNASSIGNED') return;
@@ -316,7 +336,10 @@ export async function loadWarehouseMobileOutboundAvailability(
       if (local.kind !== 'LOCAL' || local.depotId !== depot.id) {
         throw new Error('WAREHOUSE_MOBILE_OUTBOUND_POSITION_HIERARCHY_INVALID');
       }
-      if (depot.status !== 'active' || local.status !== 'active') return;
+      if (depot.status !== 'active' || local.status !== 'active') {
+        inactivePositionQuantity += item.quantity;
+        return;
+      }
 
       let label = depot.code + ' · ' + local.code;
       if (item.position.kind === 'SUBPOSITION') {
@@ -337,7 +360,10 @@ export async function loadWarehouseMobileOutboundAvailability(
         ) {
           throw new Error('WAREHOUSE_MOBILE_OUTBOUND_POSITION_HIERARCHY_INVALID');
         }
-        if (sub.status !== 'active') return;
+        if (sub.status !== 'active') {
+          inactivePositionQuantity += item.quantity;
+          return;
+        }
         label += ' · ' + sub.code;
       }
 
@@ -348,12 +374,27 @@ export async function loadWarehouseMobileOutboundAvailability(
       });
     });
 
+    const activePhysicalQuantity = activeBalances.reduce(
+      (total, item) => total + item.quantity,
+      0
+    );
+    const trackedQuantity =
+      activePhysicalQuantity + unassignedQuantity + inactivePositionQuantity;
+    const differenceQuantity = balance.quantity - trackedQuantity;
+
     return {
       material,
       balance,
       locationBalances: activeBalances,
       lots,
       positionLabels,
+      reconciliation: {
+        activePhysicalQuantity,
+        unassignedQuantity,
+        inactivePositionQuantity,
+        trackedQuantity,
+        differenceQuantity,
+      },
       metrics: {
         documentsRead: initialReads + depotDocuments.reads + locationDocuments.reads,
         listeners: 0,
@@ -364,3 +405,7 @@ export async function loadWarehouseMobileOutboundAvailability(
     throw error;
   }
 }
+
+export type WarehouseMobileOutboundAvailability = WarehouseMobileItemAvailability;
+
+export const loadWarehouseMobileOutboundAvailability = loadWarehouseMobileItemAvailability;

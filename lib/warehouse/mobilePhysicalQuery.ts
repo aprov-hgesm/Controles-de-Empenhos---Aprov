@@ -35,6 +35,9 @@ import {
 } from './material';
 import {
   buildWarehouseMobilePhysicalQueryItems,
+  warehouseMobileCanonicalBalanceReadInput,
+  warehouseMobileCanonicalLotReadInput,
+  warehouseMobileCanonicalMaterialReadInput,
   warehouseMobilePhysicalQueryPlan,
   type WarehouseMobilePhysicalQueryItem,
 } from './mobilePhysicalQueryModel';
@@ -92,12 +95,22 @@ function parseBalance(
   id: string,
   data: Record<string, unknown>
 ): WarehouseLocationBalance {
+  // Compatibilidade de leitura para saldos legados:
+  // preserva o contrato canônico e ignora apenas metadados extras históricos.
   const result = validateWarehouseLocationBalance(
-    { ...data, id },
+    warehouseMobileCanonicalBalanceReadInput(id, data),
     { expectedWorkspaceId: scope.workspaceId }
   );
-  if (!result.ok || result.data.ug !== scope.ug) {
-    throw new Error('WAREHOUSE_MOBILE_PHYSICAL_QUERY_INVALID_BALANCE');
+  if (!result.ok) {
+    const issues = result.issues.map((issue) => issue.code + '@' + issue.path).join(',');
+    throw new Error(
+      'WAREHOUSE_MOBILE_PHYSICAL_QUERY_INVALID_BALANCE:' + id + ':' + issues
+    );
+  }
+  if (result.data.ug !== scope.ug) {
+    throw new Error(
+      'WAREHOUSE_MOBILE_PHYSICAL_QUERY_INVALID_BALANCE:' + id + ':ug_mismatch'
+    );
   }
   return result.data;
 }
@@ -108,14 +121,17 @@ function parseMaterial(
   data: Record<string, unknown>
 ): WarehouseMaterial {
   const result = validateWarehouseMaterial(
-    { ...data, id },
+    warehouseMobileCanonicalMaterialReadInput(id, data),
     {
       expectedWorkspaceId: scope.workspaceId,
       expectedUg: scope.ug,
     }
   );
   if (!result.ok) {
-    throw new Error('WAREHOUSE_MOBILE_PHYSICAL_QUERY_INVALID_MATERIAL');
+    const issues = result.issues.map((issue) => issue.code + '@' + issue.path).join(',');
+    throw new Error(
+      'WAREHOUSE_MOBILE_PHYSICAL_QUERY_INVALID_MATERIAL:' + id + ':' + issues
+    );
   }
   return result.data;
 }
@@ -126,18 +142,17 @@ function parseLot(
   data: Record<string, unknown>
 ): WarehouseLot {
   const result = validateWarehouseLot(
-    {
-      ...data,
-      id,
-      expiresOn: data.expiresOn ?? null,
-    },
+    warehouseMobileCanonicalLotReadInput(id, data),
     {
       expectedWorkspaceId: scope.workspaceId,
       expectedUg: scope.ug,
     }
   );
   if (!result.ok) {
-    throw new Error('WAREHOUSE_MOBILE_PHYSICAL_QUERY_INVALID_LOT');
+    const issues = result.issues.map((issue) => issue.code + '@' + issue.path).join(',');
+    throw new Error(
+      'WAREHOUSE_MOBILE_PHYSICAL_QUERY_INVALID_LOT:' + id + ':' + issues
+    );
   }
   return result.data;
 }
@@ -229,7 +244,11 @@ async function loadMaterials(
   }
 
   if (materials.length !== materialIds.length) {
-    throw new Error('WAREHOUSE_MOBILE_PHYSICAL_QUERY_MATERIAL_NOT_FOUND');
+    const found = new Set(materials.map((material) => material.id));
+    const missing = materialIds.filter((materialId) => !found.has(materialId));
+    throw new Error(
+      'WAREHOUSE_MOBILE_PHYSICAL_QUERY_MATERIAL_NOT_FOUND:' + missing.join(',')
+    );
   }
 
   return { materials, reads, queries };

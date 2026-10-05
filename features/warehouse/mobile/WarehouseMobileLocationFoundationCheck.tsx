@@ -1,11 +1,13 @@
 'use client';
 
 import {
+  ArrowLeft,
   LoaderCircle,
   MapPin,
   ShieldCheck,
   TriangleAlert,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useCallback, useRef, useState } from 'react';
 
 import { useWarehouseWorkspaceContext } from '../components/WarehouseModuleContext';
@@ -58,12 +60,13 @@ function resolutionErrorMessage(error: string): string {
 
 function physicalQueryErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
+  const diagnostic = message.trim() || 'UNKNOWN_ERROR';
 
   if (
     message.includes('WAREHOUSE_MOBILE_PHYSICAL_QUERY_BALANCE_LIMIT')
     || message.includes('WAREHOUSE_MOBILE_PHYSICAL_QUERY_LOT_LIMIT')
   ) {
-    return 'A posição possui registros acima do limite seguro desta consulta móvel. Use a Central desktop para revisar o conteúdo completo.';
+    return 'A posição possui registros acima do limite seguro desta consulta móvel. Diagnóstico: ' + diagnostic;
   }
 
   if (
@@ -71,7 +74,7 @@ function physicalQueryErrorMessage(error: unknown): string {
     || message.includes('WORKSPACE_MISMATCH')
     || message.includes('UG_MISMATCH')
   ) {
-    return 'A consulta foi bloqueada porque o workspace/UG atual não corresponde aos dados solicitados.';
+    return 'A consulta foi bloqueada porque o workspace/UG atual não corresponde aos dados solicitados. Diagnóstico: ' + diagnostic;
   }
 
   if (
@@ -79,10 +82,10 @@ function physicalQueryErrorMessage(error: unknown): string {
     || message.includes('WAREHOUSE_MOBILE_PHYSICAL_QUERY_MATERIAL_NOT_FOUND')
     || message.includes('WAREHOUSE_MOBILE_PHYSICAL_QUERY_DUPLICATE_BALANCE')
   ) {
-    return 'A distribuição física retornou dados inconsistentes e não será apresentada parcialmente. Revise o cadastro pela Central desktop.';
+    return 'A distribuição física retornou dados inconsistentes. Diagnóstico: ' + diagnostic;
   }
 
-  return 'Falha ao consultar o conteúdo esperado. Verifique a conexão e o acesso à Central e tente novamente.';
+  return 'Falha ao consultar o conteúdo esperado. Diagnóstico: ' + diagnostic;
 }
 
 export function WarehouseMobileLocationFoundationCheck() {
@@ -166,18 +169,25 @@ export function WarehouseMobileLocationFoundationCheck() {
   }, [workspace.workspaceId, workspace.ug]);
 
   return (
-    <section className="space-y-3">
-      <div className="px-1">
-        <p className="font-mono text-[9px] font-black uppercase tracking-[0.18em] text-slate-500">
-          MOBILE-E · CONSULTA FÍSICA
+    <section className="space-y-4">
+      <header className="rounded-3xl bg-[#00288e] p-5 text-white">
+        <Link
+          href="/central-mobile"
+          className="inline-flex items-center gap-2 text-xs font-black text-blue-100"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Central Móvel
+        </Link>
+        <p className="mt-4 font-mono text-[9px] font-black uppercase tracking-[0.18em] text-blue-200">
+          CONSULTA · SOMENTE LEITURA
         </p>
-        <h2 className="mt-1 text-lg font-black text-slate-950">
-          O que deveria estar aqui?
-        </h2>
-        <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
-          Leia uma posição para consultar a distribuição física oficial. Nenhum saldo ou movimento é alterado.
+        <h1 className="mt-1 text-2xl font-black">
+          Consultar localização
+        </h1>
+        <p className="mt-2 text-sm font-semibold leading-6 text-blue-100">
+          Leia um LOCAL ou SUBPOSIÇÃO para ver os materiais e quantidades registrados ali. Nenhum saldo ou movimento é alterado.
         </p>
-      </div>
+      </header>
 
       <WarehouseMobileScanner
         expectation="EXPECT_LOCATION"
@@ -262,7 +272,7 @@ export function WarehouseMobileLocationFoundationCheck() {
       {resolution.status === 'idle' && (
         <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-500">
           <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
-          Leia uma etiqueta EPX1 de LOCAL ou SUBPOSIÇÃO.
+          Leia uma etiqueta de LOCAL ou SUBPOSIÇÃO. EPX1, EPX2 e o formato numérico atual são aceitos.
         </div>
       )}
     </section>

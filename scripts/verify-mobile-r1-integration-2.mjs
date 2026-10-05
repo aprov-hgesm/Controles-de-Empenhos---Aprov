@@ -10,6 +10,7 @@ const read = (path) => readFileSync(resolve(root, path), 'utf8');
 for (const path of [
   'app/central-mobile/alocar/page.tsx',
   'app/central-mobile/transferir/page.tsx',
+  'app/central-mobile/consultar-localizacao/page.tsx',
   'features/warehouse/mobile/WarehouseMobilePhysicalQueryResult.tsx',
   'features/warehouse/mobile/WarehouseMobileTransfer.tsx',
   'lib/warehouse/mobileIntakeAllocation.ts',
@@ -29,6 +30,13 @@ assert.match(
 );
 assert.match(transfer, /WAREHOUSE_MOBILE_TRANSFER_MAX_RELOCATE_LOTS = 24/);
 assert.match(transfer, /TOO_MANY_ACTIVE_LOTS/);
+assert.match(transfer, /LOT_ATTRIBUTION_EXCEEDS_STOCK/);
+assert.match(transfer, /lotAllocations/);
+assert.doesNotMatch(
+  transfer,
+  /PARTIAL_WITH_ACTIVE_LOTS_UNSUPPORTED/,
+  'Transferência parcial com lote reconciliado não deve ser bloqueada'
+);
 
 const criticalLots = read('lib/warehouse/mobileTransferLotRepository.ts');
 assert.match(criticalLots, /WAREHOUSE_MOBILE_TRANSFER_CRITICAL_LOT_FETCH_LIMIT/);
@@ -52,7 +60,8 @@ for (const forbidden of ['setDoc(', 'updateDoc(', 'runTransaction(']) {
 const home = read('features/warehouse/mobile/WarehouseMobileHome.tsx');
 assert.match(home, /href: '\/central-mobile\/alocar'/);
 assert.match(home, /href: '\/central-mobile\/transferir'/);
-assert.match(home, /WarehouseMobileLocationFoundationCheck/);
+assert.match(home, /href: '\/central-mobile\/consultar-localizacao'/);
+assert.doesNotMatch(home, /WarehouseMobileLocationFoundationCheck/);
 
 const allocationPage = read('features/warehouse/mobile/WarehouseMobileIntakeAllocation.tsx');
 assert.match(allocationPage, /allocateWarehousePendingItemFast/);
@@ -62,9 +71,15 @@ assert.doesNotMatch(allocationPage, /\bupdateDoc\s*\(/);
 const transferPage = read('features/warehouse/mobile/WarehouseMobileTransfer.tsx');
 assert.match(transferPage, /transferWarehouseStock/);
 assert.match(transferPage, /listWarehouseMobileTransferLotsCritical/);
+assert.match(transferPage, /lotAllocations: prepared\.lotAllocations/);
 assert.doesNotMatch(transferPage, /\bsetDoc\s*\(/);
 assert.doesNotMatch(transferPage, /\bupdateDoc\s*\(/);
 assert.doesNotMatch(transferPage, /\bOUTBOUND\b/);
+
+const locationRepository = read('lib/warehouse/locationRepository.ts');
+assert.match(locationRepository, /createWarehouseTransferSplitLotId/);
+assert.match(locationRepository, /WAREHOUSE_TRANSFER_LOT_SPLIT_INVALID/);
+assert.match(locationRepository, /validateWarehouseLot/);
 
 const pkg = JSON.parse(read('package.json'));
 assert.equal(
@@ -81,7 +96,7 @@ assert.match(workflow, /Central Móvel R1 Integration 2 domain tests/);
 assert.match(workflow, /Central Móvel R1 Integration 2 guard/);
 
 console.log('MOBILE-R1 INTEGRATION 2: PASS');
-console.log('- alocação, consulta e transferência compartilham posições e autoridades canônicas');
+console.log('- alocação, consulta de localização e transferência compartilham posições e autoridades canônicas');
 console.log('- transferência preserva total físico e classificação de produto única');
 console.log('- lotes críticos permanecem fail-closed');
 console.log('- consulta física permanece read-only');

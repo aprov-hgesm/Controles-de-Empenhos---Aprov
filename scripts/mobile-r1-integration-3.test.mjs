@@ -207,7 +207,22 @@ test('Integração 3: F, G e H compartilham a mesma identidade física canônica
 });
 
 test('Integração 3 preserva um único classificador PRODUCT/LOCATION/UNKNOWN', () => {
-  for (const value of ['7891234567890', 'EPX1INVALIDO', '   ']) {
+  const validLocationNumeric = '9812001101000';
+  const commercialLike981 = '9819123456789';
+
+  assert.equal(allocation.classifyWarehouseMobileProductScan('7891234567890'), 'PRODUCT');
+  assert.equal(allocation.classifyWarehouseMobileProductScan(validLocationNumeric), 'LOCATION');
+  assert.equal(allocation.classifyWarehouseMobileProductScan(commercialLike981), 'PRODUCT');
+  assert.equal(allocation.classifyWarehouseMobileProductScan('EPX1INVALIDO'), 'UNKNOWN');
+  assert.equal(allocation.classifyWarehouseMobileProductScan('   '), 'UNKNOWN');
+
+  for (const value of [
+    '7891234567890',
+    validLocationNumeric,
+    commercialLike981,
+    'EPX1INVALIDO',
+    '   ',
+  ]) {
     const expected = allocation.classifyWarehouseMobileProductScan(value);
     assert.equal(mobileInventory.classifyWarehouseMobileInventoryProductScan(value), expected);
     assert.equal(mobileOutbound.classifyWarehouseMobileOutboundProductScan(value), expected);
