@@ -79,6 +79,11 @@ import {
   type WarehouseMovement,
 } from './movement';
 import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
+import {
+  warehouseCanonicalBarcodeReadInput,
+  warehouseCanonicalLotReadInput,
+  warehouseCanonicalMaterialReadInput,
+} from './readCompatibility';
 
 const LEGACY_MOVEMENTS_PER_INVOICE_LIMIT = 51;
 const QUANTITY_EPSILON = 0.000001;
@@ -159,7 +164,7 @@ function parseMaterial(
   data: Record<string, unknown>
 ): WarehouseMaterial {
   const parsed = validateWarehouseMaterial(
-    { ...data, id },
+    warehouseCanonicalMaterialReadInput(id, data),
     { expectedWorkspaceId: workspaceId }
   );
   if (!parsed.ok) {
@@ -331,21 +336,7 @@ function parseLot(
   data: Record<string, unknown>
 ): WarehouseLot {
   const parsed = validateWarehouseLot(
-    {
-      schemaVersion: data.schemaVersion,
-      id,
-      workspaceId: data.workspaceId,
-      ug: data.ug,
-      materialId: data.materialId,
-      code: data.code,
-      expiresOn: data.expiresOn ?? null,
-      quantity: data.quantity,
-      position: data.position,
-      origin: data.origin,
-      status: data.status,
-      createdBy: data.createdBy,
-      updatedBy: data.updatedBy,
-    },
+    warehouseCanonicalLotReadInput(id, data),
     { expectedWorkspaceId: workspaceId }
   );
   if (!parsed.ok) throw new Error('WAREHOUSE_INVALID_LOT');
@@ -358,19 +349,7 @@ function parseBarcode(
   data: Record<string, unknown>
 ): WarehouseBarcodeAssociation {
   const parsed = validateWarehouseBarcodeAssociation(
-    {
-      schemaVersion: data.schemaVersion,
-      id,
-      workspaceId: data.workspaceId,
-      ug: data.ug,
-      materialId: data.materialId,
-      barcode: data.barcode,
-      presentation: data.presentation,
-      factorToBaseUnit: data.factorToBaseUnit,
-      status: data.status,
-      createdBy: data.createdBy,
-      updatedBy: data.updatedBy,
-    },
+    warehouseCanonicalBarcodeReadInput(id, data),
     { expectedWorkspaceId: workspaceId }
   );
   if (!parsed.ok) throw new Error('WAREHOUSE_INVALID_BARCODE');
