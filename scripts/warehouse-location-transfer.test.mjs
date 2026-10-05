@@ -374,7 +374,7 @@ test('MOBILE-D rejeita origem igual, zero e quantidade acima do disponível', ()
   );
 });
 
-test('MOBILE-D preserva lote: parcial com lote ativo fecha e integral carrega IDs', () => {
+test('MOBILE-D preserva lote em transferência parcial e integral', () => {
   const from = { kind: 'LOCATION', depotId, locationId: localA, subpositionId: null };
   const to = { kind: 'SUBPOSITION', depotId, locationId: localB, subpositionId: 'sub_' + 'e'.repeat(32) };
   const lots = [
@@ -397,19 +397,73 @@ test('MOBILE-D preserva lote: parcial com lote ativo fecha e integral carrega ID
   const partial = mobileTransfer.prepareWarehouseMobileTransfer({
     materialId, from, to, quantity: 4, availableQuantity: 10, lots,
   });
-  assert.deepEqual(partial, {
-    ok: false,
-    error: 'PARTIAL_WITH_ACTIVE_LOTS_UNSUPPORTED',
-  });
+  assert.equal(partial.ok, true);
+  assert.deepEqual(partial.lotAllocations, [
+    { lotId: 'lot_' + '1'.repeat(32), quantity: 4 },
+  ]);
+  assert.deepEqual(partial.relocateLotIds, []);
+  assert.equal(partial.unattributedQuantity, 0);
 
   const integral = mobileTransfer.prepareWarehouseMobileTransfer({
     materialId, from, to, quantity: 10, availableQuantity: 10, lots,
   });
   assert.equal(integral.ok, true);
+  assert.deepEqual(integral.lotAllocations, [
+    { lotId: 'lot_' + '1'.repeat(32), quantity: 6 },
+    { lotId: 'lot_' + '2'.repeat(32), quantity: 4 },
+  ]);
   assert.deepEqual(integral.relocateLotIds, [
     'lot_' + '1'.repeat(32),
     'lot_' + '2'.repeat(32),
   ]);
+});
+
+test('MOBILE-D bloqueia lote atribuído acima do saldo físico', () => {
+  const from = { kind: 'LOCATION', depotId, locationId: localA, subpositionId: null };
+  const to = { kind: 'LOCATION', depotId, locationId: localB, subpositionId: null };
+  const lots = [
+    {
+      id: 'lot_' + '3'.repeat(32),
+      materialId,
+      status: 'active',
+      quantity: 440,
+      position: from,
+    },
+    {
+      id: 'lot_' + '4'.repeat(32),
+      materialId,
+      status: 'active',
+      quantity: 100,
+      position: from,
+    },
+  ];
+
+  const result = mobileTransfer.prepareWarehouseMobileTransfer({
+    materialId, from, to, quantity: 10, availableQuantity: 440, lots,
+  });
+  assert.deepEqual(result, {
+    ok: false,
+    error: 'LOT_ATTRIBUTION_EXCEEDS_STOCK',
+  });
+});
+
+test('MOBILE-D transfere primeiro a parcela sem lote sem inventar procedência', () => {
+  const from = { kind: 'LOCATION', depotId, locationId: localA, subpositionId: null };
+  const to = { kind: 'LOCATION', depotId, locationId: localB, subpositionId: null };
+  const lots = [{
+    id: 'lot_' + '5'.repeat(32),
+    materialId,
+    status: 'active',
+    quantity: 100,
+    position: from,
+  }];
+
+  const result = mobileTransfer.prepareWarehouseMobileTransfer({
+    materialId, from, to, quantity: 10, availableQuantity: 440, lots,
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.unattributedQuantity, 10);
+  assert.deepEqual(result.lotAllocations, []);
 });
 
 test('MOBILE-D revalida concorrência usando o saldo físico mais recente', () => {
