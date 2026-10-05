@@ -259,7 +259,9 @@ function drawLabel(
   const footerY = y + height - (compact ? 2.6 : 3.8);
   const separatorY = footerY - (compact ? 2.1 : 2.8);
   const barcodeTextY = separatorY - (compact ? 0.9 : 1.2);
-  const barcodeHeight = compact ? 10.2 : large ? 15.5 : 10.8;
+  // MEDIUM tem somente ~43 mm de altura. Reservar uma faixa própria
+  // para o Code 128 evita que a hierarquia invada as barras.
+  const barcodeHeight = compact ? 10.2 : large ? 15.5 : 7.8;
   const barcodeGap = compact ? 0.9 : large ? 2.2 : 1.4;
   const barcodeY = barcodeTextY - barcodeGap - barcodeHeight;
   const barcodeX = x + pad;
