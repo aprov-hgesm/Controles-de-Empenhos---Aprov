@@ -408,4 +408,3 @@ Referências vigentes informadas pelo Program Control:
 - classificação final: **BLOCKER — INCONSISTÊNCIAS SISTÊMICAS IMPEDEM RC**.
 
 A próxima frente deve ser específica de forensics/repair de dados, com backup prévio, dry-run, idempotência, reversibilidade e aprovação humana. Esta auditoria não executa repair.
-
