@@ -112,6 +112,7 @@ const operations = new Map([
     'finalizeWarehouseMaterialWithdrawal',
     'createWarehouseWithdrawalId',
     'listWarehouseDestinationsCached',
+    'createWarehouseDestination',
   ]],
   ['features/warehouse/mobile/WarehouseMobilePositionCheck.tsx', [
     'WarehouseMobileScanner',
