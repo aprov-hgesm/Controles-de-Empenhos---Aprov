@@ -158,7 +158,8 @@ export function WarehouseMobileItemQuery() {
       .map((balance) => {
         const lots = state.availability.lots.filter(
           (lot) =>
-            lot.quantity > 0
+            lot.status === 'active'
+            && lot.quantity > 0
             && warehouseStockPositionsEqual(lot.position, balance.position)
         );
         const key = warehouseStockPositionKey(balance.position);
@@ -167,6 +168,7 @@ export function WarehouseMobileItemQuery() {
           label: labels.get(key) || key,
           balance,
           lots,
+          lotQuantity: lots.reduce((total, lot) => total + lot.quantity, 0),
         };
       })
       .sort((left, right) => left.label.localeCompare(right.label));
@@ -174,6 +176,14 @@ export function WarehouseMobileItemQuery() {
 
   const distributedQuantity = useMemo(
     () => rows.reduce((total, row) => total + row.balance.quantity, 0),
+    [rows]
+  );
+
+  const lotOverages = useMemo(
+    () =>
+      rows.filter(
+        (row) => row.lotQuantity - row.balance.quantity > 0.000001
+      ),
     [rows]
   );
 
@@ -325,13 +335,52 @@ export function WarehouseMobileItemQuery() {
               </div>
             )}
 
-            {Math.abs(
-              state.availability.balance.quantity - distributedQuantity
-            ) > 0.000001 && (
-              <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[11px] font-bold leading-5 text-amber-900">
-                Saldo agregado e soma das posições ativas não coincidem. A consulta não altera dados; revise a distribuição na Central desktop se necessário.
+            {state.availability.reconciliation.unassignedQuantity > 0.000001 && (
+              <p className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-[11px] font-bold leading-5 text-blue-900">
+                Saldo sem localização: {formatQuantity(
+                  state.availability.reconciliation.unassignedQuantity
+                )}{' '}
+                {unitLabel(state.availability)} ainda não está vinculado a uma posição física ativa.
+                Esse saldo faz parte do total agregado, mas não aparece como origem disponível para retirada.
               </p>
             )}
+
+            {state.availability.reconciliation.inactivePositionQuantity > 0.000001 && (
+              <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[11px] font-bold leading-5 text-amber-900">
+                Há {formatQuantity(
+                  state.availability.reconciliation.inactivePositionQuantity
+                )}{' '}
+                {unitLabel(state.availability)} associado a posição física inativa.
+                A consulta não oferece essa posição para retirada; revise a distribuição na Central desktop.
+              </p>
+            )}
+
+            {Math.abs(
+              state.availability.reconciliation.differenceQuantity
+            ) > 0.000001 && (
+              <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-3 text-[11px] font-bold leading-5 text-red-900">
+                Divergência de reconciliação: o saldo agregado difere em{' '}
+                {formatQuantity(
+                  Math.abs(state.availability.reconciliation.differenceQuantity)
+                )}{' '}
+                {unitLabel(state.availability)} da soma rastreada entre posições ativas,
+                posições inativas e saldo sem localização. A consulta não altera dados;
+                revise este material na Central desktop antes de corrigir o estoque.
+              </p>
+            )}
+
+            {lotOverages.map((row) => (
+              <p
+                key={'lot-overage-' + row.key}
+                className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-3 text-[11px] font-bold leading-5 text-red-900"
+              >
+                A soma dos lotes ativos em {row.label} é{' '}
+                {formatQuantity(row.lotQuantity)} {unitLabel(state.availability)},
+                acima do saldo físico de {formatQuantity(row.balance.quantity)}{' '}
+                {unitLabel(state.availability)}. A consulta não altera dados; revise a
+                atribuição de lotes na Central desktop.
+              </p>
+            ))}
           </section>
 
           <button
