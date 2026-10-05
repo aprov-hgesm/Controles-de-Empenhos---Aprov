@@ -10,6 +10,7 @@ const read = (path) => readFileSync(resolve(root, path), 'utf8');
 for (const path of [
   'app/central-mobile/alocar/page.tsx',
   'app/central-mobile/transferir/page.tsx',
+  'app/central-mobile/consultar-localizacao/page.tsx',
   'features/warehouse/mobile/WarehouseMobilePhysicalQueryResult.tsx',
   'features/warehouse/mobile/WarehouseMobileTransfer.tsx',
   'lib/warehouse/mobileIntakeAllocation.ts',
@@ -52,7 +53,8 @@ for (const forbidden of ['setDoc(', 'updateDoc(', 'runTransaction(']) {
 const home = read('features/warehouse/mobile/WarehouseMobileHome.tsx');
 assert.match(home, /href: '\/central-mobile\/alocar'/);
 assert.match(home, /href: '\/central-mobile\/transferir'/);
-assert.match(home, /WarehouseMobileLocationFoundationCheck/);
+assert.match(home, /href: '\/central-mobile\/consultar-localizacao'/);
+assert.doesNotMatch(home, /WarehouseMobileLocationFoundationCheck/);
 
 const allocationPage = read('features/warehouse/mobile/WarehouseMobileIntakeAllocation.tsx');
 assert.match(allocationPage, /allocateWarehousePendingItemFast/);
@@ -81,7 +83,7 @@ assert.match(workflow, /Central Móvel R1 Integration 2 domain tests/);
 assert.match(workflow, /Central Móvel R1 Integration 2 guard/);
 
 console.log('MOBILE-R1 INTEGRATION 2: PASS');
-console.log('- alocação, consulta e transferência compartilham posições e autoridades canônicas');
+console.log('- alocação, consulta de localização e transferência compartilham posições e autoridades canônicas');
 console.log('- transferência preserva total físico e classificação de produto única');
 console.log('- lotes críticos permanecem fail-closed');
 console.log('- consulta física permanece read-only');
