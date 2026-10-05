@@ -38,7 +38,6 @@ import {
   encodeWarehouseLocationBarcode,
   isWarehouseLocationBarcode,
   WAREHOUSE_LOCATION_BARCODE_COMPACT_PREFIX,
-  WAREHOUSE_LOCATION_BARCODE_NUMERIC_PREFIX,
   WAREHOUSE_LOCATION_BARCODE_PREFIX,
   type WarehouseStockPositionResolveResult,
 } from './locationBarcode';
@@ -51,6 +50,11 @@ import {
   loadWarehouseMobilePhysicalPositionContents,
 } from './mobilePhysicalQuery';
 import type { WarehouseMobilePhysicalQueryItem } from './mobilePhysicalQueryModel';
+import {
+  warehouseCanonicalBarcodeReadInput,
+  warehouseCanonicalLocationBalanceReadInput,
+  warehouseCanonicalMaterialReadInput,
+} from './readCompatibility';
 import {
   buildWarehouseMobilePositionCheckDecision,
   type WarehouseMobilePositionCheckDecision,
@@ -126,19 +130,7 @@ function parseAssociation(
   data: Record<string, unknown>
 ): WarehouseBarcodeAssociation {
   const result = validateWarehouseBarcodeAssociation(
-    {
-      schemaVersion: data.schemaVersion,
-      id,
-      workspaceId: data.workspaceId,
-      ug: data.ug,
-      materialId: data.materialId,
-      barcode: data.barcode,
-      presentation: data.presentation,
-      factorToBaseUnit: data.factorToBaseUnit,
-      status: data.status,
-      createdBy: data.createdBy,
-      updatedBy: data.updatedBy,
-    },
+    warehouseCanonicalBarcodeReadInput(id, data),
     {
       expectedWorkspaceId: scope.workspaceId,
       expectedUg: scope.ug,
@@ -157,7 +149,7 @@ function parseMaterial(
   data: Record<string, unknown>
 ): WarehouseMaterial {
   const result = validateWarehouseMaterial(
-    { ...data, id },
+    warehouseCanonicalMaterialReadInput(id, data),
     {
       expectedWorkspaceId: scope.workspaceId,
       expectedUg: scope.ug,
@@ -176,17 +168,7 @@ function parseBalance(
   data: Record<string, unknown>
 ): WarehouseLocationBalance {
   const result = validateWarehouseLocationBalance(
-    {
-      schemaVersion: data.schemaVersion,
-      id,
-      workspaceId: data.workspaceId,
-      ug: data.ug,
-      materialId: data.materialId,
-      position: data.position,
-      quantity: data.quantity,
-      revision: data.revision,
-      lastMovementId: data.lastMovementId,
-    },
+    warehouseCanonicalLocationBalanceReadInput(id, data),
     {
       expectedWorkspaceId: scope.workspaceId,
       expectedMaterialId: materialId,
@@ -214,7 +196,6 @@ async function loadProduct(
     || isWarehouseLocationBarcode(barcode)
     || barcode.toUpperCase().startsWith(WAREHOUSE_LOCATION_BARCODE_PREFIX)
     || barcode.toUpperCase().startsWith(WAREHOUSE_LOCATION_BARCODE_COMPACT_PREFIX)
-    || barcode.startsWith(WAREHOUSE_LOCATION_BARCODE_NUMERIC_PREFIX)
   ) {
     throw new Error('WAREHOUSE_MOBILE_POSITION_CHECK_PRODUCT_BARCODE_INVALID');
   }
