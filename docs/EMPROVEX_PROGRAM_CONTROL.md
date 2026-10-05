@@ -640,3 +640,65 @@ Sem impacto no RC FROZEN `54e60c2264588d8802a67a4cab3d875d64f6bfc1`.
 Próximo gate global permanece:
 
 **Preview HTTPS do RC congelado → MOBILE-J + certificação física/integrada**.
+
+## 24. Checkpoint Program Control — RC-P Preview
+
+Data: 2026-10-05.
+
+Após auditoria independente do handoff operacional da RC-P e do comentário #5993745462 no PR #251, o Program Control registra:
+
+**RC-P — PARCIAL / BLOQUEIO EXTERNO DE AUTORIZAÇÃO VERCEL**
+
+Identidade preservada:
+
+- branch: `rc-r1-p-preview`;
+- HEAD: `54e60c2264588d8802a67a4cab3d875d64f6bfc1`;
+- comparação contra o RC FROZEN: `identical`;
+- ahead: 0;
+- behind: 0;
+- commits adicionais: 0;
+- arquivos em delta: 0.
+
+Produção permanece:
+
+`main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
+
+sem alteração.
+
+O Preview Ready observado antes das 04:11:52 UTC de 2026-10-04 não serve à MOBILE-J, porque antecede a criação do commit técnico congelado `54e60c...`.
+
+Projeto Vercel alvo identificado:
+
+- project: `controles-de-empenhos-aprov`;
+- project ID: `prj_DZ2y10DUaXrcHoRMaZ58FkTCvOHB`;
+- team: `aprov-hgesms-projects`;
+- team ID: `team_HYvilprcT8s972DFBVQoeZa3`.
+
+Bloqueio vigente:
+
+`403 Forbidden — Not authorized: Trying to access resource under scope "aprov-hgesms-projects".`
+
+A credencial/conector Vercel disponível na sessão auditada pertence a outro team. Portanto, o blocker vigente não é uma regressão de runtime nem o rate-limit histórico; é **autorização no escopo Vercel correto**.
+
+Não ocorreu:
+
+- commit;
+- rebase;
+- merge;
+- alteração de Rules;
+- alteração de produção;
+- alteração do RC FROZEN;
+- deploy Production.
+
+Próxima ação obrigatória:
+
+**reatenticar ou usar credencial Vercel com acesso ao team `aprov-hgesms-projects` e executar exclusivamente um Preview não produtivo do SHA `54e60c2264588d8802a67a4cab3d875d64f6bfc1`.**
+
+Depois de deployment `READY`:
+
+1. smoke RC-P;
+2. confirmar URL/Deployment ID/SHA;
+3. classificar `RC-P — PASS / PREVIEW HTTPS APTO PARA MOBILE-J`;
+4. entregar o Preview à MOBILE-J.
+
+O RC FROZEN permanece válido e não deve ser reaberto por este bloqueio externo.
