@@ -157,8 +157,8 @@ function drawLabel(
   const footerY = y + height - (compact ? 2.6 : 3.8);
   const separatorY = footerY - (compact ? 2.1 : 2.8);
   const barcodeTextY = separatorY - (compact ? 0.9 : 1.2);
-  const barcodeHeight = compact ? 8.4 : large ? 13 : 8.2;
-  const barcodeGap = compact ? 1.2 : large ? 2.6 : 1.8;
+  const barcodeHeight = compact ? 10.2 : large ? 15.5 : 10.8;
+  const barcodeGap = compact ? 0.9 : large ? 2.2 : 1.4;
   const barcodeY = barcodeTextY - barcodeGap - barcodeHeight;
   const barcodeX = x + pad;
   const barcodeWidth = width - pad * 2;
@@ -223,7 +223,8 @@ export function createWarehouseLabelsPdf(
     pageWidth - preset.marginMm * 2 - preset.gapMm * (preset.columns - 1);
   const usableHeight =
     pageHeight - preset.marginMm * 2 - preset.gapMm * (preset.rows - 1);
-  const labelWidth = usableWidth / preset.columns;
+  const cellWidth = usableWidth / preset.columns;
+  const labelWidth = Math.min(preset.widthMm ?? cellWidth, cellWidth);
   const labelHeight = usableHeight / preset.rows;
 
   pages.forEach((pageItems, pageIndex) => {
@@ -232,7 +233,8 @@ export function createWarehouseLabelsPdf(
     pageItems.forEach((item, index) => {
       const row = Math.floor(index / preset.columns);
       const column = index % preset.columns;
-      const x = preset.marginMm + column * (labelWidth + preset.gapMm);
+      const cellX = preset.marginMm + column * (cellWidth + preset.gapMm);
+      const x = cellX + (cellWidth - labelWidth) / 2;
       const y = preset.marginMm + row * (labelHeight + preset.gapMm);
       drawLabel(doc, item, x, y, labelWidth, labelHeight, options);
     });
