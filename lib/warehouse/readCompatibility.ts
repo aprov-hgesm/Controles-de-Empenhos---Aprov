@@ -124,10 +124,10 @@ export function warehouseCanonicalMaterialReadInput(
     workspaceId: data.workspaceId,
     ug: data.ug,
     description: data.description,
-    aliases: data.aliases,
+    aliases: data.aliases ?? [],
     unit: canonicalUnit(data.unit),
     status: data.status,
-    conversions,
+    conversions: conversions ?? [],
   };
 }
 
