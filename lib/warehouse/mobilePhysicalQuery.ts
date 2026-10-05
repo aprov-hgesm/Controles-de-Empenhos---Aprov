@@ -35,6 +35,7 @@ import {
 } from './material';
 import {
   buildWarehouseMobilePhysicalQueryItems,
+  warehouseMobileCanonicalBalanceReadInput,
   warehouseMobilePhysicalQueryPlan,
   type WarehouseMobilePhysicalQueryItem,
 } from './mobilePhysicalQueryModel';
@@ -94,20 +95,8 @@ function parseBalance(
 ): WarehouseLocationBalance {
   // Compatibilidade de leitura para saldos legados:
   // preserva o contrato canônico e ignora apenas metadados extras históricos.
-  const canonicalBalanceInput = {
-    schemaVersion: data.schemaVersion,
-    id,
-    workspaceId: data.workspaceId,
-    ug: data.ug,
-    materialId: data.materialId,
-    position: data.position,
-    quantity: data.quantity,
-    revision: data.revision,
-    lastMovementId: data.lastMovementId,
-  };
-
   const result = validateWarehouseLocationBalance(
-    canonicalBalanceInput,
+    warehouseMobileCanonicalBalanceReadInput(id, data),
     { expectedWorkspaceId: scope.workspaceId }
   );
   if (!result.ok) {
