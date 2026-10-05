@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05 — MOBILE-K concluída e aceita para revisão; RULES-COMPAT-01 PASS; WAREHOUSE-DATA-AUDIT-01 concluída em `07265b209d6c27873278139a507aa12d4eb97973` com `BLOCKER — INTEGRIDADE LOGÍSTICA IMPEDE RC`. O blocker confirmado é Inventário TOTAL ainda incluindo `UNASSIGNED` como item físico; PAL-01 permanece `RECONCILIATION_REQUIRED` (440 L físicos vs 540 L em lotes) e exige diagnóstico read-only antes do RC. Também foi identificado risco de performance em `listWarehouseMovementsForMaterial`, que lê todos os movimentos do material antes de cortar em memória. Permanecem em execução SAAS-FINAL-AUDIT-01 e RC-READINESS-01.**
+Última sincronização global: **2026-10-05 — MOBILE-K concluída e aceita para revisão; RULES-COMPAT-01 PASS; WAREHOUSE-DATA-AUDIT-01 confirmou blocker de integridade. Program Control abriu `INVENTORY-PHYSICAL-FIX-01` em `inventory-physical-fix-01@9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0` para corrigir exclusivamente Inventário TOTAL + `UNASSIGNED`, sem reabrir a MOBILE-K inteira. PAL-01 permanece `RECONCILIATION_REQUIRED` (440 L físicos vs 540 L em lotes) e terá frente diagnóstica read-only separada. SAAS-FINAL-AUDIT-01 e RC-READINESS-01 seguem em execução.**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -114,6 +114,8 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | PAL-01 / lotes | **DIVERGÊNCIA REAL DETECTADA** | posição física 440 L com lotes ativos observados somando 540 L; não mascarar nem autocorrigir dados; arquitetura nova deve selecionar/conciliar operação sem criar segunda autoridade |
 | Estado logístico do material | **CONTRATO CANÔNICO CORRIGIDO** | usuário vê apenas: PENDENTE/PARCIALMENTE TRATADO no intake, ESTOQUE LOCALIZADO em LOCAL/SUBPOSIÇÃO, CONSUMIDO/TRATADO; `UNASSIGNED` não é categoria operacional normal de estoque |
 | Onda paralela de auditoria | **2/4 CONCLUÍDAS** | RULES-COMPAT-01 = PASS; WAREHOUSE-DATA-AUDIT-01 = BLOCKER RC; aguardando SAAS-FINAL-AUDIT-01 + RC-READINESS-01 |
+| INVENTORY-PHYSICAL-FIX-01 | **ATIVADA / CORREÇÃO MÍNIMA** | branch `inventory-physical-fix-01@9f1035ac...`; owner exclusivo do blocker Inventário TOTAL + `UNASSIGNED`; sem Rules, dados reais ou refactor amplo |
+| PAL01-RECONCILE-01 | **PLANEJADA / READ-ONLY** | diagnóstico dos 440 L físicos vs 540 L em lotes; nenhuma correção ou migração até causa comprovada |
 | Firestore Rules — contrato da onda | **CONGELADAS PARA OS WORKERS** | SaaS/RC/MOBILE-K usam `firestore.rules@bc91185f...` e `firestore.warehouse.rules@6e1f1050...`; qualquer necessidade de alterar Rules deve voltar ao Coordenador antes de edição |
 | HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
 | Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
@@ -174,12 +176,14 @@ A implementação da **MOBILE-K — Canonical Ops Engine** foi concluída pelo w
 2. SAAS-FINAL-AUDIT-01 — confirmar completude SaaS R1;
 3. WAREHOUSE-DATA-AUDIT-01 — **ENCERRADA / BLOCKER RC**: Inventário TOTAL inclui `UNASSIGNED`; PAL-01 exige diagnóstico read-only; performance risk em movimentos por material;
 4. RC-READINESS-01 — fechar matriz de gates, rollback e re-freeze;
-5. revisar semanticamente o delta MOBILE-K contra esses quatro relatórios;
-6. corrigir apenas blockers reais com owner exclusivo;
-7. integrar semanticamente o resultado na linha RC;
-8. repetir gates afetados no SHA final;
-9. executar teste físico curto das operações críticas;
-10. declarar novo RC SHA e RE-FREEZE somente depois dessas barreiras.
+5. executar `INVENTORY-PHYSICAL-FIX-01` sobre o HEAD final da MOBILE-K, alterando apenas o contrato de Inventário TOTAL + testes associados;
+6. executar diagnóstico read-only `PAL01-RECONCILE-01` antes de qualquer reparo de dados;
+7. revisar semanticamente MOBILE-K + correções + quatro relatórios paralelos;
+8. corrigir somente blockers remanescentes com owner exclusivo;
+9. integrar semanticamente o resultado na linha RC;
+10. repetir gates afetados no SHA final;
+11. executar teste físico curto das operações críticas;
+12. declarar novo RC SHA e RE-FREEZE somente depois dessas barreiras.
 
 ### Onda paralela de auditoria — execução autorizada sem competição com MOBILE-K
 
@@ -245,6 +249,32 @@ Regra de saída do blocker:
 - executar diagnóstico read-only do PAL-01;
 - só então decidir se existe reparo de dados necessário, em frente separada e autorizada;
 - repetir Rules/CI afetados no delta final.
+
+#### Frentes corretivas derivadas da auditoria logística
+
+**INVENTORY-PHYSICAL-FIX-01 — ATIVADA**
+
+- branch: `inventory-physical-fix-01`;
+- base exata: `mobile-r1-k-canonical-ops-engine@9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0`;
+- escopo exclusivo: Inventário TOTAL deve considerar somente `LOCATION`/`SUBPOSITION` físicas e excluir `UNASSIGNED`;
+- atualizar o teste histórico que hoje exige TOTAL + UNASSIGNED = true;
+- auditar criação de itens do inventário para garantir que nenhuma UI Desktop/Mobile ofereça projeção técnica para contagem física;
+- preservar compatibilidade de leitura do tipo `UNASSIGNED` fora do inventário;
+- preservar Rules exatamente nos hashes auditados;
+- não tocar em PAL-01, lotes reais, intake, transfer, outbound, billing, sessão ou produção;
+- repetir testes de inventário Desktop/Mobile, MOBILE-K guard, TypeScript, build, diff hygiene e gates afetados.
+
+**PAL01-RECONCILE-01 — PLANEJADA**
+
+- finalidade exclusivamente diagnóstica/read-only;
+- levantar saldo agregado, locationBalances, lotes, movimentos, consumptions, returns e inventários relacionados à PAL-01;
+- distinguir fato, hipótese e causa comprovada;
+- nenhuma escrita, backfill, migração, correção de lote/saldo ou Rules;
+- qualquer reparo posterior exigirá frente própria e autorização explícita do Coordenador/Fundador quando tocar dados reais.
+
+**Performance**
+
+O achado em `listWarehouseMovementsForMaterial()` permanece backlog técnico separado. Não deve ser misturado à correção de Inventário, salvo se um gate do RC demonstrar impacto material que justifique abrir owner próprio.
 
 #### Guardrail obrigatório de Firestore Rules
 
