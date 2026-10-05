@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05 — HANDOFF DE COORDENAÇÃO VALIDADO CONTRA GITHUB: 7 operações móveis consolidadas; Saída ≠ Transferência; Consultar Item read-only; PR #252 OPEN/DRAFT/MERGEABLE; HEAD b83f9de... com Vercel/Core/Application CI verdes**
+Última sincronização global: **2026-10-05 — MOBILE-J revelou burocracia e duplicação de regras operacionais; Fundador autorizou frente MOBILE-K para unificar Desktop↔Mobile sobre um único motor canônico. PR #252 segue OPEN/DRAFT/MERGEABLE; HEAD RC bd27da91... com Vercel SUCCESS e Core #317 SUCCESS; Application CI #1030 ainda aguardando runner no momento deste checkpoint.**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -8,7 +8,7 @@ Integradora SaaS R1: `feat/saas-r1-commercializacao` — fonte congelada da comp
 
 Integradora Mobile R1: `feat/central-mobile-r1@7b7717b6eebabf911310d2b8ac56ed13c9cb9238` — avanço documental, sem novo delta runtime
 
-Estado global: **Performance R3 permanece como aplicação produtiva; Rules RC foram publicadas de forma autorizada nos bancos principal e Warehouse; o RC original `54e60c2264588d8802a67a4cab3d875d64f6bfc1` permanece baseline histórica; a certificação MOBILE-J reabriu o freeze de forma controlada por defeitos reais e agora também consolidou a semântica das 7 operações móveis. A branch ativa é `rc-r1-mobile-j-fix-label-readability@b83f9de756a5690a8459c3bf8d9dcb2fee222a14`, PR #252 draft, com Vercel SUCCESS, Core Protection #300 SUCCESS e Application CI #1013 SUCCESS; produção do app/main não foi alterada.**
+Estado global: **Performance R3 permanece como aplicação produtiva; Rules RC foram publicadas de forma autorizada nos bancos principal e Warehouse; o RC original `54e60c2264588d8802a67a4cab3d875d64f6bfc1` permanece baseline histórica. A certificação física MOBILE-J encontrou defeitos reais de etiqueta, consulta, reconciliação de lotes e UX. O Fundador autorizou agora uma correção arquitetural transversal: Mobile deve deixar de manter regras operacionais paralelas e tornar-se camada fina de scanner/UX sobre o mesmo motor canônico usado pela Central Desktop. A linha RC viva é `rc-r1-mobile-j-fix-label-readability@bd27da91da92642d5a5fea08f7020c6cea658a62`; o worker isolado partirá exatamente desse SHA em `mobile-r1-k-canonical-ops-engine`. PR #252 continua draft e não mergeado; produção do app/main não foi alterada.**
 
 ---
 
@@ -102,14 +102,16 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | RC original | **FROZEN HISTÓRICO / BASELINE** | `54e60c2264588d8802a67a4cab3d875d64f6bfc1`; não é mais o HEAD final pretendido após defeitos físicos reais |
 | RC-P base | **PREVIEW HTTPS OBTIDO** | `rc-r1-p-preview@54e60c...`; acesso/auth/legal gate e Central Móvel confirmados manualmente |
 | Reabertura controlada | **ATIVA / JUSTIFICADA POR DEFEITO REAL** | branch `rc-r1-mobile-j-fix-label-readability`; PR #252 **OPEN / DRAFT / MERGEABLE=true / NOT MERGED**; base `rc-r1-p-preview@54e60c...`; nenhum merge em main |
-| HEAD auditado MOBILE-J-FIX | **VERDE NO PREVIEW** | `b83f9de756a5690a8459c3bf8d9dcb2fee222a14`; Vercel SUCCESS; Core #300 SUCCESS; Application CI #1013 SUCCESS |
+| HEAD vivo MOBILE-J-FIX | **PREVIEW VERDE / CI PARCIAL** | `bd27da91da92642d5a5fea08f7020c6cea658a62`; Vercel SUCCESS; Core #317 SUCCESS; Application CI #1030 aguardando runner neste checkpoint |
 | Barcode físico | **PASS FÍSICO PARA LOCAL** | novo código numérico de 13 dígitos; `9812001101000` lido como `CAMERA · LOCATION` |
-| Etiqueta compacta | **AJUSTADA PARA PRATELEIRA** | 140 mm × 32,5 mm; altura <= 35 mm; Code 128 ampliado |
+| Etiqueta compacta | **PASS FÍSICO / AJUSTADA PARA PRATELEIRA** | 140 mm × 35 mm; 8 por A4; layout lateral; Code 128 lido com sucesso em Android real |
 | Compatibilidade de etiquetas | **PRESERVADA** | EPX1 e EPX2 continuam aceitos; formato numérico é preferido quando representável |
 | Consulta física legada | **HARDENING APLICADO / RETESTE MANUAL PENDENTE** | projeções canônicas ignoram metadados extras históricos sem mascarar inconsistência real |
 | Central Móvel — operações | **7 FLUXOS DISTINTOS / PREVIEW VERDE** | Alocar Recebimento; Transferir Material; Consultar Localização; Consultar Item; Inventário; Saída de Material; Conferir posição |
 | Consultar Item | **IMPLEMENTADA / READ-ONLY** | barcode do item → saldo agregado → locais/subposições + quantidades + lotes; reutiliza o mesmo read model da Saída |
-| Saída vs Transferência | **SEMÂNTICA SEPARADA** | Saída usa origem física + destino administrativo; Transferência usa origem física + destino físico; nenhuma lógica paralela de estoque |
+| Saída vs Transferência | **SEMÂNTICA SEPARADA / MOTOR A UNIFICAR** | intenção continua distinta na UX, mas regras de saldo/lote/validade/idempotência devem vir de um único motor canônico compartilhado Desktop↔Mobile |
+| MOBILE-K — Canonical Ops Engine | **AUTORIZADA / WORKER ISOLADO PREPARADO** | branch `mobile-r1-k-canonical-ops-engine` criada em `bd27da91...`; objetivo: reduzir Mobile a scanner/UX e reutilizar serviços transacionais oficiais da Central Desktop |
+| PAL-01 / lotes | **DIVERGÊNCIA REAL DETECTADA** | posição física 440 L com lotes ativos observados somando 540 L; não mascarar nem autocorrigir dados; arquitetura nova deve selecionar/conciliar operação sem criar segunda autoridade |
 | HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
 | Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
 | Piloto real | **NÃO INICIADO** | somente após novo RC reconciliado/re-frozen e decisão posterior |
@@ -123,8 +125,8 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 - Mobile integradora documental: `feat/central-mobile-r1@7b7717b6eebabf911310d2b8ac56ed13c9cb9238`;
 - RC runtime original/frozen: `54e60c2264588d8802a67a4cab3d875d64f6bfc1`;
 - branch RC-P original: `rc-r1-p-preview@54e60c2264588d8802a67a4cab3d875d64f6bfc1`;
-- branch ativa de correção/certificação: `rc-r1-mobile-j-fix-label-readability@b83f9de756a5690a8459c3bf8d9dcb2fee222a14`;
-- PR de correção/certificação: **#252 — OPEN / DRAFT / MERGEABLE=true / NÃO MERGEADO**; HEAD `b83f9de756a5690a8459c3bf8d9dcb2fee222a14`; 61 commits / 30 arquivos no PR no momento deste handoff;
+- branch ativa de correção/certificação: `rc-r1-mobile-j-fix-label-readability@bd27da91da92642d5a5fea08f7020c6cea658a62`;
+- PR de correção/certificação: **#252 — OPEN / DRAFT / MERGEABLE=true / NÃO MERGEADO**; HEAD `bd27da91da92642d5a5fea08f7020c6cea658a62`; 61 commits / 30 arquivos no PR no momento deste handoff;
 - Preview estável da branch: `https://controles-de-empenhos-aprov-git-rc-f44756-aprov-hgesms-projects.vercel.app`;
 - HARDEN-B: `saas-harden-b-recovery-restore@c6368d0dd1b89610cb02b9b87f5ef6392810b336`.
 
@@ -138,47 +140,42 @@ Sequência vigente:
 
 ```text
 RC original 54e60c... — FROZEN histórico
-→ Preview HTTPS obtido
-→ Rules RC publicadas de forma autorizada
-→ acesso/auth/legal gate no Preview — PASS manual
-→ MOBILE-J física iniciada
-→ defeito real: Code128 EPX1 muito denso — CONFIRMADO
-→ MOBILE-J-FIX: EPX2 e depois código físico numérico de 13 dígitos
-→ leitura física 9812001101000 como CAMERA · LOCATION — PASS
-→ defeito real: documentos legados com unexpected_field em locationBalances/lots
-→ camada de compatibilidade read-only canônica + auditoria preventiva
-→ HEAD d7aef5e... com barcode/compatibilidade legada auditados
-→ achado de UX: Saída visualmente confundida com Transferência
-→ contrato móvel reorganizado em 7 operações distintas
-→ nova operação read-only Consultar Item criada sobre o mesmo read model da Saída
-→ HEAD b83f9de... com Vercel/Core/Application CI verdes
-→ TESTE MANUAL dos 7 fluxos no Preview
-→ concluir restante do runbook MOBILE-J
-→ integrar semanticamente PR #252 em uma linha RC controlada
+→ Preview HTTPS + Rules RC autorizadas
+→ MOBILE-J física encontrou defeitos reais
+→ barcode/etiqueta física — PASS na última forma testada
+→ consultas/legado/7 operações — hardening aplicado
+→ transferência parcial expôs divergência real PAL-01 (440 L físico vs lotes ativos observados 540 L)
+→ diagnóstico arquitetural: Mobile acumulou regras próprias e burocracia
+→ decisão do Fundador: MOBILE-K / motor operacional único Desktop↔Mobile
+→ worker isolado mobile-r1-k-canonical-ops-engine em bd27da91...
+→ mapear motores canônicos Desktop e eliminar autoridades móveis duplicadas
+→ gates + testes de regressão Desktop e Mobile
+→ teste físico simplificado das operações críticas
+→ integrar semanticamente resultado na linha RC
 → repetir gates afetados
 → declarar NOVO RC SHA / RE-FREEZE
 → certificação final no SHA re-frozen
 → GO/NO-GO explícito do Fundador
 → eventual produção controlada do app
 → piloto real
-→ correções pós-piloto
-→ SAAS-J / abertura comercial quando autorizada
 ```
+
 
 ### Gate imediato
 
-O próximo gate **não é produção**.
+O próximo gate **não é produção** e também **não é continuar remendando avisos da UI móvel um a um**.
 
-É:
+É concluir a frente **MOBILE-K — Canonical Ops Engine**:
 
-1. recarregar o Preview da branch `rc-r1-mobile-j-fix-label-readability` no HEAD `b83f9de...`;
-2. confirmar que a Home mostra exatamente as 7 operações;
-3. **Consultar Localização**: ler LOCAL/SUBPOSIÇÃO e confirmar conteúdo físico, somente leitura;
-4. **Consultar Item**: ler barcode comercial e confirmar locais/subposições + quantidades + lotes, somente leitura;
-5. **Saída de Material**: material → quantidade → origem da retirada → confirmar origem física → lote → destino administrativo/retirado por → CONFIRMAR SAÍDA; não deve existir destino físico;
-6. **Transferir Material**: origem física → material → quantidade → destino físico → CONFIRMAR TRANSFERÊNCIA;
-7. validar **Alocar Recebimento**, **Inventário** e **Conferir posição** preservando suas responsabilidades próprias;
-8. continuar casos físicos MOBILE-J (câmera permitida/negada/indisponível, fallback manual, som/vibração, double scan/cooldown, perda/retorno de rede, jornada ponta a ponta, coerência Desktop↔Mobile).
+1. mapear quais operações Desktop já possuem serviços transacionais oficiais e quais wrappers Mobile duplicam regra;
+2. preservar as 7 intenções móveis e as rotas atuais;
+3. tornar Mobile camada fina de scanner/resolução/UX;
+4. fazer Saída móvel reutilizar o caminho canônico de Saída/Withdrawal/OUTBOUND sempre que semanticamente equivalente;
+5. fazer Transferência móvel utilizar um serviço canônico compartilhável para transferência física, sem lógica de lote exclusiva da UI;
+6. centralizar seleção de lote/FEFO, fracionamento quando suportado, validação de saldo, concorrência e idempotência;
+7. não mascarar o caso PAL-01: 440 L físicos vs lotes ativos observados somando 540 L é divergência de dados e precisa permanecer detectável;
+8. rodar regressão Desktop + Mobile e provar que Desktop não foi quebrado;
+9. só então retomar certificação física simplificada.
 
 ### Regra de re-freeze
 
@@ -1734,6 +1731,8 @@ Contrato:
 - EPX1 apenas como identidade física;
 - resolver sempre contra entidades canônicas;
 - repositories/ledger/saldo/lote/posição oficiais;
+- **um único motor operacional canônico compartilhado com a Central Desktop**;
+- Mobile deve conter scanner, resolução física e UX compacta, mas não uma segunda autoridade para saldo, lote, validade, FEFO, idempotência ou escrita transacional;
 - fallback manual;
 - sem banco Mobile paralelo;
 - sem operação offline integral na R1.
@@ -1765,34 +1764,78 @@ MOBILE-I:
 
 Não reabrir F/G/H/I sem regressão concreta.
 
-## 26. MOBILE-J — certificação final
+## 26. MOBILE-J — certificação final e reabertura controlada
 
-Branch:
+Linha RC ativa:
 
-`mobile-r1-j-final-certification@90d646372aae3e92318a78b90d71f72c5eb6b00e`
+`rc-r1-mobile-j-fix-label-readability@bd27da91da92642d5a5fea08f7020c6cea658a62`
 
-PR #246:
+PR #252:
 
-**OPEN / DRAFT / MERGEABLE**
+**OPEN / DRAFT / MERGEABLE / NÃO MERGEADO**
 
-Classificação:
+Estado do HEAD no checkpoint deste Memorial:
 
-**PARCIAL TECNICAMENTE SAUDÁVEL / CERTIFICAÇÃO EM EXECUÇÃO**
+- Vercel Preview: **SUCCESS**;
+- Core Protection #317: **SUCCESS**;
+- Application CI #1030: **AGUARDANDO RUNNER**;
+- produção/main: **INALTERADOS**.
 
-Escopo permitido:
+A MOBILE-J encontrou defeitos reais durante o uso físico, portanto o freeze original foi reaberto de forma controlada. Entre os achados já tratados estão:
 
-- certificação;
-- evidência;
-- regressão concreta mínima;
-- nenhuma feature nova.
+- Code 128/etiqueta física e legibilidade;
+- etiqueta Compacta 140 × 35 mm com leitura física confirmada;
+- compatibilidade de dados legados em read models;
+- separação UX entre Saída e Transferência;
+- Consultar Item read-only;
+- reconciliação explícita de saldo sem localização, posição inativa e divergência real;
+- suporte experimental a transferência parcial com lotes no HEAD atual.
 
-Próximo marco real:
+### 26.1 Decisão arquitetural autorizada — MOBILE-K / motor operacional único
 
-**RC em Preview HTTPS → testes físicos → reconciliação SaaS final → avaliação de PASS FINAL.**
+O teste real mostrou que a camada Mobile acumulou regras próprias demais para movimentação. Isso aumentou passos, mensagens de bloqueio e risco de divergência em relação à Central Desktop.
 
-Runbook especializado:
+Decisão do Fundador em 2026-10-05:
 
-`mobile-r1-j-final-certification:docs/CENTRAL_MOBILE_R1_MOBILE_J_PHYSICAL_TEST_RUNBOOK.md`
+> **A Central Móvel deve ser uma interface rápida de scanner/UX sobre os mesmos serviços e motores transacionais canônicos da Central Desktop.**
+
+Objetivo:
+
+- manter as 7 intenções de UX móvel;
+- preservar câmera, barcode físico, fallback manual e navegação otimizada para celular;
+- remover ou reduzir regras duplicadas em `mobileTransfer.ts`, `mobileOutbound.ts` e equivalentes;
+- fazer saldo, lote, validade, FEFO, idempotência, concorrência e writes serem decididos pelos serviços canônicos compartilhados;
+- não criar banco, ledger, saldo ou lote Mobile paralelo;
+- não transformar inconsistência histórica em correção automática de dados.
+
+Branch worker já preparada:
+
+`mobile-r1-k-canonical-ops-engine@bd27da91da92642d5a5fea08f7020c6cea658a62`
+
+A branch parte **exatamente** do HEAD RC vivo e não deve incorporar `main`, integradoras antigas ou mudanças externas por merge/rebase.
+
+Arquivos de entrada obrigatórios para o worker:
+
+- `features/warehouse/components/WarehouseMaterialWithdrawal.tsx`;
+- `lib/warehouse/outbound.ts`;
+- `lib/warehouse/outboundRepository.ts`;
+- `lib/warehouse/withdrawal.ts`;
+- `lib/warehouse/withdrawalRepository.ts`;
+- `features/warehouse/mobile/WarehouseMobileOutbound.tsx`;
+- `features/warehouse/mobile/WarehouseMobileTransfer.tsx`;
+- `lib/warehouse/mobileOutbound.ts`;
+- `lib/warehouse/mobileOutboundRepository.ts`;
+- `lib/warehouse/mobileTransfer.ts`;
+- `lib/warehouse/locationRepository.ts`;
+- `lib/warehouse/lot.ts`;
+- `lib/warehouse/lotRepository.ts`;
+- Rules e testes afetados.
+
+Critério arquitetural central:
+
+**Desktop e Mobile podem ter UX diferente, mas não podem ter duas autoridades de estoque.**
+
+O worker deve primeiro mapear os motores já canônicos e refatorar por reutilização/composição. Não deve simplesmente deslocar a duplicação para outro arquivo chamado “shared”.
 
 ## 27. Certificação física obrigatória
 
@@ -2929,7 +2972,7 @@ A **Transferência** permanece:
 
 `origem física → material → quantidade → destino físico → confirmar transferência`
 
-No HEAD `b83f9de756a5690a8459c3bf8d9dcb2fee222a14` foram confirmados no GitHub:
+No HEAD `bd27da91da92642d5a5fea08f7020c6cea658a62` foram confirmados no GitHub:
 
 - Vercel: SUCCESS;
 - Core Protection #300: SUCCESS;
@@ -3030,7 +3073,7 @@ O próximo passo é certificação manual dos sete fluxos no Preview, não integ
 - EPX1 e EPX2 continuam aceitos como compatibilidade;
 - código físico válido de localização é reservado e não pode ser cadastrado como barcode de produto;
 - número comercial iniciado por `981` que não forme uma localização válida continua permitido como produto;
-- perfil COMPACT de prateleira: 140 mm × 32,5 mm, respeitando limite físico de 35 mm de altura;
+- perfil COMPACT de prateleira: 140 mm × 35 mm, respeitando limite físico de 35 mm de altura;
 - renomear código lógico de estrutura exige reimpressão da etiqueta correspondente;
 - metadados legados extras podem ser descartados somente em projeção read-only canônica;
 - inconsistência semântica real de estoque deve continuar fail-closed.
@@ -3186,16 +3229,16 @@ freeze original: REABERTO CONTROLADAMENTE POR DEFEITO FÍSICO REAL
 
 BRANCH ATIVA DE CERTIFICAÇÃO/CORREÇÃO
 rc-r1-mobile-j-fix-label-readability
-HEAD auditado: b83f9de756a5690a8459c3bf8d9dcb2fee222a14
+HEAD vivo: bd27da91da92642d5a5fea08f7020c6cea658a62
 PR: #252
 estado PR: OPEN / DRAFT / MERGEABLE=true / NÃO MERGEADO
 base PR: rc-r1-p-preview@54e60c2264588d8802a67a4cab3d875d64f6bfc1
-HEAD PR: b83f9de756a5690a8459c3bf8d9dcb2fee222a14
+HEAD PR: bd27da91da92642d5a5fea08f7020c6cea658a62
 tamanho PR no handoff: 61 commits / 30 arquivos
 Preview:
 https://controles-de-empenhos-aprov-git-rc-f44756-aprov-hgesms-projects.vercel.app
 
-GATES DO HEAD b83f9de...
+GATES DO HEAD bd27da91...
 Vercel Preview: SUCCESS
 Core Protection #300: SUCCESS
 Application CI #1013: SUCCESS
@@ -3210,7 +3253,7 @@ novo numérico 13 dígitos: PREFERIDO QUANDO REPRESENTÁVEL
 exemplo PAL-01: 9812001101000
 teste Android real: CAMERA · LOCATION / Leitura validada — PASS
 Code128: mantido
-Compacta prateleira: 140 mm × 32,5 mm
+Compacta prateleira: 140 mm × 35 mm
 limite informado: altura <= 35 mm
 
 MOBILE-J — CONSULTA FÍSICA / LEGADO
@@ -3267,16 +3310,17 @@ read model compartilhado de item/saída: lib/warehouse/mobileOutboundRepository.
 barcode físico/resolver: lib/warehouse/locationBarcode.ts + locationBarcodeResolver.ts
 compatibilidade legada read-only: lib/warehouse/readCompatibility.ts
 
-DECISÃO DE NÃO DUPLICAÇÃO
-- Consultar Item NÃO possui um segundo modelo de estoque: reutiliza loadWarehouseMobileItemAvailability, o mesmo read model físico usado pela Saída.
-- Consultar Localização usa a consulta física por posição e não escreve estoque.
-- Saída usa OUTBOUND canônico/transacional.
-- Transferência usa TRANSFER canônico e continua sendo a única operação com origem física + destino físico.
-- Conferir posição e consultas não devem executar movimentação.
-- qualquer nova UX deve compor esses contratos, não copiar lógica de saldo/lot/posição para outro módulo.
+DECISÃO DE NÃO DUPLICAÇÃO — ATUALIZADA
+- Desktop e Mobile podem ter UX diferente, mas NÃO podem ter duas autoridades de estoque.
+- Consultar Item e Consultar Localização permanecem read-only.
+- Saída móvel deve compor o motor oficial já usado pela Central Desktop, não manter uma segunda regra de OUTBOUND.
+- Transferência móvel deve usar um serviço canônico compartilhado para saldo/lote/validade/concorrência; scanner e passos de tela ficam no Mobile.
+- Conferir posição e consultas não executam movimentação.
+- regras de lote, FEFO, fracionamento, idempotência e writes não pertencem à camada de UI móvel.
+- branch worker autorizada: mobile-r1-k-canonical-ops-engine@bd27da91da92642d5a5fea08f7020c6cea658a62.
 
 TESTE MANUAL IMEDIATO PENDENTE — PRIMEIRA MISSÃO DO NOVO COORDENADOR
-1. abrir o Preview no HEAD b83f9de756a5690a8459c3bf8d9dcb2fee222a14
+1. abrir o Preview no HEAD bd27da91da92642d5a5fea08f7020c6cea658a62
 2. confirmar 7 cards na Home e respectivas rotas
 3. Consultar Localização: testar LOCAL e SUBPOSIÇÃO e confirmar READ-ONLY
 4. Consultar Item: testar barcode comercial e confirmar locais/subposições + quantidades + lotes
@@ -3330,7 +3374,7 @@ Legal Acceptance no Preview: funcionando após publicação das Rules RC
 nenhum bypass temporário foi criado
 
 PRÓXIMA SEQUÊNCIA CANÔNICA
-teste manual das 7 operações no HEAD b83f9de...
+teste manual das 7 operações no HEAD bd27da91...
 → LOCAL/SUBPOSIÇÃO/ITEM
 → Saída ≠ Transferência confirmada fisicamente
 → restante MOBILE-J física/integrada
@@ -3382,19 +3426,17 @@ Este SHA é baseline histórica, não o candidato final após a reabertura contr
 BRANCH ATIVA
 rc-r1-mobile-j-fix-label-readability
 HEAD:
-b83f9de756a5690a8459c3bf8d9dcb2fee222a14
+bd27da91da92642d5a5fea08f7020c6cea658a62
 
 PR
 #252
 OPEN / DRAFT / MERGEABLE / NÃO MERGEADO
 
-GATES DO HEAD ATIVO
+GATES DO HEAD ATIVO NO CHECKPOINT
 Vercel Preview: SUCCESS
-Core Protection #300: SUCCESS
-Application CI #1013: SUCCESS
-Production build: PASS
-TypeScript: PASS
-Diff hygiene: PASS
+Core Protection #317: SUCCESS
+Application CI #1030: AGUARDANDO RUNNER
+Não inferir PASS final antes do fechamento do CI.
 
 PREVIEW
 https://controles-de-empenhos-aprov-git-rc-f44756-aprov-hgesms-projects.vercel.app
@@ -3416,7 +3458,9 @@ SEMÂNTICA OBRIGATÓRIA
 - Consultar Item = item → locais/quantidades/lotes; read-only
 - Conferir posição = posição + item → correto/incorreto; read-only
 - Consultas/conferência não movimentam estoque
-- Consultar Item e Saída reutilizam o mesmo read model de disponibilidade; não criar autoridade duplicada
+- NOVA DECISÃO: Mobile é camada fina de scanner/UX sobre o mesmo motor canônico da Central Desktop.
+- Não manter segunda autoridade de saldo/lote/validade/FEFO/idempotência em arquivos mobile.
+- Worker autorizado: mobile-r1-k-canonical-ops-engine@bd27da91da92642d5a5fea08f7020c6cea658a62
 
 IDENTIDADE FÍSICA
 - EPX1: legado suportado
@@ -3424,7 +3468,7 @@ IDENTIDADE FÍSICA
 - código numérico 13 dígitos: preferido quando representável
 - exemplo físico certificado: 9812001101000 = PAL-01
 - Android real: CAMERA · LOCATION — PASS
-- etiqueta Compacta: 140 mm × 32,5 mm
+- etiqueta Compacta: 140 mm × 35 mm
 - limite de prateleira: <= 35 mm de altura
 
 COMPATIBILIDADE LEGADA
@@ -3439,7 +3483,7 @@ NÃO mascarar inconsistência semântica real.
 Saldo duplicado, material ausente, quantidade inválida, hierarquia inválida etc. continuam fail-closed.
 
 PRIMEIRO TRABALHO DO NOVO COORDENADOR
-Executar/acompanhar a certificação manual no Preview do HEAD b83f9de...:
+Executar/acompanhar a certificação manual no Preview do HEAD bd27da91...:
 1. confirmar 7 cards na Home;
 2. Consultar Localização com LOCAL e SUBPOSIÇÃO;
 3. Consultar Item com barcode comercial;
