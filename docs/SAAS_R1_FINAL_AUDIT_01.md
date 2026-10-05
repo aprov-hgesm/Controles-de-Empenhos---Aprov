@@ -1,8 +1,8 @@
 # SAAS-FINAL-AUDIT-01 — Auditoria Final do SaaS R1
 
-Data: **2026-10-05**  
-Branch: `saas-final-audit-01`  
-HEAD inicial: `d7837257d56ca0be5d0c32426b164696441b7541`  
+Data: **2026-10-05**
+Branch: `saas-final-audit-01`
+HEAD inicial: `d7837257d56ca0be5d0c32426b164696441b7541`
 Base congelada exigida: `d7837257d56ca0be5d0c32426b164696441b7541`
 
 ## 1. Conclusão executiva
