@@ -42,7 +42,9 @@ function drawPhysicalBarcode(
   width: number,
   height: number,
   textY: number,
-  compact: boolean
+  compact: boolean,
+  textStartSize?: number,
+  textMinSize?: number
 ): void {
   const pattern = buildWarehouseCode128Pattern(value);
   const moduleWidth = width / pattern.totalModules;
@@ -62,12 +64,107 @@ function drawPhysicalBarcode(
     doc,
     value,
     width,
-    compact ? 3.2 : 4,
-    compact ? 2.35 : 2.8,
+    textStartSize ?? (compact ? 3.2 : 4),
+    textMinSize ?? (compact ? 2.35 : 2.8),
     'normal'
   );
   doc.setFontSize(textSize);
   doc.text(value, x + width / 2, textY, { align: 'center' });
+}
+
+function drawCompactShelfLabel(
+  doc: jsPDF,
+  item: WarehouseLabelItem,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  options: WarehouseLabelPdfOptions
+): void {
+  const pad = 2.8;
+  const leftX = x + pad;
+  const rightEdge = x + width - pad;
+  const dividerX = x + width * 0.43;
+  const leftWidth = dividerX - leftX - 2.4;
+  const barcodeX = dividerX + 3.2;
+  const barcodeWidth = rightEdge - barcodeX;
+
+  doc.setDrawColor(10, 10, 10);
+  doc.setTextColor(5, 5, 5);
+  doc.setLineWidth(0.28);
+  doc.roundedRect(x, y, width, height, 1.4, 1.4);
+
+  doc.setLineWidth(0.22);
+  doc.line(dividerX, y + 2, dividerX, y + height - 2);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(5.6);
+  doc.text('EMPROVEX', leftX, y + 4.4);
+
+  doc.setFontSize(3.6);
+  doc.text('CENTRAL DE DEPÓSITOS', leftX, y + 7.2);
+
+  const codeSize = fitText(
+    doc,
+    item.code,
+    leftWidth,
+    17,
+    8,
+    'bold'
+  );
+  doc.setFontSize(codeSize);
+  doc.text(item.code, leftX, y + 14.7);
+
+  const nameSize = fitText(
+    doc,
+    item.name,
+    leftWidth,
+    7.5,
+    4.4,
+    'bold'
+  );
+  doc.setFontSize(nameSize);
+  doc.text(item.name, leftX, y + 19.5);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(4.3);
+  doc.text(warehouseLabelKindLabel(item.kind), leftX, y + 23.1);
+
+  doc.setFontSize(4.1);
+  doc.text('ESTRUTURA FÍSICA', leftX, y + 26.5);
+
+  const footerSeparatorY = y + 28.5;
+  doc.setDrawColor(80, 80, 80);
+  doc.setLineWidth(0.16);
+  doc.line(leftX, footerSeparatorY, dividerX - 2.4, footerSeparatorY);
+
+  const footerParts = [item.depotCode];
+  if (options.includeUg) footerParts.push('UG ' + item.ug);
+  footerParts.push(item.workspaceId.toUpperCase());
+  const footerText = footerParts.join('   ');
+  const footerSize = fitText(
+    doc,
+    footerText,
+    leftWidth,
+    4.1,
+    2.8,
+    'bold'
+  );
+  doc.setFontSize(footerSize);
+  doc.text(footerText, leftX, y + 32.5);
+
+  drawPhysicalBarcode(
+    doc,
+    item.physicalBarcode,
+    barcodeX,
+    y + 3,
+    barcodeWidth,
+    22.5,
+    y + 31.2,
+    true,
+    5.6,
+    3.2
+  );
 }
 
 function drawLabel(
@@ -80,8 +177,13 @@ function drawLabel(
   options: WarehouseLabelPdfOptions
 ): void {
   const compact = options.preset === 'COMPACT';
+  if (compact) {
+    drawCompactShelfLabel(doc, item, x, y, width, height, options);
+    return;
+  }
+
   const large = options.preset === 'LARGE';
-  const pad = compact ? 3.2 : large ? 5 : 4.2;
+  const pad = large ? 5 : 4.2;
 
   doc.setDrawColor(20, 20, 20);
   doc.setTextColor(10, 10, 10);
@@ -224,8 +326,9 @@ export function createWarehouseLabelsPdf(
   const usableHeight =
     pageHeight - preset.marginMm * 2 - preset.gapMm * (preset.rows - 1);
   const cellWidth = usableWidth / preset.columns;
+  const cellHeight = usableHeight / preset.rows;
   const labelWidth = Math.min(preset.widthMm ?? cellWidth, cellWidth);
-  const labelHeight = usableHeight / preset.rows;
+  const labelHeight = Math.min(preset.heightMm ?? cellHeight, cellHeight);
 
   pages.forEach((pageItems, pageIndex) => {
     if (pageIndex > 0) doc.addPage('a4', 'portrait');
@@ -234,8 +337,9 @@ export function createWarehouseLabelsPdf(
       const row = Math.floor(index / preset.columns);
       const column = index % preset.columns;
       const cellX = preset.marginMm + column * (cellWidth + preset.gapMm);
+      const cellY = preset.marginMm + row * (cellHeight + preset.gapMm);
       const x = cellX + (cellWidth - labelWidth) / 2;
-      const y = preset.marginMm + row * (labelHeight + preset.gapMm);
+      const y = cellY + (cellHeight - labelHeight) / 2;
       drawLabel(doc, item, x, y, labelWidth, labelHeight, options);
     });
   });
