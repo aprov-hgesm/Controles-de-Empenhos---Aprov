@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05 — Rules RC publicadas; Preview HTTPS operacional; MOBILE-J reabriu o freeze por defeito físico real; barcode numérico + auditoria preventiva verdes no Preview**
+Última sincronização global: **2026-10-05 — Preview MOBILE-J reorganizado em 7 operações sem sobreposição; Saída ≠ Transferência; Consultar Item criada; HEAD b83f9de... com Vercel/Core/Application CI verdes**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -8,7 +8,7 @@ Integradora SaaS R1: `feat/saas-r1-commercializacao` — fonte congelada da comp
 
 Integradora Mobile R1: `feat/central-mobile-r1@7b7717b6eebabf911310d2b8ac56ed13c9cb9238` — avanço documental, sem novo delta runtime
 
-Estado global: **Performance R3 permanece como aplicação produtiva; Rules RC foram publicadas de forma autorizada nos bancos principal e Warehouse; o RC original `54e60c2264588d8802a67a4cab3d875d64f6bfc1` serviu como baseline congelada e Preview inicial; a certificação física MOBILE-J encontrou defeitos reais de legibilidade/compatibilidade legada, reabrindo o freeze de modo controlado; a correção está isolada em `rc-r1-mobile-j-fix-label-readability@d7aef5e62d471d96de0899728d091bec0cfc9f1`, PR #252 draft, com Vercel SUCCESS, Core Protection #288 SUCCESS e Application CI #1001 SUCCESS; produção do app/main não foi alterada.**
+Estado global: **Performance R3 permanece como aplicação produtiva; Rules RC foram publicadas de forma autorizada nos bancos principal e Warehouse; o RC original `54e60c2264588d8802a67a4cab3d875d64f6bfc1` permanece baseline histórica; a certificação MOBILE-J reabriu o freeze de forma controlada por defeitos reais e agora também consolidou a semântica das 7 operações móveis. A branch ativa é `rc-r1-mobile-j-fix-label-readability@b83f9de756a5690a8459c3bf8d9dcb2fee222a14`, PR #252 draft, com Vercel SUCCESS, Core Protection #300 SUCCESS e Application CI #1013 SUCCESS; produção do app/main não foi alterada.**
 
 ---
 
@@ -102,11 +102,14 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | RC original | **FROZEN HISTÓRICO / BASELINE** | `54e60c2264588d8802a67a4cab3d875d64f6bfc1`; não é mais o HEAD final pretendido após defeitos físicos reais |
 | RC-P base | **PREVIEW HTTPS OBTIDO** | `rc-r1-p-preview@54e60c...`; acesso/auth/legal gate e Central Móvel confirmados manualmente |
 | Reabertura controlada | **ATIVA / JUSTIFICADA POR DEFEITO REAL** | branch `rc-r1-mobile-j-fix-label-readability`; PR #252 draft; nenhum merge em main |
-| HEAD auditado MOBILE-J-FIX | **VERDE NO PREVIEW** | `d7aef5e62d471d96de0899728d091bec0cfc9f1f`; Vercel SUCCESS; Core #288 SUCCESS; Application CI #1001 SUCCESS |
+| HEAD auditado MOBILE-J-FIX | **VERDE NO PREVIEW** | `b83f9de756a5690a8459c3bf8d9dcb2fee222a14`; Vercel SUCCESS; Core #300 SUCCESS; Application CI #1013 SUCCESS |
 | Barcode físico | **PASS FÍSICO PARA LOCAL** | novo código numérico de 13 dígitos; `9812001101000` lido como `CAMERA · LOCATION` |
 | Etiqueta compacta | **AJUSTADA PARA PRATELEIRA** | 140 mm × 32,5 mm; altura <= 35 mm; Code 128 ampliado |
 | Compatibilidade de etiquetas | **PRESERVADA** | EPX1 e EPX2 continuam aceitos; formato numérico é preferido quando representável |
 | Consulta física legada | **HARDENING APLICADO / RETESTE MANUAL PENDENTE** | projeções canônicas ignoram metadados extras históricos sem mascarar inconsistência real |
+| Central Móvel — operações | **7 FLUXOS DISTINTOS / PREVIEW VERDE** | Alocar Recebimento; Transferir Material; Consultar Localização; Consultar Item; Inventário; Saída de Material; Conferir posição |
+| Consultar Item | **IMPLEMENTADA / READ-ONLY** | barcode do item → saldo agregado → locais/subposições + quantidades + lotes; reutiliza o mesmo read model da Saída |
+| Saída vs Transferência | **SEMÂNTICA SEPARADA** | Saída usa origem física + destino administrativo; Transferência usa origem física + destino físico; nenhuma lógica paralela de estoque |
 | HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
 | Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
 | Piloto real | **NÃO INICIADO** | somente após novo RC reconciliado/re-frozen e decisão posterior |
@@ -120,7 +123,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 - Mobile integradora documental: `feat/central-mobile-r1@7b7717b6eebabf911310d2b8ac56ed13c9cb9238`;
 - RC runtime original/frozen: `54e60c2264588d8802a67a4cab3d875d64f6bfc1`;
 - branch RC-P original: `rc-r1-p-preview@54e60c2264588d8802a67a4cab3d875d64f6bfc1`;
-- branch ativa de correção/certificação: `rc-r1-mobile-j-fix-label-readability@d7aef5e62d471d96de0899728d091bec0cfc9f1f`;
+- branch ativa de correção/certificação: `rc-r1-mobile-j-fix-label-readability@b83f9de756a5690a8459c3bf8d9dcb2fee222a14`;
 - PR de correção/certificação: **#252 — DRAFT / NÃO MERGEADO**;
 - Preview estável da branch: `https://controles-de-empenhos-aprov-git-rc-f44756-aprov-hgesms-projects.vercel.app`;
 - HARDEN-B: `saas-harden-b-recovery-restore@c6368d0dd1b89610cb02b9b87f5ef6392810b336`.
@@ -144,9 +147,12 @@ RC original 54e60c... — FROZEN histórico
 → leitura física 9812001101000 como CAMERA · LOCATION — PASS
 → defeito real: documentos legados com unexpected_field em locationBalances/lots
 → camada de compatibilidade read-only canônica + auditoria preventiva
-→ HEAD d7aef5e... com Vercel/Core/Application CI verdes
-→ RETESTE MANUAL da PAL-01 no Preview auditado
-→ testar SUBPOSIÇÃO e ITEM físico no mesmo Preview
+→ HEAD d7aef5e... com barcode/compatibilidade legada auditados
+→ achado de UX: Saída visualmente confundida com Transferência
+→ contrato móvel reorganizado em 7 operações distintas
+→ nova operação read-only Consultar Item criada sobre o mesmo read model da Saída
+→ HEAD b83f9de... com Vercel/Core/Application CI verdes
+→ TESTE MANUAL dos 7 fluxos no Preview
 → concluir restante do runbook MOBILE-J
 → integrar semanticamente PR #252 em uma linha RC controlada
 → repetir gates afetados
@@ -165,12 +171,14 @@ O próximo gate **não é produção**.
 
 É:
 
-1. recarregar o Preview da branch `rc-r1-mobile-j-fix-label-readability`;
-2. reler a posição física `PAL-01` / código `9812001101000`;
-3. confirmar que o conteúdo físico carrega sem `unexpected_field`;
-4. testar uma **SUBPOSIÇÃO** real;
-5. testar um **ITEM** cadastrado real, incluindo barcode comercial;
-6. continuar casos físicos MOBILE-J (câmera permitida/negada/indisponível, fallback manual, som/vibração, double scan/cooldown, perda/retorno de rede, jornada ponta a ponta, coerência Desktop↔Mobile).
+1. recarregar o Preview da branch `rc-r1-mobile-j-fix-label-readability` no HEAD `b83f9de...`;
+2. confirmar que a Home mostra exatamente as 7 operações;
+3. **Consultar Localização**: ler LOCAL/SUBPOSIÇÃO e confirmar conteúdo físico, somente leitura;
+4. **Consultar Item**: ler barcode comercial e confirmar locais/subposições + quantidades + lotes, somente leitura;
+5. **Saída de Material**: material → quantidade → origem da retirada → confirmar origem física → lote → destino administrativo/retirado por → CONFIRMAR SAÍDA; não deve existir destino físico;
+6. **Transferir Material**: origem física → material → quantidade → destino físico → CONFIRMAR TRANSFERÊNCIA;
+7. validar **Alocar Recebimento**, **Inventário** e **Conferir posição** preservando suas responsabilidades próprias;
+8. continuar casos físicos MOBILE-J (câmera permitida/negada/indisponível, fallback manual, som/vibração, double scan/cooldown, perda/retorno de rede, jornada ponta a ponta, coerência Desktop↔Mobile).
 
 ### Regra de re-freeze
 
@@ -2832,6 +2840,71 @@ Depois disso:
 - prosseguir com o restante do runbook MOBILE-J.
 
 
+### 2026-10-05 — Central Móvel reorganizada em 7 operações sem duplicação semântica
+
+Durante o teste físico da **Saída de Material**, o Fundador identificou que, após ler o item e escolher uma posição com saldo, a jornada visual se parecia com **Transferência de Material**.
+
+A revisão confirmou que o backend da Saída já usava o OUTBOUND canônico, mas a UX misturava conceitos de posição e “troca”, tornando a intenção operacional ambígua.
+
+Contrato consolidado da Central Móvel:
+
+1. **Alocar Recebimento**
+   - NF/item pendente → material → posição destino → confirmar entrada.
+2. **Transferir Material**
+   - movimento interno: origem física → material → quantidade → destino físico → confirmar transferência.
+3. **Consultar Localização**
+   - ler LOCAL/SUBPOSIÇÃO → mostrar conteúdo físico;
+   - somente leitura.
+4. **Consultar Item**
+   - ler barcode comercial → mostrar saldo agregado, locais/subposições, quantidades e lotes;
+   - somente leitura.
+5. **Inventário**
+   - sessão/snapshot → posição → item → contagem → revisão/confirmação própria.
+6. **Saída de Material**
+   - material → quantidade → origem da retirada → confirmar origem física → lote → destino administrativo/retirado por → confirmar baixa;
+   - **não existe destino físico** nessa operação.
+7. **Conferir posição**
+   - posição + item → CORRETO/INCORRETO;
+   - somente leitura;
+   - pode direcionar para Transferência como operação separada, sem movimentar estoque por si.
+
+Arquitetura para evitar duplicação:
+
+- **Consultar Item** reutiliza `loadWarehouseMobileItemAvailability`;
+- a **Saída** usa o mesmo read model de disponibilidade física;
+- não foi criada uma segunda autoridade para saldo/local/lote;
+- Transferência continua usando o contrato próprio de movimentação interna;
+- Saída continua sendo a única jornada dessa lista que executa OUTBOUND;
+- consultas e conferência não possuem mutação operacional.
+
+Rotas móveis vigentes:
+
+- `/central-mobile/alocar`;
+- `/central-mobile/transferir`;
+- `/central-mobile/consultar-localizacao`;
+- `/central-mobile/consultar-item`;
+- `/central-mobile/inventario`;
+- `/central-mobile/saida`;
+- `/central-mobile/conferir`.
+
+A Consulta de Localização deixou de ficar embutida na Home e virou operação própria.
+
+HEAD consolidado:
+
+`b83f9de756a5690a8459c3bf8d9dcb2fee222a14`
+
+Gates:
+
+- Vercel Preview: **SUCCESS**;
+- Core Protection #300: **SUCCESS**;
+- Application CI #1013: **SUCCESS**;
+- Production build: **SUCCESS**;
+- Final TypeScript: **SUCCESS**;
+- Diff hygiene: **SUCCESS**;
+- Final Release Gates do workflow: **SUCCESS**.
+
+Produção do app permaneceu em `main@e90f92...`; PR #252 continua DRAFT/não mergeado.
+
 # PARTE XI — DECISÕES PERMANENTES
 
 ## 35. Decisões que só podem mudar por decisão explícita
@@ -3079,16 +3152,16 @@ freeze original: REABERTO CONTROLADAMENTE POR DEFEITO FÍSICO REAL
 
 BRANCH ATIVA DE CERTIFICAÇÃO/CORREÇÃO
 rc-r1-mobile-j-fix-label-readability
-HEAD auditado: d7aef5e62d471d96de0899728d091bec0cfc9f1f
+HEAD auditado: b83f9de756a5690a8459c3bf8d9dcb2fee222a14
 PR: #252
 estado PR: DRAFT / NÃO MERGEADO
 Preview:
 https://controles-de-empenhos-aprov-git-rc-f44756-aprov-hgesms-projects.vercel.app
 
-GATES DO HEAD d7aef5e...
+GATES DO HEAD b83f9de...
 Vercel Preview: SUCCESS
-Core Protection #288: SUCCESS
-Application CI #1001: SUCCESS
+Core Protection #300: SUCCESS
+Application CI #1013: SUCCESS
 Production build: PASS
 TypeScript: PASS
 Diff hygiene: PASS
@@ -3121,13 +3194,24 @@ barcode válido de localização: reservado e não pode virar barcode de produto
 compatibilidade de leitura aplicada a physical query, position check, inventory,
 outbound, transfer, intake, materials e barcodes
 
+CENTRAL MÓVEL — 7 OPERAÇÕES
+1. Alocar Recebimento — entrada em posição destino
+2. Transferir Material — origem física → destino físico
+3. Consultar Localização — posição → conteúdo, read-only
+4. Consultar Item — item → locais/quantidades/lotes, read-only
+5. Inventário — snapshot/contagem/revisão
+6. Saída de Material — item → origem → lote → destino administrativo → baixa
+7. Conferir posição — posição + item → correto/incorreto, read-only
+
 TESTE MANUAL IMEDIATO PENDENTE
-1. recarregar Preview no HEAD d7aef5e...
-2. ler PAL-01 / 9812001101000
-3. confirmar conteúdo físico sem novo diagnóstico
-4. testar SUBPOSIÇÃO real
-5. testar ITEM real
-6. continuar runbook físico MOBILE-J
+1. recarregar Preview no HEAD b83f9de...
+2. confirmar 7 cards na Home
+3. testar Consultar Localização com LOCAL e SUBPOSIÇÃO
+4. testar Consultar Item com barcode comercial
+5. testar Saída e confirmar que NÃO pede destino físico
+6. testar Transferência e confirmar que exige destino físico
+7. validar Alocar/Inventário/Conferir sem sobreposição
+8. continuar runbook físico MOBILE-J
 
 SE SURGIR NOVO ERRO
 não mascarar automaticamente
@@ -3171,9 +3255,9 @@ Legal Acceptance no Preview: funcionando após publicação das Rules RC
 nenhum bypass temporário foi criado
 
 PRÓXIMA SEQUÊNCIA CANÔNICA
-reteste PAL-01
-→ SUBPOSIÇÃO
-→ ITEM
+teste manual das 7 operações no HEAD b83f9de...
+→ LOCAL/SUBPOSIÇÃO/ITEM
+→ Saída ≠ Transferência confirmada fisicamente
 → restante MOBILE-J física/integrada
 → reconciliar PR #252
 → repetir gates afetados no SHA final
