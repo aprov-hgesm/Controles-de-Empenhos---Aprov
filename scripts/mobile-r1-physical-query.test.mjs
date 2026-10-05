@@ -156,6 +156,23 @@ test('resolver canônico recusa posição inexistente', async () => {
   assert.deepEqual(resolved, { ok: false, error: 'ENTITY_NOT_FOUND' });
 });
 
+test('projeção de leitura ignora metadado legado sem alterar campos canônicos', () => {
+  const coffee = material('1', 'Café');
+  const canonical = balance(coffee.id, 8);
+  const projected = model.warehouseMobileCanonicalBalanceReadInput(
+    canonical.id,
+    {
+      ...canonical,
+      legacyTimestamp: '2026-01-01T00:00:00Z',
+      legacySource: 'migration-v0',
+    }
+  );
+
+  assert.deepEqual(projected, canonical);
+  assert.equal('legacyTimestamp' in projected, false);
+  assert.equal('legacySource' in projected, false);
+});
+
 test('posição vazia produz resultado vazio sem inventar material', () => {
   const rows = model.buildWarehouseMobilePhysicalQueryItems({
     workspaceId,
