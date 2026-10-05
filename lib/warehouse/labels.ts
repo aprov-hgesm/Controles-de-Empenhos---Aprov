@@ -1,5 +1,8 @@
 import type { WarehouseDepot, WarehouseLocation } from './location';
-import { encodeWarehouseLocationBarcode } from './locationBarcode';
+import {
+  encodeWarehouseCompactLocationBarcode,
+  encodeWarehouseLocationBarcode,
+} from './locationBarcode';
 
 export type WarehouseLabelKind = 'DEPOT' | 'LOCAL' | 'SUBPOSITION';
 export type WarehouseLabelSheetPreset = 'COMPACT' | 'MEDIUM' | 'LARGE';
@@ -34,10 +37,10 @@ export const WAREHOUSE_LABEL_PRESETS: Record<WarehouseLabelSheetPreset, Warehous
   COMPACT: {
     id: 'COMPACT',
     label: 'Compacta',
-    description: '21 por folha · ideal para prateleiras e nichos',
-    columns: 3,
-    rows: 7,
-    perPage: 21,
+    description: '16 por folha · até 3,5 cm de altura · prateleiras e nichos',
+    columns: 2,
+    rows: 8,
+    perPage: 16,
     gapMm: 3,
     marginMm: 8,
   },
@@ -82,7 +85,10 @@ export function buildDepotLabel(depot: WarehouseDepot): WarehouseLabelItem {
     hierarchy: [depot.name],
     workspaceId: depot.workspaceId,
     ug: depot.ug,
-    physicalBarcode: encodeWarehouseLocationBarcode({ kind: 'DEPOT', entityId: depot.id }),
+    physicalBarcode: encodeWarehouseCompactLocationBarcode({
+      kind: 'DEPOT',
+      depotCode: depot.code,
+    }),
   };
 }
 
@@ -104,7 +110,11 @@ export function buildLocationLabel(
       hierarchy: [depot.name, location.name],
       workspaceId: location.workspaceId,
       ug: location.ug,
-      physicalBarcode: encodeWarehouseLocationBarcode({ kind: 'LOCAL', entityId: location.id }),
+      physicalBarcode: encodeWarehouseCompactLocationBarcode({
+        kind: 'LOCAL',
+        depotCode: depot.code,
+        locationCode: location.code,
+      }),
     };
   }
 
@@ -127,7 +137,17 @@ export function buildLocationLabel(
     hierarchy: [depot.name, parent?.name ?? 'Local', location.name],
     workspaceId: location.workspaceId,
     ug: location.ug,
-    physicalBarcode: encodeWarehouseLocationBarcode({ kind: 'SUBPOSITION', entityId: location.id }),
+    physicalBarcode: parent
+      ? encodeWarehouseCompactLocationBarcode({
+          kind: 'SUBPOSITION',
+          depotCode: depot.code,
+          parentCode: parent.code,
+          locationCode: location.code,
+        })
+      : encodeWarehouseLocationBarcode({
+          kind: 'SUBPOSITION',
+          entityId: location.id,
+        }),
   };
 }
 
