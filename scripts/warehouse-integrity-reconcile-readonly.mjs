@@ -23,6 +23,7 @@ const COLLECTIONS = [
 ];
 let token = '';
 let readCount = 0;
+let gcloudCommand = 'gcloud';
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch((error) => {
@@ -35,7 +36,7 @@ async function main() {
   const flags = parseFlags(process.argv.slice(2));
   if (flags.help || flags.h) return printHelp();
   assertTarget(flags);
-  ensureGcloud();
+  ensureGcloud(flags.gcloud);
 
   const pageSize = boundedInt(flags['page-size'], 200, 50, 300);
   const cap = boundedInt(flags['max-docs-per-collection'], 5000, 100, 20000);
@@ -88,6 +89,7 @@ function printHelp() {
     '  --database=' + EXPECTED.databaseId,
     '  --workspace=' + EXPECTED.workspaceId,
     '  [--page-size=200] [--max-docs-per-collection=5000]',
+    '  [--gcloud="C:\\caminho\\para\\gcloud.cmd"]',
     '',
     'Garantia: transporte Firestore exclusivamente HTTP GET; nenhuma escrita.',
   ].join('\n'));
@@ -116,15 +118,50 @@ function boundedInt(value, fallback, min, max) {
   return parsed;
 }
 
-function ensureGcloud() {
-  const result = spawnSync('gcloud', ['--version'], { encoding: 'utf8' });
-  if (result.error?.code === 'ENOENT') throw new Error('Google Cloud CLI não encontrado. Use o Cloud Shell.');
-  if (result.status !== 0) throw new Error('gcloud indisponível.');
+function ensureGcloud(explicitCommand) {
+  const windowsDefault = process.env.LOCALAPPDATA
+    ? process.env.LOCALAPPDATA + '\\Google\\Cloud SDK\\google-cloud-sdk\\bin\\gcloud.cmd'
+    : null;
+  const candidates = [
+    explicitCommand,
+    process.env.GCLOUD,
+    process.env.GCLOUD_CMD,
+    windowsDefault,
+    process.platform === 'win32' ? 'gcloud.cmd' : null,
+    'gcloud',
+  ].filter(Boolean);
+
+  const unique = [...new Set(candidates.map((value) => String(value).trim()).filter(Boolean))];
+  for (const candidate of unique) {
+    if (/[\r\n]/.test(candidate)) continue;
+    const result = spawnGcloud(candidate, ['--version']);
+    if (!result.error && result.status === 0) {
+      gcloudCommand = candidate;
+      return;
+    }
+  }
+
+  throw new Error(
+    'Google Cloud CLI não encontrado. No Windows, use --gcloud="C:\\\\...\\\\gcloud.cmd" ou defina GCLOUD_CMD.'
+  );
+}
+
+function spawnGcloud(command, args) {
+  if (process.platform === 'win32') {
+    const comspec = process.env.ComSpec || 'cmd.exe';
+    const commandLine = [command, ...args].map(quoteCmdArg).join(' ');
+    return spawnSync(comspec, ['/d', '/s', '/c', commandLine], { encoding: 'utf8' });
+  }
+  return spawnSync(command, args, { encoding: 'utf8' });
+}
+
+function quoteCmdArg(value) {
+  return '"' + String(value).replace(/"/g, '""') + '"';
 }
 
 function accessToken() {
-  const result = spawnSync('gcloud', ['auth', 'print-access-token'], { encoding: 'utf8' });
-  if (result.status !== 0) throw new Error('Falha ao obter token gcloud.');
+  const result = spawnGcloud(gcloudCommand, ['auth', 'print-access-token']);
+  if (result.status !== 0) throw new Error('Falha ao obter token gcloud: ' + String(result.stderr || '').trim());
   const value = result.stdout.trim();
   if (!value) throw new Error('Token gcloud vazio.');
   return value;
