@@ -34,9 +34,14 @@ import {
 } from '../../../lib/warehouse/mobileOutboundRepository';
 import type { WarehouseMobileScanEvent } from '../../../lib/warehouse/mobileScanner';
 import {
-  applyWarehouseExpressOutbound,
-  createWarehouseOutboundIdempotencyKey,
-} from '../../../lib/warehouse/outboundRepository';
+  createWarehouseWithdrawalId,
+  createWarehouseWithdrawalLineId,
+  normalizeWarehouseDestinationName,
+} from '../../../lib/warehouse/withdrawal';
+import {
+  finalizeWarehouseMaterialWithdrawal,
+  listWarehouseDestinationsCached,
+} from '../../../lib/warehouse/withdrawalRepository';
 import { useWarehouseWorkspaceContext } from '../components/WarehouseModuleContext';
 import { WarehouseMobileScanner } from './WarehouseMobileScanner';
 
@@ -57,14 +62,16 @@ type PositionSelection = {
 };
 
 type ReviewState = {
-  idempotencyKey: string;
+  withdrawalId: string;
+  lineId: string;
   lotId: string | null;
   planBaseQuantity: number;
 };
 
 type SuccessState = {
   applied: boolean;
-  movementId: string;
+  withdrawalId: string;
+  movementId: string | null;
   aggregateQuantity: number;
   locationQuantity: number;
   lotQuantity: number | null;
@@ -99,7 +106,7 @@ function resolvedPositionLabel(value: ResolvedPosition) {
       + ' · '
       + (value.location?.code || value.position.subpositionId);
   }
-  return 'Sem localização';
+  return 'Posição não física';
 }
 
 function expiryLabel(expiresOn: string | null) {
@@ -187,8 +194,20 @@ function confirmationError(error: unknown) {
   ) {
     return 'O lote mudou e não atende mais à saída preparada. A saída não foi aplicada.';
   }
-  if (raw.includes('WAREHOUSE_IDEMPOTENCY_CONFLICT')) {
-    return 'Conflito de idempotência: a chave já representa outra solicitação. Recomece a jornada.';
+  if (raw.includes('WAREHOUSE_MOBILE_OUTBOUND_DESTINATION_NOT_FOUND')) {
+    return 'O destino informado não corresponde a um destino ativo cadastrado na Central.';
+  }
+  if (raw.includes('WAREHOUSE_MOBILE_OUTBOUND_DESTINATION_AMBIGUOUS')) {
+    return 'Há mais de um destino ativo com esse nome. Revise o cadastro na Central desktop.';
+  }
+  if (raw.includes('WAREHOUSE_DESTINATION_INACTIVE')) {
+    return 'O destino ficou inativo antes da confirmação. A saída não foi aplicada.';
+  }
+  if (
+    raw.includes('WAREHOUSE_IDEMPOTENCY_CONFLICT')
+    || raw.includes('WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT')
+  ) {
+    return 'Conflito de idempotência: a identidade da retirada já representa outra solicitação. Recomece a jornada.';
   }
   if (raw.startsWith('POSITION:')) return positionResolutionError(raw.slice(9));
   if (raw.includes('POSITION_CHANGED')) {
@@ -407,7 +426,8 @@ export function WarehouseMobileOutbound() {
         lot,
       });
       setReview({
-        idempotencyKey: createWarehouseOutboundIdempotencyKey(),
+        withdrawalId: createWarehouseWithdrawalId(),
+        lineId: createWarehouseWithdrawalLineId(),
         lotId: lot?.id || null,
         planBaseQuantity: plan.baseQuantity,
       });
@@ -452,36 +472,79 @@ export function WarehouseMobileOutbound() {
         throw new Error('PRODUCT_CHANGED');
       }
 
-      const note =
-        'Central Móvel R1 | Destino: '
-        + destination
-        + ' | Retirado por: '
-        + pickedBy;
+      const destinationKey = normalizeWarehouseDestinationName(destination)
+        .toLocaleLowerCase('pt-BR');
+      const destinationMatches = (await listWarehouseDestinationsCached(
+        workspace.workspaceId
+      )).filter((item) =>
+        item.destination.status === 'active'
+        && normalizeWarehouseDestinationName(item.destination.name)
+          .toLocaleLowerCase('pt-BR') === destinationKey
+      );
+      if (destinationMatches.length === 0) {
+        throw new Error('WAREHOUSE_MOBILE_OUTBOUND_DESTINATION_NOT_FOUND');
+      }
+      if (destinationMatches.length > 1) {
+        throw new Error('WAREHOUSE_MOBILE_OUTBOUND_DESTINATION_AMBIGUOUS');
+      }
+      const canonicalDestination = destinationMatches[0].destination;
+      const selectedLot = position.option.lots.find(
+        (lot) => lot.id === review.lotId
+      ) || null;
 
-      const result = await applyWarehouseExpressOutbound(
+      const result = await finalizeWarehouseMaterialWithdrawal(
         workspace.workspaceId,
         {
-          materialId: product.association.materialId,
-          requestedQuantity: preparation.requestedQuantity,
-          presentation: freshAssociation.presentation,
-          position: freshPosition.position,
-          barcodeAssociation: freshAssociation,
-          lotId: review.lotId,
-          idempotencyKey: review.idempotencyKey,
-          note,
+          withdrawalId: review.withdrawalId,
+          destinationId: canonicalDestination.id,
+          withdrawnBy: pickedBy,
+          lines: [{
+            lineId: review.lineId,
+            materialId: product.association.materialId,
+            materialDescription: product.availability.material.description,
+            requestedQuantity: preparation.requestedQuantity,
+            presentation: freshAssociation.presentation,
+            presentationLabel: unitLabel(
+              freshAssociation.presentation.code,
+              freshAssociation.presentation.label
+            ),
+            baseQuantity: review.planBaseQuantity,
+            unitLabel: unitLabel(
+              product.availability.material.unit.code,
+              product.availability.material.unit.label
+            ),
+            position: freshPosition.position,
+            positionLabel: position.label,
+            barcodeAssociation: freshAssociation,
+            barcode: product.barcode,
+            lotId: review.lotId,
+            lotCode: selectedLot?.code || null,
+          }],
         }
       );
 
+      const refreshed = await loadWarehouseMobileOutboundAvailability(
+        workspace.workspaceId,
+        product.association.materialId
+      );
+      const refreshedLocation = refreshed.locationBalances.find(
+        (item) => warehouseStockPositionKey(item.position) === position.option.key
+      );
+      const refreshedLot = review.lotId
+        ? refreshed.lots.find((lot) => lot.id === review.lotId)
+        : null;
+
       setSuccess({
-        applied: result.applied,
-        movementId: result.movement.id,
-        aggregateQuantity: result.balance.quantity,
-        locationQuantity: result.locationBalance.quantity,
-        lotQuantity: result.lot?.quantity ?? null,
+        applied: result.movementIds.length > 0,
+        withdrawalId: result.withdrawal.id,
+        movementId: result.movementIds[0] || null,
+        aggregateQuantity: refreshed.balance.quantity,
+        locationQuantity: refreshedLocation?.quantity || 0,
+        lotQuantity: review.lotId ? refreshedLot?.quantity || 0 : null,
       });
       setMessage(
-        result.applied
-          ? 'Saída confirmada pelo ledger oficial.'
+        result.movementIds.length > 0
+          ? 'Saída confirmada pelo fluxo canônico de retirada e consumo.'
           : 'Replay idempotente confirmado: nenhuma segunda baixa foi criada.'
       );
     } catch (error) {
@@ -878,7 +941,8 @@ export function WarehouseMobileOutbound() {
               : ''}
           </p>
           <p className="mt-2 break-all font-mono text-[9px] text-emerald-700">
-            {success.movementId}
+            {success.withdrawalId}
+            {success.movementId ? ' · ' + success.movementId : ''}
           </p>
           <Primary onClick={reset}>Nova saída</Primary>
         </section>
@@ -893,7 +957,7 @@ export function WarehouseMobileOutbound() {
 
       <p className="flex items-start gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-[11px] font-semibold text-slate-500">
         <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-        Saída reduz o saldo da origem confirmada e nunca transfere material para outra posição física. A baixa ocorre somente em CONFIRMAR SAÍDA pelo OUTBOUND canônico e transacional.
+        Saída reduz somente estoque físico localizado e nunca transfere material para outra posição. A confirmação reutiliza o fluxo canônico de retirada/consumo da Central, com OUTBOUND transacional e replay idempotente.
       </p>
     </div>
   );

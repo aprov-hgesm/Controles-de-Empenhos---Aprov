@@ -261,8 +261,13 @@ export function WarehouseMobileItemQuery() {
                   {state.availability.material.description}
                 </p>
                 <p className="mt-1 text-xs font-semibold text-emerald-800">
-                  Saldo agregado: {formatQuantity(state.availability.balance.quantity)}{' '}
+                  Estoque físico localizado: {formatQuantity(
+                    state.availability.reconciliation.activePhysicalQuantity
+                  )}{' '}
                   {unitLabel(state.availability)}
+                </p>
+                <p className="mt-1 text-[10px] font-semibold leading-4 text-emerald-700">
+                  Pendências de alocação pertencem ao intake e não entram neste estoque físico.
                 </p>
                 <p className="mt-1 break-all font-mono text-[9px] font-semibold text-emerald-700">
                   {state.barcode}
@@ -331,12 +336,13 @@ export function WarehouseMobileItemQuery() {
             )}
 
             {state.availability.reconciliation.unassignedQuantity > 0.000001 && (
-              <p className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-[11px] font-bold leading-5 text-blue-900">
-                Saldo sem localização: {formatQuantity(
+              <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-3 text-[11px] font-bold leading-5 text-red-900">
+                Reconciliação necessária: há {formatQuantity(
                   state.availability.reconciliation.unassignedQuantity
                 )}{' '}
-                {unitLabel(state.availability)} ainda não está vinculado a uma posição física ativa.
-                Esse saldo faz parte do total agregado, mas não aparece como origem disponível para retirada.
+                {unitLabel(state.availability)} em projeção legada UNASSIGNED.
+                Essa quantidade não é estoque físico disponível e não é classificada como pendência
+                de alocação sem evidência canônica do intake v2.
               </p>
             )}
 
@@ -358,8 +364,8 @@ export function WarehouseMobileItemQuery() {
                 {formatQuantity(
                   Math.abs(state.availability.reconciliation.differenceQuantity)
                 )}{' '}
-                {unitLabel(state.availability)} da soma rastreada entre posições ativas,
-                posições inativas e saldo sem localização. A consulta não altera dados;
+                {unitLabel(state.availability)} da soma rastreada entre posições físicas ativas,
+                posições físicas inativas e projeções legadas em reconciliação. A consulta não altera dados;
                 revise este material na Central desktop antes de corrigir o estoque.
               </p>
             )}

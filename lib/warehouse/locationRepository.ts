@@ -69,7 +69,10 @@ import {
   warehouseCanonicalLocationBalanceReadInput,
   warehouseCanonicalMaterialReadInput,
 } from './readCompatibility';
-import { planWarehouseTransferLots } from './transfer';
+import {
+  isWarehousePhysicalStockPosition,
+  planWarehouseTransferLots,
+} from './transfer';
 
 export interface WarehouseDepotListItem {
   depot: WarehouseDepot;
@@ -929,7 +932,9 @@ async function assertPositionActive(
   workspaceId: string,
   position: WarehouseStockPosition
 ): Promise<void> {
-  if (position.kind === 'UNASSIGNED') return;
+  if (!isWarehousePhysicalStockPosition(position)) {
+    throw new Error('WAREHOUSE_TRANSFER_REQUIRES_PHYSICAL_POSITION');
+  }
 
   const depotPath = warehouseDocumentPath(workspaceId, 'depots', position.depotId);
   const locationPath = warehouseDocumentPath(workspaceId, 'locations', position.locationId);
@@ -1003,7 +1008,9 @@ async function buildCanonicalWarehouseTransferLotPlan(input: {
   quantity: number;
   fromBalanceId: string;
 }): Promise<TransferWarehouseLotAllocation[]> {
-  if (input.from.kind === 'UNASSIGNED') return [];
+  if (!isWarehousePhysicalStockPosition(input.from)) {
+    throw new Error('WAREHOUSE_TRANSFER_REQUIRES_PHYSICAL_POSITION');
+  }
 
   const fromBalancePath = warehouseDocumentPath(
     input.workspaceId,
@@ -1084,6 +1091,12 @@ export async function transferWarehouseStock(
   const from = validateWarehouseStockPosition(input.from);
   const to = validateWarehouseStockPosition(input.to);
   if (!from || !to) throw new Error('WAREHOUSE_TRANSFER_INVALID_POSITION');
+  if (
+    !isWarehousePhysicalStockPosition(from)
+    || !isWarehousePhysicalStockPosition(to)
+  ) {
+    throw new Error('WAREHOUSE_TRANSFER_REQUIRES_PHYSICAL_POSITION');
+  }
   if (warehouseStockPositionsEqual(from, to)) throw new Error('WAREHOUSE_TRANSFER_SAME_POSITION');
 
   const normalizedQuantity = normalizeWarehouseLocationQuantity(input.quantity);
@@ -1101,30 +1114,18 @@ export async function transferWarehouseStock(
   const fromBalanceId = await createWarehouseLocationBalanceId(scope.workspaceId, input.materialId, from);
   const toBalanceId = await createWarehouseLocationBalanceId(scope.workspaceId, input.materialId, to);
 
-  let relocateLotIds = Array.from(new Set(input.relocateLotIds || []));
-  let lotAllocations = (input.lotAllocations || []).map((item) => {
-    const quantity = normalizeWarehouseLocationQuantity(item.quantity);
-    if (!isValidWarehouseLotId(item.lotId) || quantity === null || quantity <= 0) {
-      throw new Error('WAREHOUSE_TRANSFER_INVALID_LOT_ALLOCATION');
-    }
-    return { lotId: item.lotId, quantity };
+  // Physical transfers never trust caller-specific lot hints. The canonical
+  // repository derives lot allocations from the current physical source
+  // balance and canonical lot documents.
+  const lotAllocations = await buildCanonicalWarehouseTransferLotPlan({
+    workspaceId: scope.workspaceId,
+    ug: scope.ug,
+    materialId: input.materialId,
+    from,
+    quantity: normalizedQuantity,
+    fromBalanceId,
   });
-
-  // Physical transfers never trust a caller-specific lot plan. The canonical
-  // repository derives the lot allocations from the current source balance
-  // and canonical lot documents. UNASSIGNED flows keep the legacy explicit
-  // hints because they are entry/allocation workflows, not a physical move.
-  if (from.kind !== 'UNASSIGNED') {
-    lotAllocations = await buildCanonicalWarehouseTransferLotPlan({
-      workspaceId: scope.workspaceId,
-      ug: scope.ug,
-      materialId: input.materialId,
-      from,
-      quantity: normalizedQuantity,
-      fromBalanceId,
-    });
-    relocateLotIds = [];
-  }
+  const relocateLotIds: string[] = [];
 
   if (
     relocateLotIds.length > 24
@@ -1253,10 +1254,7 @@ export async function transferWarehouseStock(
         };
       }
 
-      const fromInitial = from.kind === 'UNASSIGNED' && !existingFrom
-        ? currentBalance.quantity
-        : 0;
-      const available = existingFrom?.quantity ?? fromInitial;
+      const available = existingFrom?.quantity ?? 0;
       if (available < normalizedQuantity) throw new Error('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK');
 
       const nextFrom = applyWarehouseLocationDelta(existingFrom, {
@@ -1409,7 +1407,7 @@ export function buildWarehousePositionLabel(
   depots: WarehouseDepotListItem[],
   locations: WarehouseLocationListItem[]
 ): string {
-  if (position.kind === 'UNASSIGNED') return 'Sem localização';
+  if (position.kind === 'UNASSIGNED') return 'Reconciliação necessária';
   const depot = depots.find((item) => item.depot.id === position.depotId)?.depot;
   const local = locations.find((item) => item.location.id === position.locationId)?.location;
   const base = [depot?.code || position.depotId, local?.code || position.locationId].join(' → ');

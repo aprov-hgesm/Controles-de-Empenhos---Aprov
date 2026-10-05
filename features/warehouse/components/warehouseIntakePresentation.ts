@@ -79,7 +79,7 @@ export function warehouseAllocationErrorMessage(error: unknown): string {
     return 'A quantidade informada supera a quantidade pendente atual.';
   }
   if (code.includes('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK')) {
-    return 'A quantidade disponível em Sem localização não é suficiente. O item precisa ser reconciliado.';
+    return 'A projeção logística legada não comporta a alocação solicitada. O item precisa de reconciliação antes de continuar.';
   }
   if (
     code.includes('WAREHOUSE_POSITION_INACTIVE')
