@@ -157,7 +157,7 @@ test('um mesmo material pode manter projeções em múltiplas localizações', a
   assert.match(idB, /^locbal_[a-f0-9]{64}$/);
 });
 
-test('saldo legado é representado como Sem localização sem alterar o total', () => {
+test('helper legado calcula residual UNASSIGNED sem promovê-lo a estoque operacional', () => {
   const physical = [{
     schemaVersion: location.WAREHOUSE_LOCATION_BALANCE_SCHEMA_VERSION,
     id: 'locbal_' + '1'.repeat(64),

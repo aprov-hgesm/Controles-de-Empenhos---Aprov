@@ -69,7 +69,7 @@ for (const marker of [
   'unassignedBalancePath',
   'applyWarehouseLocationDelta',
   "WAREHOUSE_TRANSFER_REQUIRES_LOCATION_FLOW",
-]) requireText(ledger, marker, 'Integração do ledger com Sem localização ausente: ' + marker);
+]) requireText(ledger, marker, 'Integração do ledger com compatibilidade legada UNASSIGNED ausente: ' + marker);
 
 for (const marker of [
   'warehouse-locations-r1-operational',
@@ -141,7 +141,7 @@ if (findings.length) {
 
 console.log('FASE 6 — Depósitos / Localizações / Transferências: OK');
 console.log('- depósitos, locais e subposições possuem identidade lógica estável');
-console.log('- saldo físico é projeção derivada do ledger, com Sem localização para legado');
+console.log('- saldo físico operacional é localizado; UNASSIGNED permanece apenas como compatibilidade legada');
 console.log('- TRANSFER mantém saldo agregado e atualiza origem/destino atomicamente');
 console.log('- idempotência e isolamento multi-tenant por workspace/UG permanecem protegidos');
 console.log('- UI operacional e gates permanentes da FASE 6 estão presentes');

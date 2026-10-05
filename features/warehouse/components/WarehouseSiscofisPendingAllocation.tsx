@@ -40,8 +40,11 @@ function quantityLabel(row: WarehousePendingPhysicalAllocationRow): string {
 
 function allocationErrorMessage(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error || '');
+  if (raw.includes('WAREHOUSE_PENDING_ALLOCATION_RECONCILIATION_REQUIRED')) {
+    return 'Este registro é uma projeção legada do Marco Zero e exige reconciliação dedicada antes de virar estoque físico localizado.';
+  }
   if (raw.includes('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK')) {
-    return 'O saldo sem localização foi alterado. Atualize a fila e tente novamente.';
+    return 'A projeção legada mudou. Atualize a fila antes de revisar novamente.';
   }
   if (
     raw.includes('WAREHOUSE_POSITION_INACTIVE')
@@ -154,7 +157,7 @@ function SiscofisAllocationDialog({
   const submit = async () => {
     setError(null);
     if (!validQuantity) {
-      setError('Informe uma quantidade maior que zero e limitada ao saldo sem localização.');
+      setError('Informe uma quantidade maior que zero e limitada à quantidade legada observada.');
       return;
     }
     if (!destination) {
@@ -183,7 +186,7 @@ function SiscofisAllocationDialog({
       className="fixed inset-0 z-[75] flex items-end justify-center bg-slate-950/45 p-0 backdrop-blur-[2px] sm:items-center sm:p-6"
       role="dialog"
       aria-modal="true"
-      aria-label="Alocar material do Marco Zero SISCOFIS"
+      aria-label="Revisar legado do Marco Zero SISCOFIS"
     >
       <div className="max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl border border-slate-200 bg-white shadow-2xl sm:rounded-3xl">
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-100 bg-white/95 px-5 py-4 backdrop-blur">
@@ -196,7 +199,7 @@ function SiscofisAllocationDialog({
               {row.sourceItemNumbers.length > 0
                 ? 'Ficha(s) ' + row.sourceItemNumbers.join(', ') + ' · '
                 : ''}
-              {quantityLabel(row)} sem localização
+              {quantityLabel(row)} em projeção legada
             </p>
           </div>
           <button
@@ -212,9 +215,9 @@ function SiscofisAllocationDialog({
 
         <div className="space-y-5 p-5">
           <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 text-xs leading-5 text-slate-600">
-            Esta operação não cria novo estoque. Ela apenas move o saldo existente de
-            <strong className="text-slate-800"> Sem localização</strong> para a posição física escolhida
-            usando o movimento oficial TRANSFER.
+            Este registro é compatibilidade histórica do Marco Zero SISCOFIS. Ele
+            <strong className="text-slate-800"> não é estoque físico disponível nem pendência do intake v2</strong>.
+            A alocação automática está bloqueada até existir um fluxo dedicado de reconciliação que preserve a evidência histórica.
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -232,7 +235,7 @@ function SiscofisAllocationDialog({
 
             <div className="space-y-1.5">
               <span className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
-                Saldo pendente
+                Quantidade legada
               </span>
               <div className="flex h-11 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-black text-slate-700">
                 {quantityLabel(row)}
@@ -339,7 +342,7 @@ function SiscofisAllocationDialog({
               ) : (
                 <MapPin className="h-4 w-4" />
               )}
-              Confirmar alocação
+              Revisar reconciliação
             </button>
           </div>
         </div>
@@ -423,7 +426,7 @@ export function WarehouseSiscofisPendingAllocation({
 
   const completeAllocation = async () => {
     setSelected(null);
-    setMessage('Alocação física registrada. O saldo sem localização foi atualizado.');
+    setMessage('Reconciliação física registrada. Atualize a fila para conferir o estado canônico.');
     await refresh();
   };
 
@@ -438,16 +441,16 @@ export function WarehouseSiscofisPendingAllocation({
             <div className="flex items-center gap-2 text-[#00288e]">
               <PackageOpen className="h-4 w-4" />
               <p className="text-[10px] font-black uppercase tracking-[0.15em]">
-                Marco Zero SISCOFIS · pendente de alocação
+                Marco Zero SISCOFIS · reconciliação legada
               </p>
             </div>
             <h3 className="mt-2 text-base font-black text-slate-900">
-              Materiais importados ainda sem localização física
+              Registros legados do Marco Zero que exigem reconciliação
             </h3>
             <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">
-              O saldo já existe no estoque. Esta fila mostra apenas materiais do Marco Zero SISCOFIS
-              que continuam em “Sem localização”. Alocar não cria novo saldo; apenas define onde o
-              material está fisicamente armazenado.
+              Esta fila mostra projeções históricas UNASSIGNED associadas ao Marco Zero SISCOFIS.
+              Elas não são estoque físico disponível nem pendência de intake. A consulta é compatível
+              com o legado, mas a conversão para LOCATION/SUBPOSITION fica bloqueada até reconciliação dedicada.
             </p>
           </div>
 
@@ -470,13 +473,13 @@ export function WarehouseSiscofisPendingAllocation({
         {loading ? (
           <div className="mt-4 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-xs font-bold text-slate-500">
             <RefreshCw className="h-4 w-4 animate-spin" />
-            Consultando saldo SISCOFIS sem localização…
+            Consultando projeções legadas do Marco Zero SISCOFIS…
           </div>
         ) : rows.length === 0 ? (
           <div className="mt-4 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4">
             <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" />
             <div>
-              <p className="text-xs font-black text-emerald-800">Nenhuma pendência SISCOFIS de localização.</p>
+              <p className="text-xs font-black text-emerald-800">Nenhum legado SISCOFIS exige reconciliação física.</p>
               <p className="mt-1 text-[10px] leading-4 text-emerald-700/80">
                 Se o Marco Zero ainda não foi confirmado, os itens aparecerão aqui depois da confirmação.
               </p>
@@ -500,7 +503,7 @@ export function WarehouseSiscofisPendingAllocation({
                   <tr>
                     <th className="p-3">Nº Ficha</th>
                     <th className="p-3">Material</th>
-                    <th className="p-3">Saldo sem localização</th>
+                    <th className="p-3">Legado a reconciliar</th>
                     <th className="p-3">Referência</th>
                     <th className="p-3 text-right">Ação</th>
                   </tr>
@@ -532,7 +535,7 @@ export function WarehouseSiscofisPendingAllocation({
                           className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#00288e] px-3 text-[10px] font-black text-white hover:bg-[#001f70]"
                         >
                           <MapPin className="h-3.5 w-3.5" />
-                          Alocar
+                          Revisar
                         </button>
                       </td>
                     </tr>

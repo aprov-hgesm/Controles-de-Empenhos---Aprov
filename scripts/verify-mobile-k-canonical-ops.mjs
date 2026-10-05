@@ -17,6 +17,9 @@ for (const path of [
   'features/warehouse/mobile/WarehouseMobileItemQuery.tsx',
   'features/warehouse/mobile/WarehouseMobileOutbound.tsx',
   'features/warehouse/components/warehouseIntakePresentation.ts',
+  'features/warehouse/components/WarehouseLocationsOperational.tsx',
+  'features/warehouse/components/WarehouseSiscofisPendingAllocation.tsx',
+  'lib/warehouse/pendingPhysicalAllocationRepository.ts',
 ]) {
   assert.equal(existsSync(resolve(root, path)), true, 'MOBILE-K ausente: ' + path);
 }
@@ -63,6 +66,31 @@ const intakePresentation = read(
   'features/warehouse/components/warehouseIntakePresentation.ts'
 );
 assert.doesNotMatch(intakePresentation, /quantidade disponível em Sem localização/);
+
+const desktopLocations = read(
+  'features/warehouse/components/WarehouseLocationsOperational.tsx'
+);
+assert.doesNotMatch(desktopLocations, /deriveUnassignedQuantity\(/);
+assert.match(desktopLocations, /row\.position\.kind !== 'UNASSIGNED'/);
+assert.match(desktopLocations, /Legado em reconciliação/);
+assert.doesNotMatch(desktopLocations, />Sem localização</);
+
+const legacySiscofis = read(
+  'lib/warehouse/pendingPhysicalAllocationRepository.ts'
+);
+assert.match(
+  legacySiscofis,
+  /WAREHOUSE_PENDING_ALLOCATION_RECONCILIATION_REQUIRED/
+);
+assert.doesNotMatch(legacySiscofis, /transferWarehouseStock\s*\(/);
+assert.doesNotMatch(legacySiscofis, /from:\s*\{ kind: 'UNASSIGNED' \}/);
+
+const legacySiscofisUi = read(
+  'features/warehouse/components/WarehouseSiscofisPendingAllocation.tsx'
+);
+assert.match(legacySiscofisUi, /reconciliação legada/);
+assert.match(legacySiscofisUi, /Revisar reconciliação/);
+assert.doesNotMatch(legacySiscofisUi, /Saldo sem localização/);
 
 const intakeState = read('lib/warehouse/intakeState.ts');
 for (const marker of [
