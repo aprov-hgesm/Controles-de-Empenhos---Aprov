@@ -266,10 +266,12 @@ async function assertManualEntryPositionActive(
   workspaceId: string,
   position: Exclude<WarehouseStockPosition, { kind: 'UNASSIGNED' }>
 ): Promise<void> {
-  const [depot, location] = await Promise.all([
+  const [depotItem, locationItem] = await Promise.all([
     getWarehouseDepot(workspaceId, position.depotId),
     getWarehouseLocation(workspaceId, position.locationId),
   ]);
+  const depot = depotItem?.depot || null;
+  const location = locationItem?.location || null;
   if (
     !depot
     || depot.status !== 'active'
@@ -282,10 +284,11 @@ async function assertManualEntryPositionActive(
   }
 
   if (position.kind === 'SUBPOSITION') {
-    const subposition = await getWarehouseLocation(
+    const subpositionItem = await getWarehouseLocation(
       workspaceId,
       position.subpositionId
     );
+    const subposition = subpositionItem?.location || null;
     if (
       !subposition
       || subposition.status !== 'active'
