@@ -60,7 +60,10 @@ import {
 import { validateWarehouseBalance } from './movement';
 import { isValidWarehouseLotId } from './lot';
 import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
-import { warehouseCanonicalMaterialReadInput } from './readCompatibility';
+import {
+  warehouseCanonicalLocationBalanceReadInput,
+  warehouseCanonicalMaterialReadInput,
+} from './readCompatibility';
 
 export interface WarehouseDepotListItem {
   depot: WarehouseDepot;
@@ -236,17 +239,7 @@ function parseLocationBalance(
   data: Record<string, unknown>
 ): WarehouseLocationBalance {
   const result = validateWarehouseLocationBalance(
-    {
-      schemaVersion: data.schemaVersion,
-      id,
-      workspaceId: data.workspaceId,
-      ug: data.ug,
-      materialId: data.materialId,
-      position: data.position,
-      quantity: data.quantity,
-      revision: data.revision,
-      lastMovementId: data.lastMovementId,
-    },
+    warehouseCanonicalLocationBalanceReadInput(id, data),
     { expectedWorkspaceId: workspaceId }
   );
   if (!result.ok) {
