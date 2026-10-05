@@ -46,7 +46,7 @@ PROGRAM CONTROL + COORDENAÇÃO DO RC
    │
    ├── COORDENADOR SAAS-R1 — consulta/evidência
    ├── COORDENADOR MOBILE-R1 — consulta/evidência
-   ├── HARDEN-B — frente especializada temporal
+   ├── HARDEN-B — PASS / evidência de recovery encerrada
    └── MOBILE-J — certificação física especializada
 ```
 
@@ -200,7 +200,7 @@ Snapshot em 2026-10-04:
 - produção: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330` — Performance R3;
 - SaaS funcional: encerrado;
 - HARDEN-A1/A2/C/D: PASS;
-- HARDEN-B: parcial/temporal;
+- HARDEN-B: **PASS — recuperação real certificada**;
 - Mobile funcional A–I: encerrado;
 - MOBILE-J: certificação final;
 - nova feature SaaS/Mobile: congelada;
@@ -586,7 +586,57 @@ Não justificam reabertura: melhoria visual, refactor, limpeza, feature nova, ot
 Pendências posteriores:
 - Preview HTTPS bloqueado por Vercel build-rate-limit;
 - MOBILE-J física pendente;
-- HARDEN-B temporal pendente;
+- HARDEN-B: **PASS**; cleanup do banco temporário permanece pendente e não bloqueante;
 - produção continua não autorizada.
 
 Próximo gate: **Preview HTTPS do RC congelado e certificação física/integrada**.
+
+## 23. Decisão Program Control — HARDEN-B PASS
+
+Data: 2026-10-05.
+
+Após auditoria independente do handoff final, do PR #237, da branch `saas-harden-b-recovery-restore` e da documentação publicada, o Program Control ratifica:
+
+**HARDEN-B — PASS**
+
+Evidência principal aceita:
+
+- branch worker: `saas-harden-b-recovery-restore`;
+- HEAD final: `c6368d0dd1b89610cb02b9b87f5ef6392810b336`;
+- PR #237: OPEN / DRAFT / MERGEABLE / não mergeado;
+- branch: 6 commits à frente e 87 atrás da integradora, sem rebase;
+- delta inteiro da frente: somente `docs/SAAS_R1_HARDEN_B_RECOVERY_RESTORE.md`;
+- backups nativos READY nos dois bancos;
+- `recovery:status = ready=true`;
+- `recovery:verify = ready=true`;
+- restore real autorizado e concluído com `operationState: SUCCESSFUL`;
+- target isolado: `emprovex-restore-warehouse-2026-10-04`;
+- snapshot Warehouse: `2026-10-03T17:05:24.058789Z`;
+- 13/13 coleções verificadas com contagens idênticas entre origem e restore;
+- isolamento: PASS;
+- IAM read-only: PASS;
+- TTL: 0 políticas na origem e 0 no restore;
+- composite indexes: 0 na origem e 0 no restore;
+- field indexes: default em ambos;
+- produção alterada: NÃO;
+- RC FROZEN alterado: NÃO.
+
+Rules:
+
+A leitura do release de Firebase Security Rules retornou HTTP 403 tanto na origem quanto no target. Esse resultado não foi tratado como falha do restore, porque Rules não fazem parte do backup e precisam ser configuradas/confirmadas separadamente em disaster recovery. A permissão de leitura necessária é `firebaserules.releases.get`.
+
+Risco residual não bloqueante:
+
+- confirmar/aplicar explicitamente o ruleset correto antes de qualquer promoção de banco restaurado a substituto operacional;
+- banco temporário `emprovex-restore-warehouse-2026-10-04` continua existente, com delete protection ativa e possível custo;
+- cleanup exige autorização separada e não é condição para o PASS.
+
+Classificação formal:
+
+**HARDEN-B — PASS**
+
+Sem impacto no RC FROZEN `54e60c2264588d8802a67a4cab3d875d64f6bfc1`.
+
+Próximo gate global permanece:
+
+**Preview HTTPS do RC congelado → MOBILE-J + certificação física/integrada**.
