@@ -2,6 +2,23 @@ import { warehouseStockPositionsEqual, type WarehouseLocationBalance, type Wareh
 import type { WarehouseLot } from './lot';
 import type { WarehouseMaterial } from './material';
 
+export function warehouseMobileCanonicalBalanceReadInput(
+  id: string,
+  data: Record<string, unknown>
+): Record<string, unknown> {
+  return {
+    schemaVersion: data.schemaVersion,
+    id,
+    workspaceId: data.workspaceId,
+    ug: data.ug,
+    materialId: data.materialId,
+    position: data.position,
+    quantity: data.quantity,
+    revision: data.revision,
+    lastMovementId: data.lastMovementId,
+  };
+}
+
 export interface WarehouseMobilePhysicalQueryPlan {
   field: 'position.locationId' | 'position.subpositionId';
   value: string;
