@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05 — handoff de coordenação preparado; Preview MOBILE-J reorganizado em 7 operações sem sobreposição; Saída ≠ Transferência; Consultar Item criada; HEAD b83f9de... com Vercel/Core/Application CI verdes**
+Última sincronização global: **2026-10-05 — HANDOFF DE COORDENAÇÃO VALIDADO CONTRA GITHUB: 7 operações móveis consolidadas; Saída ≠ Transferência; Consultar Item read-only; PR #252 OPEN/DRAFT/MERGEABLE; HEAD b83f9de... com Vercel/Core/Application CI verdes**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -101,7 +101,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | RULES-AUDIT-01 | **PASS / EXECUTADA NO ROLLOUT DE RULES** | Rules RC publicadas antes do app, conforme contrato de compatibilidade |
 | RC original | **FROZEN HISTÓRICO / BASELINE** | `54e60c2264588d8802a67a4cab3d875d64f6bfc1`; não é mais o HEAD final pretendido após defeitos físicos reais |
 | RC-P base | **PREVIEW HTTPS OBTIDO** | `rc-r1-p-preview@54e60c...`; acesso/auth/legal gate e Central Móvel confirmados manualmente |
-| Reabertura controlada | **ATIVA / JUSTIFICADA POR DEFEITO REAL** | branch `rc-r1-mobile-j-fix-label-readability`; PR #252 draft; nenhum merge em main |
+| Reabertura controlada | **ATIVA / JUSTIFICADA POR DEFEITO REAL** | branch `rc-r1-mobile-j-fix-label-readability`; PR #252 **OPEN / DRAFT / MERGEABLE=true / NOT MERGED**; base `rc-r1-p-preview@54e60c...`; nenhum merge em main |
 | HEAD auditado MOBILE-J-FIX | **VERDE NO PREVIEW** | `b83f9de756a5690a8459c3bf8d9dcb2fee222a14`; Vercel SUCCESS; Core #300 SUCCESS; Application CI #1013 SUCCESS |
 | Barcode físico | **PASS FÍSICO PARA LOCAL** | novo código numérico de 13 dígitos; `9812001101000` lido como `CAMERA · LOCATION` |
 | Etiqueta compacta | **AJUSTADA PARA PRATELEIRA** | 140 mm × 32,5 mm; altura <= 35 mm; Code 128 ampliado |
@@ -124,7 +124,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 - RC runtime original/frozen: `54e60c2264588d8802a67a4cab3d875d64f6bfc1`;
 - branch RC-P original: `rc-r1-p-preview@54e60c2264588d8802a67a4cab3d875d64f6bfc1`;
 - branch ativa de correção/certificação: `rc-r1-mobile-j-fix-label-readability@b83f9de756a5690a8459c3bf8d9dcb2fee222a14`;
-- PR de correção/certificação: **#252 — DRAFT / NÃO MERGEADO**;
+- PR de correção/certificação: **#252 — OPEN / DRAFT / MERGEABLE=true / NÃO MERGEADO**; HEAD `b83f9de756a5690a8459c3bf8d9dcb2fee222a14`; 61 commits / 30 arquivos no PR no momento deste handoff;
 - Preview estável da branch: `https://controles-de-empenhos-aprov-git-rc-f44756-aprov-hgesms-projects.vercel.app`;
 - HARDEN-B: `saas-harden-b-recovery-restore@c6368d0dd1b89610cb02b9b87f5ef6392810b336`.
 
@@ -2905,6 +2905,40 @@ Gates:
 
 Produção do app permaneceu em `main@e90f92...`; PR #252 continua DRAFT/não mergeado.
 
+### 2026-10-05 — Reorganização semântica final das 7 operações móveis
+
+Após teste manual da Saída de Material, o Fundador relatou que, depois de ler o item e escolher a posição, a jornada parecia entrar em “troca de local”, confundindo Saída com Transferência.
+
+A revisão comprovou que o backend da Saída já usava OUTBOUND, mas a UX estava semanticamente próxima demais de Transferência. O contrato foi reorganizado para sete operações sem sobreposição:
+
+- Alocar Recebimento;
+- Transferir Material;
+- Consultar Localização;
+- Consultar Item;
+- Inventário;
+- Saída de Material;
+- Conferir posição.
+
+A nova **Consultar Item** foi implementada como read-only sobre o mesmo read model físico usado pela Saída, evitando duplicação de lógica.
+
+A **Saída** passou a declarar e apresentar explicitamente:
+
+`material → quantidade → origem da retirada → confirmar origem física → lote → destino administrativo/retirado por → confirmar baixa`
+
+A **Transferência** permanece:
+
+`origem física → material → quantidade → destino físico → confirmar transferência`
+
+No HEAD `b83f9de756a5690a8459c3bf8d9dcb2fee222a14` foram confirmados no GitHub:
+
+- Vercel: SUCCESS;
+- Core Protection #300: SUCCESS;
+- Application CI #1013: SUCCESS;
+- PR #252: OPEN / DRAFT / MERGEABLE=true / NOT MERGED;
+- produção/app: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330` inalterada.
+
+O próximo passo é certificação manual dos sete fluxos no Preview, não integração ou produção.
+
 # PARTE XI — DECISÕES PERMANENTES
 
 ## 35. Decisões que só podem mudar por decisão explícita
@@ -3154,7 +3188,10 @@ BRANCH ATIVA DE CERTIFICAÇÃO/CORREÇÃO
 rc-r1-mobile-j-fix-label-readability
 HEAD auditado: b83f9de756a5690a8459c3bf8d9dcb2fee222a14
 PR: #252
-estado PR: DRAFT / NÃO MERGEADO
+estado PR: OPEN / DRAFT / MERGEABLE=true / NÃO MERGEADO
+base PR: rc-r1-p-preview@54e60c2264588d8802a67a4cab3d875d64f6bfc1
+HEAD PR: b83f9de756a5690a8459c3bf8d9dcb2fee222a14
+tamanho PR no handoff: 61 commits / 30 arquivos
 Preview:
 https://controles-de-empenhos-aprov-git-rc-f44756-aprov-hgesms-projects.vercel.app
 
@@ -3194,24 +3231,62 @@ barcode válido de localização: reservado e não pode virar barcode de produto
 compatibilidade de leitura aplicada a physical query, position check, inventory,
 outbound, transfer, intake, materials e barcodes
 
-CENTRAL MÓVEL — 7 OPERAÇÕES
-1. Alocar Recebimento — entrada em posição destino
-2. Transferir Material — origem física → destino físico
-3. Consultar Localização — posição → conteúdo, read-only
-4. Consultar Item — item → locais/quantidades/lotes, read-only
-5. Inventário — snapshot/contagem/revisão
-6. Saída de Material — item → origem → lote → destino administrativo → baixa
-7. Conferir posição — posição + item → correto/incorreto, read-only
+CENTRAL MÓVEL — 7 OPERAÇÕES / CONTRATO CANÔNICO
+1. Alocar Recebimento
+   rota: /central-mobile/alocar
+   intenção: NF/item recebido → material → posição DESTINO → confirmar entrada
+2. Transferir Material
+   rota: /central-mobile/transferir
+   intenção: ORIGEM física → material → quantidade → DESTINO físico → confirmar transferência
+3. Consultar Localização
+   rota: /central-mobile/consultar-localizacao
+   intenção: LOCAL/SUBPOSIÇÃO → conteúdo esperado; READ-ONLY
+4. Consultar Item
+   rota: /central-mobile/consultar-item
+   intenção: barcode comercial → saldo agregado → locais/subposições + quantidades + lotes; READ-ONLY
+5. Inventário
+   rota: /central-mobile/inventario
+   intenção: snapshot → posição/material → contagem → revisão/ajuste próprio do inventário
+6. Saída de Material
+   rota: /central-mobile/saida
+   intenção: material → quantidade → ORIGEM da retirada → confirmar origem física → lote → destino ADMINISTRATIVO/retirado por → CONFIRMAR SAÍDA
+   regra: NÃO existe destino físico nesta operação; saída reduz saldo da origem e não transfere material
+7. Conferir posição
+   rota: /central-mobile/conferir
+   intenção: posição + item → correto/incorreto; READ-ONLY; não executar transferência silenciosa
 
-TESTE MANUAL IMEDIATO PENDENTE
-1. recarregar Preview no HEAD b83f9de...
-2. confirmar 7 cards na Home
-3. testar Consultar Localização com LOCAL e SUBPOSIÇÃO
-4. testar Consultar Item com barcode comercial
-5. testar Saída e confirmar que NÃO pede destino físico
-6. testar Transferência e confirmar que exige destino físico
-7. validar Alocar/Inventário/Conferir sem sobreposição
-8. continuar runbook físico MOBILE-J
+IMPLEMENTAÇÃO MÓVEL — PONTOS DE ENTRADA PARA O NOVO COORDENADOR
+Home/catálogo: features/warehouse/mobile/WarehouseMobileHome.tsx
+Consultar Localização: app/central-mobile/consultar-localizacao/page.tsx
+UI Consultar Localização: features/warehouse/mobile/WarehouseMobileLocationFoundationCheck.tsx
+Consultar Item: app/central-mobile/consultar-item/page.tsx
+UI Consultar Item: features/warehouse/mobile/WarehouseMobileItemQuery.tsx
+Saída: features/warehouse/mobile/WarehouseMobileOutbound.tsx
+Transferência: features/warehouse/mobile/WarehouseMobileTransfer.tsx
+read model compartilhado de item/saída: lib/warehouse/mobileOutboundRepository.ts
+barcode físico/resolver: lib/warehouse/locationBarcode.ts + locationBarcodeResolver.ts
+compatibilidade legada read-only: lib/warehouse/readCompatibility.ts
+
+DECISÃO DE NÃO DUPLICAÇÃO
+- Consultar Item NÃO possui um segundo modelo de estoque: reutiliza loadWarehouseMobileItemAvailability, o mesmo read model físico usado pela Saída.
+- Consultar Localização usa a consulta física por posição e não escreve estoque.
+- Saída usa OUTBOUND canônico/transacional.
+- Transferência usa TRANSFER canônico e continua sendo a única operação com origem física + destino físico.
+- Conferir posição e consultas não devem executar movimentação.
+- qualquer nova UX deve compor esses contratos, não copiar lógica de saldo/lot/posição para outro módulo.
+
+TESTE MANUAL IMEDIATO PENDENTE — PRIMEIRA MISSÃO DO NOVO COORDENADOR
+1. abrir o Preview no HEAD b83f9de756a5690a8459c3bf8d9dcb2fee222a14
+2. confirmar 7 cards na Home e respectivas rotas
+3. Consultar Localização: testar LOCAL e SUBPOSIÇÃO e confirmar READ-ONLY
+4. Consultar Item: testar barcode comercial e confirmar locais/subposições + quantidades + lotes
+5. Saída: validar fluxo completo e confirmar que NÃO aparece destino físico; somente destino administrativo/retirado por
+6. Transferência: validar que exige origem física e destino físico distintos
+7. Alocar Recebimento: validar entrada em destino sem conflitar com Transferência/Saída
+8. Inventário: validar contagem/snapshot sem virar consulta genérica
+9. Conferir posição: validar correto/incorreto sem executar transferência
+10. retestar PAL-01 / 9812001101000 após hardening legado e confirmar conteúdo físico
+11. continuar runbook MOBILE-J: câmera permitida/negada/indisponível, fallback manual, som/vibração, double scan/cooldown, perda/retorno de rede e jornada ponta a ponta
 
 SE SURGIR NOVO ERRO
 não mascarar automaticamente
