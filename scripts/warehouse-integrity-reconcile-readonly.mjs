@@ -36,7 +36,9 @@ async function main() {
   const flags = parseFlags(process.argv.slice(2));
   if (flags.help || flags.h) return printHelp();
   assertTarget(flags);
-  ensureGcloud(flags.gcloud);
+  const suppliedToken = String(process.env.WAREHOUSE_AUDIT_ACCESS_TOKEN || '').trim();
+  if (suppliedToken) token = suppliedToken;
+  else ensureGcloud(flags.gcloud);
 
   const pageSize = boundedInt(flags['page-size'], 200, 50, 300);
   const cap = boundedInt(flags['max-docs-per-collection'], 5000, 100, 20000);
@@ -90,6 +92,9 @@ function printHelp() {
     '  --workspace=' + EXPECTED.workspaceId,
     '  [--page-size=200] [--max-docs-per-collection=5000]',
     '  [--gcloud="C:\\caminho\\para\\gcloud.cmd"]',
+    '',
+    'Windows/PowerShell recomendado:',
+    '  $env:WAREHOUSE_AUDIT_ACCESS_TOKEN = & $Gcloud auth print-access-token',
     '',
     'Garantia: transporte Firestore exclusivamente HTTP GET; nenhuma escrita.',
   ].join('\n'));
@@ -160,6 +165,7 @@ function quoteCmdArg(value) {
 }
 
 function accessToken() {
+  if (token) return token;
   const result = spawnGcloud(gcloudCommand, ['auth', 'print-access-token']);
   if (result.status !== 0) throw new Error('Falha ao obter token gcloud: ' + String(result.stderr || '').trim());
   const value = result.stdout.trim();
