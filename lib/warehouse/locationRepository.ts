@@ -60,6 +60,7 @@ import {
 import { validateWarehouseBalance } from './movement';
 import { isValidWarehouseLotId } from './lot';
 import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
+import { warehouseCanonicalMaterialReadInput } from './readCompatibility';
 
 export interface WarehouseDepotListItem {
   depot: WarehouseDepot;
@@ -303,7 +304,10 @@ function parseMovement(
 }
 
 function parseMaterial(workspaceId: string, id: string, data: Record<string, unknown>): WarehouseMaterial {
-  const result = validateWarehouseMaterial({ ...data, id }, { expectedWorkspaceId: workspaceId });
+  const result = validateWarehouseMaterial(
+    warehouseCanonicalMaterialReadInput(id, data),
+    { expectedWorkspaceId: workspaceId }
+  );
   if (!result.ok) throw new Error('WAREHOUSE_INVALID_MATERIAL');
   return result.data;
 }
