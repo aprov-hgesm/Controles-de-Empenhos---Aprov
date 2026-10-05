@@ -2,7 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -125,17 +125,41 @@ test('escopo de subposições retorna somente as filhas ativas do Local', () => 
   assert.equal(result[0].code, 'PRAT-01');
 });
 
-test('paginação respeita prateleira <=35mm e perfil compacto de 14cm de largura', () => {
+test('paginação fixa a etiqueta compacta em 140 × 35 mm e mantém 8 por A4', () => {
   const items = Array.from({ length: 25 }, (_, index) => ({ index }));
-  assert.equal(labels.WAREHOUSE_LABEL_PRESETS.COMPACT.columns, 1);
-  assert.equal(labels.WAREHOUSE_LABEL_PRESETS.COMPACT.rows, 8);
-  assert.equal(labels.WAREHOUSE_LABEL_PRESETS.COMPACT.widthMm, 140);
   const compact = labels.WAREHOUSE_LABEL_PRESETS.COMPACT;
-  const compactHeight = (297 - compact.marginMm * 2 - compact.gapMm * (compact.rows - 1)) / compact.rows;
-  assert.ok(compactHeight <= 35, 'Etiqueta compacta deve respeitar 35 mm de altura');
+
+  assert.equal(compact.columns, 1);
+  assert.equal(compact.rows, 8);
+  assert.equal(compact.widthMm, 140);
+  assert.equal(compact.heightMm, 35);
+  assert.equal(compact.gapMm, 0.5);
+  assert.equal(compact.marginMm, 6.75);
+
+  const compactCellHeight =
+    (297 - compact.marginMm * 2 - compact.gapMm * (compact.rows - 1))
+    / compact.rows;
+  assert.equal(compactCellHeight, 35);
+  assert.match(compact.description, /14 × 3,5 cm/);
+
   assert.deepEqual(labels.paginateWarehouseLabels(items, 'COMPACT').map((page) => page.length), [8, 8, 8, 1]);
   assert.deepEqual(labels.paginateWarehouseLabels(items, 'MEDIUM').map((page) => page.length), [12, 12, 1]);
   assert.deepEqual(labels.paginateWarehouseLabels(items, 'LARGE').map((page) => page.length), [8, 8, 8, 1]);
+});
+
+test('layout compacto preserva identificação à esquerda e Code 128 dominante à direita', () => {
+  const source = readFileSync(
+    resolve(root, 'features/warehouse/pdf/warehouseLabelsPdf.ts'),
+    'utf8'
+  );
+
+  assert.match(source, /function drawCompactShelfLabel/);
+  assert.match(source, /CENTRAL DE DEPÓSITOS/);
+  assert.match(source, /width \* 0\.43/);
+  assert.match(source, /ESTRUTURA FÍSICA/);
+  assert.match(source, /item\.workspaceId\.toUpperCase\(\)/);
+  assert.match(source, /22\.5,/);
+  assert.match(source, /5\.6,/);
 });
 
 test('gerador produz PDF A4 não vazio para impressão monocromática', async () => {
