@@ -36,9 +36,10 @@ import type { WarehouseMobileScanEvent } from '../../../lib/warehouse/mobileScan
 import {
   createWarehouseWithdrawalId,
   createWarehouseWithdrawalLineId,
-  normalizeWarehouseDestinationName,
+  type WarehouseDestinationListItem,
 } from '../../../lib/warehouse/withdrawal';
 import {
+  createWarehouseDestination,
   finalizeWarehouseMaterialWithdrawal,
   listWarehouseDestinationsCached,
 } from '../../../lib/warehouse/withdrawalRepository';
@@ -194,11 +195,8 @@ function confirmationError(error: unknown) {
   ) {
     return 'O lote mudou e não atende mais à saída preparada. A saída não foi aplicada.';
   }
-  if (raw.includes('WAREHOUSE_MOBILE_OUTBOUND_DESTINATION_NOT_FOUND')) {
-    return 'O destino informado não corresponde a um destino ativo cadastrado na Central.';
-  }
-  if (raw.includes('WAREHOUSE_MOBILE_OUTBOUND_DESTINATION_AMBIGUOUS')) {
-    return 'Há mais de um destino ativo com esse nome. Revise o cadastro na Central desktop.';
+  if (raw.includes('WAREHOUSE_DESTINATION_NOT_FOUND')) {
+    return 'O destino cadastrado não existe mais. Selecione outro destino.';
   }
   if (raw.includes('WAREHOUSE_DESTINATION_INACTIVE')) {
     return 'O destino ficou inativo antes da confirmação. A saída não foi aplicada.';
@@ -222,7 +220,10 @@ function confirmationError(error: unknown) {
 export function WarehouseMobileOutbound() {
   const workspace = useWarehouseWorkspaceContext();
   const requestRef = useRef(0);
-  const [destination, setDestination] = useState('');
+  const [destinations, setDestinations] = useState<WarehouseDestinationListItem[]>([]);
+  const [destinationsLoaded, setDestinationsLoaded] = useState(false);
+  const [destinationId, setDestinationId] = useState('');
+  const [newDestinationName, setNewDestinationName] = useState('');
   const [pickedBy, setPickedBy] = useState('');
   const [partyReady, setPartyReady] = useState(false);
   const [product, setProduct] = useState<ProductState | null>(null);
@@ -239,7 +240,8 @@ export function WarehouseMobileOutbound() {
 
   const reset = useCallback(() => {
     requestRef.current += 1;
-    setDestination('');
+    setDestinationId('');
+    setNewDestinationName('');
     setPickedBy('');
     setPartyReady(false);
     setProduct(null);
@@ -264,14 +266,52 @@ export function WarehouseMobileOutbound() {
     return result.value;
   }, [workspace.ug, workspace.workspaceId]);
 
-  const confirmWithdrawalParty = () => {
-    const normalizedDestination = destination.trim();
-    const normalizedPickedBy = pickedBy.trim();
-    if (normalizedDestination.length < 2 || normalizedPickedBy.length < 2) {
-      setMessage('Informe destino da retirada e retirado por antes de confirmar a saída.');
+  const loadDestinations = useCallback(async () => {
+    if (destinationsLoaded) return;
+    const loaded = await listWarehouseDestinationsCached(
+      workspace.workspaceId,
+      250
+    );
+    setDestinations(loaded);
+    setDestinationsLoaded(true);
+  }, [destinationsLoaded, workspace.workspaceId]);
+
+  const createDestination = useCallback(async () => {
+    const name = newDestinationName.trim();
+    if (name.length < 2) {
+      setMessage('Informe um nome válido para o novo destino.');
       return;
     }
-    setDestination(normalizedDestination);
+    setWorking(true);
+    setMessage(null);
+    try {
+      const destination = await createWarehouseDestination(
+        workspace.workspaceId,
+        { name }
+      );
+      setDestinations((current) => [
+        ...current,
+        { destination, createdAt: null, updatedAt: null },
+      ].sort((left, right) =>
+        left.destination.name.localeCompare(right.destination.name, 'pt-BR')
+      ));
+      setDestinationId(destination.id);
+      setNewDestinationName('');
+      setDestinationsLoaded(true);
+      setMessage('Destino cadastrado e selecionado.');
+    } catch (error) {
+      setMessage(confirmationError(error));
+    } finally {
+      setWorking(false);
+    }
+  }, [newDestinationName, workspace.workspaceId]);
+
+  const confirmWithdrawalParty = () => {
+    const normalizedPickedBy = pickedBy.trim();
+    if (!destinationId || normalizedPickedBy.length < 2) {
+      setMessage('Selecione o destino da retirada e informe retirado por.');
+      return;
+    }
     setPickedBy(normalizedPickedBy);
     setPartyReady(true);
     setMessage(null);
@@ -285,7 +325,8 @@ export function WarehouseMobileOutbound() {
     setPosition(null);
     setScannedPosition(null);
     setReview(null);
-    setDestination('');
+    setDestinationId('');
+    setNewDestinationName('');
     setPickedBy('');
     setPartyReady(false);
     setSuccess(null);
@@ -431,7 +472,10 @@ export function WarehouseMobileOutbound() {
         lotId: lot?.id || null,
         planBaseQuantity: plan.baseQuantity,
       });
+      setDestinationId('');
+      setPartyReady(false);
       setMessage(null);
+      void loadDestinations();
     } catch (error) {
       setMessage(preparationError(error));
     }
@@ -472,22 +516,9 @@ export function WarehouseMobileOutbound() {
         throw new Error('PRODUCT_CHANGED');
       }
 
-      const destinationKey = normalizeWarehouseDestinationName(destination)
-        .toLocaleLowerCase('pt-BR');
-      const destinationMatches = (await listWarehouseDestinationsCached(
-        workspace.workspaceId
-      )).filter((item) =>
-        item.destination.status === 'active'
-        && normalizeWarehouseDestinationName(item.destination.name)
-          .toLocaleLowerCase('pt-BR') === destinationKey
-      );
-      if (destinationMatches.length === 0) {
-        throw new Error('WAREHOUSE_MOBILE_OUTBOUND_DESTINATION_NOT_FOUND');
+      if (!destinationId) {
+        throw new Error('WAREHOUSE_DESTINATION_NOT_FOUND');
       }
-      if (destinationMatches.length > 1) {
-        throw new Error('WAREHOUSE_MOBILE_OUTBOUND_DESTINATION_AMBIGUOUS');
-      }
-      const canonicalDestination = destinationMatches[0].destination;
       const selectedLot = position.option.lots.find(
         (lot) => lot.id === review.lotId
       ) || null;
@@ -496,7 +527,7 @@ export function WarehouseMobileOutbound() {
         workspace.workspaceId,
         {
           withdrawalId: review.withdrawalId,
-          destinationId: canonicalDestination.id,
+          destinationId,
           withdrawnBy: pickedBy,
           lines: [{
             lineId: review.lineId,
@@ -553,7 +584,7 @@ export function WarehouseMobileOutbound() {
       setWorking(false);
     }
   }, [
-    destination,
+    destinationId,
     partyReady,
     pickedBy,
     position,
@@ -570,6 +601,13 @@ export function WarehouseMobileOutbound() {
     : null;
   const selectedLots =
     position?.option.lots.filter((lot) => lot.quantity > 0) || [];
+  const activeDestinations = destinations.filter(
+    (item) => item.destination.status === 'active'
+  );
+  const selectedDestinationName =
+    activeDestinations.find(
+      (item) => item.destination.id === destinationId
+    )?.destination.name || '';
 
   return (
     <div className="space-y-5" data-testid="warehouse-mobile-outbound">
@@ -802,17 +840,47 @@ export function WarehouseMobileOutbound() {
           <p className="rounded-2xl bg-blue-50 p-3 text-xs font-bold leading-5 text-blue-900">
             Estes dados identificam para onde o material saiu e quem realizou a retirada. Não representam outro local de estoque.
           </p>
-          <input
-            value={destination}
+          <select
+            value={destinationId}
+            onFocus={() => void loadDestinations()}
             onChange={(event) => {
-              setDestination(event.target.value);
+              setDestinationId(event.target.value);
               setMessage(null);
             }}
-            maxLength={72}
             className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold"
-            placeholder="Destino da retirada"
             data-testid="warehouse-mobile-outbound-destination"
-          />
+          >
+            <option value="">
+              {destinationsLoaded ? 'Selecione o destino' : 'Carregando destinos…'}
+            </option>
+            {activeDestinations.map(({ destination }) => (
+              <option key={destination.id} value={destination.id}>
+                {destination.name}
+              </option>
+            ))}
+          </select>
+          <div className="flex gap-2">
+            <input
+              value={newDestinationName}
+              onChange={(event) => {
+                setNewDestinationName(event.target.value);
+                setMessage(null);
+              }}
+              maxLength={120}
+              className="h-12 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold"
+              placeholder="Novo destino"
+              data-testid="warehouse-mobile-outbound-new-destination"
+            />
+            <button
+              type="button"
+              onClick={() => void createDestination()}
+              disabled={working || newDestinationName.trim().length < 2}
+              className="h-12 rounded-2xl border border-[#00288e] px-4 text-xs font-black text-[#00288e] disabled:opacity-40"
+              data-testid="warehouse-mobile-outbound-create-destination"
+            >
+              Cadastrar
+            </button>
+          </div>
           <input
             value={pickedBy}
             onChange={(event) => {
@@ -831,7 +899,7 @@ export function WarehouseMobileOutbound() {
       {review && partyReady && (
         <Card
           title="Destino da retirada"
-          value={destination}
+          value={selectedDestinationName || 'Destino não identificado'}
           detail={'Retirado por: ' + pickedBy}
         />
       )}
@@ -847,7 +915,7 @@ export function WarehouseMobileOutbound() {
               Nenhuma baixa foi executada até aqui
             </p>
             <dl className="mt-4 space-y-2 text-xs">
-              <Row label="Destino" value={destination} />
+              <Row label="Destino" value={selectedDestinationName || 'Destino não identificado'} />
               <Row label="Retirado por" value={pickedBy} />
               <Row label="Material" value={product.availability.material.description} />
               <Row
