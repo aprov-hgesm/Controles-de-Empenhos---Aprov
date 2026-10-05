@@ -285,6 +285,53 @@ test('resolver numérico de 13 dígitos encontra LOCAL sem migração de IDs', a
   });
 });
 
+test('resolver numérico de 13 dígitos encontra SUBPOSITION com hierarquia completa', async () => {
+  const child = subposition(1);
+  const code = locationBarcode.encodeWarehouseNumericLocationBarcode({
+    kind: 'SUBPOSITION',
+    depotCode: depot.code,
+    parentCode: local.code,
+    locationCode: child.code,
+  });
+  assert.equal(code, '9813001201101');
+
+  const result = await locationBarcode.resolveWarehouseStockPositionCode({
+    code,
+    workspaceId: depot.workspaceId,
+    ug: depot.ug,
+  }, {
+    ...resolverSource(),
+    async getDepotByCode(depotCode) {
+      return ['DEP-001', 'DEP-01', 'DEP-1'].includes(depotCode) ? depot : null;
+    },
+    async getLocationByCode(input) {
+      if (
+        input.depotId === depot.id
+        && input.kind === 'LOCAL'
+        && input.parentLocationId === null
+        && input.code === local.code
+      ) return local;
+      if (
+        input.depotId === depot.id
+        && input.kind === 'SUBPOSITION'
+        && input.parentLocationId === local.id
+        && input.code === child.code
+      ) return child;
+      return null;
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.value.identity.version, 3);
+  assert.equal(result.value.identity.entityId, child.id);
+  assert.deepEqual(result.value.position, {
+    kind: 'SUBPOSITION',
+    depotId: depot.id,
+    locationId: local.id,
+    subpositionId: child.id,
+  });
+});
+
 test('resolver EPX2 encontra LOCAL pelo caminho lógico sem migração de IDs', async () => {
   const code = locationBarcode.encodeWarehouseCompactLocationBarcode({
     kind: 'LOCAL',
