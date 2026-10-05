@@ -2587,6 +2587,48 @@ Por decisão do Fundador:
 - nenhuma nova wave funcional autorizada;
 - próximo produto a ser construído é um único SHA de RC SaaS+Mobile.
 
+### 2026-10-05 — HARDEN-B encerrada em PASS
+
+O Program Control auditou e ratificou o fechamento da frente HARDEN-B.
+
+Resultado:
+
+**HARDEN-B — PASS**
+
+Evidência consolidada:
+
+- branch: `saas-harden-b-recovery-restore`;
+- HEAD: `c6368d0dd1b89610cb02b9b87f5ef6392810b336`;
+- PR #237: OPEN / DRAFT / MERGEABLE / não mergeado;
+- backups READY nos bancos principal e Warehouse;
+- `recovery:status = ready=true`;
+- `recovery:verify = ready=true`;
+- restore real do Warehouse concluído com sucesso para `emprovex-restore-warehouse-2026-10-04`;
+- restore sem erro, snapshot `2026-10-03T17:05:24.058789Z`;
+- 13/13 coleções verificadas com igualdade de contagens;
+- isolamento: PASS;
+- IAM: PASS;
+- TTL origem/restore: 0/0;
+- composite indexes origem/restore: 0/0;
+- field indexes: configuração default em ambos;
+- produção: inalterada;
+- RC FROZEN: inalterado.
+
+Risco residual aceito:
+
+- Firebase Security Rules não fazem parte do backup;
+- leitura do release retornou HTTP 403 tanto na origem quanto no restore;
+- antes de promover um banco restaurado a substituto operacional, o ruleset correto deve ser explicitamente confirmado/aplicado.
+
+Cleanup:
+
+- o target temporário continua existente;
+- delete protection permanece ativa;
+- pode haver custo enquanto existir;
+- remoção exige autorização separada.
+
+O cleanup não bloqueia o PASS.
+
 # PARTE XI — DECISÕES PERMANENTES
 
 ## 35. Decisões que só podem mudar por decisão explícita
@@ -2812,7 +2854,7 @@ integrador com SESSION-CAP: feat/saas-r1-commercializacao
 commit de integração runtime SESSION-CAP/RULES-AUDIT: 54aba792cb9e7bb195e21401fb50a21ed50add19
 HARDEN-A1: PASS
 HARDEN-A2: PASS — risco residual aceito
-HARDEN-B: PARCIAL / temporal
+HARDEN-B: PASS — recovery/restore real certificado
 HARDEN-C: PASS
 HARDEN-D: PASS
 nova feature SaaS: NÃO AUTORIZADA
@@ -2876,9 +2918,12 @@ PITR: ATIVO em ambos
 delete protection: ATIVA
 backup diário: ATIVO
 retenção: 14 semanas
-backup READY: PENDENTE
-recovery:verify: PENDENTE
-restore isolado real: PENDENTE / protegido
+backup READY: PASS nos dois bancos
+recovery:verify: PASS / ready=true
+restore isolado real: PASS — Warehouse restaurado em emprovex-restore-warehouse-2026-10-04
+integridade: PASS — 13/13 coleções verificadas
+Rules pós-restore: risco residual operacional documentado; confirmar/aplicar ruleset antes de eventual promoção
+cleanup do target: PENDENTE por decisão explícita / não bloqueante
 
 RELEASE
 RC único SaaS+Mobile: RC CANDIDATE DECLARADO
