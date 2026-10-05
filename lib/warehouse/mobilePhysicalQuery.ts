@@ -92,8 +92,22 @@ function parseBalance(
   id: string,
   data: Record<string, unknown>
 ): WarehouseLocationBalance {
+  // Compatibilidade de leitura para saldos legados:
+  // preserva o contrato canônico e ignora apenas metadados extras históricos.
+  const canonicalBalanceInput = {
+    schemaVersion: data.schemaVersion,
+    id,
+    workspaceId: data.workspaceId,
+    ug: data.ug,
+    materialId: data.materialId,
+    position: data.position,
+    quantity: data.quantity,
+    revision: data.revision,
+    lastMovementId: data.lastMovementId,
+  };
+
   const result = validateWarehouseLocationBalance(
-    { ...data, id },
+    canonicalBalanceInput,
     { expectedWorkspaceId: scope.workspaceId }
   );
   if (!result.ok) {
