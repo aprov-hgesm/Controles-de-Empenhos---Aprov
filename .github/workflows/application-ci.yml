@@ -93,7 +93,8 @@ jobs:
         run: npm run verify:saas-r1-security-enforcement
 
       - name: SAAS R1 integrated contract guard
-        run: npm run verify:saas-r1-integration
+        run: npm run verify:saas-r1-integration\n\n      - name: SAAS R1 final audit contract guard
+        run: npm run verify:saas-r1-final-audit
 
       - name: Empenho class configuration guard
         run: npm run verify:empenho-class-config
