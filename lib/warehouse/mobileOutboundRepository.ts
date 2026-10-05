@@ -28,6 +28,13 @@ import {
 } from './material';
 import { validateWarehouseBalance, type WarehouseBalance } from './movement';
 import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
+import {
+  warehouseCanonicalDepotReadInput,
+  warehouseCanonicalLocationBalanceReadInput,
+  warehouseCanonicalLocationReadInput,
+  warehouseCanonicalLotReadInput,
+  warehouseCanonicalMaterialReadInput,
+} from './readCompatibility';
 import { recordWarehouseDocumentReads } from './telemetry';
 
 export const WAREHOUSE_MOBILE_OUTBOUND_LOCATION_LIMIT = 60;
@@ -95,7 +102,7 @@ function parseMaterial(
   data: Record<string, unknown>
 ): WarehouseMaterial {
   const result = validateWarehouseMaterial(
-    { ...data, id },
+    warehouseCanonicalMaterialReadInput(id, data),
     { expectedWorkspaceId: workspaceId, expectedUg: ug }
   );
   if (!result.ok) throw new Error('WAREHOUSE_MOBILE_OUTBOUND_INVALID_MATERIAL');
@@ -136,7 +143,7 @@ function parseLocationBalance(
   data: Record<string, unknown>
 ): WarehouseLocationBalance {
   const result = validateWarehouseLocationBalance(
-    { ...data, id },
+    warehouseCanonicalLocationBalanceReadInput(id, data),
     { expectedWorkspaceId: workspaceId, expectedMaterialId: materialId }
   );
   if (!result.ok || result.data.ug !== ug) {
@@ -153,7 +160,7 @@ function parseLot(
   data: Record<string, unknown>
 ): WarehouseLot {
   const result = validateWarehouseLot(
-    { ...data, id, expiresOn: data.expiresOn ?? null },
+    warehouseCanonicalLotReadInput(id, data),
     {
       expectedWorkspaceId: workspaceId,
       expectedUg: ug,
@@ -171,7 +178,7 @@ function parseDepot(
   data: Record<string, unknown>
 ): WarehouseDepot {
   const result = validateWarehouseDepot(
-    { ...data, id },
+    warehouseCanonicalDepotReadInput(id, data),
     { expectedWorkspaceId: workspaceId, expectedUg: ug }
   );
   if (!result.ok) throw new Error('WAREHOUSE_MOBILE_OUTBOUND_INVALID_DEPOT');
@@ -185,7 +192,7 @@ function parseLocation(
   data: Record<string, unknown>
 ): WarehouseLocation {
   const result = validateWarehouseLocation(
-    { ...data, id },
+    warehouseCanonicalLocationReadInput(id, data),
     { expectedWorkspaceId: workspaceId, expectedUg: ug }
   );
   if (!result.ok) throw new Error('WAREHOUSE_MOBILE_OUTBOUND_INVALID_LOCATION');
