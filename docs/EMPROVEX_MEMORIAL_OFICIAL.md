@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05 — MOBILE-K concluída e aceita para revisão; RULES-COMPAT-01 PASS; WAREHOUSE-DATA-AUDIT-01 confirmou blocker de integridade. Program Control abriu `INVENTORY-PHYSICAL-FIX-01` em `inventory-physical-fix-01@9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0` para corrigir globalmente o contrato de Inventário Físico, e abriu `WAREHOUSE-INTEGRITY-RECONCILE-01` em `warehouse-integrity-reconcile-01@9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0` para auditoria read-only sistêmica de todas as posições, materiais, saldos, lotes e movimentos. PAL-01 deixa de ser uma frente própria e passa a ser apenas caso conhecido obrigatório de validação dentro da auditoria global. SAAS-FINAL-AUDIT-01 e RC-READINESS-01 seguem em execução.**
+Última sincronização global: **2026-10-05 — WAREHOUSE-INTEGRITY-RECONCILE-01 concluiu leitura viva global do `emprovex-warehouse`: 3.113 reads, 56 materiais, 810 movimentos, 917 intakes, 912 consumptions, 12 lotes e 1 devolução; nenhum cap atingido. Resultado: `BLOCKER — INCONSISTÊNCIAS SISTÊMICAS IMPEDEM RC`. Foram confirmados dois blockers quantitativos de lotes (`mat_272f...`: +100 sobre o físico; `mat_6feb...`: +10) e três reconciliações adicionais (UNASSIGNED positivo + duas duplicidades aparentes de lote técnico). O RC não pode avançar sem tratamento dos blockers de dados. O auditor foi fechado em `warehouse-integrity-reconcile-01@b8dbc33ce6f3bed949dc8d4000316a9cc501998f`; Core Protection PASS e novo Application CI em execução após correção de higiene documental. Program Control abriu `warehouse-data-repair-forensics-01@b8dbc33ce6f3bed949dc8d4000316a9cc501998f` para investigação causal, dry-run e plano idempotente/reversível, ainda sem escrita em dados reais.**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -115,7 +115,8 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | Estado logístico do material | **CONTRATO CANÔNICO CORRIGIDO** | usuário vê apenas: PENDENTE/PARCIALMENTE TRATADO no intake, ESTOQUE LOCALIZADO em LOCAL/SUBPOSIÇÃO, CONSUMIDO/TRATADO; `UNASSIGNED` não é categoria operacional normal de estoque |
 | Onda paralela de auditoria | **2/4 CONCLUÍDAS** | RULES-COMPAT-01 = PASS; WAREHOUSE-DATA-AUDIT-01 = BLOCKER RC; aguardando SAAS-FINAL-AUDIT-01 + RC-READINESS-01 |
 | INVENTORY-PHYSICAL-FIX-01 | **ATIVADA / CORREÇÃO MÍNIMA** | branch `inventory-physical-fix-01@9f1035ac...`; owner exclusivo do blocker Inventário TOTAL + `UNASSIGNED`; sem Rules, dados reais ou refactor amplo |
-| WAREHOUSE-INTEGRITY-RECONCILE-01 | **ATIVADA / READ-ONLY SISTÊMICA** | branch `warehouse-integrity-reconcile-01@9f1035ac...`; audita todas as posições/materiais e usa PAL-01 apenas como caso conhecido de validação; nenhuma correção ou migração de dados |
+| WAREHOUSE-INTEGRITY-RECONCILE-01 | **CONCLUÍDA / BLOCKER RC** | `warehouse-integrity-reconcile-01@b8dbc33...`; 3.113 reads; 2 blockers quantitativos de lote (+100 e +10); 3 reconciliações adicionais; nenhum dado escrito |
+| WAREHOUSE-DATA-REPAIR-FORENSICS-01 | **ATIVADA / READ-ONLY + DRY-RUN** | `warehouse-data-repair-forensics-01@b8dbc33...`; investigar causalidade dos blockers, preparar plano/script de repair idempotente e reversível; nenhuma escrita até autorização explícita |
 | Firestore Rules — contrato da onda | **CONGELADAS PARA OS WORKERS** | SaaS/RC/MOBILE-K usam `firestore.rules@bc91185f...` e `firestore.warehouse.rules@6e1f1050...`; qualquer necessidade de alterar Rules deve voltar ao Coordenador antes de edição |
 | HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
 | Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
@@ -177,13 +178,15 @@ A implementação da **MOBILE-K — Canonical Ops Engine** foi concluída pelo w
 3. WAREHOUSE-DATA-AUDIT-01 — **ENCERRADA / BLOCKER RC**: Inventário TOTAL inclui `UNASSIGNED`; PAL-01 exige diagnóstico read-only; performance risk em movimentos por material;
 4. RC-READINESS-01 — fechar matriz de gates, rollback e re-freeze;
 5. executar `INVENTORY-PHYSICAL-FIX-01` sobre o HEAD final da MOBILE-K, alterando apenas o contrato de Inventário TOTAL + testes associados;
-6. executar auditoria read-only sistêmica `WAREHOUSE-INTEGRITY-RECONCILE-01` sobre todas as posições/materiais; PAL-01 é apenas caso conhecido obrigatório de validação;
-7. revisar semanticamente MOBILE-K + correções + quatro relatórios paralelos;
-8. corrigir somente blockers remanescentes com owner exclusivo;
-9. integrar semanticamente o resultado na linha RC;
-10. repetir gates afetados no SHA final;
-11. executar teste físico curto das operações críticas;
-12. declarar novo RC SHA e RE-FREEZE somente depois dessas barreiras.
+6. `WAREHOUSE-INTEGRITY-RECONCILE-01` — **CONCLUÍDA**: auditoria global confirmou dois blockers quantitativos de lotes e três reconciliações adicionais;
+7. executar `WAREHOUSE-DATA-REPAIR-FORENSICS-01` para provar causalidade e preparar dry-run/repair plan sem escrita;
+8. somente após causa comprovada, backup confirmado e aprovação explícita, abrir frente separada de repair real;
+9. revisar semanticamente MOBILE-K + correções + quatro relatórios paralelos;
+10. corrigir somente blockers remanescentes com owner exclusivo;
+11. integrar semanticamente o resultado na linha RC;
+12. repetir gates afetados no SHA final;
+13. executar teste físico curto das operações críticas;
+14. declarar novo RC SHA e RE-FREEZE somente depois dessas barreiras.
 
 ### Onda paralela de auditoria — execução autorizada sem competição com MOBILE-K
 
@@ -264,7 +267,7 @@ Regra de saída do blocker:
 - não tocar em PAL-01, lotes reais, intake, transfer, outbound, billing, sessão ou produção;
 - repetir testes de inventário Desktop/Mobile, MOBILE-K guard, TypeScript, build, diff hygiene e gates afetados.
 
-**WAREHOUSE-INTEGRITY-RECONCILE-01 — ATIVADA / AUDITORIA SISTÊMICA**
+**WAREHOUSE-INTEGRITY-RECONCILE-01 — CONCLUÍDA / BLOCKER RC**
 
 - branch: `warehouse-integrity-reconcile-01`;
 - base exata: `mobile-r1-k-canonical-ops-engine@9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0`;
@@ -276,6 +279,29 @@ Regra de saída do blocker:
 - distinguir fato, padrão sistêmico, hipótese e causa comprovada;
 - nenhuma escrita, backfill, migração, correção de lote/saldo ou Rules;
 - qualquer reparo posterior exige frente própria e autorização específica quando tocar dados reais.
+
+Resultado vivo consolidado:
+
+- 3.113 reads aproximados; nenhum cap;
+- 56 materiais; 15 registros físicos; 55 `UNASSIGNED`, somente 1 positivo;
+- 12 lotes; 810 movimentos; 917 intakes; 912 consumptions; 1 `outboundReturn`; 0 inventários;
+- `mat_272f2d996ee65ed3530ad2d7e27b66d7`: aggregate 445, físico 440, `UNASSIGNED` 5, lotes ativos 540, ledger 445 — blocker de lote +100;
+- `mat_6feb0840ca4060f7d69fcce1663f21b8`: aggregate/físico/ledger 90, lotes ativos 100 — blocker de lote +10;
+- `mat_bb6d4a089c224b1a48ad3a43f32170a3`: duplicidade aparente de lote técnico, mas aggregate/físico/lotes/ledger em 100 — reconciliação, não blocker quantitativo isolado;
+- causa histórica específica dos +100/+10 ainda **não comprovada**;
+- RC pode avançar sem repair de dados: **NÃO**;
+- Application CI do HEAD anterior falhou somente por linha vazia extra no EOF do relatório; higiene corrigida em `b8dbc33...`, Core Protection novamente PASS e Application CI reexecutando.
+
+**WAREHOUSE-DATA-REPAIR-FORENSICS-01 — ATIVADA / SEM ESCRITA**
+
+- branch: `warehouse-data-repair-forensics-01`;
+- base exata: `warehouse-integrity-reconcile-01@b8dbc33ce6f3bed949dc8d4000316a9cc501998f`;
+- objetivo: identificar a causa histórica específica dos +100 e +10 de lotes e das duplicidades aparentes;
+- começar pelos materiais `mat_272f...` e `mat_6feb...`, usando `mat_bb6d...` como controle de duplicidade sem divergência quantitativa;
+- reconstruir cronologia por intake/lote/movimento/saída/retorno/posição;
+- produzir dry-run e plano de repair, mas sem executar escrita;
+- repair futuro deve ser idempotente, reversível, respaldado por backup, auditável e aprovado explicitamente;
+- nenhuma Rule, saldo, lote, movimento ou documento real pode ser alterado nesta frente.
 
 **Performance**
 
