@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05 — MOBILE-K concluída pelo worker em `9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0` e aceita pelo Coordenador como APTO PARA REVISÃO / CANDIDATA À INTEGRAÇÃO. PR #253 permanece OPEN/DRAFT/MERGEABLE, não mergeado; 22 commits à frente / 0 atrás, 26 arquivos; Application CI, Core Protection, Recovery guardrails, Legal Validation e Vercel Preview verdes; Firestore Rules inalteradas. Onda paralela RULES-COMPAT-01, SAAS-FINAL-AUDIT-01, WAREHOUSE-DATA-AUDIT-01 e RC-READINESS-01 segue como barreira antes da composição do novo RC.**
+Última sincronização global: **2026-10-05 — MOBILE-K concluída e aceita para revisão; RULES-COMPAT-01 também concluída em `97442b5f11779b7b434cba8d0a9a2c9ab843ac66` com `PASS — COMPATIBILIDADE PRESERVADA`, PR #254 DRAFT e zero delta nas Firestore Rules. Permanecem como barreira paralela SAAS-FINAL-AUDIT-01, WAREHOUSE-DATA-AUDIT-01 e RC-READINESS-01 antes da composição do novo RC.**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -113,7 +113,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | MOBILE-K — Canonical Ops Engine | **CONCLUÍDA PELO WORKER / APTO PARA REVISÃO** | `mobile-r1-k-canonical-ops-engine@9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0`; PR #253 OPEN/DRAFT/MERGEABLE, não mergeado; 22 commits à frente / 0 atrás; 26 arquivos; gates completos verdes; Rules inalteradas |
 | PAL-01 / lotes | **DIVERGÊNCIA REAL DETECTADA** | posição física 440 L com lotes ativos observados somando 540 L; não mascarar nem autocorrigir dados; arquitetura nova deve selecionar/conciliar operação sem criar segunda autoridade |
 | Estado logístico do material | **CONTRATO CANÔNICO CORRIGIDO** | usuário vê apenas: PENDENTE/PARCIALMENTE TRATADO no intake, ESTOQUE LOCALIZADO em LOCAL/SUBPOSIÇÃO, CONSUMIDO/TRATADO; `UNASSIGNED` não é categoria operacional normal de estoque |
-| Onda paralela de auditoria | **PLANEJADA / SEM SOBREPOSIÇÃO COM MOBILE-K** | RULES-COMPAT-01 + SAAS-FINAL-AUDIT-01 + WAREHOUSE-DATA-AUDIT-01 + RC-READINESS-01; workers não alteram o motor de Transferência/Saída da MOBILE-K |
+| Onda paralela de auditoria | **1/4 CONCLUÍDA** | RULES-COMPAT-01 = PASS; aguardando SAAS-FINAL-AUDIT-01 + WAREHOUSE-DATA-AUDIT-01 + RC-READINESS-01; nenhum worker altera o motor MOBILE-K |
 | Firestore Rules — contrato da onda | **CONGELADAS PARA OS WORKERS** | SaaS/RC/MOBILE-K usam `firestore.rules@bc91185f...` e `firestore.warehouse.rules@6e1f1050...`; qualquer necessidade de alterar Rules deve voltar ao Coordenador antes de edição |
 | HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
 | Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
@@ -170,7 +170,7 @@ O próximo gate **não é produção** e também **não é continuar remendando 
 
 A implementação da **MOBILE-K — Canonical Ops Engine** foi concluída pelo worker e está em revisão coordenada. O gate imediato agora é receber e cruzar os quatro handoffs paralelos antes de qualquer integração do PR #253:
 
-1. RULES-COMPAT-01 — confirmar compatibilidade antiga + RC e ALLOW/DENY;
+1. RULES-COMPAT-01 — **PASS / ENCERRADA**: compatibilidade antiga + RC e ALLOW/DENY preservados, sem necessidade de mudança de Rules;
 2. SAAS-FINAL-AUDIT-01 — confirmar completude SaaS R1;
 3. WAREHOUSE-DATA-AUDIT-01 — classificar legado/integridade sem escrever dados;
 4. RC-READINESS-01 — fechar matriz de gates, rollback e re-freeze;
@@ -187,7 +187,7 @@ Enquanto a `MOBILE-K — Canonical Ops Engine` evolui em branch própria, o Prog
 
 | Frente | Branch exclusiva | Base de trabalho | Ownership | Saída esperada | Proibição principal |
 | --- | --- | --- | --- | --- | --- |
-| RULES-COMPAT-01 | `rules-compat-01` | RC estável `bd27da91...` | Firestore Rules, ALLOW/DENY, rollout/rollback e compatibilidade histórica | matriz de compatibilidade + testes/guards + recomendação | não alterar Rules nem relaxar permissão |
+| RULES-COMPAT-01 | `rules-compat-01@97442b5f...` | RC estável `bd27da91...` | **PASS / ENCERRADA** — Firestore Rules, ALLOW/DENY, rollout/rollback e compatibilidade histórica | `docs/RULES_COMPAT_01_AUDIT.md`; PR #254 DRAFT | Rules não alteradas; comentário antigo `queueExclusions` continua apenas inconsistência textual |
 | SAAS-FINAL-AUDIT-01 | `saas-final-audit-01` | Memorial/SaaS `f6b767bd...` | completude SaaS R1: billing, onboarding, legal, lifecycle, sessão, recovery e documentação viva | matriz IMPLEMENTADO/TESTADO/PENDENTE/RISCO | não tocar Central/Mobile nem criar nova feature |
 | WAREHOUSE-DATA-AUDIT-01 | `warehouse-data-audit-01` | RC estável `bd27da91...`; MOBILE-K somente leitura | integridade logística/legado: intake, UNASSIGNED, saldos, lotes, ledger | inventário CANONICAL/LEGACY/RECONCILIATION_REQUIRED/INCONSISTENT | nenhuma escrita/migração/correção de dados |
 | RC-READINESS-01 | `rc-readiness-01` | RC estável `bd27da91...` | gates, CI, release manifest, rollback, performance e roteiro de certificação | checklist executável do novo RC | não alterar domínio, Rules ou produção |
@@ -201,6 +201,23 @@ Enquanto a `MOBILE-K — Canonical Ops Engine` evolui em branch própria, o Prog
 5. Nenhum worker publica app, Rules, restore ou altera `main`.
 6. Nenhum worker executa migração destrutiva ou corrige dados reais.
 7. Correção de blocker só começa após o Coordenador definir owner exclusivo.
+
+#### Fechamento RULES-COMPAT-01
+
+Estado aceito pelo Coordenador:
+
+- branch: `rules-compat-01@97442b5f11779b7b434cba8d0a9a2c9ab843ac66`;
+- PR #254: OPEN / DRAFT / MERGEABLE / não mergeado;
+- delta: 1 arquivo documental, 202 linhas;
+- classificação: **PASS — COMPATIBILIDADE PRESERVADA**;
+- `firestore.rules`: `bc91185f34bcdcb4437a4de1078d1089a09292ba` — sem alteração;
+- `firestore.warehouse.rules`: `6e1f1050005314db4e17cb3136409abbddb0ee91` — sem alteração;
+- nenhum caso `RULES CHANGE REQUIRED`;
+- compatibilidade `slot-1/slot-2`, sessões dinâmicas, Legal Gate, billing isolado, lifecycle, multi-tenant, Warehouse, ledger, balances/locationBalances, lotes, barcode e intake v1/v2 preservados.
+
+Precisão sobre CI histórica: no run `37365421191` do baseline `bd27da91...`, o job `validate-application` ficou **SUCCESS** e contém a evidência Emulator usada pela auditoria; o workflow agregado terminou **FAILURE** porque alguns gates posteriores ficaram `cancelled`. Portanto o PASS desta frente se apoia na evidência específica de Rules/Emulator e em auditorias anteriores aplicáveis, e não deve ser descrito como “workflow #1030 completamente verde”.
+
+Observação não bloqueante: em `firestore.warehouse.rules`, o comentário de `queueExclusions` ainda diz “founder-only”, mas a regra efetiva usa `canAccessWarehouseModule(workspaceId)`. Não alterar o arquivo apenas para corrigir comentário, pois isso mudaria o hash das Rules e obrigaria nova auditoria sem ganho de segurança.
 
 #### Guardrail obrigatório de Firestore Rules
 
