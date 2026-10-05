@@ -51,9 +51,14 @@ export type WarehousePhysicalTransferPreparationResult =
       error: WarehouseTransferPreparationError;
     };
 
+export type WarehousePhysicalStockPosition = Exclude<
+  WarehouseStockPosition,
+  { kind: 'UNASSIGNED' }
+>;
+
 export function isWarehousePhysicalStockPosition(
   position: WarehouseStockPosition
-): boolean {
+): position is WarehousePhysicalStockPosition {
   return position.kind === 'LOCATION' || position.kind === 'SUBPOSITION';
 }
 

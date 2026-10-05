@@ -1265,7 +1265,6 @@ export async function transferWarehouseStock(
         position: from,
         quantityDelta: -normalizedQuantity,
         movementId,
-        initialQuantity: fromInitial,
       });
       const nextTo = applyWarehouseLocationDelta(existingTo, {
         id: toBalanceId,
