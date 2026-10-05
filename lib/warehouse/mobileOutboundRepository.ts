@@ -46,7 +46,7 @@ export interface WarehouseMobileOutboundPositionLabel {
   label: string;
 }
 
-export interface WarehouseMobileOutboundAvailability {
+export interface WarehouseMobileItemAvailability {
   material: WarehouseMaterial;
   balance: WarehouseBalance;
   locationBalances: WarehouseLocationBalance[];
@@ -199,10 +199,10 @@ function parseLocation(
   return result.data;
 }
 
-export async function loadWarehouseMobileOutboundAvailability(
+export async function loadWarehouseMobileItemAvailability(
   workspaceId: string,
   materialId: string
-): Promise<WarehouseMobileOutboundAvailability> {
+): Promise<WarehouseMobileItemAvailability> {
   const scope = currentScope(workspaceId);
   if (!isValidWarehouseMaterialId(materialId)) {
     throw new Error('WAREHOUSE_MOBILE_OUTBOUND_INVALID_MATERIAL_ID');
@@ -371,3 +371,7 @@ export async function loadWarehouseMobileOutboundAvailability(
     throw error;
   }
 }
+
+export type WarehouseMobileOutboundAvailability = WarehouseMobileItemAvailability;
+
+export const loadWarehouseMobileOutboundAvailability = loadWarehouseMobileItemAvailability;
