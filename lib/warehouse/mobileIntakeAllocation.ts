@@ -5,6 +5,7 @@ import {
 import {
   isWarehouseLocationBarcode,
   WAREHOUSE_LOCATION_BARCODE_COMPACT_PREFIX,
+  WAREHOUSE_LOCATION_BARCODE_NUMERIC_PREFIX,
   WAREHOUSE_LOCATION_BARCODE_PREFIX,
 } from './locationBarcode';
 import type { WarehouseMobileScanKind } from './mobileScanner';
@@ -26,6 +27,7 @@ export function classifyWarehouseMobileProductScan(
   if (
     normalized.toUpperCase().startsWith(WAREHOUSE_LOCATION_BARCODE_PREFIX)
     || normalized.toUpperCase().startsWith(WAREHOUSE_LOCATION_BARCODE_COMPACT_PREFIX)
+    || normalized.startsWith(WAREHOUSE_LOCATION_BARCODE_NUMERIC_PREFIX)
   ) {
     return 'UNKNOWN';
   }
