@@ -269,7 +269,7 @@ function decodeWarehouseCompactLocationBarcode(
     };
   }
 
-  const locationCode = normalizeWarehouseLogicalCode(parts.at(-1));
+  const locationCode = normalizeWarehouseLogicalCode(parts[parts.length - 1]);
   if (!locationCode) {
     return { ok: false, error: 'MALFORMED_LOCATION_CODE' };
   }
