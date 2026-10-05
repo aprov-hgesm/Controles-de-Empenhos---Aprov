@@ -19,6 +19,78 @@ export function warehouseMobileCanonicalBalanceReadInput(
   };
 }
 
+export function warehouseMobileCanonicalMaterialReadInput(
+  id: string,
+  data: Record<string, unknown>
+): Record<string, unknown> {
+  const unit = data.unit && typeof data.unit === 'object' && !Array.isArray(data.unit)
+    ? data.unit as Record<string, unknown>
+    : null;
+  const conversions = Array.isArray(data.conversions)
+    ? data.conversions.map((entry) => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return entry;
+        const conversion = entry as Record<string, unknown>;
+        const presentation = conversion.presentation
+          && typeof conversion.presentation === 'object'
+          && !Array.isArray(conversion.presentation)
+          ? conversion.presentation as Record<string, unknown>
+          : null;
+        return {
+          presentation: presentation
+            ? { code: presentation.code, label: presentation.label }
+            : conversion.presentation,
+          factorToBaseUnit: conversion.factorToBaseUnit,
+        };
+      })
+    : data.conversions;
+
+  return {
+    schemaVersion: data.schemaVersion,
+    id,
+    workspaceId: data.workspaceId,
+    ug: data.ug,
+    description: data.description,
+    aliases: data.aliases,
+    unit: unit ? { code: unit.code, label: unit.label } : data.unit,
+    status: data.status,
+    conversions,
+  };
+}
+
+export function warehouseMobileCanonicalLotReadInput(
+  id: string,
+  data: Record<string, unknown>
+): Record<string, unknown> {
+  const origin = data.origin && typeof data.origin === 'object' && !Array.isArray(data.origin)
+    ? data.origin as Record<string, unknown>
+    : null;
+
+  return {
+    schemaVersion: data.schemaVersion,
+    id,
+    workspaceId: data.workspaceId,
+    ug: data.ug,
+    materialId: data.materialId,
+    code: data.code,
+    expiresOn: data.expiresOn ?? null,
+    quantity: data.quantity,
+    position: data.position,
+    origin: origin
+      ? {
+          kind: origin.kind,
+          movementId: origin.movementId,
+          invoiceRecordKey: origin.invoiceRecordKey,
+          invoiceId: origin.invoiceId,
+          supplier: origin.supplier,
+          supplierCnpj: origin.supplierCnpj,
+        }
+      : data.origin,
+    status: data.status,
+    createdBy: data.createdBy,
+    updatedBy: data.updatedBy,
+  };
+}
+
 export interface WarehouseMobilePhysicalQueryPlan {
   field: 'position.locationId' | 'position.subpositionId';
   value: string;
