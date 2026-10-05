@@ -30,6 +30,13 @@ assert.match(
 );
 assert.match(transfer, /WAREHOUSE_MOBILE_TRANSFER_MAX_RELOCATE_LOTS = 24/);
 assert.match(transfer, /TOO_MANY_ACTIVE_LOTS/);
+assert.match(transfer, /LOT_ATTRIBUTION_EXCEEDS_STOCK/);
+assert.match(transfer, /lotAllocations/);
+assert.doesNotMatch(
+  transfer,
+  /PARTIAL_WITH_ACTIVE_LOTS_UNSUPPORTED/,
+  'Transferência parcial com lote reconciliado não deve ser bloqueada'
+);
 
 const criticalLots = read('lib/warehouse/mobileTransferLotRepository.ts');
 assert.match(criticalLots, /WAREHOUSE_MOBILE_TRANSFER_CRITICAL_LOT_FETCH_LIMIT/);
@@ -64,9 +71,15 @@ assert.doesNotMatch(allocationPage, /\bupdateDoc\s*\(/);
 const transferPage = read('features/warehouse/mobile/WarehouseMobileTransfer.tsx');
 assert.match(transferPage, /transferWarehouseStock/);
 assert.match(transferPage, /listWarehouseMobileTransferLotsCritical/);
+assert.match(transferPage, /lotAllocations: prepared\.lotAllocations/);
 assert.doesNotMatch(transferPage, /\bsetDoc\s*\(/);
 assert.doesNotMatch(transferPage, /\bupdateDoc\s*\(/);
 assert.doesNotMatch(transferPage, /\bOUTBOUND\b/);
+
+const locationRepository = read('lib/warehouse/locationRepository.ts');
+assert.match(locationRepository, /createWarehouseTransferSplitLotId/);
+assert.match(locationRepository, /WAREHOUSE_TRANSFER_LOT_SPLIT_INVALID/);
+assert.match(locationRepository, /validateWarehouseLot/);
 
 const pkg = JSON.parse(read('package.json'));
 assert.equal(
