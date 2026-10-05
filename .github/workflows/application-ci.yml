@@ -528,7 +528,12 @@ jobs:
         shell: bash
         run: |
           if [ -n "$GITHUB_BASE_REF" ]; then
-            git diff --check "origin/$GITHUB_BASE_REF...HEAD"
+          git fetch origin \
+            "+refs/heads/$GITHUB_BASE_REF:refs/remotes/origin/$GITHUB_BASE_REF" \
+            "+refs/heads/$GITHUB_HEAD_REF:refs/remotes/origin/$GITHUB_HEAD_REF" \
+            --depth=256
+          merge_base="$(git merge-base "origin/$GITHUB_BASE_REF" HEAD)"
+          git diff --check "$merge_base"..HEAD
           else
             git diff --check HEAD^
           fi
