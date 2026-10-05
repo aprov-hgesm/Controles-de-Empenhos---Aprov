@@ -37,6 +37,7 @@ import {
 import {
   encodeWarehouseLocationBarcode,
   isWarehouseLocationBarcode,
+  WAREHOUSE_LOCATION_BARCODE_COMPACT_PREFIX,
   WAREHOUSE_LOCATION_BARCODE_PREFIX,
   type WarehouseStockPositionResolveResult,
 } from './locationBarcode';
@@ -211,6 +212,7 @@ async function loadProduct(
     !barcode
     || isWarehouseLocationBarcode(barcode)
     || barcode.toUpperCase().startsWith(WAREHOUSE_LOCATION_BARCODE_PREFIX)
+    || barcode.toUpperCase().startsWith(WAREHOUSE_LOCATION_BARCODE_COMPACT_PREFIX)
   ) {
     throw new Error('WAREHOUSE_MOBILE_POSITION_CHECK_PRODUCT_BARCODE_INVALID');
   }
