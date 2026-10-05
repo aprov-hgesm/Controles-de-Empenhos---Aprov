@@ -14,6 +14,8 @@ for (const path of [
   'lib/warehouse/intakeState.ts',
   'lib/warehouse/intakeRepository.ts',
   'lib/warehouse/intakeAllocationRepository.ts',
+  'lib/warehouse/manualEntryRepository.ts',
+  'lib/warehouse/withdrawalRepository.ts',
   'features/warehouse/mobile/WarehouseMobileTransfer.tsx',
   'features/warehouse/mobile/WarehouseMobileItemQuery.tsx',
   'features/warehouse/mobile/WarehouseMobileOutbound.tsx',
@@ -123,6 +125,22 @@ assert.match(intakeAllocation, /const from: WarehouseStockPosition = \{ kind: 'U
 assert.match(intakeAllocation, /position\.kind === 'UNASSIGNED'/);
 assert.match(intakeAllocation, /WAREHOUSE_INTAKE_LOCATION_REQUIRED/);
 
+const manualEntry = read('lib/warehouse/manualEntryRepository.ts');
+assert.match(manualEntry, /applyWarehouseManualLocatedEntry/);
+assert.match(manualEntry, /position\.kind === 'UNASSIGNED'/);
+assert.match(manualEntry, /WAREHOUSE_MANUAL_ENTRY_POSITION_REQUIRED/);
+assert.doesNotMatch(manualEntry, /allowUnassignedPosition/);
+assert.doesNotMatch(manualEntry, /transferWarehouseStock\s*\(/);
+assert.doesNotMatch(manualEntry, /from:\s*\{ kind: 'UNASSIGNED' \}/);
+
+const withdrawalRepository = read('lib/warehouse/withdrawalRepository.ts');
+assert.match(
+  withdrawalRepository,
+  /WAREHOUSE_OUTBOUND_RETURN_RECONCILIATION_REQUIRED/
+);
+assert.match(withdrawalRepository, /returnedEntry\.locationBalance/);
+assert.doesNotMatch(withdrawalRepository, /allowUnassignedPosition/);
+
 const outboundRepository = read('lib/warehouse/outboundRepository.ts');
 assert.match(outboundRepository, /WAREHOUSE_OUTBOUND_REQUIRES_PHYSICAL_POSITION/);
 
@@ -145,3 +163,4 @@ console.log('- UNASSIGNED ficou fora de Transferência e Saída operacionais');
 console.log('- Mobile delega lotes ao motor canônico e retirada ao withdrawal canônico');
 console.log('- intake v2 continua autoridade de pendingQuantity');
 console.log('- legado UNASSIGNED permanece isolado na ponte técnica do intake');
+console.log('- Entrada Avulsa e devolução normal exigem posição física canônica');
