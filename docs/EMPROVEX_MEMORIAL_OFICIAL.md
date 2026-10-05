@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-04 — EMPROVEX RC FROZEN declarado**
+Última sincronização global: **2026-10-05 — Rules RC publicadas; Preview HTTPS operacional; MOBILE-J reabriu o freeze por defeito físico real; barcode numérico + auditoria preventiva verdes no Preview**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -8,7 +8,7 @@ Integradora SaaS R1: `feat/saas-r1-commercializacao` — fonte congelada da comp
 
 Integradora Mobile R1: `feat/central-mobile-r1@7b7717b6eebabf911310d2b8ac56ed13c9cb9238` — avanço documental, sem novo delta runtime
 
-Estado global: **Performance R3 permanece em produção; SaaS R1 + Mobile R1 reconciliados; RC Candidate certificado; RC-F auditado e aceito; EMPROVEX RC FROZEN declarado no runtime `54e60c2264588d8802a67a4cab3d875d64f6bfc1`; Preview HTTPS ainda bloqueado externamente por Vercel build-rate-limit; MOBILE-J física e HARDEN-B permanecem pendências posteriores/controladas; produção não foi alterada.**
+Estado global: **Performance R3 permanece como aplicação produtiva; Rules RC foram publicadas de forma autorizada nos bancos principal e Warehouse; o RC original `54e60c2264588d8802a67a4cab3d875d64f6bfc1` serviu como baseline congelada e Preview inicial; a certificação física MOBILE-J encontrou defeitos reais de legibilidade/compatibilidade legada, reabrindo o freeze de modo controlado; a correção está isolada em `rc-r1-mobile-j-fix-label-readability@d7aef5e62d471d96de0899728d091bec0cfc9f1`, PR #252 draft, com Vercel SUCCESS, Core Protection #288 SUCCESS e Application CI #1001 SUCCESS; produção do app/main não foi alterada.**
 
 ---
 
@@ -92,93 +92,98 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 
 | Domínio | Estado vigente | Contrato/observação |
 | --- | --- | --- |
-| Produção | **Performance R3** | `main@e90f92acae1514ee5cbc6ce95fed354bc1454330` |
-| SaaS R1 | **FUNCIONALMENTE CONCLUÍDO / PRONTO PARA RC** | A1/A2/C/D PASS; B parcial/temporal |
-| Mobile R1 | **FUNCIONALMENTE CONCLUÍDO** | A–I integradas; MOBILE-J em certificação final |
-| MOBILE-J | **PARCIAL TECNICAMENTE SAUDÁVEL / CERTIFICAÇÃO EM EXECUÇÃO** | aguarda RC em Preview HTTPS para testes físicos reais |
-| SESSION-CAP-01 | **PASS TÉCNICO COMPLETO / INTEGRADA** | PR #248 squash-merged; sessões externas dinâmicas sem teto fixo |
-| RULES-AUDIT-01 | **PASS — RULES APTAS PARA RC** | Rules vivas sem drift; TTL dos dois grupos ACTIVE |
-| RC-A | **APTO PARA RC-B / ENCERRADA** | composição semântica concluída; PR #249 draft/open |
-| RC-B | **PASS COM RISCO EXTERNO CONTROLADO** | certificação independente; PR #250 draft/open; Vercel/HARDEN-B externos |
-| RC-F | **FREEZE READY / ACEITO** | PR #251 draft/open; somente documentos de freeze; nenhum delta runtime |
-| RC conjunto | **RC FROZEN** | runtime imutável `54e60c2264588d8802a67a4cab3d875d64f6bfc1`; reabertura só por blocker/regressão/segurança/defeito real |
-| CT-01 | **PASS NO RC CANDIDATE** | `camera=(self), microphone=(), geolocation=()` |
-| Rules candidatas | **AUDITADAS / APTAS PARA RC** | produção R3 sem drift; principal RC `bc91185...`; Warehouse RC `6e1f105...`; rollout Rules RC → app RC |
-| HARDEN-B | **PARCIAL / ESPERA CONTROLADA** | PITR/delete protection/schedule/retention ativos; backup READY/verify/restore pendentes |
-| Billing R1 | **IMPLEMENTADO EM MODO OBSERVE** | R$ 70; trial; cobrança externa; confirmação manual; sem suspensão automática |
-| Piloto real | **NÃO INICIADO** | vem depois do RC tecnicamente fechado/publicação controlada |
-| Abertura comercial ampla | **NÃO AUTORIZADA** | exige piloto, correções, SAAS-J e GO explícito do Fundador |
+| Produção — app | **Performance R3 / INALTERADA** | `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`; app RC não publicado |
+| Produção — Firestore Rules | **RULES RC PUBLICADAS EM 2026-10-05** | publicação autorizada apenas de Rules; principal source blob `bc91185f34bcdcb4437a4de1078d1089a09292ba`; Warehouse source blob `6e1f1050005314db4e17cb3136409abbddb0ee91` |
+| Rollback Rules | **PREPARADO** | baseline anterior principal `0d990b7de0b2e85ed55fe14ec0d2ce29b3635299`; Warehouse `b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2` |
+| SaaS R1 | **FUNCIONALMENTE CONCLUÍDO** | HARDEN-A1/A2/B/C/D encerradas; HARDEN-B PASS |
+| Mobile R1 | **FUNCIONAL A–I ENCERRADO / J EM CERTIFICAÇÃO FÍSICA** | MOBILE-J encontrou e corrigiu defeitos reais no Preview; ainda não encerrada |
+| SESSION-CAP-01 | **PASS / INTEGRADA** | candidato sem teto fixo de sessões externas; lease/revogação/telemetria preservados |
+| RULES-AUDIT-01 | **PASS / EXECUTADA NO ROLLOUT DE RULES** | Rules RC publicadas antes do app, conforme contrato de compatibilidade |
+| RC original | **FROZEN HISTÓRICO / BASELINE** | `54e60c2264588d8802a67a4cab3d875d64f6bfc1`; não é mais o HEAD final pretendido após defeitos físicos reais |
+| RC-P base | **PREVIEW HTTPS OBTIDO** | `rc-r1-p-preview@54e60c...`; acesso/auth/legal gate e Central Móvel confirmados manualmente |
+| Reabertura controlada | **ATIVA / JUSTIFICADA POR DEFEITO REAL** | branch `rc-r1-mobile-j-fix-label-readability`; PR #252 draft; nenhum merge em main |
+| HEAD auditado MOBILE-J-FIX | **VERDE NO PREVIEW** | `d7aef5e62d471d96de0899728d091bec0cfc9f1f`; Vercel SUCCESS; Core #288 SUCCESS; Application CI #1001 SUCCESS |
+| Barcode físico | **PASS FÍSICO PARA LOCAL** | novo código numérico de 13 dígitos; `9812001101000` lido como `CAMERA · LOCATION` |
+| Etiqueta compacta | **AJUSTADA PARA PRATELEIRA** | 140 mm × 32,5 mm; altura <= 35 mm; Code 128 ampliado |
+| Compatibilidade de etiquetas | **PRESERVADA** | EPX1 e EPX2 continuam aceitos; formato numérico é preferido quando representável |
+| Consulta física legada | **HARDENING APLICADO / RETESTE MANUAL PENDENTE** | projeções canônicas ignoram metadados extras históricos sem mascarar inconsistência real |
+| HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
+| Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
+| Piloto real | **NÃO INICIADO** | somente após novo RC reconciliado/re-frozen e decisão posterior |
+| Produção controlada / GO | **NÃO AUTORIZADA** | CI verde ou Preview verde não equivalem a autorização produtiva |
+| Abertura comercial ampla | **NÃO AUTORIZADA** | depende de certificação, eventual produção controlada, piloto e GO explícito |
 
 ### Snapshots técnicos relevantes
 
-- SaaS/RC após SESSION-CAP + RULES-AUDIT: `54aba792cb9e7bb195e21401fb50a21ed50add19`;
-- Mobile integradora documental: `7b7717b6eebabf911310d2b8ac56ed13c9cb9238`;
-- MOBILE-J: `mobile-r1-j-final-certification@90d646372aae3e92318a78b90d71f72c5eb6b00e`;
-- HARDEN-B: `saas-harden-b-recovery-restore@910cca1ea9f14e4ef080ee649624042f63206d51`.
+- produção/app: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`;
+- SaaS source congelada da composição original: `2c1eee759ea8024c296b4c6968ed935b9a59e880`;
+- Mobile integradora documental: `feat/central-mobile-r1@7b7717b6eebabf911310d2b8ac56ed13c9cb9238`;
+- RC runtime original/frozen: `54e60c2264588d8802a67a4cab3d875d64f6bfc1`;
+- branch RC-P original: `rc-r1-p-preview@54e60c2264588d8802a67a4cab3d875d64f6bfc1`;
+- branch ativa de correção/certificação: `rc-r1-mobile-j-fix-label-readability@d7aef5e62d471d96de0899728d091bec0cfc9f1f`;
+- PR de correção/certificação: **#252 — DRAFT / NÃO MERGEADO**;
+- Preview estável da branch: `https://controles-de-empenhos-aprov-git-rc-f44756-aprov-hgesms-projects.vercel.app`;
+- HARDEN-B: `saas-harden-b-recovery-restore@c6368d0dd1b89610cb02b9b87f5ef6392810b336`.
 
-A produção só muda por autorização explícita e posterior do Fundador.
+A aplicação produtiva só muda por autorização explícita e posterior do Fundador. As Rules RC já foram publicadas por autorização específica em 2026-10-05; essa autorização **não** autorizou o app RC em produção.
 
 ## 2. Próxima barreira global
 
-A fase atual é **Release Engineering / Certificação**, com `RC FROZEN` declarado.
+A fase atual continua sendo **Release Engineering / Certificação Física**, porém o freeze original foi reaberto de modo controlado por defeitos reais encontrados na MOBILE-J.
 
-Sequência canônica:
+Sequência vigente:
 
 ```text
-SaaS final + Mobile final
-→ SESSION-CAP-01 — PASS / integrada
-→ RULES-AUDIT-01 — PASS / Rules aptas para RC
-→ RC-A composição semântica — PASS
-→ RC-B certificação independente — PASS com risco externo controlado
-→ PROGRAMAS RECONCILIADOS
-→ RC CANDIDATE — DECLARADO
-→ RC-F — FREEZE READY
-→ RC FROZEN — DECLARADO
-→ Preview HTTPS
-→ testes SaaS + MOBILE-J físicos
-→ correções rastreáveis, se houver
-→ nova reconciliação/freeze quando necessário
-→ GO/NO-GO explícito
-→ eventual produção controlada
+RC original 54e60c... — FROZEN histórico
+→ Preview HTTPS obtido
+→ Rules RC publicadas de forma autorizada
+→ acesso/auth/legal gate no Preview — PASS manual
+→ MOBILE-J física iniciada
+→ defeito real: Code128 EPX1 muito denso — CONFIRMADO
+→ MOBILE-J-FIX: EPX2 e depois código físico numérico de 13 dígitos
+→ leitura física 9812001101000 como CAMERA · LOCATION — PASS
+→ defeito real: documentos legados com unexpected_field em locationBalances/lots
+→ camada de compatibilidade read-only canônica + auditoria preventiva
+→ HEAD d7aef5e... com Vercel/Core/Application CI verdes
+→ RETESTE MANUAL da PAL-01 no Preview auditado
+→ testar SUBPOSIÇÃO e ITEM físico no mesmo Preview
+→ concluir restante do runbook MOBILE-J
+→ integrar semanticamente PR #252 em uma linha RC controlada
+→ repetir gates afetados
+→ declarar NOVO RC SHA / RE-FREEZE
+→ certificação final no SHA re-frozen
+→ GO/NO-GO explícito do Fundador
+→ eventual produção controlada do app
 → piloto real
 → correções pós-piloto
-→ SAAS-J
-→ autorização explícita
-→ abertura comercial ampla
+→ SAAS-J / abertura comercial quando autorizada
 ```
 
-### Condições para declarar RC CANDIDATE
+### Gate imediato
 
-Obrigatório:
+O próximo gate **não é produção**.
 
-- SESSION-CAP-01 concluída e reconciliada, salvo decisão explícita do Fundador de adiar a mudança para release posterior;
-- RULES-AUDIT-01 concluída em **PASS** sobre o ruleset final pós-SESSION-CAP-01;
-- nenhuma Rule produtiva nova pode ser publicada sem esse PASS;
-- nenhum novo conflito SaaS↔Mobile;
-- CT-01 materializada;
-- Rules candidata principal e warehouse registradas;
-- rollback de Rules preparado;
-- package/lockfile/CI reconciliados;
-- build/TypeScript/diff hygiene verdes;
-- Core/Legal/Recovery e segurança multi-tenant verdes;
-- contratos de Auth/workspace/UG/sessão/lifecycle/Legal/billing/Central coerentes;
-- source of truth logística única.
+É:
 
-### Condições para RC FROZEN
+1. recarregar o Preview da branch `rc-r1-mobile-j-fix-label-readability`;
+2. reler a posição física `PAL-01` / código `9812001101000`;
+3. confirmar que o conteúdo físico carrega sem `unexpected_field`;
+4. testar uma **SUBPOSIÇÃO** real;
+5. testar um **ITEM** cadastrado real, incluindo barcode comercial;
+6. continuar casos físicos MOBILE-J (câmera permitida/negada/indisponível, fallback manual, som/vibração, double scan/cooldown, perda/retorno de rede, jornada ponta a ponta, coerência Desktop↔Mobile).
 
-Registrar no mínimo:
+### Regra de re-freeze
 
-- `RC_BRANCH`;
-- `RC_SHA`;
-- `SAAS_SOURCE_SHA`;
-- `MOBILE_SOURCE_SHA`;
-- resultado HARDEN-A2;
-- hashes das Rules de produção e do RC;
-- hash de `next.config.ts`;
-- hash de `package-lock.json`;
-- resultados dos gates.
+O SHA `54e60c...` permanece a baseline histórica certificada antes dos defeitos físicos.
 
-Após o freeze, só entram correções de blocker, regressão, segurança ou defeito real da certificação. Não entram melhorias oportunistas.
+Nenhum novo RC pode ser declarado congelado enquanto:
+
+- PR #252 não estiver semanticamente reconciliado;
+- a PAL-01 não for retestada no HEAD auditado;
+- LOCAL/SUBPOSIÇÃO/ITEM não estiverem fisicamente validados;
+- os gates afetados não forem repetidos no SHA final.
+
+Correções oportunistas/estéticas continuam proibidas. Só entram defeito real, regressão, segurança, compatibilidade necessária ou impeditivo de release.
 
 # PARTE II — GOVERNANÇA GLOBAL
 
@@ -2647,6 +2652,186 @@ Não há evidência de regressão do RC. Produção, Rules e RC FROZEN permanece
 
 Próxima ação: reautenticar no team Vercel correto e executar Preview não produtivo do SHA congelado; depois realizar smoke RC-P e entregar à MOBILE-J.
 
+### 2026-10-05 — Rules RC publicadas de forma autorizada
+
+O Fundador autorizou explicitamente publicar **somente** as Rules RC do banco principal e do Warehouse para permitir a certificação do Preview, sem publicar o app RC em produção.
+
+Pré-condições confirmadas localmente no RC original:
+
+- branch: `rc-r1-p-preview`;
+- HEAD: `54e60c2264588d8802a67a4cab3d875d64f6bfc1`;
+- working tree: clean;
+- `firestore.rules`: `bc91185f34bcdcb4437a4de1078d1089a09292ba`;
+- `firestore.warehouse.rules`: `6e1f1050005314db4e17cb3136409abbddb0ee91`.
+
+Comando executado:
+
+`npx --yes firebase-tools@latest deploy --only firestore:rules --project gen-lang-client-0982077967`
+
+Resultado:
+
+- principal: compilou e foi released;
+- Warehouse: compilou e foi released;
+- deploy: COMPLETE;
+- apenas warnings de função/variável não utilizadas;
+- nenhum app/Hosting/Functions/índice publicado por esse comando.
+
+Após a publicação, o Preview deixou de falhar no Legal Acceptance com `Missing or insufficient permissions`, confirmando a incompatibilidade previamente conhecida entre app RC e Rules antigas.
+
+Produção do app permaneceu em `main@e90f92...`.
+
+### 2026-10-05 — RC-P desbloqueada e Preview HTTPS operacional
+
+O bloqueio anterior de autorização Vercel foi resolvido localmente:
+
+- usuário Vercel: `aprov-hgesm`;
+- team ativo: `aprov-hgesms-projects`;
+- deploy hook criado para `rc-r1-p-preview`;
+- Preview do SHA exato do RC original foi obtido em HTTPS;
+- sistema acessado manualmente;
+- Central de Depósitos acessada;
+- rota `/central-mobile` acessada no Android/Chrome;
+- câmera real ativada.
+
+O Preview anterior a `54e60c...` continuou considerado inválido para certificação; somente deploys do SHA correto ou das correções controladas posteriores são evidência válida.
+
+### 2026-10-05 — MOBILE-J encontrou defeito físico real e reabriu o freeze
+
+Teste físico Android mostrou:
+
+- EAN-13 comercial de item foi decodificado pela câmera;
+- etiqueta de localização EPX1 longa não foi decodificada de forma confiável;
+- entrada manual do EPX1 foi reconhecida como `LOCATION`.
+
+Conclusão:
+
+- scanner/câmera estavam funcionais;
+- o problema era densidade/tamanho físico do barcode de localização;
+- o defeito justificou reabertura controlada do RC FROZEN.
+
+Branch criada a partir do RC original:
+
+`rc-r1-mobile-j-fix-label-readability`
+
+PR:
+
+**#252 — DRAFT / NÃO MERGEADO**
+
+### 2026-10-05 — Identidade física curta e etiqueta de prateleira
+
+Evolução executada:
+
+1. EPX1 legado preservado;
+2. EPX2 compacto adicionado como compatibilidade intermediária;
+3. formato físico numérico de 13 dígitos implementado como preferência quando o código lógico é representável;
+4. namespace físico numérico atual começa por `981`;
+5. DEPOT/LOCAL/SUBPOSITION continuam distinguíveis;
+6. fallback para EPX2 quando o código lógico não cabe no formato numérico;
+7. códigos EPX1/EPX2 antigos permanecem aceitos.
+
+Exemplo certificado:
+
+`DEP-001 / PAL-01 → 9812001101000`
+
+Evidência física:
+
+- câmera Android capturou `9812001101000`;
+- classificador exibiu `CAMERA · LOCATION`;
+- UI exibiu `Leitura validada`.
+
+Layout Compacta:
+
+- largura: **140 mm**;
+- altura calculada: **32,5 mm**;
+- limite operacional informado para prateleiras: **35 mm**;
+- Code 128 recebeu mais área horizontal e barras maiores.
+
+Etiquetas de palete/freezer/geladeira/estruturas amplas podem continuar usando perfis maiores.
+
+Risco residual documentado:
+
+- o formato numérico é derivado do código lógico da estrutura;
+- renomear `DEP-001`, `PAL-01`, `PRAT-01` etc. exige reimpressão da etiqueta;
+- Code 128 possui checksum próprio para detecção física;
+- um barcode de produto que seja **um código físico de localização válido** é reservado e não deve ser associado a material;
+- um número comercial que apenas comece por `981`, mas não seja uma localização válida, continua podendo ser tratado como produto.
+
+### 2026-10-05 — Consulta física revelou metadados legados extras
+
+Após a leitura física da PAL-01, a consulta encontrou:
+
+`WAREHOUSE_MOBILE_PHYSICAL_QUERY_INVALID_BALANCE:...:unexpected_field@$`
+
+Depois da primeira compatibilidade, surgiu:
+
+`WAREHOUSE_MOBILE_PHYSICAL_QUERY_INVALID_LOT:...:unexpected_field@$`
+
+Conclusão:
+
+- não era necessariamente saldo ou lote semanticamente corrompido;
+- registros históricos possuíam metadados extras fora dos contratos estritos atuais;
+- o cliente móvel estava passando documentos Firestore brutos para validadores fail-closed.
+
+Correção adotada:
+
+- camada read-only de projeção canônica;
+- ignorar **somente metadados extras históricos**;
+- continuar validando os campos oficiais de material/saldo/lote/posição/barcode;
+- não alterar documentos Firestore;
+- não mascarar inconsistências reais como saldo duplicado, material ausente, quantidade inválida, posição inválida ou hierarquia quebrada.
+
+A compatibilidade foi expandida preventivamente para caminhos usados por:
+
+- consulta física;
+- conferência de posição;
+- inventário;
+- saída;
+- transferência;
+- alocação/intake;
+- repositórios de material e barcode.
+
+### 2026-10-05 — Auditoria preventiva LOCAL / SUBPOSIÇÃO / ITEM
+
+A pedido do Fundador, foi executada auditoria preventiva antes de seguir com os testes físicos.
+
+Riscos encontrados e tratados:
+
+- metadados extras legados em `locationBalances`, `lots`, `materials` e associações;
+- campos extras aninhados em `position`, `origin`, `unit` e `conversions`;
+- materiais legados sem `aliases`/`conversions`, normalizados para listas vazias somente em leitura;
+- colisão potencial entre namespace físico válido e barcode de produto;
+- produto comercial iniciado por `981` não deve ser bloqueado se não formar código de localização válido;
+- cobertura explícita de SUBPOSITION numérica adicionada;
+- compatibilidade EPX1/EPX2 mantida.
+
+Durante a auditoria, Application CI #1000 detectou 4 erros TypeScript por imports ausentes em `outboundRepository.ts`. O problema foi corrigido antes do fechamento.
+
+HEAD final auditado:
+
+`d7aef5e62d471d96de0899728d091bec0cfc9f1f`
+
+Gates finais nesse HEAD:
+
+- Vercel Preview: **SUCCESS**;
+- EMPROVEX Core Protection #288: **SUCCESS**;
+- Application CI #1001: **SUCCESS**;
+- Production build: PASS dentro do CI;
+- TypeScript final: PASS;
+- diff hygiene: PASS.
+
+Produção do app permaneceu inalterada.
+
+### Estado manual ainda pendente após a auditoria
+
+Apesar dos gates verdes, ainda falta repetir fisicamente a leitura da `PAL-01` no HEAD `d7aef5e...` e confirmar que a consulta de conteúdo não apresenta novo diagnóstico.
+
+Depois disso:
+
+- testar SUBPOSIÇÃO real;
+- testar ITEM real;
+- prosseguir com o restante do runbook MOBILE-J.
+
+
 # PARTE XI — DECISÕES PERMANENTES
 
 ## 35. Decisões que só podem mudar por decisão explícita
@@ -2687,7 +2872,7 @@ Próxima ação: reautenticar no team Vercel correto e executar Preview não pro
 - externo password-only;
 - workspace/UG/UID/e-mail precisam ser coerentes;
 - founder isento de capacidade;
-- runtime atual dos externos: 2 sessões, **com remoção do teto fixo já autorizada pelo Fundador**;
+- app produtiva Performance R3 ainda segue o comportamento legado do cliente; as Rules produtivas já aceitam o contrato RC dinâmico e o candidato RC remove o teto fixo de sessões externas;
 - estado alvo: sessões externas sem limite fixo por workspace, preservando identidade/lease/revogação/auditoria/telemetria;
 - a migração deve ocorrer antes do RC freeze;
 - lease atual permanece 30 min;
@@ -2713,7 +2898,7 @@ Próxima ação: reautenticar no team Vercel correto e executar Preview não pro
 
 ### Segurança e dependências
 
-- RULES-AUDIT-01 é gate obrigatório antes de publicar Rules do novo release;
+- RULES-AUDIT-01 foi gate obrigatório antes da publicação das Rules deste release; as Rules RC foram publicadas de forma autorizada em 2026-10-05; qualquer alteração posterior de Rules exige nova auditoria dos blocos afetados;
 - Rules realmente ativas devem ser capturadas e comparadas ao Git antes de rollout;
 - todo delta de Rule precisa de justificativa + teste ALLOW/DENY;
 - regressão da Performance R3 é obrigatória com o ruleset final;
@@ -2730,6 +2915,18 @@ Próxima ação: reautenticar no team Vercel correto e executar Preview não pro
 - jsPDF 4.2.1 / AutoTable 5.0.8;
 - defeito funcional em PDF bloqueia;
 - acabamento visual fino isolado não bloqueia e pode ir para backlog.
+
+### Central Móvel — identidade física e compatibilidade de leitura
+
+- novas etiquetas devem preferir código físico numérico de 13 dígitos quando o caminho lógico for representável;
+- namespace numérico atual: prefixo `981`;
+- EPX1 e EPX2 continuam aceitos como compatibilidade;
+- código físico válido de localização é reservado e não pode ser cadastrado como barcode de produto;
+- número comercial iniciado por `981` que não forme uma localização válida continua permitido como produto;
+- perfil COMPACT de prateleira: 140 mm × 32,5 mm, respeitando limite físico de 35 mm de altura;
+- renomear código lógico de estrutura exige reimpressão da etiqueta correspondente;
+- metadados legados extras podem ser descartados somente em projeção read-only canônica;
+- inconsistência semântica real de estoque deve continuar fail-closed.
 
 ### Release
 
@@ -2855,114 +3052,146 @@ O arquivo:
 # 45. Estado para retomada imediata
 
 ```text
-PRODUÇÃO
+DATA CANÔNICA DESTE HANDOFF
+2026-10-05
+
+PRODUÇÃO — APP
 main@e90f92acae1514ee5cbc6ce95fed354bc1454330
 Performance R3
-aplicação RC: NÃO PUBLICADA
-Rules RC: NÃO PUBLICADAS
+app RC em Vercel Production: NÃO
+merge do RC em main: NÃO
 
-GOVERNANÇA
-Program Control + Coordenação do RC: ATIVO
-Coordenadores SaaS/Mobile: consulta/evidência sob demanda
-Fundador: autoridade final de produção/GO
+PRODUÇÃO — RULES
+Rules RC: PUBLICADAS COM AUTORIZAÇÃO ESPECÍFICA EM 2026-10-05
+principal source blob: bc91185f34bcdcb4437a4de1078d1089a09292ba
+warehouse source blob: 6e1f1050005314db4e17cb3136409abbddb0ee91
+rollback principal antigo: 0d990b7de0b2e85ed55fe14ec0d2ce29b3635299
+rollback warehouse antigo: b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2
+nenhuma nova alteração de Rules ocorreu durante MOBILE-J-FIX
+
+RC ORIGINAL
+RC frozen histórico: 54e60c2264588d8802a67a4cab3d875d64f6bfc1
+branch base Preview: rc-r1-p-preview
+RC-P HTTPS: OBTIDO
+sistema/auth/legal gate: ACESSO MANUAL CONFIRMADO
+Central Móvel: ACESSO MANUAL CONFIRMADO
+freeze original: REABERTO CONTROLADAMENTE POR DEFEITO FÍSICO REAL
+
+BRANCH ATIVA DE CERTIFICAÇÃO/CORREÇÃO
+rc-r1-mobile-j-fix-label-readability
+HEAD auditado: d7aef5e62d471d96de0899728d091bec0cfc9f1f
+PR: #252
+estado PR: DRAFT / NÃO MERGEADO
+Preview:
+https://controles-de-empenhos-aprov-git-rc-f44756-aprov-hgesms-projects.vercel.app
+
+GATES DO HEAD d7aef5e...
+Vercel Preview: SUCCESS
+Core Protection #288: SUCCESS
+Application CI #1001: SUCCESS
+Production build: PASS
+TypeScript: PASS
+Diff hygiene: PASS
+
+MOBILE-J — BARCODE FÍSICO
+EPX1 legado: SUPORTADO
+EPX2 compacto: SUPORTADO
+novo numérico 13 dígitos: PREFERIDO QUANDO REPRESENTÁVEL
+exemplo PAL-01: 9812001101000
+teste Android real: CAMERA · LOCATION / Leitura validada — PASS
+Code128: mantido
+Compacta prateleira: 140 mm × 32,5 mm
+limite informado: altura <= 35 mm
+
+MOBILE-J — CONSULTA FÍSICA / LEGADO
+erros encontrados:
+- INVALID_BALANCE ... unexpected_field@$
+- INVALID_LOT ... unexpected_field@$
+causa: metadados legados extras em documentos históricos
+correção: projeção canônica read-only
+Firestore data migration destrutiva: NÃO
+validadores de inconsistência real: PRESERVADOS
+
+AUDITORIA PREVENTIVA
+LOCAL: coberto
+SUBPOSIÇÃO: cobertura numérica adicionada
+ITEM/barcode: colisão de namespace tratada
+produto 981 inválido como localização: continua PRODUCT
+barcode válido de localização: reservado e não pode virar barcode de produto
+compatibilidade de leitura aplicada a physical query, position check, inventory,
+outbound, transfer, intake, materials e barcodes
+
+TESTE MANUAL IMEDIATO PENDENTE
+1. recarregar Preview no HEAD d7aef5e...
+2. ler PAL-01 / 9812001101000
+3. confirmar conteúdo físico sem novo diagnóstico
+4. testar SUBPOSIÇÃO real
+5. testar ITEM real
+6. continuar runbook físico MOBILE-J
+
+SE SURGIR NOVO ERRO
+não mascarar automaticamente
+classificar:
+- unexpected_field puramente legado → avaliar projeção canônica
+- saldo duplicado/material ausente/quantidade inválida/hierarquia inválida → inconsistência real; fail-closed
+- scanner não decodifica → defeito físico/decoder
+- resolver reconhece tipo errado → defeito de namespace/classificador
 
 SAAS R1
 funcional: ENCERRADO
-integrador com SESSION-CAP: feat/saas-r1-commercializacao
-commit de integração runtime SESSION-CAP/RULES-AUDIT: 54aba792cb9e7bb195e21401fb50a21ed50add19
 HARDEN-A1: PASS
 HARDEN-A2: PASS — risco residual aceito
-HARDEN-B: PASS — recovery/restore real certificado
+HARDEN-B: PASS
 HARDEN-C: PASS
 HARDEN-D: PASS
-nova feature SaaS: NÃO AUTORIZADA
 
-BILLING R1
-Plano Completo: R$ 70/mês
-trial: 30 dias
-vencimento: 5º dia útil
-tolerância: 10 dias
-modo: observe
-requirePayment: false
-automaticSuspension: false
-pagamento: externo via Link HTTPS/Pix
-confirmação: manual/auditada
-suspensão operacional: manual via lifecycle
-delete por inadimplência: NÃO
+RECOVERY
+backup READY: PASS nos dois bancos
+recovery:verify: PASS
+restore real isolado Warehouse: PASS
+integridade: 13/13 coleções
+target temporário: emprovex-restore-warehouse-2026-10-04
+delete protection target: ATIVA
+cleanup target: PENDENTE / exige autorização separada
 
-IDENTIDADE / SESSÕES
-founder: Google-only / capacidade isenta
-externo: e-mail+senha / e-mail verificado
-workspace↔UG↔conta primária: obrigatório
-produção R3 atual: teto histórico de 2 sessões externas
-candidato SaaS/RC: múltiplas sessões externas sem teto fixo, com controle individual
-SESSION-CAP-01: PASS TÉCNICO COMPLETO / INTEGRADA
+SESSION / AUTH
+SESSION-CAP-01: PASS / integrada no RC original
+candidato: sem teto fixo de sessões externas
 lease: 30 min
 heartbeat: 15 min
 TTL sessionSlots.expiresAt: ACTIVE
 TTL sessionRevocations.expiresAt: ACTIVE
-fail-closed: SIM
+founder: Google-only
+externos: e-mail/senha + e-mail verificado
+workspace/UG/UID/e-mail: fail-closed
 
 LEGAL
-bundle: saas-r1-2026-10-01
-terms: terms-2026-10-01-r1
-privacy: privacy-2026-10-01-r1
-aceite: versionado por UID/workspace
-erro de verificação: fail-closed
+bundle atual: saas-r1-2026-10-01
+Legal Acceptance no Preview: funcionando após publicação das Rules RC
+nenhum bypass temporário foi criado
 
-MOBILE R1
-integrador: feat/central-mobile-r1@7b7717b6eebabf911310d2b8ac56ed13c9cb9238
-funcional A–I: ENCERRADO
-MOBILE-J: CERTIFICAÇÃO FINAL EM EXECUÇÃO
-HEAD J: 90d646372aae3e92318a78b90d71f72c5eb6b00e
-blocker funcional: NENHUM
-próximo trabalho: RC Preview HTTPS + runbook físico
+PRÓXIMA SEQUÊNCIA CANÔNICA
+reteste PAL-01
+→ SUBPOSIÇÃO
+→ ITEM
+→ restante MOBILE-J física/integrada
+→ reconciliar PR #252
+→ repetir gates afetados no SHA final
+→ declarar novo RC SHA
+→ RE-FREEZE
+→ certificação final no SHA exato
+→ GO/NO-GO explícito do Fundador
+→ eventual app Production
+→ piloto real
 
-RULES
-PR #248: MERGED
-squash SESSION-CAP/RULES-AUDIT: 54aba792cb9e7bb195e21401fb50a21ed50add19
-RULES-AUDIT-01: PASS — RULES APTAS PARA RC
-produção principal viva: 0d990b7de0b2e85ed55fe14ec0d2ce29b3635299
-produção warehouse viva: b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2
-drift produtivo: NENHUM
-principal RC: bc91185f34bcdcb4437a4de1078d1089a09292ba
-warehouse RC: 6e1f1050005314db4e17cb3136409abbddb0ee91
-ordem futura autorizável de rollout: Rules RC → aplicação RC
-publicação produtiva RC: NÃO AUTORIZADA
-rollback Rules: obrigatório e independente do Vercel
-
-RECOVERY
-PITR: ATIVO em ambos
-delete protection: ATIVA
-backup diário: ATIVO
-retenção: 14 semanas
-backup READY: PASS nos dois bancos
-recovery:verify: PASS / ready=true
-restore isolado real: PASS — Warehouse restaurado em emprovex-restore-warehouse-2026-10-04
-integridade: PASS — 13/13 coleções verificadas
-Rules pós-restore: risco residual operacional documentado; confirmar/aplicar ruleset antes de eventual promoção
-cleanup do target: PENDENTE por decisão explícita / não bloqueante
-
-RELEASE
-RC único SaaS+Mobile: RC CANDIDATE DECLARADO
-RC Candidate: DECLARADO — 54e60c2264588d8802a67a4cab3d875d64f6bfc1
-RC Frozen: DECLARADO — 54e60c2264588d8802a67a4cab3d875d64f6bfc1
-CT-01: PASS
-Preview HTTPS: RC-P PARCIAL — bloqueado por autorização Vercel no team aprov-hgesms-projects
-produção controlada: NÃO AUTORIZADA
-piloto real: NÃO INICIADO
-abertura comercial: NÃO AUTORIZADA
-
-PRÓXIMA SEQUÊNCIA
-RC CANDIDATE — DECLARADO
-→ RC-F — FREEZE READY / ACEITO
-→ RC FROZEN — DECLARADO
-→ Preview HTTPS
-→ Preview HTTPS
-→ testes SaaS + MOBILE-J físicos
-→ corrigir somente regressões/blockers reais
-→ nova reconciliação/freeze se necessário
-→ GO/NO-GO explícito para produção controlada
+PROIBIDO SEM NOVA AUTORIZAÇÃO DO FUNDADOR
+- deploy do app RC em Vercel Production
+- merge/release em main para produção
+- novas mudanças produtivas de Rules
+- restore real adicional
+- apagar target de restore / desligar delete protection para cleanup
+- ações destrutivas em usuários/workspaces/dados
+- GO comercial amplo
 ```
 
 ## Regra final de continuidade
