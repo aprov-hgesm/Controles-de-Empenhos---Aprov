@@ -54,6 +54,9 @@ assert.match(outboundUi, /finalizeWarehouseMaterialWithdrawal/);
 assert.match(outboundUi, /createWarehouseWithdrawalId/);
 assert.match(outboundUi, /createWarehouseWithdrawalLineId/);
 assert.match(outboundUi, /listWarehouseDestinationsCached/);
+assert.match(outboundUi, /createWarehouseDestination/);
+assert.match(outboundUi, /destinationId/);
+assert.doesNotMatch(outboundUi, /WAREHOUSE_MOBILE_OUTBOUND_DESTINATION_AMBIGUOUS/);
 assert.doesNotMatch(outboundUi, /applyWarehouseExpressOutbound\s*\(/);
 
 const itemQuery = read('features/warehouse/mobile/WarehouseMobileItemQuery.tsx');
