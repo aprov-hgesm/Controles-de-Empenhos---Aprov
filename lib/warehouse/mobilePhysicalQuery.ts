@@ -96,8 +96,16 @@ function parseBalance(
     { ...data, id },
     { expectedWorkspaceId: scope.workspaceId }
   );
-  if (!result.ok || result.data.ug !== scope.ug) {
-    throw new Error('WAREHOUSE_MOBILE_PHYSICAL_QUERY_INVALID_BALANCE');
+  if (!result.ok) {
+    const issues = result.issues.map((issue) => issue.code + '@' + issue.path).join(',');
+    throw new Error(
+      'WAREHOUSE_MOBILE_PHYSICAL_QUERY_INVALID_BALANCE:' + id + ':' + issues
+    );
+  }
+  if (result.data.ug !== scope.ug) {
+    throw new Error(
+      'WAREHOUSE_MOBILE_PHYSICAL_QUERY_INVALID_BALANCE:' + id + ':ug_mismatch'
+    );
   }
   return result.data;
 }
@@ -115,7 +123,10 @@ function parseMaterial(
     }
   );
   if (!result.ok) {
-    throw new Error('WAREHOUSE_MOBILE_PHYSICAL_QUERY_INVALID_MATERIAL');
+    const issues = result.issues.map((issue) => issue.code + '@' + issue.path).join(',');
+    throw new Error(
+      'WAREHOUSE_MOBILE_PHYSICAL_QUERY_INVALID_MATERIAL:' + id + ':' + issues
+    );
   }
   return result.data;
 }
@@ -137,7 +148,10 @@ function parseLot(
     }
   );
   if (!result.ok) {
-    throw new Error('WAREHOUSE_MOBILE_PHYSICAL_QUERY_INVALID_LOT');
+    const issues = result.issues.map((issue) => issue.code + '@' + issue.path).join(',');
+    throw new Error(
+      'WAREHOUSE_MOBILE_PHYSICAL_QUERY_INVALID_LOT:' + id + ':' + issues
+    );
   }
   return result.data;
 }
@@ -229,7 +243,11 @@ async function loadMaterials(
   }
 
   if (materials.length !== materialIds.length) {
-    throw new Error('WAREHOUSE_MOBILE_PHYSICAL_QUERY_MATERIAL_NOT_FOUND');
+    const found = new Set(materials.map((material) => material.id));
+    const missing = materialIds.filter((materialId) => !found.has(materialId));
+    throw new Error(
+      'WAREHOUSE_MOBILE_PHYSICAL_QUERY_MATERIAL_NOT_FOUND:' + missing.join(',')
+    );
   }
 
   return { materials, reads, queries };
