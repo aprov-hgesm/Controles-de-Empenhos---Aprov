@@ -185,12 +185,12 @@ O próximo gate **não é produção** e também **não é continuar remendando 
 
 Enquanto a `MOBILE-K — Canonical Ops Engine` evolui em branch própria, o Program Control pode executar quatro frentes independentes. A finalidade é antecipar auditoria, evidência e release engineering sem criar dois owners para o mesmo contrato.
 
-| Frente | Base de trabalho | Ownership | Saída esperada | Proibição principal |
-| --- | --- | --- | --- | --- |
-| RULES-COMPAT-01 | RC estável `bd27da91...` | Firestore Rules, ALLOW/DENY, rollout/rollback e compatibilidade histórica | matriz de compatibilidade + testes/guards + recomendação | não alterar Rules nem relaxar permissão |
-| SAAS-FINAL-AUDIT-01 | integradora SaaS viva | completude SaaS R1: billing, onboarding, legal, lifecycle, sessão, recovery e documentação viva | matriz IMPLEMENTADO/TESTADO/PENDENTE/RISCO | não tocar Central/Mobile nem criar nova feature |
-| WAREHOUSE-DATA-AUDIT-01 | RC estável em leitura, comparando MOBILE-K somente como referência | integridade logística/legado: intake, UNASSIGNED, saldos, lotes, ledger | inventário CANONICAL/LEGACY/RECONCILIATION_REQUIRED/INCONSISTENT | nenhuma escrita/migração/correção de dados |
-| RC-READINESS-01 | RC estável `bd27da91...` | gates, CI, release manifest, rollback, performance e roteiro de certificação | checklist executável do novo RC | não alterar domínio, Rules ou produção |
+| Frente | Branch exclusiva | Base de trabalho | Ownership | Saída esperada | Proibição principal |
+| --- | --- | --- | --- | --- | --- |
+| RULES-COMPAT-01 | `rules-compat-01` | RC estável `bd27da91...` | Firestore Rules, ALLOW/DENY, rollout/rollback e compatibilidade histórica | matriz de compatibilidade + testes/guards + recomendação | não alterar Rules nem relaxar permissão |
+| SAAS-FINAL-AUDIT-01 | `saas-final-audit-01` | Memorial/SaaS `f6b767bd...` | completude SaaS R1: billing, onboarding, legal, lifecycle, sessão, recovery e documentação viva | matriz IMPLEMENTADO/TESTADO/PENDENTE/RISCO | não tocar Central/Mobile nem criar nova feature |
+| WAREHOUSE-DATA-AUDIT-01 | `warehouse-data-audit-01` | RC estável `bd27da91...`; MOBILE-K somente leitura | integridade logística/legado: intake, UNASSIGNED, saldos, lotes, ledger | inventário CANONICAL/LEGACY/RECONCILIATION_REQUIRED/INCONSISTENT | nenhuma escrita/migração/correção de dados |
+| RC-READINESS-01 | `rc-readiness-01` | RC estável `bd27da91...` | gates, CI, release manifest, rollback, performance e roteiro de certificação | checklist executável do novo RC | não alterar domínio, Rules ou produção |
 
 #### Regras de concorrência
 
