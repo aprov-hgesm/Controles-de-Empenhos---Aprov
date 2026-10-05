@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05 — MOBILE-J revelou burocracia e duplicação de regras operacionais; Fundador autorizou frente MOBILE-K para unificar Desktop↔Mobile sobre um único motor canônico. PR #252 segue OPEN/DRAFT/MERGEABLE; HEAD RC bd27da91... com Vercel SUCCESS e Core #317 SUCCESS; Application CI #1030 ainda aguardando runner no momento deste checkpoint.**
+Última sincronização global: **2026-10-05 — MOBILE-K congelada em 8e3e9a4 após 5 commits úteis para corrigir contrato de domínio: não existe estado operacional normal 'material sem localização'. Quantidade ainda não tratada é PENDENTE DE ALOCAÇÃO no intake; estoque existente é obrigatoriamente localizado; consumo imediato não cria estoque/localização. UNASSIGNED fica restrito a compatibilidade/legado técnico até reconciliação controlada.**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -110,8 +110,9 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | Central Móvel — operações | **7 FLUXOS DISTINTOS / PREVIEW VERDE** | Alocar Recebimento; Transferir Material; Consultar Localização; Consultar Item; Inventário; Saída de Material; Conferir posição |
 | Consultar Item | **IMPLEMENTADA / READ-ONLY** | barcode do item → saldo agregado → locais/subposições + quantidades + lotes; reutiliza o mesmo read model da Saída |
 | Saída vs Transferência | **SEMÂNTICA SEPARADA / MOTOR A UNIFICAR** | intenção continua distinta na UX, mas regras de saldo/lote/validade/idempotência devem vir de um único motor canônico compartilhado Desktop↔Mobile |
-| MOBILE-K — Canonical Ops Engine | **AUTORIZADA / WORKER ISOLADO PREPARADO** | branch `mobile-r1-k-canonical-ops-engine` criada em `bd27da91...`; objetivo: reduzir Mobile a scanner/UX e reutilizar serviços transacionais oficiais da Central Desktop |
+| MOBILE-K — Canonical Ops Engine | **PAUSADA CONTROLADAMENTE / RETOMADA COM CONTRATO CORRIGIDO** | branch `mobile-r1-k-canonical-ops-engine@8e3e9a490e6df8f5cf8d2108d7fb1fe9d0e13189`; 5 commits à frente da base `bd27da91...`; trabalho útil preservado; revisar assumptions de UNASSIGNED antes de continuar |
 | PAL-01 / lotes | **DIVERGÊNCIA REAL DETECTADA** | posição física 440 L com lotes ativos observados somando 540 L; não mascarar nem autocorrigir dados; arquitetura nova deve selecionar/conciliar operação sem criar segunda autoridade |
+| Estado logístico do material | **CONTRATO CANÔNICO CORRIGIDO** | usuário vê apenas: PENDENTE/PARCIALMENTE TRATADO no intake, ESTOQUE LOCALIZADO em LOCAL/SUBPOSIÇÃO, CONSUMIDO/TRATADO; `UNASSIGNED` não é categoria operacional normal de estoque |
 | HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
 | Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
 | Piloto real | **NÃO INICIADO** | somente após novo RC reconciliado/re-frozen e decisão posterior |
@@ -167,15 +168,16 @@ O próximo gate **não é produção** e também **não é continuar remendando 
 
 É concluir a frente **MOBILE-K — Canonical Ops Engine**:
 
-1. mapear quais operações Desktop já possuem serviços transacionais oficiais e quais wrappers Mobile duplicam regra;
-2. preservar as 7 intenções móveis e as rotas atuais;
-3. tornar Mobile camada fina de scanner/resolução/UX;
-4. fazer Saída móvel reutilizar o caminho canônico de Saída/Withdrawal/OUTBOUND sempre que semanticamente equivalente;
-5. fazer Transferência móvel utilizar um serviço canônico compartilhável para transferência física, sem lógica de lote exclusiva da UI;
-6. centralizar seleção de lote/FEFO, fracionamento quando suportado, validação de saldo, concorrência e idempotência;
-7. não mascarar o caso PAL-01: 440 L físicos vs lotes ativos observados somando 540 L é divergência de dados e precisa permanecer detectável;
-8. rodar regressão Desktop + Mobile e provar que Desktop não foi quebrado;
-9. só então retomar certificação física simplificada.
+1. primeiro revisar o contrato de estado logístico: Transferência/Saída/Inventário/consulta física só operam estoque localizado; intake pendente não é estoque físico e `UNASSIGNED` não é estado operacional normal;
+2. mapear quais operações Desktop já possuem serviços transacionais oficiais e quais wrappers Mobile duplicam regra;
+3. preservar as 7 intenções móveis e as rotas atuais;
+4. tornar Mobile camada fina de scanner/resolução/UX;
+5. fazer Saída móvel reutilizar o caminho canônico de Saída/Withdrawal/OUTBOUND sempre que semanticamente equivalente;
+6. fazer Transferência móvel utilizar um serviço canônico compartilhável para transferência física, sem lógica de lote exclusiva da UI;
+7. centralizar seleção de lote/FEFO, fracionamento quando suportado, validação de saldo, concorrência e idempotência;
+8. não mascarar o caso PAL-01: 440 L físicos vs lotes ativos observados somando 540 L é divergência de dados e precisa permanecer detectável;
+9. rodar regressão Desktop + Mobile e provar que Desktop não foi quebrado;
+10. só então retomar certificação física simplificada.
 
 ### Regra de re-freeze
 
@@ -1808,11 +1810,68 @@ Objetivo:
 - não criar banco, ledger, saldo ou lote Mobile paralelo;
 - não transformar inconsistência histórica em correção automática de dados.
 
-Branch worker já preparada:
+### 26.1.1 Contrato canônico de estado logístico — SEM “MATERIAL SEM LOCALIZAÇÃO”
 
-`mobile-r1-k-canonical-ops-engine@bd27da91da92642d5a5fea08f7020c6cea658a62`
+Decisão reafirmada pelo Fundador em 2026-10-05:
 
-A branch parte **exatamente** do HEAD RC vivo e não deve incorporar `main`, integradoras antigas ou mudanças externas por merge/rebase.
+> **“Material sem localização” não é uma classificação operacional válida do EMPROVEX.**
+
+Estados/intenções válidos para o produto:
+
+1. **PENDENTE DE ALOCAÇÃO / PENDENTE DE TRATAMENTO**
+   - controlado pelo intake v2;
+   - fonte: `receivedQuantity`, `allocatedQuantity`, `immediateConsumptionQuantity`, `pendingQuantity`;
+   - status: `PENDING` ou `PARTIALLY_PROCESSED`;
+   - ainda não deve ser apresentado como estoque físico disponível.
+
+2. **ESTOQUE LOCALIZADO**
+   - quantidade operacional disponível somente quando vinculada a `LOCATION` ou `SUBPOSITION` ativa;
+   - Saída, Transferência, Inventário e consultas físicas usam somente posições físicas válidas.
+
+3. **CONSUMIDO / TRATADO**
+   - consumo imediato reduz a pendência sem criar posição física, lote de estoque ou saldo localizado;
+   - quando toda quantidade recebida for alocada e/ou consumida, intake = `PROCESSED`.
+
+Regra de compatibilidade:
+
+- `UNASSIGNED` pode continuar existindo temporariamente em documentos/código legado ou como detalhe técnico de transição;
+- `UNASSIGNED` **NÃO** pode ser mostrado ao operador como “estoque sem localização”;
+- `UNASSIGNED` **NÃO** pode ser origem/destino de Transferência física normal;
+- `UNASSIGNED` **NÃO** pode ser quantidade disponível para Saída, Inventário ou consulta de estoque;
+- quando legado `UNASSIGNED` não puder ser reconciliado com intake canônico, classificar como **RECONCILIATION_REQUIRED**, não como estoque normal;
+- nenhuma migração/correção destrutiva automática é autorizada nesta frente.
+
+O código atual já possui o modelo `warehouse_item_intake_v2` com:
+- `pendingQuantity`;
+- `PENDING`;
+- `PARTIALLY_PROCESSED`;
+- `PROCESSED`;
+- `RECONCILIATION_REQUIRED` como status efetivo de proteção.
+
+A implementação histórica de alocação ainda utiliza `UNASSIGNED` internamente como ponte técnica em alguns trechos. A MOBILE-K deve **conter e isolar esse legado**, sem promovê-lo a contrato canônico. Se remover totalmente essa ponte exigir uma migração estrutural maior do intake, o worker deve registrar a dívida e manter a mudança fora do escopo sem autorização adicional.
+
+Impacto imediato sobre MOBILE-K:
+
+- preservar os 5 commits já feitos;
+- não resetar/recriar a branch;
+- revisar `buildCanonicalWarehouseTransferLotPlan()` e qualquer comentário/lógica que trate “UNASSIGNED flows” como fluxo operacional normal;
+- Transferência física canônica deve aceitar somente `LOCATION`/`SUBPOSITION`;
+- a UI Mobile já rejeitar `UNASSIGNED` está correta;
+- remover/alterar textos de produto “Sem localização” quando representarem estado normal;
+- Consultar Item deve distinguir **estoque físico localizado** de **pendência de intake**; não somar ambos como um único “saldo disponível”;
+- legado não reconciliado deve aparecer como necessidade de reconciliação, não como terceira categoria de estoque.
+
+Branch worker congelada para retomada:
+
+`mobile-r1-k-canonical-ops-engine@8e3e9a490e6df8f5cf8d2108d7fb1fe9d0e13189`
+
+Base original preservada:
+
+`bd27da91da92642d5a5fea08f7020c6cea658a62`
+
+Commits úteis preservados: `efafd2b`, `a00b94d`, `a9401add`, `17c2704b`, `8e3e9a4`.
+
+A branch foi criada exatamente no HEAD RC `bd27da91...` e agora está congelada em `8e3e9a4`, 5 commits à frente. Retomar **a partir de `8e3e9a4`**, sem reset/rebase e sem incorporar `main`, integradoras antigas ou mudanças externas por merge.
 
 Arquivos de entrada obrigatórios para o worker:
 
