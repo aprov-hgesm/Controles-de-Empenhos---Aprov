@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05 — MOBILE-K concluída e aceita para revisão; RULES-COMPAT-01 também concluída em `97442b5f11779b7b434cba8d0a9a2c9ab843ac66` com `PASS — COMPATIBILIDADE PRESERVADA`, PR #254 DRAFT e zero delta nas Firestore Rules. Permanecem como barreira paralela SAAS-FINAL-AUDIT-01, WAREHOUSE-DATA-AUDIT-01 e RC-READINESS-01 antes da composição do novo RC.**
+Última sincronização global: **2026-10-05 — MOBILE-K concluída e aceita para revisão; RULES-COMPAT-01 PASS; WAREHOUSE-DATA-AUDIT-01 concluída em `07265b209d6c27873278139a507aa12d4eb97973` com `BLOCKER — INTEGRIDADE LOGÍSTICA IMPEDE RC`. O blocker confirmado é Inventário TOTAL ainda incluindo `UNASSIGNED` como item físico; PAL-01 permanece `RECONCILIATION_REQUIRED` (440 L físicos vs 540 L em lotes) e exige diagnóstico read-only antes do RC. Também foi identificado risco de performance em `listWarehouseMovementsForMaterial`, que lê todos os movimentos do material antes de cortar em memória. Permanecem em execução SAAS-FINAL-AUDIT-01 e RC-READINESS-01.**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -113,7 +113,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | MOBILE-K — Canonical Ops Engine | **CONCLUÍDA PELO WORKER / APTO PARA REVISÃO** | `mobile-r1-k-canonical-ops-engine@9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0`; PR #253 OPEN/DRAFT/MERGEABLE, não mergeado; 22 commits à frente / 0 atrás; 26 arquivos; gates completos verdes; Rules inalteradas |
 | PAL-01 / lotes | **DIVERGÊNCIA REAL DETECTADA** | posição física 440 L com lotes ativos observados somando 540 L; não mascarar nem autocorrigir dados; arquitetura nova deve selecionar/conciliar operação sem criar segunda autoridade |
 | Estado logístico do material | **CONTRATO CANÔNICO CORRIGIDO** | usuário vê apenas: PENDENTE/PARCIALMENTE TRATADO no intake, ESTOQUE LOCALIZADO em LOCAL/SUBPOSIÇÃO, CONSUMIDO/TRATADO; `UNASSIGNED` não é categoria operacional normal de estoque |
-| Onda paralela de auditoria | **1/4 CONCLUÍDA** | RULES-COMPAT-01 = PASS; aguardando SAAS-FINAL-AUDIT-01 + WAREHOUSE-DATA-AUDIT-01 + RC-READINESS-01; nenhum worker altera o motor MOBILE-K |
+| Onda paralela de auditoria | **2/4 CONCLUÍDAS** | RULES-COMPAT-01 = PASS; WAREHOUSE-DATA-AUDIT-01 = BLOCKER RC; aguardando SAAS-FINAL-AUDIT-01 + RC-READINESS-01 |
 | Firestore Rules — contrato da onda | **CONGELADAS PARA OS WORKERS** | SaaS/RC/MOBILE-K usam `firestore.rules@bc91185f...` e `firestore.warehouse.rules@6e1f1050...`; qualquer necessidade de alterar Rules deve voltar ao Coordenador antes de edição |
 | HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
 | Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
@@ -172,7 +172,7 @@ A implementação da **MOBILE-K — Canonical Ops Engine** foi concluída pelo w
 
 1. RULES-COMPAT-01 — **PASS / ENCERRADA**: compatibilidade antiga + RC e ALLOW/DENY preservados, sem necessidade de mudança de Rules;
 2. SAAS-FINAL-AUDIT-01 — confirmar completude SaaS R1;
-3. WAREHOUSE-DATA-AUDIT-01 — classificar legado/integridade sem escrever dados;
+3. WAREHOUSE-DATA-AUDIT-01 — **ENCERRADA / BLOCKER RC**: Inventário TOTAL inclui `UNASSIGNED`; PAL-01 exige diagnóstico read-only; performance risk em movimentos por material;
 4. RC-READINESS-01 — fechar matriz de gates, rollback e re-freeze;
 5. revisar semanticamente o delta MOBILE-K contra esses quatro relatórios;
 6. corrigir apenas blockers reais com owner exclusivo;
@@ -189,7 +189,7 @@ Enquanto a `MOBILE-K — Canonical Ops Engine` evolui em branch própria, o Prog
 | --- | --- | --- | --- | --- | --- |
 | RULES-COMPAT-01 | `rules-compat-01@97442b5f...` | RC estável `bd27da91...` | **PASS / ENCERRADA** — Firestore Rules, ALLOW/DENY, rollout/rollback e compatibilidade histórica | `docs/RULES_COMPAT_01_AUDIT.md`; PR #254 DRAFT | Rules não alteradas; comentário antigo `queueExclusions` continua apenas inconsistência textual |
 | SAAS-FINAL-AUDIT-01 | `saas-final-audit-01` | Memorial/SaaS `f6b767bd...` | completude SaaS R1: billing, onboarding, legal, lifecycle, sessão, recovery e documentação viva | matriz IMPLEMENTADO/TESTADO/PENDENTE/RISCO | não tocar Central/Mobile nem criar nova feature |
-| WAREHOUSE-DATA-AUDIT-01 | `warehouse-data-audit-01` | RC estável `bd27da91...`; MOBILE-K somente leitura | integridade logística/legado: intake, UNASSIGNED, saldos, lotes, ledger | inventário CANONICAL/LEGACY/RECONCILIATION_REQUIRED/INCONSISTENT | nenhuma escrita/migração/correção de dados |
+| WAREHOUSE-DATA-AUDIT-01 | `warehouse-data-audit-01@07265b2...` | RC estável `bd27da91...`; MOBILE-K somente leitura | **BLOCKER RC** — integridade logística/legado | `docs/WAREHOUSE_DATA_AUDIT_01.md`; PR #255 DRAFT | nenhuma escrita/migração; Inventário TOTAL + UNASSIGNED precisa correção isolada; PAL-01 precisa diagnóstico read-only |
 | RC-READINESS-01 | `rc-readiness-01` | RC estável `bd27da91...` | gates, CI, release manifest, rollback, performance e roteiro de certificação | checklist executável do novo RC | não alterar domínio, Rules ou produção |
 
 #### Regras de concorrência
@@ -218,6 +218,33 @@ Estado aceito pelo Coordenador:
 Precisão sobre CI histórica: no run `37365421191` do baseline `bd27da91...`, o job `validate-application` ficou **SUCCESS** e contém a evidência Emulator usada pela auditoria; o workflow agregado terminou **FAILURE** porque alguns gates posteriores ficaram `cancelled`. Portanto o PASS desta frente se apoia na evidência específica de Rules/Emulator e em auditorias anteriores aplicáveis, e não deve ser descrito como “workflow #1030 completamente verde”.
 
 Observação não bloqueante: em `firestore.warehouse.rules`, o comentário de `queueExclusions` ainda diz “founder-only”, mas a regra efetiva usa `canAccessWarehouseModule(workspaceId)`. Não alterar o arquivo apenas para corrigir comentário, pois isso mudaria o hash das Rules e obrigaria nova auditoria sem ganho de segurança.
+
+#### Fechamento WAREHOUSE-DATA-AUDIT-01
+
+Estado aceito pelo Coordenador:
+
+- branch: `warehouse-data-audit-01@07265b209d6c27873278139a507aa12d4eb97973`;
+- PR #255: OPEN / DRAFT / MERGEABLE / não mergeado;
+- delta: 1 commit, 1 arquivo documental (`docs/WAREHOUSE_DATA_AUDIT_01.md`);
+- classificação: **BLOCKER — INTEGRIDADE LOGÍSTICA IMPEDE RC**;
+- nenhum dado real, Rules, índice, TTL, MOBILE-K ou produção foi alterado.
+
+Blockers confirmados:
+
+1. `warehouseInventoryScopeIncludesPosition({ kind: 'TOTAL' }, { kind: 'UNASSIGNED' })` retorna `true`; o teste histórico em `scripts/warehouse-inventory.test.mjs` também exige explicitamente esse comportamento. O contrato novo exige Inventário TOTAL somente sobre posições físicas.
+2. PAL-01 permanece `RECONCILIATION_REQUIRED`: 440 L físicos vs 540 L em lotes ativos observados. A causa dos +100 L não pode ser afirmada sem diagnóstico read-only dos documentos vivos/histórico.
+
+Risco adicional não bloqueante isolado:
+
+- `listWarehouseMovementsForMaterial()` consulta por `materialId` sem `orderBy/limit` no Firestore, ordena e aplica `.slice()` apenas em memória. Deve ser tratado em correção de performance própria ou junto do RC se o impacto justificar.
+
+Regra de saída do blocker:
+
+- corrigir Inventário TOTAL para excluir `UNASSIGNED` e atualizar os testes;
+- confirmar que nenhuma operação física do candidato oferece `UNASSIGNED`;
+- executar diagnóstico read-only do PAL-01;
+- só então decidir se existe reparo de dados necessário, em frente separada e autorizada;
+- repetir Rules/CI afetados no delta final.
 
 #### Guardrail obrigatório de Firestore Rules
 
