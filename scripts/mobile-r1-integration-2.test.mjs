@@ -192,3 +192,53 @@ test('Integração 2 mantém fail-closed de quantidade na transferência', () =>
   });
   assert.deepEqual(prepared, { ok: false, error: 'INSUFFICIENT_STOCK' });
 });
+
+test('Integração 2 permite transferência parcial preservando atribuição de lote', () => {
+  const lot = {
+    id: 'lot_' + '7'.repeat(32),
+    materialId,
+    status: 'active',
+    quantity: 5,
+    position: positionA,
+  };
+
+  const prepared = transfer.prepareWarehouseMobileTransfer({
+    materialId,
+    from: positionA,
+    to: positionB,
+    quantity: 2,
+    availableQuantity: 5,
+    lots: [lot],
+  });
+
+  assert.equal(prepared.ok, true);
+  assert.deepEqual(prepared.lotAllocations, [
+    { lotId: lot.id, quantity: 2 },
+  ]);
+  assert.deepEqual(prepared.relocateLotIds, []);
+  assert.equal(prepared.unattributedQuantity, 0);
+});
+
+test('Integração 2 bloqueia atribuição de lotes maior que o saldo físico', () => {
+  const lot = {
+    id: 'lot_' + '8'.repeat(32),
+    materialId,
+    status: 'active',
+    quantity: 6,
+    position: positionA,
+  };
+
+  const prepared = transfer.prepareWarehouseMobileTransfer({
+    materialId,
+    from: positionA,
+    to: positionB,
+    quantity: 2,
+    availableQuantity: 5,
+    lots: [lot],
+  });
+
+  assert.deepEqual(prepared, {
+    ok: false,
+    error: 'LOT_ATTRIBUTION_EXCEEDS_STOCK',
+  });
+});
