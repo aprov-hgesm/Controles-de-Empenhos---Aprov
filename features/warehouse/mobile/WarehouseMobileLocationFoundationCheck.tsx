@@ -185,7 +185,7 @@ export function WarehouseMobileLocationFoundationCheck() {
           Consultar localização
         </h1>
         <p className="mt-2 text-sm font-semibold leading-6 text-blue-100">
-          Leia um LOCAL ou SUBPOSIÇÃO para ver os materiais e quantidades registrados ali.
+          Leia um LOCAL ou SUBPOSIÇÃO para ver os materiais e quantidades registrados ali. Nenhum saldo ou movimento é alterado.
         </p>
       </header>
 
