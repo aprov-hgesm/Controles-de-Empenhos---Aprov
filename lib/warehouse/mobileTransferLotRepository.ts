@@ -14,6 +14,7 @@ import {
   loadWarehouseMobileTransferCriticalLotsFailClosed,
 } from './mobileTransferLots';
 import { warehouseDomainPath } from './namespace';
+import { warehouseCanonicalLotReadInput } from './readCompatibility';
 import { recordWarehouseDocumentReads } from './telemetry';
 
 function currentScope(
@@ -42,21 +43,7 @@ function parseCriticalLot(
   data: Record<string, unknown>
 ): WarehouseLot {
   const result = validateWarehouseLot(
-    {
-      schemaVersion: data.schemaVersion,
-      id,
-      workspaceId: data.workspaceId,
-      ug: data.ug,
-      materialId: data.materialId,
-      code: data.code,
-      expiresOn: data.expiresOn ?? null,
-      quantity: data.quantity,
-      position: data.position,
-      origin: data.origin,
-      status: data.status,
-      createdBy: data.createdBy,
-      updatedBy: data.updatedBy,
-    },
+    warehouseCanonicalLotReadInput(id, data),
     {
       expectedWorkspaceId: workspaceId,
       expectedUg: ug,
