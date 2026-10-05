@@ -271,6 +271,14 @@ function familyDigitForPrefix(
   return null;
 }
 
+function numericSuffixCandidates(sequence: number, maxWidth: number): string[] {
+  const values = new Set<string>();
+  for (let width = maxWidth; width >= 1; width -= 1) {
+    values.add(String(sequence).padStart(width, '0'));
+  }
+  return Array.from(values);
+}
+
 function codesForFamily(
   digit: string,
   sequence: number,
@@ -278,13 +286,23 @@ function codesForFamily(
 ): string[] {
   const prefixes = families[digit];
   if (!prefixes) return [];
-  const suffix = String(sequence).padStart(2, '0');
-  return prefixes.map((prefix) => prefix + '-' + suffix);
+  const results = new Set<string>();
+  for (const prefix of prefixes) {
+    for (const suffix of numericSuffixCandidates(sequence, 2)) {
+      results.add(prefix + '-' + suffix);
+    }
+  }
+  return Array.from(results);
 }
 
 function depotCodeCandidates(sequence: number): string[] {
-  const suffix = String(sequence).padStart(3, '0');
-  return ['DEP-' + suffix, 'DEPOSITO-' + suffix];
+  const results = new Set<string>();
+  for (const prefix of ['DEP', 'DEPOSITO']) {
+    for (const suffix of numericSuffixCandidates(sequence, 3)) {
+      results.add(prefix + '-' + suffix);
+    }
+  }
+  return Array.from(results);
 }
 
 export function tryEncodeWarehouseNumericLocationBarcode(input: {
