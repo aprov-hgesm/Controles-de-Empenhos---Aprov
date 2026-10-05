@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05 — Preview MOBILE-J reorganizado em 7 operações sem sobreposição; Saída ≠ Transferência; Consultar Item criada; HEAD b83f9de... com Vercel/Core/Application CI verdes**
+Última sincronização global: **2026-10-05 — handoff de coordenação preparado; Preview MOBILE-J reorganizado em 7 operações sem sobreposição; Saída ≠ Transferência; Consultar Item criada; HEAD b83f9de... com Vercel/Core/Application CI verdes**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -3276,6 +3276,136 @@ PROIBIDO SEM NOVA AUTORIZAÇÃO DO FUNDADOR
 - apagar target de restore / desligar delete protection para cleanup
 - ações destrutivas em usuários/workspaces/dados
 - GO comercial amplo
+```
+
+# 46. Ativação do próximo Coordenador
+
+Use este bloco quando um novo chat assumir a coordenação geral do EMPROVEX.
+
+```text
+PAPEL
+Você é o Chat Coordenador Geral / Program Control do EMPROVEX.
+
+REPOSITÓRIO
+aprov-hgesm/Controles-de-Empenhos---Aprov
+
+LEITURA OBRIGATÓRIA ANTES DE QUALQUER AÇÃO
+1. docs/EMPROVEX_MEMORIAL_OFICIAL.md
+2. docs/EMPROVEX_PROGRAM_CONTROL.md
+3. PR #252 quando o assunto for MOBILE-J / Preview / Central Móvel
+
+ESTADO PRODUTIVO
+main@e90f92acae1514ee5cbc6ce95fed354bc1454330
+App produtivo: Performance R3
+App RC em Production: NÃO
+Rules RC: JÁ PUBLICADAS por autorização específica em 2026-10-05
+
+RC HISTÓRICO
+54e60c2264588d8802a67a4cab3d875d64f6bfc1
+Este SHA é baseline histórica, não o candidato final após a reabertura controlada.
+
+BRANCH ATIVA
+rc-r1-mobile-j-fix-label-readability
+HEAD:
+b83f9de756a5690a8459c3bf8d9dcb2fee222a14
+
+PR
+#252
+OPEN / DRAFT / MERGEABLE / NÃO MERGEADO
+
+GATES DO HEAD ATIVO
+Vercel Preview: SUCCESS
+Core Protection #300: SUCCESS
+Application CI #1013: SUCCESS
+Production build: PASS
+TypeScript: PASS
+Diff hygiene: PASS
+
+PREVIEW
+https://controles-de-empenhos-aprov-git-rc-f44756-aprov-hgesms-projects.vercel.app
+
+CENTRAL MÓVEL — CONTRATO ATUAL
+1. Alocar Recebimento
+2. Transferir Material
+3. Consultar Localização
+4. Consultar Item
+5. Inventário
+6. Saída de Material
+7. Conferir posição
+
+SEMÂNTICA OBRIGATÓRIA
+- Transferência = origem física → destino físico
+- Saída = retirada do estoque → origem física + destino administrativo/retirado por
+- Saída NÃO deve pedir destino físico
+- Consultar Localização = posição → conteúdo; read-only
+- Consultar Item = item → locais/quantidades/lotes; read-only
+- Conferir posição = posição + item → correto/incorreto; read-only
+- Consultas/conferência não movimentam estoque
+- Consultar Item e Saída reutilizam o mesmo read model de disponibilidade; não criar autoridade duplicada
+
+IDENTIDADE FÍSICA
+- EPX1: legado suportado
+- EPX2: suportado
+- código numérico 13 dígitos: preferido quando representável
+- exemplo físico certificado: 9812001101000 = PAL-01
+- Android real: CAMERA · LOCATION — PASS
+- etiqueta Compacta: 140 mm × 32,5 mm
+- limite de prateleira: <= 35 mm de altura
+
+COMPATIBILIDADE LEGADA
+Foi criada projeção canônica read-only para tolerar metadados extras históricos em:
+- locationBalances
+- lots
+- materials
+- barcode associations
+- posições/origin/unit/conversions onde aplicável
+
+NÃO mascarar inconsistência semântica real.
+Saldo duplicado, material ausente, quantidade inválida, hierarquia inválida etc. continuam fail-closed.
+
+PRIMEIRO TRABALHO DO NOVO COORDENADOR
+Executar/acompanhar a certificação manual no Preview do HEAD b83f9de...:
+1. confirmar 7 cards na Home;
+2. Consultar Localização com LOCAL e SUBPOSIÇÃO;
+3. Consultar Item com barcode comercial;
+4. Saída de Material e confirmar que NÃO pede destino físico;
+5. Transferir Material e confirmar que exige destino físico;
+6. Alocar Recebimento / Inventário / Conferir posição sem sobreposição;
+7. continuar casos físicos MOBILE-J: câmera permitida/negada/indisponível, fallback manual, Code128 físico, som/vibração, double scan/cooldown, perda/retorno de rede, jornada ponta a ponta e coerência Desktop↔Mobile.
+
+APÓS CERTIFICAÇÃO
+→ corrigir somente blocker/regressão real, se houver
+→ reconciliar semanticamente PR #252
+→ repetir gates afetados
+→ declarar novo RC SHA
+→ RE-FREEZE
+→ certificar o SHA exato
+→ solicitar GO/NO-GO explícito do Fundador
+→ somente depois considerar app Production / piloto
+
+NÃO FAZER SEM AUTORIZAÇÃO EXPLÍCITA DO FUNDADOR
+- merge/release em main para produção
+- deploy/promote do app para Vercel Production
+- novas mudanças produtivas de Firestore Rules
+- restore real adicional
+- apagar restore temporário / desligar delete protection
+- ação destrutiva em usuário/workspace/dados
+- GO comercial amplo
+
+RECOVERY
+HARDEN-B: PASS
+restore isolado: PASS
+integridade: 13/13
+target temporário ainda existente:
+emprovex-restore-warehouse-2026-10-04
+cleanup requer autorização separada
+
+REGRA DE COORDENAÇÃO
+- verificar HEAD vivo antes de decidir;
+- não confundir CI verde com autorização produtiva;
+- não reabrir feature nova durante certificação;
+- separar blocker real de melhoria estética;
+- atualizar este Memorial sempre que o estado global mudar.
 ```
 
 ## Regra final de continuidade
