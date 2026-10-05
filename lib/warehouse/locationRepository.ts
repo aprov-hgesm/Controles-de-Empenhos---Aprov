@@ -712,6 +712,42 @@ export async function getWarehouseDepot(
   }
 }
 
+export async function getWarehouseDepotByCode(
+  workspaceId: string,
+  code: string
+): Promise<WarehouseDepotListItem | null> {
+  const scope = currentScope(workspaceId);
+  const normalized = normalizeWarehouseLogicalCode(code);
+  if (!normalized) return null;
+  const path = warehouseDomainPath(scope.workspaceId, 'depots');
+  try {
+    const snapshot = await getDocs(
+      query(
+        collection(db, path),
+        where('code', '==', normalized),
+        limit(5)
+      )
+    );
+    recordWarehouseDocumentReads(scope.workspaceId, snapshot.size);
+    const matches = snapshot.docs
+      .map((item) => ({
+        depot: parseDepot(
+          scope.workspaceId,
+          item.id,
+          item.data() as Record<string, unknown>
+        ),
+        createdAt: timestampToIso((item.data() as Record<string, unknown>).createdAt),
+        updatedAt: timestampToIso((item.data() as Record<string, unknown>).updatedAt),
+      }))
+      .filter((item) => item.depot.status === 'active');
+
+    return matches.length === 1 ? matches[0] : null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return null;
+  }
+}
+
 export async function getWarehouseDepotCached(
   workspaceId: string,
   depotId: string
@@ -745,6 +781,54 @@ export async function getWarehouseLocation(
     return await loadWarehouseLocationFromFirestore(scope.workspaceId, locationId);
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, path);
+    return null;
+  }
+}
+
+export async function getWarehouseLocationByCode(
+  workspaceId: string,
+  input: {
+    depotId: string;
+    kind: WarehouseLocationKind;
+    parentLocationId: string | null;
+    code: string;
+  }
+): Promise<WarehouseLocationListItem | null> {
+  const scope = currentScope(workspaceId);
+  const normalized = normalizeWarehouseLogicalCode(input.code);
+  if (!normalized || !isValidWarehouseDepotId(input.depotId)) return null;
+  const path = warehouseDomainPath(scope.workspaceId, 'locations');
+
+  try {
+    const snapshot = await getDocs(
+      query(
+        collection(db, path),
+        where('code', '==', normalized),
+        limit(20)
+      )
+    );
+    recordWarehouseDocumentReads(scope.workspaceId, snapshot.size);
+
+    const matches = snapshot.docs
+      .map((item) => ({
+        location: parseLocation(
+          scope.workspaceId,
+          item.id,
+          item.data() as Record<string, unknown>
+        ),
+        createdAt: timestampToIso((item.data() as Record<string, unknown>).createdAt),
+        updatedAt: timestampToIso((item.data() as Record<string, unknown>).updatedAt),
+      }))
+      .filter(({ location }) =>
+        location.status === 'active'
+        && location.depotId === input.depotId
+        && location.kind === input.kind
+        && location.parentLocationId === input.parentLocationId
+      );
+
+    return matches.length === 1 ? matches[0] : null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
     return null;
   }
 }
