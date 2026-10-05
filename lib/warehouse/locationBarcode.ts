@@ -8,6 +8,7 @@ import {
   isValidWarehouseDepotId,
   isValidWarehouseLocationId,
   isValidWarehouseSubpositionId,
+  normalizeWarehouseLogicalCode,
   validateWarehouseDepot,
   validateWarehouseLocation,
   type WarehouseDepot,
@@ -17,13 +18,17 @@ import {
 
 export const WAREHOUSE_LOCATION_BARCODE_VERSION = 1 as const;
 export const WAREHOUSE_LOCATION_BARCODE_PREFIX = 'EPX1' as const;
+export const WAREHOUSE_LOCATION_BARCODE_COMPACT_VERSION = 2 as const;
+export const WAREHOUSE_LOCATION_BARCODE_COMPACT_PREFIX = 'EPX2' as const;
 export const WAREHOUSE_LOCATION_BARCODE_DECIMAL_WIDTH = 39;
 export const WAREHOUSE_LOCATION_BARCODE_TOTAL_DIGITS = 40;
 
 export type WarehouseLocationBarcodeEntityKind = 'DEPOT' | 'LOCAL' | 'SUBPOSITION';
 
 export interface WarehouseLocationBarcodeIdentity {
-  version: typeof WAREHOUSE_LOCATION_BARCODE_VERSION;
+  version:
+    | typeof WAREHOUSE_LOCATION_BARCODE_VERSION
+    | typeof WAREHOUSE_LOCATION_BARCODE_COMPACT_VERSION;
   kind: WarehouseLocationBarcodeEntityKind;
   entityId: string;
   code: string;
@@ -40,7 +45,27 @@ export type WarehouseLocationBarcodeDecodeResult =
 export interface WarehouseLocationBarcodeResolverSource {
   getDepot(depotId: string): Promise<WarehouseDepot | null>;
   getLocation(locationId: string): Promise<WarehouseLocation | null>;
+  getDepotByCode?(depotCode: string): Promise<WarehouseDepot | null>;
+  getLocationByCode?(input: {
+    depotId: string;
+    kind: 'LOCAL' | 'SUBPOSITION';
+    parentLocationId: string | null;
+    code: string;
+  }): Promise<WarehouseLocation | null>;
 }
+
+interface WarehouseCompactLocationBarcodeIdentity {
+  version: typeof WAREHOUSE_LOCATION_BARCODE_COMPACT_VERSION;
+  kind: WarehouseLocationBarcodeEntityKind;
+  depotCode: string;
+  parentCode: string | null;
+  locationCode: string | null;
+  code: string;
+}
+
+type WarehouseCompactLocationBarcodeDecodeResult =
+  | { ok: true; value: WarehouseCompactLocationBarcodeIdentity }
+  | { ok: false; error: WarehouseLocationBarcodeDecodeError };
 
 export type WarehouseLocationBarcodeResolveError =
   | 'INVALID_CONTEXT'
@@ -134,7 +159,7 @@ function entityIdMatchesKind(kind: WarehouseLocationBarcodeEntityKind, entityId:
 function normalizeLocationCodeInput(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const normalized = value.trim().toUpperCase();
-  if (!normalized || normalized.length > 64 || /[\u0000-\u001f\u007f]/.test(normalized)) {
+  if (!normalized || normalized.length > 128 || /[\u0000-\u001f\u007f]/.test(normalized)) {
     return null;
   }
   return normalized;
@@ -178,6 +203,109 @@ export function encodeWarehouseLocationBarcode(input: {
     + decimalIdentity(hex);
 }
 
+export function encodeWarehouseCompactLocationBarcode(input: {
+  kind: WarehouseLocationBarcodeEntityKind;
+  depotCode: string;
+  locationCode?: string | null;
+  parentCode?: string | null;
+}): string {
+  const depotCode = normalizeWarehouseLogicalCode(input.depotCode);
+  const locationCode = input.locationCode
+    ? normalizeWarehouseLogicalCode(input.locationCode)
+    : null;
+  const parentCode = input.parentCode
+    ? normalizeWarehouseLogicalCode(input.parentCode)
+    : null;
+
+  if (!depotCode) throw new Error('WAREHOUSE_LOCATION_BARCODE_COMPACT_DEPOT_CODE_INVALID');
+
+  if (input.kind === 'DEPOT') {
+    return WAREHOUSE_LOCATION_BARCODE_COMPACT_PREFIX + 'D:' + depotCode;
+  }
+
+  if (input.kind === 'LOCAL') {
+    if (!locationCode) {
+      throw new Error('WAREHOUSE_LOCATION_BARCODE_COMPACT_LOCATION_CODE_INVALID');
+    }
+    return WAREHOUSE_LOCATION_BARCODE_COMPACT_PREFIX
+      + 'L:' + depotCode + ':' + locationCode;
+  }
+
+  if (!parentCode || !locationCode) {
+    throw new Error('WAREHOUSE_LOCATION_BARCODE_COMPACT_SUBPOSITION_CODE_INVALID');
+  }
+  return WAREHOUSE_LOCATION_BARCODE_COMPACT_PREFIX
+    + 'S:' + depotCode + ':' + parentCode + ':' + locationCode;
+}
+
+function decodeWarehouseCompactLocationBarcode(
+  value: unknown
+): WarehouseCompactLocationBarcodeDecodeResult {
+  const normalized = normalizeLocationCodeInput(value);
+  if (!normalized || !normalized.startsWith(WAREHOUSE_LOCATION_BARCODE_COMPACT_PREFIX)) {
+    return { ok: false, error: 'NOT_LOCATION_CODE' };
+  }
+
+  const payload = normalized.slice(WAREHOUSE_LOCATION_BARCODE_COMPACT_PREFIX.length);
+  const parts = payload.split(':');
+  const marker = parts[0];
+  const depotCode = normalizeWarehouseLogicalCode(parts[1]);
+
+  if (!depotCode) {
+    return { ok: false, error: 'MALFORMED_LOCATION_CODE' };
+  }
+
+  if (marker === 'D' && parts.length === 2) {
+    return {
+      ok: true,
+      value: {
+        version: WAREHOUSE_LOCATION_BARCODE_COMPACT_VERSION,
+        kind: 'DEPOT',
+        depotCode,
+        parentCode: null,
+        locationCode: null,
+        code: normalized,
+      },
+    };
+  }
+
+  const locationCode = normalizeWarehouseLogicalCode(parts.at(-1));
+  if (!locationCode) {
+    return { ok: false, error: 'MALFORMED_LOCATION_CODE' };
+  }
+
+  if (marker === 'L' && parts.length === 3) {
+    return {
+      ok: true,
+      value: {
+        version: WAREHOUSE_LOCATION_BARCODE_COMPACT_VERSION,
+        kind: 'LOCAL',
+        depotCode,
+        parentCode: null,
+        locationCode,
+        code: normalized,
+      },
+    };
+  }
+
+  const parentCode = normalizeWarehouseLogicalCode(parts[2]);
+  if (marker === 'S' && parts.length === 4 && parentCode) {
+    return {
+      ok: true,
+      value: {
+        version: WAREHOUSE_LOCATION_BARCODE_COMPACT_VERSION,
+        kind: 'SUBPOSITION',
+        depotCode,
+        parentCode,
+        locationCode,
+        code: normalized,
+      },
+    };
+  }
+
+  return { ok: false, error: 'MALFORMED_LOCATION_CODE' };
+}
+
 export function decodeWarehouseLocationBarcode(
   value: unknown
 ): WarehouseLocationBarcodeDecodeResult {
@@ -208,7 +336,8 @@ export function decodeWarehouseLocationBarcode(
 }
 
 export function isWarehouseLocationBarcode(value: unknown): boolean {
-  return decodeWarehouseLocationBarcode(value).ok;
+  return decodeWarehouseLocationBarcode(value).ok
+    || decodeWarehouseCompactLocationBarcode(value).ok;
 }
 
 function validationFailure(
@@ -287,6 +416,169 @@ export async function resolveWarehousePhysicalIdentityCode(
 ): Promise<WarehousePhysicalIdentityResolveResult> {
   const context = validateContext(input);
   if (!context) return { ok: false, error: 'INVALID_CONTEXT' };
+
+  const compact = decodeWarehouseCompactLocationBarcode(input.code);
+  if (compact.ok) {
+    if (!source.getDepotByCode || !source.getLocationByCode) {
+      return { ok: false, error: 'ENTITY_NOT_FOUND' };
+    }
+
+    const rawDepot = await source.getDepotByCode(compact.value.depotCode);
+    if (!rawDepot) return { ok: false, error: 'ENTITY_NOT_FOUND' };
+    const depotValidated = validateWarehouseDepot(rawDepot, {
+      expectedWorkspaceId: context.workspaceId,
+      expectedUg: context.ug,
+    });
+    if (!depotValidated.ok) {
+      return { ok: false, error: validationFailure(depotValidated.issues) };
+    }
+    if (depotValidated.data.status !== 'active') {
+      return { ok: false, error: 'ENTITY_INACTIVE' };
+    }
+
+    const depot = depotValidated.data;
+
+    if (compact.value.kind === 'DEPOT') {
+      return {
+        ok: true,
+        value: {
+          identity: {
+            version: WAREHOUSE_LOCATION_BARCODE_COMPACT_VERSION,
+            kind: 'DEPOT',
+            entityId: depot.id,
+            code: compact.value.code,
+          },
+          depot,
+          location: null,
+          parentLocation: null,
+          position: null,
+        },
+      };
+    }
+
+    if (compact.value.kind === 'LOCAL' && compact.value.locationCode) {
+      const rawLocation = await source.getLocationByCode({
+        depotId: depot.id,
+        kind: 'LOCAL',
+        parentLocationId: null,
+        code: compact.value.locationCode,
+      });
+      if (!rawLocation) return { ok: false, error: 'ENTITY_NOT_FOUND' };
+      const locationValidated = validateWarehouseLocation(rawLocation, {
+        expectedWorkspaceId: context.workspaceId,
+        expectedUg: context.ug,
+      });
+      if (!locationValidated.ok) {
+        return { ok: false, error: validationFailure(locationValidated.issues) };
+      }
+      const location = locationValidated.data;
+      if (
+        location.status !== 'active'
+        || location.kind !== 'LOCAL'
+        || location.depotId !== depot.id
+        || location.parentLocationId !== null
+      ) {
+        return { ok: false, error: 'HIERARCHY_INVALID' };
+      }
+      return {
+        ok: true,
+        value: {
+          identity: {
+            version: WAREHOUSE_LOCATION_BARCODE_COMPACT_VERSION,
+            kind: 'LOCAL',
+            entityId: location.id,
+            code: compact.value.code,
+          },
+          depot,
+          location,
+          parentLocation: null,
+          position: {
+            kind: 'LOCATION',
+            depotId: depot.id,
+            locationId: location.id,
+            subpositionId: null,
+          },
+        },
+      };
+    }
+
+    if (
+      compact.value.kind === 'SUBPOSITION'
+      && compact.value.parentCode
+      && compact.value.locationCode
+    ) {
+      const rawParent = await source.getLocationByCode({
+        depotId: depot.id,
+        kind: 'LOCAL',
+        parentLocationId: null,
+        code: compact.value.parentCode,
+      });
+      if (!rawParent) return { ok: false, error: 'ENTITY_NOT_FOUND' };
+      const parentValidated = validateWarehouseLocation(rawParent, {
+        expectedWorkspaceId: context.workspaceId,
+        expectedUg: context.ug,
+      });
+      if (!parentValidated.ok) {
+        return { ok: false, error: validationFailure(parentValidated.issues) };
+      }
+      const parent = parentValidated.data;
+      if (
+        parent.status !== 'active'
+        || parent.kind !== 'LOCAL'
+        || parent.depotId !== depot.id
+        || parent.parentLocationId !== null
+      ) {
+        return { ok: false, error: 'HIERARCHY_INVALID' };
+      }
+
+      const rawLocation = await source.getLocationByCode({
+        depotId: depot.id,
+        kind: 'SUBPOSITION',
+        parentLocationId: parent.id,
+        code: compact.value.locationCode,
+      });
+      if (!rawLocation) return { ok: false, error: 'ENTITY_NOT_FOUND' };
+      const locationValidated = validateWarehouseLocation(rawLocation, {
+        expectedWorkspaceId: context.workspaceId,
+        expectedUg: context.ug,
+      });
+      if (!locationValidated.ok) {
+        return { ok: false, error: validationFailure(locationValidated.issues) };
+      }
+      const location = locationValidated.data;
+      if (
+        location.status !== 'active'
+        || location.kind !== 'SUBPOSITION'
+        || location.depotId !== depot.id
+        || location.parentLocationId !== parent.id
+      ) {
+        return { ok: false, error: 'HIERARCHY_INVALID' };
+      }
+
+      return {
+        ok: true,
+        value: {
+          identity: {
+            version: WAREHOUSE_LOCATION_BARCODE_COMPACT_VERSION,
+            kind: 'SUBPOSITION',
+            entityId: location.id,
+            code: compact.value.code,
+          },
+          depot,
+          location,
+          parentLocation: parent,
+          position: {
+            kind: 'SUBPOSITION',
+            depotId: depot.id,
+            locationId: parent.id,
+            subpositionId: location.id,
+          },
+        },
+      };
+    }
+
+    return { ok: false, error: 'MALFORMED_LOCATION_CODE' };
+  }
 
   const decoded = decodeWarehouseLocationBarcode(input.code);
   if (decoded.ok === false) return decoded;
