@@ -31,6 +31,10 @@ import {
 } from './material';
 import { validateWarehouseMaterial } from './material';
 import { warehouseDocumentPath, warehouseDomainPath } from './namespace';
+import {
+  warehouseCanonicalBarcodeReadInput,
+  warehouseCanonicalMaterialReadInput,
+} from './readCompatibility';
 
 export interface WarehouseBarcodeListItem {
   association: WarehouseBarcodeAssociation;
@@ -74,7 +78,7 @@ function parseMaterial(
   data: Record<string, unknown>
 ): WarehouseMaterial {
   const result = validateWarehouseMaterial(
-    { ...data, id },
+    warehouseCanonicalMaterialReadInput(id, data),
     { expectedWorkspaceId: workspaceId }
   );
   if (!result.ok) throw new Error('WAREHOUSE_INVALID_MATERIAL');
@@ -87,19 +91,7 @@ function parseAssociation(
   data: Record<string, unknown>
 ): WarehouseBarcodeAssociation {
   const result = validateWarehouseBarcodeAssociation(
-    {
-      schemaVersion: data.schemaVersion,
-      id,
-      workspaceId: data.workspaceId,
-      ug: data.ug,
-      materialId: data.materialId,
-      barcode: data.barcode,
-      presentation: data.presentation,
-      factorToBaseUnit: data.factorToBaseUnit,
-      status: data.status,
-      createdBy: data.createdBy,
-      updatedBy: data.updatedBy,
-    },
+    warehouseCanonicalBarcodeReadInput(id, data),
     { expectedWorkspaceId: workspaceId }
   );
   if (!result.ok) {
