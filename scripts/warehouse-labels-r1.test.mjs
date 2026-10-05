@@ -125,9 +125,14 @@ test('escopo de subposições retorna somente as filhas ativas do Local', () => 
   assert.equal(result[0].code, 'PRAT-01');
 });
 
-test('paginação respeita 21, 12 e 8 etiquetas por A4', () => {
+test('paginação respeita prateleira <=35mm e presets 16, 12 e 8 por A4', () => {
   const items = Array.from({ length: 25 }, (_, index) => ({ index }));
-  assert.deepEqual(labels.paginateWarehouseLabels(items, 'COMPACT').map((page) => page.length), [21, 4]);
+  assert.equal(labels.WAREHOUSE_LABEL_PRESETS.COMPACT.columns, 2);
+  assert.equal(labels.WAREHOUSE_LABEL_PRESETS.COMPACT.rows, 8);
+  const compact = labels.WAREHOUSE_LABEL_PRESETS.COMPACT;
+  const compactHeight = (297 - compact.marginMm * 2 - compact.gapMm * (compact.rows - 1)) / compact.rows;
+  assert.ok(compactHeight <= 35, 'Etiqueta compacta deve respeitar 35 mm de altura');
+  assert.deepEqual(labels.paginateWarehouseLabels(items, 'COMPACT').map((page) => page.length), [16, 9]);
   assert.deepEqual(labels.paginateWarehouseLabels(items, 'MEDIUM').map((page) => page.length), [12, 12, 1]);
   assert.deepEqual(labels.paginateWarehouseLabels(items, 'LARGE').map((page) => page.length), [8, 8, 8, 1]);
 });
@@ -151,7 +156,7 @@ test('gerador produz PDF A4 não vazio para impressão monocromática', async ()
 });
 
 
-test('identidade física é estável para depósito, local e subposição e independe de renomeação', () => {
+test('EPX1 legado permanece estável e EPX2 compacto usa caminho lógico legível', () => {
   const child = subposition(1);
   const identities = [
     ['DEPOT', depot.id],
@@ -168,10 +173,14 @@ test('identidade física é estável para depósito, local e subposição e inde
     assert.match(code, /^EPX1[123][0-9]{39}$/);
   }
 
-  const before = labels.buildLocationLabel(local, depot, [local]).physicalBarcode;
+  const compact = labels.buildLocationLabel(local, depot, [local]).physicalBarcode;
+  assert.equal(compact, 'EPX2L:DEP-01:EST-01');
+  assert.equal(locationBarcode.isWarehouseLocationBarcode(compact), true);
+
   const renamed = { ...local, name: 'Estante renomeada', code: 'EST-99' };
   const after = labels.buildLocationLabel(renamed, depot, [renamed]).physicalBarcode;
-  assert.equal(before, after);
+  assert.equal(after, 'EPX2L:DEP-01:EST-99');
+  assert.notEqual(compact, after);
 });
 
 test('namespace de posição rejeita código comercial e payload malformado', () => {
@@ -223,6 +232,44 @@ function resolverSource(overrides = {}) {
     },
   };
 }
+
+test('resolver EPX2 encontra LOCAL pelo caminho lógico sem migração de IDs', async () => {
+  const code = locationBarcode.encodeWarehouseCompactLocationBarcode({
+    kind: 'LOCAL',
+    depotCode: depot.code,
+    locationCode: local.code,
+  });
+
+  const result = await locationBarcode.resolveWarehouseStockPositionCode({
+    code,
+    workspaceId: depot.workspaceId,
+    ug: depot.ug,
+  }, {
+    ...resolverSource(),
+    async getDepotByCode(depotCode) {
+      return depotCode === depot.code ? depot : null;
+    },
+    async getLocationByCode(input) {
+      if (
+        input.depotId === depot.id
+        && input.kind === 'LOCAL'
+        && input.parentLocationId === null
+        && input.code === local.code
+      ) return local;
+      return null;
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.value.identity.version, 2);
+  assert.equal(result.value.identity.entityId, local.id);
+  assert.deepEqual(result.value.position, {
+    kind: 'LOCATION',
+    depotId: depot.id,
+    locationId: local.id,
+    subpositionId: null,
+  });
+});
 
 test('resolver converte LOCAL e SUBPOSITION em WarehouseStockPosition', async () => {
   const localCode = locationBarcode.encodeWarehouseLocationBarcode({
@@ -378,7 +425,7 @@ test('resolver recusa entidade divergente e round-trip encode → resolve preser
   assert.equal(result.value.identity.entityId, child.id);
 });
 
-test('builder inclui barcode físico em todas as etiquetas e ignora depósito inativo', () => {
+test('builder inclui barcode físico compacto em todas as etiquetas e ignora depósito inativo', () => {
   const child = subposition(1);
   const items = labels.buildWarehouseLabelsForScope({
     depot,
@@ -386,7 +433,14 @@ test('builder inclui barcode físico em todas as etiquetas e ignora depósito in
     scope: 'DEPOT_FULL',
   });
   assert.equal(items.length, 3);
-  assert.ok(items.every((item) => /^EPX1[123][0-9]{39}$/.test(item.physicalBarcode)));
+  assert.deepEqual(
+    items.map((item) => item.physicalBarcode),
+    [
+      'EPX2D:DEP-01',
+      'EPX2L:DEP-01:EST-01',
+      'EPX2S:DEP-01:EST-01:PRAT-01',
+    ]
+  );
 
   const inactiveDepot = labels.buildWarehouseLabelsForScope({
     depot: { ...depot, status: 'inactive' },
