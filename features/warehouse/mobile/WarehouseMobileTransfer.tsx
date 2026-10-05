@@ -79,7 +79,8 @@ function preparationError(error: WarehouseMobileTransferPreparationError) {
   if (error === 'INVALID_AVAILABLE_STOCK') return 'O saldo físico atual não pôde ser validado.';
   if (error === 'INSUFFICIENT_STOCK') return 'A quantidade é maior que o saldo disponível na origem.';
   if (error === 'TOO_MANY_ACTIVE_LOTS') return 'Esta posição possui quantidade de lotes acima do limite suportado pela transferência atual. A operação precisa ser tratada por fluxo administrativo.';
-  return 'Há lote ativo nessa posição. Para manter lote e validade coerentes, transfira o saldo integral da posição.';
+  if (error === 'LOT_ATTRIBUTION_EXCEEDS_STOCK') return 'A soma dos lotes ativos é maior que o saldo físico desta posição. A transferência foi bloqueada para não ampliar a divergência. Revise os lotes deste material na Central desktop.';
+  return 'A quantidade não pôde ser conciliada com o saldo físico e os lotes atuais.';
 }
 
 function operationError(error: unknown) {
@@ -88,6 +89,8 @@ function operationError(error: unknown) {
   if (raw.includes('WAREHOUSE_POSITION_INACTIVE') || raw.includes('WAREHOUSE_SUBPOSITION_INACTIVE')) return 'Origem ou destino ficou inativo antes da confirmação.';
   if (raw.includes('WAREHOUSE_POSITION_NOT_FOUND') || raw.includes('WAREHOUSE_SUBPOSITION_NOT_FOUND')) return 'Origem ou destino não existe mais.';
   if (raw.includes('WAREHOUSE_TRANSFER_LOT_POSITION_MISMATCH')) return 'O lote mudou de posição antes da confirmação. Refaça a leitura.';
+  if (raw.includes('WAREHOUSE_TRANSFER_LOT_INSUFFICIENT_ATTRIBUTION')) return 'A quantidade disponível no lote mudou antes da confirmação. Refaça a leitura.';
+  if (raw.includes('WAREHOUSE_TRANSFER_SPLIT_LOT_CONFLICT') || raw.includes('WAREHOUSE_TRANSFER_LOT_SPLIT_INVALID')) return 'Não foi possível preservar o lote durante a transferência parcial. Refaça a operação.';
   if (raw.includes('WAREHOUSE_IDEMPOTENCY_CONFLICT')) return 'Conflito de idempotência. Recomece a operação.';
   if (raw.includes('WAREHOUSE_MOBILE_TRANSFER_LOTS_SATURATED')) return 'Não foi possível provar a leitura completa dos lotes. A transferência foi bloqueada por segurança.';
   if (raw.includes('WAREHOUSE_MOBILE_TRANSFER_LOTS_READ_FAILED')) return 'Falha ao verificar os lotes atuais. A transferência foi bloqueada por segurança.';
@@ -218,7 +221,7 @@ export function WarehouseMobileTransfer() {
         quantity: prepared.quantity,
         from: freshSource.position,
         to: freshDestination.position,
-        relocateLotIds: prepared.relocateLotIds,
+        lotAllocations: prepared.lotAllocations,
         idempotencyKey: review.idempotencyKey,
         note: 'Transferência confirmada pela Central Móvel R1',
       });
@@ -246,7 +249,7 @@ export function WarehouseMobileTransfer() {
 
       {source && !material && <Step title="2 · LER MATERIAL"><WarehouseMobileScanner expectation="EXPECT_PRODUCT" identifyScan={classifyWarehouseMobileTransferProductScan} onValidatedScan={scanProduct} title="LER MATERIAL" /><Secondary onClick={reset}>Trocar origem</Secondary></Step>}
 
-      {material && <Card title="Material" value={material.material.description} detail={`Disponível: ${formatQty(material.availableQuantity)} ${unitLabel(material.material)}${material.sourceLots.length ? ' · com lote ativo (transferência integral)' : ''}`} />}
+      {material && <Card title="Material" value={material.material.description} detail={`Disponível: ${formatQty(material.availableQuantity)} ${unitLabel(material.material)}${material.sourceLots.length ? ' · com lote ativo (transferência parcial preserva lote e validade)' : ''}`} />}
 
       {material && quantity === null && <Step title="3 · QUANTIDADE"><input value={quantityText} onChange={(event) => { setQuantityText(event.target.value); setMessage(null); }} inputMode="decimal" className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 font-black" placeholder="0" data-testid="warehouse-mobile-transfer-quantity" /><Primary onClick={acceptQuantity}>Continuar para destino</Primary></Step>}
 
