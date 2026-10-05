@@ -96,7 +96,9 @@ export function buildWarehouseMobilePhysicalQueryItems(input: {
     }
 
     if (seenMaterials.has(balance.materialId)) {
-      throw new Error('WAREHOUSE_MOBILE_PHYSICAL_QUERY_DUPLICATE_BALANCE');
+      throw new Error(
+        'WAREHOUSE_MOBILE_PHYSICAL_QUERY_DUPLICATE_BALANCE:' + balance.materialId
+      );
     }
     seenMaterials.add(balance.materialId);
 
