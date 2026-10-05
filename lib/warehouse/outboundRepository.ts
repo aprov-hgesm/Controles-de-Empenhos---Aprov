@@ -43,6 +43,12 @@ import {
   type WarehouseExpressOutboundPlan,
 } from './outbound';
 import { warehouseDocumentPath } from './namespace';
+import {
+  warehouseCanonicalBarcodeReadInput,
+  warehouseCanonicalLocationBalanceReadInput,
+  warehouseCanonicalLotReadInput,
+  warehouseCanonicalMaterialReadInput,
+} from './readCompatibility';
 
 export interface ApplyWarehouseExpressOutboundInput {
   materialId: string;
