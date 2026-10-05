@@ -469,15 +469,20 @@ test('MOBILE-D transfere primeiro a parcela sem lote sem inventar procedência',
 test('MOBILE-K transferência física rejeita UNASSIGNED e aceita combinações físicas', () => {
   const locationA = { kind: 'LOCATION', depotId, locationId: localA, subpositionId: null };
   const locationB = { kind: 'LOCATION', depotId, locationId: localB, subpositionId: null };
-  const subA = { kind: 'SUBPOSITION', depotId, locationId: localA, subpositionId: subAId };
-  const subB = { kind: 'SUBPOSITION', depotId, locationId: localB, subpositionId: subBId };
+  const subpositionA = { kind: 'SUBPOSITION', depotId, locationId: localA, subpositionId: subA };
+  const subpositionB = {
+    kind: 'SUBPOSITION',
+    depotId,
+    locationId: localB,
+    subpositionId: 'sub_' + 'e'.repeat(32),
+  };
   const unassigned = { kind: 'UNASSIGNED' };
 
   for (const [from, to] of [
     [locationA, locationB],
-    [locationA, subB],
-    [subA, locationB],
-    [subA, subB],
+    [locationA, subpositionB],
+    [subpositionA, locationB],
+    [subpositionA, subpositionB],
   ]) {
     const result = mobileTransfer.prepareWarehouseMobileTransfer({
       materialId,
