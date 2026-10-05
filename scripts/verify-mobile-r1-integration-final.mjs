@@ -12,6 +12,8 @@ const requiredPaths = [
   'app/central-mobile/page.tsx',
   'app/central-mobile/alocar/page.tsx',
   'app/central-mobile/transferir/page.tsx',
+  'app/central-mobile/consultar-localizacao/page.tsx',
+  'app/central-mobile/consultar-item/page.tsx',
   'app/central-mobile/inventario/page.tsx',
   'app/central-mobile/saida/page.tsx',
   'app/central-mobile/conferir/page.tsx',
@@ -20,6 +22,7 @@ const requiredPaths = [
   'features/warehouse/mobile/WarehouseMobileProtectedLayout.tsx',
   'features/warehouse/mobile/WarehouseMobileScanner.tsx',
   'features/warehouse/mobile/WarehouseMobileLocationFoundationCheck.tsx',
+  'features/warehouse/mobile/WarehouseMobileItemQuery.tsx',
   'features/warehouse/mobile/WarehouseMobileIntakeAllocation.tsx',
   'features/warehouse/mobile/WarehouseMobileTransfer.tsx',
   'features/warehouse/mobile/WarehouseMobileInventory.tsx',
@@ -45,7 +48,8 @@ const home = read('features/warehouse/mobile/WarehouseMobileHome.tsx');
 for (const target of [
   '/central-mobile/alocar',
   '/central-mobile/transferir',
-  '#consulta-localizacao',
+  '/central-mobile/consultar-localizacao',
+  '/central-mobile/consultar-item',
   '/central-mobile/inventario',
   '/central-mobile/saida',
   '/central-mobile/conferir',
@@ -56,7 +60,6 @@ for (const target of [
     'Home deve expor a jornada integrada: ' + target
   );
 }
-assert.match(home, /id="consulta-localizacao"/);
 assert.doesNotMatch(home, /href:\s*null/);
 
 const shell = read('features/warehouse/mobile/WarehouseMobileShell.tsx');
@@ -86,6 +89,10 @@ const operations = new Map([
     'classifyWarehouseMobileLocationScan',
     'resolveWarehouseStockPositionBarcode',
     'loadWarehouseMobilePhysicalPositionContents',
+  ]],
+  ['features/warehouse/mobile/WarehouseMobileItemQuery.tsx', [
+    'WarehouseMobileScanner',
+    'loadWarehouseMobileItemAvailability',
   ]],
   ['features/warehouse/mobile/WarehouseMobileIntakeAllocation.tsx', [
     'WarehouseMobileScanner',
@@ -131,6 +138,49 @@ for (const [path, requiredContracts] of operations) {
       path + ' não pode criar mutação Firestore paralela'
     );
   }
+}
+
+const outboundUi = read('features/warehouse/mobile/WarehouseMobileOutbound.tsx');
+assert.match(
+  outboundUi,
+  /ESCOLHER ORIGEM DA RETIRADA/,
+  'Saída deve tratar posição física como origem da baixa'
+);
+assert.match(
+  outboundUi,
+  /DESTINO DA RETIRADA \/ RETIRADO POR/,
+  'Saída deve distinguir destino administrativo de destino físico'
+);
+assert.doesNotMatch(
+  outboundUi,
+  /title="LER DESTINO"/,
+  'Saída não pode pedir destino físico como uma transferência'
+);
+
+const transferUi = read('features/warehouse/mobile/WarehouseMobileTransfer.tsx');
+assert.match(
+  transferUi,
+  /LER DESTINO/,
+  'Transferência deve continuar exigindo destino físico'
+);
+assert.match(
+  transferUi,
+  /Movimento interno:/,
+  'Transferência deve declarar explicitamente sua semântica interna'
+);
+
+const itemQuery = read('features/warehouse/mobile/WarehouseMobileItemQuery.tsx');
+for (const forbidden of [
+  'applyWarehouseExpressOutbound(',
+  'transferWarehouseStock(',
+  'saveWarehouseInventoryCount(',
+  'allocateWarehousePendingItemFast(',
+]) {
+  assert.equal(
+    itemQuery.includes(forbidden),
+    false,
+    'Consultar Item deve permanecer read-only: ' + forbidden
+  );
 }
 
 const positionCheck = read('lib/warehouse/mobilePositionCheck.ts');
@@ -202,10 +252,12 @@ for (const marker of [
 }
 
 console.log('MOBILE-R1 MOBILE-I INTEGRATED PRODUCT: PASS');
-console.log('- Home expõe A–H, incluindo consulta física já disponível');
+console.log('- Home expõe 7 operações com Consulta de Localização e Consulta de Item separadas');
 console.log('- navegação Home/Central permanece única e compartilhada');
 console.log('- Auth/workspace/sessão/legal/warehouseAccess continuam no boundary canônico');
-console.log('- scanner e resolver EPX1 permanecem compartilhados nas jornadas físicas');
+console.log('- scanner e resolver físico compartilhados preservam EPX1/EPX2/numerico nas jornadas');
 console.log('- ALLOCATE/TRANSFER/INVENTORY/OUTBOUND reutilizam autoridades canônicas');
+console.log('- Saída usa origem física + destino administrativo; Transferência usa origem/destino físicos');
+console.log('- Consultar Item reutiliza a distribuição física da Saída sem criar mutação paralela');
 console.log('- consulta e conferência permanecem read-only');
 console.log('- CT-01 permanece preservada para o futuro Release Candidate');
