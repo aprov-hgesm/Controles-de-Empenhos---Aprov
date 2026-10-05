@@ -82,7 +82,7 @@ function sortLotsForTransfer(lots: WarehouseLot[]): WarehouseLot[] {
     const expiryCompare = leftExpiry.localeCompare(rightExpiry);
     if (expiryCompare !== 0) return expiryCompare;
 
-    const codeCompare = left.code.localeCompare(right.code, 'pt-BR');
+    const codeCompare = (left.code || '').localeCompare(right.code || '', 'pt-BR');
     if (codeCompare !== 0) return codeCompare;
     return left.id.localeCompare(right.id);
   });
