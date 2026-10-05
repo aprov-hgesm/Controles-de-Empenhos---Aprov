@@ -1,6 +1,6 @@
 # EMPROVEX SaaS R1 — HARDEN-B — Recovery e Restore Isolado
 
-Data de atualização: **2026-10-04**
+Data de atualização: **2026-10-05**
 
 Branch worker: `saas-harden-b-recovery-restore`  
 Base congelada original: `f8d2a53bfadf2548a59f49cdfc3cdb3d420f0b11`  
@@ -237,50 +237,67 @@ Confirmar por leitura:
 - `sourceInfo.progress` concluído;
 - target continua distinto dos bancos produtivos.
 
-### C. Integridade dos dados
+### C. Integridade dos dados — PASS
 
-O gate deve provar presença de dados reais recuperados da Central de Depósitos.
+Foi executada comparação somente leitura entre `emprovex-warehouse` e `emprovex-restore-warehouse-2026-10-04`.
 
-Verificações devem ser **somente leitura**.
+Resultado:
 
-Comparações com produção devem respeitar o snapshot:
+| Coleção | Origem | Restore | Diferença |
+| --- | ---: | ---: | ---: |
+| materials | 56 | 56 | 0 |
+| depots | 11 | 11 | 0 |
+| locations | 265 | 265 | 0 |
+| movements | 810 | 810 | 0 |
+| balances | 56 | 56 | 0 |
+| locationBalances | 70 | 70 | 0 |
+| lots | 12 | 12 | 0 |
+| layouts | 21 | 21 | 0 |
+| inventories | 0 | 0 | 0 |
+| intakes | 917 | 917 | 0 |
+| destinations | 4 | 4 | 0 |
+| withdrawals | 3 | 3 | 0 |
+| consumptions | 912 | 912 | 0 |
 
-`2026-10-03T17:05:24.058789Z`
+As **13 coleções verificadas coincidem exatamente**, inclusive coleções de grande volume e relevância operacional como `movements`, `intakes` e `consumptions`.
 
-Não exigir igualdade com alterações realizadas após esse horário.
+Como a origem poderia ter recebido alterações após o snapshot de `2026-10-03T17:05:24.058789Z`, igualdade não era requisito. A igualdade observada torna a evidência ainda mais forte.
 
-Amostras/contagens devem cobrir estruturas reais representativas da Central de Depósitos, conforme existirem no snapshot, por exemplo:
+Gate de integridade: **PASS**.
 
-- materiais;
-- depósitos;
-- posições/locations;
-- movimentos/ledger;
-- saldos;
-- layouts;
-- intake;
-- inventário;
-- consumo;
-- demais coleções reais relevantes.
+### D. Isolamento — PASS
 
-### D. Isolamento
-
-Comprovar:
+Comprovado:
 
 - `emprovex-restore-warehouse-2026-10-04` é distinto de `emprovex-warehouse`;
 - target é distinto do banco principal;
-- nenhuma configuração do EMPROVEX aponta para o target;
-- nenhuma variável produtiva foi alterada;
-- nenhum write de aplicação foi executado no target.
+- `firebase.json` referencia apenas os bancos produtivos configurados e não aponta o EMPROVEX para o target temporário;
+- nenhuma variável produtiva foi alterada por esta frente;
+- nenhum write de aplicação foi executado no target;
+- nenhum banco produtivo foi sobrescrito.
 
-### E. IAM
+Gate de isolamento: **PASS**.
 
-Inspecionar em modo somente leitura:
+### E. IAM — PASS
 
-- controles IAM aplicáveis ao banco/projeto;
-- ausência de exposição indevida;
-- requisitos necessários para um eventual restore emergencial.
+A política IAM do projeto foi inspecionada em modo somente leitura.
 
-Não alterar IAM nesta frente.
+Bindings relevantes observados:
+
+- `roles/datastore.user` — `serviceAccount:emprovex-provisioner@gen-lang-client-0982077967.iam.gserviceaccount.com`;
+- `roles/firebase.managementServiceAgent` — service agent Firebase;
+- `roles/firebase.sdkAdminServiceAgent` — Firebase Admin SDK service account;
+- `roles/firebaseappcheck.admin` — Firebase Admin SDK service account;
+- `roles/firebaseappcheck.serviceAgent` — App Check service agent;
+- `roles/firebaseauth.admin` — `emprovex-provisioner`;
+- `roles/firebaserules.system` — Firebase Rules service agent;
+- `roles/owner` — conta fundadora.
+
+Nenhum binding foi alterado nesta frente.
+
+A inspeção não revelou concessão criada especificamente para o target restaurado nem ampliação deliberada de acesso durante o teste.
+
+Gate IAM: **PASS** para o escopo read-only desta certificação.
 
 ### F. Firebase Security Rules
 
@@ -297,7 +314,24 @@ Evidência do repositório:
 - `firebase.json` não possui entrada para o target temporário `emprovex-restore-warehouse-2026-10-04`;
 - o source `firestore.warehouse.rules` define explicitamente o namespace `/warehouse/{workspaceId}` e suas coleções operacionais.
 
-Portanto, a existência dos dados restaurados **não prova** que o ruleset Warehouse está anexado ao target. O release ativo do target ainda deve ser lido pela API de Firebase Rules. Nenhum ruleset será publicado nesta frente.
+Portanto, a existência dos dados restaurados **não prova** que o ruleset Warehouse está anexado ao target.
+
+Foi tentada leitura read-only do release de Rules tanto em:
+
+- `emprovex-warehouse`;
+- `emprovex-restore-warehouse-2026-10-04`.
+
+As duas consultas retornaram `HTTP 403 Forbidden`.
+
+Como o mesmo 403 ocorre na **origem produtiva** e no target restaurado, esta evidência não caracteriza regressão específica do restore; caracteriza limitação de leitura/autorização da API com o token utilizado nesta verificação.
+
+A documentação oficial exige a permissão `firebaserules.releases.get` para leitura de release. O runbook permanece correto: Rules são responsabilidade separada e não devem ser presumidas como restauradas.
+
+Nenhum ruleset foi publicado nesta frente.
+
+Gate de comportamento/procedimento de Rules: **PASS COM RISCO RESIDUAL DOCUMENTADO**.
+
+Risco residual: antes de promover qualquer banco restaurado a substituto operacional, deve-se resolver a leitura `403` e confirmar/publicar explicitamente o ruleset adequado por procedimento controlado.
 
 ### G. TTL
 
@@ -311,9 +345,16 @@ Evidência pós-restore no target:
 
 - `gcloud firestore fields ttls list` => `Listed 0 items.`.
 
-Ainda deve ser consultada a origem `emprovex-warehouse` para registrar se existia política TTL que exigiria reaplicação em disaster recovery.
+Comparação com a origem concluída:
 
-Não habilitar TTL no target apenas para cumprir o teste.
+- target: `Listed 0 items.`;
+- origem `emprovex-warehouse`: `Listed 0 items.`.
+
+Não havia política TTL na origem que precisasse ser reaplicada neste snapshot.
+
+Gate TTL: **PASS**.
+
+Não foi habilitado TTL no target apenas para cumprir o teste.
 
 ### H. Índices/configurações
 
@@ -324,7 +365,18 @@ Evidência pós-restore no target:
 - composite indexes: `Listed 0 items.`;
 - field indexes: somente o registro default `collectionGroups/__default__/fields/*`.
 
-Ainda deve ser feita a leitura equivalente no banco Warehouse de origem para registrar se o estado é coerente com a origem/snapshot. Nenhuma alteração será feita apenas para o teste.
+Comparação com a origem concluída:
+
+- composite indexes origem: `Listed 0 items.`;
+- composite indexes target: `Listed 0 items.`;
+- field indexes origem: apenas `collectionGroups/__default__/fields/*`;
+- field indexes target: apenas `collectionGroups/__default__/fields/*`.
+
+A configuração observável de índices é coerente entre origem e restore.
+
+Gate de índices/configuração: **PASS**.
+
+Nenhuma alteração foi feita apenas para o teste.
 
 ## 10. Comandos de verificação pós-restore
 
@@ -395,41 +447,41 @@ Justificativa:
 - nenhuma alteração de código Mobile;
 - nenhuma alteração de `next.config.ts`.
 
-## 14. Classificação atual do worker
-
-**HARDEN-B — PARCIAL / RESTORE REAL CONCLUÍDO COM SUCESSO**
-
-Motivo:
-
-- backups READY: comprovados;
-- `recovery:status = ready=true`: comprovado;
-- `recovery:verify = ready=true`: comprovado;
-- autorização explícita do restore: comprovada;
-- restore real isolado: **SUCCESSFUL**;
-- target isolado: criado e confirmado em `us-east1`;
-- source backup/snapshot: comprovados;
-- `sourceInfo.progress = COMPLETED`: comprovado;
-- TTL no target: 0 políticas, conforme esperado para configuração não incluída em backup;
-- composite indexes no target: 0;
-- field index config no target: default;
-- integridade de dados pós-restore: **pendente**;
-- IAM pós-restore: **pendente**;
-- release de Firebase Security Rules do target: **pendente de leitura**;
-- comparação TTL/índices com a origem: **pendente**.
-
-O restore em si passou. O `PASS TÉCNICO` permanece condicionado somente aos gates finais de integridade, isolamento/configuração e segurança.
-
-## 15. Gate final esperado
-
-Se a operação concluir sem erro e todos os gates pós-restore forem comprovados:
+## 14. Classificação final do worker
 
 **HARDEN-B — PASS TÉCNICO / APTO PARA RATIFICAÇÃO DO PROGRAM CONTROL**
 
-A ratificação formal:
+Fundamentos:
 
-**HARDEN-B — PASS**
+- backups READY nos dois bancos: **PASS**;
+- `recovery:status = ready=true`: **PASS**;
+- `recovery:verify = ready=true`: **PASS**;
+- autorização explícita do restore: **PASS**;
+- restore real isolado: **SUCCESSFUL / PASS**;
+- target Firestore Native em `us-east1`: **PASS**;
+- source backup/snapshot corretos: **PASS**;
+- `sourceInfo.progress = COMPLETED`: **PASS**;
+- integridade de dados: **13/13 coleções verificadas com contagens idênticas / PASS**;
+- isolamento: **PASS**;
+- IAM read-only: **PASS**;
+- TTL origem x restore: **0 x 0 / PASS**;
+- composite indexes origem x restore: **0 x 0 / PASS**;
+- field index config origem x restore: **default x default / PASS**;
+- Rules: procedimento de disaster recovery comprovado; leitura live do release retornou `403` em origem e target, registrada como **risco residual não bloqueante**;
+- produção alterada: **NÃO**;
+- RC FROZEN alterado: **NÃO**.
 
-permanece responsabilidade do Program Control após auditoria independente.
+A recuperabilidade real do Warehouse foi demonstrada por backup nativo READY, restore autorizado em database isolado, conclusão sem erro e verificação quantitativa de dados reais.
+
+## 15. Recomendação ao Program Control
+
+A recomendação formal deste worker é:
+
+**APTO PARA RATIFICAR HARDEN-B — PASS**
+
+A ratificação global permanece responsabilidade do Program Control após auditoria independente deste handoff.
+
+O risco residual de Rules não bloqueia a certificação de recuperabilidade, mas deve permanecer registrado no runbook: um banco restaurado não deve ser promovido a substituto operacional sem confirmação/aplicação explícita do ruleset correto.
 
 ## 16. Handoff final — campos obrigatórios
 
