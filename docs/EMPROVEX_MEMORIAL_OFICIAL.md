@@ -2629,6 +2629,24 @@ Cleanup:
 
 O cleanup não bloqueia o PASS.
 
+### 2026-10-05 — RC-P em PARCIAL por autorização Vercel
+
+Program Control auditou a frente RC-P.
+
+Estado:
+
+**RC-P — PARCIAL / BLOQUEIO EXTERNO DE AUTORIZAÇÃO VERCEL**
+
+A branch `rc-r1-p-preview` está exatamente em `54e60c2264588d8802a67a4cab3d875d64f6bfc1`, sem commits adicionais e sem delta.
+
+O projeto Vercel correto é `controles-de-empenhos-aprov`, no team `aprov-hgesms-projects`. A sessão disponível retornou HTTP 403 por não possuir autorização nesse escopo.
+
+O Preview anterior ao commit técnico congelado não é válido para MOBILE-J.
+
+Não há evidência de regressão do RC. Produção, Rules e RC FROZEN permanecem inalterados.
+
+Próxima ação: reautenticar no team Vercel correto e executar Preview não produtivo do SHA congelado; depois realizar smoke RC-P e entregar à MOBILE-J.
+
 # PARTE XI — DECISÕES PERMANENTES
 
 ## 35. Decisões que só podem mudar por decisão explícita
@@ -2930,7 +2948,7 @@ RC único SaaS+Mobile: RC CANDIDATE DECLARADO
 RC Candidate: DECLARADO — 54e60c2264588d8802a67a4cab3d875d64f6bfc1
 RC Frozen: DECLARADO — 54e60c2264588d8802a67a4cab3d875d64f6bfc1
 CT-01: PASS
-Preview HTTPS: AINDA NÃO PUBLICADO
+Preview HTTPS: RC-P PARCIAL — bloqueado por autorização Vercel no team aprov-hgesms-projects
 produção controlada: NÃO AUTORIZADA
 piloto real: NÃO INICIADO
 abertura comercial: NÃO AUTORIZADA
