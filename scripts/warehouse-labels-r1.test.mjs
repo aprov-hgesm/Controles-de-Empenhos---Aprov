@@ -162,6 +162,35 @@ test('layout compacto preserva identificação à esquerda e Code 128 dominante 
   assert.match(source, /5\.6,/);
 });
 
+test('preset compacto é padrão da UI e a prévia representa o layout lateral', () => {
+  const source = readFileSync(
+    resolve(root, 'features/warehouse/components/WarehouseLabelsR1.tsx'),
+    'utf8'
+  );
+
+  assert.match(
+    source,
+    /useState<WarehouseLabelSheetPreset>\('COMPACT'\)/,
+    'Tela de etiquetas deve iniciar no formato 140 × 35 mm'
+  );
+  assert.match(source, /grid-cols-\[43%_57%\]/);
+  assert.match(source, /CENTRAL DE DEPÓSITOS/);
+  assert.match(source, /previewLabel\?\.physicalBarcode/);
+});
+
+test('layout médio reserva uma faixa exclusiva para o Code 128', () => {
+  const source = readFileSync(
+    resolve(root, 'features/warehouse/pdf/warehouseLabelsPdf.ts'),
+    'utf8'
+  );
+
+  assert.match(
+    source,
+    /const barcodeHeight = compact \? 10\.2 : large \? 15\.5 : 7\.8/,
+    'Médio deve manter o barcode abaixo da hierarquia, sem sobreposição'
+  );
+});
+
 test('gerador produz PDF A4 não vazio para impressão monocromática', async () => {
   const items = labels.buildWarehouseLabelsForScope({
     depot,
