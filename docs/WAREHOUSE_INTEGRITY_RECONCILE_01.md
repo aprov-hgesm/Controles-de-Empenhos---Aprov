@@ -2,18 +2,20 @@
 
 ## Estado
 
-- Branch: \`warehouse-integrity-reconcile-01\`
-- Base congelada: \`9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0\`
+- Branch: `warehouse-integrity-reconcile-01`
+- Base congelada: `9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0`
 - Escopo: auditoria sistêmica read-only da integridade logística.
 - Dados reais: nenhuma escrita, migração, backfill, repair, cleanup, TTL ou índice.
 - Rules: não alteradas.
 - Produção: não alterada.
 
-Classificação desta execução:
+Classificação desta execução viva:
 
-**DIAGNOSTIC ACCESS REQUIRED — ferramenta read-only entregue; execução viva ainda necessária para fechar a matriz global de dados.**
+**BLOCKER — INCONSISTÊNCIAS SISTÊMICAS IMPEDEM RC**
 
-O RC permanece bloqueado pelas evidências já confirmadas antes desta frente: Inventário TOTAL incluindo \`UNASSIGNED\` e PAL-01 com 440 L físicos vs 540 L em lotes ativos.
+A auditoria autenticada do Firestore `emprovex-warehouse` foi executada em 2026-10-05T23:28:34.922Z, workspace `hgesm-aprov`, com 3.113 reads aproximados e nenhuma coleção atingindo o cap. Foram encontrados 2 blockers quantitativos de lote ativo acima do estoque físico e 3 ocorrências que exigem reconciliação. Nenhum dado foi escrito.
+
+O RC não pode avançar sem tratamento dos blockers de dados descritos neste documento. A correção runtime de Inventário TOTAL continua pertencendo à frente separada `INVENTORY-PHYSICAL-FIX-01`.
 
 ## Objetivo
 
@@ -231,41 +233,78 @@ A análise cruza:
 
 Saída sem lotId pode explicar lote stale, mas a ferramenta não atribui causalidade automaticamente.
 
-## Execução viva pendente
+## Execução viva — 2026-10-05
 
-O ambiente deste worker não possui \`gcloud\`, portanto não existe evidência fabricada de leitura real.
+Comando executado via PowerShell usando token temporário obtido por `gcloud auth print-access-token`. O transporte do auditor permaneceu exclusivamente HTTP GET.
 
-O caminho previsto pelo prompt foi seguido: ferramenta read-only + instrução exata.
+### Universo efetivamente lido
 
-### Cloud Shell
+- materiais: **56**
+- registros de saldo em posições físicas: **15**
+- registros `UNASSIGNED`: **55**
+- lotes: **12**
+- movimentos: **810**
+- inventários: **0**
+- itens de inventário: **0**
+- intakes: **917**
+- consumptions: **912**
+- outboundReturns: **1**
+- reads aproximados: **3.113**
+- coleções que atingiram cap: **nenhuma**
+- performance risks: **0**
 
-\`\`\`bash
-git fetch origin
-git switch warehouse-integrity-reconcile-01
-git pull --ff-only origin warehouse-integrity-reconcile-01
+Importante: os 55 registros `UNASSIGNED` não representam 55 saldos positivos. O auditor encontrou somente um `POSITIVE_UNASSIGNED`, com quantidade **5**, no material PAL-01 candidato.
 
-node scripts/warehouse-integrity-reconcile-readonly.mjs \
-  --project=gen-lang-client-0982077967 \
-  --database=emprovex-warehouse \
-  --workspace=hgesm-aprov \
-  --page-size=200 \
-  --max-docs-per-collection=5000 \
-  | tee warehouse-integrity-reconcile-live.txt
-\`\`\`
+### Materiais não canônicos
 
-A saída inclui:
+| Material | Aggregate | Físico ativo | UNASSIGNED | Lotes ativos | Ledger derivado | Resultado |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| `mat_272f2d996ee65ed3530ad2d7e27b66d7` | 445 | 440 | 5 | 540 | 445 | **INCONSISTENT** |
+| `mat_6feb0840ca4060f7d69fcce1663f21b8` | 90 | 90 | 0 | 100 | 90 | **INCONSISTENT** |
 
-- resumo global;
-- materiais não canônicos;
-- issues;
-- classificação final;
-- \`JSON_REPORT_BEGIN\` / \`JSON_REPORT_END\`.
+O primeiro é o candidato PAL-01 conhecido. O segundo revelou um blocker quantitativo adicional que não estava no caso conhecido inicial.
 
-Se houver 403/PERMISSION_DENIED:
+### Issues encontrados
 
-**DIAGNOSTIC ACCESS REQUIRED**
+1. `POSITIVE_UNASSIGNED` — material `mat_272f...`, quantidade 5 — **RECONCILIATION_REQUIRED**.
+2. `LOT_ATTRIBUTION_EXCEEDS_STOCK` — material `mat_272f...`, lotes 540 vs físico 440, diferença +100 — **INCONSISTENT / BLOCKER RC**.
+3. `LOT_ATTRIBUTION_EXCEEDS_STOCK` — material `mat_6feb...`, lotes 100 vs físico 90, diferença +10 — **INCONSISTENT / BLOCKER RC**.
+4. `APPARENT_DUPLICATE_ACTIVE_LOT` — material `mat_6feb...`, dois lotes ativos com mesmo código técnico de pending lot — **RECONCILIATION_REQUIRED**.
+5. `APPARENT_DUPLICATE_ACTIVE_LOT` — material `mat_bb6d...`, dois lotes ativos com mesmo código técnico de pending lot — **RECONCILIATION_REQUIRED**.
 
-Não alterar Rules para liberar a auditoria.
+No material `mat_bb6d...`, aggregate, físico, lotes ativos e ledger derivado permanecem todos em 100. Portanto a duplicidade aparente é sinal de reconciliação/normalização, mas **não é blocker quantitativo por si só na fotografia atual**.
+
+### O que está comprovado
+
+- PAL-01 foi detectado genericamente, sem ID hard-coded.
+- No PAL-01 candidato, `aggregateBalance=445`, `physicalActive=440`, `legacyUnassigned=5` e `movementDerivedBalance=445`. Portanto ledger e aggregate reconciliam, e a diferença aggregate vs físico é integralmente explicada pelo legado `UNASSIGNED=5`.
+- Ainda no PAL-01 candidato, `activeLotQuantity=540` excede o físico ativo em 100. A inconsistência está na atribuição quantitativa da camada de lotes.
+- No segundo blocker, aggregate, físico e ledger são todos 90, enquanto lotes ativos somam 100. A divergência também está concentrada na camada de lotes, +10.
+- Não houve saldo físico acima do aggregate, saldo negativo, posição órfã, intake v2 divergente, retorno órfão, inventário histórico inválido ou cap de auditoria reportado.
+- Não existem sessões de inventário no universo atual lido; portanto não há evidência de dado histórico de inventário para reparar nesta fotografia.
+
+### Causalidade: comprovado vs hipótese
+
+A auditoria **não prova ainda qual evento histórico criou os lotes excedentes**. Logo, não é correto atribuir automaticamente a causa a OUTBOUND, transferência, retorno ou inventário.
+
+Hipóteses a investigar em frente de repair/forensics, sem alterar esta branch:
+
+- lote pending técnico duplicado em reprocessamento/idempotência de intake;
+- lote não reduzido após OUTBOUND;
+- duplicação histórica de lot document apesar de aggregate/locationBalance corretos;
+- transição legada entre UNASSIGNED e localização física.
+
+A presença de duplicidade aparente com código `__EMPROVEX_PENDING_LOT__:INTAKE_*` em dois materiais aumenta a prioridade de revisar a origem/idempotência desses lotes, mas **não constitui prova causal isoladamente**.
+
+## Execução viva — procedimento reproduzível
+
+A execução viva já foi concluída e consolidada acima. Para reproduzir no Windows/PowerShell, obtenha um token temporário com o `gcloud` autenticado e exponha-o apenas na sessão atual como `WAREHOUSE_AUDIT_ACCESS_TOKEN`.
+
+No Cloud Shell, o script também pode obter o token via `gcloud`.
+
+A saída inclui resumo global, materiais não canônicos, issues, classificação final e o bloco `JSON_REPORT_BEGIN` / `JSON_REPORT_END`.
+
+Se houver 403/PERMISSION_DENIED: **DIAGNOSTIC ACCESS REQUIRED**. Não alterar Rules para liberar a auditoria.
 
 ## Testes da frente
 
@@ -305,17 +344,22 @@ Nenhuma linha autoriza repair nesta branch.
 
 ## Critério RC
 
-O RC não deve ser certificado enquanto:
+A auditoria viva global foi concluída. O RC **não pode avançar sem reparo de dados** porque existem dois blockers quantitativos reais:
 
-1. Inventário TOTAL ainda aceitar UNASSIGNED;
-2. a auditoria viva global não tiver sido executada;
-3. PAL-01 não tiver causa suficientemente demonstrada;
-4. inconsistências operacionais reais não tiverem owner de correção/repair;
-5. qualquer repair necessário não tiver backup e plano idempotente/reversível.
+1. `mat_272f2d996ee65ed3530ad2d7e27b66d7`: lotes ativos excedem estoque físico em **100**;
+2. `mat_6feb0840ca4060f7d69fcce1663f21b8`: lotes ativos excedem estoque físico em **10**.
 
-Classificação provisória:
+Além disso:
 
-**BLOCKER — INTEGRIDADE LOGÍSTICA AINDA NÃO LIBERADA PARA RC**.
+- o PAL-01 candidato mantém **5** em `UNASSIGNED`, que exige reconciliação controlada;
+- há duplicidade aparente de lote ativo em `mat_6feb...` e `mat_bb6d...`;
+- a causa histórica exata dos excessos de lote ainda deve ser comprovada antes de qualquer repair;
+- qualquer repair deve ter backup, plano idempotente/reversível e owner próprio;
+- a correção runtime de Inventário TOTAL continua separada nesta governança.
+
+Classificação final:
+
+**BLOCKER — INCONSISTÊNCIAS SISTÊMICAS IMPEDEM RC**.
 
 ## Performance
 
@@ -340,28 +384,28 @@ Referências vigentes informadas pelo Program Control:
 - Warehouse: \`6e1f1050005314db4e17cb3136409abbddb0ee91\`;
 - RULES-COMPAT-01: PASS.
 
-## Handoff após execução viva
+## Handoff final
 
-Retornar ao Coordenador:
+- branch: `warehouse-integrity-reconcile-01`;
+- base congelada: `9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0`;
+- execução viva: concluída;
+- reads aproximados: 3.113;
+- cap atingido: nenhum;
+- materiais: 56;
+- registros físicos: 15;
+- registros UNASSIGNED: 55, somente 1 positivo;
+- lotes: 12;
+- movimentos: 810;
+- inventários/itens: 0/0;
+- blockers quantitativos: 2 materiais;
+- reconciliações adicionais: POSITIVE_UNASSIGNED + 2 duplicidades aparentes;
+- PAL-01: detectado em `mat_272f2d996ee65ed3530ad2d7e27b66d7`;
+- causa estrutural comprovada: divergência localizada na camada de lotes, com aggregate/ledger coerentes nos dois blockers;
+- causa histórica específica: ainda não comprovada;
+- repair: obrigatório para os excessos de lote antes do RC, porém proibido nesta branch;
+- Rules: inalteradas;
+- produção: inalterada;
+- classificação final: **BLOCKER — INCONSISTÊNCIAS SISTÊMICAS IMPEDEM RC**.
 
-- branch e HEAD;
-- comando executado;
-- reads aproximados;
-- coleções que atingiram cap;
-- materiais;
-- posições físicas;
-- UNASSIGNED;
-- lotes;
-- movimentos;
-- inventários/itens;
-- inconsistências por código;
-- materiais/posições afetados;
-- PAL-01/materialId candidato;
-- causas comprovadas;
-- hipóteses;
-- blockers;
-- candidatos a repair;
-- exigência de decisão humana/backup;
-- classificação final.
+A próxima frente deve ser específica de forensics/repair de dados, com backup prévio, dry-run, idempotência, reversibilidade e aprovação humana. Esta auditoria não executa repair.
 
-Até essa leitura, nenhuma escrita em dados reais é autorizada.
