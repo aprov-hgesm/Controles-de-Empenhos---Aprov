@@ -36,6 +36,8 @@ import {
 import {
   buildWarehouseMobilePhysicalQueryItems,
   warehouseMobileCanonicalBalanceReadInput,
+  warehouseMobileCanonicalLotReadInput,
+  warehouseMobileCanonicalMaterialReadInput,
   warehouseMobilePhysicalQueryPlan,
   type WarehouseMobilePhysicalQueryItem,
 } from './mobilePhysicalQueryModel';
@@ -119,7 +121,7 @@ function parseMaterial(
   data: Record<string, unknown>
 ): WarehouseMaterial {
   const result = validateWarehouseMaterial(
-    { ...data, id },
+    warehouseMobileCanonicalMaterialReadInput(id, data),
     {
       expectedWorkspaceId: scope.workspaceId,
       expectedUg: scope.ug,
@@ -140,11 +142,7 @@ function parseLot(
   data: Record<string, unknown>
 ): WarehouseLot {
   const result = validateWarehouseLot(
-    {
-      ...data,
-      id,
-      expiresOn: data.expiresOn ?? null,
-    },
+    warehouseMobileCanonicalLotReadInput(id, data),
     {
       expectedWorkspaceId: scope.workspaceId,
       expectedUg: scope.ug,
