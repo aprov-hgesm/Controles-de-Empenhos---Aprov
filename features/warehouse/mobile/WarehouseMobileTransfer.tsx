@@ -235,8 +235,8 @@ export function WarehouseMobileTransfer() {
     <div className="space-y-5" data-testid="warehouse-mobile-transfer">
       <header className="rounded-3xl bg-[#00288e] p-5 text-white">
         <Link href="/central-mobile" className="inline-flex items-center gap-2 text-xs font-black text-blue-100"><ArrowLeft className="h-4 w-4" /> Central Móvel</Link>
-        <h1 className="mt-4 text-2xl font-black">Transferência móvel</h1>
-        <p className="mt-2 text-sm font-semibold text-blue-100">Origem → material → quantidade → destino → confirmação humana.</p>
+        <h1 className="mt-4 text-2xl font-black">Transferir material</h1>
+        <p className="mt-2 text-sm font-semibold text-blue-100">Movimento interno: origem física → material → quantidade → destino físico → confirmar transferência.</p>
       </header>
 
       {message && <div className={`rounded-2xl border p-4 text-xs font-bold ${success ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>{message}</div>}
