@@ -288,10 +288,16 @@ Registrar explicitamente:
 
 - Rules **não fazem parte do backup**;
 - Rules não devem ser inferidas como restauradas;
-- em um banco novo sem configuração anterior, clientes web/mobile ficam bloqueados por padrão segundo a documentação oficial;
+- Firebase Security Rules são gerenciadas separadamente para cada named database;
 - a configuração segura de Rules é etapa separada de disaster recovery.
 
-Não publicar Rules nesta frente.
+Evidência do repositório:
+
+- `firebase.json` associa `emprovex-warehouse` a `firestore.warehouse.rules`;
+- `firebase.json` não possui entrada para o target temporário `emprovex-restore-warehouse-2026-10-04`;
+- o source `firestore.warehouse.rules` define explicitamente o namespace `/warehouse/{workspaceId}` e suas coleções operacionais.
+
+Portanto, a existência dos dados restaurados **não prova** que o ruleset Warehouse está anexado ao target. O release ativo do target ainda deve ser lido pela API de Firebase Rules. Nenhum ruleset será publicado nesta frente.
 
 ### G. TTL
 
