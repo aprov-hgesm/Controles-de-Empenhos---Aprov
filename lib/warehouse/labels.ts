@@ -2,6 +2,7 @@ import type { WarehouseDepot, WarehouseLocation } from './location';
 import {
   encodeWarehouseCompactLocationBarcode,
   encodeWarehouseLocationBarcode,
+  tryEncodeWarehouseNumericLocationBarcode,
 } from './locationBarcode';
 
 export type WarehouseLabelKind = 'DEPOT' | 'LOCAL' | 'SUBPOSITION';
@@ -31,18 +32,20 @@ export interface WarehouseLabelLayoutPreset {
   perPage: number;
   gapMm: number;
   marginMm: number;
+  widthMm?: number;
 }
 
 export const WAREHOUSE_LABEL_PRESETS: Record<WarehouseLabelSheetPreset, WarehouseLabelLayoutPreset> = {
   COMPACT: {
     id: 'COMPACT',
     label: 'Compacta',
-    description: '16 por folha · até 3,5 cm de altura · prateleiras e nichos',
-    columns: 2,
+    description: '8 por folha · 14 × 3,25 cm · prateleiras e nichos',
+    columns: 1,
     rows: 8,
-    perPage: 16,
+    perPage: 8,
     gapMm: 3,
     marginMm: 8,
+    widthMm: 140,
   },
   MEDIUM: {
     id: 'MEDIUM',
@@ -85,7 +88,10 @@ export function buildDepotLabel(depot: WarehouseDepot): WarehouseLabelItem {
     hierarchy: [depot.name],
     workspaceId: depot.workspaceId,
     ug: depot.ug,
-    physicalBarcode: encodeWarehouseCompactLocationBarcode({
+    physicalBarcode: tryEncodeWarehouseNumericLocationBarcode({
+      kind: 'DEPOT',
+      depotCode: depot.code,
+    }) ?? encodeWarehouseCompactLocationBarcode({
       kind: 'DEPOT',
       depotCode: depot.code,
     }),
@@ -110,7 +116,11 @@ export function buildLocationLabel(
       hierarchy: [depot.name, location.name],
       workspaceId: location.workspaceId,
       ug: location.ug,
-      physicalBarcode: encodeWarehouseCompactLocationBarcode({
+      physicalBarcode: tryEncodeWarehouseNumericLocationBarcode({
+        kind: 'LOCAL',
+        depotCode: depot.code,
+        locationCode: location.code,
+      }) ?? encodeWarehouseCompactLocationBarcode({
         kind: 'LOCAL',
         depotCode: depot.code,
         locationCode: location.code,
@@ -138,12 +148,19 @@ export function buildLocationLabel(
     workspaceId: location.workspaceId,
     ug: location.ug,
     physicalBarcode: parent
-      ? encodeWarehouseCompactLocationBarcode({
-          kind: 'SUBPOSITION',
-          depotCode: depot.code,
-          parentCode: parent.code,
-          locationCode: location.code,
-        })
+      ? (
+          tryEncodeWarehouseNumericLocationBarcode({
+            kind: 'SUBPOSITION',
+            depotCode: depot.code,
+            parentCode: parent.code,
+            locationCode: location.code,
+          }) ?? encodeWarehouseCompactLocationBarcode({
+            kind: 'SUBPOSITION',
+            depotCode: depot.code,
+            parentCode: parent.code,
+            locationCode: location.code,
+          })
+        )
       : encodeWarehouseLocationBarcode({
           kind: 'SUBPOSITION',
           entityId: location.id,
