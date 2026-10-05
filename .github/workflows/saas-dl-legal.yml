@@ -65,5 +65,9 @@ jobs:
       - name: Diff hygiene
         shell: bash
         run: |
-          git fetch origin "${{ github.base_ref }}" --depth=1
-          git diff --check "origin/${{ github.base_ref }}...HEAD"
+          git fetch origin \
+            "+refs/heads/$GITHUB_BASE_REF:refs/remotes/origin/$GITHUB_BASE_REF" \
+            "+refs/heads/$GITHUB_HEAD_REF:refs/remotes/origin/$GITHUB_HEAD_REF" \
+            --depth=256
+          merge_base="$(git merge-base "origin/$GITHUB_BASE_REF" HEAD)"
+          git diff --check "$merge_base"..HEAD
