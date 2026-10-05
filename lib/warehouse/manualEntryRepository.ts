@@ -1,20 +1,41 @@
 'use client';
 
-import { auth } from '../firebase';
+import {
+  doc,
+  runTransaction,
+  serverTimestamp,
+} from 'firebase/firestore';
+
+import { auth, warehouseDb as db } from '../firebase';
 import { getCurrentOperationalScope } from '../operationalPaths';
 import { normalizeWorkspaceId } from '../platformIdentity';
 import { saveWarehouseBarcodeAssociation } from './barcodeRepository';
 import { warehouseUnitFromOperationalLabel } from './invoiceIntegration';
 import {
-  transferWarehouseStock,
+  getWarehouseDepot,
+  getWarehouseLocation,
   type TransferWarehouseStockResult,
 } from './locationRepository';
 import {
+  applyWarehouseLocationDelta,
+  createWarehouseLocationBalanceId,
+  validateWarehouseLocationBalance,
   validateWarehouseStockPosition,
   warehouseStockPositionKey,
+  type WarehouseLocationBalance,
   type WarehouseStockPosition,
 } from './location';
-import { applyWarehouseMovement, type ApplyWarehouseMovementResult } from './ledgerRepository';
+import type { ApplyWarehouseMovementResult } from './ledgerRepository';
+import {
+  applyWarehouseMovementToBalance,
+  createWarehouseMovementId,
+  validateWarehouseBalance,
+  validateWarehouseMovement,
+  warehouseMovementMatchesReplay,
+  WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
+  type WarehouseBalance,
+  type WarehouseMovement,
+} from './movement';
 import {
   createWarehousePendingLotCode,
   normalizeWarehouseExpiryDate,
@@ -29,6 +50,7 @@ import {
   getWarehouseMaterial,
   saveWarehouseMaterial,
 } from './materialRepository';
+import { warehouseDocumentPath } from './namespace';
 
 export interface RegisterWarehouseManualEntryInput {
   operationId: string;
@@ -39,11 +61,6 @@ export interface RegisterWarehouseManualEntryInput {
   provenance: string;
   reference?: string | null;
   position: WarehouseStockPosition;
-  /**
-   * Uso interno: permite registrar a entrada diretamente em UNASSIGNED.
-   * A interface normal de Entrada Avulsa não habilita esta opção.
-   */
-  allowUnassignedPosition?: boolean;
   expiresOn?: string | null;
   barcode?: string | null;
 }
@@ -51,7 +68,12 @@ export interface RegisterWarehouseManualEntryInput {
 export interface RegisterWarehouseManualEntryResult {
   material: WarehouseMaterial;
   entry: ApplyWarehouseMovementResult;
+  /**
+   * Compatibilidade de retorno. Entradas novas já nascem localizadas e,
+   * portanto, não executam TRANSFER após a entrada.
+   */
   transfer: TransferWarehouseStockResult | null;
+  locationBalance: WarehouseLocationBalance;
   validity: WarehouseLot | null;
   barcodeLinked: boolean;
   warnings: string[];
@@ -168,6 +190,291 @@ async function ensureMaterial(
   return saved;
 }
 
+function parseManualEntryMovement(
+  workspaceId: string,
+  movementId: string,
+  data: Record<string, unknown>
+): WarehouseMovement {
+  const result = validateWarehouseMovement(
+    {
+      schemaVersion: data.schemaVersion,
+      id: movementId,
+      workspaceId: data.workspaceId,
+      ug: data.ug,
+      materialId: data.materialId,
+      type: data.type,
+      quantityDelta: data.quantityDelta,
+      idempotencyKeyHash: data.idempotencyKeyHash,
+      reversesMovementId: data.reversesMovementId ?? null,
+      note: data.note ?? null,
+      source: data.source ?? null,
+    },
+    { expectedWorkspaceId: workspaceId }
+  );
+  if (!result.ok) throw new Error('WAREHOUSE_MANUAL_ENTRY_MOVEMENT_INVALID');
+  return result.data;
+}
+
+function parseManualEntryBalance(
+  workspaceId: string,
+  materialId: string,
+  data: Record<string, unknown>
+): WarehouseBalance {
+  const result = validateWarehouseBalance(
+    {
+      schemaVersion: data.schemaVersion,
+      workspaceId: data.workspaceId,
+      ug: data.ug,
+      materialId: data.materialId,
+      quantity: data.quantity,
+      revision: data.revision,
+      lastMovementId: data.lastMovementId,
+    },
+    { expectedWorkspaceId: workspaceId, expectedMaterialId: materialId }
+  );
+  if (!result.ok) throw new Error('WAREHOUSE_MANUAL_ENTRY_BALANCE_INVALID');
+  return result.data;
+}
+
+function parseManualEntryLocationBalance(
+  workspaceId: string,
+  materialId: string,
+  id: string,
+  data: Record<string, unknown>
+): WarehouseLocationBalance {
+  const result = validateWarehouseLocationBalance(
+    {
+      schemaVersion: data.schemaVersion,
+      id,
+      workspaceId: data.workspaceId,
+      ug: data.ug,
+      materialId: data.materialId,
+      position: data.position,
+      quantity: data.quantity,
+      revision: data.revision,
+      lastMovementId: data.lastMovementId,
+    },
+    { expectedWorkspaceId: workspaceId, expectedMaterialId: materialId }
+  );
+  if (!result.ok) {
+    throw new Error('WAREHOUSE_MANUAL_ENTRY_LOCATION_BALANCE_INVALID');
+  }
+  return result.data;
+}
+
+async function assertManualEntryPositionActive(
+  workspaceId: string,
+  position: Exclude<WarehouseStockPosition, { kind: 'UNASSIGNED' }>
+): Promise<void> {
+  const [depotItem, locationItem] = await Promise.all([
+    getWarehouseDepot(workspaceId, position.depotId),
+    getWarehouseLocation(workspaceId, position.locationId),
+  ]);
+  const depot = depotItem?.depot || null;
+  const location = locationItem?.location || null;
+  if (
+    !depot
+    || depot.status !== 'active'
+    || !location
+    || location.status !== 'active'
+    || location.kind !== 'LOCAL'
+    || location.depotId !== depot.id
+  ) {
+    throw new Error('WAREHOUSE_MANUAL_ENTRY_POSITION_REQUIRED');
+  }
+
+  if (position.kind === 'SUBPOSITION') {
+    const subpositionItem = await getWarehouseLocation(
+      workspaceId,
+      position.subpositionId
+    );
+    const subposition = subpositionItem?.location || null;
+    if (
+      !subposition
+      || subposition.status !== 'active'
+      || subposition.kind !== 'SUBPOSITION'
+      || subposition.depotId !== depot.id
+      || subposition.parentLocationId !== location.id
+    ) {
+      throw new Error('WAREHOUSE_MANUAL_ENTRY_POSITION_REQUIRED');
+    }
+  }
+}
+
+async function applyWarehouseManualLocatedEntry(input: {
+  scope: { workspaceId: string; ug: string; uid: string };
+  material: WarehouseMaterial;
+  position: Exclude<WarehouseStockPosition, { kind: 'UNASSIGNED' }>;
+  quantity: number;
+  operationId: string;
+  provenance: string;
+  reference: string | null;
+}): Promise<{
+  entry: ApplyWarehouseMovementResult;
+  locationBalance: WarehouseLocationBalance;
+}> {
+  const positionKey = warehouseStockPositionKey(input.position);
+  const positionToken = (await stableHex(positionKey)).slice(0, 16);
+  const movementId = await createWarehouseMovementId(
+    input.scope.workspaceId,
+    ['manual-entry', input.operationId, 'ledger'].join(':')
+  );
+  const idempotencyKeyHash = movementId.slice('mov_'.length);
+  const locationBalanceId = await createWarehouseLocationBalanceId(
+    input.scope.workspaceId,
+    input.material.id,
+    input.position
+  );
+
+  const movementPath = warehouseDocumentPath(
+    input.scope.workspaceId,
+    'movements',
+    movementId
+  );
+  const balancePath = warehouseDocumentPath(
+    input.scope.workspaceId,
+    'balances',
+    input.material.id
+  );
+  const locationBalancePath = warehouseDocumentPath(
+    input.scope.workspaceId,
+    'locationBalances',
+    locationBalanceId
+  );
+
+  const candidateResult = validateWarehouseMovement(
+    {
+      schemaVersion: WAREHOUSE_MOVEMENT_SCHEMA_VERSION,
+      id: movementId,
+      workspaceId: input.scope.workspaceId,
+      ug: input.scope.ug,
+      materialId: input.material.id,
+      type: 'MANUAL_ENTRY',
+      quantityDelta: input.quantity,
+      idempotencyKeyHash,
+      reversesMovementId: null,
+      note: [
+        'Entrada avulsa',
+        input.provenance,
+        'posição ' + positionToken,
+      ].join(' · '),
+      source: {
+        kind: 'MANUAL_ENTRY',
+        actorUid: input.scope.uid,
+        provenance: input.provenance,
+        reference: input.reference,
+      },
+    },
+    {
+      expectedWorkspaceId: input.scope.workspaceId,
+      expectedUg: input.scope.ug,
+      expectedMaterialId: input.material.id,
+    }
+  );
+  if (!candidateResult.ok) {
+    throw new Error('WAREHOUSE_MANUAL_ENTRY_MOVEMENT_INVALID');
+  }
+  const candidate = candidateResult.data;
+
+  return runTransaction(db, async (transaction) => {
+    const movementRef = doc(db, movementPath);
+    const balanceRef = doc(db, balancePath);
+    const locationBalanceRef = doc(db, locationBalancePath);
+    const [movementSnapshot, balanceSnapshot, locationBalanceSnapshot] =
+      await Promise.all([
+        transaction.get(movementRef),
+        transaction.get(balanceRef),
+        transaction.get(locationBalanceRef),
+      ]);
+
+    const currentBalance = balanceSnapshot.exists()
+      ? parseManualEntryBalance(
+          input.scope.workspaceId,
+          input.material.id,
+          balanceSnapshot.data() as Record<string, unknown>
+        )
+      : null;
+    const currentLocationBalance = locationBalanceSnapshot.exists()
+      ? parseManualEntryLocationBalance(
+          input.scope.workspaceId,
+          input.material.id,
+          locationBalanceId,
+          locationBalanceSnapshot.data() as Record<string, unknown>
+        )
+      : null;
+
+    if (movementSnapshot.exists()) {
+      const existing = parseManualEntryMovement(
+        input.scope.workspaceId,
+        movementSnapshot.id,
+        movementSnapshot.data() as Record<string, unknown>
+      );
+      if (!warehouseMovementMatchesReplay(existing, candidate)) {
+        throw new Error('WAREHOUSE_IDEMPOTENCY_CONFLICT');
+      }
+      if (!currentBalance || !currentLocationBalance) {
+        throw new Error('WAREHOUSE_MANUAL_ENTRY_PROJECTION_INCONSISTENT');
+      }
+      return {
+        entry: {
+          applied: false,
+          movement: existing,
+          balance: currentBalance,
+        },
+        locationBalance: currentLocationBalance,
+      };
+    }
+
+    if (currentLocationBalance) {
+      const currentPositionKey = warehouseStockPositionKey(
+        currentLocationBalance.position
+      );
+      if (currentPositionKey !== positionKey) {
+        throw new Error('WAREHOUSE_MANUAL_ENTRY_POSITION_CONFLICT');
+      }
+    }
+
+    const nextBalance = applyWarehouseMovementToBalance(
+      candidate,
+      currentBalance
+    );
+    const nextLocationBalance = applyWarehouseLocationDelta(
+      currentLocationBalance,
+      {
+        id: locationBalanceId,
+        workspaceId: input.scope.workspaceId,
+        ug: input.scope.ug,
+        materialId: input.material.id,
+        position: input.position,
+        quantityDelta: input.quantity,
+        movementId,
+      }
+    );
+
+    transaction.set(movementRef, {
+      ...candidate,
+      createdAt: serverTimestamp(),
+    });
+    transaction.set(balanceRef, {
+      ...nextBalance,
+      updatedAt: serverTimestamp(),
+    });
+    transaction.set(locationBalanceRef, {
+      ...nextLocationBalance,
+      updatedAt: serverTimestamp(),
+    });
+
+    return {
+      entry: {
+        applied: true,
+        movement: candidate,
+        balance: nextBalance,
+      },
+      locationBalance: nextLocationBalance,
+    };
+  });
+}
+
 export async function registerWarehouseManualEntry(
   workspaceId: string,
   input: RegisterWarehouseManualEntryInput
@@ -189,12 +496,10 @@ export async function registerWarehouseManualEntry(
   }
 
   const position = validateWarehouseStockPosition(input.position);
-  if (
-    !position
-    || (position.kind === 'UNASSIGNED' && !input.allowUnassignedPosition)
-  ) {
+  if (!position || position.kind === 'UNASSIGNED') {
     throw new Error('WAREHOUSE_MANUAL_ENTRY_POSITION_REQUIRED');
   }
+  await assertManualEntryPositionActive(scope.workspaceId, position);
 
   const normalizedExpiry = normalizeWarehouseExpiryDate(input.expiresOn ?? null);
   if (normalizedExpiry === undefined) {
@@ -203,30 +508,17 @@ export async function registerWarehouseManualEntry(
 
   const material = await ensureMaterial(scope, input, operationId);
 
-  const entry = await applyWarehouseMovement(scope.workspaceId, {
-    materialId: material.id,
-    type: 'MANUAL_ENTRY',
-    quantityDelta: quantity,
-    idempotencyKey: ['manual-entry', operationId, 'ledger'].join(':'),
-    note: 'Entrada avulsa · ' + provenance,
-    source: {
-      kind: 'MANUAL_ENTRY',
-      actorUid: scope.uid,
-      provenance,
-      reference,
-    },
+  const locatedEntry = await applyWarehouseManualLocatedEntry({
+    scope,
+    material,
+    position,
+    quantity,
+    operationId,
+    provenance,
+    reference,
   });
-
-  const transfer = position.kind === 'UNASSIGNED'
-    ? null
-    : await transferWarehouseStock(scope.workspaceId, {
-        materialId: material.id,
-        quantity,
-        from: { kind: 'UNASSIGNED' },
-        to: position,
-        idempotencyKey: ['manual-entry', operationId, 'position'].join(':'),
-        note: 'Posicionamento da entrada avulsa',
-      });
+  const entry = locatedEntry.entry;
+  const transfer = null;
 
   const warnings: string[] = [];
   let validity: WarehouseLot | null = null;
@@ -283,6 +575,7 @@ export async function registerWarehouseManualEntry(
     material,
     entry,
     transfer,
+    locationBalance: locatedEntry.locationBalance,
     validity,
     barcodeLinked,
     warnings,

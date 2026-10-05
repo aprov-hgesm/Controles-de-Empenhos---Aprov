@@ -109,8 +109,10 @@ const operations = new Map([
   ]],
   ['features/warehouse/mobile/WarehouseMobileOutbound.tsx', [
     'WarehouseMobileScanner',
-    'applyWarehouseExpressOutbound',
-    'createWarehouseOutboundIdempotencyKey',
+    'finalizeWarehouseMaterialWithdrawal',
+    'createWarehouseWithdrawalId',
+    'listWarehouseDestinationsCached',
+    'createWarehouseDestination',
   ]],
   ['features/warehouse/mobile/WarehouseMobilePositionCheck.tsx', [
     'WarehouseMobileScanner',
@@ -189,8 +191,18 @@ assert.match(
 );
 assert.match(
   itemQuery,
+  /Reconciliação necessária:/,
+  'Consultar Item deve classificar UNASSIGNED legado como reconciliação, não estoque'
+);
+assert.match(
+  itemQuery,
+  /Estoque físico localizado:/,
+  'Consultar Item deve apresentar disponibilidade física somente de posições válidas'
+);
+assert.doesNotMatch(
+  itemQuery,
   /Saldo sem localização:/,
-  'Consultar Item deve distinguir UNASSIGNED de divergência real'
+  'UNASSIGNED não pode ser apresentado como categoria operacional normal'
 );
 assert.match(
   itemQuery,

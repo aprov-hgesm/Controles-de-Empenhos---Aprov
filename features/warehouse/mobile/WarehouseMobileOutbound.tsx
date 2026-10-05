@@ -34,9 +34,15 @@ import {
 } from '../../../lib/warehouse/mobileOutboundRepository';
 import type { WarehouseMobileScanEvent } from '../../../lib/warehouse/mobileScanner';
 import {
-  applyWarehouseExpressOutbound,
-  createWarehouseOutboundIdempotencyKey,
-} from '../../../lib/warehouse/outboundRepository';
+  createWarehouseWithdrawalId,
+  createWarehouseWithdrawalLineId,
+  type WarehouseDestinationListItem,
+} from '../../../lib/warehouse/withdrawal';
+import {
+  createWarehouseDestination,
+  finalizeWarehouseMaterialWithdrawal,
+  listWarehouseDestinationsCached,
+} from '../../../lib/warehouse/withdrawalRepository';
 import { useWarehouseWorkspaceContext } from '../components/WarehouseModuleContext';
 import { WarehouseMobileScanner } from './WarehouseMobileScanner';
 
@@ -57,14 +63,16 @@ type PositionSelection = {
 };
 
 type ReviewState = {
-  idempotencyKey: string;
+  withdrawalId: string;
+  lineId: string;
   lotId: string | null;
   planBaseQuantity: number;
 };
 
 type SuccessState = {
   applied: boolean;
-  movementId: string;
+  withdrawalId: string;
+  movementId: string | null;
   aggregateQuantity: number;
   locationQuantity: number;
   lotQuantity: number | null;
@@ -99,7 +107,7 @@ function resolvedPositionLabel(value: ResolvedPosition) {
       + ' · '
       + (value.location?.code || value.position.subpositionId);
   }
-  return 'Sem localização';
+  return 'Posição não física';
 }
 
 function expiryLabel(expiresOn: string | null) {
@@ -187,8 +195,17 @@ function confirmationError(error: unknown) {
   ) {
     return 'O lote mudou e não atende mais à saída preparada. A saída não foi aplicada.';
   }
-  if (raw.includes('WAREHOUSE_IDEMPOTENCY_CONFLICT')) {
-    return 'Conflito de idempotência: a chave já representa outra solicitação. Recomece a jornada.';
+  if (raw.includes('WAREHOUSE_DESTINATION_NOT_FOUND')) {
+    return 'O destino cadastrado não existe mais. Selecione outro destino.';
+  }
+  if (raw.includes('WAREHOUSE_DESTINATION_INACTIVE')) {
+    return 'O destino ficou inativo antes da confirmação. A saída não foi aplicada.';
+  }
+  if (
+    raw.includes('WAREHOUSE_IDEMPOTENCY_CONFLICT')
+    || raw.includes('WAREHOUSE_WITHDRAWAL_IDEMPOTENCY_CONFLICT')
+  ) {
+    return 'Conflito de idempotência: a identidade da retirada já representa outra solicitação. Recomece a jornada.';
   }
   if (raw.startsWith('POSITION:')) return positionResolutionError(raw.slice(9));
   if (raw.includes('POSITION_CHANGED')) {
@@ -203,7 +220,10 @@ function confirmationError(error: unknown) {
 export function WarehouseMobileOutbound() {
   const workspace = useWarehouseWorkspaceContext();
   const requestRef = useRef(0);
-  const [destination, setDestination] = useState('');
+  const [destinations, setDestinations] = useState<WarehouseDestinationListItem[]>([]);
+  const [destinationsLoaded, setDestinationsLoaded] = useState(false);
+  const [destinationId, setDestinationId] = useState('');
+  const [newDestinationName, setNewDestinationName] = useState('');
   const [pickedBy, setPickedBy] = useState('');
   const [partyReady, setPartyReady] = useState(false);
   const [product, setProduct] = useState<ProductState | null>(null);
@@ -220,7 +240,8 @@ export function WarehouseMobileOutbound() {
 
   const reset = useCallback(() => {
     requestRef.current += 1;
-    setDestination('');
+    setDestinationId('');
+    setNewDestinationName('');
     setPickedBy('');
     setPartyReady(false);
     setProduct(null);
@@ -245,14 +266,52 @@ export function WarehouseMobileOutbound() {
     return result.value;
   }, [workspace.ug, workspace.workspaceId]);
 
-  const confirmWithdrawalParty = () => {
-    const normalizedDestination = destination.trim();
-    const normalizedPickedBy = pickedBy.trim();
-    if (normalizedDestination.length < 2 || normalizedPickedBy.length < 2) {
-      setMessage('Informe destino da retirada e retirado por antes de confirmar a saída.');
+  const loadDestinations = useCallback(async () => {
+    if (destinationsLoaded) return;
+    const loaded = await listWarehouseDestinationsCached(
+      workspace.workspaceId,
+      250
+    );
+    setDestinations(loaded);
+    setDestinationsLoaded(true);
+  }, [destinationsLoaded, workspace.workspaceId]);
+
+  const createDestination = useCallback(async () => {
+    const name = newDestinationName.trim();
+    if (name.length < 2) {
+      setMessage('Informe um nome válido para o novo destino.');
       return;
     }
-    setDestination(normalizedDestination);
+    setWorking(true);
+    setMessage(null);
+    try {
+      const destination = await createWarehouseDestination(
+        workspace.workspaceId,
+        { name }
+      );
+      setDestinations((current) => [
+        ...current,
+        { destination, createdAt: null, updatedAt: null },
+      ].sort((left, right) =>
+        left.destination.name.localeCompare(right.destination.name, 'pt-BR')
+      ));
+      setDestinationId(destination.id);
+      setNewDestinationName('');
+      setDestinationsLoaded(true);
+      setMessage('Destino cadastrado e selecionado.');
+    } catch (error) {
+      setMessage(confirmationError(error));
+    } finally {
+      setWorking(false);
+    }
+  }, [newDestinationName, workspace.workspaceId]);
+
+  const confirmWithdrawalParty = () => {
+    const normalizedPickedBy = pickedBy.trim();
+    if (!destinationId || normalizedPickedBy.length < 2) {
+      setMessage('Selecione o destino da retirada e informe retirado por.');
+      return;
+    }
     setPickedBy(normalizedPickedBy);
     setPartyReady(true);
     setMessage(null);
@@ -266,7 +325,8 @@ export function WarehouseMobileOutbound() {
     setPosition(null);
     setScannedPosition(null);
     setReview(null);
-    setDestination('');
+    setDestinationId('');
+    setNewDestinationName('');
     setPickedBy('');
     setPartyReady(false);
     setSuccess(null);
@@ -407,11 +467,15 @@ export function WarehouseMobileOutbound() {
         lot,
       });
       setReview({
-        idempotencyKey: createWarehouseOutboundIdempotencyKey(),
+        withdrawalId: createWarehouseWithdrawalId(),
+        lineId: createWarehouseWithdrawalLineId(),
         lotId: lot?.id || null,
         planBaseQuantity: plan.baseQuantity,
       });
+      setDestinationId('');
+      setPartyReady(false);
       setMessage(null);
+      void loadDestinations();
     } catch (error) {
       setMessage(preparationError(error));
     }
@@ -452,36 +516,66 @@ export function WarehouseMobileOutbound() {
         throw new Error('PRODUCT_CHANGED');
       }
 
-      const note =
-        'Central Móvel R1 | Destino: '
-        + destination
-        + ' | Retirado por: '
-        + pickedBy;
+      if (!destinationId) {
+        throw new Error('WAREHOUSE_DESTINATION_NOT_FOUND');
+      }
+      const selectedLot = position.option.lots.find(
+        (lot) => lot.id === review.lotId
+      ) || null;
 
-      const result = await applyWarehouseExpressOutbound(
+      const result = await finalizeWarehouseMaterialWithdrawal(
         workspace.workspaceId,
         {
-          materialId: product.association.materialId,
-          requestedQuantity: preparation.requestedQuantity,
-          presentation: freshAssociation.presentation,
-          position: freshPosition.position,
-          barcodeAssociation: freshAssociation,
-          lotId: review.lotId,
-          idempotencyKey: review.idempotencyKey,
-          note,
+          withdrawalId: review.withdrawalId,
+          destinationId,
+          withdrawnBy: pickedBy,
+          lines: [{
+            lineId: review.lineId,
+            materialId: product.association.materialId,
+            materialDescription: product.availability.material.description,
+            requestedQuantity: preparation.requestedQuantity,
+            presentation: freshAssociation.presentation,
+            presentationLabel: unitLabel(
+              freshAssociation.presentation.code,
+              freshAssociation.presentation.label
+            ),
+            baseQuantity: review.planBaseQuantity,
+            unitLabel: unitLabel(
+              product.availability.material.unit.code,
+              product.availability.material.unit.label
+            ),
+            position: freshPosition.position,
+            positionLabel: position.label,
+            barcodeAssociation: freshAssociation,
+            barcode: product.barcode,
+            lotId: review.lotId,
+            lotCode: selectedLot?.code || null,
+          }],
         }
       );
 
+      const refreshed = await loadWarehouseMobileOutboundAvailability(
+        workspace.workspaceId,
+        product.association.materialId
+      );
+      const refreshedLocation = refreshed.locationBalances.find(
+        (item) => warehouseStockPositionKey(item.position) === position.option.key
+      );
+      const refreshedLot = review.lotId
+        ? refreshed.lots.find((lot) => lot.id === review.lotId)
+        : null;
+
       setSuccess({
-        applied: result.applied,
-        movementId: result.movement.id,
-        aggregateQuantity: result.balance.quantity,
-        locationQuantity: result.locationBalance.quantity,
-        lotQuantity: result.lot?.quantity ?? null,
+        applied: result.movementIds.length > 0,
+        withdrawalId: result.withdrawal.id,
+        movementId: result.movementIds[0] || null,
+        aggregateQuantity: refreshed.balance.quantity,
+        locationQuantity: refreshedLocation?.quantity || 0,
+        lotQuantity: review.lotId ? refreshedLot?.quantity || 0 : null,
       });
       setMessage(
-        result.applied
-          ? 'Saída confirmada pelo ledger oficial.'
+        result.movementIds.length > 0
+          ? 'Saída confirmada pelo fluxo canônico de retirada e consumo.'
           : 'Replay idempotente confirmado: nenhuma segunda baixa foi criada.'
       );
     } catch (error) {
@@ -490,7 +584,7 @@ export function WarehouseMobileOutbound() {
       setWorking(false);
     }
   }, [
-    destination,
+    destinationId,
     partyReady,
     pickedBy,
     position,
@@ -507,6 +601,13 @@ export function WarehouseMobileOutbound() {
     : null;
   const selectedLots =
     position?.option.lots.filter((lot) => lot.quantity > 0) || [];
+  const activeDestinations = destinations.filter(
+    (item) => item.destination.status === 'active'
+  );
+  const selectedDestinationName =
+    activeDestinations.find(
+      (item) => item.destination.id === destinationId
+    )?.destination.name || '';
 
   return (
     <div className="space-y-5" data-testid="warehouse-mobile-outbound">
@@ -739,17 +840,47 @@ export function WarehouseMobileOutbound() {
           <p className="rounded-2xl bg-blue-50 p-3 text-xs font-bold leading-5 text-blue-900">
             Estes dados identificam para onde o material saiu e quem realizou a retirada. Não representam outro local de estoque.
           </p>
-          <input
-            value={destination}
+          <select
+            value={destinationId}
+            onFocus={() => void loadDestinations()}
             onChange={(event) => {
-              setDestination(event.target.value);
+              setDestinationId(event.target.value);
               setMessage(null);
             }}
-            maxLength={72}
             className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold"
-            placeholder="Destino da retirada"
             data-testid="warehouse-mobile-outbound-destination"
-          />
+          >
+            <option value="">
+              {destinationsLoaded ? 'Selecione o destino' : 'Carregando destinos…'}
+            </option>
+            {activeDestinations.map(({ destination }) => (
+              <option key={destination.id} value={destination.id}>
+                {destination.name}
+              </option>
+            ))}
+          </select>
+          <div className="flex gap-2">
+            <input
+              value={newDestinationName}
+              onChange={(event) => {
+                setNewDestinationName(event.target.value);
+                setMessage(null);
+              }}
+              maxLength={120}
+              className="h-12 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold"
+              placeholder="Novo destino"
+              data-testid="warehouse-mobile-outbound-new-destination"
+            />
+            <button
+              type="button"
+              onClick={() => void createDestination()}
+              disabled={working || newDestinationName.trim().length < 2}
+              className="h-12 rounded-2xl border border-[#00288e] px-4 text-xs font-black text-[#00288e] disabled:opacity-40"
+              data-testid="warehouse-mobile-outbound-create-destination"
+            >
+              Cadastrar
+            </button>
+          </div>
           <input
             value={pickedBy}
             onChange={(event) => {
@@ -768,7 +899,7 @@ export function WarehouseMobileOutbound() {
       {review && partyReady && (
         <Card
           title="Destino da retirada"
-          value={destination}
+          value={selectedDestinationName || 'Destino não identificado'}
           detail={'Retirado por: ' + pickedBy}
         />
       )}
@@ -784,7 +915,7 @@ export function WarehouseMobileOutbound() {
               Nenhuma baixa foi executada até aqui
             </p>
             <dl className="mt-4 space-y-2 text-xs">
-              <Row label="Destino" value={destination} />
+              <Row label="Destino" value={selectedDestinationName || 'Destino não identificado'} />
               <Row label="Retirado por" value={pickedBy} />
               <Row label="Material" value={product.availability.material.description} />
               <Row
@@ -878,7 +1009,8 @@ export function WarehouseMobileOutbound() {
               : ''}
           </p>
           <p className="mt-2 break-all font-mono text-[9px] text-emerald-700">
-            {success.movementId}
+            {success.withdrawalId}
+            {success.movementId ? ' · ' + success.movementId : ''}
           </p>
           <Primary onClick={reset}>Nova saída</Primary>
         </section>
@@ -893,7 +1025,7 @@ export function WarehouseMobileOutbound() {
 
       <p className="flex items-start gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-[11px] font-semibold text-slate-500">
         <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-        Saída reduz o saldo da origem confirmada e nunca transfere material para outra posição física. A baixa ocorre somente em CONFIRMAR SAÍDA pelo OUTBOUND canônico e transacional.
+        Saída reduz somente estoque físico localizado e nunca transfere material para outra posição. A confirmação reutiliza o fluxo canônico de retirada/consumo da Central, com OUTBOUND transacional e replay idempotente.
       </p>
     </div>
   );
