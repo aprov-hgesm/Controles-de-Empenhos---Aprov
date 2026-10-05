@@ -182,6 +182,47 @@ for (const forbidden of [
     'Consultar Item deve permanecer read-only: ' + forbidden
   );
 }
+assert.match(
+  itemQuery,
+  /lot\.status === 'active'/,
+  'Consultar Item não deve apresentar lote inativo como atribuição física ativa'
+);
+assert.match(
+  itemQuery,
+  /Saldo sem localização:/,
+  'Consultar Item deve distinguir UNASSIGNED de divergência real'
+);
+assert.match(
+  itemQuery,
+  /Divergência de reconciliação:/,
+  'Consultar Item deve explicitar diferença residual real'
+);
+assert.match(
+  itemQuery,
+  /A soma dos lotes ativos em/,
+  'Consultar Item deve sinalizar atribuição ativa de lotes acima do saldo da posição'
+);
+assert.doesNotMatch(
+  itemQuery,
+  /Saldo agregado e soma das posições ativas não coincidem/,
+  'Consultar Item não pode tratar automaticamente UNASSIGNED como corrupção'
+);
+
+const itemAvailabilityRepository = read(
+  'lib/warehouse/mobileOutboundRepository.ts'
+);
+for (const marker of [
+  'unassignedQuantity',
+  'inactivePositionQuantity',
+  'trackedQuantity',
+  'differenceQuantity',
+]) {
+  assert.equal(
+    itemAvailabilityRepository.includes(marker),
+    true,
+    'Read model de disponibilidade deve expor reconciliação: ' + marker
+  );
+}
 
 const positionCheck = read('lib/warehouse/mobilePositionCheck.ts');
 for (const forbidden of [
