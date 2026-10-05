@@ -145,23 +145,23 @@ Start time:
 
 `2026-10-04T05:16:14.315849Z`
 
-## 6. Último estado operacional conhecido
+## 6. Resultado final da operação de restore
 
-Na última evidência entregue ao worker, a operação ainda estava em execução:
+Evidência coletada em PowerShell autenticado no projeto em 2026-10-05:
 
-- `operationState: PROCESSING`;
-- `completedWork: 30`;
-- `estimatedWork: 100`;
-- `sourceInfo.progress: IN_PROGRESS`;
-- nenhum erro reportado.
+- `done: true`;
+- `operationState: SUCCESSFUL`;
+- `startTime: 2026-10-04T05:16:14.315849Z`;
+- `endTime: 2026-10-04T05:25:24.414352Z`;
+- backup: `projects/gen-lang-client-0982077967/locations/us-east1/backups/5640c06e-229b-4cab-82a8-e7425dc035a3`;
+- database target: `projects/gen-lang-client-0982077967/databases/emprovex-restore-warehouse-2026-10-04`;
+- `sourceInfo.progress: COMPLETED`;
+- snapshot restaurado: `2026-10-03T17:05:24.058789Z`;
+- nenhum `error` reportado.
 
-Enquanto esse estado permanecer `PROCESSING`:
+O gate de conclusão do restore real está **PASS**.
 
-- não iniciar novo restore;
-- não criar segundo target;
-- não alterar o target;
-- não executar cleanup;
-- não declarar PASS.
+Não foi iniciado segundo restore e nenhum banco produtivo foi sobrescrito.
 
 ## 7. Banco isolado criado
 
@@ -177,10 +177,16 @@ Região:
 
 `us-east1`
 
-Estado observado durante o restore:
+Estado confirmado após a conclusão:
 
+- tipo: `FIRESTORE_NATIVE`;
+- edição: `STANDARD`;
+- região: `us-east1`;
+- UID: `e1e77149-a359-4d9c-8f81-5a094e871154`;
 - `deleteProtectionState: DELETE_PROTECTION_ENABLED`;
-- `pointInTimeRecoveryEnablement: POINT_IN_TIME_RECOVERY_DISABLED`.
+- `pointInTimeRecoveryEnablement: POINT_IN_TIME_RECOVERY_DISABLED`;
+- `sourceInfo.progress: COMPLETED`;
+- source backup e snapshot correspondem exatamente ao backup Warehouse selecionado.
 
 O PITR desabilitado no target temporário **não é automaticamente falha do teste**. O objetivo deste target é comprovar recuperabilidade, integridade e isolamento; ele não foi promovido a banco produtivo.
 
@@ -295,13 +301,24 @@ Registrar explicitamente:
 - TTL não é reaplicado automaticamente ao target;
 - a eventual reaplicação deve seguir runbook separado e autorização adequada.
 
+Evidência pós-restore no target:
+
+- `gcloud firestore fields ttls list` => `Listed 0 items.`.
+
+Ainda deve ser consultada a origem `emprovex-warehouse` para registrar se existia política TTL que exigiria reaplicação em disaster recovery.
+
 Não habilitar TTL no target apenas para cumprir o teste.
 
 ### H. Índices/configurações
 
 O backup inclui configurações de índice do snapshot.
 
-Após a conclusão, listar/inspecionar o estado de índices no target e registrar a evidência. Nenhuma alteração deve ser feita sem necessidade.
+Evidência pós-restore no target:
+
+- composite indexes: `Listed 0 items.`;
+- field indexes: somente o registro default `collectionGroups/__default__/fields/*`.
+
+Ainda deve ser feita a leitura equivalente no banco Warehouse de origem para registrar se o estado é coerente com a origem/snapshot. Nenhuma alteração será feita apenas para o teste.
 
 ## 10. Comandos de verificação pós-restore
 
@@ -374,7 +391,7 @@ Justificativa:
 
 ## 14. Classificação atual do worker
 
-**HARDEN-B — PARCIAL / RESTORE REAL EM ANDAMENTO**
+**HARDEN-B — PARCIAL / RESTORE REAL CONCLUÍDO COM SUCESSO**
 
 Motivo:
 
@@ -382,15 +399,19 @@ Motivo:
 - `recovery:status = ready=true`: comprovado;
 - `recovery:verify = ready=true`: comprovado;
 - autorização explícita do restore: comprovada;
-- restore real isolado: iniciado;
-- target isolado: criado;
-- conclusão da operação: **ainda não comprovada neste checkpoint**;
+- restore real isolado: **SUCCESSFUL**;
+- target isolado: criado e confirmado em `us-east1`;
+- source backup/snapshot: comprovados;
+- `sourceInfo.progress = COMPLETED`: comprovado;
+- TTL no target: 0 políticas, conforme esperado para configuração não incluída em backup;
+- composite indexes no target: 0;
+- field index config no target: default;
 - integridade de dados pós-restore: **pendente**;
 - IAM pós-restore: **pendente**;
-- Rules/TTL pós-restore: comportamento documentado, verificação do target pendente;
-- índices/configurações pós-restore: verificação pendente.
+- release de Firebase Security Rules do target: **pendente de leitura**;
+- comparação TTL/índices com a origem: **pendente**.
 
-Ainda não existe base factual para declarar `PASS TÉCNICO` enquanto a operação estiver `PROCESSING`.
+O restore em si passou. O `PASS TÉCNICO` permanece condicionado somente aos gates finais de integridade, isolamento/configuração e segurança.
 
 ## 15. Gate final esperado
 
