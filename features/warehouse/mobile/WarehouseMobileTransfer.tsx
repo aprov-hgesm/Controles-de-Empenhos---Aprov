@@ -92,6 +92,16 @@ function locationError(error: string) {
   return 'A posição não pôde ser validada no cadastro autoritativo.';
 }
 
+function technicalOperationCode(raw: string): string {
+  const warehouseCode = raw.match(/\b(WAREHOUSE_[A-Z0-9_]+)\b/)?.[1];
+  if (warehouseCode) return warehouseCode;
+  if (/permission-denied|insufficient permissions/i.test(raw)) {
+    return 'FIRESTORE_PERMISSION_DENIED';
+  }
+  if (/unavailable|network|offline/i.test(raw)) return 'FIRESTORE_UNAVAILABLE';
+  return 'UNCLASSIFIED';
+}
+
 function operationError(error: unknown) {
   const raw = error instanceof Error ? error.message : String(error);
   if (raw.includes('WAREHOUSE_TRANSFER_INSUFFICIENT_STOCK')) {
@@ -133,7 +143,7 @@ function operationError(error: unknown) {
   if (raw.includes('WAREHOUSE_IDEMPOTENCY_CONFLICT')) {
     return 'Conflito de idempotência. Recomece a operação.';
   }
-  return 'A transferência não pôde ser confirmada. Revalide os dados e tente novamente.';
+  return 'A transferência não pôde ser confirmada. Código técnico: ' + technicalOperationCode(raw) + '. Revalide os dados e tente novamente.';
 }
 
 export function WarehouseMobileTransfer() {

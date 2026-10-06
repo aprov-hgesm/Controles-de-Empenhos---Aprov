@@ -180,6 +180,15 @@ export function WarehouseMobileScanner({
     setStatus('success');
     setMessage('Leitura validada.');
     emitOptionalScanFeedback();
+
+    // Cada etapa operacional de scanner é single-shot: depois de uma leitura
+    // válida, encerra o decoder antes de entregar o evento ao fluxo pai. Isso
+    // impede que uma etiqueta de localização mantida diante da câmera volte a
+    // ser aceita quando a janela curta de cooldown expira.
+    stopRef.current?.();
+    stopRef.current = null;
+    setCameraRunning(false);
+
     onValidatedScan?.(event);
   }, [
     expectation,

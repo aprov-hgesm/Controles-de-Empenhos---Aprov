@@ -73,8 +73,8 @@ type SuccessState = {
   applied: boolean;
   withdrawalId: string;
   movementId: string | null;
-  aggregateQuantity: number;
-  locationQuantity: number;
+  aggregateQuantity: number | null;
+  locationQuantity: number | null;
   lotQuantity: number | null;
 };
 
@@ -172,6 +172,16 @@ function preparationError(error: unknown) {
   return 'Não foi possível preparar a saída. Revalide os dados e tente novamente.';
 }
 
+function technicalConfirmationCode(raw: string): string {
+  const warehouseCode = raw.match(/\b(WAREHOUSE_[A-Z0-9_]+)\b/)?.[1];
+  if (warehouseCode) return warehouseCode;
+  if (/permission-denied|insufficient permissions/i.test(raw)) {
+    return 'FIRESTORE_PERMISSION_DENIED';
+  }
+  if (/unavailable|network|offline/i.test(raw)) return 'FIRESTORE_UNAVAILABLE';
+  return 'UNCLASSIFIED';
+}
+
 function confirmationError(error: unknown) {
   const raw = error instanceof Error ? error.message : String(error);
   if (raw.includes('WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK')) {
@@ -214,7 +224,7 @@ function confirmationError(error: unknown) {
   if (raw.includes('PRODUCT_CHANGED')) {
     return 'O barcode deixou de apontar para o material preparado. Recomece a jornada.';
   }
-  return 'Resultado não confirmado. Não assuma sucesso: toque novamente em CONFIRMAR SAÍDA para executar replay seguro com a mesma chave de idempotência.';
+  return 'Resultado não confirmado. Código técnico: ' + technicalConfirmationCode(raw) + '. Não repita a baixa até revalidar o saldo em outra tela.';
 }
 
 export function WarehouseMobileOutbound() {
@@ -554,30 +564,49 @@ export function WarehouseMobileOutbound() {
         }
       );
 
-      const refreshed = await loadWarehouseMobileOutboundAvailability(
-        workspace.workspaceId,
-        product.association.materialId
-      );
-      const refreshedLocation = refreshed.locationBalances.find(
-        (item) => warehouseStockPositionKey(item.position) === position.option.key
-      );
-      const refreshedLot = review.lotId
-        ? refreshed.lots.find((lot) => lot.id === review.lotId)
-        : null;
+      // A partir daqui a retirada já foi finalizada pelo motor canônico. Uma
+      // falha de refresh não pode rebaixar esse resultado para "desconhecido"
+      // nem induzir o operador a repetir a baixa.
+      try {
+        const refreshed = await loadWarehouseMobileOutboundAvailability(
+          workspace.workspaceId,
+          product.association.materialId
+        );
+        const refreshedLocation = refreshed.locationBalances.find(
+          (item) => warehouseStockPositionKey(item.position) === position.option.key
+        );
+        const refreshedLot = review.lotId
+          ? refreshed.lots.find((lot) => lot.id === review.lotId)
+          : null;
 
-      setSuccess({
-        applied: result.movementIds.length > 0,
-        withdrawalId: result.withdrawal.id,
-        movementId: result.movementIds[0] || null,
-        aggregateQuantity: refreshed.balance.quantity,
-        locationQuantity: refreshedLocation?.quantity || 0,
-        lotQuantity: review.lotId ? refreshedLot?.quantity || 0 : null,
-      });
-      setMessage(
-        result.movementIds.length > 0
-          ? 'Saída confirmada pelo fluxo canônico de retirada e consumo.'
-          : 'Replay idempotente confirmado: nenhuma segunda baixa foi criada.'
-      );
+        setSuccess({
+          applied: result.movementIds.length > 0,
+          withdrawalId: result.withdrawal.id,
+          movementId: result.movementIds[0] || null,
+          aggregateQuantity: refreshed.balance.quantity,
+          locationQuantity: refreshedLocation?.quantity ?? null,
+          lotQuantity: review.lotId ? refreshedLot?.quantity ?? null : null,
+        });
+        setMessage(
+          result.movementIds.length > 0
+            ? 'Saída confirmada pelo fluxo canônico de retirada e consumo.'
+            : 'Replay idempotente confirmado: nenhuma segunda baixa foi criada.'
+        );
+      } catch {
+        setSuccess({
+          applied: result.movementIds.length > 0,
+          withdrawalId: result.withdrawal.id,
+          movementId: result.movementIds[0] || null,
+          aggregateQuantity: null,
+          locationQuantity: null,
+          lotQuantity: null,
+        });
+        setMessage(
+          result.movementIds.length > 0
+            ? 'Saída confirmada. A atualização visual dos saldos falhou; consulte o item antes de iniciar outra operação.'
+            : 'Replay idempotente confirmou que a saída já estava finalizada. A atualização visual dos saldos falhou; consulte o item.'
+        );
+      }
     } catch (error) {
       setMessage(confirmationError(error));
     } finally {
@@ -1001,12 +1030,18 @@ export function WarehouseMobileOutbound() {
               : 'Replay idempotente confirmado'}
           </p>
           <p className="mt-2 text-xs font-semibold text-emerald-800">
-            Saldo agregado: {formatQty(success.aggregateQuantity)}
-            {' · Posição: '}
-            {formatQty(success.locationQuantity)}
-            {success.lotQuantity !== null
-              ? ' · Lote: ' + formatQty(success.lotQuantity)
-              : ''}
+            {success.aggregateQuantity !== null && success.locationQuantity !== null
+              ? (
+                <>
+                  Saldo agregado: {formatQty(success.aggregateQuantity)}
+                  {' · Posição: '}
+                  {formatQty(success.locationQuantity)}
+                  {success.lotQuantity !== null
+                    ? ' · Lote: ' + formatQty(success.lotQuantity)
+                    : ''}
+                </>
+              )
+              : 'Operação finalizada; saldos ainda não foram recarregados nesta tela.'}
           </p>
           <p className="mt-2 break-all font-mono text-[9px] text-emerald-700">
             {success.withdrawalId}

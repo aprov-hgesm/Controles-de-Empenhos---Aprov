@@ -52,6 +52,15 @@ assert.match(scanner, /playsInline/);
 assert.match(scanner, /MANUAL/);
 assert.match(scanner, /stopRef\.current\?\.\(\)/);
 
+const successMarker = scanner.indexOf("setMessage('Leitura validada.');");
+const singleShotStop = scanner.indexOf('stopRef.current?.();', successMarker);
+const validatedCallback = scanner.indexOf('onValidatedScan?.(event);', successMarker);
+assert.ok(successMarker >= 0, 'Feedback de leitura válida ausente.');
+assert.ok(
+  singleShotStop > successMarker && singleShotStop < validatedCallback,
+  'Scanner deve encerrar o decoder antes de entregar uma leitura válida ao fluxo pai.'
+);
+
 const lifecycleEffectStart = scanner.indexOf('useEffect(() => {');
 const mountedSetup = scanner.indexOf('mountedRef.current = true;', lifecycleEffectStart);
 const mountedCleanup = scanner.indexOf('mountedRef.current = false;', mountedSetup);
