@@ -172,6 +172,16 @@ function preparationError(error: unknown) {
   return 'Não foi possível preparar a saída. Revalide os dados e tente novamente.';
 }
 
+function technicalConfirmationCode(raw: string): string {
+  const warehouseCode = raw.match(/\b(WAREHOUSE_[A-Z0-9_]+)\b/)?.[1];
+  if (warehouseCode) return warehouseCode;
+  if (/permission-denied|insufficient permissions/i.test(raw)) {
+    return 'FIRESTORE_PERMISSION_DENIED';
+  }
+  if (/unavailable|network|offline/i.test(raw)) return 'FIRESTORE_UNAVAILABLE';
+  return 'UNCLASSIFIED';
+}
+
 function confirmationError(error: unknown) {
   const raw = error instanceof Error ? error.message : String(error);
   if (raw.includes('WAREHOUSE_OUTBOUND_INSUFFICIENT_STOCK')) {
@@ -214,7 +224,7 @@ function confirmationError(error: unknown) {
   if (raw.includes('PRODUCT_CHANGED')) {
     return 'O barcode deixou de apontar para o material preparado. Recomece a jornada.';
   }
-  return 'Resultado não confirmado. Não assuma sucesso: toque novamente em CONFIRMAR SAÍDA para executar replay seguro com a mesma chave de idempotência.';
+  return 'Resultado não confirmado. Código técnico: ' + technicalConfirmationCode(raw) + '. Não repita a baixa até revalidar o saldo em outra tela.';
 }
 
 export function WarehouseMobileOutbound() {
