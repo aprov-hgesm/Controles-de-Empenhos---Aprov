@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05/06 — `RC-COMPOSITION-01` foi encerrada tecnicamente em `fae9ce6aed7242e85d53fc8e6470fba4425a8c27` com classificação `APTA PARA RE-FREEZE`. PR #262 permanece OPEN/DRAFT/MERGEABLE e não mergeado. No HEAD final, Application CI `37402133902`, SAAS-DL Legal Validation `37402133906`, EMPROVEX Core Protection `37402133890` e Recovery guardrails `37402133915` estão todos SUCCESS; Production build, TypeScript, diff hygiene, MOBILE-K, Inventory, Transfer, Outbound, multi-tenant e Sessions também fecharam verdes dentro do Application CI. Rules permaneceram exatamente nos blobs `bc91185f...` e `6e1f1050...`; nenhum merge final, deploy, publicação de Rules ou novo repair ocorreu. Program Control criou `rc-r1-refreeze-01@fae9ce6...` como snapshot congelado da nova candidata. Próximo gate único: certificação física final curta no SHA re-frozen, seguida de GO/NO-GO explícito antes de qualquer Production.**
+Última sincronização global: **2026-10-05/06 — a certificação final foi formalmente aberta em `rc-r1-physical-cert-01@9c76e3475744c1a7ac2fd349d64276a4a8d9c76c`, PR #264 DRAFT contra `rc-r1-refreeze-01`. A parte automatizável está fechada: o RC re-frozen `fae9ce6...` mantém Application CI, Legal, Core e Recovery SUCCESS, Rules preservadas e 0 inconsistências quantitativas Warehouse. Foi comprovada equivalência de runtime entre o Preview verde `5255bbcb...` e o RC re-frozen: do Preview até `fae9ce6...` entraram apenas workflows, documentação, script npm/guard e tooling read-only; não houve mudança em `app/`, `features/` ou `lib/`. Assim, o Preview verde existente pode ser usado para a validação física sem esperar a quota Vercel voltar. O único bloqueio externo atual é `build-rate-limit` da Vercel para novos previews. Restam somente evidências físicas F01–F16 em dispositivos reais; nenhum GO/Production foi autorizado.**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -120,6 +120,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | WAREHOUSE-DATA-REPAIR-EXECUTION-01 | **PASS / REPAIR EXECUTADO E REVALIDADO** | `warehouse-data-repair-execution-01@e3f3aae...`; commit Firestore `2026-10-06T01:14:32.083411Z`; 2 writes allowlisted; pós-repair com 0 inconsistências e lotExcess=0 nos dois materiais; Core Protection e Application CI SUCCESS |
 | RC-COMPOSITION-01 | **PASS / APTA PARA RE-FREEZE** | `rc-r1-composition-01@fae9ce6...`; PR #262 DRAFT; Application CI + Legal + Core + Recovery SUCCESS; Rules preservadas; nenhum blocker funcional/quantitativo conhecido |
 | RC R1 re-freeze | **CRIADO / CANDIDATA CONGELADA** | `rc-r1-refreeze-01@fae9ce6aed7242e85d53fc8e6470fba4425a8c27`; snapshot exato do RC composto; nenhuma alteração após freeze permitida sem reabrir certificação |
+| RC-R1-PHYSICAL-CERT-01 | **ATIVA / EVIDÊNCIA AUTOMATIZADA FECHADA** | `rc-r1-physical-cert-01@9c76e347...`; PR #264 DRAFT; matriz F01–F16 criada; Preview `5255bbcb...` comprovado runtime-equivalente ao RC re-frozen; faltam apenas testes físicos reais |
 | Firestore Rules — contrato da onda | **CONGELADAS PARA OS WORKERS** | SaaS/RC/MOBILE-K usam `firestore.rules@bc91185f...` e `firestore.warehouse.rules@6e1f1050...`; qualquer necessidade de alterar Rules deve voltar ao Coordenador antes de edição |
 | HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
 | Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
@@ -172,69 +173,82 @@ RC original 54e60c... — FROZEN histórico
 
 ### Gate imediato
 
-O gate vigente agora é **CERTIFICAÇÃO FÍSICA FINAL DO RC RE-FROZEN**.
+O gate vigente é **RC-R1-PHYSICAL-CERT-01 — certificação física final**.
 
-Candidata congelada:
+Branch de certificação:
+
+`rc-r1-physical-cert-01@9c76e3475744c1a7ac2fd349d64276a4a8d9c76c`
+
+PR:
+
+`#264 — DRAFT`
+
+Base:
 
 `rc-r1-refreeze-01@fae9ce6aed7242e85d53fc8e6470fba4425a8c27`
 
-Origem:
+A parte automatizável já está concluída e não deve ser repetida sem necessidade:
 
-`rc-r1-composition-01@fae9ce6aed7242e85d53fc8e6470fba4425a8c27`
+- Application CI: SUCCESS;
+- Legal Validation: SUCCESS;
+- Core Protection: SUCCESS;
+- Recovery: SUCCESS;
+- Production build: SUCCESS;
+- TypeScript: SUCCESS;
+- Diff hygiene: SUCCESS;
+- MOBILE-K, Inventory, Transfer, Outbound, multi-tenant e Sessions: SUCCESS;
+- Rules preservadas;
+- Warehouse repair revalidado;
+- 0 inconsistências quantitativas pós-repair.
 
-Classificação da composição:
+### Ponte de Preview aprovada
 
-**APTA PARA RE-FREEZE**
+O Preview verde conhecido corresponde a:
 
-Gates do mesmo HEAD:
+`5255bbcbc43593bcf66001adf85eb5d6264a121e`
 
-- Application CI `37402133902`: **SUCCESS**;
-- SAAS-DL Legal Validation `37402133906`: **SUCCESS**;
-- EMPROVEX Core Protection `37402133890`: **SUCCESS**;
-- Recovery guardrails `37402133915`: **SUCCESS**;
-- Production build: **SUCCESS**;
-- TypeScript: **SUCCESS**;
-- Diff hygiene: **SUCCESS**;
-- MOBILE-K canonical ops: **SUCCESS**;
-- Inventory: **SUCCESS**;
-- Transfer: **SUCCESS**;
-- Outbound: **SUCCESS**;
-- multi-tenant: **SUCCESS**;
-- Sessions: **SUCCESS**.
+URL conhecida:
 
-Rules congeladas e confirmadas:
+`https://controles-de-empenhos-aprov-git-rc-b384cb-aprov-hgesms-projects.vercel.app`
 
-- `firestore.rules@bc91185f34bcdcb4437a4de1078d1089a09292ba`;
-- `firestore.warehouse.rules@6e1f1050005314db4e17cb3136409abbddb0ee91`.
+A comparação até o RC re-frozen `fae9ce6...` contém somente:
 
-Dados Warehouse:
+- workflows;
+- documentação;
+- `package.json` com script de verificação;
+- guard/script SaaS final audit;
+- tooling Warehouse read-only.
 
-- repair `WAREHOUSE-LOT-REPAIR-2026-10-05-01` já executado e revalidado;
-- 0 inconsistências quantitativas pós-repair;
-- nenhum novo repair autorizado ou necessário para este gate.
+Não existem mudanças em `app/`, `features/` ou `lib/`.
 
-A certificação física final deve ocorrer **neste SHA exato**, sem novos commits de runtime. Cobrir, de forma curta e dirigida:
+Portanto o Preview de `5255bbcb...` é aceito como **runtime-equivalente** para a certificação física do RC re-frozen. Isso evita depender de novo build Vercel, atualmente bloqueado por quota `build-rate-limit`.
 
-1. Android/Chrome;
-2. iPhone/Safari quando disponível;
-3. câmera permitida/negada/indisponível;
-4. fallback manual;
-5. Code128 físico;
-6. entrada;
-7. transferência;
-8. consulta;
-9. inventário;
-10. saída;
-11. conferência;
-12. coerência Desktop ↔ Mobile;
-13. COMPACT/MEDIUM/LARGE;
-14. som/vibração;
-15. double scan/cooldown;
-16. perda/retorno de rede.
+### Evidências físicas restantes
 
-Se qualquer correção de código for necessária, o re-freeze é invalidado e a composição deve ser reaberta.
+Executar no Preview runtime-equivalente:
 
-Se a certificação física fechar sem blocker, o próximo passo é **GO/NO-GO explícito do Fundador**. Mesmo com PASS físico, Production continua proibida até essa autorização.
+- F01 Android/Chrome;
+- F02 câmera permitida;
+- F03 câmera negada/indisponível + fallback manual;
+- F04 Code128 físico;
+- F05 entrada/alocação;
+- F06 transferência física→física;
+- F07 consulta item/local;
+- F08 inventário físico sem UNASSIGNED operacional;
+- F09 saída;
+- F10 conferência;
+- F11 coerência Desktop↔Mobile;
+- F12 COMPACT/MEDIUM/LARGE;
+- F13 som/vibração;
+- F14 double scan/cooldown;
+- F15 perda/retorno de rede;
+- F16 iPhone/Safari quando disponível.
+
+Documento de controle:
+
+`docs/RC_R1_PHYSICAL_CERT_01.md`
+
+Qualquer defeito que exija alteração de runtime invalida o re-freeze. Se as evidências físicas passarem, o próximo passo é GO/NO-GO explícito do Fundador antes de qualquer Production.
 
 ### Onda paralela de auditoria — execução autorizada sem competição com MOBILE-K
 
