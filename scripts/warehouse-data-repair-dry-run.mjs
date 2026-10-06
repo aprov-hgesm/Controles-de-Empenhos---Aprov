@@ -498,7 +498,7 @@ function analyzeMaterial(
     const correction = signal.overAggregateAfterCreation;
     const after = round(before - correction);
     if (lot && after >= -EPSILON) {
-      cause = 'MANUAL_ENRICHMENT_CRIou_ATRIBUICAO_DE_LOTE_ACIMA_DO_LEDGER';
+      cause = 'MANUAL_ENRICHMENT_CRIOU_ATRIBUICAO_DE_LOTE_ACIMA_DO_LEDGER';
       causeProven = true;
       repairDeterministic = true;
       repairCandidates.push(
