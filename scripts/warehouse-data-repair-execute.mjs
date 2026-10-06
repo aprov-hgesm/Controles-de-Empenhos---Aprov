@@ -394,28 +394,49 @@ function validateAuthorizedPlan(report, dataset) {
   if (candidates.length !== TARGETS.length) {
     throw new Error('ABORT — REFORENSICS REQUIRED: número inesperado de candidatos: ' + candidates.length);
   }
+
+  const resultByMaterial = new Map(
+    (report.results || []).map((row) => [row.materialId, row])
+  );
   const plan = [];
+
   for (const candidate of candidates) {
     const target = TARGET_BY_PATH.get(candidate.path);
     if (!target) throw new Error('ABORT — candidato fora da allowlist: ' + candidate.path);
+
+    const materialResult = resultByMaterial.get(target.materialId);
+    if (
+      !materialResult
+      || materialResult.cause !== target.cause
+      || materialResult.causeProven !== true
+      || materialResult.repairDeterministic !== true
+    ) {
+      throw new Error(
+        'ABORT — causa canônica diverge da autorização para ' + candidate.path
+      );
+    }
+
     if (
       candidate.materialId !== target.materialId
       || !approx(candidate.before?.quantity, target.beforeQuantity)
       || !approx(candidate.after?.quantity, target.afterQuantity)
-      || candidate.cause !== target.cause
     ) {
       throw new Error('ABORT — manifesto atual diverge da autorização para ' + candidate.path);
     }
+
     if (!candidate.preconditions?.expectedLotUpdatedAt) {
       throw new Error('ABORT — precondição updateTime ausente para ' + candidate.path);
     }
-    plan.push({ target, candidate });
+
+    plan.push({ target, candidate, materialResult });
   }
+
   for (const target of TARGETS) {
     if (!plan.some((entry) => entry.target.path === target.path)) {
       throw new Error('ABORT — target autorizado não apareceu no dry-run: ' + target.path);
     }
   }
+
   return plan.sort((a, b) => a.target.path.localeCompare(b.target.path));
 }
 
