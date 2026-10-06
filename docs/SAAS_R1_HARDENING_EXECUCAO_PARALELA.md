@@ -323,4 +323,3 @@ A worker deve:
 6. produzir matriz completa.
 
 MOBILE-F/G/H ficam fora da janela até o handoff D.
-
