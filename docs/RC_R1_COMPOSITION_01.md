@@ -4,7 +4,9 @@ Data de composição: 2026-10-05 / 2026-10-06 UTC
 Branch: `rc-r1-composition-01`
 Base alvo do PR: `rc-r1-mobile-j-fix-label-readability`
 HEAD inicial congelado: `bd27da91da92642d5a5fea08f7020c6cea658a62`
-HEAD final: **PENDENTE DE FECHAMENTO APÓS GATES DO PR**
+HEAD final técnico certificado: `272b86c1be1b66d17602a8fef3605b36e7f229c6`
+PR: `#262` (DRAFT, base `rc-r1-mobile-j-fix-label-readability`)
+Observação: o commit de fechamento documental que contém esta atualização será posterior ao HEAD técnico certificado e não altera runtime, Rules ou dados.
 
 ## 1. Identidade e proveniência
 
@@ -148,26 +150,54 @@ Contratos a preservar nos gates:
 
 ## 8. Gates
 
-Estado inicial do manifest — será fechado com run IDs reais do PR:
+Rodada final do HEAD técnico certificado `272b86c1be1b66d17602a8fef3605b36e7f229c6`:
 
 | Gate | Run/Job | Status |
 | --- | --- | --- |
-| Application CI | PENDENTE | PENDENTE |
-| Legal Validation | PENDENTE | PENDENTE |
-| Core Protection | via Application CI | PENDENTE |
-| Recovery | via Application CI | PENDENTE |
-| SaaS final audit guard | via Application CI | PENDENTE |
-| MOBILE-K canonical ops | via Application CI | PENDENTE |
-| MOBILE-J/integration guards | via Application CI | PENDENTE |
-| Warehouse inventory | via Application CI | PENDENTE |
-| Warehouse transfer | via Application CI | PENDENTE |
-| Warehouse outbound | via Application CI | PENDENTE |
-| Multi-tenant | via Application CI | PENDENTE |
-| Sessions | via Application CI | PENDENTE |
-| Production build | via Application CI / Legal | PENDENTE |
-| Diff hygiene | workflows | PENDENTE |
+| Application CI | run `37401660131` / `validate-application` | **SUCCESS** |
+| Legal Validation | run `37401660140` / `validate-legal` | **SUCCESS** |
+| Core Protection | run `37401660119` / `core-protection` | **SUCCESS** |
+| Recovery guardrails | run `37401660175` / `validate-recovery-tooling` | **SUCCESS** |
+| SaaS final audit guard | Application CI `37401660131` | **SUCCESS** |
+| MOBILE-K canonical ops tests + guard | Application CI `37401660131` | **SUCCESS** |
+| MOBILE-J/integration guards | Application CI `37401660131` | **SUCCESS** |
+| Warehouse inventory tests + guard | Application CI `37401660131` | **SUCCESS** |
+| Warehouse transfer tests + guard | Application CI `37401660131` | **SUCCESS** |
+| Warehouse outbound tests + guard | Application CI `37401660131` | **SUCCESS** |
+| Multi-tenant suite + Firestore security | Application CI `37401660131` | **SUCCESS** |
+| Session enforcement/admin/integrated gates | Application CI `37401660131` | **SUCCESS** |
+| Production build | Application CI + Legal Validation | **SUCCESS** |
+| Final TypeScript validation | Application CI `37401660131` | **SUCCESS** |
+| Diff hygiene | Application CI + Legal Validation | **SUCCESS** |
 
-Nenhum PASS será declarado sem evidência executada.
+Subgates explicitamente confirmados como `success` no Application CI:
+- `SAAS R1 final audit contract guard`;
+- `Multi-tenant security suite guard`;
+- `Multi-tenant Firestore security tests`;
+- `ADM Depósito Phase 6 locations and transfers domain tests`;
+- `ADM Depósito Phase 6 permanent guard`;
+- `ADM Depósito Phase 8 barcode and outbound domain tests`;
+- `Central Móvel R1 MOBILE-G outbound domain tests`;
+- `Central Móvel R1 MOBILE-G outbound guard`;
+- `MOBILE-K canonical ops domain tests`;
+- `MOBILE-K canonical ops permanent guard`;
+- `ADM Depósito Phase 10 physical inventory domain tests`;
+- `ADM Depósito Phase 10 permanent guard`;
+- `Block 16.1 session enforcement guard`;
+- `Block 16.2 admin session panel guard`;
+- `Block 16.8 integrated domain tests`;
+- `Block 16.8 integrated E2E guard`;
+- `Production build`;
+- `Final TypeScript validation`;
+- `Diff hygiene`.
+
+### Incidente de higiene corrigido
+
+A primeira execução de Legal Validation (`37401412660`) falhou exclusivamente em `Diff hygiene` por quatro trailing spaces no cabeçalho deste manifest. Nenhum gate funcional, Rules, TypeScript ou build havia falhado. O whitespace foi removido no commit `272b86c1be1b66d17602a8fef3605b36e7f229c6`, e a rodada final acima passou integralmente.
+
+### Auditor Warehouse live
+
+O repair não foi repetido. Nenhum executor `--apply` foi executado. A composição utiliza a evidência pós-repair já aprovada e incorpora apenas o auditor read-only + teste; não houve credencial live exposta a esta sessão de composição para repetir consulta Firestore.
 
 ## 9. Riscos residuais
 
@@ -231,8 +261,15 @@ Deliberadamente ficaram fora:
 - qualquer publicação de Rules;
 - qualquer piloto, cobrança ou suspensão real.
 
-## 13. Classificação provisória
+## 13. Classificação final
 
-**PENDENTE DOS GATES DO PR.**
+**APTA PARA RE-FREEZE**
 
-Esta composição não autoriza produção, GO, merge final ou deploy.
+Fundamentos:
+- todos os deltas planejados foram compostos;
+- Application CI, Legal Validation, Core Protection e Recovery estão verdes;
+- Rules foram preservadas com hashes idênticos antes/depois;
+- nenhum blocker funcional ou quantitativo de dados permanece;
+- a validação física final continua pendente conforme a matriz deste manifest.
+
+Esta classificação **não** autoriza produção, GO, merge final ou deploy.
