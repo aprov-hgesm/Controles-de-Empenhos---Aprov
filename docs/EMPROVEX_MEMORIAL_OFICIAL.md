@@ -117,7 +117,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | INVENTORY-PHYSICAL-FIX-01 | **ATIVADA / CORREÇÃO MÍNIMA** | branch `inventory-physical-fix-01@9f1035ac...`; owner exclusivo do blocker Inventário TOTAL + `UNASSIGNED`; sem Rules, dados reais ou refactor amplo |
 | WAREHOUSE-INTEGRITY-RECONCILE-01 | **CONCLUÍDA / BLOCKER RC** | `warehouse-integrity-reconcile-01@b8dbc33...`; 3.113 reads; 2 blockers quantitativos de lote (+100 e +10); 3 reconciliações adicionais; nenhum dado escrito |
 | WAREHOUSE-DATA-REPAIR-FORENSICS-01 | **PASS / ENCERRADA TECNICAMENTE** | `warehouse-data-repair-forensics-01@c1fa1d9...`; causa comprovada nos 2 blockers, dry-run determinístico e manifesto prontos; nenhum dado escrito |
-| WAREHOUSE-DATA-REPAIR-EXECUTION-01 | **PREPARADA / BLOQUEADA POR AUTORIZAÇÃO HUMANA** | `warehouse-data-repair-execution-01@c1fa1d9...`; poderá alterar somente 2 documentos de lote após revalidar dry-run + backup/PITR + precondições; nenhuma escrita autorizada neste checkpoint |
+| WAREHOUSE-DATA-REPAIR-EXECUTION-01 | **AUTORIZADA PELO FUNDADOR / AGUARDA EXECUÇÃO CONTROLADA** | `warehouse-data-repair-execution-01@c1fa1d9...`; autorização explícita concedida em 2026-10-05 para alterar somente os 2 documentos causalmente comprovados, após revalidar dry-run + backup/PITR + todas as precondições |
 | Firestore Rules — contrato da onda | **CONGELADAS PARA OS WORKERS** | SaaS/RC/MOBILE-K usam `firestore.rules@bc91185f...` e `firestore.warehouse.rules@6e1f1050...`; qualquer necessidade de alterar Rules deve voltar ao Coordenador antes de edição |
 | HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
 | Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
@@ -181,7 +181,7 @@ A implementação da **MOBILE-K — Canonical Ops Engine** foi concluída pelo w
 5. executar `INVENTORY-PHYSICAL-FIX-01` sobre o HEAD final da MOBILE-K, alterando apenas o contrato de Inventário TOTAL + testes associados;
 6. `WAREHOUSE-INTEGRITY-RECONCILE-01` — **CONCLUÍDA**: auditoria global confirmou dois blockers quantitativos de lotes e três reconciliações adicionais;
 7. `WAREHOUSE-DATA-REPAIR-FORENSICS-01` — **PASS / ENCERRADA**: causa histórica dos dois blockers comprovada, documentos exatos identificados e repair determinístico preparado;
-8. `WAREHOUSE-DATA-REPAIR-EXECUTION-01` — branch preparada, porém **BLOQUEADA POR AUTORIZAÇÃO HUMANA**; antes de qualquer escrita, repetir dry-run, confirmar backup/PITR READY e abortar diante de qualquer precondição divergente;
+8. `WAREHOUSE-DATA-REPAIR-EXECUTION-01` — **AUTORIZADA PELO FUNDADOR** para repair real estritamente limitado aos dois lotes comprovados; antes de qualquer escrita, repetir dry-run, confirmar backup/PITR READY e abortar diante de qualquer precondição divergente;
 9. após repair autorizado e verificado, repetir auditoria global read-only e confirmar desaparecimento dos blockers sem criar novas inconsistências;
 10. revisar semanticamente MOBILE-K + correções + quatro relatórios paralelos;
 11. corrigir somente blockers remanescentes com owner exclusivo;
@@ -330,17 +330,21 @@ Resultado vivo consolidado:
 - backup Warehouse READY histórico foi identificado e restore 13/13 já havia sido comprovado; a frente executora ainda deve reconfirmar backup/PITR suficientemente recente imediatamente antes da escrita;
 - Rules, MOBILE-K, ledger, produção e dados reais permaneceram inalterados nesta forensics.
 
-**WAREHOUSE-DATA-REPAIR-EXECUTION-01 — PREPARADA / NÃO AUTORIZADA**
+**WAREHOUSE-DATA-REPAIR-EXECUTION-01 — AUTORIZADA / EXECUÇÃO CONTROLADA**
 
 - branch: `warehouse-data-repair-execution-01`;
 - base exata: `warehouse-data-repair-forensics-01@c1fa1d914990fbe126eaeb81889c6016dd84e7b0`;
-- escopo futuro máximo: somente os dois documentos de lote causalmente comprovados;
-- antes de qualquer write: reexecutar dry-run, comparar todas as precondições, confirmar backup/PITR Warehouse READY e suficientemente recente, registrar aprovação humana explícita;
+- autorização explícita do Fundador concedida em **2026-10-05**;
+- escopo máximo autorizado: somente os dois documentos de lote causalmente comprovados:
+  - `warehouse/hgesm-aprov/lots/lot_670e1ca177804501b90bf8cdd669683f`: `quantity 440 → 340`;
+  - `warehouse/hgesm-aprov/lots/lot_082ebcd7a2acf0c706c87464307cb1ff`: `quantity 50 → 40`;
+- antes de qualquer write: reexecutar dry-run, comparar todas as precondições, confirmar backup/PITR Warehouse READY e suficientemente recente, registrar esta aprovação humana no manifesto;
 - abortar se quantidade, `updatedAt`, revisão, `lastMovementId` ou conjunto de lotes divergir;
 - `movements` permanece append-only;
 - não alterar aggregate, locationBalances, intakes, consumptions, Rules ou qualquer terceiro lote salvo nova forensics;
 - após eventual repair autorizado: executar verificação read-only imediata e repetir a auditoria sistêmica antes de liberar o RC;
-- **nenhuma escrita está autorizada por este Memorial neste checkpoint**.
+- qualquer write fora desses dois documentos ou fora dos valores/precondições comprovados **NÃO está autorizado**;
+- após a escrita, executar verificação read-only imediata e repetir a auditoria global para confirmar `activeLots == physicalActive` nos dois materiais e ausência de regressão.
 
 **Performance**
 
