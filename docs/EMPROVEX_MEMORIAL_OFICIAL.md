@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05 — WAREHOUSE-INTEGRITY-RECONCILE-01 concluiu leitura viva global do `emprovex-warehouse`: 3.113 reads, 56 materiais, 810 movimentos, 917 intakes, 912 consumptions, 12 lotes e 1 devolução; nenhum cap atingido. Resultado: `BLOCKER — INCONSISTÊNCIAS SISTÊMICAS IMPEDEM RC`. Foram confirmados dois blockers quantitativos de lotes (`mat_272f...`: +100 sobre o físico; `mat_6feb...`: +10) e três reconciliações adicionais (UNASSIGNED positivo + duas duplicidades aparentes de lote técnico). O RC não pode avançar sem tratamento dos blockers de dados. O auditor foi fechado em `warehouse-integrity-reconcile-01@b8dbc33ce6f3bed949dc8d4000316a9cc501998f`; Core Protection PASS e novo Application CI em execução após correção de higiene documental. Program Control abriu `warehouse-data-repair-forensics-01@b8dbc33ce6f3bed949dc8d4000316a9cc501998f` para investigação causal, dry-run e plano idempotente/reversível, ainda sem escrita em dados reais.**
+Última sincronização global: **2026-10-05 — WAREHOUSE-INTEGRITY-RECONCILE-01 confirmou blockers sistêmicos de dados e abriu a frente forensics sem escrita. Em paralelo, SAAS-FINAL-AUDIT-01 fechou tecnicamente em `4cc5b3797747d4d49591f4a68196e723700daa74` com `PASS COM RISCOS RESIDUAIS DOCUMENTADOS`; Application CI, Legal Validation, Core Protection e Recovery guardrails estão SUCCESS, sem blocker funcional SaaS. Para aproveitar o tempo enquanto o RC permanece bloqueado por Warehouse, Program Control abriu três frentes SaaS não produtivas e independentes: `saas-pilot-journey-01`, `saas-pilot-ops-01` e `saas-uptime-readiness-01`, todas baseadas no HEAD auditado do SaaS. Nenhuma delas autoriza produção ou piloto real.**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -95,7 +95,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | Produção — app | **Performance R3 / INALTERADA** | `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`; app RC não publicado |
 | Produção — Firestore Rules | **RULES RC PUBLICADAS EM 2026-10-05** | publicação autorizada apenas de Rules; principal source blob `bc91185f34bcdcb4437a4de1078d1089a09292ba`; Warehouse source blob `6e1f1050005314db4e17cb3136409abbddb0ee91` |
 | Rollback Rules | **PREPARADO** | baseline anterior principal `0d990b7de0b2e85ed55fe14ec0d2ce29b3635299`; Warehouse `b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2` |
-| SaaS R1 | **FUNCIONALMENTE CONCLUÍDO** | HARDEN-A1/A2/B/C/D encerradas; HARDEN-B PASS |
+| SaaS R1 | **FUNCIONALMENTE CONCLUÍDO / AUDITORIA FINAL PASS** | SAAS-FINAL-AUDIT-01 `4cc5b379...`: PASS com riscos residuais documentados; Application CI, Legal, Core e Recovery SUCCESS; nenhum blocker funcional SaaS |
 | Mobile R1 | **FUNCIONAL A–I ENCERRADO / J EM CERTIFICAÇÃO FÍSICA** | MOBILE-J encontrou e corrigiu defeitos reais no Preview; ainda não encerrada |
 | SESSION-CAP-01 | **PASS / INTEGRADA** | candidato sem teto fixo de sessões externas; lease/revogação/telemetria preservados |
 | RULES-AUDIT-01 | **PASS / EXECUTADA NO ROLLOUT DE RULES** | Rules RC publicadas antes do app, conforme contrato de compatibilidade |
@@ -113,7 +113,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | MOBILE-K — Canonical Ops Engine | **CONCLUÍDA PELO WORKER / APTO PARA REVISÃO** | `mobile-r1-k-canonical-ops-engine@9f1035ac447d25a8fad0ffbb0b319c31f8ba2ef0`; PR #253 OPEN/DRAFT/MERGEABLE, não mergeado; 22 commits à frente / 0 atrás; 26 arquivos; gates completos verdes; Rules inalteradas |
 | PAL-01 / lotes | **DIVERGÊNCIA REAL DETECTADA** | posição física 440 L com lotes ativos observados somando 540 L; não mascarar nem autocorrigir dados; arquitetura nova deve selecionar/conciliar operação sem criar segunda autoridade |
 | Estado logístico do material | **CONTRATO CANÔNICO CORRIGIDO** | usuário vê apenas: PENDENTE/PARCIALMENTE TRATADO no intake, ESTOQUE LOCALIZADO em LOCAL/SUBPOSIÇÃO, CONSUMIDO/TRATADO; `UNASSIGNED` não é categoria operacional normal de estoque |
-| Onda paralela de auditoria | **2/4 CONCLUÍDAS** | RULES-COMPAT-01 = PASS; WAREHOUSE-DATA-AUDIT-01 = BLOCKER RC; aguardando SAAS-FINAL-AUDIT-01 + RC-READINESS-01 |
+| Onda paralela de auditoria | **3/4 CONCLUÍDAS** | RULES-COMPAT-01 = PASS; SAAS-FINAL-AUDIT-01 = PASS COM RISCOS RESIDUAIS; WAREHOUSE-DATA-AUDIT-01 = BLOCKER RC; aguardando RC-READINESS-01 |
 | INVENTORY-PHYSICAL-FIX-01 | **ATIVADA / CORREÇÃO MÍNIMA** | branch `inventory-physical-fix-01@9f1035ac...`; owner exclusivo do blocker Inventário TOTAL + `UNASSIGNED`; sem Rules, dados reais ou refactor amplo |
 | WAREHOUSE-INTEGRITY-RECONCILE-01 | **CONCLUÍDA / BLOCKER RC** | `warehouse-integrity-reconcile-01@b8dbc33...`; 3.113 reads; 2 blockers quantitativos de lote (+100 e +10); 3 reconciliações adicionais; nenhum dado escrito |
 | WAREHOUSE-DATA-REPAIR-FORENSICS-01 | **ATIVADA / READ-ONLY + DRY-RUN** | `warehouse-data-repair-forensics-01@b8dbc33...`; investigar causalidade dos blockers, preparar plano/script de repair idempotente e reversível; nenhuma escrita até autorização explícita |
@@ -174,7 +174,7 @@ O próximo gate **não é produção** e também **não é continuar remendando 
 A implementação da **MOBILE-K — Canonical Ops Engine** foi concluída pelo worker e está em revisão coordenada. O gate imediato agora é receber e cruzar os quatro handoffs paralelos antes de qualquer integração do PR #253:
 
 1. RULES-COMPAT-01 — **PASS / ENCERRADA**: compatibilidade antiga + RC e ALLOW/DENY preservados, sem necessidade de mudança de Rules;
-2. SAAS-FINAL-AUDIT-01 — confirmar completude SaaS R1;
+2. SAAS-FINAL-AUDIT-01 — **PASS / ENCERRADA TECNICAMENTE**: completude SaaS R1 confirmada; nenhum blocker funcional; riscos residuais de uptime externo, A2, `warehouseAccess` inicial e Rules documentados;
 3. WAREHOUSE-DATA-AUDIT-01 — **ENCERRADA / BLOCKER RC**: Inventário TOTAL inclui `UNASSIGNED`; PAL-01 exige diagnóstico read-only; performance risk em movimentos por material;
 4. RC-READINESS-01 — fechar matriz de gates, rollback e re-freeze;
 5. executar `INVENTORY-PHYSICAL-FIX-01` sobre o HEAD final da MOBILE-K, alterando apenas o contrato de Inventário TOTAL + testes associados;
@@ -195,7 +195,10 @@ Enquanto a `MOBILE-K — Canonical Ops Engine` evolui em branch própria, o Prog
 | Frente | Branch exclusiva | Base de trabalho | Ownership | Saída esperada | Proibição principal |
 | --- | --- | --- | --- | --- | --- |
 | RULES-COMPAT-01 | `rules-compat-01@97442b5f...` | RC estável `bd27da91...` | **PASS / ENCERRADA** — Firestore Rules, ALLOW/DENY, rollout/rollback e compatibilidade histórica | `docs/RULES_COMPAT_01_AUDIT.md`; PR #254 DRAFT | Rules não alteradas; comentário antigo `queueExclusions` continua apenas inconsistência textual |
-| SAAS-FINAL-AUDIT-01 | `saas-final-audit-01` | Memorial/SaaS `f6b767bd...` | completude SaaS R1: billing, onboarding, legal, lifecycle, sessão, recovery e documentação viva | matriz IMPLEMENTADO/TESTADO/PENDENTE/RISCO | não tocar Central/Mobile nem criar nova feature |
+| SAAS-FINAL-AUDIT-01 | `saas-final-audit-01@4cc5b379...` | base congelada `d7837257...` | **PASS COM RISCOS RESIDUAIS DOCUMENTADOS** — billing, onboarding, legal, lifecycle, sessão, recovery | PR #256 DRAFT; CI/Legal/Core/Recovery SUCCESS | nenhum blocker funcional SaaS; sem produção |
+| SAAS-PILOT-JOURNEY-01 | `saas-pilot-journey-01@4cc5b379...` | HEAD auditado SaaS | jornada E2E não produtiva: onboarding → login → Legal → trial/billing → lifecycle → sessões | matriz executável + testes/smoke | sem cliente real, sem cobrança/suspensão produtiva |
+| SAAS-PILOT-OPS-01 | `saas-pilot-ops-01@4cc5b379...` | HEAD auditado SaaS | operação do piloto: checklist, evidências, suporte, billing manual, participantes, rollback | runbook operacional do piloto | sem iniciar piloto real ou alterar produção |
+| SAAS-UPTIME-READINESS-01 | `saas-uptime-readiness-01@4cc5b379...` | HEAD auditado SaaS | health/Cloud Monitoring: configuração reproduzível e validação prévia | runbook/scripts dry-run para uptime/alert/canal | não criar check/alert/channel produtivo antes de publicação autorizada |
 | WAREHOUSE-DATA-AUDIT-01 | `warehouse-data-audit-01@07265b2...` | RC estável `bd27da91...`; MOBILE-K somente leitura | **BLOCKER RC** — integridade logística/legado | `docs/WAREHOUSE_DATA_AUDIT_01.md`; PR #255 DRAFT | nenhuma escrita/migração; Inventário TOTAL + UNASSIGNED precisa correção isolada; PAL-01 precisa diagnóstico read-only |
 | RC-READINESS-01 | `rc-readiness-01` | RC estável `bd27da91...` | gates, CI, release manifest, rollback, performance e roteiro de certificação | checklist executável do novo RC | não alterar domínio, Rules ou produção |
 
@@ -252,6 +255,25 @@ Regra de saída do blocker:
 - executar auditoria read-only sistêmica de integridade, incluindo PAL-01 como caso conhecido;
 - só então decidir se existe reparo de dados necessário, por classe de inconsistência, em frente separada e autorizada;
 - repetir Rules/CI afetados no delta final.
+
+#### Onda paralela SaaS R1 — preparação pré-piloto sem produção
+
+Com a auditoria final SaaS tecnicamente verde, três frentes podem trabalhar enquanto os blockers Warehouse são tratados. Elas não alteram o motor logístico e não iniciam piloto real.
+
+- `SAAS-PILOT-JOURNEY-01`: validar de ponta a ponta, em ambiente não produtivo/emulador/Preview quando disponível, onboarding assistido, primeiro login, aceite legal, trial/billing exibido, suspensão/regularização/reativação e sessões. Não usar cliente real nem cobrança real.
+- `SAAS-PILOT-OPS-01`: preparar operação do piloto controlado, critérios de participante, evidências J01–J24, suporte, billing manual, checklist de entrada/saída, rollback e matriz de riscos. Documento/runbook; sem publicação.
+- `SAAS-UPTIME-READINESS-01`: fechar artefatos reproduzíveis para `/api/health`, uptime check, alert policy e notification channel, com dry-run/validação estática. A aplicação real desses controles permanece bloqueada até publicação controlada autorizada.
+
+Base comum congelada das três frentes:
+
+`saas-final-audit-01@4cc5b3797747d4d49591f4a68196e723700daa74`
+
+Regras:
+
+1. nenhum worker faz merge em `main`, deploy Production, publicação de Rules, cobrança real, suspensão de cliente real ou início de piloto;
+2. achado funcional vira handoff ao Coordenador, não feature oportunista;
+3. mudanças em Auth, sessão, lifecycle, legal, `warehouseAccess` ou Rules compartilhadas exigem impacto Mobile explícito;
+4. RC-READINESS continua owner de composição/re-freeze; estas frentes apenas antecipam evidência e operação SaaS.
 
 #### Frentes corretivas derivadas da auditoria logística
 
