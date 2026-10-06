@@ -2,7 +2,7 @@
 
 Data da auditoria: **2026-10-03**
 
-Branch: `saas-harden-a2-firebase-firestore-grpc`  
+Branch: `saas-harden-a2-firebase-firestore-grpc`
 Base congelada: `f308ff601fe923467b8ccc1489be91b318bc3e8c`
 
 ## 1. Resultado executivo
