@@ -1065,4 +1065,3 @@ O risco residual permanece explicitamente registrado e deve ser reaberto se:
 3. surgir nova evidência de alcançabilidade.
 
 Não abrir nova frente Firebase/gRPC sem nova evidência técnica.
-
