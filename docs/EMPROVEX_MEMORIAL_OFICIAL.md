@@ -1,14 +1,14 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-06 — F09 foi revalidado por leitura autoritativa após o replay: estoque físico do material permanece 440 L em DEP-001/PAL-01, lotes permanecem 340+100=440 L e a projeção legada UNASSIGNED permanece 5 L; portanto nenhuma saída de 1 L foi aplicada nas duas tentativas. F09 passa a `BLOCKER FUNCIONAL CONFIRMADO / SEM WRITE`, e terceira tentativa está proibida até nova candidata. A frente corretiva `rc-r1-physical-fix-01@20337dd4...` já contém: F14 scanner single-shot, separação entre finalização da saída e falha de refresh, e códigos técnicos seguros para Transferência/Saída. No mesmo HEAD, Application CI e Core Protection estão SUCCESS e o Vercel Preview também está SUCCESS; URL de preview da branch corretiva: `https://controles-de-empenhos-aprov-git-rc-fa0502-aprov-hgesms-projects.vercel.app`. F05 continua em diagnóstico de fast-path server-side; F06 e F09 devem ser retestados apenas no novo Preview, que agora exibirá código técnico seguro se falharem. Production continua não autorizada.**
+Última sincronização global: **2026-10-06 — publicação real autorizada pelo Fundador foi concluída. PR #266 foi mergeado em `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35` e o deployment Production da Vercel concluiu com SUCCESS. O R1 passa a ser o app produtivo para usuários fundadores e externos. A Central Mobile, porém, permanece em piloto técnico fechado: o botão `Central Móvel` aparece somente na Central de Depósitos da conta fundadora e a própria rota `/central-mobile` mantém guard explícito de identidade fundadora, de modo que ocultar o botão não é a única barreira. F14 já passou no reteste; F05/F06/F09 continuam em diagnóstico/correção e não são considerados funcionalidades liberadas aos usuários externos. Rules permanecem nos hashes já publicados e nenhum novo repair de dados foi executado.**
 
-Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
+Produção vigente: `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`
 
 Integradora SaaS R1: `feat/saas-r1-commercializacao` — fonte congelada da composição: `2c1eee759ea8024c296b4c6968ed935b9a59e880`; commits posteriores nesta branch podem ser exclusivamente documentais de Program Control
 
 Integradora Mobile R1: `feat/central-mobile-r1@7b7717b6eebabf911310d2b8ac56ed13c9cb9238` — avanço documental, sem novo delta runtime
 
-Estado global: **Performance R3 permanece como aplicação produtiva; Rules RC já publicadas permanecem congeladas; o RC original `54e60c...` é baseline histórica e a linha de correção `bd27da91...` continua a base da composição. MOBILE-K fechou em `9f1035ac...`; o Inventory Physical Fix, descendente linear de MOBILE-K, fechou em `5255bbcb...` com os dois gates principais verdes. O repair Warehouse real foi executado e revalidado sem alterar runtime, Rules ou ledger. O próximo owner exclusivo é `RC-COMPOSITION-01`, que deve compor semanticamente a candidata final sem publicar produção, sem executar novo repair e sem incorporar frentes SaaS pré-piloto ainda não certificadas.**
+Estado global: **R1 está publicado em Production em `main@97556bb8...` após PR #266, com Vercel Production SUCCESS. Usuários externos recebem o runtime R1 normal; a Central Mobile continua deliberadamente isolada como piloto founder-only por visibilidade condicional + guard de rota. Rules RC permanecem congeladas/publicadas nos hashes auditados; Warehouse repair permanece validado. O owner ativo volta a ser `RC-R1-PHYSICAL-FIX-01`, focado exclusivamente em F05/F06/F09 sem reabrir o restante do R1.**
 
 ---
 
@@ -92,7 +92,7 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 
 | Domínio | Estado vigente | Contrato/observação |
 | --- | --- | --- |
-| Produção — app | **Performance R3 / INALTERADA** | `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`; app RC não publicado |
+| Produção — app | **R1 PUBLICADO / CENTRAL MOBILE FOUNDER-ONLY** | `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`; PR #266 mergeado; Vercel Production SUCCESS; usuários externos usam R1 normal e `/central-mobile` fica bloqueada para não fundadores |
 | Produção — Firestore Rules | **RULES RC PUBLICADAS EM 2026-10-05** | publicação autorizada apenas de Rules; principal source blob `bc91185f34bcdcb4437a4de1078d1089a09292ba`; Warehouse source blob `6e1f1050005314db4e17cb3136409abbddb0ee91` |
 | Rollback Rules | **PREPARADO** | baseline anterior principal `0d990b7de0b2e85ed55fe14ec0d2ce29b3635299`; Warehouse `b5325fe5a8cbe9b0ade8568d35a2cd678ce6e0f2` |
 | SaaS R1 | **FUNCIONALMENTE CONCLUÍDO / PRÉ-PILOTO PREPARADO** | Final Audit `4cc5b379...` PASS; Journey `f3f699a...` PASS COM PENDÊNCIAS EXTERNAS; Pilot Ops `bdf78bc...` PASS COM PENDÊNCIAS EXTERNAS; nenhum blocker funcional SaaS conhecido |
@@ -174,51 +174,41 @@ RC original 54e60c... — FROZEN histórico
 
 ### Gate imediato
 
-O gate vigente é **RC-R1-PHYSICAL-FIX-01 — correção única dos blockers encontrados na certificação física**.
+O gate vigente é **RC-R1-PHYSICAL-FIX-01 — correção pontual da Central Mobile em Production founder-only**.
 
-Branch:
+Estado de publicação:
 
-`rc-r1-physical-fix-01@b69fc103467d428511756b2567980a4514ad17d4`
+- `main@97556bb8eb04af070016f9e58ddc2d9cca36bb35`;
+- PR #266: **MERGED**;
+- Vercel Production: **SUCCESS**;
+- R1 geral: disponível para usuários externos;
+- Central Mobile: **PILOTO TÉCNICO FOUNDER-ONLY**;
+- botão `Central Móvel`: visível somente à conta fundadora;
+- rota `/central-mobile`: guardada também por identidade fundadora, portanto URL direta não libera acesso externo;
+- Rules: inalteradas neste rollout;
+- repair Warehouse: não repetido.
 
-PR:
+Objetivo do piloto técnico em Production:
 
-`#265 — DRAFT`
+1. reproduzir F05/F06/F09 contra infraestrutura produtiva real;
+2. isolar com precisão diferença Preview vs Production;
+3. aplicar apenas correções pontuais;
+4. manter usuários externos fora da Central Mobile enquanto ela não estiver certificada;
+5. liberar o botão/rota aos externos somente após PASS da certificação Mobile.
 
-Base preservada:
+Estado dos testes:
 
-`rc-r1-refreeze-01@fae9ce6aed7242e85d53fc8e6470fba4425a8c27`
+- F01–F04: PASS;
+- F05: BLOCKER em Preview (`WAREHOUSE_FAST_PATH_UNAVAILABLE`);
+- F06: BLOCKER em Preview;
+- F07–F08: PASS;
+- F09: BLOCKER em Preview, com `FIRESTORE_PERMISSION_DENIED` e confirmação independente de **sem write**;
+- F10–F13: PASS;
+- F14: **RETESTE PASS** após scanner single-shot;
+- F15: pendente;
+- F16: pendente por indisponibilidade iOS.
 
-Resultado físico recebido:
-
-- F01 PASS;
-- F02 PASS;
-- F03 PASS;
-- F04 PASS;
-- F05 **BLOCKER** — `WAREHOUSE_FAST_PATH_UNAVAILABLE`;
-- F06 **BLOCKER / causa a isolar** — transferência não confirmada;
-- F07 PASS;
-- F08 PASS;
-- F09 **PENDENTE DE REPLAY / blocker se recorrente**;
-- F10 PASS;
-- F11 PASS;
-- F12 PASS;
-- F13 PASS — som OK, vibração não suportada pelo navegador;
-- F14 **BLOCKER** — double scan em códigos de localização;
-- F15 PENDENTE;
-- F16 PENDENTE — iOS indisponível.
-
-Decisões vigentes:
-
-1. não declarar GO/Production;
-2. preservar o re-freeze antigo apenas como evidência da candidata que falhou fisicamente;
-3. corrigir somente F05/F06/F09/F14 em uma única branch;
-4. F14 já corrigido: scanner passa a encerrar o decoder imediatamente após leitura válida, antes de entregar o evento ao fluxo pai;
-5. F05: não ampliar fallback legado para `WAREHOUSE_FAST_PATH_UNAVAILABLE`, pois isso reduziria a revalidação canônica server-side; confirmar ambiente/log do fast path;
-6. F06: obter/reproduzir o erro técnico real antes de alterar domínio ou Rules;
-7. F09: executar replay com a mesma chave de idempotência; sucesso sem segunda baixa pode reclassificar o caso como recuperação prevista;
-8. F15 será executado apenas depois dos blockers operacionais;
-9. F16 pode permanecer pendente por indisponibilidade de iPhone, desde que explicitamente aceito no GO/NO-GO;
-10. qualquer novo runtime exige CI/Legal/Core/Recovery aplicáveis e novo re-freeze antes de Production.
+O fato de o R1 geral estar em Production **não transforma F05/F06/F09 em funcionalidades liberadas aos externos**, pois a superfície Mobile está isolada temporariamente.
 
 ### Onda paralela de auditoria — execução autorizada sem competição com MOBILE-K
 
