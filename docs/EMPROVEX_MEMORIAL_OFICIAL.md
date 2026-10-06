@@ -1,6 +1,6 @@
 # EMPROVEX — Memorial Oficial
 
-Última sincronização global: **2026-10-05/06 — `SAAS-PILOT-OPS-01` foi encerrada em `bdf78bc87df1271def239feab715ddb8dd6c295d` com `PASS COM PENDÊNCIAS EXTERNAS`. PR #263 OPEN/DRAFT/MERGEABLE, 2 commits à frente / 0 atrás da base `4cc5b379...`, delta líquido exclusivamente documental: `docs/SAAS_PILOT_OPS_01.md` com 705 linhas; runtime, Rules, Warehouse e RC-COMPOSITION permaneceram intactos. O único status externo do HEAD é Vercel failure por `build-rate-limit`, classificado como quota externa, não falha funcional do runbook. `RC-COMPOSITION-01` permanece caminho crítico da publicação e avançou para `fae9ce6aed7242e85d53fc8e6470fba4425a8c27`; Core Protection, Recovery e SAAS-DL Legal Validation estão SUCCESS no HEAD, enquanto Application CI está na fila.**
+Última sincronização global: **2026-10-05/06 — `RC-COMPOSITION-01` foi encerrada tecnicamente em `fae9ce6aed7242e85d53fc8e6470fba4425a8c27` com classificação `APTA PARA RE-FREEZE`. PR #262 permanece OPEN/DRAFT/MERGEABLE e não mergeado. No HEAD final, Application CI `37402133902`, SAAS-DL Legal Validation `37402133906`, EMPROVEX Core Protection `37402133890` e Recovery guardrails `37402133915` estão todos SUCCESS; Production build, TypeScript, diff hygiene, MOBILE-K, Inventory, Transfer, Outbound, multi-tenant e Sessions também fecharam verdes dentro do Application CI. Rules permaneceram exatamente nos blobs `bc91185f...` e `6e1f1050...`; nenhum merge final, deploy, publicação de Rules ou novo repair ocorreu. Program Control criou `rc-r1-refreeze-01@fae9ce6...` como snapshot congelado da nova candidata. Próximo gate único: certificação física final curta no SHA re-frozen, seguida de GO/NO-GO explícito antes de qualquer Production.**
 
 Produção vigente: `main@e90f92acae1514ee5cbc6ce95fed354bc1454330`
 
@@ -118,7 +118,8 @@ Como SaaS e Mobile podem atualizar documentação em paralelo, qualquer edição
 | WAREHOUSE-INTEGRITY-RECONCILE-01 | **CONCLUÍDA / BLOCKER RC** | `warehouse-integrity-reconcile-01@b8dbc33...`; 3.113 reads; 2 blockers quantitativos de lote (+100 e +10); 3 reconciliações adicionais; nenhum dado escrito |
 | WAREHOUSE-DATA-REPAIR-FORENSICS-01 | **PASS / ENCERRADA TECNICAMENTE** | `warehouse-data-repair-forensics-01@c1fa1d9...`; causa comprovada nos 2 blockers, dry-run determinístico e manifesto prontos; nenhum dado escrito |
 | WAREHOUSE-DATA-REPAIR-EXECUTION-01 | **PASS / REPAIR EXECUTADO E REVALIDADO** | `warehouse-data-repair-execution-01@e3f3aae...`; commit Firestore `2026-10-06T01:14:32.083411Z`; 2 writes allowlisted; pós-repair com 0 inconsistências e lotExcess=0 nos dois materiais; Core Protection e Application CI SUCCESS |
-| RC-COMPOSITION-01 | **ATIVADA / OWNER DO NOVO RC** | `rc-r1-composition-01@bd27da91...`; compor semanticamente runtime `5255bbcb...` + gates SaaS aplicáveis + evidências/auditorias, sem merge cego, sem Rules, sem produção e sem novo repair |
+| RC-COMPOSITION-01 | **PASS / APTA PARA RE-FREEZE** | `rc-r1-composition-01@fae9ce6...`; PR #262 DRAFT; Application CI + Legal + Core + Recovery SUCCESS; Rules preservadas; nenhum blocker funcional/quantitativo conhecido |
+| RC R1 re-freeze | **CRIADO / CANDIDATA CONGELADA** | `rc-r1-refreeze-01@fae9ce6aed7242e85d53fc8e6470fba4425a8c27`; snapshot exato do RC composto; nenhuma alteração após freeze permitida sem reabrir certificação |
 | Firestore Rules — contrato da onda | **CONGELADAS PARA OS WORKERS** | SaaS/RC/MOBILE-K usam `firestore.rules@bc91185f...` e `firestore.warehouse.rules@6e1f1050...`; qualquer necessidade de alterar Rules deve voltar ao Coordenador antes de edição |
 | HARDEN-B | **PASS** | backup/verify/restore real isolado/integridade 13/13 PASS |
 | Restore temporário | **AINDA EXISTE** | `emprovex-restore-warehouse-2026-10-04`; delete protection ativa; cleanup exige autorização separada |
@@ -171,46 +172,69 @@ RC original 54e60c... — FROZEN histórico
 
 ### Gate imediato
 
-O gate vigente é **RC-COMPOSITION-01 — composição semântica e preparação do novo re-freeze**.
+O gate vigente agora é **CERTIFICAÇÃO FÍSICA FINAL DO RC RE-FROZEN**.
 
-Branch exclusiva já criada:
+Candidata congelada:
 
-`rc-r1-composition-01@bd27da91da92642d5a5fea08f7020c6cea658a62`
+`rc-r1-refreeze-01@fae9ce6aed7242e85d53fc8e6470fba4425a8c27`
 
-Fontes congeladas para o worker:
+Origem:
 
-1. **base RC viva:** `rc-r1-mobile-j-fix-label-readability@bd27da91da92642d5a5fea08f7020c6cea658a62`;
-2. **runtime operacional alvo:** `inventory-physical-fix-01@5255bbcbc43593bcf66001adf85eb5d6264a121e` — descendente linear da base RC e já contém todo `MOBILE-K@9f1035ac...` + 3 commits do Inventory Physical Fix;
-3. **SaaS final audit:** `saas-final-audit-01@4cc5b3797747d4d49591f4a68196e723700daa74` — branch divergente; somente mudanças ainda aplicáveis de CI/Legal/guard/docs devem ser reconciliadas arquivo a arquivo, nunca mergeadas em bloco;
-4. **Rules compatibility:** `rules-compat-01@97442b5f11779b7b434cba8d0a9a2c9ab843ac66` — documental; Rules permanecem nos hashes `bc91185f...` e `6e1f1050...`;
-5. **Warehouse repair/evidence:** `warehouse-data-repair-execution-01@e3f3aae9e8ee2337e387fd652a104f194049cd70` — dados já reparados; não repetir escrita. Seus scripts/docs read-only podem ser incorporados seletivamente se ajudarem a certificar o RC;
-6. **SaaS pré-piloto:** `saas-pilot-journey-01`, `saas-pilot-ops-01`, `saas-uptime-readiness-01` ficam fora desta composição enquanto não houver handoff aprovado.
+`rc-r1-composition-01@fae9ce6aed7242e85d53fc8e6470fba4425a8c27`
 
-Estado já resolvido antes da composição:
+Classificação da composição:
 
-- MOBILE-K: PASS / candidata à integração;
-- Inventory Physical Fix: PASS / Core + Application CI SUCCESS;
-- dois excessos de lotes +100/+10: reparados e revalidados;
-- auditoria pós-repair: 0 inconsistências quantitativas;
-- Rules compatibility: PASS;
-- SaaS final audit: PASS com riscos residuais documentados;
-- produção: inalterada;
-- Rules: inalteradas.
+**APTA PARA RE-FREEZE**
 
-O worker de composição deve:
+Gates do mesmo HEAD:
 
-1. confirmar que `5255bbcb...` é exatamente 25 commits à frente / 0 atrás de `bd27da91...`;
-2. trazer esse runtime para `rc-r1-composition-01` preservando os commits auditados — fast-forward é aceitável por ser relação linear comprovada, mas somente após conferência;
-3. reconciliar semanticamente o delta SaaS final, preservando quaisquer guards Mobile/RC mais novos do `application-ci.yml` e evitando regressão por substituição de arquivo;
-4. decidir explicitamente quais artifacts read-only Warehouse entram na candidata; **não executar** `warehouse-data-repair-execute.mjs --apply`;
-5. preservar integralmente os dois arquivos de Rules nos hashes auditados;
-6. executar suites Warehouse/Mobile/SaaS/Legal/TypeScript/build/diff hygiene/Core/Recovery aplicáveis;
-7. produzir release manifest com SHAs, Rules hashes, estado de dados reparados, riscos residuais, rollback e testes físicos ainda necessários;
-8. abrir PR DRAFT contra `rc-r1-mobile-j-fix-label-readability`;
-9. classificar a candidata como `APTA PARA RE-FREEZE`, `PASS COM PENDÊNCIAS DE CERTIFICAÇÃO FÍSICA` ou `BLOCKER`;
-10. **não** mergear `main`, publicar Production, publicar Rules, executar novo repair, iniciar piloto ou declarar GO.
+- Application CI `37402133902`: **SUCCESS**;
+- SAAS-DL Legal Validation `37402133906`: **SUCCESS**;
+- EMPROVEX Core Protection `37402133890`: **SUCCESS**;
+- Recovery guardrails `37402133915`: **SUCCESS**;
+- Production build: **SUCCESS**;
+- TypeScript: **SUCCESS**;
+- Diff hygiene: **SUCCESS**;
+- MOBILE-K canonical ops: **SUCCESS**;
+- Inventory: **SUCCESS**;
+- Transfer: **SUCCESS**;
+- Outbound: **SUCCESS**;
+- multi-tenant: **SUCCESS**;
+- Sessions: **SUCCESS**.
 
-A antiga branch `rc-readiness-01@bd27da91...` não recebeu delta e fica **SUPERSEDIDA por RC-COMPOSITION-01** para evitar dois owners da mesma etapa.
+Rules congeladas e confirmadas:
+
+- `firestore.rules@bc91185f34bcdcb4437a4de1078d1089a09292ba`;
+- `firestore.warehouse.rules@6e1f1050005314db4e17cb3136409abbddb0ee91`.
+
+Dados Warehouse:
+
+- repair `WAREHOUSE-LOT-REPAIR-2026-10-05-01` já executado e revalidado;
+- 0 inconsistências quantitativas pós-repair;
+- nenhum novo repair autorizado ou necessário para este gate.
+
+A certificação física final deve ocorrer **neste SHA exato**, sem novos commits de runtime. Cobrir, de forma curta e dirigida:
+
+1. Android/Chrome;
+2. iPhone/Safari quando disponível;
+3. câmera permitida/negada/indisponível;
+4. fallback manual;
+5. Code128 físico;
+6. entrada;
+7. transferência;
+8. consulta;
+9. inventário;
+10. saída;
+11. conferência;
+12. coerência Desktop ↔ Mobile;
+13. COMPACT/MEDIUM/LARGE;
+14. som/vibração;
+15. double scan/cooldown;
+16. perda/retorno de rede.
+
+Se qualquer correção de código for necessária, o re-freeze é invalidado e a composição deve ser reaberta.
+
+Se a certificação física fechar sem blocker, o próximo passo é **GO/NO-GO explícito do Fundador**. Mesmo com PASS físico, Production continua proibida até essa autorização.
 
 ### Onda paralela de auditoria — execução autorizada sem competição com MOBILE-K
 
@@ -345,15 +369,22 @@ Estado aceito pelo Coordenador:
 - classificação final: **PASS COM PENDÊNCIAS EXTERNAS**;
 - esta frente está fora do caminho crítico da publicação e passa a ser artefato operacional pronto para uso futuro.
 
-#### Estado RC-COMPOSITION após fechamento do Pilot Ops
+#### Fechamento RC-COMPOSITION-01
 
 - branch: `rc-r1-composition-01@fae9ce6aed7242e85d53fc8e6470fba4425a8c27`;
 - PR #262: OPEN / DRAFT / MERGEABLE / não mergeado;
-- Core Protection: **SUCCESS**;
-- Recovery guardrails: **SUCCESS**;
-- SAAS-DL Legal Validation: **SUCCESS**;
-- Application CI: **QUEUED** neste checkpoint;
-- caminho crítico permanece: concluir CI → re-freeze → teste físico final curto → GO/NO-GO → eventual Production autorizada.
+- merge-base: `bd27da91da92642d5a5fea08f7020c6cea658a62`;
+- delta acumulado: 39 commits à frente / 0 atrás da base RC;
+- Application CI `37402133902`: **SUCCESS**;
+- SAAS-DL Legal Validation `37402133906`: **SUCCESS**;
+- Core Protection `37402133890`: **SUCCESS**;
+- Recovery guardrails `37402133915`: **SUCCESS**;
+- release manifest: `docs/RC_R1_COMPOSITION_01.md`;
+- Rules blobs preservados em `bc91185f...` e `6e1f1050...`;
+- executor de repair não incorporado/executado;
+- classificação final: **APTA PARA RE-FREEZE**;
+- snapshot congelado criado: `rc-r1-refreeze-01@fae9ce6...`;
+- caminho crítico: certificação física final → GO/NO-GO → eventual Production autorizada.
 
 #### Frentes corretivas derivadas da auditoria logística
 
