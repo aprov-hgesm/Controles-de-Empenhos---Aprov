@@ -89,7 +89,7 @@ Executar no Preview runtime-equivalente:
 | F06 | transferência física→física | UI: “A transferência não pôde ser confirmada. Revalide os dados e tente novamente” | **BLOCKER / CAUSA A ISOLAR** |
 | F07 | consulta por item/local | resultado coerente | PASS |
 | F08 | inventário físico | fluxo passou e não ofereceu UNASSIGNED operacional | PASS |
-| F09 | saída | resultado não confirmado; UI solicitou replay idempotente com a mesma chave | **PENDENTE DE REPLAY / BLOCKER SE RECORRENTE** |
+| F09 | saída | replay com a mesma chave também retornou “Resultado não confirmado” | **BLOCKER — OUTCOME AINDA NÃO PROVADO** |
 | F10 | conferência de posição | resultado coerente | PASS |
 | F11 | Desktop ↔ Mobile | coerência confirmada | PASS |
 | F12 | COMPACT/MEDIUM/LARGE | legíveis | PASS |
@@ -109,7 +109,7 @@ Motivos:
 1. F05 falhou em runtime com `WAREHOUSE_FAST_PATH_UNAVAILABLE`;
 2. F06 não confirmou a transferência e a UI não expôs o código técnico causal;
 3. F14 confirmou double scan de códigos de localização;
-4. F09 ainda exige replay idempotente para determinar se houve apenas resultado incerto/transiente ou falha recorrente;
+4. F09 repetiu a mensagem de resultado não confirmado mesmo após replay idempotente; antes de qualquer terceira tentativa é obrigatório consultar o saldo por uma leitura autoritativa independente para descobrir se a primeira/segunda tentativa efetivamente gravou a saída;
 5. F15 permanece pendente;
 6. F16 fica como pendência de dispositivo iOS e não é blocker isolado por si só.
 
@@ -126,10 +126,10 @@ F06:
 - é necessário obter o erro técnico real ou reproduzir com teste dirigido antes de alterar domínio/Rules.
 
 F09:
-- o fluxo foi desenhado para replay seguro com a mesma identidade;
-- o próximo clique em CONFIRMAR SAÍDA é parte válida do protocolo idempotente;
-- se o replay confirmar sem segunda baixa, o caso pode ser reclassificado;
-- se repetir o erro, torna-se blocker funcional confirmado.
+- o replay com a mesma identidade foi executado uma vez e repetiu a mensagem genérica;
+- **não executar uma terceira confirmação** antes de consultar o saldo por outra superfície;
+- o `confirm()` atual agrupa `finalizeWarehouseMaterialWithdrawal()` e a recarga pós-operação no mesmo `try/catch`, portanto uma falha de refresh posterior também produz “Resultado não confirmado” mesmo se o finalize já tiver concluído;
+- diagnóstico mínimo agora: consultar novamente o material fora desta tela. Para o caso testado, 445/440 antes da saída: se o agregado/físico tiverem caído exatamente pela quantidade retirada, a baixa ocorreu e o blocker é de confirmação/refresh; se permanecerem iguais, a baixa não foi aplicada; qualquer estado intermediário exige reconciliação antes de novo teste.
 
 F14:
 - o scanner compartilhado mantém a câmera ativa depois de leitura válida;
