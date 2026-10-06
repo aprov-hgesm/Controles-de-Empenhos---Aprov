@@ -1,6 +1,6 @@
 # WAREHOUSE-DATA-REPAIR-FORENSICS-01
 
-Status: **PASS PARCIAL — LEITURA VIVA CONCLUÍDA / ANALISADOR CAUSAL V2 AGUARDA REEXECUÇÃO**
+Status: **PASS — CAUSA PROVADA / REPAIR PLAN PRONTO PARA APROVAÇÃO**
 
 Esta frente é exclusivamente de investigação causal, dry-run e preparação de repair.
 **Nenhum write em dados reais foi autorizado ou executado.**
@@ -227,19 +227,89 @@ Permanece quantitativamente canônico:
 A duplicidade técnica aparente continua sendo evidência de que dois documentos
 com o mesmo código técnico não são, isoladamente, prova de erro quantitativo.
 
-### 4.4 Estado probatório
+### 4.4 Leitura viva v2 — confirmação final
 
-A leitura viva #1 é suficiente para rejeitar a hipótese simplista
-"todo excesso = soma global de OUTBOUND sem lote".
+A segunda execução viva do analisador causal v2 foi concluída em
+`2026-10-06T00:42:35.515Z`, com **3.057 reads**, nenhuma coleção capped e
+nenhuma escrita.
 
-O analisador causal v2 foi implementado e validado com fixtures que reproduzem
-os eventos vivos. Porém, **ainda precisa ser reexecutado contra o Firestore
-real** antes de promover os dois candidatos acima a documentos de repair
-formalmente comprovados.
+Resultado:
 
-Até essa reexecução:
+- Material A: `causeProven = true`, `repairDeterministic = true`;
+- Material B: `causeProven = true`, `repairDeterministic = true`;
+- controle: sem blocker quantitativo;
+- classificação global:
+  **PASS — CAUSA PROVADA / REPAIR PLAN PRONTO PARA APROVAÇÃO**;
+- `readyForHumanRepairAuthorization = true`.
 
-**NÃO EXECUTE REPAIR.**
+A execução viva confirmou exatamente os candidatos previstos pelo v2.
+
+#### Material A confirmado
+
+Documento:
+
+`warehouse/hgesm-aprov/lots/lot_670e1ca177804501b90bf8cdd669683f`
+
+Before:
+
+`quantity = 440`
+
+After proposto:
+
+`quantity = 340`
+
+Delta:
+
+`-100`
+
+Causa comprovada:
+
+`MANUAL_ENRICHMENT_CRIOU_ATRIBUICAO_DE_LOTE_ACIMA_DO_LEDGER`
+
+Evidência quantitativa:
+
+- cumulativeActiveLotQuantityAfterCreation = **540**;
+- ledgerBalanceAtCreation = **440**;
+- overAggregateAfterCreation = **100**.
+
+#### Material B confirmado
+
+Documento:
+
+`warehouse/hgesm-aprov/lots/lot_082ebcd7a2acf0c706c87464307cb1ff`
+
+Before:
+
+`quantity = 50`
+
+After proposto:
+
+`quantity = 40`
+
+Delta:
+
+`-10`
+
+Causa comprovada:
+
+`OUTBOUND_SEM_LOTID_NAO_REDUZIU_ATRIBUICAO_LOGISTICA_DE_LOTE`
+
+Evidência quantitativa e histórica:
+
+- OUTBOUND sem lotId líquido = **10**;
+- lote causal identificado pela posição histórica
+  `sub_43397d13f1924addb1383aa31c151b62`;
+- movimento causal:
+  `mov_fc391dd2a9b6b0fbbee257595376305ab1c3dd39352241a1b8896c24a912a3b6`;
+- grossOutboundQuantity = **10**;
+- returnedQuantity = **0**;
+- netOutboundQuantity = **10**.
+
+A forensics está, portanto, concluída.
+
+**NÃO EXECUTE REPAIR NESTA FRENTE.**
+A classificação PASS significa que o plano está pronto para aprovação humana,
+não que a escrita esteja autorizada ou executada.
 
 ## 5. Dry-run criado
 
@@ -288,7 +358,9 @@ node scripts/warehouse-data-repair-dry-run.mjs `
 Remove-Item Env:WAREHOUSE_AUDIT_ACCESS_TOKEN
 ```
 
-A primeira execução viva foi realizada pelo Fundador e preservada como evidência. Após essa execução, o analisador foi evoluído para v2. É necessária **uma segunda execução viva, ainda somente leitura**, para confirmar os documentos candidatos e o manifesto final.
+A primeira execução viva foi realizada pelo Fundador e preservada como evidência.
+Após essa execução, o analisador foi evoluído para v2. A segunda execução viva
+também foi concluída e confirmou os documentos candidatos e o manifesto final.
 
 ## 6. Teste de contrato criado
 
@@ -387,49 +459,39 @@ Preferência:
 
 Enquanto os documentos exatos não forem causalmente identificados, rollback executável ainda não está fechado.
 
-## 9. Resultado por blocker no estado atual
+## 9. Resultado por blocker — final
 
 | Critério | Material A | Material B |
 | --- | --- | --- |
-| CAUSA COMPROVADA NO LIVE V2? | **PENDENTE** | **PENDENTE** |
+| CAUSA COMPROVADA? | **SIM** | **SIM** |
 | REPAIR NECESSÁRIO? | **SIM** | **SIM** |
-| CANDIDATO CAUSAL V2? | **lot_670e1ca...** | **lot_082ebcd7...** |
-| DELTA CANDIDATO V2 | **440 -> 340** | **50 -> 40** |
-| REPAIR DETERMINÍSTICO NO ALGORITMO? | **SIM** | **SIM** |
+| REPAIR DETERMINÍSTICO? | **SIM** | **SIM** |
+| DOCUMENTOS EXATOS IDENTIFICADOS? | **SIM** | **SIM** |
+| CANDIDATO | **lot_670e1ca...** | **lot_082ebcd7...** |
+| BEFORE -> AFTER | **440 -> 340** | **50 -> 40** |
 | BACKUP IDENTIFICADO? | **SIM** | **SIM** |
-| ROLLBACK E PRECONDIÇÕES PREPARADOS? | **SIM** | **SIM** |
-| PRONTO PARA AUTORIZAÇÃO HUMANA DE REPAIR? | **NÃO, falta live v2** | **NÃO, falta live v2** |
+| ROLLBACK DEFINIDO? | **SIM** | **SIM** |
+| PRONTO PARA AUTORIZAÇÃO HUMANA DE REPAIR? | **SIM** | **SIM** |
 
-Os candidatos acima são derivados de causalidade histórica reconstruída. Eles
-**não são autorização de escrita** e só podem ser promovidos ao manifesto final
-se a reexecução viva do analisador v2 reproduzir os mesmos paths, estados
-before/after e precondições.
+## 10. Gate obrigatório antes da futura escrita
 
-## 10. Evidência adicional obrigatória
+A forensics não exige mais evidência causal adicional.
 
-Para concluir a forensics, reexecutar o dry-run v2 e preservar o JSON entre:
+A futura frente de repair deverá, imediatamente antes de escrever:
 
-`FORENSICS_JSON_BEGIN`
+1. reexecutar o dry-run read-only;
+2. confirmar que os dois candidatos continuam exatamente iguais ao manifesto;
+3. abortar se `revision`, `lastMovementId`, `updatedAt`, quantidade ou
+   conjunto de lotes ativos tiver mudado;
+4. confirmar backup/PITR Warehouse READY e suficientemente recente para
+   representar o estado pré-repair;
+5. manter `movements` append-only;
+6. registrar aprovação humana explícita;
+7. executar somente os dois documentos autorizados.
 
-e:
+Qualquer divergência de precondição exige:
 
-`FORENSICS_JSON_END`
-
-A promoção para **CAUSA COMPROVADA** exige, no live v2:
-
-1. Material A: `manualOverAttribution` identificar exatamente
-   `lot_670e1ca177804501b90bf8cdd669683f`, com overage **100**;
-2. Material A: candidato before **440**, after **340**;
-3. Material B: `noLotAffectedLots` identificar exatamente
-   `lot_082ebcd7a2acf0c706c87464307cb1ff`;
-4. Material B: candidato before **50**, after **40**;
-5. nenhuma evidência quantitativa concorrente nova;
-6. nenhuma coleção capped;
-7. `readyForHumanRepairAuthorization = true`.
-
-Qualquer divergência mantém:
-
-**FORENSICS INCONCLUSIVE — REPAIR NÃO AUTORIZÁVEL**
+**ABORT — REFORENSICS REQUIRED**
 ## 11. Hipóteses descartadas ou não provadas
 
 - **UNASSIGNED +5 do Material A:** fato separado; explica aggregate 445 vs physical 440, mas não explica automaticamente +100 de lotes.
@@ -457,20 +519,24 @@ Se uma futura execução de repair exigir permissão adicional:
 
 ## 13. Classificação final desta entrega
 
-**PASS PARCIAL — CAUSA PROVADA EM PARTE / MAIS EVIDÊNCIA NECESSÁRIA**
+**PASS — CAUSA PROVADA / REPAIR PLAN PRONTO PARA APROVAÇÃO**
 
 Motivo:
 
-- a leitura viva #1 foi concluída, com 3.057 reads e sem cap;
-- os eventos individuais de intake, lotes, saídas, devolução e transfers foram
-  obtidos;
-- a hipótese simplista original foi corretamente rejeitada para o Material A;
-- duas cadeias causais mais específicas foram reconstruídas;
-- o analisador v2 identifica deterministicamente os candidatos em fixtures
-  equivalentes aos dados vivos;
-- falta somente reexecutar o v2 contra o Firestore real para confirmar paths,
-  deltas e precondições antes de qualquer autorização humana.
+- leitura viva v2 concluída com **3.057 reads** e nenhuma coleção capped;
+- Material A com causa comprovada por sobre-atribuição de
+  `MANUAL_ENRICHMENT`;
+- Material B com causa comprovada por OUTBOUND sem `lotId` associado
+  deterministicamente ao lote histórico correto;
+- documentos exatos identificados;
+- before/after e deltas definidos;
+- precondições de concorrência registradas;
+- backup/recovery identificado;
+- rollback definido;
+- `readyForHumanRepairAuthorization = true`.
 
-Até essa confirmação:
+A frente WAREHOUSE-DATA-REPAIR-FORENSICS-01 está tecnicamente concluída.
 
-**NÃO EXECUTE REPAIR.**
+**NENHUM REPAIR FOI EXECUTADO.**
+A escrita deve ocorrer somente em uma frente separada, após autorização humana
+explícita e reconfirmação das precondições e do backup.
